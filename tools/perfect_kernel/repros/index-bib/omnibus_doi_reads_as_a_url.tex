@@ -1,11 +1,12 @@
 % witness: 57m review: apa6/apa7 define no `\doi` and fall to OmniBus, whose `\doi{}` (Perl OmniBus.cls.ltxml:154)
 %          digested the DOI as TeX — `\doi{10.1000/j_x.2002}` in an apacite `.bbl` gave Error:unexpected:_ once
 %          apacite's `\providecommand{\doi}` (apacite.sty:1812-1816) left OmniBus's in place (57m first cut)
-% oracle:  pdflatex (apa7 + apacite) 0 errors: "doi: 10.1000/j_x~y.2002"
+% oracle:  pdflatex (apa6 + apacite) 0 errors: "doi: 10.1000/j_x~y.2002"
 % engines: perl: OmniBus's `\doi{}` — the same error; rust 57m first cut: Error:unexpected:_
-% expect:  0 errors; the DOI linked to https://doi.org/10.1000/j_x~y.2002 (the missing-binding warning for apa7 stays)
-% status:  RED (57m first cut) -> GREEN (57m)
-\documentclass{apa7}
+% expect:  0 errors; the DOI linked to https://doi.org/10.1000/j_x~y.2002 (the missing-binding warning for apa6 stays)
+% status:  RED (57m first cut) -> GREEN (57m); apa6 since 62zl, as apa7 has its own binding now (apa7_cls.rs reads
+%          apa7.cls and keeps the DOI a link, where apacite's `\doi` would set url-styled text, apacite.sty:1812-1815)
+\documentclass{apa6}
 \usepackage[natbibapa]{apacite}
 \title{T}\shorttitle{T}
 \begin{document}

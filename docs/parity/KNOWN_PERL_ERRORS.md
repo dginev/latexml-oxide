@@ -10928,3 +10928,27 @@ none. Minimal trigger:
 
 pdflatex: x̄. Perl: `\re@DeclareMathAccent` undefined, then a malformed `\bar`. Rust (62zj, newtxmath_sty.rs): the three
 helpers. Witness 2609.02595. Guard `perfect_kernel_batch61::amsthm_upn_and_newtxmath_redeclare`.
+
+## 511. iopart's `\address` keeps only the last address
+
+iopart.cls:240-248 has `\address` used "once for each address", each call printing its own block; Perl's
+iopart_support.sty.ltxml:53 maps it to `\lx@add@affiliations`, which dequeues every affiliation queued before it
+(Base_Utility.pool.ltxml:742-753), so only the last call survives. Minimal trigger:
+
+```latex
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able${}^{1}$, Bob Baker${}^{2}$}
+\address{$^1$ Univ A}
+\address{$^2$ Univ B}
+\maketitle
+Text.
+\end{document}
+```
+
+pdflatex (iopart.cls of 2609.01831): "1 Univ A", "2 Univ B". Perl: Ann Able holds no affiliation, Bob Baker Univ B.
+Rust (62zl, iopart_support_sty.rs): each `\address` adds its affiliation through `\lx@add@affiliation@marked`, linked by
+its marks when the authors carry them. 21 of the 41 2609 papers shipping iopart.cls call `\address` more than once
+(2609.01831 lost three of four). Repro sectioning-frontmatter/iopart_each_address_adds_an_affiliation; guard
+`perfect_kernel_batch61::iopart_each_address_adds_an_affiliation`.

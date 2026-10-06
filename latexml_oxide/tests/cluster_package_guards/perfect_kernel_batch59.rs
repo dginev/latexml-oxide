@@ -193,10 +193,10 @@ fn pgfmath_function_body_is_grouped() {
 }
 
 /// 59d: what code appends to `\@author` after `\author` stored it is the author block LaTeX prints
-/// with the names; at `\maketitle` it is handed to the creators as unlabelled author-block rows
-/// (`\lx@author@tail`, frontmatter_stores.rs), not dropped (Perl drops it). (Open: a row with a
-/// superscript mark is placed by its label, after the unmarked rows, not in source order.) Repro
-/// sectioning-frontmatter/author_block_appended_after_author_is_kept.
+/// with the names; at `\maketitle` it is handed to the creators as author-block rows
+/// (`\lx@author@tail`, frontmatter_stores.rs), not dropped (Perl drops it). An unmarked row after a
+/// marked one continues it, in source order (62zl, `affiliation_calls`; before, the marked row was
+/// placed after the unmarked one). Repro sectioning-frontmatter/author_block_appended_after_author_is_kept.
 #[test]
 fn author_block_appended_after_author_is_kept() {
   let tex = include_str!(
@@ -208,8 +208,7 @@ fn author_block_appended_after_author_is_kept() {
     "creator",
     &["role=\"author\""],
     "<creator role=\"author\"><personname>A. Author</personname><contact \
-     role=\"authorblock\">Emails: a@b.c</contact><contact role=\"authorblock\">Affiliation \
-     one</contact></creator>",
+     role=\"authorblock\">Affiliation one<break/>Emails: a@b.c</contact></creator>",
   );
 }
 

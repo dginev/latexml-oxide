@@ -1479,6 +1479,20 @@ gave author 1 nothing and author 2 both; 2609.21347, 22690); a line with text be
 (`Present address: $^2$Univ C`) stays whole. `trim_trailing_separator` drops a trailing `;` as well
 as a trailing `,`. Guards `perfect_kernel_batch61::{marked_affiliation_lines_split_at_their_marks,
 informs_author_marks_link_affiliations}`.
+In the same marked branch an unmarked line continues the affiliation before it, its `\\` put back
+(`$^1$Department\\University` is one affiliation; each line had been its own, the unmarked ones placed by position —
+2609.19448), as an unmarked line continues an entry in `\lx@add@authors` — not across `\and`, which ends an entry there
+too (#52(g)), nor a line opening with a footnote symbol (`* Equal contribution`, `$\dagger$ …`, `\dag …`), a legend
+for the whole block (llncs `\institute`, 2609.06094); a line of addresses goes through `email_line_calls`, which
+both paths now share, placed as #52(j) says. A declaration opening a line (`\large`, `\color{blue}`; only the NFSS
+selectors and `\color` take brace arguments — `\textbf{Ann}` is content) is no text before its mark. The splitter cuts only outside groups, and a line opening with a font
+command or a group that holds the marks (`\textit{$^1$A, $^2$B}`, `{\small …}`, `{\color{blue} $^1$A, …}`,
+`\small{$^1$A, $^2$B}. Email: …`) is split inside it, the wrapper (a group with its opening declarations and their
+arguments) repeated on each piece and what follows split at its own marks; a `\thanks{…}` wrapper is unwrapped, its
+mark-led content being the affiliation list as in `\lx@add@thanks` (`split_wrapped_affiliation_marks`,
+`marker_leads`, 62zl; 2609.00995, 24896). Guards `perfect_kernel_batch61::{marked_affiliation_continuation_lines_stay_with_it,
+marked_affiliations_inside_a_font_group_keep_the_font, marked_affiliation_wrappers_and_legends,
+marked_affiliation_review_shapes}`.
 
 **(g) `\and` is a HARD author boundary in the superscript-marker branch.** The
 marker-branch flat-split `\and`/`\quad`/`\\` into one list, then appended any
@@ -1560,11 +1574,33 @@ are no more than one per author, hands each to `\lx@add@email` with `labelseq=au
 - **Grouped brace-expansion (`{a,b,c}@dom`)** → expand to `a@dom, b@dom, c@dom` first, then
   distribute; the expansion is never glued into an affiliation label.
 - **A single shared address** → `author:1`, the LEAD author, never a trailing one.
-A whole-line `\texttt`/`\url` wrapper is re-applied per address. MORE addresses than authors
-cannot map cleanly, so the original line is kept as one contact (the prior behavior). Witness
-arXiv:2605.23553 (`frontmatter_ieee_linebreak_optarg`). Guard
-`06_cluster_frontmatter::frontmatter_shared_email_distribution` (fixtures
-`frontmatter_email_{distributed,grouped,single_shared}.tex`).
+A whole-line wrapper (`\texttt`, `\small`, `\url`, …) is re-applied per address; an email command's (`\email`,
+`\mailto`, `\emailaddr` — a name containing `mail`) is dropped, as nested in `\lx@add@email` it made a second, empty
+contact and advanced the `labelseq` count twice. MORE addresses than authors cannot map cleanly, so the line is kept
+as one contact (the prior behavior), without the email command's wrapper. Witness arXiv:2605.23553
+(`frontmatter_ieee_linebreak_optarg`). The same `email_line_calls` (62zl) serves address lines in a marked
+affiliation list (`affiliation_calls` → `place_address_runs`), placed as runs of consecutive address lines once the
+whole list is read. An address claims an author only where the list says whose it is, by that author's queue
+position (an explicit `author:N` label; `labelseq=author` counts every earlier email contact, which had made a creator
+with no name):
+- **The list puts addresses under its affiliations** (it has one marked affiliation, or a run sits above another
+  that is not a footnote-symbol legend such as `$^\dagger$ Corresponding author`; 2609.19448) → one address under an affiliation exactly one author requests is that author's; any other run under
+  an affiliation continues it, as the PDF prints it — an affiliation several authors share, or several addresses
+  under one author's, which may be everyone's.
+- **Otherwise the runs are the block's** → one address for each author goes to the authors in order (llncs
+  `\institute{$^1$A \\ $^2$B \\ \email{a@x} \\ \email{b@y}}`); any other is one contact a line on the shared creator
+  below the authors (#159) — 2609.06094's four addresses for six authors had gone, by order, Jindong Gu's to Runjia
+  Li, and by the mark of the affiliation they follow, three to the wrong author.
+`\and` ends a run as it ends an entry. A line with one address is kept as written (`\href{mailto:a@x}{a@x}` stays a link; `email_addresses` reads past
+`\href`'s URL and a `mailto:`). An `\author` call's tail (`author_tail_calls`) is placed so only at `\maketitle` when
+that call made every author; before a later `\author`, its unmarked lines stay its own creators' rows. A marked
+iopart `\address` before any `\author` keeps its labelled affiliations for the authors to come. Residuals: an
+unwrapped llncs `\email` loses the class's `E-mail` contact name for the generic `Email:`; the `\lx@add@authors`
+email line still places by `labelseq=author`; a trailing `$^\dagger$` legend makes a one-affiliation list count as
+several, so its addresses go by order rather than continue the affiliation (neither misplaces one); apa7
+affiliations given with no names are not kept.
+Guards `06_cluster_frontmatter::frontmatter_shared_email_distribution` (fixtures
+`frontmatter_email_{distributed,grouped,single_shared}.tex`), `perfect_kernel_batch61::marked_affiliation_review_shapes`.
 
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still

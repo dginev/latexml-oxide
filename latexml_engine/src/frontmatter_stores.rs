@@ -209,7 +209,10 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
 }
 
 /// The calls handing the last `\author` call's tail (`\lx@author@handed`) to the creators it made.
-fn author_tail_calls() -> Result<Vec<Token>> {
+/// `at_maketitle`: no `\author` call follows, so when this one made every author, all are queued and
+/// the tail's unmarked lines may be placed by the marks (`affiliation_calls`); else they are rows of
+/// this call's creators, as a later author's marks are not yet known.
+fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
   let Some(Stored::Tokens(handed)) = lookup_value("lx_author_handed") else {
     return Ok(Vec::new());
   };
@@ -243,7 +246,14 @@ fn author_tail_calls() -> Result<Vec<Token>> {
   let marked = mouth::tokenize_internal(TeXString::assembled(
     "_store=author,role=authorblock".to_string(),
   ));
-  affiliation_calls(Some(attr), Some(marked), tail, queued_creators_have_marks())
+  let authors_queued = at_maketitle && made as usize == queued_creator_count();
+  affiliation_calls(
+    Some(attr),
+    Some(marked),
+    tail,
+    queued_creators_have_marks(),
+    authors_queued,
+  )
 }
 
 /// A store value of spaces only.
@@ -384,6 +394,7 @@ LoadDefinitions!({
       Some(marked),
       stuff,
       queued_creators_have_marks(),
+      true,
     )?))
   });
   // The author block: what code appends to `\@author` after `\author` stored it — a template's
@@ -411,7 +422,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@author@flush", sub[_args] {
     // Only an appending `\author` (a class redefined it) keeps the earlier authors; the kernel's
     // replaces them and `\@author` with them, the tail too, as LaTeX does.
-    let calls = if lookup_bool("\\author:redefined") { author_tail_calls()? } else { Vec::new() };
+    let calls = if lookup_bool("\\author:redefined") { author_tail_calls(false)? } else { Vec::new() };
     assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
     assign_value(
       "lx_author_creators_before",
@@ -421,7 +432,7 @@ LoadDefinitions!({
     Ok(Tokens::new(calls))
   });
   DefMacro!("\\lx@author@tail", sub[_args] {
-    let calls = author_tail_calls()?;
+    let calls = author_tail_calls(true)?;
     assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
     Ok(Tokens::new(calls))
   });

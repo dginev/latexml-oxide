@@ -46,7 +46,11 @@ LoadDefinitions!({
   DefMacro!("\\theequation", "\\ifnumbysec\\arabic{section}.\\arabic{equation}\\else\\arabic{equation}\\fi");
 
   // Authors (Perl PR #2767)
-  DefMacro!("\\address{}", "\\lx@add@affiliations{#1}");
+  // iopart.cls:240-248: "Use once for each address" — each `\address` prints its own block, so each adds its
+  // affiliation, linked by its superscript marks when the authors carry them. Perl's `\lx@add@affiliations`
+  // (iopart_support.sty.ltxml:53) dequeues the affiliations before it, so only the last `\address` survived
+  // (KNOWN_PERL_ERRORS #511; 21 of the 41 2609 iopart papers call it more than once, 2609.01831 lost three of four).
+  DefMacro!("\\address{}", "\\lx@add@affiliation@marked{#1}");
   DefMacro!("\\ead Semiverbatim", "\\lx@add@email{#1}");
 
   // NOTE: NO `\received`/`\revised`/`\accepted`/`\published`/`\online` date

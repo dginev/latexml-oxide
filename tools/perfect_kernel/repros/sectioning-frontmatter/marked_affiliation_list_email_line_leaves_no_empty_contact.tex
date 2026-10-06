@@ -1,0 +1,20 @@
+% witness: 2609.06094 (llncs `\institute{$^1$ … \\ $^5$ University of Oxford, UK \\ \email{…} \\ \email{…} \\ * Equal
+%          Contribution \quad $\dagger$ Corresponding Author}`); 62zl A/B side finding
+% oracle:  pdflatex 0 errors: "1 Univ A", "2 Univ B", "a@x.y, b@x.y" (llncs prints the addresses under the institutes)
+% engines: rust (62zk8, 62zl6) = 0 errors: Bob Baker holds an EMPTY <contact role="affiliation"/> beside the email
+%          contact: in a marked affiliation list the `\email{…}` line is an affiliation of its own (unlabelled), whose
+%          address `\lx@add@email` takes out, leaving the shell; unmarked (`\institute{Univ A \\ \email{a@x.y}}`) there is
+%          no shell; perl = no mark linking
+%          rust (62zl, review round 1) = each address of the line to its author in order, as `\lx@add@authors` takes an
+%          address line (`email_line_calls`, which no longer nests the `\email{…}` wrapper in `\lx@add@email`): Ann
+%          a@x.y, Bob b@x.y, no empty contact
+% expect:  0 errors; no empty <contact role="affiliation"/>; the email contact kept
+% status:  GREEN (62zl; guard perfect_kernel_batch61::marked_affiliation_review_shapes)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{a@x.y, b@x.y}}
+\maketitle
+Text.
+\end{document}

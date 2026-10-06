@@ -1,0 +1,20 @@
+% witness: 2609.19448 (apa7: `\authorsaffiliations{$^1$Department of Informatics\\University of Edinburgh\\
+%          \texttt{…}\\[2ex] $^2$Department of Psychology\\…}`); iopart's `\address{$^1$Dept\\Univ}` the same shape
+% oracle:  pdflatex (iopart.cls of 2609.01831) 0 errors: "1 Dept A", "Univ A", "2 Dept B", "Univ B"
+% engines: rust (62zl2) = 0 errors, Ann Able holds "Univ A" and "Dept A" as two affiliations, the unlabelled one
+%          first (Bob Baker the same): in a marked affiliation list each `\\` line was its own affiliation, an unmarked
+%          one unlabelled, attached by position rather than by mark; with several authors in one `\address` list it
+%          went to the last author (2609.19448 apa7 shape); rust (62zl3) = an unmarked line continues the affiliation
+%          before it (as `\lx@add@authors` continues an entry): one affiliation "Dept A<break/>Univ A"; perl = no mark
+%          linking
+% expect:  0 errors; Ann Able holds one <contact role="affiliation">Dept A<break/>Univ A</contact>, Bob Baker Dept B…
+% status:  GREEN (62zl; guard perfect_kernel_batch61::marked_affiliation_continuation_lines_stay_with_it)
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{$^1$Dept A\\ Univ A}
+\address{$^2$Dept B\\ Univ B}
+\maketitle
+Text.
+\end{document}

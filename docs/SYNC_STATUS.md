@@ -410,6 +410,40 @@ note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head fon
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
 
+62zl: iopart's `\address` adds its affiliation on each call, as iopart.cls prints one block per call (:240-248),
+through `\lx@add@affiliation@marked`; Perl's `\lx@add@affiliations` dequeued the ones before, keeping only the last
+(KNOWN_PERL_ERRORS #511; 21 of the 41 2609 iopart papers call it more than once, 2609.01831 lost three of four). In a
+marked affiliation list (`affiliation_calls`) an unmarked line continues the affiliation before it, as in
+`\lx@add@authors` (each `\\` line had been its own affiliation, the unmarked ones placed by position; 2609.19448) —
+not across `\and` (an entry boundary there too), nor a footnote-symbol legend (`* Equal contribution`, `\dag …`),
+which stays apart (llncs `\institute`, 2609.06094); address lines are placed as runs once the list is
+read (`place_address_runs`, explicit `author:N` labels): where the list puts addresses under its affiliations (one
+affiliation, or a run above another that is no footnote-symbol legend; 2609.19448), one address under an affiliation one author requests is theirs and
+any other run continues the affiliation; else the runs are the block's — by order when there is one address per
+author, else on the shared creator below the authors (2609.06094); a one-address line is kept as written
+(`\href{mailto:…}` stays a link), an `\author` call's tail is placed so only at `\maketitle` when that call made
+every author, and a marked iopart `\address` before `\author` keeps its affiliations (`email_line_calls`, shared with
+`\lx@add@authors`; an email command's wrapper is no longer nested in `\lx@add@email`; DIVERGENCES #52(j)); the mark splitter cuts only outside
+groups, and a line opening with a font command or group that holds the marks (`\textit{$^1$A, $^2$B}`, `{\small …}`,
+`\small{$^1$A, $^2$B}. Email: …`, `{\color{blue} $^1$A, …}`) is split inside it, the wrapper (a group with its opening
+declarations and their arguments) repeated on each piece and what follows split at its own marks, while a
+`\thanks{…}` holding the list is unwrapped (2609.00995, 24896: both had regressed under a depth-only rule,
+caught by the A/B) (OXIDIZED_DESIGN_DIVERGENCES #52(f)). A new
+apa7 binding (contrib) reads apa7.cls itself for its modes, packages and bibliography choice (none by default, :179-216
+— the dependency scan had loaded both biblatex and apacite, 17 malformed bibitems in 2609.02899) and maps its author
+block onto the frontmatter API: `\authorsnames[marks]{names}` with `\authorsaffiliations{…}` numbered in order, linked
+through the kernel's author-line parser (affiliations given first are kept until the names, as apa7.cls builds the
+title block from stored lists at `\maketitle`, :780-890); `\author` (the class's one-name `\authorsnames`), `\authornote`, `\note`, `\abstract{}`, `\keywords{}`
+(`\lx@add@keywords`); the student page's course, instructor and due date and the journal masthead's journal, volume,
+copyright and number, as the modes print them; `\addORCIDlink` as the kernel ORCID link; `\doi` a link to the record, where apacite's own sets url-styled text only (semantic markup before
+PDF fidelity, user 2026-10-06); `mask` hides the author identity as the PDF does (:131; user 2026-10-06); the kernel's `\appendix`
+stands over the class's (:1041-1075, whose `\section` redefinition the kernel refuses: "Appendix 9" for "Appendix A",
+2609.00670). 4 papers, 32 errors -> 0 (2609.00670, 02899, 12869, 19448). RED `marked_affiliation_list_email_line_leaves_no_empty_contact` (in a
+marked list an `\email{…}` line had left an empty affiliation contact; GREEN with the shared `email_line_calls`). Guards `perfect_kernel_batch61::{iopart_each_address_adds_an_affiliation,
+marked_affiliations_inside_a_font_group_keep_the_font, marked_affiliation_continuation_lines_stay_with_it,
+marked_affiliation_wrappers_and_legends, marked_affiliation_review_shapes, apa7_author_block_maps_onto_the_frontmatter}` (and `omnibus_doi_reads_as_a_url`
+now on apa6, OmniBus's class, with apa7's linked DOI beside it).
+
 62zk: the informs binding (informs3 and its h/a/noheader copies, informs4 and its copies, informs5) gains the class
 API its papers use — the journal switches and the review options (informs4.cls:9-54; informs3 declares twelve journals
 and no anonymous-review options), the stored metadata and running heads and feet (:948-985, read back as
@@ -442,11 +476,8 @@ notes though the class prints them only in the page heads (page furniture). RED
 as Perl does); RED `affiliation_before_any_author_is_kept` (an `\AFF` before any `\AUTHOR` is lost without a warning;
 Perl removes an unlabelled pending annotation silently too); RED `author_symbol_mark_links_its_affiliation` (a
 symbol-only author mark `$^{*}$` is kept visible and requests nothing, so `\AFF{$^*$…}` lands on a creator with no
-name); RED `iopart_each_address_adds_an_affiliation` (iopart's `\address` is `\lx@add@affiliations`, which dequeues
-the affiliations before it, so only the last of several `\address` calls survives — SHARED with Perl; 15 of the 41
-2609 iopart papers, 2609.01831 loses three of four; next batch); `split_before_affiliation_marks`, now reached from
-`affiliation_calls`, ignores brace depth (RED `affiliation_marks_inside_a_font_group_keep_the_font`: the second
-piece leaves `\textit{…}`) and takes any whitespace-preceded superscript for a mark (RED
+name); `iopart_each_address_adds_an_affiliation` (fixed by 62zl); `split_before_affiliation_marks`, now reached from
+`affiliation_calls`, ignored brace depth (`affiliation_marks_inside_a_font_group_keep_the_font`, fixed by 62zl) and takes any whitespace-preceded superscript for a mark (RED
 `affiliation_line_superscript_ordinal_is_not_a_mark`: `5 \textsuperscript{th} floor` splits, "th" lost, " floor" on
 a name-less creator — before, the whole line was); splitting only at marks a queued author requests would cover both. Kernel author-mark linking, side findings (RED
 `sectioning-frontmatter/author_suffix_marks_after_commas_link_affiliations`, SHARED with Perl, 2609.25924; RED

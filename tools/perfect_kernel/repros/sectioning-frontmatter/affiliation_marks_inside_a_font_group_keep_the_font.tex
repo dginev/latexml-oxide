@@ -3,8 +3,10 @@
 % engines: rust (62zk) = 0 errors, Ann Able holds Univ A and Bob Baker Univ B, but "Univ B" is upright:
 %          split_before_affiliation_marks splits at a mark inside the `\textit{…}` group (it does not track brace
 %          depth), so the second piece leaves the group; perl has no mark splitting (one affiliation, unlinked)
+%          rust (62zl) = the splitter cuts only outside groups, and a line wrapped whole in a font command or group
+%          is split inside it with the wrapper repeated on each piece: both italic
 % expect:  0 errors; both affiliations linked and both italic (<text font="italic">)
-% status:  RED
+% status:  GREEN (62zl; guard perfect_kernel_batch61::marked_affiliations_inside_a_font_group_keep_the_font)
 \documentclass{iopart}
 \begin{document}
 \title{T}

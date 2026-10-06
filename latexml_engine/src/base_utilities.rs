@@ -1049,7 +1049,7 @@ LoadDefinitions!({
       // the MathSciNet review path (issue 410). Witness arXiv:2606.00313.
       let retok = mouth::tokenize_internal(content.clone().untex_string());
       let mut calls: Vec<Token> = Vec::new();
-      for seg in split_before_affiliation_marks(retok) {
+      for seg in split_wrapped_affiliation_marks(retok) {
         if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
           continue;
         }
@@ -1324,14 +1324,14 @@ LoadDefinitions!({
                 entries.push((AuthorLineKind::Author, line));
               }
             },
-            Some(p) => {
+            Some(_) => {
               // "\textsuperscript{n}Affil" (the marker LEADS the line) → an
               // affiliation; "Name\textsuperscript{n}" (a name precedes the
               // marker) → an author line, split into the individual creators it
               // names (see split_author_line). The old `p < 8` token-count proxy
               // misread short author names like "Min Xu" (html_feedback#6614) —
               // key on name-before-marker, which is length-independent.
-              if name_precedes_marker(&line, p) {
+              if !marker_leads(&line) {
                 for author in split_author_line(line) {
                   entries.push((AuthorLineKind::Author, author));
                 }
@@ -1344,7 +1344,7 @@ LoadDefinitions!({
                 // superscript glued INSIDE an institution name) so each numbered
                 // institution becomes its own affiliation and attaches to its authors
                 // by number, instead of merging into one.
-                for seg in split_before_affiliation_marks(line) {
+                for seg in split_wrapped_affiliation_marks(line) {
                   if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
                     continue;
                   }
@@ -1384,29 +1384,13 @@ LoadDefinitions!({
             // \texttt/\url wrapper by re-wrapping each address. If there are MORE
             // addresses than authors (cannot map cleanly), keep the original line
             // as one contact (the prior behavior). OXIDIZED_DESIGN #52(j).
-            let wrapper = whole_line_cs_wrapper(&line).map(|(cmd, _)| cmd);
-            let addrs = email_addresses(&line).unwrap_or_default();
-            if !addrs.is_empty() && author_count >= 1 && addrs.len() <= author_count {
-              for addr in addrs {
-                let mut toks = mouth::tokenize(TeXString::assembled(addr)).unlist();
-                if let Some(cmd) = wrapper {
-                  let mut wrapped = vec![cmd, T_BEGIN!()];
-                  wrapped.append(&mut toks);
-                  wrapped.push(T_END!());
-                  toks = wrapped;
-                }
-                let opts = mouth::tokenize_internal("labelseq=author");
-                calls.extend(
-                  Invocation!(T_CS!("\\lx@add@email"), vec![
-                    Some(opts),
-                    Some(Tokens::new(toks))
-                  ])
-                  .unlist(),
-                );
-              }
+            let addresses = email_addresses(&line).map_or(0, |a| a.len());
+            let placement = if author_count >= 1 && addresses <= author_count {
+              AddressPlacement::Sequence
             } else {
-              calls.extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(line)]).unlist());
-            }
+              AddressPlacement::OneContact
+            };
+            calls.extend(email_line_calls(line, placement)?);
           },
         }
       }
@@ -1476,12 +1460,17 @@ LoadDefinitions!({
   DefMacro!("\\lx@add@authors@append{}", sub[(stuff)] { add_authors_calls(stuff, false) });
   // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): when the queued authors
   // carry marks, its marked lines are affiliations labelled by their marks, which go to the authors requesting them
-  // (`affiliation_calls`; 2609.17368, 22690, 28084); otherwise it is one affiliation of the last author.
-  DefMacro!("\\lx@add@affiliation@marked{}", sub[(stuff)] {
-    if queued_creators_have_marks() && position_of(&stuff, &authorsup_markers()).is_some() {
-      Ok(Tokens::new(affiliation_calls(None, None, stuff, true)?))
+  // (`affiliation_calls`; 2609.17368, 22690, 28084); otherwise it is one affiliation, of the last author or as the
+  // optional attributes place it (apa7's unnumbered list, `annotate=all`).
+  DefMacro!("\\lx@add@affiliation@marked[]{}", sub[(attr, stuff)] {
+    // (before any author, the marks are labels for the authors to come: an affiliation without its label had no one
+    // to go to)
+    if (queued_creators_have_marks() || queued_creator_count() == 0)
+      && position_of(&stuff, &authorsup_markers()).is_some()
+    {
+      Ok(Tokens::new(affiliation_calls(None, None, stuff, true, true)?))
     } else {
-      Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(stuff)]))
+      Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
     }
   });
   DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] { add_authors_calls_sectioned(stuff, true, false) });
@@ -1591,7 +1580,7 @@ LoadDefinitions!({
 
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
     dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
-    Ok(Tokens::new(affiliation_calls(attr, None, stuff, true)?))
+    Ok(Tokens::new(affiliation_calls(attr, None, stuff, true, true)?))
   });
 
   DefMacro!("\\lx@date@received@name", "Received~");
@@ -2148,17 +2137,30 @@ LoadDefinitions!({
 /// entry, each with its superscript marker as its label when the list has markers (Perl
 /// Base_Utility.pool.ltxml:742-753, the body of `\lx@add@affiliations` after its dequeue). `attr`
 /// is passed to each entry, `marked_attr` instead when the list has markers and `marks_are_labels`.
+/// `authors_queued` says every author is queued, so an unmarked line may be placed by the marks: an
+/// address run by its authors' positions, another line with the affiliation before it. An `\author`
+/// call's tail (`author_tail_calls`) may come before later authors, and then its unmarked lines are
+/// its own creators' rows, as each was before.
 pub fn affiliation_calls(
   attr: Option<Tokens>,
   marked_attr: Option<Tokens>,
   stuff: Tokens,
   marks_are_labels: bool,
+  authors_queued: bool,
 ) -> Result<Vec<Token>> {
   let mut calls: Vec<Token> = Vec::new();
   // Consume `\\[len]` row-break optionals before splitting (KNOWN_PERL_ERRORS #75).
   let stuff = strip_linebreak_options(stuff);
   let with_sup = marks_are_labels && position_of(&stuff, &authorsup_markers()).is_some();
-  for line in split_tokens(stuff, affil_splits()) {
+  // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
+  // that follow it.
+  let mut marked_entries: Vec<Vec<Token>> = Vec::new();
+  // The runs of address lines, placed once the whole list is read (`place_address_runs`); whether a run is being
+  // read, and whether the line just read was an entry or its continuation.
+  let mut address_runs: Vec<AddressRun> = Vec::new();
+  let mut in_run = false;
+  let mut follows_entry = false;
+  for (delimiter, line) in split_tokens_delimited(stuff, affil_splits()) {
     // Skip empty segments (e.g. a trailing \\ or a line that was wholly
     // consumed by an \email/\url) so they don't become blank affiliations.
     // Mirrors \lx@add@authors.
@@ -2166,6 +2168,48 @@ pub fn affiliation_calls(
       continue;
     }
     if with_sup {
+      let across_and = delimiter.iter().any(|t| {
+        author_and_splits()
+          .iter()
+          .any(|d| matches!(d, SplitDelim::Token(a) if a == t))
+      });
+      if authors_queued
+        && position_of(&line, &authorsup_markers()).is_none()
+        && line_is_email_list(&line)
+      {
+        // (`\and` separates entries, and runs: `Univ A \\ a@x \and b@y` is two)
+        if !in_run || across_and {
+          let under = (follows_entry && !across_and).then(|| {
+            let entry = marked_entries.len() - 1;
+            (entry, marked_entries[entry].len())
+          });
+          address_runs.push(AddressRun { lines: Vec::new(), under });
+          in_run = true;
+        }
+        if let Some(run) = address_runs.last_mut() {
+          run.lines.push((delimiter, line));
+        }
+        follows_entry = false;
+        continue;
+      }
+      in_run = false;
+      // An unmarked line continues the affiliation before it, with its `\\` put back, as an unmarked line continues
+      // an entry in `\lx@add@authors`: `$^1$Department\\University` is one affiliation; on its own, an unlabelled
+      // line was placed by position, not by mark (2609.19448; repro
+      // sectioning-frontmatter/marked_affiliation_continuation_lines_stay_with_it). Not across `\and`, which
+      // separates entries there too (DIVERGENCES #52(g)), nor a footnote-symbol legend (`* Equal contribution`,
+      // `$\dagger$ Corresponding author`), which belongs to the whole block (llncs `\institute`, 2609.06094).
+      if authors_queued
+        && position_of(&line, &authorsup_markers()).is_none()
+        && !across_and
+        && !starts_with_footnote_symbol(&line)
+        && let Some(last) = marked_entries.last_mut()
+      {
+        last.extend(delimiter);
+        last.extend(line.unlist());
+        follows_entry = true;
+        continue;
+      }
       // The superscript markers ARE the affiliation labels here, so drop any
       // caller-supplied labelseq: applying both double-labels each affiliation
       // and duplicates it onto every \inst{n} author. Mirrors \lx@add@authors,
@@ -2175,22 +2219,17 @@ pub fn affiliation_calls(
       // lines: one label per affiliation, else the last mark labelled them all (2609.22690, 21347). A
       // line with text before its first mark (`Univ X \\ Present address: $^2$Univ Y`'s second line)
       // stays whole, as there.
-      let segs = match position_of(&line, &authorsup_markers()) {
-        Some(p) if !name_precedes_marker(&line, p) => split_before_affiliation_marks(line),
-        _ => vec![line],
+      let segs = if marker_leads(&line) {
+        split_wrapped_affiliation_marks(line)
+      } else {
+        vec![line]
       };
       for seg in segs {
         if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
           continue;
         }
-        let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(seg)]);
-        calls.extend(
-          Invocation!(T_CS!("\\lx@add@affiliation"), vec![
-            marked_attr.clone(),
-            Some(withsup)
-          ])
-          .unlist(),
-        );
+        marked_entries.push(seg.unlist());
+        follows_entry = true;
       }
     } else {
       calls.extend(
@@ -2202,7 +2241,291 @@ pub fn affiliation_calls(
       );
     }
   }
+  let email_calls = place_address_runs(address_runs, &mut marked_entries)?;
+  for entry in marked_entries {
+    let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(Tokens::new(
+      entry
+    ))]);
+    calls.extend(
+      Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+        marked_attr.clone(),
+        Some(withsup)
+      ])
+      .unlist(),
+    );
+  }
+  calls.extend(email_calls);
   Ok(calls)
+}
+
+/// A run of consecutive address lines in a marked affiliation list, with the entry it follows (when the line before
+/// it was that entry, not across `\and`) and the length that entry had when the run was read: where a continuation
+/// goes.
+struct AddressRun {
+  lines: Vec<(Vec<Token>, Tokens)>,
+  under: Option<(usize, usize)>,
+}
+
+/// The `\lx@add@email` calls for the address runs of a marked affiliation list (OXIDIZED_DESIGN #52(j)); a run that
+/// stays with its affiliation is spliced into that entry. An address claims an author only where the list says
+/// whose it is:
+/// - when the list puts addresses under its affiliations — it has one, or a run sits between two (2609.19448
+///   `$^1$Department\\University\\\texttt{david.abel@ed.ac.uk}\\[2ex]$^2$…`) — one address under an affiliation
+///   exactly one author requests is that author's; any other run under an affiliation continues it, as the PDF prints
+///   it, claiming no author (an affiliation several authors share, or several addresses under one author's, which
+///   may be everyone's);
+/// - else the run is the block's: one address for each author goes to the authors in order (llncs
+///   `\institute{$^1$A \\ $^2$B \\ \email{a@x} \\ \email{b@y}}`), any other is one contact a line on the shared
+///   creator below the authors (#159) — by order, 2609.06094's four addresses for six authors had given Jindong
+///   Gu's to Runjia Li, and by the mark of the affiliation they follow, three of them to the wrong author.
+fn place_address_runs(runs: Vec<AddressRun>, entries: &mut [Vec<Token>]) -> Result<Vec<Token>> {
+  let authors = queued_author_marks();
+  // (a legend line, `* Equal contribution`, is an entry with no mark; nor does a footnote-symbol mark after a run,
+  // `$^\dagger$ Corresponding author`, show the run sits under an affiliation — as an iopart `\address`'s one mark it
+  // still labels one)
+  let marks: Vec<Option<Vec<Token>>> = entries.iter().map(|entry| entry_mark(entry)).collect();
+  let affiliation_follows = |entry: usize| {
+    marks[entry + 1..]
+      .iter()
+      .flatten()
+      .any(|mark| !is_symbol_mark(mark))
+  };
+  let under_affiliations = marks.iter().flatten().count() == 1
+    || runs.iter().any(|run| {
+      run
+        .under
+        .is_some_and(|(entry, _)| affiliation_follows(entry))
+    });
+  let mut placed: Vec<Vec<Token>> = Vec::new();
+  // In reverse, so a continuation spliced into an entry leaves the places of the runs before it there.
+  for run in runs.into_iter().rev() {
+    let counts: Vec<usize> = run
+      .lines
+      .iter()
+      .map(|(_, line)| email_addresses(line).map_or(0, |a| a.len()))
+      .collect();
+    let total: usize = counts.iter().sum();
+    let mut calls = Vec::new();
+    match run.under {
+      Some((entry, at)) if under_affiliations => {
+        let requesting = entry_mark(&entries[entry])
+          .map_or_else(Vec::new, |mark| requesting_authors(&authors, &mark));
+        if let ([author], 1) = (requesting.as_slice(), total) {
+          for (_, line) in run.lines {
+            calls.extend(email_line_calls(
+              line,
+              AddressPlacement::Authors(vec![*author]),
+            )?);
+          }
+        } else {
+          let continuation: Vec<Token> = run
+            .lines
+            .into_iter()
+            .flat_map(|(delimiter, line)| delimiter.into_iter().chain(line.unlist()))
+            .collect();
+          entries[entry].splice(at..at, continuation);
+        }
+      },
+      _ if total == authors.len() => {
+        let mut positions = 1..;
+        for ((_, line), count) in run.lines.into_iter().zip(counts) {
+          let authors = positions.by_ref().take(count).collect();
+          calls.extend(email_line_calls(line, AddressPlacement::Authors(authors))?);
+        }
+      },
+      _ => {
+        for (_, line) in run.lines {
+          calls.extend(email_line_calls(line, AddressPlacement::Shared)?);
+        }
+      },
+    }
+    placed.push(calls);
+  }
+  Ok(placed.into_iter().rev().flatten().collect())
+}
+
+/// The queue positions of the authors whose marks request the affiliation label `mark` sets.
+fn requesting_authors(authors: &[Vec<Vec<Token>>], mark: &[Token]) -> Vec<usize> {
+  let Some(label) = mark_label(mark) else {
+    return Vec::new();
+  };
+  authors
+    .iter()
+    .enumerate()
+    .filter(|(_, marks)| {
+      marks.iter().any(|operand| {
+        clean_frontmatter_labels(&Tokens::new(operand.clone()).to_string(), "affiliation")
+          .contains(&label)
+      })
+    })
+    .map(|(i, _)| i + 1)
+    .collect()
+}
+
+/// Where the addresses of a line in an author block go.
+enum AddressPlacement {
+  /// The whole line is one contact, attached as an unlabelled email is.
+  OneContact,
+  /// The n-th address to the n-th author, counted over the emails so far (`labelseq=author`).
+  Sequence,
+  /// Each address to the author at that queue position, by the `author:N` label the creator digests with.
+  Authors(Vec<usize>),
+  /// The whole line is one contact of the author block, on the shared creator below the authors (#159): its label
+  /// names no creator.
+  Shared,
+}
+
+/// The `\lx@add@email` calls for a line of addresses in an author block (`a@x, b@y`, `{a,b}@dom`), placed as
+/// `placement` says: one call per address, a whole-line wrapper repeated on each, or the line itself when it holds one
+/// address (`\href{mailto:a@x}{a@x}` stays a link); else the line as one contact. OXIDIZED_DESIGN #52(j).
+fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Token>> {
+  let mut calls = Vec::new();
+  // A wrapper is kept on each address (`\texttt`, `\small`, `\url`), but an email command's (`\email`, `\mailto`,
+  // `\emailaddr`) is the contact `\lx@add@email` stands for — nested, it made a second (empty) contact and advanced
+  // the `labelseq` count twice, so the second address found no author (llncs `\institute{… \\ \email{a@x, b@y}}`).
+  let is_email_command = |cmd: &Token| cmd.with_str(|name| name.to_lowercase().contains("mail"));
+  let unwrapped = |line: Tokens| match whole_line_cs_wrapper(&line) {
+    Some((cmd, inner)) if is_email_command(&cmd) => inner,
+    _ => line,
+  };
+  let addrs = email_addresses(&line).unwrap_or_default();
+  let options: Vec<Option<Tokens>> = match placement {
+    AddressPlacement::Sequence if !addrs.is_empty() => addrs
+      .iter()
+      .map(|_| Some(mouth::tokenize_internal("labelseq=author")))
+      .collect(),
+    AddressPlacement::Authors(authors) if !addrs.is_empty() && authors.len() == addrs.len() => {
+      authors
+        .into_iter()
+        .map(|n| {
+          Some(mouth::tokenize_internal(TeXString::assembled(s!(
+            "label=author:{n}"
+          ))))
+        })
+        .collect()
+    },
+    placement => {
+      // One contact; an email command's wrapper is the contact itself.
+      let opts = matches!(placement, AddressPlacement::Shared)
+        .then(|| mouth::tokenize_internal("label=addresses:block"));
+      calls
+        .extend(Invocation!(T_CS!("\\lx@add@email"), vec![opts, Some(unwrapped(line))]).unlist());
+      return Ok(calls);
+    },
+  };
+  if let [opts] = options.as_slice() {
+    calls.extend(
+      Invocation!(T_CS!("\\lx@add@email"), vec![
+        opts.clone(),
+        Some(unwrapped(line))
+      ])
+      .unlist(),
+    );
+    return Ok(calls);
+  }
+  let wrapper = whole_line_cs_wrapper(&line)
+    .map(|(cmd, _)| cmd)
+    .filter(|cmd| !is_email_command(cmd));
+  for (addr, opts) in addrs.into_iter().zip(options) {
+    let mut toks = mouth::tokenize(TeXString::assembled(addr)).unlist();
+    if let Some(cmd) = wrapper {
+      let mut wrapped = vec![cmd, T_BEGIN!()];
+      wrapped.append(&mut toks);
+      wrapped.push(T_END!());
+      toks = wrapped;
+    }
+    calls
+      .extend(Invocation!(T_CS!("\\lx@add@email"), vec![opts, Some(Tokens::new(toks))]).unlist());
+  }
+  Ok(calls)
+}
+
+/// The marks that request an affiliation label in an author (`\lx@author@withsup`, llncs `\inst`) and set it in an
+/// affiliation (`\lx@affiliation@withsup`, `\lx@affiliation@withinst`).
+fn affiliation_mark_tokens() -> [Token; 3] {
+  [T_SUPER!(), T_CS!("\\textsuperscript"), T_CS!("\\inst")]
+}
+
+/// The operand of each mark in `tokens`, in order, read as `read_frontmatter_sup_operand` reads it.
+fn mark_operands(tokens: &[Token]) -> Vec<Vec<Token>> {
+  let marks = affiliation_mark_tokens();
+  let mut operands = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    if marks.contains(&tokens[i])
+      && let Some((operand, next)) = sup_operand_at(tokens, i + 1)
+    {
+      operands.push(operand);
+      i = next;
+    } else {
+      i += 1;
+    }
+  }
+  operands
+}
+
+/// The operand of an affiliation entry's last mark, which `\lx@sup@setlabel@affiliation` labels it by.
+fn entry_mark(entry: &[Token]) -> Option<Vec<Token>> { mark_operands(entry).pop() }
+
+/// The label `\lx@sup@setlabel@affiliation` sets for a mark's operand: the first of its labels.
+fn mark_label(operand: &[Token]) -> Option<String> {
+  clean_frontmatter_labels(&Tokens::new(operand.to_vec()).to_string(), "affiliation")
+    .into_iter()
+    .next()
+}
+
+/// The mark operands of each queued author, in queue order: the n-th digests with the label `author:n`
+/// (`num_ltx:creator{author}`), by which an address goes to it — as the count starts from no author, which holds
+/// unless authors an earlier flush digested are still kept (an appending `\author` after `\maketitle`).
+fn queued_author_marks() -> Vec<Vec<Vec<Token>>> {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| {
+        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+      })
+      .map(|entry| mark_operands(entry.2.unlist_ref()))
+      .collect(),
+    _ => Vec::new(),
+  })
+}
+
+/// The operand of a mark at `tokens[i..]`, as `read_frontmatter_sup_operand` reads it from the input — a group's
+/// content, a control sequence with the group after it, else one token — and the index after it.
+fn sup_operand_at(tokens: &[Token], mut i: usize) -> Option<(Vec<Token>, usize)> {
+  while tokens.get(i) == Some(&T_SPACE!()) {
+    i += 1;
+  }
+  let group_end = |start: usize| {
+    let mut depth = 0usize;
+    for (j, t) in tokens.iter().enumerate().skip(start) {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth = depth.saturating_sub(1);
+          if depth == 0 {
+            return Some(j);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let first = *tokens.get(i)?;
+  if first.get_catcode() == Catcode::BEGIN {
+    let end = group_end(i)?;
+    return Some((tokens[i + 1..end].to_vec(), end + 1));
+  }
+  if first.get_catcode() == Catcode::CS
+    && tokens
+      .get(i + 1)
+      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+  {
+    let end = group_end(i + 1)?;
+    return Some((tokens[i..=end].to_vec(), end + 1));
+  }
+  Some((vec![first], i + 1))
 }
 
 /// `\unitlength` in sp, exact (65536, 1pt, when it is undefined): the picture
@@ -7436,6 +7759,37 @@ fn is_footnote_symbol_operand(sym: &[Token]) -> bool {
   saw_symbol
 }
 
+/// Is a mark's operand a footnote symbol (`*`, `\dagger`, `\dag`), an equal-contribution or correspondence legend's
+/// mark rather than an affiliation number?
+fn is_symbol_mark(operand: &[Token]) -> bool {
+  is_footnote_symbol_operand(operand)
+    || matches!(
+      operand.iter().filter(|t| **t != T_SPACE!()).collect::<Vec<_>>()[..],
+      [t] if *t == T_CS!("\\dag") || *t == T_CS!("\\ddag")
+    )
+}
+
+/// Does `line` open (after spaces, math shifts and braces) with a footnote symbol (`* Equal contribution`,
+/// `$\dagger$ Corresponding author`, `\dag Corresponding author`) — a legend for the authors' symbol marks, not an
+/// affiliation line? The text-mode `\dag`/`\ddag` count here only: as superscript marks (`$^\dag$`) they still label
+/// affiliations (`is_footnote_symbol_operand` leaves them out, so `rewrite_symbol_superscripts` keeps them as marks).
+fn starts_with_footnote_symbol(line: &Tokens) -> bool {
+  line
+    .unlist_ref()
+    .iter()
+    .find(|t| {
+      !matches!(
+        t.get_catcode(),
+        Catcode::SPACE | Catcode::MATH | Catcode::BEGIN | Catcode::END
+      )
+    })
+    .is_some_and(|t| {
+      *t == T_CS!("\\dag")
+        || *t == T_CS!("\\ddag")
+        || is_footnote_symbol_operand(std::slice::from_ref(t))
+    })
+}
+
 /// Rewrite footnote-SYMBOL author superscripts — `$^{*}$`, `${}^{\dagger}$`,
 /// `\textsuperscript{\ddagger}`, a bare `^{*}` — onto the visible
 /// `\lx@frontmatter@keepsup` sentinel, BEFORE author-block branch selection.
@@ -7634,6 +7988,9 @@ fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
   let toks = tokens.unlist();
   let mut segments: Vec<Tokens> = Vec::new();
   let mut current: Vec<Token> = Vec::new();
+  // A boundary only outside every group: a cut inside `{…}` would leave the pieces unbalanced (a mark
+  // list inside a font group is split by `split_wrapped_affiliation_marks`, which repeats the group).
+  let mut depth = 0usize;
   for (i, t) in toks.iter().enumerate() {
     let dollar_super = *t == T_MATH!() && toks.get(i + 1).is_some_and(|n| *n == T_SUPER!());
     let is_mark_start = dollar_super || *t == T_CS!("\\textsuperscript");
@@ -7643,8 +8000,18 @@ fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
     // "Center for R$^2$ Studies" — is not a boundary, so the name is not
     // wrongly split (reviewer-flagged). The first mark (current empty) always
     // opens segment 0.
-    if is_mark_start && current.last() == Some(&T_SPACE!()) {
+    // Declarations alone before the first mark (`\color{blue} $^1$…`) are no segment: they open the first one.
+    let only_declarations = || {
+      current.iter().any(|t| t.get_catcode() == Catcode::CS)
+        && opening_declarations(&Tokens::new(current.clone())).len() == current.len()
+    };
+    if is_mark_start && depth == 0 && current.last() == Some(&T_SPACE!()) && !only_declarations() {
       segments.push(trim_trailing_separator(std::mem::take(&mut current)));
+    }
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
     }
     current.push(*t);
   }
@@ -7652,6 +8019,174 @@ fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
     segments.push(trim_trailing_separator(current));
   }
   segments
+}
+
+/// [`split_before_affiliation_marks`] for a marker-led affiliation line that opens with a font command or a group
+/// holding the marks (`\textit{$^1$Univ A, $^2$Univ B}`, `{\small $^1$A; $^2$B}`, `\small{$^1$A, $^2$B}. Email: …`):
+/// the inner list is split, the wrapper repeated on each piece — a group with the declarations that open it
+/// (`\small`) — and what follows the wrapper kept after the last piece; else the marks inside the group were no
+/// boundary, or every piece after the first left the font (62zk review; 2609.00995; repro
+/// sectioning-frontmatter/affiliation_marks_inside_a_font_group_keep_the_font). A `\thanks{…}` wrapper is not
+/// repeated: its mark-led content is the affiliation list (the `\thanks` idiom of `\lx@add@thanks`; 2609.24896).
+fn split_wrapped_affiliation_marks(line: Tokens) -> Vec<Tokens> {
+  if let Some((cmd, inner, trailing)) = leading_wrapper(&line) {
+    // A bare group's opening declarations (`\small`, `\it`, `\color{blue}` with its argument), repeated in each
+    // later piece.
+    let opening = if cmd.is_none() {
+      opening_declarations(&inner)
+    } else {
+      Vec::new()
+    };
+    let mut pieces = split_wrapped_affiliation_marks(inner);
+    if pieces.len() > 1 {
+      let mut out: Vec<Tokens> = pieces
+        .drain(..)
+        .enumerate()
+        .map(|(i, piece)| {
+          let mut wrapped = Vec::new();
+          if cmd == Some(T_CS!("\\thanks")) {
+            wrapped.extend(piece.unlist());
+          } else {
+            wrapped.extend(cmd);
+            wrapped.push(T_BEGIN!());
+            if i > 0 {
+              wrapped.extend(opening.iter().copied());
+            }
+            wrapped.extend(piece.unlist());
+            wrapped.push(T_END!());
+          }
+          Tokens::new(wrapped)
+        })
+        .collect();
+      // What follows the wrapper is split at its own marks too (`\textit{$^1$A, $^2$B} $^3$C`): its first piece stays
+      // with the last wrapped one, the rest are pieces of their own.
+      let mut after = split_before_affiliation_marks(Tokens::new(trailing)).into_iter();
+      if let (Some(first), Some(last_piece)) = (after.next(), out.last_mut()) {
+        let mut joined = last_piece.clone().unlist();
+        joined.extend(first.unlist());
+        *last_piece = Tokens::new(joined);
+      }
+      out.extend(after);
+      return out;
+    }
+  }
+  split_before_affiliation_marks(line)
+}
+
+/// Does a mark lead `line` — no text before its first mark, looking inside a leading font command or group past the
+/// declarations that open it (`{\color{blue} $^1$Univ A, $^2$Univ B}`: the letters of `blue` are no name)?
+fn marker_leads(line: &Tokens) -> bool {
+  let probe = match leading_wrapper(line) {
+    Some((_, inner, _)) => {
+      let skip = opening_declarations(&inner).len();
+      Tokens::new(inner.unlist_ref()[skip..].to_vec())
+    },
+    None => {
+      let skip = opening_declarations(line).len();
+      Tokens::new(line.unlist_ref()[skip..].to_vec())
+    },
+  };
+  match position_of(&probe, &authorsup_markers()) {
+    Some(p) => !name_precedes_marker(&probe, p),
+    // No mark inside the wrapper (`{}$^1$Univ A`, `\noindent{}$^1$…`): the whole line decides, as before.
+    None => position_of(line, &authorsup_markers()).is_some_and(|p| !name_precedes_marker(line, p)),
+  }
+}
+
+/// The declarations that open a group's content (`\small`, `\bfseries`, `\color{blue}` with its argument), up to its
+/// first mark, text, or a command over a braced argument (`\textbf{Ann Able}` is content, not a declaration: read
+/// as one, `\large\textbf{Ann Able}$^1$` became an affiliation line and lost its author).
+fn opening_declarations(inner: &Tokens) -> Vec<Token> {
+  // The declarations that take brace arguments (latex.ltx `\color`, the NFSS font selectors).
+  const WITH_ARGUMENTS: &[&str] = &[
+    "\\color",
+    "\\fontsize",
+    "\\fontfamily",
+    "\\fontseries",
+    "\\fontshape",
+    "\\usefont",
+  ];
+  let v = inner.unlist_ref();
+  let mut out = Vec::new();
+  let mut i = 0;
+  while i < v.len() {
+    let t = v[i];
+    let braced = v
+      .get(i + 1)
+      .is_some_and(|n| n.get_catcode() == Catcode::BEGIN);
+    let with_arguments = WITH_ARGUMENTS.iter().any(|cs| t == T_CS!(*cs));
+    if t == T_SPACE!() {
+      out.push(t);
+      i += 1;
+    } else if t.get_catcode() == Catcode::CS
+      && t != T_CS!("\\textsuperscript")
+      && (with_arguments || !braced)
+    {
+      out.push(t);
+      i += 1;
+      // its brace-group arguments
+      while i < v.len() && v[i].get_catcode() == Catcode::BEGIN {
+        let mut depth = 0usize;
+        while i < v.len() {
+          let a = v[i];
+          out.push(a);
+          i += 1;
+          match a.get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => {
+              depth -= 1;
+              if depth == 0 {
+                break;
+              }
+            },
+            _ => {},
+          }
+        }
+      }
+    } else {
+      break;
+    }
+  }
+  out
+}
+
+/// A line that opens (spaces aside) with `\cmd{…}` or a bare `{…}`: the command (none for a bare group), the group's
+/// inside, and the tokens after it. A leading `\textsuperscript{n}` is a mark, not a wrapper.
+fn leading_wrapper(line: &Tokens) -> Option<(Option<Token>, Tokens, Vec<Token>)> {
+  let v = line.unlist_ref();
+  let start = v.iter().position(|t| *t != T_SPACE!())?;
+  let (cmd, open) = match v[start].get_catcode() {
+    Catcode::CS
+      if v
+        .get(start + 1)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN) =>
+    {
+      if v[start] == T_CS!("\\textsuperscript") {
+        return None;
+      }
+      (Some(v[start]), start + 1)
+    },
+    Catcode::BEGIN => (None, start),
+    _ => return None,
+  };
+  let mut depth = 0usize;
+  for (i, t) in v.iter().enumerate().skip(open) {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth -= 1;
+        if depth == 0 {
+          return Some((
+            cmd,
+            Tokens::new(v[open + 1..i].to_vec()),
+            v[i + 1..].to_vec(),
+          ));
+        }
+      },
+      _ => {},
+    }
+  }
+  None
 }
 
 /// A `\\`-delimited line in a no-marker author block is really an EMAIL, not an
@@ -7696,10 +8231,27 @@ fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }
 /// and is rejected, so an address is never misclassified.
 fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
   let mut visible = String::new();
+  // `\href`'s first argument is its link, not printed (`\href{mailto:a@x}{a@x}`).
+  let mut skip_group = false;
+  let mut depth = 0usize;
   for t in line.unlist_ref() {
+    if skip_group {
+      match t.code {
+        Catcode::SPACE if depth == 0 => {},
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth = depth.saturating_sub(1);
+          skip_group = depth > 0;
+        },
+        _ if depth == 0 => skip_group = false,
+        _ => {},
+      }
+      continue;
+    }
     match t.code {
       Catcode::LETTER | Catcode::OTHER => t.with_str(|s| visible.push_str(s)),
       Catcode::SPACE => visible.push(' '),
+      Catcode::CS if *t == T_CS!("\\href") => skip_group = true,
       _ => {},
     }
   }
@@ -7709,7 +8261,7 @@ fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
   }
   let parts: Vec<&str> = v
     .split(',')
-    .map(str::trim)
+    .map(|p| p.trim().trim_start_matches("mailto:"))
     .filter(|p| !p.is_empty())
     .collect();
   if parts.is_empty() {

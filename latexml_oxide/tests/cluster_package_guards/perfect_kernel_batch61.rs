@@ -6290,15 +6290,6 @@ Text.
 /// written.
 #[test]
 fn informs_author_marks_link_affiliations() {
-  fn creators(xml: &str) -> Vec<String> {
-    let mut found = Vec::new();
-    let mut from = 0;
-    while let Some(at) = xml[from..].find("<creator") {
-      found.extend(xml_element(&xml[from + at..], "creator", &[]));
-      from += at + 1;
-    }
-    found
-  }
   let affiliation = |name: &str| {
     format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
   };
@@ -6319,7 +6310,7 @@ Text.
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let sep = "before=\"\u{2003}\u{2003}\" ";
   assert_eq!(
-    creators(&xml),
+    creators_of(&xml),
     vec![
       format!(
         "<creator role=\"author\"><personname>Sunkanghong Wang</personname>{}{}</creator>",
@@ -6357,7 +6348,7 @@ Text.
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
-    creators(&xml),
+    creators_of(&xml),
     vec![
       format!(
         "<creator role=\"author\"><personname>Huikang Liu</personname>{}</creator>",
@@ -6410,15 +6401,6 @@ fn informs_hanging_lists() {
 /// "Ann Able1 and Bob Baker2", "1 Univ A; 2 Univ B", "Present address: 2 Univ C".
 #[test]
 fn marked_affiliation_lines_split_at_their_marks() {
-  fn creators(xml: &str) -> Vec<String> {
-    let mut found = Vec::new();
-    let mut from = 0;
-    while let Some(at) = xml[from..].find("<creator") {
-      found.extend(xml_element(&xml[from + at..], "creator", &[]));
-      from += at + 1;
-    }
-    found
-  }
   let affiliation = |name: &str| {
     format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
   };
@@ -6435,7 +6417,7 @@ Text.
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
-    creators(&xml),
+    creators_of(&xml),
     vec![
       format!(
         "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
@@ -6448,5 +6430,911 @@ Text.
       ),
     ],
     "{xml}"
+  );
+}
+
+/// The `<creator>` elements of `xml`, in document order, each whole.
+fn creators_of(xml: &str) -> Vec<String> {
+  let mut found = Vec::new();
+  let mut from = 0;
+  while let Some(at) = xml[from..].find("<creator") {
+    found.extend(xml_element(&xml[from + at..], "creator", &[]));
+    from += at + 1;
+  }
+  found
+}
+
+/// 62zl: iopart's `\address` is used "once for each address" (iopart.cls:240-248), each call printing its block, so
+/// each adds its affiliation, linked by its mark; Perl's `\lx@add@affiliations` dequeued the ones before, keeping only
+/// the last (KNOWN_PERL_ERRORS #511; 21 of the 41 2609 iopart papers, 2609.01831 lost three of four). Repro
+/// sectioning-frontmatter/iopart_each_address_adds_an_affiliation. pdflatex (iopart.cls of 2609.01831): "1 Univ A",
+/// "2 Univ B".
+#[test]
+fn iopart_each_address_adds_an_affiliation() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/iopart_each_address_adds_an_affiliation.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    creators_of(&xml),
+    vec![
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact></creator>",
+    ],
+    "{xml}"
+  );
+}
+
+/// 62zl: a marked affiliation list wrapped whole in a font command or a group is split inside it, the wrapper (a
+/// group with its opening declarations) repeated on each piece; the splitter cut inside the group, and every piece
+/// after the first left the font (62zk review). Repro
+/// sectioning-frontmatter/affiliation_marks_inside_a_font_group_keep_the_font. pdflatex (iopart.cls of 2609.01831):
+/// "1 Univ A, 2 Univ B" all italic; "1 Univ A; 2 Univ B" all small.
+#[test]
+fn marked_affiliations_inside_a_font_group_keep_the_font() {
+  let affiliated = |xml: &str| -> Vec<String> {
+    creators_of(xml)
+      .iter()
+      .map(|c| xml_element(c, "contact", &[]).unwrap_or_default())
+      .collect()
+  };
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/affiliation_marks_inside_a_font_group_keep_the_font.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    affiliated(&xml),
+    vec![
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id1\">Univ A</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id2\">Univ B</text></contact>",
+    ],
+    "{xml}"
+  );
+  let (log, xml) = convert_with(
+    r"\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{{\small $^1$Univ A; $^2$Univ B}}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    affiliated(&xml),
+    vec![
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>",
+    ],
+    "{xml}"
+  );
+}
+
+/// 62zl: in a marked affiliation list an unmarked line continues the affiliation before it, as an unmarked line
+/// continues an entry in `\lx@add@authors`; each `\\` line had been its own affiliation, the unmarked ones placed by
+/// position, not by mark (2609.19448). Repro sectioning-frontmatter/marked_affiliation_continuation_lines_stay_with_it.
+/// pdflatex (iopart.cls of 2609.01831): "1 Dept A", "Univ A", "2 Dept B", "Univ B".
+#[test]
+fn marked_affiliation_continuation_lines_stay_with_it() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_affiliation_continuation_lines_stay_with_it.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    creators_of(&xml),
+    vec![
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept A<break/>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept B<break/>Univ B</contact></creator>",
+    ],
+    "{xml}"
+  );
+}
+
+/// 62zl: apa7.cls is read for its modes and packages, and its author block maps onto the frontmatter API:
+/// `\authorsnames[marks]{names}` (:798-806) and `\authorsaffiliations{…}` (:808-812), numbered in order, link each
+/// name to the affiliations its marks number; `\authornote` is a note, `\abstract`/`\keywords` the abstract and
+/// keywords (:785-787); under `mask` (:131) no author identity prints (2609.00670, 02899, 12869, 19448: 32 errors
+/// before). The one warning is pgf's `svg.path` library, which the class loads for its ORCID icon (:312), as Perl warns.
+/// pdflatex: "Ann Able1, 2 and Bob Baker2", "1Univ A", "2Univ B", "Author Note", "Correspondence to Ann.".
+#[test]
+fn apa7_author_block_maps_onto_the_frontmatter() {
+  if !latexml::util::test::kpse_has("apa7.cls") {
+    return;
+  }
+  let body = r"\title{A Title}
+\authorsnames[{1,2},2]{Ann Able, Bob Baker}
+\authorsaffiliations{{Univ A},{Univ B}}
+\authornote{Correspondence to Ann.}
+\abstract{Abstract text.}
+\keywords{alpha, beta}
+\begin{document}
+\maketitle
+Body, see \ref{a1}.
+\appendix
+\section{Extra}\label{a1}
+More.
+\end{document}";
+  let pgf_warning =
+    "The conditional \\pgf@lib@svg@relative is being defined but doesn't start with \\if";
+  let (log, xml) = convert_with(
+    &format!(r"\documentclass[man]{{apa7}}{body}"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(log.contains(pgf_warning), "{log}");
+  let affiliation = |name: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+  };
+  assert_eq!(
+    creators_of(&xml),
+    vec![
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname>{}{}</creator>",
+        affiliation("Univ A"),
+        affiliation("Univ B")
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}</creator>",
+        affiliation("Univ B")
+      ),
+    ],
+    "{xml}"
+  );
+  // apa7.cls builds the title block from its stored lists at `\maketitle` (:780-890), so affiliations given before
+  // the names are linked the same (round 6: lost).
+  let names = "\\authorsnames[{1,2},2]{Ann Able, Bob Baker}\n";
+  let affiliations = "\\authorsaffiliations{{Univ A},{Univ B}}\n";
+  let swapped = body.replace(
+    &format!("{names}{affiliations}"),
+    &format!("{affiliations}{names}"),
+  );
+  assert_ne!(swapped, body);
+  let (swapped_log, swapped_xml) = convert_with(
+    &format!(r"\documentclass[man]{{apa7}}{swapped}"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (error_count(&swapped_log), warning_count(&swapped_log)),
+    (0, 1),
+    "{swapped_log}"
+  );
+  assert_eq!(creators_of(&swapped_xml), creators_of(&xml));
+  assert_element(
+    &xml,
+    "note",
+    &["role=\"authornote\""],
+    "<note role=\"authornote\" xml:id=\"id1\">Correspondence to Ann.</note>",
+  );
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Keywords:\u{a0}\">alpha, beta</keywords>",
+  );
+  // The kernel's appendix stands over apa7.cls's (:1041-1075), whose `\section` redefinition the kernel refuses:
+  // lettered, as pdflatex's "Appendix A" (2609.00670 read "Appendix 9").
+  assert_element(
+    &xml,
+    "appendix",
+    &["xml:id=\"A1\""],
+    "<appendix inlist=\"toc\" labels=\"LABEL:a1\" xml:id=\"A1\"><tags><tag>Appendix A</tag><tag role=\"autoref\">Appendix\u{a0}A<text xml:id=\"A1.1\"/></tag><tag role=\"refnum\">A</tag><tag role=\"typerefnum\">Appendix A</tag></tags><title><tag close=\" \">Appendix A</tag>Extra</title><toctitle><tag close=\" \">A</tag>Extra</toctitle><para xml:id=\"A1.p1\"><p xml:id=\"A1.p1.1\">More.</p></para></appendix>",
+  );
+  let (log, xml) = convert_with(
+    &format!(r"\documentclass[man,mask]{{apa7}}{body}"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(creators_of(&xml), Vec::<String>::new(), "{xml}");
+  for hidden in ["Ann Able", "Univ A", "Correspondence"] {
+    assert!(!xml.contains(hidden), "{hidden}: {xml}");
+  }
+  // `\author` is the class's one-name `\authorsnames` (:766), hidden under `mask` too; the student page's course,
+  // instructor and due date (`stu`, :1292-1294) print either way; an unnumbered affiliation under unmarked names
+  // belongs to every author, marks of its own kept as written.
+  let (log, xml) = convert_with(
+    r"\documentclass[stu,mask]{apa7}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A}
+\course{PSY 101}
+\professor{Dr. Zed}
+\duedate{May 5}
+\begin{document}
+\maketitle
+Body.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(creators_of(&xml), Vec::<String>::new(), "{xml}");
+  assert!(!xml.contains("Ann Able"), "{xml}");
+  for (role, text) in [
+    ("course", "PSY 101"),
+    ("professor", "Dr. Zed"),
+    ("duedate", "May 5"),
+  ] {
+    assert_eq!(
+      xml_element(&xml, "note", &[&format!("role=\"{role}\"")])
+        .map(|note| note.contains(&format!(">{text}</note>"))),
+      Some(true),
+      "{role}: {xml}"
+    );
+  }
+  let (log, xml) = convert_with(
+    r"\documentclass[man]{apa7}
+\title{T}
+\authorsnames{Ann Able, Bob Baker}
+\authorsaffiliations{{$^1$Univ A}}
+\begin{document}
+\maketitle
+Body.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  let shared = "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ A</contact>";
+  assert_eq!(
+    creators_of(&xml),
+    vec![
+      format!("<creator role=\"author\"><personname>Ann Able</personname>{shared}</creator>"),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}</creator>",
+        shared.replace("id1", "id2")
+      ),
+    ],
+    "{xml}"
+  );
+}
+
+/// 62zl: the marked affiliation shapes the A/B of the brace-depth rule turned up, each linked by its marks: marks
+/// inside a leading `\small{…}` with text after it (2609.00995: the text stays with the last piece); a `\thanks{…}`
+/// line holding the list (2609.24896: unwrapped, as `\lx@add@thanks` reads it, not repeated on each piece); and,
+/// after a marked entry, an address line or a footnote-symbol legend, which stays apart rather than continuing it
+/// (llncs `\institute`, 2609.06094).
+#[test]
+fn marked_affiliation_wrappers_and_legends() {
+  let contacts = |xml: &str| -> Vec<Vec<String>> {
+    creators_of(xml)
+      .iter()
+      .map(|creator| {
+        let mut found = Vec::new();
+        let mut from = 0;
+        while let Some(at) = creator[from..].find("<contact") {
+          found.extend(xml_element(&creator[from + at..], "contact", &[]));
+          from += at + 1;
+        }
+        found
+      })
+      .collect()
+  };
+  let affiliation = |name: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+  };
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{2}\\
+\small{\textsuperscript{1} Univ A, \textsuperscript{2} Univ B}. Email: x@y.z}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // `\small` is a declaration: what follows its group is small too, as in the PDF.
+  assert_eq!(
+    contacts(&xml),
+    vec![
+      vec![affiliation(
+        "<text fontsize=\"90%\" xml:id=\"id1\"> Univ A</text>"
+      )],
+      vec![affiliation(
+        "<text fontsize=\"90%\" xml:id=\"id2\"> Univ B. Email: x@y.z</text>"
+      )],
+    ],
+    "{xml}"
+  );
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\\
+\thanks{$^1$Univ A. $^2$Univ B.}}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    contacts(&xml),
+    vec![vec![affiliation("Univ A.")], vec![affiliation("Univ B.")]],
+    "{xml}"
+  );
+  let (log, xml) = convert_with(
+    r"\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,*} \and Bob Baker\inst{2}}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{a@x.y, b@x.y} \\ * Equal contribution}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let found = contacts(&xml);
+  // Ann holds her affiliation and her address alone: each address of the line goes to its author in order
+  // (`email_line_calls`), the legend is not folded into Univ B. (Where the legend goes, an unmarked line placed by
+  // position, is not pinned: it is not an affiliation.)
+  assert_eq!(
+    found[0],
+    vec![
+      affiliation(" Univ A"),
+      "<contact name=\"Email:\u{a0}\" role=\"email\">a@x.y</contact>".to_string()
+    ],
+    "{xml}"
+  );
+  let bob: Vec<&String> = found[1]
+    .iter()
+    .filter(|c| !c.contains("Equal contribution"))
+    .collect();
+  assert_eq!(
+    bob,
+    vec![
+      &affiliation(" Univ B"),
+      &"<contact name=\"Email:\u{a0}\" role=\"email\">b@x.y</contact>".to_string()
+    ],
+    "{xml}"
+  );
+  assert_eq!(xml.matches("Equal contribution").count(), 1, "{xml}");
+}
+
+/// 62zl review shapes, each linked by its marks: a `$^\dag$` mark still labels its affiliation (`\dag` is a legend
+/// symbol only at a line's start, not a footnote-symbol superscript); `\and` ends an entry (an unmarked line after it
+/// is no continuation), while `\quad` continues one; an address line gives each address to its author in order; marks
+/// after a wrapper split too; a group's opening `\color{…}` is no text before the mark and is repeated with its
+/// argument on each piece.
+#[test]
+fn marked_affiliation_review_shapes() {
+  let contacts = |tex: &str| -> Vec<String> {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    creators_of(&xml)
+  };
+  let creator = |before: bool, name: &str, rest: &str| {
+    let sep = if before {
+      "before=\"\u{2003}\u{2003}\" "
+    } else {
+      ""
+    };
+    format!("<creator {sep}role=\"author\"><personname>{name}</personname>{rest}</creator>")
+  };
+  let affiliation = |name: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+  };
+  let email =
+    |addr: &str| format!("<contact name=\"Email:\u{a0}\" role=\"email\">{addr}</contact>");
+  assert_eq!(
+    contacts(
+      r"\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{\dag}$\\ $^1$Univ A\\ $^\dag$Univ C}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(false, "Ann Able", &affiliation("Univ A")),
+      creator(true, "Bob Baker", &affiliation("Univ C"))
+    ]
+  );
+  // `\and` ends Ann's entry: "Univ C" is an entry of its own (placed by position, so not pinned here), not folded
+  // into Univ A; `\quad` continues Bob's.
+  let found = contacts(
+    r"\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{$^1$ Univ A \and Univ C}
+\address{$^2$ Univ B \quad Univ D}
+\maketitle
+Text.
+\end{document}",
+  );
+  assert_eq!(
+    found[0],
+    creator(false, "Ann Able", &affiliation(" Univ A"))
+  );
+  assert!(
+    found[1].contains(&affiliation(" Univ B\u{2003}Univ D")),
+    "{found:?}"
+  );
+  assert_eq!(
+    found
+      .iter()
+      .map(|c| c.matches("Univ C").count())
+      .sum::<usize>(),
+    1,
+    "{found:?}"
+  );
+  // A declaration then a content command opening an author line (`\large\textbf{Ann Able}$^1$`) is no affiliation
+  // line: `\textbf{…}` is content, not a declaration's argument (round 2: the authors were lost).
+  assert_eq!(
+    contacts(
+      r"\documentclass{article}
+\begin{document}
+\title{T}
+\author{\large\textbf{Ann Able}$^1$, \textbf{Bob Baker}$^2$\\ $^1$Univ A\\ $^2$Univ B}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(false, "Ann Able", &affiliation("Univ A")),
+      creator(true, "Bob Baker", &affiliation("Univ B"))
+    ]
+  );
+  // An empty leading group holds no mark: the whole line decides, so these stay affiliation lines.
+  assert_eq!(
+    contacts(
+      r"\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$\\ {}$^1$Univ A\\ {}$^2$Univ B}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(false, "Ann Able", &affiliation("Univ A")),
+      creator(true, "Bob Baker", &affiliation("Univ B"))
+    ]
+  );
+  // One address under a marked affiliation is that affiliation's authors' (round 2: by order it went to author 1).
+  assert_eq!(
+    contacts(
+      r"\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$ and Cy Dee$^2$}
+\address{$^1$ Univ A}
+\address{$^2$ Univ B\\ cy@x.y}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(false, "Ann Able", &affiliation(" Univ A")),
+      creator(true, "Bob Baker", &affiliation(" Univ A")),
+      creator(
+        true,
+        "Cy Dee",
+        &format!("{}{}", affiliation(" Univ B"), email("cy@x.y"))
+      )
+    ]
+  );
+  // A mark with a control sequence labels the email as it labels the affiliation (round 3: the label was retokenized
+  // into `\mathrma`, an undefined-command error, and digested, which mangled its `\`).
+  for (ann, bob) in [
+    (r"$^{\mathrm{a}}$", r"$^{\mathrm{b}}$"),
+    (r"\textsuperscript{\it a}", r"\textsuperscript{\it b}"),
+    (r"$^\text{a}$", r"$^\text{b}$"),
+  ] {
+    assert_eq!(
+      contacts(&format!(
+        r"\documentclass{{iopart}}
+\usepackage{{amsmath}}
+\begin{{document}}
+\title{{T}}
+\author{{Ann Able{ann} and Bob Baker{bob}}}
+\address{{{ann} Univ A\\ ann@x.y}}
+\address{{{bob} Univ B\\ bob@x.y}}
+\maketitle
+Text.
+\end{{document}}"
+      )),
+      vec![
+        creator(
+          false,
+          "Ann Able",
+          &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
+        ),
+        creator(
+          true,
+          "Bob Baker",
+          &format!("{}{}", affiliation(" Univ B"), email("bob@x.y"))
+        )
+      ],
+      "{ann}"
+    );
+  }
+  // One address under an affiliation two authors share continues it, as printed (round 3: each author got it).
+  assert_eq!(
+    contacts(
+      r"\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$ and Cy Dee$^2$}
+\address{$^1$ Univ A\\ ann@x.y}
+\address{$^2$ Univ B}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(false, "Ann Able", &affiliation(" Univ A<break/>ann@x.y")),
+      creator(true, "Bob Baker", &affiliation(" Univ A<break/>ann@x.y")),
+      creator(true, "Cy Dee", &affiliation(" Univ B"))
+    ]
+  );
+  // A run of address lines after a list's affiliations, one for each author, goes by order (round 3: both took the
+  // last affiliation's label).
+  assert_eq!(
+    contacts(
+      r"\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{ann@x.y} \\ \email{bob@x.y}}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(
+        false,
+        "Ann Able",
+        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
+      ),
+      creator(
+        true,
+        "Bob Baker",
+        &format!("{}{}", affiliation(" Univ B"), email("bob@x.y"))
+      )
+    ]
+  );
+  // Rounds 4-5. An address claims an author only where the list says whose it is: under an affiliation of a list
+  // that puts addresses under its affiliations, one address of its one author's. Several under one author's
+  // affiliation, or one under an affiliation several share, continue it, as printed (the global email count had made
+  // a creator with no name for `bob2@x.y`; by order among a shared mark's authors, 2609.06094's addresses went to
+  // the wrong ones).
+  let iopart = |authors: &str, addresses: &str| {
+    contacts(&format!(
+      "\\documentclass{{iopart}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{authors}}}\n{addresses}\n\\maketitle\nText.\n\\end{{document}}"
+    ))
+  };
+  let shared = |rest: &str| format!("<creator role=\"author\">{rest}</creator>");
+  assert_eq!(
+    iopart(
+      r"Ann Able$^1$, Bob Baker$^2$ and Cy Dee$^2$",
+      r"\address{$^1$ Univ A\\ ann@x.y}\address{$^2$ Univ B\\ bob@x.y\\ cy@x.y}"
+    ),
+    vec![
+      creator(
+        false,
+        "Ann Able",
+        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
+      ),
+      creator(
+        true,
+        "Bob Baker",
+        &affiliation(" Univ B<break/>bob@x.y<break/>cy@x.y")
+      ),
+      creator(
+        true,
+        "Cy Dee",
+        &affiliation(" Univ B<break/>bob@x.y<break/>cy@x.y")
+      )
+    ]
+  );
+  assert_eq!(
+    iopart(
+      r"Ann Able$^1$ and Bob Baker$^2$",
+      r"\address{$^1$ Univ A\\ ann@x.y}\address{$^2$ Univ B\\ bob@x.y\\ bob2@x.y}"
+    ),
+    vec![
+      creator(
+        false,
+        "Ann Able",
+        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
+      ),
+      creator(
+        true,
+        "Bob Baker",
+        &affiliation(" Univ B<break/>bob@x.y<break/>bob2@x.y")
+      )
+    ]
+  );
+  // A list whose addresses only follow its affiliations gives them to the authors in order when there is one for
+  // each, else to the shared creator below the authors (#159) — 2609.06094's shape: two authors request mark 2, two
+  // addresses, a legend after. (The legend on the last author is the unmarked-row placement of before, not pinned
+  // as intended.) A footnote-symbol legend after the run, `$^\dagger$ Corresponding author`, is no affiliation the
+  // run sits above (round 6: Ann's address went to Bob).
+  assert_eq!(
+    contacts(
+      r"\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2} \and Cy Dee\inst{2}}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{ann@x.y, bob@x.y} \\ * Equal contribution}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(false, "Ann Able", &affiliation(" Univ A")),
+      creator(true, "Bob Baker", &affiliation(" Univ B")),
+      creator(
+        true,
+        "Cy Dee",
+        &format!(
+          "{}{}",
+          affiliation("* Equal contribution"),
+          affiliation(" Univ B")
+        )
+      ),
+      shared(&email("ann@x.y, bob@x.y"))
+    ]
+  );
+  assert_eq!(
+    contacts(
+      r"\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2,\dagger}}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{ann@x.y, bob@x.y} \\ $^\dagger$ Corresponding author}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(
+        false,
+        "Ann Able",
+        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
+      ),
+      creator(
+        true,
+        "Bob Baker",
+        &format!(
+          "{}{}{}",
+          affiliation(" Univ B"),
+          affiliation(" Corresponding author"),
+          email("bob@x.y")
+        )
+      )
+    ]
+  );
+  // Before any author, a marked `\address` keeps its affiliations, for the authors to come (round 5: dropped).
+  assert_eq!(
+    contacts(
+      r"\documentclass{iopart}
+\begin{document}
+\title{T}
+\address{$^1$ Univ A}
+\address{$^2$ Univ B}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(false, "Ann Able", &affiliation(" Univ A")),
+      creator(true, "Bob Baker", &affiliation(" Univ B"))
+    ]
+  );
+  // An `\href{mailto:…}{…}` address is read by what it prints and kept as the link (round 4: `mailto:a@xa@x`).
+  assert_eq!(
+    contacts(
+      r"\documentclass{iopart}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{$^1$ Univ A\\ \href{mailto:ann@x.y}{ann@x.y}}
+\address{$^2$ Univ B}
+\maketitle
+Text.
+\end{document}"
+    )[0],
+    creator(
+      false,
+      "Ann Able",
+      &format!(
+        "{}{}",
+        affiliation(" Univ A"),
+        email(r#"<ref class="ltx_href" href="mailto:ann@x.y">ann@x.y</ref>"#)
+      )
+    )
+  );
+  // An `\author` call's tail comes before the later authors: its lines are its own author's rows, as before (round
+  // 4: by the marks of the authors queued so far, Ann's address went to Bob too and Bob's to Ann).
+  let (log, xml) = convert_files_with(
+    r"\documentclass{myc}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$}
+\affil{$^1$ Univ A\\ ann@x.y}
+\author{Bob Baker$^1$}
+\affil{$^1$ Univ A\\ bob@x.y}
+\maketitle
+Text.
+\end{document}",
+    &[(
+      "myc.cls",
+      r"\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{myc}
+\LoadClass{article}
+\renewcommand\author[1]{\ifx\@author\@empty\gdef\@author{#1}\else\g@addto@macro\@author{\and #1}\fi}
+\let\@author\@empty
+\newcommand\affil[1]{\g@addto@macro\@author{\\#1}}",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // (each `Univ A` row goes to both authors by its mark, as before)
+  let row = |text: &str| format!("<contact role=\"authorblock\">{text}</contact>");
+  let rows = |own: &str| format!("{}{}{}", row(own), row(" Univ A"), row(" Univ A"));
+  assert_eq!(creators_of(&xml), vec![
+    creator(false, "Ann Able", &rows("ann@x.y")),
+    creator(true, "Bob Baker", &rows("bob@x.y"))
+  ]);
+  // A presentational wrapper stays on each address; only an email command's is dropped (round 3: `\small` was lost).
+  assert_eq!(
+    contacts(
+      r"\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \small{ann@x.y, bob@x.y}}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(
+        false,
+        "Ann Able",
+        &format!(
+          "{}{}",
+          affiliation(" Univ A"),
+          email("<text fontsize=\"90%\" xml:id=\"id1\">ann@x.y</text>")
+        )
+      ),
+      creator(
+        true,
+        "Bob Baker",
+        &format!(
+          "{}{}",
+          affiliation(" Univ B"),
+          email("<text fontsize=\"90%\" xml:id=\"id2\">bob@x.y</text>")
+        )
+      )
+    ]
+  );
+  // A mark's first label is the one it sets (`$^{1,3}$`): Bob's request for 3 finds no affiliation, a residual shared
+  // with Perl (Base_Utility.pool.ltxml:565-570 keeps the first label), though pdflatex prints Univ A as his too.
+  assert_eq!(
+    contacts(
+      r"\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{3}}
+\institute{$^{1,3}$ Univ A \\ ann@x.y}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(
+        false,
+        "Ann Able",
+        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
+      ),
+      creator(true, "Bob Baker", "")
+    ]
+  );
+  // More addresses than authors: one contact of the block, on the shared creator, without the `\email{…}` wrapper
+  // (round 2: an empty contact beside it; round 5: on the last author).
+  assert_eq!(
+    contacts(
+      r"\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{a@x.y, b@x.y, c@x.y}}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(false, "Ann Able", &affiliation(" Univ A")),
+      creator(true, "Bob Baker", &affiliation(" Univ B")),
+      format!(
+        "<creator role=\"author\">{}</creator>",
+        email("a@x.y, b@x.y, c@x.y")
+      )
+    ]
+  );
+  assert_eq!(
+    contacts(
+      r"\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ and Cy Dee$^3$}
+\address{\textit{$^1$Univ A, $^2$Univ B} $^3$Univ C}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(
+        false,
+        "Ann Able",
+        &affiliation("<text font=\"italic\" xml:id=\"id1\">Univ A</text>")
+      ),
+      creator(
+        true,
+        "Bob Baker",
+        &affiliation("<text font=\"italic\" xml:id=\"id2\">Univ B</text>")
+      ),
+      creator(true, "Cy Dee", &affiliation("Univ C"))
+    ]
+  );
+  assert_eq!(
+    contacts(
+      r"\documentclass{iopart}
+\usepackage{xcolor}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{{\color{blue} $^1$Univ A, $^2$Univ B}}
+\maketitle
+Text.
+\end{document}"
+    ),
+    vec![
+      creator(
+        false,
+        "Ann Able",
+        &affiliation("<text color=\"#0000FF\" xml:id=\"id1\"> Univ A</text>")
+      ),
+      creator(
+        true,
+        "Bob Baker",
+        &affiliation("<text color=\"#0000FF\" xml:id=\"id2\"> Univ B</text>")
+      )
+    ]
+  );
+  assert_eq!(
+    contacts(include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_affiliation_list_email_line_leaves_no_empty_contact.tex"
+    )),
+    vec![
+      creator(
+        false,
+        "Ann Able",
+        &format!("{}{}", affiliation(" Univ A"), email("a@x.y"))
+      ),
+      creator(
+        true,
+        "Bob Baker",
+        &format!("{}{}", affiliation(" Univ B"), email("b@x.y"))
+      )
+    ]
   );
 }

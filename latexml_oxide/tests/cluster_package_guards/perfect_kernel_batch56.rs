@@ -12108,9 +12108,10 @@ C, D. </bibblock><bibblock>(2002).
   );
 }
 
-/// 57m: OmniBus's `\doi` reads its DOI as a url (`HyperVerbatim`), so the `.bbl` of an apa6/apa7 paper —
-/// classes with no `\doi` of their own, falling to OmniBus — keeps `\doi{10.1000/j_x~y.2002}` whole
-/// (Perl OmniBus.cls.ltxml:154's `\doi{}` gives Error:unexpected:_).
+/// 57m: OmniBus's `\doi` reads its DOI as a url (`HyperVerbatim`), so the `.bbl` of an apa6 paper — a class with
+/// no `\doi` of its own, falling to OmniBus — keeps `\doi{10.1000/j_x~y.2002}` whole (Perl OmniBus.cls.ltxml:154's
+/// `\doi{}` gives Error:unexpected:_). apa7, bound since 62zl, keeps the DOI a link (apa7_cls.rs), where apacite's
+/// own `\doi` would set url-styled text only (apacite.sty:1812-1815): semantic markup before PDF fidelity.
 #[test]
 fn omnibus_doi_reads_as_a_url() {
   let (stderr, xml) = convert_with(
@@ -12130,7 +12131,7 @@ fn omnibus_doi_reads_as_a_url() {
     })
     .count();
   assert_eq!(foreign, 0, "{stderr}");
-  assert!(stderr.contains("Warning:missing_file:apa7"), "{stderr}");
+  assert!(stderr.contains("Warning:missing_file:apa6"), "{stderr}");
   latexml::util::test::assert_element(
     &xml,
     "bibitem",
@@ -12138,6 +12139,29 @@ fn omnibus_doi_reads_as_a_url() {
     r##"<bibitem key="c" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2002</tag><tag role="authors">C</tag><tag role="fullauthors">C</tag><tag role="refnum">C (2002)</tag><tag role="key">c</tag></tags><bibblock>
 C, D. </bibblock><bibblock>(2002).
 </bibblock><bibblock>doi: <ref href="https://doi.org/10.1000/j_x~y.2002">10.1000/j_x~y.2002</ref> 
+</bibblock></bibitem>"##,
+  );
+  let (stderr, xml) = convert_with(
+    &include_str!("../../../tools/perfect_kernel/repros/index-bib/omnibus_doi_reads_as_a_url.tex")
+      .replace("{apa6}", "{apa7}"),
+    None,
+  );
+  let foreign = stderr
+    .lines()
+    .filter(|l| l.contains("Error:") || l.contains("Fatal:"))
+    .filter(|l| {
+      !(l.contains("Mismatched LaTeX support files")
+        || l.contains("Cannot run piped system commands"))
+    })
+    .count();
+  assert_eq!(foreign, 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibitem",
+    &[r#"key="c""#],
+    r##"<bibitem key="c" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2002</tag><tag role="authors">C</tag><tag role="fullauthors">C</tag><tag role="refnum">C (2002)</tag><tag role="key">c</tag></tags><bibblock>
+C, D. </bibblock><bibblock>(2002).
+</bibblock><bibblock>doi: <ref class="ltx_href" href="https://doi.org/10.1000/j_x~y.2002">10.1000/j_x~y.2002</ref> 
 </bibblock></bibitem>"##,
   );
 }

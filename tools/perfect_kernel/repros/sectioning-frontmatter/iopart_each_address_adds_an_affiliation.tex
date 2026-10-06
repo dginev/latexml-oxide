@@ -8,8 +8,10 @@
 %          `\lx@add@affiliations`, which dequeues every affiliation queued before it (it replaces an affiliation LIST),
 %          so only the last `\address` survives; perl (iopart_support.sty.ltxml:53, Base_Utility.pool.ltxml:742-753
 %          `dequeueFrontMatter`) the same (SHARED)
+%          rust (62zl) = each `\address` adds its affiliation (`\lx@add@affiliation@marked`), Ann Able Univ A, Bob
+%          Baker Univ B (KNOWN_PERL_ERRORS #511)
 % expect:  0 errors; Ann Able's creator holds <contact role="affiliation">Univ A</contact>, Bob Baker's Univ B
-% status:  RED
+% status:  GREEN (62zl; guard perfect_kernel_batch61::iopart_each_address_adds_an_affiliation)
 \documentclass{iopart}
 \begin{document}
 \title{T}
