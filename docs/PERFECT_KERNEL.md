@@ -211,9 +211,10 @@ Crash canaries (772): 64 Fatal and 3 timeouts on every sweep since s130; cpu_h 1
   `PushbackLimit` in 1 s and 2605.12601 at the 180 s timeout (resolved by 62w's 48M cap: 2605.27177, 621 raw-mhchem
   `\ce`, with 2 warnings, and 2605.04377 with 102); the cycle guard's false positive on a large repetitive table (2605.11798); the autoload hoist as a load at
   group level 0 (DIVERGENCES #282).
-- **Engine:** a group-local `\def` of a locked control sequence, and Rust's empty root where Perl keeps a partial
-  document (both 2605.31475, LEDGER 56hk: pgffor's `\foreach \x/\tag` refused by the lock on amsmath's `\tag`; Perl
-  ends in a bounded `Fatal:misdefined`, Rust in an unbounded pushback); catoptions' residual option-stack-limit error.
+- **Engine:** pgffor's `\foreach \x/\tag` against the lock on amsmath's `\tag` (2605.31475, LEDGER 56hk) — RULED
+  2026-10-06: keep Perl's lock; Rust now ends boundedly (the runaway cap's `Fatal:TooManyErrors` in 0.55 s, a
+  partial document salvaged), and the simple shape `\foreach \x/\tag in {a/b}{[\x:\tag]}` gives Perl's output
+  exactly ("[a:"); catoptions' residual option-stack-limit error.
 - **Semantic coverage (axis 2b, `semantic_coverage.py`; s114: sections/lists/floats/refs 93-98 %, equations 93 %,
   graphics 88 %, `\part` 59.5 %):** the graphics family (36 documents short); ctex's localized part label reads
   "Part I"; beamer overlays are not acted on (Perl's `ltx_covered` wrapper, #270), and frames are not Perl's

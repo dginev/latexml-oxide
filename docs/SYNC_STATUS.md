@@ -489,6 +489,14 @@ Perl removes an unlabelled pending annotation silently too); `author_symbol_mark
 (`author_suffix_marks_after_commas_link_affiliations`, SHARED with Perl, 2609.25924; `author_prefix_marks_first_line_is_names`,
 Perl drops the authors): fixed by 62zp.
 
+62zr: MathSciNet's `\cprime`/`\Cprime`/`\cdprime`/`\Cdprime`/`\cftil` provided within `{bibtex@bibliography}` only,
+where free, for `.bib` entries copied without the export's `@preamble` (15 2609 papers, 2609.00627, 2609.11266; user
+ruling 2026-10-06; OXIDIZED_DESIGN_DIVERGENCES #78). Guard
+`06_cluster_bibliography::bib_mathscinet_fields_without_preamble`. Rulings 2026-10-06 recorded: `\foreach` over a
+locked variable keeps Perl's lock (already bounded, PERFECT_KERNEL "Engine"); an eqnarray cell's `+} {` relying on
+the `{##}` template is an accepted residual; a `\section` in a float awaits a repro showing PDF-faithful numbering,
+`xml:id`s and `\label`/`\ref` before an inline sectional block is considered.
+
 62zq: an author's `\thanks` and `\footnote` read an ordinary argument, as LaTeX's and a title's do — Perl's
 Semiverbatim `\lx@add@thanks`/`\lx@add@note` printed their math as text (1,391 2609 papers have math in a `\thanks`;
 KNOWN_PERL_ERRORS #515) — and a note's content in a marked author line keeps its superscripts as text

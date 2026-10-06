@@ -3968,3 +3968,29 @@ fn biblatex_refsection_option_does_not_repeat() {
   let two = x.find(">Two</title>").unwrap_or(0);
   assert!(list < two, "{x}");
 }
+
+/// MathSciNet's `\cprime` and `\cftil` in a cited entry's FJOURNAL/MRREVIEWER fields, the `.bib` carrying no
+/// `@preamble` for them, are provided while the bibliography's entries are digested (bibtex.rs
+/// `provide_mathscinet_export_macros`; user ruling 2026-10-06; witnesses 2609.00627, 2609.11266), and only there.
+#[test]
+fn bib_mathscinet_fields_without_preamble() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_mathscinet_fields.tex");
+  // Before the bibliography: not always-on (the retracted stub); the environment's group ends the provision.
+  assert!(
+    x.contains("CPRIME-UNDEFINED"),
+    "\\cprime is defined outside the bibliography:\n{x}"
+  );
+  // The reviewer shows in the review line MRNUMBER brings; FJOURNAL is digested, not shown.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"arsenev\""],
+    r#"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="arsenev" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Ivanov</tag><tag class="ltx_bib_year" role="year">1990</tag><tag class="ltx_bib_title" role="title">On a boundary problem</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Ivan Ivanov</text><text class="ltx_bib_year"> (1990)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On a boundary problem</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Differ. Uravn.</text></bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="mr ltx_bib_external" href="https://www.ams.org/mathscinet-getitem?mr=1234567">MathReview (Nguyễn Quôc Tháng)</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"#,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"second\""],
+    r#"<bibitem class="ltx_bib_article" fragid="bib.bib2" key="second" type="article" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Petrov</tag><tag class="ltx_bib_year" role="year">1991</tag><tag class="ltx_bib_title" role="title">Another problem</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Petr Petrov</text><text class="ltx_bib_year"> (1991)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Another problem</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Mat. Sb.</text></bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="mr ltx_bib_external" href="https://www.ams.org/mathscinet-getitem?mr=7654321">MathReview (A. A. Arsenʹev)</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"#,
+  );
+}

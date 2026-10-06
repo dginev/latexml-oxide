@@ -2863,11 +2863,40 @@ LoadDefinitions!({
    </ltx:bibliography>",
   before_digest => sub {
     crate::latex_constructs::before_digest_bibliography()?;
+    provide_mathscinet_export_macros()?;
   },
   after_digest_begin => sub[whatsit] {
     crate::latex_constructs::begin_bibliography_clean(whatsit)?;
   });
 });
+
+/// The macros MathSciNet's `.bib` export defines in its `@preamble` (`\def\cprime{$'$}`, the Vietnamese double
+/// accent `\cftil`) and its fields use — `MRREVIEWER = {A.\ A.\ Arsen\cprime ev}`, `FJOURNAL =
+/// {Differentsial\cprime nye Uravneniya}`, `MRREVIEWER = {Nguy\cftil en Qu\^oc Th\'ang}` — for a `.bib` whose
+/// entries were copied without it (2609.00627, 2609.11266; 15 2609 papers erred). Provided while the bibliography's
+/// entries are digested only, each where it is free (an `@preamble`, `mathscinet.sty` or the document's own definition
+/// wins), never always-on (the stub `latex_constructs_rust_only.rs` retracted; user ruling 2026-10-06). The letters
+/// are `mathscinet_sty`'s (ʹ, ʺ); `\cftil{e}` is ễ, a tilde over the circumflex, as the export's box construction draws.
+fn provide_mathscinet_export_macros() -> Result<()> {
+  for (proto, body) in [
+    ("\\cprime", "\u{02B9}"),
+    ("\\Cprime", "\u{02B9}"),
+    ("\\cdprime", "\u{02BA}"),
+    ("\\Cdprime", "\u{02BA}"),
+    ("\\cftil{}", "\\~{\\^{#1}}"),
+  ] {
+    let (cs, params) = parse_prototype(proto, true)?;
+    if lookup_meaning(&cs).is_none() {
+      def_macro(
+        cs,
+        params,
+        ExpansionBody::Tokens(mouth::tokenize_internal(body)),
+        None,
+      )?;
+    }
+  }
+  Ok(())
+}
 
 #[cfg(test)]
 mod tests {

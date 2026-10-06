@@ -12,8 +12,9 @@
 % `\begin{bibtex@bibliography}` (Perl `Pre/BibTeX.pm` L118-122).
 %
 % The macro names here are deliberately unique to this fixture. `\cprime` itself
-% would be a vacuous probe: `latex_constructs_rust_only.rs` defines it
-% always-on, so the entry would render whether or not the preamble ran.
+% would be a vacuous probe: the bibliography provides it where it is free
+% (bibtex.rs `provide_mathscinet_export_macros`), so the entry would render
+% whether or not the preamble ran.
 %
 % What each block is here to pin:
 %   * `$'$` — the MathSciNet shape verbatim. It is also the treatment-2 canary:

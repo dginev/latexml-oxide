@@ -3007,6 +3007,17 @@ renders `Đ`, and equally RED if the `.bib` session is made to auto-load).
 now loads the package: that fixture is about accent welds surviving reversion,
 not about macro availability.
 
+**Within the bibliography (62zr, user ruling 2026-10-06).** A `.bib` whose MathSciNet entries were copied without the
+export's `@preamble{"\def\cprime{$'$} \def\cftil#1{...}"}` still uses `\cprime` and `\cftil` in fields no style
+prints (`MRREVIEWER`, `FJOURNAL`), which our bibliography digests: 15 2609 papers erred (2609.00627, 2609.11266).
+`{bibtex@bibliography}` provides `\cprime`, `\Cprime`, `\cdprime`, `\Cdprime` (this binding's ʹ, ʺ) and `\cftil{x}`
+(ễ: `\~{\^{x}}`) while its entries are digested, each only where free — an `@preamble`, the package or the
+document's own definition wins — and never outside it (bibtex.rs `provide_mathscinet_export_macros`); Perl errs.
+The provision covers every field, so a `\cprime` in a field a style prints (`TITLE`, `JOURNAL`) with no `@preamble`
+renders ʹ where the author's own build stops at an undefined control sequence: a recorded choice of the ruling, unlike
+`\Dbar`, which stays package-only (`bib_mathscinet_macro_yields_to_the_authors_own_definition`).
+Guard `06_cluster_bibliography::bib_mathscinet_fields_without_preamble`.
+
 ### 79. An UNMATCHED `$` in a `.bib` field is data, not a math shift
 
 Extends divergence #74 (a `.bib` field's content is DATA) to the one special it
