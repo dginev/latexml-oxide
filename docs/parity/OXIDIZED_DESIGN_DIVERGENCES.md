@@ -7137,15 +7137,21 @@ same content written live. The climb never leaves a flow container (a drawing
 or math box is another medium; hoisting past it strands the rest of the box),
 where the model's verdict stands as in Perl. Nor does it leave an alignment (a table cell, row or tabular, a math
 `array` cell): the cell's `</td>` is still owed by the alignment, and moving the insertion point past it left `<td>`
-open in the figure (62o, 1601.03744). Wherever the climb places nothing — an alignment, a list, a drawing stops it —
+open in the figure (62o, 1601.03744). Nor a float (62zd): an appendix section or a bibliography in a minipage in a
+`table` was lifted past it, leaving the table empty and its caption at the top level with no diagnostic; it stays in the
+float and the model reports it, as Perl's does. Wherever the climb places nothing — an alignment, a list, a float, a
+drawing stops it —
 a box in running text holding a caption, all of whose content a figure may hold, becomes an inline logical block
 around a `figure class="ltx_figure_panel"` with its content in source order: the in-cell (in-item, in-node) form of
-the side-by-side minipage panel (KNOWN_PERL_ERRORS #486), where Perl reports the caption in an `ltx:block`. One rule, no per-tag cases
+the side-by-side minipage panel (KNOWN_PERL_ERRORS #486), where Perl reports the caption in an `ltx:block`. The stops
+are per-tag (list, alignment, float) and a quote still leaks (repros/boxes-groups/
+bibliography_in_minipage_in_quote_keeps_the_quote.tex): consolidating them is open, SYNC_STATUS 62zd
 (`latexml_engine/src/base_utilities.rs::insert_block`). Guards:
 `perfect_kernel_gemini::mdframed_block_bibliography_juradiss`,
 `perfect_kernel_batch56::caption_in_inline_parbox_floats_to_figure`,
 `tests/complex/figure_dual_caption` (a minipage of graphics + caption still
-becomes the figure), `perfect_kernel_batch61::captions_in_minipages_in_a_tabular_are_panels`.
+becomes the figure), `perfect_kernel_batch61::captions_in_minipages_in_a_tabular_are_panels`,
+`perfect_kernel_batch61::appendix_in_a_minipage_stays_in_its_float`.
 
 
 

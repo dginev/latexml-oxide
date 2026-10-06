@@ -410,6 +410,28 @@ note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head fon
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
 
+62zd: rasti.cls (RAS Techniques and Instruments, mnras.cls under another name: v3.0 defines the same commands) loads
+as the mnras binding (rasti_cls.rs): all 18 rasti papers in 2609 at 0 errors (2609.08700, 09329, 27622, 29860, 35676
+had 5-33). cas-common's `stm/mktitle` title-page keys are declared (2609.00281). The box capture's backmatter lift
+stops at a float, as at an alignment (base_utilities.rs `insert_block`, OXIDIZED_DESIGN_DIVERGENCES #205): an appendix
+section or a bibliography in a minipage in a table was lifted past it with no diagnostic, leaving the table empty and
+its caption at the top level; it stays in the table and errors as Perl's does (A/B over 867 papers: 8 improved; 2609.05763,
+a cas paper's abbreviation list in a framed table, now in its table with Perl's `ltx:glossary`-in-`ltx:block` error
+instead of moved after an emptied table). OPEN (third stop on one climb —
+consolidate): the climb's stops are per-tag (list, alignment, float), and a box in a `quote` still leaks — the lift
+moves the insertion point past the open quote, so the text after the box escapes it (RED
+repros/boxes-groups/bibliography_in_minipage_in_quote_keeps_the_quote.tex); Perl's `floatToElement` restores the
+insertion point after floating past an open container, the likely single rule, but the xebaposter/juradiss hoists
+(surpass) must keep working — needs its own A/B. Pre-existing mnras-binding gaps rasti papers now inherit: `\theenumi`
+`(\roman{enumi})` (mnras.cls:930-939), `\bibpunct{(}{)}{;}{a}{}{,}` (:1336), "REFERENCES"; `mn_cls.rs` declares the
+option `usedcolum` (Perl mn.cls.ltxml:23 too) where the class has `usedcolumn`. NEEDS A RULING: a `\section` inside a float (38 papers in 2609, 117 errors; 29 have no
+other error: 2609.03590, 00943, 05680) is valid TeX — `\@startsection` needs only vertical mode — and could open in an
+`ltx:inline-sectional-block` in the float (schema-valid, the appendix as its `ltx:section` stand-in; prototyped, 0
+errors, jing-clean), but the 2026-10-04 ruling restored Perl's `Error:malformed` for sectioning in items and figures
+(OXIDIZED_DESIGN_DIVERGENCES #189, `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_errors`), so it is
+not applied. Guards `perfect_kernel_batch61::{rasti_loads_as_mnras, appendix_in_a_minipage_stays_in_its_float,
+cas_common_helpers_can_be_renewed}`.
+
 62zc: class bindings that skipped what the class loads or defines. optica-article's binding runs the class file's own
 dependency scan (`require_dependencies_except`, as sn-jnl's, without soul — the `\else` arm of its `\ifpdf`): array,
 tabularx, multirow, newtxmath were missing (2609.00899, 05706, 06191, 10235, 01145; all 24 optica papers in 2609 at 0

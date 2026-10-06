@@ -43,6 +43,29 @@ LoadDefinitions!({
   // needs defined — ltcmd errors on renewing an undefined command (2609.16168, 16199, 36345 `\firstname`,
   // `\emailauthor`, `\ps@cas`; 2609.00634, 20010 `\printorcid`, `\printemails`). This binding's frontmatter, which
   // keeps the e-mails and notes itself, does not call them; the page styles are page furniture.
+  // cas-common.sty:1723-1732: the title-page layout keys (`\pprintMaketitle[<keys>]`, `\MaketitleBox[…]`, :1748-1829,
+  // or a paper's own `\keys_set:nn {stm/mktitle}{nologo}`, 2609.00281) — layout only here.
+  RawTeX!(
+    r"\ExplSyntaxOn
+\bool_if_exist:NF \g_stm_blind_bool { \bool_new:N \g_stm_blind_bool }
+\bool_if_exist:NF \g_stm_longtitle_bool { \bool_new:N \g_stm_longtitle_bool }
+\bool_if_exist:NF \g_stm_nologo_bool { \bool_new:N \g_stm_nologo_bool }
+\tl_if_exist:NF \g_stm_footer_default_tl { \tl_new:N \g_stm_footer_default_tl }
+\tl_if_exist:NF \g_stm_footer_custom_tl { \tl_new:N \g_stm_footer_custom_tl }
+\clist_if_exist:NF \g_stm_breakafter_clist { \clist_new:N \g_stm_breakafter_clist }
+\keys_define:nn { stm / mktitle }
+  {
+    blind .bool_gset:N = \g_stm_blind_bool,
+    footer .multichoice:,
+    footer/default .tl_gset:N = \g_stm_footer_default_tl,
+    footer/custom .tl_gset:N = \g_stm_footer_custom_tl,
+    longtitle .bool_gset:N = \g_stm_longtitle_bool,
+    longabstract .bool_gset:N = \g_stm_longtitle_bool,
+    breakafter .clist_gset:N = \g_stm_breakafter_clist,
+    nologo .bool_gset:N = \g_stm_nologo_bool,
+  }
+\ExplSyntaxOff"
+  );
   for (cs, args) in [
     ("\\parsename", "{}"),
     ("\\invparsename", "{}"),

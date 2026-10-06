@@ -232,6 +232,7 @@ pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod ptephy_cls;
 pub mod quotchap_sty;
+pub mod rasti_cls;
 pub mod refstyle_sty;
 pub mod resphilosophica_cls;
 pub mod robustindex_sty;
@@ -683,6 +684,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "cls",
     optica_article_cls::load_definitions,
   ),
+  ("rasti", "cls", rasti_cls::load_definitions),
   (
     "oup-authoring-template",
     "cls",

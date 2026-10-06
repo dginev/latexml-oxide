@@ -5898,7 +5898,19 @@ fn insert_block_as(
           )
         })
       };
-      if alignment(&ancestor) {
+      // Nor out of a float: an appendix section (or a bibliography) in a minipage in a `table` was lifted past it,
+      // leaving the table empty and its caption at the document's top level, with no diagnostic; it now stays in the
+      // float and errors there, as Perl's does (a sectioning unit in a float errors, OXIDIZED_DESIGN_DIVERGENCES #189
+      // ruling). Witness 2609.05763 (a nomenclature glossary in a framed minipage in a table); guard
+      // `perfect_kernel_batch61::appendix_in_a_minipage_stays_in_its_float`.
+      // The climb now has three per-tag stops (list, alignment, float), and a quote still leaks
+      // (repros/boxes-groups/bibliography_in_minipage_in_quote_keeps_the_quote.tex): SYNC_STATUS 62zd.
+      let float = |n: &Node| {
+        with(document::get_node_qname(n), |t| {
+          matches!(t, "ltx:table" | "ltx:figure" | "ltx:float")
+        })
+      };
+      if alignment(&ancestor) || float(&ancestor) {
         break;
       }
       match ancestor.get_parent() {
