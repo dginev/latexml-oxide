@@ -1033,23 +1033,19 @@ LoadDefinitions!({
   // leading superscript mark ($^{n}$ / \textsuperscript{n}). \thanks is
   // semantically an acknowledgement, so we re-route ONLY when the content BEGINS
   // with such a mark (the abuse signature — a genuine acknowledgement never
-  // starts with a bare superscript); every other \thanks stays the parity-
-  // faithful Semiverbatim role=thanks contact. When detected we re-tokenize (the
-  // Semiverbatim read froze $/^ to catcode-other) and feed each $^{n}$-delimited
-  // segment through \lx@affiliation@withsup, which sets the affiliation:N label
-  // that the authors' own marks already request (relocate_annotations then links
+  // starts with a bare superscript); every other \thanks stays a role=thanks
+  // note. When detected we feed each $^{n}$-delimited segment through
+  // \lx@affiliation@withsup, which sets the affiliation:N label that the authors'
+  // own marks already request (relocate_annotations then links
   // author<->affiliation). Witness arXiv:2606.00313.
-  DefMacro!("\\lx@add@thanks [] Semiverbatim", sub[(attr, content)] {
+  // The argument is an ordinary one, as LaTeX's `\thanks` reads it and as a title's `\thanks`
+  // (`\lx@add@pubnote@thanks`) does: Perl's Semiverbatim (Base_Utility.pool.ltxml:661) froze `$`, `^`, `_` to
+  // catcode other, so an author's `\thanks{... 10 m$^{2}$ lab.}` printed its math as text (KNOWN_PERL_ERRORS #515;
+  // repro sectioning-frontmatter/author_thanks_and_footnote_keep_their_math).
+  DefMacro!("\\lx@add@thanks [] {}", sub[(attr, content)] {
     if starts_with_affiliation_mark(&content) {
-      // `untex_string()`, NOT `to_string()`: flattening with `Display` welds a
-      // control word to whatever letter follows it (`\c c` → `\cc`), because the
-      // space that terminated the control word was eaten by the tokenizer and is
-      // not in the token list. `\thanks{...}` carries author names, so that is
-      // exactly the space-form-accent case that broke `\bib@@names` (PR #399) and
-      // the MathSciNet review path (issue 410). Witness arXiv:2606.00313.
-      let retok = mouth::tokenize_internal(content.clone().untex_string());
       let mut calls: Vec<Token> = Vec::new();
-      for seg in split_wrapped_affiliation_marks(retok) {
+      for seg in split_wrapped_affiliation_marks(content) {
         if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
           continue;
         }
@@ -1081,13 +1077,21 @@ LoadDefinitions!({
       Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
         vec![Some(mouth::tokenize_internal("ltx:creator")),
              Some(mouth::tokenize_internal("ltx:note")),
-             Some(Tokens::new(opts)), Some(content)]))
+             Some(Tokens::new(opts)), Some(note_body(content))]))
     }
   });
-  DefMacro!(
-    "\\lx@add@note [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=note,#1]{#2}"
-  );
+  // An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515).
+  DefMacro!("\\lx@add@note [] {}", sub[(attr, content)] {
+    let mut opts = mouth::tokenize_internal("role=note").unlist();
+    if let Some(a) = &attr {
+      opts.push(T_OTHER!(","));
+      opts.extend(a.unlist_ref().iter().copied());
+    }
+    Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
+      vec![Some(mouth::tokenize_internal("ltx:creator")),
+           Some(mouth::tokenize_internal("ltx:contact")),
+           Some(Tokens::new(opts)), Some(note_body(content))]))
+  });
 
   // This corresponds to standard LaTeX,
   // The command replaces any previous authors/creators;
@@ -1352,7 +1356,7 @@ LoadDefinitions!({
                 let requested: Vec<String> = entries
                   .iter()
                   .filter(|(kind, _)| *kind == AuthorLineKind::Author)
-                  .flat_map(|(_, author)| mark_operands(author.unlist_ref()))
+                  .flat_map(|(_, author)| author_mark_operands(author.unlist_ref()))
                   .flat_map(|operand| {
                     clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation")
                   })
@@ -1604,13 +1608,45 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@let@superscript Token", sub[(cs)] {
     Let!(T_SUPER!(), cs);
   });
+  // The plain meanings of the superscript and `\textsuperscript`, which an author or affiliation line rebinds to its
+  // mark readers: saved where it rebinds them (the first time, so a line inside another keeps the outer save) and
+  // restored for a note's content (`\lx@frontmatter@plainsups`), whose superscripts are the author's text, not marks
+  // — a `\thanks{... 10 m$^{2}$ lab.}` in a marked author line lost its note to an orphaned `affiliation:2` label
+  // (KNOWN_PERL_ERRORS #515, where Perl's Semiverbatim `\thanks` hid them; repro
+  // sectioning-frontmatter/author_thanks_and_footnote_keep_their_math).
+  DefPrimitive!(T_CS!("\\lx@frontmatter@savesups"), None, {
+    // Saved once per group chain, keyed on the superscript (`\textsuperscript` is undefined under plain TeX).
+    if lookup_meaning(&T_CS!("\\lx@frontmatter@plainsup")).is_none() {
+      // The definition a superscript digests by (a `\let` from `^` copies only the character).
+      if let Some(plain) = lookup_digestable_definition(&T_SUPER!()) {
+        assign_meaning(&T_CS!("\\lx@frontmatter@plainsup"), plain, None);
+      }
+      Let!(
+        T_CS!("\\lx@frontmatter@plaintextsuperscript"),
+        T_CS!("\\textsuperscript")
+      );
+    }
+    Ok(Vec::new())
+  });
+  DefPrimitive!(T_CS!("\\lx@frontmatter@plainsups"), None, {
+    if let Some(plain) = lookup_meaning(&T_CS!("\\lx@frontmatter@plainsup")) {
+      assign_meaning(&T_SUPER!(), plain, None);
+    }
+    if is_defined_token(&T_CS!("\\lx@frontmatter@plaintextsuperscript")) {
+      Let!(
+        T_CS!("\\textsuperscript"),
+        T_CS!("\\lx@frontmatter@plaintextsuperscript")
+      );
+    }
+    Ok(Vec::new())
+  });
   DefMacro!(
     "\\lx@author@withsup{}",
-    "\\bgroup\\lx@let@superscript\\lx@sup@request@affiliation\\let\\textsuperscript\\lx@sup@request@affiliation#1\\egroup"
+    "\\bgroup\\lx@frontmatter@savesups\\lx@let@superscript\\lx@sup@request@affiliation\\let\\textsuperscript\\lx@sup@request@affiliation#1\\egroup"
   );
   DefMacro!(
     "\\lx@affiliation@withsup{}",
-    "\\bgroup\\lx@let@superscript\\lx@sup@setlabel@affiliation\\let\\textsuperscript\\lx@sup@setlabel@affiliation#1\\egroup"
+    "\\bgroup\\lx@frontmatter@savesups\\lx@let@superscript\\lx@sup@setlabel@affiliation\\let\\textsuperscript\\lx@sup@setlabel@affiliation#1\\egroup"
   );
   // A VISIBLE author superscript mark that must survive the `\lx@author@withsup`
   // hijack (which points `^`, via `\lx@let@superscript`, and `\textsuperscript`
@@ -2529,6 +2565,30 @@ fn mark_operands(tokens: &[Token]) -> Vec<Vec<Token>> {
   operands
 }
 
+/// The marks an author's tokens request: those outside its notes, a `\thanks{...}` or `\footnote{...}` whose own
+/// superscripts are its text or label it (`note_body`) — `Ann Able\thanks{$^{a}$ Supported by ...}` requests nothing.
+fn author_mark_operands(tokens: &[Token]) -> Vec<Vec<Token>> {
+  let mut outside = Vec::with_capacity(tokens.len());
+  let mut i = 0;
+  while i < tokens.len() {
+    if tokens[i] == T_CS!("\\thanks") || tokens[i] == T_CS!("\\footnote") {
+      let mut j = i + 1;
+      if tokens.get(j) == Some(&T_OTHER!("["))
+        && let Some(close) = tokens[j..].iter().position(|t| *t == T_OTHER!("]"))
+      {
+        j += close + 1;
+      }
+      if let Some((_, next)) = sup_operand_at(tokens, j) {
+        i = next;
+        continue;
+      }
+    }
+    outside.push(tokens[i]);
+    i += 1;
+  }
+  mark_operands(&outside)
+}
+
 /// The operand of an affiliation entry's last mark, which `\lx@sup@setlabel@affiliation` labels it by.
 fn entry_mark(entry: &[Token]) -> Option<Vec<Token>> { mark_operands(entry).pop() }
 
@@ -2549,7 +2609,7 @@ fn queued_author_marks() -> Vec<Vec<Vec<Token>>> {
       .filter(|entry| {
         entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
       })
-      .map(|entry| mark_operands(entry.2.unlist_ref()))
+      .map(|entry| author_mark_operands(entry.2.unlist_ref()))
       .collect(),
     _ => Vec::new(),
   })
@@ -3295,6 +3355,21 @@ pub fn digest_front_matter() -> Result<()> {
       Some(Scope::Global),
     );
   }
+  // The labels the authors' marks request, for the notes digested here (`note_body`) — this call's authors only: a
+  // note queued for a later call (an appending `\author` after `\maketitle`) sees that call's.
+  let requested: Vec<String> = commands
+    .iter()
+    .filter(|entry| {
+      entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+    })
+    .flat_map(|entry| author_mark_operands(entry.2.unlist_ref()))
+    .flat_map(|operand| clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation"))
+    .collect();
+  assign_value(
+    "lx_frontmatter_requested_marks",
+    Stored::String(pin(requested.join("\u{1}"))),
+    Some(Scope::Local),
+  );
   if !commands.is_empty() {
     let_i(
       &T_CS!("\\lx@add@frontmatter"),
@@ -8172,6 +8247,42 @@ fn classify_thanks(text: &str) -> &'static str {
   } else {
     "note"
   }
+}
+
+/// The body a creator's note (`\lx@add@thanks`, `\lx@add@note`) digests: its leading marks as the author line reads
+/// them when an author's mark requests them and the note is one legend — a `\thanks{\textsuperscript{$\dagger$} School
+/// ...}` is labelled by its mark and goes to the starred authors (2609.00885, 2609.19600) — and the rest, or all of it
+/// when no author requests the mark or more legends follow, with the plain superscripts (`\lx@frontmatter@plainsups`): its `10 m$^{2}$` is text, not a mark
+/// (KNOWN_PERL_ERRORS #515), and an unrequested leading mark stays shown, its note with its author.
+fn note_body(content: Tokens) -> Tokens {
+  let toks = content.unlist();
+  let lead = toks.iter().take_while(|t| **t == T_SPACE!()).count();
+  let end = lead + leading_marks_end(&toks[lead..]);
+  let requested = lookup_string("lx_frontmatter_requested_marks");
+  // One legend: no other mark after a space in its text (`$^{\dag}$ These authors ... $^{*}$ This author ...` is several
+  // legends and a funding line in one `\thanks`, 2609.39576, which stays whole with its author), where `10 m$^{2}$`
+  // is glued to its base.
+  // A numeral's spaced suffix (`5 $^{th}$`, shown by `rewrite_ordinal_superscripts`) is no legend.
+  let after_numeral = |i: usize| {
+    i >= 2
+      && toks[i - 2].get_catcode() == Catcode::OTHER
+      && toks[i - 2].with_str(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()))
+  };
+  let another_legend = (end + 1..toks.len())
+    .any(|i| toks[i - 1] == T_SPACE!() && !after_numeral(i) && leading_marks_end(&toks[i..]) > 0);
+  let marks_requested = end > lead
+    && !another_legend
+    && mark_operands(&toks[lead..end]).iter().any(|operand| {
+      clean_frontmatter_labels(&Tokens::new(operand.clone()).to_string(), "affiliation")
+        .iter()
+        .any(|label| requested.split('\u{1}').any(|r| r == label))
+    });
+  let split = if marks_requested { end } else { 0 };
+  let mut body = toks[..split].to_vec();
+  body.extend([T_CS!("\\bgroup"), T_CS!("\\lx@frontmatter@plainsups")]);
+  body.extend_from_slice(&toks[split..]);
+  body.push(T_CS!("\\egroup"));
+  Tokens::new(body)
 }
 
 /// Does this token list *begin* with a NUMERIC affiliation superscript mark

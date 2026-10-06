@@ -11054,5 +11054,10 @@ Text.
 
 pdflatex: 0 errors, typeset math in both notes. Perl and Rust (62zp): 0 errors, "Supported by the 10 m$ˆ2$ lab." and
 "On leave from $x˙0$." as text (OT1 glyphs for `^` and `_`). 1,391 of the 77,237 2609 papers have math in a `\thanks`
-argument (most of them in an author). OPEN, RED repro
-`sectioning-frontmatter/author_thanks_and_footnote_keep_their_math`.
+argument (most of them in an author). Rust (62zq): both read an ordinary argument, as a title's
+`\lx@add@pubnote@thanks[]{}` (:636) does, and a note's content restores the plain superscript and `\textsuperscript`
+that a marked author line rebinds to its mark readers (`\lx@frontmatter@plainsups`), or `m$^{2}$` in it labels the
+note `affiliation:2` and the orphaned note is dropped; a leading mark that authors request still labels a note that is
+one legend, so a `\thanks{\textsuperscript{$\dagger$} School ...}` goes to the † authors (2609.00885, 2609.19600).
+Repro `sectioning-frontmatter/author_thanks_and_footnote_keep_their_math`;
+guard `perfect_kernel_batch61::author_thanks_and_footnote_keep_their_math`.

@@ -1,0 +1,14 @@
+% witness: 62zq review (t9): the thanks-abuse idiom (2606.00313) whose text holds an ordinary superscript
+% oracle:  pdflatex 0 errors: the footnote reads "1Univ A, 2Univ B. Supported by 10 m2 labs." (m², superscript 2)
+% engines: rust (62zq) = 0 errors: Ann Able holds Univ A and Bob Baker "Univ B. Supported by 10 m labs." — every
+%          `$^{n}$` in the `\thanks` goes through `\lx@affiliation@withsup`, which reads `m$^{2}$`'s superscript as a
+%          label and drops the "2" (`split_wrapped_affiliation_marks` does not split there: no space before it);
+%          Perl 0.8.8 keeps the whole `\thanks` as one thanks contact of Bob's, its math as text ("$ˆ1$Univ A, ...")
+% expect:  0 errors; Ann Able holds Univ A, Bob Baker holds "Univ B. Supported by 10 m<sup>2</sup> labs." (the 2 kept)
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}\author{Ann Able$^{1}$, Bob Baker$^{2}$\thanks{$^{1}$Univ A, $^{2}$Univ B. Supported by 10 m$^{2}$ labs.}}
+\maketitle
+Text.
+\end{document}

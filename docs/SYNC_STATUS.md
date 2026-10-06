@@ -489,6 +489,19 @@ Perl removes an unlabelled pending annotation silently too); `author_symbol_mark
 (`author_suffix_marks_after_commas_link_affiliations`, SHARED with Perl, 2609.25924; `author_prefix_marks_first_line_is_names`,
 Perl drops the authors): fixed by 62zp.
 
+62zq: an author's `\thanks` and `\footnote` read an ordinary argument, as LaTeX's and a title's do — Perl's
+Semiverbatim `\lx@add@thanks`/`\lx@add@note` printed their math as text (1,391 2609 papers have math in a `\thanks`;
+KNOWN_PERL_ERRORS #515) — and a note's content in a marked author line keeps its superscripts as text
+(`\lx@frontmatter@savesups`/`\lx@frontmatter@plainsups`), save a leading mark authors request on a note that is one
+legend, which labels the note, the legend going to them (`note_body`; 2609.00885, 2609.19600); an author's requests are
+its marks outside its notes (`author_mark_operands`). RED `thanks_with_several_legends_goes_to_each_legends_authors`
+(2609.39576: several legends in one `\thanks` stay whole with its author); `\dag` is not among the footnote symbols
+`rewrite_symbol_superscripts` shows (an author's `$^{\dag}$` is consumed where `$^{*}$` is shown). Guard
+`perfect_kernel_batch61::author_thanks_and_footnote_keep_their_math`. Open from its review: RED
+`sectioning-frontmatter/thanks_affiliation_list_keeps_superscripts_in_its_text` (the thanks-abuse idiom, 2606.00313:
+every `$^{n}$` in the `\thanks` goes through `\lx@affiliation@withsup`, so `10 m$^{2}$ labs.` loses its "2"; the same
+on 62zp).
+
 62zp: marks glued to a comma in a line that does not open with a mark are the name's before it
 (`marks_before_glued_commas`), a `\thanks` glued among them too (2609.37343); an author block's first line is its names even when the marks lead them, and so is a
 later `\and` group's first line once the first line did, when no author before it requests its mark and no
@@ -503,9 +516,8 @@ informs_author_marks_link_affiliations, informs_hanging_lists, marked_affiliatio
 Open from the 62zp review: RED `sectioning-frontmatter/author_symbol_legend_line_links_its_starred_author` (Rust-only;
 Perl links it): in an article `\author`, a `$^*$Corresponding author` line continues the affiliation before it
 instead of going to the author whose mark carries `*` (`$^{1,*}$`), because `rewrite_symbol_superscripts` makes its
-`$^*$` a visible superscript before the lines are split; RED `author_thanks_and_footnote_keep_their_math` (SHARED,
-KNOWN_PERL_ERRORS #515; 1,391 2609 papers have math in a `\thanks`): an author's `\thanks`/`\footnote` read as
-Semiverbatim print their math as text — next, 62zq; RED `author_concatenated_digit_marks_link_each_affiliation`
+`$^*$` a visible superscript before the lines are split; `author_thanks_and_footnote_keep_their_math` (SHARED,
+KNOWN_PERL_ERRORS #515; fixed by 62zq); RED `author_concatenated_digit_marks_link_each_affiliation`
 (2609.37343: `$^{23}$` for affiliations 2 and 3 labels `affiliation:23`, so they sit on a nameless creator; Perl
 gives the first and drops the second); RED `author_and_groups_sharing_a_prefix_mark_are_names` (`\and` groups whose
 names open with the mark of an author before them read as that author's affiliation; Perl drops both authors).

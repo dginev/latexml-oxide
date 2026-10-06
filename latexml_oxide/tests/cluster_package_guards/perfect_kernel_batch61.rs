@@ -7873,3 +7873,93 @@ fn author_marks_link_their_affiliations() {
     ]
   );
 }
+
+/// 62zq: an author's `\thanks` and `\footnote` read an ordinary argument, as LaTeX's and a title's
+/// (`\lx@add@pubnote@thanks`) do: Perl's Semiverbatim `\lx@add@thanks`/`\lx@add@note` (Base_Utility.pool.ltxml:661/663)
+/// printed their math as text ("10 m$ˆ2$ lab."; KNOWN_PERL_ERRORS #515). In a marked author line the note's
+/// superscripts stay text, not marks (`\lx@frontmatter@plainsups`). Repro
+/// sectioning-frontmatter/author_thanks_and_footnote_keep_their_math. pdflatex: "Supported by the 10 m² lab.", "On
+/// leave from x₀.".
+#[test]
+fn author_thanks_and_footnote_keep_their_math() {
+  let creators = |tex: &str| -> Vec<String> {
+    let (log, xml) = convert_with(tex, None);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    creators_of(&xml)
+  };
+  let thanks = |kind: &str, text: &str| {
+    format!("<note class=\"ltx_note_frontmatter ltx_thanks_{kind}\" role=\"thanks\">{text}</note>")
+  };
+  let squared = "m<sup><text font=\"italic\">2</text></sup>";
+  let found = creators(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_thanks_and_footnote_keep_their_math.tex"
+  ));
+  assert_eq!(found, vec![
+    format!(
+      "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
+      thanks("funding", &format!("Supported by the 10 {squared} lab."))
+    ),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" \
+     role=\"note\">On leave from <Math mode=\"inline\" tex=\"x_{0}\" text=\"x _ 0\" xml:id=\"m2\"><XMath><XMApp><XMTok \
+     role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok fontsize=\"70%\" \
+     meaning=\"0\" role=\"NUMBER\">0</XMTok></XMApp></XMath></Math>.</contact></creator>"
+      .to_string(),
+  ]);
+  // A note's leading mark that authors request labels it, the legend going to them (2609.00885, 2609.19600); one no
+  // author requests is the note's text, the note staying with its author.
+  let it = |s: &str| format!("<sup><text font=\"italic\">{s}</text></sup>");
+  assert_eq!(
+    creators(
+      r"\documentclass{article}\begin{document}\title{T}\author{Ann Able\textsuperscript{$\dagger$}, Bob Baker\textsuperscript{*}, Cy Cole\textsuperscript{$\dagger$}\thanks{\textsuperscript{$\dagger$} Univ X}\thanks{$^{a}$ Supported by 10 m$^{2}$ labs.}}\maketitle Text.\end{document}"
+    ),
+    vec![
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
+        thanks("note", " Univ X")
+      ),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname></creator>"
+        .to_string(),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Cole</personname>{}{}</creator>",
+        thanks("funding", &format!("{} Supported by 10 m{} labs.", it("a"), it("2"))),
+        thanks("note", " Univ X")
+      ),
+    ]
+  );
+  // A numeral's spaced ordinal suffix in the legend's text is no second legend.
+  let found = creators(
+    r"\documentclass{article}\begin{document}\title{T}\author{Ann\textsuperscript{$\dagger$}, Bob, Cy\textsuperscript{$\dagger$}\thanks{\textsuperscript{$\dagger$} School of X, 5 $^{th}$ floor.}}\maketitle Text.\end{document}",
+  );
+  let legend = thanks("note", " School of X, 5 <sup>th</sup> floor.");
+  assert_eq!(found, vec![
+    format!("<creator role=\"author\"><personname>Ann</personname>{legend}</creator>"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob</personname></creator>"
+      .to_string(),
+    format!(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy</personname>{legend}</creator>"
+    ),
+  ]);
+  // Several legends in one note: it stays whole with its author, its marks shown (2609.39576).
+  assert_eq!(
+    creators(
+      r"\documentclass{article}\begin{document}\title{T}\author{Ann Able$^{\dag}$, Bob Baker$^{*}$\thanks{$^{\dag}$ Univ X. $^{*}$ Univ Y.}}\maketitle Text.\end{document}"
+    ),
+    vec![
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>".to_string(),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname>{}</creator>",
+        thanks("note", &format!("{} Univ X. <sup>*</sup> Univ Y.", it("†")))
+      ),
+    ]
+  );
+  // In a marked author line, the note's superscript is the author's text, not a mark.
+  assert_eq!(
+    creators(
+      r"\documentclass{article}\begin{document}\title{T}\author{Ann Able$^{1}$\thanks{A 10 m$^{2}$ lab.}\\ $^1$Univ A}\maketitle Text.\end{document}"
+    ),
+    vec![format!(
+      "<creator role=\"author\"><personname>Ann Able</personname>{}<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      thanks("note", &format!("A 10 {squared} lab."))
+    )]
+  );
+}

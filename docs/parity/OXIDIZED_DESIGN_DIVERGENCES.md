@@ -1620,6 +1620,17 @@ than standing alone; an ordinal suffix superscript after a numeral (`5 \textsupe
 not taken for an affiliation mark (iopart, 2609.01831). Guard
 `perfect_kernel_batch61::author_marks_link_their_affiliations`.
 
+**(l) An author's notes keep their math (62zq).** `\lx@add@thanks` and `\lx@add@note` (an author's `\thanks` and
+`\footnote`) read an ordinary argument, as LaTeX's `\thanks` and a title's `\lx@add@pubnote@thanks` do, where Perl's
+are Semiverbatim (Base_Utility.pool.ltxml:661/663) and print their math as text; a note's content in a marked author
+line keeps its superscripts as text, not marks (`\lx@frontmatter@plainsups`), save a leading mark that authors
+request on a note that is one legend, which labels the note so that the legend goes to them
+(`\thanks{\textsuperscript{$\dagger$} School ...}`, 2609.00885, 2609.19600; `note_body`); a note of several legends
+stays whole with its author, its marks shown (2609.39576; RED
+`thanks_with_several_legends_goes_to_each_legends_authors`). An author's own requests are its marks outside its notes
+(`author_mark_operands`). KNOWN_PERL_ERRORS #515. Guard
+`perfect_kernel_batch61::author_thanks_and_footnote_keep_their_math`.
+
 **Scope/limits:**
 - The `*` equal-contribution suffix on a combined author mark (`$^{1*}$`) still
   labels `affiliation:1*`, so it does not yet match a plain `affiliation:1`
