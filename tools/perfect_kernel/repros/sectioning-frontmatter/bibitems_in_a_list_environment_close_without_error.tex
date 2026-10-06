@@ -6,7 +6,7 @@
 %          closes the list, lets its `\end` be `\endthebibliography`, and opens the bibliography with `\thebibliography`,
 %          not `\begin`, so the author's `\end{enumerate}` closes a group that was never opened (KNOWN_PERL_ERRORS #513)
 % expect:  0 errors; one <bibliography> holding the entry
-% status:  RED
+% status:  GREEN (62zn: `\lx@mung@bibliography` opens the group the author's `\end{enumerate}` closes)
 \documentclass{article}
 \begin{document}
 Text \cite{a}.

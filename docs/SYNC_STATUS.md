@@ -448,9 +448,10 @@ now on apa6, OmniBus's class, with apa7's linked DOI beside it).
 `absorb_bibliography_heading`, the bibliography's `after_close`): titled as it is, or an otherwise empty unit when the
 bibliography has no title or the `\bibitem`s opened it in — Pandoc's `\section{References}` over its
 `{CSLReferences}` list (2609.02899), `\section*{References}` before `{thebibliography}`; Perl keeps two headings, the
-first over nothing (KNOWN_PERL_ERRORS #512, OXIDIZED_DESIGN_DIVERGENCES #456). Side finding, open: `\bibitem`s in
-`{enumerate}`/`{itemize}`/`{description}` err at the list's `\end` (`\endgroup`, shared with Perl, KNOWN_PERL_ERRORS
-#513; RED repro sectioning-frontmatter/bibitems_in_a_list_environment_close_without_error).
+first over nothing (KNOWN_PERL_ERRORS #512, OXIDIZED_DESIGN_DIVERGENCES #456). 62zn: `\bibitem`s in
+`{enumerate}`/`{itemize}`/`{description}` no longer err at the list's `\end` (`\endgroup`, shared with Perl,
+KNOWN_PERL_ERRORS #513): the auto-open opens the group that `\end` closes. Open: what the list sets before its first
+`\bibitem` is undone with the list's group (RED repro sectioning-frontmatter/bibitems_in_a_list_keep_the_lists_settings).
 
 62zk: the informs binding (informs3 and its h/a/noheader copies, informs4 and its copies, informs5) gains the class
 API its papers use — the journal switches and the review options (informs4.cls:9-54; informs3 declares twelve journals

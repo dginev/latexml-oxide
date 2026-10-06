@@ -569,12 +569,15 @@ pub(crate) fn load() -> Result<()> {
     if tag == "enumerate" || tag == "itemize" || tag == "description" {
       tokens.extend(Invocation!("\\end", vec![env]).unlist());
       tokens.extend(vec![
+        // the group the author's `\end{<list>}` closes, its own having been ended above, which also undoes the
+        // `\let`s, so a later list of that kind is itself again (KNOWN_PERL_ERRORS #513)
+        T_CS!("\\begingroup"),
         T_CS!("\\let"),
         T_CS!(format!("\\end{tag}")),
         T_CS!("\\endthebibliography"),
         T_CS!("\\let"),
         T_CS!(format!("\\end{{{tag}}}")),
-        T_CS!("\\end{thebibliography}")
+        T_CS!("\\end{thebibliography}"),
       ]);
     }
     // else ? it probably isn't going to work??

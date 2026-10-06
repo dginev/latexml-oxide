@@ -1,0 +1,19 @@
+% witness: 62zn review (side finding); shape of `\bibitem`s in a list environment that set things up first
+% oracle:  pdflatex 0 errors: "1. Able IN." then "After OUT." — the list's `\def` holds for its items and ends with it
+% engines: rust (62zn) = perl (2026-10-06) = "Able OUT.": the auto-open (`\lx@mung@bibliography`, Perl
+%          latex_constructs.pool.ltxml:4114-4121) ends the list, and its group, before opening the bibliography, so
+%          what the author set inside the list before the first `\bibitem` is undone (KNOWN_PERL_ERRORS #513)
+% expect:  0 errors; the entry reads "Able IN."; "After OUT."
+% status:  RED
+\documentclass{article}
+\begin{document}
+Text \cite{a}.
+
+\def\foo{OUT}
+\section{Refs}
+\begin{enumerate}
+\def\foo{IN}\small
+\bibitem{a} Able \foo.
+\end{enumerate}
+After \foo.
+\end{document}

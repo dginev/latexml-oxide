@@ -7427,9 +7427,93 @@ fn bibliography_takes_the_place_of_its_heading_unit() {
     tail
   ]);
   assert_eq!(bibliography_children(&xml), ["tags", "title", "biblist"]);
-  // `\bibitem`s opening the bibliography under any heading take it, as the PDF prints that heading over them. (In
-  // `{enumerate}` the auto-open errs at its `\end`, a shared Perl error: KNOWN_PERL_ERRORS #513, RED repro
-  // sectioning-frontmatter/bibitems_in_a_list_environment_close_without_error.)
+  // `\bibitem`s opening the bibliography under any heading take it, as the PDF prints that heading over them — in
+  // `{enumerate}` and `{itemize}` too, which ended in an `\endgroup` error (62zn, KNOWN_PERL_ERRORS #513; repro
+  // sectioning-frontmatter/bibitems_in_a_list_environment_close_without_error).
+  for list in ["enumerate", "itemize", "description"] {
+    let tex = format!(
+      "\\documentclass{{article}}\n\\begin{{document}}\nText \\cite{{a}}.\n\n\\section{{Literature}}\\label{{lit}}\n\\begin{{{list}}}\n\\bibitem{{a}} Able, A title.\n\\end{{{list}}}\nAfter the list.\n\\end{{document}}\n"
+    );
+    let (log, xml) = convert_with(&tex, None);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{list}: {log}"
+    );
+    assert_eq!(
+      units_of(&xml),
+      vec!["bibliography:Literature [LABEL:lit] +biblist"],
+      "{list}"
+    );
+    assert_element(
+      &xml,
+      "bibitem",
+      &["key=\"a\""],
+      "<bibitem key=\"a\" xml:id=\"bib.bib1\"><tags><tag>[1]</tag><tag role=\"refnum\">1</tag></tags><bibblock> Able, A title.</bibblock></bibitem>",
+    );
+    // the text after the list is a paragraph after the bibliography
+    let after = xml.split("</bibliography>").nth(1).unwrap_or_default();
+    assert!(after.contains("<p>After the list.</p>"), "{list}: {xml}");
+  }
+  // The auto-open's group also ends the lists' redirection: a later list of that kind is itself again, and a second
+  // such bibliography opens and ends too (without it both met an `\endgroup` error and the later lists nested into the
+  // bibliography's list).
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\begin{document}
+Text \cite{a}.
+
+\section{Refs}
+\begin{enumerate}
+\bibitem{a} Able.
+\end{enumerate}
+\section{Later}
+\begin{enumerate}
+\item one
+\item two
+\end{enumerate}
+\begin{itemize}
+\item three
+\end{itemize}
+After.
+\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S2\""],
+    "<section inlist=\"toc\" xml:id=\"S2\"><tags><tag>2</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">§2</tag></tags><title><tag close=\" \">2</tag>Later</title><para xml:id=\"S2.p1\"><enumerate xml:id=\"S2.I1\"><item xml:id=\"S2.I1.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S2.I1.i1.p1\"><p>one</p></para></item><item xml:id=\"S2.I1.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S2.I1.i2.p1\"><p>two</p></para></item></enumerate><itemize xml:id=\"S2.I2\"><item xml:id=\"S2.I2.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S2.I2.i1.p1\"><p>three</p></para></item></itemize><p>After.</p></para></section>",
+  );
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\begin{document}
+Text \cite{a}.
+
+\section{Refs}
+\begin{enumerate}
+\bibitem{a} Able.
+\end{enumerate}
+\section{Refs2}
+\begin{enumerate}
+\bibitem{b} Baker.
+\end{enumerate}
+After.
+\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(units_of(&xml), vec![
+    "bibliography:Refs +biblist",
+    "bibliography:Refs2 +biblist"
+  ]);
+  assert_element(
+    &xml,
+    "bibitem",
+    &["key=\"b\""],
+    "<bibitem key=\"b\" xml:id=\"biba.bib1\"><tags><tag>[1]</tag><tag role=\"refnum\">1</tag></tags><bibblock> Baker.</bibblock></bibitem>",
+  );
   assert_eq!(
     units(
       r"\section{Literature}\label{lit}

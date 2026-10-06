@@ -10996,4 +10996,12 @@ sectioning-frontmatter/bibliography_section_titled_as_it_becomes_it; guard
 \end{document}
 ```
 
-Rust the same (open). RED repro sectioning-frontmatter/bibitems_in_a_list_environment_close_without_error.
+Rust (62zn, sect11.rs `\lx@mung@bibliography`): after ending the list it opens the group the author's
+`\end{enumerate}` closes (`\endenumerate` = `\endthebibliography`, then `\endgroup`), so the bibliography ends there
+without error, and that group also undoes the `\let`s, so a later list of the kind is itself again; with 62zm it
+takes the place of the heading above it. A list never closed now leaves that group open at `\end{document}` (a
+warning; pdflatex errs on such input). Open: what the list set before its first `\bibitem` is undone with the list's
+group (pdflatex "Able IN", Rust and Perl "Able OUT"; RED repro
+sectioning-frontmatter/bibitems_in_a_list_keep_the_lists_settings), and the emptied list stays as an empty element.
+Repro sectioning-frontmatter/bibitems_in_a_list_environment_close_without_error; guard
+`perfect_kernel_batch61::bibliography_takes_the_place_of_its_heading_unit`.
