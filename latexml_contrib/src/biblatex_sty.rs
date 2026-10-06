@@ -1219,6 +1219,19 @@ LoadDefinitions!({
     "biblatex.sty is provided by a native binding, not interpreted raw."
   );
 
+  // biblatex.sty:135-155, 1353-1370: its message commands, which the style files a paper ships (.cbx/.bbx, biblatex-acm's
+  // acmauthoryear.cbx) call; undefined, each call was an error (2609.32652; 58 papers in 2609 ship such files;
+  // KNOWN_PERL_ERRORS #508). The `\AtEndOfPackage` switch of `\blx@warning`/`\blx@info` from the no-line forms to the
+  // line forms (:147-152, 1364-1369) is taken here at once: the binding prints both alike.
+  RawTeX!(
+    r"\protected\def\blx@error#1#2{\begingroup\blx@safe@actives\PackageError{biblatex}{#1}{#2.}\endgroup}
+\protected\def\blx@warning@noline#1{\begingroup\blx@safe@actives\PackageWarningNoLine{biblatex}{#1}\endgroup}
+\protected\def\blx@warning#1{\begingroup\blx@safe@actives\PackageWarning{biblatex}{#1}\endgroup}
+\protected\def\blx@warning@entry#1{\ifdef\abx@field@entrykey{\blx@warning{#1\MessageBreak at entry '\abx@field@entrykey'}}{\blx@warning{#1}}}
+\protected\def\blx@info@noline#1{\begingroup\blx@safe@actives\PackageInfo{biblatex}{#1\@gobble}\endgroup}
+\protected\def\blx@info#1{\begingroup\blx@safe@actives\PackageInfo{biblatex}{#1}\endgroup}"
+  );
+
   // Mark biblatex as provided, exactly as the real biblatex.sty's
   // `\ProvidesPackage{biblatex}[…]` does (latex_constructs `\ProvidesPackage`
   // → `\ver@biblatex.sty`). Every biber-generated `.bbl` opens with the guard

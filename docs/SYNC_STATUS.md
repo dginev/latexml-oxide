@@ -410,6 +410,14 @@ note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head fon
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
 
+62zi: acmart reads `acmart-preload-hook.tex` before its packages, with the class's warning, and defines the ACM palette
+(acmart.cls:44-47, 673-680; KNOWN_PERL_ERRORS #507; 2609.29962 298 errors → 0); the biblatex binding defines biblatex's
+message commands `\blx@error`/`\blx@warning`/`\blx@info` and variants, which shipped style files call
+(biblatex.sty:135-155, 1353-1370; KNOWN_PERL_ERRORS #508; 2609.32652, 58 papers in 2609) — which lets acmauthoryear.bbx
+print a "bibmacro missing" warning pdflatex does not, the binding's `\ifbibmacroundef` always answering undefined (RED
+`index-bib/ifbibmacroundef_knows_the_standard_bibmacros.tex`). Guards
+`perfect_kernel_batch61::{acmart_reads_its_preload_hook_and_palette, biblatex_message_commands_are_defined}`.
+
 62zh: the conversion binaries remove a run's temporary trees however they exit. `process::exit` skips destructors, so
 the `latexml_oxide` CLI left each archive's unpacked sources (a `TempDir`) in the temp directory after every archive
 conversion — clean, or stopped early by a Fatal — until a per-user `/tmp` quota filled during the 62zg A/B; its exits

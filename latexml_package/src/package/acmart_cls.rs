@@ -26,6 +26,10 @@ fn add_describedby(document: &mut Document, node: &mut Node, ids: &[String]) -> 
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // acmart.cls:44-47: before anything else the class reads `acmart-preload-hook.tex`, where a paper puts what must
+  // precede its packages (2609.29962: `\PassOptionsToPackage{svgnames}{xcolor}`; without it 293 `DarkViolet` errors;
+  // KNOWN_PERL_ERRORS #507), with the class's warning.
+  RawTeX!(r"\InputIfFileExists{acmart-preload-hook.tex}{\ClassWarning{acmart}{I am loading acmart-preload-hook.tex. You are fully responsible for any problems from now on.}}{}");
   // Perl: LoadClass('amsart', withoptions => 1). acmart.cls:282 loads amsart
   // with `reqno` as well: ACM numbers equations on the right, where amsart's
   // default is the left (DIVERGENCES #336, KPE #306; 2605.02222, 2605.24417).
@@ -52,6 +56,16 @@ LoadDefinitions!({
   // the extended palette eagerly so the named colors resolve. Witness
   // 2 acmart papers/100k cluster with `Error:unexpected:ForestGreen`.
   RequirePackage!("xcolor", options => vec!["dvipsnames".to_string()]);
+  // acmart.cls:673-680: the ACM palette, which papers use by name (`\colorlet{…}{ACMPurple}`, 2609.29962; 17 papers in
+  // 2609).
+  RawTeX!(r"\definecolor[named]{ACMBlue}{cmyk}{1,0.1,0,0.1}
+\definecolor[named]{ACMYellow}{cmyk}{0,0.16,1,0}
+\definecolor[named]{ACMOrange}{cmyk}{0,0.42,1,0.01}
+\definecolor[named]{ACMRed}{cmyk}{0,0.90,0.86,0}
+\definecolor[named]{ACMLightBlue}{cmyk}{0.49,0.01,0,0}
+\definecolor[named]{ACMGreen}{cmyk}{0.20,0,1,0.19}
+\definecolor[named]{ACMPurple}{cmyk}{0.55,1,0,0.15}
+\definecolor[named]{ACMDarkBlue}{cmyk}{1,0.58,0,0.21}");
   // RequirePackage('totpages');
   RequirePackage!("microtype");
   RequirePackage!("hyperref");

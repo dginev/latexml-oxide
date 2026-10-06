@@ -5846,3 +5846,52 @@ fn caption_after_framed_text_keeps_the_reading_order() {
     )],
   );
 }
+
+/// 62zi: biblatex's message commands (biblatex.sty:135-155, 1353-1370) exist for the style files a paper ships to call
+/// — undefined, each call was an error (2609.32652's acmauthoryear.cbx; 58 papers in 2609 ship such files). pdflatex:
+/// "Body.".
+#[test]
+fn biblatex_message_commands_are_defined() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{biblatex}
+\makeatletter
+\newcommand{\checkstyle}{\blx@info{style checked}\blx@info@noline{again}}
+\makeatother
+\begin{document}
+\checkstyle Body.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Body.</p>")],
+  );
+}
+
+/// 62zi: acmart.cls:44-47 reads `acmart-preload-hook.tex` before its packages, with its class warning (2609.29962
+/// passes `svgnames` to xcolor there: 293 `DarkViolet` errors), and :673-680 defines the ACM palette (`ACMPurple`, 17
+/// papers in 2609). pdflatex: the warning, "Text violet and purple." in color.
+#[test]
+fn acmart_reads_its_preload_hook_and_palette() {
+  let (log, xml) = convert_with(
+    r"\begin{filecontents*}[overwrite]{acmart-preload-hook.tex}
+\PassOptionsToPackage{svgnames}{xcolor}
+\end{filecontents*}
+\documentclass[acmsmall,screen,nonacm]{acmart}
+\colorlet{mylink}{ACMPurple}
+\begin{document}
+Text {\color{DarkViolet}violet} and {\color{mylink}purple}.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("I am loading acmart-preload-hook.tex"),
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Text <text color=\"#9400D3\" xml:id=\"p1.1.1\">violet</text> and <text color=\"#4D00D9\" xml:id=\"p1.1.2\">purple</text>.</p>",
+  );
+}

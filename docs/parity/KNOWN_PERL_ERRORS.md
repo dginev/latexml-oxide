@@ -10849,3 +10849,46 @@ pdflatex: "h = [a ··· b].". Perl: 3 errors (`{IEEEeqnarraybox*}` undefined). 
 the expanded specification (:2280 `\edef`) alone in the template; the reversion keeps the star and options as written
 (Perl's prints `\begin{IEEEeqnarraybox}[]{…}` for every box; the fixture `latexml_oxide/tests/structure/IEEE.xml` is
 re-blessed to `\begin{IEEEeqnarraybox}{rCl}` where `LaTeXML/t/structure/IEEE.xml` has `[]{rCl}`). Witness 2609.32652. Guard `perfect_kernel_batch61::ieeeeqnarraybox_star_with_options_and_glue`.
+
+## 507. The acmart binding reads no preload hook and defines no ACM palette
+
+acmart.cls:44-47 reads `acmart-preload-hook.tex` (with a class warning) before it loads any package — where a paper puts
+`\PassOptionsToPackage` calls that must precede them — and :673-680 defines the ACM palette (`ACMBlue` … `ACMDarkBlue`)
+that papers use by name. Perl's acmart.cls.ltxml does neither. Minimal trigger:
+
+```latex
+\begin{filecontents*}[overwrite]{acmart-preload-hook.tex}
+\PassOptionsToPackage{svgnames}{xcolor}
+\end{filecontents*}
+\documentclass[acmsmall,screen,nonacm]{acmart}
+\begin{document}
+{\color{DarkViolet}violet} {\color{ACMPurple}purple}
+\end{document}
+```
+
+pdflatex: the hook's warning, both colors. Perl: `DarkViolet` and `ACMPurple` unknown ("assuming Black"). Rust (62zi,
+acmart_cls.rs): the hook and the palette, as the class. Witness 2609.29962 (298 errors → 0). Guard
+`perfect_kernel_batch61::acmart_reads_its_preload_hook_and_palette`.
+
+## 508. The ar5iv biblatex binding defines none of biblatex's message commands
+
+biblatex.sty:135-155 and :1353-1370 define `\blx@error`, `\blx@warning`, `\blx@warning@noline`, `\blx@warning@entry`,
+`\blx@info` and `\blx@info@noline`, which biblatex style files (`.cbx`/`.bbx`) call; ar5iv-bindings' biblatex.sty.ltxml
+defines none, so every call in a style a paper ships is an undefined macro. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{biblatex}
+\makeatletter
+\begin{document}
+\blx@info{checked}Body.
+\end{document}
+```
+
+pdflatex: "Body.". Perl (ar5iv bindings): `\blx@info` undefined. Rust (62zi, biblatex_sty.rs): the commands, as
+`\PackageError`/`\PackageWarning`/`\PackageInfo` calls. Witness 2609.32652 (acmauthoryear.cbx); 58 papers in 2609 ship
+style files using them. Guard `perfect_kernel_batch61::biblatex_message_commands_are_defined`. Residual: with the
+commands defined, acmauthoryear.bbx:22-27 now prints its "bibmacro 'date+extradate' is missing … Using 'date+extrayear'"
+warning, which pdflatex does not — the binding's `\ifbibmacroundef` always answers undefined (biblatex_sty.rs
+`DefMacro!("\\ifbibmacroundef{}{}{}", "#2")`), where authoryear.bbx:20 provides that bibmacro (RED
+`tools/perfect_kernel/repros/index-bib/ifbibmacroundef_knows_the_standard_bibmacros.tex`).
