@@ -5072,6 +5072,57 @@ Body.
   );
 }
 
+/// 62ze: mnras.cls's own settings the binding lacked: its enumerate labels (:930-940, "(i)"), its bibliography heading
+/// "REFERENCES" (:1312, 1339), with `usenatbib` its punctuation (:1336 `\bibpunct{(}{)}{;}{a}{}{,}`, "(Draine 2011)"),
+/// and with `usedcolumn` its `d` column on dcolumn (:1349-1354); the mn binding declared that option as `usedcolum`
+/// (Perl's typo, KNOWN_PERL_ERRORS #500). Witnesses 2609.09329, 2609.08700 (rasti, which loads as mnras). pdflatex:
+/// "(i) First. (ii) Second.", the table, "REFERENCES".
+#[test]
+fn mnras_lists_citations_and_columns() {
+  let xml = assert_elements(
+    r"\documentclass[usenatbib,usedcolumn]{mnras}
+\title{A Title}
+\author{A. Author}
+\begin{document}
+\maketitle
+\begin{enumerate}
+\item First.\label{it:a}
+\item Second.
+\end{enumerate}
+See item~\ref{it:a} and \citet{dr11} \citep{dr11}.
+\begin{tabular}{d{2}}
+1.5 \\
+\end{tabular}
+\begin{thebibliography}{}
+\bibitem[Draine(2011)]{dr11} Draine B. T., 2011, Physics of the ISM.
+\end{thebibliography}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "enumerate",
+        "S0.I1",
+        "<enumerate xml:id=\"S0.I1\"><item labels=\"LABEL:it:a\" xml:id=\"S0.I1.i1\"><tags><tag>(i)</tag><tag role=\"autoref\">item (i)<text xml:id=\"S0.I1.i1.1\"/></tag><tag role=\"refnum\">(i)</tag><tag role=\"typerefnum\">item (i)</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p xml:id=\"S0.I1.i1.p1.1\">First.</p></para></item><item xml:id=\"S0.I1.i2\"><tags><tag>(ii)</tag><tag role=\"autoref\">item (ii)<text xml:id=\"S0.I1.i2.1\"/></tag><tag role=\"refnum\">(ii)</tag><tag role=\"typerefnum\">item (ii)</tag></tags><para xml:id=\"S0.I1.i2.p1\"><p xml:id=\"S0.I1.i2.p1.1\">Second.</p></para></item></enumerate>",
+      ),
+      (
+        "tabular",
+        "p1.1.1",
+        "<tabular vattach=\"middle\" xml:id=\"p1.1.1\"><tbody><tr xml:id=\"p1.1.1.1\"><td align=\"char:.\" xml:id=\"p1.1.1.1.1\"><Math mode=\"inline\" tex=\"1.5\" text=\"1.5\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMTok meaning=\"1.5\" role=\"NUMBER\">1.5</XMTok></XMath></Math></td></tr></tbody></tabular>",
+      ),
+    ],
+  );
+  // `\bibpunct{(}{)}{;}{a}{}{,}`: no comma between author and year ("(Draine 2011)")
+  assert_element(
+    &xml,
+    "cite",
+    &["class=\"ltx_citemacro_citep\""],
+    "<cite class=\"ltx_citemacro_citep\">(<bibref bibrefs=\"dr11\" separator=\";\" show=\"AuthorsPhrase1Year\" yyseparator=\",\"><bibrefphrase> </bibrefphrase></bibref>)</cite>",
+  );
+  assert_element(&xml, "bibliography", &["xml:id=\"bib\""], "<bibliography inlist=\"toc\" xml:id=\"bib\"><title>REFERENCES</title><biblist><bibitem key=\"dr11\" xml:id=\"bib.bib1\"><tags><tag role=\"number\">1</tag><tag role=\"year\">2011</tag><tag role=\"authors\">Draine</tag><tag role=\"refnum\">Draine (2011)</tag><tag role=\"key\">dr11</tag></tags><bibblock> Draine B. T., 2011, Physics of the ISM.
+</bibblock></bibitem></biblist></bibliography>");
+}
+
 /// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
 /// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
 /// Read on the conversion thread before its engine is released.

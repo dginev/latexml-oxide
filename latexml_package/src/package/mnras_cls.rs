@@ -14,6 +14,21 @@ LoadDefinitions!({
   // Witness 2509.13010 ("Can't find color named 'ForestGreen'") and
   // 2305.08788 ("undefined:\\cellcolor").
   RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
+  // mnras.cls:930-940: the class's enumerate labels, (i), (a), (1), (A), and the references they make; :1312, 1339 its
+  // bibliography heading, "REFERENCES" with or without natbib; :1333-1340, with natbib, its author-year punctuation
+  // "(Draine 2011)" and `\bibname` (2609.09329, 2609.08700, which printed "1." and "(Draine, 2011)").
+  RawTeX!(r"\def\labelenumi{\theenumi}\def\theenumi{(\roman{enumi})}
+\def\labelenumii{\theenumii}\def\theenumii{(\alph{enumii})}\def\p@enumii{\theenumi}
+\def\labelenumiii{\theenumiii}\def\theenumiii{(\arabic{enumiii})}\def\p@enumiii{\theenumi(\theenumii)}
+\def\labelenumiv{\theenumiv}\def\theenumiv{(\Alph{enumiv})}\def\p@enumiv{\p@enumiii\theenumiii}
+\renewcommand\refname{REFERENCES}");
+  if lookup_int("@usenatbib") != 0 {
+    RawTeX!(r"\bibpunct{(}{)}{;}{a}{}{,}\renewcommand\bibname{BIBLIOGRAPHY}");
+  }
+  // mnras.cls:1349-1354: with `usedcolumn`, the class's column types on dcolumn's `D` (mn2e_support loads dcolumn).
+  if lookup_int("@usedcolumn") != 0 {
+    RawTeX!(r"\newcolumntype{d}[1]{D{.}{.}{#1}}\newcolumntype{.}{D{.}{.}{-1}}\newcolumntype{,}{D{,}{,}{2}}");
+  }
 
   RawTeX!(r"\newcommand\aap{A\&A}");                // Astronomy and Astrophysics
   RawTeX!(r"\let\astap=\aap");                       // alternative shortcut

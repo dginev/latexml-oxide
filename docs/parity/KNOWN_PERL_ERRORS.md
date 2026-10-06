@@ -10697,3 +10697,25 @@ See \pdfstartlink attr {/Border [0 0 0]} goto name {impact.sec:in_tro}\relax Sec
 pdflatex: "See Section 1." Perl: "See attr /Border [0 0 0] goto name impact.sec:in_tro Section 1", with an error.
 Rust (62zb): `LinkSpecification` reads the rule, attr and action specs (pdftex.rs, the action spec as `\pdfoutline`'s).
 Witness 2609.00161. Guard `perfect_kernel_batch61::pdfstartlink_consumes_its_spec`.
+
+## 500. mnras's `usedcolumn` option is declared as `usedcolum`
+
+Perl's mn.cls.ltxml:23 (and mn2e.cls.ltxml:24) declare the option `usedcolum` and set `@usedcolum`, while the class's
+option is `usedcolumn` (mnras.cls:72-75 `\ds@usedcolumn`) and mn2e_support.sty.ltxml:18 reads `@usedcolumn`; and the
+class's `d`/`.`/`,` column types (mnras.cls:1349-1354, on dcolumn's `D`) are never defined. Minimal trigger:
+
+```latex
+\documentclass[usedcolumn]{mnras}
+\begin{document}
+\begin{tabular}{d{2}}
+1.5 \\
+\end{tabular}
+\end{document}
+```
+
+pdflatex: the decimal-aligned cell. Perl: `Unrecognized tabular template 'd'`, `'2'` and an extra-alignment-tab error.
+Rust (62ze): both spellings set `@usedcolumn` (mn_cls.rs, mn2e_cls.rs) and the mnras binding defines the column
+types. Perl's mnras binding also lacks the class's enumerate labels "(i)" (mnras.cls:930-940), its "REFERENCES" heading
+and, with `usenatbib`, its `\bibpunct` ("(Draine, 2011)" for "(Draine 2011)"); Rust's has them. (Without natbib and with
+babel, babel's captions still reset `\refname` to "References", where mnras.cls:1312 hardcodes the heading.) Guard
+`perfect_kernel_batch61::mnras_lists_citations_and_columns`.

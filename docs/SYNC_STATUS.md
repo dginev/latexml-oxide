@@ -410,6 +410,12 @@ note's parentheses, ours keeps them) and informs3's `\mdseries\scshape` head fon
 (`require_dependencies_except`, as sn_jnl_cls.rs uses it) with per-class exceptions is the general form — needs its own
 A/B over each class's papers.
 
+62ze: the mnras binding takes mnras.cls's own settings: its enumerate labels "(i)", "(a)" (:930-940), the bibliography
+heading "REFERENCES" (:1312, 1339), with `usenatbib` the author-year punctuation "(Draine 2011)" (:1336 `\bibpunct`),
+with `usedcolumn` the `d`/`.`/`,` columns on dcolumn (:1349-1354); the mn binding declared that option as `usedcolum`
+(Perl's typo, KNOWN_PERL_ERRORS #500), so dcolumn never loaded. 216 mnras + 18 rasti papers in 2609. Guard
+`perfect_kernel_batch61::mnras_lists_citations_and_columns`.
+
 62zd: rasti.cls (RAS Techniques and Instruments, mnras.cls under another name: v3.0 defines the same commands) loads
 as the mnras binding (rasti_cls.rs): all 18 rasti papers in 2609 at 0 errors (2609.08700, 09329, 27622, 29860, 35676
 had 5-33). cas-common's `stm/mktitle` title-page keys are declared (2609.00281). The box capture's backmatter lift
@@ -422,9 +428,7 @@ consolidate): the climb's stops are per-tag (list, alignment, float), and a box 
 moves the insertion point past the open quote, so the text after the box escapes it (RED
 repros/boxes-groups/bibliography_in_minipage_in_quote_keeps_the_quote.tex); Perl's `floatToElement` restores the
 insertion point after floating past an open container, the likely single rule, but the xebaposter/juradiss hoists
-(surpass) must keep working — needs its own A/B. Pre-existing mnras-binding gaps rasti papers now inherit: `\theenumi`
-`(\roman{enumi})` (mnras.cls:930-939), `\bibpunct{(}{)}{;}{a}{}{,}` (:1336), "REFERENCES"; `mn_cls.rs` declares the
-option `usedcolum` (Perl mn.cls.ltxml:23 too) where the class has `usedcolumn`. NEEDS A RULING: a `\section` inside a float (38 papers in 2609, 117 errors; 29 have no
+(surpass) must keep working — needs its own A/B. The mnras-binding gaps rasti papers inherited landed in 62ze. NEEDS A RULING: a `\section` inside a float (38 papers in 2609, 117 errors; 29 have no
 other error: 2609.03590, 00943, 05680) is valid TeX — `\@startsection` needs only vertical mode — and could open in an
 `ltx:inline-sectional-block` in the float (schema-valid, the appendix as its `ltx:section` stand-in; prototyped, 0
 errors, jing-clean), but the 2026-10-04 ruling restored Perl's `Error:malformed` for sectioning in items and figures
