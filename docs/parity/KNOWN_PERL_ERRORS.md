@@ -10719,3 +10719,21 @@ types. Perl's mnras binding also lacks the class's enumerate labels "(i)" (mnras
 and, with `usenatbib`, its `\bibpunct` ("(Draine, 2011)" for "(Draine 2011)"); Rust's has them. (Without natbib and with
 babel, babel's captions still reset `\refname` to "References", where mnras.cls:1312 hardcodes the heading.) Guard
 `perfect_kernel_batch61::mnras_lists_citations_and_columns`.
+
+## 501. elsarticle's `nonatbib` option still loads natbib
+
+Perl's elsarticle.cls.ltxml:49-54 requires natbib for every paper and defines none of the class's conditionals, while
+elsarticle.cls:80 `\DeclareOption{nonatbib}{\global\nonatbibtrue}` and :1242-1244 load natbib only without it — the
+option's papers bring biblatex or apacite of their own (2609.05849, 20719, 26003; 19225, 23461). Minimal trigger:
+
+```latex
+\documentclass[nonatbib]{elsarticle}
+\makeatletter
+\begin{document}
+NN:\ifnonatbib YES\else NO\fi; \@ifpackageloaded{natbib}{natbib}{none}.
+\end{document}
+```
+
+pdflatex: "NN:YES; none.". Perl: "NN:NO; natbib." with `\ifnonatbib` undefined. Rust (62zf): the option sets the
+conditional, natbib loads only without it, and `\biboptions` (which the class writes to the .spl for natbib's next-run
+options, :1247-1249) is then a no-op. Guard `perfect_kernel_batch61::elsarticle_nonatbib_leaves_natbib_out`.

@@ -5123,6 +5123,83 @@ See item~\ref{it:a} and \citet{dr11} \citep{dr11}.
 </bibblock></bibitem></biblist></bibliography>");
 }
 
+/// 62zf: elsarticle.cls:40-45's conditionals (`\iflongmktitle`, `\ifdoubleblind`, …), set by its options: an Elsevier
+/// journal style (jasr.sty, cnf.sty, jcomp.sty) tests them inside the `\if@twocolumn` branches of its `\maketitle`, and
+/// undefined they unbalanced TeX's skip of the false branch, so the other branch's body ran at load
+/// (`\finalMaketitle` undefined). Also the class's `\emailauthor{<email>}{<name>}` and `\urlauthor` (:211-235, frontmatter
+/// notes "email (name)", as the first page prints them) and the styles' `\KWD` (defined in their `\keyword`, which the binding's
+/// {keyword} bypasses). Witnesses 2609.23725, 23732, 27838, 39431, 09773, 31741, 39502. pdflatex: the title block,
+/// "first; second", "Body.".
+#[test]
+fn elsarticle_journal_styles_load() {
+  let xml = assert_elements(
+    r"\begin{filecontents*}[overwrite]{jstyle62zf.sty}
+\if@twocolumn
+  \def\maketitle{\iflongmktitle\getSpaceLeft\else\twocolumn[\finalMaketitle]\printFirstPageNotes\fi}
+\else
+  \def\maketitle{\iflongmktitle\getSpaceLeft\else\finalMaketitle\printFirstPageNotes\fi}
+\fi
+\long\def\finalMaketitle{\MaketitleBox}
+\def\printFirstPageNotes{}
+\def\keyword{\def\KWD{\par\noindent Keywords:~}\global\setbox\keybox=\vbox\bgroup\hsize=\textwidth\noindent\ignorespaces}
+\def\endkeyword{\egroup}
+\end{filecontents*}
+\documentclass[times,authoryear]{elsarticle}
+\usepackage{jstyle62zf}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author{A. Author}
+\emailauthor{a.author@example.org}{A. Author}
+\urlauthor{https://example.org}{A. Author}
+\begin{keyword}
+\KWD first \sep second
+\end{keyword}
+\end{frontmatter}
+Body.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "note",
+        "id1",
+        "<note role=\"email\" xml:id=\"id1\"><text font=\"typewriter\" xml:id=\"id1.1\">a.author@example.org</text> (A. Author)</note>",
+      ),
+      (
+        "note",
+        "id2",
+        "<note role=\"url\" xml:id=\"id2\"><text font=\"typewriter\" xml:id=\"id2.1\">https://example.org</text> (A. Author)</note>",
+      ),
+      ("p", "p1.1", "<p xml:id=\"p1.1\">Body.</p>"),
+    ],
+  );
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Keywords: \">\nfirst, second\n</keywords>",
+  );
+}
+
+/// 62zf: elsarticle's `nonatbib` option sets `\ifnonatbib` (elsarticle.cls:80) and leaves natbib out (:1242-1244), and
+/// `\biboptions` then selects nothing: those papers load biblatex or apacite (2609.05849, 19225, 20719, 23461, 26003).
+/// pdflatex: "NN:YES; none.".
+#[test]
+fn elsarticle_nonatbib_leaves_natbib_out() {
+  assert_elements(
+    r"\documentclass[nonatbib]{elsarticle}
+\biboptions{sort}
+\makeatletter
+\begin{document}
+NN:\ifnonatbib YES\else NO\fi; \@ifpackageloaded{natbib}{natbib}{none}.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">NN:YES; none.</p>")],
+  );
+}
+
 /// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
 /// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
 /// Read on the conversion thread before its engine is released.
