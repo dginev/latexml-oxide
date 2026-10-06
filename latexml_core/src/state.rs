@@ -3095,7 +3095,8 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   let lookup_sym = if is_active_or_cs
     || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
       && lookup_bool_sym(crate::pin!("IN_MATH"))
-      && (lookup_mathcode_sym(t_sym).unwrap_or(0) == 0x8000))
+      && (lookup_mathcode_sym(t_sym).unwrap_or(0) == 0x8000)
+      && !crate::stomach::digesting_delimiter())
   {
     // `\special_relax`-family tokens digest under the bare `\special_relax` no-op.
     meaning_key(token)

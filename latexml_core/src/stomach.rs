@@ -182,6 +182,27 @@ fn soft_yield_urgency(rss_kb: u64, watermark: Option<u64>, fuse: Option<u64>) ->
 }
 
 thread_local! {
+  /// Set while a `\left`/`\middle`/`\right` delimiter is digested ([`digest_as_delimiter`]).
+  static DIGESTING_DELIMITER: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Digests `f`'s token as a delimiter: tex.web §1160 `scan_delimiter` takes a letter or other character by its
+/// `\delcode`, never its `\mathcode`, so a math-active character (`\mathcode`(="8000`, the active `(` a `\left(`) is
+/// that character, not its active meaning — which, `\left(` itself, recursed without end (2609.40266).
+pub fn digest_as_delimiter<T>(f: impl FnOnce() -> T) -> T {
+  // Restored on unwind too: a sweep catches a paper's panic and converts the next on this thread.
+  struct Restore(bool);
+  impl Drop for Restore {
+    fn drop(&mut self) { DIGESTING_DELIMITER.set(self.0); }
+  }
+  let _restore = Restore(DIGESTING_DELIMITER.replace(true));
+  f()
+}
+
+/// Whether a delimiter is being digested ([`digest_as_delimiter`]).
+pub fn digesting_delimiter() -> bool { DIGESTING_DELIMITER.get() }
+
+thread_local! {
   /// RSS (KB) at the last fragment yield (or at digestion start): the soft-RSS
   /// seam's GROWTH floor measures accumulation directly as resident memory
   /// gained since then — the box-count floor never fires for a few huge
@@ -2868,8 +2889,13 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // TODO: Use for chars where font-encoding glyph differs from input.
       // Perl L248-257: if IN_MATH && mathcode → decodeMathChar (math box)
       // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
+      // A math-active character ("8000) digested as itself has no math character to decode; it is the plain character:
+      // a delimiter (`digest_as_delimiter`), or one whose active meaning is undefined and self-inserts
+      // (`lookup_digestable_definition`, braket's `\Pr{A|B}`, 1602.01342). `decode_math_char` of "8000 is class 8, which
+      // dropped the character here before, and is Γ in Perl (KNOWN_PERL_ERRORS #495).
       if lookup_bool_sym(crate::pin!("IN_MATH"))
         && let Some(mathcode) = lookup_mathcode_sym(meaning.get_sym())
+        && mathcode != 0x8000
       {
         return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
       }

@@ -32,6 +32,14 @@ LoadDefinitions!({
   ProcessOptions!();
 
   load_class("revtex4", Vec::new(), Tokens!())?;
+  // aastex7.cls:11484 / aastex701.cls:11416 `\usepackage[figuresright]{rotating}`, ahead of their own `\rotate`
+  // (:12264 / :12196), which a deluxetable's `\rotate` (deluxetable_sty.rs) must stay; aastex631 and earlier do not load
+  // it. Read from the class file after this binding (the versioned fallback's dependency scan), rotating's
+  // `{rotate}` environment replaced it: `\rotate` in a `deluxetable*` opened a box that never closed (2609.09266).
+  let request = lookup_string("fallback_request");
+  if request.rsplit('/').next().is_some_and(|name| name.starts_with("aastex7")) {
+    RequirePackage!("rotating", options => vec![s!("figuresright")]);
+  }
   RequirePackage!("aas_support");
   // aastex701.cls:13637-13638 — `\digitalasset` flags a digital-asset paper
   // (aastex701-sample; the Perl reimplementation lacks it too).

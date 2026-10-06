@@ -56,6 +56,7 @@ pub mod arydshln_sty;
 pub mod ascmac_sty;
 pub mod asme2ej_cls;
 pub mod autart_cls;
+pub mod autobreak_sty;
 pub mod autofe_sty;
 pub mod axessibility_sty;
 pub mod backref_sty;
@@ -530,6 +531,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("animate", "sty", animate_sty::load_definitions),
   ("arxbj", "cls", arxbj_cls::load_definitions),
+  ("autobreak", "sty", autobreak_sty::load_definitions),
   // Paper-BUNDLED styles, so both bindings hand control straight back to the
   // paper's own file whenever raw style loading is on; they only fill the
   // frontmatter gap in bare mode. See arxiv_sty.rs for the rationale.

@@ -1144,7 +1144,7 @@ LoadDefinitions!({
   // (arXiv 2605.21750, `Fatal:Timeout:PushbackLimit`). TeX and Perl leave
   // `\@left`/`\@right` undefined. Guard:
   // `perfect_kernel_batch56::let_at_left_left_does_not_loop`.
-  DefConstructor!("\\lx@delim@left Token",
+  DefConstructor!("\\lx@delim@left DelimiterToken",
     "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
       (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
     after_digest => sub[whatsit] {
@@ -1210,7 +1210,7 @@ LoadDefinitions!({
       Ok(Vec::new())
     },
     alias => "\\left");
-  DefConstructor!("\\lx@delim@right Token",
+  DefConstructor!("\\lx@delim@right DelimiterToken",
     "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
       (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
     after_digest => sub[whatsit] {

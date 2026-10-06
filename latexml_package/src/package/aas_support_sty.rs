@@ -582,6 +582,10 @@ LoadDefinitions!({
 
   DefEnvironment!("{interactive}{}{}", "#body");
   DefEnvironment!("{longrotatetable}", "#body");
+  // aastex701.cls TL :12212-12231 — `rotatetable(*)` sets its table turned 90° on its own page, page layout as for
+  // `longrotatetable` (2609.01052).
+  DefEnvironment!("{rotatetable}", "#body");
+  DefEnvironment!("{rotatetable*}", "#body");
 
   // 2.17.1 Celestial Objects and Data Sets
   DefConstructor!("\\objectname OptionalSemiverbatim {}",

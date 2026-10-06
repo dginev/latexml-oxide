@@ -372,6 +372,19 @@ LoadDefinitions!({
     }
   });
 
+  // A `\left`/`\middle`/`\right` delimiter: read as `Token`, digested as a delimiter (tex.web §1160 `scan_delimiter`,
+  // `stomach::digest_as_delimiter`) — a character by its `\delcode`, so a math-active `(` is the parenthesis, not its
+  // active meaning. Perl's `TeXDelimiter` invokes the token, active meaning and all (TeX_Math.pool.ltxml:712-724), and
+  // recurses when that meaning is `\left(` (KNOWN_PERL_ERRORS #494, 2609.40266).
+  DefParameterType!(DelimiterToken, sub[_inner, _extra] {
+    match read_primitive_token()? {
+      Some(t) => Ok(ArgWrap::Token(t)),
+      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
+    }
+  }, predigest => sub[arg] {
+    Ok(Some(digest_as_delimiter(|| arg.be_digested())?))
+  });
+
   // A token read at `normal` scanner status whatever the enclosing scan:
   // tex.web §507 saves the status and sets `normal` for `\ifx`'s two
   // `get_next`s (eTeX's `\ifdefined` likewise), so they cross the end of an
@@ -1500,6 +1513,22 @@ LoadDefinitions!({
         read_arg(ExpansionLevel::Partial)
       },
     }
+  },
+  // A one-token delimiter is a delimiter (`\big#1` is `\left#1`, tex.web §1160 — `stomach::digest_as_delimiter`): a
+  // math-active `(` is the parenthesis, not its active meaning, which in the auto-sized-parentheses idiom is `\left(`
+  // and lost the `)` of `\bigl( x \bigr)` (2609.40266's preamble). A longer group digests as written.
+  predigest => sub[arg] {
+    let one_token = match &arg {
+      ArgWrap::Token(_) => true,
+      ArgWrap::Tokens(tokens) => tokens.unlist_ref().len() == 1,
+      _ => false,
+    };
+    let digested = if one_token {
+      digest_as_delimiter(|| arg.be_digested())?
+    } else {
+      arg.be_digested()?
+    };
+    Ok(Some(digested))
   },
   digested_reversion => sub[arg] {
     // Revert without adding braces (unlike {} parameter)

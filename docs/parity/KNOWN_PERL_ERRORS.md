@@ -10573,3 +10573,48 @@ the error in the first column's cell. Rust
 its first `.`, so "12" and ".345" fill the two columns (the first right-aligned, the second left), each part in math as
 the class sets it. Witness 2609.05675 (`{llDDDCLll}`, Fatal TooManyErrors before the port). Guard
 `perfect_kernel_batch61::aastex_decimal_and_math_columns`.
+
+## 494. A math-active delimiter character recurses through its active meaning
+
+Perl's `TeXDelimiter` parameter (TeX_Math.pool.ltxml:712-724) reads the token after `\left`/`\right` and *invokes* it,
+so a character whose `\mathcode` is `"8000` is digested as its active meaning. The common "auto-sizing parentheses"
+idiom makes that meaning `\left(` itself, and the digestion recurses until the stack limit. Minimal trigger:
+
+```latex
+\documentclass{article}
+\newcommand*\autoop{\left(}
+\newcommand*\autocp{\right)}
+\AtBeginDocument{%
+  \mathcode`( 32768 \mathcode`) 32768
+  \begingroup\lccode`\~`(\lowercase{\endgroup\let~\autoop}%
+  \begingroup\lccode`\~`)\lowercase{\endgroup\let~\autocp}}
+\begin{document}
+$f(x) = \frac{1}{2}(a+b)$
+\end{document}
+```
+
+pdflatex: f(x) = ½(a+b) with stretched parentheses — tex.web §1160 `scan_delimiter` takes a letter or other character
+by its `\delcode`, never its `\mathcode`. Perl: `Fatal` deep recursion (`Constructor[\left T…` repeated). Rust (62y): the
+`DelimiterToken` parameter of `\lx@delim@left`/`\lx@delim@right`/`\middle` digests under
+`stomach::digest_as_delimiter`, in which a math-active character is the character itself; so does the one-token
+argument of `\bigl(` and its family (the `TeXDelimiter` parameter), where Perl's active-meaning reading lost the `)`.
+Witness 2609.40266. Guard `perfect_kernel_batch61::math_active_delimiter_is_its_character` (paragraphs p1.1, p2.1).
+
+## 495. A math-active character whose active meaning is undefined prints as Γ
+
+A letter or other character with `\mathcode` `"8000` whose active meaning is `\let` to an undefined control sequence
+self-inserts in Perl (State.pm:474 `lookupDigestableDefinition`) and is then decoded as a math character from its
+mathcode: `"8000` is class 8, family 0, slot 0, which the OT1 table maps to Γ. braket's `\Pr{A|B}` reaches it (its body
+does `\mathcode`\|=32768 \let|\SetVert` with `\SetVert` undefined in both bindings). Minimal trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+$a\mathcode`\|="8000 |b$
+\end{document}
+```
+
+pdflatex: "Undefined control sequence" (the active `|` has no meaning). Perl: `aΓb`, no error. Rust before 62y: the
+character dropped (`tex="ab"`), no error; Rust (62y): the plain `|` (`stomach.rs` skips decoding a mathcode of "8000),
+no error. braket's own idiom reaches it in valid input: braket.sty:73 defines `\SetVert`, which neither our braket binding
+nor Perl's does. Witness 1602.01342. Guard `perfect_kernel_batch61::math_active_character_without_meaning_is_itself`.

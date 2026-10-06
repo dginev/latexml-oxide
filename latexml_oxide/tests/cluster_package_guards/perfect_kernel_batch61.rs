@@ -4244,6 +4244,194 @@ Text $$x^2$$ more and $y$.
   );
 }
 
+/// 62y: aastex7/aastex701 load rotating before their own `\rotate` (aastex701.cls:11416, 12196), so a
+/// deluxetable's `\rotate` stays the no-op it is here (deluxetable_sty.rs) rather than rotating's `{rotate}`
+/// environment, which the class file's dependency scan had loaded after the binding; `rotatetable` (:12212) sets its
+/// body. Witnesses 2609.09266 (Fatal TooManyErrors → 2 errors, both its .bib's), 2609.01052.
+#[test]
+fn aastex7_rotate_and_rotatetable() {
+  let tex = r"\documentclass{aastex701}\begin{document}
+\begin{deluxetable*}{ll}
+\rotate
+\tablecaption{Cap\label{t1}}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+x & y \\
+\enddata
+\end{deluxetable*}
+\begin{rotatetable}
+Turned text.
+\end{rotatetable}
+\end{document}";
+  let cases: [(&str, &str, &str, &str); 2] = [
+    (
+      tex,
+      "tr",
+      "S0.T1.2.2",
+      "<tr xml:id=\"S0.T1.2.2\"><td align=\"left\" border=\"b t\" xml:id=\"S0.T1.2.2.1\">x</td><td align=\"left\" border=\"b t\" xml:id=\"S0.T1.2.2.2\">y</td></tr>",
+    ),
+    (tex, "p", "p1.1", "<p xml:id=\"p1.1\">Turned text.</p>"),
+  ];
+  for (tex, tag, id, element) in cases {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{tex}\n{log}"
+    );
+    let attrs: Vec<String> = if id.is_empty() {
+      vec![]
+    } else {
+      vec![format!("xml:id=\"{id}\"")]
+    };
+    let attrs: Vec<&str> = attrs.iter().map(String::as_str).collect();
+    assert_element(&xml, tag, &attrs, element);
+  }
+}
+
+/// 62y: a `\left`/`\right` delimiter is its character (tex.web §1160 `scan_delimiter`: by `\delcode`, never
+/// `\mathcode`), so a math-active `(` whose active meaning is `\left(` gives one delimiter instead of recursing
+/// (`stomach::digest_as_delimiter`; Perl's `TeXDelimiter` recurses too, KNOWN_PERL_ERRORS #494), and so for `\bigl(`, which is
+/// `\left(` (the `TeXDelimiter` parameter). pdflatex: f(x) = 1/2 (a+b), [x], and the big parentheses. Witness 2609.40266 (Fatal Recursion → 0 errors).
+#[test]
+fn math_active_delimiter_is_its_character() {
+  let tex = r"\documentclass{article}
+\newcommand*\autoop{\left(}
+\newcommand*\autocp{\right)}
+\AtBeginDocument{%
+  \mathcode`( 32768 \mathcode`) 32768
+  \begingroup\lccode`\~`(\lowercase{\endgroup\let~\autoop}%
+  \begingroup\lccode`\~`)\lowercase{\endgroup\let~\autocp}}
+\begin{document}
+Text $f(x) = \frac{1}{2}(a+b)$ and $\left[ x \right]$.
+
+Big $\bigl( x \bigr)$ and $\Big( y \Big)$.
+\end{document}";
+  let cases: [(&str, &str, &str, &str); 2] = [
+    (
+      tex,
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Text <Math mode=\"inline\" tex=\"f\\left(x\\right)=\\frac{1}{2}\\left(a+b\\right)\" text=\"f@(x) = (1 / 2) * (a + b)\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.3\"><XMApp xml:id=\"p1.m1.3.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMApp xml:id=\"p1.m1.3.1.2\"><XMTok font=\"italic\" role=\"UNKNOWN\">f</XMTok><XMDual xml:id=\"p1.m1.3.1.2.2\"><XMRef idref=\"p1.m1.1\" xml:id=\"p1.m1.3.1.2.2.1\"/><XMWrap xml:id=\"p1.m1.3.1.2.2.2\"><XMTok role=\"OPEN\" stretchy=\"true\">(</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.1\">x</XMTok><XMTok role=\"CLOSE\" stretchy=\"true\">)</XMTok></XMWrap></XMDual></XMApp><XMApp xml:id=\"p1.m1.3.1.3\"><XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok><XMApp xml:id=\"p1.m1.3.1.3.2\"><XMTok mathstyle=\"text\" meaning=\"divide\" role=\"FRACOP\"/><XMTok fontsize=\"70%\" meaning=\"1\" role=\"NUMBER\">1</XMTok><XMTok fontsize=\"70%\" meaning=\"2\" role=\"NUMBER\">2</XMTok></XMApp><XMDual xml:id=\"p1.m1.3.1.3.3\"><XMRef idref=\"p1.m1.2\" xml:id=\"p1.m1.3.1.3.3.1\"/><XMWrap xml:id=\"p1.m1.3.1.3.3.2\"><XMTok role=\"OPEN\" stretchy=\"true\">(</XMTok><XMApp xml:id=\"p1.m1.2\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp><XMTok role=\"CLOSE\" stretchy=\"true\">)</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math> and <Math mode=\"inline\" tex=\"\\left[x\\right]\" text=\"delimited-[]@(x)\" xml:id=\"p1.m2\"><XMath xml:id=\"p1.m2.2\"><XMDual xml:id=\"p1.m2.2.1\"><XMApp xml:id=\"p1.m2.2.1.1\"><XMTok meaning=\"delimited-[]\"/><XMRef idref=\"p1.m2.1\" xml:id=\"p1.m2.2.1.1.2\"/></XMApp><XMWrap xml:id=\"p1.m2.2.1.2\"><XMTok role=\"OPEN\" stretchy=\"true\">[</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m2.1\">x</XMTok><XMTok role=\"CLOSE\" stretchy=\"true\">]</XMTok></XMWrap></XMDual></XMath></Math>.</p>",
+    ),
+    (
+      tex,
+      "p",
+      "p2.1",
+      "<p xml:id=\"p2.1\">Big <Math mode=\"inline\" tex=\"\\bigl(x\\bigr)\" text=\"x\" xml:id=\"p2.m1\"><XMath xml:id=\"p2.m1.2\"><XMDual xml:id=\"p2.m1.2.1\"><XMRef idref=\"p2.m1.1\" xml:id=\"p2.m1.2.1.1\"/><XMWrap xml:id=\"p2.m1.2.1.2\"><XMTok fontsize=\"120%\" role=\"OPEN\" stretchy=\"false\">(</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p2.m1.1\">x</XMTok><XMTok fontsize=\"120%\" role=\"CLOSE\" stretchy=\"false\">)</XMTok></XMWrap></XMDual></XMath></Math> and <Math mode=\"inline\" tex=\"\\Big(y\\Big)\" text=\"y\" xml:id=\"p2.m2\"><XMath xml:id=\"p2.m2.2\"><XMDual xml:id=\"p2.m2.2.1\"><XMRef idref=\"p2.m2.1\" xml:id=\"p2.m2.2.1.1\"/><XMWrap xml:id=\"p2.m2.2.1.2\"><XMTok fontsize=\"160%\" role=\"OPEN\" stretchy=\"false\">(</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p2.m2.1\">y</XMTok><XMTok fontsize=\"160%\" role=\"CLOSE\" stretchy=\"false\">)</XMTok></XMWrap></XMDual></XMath></Math>.</p>",
+    ),
+  ];
+  for (tex, tag, id, element) in cases {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{tex}\n{log}"
+    );
+    let attrs: Vec<String> = if id.is_empty() {
+      vec![]
+    } else {
+      vec![format!("xml:id=\"{id}\"")]
+    };
+    let attrs: Vec<&str> = attrs.iter().map(String::as_str).collect();
+    assert_element(&xml, tag, &attrs, element);
+  }
+}
+
+/// 62y: a math-active character whose active meaning is undefined self-inserts (`lookup_digestable_definition`) as
+/// the plain character, not a mathcode "8000 decoded as a math character — dropped here before, Γ in Perl
+/// (KNOWN_PERL_ERRORS #495). braket's own `\Pr`-style idiom reaches it: braket.sty:73 defines `\SetVert`, which our braket
+/// binding (and Perl's) does not, so the active `|` has no meaning. pdflatex: P( A | B ). Witness 1602.01342.
+#[test]
+fn math_active_character_without_meaning_is_itself() {
+  let tex = r"\documentclass{article}
+\usepackage{braket}
+{\catcode`\|=\active
+ \gdef\Pr#1{\mathrm{P}\left(\:{\mathcode`\|32768\let|\SetVert #1}\:\right)}}
+\begin{document}
+$\Pr{A|B}$
+\end{document}";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\"><Math mode=\"inline\" tex=\"\\mathrm{P}\\left(\\&gt;{A|B}\\&gt;\\right)\" text=\"P@(conditional@(A, B))\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.3\"><XMApp xml:id=\"p1.m1.3.1\"><XMTok role=\"UNKNOWN\">P</XMTok><XMDual xml:id=\"p1.m1.3.1.2\"><XMApp xml:id=\"p1.m1.3.1.2.1\"><XMTok meaning=\"conditional\"/><XMRef idref=\"p1.m1.1\" xml:id=\"p1.m1.3.1.2.1.2\"/><XMRef idref=\"p1.m1.2\" xml:id=\"p1.m1.3.1.2.1.3\"/></XMApp><XMWrap xml:id=\"p1.m1.3.1.2.2\"><XMTok role=\"OPEN\" stretchy=\"true\">(</XMTok><XMTok font=\"italic\" lpadding=\"2.2pt\" role=\"UNKNOWN\" xml:id=\"p1.m1.1\">A</XMTok><XMTok role=\"MIDDLE\" stretchy=\"false\">|</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" rpadding=\"2.2pt\" xml:id=\"p1.m1.2\">B</XMTok><XMTok role=\"CLOSE\" stretchy=\"true\">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math></p>",
+  );
+}
+
+/// 62y: autobreak (latexml_contrib autobreak_sty.rs): the body's first non-empty line is the left-hand side and the rest
+/// follows the alignment tab (autobreak.sty:283-299), a line end inside braces stays in its line (:163) and a leading
+/// `,` joins the line before (:166-197), the width-driven breaks left out; the raw package needed
+/// amsmath internals the native `align` never runs. Witness 2609.08470 (17 environments, Fatal TooManyErrors → 0).
+#[test]
+fn autobreak_lines_after_the_left_side() {
+  let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\usepackage{autobreak}
+\begin{document}
+\begin{align*}
+\begin{autobreak}
+\beta(g) =
+
++ \frac{199}{18} g^{5}
+- 3 g^{3}
+\end{autobreak}
+\end{align*}
+\begin{align*}
+\begin{autobreak}
+F = \frac{a}{
+b}
++ c
+\end{autobreak}
+\end{align*}
+\begin{align*}
+\begin{autobreak}
+K
+, = x
++ y
+\end{autobreak}
+\end{align*}
+After.
+\end{document}";
+  let cases: [(&str, &str, &str, &str); 3] = [
+    (
+      tex,
+      "equationgroup",
+      "S0.EGx1",
+      "<equationgroup class=\"ltx_eqn_align\" xml:id=\"S0.EGx1\"><equation xml:id=\"S0.Ex1\"><MathFork><Math tex=\"\\displaystyle\\beta(g)={}+\\frac{199}{18}g^{5}-3g^{3}\" text=\"beta@(g) = (+ (199 / 18) * g ^ 5) - 3 * g ^ 3\" xml:id=\"S0.Ex1.m3\"><XMath xml:id=\"S0.Ex1.m3.2\"><XMApp xml:id=\"S0.Ex1.m3.2.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMApp xml:id=\"S0.Ex1.m3.2.1.2\"><XMTok font=\"italic\" name=\"beta\" role=\"UNKNOWN\">β</XMTok><XMDual xml:id=\"S0.Ex1.m3.2.1.2.2\"><XMRef idref=\"S0.Ex1.m3.1\" xml:id=\"S0.Ex1.m3.2.1.2.2.1\"/><XMWrap xml:id=\"S0.Ex1.m3.2.1.2.2.2\"><XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex1.m3.1\">g</XMTok><XMTok role=\"CLOSE\" stretchy=\"false\">)</XMTok></XMWrap></XMDual></XMApp><XMApp xml:id=\"S0.Ex1.m3.2.1.3\"><XMTok meaning=\"minus\" role=\"ADDOP\">-</XMTok><XMApp xml:id=\"S0.Ex1.m3.2.1.3.2\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMApp xml:id=\"S0.Ex1.m3.2.1.3.2.2\"><XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok><XMApp xml:id=\"S0.Ex1.m3.2.1.3.2.2.2\"><XMTok mathstyle=\"display\" meaning=\"divide\" role=\"FRACOP\"/><XMTok meaning=\"199\" role=\"NUMBER\">199</XMTok><XMTok meaning=\"18\" role=\"NUMBER\">18</XMTok></XMApp><XMApp xml:id=\"S0.Ex1.m3.2.1.3.2.2.3\"><XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok><XMTok fontsize=\"70%\" meaning=\"5\" role=\"NUMBER\">5</XMTok></XMApp></XMApp></XMApp><XMApp xml:id=\"S0.Ex1.m3.2.1.3.3\"><XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok><XMTok meaning=\"3\" role=\"NUMBER\">3</XMTok><XMApp xml:id=\"S0.Ex1.m3.2.1.3.3.3\"><XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok><XMTok fontsize=\"70%\" meaning=\"3\" role=\"NUMBER\">3</XMTok></XMApp></XMApp></XMApp></XMApp></XMath></Math><MathBranch><td align=\"right\" xml:id=\"S0.Ex1.1\"><Math mode=\"inline\" tex=\"\\displaystyle\\beta(g)={}\" text=\"beta@(g) = absent\" xml:id=\"S0.Ex1.m1\"><XMath xml:id=\"S0.Ex1.m1.2\"><XMApp xml:id=\"S0.Ex1.m1.2.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMApp xml:id=\"S0.Ex1.m1.2.1.2\"><XMTok font=\"italic\" name=\"beta\" role=\"UNKNOWN\">β</XMTok><XMDual xml:id=\"S0.Ex1.m1.2.1.2.2\"><XMRef idref=\"S0.Ex1.m1.1\" xml:id=\"S0.Ex1.m1.2.1.2.2.1\"/><XMWrap xml:id=\"S0.Ex1.m1.2.1.2.2.2\"><XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex1.m1.1\">g</XMTok><XMTok role=\"CLOSE\" stretchy=\"false\">)</XMTok></XMWrap></XMDual></XMApp><XMTok meaning=\"absent\"/></XMApp></XMath></Math></td><td align=\"left\" xml:id=\"S0.Ex1.2\"><Math mode=\"inline\" tex=\"\\displaystyle+\\frac{199}{18}g^{5}-3g^{3}\" text=\"(+ (199 / 18) * g ^ 5) - 3 * g ^ 3\" xml:id=\"S0.Ex1.m2\"><XMath xml:id=\"S0.Ex1.m2.1\"><XMApp xml:id=\"S0.Ex1.m2.1.1\"><XMTok meaning=\"minus\" role=\"ADDOP\">-</XMTok><XMApp xml:id=\"S0.Ex1.m2.1.1.2\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMApp xml:id=\"S0.Ex1.m2.1.1.2.2\"><XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok><XMApp xml:id=\"S0.Ex1.m2.1.1.2.2.2\"><XMTok mathstyle=\"display\" meaning=\"divide\" role=\"FRACOP\"/><XMTok meaning=\"199\" role=\"NUMBER\">199</XMTok><XMTok meaning=\"18\" role=\"NUMBER\">18</XMTok></XMApp><XMApp xml:id=\"S0.Ex1.m2.1.1.2.2.3\"><XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok><XMTok fontsize=\"70%\" meaning=\"5\" role=\"NUMBER\">5</XMTok></XMApp></XMApp></XMApp><XMApp xml:id=\"S0.Ex1.m2.1.1.3\"><XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok><XMTok meaning=\"3\" role=\"NUMBER\">3</XMTok><XMApp xml:id=\"S0.Ex1.m2.1.1.3.3\"><XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok><XMTok fontsize=\"70%\" meaning=\"3\" role=\"NUMBER\">3</XMTok></XMApp></XMApp></XMApp></XMath></Math></td></MathBranch></MathFork></equation></equationgroup>",
+    ),
+    (
+      tex,
+      "equationgroup",
+      "S0.EGx2",
+      "<equationgroup class=\"ltx_eqn_align\" xml:id=\"S0.EGx2\"><equation xml:id=\"S0.Ex2\"><MathFork><Math tex=\"\\displaystyle F=\\frac{a}{b}{}+c\" text=\"F = a / b + c\" xml:id=\"S0.Ex2.m3\"><XMath xml:id=\"S0.Ex2.m3.1\"><XMApp xml:id=\"S0.Ex2.m3.1.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">F</XMTok><XMApp xml:id=\"S0.Ex2.m3.1.1.3\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMApp xml:id=\"S0.Ex2.m3.1.1.3.2\"><XMTok mathstyle=\"display\" meaning=\"divide\" role=\"FRACOP\"/><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp><XMTok font=\"italic\" role=\"UNKNOWN\">c</XMTok></XMApp></XMApp></XMath></Math><MathBranch><td align=\"right\" xml:id=\"S0.Ex2.1\"><Math mode=\"inline\" tex=\"\\displaystyle F=\\frac{a}{b}{}\" text=\"F = a / b\" xml:id=\"S0.Ex2.m1\"><XMath xml:id=\"S0.Ex2.m1.1\"><XMApp xml:id=\"S0.Ex2.m1.1.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">F</XMTok><XMApp xml:id=\"S0.Ex2.m1.1.1.3\"><XMTok mathstyle=\"display\" meaning=\"divide\" role=\"FRACOP\"/><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMApp></XMath></Math></td><td align=\"left\" xml:id=\"S0.Ex2.2\"><Math mode=\"inline\" tex=\"\\displaystyle+c\" text=\"+ c\" xml:id=\"S0.Ex2.m2\"><XMath xml:id=\"S0.Ex2.m2.1\"><XMApp xml:id=\"S0.Ex2.m2.1.1\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">c</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation></equationgroup>",
+    ),
+    (
+      tex,
+      "equationgroup",
+      "S0.EGx3",
+      "<equationgroup class=\"ltx_eqn_align\" xml:id=\"S0.EGx3\"><equation xml:id=\"S0.Ex3\"><MathFork><Math tex=\"\\displaystyle K,{}=x+y\" text=\"formulae@(K = x + y, absent = x + y)\" xml:id=\"S0.Ex3.m3\"><XMath xml:id=\"S0.Ex3.m3.5\"><XMDual xml:id=\"S0.Ex3.m3.5.1\"><XMApp xml:id=\"S0.Ex3.m3.5.1.1\"><XMTok meaning=\"formulae\"/><XMApp xml:id=\"S0.Ex3.m3.5.1.1.2\"><XMRef idref=\"S0.Ex3.m3.1\" xml:id=\"S0.Ex3.m3.5.1.1.2.1\"/><XMRef idref=\"S0.Ex3.m3.2\" xml:id=\"S0.Ex3.m3.5.1.1.2.2\"/><XMRef idref=\"S0.Ex3.m3.4\" xml:id=\"S0.Ex3.m3.5.1.1.2.3\"/></XMApp><XMApp xml:id=\"S0.Ex3.m3.5.1.1.3\"><XMRef idref=\"S0.Ex3.m3.1\" xml:id=\"S0.Ex3.m3.5.1.1.3.1\"/><XMRef idref=\"S0.Ex3.m3.3\" xml:id=\"S0.Ex3.m3.5.1.1.3.2\"/><XMRef idref=\"S0.Ex3.m3.4\" xml:id=\"S0.Ex3.m3.5.1.1.3.3\"/></XMApp></XMApp><XMApp xml:id=\"S0.Ex3.m3.5.1.2\"><XMTok meaning=\"equals\" role=\"RELOP\" xml:id=\"S0.Ex3.m3.1\">=</XMTok><XMWrap xml:id=\"S0.Ex3.m3.5.1.2.1\"><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex3.m3.2\">K</XMTok><XMTok role=\"PUNCT\">,</XMTok><XMTok meaning=\"absent\" xml:id=\"S0.Ex3.m3.3\"/></XMWrap><XMApp xml:id=\"S0.Ex3.m3.4\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok></XMApp></XMApp></XMDual></XMath></Math><MathBranch><td align=\"right\" xml:id=\"S0.Ex3.1\"><Math mode=\"inline\" tex=\"\\displaystyle K,{}\" text=\"K\" xml:id=\"S0.Ex3.m1\"><XMath xml:id=\"S0.Ex3.m1.2\"><XMDual xml:id=\"S0.Ex3.m1.2.1\"><XMRef idref=\"S0.Ex3.m1.1\" xml:id=\"S0.Ex3.m1.2.1.1\"/><XMWrap xml:id=\"S0.Ex3.m1.2.1.2\"><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex3.m1.1\">K</XMTok><XMTok role=\"PUNCT\">,</XMTok></XMWrap></XMDual></XMath></Math></td><td align=\"left\" xml:id=\"S0.Ex3.2\"><Math mode=\"inline\" tex=\"\\displaystyle=x+y\" text=\"absent = x + y\" xml:id=\"S0.Ex3.m2\"><XMath xml:id=\"S0.Ex3.m2.1\"><XMApp xml:id=\"S0.Ex3.m2.1.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok meaning=\"absent\"/><XMApp xml:id=\"S0.Ex3.m2.1.1.3\"><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok></XMApp></XMApp></XMath></Math></td></MathBranch></MathFork></equation></equationgroup>",
+    ),
+  ];
+  for (tex, tag, id, element) in cases {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{tex}\n{log}"
+    );
+    let attrs: Vec<String> = if id.is_empty() {
+      vec![]
+    } else {
+      vec![format!("xml:id=\"{id}\"")]
+    };
+    let attrs: Vec<&str> = attrs.iter().map(String::as_str).collect();
+    assert_element(&xml, tag, &attrs, element);
+  }
+}
+
 /// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
 /// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
 /// Read on the conversion thread before its engine is released.
