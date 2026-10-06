@@ -10952,3 +10952,48 @@ Rust (62zl, iopart_support_sty.rs): each `\address` adds its affiliation through
 its marks when the authors carry them. 21 of the 41 2609 papers shipping iopart.cls call `\address` more than once
 (2609.01831 lost three of four). Repro sectioning-frontmatter/iopart_each_address_adds_an_affiliation; guard
 `perfect_kernel_batch61::iopart_each_address_adds_an_affiliation`.
+
+## 512. A `\bibitem` under a "References" heading gives two headings
+
+A `\bibitem` outside a bibliography opens `{thebibliography}` (`\lx@mung@bibliography`, latex_constructs.pool.ltxml:
+4109-4122), which brings its own `\refname` heading and, as section-level back matter, closes the section the author
+headed the entries with. Perl leaves that section empty (its only content the list the entries left) before a second
+"References" heading; the PDF prints one. Pandoc's citeproc output takes this shape (`\section{References}` then a
+`{CSLReferences}` list of `\bibitem`s, 2609.02899). Minimal trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+Text \cite{a}.
+\section{References}
+\begin{list}{}{}
+\bibitem{a} Able, A title.
+\end{list}
+\end{document}
+```
+
+Rust (62zm, sect11.rs `absorb_bibliography_heading`, the bibliography's `after_close`): the bibliography takes the place
+of a unit right before it titled as it is, or of an otherwise empty unit when it has no title of its own or the
+`\bibitem`s opened it in — its heading, labels and other content (OXIDIZED_DESIGN_DIVERGENCES #456). Repro
+sectioning-frontmatter/bibliography_section_titled_as_it_becomes_it; guard
+`perfect_kernel_batch61::bibliography_takes_the_place_of_its_heading_unit`.
+
+## 513. `\bibitem`s in a list environment err at the list's `\end`
+
+`\lx@mung@bibliography` (latex_constructs.pool.ltxml:4114-4121), for a `\bibitem` in `{enumerate}`, `{itemize}` or
+`{description}`, ends the list, lets `\end<list>` be `\endthebibliography`, and opens the bibliography with
+`\thebibliography` rather than `\begin`; the author's `\end{enumerate}` then closes a group that was never opened:
+"Error:unexpected:\endgroup Attempt to close a group that switched to mode horizontal" (Perl also reports
+"<ltx:bibitem> isn't allowed in <ltx:document>"). pdflatex: 0 errors. Minimal trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+\section{Literature}
+\begin{enumerate}
+\bibitem{a} Able, A title.
+\end{enumerate}
+\end{document}
+```
+
+Rust the same (open). RED repro sectioning-frontmatter/bibitems_in_a_list_environment_close_without_error.

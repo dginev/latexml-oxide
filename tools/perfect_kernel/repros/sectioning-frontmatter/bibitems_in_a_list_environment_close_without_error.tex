@@ -1,0 +1,18 @@
+% witness: the auto-opened bibliography of `\bibitem`s in an `{enumerate}` (the shape 2609.02899's Pandoc list takes in
+%          other papers), probed for 62zm
+% oracle:  pdflatex 0 errors: `\bibitem` in `{enumerate}` is an item with its label
+% engines: rust (62zm) = perl (2026-10-06) = Error:unexpected:\endgroup "Attempt to close a group that switched to mode
+%          horizontal" at `\end{enumerate}`: `\lx@mung@bibliography` (Perl latex_constructs.pool.ltxml:4109-4122)
+%          closes the list, lets its `\end` be `\endthebibliography`, and opens the bibliography with `\thebibliography`,
+%          not `\begin`, so the author's `\end{enumerate}` closes a group that was never opened (KNOWN_PERL_ERRORS #513)
+% expect:  0 errors; one <bibliography> holding the entry
+% status:  RED
+\documentclass{article}
+\begin{document}
+Text \cite{a}.
+
+\section{Literature}
+\begin{enumerate}
+\bibitem{a} Able, A title.
+\end{enumerate}
+\end{document}

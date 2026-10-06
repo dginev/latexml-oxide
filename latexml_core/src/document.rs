@@ -4261,8 +4261,9 @@ impl Document {
   /// * ROOT-level children spill only when sectional (`ROOT_SPILLABLE`):
   ///   the frontmatter fallback and `maybe_promote_leading_title` operate on
   ///   the leading non-sectional root children at end-of-build.
-  /// * Children of the insertion element itself never spill: in-flight
-  ///   construction state may still reference recently built nodes.
+  /// * An open element's heading parts (`ltx:tags`, `ltx:title`, `ltx:toctitle`) never spill: its close-time
+  ///   hooks read them (a bibliography taking the place of the unit that heads it, latexml_engine sect11.rs
+  ///   `absorb_bibliography_heading`). One title per open element, so the memory cost is negligible.
   ///
   /// Returns the number of runs spilled.
   pub fn spill_closed_subtrees(&mut self, index: &mut crate::sxml::FragmentIndex) -> Result<usize> {
@@ -4370,7 +4371,18 @@ impl Document {
           // witness tests/structure/bibsect.tex). Rare and small.
           && self
             .findnodes("descendant-or-self::ltx:bibliography", Some(&child))
-            .is_empty();
+            .is_empty()
+          // (`parent` is open: its heading stays until it closes)
+          && !matches!(
+            get_node_qname(&child),
+            q if q == pin!("ltx:tags") || q == pin!("ltx:title") || q == pin!("ltx:toctitle")
+          )
+          // The unit right before the bibliography still open (the barrier) stays too: closing, the
+          // bibliography may take its place (latexml_engine sect11.rs `absorb_bibliography_heading`).
+          && !barrier.as_ref().is_some_and(|open| {
+            get_node_qname(open) == pin!("ltx:bibliography")
+              && child.get_next_element_sibling().as_ref() == Some(open)
+          });
         if eligible {
           run.push(child);
         } else {

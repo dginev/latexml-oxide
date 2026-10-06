@@ -1,0 +1,33 @@
+% witness: 2609.02899 (Pandoc/Quarto citeproc output under apa7: `\section{References}\label{references}`, then
+%          `\begin{CSLReferences}{1}{0}` — a `list` — holding `\bibitem[\citeproctext]{ref-…}` entries)
+% oracle:  pdflatex 0 errors: one heading "References", then the entries
+% engines: rust (62zl) = perl (2026-10-06) = 0 errors, an empty <section> "References" (its only content the empty
+%          list) followed by a separate <bibliography> titled "References" — two headings: the `\bibitem` outside a
+%          bibliography auto-opens `{thebibliography}` (`\lx@mung@bibliography`, Perl latex_constructs.pool.ltxml:
+%          4109-4122), which brings its own `\refname` heading and, a section-level unit, closes the section
+% expect:  0 errors; one <bibliography> titled "References" carrying the section's label, no empty section
+% status:  GREEN (62zm: `absorb_bibliography_heading`, the bibliography's `after_close`; KNOWN_PERL_ERRORS #512)
+\documentclass{article}
+\usepackage{hyperref}
+\newenvironment{CSLReferences}[2]
+ {\begin{list}{}{\setlength{\itemindent}{0pt}\setlength{\leftmargin}{0pt}}}
+ {\end{list}}
+\def\citeproctext{}
+\begin{document}
+Text \cite{ref-a}, see Section~\ref{references}.
+
+\section{References}\label{references}
+
+\protect\phantomsection\label{refs}
+\begin{CSLReferences}{1}{0}
+\bibitem[\citeproctext]{ref-a}
+Able, A. (2020). A title. \emph{Journal}, 1--2.
+
+\bibitem[\citeproctext]{ref-b}
+Baker, B. (2021). Another title.
+\end{CSLReferences}
+
+\appendix
+\section{Extra}
+More.
+\end{document}

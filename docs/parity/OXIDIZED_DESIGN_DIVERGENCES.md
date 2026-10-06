@@ -13723,3 +13723,26 @@ it). Minimal trigger (Perl and Rust now alike; Rust before: one error):
 ```
 
 **Guard**: `perfect_kernel_batch61::{subcaptions_in_minipages_then_the_caption, subcaption_boxes_around_math_then_the_caption, caption_after_framed_text_keeps_the_reading_order}`.
+
+### 456. A bibliography right after a unit that heads it takes its place (Perl: two headings)
+
+A unit (part … subparagraph) right before a bibliography — the unit closest to it in document order, a section's last
+subsection included — heads it when titled as the bibliography is (tag, case, spacing and a closing `.`/`:` aside);
+or, holding nothing but empty paragraphs and lists, when the bibliography has no title of its own
+(`\renewcommand\refname{}`) or the `\bibitem`s opened the
+bibliography in it (`\lx@mung@bibliography@pre` marks the unit). The unit's heading (tags,
+title, toctitle) and labels then replace the bibliography's own, its other content goes before the entries (when the
+bibliography's model takes it), and the unit is removed (sect11.rs `absorb_bibliography_heading`). Perl keeps both
+headings, the first over nothing: an auto-opened bibliography (KNOWN_PERL_ERRORS #512, 2609.02899's Pandoc list), or
+`\section*{References}` before `{thebibliography}`, which pdflatex too prints twice — kept as one, the semantic
+reading (user 2026-10-06). Not merged: a unit with other content and another title (a `\section{Conclusion}` with its
+text before an untitled bibliography stays the conclusion), an empty unit before a `{thebibliography}` titled
+otherwise (its own heading prints there), a hidden bibliography (`ltx_nodisplay`). The heading goes after any front
+matter the bibliography has; labels inside the emptied paragraphs join the bibliography's; under `--streaming` the
+unit before an open bibliography stays resident until it closes, and an open element's heading parts never spill
+(`spill_closed_subtrees`; guards `114_streaming_structure::{streaming_bibliography_takes_its_heading_unit,
+streaming_keeps_an_open_units_heading}`); body paragraphs that spilled while the unit was open still reach the hook as
+placeholders, so a streamed unit with prose before its entries keeps its own heading. Limits: `ltx:appendix` is not a heading unit
+(`\appendix\section{References}` keeps two headings); a last subsection's number can end up on a section-level
+bibliography; the unit's other attributes (`class`, `xml:lang`) are not carried. Guard
+`perfect_kernel_batch61::bibliography_takes_the_place_of_its_heading_unit`.

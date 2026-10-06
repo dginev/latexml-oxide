@@ -434,7 +434,10 @@ pub(crate) fn load() -> Result<()> {
       {
         document.set_attribute(node, "inlist", "toc")?;
       }
-  });
+    },
+    after_close => sub[document, node] {
+      absorb_bibliography_heading(document, node)?;
+    });
 
   DefMacro!("\\par@in@bibliography", {
     skip_spaces()?;
@@ -581,6 +584,8 @@ pub(crate) fn load() -> Result<()> {
     Ok(Tokens::new(tokens))
   });
   // Perl: maybeCloseElement($tag) if tag =~ /^ltx:(?:itemize|enumerate|description)$/
+  // The unit the `\bibitem` opens the bibliography in is marked: the PDF prints its heading over the entries, the
+  // bibliography's own being LaTeXML's (`absorb_bibliography_heading`).
   DefConstructor!("\\lx@mung@bibliography@pre", sub[document] {
     let parent     = document.get_node();
     let tag_sym    = model::get_node_qname(parent);
@@ -589,6 +594,15 @@ pub(crate) fn load() -> Result<()> {
         document.maybe_close_element(tag)
       } else { Ok(None) }
     )?;
+    let mut node = Some(document.get_node().clone());
+    while let Some(current) = node {
+      if is_heading_unit(&current) {
+        let mut unit = current;
+        document.set_attribute(&mut unit, "_bibliography_opened", "true")?;
+        break;
+      }
+      node = current.get_parent();
+    }
   });
 
   // Perl latex_constructs.pool.ltxml L4187-4189: enterHorizontal => 1.
@@ -1237,5 +1251,175 @@ fn tie_held_tags(node: &Node, labels: &str) {
       }
       cursor = current.get_parent();
     }
+  }
+}
+
+/// The units a bibliography may take the heading of: those whose model takes `BackMatter.class`
+/// (LaTeXML-structure.rnc:69-163), which a bibliography closes as section-level back matter
+/// (`adjust_backmatter_element`).
+const BIBLIOGRAPHY_HEADED_UNITS: &[&str] = &[
+  "ltx:part",
+  "ltx:chapter",
+  "ltx:section",
+  "ltx:subsection",
+  "ltx:subsubsection",
+  "ltx:paragraph",
+  "ltx:subparagraph",
+];
+
+fn is_heading_unit(node: &Node) -> bool {
+  with(model::get_node_qname(node), |q| {
+    BIBLIOGRAPHY_HEADED_UNITS.contains(&q)
+  })
+}
+
+fn is_heading_part(node: &Node) -> bool {
+  with(model::get_node_qname(node), |q| {
+    matches!(q, "ltx:tags" | "ltx:title" | "ltx:toctitle")
+  })
+}
+
+/// The text of a unit's title without its number tag, spaces collapsed, a closing `.`/`:` and case ignored; empty
+/// when it has none.
+fn heading_text(unit: &Node) -> String {
+  let Some(title) = unit
+    .get_child_elements()
+    .into_iter()
+    .find(|c| with(model::get_node_qname(c), |q| q == "ltx:title"))
+  else {
+    return String::new();
+  };
+  let mut text = String::new();
+  for child in title.get_child_nodes() {
+    if !with(model::get_node_qname(&child), |q| q == "ltx:tag") {
+      text.push_str(&child.get_content());
+    }
+  }
+  let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+  text.trim_end_matches(['.', ':']).to_lowercase()
+}
+
+/// A paragraph or list with no text and nothing but paragraphs and lists inside: Pandoc's `{CSLReferences}` list
+/// whose `\bibitem`s opened the bibliography, a `\phantomsection`'s paragraph.
+fn is_empty_block(node: &Node) -> bool {
+  with(model::get_node_qname(node), |q| {
+    matches!(
+      q,
+      "ltx:para" | "ltx:p" | "ltx:itemize" | "ltx:enumerate" | "ltx:description"
+    )
+  }) && node.get_content().trim().is_empty()
+    && node.get_child_elements().iter().all(is_empty_block)
+}
+
+/// A bibliography right after a unit that heads it takes that unit's place (user 2026-10-06), else the document has
+/// two headings, the first over nothing: the author's `\section{References}` over the `\bibitem`s that open the
+/// bibliography — Pandoc's citeproc `{CSLReferences}` (2609.02899), `\bibitem`s in an `{enumerate}` (Perl the same,
+/// KNOWN_PERL_ERRORS #512) — or before `{thebibliography}` (OXIDIZED_DESIGN_DIVERGENCES #456). The unit heads it when
+/// titled as the bibliography is; or, holding nothing else, when the bibliography has no title
+/// (`\renewcommand\refname{}`) or the `\bibitem`s opened the bibliography in it — the PDF prints that heading over
+/// them, not `\refname`. Its heading (tags, title, toctitle) and labels replace the bibliography's own, its other content goes
+/// before the entries, and the unit is removed.
+fn absorb_bibliography_heading(document: &mut Document, bibliography: &Node) -> Result<()> {
+  if bibliography
+    .get_attribute("class")
+    .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_nodisplay"))
+  {
+    return Ok(());
+  }
+  // The unit just before the bibliography in document order: its previous sibling, or that one's last unit, …
+  let Some(mut unit) = bibliography.get_prev_element_sibling() else {
+    return Ok(());
+  };
+  if !is_heading_unit(&unit) {
+    return Ok(());
+  }
+  while let Some(last) = unit.get_last_element_child()
+    && is_heading_unit(&last)
+  {
+    unit = last;
+  }
+  let unit_title = heading_text(&unit);
+  if unit_title.is_empty() {
+    return Ok(());
+  }
+  let (heading, rest): (Vec<Node>, Vec<Node>) = unit
+    .get_child_elements()
+    .into_iter()
+    .partition(is_heading_part);
+  let (emptied, body): (Vec<Node>, Vec<Node>) = rest.into_iter().partition(is_empty_block);
+  let bibliography_title = heading_text(bibliography);
+  let opened_here = unit.get_attribute("_bibliography_opened").is_some();
+  // Titled as the bibliography, the unit heads it with what it holds; else only when it holds nothing else, as a
+  // `\section{Conclusion}` with its text before an untitled bibliography stays the conclusion.
+  if !(unit_title == bibliography_title
+    || ((bibliography_title.is_empty() || opened_here) && body.is_empty()))
+  {
+    return Ok(());
+  }
+  if !body
+    .iter()
+    .all(|n| document::can_contain_node(bibliography, n))
+  {
+    return Ok(());
+  }
+  for own in bibliography
+    .get_child_elements()
+    .into_iter()
+    .filter(is_heading_part)
+  {
+    document.remove_node(own);
+  }
+  // after the bibliography's front matter (an abstract, a date), where its model has the heading
+  let anchor = bibliography
+    .get_child_elements()
+    .into_iter()
+    .find(|child| !is_front_matter(child));
+  let mut target = bibliography.clone();
+  for mut node in heading.into_iter().chain(body) {
+    node.unlink();
+    match &anchor {
+      Some(anchor) => {
+        anchor.clone().add_prev_sibling(&mut node)?;
+      },
+      None => {
+        target.add_child(&mut node)?;
+      },
+    }
+  }
+  // the unit's labels, those in the paragraphs it is left with, and the bibliography's own
+  let mut labels: Vec<String> = unit.get_attribute("labels").into_iter().collect();
+  for block in &emptied {
+    collect_labels(block, &mut labels);
+  }
+  labels.extend(bibliography.get_attribute("labels"));
+  if !labels.is_empty() {
+    document.set_attribute(&mut target, "labels", &labels.join(" "))?;
+  }
+  document.remove_node(unit);
+  Ok(())
+}
+
+/// Is `node` of the front matter a unit's model takes before its heading (`FrontMatter.class`,
+/// LaTeXML-structure.rnc:672-674)?
+fn is_front_matter(node: &Node) -> bool {
+  with(model::get_node_qname(node), |q| {
+    matches!(
+      q,
+      "ltx:subtitle"
+        | "ltx:date"
+        | "ltx:abstract"
+        | "ltx:acknowledgements"
+        | "ltx:keywords"
+        | "ltx:classification"
+        | "ltx:pubnote"
+    )
+  })
+}
+
+/// The `labels` of `node` and the elements inside it.
+fn collect_labels(node: &Node, labels: &mut Vec<String>) {
+  labels.extend(node.get_attribute("labels"));
+  for child in node.get_child_elements() {
+    collect_labels(&child, labels);
   }
 }

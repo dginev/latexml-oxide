@@ -7338,3 +7338,210 @@ Text.
     ]
   );
 }
+
+/// The top-level units of a document, each as `<qname>:<title text without its tag>`, with `+biblist` on a
+/// bibliography holding entries and its labels, if any.
+fn units_of(xml: &str) -> Vec<String> {
+  let unit = regex::Regex::new(
+    r#"(?s)<(section|subsection|chapter|appendix|bibliography)\b([^>]*)>\s*(?:<tags>.*?</tags>\s*)?(?:<title>(.*?)</title>)?"#,
+  )
+  .unwrap();
+  let tag = regex::Regex::new(r"(?s)<tag\b[^>]*>.*?</tag>").unwrap();
+  let labels = regex::Regex::new(r#"labels="([^"]*)""#).unwrap();
+  unit
+    .captures_iter(xml)
+    .map(|c| {
+      let title = c.get(3).map_or(String::new(), |t| {
+        tag.replace_all(t.as_str(), "").trim().to_string()
+      });
+      let mut shown = format!("{}:{title}", &c[1]);
+      if &c[1] == "bibliography" {
+        if let Some(l) = labels.captures(&c[2]) {
+          shown.push_str(&format!(" [{}]", &l[1]));
+        }
+        if xml[c.get(0).unwrap().end()..]
+          .split("</bibliography>")
+          .next()
+          .is_some_and(|b| b.contains("<biblist>"))
+        {
+          shown.push_str(" +biblist");
+        }
+      }
+      shown
+    })
+    .collect()
+}
+
+/// The element children of the first bibliography, by local name (`["tags", "title", "biblist"]`).
+fn bibliography_children(xml: &str) -> Vec<String> {
+  let start = xml.find("<bibliography").expect("a bibliography");
+  let end = xml[start..]
+    .find("</bibliography>")
+    .map_or(xml.len(), |e| start + e);
+  let tag = regex::Regex::new(r"<(/?)([A-Za-z_][-\w:.]*)[^>]*?(/?)>").unwrap();
+  let mut children = Vec::new();
+  let mut depth = 0i32;
+  for c in tag.captures_iter(&xml[start..end]) {
+    if &c[1] == "/" {
+      depth -= 1;
+      continue;
+    }
+    if depth == 1 {
+      children.push(c[2].to_string());
+    }
+    if &c[3] != "/" {
+      depth += 1;
+    }
+  }
+  children
+}
+
+/// 62zm: a bibliography right after a unit that heads it takes that unit's place (user 2026-10-06), or the document
+/// has two headings, the first over nothing — Pandoc's `\section{References}` over the `{CSLReferences}` `\bibitem`s
+/// that open the bibliography (2609.02899; Perl the same, KNOWN_PERL_ERRORS #512), `\bibitem`s in an `{enumerate}`
+/// under any heading (the PDF prints that heading, not `\refname`), `\section*{References}` before `{thebibliography}`
+/// and a bibliography with an empty `\refname` (both printed twice; OXIDIZED_DESIGN_DIVERGENCES #456). Not a unit
+/// with other content and another title, nor an empty unit before a `{thebibliography}` titled otherwise. Repro
+/// sectioning-frontmatter/bibliography_section_titled_as_it_becomes_it.
+#[test]
+fn bibliography_takes_the_place_of_its_heading_unit() {
+  let units = |body: &str| -> Vec<String> {
+    let tex = format!(
+      "\\documentclass{{article}}\n\\begin{{document}}\nText \\cite{{a}}.\n\n{body}\n\\appendix\n\\section{{Extra}}\nMore.\n\\end{{document}}\n"
+    );
+    let (log, xml) = convert_with(&tex, None);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    units_of(&xml)
+  };
+  let tail = "appendix:Extra";
+  // The repro: Pandoc's list of `\bibitem`s under `\section{References}\label{references}`.
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bibliography_section_titled_as_it_becomes_it.tex"
+    ),
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(units_of(&xml), vec![
+    "bibliography:References [LABEL:references LABEL:refs] +biblist",
+    tail
+  ]);
+  assert_eq!(bibliography_children(&xml), ["tags", "title", "biblist"]);
+  // `\bibitem`s opening the bibliography under any heading take it, as the PDF prints that heading over them. (In
+  // `{enumerate}` the auto-open errs at its `\end`, a shared Perl error: KNOWN_PERL_ERRORS #513, RED repro
+  // sectioning-frontmatter/bibitems_in_a_list_environment_close_without_error.)
+  assert_eq!(
+    units(
+      r"\section{Literature}\label{lit}
+\begin{list}{}{}
+\bibitem{a} Able, A title.
+\end{list}"
+    ),
+    vec!["bibliography:Literature [LABEL:lit] +biblist", tail]
+  );
+  // `\section*{References}` before `{thebibliography}`, and a heading over a bibliography with no title of its own.
+  for (heading, refname) in [
+    (r"\section*{References}", ""),
+    (r"\section{Sources}", r"\renewcommand\refname{}"),
+  ] {
+    assert_eq!(
+      units(&format!(
+        r"{heading}
+{refname}
+\begin{{thebibliography}}{{9}}
+\bibitem{{a}} Able, A title.
+\end{{thebibliography}}"
+      )),
+      vec![
+        format!(
+          "bibliography:{} +biblist",
+          if refname.is_empty() {
+            "References"
+          } else {
+            "Sources"
+          }
+        ),
+        tail.to_string()
+      ],
+      "{heading}"
+    );
+  }
+  // The unit's other content goes before the entries.
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\begin{document}
+\section{References}
+Listed in order of citation.
+\begin{thebibliography}{9}
+\bibitem{a} Able, A title.
+\end{thebibliography}
+\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(units_of(&xml), vec!["bibliography:References +biblist"]);
+  assert_eq!(bibliography_children(&xml), [
+    "tags", "title", "para", "biblist"
+  ]);
+  let bibliography = &xml[xml.find("<bibliography").unwrap()..];
+  assert!(
+    bibliography.find("Listed in order of citation.").unwrap()
+      < bibliography.find("<biblist>").unwrap(),
+    "{xml}"
+  );
+  // Not a unit with other content and another title, nor an empty unit before a bibliography titled otherwise.
+  assert_eq!(
+    units(
+      r"\section{Conclusions}
+Done.
+\begin{list}{}{}
+\bibitem{a} Able, A title.
+\end{list}"
+    ),
+    vec![
+      "section:Conclusions",
+      "bibliography:References +biblist",
+      tail
+    ]
+  );
+  assert_eq!(
+    units(
+      r"\section{Sources}
+\begin{thebibliography}{9}
+\bibitem{a} Able, A title.
+\end{thebibliography}"
+    ),
+    vec!["section:Sources", "bibliography:References +biblist", tail]
+  );
+  // Nor a unit with content before an untitled bibliography — the section, or its last subsection (round 1: the
+  // conclusion became the bibliography).
+  assert_eq!(
+    units(
+      r"\section{Conclusion}\label{sec:conc}
+We conclude something important.
+\renewcommand\refname{}
+\begin{thebibliography}{9}
+\bibitem{a} Able, A title.
+\end{thebibliography}"
+    ),
+    vec!["section:Conclusion", "bibliography: +biblist", tail]
+  );
+  assert_eq!(
+    units(
+      r"\section{Discussion}
+Intro.
+\subsection{Limitations}
+Some limits.
+\renewcommand\refname{}
+\begin{thebibliography}{9}
+\bibitem{a} Able, A title.
+\end{thebibliography}"
+    ),
+    vec![
+      "section:Discussion",
+      "subsection:Limitations",
+      "bibliography: +biblist",
+      tail
+    ]
+  );
+}

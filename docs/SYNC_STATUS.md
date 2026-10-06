@@ -444,6 +444,14 @@ marked_affiliations_inside_a_font_group_keep_the_font, marked_affiliation_contin
 marked_affiliation_wrappers_and_legends, marked_affiliation_review_shapes, apa7_author_block_maps_onto_the_frontmatter}` (and `omnibus_doi_reads_as_a_url`
 now on apa6, OmniBus's class, with apa7's linked DOI beside it).
 
+62zm: a bibliography right after a unit that heads it takes its place (user 2026-10-06; sect11.rs
+`absorb_bibliography_heading`, the bibliography's `after_close`): titled as it is, or an otherwise empty unit when the
+bibliography has no title or the `\bibitem`s opened it in — Pandoc's `\section{References}` over its
+`{CSLReferences}` list (2609.02899), `\section*{References}` before `{thebibliography}`; Perl keeps two headings, the
+first over nothing (KNOWN_PERL_ERRORS #512, OXIDIZED_DESIGN_DIVERGENCES #456). Side finding, open: `\bibitem`s in
+`{enumerate}`/`{itemize}`/`{description}` err at the list's `\end` (`\endgroup`, shared with Perl, KNOWN_PERL_ERRORS
+#513; RED repro sectioning-frontmatter/bibitems_in_a_list_environment_close_without_error).
+
 62zk: the informs binding (informs3 and its h/a/noheader copies, informs4 and its copies, informs5) gains the class
 API its papers use — the journal switches and the review options (informs4.cls:9-54; informs3 declares twelve journals
 and no anonymous-review options), the stored metadata and running heads and feet (:948-985, read back as
