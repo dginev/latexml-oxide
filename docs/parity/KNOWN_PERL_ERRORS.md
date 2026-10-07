@@ -11116,6 +11116,37 @@ latex_constructs.pool.ltxml:3740-3755 (`\@array@bindings`) and TeX_Tables.pool.l
 reset `\lx@alignment@row@before`/`@after`; only Base_XMath.pool.ltxml:596 and :718 do. An `\halign` or `{array}` inside an
 `{eqnarray}` row inherits `\eqnarray@row@before`, which steps the equation per inner row. Minimal trigger: repro
 `kernel-alignment/nested_alignment_inherits_eqnarray_row_hook` (three eqnarrays, the second with a two-row `\halign`,
-the third with a two-row `{array}`, each followed by `\theequation`). pdflatex: 1, 2, 3. Perl and Rust (63a): 1, 4, 7.
-RED. Fix plan: reset both hooks to empty at the start of the alignment bindings (`sect10.rs:468`, `tex_tables.rs:850`);
-eqnarray and amsmath set them afterwards. Found under 1601.02132 (63a, root B).
+the third with a two-row `{array}`, a fourth with the `{array}` in the first of two rows, each followed by
+`\theequation`). pdflatex: 1, 2, 3, 5. Perl and Rust (63a): 1, 4, 7, …. Fixed in Rust (63b): every alignment's
+bindings let both hooks to `\lx@empty` (`tex_tables.rs` `clear_alignment_row_hooks`, called by `alignment_bindings`,
+which `\@array@bindings` and the tabular bindings use, by the TikZ matrix bindings and by `{tabbing}`); eqnarray,
+amsmath and cases set theirs afterwards, and the hooks are local to the cell, so the outer rows still step. An
+`{array}` in an `{eqnarray*}` row now gets the row's own `Ex` id instead of inner-row ids. Found under 1601.02132 (63a,
+root B). Guard `perfect_kernel_batch63::nested_alignment_inherits_no_eqnarray_row_hook`.
+
+## 519. A preamble `\ref` redefinition survives `\begin{document}` under hyperref
+
+nameref.sty:352-359 (TL2025 v2.57; loaded by hyperref.sty:128) redeclares `\ref`, `\pageref` and `\Ref` in the
+`begindocument` hook, so a preamble redefinition never reaches the document; Perl's `nameref.sty.ltxml` does not, and a
+self-recursive one recurses endlessly (deep_recursion). Minimal trigger: repro
+`macro-state/preamble_ref_redefinition_reset_at_begin_document`:
+
+```latex
+\usepackage{xcolor}\usepackage{hyperref}
+\newcommand{\reff}[1]{\textcolor{purple}{\ref{#1}}}
+\renewcommand{\ref}[1]{\hyperref[#1]{\reff{#1}}}
+```
+
+pdflatex prints the plain reference. Witnesses 2503.08060, 1908.01329 (`\renewcommand{\ref}[1]{\textup{\ref{#1}}}`) and
+1811.01873 (CMbook.cls:520-522 `\let\rref\ref\def\ref#1{\hbox{\rref{#1}}}`, then the document's `\renewcommand\rref[1]
+{\ref{#1} \paref{#1}}`; hyperref loaded under `\ifpdf` in the main file). Fixed in Rust (63b): `nameref_sty.rs`
+restores the kernel's `\ref` (`\lx@kernel@ref`, and the `\ref␣` constructor its robust wrapper calls, which a
+`\DeclareRobustCommand\ref` replaces; sect11.rs) in a `begindocument` chunk labelled `nameref`, so later packages'
+chunks and the document's own `\AtBeginDocument` code run after it, as in LaTeX. It also defines nameref's
+`\NR@setref` (nameref.sty:297-314), on which 1811.01873 builds its `\iref`: no label has an `\r@` entry while the
+document is read, so the selector names the reference command that prints its field (`\@firstoffive` `\ref`,
+`\@secondoffive` `\pageref`, `\@thirdoffive` `\nameref`, `\NR@MakeUppercaseFirstOfFive` `\Ref`, any other `\ref`).
+Residual: hyperref loaded from an `\AtBeginDocument` chunk adds the reset while the hook runs; LaTeX's
+`\UseOneTimeHook{begindocument}` (latex.ltx:9512) runs such late code at once, Rust's `\hook_use:n` may not, leaving
+the 63a behaviour. Guards `perfect_kernel_batch63::{preamble_ref_redefinition_reset_at_begin_document,
+begin_document_ref_redefinition_survives_nameref}`.

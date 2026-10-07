@@ -1,14 +1,20 @@
 % witness: 2503.08060, 1908.01329, 1811.01873: a preamble `\renewcommand{\ref}[1]{...\ref...}` through \hyperref/\reff
-% oracle:  pdflatex 0 errors: "See 1." (nameref.sty:352-359 redeclares \ref, \pageref, \Ref at begindocument)
+% oracle:  pdflatex 0 errors: "See 1." / "Also 1." / "Named A." (nameref.sty:352-359 redeclares \ref, \pageref, \Ref at begindocument)
 % engines: rust (63a) = Fatal:Stomach:Recursion (\hyperref@@ii ...); Perl deep_recursion alike
-% expect:  0 errors; one ref with labelref LABEL:a
-% status:  RED
+% expect:  0 errors; \ref and \NR@setref with \@firstoffive (1811.01873's \U@ref) a ref to LABEL:a, with \@thirdoffive a title ref
+% status:  GREEN (63b)
 \documentclass{article}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \newcommand{\reff}[1]{\textcolor{purple}{\ref{#1}}}
 \renewcommand{\ref}[1]{\hyperref[#1]{\reff{#1}}}
+\makeatletter\newcommand{\U@ref}[1]{\NR@setref{#1}\@firstoffive{#1}}\let\iref\U@ref
+\newcommand{\U@name}[1]{\NR@setref{#1}\@thirdoffive{#1}}\let\iname\U@name\makeatother
 \begin{document}
 \section{A}\label{a}
 See \ref{a}.
+
+Also \iref{a}.
+
+Named \iname{a}.
 \end{document}

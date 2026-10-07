@@ -73,7 +73,7 @@ fn autoref_tag_tilde_is_the_kernel_space() {
       (
         "equationgroup",
         "S0.EGx2",
-        r#"<equationgroup class="ltx_eqn_eqnarray" xml:id="S0.EGx2"><equation><MathFork><Math tex="\displaystyle\begin{array}[]{c}f\\&#10;g\end{array}" text="Array[[f], [g]]" xml:id="S0.EGx2.m2"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow xml:id="S0.EGx2.m2.1"><XMCell align="center"><XMTok font="italic" role="UNKNOWN">f</XMTok></XMCell></XMRow><XMRow xml:id="S0.EGx2.m2.2"><XMCell align="center"><XMTok font="italic" role="UNKNOWN">g</XMTok></XMCell></XMRow></XMArray></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle\begin{array}[]{c}f\\&#10;g\end{array}" text="Array[[f], [g]]" xml:id="S0.EGx2.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow xml:id="S0.EGx2.m1.1"><XMCell align="center"><XMTok font="italic" role="UNKNOWN">f</XMTok></XMCell></XMRow><XMRow xml:id="S0.EGx2.m1.2"><XMCell align="center"><XMTok font="italic" role="UNKNOWN">g</XMTok></XMCell></XMRow></XMArray></XMath></Math></td></MathBranch></MathFork></equation></equationgroup>"#,
+        r#"<equationgroup class="ltx_eqn_eqnarray" xml:id="S0.EGx2"><equation xml:id="S0.Ex1"><MathFork><Math tex="\displaystyle\begin{array}[]{c}f\\&#10;g\end{array}" text="Array[[f], [g]]" xml:id="S0.Ex1.m2"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">f</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">g</XMTok></XMCell></XMRow></XMArray></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle\begin{array}[]{c}f\\&#10;g\end{array}" text="Array[[f], [g]]" xml:id="S0.Ex1.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">f</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">g</XMTok></XMCell></XMRow></XMArray></XMath></Math></td></MathBranch></MathFork></equation></equationgroup>"#,
       ),
     ],
   );
@@ -116,5 +116,105 @@ fn ims_structured_bibliography_and_proofs() {
     "proof",
     &[],
     r#"<proof><title class="ltx_runin">Proof of the claim.</title><para xml:id="p3"><p>Trivial.<Math mode="inline" tex="\square" text="square" xml:id="p3.m1"><XMath><XMTok name="square" role="UNKNOWN">□</XMTok></XMath></Math></p></para></proof>"#,
+  );
+}
+
+/// 63b: nameref.sty:352-359 redeclares `\ref`, `\pageref` and `\Ref` at `\begin{document}`, so a self-recursive
+/// preamble `\renewcommand{\ref}` never runs (2503.08060, 1908.01329, 1811.01873; KNOWN_PERL_ERRORS #519). nameref's
+/// `\NR@setref`'s selector names the field a reference prints (`\@firstoffive`: the number). Repro
+/// macro-state/preamble_ref_redefinition_reset_at_begin_document.
+#[test]
+fn preamble_ref_redefinition_reset_at_begin_document() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/preamble_ref_redefinition_reset_at_begin_document.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "S1.p1",
+        r#"<para xml:id="S1.p1"><p>See <ref labelref="LABEL:a"/>.</p></para>"#,
+      ),
+      (
+        "para",
+        "S1.p2",
+        r#"<para xml:id="S1.p2"><p>Also <ref labelref="LABEL:a"/>.</p></para>"#,
+      ),
+      (
+        "para",
+        "S1.p3",
+        r#"<para xml:id="S1.p3"><p>Named <ref class="ltx_refmacro_nameref" labelref="LABEL:a" show="title"/>.</p></para>"#,
+      ),
+    ],
+  );
+}
+
+/// 63b: nameref's reset is a `nameref`-labelled begindocument chunk, so the document's own `\AtBeginDocument` code runs
+/// after it and keeps its `\pageref`/`\Ref`, while a preamble `\DeclareRobustCommand{\ref}` (its `\ref␣` too) is
+/// reset (KNOWN_PERL_ERRORS #519). Repro macro-state/begin_document_ref_redefinition_survives_nameref.
+#[test]
+fn begin_document_ref_redefinition_survives_nameref() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/begin_document_ref_redefinition_survives_nameref.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "S1.p1",
+      r#"<para xml:id="S1.p1"><p>See <ref labelref="LABEL:a"/>; <ref class="ltx_refmacro_autoref" labelref="LABEL:a" show="autoref"/>; the section a.</p></para>"#,
+    )],
+  );
+}
+
+/// 63b: an `\halign` or `{array}` in an `{eqnarray}` row inherited `\eqnarray@row@before` and stepped the equation once
+/// per inner row (1601.02132; Perl alike, KNOWN_PERL_ERRORS #518); a new alignment's rows run no enclosing row hook,
+/// and the eqnarray's own later rows still do. Repro kernel-alignment/nested_alignment_inherits_eqnarray_row_hook.
+#[test]
+fn nested_alignment_inherits_no_eqnarray_row_hook() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/nested_alignment_inherits_eqnarray_row_hook.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "equationgroup",
+      "S0.EGx4",
+      r#"<equationgroup class="ltx_eqn_eqnarray" xml:id="S0.EGx4"><equation xml:id="S0.E4"><tags><tag>(4)</tag><tag role="refnum">4</tag></tags><MathFork><Math tex="\displaystyle a=\begin{array}[]{c}x\\&#10;y\end{array}" text="a = Array[[x], [y]]" xml:id="S0.E4.m4"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">y</XMTok></XMCell></XMRow></XMArray></XMApp></XMath></Math><MathBranch><tr><td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E4.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.E4.m2"><XMath><XMTok meaning="equals" role="RELOP">=</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle\begin{array}[]{c}x\\&#10;y\end{array}" text="Array[[x], [y]]" xml:id="S0.E4.m3"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">y</XMTok></XMCell></XMRow></XMArray></XMath></Math></td></tr></MathBranch></MathFork></equation><equation xml:id="S0.E5"><tags><tag>(5)</tag><tag role="refnum">5</tag></tags><MathFork><Math tex="\displaystyle c=d" text="c = d" xml:id="S0.E5.m4"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math><MathBranch><tr><td align="right"><Math mode="inline" tex="\displaystyle c" text="c" xml:id="S0.E5.m1"><XMath><XMTok font="italic" role="UNKNOWN">c</XMTok></XMath></Math></td><td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.E5.m2"><XMath><XMTok meaning="equals" role="RELOP">=</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle d" text="d" xml:id="S0.E5.m3"><XMath><XMTok font="italic" role="UNKNOWN">d</XMTok></XMath></Math></td></tr></MathBranch></MathFork></equation></equationgroup>"#,
+    )],
+  );
+  // The four `\theequation` reports, each a whole `<p>`; the last eqnarray numbers its two rows 4 and 5.
+  let afters: Vec<&str> = xml
+    .match_indices("<p>After")
+    .map(|(at, _)| &xml[at..at + xml[at..].find("</p>").expect("a closed paragraph") + 4])
+    .collect();
+  assert_eq!(afters, [
+    "<p>After: 1.</p>",
+    "<p>After: 2.</p>",
+    "<p>After: 3.</p>",
+    "<p>After: 5.</p>"
+  ]);
+}
+
+/// 63b: PiCTeX's `\plot` sets each dot with its own `\raise`; the stomach's loop detector hashed a register value by its
+/// kind alone, so a long line of dots read as a loop past 50,000 boxes (0801.0709, Rust only). Repro
+/// boxes-groups/pictex_finite_dots_are_not_a_loop.
+#[test]
+fn pictex_finite_dots_are_not_a_loop() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/pictex_finite_dots_are_not_a_loop.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert!(
+    xml.matches("<text").count() >= 18_000,
+    "every dot of the 30 lines is kept"
   );
 }

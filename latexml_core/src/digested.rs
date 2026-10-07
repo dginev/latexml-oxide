@@ -682,6 +682,18 @@ impl Digested {
       DigestedData::RegisterValue(r) => {
         6u8.hash(h);
         std::mem::discriminant(r).hash(h);
+        // The amount tells register values apart: a PiCTeX `\plot` sets each of its dots with its own `\raise`, and
+        // hashed by kind alone a long line of them read as a loop past `STOMACH_CYCLE_ACTIVATE` (0801.0709;
+        // OXIDIZED_DESIGN_DIVERGENCES #326).
+        match r {
+          RegisterValue::Number(v) => v.0.hash(h),
+          RegisterValue::Dimension(v) => v.0.hash(h),
+          RegisterValue::MuDimension(v) => v.0.hash(h),
+          RegisterValue::Glue(v) => (v.skip, v.plus, v.minus).hash(h),
+          RegisterValue::MuGlue(v) => (v.skip, v.plus, v.minus).hash(h),
+          RegisterValue::Pair(v) => (v.x.0.to_bits(), v.y.0.to_bits()).hash(h),
+          RegisterValue::Token(_) | RegisterValue::Tokens(_) => {},
+        }
       },
       DigestedData::Comment(c) => {
         7u8.hash(h);
@@ -1132,6 +1144,20 @@ mod tests {
     // ...while structurally identical lists DO (so real cycles are still caught).
     let ab2 = list_of(vec![tbox_with("a"), tbox_with("b")]);
     assert_eq!(ab.cycle_fingerprint(), ab2.cycle_fingerprint());
+  }
+
+  #[test]
+  fn cycle_fingerprint_distinguishes_register_amounts() {
+    // Two dots of a PiCTeX line differ only by their `\raise` (0801.0709): equal kinds, different amounts.
+    let raise = |sp: i64| Digested::from(RegisterValue::Dimension(Dimension(sp)));
+    assert_ne!(
+      raise(65536).cycle_fingerprint(),
+      raise(131072).cycle_fingerprint()
+    );
+    assert_eq!(
+      raise(65536).cycle_fingerprint(),
+      raise(65536).cycle_fingerprint()
+    );
   }
 
   #[test]

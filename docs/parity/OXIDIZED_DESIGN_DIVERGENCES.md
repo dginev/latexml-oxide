@@ -3897,16 +3897,20 @@ idiom → `(1.1)`/`(1.2)` while a sibling `section` autoref stays `section 1`);
 `50_structure::autoref_test` (default path unchanged). Witness: ar5iv #607
 (arXiv **2607.12124**).
 
-**Addendum (63a, 2026-10-07): a tag's `~`.** A target's tags (refnum, typerefnum, the autoref name, cleveref names)
-are built where the target is — an eqnarray row's in its math group, where a document may rebind `~` (vdm.sty:135-138,
+**Addendum (63a, 2026-10-07; narrowed in 63b): a tag's `~`.** A target's tags that a reference prints (refnum,
+typerefnum, the autoref name, cleveref names) are built where the target is — an eqnarray row's in its math group, where a document may rebind `~` (vdm.sty:135-138,
 202-205 `\everymath{\let~\hook}`, a `\vbox{\ialign…}` that re-stepped the equation: an endless recursion on
 1601.02132) — and printed by a reference in text. `\lx@make@tags` binds their `~` to the kernel's no-break space,
 LaTeX's `\nobreakspace`, which babel's `~` also is except in a language that makes it a shorthand; under babel German
 and Russian an autoref tag now reads "Abbildung 1" with the no-break space, as without babel. The binding is
 unconditional, so a document's own text `~` (`\def~{\,}`) and a shorthand language's (spanish, galician, basque,
 estonian, magyar) no longer reach a tag, where pdflatex prints hyperref's `~` with the meaning it has at the reference
-(hyperref.sty:8247): accepted, since a tag is built away from where it is printed. The delimiter idiom still matches the
-active token. Guard `perfect_kernel_batch63::autoref_tag_tilde_is_the_kernel_space`.
+(hyperref.sty:8247): accepted, since these tags are built away from where they are printed. The role-less tag is the
+target's own label, printed where it is built (`\item[\texttt{environnement~~}]`, tkz-grapheur-doc-fr; `\item[Espa~na]`
+under spanish), and keeps the document's `~`. Residual: an eqnarray row's role-less tag `(n)` is built in the row's
+math group here, where pdflatex typesets `\@eqnnum` outside the cell's `$…$`; a `~` in `\theequation` under a
+vdm-style `\everymath{\let~…}` still meets the rebinding. The delimiter idiom still matches the active token. Guard
+`perfect_kernel_batch63::autoref_tag_tilde_is_the_kernel_space`.
 
 ### 99. `geometry` sizes measured SVG graphics (not the HTML flow)
 
@@ -10621,6 +10625,17 @@ repros `tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined
     - XOR-ing the span into the box fingerprint defeated the uniform-run exemption: a finite `\loop` printing 60,000 x's through `\ifodd` branches became a Fatal. It also pushed combined periods past the 10-box window (the alternating runaway fell to the count cap, 3.2 s, 3.7 GB).
     - Dropping spaces under `\nullfont` is unfaithful: TeX appends glue for every space (tex.web §1041).
     - Hashing token content lets a counter defeat the cloud loop.
+- **Register amounts (63b).** `fingerprint_into` hashes a `RegisterValue`'s amount as well as its kind (Number,
+  Dimension, MuDimension, Glue and MuGlue by value; Pair by its coordinates). A PiCTeX `\plot` sets each dot with its own
+  `\raise` through the same macros, so a 30-line picture read as a 3-box cycle with a repeating input period (0801.0709:
+  Fatal at 50K boxes, now 0 errors and 22,382 dots in 1.7 s). Unlike token content, a box's register amounts vary only
+  when the output varies; the cloud-loop reduction (`fatal_salvages_partial_document`) and the batch-56 runaway guards
+  still stop at the floor. A runaway that raises each box by a growing amount was not caught by the window before
+  either: `\loop\raise\d\hbox{.}\advance\d by 1sp\iftrue\repeat` stops at the memory fuse in 67 s, 6.3 GB, on 63a and
+  63b alike. Unchanged: 2201.09268 (0 errors, 3 s), tkz-grapheur-doc-en (byte-identical), tkz-grapheur-doc-fr (only
+  the 63a typerefnum `~`), 2508.07407, math0102053, 2605.25400. Guards
+  `digested::tests::cycle_fingerprint_distinguishes_register_amounts`,
+  `perfect_kernel_batch63::pictex_finite_dots_are_not_a_loop`.
 
 **Perl** has no stomach guard, and checks the pushback only in `readToken` (Gullet.pm:300-306), not in `readXToken`/`readBalanced`.
 - Perl with ar5iv stops on the finite 9,000-sample plot: `Fatal:timeout:pushback_limit 599999` after 107 s (KNOWN_PERL_ERRORS #297).

@@ -118,6 +118,10 @@ pub(crate) fn load() -> Result<()> {
   // "page" does not make sense in xml.  If the user really wants, they will need:
   // \usepackage{latexml} ... \iflatexml alternate\else page \pageref{label}\fi
   Let!("\\pageref", "\\ref");
+  // The kernel's `\ref`, its robust wrapper and the constructor that wrapper calls, which nameref.sty restores at
+  // `\begin{document}` (`nameref_sty.rs`; 1811.01873).
+  Let!("\\lx@kernel@ref", "\\ref");
+  Let!("\\lx@kernel@ref@", "\\ref ");
 
   // \@setref is from latex.ltx kernel. LaTeXML redefines \ref directly,
   // so \@setref is normally bypassed — but some packages call it directly.

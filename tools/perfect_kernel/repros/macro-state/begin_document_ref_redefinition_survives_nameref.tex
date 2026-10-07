@@ -1,0 +1,15 @@
+% witness: review of 63b (KPE #519): nameref's begindocument reset is a `nameref`-labelled chunk, so the document's own
+%          \AtBeginDocument code (top-level, last) keeps its \ref family; a preamble \DeclareRobustCommand{\ref} is reset
+% oracle:  pdflatex 0 errors: "See 1; section 1; the section a." (nameref.sty:352-360; lthooks runs top-level code last)
+% engines: rust (63b first cut, private store after the L3 hook) = the reset overwrote both \AtBeginDocument chunks
+% expect:  0 errors; \ref the kernel reference, \pageref an autoref, \Ref "the section a"
+% status:  GREEN (63b)
+\documentclass{article}
+\usepackage{hyperref}
+\DeclareRobustCommand{\ref}[1]{[\ref{#1}]}
+\AtBeginDocument{\let\pageref\autoref}
+\AtBeginDocument{\renewcommand{\Ref}[1]{the section #1}}
+\begin{document}
+\section{A}\label{a}
+See \ref{a}; \pageref{a}; \Ref{a}.
+\end{document}

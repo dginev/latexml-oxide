@@ -323,6 +323,7 @@ fn tikz_alignment_bindings(
   });
 
   assign_alignment(alignment, None);
+  engine::tex_tables::clear_alignment_row_hooks();
   let_i(
     &T_MATH!(),
     &if is_math {

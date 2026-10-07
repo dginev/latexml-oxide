@@ -28,7 +28,8 @@ use crate::{
   prelude::*,
   tex_box::{FramedOptions, framed_properties},
   tex_tables::{
-    alignment_bindings, array_strut, array_zeroes_interline, restore_dollar_outside_alignment,
+    alignment_bindings, array_strut, array_zeroes_interline, clear_alignment_row_hooks,
+    restore_dollar_outside_alignment,
   },
 };
 
@@ -3719,6 +3720,7 @@ fn tabbing_bindings() -> Result<()> {
     xml_attributes:  xml_attrs,
   });
   assign_alignment(alignment, None);
+  clear_alignment_row_hooks();
 
   // Rebind control characters within tabbing
   // Perl: Let("\\=", '\@tabbing@tabset') etc.

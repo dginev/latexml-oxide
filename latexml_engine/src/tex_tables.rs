@@ -847,6 +847,24 @@ pub fn array_strut() -> Option<Stored> {
   }
 }
 
+/// A new alignment's rows run no row hook of an enclosing one: an `\halign`, `{array}` or `tikzcd` in an `{eqnarray}`
+/// or `align` row inherited `\eqnarray@row@before` and stepped the equation once per inner row (1601.02132; Perl alike,
+/// KNOWN_PERL_ERRORS #518). Every alignment's bindings call this after `assign_alignment`; the numbered displays
+/// (eqnarray, amsmath, cases) set their hooks afterwards. The hooks are local to the enclosing cell, so the outer
+/// alignment's later rows still run its own.
+pub fn clear_alignment_row_hooks() {
+  let_i(
+    &T_CS!("\\lx@alignment@row@before"),
+    &T_CS!("\\lx@empty"),
+    None,
+  );
+  let_i(
+    &T_CS!("\\lx@alignment@row@after"),
+    &T_CS!("\\lx@empty"),
+    None,
+  );
+}
+
 pub fn alignment_bindings(
   template: Template,
   mode: String,
@@ -895,6 +913,7 @@ pub fn alignment_bindings(
     xml_attributes,
   });
   assign_alignment(alignment, None);
+  clear_alignment_row_hooks();
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
   // The re-let of `$` below is LaTeXML's device for its cells; TeX never rebinds `$`. The caller's `$` is kept beside
   // it, so an alignment whose bindings run before its group opens (`\array`, `\@array`, `\tabular`) gives it back

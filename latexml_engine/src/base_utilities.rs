@@ -1917,30 +1917,34 @@ LoadDefinitions!({
         } else {
           "\\lx@tag@intags"
         };
-        tags.push(Invocation!(T_CS!(constructor),
+        tags.push((role.is_empty(), Invocation!(T_CS!(constructor),
           vec![
             Tokens!(T_OTHER!(role.as_str())),
             build_invocation(formatter_token, vec![Some(ttype.clone())])?
           ])
-        );
+        ));
       }
     }
 
-    // A tag is text, built where its target is (an eqnarray row's in its math group, where a document may rebind `~`:
-    // vdm.sty:135-138, 202-205 `\everymath{\let~\hook}`, a `\vbox{\ialign…}` that re-stepped the equation, an endless
-    // recursion on 1601.02132), and printed by a reference. Its `~` is the kernel's no-break space, LaTeX's
-    // `\nobreakspace`, which babel's `~` also is except in a language that makes it a shorthand; such a shorthand, or a
-    // document's own text `~`, no longer reaches a tag (OXIDIZED_DESIGN_DIVERGENCES #98 addendum).
-    // Guard `perfect_kernel_batch63::autoref_tag_tilde_is_the_kernel_space`.
-    let mut lx_tags = vec![
-      T_CS!("\\begingroup"), T_CS!("\\let"), T_ACTIVE!('~'), T_CS!("\\lx@tag@texttilde"), T_CS!("\\lx@tags"),
-      T_BEGIN!(),
-    ];
-    for invoked_tag in tags {
-      lx_tags.append(&mut invoked_tag.unlist());
+    // A tag a reference prints (refnum, typerefnum, autoref, the cleveref forms) is built where its target is (an
+    // eqnarray row's in its math group, where a document may rebind `~`: vdm.sty:135-138, 202-205
+    // `\everymath{\let~\hook}`, a `\vbox{\ialign…}` that re-stepped the equation, an endless recursion on 1601.02132)
+    // and printed in text. Its `~` is the kernel's no-break space, LaTeX's `\nobreakspace`, which babel's `~` also is
+    // except in a language that makes it a shorthand; such a shorthand, or a document's own text `~`, no longer reaches
+    // these tags (OXIDIZED_DESIGN_DIVERGENCES #98 addendum). The role-less tag is the target's own label, printed where
+    // it is built (`\item[Espa~na]`), and keeps the document's `~`. Guard
+    // `perfect_kernel_batch63::autoref_tag_tilde_is_the_kernel_space`.
+    let mut lx_tags = vec![T_CS!("\\lx@tags"), T_BEGIN!()];
+    for (printed_here, invoked_tag) in tags {
+      if printed_here {
+        lx_tags.extend(invoked_tag.unlist());
+      } else {
+        lx_tags.extend([T_CS!("\\begingroup"), T_CS!("\\let"), T_ACTIVE!('~'), T_CS!("\\lx@tag@texttilde")]);
+        lx_tags.extend(invoked_tag.unlist());
+        lx_tags.push(T_CS!("\\endgroup"));
+      }
     }
     lx_tags.push(T_END!());
-    lx_tags.push(T_CS!("\\endgroup"));
     Ok(Tokens::new(lx_tags))
   });
   DefMacro!("\\lx@tag@texttilde", "\\lx@NBSP", protected => true);

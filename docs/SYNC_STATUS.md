@@ -333,16 +333,16 @@ completion, row G). **63a** (landed): the `Fatal:Stomach:Recursion` cluster's fi
 class's own `\list` (KPE #517), etex's register-block allocators (KPE #516), the autoref tag's `~` bound to the kernel
 space where it is digested (1601.02132), and arxbj's IMS markup through a binding shared with arximspdf
 (`ims_support`); guards `perfect_kernel_batch63::*`. Open:
-- **`\ref` reset at `\begin{document}`** (3 witnesses: 2503.08060, 1908.01329, 1811.01873; Perl deep_recursion too):
-  nameref.sty:352-359 redeclares `\ref`/`\pageref`/`\Ref` in the begindocument hook, discarding a self-recursive
-  preamble redefinition; `nameref_sty.rs` does not. RED repro `macro-state/preamble_ref_redefinition_reset_at_begin_document`.
-  Fix plan: snapshot at load, re-`\let` in a begindocument hook ordered as LaTeX's (nameref.sty:360 `\DeclareHookRule`)
-  so later patches (cleveref, varioref, showkeys) still win. MED.
-- **Loop detector on a finite PiCTeX picture** (0801.0709, Rust-only): `digested.rs` `fingerprint_into` hashes a
-  `RegisterValue` by variant only, so dots with different `\raise` look identical past `STOMACH_CYCLE_ACTIVATE`. RED repro
-  `boxes-groups/pictex_finite_dots_are_not_a_loop`. Fix: hash the value (and dimension-valued whatsit properties);
-  re-convert the guard's witnesses 2508.07407, tkz-grapheur-doc-en/fr, math0102053, 2605.25400. MED.
-- **Nested alignment steps the eqnarray** (KPE #518, shared): RED repro `kernel-alignment/nested_alignment_inherits_eqnarray_row_hook`.
+- **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
+  2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
+  enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the
+  tags a reference prints,
+  and the stomach loop detector tells register values apart by amount (Rust-only: `digested.rs` `fingerprint_into`
+  hashed a `RegisterValue` by kind, so PiCTeX's dots, each `\raise`d differently, read as a loop; 0801.0709). Guards
+  `perfect_kernel_batch63::{preamble_ref_redefinition_reset_at_begin_document,
+  begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
+  pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
+  trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
 - **Mouth EoF** (10, runaway delimiters, singletons): 3 × `\input amstex` (amsppt-as-plain, below); `\NOT` 2002.09653
   2212.04182; `\endcaption` 1210.4309 2407.08262; `\@checkend` 1404.3085; ` at ` 0811.2708; `\@nil` 1402.2014.
 - **Document Malformed** (8): 0901.1457 ships the AIP proceedings kit and a template driver is taken as the main file.

@@ -1,9 +1,9 @@
 % witness: 1601.02132 (side finding of 63a root B): an \halign or {array} inside an eqnarray row
-% oracle:  pdflatex 0 errors: "After: 1." / "After: 2." / "After: 3."
+% oracle:  pdflatex 0 errors: "After: 1." / "After: 2." / "After: 3." / "After: 5." (the array's row is the outer row 4)
 % engines: rust (63a) = "After: 1/4/7": the inner alignment inherits \lx@alignment@row@before = \eqnarray@row@before and steps the
 %          equation per inner row; Perl 0.8.8 1/4/7 alike (latex_constructs.pool.ltxml:3740-3755, TeX_Tables.pool.ltxml:252-275 never reset it)
-% expect:  0 errors; the three "After:" paragraphs read 1, 2, 3
-% status:  RED
+% expect:  0 errors; the four "After:" paragraphs read 1, 2, 3, 5
+% status:  GREEN (63b)
 \documentclass{article}
 \begin{document}
 \begin{eqnarray}
@@ -16,6 +16,11 @@ a &=& \vbox{\halign{#\cr x\cr y\cr}}
 After: \theequation.
 \begin{eqnarray}
 a &=& \begin{array}{c} x\\ y\end{array}
+\end{eqnarray}
+After: \theequation.
+\begin{eqnarray}
+a &=& \begin{array}{c} x\\ y\end{array} \\
+c &=& d
 \end{eqnarray}
 After: \theequation.
 \end{document}
