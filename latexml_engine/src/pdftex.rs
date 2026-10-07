@@ -365,15 +365,16 @@ LoadDefinitions!({
   DefRegister!("\\pdflastximagecolordepth" => Number::new(0));
   DefRegister!("\\pdfretval"               => Number::new(0));
 
-  // \pdfximage [ image attr spec ] general text (h, v, m)
-  // Real pdfTeX reads optional `[image attr spec]` then a balanced text (the
-  // file path), registers the image and sets `\pdflastximage` (its object
-  // number) and `\pdflastximagepages` (a PDF's page count, 1 for bitmaps —
-  // pdfTeX manual §8.9). No PDF emission here, but the two registers are real
-  // (batch 56ap): pdfpages' `\AM@getpagecount` (pppdftex.def:79-82), the
-  // l3 backend's page count in the DVI persona (latexml.sty hook) and any
-  // document testing `\pdflastximagepages` read them. Drivers: 2406.14142
-  // (`\pdfximage{...}` in a graphics-bbox-precompute path), notebeamer-demo.
+  // \pdfximage [rule spec] [attr spec] [page spec] [colorspace spec] [pdf box spec] general text (h, v, m)
+  // (pdfTeX manual, `\pdfximage`): `width`/`height`/`depth` <dimen> in any order, `attr` <general text>,
+  // `page` <number> or `named` <general text>, `colorspace` <number>, one of `mediabox` `cropbox` `bleedbox`
+  // `trimbox` `artbox`, then the file name. It registers the image and sets `\pdflastximage` (its object number)
+  // and `\pdflastximagepages` (a PDF's page count, 1 for bitmaps — pdfTeX manual §8.9). No PDF emission here, but
+  // the two registers are real (batch 56ap): pdfpages' `\AM@getpagecount` (pppdftex.def:79-82), the l3 backend's
+  // page count in the DVI persona (latexml.sty hook) and any document testing `\pdflastximagepages` read them; and
+  // `\pdfximagebbox` reports the image's box. Drivers: 2406.14142 (`\pdfximage{...}` in a graphics-bbox-precompute
+  // path), notebeamer-demo; pinlabel.sty:588-592 (`\pdfximage cropbox {<fig>.pdf}`, then `\pdfximagebbox`:
+  // 1310.1838, 1904.09721). A leading `[...]` is skipped, as before.
   DefPrimitive!("\\pdfximage", sub[_args] {
     skip_spaces()?;
     if if_next(T_OTHER!("["))? {
@@ -384,36 +385,55 @@ LoadDefinitions!({
         }
       }
     }
+    while read_keyword(&["width", "height", "depth"])?.is_some() {
+      read_dimension()?;
+    }
+    if read_keyword(&["attr"])?.is_some() {
+      read_balanced_text(ExpansionLevel::Off, true)?;
+    }
+    if read_keyword(&["named"])?.is_some() {
+      read_balanced_text(ExpansionLevel::Off, true)?;
+    } else if read_keyword(&["page"])?.is_some() {
+      read_number()?;
+    }
+    if read_keyword(&["colorspace"])?.is_some() {
+      read_number()?;
+    }
+    // The box keyword is read but not honoured: the box reported is the page's CropBox, else its MediaBox (a
+    // CropBox defaults to the MediaBox), which is pdfTeX's default box and pinlabel's `cropbox`.
+    read_keyword(&["mediabox", "cropbox", "bleedbox", "trimbox", "artbox"])?;
     skip_spaces()?;
     // pdfTeX reads every `<general text>` with `scan_pdf_ext_toks`, i.e.
-    // tex.web's `scan_toks(false, true)` at `absorbing` status, hence
-    // `read_balanced_text` here and below.
-    let file = read_balanced_text(ExpansionLevel::Off, true)?.to_string();
+    // tex.web's `scan_toks(false, true)` at `absorbing` status — expanded, as an
+    // `\edef` is: pinlabel.sty:588 names the file `{\@filestem.pdf}`, which read
+    // unexpanded found nothing and gave the figure a 0pt box (1904.09721).
+    let file = read_balanced_text(ExpansionLevel::Partial, true)?.to_string();
     let name = file.trim().trim_matches(|c| c == '{' || c == '}').trim().to_string();
-    let pages = find_file(&name, None)
-      .or_else(|| {
-        // pdfTeX's default extension search order for `\pdfximage`
-        [".pdf", ".png", ".jpg", ".jpeg", ".PDF", ".PNG", ".JPG"]
-          .iter()
-          .find_map(|ext| find_file(&format!("{name}{ext}"), None))
-      })
-      .and_then(|found| {
-        let path = std::path::PathBuf::from(found);
-        let is_pdf = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf"))
-          || std::fs::File::open(&path)
-            .ok()
-            .and_then(|mut f| { let mut h = [0u8; 5]; std::io::Read::read_exact(&mut f, &mut h).ok().map(|_| &h == b"%PDF-") })
-            .unwrap_or(false);
-        if is_pdf { util::image::read_pdf_page_count(&path) } else { Some(1) }
-      })
-      .unwrap_or(0);
+    let found = find_file(&name, None).or_else(|| {
+      // pdfTeX's default extension search order for `\pdfximage`
+      [".pdf", ".png", ".jpg", ".jpeg", ".PDF", ".PNG", ".JPG"]
+        .iter()
+        .find_map(|ext| find_file(&format!("{name}{ext}"), None))
+    });
+    let (pages, bbox) = found
+      .map_or((0, None), |found| ximage_pages_and_box(&std::path::PathBuf::from(found)));
     let next = match lookup_register("\\pdflastximage", Vec::new())? {
       Some(RegisterValue::Number(n)) => n.0 + 1,
       _ => 1,
     };
     assign_register("\\pdflastximage", RegisterValue::Number(Number::new(next)), Some(Scope::Global), Vec::new())?;
     assign_register("\\pdflastximagepages", RegisterValue::Number(Number::new(i64::from(pages))), Some(Scope::Global), Vec::new())?;
+    let [llx, lly, urx, ury] = bbox.unwrap_or([0.0; 4]);
+    assign_value(&format!("pdf_ximage_bbox_{next}"), Stored::String(pin(format!("{llx} {lly} {urx} {ury}"))), Some(Scope::Global));
     Ok(vec![])
+  });
+  // \pdfximagebbox <image number> <1-4> (expandable): the image's box corner llx, lly, urx or ury, as pdfTeX prints
+  // it: the bp value in scaled points, printed in pt as catcode-12 characters, `pt` included (pdftex.web
+  // `pdf_ximage_bbox_code` through `conv_toks`). An unknown image, or a corner outside 1-4, gives 0.0pt.
+  DefMacro!("\\pdfximagebbox Number Number", sub[(image, corner)] {
+    let bp = ximage_bbox_corner_bp(image.value_of(), corner.value_of());
+    let sp = (bp * 65_781.76).round() as i64;
+    Ok(Tokens::new(Explode!(&Dimension::new(sp).to_string())))
   });
   // \pdfrefximage object number (h, v, m) — discard the object number
   def_primitive_noop("\\pdfrefximage Number")?;
@@ -966,4 +986,52 @@ pub fn pdf_creation_date() -> Result<Tokens> {
   let (hh, mm) = (time / 60, time % 60);
   let stamp = s!("D:{year:04}{month:02}{day:02}{hh:02}{mm:02}00Z");
   Ok(Tokens::new(Explode!(&stamp)))
+}
+
+/// A `\pdfximage` file's page count and page box corners `[llx, lly, urx, ury]` in bp: a PDF's
+/// `/Count` and CropBox (else MediaBox); a bitmap is one page whose box is its pixel size at its
+/// resolution (72 dpi when it records none).
+fn ximage_pages_and_box(path: &std::path::Path) -> (u32, Option<[f64; 4]>) {
+  let is_pdf = path
+    .extension()
+    .is_some_and(|e| e.eq_ignore_ascii_case("pdf"))
+    || std::fs::File::open(path)
+      .ok()
+      .and_then(|mut f| {
+        let mut h = [0u8; 5];
+        std::io::Read::read_exact(&mut f, &mut h)
+          .ok()
+          .map(|_| &h == b"%PDF-")
+      })
+      .unwrap_or(false);
+  if is_pdf {
+    return (
+      util::image::read_pdf_page_count(path).unwrap_or(0),
+      util::image::read_pdf_page_box_corners(path),
+    );
+  }
+  let bbox = util::image::read_image_dimensions(path).map(|(w, h)| {
+    let (xdpi, ydpi) =
+      util::image::raster_resolution_dpi(&path.to_string_lossy()).unwrap_or((72.0, 72.0));
+    [
+      0.0,
+      0.0,
+      f64::from(w) * 72.0 / xdpi,
+      f64::from(h) * 72.0 / ydpi,
+    ]
+  });
+  (1, bbox)
+}
+
+/// Corner `corner` (1 llx, 2 lly, 3 urx, 4 ury) of `\pdfximage` number `image`'s box in bp; 0 when
+/// the image or the corner is unknown.
+fn ximage_bbox_corner_bp(image: i64, corner: i64) -> f64 {
+  let Ok(index) = usize::try_from(corner - 1) else {
+    return 0.0;
+  };
+  lookup_string(&format!("pdf_ximage_bbox_{image}"))
+    .split_whitespace()
+    .nth(index)
+    .and_then(|value| value.parse::<f64>().ok())
+    .unwrap_or(0.0)
 }

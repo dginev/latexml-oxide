@@ -45,7 +45,12 @@ LoadDefinitions!({
   sub[(port, filename)] {
     let port = port.to_string();
     let (filename, _) = tex_file_name(&filename.unlist());
-    // possibly should close $port if it's already been opened?
+    // tex.web §1275: `\openin` first closes the stream, so a name that cannot be opened leaves it closed (`\ifeof`
+    // true) instead of still reading the previous file. pinlabel.sty:607-623 leaves a figure's EPS open after finding
+    // its `%%BoundingBox`, then probes the next figure's `.ps` (:567): the stale stream answered, so every later
+    // figure read the previous EPS, found no box and printed its file name ("summ\_2 not found", a stray `_`), its
+    // labels lost (1010.6236). Perl alike (TeX_FileIO.pool.ltxml:52,60; KNOWN_PERL_ERRORS #520).
+    close_input_stream(&port);
     // Rely on FindFile to enforce any access restrictions
     // Perl: NOT noltxml! \openin is often used to check file existence,
     // and we SHOULD find .ltxml (binding) versions too.
@@ -75,17 +80,7 @@ LoadDefinitions!({
     }
   });
   DefPrimitive!("\\closein Number", sub[(port)] {
-    let file_key = s!("input_file:{}", port);
-    let mut finished = false;
-    //   close the mouth (if any) and clear the variable
-    with_value(&file_key, |mouth_opt|
-      if let Some(Stored::Mouth(mouth)) = mouth_opt {
-        mouth.borrow_mut().finish();
-        finished = true;
-      });
-    if finished {
-      AssignValue!(&file_key, false, Some(Scope::Global));
-    }
+    close_input_stream(&port.to_string());
   });
 
   DefPrimitive!("\\read Number SkipKeyword:to RedefinableToken", sub[(port, token)] {
@@ -427,3 +422,18 @@ LoadDefinitions!({
   });
   DefRegister!("\\output", Tokens!());
 });
+
+/// Close input stream `port` (`\closein`): finish its mouth, if one is open, and clear it.
+fn close_input_stream(port: &str) {
+  let file_key = s!("input_file:{}", port);
+  let mut finished = false;
+  with_value(&file_key, |mouth_opt| {
+    if let Some(Stored::Mouth(mouth)) = mouth_opt {
+      mouth.borrow_mut().finish();
+      finished = true;
+    }
+  });
+  if finished {
+    AssignValue!(&file_key, false, Some(Scope::Global));
+  }
+}

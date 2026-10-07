@@ -48,7 +48,7 @@ affected** → **is it unblocked** → **effort**.
 | # | item | state | size | detail |
 |---|---|---|---|---|
 | **R8** | **Perfect-kernel program** (branch `perfect_kernel`; the TL-manual corpus; generalized capabilities K1–K18 in [`perfect_kernel/KERNEL_CAPABILITIES.md`](perfect_kernel/KERNEL_CAPABILITIES.md)) — goal bar met at sweeps #146-148 (G1–G5); close status in [`PERFECT_KERNEL.md`](PERFECT_KERNEL.md) | **CLOSING**: bar confirmed (user 2026-10-04); ar5iv-css PR #54 open; run 329 completes | program | [`PERFECT_KERNEL.md`](PERFECT_KERNEL.md) |
-| **G** | **Run 336** (full arXiv, cortex, 2,947,191 papers, `cortex-worker.service` on 62zu `c0e4393f39`, 56 workers) — compare to run 306 and cluster when complete; this opens the arXiv success-rate task. Run 329 (paused at 263,636) is superseded | **RUNNING** since 2026-10-07 10:10Z (user: fresh full run on head, after the 62zu perf pass). Host AppArmor `gs` profile blocked the fleet's TMPDIR from 2026-10-05 15:10Z (runs 332-335, every EPS/PS figure failed; 15,659 denials) until `owner /opt/cortex-scratch/** rw,` in `/etc/apparmor.d/local/gs` (2026-10-07 ~10:25Z, user OK). At completion: rerun `severity=error&category=imageprocessing` for run 336's ~1.1k pre-fix tasks | program | [`PERFECT_KERNEL.md`](PERFECT_KERNEL.md) close status |
+| **G** | **Run 336** (full arXiv, cortex, 2,947,191 papers, `cortex-worker.service`, 56 workers: 62zu `c0e4393f39` until 2026-10-07 16:35Z (~264k done), head `9569ca27a7` (63a-63c) after, user OK) — compare to run 306 and cluster when complete; this opens the arXiv success-rate task. Run 329 (paused at 263,636) is superseded | **RUNNING** since 2026-10-07 10:10Z (user: fresh full run on head, after the 62zu perf pass). Host AppArmor `gs` profile blocked the fleet's TMPDIR from 2026-10-05 15:10Z (runs 332-335, every EPS/PS figure failed; 15,659 denials) until `owner /opt/cortex-scratch/** rw,` in `/etc/apparmor.d/local/gs` (2026-10-07 ~10:25Z, user OK). At completion: rerun `severity=error&category=imageprocessing` for run 336's ~1.1k pre-fix tasks, the early env-gap tasks (texlive-pstricks / -lang-*, before 11:11Z) and the pre-63c address-space ones (`post:xpath` TooManyErrors, `never_completed_with_retries`) | program | [`PERFECT_KERNEL.md`](PERFECT_KERNEL.md) close status |
 | **G1** | **Run-329 open residuals** — 17 PushbackLimit Fatals (csvsimple + siunitx `S`), TooManyErrors / never_completed, the `gullet.rs` `handle_template` latent panic, the runtime-bindings `.rhai` fallback, amsppt-as-plain, `.aux` re-read, eplain, calc's `!`, singles | **NEXT** (arXiv success-rate task) | medium each | §"Run-329 and sandbox open residuals" |
 | **D1** | **Rulings**: RULED 2026-10-04 — implement tex.web §392 `\par` in a non-`\long` argument (1001.1670) and restore Perl's `Error:malformed` for DIVERGENCES #189 (prerex section-in-figure): 62g landed (#189: 7 in-scope manuals now report it — biblatex, keytheorems-doc, pdfmarginpar, phonrule-doc, prerex, srdp-mathematik, zx-calculus — so G1 counts 7), 62h landed (§392, DIVERGENCES #442 / KPE #472-473). Still pending: `\obeylines` `^^M`; `{framed}` item shape; biblatex `cite.<n>@<key>` surpass anchors (D15); R7 port-or-drop | RULING | small-medium | rows cited |
 | **T1** | **Repro suite move**: `tools/perfect_kernel/repros` (1,469 files) → `latexml_oxide/tests/repros` header-contract trials (release CI + `LATEXML_FULL_TESTS=1`); drain `tools/` | **OPEN**, not started (user 2026-10-02) | large | memory `project_repro_suite_move` |
@@ -343,13 +343,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
-- **Fleet address-space ceiling → `Fatal:TooManyErrors`** (63c, landed in code; deploy pending): 113 of run 336's first
+- **63d** (landed): pinlabel figure labels (85 papers of run 336's first 265k had `\labellist`/`\pinlabel` undefined):
+  pinlabel.sty read raw with its `\ps@begin` placing the picture through graphicx on both driver branches,
+  `\pdfximage` keywords + `\pdfximagebbox` (OD #458), `\openin` closes the stream first (KPE #520), PDF object streams
+  with `/Filter` first. A/B on the 100 papers with them undefined by then (63b → 63d): errors 843 → 5, no Fatal, none with more errors, 26 with
+  more images, one with fewer (1310.1838's unshipped figure: pinlabel's own "not found" text, as pdflatex prints it); the reader's `/Filter`-first object streams reach every Illustrator PDF figure, A/B'd on these papers only.
+- **Fleet address-space ceiling → `Fatal:TooManyErrors`** (63c, deployed 2026-10-07 16:35Z): 113 of run 336's first
   253 TooManyErrors papers carry only `Error:post:xpath` "XPath evaluation failed (no libxml2 error detail)" on
   `ltx:XMath`, 15 more were tipped over by it (math0005012, 1209.0448, 1310.4783). They convert with 0 errors in a fresh
   process under the same 5632 MiB `RLIMIT_AS`, on 62zt and 62zu alike (`VmPeak` 3.6 GB for 1106.3786). Live harness
   children sat at ~1 GB RSS but 4.8-5.6 GB of address space (mimalloc reservations), so the RSS recycle never fired
   and libxml2's `malloc` failed. 63c recycles a harness child when its `VmSize` nears the cap
-  (`docs/performance/CORTEX_WORKER_HARNESS.md`). Re-queue the affected tasks after redeploying. Open: post-processing
+  (`docs/performance/CORTEX_WORKER_HARNESS.md`); after the swap children held 3.1 GB of address space on average
+  (4.2 GB max) where they had held 4.8 GB (5.6 GB max). Re-queue the affected tasks at completion (row G). Open: post-processing
   still reports such an OOM as ~100 `Error:post:xpath` → `Fatal:TooManyErrors`; on a detail-less XPath failure under
   memory pressure (`latexml_post/src/document.rs` ≈959/1031) emit one latched resource `Fatal` instead. Also open:
   `fatal/cortex never_completed_with_retries` (150 in the first 145k), likely the same ceiling killing workers.

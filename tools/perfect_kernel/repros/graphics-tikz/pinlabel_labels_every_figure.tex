@@ -1,0 +1,23 @@
+% witness: math0412330, 1010.6236, 1904.09721 (85 papers of run 336's first 265k: \labellist/\pinlabel undefined)
+% oracle:  pdflatex 0 errors (latex/DVI places both labels); pinlabel.sty read raw keeps every label's text
+% engines: rust (63c) = 6 undefined-macro errors, label coordinates printed as text; Perl alike (no binding)
+% expect:  0 errors; both figures carry their labels $P_A$ and $P_B$
+% status:  GREEN (63d)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{pinlabel}
+\begin{document}
+\begin{figure}
+\labellist
+\small\hair 2pt
+\pinlabel $P_A$ [l] at 100 100
+\endlabellist
+\includegraphics[width=2in]{example-image-a}
+\end{figure}
+\begin{figure}
+\labellist
+\pinlabel $P_B$ at 50 50
+\endlabellist
+\includegraphics[width=2in]{example-image-b}
+\end{figure}
+\end{document}

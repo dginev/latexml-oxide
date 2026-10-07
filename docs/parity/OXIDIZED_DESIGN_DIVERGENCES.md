@@ -13846,3 +13846,36 @@ end" idiom (`\toks\numexpr\prooftoks+\count@`) loops forever in both engines (KN
 defines them: a block of n registers is taken downward from the top of each range (32767), as etex's local blocks were
 (`\count27`), clear of LaTeX's upward allocation and of `\count@`. Witnesses 1610.01929, 1801.07292. Guard
 `perfect_kernel_batch63::etex_register_blocks_allocate`.
+
+### 458. pinlabel.sty is read raw, and pdfTeX's `\pdfximage` keywords and `\pdfximagebbox` are implemented (Perl: neither)
+
+Perl has no pinlabel binding (`\labellist`/`\pinlabel`/`\endlabellist` undefined) and defines no `\pdfximage`.
+Rust's former pinlabel stub only warned: 85 of run 336's first 265k papers had the three undefined and printed each
+label's `[l] at 231 47` as text. **Rust (63d)** reads pinlabel.sty raw (`latexml_contrib/src/pinlabel_sty.rs`): its
+label parser and its `\includegraphics` → `\psfig` translation run as in TeX, so every label's text stays with its
+figure; LaTeXML has no PostScript-coordinate overlay, so the labels follow the image instead of sitting on it (content
+kept, layout not — user priority order, content first). Each driver branch's `\ps@begin` places the picture: the
+pdfTeX one through graphicx (pinlabel.sty:281-287, `<stem>.pdf`), the DVI one as dvips's `\special{PSfile=…}`
+(:254-258), which LaTeXML does not render, so a latex+dvips paper (EPS figures, `\pdfoutput=0`) kept its labels and lost
+its pictures (1010.6236 12 → 2 images, 0902.4317 7 → 1, 1112.5970 30 → 1). The binding redefines `\ps@begin` for both
+branches to include through graphicx the file that branch places (DVI: the `.ps`/`.eps`/`.pdf` `\scan@header` found,
+:566-606) at the psfig size; a side no bounding box sized (`0`) is left out of the options, so the image keeps its
+natural size there. For a PDF figure pinlabel reads the box with `\pdfximage cropbox {\@filestem.pdf}` and
+`\pdfximagebbox` (pinlabel.sty:588-592): `\pdfximage` now takes pdfTeX's keywords (rule spec, `attr`, `page`/`named`,
+`colorspace`, the five box names) and an expanded file name (`scan_pdf_ext_toks` expands), records the image's box,
+and `\pdfximagebbox <image> <1-4>` prints its corners as pdfTeX does (bp → sp → pt, catcode-12 characters). The box
+keyword is read but not honoured: the box reported is the page's CropBox, else its MediaBox (pdfTeX's default box, and
+pinlabel's `cropbox`); an unknown image or a corner outside 1-4 gives `0.0pt`. `\pdfximage` is accepted under `\pdfoutput=0` too (pdfTeX refuses it: "`\pdfximage`: not allowed in DVI mode (`\pdfoutput` <= 0)", since our DVI mode is
+only inferred from the EPS figures a source ships), so a
+figure pinlabel finds only as `.pdf` on its DVI branch still has its box; a bitmap's box is its pixel size at its
+resolution. A PDF whose box the reader cannot find
+reports a zero box, on which pinlabel's size arithmetic divides by zero (pdfTeX would have read the box). The PDF reader
+also finds object streams whose dictionary lists `/Filter` before `/Type /ObjStm` (Illustrator, 1904.12947's
+Whitehead.pdf: box, page count and natural size had been unreadable). A/B over the 100 papers of run 336 with
+`\pinlabel` undefined by then (63b → 63d): errors 843 → 5, no Fatal, none with more errors, 26 with more images (math0412330
+1 → 9, math0505219 1 → 125), one with fewer (1310.1838: its `knotsurgery2` is not shipped, and pinlabel prints its own
+"not found" text instead of LaTeXML's missing-image placeholder, as pdflatex does); the words lost are the label
+source the stub printed (`\pinlabel`, `at`, coordinates, raw `\includegraphics[…]`), the labels' own text is kept.
+Witnesses math0412330, 1010.6236, 1112.5970, 1310.1838, 1904.09721, 1904.12947. Guards
+`perfect_kernel_batch63::{pinlabel_labels_every_figure, pinlabel_dvi_figure_keeps_its_picture,
+pdfximagebbox_reads_the_cropbox}`, `util::image` test `read_pdf_page_box_prefers_cropbox_and_reaches_into_object_streams`.

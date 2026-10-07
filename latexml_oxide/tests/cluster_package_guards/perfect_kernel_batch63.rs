@@ -218,3 +218,121 @@ fn pictex_finite_dots_are_not_a_loop() {
     "every dot of the 30 lines is kept"
   );
 }
+
+/// 63d: tex.web §1275 — `\openin` first closes the stream, so a name that cannot be opened leaves it closed; ours kept
+/// the previous file open, and pinlabel's next figure read the last one's EPS (1010.6236; Perl alike, KNOWN_PERL_ERRORS
+/// #520). Repro macro-state/openin_closes_the_stream_first.
+#[test]
+fn openin_closes_the_stream_first() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/openin_closes_the_stream_first.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[("para", "p1", r#"<para xml:id="p1"><p>CLOSED</p></para>"#)],
+  );
+}
+
+/// 63d: `\pdfximage` takes pdfTeX's keywords (`cropbox` …) and an expanded file name, and `\pdfximagebbox` reports
+/// the image's box corners as pdfTeX prints them (pinlabel.sty:588-592; 1904.09721, 1310.1838). Repro
+/// expansion-primitives/pdfximagebbox_reads_the_cropbox.
+#[test]
+fn pdfximagebbox_reads_the_cropbox() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/pdfximagebbox_reads_the_cropbox.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r#"<para xml:id="p1"><p>BB: 0.0pt0.0pt321.2pt240.9pt</p></para>"#,
+    )],
+  );
+}
+
+/// 63d: pinlabel.sty is read raw, so every `\pinlabel`'s text stays with its figure, and the picture with it: the
+/// pdfTeX branch's `\ps@begin` includes `<stem>.pdf` (math0412330, 1904.09721; 85 papers of run 336's first 265k had
+/// `\labellist`/`\pinlabel` undefined). Repro graphics-tikz/pinlabel_labels_every_figure.
+#[test]
+fn pinlabel_labels_every_figure() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pinlabel_labels_every_figure.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  // mwe's images are found in the TeX tree, wherever it is installed
+  let texmf = regex::Regex::new(r#"candidates="[^"]*/(example-image-[ab]\.pdf)""#).unwrap();
+  let xml = texmf.replace_all(&xml, r#"candidates="TEXMF/$1""#);
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="fig1""#],
+    concat!(
+      r#"<figure xml:id="fig1"><block vattach="bottom"><p vattach="bottom" width="144.5pt"/><p width="0.0pt"><graphics candidates="TEXMF/example-image-a.pdf" graphic="example-image-a.pdf" options="width=144.54pt,height=108.40498pt" xml:id="g1"/></p><p vattach="bottom" width="144.5pt"><text fontsize="90%">"#,
+      "\u{2003}\u{2003}\u{2003}\u{2003}\u{2003}\u{2009}",
+      r#"</text><text fontsize="90%" width="7.4pt"><Math mode="inline" tex="P_{A}" text="P _ A" xml:id="m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">P</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">A</XMTok></XMApp></XMath></Math></text></p></block></figure>"#
+    ),
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="fig2""#],
+    concat!(
+      r#"<figure xml:id="fig2"><block vattach="bottom"><p vattach="bottom" width="144.5pt"/><p width="0.0pt"><graphics candidates="TEXMF/example-image-b.pdf" graphic="example-image-b.pdf" options="width=144.54pt,height=108.40498pt" xml:id="g2"/></p><p vattach="bottom" width="144.5pt">"#,
+      "\u{2003}\u{2003}\u{2005}",
+      r#"<Math mode="inline" tex="P_{B}" text="P _ B" xml:id="m2"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">P</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">B</XMTok></XMApp></XMath></Math></p></block></figure>"#
+    ),
+  );
+}
+
+/// 63d: an EPS figure puts pinlabel on its DVI branch (`\pdfoutput=0`), whose `\ps@begin` places the picture with
+/// dvips's `\special{PSfile=…}` (pinlabel.sty:254-258) — not rendered, so the figure kept its labels and lost its
+/// picture (1010.6236 12 → 2 images, 1112.5970 30 → 1). Both branches include through graphicx: the `.eps` the DVI
+/// branch found, at the psfig size.
+#[test]
+fn pinlabel_dvi_figure_keeps_its_picture() {
+  let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
+    r"\documentclass{article}
+\usepackage{graphicx}
+\usepackage{pinlabel}
+\begin{document}
+\begin{figure}
+\labellist
+\pinlabel $P$ at 10 10
+\endlabellist
+\includegraphics[width=2in]{fig}
+\end{figure}
+\end{document}
+",
+    &[(
+      "fig.eps",
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 144 72\nnewpath 0 0 moveto 144 72 lineto stroke\nshowpage\n",
+    )],
+  );
+  assert_eq!(
+    super::perfect_kernel_batch46::error_count(&stderr),
+    0,
+    "{stderr}"
+  );
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&stderr),
+    0,
+    "{stderr}"
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="fig1""#],
+    concat!(
+      r#"<figure xml:id="fig1"><block vattach="bottom"><p vattach="bottom" width="144.5pt"/><p width="0.0pt"><graphics candidates="fig.eps" graphic="fig.eps" options="width=144.54pt,height=72.26999pt" xml:id="g1"/></p><p vattach="bottom" width="144.5pt">"#,
+      "\u{2003}",
+      r#"<Math mode="inline" tex="P" text="P" xml:id="m1"><XMath><XMTok font="italic" role="UNKNOWN">P</XMTok></XMath></Math></p></block></figure>"#
+    ),
+  );
+}

@@ -1,0 +1,11 @@
+% witness: 1904.09721, 1310.1838 (pinlabel.sty:588-592 `\pdfximage cropbox {\@filestem.pdf}` then `\pdfximagebbox`)
+% oracle:  pdflatex 0 errors: "BB: 0.0pt0.0pt321.2pt240.9pt" (pdfTeX: the image's CropBox corners, bp in sp, printed in pt; the space after each corner number ends it)
+% engines: rust (63c) = "Expected opening '{'" at `cropbox`, \pdfximagebbox undefined, the name read unexpanded
+% expect:  0 errors; the paragraph reads the four corners as pdflatex prints them
+% status:  GREEN (63d)
+\documentclass{article}
+\begin{document}
+\def\stem{example-image}
+\pdfximage cropbox {\stem.pdf}
+BB: \pdfximagebbox\pdflastximage 1 \pdfximagebbox\pdflastximage 2 \pdfximagebbox\pdflastximage 3 \pdfximagebbox\pdflastximage 4
+\end{document}

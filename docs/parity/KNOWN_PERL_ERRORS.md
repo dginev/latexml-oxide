@@ -11150,3 +11150,15 @@ Residual: hyperref loaded from an `\AtBeginDocument` chunk adds the reset while 
 `\UseOneTimeHook{begindocument}` (latex.ltx:9512) runs such late code at once, Rust's `\hook_use:n` may not, leaving
 the 63a behaviour. Guards `perfect_kernel_batch63::{preamble_ref_redefinition_reset_at_begin_document,
 begin_document_ref_redefinition_survives_nameref}`.
+
+## 520. `\openin` keeps the previous file open when the new one cannot be opened
+
+tex.web §1275 (`open_or_close_in`) closes the stream before it tries the new name, so a name that cannot be opened
+leaves the stream closed and `\ifeof` true. `TeX_FileIO.pool.ltxml:52,60` assigns the stream only when `FindFile`
+succeeds ("possibly should close $port if it's already been opened?"), so the stream keeps reading the previous file.
+Minimal trigger: repro `macro-state/openin_closes_the_stream_first` (`\openin\s=example-image.eps \read\s to\x
+\openin\s=nonexistent-file.ps \ifeof\s CLOSED\else STALE\fi`): pdflatex "CLOSED", Perl and Rust (63c) "STALE".
+pinlabel.sty:607-623 leaves a figure's EPS open after finding its `%%BoundingBox` and probes the next figure's `.ps`
+first (:567): every later figure read the previous EPS, found no box, printed its name as text ("summ\_2 not found",
+a stray `_` in 1010.6236) and lost its labels. Fixed in Rust (63d): `tex_file_io.rs` `\openin` closes the stream
+first, as `\closein` does (`close_input_stream`). Guard `perfect_kernel_batch63::openin_closes_the_stream_first`.

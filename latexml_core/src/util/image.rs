@@ -748,7 +748,7 @@ type SizeMemo<T> = std::cell::RefCell<rustc_hash::FxHashMap<PathBuf, Option<T>>>
 std::thread_local! {
   static IMAGE_DIMENSIONS_MEMO: SizeMemo<(u32, u32)> =
     std::cell::RefCell::new(rustc_hash::FxHashMap::default());
-  static PDF_PAGE_BOX_MEMO: SizeMemo<(f64, f64)> =
+  static PDF_PAGE_BOX_MEMO: SizeMemo<[f64; 4]> =
     std::cell::RefCell::new(rustc_hash::FxHashMap::default());
 }
 
@@ -1085,6 +1085,12 @@ fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
 /// single-page, the first box is the page's own (or the `/Pages` node's, which
 /// it inherits).
 pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
+  read_pdf_page_box_corners(path).map(|[x0, y0, x1, y1]| ((x1 - x0).abs(), (y1 - y0).abs()))
+}
+
+/// The page box [`read_pdf_page_box`] reads, as its corners `[llx, lly, urx, ury]` in bp —
+/// what pdfTeX's `\pdfximagebbox` reports for an image (pdftex.web `pdf_ximage_bbox`).
+pub fn read_pdf_page_box_corners(path: &Path) -> Option<[f64; 4]> {
   PDF_PAGE_BOX_MEMO.with(|m| {
     if let Some(hit) = m.borrow().get(path) {
       return *hit;
@@ -1095,7 +1101,7 @@ pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
   })
 }
 
-fn read_pdf_page_box_uncached(path: &Path) -> Option<(f64, f64)> {
+fn read_pdf_page_box_uncached(path: &Path) -> Option<[f64; 4]> {
   let bytes = read_file_resilient(path)?;
   if let Some(box_) =
     parse_pdf_box(&bytes, b"/CropBox").or_else(|| parse_pdf_box(&bytes, b"/MediaBox"))
@@ -1247,7 +1253,12 @@ fn inflate_object_streams(bytes: &[u8]) -> Option<Vec<u8>> {
     let Some(rel) = byte_find(&bytes[at..], b"stream") else {
       continue;
     };
-    let dict = &bytes[at..at + rel];
+    // The stream's dictionary runs from its object header (`N G obj`) to `stream`, its keys in any order: an
+    // Illustrator PDF writes `/Filter /FlateDecode` before `/Type /ObjStm` (1904.12947's Whitehead.pdf, whose page
+    // box, page count and natural size were unreadable).
+    let window = at.saturating_sub(1024);
+    let dict_start = memchr::memmem::rfind(&bytes[window..at], b"obj").map_or(at, |p| window + p);
+    let dict = &bytes[dict_start..at + rel];
     if byte_find(dict, b"/FlateDecode").is_none() {
       continue;
     }
@@ -1285,7 +1296,7 @@ fn inflate_object_streams(bytes: &[u8]) -> Option<Vec<u8>> {
 /// ([`is_pdf_whitespace`]). Making that copy of a whole figure PDF cost, in
 /// release instructions with `--preload=ar5iv.sty`, 18.7 % of arXiv
 /// 2605.13583's conversion, 14.5 % of 2605.09543's and 8.0 % of 2605.08504's.
-fn parse_pdf_box(content: &[u8], token: &[u8]) -> Option<(f64, f64)> {
+fn parse_pdf_box(content: &[u8], token: &[u8]) -> Option<[f64; 4]> {
   let start = byte_find(content, token)? + token.len();
   let rest = &content[start..];
   let lb = memchr::memchr(b'[', rest)?;
@@ -1294,8 +1305,9 @@ fn parse_pdf_box(content: &[u8], token: &[u8]) -> Option<(f64, f64)> {
     .split(|&b| is_pdf_whitespace(b))
     .filter(|s| !s.is_empty())
     .filter_map(|s| std::str::from_utf8(s).ok()?.parse::<f64>().ok());
-  let (x0, y0, x1, y1) = (it.next()?, it.next()?, it.next()?, it.next()?);
-  Some(((x1 - x0).abs(), (y1 - y0).abs()))
+  let [x0, y0, x1, y1] = [it.next()?, it.next()?, it.next()?, it.next()?];
+  // A PDF rectangle may name any two opposite corners (ISO 32000-1 §7.9.5); read as lower left, upper right.
+  Some([x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1)])
 }
 
 /// Byte-level substring search.
@@ -2070,6 +2082,12 @@ mod sizing_characterization_tests {
     // Non-zero origin: the box is the extent, not the corner.
     let offset = fixture("o.pdf", b"%PDF-1.4\n<< /MediaBox [10 20 210 120] >>\n");
     assert_eq!(read_pdf_page_box(&offset), Some((200.0, 100.0)));
+    // Opposite corners in either order name the same rectangle: `\pdfximagebbox` reports lower left, upper right.
+    let flipped = fixture("f.pdf", b"%PDF-1.4\n<< /MediaBox [210 120 10 20] >>\n");
+    assert_eq!(
+      read_pdf_page_box_corners(&flipped),
+      Some([10.0, 20.0, 210.0, 120.0])
+    );
 
     // A real object stream: the box exists only as deflated bytes.
     let objstm = fixture(
@@ -2084,6 +2102,26 @@ mod sizing_characterization_tests {
       &objstm_pdf(b"5 0 << /MediaBox [0 0 612 792] /CropBox [0 0 200 100] >>"),
     );
     assert_eq!(read_pdf_page_box(&cropped), Some((200.0, 100.0)));
+
+    // The stream dictionary's keys in another order (`/Filter` before `/Type`, as Illustrator writes them).
+    let filter_first = {
+      use std::io::Write;
+      let mut enc = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+      enc
+        .write_all(b"13 0 <</CropBox[0.0 0.0 108.056 52.537]/Type/Page>>")
+        .expect("deflate");
+      let mut pdf = Vec::from(
+        &b"%PDF-1.6\r82 0 obj\r<</Filter/FlateDecode/First 5/Length 60/N 1/Type/ObjStm>>stream\r\n"
+          [..],
+      );
+      pdf.extend_from_slice(&enc.finish().expect("finish"));
+      pdf.extend_from_slice(b"\r\nendstream\rendobj\r");
+      fixture("hf.pdf", &pdf)
+    };
+    assert_eq!(
+      read_pdf_page_box_corners(&filter_first),
+      Some([0.0, 0.0, 108.056, 52.537])
+    );
 
     // Nothing readable anywhere: an object stream we cannot inflate.
     let opaque = fixture(
