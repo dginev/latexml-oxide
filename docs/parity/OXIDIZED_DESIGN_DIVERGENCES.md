@@ -6873,6 +6873,19 @@ following items.
 `perfect_kernel_batch54::next_sectioning_unit_in_an_item_is_a_sibling`.
 **Upstream**: not filed.
 
+**In a float (62zs, user ruling 2026-10-06).** A sectioning unit in a `figure`, `table` or other float body no longer
+errs: it opens an `ltx:inline-sectional-block` in the float (document.rs `AUTO_OPEN_BRIDGES`), schema-valid, the
+heading numbered, labelled and identified in the document's sequence as pdflatex numbers it (`\section` in Figure 1
+of section 1 is section 2, `xml:id` S2, and `\ref`s read 2). The float's own id is fixed before the unit steps the
+counters it is made within (`pin_float_id_before_its_sectioning`; the caption takes it, `\@@add@caption@counters`), so
+the figure is S1.F1 where its caption made S2.F1 — in Perl too; the caption still numbers the float, so under
+`\numberwithin{figure}{section}` it reads 2.1 as pdflatex prints it. An appendix unit there is a section of class
+`ltx_appendix` (the block holds sections), its letter and id kept; a `minipage` holding such a unit is captured as the
+inline sectional block, which keeps its class but not its `width`/`vattach` (layout only). 38 2609 papers, 117 errors
+(A/B over 187 2609 papers: 1,089 → 980 errors, 36 improved, 0 regressed; 2609.00179, 00943,
+03590, 05680). A list item keeps Perl's error. Guard `perfect_kernel_batch54::sections_inside_floats_keep_number_id_and_ref`;
+repro sectioning-frontmatter/sections_inside_floats_keep_number_id_and_ref.
+
 ### 190. Math content in a ref-family element auto-opens an inline `ltx:Math` (Perl: schema error)
 
 **Perl behavior**: `TeX_Math.pool.ltxml:42` autoOpens only `ltx:XMText`, so a

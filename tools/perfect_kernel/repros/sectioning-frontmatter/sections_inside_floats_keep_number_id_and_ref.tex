@@ -1,0 +1,28 @@
+% witness: 2609 cluster "malformed ltx:section in a float" (38 papers, 117 errors; 2609.00179, 00943, 03590, 05680)
+% oracle:  pdflatex 0 errors: 1 Intro, [Figure 1: 2 In a figure], 3 Next, 3.1 Sub, [Table 1: 3.2 In a table], 3.3 After;
+%          refs 2, 3, 3.2, Figure 1; 1, 2, 3, 3.1, 3.2, 3.3, Table 1
+% engines: rust (62zr) = 2 errors (Error:malformed: <ltx:section> in <ltx:figure>, <ltx:subsection> in <ltx:table>), 2 jing
+%          errors, the figure xml:id S2.F1 (its caption made it after the inner section); Perl 0.8.8 errs alike
+% expect:  0 errors, jing-valid; each in-float heading in an ltx:inline-sectional-block in its float, numbered and
+%          labelled in sequence (S2, S3.SS2), the floats S1.F1 and S3.T1, every \ref the number the PDF prints
+% status:  GREEN (62zs)
+\documentclass{article}
+\begin{document}
+\section{Intro}\label{sec:intro}
+See Sections~\ref{sec:infig}, \ref{sec:next} and \ref{sec:intab}, and Figure~\ref{fig:a}.
+\begin{figure}[h]
+\section{In a figure}\label{sec:infig}
+Figure text.
+\caption{A figure}\label{fig:a}
+\end{figure}
+\section{Next}\label{sec:next}
+\subsection{Sub}\label{sec:sub}
+Text.
+\begin{table}[h]
+\subsection{In a table}\label{sec:intab}
+Table text.
+\caption{A table}\label{tab:a}
+\end{table}
+\subsection{After}\label{sec:after}
+Refs: \ref{sec:intro}, \ref{sec:infig}, \ref{sec:next}, \ref{sec:sub}, \ref{sec:intab}, \ref{sec:after}, \ref{tab:a}.
+\end{document}

@@ -2885,11 +2885,66 @@ pub fn preincrement_float_counter(float_type: &str, main_counter: &str) {
 }
 /// Perl: afterFloat (latex_constructs.pool.ltxml L3440-3448)
 /// Rescues caption counters into the whatsit properties.
+/// A sectioning unit in a float's body (an `ltx:inline-sectional-block`, OXIDIZED_DESIGN_DIVERGENCES #189) steps the
+/// section counters the float's id is made within (`idwithin => "section"`), and the float's caption, which comes
+/// after it, would make the id in the unit's context: a `\section` in the first figure of section 1 gave the figure
+/// `S2.F1`. The float's id is fixed first, in its own context, once per float, and its caption takes it
+/// (`\@@add@caption@counters`); the caption still numbers the float, so a figure numbered within sections
+/// reads its section as pdflatex prints it. Repro sectioning-frontmatter/sections_inside_floats_keep_number_id_and_ref.
+pub fn pin_float_id_before_its_sectioning() -> Result<()> {
+  if !lookup_bool("lx@in@float") {
+    return Ok(());
+  }
+  let captype = do_expand(T_CS!("\\@captype"))?.to_string();
+  let key = s!("lx@float@pinned@id@{captype}");
+  // Nothing to fix when the float already has its id: its caption ran (`\iflx@donecaption`), or a sub-float stepped
+  // its counter first (`PREINCREMENTED_<captype>`, which the caption takes, made in the float's own context).
+  if captype.is_empty()
+    || has_value(&key)
+    || has_value(&s!("PREINCREMENTED_{captype}"))
+    || if_condition(&T_CS!("\\iflx@donecaption"))
+      .unwrap_or(None)
+      .unwrap_or(false)
+  {
+    return Ok(());
+  }
+  // The id the caption's step would make now: `\the<counter>@ID` with `\@<counter>@ID` at the counter's next value
+  // (`step_counter`), in a group, so neither the counter nor the definition moves.
+  let counter = lookup_mapping("counter_for_type", &captype)
+    .map(|c| c.to_string())
+    .unwrap_or_else(|| captype.clone());
+  // A float type with no counter has no numbered id to fix.
+  if lookup_register(&s!("\\c@{counter}"), Vec::new())
+    .ok()
+    .flatten()
+    .is_none()
+  {
+    return Ok(());
+  }
+  let next = counter_value(&counter)?.value_of() + 1;
+  bgroup();
+  def_macro(
+    T_CS!(s!("\\@{counter}@ID")),
+    None,
+    Tokens::new(Explode!(next)),
+    None,
+  )?;
+  let id = digest_literal(T_CS!(s!("\\the{counter}@ID")));
+  egroup()?;
+  assign_value(
+    &key,
+    Stored::String(pin(clean_id(&id?.to_string()))),
+    Some(Scope::Global),
+  );
+  Ok(())
+}
+
 pub fn after_float(whatsit: &mut Whatsit) {
   unwind_caption_boxes();
   let captype = digest(T_CS!("\\@captype"))
     .map(|d| d.to_string())
     .unwrap_or_default();
+  remove_value(&s!("lx@float@pinned@id@{captype}"));
   // Perl: AssignValue('PREINCREMENTED_' . $type => undef, 'global');
   let prekey = s!("PREINCREMENTED_{captype}");
   remove_value(&prekey);

@@ -145,7 +145,13 @@ pub(crate) fn load() -> Result<()> {
       props.get("tags"),
       Some(Scope::Global),
     );
-    assign_value(&s!("{}_id", captype), props.get("id"), Some(Scope::Global));
+    // A sectioning unit in the float's body fixed the float's id first (`pin_float_id_before_its_sectioning`).
+    let pinned = remove_value(&s!("lx@float@pinned@id@{captype}"));
+    assign_value(
+      &s!("{}_id", captype),
+      pinned.as_ref().or(props.get("id")),
+      Some(Scope::Global),
+    );
     assign_value(&s!("{}_inlist", captype), inlist, Some(Scope::Global));
   });
 

@@ -4999,9 +4999,9 @@ Body.
 
 /// 62zd: the box capture's backmatter lift stops at a float, as at an alignment (base_utilities.rs `insert_block`): an
 /// appendix section in a minipage in a `table` was lifted past it, leaving the table empty and its caption at the
-/// document's top level, with no diagnostic. It stays in the table now, and errors there as Perl's does (a sectioning
-/// unit in a float errors, OXIDIZED_DESIGN_DIVERGENCES #189 ruling 2026-10-04; 2609.05763's glossary). pdflatex: the
-/// heading, the table and its caption.
+/// document's top level, with no diagnostic. It stays in the table now (2609.05763's glossary), a section of class
+/// `ltx_appendix` since 62zs (a sectioning unit in a float, OXIDIZED_DESIGN_DIVERGENCES #189 ruling 2026-10-06; Perl
+/// errs). pdflatex: the heading, the table and its caption.
 #[test]
 fn appendix_in_a_minipage_stays_in_its_float() {
   let (log, xml) = convert_with(
@@ -5023,22 +5023,14 @@ Body.
 \end{document}",
     Some("ar5iv.sty"),
   );
-  // the schema-invalid appendix-in-block Perl reports too: exactly that error and the capture's warning
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 1), "{log}");
-  for message in [
-    "Error:malformed:ltx:appendix <ltx:appendix> isn't allowed in <ltx:block>",
-    "Warning:malformed:_CaptureBlock_ Did not find a block-like candidate in ltx:table",
-  ] {
-    assert!(
-      log.lines().any(|l| l.starts_with(message)),
-      "{message}\n{log}"
-    );
-  }
+  // An appendix unit in a float body is a section of class `ltx_appendix` (62zs, OD #189 ruling 2026-10-06), which
+  // the minipage's block holds: no error, no capture warning.
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_element(
     &xml,
     "table",
-    &["xml:id=\"A2.T1\""],
-    "<table inlist=\"lot\" placement=\"h\" xml:id=\"A2.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><block class=\"ltx_minipage\" vattach=\"middle\" width=\"345.0pt\" xml:id=\"A2.T1.1\"><appendix inlist=\"toc\" labels=\"LABEL:sec:tab\" xml:id=\"A2\"><tags><tag>Appendix B</tag><tag role=\"refnum\">B</tag><tag role=\"typerefnum\">Appendix B</tag></tags><title><tag close=\" \">Appendix B</tag>Notation Table</title><toctitle><tag close=\" \">B</tag>Notation Table</toctitle><para align=\"center\" xml:id=\"A2.p1\"><tabular vattach=\"middle\" xml:id=\"A2.p1.1\"><tbody><tr xml:id=\"A2.p1.1.1\"><td align=\"center\" xml:id=\"A2.p1.1.1.1\">a</td><td align=\"center\" xml:id=\"A2.p1.1.1.2\">b</td></tr></tbody></tabular></para></appendix></block><toccaption><tag close=\" \">1</tag>Notation.</toccaption><caption><tag close=\": \">Table 1</tag>Notation.</caption></table>",
+    &["xml:id=\"A1.T1\""],
+    "<table inlist=\"lot\" placement=\"h\" xml:id=\"A1.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><inline-sectional-block class=\"ltx_minipage\" xml:id=\"A1.T1.1\"><section class=\"ltx_appendix\" inlist=\"toc\" labels=\"LABEL:sec:tab\" xml:id=\"A2\"><tags><tag>Appendix B</tag><tag role=\"refnum\">B</tag><tag role=\"typerefnum\">Appendix B</tag></tags><title><tag close=\" \">Appendix B</tag>Notation Table</title><toctitle><tag close=\" \">B</tag>Notation Table</toctitle><para align=\"center\" xml:id=\"A2.p1\"><tabular vattach=\"middle\" xml:id=\"A2.p1.1\"><tbody><tr xml:id=\"A2.p1.1.1\"><td align=\"center\" xml:id=\"A2.p1.1.1.1\">a</td><td align=\"center\" xml:id=\"A2.p1.1.1.2\">b</td></tr></tbody></tabular></para></section></inline-sectional-block><toccaption><tag close=\" \">1</tag>Notation.</toccaption><caption><tag close=\": \">Table 1</tag>Notation.</caption></table>",
   );
 }
 

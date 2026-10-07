@@ -205,11 +205,16 @@ pub(crate) fn load() -> Result<()> {
       // `\newcommand\Proof{\@startsection{Proof}{5}{...}}` (e.g.
       // mst-stylefile.sty in 1608.04650) opened `<ltx:Proof>` and cascaded
       // 1500+ malformed errors on every nested element.
-      let tagname = section_element_for_type(&stype, true);
-      let section = document.open_element(&tagname,
-        Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
-        None,
-          )?;
+      let mut tagname = section_element_for_type(&stype, true);
+      let mut attrs = string_map!("xml:id" => clean_id, "inlist" => inlist);
+      // An appendix unit in a float body goes into its inline sectional block (document.rs `AUTO_OPEN_BRIDGES`),
+      // which holds sections, not appendices: a section of class `ltx_appendix`, its letter, id and labels kept
+      // (2609 witnesses, 41 of the 117 errors).
+      if tagname == "ltx:appendix" && props.get("in_float_body").is_some() {
+        tagname = "ltx:section".into();
+        attrs.insert("class".to_string(), "ltx_appendix".to_string());
+      }
+      let section = document.open_element(&tagname, Some(attrs), None)?;
       // TODO: Another instance where the immutability of props causes endless cloning
       //       which is slow and wasteful.
       // The big problem is that for props to be mutable, the entire parent whatsit needs to
@@ -253,7 +258,12 @@ pub(crate) fn load() -> Result<()> {
       maybe_peek_label()?;
       // See Cluster A note in the body closure above; sanitize identical here.
       let stype_str = type_name(stype);
+      pin_float_id_before_its_sectioning()?;
       let mut props = ref_step_counter_by_meaning(&stype_str)?;
+      // Digested in a float body (the constructor, which runs after the float, reads it for an appendix unit).
+      if lookup_bool("lx@in@float") {
+        props.insert("in_float_body", Stored::Bool(true));
+      }
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix"
         && let Some(bme) = lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {

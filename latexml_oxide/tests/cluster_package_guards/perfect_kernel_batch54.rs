@@ -4342,17 +4342,15 @@ Figure body text.
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
-  assert_eq!(error_count(&stderr), 2, "{stderr}");
-  for line in [
-    "Error:malformed:ltx:subsection <ltx:subsection> isn't allowed in <ltx:item>",
-    "Error:malformed:ltx:paragraph <ltx:paragraph> isn't allowed in <ltx:figure>",
-  ] {
-    assert!(
-      stderr.lines().any(|l| l == line),
-      "missing `{line}`:\n{stderr}"
-    );
-  }
-  // Inserted where they are, nothing closed: the subsection inside the item, the paragraph inside the figure.
+  // The item errs as Perl's does (OD #189); the figure's unit opens an inline sectional block (ruling 2026-10-06).
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  let line = "Error:malformed:ltx:subsection <ltx:subsection> isn't allowed in <ltx:item>";
+  assert!(
+    stderr.lines().any(|l| l == line),
+    "missing `{line}`:\n{stderr}"
+  );
+  // Inserted where they are, nothing closed: the subsection inside the item, the paragraph inside the figure's
+  // inline sectional block.
   let at = |needle: &str| {
     xml
       .find(needle)
@@ -4363,9 +4361,147 @@ Figure body text.
     "{xml}"
   );
   assert!(
-    at("<figure") < at("<paragraph") && at("<paragraph") < at("</figure>"),
+    at("<figure") < at("<inline-sectional-block")
+      && at("<inline-sectional-block") < at("<paragraph")
+      && at("<paragraph") < at("</inline-sectional-block>")
+      && at("</inline-sectional-block>") < at("</figure>"),
     "{xml}"
   );
+}
+
+/// 62zs: a sectioning unit in a float body opens an `ltx:inline-sectional-block` there, numbered, labelled and
+/// identified in the document's sequence as pdflatex numbers it, and the float's own id is fixed before the unit
+/// steps the counters it is made within (`pin_float_id_before_its_sectioning`): user ruling 2026-10-06, OD #189;
+/// 38 2609 papers. Repro sectioning-frontmatter/sections_inside_floats_keep_number_id_and_ref.
+#[test]
+fn sections_inside_floats_keep_number_id_and_ref() {
+  let (stderr, xml) = convert(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/sections_inside_floats_keep_number_id_and_ref.tex"
+    ),
+    false,
+  );
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  let opening = |tag: &str, id: &str| {
+    let at = xml
+      .find(&format!("xml:id=\"{id}\""))
+      .unwrap_or_else(|| panic!("no {id}:\n{xml}"));
+    let start = xml[..at].rfind('<').unwrap();
+    assert!(
+      xml[start..].starts_with(&format!("<{tag} ")),
+      "{id} is not a <{tag}>:\n{xml}"
+    );
+    start
+  };
+  // The headings in their floats, each in an inline sectional block, with their labels.
+  for (float_tag, float_id, float_label, unit, unit_id, unit_label) in [
+    ("figure", "S1.F1", "fig:a", "section", "S2", "sec:infig"),
+    (
+      "table",
+      "S3.T1",
+      "tab:a",
+      "subsection",
+      "S3.SS2",
+      "sec:intab",
+    ),
+  ] {
+    let float = opening(float_tag, float_id);
+    let block = float + xml[float..].find("<inline-sectional-block").unwrap();
+    let heading = opening(unit, unit_id);
+    let close = float + xml[float..].find(&format!("</{float_tag}>")).unwrap();
+    assert!(
+      block < heading && heading < close,
+      "{unit_id} is not in {float_id}'s block:\n{xml}"
+    );
+    assert!(
+      xml[float..block].contains(&format!("labels=\"LABEL:{float_label}\"")),
+      "{xml}"
+    );
+    assert!(
+      xml[heading..].starts_with(&format!(
+        "<{unit} inlist=\"toc\" labels=\"LABEL:{unit_label}\""
+      )),
+      "{xml}"
+    );
+  }
+  // The sequence numbers, as pdflatex prints them.
+  for (id, refnum) in [
+    ("S1", "1"),
+    ("S2", "2"),
+    ("S3", "3"),
+    ("S3.SS1", "3.1"),
+    ("S3.SS2", "3.2"),
+    ("S3.SS3", "3.3"),
+  ] {
+    let at = xml.find(&format!("xml:id=\"{id}\"")).unwrap();
+    assert!(
+      xml[at..].contains(&format!("<tag role=\"refnum\">{refnum}</tag>")),
+      "{id} is not {refnum}:\n{xml}"
+    );
+  }
+  // An appendix unit in a float: a section of class `ltx_appendix` in the block, its letter and id kept.
+  let (stderr, xml) = convert(
+    r"\documentclass{article}\begin{document}\section{A}\appendix\section{B}
+\begin{table}[h]\section{In a table}\label{s:intab}T.\caption{Tab}\end{table}
+\section{C}\end{document}",
+    false,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  let block = xml
+    .find("<inline-sectional-block>")
+    .unwrap_or_else(|| panic!("{xml}"));
+  let inner = block + "<inline-sectional-block>".len();
+  assert!(
+    xml[inner..].trim_start().starts_with(
+      "<section class=\"ltx_appendix\" inlist=\"toc\" labels=\"LABEL:s:intab\" xml:id=\"A2\">"
+    ),
+    "{xml}"
+  );
+  assert!(
+    xml[block..].contains("<tag role=\"refnum\">B</tag>"),
+    "{xml}"
+  );
+  // A sub-float that stepped the float's counter first already holds its id: the float keeps it, the next float its
+  // own.
+  let (stderr, xml) = convert(
+    r"\documentclass{article}\usepackage{subcaption}\begin{document}\section{A}
+\begin{figure}[h]\begin{subfigure}{0.4\textwidth}X\caption{Sub}\end{subfigure}\subsection{Inner}Y\caption{Main}\end{figure}
+\begin{figure}[h]Z\caption{Second}\end{figure}
+\end{document}",
+    false,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  let figure_ids: Vec<&str> = xml
+    .match_indices("<figure ")
+    .filter_map(|(at, _)| {
+      let id = at + xml[at..].find("xml:id=\"")? + "xml:id=\"".len();
+      Some(&xml[id..id + xml[id..].find('"')?])
+    })
+    .collect();
+  assert_eq!(figure_ids, ["S1.F1", "S1.F1.sf1", "S1.F2"], "{xml}");
+  // Numbered within sections, a float keeps the number its caption reads and an id of its own context.
+  let (stderr, xml) = convert(
+    r"\documentclass{article}\usepackage{amsmath}\numberwithin{figure}{section}\begin{document}\section{A}
+\begin{figure}[h]X\caption{First}\end{figure}
+\begin{figure}[h]\section{In fig}Y\caption{Second}\end{figure}
+\begin{figure}[h]Z\caption{Third}\end{figure}
+\end{document}",
+    false,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  for (id, refnum) in [("S1.F1", "1.1"), ("S1.F2", "2.1"), ("S2.F2", "2.2")] {
+    let at = xml
+      .find(&format!("xml:id=\"{id}\""))
+      .unwrap_or_else(|| panic!("no figure {id}:\n{xml}"));
+    assert!(
+      xml[at..].contains(&format!("<tag role=\"refnum\">{refnum}</tag>")),
+      "{id} is not {refnum}:\n{xml}"
+    );
+  }
 }
 
 /// A math node arriving in an Inline-model element opened in math mode — a

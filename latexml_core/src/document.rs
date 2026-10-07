@@ -3487,11 +3487,12 @@ impl Document {
         // build-leniency for the narrow sectioning-into-frontmatter case so
         // we don't out-strict Perl. Same `return self.node` "insert anyway"
         // mechanism as the math-leaf cascade above.
-        // A sectioning unit inside a list item or a figure is NOT lenient: both
-        // engines build the nested `<ltx:item><ltx:subsection>`, and Perl errors
-        // "isn't allowed" then inserts it anyway (Document.pm openElement) — the
-        // generic path below does the same (user ruling 2026-10-04, OD #189:
-        // every diagnostic once; ddphonism, phonrule, prerex, pdfmarginpar).
+        // A sectioning unit inside a list item is NOT lenient: both engines build
+        // the nested `<ltx:item><ltx:subsection>`, and Perl errors "isn't allowed"
+        // then inserts it anyway (Document.pm openElement) — the generic path below
+        // does the same (user ruling 2026-10-04, OD #189: every diagnostic once;
+        // ddphonism, phonrule, prerex, pdfmarginpar). In a float body it opens an
+        // `ltx:inline-sectional-block` (the bridge below; ruling 2026-10-06).
         // Guard: `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_errors`.
         let is_sectioning_unit = is_lenient_sectioning_unit(qsym);
         // Container is either a frontmatter block (abstract/acknowledgements,
@@ -3589,6 +3590,27 @@ impl Document {
           AutoOpenBridge {
             chain:   &["ltx:itemize"],
             applies: |_cur, qsym| qsym == "ltx:item",
+            attrs:   &[],
+          },
+          // A sectioning unit in a float body (`\section` in a `figure`, `\subsection` in a `table`; 38 2609 papers,
+          // 117 errors) opens an `ltx:inline-sectional-block` there: the heading keeps its number in the sequence,
+          // its id and its labels, as the PDF prints it, and the float stays whole (user ruling 2026-10-06,
+          // OXIDIZED_DESIGN_DIVERGENCES #189); in a list item it still errors as Perl's does. The float's own id is
+          // fixed before the unit steps the counters it is made within (`pin_float_id_before_its_sectioning`).
+          // Guard `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_errors`.
+          AutoOpenBridge {
+            chain:   &["ltx:inline-sectional-block"],
+            applies: |cur, qsym| {
+              matches!(cur, "ltx:figure" | "ltx:table" | "ltx:float")
+                && matches!(
+                  qsym,
+                  "ltx:section"
+                    | "ltx:subsection"
+                    | "ltx:subsubsection"
+                    | "ltx:paragraph"
+                    | "ltx:subparagraph"
+                )
+            },
             attrs:   &[],
           },
           AutoOpenBridge {
