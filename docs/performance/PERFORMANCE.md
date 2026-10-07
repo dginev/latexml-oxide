@@ -214,6 +214,7 @@ The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, x
 Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the primary lever; see **Principle 4**, [`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](../archive/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md) and [`MATH_PARSER_AND_ASF.md`](../math/MATH_PARSER_AND_ASF.md).
 
 * **Landed 2026-06-30 — differential-`d` lexer gating:** Downgrades `XDIFFUNK→UNKNOWN`/`XDIFFID→ID` when the formula has no `INTOP`, removing over-parse on every non-integral `d` (`\frac{dx}{dt}`, subscripts).
+* **Landed 2026-10-07 — byte classes as single terminals (marpa-asf 0.4.0):** the grammar is scannerless over the serialized lexemes (`ROLE:content:index `, 18 bytes on average), and marpa-asf compiled `lex_char` (`inverse_string_set`, 252 bytes) and `digit` as an alternative rule per member byte, so every earleme where a class was predicted carried one Earley item per byte. A class is now one terminal, offered with each scanned byte that it holds; `BocageStats` counts a class token as the two nodes the byte rules made, so `HYBRID_AND_NODE_LIMIT` routes every formula as before (large-bocage audit lines identical). Recognizer alone: 2609.30034's 3,502 inputs 25.7 → 12.7 G instructions. Whole conversions: 440 random 2609 papers −11.4% instructions (−0.6 … −19.4% per paper, math-heavy most), 439 byte-identical, the 440th (2609.14580) completing where it timed out.
 * **Settled intentional divergence:** `f(x,y)` apply-vs-multiply is intentional divergence #18 (`OXIDIZED_DESIGN_MATH.md` §18; do not re-attempt toward-Perl reverts without explicit user sign-off).
 * **Open hot patterns:**
   - **Integrals (largest volume driver):** Step 2 of differential gating — a dedicated in-integral `DIFFOP_D` terminal so `∫(x·d·x)` is never built, pulling `\int … f(x)\,dx` off the legacy fallback path.
@@ -272,6 +273,14 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
 ---
 
 ## Audit log (periodic passes; newest first)
+
+### 2026-10-07 — random 2609 sample profile (pre-rerun perf pass)
+
+Basis: 40 random 2609 papers (`shuf --random-source=<(yes 62)`), bench binary, `perf stat instructions:u`, and frame-pointer call graphs (`RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Zthreads=8 -Zunstable-options -Cforce-frame-pointers=yes" CARGO_TARGET_DIR=<separate dir> cargo build --profile bench --bin latexml_oxide`, the first three flags restating `.cargo/config.toml` since `RUSTFLAGS` replaces it; then `perf record --call-graph fp`; DWARF unwinding gives empty stacks). A new binary run against the vendor TL builds a format dump into `~/.cache/latexml-oxide/formats/` on its first run (OXIDIZED_DESIGN_DIVERGENCES #449): warm it before measuring, or one paper reads 3 → 212 G instructions.
+
+- **Math parse = 39.1% of instructions** (`--nomathparse`: 727.9 → 443.3 G); 67% on 2609.30034 (1,818 formulas). Within it the libmarpa recognizer dominated (`marpa_r_earleme_complete` + `postdot_items_create` + `bv_scan` ≈ 16% of all self samples) → byte-class terminals (P3).
+- **12 mixed papers, inclusive:** math parse 27.9%, digestion (`stomach::digest`) 21%, package loading (`load_definitions`) 27%, post-processing 10% (XSLT 8.7%), `xmlXPathEval` 5.9% spread over many call sites (largest `Rewrite::apply_clause` 1.9% on a math-heavy paper; `cleanup_unreferenced_xmtok_ids`, `set_rdfa_prefixes`, CrossRef ~1% each), graphics converters (mutool, pdftocairo) ~10% of cycles in child processes.
+- glibc malloc ~11.5% of self samples: allocator swap measured, no gain (closed levers).
 
 ### 2026-09-03 — read-only algorithm and memory audit
 
@@ -601,6 +610,8 @@ output-neutral (suite green).
 
 One-line outcomes; detail in `git log` + commit messages.
 
+- **Byte-class terminals in the Marpa math grammar — FIXED (2026-10-07, marpa-asf 0.4.0).** See P3. Settled with it: the recognizer cost is per earleme, not per token boundary (padding the index digits costs ~50k instructions per byte, more than the average byte), so shortening role names or feeding one terminal per lexeme are the remaining levers there (the latter an interface change: semantics read lexeme text).
+- **C-library allocator (glibc → mimalloc for libxml2/libmarpa) — NO GAIN, closed (2026-10-07).** glibc malloc/free is ~11.5% of self samples (libxml2 attribute strings, XPath node sets), but `LD_PRELOAD=libmimalloc.so.3` cut instructions only 2.6–3% while cycles rose 5% and task-clock 12% on 2609.30034.
 - **`SymHashMap` negative string probes — FIXED in the 2026-09-03 source snapshot.**
   `get`/`get_mut`/`contains_key`/`remove` resolve with non-interning
   `arena::get`, so misses do not grow the thread-local arena. No isolated A/B
@@ -654,7 +665,11 @@ One recognizer pass → one bocage; routing branches on
 - `metric == 1` (unambiguous, 60–87% of corpus formulae) → ordinary
   `Tree::next()` + `Actions::get_tree`; skips ASF entirely.
 - `metric ≥ 2`, and-node count ≤ `HYBRID_AND_NODE_LIMIT` (default 500) → ASF
-  traversal (`MathTraverser`), one post-order pass with subtree sharing.
+  traversal (`MathTraverser`), one post-order pass with subtree sharing. The count
+  is in byte-rule units: marpa-asf ≥ 0.4 counts a byte-class token (`lex_char`,
+  `digit`) as the two nodes the per-byte alternative rules made, so the cap routes
+  every formula as before byte classes became terminals. Do not "simplify" that
+  normalization away: it moves the cap (3 readings changed in 440 papers without it).
 - `metric ≥ 2`, bocage exceeds the cap → libmarpa Tree iterator on the same
   bocage with the six legacy convergence caps. Sidesteps the ASF allocation
   cliff.
@@ -680,7 +695,8 @@ n=98 both-OK, zero OOM; the cap fixed 19 OOMs the no-cap hybrid produced).
 `Symch.factorings` +72 MB RAM for ~0 gain (closed). Total Rust-side micro-opt
 ~6%; HYBRID-routing delivered the ~37% for LEGACY parity. The residual
 ASF→LEGACY gap is structural (glade bookkeeping) — further wins are in
-libmarpa C-side bocage walking (out of scope).
+libmarpa C-side bocage walking (out of scope). On the recognizer side, byte classes
+as terminals (marpa-asf 0.4.0, P3) halved the recognizer.
 
 ---
 

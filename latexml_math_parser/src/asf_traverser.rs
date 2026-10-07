@@ -13,8 +13,9 @@
 //!
 //! Marpa classifies glades for us; this callback only routes:
 //!
-//! 1. **Token glade** (`glade.is_token()`): a ByteScanner byte. Emits one `XM::Lexeme("x")` for the
-//!    byte value.
+//! 1. **Token glade** (`glade.is_token()`): a ByteScanner byte, read as its own terminal or as a byte
+//!    class holding it (`lex_char`, `digit`); its token value is the byte + 1. Emits one
+//!    `XM::Lexeme("x")` for the byte.
 //! 2. **Lexeme rule** (`builder.is_token(rule_id)`): RELOP / ADDOP / NUMBER and friends — rule
 //!    whose body is a byte sequence that rolls up into a single lexeme name, then is
 //!    `.specialize`d.
@@ -135,12 +136,18 @@ impl Traverser for MathTraverser<'_> {
     if !self.within_budget() {
       return Ok(Rc::new(Vec::new()));
     }
-    // Case 1: byte-token glade. ByteScanner symbol_id == byte value.
+    // Case 1: byte-token glade. Its value is the ByteScanner byte + 1, whether the byte was read as
+    // its own terminal or through a byte class holding it (marpa-asf 0.4 `inverse_string_set`,
+    // `char_range`: `lex_char`, `digit`), whose terminal is the glade's symbol. A nulling token has
+    // no value and no byte.
     if glade.is_token() {
-      let sym = glade.symbol_id();
-      let alt = u8::try_from(sym)
-        .ok()
-        .map(|byte| XM::Lexeme(byte_lexeme(byte), Meta::default()));
+      let alt = glade.token_value().map(|value| {
+        debug_assert!(
+          (1..=256).contains(&value),
+          "a byte token's value is its byte + 1, got {value}"
+        );
+        XM::Lexeme(byte_lexeme((value - 1) as u8), Meta::default())
+      });
       return Ok(Rc::new(vec![alt]));
     }
 

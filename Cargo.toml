@@ -27,11 +27,11 @@ unimplemented = "warn"  # flag `unimplemented!()` stubs
 unused_qualifications = "warn"
 
 # marpa-rs (parser engine) — the dginev/marpa fork, PUBLISHED to crates.io as
-# `marpa-asf` (the upstream `marpa` name is taken). `latexml_core` /
-# `latexml_math_parser` depend on it via the `package = "marpa-asf"` alias, so
-# `marpa::` in code is unchanged. The fork carries the ASF + hybrid-dispatch
-# baseline (PR #3) plus the allocation-trim + large-bocage Tree-iter fallback
-# (PR #4). Source: https://github.com/dginev/marpa.
+# `marpa-asf` (the upstream `marpa` name is taken). `latexml_math_parser`
+# depends on it via the `package = "marpa-asf"` alias, so `marpa::` in code is
+# unchanged. The fork carries the ASF + hybrid-dispatch baseline (PR #3), the
+# allocation-trim + large-bocage Tree-iter fallback (PR #4), and byte classes
+# as single terminals (0.4.0). Source: https://github.com/dginev/marpa.
 #
 # Local-development shortcut: clone the marpa repo to `~/git/marpa` and
 # *uncomment* the [patch] block below to redirect the published `marpa-asf` at
