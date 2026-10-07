@@ -1,0 +1,22 @@
+% witness: 2609.02116 (IEEEtran, `\authorrowbreak` = `\end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}`)
+% oracle:  pdflatex 0 errors: two author blocks, "Ann Able / Univ A", "Bob Baker / Univ B"
+% engines: rust (62zt) = 0 errors: two creators, but Ann Able also holds an empty affiliation contact
+%          (<text/><text/>, the `\hfill\mbox{}\par\mbox{}\hfill` between the blocks); Perl 0.8.8 merges both names into one
+%          creator
+% expect:  0 errors; creators Ann Able (Univ A) and Bob Baker (Univ B), no empty contact
+% status:  RED
+\documentclass[conference]{IEEEtran}
+\makeatletter
+\newcommand{\authorrowbreak}{\end{@IEEEauthorhalign}
+  \hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}}
+\makeatother
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\IEEEauthorblockA{Univ A}
+\authorrowbreak
+\IEEEauthorblockN{Bob Baker}
+\IEEEauthorblockA{Univ B}}
+\maketitle
+Text.
+\end{document}

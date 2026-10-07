@@ -794,9 +794,13 @@ LoadDefinitions!({
   // bstctlcite stub (Perl L445)
   def_macro_noop("\\bstctlcite[]{}")?;
 
-  // Disable internal alignment env (Perl L453-454)
-  DefMacro!("\\@IEEEauthorhalign", "\\relax");
-  DefMacro!("\\end@IEEEauthorhalign", "\\relax");
+  // Disable internal alignment env (Perl IEEEtran.cls.ltxml:443-444): the `\begin{@IEEEauthorhalign}` and
+  // `\end{@IEEEauthorhalign}` control sequences themselves, which `\begin`/`\end` look up first, so a document's
+  // `\authorrowbreak` (`\end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}`) opens and
+  // closes no group in the frontmatter digest (2609.02116; the `\@IEEEauthorhalign`/`\end@IEEEauthorhalign` pair
+  // this defined left `\end`'s `\endgroup` live).
+  DefMacro!(T_CS!("\\begin{@IEEEauthorhalign}"), None, "\\relax");
+  DefMacro!(T_CS!("\\end{@IEEEauthorhalign}"), None, "\\relax");
 
   // \linebreakand — IEEEtran tip-jar macro that papers redefine to break
   // a multi-row author halign across visual lines. The canonical

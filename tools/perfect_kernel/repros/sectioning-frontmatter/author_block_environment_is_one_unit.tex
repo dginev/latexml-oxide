@@ -1,0 +1,16 @@
+% witness: 2609.01563 (wscpaperproc), 2609.17357 (IEEEtran): `\author{... and ... \begin{center}...Engineering and Computer Science...\end{center}}`
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker", centred "Department of Physics and Astronomy"
+% engines: rust (62zs) = 5 errors: the author splitter cut at the `and` inside {center}, its \begin and \end in different
+%          \lx@personname pieces (`Attempt to end mode restricted_horizontal`, `\lx@frontmatterhere`); Perl 0.8.8 5 errors alike
+% expect:  0 errors; creators Ann Able and Bob Baker, the {center} affiliation kept whole with Bob Baker
+% status:  GREEN (62zt)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker
+\begin{center}
+Department of Physics and Astronomy
+\end{center}}
+\maketitle
+Text.
+\end{document}

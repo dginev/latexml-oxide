@@ -1245,6 +1245,7 @@ LoadDefinitions!({
     // want in frontmatter anyway, so there is nothing to preserve by skipping it.
     let stuff = strip_linebreak_options(stuff);
     let stuff = unbrace_acm_author_columns(stuff);
+    let stuff = unwrap_alignment_environment(stuff);
     // Beyond-Perl (OXIDIZED_DESIGN #52), two composable normalizations applied
     // BEFORE branch selection so both branches benefit, and so a symbol mark can
     // no longer spuriously trigger the affiliation-marker branch:
@@ -1294,6 +1295,7 @@ LoadDefinitions!({
       // `Alice\mk$^*$ \and Bob\mk` was one merged creator; now two.
       // OXIDIZED_DESIGN #52(g).
       for group in split_tokens(stuff, author_and_splits()) {
+        let group = unwrap_alignment_environment(group);
         if group.is_empty() {
           continue;
         }
@@ -1455,6 +1457,7 @@ LoadDefinitions!({
       // trailing \email line as an affiliation. OXIDIZED_DESIGN #52 (surpass-Perl,
       // Perl's @authorsplits shares the comma); witness arXiv:2606.00315.
       for block in split_tokens(stuff, author_group_splits()) {
+        let block = unwrap_alignment_environment(block);
         if block.is_empty() {
           continue;
         }
@@ -1628,7 +1631,11 @@ LoadDefinitions!({
     }
     Ok(Vec::new())
   });
+  // A note's text is typeset as a footnote's, under `\@footnotetext`'s `\@parboxrestore` (latex.ltx:17663, 16288),
+  // which also gives `\\` back its plain meaning: in a `p{}` cell of an author tabular it ended the row in the middle
+  // of `\thanks{Corresponding author.\\ Code: none.}` (2609.32661).
   DefPrimitive!(T_CS!("\\lx@frontmatter@plainsups"), None, {
+    Let!(T_CS!("\\\\"), T_CS!("\\@normalcr"));
     if let Some(plain) = lookup_meaning(&T_CS!("\\lx@frontmatter@plainsup")) {
       assign_meaning(&T_SUPER!(), plain, None);
     }
@@ -7376,6 +7383,32 @@ pub fn split_tokens_delimited(
             break;
           }
         }
+      } else if t == T_CS!("\\begin")
+        && let Some(span) = environment_closes_ahead(&stream)
+      {
+        // INTENTIONAL DIVERGENCE FROM PERL (as for the parentheses below): an unbraced `\begin{name} ... \end{name}`
+        // in an author block is one unit — a `{center}` affiliation under the names, a `{tabular}` holding
+        // `COSIC, KU Leuven` — not split at its inner `and`/`,`/`\\`, which left the environment's ends in different
+        // `\lx@personname`s (Perl's SplitTokens protects only braces and math, Base_Utility.pool.ltxml:152-165;
+        // 2609.01563, 17357, 33831). Only when the matching `\end{name}` follows: an unbalanced `\begin` stays a token.
+        toks.push(t);
+        toks.extend(stream.drain(..span));
+      } else if t == T_CS!("\\textsuperscript")
+        && stream
+          .front()
+          .is_some_and(|next| !matches!(next.get_catcode(), Catcode::BEGIN | Catcode::SPACE))
+      {
+        // A superscript's one-token argument stays with it (`\textsuperscript*`); when that argument is a delimiter
+        // (`Bob Baker\textsuperscript, Carl Cole`, the separator typeset raised; 2609.15009) the split is there, and the
+        // superscript, with nothing left to raise, goes — it took the piece's closing brace as its argument.
+        let next = *stream.front().unwrap();
+        let splits_here = delims
+          .iter()
+          .any(|delim| matches!(delim, SplitDelim::Token(d) if *d == next));
+        if !splits_here {
+          toks.push(t);
+          toks.extend(stream.pop_front());
+        }
       } else if t == T_OTHER!("(") && paren_closes_ahead(&stream) {
         // INTENTIONAL DIVERGENCE FROM PERL: also protect delimiters inside
         // BALANCED parentheses (mirroring the brace/math skipping above), so a
@@ -7413,6 +7446,38 @@ pub fn split_tokens_delimited(
     items.push((before, Tokens::new(toks)));
   }
   items
+}
+
+/// After a `\begin`: the length of `{name} ... \end{name}` at the front of `stream`, through the matching `\end{name}`
+/// (nested environments of the same name counted), or None when it does not close.
+fn environment_closes_ahead(stream: &VecDeque<Token>) -> Option<usize> {
+  let name_at = |i: usize| -> Option<(String, usize)> {
+    if stream.get(i)?.get_catcode() != Catcode::BEGIN {
+      return None;
+    }
+    let close = (i + 1..stream.len()).find(|&k| stream[k].get_catcode() == Catcode::END)?;
+    let name: String = (i + 1..close).map(|k| stream[k].to_string()).collect();
+    Some((name, close + 1))
+  };
+  let (name, mut i) = name_at(0)?;
+  let mut depth = 1;
+  while i < stream.len() {
+    let t = stream[i];
+    if (t == T_CS!("\\begin") || t == T_CS!("\\end"))
+      && let Some((other, next)) = name_at(i + 1)
+    {
+      if other == name {
+        depth += if t == T_CS!("\\begin") { 1 } else { -1 };
+        if depth == 0 {
+          return Some(next);
+        }
+      }
+      i = next;
+    } else {
+      i += 1;
+    }
+  }
+  None
 }
 
 /// If `tokens` — ignoring leading/trailing spaces — is exactly a single control
@@ -7656,6 +7721,43 @@ fn literal_and() -> SplitDelim {
   tks.push(T_SPACE!());
   SplitDelim::Tokens(Tokens::new(tks))
 }
+/// An alignment environment (`center`, `flushleft`, `flushright`) that wraps a whole author block, or a whole `\and`
+/// group, is layout around the lines the splitter reads, not one unit of them: its content, so its names, `\\`
+/// lines and marks split as written (`\author{\begin{center}Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^1$Univ A
+/// ...\end{center}}`). One inside a piece — a `{center}` affiliation under the names — stays whole
+/// (`split_tokens_delimited`; 2609.01563, 17357). Nested wrappers unwrap in turn.
+fn unwrap_alignment_environment(tokens: Tokens) -> Tokens {
+  let mut toks = tokens.unlist();
+  loop {
+    let start = toks.iter().take_while(|t| **t == T_SPACE!()).count();
+    let end = toks.len() - toks.iter().rev().take_while(|t| **t == T_SPACE!()).count();
+    if start >= end || toks[start] != T_CS!("\\begin") {
+      break;
+    }
+    let stream: VecDeque<Token> = toks[start + 1..end].iter().copied().collect();
+    let Some(span) = environment_closes_ahead(&stream) else {
+      break;
+    };
+    let name_end = (start + 2..end)
+      .find(|&k| toks[k].get_catcode() == Catcode::END)
+      .unwrap_or(start + 1);
+    let name: String = toks[start + 2..name_end]
+      .iter()
+      .map(|t| t.to_string())
+      .collect();
+    // The environment must end where the tokens do, its `\end{name}` the last thing.
+    if start + 1 + span != end || !matches!(name.as_str(), "center" | "flushleft" | "flushright") {
+      break;
+    }
+    let end_cs = (name_end + 1..end)
+      .rev()
+      .find(|&k| toks[k] == T_CS!("\\end"))
+      .unwrap_or(end);
+    toks = toks[name_end + 1..end_cs].to_vec();
+  }
+  Tokens::new(toks)
+}
+
 /// The ACM SIG classes' author columns (DIVERGENCES #445), read through their own commands: the brace group that
 /// follows `\alignauthor` and is the whole column — sigchi.cls writes each column as one, `\alignauthor{Name\\ \affaddr{…}\\ \email{…}}` — is
 /// its content, so the column's `\\` lines split (1906.01122); and an `\affaddr{…}` is its content, so a mark that

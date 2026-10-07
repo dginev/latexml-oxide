@@ -862,7 +862,17 @@ protected; parentheses are the remaining natural text grouper, so a
 parenthesized affiliation `(Scuola Normale Superiore, Pisa)` is now kept
 whole. The guard `paren_closes_ahead` means an *unbalanced* `(` is treated as
 an ordinary token (it must not greedily swallow a later `\\` name/affiliation
-separator).
+separator). An unbraced environment, `\begin{name}...\end{name}`, is the other
+grouper (62zt): a `{center}` affiliation under the names (2609.01563, 17357) or a
+`{tabular}` holding `COSIC, KU Leuven` (2609.33831) was cut at its inner `and`, `,`
+or `\\`, its ends in different `\lx@personname`s (Perl errs alike); kept whole
+when the matching `\end{name}` follows (`environment_closes_ahead`) — an alignment
+environment (`center`, `flushleft`, `flushright`) wrapping the whole block or a whole
+`\and` group is unwrapped first (`unwrap_alignment_environment`), its lines split as
+written, so only an environment inside a piece is one unit. A superscript
+whose one-token argument is a separator (`Bob Baker\textsuperscript, Carl Cole`,
+2609.15009) is a split there, the superscript dropped. Guard
+`perfect_kernel_batch61::frontmatter_digest_cluster_2609`.
 
 **Perl behavior & scope.** Perl's `SplitTokens` (Base_Utility.pool.ltxml)
 protects braces/math but NOT parens, so it makes the same mistake — witness

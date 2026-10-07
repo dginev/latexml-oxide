@@ -72,10 +72,12 @@ LoadDefinitions!({
   DefMacro!("\\email{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
   DefMacro!("\\phone{}", "\\@add@frontmatter{ltx:note}[role=phone]{#1}");
   DefMacro!("\\fax{}", "\\@add@frontmatter{ltx:note}[role=fax]{#1}");
-  DefMacro!(
-    "\\suppinfo{}",
-    "\\@add@frontmatter{ltx:note}[role=suppinfo]{#1}"
-  );
+  // achemso.cls:1115-1124: `suppinfo` is an environment that opens an unnumbered "Supporting Information Available"
+  // section (`\acs@section*{\suppinfoname}`), not a one-argument frontmatter command — which took the `\begin` of
+  // the environment's first list as its argument (2609.03387, 2609.10829).
+  DefMacro!("\\suppinfoname", "Supporting Information Available");
+  DefMacro!("\\suppinfo", "\\section*{\\suppinfoname}");
+  DefMacro!("\\endsuppinfo", "");
   DefMacro!(
     "\\manuscript{}",
     "\\@add@frontmatter{ltx:note}[role=manuscript]{#1}"

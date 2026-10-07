@@ -7955,3 +7955,132 @@ fn author_thanks_and_footnote_keep_their_math() {
     )]
   );
 }
+
+/// 62zt: the 2609 frontmatter digest cluster (`\lx@add@frontmatter@now`, `\lx@frontmatterhere`, `\lx@personname`
+/// errors). The author splitter keeps an unbraced `\begin{name}...\end{name}` whole (2609.01563, 17357, 33831; repro
+/// sectioning-frontmatter/author_block_environment_is_one_unit) and splits at a superscripted separator
+/// (`\textsuperscript,`, 2609.15009); a note's `\\` is the plain one (`\thanks` in a `p{}` cell, 2609.32661);
+/// IEEEtran's `\begin{@IEEEauthorhalign}`/`\end{@IEEEauthorhalign}` are `\relax` as in Perl (`\authorrowbreak`,
+/// 2609.02116); achemso's `{suppinfo}` is its "Supporting Information Available" section (2609.03387, 10829).
+#[test]
+fn frontmatter_digest_cluster_2609() {
+  let clean = |tex: &str| -> String {
+    let (log, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&log), 0, "{log}");
+    xml
+  };
+  let names = |xml: &str| -> Vec<String> {
+    creators_of(xml)
+      .iter()
+      .map(|c| {
+        let at = c
+          .find("<personname>")
+          .map(|i| i + "<personname>".len())
+          .unwrap_or(0);
+        let end = c[at..].find("</personname>").map(|e| at + e).unwrap_or(at);
+        c[at..end].to_string()
+      })
+      .collect()
+  };
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_environment_is_one_unit.tex"
+  ));
+  let found = names(&xml);
+  assert_eq!(found.len(), 2, "{found:?}");
+  assert_eq!(found[0], "Ann Able");
+  assert!(
+    found[1].starts_with("Bob Baker") && found[1].contains("Department of Physics and Astronomy"),
+    "{found:?}"
+  );
+  // An alignment environment around the whole block, or a whole `\and` group, is layout: its lines split as written.
+  let affiliation = |name: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+  };
+  let creator = |before: &str, name: &str, rest: &str| {
+    format!("<creator {before}role=\"author\"><personname>{name}</personname>{rest}</creator>")
+  };
+  let second = "before=\"\u{2003}\u{2003}\" ";
+  let article = |author: &str| {
+    format!(
+      "\\documentclass{{article}}\\begin{{document}}\\title{{T}}\\author{{{author}}}\\maketitle Text.\\end{{document}}"
+    )
+  };
+  for (author, expected) in [
+    (r"\begin{center}Ann Able \and Bob Baker\end{center}", vec![
+      creator("", "Ann Able", ""),
+      creator(second, "Bob Baker", ""),
+    ]),
+    (
+      r"\begin{center} Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^1$Univ A \\ $^2$Univ B \end{center}",
+      vec![
+        creator("", "Ann Able", &affiliation("Univ A")),
+        creator(second, "Bob Baker", &affiliation("Univ B")),
+      ],
+    ),
+    (
+      r"\begin{center}Ann\\ Univ A\end{center} \and \begin{center}Bob\\ Univ B\end{center}",
+      vec![
+        creator("", "Ann", &affiliation("Univ A")),
+        creator(second, "Bob", &affiliation("Univ B")),
+      ],
+    ),
+  ] {
+    let (log, xml) = convert_with(&article(author), None);
+    assert_eq!(error_count(&log), 0, "{log}");
+    assert_eq!(creators_of(&xml), expected, "{author}");
+  }
+  let xml = clean(
+    r"\documentclass{article}\begin{document}\title{T}
+\author{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript,
+Carl Cole\textsuperscript{2}}\maketitle Text.\end{document}",
+  );
+  assert_eq!(names(&xml), ["Ann Able", "Bob Baker", "Carl Cole"]);
+  let xml = clean(
+    r"\documentclass{llncs}\begin{document}\title{T}
+\author{\begin{tabular}{c@{\hspace{4em}}c}
+Nicolas Constantinides$^{*}$ & Mahdi Rahimi \\[2pt]
+\normalsize Unaffiliated & \normalsize COSIC, KU Leuven \\
+& \normalsize Leuven, Belgium
+\end{tabular}}\institute{}\maketitle Text.\end{document}",
+  );
+  let found = names(&xml);
+  assert!(
+    found.len() == 1 && found[0].contains("Mahdi Rahimi") && found[0].contains("COSIC, KU Leuven"),
+    "{found:?}"
+  );
+  let xml = clean(
+    r"\documentclass{article}\begin{document}\title{T}
+\author{\begin{tabular}{p{3cm}p{3cm}}
+Ann Able & Bob Baker\thanks{Corresponding author.\\ Code: none.}
+\end{tabular}}\maketitle Text.\end{document}",
+  );
+  assert!(
+    xml.contains("Bob Baker") && xml.contains("Corresponding author.<break/>Code: none."),
+    "{xml}"
+  );
+  let xml = clean(
+    r"\documentclass[conference]{IEEEtran}
+\makeatletter
+\newcommand{\authorrowbreak}{\end{@IEEEauthorhalign}
+  \hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}}
+\makeatother
+\begin{document}\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\IEEEauthorblockA{Univ A}
+\authorrowbreak
+\IEEEauthorblockN{Bob Baker}
+\IEEEauthorblockA{Univ B}}\maketitle Text.\end{document}",
+  );
+  assert_eq!(names(&xml), ["Ann Able", "Bob Baker"]);
+  let xml = clean(
+    r"\documentclass{achemso}\title{T}\author{Ann Able}\affiliation{Univ A}
+\begin{document}\begin{abstract}Abs.\end{abstract}Text.
+\begin{suppinfo}\begin{itemize}\item Extra data.\end{itemize}\end{suppinfo}
+\end{document}",
+  );
+  let section = xml
+    .find("<title>Supporting Information Available</title>")
+    .unwrap_or_else(|| panic!("{xml}"));
+  assert!(xml[section..].contains("<itemize"), "{xml}");
+  assert!(!xml.contains("itemize</"), "{xml}");
+}

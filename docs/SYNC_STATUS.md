@@ -489,6 +489,19 @@ Perl removes an unlabelled pending annotation silently too); `author_symbol_mark
 (`author_suffix_marks_after_commas_link_affiliations`, SHARED with Perl, 2609.25924; `author_prefix_marks_first_line_is_names`,
 Perl drops the authors): fixed by 62zp.
 
+62zt: the 2609 frontmatter digest cluster (`\lx@add@frontmatter@now`/`\lx@frontmatterhere`/`\lx@personname`, 9
+papers; root-cause by agent, verified): the author splitter keeps an unbraced `\begin{name}...\end{name}` inside a piece
+whole (a `{center}`/`{flushleft}`/`{flushright}` around the whole block or an `\and` group is unwrapped first) and
+splits at a superscripted separator (SHARED with Perl; OXIDIZED_DESIGN_DIVERGENCES paren-split entry); a note's
+`\\` is the plain one, as `\@footnotetext`'s `\@parboxrestore` gives it (`\thanks` in a `p{}` cell, 2609.32661);
+IEEEtran's `\begin{@IEEEauthorhalign}`/`\end{@IEEEauthorhalign}` are `\relax` as in Perl (`\authorrowbreak`,
+2609.02116); achemso's `{suppinfo}` is its "Supporting Information Available" section (2609.03387, 10829). Guard
+`perfect_kernel_batch61::frontmatter_digest_cluster_2609`. Open: RED `ieeetran_authorrowbreak_leaves_no_empty_affiliation` (one
+empty affiliation contact; Perl merges the two authors); a block-wide `{center}` followed by more tokens (`\begin{center}Ann
+\and Bob\end{center}\thanks{...}`) is not unwrapped, its authors kept together; 2609.13401's frontmatter errors follow a
+math-mode leak earlier
+in sections/mdps.tex, not this cluster.
+
 62zs: a sectioning unit in a float body opens an `ltx:inline-sectional-block` there — numbered, labelled and identified
 in sequence as pdflatex numbers it, schema-valid — and the float's id is fixed before the unit steps its counters
 (S1.F1, not S2.F1); user ruling 2026-10-06 after a demo (38 2609 papers, 117 errors; OXIDIZED_DESIGN_DIVERGENCES
