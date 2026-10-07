@@ -136,6 +136,14 @@ s136), title pages and letters (59o, 59p), arabi (59r) and the rulings 7a-7e. Th
   Error/Fatal results were re-queued for 62c. Compare it to run 306 only when complete. Later fixes found by mining
   the run (62d-62f) are on `perfect_kernel`, not deployed to the fleet. Open run-329 work: `SYNC_STATUS.md`
   ("Run-329 and sandbox open residuals"). Run 329 finishes on 62c (user 2026-10-04: no mid-run swap).
+- the 2609 Error/Fatal study (run 329 paused 2026-10-05 02:29Z at 263,636 papers, user): batches 62s-62zt, each
+  A/B-neutral or better with content checks (words, jing, PDF recall); the 849 Error papers' recheck went 8,176 errors
+  / 86 clean (rc62za6) → 6,443 / 200 (rc62zt, c4dd3bdd9b). Rulings 2026-10-06: `\section` in a float lands as an
+  inline sectional block with its float's id fixed first (62zs, after a demo), `\cprime` within the bibliography
+  (62zr), `\foreach` over a locked macro keeps Perl's lock (already bounded), eqnarray `{##}` accepted. The residual
+  tail is long and flat (largest cluster 23 papers; math-mode `_`/`^`/`$`, `\endgroup` interleavings — Perl-origin
+  — and singles), recorded in `SYNC_STATUS.md`. Next (user 2026-10-07): a short performance pass, then a fresh full
+  arXiv rerun on a worker built from the head, compared to run 306 when complete.
 The sweep narratives #135-148, the ranked path steps 1-8 and the stream-G log are archived in
 [`perfect_kernel/archive/PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md).
 
