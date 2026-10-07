@@ -142,8 +142,14 @@ s136), title pages and letters (59o, 59p), arabi (59r) and the rulings 7a-7e. Th
   inline sectional block with its float's id fixed first (62zs, after a demo), `\cprime` within the bibliography
   (62zr), `\foreach` over a locked macro keeps Perl's lock (already bounded), eqnarray `{##}` accepted. The residual
   tail is long and flat (largest cluster 23 papers; math-mode `_`/`^`/`$`, `\endgroup` interleavings — Perl-origin
-  — and singles), recorded in `SYNC_STATUS.md`. Next (user 2026-10-07): a short performance pass, then a fresh full
-  arXiv rerun on a worker built from the head, compared to run 306 when complete.
+  — and singles), recorded in `SYNC_STATUS.md`.
+- the performance pass (user 2026-10-07): math parsing is 39 % of a random 2609 sample's instructions; byte classes
+  as single Marpa terminals (62zu `c0e4393f39`, marpa-asf 0.4.0) cut 11.4 % over 440 random papers, 439
+  byte-identical (`performance/PERFORMANCE.md` P3).
+- stream G now: run 336, the full arXiv rerun (2,947,191 papers) on a 62zu worker, started 2026-10-07 10:10Z; compare
+  it to run 306 when complete (no new Fatal cluster; Error/Fatal classes worse than 306 explained or fixed). Run 329
+  is superseded. The host's AppArmor `gs` profile had blocked the bare-host fleet's TMPDIR since 2026-10-05 (every
+  EPS/PS figure failed in runs 332-335); fixed 2026-10-07 (`SYNC_STATUS.md` row G).
 The sweep narratives #135-148, the ranked path steps 1-8 and the stream-G log are archived in
 [`perfect_kernel/archive/PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md).
 
