@@ -1,0 +1,18 @@
+% witness: 1601.02132 (elsarticle + vdm.sty:135-138,202-205 `\everymath{\let~\hook}`)
+% oracle:  pdflatex 0 errors (hyperref prints `~` where the reference is, in text: hyperref.sty:8236-8262)
+% engines: rust (62zu) = Fatal:Stomach:Recursion (the autoref tag's `~` ran `\hook` in the equation, re-stepping it); Perl 0
+% expect:  0 errors; equation 1 tagged "Equation 1" (no-break space) for \autoref, the eqnarray* one equationgroup
+% status:  GREEN (63a)
+\documentclass{article}
+\usepackage{hyperref}
+\def\hook#1{\vbox{\halign{##\cr#1\cr}}}
+\everymath{\let~\hook}
+\begin{document}
+\begin{eqnarray}
+a &=& b \label{e}
+\end{eqnarray}
+\begin{eqnarray*}
+\begin{array}{c} f\\ g \end{array}
+\end{eqnarray*}
+See \autoref{e}.
+\end{document}

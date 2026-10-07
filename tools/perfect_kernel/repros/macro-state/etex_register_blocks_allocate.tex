@@ -1,0 +1,23 @@
+% witness: 1610.01929, 1801.07292: `\globtoksblk\prooftoks{1000}` and `\toks\numexpr\prooftoks+\count@\relax`
+% oracle:  pdflatex (pre-2020 kernel) 0 errors: "First proof." once (etex.sty:382-425); TL2025 pdflatex: \globtoksblk undefined (etex.sty:103-139)
+% engines: rust (62zu) = \globtoksblk undefined, then an endless \loop (Fatal:Stomach:Recursion); Perl loops alike (killed)
+% expect:  0 errors; "First proof." printed once; the block is taken from the top of the range: "Block: 31768."
+% status:  GREEN (63a)
+\documentclass{article}
+\usepackage{etex}
+\makeatletter
+\globtoksblk\prooftoks{1000}
+\newcounter{proofcount}
+\long\def\proofatend#1\endproofatend{%
+  \toks\numexpr\prooftoks+\value{proofcount}\relax=\expandafter{#1}%
+  \stepcounter{proofcount}}
+\def\printproofs{\count@=\z@
+  \loop \the\toks\numexpr\prooftoks+\count@\relax
+  \ifnum\count@<\value{proofcount}\advance\count@\@ne \repeat}
+\makeatother
+\begin{document}
+\proofatend First proof.\endproofatend
+\printproofs
+
+Block: \the\prooftoks.
+\end{document}

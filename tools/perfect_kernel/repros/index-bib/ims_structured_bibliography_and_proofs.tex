@@ -1,0 +1,24 @@
+% witness: 1003.1189, 1203.0186 (arxbj): `{barticle}` with `\bsnm`/`\btitle`/..., `{pf*}`, `\tablewidth`, `\bolds`
+% oracle:  pdflatex 0 errors (arxbj.cls:1428-1445 {pf}, :1684 \tablewidth, :2599-2897 structured bibliography)
+% engines: rust (62zu) = 17 undefined ({barticle}, \bsnm, {pf*}, \tablewidth, \bolds, ...); arximspdf had them (62d)
+% expect:  0 errors; proofs titled "Proof." and "Proof of the claim." ending in a square; the bibitem "Doe, J. ... MR2363971"
+% status:  GREEN (63a)
+\documentclass{arxbj}
+\begin{document}
+\setlength{\tablewidth}{5cm}
+$\bolds{x}$
+\begin{pf}
+Obvious.
+\end{pf}
+\begin{pf*}{Proof of the claim}
+Trivial.
+\end{pf*}
+\begin{thebibliography}{1}
+\bibitem{a}
+\begin{barticle}
+\bauthor{\bsnm{Doe},~\bfnm{John}\binits{J.}}
+(\byear{2001}). \btitle{A title}. \bjournal{Bernoulli} \bvolume{7} \bpages{1--2}. \bid{doi={10.1000/x}, mr={2363971}}
+\end{barticle}
+\endbibitem
+\end{thebibliography}
+\end{document}

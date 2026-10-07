@@ -569,7 +569,7 @@ fn autoref_name_diagnostics_wait_for_an_autoref() {
     &xml,
     "tags",
     &[],
-    r##"<tags><tag>1</tag><tag role="autoref"><ERROR class="undefined">\cyrr</ERROR><ERROR class="undefined">\cyra</ERROR><ERROR class="undefined">\cyrz</ERROR><ERROR class="undefined">\cyrd</ERROR>. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags>"##,
+    r##"<tags><tag>1</tag><tag role="autoref"><ERROR class="undefined">\cyrr</ERROR><ERROR class="undefined">\cyra</ERROR><ERROR class="undefined">\cyrz</ERROR><ERROR class="undefined">\cyrd</ERROR>. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags>"##,
   );
   let (stderr, _) = convert(
     "\\begin{longtable}{l}\\caption{T}\\label{tab:lt}\\\\ x\\end{longtable} See \\autoref{tab:lt}.",

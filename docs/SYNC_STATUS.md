@@ -326,6 +326,30 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   expansion. RED `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
+### Run-336 open residuals (63a, 2026-10-07)
+
+Mined from run 336's first ~35k papers (post-fix reconversions on the fleet worker; the env-gap papers are re-queued at
+completion, row G). **63a** (landed): the `Fatal:Stomach:Recursion` cluster's fixable roots — arxbj `{longlist}` as the
+class's own `\list` (KPE #517), etex's register-block allocators (KPE #516), the autoref tag's `~` bound to the kernel
+space where it is digested (1601.02132), and arxbj's IMS markup through a binding shared with arximspdf
+(`ims_support`); guards `perfect_kernel_batch63::*`. Open:
+- **`\ref` reset at `\begin{document}`** (3 witnesses: 2503.08060, 1908.01329, 1811.01873; Perl deep_recursion too):
+  nameref.sty:352-359 redeclares `\ref`/`\pageref`/`\Ref` in the begindocument hook, discarding a self-recursive
+  preamble redefinition; `nameref_sty.rs` does not. RED repro `macro-state/preamble_ref_redefinition_reset_at_begin_document`.
+  Fix plan: snapshot at load, re-`\let` in a begindocument hook ordered as LaTeX's (nameref.sty:360 `\DeclareHookRule`)
+  so later patches (cleveref, varioref, showkeys) still win. MED.
+- **Loop detector on a finite PiCTeX picture** (0801.0709, Rust-only): `digested.rs` `fingerprint_into` hashes a
+  `RegisterValue` by variant only, so dots with different `\raise` look identical past `STOMACH_CYCLE_ACTIVATE`. RED repro
+  `boxes-groups/pictex_finite_dots_are_not_a_loop`. Fix: hash the value (and dimension-valued whatsit properties);
+  re-convert the guard's witnesses 2508.07407, tkz-grapheur-doc-en/fr, math0102053, 2605.25400. MED.
+- **Nested alignment steps the eqnarray** (KPE #518, shared): RED repro `kernel-alignment/nested_alignment_inherits_eqnarray_row_hook`.
+- **Mouth EoF** (10, runaway delimiters, singletons): 3 × `\input amstex` (amsppt-as-plain, below); `\NOT` 2002.09653
+  2212.04182; `\endcaption` 1210.4309 2407.08262; `\@checkend` 1404.3085; ` at ` 0811.2708; `\@nil` 1402.2014.
+- **Document Malformed** (8): 0901.1457 ships the AIP proceedings kit and a template driver is taken as the main file.
+- **never_completed** (53): fleet pressure; 3 of 4 convert standalone, 1007.0100 is a clean 180 s timeout.
+- **IMS bindings**: imsart (contrib) keeps a partial copy of the `\b*` markup — fold it into `ims_support`; arximspdf's
+  `{longlist}` is a structural environment where arxbj's is now the class's labelled `\list`.
+
 ### Run-329 and sandbox open residuals (61r-62f, 2026-10-04)
 
 Open items from the cortex reruns of sandboxes 2605/2606 (61r) and from mining run 329 (62a-62f). The fixed narratives

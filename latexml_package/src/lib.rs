@@ -89,6 +89,12 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "cls",
     package::arximspdf_cls::load_arxstspdf_definitions,
   ),
+  // The VTeX IMS markup arximspdf/arxstspdf and arxbj share (structured bibliography, `{pf}`, table notes).
+  (
+    "ims_support",
+    "sty",
+    package::ims_support_sty::load_definitions,
+  ),
   // smfart: no binding — Perl falls through to OmniBus, which provides
   // \Subsection, \Paragraph, \institute, etc. The earlier Rust binding
   // loaded amsart instead, which doesn't define those CSes; smfart-using

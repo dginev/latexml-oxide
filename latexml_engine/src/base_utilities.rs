@@ -1926,13 +1926,24 @@ LoadDefinitions!({
       }
     }
 
-    let mut lx_tags = vec![T_CS!("\\lx@tags"), T_BEGIN!()];
+    // A tag is text, built where its target is (an eqnarray row's in its math group, where a document may rebind `~`:
+    // vdm.sty:135-138, 202-205 `\everymath{\let~\hook}`, a `\vbox{\ialign…}` that re-stepped the equation, an endless
+    // recursion on 1601.02132), and printed by a reference. Its `~` is the kernel's no-break space, LaTeX's
+    // `\nobreakspace`, which babel's `~` also is except in a language that makes it a shorthand; such a shorthand, or a
+    // document's own text `~`, no longer reaches a tag (OXIDIZED_DESIGN_DIVERGENCES #98 addendum).
+    // Guard `perfect_kernel_batch63::autoref_tag_tilde_is_the_kernel_space`.
+    let mut lx_tags = vec![
+      T_CS!("\\begingroup"), T_CS!("\\let"), T_ACTIVE!('~'), T_CS!("\\lx@tag@texttilde"), T_CS!("\\lx@tags"),
+      T_BEGIN!(),
+    ];
     for invoked_tag in tags {
       lx_tags.append(&mut invoked_tag.unlist());
     }
     lx_tags.push(T_END!());
+    lx_tags.push(T_CS!("\\endgroup"));
     Ok(Tokens::new(lx_tags))
   });
+  DefMacro!("\\lx@tag@texttilde", "\\lx@NBSP", protected => true);
 
   // Remove the last closed node, if it's empty.
   let remove_empty_element: Vec<ConstructionClosure> = construct!(document, _whatsit, {

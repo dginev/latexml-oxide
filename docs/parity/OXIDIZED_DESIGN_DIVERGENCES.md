@@ -3897,6 +3897,17 @@ idiom → `(1.1)`/`(1.2)` while a sibling `section` autoref stays `section 1`);
 `50_structure::autoref_test` (default path unchanged). Witness: ar5iv #607
 (arXiv **2607.12124**).
 
+**Addendum (63a, 2026-10-07): a tag's `~`.** A target's tags (refnum, typerefnum, the autoref name, cleveref names)
+are built where the target is — an eqnarray row's in its math group, where a document may rebind `~` (vdm.sty:135-138,
+202-205 `\everymath{\let~\hook}`, a `\vbox{\ialign…}` that re-stepped the equation: an endless recursion on
+1601.02132) — and printed by a reference in text. `\lx@make@tags` binds their `~` to the kernel's no-break space,
+LaTeX's `\nobreakspace`, which babel's `~` also is except in a language that makes it a shorthand; under babel German
+and Russian an autoref tag now reads "Abbildung 1" with the no-break space, as without babel. The binding is
+unconditional, so a document's own text `~` (`\def~{\,}`) and a shorthand language's (spanish, galician, basque,
+estonian, magyar) no longer reach a tag, where pdflatex prints hyperref's `~` with the meaning it has at the reference
+(hyperref.sty:8247): accepted, since a tag is built away from where it is printed. The delimiter idiom still matches the
+active token. Guard `perfect_kernel_batch63::autoref_tag_tilde_is_the_kernel_space`.
+
 ### 99. `geometry` sizes measured SVG graphics (not the HTML flow)
 
 **Perl** (`geometry.sty.ltxml` L27-59) makes every geometry macro a no-op —
@@ -13809,3 +13820,14 @@ placeholders, so a streamed unit with prose before its entries keeps its own hea
 (`\appendix\section{References}` keeps two headings); a last subsection's number can end up on a section-level
 bibliography; the unit's other attributes (`class`, `xml:lang`) are not carried. Guard
 `perfect_kernel_batch61::bibliography_takes_the_place_of_its_heading_unit`.
+
+### 457. etex's register-block allocators are defined on today's kernel (Perl and current pdflatex: undefined)
+
+etex.sty:382-425 defines `\globcountblk` … `\locmarksblk` only in its pre-2020 branch; on a kernel with extended
+allocation (LaTeX 2020-02 on, `\count10`-`\count15` past 255) etex.sty:103-139 aliases `\globcount`→`\newcount` and
+the like and stops, so TL2025 pdflatex reports `\globtoksblk` undefined, as Perl does (`etex.sty.ltxml` is
+`LoadPool('eTeX')`). Papers written for the older kernel use the block forms; with them undefined, the "proofs at the
+end" idiom (`\toks\numexpr\prooftoks+\count@`) loops forever in both engines (KNOWN_PERL_ERRORS #516). Rust (63a)
+defines them: a block of n registers is taken downward from the top of each range (32767), as etex's local blocks were
+(`\count27`), clear of LaTeX's upward allocation and of `\count@`. Witnesses 1610.01929, 1801.07292. Guard
+`perfect_kernel_batch63::etex_register_blocks_allocate`.

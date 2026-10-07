@@ -62,71 +62,16 @@ LoadDefinitions!({
   DefMacro!("\\zs{}",  "#1");
   DefMacro!("\\zss{}", "#1");
   DefMacro!("\\eqntext{}", "#1");
-  Let!("\\bolds", "\\boldsymbol");
-
-  // ---- structured bibliography (passthrough) -------------------------------
-  // Entry environments: transparent (swallow the optional [type] arg, pass body).
-  for env in [
-    "barticle","bbook","bincollection","binproceedings","binbook","bproceedings",
-    "btechreport","bmanual","bmastersthesis","bphdthesis","bbooklet",
-    "bunpublished","bmisc","bchapter",
-  ] {
-    def_macro_noop(&format!("\\{env}[]"))?;
-    def_macro_noop(&format!("\\end{env}"))?;
-  }
-  // Field markup macros: emit their content as text.
-  for m in [
-    "bauthor","beditor","bsnm","bfnm","binits","bparticle","bsuffix",
-    "btitle","bjournal","bbooktitle","bseries","bvolume","byear","bpages",
-    "bedition","bpublisher","baddress","blocation","borganization","binstitution",
-    "bschool","btype","bnumber","bchapter","bhowpublished","bnote","banumber",
-    "bisbn","betal",
-  ] {
-    def_macro_identity(&format!("\\{m}{{}}"))?;
-  }
-  DefMacro!("\\AND", "and ");
-  def_macro_noop("\\bptok{}")?;
-  def_macro_noop("\\bptnote{}")?;
-  def_macro_noop("\\bid{}")?;          // keyval mr=/doi=… — drop (matches class display)
-  DefMacro!("\\bmrnumber{}", "\\MR{#1}");
-  DefMacro!("\\MR{}", "MR#1");         // MathReviews id, as text
-  def_macro_noop("\\endbibitem")?;
+  // The structured `\b*` bibliography, `{pf}` proofs with `\qed`, `\tablewidth` table notes and `\bolds`: the
+  // markup the VTeX IMS classes share (ims_support_sty.rs).
+  RequirePackage!("ims_support");
 
   // ---- misc list / sectioning / theorems the class adds --------------------
   DefEnvironment!("{longlist}[]", "<ltx:enumerate>#body</ltx:enumerate>",
     mode => "internal_vertical");
   DefMacro!("\\newproclaim", "\\newtheorem");
-  // arximspdf predefines a Theorem env and proof env(s) (L1405/1430-1435).
+  // arximspdf predefines a Theorem env (L1405); its proof envs are in ims_support.
   RawTeX!(r"\newtheorem{thm}{Theorem}");
-  // `{pf}` (arximspdf.cls:1428-1434, vtexthm) runs `\proofname\proof@sep` ("Proof.") in before its body and ends with
-  // `\@qed`, the class's `\qed` (`\theqed`, a □ ending the line; :1417-1426); `{pf*}{<name>}` names it. `\noqed` drops
-  // the next automatic □; `\upqed`/`\rightqed`/`\qedbreak` only move it. The class has no `{proof}` and loads no amsthm,
-  // so `pf` as `\begin{proof}` was undefined (12 arximspdf papers of run 329: 1205.6055, 1104.1047, 1001.4028), and
-  // `\upqed` undefined in 5.
-  DefMacro!("\\proofname", "Proof");
-  DefConstructor!("\\lx@arxims@proof{}", "<ltx:proof><ltx:title class='ltx_runin'>#1</ltx:title>");
-  DefConstructor!("\\lx@arxims@endproof", sub[document, _args] {
-    document.maybe_close_element("ltx:proof")?;
-  });
-  RawTeX!(r"\def\theqed{\ensuremath{\square}}
-\def\qed{\theqed}
-\let\@qed\qed
-\def\noqed{\let\sv@qed\@qed\def\@qed{\global\let\@qed\sv@qed}}
-\newenvironment{pf}{\par\lx@arxims@proof{\proofname.}}{\@qed\par\lx@arxims@endproof}
-\newenvironment{pf*}[1]{\par\lx@arxims@proof{#1.}}{\@qed\par\lx@arxims@endproof}");
-  for cs in ["upqed","qedbreak","rightqed"] { def_macro_noop(&format!("\\{cs}"))?; }
-
-  // ---- tables (arximspdf.cls:1729-1790, 1838-1848) ---------------------------
-  // `\tablewidth` is the class's dimen for a table's caption and notes (11 papers of run 329 set it).
-  RawTeX!(r"\newdimen\tablewidth \tablewidth\textwidth");
-  // `\tabnotetext[<mark>]{<label>}{<text>}` sets a table note below the tabular; `\tabnoteref[<mark>]{<label>}` and
-  // `\tabnotemark[<mark>]{<label>}` print its mark in a cell (:1745-1764). The note's text is kept as a paragraph of the
-  // table, and an explicit `[<mark>]` as a superscript on both sides; the class's automatic numbering is not modelled.
-  DefMacro!("\\tabnotetext[]{}{}", "\\par\\lx@arxims@tabnotemark{#1}#3\\par");
-  DefMacro!("\\tabnoteref[]{}", "\\lx@arxims@tabnotemark{#1}");
-  DefMacro!("\\tabnotemark[]{}", "\\lx@arxims@tabnotemark{#1}");
-  RawTeX!(r"\def\lx@arxims@tabnotemark#1{\if\relax\detokenize{#1}\relax\else\textsuperscript{#1}\fi}");
-
   // ---- frontmatter (standard LaTeXML frontmatter API; metadata preserved) --
   // Standardize the IMS scaffolding onto the article frontmatter flow: the
   // {frontmatter}/{aug}/{keyword} blocks are TRANSPARENT wrappers (no special

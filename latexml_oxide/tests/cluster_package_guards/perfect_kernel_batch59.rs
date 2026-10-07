@@ -1202,17 +1202,17 @@ fn autoref_names_follow_the_babel_language() {
       (
         "figure",
         "S0.F1",
-        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Abbildung 1</tag><tag role="autoref">Abbildung 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Abbildung 1</tag></tags><toccaption><tag close=" ">1</tag>Bild</toccaption><caption><tag close=": ">Abbildung 1</tag>Bild</caption></figure>"##,
+        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Abbildung 1</tag><tag role="autoref">Abbildung 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Abbildung 1</tag></tags><toccaption><tag close=" ">1</tag>Bild</toccaption><caption><tag close=": ">Abbildung 1</tag>Bild</caption></figure>"##,
       ),
       (
         "table",
         "S0.T1",
-        r##"<table inlist="lot" labels="LABEL:t" xml:id="S0.T1"><tags><tag>Tabelle 1</tag><tag role="autoref">Tabelle 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Tabelle 1</tag></tags><toccaption><tag close=" ">1</tag>Tafel</toccaption><caption><tag close=": ">Tabelle 1</tag>Tafel</caption></table>"##,
+        r##"<table inlist="lot" labels="LABEL:t" xml:id="S0.T1"><tags><tag>Tabelle 1</tag><tag role="autoref">Tabelle 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Tabelle 1</tag></tags><toccaption><tag close=" ">1</tag>Tafel</toccaption><caption><tag close=": ">Tabelle 1</tag>Tafel</caption></table>"##,
       ),
       (
         "figure",
         "S0.F2",
-        r##"<figure inlist="lof" labels="LABEL:g" xml:id="S0.F2" xml:lang="fr"><tags><tag>Figure 2</tag><tag role="autoref">figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>Image</toccaption><caption><tag close=": ">Figure 2</tag>Image</caption></figure>"##,
+        r##"<figure inlist="lof" labels="LABEL:g" xml:id="S0.F2" xml:lang="fr"><tags><tag>Figure 2</tag><tag role="autoref">figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>Image</toccaption><caption><tag close=": ">Figure 2</tag>Image</caption></figure>"##,
       ),
     ],
   );

@@ -37,4 +37,24 @@ LoadDefinitions!({
   DefMacro!("\\loctoks", "\\newtoks");
   DefMacro!("\\globmarks", "\\newmarks");
   DefMacro!("\\locmarks", "\\newmarks");
+  // etex.sty:382-425 block allocators: `\globtoksblk\foo{17}` `\mathchardef`s `\foo` to the first of 17 consecutive
+  // registers (`\et@xgblk`). They exist only in etex.sty's pre-2020 branch: on a kernel with extended allocation
+  // (`\count10`-`\count15` past 255, LaTeX 2020-02 on) etex.sty:103-139 aliases the single forms, as this binding does,
+  // and stops, leaving the block forms undefined (TL2025 pdflatex: "Undefined control sequence"). Papers of that era use
+  // them (OXIDIZED_DESIGN_DIVERGENCES #457). A block is taken downward from the top of each register range, as etex's
+  // local blocks were (`\count27`), clear of LaTeX's upward allocation and of `\count@`/`\count255`. Undefined, the
+  // "proofs at the end" idiom's `\toks\numexpr\prooftoks+\count@` read "Missing number" and left `+\count@\relax`, which
+  // reset its loop counter: an endless `\loop` (1610.01929, 1801.07292; Perl loops too).
+  RawTeX!(r"\def\lx@etex@allocblk#1#2#3{\global\allocationnumber\numexpr\csname lx@etex@blktop@#1\endcsname-(#3)\relax
+\expandafter\xdef\csname lx@etex@blktop@#1\endcsname{\the\allocationnumber}\global\mathchardef#2\allocationnumber}
+\def\lx@etex@blktop@count{32768}\def\lx@etex@blktop@dimen{32768}\def\lx@etex@blktop@skip{32768}
+\def\lx@etex@blktop@muskip{32768}\def\lx@etex@blktop@box{32768}\def\lx@etex@blktop@toks{32768}
+\def\lx@etex@blktop@marks{32768}
+\def\globcountblk{\lx@etex@allocblk{count}}\let\loccountblk\globcountblk
+\def\globdimenblk{\lx@etex@allocblk{dimen}}\let\locdimenblk\globdimenblk
+\def\globskipblk{\lx@etex@allocblk{skip}}\let\locskipblk\globskipblk
+\def\globmuskipblk{\lx@etex@allocblk{muskip}}\let\locmuskipblk\globmuskipblk
+\def\globboxblk{\lx@etex@allocblk{box}}\let\locboxblk\globboxblk
+\def\globtoksblk{\lx@etex@allocblk{toks}}\let\loctoksblk\globtoksblk
+\def\globmarksblk{\lx@etex@allocblk{marks}}\let\locmarksblk\globmarksblk");
 });

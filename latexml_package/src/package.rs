@@ -250,6 +250,7 @@ pub mod ifwea_fontmap;
 pub mod ifxetex_sty;
 pub mod ijcai_sty;
 pub mod import_sty;
+pub mod ims_support_sty;
 pub mod indentfirst_sty;
 pub mod infwarerr_sty;
 pub mod inputenc_sty;

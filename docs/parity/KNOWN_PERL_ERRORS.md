@@ -11061,3 +11061,61 @@ note `affiliation:2` and the orphaned note is dropped; a leading mark that autho
 one legend, so a `\thanks{\textsuperscript{$\dagger$} School ...}` goes to the † authors (2609.00885, 2609.19600).
 Repro `sectioning-frontmatter/author_thanks_and_footnote_keep_their_math`;
 guard `perfect_kernel_batch61::author_thanks_and_footnote_keep_their_math`.
+
+## 516. etex's register-block allocators are undefined, and the "proofs at the end" idiom loops
+
+etex.sty:382-425 defines `\globcountblk`/`\loccountblk` … `\globmarksblk`/`\locmarksblk`: `\globtoksblk\foo{17}`
+`\mathchardef`s `\foo` to the first of 17 consecutive registers. Perl's `etex.sty.ltxml` is `LoadPool('eTeX')` only, and
+Rust's binding forwarded the single-register `\glob*`/`\loc*` forms to `\new*` without the block forms. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{etex}
+\makeatletter
+\globtoksblk\prooftoks{1000}
+\newcounter{proofcount}
+\long\def\proofatend#1\endproofatend{\toks\numexpr\prooftoks+\value{proofcount}\relax=\expandafter{#1}\stepcounter{proofcount}}
+\def\printproofs{\count@=\z@\loop \the\toks\numexpr\prooftoks+\count@\relax\ifnum\count@<\value{proofcount}\advance\count@\@ne \repeat}
+\makeatother
+\begin{document}
+\proofatend First proof.\endproofatend
+\printproofs
+\end{document}
+```
+
+pdflatex with a pre-2020 kernel: 0 errors, "First proof." once (on today's kernel etex.sty:103-139 stops before the
+block forms, and TL2025 pdflatex reports `\globtoksblk` undefined too). Perl: `\globtoksblk` and `\prooftoks` undefined, then `\numexpr` reads "Missing
+number" and leaves `+\count@\relax`, which resets the `\loop` counter — an endless loop (1610.01929 killed at the timeout
+after 1,914,755 warnings). Rust (63a): the block allocators are defined, each block taken downward from the top of
+its register range (OXIDIZED_DESIGN_DIVERGENCES #457). Witnesses 1610.01929, 1801.07292.
+Repro `macro-state/etex_register_blocks_allocate`; guard `perfect_kernel_batch63::etex_register_blocks_allocate`.
+
+## 517. arxbj's `{longlist}` is a bare `\list`, which recurses
+
+ar5iv-bindings `arxbj.cls.ltxml:36` does `Let('\longlist','\list')`; arxbj.cls:930-958 defines `\longlist` as
+`\list{\labellonglist}{\usecounter{longlist}…}`, labelled "(i)", "(ii)" (:1070). With the bare `\list`, the first
+`\item` is read as the label argument and every label is `\item` again. Minimal trigger:
+
+```latex
+\documentclass{arxbj}
+\begin{document}
+\begin{longlist}
+\item first
+\item second
+\end{longlist}
+\end{document}
+```
+
+pdflatex (with the class): "(i) first / (ii) second". Perl: `Fatal:perl:deep_recursion`. Rust (62zu): the same binding
+gave `Fatal:Stomach:Recursion`; (63a) the class's counter, labels and `\list` call. Witnesses 1203.0186, 1003.1189.
+Repro `list-structure/arxbj_longlist_items_are_labelled`; guard `perfect_kernel_batch63::arxbj_longlist_items_are_labelled`.
+
+## 518. An alignment nested in an eqnarray row steps the equation once per inner row
+
+latex_constructs.pool.ltxml:3740-3755 (`\@array@bindings`) and TeX_Tables.pool.ltxml:252-275 (`alignmentBindings`) never
+reset `\lx@alignment@row@before`/`@after`; only Base_XMath.pool.ltxml:596 and :718 do. An `\halign` or `{array}` inside an
+`{eqnarray}` row inherits `\eqnarray@row@before`, which steps the equation per inner row. Minimal trigger: repro
+`kernel-alignment/nested_alignment_inherits_eqnarray_row_hook` (three eqnarrays, the second with a two-row `\halign`,
+the third with a two-row `{array}`, each followed by `\theequation`). pdflatex: 1, 2, 3. Perl and Rust (63a): 1, 4, 7.
+RED. Fix plan: reset both hooks to empty at the start of the alignment bindings (`sect10.rs:468`, `tex_tables.rs:850`);
+eqnarray and amsmath set them afterwards. Found under 1601.02132 (63a, root B).

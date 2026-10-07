@@ -1,0 +1,12 @@
+% witness: 1203.0186, 1003.1189 (arxbj): `\begin{longlist}\item ...`
+% oracle:  pdflatex 0 errors: items labelled "(i)", "(ii)" (arxbj.cls:930-958, :1070)
+% engines: rust (62zu) = Fatal:Stomach:Recursion (`\longlist` let to `\list` took `\item` as its label); Perl (ar5iv-bindings) deep_recursion
+% expect:  0 errors; items tagged (i) and (ii)
+% status:  GREEN (63a)
+\documentclass{arxbj}
+\begin{document}
+\begin{longlist}
+\item first
+\item second
+\end{longlist}
+\end{document}
