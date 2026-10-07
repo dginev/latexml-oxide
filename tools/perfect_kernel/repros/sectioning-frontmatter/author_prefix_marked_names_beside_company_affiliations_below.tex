@@ -1,0 +1,13 @@
+% witness: 63e review r10 (r2: names marked before them side by side, their company affiliations and emails below, each
+%          after \quad)
+% oracle:  pdflatex 0 errors: "^1Ann Able  ^2Bob Baker" / "^1Google DeepMind  ^2Huawei Technologies" / emails
+% engines: rust (63e r15) = two authors "Google DeepMind", "Huawei Technologies" invented, Ann and Bob without
+%          affiliations (0 errors, silent); HEAD Bob lost into an affiliation (Perl: Base_Utility.pool.ltxml:708)
+% expect:  2 creators — Ann (Google DeepMind, ann@google.com), Bob (Huawei Technologies, bob@huawei.com); 0 errors
+% status:  RED (63e r15) -> GREEN (63e)
+\documentclass{article}
+\author{$^{1}$Ann Able \quad $^{2}$Bob Baker\\ $^{1}$Google DeepMind \quad $^{2}$Huawei Technologies\\ $^{1}$\texttt{ann@google.com} \quad $^{2}$\texttt{bob@huawei.com}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

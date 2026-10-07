@@ -862,13 +862,24 @@ fn frontmatter_ieee_authorblock_trailing_email() {
     !x.contains("<p>{anuja") && !x.contains("<p>\n{anuja"),
     "trailing bare email leaked into the document body as a <p>:\n{x}"
   );
-  // The email must instead live inside the creator's frontmatter (an affiliation).
+  // The email must instead live inside the creators' frontmatter (an affiliation). The block's name list is one
+  // author each (63e: `\IEEEauthorblockN` reads its body as an author block), exactly three, the block's affiliation
+  // every one's, and the email the last one's (`convert_to_xml` holds the conversion to 0 errors).
+  assert_eq!(x.matches("<creator ").count(), 3, "{x}");
+  // one affiliation each: the empty piece of ", and Kian-Lee Tan" gave Seth Gilbert a second copy (63e review)
+  assert_eq!(
+    x.matches("National University of Singapore").count(),
+    3,
+    "{x}"
+  );
+  for name in ["Anuja Meetoo Appavoo", "Seth Gilbert", "Kian-Lee Tan"] {
+    assert!(
+      creator_block_contains(&x, name, "National University of Singapore"),
+      "{name} is not an author with the block's affiliation:\n{x}"
+    );
+  }
   assert!(
-    creator_block_contains(
-      &x,
-      "Anuja Meetoo Appavoo, Seth Gilbert, and Kian-Lee Tan",
-      "@comp.nus.edu.sg"
-    ),
+    creator_block_contains(&x, "Kian-Lee Tan", "@comp.nus.edu.sg"),
     "trailing email is not attached to the creator's frontmatter:\n{x}"
   );
   // The genuine body paragraph is still present and correct.

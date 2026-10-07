@@ -1,0 +1,13 @@
+% witness: astro-ph0302534 (aastex, here emulateapj — aastex.cls is not in TeX Live; both bind aas_support: `Todd M. Tripp,\altaffilmark{2,3} Bart P. Wakker,\altaffilmark{4} ...`)
+% oracle:  pdflatex 0 errors: each mark printed after the comma that follows its name
+% engines: rust (63d) = ONE personname for all three names, 0 errors (silent); Perl alike
+% expect:  3 creators — Tripp (2), Wakker (4), Jenkins (2) — each with its \altaffiltext; 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Todd M. Tripp,\altaffilmark{2} Bart P. Wakker,\altaffilmark{4} and Edward B. Jenkins\altaffilmark{2}}
+\altaffiltext{2}{Princeton University Observatory, Princeton, NJ}
+\altaffiltext{4}{Department of Astronomy, University of Wisconsin, Madison, WI}
+\maketitle
+\end{document}

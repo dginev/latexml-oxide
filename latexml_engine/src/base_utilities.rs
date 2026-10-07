@@ -1176,11 +1176,21 @@ LoadDefinitions!({
   /// `\affiliations`) as a function, so both the replacing kernel `\author`
   /// and the appending raw-class mode share it.
   fn add_authors_calls(stuff: Tokens, replace: bool) -> Result<Tokens> {
-    add_authors_calls_sectioned(stuff, replace, true)
+    add_authors_calls_sectioned(stuff, replace, true, None, false)
   }
   /// [`add_authors_calls`]; `sectioned` false for the names an IJCAI split already took out, which
-  /// go round no more (Perl's `\lx@add@authors` has no marker branch, ijcai.sty.ltxml:40).
-  fn add_authors_calls_sectioned(stuff: Tokens, replace: bool, sectioned: bool) -> Result<Tokens> {
+  /// go round no more (Perl's `\lx@add@authors` has no marker branch, ijcai.sty.ltxml:40), and for a per-author
+  /// class's `\author`, which Perl adds whole (its names re-entering as `\lx@ijcai@names` would replace the authors
+  /// before it). `keyvals` are handed to every `\lx@add@author` the block makes (a per-author class's
+  /// `\author[labels]{…}`: revtex `annotations=`); `cautious` for a per-author class binding, whose names lines split
+  /// only where they read as names ([`split_author_line_cautious`]).
+  fn add_authors_calls_sectioned(
+    stuff: Tokens,
+    replace: bool,
+    sectioned: bool,
+    keyvals: Option<Tokens>,
+    cautious: bool,
+  ) -> Result<Tokens> {
     // Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
     // blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in
     // arXiv:2401.03955) — pack names, `\affiliations` and a comma-separated
@@ -1206,6 +1216,16 @@ LoadDefinitions!({
       return Ok(Tokens::new(out));
     }
     let mut calls: Vec<Token> = Vec::new();
+    // A per-author class binding's `\author` (aastex, amsart, revtex, an IEEE block, a labelled authblk `\author`),
+    // which Perl reads as one author, splits its names only where they read as names (63e); a raw class's own
+    // `\author` (`\lx@add@authors@adaptive`, 2309.03769's dan2e.sty) splits as the article `\author` does.
+    let split_names = |line: Tokens| {
+      if cautious {
+        split_author_line_cautious(line)
+      } else {
+        split_author_line(line)
+      }
+    };
     // LaTeX-faithful `\author` REPLACES (the last call wins); a raw class that
     // redefined `\author` to call it once per author appends instead (56fl).
     if replace {
@@ -1280,8 +1300,14 @@ LoadDefinitions!({
     .iter()
     .any(|form| stuff_string.contains(form))
     {
-      calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(stuff)]).unlist());
-    } else if position_of(&stuff, &authorsup_markers()).is_some() {
+      calls
+        .extend(Invocation!(T_CS!("\\lx@add@author"), vec![keyvals.clone(), Some(stuff)]).unlist());
+    } else if position_of(&stuff, &authorsup_markers()).is_some()
+      && (!cautious || answers_its_marks(&stuff))
+    {
+      // (a per-author class binding keeps its marks visible on the names, as Perl does, and takes the unmarked path
+      // below — its affiliation commands answer no mark (an IEEE block's `\IEEEauthorblockA`, amsart's `\address`) —
+      // unless the block holds its marked affiliations itself (2401.14196's `\author[*]{… \\ $^1$DeepSeek-AI …}`))
       let mut entries: Vec<(AuthorLineKind, Tokens)> = Vec::new();
       let mut prefix_marked_names = false;
       // Split on the `\and` family FIRST so an `\and` is a HARD author boundary:
@@ -1294,15 +1320,26 @@ LoadDefinitions!({
       // splitting on `\quad`/`\qquad`/`\\`. html_feedback#1021 F2 residual:
       // `Alice\mk$^*$ \and Bob\mk` was one merged creator; now two.
       // OXIDIZED_DESIGN #52(g).
-      for group in split_tokens(stuff, author_and_splits()) {
-        let group = unwrap_alignment_environment(group);
-        if group.is_empty() {
-          continue;
-        }
+      // The block's lines, in the order the loop below reads them, for a line to look at the lines after it.
+      let groups: Vec<Tokens> = split_tokens(stuff, author_and_splits())
+        .into_iter()
+        .map(unwrap_alignment_environment)
+        .filter(|group| !group.is_empty())
+        .collect();
+      let block_lines: Vec<Tokens> = groups
+        .iter()
+        .flat_map(|group| split_tokens_delimited(group.clone(), author_affil_splits()))
+        .map(|(_, line)| line)
+        .collect();
+      let mut position = 0;
+      for group in groups {
         // Marker-less lines may only continue an entry created WITHIN this
         // `\and` group — never one from a previous group.
         let group_start = entries.len();
+        let mut names_line = true;
         for (delimiter, line) in split_tokens_delimited(group, author_affil_splits()) {
+          position += 1;
+          let beside = beside_prefix_marked_names(prefix_marked_names, &mut names_line, &delimiter);
           if line.is_empty() {
             continue;
           }
@@ -1327,9 +1364,18 @@ LoadDefinitions!({
                 appended.extend(line.unlist());
                 last.1 = Tokens::new(appended);
               } else {
-                // First line of this `\and` group and it has no marker → a NEW
-                // author (never merge back into the previous group).
-                entries.push((AuthorLineKind::Author, line));
+                // First line of this `\and` group and it has no marker → a NEW author (never merged
+                // back into the previous group), whole as Perl keeps it ("safest to assume author?",
+                // Base_Utility.pool.ltxml:705-706) — unless it reads as several names, then each its own
+                // (`Aghil Alaee\footnote{…} \,\,and Hari K. Kunduri\footnote{…}\\ … $^a$ Department …`,
+                // 1407.0988), as the merged-author check would otherwise report.
+                if name_count(&visible_name_text(line.unlist_ref())) >= 2 {
+                  for author in split_author_line(line) {
+                    entries.push((AuthorLineKind::Author, author));
+                  }
+                } else {
+                  entries.push((AuthorLineKind::Author, line));
+                }
               }
             },
             Some(_) => {
@@ -1377,14 +1423,32 @@ LoadDefinitions!({
               let affiliations_begun = entries
                 .iter()
                 .any(|(kind, _)| *kind == AuthorLineKind::Affiliation);
-              if first_line
-                || !leads
-                || (prefix_marked_names
-                  && entries.len() == group_start
-                  && !affiliations_begun
-                  && names_a_new_mark())
-              {
-                for author in split_author_line(line) {
+              // A line marked as the first that reads as names is a name by where it stands: as the first line of an
+              // `\and` group when no author before it requests its mark (Perl-era rule) or an affiliation below
+              // answers it ([`mark_answered_below`]: `… $^{1}$Univ A \and $^{2}$Bob Baker\\ $^{2}$Univ B`); before the
+              // affiliations, beside the first on its printed line when its mark is new or answered below
+              // (`$^{1}$Ann Able \quad $^{1}$Bob Baker \quad $^{2}$Cat Cole\\ $^{1}$Univ A\\ $^{2}$Univ B`), and on a
+              // line of its own when its mark is new and answered below (`$^{1}$Ann Able\\ $^{2}$Bob Baker\\
+              // $^{1}$Univ A\\ $^{2}$Univ B`). On a line of its own, an affiliation whose mark a name above requests stays
+              // one however it reads (`$^{1}$Carnegie Mellon\\ $^{1}$School of Computer Science`); beside the first or at
+              // an `\and` group's head it does unless an affiliation below answers it (`$^{1}$Ann Able \quad
+              // $^{1}$Google DeepMind`); one nothing below answers stays one (`$^{3}$Google DeepMind`).
+              let names = || reads_as_names(&line);
+              let answered = || mark_answered_below(&line, &block_lines[position..]);
+              let group_first = entries.len() == group_start;
+              let marked_name = || {
+                (group_first
+                  && ((!affiliations_begun && names_a_new_mark()) || (names() && answered())))
+                  || (!affiliations_begun
+                    && names()
+                    && if beside {
+                      names_a_new_mark() || answered()
+                    } else {
+                      names_a_new_mark() && answered()
+                    })
+              };
+              if first_line || !leads || (prefix_marked_names && marked_name()) {
+                for author in split_names(line) {
                   entries.push((AuthorLineKind::Author, author));
                 }
               } else {
@@ -1415,7 +1479,13 @@ LoadDefinitions!({
         match kind {
           AuthorLineKind::Author => {
             let withsup = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]);
-            calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(withsup)]).unlist());
+            calls.extend(
+              Invocation!(T_CS!("\\lx@add@author"), vec![
+                keyvals.clone(),
+                Some(withsup)
+              ])
+              .unlist(),
+            );
           },
           AuthorLineKind::Affiliation => {
             let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
@@ -1470,37 +1540,46 @@ LoadDefinitions!({
         // rendered "Ruiqi Li" as an empty `<personname/>` + a bold "Ruiqi Li"
         // affiliation; now "Ruiqi Li" is an author. (A `\\`-only block still yields a
         // single empty author below, so its affiliations are not dropped.)
-        let mut pieces = split_tokens(block, vec![SplitDelim::Token(T_CS!("\\\\"))])
+        let lines: Vec<Tokens> = split_tokens(block, author_line_breaks())
           .into_iter()
-          .filter(|l| !l.is_empty());
-        let names_line = pieces.next().unwrap_or_default();
-        let affils: Vec<Tokens> = pieces.collect();
-        let mut names = split_author_line(names_line);
-        if names.is_empty() {
-          names.push(Tokens::default());
-        }
-        let last = names.len() - 1;
-        for (i, name) in names.into_iter().enumerate() {
-          let mut body: Vec<Token> = name.unlist();
-          if i == last {
-            for line in &affils {
-              // A bare email line (\texttt{user@host}) is an email, not an
-              // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315).
-              let cs = if line_is_email(line) {
-                T_CS!("\\lx@add@email")
-              } else {
-                T_CS!("\\lx@add@affiliation")
-              };
-              body.extend(Invocation!(cs, vec![None, Some(line.clone())]).unlist());
-            }
+          .filter(|l| !l.is_empty())
+          .collect();
+        for (names_line, affils) in name_groups(lines) {
+          let mut names = split_names(names_line);
+          if names.is_empty() {
+            names.push(Tokens::default());
           }
-          calls.extend(
-            Invocation!(T_CS!("\\lx@add@author"), vec![
-              None,
-              Some(Tokens::new(body))
-            ])
-            .unlist(),
-          );
+          let last = names.len() - 1;
+          for (i, name) in names.into_iter().enumerate() {
+            let mut body: Vec<Token> = name.unlist();
+            if i == last {
+              for line in &affils {
+                let (line, annotations) = if cautious {
+                  take_author_annotations(line)
+                } else {
+                  (line.clone(), Vec::new())
+                };
+                if !line.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+                  // A bare email line (\texttt{user@host}) is an email, not an
+                  // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315).
+                  let cs = if line_is_email(&line) {
+                    T_CS!("\\lx@add@email")
+                  } else {
+                    T_CS!("\\lx@add@affiliation")
+                  };
+                  body.extend(Invocation!(cs, vec![None, Some(line)]).unlist());
+                }
+                body.extend(annotations);
+              }
+            }
+            calls.extend(
+              Invocation!(T_CS!("\\lx@add@author"), vec![
+                keyvals.clone(),
+                Some(Tokens::new(body))
+              ])
+              .unlist(),
+            );
+          }
         }
       }
     }
@@ -1510,7 +1589,30 @@ LoadDefinitions!({
   // A class's own author command, called once per author or author group and each adding to the ones before
   // (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`): the author-line parsing of `\lx@add@authors`
   // without its replacing, so the names' superscript marks request the affiliations labelled with them.
-  DefMacro!("\\lx@add@authors@append{}", sub[(stuff)] { add_authors_calls(stuff, false) });
+  // A per-author class's `\author` (amsart, aastex, revtex) parses its body as one more author block too: a name list
+  // there names several people (`\author{Klemens Fellner and Bao Quoc Tang}`, 1708.01427; aastex's
+  // `Name\altaffilmark{1}, Name\altaffilmark{2}`, 1010.1318), and a `\\` line under a name is its affiliation
+  // (`\author{Masao Ishikawa\\ \small Faculty of Education, …}`, math0606082). The optional keyvals go to each author
+  // (revtex's `annotations=`).
+  DefMacro!("\\lx@add@authors@append[]{}", sub[(keyvals, stuff)] {
+    add_authors_calls_sectioned(stuff, false, false, keyvals, true)
+  });
+  // A class's own author-list command (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`, documented as a
+  // name list): appended like `\lx@add@authors@append`, but split at every separator as the article `\author` is.
+  DefMacro!("\\lx@add@authors@list{}", sub[(stuff)] {
+    add_authors_calls_sectioned(stuff, false, true, None, false)
+  });
+  // A name list where a binding has no lines or affiliations to read: each name `split_author_line` finds (comma,
+  // " and ", " \& ") is an author of its own, the keyvals given to each (`\author{R. Braun\inst{1} and W. B.
+  // Burton\inst{2}}`, astro-ph9810433; `\IEEEauthorblockN{Clemens Paul Zengler, Niels Troldborg, Mac Gaunaa.}`,
+  // 2410.19527).
+  DefMacro!("\\lx@add@author@split[]{}", sub[(keyvals, names)] {
+    let mut calls: Vec<Token> = Vec::new();
+    for name in split_author_line(names) {
+      calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![keyvals.clone(), Some(name)]).unlist());
+    }
+    Ok(Tokens::new(calls))
+  });
   // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): when the queued authors
   // carry marks, its marked lines are affiliations labelled by their marks, which go to the authors requesting them
   // (`affiliation_calls`; 2609.17368, 22690, 28084); otherwise it is one affiliation, of the last author or as the
@@ -1526,7 +1628,7 @@ LoadDefinitions!({
       Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
     }
   });
-  DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] { add_authors_calls_sectioned(stuff, true, false) });
+  DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] { add_authors_calls_sectioned(stuff, true, false, None, false) });
 
   // Shared "sectioned author block" machinery for the IJCAI author idiom
   // (ijcai97.sty and its derivatives): one `\author{}` holding names, then
@@ -2590,6 +2692,11 @@ fn mark_operands(tokens: &[Token]) -> Vec<Vec<Token>> {
 /// The marks an author's tokens request: those outside its notes, a `\thanks{...}` or `\footnote{...}` whose own
 /// superscripts are its text or label it (`note_body`) — `Ann Able\thanks{$^{a}$ Supported by ...}` requests nothing.
 fn author_mark_operands(tokens: &[Token]) -> Vec<Vec<Token>> {
+  mark_operands(&outside_notes(tokens))
+}
+
+/// An author's tokens without its `\thanks{...}` and `\footnote{...}` (and their optional label).
+fn outside_notes(tokens: &[Token]) -> Vec<Token> {
   let mut outside = Vec::with_capacity(tokens.len());
   let mut i = 0;
   while i < tokens.len() {
@@ -2608,7 +2715,44 @@ fn author_mark_operands(tokens: &[Token]) -> Vec<Vec<Token>> {
     outside.push(tokens[i]);
     i += 1;
   }
-  mark_operands(&outside)
+  outside
+}
+
+/// The notes and requests an affiliation line under a name carries in a per-author class's `\author` (`Steward
+/// Observatory\altaffilmark{2}`, `Univ A\thanks{Grant}`), taken off the line with their arguments to annotate the
+/// author, as Perl, adding that `\author` whole, gives them to it: digested inside the affiliation, an `\altaffilmark`
+/// request made a creator of its own and a `\thanks` a document-level note. The article `\author` nests the line as
+/// Perl does (Base_Utility.pool.ltxml:723-725), so a `\thanks` there stays a document note (pubnote, as Perl's
+/// `digestFrontmatterItem` binds it in a contact, :332-333; html_feedback#6888).
+fn take_author_annotations(line: &Tokens) -> (Tokens, Vec<Token>) {
+  let notes = [
+    T_CS!("\\thanks"),
+    T_CS!("\\thanksref"),
+    T_CS!("\\footnote"),
+    T_CS!("\\altaffilmark"),
+  ];
+  let v = line.unlist_ref();
+  let mut kept = Vec::with_capacity(v.len());
+  let mut taken = Vec::new();
+  let mut i = 0;
+  while i < v.len() {
+    if notes.contains(&v[i]) {
+      let mut j = i + 1;
+      if v.get(j) == Some(&T_OTHER!("["))
+        && let Some(close) = v[j..].iter().position(|t| *t == T_OTHER!("]"))
+      {
+        j += close + 1;
+      }
+      if let Some((_, next)) = sup_operand_at(v, j) {
+        taken.extend_from_slice(&v[i..next]);
+        i = next;
+        continue;
+      }
+    }
+    kept.push(v[i]);
+    i += 1;
+  }
+  (Tokens::new(kept), taken)
 }
 
 /// The operand of an affiliation entry's last mark, which `\lx@sup@setlabel@affiliation` labels it by.
@@ -4367,6 +4511,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   coalesce_empty_creators(document)?;
   distribute_upfront_contacts(document)?;
   relocate_annotations(document)?;
+  flag_merged_creators(document)?;
   Ok(())
 }
 
@@ -7339,8 +7484,9 @@ pub fn split_tokens_delimited(
             let mut peeked: Vec<Token> = Vec::new(); // tokens consumed beyond `t`
             let mut cur: Option<Token> = Some(t);
             while let (Some(c), Some(m)) = (cur, tomatch.first()) {
-              if c == *m || (*m == T_SPACE!() && c == T_CS!("\\ ")) {
-                // HACK space!
+              // HACK space! A control space or thin space stands for the space of a space-bearing delimiter
+              // (`Aghil Alaee\footnote{…} \,\,and Hari K. Kunduri`, 1407.0988: " and ")
+              if c == *m || (*m == T_SPACE!() && (c == T_CS!("\\ ") || c == T_CS!("\\,"))) {
                 tomatch = &tomatch[1..];
                 if !tomatch.is_empty() {
                   cur = stream.pop_front();
@@ -7547,42 +7693,121 @@ fn whole_line_cs_wrapper(tokens: &Tokens) -> Option<(Token, Tokens)> {
 /// (where it would shred "Language and Intelligence").
 ///
 /// The split proceeds by hierarchy:
-///  1. the name separators ("," and " and ") at top level; if that already
+///  1. the name separators ("," and " and ", " \& ") at top level; if that already
 ///     yields more than one name we are done;
 ///  2. otherwise, if the whole line is a single font wrapper `\cmd{ a, b, c }`
 ///     (Perl's `SplitTokens` can't see the brace-hidden separators, so the
 ///     wrapper collapses into ONE creator that then hoards every `$^n$` marker
 ///     as a duplicate affiliation — arXiv 2605.00347), descend through the
 ///     wrapper, split its inner name list, and re-apply `\cmd` to each name so
-///     every author becomes its own creator with the correct affiliation.
+///     every author becomes its own creator with the correct affiliation;
+///  3. otherwise, if the line is one group opening with declarations whose content reads as names (`{\bf A, B}`,
+///     hep-th9212083), the same with the group and its declarations.
+///
+/// A qualifier (`Jr.`, `PhD`, `\emph{Member, IEEE}`) or a piece of marks and notes only then rejoins the name before
+/// it.
 ///
 /// Public so a class binding whose `\authors{...}` is a comma/"and"-separated
 /// name list (e.g. AGU's `agujournal2019`) reuses this canonical splitter
 /// instead of re-listing the separators — the same split `\lx@add@authors`
 /// applies to a superscript-marked author line.
 pub fn split_author_line(line: Tokens) -> Vec<Tokens> {
-  // Name-level separators: comma and the literal word " and " ("Alice and Bob").
-  let name_seps = || vec![SplitDelim::Token(T_OTHER!(",")), literal_and()];
+  rejoin_name_qualifiers(split_author_names(line))
+}
+
+/// [`split_author_line`] for a binding whose `\author` Perl reads as one author (aastex, amsart, revtex, an IEEE
+/// block, a labelled authblk `\author`): its names line splits only where it reads as two or more names
+/// ([`name_count`]: `Klemens Fellner and Bao Quoc Tang`), and otherwise stays one author as written (`John Smith,
+/// Max Planck Institute for Mathematics`; a name the shape test cannot read).
+fn split_author_line_cautious(line: Tokens) -> Vec<Tokens> {
+  if name_count(&visible_name_text(line.unlist_ref())) >= 2 {
+    split_author_line(line)
+  } else {
+    vec![line]
+  }
+}
+
+/// [`split_author_line`] before a qualifier rejoins its name: each piece with the separator written before it (none
+/// for the first). An empty piece — between ", " and " and " in "A, B, and C" — names no one and is dropped, before a
+/// wrapper is put back on the pieces: kept, it became an empty creator that took a copy of every affiliation given to
+/// all the authors (`annotate=new`) and merged it onto B.
+fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
+  // Name-level separators: comma, the literal word " and " ("Alice and Bob") and " \& " (`Zheng Zheng \& Jordi
+  // Miralda-Escud\'e`, astro-ph0201275; 0908.0757).
+  let split = |tokens: Tokens| -> Vec<(Vec<Token>, Tokens)> {
+    let mut pieces: Vec<(Vec<Token>, Tokens)> = Vec::new();
+    // the separators of a dropped empty piece go on to the next (", and")
+    let mut carried: Vec<Token> = Vec::new();
+    for (delimiter, piece) in split_tokens_delimited(tokens, vec![
+      SplitDelim::Token(T_OTHER!(",")),
+      literal_and(),
+      literal_ampersand(),
+    ]) {
+      carried.extend(delimiter);
+      if !piece.is_empty() {
+        pieces.push((std::mem::take(&mut carried), piece));
+      }
+    }
+    pieces
+  };
   let line = marks_before_glued_commas(line);
-  let top = split_tokens(line.clone(), name_seps());
+  let top = split(line.clone());
   if top.len() > 1 {
     return top;
   }
   if let Some((cmd, inner)) = whole_line_cs_wrapper(&line) {
-    let inner_split = split_tokens(inner, name_seps());
+    // the marks after commas inside the wrapper are its names' too (`\textbf{Todd M. Tripp,\altaffilmark{2} …}`)
+    let inner_split = split(marks_before_glued_commas(inner));
     if inner_split.len() > 1 {
       return inner_split
         .into_iter()
-        .map(|piece| {
+        .map(|(delimiter, piece)| {
           let mut v = vec![cmd, T_BEGIN!()];
           v.extend(piece.unlist());
           v.push(T_END!());
-          Tokens::new(v)
+          (delimiter, Tokens::new(v))
+        })
+        .collect();
+    }
+  }
+  // A line that is one group opening with declarations (`{\bf Daniel Boyanovsky, Da- Shin Lee}`, hep-th9212083;
+  // `{\bf Jianfei Ma$^{2}$, \enspace Emmanuele Chersoni$^{2}$, …}`, 2608.16650) is the same when what it holds is
+  // names: each name in the group and its declarations. Braces alone are kept: they hold one name together
+  // (`\author{{Smith, Jr., John}}`).
+  if let Some((declarations, inner)) = whole_line_group(&line)
+    && declarations.iter().any(|t| *t != T_SPACE!())
+    && name_count(&visible_name_text(inner.unlist_ref())) >= 2
+  {
+    let inner_split = split(marks_before_glued_commas(inner));
+    if inner_split.len() > 1 {
+      return inner_split
+        .into_iter()
+        .map(|(delimiter, piece)| {
+          let mut v = vec![T_BEGIN!()];
+          v.extend(declarations.iter().copied());
+          v.extend(piece.unlist());
+          v.push(T_END!());
+          (delimiter, Tokens::new(v))
         })
         .collect();
     }
   }
   top
+}
+
+/// If `tokens` (spaces around it aside) is one brace group, its opening declarations ([`opening_declarations`]:
+/// `\bf`, `\small`) and the rest of its content.
+fn whole_line_group(tokens: &Tokens) -> Option<(Vec<Token>, Tokens)> {
+  let v = tokens.unlist_ref();
+  let start = v.iter().position(|t| *t != T_SPACE!())?;
+  let end = v.iter().rposition(|t| *t != T_SPACE!())?;
+  if end <= start || v[start].get_catcode() != Catcode::BEGIN || skip_group(v, start) != end + 1 {
+    return None;
+  }
+  let inner = Tokens::new(v[start + 1..end].to_vec());
+  let declarations = opening_declarations(&inner);
+  let rest = Tokens::new(inner.unlist_ref()[declarations.len()..].to_vec());
+  Some((declarations, rest))
 }
 
 /// In a list of names whose marks follow them, a mark glued to the comma after a name is that name's: `Ann
@@ -7644,6 +7869,9 @@ fn leading_marks_end(tokens: &[Token]) -> usize {
     let next = if first == T_CS!("\\textsuperscript")
       || first == T_CS!("\\lx@frontmatter@keepsup")
       || first == T_CS!("\\lx@frontmatter@symbolmark")
+      // aastex's mark (aas_support: an affiliation request), written after the comma as often as before it
+      // (`Todd M. Tripp,\altaffilmark{2,3} Bart P. Wakker,\altaffilmark{4}`, astro-ph0302534)
+      || first == T_CS!("\\altaffilmark")
     {
       sup_operand_at(tokens, i + 1).map(|(_, next)| next)
     } else if (first == T_CS!("\\thanks") || first == T_CS!("\\footnote"))
@@ -7728,6 +7956,10 @@ pub fn position_of(tokens: &Tokens, delims: &[Token]) -> Option<usize> {
   None
 }
 
+/// " \& " between two names, its spaces kept.
+fn literal_ampersand() -> SplitDelim {
+  SplitDelim::Tokens(Tokens::new(vec![T_SPACE!(), T_CS!("\\&"), T_SPACE!()]))
+}
 // Things to split authors (Perl PR #2767, Base_Utility.pool.ltxml)
 // This is " and " without the spaces stripped.
 fn literal_and() -> SplitDelim {
@@ -7910,8 +8142,147 @@ fn author_affil_splits() -> Vec<SplitDelim> {
     T_CS!("\\quad").into(),
     T_CS!("\\qquad").into(),
     T_CS!("\\\\").into(),
+    // latex.ltx:9256 `\DeclareRobustCommand\newline{\@normalcr\relax}`: the line break `\\` is (2401.14196's
+    // `Ann Able$^{1}$, Bob Baker$^{1,2}$ \newline Cat Cole$^{1}$`)
+    T_CS!("\\newline").into(),
   ]
 }
+/// Whether an author block holds the affiliations its marks request: a line after its first opening with a mark a
+/// name before it requests (`Ann Able$^{1}$, Bob Baker$^{2}$\\ $^{1}$Univ A`), which the marked parse labels for the
+/// names' marks to find. A line led by a mark no name requests is a name marked before it, or text (`${}^3$He …`), and
+/// answers nothing; so does a name marked as the first, beside it on its printed line
+/// ([`beside_prefix_marked_names`]: `$^{1}$Ann Able \quad $^{1}$Bob Baker`) or answered by a line below
+/// ([`mark_answered_below`]).
+fn answers_its_marks(stuff: &Tokens) -> bool {
+  let labels = |operands: Vec<Vec<Token>>| -> Vec<String> {
+    operands
+      .into_iter()
+      .flat_map(|operand| {
+        clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation")
+      })
+      .collect()
+  };
+  let pieces = split_tokens_delimited(stuff.clone(), author_affil_splits());
+  let lines: Vec<Tokens> = pieces.iter().map(|(_, line)| line.clone()).collect();
+  let mut requested: Vec<String> = Vec::new();
+  let mut prefix_marked: Option<bool> = None;
+  let mut names_line = true;
+  for (index, (delimiter, line)) in pieces.iter().enumerate() {
+    let beside =
+      beside_prefix_marked_names(prefix_marked == Some(true), &mut names_line, delimiter);
+    if line.is_empty() {
+      continue;
+    }
+    let leads = marker_leads(line);
+    let Some(prefix_marked) = prefix_marked else {
+      prefix_marked = Some(leads);
+      requested.extend(labels(author_mark_operands(line.unlist_ref())));
+      continue;
+    };
+    // a line of names beside the first on its printed line (a per-author block of names alone,
+    // `\IEEEauthorblockN{$^{1}$Ann Able \quad $^{1}$Bob Baker}`, splits at the `\quad` on the unmarked path), or on a
+    // line of its own when its mark is new and an affiliation below answers it, as the marked path reads it
+    let new_mark = || {
+      labels(
+        mark_operands(line.unlist_ref())
+          .into_iter()
+          .take(1)
+          .collect(),
+      )
+      .iter()
+      .any(|label| !requested.contains(label))
+    };
+    let a_name = prefix_marked
+      && reads_as_names(line)
+      && (beside || (new_mark() && mark_answered_below(line, &lines[index + 1..])));
+    if leads && !a_name {
+      let leading = mark_operands(line.unlist_ref())
+        .into_iter()
+        .take(1)
+        .collect();
+      if labels(leading)
+        .iter()
+        .any(|label| requested.contains(label))
+      {
+        return true;
+      }
+    } else {
+      requested.extend(labels(author_mark_operands(line.unlist_ref())));
+    }
+  }
+  false
+}
+
+/// Whether an affiliation below `line` (among `below`, the lines of an author block after it) answers the mark
+/// leading `line`: the label a name marked before it requests (`$^{1}$Ann Able\\ $^{1}$Bob Baker\\ $^{1}$Univ A`). The
+/// answering part must read as an affiliation ([`reads_as_affiliation`]): a line led by the same mark that is an email
+/// or a place (`$^{1}$\texttt{ann@google.com}`, `$^{1}$Beijing, China`) answers nothing, so a name-shaped affiliation
+/// above it (`$^{1}$Google DeepMind`) stays one.
+fn mark_answered_below(line: &Tokens, below: &[Tokens]) -> bool {
+  let leading_label = |line: &Tokens| {
+    mark_operands(line.unlist_ref())
+      .into_iter()
+      .next()
+      .and_then(|operand| mark_label(&operand))
+  };
+  let Some(label) = leading_label(line) else {
+    return false;
+  };
+  below
+    .iter()
+    .filter(|later| marker_leads(later))
+    .any(|later| {
+      marked_parts(later)
+        .iter()
+        .any(|part| leading_label(part).as_ref() == Some(&label) && reads_as_affiliation(part))
+    })
+}
+
+/// The marked parts of a line (`split_wrapped_affiliation_marks`: `$^{1}$Univ A $^{2}$Univ B` → two), blank ones dropped.
+fn marked_parts(line: &Tokens) -> Vec<Tokens> {
+  split_wrapped_affiliation_marks(line.clone())
+    .into_iter()
+    .filter(|part| !part.unlist_ref().iter().all(|t| *t == T_SPACE!()))
+    .collect()
+}
+
+/// Whether a marked line reads as names: each of its marked parts a name or names ([`name_count`]), so that
+/// `$^{1}$Google DeepMind $^{2}$Huawei Technologies` is two parts, not one four-word name.
+fn reads_as_names(line: &Tokens) -> bool {
+  let parts = marked_parts(line);
+  !parts.is_empty()
+    && parts
+      .iter()
+      .all(|part| name_count(&visible_name_text(part.unlist_ref())) > 0)
+}
+
+/// Whether a line reads as an affiliation: no name, no address (`@`), and a word that names an institution
+/// ([`non_name_word`]: `Univ A`, `Department of Physics`, `MIT`).
+fn reads_as_affiliation(line: &Tokens) -> bool {
+  let text = visible_name_text(line.unlist_ref());
+  name_count(&text) == 0 && !text.contains('@') && text.split_whitespace().any(non_name_word)
+}
+
+/// Whether the line after `delimiter` stands beside the names of an author block whose names are marked before them
+/// (`prefix_marked`: `$^{1}$Ann Able \quad $^{1}$Bob Baker \quad $^{2}$Cat Cole\\ $^{1}$Univ A`): on the printed line
+/// of its first name, after `\quad`/`\qquad`, where a line break has not yet ended the names. `names_line` tracks it
+/// across a block's lines: a line break ends it, the `\and` family opens the next author's.
+fn beside_prefix_marked_names(
+  prefix_marked: bool,
+  names_line: &mut bool,
+  delimiter: &[Token],
+) -> bool {
+  let written = |delims: &[Token]| delimiter.iter().any(|t| delims.contains(t));
+  if written(&[T_CS!("\\\\"), T_CS!("\\newline")]) {
+    *names_line = false;
+  } else if written(&[T_CS!("\\and"), T_CS!("\\And"), T_CS!("\\AND")]) {
+    *names_line = true;
+  }
+  prefix_marked && *names_line && written(&[T_CS!("\\quad"), T_CS!("\\qquad")])
+}
+
+/// The line breaks an author block's lines are split at: `\\` and `\newline` (latex.ltx:9253-9256).
+fn author_line_breaks() -> Vec<SplitDelim> { vec![T_CS!("\\\\").into(), T_CS!("\\newline").into()] }
 fn affil_splits() -> Vec<SplitDelim> {
   vec![
     // The \and CONTROL-SEQUENCE family is added (vs upstream, which splits
@@ -7927,6 +8298,7 @@ fn affil_splits() -> Vec<SplitDelim> {
     T_CS!("\\quad").into(),
     T_CS!("\\qquad").into(),
     T_CS!("\\\\").into(),
+    T_CS!("\\newline").into(),
   ]
 }
 fn authorsup_markers() -> Vec<Token> { vec![T_SUPER!(), T_CS!("\\textsuperscript")] }
@@ -8664,6 +9036,743 @@ fn leading_wrapper(line: &Tokens) -> Option<(Option<Token>, Tokens, Vec<Token>)>
     }
   }
   None
+}
+
+/// Commands whose braced argument is a note or a mark, not part of the name beside it.
+const NAME_ANNOTATIONS: &[&str] = &[
+  "\\thanks",
+  "\\thanksref",
+  "\\footnote",
+  "\\altaffilmark",
+  "\\inst",
+  "\\IEEEauthorrefmark",
+  "\\textsuperscript",
+  "\\email",
+  "\\orcidlink",
+  "\\orcidID",
+  "\\lx@aas@checkorcid",
+  "\\IEEEmembership",
+  // a footnote-symbol mark, rewritten before the parse (`rewrite_symbol_superscripts`: `$^{*}$`)
+  "\\lx@frontmatter@keepsup",
+  "\\lx@frontmatter@symbolmark",
+];
+
+/// The letter a letter command stands for (latex.ltx / the OT1 and T1 encodings: `\L` Ł, `\o` ø, `\ss` ß), as a
+/// name-shape test reads it: its base letter, keeping its case.
+fn letter_command(cs: &str) -> Option<char> {
+  match cs {
+    "\\L" | "\\l" | "\\O" | "\\o" | "\\i" | "\\j" => cs.chars().nth(1),
+    "\\AA" | "\\AE" => Some('A'),
+    "\\aa" | "\\ae" => Some('a'),
+    "\\OE" => Some('O'),
+    "\\oe" => Some('o'),
+    "\\ss" => Some('s'),
+    _ => None,
+  }
+}
+
+/// The accent commands of latex.ltx / LaTeX's text encodings, whose argument is one letter of the word.
+const ACCENT_COMMANDS: &[&str] = &[
+  "\\'", "\\`", "\\^", "\\\"", "\\~", "\\=", "\\.", "\\u", "\\v", "\\H", "\\c", "\\d", "\\b",
+  "\\t", "\\r", "\\k",
+];
+
+/// The visible text of an author line as a name-shape test reads it: its letters, other characters and spaces at
+/// any brace depth, without control sequences, math, superscripts, or the argument of a note or mark command
+/// ([`NAME_ANNOTATIONS`]). `{\it D.A. Johnston}` reads "D.A. Johnston", `Avi Shporer\altaffilmark{1}` "Avi Shporer",
+/// `Plech\'a\v{c}` "Plechac", `Zheng \& Jordi` "Zheng & Jordi".
+fn visible_name_text(tokens: &[Token]) -> String {
+  let mut text = String::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = tokens[i];
+    match t.get_catcode() {
+      Catcode::CS => {
+        // a control space or thin space between initials (`Joshua N.\ Winn`, `J.\,R. Smith`) is a space
+        if t == T_CS!("\\ ") || t == T_CS!("\\,") {
+          text.push(' ');
+        } else if t == T_CS!("\\&") {
+          text.push('&');
+        } else if let Some(letter) = t.with_str(letter_command) {
+          // a letter written as a command (`{\L}ukasz`, `\O stergaard`) is that letter, the spaces ending the
+          // command's name aside
+          text.push(letter);
+          while tokens.get(i + 1) == Some(&T_SPACE!()) {
+            i += 1;
+          }
+        }
+        let annotation = t.with_str(|s| NAME_ANNOTATIONS.contains(&s));
+        i += 1;
+        // an accent's spaces before its letter are not text (`Plech\' a\v{c}`, cond-mat9705101; tex.web §1123
+        // `\accent` skips them)
+        if t.with_str(|s| ACCENT_COMMANDS.contains(&s)) {
+          while tokens.get(i) == Some(&T_SPACE!()) {
+            i += 1;
+          }
+        }
+        // an optional `[...]` (`\footnotemark[2]` has nothing more), then a note's or mark's braced argument
+        if annotation || t == T_CS!("\\footnotemark") {
+          if tokens.get(i) == Some(&T_OTHER!("[")) {
+            while i < tokens.len() && tokens[i] != T_OTHER!("]") {
+              i += 1;
+            }
+            i += 1;
+          }
+          if annotation {
+            i = skip_group(tokens, i);
+          }
+        }
+        continue;
+      },
+      Catcode::MATH => {
+        i += 1;
+        while i < tokens.len() && tokens[i].get_catcode() != Catcode::MATH {
+          i += 1;
+        }
+      },
+      Catcode::SUPER | Catcode::SUB => {
+        i = skip_group(tokens, i + 1);
+        continue;
+      },
+      Catcode::LETTER | Catcode::OTHER => t.with_str(|s| text.push_str(s)),
+      Catcode::SPACE => text.push(' '),
+      // `~` is a space; another active character (babel's `"`) is no text
+      Catcode::ACTIVE if t.with_str(|s| s == "~") => text.push(' '),
+      _ => {},
+    }
+    i += 1;
+  }
+  text
+}
+
+/// The index after the brace group (or single token) at `i`.
+fn skip_group(tokens: &[Token], mut i: usize) -> usize {
+  if tokens
+    .get(i)
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+  {
+    let mut depth = 0i32;
+    while i < tokens.len() {
+      match tokens[i].get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            return i + 1;
+          }
+        },
+        _ => {},
+      }
+      i += 1;
+    }
+    i
+  } else {
+    i + 1
+  }
+}
+
+/// Particles that stand inside a personal name (`Camillo De Lellis`, `Ludwig van Beethoven`) but never open or close it.
+const NAME_PARTICLES: &[&str] = &[
+  "van", "von", "de", "der", "den", "del", "della", "da", "di", "du", "la", "le", "ten", "ter",
+  "bin", "ibn", "al", "y", "dos", "das", "do",
+];
+/// Words that name an institution, a place or a role, never a person — whole words, lowercased, the punctuation
+/// around them (`.,;:()[]`) dropped, in the languages arXiv affiliations are written in (`Dipartimento di Fisica`, `Sezione di Napoli`,
+/// `Osservatorio Astronomico`, `École`). Whole words, not word openings: "Strasser", "Schooler", "Campusano" are
+/// surnames.
+const NON_NAME_WORDS: &[&str] = &[
+  "univ",
+  "university",
+  "universities",
+  "universität",
+  "universitat",
+  "universitaet",
+  "universidad",
+  "universidade",
+  "université",
+  "universite",
+  "universiteit",
+  "università",
+  "universita",
+  "universitet",
+  "uniwersytet",
+  "institute",
+  "institutes",
+  "institut",
+  "instituto",
+  "istituto",
+  "institution",
+  "inst",
+  "laboratory",
+  "laboratories",
+  "laboratoire",
+  "laboratorio",
+  "laboratorium",
+  "lab",
+  "labs",
+  "observatory",
+  "observatoire",
+  "observatorio",
+  "osservatorio",
+  "observatorium",
+  "sterrewacht",
+  "academy",
+  "academia",
+  "académie",
+  "academie",
+  "akademie",
+  "accademia",
+  "acad",
+  "department",
+  "departments",
+  "departement",
+  "département",
+  "departamento",
+  "dipartimento",
+  "departament",
+  "dept",
+  "dep",
+  "faculty",
+  "faculté",
+  "faculte",
+  "facultad",
+  "faculdade",
+  "fakultät",
+  "fakultat",
+  "fachbereich",
+  "division",
+  "sezione",
+  "section",
+  "sektion",
+  "collaboration",
+  "consortium",
+  "hospital",
+  "hôpital",
+  "hopital",
+  "ospedale",
+  "klinik",
+  "klinikum",
+  "clinic",
+  "clinique",
+  "foundation",
+  "fundación",
+  "fundacion",
+  "fondazione",
+  "stiftung",
+  "society",
+  "société",
+  "societe",
+  "società",
+  "professor",
+  "ministry",
+  "museum",
+  "company",
+  "corporation",
+  "corp",
+  "inc",
+  "llc",
+  "ltd",
+  "gmbh",
+  "physics",
+  "physik",
+  "research",
+  "school",
+  "scuola",
+  "escuela",
+  "école",
+  "ecole",
+  "hochschule",
+  "politecnico",
+  "polytechnic",
+  "polytechnique",
+  "politécnica",
+  "politecnica",
+  "college",
+  "collège",
+  "colegio",
+  "center",
+  "centers",
+  "centre",
+  "centres",
+  "centro",
+  "zentrum",
+  "centrum",
+  "ctr",
+  "program",
+  "programme",
+  "agency",
+  "consiglio",
+  "conseil",
+  "avenue",
+  "strasse",
+  "straße",
+  // a two-word place reads as a name (`\author{John Smith, New York}`): its words that no name carries
+  "new",
+  "tel",
+  "team",
+  "group",
+  "member",
+  "fellow",
+  "student",
+  "email",
+  "e-mail",
+  "obs",
+  "natl",
+  "sch",
+  "sci",
+];
+/// Acronyms of institutions and societies, in capitals only: "Meta AI", "ESA" are none of them a name, though Qingyao
+/// Ai and Esa Räsänen are.
+const NON_NAME_ACRONYMS: &[&str] = &[
+  "AI", "IEEE", "ACM", "INFN", "CNRS", "INAF", "CSIC", "NASA", "ESA", "ESO", "CERN", "DESY",
+  "RIKEN", "KEK", "IPMU", "MIT", "UCLA", "SISSA",
+];
+
+/// The lowercased whole words of `word`: itself, the punctuation around it (`.,;:()[]`) dropped, and the parts of a
+/// hyphenated compound (`Max-Planck-Institut`).
+fn word_forms(word: &str) -> impl Iterator<Item = String> + '_ {
+  let bare = word.trim_matches(|c: char| ".,;:()[]".contains(c));
+  std::iter::once(bare)
+    .chain(bare.split('-'))
+    .map(str::to_lowercase)
+}
+
+/// Whether a word names an institution, a place or a role ([`NON_NAME_WORDS`], [`NON_NAME_ACRONYMS`]), never a person.
+fn non_name_word(word: &str) -> bool {
+  let bare = word.trim_matches(|c: char| ".,;:()[]".contains(c));
+  word_forms(word).any(|form| NON_NAME_WORDS.contains(&form.as_str()))
+    || bare
+      .split('-')
+      .any(|part| NON_NAME_ACRONYMS.contains(&part))
+}
+
+/// `text` without the marks glued to its end (`Ann Able*`, `Bob Baker1,`): digits and symbols right after a letter.
+/// Digits after a space are text — a postal code (`CA 93106`), not a mark.
+fn strip_glued_marks(text: &str) -> &str {
+  let text = text.trim();
+  let stripped = text.trim_end_matches(|c: char| c.is_ascii_digit() || "*∗†‡§¶♯#,".contains(c));
+  if stripped.len() < text.len() && stripped.ends_with(char::is_whitespace) {
+    text
+  } else {
+    stripped.trim_end()
+  }
+}
+
+/// Whether `text` — one part of an author line, as [`visible_name_text`] reads it — is shaped like a personal name:
+/// two to five words, each capitalised or an initial (`J.`, `D.A.`), name particles inside but not at either end, no
+/// digit, `@`, `:`, `/` or parenthesis and no institution word, once the marks glued to its end are dropped.
+fn name_shaped(text: &str) -> bool {
+  let text = strip_glued_marks(text);
+  if text
+    .chars()
+    .any(|c| c.is_ascii_digit() || "@:/()".contains(c))
+  {
+    return false;
+  }
+  let words: Vec<&str> = text.split_whitespace().collect();
+  if !(2..=5).contains(&words.len()) {
+    return false;
+  }
+  let particle = |w: &str| NAME_PARTICLES.contains(&w);
+  if particle(words[0]) || particle(words[words.len() - 1]) {
+    return false;
+  }
+  words.iter().all(|word| {
+    if non_name_word(word) {
+      return false;
+    }
+    particle(word)
+      || (word.chars().next().is_some_and(char::is_uppercase)
+        && word
+          .chars()
+          .all(|c| c.is_alphabetic() || "'’.-".contains(c)))
+  })
+}
+
+/// The societies whose membership grade follows an author's name (`Senior Member, IEEE`).
+const NAME_GRADE_SOCIETIES: &[&str] = &[
+  "IEEE", "ACM", "OSA", "SPIE", "IET", "IEICE", "AAAI", "SIAM", "APS", "IAPR", "IFAC",
+];
+/// Generational suffixes and academic degrees written after a name, comma-separated (`John Smith, Jr.`, `Jane Doe,
+/// MD, PhD`).
+const NAME_SUFFIXES: &[&str] = &[
+  "Jr", "Jr.", "Sr", "Sr.", "Jun.", "Sen.", "II", "III", "IV", "PhD", "Ph.D.", "Ph.D", "MD",
+  "M.D.", "MSc", "M.Sc.", "BSc", "B.Sc.", "MA", "M.A.", "MS", "M.S.", "MBA", "MPH", "MBBS",
+  "DPhil", "D.Phil.", "DSc", "D.Sc.", "FRS", "RN", "Esq.",
+];
+
+/// Whether an author-list part qualifies the name before it instead of naming a person: a generational suffix or a
+/// degree ([`NAME_SUFFIXES`]), or a professional membership grade (`Member, IEEE`, `Senior Member`, or the society
+/// alone once the list is split at the grade's comma), which LaTeX prints after the name, comma-separated.
+fn is_name_qualifier(text: &str) -> bool {
+  let text = strip_glued_marks(text);
+  if NAME_SUFFIXES.contains(&text) {
+    return true;
+  }
+  let words: Vec<&str> = text.split([' ', ',']).filter(|w| !w.is_empty()).collect();
+  let grade = |w: &&str| {
+    [
+      "Life",
+      "Senior",
+      "Student",
+      "Graduate",
+      "Associate",
+      "Member",
+      "Fellow",
+    ]
+    .contains(w)
+  };
+  !words.is_empty()
+    && words
+      .iter()
+      .all(|w| grade(w) || NAME_GRADE_SOCIETIES.contains(w))
+}
+
+/// The parts of an author-line text that may each be one name: split at commas, " and " and " & ", a leading "and"
+/// dropped.
+fn name_parts(text: &str) -> Vec<String> {
+  text
+    .split(',')
+    .flat_map(|part| {
+      part
+        .split(" and ")
+        .flat_map(|p| p.split(" & "))
+        .map(str::to_string)
+        .collect::<Vec<_>>()
+    })
+    .map(|part| {
+      let part = part.trim();
+      part
+        .strip_prefix("and ")
+        .or_else(|| part.strip_prefix("& "))
+        .unwrap_or(part)
+        .trim()
+        .to_string()
+    })
+    .filter(|part| !part.is_empty())
+    .collect()
+}
+
+/// How many parts of `text` are names when every part is a name or qualifies one ([`is_name_qualifier`]); 0 when a
+/// part is neither (an institution, a place).
+fn name_count(text: &str) -> usize {
+  let parts = name_parts(text);
+  if parts.iter().all(|p| name_shaped(p) || is_name_qualifier(p)) {
+    parts.iter().filter(|p| name_shaped(p)).count()
+  } else {
+    0
+  }
+}
+
+/// Whether `line` continues the author names `names` instead of starting their affiliations: styled as the names are,
+/// all of it names (or their qualifiers), and either the names read as an unfinished list — ending in a comma, "and"
+/// or "&" (`Joshua N.\ Winn\altaffilmark{1}, Andrew W.\ Howard\altaffilmark{2},\\ Avi Shporer\altaffilmark{1}`,
+/// 1010.1318) — or the line opens with "and" (`…, \emph{Member, IEEE},\\ and Warren J. Gross, \emph{Senior Member,
+/// IEEE}`, 1611.04834). "and Max--Planck Institut für Mathematik, Bonn" (math0208081) and `John Smith,\\ {\it Bell
+/// Labs, Murray Hill}` stay affiliations.
+fn names_continue(names: &Tokens, line: &Tokens) -> bool {
+  if leading_markup(line) != leading_markup(names) {
+    return false;
+  }
+  let names_text = visible_name_text(names.unlist_ref());
+  let names_text = names_text.trim_end();
+  let text = visible_name_text(line.unlist_ref());
+  let text = text.trim();
+  let unfinished =
+    names_text.ends_with(',') || names_text.ends_with(" and") || names_text.ends_with('&');
+  (unfinished || text.starts_with("and ") || text.starts_with("& ")) && name_count(text) > 0
+}
+
+/// Whether `line` is more names under the names `names`, not their affiliation: styled as they are, all of it names
+/// (or their qualifiers), and every name of both carrying its mark after it, as authors' marks stand (`Ann
+/// Able$^{1}$\\ Bob Baker$^{2}$`; `A\altaffilmark{1}, B\altaffilmark{2}\\ C\altaffilmark{3}`; [`marked_after_name`]).
+fn names_marked_alike(names: &Tokens, line: &Tokens) -> bool {
+  leading_markup(line) == leading_markup(names)
+    && name_count(visible_name_text(line.unlist_ref()).trim()) > 0
+    && [names, line].into_iter().all(|tokens| {
+      split_author_line(tokens.clone())
+        .iter()
+        .all(marked_after_name)
+    })
+}
+
+/// Whether a name carries a mark after it, outside its notes: a superscript ([`affiliation_mark_tokens`]) or a mark
+/// command (aastex's `\altaffilmark`, IEEEtran's `\IEEEauthorrefmark`) after its first letter (`Bob Baker$^{2}$`; not
+/// `$^{2}$Univ B`).
+fn marked_after_name(name: &Tokens) -> bool {
+  let outside = outside_notes(name.unlist_ref());
+  let Some(first_letter) = outside
+    .iter()
+    .position(|t| t.get_catcode() == Catcode::LETTER)
+  else {
+    return false;
+  };
+  outside[first_letter..].iter().any(|t| {
+    affiliation_mark_tokens().contains(t)
+      || *t == T_CS!("\\altaffilmark")
+      || *t == T_CS!("\\IEEEauthorrefmark")
+  })
+}
+
+/// The markup an author line opens with, before its first letter: its control sequences and the groups they open
+/// (`{\small\em Bartol …}` → `{`, `\small`, `\em`; `T. Stelzer` → none). Lines styled alike share it.
+fn leading_markup(line: &Tokens) -> Vec<Token> {
+  line
+    .unlist_ref()
+    .iter()
+    .take_while(|t| t.get_catcode() != Catcode::LETTER)
+    .filter(|t| matches!(t.get_catcode(), Catcode::CS | Catcode::BEGIN))
+    .copied()
+    .collect()
+}
+
+/// The `\\`-lines of an author group without affiliation marks, as (names, affiliations) pairs. The first line is
+/// the names and the lines after it their affiliations (Perl Base_Utility.pool.ltxml:720-725), except that
+///  - a line that is only "and" (or `\&`) separates two pairs (cond-mat9705101's `\\ \\ and\\ \\`);
+///  - a line continues the names while they read as an unfinished list ([`names_continue`]), and a line of names
+///    marked as the names above are opens the next pair ([`names_marked_alike`]);
+///  - after an affiliation styled unlike the names, a line of names styled as the names were opens the next pair when
+///    an affiliation styled as that one follows it — the alternation (hep-ph9306253's `T. Stelzer` between `{\small
+///    \em …}` affiliations; 0811.1526's `Ingo Rehberg and Reinhard Richter` between `{\sl …}` ones). A last line
+///    (a city: `Los Angeles, CA 90095, USA`) or an affiliation styled as the names ("University of X" under a plain
+///    name) stays an affiliation.
+fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens, Vec<Tokens>)> {
+  let mut groups: Vec<(Tokens, Vec<Tokens>)> = Vec::new();
+  let mut names_markup: Vec<Token> = Vec::new();
+  let mut opens_pair = true;
+  let mut pending_and: Option<Tokens> = None;
+  for (index, line) in lines.iter().enumerate() {
+    let text = visible_name_text(line.unlist_ref());
+    let text = text.trim();
+    if text == "and" || text == "&" {
+      // a second "and" in a row: the first is affiliation text (one before any names separates nothing)
+      if let (Some(earlier), Some((_, affiliations))) = (pending_and.take(), groups.last_mut()) {
+        affiliations.push(earlier);
+      }
+      pending_and = Some(line.clone());
+      continue;
+    }
+    // A line of only "and" parts two authors when names follow it (cond-mat9705101's `\\ \\ and\\ \\ {\it P.
+    // Plech\' a\v{c}}`); before anything else it is affiliation text, kept with the line after it (`Dept.\ of
+    // Physics\\ and\\ Center for Theoretical Physics`; `and\\ SISSA, Trieste`), as Perl keeps both.
+    if let Some(and_line) = pending_and.take() {
+      if groups.is_empty() || name_count(text) > 0 {
+        opens_pair = true;
+      } else if let Some((_, affiliations)) = groups.last_mut() {
+        affiliations.push(and_line);
+        affiliations.push(line.clone());
+        continue;
+      }
+    }
+    if opens_pair || groups.is_empty() {
+      names_markup = leading_markup(line);
+      groups.push((line.clone(), Vec::new()));
+      opens_pair = false;
+      continue;
+    }
+    let (names, affiliations) = groups.last_mut().expect("a pair is open");
+    let alternates = affiliations.last().is_some_and(|last| {
+      let affiliation_markup = leading_markup(last);
+      affiliation_markup != names_markup
+        && lines
+          .get(index + 1)
+          .is_some_and(|next| leading_markup(next) == affiliation_markup)
+    });
+    let and_led = text
+      .strip_prefix("and ")
+      .or_else(|| text.strip_prefix("& "));
+    if affiliations.is_empty() && names_continue(names, line) {
+      let mut joined = names.clone().unlist();
+      joined.push(T_SPACE!());
+      joined.extend(line.clone().unlist());
+      *names = Tokens::new(joined);
+    } else if affiliations.is_empty() && names_marked_alike(names, line) {
+      // the next names, the lines after them their affiliations as after any names
+      groups.push((line.clone(), Vec::new()));
+    } else if let Some(names_line) = and_led
+      .filter(|rest| leading_markup(line) == names_markup && name_count(rest) > 0)
+      .and_then(|_| without_leading_and(line))
+    {
+      // after affiliations, "and" before names opens the next author (`James Brink \\Dept of Math., UC Berkeley,
+      // …\\and Zhenghan Wang \\Dept of Math., Indiana University`, math-ph0303018), its "and" dropped
+      groups.push((names_line, Vec::new()));
+    } else if alternates && leading_markup(line) == names_markup && name_count(text) > 0 {
+      groups.push((line.clone(), Vec::new()));
+    } else {
+      affiliations.push(line.clone());
+    }
+  }
+  if groups.is_empty() {
+    // a block of `\\` alone still gives its (empty) author
+    groups.push((Tokens::default(), Vec::new()));
+  }
+  // a closing "and" line is affiliation text
+  if let (Some(and_line), Some((_, affiliations))) = (pending_and, groups.last_mut()) {
+    affiliations.push(and_line);
+  }
+  groups
+}
+
+/// `line` without the word "and" its text opens with — after its leading markup, which is kept (`{\it and Zhenghan
+/// Wang}` → `{\it Zhenghan Wang}`) — and the spaces after it; `None` when its first word is not "and".
+fn without_leading_and(line: &Tokens) -> Option<Tokens> {
+  let v = line.unlist_ref();
+  let first = v.iter().position(|t| t.get_catcode() == Catcode::LETTER)?;
+  if v.get(first..first + 3) != Some(&[T_LETTER!("a"), T_LETTER!("n"), T_LETTER!("d")][..])
+    || v
+      .get(first + 3)
+      .is_some_and(|t| t.get_catcode() == Catcode::LETTER)
+  {
+    return None;
+  }
+  let mut rest = first + 3;
+  while v.get(rest) == Some(&T_SPACE!()) {
+    rest += 1;
+  }
+  let mut out = v[..first].to_vec();
+  out.extend_from_slice(&v[rest..]);
+  Some(Tokens::new(out))
+}
+
+/// A name-list piece that qualifies the name before it ([`is_name_qualifier`]: `Jr.`, `PhD`, `\emph{Member, IEEE}`)
+/// rejoins that name with the separator written between them, instead of becoming an author of its own; so does a
+/// piece of marks and notes only ([`only_marks_and_notes`]: `~\IEEEmembership{Senior Member,~IEEE,}\thanks{…}`,
+/// 1510.02728), without its separator, which separated nothing visible.
+fn rejoin_name_qualifiers(pieces: Vec<(Vec<Token>, Tokens)>) -> Vec<Tokens> {
+  let mut out: Vec<Tokens> = Vec::with_capacity(pieces.len());
+  for (delimiter, piece) in pieces {
+    let unseen = only_marks_and_notes(piece.unlist_ref());
+    match out.last_mut() {
+      Some(name) if unseen || is_name_qualifier(&visible_name_text(piece.unlist_ref())) => {
+        let mut joined = name.clone().unlist();
+        if !unseen {
+          // the comma's space went with the piece's trimming
+          let comma = delimiter.last() == Some(&T_OTHER!(","));
+          joined.extend(delimiter);
+          if comma {
+            joined.push(T_SPACE!());
+          }
+        }
+        joined.extend(piece.unlist());
+        *name = Tokens::new(joined);
+      },
+      _ => out.push(piece),
+    }
+  }
+  out
+}
+
+/// Whether `tokens` hold nothing to read but marks and notes: spaces (`~`, `\ `, `\,`), a note or mark command with
+/// its arguments ([`NAME_ANNOTATIONS`], `\footnotemark[…]`), a superscript or subscript, or math holding only those
+/// (`$^{*}$`). An author written as a macro (`\A`) is something to read.
+fn only_marks_and_notes(tokens: &[Token]) -> bool {
+  let mut i = 0;
+  let mut any = false;
+  while i < tokens.len() {
+    let t = tokens[i];
+    match t.get_catcode() {
+      Catcode::SPACE => i += 1,
+      Catcode::ACTIVE if t.with_str(|s| s == "~") => i += 1,
+      Catcode::CS if t == T_CS!("\\ ") || t == T_CS!("\\,") => i += 1,
+      // `${}^{1}$`'s empty group
+      Catcode::BEGIN
+        if tokens
+          .get(i + 1)
+          .is_some_and(|n| n.get_catcode() == Catcode::END) =>
+      {
+        i += 2
+      },
+      Catcode::CS
+        if t == T_CS!("\\footnotemark") || t.with_str(|s| NAME_ANNOTATIONS.contains(&s)) =>
+      {
+        any = true;
+        i += 1;
+        if tokens.get(i) == Some(&T_OTHER!("[")) {
+          while i < tokens.len() && tokens[i] != T_OTHER!("]") {
+            i += 1;
+          }
+          i += 1;
+        }
+        if t != T_CS!("\\footnotemark") {
+          i = skip_group(tokens, i);
+        }
+      },
+      Catcode::SUPER | Catcode::SUB => {
+        any = true;
+        i = skip_group(tokens, i + 1);
+      },
+      Catcode::MATH => {
+        let Some(close) = tokens[i + 1..]
+          .iter()
+          .position(|t| t.get_catcode() == Catcode::MATH)
+        else {
+          return false;
+        };
+        if !only_marks_and_notes(&tokens[i + 1..i + 1 + close])
+          || tokens[i + 1..i + 1 + close].is_empty()
+        {
+          return false;
+        }
+        any = true;
+        i += close + 2;
+      },
+      _ => return false,
+    }
+  }
+  any
+}
+
+/// The text a `<ltx:personname>` shows, without its marks and notes (`ltx:sup`, `ltx:note`, math); an element
+/// (a `<ltx:break/>`, a cell) parts the words around it.
+fn personname_text(node: &Node) -> String {
+  let mut text = String::new();
+  for child in node.get_child_nodes() {
+    match child.get_type() {
+      Some(NodeType::TextNode) => text.push_str(&child.get_content()),
+      Some(NodeType::ElementNode) => {
+        text.push(' ');
+        if !with(document::get_node_qname(&child), |q| {
+          q == "ltx:sup" || q == "ltx:note" || q == "ltx:Math" || q == "ltx:contact"
+        }) {
+          text.push_str(&personname_text(&child));
+        }
+        text.push(' ');
+      },
+      _ => {},
+    }
+  }
+  text
+}
+
+/// A frontmatter author whose name reads as two or more people ("Ann Able and Bob Baker") lost the boundaries between
+/// them: LaTeX typesets several authors where the document has one, and nothing else tells. Each such author is an
+/// error, once (the creator is marked, for the frontmatter a streaming conversion places late). Every part must be a
+/// name or qualify one (`Jane Doe, PhD`): a name beside its institution ("John Smith, Bell Labs") is not two people.
+fn flag_merged_creators(document: &mut Document) -> Result<()> {
+  for mut creator in
+    document.findnodes("//ltx:creator[@role='author'][not(@_merged_checked)]", None)
+  {
+    document.set_attribute(&mut creator, "_merged_checked", "1")?;
+    // An author block laid out as a tabular is kept whole on purpose (`add_authors_calls`; Perl
+    // Base_Utility.pool.ltxml:693): its names are there, in their layout.
+    let Some(person) = document.findnode("ltx:personname[not(.//ltx:tabular)]", Some(&creator))
+    else {
+      continue;
+    };
+    let text = personname_text(&person);
+    let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let names = name_count(&text);
+    if names >= 2 {
+      Error!(
+        "frontmatter",
+        "merged_creators",
+        s!(
+          "One author holds {names} names: \"{text}\"; the separators between them were not recognized"
+        )
+      );
+    }
+  }
+  Ok(())
 }
 
 /// A `\\`-delimited line in a no-marker author block is really an EMAIL, not an

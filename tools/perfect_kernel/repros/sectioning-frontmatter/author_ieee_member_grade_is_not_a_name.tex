@@ -1,0 +1,13 @@
+% witness: 1611.04834 (IEEEtran conference, written grades instead of \IEEEmembership)
+% oracle:  pdflatex 0 errors: "Carlo Condo, Pascal Giard, Member, IEEE, and Warren J. Gross, Senior Member, IEEE"
+% engines: rust (63d) = "Member, IEEE" a personname of its own and Gross an affiliation, 0 errors; Perl alike
+% expect:  3 creators, the grades kept with Giard and Gross; the McGill line their affiliation; 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass[conference]{IEEEtran}
+\author{Carlo Condo, Pascal Giard, \emph{Member, IEEE},\\
+and Warren J. Gross, \emph{Senior Member, IEEE}\\
+Department of Electrical and Computer Engineering, McGill University}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

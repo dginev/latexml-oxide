@@ -1,0 +1,13 @@
+% witness: 63e review r8 (residual): names marked before them, one label shared, each on a line of its own
+% oracle:  pdflatex 0 errors: "^1Ann Able" / "^1Bob Baker" / "^1Univ A"
+% engines: rust (63d, 63e r14) = Ann Able with "Bob Baker" among her affiliations (0 errors, silent); Perl no
+%          creator at all (Base_Utility.pool.ltxml:708 `$p < 8`: every line an affiliation)
+% expect:  2 creators, Ann and Bob, each with Univ A; 0 errors
+% status:  RED (open; OD #459: a name on a line of its own whose mark an author above already requests reads as
+%          an affiliation, as `$^{1}$Carnegie Mellon\\ $^{1}$School of Computer Science` must)
+\documentclass{article}
+\author{$^{1}$Ann Able\\ $^{1}$Bob Baker\\ $^{1}$Univ A}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

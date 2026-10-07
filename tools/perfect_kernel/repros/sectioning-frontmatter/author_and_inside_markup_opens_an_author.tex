@@ -1,0 +1,11 @@
+% witness: 63e review r2 finding 2 (math-ph0303018 shape with the names in italics: `{\it and Zhenghan Wang}`)
+% oracle:  pdflatex 0 errors: two authors, each over its department
+% engines: rust (63e r3) = an author named "and Zhenghan Wang"
+% expect:  2 creators, Brink and Wang (no "and"), each with its department; 0 errors
+% status:  RED (63e r3) -> GREEN (63e)
+\documentclass{article}
+\author{{\it James Brink}\\ Dept of Math., UC Berkeley\\ {\it and Zhenghan Wang}\\ Dept of Math., Indiana University}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

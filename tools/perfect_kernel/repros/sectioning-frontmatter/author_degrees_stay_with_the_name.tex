@@ -1,0 +1,13 @@
+% witness: 63e review r1 finding 4 (medical-AI papers: `\author[1]{Jane Doe, MD, PhD}` under authblk)
+% oracle:  pdflatex 0 errors: "Jane Doe, MD, PhD^1"
+% engines: rust (63e r1) = Jane Doe plus an author "PhD"; rust 63d and Perl one personname
+% expect:  1 creator "Jane Doe, MD, PhD" with Univ A; 0 errors
+% status:  RED (63e r1) -> GREEN (63e)
+\documentclass{article}
+\usepackage{authblk}
+\author[1]{Jane Doe, MD, PhD}
+\affil[1]{Univ A}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

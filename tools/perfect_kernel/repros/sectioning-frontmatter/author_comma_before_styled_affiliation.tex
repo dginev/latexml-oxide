@@ -1,0 +1,11 @@
+% witness: 63e review r1 finding 5 (a names line ending in a comma, then an affiliation styled unlike it)
+% oracle:  pdflatex 0 errors: "John Smith," over "Bell Labs, Murray Hill"
+% engines: rust (63e r1) = "Bell Labs" an author; rust 63d and Perl one author
+% expect:  1 creator, John Smith, with the affiliation; 0 errors
+% status:  RED (63e r1) -> GREEN (63e)
+\documentclass{article}
+\author{John Smith,\\ {\it Bell Labs, Murray Hill}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

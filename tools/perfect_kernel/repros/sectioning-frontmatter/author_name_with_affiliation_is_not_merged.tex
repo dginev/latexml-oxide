@@ -1,0 +1,12 @@
+% witness: 63e review r1 finding 6 (a name beside its institution is not two people)
+% oracle:  pdflatex 0 errors: "Jane Doe, Bell Labs"
+% engines: rust (63e r1) = Error:frontmatter:merged_creators on "Jane Doe, Bell Labs"
+% expect:  the creator as written, no error
+% status:  RED (63e r1) -> GREEN (63e)
+\documentclass{acmart}
+\begin{document}
+\title{T}
+\author{Jane Doe, Bell Labs}
+\affiliation{\institution{Univ A}\country{Country}}
+\maketitle
+\end{document}

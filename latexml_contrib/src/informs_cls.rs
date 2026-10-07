@@ -135,7 +135,7 @@ LoadDefinitions!({
   // took the following `\AFF` token as its affiliation and the affiliations became loose notes (2609.37380). Each
   // `\AUTHOR` adds its authors to the ones before, and the superscript marks of a marked author list link the marked
   // `\AFF` lines to their authors (2609.17368 `$^{a,e}$`, 22690 and 28084 `\textsuperscript{1}`).
-  DefMacro!("\\AUTHOR{}", "\\lx@add@authors@append{#1}");
+  DefMacro!("\\AUTHOR{}", "\\lx@add@authors@list{#1}");
   DefMacro!("\\AFF{}", "\\lx@add@affiliation@marked{#1}");
   // \ABSTRACT → abstract env so the text is preserved as document abstract.
   DefMacro!("\\ABSTRACT{}", "\\begin{abstract}#1\\end{abstract}");

@@ -1,0 +1,11 @@
+% witness: hep-ph9504228 (names set in math: `$\mbox{\rm F. del Aguila}^{1}$ and $\mbox{\rm M. Zra{\l }ek}^{2}$`)
+% oracle:  pdflatex 0 errors: "F. del Aguila^1 and M. Zrałek^2" over the two departments
+% engines: rust (63e r7) = ONE creator "F. del Aguila M. Zrałek" (the math-set name read as nothing, joined without a separator)
+% expect:  2 creators, each with its department; 0 errors
+% status:  RED (63e r7) -> GREEN (63e)
+\documentclass{article}
+\author{$\mbox{\rm F. del Aguila}^{1}$ and $\mbox{\rm M. Zra{\l }ek}^{2}$\\ $^1$ Universidad de Granada\\ $^2$ University of Silesia}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

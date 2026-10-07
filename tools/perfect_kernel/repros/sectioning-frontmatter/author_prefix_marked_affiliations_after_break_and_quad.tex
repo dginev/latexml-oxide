@@ -1,0 +1,14 @@
+% witness: 63e review r9 finding 1 (w2: the article \author, names marked before them on one line, the affiliations
+%          on the next, each after \quad)
+% oracle:  pdflatex 0 errors: "^1Ann Able  ^2Bob Baker" over "  ^1Univ A  ^2Univ B"
+% engines: rust (63e r14) = four authors, "Univ A" and "Univ B" among them (0 errors, silent): the break before the
+%          \quad was not seen; HEAD Bob lost into an affiliation; Perl no creator at all (Base_Utility.pool.ltxml:708
+%          `$p < 8`: every line an affiliation)
+% expect:  2 creators — Ann (Univ A), Bob (Univ B); 0 errors
+% status:  RED (63e r14) -> GREEN (63e)
+\documentclass{article}
+\author{$^{1}$Ann Able \quad $^{2}$Bob Baker \\ \quad $^{1}$Univ A \quad $^{2}$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

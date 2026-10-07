@@ -1,0 +1,16 @@
+% witness: 63e review r8 finding 2 (t1: an \altaffilmark on the affiliation line under the names; s1 is the
+%          aastex631 one-author form `Ann Able\altaffilmark{1}\\ Univ A\altaffilmark{2}`)
+% oracle:  pdflatex 0 errors: "Ann Able^1 and Bob Baker" over "Steward Observatory^2", footnotes 1 Fellow, 2 Tucson
+% engines: rust (63e r13) = a third creator with no name holding Steward Observatory and Tucson, Bob without an
+%          affiliation (0 errors, silent); HEAD/Perl one creator holding both (aas_support.sty.ltxml:103)
+% expect:  2 creators — Ann (altaffiliation Fellow), Bob (affiliation Steward Observatory, altaffiliation Tucson);
+%          0 errors
+% status:  RED (63e r13) -> GREEN (63e)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1} and Bob Baker\\ Steward Observatory\altaffilmark{2}}
+\altaffiltext{1}{Fellow}
+\altaffiltext{2}{Tucson}
+\maketitle
+\end{document}

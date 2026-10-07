@@ -1,0 +1,14 @@
+% witness: 1407.0988 (`Aghil Alaee\footnote{...} \,\,and  Hari K. Kunduri\footnote{...} \\ ... $^a$ Department ...`: the
+%          marked affiliation puts the block on the marked path, whose unmarked first line is the names)
+% oracle:  pdflatex 0 errors: "Aghil Alaee^1 and Hari K. Kunduri^2"
+% engines: rust (63e r2) = ONE personname, Error:frontmatter:merged_creators; Perl one personname, silent
+% expect:  2 creators, each with its footnote; the department, whose mark `a` no author requests, kept on a
+%          creator of its own (OXIDIZED_DESIGN #159, repro author_block_orphan_mark_is_kept); 0 errors
+% status:  RED (63e r2) -> GREEN (63e)
+\documentclass{article}
+\author{Aghil Alaee\footnote{aak818@mun.ca} \,\,and  Hari K. Kunduri\footnote{hkkunduri@mun.ca} \\
+\small \sl $^a$ Department of Mathematics and Statistics, Memorial University of Newfoundland}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

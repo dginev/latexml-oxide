@@ -1,0 +1,11 @@
+% witness: math-ph0303018 (amsart: `James Brink \\Dept ...\\and Zhenghan Wang \\Dept ..., Indiana University`)
+% oracle:  pdflatex 0 errors: two authors, each over its department
+% engines: rust (63d) = ONE personname holding both names and departments; 63e r2 = Zhenghan Wang an affiliation
+% expect:  2 creators, Brink and Wang, each with its department; 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{James Brink \\Dept of Math., UC Berkeley  \\and Zhenghan Wang \\Dept of Math., Indiana University}
+\maketitle
+\end{document}

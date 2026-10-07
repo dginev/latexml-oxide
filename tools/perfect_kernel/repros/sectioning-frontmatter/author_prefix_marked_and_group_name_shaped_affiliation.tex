@@ -1,0 +1,16 @@
+% witness: 63e review r12 finding 1 (p2: an `\and` group headed by a name-shaped affiliation whose mark a name above
+%          requests, a second affiliation line below led by the same mark)
+% oracle:  pdflatex 0 errors: "^1Ann Able, ^2Bob Baker" / "^1Univ A" and "^2Carnegie Mellon" / "^2School of Computer
+%          Science"
+% engines: rust (63d) = Bob with Carnegie Mellon and School of Computer Science; rust (63e) = a creator "Carnegie
+%          Mellon", Bob without it (0 errors, silent): an `\and` group's first line that reads as names is one when an
+%          affiliation below answers its mark (needed for author_and_groups_sharing_a_prefix_mark_are_names); Perl no
+%          creator at all (Base_Utility.pool.ltxml:708)
+% expect:  2 creators — Ann (Univ A), Bob (Carnegie Mellon, School of Computer Science); 0 errors
+% status:  RED (open; OD #459: "Carnegie Mellon" and "Bob Baker" read alike at an `\and` group's head)
+\documentclass{article}
+\author{$^{1}$Ann Able, $^{2}$Bob Baker\\ $^{1}$Univ A \and $^{2}$Carnegie Mellon\\ $^{2}$School of Computer Science}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

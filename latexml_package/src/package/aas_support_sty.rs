@@ -92,7 +92,11 @@ LoadDefinitions!({
   // \author[orcid,KV]{name}  Use once per author
   // Note optional arg starts with orcid ID,
   // followed by keyval (gname,sname,suffix for parts of author's name)
-  DefMacro!("\\author[]{}", "\\lx@add@author{#2\\lx@aas@checkorcid{#1}}");
+  // A name list in one `\author` (older aastex, emulateapj: `Joshua N.\ Winn\altaffilmark{1}, Andrew W.\ Howard
+  // \altaffilmark{2},\\ Avi Shporer\altaffilmark{1}`, 1010.1318) is one author each, as the article `\author` reads it
+  // (Perl aas_support.sty.ltxml:103 makes it one author; 63e).
+  // The orcid goes to the last author the block makes, after it (inside, it rode on the last `\\` line).
+  DefMacro!("\\author[]{}", "\\lx@add@authors@append{#2}\\lx@aas@checkorcid{#1}");
   DefMacro!("\\lx@aas@checkorcid{}", "\\lx@aas@checkorcid@#1,\\done");
   // In later aas, $junk may be keywords? (gname,sname,suffix,...?)
   DefMacro!("\\lx@aas@checkorcid@ Until:, Until:\\done", sub[(possibleid, _junk)] {
@@ -116,7 +120,9 @@ LoadDefinitions!({
     "\\lx@add@contact[role=correspondent,label={fuzzy:#1}]{#1}");
 
   // Various contact information attaches to previous \author
-  DefMacro!("\\affiliation{}",    "\\lx@add@affiliation{#1}");
+  // AASTeX 6 (revtex-derived): an affiliation is every preceding author's that has none yet (`\author{Ann Able and Bob
+  // Baker}\affiliation{Univ}` gives it to both), as revtex's is (`annotate=new`; 63e).
+  DefMacro!("\\affiliation{}",    "\\lx@add@affiliation[annotate=new]{#1}");
   DefMacro!("\\altaffiliation{}", "\\lx@add@altaffiliation{#1}");
   DefMacro!("\\affil",            "\\affiliation");
   DefMacro!("\\authoraddr{}",     "\\lx@add@address{#1}");

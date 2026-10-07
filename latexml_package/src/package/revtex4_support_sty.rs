@@ -53,7 +53,9 @@ LoadDefinitions!({
   // \author[labels]{name}   One \author per author
   // If labels given, the corresponding affiliation from \affil is attached
   // otherwise, \author should be followed by \affiliation
-  DefMacro!("\\author[]{}",    "\\lx@add@author[annotations={#1}]{#2}");
+  // `\author{Brent Preston and Eric Poisson}` names two (gr-qc0606093): the article `\author`'s parse, each author
+  // with the labels (Perl revtex4_support makes it one author; 63e).
+  DefMacro!("\\author[]{}",    "\\lx@add@authors@append[annotations={#1}]{#2}");
   DefMacro!("\\affiliation{}", "\\lx@add@affiliation[annotate=new]{#1}");
   // revtex4-1.cls:2147-2250, the internals of `\affiliation` (`\move@AU\move@AF\begingroup … \@affiliation`,
   // :2206-2211): `\move@AU`/`\move@AF` file the pending authors and affiliations, which the frontmatter API attaches

@@ -1,0 +1,12 @@
+% witness: astro-ph9810433 (aa.cls -> inst_support; llncs shares the splitter)
+% oracle:  pdflatex 0 errors: "R. Braun^1 and W. B. Burton^2"
+% engines: rust (63d) = ONE personname "R. Braun and W. B. Burton", 0 errors (silent); Perl alike (inst_support.sty.ltxml:35)
+% expect:  2 creators, Braun (aff 1) and Burton (aff 2); 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{R. Braun\inst{1} and W. B. Burton\inst{2}}
+\institute{Netherlands Foundation for Research in Astronomy \and Sterrewacht Leiden}
+\maketitle
+\end{document}

@@ -1,0 +1,11 @@
+% witness: 63e review r6 finding 3 (amsart `\author{\textbf{John Smith, Max Planck Institute for Mathematics}}`)
+% oracle:  pdflatex 0 errors: "JOHN SMITH, MAX PLANCK INSTITUTE FOR MATHEMATICS" in bold
+% engines: rust (63e r10) = one author rewritten as `\textbf{John Smith}, \textbf{Max Planck ...}`
+% expect:  1 creator, the line as written; 0 errors
+% status:  RED (63e r10) -> GREEN (63e)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{\textbf{John Smith, Max Planck Institute for Mathematics}}
+\maketitle
+\end{document}

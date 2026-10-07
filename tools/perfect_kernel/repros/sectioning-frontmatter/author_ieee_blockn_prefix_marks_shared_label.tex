@@ -1,0 +1,12 @@
+% witness: 63e review r8 finding 1 (q1: names marked before them, one label shared, side by side in an IEEE block)
+% oracle:  pdflatex 0 errors: "^1Ann Able  ^1Bob Baker" over "^1Univ A"
+% engines: rust (63e r13) = ONE author Ann Able, "Bob Baker" her affiliation, the marks gone (0 errors, silent);
+%          HEAD one merged creator, marks visible; Perl one author (IEEEtran.cls.ltxml `\IEEEauthorblockN`)
+% expect:  2 creators, ¹Ann Able and ¹Bob Baker, each keeping its visible mark; 0 errors
+% status:  RED (63e r13) -> GREEN (63e)
+\documentclass[conference]{IEEEtran}
+\author{\IEEEauthorblockN{$^{1}$Ann Able \quad $^{1}$Bob Baker}\IEEEauthorblockA{$^{1}$Univ A}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

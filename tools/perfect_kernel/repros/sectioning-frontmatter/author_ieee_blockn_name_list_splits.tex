@@ -1,0 +1,13 @@
+% witness: 2410.19527 (IEEEtran: one \IEEEauthorblockN carries a comma list)
+% oracle:  pdflatex 0 errors: "Clemens Paul Zengler1, Niels Troldborg, Mac Gaunaa." over "Technical University of Denmark."
+% engines: rust (63d) = ONE personname with all three names, 0 errors; Perl 0.8.8 alike
+% expect:  3 creators, each with the block affiliation; 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass[11pt]{IEEEtran}
+\author{\IEEEauthorblockN{Clemens Paul Zengler\IEEEauthorrefmark{1},
+Niels Troldborg, Mac Gaunaa.}\\
+\IEEEauthorblockA{Technical University of Denmark.}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

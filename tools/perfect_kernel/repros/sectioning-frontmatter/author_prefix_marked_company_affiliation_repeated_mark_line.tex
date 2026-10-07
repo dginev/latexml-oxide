@@ -1,0 +1,13 @@
+% witness: 63e review r11 R2 (a4: a name-shaped affiliation, then a second affiliation line led by the same mark)
+% oracle:  pdflatex 0 errors: "^1Ann Able, ^2Bob Baker" / "^1Carnegie Mellon" / "^1School of Computer Science" /
+%          "^2Univ B"
+% engines: rust (63e r16) = an author "Carnegie Mellon", Ann without it (0 errors, silent); HEAD Ann (Carnegie
+%          Mellon, School of Computer Science), Bob (Univ B); Perl no creator at all (Base_Utility.pool.ltxml:708)
+% expect:  2 creators — Ann (Carnegie Mellon, School of Computer Science), Bob (Univ B); 0 errors
+% status:  RED (63e r16) -> GREEN (63e: a line of its own whose mark a name above requests is an affiliation)
+\documentclass{article}
+\author{$^{1}$Ann Able, $^{2}$Bob Baker\\ $^{1}$Carnegie Mellon\\ $^{1}$School of Computer Science\\ $^{2}$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

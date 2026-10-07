@@ -1,0 +1,11 @@
+% witness: 63e review r5 finding 1 (amsart `\author{John Smith, Max Planck Institute for Mathematics}`: a person-named institution)
+% oracle:  pdflatex 0 errors: "JOHN SMITH, MAX PLANCK INSTITUTE FOR MATHEMATICS"
+% engines: rust (63e r8) = an author "Max Planck Institute for Mathematics"; rust 63d and Perl one creator as written
+% expect:  1 creator as written (a per-author class splits only a line of names); 0 errors
+% status:  RED (63e r8) -> GREEN (63e)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{John Smith, Max Planck Institute for Mathematics}
+\maketitle
+\end{document}

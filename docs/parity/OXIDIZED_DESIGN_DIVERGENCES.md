@@ -1691,6 +1691,8 @@ single-arg form dropped them; wiring them to the affiliation annotation (à la
 `\inst`) is a separate follow-up. Verified: 2605.00004 now yields all four
 personnames; full suite 1532/0.
 
+Each `\and` piece is now split at its commas, " and " and " \& " by `\lx@add@author@split` (63e, #459).
+
 ---
 
 ### 54. `eqnarray` keeps distinctly-`\label`-ed continuation rows separately numbered
@@ -13879,3 +13881,146 @@ source the stub printed (`\pinlabel`, `at`, coordinates, raw `\includegraphics[�
 Witnesses math0412330, 1010.6236, 1112.5970, 1310.1838, 1904.09721, 1904.12947. Guards
 `perfect_kernel_batch63::{pinlabel_labels_every_figure, pinlabel_dvi_figure_keeps_its_picture,
 pdfximagebbox_reads_the_cropbox}`, `util::image` test `read_pdf_page_box_prefers_cropbox_and_reaches_into_object_streams`.
+
+### 459. An author block's names are found in per-author classes, across lines, and a merged author is an error (Perl: one creator, silent)
+
+KNOWN_PERL_ERRORS #521's shapes, each settled by the article author parse (`add_authors_calls`) rather than a
+per-class rule:
+
+- **Per-author classes parse their `\author` as an author block.** aastex/emulateapj, amsart, revtex, IEEEtran's
+  `\IEEEauthorblockN` and a labelled authblk `\author[1]{…}` call `\lx@add@authors@append[keyvals]{…}` (the keyvals —
+  revtex's `annotations=`, authblk's label — go to every author), so a name list there is one author each and a `\\`
+  line under a name is its affiliation (`\author{Masao Ishikawa\\ \small Faculty of Education, …}`, math0606082;
+  `\IEEEauthorblockN{Ann Able\\ University of X, City}`). Measured on a random arXiv sample (7,880 `\author` bodies
+  of aa, aastex, amsart, emulateapj, llncs and revtex papers): " and " in 6-15% by class, a comma in 5-30%, `\\` in
+  0.5-15%, the amsart `\\` ones mostly "Name \\ affiliation" — so these classes take the full parse, not a names-only
+  split. Their names line splits only where it reads as two or more names (`split_author_line_cautious`: `Klemens
+  Fellner and Bao Quoc Tang`); otherwise it stays one author as written, as in Perl (`John Smith, Max Planck Institute
+  for Mathematics`, `John Smith, University of Toronto`, a name the shape test cannot read). The article `\author`
+  splits at every comma, as it always has, and so does a raw class's own `\author` (`\lx@add@authors@adaptive`,
+  2309.03769's dan2e.sty). inst/llncs (names only, the institutes apart) split each `\and` piece with `\lx@add@author@split` (comma,
+  " and ", " \& "); an empty piece gives no author there. An IEEE block's `\IEEEauthorblockA` goes to its last
+  author and the run of authors before it that have none (`annotate=new`, which can reach into an earlier block's
+  authors when those have none), and the `\\` between the blocks is no affiliation. These bindings keep their
+  authors' marks visible on the names, as Perl does — their affiliation commands answer no mark request — so their
+  block takes the unmarked path even when it holds marks (`\IEEEauthorblockN{Ann Able$^{1}$, Bob Baker$^{2}$}`),
+  unless it holds its marked affiliations itself (`answers_its_marks`: a line after the first led by a mark that a
+  name before it requests — 2401.14196's `\author[*]{… \\ $^1$DeepSeek-AI …}`, 1 → 13 creators; a line led by a mark
+  no name requests is a name marked before it, and so is a line of names beside the first on its printed line or
+  answered by a line below when the names are marked before them, `$^{1}$Ann Able \quad $^{1}$Bob Baker`, two authors
+  at the `\quad`).
+  Linking those marks to marked affiliations is later work. Their `\author` takes no IJCAI split at an
+  `\affiliations`/`\emails` marker, as Perl adds it whole: re-entering as a replacing `\author`, its names dropped
+  the authors before it. informs' `\AUTHOR` (a documented name list, informs4.cls:1198) appends with the article `\author`'s split
+  (`\lx@add@authors@list`).
+- **Lines of a block without marks** (`name_groups`): the first line is the names, as in Perl, except that a line
+  of only "and" separates two name-and-affiliation groups; a line styled as the names continues them when it is all
+  names (or their qualifiers) and either the names read as an unfinished list (ending in a comma, "and", "&") or the
+  line opens with "and" — so "and Max--Planck Institut für Mathematik" (math0208081), "and INFN Sezione di Roma" and
+  `John Smith,\\ {\it Bell Labs, …}` stay affiliations; a line of names each marked after it (a superscript,
+  `\altaffilmark`, `\IEEEauthorrefmark`), under names marked alike, opens the next group (`Ann Able$^{1}$\\ Bob
+  Baker$^{2}$`; `A\altaffilmark{1}, B\altaffilmark{2}\\ C\altaffilmark{3}, D\altaffilmark{4}`); after affiliations, a line of names styled as the names and
+  opening with "and" opens the next group, its "and" dropped (`…\\and Zhenghan Wang \\Dept of Math., …`,
+  math-ph0303018); and after an affiliation styled unlike the names, a line of names styled as the names opens the
+  next group only when an affiliation styled as that one follows it (the alternation of hep-ph9306253, 0811.1526), so
+  a closing city line stays an affiliation. "Names" is `name_shaped`:
+  2-5 capitalised words or initials (a letter command — `{\L}ukasz`, `\O stergaard` — read as its letter, an accent's
+  spaces skipped), particles inside, no digit, `@`, `:`, `/` or parenthesis, no institution word, marks glued to its
+  end dropped but not a postal code after a space (`CA 93106`). Institution words are whole words in the languages
+  affiliations are written in (`university`, `università`, `dipartimento`, `sezione`, `osservatorio`, `école`, `labs`,
+  …; a hyphenated compound's parts too, `Max-Planck-Institut`), never word openings: "Strasser", "Schooler",
+  "Campusano" are surnames, and words that are also common surnames (street, road, campus, station, bureau, office,
+  council: "Rachel Street") are not on the list; acronyms (`INFN`, `ESA`, `AI`) count only in capitals. A place's
+  word that no name carries is on it ("New", "Tel": `\author{John Smith, New York}` stays one author as written).
+  Known miss: a two-word place whose words are also names' ("Hong Kong", "Murray Hill", "Los Angeles") reads as a
+  name, so `\author{John Smith, Hong Kong}` in a per-author class gives an author "Hong Kong" (Perl: one creator), and
+  so does such a place on a line of its own with a mark after it, under a name so marked (`Ann Able$^{1}$\\ Murray
+  Hill$^{2}$`).
+- `\newline` breaks author lines as `\\` does, and affiliation lines too (`affil_splits`: `Dept\newline Univ` is two
+  affiliation contacts, as `Dept\\ Univ` is; Perl's `@affilsplits` lacks it); " \& " separates names, and a thin space before "and" is its space
+  (`\,\,and`, 1407.0988); a names line wrapped whole in a group with its declarations splits as `\textbf{A, B}` does
+  (`{\bf Daniel Boyanovsky, Da- Shin Lee}`, hep-th9212083; 2608.16650); aastex's `\altaffilmark` written after the
+  comma that follows its name stays with that name (astro-ph0302534); a generational suffix or degree (`Jr.`, `III`,
+  `MD`, `PhD`) or a written membership grade (`\emph{Member, IEEE}`, the society alone only from a short list of
+  societies) rejoins the name before it with the separator written between them, instead of becoming an author — an
+  all-capitals name (`WEI LI`) stays a name. A piece of marks and notes only (`only_marks_and_notes`: spaces, a note or
+  mark command with its argument, a superscript, math holding only those —
+  `~\IEEEmembership{Senior Member,~IEEE,}\thanks{…}`, 1510.02728; `$^{*}$`) joins the name before it without its
+  separator; a name set in math (`$\mbox{\rm M. Zra{\l }ek}^{2}$`, hep-ph9504228) or written as a macro (`\A`) is
+  something to read. The empty piece between ", " and
+  " and " ("A, B, and C", inside a wrapper as well: `\textbf{A, B, and C}`) makes no author: it had taken a copy of an
+  affiliation given to all and merged it onto B.
+- A line of only "and" parts two authors only when names follow it (`{\it P. Plech\' a\v{c}}`, cond-mat9705101);
+  before an affiliation (`and\\ SISSA, Trieste`) it is affiliation text, kept with the line after it as Perl keeps
+  both, and so is the first of two "and" lines in a row.
+- aastex's `\affiliation`, like revtex's, is every preceding author's that has none (`annotate=new`; AASTeX 6 is
+  revtex-derived), unlabelled, as at HEAD for revtex.
+- **A creator whose name holds two or more people is `Error:frontmatter:merged_creators`**, once per creator
+  (`flag_merged_creators`, after the frontmatter is placed): LaTeX typesets several people where the document has
+  one, a loss nothing else reports (user directive 2026-10-07: silent fidelity gaps must be errors). Names are parted
+  at commas, " and ", " & "; every part must be a name or qualify one and two must be names, so a name beside its
+  institution ("Jane Doe, Bell Labs") is not flagged. A block laid out as a tabular is kept whole on purpose (Perl
+  Base_Utility.pool.ltxml:693) and not checked. Known misses: names parted only by spaces, marks or a line break (`Ann
+  Able$^1$ Bob Baker$^2$`, cs9810005; the marked path's continuation `Ann Able$^{1}$\\ Bob Baker\\ $^{1}$Univ A`, one
+  personname `Ann Able<break/>Bob Baker`) are neither split nor flagged; in a per-author binding, unmarked names
+  stacked with `\\` (`\IEEEauthorblockN{Ann Able\\ Bob Baker}`, amsart `\author{Ann Able\\ Bob Baker}`) read the
+  second as the first's affiliation, where HEAD merged them (author_ieee_blockn_stacked_names); acmart, jheppub, quantumarticle and arximspdf keep one author
+  per `\author` as their classes require, so a list there is flagged rather than split.
+- **Names marked before them** (the marked path): the block's first line is its names; after it, a line marked as
+  the first that reads as names (each marked part, `reads_as_names`) is a name by where it stands — as the first line
+  of an `\and` group when no author before it requests its mark (the earlier rule) or an affiliation below answers it
+  (`… $^{1}$Univ A \and $^{2}$Bob Baker\\ $^{2}$Univ B`); before the affiliations, beside the first on its printed line
+  (`beside_prefix_marked_names`: after `\quad`/`\qquad`, no line break between, the `\and` family reopening it) when
+  its mark is new or answered below (`$^{1}$Ann Able \quad $^{1}$Bob Baker \quad $^{2}$Cat Cole\\ $^{1}$Univ A\\
+  $^{2}$Univ B`; `$^{1}$Ann Able \quad $^{2}$Bob Baker\\ $^{1}$Google DeepMind \quad $^{2}$Huawei Technologies`), and on
+  a line of its own when its mark is new and answered below (`$^{1}$Ann Able\\ $^{2}$Bob Baker\\ $^{1}$Univ A\\
+  $^{2}$Univ B`). An affiliation answers a mark when a marked part of it led by that mark reads as an affiliation
+  (`mark_answered_below`, `reads_as_affiliation`: no name, no `@`, an institution word), so an email or a place led by
+  the same mark answers nothing. On a line of its own, a line whose mark a name above requests stays an affiliation
+  however it reads (`$^{1}$Carnegie Mellon\\ $^{1}$School of Computer Science`); beside the first or at an `\and`
+  group's head it does unless an affiliation below answers it (`$^{1}$Ann Able \quad $^{1}$University of Arizona`;
+  `$^{1}$Ann Able \quad $^{1}$Google DeepMind`); a name-shaped line no affiliation below answers stays one
+  (`$^{1}$Google DeepMind` over `$^{1}$\texttt{ann@google.com}` or `$^{1}$Hong Kong`; `$^{3}$Google DeepMind`, which no
+  author requests: kept in a creator of its own, #159). `answers_its_marks` reads a line of names beside the first as a name, so a per-author
+  binding's block of names alone (`\IEEEauthorblockN{$^{1}$Ann Able \quad $^{1}$Bob Baker}`, its affiliations in
+  `\IEEEauthorblockA`) splits at the `\quad` on the unmarked path. Perl's `$p < 8` made every such line an affiliation
+  and, with no author left, emitted no creator (KNOWN_PERL_ERRORS #521). Open (RED repros in sectioning-frontmatter/),
+  each name read as an affiliation (of the author above, or in a creator with no name), as at HEAD: names on lines of
+  their own sharing a label
+  (`$^{1}$Ann Able\\ $^{1}$Bob Baker\\ $^{1}$Univ A`, author_prefix_marked_shared_label_name_lines — not told from
+  `$^{1}$Carnegie Mellon` without knowing names), a name whose label no affiliation answers
+  (author_prefix_marked_name_with_unanswered_label), names sharing a label over a name-shaped affiliation
+  (author_prefix_marked_shared_label_company_affiliation), and names joined by "and" in one marked line
+  (author_prefix_marked_and_joined_name_line). And beyond HEAD, a name-shaped affiliation at an `\and` group's head or
+  beside the first that an affiliation below answers reads as a name (`… \and $^{2}$Carnegie Mellon\\ $^{2}$School of
+  Computer Science`, author_prefix_marked_and_group_name_shaped_affiliation): it reads as `\and $^{1}$Bob Baker\\
+  $^{1}$Univ A` does, which 62zp's author_and_groups_sharing_a_prefix_mark_are_names needs as names.
+- **Notes and requests on an affiliation line** under a name in a per-author class's `\author` (`\thanks`,
+  `\thanksref`, `\footnote`, `\altaffilmark`: `Univ A\thanks{Grant}`, `Steward Observatory\altaffilmark{2}`) go on its
+  author (`take_author_annotations`), as Perl, adding that `\author` whole, gives them; digested inside the nested
+  `\lx@add@affiliation` they came loose (a document-level note; a creator of their own holding the affiliation and its
+  `\altaffiltext`). The article `\author` nests the line as Perl does (Base_Utility.pool.ltxml:723-725), a `\thanks`
+  there a document-level pubnote (`digestFrontmatterItem` in a contact, :332-333; html_feedback#6888).
+- **The marked path's unmarked first line** of an `\and` group stays one author, as Perl keeps it ("safest to assume
+  author?", Base_Utility.pool.ltxml:705-706), unless it reads as two or more names: then each is an author
+  (`Aghil Alaee\footnote{…} \,\,and Hari K. Kunduri\footnote{…}\\ … $^a$ Department …`, 1407.0988).
+- **Residual:** in the article parse a names line's affiliations go to its last name only (`Ingo Rehberg and
+  Reinhard Richter\\ {\sl Experimentalphysik V, …}`: Richter's), as it has always given them, while the per-author
+  classes' affiliation commands (revtex, aastex, an IEEE block's `\IEEEauthorblockA`) go to every preceding author
+  without one — which can reach into an earlier IEEE block whose authors have none. One rule for both is later work.
+  `annotate=new` (Perl Base_Utility.pool.ltxml:521) gives a second contact to the last author only, so after
+  `\author{A}\author{B}` (revtex, aastex) the first `\affiliation` is both names' and a second B's alone. amsart's
+  `\address` stays the last author's (Perl's default): after a split `\author{Klemens Fellner and Bao Quoc Tang}` one
+  `\address{Graz}` is Tang's only, where the merged creator held it (repro
+  sectioning-frontmatter/author_amsart_address_reaches_every_name, open); `annotate=new` there would break the up-front
+  idiom `\author{A}\author{B}\address{X}\address{Y}` that `distribute_upfront_contacts` deals out (2308.06214).
+  Giving a contact to the names one `\author` gave needs the creators to carry their call, later work.
+
+A/B over 318 papers (run-336's 80-paper fidelity sample and 238 random arXiv papers, 63d → 63e): 56 papers' authors
+change, each a list now split as LaTeX typesets it (astro-ph0107113 1 → 46 creators, 1010.1318 1 → 12, 2401.14196
+1 → 13, math-ph0303018's second author recovered), none with more errors, no Fatal, no merged author left after the
+fixes the check pointed to (hep-th9212083, 2608.16650, 1407.0988). Guards `perfect_kernel_batch63::author_*` (39
+positive; 27 negative — affiliations, degrees, all-capitals names, surnames like institution words, names set in math
+or written as macros, a per-author binding's visible marks and unsplit lines, a name beside its institution or a
+place, that must stay as they are; `author_merged_names_are_an_error` for the error),
+`06_cluster_frontmatter::frontmatter_ieee_authorblock_trailing_email`.

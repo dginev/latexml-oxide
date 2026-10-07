@@ -1,0 +1,11 @@
+% witness: 63e review r3 finding 3 (`\\ and\\ ` between two affiliations)
+% oracle:  pdflatex 0 errors: "John Smith" over "Dept. of Physics", "and", "Center for Theoretical Physics"
+% engines: rust (63e r4) = an author "Center for Theoretical Physics", the "and" dropped; Perl one author
+% expect:  1 creator, John Smith, with the three lines as affiliations; 0 errors
+% status:  RED (63e r4) -> GREEN (63e)
+\documentclass{article}
+\author{John Smith\\ Dept.\ of Physics\\ and\\ Center for Theoretical Physics}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

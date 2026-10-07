@@ -1,0 +1,11 @@
+% witness: 63e review r4 finding 1 (amsart "and" list; the rejoin also rewrote the written "and" as ", ")
+% oracle:  pdflatex 0 errors: "ANN ABLE AND PATRICK STRASSER"
+% engines: rust (63e r5) = ONE creator "Ann Able, Patrick Strasser"
+% expect:  2 creators; 0 errors
+% status:  RED (63e r5) -> GREEN (63e)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able and Patrick Strasser}
+\maketitle
+\end{document}

@@ -1,0 +1,11 @@
+% witness: math0208081 (amsart: "Name$^*$\\ affiliation\\ and Max--Planck Institut ..."), 63e review r1 finding 5
+% oracle:  pdflatex 0 errors: one author over two affiliations, the second opening with "and"
+% engines: rust (63d) = one author, two affiliations; 63e must keep it so
+% expect:  1 creator, Ralph M. Kaufmann, with both affiliations; 0 errors
+% status:  GREEN (63e)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ralph M. Kaufmann\\ University of Southern California, Los Angeles, USA\\ and Max--Planck Institut f\"ur Mathematik, Bonn, Germany}
+\maketitle
+\end{document}

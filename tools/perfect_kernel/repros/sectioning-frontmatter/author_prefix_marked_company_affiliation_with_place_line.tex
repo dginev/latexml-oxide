@@ -1,0 +1,13 @@
+% witness: 63e review r10 finding 1 (r6: a name-shaped company affiliation, then a place led by the same mark)
+% oracle:  pdflatex 0 errors: "^1Ann Able, ^2Bob Baker" / "^1Google DeepMind" / "^2Hong Kong Baptist University" /
+%          "^1Hong Kong"
+% engines: rust (63e r15) = an author "Google DeepMind" (0 errors, silent); HEAD Ann (Google DeepMind, Hong Kong), Bob
+%          (Hong Kong Baptist University)
+% expect:  2 creators — Ann (Google DeepMind, Hong Kong), Bob (Hong Kong Baptist University); 0 errors
+% status:  RED (63e r15) -> GREEN (63e: only an affiliation-shaped line answers a mark)
+\documentclass{article}
+\author{$^{1}$Ann Able, $^{2}$Bob Baker\\ $^{1}$Google DeepMind\\ $^{2}$Hong Kong Baptist University\\ $^{1}$Hong Kong}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

@@ -6426,7 +6426,7 @@ Text.
 }
 
 /// The `<creator>` elements of `xml`, in document order, each whole.
-fn creators_of(xml: &str) -> Vec<String> {
+pub(super) fn creators_of(xml: &str) -> Vec<String> {
   let mut found = Vec::new();
   let mut from = 0;
   while let Some(at) = xml[from..].find("<creator") {

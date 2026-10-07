@@ -157,7 +157,7 @@ LoadDefinitions!({
     ))
   });
   DefMacro!("\\lx@ams@author{}{}{}",
-    "\\def\\@shortauthor{#1}\\def\\@author{#2}\\lx@ams@addto@authors{#3}{#2}\\lx@add@author{#2}");
+    "\\def\\@shortauthor{#1}\\def\\@author{#2}\\lx@ams@addto@authors{#3}{#2}\\lx@add@authors@append{#2}");
 
   DefMacro!("\\datename", None, "\\textit{Date}:");
 

@@ -1,0 +1,14 @@
+% witness: the run-336 fidelity audit's 16 merged-author papers (1010.1318, 2401.14196, 0908.0757, cs9810005, ...):
+%          a creator holding several people was a silent loss — status OK, nothing logged
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" (acmart takes one \author per author)
+% engines: rust (63d) = ONE personname "Ann Able and Bob Baker", 0 errors (silent); Perl alike
+% expect:  the creator stays as written (acmart's \author is one author), and the loss is reported:
+%          exactly one `Error:frontmatter:merged_creators`
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\affiliation{\institution{Univ A}\country{Country}}
+\maketitle
+\end{document}

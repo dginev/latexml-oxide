@@ -1,0 +1,15 @@
+% witness: 1010.1318 (emulateapj; also 0908.0757, astro-ph0502290, astro-ph9806172 — aastex-family, run-336 fidelity audit)
+% oracle:  pdflatex 0 errors: three authors, each with its \altaffilmark
+% engines: rust (63d) = ONE personname "Joshua N. Winn, Andrew W. Howard, Avi Shporer", 0 errors (silent); Perl alike
+%          (aas_support.sty.ltxml:103 `\lx@add@author{#2}`, one creator per \author)
+% expect:  3 creators — Winn (1), Howard (2), Shporer (1) — each with its \altaffiltext; 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Joshua N.\ Winn\altaffilmark{1}, Andrew W.\ Howard\altaffilmark{2},\\
+Avi Shporer\altaffilmark{1}}
+\altaffiltext{1}{MIT, Cambridge, MA}
+\altaffiltext{2}{UC Berkeley, CA}
+\maketitle
+\end{document}

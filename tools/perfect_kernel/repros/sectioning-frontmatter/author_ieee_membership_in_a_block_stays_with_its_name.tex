@@ -1,0 +1,11 @@
+% witness: 63e review r4 finding 3 (`\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE" over "Univ"
+% engines: rust (63e r5) = Ann Able with "Univ" twice (the membership piece an empty creator)
+% expect:  1 creator with Univ once; 0 errors
+% status:  RED (63e r5) -> GREEN (63e)
+\documentclass[conference]{IEEEtran}
+\author{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}}\IEEEauthorblockA{Univ}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

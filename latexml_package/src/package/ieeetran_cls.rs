@@ -246,8 +246,12 @@ LoadDefinitions!({
   // structure, bind each `\IEEEauthorblockN` to a creator directly and each
   // `\IEEEauthorblockA` to that creator's affiliation, then have `\author` run
   // the block body verbatim (below) instead of guessing.
-  DefMacro!("\\IEEEauthorblockN{}", "\\lx@add@creator[role=author]{#1}");
-  DefMacro!("\\IEEEauthorblockA{}", "\\lx@add@affiliation{#1}");
+  // A block's names may be a list (`\IEEEauthorblockN{Clemens Paul Zengler\IEEEauthorrefmark{1}, Niels Troldborg, Mac
+  // Gaunaa.}`, 2410.19527): read as an author block, one author each, and a `\\` line under a name its affiliation
+  // (`\IEEEauthorblockN{Ann Able\\ University of X, City}`); the block's `\IEEEauthorblockA` goes to its last author
+  // and the run of authors before it that have none (`annotate=new`; 63e).
+  DefMacro!("\\IEEEauthorblockN{}", "\\lx@add@authors@append{#1}");
+  DefMacro!("\\IEEEauthorblockA{}", "\\lx@add@affiliation[annotate=new]{#1}");
   // Run an explicit author-block body: `\and` merely separates blocks here (each
   // block already emits its own creator), so neutralise it.
   DefMacro!("\\lx@IEEE@author@blocks{}",
@@ -914,14 +918,18 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
       || *t == T_CS!("\\authorblockA")
   };
   fn flush(run: &mut Vec<Token>, out: &mut Vec<Token>) {
-    if run.iter().any(|t| *t != T_SPACE!()) {
+    // The line break between two blocks (`\IEEEauthorblockN{…}\\ \IEEEauthorblockA{…}`, 2410.19527) is layout:
+    // wrapped, it was an empty affiliation of the block's authors.
+    let gap = |t: &Token| *t == T_SPACE!() || *t == T_CS!("\\\\") || *t == T_CS!("\\newline");
+    if run.iter().any(|t| !gap(t)) {
       // Non-empty bare run → route to the creator as an affiliation.
       out.push(T_CS!("\\IEEEauthorblockA"));
       out.push(T_BEGIN!());
       out.append(run);
       out.push(T_END!());
     } else {
-      out.append(run); // whitespace-only gap: pass through
+      // whitespace-only gap: pass its spaces through
+      out.extend(run.iter().filter(|t| **t == T_SPACE!()));
     }
     run.clear();
   }

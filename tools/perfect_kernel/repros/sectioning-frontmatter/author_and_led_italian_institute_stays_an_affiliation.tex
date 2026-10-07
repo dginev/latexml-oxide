@@ -1,0 +1,12 @@
+% witness: 63e review r1 finding 5 ("and INFN Sezione di Roma" read as a name: "INFN Sezione di Roma" was name-shaped),
+%          r2 finding 3 ("and Max Planck Inst.": the abbreviation read as a name)
+% oracle:  pdflatex 0 errors: one author over three affiliations
+% engines: rust (63e r1) = "INFN Sezione di Roma, Italy" an author; Perl one author
+% expect:  1 creator, A. Smith, with the three affiliations; 0 errors
+% status:  RED (63e r1) -> GREEN (63e)
+\documentclass{article}
+\author{A. Smith\\ Dipartimento di Fisica, Universit\`a di Roma\\ and INFN Sezione di Roma, Italy\\ and Max Planck Inst.}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

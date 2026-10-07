@@ -23,14 +23,15 @@ LoadDefinitions!({
   // (shared upstream bug; witness arXiv:2605.00004, whose pdflatex PDF lists all
   // four authors). Surpass-Perl (OXIDIZED_DESIGN #53):
   //   * accept the optional `[marks]` so `[` is never mistaken for the name,
-  //   * take the name from #2 and split it on \and/\And/comma as before,
+  //   * take the name from #2 and split it on \and/\And, then each piece at its commas, " and " and " \& "
+  //     (`\lx@add@author@split`: `R. Braun\inst{1} and W. B. Burton\inst{2}`, astro-ph9810433; 63e),
   //   * ACCUMULATE across calls — drop the per-call `\lx@clear@creators`, which
   //     is a no-op on the first call anyway, so single-`\author` classes are
   //     unaffected (and aa/llncs/sv define their own `\author` regardless).
   // The `[marks]` (author↔affiliation label) are dropped, matching Perl's own
   // handling; wiring them to the affiliation annotation is a separate follow-up.
   DefMacro!("\\author[]{}",
-    "\\lx@splitting{\\lx@add@author}{\\and\\And,}{#2}\\lx@author@trailing");
+    "\\lx@splitting{\\lx@add@author@split}{\\and\\And}{#2}\\lx@author@trailing");
   DefMacro!("\\institute{}",
     "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");
   DefMacro!("\\inst{}", "\\lx@request@frontmatter@annotation[affiliation]{#1}");

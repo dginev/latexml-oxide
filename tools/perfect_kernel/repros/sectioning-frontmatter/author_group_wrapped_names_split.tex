@@ -1,0 +1,11 @@
+% witness: hep-th9212083 (`\author{{\bf Daniel Boyanovsky, Da- Shin Lee}}`), 2608.16650 (`{\bf Name$^{2}$, \enspace Name$^{2}$}`)
+% oracle:  pdflatex 0 errors: the names in bold, comma-separated
+% engines: rust (63e r2) = ONE personname, Error:frontmatter:merged_creators; Perl one personname, silent
+% expect:  2 creators (the bold wrapping a whole name is unwrapped there, `unwrap_whole_name_bold`); 0 errors
+% status:  RED (63e r2) -> GREEN (63e)
+\documentclass{article}
+\author{{\bf Daniel Boyanovsky, Da-Shin Lee}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

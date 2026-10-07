@@ -1,0 +1,13 @@
+% witness: 63e review r10 (r3: each author its own \and group, sharing a label, a name-shaped company affiliation
+%          under each)
+% oracle:  pdflatex 0 errors: "^1Ann Able / ^1Google DeepMind  and  ^1Bob Baker / ^1Google DeepMind"
+% engines: rust (63d, 63e) = Bob Baker an affiliation of Ann (0 errors, silent); Perl no creator at all
+%          (Base_Utility.pool.ltxml:708)
+% expect:  2 creators — Ann and Bob, each with Google DeepMind; 0 errors
+% status:  RED (open; OD #459: only an affiliation-shaped line answers a mark, and "Google DeepMind" reads as a name)
+\documentclass{article}
+\author{$^{1}$Ann Able\\ $^{1}$Google DeepMind \and $^{1}$Bob Baker\\ $^{1}$Google DeepMind}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

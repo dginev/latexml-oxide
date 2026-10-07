@@ -1,0 +1,11 @@
+% witness: math0606082 (amsart: `\author{Name\\ \small Faculty ...\\ \small City\\ \small \texttt{email}}`); its `\\[-0.8ex]` spacing dropped, which pdflatex rejects in amsart's uppercased author
+% oracle:  pdflatex 0 errors: the name, then the faculty, the city and the address
+% engines: rust (63d) = ONE personname holding the name and every line; Perl alike
+% expect:  1 creator, Masao Ishikawa, with the faculty and city as affiliations and the address as an email; 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Masao Ishikawa\\ \small Faculty of Education, Tottori University\\ \small Koyama, Tottori, Japan\\ \small \texttt{ishikawa@fed.tottori-u.ac.jp}}
+\maketitle
+\end{document}

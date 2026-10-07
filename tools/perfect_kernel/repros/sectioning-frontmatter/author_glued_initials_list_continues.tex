@@ -1,0 +1,14 @@
+% witness: hep-ex0105093 (SND collaboration list: `A.G.Bogdanchikov, A.V.Bozhenok, …,\\ A.F.Danilyuk, …`)
+% oracle:  pdflatex 0 errors: one list of names over several lines
+% engines: rust (63e) = the names after the first line become affiliations of the last name on it (0 errors,
+%          silent): "A.G.Bogdanchikov" reads as one word, not a name (name_shaped wants 2-5 words); Perl the same
+%          (Base_Utility.pool.ltxml:720-725, every later line an affiliation)
+% expect:  6 creators, one per name; 0 errors
+% status:  RED (open; 63f: initials glued to a surname read as a name)
+\documentclass{article}
+\author{G.N.Abramov, M.N.Achasov, V.M.Aulchenko,\\
+A.G.Bogdanchikov, A.V.Bozhenok, D.A.Bukin}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

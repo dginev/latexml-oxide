@@ -1,0 +1,12 @@
+% witness: 63e review r9 finding 2 (s2: a name marked before it, its affiliation beside it on the same printed line)
+% oracle:  pdflatex 0 errors: "^1Ann Able  ^1University of Arizona"
+% engines: rust (63e r14) = a second author "University of Arizona" (0 errors, silent); HEAD Ann with the
+%          affiliation; Perl no creator at all (Base_Utility.pool.ltxml:708 `$p < 8`: every line an affiliation)
+% expect:  1 creator — Ann Able, affiliation University of Arizona; 0 errors
+% status:  RED (63e r14) -> GREEN (63e)
+\documentclass{article}
+\author{$^{1}$Ann Able \quad $^{1}$University of Arizona}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

@@ -11162,3 +11162,30 @@ pinlabel.sty:607-623 leaves a figure's EPS open after finding its `%%BoundingBox
 first (:567): every later figure read the previous EPS, found no box, printed its name as text ("summ\_2 not found",
 a stray `_` in 1010.6236) and lost its labels. Fixed in Rust (63d): `tex_file_io.rs` `\openin` closes the stream
 first, as `\closein` does (`close_input_stream`). Guard `perfect_kernel_batch63::openin_closes_the_stream_first`.
+
+## 521. Author name lists collapse into one creator, silently
+
+A list of names given where Perl expects one name, or lines of names where it expects one names line, becomes one
+`<ltx:creator>` (or a creator plus "affiliations" that are people), with no diagnostic. Measured on run 336's
+fidelity audit: 21 of 73 papers with authors (16 merged, 5 losing co-authors to affiliations); Perl `latexmlc` gives
+the same or worse on every repro. Shapes (each a repro in `tools/perfect_kernel/repros/sectioning-frontmatter/`):
+
+- One-author-per-`\author` bindings never split: `aas_support.sty.ltxml:102-103` (`\author{Joshua N.\ Winn\altaffilmark{1},
+  Andrew W.\ Howard\altaffilmark{2}, …}`, 1010.1318, 0908.0757, astro-ph9806172), `ams_support.sty.ltxml:99`
+  (`\author{Klemens Fellner and Bao Quoc Tang}`, 1708.01427), `revtex4_support.sty.ltxml:46` (`\author{Brent Preston and Eric
+  Poisson}`, gr-qc0606093), `inst_support.sty.ltxml:35` splitting at `\and` and commas but not " and " (`\author{R.
+  Braun\inst{1} and W. B. Burton\inst{2}}`, astro-ph9810433), `authblk.sty.ltxml:50`'s labelled `\author[1]{Ann Able,
+  Bob Baker}` (2401.14196's deepseek.cls), IEEEtran's `\IEEEauthorblockN{A, B, C}` (`IEEEtran.cls.ltxml:144` maps it to plain `#1`, its braces shielding
+  the list from the split; 2410.19527).
+- `Base_Utility.pool.ltxml:720-725` reads the first `\\` line of a block without marks as its names and every later
+  line as an affiliation: a line that is only "and" (cond-mat9705101), names continuing an unfinished list onto the
+  next line (`…, Andrew W.\ Howard\altaffilmark{2},\\ Avi Shporer…`; `\\ and Warren J. Gross`, 1611.04834), and name
+  lines alternating with styled affiliations (hep-ph9306253, 0811.1526) all lose the later names.
+- `\newline` (latex.ltx:9256, the same line break as `\\`) is no line separator (2401.14196).
+- `Base_Utility.pool.ltxml:708` reads a marked line whose mark is near its front (`$p < 8`) as an affiliation, so
+  every name marked before it is one, the first included; with no author left Perl emits no creator at all
+  (`$^{1}$Ann Able \quad $^{1}$Bob Baker \quad $^{2}$Cat Cole\\ $^{1}$Univ A\\ $^{2}$Univ B`; `$^{1}$Ann Able\\
+  $^{2}$Bob Baker\\ $^{1}$Univ A\\ $^{2}$Univ B`).
+
+Fixed in Rust (63e, OXIDIZED_DESIGN_DIVERGENCES #459); a creator still holding two or more names is now
+`Error:frontmatter:merged_creators`. Guards `perfect_kernel_batch63::author_*`.

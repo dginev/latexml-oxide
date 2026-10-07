@@ -1,0 +1,12 @@
+% witness: 63e review r4 finding 2 (`\textbf{A, B, and C}`: the empty piece of ", and" survived inside the wrapper)
+% oracle:  pdflatex 0 errors: the three names in bold over the department
+% engines: rust (63e r5) = Bob Baker with the affiliation twice
+% expect:  3 creators, each with the affiliation once; 0 errors
+% status:  RED (63e r5) -> GREEN (63e)
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able, Bob Baker, and Cat Cole}}
+\affiliation{Department of Physics, University X}
+\maketitle
+\end{document}

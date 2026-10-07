@@ -1,0 +1,11 @@
+% witness: 63e review r5 finding 4 ("Street" is a surname: Rachel A. Street, astro-ph)
+% oracle:  pdflatex 0 errors: "Ann Able^1, Rachel Street^2"
+% engines: rust (63e r8) = ONE creator "Ann Able, Rachel Street" (Street read as an institution word)
+% expect:  2 creators, each with its affiliation; 0 errors
+% status:  RED (63e r8) -> GREEN (63e)
+\documentclass{article}
+\author{Ann Able$^{1}$, Rachel Street$^{2}$\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

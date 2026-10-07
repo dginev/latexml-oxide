@@ -37,8 +37,9 @@ LoadDefinitions!({
   // Perl: authblk.sty.ltxml (PR #2767)
   DefMacro!("\\author[]{}", sub[(label, author)] {
     if let Some(label) = label {
-      // Use label attachment
-      Ok(Invocation!("\\lx@add@creator[role=author,annotations={#1}]{#2}",
+      // Use label attachment; a list of names under one label (`\author[1]{Ann Able, Bob Baker}`; deepseek.cls's
+      // `\author[*]{…}` block, 2401.14196) is one author each, every one carrying the label (63e)
+      Ok(Invocation!("\\lx@add@authors@append[annotations={#1}]{#2}",
         vec![Some(label), Some(author)]))
     } else if author.unlist_ref().iter().any(|t|
       t.defined_as(&T_CS!("\\and")) || t.defined_as(&T_CS!("\\And"))

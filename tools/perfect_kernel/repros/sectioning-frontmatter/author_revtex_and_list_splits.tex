@@ -1,0 +1,13 @@
+% witness: cond-mat0205631, gr-qc0606093 (revtex: 308 of 5317 sampled revtex \author bodies hold " and ", 269 a comma)
+% oracle:  pdflatex 0 errors: "Brent Preston and Eric Poisson" over the department
+% engines: rust (63d) = ONE personname "Brent Preston and Eric Poisson", 0 errors (silent); Perl alike
+%          (revtex4_support.sty.ltxml `\lx@add@author`, one creator per \author)
+% expect:  2 creators, both with the \affiliation (revtex: it applies to the authors before it); 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Brent Preston and Eric Poisson}
+\affiliation{Department of Physics, University of Guelph}
+\maketitle
+\end{document}

@@ -1,0 +1,13 @@
+% witness: 63e review r10 (residual): a name-shaped company affiliation beside a name marked before it, on the same
+%          printed line
+% oracle:  pdflatex 0 errors: "^1Ann Able  ^1Google DeepMind"
+% engines: rust (63e r16) = a second author "Google DeepMind" (0 errors, silent); HEAD Ann with the affiliation
+% expect:  1 creator — Ann Able, affiliation Google DeepMind; 0 errors
+% status:  RED (63e r16) -> GREEN (63e: a line beside the first is a name only when the block goes on below
+%          that printed line)
+\documentclass{article}
+\author{$^{1}$Ann Able \quad $^{1}$Google DeepMind}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

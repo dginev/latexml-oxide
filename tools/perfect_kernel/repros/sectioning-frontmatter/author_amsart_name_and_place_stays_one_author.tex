@@ -1,0 +1,11 @@
+% witness: 63e review r7 finding 3 (a two-word place after the name: `\author{John Smith, New York}`)
+% oracle:  pdflatex 0 errors: "JOHN SMITH, NEW YORK"
+% engines: rust (63e r12) = 2 authors, John Smith and "New York" (0 errors, silent); Perl one author
+% expect:  1 creator "John Smith, New York", as written; 0 errors
+% status:  RED (63e r12) -> GREEN (63e)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{John Smith, New York}
+\maketitle
+\end{document}

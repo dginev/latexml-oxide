@@ -1,0 +1,11 @@
+% witness: 63e review r6 finding 4 (`\author{Ann Able, $^{*}$\thanks{Equal contribution}, Bob Baker}`)
+% oracle:  pdflatex 0 errors: "Ann Able, *, Bob Baker" with the footnote
+% engines: rust (63e r10) = a third author showing only "*"
+% expect:  2 creators, the mark and its note with Ann Able; 0 errors
+% status:  RED (63e r10) -> GREEN (63e)
+\documentclass{article}
+\author{Ann Able, $^{*}$\thanks{Equal contribution}, Bob Baker}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

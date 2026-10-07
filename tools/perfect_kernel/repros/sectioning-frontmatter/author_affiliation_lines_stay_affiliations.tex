@@ -1,0 +1,11 @@
+% witness: 63e review r1 (findings 2, 5): the lines under a name are its affiliations, a postal city line included
+% oracle:  pdflatex 0 errors: "John Smith" over "Dept. of Physics, UCLA" and "Los Angeles, CA 90095, USA"
+% engines: rust (63e r1) = "Los Angeles" an author ("CA 93106"-style codes read as a society acronym); Perl one author
+% expect:  1 creator, John Smith, with both lines as affiliations; 0 errors
+% status:  RED (63e r1) -> GREEN (63e)
+\documentclass{article}
+\author{John Smith\\ {\it Dept. of Physics, UCLA}\\ Los Angeles, CA 90095, USA}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

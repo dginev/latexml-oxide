@@ -343,6 +343,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
+- **63e** (landed): author lists (the run-336 fidelity audit's 21 of 73 papers with merged or lost co-authors, all
+  silent; KPE #521, OD #459): per-author classes (aastex/emulateapj, amsart, revtex, llncs/aa, IEEE blocks, labelled
+  authblk) parse their `\author` as an author block; lines without marks find later names ("and" lines, unfinished
+  lists, names after styled affiliations); `\newline`, " \& ", `\altaffilmark` after the comma; names marked before
+  them are found by layout and by the affiliation below that answers their mark (Perl drops them all); a per-author
+  class's affiliation-line `\thanks`/`\altaffilmark` stays with its author; a merged author is
+  `Error:frontmatter:merged_creators`. A/B on 318 papers (the 80-paper fidelity sample + 238 random): 56 papers'
+  authors split as LaTeX typesets them, none with more errors, no merged author left. 67 guards
+  `perfect_kernel_batch63::author_*`; open RED repros (sectioning-frontmatter/, listed in OD #459): shared-label names
+  on lines of their own, unanswered labels, "and"-joined marked names, name-shaped affiliations at an `\and` group's
+  head, stacked unmarked names in per-author blocks, amsart `\address` after a split `\author`, glued initials (63f).
 - **63d** (landed): pinlabel figure labels (85 papers of run 336's first 265k had `\labellist`/`\pinlabel` undefined):
   pinlabel.sty read raw with its `\ps@begin` placing the picture through graphicx on both driver branches,
   `\pdfximage` keywords + `\pdfximagebbox` (OD #458), `\openin` closes the stream first (KPE #520), PDF object streams
@@ -584,8 +595,8 @@ instead of going to the author whose mark carries `*` (`$^{1,*}$`), because `rew
 `$^*$` a visible superscript before the lines are split; `author_thanks_and_footnote_keep_their_math` (SHARED,
 KNOWN_PERL_ERRORS #515; fixed by 62zq); RED `author_concatenated_digit_marks_link_each_affiliation`
 (2609.37343: `$^{23}$` for affiliations 2 and 3 labels `affiliation:23`, so they sit on a nameless creator; Perl
-gives the first and drops the second); RED `author_and_groups_sharing_a_prefix_mark_are_names` (`\and` groups whose
-names open with the mark of an author before them read as that author's affiliation; Perl drops both authors).
+gives the first and drops the second); `author_and_groups_sharing_a_prefix_mark_are_names` (`\and` groups whose
+names open with the mark of an author before them; GREEN in 63e, guard `perfect_kernel_batch63::author_and_groups_sharing_a_prefix_mark_are_names`; Perl drops both authors).
 
 62zj: the jmlr binding defines the ML4H copy of jmlr.cls's track machinery (`\mlhtrack`, the `\ifmlh…` switches; :83-142,
 its "no track" `\AtBeginDocument` error left out; 8 papers); IEEEoj's front-matter setters (`\authornote`/`\corresp` as

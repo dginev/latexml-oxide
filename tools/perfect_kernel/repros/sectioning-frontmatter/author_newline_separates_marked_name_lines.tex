@@ -1,0 +1,12 @@
+% witness: 2401.14196 (deepseek.cls body, here in article): marked name lists split by \newline, not \\
+% oracle:  pdflatex 0 errors: two name lines, then the affiliations
+% engines: rust (63d) = "Bob Baker Cat Cole" one creator across the \newline, 0 errors; Perl alike
+% expect:  4 creators, Univ A for 1, Univ B for 2; 0 errors
+% status:  RED (63d) -> GREEN (63e)
+\documentclass{article}
+\author{\small \hspace{2.4em} Ann Able$^{1}$, Bob Baker$^{1,2}$
+\newline Cat Cole$^{1}$, Dan Dunn$^{2}$ \\ \small $^1$Univ A \\ \small $^2$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

@@ -1,0 +1,13 @@
+% witness: 63e review r5 finding 2 (authors written as macros: `\author{\A, \B}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker"
+% engines: rust (63e r8) = ONE creator "Ann AbleBob Baker" (the macro piece read as nothing, joined without its comma)
+% expect:  2 creators; 0 errors
+% status:  RED (63e r8) -> GREEN (63e)
+\documentclass{article}
+\newcommand\A{Ann Able}
+\newcommand\B{Bob Baker}
+\author{\A, \B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

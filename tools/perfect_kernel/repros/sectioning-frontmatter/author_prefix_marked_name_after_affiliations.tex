@@ -1,0 +1,12 @@
+% witness: 63e review r9 (s5: each author its own \and group, a name marked before it then its marked affiliation)
+% oracle:  pdflatex 0 errors: "^1Ann Able / ^1Univ A  and  ^2Bob Baker / ^2Univ B"
+% engines: rust (63d, 63e r14) = Bob Baker an affiliation in a creator with no name (0 errors, silent); Perl no
+%          creator at all (Base_Utility.pool.ltxml:708 `$p < 8`: every line an affiliation)
+% expect:  2 creators — Ann (Univ A), Bob (Univ B); 0 errors
+% status:  RED (63e r14) -> GREEN (63e)
+\documentclass{article}
+\author{$^{1}$Ann Able\\ $^{1}$Univ A \and $^{2}$Bob Baker\\ $^{2}$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

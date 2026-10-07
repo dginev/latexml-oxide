@@ -1,0 +1,12 @@
+% witness: 63e review r7 finding 2 (`\IEEEauthorblockN{$^{1}$Ann Able \quad $^{2}$Bob Baker}`: marks before the names)
+% oracle:  pdflatex 0 errors: "^1Ann Able  ^2Bob Baker" over "^1Univ A", "^2Univ B"
+% engines: rust (63e r12) = Ann Able, and "Bob Baker" an affiliation labelled 2 that no author requests (0 errors,
+%          silent); Perl one author (IEEEtran.cls.ltxml `\IEEEauthorblockN` → `\lx@add@author`)
+% expect:  2 creators, ¹Ann Able and ²Bob Baker, each keeping its visible mark; 0 errors
+% status:  RED (63e r12) -> GREEN (63e)
+\documentclass[conference]{IEEEtran}
+\author{\IEEEauthorblockN{$^{1}$Ann Able \quad $^{2}$Bob Baker}\IEEEauthorblockA{$^{1}$Univ A\\ $^{2}$Univ B}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

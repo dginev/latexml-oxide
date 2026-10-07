@@ -1,0 +1,14 @@
+% witness: 63e review r7 finding 7 (a document's `\let\affiliations\relax` inside a revtex `\author`)
+% oracle:  pdflatex 0 errors: "Ann Able", "Bob Baker Univ A"
+% engines: rust (63e r12) = the IJCAI split re-enters as a replacing `\author`: Ann Able dropped (0 errors, silent);
+%          Perl adds each `\author` whole (revtex4.cls.ltxml `\author` → `\lx@add@author`)
+% expect:  2 creators, Ann Able and "Bob Baker Univ A"; 0 errors
+% status:  RED (63e r12) -> GREEN (63e)
+\documentclass{revtex4-2}
+\let\affiliations\relax
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker \affiliations Univ A}
+\maketitle
+\end{document}
