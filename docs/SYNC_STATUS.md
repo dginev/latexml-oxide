@@ -343,6 +343,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
+- **Fleet address-space ceiling → `Fatal:TooManyErrors`** (63c, landed in code; deploy pending): 113 of run 336's first
+  253 TooManyErrors papers carry only `Error:post:xpath` "XPath evaluation failed (no libxml2 error detail)" on
+  `ltx:XMath`, 15 more were tipped over by it (math0005012, 1209.0448, 1310.4783). They convert with 0 errors in a fresh
+  process under the same 5632 MiB `RLIMIT_AS`, on 62zt and 62zu alike (`VmPeak` 3.6 GB for 1106.3786). Live harness
+  children sat at ~1 GB RSS but 4.8-5.6 GB of address space (mimalloc reservations), so the RSS recycle never fired
+  and libxml2's `malloc` failed. 63c recycles a harness child when its `VmSize` nears the cap
+  (`docs/performance/CORTEX_WORKER_HARNESS.md`). Re-queue the affected tasks after redeploying. Open: post-processing
+  still reports such an OOM as ~100 `Error:post:xpath` → `Fatal:TooManyErrors`; on a detail-less XPath failure under
+  memory pressure (`latexml_post/src/document.rs` ≈959/1031) emit one latched resource `Fatal` instead. Also open:
+  `fatal/cortex never_completed_with_retries` (150 in the first 145k), likely the same ceiling killing workers.
 - **Mouth EoF** (10, runaway delimiters, singletons): 3 × `\input amstex` (amsppt-as-plain, below); `\NOT` 2002.09653
   2212.04182; `\endcaption` 1210.4309 2407.08262; `\@checkend` 1404.3085; ` at ` 0811.2708; `\@nil` 1402.2014.
 - **Document Malformed** (8): 0901.1457 ships the AIP proceedings kit and a template driver is taken as the main file.

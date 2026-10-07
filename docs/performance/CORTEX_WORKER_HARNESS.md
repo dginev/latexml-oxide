@@ -89,8 +89,9 @@ Guards 1–4 bound a **single conversion** (per-process); guard 5 bounds the
 2. **Polled RSS soft guard** (`--max-rss-mb`, the shared `Watchdog`) — samples
    `/proc/self/status` `VmRSS` and exits `137` with a `Fatal:oom:rss` log line
    and a `Status:conversion:3` artifact. Linux-only (reads `/proc`).
-3. **Alloc-error hook** (`custom_alloc_error_hook`) — when *any* allocation
-   returns null (e.g. an `ENOMEM` from the hard cap below), emits
+3. **Alloc-error hook** (`custom_alloc_error_hook`) — when any *Rust* allocation
+   returns null (e.g. an `ENOMEM` from the hard cap below; C libraries such as libxml2 call `malloc` directly and never
+   reach it), emits
    `Fatal:oom:alloc_failed` and exits `137`. Portable.
 4. **Hard `RLIMIT_AS` cap** (`--child-mem-limit-mb`, applied by the harness) —
    the kernel refuses allocations past the address-space ceiling, which surfaces
@@ -125,6 +126,18 @@ portable `setrlimit` knob (`RLIMIT_RSS` is a Linux no-op). For a *precise* 4 GiB
 container, or `systemd-run --scope -p MemoryMax=4G`); the cgroup caps the
 aggregate while each child's `RLIMIT_AS` caps the individual — they compose.
 Full mechanism + rationale: pericortex `docs/HARNESS.md`.
+
+The reservations also **accumulate** in a long-lived child. In run 336 (2026-10-07) a fresh child sat at 219 MB RSS
+and 2.7 GB VSZ; after 20 minutes children held about 1 GB RSS and 4.8-5.6 GB of the 5.5 GiB cap (one child's map: 2.2 GB
+`[anon:mimalloc]`, 1.9 GB reserved `---p`, 1.5 GB `rw-p`). The RSS recycle (25% of the cap) never fired, while libxml2's
+`malloc` — not the Rust allocator, so guard 3 never saw it — failed: post-processing's XPath over `ltx:XMath` returned
+nothing, logging a hundred `Error:post:xpath` "no libxml2 error detail" and ending in `Fatal:TooManyErrors` on large
+papers that convert cleanly in a fresh process (113 of run 336's first 253 TooManyErrors; math0005012, 1209.0448,
+1310.4783; `VmPeak` 3.6 GB for 1106.3786 on both 62zt and 62zu). So a harness child also **recycles when its `VmSize`
+comes within 1.5 GiB of its `RLIMIT_AS`** (`cortex_worker.rs` `address_space_near_cap`, after the result is returned;
+the log line names which recycle fired). A child whose cap leaves less than that headroom above a fresh worker's 2.7 GB
+(a cap below about 4.1 GiB) turns the check off at start and says so, rather than recycling after every paper.
+Standalone and pooled workers, which nothing respawns, never take it.
 
 ## Production recommendation
 

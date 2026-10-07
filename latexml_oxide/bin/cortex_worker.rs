@@ -291,26 +291,31 @@ impl ConversionProfile {
 /// The CorTeX worker implementation for latexml-oxide
 #[derive(Clone)]
 struct LatexmlWorker {
-  service:        String,
-  source_address: String,
-  sink_address:   String,
-  identity:       String,
-  msg_size:       usize,
-  threads:        usize,
-  profile:        ConversionProfile,
-  verbosity:      i32,
+  service:               String,
+  source_address:        String,
+  sink_address:          String,
+  identity:              String,
+  msg_size:              usize,
+  threads:               usize,
+  profile:               ConversionProfile,
+  verbosity:             i32,
   /// Extra --path search dirs from CLI, prepended to per-job source_dir.
-  search_paths:   Vec<String>,
-  /// Recycle the worker after a conversion once RSS exceeds this many MiB (0 =
-  /// never). See `--allocation-limit-mb` and `Worker::recycle_after_task`.
-  alloc_limit_mb: u64,
+  search_paths:          Vec<String>,
+  /// Recycle the worker after a conversion once RSS exceeds this many MiB (0 = no RSS
+  /// recycle). See `--allocation-limit-mb` and `Worker::recycle_after_task`.
+  alloc_limit_mb:        u64,
   /// Stable harness slot index (`--worker-slot`), if launched by the `--harness`
   /// supervisor. When set, it replaces the PID in the ZMQ identity so a slot keeps
   /// the SAME `worker_metadata` name across respawns and runs (the harness keeps one
   /// live process per slot, so it can't collide under `router_handover`). `None` for
   /// a standalone/pooled worker → the globally-unique PID is used. See
   /// `Worker::stable_identity_suffix`.
-  worker_slot:    Option<u32>,
+  worker_slot:           Option<u32>,
+  /// Recycle after a conversion once the address space nears its `RLIMIT_AS` cap
+  /// ([`address_space_near_cap`]): set for a harness child (`--worker-slot`, which the
+  /// harness respawns) whose cap leaves the headroom above a fresh worker's address space
+  /// ([`address_space_recycle_fits`]).
+  address_space_recycle: bool,
 }
 
 impl LatexmlWorker {
@@ -822,15 +827,103 @@ impl Worker for LatexmlWorker {
   }
 
   /// Recycle this worker (clean exit → fresh respawn) once its resident memory has
-  /// grown past `--allocation-limit-mb`. Called by `start_single` AFTER the result is
-  /// returned, so no paper is lost. Reads current `VmRSS` (one cheap `/proc` read);
-  /// `0` disables. Bounds the engine's never-reset thread-local interner/arena by
-  /// process replacement rather than a fragile mid-life reset.
+  /// grown past `--allocation-limit-mb`, or once its address space nears its
+  /// `RLIMIT_AS` cap ([`address_space_near_cap`]). Called by `start_single` AFTER the
+  /// result is returned, so no paper is lost. Reads current `VmRSS` (one cheap `/proc`
+  /// read); `0` disables the RSS test. Bounds the engine's never-reset thread-local
+  /// interner/arena by process replacement rather than a fragile mid-life reset.
   fn recycle_after_task(&self) -> bool {
-    self.alloc_limit_mb > 0
-      && latexml_core::watchdog::process_rss_kb()
-        .is_some_and(|rss_kb| rss_kb / 1024 > self.alloc_limit_mb)
+    if self.alloc_limit_mb > 0
+      && let Some(rss_kb) = latexml_core::watchdog::process_rss_kb()
+      && rss_kb / 1024 > self.alloc_limit_mb
+    {
+      eprintln!(
+        "recycle: RSS {rss_kb} kB past --allocation-limit-mb {}",
+        self.alloc_limit_mb
+      );
+      return true;
+    }
+    if self.address_space_recycle
+      && let Some((size_kb, limit_kb)) = address_space_kb()
+      && address_space_near_cap(size_kb, limit_kb)
+    {
+      eprintln!(
+        "recycle: address space VmSize {size_kb} kB within the headroom of RLIMIT_AS {limit_kb} kB"
+      );
+      return true;
+    }
+    false
   }
+}
+
+/// A harness child's address space once the engine is loaded: 2,693 MB for a 12 s old child
+/// in run 336.
+const FRESH_ADDRESS_SPACE_KB: u64 = 2_760_000;
+
+/// Address space a large paper may still need above a worker's current size: 1106.3786
+/// peaks at 3,612 MB of address space (`VmPeak`) in a fresh process, about 1 GB above a
+/// fresh worker's 2.7 GB.
+const ADDRESS_SPACE_HEADROOM_KB: u64 = 1536 * 1024;
+
+/// True when an address space of `size_kb` is within [`ADDRESS_SPACE_HEADROOM_KB`] of the
+/// `RLIMIT_AS` cap `limit_kb`. The harness caps each child's address space
+/// (`--child-mem-limit-mb`), and the allocator's reservations grow it far past the
+/// resident set: in run 336 workers at about 1 GB RSS sat at 4.8-5.6 GB of a 5.5 GiB cap,
+/// so the RSS recycle never fired while libxml2's `malloc` failed. Post-processing's XPath
+/// evaluation then returned nothing — a hundred `Error:post:xpath` and a
+/// `Fatal:TooManyErrors` on papers that convert cleanly in a fresh process (math0005012,
+/// 1209.0448, 1310.4783).
+fn address_space_near_cap(size_kb: u64, limit_kb: u64) -> bool {
+  size_kb.saturating_add(ADDRESS_SPACE_HEADROOM_KB) > limit_kb
+}
+
+/// Whether this process's `RLIMIT_AS` leaves [`ADDRESS_SPACE_HEADROOM_KB`] above a fresh
+/// worker's address space. Below that (a `--child-mem-limit-mb` under about 4.1 GiB) the
+/// recycle would follow every paper, so such a child keeps the RSS recycle alone and says
+/// so once. The cap is set before `exec`, so this is decided at start.
+fn address_space_recycle_fits() -> bool {
+  let Some((_, limit_kb)) = address_space_kb() else {
+    return false;
+  };
+  let fits = limit_kb >= FRESH_ADDRESS_SPACE_KB + ADDRESS_SPACE_HEADROOM_KB;
+  if !fits {
+    eprintln!(
+      "address-space recycle off: RLIMIT_AS {limit_kb} kB leaves less than {ADDRESS_SPACE_HEADROOM_KB} kB \
+       above a fresh worker's {FRESH_ADDRESS_SPACE_KB} kB"
+    );
+  }
+  fits
+}
+
+/// This process's address space (`VmSize`) and its soft `RLIMIT_AS`, both in KiB; `None`
+/// when there is no cap or `/proc` is unreadable (Linux-only).
+fn address_space_kb() -> Option<(u64, u64)> {
+  #[cfg(target_os = "linux")]
+  {
+    parse_address_space(
+      &fs::read_to_string("/proc/self/status").ok()?,
+      &fs::read_to_string("/proc/self/limits").ok()?,
+    )
+  }
+  #[cfg(not(target_os = "linux"))]
+  {
+    None
+  }
+}
+
+/// [`address_space_kb`] on the text of `/proc/self/status` and `/proc/self/limits`:
+/// `VmSize` (KiB) and the soft `Max address space` (bytes; `unlimited` is no cap).
+#[cfg(any(target_os = "linux", test))]
+fn parse_address_space(status: &str, limits: &str) -> Option<(u64, u64)> {
+  let size_kb = status
+    .lines()
+    .find_map(|line| line.strip_prefix("VmSize:"))
+    .and_then(|rest| rest.split_whitespace().next()?.parse::<u64>().ok())?;
+  let limit_bytes = limits
+    .lines()
+    .find_map(|line| line.strip_prefix("Max address space"))
+    .and_then(|rest| rest.split_whitespace().next()?.parse::<u64>().ok())?;
+  Some((size_kb, limit_bytes / 1024))
 }
 
 // --- Helper functions (shared with latexml_oxide.rs) ---
@@ -1828,6 +1921,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     search_paths: cli.search_paths.clone(),
     alloc_limit_mb: cli.allocation_limit_mb,
     worker_slot: cli.worker_slot,
+    // Only a harness child is respawned after a recycle.
+    address_space_recycle: cli.worker_slot.is_some() && address_space_recycle_fits(),
   };
 
   if cli.standalone {
@@ -1903,4 +1998,32 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   }
 
   Ok(())
+}
+
+#[cfg(test)]
+mod address_space_tests {
+  use super::{address_space_near_cap, parse_address_space};
+
+  const LIMITS_5632: &str = "Limit                     Soft Limit           Hard Limit           Units     \nMax address space         5905580032           5905580032           bytes     \n";
+
+  #[test]
+  fn a_worker_near_its_address_space_cap_recycles() {
+    // 4.8 GB of a 5.5 GiB cap (run 336's live workers) leaves less than the headroom.
+    let (size, limit) = parse_address_space("VmSize:\t 4931584 kB\n", LIMITS_5632).unwrap();
+    assert_eq!((size, limit), (4_931_584, 5_767_168));
+    assert!(address_space_near_cap(size, limit));
+    // A fresh worker (2.7 GB) keeps going.
+    assert!(!address_space_near_cap(2_757_632, limit));
+  }
+
+  #[test]
+  fn no_cap_or_unreadable_fields_are_no_address_space() {
+    let unlimited =
+      "Max address space         unlimited            unlimited            bytes     \n";
+    assert_eq!(
+      parse_address_space("VmSize:\t 9931584 kB\n", unlimited),
+      None
+    );
+    assert_eq!(parse_address_space("", LIMITS_5632), None);
+  }
 }
