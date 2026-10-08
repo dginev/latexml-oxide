@@ -49,6 +49,7 @@ affected** → **is it unblocked** → **effort**.
 |---|---|---|---|---|
 | **R8** | **Perfect-kernel program** (branch `perfect_kernel`; the TL-manual corpus; generalized capabilities K1–K18 in [`perfect_kernel/KERNEL_CAPABILITIES.md`](perfect_kernel/KERNEL_CAPABILITIES.md)) — goal bar met at sweeps #146-148 (G1–G5); close status in [`PERFECT_KERNEL.md`](PERFECT_KERNEL.md) | **CLOSING**: bar confirmed (user 2026-10-04); ar5iv-css PR #54 open; run 329 completes | program | [`PERFECT_KERNEL.md`](PERFECT_KERNEL.md) |
 | **G** | **Run 336** (full arXiv, cortex, 2,947,191 papers, `cortex-worker.service`, 56 workers: 62zu `c0e4393f39` until 2026-10-07 16:35Z (~264k done), head `9569ca27a7` (63a-63c) after, user OK) — compare to run 306 and cluster when complete; this opens the arXiv success-rate task. Run 329 (paused at 263,636) is superseded | **RUNNING** since 2026-10-07 10:10Z (user: fresh full run on head, after the 62zu perf pass). Host AppArmor `gs` profile blocked the fleet's TMPDIR from 2026-10-05 15:10Z (runs 332-335, every EPS/PS figure failed; 15,659 denials) until `owner /opt/cortex-scratch/** rw,` in `/etc/apparmor.d/local/gs` (2026-10-07 ~10:25Z, user OK). At completion: rerun `severity=error&category=imageprocessing` for run 336's ~1.1k pre-fix tasks, the early env-gap tasks (texlive-pstricks / -lang-*, before 11:11Z) and the pre-63c address-space ones (`post:xpath` TooManyErrors, `never_completed_with_retries`) | program | [`PERFECT_KERNEL.md`](PERFECT_KERNEL.md) close status |
+| **A2** | **Fidelity audit round 2 residuals** (silent content/markup losses in "successful" run-336 papers): acmart comma list (2b), an.cls `\abstract{}` (9), entics `\thanksref{ALL}` (10), group affiliations (14), names past `\\` (13), `$(a)$` marks (15), sectsty (11), title-`\cite` tooltip (12), llncs check (16) | **OPEN**; 63j-63l landed 8 classes; 63m in progress (14) | small-medium each | §"Fidelity audit round 2" |
 | **G1** | **Run-329 open residuals** — 17 PushbackLimit Fatals (csvsimple + siunitx `S`), TooManyErrors / never_completed, the `gullet.rs` `handle_template` latent panic, the runtime-bindings `.rhai` fallback, amsppt-as-plain, `.aux` re-read, eplain, calc's `!`, singles | **NEXT** (arXiv success-rate task) | medium each | §"Run-329 and sandbox open residuals" |
 | **D1** | **Rulings**: RULED 2026-10-04 — implement tex.web §392 `\par` in a non-`\long` argument (1001.1670) and restore Perl's `Error:malformed` for DIVERGENCES #189 (prerex section-in-figure): 62g landed (#189: 7 in-scope manuals now report it — biblatex, keytheorems-doc, pdfmarginpar, phonrule-doc, prerex, srdp-mathematik, zx-calculus — so G1 counts 7), 62h landed (§392, DIVERGENCES #442 / KPE #472-473). Still pending: `\obeylines` `^^M`; `{framed}` item shape; biblatex `cite.<n>@<key>` surpass anchors (D15); R7 port-or-drop | RULING | small-medium | rows cited |
 | **T1** | **Repro suite move**: `tools/perfect_kernel/repros` (1,469 files) → `latexml_oxide/tests/repros` header-contract trials (release CI + `LATEXML_FULL_TESTS=1`); drain `tools/` | **OPEN**, not started (user 2026-10-02) | large | memory `project_repro_suite_move` |
@@ -325,6 +326,33 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `pdftitle=\@title`). Digesting the value would duplicate frontmatter notes (`\thanks`); needs a `\pdfstringdef`-like
   expansion. RED `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
+
+### Fidelity audit round 2 (2026-10-08) — findings and their state
+
+The second audit of "successful" run-336 conversions (80 papers, seed 337, on 63h5; notes
+`~/data/pk_agents/main/scratch_356a0c47/fidelity2/notes.txt`, audit.tsv): authors right in 65/69 (round 1: 52/73).
+Each class is a silent content or markup loss unless marked otherwise; each landed fix has a repro under
+`tools/perfect_kernel/repros/` and a guard in `perfect_kernel_batch63`. Open rows are the worklist (row **A2**).
+
+| # | finding | witnesses | state | next step |
+|---|---|---|---|---|
+| 1 | `\IEEEmembership` dropped from the author line | 2201.01230, 2306.15457, 2408.09035 | **DONE 63l** (KPE #534) — name-line grades are membership contacts | residual: grades after names misread past a `\\` stay dropped (row 13) |
+| 2 | merged creators: `{\ and}`, `\ddag~and` | 1508.01140, nlin0101056 | **DONE 63l** (KPE #532) | — |
+| 2b | merged creators: acmart comma list in one `\author` (`Error:frontmatter:merged_creators`) | 2212.06542 | **OPEN** | acmart `\author` binding: split a comma-separated name list (PDF prints them as one block) |
+| 3 | eqnarray/align row holding only `\label` dropped with its number | 1011.4399, 1305.3072, hep-th9412215, hep-ph0208046 | **DONE 63j** (KPE #526) | nit: a kept eqnarray row takes a following unnumbered `&=&` row as its continuation |
+| 4 | `\ref` (and `\eqref`/`\autoref`/`\cref`/`\nameref`) in a section title empty in the TOC and `title=` tooltips (RUST-ONLY) | 1011.3492, 1111.3672 | **DONE 63k** (fillInTitle port) | residual: a `\cite` in a title reads empty in tooltips (row 12) |
+| 5 | IEEE `and~Name` keeps "and" in the last name | 2011.10474, 2408.09035 | **DONE 63j** (KPE #528) | — |
+| 6 | `\fnmsep` leaves a stray comma in the name | astro-ph0001054, astro-ph0611016 | **DONE 63l** (KPE #533) | — |
+| 7 | PoS/JHEP `\author` calls accumulate, only the last kept | astro-ph0611258 | **DONE 63k** (KPE #529) | — |
+| 8 | algorithmic `\REQUIRE`/`\ENSURE` labels replaced by "0:" | 2201.01230 | **DONE 63j** (KPE #527; algpseudocode too) | residuals: algpseudocodex drops the label (RED `list-structure/algpseudocodex_require_shows_its_label`); `\ref` to a labelled line prints the label |
+| 9 | raw class `\abstract{…}` (an.cls) a plain paragraph, no `ltx:abstract` | astro-ph0611016 | **OPEN** | an.cls binding or a raw-class `\abstract{}` command form → the abstract frontmatter |
+| 10 | entics.cls (raw) `\thanksref{ALL}` prints its key in the name | 2212.08177 | **OPEN** | entics `\thanks[key]`/`\thanksref` → the frontmatter annotation API (elsart-style) |
+| 11 | sectsty `\subsectionfont{…\textit}` applies the font to the first letter only (presentation) | 1508.01140 | **OPEN**, low | sectsty font hooks take the whole title |
+| 12 | a `\cite` in a section title reads empty in tooltips (63k residual) | — | **OPEN**, low | tooltip text of a nested bibref without double-counting missing-citation warnings |
+| 13 | names continued past a `\\` in an author line read as an affiliation line | 2408.01902, 2408.02464 | **OPEN** | the no-marker path: a `\\` line that reads as a name list continues the names |
+| 14 | an affiliation line under a group of names goes to the group's last name only | 0911.0568 (LPT Orsay group), JHEP/PoS group blocks | **IN PROGRESS 63m** | give the line to every name of its group (`annotate=new`-style) |
+| 15 | `$(a)$Department …` marked affiliation lines not linked (0 affiliations) | 1011.0516 | **OPEN** | read a `$(a)$` lead as the line's mark |
+| 16 | llncs `\author{A\\Univ\\\email{x}}` reads "Univ" as a person | review probe (rv63k/llncs1) | **OPEN**, check | confirm llncs semantics (`\\` there separates names) before changing |
 
 ### Run-336 open residuals (63a, 2026-10-07)
 
