@@ -3162,3 +3162,45 @@ fn standalone_subfile_preamble_skipped() {
   );
   assert!(!element_with(&xml, "figure", "<").contains("Adar"), "{xml}");
 }
+
+/// 63q: author markup a class defines only inside `\@maketitle`'s group (melba.cls:279-283 `\def\aff`, `\def\name`;
+/// dmlr2e.sty:249-252 `\def\addr`, `\def\email`) is defined while the author content is digested, before the title
+/// code runs (2405.09787, 2404.08403). Repro sectioning-frontmatter/author_markup_defined_in_title_code.
+#[test]
+fn author_markup_defined_in_title_code() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_markup_defined_in_title_code.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "creator", "Ann"),
+    "<creator role=\"author\">\n    <personname>Ann Author<sup xml:id=\"id1\"><text font=\"bold\" xml:id=\"id1.1\">1</text></sup></personname>\n  </creator>"
+  );
+}
+
+/// 63q: the forms a title code defines its author markup with — `\let`, a spaced `\newcommand [1] {…}`, `\def\x#1`, two
+/// `\def`s of one name (the last wins) — in force for the author and its affiliation lines (2406.07496's `\email`
+/// line), none left defined after it; a definition already in force stands; one in a group closed before `\@author`
+/// is not replayed. Repro sectioning-frontmatter/author_markup_title_code_forms.
+#[test]
+fn author_markup_title_code_forms() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_markup_title_code_forms.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ann"),
+    "<creator role=\"author\">\n    <personname>Ann Author [x] b Given</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"bold italic\" xml:id=\"id1\">Some University</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter bold\" xml:id=\"id2\">ann@uni.edu</text></contact>\n  </creator>",
+    "{xml}"
+  );
+  assert_eq!(
+    element_with(&xml, "para", "clean"),
+    "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">clean clean</p>\n  </para>",
+    "{xml}"
+  );
+}

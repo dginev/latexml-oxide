@@ -1,0 +1,25 @@
+% witness: 2405.09787, 2407.21368, 2105.14711 (melba.cls:279-283), 2404.08403 (dmlr2e.sty:249-251), 2405.16969
+%          (amta2024.sty:77-78), 2503.22625 (ssArxiv.sty:109-111), 2601.05137 (its own `\@maketitle`): the class
+%          defines its author markup (`\name`, `\aff`, `\addr`, `\email`) only inside `\@maketitle`'s group, where
+%          `\@author` is typeset
+% oracle:  pdflatex 0 errors: "Ann Author" (bold) with a superscript 1; the personname's font is not kept (as for any
+%          `\author`), so only the bold of the mark inside it shows
+% engines: rust 63p5 = `Error:undefined:\name`, `Error:undefined:\aff` (the author markup is digested before the
+%          title code runs)
+% expect:  0 errors, 0 warnings; the creator holds the name and its superscript
+% status:  RED (63p5) -> GREEN (63q)
+\begin{filecontents*}{author_markup_defined_in_title_code.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{author_markup_defined_in_title_code}
+\LoadClass{article}
+\def\maketitle{\par\begingroup\def\@makefnmark{\hbox{$^{\@thefnmark}$}}%
+  \@maketitle\endgroup}
+\def\@maketitle{{\Large\@title\par}%
+  {\def\aff{\textsuperscript}\def\name{\bfseries}\@author\par}}
+\end{filecontents*}
+\documentclass{author_markup_defined_in_title_code}
+\title{A Title}
+\author{\name Ann Author\aff{1}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

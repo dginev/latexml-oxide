@@ -1,0 +1,26 @@
+% witness: 2406.07496 (`\email` in an affiliation line under auth_detailed.sty's title-code definitions), the forms a
+%          title code defines its author markup with (melba.cls:279-283, dmlr2e.sty:249-251, amta2024.sty:77-78)
+% oracle:  pdflatex 0 errors: "Ann Author [x] b X" over "Some University" and "ann@uni.edu"; "clean clean"
+% engines: rust 63p5 = `Error:undefined:\name`, `\note`, `\dup`, `\addr`, `\email`
+% expect:  0 errors, 0 warnings; `\let`, a spaced `\newcommand [1] {…}`, `\def\email#1`, the last of two `\def`s and
+%          the preamble's own `\given` in force for the author content; none left defined after it; a definition in
+%          a group closed before `\@author` (`\gone`) not replayed. Known divergence: pdflatex prints the title
+%          code's `\given` (X); here a definition already in force stands, as the frontmatter's own `\and`,
+%          `\thanks` and `\\` must (OXIDIZED_DESIGN_DIVERGENCES #464).
+% status:  RED (63p5) -> GREEN (63q)
+\begin{filecontents*}{author_markup_title_code_forms.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{author_markup_title_code_forms}
+\LoadClass{article}
+\def\maketitle{\par\begingroup\@maketitle\endgroup}
+\def\@maketitle{{\Large\@title\par}%
+  {\let\addr\itshape\newcommand\note [1] {[##1]}\def\email##1{\texttt{##1}}\def\dup{a}%
+   {\def\dup{b}\def\name{\bfseries}\def\given{X}\begingroup\def\gone{G}\endgroup\@author\par}}}
+\end{filecontents*}
+\documentclass{author_markup_title_code_forms}
+\newcommand\given{Given}
+\title{A Title}
+\author{\name Ann Author \note{x} \dup\ \given\\ \addr Some University\\ \email{ann@uni.edu}}
+\begin{document}
+\maketitle
+\ifdefined\name LEAK\else clean\fi\ \ifdefined\dup LEAK\else clean\fi
+\end{document}

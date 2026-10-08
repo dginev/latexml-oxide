@@ -11425,3 +11425,12 @@ Perl's standalone.sty.ltxml (L20-36) intercepts a sub-file's `\documentclass` bu
 figure is lost. Rust had stood in `\includegraphics{fig}`, which loses a `.tex`-only figure silently. Fixed in Rust
 (63p): the command follows standalone.sty's modes and inputs the `.tex` (OXIDIZED_DESIGN_DIVERGENCES #463). Witnesses
 2412.12317, 2505.19304, 2608.05283, 2406.02722 (html_feedback HF12, 11 papers, ~95 figures).
+
+## 538. Author markup a class defines in its title code is undefined
+
+`\author{\name Ann Author\aff{1}}` under melba.cls, whose `\@maketitle` defines `\name` and `\aff` in the group where it
+typesets `\@author` (melba.cls:279-283; also dmlr2e.sty:249-251, amta2024.sty:77-78), gives
+`Error:undefined:\name` and `Error:undefined:\aff`, the error text inside the personname. LaTeXML digests the author
+content at the frontmatter, before the title code runs. Fixed in Rust (63q): the title code's definitions open at
+`\@author` are in force for the author content (OXIDIZED_DESIGN_DIVERGENCES #464). Witnesses 2405.09787, 2404.08403
+(html_feedback HF6).

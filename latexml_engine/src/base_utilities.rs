@@ -833,13 +833,38 @@ LoadDefinitions!({
     "\\ifx#1\\@undefined\\let#1#2\\expandafter\\def\\expandafter\\lx@author@markup@unprovide\\expandafter{\\lx@author@markup@unprovide\\let#1\\@undefined}\\fi"
   );
   DefMacro!("\\lx@author@markup@begin", sub[()] {
-    Ok(if lookup_bool("\\author:redefined") {
+    let mut out = if lookup_bool("\\author:redefined") {
       TokenizeInternal!(
         r"\def\lx@author@markup@unprovide{}\lx@author@markup@provide\prefix\@firstofone\lx@author@markup@provide\suffix\@firstofone\lx@author@markup@provide\particle\@firstofone\lx@author@markup@provide\fnms\@firstofone\lx@author@markup@provide\snm\@firstofone\lx@author@markup@provide\inits\@firstofone\lx@author@markup@provide\degs\@firstofone\lx@author@markup@provide\roles\@firstofone\lx@author@markup@provide\orcid\lx@author@orcid"
       )
     } else {
       TokenizeInternal!(r"\def\lx@author@markup@unprovide{}")
-    })
+    }
+    .unlist();
+    // The author markup a class defines only where its title code reads `\@author` is in force for the author content
+    // too: melba.cls:279-283 `{\def\aff{…}\def\name{…}\@author …}` (2405.09787, 2407.21368, 2105.14711), dmlr2e.sty:
+    // 249-251 (2404.08403), amta2024.sty:77-78 (2405.16969), ssArxiv.sty:109-111 (2503.22625), a preamble's own
+    // `\@maketitle` (2601.05137). In pdflatex `\@author` expands inside that group, while here the author content is
+    // read at the frontmatter, before the title code runs. Each definition of a control sequence still undefined runs,
+    // in source order, for the author content, which it is undefined again after, as the OmniBus author markup is
+    // (#444); a definition already in force stands. Perl errs the same (`undefined:\name`).
+    let definitions = title_code_author_definitions();
+    let undefined: Vec<bool> = definitions
+      .iter()
+      .map(|(definee, _)| lookup_meaning(definee).is_none())
+      .collect();
+    for ((definee, statement), undefined) in definitions.into_iter().zip(undefined) {
+      if !undefined {
+        continue;
+      }
+      out.extend(statement);
+      out.extend(
+        TokenizeInternal!(r"\expandafter\def\expandafter\lx@author@markup@unprovide\expandafter{\lx@author@markup@unprovide\let")
+          .unlist(),
+      );
+      out.extend([definee, T_CS!("\\@undefined"), T_END!()]);
+    }
+    Ok(Tokens::new(out))
   });
   DefMacro!("\\lx@author@markup@run{}{}", "#2#1");
   DefMacro!("\\lx@author@orcid[]{}", "\\lx@add@orcid{#2}");
@@ -976,10 +1001,12 @@ LoadDefinitions!({
   // with the number the authors' `\inst{1}` request) — the meaning
   // `\lx@affiliation@withsup` gives a `\textsuperscript` mark, never a
   // typeset `<sup>`; `\def`, as in `\lx@author@withinst` (a class's
-  // document-level `\inst` is the affiliation LIST, not a label).
+  // document-level `\inst` is the affiliation LIST, not a label). The author markup is in force here too: an
+  // affiliation line of the author block is author content (`$^{3}$Chan Zuckerberg Biohub \\ \email Correspondence:
+  // …` under auth_detailed.sty's `\@maketitle` definitions, 2406.07496).
   DefMacro!(
     "\\lx@affiliation@withinst{}",
-    "\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@sup@setlabel@affiliation{##1}}#1\\let\\inst\\lx@saved@inst"
+    "\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@sup@setlabel@affiliation{##1}}\\lx@author@markup@begin\\expandafter\\lx@author@markup@run\\expandafter{\\lx@author@markup@unprovide}{#1}\\let\\inst\\lx@saved@inst"
   );
   DefMacro!(
     "\\lx@add@altaffiliation[]{}",
@@ -2780,6 +2807,178 @@ fn bare_email_addresses(line: &Tokens) -> Option<Vec<Tokens>> {
     return line_is_email(line).then(|| vec![line.clone()]);
   }
   Some(address_tokens(line, addrs))
+}
+
+/// The definitions in force where a class's title code reads `\@author`: the statements of the groups still open there
+/// in its `\@maketitle` (else a dropped `\maketitle`'s) body — `\def`, `\gdef`, `\let`, `\newcommand`, `\providecommand`
+/// — with a global one kept past its group, in source order; each with its definee.
+fn title_code_author_definitions() -> Vec<(Token, Vec<Token>)> {
+  [T_CS!("\\@maketitle"), T_CS!("\\lx@dropped@maketitle")]
+    .iter()
+    .find_map(|cs| match lookup_meaning(cs) {
+      Some(Stored::Expandable(definition)) => match definition.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => definitions_at_author(body.unlist_ref()),
+        _ => None,
+      },
+      _ => None,
+    })
+    .unwrap_or_default()
+}
+
+/// The definition statements of `body`'s groups open at its first `\@author` ([`title_code_author_definitions`]),
+/// in source order; `None` when it reads no `\@author`. Groups are brace groups, `\bgroup`/`\egroup`,
+/// `\begingroup`/`\endgroup` and environments. A statement runs locally where it is replayed: a `\gdef` is a `\def`
+/// there, and the `\global` before a definition is left out. `\edef`/`\xdef` are not replayed (expanded now, not at
+/// the title code), nor `\renewcommand` (of a command already defined, which stands). A statement whose shape is not
+/// read whole (a `\def` without its body's `{`, a `\newcommand` without a body) is left out, and so is one that closes
+/// a group it did not open (2601.13359's `\def\affiliations{\egroup\par\Large\bgroup\rm}`, `\let\x\egroup`): the
+/// title code's layout between its own groups, which the author content is not inside.
+fn definitions_at_author(body: &[Token]) -> Option<Vec<(Token, Vec<Token>)>> {
+  // the index after the balanced group starting at `i` (a BEGIN), else after the one token there
+  let group_end = |i: usize| -> usize {
+    if body.get(i).map(|t| t.get_catcode()) != Some(Catcode::BEGIN) {
+      return (i + 1).min(body.len());
+    }
+    let mut depth = 0usize;
+    for (j, t) in body.iter().enumerate().skip(i) {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            return j + 1;
+          }
+        },
+        _ => {},
+      }
+    }
+    body.len()
+  };
+  let skip_spaces = |mut j: usize| -> usize {
+    while body.get(j) == Some(&T_SPACE!()) {
+      j += 1;
+    }
+    j
+  };
+  // each statement with the group it is made in (None: global)
+  let mut statements: Vec<(Token, Vec<Token>, Option<usize>)> = Vec::new();
+  let mut open: Vec<usize> = vec![0];
+  let mut groups = 0usize;
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    let name = t.with_str(str::to_string);
+    let opens = t.get_catcode() == Catcode::BEGIN
+      || matches!(name.as_str(), "\\bgroup" | "\\begingroup" | "\\begin");
+    let closes = t.get_catcode() == Catcode::END
+      || matches!(name.as_str(), "\\egroup" | "\\endgroup" | "\\end");
+    if opens {
+      groups += 1;
+      open.push(groups);
+      i += 1;
+      continue;
+    }
+    if closes {
+      if open.len() > 1 {
+        open.pop();
+      }
+      i += 1;
+      continue;
+    }
+    if t == T_CS!("\\@author") {
+      return Some(
+        statements
+          .into_iter()
+          .filter(|(_, _, group)| group.is_none_or(|g| open.contains(&g)))
+          .map(|(definee, statement, _)| (definee, statement))
+          .collect(),
+      );
+    }
+    let global = name == "\\gdef" || (i > 0 && body[i - 1] == T_CS!("\\global"));
+    // the definee, where the statement ends, and its first token as replayed
+    let read: Option<(Option<Token>, usize, Token)> = match name.as_str() {
+      "\\def" | "\\gdef" if t.get_catcode() == Catcode::CS => {
+        // the parameter text runs to the body's `{`
+        let mut j = i + 2;
+        while j < body.len() && body[j].get_catcode() != Catcode::BEGIN {
+          j += 1;
+        }
+        (j < body.len()).then(|| (body.get(i + 1).copied(), group_end(j), T_CS!("\\def")))
+      },
+      "\\let" if t.get_catcode() == Catcode::CS => {
+        let mut j = skip_spaces(i + 2);
+        if body.get(j) == Some(&T_OTHER!("=")) {
+          j += 1;
+        }
+        j = skip_spaces(j);
+        body
+          .get(j)
+          .filter(|target| !matches!(target.get_catcode(), Catcode::BEGIN | Catcode::END))
+          .map(|_| (body.get(i + 1).copied(), j + 1, t))
+      },
+      "\\newcommand" | "\\providecommand" if t.get_catcode() == Catcode::CS => {
+        let mut j = i + 1;
+        if body.get(j) == Some(&T_OTHER!("*")) {
+          j += 1;
+        }
+        j = skip_spaces(j);
+        let definee = match body.get(j) {
+          Some(b) if b.get_catcode() == Catcode::BEGIN => body.get(j + 1).copied(),
+          other => other.copied(),
+        };
+        j = skip_spaces(group_end(j));
+        while body.get(j) == Some(&T_OTHER!("[")) {
+          while j < body.len() && body[j] != T_OTHER!("]") {
+            j += 1;
+          }
+          j = skip_spaces(j + 1);
+        }
+        body
+          .get(j)
+          .filter(|b| b.get_catcode() != Catcode::END)
+          .map(|_| (definee, group_end(j), t))
+      },
+      _ => None,
+    };
+    match read {
+      Some((Some(definee), stop, head))
+        if matches!(definee.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+          && stop <= body.len()
+          && closes_only_its_own_groups(&body[i + 2..stop]) =>
+      {
+        let mut statement = vec![head];
+        statement.extend_from_slice(&body[i + 1..stop]);
+        statements.push((
+          definee,
+          statement,
+          (!global).then(|| *open.last().unwrap_or(&0)),
+        ));
+        i = stop;
+      },
+      _ => i += 1,
+    }
+  }
+  None
+}
+
+/// Whether `tokens` (a definition's meaning) close only the groups and environments they open (`\bgroup`,
+/// `\begingroup`, `\begin`): an author separator `\def\sep{\end{tabular}\begin{tabular}{c}}` does not.
+fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
+  let mut depth = 0usize;
+  for t in tokens {
+    if t.get_catcode() != Catcode::CS {
+      continue;
+    }
+    match t.with_str(str::to_string).as_str() {
+      "\\bgroup" | "\\begingroup" | "\\begin" => depth += 1,
+      "\\egroup" | "\\endgroup" | "\\end" => match depth.checked_sub(1) {
+        Some(d) => depth = d,
+        None => return false,
+      },
+      _ => {},
+    }
+  }
+  true
 }
 
 /// The marks that request an affiliation label in an author (`\lx@author@withsup`, llncs `\inst`) and set it in an
@@ -11482,6 +11681,51 @@ mod author_split_tests {
     set_state(State::new(StateOptions::default()));
   }
   fn tk(s: &'static str) -> Tokens { mouth::tokenize_internal(s) }
+
+  /// The replayed statements of a title code `body`, as strings (`definitions_at_author`).
+  fn replayed(body: &'static str) -> Vec<String> {
+    definitions_at_author(tk(body).unlist_ref())
+      .expect("reads \\@author")
+      .into_iter()
+      .map(|(_, statement)| Tokens::new(statement).to_string())
+      .collect()
+  }
+
+  #[test]
+  fn title_code_definitions_open_at_author() {
+    setup();
+    // a spaced `\newcommand [1] {…}` is read whole; `\let`; the last of two `\def`s comes last; a group closed before
+    // `\@author` is not replayed
+    assert_eq!(
+      replayed(
+        r"{\let\addr\itshape\newcommand\note [1] {[#1]}\def\dup{a}{\def\dup{b}\begingroup\def\gone{G}\endgroup\@author}}"
+      ),
+      [
+        r"\let\addr\itshape",
+        r"\newcommand\note[1] {[#1]}",
+        r"\def\dup{a}",
+        r"\def\dup{b}"
+      ]
+    );
+  }
+
+  #[test]
+  fn title_code_definitions_global_local_and_skipped() {
+    setup();
+    // a `\gdef` (and `\global\def`) made in a closed group is kept, replayed as a local `\def`; `\edef`,
+    // `\renewcommand` and a definition closing a group it did not open (2601.13359) are not replayed
+    assert_eq!(
+      replayed(
+        r"{\gdef\g{1}\global\def\h{2}}{\edef\e{3}\renewcommand\r{4}\def\affiliations{\egroup\par\bgroup}\let\x\egroup\def\sep{\end{tabular}\begin{tabular}{c}}\def\ok{\begin{center}c\end{center}}\@author}"
+      ),
+      [
+        r"\def\g{1}",
+        r"\def\h{2}",
+        r"\def\ok{\begin{center}c\end{center}}"
+      ]
+    );
+    assert!(definitions_at_author(tk(r"{\def\name{N}}").unlist_ref()).is_none());
+  }
 
   #[test]
   fn whole_line_cs_wrapper_detects_font_wrapper() {

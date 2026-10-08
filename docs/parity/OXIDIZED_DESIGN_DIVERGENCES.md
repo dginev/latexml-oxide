@@ -14238,3 +14238,37 @@ to 0, pictures from 15 to 87, with no new errors. 2404.19456 gains six `\Descrip
 hold a picture rather than an image (acmart's `\Description` looks only for `<graphics>`; a residual). Guards:
 `perfect_kernel_batch63::{includestandalone_tex_figure,
 includestandalone_through_graphicspath, standalone_subfile_preamble_skipped}`.
+
+### 464. Author content sees the author markup a class defines in its title code (Perl: undefined)
+
+**Background.** A raw class can define its author markup only where its title code typesets `\@author`, inside a
+group of `\@maketitle`: melba.cls:279-283 `{\def\aff{…}\def\name{…}\@author …}`, dmlr2e.sty:249-251,
+amta2024.sty:77-78 and ssArxiv.sty:109-111 `\def\addr`, `\def\email`, `\def\name`. In pdflatex `\@author` expands
+there, so the markup is defined. LaTeXML reads the author content at the frontmatter, before any title code runs, so
+`\name Ann\aff{1}` was `Error:undefined:\name` and `\aff`, the error text inside the personname, in Perl and Rust
+alike.
+
+**Rust behavior.** When `\lx@author@markup@begin` opens an author's content, or an affiliation's (an affiliation line
+of the author block is author content: 2406.07496's `\email` line), it reads the class's `\@maketitle` (else a
+dropped `\maketitle`'s) stored body up to its first `\@author`. The `\def`, `\gdef`, `\let`, `\newcommand` and
+`\providecommand` statements of the groups still open there (brace groups, `\bgroup`, `\begingroup`, environments),
+and the global ones before it, run in source order for each definee still undefined, locally. After the content they
+are undefined again, as the OmniBus author markup (#444) is. Not replayed: `\edef`/`\xdef` (they would expand at the
+frontmatter, not at the title code) and `\renewcommand`; a statement not read whole is left out, and so is one that
+closes a group or environment it did not open (2601.13359's IJCAI-style `\def\affiliations{\egroup\par\Large\bgroup\rm}`: the
+title code's layout between its own groups, which replayed broke the frontmatter's modes).
+
+A definition already in force stands, where pdflatex runs the title code's over it (a preamble `\newcommand\given`
+under a title code's `\def\given`): the frontmatter's own `\and`, `\thanks` and `\\` must stand, so the replay only
+supplies what would otherwise be undefined. The definitions open at `\@author` serve every affiliation, also one a
+class sets elsewhere (an `\@address` under its own `\def\addr`): a font may differ from the PDF there, never the
+content.
+
+**Measured.** The 7 witnesses (2405.09787, 2407.21368, 2105.14711, 2404.08403, 2405.16969, 2503.22625, 2601.05137) go
+from 2-3 errors to 0, their creators' names and addresses clean of error text; 2406.07496 from 2 to 0. On 1,078
+frontmatter-heavy papers compared with 63p5, 2 XMLs change (2406.07496, 2503.22625) and none gains an error or a
+warning. Guards
+`perfect_kernel_batch63::{author_markup_defined_in_title_code, author_markup_title_code_forms}` and the unit tests
+`author_split_tests::title_code_definitions_*`, repros
+sectioning-frontmatter/author_markup_defined_in_title_code, author_markup_title_code_forms. Residual: a name line's
+trailing email (`\name A \email a@b`, the JMLR idiom) stays in the personname, as with the jmlr2e binding.
