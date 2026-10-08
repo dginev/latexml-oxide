@@ -11288,3 +11288,45 @@ The author splitter (Base_Utility.pool.ltxml) separates names at commas and " an
 
 Fixed in Rust (63j): " and~" separates as " and " does. Guard
 `perfect_kernel_batch63::author_and_tied_to_the_last_name_splits`.
+
+## 529. A JHEP/PoS paper keeps only its last `\author`
+
+JHEP.cls:513, JHEP3.cls:764 and PoS.cls:666 redefine `\author` to append each call's block to `\@author`
+(`\long\xdef\@author{\the\prev@t\the\cur@t}`): one `\author{Name\\ Address\\ E-mail: \email{x}}` per author is the
+documented use. JHEP.cls.ltxml (which JHEP3 and PoS load) keeps the kernel `\author`, each call replacing the last,
+so astro-ph0611258 (PoS, three `\author` calls) shows only its third author, split at the address's commas into
+four.
+
+Fixed in Rust (63k): the JHEP binding's `\author` appends its block, read as the article `\author` reads one
+(`\lx@add@authors@list`): a name with its affiliation and email lines, or a marked name list with its marked
+affiliations (0811.4645, 1011.0516). Guard `perfect_kernel_batch63::jhep_author_calls_accumulate`.
+
+## 530. An author block's "E-mail:" line becomes an affiliation
+
+An author block's last line is often its email behind a label: `E-mail: \email{x}` (JHEP, PoS), `E-mail:
+\texttt{x}`. The splitter (Base_Utility.pool.ltxml) makes every line after the name an affiliation, so the label
+stays as an affiliation of its own ("E-mail: ", beside the email the nested `\email` adds) or carries the address
+with it. A lone `\email{x}` line, read as an email, nests the class's `\email` inside another `\lx@add@email`,
+leaving a second, empty email contact.
+
+Fixed in Rust (63k): a line holding the class's email commands (a macro whose expansion is `\lx@add@email…`), or a
+labelled address, is that many emails; the author's label becomes the contact's `name` ("E-mail: "), markup a
+stylesheet shows or hides as it does the default "Email: ". Without a label of the author's, the class's own command
+runs as written, keeping the name it gives (amsart's "Email address: "); spacing after the label (`E-mail:~`,
+`E-mail:\ `) is no part of either. A line shared by a group of names gives each address to
+the one name whose surname its local part spells (whole, or its first six letters: `leyaouan@` for "A.~Le~Yaouanc"),
+whatever their order (0911.0082 lists Nele's address before David's); an address naming no one, or several, stays
+with the group's last name. Guards `perfect_kernel_batch63::{author_email_line_label_is_its_name,
+author_class_email_line_keeps_its_name}`.
+
+## 531. A `\nameref` in a section title keeps its target's number where the title is reused
+
+CrossRef.pm:774-777 drops the leading `ltx:tag` of a `\nameref`'s title (pdflatex prints the title alone), but
+`fillInTitle` (CrossRef.pm:899) fills a ref nested in another title with no `$is_nameref`, so
+`\section{After \nameref{tgt}}` reads "After 2 Target" in the TOC and tooltips. The drop also unbinds the tag from the
+stored title itself (`$first_child->unbindNode`), so after one `\nameref{s}` every later use of `s`'s title (TOC,
+tooltips, other refs) loses its number.
+
+Fixed in Rust (63k): a nested `\nameref` drops the tag too, read from its `ltx_refmacro_nameref` class as
+`fill_in_refs` does, and the drop is made on the copy, the stored title keeping its tag. Guard
+`perfect_kernel_batch63::nameref_drops_the_section_number`.

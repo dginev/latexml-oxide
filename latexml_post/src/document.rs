@@ -1495,6 +1495,15 @@ impl PostDocument {
           if is_xmlid {
             continue;
           }
+          // `get_properties` names an `xml:` attribute bare: the copy of a `\foreignlanguage` title in a TOC entry
+          // came out `lang="de"`, which the schema refuses (63k review).
+          if source
+            .get_attribute_ns(key, latexml_core::common::xml::XML_NS)
+            .is_some()
+          {
+            new_node.set_attribute(&format!("xml:{key}"), value).ok();
+            continue;
+          }
           new_node.set_attribute(key, value).ok();
         }
         if let Some(newid) = &new_xmlid {

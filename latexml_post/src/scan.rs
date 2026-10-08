@@ -1225,39 +1225,41 @@ pub(crate) fn title_text_content(doc: &PostDocument, node: &Node) -> String {
   let mut result = String::new();
   let mut child = node.get_first_child();
   while let Some(c) = child {
-    match c.get_type() {
-      Some(NodeType::TextNode) => {
-        result.push_str(&c.get_content());
-      },
-      // A mark adds no text: stored titles are `cleanNode` copies already,
-      // and `Scan::clean_node`'s fallback reads the live title.
-      Some(NodeType::ElementNode) if is_indexmark(&c) => {},
-      Some(NodeType::ElementNode) => {
-        let name = c.get_name();
-        if name == "tag" {
-          // Honor open/close attributes on <ltx:tag>
-          if let Some(open) = c.get_attribute("open") {
-            result.push_str(&open);
-          }
-          result.push_str(&title_text_content(doc, &c));
-          if let Some(close) = c.get_attribute("close") {
-            result.push_str(&close);
-          }
-        } else if name == "Math" {
-          // Perl `CrossRef.pm` L872-873: `return unicodemath($doc, $node)` — the
-          // presentation branch of the math, in reading order. Without this a
-          // math title flattened to its XMApp/XMDual content tree (operator
-          // first: `= sin x x`) with every inter-token newline preserved.
-          result.push_str(&crate::unicode_math::unicodemath(doc, &c));
-        } else {
-          result.push_str(&title_text_content(doc, &c));
-        }
-      },
-      _ => {},
-    }
+    result.push_str(&title_node_text(doc, &c));
     child = c.get_next_sibling();
   }
   result
+}
+
+/// The text one node of a title contributes to [`title_text_content`].
+pub(crate) fn title_node_text(doc: &PostDocument, c: &Node) -> String {
+  match c.get_type() {
+    Some(NodeType::TextNode) => c.get_content(),
+    // A mark adds no text: stored titles are `cleanNode` copies already,
+    // and `Scan::clean_node`'s fallback reads the live title.
+    Some(NodeType::ElementNode) if is_indexmark(c) => String::new(),
+    Some(NodeType::ElementNode) => {
+      let name = c.get_name();
+      if name == "tag" {
+        // Honor open/close attributes on <ltx:tag>
+        let mut result = c.get_attribute("open").unwrap_or_default();
+        result.push_str(&title_text_content(doc, c));
+        if let Some(close) = c.get_attribute("close") {
+          result.push_str(&close);
+        }
+        result
+      } else if name == "Math" {
+        // Perl `CrossRef.pm` L872-873: `return unicodemath($doc, $node)` — the
+        // presentation branch of the math, in reading order. Without this a
+        // math title flattened to its XMApp/XMDual content tree (operator
+        // first: `= sin x x`) with every inter-token newline preserved.
+        crate::unicode_math::unicodemath(doc, c)
+      } else {
+        title_text_content(doc, c)
+      }
+    },
+    _ => String::new(),
+  }
 }
 
 // NOTE: Perl uses cloneNode(1) for deep DOM copies. Every node stored in the

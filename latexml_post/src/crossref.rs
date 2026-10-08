@@ -15,7 +15,7 @@ use crate::{
   document::{NodeData, PostDocument, get_xml_id},
   object_db::{Entry, ObjectDB, Value},
   processor::{ProcessResult, Processor},
-  scan::title_text_content,
+  scan::{title_node_text, title_text_content},
 };
 
 /// Perl CrossRef.pm `$normaltoctypes` (L202-206): the sectional element types
@@ -77,26 +77,25 @@ fn value_text(doc: &PostDocument, val: &Value) -> String {
   raw.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Build the child nodes of an `<ltx:ref>` from a stored value.
+/// Build the child nodes of an `<ltx:ref>` from a stored value, as stored.
 ///
-/// Port of Perl `CrossRef::prepRefText` = `cloneNodes(trimChildNodes($value))`:
+/// Port of Perl `CrossRef::prepRefText` = `cloneNodes(trimChildNodes($value))`
+/// without its `fillInTitle`, which [`CrossRef::ref_text_children`] adds:
 /// deep-clone the title's child nodes — `<ltx:Math>` included — trimming
 /// whitespace at the two edges. Element children become [`NodeData::XmlNode`]
 /// (deep-copied at materialization by `PostDocument::add_xml_node`, which
 /// uniquifies their `xml:id`s); text children become [`NodeData::Text`]. A
 /// plain-string value keeps the single flat-text child.
-///
-/// (Perl's `fillInTitle` — resolving nested `ltx:ref`/`ltx:bibref`/`ltx:break`
-/// embedded in a title before cloning — is not ported here; those are rare in
-/// titles and were not handled by the previous flat-text path either.)
 fn ref_content_children(val: &Value) -> Vec<NodeData> {
-  let node = match val {
-    Value::Xml(node) => node,
-    other => return vec![NodeData::Text(other.to_string())],
-  };
-  let mut out = child_nodes_data(node);
-  // trimChildNodes: left-trim the first text child, right-trim the last; drop
-  // either if it becomes empty.
+  match val {
+    Value::Xml(node) => trim_child_data(child_nodes_data(node)),
+    other => vec![NodeData::Text(other.to_string())],
+  }
+}
+
+/// Perl `Post::Document::trimChildNodes` on ref content: left-trim the first text child, right-trim the last; drop
+/// either if it becomes empty.
+fn trim_child_data(mut out: Vec<NodeData>) -> Vec<NodeData> {
   if let Some(NodeData::Text(s)) = out.first_mut() {
     let t = s.trim_start().to_string();
     if t.is_empty() {
@@ -239,6 +238,10 @@ pub struct CrossRef {
   /// O(siblings) recomputation (Perl's unpruned `getChildPages`) into O(1)
   /// lookups, eliminating the `fill_in_relations` O(n²).
   child_pages:    RefCell<HashMap<String, Rc<ChildPages>>>,
+  /// The entries whose stored values are being filled in, innermost last: a value whose own refs lead back to its
+  /// entry (`\section{On \nameref{s}}\label{s}`) is used as stored the second time, where Perl's `fillInTitle`
+  /// recurses without end.
+  filling:        RefCell<Vec<String>>,
 }
 
 /// One cited entry as Perl `make_bibcite` collects it (`CrossRef.pm` L516-562):
@@ -346,6 +349,63 @@ fn child_nodes_data(node: &Node) -> Vec<NodeData> {
       _ => {},
     }
     child = c.get_next_sibling();
+  }
+  out
+}
+
+/// Whether a stored title holds what Perl `CrossRef::fillInTitle` (CrossRef.pm:882-904) replaces before the title
+/// is reused: an `ltx:ref` never filled — Scan stored the title before CrossRef ran, so a `\ref`, `\eqref`,
+/// `\autoref`, `\cref` or `\nameref` in a section title is still empty there (1011.3492, 1111.3672) — or an
+/// `ltx:break`. Math is not entered: its copy keeps the ids its own references point to.
+fn needs_fill_in(node: &Node) -> bool {
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    if c.get_type() == Some(NodeType::ElementNode) {
+      match c.get_name().as_str() {
+        "ref" if is_unfilled_ref(&c) => return true,
+        "break" => return true,
+        "Math" => {},
+        _ if needs_fill_in(&c) => return true,
+        _ => {},
+      }
+    }
+    child = c.get_next_sibling();
+  }
+  false
+}
+
+/// An `ltx:ref` naming its target (`idref`/`labelref`) whose text is still to be generated (Perl `next if
+/// $ref->textContent`).
+fn is_unfilled_ref(node: &Node) -> bool {
+  (node.get_attribute("idref").is_some() || node.get_attribute("labelref").is_some())
+    && node.get_content().is_empty()
+}
+
+/// The text of ref content as Perl `getTextContent` reads a filled title (`CrossRef.pm` L861-879): a tag with its
+/// `open`/`close`, math in its Unicode reading.
+fn node_data_text(doc: &PostDocument, data: &[NodeData]) -> String {
+  let mut out = String::new();
+  for datum in data {
+    match datum {
+      NodeData::Text(text) => out.push_str(text),
+      NodeData::XmlNode(node) => out.push_str(&title_node_text(doc, node)),
+      NodeData::Element { tag, attributes, children } => {
+        let attr = |key: &str| {
+          attributes
+            .as_ref()
+            .and_then(|attributes| attributes.get(key))
+            .map_or("", String::as_str)
+        };
+        let tagged = tag == "ltx:tag";
+        if tagged {
+          out.push_str(attr("open"));
+        }
+        out.push_str(&node_data_text(doc, children));
+        if tagged {
+          out.push_str(attr("close"));
+        }
+      },
+    }
   }
   out
 }
@@ -555,6 +615,7 @@ impl CrossRef {
       navigation_toc: None,
       missing: HashMap::default(),
       child_pages: RefCell::new(HashMap::default()),
+      filling: RefCell::new(Vec::new()),
     }
   }
 
@@ -630,7 +691,7 @@ impl CrossRef {
           // The title is stored as a NODE (`Value::Xml`) for sections; derive
           // its string form tag-aware (Perl `getTextContent`). A plain-string
           // title (e.g. abstract/bibliography names) is used verbatim.
-          pieces.push(value_text(doc, title_val));
+          pieces.push(self.filled_value_text(doc, &current_id, title_val));
         }
       }
       if pieces.is_empty() {
@@ -735,12 +796,12 @@ impl CrossRef {
       }]
     };
     if let Some(val) = entry.get_value(&format!("phrase:{show}")) {
-      return wrap(ref_content_children(val));
+      return wrap(self.entry_text_children(entry_key, val, false));
     }
     if let Some(base) = show.strip_suffix("-plural")
       && let Some(val) = entry.get_value(&format!("phrase:{base}"))
     {
-      let mut children = ref_content_children(val);
+      let mut children = self.entry_text_children(entry_key, val, false);
       children.push(NodeData::Text("s".to_string()));
       return wrap(children);
     }
@@ -757,7 +818,7 @@ impl CrossRef {
         "a "
       };
       let mut children = vec![NodeData::Text(article.to_string())];
-      children.extend(ref_content_children(val));
+      children.extend(self.entry_text_children(entry_key, val, false));
       return wrap(children);
     }
     vec![]
@@ -779,10 +840,142 @@ impl CrossRef {
     }
   }
 
-  /// Generate reference content for a given ID and show pattern.
+  /// Perl `CrossRef::prepRefText` (CrossRef.pm:791-793), `cloneNodes(trimChildNodes(fillInTitle($value)))`, for the
+  /// value from the entry `id`: its children with nested refs filled ([`Self::filled_children`]), trimmed. For
+  /// a `\nameref` its leading `ltx:tag` goes (`generateRef_aux` L774-777, which unbinds it from the stored value
+  /// itself; the copy loses it here, the stored title keeping its tag for the TOC).
+  fn entry_text_children(&self, id: &str, val: &Value, is_nameref: bool) -> Vec<NodeData> {
+    let Value::Xml(node) = val else {
+      return ref_content_children(val);
+    };
+    // (an entry whose own title refs lead back to it stops at the first return, whichever of its keys it shows)
+    let mut out =
+      if needs_fill_in(node) && !self.filling.borrow().iter().any(|filling| filling == id) {
+        self.filling.borrow_mut().push(id.to_string());
+        let filled = self.filled_children(node);
+        self.filling.borrow_mut().pop();
+        filled
+      } else {
+        child_nodes_data(node)
+      };
+    if is_nameref
+      && let Some(at) = out
+        .iter()
+        .position(|datum| !matches!(datum, NodeData::Text(_)))
+      && matches!(&out[at], NodeData::XmlNode(first) if first.get_name() == "tag")
+    {
+      out.remove(at);
+    }
+    trim_child_data(out)
+  }
+
+  /// Perl `CrossRef::fillInTitle` (CrossRef.pm:882-904) on a copy of a stored value's children: a nested `ltx:ref`
+  /// still empty becomes the content its target's entry generates for the ref's `show` (else the default), unlinked
+  /// (`replaceNode($ref, generateRef_aux(...))`); an `ltx:break` becomes a space. Perl edits the stored title in
+  /// place, once; here each use fills a copy and the ObjectDB stays read-only. A wrapper around a filled ref is
+  /// rebuilt without its `xml:id`/`fragid`, display copies as in MakeIndex's see-also chunks. A nested
+  /// `ltx:bibref` is left to `fill_in_bibrefs`, which fills the copy where it lands; a tooltip reads it empty.
+  fn filled_children(&self, node: &Node) -> Vec<NodeData> {
+    let mut out = Vec::new();
+    let mut child = node.get_first_child();
+    while let Some(c) = child {
+      match c.get_type() {
+        Some(NodeType::TextNode) => out.push(NodeData::Text(c.get_content())),
+        Some(NodeType::ElementNode) => out.extend(self.filled_node(&c)),
+        _ => {},
+      }
+      child = c.get_next_sibling();
+    }
+    out
+  }
+
+  /// One element of [`Self::filled_children`].
+  fn filled_node(&self, node: &Node) -> Vec<NodeData> {
+    let in_ltx = node
+      .get_namespace()
+      .is_some_and(|ns| ns.get_href() == crate::document::LTX_NSURI);
+    match node.get_name().as_str() {
+      "ref" if in_ltx && is_unfilled_ref(node) => {
+        let target = match node.get_attribute("idref") {
+          Some(id) => Some(id),
+          None => node.get_attribute("labelref").and_then(|label| {
+            self
+              .db
+              .lookup(&label)
+              .and_then(|entry| entry.get_string("id").map(String::from))
+          }),
+        };
+        match target.filter(|id| self.db.lookup(&format!("ID:{id}")).is_some()) {
+          Some(id) => {
+            let show = node
+              .get_attribute("show")
+              .filter(|show| !show.is_empty())
+              .unwrap_or_else(|| self.ref_show.clone());
+            // A nested `\nameref` drops its target's number as one in the text does; Perl's `fillInTitle` passes no
+            // `$is_nameref` and keeps it (KNOWN_PERL_ERRORS #531).
+            let is_nameref = node
+              .get_attribute("class")
+              .is_some_and(|class| class.contains("ltx_refmacro_nameref"));
+            self.generate_ref_aux(&id, &show, is_nameref)
+          },
+          None => vec![NodeData::XmlNode(node.clone())],
+        }
+      },
+      "break" if in_ltx => vec![NodeData::Element {
+        tag:        "ltx:text".to_string(),
+        attributes: None,
+        children:   vec![NodeData::Text(" ".to_string())],
+      }],
+      "Math" => vec![NodeData::XmlNode(node.clone())],
+      name if in_ltx && needs_fill_in(node) => {
+        // (its `xml:` attributes keep their namespace — `get_properties` names them bare — and a display copy carries
+        // no `labels`, as `append_clone` drops them)
+        let xml_ns = latexml_core::common::xml::XML_NS;
+        let attributes: HashMap<String, String> = node
+          .get_properties()
+          .into_iter()
+          .filter(|(k, _)| k != "fragid" && k != "labels")
+          .filter_map(|(k, v)| match node.get_attribute_ns(&k, xml_ns) {
+            Some(_) if k == "id" => None,
+            Some(_) => Some((format!("xml:{k}"), v)),
+            None => Some((k, v)),
+          })
+          .collect();
+        vec![NodeData::Element {
+          tag:        format!("ltx:{name}"),
+          attributes: Some(attributes),
+          children:   self.filled_children(node),
+        }]
+      },
+      _ => vec![NodeData::XmlNode(node.clone())],
+    }
+  }
+
+  /// Perl `getTextContent($doc, fillInTitle($title))` (CrossRef.pm:846): the string form of a value of the entry `id`, nested refs filled, whitespace collapsed as [`value_text`] does.
+  fn filled_value_text(&self, doc: &PostDocument, id: &str, val: &Value) -> String {
+    match val {
+      Value::Xml(node) if needs_fill_in(node) => {
+        let children = self.entry_text_children(id, val, false);
+        node_data_text(doc, &children)
+          .split_whitespace()
+          .collect::<Vec<_>>()
+          .join(" ")
+      },
+      _ => value_text(doc, val),
+    }
+  }
+
+  /// Generate reference content for a given ID and show pattern; a `\nameref`'s (`is_nameref`) drops the titles'
+  /// tags.
   ///
   /// Port of `CrossRef::generateRef`.
-  fn generate_ref(&mut self, _doc: &PostDocument, req_id: &str, req_show: &str) -> Vec<NodeData> {
+  fn generate_ref(
+    &mut self,
+    _doc: &PostDocument,
+    req_id: &str,
+    req_show: &str,
+    is_nameref: bool,
+  ) -> Vec<NodeData> {
     let show_options = if !req_show.contains("title") {
       vec![req_show.to_string(), "title".to_string()]
     } else {
@@ -798,7 +991,7 @@ impl CrossRef {
         if !entry_exists {
           break;
         }
-        let s = self.generate_ref_aux(&id, show);
+        let s = self.generate_ref_aux(&id, show, is_nameref);
         if !s.is_empty() {
           if !pending.is_empty() {
             stuff.push(NodeData::Text(pending.clone()));
@@ -828,7 +1021,7 @@ impl CrossRef {
   }
 
   /// Generate ref content from a single DB entry.
-  fn generate_ref_aux(&self, id: &str, show: &str) -> Vec<NodeData> {
+  fn generate_ref_aux(&self, id: &str, show: &str, is_nameref: bool) -> Vec<NodeData> {
     let entry = match self.db.lookup(&format!("ID:{}", id)) {
       Some(e) => e,
       None => return vec![],
@@ -872,7 +1065,7 @@ impl CrossRef {
                   "class".to_string(),
                   class.to_string(),
                 )])),
-                children:   ref_content_children(val),
+                children:   self.entry_text_children(id, val, is_nameref),
               });
               break;
             }
@@ -1409,7 +1602,7 @@ impl CrossRef {
       && !req_id.is_empty()
       && self.db.lookup(&format!("ID:{}", req_id)).is_some()
     {
-      self.generate_ref_aux(req_id, req_show)
+      self.generate_ref_aux(req_id, req_show, false)
     } else {
       Vec::new()
     }
@@ -1587,7 +1780,11 @@ impl CrossRef {
           }
         }
         if ref_mut.get_first_child().is_none() && tag != "ltx:graphics" && tag != "ltx:picture" {
-          let content = self.generate_ref(doc, id_str, &show);
+          // Perl CrossRef.pm:364
+          let is_nameref = ref_node
+            .get_attribute("class")
+            .is_some_and(|class| class.contains("ltx_refmacro_nameref"));
+          let content = self.generate_ref(doc, id_str, &show, is_nameref);
           doc.add_nodes(&mut ref_mut, &content);
         }
       }

@@ -1,0 +1,16 @@
+% witness: synthetic (63k review: amsart's `\email` names its contact "Email address: "; `E-mail:\ \email{}` with a
+%          spacing command after the label)
+% oracle:  pdflatex 0 errors: Bob's author block prints his label "E-mail:", amsart's footnote block both addresses as
+%          "Email address: ann@a.edu", "Email address: bob@b.edu"
+% engines: rust 63j = Ann's email beside an empty second email contact, Bob's "E-mail:" an affiliation beside an empty
+%          contact; 63k r1 named Ann's "Email: " and nested Bob's
+% expect:  0 errors; Ann's email named "Email address: " (the class's), Bob's "E-mail: " (his label), one contact each
+% status:  RED (63j, 63k r1) -> GREEN (63k)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able\\ Univ A\\ \email{ann@a.edu}}
+\author{Bob Baker\\ Univ B\\ E-mail:\ \email{bob@b.edu}}
+\maketitle
+Body.
+\end{document}

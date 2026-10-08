@@ -1315,9 +1315,7 @@ LoadDefinitions!({
     {
       calls
         .extend(Invocation!(T_CS!("\\lx@add@author"), vec![keyvals.clone(), Some(stuff)]).unlist());
-    } else if position_of(&stuff, &authorsup_markers()).is_some()
-      && (!cautious || answers_its_marks(&stuff))
-    {
+    } else if has_author_marks(&stuff) && (!cautious || answers_its_marks(&stuff)) {
       // (a per-author class binding keeps its marks visible on the names, as Perl does, and takes the unmarked path
       // below — its affiliation commands answer no mark (an IEEE block's `\IEEEauthorblockA`, amsart's `\address`) —
       // unless the block holds its marked affiliations itself (2401.14196's `\author[*]{… \\ $^1$DeepSeek-AI …}`))
@@ -1563,28 +1561,39 @@ LoadDefinitions!({
             names.push(Tokens::default());
           }
           let last = names.len() - 1;
-          for (i, name) in names.into_iter().enumerate() {
-            let mut body: Vec<Token> = name.unlist();
-            if i == last {
-              for line in &affils {
-                let (line, annotations) = if cautious {
-                  take_author_annotations(line)
+          let name_keys: Vec<Vec<String>> = names.iter().map(surname_keys).collect();
+          let mut bodies: Vec<Vec<Token>> = names.into_iter().map(Tokens::unlist).collect();
+          for line in &affils {
+            let (line, annotations) = if cautious {
+              take_author_annotations(line)
+            } else {
+              (line.clone(), Vec::new())
+            };
+            if let Some((label, addresses)) = labelled_emails(&line)? {
+              // A shared email line under several names gives each address to the one name it spells (0911.0568's
+              // five PoS authors over one `E-mail:` line, 0911.0082's addresses in another order than the names,
+              // 63k); an address naming no one, or several, stays with the line's last name.
+              for address in addresses {
+                let owner = if last > 0 {
+                  address_owner(&name_keys, &address.address)
                 } else {
-                  (line.clone(), Vec::new())
+                  None
                 };
-                if !line.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
-                  // A bare email line (\texttt{user@host}) is an email, not an
-                  // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315).
-                  let cs = if line_is_email(&line) {
-                    T_CS!("\\lx@add@email")
-                  } else {
-                    T_CS!("\\lx@add@affiliation")
-                  };
-                  body.extend(Invocation!(cs, vec![None, Some(line)]).unlist());
-                }
-                body.extend(annotations);
+                bodies[owner.unwrap_or(last)].extend(email_calls(label.as_ref(), vec![address])?);
               }
+            } else if !line.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+              // A bare email line (\texttt{user@host}) is an email, not an
+              // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315).
+              let cs = if line_is_email(&line) {
+                T_CS!("\\lx@add@email")
+              } else {
+                T_CS!("\\lx@add@affiliation")
+              };
+              bodies[last].extend(Invocation!(cs, vec![None, Some(line)]).unlist());
             }
+            bodies[last].extend(annotations);
+          }
+          for body in bodies {
             calls.extend(
               Invocation!(T_CS!("\\lx@add@author"), vec![
                 keyvals.clone(),
@@ -8717,6 +8726,50 @@ fn affil_splits() -> Vec<SplitDelim> {
 }
 fn authorsup_markers() -> Vec<Token> { vec![T_SUPER!(), T_CS!("\\textsuperscript")] }
 
+/// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or
+/// `\thanks` is the note's own text, not a mark: 0911.0568's `LPT Orsay (CNRS)~\footnote{$^a$Laboratoire …}` line
+/// made its PoS author block a marked list, its affiliation and email line read as a person (63k).
+fn has_author_marks(stuff: &Tokens) -> bool {
+  let markers = authorsup_markers();
+  let tokens = stuff.unlist_ref();
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = &tokens[i];
+    if *t == T_CS!("\\footnote") || *t == T_CS!("\\thanks") {
+      i += 1;
+      while i < tokens.len() && tokens[i] == T_SPACE!() {
+        i += 1;
+      }
+      if i < tokens.len() && tokens[i] == T_OTHER!("[") {
+        while i < tokens.len() && tokens[i] != T_OTHER!("]") {
+          i += 1;
+        }
+        i += 1;
+      }
+      if i < tokens.len() && tokens[i].code == Catcode::BEGIN {
+        let mut depth = 0usize;
+        while i < tokens.len() {
+          match tokens[i].code {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => {
+              depth -= 1;
+              if depth == 0 {
+                break;
+              }
+            },
+            _ => {},
+          }
+          i += 1;
+        }
+      }
+    } else if markers.contains(t) {
+      return true;
+    }
+    i += 1;
+  }
+  false
+}
+
 /// In a superscript-labeled author block, decide whether a line reads
 /// "Name\textsuperscript{n}" (an author — name TEXT precedes the marker) or
 /// "\textsuperscript{n}Affil" (an affiliation — the marker LEADS the line).
@@ -10305,6 +10358,257 @@ fn line_is_email(line: &Tokens) -> bool {
   }
   let v = visible.trim();
   !v.is_empty() && v.contains('@') && !v.chars().any(|c| c.is_whitespace())
+}
+
+/// An author-block line holding email addresses behind the author's own label, or given by the class's email command,
+/// as its label and addresses:
+/// `E-mail: \email{x}` (JHEP.cls/PoS.cls author blocks, astro-ph0611258), `E-mail: \texttt{x@y}`, `\email{x}`. Each
+/// address becomes `\lx@add@email`, the label (as written, "E-mail:") its `name`, so it stays markup a stylesheet can
+/// show or hide (as the default "Email: " is). Before, the label stood as an affiliation of its own ("E-mail: ") and
+/// a lone `\email{x}` line nested its own `\lx@add@email` in another, leaving an empty email contact. `None` for any
+/// other line.
+fn labelled_emails(line: &Tokens) -> Result<Option<(Option<Tokens>, Vec<EmailAddress>)>> {
+  let (label, rest) = split_email_label(line);
+  if let Some(calls) = email_command_calls(&rest)? {
+    return Ok(Some((label, calls)));
+  }
+  let commands = rest
+    .unlist_ref()
+    .iter()
+    .filter(|t| t.code == Catcode::CS)
+    .map(is_email_command)
+    .collect::<Result<Vec<bool>>>()?;
+  Ok(
+    (label.is_some() && line_is_email(&rest) && !commands.contains(&true))
+      .then(|| (label, vec![EmailAddress { address: rest, call: None }])),
+  )
+}
+
+/// One address of an email line, and the class's email command that gave it (`\email{x}`), if any.
+struct EmailAddress {
+  address: Tokens,
+  call:    Option<Tokens>,
+}
+
+/// The words that can stand for a person in an email address: the name's words after the first that have three
+/// letters or more (`Ph.~Boucaud` "boucaud", `J.~Rodr\'iguez-Quintero` "rodriguez", "quintero"), lowercased.
+fn surname_keys(name: &Tokens) -> Vec<String> {
+  let mut text = String::new();
+  for t in name.unlist_ref() {
+    match t.code {
+      Catcode::LETTER | Catcode::OTHER => text.push_str(&t.to_string()),
+      Catcode::SPACE | Catcode::ACTIVE => text.push(' '),
+      _ => {},
+    }
+  }
+  text
+    .split(|c: char| !c.is_alphabetic())
+    .filter(|word| !word.is_empty())
+    .skip(1)
+    .filter(|word| word.chars().count() >= 3)
+    .map(str::to_lowercase)
+    .collect()
+}
+
+/// The one name (index into `name_keys`) whose surname the address's local part spells — whole, or its first six
+/// letters (`leyaouan@…` for "A.~Le~Yaouanc") — or `None` when no name or several do.
+fn address_owner(name_keys: &[Vec<String>], address: &Tokens) -> Option<usize> {
+  let text: String = address
+    .unlist_ref()
+    .iter()
+    .filter(|t| matches!(t.code, Catcode::LETTER | Catcode::OTHER))
+    .map(|t| t.to_string())
+    .collect();
+  let local: String = text
+    .split('@')
+    .next()?
+    .chars()
+    .filter(|c| c.is_alphabetic())
+    .collect::<String>()
+    .to_lowercase();
+  let spells = |key: &String| {
+    local.contains(key.as_str())
+      || (key.chars().count() >= 6 && local.contains(&key.chars().take(6).collect::<String>()))
+  };
+  let mut owners = name_keys
+    .iter()
+    .enumerate()
+    .filter(|(_, keys)| keys.iter().any(spells))
+    .map(|(at, _)| at);
+  let owner = owners.next()?;
+  owners.next().is_none().then_some(owner)
+}
+
+/// The email calls for `addresses`: under the author's `label`, `\lx@add@email` named by it; without one, the class's
+/// own email command as written (`\email{x}`), or `\lx@add@email`.
+fn email_calls(label: Option<&Tokens>, addresses: Vec<EmailAddress>) -> Result<Vec<Token>> {
+  let keyvals = label.map(|label| {
+    let mut kv = mouth::tokenize_internal("name=").unlist();
+    kv.push(T_BEGIN!());
+    kv.extend(label.unlist_ref().iter().copied());
+    kv.push(T_SPACE!());
+    kv.push(T_END!());
+    Tokens::new(kv)
+  });
+  let mut calls = Vec::new();
+  for EmailAddress { address, call } in addresses {
+    match (&keyvals, call) {
+      // no label of the author's: the class's own command, with the name it gives (amsart's "Email address: ")
+      (None, Some(call)) => calls.extend(call.unlist()),
+      _ => calls.extend(
+        Invocation!(T_CS!("\\lx@add@email"), vec![
+          keyvals.clone(),
+          Some(address)
+        ])
+        .unlist(),
+      ),
+    }
+  }
+  Ok(calls)
+}
+
+/// A line's leading email label — "E-mail:", "Email:", "e-mails:", "E-mail address:", up to its colon, or the same
+/// words without one right before a command — and the rest of the line.
+fn split_email_label(line: &Tokens) -> (Option<Tokens>, Tokens) {
+  let tokens = line.unlist_ref();
+  let mut text = String::new();
+  let mut end = None;
+  for (i, t) in tokens.iter().enumerate() {
+    match t.code {
+      Catcode::LETTER | Catcode::OTHER => {
+        let ch = t.to_string();
+        if ch == ":" {
+          end = Some(i + 1);
+          break;
+        }
+        text.push_str(&ch);
+      },
+      Catcode::SPACE => text.push(' '),
+      Catcode::CS => {
+        end = Some(i);
+        break;
+      },
+      _ => break,
+    }
+  }
+  let is_label = {
+    let words: String = text
+      .chars()
+      .filter(|c| !c.is_whitespace() && *c != '-')
+      .collect::<String>()
+      .to_lowercase();
+    matches!(
+      words.as_str(),
+      "email" | "emails" | "emailaddress" | "emailaddresses"
+    )
+  };
+  match end {
+    Some(end) if is_label => {
+      let label: Vec<Token> = tokens[..end]
+        .iter()
+        .copied()
+        .skip_while(|t| *t == T_SPACE!())
+        .collect();
+      let label_end = label
+        .iter()
+        .rposition(|t| !is_spacing(t))
+        .map_or(0, |at| at + 1);
+      (
+        Some(Tokens::new(label[..label_end].to_vec())),
+        Tokens::new(
+          tokens[end..]
+            .iter()
+            .copied()
+            .skip_while(is_spacing)
+            .collect(),
+        ),
+      )
+    },
+    _ => (None, line.clone()),
+  }
+}
+
+/// The addresses of a line made only of the class's email commands (a macro whose expansion is `\lx@add@email…`,
+/// JHEP's `\email`, amsart's) and the commas, semicolons or spaces between them, each with its command call; `None`
+/// for any other line.
+fn email_command_calls(line: &Tokens) -> Result<Option<Vec<EmailAddress>>> {
+  let tokens = line.unlist_ref();
+  let mut calls = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = &tokens[i];
+    if is_spacing(t) || *t == T_OTHER!(",") || *t == T_OTHER!(";") {
+      i += 1;
+      continue;
+    }
+    if t.code != Catcode::CS || !is_email_command(t)? {
+      return Ok(None);
+    }
+    let command = i;
+    i += 1;
+    while i < tokens.len() && tokens[i] == T_SPACE!() {
+      i += 1;
+    }
+    if i >= tokens.len() || tokens[i].code != Catcode::BEGIN {
+      return Ok(None);
+    }
+    let start = i + 1;
+    let mut depth = 0usize;
+    while i < tokens.len() {
+      match tokens[i].code {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            break;
+          }
+        },
+        _ => {},
+      }
+      i += 1;
+    }
+    if depth != 0 {
+      return Ok(None);
+    }
+    calls.push(EmailAddress {
+      address: Tokens::new(tokens[start..i].to_vec()),
+      call:    Some(Tokens::new(tokens[command..=i].to_vec())),
+    });
+    i += 1;
+  }
+  Ok(if calls.is_empty() { None } else { Some(calls) })
+}
+
+/// Space between an email label and its addresses, or between addresses: a space, a tie, or a spacing command
+/// (`E-mail:~\email{x}`, `E-mail:\ \email{x}`).
+fn is_spacing(t: &Token) -> bool {
+  *t == T_SPACE!()
+    || *t == T_ACTIVE!('~')
+    || (t.code == Catcode::CS
+      && matches!(
+        t.to_string().as_str(),
+        "\\ "
+          | "\\,"
+          | "\\;"
+          | "\\:"
+          | "\\quad"
+          | "\\qquad"
+          | "\\enskip"
+          | "\\enspace"
+          | "\\thinspace"
+          | "\\space"
+      ))
+}
+
+/// A class's email command: a macro whose expansion begins with `\lx@add@email` (JHEP.cls.ltxml's `\email`).
+fn is_email_command(cs: &Token) -> Result<bool> {
+  let Some(def) = lookup_definition(cs)? else {
+    return Ok(false);
+  };
+  Ok(
+    matches!(def.get_expansion(), Some(ExpansionBody::Tokens(body))
+    if body.unlist_ref().first().is_some_and(|first| first.to_string() == "\\lx@add@email")),
+  )
 }
 
 /// A marker-less line that is *purely* a list of email addresses — a shared

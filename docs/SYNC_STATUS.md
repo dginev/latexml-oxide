@@ -343,6 +343,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
+- **63k**: titles' refs and JHEP-family authors (fidelity audit round 2):
+  - RUST-ONLY: a `\ref`/`\eqref`/`\autoref`/`\cref`/`\nameref` in a section title was empty wherever the title is
+    reused (TOC entries, `title=` tooltips): Perl's `CrossRef::fillInTitle` (CrossRef.pm:882-904) was never ported.
+    `crossref.rs` now fills a copy of the stored title before each use (`entry_text_children`, `filled_value_text`),
+    the ObjectDB staying read-only; a title whose refs lead back to itself is used as stored the second time (Perl
+    recurses without end). 1011.3492, 1111.3672. Open: a `\cite` in a title reads empty in the tooltip ("cite []";
+    the TOC is filled by `fill_in_bibrefs`).
+  - RUST-ONLY: `\nameref` showed the target title's number ("2 Target"); Perl drops the title's tag
+    (CrossRef.pm:774-777). A `\nameref` nested in a title drops it too (KPE #531, where Perl keeps it).
+  - RUST-ONLY: a display copy (TOC entry, ref text) named its `xml:` attributes bare: a `\foreignlanguage` title's
+    copy was `<text lang="de">`, which the schema refuses (`PostDocument::clone_subtree`).
+  - JHEP/JHEP3/PoS `\author` appends, one author per call (KPE #529; astro-ph0611258 keeps its three authors).
+  - An author block's email line is the email, its label the contact's `name` (the class's own name when the author
+    wrote none: amsart's "Email address: "); a group's shared line gives each
+    address to the name it spells (KPE #530; 0911.0568, 0911.0082). A `$^a$` inside a `\footnote`/`\thanks` no
+    longer turns an author block into a marked list (`has_author_marks`; 0911.0568's affiliation line read as a
+    person). Open: a group's shared affiliation still goes to its last name only.
+
+  A/B vs 63j: XML 454 papers, 51 change with 0 more errors or warnings (JHEP/PoS papers gain their authors:
+  0711.2174 1 → 16, 0811.2355 1 → 15, 1211.0565 1 → 14); HTML 151 papers, 22 change, 0 worse (empty TOC refs 1011.3492
+  4 → 0; tooltips fill their refs, "Proof of Theorem 3.2." in 0909.5610, and a title's `\\` reads as a space as in
+  Perl). Guards `perfect_kernel_batch63::{ref_in_section_title_fills_toc_and_tooltip, nameref_drops_the_section_number,
+  jhep_author_calls_accumulate, author_email_line_label_is_its_name, author_class_email_line_keeps_its_name,
+  toc_copy_keeps_its_language}`.
 - **63j**: three silent classes from fidelity audit round 2, all Perl-origin:
   - numbered eqnarray, align and gather rows holding only `\label` keep their number and label (KPE #526). Before,
     the row was dropped and the `\ref` printed "( )". hep-ph0208046: 12 missing labels → 0, equation numbers gap-free 1-59;

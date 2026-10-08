@@ -2254,3 +2254,194 @@ fn algorithmic_empty_and_bracketed_item_labels() {
     "{xml}"
   );
 }
+
+/// Core XML of `tex` (0 errors, 0 warnings) through the post-processor's CrossRef pass, as XML (no stylesheet).
+fn post_xml(tex: &str) -> String {
+  let (log, xml) = latexml::util::test::convert_with(tex, None);
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  latexml_core::util::logger::bind_log();
+  let opts = latexml::post::PostOptions {
+    pmml:                      true,
+    cmml:                      false,
+    keep_xmath:                false,
+    stylesheet:                None,
+    destination:               None,
+    source_directory:          None,
+    site_directory:            None,
+    search_paths:              &[],
+    nodefaultresources:        true,
+    css_files:                 &[],
+    js_files:                  &[],
+    noinvisibletimes:          false,
+    plane1:                    true,
+    hackplane1:                false,
+    mathtex:                   false,
+    url_style:                 latexml_post::crossref::UrlStyle::File,
+    navigationtoc:             None,
+    schemadocs:                false,
+    split:                     false,
+    split_xpath:               None,
+    split_naming:              None,
+    xslt_parameters:           &[],
+    graphics_svg_threshold_kb: 0,
+    graphicimages:             false,
+    timestamp:                 None,
+    icon:                      None,
+    whatsout:                  latexml_post::extract::Whatsout::default(),
+  };
+  let out = latexml::post::run_post_processing(&xml, &opts);
+  let log = latexml_core::util::logger::flush_log();
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "POST diagnostics:\n{log}"
+  );
+  out
+}
+
+/// The `<ref>` element filled for `idref` in the post XML's table of contents.
+fn toc_ref(xml: &str, idref: &str) -> Option<String> {
+  let toc = xml.find("<toclist")?;
+  let at = toc + xml[toc..].find(&format!("<ref idref=\"{idref}\""))?;
+  latexml::util::test::xml_element(&xml[at..], "ref", &[])
+}
+
+/// 63k: a `\ref` in a section title fills the TOC entry and the tooltips that reuse the title, unlinked (Perl
+/// CrossRef.pm:882-904 `fillInTitle`; 1011.3492, 1111.3672). Repro sectioning-frontmatter/ref_in_section_title_fills_toc_and_tooltip.
+#[test]
+fn ref_in_section_title_fills_toc_and_tooltip() {
+  let xml = post_xml(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ref_in_section_title_fills_toc_and_tooltip.tex"
+  ));
+  let see = xml
+    .find("See Section")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "ref", &[]));
+  assert_eq!(
+    (
+      toc_ref(&xml, "S1").as_deref(),
+      toc_ref(&xml, "S1.SS1").as_deref(),
+      see.as_deref()
+    ),
+    (
+      Some(
+        "<ref idref=\"S1\" show=\"toctitle\"><text class=\"ltx_ref_title\"><tag close=\" \">1</tag>Proof of Theorem\u{a0}<text class=\"ltx_ref_tag\">1</text></text></ref>"
+      ),
+      Some(
+        "<ref idref=\"S1.SS1\" show=\"toctitle\" title=\"In 1 Proof of Theorem 1\"><text class=\"ltx_ref_title\"><tag close=\" \">1.1</tag>Case (<text class=\"ltx_ref_tag\">1</text>) and\u{a0}(<text class=\"ltx_ref_tag\">1</text>)</text></ref>"
+      ),
+      Some(
+        "<ref idref=\"S1\" labelref=\"LABEL:sec\" title=\"1 Proof of Theorem 1\"><text class=\"ltx_ref_tag\">1</text></ref>"
+      )
+    ),
+    "{xml}"
+  );
+}
+
+/// 63k: `\nameref` shows the section's title without its number (Perl CrossRef.pm:774-777), in the text and inside
+/// another section's title, in its TOC entry (KNOWN_PERL_ERRORS #531). Repro
+/// sectioning-frontmatter/nameref_drops_the_section_number.
+#[test]
+fn nameref_drops_the_section_number() {
+  let xml = post_xml(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/nameref_drops_the_section_number.tex"
+  ));
+  let see = xml
+    .find("See <ref")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at + 4..], "ref", &[]));
+  assert_eq!(
+    (see.as_deref(), toc_ref(&xml, "S3").as_deref()),
+    (
+      Some(
+        "<ref class=\"ltx_refmacro_nameref\" idref=\"S2\" labelref=\"LABEL:tgt\" show=\"title\"><text class=\"ltx_ref_title\">Target</text></ref>"
+      ),
+      Some(
+        "<ref idref=\"S3\" show=\"toctitle\"><text class=\"ltx_ref_title\"><tag close=\" \">3</tag>After <text class=\"ltx_ref_title\">Target</text></text></ref>"
+      )
+    ),
+    "{xml}"
+  );
+}
+
+/// 63k: each `\author` of the JHEP family adds an author (JHEP.cls:513, JHEP3.cls:764, PoS.cls:666; astro-ph0611258),
+/// its `E-mail:` line an email named by that label. Repro sectioning-frontmatter/jhep_author_calls_accumulate.
+#[test]
+fn jhep_author_calls_accumulate() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/jhep_author_calls_accumulate.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"E-mail: \" role=\"email\">ann@a.edu</contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. B</contact><contact name=\"E-mail: \" role=\"email\">bob@b.edu</contact></creator>",
+    ],
+  );
+}
+
+/// 63k: an author block's email line is the email, its label (`E-mail:`, `Emails:`) the contact's name; a lone class
+/// `\email{x}` line adds one contact; a group's shared line gives each address to the name it spells (0911.0082), and
+/// a `$^a$` in a footnote marks no name (0911.0568). Repro sectioning-frontmatter/author_email_line_label_is_its_name.
+#[test]
+fn author_email_line_label_is_its_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_line_label_is_its_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\">ann@a.edu</contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">bob@b.edu</text></contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact><contact name=\"Emails: \" role=\"email\">cat@c.edu</contact><contact name=\"Emails: \" role=\"email\">cc@c.edu</contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Dan Doe</personname><contact name=\"E-mail: \" role=\"email\">dan.doe@d.edu</contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Eve Eng</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ D</contact><contact name=\"E-mail: \" role=\"email\">eve.eng@d.edu</contact></creator>",
+    ],
+  );
+}
+
+/// 63k review: an author block's unlabelled class `\email` keeps the name its class gives ("Email address: ",
+/// amsart), and a label followed by a spacing command (`E-mail:\ \email{x}`) names its one contact. Repro
+/// sectioning-frontmatter/author_class_email_line_keeps_its_name.
+#[test]
+fn author_class_email_line_keeps_its_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_class_email_line_keeps_its_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Email address: \" role=\"email\">ann@a.edu</contact></creator>",
+      "<creator before=\" and \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact><contact name=\"E-mail: \" role=\"email\">bob@b.edu</contact></creator>",
+    ],
+  );
+}
+
+/// 63k review: a display copy keeps its `xml:` attributes namespaced — the TOC's copy of a `\foreignlanguage` title
+/// was `<text lang="de">`, which the schema refuses — cloned as stored, or rebuilt around a filled `\ref`. Repro sectioning-frontmatter/toc_copy_keeps_its_language.
+#[test]
+fn toc_copy_keeps_its_language() {
+  let xml = post_xml(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/toc_copy_keeps_its_language.tex"
+  ));
+  assert_eq!(
+    (
+      toc_ref(&xml, "S1").as_deref(),
+      toc_ref(&xml, "S2").as_deref()
+    ),
+    (
+      Some(
+        "<ref idref=\"S1\" show=\"toctitle\"><text class=\"ltx_ref_title\"><tag close=\" \">1</tag><text xml:lang=\"de\">Beweis</text></text></ref>"
+      ),
+      Some(
+        "<ref idref=\"S2\" show=\"toctitle\"><text class=\"ltx_ref_title\"><tag close=\" \">2</tag><text xml:lang=\"de\">Beweis von Satz <text class=\"ltx_ref_tag\">1</text></text></text></ref>"
+      )
+    ),
+    "{xml}"
+  );
+}

@@ -1,0 +1,23 @@
+% witness: synthetic (63k; JHEP/PoS author blocks end in an email line: astro-ph0611258 `E-mail: \email{...}`;
+%          a group's shared line in another order than its names, 0911.0082; a `$^a$` in an affiliation's footnote,
+%          0911.0568)
+% oracle:  pdflatex (with the shipped JHEP3.cls) 0 errors: "Ann Able / Univ A / ann@a.edu", "Bob Baker / Univ B /
+%          E-mail: bob@b.edu", "Cat Cole / Univ C / Emails: cat@c.edu, cc@c.edu", "Dan Doe, Eve Eng / Univ D* /
+%          E-mail: eve.eng@d.edu, dan.doe@d.edu" with footnote "*a Lab D"
+% engines: rust 63j = only the last author kept (Perl alike); a lone \email{} line added an empty second email
+%          contact, "E-mail: \texttt{}" became an affiliation, "Emails:" an affiliation beside the emails; the
+%          footnote's `$^a$` read the group as a marked list
+% expect:  0 errors; five creators, each with its affiliation (Dan and Eve's on Eve, the group's last name); Ann's
+%          email unnamed by the author (default "Email: "), Bob's named "E-mail: ", Cat's two named "Emails: "; Dan and
+%          Eve each with the address spelling their surname; no empty contact, no label as an affiliation
+% status:  RED (63j) -> GREEN (63k)
+\documentclass{JHEP3}
+\title{T}
+\author{Ann Able\\ Univ A\\ \email{ann@a.edu}}
+\author{Bob Baker\\ Univ B\\ E-mail: \texttt{bob@b.edu}}
+\author{Cat Cole\\ Univ C\\ Emails: \email{cat@c.edu}, \email{cc@c.edu}}
+\author{Dan Doe, Eve Eng\\ Univ D\footnote{$^a$Lab D}\\ E-mail: \email{eve.eng@d.edu}, \email{dan.doe@d.edu}}
+\abstract{The abstract.}
+\begin{document}
+Body.
+\end{document}

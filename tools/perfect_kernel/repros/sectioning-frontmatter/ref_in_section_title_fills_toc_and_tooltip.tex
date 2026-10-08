@@ -1,0 +1,19 @@
+% witness: 1011.3492 (`\section{Proof of Theorem \ref{ThmTwo}}`), 1111.3672 (`\subsection{Proof of Theorems \ref{EZa}
+%          and \ref{EZb}}`); fidelity audit round 2
+% oracle:  pdflatex 0 errors: contents "1 Proof of Theorem 1", "1.1 Case (1) and (1)"; Perl fills the TOC entries and
+%          tooltips alike (CrossRef.pm:882-904 fillInTitle)
+% engines: rust 63j = the TOC entry's ref empty ("Proof of Theorem "), tooltips "In 1 Proof of Theorem",
+%          "In 1.1 Case () and ()"; Perl 0 errors, filled
+% expect:  0 errors; the section's TOC entry reads "Proof of Theorem 1", its nested ref an unlinked ltx_ref_tag text;
+%          the See-Section ref's title "1 Proof of Theorem 1"
+% status:  RED (63j) -> GREEN (63k)
+\documentclass{article}
+\begin{document}
+\tableofcontents
+\section{Proof of Theorem~\ref{thm}}\label{sec}
+\newtheorem{theorem}{Theorem}
+\begin{theorem}\label{thm} T. \end{theorem}
+\subsection{Case (\ref{eq}) and~(\ref{eq})}
+\begin{equation} a=b \label{eq}\end{equation}
+See Section~\ref{sec}.
+\end{document}

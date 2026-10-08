@@ -40,6 +40,12 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
 
   // Perl L40-58: Frontmatter
+  // Each `\author` adds one more author block (JHEP.cls:513, JHEP3.cls:764, PoS.cls:666 append to `\@author`:
+  // `\xdef\@author{\the\prev@t\the\cur@t}`), read as the article `\author` reads its block: one author with its
+  // `\\` lines (affiliation, email), or a marked name list with its marked affiliations (`$^{ab}$`, 0811.4645,
+  // 1011.0516). Perl kept the kernel's `\author`, each call replacing the last: astro-ph0611258 (PoS) kept only its
+  // third author (63k).
+  DefMacro!("\\author{}", "\\lx@add@authors@list{#1}");
   DefMacro!("\\speaker{}", "\\lx@add@creator[role=speaker]{#1}");
   DefMacro!("\\abstract{}", "\\lx@add@abstract[name={\\abstractname~}]{#1}");
   DefMacro!("\\email Semiverbatim", "\\lx@add@email{#1}");
