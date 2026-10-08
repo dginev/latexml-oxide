@@ -1,6 +1,8 @@
 //! standalone.sty — compile standalone sub-documents
 //! Perl: standalone.sty.ltxml (40 lines).
 //! NOTE: standalone.cls is handled separately; this is the .sty package.
+use latexml_core::util::image::image_candidates;
+
 use crate::prelude::*;
 
 /// The `standalone.cls` options that load a same-named package
@@ -11,6 +13,21 @@ const CLASS_OPTION_PACKAGES: [&str; 5] = ["tikz", "pstricks", "preview", "varwid
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // standalone.sty:172-211 `mode=`: how `\includestandalone` includes a sub-file (`tex`, the default, L211).
+  if let Some(opts) = lookup_vecdeque("opt@standalone.sty") {
+    for opt in opts.iter() {
+      let opt = opt.to_string();
+      let (key, value) = opt.split_once('=').map_or((opt.trim(), "true"), |(k, v)| (k.trim(), v.trim()));
+      if key == "mode" {
+        assign_value("standalone_mode", Stored::String(pin(unbraced(value))), Some(Scope::Global));
+      }
+      // standalone.sty:97-144: `subpreambles` (or `sortsubpreambles`/`printsubpreambles`) keeps the sub-files'
+      // preambles for the main one
+      if key.ends_with("subpreambles") && value != "false" {
+        assign_value("standalone_subpreambles", Stored::Bool(true), Some(Scope::Global));
+      }
+    }
+  }
   // standalone.sty:255 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
   // BEYOND PERL (the Perl standalone.sty.ltxml omits these): the real
@@ -32,6 +49,10 @@ LoadDefinitions!({
   RequirePackage!("currfile");
 
   DefMacro!("\\@standalone@end@input", "\\egroup\\endinput");
+  // The sub-file `\includestandalone` reads next has its preamble skipped (in the group around it).
+  DefPrimitive!("\\lx@standalone@skippreamble", {
+    assign_value("standalone_skip_preamble", Stored::Bool(true), None);
+  });
 
   // Perl L21-23: DefPrimitiveI \@standalone@start@input — sets inPreamble = 0.
   DefPrimitive!("\\@standalone@start@input", {
@@ -99,6 +120,34 @@ LoadDefinitions!({
     }
     Let!(T_CS!("\\begin{document}"), T_CS!("\\@standalone@start@input"));
     Let!(T_CS!("\\end{document}"),   T_CS!("\\@standalone@end@input"));
+    // standalone.sty:602-646 `\sa@documentclass` gobbles the sub-file's preamble to its `\begin{document}`: it never
+    // runs there, so a sub-file's `\title`, its own packages (`\usepackage{emoji}`, LuaTeX only; 2403.17633) and
+    // `\input`s (2508.06316 `config-gfx`) are not the main document's. With `subpreambles` the preambles are kept for the
+    // main preamble of the next run (`\subpreamble`, :654-680), so they run in place, in the bracket above. Done for a
+    // sub-file `\includestandalone` reads; a plain `\input` keeps running the preamble, as Perl does, which renders
+    // children whose packages only their own preamble loads (#311, OXIDIZED_DESIGN_DIVERGENCES #63, #65, #463).
+    if matches!(lookup_value("standalone_skip_preamble"), Some(Stored::Bool(true)))
+      && !matches!(lookup_value("standalone_subpreambles"), Some(Stored::Bool(true)))
+    {
+      loop {
+        let Some(token) = read_token()? else {
+          // pdflatex: "File ended while scanning use of \sa@gobble"
+          Error!("expected", "\\begin{document}",
+            "the standalone sub-file ended while its preamble was skipped, before its \\begin{document}");
+          break;
+        };
+        if token == T_CS!("\\begin") {
+          let name = read_arg(ExpansionLevel::Off)?;
+          if name.to_string().trim() == "document" {
+            let mut begin = vec![T_CS!("\\begin"), T_BEGIN!()];
+            begin.extend(name.unlist());
+            begin.push(T_END!());
+            unread(Tokens::new(begin));
+            break;
+          }
+        }
+      }
+    }
   });
 
   // Perl L35-36: AtBeginDocument — swap \documentclass to the intercept.
@@ -106,8 +155,109 @@ LoadDefinitions!({
   // lifecycle point Perl uses.
   at_begin_document(TokenizeInternal!(r"\let\documentclass\@standalone@documentclass"))?;
 
-  // standalone.sty L1014: \includestandalone[opts]{file}. Treat as
-  // \includegraphics{file} so the figure surfaces in the XML output.
-  // Witness 2406.02722.
-  DefMacro!("\\includestandalone[]{}", "\\includegraphics{#2}");
+  // standalone.sty:1014-1093 `\includestandalone[opts]{file}`, by its mode (the `mode` key, else the package option,
+  // else `tex`): `tex`, and `build` without shell escape, inputs `file.tex`, set in a box and scaled to the requested
+  // width, height or scale as gincltex does (gincltex.sty:45-67); `image` includes the image; `image|tex`,
+  // `buildmissing` and `buildnew` (which compares file times, :1078-1092) include `file.pdf` when it exists, else the
+  // `.tex`. The
+  // `.tex` is found as a graphic is (`\graphicspath`). Before, every call was `\includegraphics{file}`, whose `.tex`
+  // candidate nothing renders: the figure was lost (2406.02722, 2412.12317, 2505.19304, 2608.05283, 2504.17583, …;
+  // html_feedback HF12). Perl's binding lacks the command.
+  DefMacro!("\\includestandalone[]{}", sub[(opts, file)] {
+    // standalone.sty:1017 expands the name (`\edef\@tempa{{#2…}}`)
+    let file = Expand!(file).to_string();
+    let base = file.trim();
+    let mut mode = lookup_string("standalone_mode");
+    let mut gin: Vec<(String, String)> = Vec::new();
+    for item in top_level_items(&opts.map(|o| o.to_string()).unwrap_or_default()) {
+      // (xkeyval's `\setkeys` strips a value's one brace level: `width={0.5\textwidth}`)
+      let (key, value) = item.split_once('=').map_or((item.as_str(), ""), |(k, v)| (k.trim(), unbraced(v)));
+      if key == "mode" {
+        mode = value.to_string();
+      } else {
+        gin.push((key.to_string(), value.to_string()));
+      }
+    }
+    // as a graphic is found (`\graphicspath`), or as `\input` finds it (a `filecontents` file)
+    let tex = image_candidates(&s!("{base}.tex"))
+      .split(',')
+      .next()
+      .filter(|found| !found.is_empty())
+      .map(str::to_string)
+      .or_else(|| find_file(&s!("{base}.tex"), None).map(|_| base.to_string()))
+      .unwrap_or_default();
+    let image_exists = !image_candidates(&s!("{base}.pdf")).is_empty();
+    let use_tex = !tex.is_empty()
+      && match mode.as_str() {
+        "image" => false,
+        "image|tex" | "buildmissing" | "buildnew" => !image_exists,
+        _ => true,
+      };
+    let value = |key: &str| gin.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone()).filter(|v| !v.is_empty());
+    let source = if !use_tex {
+      let options = gin
+        .iter()
+        .map(|(k, v)| if v.is_empty() { k.clone() } else { s!("{k}={v}") })
+        .collect::<Vec<_>>()
+        .join(",");
+      s!("\\includegraphics[{options}]{{{base}}}")
+    } else {
+      let body = s!("{{\\lx@standalone@skippreamble\\input{{{tex}}}}}");
+      match (value("width"), value("height"), value("scale")) {
+        (None, None, None) => body,
+        (None, None, Some(scale)) => s!("\\scalebox{{{scale}}}{body}"),
+        (width, height, _) => s!(
+          "\\resizebox{{{}}}{{{}}}{body}",
+          width.unwrap_or_else(|| s!("!")),
+          height.unwrap_or_else(|| s!("!"))
+        ),
+      }
+    };
+    Ok(mouth::tokenize_internal(TeXString::assembled(source)))
+  });
 });
+
+/// A keyval value without one balanced outer brace pair, as xkeyval reads it (`{0.5\textwidth}`; not `{a}{b}`).
+fn unbraced(value: &str) -> &str {
+  let value = value.trim();
+  if !value.starts_with('{') || !value.ends_with('}') {
+    return value;
+  }
+  let mut depth = 0usize;
+  for (at, c) in value.char_indices() {
+    match c {
+      '{' => depth += 1,
+      '}' => {
+        depth = depth.saturating_sub(1);
+        if depth == 0 && at + 1 < value.len() {
+          return value;
+        }
+      },
+      _ => {},
+    }
+  }
+  value[1..value.len() - 1].trim()
+}
+
+/// The items of a keyval list at brace depth 0.
+fn top_level_items(list: &str) -> Vec<String> {
+  let (mut items, mut current, mut depth) = (Vec::new(), String::new(), 0usize);
+  for c in list.chars() {
+    match c {
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      ',' if depth == 0 => {
+        items.push(std::mem::take(&mut current));
+        continue;
+      },
+      _ => {},
+    }
+    current.push(c);
+  }
+  items.push(current);
+  items
+    .into_iter()
+    .map(|i| i.trim().to_string())
+    .filter(|i| !i.is_empty())
+    .collect()
+}

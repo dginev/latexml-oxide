@@ -3058,3 +3058,107 @@ fn bmvc2k_requires_xspace() {
     "<p xml:id=\"p1.1\">BMVC is here.</p>"
   );
 }
+
+/// The start tag of the `<picture>` in the `<figure>` of `xml`, and how many `<graphics>` that figure holds.
+fn figure_picture(xml: &str) -> (String, usize) {
+  let figure = element_with(xml, "figure", "<");
+  let picture = figure
+    .find("<picture")
+    .map(|at| figure[at..at + figure[at..].find('>').unwrap() + 1].to_string())
+    .unwrap_or_default();
+  (picture, figure.matches("<graphics").count())
+}
+
+/// 63p: `\includestandalone` of a sub-file that ships only as `.tex` inputs it, as standalone.sty's default `tex` mode
+/// does (standalone.sty:211, :1014-1093), scaled to the width asked for (html_feedback HF12: 2412.12317, 2505.19304,
+/// 2608.05283). Repro graphics-tikz/includestandalone_tex_figure.
+#[test]
+fn includestandalone_tex_figure() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/includestandalone_tex_figure.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(
+    figure_picture(&xml),
+    (
+      "<picture height=\"39.92\" width=\"39.92\" xml:id=\"S0.F1.pic1\">".to_string(),
+      0
+    ),
+    "{xml}"
+  );
+  // scaled to half the line width as gincltex's `\resizebox` does
+  let figure = element_with(&xml, "figure", "<");
+  let at = figure.find("<inline-block").expect("the resized box");
+  assert_eq!(
+    &figure[at..at + figure[at..].find('>').unwrap() + 1],
+    "<inline-block align=\"center\" depth=\"0.0pt\" height=\"128.1pt\" width=\"172.5pt\" xscale=\"4.43984160254303\" xtranslate=\"66.8pt\" yscale=\"4.43984160254303\" ytranslate=\"-49.6pt\" xml:id=\"S0.F1.1\">",
+    "{xml}"
+  );
+}
+
+/// 63p: the sub-file is found as a graphic is, through `\graphicspath` (2403.01643 `\graphicspath{{figs/}}` and
+/// `\includestandalone{archs/eff_att}`).
+#[test]
+fn includestandalone_through_graphicspath() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{article}\n\\usepackage{tikz}\n\\usepackage{standalone}\n\\graphicspath{{sfigs/}}\n\
+     \\begin{document}\n\\begin{figure}\\includestandalone{archs/fig}\\caption{C.}\\end{figure}\n\\end{document}\n",
+    &[(
+      "sfigs/archs/fig.tex",
+      "\\documentclass{standalone}\n\\usepackage{tikz}\n\\begin{document}\n\
+       \\begin{tikzpicture}\\draw (0,0)--(1,1);\\end{tikzpicture}\n\\end{document}\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(
+    figure_picture(&xml),
+    (
+      "<picture height=\"39.92\" width=\"39.92\" xml:id=\"S0.F1.pic1\">".to_string(),
+      0
+    ),
+    "{xml}"
+  );
+}
+
+/// 63p: a sub-file's preamble is skipped as standalone.sty's `\sa@documentclass` skips it (standalone.sty:602-646): its
+/// `\title`/`\author` print nothing in the figure (2504.17583), its packages and inputs are not loaded (2403.17633,
+/// 2508.06316). Repro graphics-tikz/standalone_subfile_preamble_skipped.
+#[test]
+fn standalone_subfile_preamble_skipped() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/standalone_subfile_preamble_skipped.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let (picture, graphics) = figure_picture(&xml);
+  assert_eq!(
+    (picture.as_str(), graphics),
+    (
+      "<picture class=\"ltx_centering\" height=\"39.92\" width=\"39.92\" xml:id=\"S0.F1.pic1\">",
+      0
+    ),
+    "{xml}"
+  );
+  assert!(!element_with(&xml, "figure", "<").contains("Adar"), "{xml}");
+}

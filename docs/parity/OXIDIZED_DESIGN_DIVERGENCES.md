@@ -14211,3 +14211,30 @@ Each `\@lst@startline` records the `\baselineskip` and `\linewidth` in force aft
 lines it spans, so the sizer opens any whatsit holding line markers. A negative total is no height. The block records its skips and `breaklines` while the listing's settings hold.
 Only the size changes; the XML structure is untouched. Guard `perfect_kernel_batch63::tcb_listing_body_height` (six
 lines: 84pt), `tcb_listing_comment_lines` (a three-line comment: 60pt); repros `boxes-groups/`.
+
+### 463. `\includestandalone` inputs a `.tex` sub-file as standalone.sty does, its preamble skipped (Perl: undefined)
+
+**Background.** standalone.sty:1014-1093 picks what `\includestandalone[opts]{file}` includes by its mode: the `mode`
+key, else the package option, else `tex` (:211). `tex`, and `build` without shell escape, input `file.tex`, set in a
+box and scaled to the requested width, height or scale (gincltex.sty:45-67). `image` includes the image; `image|tex`,
+`buildmissing` and `buildnew` (which compares file times, :1078-1092) include `file.pdf` when it exists, else the
+`.tex`. The `.tex` is found as a
+graphic is, through `\graphicspath`. A sub-file read this way has its preamble gobbled to its `\begin{document}`
+(`\sa@documentclass`, :602-646). With `subpreambles` the preambles are saved for the main preamble of the next run
+(:654-680). Perl's standalone binding has no `\includestandalone`; Rust's had made it `\includegraphics{file}`, whose
+`.tex` candidate nothing renders, so the figure was lost without a diagnostic (html_feedback HF12).
+
+**Rust behavior.** `\includestandalone` follows the mode logic above. The `.tex` is resolved by `image_candidates`, or
+by `find_file` for a `filecontents` file, and inputs it inside `\resizebox`/`\scalebox` when a size is asked for. The
+sub-file's preamble is skipped unless `subpreambles` is set, so a sub-file's `\title`/`\author` print nothing in the
+figure (2504.17583) and its own packages and inputs (`\usepackage{emoji}`, 2403.17633; `\input{config-gfx}`,
+2508.06316) do not run. With `subpreambles` the preamble runs in place, in the sub-file's bracket. A plain `\input` of a
+standalone sub-file keeps running its preamble, as Perl does (#63, #65, the #311 guards in
+`06_cluster_standalone_subfiles.rs`). pdflatex skips those preambles too, so this is a leniency that renders children
+whose packages only their own preamble loads.
+
+**Measured.** On the 24 report papers that load standalone, compared with 63o: `.tex` graphic candidates go from 82
+to 0, pictures from 15 to 87, with no new errors. 2404.19456 gains six `\Description` warnings because its figures now
+hold a picture rather than an image (acmart's `\Description` looks only for `<graphics>`; a residual). Guards:
+`perfect_kernel_batch63::{includestandalone_tex_figure,
+includestandalone_through_graphicspath, standalone_subfile_preamble_skipped}`.

@@ -11417,3 +11417,11 @@ And `\includesvg` passed `\lx@svg@options` unexpanded, so a `\setsvg` option lis
 `perfect_kernel_batch63::{svmult_runinhead, interact_tbl, ieeetaes_member, jcappub_journal_macros, svg_setup_options,
 mdpi_requires_soul, bmvc2k_requires_xspace}`. Residual: neurips_2024 serves a paper's own edited copy that loads
 xspace (2401.08140), which only a scan of the shipped file would see.
+
+## 537. `\includestandalone` is undefined
+
+Perl's standalone.sty.ltxml (L20-36) intercepts a sub-file's `\documentclass` but defines no `\includestandalone`
+(standalone.sty:1014-1093), so `\includestandalone[width=…]{fig}` is `Error:undefined:\includestandalone` and the
+figure is lost. Rust had stood in `\includegraphics{fig}`, which loses a `.tex`-only figure silently. Fixed in Rust
+(63p): the command follows standalone.sty's modes and inputs the `.tex` (OXIDIZED_DESIGN_DIVERGENCES #463). Witnesses
+2412.12317, 2505.19304, 2608.05283, 2406.02722 (html_feedback HF12, 11 papers, ~95 figures).

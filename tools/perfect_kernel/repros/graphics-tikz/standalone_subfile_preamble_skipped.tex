@@ -1,0 +1,26 @@
+% witness: 2504.17583 (`figures/tm_sketch.tex`, an article sub-file whose `\title`/`\author` printed in the figure),
+%          2403.17633 (a sub-file's `\usepackage{emoji}`, LuaTeX only), 2508.06316 (a sub-file's `\input{config-gfx}`):
+%          standalone.sty:602-646 gobbles a sub-file's preamble to its `\begin{document}`
+% oracle:  pdflatex 0 errors: only the TikZ line in the figure
+% engines: rust 63p2 = "Sketch Adar" text in the figure (the sub-preamble ran); Perl 0.8.8
+%          `Error:undefined:\includestandalone` (a plain `\input` of the sub-file prints the text there too)
+% expect:  0 errors, 0 warnings; the figure holds the picture and no "Adar"
+% status:  RED (63p2) -> GREEN (63p)
+\begin{filecontents*}{standalone_subfile_preamble_skipped_sub.tex}
+\documentclass{article}
+\usepackage{tikz}
+\title{Sketch}
+\author{Adar}
+\begin{document}
+\begin{tikzpicture}\draw (0,0)--(1,1);\end{tikzpicture}
+\end{document}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{standalone}
+\begin{document}
+\begin{figure}\centering
+\includestandalone{standalone_subfile_preamble_skipped_sub}
+\caption{A sketch.}
+\end{figure}
+\end{document}
