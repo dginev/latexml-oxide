@@ -343,6 +343,33 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
+- **63h**: a labelled annotation relocated into a title (the AAS title footnote `\title{..\altaffilmark{1}}` +
+  `\altaffiltext{1}`, 0704.0478, 1001.2402; elsarticle `\tnoteref`/`\tnotetext`) is the title's frontmatter note, not a
+  schema-invalid `<contact>` (KPE #524, OD #461; both papers 1 → 0 jing errors). Orphaned frontmatter annotations go
+  where the evidence names (OD #159):
+  - svjour3 `\at` institutes go by surname to every author they name, in any order (a shared institute's e-mail
+    stays shared);
+  - as many numbered institutes as authors pair by position;
+  - a sole author's orphans are that author's;
+  - otherwise they are shared, and none is dropped;
+  - the prefix-stripped label fallback serves creators only.
+
+  svjour3's unlabelled institute pieces are numbered and its `\author` pieces split at " and " (OD #460).
+  A/B vs 63g:
+  - 64 svjour3 papers: 34 change and none is worse; a script checked each `\at` link against its source. Changes:
+    - stranded institutes reach their authors (1205.2208, 1811.03214, 2105.03148, …) or become shared;
+    - 3 merged creators split (1406.5162, 2105.12728, 1709.07063 errors 1 → 0).
+  - 318 other papers: only the two title papers and kluwer astro-ph0302424 (its sole author keeps the institute)
+    change. No paper has more errors or warnings.
+
+  Guards `perfect_kernel_batch63::{aastex_title_altaffilmark_is_a_note, elsarticle_title_tnote_is_a_note,
+  svjour3_epj_one_institute_shared, svjour3_sole_author_keeps_the_institute, llncs_sole_author_keeps_the_institute,
+  svjour3_two_institutes_pair_by_position, svjour3_at_institutes_link_by_surname_in_any_order,
+  svjour3_at_piece_naming_several_authors, svjour3_name_only_piece_keeps_the_institute_shared,
+  elsarticle_lettered_addresses_no_one_cites_stay_shared, author_svjour3_and_piece_splits,
+  elsarticle_orphan_fntext_stays_off_the_title}`. Open RED: svjour3_marked_institutes_link_by_mark,
+  svjour3_name_only_piece_shares_the_next_institute, author_svjour3_mbox_list_splits,
+  author_collaboration_name_with_and_stays_one.
 - **63g**: svjour3's EPJ style (svepjc3.clo) links an author to its institutes and notes by key (OD #460) —
   `\thanksref{addr1,e1}` requests them, an institute's `\label` labels its affiliation, `\thankstext{e1}` is a labelled
   thanks note. Before, the keys printed as marks and nothing linked (2304.02920; also 2406.12029, 2406.12545, whose
@@ -351,9 +378,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   prints all its entries, cited or not, each bibliography its own (OD #57; 1012.2719 29 → 34 references). Guards
   `perfect_kernel_batch63::svjour3_epj_*`, `06_cluster_bibliography::amsrefs_*`. The revtex shape of the same audit row
   (2011.01984, 2301.08449: all `\author`s, then `$^{a}$`-marked `\affiliation`s) is the marked-affiliation linking still
-  open for per-author classes (OD #459). Open RED repros: index-bib/amsrefs_case_distinct_keys_both_kept (two `\bib`
-  keys differing only in case merge into one entry, silently), sectioning-frontmatter/svjour3_epj_one_institute_shared
-  (one unlabelled `\institute` under two authors goes to the last author only).
+  open for per-author classes (OD #459). Open RED repro: index-bib/amsrefs_case_distinct_keys_both_kept (two `\bib`
+  keys differing only in case merge into one entry, silently).
 - **63f**: frontmatter fidelity follow-ups (run-336 audit): acmart's `\received` keeps its whole history — received,
   revised (several), labelled — each its own date via the frontmatter key `accumulate` (KPE #522; 2307.05988); initials
   glued to a surname (`A.G.Bogdanchikov`, `Yu.M.Shatunov`; not `St.`/`Mt.`/`Ft.`) read as a name and a `\vspace`'s length

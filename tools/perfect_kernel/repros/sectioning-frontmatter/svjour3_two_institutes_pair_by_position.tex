@@ -1,0 +1,14 @@
+% witness: 63h review r1 finding 2 (svjour3, as many unlabelled institutes as authors)
+% oracle:  pdflatex (svjour3.cls) 0 errors: "Ann Able · Bob Baker"; "Univ A · Univ B" (no marks)
+% engines: rust 63g = Ann Univ A, Bob Univ B (distribute_upfront_contacts); 63h r1 = both shared
+% expect:  the i-th institute on the i-th author, as Perl's numeric fallback pairs them; 0 errors
+% status:  RED (63h r1) -> GREEN (63h)
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A \and Univ B}
+\date{}
+\maketitle
+Text.
+\end{document}

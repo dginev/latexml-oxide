@@ -1,0 +1,15 @@
+% witness: 63h review r1 finding 2 (svjour3 marked authors and institutes listed out of order; synthetic)
+% oracle:  pdflatex (svjour3.cls) 0 errors: "Ann Able^1 · Bob Baker^2"; "^2 Univ B · ^1 Univ A"
+% engines: rust 63h = Ann Univ B, Bob Univ A (the i-th institute on the i-th author, by position); 63g alike
+% expect:  linked by mark: Ann Able Univ A, Bob Baker Univ B (the superscript heuristic, `\lx@author@withsup` /
+%          `\lx@affiliation@withsup`); 0 errors
+% status:  RED (63h)
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^{2}$Univ B \and $^{1}$Univ A}
+\date{}
+\maketitle
+Text.
+\end{document}

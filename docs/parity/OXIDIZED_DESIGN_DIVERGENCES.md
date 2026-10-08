@@ -6314,6 +6314,41 @@ trailing creator, for every class. Perl warns ("Orphaned frontmatter annotation"
 though LaTeX prints it as a footnote. The case is an svjour3 EPJ `\thankstext` whose key only its
 institute cites (#460). Guard `perfect_kernel_batch63::svjour3_epj_title_and_institute_notes`.
 
+**Whose orphans (63h).** An orphan's label is one institute together with what inherited its label
+(its `\email`, `\url`). An orphan goes to the authors the evidence names; otherwise it is shared.
+- **An institute's `\at` names** (svjour3, a `fuzzy:` label that missed the exact name match): it
+  goes to the authors with those surnames, in any order, provided each name matches exactly one
+  author. Examples: `A.M.Bykov \at …` for "Andrei Bykov" (1205.2208; also 1811.08330, 1709.03245),
+  and `Olivier Augereau, Koichi Kise, and Motoi Iwata \at …`, where each of the three gets it
+  (1811.03214, 1001.2544, 2105.03148). An institute that several authors share goes to each of them, but its
+  `\email`/`\url` names only one of them, unknown, so it stays shared (`kono@rice.edu`, 1205.6171). This does not
+  apply when an unlabelled piece sits among the
+  institutes. svjour3's `\institute{A \and B \at X}` means the name-only piece shares the next
+  institute; position or surname would misread that (1406.4834, 1603.00632, 1709.00485, 2311.02489,
+  2208.03119), so those stay shared.
+- **Numbered institutes** (`affiliation:N`, cited by no `\inst`), as many as the authors: the i-th
+  goes to the i-th author. Perl's numeric fallback gives the same, and it is the grid
+  `distribute_upfront_contacts` pairs (`\author{A \and B}` + `\institute{X \and Y}`, svjour3 and llncs alike;
+  Perl Base_Utility.pool.ltxml:888-894). Lettered labels
+  (elsarticle `\address[a]`) are no numbering, so they stay shared.
+- **A sole author:** every orphan is that author's, as Perl attaches it (svjour3 1709.03696,
+  2003.07473, llncs alike). For institutes this applies only where none is linked otherwise: an
+  author marked for one institute is not given the one no one marks.
+
+Any other orphan is kept on the trailing creator. A person's own note (elsarticle's `\fntext`
+without its `\fnref`) gets the orphan warning, since its link is lost, but its content stays as
+LaTeX prints it; Perl drops it. The prefix-stripped label fallbacks serve creators only, so such a
+note no longer reaches a title through `fn:t1` → `t1` → `tnote:t1`.
+
+Guards `perfect_kernel_batch63::{svjour3_sole_author_keeps_the_institute,
+llncs_sole_author_keeps_the_institute, svjour3_two_institutes_pair_by_position,
+svjour3_at_institutes_link_by_surname_in_any_order, svjour3_at_piece_naming_several_authors,
+svjour3_name_only_piece_keeps_the_institute_shared, elsarticle_lettered_addresses_no_one_cites_stay_shared,
+elsarticle_orphan_fntext_stays_off_the_title}`, and `perfect_kernel_batch59::author_block_orphan_mark_is_kept`.
+Open: institutes linked by their `$^{n}$` marks rather than by position (RED
+`svjour3_marked_institutes_link_by_mark`), and a name-only piece sharing the next institute (RED
+`svjour3_name_only_piece_shares_the_next_institute`).
+
 ### 160. OmniBus captures `\orcid` and no-ops the running-head registers `\lefttitle`/`\righttitle`
 
 **Background.** Unbound bundled journal `.cls` files fall through to the generic OmniBus fallback
@@ -14062,8 +14097,40 @@ definitions print the keys as marks, so `addr1,e1` leaks into the author's name 
 - `\thankstext{key}{text}` is a thanks note with that label (`\lx@add@thanks`). A note, unlike a
   contact, is valid in a title as well as in a creator, so a title's `\thanksref` keeps its note.
 
-An institute's own `\thanksref` is a no-op inside the affiliation, so it cannot relabel the institute
-its authors cite. Its note, cited by no author, goes to the trailing creator (#159). `\thanksref[mark]{keys}`
-prints only the mark in svepjc3 (`\@thanksref`'s `\if@tempswa` branch), but Rust still requests the
+An unlabelled institute piece (no `\at` name, no `\label`) is numbered as LLNCS numbers its institutes
+(`labelseq=affiliation`, 63h). No author cites the number, so these are orphans placed by #159's rule: a sole author's,
+the i-th author's when there are as many as authors, otherwise shared on the trailing creator. A shared one is printed
+once below the authors, as the PDF has it. Before, every unlabelled piece went to the last author, and
+`distribute_upfront_contacts` re-dealt a clean grid. The `\at` pieces whose abbreviated names miss the exact match go to
+the authors they name by surname (#159). Guards `perfect_kernel_batch63::{svjour3_epj_one_institute_shared,
+svjour3_two_institutes_pair_by_position, svjour3_sole_author_keeps_the_institute,
+svjour3_at_institutes_link_by_surname_in_any_order, svjour3_at_piece_naming_several_authors}`.
+
+svjour3's `\author` splits each `\and` piece at its commas, " and " and " \& " (`\lx@add@author@split`, as llncs and
+inst do since 63e; Perl split at commas only): `\author{A and B \and C}` is three people (1406.5162, 2105.12728, both
+`Error:frontmatter:merged_creators` before). Guard `perfect_kernel_batch63::author_svjour3_and_piece_splits`. Open RED
+repros: `author_svjour3_mbox_list_splits` (`\author{\mbox{A \and B}}`, 2105.05947) and
+`svjour3_name_only_piece_shares_the_next_institute` (`\institute{A \and B \at X}`, 1709.00485).
+
+An institute's own `\thanksref` is a no-op inside the affiliation, so it cannot relabel the institute its authors cite.
+Its note, cited by no author, goes to the trailing creator (#159). `\thanksref[mark]{keys}` prints only the mark in
+svepjc3 (`\@thanksref`'s `\if@tempswa` branch), but Rust still requests the
 keys: extra links to notes the PDF also prints, nothing lost. Guards
 `perfect_kernel_batch63::svjour3_epj_{thanksref_links_institutes_and_notes,title_and_institute_notes}`.
+
+### 461. A labelled annotation relocated into a title is the title's note (Perl: an `ltx:contact` there, schema-invalid)
+
+**Background.** `relocate_annotations` (`base_utilities.rs`) clones each labelled frontmatter annotation into every
+element that cites its label. A creator holds contacts. A title does not: title_model is inline content plus
+Meta.class, which has `ltx:note` but no `ltx:contact`. The AAS title footnote (`\altaffilmark` / `\altaffiltext`) and
+elsarticle's `\tnoteref` / `\tnotetext` are both cited from a `\title` (KNOWN_PERL_ERRORS #524).
+
+**Rust behavior.** `contact_in_title_as_note` renames such a clone to `ltx:note` when its target cannot contain
+`ltx:contact`. The note gets role `thanks` and the classes `ltx_note_frontmatter ltx_thanks_<kind>`, the same note
+`\lx@add@thanks` makes and svjour3's title `\thankstext` already gets (#460). LaTeX prints these as footnotes marked on
+the title, and the note renders that way. The rule follows the schema, not the class: any contact-less target
+qualifies. Creators are untouched. The prefix-stripped label fallbacks serve creators only (#159), so an author's
+orphaned note cannot be routed into a title this way.
+
+**Measured.** A/B on 318 papers vs 63g: only 0704.0478 and 1001.2402 change, each from 1 jing error to 0. Guards
+`perfect_kernel_batch63::{aastex_title_altaffilmark_is_a_note, elsarticle_title_tnote_is_a_note}`.

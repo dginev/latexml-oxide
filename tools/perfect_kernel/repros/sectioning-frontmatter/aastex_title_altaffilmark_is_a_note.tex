@@ -1,0 +1,21 @@
+% witness: 0704.0478, 1001.2402 (aastex/emulateapj: the title's `\altaffilmark{1}` — the AAS "Based on observations"
+%          title footnote — answered by `\altaffiltext{1}`)
+% oracle:  pdflatex (emulateapj.cls) 0 errors: "VELOCITY DISPERSIONS IN M82^1"; "Nate Able^2 and James Baker"; footnotes
+%          "1 Based on observations made at the Keck Observatory.", "2 Hubble Fellow."
+% engines: rust 63g = the title note an <ltx:contact role="altaffiliation"> inside <ltx:title> (schema-invalid: title_model
+%          holds no contact); Perl same (the relocation clones the contact into whatever cites it)
+% expect:  the title holds the note as a frontmatter thanks note; Nate's altaffiltext stays his contact; 0 errors
+% status:  RED (63g) -> GREEN (63h)
+\documentclass{emulateapj}
+\begin{document}
+\title{Velocity Dispersions in M82\altaffilmark{1}}
+\author{Nate Able\altaffilmark{2} and James Baker}
+\affil{Univ A}
+\altaffiltext{1}{Based on observations made at the Keck Observatory.}
+\altaffiltext{2}{Hubble Fellow.}
+\begin{abstract}
+Abs.
+\end{abstract}
+\section{Intro}
+Text.
+\end{document}

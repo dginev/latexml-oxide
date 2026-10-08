@@ -1554,3 +1554,250 @@ fn svjour3_epj_title_and_institute_notes() {
     found.join("\n")
   );
 }
+
+/// The title element and the creators of `tex`, which converts with no error or warning.
+fn assert_title_and_creators(tex: &str, title: &str, creators: &[&str]) {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let found_title = xml
+    .find("<title")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "title", &[]));
+  assert_eq!(found_title.as_deref(), Some(title), "{xml}");
+  let found = super::perfect_kernel_batch61::creators_of(&xml);
+  assert!(
+    found == creators,
+    "creators differ\n--- found:\n{}\n--- xml:\n{xml}",
+    found.join("\n")
+  );
+}
+
+/// 63h: the AAS title footnote (`\title{..\altaffilmark{1}}` answered by `\altaffiltext{1}`; 0704.0478, 1001.2402) is
+/// the title's note: a title holds no contact (title_model), so the relocated annotation becomes the frontmatter thanks
+/// note `\lx@add@thanks` makes. An author's `\altaffiltext` stays its contact. Repro
+/// sectioning-frontmatter/aastex_title_altaffilmark_is_a_note.
+#[test]
+fn aastex_title_altaffilmark_is_a_note() {
+  assert_title_and_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex_title_altaffilmark_is_a_note.tex"
+    ),
+    "<title>Velocity Dispersions in M82<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Based on observations made at the Keck Observatory.</note></title>",
+    &[
+      "<creator role=\"author\"><personname>Nate Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Hubble Fellow.</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>James Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: elsarticle's `\tnoteref{t1}` in `\title` and its `\tnotetext[t1]{..}` (the Elsevier template's title note) give
+/// the title a frontmatter note, as for aastex. Repro sectioning-frontmatter/elsarticle_title_tnote_is_a_note.
+#[test]
+fn elsarticle_title_tnote_is_a_note() {
+  assert_title_and_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_title_tnote_is_a_note.tex"
+    ),
+    "<title>My Title<note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Funded by grant XYZ.</note></title>",
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" role=\"email\">ann@a.org</contact><contact name=\"Corresponding author:\u{a0}\" role=\"correspondent\">Corresponding author.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" role=\"note\">Visiting from Z.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: one unlabelled svjour3 `\institute` under two authors is shared by both, as the PDF prints it once below them:
+/// the trailing creator of OXIDIZED_DESIGN_DIVERGENCES #159, not the last author's alone (63g review r2). Repro
+/// sectioning-frontmatter/svjour3_epj_one_institute_shared.
+#[test]
+fn svjour3_epj_one_institute_shared() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_epj_one_institute_shared.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: one author and an unlabelled svjour3 `\institute`: the institute and its e-mail are that author's (1709.03696,
+/// 2003.07473; Perl alike), not a name-less creator's (OXIDIZED_DESIGN_DIVERGENCES #159). Repro
+/// sectioning-frontmatter/svjour3_sole_author_keeps_the_institute.
+#[test]
+fn svjour3_sole_author_keeps_the_institute() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_sole_author_keeps_the_institute.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact><contact name=\"E-mail: \" role=\"email\">ann@a.org</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: the same for llncs, whose `\institute` without `\inst` went to a name-less creator even under one author (#159).
+/// Repro sectioning-frontmatter/llncs_sole_author_keeps_the_institute.
+#[test]
+fn llncs_sole_author_keeps_the_institute() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_sole_author_keeps_the_institute.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact><contact name=\"E-mail\u{a0}\" role=\"email\">ann@a.org</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: as many unlabelled svjour3 institutes as authors pair by position, the i-th to the i-th author, as
+/// `distribute_upfront_contacts` and Perl's numeric fallback pair them (63h review r1). Repro
+/// sectioning-frontmatter/svjour3_two_institutes_pair_by_position.
+#[test]
+fn svjour3_two_institutes_pair_by_position() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_two_institutes_pair_by_position.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: a svjour3 `\and` piece holding "A and B" is two people (1406.5162, 2105.12728), split as llncs splits its pieces.
+/// Repro sectioning-frontmatter/author_svjour3_and_piece_splits.
+#[test]
+fn author_svjour3_and_piece_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_svjour3_and_piece_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: an elsarticle `\fntext[t1]` no `\fnref` cites does not reach the title's `\tnoteref{t1}` by the prefix-stripped
+/// label fallback, which serves creators only; it is kept on the sole author, with the orphan warning (63h review r1,
+/// r2).
+/// Repro sectioning-frontmatter/elsarticle_orphan_fntext_stays_off_the_title.
+#[test]
+fn elsarticle_orphan_fntext_stays_off_the_title() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_orphan_fntext_stays_off_the_title.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 1),
+    "{log}"
+  );
+  assert!(
+    log.contains("Orphaned frontmatter annotation couldn't find target for label=fn:t1"),
+    "{log}"
+  );
+  let title = xml
+    .find("<title")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "title", &[]));
+  assert_eq!(
+    title.as_deref(),
+    Some(
+      "<title>My Title<note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Funded by grant XYZ.</note></title>"
+    ),
+    "{xml}"
+  );
+  let found = super::perfect_kernel_batch61::creators_of(&xml);
+  assert!(
+    found
+      == [
+        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Note:\u{a0}\" role=\"note\">Visiting from Z.</contact></creator>",
+      ],
+    "creators differ\n--- found:\n{}\n--- xml:\n{xml}",
+    found.join("\n")
+  );
+}
+
+/// 63h: svjour3 `\at` institutes go to the author whose surname each names, in any order (`B. Baker \at Univ B \and
+/// A. Able \at Univ A`; the abbreviated names miss the exact match; 63h review r2). Repro
+/// sectioning-frontmatter/svjour3_at_institutes_link_by_surname_in_any_order.
+#[test]
+fn svjour3_at_institutes_link_by_surname_in_any_order() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_at_institutes_link_by_surname_in_any_order.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: a name-only svjour3 institute piece (`\institute{A. Able \and B. Baker \at Univ A}`; 1406.4834, 1603.00632,
+/// 1709.00485, 2311.02489, 2208.03119) pairs nothing by position: the institute stays shared, as at 63g (63h review r2).
+/// The name-only piece "A. Able" pinned as a shared affiliation (at 63g it sat on the last author) is the known residual of
+/// RED svjour3_name_only_piece_shares_the_next_institute: turning that green updates this guard.
+/// Repro sectioning-frontmatter/svjour3_name_only_piece_keeps_the_institute_shared.
+#[test]
+fn svjour3_name_only_piece_keeps_the_institute_shared() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_name_only_piece_keeps_the_institute_shared.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A. Able</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact><contact name=\"E-mail: \" role=\"email\">ann@a.org</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: lettered elsarticle addresses no author cites are no numbering to pair by: both stay shared (63h review r2).
+/// Repro sectioning-frontmatter/elsarticle_lettered_addresses_no_one_cites_stay_shared.
+#[test]
+fn elsarticle_lettered_addresses_no_one_cites_stay_shared() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_lettered_addresses_no_one_cites_stay_shared.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+      "<creator role=\"author\"><contact name=\"Address:\u{a0}\" role=\"address\">Univ A</contact><contact name=\"Address:\u{a0}\" role=\"address\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: an svjour3 `\at` piece naming several authors (`Olivier Augereau, Koichi Kise, and Motoi Iwata \at …`,
+/// 1811.03214; 1001.2544) is every one of theirs. Repro sectioning-frontmatter/svjour3_at_piece_naming_several_authors.
+#[test]
+fn svjour3_at_piece_naming_several_authors() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_at_piece_naming_several_authors.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B </contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B </contact></creator>",
+      "<creator role=\"author\"><contact name=\"E-mail: \" role=\"email\">carl@b.org</contact></creator>",
+    ],
+  );
+}

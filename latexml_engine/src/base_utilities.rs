@@ -4877,76 +4877,221 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
       }
     }
   }
-  // Beyond-Perl (OXIDIZED_DESIGN #159): a SHARED affiliation with no per-author
-  // `\inst` target (see Part 1) matches no creator. Perl warns and drops it; the
-  // pre-fix fallback stranded it on author 1. Instead, gather every such orphaned
-  // institute-level contact (the affiliation and any `\email`/`\url` that inherited
-  // its label) into ONE trailing name-LESS `<ltx:creator role="author">`, kept as
-  // the LAST child of the authors container — so the institute renders exactly once
-  // below the whole author row (ar5iv theme already breaks a last-position shared
-  // affiliation out to full width). Witness arXiv:2402.19043 (WDM). We reuse the
-  // first orphaned pending stub in place: it is already a `<creator>` sitting right
-  // after the last real author, so promoting it needs no fresh node.
+  // A label's targets: the exact index, then the prefix-stripped fallbacks for a misused prefix — creators only, the
+  // annotations a prefix is misused on: a title's `tnote:t1` must not take an author's orphaned `fn:t1` (63h review,
+  // `elsarticle_orphan_fntext_stays_off_the_title`).
+  let find_targets = |label: &str| -> Option<Vec<Node>> {
+    if let Some(targets) = labeltable.get(label) {
+      return Some(targets.clone());
+    }
+    let noprefix = label
+      .find(':')
+      .map(|pos| &label[pos + 1..])
+      .unwrap_or(label);
+    [
+      unlabeltable.get(label),
+      labeltable.get(noprefix),
+      unlabeltable.get(noprefix),
+    ]
+    .into_iter()
+    .flatten()
+    .map(|targets| {
+      targets
+        .iter()
+        .filter(|target| target.get_name() == "creator")
+        .cloned()
+        .collect::<Vec<_>>()
+    })
+    .find(|targets| !targets.is_empty())
+  };
+  // An orphan no one cites is kept all the same, as LaTeX prints it. An institute-level contact, or a thanks note
+  // (svjour3's `\thankstext` without its `\thanksref`; an EPJ institute's own note, 63g review, repro
+  // svjour3_epj_title_and_institute_notes), is shared as a matter of course. A person's own note (elsarticle's
+  // `\fntext` without its `\fnref`) lost the link to its person, which is warned about.
+  let shared_orphan = |note: &Node| {
+    let role = note.get_attribute("role").unwrap_or_default();
+    is_shared_contact_role(&role) || role == "thanks"
+  };
+  // Beyond-Perl (OXIDIZED_DESIGN #159): an orphan's label is one institute with what inherited its label (its
+  // `\email`/`\url`), and it goes to the author the evidence names, else is shared:
+  // - an institute's `\at` names (svjour3 `fuzzy:` label) that missed the exact name match are the authors with those
+  //   surnames, when each names one (`A.M.Bykov \at …` for "Andrei Bykov", 1205.2208; `Olivier Augereau, Koichi Kise,
+  //   and Motoi Iwata \at …`, 1811.03214, every one of them), in any order; unless an unlabelled
+  //   piece sits among them, svjour3's `\institute{A \and B \at X}` where a name-only piece shares the next institute
+  //   (1709.00485, 2003.07295; repro svjour3_name_only_piece_shares_the_next_institute);
+  // - numbered institutes (`affiliation:N`, no `\inst`), as many as the authors, are the i-th author's: Perl's numeric
+  //   fallback and the grid `distribute_upfront_contacts` pairs (`\author{A \and B}` + `\institute{X \and Y}`);
+  // - a sole author's orphans are that author's, as Perl attaches them; its institutes only where no institute is
+  //   linked otherwise (an author marked for one institute is not given the one no one marks,
+  //   `author_block_orphan_mark_is_kept`).
+  // Any other orphan is shared, gathered into ONE trailing name-LESS `<ltx:creator role="author">` below the whole
+  // author row, where Perl warns and drops it, or strands one shared `\institute` on author 1 (arXiv:2402.19043, WDM: 5
+  // authors + one `\institute`). The ar5iv theme breaks a last-position shared affiliation out to full width. We reuse
+  // the first such pending stub in place: it is already a `<creator>` right after the last real author.
+  let mut orphan_labels: Vec<(String, bool)> = Vec::new();
+  let mut linked_institute = false;
+  for pending in &pending_nodes {
+    for note in element_nodes(pending) {
+      let label = note.get_attribute("_label").unwrap_or_default();
+      let institute = is_institute_role(&note.get_attribute("role").unwrap_or_default());
+      if label.is_empty() {
+        continue;
+      } else if find_targets(&label).is_some() {
+        linked_institute |= institute;
+      } else if let Some(entry) = orphan_labels.iter_mut().find(|(known, _)| *known == label) {
+        entry.1 |= institute;
+      } else {
+        orphan_labels.push((label, institute));
+      }
+    }
+  }
+  let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
+  let unaffiliated = !linked_institute
+    && authors.iter().all(|author| {
+      element_nodes(author).iter().all(|child| {
+        child.get_name() != "contact"
+          || !is_institute_role(&child.get_attribute("role").unwrap_or_default())
+      })
+    });
+  let institutes: Vec<&String> = orphan_labels
+    .iter()
+    .filter(|(_, institute)| *institute)
+    .map(|(label, _)| label)
+    .collect();
+  let numbered = |label: &str| {
+    label
+      .strip_prefix("affiliation:")
+      .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+  };
+  let mut owners: HashMap<String, Vec<Node>> = HashMap::default();
+  if !institutes.iter().any(|label| numbered(label)) {
+    let surnames: Vec<Option<String>> = authors
+      .iter()
+      .map(|author| {
+        document
+          .findnode("ltx:personname", Some(author))
+          .and_then(|person| surname_key(&person.get_content()))
+      })
+      .collect();
+    for label in &institutes {
+      let Some(names) = label.strip_prefix("fuzzy:") else {
+        continue;
+      };
+      // each name the piece gives before its `\at` (a list: commas, " and ", " \& "; spaces are `_` in a label)
+      let mut named: Vec<Node> = Vec::new();
+      let each_named_once = names
+        .split([',', '&'])
+        .flat_map(|part| part.split("_and_"))
+        .map(|name| name.trim_matches('_').trim_start_matches("and_"))
+        .filter(|name| !name.is_empty())
+        .all(|name| {
+          let key = surname_key(name);
+          let matches: Vec<usize> = (0..authors.len())
+            .filter(|&i| key.is_some() && surnames[i] == key)
+            .collect();
+          if let [i] = matches.as_slice() {
+            if !named.contains(&authors[*i]) {
+              named.push(authors[*i].clone());
+            }
+            true
+          } else {
+            false
+          }
+        });
+      if each_named_once && !named.is_empty() {
+        owners.insert((*label).clone(), named);
+      }
+    }
+  } else if unaffiliated
+    && authors.len() > 1
+    && institutes.len() == authors.len()
+    && institutes.iter().all(|label| numbered(label))
+  {
+    owners.extend(
+      institutes
+        .iter()
+        .map(|label| (*label).clone())
+        .zip(authors.iter().map(|author| vec![author.clone()])),
+    );
+  }
+  if let [sole] = authors.as_slice() {
+    for (label, institute) in &orphan_labels {
+      if !*institute || unaffiliated {
+        owners
+          .entry(label.clone())
+          .or_insert_with(|| vec![sole.clone()]);
+      }
+    }
+  }
   let mut shared_creator: Option<Node> = None;
   for mut pending in pending_nodes {
     let mut promote_this = false;
+    // the stub's notes placed elsewhere, which a promoted stub must not keep a second time
+    let mut placed: Vec<Node> = Vec::new();
     for note in element_nodes(&pending) {
       let label = note.get_attribute("_label").unwrap_or_default();
       if label.is_empty() {
         continue;
       }
-      let noprefix = label
-        .find(':')
-        .map(|pos| &label[pos + 1..])
-        .unwrap_or(label.as_str());
-      let targets = labeltable
-        .get(&label)
-        .or_else(|| unlabeltable.get(&label))
-        .or_else(|| labeltable.get(noprefix))
-        .or_else(|| unlabeltable.get(noprefix));
-      if let Some(targets) = targets {
-        for target in targets.clone() {
+      if let Some(targets) = find_targets(&label) {
+        placed.push(note.clone());
+        for target in targets {
           DebugFeature!("frontmatter", "FRONT Moving annotation for {label}");
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
-        }
-      } else if is_shared_contact_role(&note.get_attribute("role").unwrap_or_default())
-        // a thanks note no one cites (svjour3's `\thankstext` without its `\thanksref`; an EPJ institute's own note, 63g
-        // review, repro svjour3_epj_title_and_institute_notes) is printed all the same (OXIDIZED_DESIGN #159)
-        || note.get_attribute("role").as_deref() == Some("thanks")
-      {
-        DebugFeature!(
-          "frontmatter",
-          "FRONT Sharing orphaned annotation {label} below authors"
-        );
-        match &mut shared_creator {
-          // First orphaned shared contact: promote THIS pending stub in place into
-          // the trailing shared creator (its note already lives inside it).
-          None => {
-            promote_this = true;
-          },
-          // Later shared contacts (e.g. the institute's `\email`) join it.
-          Some(sc) => {
-            let mut sc = sc.clone();
-            document.append_clone(&mut sc, vec![note.clone()])?;
-          },
+          contact_in_title_as_note(document, &target)?;
         }
       } else {
-        let mut known: Vec<&String> = labeltable.keys().collect();
-        known.sort();
-        Warn!(
-          "unexpected",
-          "annotation",
-          s!("Orphaned frontmatter annotation couldn't find target for label={label}"),
-          s!(
-            "known labels={}",
-            known
-              .iter()
-              .map(|k| k.as_str())
-              .collect::<Vec<_>>()
-              .join(",")
-          )
-        );
+        if !shared_orphan(&note) {
+          let mut known: Vec<&String> = labeltable.keys().collect();
+          known.sort();
+          Warn!(
+            "unexpected",
+            "annotation",
+            s!("Orphaned frontmatter annotation couldn't find target for label={label}"),
+            s!(
+              "known labels={}",
+              known
+                .iter()
+                .map(|k| k.as_str())
+                .collect::<Vec<_>>()
+                .join(",")
+            )
+          );
+        }
+        // (an institute several authors share is each one's; its `\email`/`\url` names one of them, which, unknown,
+        // stays shared: `kono@rice.edu` under one `L. Ren, Q. Zhang, S. Nanot, and J. Kono \at …` piece, 1205.6171)
+        let owned = owners.get(&label).filter(|named| {
+          named.len() == 1 || is_institute_role(&note.get_attribute("role").unwrap_or_default())
+        });
+        if let Some(named) = owned {
+          placed.push(note.clone());
+          DebugFeature!(
+            "frontmatter",
+            "FRONT Giving orphaned annotation {label} to its authors"
+          );
+          for owner in named {
+            let mut owner = owner.clone();
+            document.append_clone(&mut owner, vec![note.clone()])?;
+          }
+        } else {
+          DebugFeature!(
+            "frontmatter",
+            "FRONT Sharing orphaned annotation {label} below authors"
+          );
+          match &mut shared_creator {
+            // First orphan: promote THIS pending stub in place into the trailing shared creator (its note already
+            // lives inside it).
+            None => {
+              promote_this = true;
+            },
+            // Later orphans (e.g. the institute's `\email`) join it.
+            Some(sc) => {
+              let mut sc = sc.clone();
+              document.append_clone(&mut sc, vec![note.clone()])?;
+            },
+          }
+        }
       }
     }
     if promote_this {
@@ -4954,12 +5099,49 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
       // with the node; the `_annotations`/`_label` bookkeeping attrs are stripped
       // at serialization). Name-LESS: it carries no `<ltx:personname>`.
       document.set_attribute(&mut pending, "role", "author")?;
+      for note in placed {
+        document.remove_node(note);
+      }
       shared_creator = Some(pending);
     } else {
       document.remove_node(pending);
     }
   }
   Ok(())
+}
+
+/// A labelled annotation relocated into an element that holds no contact — a title, whose model has none (aastex's
+/// title footnote `\title{..\altaffilmark{1}}` + `\altaffiltext{1}`, 0704.0478, 1001.2402; elsarticle's
+/// `\tnoteref`/`\tnotetext`) — is that element's note: the frontmatter thanks note `\lx@add@thanks` makes, as LaTeX
+/// prints it (a footnote marked on the title). Perl clones the `ltx:contact` as it is, schema-invalid there.
+fn contact_in_title_as_note(document: &mut Document, target: &Node) -> Result<()> {
+  let Some(clone) = target.get_last_child() else {
+    return Ok(());
+  };
+  if clone.get_type() != Some(NodeType::ElementNode)
+    || document::get_node_qname(&clone) != pin_static("ltx:contact")
+    || document::can_contain_qsym(document::get_node_qname(target), pin_static("ltx:contact"))
+  {
+    return Ok(());
+  }
+  let kind = classify_thanks(&clone.get_content());
+  let mut note = document.rename_node(clone, "ltx:note", false)?;
+  document.set_attribute(&mut note, "role", "thanks")?;
+  document.add_class(&mut note, &s!("ltx_note_frontmatter ltx_thanks_{kind}"))
+}
+
+/// The surname a name ends with, to match an institute's `\at` name with its author: the last run of letters,
+/// lowercased (`A.M.Bykov` and "Andrei Bykov" give "bykov"). `None` for a name without letters.
+fn surname_key(name: &str) -> Option<String> {
+  name
+    .rsplit(|c: char| !c.is_alphabetic())
+    .find(|word| !word.is_empty())
+    .map(str::to_lowercase)
+}
+
+/// The contact roles that are an institute itself, which its `\email`/`\url` may follow under its label.
+fn is_institute_role(role: &str) -> bool {
+  matches!(role, "affiliation" | "authorblock" | "address")
 }
 
 /// Contact roles that are institute-level information shared by every author (an

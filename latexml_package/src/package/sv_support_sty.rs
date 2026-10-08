@@ -20,9 +20,11 @@ LoadDefinitions!({
   DefMacro!("\\mailname", "\\textit{Correspondence}");
 
   // Single \author containing multiple authors separated by \and  (Perl PR #2767)
+  // Each `\and` piece is split at its commas, " and " and " \& " (`\lx@add@author@split`, as llncs; 63h): `\author{A and
+  // B \and C}` is three people, where Perl split at commas only (1406.5162, 2105.12728).
   DefMacro!(
     "\\author{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,}{#1}\\lx@author@trailing"
+    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And}{#1}\\lx@author@trailing"
   );
   // Single \institute containing name \at institute \and ... repeating.
   // Note that the name corresponds to (but probably won't match exactly!) an author name
@@ -33,9 +35,13 @@ LoadDefinitions!({
   );
   Let!("\\at", "\\relax");
   DefMacro!("\\lx@sv@institute{}", "\\lx@sv@institute@#1\\at\\done");
+  // An unlabelled piece is numbered as llncs numbers its institutes (`labelseq`): a `\label` in it (EPJ) relabels it,
+  // and one no author cites is placed as OXIDIZED_DESIGN #159 places orphans (a sole author's, the i-th author's in a
+  // grid, else shared below them all), not the last author's alone (63g/63h review; repros
+  // sectioning-frontmatter/svjour3_epj_one_institute_shared, svjour3_two_institutes_pair_by_position).
   DefMacro!(
     "\\lx@sv@institute@ Until:\\at Until:\\done",
-    "\\ifx.#2.\\lx@add@affiliation{\\lx@sv@institute@marks#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks#2}\\fi"
+    "\\ifx.#2.\\lx@add@affiliation[labelseq=affiliation]{\\lx@sv@institute@marks#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks#2}\\fi"
   );
   // for older versions?
   DefMacro!(

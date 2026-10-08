@@ -11175,7 +11175,8 @@ the same or worse on every repro. Shapes (each a repro in `tools/perfect_kernel/
   Andrew W.\ Howard\altaffilmark{2}, …}`, 1010.1318, 0908.0757, astro-ph9806172), `ams_support.sty.ltxml:99`
   (`\author{Klemens Fellner and Bao Quoc Tang}`, 1708.01427), `revtex4_support.sty.ltxml:46` (`\author{Brent Preston and Eric
   Poisson}`, gr-qc0606093), `inst_support.sty.ltxml:35` splitting at `\and` and commas but not " and " (`\author{R.
-  Braun\inst{1} and W. B. Burton\inst{2}}`, astro-ph9810433), `authblk.sty.ltxml:50`'s labelled `\author[1]{Ann Able,
+  Braun\inst{1} and W. B. Burton\inst{2}}`, astro-ph9810433), `sv_support.sty.ltxml:34-36` the same (`\author{A and B \and C}`,
+  1406.5162, 2105.12728; fixed 63h), `authblk.sty.ltxml:50`'s labelled `\author[1]{Ann Able,
   Bob Baker}` (2401.14196's deepseek.cls), IEEEtran's `\IEEEauthorblockN{A, B, C}` (`IEEEtran.cls.ltxml:144` maps it to plain `#1`, its braces shielding
   the list from the split; 2410.19527).
 - `Base_Utility.pool.ltxml:720-725` reads the first `\\` line of a block without marks as its names and every later
@@ -11213,3 +11214,15 @@ Fixed in Rust (63f): the strip keeps a period that ends an initial (a single cap
 (`Jr.`, `Esq.`); a two-letter last word (`Wei Li.`, `Andrew Ng.`) is a surname as often as an initial, so its period is
 sentence punctuation and goes, as in Perl (residual: a surname-first `Shatunov Yu.` loses it). Guard
 `perfect_kernel_batch63::author_name_ending_in_an_initial_keeps_its_period`.
+
+## 524. A title's labelled note is an `ltx:contact` inside `ltx:title` (schema-invalid)
+
+`relocateAnnotations` (Base_Utility.pool.ltxml:880-904) clones a labelled annotation into whatever cites its label,
+as it is. A title cites one in two templates: the AAS title footnote, `\title{..\altaffilmark{1}}` answered by
+`\altaffiltext{1}{Based on observations ...}` (aas_support.sty.ltxml:130-133; 0704.0478, 1001.2402), and elsarticle's
+`\title{..\tnoteref{t1}}` with `\tnotetext[t1]{..}` (elsart_support_core.sty.ltxml:81, 90). Each makes
+`<ltx:contact>` inside `<ltx:title>`, which title_model does not allow (1 jing error per paper).
+
+Fixed in Rust (63h, OXIDIZED_DESIGN_DIVERGENCES #461): in an element that holds no contact, the relocated annotation is
+the frontmatter thanks note `\lx@add@thanks` makes. Guards
+`perfect_kernel_batch63::{aastex_title_altaffilmark_is_a_note, elsarticle_title_tnote_is_a_note}`.

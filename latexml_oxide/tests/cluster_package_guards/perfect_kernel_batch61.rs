@@ -3896,7 +3896,7 @@ A:\if@preprint P\else\if@neuripsfinal F\else S\fi\fi\if@anonymous Y\else N\fi [\
 \begin{document}\title{T}\author{Ann Lee\corrauth{ann@x.org}}\institute{Inst}\maketitle
 Body.
 \end{document}",
-      r#"<creator role="author"><personname>Ann Lee</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author: <text font="typewriter" xml:id="id1.1">ann@x.org</text></note></creator>"#,
+      r#"<creator role="author"><personname>Ann Lee</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author: <text font="typewriter" xml:id="id1.1">ann@x.org</text></note><contact name="Affiliation: " role="affiliation">Inst</contact></creator>"#,
     ),
     (
       "p",

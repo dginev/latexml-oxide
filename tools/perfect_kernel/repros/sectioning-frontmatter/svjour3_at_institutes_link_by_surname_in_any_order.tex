@@ -1,0 +1,13 @@
+% witness: 63h review r2 finding 2 (svjour3 `\at` pieces listed in another order than the authors; synthetic)
+% oracle:  pdflatex (svjour3.cls) 0 errors: "Ann Able · Bob Baker"; "B. Baker / Univ B", "A. Able / Univ A"
+% engines: rust 63g = both shared (the abbreviated `\at` names miss the exact match); 63h r2 = by position, crossed
+% expect:  by the surname each `\at` names: Ann Able Univ A, Bob Baker Univ B; 0 errors
+% status:  RED (63h r2) -> GREEN (63h)
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{B. Baker \at Univ B \and A. Able \at Univ A}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 63h review r2 finding 4 (synthetic; llncs alike since 63e): one collaboration whose name holds " and "
+% oracle:  pdflatex (svjour3.cls) 0 errors: "The ATLAS and CMS Collaborations" on one line, over "CERN"
+% engines: rust 63h = two creators "The ATLAS", "CMS Collaborations", no diagnostic; 63g one creator flagged
+%          Error:frontmatter:merged_creators
+% expect:  one creator "The ATLAS and CMS Collaborations" (a collaboration, not two people); 0 errors
+% status:  RED (63h)
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{The ATLAS and CMS Collaborations}
+\institute{CERN}
+\date{}
+\maketitle
+Text.
+\end{document}

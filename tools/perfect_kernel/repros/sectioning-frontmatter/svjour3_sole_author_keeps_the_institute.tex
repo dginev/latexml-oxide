@@ -1,0 +1,14 @@
+% witness: 1709.03696, 2003.07473 (svjour3, one author, one unlabelled `\institute`; 63h review r1 finding 1)
+% oracle:  pdflatex (svjour3.cls) 0 errors: "Ann Able" over "Univ A", "E-mail: ann@a.org"
+% engines: rust 63g and Perl = the institute and e-mail on Ann Able; 63h r1 = a trailing name-less creator holds them
+% expect:  Ann Able keeps her affiliation and e-mail; no name-less creator; 0 errors
+% status:  RED (63h r1) -> GREEN (63h)
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\institute{Univ A \\ \email{ann@a.org}}
+\date{}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 1811.03214 (`Olivier Augereau, Koichi Kise, and Motoi Iwata \at Osaka …`), 1001.2544 (`J.R. Darias,
+%          G.Guti\'{e}rrez \at …`): one svjour3 `\at` piece naming several authors (63h A/B)
+% oracle:  pdflatex (svjour3.cls) 0 errors: "A. Able / Univ A"; "B. Baker, and C. Cole / Univ B / E-mail: carl@b.org"
+% engines: rust 63g = both institutes shared (the abbreviated `\at` names miss the exact match); 63h r3 = Univ B on
+%          Carl Cole only (the last surname)
+% expect:  Ann Able Univ A; Bob Baker and Carl Cole each Univ B; the e-mail once, shared (whose it is, the piece does not
+%          say; 63h review r3); 0 errors
+% status:  RED (63h r3) -> GREEN (63h)
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Carl Cole}
+\institute{A. Able \at Univ A \and B. Baker, and C. Cole \at Univ B \\ \email{carl@b.org}}
+\date{}
+\maketitle
+Text.
+\end{document}

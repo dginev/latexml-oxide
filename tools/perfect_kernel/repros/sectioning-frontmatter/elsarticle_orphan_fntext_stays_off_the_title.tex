@@ -1,0 +1,17 @@
+% witness: 63h review r1 finding 3 (elsarticle `\fntext[t1]` cited by no `\fnref`, beside a title `\tnoteref{t1}`)
+% oracle:  pdflatex (elsarticle.cls) 0 errors: title "My Title^⋆"; footnotes "⋆ Funded by grant XYZ.", "1 Visiting from Z."
+% engines: rust 63g and Perl = the fntext reaches the title by the prefix-stripped label fallback (fn:t1 -> t1 ->
+%          tnote:t1), a <contact> in <title>; 63h r1 = the same, now a valid-looking title note
+% expect:  the title holds only its tnote note; the fntext is kept, on the sole author, with the orphan warning; 0 errors
+% status:  RED (63h r1) -> GREEN (63h)
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{My Title\tnoteref{t1}}
+\tnotetext[t1]{Funded by grant XYZ.}
+\author{Ann Able}
+\fntext[t1]{Visiting from Z.}
+\affiliation{organization={Univ A}}
+\end{frontmatter}
+Text.
+\end{document}
