@@ -1,0 +1,20 @@
+% witness: synthetic (63j review r1: algpseudocode.sty:78-79 `\Require`/`\Ensure` are `\item[\algorithmicrequire]`, the
+%          algorithmic shape of 2201.01230)
+% oracle:  pdflatex 0 errors: "Require: data", "Ensure: out", "1: x"
+% engines: rust 63i = the labelled lines numbered 1 and 2 (the line counter stepped), their labels lost, x numbered 3;
+%          Perl alike
+% expect:  0 errors; `\Require`/`\Ensure` lines tagged by their labels, the counter unstepped (x is line 1)
+% status:  RED (63i) -> GREEN (63j)
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\begin{document}
+\begin{algorithm}
+\caption{C}
+\begin{algorithmic}[1]
+\Require data
+\Ensure out
+\State x
+\end{algorithmic}
+\end{algorithm}
+\end{document}

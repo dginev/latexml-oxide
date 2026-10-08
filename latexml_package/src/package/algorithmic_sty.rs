@@ -75,16 +75,49 @@ LoadDefinitions!({
       Let!("\\endlist", "\\relax");
     });
 
-  DefMacro!("\\lx@algorithmic@item OptionalUndigested",
-    "\\lx@algorithmic@item@@ [#1]\\hskip\\ALC@tlm\\relax");
+  // An `\item[label]` prints its label in place of the line number (the counter is stepped by `\ALC@it`, which a
+  // bare `\item` follows): algorithmic.sty:155 `\REQUIRE` is `\item[\algorithmicrequire]` ("Require:", renamed
+  // "Input:" in 2201.01230), which Perl and earlier Rust tagged "0:" with the line counter; an `\item[]` prints none.
+  // The label goes braced to its own constructor, so a `]` in it stays (63j).
+  DefMacro!("\\lx@algorithmic@item OptionalUndigested", sub[(label)] {
+    let mut out = match label {
+      Some(label) => {
+        let mut out = vec![T_CS!("\\lx@algorithmic@item@label"), T_BEGIN!()];
+        out.extend(label.unlist());
+        out.push(T_END!());
+        out
+      },
+      None => vec![T_CS!("\\lx@algorithmic@item@@")],
+    };
+    out.extend(mouth::tokenize_internal("\\hskip\\ALC@tlm\\relax").unlist());
+    Ok(Tokens::new(out))
+  });
 
-  DefConstructor!("\\lx@algorithmic@item@@ OptionalUndigested",
+  DefConstructor!("\\lx@algorithmic@labeltags{}", "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>");
+  DefConstructor!("\\lx@algorithmic@item@@",
     "<ltx:listingline xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[_args] {
       let id = digest(T_CS!("\\theALC@line@ID"))?.to_attribute();
       let tags = Stored::from(digest(Invocation!("\\lx@make@tags",
         vec![Some(Tokens!(T_OTHER!("ALC@line")))]))?);
       Ok(stored_map!("id" => id, "tags" => tags))
+    },
+    before_construct => sub[document] {
+      document.maybe_close_element("ltx:listingline")?;
+    });
+  DefConstructor!("\\lx@algorithmic@item@label Undigested",
+    "<ltx:listingline xml:id='#id' itemsep='#itemsep'>#tags",
+    properties => sub[args] {
+      let id = digest(T_CS!("\\theALC@line@ID"))?.to_attribute();
+      let label = match args.first() {
+        Some(Some(label)) => Some(label.revert()?).filter(|label| !label.unlist_ref().is_empty()),
+        _ => None,
+      };
+      Ok(match label {
+        Some(label) => stored_map!("id" => id,
+          "tags" => Stored::from(digest(Invocation!("\\lx@algorithmic@labeltags", vec![Some(label)]))?)),
+        None => stored_map!("id" => id),
+      })
     },
     before_construct => sub[document] {
       document.maybe_close_element("ltx:listingline")?;

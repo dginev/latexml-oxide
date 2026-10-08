@@ -11238,3 +11238,53 @@ Fixed in Rust (63i, OXIDIZED_DESIGN_DIVERGENCES #159). An `\affiliation` that st
 labelled by its marks (`\lx@add@affiliation@marked`), and goes to the authors whose names show them. The group rule
 still applies to an unmarked line, and to an interleaved group whose authors all show the line's one mark.
 Guard `perfect_kernel_batch63::revtex_marked_affiliations_link_by_mark`.
+
+## 526. An equation row holding only `\label` is dropped with its number and label
+
+eqnarray, align and gather number every row LaTeX does not exempt, an empty one included: `\@@eqncr` steps
+`\@eqnnum` (latex.ltx:15795), and the row's `\label` binds to that number (`a &=& b \nonumber\\ \label{x}`,
+`a &= b \\ \label{x}`). Perl keeps the row through the alignment, then its rearrangement deletes any row with no
+cells (latex_constructs.pool.ltxml:2365-2372, whose own comment names the gap; amsmath.sty.ltxml:417-418, 477-478,
+"Numbered ones still show in print out!!!"). The number and the label go with it, so the `\ref` prints "( )" and
+the later equations' numbers skip it (1011.4399, 1305.3072, hep-th9412215, hep-ph0208046: 12 missing labels,
+numbers 1-59 with gaps).
+
+Fixed in Rust (63j): a numbered cell-less row that holds a label is kept. In eqnarray it joins the unnumbered
+equation above, or stands alone when that one has a number already. In align and gather, the equation keeps its
+number and label, and only its empty cell is dropped. An unnumbered one (`\label{x}\nonumber`, align*) names no
+number, so it is still dropped and its label reported missing at post (pdflatex binds such a label to a number no row
+shows). A kept eqnarray row that stands alone takes an unnumbered `&=& c` row after it as its continuation, so the
+number sits on that line rather than on an empty one of its own (nothing is lost). Guards
+`perfect_kernel_batch63::{eqnarray_empty_labelled_row_keeps_number,
+align_empty_labelled_row_keeps_number, unnumbered_empty_labelled_row_stays_unresolved}`.
+
+## 527. algorithmic's `\REQUIRE`/`\ENSURE` lines are numbered instead of labelled
+
+algorithmic.sty:155 defines `\REQUIRE` as `\item[\algorithmicrequire]`, a labelled item that prints "Require:"
+(often renamed "Input:"/"Output:") and does not step the line counter. Perl's `\lx@algorithmic@item@@` ignores
+the optional label and tags every line with the line counter, so these lines read "0:"
+(2201.01230, 1406.5162, 1811.08330, 2507.12875, 2602.10387). algpseudocode's `\Require`/`\Ensure` are the same
+labelled item (algpseudocode.sty:78-79); Perl's `\lx@algorithmicx@item []` (algorithmicx.sty.ltxml:51) drops the
+label and steps the line number, so "Require:" reads "1:" and every later line is one off.
+
+Fixed in Rust (63j): an `\item[label]` line, in either package, is tagged with its label, the counter unstepped; the
+label is passed braced to a constructor of its own, so a `]` inside it stays (`\item[{a]b}]`). An empty `\item[]`
+(algorithmicx.sty:632 `\Statex`) is an untagged, unnumbered line, as pdflatex prints it; Perl numbered it. The bare
+`\item`'s constructor reads no argument, so a line opening with `[` keeps it (`\Statex [Phase one] begins`). Open:
+algpseudocodex's contrib binding (algpseudocodex_sty.rs:510-517) redefines the item and still drops the label, RED
+repro list-structure/algpseudocodex_require_shows_its_label. Also open: a `\label` on a labelled line refs its
+label text ("Require:") where pdflatex prints the unchanged `\@currentlabel` (the line counter); HEAD printed the
+counter plus one. The upstream golden
+`t/complex/figure_mixed_content.xml` pins Perl's "0:" on its three `\REQUIRE` lines, while that test's own PDF prints
+"Require: line"; the Rust golden now carries "Require:". Guards
+`perfect_kernel_batch63::{algorithmic_labelled_item_shows_its_label, algpseudocode_require_shows_its_label,
+algpseudocode_statex_keeps_its_bracket_text, algorithmic_empty_and_bracketed_item_labels}`.
+
+## 528. An author list's "and~" stays in the last author's name
+
+The author splitter (Base_Utility.pool.ltxml) separates names at commas and " and ". For
+`\author{Ann~Able, Bob~Baker, and~Cat~Cole}`, where the "and" is tied to the name after it, the last name reads
+"and Cat Cole" (IEEE 2011.10474, 2408.09035; svjour3 1406.6147).
+
+Fixed in Rust (63j): " and~" separates as " and " does. Guard
+`perfect_kernel_batch63::author_and_tied_to_the_last_name_splits`.

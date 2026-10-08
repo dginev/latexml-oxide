@@ -81,9 +81,29 @@ LoadDefinitions!({
 
   // Empty lines still get an \item, but they're followed by \nointerlineskip!
   // We do NOT want to generate a listingline in those cases.
-  DefMacro!(
-    "\\lx@algorithmicx@item[]",
-    "\\@ifnextchar\\nointerlineskip{}{\\lx@algorithmicx@@item}"
+  // An `\item[label]` line shows its label, unnumbered: the line number is only the list's default label (`\ALG@step`,
+  // algorithmicx.sty:88), which a given one replaces. algpseudocode.sty:78 `\Require` is `\item[\algorithmicrequire]`
+  // (Perl and earlier Rust numbered "Require:" lines 1, 2, …), and algorithmicx.sty:632 `\Statex` `\item[]`, a line
+  // with no number at all (63j). The label goes braced to its own constructor, so a `]` in it stays and the numbered
+  // `\lx@algorithmicx@@item` reads no argument from the line's text (`\Statex [Phase one] begins`).
+  DefMacro!("\\lx@algorithmicx@item[]", sub[(label)] {
+    let mut out = mouth::tokenize_internal("\\@ifnextchar\\nointerlineskip{}").unlist();
+    out.push(T_BEGIN!());
+    match label {
+      Some(label) => {
+        out.push(T_CS!("\\lx@algorithmicx@@item@label"));
+        out.push(T_BEGIN!());
+        out.extend(label.unlist());
+        out.push(T_END!());
+      },
+      None => out.push(T_CS!("\\lx@algorithmicx@@item")),
+    }
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
+  DefConstructor!(
+    "\\lx@algorithmicx@labeltags{}",
+    "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>"
   );
 
   // algpseudocodex.sty:185 wraps each code line in a `varwidth` box that only
@@ -95,33 +115,7 @@ LoadDefinitions!({
   // (`<ltx:listingline>` isn't allowed in `<ltx:p>`; algpseudocodex manual,
   // coloredtheorem). Guard: `perfect_kernel_batch54::statex_continues_the_open_line_box`.
   DefConstructor!("\\lx@algorithmicx@@item", sub[document, _args, props] {
-    let open_line = document.maybe_close_element("ltx:listingline")?.is_none() && {
-      let mut n = Some(document.get_node().clone());
-      let mut found = false;
-      while let Some(node) = n {
-        if document::get_node_qname(&node) == pin!("ltx:listingline") {
-          found = true;
-          break;
-        }
-        n = node.get_parent();
-      }
-      found
-    };
-    if open_line {
-      document.insert_element("ltx:break", Vec::new(), None)?;
-    } else {
-      let mut attrs: HashMap<String, String> = HashMap::default();
-      if let Some(id) = props.get("id") {
-        attrs.insert("xml:id".into(), id.to_string());
-      }
-      document.open_element("ltx:listingline", Some(attrs), None)?;
-      if let Some(tags) = props.get("tags") {
-        let digested: Option<Digested> = tags.into();
-        if let Some(ref d) = digested {
-          document.absorb(d, None)?;
-        }
-      }
-    }
+    open_algorithmicx_line(document, props)?;
   },
     properties => sub[_args] {
       let step = Digest!(Tokens::new(vec![
@@ -137,6 +131,23 @@ LoadDefinitions!({
       tag_tokens.push(T_END!());
       let tags = Digest!(Tokens::new(tag_tokens))?;
       Ok(stored_map!("id" => id, "tags" => tags))
+    }
+  );
+  // The line an `\item[label]` opens: tagged by its label, or untagged for an empty one, the counter unstepped.
+  DefConstructor!("\\lx@algorithmicx@@item@label Undigested", sub[document, _args, props] {
+    open_algorithmicx_line(document, props)?;
+  },
+    properties => sub[args] {
+      let id = Digest!(Tokens::new(vec![T_CS!("\\theALG@line@ID")]))?;
+      let label = match args.first() {
+        Some(Some(label)) => Some(label.revert()?).filter(|label| !label.unlist_ref().is_empty()),
+        _ => None,
+      };
+      Ok(match label {
+        Some(label) => stored_map!("id" => id,
+          "tags" => Digest!(Invocation!("\\lx@algorithmicx@labeltags", vec![Some(label)]))?),
+        None => stored_map!("id" => id),
+      })
     }
   );
 
@@ -156,3 +167,36 @@ LoadDefinitions!({
   def_macro_noop("\\ALG@g{}")?;
   def_macro_noop("\\endALG@g")?;
 });
+
+/// Open the `ltx:listingline` of an algorithmicx `\item`, with its id and tags, or — inside a line still open
+/// (algpseudocodex's `varwidth` box, see `\lx@algorithmicx@@item`) — break that line.
+fn open_algorithmicx_line(document: &mut Document, props: &SymHashMap<Stored>) -> Result<()> {
+  let open_line = document.maybe_close_element("ltx:listingline")?.is_none() && {
+    let mut n = Some(document.get_node().clone());
+    let mut found = false;
+    while let Some(node) = n {
+      if document::get_node_qname(&node) == pin!("ltx:listingline") {
+        found = true;
+        break;
+      }
+      n = node.get_parent();
+    }
+    found
+  };
+  if open_line {
+    document.insert_element("ltx:break", Vec::new(), None)?;
+  } else {
+    let mut attrs: HashMap<String, String> = HashMap::default();
+    if let Some(id) = props.get("id") {
+      attrs.insert("xml:id".into(), id.to_string());
+    }
+    document.open_element("ltx:listingline", Some(attrs), None)?;
+    if let Some(tags) = props.get("tags") {
+      let digested: Option<Digested> = tags.into();
+      if let Some(ref d) = digested {
+        document.absorb(d, None)?;
+      }
+    }
+  }
+  Ok(())
+}

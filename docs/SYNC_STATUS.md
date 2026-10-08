@@ -343,6 +343,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
+- **63j**: three silent classes from fidelity audit round 2, all Perl-origin:
+  - numbered eqnarray, align and gather rows holding only `\label` keep their number and label (KPE #526). Before,
+    the row was dropped and the `\ref` printed "( )". hep-ph0208046: 12 missing labels → 0, equation numbers gap-free 1-59;
+    hep-th9608109 7 → 0; 1011.4399, 1305.3072, hep-th9412215 all resolve.
+  - algorithmic's `\REQUIRE`/`\ENSURE` show their labels (Require:/Input:, Ensure:) rather than "0:", and
+    algpseudocode's `\Require`/`\Ensure` theirs rather than line numbers 1, 2; `\Statex`/`\item[]` lines go
+    unnumbered as pdflatex prints them (KPE #527; 2201.01230, 1406.5162, 1811.08330, 2507.12875, 2602.10387,
+    2309.03769, 1606.06256). Open: algpseudocodex's contrib binding still drops the label (RED repro
+    list-structure/algpseudocodex_require_shows_its_label).
+  - " and~" separates authors (KPE #528; 2011.10474, 2408.09035, 1406.6147).
+
+  A/B 388 papers vs 63i: 19 change, each one of these, with 0 more errors or warnings. Guards
+  `perfect_kernel_batch63::{eqnarray_empty_labelled_row_keeps_number, align_empty_labelled_row_keeps_number,
+  unnumbered_empty_labelled_row_stays_unresolved, algorithmic_labelled_item_shows_its_label,
+  algpseudocode_require_shows_its_label, algpseudocode_statex_keeps_its_bracket_text,
+  algorithmic_empty_and_bracketed_item_labels, author_and_tied_to_the_last_name_splits}`.
 - **63i**: affiliations linked by the marks authors show (OD #159, KPE #525). An institute labelled by a leading
   letter or number mark goes to the authors whose names show it. revtex lists all the authors first, then the marked
   `\affiliation`s (2011.01984, 2301.08449, 1510.01235, 0808.2763, 1205.4587, 1509.05545, 2601.16864). svjour3 marked

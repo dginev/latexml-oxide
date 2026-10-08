@@ -1,0 +1,17 @@
+% witness: synthetic (63j review r2: algorithmic's `\item[{a]b}]` and `\item[]`)
+% oracle:  pdflatex 0 errors: "Require: data", "1: x", "a]b c", "blank" (unnumbered), "2: y"
+% engines: rust 63i = "0:" on \REQUIRE, the bracketed label cut at its "]" ("b] c"), "1:" repeated on both \item lines;
+%          Perl alike
+% expect:  0 errors; the bracketed label whole, the empty one untagged, \STATE lines numbered 1 and 2
+% status:  RED (63i) -> GREEN (63j)
+\documentclass{article}
+\usepackage{algorithmic}
+\begin{document}
+\begin{algorithmic}[1]
+\REQUIRE data
+\STATE x
+\item[{a]b}] c
+\item[] blank
+\STATE y
+\end{algorithmic}
+\end{document}

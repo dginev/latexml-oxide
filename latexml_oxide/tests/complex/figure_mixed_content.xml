@@ -463,8 +463,7 @@
         <caption><tag close=" "><text font="bold">Algorithm 2</text></tag> Algorithms in minipage</caption>
         <listing framed="topbottom">
           <listingline xml:id="alg2.l0"><tags>
-              <tag><text fontsize="80%">0:</text></tag>
-              <tag role="refnum">0</tag>
+              <tag><text font="bold">Require:</text></tag>
             </tags> line
 </listingline>
           <listingline xml:id="alg2.l1"><tags>
@@ -681,8 +680,7 @@
           <caption><tag close=" "><text font="bold">Algorithm 3</text></tag> <text color="#0000FF">line</text></caption>
           <listing framed="topbottom">
             <listingline xml:id="alg3.l0"><tags>
-                <tag><text fontsize="80%">0:</text></tag>
-                <tag role="refnum">0</tag>
+                <tag><text font="bold">Require:</text></tag>
               </tags> line
 </listingline>
             <listingline xml:id="alg3.l1"><tags>
@@ -770,8 +768,7 @@
           <caption><tag close=" "><text font="bold">Algorithm 4</text></tag> <text color="#0000FF">line</text></caption>
           <listing framed="topbottom">
             <listingline xml:id="alg4.l0"><tags>
-                <tag><text fontsize="80%">0:</text></tag>
-                <tag role="refnum">0</tag>
+                <tag><text font="bold">Require:</text></tag>
               </tags> line
 </listingline>
             <listingline xml:id="alg4.l1"><tags>

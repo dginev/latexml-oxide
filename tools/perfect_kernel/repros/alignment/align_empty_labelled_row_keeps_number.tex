@@ -1,0 +1,20 @@
+% witness: fidelity audit round 2 (the eqnarray class, 1011.4399; amsmath's align and gather drop the same rows:
+%          amsmath_sty.rs rearrange_ams_align/gather, Perl amsmath.sty.ltxml:417-418, 477-478)
+% oracle:  pdflatex 0 errors: align "(1)" on a = b, "(2)" on the empty labelled row; gather "(3)" on c, "(4)" on the
+%          empty labelled row; "See (2) and (4)."
+% engines: rust 63i = both labelled empty rows dropped, the \refs unresolved; Perl alike
+% expect:  0 errors; the equations labelled al and ga carry (2) and (4); the \refs resolve
+% status:  RED (63i) -> GREEN (63j)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{align}
+a &= b \\
+\label{al}
+\end{align}
+\begin{gather}
+c \\
+\label{ga}
+\end{gather}
+See (\ref{al}) and (\ref{ga}).
+\end{document}

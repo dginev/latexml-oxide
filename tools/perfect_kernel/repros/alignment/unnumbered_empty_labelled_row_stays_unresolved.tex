@@ -1,0 +1,25 @@
+% witness: synthetic (63j review r1: the numbered-row rule of eqnarray_empty_labelled_row_keeps_number must not reach
+%          an unnumbered row)
+% oracle:  pdflatex 0 errors: "a = b (1)", "c = d" then "(2)" on the align's empty numbered row, nothing on the empty
+%          `\label{un}\nonumber` and align* rows: "See 2 and 2 and ??.", un naming a number no row shows
+% engines: rust 63i = every labelled empty row dropped, (2) with it, the labels unresolved (Warning:expected:ids Missing
+%          Target for Label at post); 63j r1 kept the unnumbered ones too, un and st bound to no number; Perl drops all
+% expect:  0 errors; no equation carries LABEL:un or LABEL:st; the numbered rows keep (1) and (2)
+% status:  RED (63i, 63j r1) -> GREEN (63j)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{eqnarray}
+a &=& b \\
+\label{un}\nonumber
+\end{eqnarray}
+\begin{align}
+c &= d \notag\\
+\label{nu}
+\end{align}
+\begin{align*}
+e &= f \\
+\label{st}
+\end{align*}
+See \ref{un} and \ref{nu} and \ref{st}.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: synthetic (63j review r2: latexml_contrib algpseudocodex_sty.rs:510-517 redefines `\lx@algorithmicx@item[]`
+%          and drops its label)
+% oracle:  pdflatex 0 errors: "Require: data", "1: x", "[Phase one] begins" (unnumbered), "2: y"
+% engines: rust 63j = "1: data", "2: x [Phase one] begins", "4: y" (the label lost, the \Statex line merged into the
+%          open line box, the count skipping 3)
+% expect:  0 errors; "Require:" tags the first line, x and y numbered 1 and 2
+% status:  RED (63j)
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algpseudocodex}
+\begin{document}
+\begin{algorithmic}[1]
+\Require data
+\State x
+\Statex [Phase one] begins
+\State y
+\end{algorithmic}
+\end{document}

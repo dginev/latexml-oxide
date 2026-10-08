@@ -2006,3 +2006,251 @@ fn revtex_interleaved_typo_mark_keeps_the_group_rule() {
     ],
   );
 }
+
+/// 63j: algorithmic's `\REQUIRE`/`\ENSURE` (`\item[\algorithmicrequire]`, algorithmic.sty:155) tag their lines with
+/// their labels ("Input:" as 2201.01230 renames it), not the line counter's "0:". Repro
+/// list-structure/algorithmic_labelled_item_shows_its_label.
+#[test]
+fn algorithmic_labelled_item_shows_its_label() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/algorithmic_labelled_item_shows_its_label.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let listing = xml
+    .find("<listing ")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "listing", &[]));
+  assert_eq!(
+    listing.as_deref(),
+    Some(
+      "<listing framed=\"topbottom\"><listingline xml:id=\"alg1.l0\"><tags><tag><text font=\"bold\">Input:</text></tag></tags>\u{2002}the data</listingline><listingline xml:id=\"alg1.l0a\"><tags><tag><text font=\"bold\">Ensure:</text></tag></tags>\u{2002}the model</listingline><listingline xml:id=\"alg1.l1\"><tags><tag><text fontsize=\"80%\">1:</text></tag><tag role=\"refnum\">1</tag></tags>\u{2002}x</listingline></listing>"
+    ),
+    "{xml}"
+  );
+}
+
+/// The `<tags>` of the equation carrying `label` in `xml`.
+fn tags_of_labelled_equation(xml: &str, label: &str) -> Option<String> {
+  let at = xml.find(&format!("<equation labels=\"{label}\""))?;
+  let eq = &xml[at..];
+  let tags = eq.find("<tags>")?;
+  latexml::util::test::xml_element(&eq[tags..], "tags", &[])
+}
+
+/// 63j: an eqnarray row holding only `\label` keeps its number and label (latex.ltx:15795 numbers it; 1011.4399,
+/// hep-th9412215, 1305.3072): the last row's (1) joins the unnumbered equation above, a middle one's (2) stands alone.
+/// Repro alignment/eqnarray_empty_labelled_row_keeps_number.
+#[test]
+fn eqnarray_empty_labelled_row_keeps_number() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment/eqnarray_empty_labelled_row_keeps_number.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(
+    (
+      tags_of_labelled_equation(&xml, "LABEL:last").as_deref(),
+      tags_of_labelled_equation(&xml, "LABEL:mid").as_deref()
+    ),
+    (
+      Some("<tags><tag>(1)</tag><tag role=\"refnum\">1</tag></tags>"),
+      Some("<tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags>")
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j: amsmath's align and gather keep a row holding only `\label`, with its number (Perl amsmath.sty.ltxml:483
+/// "Numbered ones still show in print out!!!"). Repro alignment/align_empty_labelled_row_keeps_number.
+#[test]
+fn align_empty_labelled_row_keeps_number() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment/align_empty_labelled_row_keeps_number.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(
+    (
+      tags_of_labelled_equation(&xml, "LABEL:al").as_deref(),
+      tags_of_labelled_equation(&xml, "LABEL:ga").as_deref()
+    ),
+    (
+      Some("<tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags>"),
+      Some("<tags><tag>(4)</tag><tag role=\"refnum\">4</tag></tags>")
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j: an author list's "and~" (the "and" tied to the last name: 2011.10474, 2408.09035, 1406.6147) separates as
+/// " and " does. Repro sectioning-frontmatter/author_and_tied_to_the_last_name_splits.
+#[test]
+fn author_and_tied_to_the_last_name_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_tied_to_the_last_name_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann\u{a0}Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname></creator>",
+    ],
+  );
+}
+
+/// 63j review: an empty row holding `\label` but no number (eqnarray's `\nonumber`, align*) names no number, so it is
+/// still dropped and its label left unresolved, while align's numbered one keeps (2). Repro
+/// alignment/unnumbered_empty_labelled_row_stays_unresolved.
+#[test]
+fn unnumbered_empty_labelled_row_stays_unresolved() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment/unnumbered_empty_labelled_row_stays_unresolved.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let labelled: Vec<&str> = xml
+    .match_indices(" labels=\"")
+    .map(|(at, attr)| {
+      let value = &xml[at + attr.len()..];
+      &value[..value.find('"').unwrap_or(0)]
+    })
+    .collect();
+  assert_eq!(
+    (
+      labelled,
+      tags_of_labelled_equation(&xml, "LABEL:nu").as_deref()
+    ),
+    (
+      vec!["LABEL:nu"],
+      Some("<tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags>")
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j review: algpseudocode's `\Require`/`\Ensure` (`\item[\algorithmicrequire]`, algpseudocode.sty:78-79) tag their
+/// lines with their labels, the line counter unstepped. Repro list-structure/algpseudocode_require_shows_its_label.
+#[test]
+fn algpseudocode_require_shows_its_label() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/algpseudocode_require_shows_its_label.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let listing = xml
+    .find("<listing ")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "listing", &[]));
+  assert_eq!(
+    listing.as_deref(),
+    Some(
+      "<listing framed=\"topbottom\"><listingline xml:id=\"alg1.l0\"><tags><tag><text font=\"bold\">Require:</text></tag></tags>data</listingline><listingline xml:id=\"alg1.l0a\"><tags><tag><text font=\"bold\">Ensure:</text></tag></tags>out</listingline><listingline xml:id=\"alg1.l1\"><tags><tag><text fontsize=\"80%\">1:</text></tag><tag role=\"refnum\">1</tag></tags>x</listingline></listing>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j review: algpseudocode's `\Statex` (`\item[]`, algorithmicx.sty:632) is an unnumbered line whose own text may
+/// open with "[" (`\Statex [Phase one] begins`); a braced label keeps its "]". Repro
+/// list-structure/algpseudocode_statex_keeps_its_bracket_text.
+#[test]
+fn algpseudocode_statex_keeps_its_bracket_text() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/algpseudocode_statex_keeps_its_bracket_text.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let listing = xml
+    .find("<listing")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "listing", &[]));
+  assert_eq!(
+    listing.as_deref(),
+    Some(
+      "<listing><listingline xml:id=\"algx1.l0\"><tags><tag><text font=\"bold\">Require:</text></tag></tags>data</listingline><listingline xml:id=\"algx1.l0a\">[Phase one] begins</listingline><listingline xml:id=\"algx1.l1\"><tags><tag><text fontsize=\"80%\">1:</text></tag><tag role=\"refnum\">1</tag></tags>x</listingline><listingline xml:id=\"algx1.l1a\"><tags><tag>a]b</tag></tags>c</listingline><listingline xml:id=\"algx1.l1b\"><tags><tag><text font=\"bold\">Ensure:</text></tag></tags>out</listingline><listingline xml:id=\"algx1.l2\"><tags><tag><text fontsize=\"80%\">2:</text></tag><tag role=\"refnum\">2</tag></tags>y</listingline></listing>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j review: algorithmic's `\item[{a]b}]` keeps its label whole and `\item[]` is an untagged line, the line counter
+/// stepped by `\STATE` alone. Repro list-structure/algorithmic_empty_and_bracketed_item_labels.
+#[test]
+fn algorithmic_empty_and_bracketed_item_labels() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/algorithmic_empty_and_bracketed_item_labels.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let listing = xml
+    .find("<listing")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "listing", &[]));
+  assert_eq!(
+    listing.as_deref(),
+    Some(
+      "<listing><listingline xml:id=\"algx1.l0\"><tags><tag><text font=\"bold\">Require:</text></tag></tags>\u{2002}data</listingline><listingline xml:id=\"algx1.l1\"><tags><tag><text fontsize=\"80%\">1:</text></tag><tag role=\"refnum\">1</tag></tags>\u{2002}x</listingline><listingline xml:id=\"algx1.l1a\"><tags><tag>a]b</tag></tags>\u{2002} c</listingline><listingline xml:id=\"algx1.l1b\">\u{2002} blank</listingline><listingline xml:id=\"algx1.l2\"><tags><tag><text fontsize=\"80%\">2:</text></tag><tag role=\"refnum\">2</tag></tags>\u{2002}y</listingline></listing>"
+    ),
+    "{xml}"
+  );
+}

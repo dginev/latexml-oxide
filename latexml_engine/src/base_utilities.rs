@@ -8146,6 +8146,7 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
     for (delimiter, piece) in split_tokens_delimited(tokens, vec![
       SplitDelim::Token(T_OTHER!(",")),
       literal_and(),
+      literal_and_tie(),
       literal_ampersand(),
     ]) {
       carried.extend(delimiter);
@@ -8361,6 +8362,14 @@ pub fn position_of(tokens: &Tokens, delims: &[Token]) -> Option<usize> {
   None
 }
 
+/// " and~", the "and" tied to the name after it (`Luca~Varotto, Angelo~Cenedese, and~Andrea~Cavallaro`, IEEE
+/// 2011.10474, 2408.09035; svjour3 1406.6147). Unsplit, the "and" was read as the first word of the last name (63j).
+fn literal_and_tie() -> SplitDelim {
+  let mut tks = vec![T_SPACE!()];
+  tks.extend(mouth::tokenize_internal("and").unlist());
+  tks.push(T_ACTIVE!('~'));
+  SplitDelim::Tokens(Tokens::new(tks))
+}
 /// " \& " between two names, its spaces kept.
 fn literal_ampersand() -> SplitDelim {
   SplitDelim::Tokens(Tokens::new(vec![T_SPACE!(), T_CS!("\\&"), T_SPACE!()]))

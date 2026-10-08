@@ -2521,7 +2521,16 @@ pub fn rearrange_ams_gather(document: &mut Document, equationgroup: &mut Node) -
       }
     }
     if cells.len() == 1 && cell1_children.is_empty() {
-      // Empty row — remove it
+      // Empty row — remove it, unless it is numbered and holds a `\label`: amsmath numbers it all the same, the label
+      // bound to that number (Perl amsmath.sty.ltxml:483 "Numbered ones still show in print out!!!"). The equation stays
+      // with its number and label, its empty cell gone (63j; synthetic repro alignment/align_empty_labelled_row_keeps_number,
+      // the shape of eqnarray's 1011.4399). An unnumbered one (align*, `\notag`) names no number and stays flagged.
+      if equation.get_attribute("labels").is_some()
+        && !document.findnodes("ltx:tags", Some(&equation)).is_empty()
+      {
+        cells[0].clone().unlink_node();
+        continue;
+      }
       equation.unlink_node();
       continue;
     }
@@ -2565,6 +2574,13 @@ pub fn rearrange_ams_align(document: &mut Document, equationgroup: &mut Node) ->
       }
     }
     if cells.len() == 1 && cell1_children.is_empty() {
+      // (a numbered row holding only a `\label` keeps its number and label, as in gather above)
+      if equation.get_attribute("labels").is_some()
+        && !document.findnodes("ltx:tags", Some(&equation)).is_empty()
+      {
+        cells[0].clone().unlink_node();
+        continue;
+      }
       equation.unlink_node();
       continue;
     }

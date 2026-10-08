@@ -1974,6 +1974,17 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       } else {
         class = "continue";
       }
+    } else if row.labelled && row.numbered {
+      // All columns empty, but the row holds a `\label`: LaTeX numbers it all the same (latex.ltx:15795, `\@@eqncr`
+      // steps `\@eqnnum` for every row), and the label binds to that number. Its number and label join the equation
+      // above, or stand as their own when that one has a number already (Perl latex_constructs.pool.ltxml:2366-2369
+      // notes the rows lost; 1011.4399, hep-th9412215, 1305.3072; repro alignment/eqnarray_empty_labelled_row_keeps_number).
+      // An unnumbered one (`\label{x}\nonumber`) names no number and stays flagged, as before.
+      class = if eqs.is_empty() || numbered {
+        "new"
+      } else {
+        "continue"
+      };
     } else {
       // All columns empty
       class = "remove";
