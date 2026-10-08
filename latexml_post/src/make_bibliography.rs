@@ -627,6 +627,35 @@ impl MakeBibliography {
     // inline `ltx:bibentry`, so this scan is a no-op for them.
     // Witness 2605.01646 (AIPFa.tex, 23 entries), 2605.00783, 2605.03852.
     Self::scan_bibentries(&mut entries, doc);
+    // This bibliography's own entries (an amsrefs `biblist`) are its References as written: amsrefs typesets every
+    // `\bib` of a biblist, cited or not, where a `.bib` is a library to take the cited entries from (1012.2719: 34
+    // entries, 29 cited, the PDF lists 34). Each bibliography prints its own (two `bibdiv`s, two lists).
+    let mut inline_keys: Vec<String> = doc
+      .findnodes_at(".//ltx:bibentry", Some(bib_node))
+      .iter()
+      .filter_map(|entry| entry.get_attribute("key"))
+      .collect();
+    inline_keys.sort();
+    // An inline entry inside ANOTHER bibliography (a second `bibdiv`) is that one's, even when cited from here; an entry
+    // in no bibliography (a lone `biblist`) stays anyone's.
+    let own_id = crate::document::get_xml_id(bib_node);
+    let foreign_keys: HashSet<String> = doc
+      .findnodes("//ltx:bibentry")
+      .iter()
+      .filter(|entry| {
+        let mut up = entry.get_parent();
+        while let Some(node) = up {
+          if node.get_name() == "bibliography" {
+            return crate::document::get_xml_id(&node) != own_id;
+          }
+          up = node.get_parent();
+        }
+        false
+      })
+      .filter_map(|entry| entry.get_attribute("key"))
+      .map(|key| key.to_lowercase())
+      .filter(|key| !inline_keys.iter().any(|own| own.to_lowercase() == *key))
+      .collect();
 
     // Step 2: Collect all cited bibliography keys from BIBLABEL entries in ObjectDB.
     // Note referrers (from outside the bibliography).
@@ -738,6 +767,13 @@ impl MakeBibliography {
       all.sort();
       queue.extend(all);
     }
+    // an inline key already queued under another case (`\cite{able}` for `\bib{Able}`) is the same entry
+    let queued: HashSet<String> = queue.iter().map(|key| key.to_lowercase()).collect();
+    queue.extend(
+      inline_keys
+        .into_iter()
+        .filter(|key| !queued.contains(&key.to_lowercase())),
+    );
     // A backend's listing ([`given_listing`]) is the entry list: the backend
     // already selected what the document cites (and reported what it could not
     // find — biblatex_sty.rs `\blx@bbl@missing`), so it is printed whole and a
@@ -755,7 +791,7 @@ impl MakeBibliography {
     let mut missing_keys: Vec<String> = Vec::new();
 
     while let Some(bibkey) = queue.pop() {
-      if seen.contains(&bibkey) || bibkey == "*" {
+      if seen.contains(&bibkey) || bibkey == "*" || foreign_keys.contains(&bibkey.to_lowercase()) {
         continue;
       }
       seen.insert(bibkey.clone());
@@ -3685,7 +3721,8 @@ fn order_entry_keys(
 /// and sorted by the style's scheme. `None` for any other bibliography: an
 /// external `.bib` under an unsorted style takes its order from the
 /// citations, and amsrefs' inline entries (whose `sort` a `\bibliographystyle`
-/// can set) are selected and sorted as a `.bib`'s are.
+/// can set) are all printed (OXIDIZED_DESIGN_DIVERGENCES #57) and sorted as a
+/// `.bib`'s are.
 fn given_listing(doc: &PostDocument, bib: &Node) -> Option<Vec<String>> {
   if bib.get_attribute("sort").as_deref() != Some("false")
     || !bib

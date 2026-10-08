@@ -1847,6 +1847,18 @@ entries the bibliography formats. The scan runs
 *after* the external documents, so a key defined both externally and inline
 resolves to the inline one — matching upstream's own last-source-wins loop.
 
+**Every inline entry is printed, each in its own bibliography (63g).** An amsrefs
+`biblist` typesets every `\bib` it holds, cited or not, so a bibliography's
+own inline entries are all queued for printing. A `.bib` instead is a library
+the cited entries are taken from. Keys are matched case-insensitively, as
+Perl's MakeBibliography (`lc`, `MakeBibliography.pm:270-313`) and BibTeX match
+them; amsrefs itself is case-sensitive (pdflatex leaves `\cite{able}` undefined
+against `\bib{Able}`). A cited entry that sits inline in *another*
+bibliography is left to that bibliography, so two `bibdiv`s each print only
+their own entries. Witness 1012.2719: 29 → 34 references, as its PDF prints
+them. Guards `06_cluster_bibliography::{amsrefs_uncited_entries_kept,
+amsrefs_two_bibdivs_each_their_own, amsrefs_case_variant_cite}`.
+
 **Measured.** All 40 amsrefs papers in sandboxes 2605+2606 went from 0 rendered
 references (100% loss, every citation dangling) to **1,482 references rendered
 with zero dangling citations**. Witness 2605.01646 (23 entries), 2605.00783,
@@ -6296,6 +6308,11 @@ affiliation once, full-width, centered, below the author row.
 **Why it's safe.** Only the auto self-sequence labels leave the numeric fallback; exact-label
 (`\inst`) attachment and genuine cross-prefix misuse recovery are untouched. Guarded by
 `frontmatter_llncs_shared_affiliation_below_authors`.
+
+**Orphaned thanks notes (63g).** A `role="thanks"` note that no creator cites joins the same
+trailing creator, for every class. Perl warns ("Orphaned frontmatter annotation") and drops it,
+though LaTeX prints it as a footnote. The case is an svjour3 EPJ `\thankstext` whose key only its
+institute cites (#460). Guard `perfect_kernel_batch63::svjour3_epj_title_and_institute_notes`.
 
 ### 160. OmniBus captures `\orcid` and no-ops the running-head registers `\lefttitle`/`\righttitle`
 
@@ -14028,3 +14045,25 @@ positive; 27 negative — affiliations, degrees, all-capitals names, surnames li
 or written as macros, a per-author binding's visible marks and unsplit lines, a name beside its institution or a
 place, that must stay as they are; `author_merged_names_are_an_error` for the error),
 `06_cluster_frontmatter::frontmatter_ieee_authorblock_trailing_email`.
+
+### 460. svjour3's EPJ style links authors to their institutes and notes by key (Perl: neither command defined)
+
+**Background.** The EPJ option of svjour3 (`svepjc3.clo`) cites by key. `\thanksref{addr1,e1}` after a
+name prints the number of each `\institute` piece whose `\label` is `addr1` (`svepjc3.clo:193-207` numbers
+the pieces and binds their labels) and the letter of the `\thankstext{e1}{…}` note (`:317-410`).
+
+**Perl behavior.** `sv_support.sty.ltxml` defines neither `\thanksref` nor `\thankstext`. The raw
+definitions print the keys as marks, so `addr1,e1` leaks into the author's name and nothing links
+(2304.02920; also 2406.12029, 2406.12545).
+
+**Rust behavior.** `sv_support_sty.rs` maps the EPJ keys onto the frontmatter labels:
+- `\thanksref{keys}` requests the annotations (`\lx@request@frontmatter@annotation`, label `LABEL:key`);
+- an institute's `\label` labels its affiliation (`\lx@set@frontmatter@label`);
+- `\thankstext{key}{text}` is a thanks note with that label (`\lx@add@thanks`). A note, unlike a
+  contact, is valid in a title as well as in a creator, so a title's `\thanksref` keeps its note.
+
+An institute's own `\thanksref` is a no-op inside the affiliation, so it cannot relabel the institute
+its authors cite. Its note, cited by no author, goes to the trailing creator (#159). `\thanksref[mark]{keys}`
+prints only the mark in svepjc3 (`\@thanksref`'s `\if@tempswa` branch), but Rust still requests the
+keys: extra links to notes the PDF also prints, nothing lost. Guards
+`perfect_kernel_batch63::svjour3_epj_{thanksref_links_institutes_and_notes,title_and_institute_notes}`.

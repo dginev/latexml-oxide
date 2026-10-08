@@ -1,0 +1,18 @@
+% witness: 63g review r2 (synthetic; HEAD alike): two `\bib` keys in one biblist that differ only in case
+% oracle:  pdflatex 0 errors: "Text [1], [2]."; References [1] Ann Able, First (2001); [2] Other (2005) — amsrefs keys
+%          are case-sensitive, two entries
+% engines: rust 63g = 1 bibitem ("Other"), the first merged away under the lowercased key (scan_bibentries), no
+%          warning naming the loss; Perl's MakeBibliography `lc` alike
+% expect:  2 bibitems, both printed and each cited by its own \cite; or, at the least, a Warning naming the merged key
+% status:  RED (63g)
+\documentclass{amsart}
+\usepackage{amsrefs}
+\begin{document}
+Text \cite{Able}, \cite{ABLE}.
+\begin{bibdiv}
+\begin{biblist}
+\bib{Able}{article}{author={Able, Ann}, title={First}, journal={J. One}, year={2001}}
+\bib{ABLE}{article}{author={Able, Ann}, title={Other}, journal={J. One}, year={2005}}
+\end{biblist}
+\end{bibdiv}
+\end{document}

@@ -4910,7 +4910,11 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
         }
-      } else if is_shared_contact_role(&note.get_attribute("role").unwrap_or_default()) {
+      } else if is_shared_contact_role(&note.get_attribute("role").unwrap_or_default())
+        // a thanks note no one cites (svjour3's `\thankstext` without its `\thanksref`; an EPJ institute's own note, 63g
+        // review, repro svjour3_epj_title_and_institute_notes) is printed all the same (OXIDIZED_DESIGN #159)
+        || note.get_attribute("role").as_deref() == Some("thanks")
+      {
         DebugFeature!(
           "frontmatter",
           "FRONT Sharing orphaned annotation {label} below authors"

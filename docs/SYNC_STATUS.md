@@ -343,6 +343,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
+- **63g**: svjour3's EPJ style (svepjc3.clo) links an author to its institutes and notes by key (OD #460) —
+  `\thanksref{addr1,e1}` requests them, an institute's `\label` labels its affiliation, `\thankstext{e1}` is a labelled
+  thanks note. Before, the keys printed as marks and nothing linked (2304.02920; also 2406.12029, 2406.12545, whose
+  e-mail notes now reach their authors). A title's `\thanksref` note stays in the title. An institute's own
+  `\thanksref` keeps its note, which goes to a trailing creator when no author cites it (OD #159). An amsrefs `biblist`
+  prints all its entries, cited or not, each bibliography its own (OD #57; 1012.2719 29 → 34 references). Guards
+  `perfect_kernel_batch63::svjour3_epj_*`, `06_cluster_bibliography::amsrefs_*`. The revtex shape of the same audit row
+  (2011.01984, 2301.08449: all `\author`s, then `$^{a}$`-marked `\affiliation`s) is the marked-affiliation linking still
+  open for per-author classes (OD #459). Open RED repros: index-bib/amsrefs_case_distinct_keys_both_kept (two `\bib`
+  keys differing only in case merge into one entry, silently), sectioning-frontmatter/svjour3_epj_one_institute_shared
+  (one unlabelled `\institute` under two authors goes to the last author only).
 - **63f**: frontmatter fidelity follow-ups (run-336 audit): acmart's `\received` keeps its whole history — received,
   revised (several), labelled — each its own date via the frontmatter key `accumulate` (KPE #522; 2307.05988); initials
   glued to a surname (`A.G.Bogdanchikov`, `Yu.M.Shatunov`; not `St.`/`Mt.`/`Ft.`) read as a name and a `\vspace`'s length

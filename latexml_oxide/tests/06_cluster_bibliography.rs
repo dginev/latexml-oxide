@@ -978,6 +978,80 @@ fn amsrefs_inline_bibliography_is_not_dropped() {
   );
 }
 
+/// The keys of each bibliography's items, in order (one list per `<bibliography>`).
+fn bibliography_keys(x: &str) -> Vec<Vec<String>> {
+  x.split("<bibliography")
+    .skip(1)
+    .map(|bib| {
+      bib
+        .match_indices("<bibitem ")
+        .filter_map(|(at, _)| {
+          let tag = &bib[at..at + bib[at..].find('>')?];
+          let key = tag.split(" key=\"").nth(1)?;
+          key.split('"').next().map(str::to_string)
+        })
+        .collect()
+    })
+    .collect()
+}
+
+/// An amsrefs `biblist` typesets every `\bib` in it, cited or not (1012.2719: 34 entries, 29 cited, the PDF lists 34):
+/// the document's own inline entries are its References, not a library to select the cited ones from (63g). Repro
+/// index-bib/amsrefs_uncited_entries_kept.
+#[test]
+fn amsrefs_uncited_entries_kept() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_uncited_entries_kept.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(bibliography_keys(&x), [["Able", "Baker", "Cole"]], "{x}");
+}
+
+/// 63g: each amsrefs bibliography prints its own entries — two `bibdiv`s, two lists — not every inline entry of the
+/// document. Repro index-bib/amsrefs_two_bibdivs_each_their_own.
+#[test]
+fn amsrefs_two_bibdivs_each_their_own() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_two_bibdivs_each_their_own.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(
+    bibliography_keys(&x),
+    [["Able", "Baker"], ["Cole", "Dunn"]],
+    "{x}"
+  );
+}
+
+/// 63g: a citation whose key differs from its `\bib` only in case (`\cite{able}`, `\bib{Able}`) is that entry, printed
+/// once (under the key as cited, as any cited entry is) and reported missing by no one. Repro
+/// index-bib/amsrefs_case_variant_cite.
+#[test]
+fn amsrefs_case_variant_cite() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_case_variant_cite.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(bibliography_keys(&x), [["able", "Baker"]], "{x}");
+}
+
 /// amsrefs papers commonly open their references with `\begin{bibsection}`
 /// rather than `\begin{bibdiv}` — in real `amsrefs.sty` (L1251/L1265) `bibdiv`
 /// IS `bibsection` in article mode, the section-heading wrapper around
@@ -3811,8 +3885,14 @@ fn natbib_bib_bibliography_prints_its_bibpreamble() {
     &[BIB_K],
     None,
   );
-  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
-  assert_eq!(latexml::util::test::warning_count(&log), 0, "{log}");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
   latexml::util::test::assert_element(
     &xml,
     "bibliography",

@@ -35,7 +35,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@sv@institute{}", "\\lx@sv@institute@#1\\at\\done");
   DefMacro!(
     "\\lx@sv@institute@ Until:\\at Until:\\done",
-    "\\ifx.#2.\\lx@add@affiliation{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{#2}\\fi"
+    "\\ifx.#2.\\lx@add@affiliation{\\lx@sv@institute@marks#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks#2}\\fi"
   );
   // for older versions?
   DefMacro!(
@@ -363,10 +363,26 @@ LoadDefinitions!({
     Some(Tokenize!("\\rmfamily")), // bodyfont: upright (Perl proof bodyfont)
   )?;
 
-  // \thankstext{label}{text} — sn-jnl / EPJ-style title-page footnote
-  // (svjour3 derivatives). Render as a regular footnote.
-  // Witnesses 2406.12029, 2406.12545.
-  DefMacro!("\\thankstext{}{}", "\\footnote{#2}");
-  // \thanksref{label} — footnote-style marker; render as superscript.
-  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
+  // The EPJ style (svepjc3.clo:317-410) links an author to its institutes and notes by key: `\thanksref{addr1,e1}`
+  // prints the numbers of the institutes `\label{addr1}` names (each `\institute` piece numbered, its `\label` bound to
+  // that number, :193-207) and the letter of the `\thankstext{e1}{…}` note. As frontmatter: the author (or the title)
+  // requests the keys (`\lx@request@frontmatter@annotation`, label `LABEL:key`), an institute's `\label` labels its
+  // affiliation (`\lx@set@frontmatter@label`, the same `LABEL:key`), and a `\thankstext` is a thanks note so labelled
+  // (`\lx@add@thanks`: a note is at home in a title and a creator) — each goes to what cites it, as elsart's
+  // `\thanksref`/`\thanks[label]` do. Printed as the keys, they leaked and nothing linked (2304.02920). Witnesses
+  // 2406.12029, 2406.12545.
+  DefMacro!(
+    "\\thankstext[]{}{}",
+    "\\lx@add@thanks[label={LABEL:#2}]{#3}"
+  );
+  DefMacro!("\\thanksref[]{}", "\\lx@request@frontmatter@annotation{#2}");
+  // an institute's own `\thanksref` (svepjc3.clo prints its mark beside the institute) would add its key to the
+  // institute's label, which its authors cite; its note stays, unlinked (relocate_annotations keeps an orphaned one).
+  // 63g review, repro sectioning-frontmatter/svjour3_epj_title_and_institute_notes; witness 2304.02920
+  DefMacro!("\\lx@sv@institute@thanksref[]{}", "");
+  // local to the institute's digestion (digest_frontmatter_item's group)
+  DefMacro!(
+    "\\lx@sv@institute@marks",
+    "\\let\\thanksref\\lx@sv@institute@thanksref"
+  );
 });

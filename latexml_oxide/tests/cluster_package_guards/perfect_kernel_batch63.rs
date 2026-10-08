@@ -1497,3 +1497,60 @@ fn author_glued_place_abbreviation_stays_affiliation() {
     ],
   );
 }
+
+/// 63g: svjour3's EPJ style links an author to its institutes and notes by key (svepjc3.clo:317-410):
+/// `\thanksref{addr2,e1}` requests them, an institute's `\label{addr2}` labels its affiliation, a `\thankstext{e1}`
+/// is a thanks contact so labelled; printed as the keys, they leaked and nothing linked (2304.02920). Repro
+/// sectioning-frontmatter/svjour3_epj_thanksref_links_institutes_and_notes.
+#[test]
+fn svjour3_epj_thanksref_links_institutes_and_notes() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_epj_thanksref_links_institutes_and_notes.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding author: bob@b.org</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63g: an EPJ title's `\thanksref` gets its `\thankstext` as a note (a note is valid in a title, a contact is not),
+/// an institute's own `\thanksref` leaves the institute's label alone — its note, cited by no author, kept — and both
+/// authors keep Univ A (review r1). Repro sectioning-frontmatter/svjour3_epj_title_and_institute_notes.
+#[test]
+fn svjour3_epj_title_and_institute_notes() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_epj_title_and_institute_notes.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let title = xml
+    .find("<title")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "title", &[]));
+  assert_eq!(
+    title.as_deref(),
+    Some(
+      "<title>My Title<note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Grant note XYZ.</note></title>"
+    ),
+    "{xml}"
+  );
+  let found = super::perfect_kernel_batch61::creators_of(&xml);
+  assert!(
+    found
+      == [
+        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact></creator>",
+        "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Visiting from Z.</note></creator>",
+      ],
+    "creators differ\n--- found:\n{}\n--- xml:\n{xml}",
+    found.join("\n")
+  );
+}

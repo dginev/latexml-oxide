@@ -1,0 +1,18 @@
+% witness: 2304.02920 (svjour3 epjc3: `\author{… Jun He\thanksref{addr1,addr2,e1}}`, `\institute{…\label{addr1} \and
+%          …\label{addr2}}`, `\thankstext{e1}{Corresponding author: …}`); run-336 fidelity audit
+% oracle:  pdflatex (with the paper's svjour3.cls + svepjc3.clo) 0 errors: "Ann Able^1, Bob Baker^{2,a}" over
+%          "1 Univ A", "2 Univ B", footnote "a Corresponding author: bob@b.org"
+% engines: rust (63f) = the keys printed as marks ("Ann Ableaddr1"), Univ A in a creator with no name, the note lost
+%          (0 errors, silent); Perl prints the keys too (sv_support.sty.ltxml defines no \thanksref)
+% expect:  2 creators — Ann Able (Univ A), Bob Baker (Univ B, the thanks note); 0 errors
+% status:  RED (63f) -> GREEN (63g)
+\documentclass[twocolumn,epjc3]{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able\thanksref{addr1}, Bob Baker\thanksref{addr2,e1}}
+\thankstext{e1}{Corresponding author: bob@b.org}
+\institute{Univ A\label{addr1} \and Univ B\label{addr2}}
+\date{}
+\maketitle
+Text.
+\end{document}

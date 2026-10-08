@@ -2026,7 +2026,8 @@ document for inline `ltx:bibentry`. Papers with an external `.bib`/`.bbl` carry
 no inline entries, so the scan is a no-op for them. All 40 corpus papers went
 from 0 rendered references to 1,482 with zero dangling citations. **Upstream
 candidate** — the upstream fix is one extra source document in the
-`getBibEntries` loop.
+`getBibEntries` loop. How the Rust port prints the collected entries (all of
+them, each in its own bibliography) is OXIDIZED_DESIGN_DIVERGENCES #57.
 
 ## 50. Loading `bibunits`/`chapterbib` dangles EVERY citation (`Scan` and `CrossRef` disagree on the list chain)
 
