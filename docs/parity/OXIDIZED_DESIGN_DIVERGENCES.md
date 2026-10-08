@@ -14089,11 +14089,31 @@ per-class rule:
 - **The marked path's unmarked first line** of an `\and` group stays one author, as Perl keeps it ("safest to assume
   author?", Base_Utility.pool.ltxml:705-706), unless it reads as two or more names: then each is an author
   (`Aghil Alaee\footnote{…} \,\,and Hari K. Kunduri\footnote{…}\\ … $^a$ Department …`, 1407.0988).
-- **Residual:** in the article parse a names line's affiliations go to its last name only (`Ingo Rehberg and
-  Reinhard Richter\\ {\sl Experimentalphysik V, …}`: Richter's), as it has always given them, while the per-author
-  classes' affiliation commands (revtex, aastex, an IEEE block's `\IEEEauthorblockA`) go to every preceding author
-  without one — which can reach into an earlier IEEE block whose authors have none. One rule for both is later work.
-  `annotate=new` (Perl Base_Utility.pool.ltxml:521) gives a second contact to the last author only, so after
+- **A names line's affiliation lines are every name's on it** (63m): `Ph.~Boucaud, J.P.~Leroy, …, O.~P\`ene\\ LPT
+  Orsay (CNRS)` (0911.0568) gives LPT Orsay to all five, as LaTeX prints it under them; before 63m the line went to
+  the last name only. The line is digested once, under the group's last name, and given to the names before it
+  (`\lx@add@affiliation[annotate=N]`, N the group's names) — the group rule of the per-author classes' affiliation
+  commands (revtex, aastex, an IEEE block's `\IEEEauthorblockA`: `annotate=new`, which can reach into an earlier IEEE
+  block whose authors have none). An email line still gives each address to the name it spells, so on an earlier name
+  the email comes before the group's line; a note or mark on the line (`\thanks`, `\altaffilmark`) stays the last
+  name's (`take_author_annotations`). Perl, splitting at the commas and " and " first (`@authorsplits`,
+  Base_Utility.pool.ltxml:679), gives the line to the last name only (:719-725). Guard
+  `perfect_kernel_batch63::author_group_affiliation_goes_to_each_name`.
+  A line of more addresses than its group has names gives each to the name it spells in any group of the block,
+  since every group's names are read before a line is placed (`\author{Rose Bohrer \and Ashe Neth\\ … \\
+  \texttt{\{rbohrer,aneth\}@wpi.edu}}`, 2409.18978); otherwise only the group's names are asked (2409.00286's
+  `chengxil@` stays Chengxi Li's, not "Chen"'s), and a name is keyed by its printed text, notes aside (1706.03762's
+  `\thanks{… Noam proposed …}`); guard `author_email_owner_in_another_group`. A line of several brace groups
+  (`{a, b}@x, {c, d}@y`, 2402.02746) is the names' emails, each local part taking its group's domain
+  (`author_brace_email_groups_on_one_line`). Addresses go to the authors in order only when none spells another
+  author's name at its place (2509.10377 and 2406.06326 list them by institution); else the line is one contact, and
+  so is every address line after it, since each email contact advances the `labelseq` count (2403.00801's
+  `benhe@` had gone to the third author; `author_email_list_out_of_author_order`). Residual: giving each address of
+  such a line to the name it spells (`label=author:N` counts the document's authors, not the block's); and an earlier
+  name of a group holds its own email before the group's affiliation, the last name the other way round (the PDF
+  prints the affiliation first). A second names line must be a comma list: `Meta FAIR \& Inria Rennes`
+  (2402.14904) stays an affiliation (`author_ampersand_affiliation_line_is_not_names`).
+- **Residual:** `annotate=new` (Perl Base_Utility.pool.ltxml:521) gives a second contact to the last author only, so after
   `\author{A}\author{B}` (revtex, aastex) the first `\affiliation` is both names' and a second B's alone. amsart's
   `\address` stays the last author's (Perl's default): after a split `\author{Klemens Fellner and Bao Quoc Tang}` one
   `\address{Graz}` is Tang's only, where the merged creator held it (repro

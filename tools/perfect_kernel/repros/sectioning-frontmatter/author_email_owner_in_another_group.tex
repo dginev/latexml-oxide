@@ -1,0 +1,19 @@
+% witness: 2409.18978 (`\author{Rose Bohrer \and Ashe Neth\\ … \\ \texttt{\{rbohrer,aneth\}@wpi.edu}}`: both addresses
+%          Ashe Neth's), 2403.02271, 2402.00414, 2403.00393; 1706.03762 (`Ashish Vaswani\thanks{… Noam proposed …}`:
+%          the note is no name), 2409.00286 (`Chengxi Li\\ … \\ \texttt{chengxil@…}` under its own name, not Zexin Chen's)
+% oracle:  pdflatex 0 errors: "Ann Able*" beside "Bob Baker" / "Dept. of CS" / "{aable, bob}@x.edu", beside "Zed Chen" /
+%          "Univ. Z" / "zc@z.edu", beside "Chengxi Li" / "Univ. Y" / "chengxil@y.edu"
+% engines: rust 63m3 = aable@x.edu and bob@x.edu both Bob Baker's (an address was matched only against its own
+%          group's names); rust 63m4 = bob@ Ann Able's (her note says "Bob") and chengxil@ Zed Chen's ("chen");
+%          Perl keeps each line with its group's last name
+% expect:  0 errors; 4 authors; aable@x.edu Ann Able's, bob@x.edu and "Dept. of CS" Bob Baker's, zc@z.edu Zed Chen's,
+%          chengxil@y.edu Chengxi Li's
+% status:  RED (63m3, 63m4) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{Equal contribution with Bob.} \and Bob Baker\\ Dept.\ of CS\\ \texttt{\{aable, bob\}@x.edu}
+  \and Zed Chen\\ Univ.\ Z\\ \texttt{zc@z.edu} \and Chengxi Li\\ Univ.\ Y\\ \texttt{chengxil@y.edu}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

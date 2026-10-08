@@ -3,8 +3,9 @@
 % oracle:  pdflatex 0 errors: "Wenming Li, Xiaochun Ye, Dongrui Fan, Senior Member, IEEE, and Yuan Xie, Fellow, IEEE"
 % engines: rust 63k = every grade dropped (Perl IEEEtran.cls.ltxml:143 ''); 63l r1 gave Wenming Li the grades of
 %          Dongrui Fan and Yuan Xie, and the last author the biography's and the body's
-% expect:  0 errors; no membership contact on any author (a grade whose author cannot be known stays dropped)
-% status:  RED (63l r1) -> GREEN (63l)
+% expect:  0 errors; the continued names' grades their membership contacts (63m: the line continues the names, as the
+%          article parse reads it); the biography's and the body's grades, whose author cannot be known, stay dropped
+% status:  RED (63l r1) -> GREEN (63l); continued names' grades (63m)
 \documentclass[journal]{IEEEtran}
 \begin{document}
 \title{T}

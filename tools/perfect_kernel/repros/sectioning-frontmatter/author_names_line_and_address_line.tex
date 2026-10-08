@@ -1,0 +1,21 @@
+% witness: 2308.07107 (`…, Wenhan Liu\\ Haonan Chen, Zheng Liu, Zhicheng Dou, and Ji-Rong Wen\\ …`: the second names
+%          line read as an affiliation), 2312.11514, 2406.10513; 2401.15897, 2402.02746 (a line of bare addresses,
+%          `{u1502956, haitao.wang}@utah.edu, {jeffp, zhe}@cs.utah.edu`, read as an affiliation)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" / "Cat Cole, and Dan Doe" / "Dept. of Physics, Univ. A" /
+%          "ann.able@a.edu, dan.doe@a.edu"; beside it "Eve Elm" / "Univ. B" / "{eve, staff}@b.edu"
+% engines: rust 63m1 = "Cat Cole, and Dan Doe" and the address line affiliations of Ann Able and Bob Baker; Perl
+%          splits every comma of the block into "authors"
+% expect:  0 errors; 5 authors; the four over Univ. A each hold it, ann.able@ Ann Able's and dan.doe@ Dan Doe's
+%          email; Eve Elm Univ. B and the two addresses of `{eve, staff}@b.edu`, which spell no other name
+% status:  RED (63m1) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Ann Able, Bob Baker\\
+  Cat Cole, and Dan Doe\\
+  Dept.\ of Physics, Univ.\ A\\
+  \texttt{ann.able@a.edu, dan.doe@a.edu}
+  \and Eve Elm\\ Univ.\ B\\ \texttt{\{eve, staff\}@b.edu}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

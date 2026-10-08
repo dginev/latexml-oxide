@@ -457,8 +457,8 @@ fn author_ieee_member_grade_is_not_a_name() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_member_grade_is_not_a_name.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Carlo Condo</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Pascal Giard, <emph font=\"italic\" xml:id=\"id1\">Member, IEEE</emph></personname></creator>",
+      "<creator role=\"author\"><personname>Carlo Condo</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Pascal Giard, <emph font=\"italic\" xml:id=\"id1\">Member, IEEE</emph></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Warren J. Gross, <emph font=\"italic\" xml:id=\"id2\">Senior Member, IEEE</emph></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
     ],
   );
@@ -489,10 +489,10 @@ fn author_third_line_names_after_affiliation() {
     ),
     &[
       "<creator role=\"author\"><personname>Christian Gollwitzer</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id1\">Experimentalphysik V, Univ. Bayreuth</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Marina Krekhova</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Günter Lattermann</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id2\">Makromolekulare Chemie I, Univ. Bayreuth</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ingo Rehberg</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Reinhard Richter</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id3\">Experimentalphysik V, Univ. Bayreuth</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Marina Krekhova</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id2\">Makromolekulare Chemie I, Univ. Bayreuth</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Günter Lattermann</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id3\">Makromolekulare Chemie I, Univ. Bayreuth</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ingo Rehberg</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id4\">Experimentalphysik V, Univ. Bayreuth</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Reinhard Richter</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id5\">Experimentalphysik V, Univ. Bayreuth</text></contact></creator>",
     ],
   );
 }
@@ -1197,8 +1197,8 @@ fn author_amsart_prefix_marked_name_lines() {
 }
 
 /// 63e: an `\altaffilmark` on the affiliation line under the names annotates the author whose affiliation it is,
-/// not a creator of its own (review r8). The line sits under both names in the PDF; that only the last name holds
-/// it is the OD #459 residual (a names line's affiliations go to its last name), not the target. Repro
+/// not a creator of its own (review r8). The line sits under both names in the PDF and is both names' (63m); the note
+/// it carries stays with the last name, where the line is digested (OD #459). Repro
 /// sectioning-frontmatter/author_emulateapj_affiliation_line_altaffilmark_stays_with_author.
 #[test]
 fn author_emulateapj_affiliation_line_altaffilmark_stays_with_author() {
@@ -1207,7 +1207,7 @@ fn author_emulateapj_affiliation_line_altaffilmark_stays_with_author() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_emulateapj_affiliation_line_altaffilmark_stays_with_author.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Fellow</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Steward Observatory</contact><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Fellow</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Steward Observatory</contact><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Tucson</contact></creator>",
     ],
   );
@@ -1455,11 +1455,11 @@ fn author_glued_initials_list_continues() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_glued_initials_list_continues.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>G.N.Abramov</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>M.N.Achasov</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>A.G.Bogdanchikov</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yu.M.Shatunov</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>A.V.Vasiljev</personname></creator>",
+      "<creator role=\"author\"><personname>G.N.Abramov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>M.N.Achasov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>A.G.Bogdanchikov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yu.M.Shatunov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>A.V.Vasiljev</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yu.S.Velikzhanin</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
     ],
   );
@@ -1492,7 +1492,7 @@ fn author_glued_place_abbreviation_stays_affiliation() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_glued_place_abbreviation_stays_affiliation.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ivan Petrov</personname></creator>",
+      "<creator role=\"author\"><personname>Ivan Petrov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">St.Petersburg</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Oleg Sidorov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">St.Petersburg</contact></creator>",
     ],
   );
@@ -2382,7 +2382,7 @@ fn jhep_author_calls_accumulate() {
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"E-mail: \" role=\"email\">ann@a.edu</contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. B</contact><contact name=\"E-mail: \" role=\"email\">bob@b.edu</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. B</contact><contact name=\"E-mail: \" role=\"email\">bob@b.edu</contact></creator>",
     ],
   );
 }
@@ -2398,10 +2398,10 @@ fn author_email_line_label_is_its_name() {
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\">ann@a.edu</contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">bob@b.edu</text></contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact><contact name=\"Emails: \" role=\"email\">cat@c.edu</contact><contact name=\"Emails: \" role=\"email\">cc@c.edu</contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Dan Doe</personname><contact name=\"E-mail: \" role=\"email\">dan.doe@d.edu</contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Eve Eng</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ D</contact><contact name=\"E-mail: \" role=\"email\">eve.eng@d.edu</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">bob@b.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact><contact name=\"Emails: \" role=\"email\">cat@c.edu</contact><contact name=\"Emails: \" role=\"email\">cc@c.edu</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"E-mail: \" role=\"email\">dan.doe@d.edu</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ D</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Eng</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ D</contact><contact name=\"E-mail: \" role=\"email\">eve.eng@d.edu</contact></creator>",
     ],
   );
 }
@@ -2456,10 +2456,10 @@ fn author_and_tied_or_grouped_splits() {
     ),
     &[
       "<creator role=\"author\"><personname>Tetsu Masuda†</personname></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Yasuhiro Ohta‡</personname></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Kenji Kajiwara†</personname></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Huw Price</personname></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Ken Wharton</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yasuhiro Ohta‡</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Kenji Kajiwara†</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Huw Price</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ken Wharton</personname></creator>",
     ],
   );
 }
@@ -2474,7 +2474,7 @@ fn author_fnmsep_leaves_no_comma() {
     ),
     &[
       "<creator role=\"author\"><personname>U.\u{a0}Hopp</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Visiting astronomer</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A</contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>D.\u{a0}Engels</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Fellow<sup xml:id=\"id2.1\"><text font=\"italic\" xml:id=\"id2.1.1\">,</text></sup> of X</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Engels</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Fellow<sup xml:id=\"id2.1\"><text font=\"italic\" xml:id=\"id2.1.1\">,</text></sup> of X</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">B</contact></creator>",
     ],
   );
 }
@@ -2490,27 +2490,27 @@ fn ieee_membership_is_a_contact() {
     ),
     &[
       "<creator role=\"author\"><personname>Yun-Chih\u{a0}Chen</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Yuan-Hao\u{a0}Chang</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Hong Joo Lee</personname></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Yong Man Ro</personname><contact role=\"membership\">Senior Member,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan-Hao\u{a0}Chang</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Hong Joo Lee</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yong Man Ro</personname><contact role=\"membership\">Senior Member,\u{a0}IEEE</contact></creator>",
     ],
   );
 }
 
-/// 63l review: a grade whose author cannot be known — names continued past a `\\` (2408.01902), a biography heading,
-/// the body — stays dropped, as in Perl, rather than going to the author before it. Repro
-/// sectioning-frontmatter/ieee_membership_past_a_name_line_stays_dropped.
+/// 63l review: a grade whose author cannot be known — a biography heading, the body — stays dropped, as in Perl,
+/// rather than going to the author before it; names continued past a `\\` (2408.01902) keep theirs (63m). Repro
+/// sectioning-frontmatter/ieee_membership_outside_the_names_stays_dropped.
 #[test]
-fn ieee_membership_past_a_name_line_stays_dropped() {
+fn ieee_membership_outside_the_names_stays_dropped() {
   assert_creators(
     include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_past_a_name_line_stays_dropped.tex"
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_outside_the_names_stays_dropped.tex"
     ),
     &[
       "<creator role=\"author\"><personname>Wenming\u{a0}Li</personname></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Xiaochun\u{a0}Ye</personname></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Dongrui\u{a0}Fan</personname></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Yuan\u{a0}Xie</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Xiaochun\u{a0}Ye</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dongrui\u{a0}Fan</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan\u{a0}Xie</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
     ],
   );
 }
@@ -2525,8 +2525,8 @@ fn ieee_membership_in_a_block_list() {
     ),
     &[
       "<creator role=\"author\"><personname>Huizhi\u{a0}Wang</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Yong\u{a0}Zeng</personname><contact role=\"membership\">Senior Member, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Shi\u{a0}Jin</personname><contact role=\"membership\">Fellow, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yong\u{a0}Zeng</personname><contact role=\"membership\">Senior Member, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Shi\u{a0}Jin</personname><contact role=\"membership\">Fellow, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
     ],
   );
 }
@@ -2541,7 +2541,7 @@ fn ieee_membership_own_definition_kept() {
     ),
     &[
       "<creator role=\"author\"><personname>Nuno C. Martins<text font=\"italic\" xml:id=\"id1\">Senior Member, IEEE</text></personname></creator>",
-      "<creator before=\"  \" role=\"author\"><personname>Jair Certorio<text font=\"italic\" xml:id=\"id2\">Student Member, IEEE</text></personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Jair Certorio<text font=\"italic\" xml:id=\"id2\">Student Member, IEEE</text></personname></creator>",
     ],
   );
 }
@@ -2557,6 +2557,230 @@ fn ieee_membership_conference_override() {
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: an affiliation line under a group of names is each name's, as LaTeX prints it under them (0911.0568's five
+/// LPT Orsay names over one line); an email still goes to the name it spells, ahead of the group's line there (the
+/// line is digested once, under the group's last name). Repro
+/// sectioning-frontmatter/author_group_affiliation_goes_to_each_name.
+#[test]
+fn author_group_affiliation_goes_to_each_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_group_affiliation_goes_to_each_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">bob.baker@a.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Elm</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Fay Fox</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. C</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Gus Gray</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. C</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: IEEE names continued past a `\\` after an unfinished list are names, their grades membership contacts, and a
+/// compsoc `\IEEEcompsocitemizethanks` after the last is its note (2408.01902). Repro
+/// sectioning-frontmatter/ieee_compsoc_names_continue_past_a_break.
+#[test]
+fn ieee_compsoc_names_continue_past_a_break() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_compsoc_names_continue_past_a_break.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann\u{a0}Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan\u{a0}Doe</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve\u{a0}Elm</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Fay\u{a0}Fox</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able, B. Baker and C. Cole are with Univ A. F. Fox is with Univ B.</note></creator>",
+    ],
+  );
+}
+
+/// 63m: a grade carrying the list's comma before a `\\` leaves the names unfinished, so the next line's names are
+/// authors too (2408.02464). Repro sectioning-frontmatter/ieee_grade_comma_before_a_break_continues_names.
+#[test]
+fn ieee_grade_comma_before_a_break_continues_names() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_grade_comma_before_a_break_continues_names.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Gus Gray<sup xml:id=\"id1\">1</sup></personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Hal Hill</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ida Ivy</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Jon Jay</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Kim Key</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">G. Gray and K. Key are with Univ C.</note></creator>",
+    ],
+  );
+}
+
+/// 63m: a second line of two or more names under the names is more names (2308.07107), and a line of bare addresses
+/// is their emails, each to the name it spells, else the last (2401.15897, 2402.02746). Repro
+/// sectioning-frontmatter/author_names_line_and_address_line.
+#[test]
+fn author_names_line_and_address_line() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_names_line_and_address_line.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann.able@a.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">dan.doe@a.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Elm</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">eve@b.edu</text></contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">staff@b.edu</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a line of names joined by "&" alone is an affiliation (`Meta FAIR \& Inria Rennes`, 2402.14904); a names line
+/// is a comma list. Repro sectioning-frontmatter/author_ampersand_affiliation_line_is_not_names.
+#[test]
+fn author_ampersand_affiliation_line_is_not_names() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ampersand_affiliation_line_is_not_names.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Meta FAIR &amp; Inria Rennes</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Meta FAIR</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a line of more addresses than its group has names gives each to the name it spells in any group of the
+/// author block (`\author{Rose Bohrer \and Ashe Neth\\ … \\ \texttt{\{rbohrer,aneth\}@wpi.edu}}`, 2409.18978), by the
+/// names as printed (1706.03762's `\thanks` names no one); a line of one address under one name is that name's
+/// (2409.00286). Repro
+/// sectioning-frontmatter/author_email_owner_in_another_group.
+#[test]
+fn author_email_owner_in_another_group() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_owner_in_another_group.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id1\">Equal contribution with Bob.</note><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">aable@x.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">bob@x.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zed Chen</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. Z</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">zc@z.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Chengxi Li</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. Y</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">chengxil@y.edu</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a line of several brace groups of addresses (`{a, b}@x, {c, d}@y`) is the names' emails, each group's local
+/// parts taking its domain (2402.02746, 2410.19160). Repro sectioning-frontmatter/author_brace_email_groups_on_one_line.
+#[test]
+fn author_brace_email_groups_on_one_line() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_brace_email_groups_on_one_line.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">able@a.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">baker@a.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">cole@b.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">dan.doe@b.edu</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a marked block's address line in another order than the authors is the block's, not the authors' in order
+/// (2509.10377 lists one address for each author, by institution; 2406.06326). Repro
+/// sectioning-frontmatter/author_email_list_out_of_author_order.
+#[test]
+fn author_email_list_out_of_author_order() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_list_out_of_author_order.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">{able, cole}@a.edu, baker@b.edu</text></contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">zed@z.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: an address line under the first group may name an author of a later one; every group's names are read first
+/// (the shape of 2409.18978 reversed; a panic before). Repro sectioning-frontmatter/author_email_owner_in_a_later_group.
+#[test]
+fn author_email_owner_in_a_later_group() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_owner_in_a_later_group.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">able@x.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">baker@x.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: an address split out of a line of several keeps its underscore (`wu\_zhiliang`, 2509.10377). Repro
+/// sectioning-frontmatter/author_email_underscore_kept.
+#[test]
+fn author_email_underscore_kept() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_underscore_kept.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann_able@x.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.edu</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a bare word before an address is no local part (`Berlin, Germany, foo@bar.de` invents no address); the line
+/// is the names' affiliation. Repro sectioning-frontmatter/author_place_before_address_is_affiliation.
+#[test]
+fn author_place_before_address_is_affiliation() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_place_before_address_is_affiliation.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Berlin, Germany, foo@bar.de</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Berlin, Germany, foo@bar.de</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a comma line of name-shaped parts under one name is its affiliation (`Jane Doe\\ Carnegie Mellon, Pittsburgh
+/// PA`); only a list of names continues (2308.07107). Repro
+/// sectioning-frontmatter/author_affiliation_comma_line_under_one_name.
+#[test]
+fn author_affiliation_comma_line_under_one_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_affiliation_comma_line_under_one_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Jane Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Carnegie Mellon, Pittsburgh PA</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a line of addresses parted by a spacing macro alone (no space token between them, 2410.07147's `\nsone`) is
+/// still an email line, one contact, not welded onto the affiliation. Repro
+/// sectioning-frontmatter/author_addresses_parted_by_a_macro.
+#[test]
+fn author_addresses_parted_by_a_macro() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_addresses_parted_by_a_macro.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\">able@a.edu\u{2003}baker@a.edu</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact></creator>",
     ],
   );
 }

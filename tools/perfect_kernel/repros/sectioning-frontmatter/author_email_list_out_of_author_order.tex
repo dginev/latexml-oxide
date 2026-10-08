@@ -1,0 +1,20 @@
+% witness: 2509.10377 (`{12421181,ziyuzhao.cs,wu\_zhiliang,yangyics,wufei,hehefan}@zju.edu.cn` and two more lines:
+%          nine addresses for nine marked authors, listed by institution), 2406.06326, 2509.11625; 2403.00801 (a
+%          last `{\tt benhe@ucas.ac.cn}` line after two such lines given to the third author, Bowen Yu)
+% oracle:  pdflatex 0 errors: "Ann Able^1, Bob Baker^2, Cat Cole^1" / "^1 Univ. A" / "^2 Univ. B" /
+%          "{able, cole}@a.edu, baker@b.edu" / "zed@z.edu"
+% engines: rust 63m4 = the addresses to the authors in order (cole@ Bob Baker's, baker@ Cat Cole's); rust 63m5 =
+%          zed@ Bob Baker's (the second email contact, so `author:2`); Perl splits every comma of the block into
+%          "authors"
+% expect:  0 errors; 3 authors with their affiliations; the address line, not in the authors' order, one contact of
+%          the last author, as a line of more addresses than authors is, and so the line after it (giving each address
+%          to the name it spells is a residual: `author:N` counts the document's authors)
+% status:  RED (63m4, 63m5) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{1}$\\ $^{1}$Univ.\ A\\ $^{2}$Univ.\ B\\
+  \texttt{\{able, cole\}@a.edu, baker@b.edu}\\ \texttt{zed@z.edu}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -3,8 +3,8 @@
 % engines: rust (63d) = "Ingo Rehberg and Reinhard Richter" an affiliation of Lattermann, 0 errors; Perl (latexmlc)
 %          Richter an author, "Ingo Rehberg" an affiliation in a creator with no name, each group's affiliation in a
 %          creator with no name
-% expect:  5 creators; each group's affiliation goes to the last name of its names line (Lattermann, Richter),
-%          as the article parse gives a names line's affiliations to its last name (OD #459 residual); 0 errors
+% expect:  5 creators; each group's affiliation goes to every name of its names line (63m; before, to the last
+%          name only, Lattermann, Richter); 0 errors
 % status:  RED (63d) -> GREEN (63e)
 \documentclass{article}
 \author{Christian Gollwitzer,\\ {\sl Experimentalphysik V, Univ.\ Bayreuth}

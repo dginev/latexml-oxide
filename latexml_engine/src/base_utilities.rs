@@ -1489,10 +1489,15 @@ LoadDefinitions!({
           }
         }
       }
-      let author_count = entries
+      let author_keys: Vec<Vec<String>> = entries
         .iter()
         .filter(|(k, _)| *k == AuthorLineKind::Author)
-        .count();
+        .map(|(_, author)| surname_keys(author))
+        .collect();
+      let author_count = author_keys.len();
+      // the addresses given to the authors in order so far; every email contact advances the `labelseq` count, so after
+      // a line kept whole no later address is the next author's (2403.00801's `benhe@…` under two such lines)
+      let mut sequenced = Some(0);
       for (kind, line) in entries {
         match kind {
           AuthorLineKind::Author => {
@@ -1523,12 +1528,22 @@ LoadDefinitions!({
             // lead), never a random trailing author. Preserve a whole-line
             // \texttt/\url wrapper by re-wrapping each address. If there are MORE
             // addresses than authors (cannot map cleanly), keep the original line
-            // as one contact (the prior behavior). OXIDIZED_DESIGN #52(j).
-            let addresses = email_addresses(&line).map_or(0, |a| a.len());
-            let placement = if author_count >= 1 && addresses <= author_count {
-              AddressPlacement::Sequence
-            } else {
-              AddressPlacement::OneContact
+            // as one contact (the prior behavior), as when an address spells the name of an author other than the one
+            // at its place (2406.06326's `{zhangxy, jyzhou, hmmeng}@…`, by institution; 63m). OXIDIZED_DESIGN #52(j).
+            let addresses = email_addresses(&line).unwrap_or_default();
+            let placement = match sequenced {
+              Some(offset)
+                if author_count >= 1
+                  && addresses.len() <= author_count
+                  && addresses_in_order(&author_keys, &addresses, offset) =>
+              {
+                sequenced = Some(offset + addresses.len());
+                AddressPlacement::Sequence
+              },
+              _ => {
+                sequenced = None;
+                AddressPlacement::OneContact
+              },
             };
             calls.extend(email_line_calls(line, placement)?);
           },
@@ -1538,12 +1553,14 @@ LoadDefinitions!({
       // No superscript markers. Split into author GROUPS on the \and family /
       // \quad only — NOT comma (author_group_splits). Within a group, the first
       // \\-delimited line is the author-name list (comma / " and "-split via
-      // split_author_line); each remaining \\-line is an affiliation, attached to
-      // the group's LAST author (the "affiliation follows the name(s) before \\"
-      // convention). Splitting groups on comma shredded multi-part addresses
+      // split_author_line); each remaining \\-line is an affiliation of every name
+      // in that list, as LaTeX prints it under them (`annotate=N`, the group rule of
+      // Perl's revtex `\affiliation`, `annotate=new`; 0911.0568's five LPT Orsay
+      // names over one line, 63m). Splitting groups on comma shredded multi-part addresses
       // ("…Laboratory, Laurel, MD 20723") into fake authors and mislabeled the
       // trailing \email line as an affiliation. OXIDIZED_DESIGN #52 (surpass-Perl,
       // Perl's @authorsplits shares the comma); witness arXiv:2606.00315.
+      let mut groups: Vec<(Vec<Tokens>, Vec<Tokens>)> = Vec::new();
       for block in split_tokens(stuff, author_group_splits()) {
         let block = unwrap_alignment_environment(block);
         if block.is_empty() {
@@ -1567,49 +1584,84 @@ LoadDefinitions!({
           if names.is_empty() {
             names.push(Tokens::default());
           }
-          let last = names.len() - 1;
-          let name_keys: Vec<Vec<String>> = names.iter().map(surname_keys).collect();
-          let mut bodies: Vec<Vec<Token>> = names.into_iter().map(Tokens::unlist).collect();
-          for line in &affils {
-            let (line, annotations) = if cautious {
-              take_author_annotations(line)
-            } else {
-              (line.clone(), Vec::new())
-            };
-            if let Some((label, addresses)) = labelled_emails(&line)? {
-              // A shared email line under several names gives each address to the one name it spells (0911.0568's
-              // five PoS authors over one `E-mail:` line, 0911.0082's addresses in another order than the names,
-              // 63k); an address naming no one, or several, stays with the line's last name.
-              for address in addresses {
-                let owner = if last > 0 {
-                  address_owner(&name_keys, &address.address)
-                } else {
-                  None
-                };
-                bodies[owner.unwrap_or(last)].extend(email_calls(label.as_ref(), vec![address])?);
-              }
-            } else if !line.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
-              // A bare email line (\texttt{user@host}) is an email, not an
-              // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315).
-              let cs = if line_is_email(&line) {
-                T_CS!("\\lx@add@email")
-              } else {
-                T_CS!("\\lx@add@affiliation")
-              };
-              bodies[last].extend(Invocation!(cs, vec![None, Some(line)]).unlist());
-            }
-            bodies[last].extend(annotations);
-          }
-          for body in bodies {
-            calls.extend(
-              Invocation!(T_CS!("\\lx@add@author"), vec![
-                keyvals.clone(),
-                Some(Tokens::new(body))
-              ])
-              .unlist(),
-            );
-          }
+          groups.push((names, affils));
         }
+      }
+      // Every group's names are known before any line is placed, so a line of more addresses than its group has names
+      // gives each to the name it spells in any group of the block (`\author{Rose Bohrer \and Ashe Neth\\ … \\
+      // \texttt{\{rbohrer,aneth\}@wpi.edu}}`, 2409.18978; 2403.02271, 2402.00414, 63m); a line's addresses otherwise
+      // look only at its group's names (2409.00286's `Chengxi Li\\ … \\ \texttt{chengxil@…}` is not Zexin Chen's).
+      let name_keys: Vec<Vec<String>> = groups
+        .iter()
+        .flat_map(|(names, _)| names.iter().map(surname_keys))
+        .collect();
+      let mut bodies: Vec<Vec<Token>> = Vec::with_capacity(name_keys.len());
+      let mut spans = Vec::with_capacity(groups.len());
+      for (names, affils) in groups {
+        let first = bodies.len();
+        bodies.extend(names.into_iter().map(Tokens::unlist));
+        spans.push((first, bodies.len() - 1, affils));
+      }
+      for (first, last, affils) in spans {
+        // The name an address of a line of `count` addresses spells, else the group's last.
+        let owner_of = |address: &Tokens, count: usize| {
+          let owner = if count > last - first + 1 && name_keys.len() > 1 {
+            address_owner(&name_keys, address)
+          } else if last > first {
+            address_owner(&name_keys[first..=last], address).map(|at| first + at)
+          } else {
+            None
+          };
+          owner.unwrap_or(last)
+        };
+        for line in &affils {
+          let (line, annotations) = if cautious {
+            take_author_annotations(line)
+          } else {
+            (line.clone(), Vec::new())
+          };
+          if let Some((label, addresses)) = labelled_emails(&line)? {
+            // A shared email line under several names gives each address to the one name it spells (0911.0568's
+            // five PoS authors over one `E-mail:` line, 0911.0082's addresses in another order than the names,
+            // 63k); an address naming no one, or several, stays with the line's last name.
+            let count = addresses.len();
+            for address in addresses {
+              let owner = owner_of(&address.address, count);
+              bodies[owner].extend(email_calls(label.as_ref(), vec![address])?);
+            }
+          } else if let Some(addresses) = bare_email_addresses(&line) {
+            // A bare email line (\texttt{user@host}; `a@x, b@y`; `{a,b}@dom`) is the names' emails, not an
+            // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315): each address to the name it spells, as a
+            // labelled line's are, else the last (2401.15897, 2402.02746, 63m).
+            let count = addresses.len();
+            for address in addresses {
+              let owner = owner_of(&address, count);
+              bodies[owner]
+                .extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(address)]).unlist());
+            }
+          } else if !line.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+            // (digested once, under the group's last name, and given to the group's names)
+            let (cs, keyvals) = if line_is_email(&line) {
+              (T_CS!("\\lx@add@email"), None)
+            } else {
+              let shared = (last > first).then(|| {
+                mouth::tokenize_internal(TeXString::assembled(s!("annotate={}", last - first + 1)))
+              });
+              (T_CS!("\\lx@add@affiliation"), shared)
+            };
+            bodies[last].extend(Invocation!(cs, vec![keyvals, Some(line)]).unlist());
+          }
+          bodies[last].extend(annotations);
+        }
+      }
+      for body in bodies {
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@author"), vec![
+            keyvals.clone(),
+            Some(Tokens::new(body))
+          ])
+          .unlist(),
+        );
       }
     }
     Ok(Tokens::new(calls))
@@ -2591,7 +2643,7 @@ fn place_address_runs(runs: Vec<AddressRun>, entries: &mut [Vec<Token>]) -> Resu
           entries[entry].splice(at..at, continuation);
         }
       },
-      _ if total == authors.len() => {
+      _ if total == authors.len() && run_in_author_order(&run.lines) => {
         let mut positions = 1..;
         for ((_, line), count) in run.lines.into_iter().zip(counts) {
           let authors = positions.by_ref().take(count).collect();
@@ -2648,9 +2700,8 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
   // A wrapper is kept on each address (`\texttt`, `\small`, `\url`), but an email command's (`\email`, `\mailto`,
   // `\emailaddr`) is the contact `\lx@add@email` stands for — nested, it made a second (empty) contact and advanced
   // the `labelseq` count twice, so the second address found no author (llncs `\institute{… \\ \email{a@x, b@y}}`).
-  let is_email_command = |cmd: &Token| cmd.with_str(|name| name.to_lowercase().contains("mail"));
   let unwrapped = |line: Tokens| match whole_line_cs_wrapper(&line) {
-    Some((cmd, inner)) if is_email_command(&cmd) => inner,
+    Some((cmd, inner)) if is_email_wrapper(&cmd) => inner,
     _ => line,
   };
   let addrs = email_addresses(&line).unwrap_or_default();
@@ -2688,21 +2739,47 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
     );
     return Ok(calls);
   }
-  let wrapper = whole_line_cs_wrapper(&line)
-    .map(|(cmd, _)| cmd)
-    .filter(|cmd| !is_email_command(cmd));
-  for (addr, opts) in addrs.into_iter().zip(options) {
-    let mut toks = mouth::tokenize(TeXString::assembled(addr)).unlist();
-    if let Some(cmd) = wrapper {
-      let mut wrapped = vec![cmd, T_BEGIN!()];
-      wrapped.append(&mut toks);
-      wrapped.push(T_END!());
-      toks = wrapped;
-    }
-    calls
-      .extend(Invocation!(T_CS!("\\lx@add@email"), vec![opts, Some(Tokens::new(toks))]).unlist());
+  for (address, opts) in address_tokens(&line, addrs).into_iter().zip(options) {
+    calls.extend(Invocation!(T_CS!("\\lx@add@email"), vec![opts, Some(address)]).unlist());
   }
   Ok(calls)
+}
+
+/// Whether `cmd` is an email command (`\email`, `\mailto`, `\emailaddr`): the contact `\lx@add@email` stands for.
+fn is_email_wrapper(cmd: &Token) -> bool {
+  cmd.with_str(|name| name.to_lowercase().contains("mail"))
+}
+
+/// The addresses `addrs` of an email `line` as tokens, the line's whole-line wrapper (`\texttt`, `\small`, `\url`)
+/// repeated on each — but not an email command's, the contact itself.
+fn address_tokens(line: &Tokens, addrs: Vec<String>) -> Vec<Tokens> {
+  let wrapper = whole_line_cs_wrapper(line)
+    .map(|(cmd, _)| cmd)
+    .filter(|cmd| !is_email_wrapper(cmd));
+  addrs
+    .into_iter()
+    .map(|addr| {
+      let mut toks = mouth::tokenize(TeXString::assembled(addr.replace('_', "\\_"))).unlist();
+      if let Some(cmd) = wrapper {
+        let mut wrapped = vec![cmd, T_BEGIN!()];
+        wrapped.append(&mut toks);
+        wrapped.push(T_END!());
+        toks = wrapped;
+      }
+      Tokens::new(toks)
+    })
+    .collect()
+}
+
+/// The addresses of an author-block line that is only email addresses (`\texttt{a@x, b@y}`, `{a,b}@dom`), each as
+/// tokens ([`address_tokens`]); a line of one address is itself (`\href{mailto:a@x}{a@x}` stays a link). `None` for
+/// any other line.
+fn bare_email_addresses(line: &Tokens) -> Option<Vec<Tokens>> {
+  let addrs = email_addresses(line).filter(|addrs| !addrs.is_empty())?;
+  if addrs.len() == 1 {
+    return line_is_email(line).then(|| vec![line.clone()]);
+  }
+  Some(address_tokens(line, addrs))
 }
 
 /// The marks that request an affiliation label in an author (`\lx@author@withsup`, llncs `\inst`) and set it in an
@@ -2825,6 +2902,36 @@ fn queued_author_marks() -> Vec<Vec<Vec<Token>>> {
       .collect(),
     _ => Vec::new(),
   })
+}
+
+/// Whether the addresses of `lines` may be the queued authors' in order ([`addresses_in_order`]).
+fn run_in_author_order(lines: &[(Vec<Token>, Tokens)]) -> bool {
+  let keys: Vec<Vec<String>> = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| {
+        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+      })
+      .map(|entry| surname_keys(&entry.2))
+      .collect(),
+    _ => Vec::new(),
+  });
+  let addresses: Vec<String> = lines
+    .iter()
+    .flat_map(|(_, line)| email_addresses(line).unwrap_or_default())
+    .collect();
+  addresses_in_order(&keys, &addresses, 0)
+}
+
+/// Whether `addresses` may be the authors' in order from the one at `offset` (names keyed by `keys`, [`surname_keys`]):
+/// none spells the name of an author other than the one at its place. 2509.10377's
+/// `{12421181,ziyuzhao.cs,wu\_zhiliang,yangyics,…}@zju.edu.cn` lists one address for each author, by institution —
+/// "yangyics" at Zhiliang Wu's place spells Yi Yang (2406.06326: "jyzhou" at Baolin Peng's, 63m).
+fn addresses_in_order(keys: &[Vec<String>], addresses: &[String], offset: usize) -> bool {
+  addresses
+    .iter()
+    .enumerate()
+    .all(|(at, address)| spelled_owner(keys, address).is_none_or(|owner| owner == offset + at))
 }
 
 /// The operand of a mark at `tokens[i..]`, as `read_frontmatter_sup_operand` reads it from the input — a group's
@@ -9593,6 +9700,8 @@ const NAME_ANNOTATIONS: &[&str] = &[
   "\\orcidID",
   "\\lx@aas@checkorcid",
   "\\IEEEmembership",
+  // IEEEtran's compsoc notes after the names (`\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem …}`, 2408.01902)
+  "\\IEEEcompsocitemizethanks",
   // IEEEtran's grade of a name line, made a contact (ieeetran_cls.rs `name_memberships`)
   "\\lx@IEEE@membership",
   // a footnote-symbol mark, rewritten before the parse (`rewrite_symbol_superscripts`: `$^{*}$`)
@@ -10066,9 +10175,11 @@ fn name_count(text: &str) -> usize {
 /// all of it names (or their qualifiers), and either the names read as an unfinished list — ending in a comma, "and"
 /// or "&" (`Joshua N.\ Winn\altaffilmark{1}, Andrew W.\ Howard\altaffilmark{2},\\ Avi Shporer\altaffilmark{1}`,
 /// 1010.1318) — or the line opens with "and" (`…, \emph{Member, IEEE},\\ and Warren J. Gross, \emph{Senior Member,
-/// IEEE}`, 1611.04834). "and Max--Planck Institut für Mathematik, Bonn" (math0208081) and `John Smith,\\ {\it Bell
-/// Labs, Murray Hill}` stay affiliations.
-fn names_continue(names: &Tokens, line: &Tokens) -> bool {
+/// IEEE}`, 1611.04834) — or the line is a comma list of two or more names and nothing else (`…, Wenhan Liu\\ Haonan
+/// Chen, Zheng Liu, Zhicheng Dou, and Ji-Rong Wen`, 2308.07107; 2312.11514, 2406.10513). "and Max--Planck Institut für
+/// Mathematik, Bonn" (math0208081), `John Smith,\\ {\it Bell Labs, Murray Hill}` and `Pierre Fernandez\\ Meta FAIR \&
+/// Inria Rennes` (2402.14904: joined by "&" alone, as institutions are) stay affiliations.
+pub fn names_continue(names: &Tokens, line: &Tokens) -> bool {
   if leading_markup(line) != leading_markup(names) {
     return false;
   }
@@ -10078,7 +10189,9 @@ fn names_continue(names: &Tokens, line: &Tokens) -> bool {
   let text = text.trim();
   let unfinished =
     names_text.ends_with(',') || names_text.ends_with(" and") || names_text.ends_with('&');
-  (unfinished || text.starts_with("and ") || text.starts_with("& ")) && name_count(text) > 0
+  let count = name_count(text);
+  ((unfinished || text.starts_with("and ") || text.starts_with("& ")) && count > 0)
+    || (count >= 2 && text.contains(',') && name_count(names_text) >= 2)
 }
 
 /// Whether `line` is more names under the names `names`, not their affiliation: styled as they are, all of it names
@@ -10181,6 +10294,16 @@ fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens, Vec<Tokens>)> {
       .or_else(|| text.strip_prefix("& "));
     if affiliations.is_empty() && names_continue(names, line) {
       let mut joined = names.clone().unlist();
+      // a line of names after a finished list goes on after a comma, where the line break parted them
+      let names_text = visible_name_text(names.unlist_ref());
+      let names_text = names_text.trim_end();
+      if !(names_text.ends_with(',')
+        || names_text.ends_with(" and")
+        || names_text.ends_with('&')
+        || and_led.is_some())
+      {
+        joined.push(T_OTHER!(","));
+      }
       joined.push(T_SPACE!());
       joined.extend(line.clone().unlist());
       *names = Tokens::new(joined);
@@ -10425,17 +10548,10 @@ struct EmailAddress {
 }
 
 /// The words that can stand for a person in an email address: the name's words after the first that have three
-/// letters or more (`Ph.~Boucaud` "boucaud", `J.~Rodr\'iguez-Quintero` "rodriguez", "quintero"), lowercased.
+/// letters or more (`Ph.~Boucaud` "boucaud", `J.~Rodr\'iguez-Quintero` "rodriguez", "quintero"), lowercased — of the
+/// name as printed, its notes aside (1706.03762's `Ashish Vaswani\thanks{… Noam proposed …}` is not "noam").
 fn surname_keys(name: &Tokens) -> Vec<String> {
-  let mut text = String::new();
-  for t in name.unlist_ref() {
-    match t.code {
-      Catcode::LETTER | Catcode::OTHER => text.push_str(&t.to_string()),
-      Catcode::SPACE | Catcode::ACTIVE => text.push(' '),
-      _ => {},
-    }
-  }
-  text
+  visible_name_text(name.unlist_ref())
     .split(|c: char| !c.is_alphabetic())
     .filter(|word| !word.is_empty())
     .skip(1)
@@ -10453,7 +10569,12 @@ fn address_owner(name_keys: &[Vec<String>], address: &Tokens) -> Option<usize> {
     .filter(|t| matches!(t.code, Catcode::LETTER | Catcode::OTHER))
     .map(|t| t.to_string())
     .collect();
-  let local: String = text
+  spelled_owner(name_keys, &text)
+}
+
+/// The one name (index into `name_keys`) whose surname the local part of `address` spells ([`address_owner`]).
+fn spelled_owner(name_keys: &[Vec<String>], address: &str) -> Option<usize> {
+  let local: String = address
     .split('@')
     .next()?
     .chars()
@@ -10646,24 +10767,28 @@ fn is_email_command(cs: &Token) -> Result<bool> {
 }
 
 /// A marker-less line that is *purely* a list of email addresses — a shared
-/// `\texttt{a@x, b@y,}` / `\email{...}` line covering all authors. Like
+/// `\texttt{a@x, b@y,}` / `\email{...}` / `\{a,b\}@x` line covering all authors. Like
 /// [`line_is_email`] but tolerates a comma-separated list (and the trailing
-/// comma authors often leave): every non-empty comma item must itself carry '@'.
-/// A prose affiliation line ("Dept. of Foo, University of Pisa, Italy") has no
-/// '@' and is rejected, so this never misclassifies an address as an email.
+/// comma authors often leave), as [`email_addresses`] reads it: every item a full
+/// address or a braced list of local parts before its domain. A prose affiliation
+/// line ("Dept. of Foo, University of Pisa, Italy") is rejected, so this never
+/// misclassifies an address as an email.
 fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }
 
 /// Parse an email line into its individual address strings, or `None` if the line
-/// is not an email list. Two forms are recognized (both after skipping wrapper
-/// commands / braces — only visible letter/other/space chars are read):
+/// is not an email list. Two forms are recognized, and mixed (after skipping
+/// wrapper commands and grouping — the visible letter/other/space chars are read,
+/// with the printed braces `\{ \}` and underscores `\_`):
 /// - **Distributed** — `a@x, b@y, c@z`: every comma item carries its own `@`.
-/// - **Grouped brace-expansion** — `{a,b,c}@dom` (flattens to `a,b,c@dom`): only
-///   the LAST item carries `@`; the earlier bare local-parts are each expanded
-///   against the shared domain → `a@dom, b@dom, c@dom`. This is the compact form
-///   co-located authors use for one shared address per person.
+/// - **Grouped brace-expansion** — `\{a,b,c\}@dom`: the local parts in the braces are
+///   each expanded against the domain after them → `a@dom, b@dom, c@dom`. This is the
+///   compact form co-located authors use for one shared address per person; a line
+///   may hold several groups (`{a,b}@x, {c,d}@y`, 2402.02746; `{a,b}@x, c@y`,
+///   2410.19160).
 ///
-/// A prose affiliation line ("Dept. of Foo, University of Pisa, Italy") has no `@`
-/// and is rejected, so an address is never misclassified.
+/// A prose affiliation line ("Dept. of Foo, University of Pisa, Italy") has no `@`,
+/// and a place before an address (`Berlin, Germany, foo@bar.de`) is a bare word, so
+/// either is rejected and an address is never invented.
 fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
   let mut visible = String::new();
   // `\href`'s first argument is its link, not printed (`\href{mailto:a@x}{a@x}`).
@@ -10687,6 +10812,13 @@ fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
       Catcode::LETTER | Catcode::OTHER => t.with_str(|s| visible.push_str(s)),
       Catcode::SPACE => visible.push(' '),
       Catcode::CS if *t == T_CS!("\\href") => skip_group = true,
+      // the printed braces of a list of local parts, and an underscore (`wu\_zhiliang`, 2509.10377)
+      Catcode::CS => t.with_str(|name| match name {
+        "\\{" | "\\lbrace" | "\\textbraceleft" => visible.push('{'),
+        "\\}" | "\\rbrace" | "\\textbraceright" => visible.push('}'),
+        "\\_" | "\\textunderscore" => visible.push('_'),
+        _ => {},
+      }),
       _ => {},
     }
   }
@@ -10694,34 +10826,52 @@ fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
   if !v.contains('@') {
     return None;
   }
-  let parts: Vec<&str> = v
-    .split(',')
-    .map(|p| p.trim().trim_start_matches("mailto:"))
-    .filter(|p| !p.is_empty())
-    .collect();
-  if parts.is_empty() {
-    return None;
+  // Items at commas outside the braces: each a full address, or a braced list of local parts taking the domain after
+  // its `}` (`{a,b,c}@dom` → a@dom, b@dom, c@dom). A bare word is no address, so a place before an address
+  // (`Berlin, Germany, foo@bar.de`) leaves the line no email list.
+  let is_part =
+    |p: &str| !p.is_empty() && !p.contains(['@', '{', '}']) && !p.chars().any(char::is_whitespace);
+  let mut out = Vec::new();
+  let mut rest = v;
+  while !rest.trim().is_empty() {
+    rest = rest.trim_start();
+    let (item, next) = match rest.strip_prefix('{') {
+      Some(list) => {
+        let close = list.find('}')?;
+        let after = &list[close + 1..];
+        let (domain, next) = after.split_once(',').unwrap_or((after, ""));
+        let domain = domain.trim();
+        if !domain.starts_with('@') || !is_part(&domain[1..]) {
+          return None;
+        }
+        for local in list[..close]
+          .split(',')
+          .map(str::trim)
+          .filter(|p| !p.is_empty())
+        {
+          if !is_part(local) {
+            return None;
+          }
+          out.push(format!("{local}{domain}"));
+        }
+        (None, next)
+      },
+      None => {
+        let (item, next) = rest.split_once(',').unwrap_or((rest, ""));
+        (Some(item.trim().trim_start_matches("mailto:")), next)
+      },
+    };
+    // (an item is taken whole, as the line prints it: 2410.07147's `vn72@cornell.edu\nsone sj597@…` has no space
+    // between its addresses)
+    if let Some(item) = item.filter(|item| !item.is_empty()) {
+      if !item.contains('@') || item.contains(['{', '}']) || item.chars().any(char::is_whitespace) {
+        return None;
+      }
+      out.push(item.to_string());
+    }
+    rest = next;
   }
-  let has_at = |p: &str| p.contains('@') && !p.chars().any(char::is_whitespace);
-  // Distributed: every item is a full address.
-  if parts.iter().all(|p| has_at(p)) {
-    return Some(parts.iter().map(|s| (*s).to_string()).collect());
-  }
-  // Grouped: only the last item carries the domain; earlier items are bare
-  // local-parts expanded against it (`{a,b,c}@dom` → a@dom, b@dom, c@dom).
-  if let Some((last, heads)) = parts.split_last()
-    && has_at(last)
-    && heads
-      .iter()
-      .all(|p| !p.contains('@') && !p.chars().any(char::is_whitespace))
-    && let Some(at) = last.find('@')
-  {
-    let domain = &last[at..];
-    let mut out: Vec<String> = heads.iter().map(|p| format!("{p}{domain}")).collect();
-    out.push((*last).to_string());
-    return Some(out);
-  }
-  None
+  (!out.is_empty()).then_some(out)
 }
 
 /// Line role within a superscript-labeled author block (see `\lx@add@authors`).

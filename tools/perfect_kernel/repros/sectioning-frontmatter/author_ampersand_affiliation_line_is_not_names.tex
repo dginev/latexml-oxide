@@ -1,0 +1,15 @@
+% witness: 2402.14904 (`Pierre Fernandez$^*$\\ Meta FAIR \& Inria Rennes \AND …`: the affiliation line read as two
+%          more names, "Meta FAIR" and "Inria Rennes")
+% oracle:  pdflatex 0 errors: "Ann Able" / "Meta FAIR & Inria Rennes" beside "Bob Baker" / "Meta FAIR"
+% engines: rust 63m3 = four authors (Ann Able, Meta FAIR, Inria Rennes, Bob Baker); Perl splits every comma of the
+%          block into "authors" and keeps the lines with the last
+% expect:  0 errors; 2 authors; Ann Able's affiliation "Meta FAIR & Inria Rennes", Bob Baker's "Meta FAIR"
+% status:  RED (63m3) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Ann Able\\ Meta FAIR \& Inria Rennes
+  \and Bob Baker\\ Meta FAIR}
+\begin{document}
+\maketitle
+Body.
+\end{document}

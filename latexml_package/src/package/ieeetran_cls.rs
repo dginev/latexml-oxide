@@ -1,6 +1,6 @@
 //! IEEEtran.cls — IEEE Transactions document class
 //! Perl: IEEEtran.cls.ltxml — 458 lines
-use crate::prelude::*;
+use crate::{engine::base_utilities::names_continue, prelude::*};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -995,20 +995,43 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
 /// when the list is split at its commas (`Yong Man Ro,~\IEEEmembership{Senior Member,~IEEE}`). A grade ending in a
 /// comma carries the list's separator inside its braces (`Yun-Chih~Chen,~\IEEEmembership{Member,~IEEE,}
 /// Yuan-Hao~Chang`, 2408.00327): that comma becomes the separator after it. An empty grade (`\IEEEmembership{}`,
-/// 2408.01702) is left out. Grades past a name line keep `\IEEEmembership`, which drops them.
+/// 2408.01702) is left out. The names go on past a `\\` that the article parse reads as continuing them
+/// ([`names_continue`]: `Wenming~Li, \\ Xiaochun~Ye, …`, 2408.01902); grades past the names keep `\IEEEmembership`,
+/// which drops them.
 fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
   let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~');
+  // the end of the line opening at `from`: the next `\\` or `\and` outside groups
+  let line_end = |from: usize| {
+    let mut level = 0usize;
+    tokens[from..]
+      .iter()
+      .position(|t| {
+        match t.code {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => level = level.saturating_sub(1),
+          _ => {},
+        }
+        level == 0 && (*t == T_CS!("\\\\") || *t == T_CS!("\\and"))
+      })
+      .map_or(tokens.len(), |at| from + at)
+  };
   let mut out: Vec<Token> = Vec::new();
   let mut depth = 0usize;
   let mut in_names = true;
+  let mut names_start = 0;
   let mut i = 0;
   while i < tokens.len() {
     let t = tokens[i];
     if depth == 0 {
       if t == T_CS!("\\and") {
         in_names = true;
+        names_start = i + 1;
       } else if t == T_CS!("\\\\") {
-        in_names = false;
+        in_names = in_names
+          && names_continue(
+            &Tokens::new(tokens[names_start..i].to_vec()),
+            &Tokens::new(tokens[i + 1..line_end(i + 1)].to_vec()),
+          );
       }
     }
     if in_names && depth == 0 && t == T_CS!("\\IEEEmembership") {

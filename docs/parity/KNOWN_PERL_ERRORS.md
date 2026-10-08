@@ -11359,11 +11359,13 @@ IEEEtran.cls.ltxml:143 defines `\IEEEmembership` as '', so an author's grade ("Y
 Fixed in Rust (63l): in an author's own name line — before the first `\\` of each `\and` group, or in an
 `\IEEEauthorblockN` — IEEEtran's `\author` moves each `\IEEEmembership` in front of the comma before it (a comma ending
 the grade, the list's separator in `Chen,~\IEEEmembership{Member,~IEEE,} Yuan-Hao~Chang`, 2408.00327, goes after it),
-and the grade is that author's unlabelled `membership` contact, markup a stylesheet shows or hides. A grade whose author
-cannot be known (names continued past a `\\`, 2408.01902; a biography heading; a `\thanks`) stays dropped, as does
+and the grade is that author's unlabelled `membership` contact, markup a stylesheet shows or hides. Names continued
+past a `\\` after an unfinished list (`Wenming~Li, \\ Xiaochun~Ye, …`, 2408.01902, 2408.02464; the article parse's
+`names_continue`) keep theirs too (63m). A grade whose author cannot be known (a biography heading; a `\thanks`) stays dropped, as does
 every grade in conference mode (IEEEtran.cls:6270 swallows them) unless `\IEEEoverridecommandlockouts` lets them back
 (IEEEtran.cls:6278-6288), and a document's own `\IEEEmembership` keeps its meaning (2408.00647). An A/B over 80 `\IEEEmembership` papers (2408): 57 gain their grades (2408.00332 through
 `\IEEEoverridecommandlockouts`), none on another author. Guards
 `perfect_kernel_batch63::{ieee_membership_is_a_contact, ieee_membership_in_a_block_list,
-ieee_membership_past_a_name_line_stays_dropped, ieee_membership_own_definition_kept,
-ieee_membership_conference_override, author_ieee_membership_in_a_block_stays_with_its_name}`.
+ieee_membership_outside_the_names_stays_dropped, ieee_membership_own_definition_kept,
+ieee_membership_conference_override, author_ieee_membership_in_a_block_stays_with_its_name,
+ieee_compsoc_names_continue_past_a_break, ieee_grade_comma_before_a_break_continues_names}`.

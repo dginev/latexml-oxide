@@ -1,0 +1,21 @@
+% witness: 0911.0568 (PoS.cls, `\author{Ph.~Boucaud, J.P.~Leroy, A.~Le~Yaouanc, J. Micheli, O.~P\`ene\\ LPT Orsay
+%          (CNRS)\\ E-mail: ...}`: the affiliation went to O. Pene only)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cat Cole" over "Dept. of Physics, Univ. A" and the e-mail line;
+%          "Dan Doe" over "Univ. B"; "Eve Elm" alone; "Fay Fox, Gus Gray" over "Univ. C"
+% engines: rust 63l = each line went to its group's last name (Cat Cole, Gus Gray); Perl too, its `@authorsplits`
+%          parting the whole block at commas and " and " (an "author" " Univ. A" split off the line;
+%          Base_Utility.pool.ltxml:679, 719-725)
+% expect:  0 errors; every name of a group has the group's affiliation line, the e-mail goes to the name it spells
+%          (Bob Baker), Eve Elm has none
+% status:  RED (63l) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Ann Able, Bob Baker and Cat Cole\\
+  Dept.\ of Physics, Univ.\ A\\
+  E-mail: \texttt{bob.baker@a.edu}
+  \and Dan Doe\\ Univ.\ B
+  \and Eve Elm \and Fay Fox, Gus Gray\\ Univ.\ C}
+\begin{document}
+\maketitle
+Body.
+\end{document}

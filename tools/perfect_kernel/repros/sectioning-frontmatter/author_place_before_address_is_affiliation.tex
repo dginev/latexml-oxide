@@ -1,0 +1,13 @@
+% witness: review of 63m (the brace-group expansion read any bare word before an address as a local part:
+%          `Berlin, Germany, foo@bar.de` gave Berlin@bar.de and Germany@bar.de)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" / "Berlin, Germany, foo@bar.de"
+% engines: rust 63m6 = three invented addresses; Perl keeps the line with Bob Baker as an affiliation
+% expect:  0 errors; 2 authors, each with the affiliation "Berlin, Germany, foo@bar.de"; no email
+% status:  RED (63m6) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Ann Able, Bob Baker\\ Berlin, Germany, foo@bar.de}
+\begin{document}
+\maketitle
+Body.
+\end{document}

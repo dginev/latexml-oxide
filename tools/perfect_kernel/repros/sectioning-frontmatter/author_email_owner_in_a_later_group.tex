@@ -1,0 +1,13 @@
+% witness: review of 63m (an address line under the first group naming an author of a later one indexed a creator not
+%          yet read: a panic); the shape of 2409.18978 with the line in the other group
+% oracle:  pdflatex 0 errors: "Ann Able" / "Univ. A" / "{able, baker}@x.edu" beside "Bob Baker" / "Univ. B"
+% engines: rust 63m6 = panic (index out of bounds); Perl keeps the line with Ann Able
+% expect:  0 errors; 2 authors; able@x.edu and "Univ. A" Ann Able's, baker@x.edu and "Univ. B" Bob Baker's
+% status:  RED (63m6) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Ann Able\\ Univ.\ A\\ \texttt{\{able, baker\}@x.edu} \and Bob Baker\\ Univ.\ B}
+\begin{document}
+\maketitle
+Body.
+\end{document}
