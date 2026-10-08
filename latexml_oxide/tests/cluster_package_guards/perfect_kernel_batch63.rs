@@ -1400,3 +1400,100 @@ fn author_and_groups_sharing_a_prefix_mark_are_names() {
     ],
   );
 }
+
+/// 63f: acmart's `\received` adds to one history (acmart.cls:1859-1872, "Received 20 February 2007; revised 12 March
+/// 2009; revised 3 May 2009; accepted 5 June 2009"): the first unlabelled date is received, a later unlabelled one
+/// revised, a labelled one its label — each its own date, the later ones `accumulate`. Perl's `\lx@add@date[role=received]` per call (acmart.cls.ltxml:58) cleared the
+/// earlier ones, so only the last survived, as "Received". Repro sectioning-frontmatter/acmart_received_dates_all_kept.
+#[test]
+fn acmart_received_dates_all_kept() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_received_dates_all_kept.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let mut dates = Vec::new();
+  let mut from = 0;
+  while let Some(at) = xml[from..].find("<date") {
+    dates.extend(latexml::util::test::xml_element(
+      &xml[from + at..],
+      "date",
+      &[],
+    ));
+    from += at + 1;
+  }
+  // acmart's own copyright date carries the year of the run
+  dates.retain(|date| !date.contains("role=\"copyright\""));
+  assert_eq!(
+    dates,
+    [
+      "<date name=\"Received\u{a0}\" role=\"received\">20 February 2007</date>",
+      "<date name=\"revised\u{a0}\" role=\"revised\">12 March 2009</date>",
+      "<date name=\"revised\u{a0}\" role=\"revised\">3 May 2009</date>",
+      "<date name=\"accepted\u{a0}\" role=\"accepted\">5 June 2009</date>",
+    ],
+    "{xml}"
+  );
+}
+
+/// 63f: initials glued to the surname they precede (`A.G.Bogdanchikov`, `Yu.M.Shatunov`) read as a name, and a
+/// `\vspace{1mm}` on the last names line is no text, so a collaboration list continued over `\\` lines stays names
+/// (hep-ex0105093: 5 creators, 38 in 63f). Repro sectioning-frontmatter/author_glued_initials_list_continues.
+#[test]
+fn author_glued_initials_list_continues() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_glued_initials_list_continues.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>G.N.Abramov</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>M.N.Achasov</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>A.G.Bogdanchikov</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yu.M.Shatunov</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>A.V.Vasiljev</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yu.S.Velikzhanin</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+    ],
+  );
+}
+
+/// 63f: the period of an initial or of a suffix written with one ends the name (`Sridhar K.`, hep-ph9306209; `John
+/// Smith Jr.`); Perl's personname clean-up strips every trailing non-word character (KNOWN_PERL_ERRORS #523). A
+/// two-letter last word is a surname as often as an initial (`Wei Li.`): its period goes, as Perl's. Repro
+/// sectioning-frontmatter/author_name_ending_in_an_initial_keeps_its_period.
+#[test]
+fn author_name_ending_in_an_initial_keeps_its_period() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_name_ending_in_an_initial_keeps_its_period.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Sridhar K.</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>John Smith Jr.</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Wei Li</personname></creator>",
+    ],
+  );
+}
+
+/// 63f (negative): a glued place abbreviation (`St.Petersburg`) under an unfinished names list is no name: St., Mt., Ft.
+/// are no initials (review r1). Repro sectioning-frontmatter/author_glued_place_abbreviation_stays_affiliation.
+#[test]
+fn author_glued_place_abbreviation_stays_affiliation() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_glued_place_abbreviation_stays_affiliation.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ivan Petrov</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Oleg Sidorov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">St.Petersburg</contact></creator>",
+    ],
+  );
+}

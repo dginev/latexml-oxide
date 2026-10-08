@@ -6084,7 +6084,9 @@ entry under another name is another element and stays: a bilingual document's `A
 `摘要` abstracts are two abstracts (beamertheme-mirage-doc lost its English one, which vendored
 Perl keeps). So are a journal's `Received` / `Revised` / `Accepted` dates, which the dedup had
 collapsed to the last (14 of 3,003 arXiv 2605 papers). Re-emissions (a second `\icmltitle`, which
-has no name) are still replaced. Guard `class_census::two_named_abstracts`.
+has no name) are still replaced. Guard `class_census::two_named_abstracts`. An entry carrying the Rust-only Frontmatter
+key `accumulate` adds to the same-name entries before it instead of replacing them (63f: acmart's `\received` history,
+two revisions being two `revised` dates; KNOWN_PERL_ERRORS #522, 2307.05988).
 
 **Why it's safe.** Restores the single-entry semantics upstream Perl already adopted;
 creators/notes are excluded so multi-valued frontmatter is unaffected, and the `@until`
@@ -13925,7 +13927,9 @@ per-class rule:
   next group only when an affiliation styled as that one follows it (the alternation of hep-ph9306253, 0811.1526), so
   a closing city line stays an affiliation. "Names" is `name_shaped`:
   2-5 capitalised words or initials (a letter command — `{\L}ukasz`, `\O stergaard` — read as its letter, an accent's
-  spaces skipped), particles inside, no digit, `@`, `:`, `/` or parenthesis, no institution word, marks glued to its
+  spaces skipped; initials glued to their surname, `A.G.Bogdanchikov`, `Yu.M.Shatunov`, read as words, 63f,
+  hep-ex0105093 5 → 38 creators — not a place's `St.`, `Mt.`, `Ft.`; a `\vspace` with its length is no text, an
+  `\hspace` a space; a personname keeps its closing initial's or suffix's period, KNOWN_PERL_ERRORS #523), particles inside, no digit, `@`, `:`, `/` or parenthesis, no institution word, marks glued to its
   end dropped but not a postal code after a space (`CA 93106`). Institution words are whole words in the languages
   affiliations are written in (`university`, `università`, `dipartimento`, `sezione`, `osservatorio`, `école`, `labs`,
   …; a hyphenated compound's parts too, `Max-Planck-Institut`), never word openings: "Strasser", "Schooler",

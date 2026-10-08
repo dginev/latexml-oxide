@@ -1,0 +1,14 @@
+% witness: hep-ph9306209 (`\vspace{.2cm}Sridhar K.\\ Theory Division, CERN`), 63f A/B
+% oracle:  pdflatex 0 errors: "Sridhar K.", "John Smith Jr.", "Wei Li." as written
+% engines: rust (63e) = personnames "Sridhar K", "John Smith Jr", "Wei Li" (0 errors, silent); Perl alike: its
+%          personname afterClose strips every trailing non-word character (Base_Utility.pool.ltxml:226-243), an
+%          initial's or a suffix's period with it
+% expect:  3 creators, "Sridhar K." and "John Smith Jr." with their periods, "Wei Li" without (a two-letter last word
+%          is a surname as often as an initial: its period is sentence punctuation, stripped as by Perl); 0 errors
+% status:  RED (63e) -> GREEN (63f)
+\documentclass{article}
+\author{Sridhar K. \and John Smith Jr. \and Wei Li.}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

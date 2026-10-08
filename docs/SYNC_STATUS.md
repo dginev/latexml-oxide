@@ -343,6 +343,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
+- **63f**: frontmatter fidelity follow-ups (run-336 audit): acmart's `\received` keeps its whole history — received,
+  revised (several), labelled — each its own date via the frontmatter key `accumulate` (KPE #522; 2307.05988); initials
+  glued to a surname (`A.G.Bogdanchikov`, `Yu.M.Shatunov`; not `St.`/`Mt.`/`Ft.`) read as a name and a `\vspace`'s length
+  is no name text (hep-ex0105093 5 → 38 creators; hep-ph9306209 recovers D.P. Roy and Sridhar K.); a name's closing
+  initial (one capital) or suffix keeps its period (KPE #523). A/B 318 papers vs 63e: 3 papers change, each a recovery
+  (hep-ex0105093, hep-ph9306209, 2307.05988). Next (63g): amsrefs inline biblist kept whole
+  (1012.2719), svjour3 `\thanksref`.
 - **63e** (landed): author lists (the run-336 fidelity audit's 21 of 73 papers with merged or lost co-authors, all
   silent; KPE #521, OD #459): per-author classes (aastex/emulateapj, amsart, revtex, llncs/aa, IEEE blocks, labelled
   authblk) parse their `\author` as an author block; lines without marks find later names ("and" lines, unfinished

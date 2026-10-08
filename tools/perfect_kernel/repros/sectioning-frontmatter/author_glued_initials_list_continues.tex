@@ -1,13 +1,19 @@
-% witness: hep-ex0105093 (SND collaboration list: `A.G.Bogdanchikov, A.V.Bozhenok, …,\\ A.F.Danilyuk, …`)
-% oracle:  pdflatex 0 errors: one list of names over several lines
-% engines: rust (63e) = the names after the first line become affiliations of the last name on it (0 errors,
-%          silent): "A.G.Bogdanchikov" reads as one word, not a name (name_shaped wants 2-5 words); Perl the same
-%          (Base_Utility.pool.ltxml:720-725, every later line an affiliation)
-% expect:  6 creators, one per name; 0 errors
-% status:  RED (open; 63f: initials glued to a surname read as a name)
+% witness: hep-ex0105093 (SND collaboration list: `A.G.Bogdanchikov, A.V.Bozhenok, …,\\ … Yu.S.Velikzhanin
+%          \vspace{1mm}\\ Budker Institute of Nuclear Physics \\ 630090, Novosibirsk, Russia`)
+% oracle:  pdflatex 0 errors: one list of names over several lines, the institute under them
+% engines: rust (63e) = the names after the first line became affiliations of the last name on it (0 errors,
+%          silent): "A.G.Bogdanchikov" read as one word, not a name (name_shaped wants 2-5 words), "Yu.M.Shatunov"'s
+%          two-letter initial and the last line's `\vspace{1mm}` (its "1mm") likewise; Perl the same
+%          (Base_Utility.pool.ltxml:720-725, every later line an affiliation); the witness 5 creators, 38 in 63f
+% expect:  6 creators, one per name, the institute and its city under the last; 0 errors
+% status:  RED (63e) -> GREEN (63f)
 \documentclass{article}
-\author{G.N.Abramov, M.N.Achasov, V.M.Aulchenko,\\
-A.G.Bogdanchikov, A.V.Bozhenok, D.A.Bukin}
+\author{G.N.Abramov, M.N.Achasov,\\
+A.G.Bogdanchikov, Yu.M.Shatunov,\\
+A.V.Vasiljev, Yu.S.Velikzhanin
+\vspace{1mm}\\
+Budker Institute of Nuclear Physics \\
+630090, Novosibirsk, Russia}
 \title{T}
 \begin{document}
 \maketitle

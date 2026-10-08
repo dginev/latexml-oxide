@@ -94,7 +94,54 @@ LoadDefinitions!({
 
   //======================================================================
   // Various bits of frontmatter
-  DefMacro!("\\received[]{}", "\\lx@add@date[role=received]{#2}");
+  // acmart.cls:1859-1872: `\received` adds to one history, "Received #2; revised #2; …; #1 #2": the first unlabelled
+  // date is the received one, a later unlabelled one "revised", a labelled one its label (a label of spaces included:
+  // acmart tests `#1` for emptiness). Each is its own date, the later ones `accumulate` — Perl's
+  // `\lx@add@date[role=received]` for every call (acmart.cls.ltxml:58) clears the earlier ones, so only the last
+  // survived, as "Received" (KNOWN_PERL_ERRORS #522, 2307.05988).
+  DefMacro!("\\received[]{}", sub[(label, date)] {
+    let first = lookup_value("lx_acm_received_given").is_none();
+    assign_value("lx_acm_received_given", Stored::Bool(true), Some(Scope::Global));
+    let label = label.filter(|label| !label.is_empty());
+    let mut out = match (&label, first) {
+      (None, true) => TokenizeInternal!("\\lx@add@date[role=received]{").unlist(),
+      (None, false) => TokenizeInternal!(
+        "\\lx@add@frontmatter{ltx:date}[role=revised,name={revised~},accumulate=true]{"
+      )
+      .unlist(),
+      (Some(label), _) => {
+        // the role the label names: its words, lowercased and hyphenated (`accepted`, `published-online` for
+        // `Published~online`)
+        let words: String = label
+          .unlist_ref()
+          .iter()
+          .map(|t| match t.get_catcode() {
+            Catcode::LETTER | Catcode::OTHER => t.with_str(str::to_lowercase),
+            Catcode::SPACE => " ".to_string(),
+            Catcode::ACTIVE if t.with_str(|s| s == "~") => " ".to_string(),
+            Catcode::CS if *t == T_CS!("\\ ") => " ".to_string(),
+            _ => String::new(),
+          })
+          .collect();
+        let role = words
+          .split(|c: char| !c.is_alphanumeric())
+          .filter(|w| !w.is_empty())
+          .collect::<Vec<_>>()
+          .join("-");
+        let role = if role.is_empty() { "received".to_string() } else { role };
+        let mut out = mouth::tokenize_internal(TeXString::assembled(s!(
+          "\\lx@add@frontmatter{{ltx:date}}[role={role},accumulate=true,name={{"
+        )))
+        .unlist();
+        out.extend(label.unlist_ref().iter().copied());
+        out.extend(TokenizeInternal!("~}]{").unlist());
+        out
+      },
+    };
+    out.extend(date.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
   DefMacro!("\\acmJournal{}", "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\acmSubmissionID{}", "\\lx@add@pubnote[role=submissionid]{#1}");
   DefMacro!("\\acmConference[]{}{}{}", "\\lx@add@pubnote[role=conference]{#2; #3; #4}");

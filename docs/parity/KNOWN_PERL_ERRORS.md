@@ -11189,3 +11189,26 @@ the same or worse on every repro. Shapes (each a repro in `tools/perfect_kernel/
 
 Fixed in Rust (63e, OXIDIZED_DESIGN_DIVERGENCES #459); a creator still holding two or more names is now
 `Error:frontmatter:merged_creators`. Guards `perfect_kernel_batch63::author_*`.
+
+## 522. acmart's `\received` keeps only the last date
+
+acmart.cls:1859-1872 builds one history from every `\received`: the first unlabelled date is "Received", a later
+unlabelled one "revised", a labelled one its label (`\received{20 February 2007}\received{12 March 2009}
+\received[accepted]{5 June 2009}` prints "Received 20 February 2007; revised 12 March 2009; accepted 5 June 2009").
+Perl maps each call to `\lx@add@date[role=received]{#2}` (acmart.cls.ltxml:58), whose `\lx@clear@frontmatter`
+(Base_Utility.pool.ltxml:595-597) drops the dates before, so only the last survives, named "Received" (2307.05988).
+
+Fixed in Rust (63f): each call is its own date — role received, then revised (named as acmart prints it), a labelled
+one named by its label with that label as its role; the later ones carry the frontmatter key `accumulate`, which skips
+the replaceable-tag dedup (OXIDIZED_DESIGN_DIVERGENCES #154) that would otherwise keep one date per name, so two
+revisions are two dates. Guard `perfect_kernel_batch63::acmart_received_dates_all_kept`.
+
+## 523. A name's closing initial or suffix loses its period
+
+Base_Utility.pool.ltxml:226-243 strips every trailing non-word character from an `ltx:personname` as punctuation
+abuse, so `\author{Sridhar K. \and John Smith Jr.}` gives "Sridhar K" and "John Smith Jr" (hep-ph9306209).
+
+Fixed in Rust (63f): the strip keeps a period that ends an initial (a single capital) or a suffix written with one
+(`Jr.`, `Esq.`); a two-letter last word (`Wei Li.`, `Andrew Ng.`) is a surname as often as an initial, so its period is
+sentence punctuation and goes, as in Perl (residual: a surname-first `Shatunov Yu.` loses it). Guard
+`perfect_kernel_batch63::author_name_ending_in_an_initial_keeps_its_period`.

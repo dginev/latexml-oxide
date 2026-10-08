@@ -296,7 +296,12 @@ LoadDefinitions!({
               break;
             }
           }
-          let new_text = last_text_iter.rev().collect::<String>();
+          let mut new_text = last_text_iter.rev().collect::<String>();
+          // Beyond Perl (KNOWN_PERL_ERRORS #523): the period of an initial or of a suffix written with one is the
+          // name's (`Sridhar K.`, hep-ph9306209; `John Smith Jr.`)
+          if last_text[new_text.len()..].starts_with('.') && ends_with_abbreviation(&new_text) {
+            new_text.push('.');
+          }
           if last_text != new_text {
             last.set_content(&new_text)?;
           }
@@ -323,6 +328,10 @@ LoadDefinitions!({
   DefKeyVal!("Frontmatter", "labelref", "Semiverbatim");
   DefKeyVal!("Frontmatter", "labelseq", "");
   DefKeyVal!("Frontmatter", "annotate", "");
+  // Rust-only: an entry of a replaceable tag that adds to the ones before instead of replacing them (acmart's
+  // `\received` history, acmart.cls:1859-1872: several revised dates; 2307.05988), honoured by
+  // `\lx@add@frontmatter@now` and `@until` ([`takes_accumulate`])
+  DefKeyVal!("Frontmatter", "accumulate", "");
   DefKeyVal!("Frontmatter", "name", "");
 
   // \lx@clear@frontmatter{tag}[kv]
@@ -417,6 +426,7 @@ LoadDefinitions!({
         }
       }
     }
+    let accumulate = takes_accumulate(&mut options);
     // extract (possibly multiple!) labels
     let mut labels = clean_frontmatter_labels(
       options.get("annotations").map(String::as_str).unwrap_or(""), "");
@@ -444,7 +454,8 @@ LoadDefinitions!({
     // one replaces earlier ones. Ported from upstream `%ReplaceableFrontmatterTags`
     // (the vendored copy pushes unconditionally → duplicate <title> when a document
     // re-adds it, e.g. arXiv 2002.09766's appendix `\icmltitle`). OXIDIZED_DESIGN #154.
-    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) {
+    // An `accumulate` entry adds to the ones before (acmart's `\received` history, 2307.05988).
+    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) && !accumulate {
       frontmatter_clear_same_name(&tag, entry.attr.get("name").map(String::as_str));
     }
     let index = frontmatter_push(&tag, entry);
@@ -473,6 +484,7 @@ LoadDefinitions!({
         }
       }
     }
+    let accumulate = takes_accumulate(&mut options);
     // extract (possibly multiple!) labels
     let mut labels = clean_frontmatter_labels(
       options.get("annotations").map(String::as_str).unwrap_or(""), "");
@@ -499,6 +511,7 @@ LoadDefinitions!({
     // `\begin{abstract}\begin{abstract}…` isn't corrupted by clearing a parent's still-
     // open entry. OXIDIZED_DESIGN #154. Witness 2511.21969 (nested abstract env).
     if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str())
+      && !accumulate
       && !frontmatter_has_open_placekeeper(&tag)
     {
       frontmatter_clear_same_name(&tag, entry.attr.get("name").map(String::as_str));
@@ -3420,6 +3433,14 @@ fn supersede_digested_authors() -> bool {
 /// entry under another name is another element and stays: a bilingual document's
 /// "Abstract" and "摘要" abstracts (beamertheme-mirage-doc lost its English one).
 /// OXIDIZED_DESIGN #154.
+/// Whether a frontmatter entry's options ask it to `accumulate` (any value but `false`), the key taken out of them so it
+/// is no attribute.
+fn takes_accumulate(options: &mut TagAttrs) -> bool {
+  options
+    .remove("accumulate")
+    .is_some_and(|value| value.trim() != "false")
+}
+
 fn frontmatter_clear_same_name(tag: &str, name: Option<&str>) {
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
@@ -9122,6 +9143,17 @@ fn visible_name_text(tokens: &[Token]) -> String {
             i = skip_group(tokens, i);
           }
         }
+        // a space with its length is no text (`Yu.S.Velikzhanin \vspace{1mm}\\`, hep-ex0105093), a horizontal one a
+        // space
+        if t == T_CS!("\\vspace") || t == T_CS!("\\hspace") {
+          if tokens.get(i) == Some(&T_OTHER!("*")) {
+            i += 1;
+          }
+          i = skip_group(tokens, i);
+          if t == T_CS!("\\hspace") {
+            text.push(' ');
+          }
+        }
         continue;
       },
       Catcode::MATH => {
@@ -9369,7 +9401,7 @@ fn name_shaped(text: &str) -> bool {
   {
     return false;
   }
-  let words: Vec<&str> = text.split_whitespace().collect();
+  let words: Vec<&str> = text.split_whitespace().flat_map(unglued_initials).collect();
   if !(2..=5).contains(&words.len()) {
     return false;
   }
@@ -9387,6 +9419,50 @@ fn name_shaped(text: &str) -> bool {
           .chars()
           .all(|c| c.is_alphabetic() || "'’.-".contains(c)))
   })
+}
+
+/// A word of initials glued to the surname they precede, as its words: `A.G.Bogdanchikov` → `A.`, `G.`,
+/// `Bogdanchikov`, `Yu.M.Shatunov` → `Yu.`, `M.`, `Shatunov` (hep-ex0105093's collaboration list; an initial is a
+/// capital and at most one small letter, not a place's abbreviation: `St.Petersburg`, `Mt.Stromlo`); a word without a
+/// surname after its initials (`U.S.A.`, `D.A.`, `Ph.D.`) or with none glued stays whole.
+fn unglued_initials(word: &str) -> Vec<&str> {
+  let mut parts = Vec::new();
+  let mut rest = word;
+  loop {
+    let mut chars = rest.char_indices().peekable();
+    let Some((_, capital)) = chars.next() else {
+      break;
+    };
+    chars.next_if(|(_, c)| c.is_lowercase());
+    match (chars.next(), chars.next()) {
+      (Some((dot, '.')), Some((next, after)))
+        if capital.is_uppercase()
+          && after.is_uppercase()
+          && !["St", "Mt", "Ft"].contains(&&rest[..dot]) =>
+      {
+        parts.push(&rest[..next]);
+        rest = &rest[next..];
+      },
+      _ => break,
+    }
+  }
+  if parts.is_empty() || !rest.chars().skip(1).any(char::is_lowercase) {
+    return vec![word];
+  }
+  parts.push(rest);
+  parts
+}
+
+/// Whether a name's last word is one its period belongs to: an initial (a single capital, `K`) or a suffix written with
+/// a period (`Jr`, `Esq`, [`NAME_SUFFIXES`]). A two-letter word is a surname as often as an initial (`Wei Li.`, `Andrew
+/// Ng.`: sentence punctuation), so its period goes, as Perl's.
+fn ends_with_abbreviation(name: &str) -> bool {
+  let Some(word) = name.split_whitespace().next_back() else {
+    return false;
+  };
+  let mut chars = word.chars();
+  let initial = chars.next().is_some_and(char::is_uppercase) && chars.next().is_none();
+  initial || NAME_SUFFIXES.contains(&format!("{word}.").as_str())
 }
 
 /// The societies whose membership grade follows an author's name (`Senior Member, IEEE`).
