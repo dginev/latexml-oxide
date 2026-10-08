@@ -1,0 +1,17 @@
+% witness: 2408.01902 (names continued past a `\\`, read as an affiliation line; their grades went to the author
+%          before), 2408.02464; 63l review r1 (a grade in an IEEEbiography heading or the body)
+% oracle:  pdflatex 0 errors: "Wenming Li, Xiaochun Ye, Dongrui Fan, Senior Member, IEEE, and Yuan Xie, Fellow, IEEE"
+% engines: rust 63k = every grade dropped (Perl IEEEtran.cls.ltxml:143 ''); 63l r1 gave Wenming Li the grades of
+%          Dongrui Fan and Yuan Xie, and the last author the biography's and the body's
+% expect:  0 errors; no membership contact on any author (a grade whose author cannot be known stays dropped)
+% status:  RED (63l r1) -> GREEN (63l)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Wenming~Li, \\ Xiaochun~Ye, Dongrui~Fan,~\IEEEmembership{Senior~Member,~IEEE}, and~Yuan~Xie,~\IEEEmembership{Fellow,~IEEE}}
+\maketitle
+\begin{IEEEbiography}{Bob Baker,~\IEEEmembership{Member,~IEEE}}
+Bio text.
+\end{IEEEbiography}
+Body \IEEEmembership{Stray}.
+\end{document}

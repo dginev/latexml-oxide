@@ -1,0 +1,13 @@
+% witness: 2408.00647 (`\def\IEEEmembership#1{\textit{#1}}`, its grades printed even in conference mode); 63l r3
+% oracle:  pdflatex 0 errors: "Nuno C. Martins, Senior Member, IEEE, and Jair Certorio, Student Member, IEEE" (grades
+%          italic)
+% engines: rust 63k = the document's macro prints the grades in the names; 63l r3 replaced its calls and dropped them
+% expect:  0 errors; the grades printed by the document's own \IEEEmembership, as in 63k
+% status:  RED (63l r3) -> GREEN (63l)
+\documentclass[journal]{IEEEtran}
+\def\IEEEmembership#1{\textit{#1}}
+\begin{document}
+\title{T}
+\author{Nuno C. Martins, \IEEEmembership{Senior Member, IEEE}, and Jair Certorio, \IEEEmembership{Student Member, IEEE}}
+\maketitle
+\end{document}

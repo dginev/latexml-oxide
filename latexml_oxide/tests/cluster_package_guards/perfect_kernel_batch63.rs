@@ -892,7 +892,7 @@ fn author_wrapped_serial_comma_list_shares_one_affiliation() {
 }
 
 /// 63e: a membership grade in an IEEE name block (`Ann Able,~\IEEEmembership{Member,~IEEE}`) stays with its name, not an
-/// empty author taking a copy of the block's affiliation. Repro
+/// empty author taking a copy of the block's affiliation (conference mode prints no grade, IEEEtran.cls:6270). Repro
 /// sectioning-frontmatter/author_ieee_membership_in_a_block_stays_with_its_name.
 #[test]
 fn author_ieee_membership_in_a_block_stays_with_its_name() {
@@ -2443,5 +2443,120 @@ fn toc_copy_keeps_its_language() {
       )
     ),
     "{xml}"
+  );
+}
+
+/// 63l: an "and" tied to the name before it (`Ohta\ddag~and Kenji`, nlin0101056) or set in a group (`Price {\ and}
+/// Ken`, 1508.01140) separates two authors. Repro sectioning-frontmatter/author_and_tied_or_grouped_splits.
+#[test]
+fn author_and_tied_or_grouped_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_tied_or_grouped_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Tetsu Masuda†</personname></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Yasuhiro Ohta‡</personname></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Kenji Kajiwara†</personname></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Huw Price</personname></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Ken Wharton</personname></creator>",
+    ],
+  );
+}
+
+/// 63l: `\fnmsep` between an author's marks leaves no comma in the name once the marks become a link and a note
+/// (astro-ph0001054, astro-ph0611016). Repro sectioning-frontmatter/author_fnmsep_leaves_no_comma.
+#[test]
+fn author_fnmsep_leaves_no_comma() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_fnmsep_leaves_no_comma.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>U.\u{a0}Hopp</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Visiting astronomer</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A</contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>D.\u{a0}Engels</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Fellow<sup xml:id=\"id2.1\"><text font=\"italic\" xml:id=\"id2.1.1\">,</text></sup> of X</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">B</contact></creator>",
+    ],
+  );
+}
+
+/// 63l: `\IEEEmembership` is its author's unlabelled membership contact, the comma before it no author separator
+/// (2306.15457, 2508.00603), nor the comma at the end of a grade (2408.00327). Repro
+/// sectioning-frontmatter/ieee_membership_is_a_contact.
+#[test]
+fn ieee_membership_is_a_contact() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_is_a_contact.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Yun-Chih\u{a0}Chen</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Yuan-Hao\u{a0}Chang</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Hong Joo Lee</personname></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Yong Man Ro</personname><contact role=\"membership\">Senior Member,\u{a0}IEEE</contact></creator>",
+    ],
+  );
+}
+
+/// 63l review: a grade whose author cannot be known — names continued past a `\\` (2408.01902), a biography heading,
+/// the body — stays dropped, as in Perl, rather than going to the author before it. Repro
+/// sectioning-frontmatter/ieee_membership_past_a_name_line_stays_dropped.
+#[test]
+fn ieee_membership_past_a_name_line_stays_dropped() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_past_a_name_line_stays_dropped.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Wenming\u{a0}Li</personname></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Xiaochun\u{a0}Ye</personname></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Dongrui\u{a0}Fan</personname></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Yuan\u{a0}Xie</personname></creator>",
+    ],
+  );
+}
+
+/// 63l review: grades in an `\IEEEauthorblockN` name list followed by the author's own comma (2408.01956, 2408.00368)
+/// stay with their names, the list split as before. Repro sectioning-frontmatter/ieee_membership_in_a_block_list.
+#[test]
+fn ieee_membership_in_a_block_list() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_in_a_block_list.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Huizhi\u{a0}Wang</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Yong\u{a0}Zeng</personname><contact role=\"membership\">Senior Member, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Shi\u{a0}Jin</personname><contact role=\"membership\">Fellow, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
+    ],
+  );
+}
+
+/// 63l review: a document's own `\IEEEmembership` (2408.00647 prints its grades in italics) keeps its meaning; the
+/// grades are not made contacts behind its back. Repro sectioning-frontmatter/ieee_membership_own_definition_kept.
+#[test]
+fn ieee_membership_own_definition_kept() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_own_definition_kept.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Nuno C. Martins<text font=\"italic\" xml:id=\"id1\">Senior Member, IEEE</text></personname></creator>",
+      "<creator before=\"  \" role=\"author\"><personname>Jair Certorio<text font=\"italic\" xml:id=\"id2\">Student Member, IEEE</text></personname></creator>",
+    ],
+  );
+}
+
+/// 63l review: `\IEEEoverridecommandlockouts` (IEEEtran.cls:6278-6288, in the IEEE conference template) lets the grade
+/// print in conference mode, so it is the author's contact there too. Repro
+/// sectioning-frontmatter/ieee_membership_conference_override.
+#[test]
+fn ieee_membership_conference_override() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_conference_override.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ</contact></creator>",
+    ],
   );
 }

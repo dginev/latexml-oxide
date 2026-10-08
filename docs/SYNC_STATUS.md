@@ -343,6 +343,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
+- **63l**: author-line residuals of fidelity audit round 2, all Perl-origin: "~and" and `{\ and}` separate authors
+  (KPE #532; nlin0101056, 1508.01140, both a merged_creators error before); `\fnmsep` leaves no comma in a name
+  (KPE #533; astro-ph0001054, astro-ph0611016); `\IEEEmembership` is the author's membership contact (KPE #534;
+  2306.15457, 2508.00603, 2408.00327; name lines only, not in conference mode unless `\IEEEoverridecommandlockouts`, a document's own definition kept). A/B
+  540 papers vs 63k (80 `\IEEEmembership` papers of 2408 among them): 65 change, 0 more errors or warnings (57 gain
+  grades only, none on another author). Open from the round: entics.cls `\thanksref{ALL}` prints its key (2212.08177, a raw-class
+  two-pass mark), an.cls `\abstract{…}` a plain paragraph (astro-ph0611016), llncs `\author{A\\Univ\\\email{x}}`
+  reads Univ as a person. Guards `perfect_kernel_batch63::{author_and_tied_or_grouped_splits,
+  author_fnmsep_leaves_no_comma, ieee_membership_is_a_contact, ieee_membership_in_a_block_list,
+  ieee_membership_past_a_name_line_stays_dropped, ieee_membership_own_definition_kept,
+  ieee_membership_conference_override}`.
 - **63k**: titles' refs and JHEP-family authors (fidelity audit round 2):
   - RUST-ONLY: a `\ref`/`\eqref`/`\autoref`/`\cref`/`\nameref` in a section title was empty wherever the title is
     reused (TOC entries, `title=` tooltips): Perl's `CrossRef::fillInTitle` (CrossRef.pm:882-904) was never ported.

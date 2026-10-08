@@ -1,7 +1,7 @@
 % witness: 63e review r4 finding 3 (`\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}}`)
-% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE" over "Univ"
+% oracle:  pdflatex 0 errors: "Ann Able," over "Univ" (conference mode locks the grade out, IEEEtran.cls:6270)
 % engines: rust (63e r5) = Ann Able with "Univ" twice (the membership piece an empty creator)
-% expect:  1 creator with Univ once; 0 errors
+% expect:  1 creator with Univ once, no grade (conference mode); 0 errors
 % status:  RED (63e r5) -> GREEN (63e)
 \documentclass[conference]{IEEEtran}
 \author{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}}\IEEEauthorblockA{Univ}}

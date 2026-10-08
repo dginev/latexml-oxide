@@ -216,7 +216,9 @@ LoadDefinitions!({
   def_macro_noop("\\IEEEdisplaynotcompsoctitleabstractindextext")?;
   def_macro_noop("\\IEEEcompsoctitleabstractindextext")?;
   Let!("\\IEEEpeerreviewmaketitle", "\\maketitle");
-  def_macro_noop("\\IEEEoverridecommandlockouts")?;
+  // IEEEtran.cls:6278-6288 lets the conference-mode lock-outs go (`\IEEEmembership` prints again).
+  DefMacro!("\\IEEEoverridecommandlockouts", "\\global\\let\\iflx@IEEE@lockouts@overridden\\iftrue");
+  RawTeX!(r"\newif\iflx@IEEE@lockouts@overridden");
   def_macro_noop("\\overrideIEEEmargins")?;
   // \IEEEaftertitletext{text} — after-title note (often invited-
   // paper credit, conference name). Author content; preserve as
@@ -233,10 +235,21 @@ LoadDefinitions!({
   // the author-splitter (`\lx@add@authors`) then split that comma and turned
   // the membership grade into a phantom "Senior Member, IEEE" creator (witness
   // 2508.00603, whose flat `\author{A, B, \IEEEmembership{...}, and C}` yielded
-  // 6 creators). The grade cannot be re-attached to the preceding name after a
-  // comma split, so match Perl and drop it — a clean author list beats a
-  // phantom author.
-  DefMacro!("\\IEEEmembership{}", "");
+  // 6 creators). In an author's own name line — before the first `\\` of each
+  // `\and` group, or in an `\IEEEauthorblockN` — `\author` now moves each grade
+  // in front of the comma before it (`name_memberships`) and makes it that
+  // author's unlabelled `membership` contact (`\lx@IEEE@membership`, markup a
+  // stylesheet shows or hides): "Yong Man Ro, Senior Member, IEEE" (2306.15457,
+  // 2201.01230, 2408.09035; 63l). Anywhere else (a biography heading, a `\thanks`,
+  // names misread as an affiliation line) whose author it names cannot be
+  // known, so it stays dropped there, as in Perl (2408.01902). Conference mode
+  // locks the grade out (IEEEtran.cls:6270 swallows it; pdflatex prints none)
+  // unless `\IEEEoverridecommandlockouts` lets it back in.
+  DefMacro!("\\IEEEmembership{}", "\\lx@IEEE@membership@drop{#1}");
+  DefMacro!("\\lx@IEEE@membership@drop{}", "");
+  DefMacro!("\\lx@IEEE@membership{}",
+    "\\ifCLASSOPTIONconference\\iflx@IEEE@lockouts@overridden\\lx@add@contact[role=membership]{#1}\\fi\\else\\lx@add@contact[role=membership]{#1}\\fi");
+  DefMacro!("\\lx@contact@membership@name", "");
   // `\author{\IEEEauthorblockN{Name}\IEEEauthorblockA{Affil}\and …}` is the
   // conference-mode author block. Perl maps `\IEEEauthorblockN{}`→`#1` (plain
   // text) and relies on `\author`→`\lx@add@authors` to split; but our beyond-Perl
@@ -262,6 +275,8 @@ LoadDefinitions!({
   // `\IEEEauthorblockN`, else to the standard name-splitter. `\author` is locked
   // in the kernel; re-lock so a user `\renewcommand` can't shadow this.
   DefMacro!("\\author[]{}", sub[(_short, body)] {
+    // (a document's own `\IEEEmembership` keeps its meaning: `\def\IEEEmembership#1{\textit{#1}}` in 2408.00647)
+    let ours = class_membership()?;
     let (target, body) = if body.to_string().contains("authorblockN") {
       // Transpose a genuine `\and`×`\\` grid to row-major reading order first
       // (arXiv:2403.16405); a single-row `\and` list is returned unchanged. Then
@@ -269,9 +284,12 @@ LoadDefinitions!({
       // `\IEEEauthorblockA{}` so it attaches to the creator instead of leaking into
       // the body (arXiv 1901.07768).
       (T_CS!("\\lx@IEEE@author@blocks"),
-       wrap_bare_author_block_text(transpose_ieee_author_grid(body)))
+       {
+         let body = wrap_bare_author_block_text(transpose_ieee_author_grid(body));
+         if ours { block_name_memberships(body) } else { body }
+       })
     } else {
-      (T_CS!("\\lx@IEEE@author@plain"), body)
+      (T_CS!("\\lx@IEEE@author@plain"), if ours { Tokens::new(name_memberships(body.unlist())) } else { body })
     };
     Ok(Invocation!(target, vec![Some(body)]))
   }, locked => true);
@@ -970,4 +988,151 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
   }
   flush(&mut run, &mut out);
   Tokens::new(out)
+}
+
+/// An author list with each `\IEEEmembership{…}` of its name lines — before the first `\\` of each `\and` group —
+/// moved in front of the comma before it and made `\lx@IEEE@membership`, so the grade stays with the name it follows
+/// when the list is split at its commas (`Yong Man Ro,~\IEEEmembership{Senior Member,~IEEE}`). A grade ending in a
+/// comma carries the list's separator inside its braces (`Yun-Chih~Chen,~\IEEEmembership{Member,~IEEE,}
+/// Yuan-Hao~Chang`, 2408.00327): that comma becomes the separator after it. An empty grade (`\IEEEmembership{}`,
+/// 2408.01702) is left out. Grades past a name line keep `\IEEEmembership`, which drops them.
+fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
+  let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~');
+  let mut out: Vec<Token> = Vec::new();
+  let mut depth = 0usize;
+  let mut in_names = true;
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = tokens[i];
+    if depth == 0 {
+      if t == T_CS!("\\and") {
+        in_names = true;
+      } else if t == T_CS!("\\\\") {
+        in_names = false;
+      }
+    }
+    if in_names && depth == 0 && t == T_CS!("\\IEEEmembership") {
+      let mut j = i + 1;
+      while j < tokens.len() && tokens[j] == T_SPACE!() {
+        j += 1;
+      }
+      if j < tokens.len() && tokens[j].code == Catcode::BEGIN {
+        let start = j;
+        let mut level = 0usize;
+        while j < tokens.len() {
+          match tokens[j].code {
+            Catcode::BEGIN => level += 1,
+            Catcode::END => {
+              level -= 1;
+              if level == 0 {
+                break;
+              }
+            },
+            _ => {},
+          }
+          j += 1;
+        }
+        if level == 0 && j < tokens.len() {
+          let mut grade: Vec<Token> = tokens[start + 1..j].to_vec();
+          while grade.last().is_some_and(spacing) {
+            grade.pop();
+          }
+          let mut separated = grade.last() == Some(&T_OTHER!(","));
+          if separated {
+            grade.pop();
+            while grade.last().is_some_and(spacing) {
+              grade.pop();
+            }
+          }
+          let kept = out
+            .iter()
+            .rposition(|prev| !spacing(prev))
+            .map_or(0, |at| at + 1);
+          if kept > 0 && out[kept - 1] == T_OTHER!(",") {
+            out.truncate(kept - 1);
+            separated = true;
+          }
+          if grade.iter().any(|t| !spacing(t)) {
+            out.push(T_CS!("\\lx@IEEE@membership"));
+            out.push(T_BEGIN!());
+            out.extend(grade);
+            out.push(T_END!());
+          }
+          // (unless the author's own comma follows: `Zeng,~\IEEEmembership{Senior Member, IEEE},`, 2408.01956)
+          let next = tokens[j + 1..].iter().find(|t| !spacing(t));
+          if separated && next != Some(&T_OTHER!(",")) {
+            out.push(T_OTHER!(","));
+          }
+          i = j + 1;
+          continue;
+        }
+      }
+    }
+    match t.code {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    out.push(t);
+    i += 1;
+  }
+  out
+}
+
+/// An explicit author-block body with the grades of each `\IEEEauthorblockN{…}` name line made its author's
+/// (`name_memberships`); a grade outside the name blocks stays `\IEEEmembership`, dropped.
+fn block_name_memberships(body: Tokens) -> Tokens {
+  let tokens = body.unlist();
+  let mut out: Vec<Token> = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = tokens[i];
+    out.push(t);
+    i += 1;
+    if t != T_CS!("\\IEEEauthorblockN") {
+      continue;
+    }
+    while i < tokens.len() && tokens[i] == T_SPACE!() {
+      out.push(tokens[i]);
+      i += 1;
+    }
+    if i >= tokens.len() || tokens[i].code != Catcode::BEGIN {
+      continue;
+    }
+    let start = i;
+    let mut level = 0usize;
+    while i < tokens.len() {
+      match tokens[i].code {
+        Catcode::BEGIN => level += 1,
+        Catcode::END => {
+          level -= 1;
+          if level == 0 {
+            break;
+          }
+        },
+        _ => {},
+      }
+      i += 1;
+    }
+    if level != 0 || i >= tokens.len() {
+      out.extend(tokens[start..].iter().copied());
+      return Tokens::new(out);
+    }
+    out.push(T_BEGIN!());
+    out.extend(name_memberships(tokens[start + 1..i].to_vec()));
+    out.push(T_END!());
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
+/// Is `\IEEEmembership` still this binding's (`\lx@IEEE@membership@drop`)? A document's own definition keeps its
+/// meaning and its grades their place.
+fn class_membership() -> Result<bool> {
+  Ok(
+    lookup_definition(&T_CS!("\\IEEEmembership"))?.is_some_and(|def| {
+      matches!(def.get_expansion(), Some(ExpansionBody::Tokens(body))
+        if body.unlist_ref().first() == Some(&T_CS!("\\lx@IEEE@membership@drop")))
+    }),
+  )
 }

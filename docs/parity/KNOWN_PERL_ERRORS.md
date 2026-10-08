@@ -11330,3 +11330,40 @@ tooltips, other refs) loses its number.
 Fixed in Rust (63k): a nested `\nameref` drops the tag too, read from its `ltx_refmacro_nameref` class as
 `fill_in_refs` does, and the drop is made on the copy, the stored title keeping its tag. Guard
 `perfect_kernel_batch63::nameref_drops_the_section_number`.
+
+## 532. An "and" tied to a name, or set in a group, does not separate two authors
+
+The author splitter (Base_Utility.pool.ltxml) separates names at commas and " and ". An "and" with a tie before it
+(`Yasuhiro Ohta\ddag~and Kenji Kajiwara\dag`, nlin0101056) or set in a group for its space (`Huw Price {\ and} Ken
+Wharton`, 1508.01140) is no separator, so the two names stay one author.
+
+Fixed in Rust (63l): "~and ", "~and~" and `{\ and}` separate as " and " does (with " and~", KPE #528). Guard
+`perfect_kernel_batch63::author_and_tied_or_grouped_splits`.
+
+## 533. `\fnmsep` leaves a comma in an author's name
+
+aa_support.sty.ltxml:395 (`\unskip$^,$`) and llncs.cls.ltxml:242 (`${}^{,}$`) set `\fnmsep`, the comma between two
+footnote marks (`U.~Hopp\inst{1}\fnmsep\thanks{…}`). The marks become an affiliation link and a note, so the comma is
+left alone in the name: "U. Hopp," (astro-ph0001054, astro-ph0611016).
+
+Fixed in Rust (63l): in frontmatter content `\fnmsep` sets nothing right before `\thanks`, `\inst`, `\footnote` or
+`\thanksref` (marks that become links and notes); between two marks that stay visible it is still their comma. Guard
+`perfect_kernel_batch63::author_fnmsep_leaves_no_comma`.
+
+## 534. `\IEEEmembership` is dropped
+
+IEEEtran.cls.ltxml:143 defines `\IEEEmembership` as '', so an author's grade ("Yong Man Ro, Senior Member, IEEE",
+2306.15457, 2201.01230, 2408.09035) is lost. Printing it in the name is no fix: the comma before it
+(`Ro,~\IEEEmembership{…}`) splits the author list, which made the grade a phantom author (2508.00603).
+
+Fixed in Rust (63l): in an author's own name line — before the first `\\` of each `\and` group, or in an
+`\IEEEauthorblockN` — IEEEtran's `\author` moves each `\IEEEmembership` in front of the comma before it (a comma ending
+the grade, the list's separator in `Chen,~\IEEEmembership{Member,~IEEE,} Yuan-Hao~Chang`, 2408.00327, goes after it),
+and the grade is that author's unlabelled `membership` contact, markup a stylesheet shows or hides. A grade whose author
+cannot be known (names continued past a `\\`, 2408.01902; a biography heading; a `\thanks`) stays dropped, as does
+every grade in conference mode (IEEEtran.cls:6270 swallows them) unless `\IEEEoverridecommandlockouts` lets them back
+(IEEEtran.cls:6278-6288), and a document's own `\IEEEmembership` keeps its meaning (2408.00647). An A/B over 80 `\IEEEmembership` papers (2408): 57 gain their grades (2408.00332 through
+`\IEEEoverridecommandlockouts`), none on another author. Guards
+`perfect_kernel_batch63::{ieee_membership_is_a_contact, ieee_membership_in_a_block_list,
+ieee_membership_past_a_name_line_stays_dropped, ieee_membership_own_definition_kept,
+ieee_membership_conference_override, author_ieee_membership_in_a_block_stays_with_its_name}`.

@@ -941,6 +941,13 @@ LoadDefinitions!({
     until_terminal_inside_group(&T_CS!("\\lx@end@keywords"))?;
   });
 
+  // `\fnmsep` in frontmatter content (`digest_frontmatter_item`): nothing before a mark the frontmatter turns into a
+  // link or a note, the class's comma otherwise.
+  DefMacro!(
+    "\\lx@frontmatter@fnmsep",
+    r"\@ifnextchar\thanks{}{\@ifnextchar\inst{}{\@ifnextchar\footnote{}{\@ifnextchar\thanksref{}{\lx@saved@fnmsep}}}}"
+  );
+
   // Add random notes about the document itself
   DefMacro!(
     "\\lx@add@pubnote[]{}",
@@ -3197,6 +3204,16 @@ fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
     }),
     None,
   );
+  // `\fnmsep` sets the comma between two footnote marks (`U.~Hopp\inst{1}\fnmsep\thanks{…}`, aa/llncs); before a
+  // mark that becomes a link or a note here it would stand alone in the name ("U. Hopp,": astro-ph0001054,
+  // astro-ph0611016), so it sets nothing there; between two marks that stay visible it is still their comma.
+  // (once: an item digested within another — a `\thanks` in an author — would save the wrapper as itself, and a
+  // `\fnmsep` there not before a mark would call itself without end)
+  if !lookup_bool("lx_frontmatter_fnmsep") && lookup_definition(&T_CS!("\\fnmsep"))?.is_some() {
+    let_i(&T_CS!("\\lx@saved@fnmsep"), &T_CS!("\\fnmsep"), None);
+    let_i(&T_CS!("\\fnmsep"), &T_CS!("\\lx@frontmatter@fnmsep"), None);
+    assign_value("lx_frontmatter_fnmsep", Stored::Bool(true), None);
+  }
   let digested = digest_text(item);
   egroup()?;
   digested
@@ -8156,6 +8173,9 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
       SplitDelim::Token(T_OTHER!(",")),
       literal_and(),
       literal_and_tie(),
+      tie_and_literal(),
+      tie_and_tie(),
+      group_and(),
       literal_ampersand(),
     ]) {
       carried.extend(delimiter);
@@ -8373,10 +8393,22 @@ pub fn position_of(tokens: &Tokens, delims: &[Token]) -> Option<usize> {
 
 /// " and~", the "and" tied to the name after it (`Luca~Varotto, Angelo~Cenedese, and~Andrea~Cavallaro`, IEEE
 /// 2011.10474, 2408.09035; svjour3 1406.6147). Unsplit, the "and" was read as the first word of the last name (63j).
-fn literal_and_tie() -> SplitDelim {
-  let mut tks = vec![T_SPACE!()];
+fn literal_and_tie() -> SplitDelim { word_and_between(T_SPACE!(), T_ACTIVE!('~')) }
+/// "~and " and "~and~", the "and" tied to the name before it (`Yasuhiro Ohta\ddag~and Kenji Kajiwara`, nlin0101056).
+fn tie_and_literal() -> SplitDelim { word_and_between(T_ACTIVE!('~'), T_SPACE!()) }
+fn tie_and_tie() -> SplitDelim { word_and_between(T_ACTIVE!('~'), T_ACTIVE!('~')) }
+/// `{\ and}`, an "and" given its own space in a group (`Huw Price {\ and} Ken Wharton`, 1508.01140).
+fn group_and() -> SplitDelim {
+  let mut tks = vec![T_BEGIN!(), T_CS!("\\ ")];
   tks.extend(mouth::tokenize_internal("and").unlist());
-  tks.push(T_ACTIVE!('~'));
+  tks.push(T_END!());
+  SplitDelim::Tokens(Tokens::new(tks))
+}
+/// The word "and" between `before` and `after`.
+fn word_and_between(before: Token, after: Token) -> SplitDelim {
+  let mut tks = vec![before];
+  tks.extend(mouth::tokenize_internal("and").unlist());
+  tks.push(after);
   SplitDelim::Tokens(Tokens::new(tks))
 }
 /// " \& " between two names, its spaces kept.
@@ -9561,6 +9593,8 @@ const NAME_ANNOTATIONS: &[&str] = &[
   "\\orcidID",
   "\\lx@aas@checkorcid",
   "\\IEEEmembership",
+  // IEEEtran's grade of a name line, made a contact (ieeetran_cls.rs `name_memberships`)
+  "\\lx@IEEE@membership",
   // a footnote-symbol mark, rewritten before the parse (`rewrite_symbol_superscripts`: `$^{*}$`)
   "\\lx@frontmatter@keepsup",
   "\\lx@frontmatter@symbolmark",

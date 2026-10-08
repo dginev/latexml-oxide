@@ -1,0 +1,13 @@
+% witness: nlin0101056 (`Yasuhiro Ohta\ddag~and Kenji Kajiwara\dag`), 1508.01140 (`Huw Price {\ and} Ken Wharton`);
+%          fidelity audit round 2
+% oracle:  pdflatex 0 errors: "Tetsu Masuda†, Yasuhiro Ohta‡ and Kenji Kajiwara†", "Huw Price and Ken Wharton"
+% engines: rust 63k = Error:frontmatter:merged_creators, "Yasuhiro Ohta‡ and Kenji Kajiwara†" and "Huw Price and Ken
+%          Wharton" each one creator; Perl alike, without the error
+% expect:  0 errors; five creators, one name each
+% status:  RED (63k) -> GREEN (63l)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Tetsu Masuda\dag, Yasuhiro Ohta\ddag~and Kenji Kajiwara\dag \and Huw Price {\ and} Ken Wharton}
+\maketitle
+\end{document}
