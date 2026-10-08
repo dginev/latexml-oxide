@@ -41,8 +41,29 @@ LoadDefinitions!({
   // sectioning-frontmatter/svjour3_epj_one_institute_shared, svjour3_two_institutes_pair_by_position).
   DefMacro!(
     "\\lx@sv@institute@ Until:\\at Until:\\done",
-    "\\ifx.#2.\\lx@add@affiliation[labelseq=affiliation]{\\lx@sv@institute@marks#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks#2}\\fi"
+    "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks#2}\\fi"
   );
+  // A piece that starts with a mark (`$^{1}$Univ A`, or one piece of lines `$^1$… \\ $^2$…`: 1406.6147, 2405.03406)
+  // is a marked list, its lines labelled by their marks, which the authors showing them get (OXIDIZED_DESIGN #159;
+  // repro svjour3_marked_institutes_link_by_mark); any other piece is numbered.
+  DefMacro!("\\lx@sv@institute@unlabelled{}", sub[(piece)] {
+    let labelseq = Some(mouth::tokenize_internal("labelseq=affiliation"));
+    if leads_with_mark(&piece) {
+      // its own `\thanksref`, which would add its key to the line's label, a no-op as in any piece (63i review)
+      let piece = Tokens::new(
+        piece
+          .unlist()
+          .into_iter()
+          .map(|t| if t == T_CS!("\\thanksref") { T_CS!("\\lx@sv@institute@thanksref") } else { t })
+          .collect(),
+      );
+      Ok(Invocation!(T_CS!("\\lx@add@affiliation@marked"), vec![labelseq, Some(piece)]))
+    } else {
+      let mut content = vec![T_CS!("\\lx@sv@institute@marks")];
+      content.extend(piece.unlist());
+      Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![labelseq, Some(Tokens::new(content))]))
+    }
+  });
   // for older versions?
   DefMacro!(
     "\\inst{}",

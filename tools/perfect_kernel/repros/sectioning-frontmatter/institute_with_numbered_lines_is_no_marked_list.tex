@@ -1,0 +1,15 @@
+% witness: astro-ph0305539 (aa: `\institute{{1} Astronomical Institute ... \\ {2} Copernicus ...}` under authors marked
+%          $^{1,2}$, $^{2,3}$, $^{2,4}$; 63i A/B); the same shape in llncs
+% oracle:  pdflatex (llncs.cls) 0 errors: "Ann Able^{1,2} and Bob Baker^2"; "1 Univ A, City A", "2 Univ B, City B"
+% engines: rust 63h = the one institute shared; 63i r1 = on Ann Able alone (its label affiliation:1 read as her mark 1)
+% expect:  shared, as at 63h: one institute whose lines carry numbers is no set of marked institutes (the marks 2 are
+%          answered by no institute); 0 errors
+% status:  RED (63i r1) -> GREEN (63i)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$ \and Bob Baker$^{2}$}
+\institute{{1} Univ A, City A\\ {2} Univ B, City B}
+\maketitle
+Text.
+\end{document}

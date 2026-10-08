@@ -56,7 +56,22 @@ LoadDefinitions!({
   // `\author{Brent Preston and Eric Poisson}` names two (gr-qc0606093): the article `\author`'s parse, each author
   // with the labels (Perl revtex4_support makes it one author; 63e).
   DefMacro!("\\author[]{}",    "\\lx@add@authors@append[annotations={#1}]{#2}");
-  DefMacro!("\\affiliation{}", "\\lx@add@affiliation[annotate=new]{#1}");
+  // An `\affiliation` that starts with a letter or number mark (all `\author{Name$^{a}$}`s first, then `$^{a}$`-marked
+  // lines: 2011.01984, 2301.08449) is labelled by its marks under marked authors, and goes to the authors showing them
+  // (relocate_annotations); any other is revtex's group rule, every author before it without one (`annotate=new`): a
+  // superscript inside the line (`Laboratory for $^{3}$He`) or a symbol (`$^{\dagger}$`) is no mark, and an
+  // interleaved `\author{A$^{1}$}\affiliation{$^{1}$…}` group keeps the group rule, exact there (63i review).
+  DefMacro!("\\affiliation{}", sub[(content)] {
+    let attr = Some(mouth::tokenize_internal("annotate=new"));
+    let cs = if leads_with_mark(&content)
+      && !queued_group_shares_the_mark(&content)
+    {
+      T_CS!("\\lx@add@affiliation@marked")
+    } else {
+      T_CS!("\\lx@add@affiliation")
+    };
+    Ok(Invocation!(cs, vec![attr, Some(content)]))
+  });
   // revtex4-1.cls:2147-2250, the internals of `\affiliation` (`\move@AU\move@AF\begingroup … \@affiliation`,
   // :2206-2211): `\move@AU`/`\move@AF` file the pending authors and affiliations, which the frontmatter API attaches
   // at once, and `\@affiliation{…}` (:2213) closes the group and records the affiliation. A class that redefines

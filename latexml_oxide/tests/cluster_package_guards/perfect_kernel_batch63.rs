@@ -1801,3 +1801,208 @@ fn svjour3_at_piece_naming_several_authors() {
     ],
   );
 }
+
+/// 63i: revtex authors all first, then `$^{a}$`-marked `\affiliation`s (2011.01984, 2301.08449): each affiliation is
+/// the authors' whose names show its mark, not every author's (revtex's group rule). Repro
+/// sectioning-frontmatter/revtex_marked_affiliations_link_by_mark.
+#[test]
+fn revtex_marked_affiliations_link_by_mark() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_marked_affiliations_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">a</text></sup></personname><contact name=\"Email:\u{a0}\" role=\"email\">Corresponding author: ann@a.org</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: svjour3 marked authors and institutes listed out of order link by mark (63h review r1). Repro
+/// sectioning-frontmatter/svjour3_marked_institutes_link_by_mark.
+#[test]
+fn svjour3_marked_institutes_link_by_mark() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_marked_institutes_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: author marks link institutes only where every mark is answered: one `\institute` whose lines carry numbers
+/// (`{1} Univ A \\ {2} Univ B`, aa astro-ph0305539) stays shared, not the first author's by its `affiliation:1`. Repro
+/// sectioning-frontmatter/institute_with_numbered_lines_is_no_marked_list.
+#[test]
+fn institute_with_numbered_lines_is_no_marked_list() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/institute_with_numbered_lines_is_no_marked_list.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1,2</text></sup></personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup></personname></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">1 Univ A, City A<break/>2 Univ B, City B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: an interleaved revtex group whose author shows `$^{2,\dagger}$` keeps its affiliation (the group rule; 63i review r1). Repro
+/// sectioning-frontmatter/revtex_interleaved_mark_with_symbol_keeps_the_group_rule.
+#[test]
+fn revtex_interleaved_mark_with_symbol_keeps_the_group_rule() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_interleaved_mark_with_symbol_keeps_the_group_rule.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2,†</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: interleaved revtex groups keep the group rule though one author mark is answered by none (63i review r1). Repro
+/// sectioning-frontmatter/revtex_interleaved_group_with_unanswered_mark.
+#[test]
+fn revtex_interleaved_group_with_unanswered_mark() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_interleaved_group_with_unanswered_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1,5</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">2</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: a revtex `\affiliation` with a superscript inside it (`Laboratory for $^{3}$He`) is no marked line (63i review r1). Repro
+/// sectioning-frontmatter/revtex_affiliation_with_inner_superscript_is_no_marked_line.
+#[test]
+fn revtex_affiliation_with_inner_superscript_is_no_marked_line() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_affiliation_with_inner_superscript_is_no_marked_line.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Laboratory for <sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">3</text></sup>He Physics, Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: revtex authors first, one marked `$^{b,\dagger}$`, link to their marked affiliations by the letter (63i review r1). Repro
+/// sectioning-frontmatter/revtex_marked_affiliations_with_symbol_marks_link_by_mark.
+#[test]
+fn revtex_marked_affiliations_with_symbol_marks_link_by_mark() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_marked_affiliations_with_symbol_marks_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">b,†</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: svjour3 marked institute lines link by mark though one carries its own `\thanksref` (63i review r1). Repro
+/// sectioning-frontmatter/svjour3_marked_institutes_with_thanksref_link_by_mark.
+#[test]
+fn svjour3_marked_institutes_with_thanksref_link_by_mark() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_marked_institutes_with_thanksref_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">e-mail: ann@a.org</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id4\">Institute note.</note></creator>",
+    ],
+  );
+}
+
+/// 63i: an svjour3 institute led by a symbol (`$^{\star}$`) is no marked list: the institutes pair by position (63i review r1). Repro
+/// sectioning-frontmatter/svjour3_symbol_marked_institute_pairs_by_position.
+#[test]
+fn svjour3_symbol_marked_institute_pairs_by_position() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_symbol_marked_institute_pairs_by_position.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">e-mail: ann@a.org</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">⋆</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id3\">Institute note.</note></creator>",
+    ],
+  );
+}
+
+/// 63i: a `$^{\mathrm{a}}$` mark is read alike on the author and the affiliation: an interleaved group keeps the group rule (63i review r2). Repro
+/// sectioning-frontmatter/revtex_mathrm_mark_interleaved_group_keeps_the_group_rule.
+#[test]
+fn revtex_mathrm_mark_interleaved_group_keeps_the_group_rule() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_mathrm_mark_interleaved_group_keeps_the_group_rule.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">a</text></sup>Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: revtex authors first with `$^{\mathrm{a}}$` marks link to their marked affiliations (63i review r2). Repro
+/// sectioning-frontmatter/revtex_mathrm_marked_affiliations_link_by_mark.
+#[test]
+fn revtex_mathrm_marked_affiliations_link_by_mark() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_mathrm_marked_affiliations_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: `\textsuperscript` marks count as `^` ones in the group check: an interleaved group keeps the group rule (63i review r2). Repro
+/// sectioning-frontmatter/revtex_textsuperscript_interleaved_group_keeps_the_group_rule.
+#[test]
+fn revtex_textsuperscript_interleaved_group_keeps_the_group_rule() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_textsuperscript_interleaved_group_keeps_the_group_rule.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id4\">2</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\">2</sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: an interleaved group keeps its affiliation though no author shows its mark (63i review r2). Repro
+/// sectioning-frontmatter/revtex_interleaved_typo_mark_keeps_the_group_rule.
+#[test]
+fn revtex_interleaved_typo_mark_keeps_the_group_rule() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_interleaved_typo_mark_keeps_the_group_rule.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">3</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}

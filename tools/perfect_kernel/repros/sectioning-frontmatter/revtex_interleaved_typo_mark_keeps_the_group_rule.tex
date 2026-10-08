@@ -1,0 +1,19 @@
+% witness: 63i review r2 finding 3 (revtex interleaved group whose affiliation mark no author shows: a typo; synthetic)
+% oracle:  pdflatex (revtex4-2) 0 errors: "Cat Cole^2" over "^3 Univ B"
+% engines: rust 63h = Univ B on Cat (group rule); 63i r2 = Cat bare, Univ B shared without its mark
+% expect:  as 63h; 0 errors
+% status:  RED (63i r2) -> GREEN (63i)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{1}$}
+\affiliation{$^{1}$Univ A}
+\author{Cat Cole$^{2}$}
+\affiliation{$^{3}$Univ B}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

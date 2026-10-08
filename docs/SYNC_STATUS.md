@@ -343,6 +343,23 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin_document_ref_redefinition_survives_nameref, nested_alignment_inherits_no_eqnarray_row_hook,
   pictex_finite_dots_are_not_a_loop}` and `digested::tests::cycle_fingerprint_distinguishes_register_amounts`;
   trade-off in OXIDIZED_DESIGN_DIVERGENCES #326.
+- **63i**: affiliations linked by the marks authors show (OD #159, KPE #525). An institute labelled by a leading
+  letter or number mark goes to the authors whose names show it. revtex lists all the authors first, then the marked
+  `\affiliation`s (2011.01984, 2301.08449, 1510.01235, 0808.2763, 1205.4587, 1509.05545, 2601.16864). svjour3 marked
+  list pieces (1406.6147, 2405.03406, 1709.04623, 2003.05787) now link per author. Before, every group author had every
+  affiliation, or all were shared. Interleaved revtex groups keep the group rule, and an aa numbered-lines
+  `\institute` stays shared (astro-ph0305539). A/B 384 papers vs 63h: 11 change, all to the marks; 0 more errors or
+  warnings. Guards `perfect_kernel_batch63::{revtex_marked_affiliations_link_by_mark,
+  svjour3_marked_institutes_link_by_mark, institute_with_numbered_lines_is_no_marked_list,
+  revtex_interleaved_mark_with_symbol_keeps_the_group_rule, revtex_interleaved_group_with_unanswered_mark,
+  revtex_affiliation_with_inner_superscript_is_no_marked_line, revtex_marked_affiliations_with_symbol_marks_link_by_mark,
+  svjour3_marked_institutes_with_thanksref_link_by_mark, svjour3_symbol_marked_institute_pairs_by_position,
+  revtex_mathrm_mark_interleaved_group_keeps_the_group_rule, revtex_mathrm_marked_affiliations_link_by_mark,
+  revtex_textsuperscript_interleaved_group_keeps_the_group_rule, revtex_interleaved_typo_mark_keeps_the_group_rule}`
+  (marks read alike on both sides; a line's first mark labels it). Open RED: affiliation_line_inner_superscript_is_its_text.
+  Fidelity audit round 2 (80 papers, 63h5): authors 65/69 right
+  (round 1 52/73); next classes in HANDOFF (eqnarray label-only row, IEEE "and~", `\ref` in a TOC title, PoS
+  `\author`, algorithmic labels).
 - **63h**: a labelled annotation relocated into a title (the AAS title footnote `\title{..\altaffilmark{1}}` +
   `\altaffiltext{1}`, 0704.0478, 1001.2402; elsarticle `\tnoteref`/`\tnotetext`) is the title's frontmatter note, not a
   schema-invalid `<contact>` (KPE #524, OD #461; both papers 1 → 0 jing errors). Orphaned frontmatter annotations go

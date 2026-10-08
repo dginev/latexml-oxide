@@ -1,0 +1,19 @@
+% witness: 63i review r1 finding 3 (revtex interleaved groups, one author mark answered by no affiliation; synthetic)
+% oracle:  pdflatex (revtex4-2) 0 errors: "Ann Able^1, Bob Baker^{1,5}, Cat Cole^2"; "^1 Univ A", "^2 Univ B"
+% engines: rust 63h = Univ A on Ann and Bob, Univ B on Cat; 63i r1 = all shared (the unanswered 5 turned linking off)
+% expect:  as 63h (the group rule, exact for interleaved groups); 0 errors
+% status:  RED (63i r1) -> GREEN (63i)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{1,5}$}
+\affiliation{$^{1}$Univ A}
+\author{Cat Cole$^{2}$}
+\affiliation{$^{2}$Univ B}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

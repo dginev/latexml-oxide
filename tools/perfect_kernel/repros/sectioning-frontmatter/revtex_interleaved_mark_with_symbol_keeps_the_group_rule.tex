@@ -1,0 +1,18 @@
+% witness: 63i review r1 finding 1 (revtex interleaved `\author{B$^{2,\dagger}$}\affiliation{$^{2}$Univ B}`; synthetic)
+% oracle:  pdflatex (revtex4-2) 0 errors: "Ann Able^1, Bob Baker^{2,†}"; "^1 Univ A", "^2 Univ B"
+% engines: rust 63h = Ann Univ A, Bob Univ B (revtex group rule); 63i r1 = Bob none, Univ B shared (the † made his mark none)
+% expect:  as 63h: each group keeps its affiliation, marks visible; 0 errors
+% status:  RED (63i r1) -> GREEN (63i)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\affiliation{$^{1}$Univ A}
+\author{Bob Baker$^{2,\dagger}$}
+\affiliation{$^{2}$Univ B}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

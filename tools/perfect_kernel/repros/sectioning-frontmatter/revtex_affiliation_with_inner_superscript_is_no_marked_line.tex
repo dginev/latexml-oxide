@@ -1,0 +1,18 @@
+% witness: 63i review r1 finding 2 (revtex `\affiliation{Laboratory for $^{3}$He Physics, Univ B}`; synthetic)
+% oracle:  pdflatex (revtex4-2) 0 errors: "Laboratory for ^3He Physics, Univ B" under Bob Baker
+% engines: rust 63h = Ann Univ A, Bob the laboratory with its ^3He; 63i r1 = the 3 lost, the line split
+% expect:  as 63h: a superscript inside the line is its text, not a mark; 0 errors
+% status:  RED (63i r1) -> GREEN (63i)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\affiliation{$^{1}$Univ A}
+\author{Bob Baker$^{2}$}
+\affiliation{Laboratory for $^{3}$He Physics, Univ B}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -11226,3 +11226,15 @@ as it is. A title cites one in two templates: the AAS title footnote, `\title{..
 Fixed in Rust (63h, OXIDIZED_DESIGN_DIVERGENCES #461): in an element that holds no contact, the relocated annotation is
 the frontmatter thanks note `\lx@add@thanks` makes. Guards
 `perfect_kernel_batch63::{aastex_title_altaffilmark_is_a_note, elsarticle_title_tnote_is_a_note}`.
+
+## 525. revtex's marked affiliations go to every author of the group
+
+`revtex4_support.sty.ltxml:47` maps `\affiliation{}` to `\lx@add@affiliation[annotate=new]`: every author before it
+that has no affiliation yet gets it. That is revtex's own group rule. Many papers instead list every `\author{Name$^{a}$}`
+first, then `$^{a}$`-marked `\affiliation{$^{a}$…}` lines, and the reader pairs them by mark. Perl gives every author
+the first affiliation and the last author all of them, marks and all (2011.01984, 2301.08449, 1510.01235, 2601.16864).
+
+Fixed in Rust (63i, OXIDIZED_DESIGN_DIVERGENCES #159). An `\affiliation` that starts with a letter or number mark is
+labelled by its marks (`\lx@add@affiliation@marked`), and goes to the authors whose names show them. The group rule
+still applies to an unmarked line, and to an interleaved group whose authors all show the line's one mark.
+Guard `perfect_kernel_batch63::revtex_marked_affiliations_link_by_mark`.

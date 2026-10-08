@@ -6316,6 +6316,30 @@ institute cites (#460). Guard `perfect_kernel_batch63::svjour3_epj_title_and_ins
 
 **Whose orphans (63h).** An orphan's label is one institute together with what inherited its label
 (its `\email`, `\url`). An orphan goes to the authors the evidence names; otherwise it is shared.
+- **An institute labelled by a mark** (`\affiliation{$^{a}$Univ A}`, 63i): the label `affiliation:a`
+  was set by the mark itself, and its pending stub carries `_bymark`. The institute goes to the
+  authors whose names show that mark (`Ann Able$^{a}$`, `$^{a,\dagger}$`). Each letter or number of
+  the author's superscript counts; symbols do not. The mark is read from a visible `<ltx:sup>` or,
+  before the math is rewritten, a superscript-only formula. A number that `labelseq` gave is no
+  mark, so aa's one `\institute{{1} … \\ {2} …}`, whose lines carry numbers, stays shared
+  (astro-ph0305539).
+  - revtex lists every `\author` first and then the marked `\affiliation`s (2011.01984, 2301.08449,
+    1510.01235, 0808.2763, 1205.4587, 2601.16864).
+  - svjour3 has one marked list piece (1406.6147, 2405.03406, 2003.05787).
+  - Only a line that starts with a letter or number mark (past a font switch: `{\it $^1$ …}`) is
+    marked. Only the line's first mark labels it; a later superscript in it is its text, shown. Two
+    leading marks (`$^{1}$$^{2}$ Shared Lab`) label by the first. A list is still split at every spaced
+    mark, so an isotope inside a marked line (`$^{2}$Laboratory for $^{3}$He`) is split off with its 3
+    lost (RED `affiliation_line_inner_superscript_is_its_text`, iopart alike).
+  - Marks are read alike on both sides, the label's and the author's: `^` (not the `\^` accent),
+    `\textsuperscript`, `\mathrm{a}`, `{\rm 2}`, commas at the top level only, a symbol after a mark
+    dropped (`2*`, `1\dagger`). A font-switch name is matched as a prefix (`\itshape a` reads "shapea").
+  - An interleaved revtex group keeps revtex's group rule, which is exact there. This applies when an
+    author was queued since a previous `\affiliation`, whatever its mark says: a typo'd mark stays
+    with its group, as the PDF pairs it. It also applies to a first affiliation with one mark that
+    every queued author shows.
+  - A line linked by its mark loses the visible mark (the link carries it), while a group-rule line
+    keeps it. The links are right either way.
 - **An institute's `\at` names** (svjour3, a `fuzzy:` label that missed the exact name match): it
   goes to the authors with those surnames, in any order, provided each name matches exactly one
   author. Examples: `A.M.Bykov \at …` for "Andrei Bykov" (1205.2208; also 1811.08330, 1709.03245),
@@ -6344,10 +6368,15 @@ Guards `perfect_kernel_batch63::{svjour3_sole_author_keeps_the_institute,
 llncs_sole_author_keeps_the_institute, svjour3_two_institutes_pair_by_position,
 svjour3_at_institutes_link_by_surname_in_any_order, svjour3_at_piece_naming_several_authors,
 svjour3_name_only_piece_keeps_the_institute_shared, elsarticle_lettered_addresses_no_one_cites_stay_shared,
-elsarticle_orphan_fntext_stays_off_the_title}`, and `perfect_kernel_batch59::author_block_orphan_mark_is_kept`.
-Open: institutes linked by their `$^{n}$` marks rather than by position (RED
-`svjour3_marked_institutes_link_by_mark`), and a name-only piece sharing the next institute (RED
-`svjour3_name_only_piece_shares_the_next_institute`).
+elsarticle_orphan_fntext_stays_off_the_title, revtex_marked_affiliations_link_by_mark,
+svjour3_marked_institutes_link_by_mark, institute_with_numbered_lines_is_no_marked_list,
+revtex_interleaved_mark_with_symbol_keeps_the_group_rule, revtex_interleaved_group_with_unanswered_mark,
+revtex_affiliation_with_inner_superscript_is_no_marked_line, revtex_marked_affiliations_with_symbol_marks_link_by_mark,
+svjour3_marked_institutes_with_thanksref_link_by_mark, svjour3_symbol_marked_institute_pairs_by_position}`, and
+`perfect_kernel_batch59::author_block_orphan_mark_is_kept`, plus `revtex_mathrm_mark_interleaved_group_keeps_the_group_rule,
+revtex_mathrm_marked_affiliations_link_by_mark, revtex_textsuperscript_interleaved_group_keeps_the_group_rule,
+revtex_interleaved_typo_mark_keeps_the_group_rule`. Open: a name-only piece sharing the next institute (RED
+`svjour3_name_only_piece_shares_the_next_institute`), the isotope split above.
 
 ### 160. OmniBus captures `\orcid` and no-ops the running-head registers `\lefttitle`/`\righttitle`
 
@@ -14104,7 +14133,9 @@ once below the authors, as the PDF has it. Before, every unlabelled piece went t
 `distribute_upfront_contacts` re-dealt a clean grid. The `\at` pieces whose abbreviated names miss the exact match go to
 the authors they name by surname (#159). Guards `perfect_kernel_batch63::{svjour3_epj_one_institute_shared,
 svjour3_two_institutes_pair_by_position, svjour3_sole_author_keeps_the_institute,
-svjour3_at_institutes_link_by_surname_in_any_order, svjour3_at_piece_naming_several_authors}`.
+svjour3_at_institutes_link_by_surname_in_any_order, svjour3_at_piece_naming_several_authors}`. An unlabelled piece
+that starts with a mark (`$^{1}$Univ A`, or one piece of `$^1$… \\ $^2$…` lines) is a marked list instead
+(`\lx@sv@institute@unlabelled` → `\lx@add@affiliation@marked`, 63i), its lines labelled by their marks.
 
 svjour3's `\author` splits each `\and` piece at its commas, " and " and " \& " (`\lx@add@author@split`, as llncs and
 inst do since 63e; Perl split at commas only): `\author{A and B \and C}` is three people (1406.5162, 2105.12728, both

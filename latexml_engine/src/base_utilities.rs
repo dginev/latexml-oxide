@@ -1703,13 +1703,29 @@ LoadDefinitions!({
   });
   DefPrimitive!(T_CS!("\\lx@sup@setlabel@affiliation"), None, {
     let operand = read_frontmatter_sup_operand()?;
+    // A line's first mark is its label; a later superscript in it is its text, shown (`$^{2}$Laboratory for
+    // $^{3}$He`: the isotope's, 63i review; repro affiliation_line_inner_superscript_is_its_text).
+    let mut labelled = false;
+    with_pending_entry_attr(|attr| labelled = attr.contains_key("_bymark"));
+    if labelled {
+      return Ok(vec![digest(Invocation!(
+        T_CS!("\\lx@frontmatter@keepsup"),
+        vec![Some(operand)]
+      ))?]);
+    }
     let label = clean_frontmatter_labels(&operand.to_string(), "affiliation")
       .into_iter()
       .next();
+    // the marks it is (`\mathrm{a}`: a), as the authors' are read (relocate_annotations)
+    let keys = script_marks(&operand.to_string()).join(",");
     with_pending_entry_attr(move |attr| match label {
       Some(label) => {
         DebugFeature!("frontmatter", "FRONT set label {label}");
         attr.insert("_annotations".to_string(), label);
+        // labelled by a mark, which the authors showing it answer (relocate_annotations)
+        if !keys.is_empty() {
+          attr.insert("_bymark".to_string(), keys);
+        }
       },
       None => {
         attr.remove("_annotations");
@@ -2768,8 +2784,9 @@ fn take_author_annotations(line: &Tokens) -> (Tokens, Vec<Token>) {
   (Tokens::new(kept), taken)
 }
 
-/// The operand of an affiliation entry's last mark, which `\lx@sup@setlabel@affiliation` labels it by.
-fn entry_mark(entry: &[Token]) -> Option<Vec<Token>> { mark_operands(entry).pop() }
+/// The operand of an affiliation entry's first mark, which `\lx@sup@setlabel@affiliation` labels it by (a later
+/// superscript in the entry is its text, 63i).
+fn entry_mark(entry: &[Token]) -> Option<Vec<Token>> { mark_operands(entry).into_iter().next() }
 
 /// The label `\lx@sup@setlabel@affiliation` sets for a mark's operand: the first of its labels.
 fn mark_label(operand: &[Token]) -> Option<String> {
@@ -4914,6 +4931,10 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
   };
   // Beyond-Perl (OXIDIZED_DESIGN #159): an orphan's label is one institute with what inherited its label (its
   // `\email`/`\url`), and it goes to the author the evidence names, else is shared:
+  // - an institute labelled by a mark (`\affiliation{$^{a}$Univ A}`, an `affiliation:a` label) is the authors' whose
+  //   names show that mark (`Ann Able$^{a}$`, a visible `<ltx:sup>` the author line kept), as the reader pairs them
+  //   (revtex 2011.01984, 2301.08449; repro revtex_marked_affiliations_link_by_mark); the rest are then not paired by
+  //   position;
   // - an institute's `\at` names (svjour3 `fuzzy:` label) that missed the exact name match are the authors with those
   //   surnames, when each names one (`A.M.Bykov \at …` for "Andrei Bykov", 1205.2208; `Olivier Augereau, Koichi Kise,
   //   and Motoi Iwata \at …`, 1811.03214, every one of them), in any order; unless an unlabelled
@@ -4946,6 +4967,36 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
     }
   }
   let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
+  // the marks each author's name shows (`$^{a,b}$`: two)
+  let author_marks: Vec<Vec<String>> = authors
+    .iter()
+    .map(|author| shown_marks(document, author))
+    .collect();
+  // Only a label a mark set is answered by the authors showing that mark, as the mark's own keys (`_bymark`, read as the
+  // authors' are): a number `labelseq` gave is no mark (aa's one `\institute{{1} Univ A \\ {2} Univ B …}` is one
+  // institute, `affiliation:1`, under authors marked 1,2 / 2,3: astro-ph0305539).
+  let by_mark: HashMap<String, Vec<String>> = pending_nodes
+    .iter()
+    .filter_map(|pending| {
+      let keys = pending.get_attribute("_bymark")?;
+      let label = pending.get_attribute("_annotations")?;
+      Some((label, keys.split(',').map(str::to_string).collect()))
+    })
+    .collect();
+  let mut owners: HashMap<String, Vec<Node>> = HashMap::default();
+  for (label, institute) in orphan_labels.iter() {
+    let Some(keys) = by_mark.get(label) else {
+      continue;
+    };
+    let marked: Vec<Node> = (0..authors.len())
+      .filter(|&i| *institute && keys.iter().any(|key| author_marks[i].contains(key)))
+      .map(|i| authors[i].clone())
+      .collect();
+    if !marked.is_empty() {
+      owners.insert(label.clone(), marked);
+    }
+  }
+  let linked_institute = linked_institute || !owners.is_empty();
   let unaffiliated = !linked_institute
     && authors.iter().all(|author| {
       element_nodes(author).iter().all(|child| {
@@ -4955,7 +5006,7 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
     });
   let institutes: Vec<&String> = orphan_labels
     .iter()
-    .filter(|(_, institute)| *institute)
+    .filter(|(label, institute)| *institute && !owners.contains_key(label))
     .map(|(label, _)| label)
     .collect();
   let numbered = |label: &str| {
@@ -4963,7 +5014,6 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
       .strip_prefix("affiliation:")
       .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
   };
-  let mut owners: HashMap<String, Vec<Node>> = HashMap::default();
   if !institutes.iter().any(|label| numbered(label)) {
     let surnames: Vec<Option<String>> = authors
       .iter()
@@ -5128,6 +5178,154 @@ fn contact_in_title_as_note(document: &mut Document, target: &Node) -> Result<()
   let mut note = document.rename_node(clone, "ltx:note", false)?;
   document.set_attribute(&mut note, "role", "thanks")?;
   document.add_class(&mut note, &s!("ltx_note_frontmatter ltx_thanks_{kind}"))
+}
+
+/// The marks a creator's name shows: each `<ltx:sup>`'s (`\textsuperscript{a}`), and each formula's that is only a
+/// superscript (`$^{a}$`, `$^{1,2}$`: a `<ltx:Math>` whose `tex` is `{}^{a}` until the math is rewritten into a
+/// `<ltx:sup>` later).
+fn shown_marks(document: &mut Document, creator: &Node) -> Vec<String> {
+  let mut marks: Vec<String> = document
+    .findnodes("ltx:personname//ltx:sup", Some(creator))
+    .iter()
+    .flat_map(|sup| script_marks(sup.get_content().trim()))
+    .collect();
+  for math in document.findnodes("ltx:personname//ltx:Math", Some(creator)) {
+    let tex = math.get_attribute("tex").unwrap_or_default();
+    if tex
+      .trim()
+      .trim_start_matches("{}")
+      .trim_start()
+      .starts_with('^')
+    {
+      marks.extend(superscript_scripts(&tex).concat());
+    }
+  }
+  marks
+}
+
+/// The text of the braced group `text` opens (just past its `{`), to its matching `}`, and what follows it.
+fn braced_group(text: &str) -> (&str, &str) {
+  let mut depth = 0usize;
+  for (i, c) in text.char_indices() {
+    match c {
+      '{' => depth += 1,
+      '}' if depth == 0 => return (&text[..i], &text[i + 1..]),
+      '}' => depth -= 1,
+      _ => {},
+    }
+  }
+  (text, "")
+}
+
+/// The letter or number marks of a superscript's script: each item of its list at its top-level commas (`2,\dagger`:
+/// the 2), past braces and font switches (`\rm a`, `\mathrm{a}`, `{\rm 2}`: the a, the 2), and before a symbol after
+/// it (`2*`, `1\dagger`, `1†`: the 2, the 1). A symbol alone or other markup (`\footnote{…}`) is no mark. Both the marks
+/// an affiliation is labelled by and the marks an author shows are read so (63i review).
+fn script_marks(script: &str) -> Vec<String> {
+  const FONTS: [&str; 10] = [
+    "\\mathrm", "\\textrm", "\\mathit", "\\textit", "\\mathbf", "\\textbf", "\\mathsf", "\\rm",
+    "\\it", "\\bf",
+  ];
+  let mut items = Vec::new();
+  let (mut depth, mut start) = (0usize, 0usize);
+  for (i, c) in script.char_indices() {
+    match c {
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      ',' if depth == 0 => {
+        items.push(&script[start..i]);
+        start = i + 1;
+      },
+      _ => {},
+    }
+  }
+  items.push(&script[start..]);
+  items
+    .into_iter()
+    .filter_map(|item| {
+      let mut item: String = item
+        .chars()
+        .filter(|c| !matches!(c, '{' | '}') && !c.is_whitespace())
+        .collect();
+      while let Some(rest) = FONTS.iter().find_map(|cs| item.strip_prefix(cs)) {
+        item = rest.to_string();
+      }
+      let lead: String = item.chars().take_while(|c| c.is_alphanumeric()).collect();
+      let rest = &item[lead.len()..];
+      let symbol_after = rest.is_empty()
+        || rest.starts_with(['*', '\\'])
+        || rest.starts_with(|c: char| !c.is_ascii() && !c.is_alphanumeric());
+      (!lead.is_empty() && symbol_after).then_some(lead)
+    })
+    .collect()
+}
+
+/// The marks of each superscript in a TeX source string, one list per superscript (`Ann Able$^{1,2}$ and Bob$^{1}$`
+/// gives [1, 2] and [1]; `^a` gives [a]; `\textsuperscript{b}` gives [b]).
+fn superscript_scripts(tex: &str) -> Vec<Vec<String>> {
+  const TEXTSUP: &str = "\\textsuperscript";
+  let mut scripts = Vec::new();
+  let mut rest = tex;
+  loop {
+    // (a `^` that is no `\^` accent: `Ren\^{e}`)
+    let caret = rest
+      .char_indices()
+      .find(|&(i, c)| c == '^' && !rest[..i].ends_with('\\'))
+      .map(|(i, _)| i);
+    let (at, skip) = match (caret, rest.find(TEXTSUP)) {
+      (Some(caret), Some(text)) if text < caret => (text, TEXTSUP.len()),
+      (Some(caret), _) => (caret, 1),
+      (None, Some(text)) => (text, TEXTSUP.len()),
+      (None, None) => break,
+    };
+    rest = rest[at + skip..].trim_start();
+    if let Some(inner) = rest.strip_prefix('{') {
+      let (script, after) = braced_group(inner);
+      scripts.push(script_marks(script));
+      rest = after;
+    } else if let Some(c) = rest.chars().next() {
+      scripts.push(script_marks(&c.to_string()));
+      rest = &rest[c.len_utf8()..];
+    }
+  }
+  scripts
+}
+
+/// Is the affiliation `content` the group's, as revtex's group rule gives it? So it is when an author was queued since
+/// a previous affiliation (interleaved `\author`/`\affiliation` groups, whatever their marks say: a mark no author shows
+/// is still its group's, as the PDF pairs it), and when the first affiliation carries one mark that every author
+/// queued shows (`\author{A$^{1}$ and B$^{1,2}$}\affiliation{$^{1}$…}`, 0808.2763). Authors listed first and their marked
+/// affiliations after them are no such group, and an affiliation holding several marked lines (`$^1$… \\ $^2$…`,
+/// 1205.4587) is a marked list (63i review).
+pub fn queued_group_shares_the_mark(content: &Tokens) -> bool {
+  let mut marks: Vec<String> = superscript_scripts(&content.to_string()).concat();
+  marks.dedup();
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => {
+      let is_affiliation = |entry: &RawFrontmatter| {
+        entry.0 == "ltx:contact" && entry.1.get("role").map(String::as_str) == Some("affiliation")
+      };
+      let since: Vec<&RawFrontmatter> = queue
+        .iter()
+        .rev()
+        .take_while(|entry| !is_affiliation(entry))
+        .filter(|entry| entry.0 == "ltx:creator")
+        .collect();
+      if !since.is_empty() && queue.iter().any(is_affiliation) {
+        return true;
+      }
+      let [mark] = marks.as_slice() else {
+        return false;
+      };
+      let scripts: Vec<Vec<String>> = since
+        .iter()
+        .flat_map(|entry| superscript_scripts(&entry.2.to_string()))
+        .filter(|script| !script.is_empty())
+        .collect();
+      !scripts.is_empty() && scripts.iter().all(|script| script.contains(mark))
+    },
+    _ => false,
+  })
 }
 
 /// The surname a name ends with, to match an institute's `\at` name with its author: the last run of letters,
@@ -8979,6 +9177,48 @@ fn note_body(content: Tokens) -> Tokens {
   body.extend_from_slice(&toks[split..]);
   body.push(T_CS!("\\egroup"));
   Tokens::new(body)
+}
+
+/// Does `content` start with a letter or number superscript mark (`$^{1}$Univ A`, `$^a$…`, `\textsuperscript{b}…`):
+/// a marked affiliation list, its lines labelled by their marks? A symbol (`$^{*}$Corresponding author`) is a note's
+/// mark, and a superscript later in the line (`Laboratory for $^{3}$He`) is the affiliation's own text.
+pub fn leads_with_mark(content: &Tokens) -> bool {
+  // (past a leading font switch or group: `\affiliation{\it $^1$ Key Laboratory …}`, 0808.2763)
+  let declarations = [
+    "\\it",
+    "\\rm",
+    "\\bf",
+    "\\sl",
+    "\\sf",
+    "\\tt",
+    "\\em",
+    "\\itshape",
+    "\\upshape",
+    "\\small",
+    "\\footnotesize",
+    "\\normalsize",
+    "\\noindent",
+  ];
+  let tokens: Vec<&Token> = content
+    .unlist_ref()
+    .iter()
+    .filter(|t| **t != T_SPACE!())
+    .skip_while(|t| **t == T_BEGIN!() || declarations.iter().any(|cs| **t == T_CS!(cs)))
+    .collect();
+  let script = match tokens.as_slice() {
+    [t, rest @ ..] if **t == T_CS!("\\textsuperscript") || **t == T_SUPER!() => rest,
+    [t, s, rest @ ..] if t.get_catcode() == Catcode::MATH && **s == T_SUPER!() => rest,
+    _ => return false,
+  };
+  script
+    .iter()
+    .find(|t| ***t != T_BEGIN!() && ***t != T_CS!("\\rm") && ***t != T_CS!("\\mathrm"))
+    .is_some_and(|t| {
+      t.to_string()
+        .chars()
+        .next()
+        .is_some_and(char::is_alphanumeric)
+    })
 }
 
 /// Does this token list *begin* with a NUMERIC affiliation superscript mark

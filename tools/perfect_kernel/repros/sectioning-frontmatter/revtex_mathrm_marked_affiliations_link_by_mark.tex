@@ -1,0 +1,18 @@
+% witness: 63i review r2 finding 1 (revtex authors first with `$^{\mathrm{a}}$` marks, then marked affiliations; synthetic)
+% oracle:  pdflatex (revtex4-2) 0 errors: "Ann Able^a, Bob Baker^b"; "^a Univ A", "^b Univ B"
+% engines: rust 63h = Univ A on both, Univ B on Bob; 63i r2 = nothing linked, the marks gone
+% expect:  by mark: Ann Univ A, Bob Univ B; 0 errors
+% status:  RED (63i r2) -> GREEN (63i)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\mathrm{a}}$}
+\author{Bob Baker$^{\mathrm{b}}$}
+\affiliation{$^{\mathrm{a}}$Univ A}
+\affiliation{$^{\mathrm{b}}$Univ B}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

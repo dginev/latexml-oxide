@@ -1,0 +1,20 @@
+% witness: 63i review r1 finding 2 (revtex marked line holding an isotope superscript; synthetic; iopart alike)
+% oracle:  pdflatex (revtex4-2) 0 errors: "^2 Laboratory for ^3He Physics, Univ B" under Bob Baker
+% engines: rust 63i = Bob "Laboratory for", "He Physics, Univ B" shared, the 3 lost (a marked list is split at every
+%          spaced mark; iopart alike); 63h = Bob had the whole line, and Univ A too. Splitting only at the marks the
+%          authors show failed review (an author mark the reader cannot read, `$^{2*}$`, is not "no mark")
+% expect:  Ann Univ A; Bob "Laboratory for ^3He Physics, Univ B" (the inner superscript its text); 0 errors
+% status:  RED (63i)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ A}
+\affiliation{$^{2}$Laboratory for $^{3}$He Physics, Univ B}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}
