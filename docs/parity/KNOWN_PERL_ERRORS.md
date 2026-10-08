@@ -11369,3 +11369,27 @@ every grade in conference mode (IEEEtran.cls:6270 swallows them) unless `\IEEEov
 ieee_membership_outside_the_names_stays_dropped, ieee_membership_own_definition_kept,
 ieee_membership_conference_override, author_ieee_membership_in_a_block_stays_with_its_name,
 ieee_compsoc_names_continue_past_a_break, ieee_grade_comma_before_a_break_continues_names}`.
+
+## 535. A `\label` after acmart's `\Description` labels the hidden description note
+
+`\caption{…}\Description{…}\label{fig:x}` in an acmart float puts `labels="LABEL:fig:x"` on the
+`<ltx:note class="ltx_nodisplay">` the binding builds for the description (acmart.cls.ltxml:78-85), not on the float,
+so every `\ref{fig:x}` points at a hidden note. `\label` takes the nearest element with an id from the current node's
+last child (Document.pm:1098-1123 floatToLabel; latex_constructs.pool.ltxml:3782-3790), and the note — given an id
+by `RefStepCounter('acmlabel')` — is that child until the float closes and moves it into the caption
+(latex_constructs.pool.ltxml:3259-3266). In LaTeX `\Description` typesets nothing (acmart.cls:895
+`\newcommand\Description[2][]{\global\@Description@presenttrue\ignorespaces}`), so the label is the caption's.
+Witness 2403.09168 (ten labels on notes); teasers 2401.15174, 2403.16311, 2405.18614 (`labels="LABEL:fig:teaser"` on
+the note); `\Description` before `\caption` is unaffected (`\@caption@postlabel`). Perl's template emits only `#1`, the
+short description, though it digests `#2` too.
+
+Fixed in Rust (63n): the binding's `after_construct` moves its notes into a caption already in the float, where the
+float's close would put them, so the label reaches the float. The kernel rule stays as Perl's. The binding also
+digests the description (`{}`, as Perl does) instead of reading it `Undigested`, which had printed its markup as raw
+TeX in the note (`\sysname{}`, 2403.09168; 2401.04997, 2304.01062, 2312.11013 — Rust-only). As LaTeX never typesets
+it, authors leave `_ ^ & #` unescaped (`\Description{Complaint_Loss}`, 2502.07049; 2404.00573, 2503.04114), where
+Perl's digestion errs: outside math they are read as the characters they show (`description_text`). Guards
+`perfect_kernel_batch63::{acmart_description_label_after_names_the_float, acmart_description_markup_is_digested,
+acmart_description_unescaped_characters}`;
+repros `captions-floats/acmart_description_label_after_names_the_float.tex`,
+`captions-floats/acmart_description_markup_is_digested.tex`, `captions-floats/acmart_description_unescaped_characters.tex`.

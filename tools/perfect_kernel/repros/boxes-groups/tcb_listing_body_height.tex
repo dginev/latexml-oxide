@@ -1,0 +1,23 @@
+% witness: html_feedback HF1 — a listing in a tcolorbox a line high (230 of 290 boxed listings in 37 papers):
+%          2406.06469, 2604.25850, 2601.23265, 2402.10176, 2311.11482, 2402.07204 (minted)
+% oracle:  pdflatex 0 errors; the listing in `\setbox0\vbox{…}` is 84pt high: 6pt aboveskip + 6 × 12pt baselineskip
+%          + 6pt belowskip (listings.sty:703-705, :1765, :1818; lstmisc.sty:1630, :1648), \linewidth wide
+% engines: rust 63m = the listing block measured as one horizontal list, 9pt: foreignObject height 12.45 (output
+%          units, 100/72.27 px per pt); Perl 0.8.8 = every box of the body a line, foreignObject 307.8
+% expect:  0 errors, 0 warnings; the box's foreignObject 84pt high (116.23 in output units), holding the 6 lines
+% status:  RED (63m) -> GREEN (63n)
+\documentclass{article}
+\usepackage{tcolorbox}
+\usepackage{listings}
+\begin{document}
+\begin{tcolorbox}
+\begin{lstlisting}
+line 1
+line 2
+line 3
+line 4
+line 5
+line 6
+\end{lstlisting}
+\end{tcolorbox}
+\end{document}

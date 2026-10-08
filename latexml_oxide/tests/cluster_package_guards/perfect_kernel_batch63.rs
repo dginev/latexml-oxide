@@ -2784,3 +2784,146 @@ fn author_addresses_parted_by_a_macro() {
     ],
   );
 }
+
+/// The start tag of the first `<name …>` element of `xml`, and the whole first `<note …>…</note>` of class `class`.
+fn hf4_elements(xml: &str, name: &str) -> (String, String) {
+  let open = xml
+    .find(&format!("<{name} "))
+    .map(|at| xml[at..at + xml[at..].find('>').unwrap() + 1].to_string())
+    .unwrap_or_default();
+  let note = xml
+    .find("<note class=\"ltx_nodisplay ltx_acm_description\"")
+    .or_else(|| xml.find("<note class=\"ltx_acm_description"))
+    .map(|at| xml[at..at + xml[at..].find("</note>").unwrap() + "</note>".len()].to_string())
+    .unwrap_or_default();
+  (open, note)
+}
+
+/// 63n: a `\label` after acmart's `\Description` names the float, not the hidden description note (2403.09168: ten
+/// labels on notes; Perl the same, KNOWN_PERL_ERRORS #535). Repro captions-floats/acmart_description_label_after_names_the_float.
+#[test]
+fn acmart_description_label_after_names_the_float() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/acmart_description_label_after_names_the_float.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let (table, note) = hf4_elements(&xml, "table");
+  assert_eq!(
+    (table.as_str(), note.as_str()),
+    (
+      "<table aria:describedby=\"acmlabel1\" inlist=\"lot\" labels=\"LABEL:tab:x\" xml:id=\"S0.T1\">",
+      "<note class=\"ltx_nodisplay ltx_acm_description\" xml:id=\"acmlabel1\">Hidden description.</note>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63n: acmart's `\Description` digests its description, so its markup is markup in the note, not raw TeX
+/// (`\sysname{}`, 2403.09168; 2401.04997, 2304.01062, 2312.11013; Perl acmart.cls.ltxml:78 digests `{}`). Repro
+/// captions-floats/acmart_description_markup_is_digested.
+#[test]
+fn acmart_description_markup_is_digested() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/acmart_description_markup_is_digested.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let (table, note) = hf4_elements(&xml, "table");
+  assert_eq!(
+    (table.as_str(), note.as_str()),
+    (
+      "<table aria:describedby=\"acmlabel1\" inlist=\"lot\" xml:id=\"S0.T1\">",
+      "<note class=\"ltx_nodisplay ltx_acm_description\" xml:id=\"acmlabel1\">The table of <emph font=\"italic\" xml:id=\"acmlabel1.1\">all</emph> SysName results.</note>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63n: a display listing is as high as TeX sets it — aboveskip, a `\baselineskip` per line, belowskip — so a
+/// tcolorbox around it is too (html_feedback HF1: 230 of 290 boxed listings a line high; 2406.06469, 2402.10176;
+/// OXIDIZED_DESIGN_DIVERGENCES #462). Repro boxes-groups/tcb_listing_body_height.
+#[test]
+fn tcb_listing_body_height() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/tcb_listing_body_height.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let at = xml.find("<svg:foreignObject").expect("a foreignObject");
+  let object = &xml[at..at + xml[at..].find("</svg:foreignObject>").unwrap()];
+  assert_eq!(
+    &object[..object.find('>').unwrap() + 1],
+    "<svg:foreignObject height=\"116.23\" overflow=\"visible\" style=\"--ltx-fo-width:31.37em;--ltx-fo-height:8.4em;--ltx-fo-depth:0em;font-size:10pt;\" transform=\"matrix(1 0 0 -1 0 116.23)\" width=\"434.07\">",
+    "{xml}"
+  );
+  assert_eq!(object.matches("<listingline ").count(), 6, "{object}");
+}
+
+/// 63n: acmart's `\Description` typesets nothing, so `_ ^ & #` written plain in it are the characters they show, not
+/// errors (2502.07049 `\Description{Complaint_Loss}`, 2404.00573, 2503.04114). Repro
+/// captions-floats/acmart_description_unescaped_characters.
+#[test]
+fn acmart_description_unescaped_characters() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/acmart_description_unescaped_characters.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let (_, note) = hf4_elements(&xml, "table");
+  assert_eq!(
+    note,
+    "<note class=\"ltx_nodisplay ltx_acm_description\" xml:id=\"acmlabel1\">Complaint_Loss, 5^2, A &amp; B, #1 and <Math mode=\"inline\" tex=\"x_{i}\" text=\"x _ i\" xml:id=\"acmlabel1.m1\">\n          <XMath xml:id=\"acmlabel1.m1.1\">\n            <XMApp xml:id=\"acmlabel1.m1.1.1\">\n              <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n              <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n              <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">i</XMTok>\n            </XMApp>\n          </XMath>\n        </Math></note>",
+    "{xml}"
+  );
+}
+
+/// 63n: a comment spanning lines counts each of its lines in the listing's height (its class group stays open across
+/// them; OXIDIZED_DESIGN_DIVERGENCES #462). Repro boxes-groups/tcb_listing_comment_lines.
+#[test]
+fn tcb_listing_comment_lines() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/tcb_listing_comment_lines.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let at = xml.find("<svg:foreignObject").expect("a foreignObject");
+  let object = &xml[at..at + xml[at..].find("</svg:foreignObject>").unwrap()];
+  assert_eq!(
+    &object[..object.find('>').unwrap() + 1],
+    "<svg:foreignObject height=\"83.02\" overflow=\"visible\" style=\"--ltx-fo-width:31.37em;--ltx-fo-height:6em;--ltx-fo-depth:0em;font-size:10pt;\" transform=\"matrix(1 0 0 -1 0 83.02)\" width=\"434.07\">",
+    "{xml}"
+  );
+  assert_eq!(object.matches("<listingline ").count(), 4, "{object}");
+}

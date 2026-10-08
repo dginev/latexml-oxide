@@ -611,6 +611,137 @@ fn lst_get_literal(value: &str) -> String {
 /// Perl: lstGetBoolean — get boolean from LST@key state.
 fn lst_get_boolean(value: &str) -> bool { lst_get_literal(value) == "true" }
 
+/// The skip a listing length key gives (`aboveskip=\medskipamount`, its default, listings.sty:1735-1736), read as
+/// `\vspace\lst@aboveskip` reads it (listings.sty:1765); its natural size, none when the key is empty.
+fn lst_skip(key: &str) -> Result<Dimension> {
+  let value = lst_get_tokens(key);
+  if value.is_empty() {
+    return Ok(Dimension::new(0));
+  }
+  let glue = reading_from_mouth(Mouth::new("", None)?, move || {
+    unread(value);
+    read_glue()
+  })?;
+  Ok(Dimension::new(glue.value_of()))
+}
+
+/// A display listing's size as TeX sets it: each source line a line of its own (`\lst@NewLine`,
+/// listings.sty:703-705) a strut high, so one `\baselineskip` whatever its glyphs (lstmisc.sty:1630, :1648), a line
+/// broken under `breaklines` (lstmisc.sty:1308-1320) as many as its width needs, between `aboveskip` and `belowskip`
+/// (listings.sty:1765, :1818); `\linewidth` wide (lstmisc.sty:1285-1286), no depth. Without it the body was measured
+/// as one horizontal list, one line, so a tcolorbox (or any measuring box) around a listing was a line high (HF1:
+/// 230 of 290 boxed listings in 37 html_feedback papers; 2406.06469, 2604.25850, 2601.23265, 2402.10176, 2311.11482,
+/// 2402.07204). Perl has no sizer either and sets every box of the body as a line (Whatsit.pm:252-255,
+/// Font.pm:667-682), far too tall. OXIDIZED_DESIGN_DIVERGENCES #462.
+fn lst_block_size(whatsit: &Whatsit) -> Result<(Dimension, Dimension, Dimension)> {
+  let dimension = |key: &str| match whatsit.get_property(key).as_deref() {
+    Some(Stored::Dimension(d)) => d.value_of(),
+    _ => 0,
+  };
+  let breaklines = matches!(
+    whatsit.get_property("lst_breaklines").as_deref(),
+    Some(Stored::Bool(true))
+  );
+  // The body's boxes in order, lists opened, and a whatsit holding line markers opened too: a string or comment
+  // class group (`\@listingGroup{cls}{…}`) stays open across the lines it spans.
+  let mut boxes = Vec::new();
+  let mut pending = whatsit
+    .get_arg(2)
+    .map(|body| body.unlist())
+    .unwrap_or_default();
+  pending.reverse();
+  while let Some(item) = pending.pop() {
+    match item.data() {
+      DigestedData::List(_) => pending.extend(item.unlist().into_iter().rev()),
+      DigestedData::Whatsit(w) if !is_line_marker(&item) && has_line_marker(&item) => {
+        // (only the arguments with lines, not the class name)
+        let args: Vec<Digested> = w
+          .borrow()
+          .args
+          .iter()
+          .flatten()
+          .filter(|arg| has_line_marker(arg))
+          .flat_map(|arg| arg.unlist())
+          .collect();
+        pending.extend(args.into_iter().rev());
+      },
+      _ => boxes.push(item),
+    }
+  }
+  // the control sequence of a whatsit item, and a dimension property of it
+  let whatsit_cs = |item: &Digested| match item.data() {
+    DigestedData::Whatsit(w) => Some(w.borrow().get_definition().get_cs_name().into_owned()),
+    _ => None,
+  };
+  let metric = |item: &Digested, key: &str| match item.data() {
+    DigestedData::Whatsit(w) => match w.borrow().get_property(key).as_deref() {
+      Some(Stored::Dimension(d)) => d.value_of(),
+      _ => 0,
+    },
+    _ => 0,
+  };
+  let font = whatsit.get_font()?.or_else(lookup_font).unwrap_or_default();
+  let (mut height, mut width) = (0, 0);
+  let mut line: Option<(i64, i64, Vec<Digested>)> = None;
+  for item in boxes {
+    match whatsit_cs(&item).as_deref() {
+      Some("\\@lst@startline") => {
+        line = Some((
+          metric(&item, "lst_baselineskip"),
+          metric(&item, "lst_linewidth"),
+          Vec::new(),
+        ));
+      },
+      Some("\\@lst@endline") => {
+        let Some((baselineskip, linewidth, content)) = line.take() else {
+          continue;
+        };
+        let mut lines = 1;
+        if breaklines && linewidth > 0 {
+          let mut options = SymHashMap::default();
+          options.insert("mode", Stored::String(pin!("restricted_horizontal")));
+          let (w, ..) = font.compute_boxes_size(&content, options)?;
+          lines = lines.max((w.value_of() + linewidth - 1) / linewidth);
+        }
+        height += lines * baselineskip;
+        width = width.max(linewidth);
+      },
+      _ => {
+        if let Some((_, _, content)) = line.as_mut() {
+          content.push(item);
+        }
+      },
+    }
+  }
+  let skips = dimension("lst_aboveskip") + dimension("lst_belowskip");
+  Ok((
+    Dimension::new(width),
+    Dimension::new((skips + height).max(0)),
+    Dimension::new(0),
+  ))
+}
+
+/// Whether `item` is a line marker of a listing (`\@lst@startline`, `\@lst@endline`).
+fn is_line_marker(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::Whatsit(w) => {
+      let name = w.borrow().get_definition().get_cs_name().into_owned();
+      name == "\\@lst@startline" || name == "\\@lst@endline"
+    },
+    _ => false,
+  }
+}
+
+/// Whether a line marker is in `item`: it, or one in its lists and whatsit arguments.
+fn has_line_marker(item: &Digested) -> bool {
+  is_line_marker(item)
+    || match item.data() {
+      DigestedData::List(_) => item.unlist().iter().any(has_line_marker),
+      DigestedData::Whatsit(w) => w.borrow().args.iter().flatten().any(has_line_marker),
+      _ => false,
+    }
+}
+
 /// Perl: lstGetNumber — get numeric value from LST@key state.
 fn lst_get_number(value: &str) -> i64 {
   let key = s!("LST@{value}");
@@ -3132,10 +3263,16 @@ LoadDefinitions!({
         .map(|v| v.to_string())
         .unwrap_or_default();
       let encoded = base64::engine::general_purpose::STANDARD.encode(text.as_bytes());
-      Ok(stored_map!("lstdata" => Stored::String(pin(&encoded)),
+      let mut props = stored_map!("lstdata" => Stored::String(pin(&encoded)),
         "lstmime" => Stored::String(pin("text/plain")),
-        "lstenc" => Stored::String(pin("base64"))))
-    });
+        "lstenc" => Stored::String(pin("base64")));
+      // The listing's own settings, for its size ([`lst_block_size`]), read while they are in force.
+      props.insert("lst_aboveskip", Stored::Dimension(lst_skip("aboveskip")?));
+      props.insert("lst_belowskip", Stored::Dimension(lst_skip("belowskip")?));
+      props.insert("lst_breaklines", Stored::Bool(lst_get_boolean("breaklines")));
+      Ok(props)
+    },
+    sizer => sub[whatsit] { lst_block_size(whatsit) });
 
   // List of listings
   DefConstructor!("\\lstlistoflistings",
@@ -3436,7 +3573,17 @@ LoadDefinitions!({
 
   DefConstructor!("\\@lst@startline{}",
     "<ltx:listingline xml:id='#id' _noligatures='1'>#1",
-    properties => { RefStepID!("lstnumber")? });
+    properties => {
+      let mut props = RefStepID!("lstnumber")?;
+      // The line's metrics where they are in force, after the listing's `basicstyle` (`\footnotesize` makes
+      // `\baselineskip` 9.5pt), for the block's size ([`lst_block_size`]).
+      for (key, register) in [("lst_baselineskip", "\\baselineskip"), ("lst_linewidth", "\\linewidth")] {
+        if let Ok(Some(value)) = lookup_register(register, Vec::new()) {
+          props.insert(key, Stored::Dimension(Dimension::new(value.value_of())));
+        }
+      }
+      props
+    });
   DefConstructor!("\\@lst@endline", "</ltx:listingline>");
   DefConstructor!("\\@lst@linenumber{}",
     "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>");

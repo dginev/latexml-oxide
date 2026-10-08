@@ -14185,3 +14185,29 @@ orphaned note cannot be routed into a title this way.
 
 **Measured.** A/B on 318 papers vs 63g: only 0704.0478 and 1001.2402 change, each from 1 jing error to 0. Guards
 `perfect_kernel_batch63::{aastex_title_altaffilmark_is_a_note, elsarticle_title_tnote_is_a_note}`.
+
+### 462. A display listing is measured as TeX sets it (Perl: every box of its body a line)
+
+**Background.** The listings binding emits a display listing as one `\@@listings@block` whatsit holding a flat stream:
+`\@lst@startline` and `\@lst@endline` whatsits around each source line's characters (listings.sty.ltxml:261,
+:1342-1351, :1546-1548). The whatsit had no sizer. Rust measured its body as one horizontal list (whatsit.rs
+`compute_size` → `Font::compute_boxes_size`), so the listing was one line high. Perl unlists the arguments and
+counts every box as a line (Whatsit.pm:252-255, Font.pm:667-682): far too tall (a foreignObject of 307.8 output
+units for the six-line repro, against 116.23 for TeX's 84pt).
+Any box that measures its content inherits the error, whether a tcolorbox, a pgf picture, a minipage or
+`\resizebox`. minted, piton, showexpl and tcblisting all go through `lst_process_display` too. In the html_feedback
+reports, 230 of the 290 listings in a tcolorbox were a line high, across 37 papers (HF1; 2406.06469, 2604.25850,
+2601.23265, 2402.10176, 2311.11482, 2402.07204).
+
+**Rust behavior.** `lst_block_size` (`listings_sty.rs`) sizes the block as TeX does:
+- **Lines.** Each source line is its own line (`\lst@NewLine`, listings.sty:703-705), one strut high, so it takes
+  `\baselineskip` whatever its glyphs (lstmisc.sty:1630, :1648).
+- **Breaking.** Under `breaklines`, a line takes as many lines as its width needs (lstmisc.sty:1308-1320).
+- **Skips.** `aboveskip` and `belowskip` go around the block (listings.sty:1765, :1818), read as `\vspace` reads them.
+- **Box.** The block is `\linewidth` wide (lstmisc.sty:1285-1286) with no depth.
+
+Each `\@lst@startline` records the `\baselineskip` and `\linewidth` in force after the listing's `basicstyle`, so
+`\footnotesize` gives 9.5pt lines. A string or comment class group (`\@listingGroup{cls}{…}`) stays open across the
+lines it spans, so the sizer opens any whatsit holding line markers. A negative total is no height. The block records its skips and `breaklines` while the listing's settings hold.
+Only the size changes; the XML structure is untouched. Guard `perfect_kernel_batch63::tcb_listing_body_height` (six
+lines: 84pt), `tcb_listing_comment_lines` (a three-line comment: 60pt); repros `boxes-groups/`.

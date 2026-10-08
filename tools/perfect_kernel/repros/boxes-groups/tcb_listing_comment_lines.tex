@@ -1,0 +1,20 @@
+% witness: review of 63n (a string or comment class group, `\@listingGroup{comment}{…}`, stays open across the lines
+%          it spans, so its lines sat inside a whatsit argument the listing sizer did not open: a 3-line comment
+%          counted as one line); the HF1 witnesses 2406.06469, 2402.10176 hold such comments
+% oracle:  pdflatex 0 errors; the listing is 6pt + 4 × 12pt + 6pt = 60pt high
+% engines: rust 63n2 = 36pt (the comment's three lines as one); Perl 0.8.8 = every box of the body a line
+% expect:  0 errors, 0 warnings; the box's foreignObject 60pt high (83.02 in output units), with 4 listing lines
+% status:  RED (63n2) -> GREEN (63n)
+\documentclass{article}
+\usepackage{tcolorbox}
+\usepackage{listings}
+\begin{document}
+\begin{tcolorbox}
+\begin{lstlisting}[language=C]
+/* one
+   two
+   three */
+int x;
+\end{lstlisting}
+\end{tcolorbox}
+\end{document}

@@ -5,6 +5,31 @@ use crate::{
   prelude::*,
 };
 
+/// A description's tokens with the characters text rejects outside math (`_ ^ & #`) as the text commands for them;
+/// math is `$…$` or `\(…\)`.
+fn description_text(tokens: &Tokens) -> Vec<Token> {
+  let mut in_math = false;
+  tokens
+    .unlist_ref()
+    .iter()
+    .map(|t| match t.get_catcode() {
+      Catcode::MATH => {
+        in_math = !in_math;
+        *t
+      },
+      Catcode::CS if *t == T_CS!("\\(") || *t == T_CS!("\\)") => {
+        in_math = *t == T_CS!("\\(");
+        *t
+      },
+      Catcode::SUB if !in_math => T_CS!("\\textunderscore"),
+      Catcode::SUPER if !in_math => T_CS!("\\textasciicircum"),
+      Catcode::ALIGN if !in_math => T_CS!("\\&"),
+      Catcode::PARAM if !in_math => T_CS!("\\#"),
+      _ => *t,
+    })
+    .collect()
+}
+
 /// Add `ids` to `node`'s `aria:describedby`, keeping whatever is already there.
 ///
 /// `aria-describedby` is an id LIST, and a second `\Description` in the same
@@ -220,7 +245,24 @@ LoadDefinitions!({
   // `aria-describedby`, a reference resolving to nothing. Ids use a `-short`
   // suffix rather than a dotted one so they need no escaping in a CSS
   // selector.
-  DefConstructor!("\\Description[] Undigested",
+  // acmart.cls:895 `\Description` typesets nothing, so authors leave unescaped what LaTeX would reject in text
+  // (`\Description{Complaint_Loss}`, 2502.07049): outside math, `_ ^ & #` are the characters they show, and the
+  // description is digested as written otherwise.
+  DefMacro!("\\Description[]{}", sub[(short, long)] {
+    let mut out = vec![T_CS!("\\lx@acm@description")];
+    if let Some(short) = short {
+      out.push(T_OTHER!("["));
+      out.push(T_BEGIN!());
+      out.extend(description_text(&short));
+      out.push(T_END!());
+      out.push(T_OTHER!("]"));
+    }
+    out.push(T_BEGIN!());
+    out.extend(description_text(&long));
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
+  DefConstructor!("\\lx@acm@description[]{}",
     "^^?#1(<ltx:note xml:id='#shortid' class='ltx_nodisplay ltx_acm_description_short'>#1</ltx:note>)()\
      <ltx:note xml:id='#id' class='ltx_nodisplay ltx_acm_description'>#2</ltx:note>",
     sizer => sub[_whatsit] { Ok(out_of_line_size()) },
@@ -258,10 +300,12 @@ LoadDefinitions!({
     // the first image in the figure … and the `<img>` tag eventually gets
     // `@alt` and not `@aria-label`").
     //
-    // The markup case is why the argument is read `Undigested`: `@alt` is a
-    // plain string and cannot carry markup, so we must inspect the tokens to
-    // choose the slot BEFORE expanding anything. A control sequence (or an
-    // active/`$`/`^`/`_` token) means real markup, so the block carries it.
+    // `@alt` is a plain string and cannot carry markup, so the slot is chosen by
+    // the description's tokens as written (its reversion): a control sequence
+    // (or an active/`$`/`^`/`_` token) means real markup, so the block carries
+    // it. The argument itself is digested, as Perl's `{}` (acmart.cls.ltxml:78)
+    // and LaTeX do: read `Undigested`, the block printed its markup as raw TeX
+    // (`\sysname{}`, 2403.09168; 2401.04997, 2304.01062, 2312.11013).
     //
     // The block is always emitted, so the text stays addressable, but it is
     // referenced only when it is not already the `@alt` — otherwise the same
@@ -305,7 +349,8 @@ LoadDefinitions!({
       // Does the long description contain markup, or is it plain text?
       let long_is_plain = whatsit
         .get_arg(2)
-        .and_then(|d| d.raw_tokens())
+        .map(|d| d.revert())
+        .transpose()?
         .is_some_and(|tks| {
           tks.unlist_ref().iter().all(|t| {
             matches!(
@@ -407,6 +452,37 @@ LoadDefinitions!({
                    describes, or use \\includegraphics[alt=...] per image"));
           }
         },
+      }
+    },
+    // A `\label` after the `\Description` names the float, as in LaTeX, where
+    // `\Description` typesets nothing (acmart.cls:895). `\label` takes the
+    // nearest element with an id from the current node's last child
+    // (`float_to_label`, Perl Document.pm floatToLabel), and that was the note,
+    // which moves into the caption only when the float closes (`arrange_panels`):
+    // 2403.09168's ten labels sat on hidden notes, so each `\ref` pointed at one
+    // (Perl 0.8.8 the same, KNOWN_PERL_ERRORS #535). So the caption already in the
+    // float before it — the last, the description's own — takes the notes now,
+    // where the float's close would put them.
+    after_construct => sub[document, whatsit] {
+      let ids: Vec<String> = ["id", "shortid"]
+        .iter()
+        .filter_map(|key| whatsit.get_property(key).map(|v| v.to_string()))
+        .collect();
+      let Some(float) = document.get_element() else {
+        return Ok(());
+      };
+      let children = float.get_child_elements();
+      let Some(mut caption) = children
+        .iter()
+        .rev()
+        .find(|c| c.get_name() == "caption").cloned() else {
+        return Ok(());
+      };
+      for mut note in children.into_iter().filter(|c| {
+        c.get_name() == "note" && c.get_attribute_ns("id", XML_NS).is_some_and(|id| ids.contains(&id))
+      }) {
+        note.unlink_node();
+        caption.add_child(&mut note)?;
       }
     }
   );

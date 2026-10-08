@@ -1,0 +1,17 @@
+% witness: 2502.07049 (`\Description{Complaint_Loss}`), 2404.00573, 2503.04114 (a `#`): acmart.cls:895 `\Description`
+%          typesets nothing, so authors leave `_ ^ & #` unescaped; digested as text they raised errors (review of 63n)
+% oracle:  pdflatex 0 errors (the argument is discarded)
+% engines: rust 63n2 = 2 `Script _ can only appear in math mode` errors and a `#` "should never reach Stomach"; HEAD
+%          (63m) kept the argument undigested, raw TeX in the note; Perl digests `{}` and errs alike
+% expect:  0 errors, 0 warnings; the note reads "Complaint_Loss, 5^2, A & B, #1 and x_i" with the math as math
+% status:  RED (63n2) -> GREEN (63n)
+\documentclass[nonacm]{acmart}
+\begin{document}
+\title{T}
+\maketitle
+\begin{table}
+  \caption{First caption.}
+  \Description{Complaint_Loss, 5^2, A & B, #1 and $x_i$}
+  \begin{tabular}{c}a\end{tabular}
+\end{table}
+\end{document}
