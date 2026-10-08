@@ -11393,3 +11393,27 @@ Perl's digestion errs: outside math they are read as the characters they show (`
 acmart_description_unescaped_characters}`;
 repros `captions-floats/acmart_description_label_after_names_the_float.tex`,
 `captions-floats/acmart_description_markup_is_digested.tex`, `captions-floats/acmart_description_unescaped_characters.tex`.
+
+## 536. Bindings lack what the class or package they stand in for defines
+
+A binding replaces the real file, so a command the file defines and the binding does not is undefined. Perl shares
+these gaps (html_feedback HF3) — for jcappub through having no binding at all and not reading the style raw
+(Package.pm:2688-2689):
+- svmult `\runinhead`/`\subruninhead`, run-in level-4 `\@startsection`s (svmult.cls:701-710; 1805.00023);
+- interact `\tbl{caption}{body}` (interact.cls:493-499; 2312.11500, 2501.02233);
+- IEEEtaes `\member`, `\editor`, `\supplementary` (IEEEtaes.cls:4882, :3455-3456; 2403.15966);
+- jcappub's journal abbreviations `\jcap`, `\apj`, `\prl`, … (jcappub.sty:72-146; 2404.02153, 13 undefined);
+- svg `\svgsetup`, `\svgpath`, `\includeinkscape` and its option keys (svg.sty:810-823, :876, :439-683; 2401.10458,
+  2402.15627, 2504.02263, 2505.19061, 2512.15659).
+
+Fixed in Rust (63o) by defining them as the files do: `\member` is the author's `membership` contact, `\editor` and
+`\supplementary` notes (printed in the title footnote, IEEEtaes.cls:3427-3428); jcappub gets its own loader
+(`jcappub_sty.rs`: jheppub's frontmatter, `\jname` JCAP, the abbreviations verbatim); `\svgpath` pushes its paths onto
+GRAPHICSPATHS as the `svgpath=` option does. Two Rust-only gaps of the same kind: the mdpi and bmvc2k contrib bindings
+lacked soul (`\hl`, mdpi.cls:48; 2312.16815) and xspace (bmvc2k.cls:118; 2606.17384), which Perl's scan of the class
+file loads (Package.pm:2776-2812); mdpi also gains its `\fig`/`\tabref`/`\sect`/`\app`/`\sche` (mdpi.cls:381-385).
+And `\includesvg` passed `\lx@svg@options` unexpanded, so a `\setsvg` option list was read as one unknown key
+(keys are read unexpanded, keyvals.rs; Perl expands it): it is expanded first. Guards
+`perfect_kernel_batch63::{svmult_runinhead, interact_tbl, ieeetaes_member, jcappub_journal_macros, svg_setup_options,
+mdpi_requires_soul, bmvc2k_requires_xspace}`. Residual: neurips_2024 serves a paper's own edited copy that loads
+xspace (2401.08140), which only a scan of the shipped file would see.

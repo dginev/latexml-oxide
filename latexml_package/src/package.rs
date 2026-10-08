@@ -260,6 +260,7 @@ pub mod iopams_sty;
 pub mod iopart_cls;
 pub mod iopart_support_sty;
 pub mod isorot_sty;
+pub mod jcappub_sty;
 pub mod jhep2_cls;
 pub mod jhep3_cls;
 pub mod jhep_cls;

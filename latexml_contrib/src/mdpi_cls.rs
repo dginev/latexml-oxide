@@ -28,6 +28,16 @@ LoadDefinitions!({
   // 2003.10420 (CONVERR_9: \citep/\citet/\multirow/{tabularx} +
   // \endnote/\printendnotes + mdpi-specific \tablesize/\fulllength).
   RequirePackage!("natbib");
+  // mdpi.cls:48 loads soul for its highlighting (`\hl`, 2312.16815; Perl's scan of the class loads it).
+  RequirePackage!("soul");
+  // mdpi.cls:381-385: cross-reference shorthands.
+  RawTeX!(
+    r"\providecommand{\fig}[1]{Figure~\ref{#1}}
+\providecommand{\tabref}[1]{Table~\ref{#1}}
+\providecommand{\sect}[1]{Section~\ref{#1}}
+\providecommand{\app}[1]{Appendix~\ref{#1}}
+\providecommand{\sche}[1]{Scheme~\ref{#1}}"
+  );
   RequirePackage!("multirow");
   RequirePackage!("tabularx");
   RequirePackage!("makecell");

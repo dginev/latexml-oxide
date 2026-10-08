@@ -1,0 +1,15 @@
+% witness: 2401.10458, 2402.15627, 2504.02263, 2505.19061, 2512.15659 (`\svgsetup{…}`, `\svgpath{…}` undefined:
+%          svg.sty:810, :814-823); the options of `\setsvg` reached `\includegraphics` as the key `\lx@svg@options`
+%          (Rust-only: keys are read unexpanded, keyvals.rs; Perl's options="inkscapelatex=false,width=85.35826pt,…")
+% oracle:  pdflatex 0 errors (svg.sty, with the figure converted)
+% engines: rust 63n = `undefined:\svgsetup`, `\svgpath`, and an unknown-key warning on `\lx@svg@options`
+% expect:  0 errors, 0 warnings; the graphic's options "inkscapelatex=false,width=85.35826pt,keepaspectratio=true"
+% status:  RED (63n) -> GREEN (63o)
+\documentclass{article}
+\usepackage{svg}
+\svgsetup{inkscapelatex=false}
+\svgpath{{figs/}}
+\setsvg{inkscapelatex=false,width=3cm}
+\begin{document}
+\includesvg{fig}
+\end{document}

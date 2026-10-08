@@ -1,0 +1,11 @@
+% witness: 1805.00023 (svmult `\runinhead{…}`, undefined: svmult.cls:701-710 defines `\runinhead`/`\subruninhead` as
+%          level-4 `\@startsection`s; neither Perl's svmult.cls.ltxml nor the Rust binding had them)
+% oracle:  pdflatex 0 errors: run-in bold "Transiting Giant Planets", italic "Dwarfs"
+% engines: rust 63n = 2 `undefined:\runinhead`/`\subruninhead`; Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; two `ltx:paragraph`s titled "Transiting Giant Planets" and "Dwarfs"
+% status:  RED (63n) -> GREEN (63o)
+\documentclass{svmult}
+\begin{document}
+\runinhead{Transiting Giant Planets} Some text.
+\subruninhead{Dwarfs} More text.
+\end{document}

@@ -27,6 +27,28 @@ LoadDefinitions!({
   DefKeyVal!("Gin", "pdflatex", "");
   DefKeyVal!("Gin", "pdftops",  "");
   DefKeyVal!("Gin", "convert",  "");
+  // svg.sty:328-683 (`\DefineFamilyKey{SVG}`, `\FamilyBoolKey{SVG}{inkscapelatex}`): how Inkscape converts the SVG for
+  // TeX; no effect on the graphic here, but options `\setsvg`/`\svgsetup` give every `\includesvg`.
+  DefKeyVal!("Gin", "inkscapelatex",    "", "true");
+  DefKeyVal!("Gin", "inkscapeversion",  "");
+  DefKeyVal!("Gin", "inkscapeexe",      "");
+  DefKeyVal!("Gin", "inkscapeopt",      "");
+  DefKeyVal!("Gin", "inkscapeformat",   "");
+  DefKeyVal!("Gin", "inkscapearea",     "");
+  DefKeyVal!("Gin", "inkscapedpi",      "");
+  DefKeyVal!("Gin", "inkscapedensity",  "");
+  DefKeyVal!("Gin", "inkscapepath",     "");
+  DefKeyVal!("Gin", "inkscapename",     "");
+  DefKeyVal!("Gin", "svgextension",     "");
+  DefKeyVal!("Gin", "extension",        "");
+  DefKeyVal!("Gin", "ext",              "");
+  DefKeyVal!("Gin", "apptex",           "");
+  DefKeyVal!("Gin", "lastpage",         "", "true");
+  DefKeyVal!("Gin", "distort",          "", "true");
+  DefKeyVal!("Gin", "latex",            "", "true");
+  DefKeyVal!("Gin", "tex",              "", "true");
+  DefKeyVal!("Gin", "usexcolor",        "", "true");
+  DefKeyVal!("Gin", "usetransparent",   "", "true");
 
   // svgpath — code callback that pushes onto GRAPHICSPATHS.
   // Perl: DefKeyVal('Gin', 'svgpath', '', '', code => sub {
@@ -43,8 +65,7 @@ LoadDefinitions!({
     for opt in opts.iter() {
       let opt_str = opt.to_string();
       if let Some(val) = opt_str.strip_prefix("svgpath=") {
-        let canonical = pathname::canonical(val.trim());
-        let absolute = pathname::absolute(&canonical);
+        let absolute = svg_search_path(val.trim());
         // PushValue appends to back of the VecDeque (Perl PushValue semantics).
         let _ = push_value(
           "GRAPHICSPATHS",
@@ -55,8 +76,70 @@ LoadDefinitions!({
   }
 
   def_macro_noop("\\lx@svg@options")?;
-  DefMacro!("\\setsvg{}", "\\gdef\\lx@svg@options{#1}");
+  // svg.sty:810-811: `\setsvg` and `\svgsetup` (2401.10458, 2402.15627, 2504.02263, 2505.19061, 2512.15659) add to
+  // the options every `\includesvg` takes, as `\FamilyOptions` does.
+  DefMacro!("\\setsvg{}",
+    "\\xdef\\lx@svg@options{\\unexpanded\\expandafter{\\lx@svg@options},\\unexpanded{#1}}");
+  DefMacro!("\\svgsetup{}",
+    "\\xdef\\lx@svg@options{\\unexpanded\\expandafter{\\lx@svg@options},\\unexpanded{#1}}");
+  // svg.sty:814-823 `\svgpath{{a/}{b/}}`, or a bare `\svgpath{a/}` it wraps in braces: where SVG files are found,
+  // pushed onto GRAPHICSPATHS as the `svgpath=` option is (2402.15627 `\svgpath{{svg/}}`). The argument is read as
+  // written, as `\graphicspath`'s is: a macro in it is not expanded.
+  DefPrimitive!("\\svgpath{}", sub[(paths)] {
+    let tokens = paths.unlist();
+    let grouped = tokens.iter().find(|t| **t != T_SPACE!()).is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+    let mut found: Vec<String> = Vec::new();
+    if grouped {
+      let (mut depth, mut current) = (0usize, String::new());
+      for t in &tokens {
+        match t.get_catcode() {
+          Catcode::BEGIN => {
+            if depth > 0 {
+              current.push('{');
+            }
+            depth += 1;
+          },
+          Catcode::END => {
+            depth = depth.saturating_sub(1);
+            if depth == 0 {
+              found.push(std::mem::take(&mut current));
+            } else {
+              current.push('}');
+            }
+          },
+          _ if depth > 0 => current.push_str(&t.to_string()),
+          _ => {},
+        }
+      }
+    } else {
+      found.push(Tokens::new(tokens).to_string());
+    }
+    for path in found.iter().map(|p| p.trim()).filter(|p| !p.is_empty()) {
+      let _ = push_value("GRAPHICSPATHS", Stored::String(pin(svg_search_path(path))));
+    }
+  });
 
-  // Note that various sizing & rescaling are not yet supported by Post::Graphics
-  DefMacro!("\\includesvg[]{}", "\\includegraphics[\\lx@svg@options,#1]{#2}");
+  // Note that various sizing & rescaling are not yet supported by Post::Graphics. The options given by `\setsvg` /
+  // `\svgsetup` are expanded before `\includegraphics` reads them: its keys are read unexpanded (keyvals.rs, as TeX's
+  // keyval does), and `\lx@svg@options` as a key was no option at all (2401.10458).
+  DefMacro!("\\includesvg[]{}",
+    "\\expandafter\\lx@svg@includegraphics\\expandafter{\\lx@svg@options}{#1}{#2}");
+  DefMacro!("\\lx@svg@includegraphics{}{}{}", "\\includegraphics[#1,#2]{#3}");
+  // svg.sty:876 `\includeinkscape`: an Inkscape export included as `\includesvg` includes it.
+  DefMacro!("\\includeinkscape[]{}",
+    "\\expandafter\\lx@svg@includegraphics\\expandafter{\\lx@svg@options}{#1}{#2}");
 });
+
+/// Where a path of the svg package's search path is: relative to the paper's source directory, as `\graphicspath`'s
+/// paths are (Perl svg.sty.ltxml:42-44 `pathname_absolute(…, SOURCEDIRECTORY)`); the process's directory is no root.
+fn svg_search_path(path: &str) -> String {
+  let canonical = pathname::canonical(path.trim_matches('"'));
+  let root = with_value("SOURCEDIRECTORY", |v| {
+    v.map(|s| s.to_string()).unwrap_or_default()
+  });
+  if root.is_empty() || canonical.starts_with('/') {
+    canonical
+  } else {
+    s!("{root}/{canonical}")
+  }
+}

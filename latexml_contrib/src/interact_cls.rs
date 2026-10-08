@@ -43,6 +43,9 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=articletype]{#1}"
   );
   DefMacro!("\\authormark{}", "\\textsuperscript{#1}");
+  // interact.cls:493-499 `\tbl{caption}{body}`: the table's caption, then its body (as ws_journal_cls.rs's);
+  // 2312.11500, 2501.02233.
+  DefMacro!("\\tbl{}{}", "\\caption{#1}#2");
   DefMacro!(
     "\\corres{}",
     "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"

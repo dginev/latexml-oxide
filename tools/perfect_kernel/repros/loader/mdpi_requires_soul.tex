@@ -1,0 +1,12 @@
+% witness: 2312.16815 (mdpi `\hl`: mdpi.cls:48 loads soul; the contrib binding stood in for the class without it,
+%          where Perl's scan of the class file, Package.pm:2776-2812, loads it — Rust-only); mdpi.cls:381-385
+%          `\fig`, `\tabref`, `\sect`, `\app`, `\sche`
+% oracle:  pdflatex 0 errors with mdpi.cls
+% engines: rust 63n = `undefined:\hl`; Perl 0.8.8 0
+% expect:  0 errors, 0 warnings; "important" highlighted, "see Figure 1"
+% status:  RED (63n) -> GREEN (63o)
+\documentclass{mdpi}
+\begin{document}
+This is \hl{important} text, see \fig{f1}.
+\begin{figure}\caption{C}\label{f1}\end{figure}
+\end{document}

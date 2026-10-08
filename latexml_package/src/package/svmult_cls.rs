@@ -101,6 +101,9 @@ LoadDefinitions!({
   DefMacro!("\\secstyle",    "\\bfseries\\boldmath");
   DefMacro!("\\subsecsize",  "\\normalsize");
   DefMacro!("\\subsecstyle", "\\bfseries\\boldmath");
+  // svmult.cls:701-710: run-in headings, level-4 `\@startsection`s set bold (italic for the sub form); 1805.00023.
+  RawTeX!(r"\newcommand\runinhead{\@startsection{paragraph}{4}{\z@}{-6\p@}{-6\p@}{\normalfont\normalsize\bfseries\boldmath\rightskip=\z@ \@plus 8em\pretolerance=10000 }}
+\newcommand\subruninhead{\@startsection{paragraph}{4}{\z@}{-6\p@}{-6\p@}{\normalfont\normalsize\itshape\rightskip=\z@ \@plus 8em\pretolerance=10000 }}");
 
   def_macro_noop("\\chaptermark{}")?;
   def_macro_noop("\\sectionmark{}")?;

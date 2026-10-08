@@ -9,6 +9,8 @@ LoadDefinitions!({
   // still takes its options: a repeat load applies the options the first lacked (content.rs
   // `apply_new_options_on_reload`, witness 2605.00310).
   RequirePackage!("xcolor");
+  // bmvc2k.cls:118 loads xspace (`\xspace` was undefined, 2606.17384; Perl's scan of the class loads it).
+  RequirePackage!("xspace");
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
   // bmvc2k.cls:222, 245 load geometry (a paper's own `\geometry{…}` was undefined, 2609.00981).

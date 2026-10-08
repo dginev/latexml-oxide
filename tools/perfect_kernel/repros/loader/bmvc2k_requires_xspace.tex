@@ -1,0 +1,11 @@
+% witness: 2606.17384 (bmvc2k `\xspace`: bmvc2k.cls:118 loads xspace; the contrib binding stood in for the class
+%          without it, where Perl's scan of the class file, Package.pm:2776-2812, loads it — Rust-only)
+% oracle:  pdflatex 0 errors with bmvc2k.cls
+% engines: rust 63n = `undefined:\xspace`; Perl 0.8.8 0
+% expect:  0 errors, 0 warnings; "BMVC is here." with the space kept
+% status:  RED (63n) -> GREEN (63o)
+\documentclass{bmvc2k}
+\newcommand\bmvc{BMVC\xspace}
+\begin{document}
+\bmvc is here.
+\end{document}

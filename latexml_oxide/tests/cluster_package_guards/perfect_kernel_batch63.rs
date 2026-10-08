@@ -2927,3 +2927,134 @@ fn tcb_listing_comment_lines() {
   );
   assert_eq!(object.matches("<listingline ").count(), 4, "{object}");
 }
+
+/// The first whole `<name …>…</name>` (or `<name …/>`) element of `xml` whose text contains `needle`.
+fn element_with(xml: &str, name: &str, needle: &str) -> String {
+  let mut at = 0;
+  while let Some(start) = xml[at..].find(&format!("<{name} ")).map(|i| at + i) {
+    let open_end = start + xml[start..].find('>').unwrap();
+    let end = if xml.as_bytes()[open_end - 1] == b'/' {
+      open_end + 1
+    } else {
+      xml[start..]
+        .find(&format!("</{name}>"))
+        .map_or(open_end + 1, |i| start + i + name.len() + 3)
+    };
+    if xml[start..end].contains(needle) {
+      return xml[start..end].to_string();
+    }
+    at = open_end;
+  }
+  String::new()
+}
+
+/// Converts the repro `tex`, asserts 0 errors and 0 warnings, and returns the element `element_with` finds.
+fn hf3_element(tex: &str, name: &str, needle: &str) -> String {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  element_with(&xml, name, needle)
+}
+
+/// 63o: svmult's run-in headings (svmult.cls:701-710; 1805.00023). Repro sectioning-frontmatter/svmult_runinhead.
+#[test]
+fn svmult_runinhead() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svmult_runinhead.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "paragraph", "Transiting"),
+    "<paragraph inlist=\"toc\" xml:id=\"Ch0.S0.SS0.SSS0.Px1\">\n    <title>Transiting Giant Planets</title>\n    <para xml:id=\"Ch0.S0.SS0.SSS0.Px1.p1\">\n      <p xml:id=\"Ch0.S0.SS0.SSS0.Px1.p1.1\">Some text.</p>\n    </para>\n  </paragraph>"
+  );
+  assert_eq!(
+    hf3_element(tex, "paragraph", "Dwarfs"),
+    "<paragraph inlist=\"toc\" xml:id=\"Ch0.S0.SS0.SSS0.Px2\">\n    <title>Dwarfs</title>\n    <para xml:id=\"Ch0.S0.SS0.SSS0.Px2.p1\">\n      <p xml:id=\"Ch0.S0.SS0.SSS0.Px2.p1.1\">More text.</p>\n    </para>\n  </paragraph>"
+  );
+}
+
+/// 63o: interact's `\tbl{caption}{body}` (interact.cls:493-499; 2312.11500, 2501.02233). Repro
+/// captions-floats/interact_tbl.
+#[test]
+fn interact_tbl() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/captions-floats/interact_tbl.tex");
+  assert_eq!(
+    hf3_element(tex, "table", "IMO"),
+    "<table inlist=\"lot\" xml:id=\"S0.T1\">\n    <tags>\n      <tag>Table 1</tag>\n      <tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.1\"/></tag>\n      <tag role=\"refnum\">1</tag>\n      <tag role=\"typerefnum\">Table 1</tag>\n    </tags>\n    <toccaption><tag close=\" \">1</tag>IMO definitions.</toccaption>\n    <caption><tag close=\": \">Table 1</tag>IMO definitions.</caption>\n    <tabular vattach=\"middle\" xml:id=\"S0.T1.2\">\n      <tbody>\n        <tr xml:id=\"S0.T1.2.1\">\n          <td align=\"center\" xml:id=\"S0.T1.2.1.1\">a</td>\n          <td align=\"center\" xml:id=\"S0.T1.2.1.2\">b</td>\n        </tr>\n      </tbody>\n    </tabular>\n  </table>"
+  );
+}
+
+/// 63o: IEEEtaes's `\member` is the author's membership; empty `\editor`/`\supplementary` are nothing
+/// (IEEEtaes.cls:4882, :3455-3456; 2403.15966). Repro sectioning-frontmatter/ieeetaes_member.
+#[test]
+fn ieeetaes_member() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieeetaes_member.tex");
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(
+    super::perfect_kernel_batch61::creators_of(&xml),
+    [
+      "<creator role=\"author\"><personname>SHASHWAT JAIN</personname><contact role=\"membership\">Student Member, IEEE</contact></creator>"
+    ],
+    "{xml}"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "Recommended"),
+    "<note role=\"editor\" xml:id=\"id1\">Recommended by X.</note>",
+    "{xml}"
+  );
+  assert!(!xml.contains("role=\"supplementary\""), "{xml}");
+}
+
+/// 63o: jcappub's journal abbreviations (jcappub.sty:72-146; 2404.02153). Repro index-bib/jcappub_journal_macros.
+#[test]
+fn jcappub_journal_macros() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/jcappub_journal_macros.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "See"),
+    "<p xml:id=\"p1.1\">See JCAP, ApJ, PhRvL, MNRAS.</p>"
+  );
+}
+
+/// 63o: svg's `\svgsetup`/`\svgpath` (svg.sty:810, :814-823), and the `\setsvg` options reach `\includegraphics`
+/// expanded (2401.10458, 2402.15627). Repro graphics-tikz/svg_setup_options.
+#[test]
+fn svg_setup_options() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/svg_setup_options.tex");
+  assert_eq!(
+    hf3_element(tex, "graphics", "fig"),
+    "<graphics graphic=\"fig\" options=\"inkscapelatex=false,inkscapelatex=false,width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>"
+  );
+}
+
+/// 63o: mdpi loads soul (mdpi.cls:48; `\hl`, 2312.16815) and has its reference shorthands (mdpi.cls:381-385).
+/// Repro loader/mdpi_requires_soul.
+#[test]
+fn mdpi_requires_soul() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/mdpi_requires_soul.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "important"),
+    "<p xml:id=\"p1.1\">This is <text backgroundcolor=\"#FFFF00\" xml:id=\"p1.1.1\">important</text> text, see Figure\u{a0}<ref labelref=\"LABEL:f1\"/>.</p>"
+  );
+}
+
+/// 63o: bmvc2k loads xspace (bmvc2k.cls:118; 2606.17384). Repro loader/bmvc2k_requires_xspace.
+#[test]
+fn bmvc2k_requires_xspace() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/bmvc2k_requires_xspace.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "here"),
+    "<p xml:id=\"p1.1\">BMVC is here.</p>"
+  );
+}

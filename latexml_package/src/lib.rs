@@ -160,8 +160,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // (which overwrites), truncating the list to the last author, and
   // `\affiliation`/`\emailAdd` were undefined. Route it to the jheppub binding —
   // faithful (same author API) and surpass-Perl. html_feedback #6884, witness
-  // arXiv 2404.03569 (63 authors, previously 1).
-  ("jcappub", "sty", package::jheppub_sty::load_definitions),
+  // arXiv 2404.03569 (63 authors, previously 1). Its own journal abbreviations ride along (jcappub_sty.rs).
+  ("jcappub", "sty", package::jcappub_sty::load_definitions),
   ("neurips", "sty", package::neurips_sty::load_definitions),
   (
     "neurips_2019",
