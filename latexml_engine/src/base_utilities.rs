@@ -1093,7 +1093,7 @@ LoadDefinitions!({
     if starts_with_affiliation_mark(&content) {
       let mut calls: Vec<Token> = Vec::new();
       for seg in split_wrapped_affiliation_marks(content) {
-        if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+        if spacing_end(seg.unlist_ref()) == 0 {
           continue;
         }
         let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(seg)]);
@@ -1506,7 +1506,7 @@ LoadDefinitions!({
                 // institution becomes its own affiliation and attaches to its authors
                 // by number, instead of merging into one.
                 for seg in split_wrapped_affiliation_marks(line) {
-                  if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+                  if spacing_end(seg.unlist_ref()) == 0 {
                     continue;
                   }
                   entries.push((AuthorLineKind::Affiliation, seg));
@@ -1516,23 +1516,41 @@ LoadDefinitions!({
           }
         }
       }
+      // A name line's trailing address is the name's email (`\name Ann Able$^{1}$ \email ann@uni.edu`, 2502.14381).
+      let entries = entries
+        .into_iter()
+        .map(|(kind, line)| {
+          Ok(if kind == AuthorLineKind::Author {
+            let (name, email) = name_and_trailing_email(&line)?;
+            (kind, name, email)
+          } else {
+            (kind, line, None)
+          })
+        })
+        .collect::<Result<Vec<_>>>()?;
       let author_keys: Vec<Vec<String>> = entries
         .iter()
-        .filter(|(k, _)| *k == AuthorLineKind::Author)
-        .map(|(_, author)| surname_keys(author))
+        .filter(|(k, ..)| *k == AuthorLineKind::Author)
+        .map(|(_, author, _)| surname_keys(author))
         .collect();
       let author_count = author_keys.len();
       // the addresses given to the authors in order so far; every email contact advances the `labelseq` count, so after
       // a line kept whole no later address is the next author's (2403.00801's `benhe@…` under two such lines)
       let mut sequenced = Some(0);
-      for (kind, line) in entries {
+      for (kind, line, email) in entries {
         match kind {
           AuthorLineKind::Author => {
-            let withsup = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]);
+            let mut content = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]).unlist();
+            if let Some(email) = email {
+              content
+                .extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(email)]).unlist());
+              // (an email contact, which advances the `labelseq` count a later address line is placed by)
+              sequenced = sequenced.map(|offset| offset + 1);
+            }
             calls.extend(
               Invocation!(T_CS!("\\lx@add@author"), vec![
                 keyvals.clone(),
-                Some(withsup)
+                Some(Tokens::new(content))
               ])
               .unlist(),
             );
@@ -1618,15 +1636,32 @@ LoadDefinitions!({
       // gives each to the name it spells in any group of the block (`\author{Rose Bohrer \and Ashe Neth\\ … \\
       // \texttt{\{rbohrer,aneth\}@wpi.edu}}`, 2409.18978; 2403.02271, 2402.00414, 63m); a line's addresses otherwise
       // look only at its group's names (2409.00286's `Chengxi Li\\ … \\ \texttt{chengxil@…}` is not Zexin Chen's).
+      // A name line's trailing address is the name's email (`\name Ann Able \email ann@uni.edu`, the JMLR family).
+      let groups = groups
+        .into_iter()
+        .map(|(names, affils)| {
+          let names = names
+            .iter()
+            .map(name_and_trailing_email)
+            .collect::<Result<Vec<_>>>()?;
+          Ok((names, affils))
+        })
+        .collect::<Result<Vec<_>>>()?;
       let name_keys: Vec<Vec<String>> = groups
         .iter()
-        .flat_map(|(names, _)| names.iter().map(surname_keys))
+        .flat_map(|(names, _)| names.iter().map(|(name, _)| surname_keys(name)))
         .collect();
       let mut bodies: Vec<Vec<Token>> = Vec::with_capacity(name_keys.len());
       let mut spans = Vec::with_capacity(groups.len());
       for (names, affils) in groups {
         let first = bodies.len();
-        bodies.extend(names.into_iter().map(Tokens::unlist));
+        for (name, email) in names {
+          let mut body = name.unlist();
+          if let Some(email) = email {
+            body.extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(email)]).unlist());
+          }
+          bodies.push(body);
+        }
         spans.push((first, bodies.len() - 1, affils));
       }
       for (first, last, affils) in spans {
@@ -1666,7 +1701,7 @@ LoadDefinitions!({
               bodies[owner]
                 .extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(address)]).unlist());
             }
-          } else if !line.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+          } else if spacing_end(line.unlist_ref()) > 0 {
             // (digested once, under the group's last name, and given to the group's names)
             let (cs, keyvals) = if line_is_email(&line) {
               (T_CS!("\\lx@add@email"), None)
@@ -2569,7 +2604,7 @@ pub fn affiliation_calls(
         vec![line]
       };
       for seg in segs {
-        if seg.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+        if spacing_end(seg.unlist_ref()) == 0 {
           continue;
         }
         marked_entries.push(seg.unlist());
@@ -2796,6 +2831,142 @@ fn address_tokens(line: &Tokens, addrs: Vec<String>) -> Vec<Tokens> {
       Tokens::new(toks)
     })
     .collect()
+}
+
+/// The end of `tokens` before the line break and spacing they end with, which print nothing: spaces, `\\`, `\hfill`,
+/// `\smallskip`…, `\vspace{…}`, `\hspace*{…}` (2409.06765's `\email vye@berkeley.edu\\ \vspace{-0.6cm}`, read as one
+/// line); 0 for a line of only those.
+fn spacing_end(tokens: &[Token]) -> usize {
+  let spacing = |t: &Token, names: &[&str]| {
+    t.get_catcode() == Catcode::CS && t.with_str(|s| names.contains(&s))
+  };
+  let mut end = tokens.len();
+  loop {
+    while end > 0 && tokens[end - 1] == T_SPACE!() {
+      end -= 1;
+    }
+    if end > 0
+      && spacing(&tokens[end - 1], &[
+        "\\\\",
+        "\\hfill",
+        "\\smallskip",
+        "\\medskip",
+        "\\bigskip",
+        "\\newline",
+      ])
+    {
+      end -= 1;
+      continue;
+    }
+    if end > 0 && tokens[end - 1].get_catcode() == Catcode::END {
+      let mut depth = 0usize;
+      let mut open = None;
+      for j in (0..end).rev() {
+        match tokens[j].get_catcode() {
+          Catcode::END => depth += 1,
+          Catcode::BEGIN => {
+            depth -= 1;
+            if depth == 0 {
+              open = Some(j);
+              break;
+            }
+          },
+          _ => {},
+        }
+      }
+      if let Some(open) = open {
+        let mut cs = open;
+        if cs > 0 && tokens[cs - 1] == T_OTHER!("*") {
+          cs -= 1;
+        }
+        if cs > 0 && spacing(&tokens[cs - 1], &["\\vspace", "\\hspace"]) {
+          end = cs - 1;
+          continue;
+        }
+      }
+    }
+    return end;
+  }
+}
+
+/// A name line and the address it ends with, as the JMLR family writes an author (`\name Ann Able \email ann@uni.edu`,
+/// jmlr2e.sty:271-273; 2405.13980, 2407.04153, 2411.04991, 2502.14381, 2511.15722): the name, and the line's last run
+/// without a space, the class's email markup with it (`\email ann@uni.edu`), when that run prints one plain address and a
+/// name stands before it, its markup leading the address. A run with a note or a command that adds to the frontmatter
+/// itself (`\thanks{ann@uni.edu}`, `\footnote{…}`, a class's `\email{x}` expanding to `\lx@add@email`, aa's `\mail`
+/// adding a contact) is the author's as it stands, and a line that is only an address is kept whole.
+fn name_and_trailing_email(line: &Tokens) -> Result<(Tokens, Option<Tokens>)> {
+  let tokens = line.unlist_ref();
+  let end = spacing_end(tokens);
+  // the last run without a space outside braces
+  let mut start = end;
+  let mut depth = 0usize;
+  while start > 0 {
+    match tokens[start - 1].get_catcode() {
+      Catcode::END => depth += 1,
+      Catcode::BEGIN if depth == 0 => break,
+      Catcode::BEGIN => depth -= 1,
+      Catcode::SPACE if depth == 0 => break,
+      _ => {},
+    }
+    start -= 1;
+  }
+  let whole = || Ok((line.clone(), None));
+  if start == end || depth != 0 {
+    return whole();
+  }
+  // the markup leads the address (`\email ann@uni.edu`, `\texttt{ann@uni.edu}`): a command or group after printed text
+  // is not an address's (`Peng\thanks{bp2601@columbia.edu}`, 2402.08164, is a name and its note)
+  let mut printed = false;
+  for t in &tokens[start..end] {
+    match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => printed = true,
+      Catcode::CS
+        if printed
+          && !matches!(
+            t.with_str(str::to_string).as_str(),
+            "\\_" | "\\textunderscore"
+          ) =>
+      {
+        return whole();
+      },
+      Catcode::BEGIN | Catcode::ACTIVE if printed => return whole(),
+      _ => {},
+    }
+  }
+  let run = Tokens::new(tokens[start..end].to_vec());
+  let commands = run
+    .unlist_ref()
+    .iter()
+    .filter(|t| t.code == Catcode::CS)
+    .map(adds_to_frontmatter)
+    .collect::<Result<Vec<bool>>>()?;
+  let plain = |address: &str| {
+    address.split_once('@').is_some_and(|(local, domain)| {
+      !local.is_empty()
+        && local
+          .chars()
+          .all(|c| c.is_alphanumeric() || "._%+-".contains(c))
+        && domain.contains('.')
+        && domain
+          .chars()
+          .all(|c| c.is_alphanumeric() || ".-".contains(c))
+    })
+  };
+  let one_address =
+    email_addresses(&run).is_some_and(|addresses| addresses.len() == 1 && plain(&addresses[0]));
+  let name = Tokens::new(tokens[..start].to_vec());
+  if commands.contains(&true)
+    || !one_address
+    || visible_name_text(name.unlist_ref()).trim().is_empty()
+  {
+    return whole();
+  }
+  let mut name = name.unlist();
+  while name.last() == Some(&T_SPACE!()) {
+    name.pop();
+  }
+  Ok((Tokens::new(name), Some(run)))
 }
 
 /// The addresses of an author-block line that is only email addresses (`\texttt{a@x, b@y}`, `{a,b}@dom`), each as
@@ -10954,6 +11125,56 @@ fn is_spacing(t: &Token) -> bool {
       ))
 }
 
+/// A note or mark command an author name carries (`\thanks`, `\footnote`, `\inst`, … [`NAME_ANNOTATIONS`] but the
+/// email markup and the superscript), or a macro whose expansion adds to the frontmatter itself (`\lx@add@…`,
+/// `\lx@annotate@…`, `\@add@frontmatter`, `\lx@request@…`: aa's `\mail`, achemso's `\email`, JHEP's `\email`).
+fn adds_to_frontmatter(cs: &Token) -> Result<bool> {
+  let note = cs.with_str(|name| {
+    (NAME_ANNOTATIONS.contains(&name) && !matches!(name, "\\email" | "\\textsuperscript"))
+      || matches!(
+        name,
+        "\\footnotemark"
+          | "\\footnotetext"
+          | "\\fnref"
+          | "\\corref"
+          | "\\tnoteref"
+          | "\\thankstext"
+      )
+  });
+  if note {
+    return Ok(true);
+  }
+  // a macro whose expansion begins with one of those, or with a macro that does (quantumarticle's `\ead` → `\email`);
+  // a macro computed by code (imsart's `\ead`) is taken to add itself
+  let frontmatter_call = |t: &Token| {
+    t.with_str(|name| {
+      [
+        "\\lx@add@",
+        "\\lx@annotate@",
+        "\\@add@frontmatter",
+        "\\lx@request@",
+      ]
+      .iter()
+      .any(|prefix| name.starts_with(prefix))
+    })
+  };
+  let Some(def) = lookup_definition(cs)? else {
+    return Ok(false);
+  };
+  Ok(match def.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => match body.unlist_ref().first() {
+      Some(first) if frontmatter_call(first) => true,
+      Some(first) if first.code == Catcode::CS => lookup_definition(first)?.is_some_and(|inner| {
+        matches!(inner.get_expansion(), Some(ExpansionBody::Tokens(body))
+          if body.unlist_ref().first().is_some_and(frontmatter_call))
+      }),
+      _ => false,
+    },
+    Some(_) => true,
+    None => false,
+  })
+}
+
 /// A class's email command: a macro whose expansion begins with `\lx@add@email` (JHEP.cls.ltxml's `\email`).
 fn is_email_command(cs: &Token) -> Result<bool> {
   let Some(def) = lookup_definition(cs)? else {
@@ -11725,6 +11946,49 @@ mod author_split_tests {
       ]
     );
     assert!(definitions_at_author(tk(r"{\def\name{N}}").unlist_ref()).is_none());
+  }
+
+  /// The name and trailing email `name_and_trailing_email` reads in `line`, as strings.
+  fn name_email(line: &'static str) -> (String, Option<String>) {
+    let (name, email) = name_and_trailing_email(&tk(line)).expect("reads the line");
+    (name.to_string(), email.map(|e| e.to_string()))
+  }
+
+  #[test]
+  fn name_line_trailing_email_splits_the_address() {
+    setup();
+    // the JMLR family's name line, its markup with the address; a line break and spacing after it (2409.06765)
+    assert_eq!(
+      name_email(r"\name Ann Able \email ann@uni.edu"),
+      (
+        r"\nameAnn Able".to_string(),
+        Some(r"\emailann@uni.edu".to_string())
+      )
+    );
+    assert_eq!(
+      name_email(r"Ann Able$^{1}$ \texttt{ann\_a@uni.edu}\\ \vspace{-0.6cm}"),
+      (
+        r"Ann Able$^{1}$".to_string(),
+        Some(r"\texttt{ann\_a@uni.edu}".to_string())
+      )
+    );
+  }
+
+  #[test]
+  fn name_line_trailing_email_keeps_other_lines_whole() {
+    setup();
+    // a note's address, glued to the surname (2402.08164) or not; an address alone, a bracketed one, no address
+    for line in [
+      r"Binghui Peng\thanks{bp2601@columbia.edu}",
+      r"Ann Able \thanks{ann@uni.edu}",
+      r"Ann Able \footnote{ann@uni.edu}",
+      r"ann@uni.edu",
+      r"Ann Able (ann@uni.edu)",
+      r"Ann Able",
+    ] {
+      assert_eq!(name_email(line).1, None, "{line}");
+    }
+    assert_eq!(spacing_end(tk(r"\vspace*{-1cm}\\ \hfill").unlist_ref()), 0);
   }
 
   #[test]

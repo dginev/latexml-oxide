@@ -3204,3 +3204,79 @@ fn author_markup_title_code_forms() {
     "{xml}"
   );
 }
+
+/// 63r: imsart's `\ead[label=e1]{x}` is the author's email (a URL with `url`), `\printead` in an address leaves it out
+/// (each address already the author's contact), `\author[A]`/`\address[A]` link by their marks and `\thanksref{l}` by
+/// its labels, `\thankstext{l}{…}` is the note it names, `\arxiv{id}` the paper's pubnote (imsart.sty:944, :965, :2003,
+/// :2088, :746, :789, :1186; 2201.11773, 2507.12447, 2201.09706, 2201.08502). Repro
+/// sectioning-frontmatter/imsart_ead_and_address_marks.
+#[test]
+fn imsart_ead_and_address_marks() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/imsart_ead_and_address_marks.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  // the title's `\thanksref{T0}` note, and a document-level `\renewcommand\arxiv` in the bibliography
+  for whole in [
+    "<title>A Title<note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Supported by a fund.</note></title>",
+    "<bibblock> A. Author. A paper. arXiv:1234.5678.\n</bibblock>",
+  ] {
+    assert!(xml.contains(whole), "{whole}\n{xml}");
+  }
+  assert_eq!(
+    element_with(&xml, "creator", "Ann"),
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann_a@uni.edu</contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Department of Mathematics, McGill University</contact>\n    <contact name=\"Thanks:\u{a0}\" role=\"thanks\">Supported by a grant.</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bob"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">bob@rug.nl</contact>\n    <contact name=\"URL:\u{a0}\" role=\"url\">https://bob.example.org</contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Bernoulli Institute, University of Groningen</contact>\n  </creator>"
+  );
+  // a name list in one `\author`, each name an author with the address its `\thanksref` names
+  assert_eq!(
+    element_with(&xml, "creator", "Cy"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Cole Institute</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Di Dunn"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Di Dunn</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Cole Institute</contact>\n  </creator>"
+  );
+  // an `\ead` after a space is the author's email, once
+  assert_eq!(
+    element_with(&xml, "creator", "Eve"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Eve Earl</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">eve@uni.edu</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "pubnote", "0000"),
+    "<pubnote name=\"arXiv:\u{a0}\" role=\"arxiv\">0000.00000</pubnote>"
+  );
+}
+
+/// 63r: a name line's trailing address is the author's email (`\name Ann Able \email ann@uni.edu`, jmlr2e.sty:271-273;
+/// 2405.13980, 2409.06765), a note's address glued to a name stays in its note (2402.08164), and a line printing
+/// nothing (`\vspace{-0.6cm}`) is no affiliation. Repro sectioning-frontmatter/name_line_trailing_email.
+#[test]
+fn name_line_trailing_email() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/name_line_trailing_email.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "creator", "Ann"),
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Equal contribution.</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann@uni.edu</contact>\n  </creator>"
+  );
+  assert_eq!(
+    hf3_element(tex, "creator", "Bob"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">bob_b@uni.edu</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Other Place</contact>\n  </creator>"
+  );
+  assert_eq!(
+    hf3_element(tex, "creator", "Cy"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">cy@uni.edu</note>\n  </creator>"
+  );
+}

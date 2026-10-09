@@ -14270,5 +14270,62 @@ frontmatter-heavy papers compared with 63p5, 2 XMLs change (2406.07496, 2503.226
 warning. Guards
 `perfect_kernel_batch63::{author_markup_defined_in_title_code, author_markup_title_code_forms}` and the unit tests
 `author_split_tests::title_code_definitions_*`, repros
-sectioning-frontmatter/author_markup_defined_in_title_code, author_markup_title_code_forms. Residual: a name line's
-trailing email (`\name A \email a@b`, the JMLR idiom) stays in the personname, as with the jmlr2e binding.
+sectioning-frontmatter/author_markup_defined_in_title_code, author_markup_title_code_forms. A name line's trailing
+email (`\name A \email a@b`, the JMLR idiom) is the author's email contact (#465).
+
+### 465. A name line's trailing address is the author's email (Perl: undefined markup, the address in the name)
+
+**Background.** The JMLR family writes each author as `\name Ann Able \email ann@uni.edu \\ \addr …` (jmlr2e.sty:271-273
+`\def\email{\hfill\small\sc}`; tmlr.sty, jair.sty, melba.cls, dmlr2e.sty alike): the address is printed flush right on
+the name's line. Perl reads the shipped jmlr2e.sty raw, its markup undefined in the author content (KNOWN_PERL_ERRORS
+#538); Rust's contrib jmlr2e/jair bindings make `\email` a no-op, and the title-code replay (#464) its font switch, so
+the name line, address included, was one personname ("Ann Able ann@uni.edu").
+
+**Rust behavior.** When the author block is split (`\lx@add@authors`, marked and unmarked), a name line whose last
+run without a space is one plain address (`local@domain.tld`), led by its markup (`\email`, `\texttt{…}`) and preceded
+by a name, gives that run to `\lx@add@email`; the personname is the rest. A run holding a note or a command that adds
+to the frontmatter itself (`\thanks{…}`, `\footnote{…}`, a class's `\email{x}` expanding to `\lx@add@email`, aa's
+`\mail` adding a contact) is the author's as it stands, glued or after a space (`Peng\thanks{bp2601@columbia.edu}`,
+2402.08164; `John Smith \thanks{js@x.edu}`); so is an address after printed text in its run, and a line that is only
+an address is kept whole. An email split off a marked name line advances the order later address lines are placed
+in. The line break and spacing a line ends with (`\\`, `\vspace{…}`, `\hfill`) are passed over
+(2409.06765's `\email vye@berkeley.edu\\ \vspace{-0.6cm}`), and a line of only those is no affiliation (it was an
+empty `<contact role="affiliation"/>`).
+
+**Measured.** Witnesses 2405.13980, 2407.04153, 2409.06765, 2411.04991, 2502.14381, 2511.15722, 2304.11127, 2404.08403,
+2503.22625, 2601.05137, 2406.07496: every author's address now an email contact, the other contacts unchanged. On
+1,276 frontmatter-heavy and JMLR-family papers compared with 63q4, personnames holding an address go from 610 to 47
+(171 papers), no other contact changes and none gains an error or a warning. Guards
+`perfect_kernel_batch63::name_line_trailing_email` and the unit tests `author_split_tests::name_line_trailing_email_*`,
+repro sectioning-frontmatter/name_line_trailing_email.
+
+### 466. imsart's frontmatter as the class prints it (Perl: lost or garbled)
+
+**Background.** imsart.sty (the line numbers below are those of the copy 2201.11773 ships, `\imsfmt@version`
+2022/04/06) marks each author for its
+addresses and notes. `\author[A,B]{…}` (:2003) names `\address[A]{…}` (:2088), and `\thanksref{addr1,t1}` (:746)
+names addresses or `\thankstext{t1}{…}` notes (:789), on authors or the title. `\ead[label=e1]{x}` (:944) is an
+author's email, or URL with the `url` key or a `://` address (:955). `\printead{e1}` (:965) reprints it in an address,
+and `\arxiv{id}` (:1186) prints the paper's identifier as an unmarked title footnote. See KNOWN_PERL_ERRORS #539 for
+what Perl and the old Rust binding made of these.
+
+**Rust behavior.** The imsart binding defines them before the raw file is read, so its definitions are refused.
+- `\ead[keys]{x}` (Semiverbatim) is the author's email or URL.
+- `\printead` is left out: its addresses are already the authors' contacts.
+- `\author[A]` goes through `\lx@add@authors@append[annotations=A]`, so a name list in one `\author{A and B}` is an
+  author each (2401.00578). `\address[A]` is a contact labelled A.
+- `\thanksref` requests and `\thankstext` labels carry the `thanks:` prefix, as elsarticle's do. A title's note lands
+  in the title (#461); an author's `\thanksref{addr1}` reaches `\address[addr1]` through the creators' prefix-stripped
+  match.
+- `\arxiv{id}` is the paper's arxiv pubnote, defined after the raw file and not locked, so a document's own
+  `\arxiv` (redefined after `\begin{document}` for its bibliography) stands.
+
+An address no author names is shared, a name-less creator at its place (#159), where the old binding gave every
+address to the last author.
+
+**Measured.** On 218 imsart papers compared with 63q4: personnames carrying `label=…]` debris 491 → 0, email contacts
+holding an address 12 → 465, bogus creators 41 fewer, `\thankstext` notes 42 → 74, no paper gaining an error or a
+warning. Guard `perfect_kernel_batch63::imsart_ead_and_address_marks`, repro
+sectioning-frontmatter/imsart_ead_and_address_marks. Residual (Perl the same): a `\thanksref` written after its
+`\author{…}` marks no author (2201.08502), as a request applies only to the frontmatter being digested.
+

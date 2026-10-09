@@ -1,0 +1,25 @@
+% witness: 2405.13980, 2409.06765, 2411.04991 (jmlr2e.sty:271-273 `\def\email{\hfill\small\sc}`), 2407.04153,
+%          2511.15722 (tmlr.sty), 2304.11127 (jair.sty), 2502.14381 (marked), 2404.08403 (dmlr2e.sty), 2409.06765
+%          (`\email vye@berkeley.edu\\ \vspace{-0.6cm}`); not a note's address (2402.08164's
+%          `Peng\thanks{bp2601@columbia.edu}`, `\name Cy Cole \thanks{…}`)
+% oracle:  pdflatex 0 errors (with the real jmlr2e.sty): "Ann Able*" with "ann@uni.edu" flush right on its line;
+%          "Bob Baker", "bob_b@uni.edu", "Other Place" under them; "Cy Cole" with a footnote mark, "cy@uni.edu" a note
+% engines: rust 63q4 = 0 errors, 0 warnings, personname "Ann Able ann@uni.edu" (the address inside the name)
+% expect:  0 errors, 0 warnings; each personname the name alone, the address the author's email contact; Cy Cole's
+%          address stays in its note
+% status:  RED (63q4) -> GREEN (63r)
+\documentclass{article}
+\usepackage{jmlr2e}
+\title{A Title}
+\editor{Ed Itor}
+\author{\name Ann Able\footnote{Equal contribution.} \email ann@uni.edu\\
+       \vspace{-0.6cm}
+       \AND
+       \name Bob Baker \email bob\_b@uni.edu \\
+       \addr Other Place
+       \AND
+       \name Cy Cole \thanks{cy@uni.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

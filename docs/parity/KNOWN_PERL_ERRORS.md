@@ -11434,3 +11434,15 @@ typesets `\@author` (melba.cls:279-283; also dmlr2e.sty:249-251, amta2024.sty:77
 content at the frontmatter, before the title code runs. Fixed in Rust (63q): the title code's definitions open at
 `\@author` are in force for the author content (OXIDIZED_DESIGN_DIVERGENCES #464). Witnesses 2405.09787, 2404.08403
 (html_feedback HF6).
+
+## 539. imsart's frontmatter is lost or garbled
+
+Perl has no imsart binding. Perl 0.8.8 reads the shipped imsart.cls/imsart.sty raw (2022/04/06): on the repro its
+`\author[A]{…}` authors are lost, each `\thanksref` prints "??", and no email, address or `\thankstext` note reaches the
+frontmatter, with 0 errors. The vendored OmniBus (OmniBus.cls.ltxml:80, :104, :113) would read `\ead[label=e1]{x}` as
+`\ead{}[]` (an empty email, `label=e1]x` left in the name), drop `\printead`, and print `\thankstext`'s arguments
+inline. Rust's imsart binding stood on OmniBus with the raw file: personnames "Ann Ablelabel=e1]ann@uni.edu" with an
+email contact "[", a `[label=u1,url]` address a creator of its own, each `\printead{e1}` "??", the `\thankstext` text
+and `\arxiv` id lost (they go to `\@thanks`, which nothing typesets). Fixed in Rust (63r), OXIDIZED_DESIGN_DIVERGENCES
+#466. Witnesses 2201.11773, 2507.12447, 2201.09706, 2201.08502. Guard
+`perfect_kernel_batch63::imsart_ead_and_address_marks`.

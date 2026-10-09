@@ -29,8 +29,59 @@ LoadDefinitions!({
   // `\proof` → `Error:undefined:{proof}`. Letting the paper's
   // \usepackage{amsthm} be the first real load matches Perl (clean).
   // Witness 1612.03054 (`\let\proof\relax` L5 + amsthm L22).
+  // imsart.sty's frontmatter, defined here so its raw definitions are refused. `\ead[label=e1]{addr}`
+  // (imsart.sty:944 `\DeclareRobustCommand\ead[2][label= ,email]`) is the author's email, or URL with the `url` key
+  // or a `://` address (`\checkead@prefix`, :955); OmniBus's `\ead{}[]` (elsarticle's order) read `[` as the address
+  // and left `label=e1]{…}` in the author's name (2201.11773, 2507.12447). `\printead[presep=…]{e1,u1}` (:965)
+  // reprints, in an address, the addresses `\ead` gave the authors, each already their contact. `\author[A,B]{…}`
+  // and `\address[A]{…}` (:2003, :2088) link an author to the addresses its marks label, as revtex's and elsarticle's
+  // do (revtex4_support_sty.rs, elsart_support_core_sty.rs).
+  DefMacro!("\\ead[] Semiverbatim", sub[(keys, address)] {
+    let url = keys.as_ref().is_some_and(|keys| {
+      keys.to_string().split(',').any(|key| key.split('=').next().is_some_and(|k| k.trim() == "url"))
+    }) || address.to_string().contains("://");
+    Ok(if url {
+      Invocation!(T_CS!("\\lx@add@url"), vec![None, Some(address)])
+    } else {
+      Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(address)])
+    })
+  }, locked => true);
+  DefMacro!("\\printead OptionalMatch:* []{}", "", locked => true);
+  // (a name list in one `\author{A and B}` is an author each, every one with the marks: 2401.00578, 2505.07640)
+  DefMacro!(
+    "\\author OptionalSemiverbatim {}",
+    "\\lx@add@authors@append[annotations={#1}]{#2}",
+    locked => true
+  );
+  DefMacro!(
+    "\\address OptionalSemiverbatim {}",
+    "\\lx@add@contact[label={#1},role=address]{#2}",
+    locked => true
+  );
+  // `\thanksref[mark]{addr1,t1}` (imsart.sty:746) marks the author with the addresses and notes those labels name, and
+  // `\thankstext{t1}{text}` (:789) is such a note: as elsarticle's `\thanksref`/`\thanks` (elsart_support_core_sty.rs).
+  // Read raw, the note went to `\@thanks`, which nothing typesets, and its text was lost (2201.08502).
+  // The `thanks:` prefix on both sides, as elsarticle's, matches a title's `\thanksref{T1}` to its note exactly (the
+  // prefix-stripped match serves creators only, OXIDIZED_DESIGN_DIVERGENCES #461), and an author's to an `\address`.
+  DefMacro!(
+    "\\thanksref[]{}",
+    "\\lx@request@frontmatter@annotation[thanks]{#2}",
+    locked => true
+  );
+  DefMacro!(
+    "\\thankstext[]{}{}",
+    "\\lx@add@contact[label={thanks:#2},role=thanks]{#3}",
+    locked => true
+  );
   // imsart.cls L149: \RequirePackage{imsart}.
   InputDefinitions!("imsart", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // `\arxiv{id}` (imsart.sty:1186-1189) prints the paper's arXiv identifier as an unmarked title note: the paper's
+  // arXiv pubnote, as jheppub's `\arxivnumber` (jheppub_sty.rs), not an author's note (2201.08502). Defined over the
+  // raw one and not locked: a paper citing with its own `\renewcommand\arxiv` keeps it.
+  DefMacro!(
+    "\\arxiv{}",
+    "\\gdef\\@arxiv{#1}\\lx@add@pubnote[role=arxiv]{#1}"
+  );
 
   // imsart.sty (L3015) redefines `\bibliography#1` to only
   // `\@input@{\jobname.bbl}` — it inputs a pre-built `.bbl` and NEVER reads the
