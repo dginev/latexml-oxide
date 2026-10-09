@@ -13761,6 +13761,19 @@ minipage inside an `\fbox` beside panels or another such box shares the float's 
 `captions_in_minipages_in_a_tabular_are_panels`; `perfect_kernel_batch56::parbox_panels_stay_panels`; repros
 `captions-floats/minipage_captions_label_their_panels`, `captions_in_minipages_in_a_tabular` (GREEN).
 
+**A paragraph wrapper the capture cannot place** (batch 64a, KNOWN_PERL_ERRORS #553): a minipage holding `\caption` and
+an `{adjustbox}`, whose collectbox `\noindent` opens an `ltx:para` in the capture (2312.04535, 2209.02973, 2404.07198,
+2404.18532, 2406.00259, 2502.04073), is a box no candidate holds while the para wraps its paragraph beside the caption:
+Perl's `insertBlock` (TeX_Box.pool.ltxml:471) warns `Did not find a block-like candidate` and falls back to an
+`ltx:block` the caption and the para are invalid in. `insert_block_as` (base_utilities.rs) unwraps such `ltx:para`s when
+a candidate holds their content beside the rest, their `ltx:p`s as the #244 demotion leaves them, so the minipage
+becomes its float. What the para carried goes to the elements it held, its id going with it: a text paragraph
+(`ltx:p`) takes it as the para had it; a box (the adjustbox's `ltx:inline-block`, a picture) is centred as a box
+(`\centering`'s `align="center"` as `ltx_centering`, LaTeXML.css `display:block; margin:auto` — an `align` on the
+box would centre only its own text), and the paragraph's indentation class is not its. A box's other alignments
+(`\raggedleft`'s `right`) are not carried — no class places a box right — a residual. Guards `perfect_kernel_batch64::{caption_in_minipage_with_adjustbox,
+caption_in_centered_minipage_with_adjustbox}`.
+
 
 ### 448. A neurips style names its own conference (Perl: 2022's)
 

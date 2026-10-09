@@ -504,7 +504,8 @@ fn frontmatter_nested_math_author_marker() {
 #[test]
 fn frontmatter_and_hard_author_boundary() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_and_hard_author_boundary.tex");
-  for name in ["Alice", "Bob", "Carol"] {
+  // (Alice's `$^{1}$`, which no affiliation answers, stays printed in her name, 64a)
+  for name in ["Alice<sup>1</sup>", "Bob", "Carol"] {
     assert!(
       x.contains(&format!("<personname>{name}</personname>")),
       "author {name} must be its own clean creator, not merged:\n{x}"

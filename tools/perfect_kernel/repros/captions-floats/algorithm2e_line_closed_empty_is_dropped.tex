@@ -1,0 +1,22 @@
+% witness: 2402.07867 (`\STATE …\\` before `\FOR` in an {algorithmic} inside algorithm2e's {algorithm}),
+%          2301.10369, 2508.15260, 2507.00889; the float's trailing line in every algorithm2e listing
+% oracle:  pdflatex 0 errors: no empty line between the statements, none after the last
+% engines: rust 64a5 = an empty <listingline/> before the loop and the loop's end, one after the listing's last
+%          line (63z8: the trailing one)
+% expect:  0 errors; no <listingline/> without content
+% status:  RED (64a5) -> GREEN (64a)
+\documentclass{article}
+\usepackage{algorithmic}
+\usepackage[ruled,linesnumbered]{algorithm2e}
+\begin{document}
+\begin{algorithm}
+\caption{Walk}
+\begin{algorithmic}
+\STATE {\bfseries Output:} texts. \\
+\FOR{$i=1$}
+\STATE $x = 1$ \\
+\ENDFOR
+\STATE \textbf{return} $x$
+\end{algorithmic}
+\end{algorithm}
+\end{document}

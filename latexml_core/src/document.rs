@@ -6114,7 +6114,11 @@ impl Document {
     for action in self.get_tag_action_list(node_qname, TagOptionName::AfterClose) {
       action(self, node, box_opt.as_ref())?;
     }
-    self.set_node(&savenode);
+    // (unless a hook removed the node it stood on — algorithm2e's listing drops an empty line the close walk began
+    // in — where `remove_node` already moved the point)
+    if !savenode.is_null() {
+      self.set_node(&savenode);
+    }
     Ok(())
   }
 

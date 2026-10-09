@@ -264,7 +264,9 @@ LoadDefinitions!({
   // (`\IEEEauthorblockN{Ann Able\\ University of X, City}`); the block's `\IEEEauthorblockA` goes to its last author
   // and the run of authors before it that have none (`annotate=new`; 63e).
   DefMacro!("\\IEEEauthorblockN{}", "\\lx@add@authors@append{#1}");
-  DefMacro!("\\IEEEauthorblockA{}", "\\lx@add@affiliation[annotate=new]{#1}");
+  // (an affiliation block led by an author reference mark is the affiliation of the authors showing that mark,
+  // `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A}`; 2406.11437, 2104.02493)
+  DefMacro!("\\IEEEauthorblockA{}", "\\lx@add@affiliation@marked[annotate=new]{#1}");
   // Run an explicit author-block body: `\and` merely separates blocks here (each
   // block already emits its own creator), so neutralise it.
   DefMacro!("\\lx@IEEE@author@blocks{}",

@@ -2270,7 +2270,18 @@ Initialize $x$\;
     &xml,
     "listing",
     &[],
-    "<listing class=\"ltx_lst_numbers_left\"><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}update <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></listingline><listingline>end for</listingline><listingline/></listing>",
+    "<listing class=\"ltx_lst_numbers_left\"><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}update <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></listingline><listingline>end for</listingline></listing>",
+  );
+  // the float whole: closing from the statements' last line runs every close hook up to it, the float's own (its
+  // caption frame's break) among them (64a review: a line freed on its close had ended that walk early). The
+  // statements before the first block run on in one paragraph without the `;`, as pdflatex prints them in the plain
+  // float (`\;` is the kernel's thick space there, algorithm2e.sty:2625 redefining it only in its own environment;
+  // the output keeps it as U+2004 after the math, which this whitespace-normalized assertion does not show).
+  assert_element(
+    &xml,
+    "float",
+    &["xml:id=\"algorithm1\""],
+    "<float class=\"ltx_float_algorithm\" framed=\"top\" inlist=\"loa\" placement=\"ht\" xml:id=\"algorithm1\"><tags><tag><text font=\"bold\">Algorithm\u{a0}1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Algorithm 1</tag></tags><toccaption><tag close=\" \">1</tag>Demo</toccaption><caption><tag close=\" \"><text font=\"bold\">Algorithm\u{a0}1</text></tag> Demo</caption><p framed=\"topbottom\">Initialize <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><text font=\"bold\">for</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"i=1\" text=\"i = 1\" xml:id=\"algorithm1.m2\"><XMath><XMApp><XMTok font=\"upright\" meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok role=\"UNKNOWN\">i</XMTok><XMTok font=\"upright\" meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></emph> <text font=\"bold\">do</text></p><break class=\"ltx_break\"/><listing class=\"ltx_lst_numbers_left\"><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}update <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></listingline><listingline>end for</listingline></listing></float>",
   );
 }
 
@@ -2305,7 +2316,7 @@ last\;
     &xml,
     "listing",
     &[],
-    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><inline-block><description xml:id=\"S0.I1\"><item xml:id=\"S0.I1.ix1\"><tags><tag><text font=\"bold\">Init</text></tag><tag role=\"typerefnum\">item Init</tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p><break/>Choose the constants.</p></para></item></description></inline-block></listingline><listingline><inline-block><enumerate xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m1\"><XMath><XMTok role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><break/>end foreach<break/></p></para></item><item xml:id=\"S0.I2.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I2.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline>last;</listingline><listingline><text font=\"bold\">for</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"i\" text=\"i\" xml:id=\"algorithm1.m1\"><XMath><XMTok role=\"UNKNOWN\">i</XMTok></XMath></Math></emph> <text font=\"bold\">do</text></listingline><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}inner;</listingline><listingline>end for</listingline><listingline/></listing>",
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><inline-block><description xml:id=\"S0.I1\"><item xml:id=\"S0.I1.ix1\"><tags><tag><text font=\"bold\">Init</text></tag><tag role=\"typerefnum\">item Init</tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p><break/>Choose the constants.</p></para></item></description></inline-block></listingline><listingline><inline-block><enumerate xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m1\"><XMath><XMTok role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><break/>end foreach<break/></p></para></item><item xml:id=\"S0.I2.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I2.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline>last;</listingline><listingline><text font=\"bold\">for</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"i\" text=\"i\" xml:id=\"algorithm1.m1\"><XMath><XMTok role=\"UNKNOWN\">i</XMTok></XMath></Math></emph> <text font=\"bold\">do</text></listingline><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}inner;</listingline><listingline>end for</listingline></listing>",
   );
 }
 
@@ -2335,7 +2346,7 @@ next line\;
     &xml,
     "listing",
     &[],
-    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline>update fluidupdate;</listingline><listingline>see <text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\">first<break/>second</text>;</listingline><listingline><equation xml:id=\"S0.Ex1\"><Math mode=\"display\" tex=\"z=1\\text{ {\\hbox{{{\\hbox{// }}}}{{Fluid update\\hfill}}}}\" text=\"z = 1 * [ // Fluid update ]\" xml:id=\"S0.Ex1.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">z</XMTok><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok><XMText> <text font=\"typewriter\">// </text><text font=\"typewriter\">Fluid update </text></XMText></XMApp></XMApp></XMath></Math></equation>next line;</listingline><listingline/></listing>",
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline>update fluidupdate;</listingline><listingline>see <text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\">first<break/>second</text>;</listingline><listingline><equation xml:id=\"S0.Ex1\"><Math mode=\"display\" tex=\"z=1\\text{ {\\hbox{{{\\hbox{// }}}}{{Fluid update\\hfill}}}}\" text=\"z = 1 * [ // Fluid update ]\" xml:id=\"S0.Ex1.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">z</XMTok><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok><XMText> <text font=\"typewriter\">// </text><text font=\"typewriter\">Fluid update </text></XMText></XMApp></XMApp></XMath></Math></equation>next line;</listingline></listing>",
   );
 }
 
@@ -2365,7 +2376,7 @@ last\;
     &xml,
     "listing",
     &[],
-    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><tags><tag><text font=\"bold\">1</text></tag></tags>first;</listingline><listingline><inline-block><enumerate xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m1\"><XMath><XMTok role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/>more <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/>end foreach<break/></p></para></item><item xml:id=\"S0.I1.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I1.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline><tags><tag><text font=\"bold\">2</text></tag></tags>last;</listingline><listingline/></listing>",
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><tags><tag><text font=\"bold\">1</text></tag></tags>first;</listingline><listingline><inline-block><enumerate xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m1\"><XMath><XMTok role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/>more <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/>end foreach<break/></p></para></item><item xml:id=\"S0.I1.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I1.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline><tags><tag><text font=\"bold\">2</text></tag></tags>last;</listingline></listing>",
   );
 }
 
@@ -2401,7 +2412,7 @@ after compact\;
     &xml,
     "listing",
     &[],
-    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><inline-block class=\"ltx_minipage\" vattach=\"middle\" width=\"85.4pt\"><p>mini one<break/>mini two</p></inline-block>;</listingline><listingline><inline-block vattach=\"bottom\"><p>vb one<break/>vb two</p></inline-block>;</listingline><listingline><tabular vattach=\"middle\"><tbody><tr><td align=\"left\" vattach=\"top\"><inline-block vattach=\"top\" width=\"113.8pt\"><itemize xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p>cell item</p></para></item></itemize><p>cell tail</p></inline-block></td></tr></tbody></tabular>;</listingline><listingline>note<note mark=\"1\" role=\"footnote\" xml:id=\"footnote1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">footnote 1</tag></tags>fn one<break/>fn two</note>;</listingline><listingline><inline-block><itemize xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p>compact</p></para></item></itemize></inline-block></listingline><listingline>after compact;</listingline><listingline><equation xml:id=\"S0.Ex1\"><Math mode=\"display\" tex=\"x=1;\" text=\"x = 1\" xml:id=\"S0.Ex1.m1\"><XMath><XMDual><XMRef idref=\"S0.Ex1.m1.1\"/><XMWrap><XMApp xml:id=\"S0.Ex1.m1.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp><XMTok role=\"PUNCT\">;</XMTok></XMWrap></XMDual></XMath></Math></equation><inline-block><itemize xml:id=\"S0.I3\"><item xml:id=\"S0.I3.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I3.i1.p1\"><p>boxed item</p></para></item></itemize></inline-block>;</listingline><listingline/></listing>",
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><inline-block class=\"ltx_minipage\" vattach=\"middle\" width=\"85.4pt\"><p>mini one<break/>mini two</p></inline-block>;</listingline><listingline><inline-block vattach=\"bottom\"><p>vb one<break/>vb two</p></inline-block>;</listingline><listingline><tabular vattach=\"middle\"><tbody><tr><td align=\"left\" vattach=\"top\"><inline-block vattach=\"top\" width=\"113.8pt\"><itemize xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p>cell item</p></para></item></itemize><p>cell tail</p></inline-block></td></tr></tbody></tabular>;</listingline><listingline>note<note mark=\"1\" role=\"footnote\" xml:id=\"footnote1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">footnote 1</tag></tags>fn one<break/>fn two</note>;</listingline><listingline><inline-block><itemize xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p>compact</p></para></item></itemize></inline-block></listingline><listingline>after compact;</listingline><listingline><equation xml:id=\"S0.Ex1\"><Math mode=\"display\" tex=\"x=1;\" text=\"x = 1\" xml:id=\"S0.Ex1.m1\"><XMath><XMDual><XMRef idref=\"S0.Ex1.m1.1\"/><XMWrap><XMApp xml:id=\"S0.Ex1.m1.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp><XMTok role=\"PUNCT\">;</XMTok></XMWrap></XMDual></XMath></Math></equation><inline-block><itemize xml:id=\"S0.I3\"><item xml:id=\"S0.I3.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I3.i1.p1\"><p>boxed item</p></para></item></itemize></inline-block>;</listingline></listing>",
   );
   assert_element(
     &xml,
@@ -7219,7 +7230,8 @@ Text.
     ]
   );
   // A mark's first label is the one it sets (`$^{1,3}$`): Bob's request for 3 finds no affiliation, a residual shared
-  // with Perl (Base_Utility.pool.ltxml:565-570 keeps the first label), though pdflatex prints Univ A as his too.
+  // with Perl (Base_Utility.pool.ltxml:565-570 keeps the first label), though pdflatex prints Univ A as his too; the
+  // affiliation's printed `1,3` answers his mark, so it is not shown again (64a `answered_labels`).
   assert_eq!(
     contacts(
       r"\documentclass{llncs}
@@ -8034,7 +8046,12 @@ fn frontmatter_digest_cluster_2609() {
 \author{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript,
 Carl Cole\textsuperscript{2}}\maketitle Text.\end{document}",
   );
-  assert_eq!(names(&xml), ["Ann Able", "Bob Baker", "Carl Cole"]);
+  // (the marks nothing answers stay printed, 64a)
+  assert_eq!(names(&xml), [
+    "Ann Able<sup>1</sup>",
+    "Bob Baker",
+    "Carl Cole<sup>2</sup>"
+  ]);
   let xml = clean(
     r"\documentclass{llncs}\begin{document}\title{T}
 \author{\begin{tabular}{c@{\hspace{4em}}c}

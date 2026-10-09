@@ -1405,6 +1405,8 @@ LoadDefinitions!({
         // `\and` group — never one from a previous group.
         let group_start = entries.len();
         let mut names_line = true;
+        // the last line of names this group's authors were split from, which a line of more names continues
+        let mut last_names: Option<Tokens> = None;
         for (delimiter, line) in split_tokens_delimited(group, author_affil_splits()) {
           position += 1;
           let beside = beside_prefix_marked_names(prefix_marked_names, &mut names_line, &delimiter);
@@ -1420,6 +1422,20 @@ LoadDefinitions!({
               // affiliation's text (KNOWN_PERL_ERRORS #75, witness 2605.23553).
               if line_is_email_list(&line) {
                 entries.push((AuthorLineKind::Email, line));
+              } else if entries
+                .last()
+                .is_some_and(|(kind, _)| *kind == AuthorLineKind::Author)
+                && last_names
+                  .as_ref()
+                  .is_some_and(|names| names_continue(names, &line))
+              {
+                // An unfinished name list goes on past the break, as in an unmarked block ([`names_continue`]):
+                // `Gus Gray\IEEEauthorrefmark{1}, …, Ida Ivy,~\IEEEmembership{Fellow,~IEEE,}\\ Jon Jay, … and~Kim
+                // Key` (2408.02464) is five authors, not Ida Ivy's name welded to the next line's.
+                last_names = Some(line.clone());
+                for author in split_author_line(line) {
+                  entries.push((AuthorLineKind::Author, author));
+                }
               } else if entries.len() > group_start {
                 // continues an entry from THIS `\and` group; Append, with the delimiter that split the lines
                 // (`\\` → break, `\quad`/`\qquad` → space) put back where it stood: Perl (Base_Utility.pool.ltxml:701-703 `Tokens($entries[-1][1],
@@ -1516,6 +1532,7 @@ LoadDefinitions!({
                     })
               };
               if first_line || !leads || (prefix_marked_names && marked_name()) {
+                last_names = Some(line.clone());
                 for author in split_names(line) {
                   entries.push((AuthorLineKind::Author, author));
                 }
@@ -3180,10 +3197,13 @@ fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
 
 /// The marks that request an affiliation label in an author (`\lx@author@withsup`, llncs `\inst`) and set it in an
 /// affiliation (`\lx@affiliation@withsup`, `\lx@affiliation@withinst`).
-fn affiliation_mark_tokens() -> [Token; 4] {
+fn affiliation_mark_tokens() -> [Token; 6] {
+  let [textsuperscript, ieee, refmark] = mark_commands();
   [
     T_SUPER!(),
-    T_CS!("\\textsuperscript"),
+    textsuperscript,
+    ieee,
+    refmark,
     T_CS!("\\inst"),
     T_CS!("\\lx@frontmatter@symbolmark"),
   ]
@@ -5077,7 +5097,9 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   }
   coalesce_empty_creators(document)?;
   distribute_upfront_contacts(document)?;
+  let answered = answered_labels(document);
   relocate_annotations(document)?;
+  show_unanswered_marks(document, &answered)?;
   flag_merged_creators(document)?;
   Ok(())
 }
@@ -5364,6 +5386,81 @@ fn insert_frontmatter_rec(document: &mut Document, item: &TagContent) -> Result<
     TagContent::PlaceKeeper => {
       document.absorb(&Digested::from(String::from("place_keeper")), None)?
     },
+  }
+  Ok(())
+}
+
+/// The labels the frontmatter entries carry (`_label`), each also without its prefix, as [`relocate_annotations`]
+/// matches them (`institute:1` answers `affiliation:1`), and every mark an affiliation printed (`_bymark`: llncs's
+/// `\institute{$^{1,3}$ Univ A}` answers a `\inst{3}` too, though only its first mark labels it): what an author's mark
+/// request can find. A creator's own role-sequence label (`author:N`) answers no mark.
+fn answered_labels(document: &mut Document) -> HashSet<String> {
+  let mut answered = HashSet::default();
+  for node in document.findnodes(".//*[@_bymark]", None) {
+    for mark in node.get_attribute("_bymark").unwrap_or_default().split(',') {
+      if !mark.is_empty() {
+        answered.insert(mark.to_string());
+        answered.insert(s!("affiliation:{mark}"));
+      }
+    }
+  }
+  for node in document.findnodes(".//*[@_label][not(self::ltx:creator)]", None) {
+    for label in node.get_attribute("_label").unwrap_or_default().split(',') {
+      if label.is_empty() {
+        continue;
+      }
+      answered.insert(label.to_string());
+      if let Some(pos) = label.find(':') {
+        answered.insert(label[pos + 1..].to_string());
+      }
+    }
+  }
+  answered
+}
+
+/// An author's affiliation mark that no entry answers stays in the name, as LaTeX prints it (`Ann Able$^*$ and Bob
+/// Bee$^1$` with no `$^1$` line; `Gus Gray\IEEEauthorrefmark{1}` whose legend is a `\thanks`, 2408.02464): read as
+/// a request, it was taken out of the name to link an affiliation that is not there. A mark the name already shows
+/// is not repeated. (Perl drops it too; repro sectioning-frontmatter/author_unmatched_numeric_mark.)
+fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) -> Result<()> {
+  for creator in document.findnodes(".//ltx:creator[@_annotations]", None) {
+    let Some(mut personname) = document
+      .findnodes("ltx:personname", Some(&creator))
+      .into_iter()
+      .next()
+    else {
+      continue;
+    };
+    let shown = shown_marks(document, &creator);
+    let mut marks: Vec<String> = Vec::new();
+    for label in creator
+      .get_attribute("_annotations")
+      .unwrap_or_default()
+      .split(',')
+    {
+      let Some(mark) = label.strip_prefix("affiliation:") else {
+        continue;
+      };
+      if mark.is_empty()
+        || !mark.chars().all(char::is_alphanumeric)
+        || answered.contains(label)
+        || answered.contains(mark)
+        || shown.iter().any(|known| known == mark)
+        || marks.iter().any(|known| known == mark)
+      {
+        continue;
+      }
+      marks.push(mark.to_string());
+    }
+    if marks.is_empty() {
+      continue;
+    }
+    let mut sup = Node::new("sup", None, document.get_document())?;
+    if let Some(namespace) = personname.get_namespace() {
+      let _ = sup.set_namespace(&namespace);
+    }
+    sup.append_text(&marks.join(","))?;
+    personname.add_child(&mut sup)?;
   }
   Ok(())
 }
@@ -5779,14 +5876,13 @@ fn braced_group(text: &str) -> (&str, &str) {
 }
 
 /// The letter or number marks of a superscript's script: each item of its list at its top-level commas (`2,\dagger`:
-/// the 2), past braces and font switches (`\rm a`, `\mathrm{a}`, `{\rm 2}`: the a, the 2), and before a symbol after
-/// it (`2*`, `1\dagger`, `1†`: the 2, the 1). A symbol alone or other markup (`\footnote{…}`) is no mark. Both the marks
-/// an affiliation is labelled by and the marks an author shows are read so (63i review).
+/// the 2), past braces and font and size switches (`\rm a`, `\mathrm{a}`, `{\rm 2}`, `\footnotesize 1`: the a, the 2,
+/// the 1), and before a symbol or closing parenthesis after it (`2*`, `1\dagger`, `1†`, `1)`: the 2, the 1; the `1)` of
+/// 2306.17039, as `clean_frontmatter_labels` reads its label). A symbol alone or other markup (`\footnote{…}`) is no
+/// mark. Both the marks an affiliation is labelled by and the marks an author shows are read so (63i review).
 fn script_marks(script: &str) -> Vec<String> {
-  const FONTS: [&str; 10] = [
-    "\\mathrm", "\\textrm", "\\mathit", "\\textit", "\\mathbf", "\\textbf", "\\mathsf", "\\rm",
-    "\\it", "\\bf",
-  ];
+  // (the whole script under its switches, `\footnotesize\ensuremath{1,2}`: the 1 and the 2; 2411.14110)
+  let script = past_mark_switches(script);
   let mut items = Vec::new();
   let (mut depth, mut start) = (0usize, 0usize);
   for (i, c) in script.char_indices() {
@@ -5804,21 +5900,74 @@ fn script_marks(script: &str) -> Vec<String> {
   items
     .into_iter()
     .filter_map(|item| {
-      let mut item: String = item
+      let item: String = past_mark_switches(item)
         .chars()
         .filter(|c| !matches!(c, '{' | '}') && !c.is_whitespace())
         .collect();
-      while let Some(rest) = FONTS.iter().find_map(|cs| item.strip_prefix(cs)) {
-        item = rest.to_string();
-      }
       let lead: String = item.chars().take_while(|c| c.is_alphanumeric()).collect();
       let rest = &item[lead.len()..];
       let symbol_after = rest.is_empty()
-        || rest.starts_with(['*', '\\'])
+        || rest.starts_with(['*', '\\', ')'])
         || rest.starts_with(|c: char| !c.is_ascii() && !c.is_alphanumeric());
       (!lead.is_empty() && symbol_after).then_some(lead)
     })
     .collect()
+}
+
+/// The font and size switches, and the math wrapper, a mark is printed under (`{\rm 2}`, `\mathrm{a}`,
+/// `\textsuperscript{\footnotesize\ensuremath{1}}`, 2502.16662 and 2411.14110's `\IEEEauthorrefmark`), which neither
+/// an affiliation's mark nor its leading text is.
+const MARK_SWITCHES: [&str; 32] = [
+  "\\rm",
+  "\\it",
+  "\\bf",
+  "\\sl",
+  "\\sf",
+  "\\tt",
+  "\\em",
+  "\\mathrm",
+  "\\mathit",
+  "\\mathbf",
+  "\\mathsf",
+  "\\textrm",
+  "\\textit",
+  "\\textbf",
+  "\\textsf",
+  "\\textup",
+  "\\textnormal",
+  "\\itshape",
+  "\\upshape",
+  "\\bfseries",
+  "\\rmfamily",
+  "\\normalfont",
+  "\\tiny",
+  "\\scriptsize",
+  "\\footnotesize",
+  "\\small",
+  "\\normalsize",
+  "\\large",
+  "\\Large",
+  "\\ensuremath",
+  "\\scriptstyle",
+  "\\textstyle",
+];
+
+/// `text` past the switches it opens with ([`MARK_SWITCHES`]), with the braces and spaces around them.
+fn past_mark_switches(text: &str) -> &str {
+  let mut rest = text;
+  loop {
+    rest = rest.trim_start_matches(|c: char| c == '{' || c.is_whitespace());
+    let Some(after) = rest.strip_prefix('\\') else {
+      return rest;
+    };
+    let len = after
+      .find(|c: char| !c.is_ascii_alphabetic())
+      .unwrap_or(after.len());
+    if len == 0 || !MARK_SWITCHES.contains(&&rest[..=len]) {
+      return rest;
+    }
+    rest = &after[len..];
+  }
 }
 
 /// The marks of each superscript in a TeX source string, one list per superscript (`Ann Able$^{1,2}$ and Bob$^{1}$`
@@ -7437,6 +7586,67 @@ fn insert_block_as(
     &all_candidates
   };
   let holds = |c: SymStr, t: SymStr| document::sym_can_contain_somehow(c, t).is_some();
+  // A box no candidate holds whole only because its paragraphs are wrapped in `ltx:para` — a caption beside a
+  // `\noindent` paragraph (adjustbox's collectbox; `\caption{First} \noindent x` in a minipage, 2312.04535, 2209.02973,
+  // 2404.07198, 2404.18532, 2406.00259, 2502.04073) — holds them unwrapped, the `ltx:p`s a candidate takes beside the
+  // caption (the #244 demotion). Perl warns and falls back to an `ltx:block` the caption and the para are invalid in.
+  let para = pin_static("ltx:para");
+  if !candidate_set
+    .iter()
+    .any(|c| node_tags.iter().all(|t| holds(*c, *t)))
+    && node_tags.contains(&para)
+  {
+    let unwrapped: Vec<SymStr> = nodes
+      .iter()
+      .flat_map(|n| {
+        if document::get_node_qname(n) == para {
+          content_nodes(n)
+            .iter()
+            .map(document::get_node_qname)
+            .collect::<Vec<_>>()
+        } else {
+          vec![document::get_node_qname(n)]
+        }
+      })
+      .collect();
+    if candidate_set
+      .iter()
+      .any(|c| unwrapped.iter().all(|t| holds(*c, *t)))
+    {
+      for wrapper in nodes.iter().filter(|n| document::get_node_qname(n) == para) {
+        // (what the paragraph carried goes to the elements it held, its id going with it: a text paragraph (`ltx:p`)
+        // takes it as the para had it; a box (an adjustbox's `ltx:inline-block`, a picture) is centred as a box
+        // (`ltx_centering`: an `align` on it centres only its own text), and the paragraph's indentation is not its)
+        let attributes = wrapper.get_attributes();
+        for mut child in wrapper.get_child_elements() {
+          let tag = document::get_node_qname(&child);
+          let text_block = tag == pin_static("ltx:p");
+          for (key, value) in &attributes {
+            if key == "id" || key == "xml:id" || key.starts_with('_') {
+              continue;
+            }
+            if key == "class" {
+              for class in value.split_whitespace() {
+                if text_block || (class != "ltx_indent" && class != "ltx_noindent") {
+                  document.add_class(&mut child, class)?;
+                }
+              }
+            } else if key == "align" && !text_block {
+              // (a box's other alignments are not carried: no class places a box right; a residual)
+              if value == "center" {
+                document.add_class(&mut child, "ltx_centering")?;
+              }
+            } else if !child.has_attribute(key) && document::sym_can_have_attribute(tag, pin(key)) {
+              document.set_attribute(&mut child, key, value)?;
+            }
+          }
+        }
+        document.unwrap_nodes(wrapper.clone())?;
+      }
+      nodes = content_nodes(&container);
+      node_tags = nodes.iter().map(document::get_node_qname).collect();
+    }
+  }
   let holds_all = |c: SymStr| node_tags.iter().all(|t| holds(c, *t));
   let container_tag = candidate_set
     .iter()
@@ -9618,7 +9828,25 @@ fn affil_splits() -> Vec<SplitDelim> {
     T_CS!("\\newline").into(),
   ]
 }
-fn authorsup_markers() -> Vec<Token> { vec![T_SUPER!(), T_CS!("\\textsuperscript")] }
+/// The commands that print a mark raised, its operand their argument: `\textsuperscript`, and IEEEtran's author
+/// reference mark (`Ann Able\IEEEauthorrefmark{1}` over `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A}`, IEEEtran.cls's
+/// `\IEEEauthorrefmark` a superscript symbol; 2406.11437, 2104.02493). Every reader of an author block's marks counts
+/// them alike: as labels, in the operands an address is placed by, and where a line splits into its affiliations
+/// (`\IEEEauthorrefmark{2}Google, \IEEEauthorrefmark{3}Google DeepMind`, 2310.02368).
+fn mark_commands() -> [Token; 3] {
+  [
+    T_CS!("\\textsuperscript"),
+    T_CS!("\\IEEEauthorrefmark"),
+    T_CS!("\\authorrefmark"),
+  ]
+}
+
+/// The marks an author line links its names and affiliations by: a superscript, and the mark commands.
+fn authorsup_markers() -> Vec<Token> {
+  let mut markers = vec![T_SUPER!()];
+  markers.extend(mark_commands());
+  markers
+}
 
 /// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or
 /// `\thanks` is the note's own text, not a mark: 0911.0568's `LPT Orsay (CNRS)~\footnote{$^a$Laboratoire …}` line
@@ -10140,35 +10368,21 @@ fn note_body(content: Tokens) -> Tokens {
 /// mark, and a superscript later in the line (`Laboratory for $^{3}$He`) is the affiliation's own text.
 pub fn leads_with_mark(content: &Tokens) -> bool {
   // (past a leading font switch or group: `\affiliation{\it $^1$ Key Laboratory …}`, 0808.2763)
-  let declarations = [
-    "\\it",
-    "\\rm",
-    "\\bf",
-    "\\sl",
-    "\\sf",
-    "\\tt",
-    "\\em",
-    "\\itshape",
-    "\\upshape",
-    "\\small",
-    "\\footnotesize",
-    "\\normalsize",
-    "\\noindent",
-  ];
+  let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
   let tokens: Vec<&Token> = content
     .unlist_ref()
     .iter()
     .filter(|t| **t != T_SPACE!())
-    .skip_while(|t| **t == T_BEGIN!() || declarations.iter().any(|cs| **t == T_CS!(cs)))
+    .skip_while(|t| **t == T_BEGIN!() || **t == T_CS!("\\noindent") || switch(t))
     .collect();
   let script = match tokens.as_slice() {
-    [t, rest @ ..] if **t == T_CS!("\\textsuperscript") || **t == T_SUPER!() => rest,
+    [t, rest @ ..] if mark_commands().contains(t) || **t == T_SUPER!() => rest,
     [t, s, rest @ ..] if t.get_catcode() == Catcode::MATH && **s == T_SUPER!() => rest,
     _ => return false,
   };
   script
     .iter()
-    .find(|t| ***t != T_BEGIN!() && ***t != T_CS!("\\rm") && ***t != T_CS!("\\mathrm"))
+    .find(|t| ***t != T_BEGIN!() && !switch(t))
     .is_some_and(|t| {
       t.to_string()
         .chars()
@@ -10245,7 +10459,7 @@ fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
   let mut depth = 0usize;
   for (i, t) in toks.iter().enumerate() {
     let dollar_super = *t == T_MATH!() && toks.get(i + 1).is_some_and(|n| *n == T_SUPER!());
-    let is_mark_start = dollar_super || *t == T_CS!("\\textsuperscript");
+    let is_mark_start = dollar_super || mark_commands().contains(t);
     // Only treat a mark as an affiliation boundary when it is preceded by
     // whitespace (institutions are space-separated). A mark glued to the
     // preceding text — e.g. a superscript INSIDE an institution name,
@@ -10371,7 +10585,7 @@ fn opening_declarations(inner: &Tokens) -> Vec<Token> {
       out.push(t);
       i += 1;
     } else if t.get_catcode() == Catcode::CS
-      && t != T_CS!("\\textsuperscript")
+      && !mark_commands().contains(&t)
       && (with_arguments || !braced)
     {
       out.push(t);
@@ -10413,7 +10627,7 @@ fn leading_wrapper(line: &Tokens) -> Option<(Option<Token>, Tokens, Vec<Token>)>
         .get(start + 1)
         .is_some_and(|t| t.get_catcode() == Catcode::BEGIN) =>
     {
-      if v[start] == T_CS!("\\textsuperscript") {
+      if mark_commands().contains(&v[start]) {
         return None;
       }
       (Some(v[start]), start + 1)
@@ -10538,6 +10752,25 @@ fn visible_name_text(tokens: &[Token]) -> String {
           i = skip_group(tokens, i);
           if t == T_CS!("\\hspace") {
             text.push(' ');
+          }
+          continue;
+        }
+        // another command's argument with no letter in it is an identifier or a mark, no name text
+        // (`\orcidicon{0000-0001-…}`, `\authorrefmark{1, 3}`: 2104.02493, 2407.03625); a letter is one of any script
+        // (`\textbf{Μαρία}`, its letters OTHER under pdfTeX's catcodes)
+        if !annotation
+          && tokens
+            .get(i)
+            .is_some_and(|n| n.get_catcode() == Catcode::BEGIN)
+        {
+          let end = skip_group(tokens, i).min(tokens.len());
+          let lettered = tokens[i..end].iter().any(|u| match u.get_catcode() {
+            Catcode::LETTER | Catcode::OTHER => u.with_str(|s| s.chars().any(char::is_alphabetic)),
+            Catcode::CS => u.with_str(letter_command).is_some(),
+            _ => false,
+          });
+          if !lettered {
+            i = end;
           }
         }
         continue;
@@ -10966,9 +11199,9 @@ fn names_marked_alike(names: &Tokens, line: &Tokens) -> bool {
     })
 }
 
-/// Whether a name carries a mark after it, outside its notes: a superscript ([`affiliation_mark_tokens`]) or a mark
-/// command (aastex's `\altaffilmark`, IEEEtran's `\IEEEauthorrefmark`) after its first letter (`Bob Baker$^{2}$`; not
-/// `$^{2}$Univ B`).
+/// Whether a name carries a mark after it, outside its notes: a superscript or mark command
+/// ([`affiliation_mark_tokens`]: IEEEtran's `\IEEEauthorrefmark`) or aastex's `\altaffilmark` after its first letter
+/// (`Bob Baker$^{2}$`; not `$^{2}$Univ B`).
 fn marked_after_name(name: &Tokens) -> bool {
   let outside = outside_notes(name.unlist_ref());
   let Some(first_letter) = outside
@@ -10977,11 +11210,9 @@ fn marked_after_name(name: &Tokens) -> bool {
   else {
     return false;
   };
-  outside[first_letter..].iter().any(|t| {
-    affiliation_mark_tokens().contains(t)
-      || *t == T_CS!("\\altaffilmark")
-      || *t == T_CS!("\\IEEEauthorrefmark")
-  })
+  outside[first_letter..]
+    .iter()
+    .any(|t| affiliation_mark_tokens().contains(t) || *t == T_CS!("\\altaffilmark"))
 }
 
 /// The markup an author line opens with, before its first letter: its control sequences and the groups they open

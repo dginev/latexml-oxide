@@ -1,0 +1,21 @@
+% witness: 2310.02368 (`\IEEEauthorrefmark{2}Google, \IEEEauthorrefmark{3}Google DeepMind`), 2404.05610
+% oracle:  pdflatex 0 errors: each block under its marks, its address line below it
+% engines: rust 64a5 = "Google, ³Google DeepMind" one affiliation of mark 2, mark 3 unlinked; every address on the
+%          nameless creator (the address placement did not read `\IEEEauthorrefmark` as a mark);
+%          63z8 = every block on every author
+% expect:  0 errors; Google to Mic Tufo, Google DeepMind to Alex Svy; Hespe's address his; the shared
+%          Microsoft address continues its affiliation; the Google pair's address on the block's creator
+% status:  RED (64a5) -> GREEN (64a)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ben Steen\IEEEauthorrefmark{1}, Mic Tufo\IEEEauthorrefmark{2}, Alex Svy\IEEEauthorrefmark{3}, Dem Hespe\IEEEauthorrefmark{4}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Microsoft Data \& AI\\
+\{steen,sund\}@microsoft.com}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Google, \IEEEauthorrefmark{3}Google DeepMind\\
+\{tufo,svy\}@google.com}
+\IEEEauthorblockA{\IEEEauthorrefmark{4}\textit{Independent}\\
+dem.hespe@outlook.com}}
+\maketitle
+Text.
+\end{document}

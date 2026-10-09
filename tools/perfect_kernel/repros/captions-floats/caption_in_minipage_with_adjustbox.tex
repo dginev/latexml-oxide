@@ -1,0 +1,18 @@
+% witness: 2312.04535 (also 2209.02973, 2404.07198, 2404.18532, 2406.00259, 2502.04073): a {minipage} in a float
+%          holding `\caption` and an {adjustbox}, whose collectbox `\noindent` opens an ltx:para in the block capture
+% oracle:  pdflatex 0 errors: Table 1 "First" over the box
+% engines: rust 63z8 = `Warning:malformed:_CaptureBlock_` + 3 errors (toccaption, caption, para not allowed in
+%          <ltx:block>); Perl identical (shared)
+% expect:  0 errors, 0 warnings; the caption in the table, `\ref` resolved
+% status:  RED (63z8) -> GREEN (64a)
+\documentclass{article}
+\usepackage{adjustbox}
+\begin{document}
+\begin{table}
+\begin{minipage}{0.4\linewidth}
+\caption{First}\label{t:a}
+\begin{adjustbox}{width=\textwidth}a\end{adjustbox}
+\end{minipage}
+\end{table}
+See \ref{t:a}.
+\end{document}

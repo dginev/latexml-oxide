@@ -256,12 +256,12 @@ fn only_floats_reset_the_size() {
     (
       "float",
       "algorithm1",
-      r##"<float class="ltx_algorithm" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag></tags><listing class="ltx_lst_numbers_left"><listingline>[A 12.0pt];</listingline><listingline/></listing><toccaption><tag close=" ">1</tag>y</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag>y</caption></float>"##,
+      r##"<float class="ltx_algorithm" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag></tags><listing class="ltx_lst_numbers_left"><listingline>[A 12.0pt];</listingline></listing><toccaption><tag close=" ">1</tag>y</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag>y</caption></float>"##,
     ),
     (
       "float",
       "algorithm2",
-      r##"<float class="ltx_algorithm" xml:id="algorithm2"><tags><tag><text font="bold">Algorithm 2</text></tag><tag role="refnum">2</tag></tags><listing class="ltx_lst_numbers_left"><listingline><text fontsize="90%">[H 11.0pt];</text></listingline><listingline/></listing><toccaption><tag close=" "><text fontsize="90%">2</text></tag><text fontsize="90%">x</text></toccaption><caption fontsize="90%"><tag close=" "><text font="bold">Algorithm 2</text></tag>x</caption></float>"##,
+      r##"<float class="ltx_algorithm" xml:id="algorithm2"><tags><tag><text font="bold">Algorithm 2</text></tag><tag role="refnum">2</tag></tags><listing class="ltx_lst_numbers_left"><listingline><text fontsize="90%">[H 11.0pt];</text></listingline></listing><toccaption><tag close=" "><text fontsize="90%">2</text></tag><text fontsize="90%">x</text></toccaption><caption fontsize="90%"><tag close=" "><text font="bold">Algorithm 2</text></tag>x</caption></float>"##,
     ),
     (
       "table",
@@ -287,12 +287,12 @@ fn algorithm_mixed_h_placement_floats() {
     (
       "float",
       "algorithm1",
-      r##"<float class="ltx_algorithm" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag></tags><listing class="ltx_lst_numbers_left"><listingline>[X 12.0pt];</listingline><listingline/></listing><toccaption><tag close=" ">1</tag>z</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag>z</caption></float>"##,
+      r##"<float class="ltx_algorithm" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag></tags><listing class="ltx_lst_numbers_left"><listingline>[X 12.0pt];</listingline></listing><toccaption><tag close=" ">1</tag>z</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag>z</caption></float>"##,
     ),
     (
       "float",
       "algorithm2",
-      r##"<float class="ltx_algorithm" xml:id="algorithm2"><tags><tag><text font="bold">Algorithm 2</text></tag><tag role="refnum">2</tag></tags><listing class="ltx_lst_numbers_left"><listingline>[Y 12.0pt];</listingline><listingline/></listing><toccaption><tag close=" ">2</tag>w</toccaption><caption><tag close=" "><text font="bold">Algorithm 2</text></tag>w</caption></float>"##,
+      r##"<float class="ltx_algorithm" xml:id="algorithm2"><tags><tag><text font="bold">Algorithm 2</text></tag><tag role="refnum">2</tag></tags><listing class="ltx_lst_numbers_left"><listingline>[Y 12.0pt];</listingline></listing><toccaption><tag close=" ">2</tag>w</toccaption><caption><tag close=" "><text font="bold">Algorithm 2</text></tag>w</caption></float>"##,
     ),
   ]);
 }

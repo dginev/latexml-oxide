@@ -1,0 +1,16 @@
+% witness: 2104.02493 (`Ole Schumann\IEEEauthorrefmark{1}\orcidicon{0000-0001-8953-1075}, …`), 2407.03625
+% oracle:  pdflatex 0 errors: three names, each with its mark and ORCID icon, over their marked blocks
+% engines: rust 63z8 = one creator holding every name (the ORCID digits read as name text), the blocks on it
+% expect:  0 errors; three creators, each with the affiliation its mark names
+% status:  RED (63z8) -> GREEN (64a)
+\documentclass[conference]{IEEEtran}
+\usepackage{hyperref}
+\newcommand\orcidicon[1]{\href{https://orcid.org/#1}{\mbox{iD}}}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ole Schu\IEEEauthorrefmark{1}\orcidicon{0000-0001-8953-1075}, Mark Hahn\IEEEauthorrefmark{2}, Nic Schein\IEEEauthorrefmark{1}\orcidicon{0000-0002-5176-6159}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}\textit{Lab A}, Stuttgart}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}\textit{Firm B}, Ulm}}
+\maketitle
+Text.
+\end{document}

@@ -8,17 +8,26 @@ use crate::prelude::*;
 /// prepended indentation rules (`\lx@prepend@indentation`) and, because
 /// `\the\everypar` fires at endline, a stolen line-number tag — but no actual
 /// statement. Neither the number tag nor the indentation rules count as content,
-/// so such a line is dropped; a real line always has text or a non-rule element
-/// beyond them.
+/// so such a line is dropped; a real line always has text or another element
+/// beyond them — a rule the statement draws (`\hrule`, `\rule{\linewidth}{0.8pt}`;
+/// 2301.00241, 2412.09565) is content, only the indentation's `\lx@algo@rule` is not.
 fn listingline_has_content(line: &Node) -> bool {
   line.get_child_nodes().iter().any(|c| match c.get_type() {
     Some(NodeType::ElementNode) => {
       let name = c.get_name();
-      name != "tags" && name != "rule"
+      let indentation = name == "rule"
+        && c.get_attribute("width").as_deref() == Some("1px")
+        && c.get_attribute("height").as_deref() == Some("100%");
+      name != "tags" && !indentation
     },
     Some(NodeType::TextNode) => !c.get_content().trim().is_empty(),
     _ => false,
   })
+}
+
+/// Whether a closed line goes: it holds no content ([`listingline_has_content`]) and no `\label` names it.
+fn droppable_line(line: &Node) -> bool {
+  !line.has_attribute("labels") && !listingline_has_content(line)
 }
 
 /// Inline wrappers a line split reaches through — exactly the auto-closing ones, so closing the line closes them: a
@@ -39,19 +48,33 @@ enum LineReach {
 /// the line (`_autoopened`: the `ltx:inline-block` bridging a list into the listingline, the `ltx:p` resuming after
 /// it). Anything else — a list item, an equation, a minipage or `\vbox`, a table cell, a footnote, a capture block —
 /// bars it: a `\\` or block macro there breaks that box's text (2004.03005, 1709.07249, 1410.4772).
+///
+/// The nearest listing bounds the walk: between the lines of a listing nested in a line (an `{algorithmic}` whose
+/// `\STATE` holds an algorithm2e `\For{…}{…}`, 2301.04312, 1904.07272, 2302.08012) a line opens in that listing, as
+/// TeX sets the block's body as more paragraphs of the inner list; walking on to the outer line barred it, and the body
+/// fell into the listing as bare text and breaks.
 fn line_reach(document: &Document) -> LineReach {
   let mut chain: Vec<Node> = Vec::new();
   let mut node = Some(document.get_node().clone());
+  let opened = |e: &Node| e.has_attribute("_autoopened");
+  let reachable = |chain: &[Node]| {
+    chain.iter().enumerate().all(|(k, e)| {
+      document::with_node_qname(e, |q| LINE_INLINE_WRAPPERS.contains(&q))
+        || (opened(e) && chain[k + 1..].iter().all(opened))
+    })
+  };
   while let Some(n) = node {
     if n.get_type() == Some(NodeType::ElementNode) {
       if document::with_node_qname(&n, |q| q == "ltx:listingline") {
-        let opened = |e: &Node| e.has_attribute("_autoopened");
-        let reachable = chain.iter().enumerate().all(|(k, e)| {
-          document::with_node_qname(e, |q| LINE_INLINE_WRAPPERS.contains(&q))
-            || (opened(e) && chain[k + 1..].iter().all(opened))
-        });
-        return if reachable {
+        return if reachable(&chain) {
           LineReach::Line
+        } else {
+          LineReach::Barred
+        };
+      }
+      if document::with_node_qname(&n, |q| q == "ltx:listing") {
+        return if reachable(&chain) {
+          LineReach::NoLine
         } else {
           LineReach::Barred
         };
@@ -89,7 +112,7 @@ fn end_line(document: &mut Document, break_barred: bool) -> Result<()> {
   document.close_element("ltx:listingline")?;
   if let Some(line) = document.get_node().get_last_child()
     && document::get_node_qname(&line) == pin!("ltx:listingline")
-    && !listingline_has_content(&line)
+    && droppable_line(&line)
   {
     document.remove_node(line);
   }
@@ -101,7 +124,7 @@ fn end_line(document: &mut Document, break_barred: bool) -> Result<()> {
 /// content-start `\everypar` hook, which fires `\nl` (steps `AlgoLine`). The count
 /// drifts off `1..N` for two reasons: `\lx@strippar`'s block terminator and other
 /// structural `\nl` fires over-step the counter, and empty listinglines that were
-/// numbered then dropped (see `\lx@algo@@endline`) leave a gap. This
+/// numbered then dropped (by `\lx@algo@@endline`, or by their listing when it closes) leave a gap. This
 /// construction-time pass rewrites the SURVIVING numeric line-number tags to
 /// `1..N` in document order — algorithm2e always numbers off the sequential
 /// `AlgoLine` counter (auto via `linesnumbered`, or manual via `\nl`/`\lnl`), so
@@ -653,11 +676,27 @@ LoadDefinitions!({
         None,
       )?;
     }
-    let id = props.get("id").map(|id| id.to_string());
-    document.open_element("ltx:listingline", id.map(|id| string_map!("xml:id" => id)), None)?;
+    let mut attributes = string_map!("_algo_line" => "1");
+    if let Some(id) = props.get("id") {
+      attributes.insert("xml:id".to_string(), id.to_string());
+    }
+    document.open_element("ltx:listingline", Some(attributes), None)?;
   });
   // The float's end (or the listing's) closes a line still open in an auto-opened listing.
   Tag!("ltx:listingline", auto_close => true);
+  // A line startline opened that closed with no statement is no line: TeX opens a line only at its first content
+  // (`\par` then the next `\item` prints none), so whoever closed it — endline, the listing's or float's end, the
+  // `{algorithmic}` line it is nested in (`\STATE …\\` before `\FOR`, 2402.07867, 2301.10369, 2508.15260,
+  // 2507.00889) — its listing drops it when the listing closes, unless a `\label` names it. (Not when the line itself
+  // closes: freed there, it ended the close walk of an ancestor — `\end{algorithm}` of `[algo2e]`'s plain float
+  // closing from an empty line skipped the float's own close hooks.)
+  Tag!("ltx:listing", after_close => sub[document, node] {
+    for line in node.get_child_elements() {
+      if line.has_attribute("_algo_line") && droppable_line(&line) {
+        document.remove_node(line);
+      }
+    }
+  });
   // Line numbering: `linesnumbered` overrides `\everypar`→`\algocf@everypar`→`\nl`
   // inside the listing (steps `AlgoLine`, calls `\algocf@printnl`; raw L1399/L1659).
   // The ENGINE fires `\the\everypar` at CONTENT-START (each line's vmode→hmode entry,

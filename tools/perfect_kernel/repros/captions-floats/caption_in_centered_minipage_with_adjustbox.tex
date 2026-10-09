@@ -1,0 +1,19 @@
+% witness: 64a review finding 2 (the 2312.04535 shape with `\centering`, as most of its witnesses write it: 2209.02973,
+%          2404.07198)
+% oracle:  pdflatex 0 errors: Table 1 "First" over the box, centred
+% engines: rust 63z8 = `Warning:malformed:_CaptureBlock_` + 3 errors (as caption_in_minipage_with_adjustbox); 64a9 = 0
+%          errors, but the paragraph wrapper's `align="center"` was dropped with it
+% expect:  0 errors, 0 warnings; the caption in the table, the box centred as a box (`ltx_centering`)
+% status:  RED (64a9) -> GREEN (64a)
+\documentclass{article}
+\usepackage{adjustbox}
+\begin{document}
+\begin{table}
+\begin{minipage}{0.4\linewidth}
+\centering
+\caption{First}\label{t:a}
+\begin{adjustbox}{width=\textwidth}a\end{adjustbox}
+\end{minipage}
+\end{table}
+See \ref{t:a}.
+\end{document}

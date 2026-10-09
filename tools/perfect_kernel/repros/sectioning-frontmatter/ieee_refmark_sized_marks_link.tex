@@ -1,0 +1,16 @@
+% witness: 2502.16662 (`\smash{\textsuperscript{\footnotesize #1}}`), 2411.14110 (`\footnotesize\ensuremath{#1}`)
+% oracle:  pdflatex 0 errors: names marked 1, 2, 2 over one block of marked lines
+% engines: rust 64a5 = the three affiliations on a nameless creator (the mark read as `\footnotesize 1`);
+%          63z8 = the whole block on every author
+% expect:  0 errors; Ann Able with Univ A, Bob Baker and Cy Coe with Univ B
+% status:  RED (64a5) -> GREEN (64a)
+\documentclass[conference]{IEEEtran}
+\DeclareRobustCommand{\IEEEauthorrefmark}[1]{\smash{\textsuperscript{\footnotesize\ensuremath{#1}}}}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}, Cy Coe\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, Country \\
+\IEEEauthorrefmark{2}Univ B, Country}}
+\maketitle
+Text.
+\end{document}

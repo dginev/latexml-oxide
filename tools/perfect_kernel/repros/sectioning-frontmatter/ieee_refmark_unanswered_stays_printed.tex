@@ -1,0 +1,15 @@
+% witness: 2408.02464 (`Gus Gray\IEEEauthorrefmark{1}, …` with the legend in `\IEEEcompsocitemizethanks`); 64a review
+%          finding 3
+% oracle:  pdflatex 0 errors: "Ann Able*, Bob Baker†" (IEEEtran prints the marks as symbols) over the legend
+% engines: rust 64a9 = Ann Able, Bob Baker with no marks (the refmarks, read as affiliation requests, were taken out of
+%          the names and nothing answers them); 63z8 = both marks printed
+% expect:  0 errors; each name keeps its unanswered mark
+% status:  RED (64a9) -> GREEN (64a)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}%
+\thanks{\IEEEauthorrefmark{1}Equal contribution. \IEEEauthorrefmark{2}Corresponding author.}}
+\maketitle
+Text.
+\end{document}

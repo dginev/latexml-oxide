@@ -11734,3 +11734,56 @@ whole (split, its `\if` and `\fi` landed in different authors). Guards
 author_mark_comma_in_math, author_mark_argument_comma, author_separator_tie_in_wrapper,
 author_list_in_macro_toggle_false, author_list_in_macro_toggle_true, author_separator_in_declaration_group,
 author_block_in_macro, ieeetran_author_list_in_macro, author_names_in_command_argument}`.
+
+## 553. IEEEtran's author reference marks, an algorithm2e block in an `{algorithmic}` line, mathtools' `XPP` pre-code, a caption beside a paragraph in a minipage
+
+- Perl binds `\IEEEauthorrefmark` with no argument (IEEEtran.cls.ltxml:154, its `{1}` printed as name text) and
+  `\IEEEauthorblockA{…}` as one `\lx@add@affiliation` (:145), so a marked block — `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ
+  A \\ \IEEEauthorrefmark{2}Univ B}` — is one affiliation, given to no author by its marks; `\IEEEauthorblockN` is
+  its argument (:144), one creator however many names it holds. (IEEEtran.cls:4543 prints `\IEEEauthorrefmark{1}` as
+  `*`, `{2}` as `†`, outside `transmag`; the binding prints the digit — a residual, now that the marks are link keys.)
+- An author mark that no affiliation answers (`Bob Bee$^1$` with no `$^1$` line): Perl reads it as a request and takes
+  it out of the name, so the printed mark is lost.
+- An algorithm2e block in an `{algorithmic}` `\STATE` (`\STATE \For{…}{body}`, 2301.04312, 1904.07272, 2302.08012,
+  2401.09350, 2412.07051): Perl opens the block's lines inside algorithmic's line (`<ltx:listing> isn't allowed in
+  <ltx:listingline>`).
+- `\DeclarePairedDelimiterXPP\expect[2]{\mathbb{E}_{#1}}[]{}{#2}` (2310.04475): Perl puts the pre-code in the dispatcher's
+  expansion (mathtools.sty.ltxml:702-708), outside the macro whose parameters it names, so its `#1` reaches the stomach
+  (`The token "#" … should never reach Stomach!`, twice).
+- `\caption{First}` beside an `{adjustbox}` in a `{minipage}` in a float (2312.04535, 2209.02973, 2404.07198, 2404.18532,
+  2406.00259, 2502.04073): collectbox's `\noindent` opens an `ltx:para` in the block capture, which no candidate holds
+  beside the caption; Perl warns `Did not find a block-like candidate` and the caption and para land in an `ltx:block`
+  (3 errors).
+
+Fixed in Rust (64a):
+- A name's command argument without letters of any script (`\orcidicon{0000-0001-8953-1075}`, 2104.02493) is no name
+  text in the kernel author splitter (63z8 had read its digits as a name, joining the names around it).
+- An author mark nothing answers — no entry labelled by it, no affiliation printing it (`_bymark`: llncs's
+  `$^{1,3}$ Univ A` answers an `\inst{3}`) — stays in the name, as LaTeX prints it (`show_unanswered_marks`; repro
+  sectioning-frontmatter/author_unmatched_numeric_mark, RED since 63x). In a marked author block a line of names
+  continuing an unfinished list goes on as names (`names_continue`, as in an unmarked block): `Gus
+  Gray\IEEEauthorrefmark{1}, …, Ida Ivy,~\IEEEmembership{Fellow,~IEEE,}\\ Jon Jay, … and~Kim Key` (2408.02464).
+- `\IEEEauthorblockA` is a marked affiliation list (`\lx@add@affiliation@marked`). IEEEtran's `\IEEEauthorrefmark`
+  and `\authorrefmark` are mark commands wherever an author block's marks are read: the marks that request and label
+  affiliations, the operands an address is placed by (OD #52(j)), and the points where a line splits into its
+  affiliations (`\IEEEauthorrefmark{2}Google, \IEEEauthorrefmark{3}Google DeepMind`, 2310.02368). A mark is read past
+  the font and size switches and `\ensuremath` it is printed under (`\smash{\textsuperscript{\footnotesize #1}}`,
+  2502.16662; `\footnotesize\ensuremath{#1}`, 2411.14110), and before a closing parenthesis (`1)`, 2306.17039), as its
+  label is. A name's command argument without letters is no name text.
+- An algorithm2e line opens in the nearest listing: a block in an algorithmic line sets its body as lines of that
+  listing, as TeX sets it as more paragraphs of the inner list. A line algorithm2e opened that closes with no statement,
+  whoever closes it, is dropped by its listing when that closes (2402.07867, 2301.10369, 2508.15260, 2507.00889; the
+  float's trailing line of every algorithm2e listing); a rule the statement draws (`\hrule`, 2301.00241) is content.
+  The 63e IEEE guards that pinned a marked `\IEEEauthorblockA` as answering no mark (every author given the whole
+  block) now pin each author linked to the line its mark names; their marks stay visible.
+- The `XPP` pre-code is part of the inner macro's body, with the sizes bound around it (mathtools.sty:953-988).
+- A captured box that no candidate holds only because of its `ltx:para` wrappers is placed with them unwrapped (their
+  `ltx:p`s beside the caption, the #244 demotion; a text paragraph keeps the para's `align` and class, a box is
+  centred as a box, `ltx_centering`), so the minipage
+  becomes its float (OD #447).
+
+Guards `perfect_kernel_batch64::{ieee_refmark_sized_marks_link, ieee_refmark_address_and_marks_in_a_line,
+ieee_refmark_orcid_digits_are_no_name, algorithm2e_block_in_algorithmic_line, algorithm2e_line_closed_empty_is_dropped,
+mathtools_xpp_precode_parameter, caption_in_minipage_with_adjustbox, caption_in_centered_minipage_with_adjustbox,
+ieee_refmark_unanswered_stays_printed, author_unmatched_numeric_mark}`, `perfect_kernel_batch63::ieee_grade_comma_before_a_break_continues_names`,
+`perfect_kernel_batch61::algorithm2e_statements_outside_a_listing` (the whole float).

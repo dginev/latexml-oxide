@@ -1,0 +1,23 @@
+% witness: 2301.04312 (also 1904.07272 2302.08012 2401.09350 2412.07051 2511.10253): an algorithm2e block
+%          (`\For{…}{body}`) in an {algorithmic} `\STATE` line
+% oracle:  pdflatex 0 errors: the body lines print under "for … do"
+% engines: rust 63z8 = 6 errors (`<ltx:Math> isn't allowed in <ltx:listing>`, ltx:break, ltx:emph, #PCDATA): the
+%          body fell into algorithmic's listing as bare text; Perl = 1 error (`<ltx:listing>` in `<ltx:listingline>`)
+% expect:  0 errors; the body in listing lines
+% status:  RED (63z8) -> GREEN (64a)
+\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\usepackage{algorithmic}
+\begin{document}
+\begin{algorithm}
+\caption{Walk}
+\begin{algorithmic}[1]
+\STATE $W \leftarrow 0$\;
+\STATE \For{$i = 1$ \KwTo $n$}{
+  $W \leftarrow W + 1$ \
+  Append \emph{x}\\
+}
+\STATE \Return $W$\;
+\end{algorithmic}
+\end{algorithm}
+\end{document}

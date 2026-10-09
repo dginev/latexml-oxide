@@ -835,10 +835,19 @@ LoadDefinitions!({
     use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let inner_cs_name = s!("{}@inner", cmd);
-    let after_cs_name = s!("{}@after", cmd);
+    let lsize_cs_name = s!("{}@lsize", cmd);
+    let rsize_cs_name = s!("{}@rsize", cmd);
     let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
-    let mut inner_body_toks = body;
-    inner_body_toks.push(T_CS!(&after_cs_name));
+    // The precode, the delimiters and the postcode are in the command the arguments are read by, as mathtools.sty:953-988
+    // generates it, so they may use them (`\DeclarePairedDelimiterXPP\expect[2]{\mathbb{E}_{#1}}[]{}{#2}`, 2310.04475;
+    // Perl's mathtools.sty.ltxml:702-708 puts them before the arguments: the `#` reached the stomach); the dispatcher
+    // gives each call its sizes.
+    let mut inner_body_toks = pre;
+    inner_body_toks.push(T_CS!(&lsize_cs_name));
+    inner_body_toks.extend(ldel);
+    inner_body_toks.extend(body);
+    inner_body_toks.push(T_CS!(&rsize_cs_name));
+    inner_body_toks.extend(rdel);
     inner_body_toks.extend(post);
     inner_body_toks.push(T_CS!("\\endgroup"));
     def_macro(T_CS!(&inner_cs_name),
@@ -867,12 +876,10 @@ LoadDefinitions!({
         let mut toks: Vec<Token> = vec![T_CS!("\\begingroup"), T_CS!("\\def"), T_CS!("\\delimsize"), T_BEGIN!()];
         toks.extend(size.iter().copied());
         toks.push(T_END!());
-        toks.extend(pre.iter().copied());
+        toks.extend([T_CS!("\\def"), T_CS!(&lsize_cs_name), T_BEGIN!()]);
         toks.extend(side(true));
-        toks.extend(ldel.iter().copied());
-        toks.extend([T_CS!("\\def"), T_CS!(&after_cs_name), T_BEGIN!()]);
+        toks.extend([T_END!(), T_CS!("\\def"), T_CS!(&rsize_cs_name), T_BEGIN!()]);
         toks.extend(side(false));
-        toks.extend(rdel.iter().copied());
         toks.push(T_END!());
         toks.push(T_CS!(&inner_cs_name));
         Ok(Tokens::new(toks))

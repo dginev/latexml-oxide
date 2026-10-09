@@ -1,0 +1,14 @@
+% witness: 64a review r2 finding 5 (synthetic): the marked-branch `names_continue` (2408.02464's grade comma) reads a
+%          comma list of two name-shaped places under marked names ending in a comma as more names
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2," over "Google Brain, Mountain View"
+% engines: rust 64a = four authors, "Google Brain" and "Mountain View" among them; 63z8 = the line welded onto Bob
+%          Baker's name
+% expect:  0 errors; two authors, "Google Brain, Mountain View" their (shared) affiliation
+% status:  RED (64a)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$,\\ Google Brain, Mountain View}
+\maketitle
+Text.
+\end{document}

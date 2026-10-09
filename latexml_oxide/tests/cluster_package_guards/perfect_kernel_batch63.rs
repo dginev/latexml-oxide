@@ -980,8 +980,9 @@ fn author_surname_street_is_a_name() {
   );
 }
 
-/// 63e (negative): a per-author binding keeps its authors' marks visible, as Perl does — an IEEE block's
-/// `\IEEEauthorblockA` answers no mark request. Repro sectioning-frontmatter/author_ieee_block_marks_stay_visible.
+/// 63e (negative): a per-author binding keeps its authors' marks visible, as Perl does. Since 64a (KPE #553) the
+/// block's marked `\IEEEauthorblockA` lines answer those marks, each author linked to the line its mark names
+/// (63e had given the whole block to every author). Repro sectioning-frontmatter/author_ieee_block_marks_stay_visible.
 #[test]
 fn author_ieee_block_marks_stay_visible() {
   assert_creators(
@@ -989,8 +990,8 @@ fn author_ieee_block_marks_stay_visible() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_block_marks_stay_visible.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A<break/><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">1</text></sup>Univ A<break/><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
     ],
   );
 }
@@ -1043,6 +1044,7 @@ fn author_symbol_mark_piece_stays_with_the_name() {
 /// 63e: in an IEEE block, a line of names each marked after it continues the names above, as authors' marks stand
 /// (`Ann Able$^{1}$\\ Bob Baker$^{2}$`), not an affiliation of the first (review r7). Repro
 /// sectioning-frontmatter/author_ieee_blockn_marked_name_lines_are_names.
+/// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
 #[test]
 fn author_ieee_blockn_marked_name_lines_are_names() {
   assert_creators(
@@ -1050,8 +1052,8 @@ fn author_ieee_blockn_marked_name_lines_are_names() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_marked_name_lines_are_names.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A<break/><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">1</text></sup>Univ A<break/><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
     ],
   );
 }
@@ -1076,6 +1078,7 @@ fn author_emulateapj_marked_name_lines_continue() {
 /// 63e: a block of names marked before them (`$^{1}$Ann Able \quad $^{2}$Bob Baker`) holds no affiliation its marks
 /// request: two authors, not an author and an affiliation labelled 2 (review r7). Repro
 /// sectioning-frontmatter/author_ieee_blockn_prefix_marks_across_quad.
+/// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
 #[test]
 fn author_ieee_blockn_prefix_marks_across_quad() {
   assert_creators(
@@ -1083,8 +1086,8 @@ fn author_ieee_blockn_prefix_marks_across_quad() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_across_quad.tex"
     ),
     &[
-      "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A<break/><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">1</text></sup>Univ A<break/><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
     ],
   );
 }
@@ -1120,6 +1123,7 @@ fn author_revtex_ijcai_marker_keeps_earlier_authors() {
 /// 63e: names marked before them that share a label, side by side in an IEEE block (`$^{1}$Ann Able \quad
 /// $^{1}$Bob Baker`), are two authors keeping their marks, not an author and her affiliation (review r8). Repro
 /// sectioning-frontmatter/author_ieee_blockn_prefix_marks_shared_label.
+/// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
 #[test]
 fn author_ieee_blockn_prefix_marks_shared_label() {
   assert_creators(
@@ -1127,14 +1131,15 @@ fn author_ieee_blockn_prefix_marks_shared_label() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_shared_label.tex"
     ),
     &[
-      "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
     ],
   );
 }
 
 /// 63e: three names marked before them on one printed line of an IEEE block are three authors (review r8). Repro
 /// sectioning-frontmatter/author_ieee_blockn_prefix_marks_three_names.
+/// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
 #[test]
 fn author_ieee_blockn_prefix_marks_three_names() {
   assert_creators(
@@ -1142,9 +1147,9 @@ fn author_ieee_blockn_prefix_marks_three_names() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_three_names.tex"
     ),
     &[
-      "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A<break/><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">1</text></sup>Univ A<break/><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">2</text></sup>Univ B</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">1</text></sup>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" xml:id=\"id8.1\">1</text></sup>Univ A<break/><sup xml:id=\"id9\"><text font=\"italic\" xml:id=\"id9.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
     ],
   );
 }
@@ -4556,9 +4561,9 @@ fn author_list_in_macro() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_list_in_macro.tex"
   );
   assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id3\">1</sup></personname>\n  </creator>",
   ]);
 }
 
