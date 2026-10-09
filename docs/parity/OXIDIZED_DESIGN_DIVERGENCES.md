@@ -1242,6 +1242,13 @@ Perl is broken the same way (confirmed same-host); surpass-Perl scope,
 user-directed 2026-07-05. Unit tests: `author_split_tests` in
 base_utilities.rs.
 
+**63z extension.** The descent applies to each piece of a names line, not only a whole line: a wrapper — a command over
+its last braced argument (`\textbf`, `\scalebox{.9}`, `\href{url}`) or a group opening with declarations — holding two or
+more names with only marks and notes after it (`\textbf{A$^1$, B$^2$}\thanks{…}`, 2303.16563). A separator at a
+wrapper's edge or a wrapper holding only one (`\textbf{Name,}`, `{\rm and}`) is moved out first; one in math, a script
+argument or a mark's argument stays put. An author argument that is one parameterless macro is read through its body (a
+`\newif` toggle's branch taken). KNOWN_PERL_ERRORS #552.
+
 ### 49. Begin-document hooks digest with the state RE-LOCKED (locked binding macros survive raw redefinition)
 
 **Decision:** In `\begin{document}`'s after-digest (`latex_constructs.rs`), the

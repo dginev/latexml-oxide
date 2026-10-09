@@ -11708,3 +11708,29 @@ its affiliation. Guards `perfect_kernel_batch63::{elsarticle_author_name_list, e
 elsarticle_unlabelled_addresses_shared, elsarticle_labelled_unlabelled_affiliation,
 elsarticle_author_line_printing_nothing, snjnl_author_name_list, interact_author_name_list, interact_author_name_pairs,
 interact_and_in_name, mnras_newauthor, mnras_newauthor_unmarked}`.
+
+## 552. Author names inside a styled group, separators inside a name's wrapper, an author list held in a macro
+
+- Perl's `SplitTokens` passes over groups and math (Base_Utility.pool.ltxml:152-165), so a styled group holding several
+  names is one author: `\\ \textbf{Penglin Cai$^3$, Hao Dong$^{1}$, Zongqing Lu$^{1,4}$}\thanks{…}` (2303.16563; the
+  neurips/iclr templates bold only their first row, neurips_2023.sty:289, so authors bold the later rows themselves),
+  `\scalebox{.9}{…}` (2412.05271), `\href{…}{A, B}` (2312.07592).
+- A separator inside a name's wrapper — `\textbf{Hang Xu$^{2}$,}` (2310.10477), `\textbf{,}` (2403.11004, 2411.10293,
+  2402.07204, 2407.04069), `\textbf{, Jinyang Guo}` (2505.02214), `{\rm and}` (2401.03205) — is hidden from the split.
+- An author list behind a parameterless macro (`\author{\Authors}`, Frontiers 2401.13568, 2404.14024, 2411.09973;
+  `\paperAuthor` 2409.00055; llncs `\authorBlock` 2409.13475; `\IEEEauthorblockN{\hpcaauthors{}}` 2407.02944) is read
+  unexpanded, one name.
+
+Fixed in Rust (63z): a piece of an author line that is one wrapper — a command over its last braced argument, or a group
+opening with declarations — with only marks and notes after it, and holding two or more names, splits into its names,
+each in the wrapper, the marks and notes after the last; a bare group still holds one name together (`{Smith, Jr.,
+John}`). A comma or "and" at a wrapper's edge (a tie beside it spacing), or a wrapper holding only one, is moved out to
+the line; one in math, in a script's argument or in a mark command's argument stays the formula's or the mark's
+(`$^{\dagger, 1}$`, 2301.11477; `\textsuperscript{\faRuler, \faBalanceScale}`, 2503.01996). An author argument that is
+one parameterless macro (alone or with `{}`) is read through its body, as TeX typesets it; a body that is a `\newif`
+toggle (`\ifanon Anonymous\else Ann Able, Bob Baker\fi`) through the branch TeX takes, any other conditional body left
+whole (split, its `\if` and `\fi` landed in different authors). Guards
+`perfect_kernel_batch63::{author_styled_group_names, author_separator_in_wrapper, author_list_in_macro,
+author_mark_comma_in_math, author_mark_argument_comma, author_separator_tie_in_wrapper,
+author_list_in_macro_toggle_false, author_list_in_macro_toggle_true, author_separator_in_declaration_group,
+author_block_in_macro, ieeetran_author_list_in_macro, author_names_in_command_argument}`.

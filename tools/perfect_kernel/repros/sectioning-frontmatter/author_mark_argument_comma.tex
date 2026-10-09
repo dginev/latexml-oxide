@@ -1,0 +1,13 @@
+% witness: 2503.01996 (`Mohit Iyyer\textsuperscript{\faRuler,\faBalanceScale}`): a comma inside a mark command's argument
+% oracle:  pdflatex 0 errors: "Ann Able†, Bob Baker†,‡" over "†Univ A" and "‡Univ B"
+% engines: rust 63z2 (the first separator hoist) = the argument read as a wrapper, its comma moved out: a creator "†‡"
+%          and Bob Baker without Univ A
+% expect:  0 errors; Ann Able with Univ A, Bob Baker with Univ A and Univ B
+% status:  RED (63z2) -> GREEN (63z)
+\documentclass{article}
+\title{T}
+\author{Ann Able\textsuperscript{\dag}, Bob Baker\textsuperscript{\dag,\ddag}\\ \textsuperscript{\dag}Univ A\\ \textsuperscript{\ddag}Univ B}
+\begin{document}
+\maketitle
+x
+\end{document}

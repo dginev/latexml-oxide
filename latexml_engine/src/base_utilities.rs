@@ -1260,6 +1260,7 @@ LoadDefinitions!({
     keyvals: Option<Tokens>,
     cautious: bool,
   ) -> Result<Tokens> {
+    let stuff = expand_sole_author_macro(stuff);
     // Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
     // blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in
     // arXiv:2401.03955) — pack names, `\affiliations` and a comma-separated
@@ -8657,8 +8658,10 @@ fn whole_line_cs_wrapper(tokens: &Tokens) -> Option<(Token, Tokens)> {
 /// and Bob") yet is deliberately absent from the line-level `author_affil_splits`
 /// (where it would shred "Language and Intelligence").
 ///
-/// The split proceeds by hierarchy:
-///  1. the name separators ("," and " and ", " \& ") at top level; if that already
+/// The split proceeds by hierarchy (a separator at a wrapper's edge, or a wrapper holding only one, first moved out to
+/// the line: `hoist_wrapped_separators`):
+///  1. the name separators ("," and " and ", " \& ") at top level, each piece that is one wrapper holding names with
+///     only marks and notes after it split into them (`names_in_wrapper`, KNOWN_PERL_ERRORS #552); if that already
 ///     yields more than one name we are done;
 ///  2. otherwise, if the whole line is a single font wrapper `\cmd{ a, b, c }`
 ///     (Perl's `SplitTokens` can't see the brace-hidden separators, so the
@@ -8723,8 +8726,17 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
   // a names line opening with "and" opens with the separator before its first name (mnras's `Bob Baker$^{2}$
   // \newauthor and Cat Cole$^{1}$`, 2401.11878)
   let line = without_leading_and(&line).unwrap_or(line);
-  let line = marks_before_glued_commas(line);
+  let line = marks_before_glued_commas(hoist_wrapped_separators(line));
   let top = split(line.clone());
+  // a piece that is one wrapper holding names, its marks or notes after it (`\textbf{Cat Cole$^1$, Dan Dorn$^2$}\thanks{…}`,
+  // 2303.16563; `\scalebox{.9}{…}`, 2412.05271; `\href{…}{A, B}`, 2312.07592): its names, each in the wrapper
+  let descended: Vec<(Vec<Token>, Tokens)> = top
+    .iter()
+    .flat_map(|(delimiter, piece)| names_in_wrapper(delimiter, piece))
+    .collect();
+  if descended.len() > top.len() {
+    return descended;
+  }
   if top.len() > 1 {
     return top;
   }
@@ -8766,6 +8778,318 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
     }
   }
   top
+}
+
+/// An author argument that is one parameterless macro, alone or with an empty group (`\author{\Authors}`,
+/// 2401.13568; `\IEEEauthorblockN{\hpcaauthors{}}`, 2407.02944), read as TeX typesets it: expanded once, the macro's body
+/// in its place, so its names and separators are seen; a body that is a `\newif` toggle through the branch TeX takes, any
+/// other conditional body left whole (KNOWN_PERL_ERRORS #552).
+fn expand_sole_author_macro(stuff: Tokens) -> Tokens {
+  let content: Vec<Token> = stuff
+    .unlist_ref()
+    .iter()
+    .copied()
+    .filter(|t| *t != T_SPACE!())
+    .collect();
+  let cs = match content.as_slice() {
+    [cs] => *cs,
+    [cs, open, close]
+      if open.get_catcode() == Catcode::BEGIN && close.get_catcode() == Catcode::END =>
+    {
+      *cs
+    },
+    _ => return stuff,
+  };
+  if cs.get_catcode() != Catcode::CS || lookup_conditional(&cs).is_some() {
+    return stuff;
+  }
+  let Ok(Some(defn)) = lookup_definition(&cs) else {
+    return stuff;
+  };
+  // (no parameter text at all: `\def\Authors.{…}` reads a delimiter TeX would demand)
+  if !defn.is_expandable()
+    || defn
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return stuff;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return stuff;
+  };
+  // a body holding a conditional is read through the branch a `\newif` toggle takes (`\ifanon Anonymous\else Ann Able,
+  // Bob Baker\fi`, as the PDF shows it); any other is left whole: split at its commas, the `\if` and its `\else`/`\fi`
+  // landed in different authors (`Error:expected:\fi`, the other branch's names leaking)
+  let body = body.unlist_ref();
+  let read = if body.iter().any(|t| lookup_conditional(t).is_some()) {
+    match toggled_branch(body) {
+      Some(branch) => branch,
+      None => return stuff,
+    }
+  } else {
+    body.to_vec()
+  };
+  if read.iter().any(|t| t.get_catcode() == Catcode::LETTER) {
+    Tokens::new(read)
+  } else {
+    stuff
+  }
+}
+
+/// The branch of `body` = `\ifX … [\else …] \fi` whose `\ifX` means `\iftrue` or `\iffalse` (a `\newif` toggle) that TeX
+/// takes, when that branch holds no conditional of its own; `None` for any other shape.
+fn toggled_branch(body: &[Token]) -> Option<Vec<Token>> {
+  let first = body.iter().position(|t| *t != T_SPACE!())?;
+  let last = body.iter().rposition(|t| *t != T_SPACE!())?;
+  let test = lookup_definition(&body[first]).ok().flatten()?;
+  let truth = if Some(&test)
+    == lookup_definition(&T_CS!("\\iftrue"))
+      .ok()
+      .flatten()
+      .as_ref()
+  {
+    true
+  } else if Some(&test)
+    == lookup_definition(&T_CS!("\\iffalse"))
+      .ok()
+      .flatten()
+      .as_ref()
+  {
+    false
+  } else {
+    return None;
+  };
+  if last <= first || lookup_conditional(&body[last]) != Some(ConditionalType::Fi) {
+    return None;
+  }
+  let inner = &body[first + 1..last];
+  let otherwise = inner
+    .iter()
+    .position(|t| lookup_conditional(t) == Some(ConditionalType::Else));
+  let branch = match (truth, otherwise) {
+    (true, Some(e)) => &inner[..e],
+    (true, None) => inner,
+    (false, Some(e)) => &inner[e + 1..],
+    (false, None) => &[][..],
+  };
+  if branch.iter().any(|t| lookup_conditional(t).is_some()) {
+    return None;
+  }
+  Some(branch.to_vec())
+}
+
+/// The names a piece of an author line holds inside one wrapper — a command over its last braced argument
+/// (`\textbf{A, B}`, `\scalebox{0.9}{A, B}`, `\href{url}{A, B}`) or a group opening with declarations (`{\bf A, B}`) —
+/// with only marks and notes after it: each name in the wrapper, the marks and notes after the last. Perl's
+/// `SplitTokens` passes over groups (Base_Utility.pool.ltxml:152-165), so such a piece was one author holding them all.
+/// A bare group (`{Smith, Jr., John}`) holds one name together, and a piece reading as fewer than two names stays
+/// (KNOWN_PERL_ERRORS #552).
+fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tokens)> {
+  let unchanged = || vec![(delimiter.to_vec(), piece.clone())];
+  let v = piece.unlist_ref();
+  let Some(start) = v.iter().position(|t| *t != T_SPACE!()) else {
+    return unchanged();
+  };
+  let (open, close) = if v[start].get_catcode() == Catcode::CS {
+    if is_footnote_mark(&v[start])
+      || v[start].with_str(|s| NAME_ANNOTATIONS.contains(&s))
+      || authorsup_markers().contains(&v[start])
+    {
+      return unchanged();
+    }
+    let (mut i, mut last) = (start + 1, None);
+    loop {
+      match v.get(i) {
+        Some(t) if *t == T_OTHER!("[") => match v[i..].iter().position(|u| *u == T_OTHER!("]")) {
+          Some(k) => i += k + 1,
+          None => return unchanged(),
+        },
+        Some(t) if t.get_catcode() == Catcode::BEGIN => {
+          let end = skip_group(v, i);
+          if end > v.len()
+            || v
+              .get(end - 1)
+              .is_none_or(|u| u.get_catcode() != Catcode::END)
+          {
+            return unchanged();
+          }
+          last = Some((i, end - 1));
+          i = end;
+        },
+        _ => break,
+      }
+    }
+    match last {
+      Some(group) => group,
+      None => return unchanged(),
+    }
+  } else if v[start].get_catcode() == Catcode::BEGIN {
+    let end = skip_group(v, start);
+    if end > v.len()
+      || v
+        .get(end - 1)
+        .is_none_or(|u| u.get_catcode() != Catcode::END)
+    {
+      return unchanged();
+    }
+    (start, end - 1)
+  } else {
+    return unchanged();
+  };
+  let tail = &v[close + 1..];
+  if !(tail.iter().all(|t| *t == T_SPACE!()) || only_marks_and_notes(tail)) {
+    return unchanged();
+  }
+  let inner = &v[open + 1..close];
+  let declarations = if open == start {
+    let declarations = opening_declarations(&Tokens::new(inner.to_vec()));
+    if declarations.iter().all(|t| *t == T_SPACE!()) {
+      return unchanged();
+    }
+    declarations
+  } else {
+    Vec::new()
+  };
+  let names = &inner[declarations.len()..];
+  if name_count(&visible_name_text(names)) < 2 {
+    return unchanged();
+  }
+  let pieces = split_author_names(Tokens::new(names.to_vec()));
+  if pieces.len() < 2
+    || pieces
+      .iter()
+      .any(|(_, name)| visible_name_text(name.unlist_ref()).trim().is_empty())
+  {
+    return unchanged();
+  }
+  let count = pieces.len();
+  pieces
+    .into_iter()
+    .enumerate()
+    .map(|(k, (inner_delimiter, name))| {
+      let mut wrapped = v[start..=open].to_vec();
+      wrapped.extend(declarations.iter().copied());
+      wrapped.extend(name.unlist());
+      wrapped.push(v[close]);
+      if k + 1 == count {
+        wrapped.extend_from_slice(tail);
+      }
+      (
+        if k == 0 {
+          delimiter.to_vec()
+        } else {
+          inner_delimiter
+        },
+        Tokens::new(wrapped),
+      )
+    })
+    .collect()
+}
+
+/// A name separator written at the edge of a wrapper is the line's (`\textbf{Hang Xu$^{2}$,}`, 2310.10477;
+/// `\textbf{, Jinyang Guo}`, 2505.02214), and a wrapper holding only one (`\textbf{,}`, 2403.11004; `{\rm and}`,
+/// 2401.03205) is that separator: the font of a comma or an "and" is not a name's (KNOWN_PERL_ERRORS #552).
+fn hoist_wrapped_separators(line: Tokens) -> Tokens {
+  let v = line.unlist();
+  let and = [T_LETTER!("a"), T_LETTER!("n"), T_LETTER!("d")];
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  let mut in_math = false;
+  let mut i = 0;
+  while i < v.len() {
+    let t = v[i];
+    // (a separator in math or in a script's argument is the formula's: `$^{\dagger, 1}$`, 2301.11477)
+    if t.get_catcode() == Catcode::MATH {
+      in_math = !in_math;
+    }
+    // (nor is a group after a command it does not wrap: a mark's argument, `\textsuperscript{\faRuler,\faBalanceScale}`,
+    // 2503.01996)
+    let script = t.get_catcode() == Catcode::BEGIN
+      && out
+        .last()
+        .is_some_and(|p| matches!(p.get_catcode(), Catcode::SUPER | Catcode::SUB | Catcode::CS));
+    if in_math || t.get_catcode() == Catcode::MATH || script {
+      let end = if t.get_catcode() == Catcode::BEGIN {
+        skip_group(&v, i).min(v.len())
+      } else {
+        i + 1
+      };
+      out.extend_from_slice(&v[i..end]);
+      i = end;
+      continue;
+    }
+    let command = t.get_catcode() == Catcode::CS
+      && v
+        .get(i + 1)
+        .is_some_and(|n| n.get_catcode() == Catcode::BEGIN)
+      && !is_footnote_mark(&t)
+      && !t.with_str(|s| NAME_ANNOTATIONS.contains(&s))
+      && !authorsup_markers().contains(&t);
+    let open = if command {
+      i + 1
+    } else if t.get_catcode() == Catcode::BEGIN {
+      i
+    } else {
+      out.push(t);
+      i += 1;
+      continue;
+    };
+    let end = skip_group(&v, open);
+    if end > v.len()
+      || v
+        .get(end - 1)
+        .is_none_or(|u| u.get_catcode() != Catcode::END)
+    {
+      out.push(t);
+      i += 1;
+      continue;
+    }
+    let close = end - 1;
+    let inner = &v[open + 1..close];
+    let declarations = if command {
+      Vec::new()
+    } else {
+      opening_declarations(&Tokens::new(inner.to_vec()))
+    };
+    if !command && declarations.iter().all(|u| *u == T_SPACE!()) {
+      out.extend_from_slice(&v[i..end]);
+      i = end;
+      continue;
+    }
+    let body: Vec<Token> = inner[declarations.len()..].to_vec();
+    // (a tie beside the separator is spacing: `\textbf{Jiaming Ji$^{\diamond}$,~}`, 2505.20214)
+    let spacing = |u: &Token| *u == T_SPACE!() || u.with_str(|s| s == "~");
+    let first = body.iter().position(|u| !spacing(u));
+    let last = body.iter().rposition(|u| !spacing(u));
+    let (Some(first), Some(last)) = (first, last) else {
+      out.extend_from_slice(&v[i..end]);
+      i = end;
+      continue;
+    };
+    let trimmed = &body[first..=last];
+    let rewrap = |out: &mut Vec<Token>, content: &[Token]| {
+      out.extend_from_slice(&v[i..=open]);
+      out.extend(declarations.iter().copied());
+      out.extend_from_slice(content);
+      out.push(v[close]);
+    };
+    if trimmed == [T_OTHER!(",")] {
+      out.extend([T_OTHER!(","), T_SPACE!()]);
+    } else if trimmed == and {
+      out.push(T_SPACE!());
+      out.extend(and);
+      out.push(T_SPACE!());
+    } else if trimmed.len() > 1 && trimmed[trimmed.len() - 1] == T_OTHER!(",") {
+      rewrap(&mut out, &trimmed[..trimmed.len() - 1]);
+      out.push(T_OTHER!(","));
+    } else if trimmed.len() > 1 && trimmed[0] == T_OTHER!(",") {
+      out.extend([T_OTHER!(","), T_SPACE!()]);
+      rewrap(&mut out, &trimmed[1..]);
+    } else {
+      out.extend_from_slice(&v[i..end]);
+    }
+    i = end;
+  }
+  Tokens::new(out)
 }
 
 /// If `tokens` (spaces around it aside) is one brace group, its opening declarations ([`opening_declarations`]:

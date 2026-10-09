@@ -1,0 +1,15 @@
+% witness: review of 63z: the true branch of the toggle in author_list_in_macro_toggle_false
+% oracle:  pdflatex 0 errors: "Anonymous"
+% engines: rust 63z5 (the body inlined, split at its comma) = Error:expected:\fi and "Bob Baker" leaking from the
+%          branch TeX skips
+% expect:  0 errors; one creator, Anonymous
+% status:  RED (63z5) -> GREEN (63z)
+\documentclass{article}
+\newif\ifanon \anontrue
+\def\Authors{\ifanon Anonymous\else Ann Able, Bob Baker\fi}
+\title{T}
+\author{\Authors}
+\begin{document}
+\maketitle
+x
+\end{document}

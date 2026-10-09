@@ -1,0 +1,13 @@
+% witness: 2407.02944 (`\IEEEauthorblockN{\hpcaauthors{}}`)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" over "Univ A"
+% engines: rust 63y7 = one creator "Ann Able and Bob Baker" + Error:frontmatter:merged_creators
+% expect:  0 errors; two creators, each with Univ A
+% status:  RED (63y7) -> GREEN (63z)
+\documentclass[conference]{IEEEtran}
+\def\hpcaauthors{Ann Able and Bob Baker}
+\title{T}
+\author{\IEEEauthorblockN{\hpcaauthors{}}\IEEEauthorblockA{Univ A}}
+\begin{document}
+\maketitle
+x
+\end{document}

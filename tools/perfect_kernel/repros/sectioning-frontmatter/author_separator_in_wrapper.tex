@@ -1,0 +1,13 @@
+% witness: 2310.10477 (`\textbf{Hang Xu$^{2}$,}`), 2403.11004, 2411.10293, 2402.07204, 2407.04069 (`\textbf{,}`), 2505.02214
+%          (`\textbf{, Jinyang Guo}`), 2405.12130, 2312.01314 (`{\bf Name\textsuperscript{1},}`), 2401.03205 (`{\rm and}`)
+% oracle:  pdflatex 0 errors: "Cat Cole1, Dan Dorn2, Eve Ernst2, Fay Fox1" on line 2 (bold) — four people
+% engines: rust 63y7 = one creator holding the four names + Error:frontmatter:merged_creators (Perl one author too)
+% expect:  0 errors; six creators linked by their marks
+% status:  RED (63y7) -> GREEN (63z)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$\\ \textbf{Cat Cole$^1$,} \textbf{Dan Dorn}$^2$\textbf{,} \textbf{Eve Ernst}$^2$ \textbf{, Fay Fox}$^1$\\ $^1$Univ A\\ $^2$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

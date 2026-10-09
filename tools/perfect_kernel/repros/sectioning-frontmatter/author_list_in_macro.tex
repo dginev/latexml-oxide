@@ -1,0 +1,14 @@
+% witness: 2401.13568, 2404.14024, 2411.09973 (Frontiers `\author[..]{\Authors}`), 2409.00055 (`\paperAuthor`), 2409.13475
+%          (llncs `\authorBlock`), 2407.02944 (`\IEEEauthorblockN{\hpcaauthors{}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2 and Cat Cole1" — three people
+% engines: rust 63y7 = one creator + Error:frontmatter:merged_creators (the unexpanded macro read as one name; Perl too)
+% expect:  0 errors; three creators
+% status:  RED (63y7) -> GREEN (63z)
+\documentclass{article}
+\def\Authors{Ann Able$^{1}$, Bob Baker$^{2}$ and Cat Cole$^{1}$}
+\title{T}
+\author{\Authors}
+\begin{document}
+\maketitle
+Text.
+\end{document}

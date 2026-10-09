@@ -4513,3 +4513,172 @@ fn elsarticle_labelled_unlabelled_affiliation() {
     "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Corresponding: Ann Able</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
   ]);
 }
+
+/// 63z (HF2 S1): a styled group holding several names, not the whole line (`\textbf{A$^1$, B$^2$}\thanks{…}`),
+/// splits into its names, each in the wrapper, the note after it the last's; Perl's SplitTokens passes over groups.
+/// Witness 2303.16563. Repro sectioning-frontmatter/author_styled_group_names.
+#[test]
+fn author_styled_group_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_styled_group_names.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding.</note>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z (HF2 S2): a separator at a wrapper's edge (`\textbf{Name,}`, `\textbf{, Name}`) or a wrapper holding only one
+/// (`\textbf{,}`, `{\rm and}`) separates the names around it. Witnesses 2310.10477, 2403.11004, 2505.02214. Repro
+/// sectioning-frontmatter/author_separator_in_wrapper.
+#[test]
+fn author_separator_in_wrapper() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_in_wrapper.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Eve Ernst</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Fay Fox</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z (HF2 S5): an author argument that is one parameterless macro (`\author{\Authors}`) is read through its body,
+/// as TeX typesets it. Witness 2401.13568. Repro sectioning-frontmatter/author_list_in_macro.
+#[test]
+fn author_list_in_macro() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_list_in_macro.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
+  ]);
+}
+
+/// 63z: a comma inside a math mark (`$^{\dagger, 1}$`) is the formula's: the separator hoist leaves math and script
+/// arguments alone (2301.11477). Repro sectioning-frontmatter/author_mark_comma_in_math.
+#[test]
+fn author_mark_comma_in_math() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_comma_in_math.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: a comma inside a mark command's argument (`\textsuperscript{\dag,\ddag}`) is the mark's: a group after a
+/// command the hoist does not unwrap is that command's argument (2503.01996). Repro
+/// sectioning-frontmatter/author_mark_argument_comma.
+#[test]
+fn author_mark_argument_comma() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_argument_comma.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: a comma and a tie at a wrapper's edge (`\textbf{Name$^{1}$,~}`) separate the names (2505.20214). Repro
+/// sectioning-frontmatter/author_separator_tie_in_wrapper.
+#[test]
+fn author_separator_tie_in_wrapper() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_tie_in_wrapper.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: a `\newif` toggle around a macro-held author list is read through the branch TeX takes (the false one
+/// here: the names). Repro sectioning-frontmatter/author_list_in_macro_toggle_false.
+#[test]
+fn author_list_in_macro_toggle_false() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_list_in_macro_toggle_false.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+  ]);
+}
+
+/// 63z: the true branch of the same toggle (Anonymous), no `Error:expected:\fi`, no name leaking from the other
+/// branch (review of 63z). Repro sectioning-frontmatter/author_list_in_macro_toggle_true.
+#[test]
+fn author_list_in_macro_toggle_true() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_list_in_macro_toggle_true.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Anonymous</personname>\n  </creator>",
+  ]);
+}
+
+/// 63z: `{\rm and}` and `{\bf Name\textsuperscript{2},}` separate the names around them (2401.03205, 2405.12130). Repro
+/// sectioning-frontmatter/author_separator_in_declaration_group.
+#[test]
+fn author_separator_in_declaration_group() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_in_declaration_group.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: a whole author block in a macro (`\author{\authorBlock}`) is read through its body, names and marked
+/// affiliation lines (2503.08639). Repro sectioning-frontmatter/author_block_in_macro.
+#[test]
+fn author_block_in_macro() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_in_macro.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: `\IEEEauthorblockN{\hpcaauthors{}}` reads the names the macro holds (2407.02944). Repro
+/// sectioning-frontmatter/ieeetran_author_list_in_macro.
+#[test]
+fn ieeetran_author_list_in_macro() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieeetran_author_list_in_macro.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: names inside a command's last argument (`\scalebox{0.9}{A, B}\thanks{…}`, `\href{…}{C, D}`) are its authors,
+/// the note the last's (2412.05271, 2312.07592). Repro sectioning-frontmatter/author_names_in_command_argument.
+#[test]
+fn author_names_in_command_argument() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_names_in_command_argument.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname><inline-block depth=\"0.0pt\" height=\"6.3pt\" width=\"38.0pt\" xscale=\"0.9\" xtranslate=\"-2.1pt\" yscale=\"0.9\" ytranslate=\"0.3pt\" xml:id=\"id1\">\n        <p xml:id=\"id1.1\">Ann Able</p>\n      </inline-block></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname><inline-block depth=\"0.0pt\" height=\"6.3pt\" width=\"42.0pt\" xscale=\"0.9\" xtranslate=\"-2.3pt\" yscale=\"0.9\" ytranslate=\"0.3pt\" xml:id=\"id2\">\n        <p xml:id=\"id2.1\">Bob Baker</p>\n      </inline-block></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id3\">Equal.</note>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://example.org\">Cat Cole</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://example.org\">Dan Dorn</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
