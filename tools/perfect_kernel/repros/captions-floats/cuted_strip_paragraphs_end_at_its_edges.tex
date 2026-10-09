@@ -1,0 +1,22 @@
+% witness: 64c review r1 finding 2 (a `{strip}` read as its bare body merged its last paragraph with the text after
+%          it; the `\newenvironment{widetext}{\strip}{\endstrip}` idiom of 2404.07191-style papers likewise)
+% oracle:  pdflatex 0 errors: six paragraphs (the strips' across both columns at the next page's top)
+% engines: rust 64c2 = "Para two. Tail." one paragraph, "Lead text. Wide text. After." one; 64b8 = both strips lost
+% expect:  0 errors; paragraphs Lead text. / Para one. / Para two. / Tail. / Wide text. / After.
+% status:  RED (64c2) -> GREEN (64c)
+\documentclass[twocolumn]{article}
+\usepackage{cuted}
+\newenvironment{widetext}{\strip}{\endstrip}
+\begin{document}
+Lead text.
+\begin{strip}
+Para one.
+
+Para two.
+\end{strip}
+Tail.
+\begin{widetext}
+Wide text.
+\end{widetext}
+After.
+\end{document}

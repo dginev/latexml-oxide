@@ -39,75 +39,116 @@ pub fn image_candidates(path: &str) -> String {
     search_dirs.push(".".to_string());
   }
 
-  let mut candidates: Vec<String> = Vec::new();
-  let path_obj = Path::new(path);
-  let has_extension = path_obj.extension().is_some();
+  // Perl `pathname_findall($path, types => ['*'], paths => …)` (Pathname.pm:325-371): in each search directory, the
+  // files named as the image (its whole name, a dotted `b.v0.5_x` too) or that name with one more extension
+  // (`^name\.\w+$`), case-insensitive matches only when no exact one exists. Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES
+  // #477), as pdflatex takes them: a name whose extension has a graphics rule (`has_graphics_rule`) that names a file in
+  // some directory is that file alone (`\Gin@getbase` tries the name over every `\input@path` entry before appending
+  // any extension, graphics.sty:211-231 — Perl lists a `c.eps.png` beside `c.eps` too, and post would render it), or
+  // failing that the file of that name in another case (kpathsea's `fig.pdf` for `fig.PDF`); any other name —
+  // extensionless, or with an extension no rule reads, `b.v0.5_x`, `c.EPS` — lists its `name.ext` files before a bare
+  // file of that name, which pdflatex takes only when no extended one exists (graphics.sty:205-231); only files are
+  // candidates (Perl's list defers `-f`, Pathname.pm:391, and names a directory too).
+  let mut exact_names: Vec<String> = Vec::new();
+  let mut extended_names: Vec<String> = Vec::new();
+  let mut nocase_exact_names: Vec<String> = Vec::new();
+  let mut nocase_candidates: Vec<String> = Vec::new();
+  let has_extension = Path::new(path).extension().is_some();
   let source_path = if source_dir.is_empty() {
     None
   } else {
     Some(PathBuf::from(&source_dir))
   };
+  // (a path naming no file, `..` or `/`, matches nothing here and goes on to kpsewhich below)
+  let name = Path::new(path)
+    .file_name()
+    .map(|s| s.to_string_lossy().to_string())
+    .unwrap_or_default();
+  let name_lower = name.to_lowercase();
+  // TeX tries each `\input@path` entry glued to the name as written (latex.ltx `\InputIfFileExists` over
+  // `\input@path`), so `plots/` and `/example_1/a.pdf` are `plots//example_1/a.pdf`; a leading `/` that names no
+  // file is read under each directory as TeX reads it (2409.13454's `\folder` = `/example_1/`), where joining an
+  // absolute path would drop the directory (Perl searches only the name's own directory, Pathname.pm:328-329; #477).
+  // The source directory and `SEARCHPATHS` count as such directories too, beyond pdflatex (which fails on the name
+  // without a `\graphicspath`), as post's own fallback already glued it (latexml_post graphics.rs).
+  let relative_name = match path.strip_prefix('/') {
+    Some(rest) if !Path::new(path).exists() => rest,
+    _ => path,
+  };
 
-  for dir in &search_dirs {
+  for dir in search_dirs.iter().filter(|_| !name.is_empty()) {
     // Strip surrounding double-quotes from the search directory, symmetric to
     // the `path.trim_matches('"')` above. A quoted `\graphicspath{{"./dir"}}`
     // (or `\svgpath` / `--graphicspaths`) otherwise joins to a `"…"` path that
     // never resolves. See OXIDIZED_DESIGN #55.
     let dir = dir.trim().trim_matches('"');
-    let base = PathBuf::from(dir).join(path);
-    if has_extension {
-      if base.exists() {
-        // Perl relativizes every hit to SOURCEDIRECTORY via pathname_relative
-        // (→ File::Spec->abs2rel), which emits a `../…` path for a graphic in a
-        // SIBLING directory (issue #698: `\subimport*{../gfx_asset/}` reaching a
-        // sideways tree). See `pathname::relative`, which now matches Perl (it
-        // used to leak the absolute path on a non-descendant hit).
-        let rel = match &source_path {
-          Some(sp) => {
-            crate::util::pathname::relative(&base.to_string_lossy(), &sp.to_string_lossy())
-          },
-          None => base.to_string_lossy().to_string(),
-        };
-        candidates.push(rel);
+    let base = PathBuf::from(dir).join(relative_name);
+    let parent = base.parent().unwrap_or_else(|| Path::new("."));
+    let Ok(entries) = std::fs::read_dir(parent) else {
+      continue;
+    };
+    for entry in entries.flatten() {
+      let fname = entry.file_name().to_string_lossy().to_string();
+      let Some(exact) = image_file_name_match(&fname, &name, &name_lower) else {
+        continue;
+      };
+      let full = entry.path();
+      if !full.is_file() {
+        continue;
       }
-    } else {
-      // Search for path with any extension
-      let parent = base.parent().unwrap_or_else(|| Path::new("."));
-      let stem = base
-        .file_name()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_default();
-      if let Ok(entries) = std::fs::read_dir(parent) {
-        for entry in entries.flatten() {
-          let fname = entry.file_name().to_string_lossy().to_string();
-          if let Some(dot_pos) = fname.find('.')
-            && fname[..dot_pos] == stem
-          {
-            let full = entry.path();
-            // Sibling-directory relativization (issue #698) — see the
-            // extension branch above: pathname::relative (abs2rel semantics).
-            let rel = match &source_path {
-              Some(sp) => {
-                crate::util::pathname::relative(&full.to_string_lossy(), &sp.to_string_lossy())
-              },
-              None => full.to_string_lossy().to_string(),
-            };
-            candidates.push(rel);
-          }
-        }
+      // Perl relativizes every hit to SOURCEDIRECTORY via pathname_relative
+      // (→ File::Spec->abs2rel), which emits a `../…` path for a graphic in a
+      // SIBLING directory (issue #698: `\subimport*{../gfx_asset/}` reaching a
+      // sideways tree). See `pathname::relative`, which now matches Perl (it
+      // used to leak the absolute path on a non-descendant hit).
+      let rel = match &source_path {
+        Some(sp) => crate::util::pathname::relative(&full.to_string_lossy(), &sp.to_string_lossy()),
+        None => full.to_string_lossy().to_string(),
+      };
+      if !exact && fname.to_lowercase() == name_lower {
+        nocase_exact_names.push(rel);
+      } else if !exact {
+        nocase_candidates.push(rel);
+      } else if fname == name {
+        exact_names.push(rel);
+      } else {
+        extended_names.push(rel);
       }
     }
   }
+  let graphics_name = has_graphics_rule(&name);
+  let mut candidates: Vec<String> = if graphics_name && !exact_names.is_empty() {
+    exact_names
+  } else if graphics_name && !nocase_exact_names.is_empty() {
+    std::mem::take(&mut nocase_exact_names)
+  } else {
+    extended_names.into_iter().chain(exact_names).collect()
+  };
+  if candidates.is_empty() {
+    candidates = if graphics_name {
+      nocase_exact_names
+        .into_iter()
+        .chain(nocase_candidates)
+        .collect()
+    } else {
+      nocase_candidates
+        .into_iter()
+        .chain(nocase_exact_names)
+        .collect()
+    };
+  }
 
   // Perl image_candidates (Util/Image.pm L49-53): when the search-dir lookup
-  // finds nothing AND the name is extensionless, consult kpsewhich for
-  // `<path>.png` / `<path>.pdf` — this resolves TeX Live system images such as
+  // finds nothing, consult kpsewhich for `<path>.png` / `<path>.pdf` (Perl
+  // whatever the name's extension; here unless it is a graphics extension, for
+  // which the as-is query below is the one that can hit, #230) — this resolves
+  // TeX Live system images such as
   // `example-image-a` (whose real file is a .pdf). Crucially, kpsewhich returns
   // ONLY files that actually exist, so a missing image yields no candidate. The
   // earlier Rust port instead SYNTHESIZED `<path>.png` unconditionally, so a
   // missing extensionless image got a bogus `candidates="missing.png"` (Perl
   // emits none) and `example-image-a` got the wrong `.png` instead of its `.pdf`.
-  if candidates.is_empty() && !has_extension {
+  if candidates.is_empty() && !has_graphics_extension(&name) {
     let png = format!("{path}.png");
     let pdf = format!("{path}.pdf");
     if let Some(found) = crate::util::pathname::kpsewhich(&[&png, &pdf]) {
@@ -126,8 +167,8 @@ pub fn image_candidates(path: &str) -> String {
 
   // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #230): a name WITH an extension
   // that the search paths do not hold is asked of kpsewhich as-is. Perl (and
-  // the branch above) consults kpsewhich only for extensionless names with
-  // `.png`/`.pdf` appended (Util/Image.pm:49-53), so a package-shipped asset
+  // the branch above) consults kpsewhich only with `.png`/`.pdf` appended
+  // (Util/Image.pm:49-53), so a package-shipped asset
   // referenced by its full name — `\includegraphics[page=N]
   // {openmoji-color-all.pdf}` and the other icon galleries, 97.8 % of the
   // corpus's lost figures (~27,700) — never resolved although kpsewhich finds
@@ -156,6 +197,54 @@ pub fn image_candidates(path: &str) -> String {
   // back to the raw path here, emitting `candidates="missing.png"` where Perl
   // emits no candidates at all. Return empty to match.
   candidates.join(",")
+}
+
+/// Whether `name` ends in an extension pdftex.def has a graphics rule for (`\Gin@rule@.<ext>`, pdftex.def:601-612,
+/// case as written): graphics.sty:211-231 then takes the name as given before appending any extension, so
+/// `\includegraphics{c.eps}` names that file and not a `c.eps.png` beside it, while `c.EPS` (no rule) tries the
+/// appended extensions first.
+fn has_graphics_rule(name: &str) -> bool {
+  const RULED_EXTENSIONS: [&str; 12] = [
+    "jpg", "jpeg", "JPG", "JPEG", "jb2", "jbig2", "png", "PNG", "mps", "pdf", "PDF", "eps",
+  ];
+  Path::new(name)
+    .extension()
+    .is_some_and(|ext| RULED_EXTENSIONS.iter().any(|r| ext == *r))
+}
+
+/// Whether `name` ends in an extension a graphics driver reads (pdftex.def's `\Gin@extensions`, dvips.def's,
+/// and the formats post converts), case aside — the names kpsewhich is not asked for with `.png`/`.pdf` appended.
+fn has_graphics_extension(name: &str) -> bool {
+  const GRAPHICS_EXTENSIONS: [&str; 14] = [
+    "pdf", "png", "jpg", "jpeg", "mps", "jbig2", "jb2", "eps", "ps", "svg", "gif", "tif", "tiff",
+    "bmp",
+  ];
+  Path::new(name).extension().is_some_and(|ext| {
+    GRAPHICS_EXTENSIONS
+      .iter()
+      .any(|g| ext.eq_ignore_ascii_case(g))
+  })
+}
+
+/// Whether the directory entry `entry` is the image `name`: the name itself or the name and one extension of word
+/// characters (`fig` → `fig.pdf`, not `fig.old.pdf`; `b.v0.5_x` → `b.v0.5_x.pdf`), as Perl's `candidate_pathnames`
+/// matches with types `['*']` (Pathname.pm:350-371): `Some(true)` exactly, `Some(false)` only ignoring case
+/// (`name_lower` the name lowercased).
+fn image_file_name_match(entry: &str, name: &str, name_lower: &str) -> Option<bool> {
+  let matches = |entry: &str, name: &str| {
+    entry == name
+      || entry
+        .strip_prefix(name)
+        .and_then(|rest| rest.strip_prefix('.'))
+        .is_some_and(|ext| !ext.is_empty() && ext.chars().all(|c| c.is_alphanumeric() || c == '_'))
+  };
+  if matches(entry, name) {
+    Some(true)
+  } else if matches(&entry.to_lowercase(), name_lower) {
+    Some(false)
+  } else {
+    None
+  }
 }
 
 /// One graphicx transformation, as compiled from the option string.

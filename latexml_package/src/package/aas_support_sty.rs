@@ -126,7 +126,10 @@ LoadDefinitions!({
   DefMacro!("\\altaffiliation{}", "\\lx@add@altaffiliation{#1}");
   DefMacro!("\\affil",            "\\affiliation");
   DefMacro!("\\authoraddr{}",     "\\lx@add@address{#1}");
-  DefMacro!("\\email{}",          "\\lx@add@email{#1}");
+  // AASTeX 7 `\email[show]{…}` (aastex701.cls:13341 `\@ifnextchar[\@email{\@email[]}`; `show` prints it in the
+  // title footnote "Email: …", :2455-2456): the option is no part of the address (2608.21320; Perl's `\email{}`,
+  // aas_support.sty.ltxml:122, left "[" as the address and "show]…" in the body).
+  DefMacro!("\\email[]{}",        "\\lx@add@email{#2}");
 
   // \collaboration{n}{name} applies to previous authors w/o collab; n is how many to SHOW
   // \nocollaboration{n} ditto, but says they are not in a collaboration group.

@@ -1255,8 +1255,9 @@ LoadDefinitions!({
   //     LaTeXML::Core::Array->new(...);  };
   //
   // Accepts both `\graphicspath{dir}` and `\graphicspath{{dir1}{dir2}}`.
-  // Rust output: emit `{dir1}{dir2}...` so the `\graphicspath`
-  // constructor can split on `}` to recover individual entries.
+  // Rust output: the directories joined by `,`, which no directory holds (the split above): the argument reaches the
+  // `\graphicspath` constructor digested, where the braces of `{dir1}{dir2}` are gone and the entries ran together
+  // (`{nonexist/}{figs/}` read as one "nonexist/figs/", 2608.21961).
   // Semiverbatim catcodes prevent `_`, `/`, `#` in path names from
   // tokenizing as SUB/ACTIVE.
   DefParameterType!(DirectoryList, sub[_inner, _extra] {
@@ -1292,14 +1293,15 @@ LoadDefinitions!({
         dirs.push(dir);
       }
     }
-    // Emit `{dir1}{dir2}...` as Tokens (consumed by \graphicspath).
+    // Emit `dir1,dir2,...` as Tokens (consumed by \graphicspath).
     let mut collected: Vec<Token> = Vec::new();
-    for d in dirs {
-      collected.push(T_BEGIN!());
+    for (k, d) in dirs.iter().enumerate() {
+      if k > 0 {
+        collected.push(T_OTHER!(","));
+      }
       for c in d.chars() {
         collected.push(T_OTHER!(&c.to_string()));
       }
-      collected.push(T_END!());
     }
     Tokens::new(collected)
   },

@@ -1,0 +1,12 @@
+% witness: 64c review r3/r4 (an extensionless name beside several of its `name.ext` files: pdflatex tries
+%          `\Gin@extensions` in order, `.pdf` before `.png` (pdftex.def:597); the candidates come in directory order, the
+%          sizer boxes the first raster one and post prefers the png)
+% oracle:  pdflatex 0 errors: ext/fig.pdf included
+% engines: rust 64c6 = "ext/fig.pdf,ext/fig.png" or the reverse (readdir order); the box from fig.png, the image fig.png
+% expect:  0 errors; candidates ordered as `\Gin@extensions`, the box and the rendered image from ext/fig.pdf
+% status:  RED (64c6)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics{ext/fig}
+\end{document}

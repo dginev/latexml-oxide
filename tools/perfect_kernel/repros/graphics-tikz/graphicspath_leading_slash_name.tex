@@ -1,0 +1,13 @@
+% witness: 2409.13454 (`\graphicspath{{plots/}{images/}}`, `\includegraphics{\folder ground_truth.pdf}` with
+%          `\folder` = `/example_1/`: 42 graphics)
+% oracle:  pdflatex 0 errors: TeX glues each `\input@path` entry to the name, `figs//a.eps`, and finds it
+% engines: rust 64c2 = no candidates (an absolute name joined to a directory drops the directory); Perl the same
+%          (Pathname.pm:328-329 searches only the name's own directory when it is absolute)
+% expect:  0 errors; <graphics candidates="figs/a.eps">
+% status:  RED (64c2) -> GREEN (64c)
+\documentclass{article}
+\usepackage{graphicx}
+\graphicspath{{figs/}}
+\begin{document}
+\includegraphics[width=3cm]{/a.eps}
+\end{document}

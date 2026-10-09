@@ -1,0 +1,12 @@
+% witness: 2304.13099 (34 graphics), 2405.00666 (21), 2412.12770 (13), 2411.13361 (10), 2608.12208
+%          (`FIG10_..._delta0.2_..._R100000`)
+% oracle:  pdflatex 0 errors: b.v0.5_x.eps included
+% engines: rust 64b3 = no candidates (the name's last dot read as an extension, only the exact file looked for:
+%          util/image.rs has_extension); Perl candidates b.v0.5_x.eps (Pathname.pm:325-371: `^name\.\w+$` and `^name$`)
+% expect:  0 errors; <graphics candidates="b.v0.5_x.eps">
+% status:  RED (64b3) -> GREEN (64c)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics[width=3cm]{b.v0.5_x}
+\end{document}

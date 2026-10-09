@@ -1,0 +1,18 @@
+% witness: 2608.21320 (`\email[show]{jmmiller@…}`)
+% oracle:  pdflatex 0 errors: footnote "Email: jane@example.org" (aastex701.cls:13341-13353 `\email[show]` collects
+%          `\@@email`, printed at :2455-2456)
+% engines: rust 64b3 = an email contact "[" and the text "show]jane@example.org" in the body (aas_support_sty.rs
+%          `\email{}` has no optional argument); Perl the same (aas_support.sty.ltxml:122)
+% expect:  0 errors; Jane Doe's <contact role="email">jane@example.org</contact>
+% status:  RED (64b3) -> GREEN (64c)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Jane Doe}
+\affiliation{Some University}
+\email[show]{jane@example.org}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

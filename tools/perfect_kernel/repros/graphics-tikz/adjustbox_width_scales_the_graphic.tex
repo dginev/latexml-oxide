@@ -1,0 +1,12 @@
+% witness: 64c review r2 finding 3 (adjustbox's `width=` never scales its content box: 2410.09019's `\adjustimage`
+%          figures, every `\adjustbox{width=…}{\includegraphics{…}}`)
+% oracle:  pdflatex 0 errors: the square 3cm wide, twice
+% engines: rust 64c4 = both boxes the image's natural size, xscale="1"
+% expect:  0 errors; the inline-blocks scaled to 85.36pt wide
+% status:  RED (64c4)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\begin{document}
+\adjustbox{width=3cm}{\includegraphics{figs/a.eps}} \adjustimage{width=3cm}{figs/a.eps}
+\end{document}

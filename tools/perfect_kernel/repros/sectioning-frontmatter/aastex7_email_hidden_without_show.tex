@@ -1,0 +1,20 @@
+% witness: 64c review r1 finding 3 (aastex701.cls:13341-13353: an address is printed in the "Email:" footnote only
+%          with `[show]`, or as the corresponding author's footnote; otherwise the PDF shows none)
+% oracle:  pdflatex 0 errors: only "Email: john@y.org"
+% engines: rust 64c2 = an email contact for both authors; Perl the same (aas_support.sty.ltxml:122)
+% expect:  NEEDS RULING (display toggle, 2026-10-06 ruling vs metadata): Jane's address hidden or kept as metadata
+% status:  RED (64c2)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Jane Doe}
+\affiliation{Univ A}
+\email{jane@x.org}
+\author{John Roe}
+\affiliation{Univ B}
+\email[show]{john@y.org}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

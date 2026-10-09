@@ -587,12 +587,19 @@ LoadDefinitions!({
       .map(|a| a.to_string())
       .unwrap_or_default();
     // graphics.sty:156 `\def\graphicspath#1{\def\Ginput@path{#1}}` — the
-    // TeX-visible search-path macro (upmethodology reads it back).
-    def_macro(T_CS!("\\Ginput@path"), None, Tokens::new(ExplodeText!(&arg)), None)?;
+    // TeX-visible search-path macro (upmethodology reads it back), each directory in its braces
+    // (`{nonexist/}{figs/}`; the DirectoryList hands them over joined by `,`).
+    let mut input_path: Vec<Token> = Vec::new();
+    for dir in arg.split(',').filter(|d| !d.is_empty()) {
+      input_path.push(T_BEGIN!());
+      input_path.extend(ExplodeText!(dir));
+      input_path.push(T_END!());
+    }
+    def_macro(T_CS!("\\Ginput@path"), None, Tokens::new(input_path), None)?;
     let root = with_value("SOURCEDIRECTORY",
       |v| v.map(|s| s.to_string()).unwrap_or_default());
     let mut collected: Vec<String> = Vec::new();
-    for dir in arg.split('}') {
+    for dir in arg.split(',') {
       // Beyond-Perl (OXIDIZED_DESIGN #55): strip surrounding double-quotes
       // from each directory entry. pdflatex/kpathsea tolerate quoted paths
       // such as `\graphicspath{{"./figures"}}` — the quotes guard embedded
@@ -604,7 +611,7 @@ LoadDefinitions!({
       // strip on the includegraphics FILENAME side (`image_candidates`,
       // `image.rs:53` `path.trim_matches('"')`). Witness: arXiv 2606.22880
       // (acmart, 9 figures, all lost under both Perl and Rust-before).
-      let dir = dir.trim_start_matches('{').trim().trim_matches('"').trim();
+      let dir = dir.trim().trim_matches('"').trim();
       if !dir.is_empty() {
         // Perl: pathname_absolute(pathname_canonical($dir), $root)
         let path = if root.is_empty() || dir.starts_with('/') {
@@ -696,8 +703,12 @@ LoadDefinitions!({
   // graphics.sty L115 (\newif form, so \Gin@cliptrue/false exist too;
   // was DefConditional per Perl, which lacks the setters raw code calls).
   RawTeX!(r"\newif\ifGin@clip");
-  // Perl: DefMacro('\Gin@i [][]{}', '');
-  def_macro_noop("\\Gin@i[][]{}")?;
+  // Beyond Perl (`DefMacro('\Gin@i [][]{}', '')`, graphics.sty.ltxml:327): `\Gin@i` is the body of
+  // `\includegraphics` (graphics.sty:119-124), its `[llx,lly][urx,ury]{file}`; graphicx redefines it with the keyval
+  // form (graphicx_sty.rs), which adjustbox's `\adjustimage` and `\adjincludegraphics` call (adjustbox.sty:275-280
+  // `\adjustbox{#1}{\Gin@clipfalse\Gin@i{#2}}`): read as nothing, their image was lost (2410.09019, 2405.10928,
+  // 2404.05726, 2306.17837, 2410.02073; OXIDIZED_DESIGN_DIVERGENCES #475).
+  DefMacro!("\\Gin@i [][]{}", "\\@includegraphics[#1][#2]{#3}");
 
   // Perl: DefPrimitive('\Gscale@div DefToken Dimension Dimension', sub {
   //   my $n = $num->valueOf; my $d = $denom->valueOf;

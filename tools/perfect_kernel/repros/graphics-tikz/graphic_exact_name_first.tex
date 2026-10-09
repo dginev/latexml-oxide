@@ -1,0 +1,12 @@
+% witness: 64c review r1 finding 4 (`\includegraphics{c.eps}` beside a `c.eps.png`: Perl's `^name\.\w+$` lists both in
+%          readdir order, and the first candidate sizes the image)
+% oracle:  pdflatex 0 errors: figs/c.eps included (the name as given)
+% engines: rust 64c4 = "figs/c.eps,figs/c.eps.png" and post renders the png (it rates candidates by type);
+%          64b8 = only figs/c.eps; Perl both files (`^name\.\w+$`)
+% expect:  0 errors; <graphics candidates="figs/c.eps">
+% status:  RED (64c2) -> GREEN (64c)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics[width=3cm]{figs/c.eps}
+\end{document}

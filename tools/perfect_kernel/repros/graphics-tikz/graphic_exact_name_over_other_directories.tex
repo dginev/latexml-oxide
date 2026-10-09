@@ -1,0 +1,12 @@
+% witness: 64c review r2 finding 1 (`\graphicspath{{other/}{figs/}}` with other/c.eps.png and figs/c.eps: pdflatex's
+%          `\Gin@getbase` tries `c.eps` over every `\input@path` entry before appending any extension)
+% oracle:  pdflatex 0 errors: figs/c.eps included
+% engines: rust 64c4 = "other/c.eps.png,figs/c.eps" and post renders other/c.eps.png; 64b8 = figs/c.eps
+% expect:  0 errors; <graphics candidates="figs/c.eps">
+% status:  RED (64c4) -> GREEN (64c)
+\documentclass{article}
+\usepackage{graphicx}
+\graphicspath{{other/}{figs/}}
+\begin{document}
+\includegraphics[width=3cm]{c.eps}
+\end{document}

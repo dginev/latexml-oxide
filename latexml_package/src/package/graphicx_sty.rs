@@ -128,6 +128,16 @@ LoadDefinitions!({
     "\\@ifnextchar[{\\@includegraphics#1[#2]}{\\@includegraphicx#1[#2]}",
     scope => Some(Scope::Global)
   );
+  // graphicx.sty:198-203 `\def\Gin@i{… \@ifnextchar[\Gin@ii{\Gin@ii[]}}`: the body of `\includegraphics`, its
+  // `[keys]{file}`, which adjustbox's `\adjustimage`/`\adjincludegraphics` call directly (adjustbox.sty:275-280,
+  // :439, :450) — the same dispatch as `\includegraphics`, so the image is sized by graphicx's sizer. Not through
+  // `\includegraphics` itself: a document defining it in terms of `\Gin@i` would loop (OXIDIZED_DESIGN_DIVERGENCES
+  // #475; 2410.09019).
+  DefMacro!(
+    "\\Gin@i []",
+    "\\@ifnextchar[{\\@includegraphics[#1]}{\\@includegraphicx[#1]}",
+    scope => Some(Scope::Global)
+  );
 
   // Perl L52-72: graphicx-style \includegraphics with keyval options.
   DefConstructor!(

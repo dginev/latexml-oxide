@@ -11827,3 +11827,24 @@ author_quad_at_wrapper_edge, llncs_and_inside_wrapper, amsart_and_inside_group, 
 author_separator_macro_lastand, author_tied_ampersand, author_declaration_line_opens_with_and,
 author_wrapper_closing_period_before_mark, amsart_name_list_closing_semicolon, author_redefined_and_still_parts_groups,
 author_separator_macro_prints_as_written, author_separator_macro_visible_font_kept, author_separator_macro_glue}`.
+
+## 555. `\adjustimage` and `\adjincludegraphics`, AASTeX 7's `\email[show]`: the figure or the address lost
+
+Perl's bindings lose content two ways, without an error (html_feedback HF10, report
+agent_reports/2026-10-09_hf10_content_classes.md):
+- graphics.sty.ltxml:327 `DefMacro('\Gin@i [][]{}', '')` — `\Gin@i` is the body of `\includegraphics`
+  (graphics.sty:119-124, graphicx.sty:198-203), which adjustbox's `\adjustimage`/`\adjincludegraphics` call directly
+  (adjustbox.sty:275-280 `\adjustbox{#1}{\Gin@clipfalse\Gin@i{#2}}`): the box is empty (2410.09019, 2405.10928,
+  2404.05726, 2306.17837, 2410.02073);
+- aas_support.sty.ltxml:122 `DefMacro('\email{}', …)` has no optional argument, while aastex701.cls:13341 reads
+  `\email[show]{…}` (`show` prints it in the title footnote, :2455-2456): the address is "[" and "show]jane@…" stays in
+  the body (2608.21320, 2608.05283).
+
+Minimal triggers: `\usepackage[export]{adjustbox} … \adjustimage{width=3cm}{figs/a.eps}`;
+`\documentclass{aastex701} … \email[show]{jane@example.org}`.
+
+Fixed in Rust (64c): graphicx's `\Gin@i` is `\includegraphics`'s dispatch (OXIDIZED_DESIGN_DIVERGENCES #475);
+aas_support's `\email[]{}` adds `#2`. Open (ruling asked): without `[show]` aastex7 prints no address (unless the
+author is the corresponding one), and both engines still emit it (RED sectioning-frontmatter/
+aastex7_email_hidden_without_show). Guards `perfect_kernel_batch64::{adjustimage_includes_the_graphic,
+aastex7_email_show}`.

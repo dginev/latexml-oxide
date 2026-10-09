@@ -1,0 +1,18 @@
+% witness: 2508.07251 (teaser figure in a {strip}), 2404.07191, 2404.00122, 2406.06521, 2502.12371, 2502.19582
+% oracle:  pdflatex 0 errors: the figure and "Figure 1: Teaser caption." across both columns, then the body
+% engines: rust 64b3 = the strip's content lost (cuted.sty:208-238 sets it in the global box \@viper, shipped only by
+%          the output routine's \@viperoutput); Perl Error "Not in outer par mode" + the same loss
+% expect:  0 errors; <graphics candidates="figs/a.eps"> and the caption "Teaser caption."
+% status:  RED (64b3) -> GREEN (64c)
+\documentclass[twocolumn]{article}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{cuted}
+\begin{document}
+\begin{strip}
+\centering
+\includegraphics[width=3cm]{figs/a.eps}
+\captionof{figure}{Teaser caption.}
+\end{strip}
+Body text.
+\end{document}

@@ -14520,3 +14520,60 @@ reader meets it and ends the column, as TeX's main loop does — beyond Perl for
 `\multicolumn` form Rust keeps. A `&` met inside braces (the count below 1000000) is still invoked. Witness 2410.16600
 (sgamex.sty:56-58 `\cs_new_protected:Nn \__cfr_game_first:n {& \multicolumn…}`; 9 errors → 0; pdflatex 0). Guard
 `perfect_kernel_batch63::protected_tab_after_multicolumn_ends_the_cell`, repro alignment/protected_tab_after_multicolumn.
+
+### 475. `\Gin@i` includes the graphic (Perl: defined as nothing)
+
+**Background.** Perl defines `\Gin@i [][]{}` as empty (graphics.sty.ltxml:327, marked `# ?`). In LaTeX it is the
+body of `\includegraphics` (graphics.sty:119-124: `[llx,lly][urx,ury]{file}`; graphicx.sty:198-203 redefines it to
+read `[keys]{file}`), and adjustbox calls it directly: `\adjustimage{#1}{#2}` and `\adjincludegraphics[#1]{#2}` are
+`\adjustbox{#1}{\Gin@clipfalse\Gin@i{#2}}` (adjustbox.sty:275-280, also :439/:450). Defined as nothing, every such
+image was an empty box (KNOWN_PERL_ERRORS #555).
+
+**Rust behavior.** graphics_sty.rs defines `\Gin@i [][]{}` as `\@includegraphics[#1][#2]{#3}` (the graphics form);
+graphicx_sty.rs redefines it as `\includegraphics`'s own dispatch, `\Gin@i []` →
+`\@ifnextchar[{\@includegraphics[#1]}{\@includegraphicx[#1]}`, so a keyval call reaches `\@includegraphicx` and its
+sizer and the box is the image's, as `\adjustbox{…}{\includegraphics{…}}` makes it (routed through the graphics
+constructor it had been sized as the file name's text, 64c review r1). It does not go through `\includegraphics`, which
+a document may define in terms of `\Gin@i`. Witness 2410.09019 (three `\adjustimage` figures). Guard
+`perfect_kernel_batch64::adjustimage_includes_the_graphic`, repro graphics-tikz/adjustimage_includes_the_graphic.
+
+### 476. cuted's `{strip}` is a vertical block in place (Perl: the strip undefined, or lost under raw styles)
+
+**Background.** cuted.sty's `\strip` sets its content in the global box `\@viper` and leaves it to the two-column
+output routine (`\@viperoutput`), which ships it across both columns at the top of the next page (TL2025's v2.7
+2025/10/13: `\strip` :208, `\endstrip` :225, `\@viperoutput` :241; the newer v2.10 2025/12/15: :229/:250/:272). LaTeXML builds no pages,
+so the box was never used: Rust (which reads cuted.sty raw) lost the strip silently; Perl with raw styles errs "Not in
+outer par mode" and loses it, Perl without them reports `{strip}` undefined and keeps its body inline.
+
+**Rust behavior.** latexml_contrib's `cuted_sty.rs` reads cuted.sty raw (its options, `\stripsep`, the column switches)
+and redefines `{strip}` as `{center}` is built without its alignment: `internal_vertical`, the paragraph before it
+closed, the body placed by `insert_block` — its paragraphs end at its edges (a `\newenvironment{widetext}{\strip}
+{\endstrip}` too) and a `\captionof` takes the graphic beside it into its figure. Witnesses 2508.07251 (a teaser
+figure), 2609.08929 (a table), 2609.22546 (a nomenclature box). Guards `perfect_kernel_batch64::{cuted_strip_keeps_content,
+cuted_strip_paragraphs_end_at_its_edges}`, repros captions-floats/cuted_strip_*.
+
+### 477. A graphic's candidates as pdflatex takes them; a leading `/` read under the search directories (Perl: every `name.ext`, readdir order; absolute)
+
+**Background.** Perl's `candidate_pathnames` (Pathname.pm:325-391) lists, per search directory, the files matching
+`^name\.\w+$` and `^name$` in readdir order (directories too, the `-f` check deferred), and searches only the name's own
+directory when the name is absolute (:328-329). Post renders the candidate it rates best (latexml_post graphics.rs), so
+`\includegraphics{c.eps}` beside a `c.eps.png` rendered the png. pdflatex's `\Gin@getbase` tries the name over every
+`\input@path` entry before appending any extension (graphics.sty:211-231), never takes an extensionless name bare
+(:205-209), and TeX glues each `\input@path` entry to the name as written (`plots/` + `/example_1/a.pdf` =
+`plots//example_1/a.pdf`, found).
+
+**Rust behavior.** `image_candidates` (latexml_core util/image.rs): a name whose extension has a pdftex.def graphics
+rule (`\Gin@rule@.<ext>`, pdftex.def:601-612, case as written: `.pdf .PDF .png .PNG .jpg .JPG .jpeg .JPEG .jb2 .jbig2
+.mps .eps`) that names a file in some search directory is those files alone, failing that the file of that name in
+another case (kpathsea's `fig.pdf` for `fig.PDF`); any other name — extensionless, or with an extension no rule reads
+(`b.v0.5_x`, `c.EPS`, `fig.ps`) — lists its `name.ext` files before a bare file of that name, in either case tier
+(graphics.sty:211-231 appends the extensions first); files only. The kpsewhich `<path>.png`/`.pdf` query runs for any
+name without a graphics extension. Open: among several `name.ext` files the order is the directory's, where pdflatex
+tries `\Gin@extensions` in order (`.pdf` before `.png`; RED graphics-tikz/graphic_extension_order_pdf_first); an
+exact-case `fig.eps` wins over a `Fig.pdf` kpathsea reaches first; and the box's `cssstyle` comes from the first vector
+candidate while post renders its best raster one (`natural_display_size_pt_of_candidates`), so the two can be different
+files of one figure. A name with a leading `/` that names no file is read
+under each search directory — the source directory and `SEARCHPATHS` too, beyond pdflatex, as post's fallback already
+glued it. Witness 2409.13454 (`\folder` = `/example_1/`, 42 graphics, 0 → 42 found). Guards
+`perfect_kernel_batch64::{graphic_exact_name_first, graphic_exact_name_over_other_directories,
+graphic_bare_name_listed_last, graphicspath_leading_slash_name}`.

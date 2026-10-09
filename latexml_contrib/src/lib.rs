@@ -90,6 +90,7 @@ pub mod cprotect_sty;
 pub mod crckapb_sty;
 pub mod crossreftools_sty;
 pub mod curve2e_sty;
+pub mod cuted_sty;
 pub mod cvpr_sty;
 pub mod czjphys_cls;
 pub mod daj_cls;
@@ -362,6 +363,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cprotect", "sty", cprotect_sty::load_definitions),
   ("crckapb", "sty", crckapb_sty::load_definitions),
   ("crossreftools", "sty", crossreftools_sty::load_definitions),
+  ("cuted", "sty", cuted_sty::load_definitions),
   ("colt2024", "cls", colt2024_cls::load_definitions),
   ("colt2025", "cls", colt2024_cls::load_definitions),
   ("colt2026", "cls", colt2024_cls::load_definitions),

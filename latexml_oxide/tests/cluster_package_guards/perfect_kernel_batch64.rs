@@ -464,3 +464,203 @@ fn author_separator_macro_glue() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
   ]);
 }
+
+/// The figure the 64c graphics repros include: a 10bp square as EPS text (repros graphics-tikz/figs/a.eps).
+const SQUARE_EPS: &str = "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 10 10\nnewpath 0 0 moveto 10 0 lineto 10 10 lineto 0 10 \
+                          lineto closepath fill\nshowpage\n%%EOF\n";
+
+/// The XML of `tex` converted under ar5iv with `files` beside it, which must give no error and no warning.
+fn convert_clean_files(tex: &str, files: &[(&str, &str)]) -> String {
+  let (log, xml) = latexml::util::test::convert_files_with(tex, files, Some("ar5iv.sty"));
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  xml
+}
+
+/// 64c (HF10 F1): `\graphicspath{{nonexist/}{figs/}}` searches each directory — the DirectoryList's entries no longer
+/// run together into "nonexist/figs/" in the digested argument (2608.21961, 2403.18830) — and `\Ginput@path` keeps
+/// them braced, as graphics.sty:156 defines it. Repro graphics-tikz/graphicspath_two_directories.
+#[test]
+fn graphicspath_two_directories() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/graphicspath_two_directories.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"a\""],
+    "<graphics candidates=\"figs/a.eps\" graphic=\"a\" options=\"width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>",
+  );
+  assert_element(
+    &xml,
+    "text",
+    &["font=\"typewriter\""],
+    "<text font=\"typewriter\" xml:id=\"p1.1.1\">macro:-&gt;{nonexist/}{figs/}</text>",
+  );
+}
+
+/// 64c (HF10 F2): a graphic named with dots (`b.v0.5_x`) is found with its extension, as Perl's `pathname_findall`
+/// reads the whole name (2304.13099, 2608.12208); a name finds only itself plus one extension (`a.old.eps` is not
+/// `a`). Repro graphics-tikz/graphic_name_with_dots.
+#[test]
+fn graphic_name_with_dots() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/graphic_name_with_dots.tex");
+  let xml = convert_clean_files(tex, &[
+    ("b.v0.5_x.eps", SQUARE_EPS),
+    ("b.v0.5_x.old.eps", SQUARE_EPS),
+  ]);
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"b.v0.5_x\""],
+    "<graphics candidates=\"b.v0.5_x.eps\" graphic=\"b.v0.5_x\" options=\"width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>",
+  );
+}
+
+/// 64c (HF10 F4): adjustbox's `\adjustimage`/`\adjincludegraphics` call `\Gin@i`, the body of `\includegraphics`
+/// (adjustbox.sty:275-280) — no longer read as nothing (2410.09019) — through graphicx's dispatch, so the graphic is
+/// sized as `\adjustbox{…}{\includegraphics{…}}` sizes it, not as its file name's text (64c review r1).
+/// Repro graphics-tikz/adjustimage_includes_the_graphic.
+#[test]
+fn adjustimage_includes_the_graphic() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/adjustimage_includes_the_graphic.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><inline-block depth=\"0.0pt\" height=\"7.2pt\" width=\"7.2pt\" xml:id=\"p1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.1.1\"><text xml:id=\"p1.1.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g1\"/></text></p></inline-block><inline-block depth=\"0.0pt\" height=\"7.2pt\" width=\"7.2pt\" xml:id=\"p1.2\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.2.1\"><text xml:id=\"p1.2.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g2\"/></text></p></inline-block></para>",
+  );
+}
+
+/// 64c (HF10 F5): cuted's `{strip}` keeps its content where it is written (cuted.sty set it in a box only the output
+/// routine ships; 2508.07251's teaser figure was lost), a vertical block in which `\captionof` takes the graphic beside
+/// it into its figure (64c review r1). Repro captions-floats/cuted_strip_keeps_content.
+#[test]
+fn cuted_strip_keeps_content() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/cuted_strip_keeps_content.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "figure",
+    &["inlist=\"lof\""],
+    "<figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><graphics candidates=\"figs/a.eps\" class=\"ltx_centering\" graphic=\"figs/a.eps\" options=\"width=85.35826pt,keepaspectratio=true\" xml:id=\"g1\"/><toccaption><tag close=\" \">1</tag>Teaser caption.</toccaption><caption><tag close=\": \">Figure 1</tag>Teaser caption.</caption></figure>",
+  );
+}
+
+/// 64c (HF10 F7): AASTeX 7's `\email[show]{…}` takes its option (aastex701.cls:13341), so the address is the email and
+/// "[show]" no part of it (2608.21320). Repro sectioning-frontmatter/aastex7_email_show.
+#[test]
+fn aastex7_email_show() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_show.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Some University</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">jane@example.org</contact>\n  </creator>",
+  ]);
+}
+
+/// 64c review r1: a `{strip}` is a vertical block — its paragraphs end at its edges, the raw `\strip … \endstrip` of a
+/// `\newenvironment{widetext}{\strip}{\endstrip}` too. Repro captions-floats/cuted_strip_paragraphs_end_at_its_edges.
+#[test]
+fn cuted_strip_paragraphs_end_at_its_edges() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/cuted_strip_paragraphs_end_at_its_edges.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Lead text.</p><p xml:id=\"p1.2\">Para one.</p><p xml:id=\"p1.3\">Para two.</p><p xml:id=\"p1.4\">Tail.</p><p xml:id=\"p1.5\">Wide text.</p><p xml:id=\"p1.6\">After.</p></para>",
+  );
+}
+
+/// 64c review r1/r2: a name with a graphics extension that names a file is that file alone — `\includegraphics{c.eps}`
+/// takes `c.eps` in pdflatex, and a `c.eps.png` listed beside it was what post rendered. Repro
+/// graphics-tikz/graphic_exact_name_first.
+#[test]
+fn graphic_exact_name_first() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/graphic_exact_name_first.tex");
+  let xml = convert_clean_files(tex, &[
+    ("figs/c.eps.png", "not a png"),
+    ("figs/c.eps", SQUARE_EPS),
+  ]);
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"figs/c.eps\""],
+    "<graphics candidates=\"figs/c.eps\" graphic=\"figs/c.eps\" options=\"width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>",
+  );
+}
+
+/// 64c: a name with a leading `/` that names no file is read under each `\graphicspath` directory, as TeX glues the
+/// entry to the name (`figs//a.eps`; 2409.13454's 42 graphics). Repro graphics-tikz/graphicspath_leading_slash_name.
+#[test]
+fn graphicspath_leading_slash_name() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/graphicspath_leading_slash_name.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"/a.eps\""],
+    "<graphics candidates=\"figs/a.eps\" graphic=\"/a.eps\" options=\"width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>",
+  );
+}
+
+/// 64c review r2: the exact name wins over every search directory — `\Gin@getbase` tries `c.eps` over each
+/// `\input@path` entry before appending an extension (graphics.sty:211-231), so `figs/c.eps` and not an earlier
+/// directory's `other/c.eps.png`. Repro graphics-tikz/graphic_exact_name_over_other_directories.
+#[test]
+fn graphic_exact_name_over_other_directories() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/graphic_exact_name_over_other_directories.tex"
+  );
+  let xml = convert_clean_files(tex, &[
+    ("other/c.eps.png", "not a png"),
+    ("figs/c.eps", SQUARE_EPS),
+  ]);
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"c.eps\""],
+    "<graphics candidates=\"figs/c.eps\" graphic=\"c.eps\" options=\"width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>",
+  );
+}
+
+/// 64c review r3: a name with no graphics extension — none, or one no graphics rule reads (`b.v0.5_x`) — lists its
+/// `name.ext` files before a bare file of that name, which pdflatex takes only when nothing extended exists
+/// (graphics.sty:205-231). Repro graphics-tikz/graphic_bare_name_listed_last.
+#[test]
+fn graphic_bare_name_listed_last() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/graphic_bare_name_listed_last.tex"
+  );
+  let xml = convert_clean_files(tex, &[
+    ("bare/b.v0.5_x.eps", SQUARE_EPS),
+    ("bare/b.v0.5_x", SQUARE_EPS),
+    ("bare/fig.eps", SQUARE_EPS),
+    ("bare/fig", SQUARE_EPS),
+  ]);
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"bare/b.v0.5_x\""],
+    "<graphics candidates=\"bare/b.v0.5_x.eps,bare/b.v0.5_x\" graphic=\"bare/b.v0.5_x\" options=\"width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>",
+  );
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"bare/fig\""],
+    "<graphics candidates=\"bare/fig.eps,bare/fig\" graphic=\"bare/fig\" options=\"width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g2\"/>",
+  );
+}
