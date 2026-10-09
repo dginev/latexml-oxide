@@ -1,0 +1,33 @@
+% witness: 2507.20312 Table 2 (`main.tex:893-897`: `\multicolumn{2}{l|}{\multirow{3}{*}{}}` under
+%          `\multirow{5}{*}{Computing nodes}`, two empty rows pruned below)
+% oracle:  pdflatex 0 errors: "Nodes" beside xeon/gpu/amd, two blank rows, then "Metrics time D"
+% engines: rust 63r and Perl 0.8.8 = Nodes `rowspan="4"` over the 3 rows left, spanning into the Metrics row (the
+%          covered empty `\multirow{3}` re-marks the rows below as its own, Alignment.pm L697-726, so the pruned rows
+%          shrink it instead of Nodes)
+% expect:  0 errors, 0 warnings; Nodes `rowspan="3"`, every row as wide as the table; in the `\multicolumn` form
+%          Hosts `colspan="2" rowspan="3"`
+% status:  RED (63r) -> GREEN (63s)
+\documentclass{article}
+\usepackage{multirow}
+\begin{document}
+\begin{tabular}{l|l|l}
+\hline
+\multirow{5}{*}{Nodes} & xeon & A \\ \cline{2-3}
+\multirow{3}{*}{} & gpu & B \\ \cline{2-3}
+ & amd & C \\
+ & & \\
+ & & \\ \hline
+Metrics & time & D \\ \hline
+\end{tabular}
+
+% the witness's form: each multirow inside a \multicolumn
+\begin{tabular}{ll|ll|l}
+\hline
+\multicolumn{2}{l|}{\multirow{5}{*}{Hosts}} & \multicolumn{2}{l|}{xeon} & A \\ \cline{3-5}
+\multicolumn{2}{l|}{\multirow{3}{*}{}} & \multicolumn{2}{l|}{gpu} & B \\ \cline{3-5}
+\multicolumn{2}{l|}{} & \multicolumn{2}{l|}{amd} & C \\
+\multicolumn{2}{l|}{} & \multicolumn{2}{l|}{} & \\ \hline
+\multicolumn{2}{l}{} & \multicolumn{2}{l}{} & \\ \hline
+\multicolumn{2}{l|}{Metrics} & \multicolumn{2}{l|}{time} & D \\ \hline
+\end{tabular}
+\end{document}

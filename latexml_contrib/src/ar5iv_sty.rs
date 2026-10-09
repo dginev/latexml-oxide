@@ -122,11 +122,18 @@ LoadDefinitions!({
   //     my $src = $node->getAttribute('src') || '';
   //     return if $src !~ /^http/;      # non-remote → silently drop
   //     $self->getNode->appendChild($node); });   # remote → re-attach
+  // Beyond Perl: a style sheet given inline, with no file (`\lxRequireResource[type=text/css,content={…}]{}`), is
+  // kept too: it embeds nothing local, and is how a paper styles its own HTML, the arXiv source having no room for a
+  // CSS file (2606.12996's rules for its nested tables and appendix TOC entries); so is a class option's own rules
+  // (article's `openbib`, `.ltx_bibblock{display:block;}`). Inline scripts stay dropped.
   DefRewrite!(xpath => "descendant-or-self::ltx:resource",
   replace => sub[document, nodes] {
     let node = nodes.pop().unwrap();
     let src = node.get_attribute("src").unwrap_or_default();
-    if src.starts_with("http") {
+    let inline_css = src.is_empty()
+      && node.get_attribute("type").as_deref() == Some("text/css")
+      && !node.get_content().trim().is_empty();
+    if src.starts_with("http") || inline_css {
       document.get_node_mut().add_child(node)?;
     }
   });

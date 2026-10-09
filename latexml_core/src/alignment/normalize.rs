@@ -165,6 +165,14 @@ pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
           alignment.rows[i].get_columns_mut()[j].rowspan = Some(cnr);
         }
       }
+      // A cell an earlier row's span already covers spans no rows of its own: an empty `\multirow{3}{*}{}` under
+      // `\multirow{5}{*}{Nodes}` (2507.20312) would re-mark the rows below as its own, and the empty rows pruned
+      // later shrink it instead of the outer span. TeX overlaps the empty nested box. (Perl Alignment.pm L697 marks
+      // it too; a covered cell is always skippable, else the outer span is truncated before it, L716-721.)
+      // (and keeps none, which the header guess would read as a span into the body: 2401.13447)
+      if alignment.rows[i].get_columns()[j].rowspanned.is_some() {
+        alignment.rows[i].get_columns_mut()[j].rowspan = None;
+      }
       let nr = alignment.rows[i].get_columns()[j].rowspan.unwrap_or(1);
       if nr > 1 {
         // If this column spans rows
@@ -495,6 +503,34 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
       // Empty!
       let mut prunew: i64 = 0;
       for row in &mut alignment.rows {
+        // An empty spanner at `j` (`\multicolumn{3}{c}{}`) spans the empty column with the ones after it: it shrinks
+        // by one, its first covered cell removed, and keeps its place, borders and content. Removing it (Perl
+        // Alignment.pm L855) left its covered cells spanned by nothing, never emitted, the row a cell short and the
+        // header sliding over the next column (2406.06521 Table 2).
+        let spanner_shrinks = row
+          .get_columns()
+          .get(j)
+          .is_some_and(|col| col.colspanned.is_none() && col.colspan.unwrap_or(1) > 1)
+          && row
+            .get_columns()
+            .get(j + 1)
+            .is_some_and(|next| next.colspanned == Some(j));
+        if spanner_shrinks {
+          let covered = row.get_columns_mut().remove(j + 1);
+          let preserve = preserved_boxes(covered.boxes.as_ref());
+          let spanner = &mut row.get_columns_mut()[j];
+          spanner.colspan = spanner.colspan.map(|n| n - 1);
+          if !preserve.is_empty() {
+            let mut boxes = spanner
+              .boxes
+              .as_mut()
+              .map(|b| b.unlist())
+              .unwrap_or_default();
+            boxes.extend(preserve);
+            spanner.boxes = Some(Digested::from(List::new(boxes)));
+          }
+          continue;
+        }
         let mut new_border = String::new();
         let mut preserve = Vec::new();
         let mut colspanned = None;

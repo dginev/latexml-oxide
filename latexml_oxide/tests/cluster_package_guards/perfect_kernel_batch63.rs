@@ -3280,3 +3280,54 @@ fn name_line_trailing_email() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">cy@uni.edu</note>\n  </creator>"
   );
 }
+
+/// 63s: an empty spanner over a column the pruning removes shrinks by one rather than being dropped with it, so the
+/// header row stays as wide as the data rows (2406.06521 Table 2; Perl Alignment.pm L822-855 removes the spanner). Repro
+/// alignment/empty_spanner_shrinks_with_pruned_column.
+#[test]
+fn empty_spanner_shrinks_with_pruned_column() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment/empty_spanner_shrinks_with_pruned_column.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "tabular", "24"),
+    "<tabular class=\"ltx_guessed_headers\" vattach=\"middle\" xml:id=\"tab1.1\">\n      <tbody>\n        <tr xml:id=\"tab1.1.1\">\n          <td colspan=\"2\" xml:id=\"tab1.1.1.1\"/>\n          <td align=\"center\" thead=\"column\" xml:id=\"tab1.1.1.2\">24</td>\n        </tr>\n        <tr xml:id=\"tab1.1.2\">\n          <td align=\"center\" xml:id=\"tab1.1.2.1\">VolSDF</td>\n          <td xml:id=\"tab1.1.2.2\"/>\n          <td align=\"center\" xml:id=\"tab1.1.2.3\">1.14</td>\n        </tr>\n        <tr xml:id=\"tab1.1.3\">\n          <td align=\"center\" xml:id=\"tab1.1.3.1\">NeuS</td>\n          <td xml:id=\"tab1.1.3.2\"/>\n          <td align=\"center\" xml:id=\"tab1.1.3.3\">1.00</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63s: an empty `\multirow` an outer `\multirow` covers spans no rows of its own, so the empty rows pruned below
+/// shrink the outer span (2507.20312 Table 2; Perl Alignment.pm L697-726 lets it re-mark the rows). Repro
+/// alignment/nested_empty_multirow_keeps_outer_span.
+#[test]
+fn nested_empty_multirow_keeps_outer_span() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment/nested_empty_multirow_keeps_outer_span.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "tabular", "Nodes"),
+    "<tabular class=\"ltx_guessed_headers\" vattach=\"middle\" xml:id=\"p1.1\">\n      <tbody>\n        <tr xml:id=\"p1.1.1\">\n          <td align=\"left\" border=\"r t\" rowspan=\"3\" thead=\"column row\" xml:id=\"p1.1.1.1\"><text xml:id=\"p1.1.1.1.1\">Nodes</text></td>\n          <td align=\"left\" border=\"r t\" thead=\"column\" xml:id=\"p1.1.1.2\">xeon</td>\n          <td align=\"left\" border=\"t\" thead=\"column\" xml:id=\"p1.1.1.3\">A</td>\n        </tr>\n        <tr xml:id=\"p1.1.2\">\n          <td align=\"left\" border=\"r t\" xml:id=\"p1.1.2.1\">gpu</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p1.1.2.2\">B</td>\n        </tr>\n        <tr xml:id=\"p1.1.3\">\n          <td align=\"left\" border=\"r t\" xml:id=\"p1.1.3.1\">amd</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p1.1.3.2\">C</td>\n        </tr>\n        <tr xml:id=\"p1.1.4\">\n          <td align=\"left\" border=\"b r t\" thead=\"row\" xml:id=\"p1.1.4.1\">Metrics</td>\n          <td align=\"left\" border=\"b r t\" xml:id=\"p1.1.4.2\">time</td>\n          <td align=\"left\" border=\"b t\" xml:id=\"p1.1.4.3\">D</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+  // the witness's form, each multirow inside a `\multicolumn`
+  assert_eq!(
+    hf3_element(tex, "tabular", "Hosts"),
+    "<tabular class=\"ltx_guessed_headers\" vattach=\"middle\" xml:id=\"p2.1\">\n      <tbody>\n        <tr xml:id=\"p2.1.1\">\n          <td align=\"left\" border=\"r t\" rowspan=\"4\" thead=\"row\" xml:id=\"p2.1.1.1\"><text xml:id=\"p2.1.1.1.1\">Hosts</text></td>\n          <td align=\"left\" border=\"r t\" xml:id=\"p2.1.1.2\">xeon</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p2.1.1.3\">A</td>\n        </tr>\n        <tr xml:id=\"p2.1.2\">\n          <td align=\"left\" border=\"r t\" xml:id=\"p2.1.2.1\">gpu</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p2.1.2.2\">B</td>\n        </tr>\n        <tr xml:id=\"p2.1.3\">\n          <td align=\"left\" border=\"r t\" xml:id=\"p2.1.3.1\">amd</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p2.1.3.2\">C</td>\n        </tr>\n        <tr xml:id=\"p2.1.4\">\n          <td border=\"t\" xml:id=\"p2.1.4.1\"/>\n          <td border=\"t\" xml:id=\"p2.1.4.2\"/>\n        </tr>\n        <tr xml:id=\"p2.1.5\">\n          <td align=\"left\" border=\"b r t\" thead=\"row\" xml:id=\"p2.1.5.1\">Metrics</td>\n          <td align=\"left\" border=\"b r t\" xml:id=\"p2.1.5.2\">time</td>\n          <td align=\"left\" border=\"b t\" xml:id=\"p2.1.5.3\">D</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63s: `\lxRequireResource[content=…]` builds the resource with its content (Package.pm:3139-3167), and under ar5iv a
+/// style sheet given inline is kept, the paper's and a class option's (2606.12996). Repro
+/// loader/lx_require_resource_content.
+#[test]
+fn lx_require_resource_content() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/lx_require_resource_content.tex");
+  // openbib's own rules (article.cls.ltxml:35), then the paper's
+  assert_eq!(
+    hf3_element(tex, "resource", "bibblock"),
+    "<resource type=\"text/css\">.ltx_bibblock{display:block;}</resource>"
+  );
+  assert_eq!(
+    hf3_element(tex, "resource", "width"),
+    "<resource type=\"text/css\">.ltx_tabular .ltx_tabular { width: auto; }</resource>"
+  );
+}

@@ -14329,3 +14329,41 @@ warning. Guard `perfect_kernel_batch63::imsart_ead_and_address_marks`, repro
 sectioning-frontmatter/imsart_ead_and_address_marks. Residual (Perl the same): a `\thanksref` written after its
 `\author{…}` marks no author (2201.08502), as a request applies only to the frontmatter being digested.
 
+
+### 467. Pruning an empty column shrinks an empty spanner over it, and a covered `\multirow` spans no rows (Perl: the row slides, the span overruns)
+
+**Background.** `normalize_prune_columns` (Perl `Core/Alignment.pm` L801-857) removes a column empty in every row,
+decrementing the colspan of the cell that spans it. When the empty column is the spanner's own (`\multicolumn{3}{c}{}`,
+itself empty), Perl removes the spanner (L854): its covered cells, still marked skipped, are emitted by nothing, the
+row comes out a cell short and the header slides over the next column (2406.06521 Table 2: an 18-cell header over
+20-cell rows). `normalize_mark_spans` (L697-726) lets a cell an earlier row's `\multirow` already covers mark rows of
+its own: an empty `\multirow{3}{*}{}` under `\multirow{5}{*}{Nodes}` takes the rows below as its own, so pruning the
+empty rows shrinks it, not Nodes, which then spans into the next row (2507.20312 Table 2). Perl 0.8.8 gives both.
+
+**Rust behavior.** An empty spanner at the pruned column shrinks by one: its first covered cell is removed and its
+colspan decremented, its place, borders and content kept. A cell already covered by a row span spans no rows of its own
+(TeX overlaps the empty nested box; a covered cell is always skippable, else the outer span is truncated before it,
+L716-721), and keeps none: a leftover span on it read to the header guess as one into the body, which un-guessed
+2401.13447's headers. In the witness's own form, each `\multirow` inside a `\multicolumn`, the outer cell
+also spans only the rows left (repro: 4, was 5).
+
+**Measured.** 2406.06521: its one uneven table even. 2507.20312: Computing nodes spans the rows it covers. 2503.16337:
+its "Upper bound" `\multirow{10}` over every second row empty spans the 5 rows left (was 9), its "Lower bound" 2 and 3
+(was 3 and 4). On 1,494 papers compared with 63r12 no other table changes. Guards
+`perfect_kernel_batch63::{empty_spanner_shrinks_with_pruned_column, nested_empty_multirow_keeps_outer_span}`, repros
+alignment/empty_spanner_shrinks_with_pruned_column, alignment/nested_empty_multirow_keeps_outer_span.
+
+### 468. ar5iv keeps a resource given inline (Perl ar5iv: dropped)
+
+**Background.** ar5iv.sty.ltxml (L30-35) drops every `ltx:resource` whose `src` is not remote, so an archival page
+embeds no local CSS or JS. A resource given inline, `\lxRequireResource[type=text/css,content={…}]{}` (latexml.sty),
+has no file and was dropped with them, though it is how a paper styles its own HTML: the arXiv source has no room for
+a CSS file (2606.12996's rules for nested tables and appendix TOC entries). Rust also dropped `content=` itself: the
+resource came out empty, with `Warning:expected:resource` (Perl's RequireResource passes the options, Package.pm
+L3139-3167).
+
+**Rust behavior.** `\lxRequireResource` passes `content=`, and ar5iv keeps a style sheet (`type="text/css"`) with no
+`src` and some content; the HTML carries it as a `<style>`. That also keeps a class option's own rules, article's
+`openbib` `.ltx_bibblock{display:block;}` (article.cls.ltxml:35), as the PDF sets each bibliography block on its line.
+Local files and inline scripts stay dropped. Guard `perfect_kernel_batch63::lx_require_resource_content`,
+repro loader/lx_require_resource_content.

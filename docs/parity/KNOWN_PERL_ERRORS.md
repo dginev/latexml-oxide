@@ -11446,3 +11446,12 @@ email contact "[", a `[label=u1,url]` address a creator of its own, each `\print
 and `\arxiv` id lost (they go to `\@thanks`, which nothing typesets). Fixed in Rust (63r), OXIDIZED_DESIGN_DIVERGENCES
 #466. Witnesses 2201.11773, 2507.12447, 2201.09706, 2201.08502. Guard
 `perfect_kernel_batch63::imsart_ead_and_address_marks`.
+
+## 540. An empty spanner over a pruned column drops its row's cells; a covered `\multirow` steals the outer span
+
+`Core/Alignment.pm` `normalize_prune_columns` removes a spanner whose own column is empty (L854), leaving its covered
+cells emitted by nothing: `\multicolumn{3}{c}{} & 24 \\` over `& VolSDF & & 1.14 \\` (with xcolor, whose row-color
+whatsit makes the `@{}l` column empty) puts "24" over VolSDF. `normalize_mark_spans` (L697-726) lets an empty
+`\multirow{3}{*}{}` that `\multirow{5}{*}{Nodes}` already covers mark rows of its own, so the empty rows pruned later
+shrink it and Nodes keeps `rowspan="4"` over three rows. Perl 0.8.8 gives both, with no diagnostic. Fixed in Rust
+(63s), OXIDIZED_DESIGN_DIVERGENCES #467. Witnesses 2406.06521, 2507.20312.

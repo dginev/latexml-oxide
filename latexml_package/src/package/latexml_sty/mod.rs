@@ -814,9 +814,15 @@ LoadDefinitions!({
       .and_then(|k| k.get_value("media"))
       .map(|v| v.to_string())
       .unwrap_or_default();
+    // `content=` is the resource inline (Package.pm:3164 `insertElement('ltx:resource', $options{content}, …)`):
+    // 2606.12996's `\lxRequireResource[type=text/css,content={…}]{}` style rules
+    let content = kv.as_ref()
+      .and_then(|k| k.get_value("content"))
+      .map(|v| v.to_string())
+      .unwrap_or_default();
     require_resource(
       Resource {
-        name, mimetype, media, content: String::new(),
+        name, mimetype, media, content,
       });
     Ok(Vec::new())
   });
