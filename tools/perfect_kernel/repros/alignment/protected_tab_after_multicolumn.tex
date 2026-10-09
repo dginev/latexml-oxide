@@ -1,0 +1,15 @@
+% witness: 2410.16600 (sgamex.sty:56-58 `\cs_new_protected:Nn \__cfr_game_first:n {& \multicolumn…}`): a cell reader hands a
+%          protected macro to the stomach unexpanded; the `&` its expansion yields ends the cell in the gullet, and with
+%          `\omit` (a `\multicolumn` cell) no v-part comes before it, so the stomach's own re-read took it as a stray `&`
+% oracle:  pdflatex 0 errors (three cells); Perl 0 errors
+% engines: rust 63v4 = `Error:unexpected:& Stray alignment "&"`, `b` and `c` in one cell
+% expect:  0 errors, 0 warnings; the first row has three cells a, b, c
+% status:  RED (63v4) -> GREEN (63w)
+\documentclass{article}
+\protected\def\cellx#1{& #1}
+\begin{document}
+\begin{tabular}{c|c|c}
+a & \multicolumn{1}{c}{b}\cellx{c} \\
+d & e & f
+\end{tabular}
+\end{document}

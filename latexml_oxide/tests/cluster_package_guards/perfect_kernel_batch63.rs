@@ -3835,3 +3835,340 @@ fn lefteqn_second_column() {
     "<tr xml:id=\"S0.Ex3.2\">\n              <td xml:id=\"S0.Ex3.2.1\"/>\n              <td align=\"center\" xml:id=\"S0.Ex3.2.2\"><text class=\"ltx_markedasmath\" width=\"0.0pt\" xml:id=\"S0.Ex3.2.2.1\"><Math mode=\"inline\" tex=\"\\displaystyle P(b)\\times P(c)\" text=\"P@(b) * P@(c)\" xml:id=\"S0.Ex2.m1.m1\">\n                    <XMath xml:id=\"S0.Ex2.m1.m1.3\">\n                      <XMApp xml:id=\"S0.Ex2.m1.m1.3.1\">\n                        <XMTok meaning=\"times\" role=\"MULOP\">×</XMTok>\n                        <XMApp xml:id=\"S0.Ex2.m1.m1.3.1.2\">\n                          <XMTok font=\"italic\" role=\"UNKNOWN\">P</XMTok>\n                          <XMDual xml:id=\"S0.Ex2.m1.m1.3.1.2.2\">\n                            <XMRef idref=\"S0.Ex2.m1.m1.1\" xml:id=\"S0.Ex2.m1.m1.3.1.2.2.1\"/>\n                            <XMWrap xml:id=\"S0.Ex2.m1.m1.3.1.2.2.2\">\n                              <XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok>\n                              <XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex2.m1.m1.1\">b</XMTok>\n                              <XMTok role=\"CLOSE\" stretchy=\"false\">)</XMTok>\n                            </XMWrap>\n                          </XMDual>\n                        </XMApp>\n                        <XMApp xml:id=\"S0.Ex2.m1.m1.3.1.3\">\n                          <XMTok font=\"italic\" role=\"UNKNOWN\">P</XMTok>\n                          <XMDual xml:id=\"S0.Ex2.m1.m1.3.1.3.2\">\n                            <XMRef idref=\"S0.Ex2.m1.m1.2\" xml:id=\"S0.Ex2.m1.m1.3.1.3.2.1\"/>\n                            <XMWrap xml:id=\"S0.Ex2.m1.m1.3.1.3.2.2\">\n                              <XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok>\n                              <XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex2.m1.m1.2\">c</XMTok>\n                              <XMTok role=\"CLOSE\" stretchy=\"false\">)</XMTok>\n                            </XMWrap>\n                          </XMDual>\n                        </XMApp>\n                      </XMApp>\n                    </XMath>\n                  </Math></text></td>\n              <td xml:id=\"S0.Ex3.2.3\"/>\n            </tr>"
   );
 }
+
+/// 63w: a protected macro yielding `&` after a `\multicolumn` cell ends that cell: the stomach hands the column end
+/// back to the cell's reader (`read_x_token_after_expansion`; sgamex.sty:56-58, 2410.16600). Repro
+/// alignment/protected_tab_after_multicolumn.
+#[test]
+fn protected_tab_after_multicolumn_ends_the_cell() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment/protected_tab_after_multicolumn.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "tr", ">b<"),
+    "<tr xml:id=\"p1.1.1\">\n          <td align=\"center\" border=\"r\" thead=\"column row\" xml:id=\"p1.1.1.1\">a</td>\n          <td align=\"center\" thead=\"column\" xml:id=\"p1.1.1.2\">b</td>\n          <td align=\"center\" thead=\"column\" xml:id=\"p1.1.1.3\">c</td>\n        </tr>"
+  );
+}
+
+/// 63w: blkarray's repeating preamble, `\BA@colsep` and `\BAhhline` (blkarray.sty:749, :1206-1208, :2074-2210;
+/// 2301.06399). Repro alignment-bindings/blkarray_repeating_preamble.
+#[test]
+fn blkarray_repeating_preamble() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/blkarray_repeating_preamble.tex"
+  );
+  // the `\BAhhline{~--}` row rules columns 2-3 as `\cline{2-3}` does; the last row keeps its fourth cell
+  assert_eq!(
+    hf3_element(tex, "XMArray", "ARRAY"),
+    "<XMArray role=\"ARRAY\" vattach=\"middle\" xml:id=\"S0.Ex1.m1.1.1\">\n            <XMRow xml:id=\"S0.Ex1.m1.1.1.1\">\n              <XMCell xml:id=\"S0.Ex1.m1.1.1.1.1\"/>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.1.2\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.1.3\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok>\n              </XMCell>\n            </XMRow>\n            <XMRow xml:id=\"S0.Ex1.m1.1.1.2\">\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.2.1\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.2.2\">\n                <XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.2.3\">\n                <XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok>\n              </XMCell>\n            </XMRow>\n            <XMRow xml:id=\"S0.Ex1.m1.1.1.3\">\n              <XMCell xml:id=\"S0.Ex1.m1.1.1.3.1\"/>\n              <XMCell border=\"t\" xml:id=\"S0.Ex1.m1.1.1.3.2\"/>\n              <XMCell border=\"t\" xml:id=\"S0.Ex1.m1.1.1.3.3\"/>\n            </XMRow>\n            <XMRow xml:id=\"S0.Ex1.m1.1.1.4\">\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.4.1\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.4.2\">\n                <XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.4.3\">\n                <XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok>\n              </XMCell>\n              <XMCell align=\"left\" xml:id=\"S0.Ex1.m1.1.1.4.4\">\n                <XMTok meaning=\"3\" role=\"NUMBER\">3</XMTok>\n              </XMCell>\n            </XMRow>\n          </XMArray>"
+  );
+}
+
+/// Converts an Interspeech repro (with `files` beside it), asserts 0 errors and 0 warnings, and returns its XML.
+fn interspeech_xml(tex: &str, files: &[(&str, &str)]) -> String {
+  let (log, xml) = latexml::util::test::convert_files_with(tex, files, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  xml
+}
+
+/// 63w: the 2026 Interspeech `\author[keys]{First}{Last}` with its marked `\address` lines, ORCID, email, and the
+/// corresponding-author note on the author marked `**` (2605.02715). Repro sectioning-frontmatter/interspeech_author_keys.
+#[test]
+fn interspeech_author_keys() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_author_keys.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Byron-King"),
+    "<creator role=\"author\">\n    <personname>Ada Byron-King</personname>\n    <contact role=\"orcid\"><ref class=\"ltx_orcid\" href=\"https://orcid.org/0009-0008-0680-1817\" title=\"ORCID 0009-0008-0680-1817\"><svg:svg class=\"ltx_orcidlogo\" height=\"1em\" version=\"1.1\" viewBox=\"0 0 72 72\" width=\"1em\">\n          <svg:path d=\"M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z\" fill=\"#A6CE39\"/>\n          <svg:g fill=\"#FFFFFF\" transform=\"translate(18.868966, 12.910345)\">\n            <svg:polygon points=\"5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878\"/>\n            <svg:path d=\"M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z\"/>\n            <svg:path d=\"M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z\"/>\n          </svg:g>\n        </svg:svg></ref></contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University A, Country A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University B, Country B</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">indicates the corresponding author.</note>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University B, Country B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "ada@"),
+    "<note role=\"email\" xml:id=\"id2\">ada@x.org</note>"
+  );
+}
+
+/// 63w: without the camera-ready switch the Interspeech classes print "Anonymous submission to Interspeech" for the
+/// authors and no affiliation or email (ruling 2026-10-06). Repro sectioning-frontmatter/interspeech_anonymous_submission.
+#[test]
+fn interspeech_anonymous_submission() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_anonymous_submission.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "note", "Anonymous"),
+    "<note role=\"authors\" xml:id=\"id1\">Anonymous submission to Interspeech</note>"
+  );
+  for absent in ["<creator", "<contact", "ada@x.org", "University"] {
+    assert!(!xml.contains(absent), "{absent} in {xml}");
+  }
+}
+
+/// 63w: the 2025 Interspeech `\affiliation{department}{institution}{place}`, numbered as the class numbers it, and its
+/// bold `\vec` (2409.08589). Repro sectioning-frontmatter/interspeech_affiliation_counter.
+#[test]
+fn interspeech_affiliation_counter() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_affiliation_counter.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A, Country A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Department B, University B, City B, Country B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "Math", "bm"),
+    "<Math mode=\"inline\" tex=\"\\bm{{v}}\" text=\"v\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMTok font=\"bold italic\" role=\"UNKNOWN\">v</XMTok>\n        </XMath>\n      </Math>"
+  );
+}
+
+/// 63w: the packages the Interspeech class requires: `\color` and siunitx's `S` column (Interspeech.cls:66-81;
+/// 2605.02715). Repro loader/interspeech_class_packages.
+#[test]
+fn interspeech_class_packages() {
+  let xml = interspeech_xml(
+    include_str!("../../../tools/perfect_kernel/repros/loader/interspeech_class_packages.tex"),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "text", "#FF0000"),
+    "<text color=\"#FF0000\" xml:id=\"p1.1.1\">x</text>"
+  );
+  assert_eq!(
+    element_with(&xml, "tabular", "1.5"),
+    "<tabular vattach=\"middle\" xml:id=\"p1.1.2\">\n        <tbody>\n          <tr xml:id=\"p1.1.2.1\">\n            <td align=\"left\" xml:id=\"p1.1.2.1.1\">a</td>\n            <td align=\"left\" xml:id=\"p1.1.2.1.2\"><Math mode=\"inline\" tex=\"1.5\" text=\"1.5\" xml:id=\"p1.m1\">\n                <XMath xml:id=\"p1.m1.1\">\n                  <XMTok meaning=\"1.5\" role=\"NUMBER\">1.5</XMTok>\n                </XMath>\n              </Math></td>\n          </tr>\n        </tbody>\n      </tabular>"
+  );
+}
+
+/// 63w: affiliation marks the class sets in math (`1^{\dagger}`, `1{^\dagger}{^\#}`) or glues to a symbol (`2*`), and
+/// the 2026 class's `\ifcameraready` (2406.08931, 2605.04749, 2406.07909, 2409.15974). Repro
+/// sectioning-frontmatter/interspeech_math_affiliation_marks.
+#[test]
+fn interspeech_math_affiliation_marks() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_math_affiliation_marks.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Cy Dee"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "p", "reviewers"),
+    "<p xml:id=\"p1.1\">Text.\nThanks to the reviewers.</p>"
+  );
+}
+
+/// 63w: the class decides at `\maketitle`: the switch and the frontmatter given after `\begin{document}` count.
+/// Repro sectioning-frontmatter/interspeech_frontmatter_in_body.
+#[test]
+fn interspeech_frontmatter_in_body() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_frontmatter_in_body.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "ada@"),
+    "<note role=\"email\" xml:id=\"id1\">ada@x.org</note>"
+  );
+  assert!(!xml.contains("Anonymous"), "{xml}");
+}
+
+/// 63w: a whole author list in one `\author{…}`, its names marked out of order, linked to the numbered affiliations
+/// they name (2506.00350). Repro sectioning-frontmatter/interspeech_author_list_argument.
+#[test]
+fn interspeech_author_list_argument() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_author_list_argument.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University B, City B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University B, City B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Cy Dee"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+}
+
+/// 63w: `\affiliation[nocounter]{…}{…}{…}`, an affiliation the class prints unnumbered, all the authors' (2506.10653
+/// Interspeech.cls:152-176). Repro sectioning-frontmatter/interspeech_affiliation_nocounter.
+#[test]
+fn interspeech_affiliation_nocounter() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_affiliation_nocounter.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Cy Dee"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n  </creator>"
+  );
+  assert!(!xml.contains("counter]"), "{xml}");
+}
+
+/// 63w: an `\address` block without marks is the affiliation of all the authors (2401.07506, 2406.04791). Repro
+/// sectioning-frontmatter/interspeech_unmarked_address_shared.
+#[test]
+fn interspeech_unmarked_address_shared() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_unmarked_address_shared.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Department A <break/>University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Department A <break/>University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Cy Dee"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Department A <break/>University A, City A</contact>\n  </creator>"
+  );
+}
+
+/// 63w: `\affiliation`s given before the `\author`s, linked all the same (the authors are added first). Repro
+/// sectioning-frontmatter/interspeech_affiliations_before_authors.
+#[test]
+fn interspeech_affiliations_before_authors() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_affiliations_before_authors.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University B, City B</contact>\n  </creator>"
+  );
+}
+
+/// 63w: the switch starts as the paper's copy of the class sets it: a copy edited to `\interspeechfinaltrue` prints the
+/// authors with no switch in the paper (2506.01138's Interspeech.cls:133). Repro
+/// sectioning-frontmatter/interspeech_class_starts_final.
+#[test]
+fn interspeech_class_starts_final() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_class_starts_final.tex"
+    ),
+    &[(
+      "Interspeech.cls",
+      "% an edited copy of the ISCA template\n\\interspeechfinaltrue\n",
+    )],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "ada@"),
+    "<note role=\"email\" xml:id=\"id1\">ada@x.org</note>"
+  );
+  assert!(!xml.contains("Anonymous"), "{xml}");
+}
+
+/// 63w: a class copy that calls `\interspeechcameraready` after defining it starts camera-ready too (2406.07291's
+/// Interspeech2024.cls:110-113). Repro sectioning-frontmatter/interspeech_class_starts_final.
+#[test]
+fn interspeech_class_calls_cameraready() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_class_starts_final.tex"
+    ),
+    &[(
+      "Interspeech.cls",
+      "\\newif\\ifinterspeechfinal\n\\def\\interspeechcameraready{%\n  \\global\\interspeechfinaltrue\n}\n\\interspeechcameraready\n",
+    )],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "ada@"),
+    "<note role=\"email\" xml:id=\"id1\">ada@x.org</note>"
+  );
+  assert!(!xml.contains("Anonymous"), "{xml}");
+}
+
+/// 63w: a class copy that only defines `\interspeechcameraready` (its call commented out), or whose last setting turns
+/// the switch off, starts anonymous, as the template does. Repro sectioning-frontmatter/interspeech_class_starts_final.
+#[test]
+fn interspeech_class_template_stays_anonymous() {
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_class_starts_final.tex"
+    ),
+    &[(
+      "Interspeech.cls",
+      "\\newif\\ifinterspeechfinal\n\\def\\interspeechcameraready{%\n  \\global\\interspeechfinaltrue\n}\n% \\interspeechcameraready\n\\interspeechfinaltrue\n\\interspeechfinalfalse\n",
+    )],
+  );
+  assert_eq!(
+    element_with(&xml, "note", "Anonymous"),
+    "<note role=\"authors\" xml:id=\"id1\">Anonymous submission to Interspeech</note>"
+  );
+  assert!(!xml.contains("<creator"), "{xml}");
+}

@@ -190,6 +190,7 @@ impl Alignment {
   }
 
   pub fn get_template(&self) -> &Template { &self.template }
+  pub fn get_template_mut(&mut self) -> &mut Template { &mut self.template }
 
   pub fn current_row(&self) -> Option<&Row> {
     match self.current_row {

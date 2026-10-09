@@ -1,0 +1,20 @@
+% witness: 2506.10653 (and 2506.01365, 2506.01458, 2506.02979): class copies whose `\affiliation[4][]` takes keys,
+%          `nocounter` printing the affiliation without a number (its Interspeech.cls:152-176)
+% oracle:  pdflatex 0 errors (with 2506.10653's Interspeech.cls): "Ada Byron 1, Bo Li 1, Cy Dee", "1 University A, City A",
+%          "Lab B, Company B, Country B"
+% engines: rust 63w8 = an affiliation "[, n, o" on the authors, and "counter]Lab BCompany BCountry B" in the body;
+%          63w11 = the unnumbered affiliation on Cy Dee alone
+% expect:  0 errors, 0 warnings; Ada and Bo linked to University A, the unnumbered affiliation on all three
+% status:  RED (63w8) -> GREEN (63w)
+\documentclass{Interspeech}
+\interspeechcameraready
+\title{T}
+\author[affiliation={1}]{Ada}{Byron}
+\author[affiliation={1}]{Bo}{Li}
+\author{Cy}{Dee}
+\affiliation{}{University A}{City A}
+\affiliation[nocounter]{Lab B}{Company B}{Country B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

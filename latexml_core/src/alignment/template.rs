@@ -265,6 +265,13 @@ impl Template {
   }
   pub fn set_reversion(&mut self, tks: Tokens) { self.reversion = Some(tks); }
   pub fn set_repeating(&mut self) { self.repeating = true; }
+  /// Repeats `cell` past the template's own columns, as a preamble whose repeating part (tex.web §793: what follows
+  /// `&&`) is that one column: a row may hold more cells than the template has columns, and those get `cell`.
+  pub fn repeat_past_columns(&mut self, cell: Cell) {
+    self.repeating = true;
+    self.non_repeating = self.columns.len();
+    self.repeated = vec![Cell { empty: true, ..cell }];
+  }
   pub fn set_padding(&mut self, d: Dimension) { self.padding = Some(d); }
   pub fn get_padding(&self) -> Option<&Dimension> { self.padding.as_ref() }
 

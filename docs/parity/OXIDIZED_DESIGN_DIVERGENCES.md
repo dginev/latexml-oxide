@@ -14452,3 +14452,22 @@ differing).
 No `\ignorespaces` reaches a `tex=`. Measured: on 1,494 papers one table changes beyond the witness, 2405.14573,
 whose `>{\bfseries}` header and a `\SQSPL` label macro now come out as the PDF has them (an `ERROR` element gone).
 Guard `perfect_kernel_batch63::array_prefix_takes_ignorespaces`, repro alignment/array_prefix_takes_ignorespaces.
+
+### 474. A column end that an expansion in the stomach brings is handed back to the cell's reader (Perl: re-invoked)
+
+**Background.** A cell's reader reads with `readXToken(0)` (TeX_Tables.pool.ltxml:376, :413), so a protected macro
+reaches the stomach unexpanded; `invokeToken` (Stomach.pm:204-209) expands it there and invokes the token its re-read
+`readXToken` returns. A tab that expansion yields at `align_state` 0 is the cell's end (tex.web §789): the gullet takes
+it as such, raises the count to 1000000 and puts it back behind the column's v-part (`handleTemplate`). With no v-part
+(`\omit`) the re-read returns the end itself, and invoking it digests a stray `&` — in Perl as in Rust (a bare
+`\omit b\cellx{c}` gives Perl `Error:unexpected:& Stray alignment` and one cell "b c"). Perl escapes it after a
+`\multicolumn` only because its effective `\lx@alignment@multicolumn` is the second definition
+(TeX_Tables.pool.ltxml:704-713), which re-installs the column through `\lx@alignment@altcolumn`, so the cell keeps a
+v-part; Rust ports the first (:693-702, `tex_tables.rs` `\lx@alignment@multicolumn`), which leaves none.
+
+**Rust behavior.** `read_x_token_after_expansion` (stomach.rs), used by `invoke_token`'s expandable and conditional
+branches, puts such a token back and ends the invocation when the count is 1000000 inside an alignment, so the cell's
+reader meets it and ends the column, as TeX's main loop does — beyond Perl for a bare `\omit` cell, and covering the
+`\multicolumn` form Rust keeps. A `&` met inside braces (the count below 1000000) is still invoked. Witness 2410.16600
+(sgamex.sty:56-58 `\cs_new_protected:Nn \__cfr_game_first:n {& \multicolumn…}`; 9 errors → 0; pdflatex 0). Guard
+`perfect_kernel_batch63::protected_tab_after_multicolumn_ends_the_cell`, repro alignment/protected_tab_after_multicolumn.

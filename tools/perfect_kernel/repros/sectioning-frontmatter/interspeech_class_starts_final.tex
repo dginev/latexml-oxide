@@ -1,0 +1,17 @@
+% witness: 2506.01138 (and 2406.08914, 2406.09950, 2409.20524, 2506.01148, …): the paper's copy of the class is edited to
+%          start camera-ready (`\interspeechfinaltrue` on a line of its own, its Interspeech.cls:133), so the PDF prints
+%          the authors with no switch in the paper; 2406.07291's Interspeech2024.cls:110-113 calls
+%          `\interspeechcameraready` after defining it. The guards ship each kind of copy beside the document.
+% oracle:  pdflatex 0 errors (with that copy): "Ada Byron 1", "1 University A, City A"
+% engines: rust 63w4 = "Anonymous submission to Interspeech" and no author (the call: 63w13)
+% expect:  0 errors, 0 warnings; the author, the affiliation and the email
+% status:  RED (63w4) -> GREEN (63w)
+\documentclass{Interspeech}
+\title{T}
+\author[affiliation={1}]{Ada}{Byron}
+\affiliation{}{University A}{City A}
+\email{ada@x.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

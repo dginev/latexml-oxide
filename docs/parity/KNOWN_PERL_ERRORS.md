@@ -11588,3 +11588,57 @@ line is still reopened as an input of its own, so a listing begun there loses it
 loader/verbatim_end_begin_same_line; that reader's line is already decoded, so restoring it needs the raw line). Guards
 `perfect_kernel_batch63::{tabularx_verb_in_argument, longtable_captionsetup_noalign, lefteqn_second_column,
 array_prefix_takes_ignorespaces, listings_end_begin_same_line}`.
+
+## 548. blkarray's repeating preamble, the Interspeech classes' frontmatter, and a protected `&` after `\multicolumn`
+
+- blkarray aligns with a repeating preamble (blkarray.sty:1206-1208, `\BA@upart##\BA@vpart&&…\cr`), so a row may run
+  past its spec's columns; a cell there gets no format (`\BA@col@use`'s `\csname` is `\relax`, :838-839). It also
+  defines `\BA@colsep` (:749-750) and `\BAhhline`/`\BAhline` (:2057-2210). Perl has no blkarray binding and raw-loads
+  the package (9 errors on the repro); ours built a fixed template and lacked the three commands (2301.06399: 4 errors).
+- The Interspeech classes (Interspeech2024.cls, Interspeech.cls of 2025 and 2026; 691 papers of 2406-2605 ship one) take
+  one author per call with keys, `\name[affiliation={1,*}]{First}{Last}` (2024 :91) and
+  `\author[affiliation=…,orcid=…,correspondingauthor]{First}{Last}` (2025 :95-110, 2026 :146-209), the marks set in math
+  (`$^{\author@affiliation}$`); affiliations as an `\address` block (2024 :265, 2026 :216) or numbered
+  `\affiliation{department}{institution}{place}` (2025 :115-129; copies of it take keys, `\affiliation[nocounter]`
+  printing one unnumbered, 2506.10653 :152-176); and at `\maketitle` print the authors, affiliations
+  and emails only in camera-ready mode (`\interspeechcameraready`, 2024 :108-112; the `cameraready` option and
+  `\ifcameraready`, 2026 :13-15, :52-54), else "Anonymous submission to Interspeech <year>" (`\anonname`). They require
+  siunitx, xcolor, bm, caption, enumitem and more (2026 :66-81). Perl raw-loads the paper's copy. Our binding knew only
+  `\name`, so OmniBus's one-argument `\author` kept the given names and the family names fell into the body
+  (2605.02715, 2409.08589, 2505.16351: 348 of 774 creators in a 146-paper sample were given names alone), and it
+  required none of the packages (2605.02715: 49 errors).
+- Rust-only: a cell reader hands a protected macro to the stomach unexpanded (as Perl's `readXToken(0)`), and when its
+  expansion yields `&` in a `\multicolumn` cell — `\omit`, so no v-part comes before the column's end — the stomach's
+  own re-read took the `&` the gullet had put back as the column's end and digested it as stray (2410.16600:
+  9 errors; sgamex.sty:56-58; pdflatex 0; OXIDIZED_DESIGN_DIVERGENCES #474 on why Perl escapes it).
+
+Fixed in Rust (63w): the blockarray template repeats an unformatted column past its spec
+(`Template::repeat_past_columns`), `\BA@colsep` is a dimen, `\BAhline` is `\hline` and `\BAhhline` rules its columns
+as `\cline`s; the stomach hands a column end its expansion brought back to the cell's reader. The Interspeech binding
+requires the class's packages; reads `\name`/`\author` with their keys — affiliation marks split into items (`1^\dagger`,
+`1{^\dagger}{^\#}`, `2*`, `\#1`; 2406.08931, 2605.04749, 2406.07909, 2409.15974), `*`/`**`, the ORCID — or, when no
+braced family name follows, a whole author list whose `$^n$` marks link it (2506.00350); the `\address` block (split
+by its leading marks, else one affiliation over its lines; 2406.11727, 2401.07506) and the numbered `\affiliation`
+(`affcounter`; unnumbered for `nocounter`; the affiliation of all the authors when no author carries marks, as is an
+unmarked `\address`; 2401.07506, 2406.04791); and adds them, the authors first, where `\maketitle` decides (or at the
+document's end), the equal-contribution and corresponding-author notes on the authors marked `*`
+and `**`, or the anonymous-submission note (worded as the copy words it) in place of authors, affiliations and emails
+(ruling 2026-10-06). The switch starts as the paper's copy of the class sets it: all 11 papers of the sample that set
+none ship a copy edited to start it on (the copy's last setting wins), with `\interspeechfinaltrue` (2406.08914, 2506.01138, …) or a call of
+`\interspeechcameraready` (2406.07291), so none of the sample is anonymous. Sample of 146 Interspeech papers vs 63v4: 132 changed, none with more errors or warnings and none with
+fewer creators; creators 774 → 790, affiliations 183 → 855 (743 of the 790 creators carry one), given-name-only
+creators 348 → 7 (a one-word name, `Girish*`), 17 equal-contribution and 10 corresponding-author notes on their authors; the words gone are leaked macro
+names and glued affiliation words. Open: a mark that names neither an affiliation nor one of
+the two notes (`\dagger`, `\#` pointing at an `\address`'s `\thanks`) is not shown; marked `\address` lines with no
+`\\` between them are one affiliation (RED sectioning-frontmatter/interspeech_marked_address_without_breaks,
+2406.04683); an `\address` line led by the class's own `$^*$` ("Authors contributed equally", 2406.04589) becomes an
+affiliation of the authors so marked; a shared unmarked affiliation is listed before the numbered ones it follows (it
+attaches at once, the numbered ones when their labels are matched); the anonymous note names no year when neither the copy nor the class's name has one; the 2025 class prints
+no `\address`, which the binding still adds;
+a block's delimiters around a sub-region of a blockarray are still dropped; `\BAhhline`'s `=`, `.` and `"` all become a
+plain rule. Guards `perfect_kernel_batch63::{blkarray_repeating_preamble, protected_tab_after_multicolumn_ends_the_cell,
+interspeech_author_keys, interspeech_anonymous_submission, interspeech_affiliation_counter, interspeech_class_packages,
+interspeech_math_affiliation_marks, interspeech_frontmatter_in_body, interspeech_author_list_argument,
+interspeech_affiliation_nocounter, interspeech_unmarked_address_shared, interspeech_affiliations_before_authors,
+interspeech_class_starts_final, interspeech_class_calls_cameraready,
+interspeech_class_template_stays_anonymous}`.

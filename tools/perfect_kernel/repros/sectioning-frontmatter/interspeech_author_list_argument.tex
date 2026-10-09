@@ -1,0 +1,19 @@
+% witness: 2506.00350: the whole author list in one `\author{…}`, its names marked `$^1$`; the class's `\author[3][]`
+%          is long and takes the `\par` of the blank line after it as the family name, so pdflatex prints the list
+% oracle:  pdflatex 0 errors (2409.08589's Interspeech.cls): "Ada Byron 2, Bo Li 1,2, Cy Dee 1", the two numbered
+%          affiliations
+% engines: rust 63w3 = `Error:frontmatter:merged_creators` (one creator holding the names); 63w8 = no marks and every
+%          affiliation on the last author
+% expect:  0 errors, 0 warnings; three creators, each linked to the affiliations its marks name
+% status:  RED (63w3) -> GREEN (63w)
+\documentclass{Interspeech}
+\interspeechcameraready
+\title{T}
+\author{Ada Byron$^{2}$, Bo Li$^{1,2}$, Cy Dee$^{1}$}
+
+\affiliation{}{University A}{City A}
+\affiliation{}{University B}{City B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

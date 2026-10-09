@@ -972,7 +972,8 @@ fn frontmatter_ieee_linebreak_optarg() {
 /// Modern Interspeech.cls `\name[affiliation={1,*}]{First}{Last}` (2-arg): the
 /// author renders as "First Last"; the `[affiliation=…]` optarg must not leak a
 /// `[` creator or `\name`. Interspeech2024 resolves here by version-stripping.
-/// Witness 2406.11727.
+/// The fixture is camera-ready: without the switch the class prints "Anonymous submission" for the authors (63w,
+/// KNOWN_PERL_ERRORS #548). Witness 2406.11727.
 #[test]
 fn frontmatter_interspeech2024_name() {
   let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_interspeech2024_name.tex");

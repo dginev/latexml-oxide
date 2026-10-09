@@ -1,0 +1,23 @@
+% witness: 2301.06399 (a 16-cell row under a 15-column `blockarray` spec, `\setlength\BA@colsep{4pt}`, `\BAhhline{~~------------~}`):
+%          blkarray.sty:1206-1208 aligns with a repeating preamble, so a row may run past its spec; :749 `\newdimen\BA@colsep`;
+%          :2074-2210 `\BAhhline` rules the columns its `-` `=` `.` `"` stand on
+% oracle:  pdflatex 0 errors
+% engines: rust 63v4 = `Error:unexpected:& Extra alignment tab`, `Error:undefined:\BA@colsep` (and `Error:expected:<variable>`
+%          at its `\setlength`), `Error:undefined:\BAhhline`
+% expect:  0 errors, 0 warnings; the last row keeps its fourth cell, the rule under columns 2-3
+% status:  RED (63v4) -> GREEN (63w)
+\documentclass{article}
+\usepackage{amsmath,blkarray}
+\begin{document}
+\begin{equation*}
+\makeatletter\setlength\BA@colsep{4pt}\makeatother
+\begin{blockarray}{ccc}
+ & a & b\\
+\begin{block}{c(cc)}
+ x & 1 & 2\\
+ \BAhhline{~--}
+ y & 1 & 2 & 3\\
+\end{block}
+\end{blockarray}
+\end{equation*}
+\end{document}

@@ -2555,6 +2555,32 @@ pub fn raw_tex(text: &str) -> Result<()> {
   Ok(())
 }
 
+/// The token that takes the place of an expansion made here, in the stomach (Perl Stomach.pm:204-209 `invokeToken`
+/// re-reads with `readXToken` and invokes what it finds), unless that token ends the alignment cell being read.
+///
+/// A tab or `\cr` that an expansion yields at `align_state` 0 ends the cell (tex.web §789 `insert_v_part`): the gullet
+/// takes it as the column's end, raises the count to 1000000, and puts it back behind the column's v-part
+/// (`handle_template`). The cell's own reader then meets the v-part and, after it, the end. When the column has no
+/// v-part (`\omit`, so every `\multicolumn` cell), the end itself is the next token, and it comes back to this
+/// re-read instead: it goes back to the cell's reader, which ends the column on it, rather than being digested as a
+/// stray `&`. A cell reader hands a protected macro to the stomach unexpanded (it reads as Perl's `readXToken(0)`
+/// does), so `\protected\def\cellx#1{& #1}` after a `\multicolumn` (sgamex.sty:56-58) reaches this path; pdflatex
+/// gives three cells (witness 2410.16600), and Perl too only because its `\multicolumn` keeps a v-part
+/// (OXIDIZED_DESIGN_DIVERGENCES #474). Guard:
+/// `perfect_kernel_batch63::protected_tab_after_multicolumn_ends_the_cell`.
+fn read_x_token_after_expansion() -> Result<Option<Token>> {
+  let next = gullet::read_x_token(None, false, None)?;
+  if let Some(token) = next
+    && align_group_count() == 1_000_000
+    && has_reading_alignment()
+    && gullet::is_column_end(&token).is_some()
+  {
+    gullet::unread_one(token);
+    return Ok(None);
+  }
+  Ok(next)
+}
+
 /// Invoke a token
 ///
 /// If it is a primitive or constructor, the definition will be invoked,
@@ -2637,7 +2663,7 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
           }
         }
         // replace the token by it's expansion!!!
-        maybe_token = gullet::read_x_token(None, false, None)?;
+        maybe_token = read_x_token_after_expansion()?;
         {
           stomach_mut!().token_stack.pop();
         }
@@ -2648,7 +2674,7 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         // Conditionals are "expandable", use the regular invoke.
         let invoked_meaning = meaning.invoke(false)?;
         gullet::unread(invoked_meaning);
-        maybe_token = gullet::read_x_token(None, false, None)?;
+        maybe_token = read_x_token_after_expansion()?;
         {
           stomach_mut!().token_stack.pop();
         }
