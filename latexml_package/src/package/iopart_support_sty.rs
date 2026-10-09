@@ -131,7 +131,13 @@ LoadDefinitions!({
   // Acknowledgements — Perl L249-251 (DefConstructor, defined below)
 
   // Misc — Perl L121,136
-  // Note: \eqalign/\eqalignno/\cases/\pmatrix come from Plain TeX (plain_constructs);
+  // iopart.cls:807-809 `\def\eqalign#1{\null\vcenter{\def\\{\cr}…\ialign{…\crcr#1\crcr}}\,}`: plain's alignment
+  // (plain_constructs), where `\\` ends the row (2402.10275).
+  DefMacro!(
+    "\\eqalign{}",
+    r"\@@eqalign{\def\\{\cr}\lx@begin@alignment#1\lx@end@alignment}"
+  );
+  // Note: \eqalignno/\cases/\pmatrix come from Plain TeX (plain_constructs);
   // \ft, \query, \bbox, \overmark are not in Perl iopart_support.sty.ltxml.
   // Perl L121: \fl expands to nothing
   def_macro_noop("\\fl")?;

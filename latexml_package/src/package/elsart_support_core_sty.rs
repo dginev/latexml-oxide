@@ -20,41 +20,10 @@ LoadDefinitions!({
     "\\lx@add@contact[label={#1},role=address]{#2}");
   // \affiliation[label]{text-OR-keyvals} !!  (Perl PR #2767)
   DefMacro!("\\affiliation OptionalSemiverbatim {}",
-    "\\lx@add@contact[label={#1},role=affiliation]{\\lx@els@parse@affiliation{#2}{#2}}");
+    "\\lx@add@contact[label={#1},role=affiliation]{\\lx@els@parse@affiliation{#2}}");
 
-  // Detect if affiliation is just text, or keyvals; if latter, format into text.
-  DefMacro!("\\lx@els@parse@affiliation {} RequiredKeyVals", sub[(raw, data)] {
-    let pairs: Vec<(String, ArgWrap)> = data.get_pairs().cloned().collect();
-    // 1 key, novalue: No Keyvals at all!
-    if pairs.len() <= 1
-      && pairs.first().is_none_or(|(_, v)| matches!(v, ArgWrap::None))
-    {
-      Ok(raw)
-    } else {
-      let mut affil: Vec<Token> = Vec::new();
-      for (key, value) in pairs {
-        if matches!(key.as_str(),
-          "o" | "or" | "organization"
-          | "a" | "ad" | "addressline"
-          | "c" | "ci" | "city"
-          | "p" | "pc" | "postcode"
-          | "s" | "st" | "state"
-          | "country")
-        {
-          if !affil.is_empty() {
-            affil.push(T_OTHER!(","));
-            affil.push(T_SPACE!());
-          }
-          match value {
-            ArgWrap::Tokens(tks) => affil.extend(tks.unlist()),
-            ArgWrap::None => {},
-            other => affil.extend(other.revert()?.unlist()),
-          }
-        }
-      }
-      Ok(Tokens::new(affil))
-    }
-  });
+  // The affiliation as the class prints it from its `stm/affiliation` keys ([`stm_affiliation`]).
+  DefMacro!("\\lx@els@parse@affiliation {}", sub[(raw)] { stm_affiliation(raw, true) });
   // Redefine to account for the label, which we ignore for now!
   DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 
@@ -341,3 +310,170 @@ LoadDefinitions!({
     enter_horizontal => true,
     reversion => "\\qed");
 });
+
+/// The separator slots of the `stm/affiliation` keys, in [`stm_affiliation`]'s order.
+const STM_ORGANIZATION: usize = 0;
+const STM_ADDRESS_LINE: usize = 1;
+const STM_CITY: usize = 2;
+const STM_POSTAL_CODE: usize = 3;
+const STM_STATE: usize = 4;
+const STM_COUNTRY: usize = 5;
+
+/// `\affiliation`'s argument printed as elsarticle.cls:387-440 and cas-common.sty:1118-1160 print their
+/// `stm/affiliation` keys (the value commands at elsarticle.cls:330-356, cas-common.sty:1061-1090): `organization`
+/// (`o`, `or`, and in elsarticle `organisation`), `addressline` (`a`, `ad`), `city` (`c`, `ci`), `postcode` (`p`,
+/// `pc`) and `state` (`s`, `st`) as the value, its separator — `,` unless `<key>sep` (`op`, `ap`, `cp`, `pp`, `sp`,
+/// `orp`, …) gave another — and a space; `country` (`cy`) as the value and its own separator (`cyp`, none by
+/// default); a key the set does not know as its value, or, given none, its own text, and a space. So
+/// `organization={X}, city={Y}, citysep={}, postcode={1}` is "X, Y 1" (2609.01851), and a braced `{ARTORG Center,}`
+/// part is kept (2609.04891). Three departures from the PDF (OXIDIZED_DESIGN_DIVERGENCES #472): an argument with no
+/// key at all (`Univ, City, Country`) is kept as written, its commas with it, where the class reads each part as an
+/// unknown key and drops them; the separator the class leaves after a last part that is not a country ("Univ A,") is
+/// not kept; a key's own text is typeset, not printed as its string. Perl (PR #2767) joined the known values with
+/// ", " and dropped the rest (KNOWN_PERL_ERRORS #545). `elsarticle` selects that class's set, which cas-common lacks
+/// two keys of (`organisation`, `oraganisationsep`).
+pub fn stm_affiliation(raw: Tokens, elsarticle: bool) -> Result<Tokens> {
+  let items = top_level_items(raw.unlist_ref(), ',');
+  if items
+    .iter()
+    .all(|item| top_level_items(item, '=').len() < 2)
+  {
+    return Ok(raw);
+  }
+  // `\__reset_affiliation:` (cas-common.sty:1164-1172) before each `\affiliation`
+  let mut separators: [Vec<Token>; 6] = [
+    vec![T_OTHER!(",")],
+    vec![T_OTHER!(",")],
+    vec![T_OTHER!(",")],
+    vec![T_OTHER!(",")],
+    vec![T_OTHER!(",")],
+    Vec::new(),
+  ];
+  // Each value is set down with its separator's macro (`\ca_aff_city[\l_city_punc_tl]{…}`), which the class expands
+  // only when it assembles the affiliation (cas-common.sty:1262 `\csxdef`): a `citysep={}` after the `city` still
+  // applies. So the parts are kept with their separator slot, and the separators read at the end.
+  let mut parts: Vec<(Vec<Token>, Option<usize>)> = Vec::new();
+  for item in items {
+    let (key, value) = match top_level_items(&item, '=').as_slice() {
+      [key] => (unbraced(key), None),
+      [key, value @ ..] => (unbraced(key), Some(unbraced(&value.join(&T_OTHER!("="))))),
+      [] => continue,
+    };
+    if key.is_empty() && value.is_none() {
+      continue;
+    }
+    let name = Tokens::new(key.clone()).to_string();
+    let separator_key = match name.as_str() {
+      "op" | "oraganizationsep" | "orp" => Some(STM_ORGANIZATION),
+      "oraganisationsep" if elsarticle => Some(STM_ORGANIZATION),
+      "ap" | "addresslinesep" | "adp" => Some(STM_ADDRESS_LINE),
+      "cp" | "citysep" | "cip" => Some(STM_CITY),
+      "pp" | "postcodesep" | "pcp" => Some(STM_POSTAL_CODE),
+      "sp" | "statesep" | "stp" => Some(STM_STATE),
+      "cyp" => Some(STM_COUNTRY),
+      _ => None,
+    };
+    if let Some(slot) = separator_key {
+      separators[slot] = value.unwrap_or_default();
+      continue;
+    }
+    let value_key = match name.as_str() {
+      "o" | "or" | "organization" => Some(STM_ORGANIZATION),
+      "organisation" if elsarticle => Some(STM_ORGANIZATION),
+      "a" | "ad" | "addressline" => Some(STM_ADDRESS_LINE),
+      "c" | "ci" | "city" => Some(STM_CITY),
+      "p" | "pc" | "postcode" => Some(STM_POSTAL_CODE),
+      "s" | "st" | "state" => Some(STM_STATE),
+      "cy" | "country" => Some(STM_COUNTRY),
+      _ => None,
+    };
+    match value_key {
+      Some(slot) => parts.push((value.unwrap_or_default(), Some(slot))),
+      // the unknown key's value, or its own text (`\l_keys_key_tl`)
+      None => parts.push((value.filter(|v| !v.is_empty()).unwrap_or(key), None)),
+    }
+  }
+  // A separator separates: none follows a last part that is not the country, where the class, expecting a `country`
+  // there, prints one with nothing after it ("Univ A," for a lone `organization`); the country's own (`cyp`) stays.
+  let mut out: Vec<Token> = Vec::new();
+  let count = parts.len();
+  for (i, (value, slot)) in parts.into_iter().enumerate() {
+    out.extend(value);
+    if i + 1 == count && slot != Some(STM_COUNTRY) {
+      break;
+    }
+    if let Some(slot) = slot {
+      out.extend(separators[slot].iter().copied());
+    }
+    if slot != Some(STM_COUNTRY) {
+      out.push(T_SPACE!());
+    }
+  }
+  while out
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    out.pop();
+  }
+  Ok(Tokens::new(out))
+}
+
+/// `tokens` split at each brace-depth-0 character `c`, each part without its surrounding spaces.
+fn top_level_items(tokens: &[Token], c: char) -> Vec<Vec<Token>> {
+  let delimiter = pin(c.to_string());
+  let mut parts: Vec<Vec<Token>> = vec![Vec::new()];
+  let mut depth: i32 = 0;
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      Catcode::OTHER if depth == 0 && t.text == delimiter => {
+        parts.push(Vec::new());
+        continue;
+      },
+      _ => {},
+    }
+    parts.last_mut().unwrap().push(*t);
+  }
+  parts.into_iter().map(|part| trimmed(&part)).collect()
+}
+
+/// `tokens` without leading or trailing spaces.
+fn trimmed(tokens: &[Token]) -> Vec<Token> {
+  let start = tokens
+    .iter()
+    .position(|t| t.get_catcode() != Catcode::SPACE)
+    .unwrap_or(tokens.len());
+  let end = tokens
+    .iter()
+    .rposition(|t| t.get_catcode() != Catcode::SPACE)
+    .map_or(start, |e| e + 1);
+  tokens[start..end].to_vec()
+}
+
+/// `tokens` trimmed, and without the braces of a group that is all of it (`{ARTORG Center,}`), as the key-value
+/// parser strips one level.
+fn unbraced(tokens: &[Token]) -> Vec<Token> {
+  let tokens = trimmed(tokens);
+  if tokens.len() >= 2
+    && tokens[0].get_catcode() == Catcode::BEGIN
+    && tokens[tokens.len() - 1].get_catcode() == Catcode::END
+  {
+    // the first brace must close at the very end
+    let mut depth = 0;
+    for (i, t) in tokens.iter().enumerate() {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 && i + 1 < tokens.len() {
+            return tokens;
+          }
+        },
+        _ => {},
+      }
+    }
+    return tokens[1..tokens.len() - 1].to_vec();
+  }
+  tokens
+}

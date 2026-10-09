@@ -3574,3 +3574,189 @@ Body.
     assert!(html.contains(anchor), "{anchor}\n{html}");
   }
 }
+
+/// 63u: elsarticle.cls:387-440 prints each `stm/affiliation` value with its separator, and an unknown key as its value
+/// or own text (2609.01851 `citysep={}`; Perl's parser joined the known values and dropped the rest, KPE #545); an
+/// argument with no key at all is kept as written, its commas with it (OD #472). Repro
+/// sectioning-frontmatter/elsarticle_affiliation_keyvals.
+#[test]
+fn elsarticle_affiliation_keyvals() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_affiliation_keyvals.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(xml.matches("<creator ").count(), 4, "{xml}");
+  for creator in [
+    "<creator role=\"author\">\n    <personname>A. B</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">School of CS, Guangzhou University, 1 Main St, Guang Zhou 510006, Guangdong, China</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C. D</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Plain Univ, Some City, Country</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>E. F</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">ARTORG Center, University of Bern, Bern, Switzerland</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>G. H</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept X Org Y, Z</contact>\n  </creator>",
+  ] {
+    assert!(xml.contains(creator), "{creator}\n{xml}");
+  }
+}
+
+/// 63u: cas reads `\\affiliation`'s argument as the same keys (cas-common.sty:1118-1160), and its marks link it to its
+/// authors (2609.00047; the keys were typeset as text, in 160 of 200 cas papers of 2609). Repro
+/// sectioning-frontmatter/cas_affiliation_keyvals.
+#[test]
+fn cas_affiliation_keyvals() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_affiliation_keyvals.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "creator", "A. B"),
+    "<creator role=\"author\">\n    <personname>A. B</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">School of Computer Science, Guangzhou University, Guang Zhou, 510006, Guangdong, China</contact>\n  </creator>"
+  );
+}
+
+/// 63u: diagbox.sty:24-27 loads keyval, pict2e, calc and array (2408.08776). Repro loader/diagbox_requires_array.
+#[test]
+fn diagbox_requires_array() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/diagbox_requires_array.tex");
+  assert_eq!(
+    hf3_element(tex, "tabular", "<td"),
+    "<tabular vattach=\"middle\" xml:id=\"p1.1\">\n      <tbody>\n        <tr xml:id=\"p1.1.1\">\n          <td align=\"left\" border=\"l r\" vattach=\"middle\" xml:id=\"p1.1.1.1\"><inline-block vattach=\"middle\" width=\"56.9pt\" xml:id=\"p1.1.1.1.1\">\n              <p xml:id=\"p1.1.1.1.1.1\">a</p>\n            </inline-block></td>\n          <td align=\"left\" border=\"r\" vattach=\"middle\" xml:id=\"p1.1.1.2\"><inline-block vattach=\"middle\" width=\"28.5pt\" xml:id=\"p1.1.1.2.1\">\n              <p xml:id=\"p1.1.1.2.1.1\">b</p>\n            </inline-block></td>\n          <td align=\"left\" border=\"r\" vattach=\"middle\" xml:id=\"p1.1.1.3\"><inline-block vattach=\"middle\" width=\"28.5pt\" xml:id=\"p1.1.1.3.1\">\n              <p xml:id=\"p1.1.1.3.1.1\">c</p>\n            </inline-block></td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63u: fdsymbol.sty:29, :74-75 load xkeyval, amsmath and textcomp (2311.09182). Repro loader/fdsymbol_requires_amsmath.
+#[test]
+fn fdsymbol_requires_amsmath() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/fdsymbol_requires_amsmath.tex");
+  assert_eq!(
+    hf3_element(tex, "Math", "split"),
+    "<Math mode=\"display\" tex=\"\\begin{split}a&amp;=\\text{b}\\end{split}\" text=\"a = [b]\" xml:id=\"S0.E1.m1\">\n        <XMath xml:id=\"S0.E1.m1.4\">\n          <XMDual xml:id=\"S0.E1.m1.4.1\">\n            <XMApp xml:id=\"S0.E1.m1.4.1.1\">\n              <XMRef idref=\"S0.E1.m1.2\" xml:id=\"S0.E1.m1.4.1.1.1\"/>\n              <XMRef idref=\"S0.E1.m1.1\" xml:id=\"S0.E1.m1.4.1.1.2\"/>\n              <XMRef idref=\"S0.E1.m1.3\" xml:id=\"S0.E1.m1.4.1.1.3\"/>\n            </XMApp>\n            <XMArray colsep=\"0pt\" name=\"aligned\" xml:id=\"S0.E1.m1.4.1.2\">\n              <XMRow xml:id=\"S0.E1.m1.4.1.2.1\">\n                <XMCell align=\"right\" xml:id=\"S0.E1.m1.4.1.2.1.1\">\n                  <XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.E1.m1.1\">a</XMTok>\n                </XMCell>\n                <XMCell align=\"left\" xml:id=\"S0.E1.m1.4.1.2.1.2\">\n                  <XMApp xml:id=\"S0.E1.m1.4.1.2.1.2.1\">\n                    <XMTok meaning=\"equals\" role=\"RELOP\" xml:id=\"S0.E1.m1.2\">=</XMTok>\n                    <XMTok meaning=\"absent\"/>\n                    <XMText xml:id=\"S0.E1.m1.3\">b</XMText>\n                  </XMApp>\n                </XMCell>\n              </XMRow>\n            </XMArray>\n          </XMDual>\n        </XMath>\n      </Math>"
+  );
+}
+
+/// 63u: WileyASNA-v1.cls:2120 loads apacite with `natbibapa` (2407.11648). Repro index-bib/wileyasna_apacite.
+#[test]
+fn wileyasna_apacite() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/index-bib/wileyasna_apacite.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "See"),
+    "<p xml:id=\"p1.1\">See <cite class=\"ltx_citemacro_citet\"><bibref bibrefs=\"2021A&amp;A...650A..49B\" separator=\";\" show=\"Authors Phrase1YearPhrase2\" yyseparator=\",\">\n          <bibrefphrase>(</bibrefphrase>\n          <bibrefphrase>)</bibrefphrase>\n        </bibref></cite>.</p>"
+  );
+}
+
+/// 63u: cas-common.sty:1500 loads moreverb, and so verbatim's `{comment}` (2506.19439). Repro loader/cas_moreverb_comment.
+#[test]
+fn cas_moreverb_comment() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/cas_moreverb_comment.tex");
+  assert_eq!(hf3_element(tex, "p", "x"), "<p xml:id=\"p1.1\">x\ny</p>");
+}
+
+/// 63u: OmniBus's `{abstracts}` has its end (2410.14397, nic-series; Perl lets the begin only, KPE #546). Repro
+/// sectioning-frontmatter/omnibus_endabstracts.
+#[test]
+fn omnibus_endabstracts() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/omnibus_endabstracts.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "abstract", "report"),
+    "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\">\n    <p xml:id=\"abstract1.1\">We report.</p>\n  </abstract>"
+  );
+}
+
+/// 63u: `\\cmidrule[.5pt]` is read as a width (2405.01314; `\\ifx.#1.` took it for empty, KPE #546). Repro
+/// alignment/booktabs_cmidrule_width.
+#[test]
+fn booktabs_cmidrule_width() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/alignment/booktabs_cmidrule_width.tex");
+  assert_eq!(
+    hf3_element(tex, "tabular", "<td"),
+    "<tabular vattach=\"middle\" xml:id=\"p1.1\">\n      <tbody>\n        <tr xml:id=\"p1.1.1\">\n          <td align=\"center\" border=\"tt\" xml:id=\"p1.1.1.1\">a</td>\n          <td align=\"center\" border=\"tt\" xml:id=\"p1.1.1.2\">b</td>\n          <td align=\"center\" border=\"tt\" xml:id=\"p1.1.1.3\">c</td>\n          <td align=\"center\" border=\"tt\" xml:id=\"p1.1.1.4\">d</td>\n        </tr>\n        <tr xml:id=\"p1.1.2\">\n          <td border=\"bb\" xml:id=\"p1.1.2.1\"/>\n          <td align=\"center\" border=\"bb t\" xml:id=\"p1.1.2.2\">x</td>\n          <td align=\"center\" border=\"bb t\" xml:id=\"p1.1.2.3\">y</td>\n          <td align=\"center\" border=\"bb\" xml:id=\"p1.1.2.4\">z</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63u: iopart's `\\eqalign` ends a row at `\\\\` (iopart.cls:807-809; 2402.10275, KPE #546). Repro
+/// alignment/iopart_eqalign_rows.
+#[test]
+fn iopart_eqalign_rows() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/alignment/iopart_eqalign_rows.tex");
+  assert_eq!(
+    hf3_element(tex, "Math", "eqalign"),
+    "<Math mode=\"display\" tex=\"\\eqalign{a&amp;=b=\\cr&amp;=c.}\" text=\"Array[[a, absent = b = absent], [, absent = c]]\" xml:id=\"S0.E1.m1\">\n        <XMath xml:id=\"S0.E1.m1.2\">\n          <XMArray vattach=\"baseline\" xml:id=\"S0.E1.m1.2.1\">\n            <XMRow xml:id=\"S0.E1.m1.2.1.1\">\n              <XMCell align=\"right\" xml:id=\"S0.E1.m1.2.1.1.1\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok>\n              </XMCell>\n              <XMCell align=\"left\" xml:id=\"S0.E1.m1.2.1.1.2\">\n                <XMApp xml:id=\"S0.E1.m1.2.1.1.2.1\">\n                  <XMTok meaning=\"multirelation\"/>\n                  <XMTok meaning=\"absent\"/>\n                  <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                  <XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok>\n                  <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                  <XMTok meaning=\"absent\"/>\n                </XMApp>\n              </XMCell>\n            </XMRow>\n            <XMRow xml:id=\"S0.E1.m1.2.1.2\">\n              <XMCell xml:id=\"S0.E1.m1.2.1.2.1\"/>\n              <XMCell align=\"left\" xml:id=\"S0.E1.m1.2.1.2.2\">\n                <XMDual xml:id=\"S0.E1.m1.2.1.2.2.1\">\n                  <XMRef idref=\"S0.E1.m1.1\" xml:id=\"S0.E1.m1.2.1.2.2.1.1\"/>\n                  <XMWrap xml:id=\"S0.E1.m1.2.1.2.2.1.2\">\n                    <XMApp xml:id=\"S0.E1.m1.1\">\n                      <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                      <XMTok meaning=\"absent\"/>\n                      <XMTok font=\"italic\" role=\"UNKNOWN\">c</XMTok>\n                    </XMApp>\n                    <XMTok role=\"PERIOD\">.</XMTok>\n                  </XMWrap>\n                </XMDual>\n              </XMCell>\n            </XMRow>\n          </XMArray>\n        </XMath>\n      </Math>"
+  );
+}
+
+/// 63u: ulem's declaration `{\\ul …}` underlines the rest of its group (ulem.sty:286-293, :107; 2406.03441). Repro
+/// loader/ulem_declaration_form.
+#[test]
+fn ulem_declaration_form() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/ulem_declaration_form.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "Some"),
+    "<p xml:id=\"p1.1\">Some <text class=\"ltx_ulem_uline\" xml:id=\"p1.1.1\">underlined words</text> here and plain.</p>"
+  );
+}
+
+/// 63u: under `nonacm` acmart prints no conference or booktitle (acmart.cls:2943, :3079-3250), so they are no notes, and an
+/// `&` in them is legal (2403.18105; display-toggle ruling 2026-10-06, KPE #546); without it they are. Repro
+/// sectioning-frontmatter/acmart_nonacm_conference_amp.
+#[test]
+fn acmart_nonacm_conference_amp() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_nonacm_conference_amp.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert!(!xml.contains("<pubnote"), "{xml}");
+  // the same notes, without `nonacm` and without the `&` it would no longer allow
+  let (log, xml) = latexml::util::test::convert_with(
+    &tex
+      .replace("[sigconf,nonacm]", "[sigconf]")
+      .replace(" & ", " and "),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(
+    element_with(&xml, "pubnote", "booktitle"),
+    "<pubnote role=\"booktitle\">KDD: Discovery and Data Mining</pubnote>"
+  );
+}
+
+/// 63u: cas's `\\author[1,2]` marks link the author to the affiliations `\\affiliation[1]` labels (cas-common.sty:895-940,
+/// :1252-1266; 2609.00047, 2609.00281): an unmarked author has none (every affiliation went to the last author).
+/// Repro sectioning-frontmatter/cas_author_marks_link_affiliations.
+#[test]
+fn cas_author_marks_link_affiliations() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_author_marks_link_affiliations.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(xml.matches("<creator ").count(), 3, "{xml}");
+  for creator in [
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Xland</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, Yland</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, Yland</contact>\n  </creator>",
+  ] {
+    assert!(xml.contains(creator), "{creator}\n{xml}");
+  }
+}

@@ -40,8 +40,12 @@ fn build_diagbox_invocation(dir: &str, args: Vec<ArgWrap>) -> Tokens {
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // diagbox.sty:26: a document can rely on its calc (OXIDIZED_DESIGN #317).
+  // diagbox.sty:24-27 `\RequirePackage{keyval}`, `{pict2e}`, `{calc}`, `{array}`: a document can rely on them
+  // (OXIDIZED_DESIGN #317) — an `m{…}` column with diagbox loaded and no array of its own (2408.08776: 79 `&` errors).
+  RequirePackage!("keyval");
+  RequirePackage!("pict2e");
   RequirePackage!("calc");
+  RequirePackage!("array");
   // Ensure <ltx:picture> gets xml:id generation (in case makecell isn't loaded)
   Tag!("ltx:picture", after_open => sub[document, node] {
     let _ = document.generate_id(node, "pic");

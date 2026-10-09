@@ -596,6 +596,9 @@ LoadDefinitions!({
   // Perl L222-223: abstract aliases
   Let!("\\abstracts", "\\abstract");
   Let!("\\abst",      "\\abstract");
+  // and their ends, for `\begin{abstracts}…\end{abstracts}` (nic-series, 2410.14397; Perl lets the begin only)
+  Let!("\\endabstracts", "\\endabstract");
+  Let!("\\endabst",      "\\endabstract");
 
   // Perl L226-235: acknowledgments
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",

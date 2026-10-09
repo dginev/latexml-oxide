@@ -11519,3 +11519,41 @@ fontsize="90%">ab@x.org</text></contact>` (Perl 0.8.8 and Rust). pdflatex sets t
 font. Witnesses 2609.14733 (cas-sc, `\small` before a longtable), 2609.03698. Open: RED
 sectioning-frontmatter/frontmatter_digested_in_body_font; the HTML link no longer depends on it
 (OXIDIZED_DESIGN_DIVERGENCES #470).
+
+## 545. elsarticle's `\affiliation` keys are joined with commas, the rest dropped
+
+elsarticle.cls:387-440 (and cas-common.sty:1118-1160, the same `stm/affiliation` set) prints each `organization`,
+`addressline`, `city`, `postcode`, `state` value with its separator — `,` unless `<key>sep`/`op`/`cp`/… gives another,
+read when the affiliation is assembled (cas-common.sty:1262 `\csxdef`) — and a space, `country` with its own (`cyp`,
+none by default), and a key the set does not know as its value or, given none, its own text. Perl's parser
+(elsart_support_core.sty.ltxml, PR #2767) joins the known values with ", " and drops everything else:
+`city={Macon}, citysep={}, postcode={31201}` is "Macon, 31201" (2609.01851), a plain `\affiliation{Univ, City,
+Country}` of several parts is empty, a braced `{ARTORG Center,}` part (2609.04891) or an unknown `department={X}` is
+lost. The cas binding typeset the keys as text (`organization=School of …, city=…`: 160 of 200 cas papers of 2609,
+2609.00047) and ignored the marks, every affiliation going to the last author. Fixed in Rust (63u): one parser for
+both classes (`elsart_support_core_sty::stm_affiliation`, with three departures from the PDF that keep content,
+OXIDIZED_DESIGN_DIVERGENCES #472: a plain argument kept as written, no dangling separator, a key's text typeset), and
+cas's `\author[1,2]`/`\affiliation[1]` marks link them (Rust-only: the cas binding). A/B of 400 elsarticle and cas papers: 483 `key=` affiliations → 0, 0 papers worse. Guards
+`perfect_kernel_batch63::{elsarticle_affiliation_keyvals, cas_affiliation_keyvals}`.
+
+## 546. Bindings lack what the file defines or loads (HF7, `&` and `\endgroup` clusters)
+
+- OmniBus lets `\abstracts`/`\abst` to `\abstract` but not their ends (OmniBus.cls.ltxml:215), so
+  `\end{abstracts}` is undefined (nic-series, 2410.14397).
+- booktabs `\cmidrule[.5pt]`: `\ifx.#1.` (booktabs.sty.ltxml:31-33) is true for `.5pt`, and "5pt." is typeset into
+  the next cell (2405.01314).
+- iopart's `\eqalign` sets `\\` to `\cr` (iopart.cls:807-809); the binding used plain's, where `\\` does not end a row
+  (2402.10275).
+- acmart under `nonacm` prints no conference, booktitle, ISBN or price (acmart.cls:2943, :3079-3250); the binding
+  added and digested them, an `&` in a conference name then an error (2403.18105), OXIDIZED_DESIGN_DIVERGENCES #471.
+- diagbox loads keyval, pict2e, calc and array (diagbox.sty:24-27); Perl's binding loads none (2408.08776: an `m{…}`
+  column, 79 `&` errors).
+- Rust-only, in contrib or Rust-only bindings: fdsymbol loads xkeyval, amsmath, textcomp (fdsymbol.sty:29, :74-75;
+  2311.09182); WileyASNA-v1 loads apacite with `natbibapa` (WileyASNA-v1.cls:2120; 2407.11648, 30 errors) but shared
+  the WileyNJD binding; cas lacked moreverb's `{comment}` and wrapfig (cas-common.sty:1500, :2264; 2506.19439); ulem's
+  `\useunder{\uline}{\ul}{}` declaration `{\ul words}` underlined one token (ulem.sty:286-293, :107; 2406.03441,
+  2405.20343). cas loads verbatim, the `{comment}` moreverb brings, as moreverb has no binding.
+
+Fixed in Rust (63u) by defining and loading them as the files do. Guards `perfect_kernel_batch63::{omnibus_endabstracts,
+booktabs_cmidrule_width, iopart_eqalign_rows, acmart_nonacm_conference_amp, diagbox_requires_array,
+fdsymbol_requires_amsmath, wileyasna_apacite, cas_moreverb_comment, ulem_declaration_form}`.

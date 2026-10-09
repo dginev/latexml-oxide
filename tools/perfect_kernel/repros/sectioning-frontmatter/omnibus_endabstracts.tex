@@ -1,0 +1,16 @@
+% witness: 2410.14397 (nic-series, an OmniBus class): OmniBus.cls.ltxml:215 lets `\abstracts` (and `\abst`) to
+%          `\abstract` but not their ends, so `\end{abstracts}` is undefined (Perl the same)
+% oracle:  pdflatex 0 errors with the witness's nic-series.cls (not in TeX Live; the binding does not read it)
+% engines: rust 63t7 and Perl 0.8.8 = 1 error (rust `Error:unexpected:\endgroup`)
+% expect:  0 errors, 0 warnings; the abstract
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass{nic-series}
+\begin{document}
+\title{T}\author{A \inst{1}}\institute{X}
+\maketitle
+\begin{abstracts}
+We report.
+\end{abstracts}
+\section{Intro}
+x
+\end{document}

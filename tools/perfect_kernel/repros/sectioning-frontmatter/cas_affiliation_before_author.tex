@@ -1,0 +1,15 @@
+% witness: review of 63u: an unlabelled `\affiliation` before the first `\author` is printed by cas (the list is
+%          assembled at `\maketitle`, cas-common.sty:1252-1290) and dropped by the binding (the frontmatter annotation
+%          finds no author before it), with no diagnostic
+% oracle:  pdflatex 0 errors: "Univ Before, Xland" printed under the author
+% engines: rust 63u4 (and 63t7) = no affiliation, no warning
+% expect:  0 errors; the affiliation kept on the author, or a diagnostic that it was not placed
+% status:  RED (63u4)
+\documentclass[a4paper,fleqn]{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\affiliation{organization={Univ Before}, country={Xland}}
+\author{Ann Able}
+\maketitle
+Body.
+\end{document}

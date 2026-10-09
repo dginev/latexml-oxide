@@ -1,0 +1,13 @@
+% witness: 2408.08776 (79 `&` errors): diagbox.sty:24-27 loads keyval, pict2e, calc and array; the binding loaded calc
+%          only, so an `m{…}` column had no array
+% oracle:  pdflatex 0 errors
+% engines: rust 63t7 = 3× `Error:unexpected:&`, the template unrecognized
+% expect:  0 errors, 0 warnings; one row of three cells
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass{article}
+\usepackage{diagbox}
+\begin{document}
+\begin{tabular}{|m{20mm}|*{2}{m{10mm}|}}
+a & b & c\\
+\end{tabular}
+\end{document}

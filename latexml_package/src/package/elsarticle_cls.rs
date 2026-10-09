@@ -22,8 +22,9 @@ LoadDefinitions!({
   // styles test them while they load — jasr.sty:327, 356 `\iflongmktitle` inside the `\if@twocolumn` branches of its
   // `\maketitle` (cnf.sty, jcomp.sty alike): undefined, they unbalanced TeX's skip of the false branch, so the other
   // branch's `\maketitle` body ran at load (2609.23725, 23732, 27838, 39431, 09773, 31741, 39502). The one exception is
-  // `\ifuseexplthreefunctions`, which the class sets when expl3.sty exists (:49-51): it stays false here, since the
-  // class's expl3 affiliation helpers it would select (:327-) are not emulated.
+  // `\ifuseexplthreefunctions`, which the class sets when expl3.sty exists (:49-51): it stays false here, as the code it
+  // selects (:327-) is not read; its affiliation keys are what `\affiliation` reads (`stm_affiliation`,
+  // elsart_support_core_sty.rs).
   RawTeX!(r"\newif\ifnonatbib\newif\iflongmktitle\newif\ifnopreprintline\newif\ifdoubleblind\newif\ifuseexplthreefunctions");
   DeclareOption!("nonatbib", { Digest!("\\global\\nonatbibtrue")?; });
   DeclareOption!("nopreprintline", { Digest!("\\global\\nopreprintlinetrue")?; });

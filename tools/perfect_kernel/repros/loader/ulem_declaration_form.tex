@@ -1,0 +1,12 @@
+% witness: 2406.03441: ulem.sty:286-293 `\useunder{\uline}{\ul}{}` makes `\ul` a declaration: `{\ul words}`
+%          underlines up to the group's end (the `\UL@swender` brace trick, ulem.sty:107)
+% oracle:  pdflatex 0 errors: "Some underlined words here and plain."
+% engines: rust 63t3 = only the first letter underlined (`\ul` let to `\uline`, one-token argument)
+% expect:  0 errors, 0 warnings; one `ltx_ulem_uline` text holding "underlined words"
+% status:  RED (63t3) -> GREEN (63u)
+\documentclass{article}
+\usepackage{ulem}
+\useunder{\uline}{\ul}{}
+\begin{document}
+Some {\ul underlined words} here and plain.
+\end{document}

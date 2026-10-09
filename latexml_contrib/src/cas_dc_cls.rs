@@ -11,6 +11,11 @@ LoadDefinitions!({
   // cas-sc.cls:144, cas-dc.cls:142 `\RequirePackage[T1]{fontenc}`: text `_`, `<`, `>`, `|` print as themselves.
   RequirePackage!("fontenc", options => vec![s!("T1")]);
   RequirePackage!("amsmath");
+  // cas-common.sty:1500, :2264 `\RequirePackage{moreverb}` and `{wrapfig}`. moreverb has no binding (raw loading is off
+  // by default, a warning in every cas paper), so the verbatim it loads, whose `{comment}` the papers use
+  // (2506.19439), stands for it.
+  RequirePackage!("verbatim");
+  RequirePackage!("wrapfig");
   // cas-dc.cls:64 `\RequirePackage{xspace,xstring,footmisc}` (the samples'
   // `\def\tsc#1{\textsc{#1}\xspace}`); xstring has no binding and would
   // warn under the default (non-raw) load, so only the bound two.
@@ -149,15 +154,23 @@ LoadDefinitions!({
   // accumulation as inst_support; the keyvals go through the shared
   // `\lx@add@author@keyvals` (base_utilities.rs: `orcid=` → contact, the
   // production keys dropped).
+  // The marks link the author to the affiliations labelled with them (cas-common.sty:895-940 `\author[1,2]{…}`,
+  // :1252-1266 `\affiliation[1]{…}`); unmarked, an affiliation goes to the author before it.
   DefMacro!(
     "\\author[]{}[]",
-    "\\lx@splitting{\\lx@add@author}{\\and\\And,}{#2}\\lx@add@author@keyvals{#3}"
+    "\\lx@splitting{\\lx@add@author[annotations={#1}]}{\\and\\And,}{#2}\\lx@add@author@keyvals{#3}"
   );
-  // \affiliation[id]{text} — affiliation string author typed.
+  // \affiliation[id]{keys}: cas-common.sty:1118-1160 reads the argument as nearly the `stm/affiliation` keys
+  // elsarticle reads (elsarticle.cls:387-440), printed as the class prints them (`stm_affiliation`): `organization={X},
+  // city={Y}, country={Z}` is "X, Y, Z". The keys were typeset as text (160 of 200 cas papers of 2609: 2609.00047,
+  // 2609.04891) and every affiliation went to the last author.
   DefMacro!(
     "\\affiliation[]{}",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}"
+    "\\lx@add@contact[label={#1},role=affiliation]{\\lx@cas@affiliation{#2}}"
   );
+  DefMacro!("\\lx@cas@affiliation {}", sub[(raw)] {
+    elsart_support_core_sty::stm_affiliation(raw, false)
+  });
   // \ead[type]{address} — author email/url, preserve as contact. The address is read verbatim, as cas-common.sty
   // prints it, stringified (`\ttfamily \tl_to_str:n`, :362; the `[url]` form through `\url`, :338): 2410.07921's
   // `arash_khajooei@…`, its `_` an error. The type is `email` by default, as elsarticle's, through the same contact
@@ -168,12 +181,6 @@ LoadDefinitions!({
     "\\ead Optional:email Semiverbatim",
     "\\lx@add@contact[role=#1]{#2}"
   );
-  // ltx:contact stubs (mirror elsart_support_core@@@affiliation form)
-  DefConstructor!(
-    "\\@@@affiliation{}",
-    "^ <ltx:contact role='affiliation'>#1</ltx:contact>"
-  );
-
   // \sep — author/affil separator that cas-common defines.
   DefMacro!("\\sep", ",");
 

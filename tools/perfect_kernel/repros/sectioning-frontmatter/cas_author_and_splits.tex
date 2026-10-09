@@ -1,0 +1,14 @@
+% witness: review of 63u: cas `\author[a]{Cy Cee and Dee Dee}`; the binding splits names at `\and`, `\And` and commas
+%          (cas_dc_cls.rs `\lx@splitting`), not at the word "and"
+% oracle:  pdflatex 0 errors: "Cy Cee and Dee Dee" (cas prints the argument as written; two authors)
+% engines: rust 63u4 (and 63t7) = `Error:frontmatter:merged_creators`
+% expect:  0 errors; the creators as the frontmatter kernel splits an author list
+% status:  RED (63u4)
+\documentclass[a4paper,fleqn]{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[a]{Cy Cee and Dee Dee}
+\affiliation[a]{organization={Univ A}, country={Xland}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 2405.01314: `\cmidrule[.5pt]` — the binding's `\ifx.#1.` emptiness test (booktabs.sty.ltxml:31-33) is true
+%          for `.5pt`, whose leading `.` it compares with its own, and "5pt." is typeset into the next cell
+% oracle:  pdflatex 0 errors
+% engines: rust 63t7 = `Error:unexpected:\noalign`, "5pt." in a cell; Perl 0.8.8 3 errors
+% expect:  0 errors, 0 warnings; no "5pt" text
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass{article}
+\usepackage{booktabs}
+\begin{document}
+\begin{tabular}{cccc}
+\toprule[.5pt]
+a & b & c & d \\
+\cmidrule[.5pt](l{2pt}r{2pt}){2-3} & x & y & z\\
+\bottomrule
+\end{tabular}
+\end{document}

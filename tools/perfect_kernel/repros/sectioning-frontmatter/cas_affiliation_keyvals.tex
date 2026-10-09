@@ -4,8 +4,8 @@
 % oracle:  pdflatex 0 errors: "School of Computer Science, Guangzhou University, Guang Zhou, 510006, Guangdong, China"
 % engines: rust 63t5 = `<contact role="affiliation">organization=School of Computer Science, Guangzhou University,
 %          city=Guang Zhou, postcode=510006, state=Guangdong, country=China` (the keys as text; Perl has no cas binding)
-% expect:  0 errors; the affiliation as the values the class prints, no `key=`
-% status:  RED (63t5)
+% expect:  0 errors, 0 warnings; the affiliation as the values the class prints, no `key=`, with its author
+% status:  RED (63t5) -> GREEN (63u)
 \documentclass[a4paper,fleqn]{cas-sc}
 \begin{document}
 \title [mode = title]{T}

@@ -20,8 +20,10 @@ LoadDefinitions!({
 
   // \cmidrule[thickness](trim){col-col}
   DefMacro!("\\@afterfi Until:\\fi", "\\fi#1");
+  // Whether a width was given: `\detokenize`'s emptiness test, as `\ifx.#1.` is true for `[.5pt]`, whose leading `.`
+  // it compares with its own, so "5pt." was typeset into the next cell (2405.01314; Perl booktabs.sty.ltxml:31-33).
   DefMacro!("\\cmidrule[]",
-    r"\@ifnextchar({\ifx.#1.\expandafter\ltx@@cmidrule\else\@afterfi\ltx@@cmidrule[#1]\fi}{\ifx.#1.\expandafter\ltx@cmidrule\else\@afterfi\ltx@cmidrule[#1]\fi}"
+    r"\@ifnextchar({\if\relax\detokenize{#1}\relax\expandafter\ltx@@cmidrule\else\@afterfi\ltx@@cmidrule[#1]\fi}{\if\relax\detokenize{#1}\relax\expandafter\ltx@cmidrule\else\@afterfi\ltx@cmidrule[#1]\fi}"
   );
   // The cmidrule helpers draw the partial rule via `\cline`. They route through
   // a PRIVATE saved copy (`\ltx@saved@cline`, captured at load below) rather than

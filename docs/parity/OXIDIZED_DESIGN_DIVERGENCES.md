@@ -14404,3 +14404,37 @@ before (marks after it, `\email{a@b.org \textsuperscript{*}}`, stay out of the l
 links to the address. An `email` or `url` contact holding an `ltx:ref` (at any depth) is left to that link, as the `orcid` template
 already does for a direct one. Guards `perfect_kernel_batch63::{contact_link_from_whole_text, cas_ead_verbatim}`, repro
 sectioning-frontmatter/contact_link_from_whole_text.
+
+### 471. acmart's bibliographic notes as `nonacm` prints them (Perl: always added)
+
+**Background.** acmart.cls under the `nonacm` option skips the rights block and the ACM reference format
+(acmart.cls:2943, :3079-3250): no conference, booktitle, DOI, ISBN or price is printed (probe: none of the five in the
+`sigconf,nonacm` PDF, the booktitle and the DOI without it). The binding added each as a `pubnote`, digesting
+arguments the class never typesets — an unescaped `&` in a `nonacm` conference name, legal in pdflatex, was an
+error (2403.18105; Perl the same, KNOWN_PERL_ERRORS #546).
+
+**Rust behavior.** `\acmConference`, `\acmBooktitle`, `\acmISBN` and `\acmPrice` add their note only when
+`\if@ACM@nonacm` is false, as the PDF shows them (the display-toggle ruling of 2026-10-06). The DOI stays: under
+`nonacm` with `\settopmatter{printacmref=true}` the class prints it (acmart.cls:2961), and it is read verbatim, so no
+`&` there errs. The flag is read when the command is: a later `\@ACM@nonacmtrue` does not withdraw a note already
+added. The other `\acm…` setters are unchanged. Guard `perfect_kernel_batch63::acmart_nonacm_conference_amp`, repro
+sectioning-frontmatter/acmart_nonacm_conference_amp.
+
+### 472. elsarticle's and cas's `\affiliation` keys as the class prints them, with three departures
+
+**Background.** elsarticle.cls:387-440 and cas-common.sty:1118-1160 read `\affiliation`'s argument as the
+`stm/affiliation` keys and print each value with its separator (KNOWN_PERL_ERRORS #545). Followed to the letter that
+reading loses or mangles content in three places: an argument that is plain text, `\affiliation{Univ, City,
+Country}`, is three unknown keys printed "Univ City Country", its commas gone; a last part that is not a country
+leaves its separator dangling ("Univ A,", the class expecting a `country` after it); an unknown key's text is printed
+as its string (`\'e` as written).
+
+**Rust behavior.** `stm_affiliation` (elsart_support_core_sty.rs) prints the class's reading but keeps an argument
+with no key at all as written, commas included (Perl's intent: its "no keyvals at all" branch); leaves out the
+separator after a last part that is not the country (the country's own `cyp` is kept); and typesets a key's text. The
+key set follows the class: cas-common lacks elsarticle's `organisation` and `oraganisationsep`, which it prints as
+unknown keys. A labelled affiliation whose label no author's mark names becomes a creator of its own, without a
+name, as elsarticle's already did (the frontmatter's orphan rule; 1 of 268 cas papers of 2609: 2609.16036, label
+`10`); before, cas attached it to the last author. Guards `perfect_kernel_batch63::{elsarticle_affiliation_keyvals, cas_affiliation_keyvals,
+cas_author_marks_link_affiliations}`, repros sectioning-frontmatter/elsarticle_affiliation_keyvals,
+cas_affiliation_keyvals, cas_author_marks_link_affiliations.

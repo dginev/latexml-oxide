@@ -303,6 +303,7 @@ pub mod updatemarks_sty;
 pub mod uspatent_cls;
 pub mod ut_thesis_cls;
 pub mod widetext_sty;
+pub mod wileyasna_cls;
 pub mod wileymsp_template_cls;
 pub mod wileynjd_cls;
 pub mod wlpeerj_cls;
@@ -719,7 +720,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("spie", "cls", spie_cls::load_definitions),
   ("svproc", "cls", svproc_cls::load_definitions),
   ("uai2025", "cls", uai2025_cls::load_definitions),
-  ("WileyASNA-v1", "cls", wileynjd_cls::load_definitions),
+  ("WileyASNA-v1", "cls", wileyasna_cls::load_definitions),
   (
     "WileyMSP-template",
     "cls",

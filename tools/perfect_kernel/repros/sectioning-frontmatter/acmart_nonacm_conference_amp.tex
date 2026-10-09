@@ -1,0 +1,14 @@
+% witness: 2403.18105: under `nonacm` acmart prints no conference, booktitle, DOI, ISBN or price (acmart.cls:2943,
+%          :3079-3250), so an unescaped `&` there is legal; the binding added and digested them (Perl the same)
+% oracle:  pdflatex 0 errors; none of the five printed (and without `nonacm`, the booktitle and the DOI are)
+% engines: rust 63t7 and Perl 0.8.8 = 2× `Error:unexpected:&`
+% expect:  0 errors, 0 warnings; no conference or booktitle note (display-toggle ruling 2026-10-06)
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass[sigconf,nonacm]{acmart}
+\acmConference[KDD]{Knowledge Discovery & Data Mining}{Aug}{Spain}
+\acmBooktitle{KDD: Discovery & Data Mining}
+\begin{document}
+\title{T}\author{A}
+\maketitle
+x
+\end{document}

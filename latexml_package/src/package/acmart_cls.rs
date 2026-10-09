@@ -169,16 +169,21 @@ LoadDefinitions!({
   });
   DefMacro!("\\acmJournal{}", "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\acmSubmissionID{}", "\\lx@add@pubnote[role=submissionid]{#1}");
-  DefMacro!("\\acmConference[]{}{}{}", "\\lx@add@pubnote[role=conference]{#2; #3; #4}");
-  DefMacro!("\\acmBooktitle{}", "\\lx@add@pubnote[role=booktitle]{#1}");
+  // Under `nonacm` the class prints no conference, booktitle, ISBN or price (acmart.cls:2943, :3079-3250: the rights
+  // block and the ACM reference are skipped), so these notes are added only without it, as the PDF shows them
+  // (display-toggle ruling 2026-10-06); an unescaped `&` in such a conference name is then legal (2403.18105). The DOI
+  // stays: `printacmref=true` prints it under `nonacm` too (acmart.cls:2961), and it is read verbatim. Read when the
+  // command is: a later `\@ACM@nonacmtrue` does not withdraw a note already added.
+  DefMacro!("\\acmConference[]{}{}{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=conference]{#2; #3; #4}\\fi");
+  DefMacro!("\\acmBooktitle{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=booktitle]{#1}\\fi");
   DefMacro!("\\acmArticle{}", "\\lx@add@pubnote[role=article]{#1}");
   DefMacro!("\\acmArticleSeq{}", "\\lx@add@pubnote[role=articleseq]{#1}");
   // read verbatim: acmart.cls:2052 prints the DOI through `\url` (2401.02563: `10.475/123_4`, its `_` an error)
   DefMacro!("\\acmDOI Semiverbatim", "\\lx@add@pubnote[role=doi]{#1}");
-  DefMacro!("\\acmISBN{}", "\\lx@add@pubnote[role=isbn]{#1}");
+  DefMacro!("\\acmISBN{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=isbn]{#1}\\fi");
   DefMacro!("\\acmMonth{}", "\\lx@add@pubnote[role=publicationmonth]{#1}");
   DefMacro!("\\acmNumber{}", "\\lx@add@pubnote[role=number]{#1}");
-  DefMacro!("\\acmPrice{}", "\\lx@add@pubnote[role=price,name={Price:~}]{#1}");
+  DefMacro!("\\acmPrice{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=price,name={Price:~}]{#1}\\fi");
   DefMacro!("\\acmVolume{}", "\\lx@add@pubnote[role=volume]{#1}");
   // acmart.cls:1749-1750: `\@acmYear` (default `\the\year`) is the copyright year's default.
   RawTeX!(r"\def\@acmYear{\the\year}");

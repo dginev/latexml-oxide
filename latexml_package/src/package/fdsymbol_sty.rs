@@ -23,7 +23,11 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // fdsymbol.sty:29, :74-75 load xkeyval, amsmath and textcomp: a document can rely on them (2311.09182: `split`).
+  RequirePackage!("xkeyval");
   // fdsymbol.sty:73 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
+  RequirePackage!("amsmath");
+  RequirePackage!("textcomp");
   // Intentionally empty: we don't apply fdsymbol's font swaps in XML output.
 });

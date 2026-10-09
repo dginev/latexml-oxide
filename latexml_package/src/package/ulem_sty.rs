@@ -75,12 +75,12 @@ LoadDefinitions!({
   DefMacro!("\\UL@end Match:*", r"\egroup");
   DefMacro!("\\UL@spfactor", None, "1000");
 
-  // ulem.sty L286: \useunder{ucmd}{decl}{argcmd} aliases `decl` and
-  // `argcmd` to forms that apply `ucmd{...}` to content. We \let both
-  // straight to `ucmd` so `\ul{foo}` -> `\uline{foo}` works. Empty
-  // declaration/argument-command slots (papers write `\useunder{\uline}{\ul}{}`)
-  // produce no let.
-  // Witnesses 2405.20343, 2406.08270.
+  // ulem.sty:286-293 `\useunder{ucmd}{decl}{argcmd}`: `argcmd` is `ucmd`, and `decl` a declaration that applies `ucmd`
+  // to the rest of its group — `{\ul some words}` underlines "some words" (ulem.sty:288-289 opens `ucmd`'s argument with
+  // an unmatched brace, the group's own `}` closing it, and `\UL@swender`, :107, puts the group's `}` back after). An
+  // empty slot (papers write `\useunder{\uline}{\ul}{}`) defines nothing. Witnesses 2406.08270 (`\useunder` with
+  // `\uline{…}`), 2405.20343 and 2406.03441 (`{\ul 18.8262}`, `{\ul …}`: one character underlined while `\ul` was let
+  // to `\uline`). A `\ul{x}` outside any group, a fatal error in pdflatex, reads to the end of the input.
   DefMacro!("\\useunder{}{}{}", sub[(ucmd, decl, argcmd)] {
     let mut out: Vec<Token> = Vec::new();
     let ucmd_v = ucmd.unlist();
@@ -88,13 +88,28 @@ LoadDefinitions!({
       let target = ucmd_v[0];
       let decl_v = decl.unlist();
       if !decl_v.is_empty() {
-        out.extend([T_CS!("\\let"), decl_v[0], target]);
+        out.extend([T_CS!("\\def"), decl_v[0], T_BEGIN!(), T_CS!("\\lx@ulem@declaration"), target, T_END!()]);
       }
       let arg_v = argcmd.unlist();
       if !arg_v.is_empty() {
         out.extend([T_CS!("\\let"), arg_v[0], target]);
       }
     }
+    Ok(Tokens::new(out))
+  });
+  // `\lx@ulem@declaration\uline` opens `\uline`'s argument, which the declaration's group closes; the argument read,
+  // the group's own `}` is put back after it.
+  DefMacro!("\\lx@ulem@declaration{}", sub[(ucmd)] {
+    let mut out = vec![T_CS!("\\lx@ulem@declared")];
+    out.extend(ucmd.unlist());
+    out.push(T_BEGIN!());
+    Ok(Tokens::new(out))
+  });
+  DefMacro!("\\lx@ulem@declared{}{}", sub[(ucmd, content)] {
+    let mut out = ucmd.unlist();
+    out.push(T_BEGIN!());
+    out.extend(content.unlist());
+    out.extend([T_END!(), T_END!()]);
     Ok(Tokens::new(out))
   });
   // ulem.sty:221 `\newbox\ULC@box`, the box the `\sout`-family builders measure in;

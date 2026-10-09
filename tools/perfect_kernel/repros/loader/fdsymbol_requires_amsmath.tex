@@ -1,0 +1,10 @@
+% witness: 2311.09182 (8 errors): fdsymbol.sty:29, :74-75 load xkeyval, amsmath and textcomp; the binding loaded none
+% oracle:  pdflatex 0 errors
+% engines: rust 63t7 = `Error:undefined:{split}`, `Error:undefined:\text`, `Error:unexpected:&`
+% expect:  0 errors, 0 warnings; the split equation `a&=\text{b}`
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass{article}
+\usepackage{fdsymbol}
+\begin{document}
+\begin{equation}\begin{split} a &= \text{b}\end{split}\end{equation}
+\end{document}
