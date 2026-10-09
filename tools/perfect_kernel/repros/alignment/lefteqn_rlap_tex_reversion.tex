@@ -1,0 +1,14 @@
+% witness: review of 63v: an eqnarray row whose middle column is a `\lefteqn` (an `\rlap`) writes the joined formula's
+%          `tex=` with the `\rlap`'s content as an `\mbox` of its characters: `x=y\mbox{+z×α}` for `\quad + z\times\alpha`
+%          (Perl: `x=y\quad+z\times\alpha`)
+% oracle:  pdflatex 0 errors
+% engines: rust 63v4 = `tex="\displaystyle x=y\mbox{+z×α}"` (the XMath intact)
+% expect:  0 errors; the joined `tex=` as the source writes it
+% status:  RED (63v4)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray*}
+x &=& y \\
+& \lefteqn{\quad + z\times\alpha}
+\end{eqnarray*}
+\end{document}

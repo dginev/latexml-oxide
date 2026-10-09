@@ -252,14 +252,17 @@ pub(crate) fn load() -> Result<()> {
     egroup()?;
   });
 
-  // Perl: latex_constructs.pool.ltxml lines 2243-2247
+  // Perl: latex_constructs.pool.ltxml lines 2243-2247 (2186-2190 in 0.8.8). It is read in the look-ahead before a
+  // cell starts, where the current column is the one before: the first column follows column 0. Perl's `< 2` also
+  // took a `&\lefteqn{…}` for the first column, and its `\multicolumn{3}` from the second column overran the eqnarray
+  // template (2205.04522, 2411.04274; KNOWN_PERL_ERRORS #547).
   DefConditional!("\\if@in@firstcolumn", {
     match lookup_alignment() {
       Some(alignment_digested) => {
         if let Some(alignment_cell) = alignment_digested.alignment_cell() {
           let alignment = alignment_cell.borrow();
           !alignment.is_in_row()
-            || (!alignment.is_in_column() && alignment.current_column_number() < 2)
+            || (!alignment.is_in_column() && alignment.current_column_number() < 1)
         } else {
           false
         }

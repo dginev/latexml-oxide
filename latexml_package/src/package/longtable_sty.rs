@@ -160,6 +160,10 @@ LoadDefinitions!({
 
   // Caption gets redefined. The list entry is the `[short]`, or the caption without one, chosen as the kernel's
   // `\@caption@@@` does (a `[short]` opening with a conditional, KNOWN_PERL_ERRORS #468).
+  DefMacro!(
+    "\\lx@longtable@captionsetup OptionalMatch:* {}",
+    "\\noalign{\\lx@longtable@saved@captionsetup{#2}}"
+  );
   DefMacro!("\\lx@longtable@caption[]{}",
     r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\if\relax\detokenize{#1}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#2}{#1}}}{\lx@format@title@@{table}{#2}}");
   DefPrimitive!("\\lx@longtable@caption@{}{}", sub[(toccap, cap)] {
@@ -246,6 +250,20 @@ fn longtable_bindings(template: Template) -> Result<()> {
   );
   let_i(&T_CS!("\\caption"), &T_CS!("\\lx@longtable@caption"), None);
   let_i(&T_CS!("\\label"), &T_CS!("\\lx@longtable@label"), None);
+  // caption.sty:1142-1147 (`\caption@AtBeginLongtable`): inside a longtable `\captionsetup` is a `\noalign`, so one
+  // between rows does not open a row (2310.02059: `\captionsetup{…}` before the `\hline` of a head).
+  if lookup_definition(&T_CS!("\\captionsetup"))?.is_some() {
+    let_i(
+      &T_CS!("\\lx@longtable@saved@captionsetup"),
+      &T_CS!("\\captionsetup"),
+      None,
+    );
+    let_i(
+      &T_CS!("\\captionsetup"),
+      &T_CS!("\\lx@longtable@captionsetup"),
+      None,
+    );
+  }
   let_i(&T_CS!("\\kill"), &T_CS!("\\lx@longtable@kill"), None);
 
   assign_value("LONGTABLE_LABEL", Stored::None, Some(Scope::Global));

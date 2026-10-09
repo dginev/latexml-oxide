@@ -181,14 +181,18 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
         let rest = line[m.start()..].to_string();
         if rest.trim().is_empty() {
           unread_one(T_CR!());
-        } else if let Ok(mouth) = Mouth::new(&rest, None) {
+        } else if !restore_raw_line_rest(&rest)
+          && let Ok(mouth) = Mouth::new(&rest, None)
+        {
           open_mouth(mouth, true);
         }
       } else {
         let rest = line[m.end()..].to_string();
         if rest.trim().is_empty() {
           unread_one(T_CR!());
-        } else if let Ok(mouth) = Mouth::new(&rest, None) {
+        } else if !restore_raw_line_rest(&rest)
+          && let Ok(mouth) = Mouth::new(&rest, None)
+        {
           open_mouth(mouth, true);
         }
       }

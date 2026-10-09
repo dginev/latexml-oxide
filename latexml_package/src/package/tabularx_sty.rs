@@ -8,10 +8,15 @@ LoadDefinitions!({
   // `\TX@endtabularx` runs `\TX@newcol` = `\newcol@{X}[0]{p{\TX@col@width}}` (tabularx.sty:90, :157-158) before it
   // reads the preamble, so a document's `\newcolumntype{X}[1]{…p{#1}}` does not reach it (2606.05563: `|l|c|X|` read
   // `|` as the width of every X cell; KNOWN_PERL_ERRORS #463).
+  // `\let\verb\TX@verb` (tabularx.sty:91): within the environment `\verb` ends at its delimiter token however it was
+  // read (`read_verb_invocation`), so a `\verb` in a cell's pre-read argument is whole.
   DefMacro!(
     "\\tabularx{}[]{}",
-    "\\let\\NC@rewrite@X\\lx@tabularx@X\\@tabular@bindings{#3}[vattach=#2,width=#1]\\@@tabularx{#1}[#2]{#3}\\lx@begin@alignment"
+    "\\lx@tabularx@verb\\let\\NC@rewrite@X\\lx@tabularx@X\\@tabular@bindings{#3}[vattach=#2,width=#1]\\@@tabularx{#1}[#2]{#3}\\lx@begin@alignment"
   );
+  DefPrimitive!("\\lx@tabularx@verb", {
+    AssignValue!("lx@tabularx@verb" => true);
+  });
   DefMacro!("\\endtabularx", "\\lx@end@alignment\\@end@tabularx");
   DefPrimitive!(T_CS!("\\@end@tabularx"), None, {
     egroup()?;

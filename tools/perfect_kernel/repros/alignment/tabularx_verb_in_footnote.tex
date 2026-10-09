@@ -1,0 +1,14 @@
+% witness: review of 63v: tabularx's `\TX@verb` (tabularx.sty:205-209) reads a `\verb` in any argument within the
+%          environment; a `\verb|f_n|` inside a `\footnote` or `\textbf` in a tabularx cell is whole in pdflatex, while
+%          its text, typeset again outside the environment's scope, still raises an error
+% oracle:  pdflatex 0 errors
+% engines: rust 63v4 = 2× `Error:unexpected:_`, one per such `\verb` (63u5: 5 errors)
+% expect:  0 errors; the verbatim text in the footnote and the bold run
+% status:  RED (63v4)
+\documentclass{article}
+\usepackage{tabularx}
+\begin{document}
+\begin{tabularx}{\linewidth}{lX}
+A & note\footnote{\verb|f_n|} and \textbf{\verb+d_e+} \\
+\end{tabularx}
+\end{document}

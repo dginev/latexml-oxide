@@ -14438,3 +14438,17 @@ name, as elsarticle's already did (the frontmatter's orphan rule; 1 of 268 cas p
 `10`); before, cas attached it to the last author. Guards `perfect_kernel_batch63::{elsarticle_affiliation_keyvals, cas_affiliation_keyvals,
 cas_author_marks_link_affiliations}`, repros sectioning-frontmatter/elsarticle_affiliation_keyvals,
 cas_affiliation_keyvals, cas_author_marks_link_affiliations.
+
+### 473. A `>{…}` column prefix is followed by `\ignorespaces`, as array.sty's (Perl: nothing between it and the cell)
+
+**Background.** array.sty's `\insert@column` (array.sty:97-101) sets a cell as `\the@toks…` (the `>{…}` tokens),
+`\ignorespaces`, then the cell's content. Perl's template (Template.pm:82-110 `addColumn`) puts the cell right after the
+prefix tokens. A prefix macro of one argument, `\newcolumntype{Z}{>{\form}c}` with `\form[1]`, takes the
+`\ignorespaces` in TeX and so leaves the cell alone; in Rust it took the cell's first token (`\mbox`) and the rest of
+the cell went astray, an `&` among it (2504.02110; Perl renders that repro by chance, its cell-start handling
+differing).
+
+**Rust behavior.** `Template::add_column` (alignment/template.rs) appends `\ignorespaces` after non-empty `>{…}` tokens.
+No `\ignorespaces` reaches a `tex=`. Measured: on 1,494 papers one table changes beyond the witness, 2405.14573,
+whose `>{\bfseries}` header and a `\SQSPL` label macro now come out as the PDF has them (an `ERROR` element gone).
+Guard `perfect_kernel_batch63::array_prefix_takes_ignorespaces`, repro alignment/array_prefix_takes_ignorespaces.

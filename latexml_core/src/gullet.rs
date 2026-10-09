@@ -2156,6 +2156,21 @@ pub fn read_raw_line() -> Option<String> {
   }
 }
 
+/// Give back the rest of the line a raw reader just read, as the current line of the input it came from, so the next
+/// token or raw line is read from it and then from the lines after — one TeX input line (`\end{lstlisting} x
+/// \begin{lstlisting}`: the second listing's raw reader reads its body from the following lines, 2408.11865). False
+/// when tokens wait in front of it, which the line would then follow.
+pub fn restore_raw_line_rest(rest: &str) -> bool {
+  let mut gullet = gullet_mut!();
+  match gullet.runtime.as_mut() {
+    Some(runtime) if runtime.pushback.is_empty() => {
+      runtime.mouth.restore_line_rest(rest);
+      true
+    },
+    _ => false,
+  }
+}
+
 //**********************************************************************
 // Mid-level readers: checking and matching tokens, strings etc.
 //**********************************************************************

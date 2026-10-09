@@ -1109,26 +1109,7 @@ impl Mouth {
         let line_opt = self.get_next_line();
         // For \read, we have to return something for EOL, and handle implicit final newline
         let read_mode = lookup_int("PRESERVE_NEWLINES") > 1;
-        let eolch = match lookup_definition(&T_CS!("\\endlinechar")).unwrap() {
-          Some(defn) => {
-            if defn.is_register() {
-              if let Some(eol) = defn.value_of(Vec::new()) {
-                let eol = eol.value_of() as i16;
-                if eol > 0 && eol <= 255 {
-                  let mch = (eol as u8) as char;
-                  Some(mch)
-                } else {
-                  None
-                }
-              } else {
-                None
-              }
-            } else {
-              None
-            }
-          },
-          _ => Some('\r'),
-        };
+        let eolch = endline_char();
         if line_opt.is_none() {
           // Exhausted the input.
           let eolcc = if let Some(ch) = eolch {
@@ -1330,6 +1311,20 @@ impl Mouth {
         }
       })
       .collect()
+  }
+
+  /// Make `rest` — the end of the line a raw read just took — the current line again, with the `\endlinechar` a
+  /// line is read with ([`Self::read_token`]), so tokens and raw lines are read from it before the next line. Its
+  /// columns count from the start of `rest` (the line number is the line's).
+  pub fn restore_line_rest(&mut self, rest: &str) {
+    let mut line = rest.to_string();
+    if let Some(ch) = endline_char() {
+      line.push(ch);
+    }
+    self.chars = line.chars().collect();
+    self.nchars = self.chars.len();
+    self.colno = 0;
+    self.caret_bytes.clear();
   }
 
   pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {
@@ -1659,6 +1654,24 @@ pub fn tokenize_internal(text: impl Into<TeXString>) -> Tokens {
   let result = Mouth::new(text.as_str(), None).unwrap().read_tokens();
   use_main_state();
   result
+}
+
+/// The character `\endlinechar` ends each input line with (tex.web §362: none when it is outside 0..255).
+fn endline_char() -> Option<char> {
+  match lookup_definition(&T_CS!("\\endlinechar")).unwrap() {
+    Some(defn) => {
+      if defn.is_register()
+        && let Some(eol) = defn.value_of(Vec::new())
+      {
+        let eol = eol.value_of() as i16;
+        if eol > 0 && eol <= 255 {
+          return Some((eol as u8) as char);
+        }
+      }
+      None
+    },
+    _ => Some('\r'),
+  }
 }
 
 #[cfg(test)]

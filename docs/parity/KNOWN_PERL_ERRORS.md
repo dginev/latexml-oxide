@@ -11557,3 +11557,34 @@ cas's `\author[1,2]`/`\affiliation[1]` marks link them (Rust-only: the cas bindi
 Fixed in Rust (63u) by defining and loading them as the files do. Guards `perfect_kernel_batch63::{omnibus_endabstracts,
 booktabs_cmidrule_width, iopart_eqalign_rows, acmart_nonacm_conference_amp, diagbox_requires_array,
 fdsymbol_requires_amsmath, wileyasna_apacite, cas_moreverb_comment, ulem_declaration_form}`.
+
+## 547. tabularx's `\verb`, longtable's `\captionsetup` and `\lefteqn`'s first column, as the packages have them
+
+- tabularx swaps in its own `\verb` (tabularx.sty:91, :205-209), which reads up to the delimiter token as it stands, so
+  `\verb|x|` inside an argument read before it — a `\makecell{…}` cell — is whole. Perl's and our binding kept the
+  kernel `\verb`, which needs an active delimiter: ours scanned past the argument into the source, swallowing `&` and
+  `\\` (2404.06128: 82 errors, 2309.04295: 44; Perl 2 on the repro).
+- Inside a longtable caption.sty makes `\captionsetup` a `\noalign` (caption.sty:1142-1147); between rows it opened a
+  cell before the next `\hline` (2310.02059; Perl 5 errors on the repro).
+- `\if@in@firstcolumn` (latex_constructs.pool.ltxml:2186-2190) is read in the look-ahead before a cell, where the
+  current column is the previous one; its `< 2` took `&\lefteqn{…}` in column 2 for the first column, and the
+  `\multicolumn{3}` overran the eqnarray template (2205.04522, 2411.04274; Perl's lenient span counting hides it).
+- Rust-only, with the same symptom (`&` astray): a column's `>{…}` prefix lacked the `\ignorespaces` array.sty:97-101
+  puts before the cell, so a one-argument prefix macro took the cell's first token (2504.02110,
+  OXIDIZED_DESIGN_DIVERGENCES #473); and the rest of a listing's `\end` line was reopened as an input of its own, which
+  had ended when a raw reader begun on it (another listing, `{verbatim}`) asked for its next line, so
+  `\end{lstlisting} x \begin{lstlisting}` typeset the second body as text (2408.11865; Perl unreads the rest as tokens
+  and a CR, listings.sty.ltxml:317, and reads on).
+
+Fixed in Rust (63v): `\verb` matches its delimiter token as read within tabularx (`read_verb_invocation`), caption's
+longtable `\captionsetup` is bound, `\if@in@firstcolumn` is true only before the first cell, the template adds the
+`\ignorespaces`, and the rest of a listing's `\end` line stays the current line of its input (`restore_raw_line_rest`,
+the line with its `\endlinechar`), as TeX keeps one input line, so any raw reader begun on it reads on below. Open:
+`\lefteqn{x=} & …` in the first column still spans three columns and overruns (RED alignment/lefteqn_then_amp, a
+ruling); a tabularx `\verb` inside a `\footnote` or `\textbf` still errs (RED alignment/tabularx_verb_in_footnote); a
+`\lefteqn` in a middle column writes the joined `tex=` as an `\mbox` (RED alignment/lefteqn_rlap_tex_reversion);
+`\verb*` in a pre-read argument shows no visible spaces (its spaces were read as spaces); the rest of a `\end{verbatim}`
+line is still reopened as an input of its own, so a listing begun there loses its body (RED
+loader/verbatim_end_begin_same_line; that reader's line is already decoded, so restoring it needs the raw line). Guards
+`perfect_kernel_batch63::{tabularx_verb_in_argument, longtable_captionsetup_noalign, lefteqn_second_column,
+array_prefix_takes_ignorespaces, listings_end_begin_same_line}`.

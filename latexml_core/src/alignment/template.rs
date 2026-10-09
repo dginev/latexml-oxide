@@ -362,6 +362,10 @@ impl Template {
     }
     if !self.save_before.is_empty() {
       before.extend(self.save_before.clone());
+      // array.sty's `\insert@column` (array.sty:97-101): the `>{…}` tokens, then `\ignorespaces`, then the cell, so a
+      // `>{\form}` whose `\form` takes an argument takes the `\ignorespaces`, not the cell's first token (2504.02110:
+      // `\form{\mbox}{x}` left the `x` and an `&` astray).
+      before.push(T_CS!("\\ignorespaces"));
     }
     col.before = if !before.is_empty() {
       Some(Tokens::new(before))

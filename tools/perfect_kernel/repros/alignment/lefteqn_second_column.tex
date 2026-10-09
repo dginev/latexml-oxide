@@ -1,0 +1,15 @@
+% witness: 2205.04522, 2411.04274: `\if@in@firstcolumn` (latex_constructs.pool.ltxml:2186-2190) is read in the
+%          look-ahead before a cell, where the current column is the previous one; its `< 2` took `&\lefteqn{…}` (column 2)
+%          for the first column, and the `\multicolumn{3}` overran the eqnarray template (Perl hides it)
+% oracle:  pdflatex 0 errors
+% engines: rust 63u5 = `Error:unexpected:&`
+% expect:  0 errors, 0 warnings; the first row's `\lefteqn` across three columns, the second's in its column
+% status:  RED (63u5) -> GREEN (63v)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray*}
+\lefteqn{P(a)=}\\
+&\lefteqn{P(b) \times P(c)}\\
+&&\mbox{}+ P(d).
+\end{eqnarray*}
+\end{document}

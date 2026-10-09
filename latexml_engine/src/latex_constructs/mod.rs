@@ -5291,10 +5291,18 @@ pub fn read_verb_invocation() -> Result<Option<Vec<Token>>> {
     assign_catcode('\r', Catcode::ACTIVE, None);
     let eol = T_ACTIVE!('\r');
     let par = T_CS!("\\par");
+    // tabularx's `\TX@verb` (tabularx.sty:91, :205-209) reads up to the delimiter token as it stands, so within a
+    // tabularx a `\verb|…|` in an argument read before it (`\makecell{\verb|x|}`, the `|` frozen "other") still ends
+    // there (2404.06128, 2309.04295); the kernel `\verb` needs it active.
+    let token_delimited = lookup_bool("lx@tabularx@verb");
     let mut body = Vec::new();
     let mut terminated = false;
     while let Some(token) = read_token()? {
-      if token == delim {
+      if token == delim
+        || (token_delimited
+          && token.get_catcode() == Catcode::OTHER
+          && token.with_str(|s| s.starts_with(init_ch) && s.chars().count() == 1))
+      {
         terminated = true;
         break;
       }

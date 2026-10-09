@@ -3602,7 +3602,7 @@ fn elsarticle_affiliation_keyvals() {
   }
 }
 
-/// 63u: cas reads `\\affiliation`'s argument as the same keys (cas-common.sty:1118-1160), and its marks link it to its
+/// 63u: cas reads `\affiliation`'s argument as the same keys (cas-common.sty:1118-1160), and its marks link it to its
 /// authors (2609.00047; the keys were typeset as text, in 160 of 200 cas papers of 2609). Repro
 /// sectioning-frontmatter/cas_affiliation_keyvals.
 #[test]
@@ -3667,7 +3667,7 @@ fn omnibus_endabstracts() {
   );
 }
 
-/// 63u: `\\cmidrule[.5pt]` is read as a width (2405.01314; `\\ifx.#1.` took it for empty, KPE #546). Repro
+/// 63u: `\cmidrule[.5pt]` is read as a width (2405.01314; `\ifx.#1.` took it for empty, KPE #546). Repro
 /// alignment/booktabs_cmidrule_width.
 #[test]
 fn booktabs_cmidrule_width() {
@@ -3679,7 +3679,7 @@ fn booktabs_cmidrule_width() {
   );
 }
 
-/// 63u: iopart's `\\eqalign` ends a row at `\\\\` (iopart.cls:807-809; 2402.10275, KPE #546). Repro
+/// 63u: iopart's `\eqalign` ends a row at `\\` (iopart.cls:807-809; 2402.10275, KPE #546). Repro
 /// alignment/iopart_eqalign_rows.
 #[test]
 fn iopart_eqalign_rows() {
@@ -3690,7 +3690,7 @@ fn iopart_eqalign_rows() {
   );
 }
 
-/// 63u: ulem's declaration `{\\ul …}` underlines the rest of its group (ulem.sty:286-293, :107; 2406.03441). Repro
+/// 63u: ulem's declaration `{\ul …}` underlines the rest of its group (ulem.sty:286-293, :107; 2406.03441). Repro
 /// loader/ulem_declaration_form.
 #[test]
 fn ulem_declaration_form() {
@@ -3736,7 +3736,7 @@ fn acmart_nonacm_conference_amp() {
   );
 }
 
-/// 63u: cas's `\\author[1,2]` marks link the author to the affiliations `\\affiliation[1]` labels (cas-common.sty:895-940,
+/// 63u: cas's `\author[1,2]` marks link the author to the affiliations `\affiliation[1]` labels (cas-common.sty:895-940,
 /// :1252-1266; 2609.00047, 2609.00281): an unmarked author has none (every affiliation went to the last author).
 /// Repro sectioning-frontmatter/cas_author_marks_link_affiliations.
 #[test]
@@ -3759,4 +3759,79 @@ fn cas_author_marks_link_affiliations() {
   ] {
     assert!(xml.contains(creator), "{creator}\n{xml}");
   }
+}
+
+/// 63v: within a tabularx `\verb` ends at its delimiter token however it was read (tabularx.sty:91, :205-209), so a
+/// `\verb|…|` in a `\makecell` cell is whole (2404.06128, 2309.04295). Repro alignment/tabularx_verb_in_argument.
+#[test]
+fn tabularx_verb_in_argument() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/alignment/tabularx_verb_in_argument.tex");
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  // the outer tabularx, whole (the makecell's tabular nests in it)
+  assert!(
+    xml.contains(
+      "<tabular vattach=\"middle\" xml:id=\"p1.1\">\n      <tr xml:id=\"p1.1.1\">\n        <td align=\"left\" border=\"l r t\" xml:id=\"p1.1.1.1\">A</td>\n        <td align=\"left\" border=\"r t\" xml:id=\"p1.1.1.2\"><inline-logical-block vattach=\"top\" xml:id=\"p1.1.1.2.1\">\n            <para class=\"ltx_noindent\" xml:id=\"p1.p1\">\n              <p xml:id=\"p1.p1.1\"><text xml:id=\"p1.p1.1.1\"/><text xml:id=\"p1.p1.1.2\"><tabular vattach=\"middle\" xml:id=\"p1.p1.1.2.1\">\n                    <tr xml:id=\"p1.p1.1.2.1.1\">\n                      <td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p1.p1.1.2.1.1.1\"><verbatim font=\"typewriter\" xml:id=\"p1.p1.1.2.1.1.1.1\">theorem</verbatim></td>\n                    </tr>\n                    <tr xml:id=\"p1.p1.1.2.1.2\">\n                      <td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p1.p1.1.2.1.2.1\">  \u{2003}<verbatim font=\"typewriter\" xml:id=\"p1.p1.1.2.1.2.1.1\">fixes a b :: real</verbatim></td>\n                    </tr>\n                  </tabular></text><text xml:id=\"p1.p1.1.3\"/></p>\n            </para>\n          </inline-logical-block></td>\n      </tr>\n      <tr xml:id=\"p1.1.2\">\n        <td align=\"left\" border=\"b l r t\" xml:id=\"p1.1.2.1\">B</td>\n        <td align=\"left\" border=\"b r t\" xml:id=\"p1.1.2.2\"><inline-block vattach=\"top\" xml:id=\"p1.1.2.2.1\">\n            <p xml:id=\"p1.1.2.2.1.1\">C</p>\n          </inline-block></td>\n      </tr>\n    </tabular>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63v: the rest of a listing's `\end` line stays the current input line (`restore_raw_line_rest`), so a listing
+/// begun there reads its body from the lines after (2408.11865). Repro loader/listings_end_begin_same_line.
+#[test]
+fn listings_end_begin_same_line() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/listings_end_begin_same_line.tex");
+  // both listings, the text between them
+  assert_eq!(
+    hf3_element(tex, "para", "c_d"),
+    "<para xml:id=\"p1\">\n    <listing class=\"ltx_lstlisting\" data=\"YQ==\" dataencoding=\"base64\" datamimetype=\"text/plain\" xml:id=\"p1.1\">\n      <listingline xml:id=\"lstnumberx1\"><text class=\"ltx_lst_identifier\" xml:id=\"lstnumberx1.1\">a</text></listingline>\n    </listing>\n    <p xml:id=\"p1.2\">x</p>\n    <listing class=\"ltx_lstlisting\" data=\"Y19k\" dataencoding=\"base64\" datamimetype=\"text/plain\" xml:id=\"p1.3\">\n      <listingline xml:id=\"lstnumberx2\"><text class=\"ltx_lst_identifier\" xml:id=\"lstnumberx2.1\">c_d</text></listingline>\n    </listing>\n  </para>"
+  );
+}
+
+/// 63v: a `>{…}` column prefix is followed by `\ignorespaces` (array.sty:97-101), which a one-argument prefix macro
+/// takes instead of the cell's first token (2504.02110). Repro alignment/array_prefix_takes_ignorespaces.
+#[test]
+fn array_prefix_takes_ignorespaces() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment/array_prefix_takes_ignorespaces.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "tabular", "<td"),
+    "<tabular vattach=\"middle\" xml:id=\"p1.1\">\n      <tbody>\n        <tr xml:id=\"p1.1.1\">\n          <td align=\"center\" xml:id=\"p1.1.1.1\">a</td>\n          <td align=\"center\" xml:id=\"p1.1.1.2\"><text xml:id=\"p1.1.1.2.1\">x</text> y</td>\n          <td align=\"center\" xml:id=\"p1.1.1.3\">c</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63v: inside a longtable caption's `\captionsetup` is a `\noalign` (caption.sty:1142-1147; 2310.02059). Repro
+/// captions-floats/longtable_captionsetup_noalign.
+#[test]
+fn longtable_captionsetup_noalign() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/longtable_captionsetup_noalign.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "table", "Cap"),
+    "<table inlist=\"lot\" labels=\"LABEL:t\" xml:id=\"S0.T1\">\n    <tags>\n      <tag>Table 1</tag>\n      <tag role=\"refnum\">1</tag>\n      <tag role=\"typerefnum\">Table 1</tag>\n    </tags>\n    <caption><tag close=\": \">Table 1</tag>Cap</caption>\n    <toccaption><tag close=\" \">1</tag>Cap</toccaption>\n    <tabular xml:id=\"S0.T1.1\">\n      <thead>\n        <tr xml:id=\"S0.T1.1.1\">\n          <td align=\"left\" border=\"t\" thead=\"column\" xml:id=\"S0.T1.1.1.1\">a</td>\n          <td align=\"left\" border=\"t\" thead=\"column\" xml:id=\"S0.T1.1.1.2\">b</td>\n        </tr>\n      </thead>\n      <tbody>\n        <tr xml:id=\"S0.T1.1.2\">\n          <td align=\"left\" border=\"t\" xml:id=\"S0.T1.1.2.1\">c</td>\n          <td align=\"left\" border=\"t\" xml:id=\"S0.T1.1.2.2\">d</td>\n        </tr>\n      </tbody>\n    </tabular>\n  </table>"
+  );
+}
+
+/// 63v: `\if@in@firstcolumn` is true only before the first cell, so `&\lefteqn{…}` is an `\rlap` in its column, not a
+/// span over the template's end (2205.04522, 2411.04274; KPE #547). Repro alignment/lefteqn_second_column.
+#[test]
+fn lefteqn_second_column() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/alignment/lefteqn_second_column.tex");
+  // the second row: the `\lefteqn` in its own (second) column, no span (the formula's joined `tex=` still writes it
+  // as an `\mbox`, RED alignment/lefteqn_rlap_tex_reversion)
+  assert_eq!(
+    hf3_element(tex, "tr", "P(b)"),
+    "<tr xml:id=\"S0.Ex3.2\">\n              <td xml:id=\"S0.Ex3.2.1\"/>\n              <td align=\"center\" xml:id=\"S0.Ex3.2.2\"><text class=\"ltx_markedasmath\" width=\"0.0pt\" xml:id=\"S0.Ex3.2.2.1\"><Math mode=\"inline\" tex=\"\\displaystyle P(b)\\times P(c)\" text=\"P@(b) * P@(c)\" xml:id=\"S0.Ex2.m1.m1\">\n                    <XMath xml:id=\"S0.Ex2.m1.m1.3\">\n                      <XMApp xml:id=\"S0.Ex2.m1.m1.3.1\">\n                        <XMTok meaning=\"times\" role=\"MULOP\">×</XMTok>\n                        <XMApp xml:id=\"S0.Ex2.m1.m1.3.1.2\">\n                          <XMTok font=\"italic\" role=\"UNKNOWN\">P</XMTok>\n                          <XMDual xml:id=\"S0.Ex2.m1.m1.3.1.2.2\">\n                            <XMRef idref=\"S0.Ex2.m1.m1.1\" xml:id=\"S0.Ex2.m1.m1.3.1.2.2.1\"/>\n                            <XMWrap xml:id=\"S0.Ex2.m1.m1.3.1.2.2.2\">\n                              <XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok>\n                              <XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex2.m1.m1.1\">b</XMTok>\n                              <XMTok role=\"CLOSE\" stretchy=\"false\">)</XMTok>\n                            </XMWrap>\n                          </XMDual>\n                        </XMApp>\n                        <XMApp xml:id=\"S0.Ex2.m1.m1.3.1.3\">\n                          <XMTok font=\"italic\" role=\"UNKNOWN\">P</XMTok>\n                          <XMDual xml:id=\"S0.Ex2.m1.m1.3.1.3.2\">\n                            <XMRef idref=\"S0.Ex2.m1.m1.2\" xml:id=\"S0.Ex2.m1.m1.3.1.3.2.1\"/>\n                            <XMWrap xml:id=\"S0.Ex2.m1.m1.3.1.3.2.2\">\n                              <XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok>\n                              <XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex2.m1.m1.2\">c</XMTok>\n                              <XMTok role=\"CLOSE\" stretchy=\"false\">)</XMTok>\n                            </XMWrap>\n                          </XMDual>\n                        </XMApp>\n                      </XMApp>\n                    </XMath>\n                  </Math></text></td>\n              <td xml:id=\"S0.Ex3.2.3\"/>\n            </tr>"
+  );
 }

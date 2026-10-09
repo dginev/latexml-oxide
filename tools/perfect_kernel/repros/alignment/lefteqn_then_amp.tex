@@ -1,0 +1,13 @@
+% witness: 2205.04522: `\lefteqn{x=} & …` in an eqnarray's first column spans three columns (Perl's binding,
+%          latex_constructs.pool.ltxml:2194-2197), and the `&` after it overruns the three-column template (Perl the same)
+% oracle:  pdflatex 0 errors (`\lefteqn` is `\rlap`, latex.ltx:15800)
+% engines: rust 63v and Perl 0.8.8 = `Error:unexpected:&`
+% expect:  0 errors; the row's cells as written (needs a ruling: stop spanning when the row continues)
+% status:  RED (63v)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+\lefteqn{x(n) =} & \ \nonumber \\
+& y & z
+\end{eqnarray}
+\end{document}

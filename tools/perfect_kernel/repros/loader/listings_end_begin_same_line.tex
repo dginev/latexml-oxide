@@ -1,0 +1,16 @@
+% witness: 2408.11865 (11 errors): a listing's `\end{lstlisting}` and the next `\begin{lstlisting}` on one line; the
+%          line's remainder was reopened as an input of its own, which ended under the second listing's raw-line reader,
+%          so its body was typeset as text (Perl unreads the remainder, listings.sty.ltxml:317, and reads on)
+% oracle:  pdflatex 0 errors: two listings, "a" and "c_d"
+% engines: rust 63u5 = `Error:unexpected:_` (the second body as text)
+% expect:  0 errors, 0 warnings; two listings
+% status:  RED (63u5) -> GREEN (63v)
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\begin{lstlisting}
+a
+\end{lstlisting} x \begin{lstlisting}
+c_d
+\end{lstlisting}
+\end{document}
