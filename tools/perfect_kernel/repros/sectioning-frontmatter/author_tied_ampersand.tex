@@ -1,0 +1,11 @@
+% witness: 2601.13599 (`Kai Han~\&~Yunhe Wang`)
+% oracle:  pdflatex 0 errors: three names
+% engines: rust 64b3 = "Bob Baker & Cat Cole" one creator + Error:frontmatter:merged_creators; Perl the same (its author splits have no `\&` at all, Base_Utility.pool.ltxml:682-683)
+% expect:  0 errors; 3 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker\thanks{Lead}~\&~Cat Cole \\ Univ A}
+\maketitle
+\end{document}

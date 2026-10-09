@@ -1,0 +1,18 @@
+% witness: 2407.15815 (corl_2024: `\vspace{0.1cm}` then `$^{1}$ Tsinghua University IIIS, $^{2}$ Shanghai Qi Zhi
+%          Institute, ...` — the institutions read as authors; on 64b the authors' marks 1,2 also stop showing)
+% oracle:  pdflatex 0 errors: "Ann Able1,2, Bob Baker2,3 / 1 Univ A, 2 Univ B, 3 Univ C"
+% engines: rust 64b3 and 64b8 = five creators (Univ A/B/C read as authors with their marks: `marker_leads` sees the
+%          `\vspace{…}` and no leading mark); the same line without the `\vspace` links (2 creators, 2 affiliations each)
+% expect:  0 errors; Ann Able (Univ A, Univ B), Bob Baker (Univ B, Univ C)
+% status:  RED (64b8)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+Ann Able$^{1,2}$, \quad
+Bob Baker$^{2,3}$ \\
+\vspace{0.1cm}
+$^{1}$ Univ A, $^{2}$ Univ B, $^{3}$ Univ C
+}
+\maketitle
+\end{document}

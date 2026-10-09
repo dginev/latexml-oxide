@@ -1,0 +1,12 @@
+% witness: 2411.12606 (`\\\sc and Steven Van Overberghe`)
+% oracle:  pdflatex 0 errors: three names with their footnotes
+% engines: rust 64b3 = a creator holding the "and" line + Error:frontmatter:merged_creators; Perl splits the line at `\\` and reads `\sc and Cat Cole` as the line under the names (Base_Utility.pool.ltxml:716-725)
+% expect:  0 errors; 3 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\sc Ann Able\footnote{Univ A}, Bob Baker\footnotemark[1]\\\sc
+and Cat Cole\footnote{Univ B}}
+\maketitle
+\end{document}

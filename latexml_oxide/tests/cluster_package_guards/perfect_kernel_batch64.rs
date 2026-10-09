@@ -210,3 +210,257 @@ fn author_unmatched_numeric_mark() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Bee<sup xml:id=\"id2\">1</sup></personname>\n  </creator>",
   ]);
 }
+
+/// 64b: a name list in a bare group is a wrapper too, and a line opening with "and" (inside its group) continues the
+/// names with that separator (2306.02486).
+/// Repro sectioning-frontmatter/author_bare_group_names_and_led_line.
+#[test]
+fn author_bare_group_names_and_led_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_bare_group_names_and_led_line.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
+  ]);
+}
+
+/// 64b: marked names in a bare group split as in a declaration group (2312.04684, 2501.04001).
+/// Repro sectioning-frontmatter/author_bare_group_marked_names.
+#[test]
+fn author_bare_group_marked_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_bare_group_marked_names.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Intern.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: mnras's `\newauthor{…}` group holding a name list (2409.07518, 2312.07625).
+/// Repro sectioning-frontmatter/mnras_newauthor_group_names.
+#[test]
+fn mnras_newauthor_group_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/mnras_newauthor_group_names.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: a `\vspace{…}` after a wrapper of names is spacing, not its tail (2404.02905, 2412.05271).
+/// Repro sectioning-frontmatter/author_vspace_after_wrapper_names.
+#[test]
+fn author_vspace_after_wrapper_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_vspace_after_wrapper_names.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: spacing before a wrapper of names stays with the first (2512.22234, 2508.05004).
+/// Repro sectioning-frontmatter/author_vspace_before_wrapper_names.
+#[test]
+fn author_vspace_before_wrapper_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_vspace_before_wrapper_names.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: a `\quad` beside a wrapper's closing comma is spacing (2407.15815).
+/// Repro sectioning-frontmatter/author_quad_at_wrapper_edge.
+#[test]
+fn author_quad_at_wrapper_edge() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_quad_at_wrapper_edge.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: `\and` inside a wrapper separates names (llncs `\large{A \and B}`, 2402.15967).
+/// Repro sectioning-frontmatter/llncs_and_inside_wrapper.
+#[test]
+fn llncs_and_inside_wrapper() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_and_inside_wrapper.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname><text fontsize=\"120%\" xml:id=\"id1\">Ann Able<sup xml:id=\"id1.1\">1</sup></text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><text fontsize=\"120%\" xml:id=\"id3\">Bob Baker<sup xml:id=\"id3.1\">2</sup></text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: `\and` inside a group of names (amsart `{\bf {\large A \and B}}`, 2401.03555).
+/// Repro sectioning-frontmatter/amsart_and_inside_group.
+#[test]
+fn amsart_and_inside_group() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/amsart_and_inside_group.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: a macro printing only a comma is a separator (`\authcomma`, 2403.07809).
+/// Repro sectioning-frontmatter/author_separator_macro_comma.
+#[test]
+fn author_separator_macro_comma() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_macro_comma.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: a macro printing ", and " is a separator (tibop-article `\lastand`, 2401.13365).
+/// Repro sectioning-frontmatter/author_separator_macro_lastand.
+#[test]
+fn author_separator_macro_lastand() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_macro_lastand.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id3\">1</sup></personname>\n  </creator>",
+  ]);
+}
+
+/// 64b: `~\&~` separates names (2601.13599).
+/// Repro sectioning-frontmatter/author_tied_ampersand.
+#[test]
+fn author_tied_ampersand() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_tied_ampersand.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Lead</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: a names line opening with a declaration and "and" (`\\\sc and Cat Cole`, 2411.12606). (Bob Baker's small caps
+/// from that `\sc` are not kept on his name — a font loss older than this batch.)
+/// Repro sectioning-frontmatter/author_declaration_line_opens_with_and.
+#[test]
+fn author_declaration_line_opens_with_and() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_declaration_line_opens_with_and.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname><text font=\"smallcaps\" xml:id=\"id1\">Ann Able</text></personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\"><text font=\"smallcaps\" xml:id=\"id2\">Univ A</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<note mark=\"1\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags>\n          <tag>1</tag>\n          <tag role=\"refnum\">1</tag>\n          <tag role=\"typerefnum\">footnote 1</tag>\n        </tags></note></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><text font=\"smallcaps\" xml:id=\"id3\">Cat Cole</text></personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\"><text font=\"smallcaps\" xml:id=\"id4\">Univ B</text></contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: a list's closing period before a wrapper's mark (2201.07394); the period itself is trimmed off the last name as
+/// any name's trailing punctuation is (63z8 the same).
+/// Repro sectioning-frontmatter/author_wrapper_closing_period_before_mark.
+#[test]
+fn author_wrapper_closing_period_before_mark() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_wrapper_closing_period_before_mark.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>ANN ABLE</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>BOB BAKER</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>CAT COLE</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b: a name list closing with `;` (sn-jnl's author lists, 2504.09158; amsart's cautious path). The `;` the PDF
+/// prints after "C. Cole" is trimmed with the list's closing punctuation (`strip_glued_marks`), as the closing period
+/// is. Repro sectioning-frontmatter/amsart_name_list_closing_semicolon.
+#[test]
+fn amsart_name_list_closing_semicolon() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/amsart_name_list_closing_semicolon.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n  </creator>",
+    "<creator before=\", \" role=\"author\">\n    <personname>B.\u{a0}Baker</personname>\n  </creator>",
+    "<creator before=\" and \" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b review: an author-block delimiter is never rewritten as a separator macro — a class's printing
+/// `\renewcommand{\and}{{\normalfont and}}` (ecca.cls:192) still parts its groups, each with its affiliation — and a
+/// macro printing ordinary text (`\univ`) stays. Repro sectioning-frontmatter/author_redefined_and_still_parts_groups.
+#[test]
+fn author_redefined_and_still_parts_groups() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_redefined_and_still_parts_groups.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b review r2: a separator macro is written with the spacing its body prints and no more — `AT\amp T Labs` stays
+/// "AT&T Labs", `NSF\comma NIH` "NSF,NIH" — while `\amp{}` between names, the source's spaces around it, still parts
+/// them. Repro sectioning-frontmatter/author_separator_macro_prints_as_written.
+#[test]
+fn author_separator_macro_prints_as_written() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_macro_prints_as_written.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Supported by NSF,NIH.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">AT&amp;T Labs</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">AT&amp;T Labs</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b review r3: a separator macro whose font is visible (`\textbf{\&}`) is the separator's look, kept as written —
+/// the affiliation keeps its bold "&". Repro sectioning-frontmatter/author_separator_macro_visible_font_kept.
+#[test]
+fn author_separator_macro_visible_font_kept() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_macro_visible_font_kept.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">AT<text font=\"bold\" xml:id=\"id1\">&amp;</text>T Labs</contact>\n  </creator>",
+  ]);
+}
+
+/// 64b review r3: a separator macro spaced by stretchable glue (`,\hskip 1em plus 1fil`) is read past its whole glue
+/// specification, so the comma parts the names. Repro sectioning-frontmatter/author_separator_macro_glue.
+#[test]
+fn author_separator_macro_glue() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_macro_glue.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}

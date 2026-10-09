@@ -1,0 +1,13 @@
+% witness: 2504.09158 (sn-jnl `\author[1]{…, T. Walker;}`: every author list closing with `;`; amsart takes the same
+%          cautious per-author path)
+% oracle:  pdflatex 0 errors: "A. Able, B. Baker, C. Cole;"
+% engines: rust 64b3 = one creator holding 3 names + Error:frontmatter:merged_creators ("C. Cole;" read as no name); Perl the same (amsart's `\author` is one author)
+% expect:  0 errors; 3 creators
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{A.~Able, B.~Baker, C.~Cole;}
+\address{Univ A}
+\maketitle
+\end{document}

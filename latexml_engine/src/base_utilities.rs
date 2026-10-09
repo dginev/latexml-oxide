@@ -1260,7 +1260,7 @@ LoadDefinitions!({
     keyvals: Option<Tokens>,
     cautious: bool,
   ) -> Result<Tokens> {
-    let stuff = expand_sole_author_macro(stuff);
+    let stuff = expand_separator_macros(expand_sole_author_macro(stuff));
     // Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
     // blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in
     // arXiv:2401.03955) — pack names, `\affiliations` and a comma-separated
@@ -8911,13 +8911,13 @@ fn split_author_line_cautious(line: Tokens) -> Vec<Tokens> {
 /// wrapper is put back on the pieces: kept, it became an empty creator that took a copy of every affiliation given to
 /// all the authors (`annotate=new`) and merged it onto B.
 fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
-  // Name-level separators: comma, the literal word " and " ("Alice and Bob") and " \& " (`Zheng Zheng \& Jordi
-  // Miralda-Escud\'e`, astro-ph0201275; 0908.0757).
+  // Name-level separators: comma, the literal word " and " ("Alice and Bob"), " \& " (`Zheng Zheng \& Jordi
+  // Miralda-Escud\'e`, astro-ph0201275; 0908.0757) with its ties, and the `\and` family inside a wrapper.
   let split = |tokens: Tokens| -> Vec<(Vec<Token>, Tokens)> {
     let mut pieces: Vec<(Vec<Token>, Tokens)> = Vec::new();
     // the separators of a dropped empty piece go on to the next (", and")
     let mut carried: Vec<Token> = Vec::new();
-    for (delimiter, piece) in split_tokens_delimited(tokens, vec![
+    let mut separators = vec![
       SplitDelim::Token(T_OTHER!(",")),
       literal_and(),
       literal_and_tie(),
@@ -8925,7 +8925,14 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
       tie_and_tie(),
       group_and(),
       literal_ampersand(),
-    ]) {
+      // (inside a wrapper, where the top level's `\and` split cannot reach: `{\bf {\large A \and B}}`, 2401.03555;
+      // `\large{A \and B}`, 2402.15967)
+      SplitDelim::Token(T_CS!("\\and")),
+      SplitDelim::Token(T_CS!("\\And")),
+      SplitDelim::Token(T_CS!("\\AND")),
+    ];
+    separators.extend(tied_ampersands());
+    for (delimiter, piece) in split_tokens_delimited(tokens, separators) {
       carried.extend(delimiter);
       if !piece.is_empty() {
         pieces.push((std::mem::take(&mut carried), piece));
@@ -8965,12 +8972,11 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
         .collect();
     }
   }
-  // A line that is one group opening with declarations (`{\bf Daniel Boyanovsky, Da- Shin Lee}`, hep-th9212083;
-  // `{\bf Jianfei Ma$^{2}$, \enspace Emmanuele Chersoni$^{2}$, …}`, 2608.16650) is the same when what it holds is
-  // names: each name in the group and its declarations. Braces alone are kept: they hold one name together
-  // (`\author{{Smith, Jr., John}}`).
+  // A line that is one group (`{\bf Daniel Boyanovsky, Da- Shin Lee}`, hep-th9212083; `{\bf Jianfei Ma$^{2}$,
+  // \enspace Emmanuele Chersoni$^{2}$, …}`, 2608.16650; with no declarations, mnras's `\newauthor{…}` group in
+  // 2409.07518, 2312.07625) is the same when what it holds reads as two or more names: each name in the group and its
+  // declarations. A group holding one name together (`\author{{Smith, Jr., John}}`) reads as none.
   if let Some((declarations, inner)) = whole_line_group(&line)
-    && declarations.iter().any(|t| *t != T_SPACE!())
     && name_count(&visible_name_text(inner.unlist_ref())) >= 2
   {
     let inner_split = split(marks_before_glued_commas(inner));
@@ -9046,6 +9052,216 @@ fn expand_sole_author_macro(stuff: Tokens) -> Tokens {
   }
 }
 
+/// An author line's parameterless macros that print only a name separator — `\newcommand{\authcomma}{\textmd{,}
+/// \hskip0.5em}` (2403.07809), tibop-article.cls:41's `\lastand` = `, and ` (2401.13365) — written as that separator,
+/// where the split reads it: hidden in the macro, the names around it were one author. The separator is written as the
+/// macro prints it, a space where its body has spacing and no more (`AT\amp T Labs` stays "AT&T", `NSF\comma NIH`
+/// "NSF,NIH"), and an empty group ending the macro's name (`\amp{}`) prints nothing.
+fn expand_separator_macros(stuff: Tokens) -> Tokens {
+  let v = stuff.unlist_ref();
+  if !v.iter().any(|t| t.get_catcode() == Catcode::CS) {
+    return stuff;
+  }
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  let mut changed = false;
+  let mut i = 0;
+  while i < v.len() {
+    let t = v[i];
+    i += 1;
+    let Some(sep) = separator_macro_text(&t) else {
+      out.push(t);
+      continue;
+    };
+    changed = true;
+    if sep.lead && out.last() != Some(&T_SPACE!()) {
+      out.push(T_SPACE!());
+    }
+    for c in sep.text.chars() {
+      out.push(match c {
+        ' ' => T_SPACE!(),
+        '&' => T_CS!("\\&"),
+        ',' => T_OTHER!(","),
+        _ => T_LETTER!(&c.to_string()),
+      });
+    }
+    if v.get(i) == Some(&T_BEGIN!()) && v.get(i + 1) == Some(&T_END!()) {
+      i += 2;
+    }
+    if sep.trail {
+      out.push(T_SPACE!());
+      while v.get(i) == Some(&T_SPACE!()) {
+        i += 1;
+      }
+    }
+  }
+  if changed { Tokens::new(out) } else { stuff }
+}
+
+/// The font commands that set the upright roman text a separator prints anyway: around a separator's group they
+/// print nothing of their own (`\authcomma` = `\textmd{,}\hskip0.5em`, 2403.07809).
+const PLAIN_FONT_COMMANDS: [&str; 8] = [
+  "\\textmd",
+  "\\textup",
+  "\\textrm",
+  "\\textnormal",
+  "\\normalfont",
+  "\\rm",
+  "\\rmfamily",
+  "\\upshape",
+];
+
+/// The index in `body` past the glue specification starting at `i` (after `\hskip` or `\kern`): a dimension — a
+/// number and a unit, two letters or `fil`, `fill`, `filll` — then `plus` and `minus` dimensions (`1em plus 1fil`).
+fn past_glue(body: &[Token], i: usize) -> usize {
+  let letter_at = |j: usize, c: char| {
+    body.get(j).is_some_and(|t| {
+      t.get_catcode() == Catcode::LETTER && t.with_str(|s| s.len() == 1 && s.starts_with(c))
+    })
+  };
+  let past_spaces = |mut j: usize| {
+    while body.get(j) == Some(&T_SPACE!()) {
+      j += 1;
+    }
+    j
+  };
+  let past_dimension = |j: usize| {
+    let mut j = past_spaces(j);
+    while body
+      .get(j)
+      .is_some_and(|u| u.with_str(|s| s.chars().all(|c| c.is_ascii_digit() || ".+-".contains(c))))
+    {
+      j += 1;
+    }
+    j = past_spaces(j);
+    if letter_at(j, 'f') && letter_at(j + 1, 'i') && letter_at(j + 2, 'l') {
+      j += 3;
+      while letter_at(j, 'l') {
+        j += 1;
+      }
+    } else {
+      for _ in 0..2 {
+        if body
+          .get(j)
+          .is_some_and(|u| u.get_catcode() == Catcode::LETTER)
+        {
+          j += 1;
+        }
+      }
+    }
+    j
+  };
+  let mut i = past_dimension(i);
+  for keyword in ["plus", "minus"] {
+    let j = past_spaces(i);
+    if keyword
+      .chars()
+      .enumerate()
+      .all(|(k, c)| letter_at(j + k, c))
+    {
+      i = past_dimension(j + keyword.len());
+    }
+  }
+  i
+}
+
+/// What a separator macro prints: `text` (`,`, `and`, `&` or `, and`), and whether spacing comes before (`lead`) and
+/// after it (`trail`) in the macro's body — written as one space.
+struct SeparatorText {
+  text:  &'static str,
+  lead:  bool,
+  trail: bool,
+}
+
+/// The separator a parameterless macro prints, read through its body past spacing (`\hskip0.5em`, `\quad`, ties) and
+/// the font commands around a group (`\textmd{,}`); `None` for any other macro.
+fn separator_macro_text(cs: &Token) -> Option<SeparatorText> {
+  if cs.get_catcode() != Catcode::CS || lookup_conditional(cs).is_some() {
+    return None;
+  }
+  // (an author-block delimiter is split on itself, whatever it prints: a class's `\renewcommand{\and}{{\normalfont
+  // and}}`, ecca.cls:192, still parts its groups, as Perl splits the unexpanded `\and`, Base_Utility.pool.ltxml:682)
+  let delimiter = |d: SplitDelim| matches!(d, SplitDelim::Token(t) if t == *cs);
+  if author_group_splits()
+    .into_iter()
+    .chain(author_and_splits())
+    .chain(author_affil_splits())
+    .any(delimiter)
+  {
+    return None;
+  }
+  let defn = lookup_definition(cs).ok().flatten()?;
+  if !defn.is_expandable()
+    || defn
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return None;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return None;
+  };
+  let body = body.unlist_ref();
+  let mut text = String::new();
+  let (mut lead, mut spaced) = (false, false);
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    i += 1;
+    let spacing = if matches!(t.get_catcode(), Catcode::BEGIN | Catcode::END) {
+      continue;
+    } else if is_spacing(&t) {
+      true
+    } else if t == T_CS!("\\hskip") || t == T_CS!("\\kern") {
+      i = past_glue(body, i);
+      true
+    } else if t == T_CS!("\\hspace") {
+      if body.get(i) == Some(&T_OTHER!("*")) {
+        i += 1;
+      }
+      i = skip_group(body, i);
+      true
+    } else {
+      false
+    };
+    if spacing {
+      if text.is_empty() {
+        lead = true;
+      } else {
+        spaced = true;
+      }
+      continue;
+    }
+    if t.get_catcode() == Catcode::CS && t != T_CS!("\\&") {
+      // an upright-roman font command around the separator's group (`\textmd{,}`, `\rm`) prints nothing of its own;
+      // a visible one (`\textbf{\&}`, `\large`) is the separator's look, kept as written
+      if !t.with_str(|s| PLAIN_FONT_COMMANDS.contains(&s)) {
+        return None;
+      }
+      continue;
+    }
+    if !(t == T_CS!("\\&") || matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)) {
+      // (an alignment `&`, a parameter, math: no printed separator)
+      return None;
+    }
+    if std::mem::take(&mut spaced) {
+      text.push(' ');
+    }
+    if t == T_CS!("\\&") {
+      text.push('&');
+    } else {
+      t.with_str(|s| text.push_str(s));
+    }
+  }
+  let text = match text.as_str() {
+    "," => ",",
+    "and" => "and",
+    "&" => "&",
+    ", and" => ", and",
+    _ => return None,
+  };
+  Some(SeparatorText { text, lead, trail: spaced })
+}
+
 /// The branch of `body` = `\ifX … [\else …] \fi` whose `\ifX` means `\iftrue` or `\iffalse` (a `\newif` toggle) that TeX
 /// takes, when that branch holds no conditional of its own; `None` for any other shape.
 fn toggled_branch(body: &[Token]) -> Option<Vec<Token>> {
@@ -9092,14 +9308,18 @@ fn toggled_branch(body: &[Token]) -> Option<Vec<Token>> {
 /// (`\textbf{A, B}`, `\scalebox{0.9}{A, B}`, `\href{url}{A, B}`) or a group opening with declarations (`{\bf A, B}`) —
 /// with only marks and notes after it: each name in the wrapper, the marks and notes after the last. Perl's
 /// `SplitTokens` passes over groups (Base_Utility.pool.ltxml:152-165), so such a piece was one author holding them all.
-/// A bare group (`{Smith, Jr., John}`) holds one name together, and a piece reading as fewer than two names stays
-/// (KNOWN_PERL_ERRORS #552).
+/// A group with no declarations is a wrapper too (`{Benedikt Steinar Magnússon, Ragnar Sigurðsson}`, 2306.02486;
+/// 2312.04684, 2501.04001): a piece reading as fewer than two names stays — a group holding one name together,
+/// `{Smith, Jr., John}`, reads as none ("Smith" alone is no name) (KNOWN_PERL_ERRORS #552, #554).
 fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tokens)> {
   let unchanged = || vec![(delimiter.to_vec(), piece.clone())];
   let v = piece.unlist_ref();
-  let Some(start) = v.iter().position(|t| *t != T_SPACE!()) else {
+  // (spacing before the wrapper — `\ \textbf{…}`, `\vspace{0.2cm} \textbf{…}`: 2508.05004, 2512.22234 — stays with
+  // the first name)
+  let start = leading_spacing_end(v);
+  if start >= v.len() {
     return unchanged();
-  };
+  }
   let (open, close) = if v[start].get_catcode() == Catcode::CS {
     if is_footnote_mark(&v[start])
       || v[start].with_str(|s| NAME_ANNOTATIONS.contains(&s))
@@ -9147,16 +9367,20 @@ fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tok
     return unchanged();
   };
   let tail = &v[close + 1..];
-  if !(tail.iter().all(|t| *t == T_SPACE!()) || only_marks_and_notes(tail)) {
+  // (spacing after it — `\textbf{…} \vspace{0.05in}`: 2404.00511, 2404.02905, 2408.13296, 2412.05271 — stays with the
+  // last)
+  let marks = &tail[..spacing_end(tail)];
+  // (the list's closing punctuation before them: `\uppercase{…, and Cat Cole}.$^{2}$`, 2201.07394)
+  let marks = match marks.first() {
+    Some(t) if *t == T_OTHER!(".") || *t == T_OTHER!(";") => &marks[1..],
+    _ => marks,
+  };
+  if !(marks.iter().all(|t| *t == T_SPACE!()) || only_marks_and_notes(marks)) {
     return unchanged();
   }
   let inner = &v[open + 1..close];
   let declarations = if open == start {
-    let declarations = opening_declarations(&Tokens::new(inner.to_vec()));
-    if declarations.iter().all(|t| *t == T_SPACE!()) {
-      return unchanged();
-    }
-    declarations
+    opening_declarations(&Tokens::new(inner.to_vec()))
   } else {
     Vec::new()
   };
@@ -9177,7 +9401,11 @@ fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tok
     .into_iter()
     .enumerate()
     .map(|(k, (inner_delimiter, name))| {
-      let mut wrapped = v[start..=open].to_vec();
+      let mut wrapped = if k == 0 {
+        v[..=open].to_vec()
+      } else {
+        v[start..=open].to_vec()
+      };
       wrapped.extend(declarations.iter().copied());
       wrapped.extend(name.unlist());
       wrapped.push(v[close]);
@@ -9194,6 +9422,33 @@ fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tok
       )
     })
     .collect()
+}
+
+/// Where a piece's leading spacing ends: spaces, ties, space commands (`\ `, `\quad`) and `\vspace`/`\hspace` with
+/// their length.
+fn leading_spacing_end(v: &[Token]) -> usize {
+  let mut i = 0;
+  while i < v.len() {
+    if is_spacing(&v[i]) {
+      i += 1;
+    } else if v[i] == T_CS!("\\vspace") || v[i] == T_CS!("\\hspace") {
+      let mut j = i + 1;
+      if v.get(j) == Some(&T_OTHER!("*")) {
+        j += 1;
+      }
+      while v.get(j) == Some(&T_SPACE!()) {
+        j += 1;
+      }
+      // (only with its braced length: `\vspace\baselineskip` stops here, its length no wrapper)
+      if v.get(j).is_none_or(|t| t.get_catcode() != Catcode::BEGIN) {
+        break;
+      }
+      i = skip_group(v, j).min(v.len());
+    } else {
+      break;
+    }
+  }
+  i
 }
 
 /// A name separator written at the edge of a wrapper is the line's (`\textbf{Hang Xu$^{2}$,}`, 2310.10477;
@@ -9266,8 +9521,9 @@ fn hoist_wrapped_separators(line: Tokens) -> Tokens {
       continue;
     }
     let body: Vec<Token> = inner[declarations.len()..].to_vec();
-    // (a tie beside the separator is spacing: `\textbf{Jiaming Ji$^{\diamond}$,~}`, 2505.20214)
-    let spacing = |u: &Token| *u == T_SPACE!() || u.with_str(|s| s == "~");
+    // (a tie or a space command beside the separator is spacing: `\textbf{Jiaming Ji$^{\diamond}$,~}`, 2505.20214;
+    // `\textbf{Yuanpei Chen$^5$, \quad}`, 2407.15815)
+    let spacing = is_spacing;
     let first = body.iter().position(|u| !spacing(u));
     let last = body.iter().rposition(|u| !spacing(u));
     let (Some(first), Some(last)) = (first, last) else {
@@ -9486,6 +9742,17 @@ fn word_and_between(before: Token, after: Token) -> SplitDelim {
 /// " \& " between two names, its spaces kept.
 fn literal_ampersand() -> SplitDelim {
   SplitDelim::Tokens(Tokens::new(vec![T_SPACE!(), T_CS!("\\&"), T_SPACE!()]))
+}
+/// `\&` with a tie on either side (`Kai Han~\&~Yunhe Wang`, 2601.13599), as the "and" ties are.
+fn tied_ampersands() -> [SplitDelim; 3] {
+  let amp = |before: Token, after: Token| {
+    SplitDelim::Tokens(Tokens::new(vec![before, T_CS!("\\&"), after]))
+  };
+  [
+    amp(T_ACTIVE!('~'), T_ACTIVE!('~')),
+    amp(T_ACTIVE!('~'), T_SPACE!()),
+    amp(T_SPACE!(), T_ACTIVE!('~')),
+  ]
 }
 // Things to split authors (Perl PR #2767, Base_Utility.pool.ltxml)
 // This is " and " without the spaces stripped.
@@ -10714,6 +10981,9 @@ fn visible_name_text(tokens: &[Token]) -> String {
           text.push(' ');
         } else if t == T_CS!("\\&") {
           text.push('&');
+        } else if t == T_CS!("\\and") || t == T_CS!("\\And") || t == T_CS!("\\AND") {
+          // (an author separator inside a wrapper reads as the word it prints: `{\bf {\large A \and B}}`, 2401.03555)
+          text.push_str(" and ");
         } else if let Some(letter) = t.with_str(letter_command) {
           // a letter written as a command (`{\L}ukasz`, `\O stergaard`) is that letter, the spaces ending the
           // command's name aside
@@ -11005,7 +11275,8 @@ fn non_name_word(word: &str) -> bool {
 /// Digits after a space are text — a postal code (`CA 93106`), not a mark.
 fn strip_glued_marks(text: &str) -> &str {
   let text = text.trim();
-  let stripped = text.trim_end_matches(|c: char| c.is_ascii_digit() || "*∗†‡§¶♯#,".contains(c));
+  // (a list's closing `;` too: sn-jnl's `\author[1]{A.~Able, B.~Baker, C.~Cole;}`, 2504.09158)
+  let stripped = text.trim_end_matches(|c: char| c.is_ascii_digit() || "*∗†‡§¶♯#,;".contains(c));
   if stripped.len() < text.len() && stripped.ends_with(char::is_whitespace) {
     text
   } else {
@@ -11295,7 +11566,15 @@ fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens, Vec<Tokens>)> {
         joined.push(T_OTHER!(","));
       }
       joined.push(T_SPACE!());
-      joined.extend(line.clone().unlist());
+      // (an "and" opening the line — inside its group too, `{A, B} \\ {and C}`, 2306.02486, 2411.12606 — is the
+      // separator, written where the split reads it)
+      match and_led.and_then(|_| without_leading_and(line)) {
+        Some(rest) => {
+          joined.extend([T_LETTER!("a"), T_LETTER!("n"), T_LETTER!("d"), T_SPACE!()]);
+          joined.extend(rest.unlist());
+        },
+        None => joined.extend(line.clone().unlist()),
+      }
       *names = Tokens::new(joined);
     } else if affiliations.is_empty() && names_marked_alike(names, line) {
       // the next names, the lines after them their affiliations as after any names
@@ -11374,7 +11653,8 @@ fn rejoin_name_qualifiers(pieces: Vec<(Vec<Token>, Tokens)>) -> Vec<Tokens> {
 }
 
 /// Whether `tokens` hold nothing to read but marks and notes: spaces (`~`, `\ `, `\,`), a note or mark command with
-/// its arguments ([`NAME_ANNOTATIONS`], `\footnotemark[…]`), a superscript or subscript, or math holding only those
+/// its arguments ([`NAME_ANNOTATIONS`], `\footnotemark[…]`, the mark commands of [`mark_commands`]:
+/// `\textsuperscript`, `\IEEEauthorrefmark`, `\authorrefmark`), a superscript or subscript, or math holding only those
 /// (`$^{*}$`). An author written as a macro (`\A`) is something to read.
 fn only_marks_and_notes(tokens: &[Token]) -> bool {
   let mut i = 0;
@@ -11393,7 +11673,12 @@ fn only_marks_and_notes(tokens: &[Token]) -> bool {
       {
         i += 2
       },
-      Catcode::CS if is_footnote_mark(&t) || t.with_str(|s| NAME_ANNOTATIONS.contains(&s)) => {
+      // (a mark command too: ieeeaccess's `\authorrefmark{2}` after a list's closing period, 2201.07394)
+      Catcode::CS
+        if is_footnote_mark(&t)
+          || t.with_str(|s| NAME_ANNOTATIONS.contains(&s))
+          || mark_commands().contains(&t) =>
+      {
         any = true;
         i += 1;
         if tokens.get(i) == Some(&T_OTHER!("[")) {

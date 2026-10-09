@@ -1,0 +1,12 @@
+% witness: 2312.04684, 2501.04001 (a name list in a bare `{…}` group)
+% oracle:  pdflatex 0 errors: three marked names over their affiliations
+% engines: rust 64b3 = one creator holding 3 names + Error:frontmatter:merged_creators; Perl the same (SplitTokens passes over groups, Base_Utility.pool.ltxml:152-165)
+% expect:  0 errors; 3 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{{Ann Able\textsuperscript{1}\thanks{Intern.}, Bob Baker\textsuperscript{2}, Cat Cole\textsuperscript{1}} \\ \\
+\textsuperscript{1}Univ A, \textsuperscript{2}Univ B}
+\maketitle
+\end{document}

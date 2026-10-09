@@ -1,0 +1,16 @@
+% witness: 64b review finding 1 (econ classes redefine \and as printing text: ecca.cls:192, worlddev.cls:180,
+%          regstud.cls:208 `\renewcommand{\and}{{\normalfont and}}`; ximera.cls:531 `\def\and{and }`); with a macro that
+%          prints ordinary text (`\univ`), which is no separator
+% oracle:  pdflatex 0 errors: "Ann Able / University of A and Bob Baker / University of B"
+% engines: rust 64b5 (first cut) = the redefined `\and` rewritten as a plain "and": one group, Bob Baker read as an
+%          affiliation line; Perl splits on the unexpanded `\and` (Base_Utility.pool.ltxml:682)
+% expect:  0 errors; two creators, each with its affiliation ("University of A", "University of B")
+% status:  RED (64b5) -> GREEN (64b)
+\documentclass{article}
+\renewcommand{\and}{{\normalfont and}}
+\newcommand{\univ}{University}
+\begin{document}
+\title{T}
+\author{Ann Able\\\univ{} of A \and Bob Baker\\\univ{} of B}
+\maketitle
+\end{document}

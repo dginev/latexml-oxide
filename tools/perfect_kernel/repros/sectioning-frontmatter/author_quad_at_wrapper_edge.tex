@@ -1,0 +1,15 @@
+% witness: 2407.15815 (`\textbf{Yuanpei Chen$^5$, \quad}`)
+% oracle:  pdflatex 0 errors: four names over their affiliations
+% engines: rust 64b3 = one creator holding 2 names + Error:frontmatter:merged_creators (`\quad` at the wrapper's edge hid its comma); Perl the same (SplitTokens passes over groups, Base_Utility.pool.ltxml:152-165)
+% expect:  0 errors; 4 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, \quad Bob Baker$^{2}$, \quad \\
+\textbf{Cat Cole$^{1}$, \quad}
+\vspace{0.2cm}
+\textbf{Dan Dorn$^{2}$} \\
+$^{1}$ Univ A, $^{2}$ Univ B}
+\maketitle
+\end{document}

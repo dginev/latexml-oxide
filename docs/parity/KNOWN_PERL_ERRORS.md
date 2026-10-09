@@ -11787,3 +11787,43 @@ ieee_refmark_orcid_digits_are_no_name, algorithm2e_block_in_algorithmic_line, al
 mathtools_xpp_precode_parameter, caption_in_minipage_with_adjustbox, caption_in_centered_minipage_with_adjustbox,
 ieee_refmark_unanswered_stays_printed, author_unmatched_numeric_mark}`, `perfect_kernel_batch63::ieee_grade_comma_before_a_break_continues_names`,
 `perfect_kernel_batch61::algorithm2e_statements_outside_a_listing` (the whole float).
+
+## 554. Name lists in a bare group, beside spacing, behind a separator macro, with `\and` inside a wrapper, tied `\&`, or closing punctuation
+
+Perl's `SplitTokens` passes over groups (Base_Utility.pool.ltxml:152-165), `\lx@add@authors` splits the unexpanded
+tokens at its `@authorsplits` only (:682-683: commas, " and ", the `\and` family, `\quad`/`\qquad` — no `\&`;
+:716-725), and a per-author class's `\author` is one author,
+so each of these is one author holding the whole list (the residual of HTML_FEEDBACK HF2 after
+64a: 30 of 36 papers, report agent_reports/2026-10-09_rc_hf2c_unsplit_lists.md):
+- a name list in a group without declarations — `\author{{A, B} \\ {and C}}` (2306.02486), 2312.04684, 2501.04001,
+  2502.00290, mnras's `\newauthor{…}` (2409.07518, 2312.07625);
+- spacing beside a wrapper of names — `\textbf{A, B, C} \vspace{0.05in}` (2404.02905, 2412.05271, 2408.13296,
+  2404.00511), `\vspace{…} \textbf{…}` / `\ \textbf{…}` (2512.22234, 2508.05004), `\textbf{A$^5$, \quad}` (2407.15815);
+- a separator hidden in a parameterless macro — `\authcomma` = `\textmd{,}\hskip0.5em` (2403.07809),
+  tibop-article.cls:41 `\lastand` = `, and ` (2401.13365);
+- `\and` inside a wrapper — llncs `\large{A \and B}` (2402.15967), amsart `{\bf {\large A \and B}}` (2401.03555);
+- `~\&~` (2601.13599), a line `\\\sc and Steven …` (2411.12606);
+- a list's closing punctuation — `\uppercase{…, and C}.\authorrefmark{2}` (ieeeaccess, 2201.07394), sn-jnl's lists
+  closing with `;` (2504.09158).
+
+Fixed in Rust (64b), in the kernel author splitter: a group without declarations is a wrapper of names when it holds
+two or more (a group holding one name together, `{Smith, Jr., John}`, reads as none); spacing before a wrapper (space
+commands, `\vspace`/`\hspace` with their length) stays with its first name and spacing after it (`spacing_end`) with
+its last; a parameterless macro printing only `,`, `and`, `&` or `, and` (read past spacing and font commands) is
+written as that separator, a space where its body has spacing and no more (`AT\amp T Labs` stays "AT&T"; a visible
+font around it, `\textbf{\&}`, keeps the macro as written; never
+an author-block delimiter: a class's printing `\renewcommand{\and}{{\normalfont and}}`, ecca.cls:192, still parts its
+groups; only letters and characters count as printed); `\and`/`\And`/`\AND` separate names inside a wrapper and read
+as " and "; `\&` with ties separates; a continuation line opening with "and" (inside its group too) joins with that separator; a wrapper's tail
+may open with the list's `.` or `;` before its marks, `;` closes a name like a glued mark, and the mark commands
+(`\authorrefmark`) count as marks there. Residuals: llncs's `\author{\authorBlock}` read unexpanded (2409.13475; Perl
+the same, llncs.cls.ltxml:41-43); acmart `\author{\Large\MyAuthors}` (2505.09343: acmart's own comma test cannot see
+inside the macro — a ruling); arguments printing nothing read as name text (`\textcolor{green!80!black}{…}`,
+2402.07867; `\includegraphics` in `\href`, 2312.07592); `\IEEEauthorblockA` nested in `\IEEEauthorblockN` by a missing
+brace (2402.00243); S8 commas inside math, S9 a legend line welded onto the last name (2403.01081). Guards
+`perfect_kernel_batch64::{author_bare_group_names_and_led_line, author_bare_group_marked_names,
+mnras_newauthor_group_names, author_vspace_after_wrapper_names, author_vspace_before_wrapper_names,
+author_quad_at_wrapper_edge, llncs_and_inside_wrapper, amsart_and_inside_group, author_separator_macro_comma,
+author_separator_macro_lastand, author_tied_ampersand, author_declaration_line_opens_with_and,
+author_wrapper_closing_period_before_mark, amsart_name_list_closing_semicolon, author_redefined_and_still_parts_groups,
+author_separator_macro_prints_as_written, author_separator_macro_visible_font_kept, author_separator_macro_glue}`.

@@ -1,0 +1,13 @@
+% witness: 2403.07809 (`\newcommand{\authcomma}{\textmd{,}\hskip0.5em}`)
+% oracle:  pdflatex 0 errors: three names separated by commas
+% engines: rust 64b3 = one creator holding 3 names + Error:frontmatter:merged_creators (the separator hidden in a macro); Perl the same (its split reads the unexpanded `\authcomma` and never sees the comma, Base_Utility.pool.ltxml:688-725)
+% expect:  0 errors; 3 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{article}
+\newcommand{\authcomma}{\textmd{,}\hskip0.5em}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\authcomma Bob Baker$^{2}$\authcomma Cat Cole$^{1}$\\
+$^1$Univ A \quad $^2$Univ B}
+\maketitle
+\end{document}

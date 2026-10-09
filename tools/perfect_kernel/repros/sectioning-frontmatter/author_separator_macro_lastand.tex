@@ -1,0 +1,12 @@
+% witness: 2401.13365 (tibop-article.cls:41 `\lastand` = `, and `)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2, and Cat Cole1"
+% engines: rust 64b3 = "Bob Baker, and Cat Cole" one creator + Error:frontmatter:merged_creators; Perl the same (its split reads the unexpanded `\lastand`, Base_Utility.pool.ltxml:688-725)
+% expect:  0 errors; 3 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{article}
+\newcommand{\lastand}{, and }
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1}\and Bob Baker\textsuperscript{2}\lastand Cat Cole\textsuperscript{1}}
+\maketitle
+\end{document}

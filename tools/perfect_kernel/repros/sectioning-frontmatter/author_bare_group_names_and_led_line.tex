@@ -1,0 +1,12 @@
+% witness: 2306.02486 (`\author{{Benedikt Steinar Magnússon, Ragnar Sigurðsson} \\ {and Bergur Snorrason}}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" over "and Cat Cole"
+% engines: rust 64b3 = one creator holding 3 names + Error:frontmatter:merged_creators (a group without declarations was not read as a wrapper; the "and" opening the second line stayed in its group); Perl the same (SplitTokens passes over groups, Base_Utility.pool.ltxml:152-165)
+% expect:  0 errors; 3 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{{Ann Able, Bob Baker} \\
+{and Cat Cole}}
+\maketitle
+\end{document}

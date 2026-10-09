@@ -1,0 +1,13 @@
+% witness: 64b review r1/r3 (a separator macro whose spacing is stretchable glue, `,\hskip 1em plus 1fil`)
+% oracle:  pdflatex 0 errors: "Ann Able,   Bob Baker / Univ A"
+% engines: rust 64b7 = one creator "Ann Able, Bob Baker" + Error:frontmatter:merged_creators (the glue's `plus 1fil`
+%          read as printed text); 64b3 the same; Perl one author (its splits never expand macros, Base_Utility.pool.ltxml:679-680)
+% expect:  0 errors; two creators sharing "Univ A"
+% status:  RED (64b7) -> GREEN (64b)
+\documentclass{article}
+\newcommand{\sepa}{,\hskip 1em plus 1fil}
+\begin{document}
+\title{T}
+\author{Ann Able\sepa Bob Baker\\ Univ A}
+\maketitle
+\end{document}
