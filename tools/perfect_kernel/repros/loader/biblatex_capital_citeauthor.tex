@@ -1,0 +1,15 @@
+% witness: 2410.22329 (5 `_` errors): biblatex.def:2624-2625 `\Citeauthor`, the capitalized `\citeauthor`
+% oracle:  pdflatex+biber 0 errors: "Hampe showed it."
+% engines: rust 63s4 = `Error:undefined:\Citeauthor`, then the key `Hampe_2017` typeset (`Error:unexpected:_`)
+% expect:  0 errors, 0 warnings; one citation (in this numeric style the bracketed number, not the name: RED
+%          index-bib/biblatex_citeauthor_numeric_prints_name)
+% status:  RED (63s4) -> GREEN (63t)
+\begin{filecontents*}{biblatex_capital_citeauthor.bib}
+@article{Hampe_2017, author={Hampe, Simon}, title={T}, journal={J}, year={2017}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage[style=numeric]{biblatex}
+\addbibresource{biblatex_capital_citeauthor.bib}
+\begin{document}
+\Citeauthor{Hampe_2017} showed it.
+\end{document}

@@ -14367,3 +14367,40 @@ L3139-3167).
 `openbib` `.ltx_bibblock{display:block;}` (article.cls.ltxml:35), as the PDF sets each bibliography block on its line.
 Local files and inline scripts stay dropped. Guard `perfect_kernel_batch63::lx_require_resource_content`,
 repro loader/lx_require_resource_content.
+
+### 469. `\underbar` and `\TextOrMath` as latex.ltx defines them (Perl: shortcuts)
+
+**Background.** Perl takes two kernel shortcuts: `\underbar` is `\underline` (math_common.pool.ltxml:541), and
+`\TextOrMath` tests `\ifmmode` when it is expanded (latex_constructs.pool.ltxml:5864). latex.ltx boxes `\underbar`'s
+argument in text mode (latex.ltx:619, robust by :1831) and defers `\TextOrMath`'s test to a `\protected` second stage
+(latex.ltx:10243-10248). The shortcuts differ where a formula holds `\underbar{$x$}` (the `$` leaves math) and where
+`\TextOrMath` opens an alignment cell (the look-ahead chooses text), KNOWN_PERL_ERRORS #542, #543.
+
+**Rust behavior.** `\TextOrMath` is latex.ltx's, as RawTeX in latex_constructs (sect13.rs). `\underbar` is robust and
+boxes its argument as latex.ltx does — `\underline{\setbox\tw@\hbox{#1}\dp\tw@\z@\box\tw@}` (`\sbox\tw@{#1}` is
+`\setbox\tw@\hbox{#1}` up to its color group) — in text, and in math when the argument has a `$` of its own:
+`\underbar{$\psi$}` gives `tex="\underline{\hbox{$\psi$}}\in P"`, content `underline@(psi)`. In math an argument without
+one keeps Perl's reading, an underlined formula (`$\underbar{x}$` an underlined italic variable): boxed, TeX only
+sets it as upright text, and the semantic markup comes before the PDF's look (the 2026-10-06 priority order).
+
+**Measured.** 2308.06669: 6 `_` errors → 0; 2311.14468: the align row's `\TextOrMath` takes the math branch. On 1,494
+papers compared with 63s4 (the 63t A/B, with the binding fixes of KNOWN_PERL_ERRORS #541) none changes for the worse:
+the witnesses, 2405.17935's eight fcs biographies (2 errors → 0), 2401.02038's straight quotes (the cas class's T1
+font, as its PDF prints them), and 2301.00139's ids inside one unparsed formula (content the same). Guards
+`perfect_kernel_batch63::{underbar_boxes_its_argument, textormath_in_align_cell}`, repros
+expansion-primitives/underbar_boxes_its_argument, expansion-primitives/textormath_in_align_cell.
+
+### 470. A contact's HTML link falls back to the first text inside it (Perl: its first text node only)
+
+**Background.** LaTeXML-structure-xhtml.xsl builds an `email`, `url` or `orcid` contact's link from `text()`, the
+contact's first text node. When the address sits in an element of its own — a font wrapper (a `\small` after the
+title block, KNOWN_PERL_ERRORS #544), `\texttt{…}` — there is none, and the link is `mailto:` alone or `href=""`,
+though the page shows the address (2609.14733, 2609.03698; Perl's stylesheet the same). A contact that is already a
+link (`\email{\href{mailto:…}{…}}`) was wrapped in a second `<a>`, nested anchors.
+
+**Rust behavior.** A named template `contact-address` gives the contact's own first non-blank text, trimmed, and only
+when there is none the first non-blank text inside it: a contact holding its address as its own text links to it as
+before (marks after it, `\email{a@b.org \textsuperscript{*}}`, stay out of the link), one whose address is wrapped
+links to the address. An `email` or `url` contact holding an `ltx:ref` (at any depth) is left to that link, as the `orcid` template
+already does for a direct one. Guards `perfect_kernel_batch63::{contact_link_from_whole_text, cas_ead_verbatim}`, repro
+sectioning-frontmatter/contact_link_from_whole_text.

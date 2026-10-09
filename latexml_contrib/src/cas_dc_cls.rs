@@ -8,6 +8,8 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // cas-sc.cls:144, cas-dc.cls:142 `\RequirePackage[T1]{fontenc}`: text `_`, `<`, `>`, `|` print as themselves.
+  RequirePackage!("fontenc", options => vec![s!("T1")]);
   RequirePackage!("amsmath");
   // cas-dc.cls:64 `\RequirePackage{xspace,xstring,footmisc}` (the samples'
   // `\def\tsc#1{\textsc{#1}\xspace}`); xstring has no binding and would
@@ -156,19 +158,20 @@ LoadDefinitions!({
     "\\affiliation[]{}",
     "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}"
   );
-  // \ead[type]{address} — author email/url, preserve as contact.
+  // \ead[type]{address} — author email/url, preserve as contact. The address is read verbatim, as cas-common.sty
+  // prints it, stringified (`\ttfamily \tl_to_str:n`, :362; the `[url]` form through `\url`, :338): 2410.07921's
+  // `arash_khajooei@…`, its `_` an error. The type is `email` by default, as elsarticle's, through the same contact
+  // API (elsart_support_core_sty.rs; an empty `role` before). The contact holds the address as its own text, which
+  // the HTML link is made of (LaTeXML-structure-xhtml.xsl `concat('mailto:',text())`); its `_` prints in the T1 font
+  // the class loads.
   DefMacro!(
-    "\\ead[]{}",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}"
+    "\\ead Optional:email Semiverbatim",
+    "\\lx@add@contact[role=#1]{#2}"
   );
   // ltx:contact stubs (mirror elsart_support_core@@@affiliation form)
   DefConstructor!(
     "\\@@@affiliation{}",
     "^ <ltx:contact role='affiliation'>#1</ltx:contact>"
-  );
-  DefConstructor!(
-    "\\@@@email{}{}",
-    "^ <ltx:contact role='#1'>#2</ltx:contact>"
   );
 
   // \sep — author/affil separator that cas-common defines.

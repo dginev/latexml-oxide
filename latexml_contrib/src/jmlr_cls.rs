@@ -149,21 +149,11 @@ LoadDefinitions!({
 \newcommand{\algocfconts}[3]{\jmlralgorule\par\smallskip#2\label{#1}\jmlralgorule\par\smallskip#3\jmlralgorule}
 \providecommand{\jmlralgorule}{\noindent\rule{\linewidth}{0.4pt}}"
   );
-  DefMacro!("\\tableref{}", "#1");
-  DefMacro!("\\figureref{}", "#1");
-  DefMacro!("\\algorithmref{}", "#1");
-  // jmlrutils.sty L86-140: reference helpers. Stub as the LaTeX
-  // \ref expansion so cross-refs still resolve. Witness 2409.07012.
-  DefMacro!("\\sectionref{}", "\\ref{#1}");
-  DefMacro!("\\appendixref{}", "\\ref{#1}");
-  DefMacro!("\\equationref{}", "(\\ref{#1})");
-  DefMacro!("\\theoremref{}", "\\ref{#1}");
-  DefMacro!("\\lemmaref{}", "\\ref{#1}");
-  DefMacro!("\\corollaryref{}", "\\ref{#1}");
-  DefMacro!("\\propositionref{}", "\\ref{#1}");
-  DefMacro!("\\definitionref{}", "\\ref{#1}");
-  DefMacro!("\\exampleref{}", "\\ref{#1}");
-  DefMacro!("\\remarkref{}", "\\ref{#1}");
+  // jmlrutils.sty:116-165 (read above) defines the reference helpers: `\tableref{tab:a}` is "Table 1" through
+  // `\objectref`, a list "Tables 1 and 2". Stand-ins here (`\tableref{}` → `#1`) printed the label key as text
+  // (2507.03899: "tab:raw_perf", its `_` an error) and lost the name. jmlrutils has no `\propositionref`, so none
+  // here either: a stand-in overrode the author's own `\newcommand{\propositionref}`. Witness 2409.07012
+  // (`\sectionref`).
 
   // jmlrutils theorem-style configuration helpers (gobble silently —
   // we don't replicate the punctuation/spacing). Witness: 2502.19625

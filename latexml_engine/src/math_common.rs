@@ -923,7 +923,26 @@ LoadDefinitions!({
 
   // NOTE that all the above accents REQUIRE math mode
   // EXCEPT underline, overrightarrow and overleftarrow!
-  Let!("\\underbar", "\\underline"); // Will anyone notice?
+  // latex.ltx:619 `\def\underbar#1{\underline{\sbox\tw@{#1}\dp\tw@\z@\box\tw@}}`, robust (:1831 `\MakeRobust`): the
+  // argument is boxed, in text mode, so `\underbar{$\psi$}` is legal inside math (2308.06669). Perl lets it to
+  // `\underline` (math_common.pool.ltxml:541), where the inner `$` toggled out of math. In math an argument without a
+  // `$` of its own keeps that reading, an underlined formula: boxed it would only change font, to an upright text "x"
+  // in place of the variable (semantic markup before the PDF's look, the 2026-10-06 priority order); one with its
+  // own `$…$` is boxed, as latex.ltx does. (`\setbox\tw@\hbox`: `\sbox` up to its color group.)
+  DefMacro!("\\underbar{}", sub[(arg)] {
+    let own_formula = arg.unlist_ref().iter().any(|t| t.get_catcode() == Catcode::MATH);
+    let form = if lookup_bool_sym(pin!("IN_MATH")) && !own_formula {
+      T_CS!("\\lx@underbar@formula")
+    } else {
+      T_CS!("\\lx@underbar@boxed")
+    };
+    Invocation!(form, vec![arg])
+  }, robust => true);
+  DefMacro!("\\lx@underbar@formula{}", "\\underline{#1}");
+  DefMacro!(
+    "\\lx@underbar@boxed{}",
+    "\\underline{\\setbox\\tw@\\hbox{#1}\\dp\\tw@\\z@\\box\\tw@}"
+  );
 
   // `protected`, as `\overline`/`\underline` (tex_math.rs) and LaTeX's own
   // `\DeclareRobustCommand` (fontmath.ltx:424): a partial expansion — the

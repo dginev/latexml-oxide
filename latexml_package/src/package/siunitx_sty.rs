@@ -2198,7 +2198,17 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
 /// Perl: six_parse_literalunits — parse literal (non-macro) unit expressions
 fn six_parse_literalunits(expr: &Tokens) -> Tokens {
   let mut result = Vec::new();
-  let mut iter = expr.unlist_ref().iter().copied().peekable();
+  // siunitx.sty:6810-6813 reads a `^` or `_` of any catcode as the script it stands for (`\token_to_str:N ^` → `^`):
+  // under breqn's mathstyle they are "other" in the body (breqn_sty.rs), and `\si{m^2}` still raises its unit.
+  let mut iter = expr
+    .unlist_ref()
+    .iter()
+    .map(|&t| match t.get_catcode() {
+      Catcode::OTHER | Catcode::ACTIVE if t.text == pin!("^") => T_SUPER!(),
+      Catcode::OTHER | Catcode::ACTIVE if t.text == pin!("_") => T_SUB!(),
+      _ => t,
+    })
+    .peekable();
 
   while let Some(t) = iter.next() {
     let tc = t.get_catcode();

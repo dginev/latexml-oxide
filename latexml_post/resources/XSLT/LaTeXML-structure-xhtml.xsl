@@ -848,12 +848,36 @@
     <xsl:apply-templates/>
   </xsl:template>
 
+  <!-- The address a contact links to: its own text, or, when the address sits in an element of its own (a font
+       change, \texttt), the first text inside it. Perl takes text() alone, so such a contact linked to `mailto:`
+       alone. -->
+  <xsl:template name="contact-address">
+    <xsl:choose>
+      <xsl:when test="text()[normalize-space()]">
+        <xsl:value-of select="normalize-space(text()[normalize-space()][1])"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="normalize-space((.//text()[normalize-space()])[1])"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
   <xsl:template match="ltx:contact[@role='email']" mode="inner">
     <xsl:param name="context"/>
-    <xsl:element name="a" namespace="{$html_ns}">
-      <xsl:attribute name="href"><xsl:value-of select="concat('mailto:',text())"/></xsl:attribute>
-      <xsl:apply-templates/>
-    </xsl:element>
+    <xsl:choose>
+      <xsl:when test=".//ltx:ref"> <!--Already formatted as link?-->
+        <xsl:apply-templates/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:element name="a" namespace="{$html_ns}">
+          <xsl:attribute name="href">
+            <xsl:text>mailto:</xsl:text>
+            <xsl:call-template name="contact-address"/>
+          </xsl:attribute>
+          <xsl:apply-templates/>
+        </xsl:element>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template match="ltx:contact[@role='orcid']" mode="inner">
@@ -865,7 +889,8 @@
       <xsl:otherwise>
         <xsl:element name="a" namespace="{$html_ns}">
           <xsl:attribute name="href">
-            <xsl:value-of select="concat('https://orcid.org/',text())"/>
+            <xsl:text>https://orcid.org/</xsl:text>
+            <xsl:call-template name="contact-address"/>
           </xsl:attribute>
           <xsl:apply-templates/>
         </xsl:element>
@@ -875,10 +900,17 @@
 
   <xsl:template match="ltx:contact[@role='url']" mode="inner">
     <xsl:param name="context"/>
-    <xsl:element name="a" namespace="{$html_ns}">
-      <xsl:attribute name="href"><xsl:value-of select="text()"/></xsl:attribute>
-      <xsl:apply-templates/>
-    </xsl:element>
+    <xsl:choose>
+      <xsl:when test=".//ltx:ref"> <!--Already formatted as link?-->
+        <xsl:apply-templates/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:element name="a" namespace="{$html_ns}">
+          <xsl:attribute name="href"><xsl:call-template name="contact-address"/></xsl:attribute>
+          <xsl:apply-templates/>
+        </xsl:element>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <!-- If we want to deduce style & children, we could set this up as a parameter option -->

@@ -14,6 +14,8 @@ LoadDefinitions!({
   RequirePackage!("graphicx");
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
+  // jfm.cls:663-712 builds subeqnarray in (2512.18771: `{subeqnarray}` undefined, its body read as text).
+  RequirePackage!("subeqnarray");
 
   // jfm.cls L1498: \newcommand{\backsection}[2][\backsectionname]{...\textbf{#1.} #2...}
   // — a backmatter paragraph (Acknowledgements / Declaration of interests / Data

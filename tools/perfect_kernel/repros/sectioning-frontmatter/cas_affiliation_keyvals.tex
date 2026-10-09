@@ -1,0 +1,20 @@
+% witness: 2609.00047 (and 160 of 200 cas papers of 2609): cas-common.sty:1118-1160 reads `\affiliation`'s argument as
+%          keys (organization, addressline, city, postcode, state, country) and prints their values joined by commas
+%          (:1065-1090 `\ca_affitem_postskip`); the binding typesets the argument as text
+% oracle:  pdflatex 0 errors: "School of Computer Science, Guangzhou University, Guang Zhou, 510006, Guangdong, China"
+% engines: rust 63t5 = `<contact role="affiliation">organization=School of Computer Science, Guangzhou University,
+%          city=Guang Zhou, postcode=510006, state=Guangdong, country=China` (the keys as text; Perl has no cas binding)
+% expect:  0 errors; the affiliation as the values the class prints, no `key=`
+% status:  RED (63t5)
+\documentclass[a4paper,fleqn]{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[1]{A. B}
+\affiliation[1]{organization={School of Computer Science, Guangzhou University},
+            city={Guang Zhou},
+            postcode={510006},
+            state={Guangdong},
+            country={China}}
+\maketitle
+Body.
+\end{document}

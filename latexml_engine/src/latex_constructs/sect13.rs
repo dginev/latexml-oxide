@@ -1474,7 +1474,14 @@ pub(crate) fn load() -> Result<()> {
   // it empty — emphasis in italic or slanted text would not show, now that a
   // font's slant is its TFM's (56kr; DIVERGENCES #332).
   DefMacro!("\\eminnershape", "\\upshape");
-  DefMacro!("\\TextOrMath{}{}", "\\ifmmode#2\\else#1\\fi");
+  // latex.ltx:10243-10248: `\TextOrMath{t}{m}` expands to a `\protected` `\TextOrMath␣{t}{m}`, which chooses only when
+  // executed: at the start of an alignment cell TeX's lookahead stops at it, so it chooses after the cell's template
+  // has put TeX in math (`\begin{align}\TextOrMath{$L_c$}{L_c}…`, 2311.14468; Perl's one-stage `\ifmmode` chose the
+  // text branch there, latex_constructs.pool.ltxml:5864).
+  RawTeX!(
+    r"\expandafter\protected\expandafter\def\csname TextOrMath\space\endcsname{\ifmmode\expandafter\@secondoftwo\else\expandafter\@firstoftwo\fi}
+\edef\TextOrMath#1#2{\expandafter\noexpand\csname TextOrMath\space\endcsname{#1}{#2}}"
+  );
 
   //======================================================================
   // Semi-undocumented commands

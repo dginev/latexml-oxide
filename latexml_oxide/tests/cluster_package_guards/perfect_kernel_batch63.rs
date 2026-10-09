@@ -3331,3 +3331,246 @@ fn lx_require_resource_content() {
     "<resource type=\"text/css\">.ltx_tabular .ltx_tabular { width: auto; }</resource>"
   );
 }
+
+/// 63t: jmlr.cls's object references print their name and number through jmlrutils.sty's `\objectref`
+/// (jmlrutils.sty:116-165; 2507.03899, 2409.07012) rather than the label key. Repro loader/jmlr_object_refs.
+#[test]
+fn jmlr_object_refs() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/jmlr_object_refs.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "Table"),
+    "<p xml:id=\"p1.1\">Table\u{a0}<ref labelref=\"LABEL:tab:raw_perf\"/> and Figure\u{a0}<ref labelref=\"LABEL:tab:raw_perf\"/> and Section\u{a0}<ref labelref=\"LABEL:tab:raw_perf\"/>.</p>"
+  );
+}
+
+/// 63t: fcs.cls's `{biography}` sets the photo beside the text (fcs.cls:637-660, :684) and `{competinginterest}` heads
+/// its paragraph (fcs.cls:570-588; 2504.14891). Repro loader/fcs_biography.
+#[test]
+fn fcs_biography() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/fcs_biography.tex");
+  assert_eq!(
+    hf3_element(tex, "float", "biography"),
+    "<float class=\"biography\" xml:id=\"tab1\">\n    <tabular xml:id=\"tab1.1\">\n      <tr xml:id=\"tab1.1.1\">\n        <td xml:id=\"tab1.1.1.1\"><graphics graphic=\"photo/Aoran_Gan.jpg\" options=\"width=71.13188pt,keepaspectratio=true\" xml:id=\"g1\"/></td>\n        <td xml:id=\"tab1.1.1.2\"><inline-block xml:id=\"tab1.1.1.2.1\">\n            <p xml:id=\"tab1.1.1.2.1.1\">Aoran Gan is a PhD student.</p>\n          </inline-block></td>\n      </tr>\n    </tabular>\n  </float>"
+  );
+  assert_eq!(
+    hf3_element(tex, "p", "Competing"),
+    "<p xml:id=\"p2.1\"><text font=\"bold\" xml:id=\"p2.1.1\">Competing interests</text>\u{2003}\nThe authors declare none.</p>"
+  );
+}
+
+/// 63t: newclude's `\include*{file}` inputs the file, and `\include[pre]{file}[post]` it between the two hooks
+/// (newclude.sty:743-750; 2507.19635). Repro loader/newclude_include_star.
+#[test]
+fn newclude_include_star() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/newclude_include_star.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "Intro"),
+    "<p xml:id=\"p1.1\">Intro text.\nPREMore text.\nPOST</p>"
+  );
+}
+
+/// 63t: biblatex's `\Citeauthor` is its capitalized `\citeauthor` (biblatex.def:2624-2625; 2410.22329). In this
+/// numeric style the citation is the bracketed number, where biblatex prints the name: an open residual, RED
+/// index-bib/biblatex_citeauthor_numeric_prints_name. Repro loader/biblatex_capital_citeauthor.
+#[test]
+fn biblatex_capital_citeauthor() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/biblatex_capital_citeauthor.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "showed"),
+    "<p xml:id=\"p1.1\"><cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"Hampe_2017\" separator=\",\" yyseparator=\",\"/>]</cite> showed it.</p>"
+  );
+}
+
+/// 63t: jfm.cls builds subeqnarray in (jfm.cls:663-712; 2512.18771). Repro loader/jfm_subeqnarray.
+#[test]
+fn jfm_subeqnarray() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/loader/jfm_subeqnarray.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  // the rows numbered (1a), (1b) under the group's (1)
+  for (row, id) in [("1a", "S0.E1.1.1"), ("1b", "S0.E1.2.1")] {
+    let tags = format!(
+      "<tags>\n            <tag>({row})</tag>\n            <tag role=\"autoref\">Equation\u{a0}{row}<text xml:id=\"{id}\"/></tag>\n            <tag role=\"refnum\">{row}</tag>\n          </tags>"
+    );
+    assert!(xml.contains(&tags), "{xml}");
+  }
+  assert_eq!(
+    element_with(&xml, "Math", "p_{x}="),
+    "<Math tex=\"\\displaystyle p_{x}=\\mu u_{zz}\" text=\"p _ x = mu * u _ (z * z)\" xml:id=\"S0.E1.1.m4\">\n              <XMath xml:id=\"S0.E1.1.m4.1\">\n                <XMApp xml:id=\"S0.E1.1.m4.1.1\">\n                  <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                  <XMApp xml:id=\"S0.E1.1.m4.1.1.2\">\n                    <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                    <XMTok font=\"italic\" role=\"UNKNOWN\">p</XMTok>\n                    <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">x</XMTok>\n                  </XMApp>\n                  <XMApp xml:id=\"S0.E1.1.m4.1.1.3\">\n                    <XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok>\n                    <XMTok font=\"italic\" name=\"mu\" role=\"UNKNOWN\">μ</XMTok>\n                    <XMApp xml:id=\"S0.E1.1.m4.1.1.3.3\">\n                      <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                      <XMTok font=\"italic\" role=\"UNKNOWN\">u</XMTok>\n                      <XMApp xml:id=\"S0.E1.1.m4.1.1.3.3.3\">\n                        <XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok>\n                        <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">z</XMTok>\n                        <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">z</XMTok>\n                      </XMApp>\n                    </XMApp>\n                  </XMApp>\n                </XMApp>\n              </XMath>\n            </Math>"
+  );
+  assert_eq!(
+    element_with(&xml, "Math", "p_{z}="),
+    "<Math tex=\"\\displaystyle p_{z}=-\\rho g\" text=\"p _ z = - rho * g\" xml:id=\"S0.E1.2.m4\">\n              <XMath xml:id=\"S0.E1.2.m4.1\">\n                <XMApp xml:id=\"S0.E1.2.m4.1.1\">\n                  <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                  <XMApp xml:id=\"S0.E1.2.m4.1.1.2\">\n                    <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                    <XMTok font=\"italic\" role=\"UNKNOWN\">p</XMTok>\n                    <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">z</XMTok>\n                  </XMApp>\n                  <XMApp xml:id=\"S0.E1.2.m4.1.1.3\">\n                    <XMTok meaning=\"minus\" role=\"ADDOP\">-</XMTok>\n                    <XMApp xml:id=\"S0.E1.2.m4.1.1.3.2\">\n                      <XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok>\n                      <XMTok font=\"italic\" name=\"rho\" role=\"UNKNOWN\">ρ</XMTok>\n                      <XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok>\n                    </XMApp>\n                  </XMApp>\n                </XMApp>\n              </XMath>\n            </Math>"
+  );
+}
+
+/// 63t: breqn's math-active `_` and `^` (mathstyle.sty:233-236, :250-261) still script in math, siunitx's units
+/// among them (siunitx.sty:6810-6813), and `_` in text prints (2402.04396, 2403.03720). The one warning is the binding's own "breqn.sty is not implemented". Repro
+/// loader/breqn_text_underscore.
+#[test]
+fn breqn_text_underscore() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/loader/breqn_text_underscore.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    element_with(&xml, "p", "boiler"),
+    "<p xml:id=\"p1.1\">Code at https://github.com/x/boiler_room and <Math mode=\"inline\" tex=\"a_{1}\" text=\"a _ 1\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMApp xml:id=\"p1.m1.1.1\">\n            <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok>\n            <XMTok fontsize=\"70%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMApp>\n        </XMath>\n      </Math>, <Math mode=\"inline\" tex=\"\\mathrm{m}^{2}\" text=\"m ^ 2\" xml:id=\"p1.m2\">\n        <XMath xml:id=\"p1.m2.1\">\n          <XMApp xml:id=\"p1.m2.1.1\">\n            <XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok role=\"UNKNOWN\">m</XMTok>\n            <XMTok fontsize=\"70%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMApp>\n        </XMath>\n      </Math>.</p>"
+  );
+  assert_eq!(
+    element_with(&xml, "equation", "y_{2}"),
+    "<equation xml:id=\"S0.E1\">\n      <tags>\n        <tag>(1)</tag>\n        <tag role=\"refnum\">1</tag>\n      </tags>\n      <Math mode=\"display\" tex=\"y_{2}=x^{2}\" text=\"y _ 2 = x ^ 2\" xml:id=\"S0.E1.m1\">\n        <XMath xml:id=\"S0.E1.m1.1\">\n          <XMApp xml:id=\"S0.E1.m1.1.1\">\n            <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n            <XMApp xml:id=\"S0.E1.m1.1.1.2\">\n              <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n              <XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok>\n              <XMTok fontsize=\"70%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n            </XMApp>\n            <XMApp xml:id=\"S0.E1.m1.1.1.3\">\n              <XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/>\n              <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n              <XMTok fontsize=\"70%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n            </XMApp>\n          </XMApp>\n        </XMath>\n      </Math>\n    </equation>"
+  );
+  // `_` is "other" in the body, unless `mathstyleoff` (breqn.sty:42-44, flexisym.sty:401-402) asks for TeX's 8
+  for (options, catcode) in [("", "12"), ("[mathstyleoff]", "8")] {
+    let (log, xml) = latexml::util::test::convert_with(
+      &format!(
+        "\\documentclass{{article}}\\usepackage{options}{{breqn}}\\begin{{document}}\\the\\catcode`\\_\\end{{document}}"
+      ),
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+    assert_eq!(
+      super::perfect_kernel_batch46::warning_count(&log),
+      1,
+      "{log}"
+    );
+    assert_eq!(
+      element_with(&xml, "p", catcode),
+      format!("<p xml:id=\"p1.1\">{catcode}</p>")
+    );
+  }
+}
+
+/// 63t: cas-common.sty prints `\ead`'s address stringified (cas-common.sty:362; 2410.07921), so its `_` prints, in the
+/// T1 font the class loads; the contact holds the address as its own text, which the HTML `mailto:` link is made of.
+/// Repro sectioning-frontmatter/cas_ead_verbatim.
+#[test]
+fn cas_ead_verbatim() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_ead_verbatim.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "creator", "A."),
+    "<creator role=\"author\">\n    <personname>A. B</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">arash_khajooei@alumni.iust.ac.ir</contact>\n  </creator>"
+  );
+  let html = latexml::api::convert_to_html(tex).expect("HTML");
+  assert!(
+    html.contains(
+      "<a href=\"mailto:arash_khajooei@alumni.iust.ac.ir\">arash_khajooei@alumni.iust.ac.ir</a>"
+    ),
+    "{html}"
+  );
+}
+
+/// 63t: acmart prints `\acmDOI`'s value through `\url` (acmart.cls:2052; 2401.02563). Repro
+/// sectioning-frontmatter/acmart_doi_verbatim.
+#[test]
+fn acmart_doi_verbatim() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_doi_verbatim.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "pubnote", "doi"),
+    "<pubnote name=\"DOI:\u{a0}\" role=\"doi\">10.475/123_4</pubnote>"
+  );
+}
+
+/// 63t: `\underbar` boxes its argument in text mode (latex.ltx:619), so `\underbar{$\psi$}` in math stays in math
+/// (2308.06669; Perl lets it to `\underline`, KPE #542); an argument without a `$` keeps the formula reading (OD #469). Repro expansion-primitives/underbar_boxes_its_argument.
+#[test]
+fn underbar_boxes_its_argument() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/underbar_boxes_its_argument.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "Math", "underline"),
+    "<Math mode=\"inline\" tex=\"\\underline{\\hbox{$\\psi$}}\\in P\" text=\"underline@(psi) element-of P\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMApp xml:id=\"p1.m1.1.1\">\n            <XMTok meaning=\"element-of\" name=\"in\" role=\"RELOP\">∈</XMTok>\n            <XMApp xml:id=\"p1.m1.1.1.2\">\n              <XMTok name=\"underline\" role=\"UNDERACCENT\" stretchy=\"true\">¯</XMTok>\n              <XMTok font=\"italic\" name=\"psi\" role=\"UNKNOWN\">ψ</XMTok>\n            </XMApp>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">P</XMTok>\n          </XMApp>\n        </XMath>\n      </Math>"
+  );
+  // without a `$` of its own the argument keeps the formula reading: an underlined variable
+  assert_eq!(
+    hf3_element(tex, "Math", "\\underline{x}"),
+    "<Math mode=\"inline\" tex=\"\\underline{x}\" text=\"underline@(x)\" xml:id=\"p1.m3\">\n        <XMath xml:id=\"p1.m3.1\">\n          <XMApp xml:id=\"p1.m3.1.1\">\n            <XMTok name=\"underline\" role=\"UNDERACCENT\" stretchy=\"true\">¯</XMTok>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n          </XMApp>\n        </XMath>\n      </Math>"
+  );
+}
+
+/// 63t: `\TextOrMath` defers its choice to a `\protected` second stage (latex.ltx:10243-10248), so at an alignment
+/// cell's start it chooses in the cell's math (2311.14468; Perl chooses the text branch there, KPE #543). Repro
+/// expansion-primitives/textormath_in_align_cell.
+#[test]
+fn textormath_in_align_cell() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/textormath_in_align_cell.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "p", "Text"),
+    "<p xml:id=\"p1.1\">Text <Math mode=\"inline\" tex=\"L_{c}\" text=\"L _ c\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMApp xml:id=\"p1.m1.1.1\">\n            <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">L</XMTok>\n            <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">c</XMTok>\n          </XMApp>\n        </XMath>\n      </Math> here.</p>"
+  );
+  assert_eq!(
+    hf3_element(tex, "Math", "L_{c}=x"),
+    "<Math tex=\"\\displaystyle L_{c}=x_{i}\" text=\"L _ c = x _ i\" xml:id=\"S0.E1.m2\">\n            <XMath xml:id=\"S0.E1.m2.1\">\n              <XMApp xml:id=\"S0.E1.m2.1.1\">\n                <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                <XMApp xml:id=\"S0.E1.m2.1.1.2\">\n                  <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                  <XMTok font=\"italic\" role=\"UNKNOWN\">L</XMTok>\n                  <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">c</XMTok>\n                </XMApp>\n                <XMApp xml:id=\"S0.E1.m2.1.1.3\">\n                  <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                  <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n                  <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">i</XMTok>\n                </XMApp>\n              </XMApp>\n            </XMath>\n          </Math>"
+  );
+}
+
+/// 63t: a contact's HTML link is made of its whole text, so an address inside an element of its own (the font
+/// wrapper of a `\small` after the title block, RED sectioning-frontmatter/frontmatter_digested_in_body_font; 2609.14733,
+/// 2609.03698) still links to itself (Perl's stylesheet: `text()`, the link `mailto:` alone). Repro
+/// sectioning-frontmatter/contact_link_from_whole_text.
+#[test]
+fn contact_link_from_whole_text() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/contact_link_from_whole_text.tex"
+  );
+  let (log, _xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let html = latexml::api::convert_to_html(tex).expect("HTML");
+  let at = html.find("<a href=\"mailto:").expect("the email link");
+  assert_eq!(
+    &html[at..at + html[at..].find("</a>").unwrap() + 4],
+    "<a href=\"mailto:ab@x.org\"><span class=\"ltx_text\" style=\"font-size:90%;\">ab@x.org</span></a>",
+    "{html}"
+  );
+  // an address that is the contact's own text links to that text alone, not the marks after it; a contact that is
+  // already a link (`\href`) is not wrapped in another
+  let html = latexml::api::convert_to_html(
+    r"\documentclass{revtex4-2}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{A. B}
+\email{a@b.org \textsuperscript{*}}
+\homepage{http://x.org/ \textit{(lab)}}
+\author{C. D}
+\email{\href{mailto:c@d.org}{c@d.org}}
+\maketitle
+Body.
+\end{document}",
+  )
+  .expect("HTML");
+  for anchor in [
+    "<a href=\"mailto:a@b.org\">",
+    "<a href=\"http://x.org/\">",
+    "<span class=\"ltx_contact_name\">Email:\u{a0}</span><a href=\"mailto:c@d.org\" title=\"\" class=\"ltx_ref ltx_href\">c@d.org</a>",
+  ] {
+    assert!(html.contains(anchor), "{anchor}\n{html}");
+  }
+}

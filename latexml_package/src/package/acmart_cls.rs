@@ -173,7 +173,8 @@ LoadDefinitions!({
   DefMacro!("\\acmBooktitle{}", "\\lx@add@pubnote[role=booktitle]{#1}");
   DefMacro!("\\acmArticle{}", "\\lx@add@pubnote[role=article]{#1}");
   DefMacro!("\\acmArticleSeq{}", "\\lx@add@pubnote[role=articleseq]{#1}");
-  DefMacro!("\\acmDOI{}", "\\lx@add@pubnote[role=doi]{#1}");
+  // read verbatim: acmart.cls:2052 prints the DOI through `\url` (2401.02563: `10.475/123_4`, its `_` an error)
+  DefMacro!("\\acmDOI Semiverbatim", "\\lx@add@pubnote[role=doi]{#1}");
   DefMacro!("\\acmISBN{}", "\\lx@add@pubnote[role=isbn]{#1}");
   DefMacro!("\\acmMonth{}", "\\lx@add@pubnote[role=publicationmonth]{#1}");
   DefMacro!("\\acmNumber{}", "\\lx@add@pubnote[role=number]{#1}");

@@ -1,0 +1,23 @@
+% witness: 2504.14891 (16 `_` errors): fcs.cls:323/337 `\begin{biography}{photo/a.jpg}` (layout :637-660, photo 2.5cm
+%          :684) and `{competinginterest}` (:570-588); the binding had neither
+% oracle:  pdflatex 0 errors with the witness's fcs.cls (not in TeX Live; the binding does not read it)
+% engines: rust 63s4 = `Error:undefined:{biography}`, `Error:unexpected:_` (the photo path typeset)
+% expect:  0 errors, 0 warnings; a biography float holding the photo and the text; "Competing interests" leading its
+%          paragraph
+% status:  RED (63s4) -> GREEN (63t)
+\documentclass[review]{fcs}
+\title{T}
+\author[1]{Aoran GAN}
+\address[1]{USTC, Hefei, China}
+\begin{abstract}Abs.\end{abstract}
+\keywords{K}
+\begin{document}
+\maketitle
+Body.
+\begin{competinginterest}
+The authors declare none.
+\end{competinginterest}
+\begin{biography}{photo/Aoran_Gan.jpg}
+Aoran Gan is a PhD student.
+\end{biography}
+\end{document}

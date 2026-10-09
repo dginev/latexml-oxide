@@ -1,0 +1,15 @@
+% witness: 2410.07921: cas-common.sty:362 prints `\ead`'s address stringified (`\ttfamily \tl_to_str:n`), in the T1
+%          font cas-sc.cls:144 loads
+% oracle:  pdflatex 0 errors: the address with its `_`, in typewriter
+% engines: rust 63s4 = `Error:unexpected:_`, an email contact with an empty `role`
+% expect:  0 errors, 0 warnings; `<contact role="email">` holding the address as its own text, its HTML link
+%          `mailto:` that address
+% status:  RED (63s4) -> GREEN (63t)
+\documentclass[a4paper,fleqn]{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[1]{A. B}
+\ead{arash_khajooei@alumni.iust.ac.ir}
+\maketitle
+Body.
+\end{document}

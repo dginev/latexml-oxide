@@ -1675,6 +1675,10 @@ LoadDefinitions!({
     declare_bibliography_alias(&args[0].to_string(), &args[1].to_string())?;
     Ok(Vec::new())
   });
+  // biblatex.def:2624-2625 `\newrobustcmd*{\Citeauthor}{\@ifstar{\bibsentence\citeauthor*}{\bibsentence\citeauthor}}`:
+  // `\citeauthor`, its `\bibsentence` capitalization dropped as for `\Citetitle` (2410.22329; undefined, its key then
+  // read as text).
+  Let!("\\Citeauthor", "\\citeauthor");
   // The aliases every standard style inherits from standard.bbx:740-752 (a native
   // style's `.bbx` is not read; a raw-loaded one's own `\DeclareBibliographyAlias`
   // calls reach the primitive above, e.g. mla-strict.bbx:355-370's retyping to

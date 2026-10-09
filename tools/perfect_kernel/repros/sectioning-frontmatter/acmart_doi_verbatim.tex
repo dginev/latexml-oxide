@@ -1,0 +1,13 @@
+% witness: 2401.02563: acmart.cls:2052 prints `\acmDOI`'s value through `\url`
+% oracle:  pdflatex 0 errors
+% engines: rust 63s4 and Perl 0.8.8 = `Error:unexpected:_` (the DOI `10.475/123_4` digested as text)
+% expect:  0 errors, 0 warnings; the DOI pubnote `10.475/123_4`
+% status:  RED (63s4) -> GREEN (63t)
+\documentclass[sigconf]{acmart}
+\acmDOI{10.475/123_4}
+\begin{document}
+\title{T}
+\author{A. B}
+\maketitle
+Body.
+\end{document}

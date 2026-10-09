@@ -1,0 +1,18 @@
+% witness: 2507.19635 (11 `_` errors): newclude.sty:743-750 `\include*{file}` (no page break) and
+%          `\include[pre]{file}[post]`; the kernel `\include` read `*` as the file
+% oracle:  pdflatex 0 errors: "Intro text." and, on the next page, "PREMore text. POST"
+% engines: rust 63s4 = `Error:unexpected:_`, the paragraph "1_intro" (the file name typeset)
+% expect:  0 errors, 0 warnings; the files' text, the second between its pre and post hooks
+% status:  RED (63s4) -> GREEN (63t)
+\begin{filecontents*}{1_intro.tex}
+Intro text.
+\end{filecontents*}
+\begin{filecontents*}{2_more.tex}
+More text.
+\end{filecontents*}
+\documentclass{article}
+\usepackage{newclude}
+\begin{document}
+\include*{1_intro}
+\include[PRE]{2_more}[POST]
+\end{document}

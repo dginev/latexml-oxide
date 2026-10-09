@@ -1,0 +1,18 @@
+% witness: 2410.22329: biblatex.def:2497-2506 `\citeauthor` prints `\printnames{labelname}` in every style, and
+%          `\textcite` the name before the label; the binding (biblatex_sty.rs `\citeauthor`, `\textcite`, as Perl's
+%          `_cite_fallback`) falls back to the plain `\cite` in a non-author-year style
+% oracle:  pdflatex+biber 0 errors: "Hampe showed it." and "Hampe [1] showed it too."
+% engines: rust 63t3 = "[1] showed it." and "[1] showed it too." (the citation number in place of the name)
+% expect:  0 errors; the author name, linked to the entry
+% status:  RED (63t3)
+\begin{filecontents*}{biblatex_citeauthor_numeric_prints_name.bib}
+@article{Hampe_2017, author={Hampe, Simon}, title={T}, journal={J}, year={2017}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage[style=numeric]{biblatex}
+\addbibresource{biblatex_citeauthor_numeric_prints_name.bib}
+\begin{document}
+\citeauthor{Hampe_2017} showed it.
+\textcite{Hampe_2017} showed it too.
+\printbibliography
+\end{document}

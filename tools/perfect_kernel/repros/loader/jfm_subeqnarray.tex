@@ -1,0 +1,12 @@
+% witness: 2512.18771 (3 `_` errors): jfm.cls:663-712 builds subeqnarray in; the binding never loaded it
+% oracle:  pdflatex 0 errors with the witness's jfm.cls (not in TeX Live; the binding does not read it)
+% engines: rust 63s4 = `Error:undefined:{subeqnarray}`, its rows typeset as text (`Error:unexpected:_`)
+% expect:  0 errors, 0 warnings; two equations
+% status:  RED (63s4) -> GREEN (63t)
+\documentclass{jfm}
+\begin{document}
+\begin{subeqnarray}
+  p_x &=& \mu u_{zz} \\
+  p_z &=& -\rho g
+\end{subeqnarray}
+\end{document}

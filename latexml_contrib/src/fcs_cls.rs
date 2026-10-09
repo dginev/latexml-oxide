@@ -42,4 +42,32 @@ LoadDefinitions!({
 
   // Chinese-typesetting helpers — gobble (visual only).
   def_macro_noop("\\zihang[]{}")?;
+
+  // `\begin{biography}{photo/a.jpg}` (fcs.cls:323/337, laid out at :637-660): the author's photo, 2.5cm wide (:684),
+  // beside the text; shaped as IEEEtran's biography (ieeetran_cls.rs). Undefined before, its photo path read as text
+  // (2504.14891: `photo/Aoran_Gan.jpg`, its `_` an error).
+  DefMacro!(
+    T_CS!("\\begin{biography}"),
+    "{}",
+    "\\begin{lx@fcs@biography}{\\includegraphics[width=2.5cm]{#1}}"
+  );
+  DefMacro!(T_CS!("\\end{biography}"), None, "\\end{lx@fcs@biography}");
+  DefEnvironment!(
+    "{lx@fcs@biography}{}",
+    "<ltx:float class='biography'>\
+      <ltx:tabular>\
+        <ltx:tr>\
+          <ltx:td>#1</ltx:td>\
+          <ltx:td><ltx:inline-block>#body</ltx:inline-block></ltx:td>\
+        </ltx:tr>\
+      </ltx:tabular>\
+    </ltx:float>"
+  );
+  // `{competinginterest}` (fcs.cls:570-588): a paragraph led by a bold "Competing interests".
+  DefMacro!(
+    T_CS!("\\begin{competinginterest}"),
+    None,
+    "\\par\\noindent{\\bfseries Competing interests}\\quad"
+  );
+  DefMacro!(T_CS!("\\end{competinginterest}"), None, "\\par");
 });

@@ -1,0 +1,16 @@
+% witness: 2609.14733 (cas-sc: `\maketitle` then `\small` before a longtable), 2609.03698: queued frontmatter is
+%          digested when the document element opens (Perl Base_Utility.pool.ltxml:798-809 `digestFrontMatter`, called
+%          by afterOpen), in the font then current, so a `\small` after the title block shrinks the authors' contacts
+% oracle:  pdflatex 0 errors: the address in the title block's own size
+% engines: rust 63t4 and Perl 0.8.8 = `<contact role="email"><text fontsize="90%">ab@x.org</text>`
+% expect:  0 errors; the contact holding the address as its text, no font change of its own
+% status:  RED (63t4)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{A. B}
+\ead{ab@x.org}
+\end{frontmatter}
+\small Body.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 2402.04396, 2403.03720: breqn loads mathstyle.sty, whose default `mathactivechars` (mathstyle.sty:233-236,
+%          :250-261) makes `_`/`^` math-active and, from `\begin{document}`, catcode 12 ("other") in text
+% oracle:  pdflatex 0 errors: "Code at https://github.com/x/boiler_room and a1, m2." and y2 = x2
+% engines: rust 63s4 = `Error:unexpected:_` on the bare URL's `_`
+% expect:  0 errors; the URL's `_` printed, `$a_1$`, siunitx's `\si{m^2}` (siunitx.sty:6810-6813 reads an "other"
+%          `^` as a superscript) and the dmath still sub/superscripts (one warning: breqn.sty is not interpreted)
+% status:  RED (63s4) -> GREEN (63t)
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{siunitx}
+\usepackage{breqn}
+\begin{document}
+Code at https://github.com/x/boiler_room and $a_1$, \si{m^2}.
+\begin{dmath}
+y_2 = x^2
+\end{dmath}
+\end{document}

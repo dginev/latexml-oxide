@@ -11455,3 +11455,67 @@ whatsit makes the `@{}l` column empty) puts "24" over VolSDF. `normalize_mark_sp
 `\multirow{3}{*}{}` that `\multirow{5}{*}{Nodes}` already covers mark rows of its own, so the empty rows pruned later
 shrink it and Nodes keeps `rowspan="4"` over three rows. Perl 0.8.8 gives both, with no diagnostic. Fixed in Rust
 (63s), OXIDIZED_DESIGN_DIVERGENCES #467. Witnesses 2406.06521, 2507.20312.
+
+## 541. Bindings read a verbatim or starred argument as text, or lack what the file defines
+
+A binding that digests an argument the real file reads verbatim (`\url`, `\tl_to_str:n`), or that misses a starred
+form or a command, typesets an `_` outside math (`Error:unexpected:_`; html_feedback HF7, 22 papers):
+- acmart `\acmDOI{10.475/123_4}` — acmart.cls:2052 prints the value through `\url`; Perl's
+  `DefMacro('\acmDOI{}',…)` (acmart.cls.ltxml:65) digests it (2401.02563). Perl-origin.
+- biblatex `\Citeauthor` (biblatex.def:2624-2625), newclude `\include*{file}` and `\include[pre]{file}[post]`
+  (newclude.sty:743-750): undefined, or the `*` read as the file name, so the key or the file name is typeset
+  (2410.22329, 2507.19635). Perl has no binding for either and does not read them raw.
+- breqn's mathstyle.sty by default (`mathactivechars`, mathstyle.sty:233-236, :250-261) gives `_`/`^` mathcode
+  `"8000`, bound to `\sb`/`\sp`, and from `\begin{document}` catcode 12 ("other"), so `_` in text prints while it
+  still subscripts in math (2402.04396, 2403.03720); breqn's `mathstyleoff` (breqn.sty:42-44, flexisym.sty:401-402
+  `noactivechars`) restores catcodes 7 and 8. Perl has no breqn binding.
+- Rust-only, in contrib bindings: jmlr's `\tableref`, `\figureref`, `\sectionref`, … were stand-ins printing the label
+  key, where jmlrutils.sty:116-165 prints the name and the number through `\objectref` (2507.03899, 2409.07012); fcs
+  lacked `{biography}` (photo beside the text, fcs.cls:637-660, :684) and `{competinginterest}` (fcs.cls:570-588;
+  2504.14891, 2405.17935); jfm never loaded the subeqnarray it builds in (jfm.cls:663-712; 2512.18771); cas `\ead`
+  digested the address cas-common.sty:362 prints stringified (`\ttfamily \tl_to_str:n`; the `[url]` form through
+  `\url`, :338; 2410.07921).
+
+Fixed in Rust (63t): `\acmDOI` and `\ead` read their value as `Semiverbatim`, and the cas binding loads T1 fontenc as
+cas-sc.cls:144 and cas-dc.cls:142 do (in OT1 the `_` of a verbatim address prints as slot 95's `˙`); the address stays
+the contact's own text, which the HTML `mailto:` link is made of (LaTeXML-structure-xhtml.xsl `text()`). `\Citeauthor`
+is `\citeauthor`; `\include` takes newclude's star and both optional arguments; the breqn binding installs mathstyle's
+`mathactivechars` default, and under it `$x'^2$` is a double superscript, an error as in pdflatex, while siunitx reads
+an "other" `^`/`_` in a unit as the script it stands for (siunitx.sty:6810-6813: `\si{m^2}`); jmlr's object
+references are jmlrutils' own (no stand-in left: jmlrutils has no `\propositionref`, and one overrode the author's
+own); fcs gains both environments; jfm loads subeqnarray. Residual: `\citeauthor` and `\textcite` in a non-author-year
+style print the citation number where biblatex prints the name (biblatex.def:2497-2506; the binding's fallback to
+`\cite`, as Perl's `_cite_fallback`), RED index-bib/biblatex_citeauthor_numeric_prints_name. Guards
+`perfect_kernel_batch63::{acmart_doi_verbatim, biblatex_capital_citeauthor, newclude_include_star,
+breqn_text_underscore, jmlr_object_refs, fcs_biography, jfm_subeqnarray, cas_ead_verbatim}`.
+
+## 542. `\underbar` is `\underline`, so its argument's `$` leaves math
+
+latex.ltx:619 `\def\underbar#1{\underline{\sbox\tw@{#1}\dp\tw@\z@\box\tw@}}` boxes its argument in text mode, so
+`\underbar{$\psi$}` is legal in math (a macro `\pj{#1}` → `\underbar{$#1$}` used as `$\pj{\psi}\in P$`). Perl lets it
+to `\underline` (math_common.pool.ltxml:541, "Will anyone notice?"), where the inner `$` closes the formula and the
+rest of it is read as text (`Error:unexpected:_` on a later `_`). Fixed in Rust (63t) by latex.ltx's definition for an
+argument with a `$` of its own (and in text); without one, in math, the underlined formula stays,
+OXIDIZED_DESIGN_DIVERGENCES #469. Witness 2308.06669 (6 errors → 0). Guard
+`perfect_kernel_batch63::underbar_boxes_its_argument`.
+
+## 543. `\TextOrMath` chooses at expansion time, so an alignment cell's start chooses text
+
+latex.ltx:10243-10248 defines `\TextOrMath{t}{m}` to expand to `\TextOrMath␣{t}{m}`, a `\protected` macro that tests
+`\ifmmode`: TeX's look-ahead at an alignment cell's start (for `\omit`/`\noalign`) expands `\TextOrMath` but stops at
+the protected stage, so the choice is made once the cell's template has entered math. Perl's one-stage
+`DefMacro('\TextOrMath{}{}', '\ifmmode#2\else#1\fi')` (latex_constructs.pool.ltxml:5864) is expanded by that
+look-ahead, still outside math, and chooses the text branch: `\newcommand{\lossce}{\TextOrMath{$L_c$\xspace}{L_c}}`
+opening an `align` row gives `Error:unexpected:_`. Fixed in Rust (63t) by latex.ltx's two stages,
+OXIDIZED_DESIGN_DIVERGENCES #469. Witness 2311.14468. Guard `perfect_kernel_batch63::textormath_in_align_cell`.
+
+## 544. Queued frontmatter takes the font in force where the document element opens
+
+Perl digests the frontmatter queue (`\lx@add@contact`, `\lx@add@affiliation`, … through `queueFrontMatter`) in
+`digestFrontMatter` (Base_Utility.pool.ltxml:798-809), called by the `ltx:document` afterOpen, so in the font current
+at the first box of the body. A `\small` after the title block makes every contact digested there `<text
+fontsize="90%">`: elsarticle `\ead{ab@x.org}` then `\small Body.` gives `<contact role="email"><text
+fontsize="90%">ab@x.org</text></contact>` (Perl 0.8.8 and Rust). pdflatex sets the address in the title block's own
+font. Witnesses 2609.14733 (cas-sc, `\small` before a longtable), 2609.03698. Open: RED
+sectioning-frontmatter/frontmatter_digested_in_body_font; the HTML link no longer depends on it
+(OXIDIZED_DESIGN_DIVERGENCES #470).
