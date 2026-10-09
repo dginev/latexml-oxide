@@ -15,7 +15,9 @@ LoadDefinitions!({
   // One \author per author followed by \affiliation
   // OR both are supplied an optional label by which the affiliation is attached to author
   // optional arg is a label identifying which affiliation belongs
-  DefMacro!("\\author[]{}", "\\lx@add@creator[role=author,annotations={#1}]{#2}");
+  // (a name list in one `\author` is several people, read as the per-author classes read theirs; Perl's
+  // jheppub.sty.ltxml:35 makes one creator. 2411.15300)
+  DefMacro!("\\author[]{}", "\\lx@add@authors@append[annotations={#1}]{#2}");
   DefMacro!("\\affiliation OptionalSemiverbatim {}",
     "\\lx@add@contact[role=affiliation,label={#1}]{#2}");
   // \note{} appears inside author?

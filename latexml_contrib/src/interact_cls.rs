@@ -15,6 +15,73 @@ LoadDefinitions!({
   RequirePackage!("booktabs");
   RequirePackage!("graphicx");
 
+  // interact.cls:266-274: `\author{\name{…}\affil{…}}` holds the whole block, and `\name{X}` prints `X\\`, `\affil{Y}`
+  // and `\email{Z}` lines of their own: the names line and the affiliation lines the kernel author parse reads, so a
+  // name list `\name{A\textsuperscript{a}, B\textsuperscript{b}}` is its authors, linked by their marks (Perl maps
+  // `\name` to its argument, one creator; 2112.10522, 2312.11500, 2403.20182). Each later `\name` opens a group of its
+  // own (`\name{A}\affil{X}\name{B}\affil{Y}`), and the class's `\and` prints "and ".
+  DefMacro!("\\author{}", sub[(body)] {
+    let toks = body.unlist();
+    let mut lines: Vec<Token> = Vec::new();
+    let mut named = false;
+    let mut i = 0;
+    while i < toks.len() {
+      let t = toks[i];
+      i += 1;
+      if t == T_CS!("\\and") {
+        // (before a later `\name`, which opens a group of its own, it separates nothing more)
+        if toks[i..].iter().find(|u| **u != T_SPACE!()) != Some(&T_CS!("\\name")) {
+          lines.extend(Tokenize!("and").unlist());
+          lines.push(T_SPACE!());
+        }
+        continue;
+      }
+      if t != T_CS!("\\name") && t != T_CS!("\\affil") && t != T_CS!("\\email") {
+        lines.push(t);
+        continue;
+      }
+      if t == T_CS!("\\name") {
+        if named {
+          lines.push(T_CS!("\\and"));
+        }
+        named = true;
+      }
+      while toks.get(i) == Some(&T_SPACE!()) {
+        i += 1;
+      }
+      if toks.get(i).is_none_or(|u| u.get_catcode() != Catcode::BEGIN) {
+        lines.push(t);
+        continue;
+      }
+      let mut depth = 0usize;
+      let start = i;
+      while i < toks.len() {
+        match toks[i].get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => depth -= 1,
+          _ => {},
+        }
+        i += 1;
+        if depth == 0 {
+          break;
+        }
+      }
+      for u in &toks[start + 1..i - 1] {
+        if *u == T_CS!("\\and") {
+          lines.extend(Tokenize!("and").unlist());
+          lines.push(T_SPACE!());
+        } else {
+          lines.push(*u);
+        }
+      }
+      lines.push(T_CS!("\\\\"));
+    }
+    let mut out = vec![T_CS!("\\gdef"), T_CS!("\\@author"), T_BEGIN!()];
+    out.extend(toks.iter().copied());
+    out.push(T_END!());
+    out.extend(Invocation!(T_CS!("\\lx@add@authors"), vec![Some(Tokens::new(lines))]).unlist());
+    Ok(Tokens::new(out))
+  }, locked => true);
   // Author-block macros — preserve author content.
   DefMacro!("\\name{}", "#1");
   DefMacro!(

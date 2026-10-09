@@ -675,12 +675,26 @@ LoadDefinitions!({
         (nparents as i64, false)
       } else if annotate == "new" {
         (nparents as i64, true)
+      } else if annotate == "run" {
+        // `new`, and a second such contact before any new author (elsarticle's `\author{A}\author{B}\address{X}
+        // \address{Y}`) the same run's as the one before it: past that one, the authors no longer read as new. The run is
+        // keyed by the count of parents only, so a binding whose `\author` replaces the authors before it must not use it.
+        let run_key = s!("{parenttag}|{role}|{nparents}");
+        let last = match lookup_value("lx_frontmatter_new_run") {
+          Some(Stored::String(last)) => with(last, |s| s.to_string()),
+          _ => String::new(),
+        };
+        match last.rsplit_once('|') {
+          Some((key, n)) if key == run_key => (n.parse().unwrap_or(nparents as i64), false),
+          _ => (nparents as i64, true),
+        }
       } else {
         Info!("unexpected", &tag, s!("Frontmatter annotate '{annotate}' unrecognized"));
         (1, false)
       };
       DebugFeature!("frontmatter", "...adding to {nprev} previous{}",
         if newonly { " new" } else { "" });
+      let (run_new, mut attached) = (annotate == "run", 0i64);
       with_value_mut("frontmatter", |val_opt| {
         if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
           && let Some(list) = frnt.get_mut(&parenttag) {
@@ -699,6 +713,7 @@ LoadDefinitions!({
               }
               nprev -= 1;
               if let Some(parent) = list.get_mut(pi) {
+                attached += 1;
                 parent.content.push(datum.clone());
                 if !role.is_empty() {
                   parent.attr.insert(has_role_key.clone(), "1".to_string());
@@ -715,6 +730,13 @@ LoadDefinitions!({
             }
           }
       });
+      if run_new {
+        assign_value(
+          "lx_frontmatter_new_run",
+          Stored::String(pin(s!("{parenttag}|{role}|{nparents}|{attached}"))),
+          Some(Scope::Global),
+        );
+      }
     }
   });
 
@@ -1620,9 +1642,11 @@ LoadDefinitions!({
         // rendered "Ruiqi Li" as an empty `<personname/>` + a bold "Ruiqi Li"
         // affiliation; now "Ruiqi Li" is an author. (A `\\`-only block still yields a
         // single empty author below, so its affiliations are not dropped.)
+        // So is a line that prints nothing ([`spacing_end`]: `\author[2]{\vspace{2mm}\\O.~Ennis, U.~Chauhan, …}`,
+        // 2504.09158, read as the name with the names below it its affiliation).
         let lines: Vec<Tokens> = split_tokens(block, author_line_breaks())
           .into_iter()
-          .filter(|l| !l.is_empty())
+          .filter(|l| spacing_end(l.unlist_ref()) > 0)
           .collect();
         for (names_line, affils) in name_groups(lines) {
           let mut names = split_names(names_line);
@@ -2834,8 +2858,8 @@ fn address_tokens(line: &Tokens, addrs: Vec<String>) -> Vec<Tokens> {
 }
 
 /// The end of `tokens` before the line break and spacing they end with, which print nothing: spaces, `\\`, `\hfill`,
-/// `\smallskip`…, `\vspace{…}`, `\hspace*{…}` (2409.06765's `\email vye@berkeley.edu\\ \vspace{-0.6cm}`, read as one
-/// line); 0 for a line of only those.
+/// `\smallskip`…, `\protect`, `\vspace{…}`, `\hspace*{…}` (2409.06765's `\email vye@berkeley.edu\\ \vspace{-0.6cm}`,
+/// read as one line; 2609.08102's `\author[Mech]{\protect\\Johann Guilleminot}`); 0 for a line of only those.
 fn spacing_end(tokens: &[Token]) -> usize {
   let spacing = |t: &Token, names: &[&str]| {
     t.get_catcode() == Catcode::CS && t.with_str(|s| names.contains(&s))
@@ -2853,6 +2877,7 @@ fn spacing_end(tokens: &[Token]) -> usize {
         "\\medskip",
         "\\bigskip",
         "\\newline",
+        "\\protect",
       ])
     {
       end -= 1;
@@ -8663,7 +8688,8 @@ fn split_author_line_cautious(line: Tokens) -> Vec<Tokens> {
   if name_count(&visible_name_text(line.unlist_ref())) >= 2 {
     split_author_line(line)
   } else {
-    vec![line]
+    // (one name too opens with the "and" before it: jheppub's `\author[a,2]{and Fourth}`)
+    vec![without_leading_and(&line).unwrap_or(line)]
   }
 }
 
@@ -8694,6 +8720,9 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
     }
     pieces
   };
+  // a names line opening with "and" opens with the separator before its first name (mnras's `Bob Baker$^{2}$
+  // \newauthor and Cat Cole$^{1}$`, 2401.11878)
+  let line = without_leading_and(&line).unwrap_or(line);
   let line = marks_before_glued_commas(line);
   let top = split(line.clone());
   if top.len() > 1 {

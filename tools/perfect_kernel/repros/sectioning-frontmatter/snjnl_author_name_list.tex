@@ -1,0 +1,12 @@
+% witness: 2312.04825, 2501.00473, 2504.09158 (sn-jnl `\author` holding a name list)
+% oracle:  pdflatex 0 errors: three names over "Univ A"
+% engines: rust 63x6 = one creator + Error:frontmatter:merged_creators (Perl, with no sn-jnl binding, splits them)
+% expect:  0 errors; three creators, each with the shared Univ A affiliation
+% status:  RED (63x6) -> GREEN (63y)
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\title{T}\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{1}$}\affil{Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

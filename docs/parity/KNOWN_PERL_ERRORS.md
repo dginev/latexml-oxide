@@ -11677,3 +11677,34 @@ Bee}\address{Univ B}` → one creator, Bob Bee (Perl the same); 2311.17496 kept 
 Fixed in Rust (63x): iopart's `\author[]{}` adds its authors (`\lx@add@authors@list`, the article split without the
 replacing), locked as the kernel's is; authblk loaded after it still replaces it. Guards
 `perfect_kernel_batch63::{iopart_author_per_call, iopart_authblk_author_wins}`.
+
+## 551. Per-author bindings given a name list, elsarticle's unlabelled addresses, interact's author lines, mnras's `\newauthor`
+
+- elsarticle (elsart_support_core.sty.ltxml:35-36) and jheppub (jheppub.sty.ltxml:35) make each `\author` one creator,
+  but both classes print the argument as written: `\author{Saya Hashemian, Azam Asilian Bidgoli}` (2511.07560; 2401.02456,
+  2404.00172, 2602.17250; jheppub 2411.15300) is two people, merged into one.
+- elsarticle's `\address` goes into the author list after the authors before it (elsarticle.cls:665-668, `\elsauthors`),
+  its `\affiliation` into the address list printed after all the authors (:647-653, :805-806). With no labels to link
+  them, an unlabelled one is read by authoring order: the authors before it with none yet. Perl attaches it to the last
+  author only (`\author{Ann Able}\author{Bob Baker}\address{Univ A}`, 2609.07632).
+- interact.cls:266-274 prints `\name{X}` as `X\\`, `\affil{Y}` and `\email{Z}` as lines of their own, and its `\and` prints
+  "and ": `\author{\name{A\textsuperscript{a}, B…}\affil{\textsuperscript{a}Univ A; …}}` is a names line over marked
+  affiliation lines. Perl maps `\name` to its argument and raises `\name` undefined: one creator (2112.10522,
+  2312.11500, 2403.20182, 2407.12700, 2501.02233, 2502.13874).
+- mnras.cls:1072-1079 defines `\newauthor` as a new row of the one author tabular, the addresses printed after all the
+  rows; Perl's mn2e_support.sty.ltxml:33 makes it empty, merging the names around it (2401.11878, 2409.07518).
+
+Fixed in Rust (63y): the elsarticle, jheppub (and our sn-jnl, whose one-creator `\author` was a Rust binding bug: Perl,
+with no sn-jnl binding, splits with the kernel's) `\author` take the per-author classes' author-block parse
+(`\lx@add@authors@append`, OXIDIZED_DESIGN_DIVERGENCES #459). elsarticle's unlabelled affiliation or address goes to the
+run of authors without one (`annotate=run`: the `annotate=new` run, and a second one before any new author the same run)
+while no author is labelled; once one is, an unlabelled one names no author (`corresponding author={…}`, 2609.07780) and
+stays the last's, as in Perl. interact's `\author` rewrites `\name`, `\affil`, `\email` into the lines the class prints,
+each later `\name` opening an author group and `\and` the word "and", and reads them with the kernel author parse.
+mnras's `\newauthor` separates names inside `\author` as a comma does, and a names line (or a single name) opening with
+the word "and" opens with that separator. Read by the author-block parse, a line that prints nothing (`\protect\\`,
+`\vspace{2mm}\\` opening an author argument; 2609.08102, 2504.09158) is layout, not the name with the names below it as
+its affiliation. Guards `perfect_kernel_batch63::{elsarticle_author_name_list, elsarticle_unlabelled_affiliation_shared,
+elsarticle_unlabelled_addresses_shared, elsarticle_labelled_unlabelled_affiliation,
+elsarticle_author_line_printing_nothing, snjnl_author_name_list, interact_author_name_list, interact_author_name_pairs,
+interact_and_in_name, mnras_newauthor, mnras_newauthor_unmarked}`.

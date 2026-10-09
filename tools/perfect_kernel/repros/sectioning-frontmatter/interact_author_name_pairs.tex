@@ -1,0 +1,11 @@
+% witness: review of 63y: interact's `\author` holding a `\name`/`\affil` pair per author (interact.cls:266-274)
+% oracle:  pdflatex 0 errors: "Ann Able / Univ X / Bob Baker / Univ Y"
+% engines: rust 63y4 = Bob Baker read as an affiliation of Ann Able (one names line, three affiliation lines)
+% expect:  0 errors; two creators, each with its own affiliation
+% status:  RED (63y4) -> GREEN (63y)
+\documentclass{interact}
+\title{T}\author{\name{Ann Able}\affil{Univ X}\name{Bob Baker}\affil{Univ Y}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

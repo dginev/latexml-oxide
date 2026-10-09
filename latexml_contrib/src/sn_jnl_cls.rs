@@ -117,9 +117,11 @@ LoadDefinitions!({
   // root-cause for 2306.11901. `OptionalMatch:*` makes the star optional, and the
   // body forwards to `\lx@add@creator` (never re-enters `\author`). The optional
   // `[N]` becomes the creator's `annotations` (the affiliation ids it references).
+  // (a name list in one `\author` is several people, read as the per-author classes read theirs: Perl, with no sn-jnl
+  // binding, splits it with the kernel's `\author`; 2312.04825, 2501.00473, 2504.09158)
   DefMacro!(
     "\\author OptionalMatch:* []{}",
-    "\\lx@add@creator[annotations={#2}]{#3}"
+    "\\lx@add@authors@append[annotations={#2}]{#3}"
   );
   // `\affil*[N]{text}`: attach as a structured `ltx:contact[role=affiliation]`
   // ON the author creators, not an orphaned top-level `ltx:note`. The numbered

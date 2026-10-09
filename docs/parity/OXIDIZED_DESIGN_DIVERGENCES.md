@@ -14149,6 +14149,16 @@ or written as macros, a per-author binding's visible marks and unsplit lines, a 
 place, that must stay as they are; `author_merged_names_are_an_error` for the error),
 `06_cluster_frontmatter::frontmatter_ieee_authorblock_trailing_email`.
 
+**More per-author classes (63x/63y).** acmart (a comma outside groups and math, acmart.cls:1620's test), cas,
+elsarticle, jheppub and sn-jnl read `\author` with the same author-block parse; interact's `\author` is rewritten into
+the lines interact.cls:266-274 prints (`\name{X}` → `X\\`, `\affil`/`\email` lines, each later `\name` a group, `\and`
+the word "and"); mnras's `\newauthor` separates names inside `\author` as a comma does. Lines that print nothing
+(`\protect\\`, `\vspace{…}\\` opening an author argument) are layout, and a names line or single name opening with the
+word "and" opens with that separator. elsarticle's unlabelled `\affiliation`/`\address` goes to the run of authors with
+none yet (`annotate=run`: the `annotate=new` run, and a second one before any new author the same run; IEEE blocks and
+acmart keep `annotate=new`, whose marked blocks it would give every author) while no author is labelled.
+KNOWN_PERL_ERRORS #549-#551; guards listed there.
+
 ### 460. svjour3's EPJ style links authors to their institutes and notes by key (Perl: neither command defined)
 
 **Background.** The EPJ option of svjour3 (`svepjc3.clo`) cites by key. `\thanksref{addr1,e1}` after a

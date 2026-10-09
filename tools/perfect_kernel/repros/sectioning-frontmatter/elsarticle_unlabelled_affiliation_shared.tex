@@ -1,0 +1,15 @@
+% witness: 2609.06522 (two unlabelled `\author`s and one unlabelled `\affiliation`); review of 63y
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" over "Univ A" (the address under both)
+% engines: rust 63w15 and 63x6 = Univ A on Bob Baker only
+% expect:  0 errors; both creators with the Univ A affiliation
+% status:  RED (63x6) -> GREEN (63y)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{organization={Univ A}}
+\end{frontmatter}
+Text.
+\end{document}

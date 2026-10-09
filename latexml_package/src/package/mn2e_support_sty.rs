@@ -28,7 +28,21 @@ LoadDefinitions!({
   // Frontmatter — Perl mn2e_support.sty.ltxml (PR #2767)
   DefMacro!("\\title[]{}",
     r"\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}");
-  DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@add@authors{#2}", locked => true);
+  DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@mn@authors{#2}", locked => true);
+  // mnras.cls:1072-1079: `\newauthor` starts a new row of the one author tabular, the addresses printed after all the
+  // rows: within `\author` it separates two names as a comma does, not two author groups (Perl's
+  // mn2e_support.sty.ltxml:33 makes it empty, so the names around it were one author; 2401.11878, 2409.07518)
+  DefMacro!("\\lx@mn@authors{}", sub[(names)] {
+    let mut list: Vec<Token> = Vec::new();
+    for t in names.unlist() {
+      if t == T_CS!("\\newauthor") {
+        list.extend([T_OTHER!(","), T_SPACE!()]);
+      } else {
+        list.push(t);
+      }
+    }
+    Ok(Invocation!(T_CS!("\\lx@add@authors"), vec![Some(Tokens::new(list))]))
+  });
   def_macro_noop("\\newauthor")?;
   DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");

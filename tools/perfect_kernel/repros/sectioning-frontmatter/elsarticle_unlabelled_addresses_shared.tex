@@ -1,0 +1,16 @@
+% witness: 2609.07632 (three unlabelled elsarticle authors and one unlabelled `\address`); review of 63y (two addresses)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" over "Univ X" and "Univ Y"
+% engines: rust 63x8 = both addresses on Bob Baker only; 63y4 = Ann Able Univ X, Bob Baker both
+% expect:  0 errors; both creators with both addresses
+% status:  RED (63y4) -> GREEN (63y)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\address{Univ X}
+\address{Univ Y}
+\end{frontmatter}
+Text.
+\end{document}

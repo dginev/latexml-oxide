@@ -4360,3 +4360,156 @@ fn store_set_before_a_superseding_author_list() {
     "<creator before=\"  \" role=\"author\">\n    <personname>Bob B</personname>\n    <contact name=\"Address: \" role=\"address\">Shared</contact>\n    <contact name=\"Email: \" role=\"email\">alice@a.org</contact>\n  </creator>",
   ]);
 }
+
+/// 63y (HF2 S4): elsarticle prints a name list in one `\author` as written, so it is several people, read as the
+/// per-author classes read theirs (Perl's elsart_support_core.sty.ltxml:35-36 makes one creator). Witness 2511.07560.
+/// Repro sectioning-frontmatter/elsarticle_author_name_list.
+#[test]
+fn elsarticle_author_name_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_author_name_list.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: an unlabelled elsarticle `\affiliation` is printed under the authors before it, so it goes to the run of them
+/// with none yet (`annotate=new`); it went to the last author only. Repro
+/// sectioning-frontmatter/elsarticle_unlabelled_affiliation_shared.
+#[test]
+fn elsarticle_unlabelled_affiliation_shared() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_unlabelled_affiliation_shared.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y (HF2 S4): a name list in one sn-jnl `\author` is several people (Perl, with no sn-jnl binding, splits it).
+/// Witness 2312.04825. Repro sectioning-frontmatter/snjnl_author_name_list.
+#[test]
+fn snjnl_author_name_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/snjnl_author_name_list.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y (HF2 S4): interact's `\author{\name{…}\affil{…}}` gives the kernel the lines the class prints
+/// (interact.cls:272-273), so the names are its authors, linked to the affiliations by their marks. Witness
+/// 2112.10522. Repro sectioning-frontmatter/interact_author_name_list.
+#[test]
+fn interact_author_name_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interact_author_name_list.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y (HF2 S7): mnras's `\newauthor` starts a new author row as `\and` does (mnras.cls:1072-1079), and the "and"
+/// opening the row after it is a separator. Witness 2401.11878. Repro sectioning-frontmatter/mnras_newauthor.
+#[test]
+fn mnras_newauthor() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/mnras_newauthor.tex");
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: an author argument opening with a line that prints nothing (`\protect\\`, `\vspace{2mm}\\`) has its names on
+/// the next line; read as the name, it made them the affiliation of the author before (2609.08102, 2504.09158). Repro
+/// sectioning-frontmatter/elsarticle_author_line_printing_nothing.
+#[test]
+fn elsarticle_author_line_printing_nothing() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_author_line_printing_nothing.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: mnras's `\newauthor` starts a row of the same author tabular, the addresses after all rows
+/// (mnras.cls:1072-1079): it separates names, so an unmarked shared address is every author's (review of 63y). Repro
+/// sectioning-frontmatter/mnras_newauthor_unmarked.
+#[test]
+fn mnras_newauthor_unmarked() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/mnras_newauthor_unmarked.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: interact's `\author{\name{A}\affil{X}\name{B}\affil{Y}}` is two authors, each with its own affiliation
+/// (each later `\name` opens a group; review of 63y). Repro sectioning-frontmatter/interact_author_name_pairs.
+#[test]
+fn interact_author_name_pairs() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interact_author_name_pairs.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: interact's `\and` prints "and " (interact.cls:266), so `\name{A \and B}\affil{X}` is two authors sharing
+/// X (review of 63y). Repro sectioning-frontmatter/interact_and_in_name.
+#[test]
+fn interact_and_in_name() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interact_and_in_name.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: two unlabelled elsarticle addresses after unlabelled authors are both authors' (the second takes the run
+/// the first did; review of 63y; witness 2609.07632). Repro sectioning-frontmatter/elsarticle_unlabelled_addresses_shared.
+#[test]
+fn elsarticle_unlabelled_addresses_shared() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_unlabelled_addresses_shared.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Address: \" role=\"address\">Univ X</contact>\n    <contact name=\"Address: \" role=\"address\">Univ Y</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Address: \" role=\"address\">Univ X</contact>\n    <contact name=\"Address: \" role=\"address\">Univ Y</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: in a labelled elsarticle document an unlabelled `\affiliation` names no author and stays the last's, as in
+/// Perl (2609.07780). Repro sectioning-frontmatter/elsarticle_labelled_unlabelled_affiliation.
+#[test]
+fn elsarticle_labelled_unlabelled_affiliation() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_labelled_unlabelled_affiliation.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Corresponding: Ann Able</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}

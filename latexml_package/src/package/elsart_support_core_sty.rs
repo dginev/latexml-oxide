@@ -13,14 +13,25 @@ LoadDefinitions!({
   // One \author per author! possibly with a mark to connect to affiliation
   // It either should be followed by \affiliation,
   // or both should get matching marks
+  // (elsarticle prints the argument as written, so a name list in one `\author{Ann Able, Bob Baker}` is several people:
+  // read as the per-author classes read theirs, each name given the marks; Perl's elsart_support_core.sty.ltxml:35-36
+  // makes one creator. 2511.07560, 2401.02456)
   DefMacro!("\\author OptionalSemiverbatim {}",
-    "\\lx@add@creator[role=author,annotations={#1}]{#2}");
+    "\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@add@authors@append[annotations={#1}]{#2}");
 
+  // (elsarticle puts an `\address` into the author list after the authors before it, elsarticle.cls:665-668, and an
+  // `\affiliation` into the address list after all of them, :647-653; with no labels to link them, an unlabelled one is
+  // read by authoring order: the run of authors with none yet, `annotate=run` as `\lx@els@shared` chooses (2609.06522,
+  // 2609.07632). Once an author is labelled, an unlabelled one names no author — `corresponding author={…}`,
+  // 2609.07780 — and stays the last's, as in Perl; a labelled one is found by its label, which `annotate` leaves alone)
+  DefMacro!("\\lx@els@shared",
+    "\\ifdefined\\lx@els@labelled\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi");
   DefMacro!("\\address OptionalSemiverbatim {}",
-    "\\lx@add@contact[label={#1},role=address]{#2}");
+    "\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}{\\lx@add@contact[label={#1},role=address,annotate=run]}{#2}");
   // \affiliation[label]{text-OR-keyvals} !!  (Perl PR #2767)
   DefMacro!("\\affiliation OptionalSemiverbatim {}",
-    "\\lx@add@contact[label={#1},role=affiliation]{\\lx@els@parse@affiliation{#2}}");
+    "\\lx@els@shared{\\lx@add@contact[label={#1},role=affiliation]}\
+     {\\lx@add@contact[label={#1},role=affiliation,annotate=run]}{\\lx@els@parse@affiliation{#2}}");
 
   // The affiliation as the class prints it from its `stm/affiliation` keys ([`stm_affiliation`]).
   DefMacro!("\\lx@els@parse@affiliation {}", sub[(raw)] { stm_affiliation(raw, true) });

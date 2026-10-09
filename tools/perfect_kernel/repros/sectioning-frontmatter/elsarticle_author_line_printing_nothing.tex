@@ -1,0 +1,18 @@
+% witness: 2609.08102 (`\author[Mech]{\protect\\Johann Guilleminot}`), 2504.09158 (sn-jnl `\author[2]{\vspace{2mm}\\O.~Ennis,
+%          U.~Chauhan, …}`): an author argument opening with a line that prints nothing
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, Cat Cole, Dan Dorn" over "Univ A" (the breaks are layout)
+% engines: rust 63y2 (the per-author parse) = the `\protect`/`\vspace` line read as the name, the names below it as its
+%          affiliation: Bob Baker an affiliation of Ann Able; Cat Cole and Dan Dorn lost the same way
+% expect:  0 errors; four creators, each with Univ A
+% status:  RED (63y2) -> GREEN (63y)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[a]{Ann Able}
+\author[a]{\protect\\Bob Baker}
+\author[a]{\vspace{2mm}\\Cat Cole, Dan Dorn}
+\affiliation[a]{organization={Univ A}}
+\end{frontmatter}
+Text.
+\end{document}

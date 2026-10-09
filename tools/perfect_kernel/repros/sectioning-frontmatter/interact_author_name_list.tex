@@ -1,0 +1,12 @@
+% witness: 2112.10522, 2312.11500, 2403.20182 (interact `\author{\name{A\textsuperscript{a}, …}\affil{…}}`)
+% oracle:  pdflatex 0 errors (interact.cls:272-273 prints `\name{X}` as `X\\`, `\affil{Y}` as `Y\\`): three names over
+%          "aUniv A; bUniv B"
+% engines: rust 63x6 = one creator + Error:frontmatter:merged_creators; Perl one creator
+% expect:  0 errors; three creators, each with the affiliation its mark names
+% status:  RED (63x6) -> GREEN (63y)
+\documentclass{interact}
+\title{T}\author{\name{Ann Able\textsuperscript{a}, Bob Baker\textsuperscript{b} and Cat Cole\textsuperscript{a}}\affil{\textsuperscript{a}Univ A; \textsuperscript{b}Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

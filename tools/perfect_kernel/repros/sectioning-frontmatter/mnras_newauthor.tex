@@ -1,0 +1,11 @@
+% witness: 2401.11878, 2409.07518 (mnras `\newauthor` between authors)
+% oracle:  pdflatex 0 errors: "Ann Able,1 Bob Baker2 / and Cat Cole1" over "1Univ A / 2Univ B"
+% engines: rust 63x6 = `\newauthor` empty, the names merged + Error:frontmatter:merged_creators (Perl empty too)
+% expect:  0 errors; three creators linked by their marks, the "and" before Cat Cole a separator
+% status:  RED (63x6) -> GREEN (63y)
+\documentclass{mnras}
+\title{T}\author[A. Able et al.]{Ann Able,$^{1}$ Bob Baker$^{2}$ \newauthor and Cat Cole$^{1}$\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

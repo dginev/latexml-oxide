@@ -1,0 +1,14 @@
+% witness: 2511.07560 (elsarticle `\author{Saya Hashemian, Azam Asilian Bidgoli}`); 2401.02456, 2404.00172, 2602.17250
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" over "Univ A" (two people, one address)
+% engines: rust 63x6 = one creator holding both names + Error:frontmatter:merged_creators (Perl one creator, silent)
+% expect:  0 errors; two creators, each with the Univ A affiliation
+% status:  RED (63x6) -> GREEN (63y)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able, Bob Baker}
+\affiliation{organization={Univ A}}
+\end{frontmatter}
+Text.
+\end{document}
