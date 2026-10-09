@@ -156,9 +156,11 @@ LoadDefinitions!({
   // production keys dropped).
   // The marks link the author to the affiliations labelled with them (cas-common.sty:895-940 `\author[1,2]{…}`,
   // :1252-1266 `\affiliation[1]{…}`); unmarked, an affiliation goes to the author before it.
+  // (the names are split as the kernel splits an author list, at commas, `\and` and the word "and": cas prints the
+  // argument as written, `\author[a]{Cy Cee and Dee Dee}` two people; review of 63u)
   DefMacro!(
     "\\author[]{}[]",
-    "\\lx@splitting{\\lx@add@author[annotations={#1}]}{\\and\\And,}{#2}\\lx@add@author@keyvals{#3}"
+    "\\lx@add@authors@append[annotations={#1}]{#2}\\lx@add@author@keyvals{#3}"
   );
   // \affiliation[id]{keys}: cas-common.sty:1118-1160 reads the argument as nearly the `stm/affiliation` keys
   // elsarticle reads (elsarticle.cls:387-440), printed as the class prints them (`stm_affiliation`): `organization={X},

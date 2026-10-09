@@ -1,0 +1,13 @@
+% witness: 2410.17928: an acmart author line naming its institution after a comma
+% oracle:  pdflatex 0 errors: "Stephan Bauroth, TU Berlin" (the name beside its institution)
+% engines: rust 63w15 = Error:frontmatter:merged_creators "Stephan Bauroth, TU Berlin" (TU read as a given name)
+% expect:  0 errors; one creator as written (as author_name_with_affiliation_is_not_merged)
+% status:  RED (63w15) -> GREEN (63x)
+\documentclass[sigconf,nonacm]{acmart}
+\begin{document}
+\title{T}
+\author{Stephan Bauroth, TU Berlin}
+\email{s.bauroth@tu-berlin.de}
+\maketitle
+x
+\end{document}

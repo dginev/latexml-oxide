@@ -4172,3 +4172,191 @@ fn interspeech_class_template_stays_anonymous() {
   );
   assert!(!xml.contains("<creator"), "{xml}");
 }
+
+/// 63x: every creator of a repro converted under ar5iv (0 errors, 0 warnings), whole and in document order.
+fn creators_63x(tex: &str) -> Vec<String> {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  creators_in(&xml)
+}
+
+/// Every creator of `xml`, whole and in document order.
+fn creators_in(xml: &str) -> Vec<String> {
+  let mut creators = Vec::new();
+  let mut rest = xml;
+  while let Some(i) = rest.find("<creator ") {
+    let end = i
+      + rest[i..]
+        .find("</creator>")
+        .map_or(0, |j| j + "</creator>".len());
+    creators.push(rest[i..end].to_string());
+    rest = &rest[end..];
+  }
+  creators
+}
+
+/// 63x: cas's `\author[a]{A and B}` is two authors, split as the kernel splits an author list, both linked to the
+/// affiliation `a` (review of 63u). Repro sectioning-frontmatter/cas_author_and_splits.
+#[test]
+fn cas_author_and_splits() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_author_and_splits.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Cy Cee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A, Xland</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dee Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A, Xland</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: an unlabelled `\affiliation` above the first `\author` (cas-common.sty:1252-1290 prints it under the authors) is
+/// placed as an orphan is, a sole author's; it was dropped unplaced (review of 63u). Repro
+/// sectioning-frontmatter/cas_affiliation_before_author.
+#[test]
+fn cas_affiliation_before_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_affiliation_before_author.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Before, Xland</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: the same above two authors is shared, in a creator of its own BELOW them, where a shared note prints (it was
+/// promoted in place, above the authors). Repro sectioning-frontmatter/cas_affiliation_before_authors_shared.
+#[test]
+fn cas_affiliation_before_authors_shared() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_affiliation_before_authors_shared.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Before, Xland</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x (HF2): an acmart `\author{A, B, C}` name list is three people, as acmart prints it (acmart.cls:1620 only warns),
+/// each with the `\affiliation` after it; it was one creator holding three names. Witness 2604.12138. Repro
+/// sectioning-frontmatter/acmart_comma_author_list.
+#[test]
+fn acmart_comma_author_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_comma_author_list.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Aditya Agrawal</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">Amazon.com</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id2\">USA</text></contact>\n  </creator>",
+    "<creator before=\", \" role=\"author\">\n    <personname>Alwarappan Nakkiran</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id3\">Amazon.com</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id4\">USA</text></contact>\n  </creator>",
+    "<creator before=\" and \" role=\"author\">\n    <personname>Darshan Fofadiya</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id5\">Amazon.com</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id6\">USA</text></contact>\n  </creator>",
+  ]);
+}
+
+/// 63x (HF2): "Name, TU Berlin" in an acmart `\author` is one person beside the institution (TU an institution's
+/// acronym, not a given name), kept as written with no merged-creator error. Witness 2410.17928. Repro
+/// sectioning-frontmatter/acmart_author_name_tu_institution.
+#[test]
+fn acmart_author_name_tu_institution() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_author_name_tu_institution.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Stephan Bauroth, TU Berlin</personname>\n    <contact name=\"email: \" role=\"email\">s.bauroth@tu-berlin.de</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x (HF2): a mark manyfoot declares beside `\footnotemark` (`\footnotemarkAAffil[1]`, manyfoot.sty:253-257) after
+/// each name of an acmart author list is a mark, so the comma between the names separates two authors. Witness
+/// 2309.13063. Repro sectioning-frontmatter/acmart_manyfoot_marks.
+#[test]
+fn acmart_manyfoot_marks() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_manyfoot_marks.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A, <sup xml:id=\"id3\">2</sup>Univ B <text class=\"ltx_affiliation_country\" xml:id=\"id4\">USA</text></contact>\n  </creator>",
+    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee<sup xml:id=\"id5\">2</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id6\">1</sup>Univ A, <sup xml:id=\"id7\">2</sup>Univ B <text class=\"ltx_affiliation_country\" xml:id=\"id8\">USA</text></contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: iopart typesets each `\author` where it stands (iopart.cls:225-231), so each call adds its authors, each with
+/// the `\address`/`\ead` after it; the kernel `\author` replaced them, keeping the last (KNOWN_PERL_ERRORS #550).
+/// Witness 2311.17496. Repro sectioning-frontmatter/iopart_author_per_call.
+#[test]
+fn iopart_author_per_call() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/iopart_author_per_call.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email: \" role=\"email\">a@a.a</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: authblk loaded under iopart still has its own `\author[mark]`/`\affil` (a binding loaded later replaces the
+/// class's locked `\author`; review of 63x).
+#[test]
+fn iopart_authblk_author_wins() {
+  let tex = "\\documentclass[12pt]{iopart}\\usepackage{authblk}\\begin{document}\\title{T}\n\\author[1]{Ann Able}\n\\author[2]{Bob Bee}\n\\affil[1]{Univ A}\n\\affil[2]{Univ B}\nx\n\\end{document}\n";
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: a conditional around IEEE author blocks (`\ifdefined\x \IEEEauthorblockN{…} \else … \fi`) keeps its tokens as
+/// written: only the true branch's authors, no empty affiliation, no nameless creator (the `\if`, `\else` and `\fi`
+/// were wrapped as bare affiliation text). Witness 2407.02944. Repro
+/// sectioning-frontmatter/ieeetran_author_block_conditional.
+#[test]
+fn ieeetran_author_block_conditional() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieeetran_author_block_conditional.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A <break/>a@b.c</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A <break/>a@b.c</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: a conditional the bare run after a block holds whole is wrapped with it, as any bare text (the email of its
+/// true branch stays the author's, not the body's; review of 63x, the 1901.07768 shape).
+#[test]
+fn ieeetran_conditional_in_bare_run() {
+  let tex = "\\documentclass[10pt,conference]{IEEEtran}\\def\\x{}\\title{T}\n\\author{\\IEEEauthorblockN{Ann Able}\\IEEEauthorblockA{Univ A}\\ifdefined\\x \\{a,b\\}@host.org\\else Hidden Text\\fi}\n\\begin{document}\n\\maketitle\nx\n\\end{document}\n";
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">{a,b}@host.org</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: an acmart author list inside one wrapper (`\author{\textbf{A, B}}`) separates its names as a bare one does,
+/// read through the wrapper as the author-line parse reads a whole-line wrapper (review of 63x). Repro
+/// sectioning-frontmatter/acmart_wrapped_author_list.
+#[test]
+fn acmart_wrapped_author_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_wrapped_author_list.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">Univ A</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id2\">X</text></contact>\n  </creator>",
+    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id3\">Univ A</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id4\">X</text></contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: the two-author form of `perfect_kernel_batch59::store_set_before_a_superseding_author` holds the stores once:
+/// the queued copy of a store the new authors were handed is not placed again as a shared orphan (review of 63x).
+/// Repro sectioning-frontmatter/store_set_before_a_superseding_author_list.
+#[test]
+fn store_set_before_a_superseding_author_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_set_before_a_superseding_author_list.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert_eq!(creators_in(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Alice A</personname>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob B</personname>\n    <contact name=\"Address: \" role=\"address\">Shared</contact>\n    <contact name=\"Email: \" role=\"email\">alice@a.org</contact>\n  </creator>",
+  ]);
+}

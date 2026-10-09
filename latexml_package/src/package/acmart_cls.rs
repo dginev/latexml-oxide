@@ -502,7 +502,20 @@ LoadDefinitions!({
   // \author[F. Poli]{Federico Poli} leaks '[' and drops the name; accept the
   // optional short-name and drop it (beyond-Perl; the short name is a derived
   // running-head abbreviation, not new information).
-  DefMacro!("\\author[]{}",              "\\lx@add@creator[role=author]{#2}");
+  // acmart.cls:1620-1621 reads a comma in the argument as several authors (`\IfSubStr{\detokenize{#2}}{,}`, warning
+  // "Do not put several authors in the same \author macro!") and prints the list as written: such an argument is split
+  // as the kernel splits an author list (27 of the 30 acmart papers of the html_feedback set that held one merged
+  // creator: 2604.12138, 2302.03038, …; Perl's acmart.cls.ltxml:89 makes one creator too). Without a comma it is one
+  // author (`Ann Able and Bob Baker`); a comma in a group or in math (`\thanks{X, Y}`, `$^{1,2}$`) separates no names.
+  DefMacro!("\\author[]{}", sub[(_short, name)] {
+    let form = if separates_names(name.unlist_ref()) {
+      "\\lx@add@authors@append"
+    } else {
+      "\\lx@acmart@author"
+    };
+    Ok(Invocation!(T_CS!(form), vec![None, Some(name)]))
+  });
+  DefMacro!("\\lx@acmart@author[]{}",  "\\lx@add@creator[role=author]{#2}");
   DefMacro!("\\editor{}",                "\\lx@add@creator[role=editor]{#1}");
   DefMacro!("\\affiliation{}",           "\\lx@add@contact[role=affiliation,annotate=new]{#1}");
   DefMacro!("\\additionalaffiliation{}", "\\lx@add@contact[role=altaffiliation]{#1}");
@@ -1125,3 +1138,54 @@ LoadDefinitions!({
   }
   AddToMacro!("\\lx@maketitle@body", "\\lx@acm@copyright");
 });
+
+/// A comma between names in an acmart `\author` argument: outside groups and math, or inside the one group that wraps
+/// the whole argument (`{\bf A, B}`, `\textbf{A, B}`), as the author-line parse reads a wrapped line.
+fn separates_names(tokens: &[Token]) -> bool {
+  let start = tokens
+    .iter()
+    .position(|t| *t != T_SPACE!())
+    .unwrap_or(tokens.len());
+  let end = tokens
+    .iter()
+    .rposition(|t| *t != T_SPACE!())
+    .map_or(start, |i| i + 1);
+  let mut open = start
+    + usize::from(
+      tokens
+        .get(start)
+        .is_some_and(|t| t.get_catcode() == Catcode::CS),
+    );
+  let mut wrapped = false;
+  if tokens
+    .get(open)
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+  {
+    let mut depth = 0usize;
+    for (i, t) in tokens.iter().enumerate().take(end).skip(open) {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+      if depth == 0 {
+        wrapped = i + 1 == end;
+        break;
+      }
+    }
+  }
+  if !wrapped {
+    open = start;
+  }
+  let (mut depth, mut math) = (0usize, false);
+  let level = usize::from(wrapped);
+  tokens[open..end].iter().any(|t| {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      Catcode::MATH => math = !math,
+      _ => {},
+    }
+    depth == level && !math && *t == T_OTHER!(",")
+  })
+}

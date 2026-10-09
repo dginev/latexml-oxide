@@ -1,0 +1,13 @@
+% witness: side finding of 63x (probing cas's `$^*$` mark): a numeric author mark no affiliation claims
+% oracle:  pdflatex 0 errors: "Ann Able∗ and Bob Bee1" (both marks printed)
+% engines: rust 63w15 and 63x4 = Ann Able<sup>*</sup>, Bob Bee with no mark (the "1", read as an affiliation request,
+%          is taken out of the name and nothing answers it); with `$^1$Univ A` lines below, the marks become the links
+% expect:  0 errors; an unanswered mark stays in the name as printed (Bob Bee<sup>1</sup>)
+% status:  RED (63x4)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^*$ and Bob Bee$^1$}
+\maketitle
+x
+\end{document}

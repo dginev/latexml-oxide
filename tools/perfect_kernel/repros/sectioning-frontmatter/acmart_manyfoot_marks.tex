@@ -1,0 +1,17 @@
+% witness: 2309.13063: a mark bigfoot/manyfoot declares beside `\footnotemark` (`\DeclareNewFootnote{AAffil}` makes
+%          `\footnotemarkAAffil[n]`, manyfoot.sty:253-257) after each name of an acmart author list; declared here as
+%          manyfoot names it (loading manyfoot adds manyfoot.sty:390's `\g@addto@macro\endminipage` warning, Perl's too)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Bee2" over "1 Univ A, 2 Univ B, USA" (with manyfoot the same)
+% engines: rust 63w15 = one personname holding both names + Error:frontmatter:merged_creators (the mark not read as
+%          one, so the comma between the names was not a separator)
+% expect:  0 errors; two creators, each name with its mark
+% status:  RED (63w15) -> GREEN (63x)
+\documentclass[sigconf,nonacm]{acmart}
+\newcommand\footnotemarkAAffil[1][]{\textsuperscript{#1}}
+\begin{document}
+\title{T}
+\author{Ann Able\footnotemarkAAffil[1], Bob Bee\footnotemarkAAffil[2]}
+\affiliation{$^1$Univ A, $^2$Univ B \country{USA}}
+\maketitle
+x
+\end{document}

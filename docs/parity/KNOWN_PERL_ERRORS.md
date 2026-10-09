@@ -11642,3 +11642,38 @@ interspeech_math_affiliation_marks, interspeech_frontmatter_in_body, interspeech
 interspeech_affiliation_nocounter, interspeech_unmarked_address_shared, interspeech_affiliations_before_authors,
 interspeech_class_starts_final, interspeech_class_calls_cameraready,
 interspeech_class_template_stays_anonymous}`.
+
+## 549. Author lists one acmart `\author` holds, and an affiliation given before the first author
+
+- acmart asks for one `\author` per person (acmart.cls:1620 warns "Do not put several authors in the same \author
+  macro!") but prints a name list as written. Perl's `\author{}` is one `\lx@add@creator` (acmart.cls.ltxml:89), so
+  `\author{Aditya Agrawal, Alwarappan Nakkiran, Darshan Fofadiya}` (2604.12138; 27 of the 30 acmart papers of the HF2
+  report set) was one creator holding three names. Two readings kept a list whole besides: "TU" read as a given name
+  (`Stephan Bauroth, TU Berlin`, 2410.17928), and a mark manyfoot declares beside `\footnotemark`
+  (`\footnotemarkAAffil[1]`, manyfoot.sty:253-257; 2309.13063) not read as a mark.
+- A class that files an `\affiliation` under the current author group and prints the groups at `\maketitle` (cas,
+  cas-common.sty:1252-1290) prints one given before the first `\author` under the authors. The frontmatter kernel queued
+  it with no creator to annotate and no label to find one by, and dropped it unplaced, with no diagnostic; Perl does the
+  same (`relocateAnnotations`, Base_Utility.pool.ltxml:880-909, places labelled annotations only).
+
+Fixed in Rust (63x): acmart's `\author` takes the per-author classes' author-block parse (`\lx@add@authors@append`,
+OXIDIZED_DESIGN_DIVERGENCES #459) when its argument holds a comma outside groups and math, or inside one group wrapping it all
+(acmart.cls:1620's test reads the whole argument; one name stays one `\lx@add@creator`, as in Perl); "TU" joins the institution acronyms that are
+no name, and every `\footnotemark…` control sequence is a mark with an optional `[n]` and no argument. An unlabelled
+annotation queued before any author is placed as an orphan is (OXIDIZED_DESIGN_DIVERGENCES #159): a sole author's, else
+shared in a creator below the authors; an empty one, or one an author already holds, is still dropped. Guards
+`perfect_kernel_batch63::{cas_affiliation_before_author, cas_affiliation_before_authors_shared, acmart_comma_author_list,
+acmart_author_name_tu_institution, acmart_manyfoot_marks, acmart_wrapped_author_list}`. (cas's own `\author[a]{A and B}` split — a contrib binding,
+no Perl one — is guarded by `cas_author_and_splits`.)
+
+## 550. iopart's `\author` replaces the authors before it
+
+iopart typesets each `\author[short]{names}` where it stands (iopart.cls:225-231), one call per author or author group,
+each with its `\address` and `\ead` after it. Perl's iopart_support.sty.ltxml defines no `\author`, so the kernel's runs
+(latex_constructs.pool.ltxml:1076), and its `\lx@add@authors` replaces the authors queued before: only the last call's
+authors survive. Trigger: `\documentclass{iopart}\begin{document}\author{Ann Able}\address{Univ A}\author{Bob
+Bee}\address{Univ B}` → one creator, Bob Bee (Perl the same); 2311.17496 kept one of four authors.
+
+Fixed in Rust (63x): iopart's `\author[]{}` adds its authors (`\lx@add@authors@list`, the article split without the
+replacing), locked as the kernel's is; authblk loaded after it still replaces it. Guards
+`perfect_kernel_batch63::{iopart_author_per_call, iopart_authblk_author_wins}`.

@@ -5583,10 +5583,37 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
     let mut placed: Vec<Node> = Vec::new();
     for note in element_nodes(&pending) {
       let label = note.get_attribute("_label").unwrap_or_default();
-      if label.is_empty() {
+      // An annotation given before any author with no label to find one by (cas's `\affiliation{…}` above the first
+      // `\author`, which cas-common.sty:1252-1290 prints under the authors) is an orphan like the labelled ones below:
+      // a sole author's, else shared. Perl drops it unplaced. Guard:
+      // `perfect_kernel_batch63::cas_affiliation_before_author`.
+      let unlabelled = label.is_empty();
+      // (an empty one is nothing to keep: it made a nameless creator of its own; nor one an author already holds — a
+      // store set between two `\maketitle`s is handed on to the authors a later `\author` names, and queued too:
+      // `perfect_kernel_batch59::store_set_before_a_superseding_author`)
+      let empty = note.get_content().trim().is_empty() && element_nodes(&note).is_empty();
+      let held = || {
+        let (role, content) = (note.get_attribute("role"), note.get_content());
+        authors.iter().any(|author| {
+          element_nodes(author).iter().any(|c| {
+            c.get_name() == note.get_name()
+              && c.get_attribute("role") == role
+              && c.get_content().trim() == content.trim()
+          })
+        })
+      };
+      if unlabelled && (pending.get_name() != "creator" || empty || held()) {
         continue;
       }
-      if let Some(targets) = find_targets(&label) {
+      let targets = if unlabelled {
+        match authors.as_slice() {
+          [author] => Some(vec![author.clone()]),
+          _ => None,
+        }
+      } else {
+        find_targets(&label)
+      };
+      if let Some(targets) = targets {
         placed.push(note.clone());
         for target in targets {
           DebugFeature!("frontmatter", "FRONT Moving annotation for {label}");
@@ -5595,7 +5622,7 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
           contact_in_title_as_note(document, &target)?;
         }
       } else {
-        if !shared_orphan(&note) {
+        if !unlabelled && !shared_orphan(&note) {
           let mut known: Vec<&String> = labeltable.keys().collect();
           known.sort();
           Warn!(
@@ -5654,6 +5681,11 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
       document.set_attribute(&mut pending, "role", "author")?;
       for note in placed {
         document.remove_node(note);
+      }
+      // below the authors, where a shared note prints: a stub queued before the first author stood above them
+      // (cas's `\affiliation{…}` above its `\author`s; aastex's `\correspondingauthor`+`\email` first, 2408.07136)
+      if let Some(last) = authors.last() {
+        move_content_free_after(std::slice::from_ref(&pending), last.clone())?;
       }
       shared_creator = Some(pending);
     } else {
@@ -10133,7 +10165,7 @@ fn visible_name_text(tokens: &[Token]) -> String {
           }
         }
         // an optional `[...]` (`\footnotemark[2]` has nothing more), then a note's or mark's braced argument
-        if annotation || t == T_CS!("\\footnotemark") {
+        if annotation || is_footnote_mark(&t) {
           if tokens.get(i) == Some(&T_OTHER!("[")) {
             while i < tokens.len() && tokens[i] != T_OTHER!("]") {
               i += 1;
@@ -10354,11 +10386,15 @@ const NON_NAME_WORDS: &[&str] = &[
   "sch",
   "sci",
 ];
+/// `\footnotemark` or a mark manyfoot declares beside it (`\DeclareNewFootnote{AAffil}` makes `\footnotemarkAAffil`,
+/// manyfoot.sty:253-257; 2309.13063): a mark with an optional `[n]` and no argument.
+fn is_footnote_mark(t: &Token) -> bool { t.with_str(|s| s.starts_with("\\footnotemark")) }
+
 /// Acronyms of institutions and societies, in capitals only: "Meta AI", "ESA" are none of them a name, though Qingyao
 /// Ai and Esa Räsänen are.
 const NON_NAME_ACRONYMS: &[&str] = &[
   "AI", "IEEE", "ACM", "INFN", "CNRS", "INAF", "CSIC", "NASA", "ESA", "ESO", "CERN", "DESY",
-  "RIKEN", "KEK", "IPMU", "MIT", "UCLA", "SISSA",
+  "RIKEN", "KEK", "IPMU", "MIT", "UCLA", "SISSA", "TU",
 ];
 
 /// The lowercased whole words of `word`: itself, the punctuation around it (`.,;:()[]`) dropped, and the parts of a
@@ -10773,9 +10809,7 @@ fn only_marks_and_notes(tokens: &[Token]) -> bool {
       {
         i += 2
       },
-      Catcode::CS
-        if t == T_CS!("\\footnotemark") || t.with_str(|s| NAME_ANNOTATIONS.contains(&s)) =>
-      {
+      Catcode::CS if is_footnote_mark(&t) || t.with_str(|s| NAME_ANNOTATIONS.contains(&s)) => {
         any = true;
         i += 1;
         if tokens.get(i) == Some(&T_OTHER!("[")) {
@@ -10784,7 +10818,7 @@ fn only_marks_and_notes(tokens: &[Token]) -> bool {
           }
           i += 1;
         }
-        if t != T_CS!("\\footnotemark") {
+        if !is_footnote_mark(&t) {
           i = skip_group(tokens, i);
         }
       },

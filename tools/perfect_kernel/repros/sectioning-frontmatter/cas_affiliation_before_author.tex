@@ -3,8 +3,8 @@
 %          finds no author before it), with no diagnostic
 % oracle:  pdflatex 0 errors: "Univ Before, Xland" printed under the author
 % engines: rust 63u4 (and 63t7) = no affiliation, no warning
-% expect:  0 errors; the affiliation kept on the author, or a diagnostic that it was not placed
-% status:  RED (63u4)
+% expect:  0 errors; the affiliation kept on the author (a sole author's, as an orphan is)
+% status:  RED (63u4) -> GREEN (63x)
 \documentclass[a4paper,fleqn]{cas-sc}
 \begin{document}
 \title [mode = title]{T}

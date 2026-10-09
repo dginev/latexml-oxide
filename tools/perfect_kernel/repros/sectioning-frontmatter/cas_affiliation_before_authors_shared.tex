@@ -1,0 +1,15 @@
+% witness: review of 63x: an unlabelled cas `\affiliation` above two `\author`s (cas-common.sty:1252-1290 prints it under
+%          the authors), the shared-orphan case of cas_affiliation_before_author
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Bee" over "Univ Before, Xland"
+% engines: rust 63w15 = no affiliation; 63x4 = a nameless creator holding it ABOVE the authors
+% expect:  0 errors; Ann Able, Bob Bee, then the shared affiliation in a creator of its own below them
+% status:  RED (63x4) -> GREEN (63x)
+\documentclass[a4paper,fleqn]{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\affiliation{organization={Univ Before}, country={Xland}}
+\author{Ann Able}
+\author{Bob Bee}
+\maketitle
+Body.
+\end{document}

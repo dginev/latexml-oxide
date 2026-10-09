@@ -1,0 +1,21 @@
+% witness: 2311.17496: iopart typesets each `\author` where it stands (iopart.cls:225-231), one call per author
+% oracle:  pdflatex 0 errors (with the paper's iopart.cls): "Ann Able / Univ A / E-mail: a@a.a" then "Bob Bee / Univ B"
+% engines: rust 63w15 = only Bob Bee (the kernel `\author` replaces; Perl the same); 63x2 = Bob Bee holding Ann's
+%          address and email as well
+% expect:  0 errors; two creators, each with its own address (and Ann's email)
+% status:  RED (63w15) -> GREEN (63x)
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ A}
+\ead{a@a.a}
+
+\author{Bob Bee}
+\address{Univ B}
+\vspace{10pt}
+\begin{abstract}
+Abs.
+\end{abstract}
+x
+\end{document}

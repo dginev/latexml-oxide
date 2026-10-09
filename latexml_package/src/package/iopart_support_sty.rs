@@ -52,6 +52,12 @@ LoadDefinitions!({
   // (KNOWN_PERL_ERRORS #511; 21 of the 41 2609 iopart papers call it more than once, 2609.01831 lost three of four).
   DefMacro!("\\address{}", "\\lx@add@affiliation@marked{#1}");
   DefMacro!("\\ead Semiverbatim", "\\lx@add@email{#1}");
+  // iopart.cls:225-231: each `\author[short]{names}` typesets its names where it stands, as `\address` does, so each
+  // call adds its authors (split as the article `\author` splits them). Perl has no iopart `\author`, and the kernel's
+  // replaces the authors before it (latex_constructs.pool.ltxml:1076), keeping the last call's only
+  // (KNOWN_PERL_ERRORS #550; 2311.17496 lost three of four authors). Locked as the kernel's is; a binding loaded later
+  // (authblk's `\author[mark]`) still replaces it.
+  DefMacro!("\\author[]{}", "\\def\\@shortauthor{#1}\\def\\@author{#2}\\lx@add@authors@list{#2}", locked => true);
 
   // NOTE: NO `\received`/`\revised`/`\accepted`/`\published`/`\online` date
   // macros here. The prior port added them citing "Perl L82-86", but those Perl

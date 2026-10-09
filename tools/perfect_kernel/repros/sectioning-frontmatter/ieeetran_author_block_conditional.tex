@@ -1,0 +1,22 @@
+% witness: 2407.02944: an HPCA template's `\author{\ifdefined\hpcacameraready \IEEEauthorblockN{…}… \else … \fi}`
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Bee / Univ A / a@b.c" (the camera-ready branch only)
+% engines: rust 63w15 = Error:expected:\fi + the `\else` branch's "Submission 12" as an author (the conditional's tokens
+%          wrapped as a bare affiliation run); 63x2 also a nameless creator with an empty affiliation
+% expect:  0 errors; creators Ann Able and Bob Bee with the Univ A affiliation, nothing from the `\else` branch
+% status:  RED (63w15) -> GREEN (63x)
+\documentclass[10pt,conference]{IEEEtran}
+\def\finalcopy{}
+\title{T}
+\author{
+  \ifdefined\finalcopy
+    \IEEEauthorblockN{Ann Able and Bob Bee}
+    \IEEEauthorblockA{Univ A \\ a@b.c}
+  \else
+    \IEEEauthorblockN{Submission 12
+      \IEEEauthorblockA{Confidential Draft}}
+  \fi
+}
+\begin{document}
+\maketitle
+x
+\end{document}

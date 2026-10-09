@@ -5092,6 +5092,15 @@ KNOWN_PERL_ERRORS #94.
 **Guard**: `06_cluster_frontmatter::frontmatter_ieee_author_grid_transpose` (grid
 transposed + a single-row control proven un-reordered).
 
+**Bare text between blocks (63x).** The same `\author` dispatch wraps bare text left between the blocks (a loose email
+after `\IEEEauthorblockA`, 1901.07768) in `\IEEEauthorblockA{…}`; a run holding a conditional's own tokens
+(`\ifdefined\hpcacameraready \IEEEauthorblockN{…}… \else … \fi`, 2407.02944) keeps the conditional's own tokens as
+written (an `\if…` with the test its primitive reads, each `\else`/`\or`/`\fi`) and wraps the bare text between them
+piece by piece, since wrapped whole the `\if` and its `\else`/`\fi` landed in different arguments: `Error:expected:\fi`,
+the false branch's "Submission" as an author, an empty affiliation. A conditional the run holds whole is wrapped with it
+as before, so its true branch's bare text stays the author's. Guards
+`perfect_kernel_batch63::{ieeetran_author_block_conditional, ieeetran_conditional_in_bare_run}`.
+
 ### 129. Nested inline-math superscript author markers (`$^\text{$...$}$`) no longer desync math mode
 
 **Perl**: in an author/affiliation block using `^`/`\textsuperscript` markers,
@@ -6313,6 +6322,16 @@ affiliation once, full-width, centered, below the author row.
 trailing creator, for every class. Perl warns ("Orphaned frontmatter annotation") and drops it,
 though LaTeX prints it as a footnote. The case is an svjour3 EPJ `\thankstext` whose key only its
 institute cites (#460). Guard `perfect_kernel_batch63::svjour3_epj_title_and_institute_notes`.
+
+**63x extension.** An annotation queued before any author with no label (cas's `\affiliation{…}` above the first
+`\author`, cas-common.sty:1252-1290) is an orphan of the same kind: a sole author's, else shared. It was dropped
+unplaced, as in Perl (KNOWN_PERL_ERRORS #549). An empty one (no text, no element) is still dropped: placed, it made a
+nameless creator of its own (2407.02944), and so is one an author already holds (a store set between two `\maketitle`s
+is handed to the authors a later `\author` names, and queued too). A promoted shared creator now always stands after the
+last author: a stub queued before the first author had been promoted in place, above them (cas's pre-author
+`\affiliation`; aastex's `\correspondingauthor` and `\email` given first, 2408.07136, 2511.22453). Guards
+`perfect_kernel_batch63::{cas_affiliation_before_author, cas_affiliation_before_authors_shared,
+store_set_before_a_superseding_author_list}`, `perfect_kernel_batch59::store_set_before_a_superseding_author`.
 
 **Whose orphans (63h).** An orphan's label is one institute together with what inherited its label
 (its `\email`, `\url`). An orphan goes to the authors the evidence names; otherwise it is shared.

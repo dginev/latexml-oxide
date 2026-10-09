@@ -935,7 +935,7 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
       || *t == T_CS!("\\authorblockN")
       || *t == T_CS!("\\authorblockA")
   };
-  fn flush(run: &mut Vec<Token>, out: &mut Vec<Token>) {
+  fn wrap(run: &mut Vec<Token>, out: &mut Vec<Token>) {
     // The line break between two blocks (`\IEEEauthorblockN{…}\\ \IEEEauthorblockA{…}`, 2410.19527) is layout:
     // wrapped, it was an empty affiliation of the block's authors.
     let gap = |t: &Token| *t == T_SPACE!() || *t == T_CS!("\\\\") || *t == T_CS!("\\newline");
@@ -950,6 +950,71 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
       out.extend(run.iter().filter(|t| **t == T_SPACE!()));
     }
     run.clear();
+  }
+  // A conditional around the blocks (`\ifdefined\hpcacameraready \IEEEauthorblockN{…}… \else … \fi`, 2407.02944)
+  // keeps its own tokens as written — an `\if…` with its test, each `\else`/`\or`/`\fi` — and the bare text between
+  // them is wrapped piece by piece: wrapped whole, the `\if` and its `\else`/`\fi` landed in different arguments. A
+  // conditional the run holds whole (`\ifdefined\x a@b.c\fi` after a block) is wrapped with it, as any bare text.
+  fn flush(run: &mut Vec<Token>, out: &mut Vec<Token>) {
+    let mut depth = 0i32;
+    let mut whole = true;
+    for t in run.iter() {
+      match lookup_conditional(t) {
+        Some(ConditionalType::If) => depth += 1,
+        Some(ConditionalType::Fi) => depth -= 1,
+        Some(ConditionalType::Else | ConditionalType::Or) if depth == 0 => whole = false,
+        _ => {},
+      }
+      whole &= depth >= 0;
+    }
+    if whole && depth == 0 {
+      wrap(run, out);
+      return;
+    }
+    let mut piece: Vec<Token> = Vec::new();
+    let mut tokens = run.drain(..).peekable();
+    while let Some(t) = tokens.next() {
+      let Some(kind) = lookup_conditional(&t) else {
+        piece.push(t);
+        continue;
+      };
+      wrap(&mut piece, out);
+      out.push(t);
+      if kind != ConditionalType::If {
+        continue;
+      }
+      // the test the primitive reads (tex.web §498-§513): `\ifdefined` one token, `\ifx`/`\if`/`\ifcat` two,
+      // `\ifcsname` through `\endcsname`, a number's or dimension's up to the space ending it; a `\newif` one none.
+      // The common shapes only: a relation spaced from its operands (`\ifnum\value{x} > 0`) or an `\expandafter` before
+      // the `\if` leaves part of the test to be wrapped.
+      let name = t.with_str(|s| s.to_string());
+      match name.as_str() {
+        "\\ifdefined" | "\\ifx" | "\\if" | "\\ifcat" => {
+          let n = if name == "\\ifdefined" { 1 } else { 2 };
+          out.extend(tokens.by_ref().take(n));
+        },
+        "\\ifcsname" => {
+          for u in tokens.by_ref() {
+            out.push(u);
+            if u == T_CS!("\\endcsname") {
+              break;
+            }
+          }
+        },
+        "\\ifnum" | "\\ifdim" | "\\ifodd" | "\\ifcase" | "\\ifeof" | "\\ifvoid" | "\\ifhbox"
+        | "\\ifvbox" => {
+          while let Some(u) = tokens.next_if(|u| lookup_conditional(u).is_none()) {
+            out.push(u);
+            if u == T_SPACE!() {
+              break;
+            }
+          }
+        },
+        _ => {},
+      }
+    }
+    drop(tokens);
+    wrap(&mut piece, out);
   }
   let mut out: Vec<Token> = Vec::new();
   let mut run: Vec<Token> = Vec::new();

@@ -1,0 +1,15 @@
+% witness: review of 63x: an acmart author list inside one wrapper (`\author{\textbf{A, B}}`), which the author-line
+%          parse reads through (a whole-line wrapper), so its comma separates names as a bare one does
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Bee" (bold) over "Univ A, X"
+% engines: rust 63x6 = one creator "Ann Able, Bob Bee" + Error:frontmatter:merged_creators (the comma test saw only
+%          top-level commas)
+% expect:  0 errors; two creators, each with the Univ A affiliation
+% status:  RED (63x6) -> GREEN (63x)
+\documentclass[sigconf,nonacm]{acmart}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able, Bob Bee}}
+\affiliation{\institution{Univ A}\country{X}}
+\maketitle
+x
+\end{document}
