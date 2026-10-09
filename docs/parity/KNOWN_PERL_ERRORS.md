@@ -11848,3 +11848,27 @@ aas_support's `\email[]{}` adds `#2`. Open (ruling asked): without `[show]` aast
 author is the corresponding one), and both engines still emit it (RED sectioning-frontmatter/
 aastex7_email_hidden_without_show). Guards `perfect_kernel_batch64::{adjustimage_includes_the_graphic,
 aastex7_email_show}`.
+
+## 556. AASTeX `\gridline` panels lost; a bare `\fig` in a float numbered as a figure of its own
+
+Perl's aas_support binding has `DefMacro('\gridline{}', '')` (aas_support.sty.ltxml:208) and a `\fig` that, followed by a
+brace, opens `\begin{figure}\caption{#3}\includegraphics…\end{figure}` (:211-225). In every AASTeX 6+ class
+(aastex6.cls:4909 … aastex701.cls:12314-12342, the same definitions) `\gridline{…}` is one row of panels,
+`\hbox to\hsize{…}`, and `\fig{file}{width}{caption}` (`\leftfig`, `\rightfig`, `\boxedfig`, `\rotatefig`) one unnumbered
+panel — a `\vbox` of the graphic over its sub-caption. So every gridline figure loses all its panels (2609.21324,
+2512.02147, 2505.20669, 2103.00374), and a bare `\fig` in a float steps the figure counter per panel: 2103.00666's
+four-panel figure is "Figure 3" where the PDF prints 1, every later number shifted.
+
+Minimal triggers: `\documentclass{aastex701} … \begin{figure*}\gridline{\fig{a.eps}{0.4\textwidth}{(a)}
+\fig{a.eps}{0.4\textwidth}{(b)}}\caption{X}\end{figure*}`; the same with the two `\fig`s bare in the `figure*`.
+
+Fixed in Rust (64e, aas_support_sty.rs): a panel is a child `ltx:figure` (graphic at its width, its sub-caption in the
+class's font, none when blank, `framed` for `\boxedfig`) with no counter; `\gridline` lets the `\fig` family to the
+panel forms, breaks from the row before it (in `{center}` too, 2103.16579), and marks its panels as one row the panel
+arrangement keeps whole however wide (`_gridrow`, 2609.09897); a braced `\fig` anywhere is the panel (no AAS class has a
+numbered one; Perl's float form was its own guess, :210), or a `\ref` when no brace follows (astro-ph/0003209). Guards
+`perfect_kernel_batch64::{aastex_gridline_panels, aastex_gridline_empty_caption_boxed,
+aastex_bare_fig_panels_keep_numbering, aastex_gridline_rows_kept, aastex_rotatefig_boxedfig_and_outside_fig,
+aastex5_plate_float}`. With them, AASTeX 5.x's `{plate}` (aastex.cls:1685-1704, the class 0908.0069 bundles; 6+ dropped it):
+the binding's plate float referred to an undefined `\ext@plate` (`Error:undefined`, `inlist="\ext@plate"`), now `lof`
+as the class has it — the family binding serves every version.

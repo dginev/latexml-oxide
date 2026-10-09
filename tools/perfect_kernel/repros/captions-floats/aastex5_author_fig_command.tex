@@ -1,0 +1,13 @@
+% witness: 64e review r2 finding 2 — under AASTeX 5.x (aastex.cls 5.2, which has no `\fig`; bundled in 0908.0069) an
+%          author's `\newcommand{\fig}[1]{Fig.~\ref{#1}}` is the paper's `\fig`; the shared binding's 6+ panel `\fig`
+%          pre-empts it (`\newcommand` skips a defined name) and its brace peek reads `{\it top}` as a panel argument
+% oracle:  pdflatex 0 errors WITH aastex.cls 5.x: "Same as Fig. 1top."
+% engines: rust 64e4 = a fake panel (graphic "f1", caption "."), "Fig. 1" lost; 64c7 a numbered Figure 3
+% expect:  0 errors; Figure 2's caption "Same as Fig. 1 top." with a ref to f1
+% status:  RED (64e4) — family-binding version dispatch (memory feedback_class_family_single_binding)
+\documentclass{aastex}
+\newcommand{\fig}[1]{Fig.~\ref{#1}}
+\begin{document}
+\begin{figure}\plotone{figs/a.eps}\caption{One.}\label{f1}\end{figure}
+\begin{figure}\plotone{figs/a.eps}\caption{Same as \fig{f1}{\it top}.}\label{f2}\end{figure}
+\end{document}

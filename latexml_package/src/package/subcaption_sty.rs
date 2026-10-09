@@ -19,7 +19,7 @@ use crate::{
 /// `[pos][height][inner]{width}` to a minipage, whose `\setlength\hsize{#4}` reads it, latex.ltx `\@iiiminipage`).
 /// Bound as `[]{Dimension}` (Perl subcaption.sty.ltxml:60, :70), `\begin{subfigure}[c][0pt][c]{…}` read `[` as the
 /// width (2605.06598, 2605.21425, 2606.16001).
-fn subcaption_width_props(args: &[Option<Digested>]) -> Result<SymHashMap<Stored>> {
+pub(crate) fn subcaption_width_props(args: &[Option<Digested>]) -> Result<SymHashMap<Stored>> {
   let mut props: SymHashMap<Stored> = SymHashMap::default();
   if let Some(w) = args
     .last()

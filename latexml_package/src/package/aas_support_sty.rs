@@ -1,5 +1,6 @@
 use crate::{
   engine::latex_constructs::{after_float, before_float_ex},
+  package::subcaption_sty::subcaption_width_props,
   prelude::*,
 };
 
@@ -193,10 +194,12 @@ LoadDefinitions!({
   // gap; see docs/parity/KNOWN_PERL_ERRORS.md.)
   def_macro_noop("\\floattable")?;
   NewCounter!("plate");
+  // AASTeX 5.x's plates list with the figures (aastex.cls:1685-1704 `\def\ext@plate{lof}`, "Plate N."; 0908.0069); the
+  // family binding keeps them for every version (aastex 6+ dropped `{plate}`).
+  RawTeX!(r"\def\ext@plate{lof}");
   DefMacro!("\\platename", "Plate");
   def_macro_noop("\\platewidth{Dimension}")?;
   DefMacro!("\\platenum{}", "\\def\\theplate{#1}");
-  def_macro_noop("\\gridline{}")?;
 
   // Plate environments — Perl aas_support.sty.ltxml L179-201.
   // Each variant calls beforeFloat (sets \@captype, rebinds \\ → \lx@newline,
@@ -223,36 +226,90 @@ LoadDefinitions!({
 
   // Fig macros — Perl L205-221. The smart `\fig` peeks the token after
   // the first Semiverbatim arg: if it's `{` (T_BEGIN), it's a 3-arg
-  // figure-with-caption (`\fig{label}{width}{caption}`); otherwise it's
+  // panel (`\fig{file}{width}{caption}`); otherwise it's
   // a single-arg ref-like usage (`\fig{label}` → `\ref{label}`). This
-  // dispatch is needed for papers like astro-ph/0003209 + astro-ph0503342
+  // dispatch is needed for papers like astro-ph/0003209 + astro-ph/0503342
   // that redefine `\fig` as a one-arg `\ref` shorthand inside captions
   // /footnotes — without this peek, `\fig{F:image}` always opens an
   // `<ltx:figure>` element and can land inside `<ltx:note>`.
-  DefMacro!("\\aas@fig Semiverbatim {Dimension}{}",
-    "\\begin{figure}\\caption{#3}\\includegraphics[width=#2]{#1}\\end{figure}");
-  DefMacro!("\\fig Semiverbatim Token", sub[(arg, test)] {
-    // Push back the args in correct order so the dispatched CS reads them.
-    // Push order is reversed for stack semantics: last unread is first read.
-    unread_one(test);
-    unread_one(T_END!());
-    unread_vec(arg.unlist());
-    unread_one(T_BEGIN!());
-    if test.get_catcode() == Catcode::BEGIN {
-      Ok(Tokens!(T_CS!("\\aas@fig")))
+  // AASTeX 6+ figure grids (aastex6.cls:4909 … aastex701.cls:12314-12342, the same in every version): `\gridline{…}`
+  // is one row of panels, `\hbox to\hsize{…}` between `\vskip6pt`s, and `\fig{file}{width}{caption}` one panel, an
+  // unnumbered `\vbox` holding the graphic at that width over its `\footnotesize` sub-caption (`\leftfig`/`\rightfig`
+  // without the font, `\boxedfig` framed, `\rotatefig{angle}` rotated). Perl (aas_support.sty.ltxml:208) read
+  // `\gridline` as nothing, every panel lost (2609.21324, 2512.02147, 2505.20669, 2103.00374); and a bare `\fig` in a
+  // float became a numbered figure of its own, so each panel stepped the figure counter (2103.00666: "Figure 3" where
+  // the PDF prints 1). A panel is a child `ltx:figure` as subcaption's `{subfigure}` makes one, with no counter; a
+  // gridline's panels carry their row (`_gridrow`), which the panel arrangement keeps whole however wide it adds up
+  // (a `\hbox to\hsize` of panels with negative `\hspace`s, 2609.09897).
+  DefEnvironment!("{lx@aas@panel}{Dimension}",
+    "^<ltx:figure xml:id='#id' ?#gridrow(_gridrow='#gridrow')>#body</ltx:figure>",
+    mode => "internal_vertical",
+    properties => sub[args] { aas_panel_props(args) });
+  DefEnvironment!("{lx@aas@boxedpanel}{Dimension}",
+    "^<ltx:figure xml:id='#id' framed='rectangle' ?#gridrow(_gridrow='#gridrow')>#body</ltx:figure>",
+    mode => "internal_vertical",
+    properties => sub[args] { aas_panel_props(args) });
+  // (an empty or blank caption, `\fig{a.pdf}{0.6\textwidth}{}`, prints none)
+  DefMacro!("\\lx@aas@panel@caption{}{}", sub[(font, text)] {
+    Ok(if text.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+      Tokens!()
     } else {
-      // see arXiv:astro-ph/0003209 for an example use as \ref while
-      // also loading aas_support.sty.ltxml
-      Ok(Tokens!(T_CS!("\\ref")))
-    }
+      let mut caption = vec![T_CS!("\\@@caption"), T_BEGIN!()];
+      caption.extend(font.unlist());
+      caption.extend(text.unlist());
+      caption.push(T_END!());
+      Tokens::new(caption)
+    })
   });
-  Let!("\\leftfig", "\\fig");
-  Let!("\\rightfig", "\\fig");
-  Let!("\\boxedfig", "\\fig");
+  DefMacro!("\\lx@aas@fig@panel Semiverbatim {Dimension}{}",
+    "\\begin{lx@aas@panel}{#2}\\includegraphics[width=#2]{#1}\\lx@aas@panel@caption{\\footnotesize}{#3}\\end{lx@aas@panel}");
+  DefMacro!("\\lx@aas@sidefig@panel Semiverbatim {Dimension}{}",
+    "\\begin{lx@aas@panel}{#2}\\includegraphics[width=#2]{#1}\\lx@aas@panel@caption{}{#3}\\end{lx@aas@panel}");
+  DefMacro!("\\lx@aas@boxedfig@panel Semiverbatim {Dimension}{}",
+    "\\begin{lx@aas@boxedpanel}{#2}\\includegraphics[width=#2]{#1}\\lx@aas@panel@caption{}{#3}\\end{lx@aas@boxedpanel}");
   // The angle is a decimal (aastex701.cls:12337-12342 `angle=#1` → trig.sty:55):
   // a `{Number}` put the `.5` of `{22.5}` back in the input (OXIDIZED_DESIGN #317).
-  DefMacro!("\\rotatefig{Float} Semiverbatim {Dimension}{}",
-    "\\begin{figure}\\caption{#4}\\includegraphics[width=#3,angle=#1]{#2}\\end{figure}");
+  DefMacro!("\\lx@aas@rotatefig@panel{Float} Semiverbatim {Dimension}{}",
+    "\\begin{lx@aas@panel}{#3}\\includegraphics[width=#3,angle=#1]{#2}\\lx@aas@panel@caption{\\footnotesize}{#4}\\end{lx@aas@panel}");
+  // A gridline is a row: its panels in their panel forms, and a break from the row before it in the float (none before
+  // the first row, none after a caption).
+  DefMacro!("\\gridline{}",
+    "\\par\\lx@aas@gridline@row\\begingroup\\lx@aas@gridrow@begin\\let\\fig\\lx@aas@fig@panel\
+     \\let\\leftfig\\lx@aas@sidefig@panel\\let\\rightfig\\lx@aas@sidefig@panel\\let\\boxedfig\\lx@aas@boxedfig@panel\
+     \\let\\rotatefig\\lx@aas@rotatefig@panel#1\\endgroup\\par");
+  // (the row number its panels carry, for this group)
+  DefPrimitive!("\\lx@aas@gridrow@begin", sub[_args] {
+    let row = lookup_int("lx_aas_gridrows") + 1;
+    assign_value("lx_aas_gridrows", Number::new(row), Some(Scope::Global));
+    assign_value("lx_aas_gridrow", Number::new(row), None);
+  });
+  // The break goes where the row's panels are — in the float, or in a `{center}` within it (2103.16579) whose content
+  // moves into the float with it — after a panel there, none before the first row or after a caption.
+  DefConstructor!("\\lx@aas@gridline@row", sub[document] {
+    let Some(context) = document.get_element() else {
+      return Ok(());
+    };
+    let mut ancestor = Some(context.clone());
+    while let Some(node) = ancestor.as_ref()
+      && !with(document::get_node_qname(node), |q| matches!(q, "ltx:figure" | "ltx:table" | "ltx:float"))
+    {
+      ancestor = node.get_parent();
+    }
+    let after_panel = context
+      .get_last_element_child()
+      .is_some_and(|last| !engine::latex_constructs::is_panel_break_name(document::get_node_qname(&last)));
+    if ancestor.is_some() && after_panel {
+      document.insert_element("ltx:break", Vec::new(), Some(map!("class" => s!("ltx_break"))))?;
+    }
+  });
+  // `\fig` and its kin outside a gridline are the class's panel too — no AAS class has a numbered `\fig` (Perl's
+  // float form was its own guess, aas_support.sty.ltxml:210); not followed by a brace, a `\ref` shorthand some papers
+  // define (astro-ph/0003209, astro-ph/0503342), LaTeXML's peek.
+  DefMacro!("\\fig Semiverbatim Token", sub[(arg, test)] { aas_fig_dispatch(arg, test, "\\lx@aas@fig@panel") });
+  DefMacro!("\\leftfig Semiverbatim Token", sub[(arg, test)] { aas_fig_dispatch(arg, test, "\\lx@aas@sidefig@panel") });
+  DefMacro!("\\rightfig Semiverbatim Token", sub[(arg, test)] { aas_fig_dispatch(arg, test, "\\lx@aas@sidefig@panel") });
+  DefMacro!("\\boxedfig Semiverbatim Token", sub[(arg, test)] { aas_fig_dispatch(arg, test, "\\lx@aas@boxedfig@panel") });
+  Let!("\\rotatefig", "\\lx@aas@rotatefig@panel");
 
   // 2.9 Acknowledgements
   // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
@@ -799,3 +856,28 @@ LoadDefinitions!({
   def_macro_noop("\\figsetplot {}")?;
   def_macro_noop("\\figsetgrpnote {}")?;
 });
+
+/// An AASTeX panel's properties: its width, as a sub-figure's, and the gridline row it stands in, if any.
+fn aas_panel_props(args: &[Option<Digested>]) -> Result<SymHashMap<Stored>> {
+  let mut props = subcaption_width_props(args)?;
+  let row = lookup_int("lx_aas_gridrow");
+  if row > 0 {
+    props.insert("gridrow", Stored::from(row.to_string()));
+  }
+  Ok(props)
+}
+
+/// AASTeX's `\fig`-family dispatch, after its file argument and a peek at the next token (pushed back for the target
+/// to read): a brace opens the panel form `panel`; anything else makes it a `\ref` (astro-ph/0003209).
+fn aas_fig_dispatch(arg: Tokens, test: Token, panel: &str) -> Result<Tokens> {
+  // Push order is reversed for stack semantics: last unread is first read.
+  unread_one(test);
+  unread_one(T_END!());
+  unread_vec(arg.unlist());
+  unread_one(T_BEGIN!());
+  Ok(if test.get_catcode() != Catcode::BEGIN {
+    Tokens!(T_CS!("\\ref"))
+  } else {
+    Tokens!(T_CS!(panel))
+  })
+}

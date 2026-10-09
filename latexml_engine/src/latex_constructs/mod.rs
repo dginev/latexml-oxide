@@ -3010,7 +3010,7 @@ pub fn after_float(whatsit: &mut Whatsit) {
 /// Is `qname` a "panel break" element (Perl `figure_panel_break_names`,
 /// L3245-3251) — a break/caption/metadata child that flushes the current row
 /// rather than being a panel itself?
-fn is_panel_break_name(qname: SymStr) -> bool {
+pub fn is_panel_break_name(qname: SymStr) -> bool {
   with(qname, |name| {
     matches!(
       name,
@@ -3398,7 +3398,14 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
       child_width = inner;
     }
 
-    if !row.is_empty() && (current_width + child_width > float_width) {
+    // A row a binding fixed (AASTeX's `\gridline`, a `\hbox to\hsize` of panels: `_gridrow`) stays one row however
+    // wide its panels add up (2609.09897's two 0.53\textwidth panels and a third, beside negative `\hspace`s).
+    let same_fixed_row = row.last().is_some_and(|(prev, ..)| {
+      prev
+        .get_attribute("_gridrow")
+        .is_some_and(|r| child.get_attribute("_gridrow").as_ref() == Some(&r))
+    });
+    if !row.is_empty() && !same_fixed_row && (current_width + child_width > float_width) {
       // Perl L3287-3295: row overflow — break before this child, start a new row.
       insert_break_before(document, &mut child)?;
       document.add_class(&mut child, "ltx_figure_panel")?;

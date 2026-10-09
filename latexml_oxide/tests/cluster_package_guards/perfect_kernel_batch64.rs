@@ -664,3 +664,125 @@ fn graphic_bare_name_listed_last() {
     "<graphics candidates=\"bare/fig.eps,bare/fig\" graphic=\"bare/fig\" options=\"width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g2\"/>",
   );
 }
+
+/// 64e (HF10 F3): AASTeX's `\gridline` is a row of `\fig` panels (aastex701.cls:12314-12342) — each a child figure
+/// with its graphic and sub-caption, a break between rows — no longer read as nothing (2609.21324, 2512.02147).
+/// Repro captions-floats/aastex_gridline_panels.
+#[test]
+fn aastex_gridline_panels() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/captions-floats/aastex_gridline_panels.tex");
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "figure",
+    &["labels=\"LABEL:f:grid\""],
+    "<figure inlist=\"lof\" labels=\"LABEL:f:grid\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=137.9979pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a) left</caption></figure><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=137.9979pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(b) right</caption></figure><break class=\"ltx_break\"/><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g3\"/><caption>(c)</caption></figure><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig4\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g4\"/><caption>(d)</caption></figure><toccaption><tag close=\" \">1</tag>Four panels in two rows.</toccaption><caption><tag close=\": \">Figure 1</tag>Four panels in two rows.</caption></figure>",
+  );
+}
+
+/// 64e (HF10 F3): a panel with an empty sub-caption has none, and `\boxedfig` is framed (2505.20669).
+/// Repro captions-floats/aastex_gridline_empty_caption_boxed.
+#[test]
+fn aastex_gridline_empty_caption_boxed() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/aastex_gridline_empty_caption_boxed.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "figure",
+    &["inlist=\"lof\""],
+    "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=207.0021pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/></figure><figure class=\"ltx_figure_panel\" framed=\"rectangle\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/></figure><toccaption><tag close=\" \">1</tag>Left: one map. Right: another.</toccaption><caption><tag close=\": \">Figure 1</tag>Left: one map. Right: another.</caption></figure>",
+  );
+}
+
+/// 64e (HF10 F3): a bare `\fig` in a float is the class's unnumbered panel — it stepped the figure counter as a
+/// figure of its own, the float numbered "Figure 3" where the PDF prints 1 (2103.00666).
+/// Repro captions-floats/aastex_bare_fig_panels_keep_numbering.
+#[test]
+fn aastex_bare_fig_panels_keep_numbering() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/aastex_bare_fig_panels_keep_numbering.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "figure",
+    &["labels=\"LABEL:f:x\""],
+    "<figure inlist=\"lof\" labels=\"LABEL:f:x\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=82.8019pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a1)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=82.8019pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(a2)</caption></figure><toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>Panel (a1) and (a2).</toccaption><caption class=\"ltx_centering\"><tag close=\": \">Figure 1</tag>Panel (a1) and (a2).</caption></figure>",
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &["xml:id=\"S0.F2\""],
+    "<figure inlist=\"lof\" xml:id=\"S0.F2\"><tags><tag>Figure 2</tag><tag role=\"autoref\">Figure\u{a0}2<text xml:id=\"S0.F2.1\"/></tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Figure 2</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"S0.F2.g1\"/><toccaption><tag close=\" \">2</tag>Next.</toccaption><caption><tag close=\": \">Figure 2</tag>Next.</caption></figure>",
+  );
+}
+
+/// 64e review r1: each `\gridline` stays one row — inside `{center}` (2103.16579) and when its panels add up wider than
+/// the float (2609.09897). Repro captions-floats/aastex_gridline_rows_kept.
+#[test]
+fn aastex_gridline_rows_kept() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/aastex_gridline_rows_kept.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "figure",
+    &["xml:id=\"S0.F1\""],
+    "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(b)</caption></figure><break class=\"ltx_break ltx_centering\"/><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g3\"/><caption fontsize=\"80%\">(c)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig4\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g4\"/><caption fontsize=\"80%\">(d)</caption></figure><toccaption><tag close=\" \">1</tag>Centered rows.</toccaption><caption><tag close=\": \">Figure 1</tag>Centered rows.</caption></figure>",
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &["xml:id=\"S0.F2\""],
+    "<figure inlist=\"lof\" xml:id=\"S0.F2\"><tags><tag>Figure 2</tag><tag role=\"autoref\">Figure\u{a0}2<text xml:id=\"S0.F2.1\"/></tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Figure 2</tag></tags><figure class=\"ltx_figure_panel\" xml:id=\"S0.F2.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=182.84958pt,keepaspectratio=true\" xml:id=\"S0.F2.g1\"/><caption fontsize=\"80%\">(e)</caption></figure><figure class=\"ltx_figure_panel\" xml:id=\"S0.F2.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=182.84958pt,keepaspectratio=true\" xml:id=\"S0.F2.g2\"/><caption fontsize=\"80%\">(f)</caption></figure><break class=\"ltx_break\"/><figure class=\"ltx_figure_panel\" xml:id=\"S0.F2.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=137.9979pt,keepaspectratio=true\" xml:id=\"S0.F2.g3\"/><caption fontsize=\"80%\">(g)</caption></figure><toccaption><tag close=\" \">2</tag>A wide row.</toccaption><caption><tag close=\": \">Figure 2</tag>A wide row.</caption></figure>",
+  );
+}
+
+/// 64e review r1: `\rotatefig` (a decimal angle) and a bare `\boxedfig` in a float are panels, and a braced `\fig`
+/// outside a float is the class's unnumbered panel, not a numbered figure (no AAS class has one), so the next float is
+/// Figure 2. Repro captions-floats/aastex_rotatefig_boxedfig_and_outside_fig.
+#[test]
+fn aastex_rotatefig_boxedfig_and_outside_fig() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/aastex_rotatefig_boxedfig_and_outside_fig.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "figure",
+    &["xml:id=\"S0.F1\""],
+    "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,angle=22.5,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(r)</caption></figure><figure class=\"ltx_figure_panel\" framed=\"rectangle\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption>(s)</caption></figure><toccaption><tag close=\" \">1</tag>Rotated and boxed.</toccaption><caption><tag close=\": \">Figure 1</tag>Rotated and boxed.</caption></figure>",
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &["xml:id=\"S0.F2\""],
+    "<figure inlist=\"lof\" xml:id=\"S0.F2\"><tags><tag>Figure 2</tag><tag role=\"autoref\">Figure\u{a0}2<text xml:id=\"S0.F2.1\"/></tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Figure 2</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"S0.F2.g1\"/><toccaption><tag close=\" \">2</tag>Next.</toccaption><caption><tag close=\": \">Figure 2</tag>Next.</caption></figure>",
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &["xml:id=\"fig1\""],
+    "<figure xml:id=\"fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"g1\"/><caption fontsize=\"80%\">(o) outside</caption></figure>",
+  );
+}
+
+/// 64e: AASTeX 5.x's `{plate}` lists with the figures (aastex.cls:1685-1704 `\def\ext@plate{lof}`) — the family binding
+/// serves every version, so the plate keeps working though aastex 6+ dropped it (`\ext@plate` was undefined).
+/// Repro captions-floats/aastex5_plate_float.
+#[test]
+fn aastex5_plate_float() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/captions-floats/aastex5_plate_float.tex");
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "float",
+    &["class=\"ltx_float_plate\""],
+    "<float class=\"ltx_float_plate\" inlist=\"lof\" xml:id=\"plate1\"><tags><tag>Plate 1</tag><tag role=\"autoref\">Plate\u{a0}1<text xml:id=\"plate1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Plate 1</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"plate1.g1\"/><toccaption><tag close=\" \">1</tag>A plate.</toccaption><caption><tag close=\" \">Plate 1</tag>A plate.</caption></float>",
+  );
+}

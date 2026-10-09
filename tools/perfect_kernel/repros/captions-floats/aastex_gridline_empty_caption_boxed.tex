@@ -1,0 +1,13 @@
+% witness: 2505.20669 (`\gridline{\fig{…}{0.6\textwidth}{}…}`: panels without sub-captions)
+% oracle:  pdflatex 0 errors: two panels, the second framed, no sub-captions
+% engines: rust 64c7 = no graphics (the gridline lost); Perl the same
+% expect:  0 errors; two panels, the second framed="rectangle", no empty caption
+% status:  RED (64c7) -> GREEN (64e)
+\documentclass{aastex701}
+\begin{document}
+\begin{figure*}
+\gridline{\fig{figs/a.eps}{0.6\textwidth}{}
+\boxedfig{figs/a.eps}{0.3\textwidth}{}}
+\caption{Left: one map. Right: another.}
+\end{figure*}
+\end{document}

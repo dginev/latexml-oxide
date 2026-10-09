@@ -1,0 +1,17 @@
+% witness: 64e review r1 findings 2 and 5 — `\rotatefig` with a decimal angle and a bare `\boxedfig` in a float are
+%          panels; a braced `\fig` outside a float is the class's panel too, not a numbered figure (no AAS class has one;
+%          Perl's float form is its own guess, aas_support.sty.ltxml:210)
+% oracle:  pdflatex 0 errors: "Figure 1" with the two panels; the outside panel unnumbered; "Figure 2" next
+% engines: rust 64e1 = the outside `\fig` numbered Figure 2 and the last float Figure 3
+% expect:  0 errors; panels (r) rotated 22.5 and (s) framed in Figure 1; (o) an unnumbered panel; Figure 2 after it
+% status:  RED (64e1) -> GREEN (64e)
+\documentclass{aastex701}
+\begin{document}
+\begin{figure}
+\rotatefig{22.5}{figs/a.eps}{0.3\textwidth}{(r)}
+\boxedfig{figs/a.eps}{0.3\textwidth}{(s)}
+\caption{Rotated and boxed.}
+\end{figure}
+\fig{figs/a.eps}{0.3\textwidth}{(o) outside}
+\begin{figure}\plotone{figs/a.eps}\caption{Next.}\end{figure}
+\end{document}
