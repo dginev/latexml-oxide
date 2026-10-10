@@ -1,0 +1,15 @@
+% witness: 64w review round 2 probe col/nc.tex — loading colordvi (as the colordvi-aware v1 does) replaced color's
+%          `\DefineNamedColor`, so a document's own named color was lost
+% oracle:  pdflatex 0 errors (with a v1 axodraw.sty): "blue text" in blue
+% engines: rust 64w r2 = Error:unexpected:named_MyBlue "Can't find color named 'named_MyBlue'"; rust e1ec58c24e =
+%          undefined axodraw commands only; Perl not run
+% expect:  0 errors, 0 warnings; "blue text" in a `text` with color="#0000FF"
+% status:  RED (64w r2) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{color}
+\usepackage{axodraw}
+\DefineNamedColor{named}{MyBlue}{rgb}{0,0,1}
+\begin{document}
+Plain {\color[named]{MyBlue} blue text} here.
+\end{document}

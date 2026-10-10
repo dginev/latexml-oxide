@@ -1,0 +1,18 @@
+% witness: hep-ph0612301 (`\documentclass[dvips]{article}`, `\usepackage{color}`, `\SetColor{Red}`/`{Blue}`): color
+%          loads dvipsnam.def for its `dvips` option without `usenames`, so the dvips names are color's `named`
+%          model only; axodraw's colors are colordvi's PostScript names all the same
+% oracle:  latex + dvips with the colordvi-aware v1 axodraw.sty hep-ph0101235 ships: 0 errors, a blue line
+%          (pdflatex: the `dvips` backend error any `[dvips]` document raises)
+% engines: rust 64qb = Error:undefined:\SetColor, \Line; Perl = the same (no axodraw binding)
+% expect:  0 errors; the line stroked #0000FF
+% status:  RED (64qb) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass[dvips]{article}
+\usepackage{color}
+\usepackage{axodraw}
+\begin{document}
+\begin{picture}(100,100)(0,0)
+\SetColor{Blue}
+\Line(0,0)(50,50)
+\end{picture}
+\end{document}

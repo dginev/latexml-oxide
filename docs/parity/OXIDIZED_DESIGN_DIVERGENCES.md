@@ -14997,3 +14997,49 @@ three columns. The box's text columns (`s t u`) are text cells. `L C R` drop the
 run-336 papers). Residuals: the IEEEeqnarraybox `tex=` carries the columns' `\displaystyle`; no catcode normalisation
 of the specification (`\IEEEnormalcatcodes`); an empty specification makes no "No column specifiers declared" error;
 column glue, `[decl]`, struts and the box's default `[b]` position not modelled.
+
+### 492. axodraw v1 is a native binding that draws its PostScript procedures into the picture model (Perl: no binding; a shipped copy draws nothing)
+
+**Perl behavior**: there is no `axodraw.sty.ltxml`. axodraw v1 (J.A.M. Vermaseren, 1994) is not in TeX Live (only its
+successor axodraw2), so `\usepackage{axodraw}` without a shipped copy is a missing file and every command undefined; a
+shipped copy (about one zip in 830) raw-loads, but its drawing is dvips PostScript — header procedures installed by
+`\special{! /gluon{…} def}` and called by `\special{"x1 y1 x2 y2 amp n width scale gluon}` — so nothing is drawn.
+**Rust behavior**: `axodraw_sty.rs` keeps v1's TeX layer — the command signatures, the `\Set*` state macros with v1's
+values, each object inside `\put(\axoxoff,\axoyoff)` — and replaces every `\special` with
+`\lx@axo@draw{procedure}{arguments}`, which evaluates the v1 procedure, transcribed from its PostScript (the gluon's
+head/body/tail `curveto`s, the photon's half-wiggles, `/photonarc`, `/gluearc`, `/zigzag`, lines and arcs with arrows
+and v1's odd-dash fitting, vertices, blanked/gray/colored circles, boxes, triangles and ovals, `\Curve`,
+`\LogAxis`/`\LinAxis`, the PostScript text boxes) into `ltx:line`, `ltx:bezier`, `ltx:arc`, `ltx:circle`,
+`ltx:polygon`, `ltx:rect` and `ltx:ellipse`. As a binding it also answers papers that ship their own axodraw.sty
+(bindings outrank raw files). Units are v1's: graphics in points scaled by `\SetScale`, ignoring `\unitlength`;
+`\Text`/`\rText` at `\unitlength`s, unscaled (0809.0800's `\unitlength 0.6pt\SetScale{0.6}`); graphics points are read
+as TeX points, axodraw2's correction of v1's big points (axodraw2.sty:3080). An argument may be PostScript arithmetic
+over a dvips-header constant (`{20 Tdensity mul}`, `\special{! /Tdensity {0.10} def}`; 0901.1195, 1701.01554),
+evaluated on an operand stack; `\special` records such header constants. The command set is the union of the v1
+variants papers ship: the colordvi-aware variant (51 of 63 shipped copies) `\input`s colordvi.sty, so the binding
+loads colordvi too (its names for `\SetColor`/`\CCirc`/`\CBox`/`\COval`/`\CText`/triangles, its `\Red{…}` text
+commands; 1301.5498 `\Black{$Z$}`), and a name known only as color's `named` model under a `dvips` option resolves
+through it (hep-ph0612301); axodraw2's `\GluonArc` name. The PostScript-font texts (`\PText`, `\BText`, …) are set in
+TeX at their scaled size, as axodraw2 does. colordvi's `\DefineNamedColor` does not replace a loaded color/xcolor's,
+and colordvi's read of dvipsnam.def no longer uses the file up (colordvi_sty.rs; Perl's colordvi.sty.ltxml:66 marks it
+read, so a later `\usepackage[dvips]{color}` or color's on-demand `named` read skipped it and `\color[named]{Blue}`
+failed; real colordvi.tex never reads it): it reads the file even when color already did (its `\Red{…}` defined after
+`[dvips]` color) and leaves it unread for color/xcolor, and the colordvi-aware v1's `\background{White}\textBlack`
+page defaults are not replayed: papers that shipped that copy lose the `backgroundcolor="#FFFFFF"` its raw load put on
+every element (and the stray `<text>` wrappers it opened), white on white. `\lx@axo@draw` has no reversion, so a
+diagram in math keeps its `\put` in the `tex`/`alttext`, not the PostScript arguments. A non-finite argument (`1 0
+div`, `-1 sqrt`), a non-finite axis step (`perdec` 0) or a winding or axis-mark count above 10,000 is refused with one
+warning (PostScript would fail or run for hours), and an unreadable `\SetWidth`/`\SetScale` value leaves the setting
+unchanged with a warning. axodraw2 and axodraw4j (JaxoDraw's keyval forerunner of axodraw2, shipped by papers) are
+other packages and stay raw: `axodraw2_sty.rs` raw-loads TeX Live's file so the versioned-name fallback (content.rs
+`find_file_fallback`, Perl Package.pm:2118-2121) does not answer it with the v1 binding.
+**Why**: content — run 336 had 1,507 papers with `\Text` undefined (149 as the first error) whose Feynman diagrams
+were lost and labels printed as stray text. A/B against e1ec58c24e: the 149 witnesses, papers with errors 149 → 10
+(their errors predate axodraw but for hep-ph0506201's PostScript-defined `PastelBlue`; 1801.02707 loads an unshipped
+axodraw4j), errors 872 → 94, warnings 4,450 → 4,339; 63 papers shipping an axodraw .sty: errors and warnings equal
+paper by paper, 26 now with their diagrams drawn; 16 axodraw4j and 8 axodraw2 papers unchanged; no `Math`, abstract or
+section lost (besides the white backgrounds above); two `\documentstyle[axodraw]{article}` papers no longer load
+OmniBus for the unmet option (gr-qc9906006, hep-ph9805291: creators 5 → 1 and 5 → 2, as the same document without the
+option). latex+dvips renders of witness diagrams (hep-ph0509118, 1411.6845, 0802.1498) match the browser's SVG.
+Approximations: a rotated oval's stroke is uniform (v1 scales it with the ellipse), `\PText` anchors by `\makebox`
+(v1's mode table), `\DashCurve` drops the dash offset. Guards `perfect_kernel_batch64w::*`.

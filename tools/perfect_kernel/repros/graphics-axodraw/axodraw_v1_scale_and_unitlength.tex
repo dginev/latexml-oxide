@@ -1,0 +1,18 @@
+% witness: 0809.0800 (`{\unitlength 0.6pt\SetScale{0.6} … }` around its diagrams): v1's graphics are in
+%          points scaled by `\SetScale` and ignore `\unitlength`; `\Text` is placed in `\unitlength`s, unscaled
+% oracle:  latex + dvips with the v1 axodraw.sty hep-ph9702393 ships: 0 errors; the line ends at 60pt,
+%          60pt (100 scaled by 0.6) where the label, at (100,100) of 0.6pt units, sits;
+%          pdflatex with that file: 0 errors, the label only
+% engines: rust 64qb = Error:undefined:\Line, \Text; Perl = the same (no axodraw binding)
+% expect:  0 errors; the line's end and the label's `\put` both at 83.02px (60pt)
+% status:  RED (64qb) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw}
+\begin{document}
+{\unitlength 0.6pt\SetScale{0.6}
+\begin{picture}(120,120)(0,0)
+\Line(0,0)(100,100)
+\Text(100,100)[lb]{$X$}
+\end{picture}}
+\end{document}

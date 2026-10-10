@@ -1,0 +1,22 @@
+% witness: run 336 `\Text` undefined, 1,507 papers (149 as the first error): hep-th0506235, hep-ph0512261,
+%          hep-ph0305218, 0710.3255 — `\usepackage{axodraw}` (v1, 1994), in neither TeX Live nor the paper
+% oracle:  latex + dvips with the v1 axodraw.sty hep-ph9702393 ships: 0 errors, the fermion line with its
+%          mid-arrow, the photon's 8 half-wiggles, the gluon's 5 windings, the vertex dot, both labels;
+%          pdflatex with that file: 0 errors, the labels only (its drawing is PostScript `\special`s)
+% engines: rust 64qb = Error:undefined:\Text, the picture empty; Perl = the same (no axodraw binding)
+% expect:  0 errors; an `ltx:line` + filled arrowhead `ltx:polygon`, 8 + 12 `ltx:bezier`s, a filled
+%          `ltx:circle`, the two labels placed by `\makebox(0,0)[r]`/`[l]`
+% status:  RED (64qb) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw}
+\begin{document}
+\begin{picture}(200,100)(0,0)
+\ArrowLine(10,50)(60,50)
+\Photon(60,50)(110,80){3}{4}
+\Gluon(60,50)(110,20){4}{5}
+\Vertex(60,50){2}
+\Text(5,50)[r]{$e^-$}
+\Text(115,80)[l]{$\gamma$}
+\end{picture}
+\end{document}

@@ -104,6 +104,20 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  // Perl L66: load DVI color definitions
-  InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+  // Perl L66: load DVI color definitions. colordvi.tex itself never reads
+  // dvipsnam.def (it carries its own color table), so this read must not use
+  // the file up: it reads it even when color's `dvips` option already did
+  // (`\usepackage[dvips]{color}` then colordvi: its `\Red{…}` defined), and
+  // leaves the file unread for color/xcolor, whose own read registers the
+  // `named` model (`\usepackage[dvipsnames]{color}` with colordvi, in either
+  // load order; without `dvipsnames` pdflatex too reports "Undefined color").
+  // Perl's colordvi.sty.ltxml:66 uses the file up (a divergence, OD #492).
+  // Guards: `perfect_kernel_batch64w::{colordvi_then_color_named_model,
+  // color_then_colordvi_named_model, color_dvips_then_colordvi_text_commands}`.
+  let read_flags = ["dvipsnam.def_raw_loaded", "dvipsnam.def_loaded", "dvipsnam.def_load_attempted"]
+    .map(|flag| (flag, lookup_bool(flag)));
+  InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
+  for (flag, was) in read_flags {
+    assign_value(flag, was, Some(Scope::Global));
+  }
 });

@@ -1,0 +1,17 @@
+% witness: 64w review round 3 probe c_dvips_after.tex — axodraw loads colordvi (as the colordvi-aware v1 does),
+%          whose read of dvipsnam.def used the file up, so `\usepackage[dvips]{color}` after it never read it under
+%          color's `\DefineNamedColor`: `named` colors unknown
+% oracle:  pdflatex 0 errors (with a v1 axodraw.sty): blue and red text, a red line
+% engines: rust 64w r3 = 2 × "Can't find color named 'named_Blue'/'named_Red'"; Perl: its colordvi binding reads
+%          dvipsnam.def the same way
+% expect:  0 errors, 0 warnings; "blue text" #0000FF, "red text" #FF0000, the line stroked #FF0000
+% status:  RED (64w r3) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw}
+\usepackage[dvips]{color}
+\definecolor{myred}{named}{Red}
+\begin{document}
+Plain {\color[named]{Blue} blue text} and {\color{myred} red text} here.
+\begin{picture}(40,20)(0,0)\SetColor{Red}\Line(0,0)(40,20)\end{picture}
+\end{document}

@@ -71,6 +71,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("aecompl", "sty", package::aecompl_sty::load_definitions),
   ("atveryend", "sty", package::atveryend_sty::load_definitions),
   ("auxhook", "sty", package::auxhook_sty::load_definitions),
+  ("axodraw", "sty", package::axodraw_sty::load_definitions),
+  ("axodraw2", "sty", package::axodraw2_sty::load_definitions),
   ("ams_core", "cls", package::ams_core_cls::load_definitions),
   (
     "ams_support",

@@ -325,9 +325,19 @@ impl SVG {
       x1, y1, r, r, large_arc, x2, y2
     );
 
+    // The arc's own presentation (`stroke`, `stroke-width`, a dash, a
+    // `transform`) carries over, as `SVG.pm::convertArc` copies it
+    // (`copy_valid_attributes($newArc, $node)`, L385-387): without it the arc
+    // inherits the picture's `stroke="none"` and is invisible (`\psarc`,
+    // axodraw's `\CArc`). Its geometry (`x`, `y`, `r`) is not valid on a path.
+    let mut attrs = self.copy_valid_attrs(node);
+    for geometry in ["x", "y", "r"] {
+      attrs.remove(geometry);
+    }
+    attrs.insert("d".to_string(), d);
     Some(NodeData::Element {
       tag:        "svg:path".to_string(),
-      attributes: Some(HashMap::from_iter([("d".to_string(), d)])),
+      attributes: Some(attrs),
       children:   vec![],
     })
   }

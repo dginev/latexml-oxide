@@ -1,0 +1,23 @@
+% witness: gr-qc9906006 (`\documentstyle[axodraw]{article}`; until axodraw had a binding its unmet option loaded
+%          OmniBus, which split the block at every line into 5 creators)
+% oracle:  pdflatex 0 errors: one centred block — José F. Nieves and his three address lines, a 12pt gap, Palash
+%          B. Pal and his two address lines: two authors
+% engines: rust 64w = one creator, José F. Nieves, with "Palash B. Pal" among his six affiliation contacts; rust
+%          64qb (OmniBus) = 5 creators, names and addresses mixed; Perl not run
+% expect:  0 errors; two creators, each with his own affiliation lines
+% status:  RED (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Non-universal gravitational couplings of neutrinos in matter}
+\author{Jos\'e F. Nieves\\
+Laboratory of Theoretical Physics\\
+Department of Physics, University of Puerto Rico \\
+R\'{\i}o Piedras, Puerto Rico 00931-3343 \\[12pt]
+Palash B. Pal\\
+Saha Institute of Nuclear Physics\\
+1/AF Bidhan-Nagar, Calcutta 700064, INDIA
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -10,7 +10,7 @@ use crate::cluster::convert_to_xml;
 
 /// The HTML stage (where the SVG processor runs): the core XML through the
 /// embedded html5 stylesheet, POST errors counted.
-fn post_html(xml: &str) -> String {
+pub(crate) fn post_html(xml: &str) -> String {
   latexml_core::util::logger::bind_log();
   let opts = latexml::post::PostOptions {
     pmml:                      true,

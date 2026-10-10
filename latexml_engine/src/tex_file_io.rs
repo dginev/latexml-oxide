@@ -3,6 +3,11 @@
 //! Core TeX Implementation for LaTeXML
 use crate::prelude::*;
 static PSFILE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\bpsfile=(.+?)(?:\s|\})").unwrap());
+/// A numeric constant a dvips header special defines: `/Ldensity {0.25} def`, `/Tdensity {0.10}def`, `/x 3 def`.
+static PS_HEADER_NUMBER_REGEX: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(r"/([A-Za-z][A-Za-z0-9_.]*)\s*(?:\{\s*([-+]?(?:\d+\.?\d*|\.\d+))\s*\}\s*|([-+]?(?:\d+\.?\d*|\.\d+))\s+)def\b")
+    .unwrap()
+});
 
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -272,6 +277,16 @@ LoadDefinitions!({
       unread_vec(kv);
       unread_one(T_CS!("\\lx@special@graphics"));
     } else {
+      // A dvips header (`\special{! …}`) is PostScript run before the page; its numeric constants are recorded as
+      // `dvips_header:<name>`, as PostScript drawing commands may name them in their arguments (axodraw's,
+      // axodraw_sty.rs: 1701.01554 `/Ldensity {0.25} def`, 0901.1195 `/Tdensity {0.10} def`). Nothing is drawn.
+      if special_str.trim_start().starts_with('!') {
+        for cap in PS_HEADER_NUMBER_REGEX.captures_iter(&special_str) {
+          if let Some(value) = cap.get(2).or_else(|| cap.get(3)) {
+            assign_value(&s!("dvips_header:{}", &cap[1]), value.as_str().to_string(), Some(Scope::Global));
+          }
+        }
+      }
       Info!("ignored", "special", s!("Unrecognized TeX Special: {arg}"));
     }
   });

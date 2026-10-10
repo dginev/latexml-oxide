@@ -1,0 +1,11 @@
+% witness: 1301.5498 (`\Black{$Z$}` from the colordvi-aware axodraw v1); found in the 64w review
+% oracle:  pdflatex 0 errors: "A x B" with x red
+% engines: rust 64qa = "A x B", x uncolored (colordvi's `\Red{…}` sets no color); Perl not run
+% expect:  0 errors; x in a `text` with color="#FF0000"
+% status:  RED (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{colordvi}
+\begin{document}
+A \Red{x} B
+\end{document}

@@ -1,0 +1,14 @@
+% witness: 1301.5498 (`\usepackage{axodraw}` with color; `\Black{$Z$}` from colordvi, which the colordvi-aware v1
+%          `\input`s)
+% oracle:  latex + dvips with the colordvi-aware v1 axodraw.sty hep-ph0101235 ships: 0 errors, Z in black
+% engines: rust 64w r1 = Error:undefined:\Black; rust e1ec58c24e with the paper's own copy = 0 errors; Perl = the
+%          paper's copy raw-loaded
+% expect:  0 errors, 0 warnings; the Math Z whole
+% status:  RED (64w r1) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw}
+\usepackage{color}
+\begin{document}
+A boson \Black{$Z$} here.
+\end{document}

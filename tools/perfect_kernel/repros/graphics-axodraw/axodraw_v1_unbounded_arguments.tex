@@ -1,0 +1,26 @@
+% witness: 64w review probes: `{1 0 div}` windings, `{20000000}` windings and a `1 0 div` axis count ran until
+%          killed (no log — a never-completed in the fleet); `-1 sqrt`, `0 0 div` and `\SetWidth{1 0 div}` gave NaN
+%          or an enormous stroke (round 2); `\LinAxis` with `perdec` 0 (an infinite step that never advanced: out of
+%          memory) or `perdec` -1 (200,003 marks past a product-based cap) (round 3)
+% oracle:  latex + dvips with the v1 axodraw.sty hep-ph9702393 ships: dvips/PostScript errors on these pages
+% engines: rust 64w r2 = killed at the timeout (Gluon, Photon, LinAxis), the rest silently dropped or 1.9e14 wide;
+%          rust 64w r3 = Fatal:oom on `(5,0,5,1,1)`, 200,003 lines for `(200000,-1,…)`
+% expect:  0 errors; 7 warnings "Cannot draw axodraw …" (gluon, photon, three linaxis, carc, vertex) and 1 "Cannot
+%          read \SetWidth value", the pen keeping its 0.5pt; the final line drawn, the picture's only object
+% status:  RED (64w r2, r3) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw}
+\begin{document}
+\begin{picture}(100,40)(0,0)
+\Gluon(0,20)(100,20){5}{1 0 div}
+\Photon(0,20)(100,20){5}{20000000}
+\LinAxis(0,0)(100,0)(1 0 div,10,5,0,1)
+\LinAxis(0,0)(100,0)(5,0,5,1,1)
+\LinAxis(0,0)(100,0)(200000,-1,5,0,1)
+\CArc(50,0)(20,0,-1 sqrt)
+\Vertex(10,10){0 0 div}
+\SetWidth{1 0 div}
+\Line(0,0)(100,0)
+\end{picture}
+\end{document}

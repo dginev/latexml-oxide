@@ -70,6 +70,8 @@ pub mod atveryend_sty;
 pub mod authblk_sty;
 pub mod auxhook_sty;
 pub mod avant_sty;
+pub mod axodraw2_sty;
+pub mod axodraw_sty;
 pub mod babel_def;
 pub mod babel_lang_stubs;
 pub mod babel_sty;

@@ -1,0 +1,15 @@
+% witness: 64w review (the SVG of every `ltx:arc` dropped its stroke: SVG.pm convertArc copies it, L385-387); pstricks
+%          `\psarc` is the other producer of `ltx:arc`
+% oracle:  latex + dvips 0 errors: a quarter circle of radius 1cm, stroked (pdflatex: pstricks needs dvips)
+% engines: rust 64w-base (e1ec58c24e) = the `svg:path` with only `d`, invisible under the picture's
+%          `stroke="none"`; Perl = stroked (SVG.pm copies the attributes)
+% expect:  0 errors; the arc `svg:path` with its `stroke`, `stroke-width` and `fill="none"`
+% status:  RED (64qb) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{pstricks}
+\begin{document}
+\begin{pspicture}(0,0)(2,2)
+\psarc(0,0){1}{0}{90}
+\end{pspicture}
+\end{document}
