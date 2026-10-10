@@ -1,0 +1,21 @@
+% witness: 2608.17008 (`\email{x}` ahead of every `\author`, then `\email[show]{x}` on the first author); aastex701.cls:13350
+% oracle:  pdflatex 0 errors; "Email: jane@x.org" printed once
+% engines: rust 64g3 = a trailing nameless creator holding the first address as rdf, beside Jane's displayed contact
+% expect:  0 errors; two creators, no nameless one: Jane Doe = affiliation + email contact jane@x.org (the ahead-of-authors
+%          address is the one she shows); John Roe = affiliation + rdf schema:email john@y.org
+% status:  RED (64g3) -> GREEN (64g)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\email{jane@x.org}
+\author{Jane Doe}
+\affiliation{Univ A}
+\email[show]{jane@x.org}
+\author{John Roe}
+\affiliation{Univ B}
+\email{john@y.org}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

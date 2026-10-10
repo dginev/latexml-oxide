@@ -1,0 +1,22 @@
+% witness: 2608.00173 (`\correspondingauthor{X}\email{x}` after every `\author`); aastex701.cls:13321-13353
+% oracle:  pdflatex 0 errors: "Corresponding author: John Roe" and the footnote "john@y.org"; no other address
+% engines: rust 64f3 = John Roe carries two displayed email contacts, Jane Doe one; Perl the same
+% expect:  0 errors; Jane Doe = affiliation + rdf schema:email jane@x.org; John Roe = affiliation + rdf schema:email
+%          john@y.org + correspondent + ONE email contact john@y.org
+% status:  RED (64f3) -> GREEN (64g)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Jane Doe}
+\affiliation{Univ A}
+\email{jane@x.org}
+\author{John Roe}
+\affiliation{Univ B}
+\email{john@y.org}
+\correspondingauthor{John Roe}
+\email{john@y.org}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

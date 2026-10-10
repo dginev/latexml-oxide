@@ -566,6 +566,241 @@ fn aastex7_email_show() {
   ]);
 }
 
+/// 64g: AASTeX 7 prints an `\email` only with `[show]` or after `\correspondingauthor` (aastex701.cls:13341-13353); any
+/// other it does not print, and Rust keeps it as the author's `schema:email` metadata — an `ltx:rdf` inside the creator (ruling 2026-10-09;
+/// OXIDIZED_DESIGN_DIVERGENCES #479). Repro sectioning-frontmatter/aastex7_email_hidden_without_show.
+#[test]
+fn aastex7_email_hidden_without_show() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_hidden_without_show.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>John Roe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">john@y.org</contact>\n  </creator>",
+  ]);
+}
+
+/// The core `xml` through the embedded `stylesheet` (`LaTeXML-html5.xsl`, `LaTeXML-epub3.xsl`), in-process, with no POST
+/// error.
+fn post_with(xml: &str, stylesheet: &str) -> String {
+  latexml_core::util::logger::bind_log();
+  let opts = latexml::post::PostOptions {
+    pmml:                      true,
+    cmml:                      false,
+    keep_xmath:                false,
+    stylesheet:                Some(stylesheet),
+    destination:               None,
+    source_directory:          None,
+    site_directory:            None,
+    search_paths:              &[],
+    nodefaultresources:        true,
+    css_files:                 &[],
+    js_files:                  &[],
+    noinvisibletimes:          false,
+    plane1:                    true,
+    hackplane1:                false,
+    mathtex:                   false,
+    url_style:                 latexml_post::crossref::UrlStyle::File,
+    navigationtoc:             None,
+    schemadocs:                false,
+    split:                     false,
+    split_xpath:               None,
+    split_naming:              None,
+    xslt_parameters:           &[],
+    graphics_svg_threshold_kb: 0,
+    graphicimages:             false,
+    timestamp:                 None,
+    icon:                      None,
+    whatsout:                  latexml_post::extract::Whatsout::default(),
+  };
+  let out = latexml::post::run_post_processing(xml, &opts);
+  let log = latexml_core::util::logger::flush_log();
+  assert_eq!(error_count(&log), 0, "POST errors:\n{log}");
+  assert_eq!(warning_count(&log), 0, "POST warnings:\n{log}");
+  out
+}
+
+/// 64g review r1/r2: in HTML the metadata stays inside its author's span, hidden (`span.ltx_rdf`, `display:none` in
+/// LaTeXML.css), the span typed as its RDFa subject (`typeof="schema:Person"`) under the root's `schema:` prefix; an author
+/// without metadata is untyped. EPUB, where RDFa is invalid, drops both (LaTeXML-epub3.xsl). Repro
+/// sectioning-frontmatter/aastex7_email_hidden_without_show.
+#[test]
+fn aastex7_email_hidden_without_show_html() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_hidden_without_show.tex"
+  ));
+  let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
+  let root = &html[html.find("<html").expect("an html root")..];
+  assert!(
+    root[..root.find('>').unwrap_or(0)].contains("prefix=\"schema: http://schema.org/\""),
+    "{html}"
+  );
+  assert_element(
+    &html,
+    "span",
+    &["typeof=\"schema:Person\""],
+    "<span class=\"ltx_creator ltx_role_author\" typeof=\"schema:Person\"><span class=\"ltx_personname\">Jane Doe</span><span class=\"ltx_rdf\" content=\"jane@x.org\" property=\"schema:email\"></span><span class=\"ltx_author_notes\"><span class=\"ltx_author_notes_content\"><span class=\"ltx_contact ltx_role_affiliation\"><span class=\"ltx_contact_name\">Affiliation:\u{a0}</span>Univ A</span></span></span></span>",
+  );
+  assert_eq!(
+    html.matches("typeof=\"schema:Person\"").count(),
+    1,
+    "{html}"
+  );
+  assert!(html.contains(">john@y.org<"), "{html}");
+  let epub = post_with(&xml, "resources/XSLT/LaTeXML-epub3.xsl");
+  assert!(
+    epub.contains("Jane Doe") && epub.contains(">john@y.org<"),
+    "{epub}"
+  );
+  assert!(
+    !epub.contains("typeof=") && !epub.contains("ltx_rdf") && !epub.contains("jane@x.org"),
+    "{epub}"
+  );
+}
+
+/// 64g review r2/r3: an address ahead of every `\author` waits on a pending creator, whose annotations are the sole
+/// author's (`relocate_annotations`) — the metadata with them, which read as empty (it has no text) and was dropped
+/// silently. Repro sectioning-frontmatter/aastex7_email_ahead_of_every_author.
+#[test]
+fn aastex7_email_ahead_of_every_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_ahead_of_every_author.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n    <rdf content=\"orphan@x.org\" property=\"schema:email\"/>\n  </creator>",
+  ]);
+}
+
+/// 64g: metadata ahead of every author that an author already has in any annotation is held, not a nameless creator of
+/// its own (2608.17008: `\email{x}`, then `\email[show]{x}` on the first author). Repro
+/// sectioning-frontmatter/aastex7_email_ahead_of_authors_shown_later.
+#[test]
+fn aastex7_email_ahead_of_authors_shown_later() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_ahead_of_authors_shown_later.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">jane@x.org</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>John Roe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <rdf content=\"john@y.org\" property=\"schema:email\"/>\n  </creator>",
+  ]);
+}
+
+/// 64g review r3: metadata on an author whose name prints nothing (`\author{\relax}`) moves to the author before, with
+/// the creator's contacts (`coalesce_empty_creators`), where it was lost with the empty creator. Repro
+/// sectioning-frontmatter/aastex7_email_on_nameless_author.
+#[test]
+fn aastex7_email_on_nameless_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_on_nameless_author.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <rdf content=\"nobody@x.org\" property=\"schema:email\"/>\n  </creator>",
+  ]);
+}
+
+/// 64g review r3: an author line holding the class's `\email{…}` is a name and that command (one `\lx@add@` call),
+/// not a name and an address wrapped in an email contact the command leaves empty ("Email:" over a blank link). Repro
+/// sectioning-frontmatter/aastex7_email_inside_author.
+#[test]
+fn aastex7_email_inside_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_inside_author.tex"
+  );
+  let xml = convert_clean(tex);
+  assert!(!xml.contains("role=\"email\"/>"), "{xml}");
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n  </creator>",
+  ]);
+}
+
+/// 64g review r4: an author block's line of the class's `\email{…}` is that command as written (`is_email_command` knows
+/// a frontmatter email call that decides how to record it), not a bare address nested in an email contact the command
+/// leaves empty. Repro sectioning-frontmatter/aastex7_email_on_author_line.
+#[test]
+fn aastex7_email_on_author_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_on_author_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert!(!xml.contains("role=\"email\"/>"), "{xml}");
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64g review r5: the class's `\email[show]{…}` on an author-block line is that call as written, its optional argument
+/// part of it — not an address nested in an email contact the call leaves empty. Repro
+/// sectioning-frontmatter/aastex7_email_show_on_author_line.
+#[test]
+fn aastex7_email_show_on_author_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_show_on_author_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert!(!xml.contains("role=\"email\"/>"), "{xml}");
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">jane@x.org</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64g review r6: any class's email command with an optional argument on an author-block line (revtex4-1's
+/// `\email[Also at ]{…}`) is that call as written, its option part of it — not a bare address leaving an empty contact.
+/// Repro sectioning-frontmatter/email_command_option_on_author_line.
+#[test]
+fn email_command_option_on_author_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/email_command_option_on_author_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert!(
+    !xml.contains("role=\"email\"/>") && !xml.contains("role=\"affiliation\"/>"),
+    "{xml}"
+  );
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Also at \" role=\"email\">jane@x.org</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64g: the address after `\correspondingauthor{X}` is X's and displayed, wherever it stands — ahead of the authors
+/// (2608.02190), not a nameless creator. Repro sectioning-frontmatter/aastex7_email_corresponding_author_first.
+#[test]
+fn aastex7_email_corresponding_author_first() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_corresponding_author_first.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n    <contact name=\"Corresponding author:\u{a0}\" role=\"correspondent\">Jane Doe</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">jane@corr.org</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>John Roe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <rdf content=\"john@y.org\" property=\"schema:email\"/>\n  </creator>",
+  ]);
+}
+
+/// 64g: after every author (2608.00173), the corresponding author's displayed address is one, beside the recorded one.
+/// Repro sectioning-frontmatter/aastex7_email_corresponding_author_last.
+#[test]
+fn aastex7_email_corresponding_author_last() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_corresponding_author_last.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <rdf content=\"jane@x.org\" property=\"schema:email\"/>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>John Roe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <rdf content=\"john@y.org\" property=\"schema:email\"/>\n    <contact name=\"Corresponding author:\u{a0}\" role=\"correspondent\">John Roe</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">john@y.org</contact>\n  </creator>",
+  ]);
+}
+
+/// 64g: a recorded address is kept as written (`_` and `~` characters), an empty `\email{}` records nothing, and the
+/// address after `\cofirstauthor` is displayed. Repro sectioning-frontmatter/aastex7_email_recorded_verbatim.
+#[test]
+fn aastex7_email_recorded_verbatim() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex7_email_recorded_verbatim.tex"
+  );
+  assert_eq!(creators(&convert_clean(tex)), vec![
+    "<creator role=\"author\">\n    <personname>Jane Doe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <rdf content=\"first_last~x@x.org\" property=\"schema:email\"/>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>John Roe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact>\n    <rdf content=\"ann@z.org\" property=\"schema:email\"/>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann2@z.org</contact>\n  </creator>",
+  ]);
+}
+
 /// 64c review r1: a `{strip}` is a vertical block — its paragraphs end at its edges, the raw `\strip … \endstrip` of a
 /// `\newenvironment{widetext}{\strip}{\endstrip}` too. Repro captions-floats/cuted_strip_paragraphs_end_at_its_edges.
 #[test]

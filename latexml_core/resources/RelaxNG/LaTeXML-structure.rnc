@@ -444,7 +444,9 @@ creator_attributes =
 ## Content model for \elementref{creator}.
 # `note` added by latexml-oxide (OXIDIZED_DESIGN #156): an author-attached \thanks
 # is a marked <note> child of the creator (mark on the author + margin/footnote content).
-creator_model = (Person.class | Misc.class | note)*
+# `rdf` added by latexml-oxide (OXIDIZED_DESIGN #479): metadata about this author the document does not print
+# (AASTeX 7's `\email` without `[show]`: `schema:email`), hidden in HTML.
+creator_model = (Person.class | Misc.class | note | rdf)*
 
 #----------------------------------------------------------------------
 # NOTE: This should be aligned with Bibname.

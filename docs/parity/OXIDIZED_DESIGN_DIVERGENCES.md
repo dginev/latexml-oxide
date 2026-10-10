@@ -14635,3 +14635,35 @@ graphic_bare_name_listed_last, graphicspath_leading_slash_name}`.
 **Why**: user ruling 2026-10-09 (HF10 F8): keywords a class sends only to the PDF metadata are metadata, not displayed
 content. Witness 2602.13503. Guard `perfect_kernel_batch64::icml_keywords_pdf_metadata`; repro
 sectioning-frontmatter/icml_keywords_pdf_metadata.
+
+### 479. An author's unprinted email is RDFa metadata inside the creator (Perl: a displayed email contact)
+
+**Perl behavior**: aas_support.sty.ltxml:122 `\email{}` is `\lx@add@email{#1}` for every AASTeX version — a displayed
+`<ltx:contact role="email">` — and `ltx:creator` admits no `ltx:rdf` (LaTeXML-structure.rnc `creator_model`).
+**Rust behavior**: `creator_model` admits `rdf` (LaTeXML-structure.rnc/.rng, LaTeXML.model), and the kernel's
+`\lx@add@creator@rdf[opts]{property}{value}` annotates the creator with `<ltx:rdf property="…" content="…"/>` (nothing for an
+empty value), `\lx@add@email@metadata{addr}` with `property="schema:email"`; the XSLT keeps it in the creator's span,
+which it types `typeof="schema:Person"` (the `rdfa-subject` mode), and the `ltx_rdf` span is unprinted; EPUB, where
+RDFa is invalid, drops both (LaTeXML-epub3.xsl). An annotation before every author or on a nameless creator moves to an author with
+its metadata, as its contacts do (`relocate_annotations`, which reads an rdf's value from its `content` or `resource`;
+`coalesce_empty_creators`), unless an author already has its value in any annotation (2608.17008's `\email{x}` ahead of
+the authors and `\email[show]{x}` on the first); one no single author takes stays on the trailing shared creator. AASTeX 7's `\email` (aastex_cls.rs, for
+`aastex7*`) displays an address only where aastex701.cls:13341-13353 prints it: with `[show]`, or after
+`\correspondingauthor{X}` (labelled `fuzzy:X`, so it is X's wherever it stands) or `\cofirstauthor`; any other address
+the class discards (it keeps only that the author has one, :13350, for its check at :12441), and Rust keeps it as the
+author's metadata. AASTeX 6.x prints every `\email` (aastex631.cls:6924-6931, the copy 2505.20669 ships; TL 2025 has
+only aastex701.cls) and keeps the displayed contact. Not emulated: the `[anonymous]` option, under which the class prints
+no address at all (aastex701.cls:13322, 13345). Open: an address written with markup (`\email{\url{…}}`) is recorded as its
+source, where hyperref's `\pdfstringdef` would make text of it (RED sectioning-frontmatter/aastex7_email_markup_recorded_as_text,
+SYNC F2; none of 3,123 recorded addresses in 373 AASTeX 7 papers of 2608); a labelled class `\email` on an author-block
+line (`\author{Jane Doe \newline E-mail: \email{x}}`) is a displayed contact "E-mail: x", where the PDF prints the label
+alone (RED sectioning-frontmatter/aastex7_email_labelled_on_author_line), and an `\email[show]{x}` inside `\author` is
+displayed though the class reads its show list before the author body (aastex701.cls:2455); none of either in the 373.
+**Why**: user ruling 2026-10-09: an address the PDF does not print is metadata, not displayed content (unlike
+`\icmlkeywords`, #478, it reaches no PDF metadata either; the address is the author's own content, kept rather than lost;
+witnesses 2608.05283, 2608.21320, 2608.02190, 2608.00173; 373 papers of 2608 declare `\documentclass{aastex7…}`, the
+A/B set — the root-cause census counted 381 AASTeX 7 papers, 319 with an unprinted address).
+Guards `perfect_kernel_batch64::{aastex7_email_hidden_without_show, aastex7_email_corresponding_author_first,
+aastex7_email_corresponding_author_last, aastex7_email_recorded_verbatim, aastex7_email_hidden_without_show_html,
+aastex7_email_ahead_of_every_author, aastex7_email_ahead_of_authors_shown_later, aastex7_email_on_nameless_author,
+aastex7_email_inside_author, aastex7_email_on_author_line, aastex7_email_show_on_author_line}`; KNOWN_PERL_ERRORS #559.

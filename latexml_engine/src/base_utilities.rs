@@ -333,6 +333,10 @@ LoadDefinitions!({
   // `\lx@add@frontmatter@now` and `@until` ([`takes_accumulate`])
   DefKeyVal!("Frontmatter", "accumulate", "");
   DefKeyVal!("Frontmatter", "name", "");
+  // Rust-only: the RDFa pair of an `ltx:rdf` annotation ([`\lx@add@creator@rdf`]; OXIDIZED_DESIGN #479). Semiverbatim, so an
+  // address's `_` and `~` are characters, not a script and a tie.
+  DefKeyVal!("Frontmatter", "property", "Semiverbatim");
+  DefKeyVal!("Frontmatter", "content", "Semiverbatim");
 
   // \lx@clear@frontmatter{tag}[kv]
   // Remove all pending frontmatter element matching $tag, and role (if given) in keyvals
@@ -1089,6 +1093,41 @@ LoadDefinitions!({
   DefMacro!(
     "\\lx@add@email [] Semiverbatim",
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=email,#1]{#2}"
+  );
+  // Rust-only (OXIDIZED_DESIGN #479): what the document says about an author but does not print (AASTeX 7's `\email`
+  // without `[show]`, aastex701.cls:13341-13353; 2608.05283) — an `ltx:rdf` annotation of the creator, `property` the
+  // RDFa term and `content` the value, hidden in HTML. An empty value records nothing (AASTeX 7's `\email{}` placeholder).
+  DefMacro!("\\lx@add@creator@rdf [] {} Semiverbatim", sub[(attr, property, value)] {
+    // The value as written, without the spaces around it (2608.13718 `\email{koberg@cfa.harvard.edu }`)
+    let mut value = value.unlist();
+    while value.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
+      value.pop();
+    }
+    let lead = value.iter().take_while(|t| t.get_catcode() == Catcode::SPACE).count();
+    value.drain(..lead);
+    if value.is_empty() {
+      return Ok(Tokens!());
+    }
+    let mut opts = mouth::tokenize_internal("property=").unlist();
+    opts.push(T_BEGIN!());
+    opts.extend(property.unlist());
+    opts.push(T_END!());
+    opts.extend(mouth::tokenize_internal(",content=").unlist());
+    opts.push(T_BEGIN!());
+    opts.extend(value);
+    opts.push(T_END!());
+    if let Some(a) = attr.as_ref().filter(|a| !a.is_empty()) {
+      opts.push(T_OTHER!(","));
+      opts.extend(a.unlist_ref().iter().copied());
+    }
+    Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
+      vec![Some(mouth::tokenize_internal("ltx:creator")),
+           Some(mouth::tokenize_internal("ltx:rdf")),
+           Some(Tokens::new(opts)), Some(Tokens!())]))
+  });
+  DefMacro!(
+    "\\lx@add@email@metadata [] Semiverbatim",
+    "\\lx@add@creator@rdf[#1]{schema:email}{#2}"
   );
   DefMacro!(
     "\\lx@add@url [] Semiverbatim",
@@ -5281,11 +5320,12 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
 /// preceding real author. `\footnotemark`-note markers keep a personname non-empty
 /// (2507.06670 "Yu Zhang"), so real authors are untouched.
 ///
-/// Moves BOTH `<ltx:contact>` and `<ltx:note>` annotations: an author `\thanks` is a
+/// Moves every annotation, `<ltx:contact>`, `<ltx:note>` and `<ltx:rdf>`: an author `\thanks` is a
 /// marked `<ltx:note role="thanks">` (OXIDIZED_DESIGN #156), so a trailing `\thanks` on
 /// a nameless comma-split creator would otherwise be dropped with the empty creator —
 /// witness 1510.02728 (`\author{Sani,~\IEEEmembership{…} Vosoughi,~\IEEEmembership{…}%
-/// \thanks{…NSF…}}`), where the note must land on the last real author, as a contact did.
+/// \thanks{…NSF…}}`), where the note must land on the last real author, as a contact did;
+/// and an author's metadata (OXIDIZED_DESIGN #479: an AASTeX 7 `\email` after an `\author` whose name prints nothing).
 fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
   let creators = document.findnodes("//ltx:creator[@role='author']", None);
   let mut to_remove: Vec<Node> = Vec::new();
@@ -5301,7 +5341,7 @@ fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
         .filter(|c| {
           c.get_type() == Some(NodeType::ElementNode)
             && with(document::get_node_qname(c), |q| {
-              q == "ltx:contact" || q == "ltx:note"
+              q == "ltx:contact" || q == "ltx:note" || q == "ltx:rdf"
             })
         })
         .collect();
@@ -5630,6 +5670,19 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
   Ok(())
 }
 
+/// What a frontmatter annotation says: its text, or an `ltx:rdf`'s `content`/`resource` (OXIDIZED_DESIGN #479), which
+/// has no text.
+fn annotation_value(note: &Node) -> String {
+  if note.get_name() == "rdf" {
+    note
+      .get_attribute("content")
+      .or_else(|| note.get_attribute("resource"))
+      .unwrap_or_else(|| note.get_content())
+  } else {
+    note.get_content()
+  }
+}
+
 /// Find all dummy frontmatter entries (role "pending") containing unattached annotations
 /// and attempt to attach to the appropriate frontmatter, based on the identifying labels.
 /// Perl: relocateAnnotations($document).
@@ -5879,14 +5932,17 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
       // (an empty one is nothing to keep: it made a nameless creator of its own; nor one an author already holds — a
       // store set between two `\maketitle`s is handed on to the authors a later `\author` names, and queued too:
       // `perfect_kernel_batch59::store_set_before_a_superseding_author`)
-      let empty = note.get_content().trim().is_empty() && element_nodes(&note).is_empty();
+      let empty = annotation_value(&note).trim().is_empty() && element_nodes(&note).is_empty();
+      // (metadata, an `ltx:rdf`, is held by an author who has its value in any annotation: 2608.17008's `\email{x}` ahead
+      // of the authors, then `\email[show]{x}` on the first, is that author's displayed address)
       let held = || {
-        let (role, content) = (note.get_attribute("role"), note.get_content());
+        let (role, content) = (note.get_attribute("role"), annotation_value(&note));
+        let metadata = note.get_name() == "rdf";
         authors.iter().any(|author| {
           element_nodes(author).iter().any(|c| {
-            c.get_name() == note.get_name()
-              && c.get_attribute("role") == role
-              && c.get_content().trim() == content.trim()
+            let same_kind = c.get_name() == note.get_name() && c.get_attribute("role") == role;
+            (same_kind || (metadata && matches!(c.get_name().as_str(), "contact" | "rdf")))
+              && annotation_value(c).trim() == content.trim()
           })
         })
       };
@@ -12265,6 +12321,16 @@ fn email_command_calls(line: &Tokens) -> Result<Option<Vec<EmailAddress>>> {
     while i < tokens.len() && tokens[i] == T_SPACE!() {
       i += 1;
     }
+    // the command's optional argument, part of the call (AASTeX's `\email[show]{x}`, aastex701.cls:13341)
+    if i < tokens.len() && tokens[i] == T_OTHER!("[") {
+      let Some(close) = tokens[i..].iter().position(|t| *t == T_OTHER!("]")) else {
+        return Ok(None);
+      };
+      i += close + 1;
+      while i < tokens.len() && tokens[i] == T_SPACE!() {
+        i += 1;
+      }
+    }
     if i >= tokens.len() || tokens[i].code != Catcode::BEGIN {
       return Ok(None);
     }
@@ -12366,14 +12432,18 @@ fn adds_to_frontmatter(cs: &Token) -> Result<bool> {
   })
 }
 
-/// A class's email command: a macro whose expansion begins with `\lx@add@email` (JHEP.cls.ltxml's `\email`).
+/// A class's email command: a macro whose expansion begins with a frontmatter email call — `\lx@add@email`
+/// (JHEP.cls.ltxml's `\email`), or one that decides how to record the address (AASTeX 7's `\lx@add@aas@email`, the
+/// `\lx@add@email@metadata` of an address the PDF does not print).
 fn is_email_command(cs: &Token) -> Result<bool> {
   let Some(def) = lookup_definition(cs)? else {
     return Ok(false);
   };
   Ok(
     matches!(def.get_expansion(), Some(ExpansionBody::Tokens(body))
-    if body.unlist_ref().first().is_some_and(|first| first.to_string() == "\\lx@add@email")),
+    if body.unlist_ref().first().is_some_and(|first| first.with_str(|name| {
+      name.strip_prefix("\\lx@add@").is_some_and(|rest| rest.contains("email"))
+    }))),
   )
 }
 

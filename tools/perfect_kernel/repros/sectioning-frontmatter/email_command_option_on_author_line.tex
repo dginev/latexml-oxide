@@ -1,0 +1,17 @@
+% witness: 64g review r6 finding 4 (synthetic: a class email command with an optional argument on an author-block line)
+% oracle:  pdflatex 0 errors (revtex4-1 `\email[Also at ]{…}`)
+% engines: rust 64g6 = the email plus an EMPTY affiliation contact (the line's `\email[…]{…}` not read as the class's
+%          command — email_command_calls wanted `{` after it); 64g the call as written
+% expect:  0 errors; Jane Doe = one email contact named "Also at " + affiliation Univ A; no empty contact
+% status:  RED (64g6) -> GREEN (64g)
+\documentclass{revtex4-1}
+\begin{document}
+\title{A Title}
+\author{Jane Doe \\ \email[Also at ]{jane@x.org}}
+\affiliation{Univ A}
+\begin{abstract}
+Text.
+\end{abstract}
+\maketitle
+\section{Intro} Body.
+\end{document}

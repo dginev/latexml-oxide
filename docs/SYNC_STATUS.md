@@ -325,7 +325,9 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
 - **hyperref's PDF information values are recorded unexpanded** (SHARED, Perl hyperref.sty.ltxml:133 `ToString`):
   `pdftitle=\mytitle` gives `<rdf content="\mytitle"/>`; hyperref expands with `\pdfstringdef` (resphilosophica.cls:311
   `pdftitle=\@title`). Digesting the value would duplicate frontmatter notes (`\thanks`); needs a `\pdfstringdef`-like
-  expansion. RED `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`.
+  expansion. RED `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`. The same for an AASTeX 7 address recorded as
+  `schema:email` metadata (`\email{\url{…}}` → `content="\url{…}"`; RED
+  `sectioning-frontmatter/aastex7_email_markup_recorded_as_text`, OXIDIZED_DESIGN_DIVERGENCES #479).
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
 ### Fidelity audit round 2 (2026-10-08) — findings and their state

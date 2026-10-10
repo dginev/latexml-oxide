@@ -1,0 +1,18 @@
+% witness: 64g review r6 finding 2 (synthetic; since 64f): text after an email call on an author-block line
+% oracle:  pdflatex 0 errors: "Jane Doe[note]" and no address printed (aastex701.cls:13341-13353)
+% engines: rust 64g = <contact name="Email: " role="email">[note]</contact> (a mailto link to "[note]"): email_command_calls
+%          rightly returns None, but the bare-address fallback (base_utilities.rs, line_is_email: "@" and no spaces) wraps the
+%          whole line, call included, in `\lx@add@email`
+% expect:  0 errors; "[note]" stays author text; jane@x.org as the class's `\email` gives it (rdf); no "[note]" contact.
+%          Fix: the fallback skips a line holding an email command, as labelled_emails does
+% status:  RED (64g)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Jane Doe \newline \email{jane@x.org}[note]}
+\affiliation{Univ A}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

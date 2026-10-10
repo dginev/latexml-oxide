@@ -62,6 +62,29 @@ LoadDefinitions!({
     RequirePackage!("rotating", options => vec![s!("figuresright")]);
   }
   RequirePackage!("aas_support");
+  // AASTeX 7 prints an `\email` only with `[show]` (in the title footnote "Email: …", aastex701.cls:2455-2456) or after
+  // `\correspondingauthor`/`\cofirstauthor` (a footnote, :13341-13353); any other address it discards, keeping only that
+  // the author has one (:13350, for the check at :12441) (2608.05283, 2608.21320). The address is kept as the author's
+  // `schema:email` metadata (OXIDIZED_DESIGN #479). A corresponding author's address is that author's, wherever it
+  // stands (2608.02190 ahead of the authors, 2608.00173 after them). AASTeX 6.x prints every `\email`
+  // (aastex631.cls:6924-6931, the copy 2505.20669 ships), as aas_support_sty.rs's `\email` does (Perl
+  // aas_support.sty.ltxml:122 for every version; KNOWN_PERL_ERRORS #559).
+  if requested.starts_with("aastex7") {
+    // (one `\lx@add@` call, so an author line holding `\email{…}` reads it as the class's frontmatter command:
+    // `adds_to_frontmatter`)
+    DefMacro!("\\email[]{}", "\\lx@add@aas@email{#1}{#2}");
+    // `\cofirstauthor` (aastex701.cls:13330-13337) sets the flag and prints nothing; AASTeX 7's only, so a 6.x paper's own
+    // `\newcommand\cofirstauthor` stands.
+    DefMacro!("\\cofirstauthor", "\\global\\lx@aas@correspauthortrue\\global\\let\\lx@aas@correspondent\\empty");
+    DefMacro!("\\lx@add@aas@email{}{}",
+      "\\iflx@aas@correspauthor\\expandafter\\lx@aas@email@corresp\\else\\expandafter\\lx@aas@email@author\\fi{#1}{#2}\\global\\lx@aas@correspauthorfalse");
+    DefMacro!("\\lx@aas@email@corresp{}{}",
+      "\\ifx\\lx@aas@correspondent\\empty\\lx@add@email{#2}\\else\\lx@add@email[label={fuzzy:\\lx@aas@correspondent}]{#2}\\fi");
+    DefMacro!("\\lx@aas@email@author{}{}", sub[(option, address)] {
+      let add = if option.to_string().trim() == "show" { "\\lx@add@email" } else { "\\lx@add@email@metadata" };
+      Ok(Invocation!(T_CS!(add), vec![None, Some(address)]))
+    });
+  }
   // One binding for every AASTeX version, the union of their commands (user directives 2026-10-09, 2026-10-10: the 5.x
   // `\subsubsubsection`/`\supportfrom` stay for a 6+ class too, where a paper's own `\newcommand` of them is skipped and
   // its text kept) — dispatched by version only where a version's command would take the paper's own away:

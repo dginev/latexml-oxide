@@ -1,0 +1,20 @@
+% witness: 64g review r2 finding 1 (an `\email` ahead of every `\author`; aastex701.cls:13350 keeps only that author 0 has
+%          an address, so the PDF prints nothing for it)
+% oracle:  pdflatex 0 errors; no address printed
+% engines: rust 64g2 = orphan@x.org lost silently (relocate_annotations read the text of the pending rdf, which has
+%          none, as an empty annotation); 64f a displayed email contact on Jane Doe; Perl a nameless creator
+% expect:  0 errors; one creator, Jane Doe = affiliation + rdf schema:email jane@x.org + rdf schema:email orphan@x.org
+%          (an annotation before every author is the sole author's)
+% status:  RED (64g2) -> GREEN (64g)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\email{orphan@x.org}
+\author{Jane Doe}
+\affiliation{Univ A}
+\email{jane@x.org}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

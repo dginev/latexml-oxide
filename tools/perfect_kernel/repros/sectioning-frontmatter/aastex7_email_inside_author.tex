@@ -1,0 +1,18 @@
+% witness: 64g review r3 finding 2 (synthetic, 0 of 373 AASTeX 7 papers of 2608 hold `\email` in `\author`)
+% oracle:  pdflatex 0 errors: "Jane Doe," and no address printed (aastex701.cls:13341-13353)
+% engines: rust 64g4 = rdf jane@x.org and an empty <contact role="email"/> ("Email:" over a blank mailto link; the
+%          author line's trailing `\email{…}` read as an address, name_and_trailing_email); 64f one email contact
+% expect:  0 errors; Jane Doe = the inner address as metadata (rdf), no empty email contact (the outer `\email` records
+%          the same address again)
+% status:  RED (64g4) -> GREEN (64g)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Jane Doe, \email{jane@x.org}}
+\affiliation{Univ A}
+\email{jane@x.org}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

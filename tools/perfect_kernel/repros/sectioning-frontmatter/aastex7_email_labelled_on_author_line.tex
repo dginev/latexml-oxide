@@ -1,0 +1,16 @@
+% witness: 64g review r4 finding 1 (synthetic: 0 of 373 AASTeX 7 papers of 2608 hold `\email` in `\author`)
+% oracle:  pdflatex 0 errors: "Jane Doe" and a dangling "E-mail:", no address printed (aastex701.cls:13341-13353)
+% engines: rust 64g = a displayed contact "E-mail: jane@x.org" (64f's output): email_calls turns a labelled class command
+%          into `\lx@add@email[name=label]{address}`, bypassing the class's own decision
+% expect:  0 errors; Jane Doe = rdf schema:email jane@x.org and the label kept as markup, not an empty email contact
+% status:  RED (64g)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Jane Doe \newline E-mail: \email{jane@x.org}}
+\affiliation{Univ A}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

@@ -697,6 +697,15 @@
     </xsl:call-template>
   </xsl:template>
 
+  <!-- latexml-oxide (OXIDIZED_DESIGN #479): an author with metadata (ltx:rdf children, e.g. an AASTeX 7 address the
+       PDF does not print) is the RDFa subject of it, a schema:Person. A mode of its own, so that a format without RDFa
+       (LaTeXML-epub3.xsl) can drop it with the ltx:rdf. -->
+  <xsl:template match="ltx:creator" mode="rdfa-subject">
+    <xsl:if test="ltx:rdf and not(@typeof)">
+      <xsl:attribute name="typeof">schema:Person</xsl:attribute>
+    </xsl:if>
+  </xsl:template>
+
   <!-- Format an author 'inline' as part of an author block -->
   <xsl:template match="ltx:creator[@role='author']" mode="intitle">
     <xsl:param name="context"/>
@@ -712,6 +721,7 @@
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
       <xsl:call-template name="add_id"/>
       <xsl:call-template name="add_attributes"/>
+      <xsl:apply-templates select="." mode="rdfa-subject"/>
       <xsl:apply-templates select="." mode="begin">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
@@ -746,6 +756,10 @@
            (ltx_thanks_*) ride on the note's @class. author_notes below selects only
            ltx:contact, so there is no double-render. -->
       <xsl:apply-templates select="ltx:note">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+      <!-- the author's metadata: hidden RDFa spans (span.ltx_rdf), OXIDIZED_DESIGN #479 -->
+      <xsl:apply-templates select="ltx:rdf">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
       <xsl:if test="ltx:contact[not(@role='orcid')]">

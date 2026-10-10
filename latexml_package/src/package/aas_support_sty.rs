@@ -97,7 +97,9 @@ LoadDefinitions!({
   // \altaffilmark{2},\\ Avi Shporer\altaffilmark{1}`, 1010.1318) is one author each, as the article `\author` reads it
   // (Perl aas_support.sty.ltxml:103 makes it one author; 63e).
   // The orcid goes to the last author the block makes, after it (inside, it rode on the last `\\` line).
-  DefMacro!("\\author[]{}", "\\lx@add@authors@append{#2}\\lx@aas@checkorcid{#1}");
+  // `\author` ends a corresponding author's `\email` run (aastex701.cls:12678 `\global\correspauthorfalse`; aastex_cls.rs).
+  DefMacro!("\\author[]{}",
+    "\\global\\lx@aas@correspauthorfalse\\lx@add@authors@append{#2}\\lx@aas@checkorcid{#1}");
   DefMacro!("\\lx@aas@checkorcid{}", "\\lx@aas@checkorcid@#1,\\done");
   // In later aas, $junk may be keywords? (gname,sname,suffix,...?)
   DefMacro!("\\lx@aas@checkorcid@ Until:, Until:\\done", sub[(possibleid, _junk)] {
@@ -117,8 +119,12 @@ LoadDefinitions!({
 
   // \email[]{addr} applies to previous author
   // \correspondingauthor{name}
+  // The flag and name are AASTeX 7's (aastex701.cls:13318-13328), for its `\email` (aastex_cls.rs): the address after a
+  // `\correspondingauthor{X}` is X's, wherever it stands.
+  RawTeX!(r"\newif\iflx@aas@correspauthor\let\lx@aas@correspondent\empty");
   DefMacro!("\\correspondingauthor{}",
-    "\\lx@add@contact[role=correspondent,label={fuzzy:#1}]{#1}");
+    "\\global\\lx@aas@correspauthortrue\\gdef\\lx@aas@correspondent{#1}\\lx@add@contact[role=correspondent,label={fuzzy:#1}]{#1}");
+
 
   // Various contact information attaches to previous \author
   // AASTeX 6 (revtex-derived): an affiliation is every preceding author's that has none yet (`\author{Ann Able and Bob

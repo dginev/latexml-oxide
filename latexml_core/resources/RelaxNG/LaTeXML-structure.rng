@@ -836,6 +836,7 @@ this creator in a formatted titlepage.</a:documentation>
         <ref name="Person.class"/>
         <ref name="Misc.class"/>
         <ref name="note"/>
+        <ref name="rdf"/>
       </choice>
     </zeroOrMore>
   </define>

@@ -1,0 +1,20 @@
+% witness: 64g review r3 finding 1 (synthetic, no corpus witness: an `\author` whose name prints nothing, then its address)
+% oracle:  pdflatex 0 errors; "Jane Doe" and an empty second author line; no address printed
+% engines: rust 64g2 = nobody@x.org lost with the nameless creator (coalesce_empty_creators moved contacts and notes only)
+% expect:  0 errors; one creator, Jane Doe = affiliation + rdf jane@x.org + the nameless one's affiliation Univ B and
+%          rdf nobody@x.org
+% status:  RED (64g2) -> GREEN (64g)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Jane Doe}
+\affiliation{Univ A}
+\email{jane@x.org}
+\author{\relax}
+\affiliation{Univ B}
+\email{nobody@x.org}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

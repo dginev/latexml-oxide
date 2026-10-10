@@ -11844,9 +11844,7 @@ Minimal triggers: `\usepackage[export]{adjustbox} … \adjustimage{width=3cm}{fi
 `\documentclass{aastex701} … \email[show]{jane@example.org}`.
 
 Fixed in Rust (64c): graphicx's `\Gin@i` is `\includegraphics`'s dispatch (OXIDIZED_DESIGN_DIVERGENCES #475);
-aas_support's `\email[]{}` adds `#2`. Open (ruling asked): without `[show]` aastex7 prints no address (unless the
-author is the corresponding one), and both engines still emit it (RED sectioning-frontmatter/
-aastex7_email_hidden_without_show). Guards `perfect_kernel_batch64::{adjustimage_includes_the_graphic,
+aas_support's `\email[]{}` adds `#2`. An address aastex7 does not print is metadata since 64g (#559). Guards `perfect_kernel_batch64::{adjustimage_includes_the_graphic,
 aastex7_email_show}`.
 
 ## 556. AASTeX `\gridline` panels lost; a bare `\fig` in a float numbered as a figure of its own
@@ -11946,3 +11944,29 @@ leading declarations (`\footnotesize\vspace{2pt}\noindent $^{1}$Univ A, $^{2}$Un
 TeX scopes them over the whole line (no witness; a wrapped group's are repeated on every piece; RED
 author_unwrapped_lead_declarations_style_every_institution), as do declarations between a wrapped list and its next
 mark (`{…} \color{blue} $^3$Univ C`; RED author_declaration_after_wrapped_affiliation_list).
+
+## 559. AASTeX 7 addresses printed that the class does not print; a corresponding author's address a creator of its own
+
+aas_support.sty.ltxml:122 `DefMacro('\email{}', '\lx@add@email{#1}')` displays every `\email`, for every AASTeX version.
+AASTeX 7 prints one only with `[show]` (the "Email: …" title footnote, aastex701.cls:2455-2456) or after
+`\correspondingauthor`/`\cofirstauthor` (a footnote, :13341-13353; `\author` resets the flag, :12678); any other address
+it discards, keeping only that the author has one (:13350, for the "requires all authors to have an email" check at
+:12441). And the address after `\correspondingauthor{X}` goes to the author before it, so ahead of the
+authors it makes a nameless creator (2608.02190, 2608.20544) and after them a second address for the last author
+(2608.00173).
+
+Minimal trigger: `\documentclass{aastex701} … \author{Jane Doe}\affiliation{Univ A}\email{jane@x.org}\maketitle`
+(the PDF prints no address).
+
+Fixed in Rust (64g): under `aastex7*` the address is displayed where the class prints it (after
+`\correspondingauthor{X}` labelled `fuzzy:X`, so X's), else kept, unprinted, as the author's `schema:email` RDFa
+(OXIDIZED_DESIGN_DIVERGENCES #479); an empty `\email{}` records nothing. Guards `perfect_kernel_batch64::{aastex7_email_hidden_without_show,
+aastex7_email_corresponding_author_first, aastex7_email_corresponding_author_last, aastex7_email_recorded_verbatim,
+aastex7_email_hidden_without_show_html, aastex7_email_ahead_of_every_author, aastex7_email_ahead_of_authors_shown_later,
+aastex7_email_on_nameless_author, aastex7_email_inside_author, aastex7_email_on_author_line,
+aastex7_email_show_on_author_line, email_command_option_on_author_line}` (the last: any class's email command with an
+optional argument on an author line, revtex4-1's `\email[Also at ]{…}`, is read as the call, where an empty contact stood).
+Open: text after such a call on the line becomes an email contact (RED
+sectioning-frontmatter/email_call_with_trailing_text_on_author_line, since 64f).
+Not a defect: an address typed with a bare `_` prints as a dot accent in an OT1 roman font (`i˙j@x.org` — pdflatex,
+revtex4-1 `\email{i_j@x.org}`), and both engines show that; the recorded RDFa keeps the `_`.

@@ -1,0 +1,17 @@
+% witness: 64g review r5 finding 1 (synthetic: 0 of 373 AASTeX 7 papers of 2608 hold `\email` in `\author`)
+% oracle:  pdflatex 0 errors: "Jane Doe", no address printed (aastex701.cls:2455 reads `\@@email` before the author body)
+% engines: rust 64g6 = a displayed contact jane@x.org and an EMPTY email contact (the line's `\email[show]{…}` not read as
+%          the class's command — email_command_calls wanted `{` after it — so nested in `\lx@add@email`); 64f the same
+% expect:  0 errors; one email contact jane@x.org (the `[show]` call as written), no empty contact. Open: the PDF prints
+%          none here (OXIDIZED_DESIGN_DIVERGENCES #479)
+% status:  RED (64g6) -> GREEN (64g)
+\documentclass{aastex701}
+\begin{document}
+\title{A Title}
+\author{Jane Doe \newline \email[show]{jane@x.org}}
+\affiliation{Univ A}
+\begin{abstract}
+Text.
+\end{abstract}
+\section{Intro} Body.
+\end{document}

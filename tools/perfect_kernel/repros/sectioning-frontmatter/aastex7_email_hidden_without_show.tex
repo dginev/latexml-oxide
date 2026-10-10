@@ -2,8 +2,9 @@
 %          with `[show]`, or as the corresponding author's footnote; otherwise the PDF shows none)
 % oracle:  pdflatex 0 errors: only "Email: john@y.org"
 % engines: rust 64c2 = an email contact for both authors; Perl the same (aas_support.sty.ltxml:122)
-% expect:  NEEDS RULING (display toggle, 2026-10-06 ruling vs metadata): Jane's address hidden or kept as metadata
-% status:  RED (64c2)
+% expect:  0 errors; Jane Doe = rdf schema:email jane@x.org, no email contact (ruling 2026-10-09: RDFa metadata);
+%          John Roe = <contact role="email">john@y.org</contact>, no rdf
+% status:  RED (64c2) -> GREEN (64g)
 \documentclass{aastex701}
 \begin{document}
 \title{A Title}
