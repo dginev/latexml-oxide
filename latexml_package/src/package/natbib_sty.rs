@@ -1049,10 +1049,50 @@ LoadDefinitions!({
            fullauthors.or_else(empty), Some(key)]))
   });
 
-  // \lx@nat@bibitem — natbib's version of \bibitem
+  // \lx@nat@bibitem — natbib's version of \bibitem (Perl natbib.sty.ltxml:489-493), opening
+  // the bibliography first when none is open, as the kernel's `\bibitem` does (Perl
+  // latex_constructs.pool.ltxml:4074-4076, sect11.rs): Perl's natbib `\bibitem` lacks that
+  // guard, so a `\bibitem` list written in an `{enumerate}` errored (quant-ph9706037,
+  // 1708.06608, 2003.07967, hep-ph0212045) where pdflatex prints it.
   DefMacro!("\\lx@nat@bibitem",
-    "\\reset@natbib@cites\\refstepcounter{@bibitem}\\@ifnextchar[{\\@lbibitem}{\\@lbibitem[]}",
+    "\\if@lx@inbibliography\\lx@NAT@bibitem@check{in}\\else\\lx@NAT@bibitem@check{}\\fi\\reset@natbib@cites\\refstepcounter{@bibitem}\\@ifnextchar[{\\@lbibitem}{\\@lbibitem[]}",
     locked => true);
+  // A `\bibitem` in no list is LaTeX's "Lonely \item" (latex.ltx:16041-16043, the default `\makelabel`): reported in
+  // Perl's category, `malformed:ltx:bibitem` (its natbib `\bibitem` is unguarded), once per `\bibitem`, and still opened
+  // into a bibliography, whose later `\bibitem`s are as lonely (repro index-bib/natbib_bibitem_in_document_body;
+  // 1108.2593's `\bibitem`s after aa's `{acknowledgements}`; in `{small}`, a minipage, an author's environment just as
+  // well). In no list means no itemization bound (`begin_itemize`: the lists, `\list`, `\trivlist`) and no environment
+  // latex.ltx builds on `\trivlist`/`\list` that LaTeXML lays out without one (center, flushleft, flushright, quote,
+  // quotation, verse). In a list, an `\item` of that very list before it keeps the `\bibitem` in place, one item among the
+  // list's (pdflatex: `1. A`, `[1] V`, `2. B`), whose later `\item`s a bibliography opened here would take as its entries
+  // (Perl's natbib path; cond-mat0003103, RED repro index-bib/natbib_bibitem_among_list_items, SYNC K21: the
+  // bibliography leaving the list element while the list's TeX group stays open). 1411.7266 is clean only because its
+  // class's `\acknowledgments` (CS18.sty) leaves a trivlist open around its `{references}`: the `\bibitem`s are in a list,
+  // with no `\item` of it before them in that environment, and open the bibliography.
+  DefMacro!("\\lx@NAT@bibitem@check{}", sub[(where_)] {
+    let in_bibliography = where_.to_string() == "in";
+    let in_list = !lookup_string("itemcounter").is_empty();
+    let env = lookup_string("current_environment");
+    let body = !in_list
+      && !matches!(env.as_str(), "center" | "flushleft" | "flushright" | "quote" | "quotation" | "verse");
+    if body && (!in_bibliography || lookup_bool("lx_bibliography_lonely")) {
+      Error!("malformed", "ltx:bibitem",
+        "\\bibitem outside any list (LaTeX: Lonely \\item--perhaps a missing list environment); opening a bibliography");
+    }
+    let among_items = in_list
+      && lookup_string("itemization_environment") == env
+      && lookup_int("itemization_items") > 0;
+    Ok(if in_bibliography || among_items {
+      Tokens!()
+    } else {
+      let mut toks = vec![T_CS!("\\expandafter"), T_CS!("\\lx@mung@bibliography"), T_CS!("\\expandafter"),
+        T_BEGIN!(), T_CS!("\\@currenvir"), T_END!()];
+      if body {
+        toks.push(T_CS!("\\lx@bibliography@lonely"));
+      }
+      Tokens::new(toks)
+    })
+  });
   Let!("\\bibitem", "\\lx@nat@bibitem");
 
   // RawTeX for citeauthoryear, astroncite, citename, harvarditem, NAT@ifcmd etc.
@@ -1105,13 +1145,24 @@ LoadDefinitions!({
   // default; Rust's `{}` arg type preserves the source catcodes faithfully.
   // 54 occurrences of `Error:unexpected:_` in Stage-16 v5 cluster here.
   DefMacro!("\\@lbibitem[] Semiverbatim",
-    "\\@@lbibitem{#2}\\lx@NAT@parselabel{#1}{#2}\\newblock",
+    "\\lx@NAT@labelled{#1}\\@@lbibitem{#2}\\lx@NAT@parselabel{#1}{#2}\\newblock",
     locked => true);
+  // Whether the entry carries the author's label (`\bibitem[Baker(2001)]{}`), for `\@@lbibitem`'s `_labelled`: a
+  // printed entry however empty, as under the kernel (sect11.rs `is_phantom_entry`).
+  DefMacro!("\\lx@NAT@labelled{}", sub[(label)] {
+    let labelled = !label.to_string().trim().is_empty();
+    assign_value("lx_NAT_bibitem_labelled", labelled, Some(Scope::Global));
+    Ok(Tokens!())
+  });
 
   // \@@lbibitem — constructor opening the bibitem element
   DefConstructor!("\\@@lbibitem Semiverbatim",
-  "<ltx:bibitem key='#key' xml:id='#id'>",
+  "<ltx:bibitem key='#key' xml:id='#id' _labelled='#labelled'>",
   after_digest => sub[whatsit] {
+    if lookup_bool("lx_NAT_bibitem_labelled") {
+      assign_value("lx_NAT_bibitem_labelled", false, Some(Scope::Global));
+      whatsit.set_property("labelled", "true");
+    }
     let key_str = whatsit.get_arg(1).map(|a| {
       clean_bib_key(&a.to_string())
     }).unwrap_or_default();

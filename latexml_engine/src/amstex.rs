@@ -26,8 +26,11 @@ LoadDefinitions!({
   // identical to `\def`. See AmSTeX.pool.ltxml L39-53.
   Let!("\\define",   "\\def");
   Let!("\\redefine", "\\def");
-  // \predefine \foo \bar  ≡  \let\foo\bar  (Perl L55-56)
-  Let!("\\predefine", "\\let");
+  // amstex.tex:136 `\def\predefine#1#2{\let#1#2}`: undelimited arguments, so a braced
+  // one is unwrapped (`\predefine\til{\~}`). Perl's `\predefine Token Token` (L55-56)
+  // and an alias of `\let` both took the `{` itself, `\let\til{` (math0012149,
+  // math0012150, math0012155).
+  DefMacro!("\\predefine{}{}", "\\let#1#2");
   // \undefine \foo  ≡  \let\foo\relax  (Perl L58-60)
   DefMacro!("\\undefine Token", "\\let#1\\relax");
 
@@ -137,6 +140,22 @@ LoadDefinitions!({
       // Perl L127: `$_[0]->getGullet->flush;` — discards remaining input.
       flush();
     });
+  // An AMS-TeX document ends with plain's `\end` — written bare, or amsppt's `\enddocument`
+  // → `\plainend` (TL2025 amsppt.sty:1090 `\let\plainend\end`, :1091-1098 `\enddocument`) —
+  // which Perl, reading the document plain, has as `\lx@end@document`
+  // (plain_constructs.pool.ltxml:284). Ours reads an amsppt
+  // document LaTeX (converter.rs `compile_route`), where `\end` is LaTeX's `\end{<env>}`
+  // and took what followed for an environment name (an `unexpected:\endgroup` Error per
+  // document: 1505.02369, 1901.01055, 2410.05768, math-ph9812020, q-alg9510020). An
+  // `\end` followed by a `{` stays LaTeX's, for a LaTeX document that loads AMS-TeX.
+  Let!("\\lx@amstex@saved@end", "\\end");
+  DefMacro!("\\end", {
+    Ok(Tokens!(if if_next(T_BEGIN!())? {
+      T_CS!("\\lx@amstex@saved@end")
+    } else {
+      T_CS!("\\lx@end@document")
+    }))
+  });
 
   //======================================================================
   // Front Matter (Perl PR #2767)

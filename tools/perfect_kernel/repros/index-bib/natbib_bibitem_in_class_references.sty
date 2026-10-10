@@ -1,0 +1,10 @@
+% Modelled on the CS18.sty that arXiv 1411.7266 ships (Cool Stars 18 proceedings style), reduced to what the repro
+% needs: a run-in `\acknowledgments` that starts a trivlist, its heading the item's label, and never ends it (so for
+% pdflatex the natbib \bibitem's that follow are items of that list, no "Lonely \item"), and a `{references}`
+% environment that is no list (a starred section heading and a group with hanging paragraphs).
+\def\acknowledgments{\par\addvspace{17pt}\small\rm
+  \trivlist\item[\hskip\labelsep{\it Acknowledgements.\/}]}
+\def\references{\section*{References}%
+  \bgroup\parindent=0pt \parskip=.5ex
+  \def\refpar{\par\hangindent=3em\hangafter=1}}
+\def\endreferences{\refpar\egroup}

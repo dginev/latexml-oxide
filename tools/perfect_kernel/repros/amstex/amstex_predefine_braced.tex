@@ -1,0 +1,15 @@
+% witness: math0012149, math0012150, math0012155 (run-336 `unexpected:}`, ≤65 papers)
+% oracle:  amstex (AMS-TeX format) 0 errors: amstex.tex:136 `\def\predefine#1#2{\let#1#2}` unwraps `{\~}`
+% engines: rust 64s = 1 Error:unexpected:} (`\predefine` = `\let`: `\let\til{`); Perl 0.8.8 1 (SHARED:
+%          AmSTeX.pool.ltxml:55 `\predefine Token Token`)
+% expect:  0 errors; "ñ" in text and \widetilde{x} in math
+% status:  RED (64s) -> GREEN (64x)
+% preload: ar5iv.sty
+% engine:  amstex
+\input amstex
+\documentstyle{amsppt}
+\predefine\til{\~}
+\def\~#1{\relax\ifmmode\widetilde{#1}\else\til{#1}\fi}
+\document
+A word with \~n and $\~x$.
+\enddocument

@@ -1,0 +1,23 @@
+% witness: review of 64x round 9 (smallsec): a natbib \bibitem in {small}, a \section*, another \bibitem in the same {small}
+% oracle:  pdflatex 2 errors: "Lonely \item--perhaps a missing list environment", one per \bibitem
+% engines: rust 64zc 2 Error:malformed (in <ltx:p>); 64x bef859dfca Fatal (recursion: the second open re-saved the \relax
+%          \endsmall as the wrapper calling itself, 39-byte XML); Perl 0.8.8 2 Error:malformed
+% expect:  2 Error:malformed:ltx:bibitem ("\bibitem outside any list"), two bibliographies (Able, then Cole after the
+%          unnumbered Appendix section and its "More text.")
+% status:  ERRORS KEPT (64x: the end of {small} is saved once, by its own marker)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+\section{Summary}
+Text \citep{a,c}.
+\begin{small}
+\bibitem[Able(2011)]{a} Able, A. 2011, ApJ.
+
+\section*{Appendix}
+More text.
+
+\bibitem[Cole(2013)]{c} Cole, C. 2013, ApJ.
+\end{small}
+After.
+\end{document}

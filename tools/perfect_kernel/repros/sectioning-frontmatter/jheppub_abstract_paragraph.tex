@@ -1,0 +1,20 @@
+% witness: 1903.02433 (run-336 `unexpected:}`)
+% oracle:  pdflatex 0 errors with the paper's jheppub.sty (:66 `\renewcommand{\abstract}[1]{\gdef\@abstract{#1}}`;
+%          not in TeX Live): the abstract's two paragraphs, the second after an empty run-in heading
+% engines: rust 64s = 1 Error:unexpected:} (the braced \abstract read as a group: \paragraph's section hook ended
+%          the abstract inside its braces); Perl 0.8.8 Fatal (deep recursion)
+% expect:  0 errors; <abstract> holds the first <p> and the <paragraph> with the second (the binding records the
+%          one-argument \abstract, so the kernel reads it as an argument)
+% status:  RED (64s) -> GREEN (64x)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author{A}
+\abstract{First paragraph of the abstract.
+\paragraph{}
+Second paragraph after an empty run-in heading.}
+\begin{document}
+\maketitle
+Body.
+\end{document}

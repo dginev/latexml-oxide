@@ -131,8 +131,10 @@ pub(crate) fn load() -> Result<()> {
   // 11.92×8.65, `x \frame{X} y` 22.29×12.15. Guards:
   // `picture_sizing::auto_opened_picture_is_sized_from_its_box`,
   // `node_box_append::*`.
+  // Perl latex_constructs.pool.ltxml:4943 `autoOpen => 0.5`: a picture loses the
+  // auto-open path to a full auto-opener (`ltx:para`, `ltx:text`).
   Tag!("ltx:picture",
-    auto_open  => true,
+    auto_open  => 0.5,
     auto_close => true,
     after_open => sub[document, node] {
       document.generate_id(node, "pic")?;

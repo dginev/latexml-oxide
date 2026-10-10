@@ -157,6 +157,7 @@ mod perfect_kernel_batch64ra;
 mod perfect_kernel_batch64s;
 mod perfect_kernel_batch64u;
 mod perfect_kernel_batch64w;
+mod perfect_kernel_batch64x;
 mod perfect_kernel_batch64y;
 mod perfect_kernel_batch64zb;
 mod perfect_kernel_batch64zc;

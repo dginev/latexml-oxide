@@ -1,0 +1,23 @@
+% witness: 1507.03892, 1510.07042, 1807.03003, 1908.00100 (~155 run-336 papers)
+% oracle:  pdflatex with the paper's PoS.cls (not in TeX Live): none from these lines — its 3 errors (PoS.cls 2017's
+%          two color-stack errors at \begin{document} under TL2025, the absent PoSlogo) are the bare document's too;
+%          \apj prints "ApJ"
+% engines: rust 64s = 1 Error:unexpected:} (the PoS binding loaded JHEP's `\apj{}{}{}`: the \newcommand refused, \apj
+%          read three arguments); Perl 0.8.8 the same (PERL-ORIGIN: PoS.cls.ltxml LoadClass JHEP)
+% expect:  0 errors; the reference reads "ApJ 297 (1985) 166" inside its <ref> (PoS loads JHEP without its journal
+%          macros, which PoS.cls does not define)
+% status:  RED (64s) -> GREEN (64x)
+% preload: ar5iv.sty
+\documentclass{PoS}
+\newcommand{\apj}{ApJ}
+\title{T}
+\ShortTitle{T}
+\author{A. Author\\ Affil\\ E-mail: \email{a@b.c}}
+\abstract{An abstract.}
+\FullConference{Conf\\ 1-2 April 2018\\ Place}
+\begin{document}
+\maketitle
+\providecommand{\href}[2]{#2}\begingroup\raggedright
+\href{https://doi.org/10.1086/163513}{\emph{\apj} {\bfseries 297} (1985) 166}.
+\endgroup
+\end{document}

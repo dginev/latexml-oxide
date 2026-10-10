@@ -3926,6 +3926,10 @@ pub fn before_digest_bibliography() -> Result<()> {
   seal_digested_frontmatter();
   AssignValue!("inPreamble" => false);
   Digest!("\\@lx@inbibliographytrue")?;
+  // an explicit bibliography: not the lonely one a natbib `\bibitem` opened (sect11.rs `\lx@bibliography@lonely`)
+  assign_value("lx_bibliography_lonely", false, Some(Scope::Global));
+  // …nor does natbib's pending entry stop of an earlier one (`\@bibstop`, natbib.sty:880-905) carry into its first entry
+  Let!("\\@bibstop", "\\@undefined");
   def_macro_noop("\\bibliographystyle{}")?;
   def_macro_noop("\\bibliography {}")?;
   // avoid \let-based redefinitions of the ending.

@@ -1431,6 +1431,15 @@ pub(crate) fn load() -> Result<()> {
     "\\endabstract",
     "\\lx@end@abstract\\let\\maybe@end@abstract\\relax"
   );
+  // Locked against the class and package files (`:locked@files`, state.rs `is_name_locked`) with the
+  // kernel's `\abstract`, which is locked against everyone (Perl locks an environment's pair,
+  // Package.pm:1993-1997; its own `\endabstract`, latex_constructs.pool.ltxml:1144, is not): a
+  // package's `\def\abstract{…\begingroup…}` was refused while its `\def\endabstract{\par\endgroup…}`
+  // (IMjournal.sty:81/83) was taken, ending the kernel's abstract by closing a group it never opened
+  // (1702.00108, 2304.05575; ~40 of 56 sampled run-336 papers). The document's own `\endabstract` stays
+  // its own: an author's `\beginabstract … \endabstract` pair (gr-qc9405068, gr-qc9406008) is not the
+  // kernel's.
+  AssignValue!("\\endabstract:locked@files" => true, Some(Scope::Global));
   DefMacro!("\\maybe@end@abstract", "\\lx@end@abstract");
   DefMacro!(
     "\\lx@abstract@name",
@@ -1443,11 +1452,13 @@ pub(crate) fn load() -> Result<()> {
   // `\renewcommand{\abstractname}{\centering {\large Abstract}}`, digesting the name
   // leaks `\centering`'s constructor reversion as literal text (`\centeringAbstract`);
   // Perl leaks it identically. Neutralize alignment declarations inside a group during
-  // name extraction, mirroring the `titlepage` `Let('\centering','\relax')` precedent.
+  // name extraction, mirroring the `titlepage` neutralization of `\centering` (below):
+  // a no-op macro (`\@empty`), not `\relax`, so a `\begin{centering}` still finds it
+  // defined (LaTeX's `\begin` takes a `\relax` meaning for an undefined environment).
   // Font-size/series primitives (`\large`, `\bfseries`) already produce no text leak.
   DefMacro!(
     "\\format@title@abstract{}",
-    "{\\let\\centering\\relax\\let\\raggedright\\relax\\let\\raggedleft\\relax#1}"
+    "{\\let\\centering\\@empty\\let\\raggedright\\@empty\\let\\raggedleft\\@empty#1}"
   );
 
   // Hmm, titlepage is likely to be hairy, low-level markup,
@@ -1490,7 +1501,13 @@ pub(crate) fn load() -> Result<()> {
       Ok(map)
     },
     before_digest => {
-      Let!("\\centering", "\\relax");
+      // Perl latex_constructs.pool.ltxml:1168 lets `\centering` to `\relax`, which the
+      // `\begin` of a `\begin{centering}` inside the titlepage then takes for an undefined
+      // environment (Perl :193-207, LaTeX's `\@ifundefined`), an Error pdflatex never
+      // raises: the real `{titlepage}` leaves `\centering` alone. A no-op macro keeps the
+      // neutralization and the environment defined. Witnesses hep-th9703192,
+      // cond-mat9607110, hep-lat0402021 (run 336, ~1,078 papers).
+      Let!("\\centering", "\\@empty");
       assign_value("frontmatter_deferred", true, Some(Scope::Global));
       AddToMacro!("\\lx@maketitle@body", "\\unwind@titlepage");
       // In titlepage, abstract is simpler: direct body. The

@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#506** (64zd, 64x and 64ze hold drafts; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#512** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
 
 ---
 
@@ -6240,17 +6240,33 @@ to catch exactly this, but it only inspects the IMMEDIATELY-previous box; the pr
 whitespace boxes displace the phantom from that check, so it survives. Same-host Perl emits
 the identical phantom (verified byte-identical on arXiv 2605.03143).
 
-**Rust behavior**: a `Tag!("ltx:bibitem", after_close_late)` scrub (`latex_constructs.rs`)
-removes any bibitem that has no non-empty `key` attribute AND whose `<ltx:bibblock>`s are all
-whitespace — i.e. the auto-opened phantom. A real `\bibitem` always carries a key, so real
-entries are never touched. A surpass over the shared Perl failure.
+**Rust behavior**: `prune_phantom_entries` (`latex_constructs/sect11.rs`), run at the
+`ltx:bibliography`'s close and again at the `ltx:document`'s close, removes every phantom
+`ltx:bibitem` inside — in a list, a float or table, an entry's tag, a nested entry, or outside
+any bibliography — last first, then the auto-opened `ltx:biblist`s left empty
+(`remove_emptied_lists`). A phantom (`is_phantom_entry`) has no non-empty `key`, no label of the
+author's (`\bibitem[Baker(2001)]{}`: the `_labelled` mark, kernel and natbib), and blocks — or
+no `ltx:bibblock` at all — holding no non-whitespace text and no element but `ltx:text` (a font
+run: a `{\small` group before the first `\bibitem`, 0801.2060) and `ltx:pagination`. Keyless entries are the norm in an aas
+`\references` (each paragraph an entry), so an entry holding a figure panel, a formula or a rule
+is content. The entry the recovery opens for a paragraph no `\bibitem` or `\item` starts
+(`\lx@pseudo@bibitem`) takes an unnumbered id and no label — only a TeX `\item` or `\bibitem` steps
+the counter — so pruning it leaves no gap in the numbers. No entry removes itself in its own close hook: a removed node ends the document's
+close walk there (Document.pm:1243-1247), leaving its ancestors' close hooks unrun. A surpass over
+the shared Perl failure.
 
-**Why it's safe.** The discriminator (no `key` + whitespace-only bibblocks) matches only the
-auto-opened phantom; a citeable reference always has a key and real bibblock text. The real
-entries keep their `xml:id`s and keys (cross-references key on the key, not the id).
+**Why it's safe.** The discriminator matches only an entry that prints nothing but its label: no key, no
+author label, nothing but its tags and blocks, and in the blocks no text and no element other than
+an empty font run (`ltx:text`) or a page break. Keyed entries keep their keys (cross-references key
+on the key). Their `xml:id`s can change: with the recovery's entries unnumbered, a `.bbl` preamble
+no longer consumes `bib.bib1`, so on ACM-Reference-Format papers (2106.12714, 2605.03143) every
+entry moves from `bib.bib(N+1)` to `bib.bibN`, matching its printed number.
 
 **Witnesses**: arXiv 2605.03143 (ACM-Reference-Format `.bbl`, empty `(1)` before 23 real
-entries). Guard `cluster_bib_preamble_no_phantom_entry`.
+entries); 2301.05139 (20 nested), astro-ph0102416 (in a figure and a table; its Figure 2 panels
+kept), 0904.3343 (in a tag), 2403.05651 (after the bibliography). Guards
+`cluster_bib_preamble_no_phantom_entry`, `perfect_kernel_batch64x::phantom_entries_are_pruned_anywhere`,
+`perfect_kernel_batch64x::keyless_entries_with_content_are_kept`.
 
 **Upstream**: to be filed at brucemiller/LaTeXML (the `.bbl`-preamble phantom bibitem should
 be pruned; the existing digest-time guard misses it when whitespace intervenes).
@@ -15454,3 +15470,63 @@ for, are bound instead (author content first; widened A/B of 400 option-stratifi
 hep-th9610159; their `\address` an affiliation, as Perl's iopart_support.sty.ltxml:53 takes iopart's, routed by a
 leading mark as REVTeX's `\affiliation`, hep-lat9806004) and AASTeX's substyles `aas2pp4`, `aaspptwo`, `apjpt4`, `aj_pt4` as the aaspp binding (astro-ph9703136,
 astro-ph9303008, astro-ph9801307).
+
+### 506. A bibliography a `\bibitem` opens outside any bibliography takes the author's heading line as its title, else none (Perl: `\refname`)
+
+User ruling 2026-10-10. Perl titles every bibliography `\refname`. For a bibliography a `\bibitem` opens outside any
+bibliography (kernel and natbib), ours takes the author's heading line before it as the title and removes it from the
+body. A heading line is a paragraph whose only content is one run of ≤4 words (a full stop only after one word), with
+only text runs inside, styled apart from the paragraph's font: bold, small caps, ≥1.15× size (`\large`+) or underlined,
+not italic. Otherwise the bibliography has no visible title and no table-of-contents entry (`toc` dropped from
+`inlist`). Either way the lists its `\bibitem`s were taken from, emptied, go. Section headings are absorbed as OD #456;
+an explicit `{thebibliography}` is unchanged. Trigger: `\noindent{\bf Literature}\begin{enumerate}\bibitem{a}
+A.\end{enumerate}`. Open: heading styles the paragraph's own font already carries are not absorbed (fail safe).
+
+### 507. `ltx:biblist` reopens, and the phantom-entry prune runs at the bibliography's and the document's close (Perl: autoClose only)
+
+`ltx:biblist` has `auto_open => 0.5` (Perl autoClose only); `TagOptions.auto_open` carries Perl's fraction. The OD #155
+phantom-entry prune runs at the bibliography's close and at the document's close over every keyless blank
+`ltx:bibitem` inside (lists, floats, tables, tags, nested entries, or outside any bibliography), followed by the removal
+of auto-opened `ltx:biblist`s left empty. No hook removes the node it closes (Document.pm:1243-1247 stops there).
+
+### 508. AMS-TeX `\end` ends the document unless followed by `{`
+
+AMS-TeX's `\end` is `\lx@end@document` unless followed by `{`, a consequence of routing amsppt through LaTeX
+(amstex.tex). Witness 1008.3855 (4 entries written after `\end` are, as in TeX, not typeset).
+
+### 509. `\endabstract` is locked against redefinition from files (Perl: unlocked)
+
+`\endabstract:locked@files`: a package's `\endabstract` no longer replaces the kernel's (Perl's is unlocked).
+Witness 1606.05599 (its bibliography and abstract are reached again).
+
+### 510. Only a TeX `\item` or `\bibitem` steps the bibliography counter (Perl: recovery entries are numbered)
+
+As pdflatex: the entry the recovery opens for a paragraph (`\lx@pseudo@bibitem`, Perl `\save@bibitem{}`) takes an
+unnumbered id and no label; `\par@in@bibliography` makes no entry before an `\item`; no number is given back on a prune
+(an author's `\item` before `\bibitem{d}` prints an empty [4] and d is [5], as pdflatex). natbib's `\bibitem` keeps its
+place (opens no bibliography) only among its list's own items: an itemization is bound, the environment that bound it
+(`itemization_environment`, set by `begin_itemize`) is the current one, and it has an `\item` already (RED repro
+index-bib/natbib_bibitem_among_list_items, SYNC K21). Id shift (user ruling 2026-10-11, accepted): on
+ACM-Reference-Format `.bbl`-preamble papers (2106.12714, 2605.03143; ~78% of 2020+ acmart papers) entries move from
+`bib.bib(N+1)` to `bib.bibN`, so ids and tags match pdflatex's printed numbers; Perl numbers the pseudo entry
+(`\save@bibitem{}`, latex_constructs.pool.ltxml:4058); `bib.bibxN` is Perl's unnumbered scheme (Package.pm:857-872).
+
+### 511. natbib's `\bibitem` outside any list reports Lonely `\item` and still recovers a bibliography; `\bibliography` is given back after it
+
+natbib's `\bibitem` outside any list (no itemization bound, current environment not center, flushleft, flushright,
+quote, quotation or verse) reports Perl's `Error:malformed:ltx:bibitem` with its own wording "\bibitem outside any list
+(LaTeX: Lonely \item--perhaps a missing list environment); opening a bibliography", once per `\bibitem` (pdflatex's
+Lonely `\item`, latex.ltx:16041-16043; Perl reports the misplaced element instead), and the bibliography is still
+recovered. A sectioning command or `\maketitle` ends that bibliography at digestion (`\lx@bibliography@unlonely` on
+`\@startsection@hook`), dropping natbib's pending `\@bibstop`, as a bibliography's own setup now also does. Every
+bibliography `\lx@mung@bibliography` opens (in the document body or another environment, out of an author's
+`{enumerate}`/`{itemize}`/`{description}`, or in a class's `\let` of `\thebibliography`) gives
+`\bibliography`/`\bibliographystyle` back right after its setup (Perl latex_constructs.pool.ltxml:3839-3840 leaves them
+no-ops to the end of the enclosing group): a later `.bbl` bibliography prints, and a `\bibliography` inside such a list
+runs, as in pdflatex. The end of the environment it opens in is saved once, by a marker of its own
+(`\lx@mung@saved@<env>@done`), an environment without `\end<env>` (`{small}`) included. Witnesses 1108.2593 (40 Lonely
+Errors, bibliography structure kept), 1411.7266 (CS18's open `\acknowledgments` list: 10 → 0). Trigger:
+`\usepackage{natbib}\begin{document}x\bibitem{a} A.\bibitem{b} B.\end{document}` → 2 Errors (pdflatex 2). Guards
+`perfect_kernel_batch64x::{natbib_bibitem_in_the_document_body_is_reported,
+natbib_bibitem_in_a_class_references_environment, bibliography_after_an_implicit_one_is_printed,
+lonely_bibliography_does_not_reach_the_next_document}`.

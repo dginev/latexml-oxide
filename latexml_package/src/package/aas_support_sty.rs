@@ -463,10 +463,24 @@ LoadDefinitions!({
   // malformed:ltx:bibitem cluster. The attributes and the title are Perl's (aas_support.sty.ltxml:289-293): the
   // AAS `{references}` heading (aaspp4.sty:207 `\subsection*{REFERENCES}`, astro-ph9701025), which a bare `<ltx:bibliography>` dropped once
   // OmniBus no longer replaced this `\references` (astro-ph9708112, astro-ph9510040, `[11pt,aaspp4,tighten]{article}`).
+  // …and before its body, the bibliography's own setup as revtex4_support's and OmniBus's `\references` have it
+  // (`before_digest_bibliography`, Perl latex_constructs.pool.ltxml:3837-3844): with `\if@lx@inbibliography` unset, a
+  // `\bibitem` that opens a bibliography when none is open (the kernel's, natbib's) opened a second one, leaving
+  // this one's list empty (paspconf's `\reference`, astro-ph9909358).
   DefConstructor!(
     "\\references",
     "<ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
        <ltx:title>#title</ltx:title><ltx:biblist>",
+    before_digest => {
+      // …but, opening no group, not its `\bibliography`/`\bibliographystyle` no-ops, which would last to the end of the
+      // document and drop a real bibliography read later from the `.bbl` (Perl's `\references` runs no such setup,
+      // aas_support.sty.ltxml:289-293). Repro index-bib/aas_references_then_real_bibliography.
+      Let!("\\lx@aas@saved@bibliography", "\\bibliography");
+      Let!("\\lx@aas@saved@bibliographystyle", "\\bibliographystyle");
+      engine::latex_constructs::before_digest_bibliography()?;
+      Let!("\\bibliography", "\\lx@aas@saved@bibliography");
+      Let!("\\bibliographystyle", "\\lx@aas@saved@bibliographystyle");
+    },
     after_digest => sub[whatsit] {
       engine::latex_constructs::begin_bibliography(whatsit)?;
     }

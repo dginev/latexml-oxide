@@ -1203,7 +1203,13 @@ pub(super) fn make_engine() -> Engine {
     let mut options = latexml_core::document::tag::TagOptions::default();
     for (key, val) in opts {
       match key.as_str() {
-        "autoOpen" => options.auto_open = val.as_bool().ok(),
+        "autoOpen" => {
+          options.auto_open = val
+            .as_bool()
+            .map(Into::into)
+            .or_else(|_| val.as_float().map(Into::into))
+            .ok()
+        },
         "autoClose" => options.auto_close = val.as_bool().ok(),
         _ => {},
       }

@@ -435,7 +435,15 @@ pub(crate) fn load() -> Result<()> {
   // the kernel's own, for `\lx@mung@bibliography` when a class has `\let` its list over it
   Let!("\\lx@kernel@thebibliography", "\\thebibliography");
   // auto close the bibliography and contained biblist.
-  Tag!("ltx:biblist",      auto_close => true);
+  // …and reopen a list for a `\bibitem` that follows what closed it: a float or a closed
+  // list between the entries (a figure is no `ltx:biblist` child) left the next
+  // `ltx:bibitem` with no list to go in — an Error, Perl's too (it declares `autoClose`
+  // only, latex_constructs.pool.ltxml:4020), where pdflatex prints one list. Half
+  // openability (Perl's fractional `autoOpen`, as `ltx:picture`'s) keeps it off every path
+  // a full auto-opener serves: text in the bibliography still opens an `ltx:para`, only
+  // the bibliography entries (`ltx:bibitem`, `ltx:bibentry`) open a list. Witnesses
+  // astro-ph9806175, 2103.15495, 0801.2060.
+  Tag!("ltx:biblist",      auto_open => 0.5, auto_close => true);
   // arXiv-fork: the bibliography joins the navigation TOC (its xml:id is
   // assigned by the bibliography machinery itself, so only inlist here) —
   // unless it is hidden (`ltx_nodisplay`, `lx@bibliography@class`).
@@ -447,10 +455,26 @@ pub(crate) fn load() -> Result<()> {
       {
         document.set_attribute(node, "inlist", "toc")?;
       }
+      // opened by a `\bibitem` outside any bibliography (`\lx@mung@bibliography@pre{implicit}`)
+      if lookup_bool("lx_bibliography_opened_implicitly") {
+        assign_value("lx_bibliography_opened_implicitly", false, Some(Scope::Global));
+        document.set_attribute(node, "_implicit", "true")?;
+      }
     },
     after_close => sub[document, node] {
-      absorb_bibliography_heading(document, node)?;
+      prune_phantom_entries(document, node);
+      remove_emptied_lists(document, node);
+      if !absorb_bibliography_heading(document, node)? && node.has_attribute("_implicit") {
+        head_implicit_bibliography(document, node)?;
+      }
     });
+  // …and those a bibliography's close did not reach: after it (2403.05651's nested `{thebibliography}` ends the outer
+  // one, the blank line before its `\end` makes an entry under `<document>`). None removes itself, so the close walk
+  // reaches every open element (Document.pm:1243-1247).
+  Tag!("ltx:document", after_close => sub[document, node] {
+    prune_phantom_entries(document, node);
+    remove_emptied_lists(document, node);
+  });
 
   DefMacro!("\\par@in@bibliography", {
     skip_spaces()?;
@@ -458,16 +482,39 @@ pub(crate) fn load() -> Result<()> {
       // If next token is another \par, or a REAL \bibitem,
       // then this \par expands into what followed
       // Else, put it back, and start a bibitem.
-      if tok == T_CS!("\\par") || tok == T_CS!("\\bibitem") {
+      // …and `\item`, an entry start as `\bibitem` is (Perl latex_constructs.pool.ltxml:4041-4049 names `\par` and
+      // `\bibitem` only): a blank line before it makes no entry of its own.
+      // Only the bibliography's own list's `\item` (`{thebibliography}`'s): in one a `\bibitem` opened out of an author's
+      // list (`\lx@mung@bibliography`) the `\item` is that list's, which keeps Perl's path.
+      let own_item = tok == T_CS!("\\item") && !lookup_bool("lx_bibliography_from_list");
+      if tok == T_CS!("\\par") || tok == T_CS!("\\bibitem") || own_item {
         Ok(Tokens!(tok))
       } else {
         unread_one(tok);
-        Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
+        Ok(Tokens!(T_CS!("\\lx@pseudo@bibitem")))
       }
     } else {
-      Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
+      Ok(Tokens!(T_CS!("\\lx@pseudo@bibitem")))
     }
   });
+  // The entry the recovery opens for a paragraph no `\bibitem` or `\item` starts (Perl's `\save@bibitem{}`,
+  // latex_constructs.pool.ltxml:4047): only a TeX `\item` or `\bibitem` steps the bibliography's counter, so it takes
+  // an unnumbered id and no label — an aas `\references` paragraph prints none (aasms4.sty `\refpar`), a `.bbl`
+  // preamble's none at all (2605.03143) — and pruning it, empty (`prune_phantom_entries`), leaves no gap.
+  DefConstructor!("\\lx@pseudo@bibitem", "<ltx:bibitem xml:id='#id'><ltx:bibblock>",
+    enter_horizontal => true,
+    properties => { RefStepID!("@bibitem") },
+    after_digest => sub[_whatsit] {
+      // one right after another (blank lines around a float's material, 0801.2060): the first is empty, pruned
+      // as `\lx@bibitem` prunes its empty predecessor (Perl #2403), not placed to be pruned later
+      let empty_prev = with_box_list(|list| {
+        list.last().is_some_and(|prev| matches!(prev.data(), DigestedData::Whatsit(ws)
+          if ws.borrow().get_definition().get_cs().to_string() == "\\lx@pseudo@bibitem"))
+      });
+      if empty_prev {
+        with_box_list_mut_vec(|list| { list.pop(); });
+      }
+    });
   def_macro_noop("\\vskip@in@bibliography Glue")?;
   DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
 
@@ -495,7 +542,7 @@ pub(crate) fn load() -> Result<()> {
     locked=>true);
   // Perl latex_constructs.pool.ltxml L4134-4162: enterHorizontal => 1 + afterDigest.
   DefConstructor!("\\lx@bibitem[] Semiverbatim",
-    "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
+    "<ltx:bibitem key='#key' xml:id='#id' _labelled='#labelled'>#tags<ltx:bibblock>",
     enter_horizontal => true,
     after_digest => sub[whatsit] {
       // Perl #2409: prune previous \lx@bibitem whatsit if it was auto-opened
@@ -510,6 +557,12 @@ pub(crate) fn load() -> Result<()> {
               && prev_ws.get_arg(1).is_none()
               && prev_ws.get_arg(2).is_none_or(|a| a.is_empty().unwrap_or(true))
             {
+              return true;
+            }
+            // …and the recovery's own entry (`\lx@pseudo@bibitem`), empty when the box before this one: Perl's
+            // `\save@bibitem{}` was an `\lx@bibitem` this prune caught; pruned only later, at the bibliography's
+            // close, it is placed first, where it may not go (0801.2060).
+            if cs_str == "\\lx@pseudo@bibitem" {
               return true;
             }
           }
@@ -531,6 +584,8 @@ pub(crate) fn load() -> Result<()> {
           RefStepID!("@bibitem")?
         };
         properties.insert("key", key.into());
+        // the author's own label (`\bibitem[Baker(2001)]{}`): a printed entry however empty (`is_phantom_entry`)
+        properties.insert("labelled", "true".into());
         let mut tag_tokens = vec![
             T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
         tag_tokens.extend(Revert!(tag));
@@ -556,23 +611,46 @@ pub(crate) fn load() -> Result<()> {
   // spurious empty "(N)" entry before the real references. The digest-time prune in the
   // `\lx@bibitem` afterDigest only inspects the IMMEDIATELY-previous box, which the
   // preamble whitespace displaces, so it misses this one — scrub it here after
-  // construction instead. A real `\bibitem` always carries a key; a keyless bibitem whose
-  // `<bibblock>`s are all whitespace is the phantom. SHARED with Perl (both engines emit
-  // it) — a surpass. Witness arXiv 2605.03143. OXIDIZED_DESIGN #155.
-  Tag!("ltx:bibitem", after_close_late => sub[document, node] {
-    let has_key = node.get_attribute("key").is_some_and(|k| !k.trim().is_empty());
-    if !has_key {
-      let blank = node
-        .get_child_elements()
-        .iter()
-        .filter(|c| document::get_node_qname(c) == pin!("ltx:bibblock"))
-        .all(|bb| bb.get_content().trim().is_empty());
-      if blank {
-        document.remove_node(node.clone());
+  // construction instead. The phantom: a keyless, unlabelled bibitem whose `<bibblock>`s hold no
+  // text and no element but a page break (`is_phantom_entry`). SHARED with Perl (both engines emit
+  // it) — a surpass. Witness arXiv 2605.03143. OXIDIZED_DESIGN #155. Done when the bibliography
+  // closes (`prune_phantom_entries`), not in the entry's own close: a node its after-close hook
+  // removes ends the document's close walk there (Document.pm:1243-1247, `parentNode` of a
+  // removed node is a fragment), leaving the lists and the bibliography above it unclosed.
+
+  // The bibliography a natbib `\bibitem` in no list opened (natbib_sty.rs `\lx@NAT@bibitem@check`): each later
+  // `\bibitem` there is as lonely as the first (LaTeX's "Lonely \item"; repro index-bib/natbib_bibitem_in_document_body).
+  DefPrimitive!("\\lx@bibliography@lonely", {
+    assign_value("lx_bibliography_lonely", true, Some(Scope::Global));
+  });
+  // …until the next sectioning command, which closes it (`ltx:bibliography` auto-closes): a `\bibitem` after that is
+  // lonely again and opens one of its own, one Error each as LaTeX's (a natbib `\bibitem` before and after a `\section`:
+  // pdflatex 2). Read at digestion, where the bibliography's close (a construction) cannot tell it. The hook also runs
+  // from `\maketitle` (sect05.rs `\lx@maketitle@body`), after which a `\bibitem` is as lonely. Repros
+  // index-bib/natbib_bibitem_in_document_body, index-bib/natbib_bibitem_in_size_environment_twice; guard
+  // `natbib_bibitem_in_the_document_body_is_reported`.
+  DefPrimitive!("\\lx@bibliography@unlonely", {
+    if lookup_bool("lx_bibliography_lonely") {
+      assign_value("lx_bibliography_lonely", false, Some(Scope::Global));
+      Digest!("\\@lx@inbibliographyfalse")?;
+      // natbib's pending entry stop (`\BibitemShut{NoStop}`'s `\@bibstop`, natbib.sty:880-905) goes with it: the
+      // bibliography's `\lx@bibliography@postamble` that would have spent it never runs, and the next `\bibitem`'s
+      // `\bibitem@fin` would put the first bibliography's "." at the head of the second.
+      Let!("\\@bibstop", "\\@undefined");
+      if x_equals(&T_CS!("\\bibitem"), &T_CS!("\\restoring@bibitem")) {
+        Let!("\\bibitem", "\\save@bibitem");
+        Let!("\\par", "\\save@par");
+        Let!("\\\\", "\\save@backbackslash");
       }
     }
   });
-
+  AddToMacro!("\\@startsection@hook", "\\lx@bibliography@unlonely");
+  // The bibliography a `\bibitem` opens out of an author's list, in the group standing for that list (below): an
+  // `\item` there is that list's, on Perl's path, not one of the bibliography's own (hep-ph9804413's `{enumerate}` of
+  // `\bibitem`s; repro index-bib/kernel_bibitem_list_items_stay).
+  DefPrimitive!("\\lx@bibliography@from@list", {
+    assign_value("lx_bibliography_from_list", true, None);
+  });
   // This attempts to handle the case where folks put \bibitem's within an enumerate or such.
   // We try to close the list and open the bibliography
   DefMacro!("\\lx@mung@bibliography{}", sub[(env)] {
@@ -580,11 +658,15 @@ pub(crate) fn load() -> Result<()> {
     let mut tokens = Vec::new();
     // If we're in some sort of list environment, maybe we can recover
     if tag == "enumerate" || tag == "itemize" || tag == "description" {
-      tokens.extend(Invocation!("\\end", vec![env]).unlist());
+      // Ending the list ends its group, with the definitions the author made in it, which TeX keeps until their own
+      // `\end{<list>}` (2205.07302: a `\newcommand{\enquote}` in the `{description}`; RED repro
+      // index-bib/bibitem_list_local_definition — the list's whole body is one captured whatsit).
+      tokens.extend(Invocation!("\\end", vec![env.clone()]).unlist());
       tokens.extend(vec![
         // the group the author's `\end{<list>}` closes, its own having been ended above, which also undoes the
         // `\let`s, so a later list of that kind is itself again (KNOWN_PERL_ERRORS #513)
         T_CS!("\\begingroup"),
+        T_CS!("\\lx@bibliography@from@list"),
         T_CS!("\\let"),
         T_CS!(format!("\\end{tag}")),
         T_CS!("\\endthebibliography"),
@@ -610,35 +692,47 @@ pub(crate) fn load() -> Result<()> {
     // (OXIDIZED_DESIGN_DIVERGENCES #484, KNOWN_PERL_ERRORS #569). The saved end is `\csname end<env>\endcsname`,
     // `\relax` for an environment with none (`{small}`).
     else if !tag.is_empty() {
-      let end_env = T_CS!(format!("\\end{tag}"));
-      tokens.extend([
-        T_CS!("\\expandafter"),
-        T_CS!("\\let"),
-        T_CS!("\\expandafter"),
-        T_CS!("\\lx@mung@saved@end"),
-        T_CS!("\\csname"),
-      ]);
-      tokens.extend(Explode!(format!("end{tag}")));
-      tokens.extend([
-        T_CS!("\\endcsname"),
-        T_CS!("\\def"),
-        end_env,
-        T_BEGIN!(),
-        T_CS!("\\saved@endthebibliography"),
-        T_CS!("\\lx@mung@saved@end"),
-        T_END!(),
-      ]);
+      // saved once per environment, as its own marker says (`lx@mung@saved@<env>@done`): a second `\bibitem` that
+      // opens a bibliography in the same one (after a `\section` closed the first) must not save the end it made,
+      // which would call itself — nor may the saved end itself be the test, being `\relax` for an environment with
+      // none (`{small}`). Repros index-bib/natbib_bibitem_in_document_body (`\enddocument`) and
+      // index-bib/natbib_bibitem_in_size_environment_twice (`{small}`).
+      tokens.extend(mouth::tokenize_internal(TeXString::assembled(format!(
+        r"\expandafter\ifx\csname lx@mung@saved@{tag}@done\endcsname\relax\expandafter\let\csname lx@mung@saved@{tag}@done\endcsname\@empty\expandafter\let\csname lx@mung@saved@end@{tag}\expandafter\endcsname\csname end{tag}\endcsname\expandafter\def\csname end{tag}\endcsname{{\saved@endthebibliography\csname lx@mung@saved@end@{tag}\endcsname}}\fi"
+      ))).unlist());
     }
     // Then open the kernel's bibliography: not `\thebibliography`, which a class's `\let` may have made its own list
-    // (the loop above).
+    // (the loop above). Opened by the `\bibitem` alone — not by an author's `{thebibliography}` — it is headed as the
+    // PDF heads it, not with `\refname` (`head_implicit_bibliography`).
+    tokens.extend(mouth::tokenize_internal(TeXString::assembled(
+      r"\let\lx@mung@saved@bibliography\bibliography\let\lx@mung@saved@bibliographystyle\bibliographystyle".to_string(),
+    )).unlist());
     tokens.push(T_CS!("\\lx@mung@bibliography@pre"));
+    tokens.push(T_BEGIN!());
+    if tag != "thebibliography" {
+      tokens.extend(Explode!("implicit"));
+    }
+    tokens.push(T_END!());
     tokens.push(T_CS!("\\lx@kernel@thebibliography"));
+    // …whose setup (`before_digest_bibliography`, Perl latex_constructs.pool.ltxml:3839-3840) makes `\bibliography` and
+    // `\bibliographystyle` do nothing, for the bibliography environment's group. Opened here without one of its own,
+    // that would last to the end of the enclosing group — the document's — and drop the author's real bibliography
+    // read later from the `.bbl` (Perl drops it too for the kernel's `\bibitem`); they are theirs again, so that
+    // bibliography opens its own `{thebibliography}`, as pdflatex prints it. Repros
+    // index-bib/natbib_bibitem_then_real_bibliography, index-bib/kernel_bibitem_then_real_bibliography.
+    tokens.extend(mouth::tokenize_internal(TeXString::assembled(
+      r"\let\bibliography\lx@mung@saved@bibliography\let\bibliographystyle\lx@mung@saved@bibliographystyle".to_string(),
+    )).unlist());
     Ok(Tokens::new(tokens))
   });
   // Perl: maybeCloseElement($tag) if tag =~ /^ltx:(?:itemize|enumerate|description)$/
   // The unit the `\bibitem` opens the bibliography in is marked: the PDF prints its heading over the entries, the
   // bibliography's own being LaTeXML's (`absorb_bibliography_heading`).
-  DefConstructor!("\\lx@mung@bibliography@pre", sub[document] {
+  DefConstructor!("\\lx@mung@bibliography@pre{}", sub[document, args, _props] {
+    // whether the bibliography opened next is the `\bibitem`'s own (`head_implicit_bibliography`): set
+    // afresh here, so one that failed to open is not taken for the next
+    let implicit = args.first().and_then(|a| a.as_ref()).is_some_and(|a| a.to_string() == "implicit");
+    assign_value("lx_bibliography_opened_implicitly", implicit, Some(Scope::Global));
     let parent     = document.get_node();
     let tag_sym    = model::get_node_qname(parent);
     with(tag_sym, |tag|
@@ -1370,20 +1464,20 @@ fn is_empty_block(node: &Node) -> bool {
 /// titled as the bibliography is; or, holding nothing else, when the bibliography has no title
 /// (`\renewcommand\refname{}`) or the `\bibitem`s opened the bibliography in it — the PDF prints that heading over
 /// them, not `\refname`. Its heading (tags, title, toctitle) and labels replace the bibliography's own, its other content goes
-/// before the entries, and the unit is removed.
-fn absorb_bibliography_heading(document: &mut Document, bibliography: &Node) -> Result<()> {
+/// before the entries, and the unit is removed. Whether it did.
+fn absorb_bibliography_heading(document: &mut Document, bibliography: &Node) -> Result<bool> {
   if bibliography
     .get_attribute("class")
     .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_nodisplay"))
   {
-    return Ok(());
+    return Ok(false);
   }
   // The unit just before the bibliography in document order: its previous sibling, or that one's last unit, …
   let Some(mut unit) = bibliography.get_prev_element_sibling() else {
-    return Ok(());
+    return Ok(false);
   };
   if !is_heading_unit(&unit) {
-    return Ok(());
+    return Ok(false);
   }
   while let Some(last) = unit.get_last_element_child()
     && is_heading_unit(&last)
@@ -1392,7 +1486,7 @@ fn absorb_bibliography_heading(document: &mut Document, bibliography: &Node) -> 
   }
   let unit_title = heading_text(&unit);
   if unit_title.is_empty() {
-    return Ok(());
+    return Ok(false);
   }
   let (heading, rest): (Vec<Node>, Vec<Node>) = unit
     .get_child_elements()
@@ -1406,13 +1500,13 @@ fn absorb_bibliography_heading(document: &mut Document, bibliography: &Node) -> 
   if !(unit_title == bibliography_title
     || ((bibliography_title.is_empty() || opened_here) && body.is_empty()))
   {
-    return Ok(());
+    return Ok(false);
   }
   if !body
     .iter()
     .all(|n| document::can_contain_node(bibliography, n))
   {
-    return Ok(());
+    return Ok(false);
   }
   for own in bibliography
     .get_child_elements()
@@ -1448,7 +1542,233 @@ fn absorb_bibliography_heading(document: &mut Document, bibliography: &Node) -> 
     document.set_attribute(&mut target, "labels", &labels.join(" "))?;
   }
   document.remove_node(unit);
+  Ok(true)
+}
+
+/// The phantom entries (OXIDIZED_DESIGN #155, the `ltx:bibitem` note above) anywhere inside `root` — wherever the
+/// `\par` that made one put it: in a list, in a float or table inside the bibliography (astro-ph0102416), in an entry's
+/// tag (0904.3343, physics0603210), in an entry whose block it opened inside (2301.05139: 20, 0801.2060, 1007.2457),
+/// after the bibliography (2403.05651, swept at the document's close). Last first, so an entry holding only phantoms is
+/// one when it is reached.
+fn prune_phantom_entries(document: &mut Document, root: &Node) {
+  let entries = document.findnodes("descendant::ltx:bibitem", Some(root));
+  for entry in entries.into_iter().rev() {
+    if is_phantom_entry(document, &entry) {
+      document.remove_node(entry);
+    }
+  }
+}
+
+/// A phantom entry: no key, no label of the author's (`\bibitem[Baker(2001)]{}` prints its label: `_labelled`, kernel
+/// and natbib), and blocks (none at all, too) holding no text, only font runs (a `{\small` group before the first
+/// `\bibitem`, 0801.2060) and page breaks — keyless entries are the norm in an aas `\references`, and one holding a
+/// figure panel (astro-ph0102416: 12 of Figure 2's, astro-ph9902080 `heating.ps`), a formula, a rule, a reference, a
+/// citation, a line break or an error mark is content.
+fn is_phantom_entry(document: &mut Document, entry: &Node) -> bool {
+  if entry
+    .get_attribute("key")
+    .is_some_and(|k| !k.trim().is_empty())
+    || entry.has_attribute("_labelled")
+    // anything but its tags and blocks (a float the `\par` opened it in, malformed) is not the phantom's to remove
+    || !entry.get_child_elements().iter().all(|c| {
+      with(model::get_node_qname(c), |q| q == "ltx:tags" || q == "ltx:bibblock")
+    })
+  {
+    return false;
+  }
+  let blocks: Vec<Node> = entry
+    .get_child_elements()
+    .into_iter()
+    .filter(|c| document::get_node_qname(c) == pin!("ltx:bibblock"))
+    .collect();
+  blocks.iter().all(|block| {
+    block.get_content().trim().is_empty()
+      && document
+        .findnodes("descendant::*", Some(block))
+        .iter()
+        .all(|n| {
+          with(model::get_node_qname(n), |q| {
+            q == "ltx:text" || q == "ltx:pagination"
+          })
+        })
+  })
+}
+
+/// A list auto-opened in the bibliography only for a phantom entry — the keyless `\save@bibitem{}` that a blank line or
+/// `\\` after a float makes (`\par@in@bibliography`), pruned (`prune_phantom_entries`) — is left with
+/// nothing, and goes with it (astro-ph0307431 left 21 empty lists, 0803.0740 14), when the bibliography closes.
+/// The list the bibliography itself opens (`\thebibliography`'s `<ltx:biblist>`) is not auto-opened and stays, empty or
+/// not.
+fn remove_emptied_lists(document: &mut Document, root: &Node) {
+  for list in document.findnodes("descendant::ltx:biblist", Some(root)) {
+    if is_emptied_list(&list) {
+      document.remove_node(list);
+    }
+  }
+}
+
+/// An auto-opened `ltx:biblist` with no entry left (`remove_emptied_lists`).
+fn is_emptied_list(list: &Node) -> bool {
+  with(model::get_node_qname(list), |q| q == "ltx:biblist")
+    && list.has_attribute("_autoopened")
+    && list.get_child_elements().is_empty()
+}
+
+/// A bibliography a `\bibitem` opened outside any bibliography (`\lx@mung@bibliography`, kernel and natbib alike) that no
+/// unit heads (`absorb_bibliography_heading`) is headed as the PDF heads it, not with LaTeXML's `\refname` (user ruling
+/// 2026-10-10; Perl always titles it `\refname`): the author's heading line just before it (`heading_line_run`: "{\bf
+/// References}", 2003.07967, 2306.17386, 0806.0831; "Figure Captions", hep-ph9804413, hep-ph9804388) becomes its title and
+/// leaves the body, else it has no visible title and no table-of-contents entry (quant-ph9706037, 1708.06608; pdflatex
+/// lists nothing for it). The `ltx:bibliography` stays either way, and the lists its `\bibitem`s were taken from,
+/// emptied, go (their labels to it).
+fn head_implicit_bibliography(document: &mut Document, bibliography: &Node) -> Result<()> {
+  // the paragraph before it in document order, past the lists the `\bibitem`s were taken from (emptied) and into the
+  // unit it closed (the heading line ends a `\section`: 2003.07967, 2306.17386)
+  let mut emptied = Vec::new();
+  let mut previous = bibliography.get_prev_element_sibling();
+  while let Some(node) = previous.clone() {
+    if is_empty_block(&node) {
+      previous = node.get_prev_element_sibling();
+      emptied.push(node);
+    } else if is_heading_unit(&node) {
+      previous = node.get_last_element_child();
+    } else {
+      break;
+    }
+  }
+  // …and the emptied lists ending that paragraph (`Text.\begin{enumerate}\bibitem…`)
+  if let Some(paragraph) = &previous
+    && with(model::get_node_qname(paragraph), |q| q == "ltx:para")
+  {
+    let mut last = paragraph.get_last_element_child();
+    while let Some(node) = last
+      && is_empty_block(&node)
+    {
+      last = node.get_prev_element_sibling();
+      emptied.push(node);
+    }
+  }
+  let own_title = bibliography
+    .get_child_elements()
+    .into_iter()
+    .find(|c| with(model::get_node_qname(c), |q| q == "ltx:title"));
+  let heading = previous
+    .and_then(|paragraph| heading_line_run(document, &paragraph).map(|run| (paragraph, run)));
+  let mut labels: Vec<String> = Vec::new();
+  for block in emptied {
+    collect_labels(&block, &mut labels);
+    document.remove_node(block);
+  }
+  if let Some((paragraph, run)) = heading
+    && let Some(mut title) = own_title
+  {
+    for own in bibliography
+      .get_child_elements()
+      .into_iter()
+      .filter(|c| is_heading_part(c) && *c != title)
+    {
+      document.remove_node(own);
+    }
+    for old in title.get_child_nodes() {
+      document.remove_node(old);
+    }
+    document.append_clone(&mut title, run.get_child_nodes())?;
+    collect_labels(&paragraph, &mut labels);
+    document.remove_node(paragraph);
+  } else {
+    for own in bibliography
+      .get_child_elements()
+      .into_iter()
+      .filter(is_heading_part)
+    {
+      document.remove_node(own);
+    }
+    let mut target = bibliography.clone();
+    let lists: Vec<String> = target
+      .get_attribute("inlist")
+      .unwrap_or_default()
+      .split_whitespace()
+      .filter(|l| *l != "toc")
+      .map(str::to_string)
+      .collect();
+    if lists.is_empty() {
+      let _ = target.remove_attribute("inlist");
+    } else {
+      document.set_attribute(&mut target, "inlist", &lists.join(" "))?;
+    }
+  }
+  labels.extend(bibliography.get_attribute("labels"));
+  if !labels.is_empty() {
+    let mut target = bibliography.clone();
+    document.set_attribute(&mut target, "labels", &labels.join(" "))?;
+  }
   Ok(())
+}
+
+/// The heading line of the ruling (user 2026-10-10; "short heading-like styled line" as the coordinator read it): a
+/// paragraph whose only content is one run styled apart from the paragraph's text (`heading_styled`) of at most four
+/// words — ending in a full stop only as one word ("References.", not `{\bf This work was supported by NSF.}`) — with
+/// no math, citation or reference inside (only nested text runs), beside nothing but emptied lists; the run, if so. By
+/// structure alone, never by its words.
+fn heading_line_run(document: &Document, paragraph: &Node) -> Option<Node> {
+  if !with(model::get_node_qname(paragraph), |q| q == "ltx:para") {
+    return None;
+  }
+  let mut lines = paragraph
+    .get_child_elements()
+    .into_iter()
+    .filter(|c| !is_empty_block(c));
+  let line = lines.next()?;
+  if lines.next().is_some() || !with(model::get_node_qname(&line), |q| q == "ltx:p") {
+    return None;
+  }
+  let mut run = None;
+  for child in line.get_child_nodes() {
+    match child.get_type() {
+      Some(NodeType::ElementNode) => {
+        if run.replace(child).is_some() {
+          return None;
+        }
+      },
+      Some(NodeType::TextNode) if !child.get_content().trim().is_empty() => return None,
+      _ => {},
+    }
+  }
+  let run = run?;
+  let text = run.get_content();
+  let words = text.split_whitespace().count();
+  (with(model::get_node_qname(&run), |q| q == "ltx:text")
+    && (1..=4).contains(&words)
+    && (words == 1 || !text.trim_end().ends_with('.'))
+    && heading_styled(document, &run, paragraph)
+    && only_text_runs(&run))
+  .then_some(run)
+}
+
+/// Whether `run` is set apart from its paragraph's text as a heading is: bold, small capitals, `\large` or larger, or
+/// underlined — not italic (an `\emph`). Fonts are resolved at the document's finalization, after this close: the
+/// nodes' own.
+fn heading_styled(document: &Document, run: &Node, paragraph: &Node) -> bool {
+  let font = document.get_node_font(run);
+  let body = document.get_node_font(paragraph);
+  let is = |value: Option<&Cow<'_, str>>, style: &str| value.is_some_and(|v| v.contains(style));
+  let bold = is(font.get_series(), "bold") && !is(body.get_series(), "bold");
+  let small_caps = is(font.get_shape(), "smallcaps") && !is(body.get_shape(), "smallcaps");
+  // `\large` is 1.2 times the 10pt body (size10.clo), `\Large` 1.44
+  let larger =
+    matches!((font.get_size(), body.get_size()), (Some(run), Some(text)) if run >= text * 1.15);
+  let underlined = run
+    .get_attribute("class")
+    .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_underline"));
+  bold || small_caps || larger || underlined
+}
+
+/// Whether every element inside `node` is a text run (`ltx:text`): no math, citation, reference or other markup.
+fn only_text_runs(node: &Node) -> bool {
+  node
+    .get_child_elements()
+    .iter()
+    .all(|c| with(model::get_node_qname(c), |q| q == "ltx:text") && only_text_runs(c))
 }
 
 /// Is `node` of the front matter a unit's model takes before its heading (`FrontMatter.class`,

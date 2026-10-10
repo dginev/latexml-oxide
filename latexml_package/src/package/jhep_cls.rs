@@ -21,6 +21,141 @@ fn def_jhep_journal(cs: &str, body: &str) -> Result<()> {
   Ok(())
 }
 
+/// JHEP.cls's journal-citation macros (Perl JHEP.cls.ltxml L143-261): `\@spires`, the
+/// `\<journal>{vol}{year}{page}` aliases (`\apj`, `\prd`, …), `\jhep`, `\newjournal`,
+/// `\ibid` and the arXiv-archive links (`\hepth{}`, …, `\Math{}{}`). JHEP, JHEP2 and
+/// JHEP3 have them; PoS.cls, whose binding loads JHEP's as Perl's does (PoS.cls.ltxml
+/// LoadClass JHEP), defines none (it has its own `\href`, PoS.cls:247): a PoS paper's
+/// `\newcommand{\apj}{ApJ}` was refused and its `\apj` read three arguments, swallowing
+/// what followed (an `unexpected:}` Error: 1507.03892, 1510.07042, 1807.03003, 1908.00100).
+#[rustfmt::skip]
+fn def_jhep_journal_macros() -> Result<()> {
+  // Perl L143: SPIRES URL generator
+  DefMacro!("\\@spires{}", "\\href{http://www-spires.slac.stanford.edu/spires/find/hep/www?j=#1}");
+
+  // Journal abbreviation macros with SPIRES links — Perl L145-238.
+  // Faithful 1:1 list of every journal alias. All follow the same
+  // `\@spires{CODE%2C#1%2C#3}{{\it Name }{\bf #1} (#2) #3}` shape
+  // (JHEP and the `\href`-direct ones are the only exceptions).
+  def_jhep_journal("\\apa", "\\@spires{APASA\\%2C#1\\%2C#3}{{\\it Acta Phys.\\ Austriaca }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\apas", "\\@spires{APAUA\\%2C#1\\%2C#3}{{\\it Acta Phys.\\ Austriaca, Suppl.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\appol", "\\@spires{APPOA\\%2C#1\\%2C#3}{{\\it Acta Phys.\\ Polon.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\advm", "\\@spires{ADMTA\\%2C#1\\%2C#3}{{\\it Adv.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\adnp", "\\@spires{ANUPB\\%2C#1\\%2C#3}{{\\it Adv.\\ Nucl.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\adp", "\\@spires{ADPHA\\%2C#1\\%2C#3}{{\\it Adv.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\atmp", "\\@spires{00203\\%2C#1\\%2C#3}{{\\it Adv.\\ Theor.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\am", "\\@spires{ANMAA\\%2C#1\\%2C#3}{{\\it Ann.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ap", "\\@spires{APNYA\\%2C#1\\%2C#3}{{\\it Ann.\\ Phys.\\ (NY) }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\araa", "\\@spires{ARAAA\\%2C#1\\%2C#3}{{\\it Ann.\\ Rev.\\ Astron.\\ \\& Astrophys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\arnps", "\\@spires{ARNUA\\%2C#1\\%2C#3}{{\\it Ann.\\ Rev.\\ Nucl.\\ Part.\\ Sci.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\asas", "\\@spires{AAEJA\\%2C#1\\%2C#3}{{\\it Astron.\\ Astrophys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\asj", "\\@spires{ANJOA\\%2C#1\\%2C#3}{{\\it Astron.\\ J.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\app", "\\@spires{APHYE\\%2C#1\\%2C#3}{{\\it Astropart.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\apj", "\\@spires{ASJOA\\%2C#1\\%2C#3}{{\\it Astrophys.\\ J. }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\baas", "\\@spires{AASBA\\%2C#1\\%2C#3}{{\\it Bull.\\ Am.\\ Astron.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\bams", "\\@spires{BAMOA\\%2C#1\\%2C#3}{{\\it Bull.\\ Am.\\ Math.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\blms", "\\@spires{LMSBB\\%2C#1\\%2C#3}{{\\it Bull.\\ London Math.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\cjm", "\\@spires{CJMAA\\%2C#1\\%2C#3}{{\\it Can.\\ J.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\cqg", "\\@spires{CQGRD\\%2C#1\\%2C#3}{{\\it Class.\\ and Quant.\\ Grav.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\cmp", "\\@spires{CMPHA\\%2C#1\\%2C#3}{{\\it Commun.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ctp", "\\@spires{CTPMD\\%2C#1\\%2C#3}{{\\it Commun.\\ Theor.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\cag", "\\@spires{00142\\%2C#1\\%2C#3}{{\\it Commun.\\ Anal.\\ Geom.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\cpam", "\\@spires{CPAMA\\%2C#1\\%2C#3}{{\\it Commun.\\ Pure Appl.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
+  // Perl JHEP.cls.ltxml L169 — Computer Physics Communications journal alias
+  def_jhep_journal("\\cpc", "\\@spires{CPHCB\\%2C#1\\%2C#3}{{\\it Comput.\\ Phys.\\ Commun.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\dmj", "\\@spires{DUMJA\\%2C#1\\%2C#3}{{\\it Duke Math.\\ J. }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\epjc", "\\@spires{EPHJA\\%2CC#1\\%2C#3}{{\\it Eur.\\ Phys.\\ J. }{\\bf C #1} (#2) #3}")?;
+  def_jhep_journal("\\epjd", "\\@spires{EPHJD\\%2CC#1\\%2C#3}{{\\it Eur.\\ Phys.\\ J. Direct.\\ }{\\bf C #1} (#2) #3}")?;
+  def_jhep_journal("\\epl", "\\@spires{EULEE\\%2C#1\\%2C#3}{{\\it Europhys.\\ Lett. }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\forp", "\\@spires{FPYKA\\%2C#1\\%2C#3}{{\\it Fortschr.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\faa", "\\@spires{FAAPB\\%2C#1\\%2C#3}{{\\it Funct.\\ Anal.\\ Appl.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\grg", "\\@spires{GRGVA\\%2C#1\\%2C#3}{{\\it Gen.\\ Rel.\\ Grav.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\hpa", "\\@spires{HPACA\\%2C#1\\%2C#3}{{\\it Helv.\\ Phys.\\ Acta }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ijmpa", "\\@spires{IMPAE\\%2CA#1\\%2C#3}{{\\it Int.\\ J.\\ Mod.\\ Phys.\\ }{\\bf A #1} (#2) #3}")?;
+  def_jhep_journal("\\ijmpb", "\\@spires{IMPAE\\%2CB#1\\%2C#3}{{\\it Int.\\ J.\\ Mod.\\ Phys.\\ }{\\bf B #1} (#2) #3}")?;
+  def_jhep_journal("\\ijmpc", "\\@spires{IMPAE\\%2CC#1\\%2C#3}{{\\it Int.\\ J.\\ Mod.\\ Phys.\\ }{\\bf C #1} (#2) #3}")?;
+  def_jhep_journal("\\ijmpd", "\\@spires{IMPAE\\%2CD#1\\%2C#3}{{\\it Int.\\ J.\\ Mod.\\ Phys.\\ }{\\bf D #1} (#2) #3}")?;
+  def_jhep_journal("\\ijtp", "\\@spires{IJTPB\\%2CB#1\\%2C#3}{{\\it Int.\\ J.\\ Theor.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\invm", "\\@spires{INVMB\\%2C#1\\%2C#3}{{\\it Invent.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\jag", "\\@spires{00124\\%2C#1\\%2C#3}{{\\it J.\\ Alg.\\ Geom.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\jams", "\\@spires{00052\\%2C#1\\%2C#3}{{\\it J.\\ Am.\\ Math.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\jap", "\\@spires{JAPIA\\%2C#1\\%2C#3}{{\\it J.\\ Appl.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\jdg", "\\@spires{JDGEA\\%2C#1\\%2C#3}{{\\it J.\\ Diff.\\ Geom.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\jgp", "\\@spires{JGPHE\\%2C#1\\%2C#3}{{\\it J.\\ Geom.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  DefMacro!("\\jhep{}{}{}",   "\\href{http://jhep.sissa.it/stdsearch?paper=#1\\%28#2\\%29#3}{{\\it J. High Energy Phys.\\ }{\\bf #1} (#2) #3}");
+  def_jhep_journal("\\jmp", "\\@spires{JMAPA\\%2C#1\\%2C#3}{{\\it J.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\joth", "\\@spires{JOTHE\\%2C#1\\%2C#3}{{\\it J.\\ Operator Theory }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\jpha", "\\@spires{JPAGB\\%2CA#1\\%2C#3}{{\\it J. Phys.\\ }{\\bf A #1} (#2) #3}")?;
+  def_jhep_journal("\\jphc", "\\@spires{JPAGB\\%2CC#1\\%2C#3}{{\\it J. Phys.\\ }{\\bf C #1} (#2) #3}")?;
+  def_jhep_journal("\\jphg", "\\@spires{JPAGB\\%2CG#1\\%2C#3}{{\\it J. Phys.\\ }{\\bf G #1} (#2) #3}")?;
+  def_jhep_journal("\\lmp", "\\@spires{LMPHD\\%2CA#1\\%2C#3}{{\\it Lett.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ncl", "\\@spires{NCLTA\\%2C#1\\%2C#3}{{\\it Lett.\\ Nuovo Cim.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\matan", "\\@spires{MAANA\\%2CA#1\\%2C#3}{{\\it Math.\\ Ann.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\mussr", "\\@spires{MUSIA\\%2CA#1\\%2C#3}{{\\it Math.\\ USSR Izv.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\mams", "\\@spires{MAMCA\\%2CA#1\\%2C#3}{{\\it Mem.\\ Am.\\ Math.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\mpla", "\\@spires{MPLAE\\%2CA#1\\%2C#3}{{\\it Mod.\\ Phys.\\ Lett.\\ }{\\bf A #1} (#2) #3}")?;
+  def_jhep_journal("\\mplb", "\\@spires{MPLAE\\%2CB#1\\%2C#3}{{\\it Mod.\\ Phys.\\ Lett.\\ }{\\bf B #1} (#2) #3}")?;
+  def_jhep_journal("\\nature", "\\@spires{NATUA\\%2C#1\\%2C#3}{{\\it Nature }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\nim", "\\@spires{NUIMA\\%2C#1\\%2C#3}{{\\it Nucl.\\ Instrum.\\ Meth.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\npa", "\\@spires{NUPHA\\%2CA#1\\%2C#3}{{\\it Nucl.\\ Phys.\\ }{\\bf A #1} (#2) #3}")?;
+  def_jhep_journal("\\npb", "\\@spires{NUPHA\\%2CB#1\\%2C#3}{{\\it Nucl.\\ Phys.\\ }{\\bf B #1} (#2) #3}")?;
+  def_jhep_journal("\\npps", "\\@spires{NUPHZ\\%2C#1\\%2C#3}{{\\it Nucl.\\ Phys.\\ }{\\bf #1} {\\it(Proc.\\ Suppl.)} (#2) #3}")?;
+  def_jhep_journal("\\nc", "\\@spires{NUCIA\\%2C#1\\%2C#3}{{\\it Nuovo Cim.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ncs", "\\@spires{NUCUA\\%2C#1\\%2C#3}{{\\it Nuovo Cim.\\ Suppl.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\pan", "\\@spires{PANUE\\%2C#1\\%2C#3}{{\\it Phys.\\ Atom.\\ Nucl.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\pla", "\\@spires{PHLTA\\%2CA#1\\%2C#3}{{\\it Phys.\\ Lett.\\ }{\\bf A #1} (#2) #3}")?;
+  def_jhep_journal("\\plb", "\\@spires{PHLTA\\%2CB#1\\%2C#3}{{\\it Phys.\\ Lett.\\ }{\\bf B #1} (#2) #3}")?;
+  def_jhep_journal("\\pr", "\\@spires{PHRVA\\%2C#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\pra", "\\@spires{PHRVA\\%2CA#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf A #1} (#2) #3}")?;
+  def_jhep_journal("\\prb", "\\@spires{PHRVA\\%2CB#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf B #1} (#2) #3}")?;
+  def_jhep_journal("\\prc", "\\@spires{PHRVA\\%2CC#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf C #1} (#2) #3}")?;
+  def_jhep_journal("\\prd", "\\@spires{PHRVA\\%2CD#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf D #1} (#2) #3}")?;
+  def_jhep_journal("\\pre", "\\@spires{PHRVA\\%2CE#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf E #1} (#2) #3}")?;
+  def_jhep_journal("\\prep", "\\@spires{PRPLC\\%2C#1\\%2C#3}{{\\it Phys.\\ Rept.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\prl", "\\@spires{PRLTA\\%2C#1\\%2C#3}{{\\it Phys.\\ Rev.\\ Lett.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\phys", "\\@spires{PHYSA\\%2CA#1\\%2C#3}{{\\it Physica }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\plms", "\\@spires{PHLTA\\%2CB#1\\%2C#3}{{\\it Proc.\\ London Math.\\ Soc.\\ }{\\bf B #1} (#2) #3}")?;
+  def_jhep_journal("\\pnas", "\\@spires{PNASA\\%2C#1\\%2C#3}{{\\it Proc.\\ Nat.\\ Acad.\\ Sci.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ppnp", "\\@spires{PPNPD\\%2C#1\\%2C#3}{{\\it Prog.\\ Part.\\ Nucl.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ptp", "\\@spires{PTPKA\\%2C#1\\%2C#3}{{\\it Prog.\\ Theor.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ptps", "\\@spires{PTPSA\\%2C#1\\%2C#3}{{\\it Prog.\\ Theor.\\ Phys.\\ Suppl.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\rmp", "\\@spires{RMPHA\\%2C#1\\%2C#3}{{\\it Rev.\\ Mod.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\sjnp", "\\@spires{SJNCA\\%2C#1\\%2C#3}{{\\it Sov.\\ J.\\ Nucl.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\sjpn", "\\@spires{SJPNA\\%2C#1\\%2C#3}{{\\it Sov.\\ J.\\ Part.\\ Nucl.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\jetp", "\\@spires{SPHJA\\%2C#1\\%2C#3}{{\\it Sov.\\ Phys.\\ JETP\\/ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\jetpl", "\\@spires{JTPLA\\%2C#1\\%2C#3}{{\\it Sov.\\ Phys.\\ JETP Lett.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\spu", "\\@spires{SOPUA\\%2C#1\\%2C#3}{{\\it Sov.\\ Phys.\\ Usp.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\tmf", "\\@spires{TMFZA\\%2C#1\\%2C#3}{{\\it Teor.\\ Mat.\\ Fiz.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\tmp", "\\@spires{TMPHA\\%2C#1\\%2C#3}{{\\it Theor.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ufn", "\\@spires{UFNAA\\%2C#1\\%2C#3}{{\\it Usp.\\ Fiz.\\ Nauk.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\ujp", "\\@spires{00267\\%2C#1\\%2C#3}{{\\it Ukr.\\ J.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\yf", "\\@spires{YAFIA\\%2C#1\\%2C#3}{{\\it Yad.\\ Fiz.\\ }{\\bf #1} (#2) #3}")?;
+  def_jhep_journal("\\zpc", "\\@spires{ZEPYA\\%2CC#1\\%2C#3}{{\\it Z.\\ Physik }{\\bf C #1} (#2) #3}")?;
+  def_jhep_journal("\\zetf", "\\@spires{ZETFA\\%2C#1\\%2C#3}{{\\it Zh.\\ Eksp.\\ Teor.\\ Fiz.\\ }{\\bf #1} (#2) #3}")?;
+  DefMacro!("\\newjournal{}{}{}{}{}", "\\@spires{#2\\%2C#3\\%2C#5}{{\\it #1 }{\\bf #3} (#4) #5}");
+  DefMacro!("\\ibid{}{}{}",   "{\\it ibid.\\ }{\\bf #1} (#2) #3");
+
+  // arXiv category links — Perl L244-261
+  DefMacro!("\\hepth{}",   "\\href{http://xxx.lanl.gov/abs/hep-th/#1}{\\tt hep-th/#1}");
+  DefMacro!("\\hepph{}",   "\\href{http://xxx.lanl.gov/abs/hep-ph/#1}{\\tt hep-ph/#1}");
+  DefMacro!("\\heplat{}",  "\\href{http://xxx.lanl.gov/abs/hep-lat/#1}{\\tt hep-lat/#1}");
+  DefMacro!("\\hepex{}",   "\\href{http://xxx.lanl.gov/abs/hep-ex/#1}{\\tt hep-ex/#1}");
+  DefMacro!("\\nuclth{}",  "\\href{http://xxx.lanl.gov/abs/nucl-th/#1}{\\tt nucl-th/#1}");
+  DefMacro!("\\nuclex{}",  "\\href{http://xxx.lanl.gov/abs/nucl-ex/#1}{\\tt nucl-ex/#1}");
+  DefMacro!("\\grqc{}",    "\\href{http://xxx.lanl.gov/abs/gr-qc/#1}{\\tt gr-qc/#1}");
+  DefMacro!("\\qalg{}",    "\\href{http://xxx.lanl.gov/abs/q-alg/#1}{\\tt q-alg/#1}");
+  DefMacro!("\\accphys{}", "\\href{http://xxx.lanl.gov/abs/accphys/#1}{\\tt accphys/#1}");
+  DefMacro!("\\alggeom{}", "\\href{http://xxx.lanl.gov/abs/alg-geom/#1}{\\tt alg-geom/#1}");
+  DefMacro!("\\astroph{}", "\\href{http://xxx.lanl.gov/abs/astro-ph/#1}{\\tt astro-ph/#1}");
+  DefMacro!("\\chaodyn{}", "\\href{http://xxx.lanl.gov/abs/chao-dyn/#1}{\\tt chao-dyn/#1}");
+  DefMacro!("\\condmat{}", "\\href{http://xxx.lanl.gov/abs/cond-mat/#1}{\\tt cond-mat/#1}");
+  DefMacro!("\\nlinsys{}", "\\href{http://xxx.lanl.gov/abs/nlin-sys/#1}{\\tt nlin-sys/#1}");
+  DefMacro!("\\quantph{}", "\\href{http://xxx.lanl.gov/abs/quant-ph/#1}{\\tt quant-ph/#1}");
+  DefMacro!("\\solvint{}", "\\href{http://xxx.lanl.gov/abs/solv-int/#1}{\\tt solv-int/#1}");
+  DefMacro!("\\Math{}{}", "\\href{http://xxx.lanl.gov/abs/math.#1/#2}{\\tt math.#1/#2}");
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L26-35: Class options
@@ -196,129 +331,11 @@ LoadDefinitions!({
   def_macro_noop("\\base Semiverbatim")?;
   def_macro_noop("\\name Semiverbatim")?;
 
-  // Perl L143: SPIRES URL generator
-  DefMacro!("\\@spires{}", "\\href{http://www-spires.slac.stanford.edu/spires/find/hep/www?j=#1}");
-
-  // Journal abbreviation macros with SPIRES links — Perl L145-238.
-  // Faithful 1:1 list of every journal alias. All follow the same
-  // `\@spires{CODE%2C#1%2C#3}{{\it Name }{\bf #1} (#2) #3}` shape
-  // (JHEP and the `\href`-direct ones are the only exceptions).
-  def_jhep_journal("\\apa", "\\@spires{APASA\\%2C#1\\%2C#3}{{\\it Acta Phys.\\ Austriaca }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\apas", "\\@spires{APAUA\\%2C#1\\%2C#3}{{\\it Acta Phys.\\ Austriaca, Suppl.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\appol", "\\@spires{APPOA\\%2C#1\\%2C#3}{{\\it Acta Phys.\\ Polon.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\advm", "\\@spires{ADMTA\\%2C#1\\%2C#3}{{\\it Adv.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\adnp", "\\@spires{ANUPB\\%2C#1\\%2C#3}{{\\it Adv.\\ Nucl.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\adp", "\\@spires{ADPHA\\%2C#1\\%2C#3}{{\\it Adv.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\atmp", "\\@spires{00203\\%2C#1\\%2C#3}{{\\it Adv.\\ Theor.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\am", "\\@spires{ANMAA\\%2C#1\\%2C#3}{{\\it Ann.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ap", "\\@spires{APNYA\\%2C#1\\%2C#3}{{\\it Ann.\\ Phys.\\ (NY) }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\araa", "\\@spires{ARAAA\\%2C#1\\%2C#3}{{\\it Ann.\\ Rev.\\ Astron.\\ \\& Astrophys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\arnps", "\\@spires{ARNUA\\%2C#1\\%2C#3}{{\\it Ann.\\ Rev.\\ Nucl.\\ Part.\\ Sci.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\asas", "\\@spires{AAEJA\\%2C#1\\%2C#3}{{\\it Astron.\\ Astrophys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\asj", "\\@spires{ANJOA\\%2C#1\\%2C#3}{{\\it Astron.\\ J.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\app", "\\@spires{APHYE\\%2C#1\\%2C#3}{{\\it Astropart.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\apj", "\\@spires{ASJOA\\%2C#1\\%2C#3}{{\\it Astrophys.\\ J. }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\baas", "\\@spires{AASBA\\%2C#1\\%2C#3}{{\\it Bull.\\ Am.\\ Astron.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\bams", "\\@spires{BAMOA\\%2C#1\\%2C#3}{{\\it Bull.\\ Am.\\ Math.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\blms", "\\@spires{LMSBB\\%2C#1\\%2C#3}{{\\it Bull.\\ London Math.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\cjm", "\\@spires{CJMAA\\%2C#1\\%2C#3}{{\\it Can.\\ J.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\cqg", "\\@spires{CQGRD\\%2C#1\\%2C#3}{{\\it Class.\\ and Quant.\\ Grav.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\cmp", "\\@spires{CMPHA\\%2C#1\\%2C#3}{{\\it Commun.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ctp", "\\@spires{CTPMD\\%2C#1\\%2C#3}{{\\it Commun.\\ Theor.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\cag", "\\@spires{00142\\%2C#1\\%2C#3}{{\\it Commun.\\ Anal.\\ Geom.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\cpam", "\\@spires{CPAMA\\%2C#1\\%2C#3}{{\\it Commun.\\ Pure Appl.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
-  // Perl JHEP.cls.ltxml L169 — Computer Physics Communications journal alias
-  def_jhep_journal("\\cpc", "\\@spires{CPHCB\\%2C#1\\%2C#3}{{\\it Comput.\\ Phys.\\ Commun.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\dmj", "\\@spires{DUMJA\\%2C#1\\%2C#3}{{\\it Duke Math.\\ J. }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\epjc", "\\@spires{EPHJA\\%2CC#1\\%2C#3}{{\\it Eur.\\ Phys.\\ J. }{\\bf C #1} (#2) #3}")?;
-  def_jhep_journal("\\epjd", "\\@spires{EPHJD\\%2CC#1\\%2C#3}{{\\it Eur.\\ Phys.\\ J. Direct.\\ }{\\bf C #1} (#2) #3}")?;
-  def_jhep_journal("\\epl", "\\@spires{EULEE\\%2C#1\\%2C#3}{{\\it Europhys.\\ Lett. }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\forp", "\\@spires{FPYKA\\%2C#1\\%2C#3}{{\\it Fortschr.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\faa", "\\@spires{FAAPB\\%2C#1\\%2C#3}{{\\it Funct.\\ Anal.\\ Appl.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\grg", "\\@spires{GRGVA\\%2C#1\\%2C#3}{{\\it Gen.\\ Rel.\\ Grav.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\hpa", "\\@spires{HPACA\\%2C#1\\%2C#3}{{\\it Helv.\\ Phys.\\ Acta }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ijmpa", "\\@spires{IMPAE\\%2CA#1\\%2C#3}{{\\it Int.\\ J.\\ Mod.\\ Phys.\\ }{\\bf A #1} (#2) #3}")?;
-  def_jhep_journal("\\ijmpb", "\\@spires{IMPAE\\%2CB#1\\%2C#3}{{\\it Int.\\ J.\\ Mod.\\ Phys.\\ }{\\bf B #1} (#2) #3}")?;
-  def_jhep_journal("\\ijmpc", "\\@spires{IMPAE\\%2CC#1\\%2C#3}{{\\it Int.\\ J.\\ Mod.\\ Phys.\\ }{\\bf C #1} (#2) #3}")?;
-  def_jhep_journal("\\ijmpd", "\\@spires{IMPAE\\%2CD#1\\%2C#3}{{\\it Int.\\ J.\\ Mod.\\ Phys.\\ }{\\bf D #1} (#2) #3}")?;
-  def_jhep_journal("\\ijtp", "\\@spires{IJTPB\\%2CB#1\\%2C#3}{{\\it Int.\\ J.\\ Theor.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\invm", "\\@spires{INVMB\\%2C#1\\%2C#3}{{\\it Invent.\\ Math.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\jag", "\\@spires{00124\\%2C#1\\%2C#3}{{\\it J.\\ Alg.\\ Geom.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\jams", "\\@spires{00052\\%2C#1\\%2C#3}{{\\it J.\\ Am.\\ Math.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\jap", "\\@spires{JAPIA\\%2C#1\\%2C#3}{{\\it J.\\ Appl.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\jdg", "\\@spires{JDGEA\\%2C#1\\%2C#3}{{\\it J.\\ Diff.\\ Geom.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\jgp", "\\@spires{JGPHE\\%2C#1\\%2C#3}{{\\it J.\\ Geom.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  DefMacro!("\\jhep{}{}{}",   "\\href{http://jhep.sissa.it/stdsearch?paper=#1\\%28#2\\%29#3}{{\\it J. High Energy Phys.\\ }{\\bf #1} (#2) #3}");
-  def_jhep_journal("\\jmp", "\\@spires{JMAPA\\%2C#1\\%2C#3}{{\\it J.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\joth", "\\@spires{JOTHE\\%2C#1\\%2C#3}{{\\it J.\\ Operator Theory }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\jpha", "\\@spires{JPAGB\\%2CA#1\\%2C#3}{{\\it J. Phys.\\ }{\\bf A #1} (#2) #3}")?;
-  def_jhep_journal("\\jphc", "\\@spires{JPAGB\\%2CC#1\\%2C#3}{{\\it J. Phys.\\ }{\\bf C #1} (#2) #3}")?;
-  def_jhep_journal("\\jphg", "\\@spires{JPAGB\\%2CG#1\\%2C#3}{{\\it J. Phys.\\ }{\\bf G #1} (#2) #3}")?;
-  def_jhep_journal("\\lmp", "\\@spires{LMPHD\\%2CA#1\\%2C#3}{{\\it Lett.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ncl", "\\@spires{NCLTA\\%2C#1\\%2C#3}{{\\it Lett.\\ Nuovo Cim.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\matan", "\\@spires{MAANA\\%2CA#1\\%2C#3}{{\\it Math.\\ Ann.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\mussr", "\\@spires{MUSIA\\%2CA#1\\%2C#3}{{\\it Math.\\ USSR Izv.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\mams", "\\@spires{MAMCA\\%2CA#1\\%2C#3}{{\\it Mem.\\ Am.\\ Math.\\ Soc.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\mpla", "\\@spires{MPLAE\\%2CA#1\\%2C#3}{{\\it Mod.\\ Phys.\\ Lett.\\ }{\\bf A #1} (#2) #3}")?;
-  def_jhep_journal("\\mplb", "\\@spires{MPLAE\\%2CB#1\\%2C#3}{{\\it Mod.\\ Phys.\\ Lett.\\ }{\\bf B #1} (#2) #3}")?;
-  def_jhep_journal("\\nature", "\\@spires{NATUA\\%2C#1\\%2C#3}{{\\it Nature }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\nim", "\\@spires{NUIMA\\%2C#1\\%2C#3}{{\\it Nucl.\\ Instrum.\\ Meth.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\npa", "\\@spires{NUPHA\\%2CA#1\\%2C#3}{{\\it Nucl.\\ Phys.\\ }{\\bf A #1} (#2) #3}")?;
-  def_jhep_journal("\\npb", "\\@spires{NUPHA\\%2CB#1\\%2C#3}{{\\it Nucl.\\ Phys.\\ }{\\bf B #1} (#2) #3}")?;
-  def_jhep_journal("\\npps", "\\@spires{NUPHZ\\%2C#1\\%2C#3}{{\\it Nucl.\\ Phys.\\ }{\\bf #1} {\\it(Proc.\\ Suppl.)} (#2) #3}")?;
-  def_jhep_journal("\\nc", "\\@spires{NUCIA\\%2C#1\\%2C#3}{{\\it Nuovo Cim.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ncs", "\\@spires{NUCUA\\%2C#1\\%2C#3}{{\\it Nuovo Cim.\\ Suppl.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\pan", "\\@spires{PANUE\\%2C#1\\%2C#3}{{\\it Phys.\\ Atom.\\ Nucl.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\pla", "\\@spires{PHLTA\\%2CA#1\\%2C#3}{{\\it Phys.\\ Lett.\\ }{\\bf A #1} (#2) #3}")?;
-  def_jhep_journal("\\plb", "\\@spires{PHLTA\\%2CB#1\\%2C#3}{{\\it Phys.\\ Lett.\\ }{\\bf B #1} (#2) #3}")?;
-  def_jhep_journal("\\pr", "\\@spires{PHRVA\\%2C#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\pra", "\\@spires{PHRVA\\%2CA#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf A #1} (#2) #3}")?;
-  def_jhep_journal("\\prb", "\\@spires{PHRVA\\%2CB#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf B #1} (#2) #3}")?;
-  def_jhep_journal("\\prc", "\\@spires{PHRVA\\%2CC#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf C #1} (#2) #3}")?;
-  def_jhep_journal("\\prd", "\\@spires{PHRVA\\%2CD#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf D #1} (#2) #3}")?;
-  def_jhep_journal("\\pre", "\\@spires{PHRVA\\%2CE#1\\%2C#3}{{\\it Phys.\\ Rev.\\ }{\\bf E #1} (#2) #3}")?;
-  def_jhep_journal("\\prep", "\\@spires{PRPLC\\%2C#1\\%2C#3}{{\\it Phys.\\ Rept.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\prl", "\\@spires{PRLTA\\%2C#1\\%2C#3}{{\\it Phys.\\ Rev.\\ Lett.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\phys", "\\@spires{PHYSA\\%2CA#1\\%2C#3}{{\\it Physica }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\plms", "\\@spires{PHLTA\\%2CB#1\\%2C#3}{{\\it Proc.\\ London Math.\\ Soc.\\ }{\\bf B #1} (#2) #3}")?;
-  def_jhep_journal("\\pnas", "\\@spires{PNASA\\%2C#1\\%2C#3}{{\\it Proc.\\ Nat.\\ Acad.\\ Sci.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ppnp", "\\@spires{PPNPD\\%2C#1\\%2C#3}{{\\it Prog.\\ Part.\\ Nucl.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ptp", "\\@spires{PTPKA\\%2C#1\\%2C#3}{{\\it Prog.\\ Theor.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ptps", "\\@spires{PTPSA\\%2C#1\\%2C#3}{{\\it Prog.\\ Theor.\\ Phys.\\ Suppl.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\rmp", "\\@spires{RMPHA\\%2C#1\\%2C#3}{{\\it Rev.\\ Mod.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\sjnp", "\\@spires{SJNCA\\%2C#1\\%2C#3}{{\\it Sov.\\ J.\\ Nucl.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\sjpn", "\\@spires{SJPNA\\%2C#1\\%2C#3}{{\\it Sov.\\ J.\\ Part.\\ Nucl.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\jetp", "\\@spires{SPHJA\\%2C#1\\%2C#3}{{\\it Sov.\\ Phys.\\ JETP\\/ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\jetpl", "\\@spires{JTPLA\\%2C#1\\%2C#3}{{\\it Sov.\\ Phys.\\ JETP Lett.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\spu", "\\@spires{SOPUA\\%2C#1\\%2C#3}{{\\it Sov.\\ Phys.\\ Usp.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\tmf", "\\@spires{TMFZA\\%2C#1\\%2C#3}{{\\it Teor.\\ Mat.\\ Fiz.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\tmp", "\\@spires{TMPHA\\%2C#1\\%2C#3}{{\\it Theor.\\ Math.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ufn", "\\@spires{UFNAA\\%2C#1\\%2C#3}{{\\it Usp.\\ Fiz.\\ Nauk.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\ujp", "\\@spires{00267\\%2C#1\\%2C#3}{{\\it Ukr.\\ J.\\ Phys.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\yf", "\\@spires{YAFIA\\%2C#1\\%2C#3}{{\\it Yad.\\ Fiz.\\ }{\\bf #1} (#2) #3}")?;
-  def_jhep_journal("\\zpc", "\\@spires{ZEPYA\\%2CC#1\\%2C#3}{{\\it Z.\\ Physik }{\\bf C #1} (#2) #3}")?;
-  def_jhep_journal("\\zetf", "\\@spires{ZETFA\\%2C#1\\%2C#3}{{\\it Zh.\\ Eksp.\\ Teor.\\ Fiz.\\ }{\\bf #1} (#2) #3}")?;
-  DefMacro!("\\newjournal{}{}{}{}{}", "\\@spires{#2\\%2C#3\\%2C#5}{{\\it #1 }{\\bf #3} (#4) #5}");
-  DefMacro!("\\ibid{}{}{}",   "{\\it ibid.\\ }{\\bf #1} (#2) #3");
-
-  // arXiv category links — Perl L244-261
-  DefMacro!("\\hepth{}",   "\\href{http://xxx.lanl.gov/abs/hep-th/#1}{\\tt hep-th/#1}");
-  DefMacro!("\\hepph{}",   "\\href{http://xxx.lanl.gov/abs/hep-ph/#1}{\\tt hep-ph/#1}");
-  DefMacro!("\\heplat{}",  "\\href{http://xxx.lanl.gov/abs/hep-lat/#1}{\\tt hep-lat/#1}");
-  DefMacro!("\\hepex{}",   "\\href{http://xxx.lanl.gov/abs/hep-ex/#1}{\\tt hep-ex/#1}");
-  DefMacro!("\\nuclth{}",  "\\href{http://xxx.lanl.gov/abs/nucl-th/#1}{\\tt nucl-th/#1}");
-  DefMacro!("\\nuclex{}",  "\\href{http://xxx.lanl.gov/abs/nucl-ex/#1}{\\tt nucl-ex/#1}");
-  DefMacro!("\\grqc{}",    "\\href{http://xxx.lanl.gov/abs/gr-qc/#1}{\\tt gr-qc/#1}");
-  DefMacro!("\\qalg{}",    "\\href{http://xxx.lanl.gov/abs/q-alg/#1}{\\tt q-alg/#1}");
-  DefMacro!("\\accphys{}", "\\href{http://xxx.lanl.gov/abs/accphys/#1}{\\tt accphys/#1}");
-  DefMacro!("\\alggeom{}", "\\href{http://xxx.lanl.gov/abs/alg-geom/#1}{\\tt alg-geom/#1}");
-  DefMacro!("\\astroph{}", "\\href{http://xxx.lanl.gov/abs/astro-ph/#1}{\\tt astro-ph/#1}");
-  DefMacro!("\\chaodyn{}", "\\href{http://xxx.lanl.gov/abs/chao-dyn/#1}{\\tt chao-dyn/#1}");
-  DefMacro!("\\condmat{}", "\\href{http://xxx.lanl.gov/abs/cond-mat/#1}{\\tt cond-mat/#1}");
-  DefMacro!("\\nlinsys{}", "\\href{http://xxx.lanl.gov/abs/nlin-sys/#1}{\\tt nlin-sys/#1}");
-  DefMacro!("\\quantph{}", "\\href{http://xxx.lanl.gov/abs/quant-ph/#1}{\\tt quant-ph/#1}");
-  DefMacro!("\\solvint{}", "\\href{http://xxx.lanl.gov/abs/solv-int/#1}{\\tt solv-int/#1}");
-  DefMacro!("\\Math{}{}", "\\href{http://xxx.lanl.gov/abs/math.#1/#2}{\\tt math.#1/#2}");
+  // JHEP's own journal-citation interface (`def_jhep_journal_macros`) — not PoS's, which
+  // loads this class (pos_cls.rs) for everything else.
+  if !lookup_bool("JHEP@without@journal@macros") {
+    def_jhep_journal_macros()?;
+  }
 
   // Conditionals — Perl L267-291
   TeX!(r"

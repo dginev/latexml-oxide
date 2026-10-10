@@ -72,4 +72,5 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `graphics-tikz` | drawing: picture, pstricks, TikZ/pgf keys and nodes, SVG conversion, graphics inclusion |
 | `graphics-axodraw` | axodraw v1 Feynman diagrams (the native binding of its PostScript procedures) and the picture labels they place |
 | `math-parse` | the math parser: its grammar (signs, bigop operands, fences), cells' punctuation, math ligatures, unparsed-math reporting; green shapes live in `latexml_oxide/tests/parse/` (grouped golden pairs) |
+| `amstex` | AMS-TeX documents (`\input amstex`, `\documentstyle{amsppt}`) read under the LaTeX route: plain's `\end`, amstex.tex's own definitions (oracle: the `amstex` format) |
 | `singletons` | one-off package defects whose mechanism has no topic of its own |

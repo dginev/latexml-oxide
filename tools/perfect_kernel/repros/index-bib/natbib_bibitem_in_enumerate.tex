@@ -1,0 +1,17 @@
+% witness: quant-ph9706037, 1708.06608, 2003.07967, hep-ph0212045 (~230 run-336 papers)
+% oracle:  pdflatex 0 errors: an enumerate of two bibliography entries
+% engines: rust 64s = 2 Error:malformed (bibitem outside a bibliography); Perl 0.8.8 the same (PERL-ORIGIN:
+%          natbib.sty.ltxml:489-493 `\bibitem` lacks the kernel's latex_constructs.pool.ltxml:4074-4076 guard)
+% expect:  0 errors; an untitled <bibliography> (no heading in the PDF; user ruling 2026-10-10) whose <biblist> holds
+%          bibitems a and b; the emptied <enumerate/> is gone (`head_implicit_bibliography`)
+% status:  RED (64s) -> GREEN (64x)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \cite{a}.
+\begin{enumerate}
+\bibitem{a} Able, A title.
+\bibitem{b} Baker, B title.
+\end{enumerate}
+\end{document}

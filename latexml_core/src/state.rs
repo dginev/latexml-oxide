@@ -37,7 +37,10 @@ use crate::{
     expandable::{self, Expandable},
     register::{Register, RegisterValue},
   },
-  document::{resource::Resource, tag::TagOptions},
+  document::{
+    resource::Resource,
+    tag::{AutoOpen, TagOptions},
+  },
   gullet, mouth, pin,
   token::{Catcode, Token},
   tokens::{TeXString, Tokens},
@@ -4181,25 +4184,23 @@ pub fn compute_indirect_model() -> IndirectModel {
   let mut imodel: IndirectModel = SymHashMap::default();
   // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
   // Perl Document.pm L196-199 maps the `autoOpen` property to a fractional
-  // OPENABILITY. Most tags get 1.0; `ltx:picture` gets 0.5 (L4995) so it
+  // OPENABILITY. Most tags get 1.0; `ltx:picture` gets 0.5 (latex_constructs.pool.ltxml:4943) so it
   // loses path-priority against full auto-openers (para, p, text, item, …).
-  // We scale to u32 (100 = full, 50 = half) to keep integer arithmetic; the
-  // `desirability * openability / 100` recursion mirrors Perl's float math.
+  // We scale to u32 (100 = full, 50 = half, `AutoOpen`) to keep integer
+  // arithmetic; the `desirability * openability / 100` recursion mirrors
+  // Perl's float math. An openability of 0 is no auto-opener (Perl's falsy
+  // `$::OPENABILITY{$kid}`, L216).
   let mut openability: SymHashMap<u32> = SymHashMap::default();
   // Collect all known tags: from the schema model AND from state tag_properties
   let mut all_tags: HashSet<SymStr> = model::get_tags().into_iter().collect();
   for tag in state!().tag_properties.keys() {
     all_tags.insert(*tag);
   }
-  let picture_sym = pin!("ltx:picture");
   for tag in &all_tags {
     if let Some(x) = state!().tag_properties.get(tag)
-      && let Some(true) = x.auto_open
+      && let Some(AutoOpen(priority)) = x.auto_open
+      && priority > 0
     {
-      // Perl: Tag('ltx:picture', autoOpen => 0.5). All other autoOpen
-      // sites in the LaTeXML tree use `autoOpen => 1`, so a simple
-      // `tag == ltx:picture` check reproduces the fraction faithfully.
-      let priority = if *tag == picture_sym { 50u32 } else { 100u32 };
       openability.insert_sym(*tag, priority);
     }
   }

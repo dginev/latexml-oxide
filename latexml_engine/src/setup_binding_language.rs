@@ -2350,10 +2350,11 @@ macro_rules! defi_opts {
     -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_close_late ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  // auto_open: Option<bool>
+  // auto_open: Option<AutoOpen> — `true`, or a fraction (`0.5`) as in Perl
   (@munch ( $(,)? auto_open $(:)?$(=>)? $auto:literal $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_open @ $auto.into() ]})
+    defi_opts!(@munch ($($next)*)
+      -> {$kind, $( [ $key @ $val ] )* [ auto_open @ Some($auto.into()) ]})
   };
   // auto_close: Option<bool>
   (@munch ( $(,)? auto_close $(:)?$(=>)? $auto:literal $($next:tt)*)

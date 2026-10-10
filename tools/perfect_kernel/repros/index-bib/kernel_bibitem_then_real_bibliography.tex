@@ -1,0 +1,22 @@
+% witness: review of 64x round 9 (kbibafter): the kernel's \bibitem in the body, then the author's \bibliography
+% oracle:  pdflatex 3 errors (Lonely \item and its cascade) and prints the .bbl's Zed entry under References
+% engines: rust 64zc and Perl 0.8.8 drop Zed (Perl latex_constructs.pool.ltxml:3839-3840: the bibliography the \bibitem
+%          opens makes \bibliography a no-op, with no group to end it), 1 Error:malformed each
+% expect:  1 Error:malformed:ltx:bibitem (<ltx:p>, KPE #595's silent path); a bibliography with Able,
+%          then the .bbl's titled bibliography with Zed
+% status:  ERRORS KEPT (64x: beyond Perl, \bibliography and \bibliographystyle restored after the implicit bibliography opens)
+% preload: ar5iv.sty
+\documentclass{article}
+
+\begin{document}
+\section{Summary}
+Text \cite{a,z}.
+
+\bibitem{a} Able, A. 2011, ApJ.
+
+\section{Discussion}
+More text.
+
+\bibliographystyle{plain}
+\bibliography{kernel_bibitem_then_real_bibliography}
+\end{document}

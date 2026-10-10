@@ -4,6 +4,9 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: PoS.cls.ltxml — Proceedings of Science style.
   // LoadClass("JHEP", withoptions => 1);
+  // …without JHEP's journal-citation macros, which PoS.cls does not define (jhep_cls.rs
+  // `def_jhep_journal_macros`; witnesses 1507.03892, 1510.07042, 1807.03003, 1908.00100).
+  AssignValue!("JHEP@without@journal@macros" => true);
   load_class_with_options("JHEP", Tokens!())?;
   RequirePackage!("ifpdf");
   RequirePackage!("times");
@@ -20,4 +23,8 @@ LoadDefinitions!({
     "\\lx@add@frontmatter{ltx:note}[role=conference]{#1}");
 
   DefMacro!("\\Jmath", "J");
+  // PoS.cls v1.2.1 (2006/05/19, as 1507.03892 ships it):1384: a link to a PoS contribution by its
+  // identifier (1411.6666, 0906.1503 cite `\pos{PoS(INTEGRAL08)029}`).
+  DefMacro!("\\pos{}",
+    "\\href{http://pos.sissa.it/cgi-bin/reader/contribution.cgi?id=#1}{\\tt #1}");
 });

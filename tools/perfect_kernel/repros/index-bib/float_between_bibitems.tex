@@ -1,0 +1,19 @@
+% witness: astro-ph9806175, 2103.15495, 0801.2060 (run-336 bibitem cluster, part B)
+% oracle:  pdflatex 0 errors: one reference list [1] [2], the figure floating
+% engines: rust 64s = 1 Error:malformed:ltx:bibitem (the figure closed ltx:biblist); Perl 0.8.8 the same (SHARED:
+%          ltx:biblist is autoClose only, latex_constructs.pool.ltxml:4020)
+% expect:  0 errors; <bibliography> holds biblist(a), figure, biblist(b) (ltx:biblist auto-opens at half
+%          openability, so only bibliography entries open it)
+% status:  RED (64s) -> GREEN (64x)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \cite{a,b}.
+\begin{thebibliography}{9}
+\bibitem{a} First reference.
+\begin{figure}
+\caption{A figure.}
+\end{figure}
+\bibitem{b} Second reference.
+\end{thebibliography}
+\end{document}

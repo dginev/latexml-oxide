@@ -679,6 +679,17 @@ fn cluster_newpsobject_forward() {
 #[test]
 fn cluster_jhep_href_semiverbatim() {
   convert_clean("tests/cluster_regressions/jhep_href_semiverbatim.tex");
+  // JHEP's `\am{}{}{}` takes `\mgr`, `M` and `^`; the `^` stays text in its `\href`'s Semiverbatim body.
+  let (_log, xml) = latexml::util::test::convert_with(
+    include_str!("cluster_regressions/jhep_href_semiverbatim.tex"),
+    None,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "Math",
+    &[],
+    r#"<Math mode="inline" tex="\lambda\href{http://www-spires.slac.stanford.edu/spires/find/hep/www?j=ANMAA\%2C$m_{3/2}$\%2C^}{{\it Ann.\ Math.\ }{\bf$m_{3/2}$} (M) ^}2S," text="lambda * [Ann. Math. $m_3/2$ (M) ^] * 2 * S" xml:id="p1.m1"><XMath><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMApp xml:id="p1.m1.1"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" name="lambda" role="UNKNOWN">λ</XMTok><XMText><ref font="italic" href="http://www-spires.slac.stanford.edu/spires/find/hep/www?j=ANMAA%2C$m_3/2$%2C^">Ann. Math. <text font="bold upright">$m_3/2$</text> (M) ^</ref></XMText><XMTok meaning="2" role="NUMBER">2</XMTok><XMTok font="italic" role="UNKNOWN">S</XMTok></XMApp><XMTok role="PUNCT">,</XMTok></XMWrap></XMDual></XMath></Math>"#,
+  );
 }
 /// An eqnarray reading a `\def`-ized `\arraycolsep` (a plain macro, not a length
 /// register) must NOT emit the Rust-only `expected:register` warning — Perl's

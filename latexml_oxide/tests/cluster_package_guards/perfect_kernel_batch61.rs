@@ -7584,7 +7584,9 @@ Listed in order of citation.
       < bibliography.find("<biblist>").unwrap(),
     "{xml}"
   );
-  // Not a unit with other content and another title, nor an empty unit before a bibliography titled otherwise.
+  // Not a unit with other content and another title, nor an empty unit before a bibliography titled otherwise. The
+  // `\bibitem`s open that bibliography themselves, under no heading of their own: it has no title (64x, user ruling
+  // 2026-10-10: the PDF prints none; Perl titles it `\refname`).
   assert_eq!(
     units(
       r"\section{Conclusions}
@@ -7593,11 +7595,7 @@ Done.
 \bibitem{a} Able, A title.
 \end{list}"
     ),
-    vec![
-      "section:Conclusions",
-      "bibliography:References +biblist",
-      tail
-    ]
+    vec!["section:Conclusions", "bibliography: +biblist", tail]
   );
   assert_eq!(
     units(

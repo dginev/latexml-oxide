@@ -1,0 +1,22 @@
+% witness: review of 64x round 9 (bibafter): a lonely natbib \bibitem in the body, then the author's \bibliography
+% oracle:  pdflatex 1 error (Lonely \item) and prints the .bbl's Zed entry under References
+% engines: rust 64zc keeps Zed (1 Error:malformed); 64x bef859dfca dropped Zed at 1 Error (the lonely bibliography's
+%          setup left \bibliography a no-op to the end of the document); Perl 0.8.8 keeps Zed (1 Error:malformed)
+% expect:  1 Error:malformed:ltx:bibitem ("\bibitem outside any list"); a bibliography with Able, then the .bbl's
+%          titled bibliography with Zed
+% status:  ERRORS KEPT (64x: \bibliography and \bibliographystyle are restored after the implicit bibliography opens)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+\section{Summary}
+Text \citep{a,z}.
+
+\bibitem[Able(2011)]{a} Able, A. 2011, ApJ.
+
+\section{Discussion}
+More text.
+
+\bibliographystyle{plainnat}
+\bibliography{natbib_bibitem_then_real_bibliography}
+\end{document}

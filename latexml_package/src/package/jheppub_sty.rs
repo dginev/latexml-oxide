@@ -63,6 +63,13 @@ LoadDefinitions!({
   DefMacro!("\\@subheader", "\\@empty");
   DefMacro!("\\@keywords", "\\@empty");
   DefMacro!("\\@abstract", "\\@empty");
+  // jheppub.sty:66 `\renewcommand{\abstract}[1]{\gdef\@abstract{#1}}`: the abstract is ONE
+  // argument, read pre-tokenized and stored for `\maketitle`. The kernel's locked `\abstract`
+  // reads it so when the setter it refused took an argument (`\abstract:redefined@nargs`,
+  // sect05.rs); this binding is that setter's record. Read as a group instead, a sectioning
+  // command inside it (`\paragraph{}`) ended the abstract inside its own braces (an
+  // `unexpected:}` Error: 1903.02433).
+  AssignValue!("\\abstract:redefined@nargs" => Stored::Number(Number::new(1)), Some(Scope::Global));
   DefMacro!("\\@xtum", "\\@empty");
   DefMacro!("\\@dedicated", "\\@empty");
   DefMacro!("\\@arxivnumber", "\\@empty");

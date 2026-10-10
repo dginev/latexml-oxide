@@ -12305,3 +12305,67 @@ Minimal trigger: `\documentstyle[aps]{revtex}\begin{document}\section{A}\section
 ("II.1"; pdflatex "II A").
 
 Fixed in Rust (64zd, OD #504): `sectioning-frontmatter/revtex3_section_numbers_as_aps`.
+
+## 588. `{titlepage}` lets `\centering` to `\relax`
+
+latex_constructs.pool.ltxml:1168: `\begin{titlepage}\begin{centering}x\end{centering}\end{titlepage}` gives
+`Error:undefined:{centering}` (pdflatex: centred text). Fixed in Rust (64x).
+
+## 589. `\lx@mung@bibliography` ends the list holding the `\bibitem`s, losing the list's local definitions
+
+Perl latex_constructs.pool.ltxml:4116 (ours sect11.rs) ends a list holding `\bibitem`s with `\end{<list>}`, so
+definitions made inside the list are gone for the entries (TeX keeps them to the author's `\end`):
+`\begin{description}\newcommand{\enquote}[1]{``#1''}\bibitem{a} \enquote{T}\end{description}` →
+`Error:undefined:\enquote`. Accepted residual on 2205.07302: words kept but the `\enquote` marks lost as `<ERROR>`. RED
+repro index-bib/bibitem_list_local_definition, deferred to K21 (a bibliography leaving the list element while the
+list's TeX group stays open).
+
+## 590. Blank-line-separated `\item`s in `{thebibliography}` number 1, 3, 5
+
+pdflatex numbers them 1, 2, 3. A blank line makes `\par@in@bibliography` open an entry (`\save@bibitem{}`,
+latex_constructs.pool.ltxml:4047) that steps `@bibitem` though TeX makes no item there; the #2403 prune drops it but not
+its number (:4096-4109, the unlabelled branch's `RefStepCounter` at :4104). Trigger:
+`\begin{thebibliography}{9}\item A.\n\n\item B.\n\n\item C.\end{thebibliography}`. Fixed in Rust (64x, OD #510).
+
+## 591. natbib's `\bibitem` lacks the out-of-bibliography guard
+
+natbib.sty.ltxml:489-493: `\usepackage[numbers]{natbib}…\begin{enumerate}\bibitem{a} A.\end{enumerate}` → 2 malformed
+errors (pdflatex 0: the entries print as items of the list). Fixed in Rust (64x).
+
+## 592. The PoS binding loads JHEP's journal macros
+
+PoS.cls.ltxml `LoadClass` JHEP brings journal macros PoS.cls lacks: `\documentclass{PoS}\newcommand{\apj}{ApJ}…\apj`
+fails to redefine. Fixed in Rust (64x).
+
+## 593. AmS-TeX `\predefine` reads two tokens, not two arguments
+
+AmSTeX.pool.ltxml:55 `\predefine Token Token` vs amstex.tex:136 `\def\predefine#1#2`: `\predefine\til{\~}` misreads.
+Fixed in Rust (64x).
+
+## 594. aas `\references` runs no bibliography setup
+
+aas_support.sty.ltxml:289 `\references` lacks `beforeDigestBibliography`. Ours runs it (as revtex4_support's
+`\references` already does), then gives `\bibliography`/`\bibliographystyle` back, so a later `.bbl` bibliography still
+prints (repro index-bib/aas_references_then_real_bibliography). revtex4_support's `\references` still leaves them no-ops
+(not reached in a 30,395-paper scan of 1997-2003).
+
+## 595. A kernel `\bibitem` directly in the document body is silent
+
+Perl rebuilds a bibliography without a message (latex_constructs.pool.ltxml:4074-4076), and so do we; pdflatex reports
+Lonely `\item` per `\bibitem`: `\begin{document}x\bibitem{a} A.\end{document}` (pdflatex 6, ours 0, Perl 0). RED repro
+index-bib/kernel_bibitem_in_document_body. To be raised as a Warning (semantic recovery) per the user ruling of
+2026-10-11 (batch 64zf stage 2).
+
+## 596. A kernel `\bibitem` outside any bibliography drops the author's real bibliography
+
+The bibliography the kernel `\bibitem` opens (`\lx@mung@bibliography`) runs `beforeDigestBibliography`
+(latex_constructs.pool.ltxml:3839-3840), which makes `\bibliography`/`\bibliographystyle` no-ops with no group to end
+it: `\begin{document}\bibitem{a} A.\section{B}\bibliography{x}\end{document}` with `x.bbl` holding a
+`{thebibliography}` → its entries missing (Perl 0.8.8 and base). Fixed in Rust (64x, OD #511; repro
+index-bib/kernel_bibitem_then_real_bibliography).
+
+## 597. `\bibliographystyle` writes its attributes on the first bibliography
+
+`bibstyle`, `citestyle`, `sort` go on the first `//ltx:bibliography` of the document (latex_constructs.pool.ltxml:3972-3977;
+ours sect11.rs:302), so after an implicit bibliography they land on that one, not on the `.bbl`'s that follows (repro
+index-bib/kernel_bibitem_then_real_bibliography: `bibstyle="plain"` on `bib`). No visible change.

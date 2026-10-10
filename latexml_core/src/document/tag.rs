@@ -74,9 +74,26 @@ impl TagOptionName {
   }
 }
 
+/// How readily an element is auto-opened to hold a child it can contain — Perl's
+/// `Tag($tag, autoOpen => $x)`, where any true value counts as 1 and a fraction
+/// (`ltx:picture`'s 0.5, latex_constructs.pool.ltxml:4943) makes the element's paths
+/// lose to those through a full auto-opener (Document.pm:196-199, 220). Kept as a
+/// percentage (100 = 1, 50 = 0.5) for the indirect model's integer arithmetic
+/// (`compute_indirect_model`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AutoOpen(pub u32);
+
+impl From<bool> for AutoOpen {
+  fn from(open: bool) -> Self { AutoOpen(if open { 100 } else { 0 }) }
+}
+
+impl From<f64> for AutoOpen {
+  fn from(fraction: f64) -> Self { AutoOpen((fraction.clamp(0.0, 1.0) * 100.0).round() as u32) }
+}
+
 #[derive(Clone, Default)]
 pub struct TagOptions {
-  pub auto_open:         Option<bool>,
+  pub auto_open:         Option<AutoOpen>,
   pub auto_close:        Option<bool>,
   pub after_open:        Option<Vec<TagConstructionClosure>>,
   pub after_close:       Option<Vec<TagConstructionClosure>>,

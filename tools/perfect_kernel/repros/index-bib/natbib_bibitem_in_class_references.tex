@@ -1,0 +1,27 @@
+% witness: 1411.7266 (CS18.sty: a run-in `\acknowledgments`, then `\begin{references}` with natbib \bibitem's; 64x review
+%          round 7: 0 -> 10 Errors under a list-item gate that outlived the acknowledgments' trivlist)
+% oracle:  pdflatex 0 errors: the references after the acknowledgments (CS18's `\acknowledgments` leaves its trivlist
+%          open, so the \bibitem's are items of it — the fixture .sty models that)
+% engines: rust 64zc = 2 Error:malformed:ltx:bibitem (natbib's \bibitem unguarded); Perl 0.8.8 the same
+% expect:  0 errors; the acknowledgments' paragraph, then a <bibliography> of the two entries
+% status:  RED (64zc) -> GREEN (64x)
+% preload: ar5iv.sty
+% files:   natbib_bibitem_in_class_references.sty (a reduced model of the paper's CS18.sty)
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{natbib_bibitem_in_class_references}
+\begin{document}
+\section{Summary}
+Text \citep{a}.
+
+\acknowledgments{
+Thanks.
+}
+
+\begin{references}
+
+\bibitem[Able(2011)]{a} Able, A. 2011, ApJ.
+
+\bibitem[Baker(2012)]{b} Baker, B. 2012, ApJ.
+\end{references}
+\end{document}

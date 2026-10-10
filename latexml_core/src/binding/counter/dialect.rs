@@ -1217,6 +1217,12 @@ pub fn begin_itemize(
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
   assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);
+  // …and the environment this itemization is (natbib's `\bibitem` keeps its place only among this list's own `\item`s)
+  assign_value(
+    "itemization_environment",
+    Stored::String(arena::pin(lookup_string("current_environment"))),
+    None,
+  );
   let listcounter = s!("@itemize{listpostfix}");
   if lookup_definition(&T_CS!(s!("\\c@{listcounter}")))?.is_none() {
     //Create new list counters as needed

@@ -1,0 +1,18 @@
+% witness: quant-ph9706037, 1708.06608 (64x review round 2: an untitled implicit bibliography listed in the contents)
+% oracle:  pdflatex 0 errors: the contents list "1 Intro" only; the \bibitem list prints under no heading
+% engines: rust 64x round 2 = 0 errors, but the untitled <bibliography> kept inlist="toc", so the contents listed it by
+%          its id ("bib") with Info:expected:ids "Missing Usable title for ID: bib"; Perl 0.8.8 titles it \refname
+% expect:  0 errors; <bibliography xml:id="bib"> with no inlist and no title; the contents list "1 Intro" only
+% status:  RED (64x round 2) -> GREEN (64x round 3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\tableofcontents
+\section{Intro}
+Text \cite{a}.
+
+Some words here.
+\begin{enumerate}
+\bibitem{a} A. Able, Title.
+\end{enumerate}
+\end{document}

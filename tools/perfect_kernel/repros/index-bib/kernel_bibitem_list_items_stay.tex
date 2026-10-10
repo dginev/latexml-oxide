@@ -1,0 +1,20 @@
+% witness: hep-ph9804413 (an {enumerate} of kernel \bibitem's); 64x review round 6 (il)
+% oracle:  pdflatex 0 errors: 1. A, 2. V, 3. B, 4. W, 5. C — a kernel \bibitem is one item of the list
+% engines: rust 64zc = 0 errors: the \bibitem opens a bibliography (Perl's \lx@mung@bibliography) and the list's later
+%          \item's are its entries; rust 64x the same (byte-identical); Perl 0.8.8 0
+% expect:  0 errors; as base: the bibliography holds the first item, then v, B, w, C as its entries (the list's own \item
+%          after a bibliography opened out of it is not an entry start of its own: `\lx@bibliography@from@list`)
+% status:  GREEN (base behaviour kept; pdflatex's structure needs SYNC K21)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \cite{v,w}.
+\section*{REFERENCES}
+\begin{enumerate}
+\item A. Able.
+\bibitem{v} V. Vesna.
+\item B. Baker.
+\bibitem{w} W. Wolf.
+\item C. Cole.
+\end{enumerate}
+\end{document}

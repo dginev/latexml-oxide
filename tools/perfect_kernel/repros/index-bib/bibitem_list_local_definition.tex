@@ -1,0 +1,25 @@
+% witness: 2205.07302 (SSI.tex:741 `\newcommand{\enquote}` inside the `{description}` whose `\bibitem`s follow; 64x review
+%          round 3: 29 <ERROR class="undefined">\enquote</ERROR> where 64w printed the quotes)
+% oracle:  pdflatex 0 errors: both entries print with “quoted” titles
+% engines: rust 64x = 1 Error:undefined:\enquote (an <ERROR> per use): natbib's `\bibitem` opens the bibliography through
+%          `\lx@mung@bibliography`, which ends the list (`\end{description}`) and so the group holding the list's own
+%          definitions, which TeX keeps until the author's `\end{description}`; the kernel's `\bibitem` does the same
+%          (Perl latex_constructs.pool.ltxml:4116; Perl 0.8.8: 2 Error:malformed here, natbib's `\bibitem` being
+%          unguarded, the list kept)
+% expect:  0 errors; both entries' blocks hold the quoted titles
+% status:  RED (64x): the list environments are DefEnvironments whose whole body is one captured whatsit
+%          (`<ltx:enumerate>#body</ltx:enumerate>`, sect06.rs; Perl Package.pm DefEnvironment `captureBody`); the
+%          bibliography can leave the list's element only by ending that whatsit, which ends its frame. Keeping the
+%          frame needs the environment's end to close a list element already closed — a deferred-close mechanism, not
+%          this payload.
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \cite{a,b}.
+\begin{description}
+\newcommand{\enquote}[1]{``#1''}
+\bibitem{a} Able, \enquote{A title}.
+\bibitem{b} Baker, \enquote{B title}.
+\end{description}
+\end{document}
