@@ -267,9 +267,12 @@ LoadDefinitions!({
   DefMath!("\\gid",    "\u{2267}", role => "RELOP", meaning => "greater-than-or-equals");
   DefMath!("\\grole",  "\u{2277}", role => "RELOP", meaning => "greater-than-or-less-than");
 
-  // QED symbol
+  // QED symbol, sized as llncs.cls:400 `\hbox{\rlap{$\sqcap$}$\sqcup$}` (a glyph box, not a rule): a size-less
+  // whatsit alone in an alignment cell or `\mbox` made it "empty" and the QED was dropped (Perl Alignment.pm:458-470;
+  // repro alignment-bindings/llncs_qed_alone_in_a_cell).
   DefConstructor!("\\squareforqed",
-    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    sizer => sub[whatsit] { Ok(engine::latex_constructs::sqcup_qed_size(whatsit)) });
   DefMacro!("\\qed", "\\squareforqed");
 
   //======================================================================

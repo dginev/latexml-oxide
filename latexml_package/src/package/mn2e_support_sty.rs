@@ -170,9 +170,11 @@ LoadDefinitions!({
   DefMath!("\\cor", "\u{2258}", role => "RELOP", meaning => "corresonds-to");
   DefPrimitive!("\\micron", "\u{00B5}m");
 
-  // Perl L122-125: quod erat demonstrandum marker
+  // Perl L122-125: quod erat demonstrandum marker, sized as mn2e.cls:410 `\hbox{\rlap{$\sqcap$}$\sqcup$}` (a glyph
+  // box), so a cell or `\mbox` holding only it is not dropped as empty (Perl Alignment.pm:458-470).
   DefConstructor!("\\squareforqed",
-    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    sizer => sub[whatsit] { Ok(engine::latex_constructs::sqcup_qed_size(whatsit)) });
   Let!("\\sq", "\\squareforqed");
   Let!("\\proofbox", "\\squareforqed");
 

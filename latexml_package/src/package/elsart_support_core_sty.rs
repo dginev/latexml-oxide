@@ -316,10 +316,22 @@ LoadDefinitions!({
   // def here so all elsart_*-loading classes (elsarticle + elsart)
   // have it. Witness 2306.02411 (elsarticle Pfaffian paper).
   DefMacro!("\\qed", "\\ltx@qed");
+  // Sized as elsart.cls:457's `$\Box$` and TL elsarticle.cls:1238 `\hbox{}\hfill$\Box$` (`\Box` from latexsym — lasy10
+  // "32, 0.747225 × 0.444446 em — or amssymb — msam10 `\square`, .777781 × .675 em: a glyph box of comparable size), so
+  // a cell or `\mbox` holding only it is not dropped as empty (Perl Alignment.pm:458-470). Synthetic: 1905.10621's
+  // cells keep amsthm's `\qed` (krudces.sty:188 loads amsthm after the class), sized by `openbox_size`.
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
     enter_horizontal => true,
-    reversion => "\\qed");
+    reversion => "\\qed",
+    sizer => sub[whatsit] {
+      Ok(engine::latex_constructs::symbol_box_size(
+        whatsit,
+        0.747225,
+        0.444446,
+        engine::latex_constructs::FontUnit::Em,
+      ))
+    });
 });
 
 /// The separator slots of the `stm/affiliation` keys, in [`stm_affiliation`]'s order.

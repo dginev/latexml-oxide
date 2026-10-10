@@ -126,27 +126,19 @@ LoadDefinitions!({
   DefMacro!("\\bibitem",
     "\\@ifnext@n{[\\protect\\citeauthoryear}{\\lx@late@usepackage{natbib}\\bibitem}{\\lx@OmniBus@saved@bibitem}");
 
-  // Perl L58-60: frontmatter section environments
-  DefEnvironment!("{frontmatter}", "#body");
-  DefEnvironment!("{mainmatter}",  "#body");
-  DefEnvironment!("{backmatter}",  "#body");
-  // Override the bare-`\frontmatter` / `\mainmatter` / `\backmatter`
-  // macros to noops AFTER the DefEnvironment registration. Modern
-  // book.cls-style papers (e.g. memo-l / amsmemo "Memoirs" templates
-  // — paper-bundled, no binding) call bare `\frontmatter` as a
-  // noop marker (book.cls semantics: sets page numbering style,
-  // increments chapter counter style). Our DefEnvironment binds
-  // `\frontmatter` to the env-opener, which pushes a structural
-  // frame that blocks subsequent display math (`$$...$$` triggers
-  // "Script _ can only appear in math mode" cascades; witness
-  // 1102.3639 — book-style paper using memo-l). LaTeX's
-  // `\begin{frontmatter}` / `\end{frontmatter}` env-bracket
-  // tracking still functions when the opener is a noop, so
-  // elsart/JHEP-style `\begin{frontmatter}...\end{frontmatter}`
-  // usage continues to work (env body flows as plain text).
-  Let!("\\frontmatter", "\\@empty");
-  Let!("\\mainmatter",  "\\@empty");
-  Let!("\\backmatter",  "\\@empty");
+  // Perl L58-60: frontmatter section environments. Perl's DefEnvironments box the body in restricted horizontal
+  // mode, where a `$$` is two empty inline formulas (TeX_Math.pool.ltxml:65) and the formula ran as text ("Script _
+  // can only appear in math mode": a display in an IMS abstract, imsart's `{frontmatter}`). The classes these stand
+  // for define them as markers (book.cls:284-298 `\frontmatter`/`\mainmatter`/`\backmatter`, page numbering) or as
+  // plain environments (elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`, imsart.sty:1802
+  // `\def\frontmatter`), so the body stays in the mode around it, where `$$` is display math (tex.web:21715). The
+  // bare `\frontmatter` (book-style memo-l papers, 1102.3639) is the same no-op.
+  Let!("\\frontmatter",    "\\@empty");
+  Let!("\\endfrontmatter", "\\@empty");
+  Let!("\\mainmatter",     "\\@empty");
+  Let!("\\endmainmatter",  "\\@empty");
+  Let!("\\backmatter",     "\\@empty");
+  Let!("\\endbackmatter",  "\\@empty");
 
   // Perl L62-63
   DefMacro!("\\shorttitle{}", "\\lx@add@toctitle{#1}");

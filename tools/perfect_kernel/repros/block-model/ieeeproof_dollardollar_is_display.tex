@@ -1,0 +1,35 @@
+% witness: 1203.1892, 1402.4543, 0802.1555, 1612.01904, 1512.07341 (~1,600 of run 336's IEEEtran papers with a `$$` in
+%          an `{IEEEproof}`)
+% oracle:  pdflatex 0 errors (IEEEtran.cls:5547-5549: `\IEEEproof` and `\endIEEEproof` are macros, the `$$` a display)
+% engines: rust 64h4 = 5 errors: 4 "Script _/^ can only appear in math mode" (`\bigcup_T`, `W_T`, `x_1`, `y^2`: the
+%          DefEnvironment's restricted horizontal body, where `$$` is two empty inline formulas) and 1 "The token
+%          T_CS[\IEEEQEDoff] is not defined" (reported once for its three uses); Perl the same 5, 2 warnings
+% expect:  0 errors, 0 warnings; each `$$` an `ltx:equation` in its `ltx:proof`, the second titled "Proof of the Lemma:";
+%          the first ends without the QED (`\IEEEQEDoff`, IEEEtran.cls:5556), the second and the amsthm proof keep theirs
+%          (the switch is IEEEproof's: pdflatex prints amsthm's box after an `\IEEEQEDoff` in it); in the nested pair
+%          the inner proof's QED is printed (`\@IEEEQEDshowtrue` is local, IEEEtran.cls:5548), the outer's is not (the
+%          `\IEEEQEDoff` before it is global)
+% status:  RED (64h4) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\usepackage{amsthm}
+\begin{document}
+\begin{IEEEproof}
+obtain: $$W= \bigcup_T W_T.$$
+\IEEEQEDoff
+\end{IEEEproof}
+\begin{IEEEproof}[Proof of the Lemma]
+Then
+$$x_1 = y^2$$
+\end{IEEEproof}
+\begin{proof}
+Done. \IEEEQEDoff
+\end{proof}
+\begin{IEEEproof}
+Outer. \IEEEQEDoff
+\begin{IEEEproof}
+Inner.
+\end{IEEEproof}
+OuterEnd.
+\end{IEEEproof}
+\end{document}

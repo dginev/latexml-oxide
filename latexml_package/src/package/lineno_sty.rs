@@ -4,41 +4,49 @@ use crate::prelude::*;
 LoadDefinitions!({
   // lineno.sty:2628 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
-  // Perl: lineno.sty.ltxml — stub (line numbering not meaningful for XML)
-  DefEnvironment!("{linenumbers*}[Number]",         "#body");
-  DefEnvironment!("{runninglinenumbers*}[Number]",  "#body");
-  DefEnvironment!("{pagewiselinenumbers*}[Number]", "#body");
-  DefEnvironment!("{linenomath}",                   "#body");
-  DefEnvironment!("{linenomath*}",                  "#body");
+  // Perl: lineno.sty.ltxml — stub (line numbering not meaningful for XML). Its DefEnvironments boxed the body in
+  // restricted horizontal mode (a `$$` there no display, a `\section` inside a box); lineno.sty:1157-1165 makes the
+  // environments macros: `\par` and the switch, ended by `\par\@endpetrue`. `{pagewiselinenumbers*}`,
+  // which lineno does not define, is kept from Perl's binding, without its `[Number]`.
+  RawTeX!(r"\@namedef{linenumbers*}{\par\linenumbers*}
+\@namedef{runninglinenumbers*}{\par\runninglinenumbers*}
+\@namedef{pagewiselinenumbers*}{\par\pagewiselinenumbers}
+\def\endlinenumbers{\par\@endpetrue}
+\let\endrunninglinenumbers\endlinenumbers
+\let\endpagewiselinenumbers\endlinenumbers
+\expandafter\let\csname endlinenumbers*\endcsname\endlinenumbers
+\expandafter\let\csname endrunninglinenumbers*\endcsname\endlinenumbers
+\expandafter\let\csname endpagewiselinenumbers*\endcsname\endlinenumbers
+\let\endnolinenumbers\endlinenumbers");
   // lineno.sty:2881-2908 `bframe` — a framed block (frame presentational; ulineno), which begins
   // and ends with `\par`: its body is paragraphs of their own, as setspace's `{spacing}`.
   DefEnvironment!("{bframe}",                       "#body", mode => "internal_vertical",
     before_digest_end => { leave_horizontal()?; });
   DefRegister!("\\bframerule", Dimension(26214)); // lineno.sty:2914 \fboxrule = 0.4pt
   DefRegister!("\\bframesep",  Dimension(196608)); // lineno.sty:2917 \fboxsep = 3pt
-  // Real lineno.sty also defines control sequences `\linenomath`,
-  // `\linenomathWithnumbers`, `\linenomathNonumbers` (raw-load
-  // sees these as macros). Other packages — eccv.sty, journal templates —
-  // test them with `\ifx\linenomath\linenomathWithnumbers` to switch
-  // between AMS-math styles. Without explicit defs here, all three resolve
-  // to `\relax` and the `\ifx` test is TRUE — the then-branch fires
-  // `\patchcmd\linenomathAMS{...}` which is undefined → cascade of
-  // `\else` / `\fi` mismatch (27 of 44 wp4 \else-error papers use eccv).
-  // Make them three *distinct* no-op macros so the `\ifx` test picks the
-  // else-branch reliably, matching the no-linenumbers default.
-  // Don't redefine `\linenomath` / `\endlinenomath` — those are the
-  // env-begin/env-end macros set up by DefEnvironment above. We DO
-  // define the two "style switch" macros that real lineno provides,
-  // with distinct bodies so journal-template `\ifx\linenomath\linenomathWithnumbers`
-  // tests reliably pick the no-linenumbers branch.
-  DefMacro!("\\linenomathWithnumbers", "\\relax");
-  DefMacro!("\\linenomathNonumbers",   "\\@empty");
-  // lineno.sty:1254-1263 `\linenumberdisplaymath`/`\nolinenumberdisplaymath` choose
-  // whether display math is numbered; line numbers are not modelled, and
-  // `\linenomath` stays the environment above (ascelike.cls:312; class census
-  // 2026-09-24).
-  def_macro_noop("\\linenumberdisplaymath")?;
-  def_macro_noop("\\nolinenumberdisplaymath")?;
+  // lineno.sty:1219-1271: `{linenomath}`/`{linenomath*}` are plain macros — penalties and holding inserts for
+  // the line numbers, then `\ignorespaces`; `\endlinenomath` `\global\@ignoretrue` — so a `$$` in them is display
+  // math, in the mode around it (tex.web:21715). Perl's DefEnvironments box the body in restricted horizontal
+  // mode, where `$$` is two empty inline formulas and the formula ran as text: "Script _ can only appear in math
+  // mode" (2307.10980, 2301.10600). The two styles are lineno's (:1219-1250), their penalties under `\ifLineNumbers`,
+  // which stays false (line numbers are not modelled); `\linenomath` is a macro calling one, so a template's
+  // `\ifx\linenomath\linenomathWithnumbers` (eccv.sty) takes the no-numbers branch, as with lineno's default
+  // `\nolinenumberdisplaymath` (:1254-1263, :1280). `\linenopenalty`, `\linenopenaltypar`: lineno.sty:448, :467.
+  RawTeX!(r"\newcount\linenopenalty\linenopenalty=-100000
+\mathchardef\linenopenaltypar=32000
+\def\@LN@outer@holdins{0}
+\newcommand\linenomathNonumbers{\ifLineNumbers\ifnum\interlinepenalty>-\linenopenaltypar
+\global\holdinginserts\thr@@\advance\interlinepenalty\linenopenalty
+\ifhmode\advance\predisplaypenalty\linenopenalty\fi\fi\fi\ignorespaces}
+\newcommand\linenomathWithnumbers{\ifLineNumbers\ifnum\interlinepenalty>-\linenopenaltypar
+\global\holdinginserts\thr@@\advance\interlinepenalty\linenopenalty
+\ifhmode\advance\predisplaypenalty\linenopenalty\fi
+\advance\postdisplaypenalty\linenopenalty\advance\interdisplaylinepenalty\linenopenalty\fi\fi\ignorespaces}
+\newcommand\linenumberdisplaymath{\def\linenomath{\linenomathWithnumbers}\@namedef{linenomath*}{\linenomathNonumbers}}
+\newcommand\nolinenumberdisplaymath{\def\linenomath{\linenomathNonumbers}\@namedef{linenomath*}{\linenomathWithnumbers}}
+\nolinenumberdisplaymath
+\def\endlinenomath{\ifLineNumbers\global\holdinginserts\@LN@outer@holdins\fi\global\@ignoretrue}
+\expandafter\let\csname endlinenomath*\endcsname\endlinenomath");
 
   // \internallinenumbers (lineno.sty:2732) is a macro with optional * and [Number].
   // lineno.sty also defines `\let\endinternallinenumbers\endlinenumbers` and

@@ -162,10 +162,13 @@ LoadDefinitions!({
   // U+220E text node outside any <ltx:p>, producing structurally
   // invalid bare text in a vertical-mode container.
   DefMacro!("\\qed", "\\ltx@qed");
+  // Sized as amsthm's `\openbox` (`openbox_size`): a size-less whatsit alone in an alignment cell made the cell
+  // "empty" (Alignment::normalize, Perl Alignment.pm:458-470) and the QED was dropped (synthetic, 64ra review).
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
     enter_horizontal => true,
-    reversion => "\\qed"
+    reversion => "\\qed",
+    sizer => sub[whatsit] { Ok(openbox_size(whatsit)) }
   );
   Let!("\\mathqed",    "\\qed");
   Let!("\\textsquare", "\\qed");
@@ -272,3 +275,9 @@ LoadDefinitions!({
   DefRegister!("\\theorempreskipamount"  => Glue::new(0));
   DefRegister!("\\theorempostskipamount" => Glue::new(0));
 });
+
+/// amsthm.sty:422-426 `\openbox`, the `\qedsymbol`: `\hbox to.77778em{…\vbox to.675em{…}…}` (see
+/// `symbol_box_size`). Shared with the bindings that install amsthm's `\qed` themselves (autart).
+pub fn openbox_size(whatsit: &Whatsit) -> (Dimension, Dimension, Dimension) {
+  symbol_box_size(whatsit, 0.77778, 0.675, FontUnit::Em)
+}

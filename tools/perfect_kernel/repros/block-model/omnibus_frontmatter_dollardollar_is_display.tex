@@ -1,0 +1,14 @@
+% witness: 2401.11344 and ~200 of run 336's papers with a `$$` in `{frontmatter}` under OmniBus (imsart's abstract)
+% oracle:  pdflatex 0 errors (ucthesis.cls `{frontmatter}`; elsarticle.cls:1303, imsart.sty:1802 alike)
+% engines: rust 64h4 = 2 errors "Script ^/_ can only appear in math mode", 1 warning (ucthesis falls back to OmniBus);
+%          Perl 2 errors, 1 warning
+% expect:  0 errors, 1 warning (OmniBus); the `$$` an `ltx:equation`
+% status:  RED (64h4) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{ucthesis}
+\begin{document}
+\begin{frontmatter}
+Limits of the model $$Q^{(n)}P_\theta$$ are studied.
+\end{frontmatter}
+Text.
+\end{document}

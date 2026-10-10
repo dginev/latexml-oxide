@@ -78,7 +78,10 @@ LoadDefinitions!({
   // mode), and the IMS metadata macros route to the same \lx@add@* sinks
   // article/acmart use, so creators/title/keywords/pubnotes are emitted into the
   // document frontmatter.
-  DefEnvironment!("{frontmatter}", "#body");
+  // `{frontmatter}` a plain group, as OmniBus's (omnibus_cls.rs): a DefEnvironment boxes its body in restricted
+  // horizontal mode, where a `$$` in the abstract is no display (TeX_Math.pool.ltxml:65).
+  Let!("\\frontmatter", "\\@empty");
+  Let!("\\endfrontmatter", "\\@empty");
   DefEnvironment!("{aug}", "#body");
   // {keyword} collects MANY \kwd into one keywords list: \lx@add@keywords alone
   // CLEARS on each call (keeps only the last), so use the collecting

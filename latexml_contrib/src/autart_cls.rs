@@ -39,13 +39,23 @@ LoadDefinitions!({
   // mn2e_support's {proof} pattern; self-contained, no amsthm dep — avoids the
   // eager-amsthm hazard noted below). Witness 2309.12476 (autart, `\begin{pf}` in
   // \input'd subfiles).
-  DefEnvironment!(
-    "{pf}",
-    "<ltx:proof><ltx:title>PROOF.</ltx:title>#body</ltx:proof>"
-  );
-  DefEnvironment!(
-    "{pf*}{}",
-    "<ltx:proof><ltx:title>#1</ltx:title>#body</ltx:proof>"
+  // A constructor pair, as autart.cls:537-543 makes `{pf}` a plain environment and `{pf*}` a macro around `\pf`: the
+  // body stays in the mode around it, so a `$$` there is display math (a DefEnvironment boxed it in restricted
+  // horizontal mode, where the formula ran as text, "Script _ can only appear in math mode": 2101.05047, 14 of 40
+  // sampled run-336 papers with `$$` and frontmatter). The end closes the `ltx:proof` only when one is open.
+  DefMacro!("\\Elproofname", "PROOF.");
+  DefConstructor!("\\pf", "<ltx:proof><ltx:title>#title</ltx:title>",
+  properties => sub[_args] {
+    // autart.cls:539 `{\bfseries\Elproofname}`.
+    let title = digest(Tokens!(T_BEGIN!(), T_CS!("\\bfseries"), T_CS!("\\Elproofname"), T_END!()))?;
+    Ok(stored_map!("title" => title))
+  });
+  DefConstructor!("\\endpf", sub[document, _args] {
+    document.maybe_close_element("ltx:proof")?;
+  });
+  RawTeX!(
+    r"\@namedef{pf*}#1{\par\begingroup\def\Elproofname{#1}\pf\endgroup\ignorespaces}
+\expandafter\let\csname endpf*\endcsname=\endpf"
   );
 
   // Common elsart frontmatter macros (autart inherits elsart style) —
@@ -74,11 +84,13 @@ LoadDefinitions!({
   // match Perl's ground-truth output. A paper that later `\usepackage{amsthm}`
   // simply re-installs the identical definitions. Used via the common
   // `\def\epf{\hfill\mbox{\qed}}` idiom OUTSIDE any proof env, so OmniBus's
-  // lazy theorem-env autoload never fires. Witness 1703.03101.
+  // lazy theorem-env autoload never fires. Witness 1703.03101. Sized by amsthm's own sizer (`openbox_size`), so
+  // `\mbox{\qed}` alone in a cell is kept.
   DefMacro!("\\qed", "\\ltx@qed");
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
     enter_horizontal => true,
+    sizer => sub[whatsit] { Ok(amsthm_sty::openbox_size(whatsit)) },
     reversion => "\\qed"
   );
   Let!("\\mathqed", "\\qed");

@@ -12169,3 +12169,76 @@ Minimal trigger, with `--preload=ar5iv.sty`:
 Rust (64s, OD #486): the ar5iv clock is the paper's source date, set before the format loads, so preamble readings agree
 with the body; with no source date the `\relax` is bound when ar5iv loads, before the preamble. Repro
 `singletons/ar5iv_today_split_by_class_1801.05985.tex`.
+
+## 576. A binding environment boxes its body, so `$$` in it is no display
+
+A DefEnvironment declared without `mode` digests its body in restricted horizontal mode (Package.pm:1902), where `$$`
+is two empty inline formulas (TeX_Math.pool.ltxml:65 opens a display only under a vertical bound mode; TeX does
+whenever mode>0, tex.web:21715): IEEEtran's `{IEEEproof}` (IEEEtran.cls.ltxml:199-222), lineno's `{linenomath}`,
+`{linenomath*}`, `{linenumbers*}`, `{runninglinenumbers*}` and OmniBus's `{frontmatter}` run the formula as text,
+"Script _ can only appear in math mode" (~1,600 IEEEtran papers: 1203.1892, 1402.4543; ~110 linenomath: 2307.10980;
+~200 frontmatter, imsart abstracts). The classes define them as macros (IEEEtran.cls:5547-5549, lineno.sty:1157-1271).
+
+Minimal trigger: `\documentclass{IEEEtran}\begin{document}\begin{IEEEproof}$$x_1$$\end{IEEEproof}\end{document}`.
+
+Fixed in Rust (64ra, OD #487): constructor pairs / macros; the census of the remaining mode-less `"#body"`
+DefEnvironments is in the 64ra report. Guards `perfect_kernel_batch64ra::{ieeeproof_dollardollar_is_display,
+linenomath_dollardollar_is_display, linenumbers_environment_body_is_vertical,
+omnibus_frontmatter_dollardollar_is_display, autart_pf_dollardollar_is_display}`.
+
+## 577. `\IEEEQEDhere` pops the QED stack amsthm shares
+
+IEEEtran.cls.ltxml:193-196 makes `\IEEEQEDhere` pop `QED@stack` and push an empty entry, so in an amsthm `{proof}` it
+takes amsthm's QED, and IEEEproof's end QED is whatever the stack holds (an amsthm `\qedhere` takes it). IEEEtran
+(IEEEtran.cls:5543-5556) keeps its own switch `\if@IEEEQEDshow`, read only by `\endIEEEproof`.
+
+Minimal trigger: `\documentclass{IEEEtran}\usepackage{amsthm}\begin{document}\begin{proof}A. \IEEEQEDhere\end{proof}
+\end{document}` → one ∎ (pdflatex: IEEEtran's ■ and amsthm's □).
+
+Fixed in Rust (64ra, OD #488). Guard `perfect_kernel_batch64ra::ieeeproof_qed_switches`.
+
+## 578. `\IEEEQEDhereeqn` is undefined
+
+IEEEtran.cls:5551-5552 defines `\IEEEQEDhereeqn` (the QED as the display's equation number); the Perl binding does
+not (1903.06134, 2201.03502, 2105.07617).
+
+Minimal trigger: `\documentclass{IEEEtran}\begin{document}\begin{IEEEproof}$$x=y\IEEEQEDhereeqn$$\end{IEEEproof}
+\end{document}` → "The token T_CS[\IEEEQEDhereeqn] is not defined".
+
+Fixed in Rust (64ra, OD #489). Guards `perfect_kernel_batch64ra::{ieeeproof_qed_switches,
+ieeeeqnarray_row_qedhereeqn_keeps_its_qed}`.
+
+## 579. IEEEproof's title is a fixed "Proof:", dropping the optional argument
+
+IEEEtran.cls.ltxml:199-222 digests `\textbf{\textit{Proof:}}` whatever the `[title]`; IEEEtran.cls:5547-5548 prints
+`#1:`, `#1` defaulting to `\IEEEproofname`.
+
+Minimal trigger: `\begin{IEEEproof}[Proof of Lemma 1] … \end{IEEEproof}` → title "Proof:" (pdflatex "Proof of Lemma 1:").
+
+Fixed in Rust (64ra, OD #487). Golden `tests/structure/IEEE.xml` ("Proof of Theorem 1:").
+
+## 580. `\IEEEeqnarray` ignores its column specification
+
+IEEEtran.cls.ltxml:289-295 (a TODO) maps `\IEEEeqnarray{cols}` to the three-column `\eqnarray`, so a row of more
+columns overruns it ("Extra alignment tab", then scripts out of math), and `IEEEeqnarraybox` knows only `L C R`
+beyond the standard letters (:300-307), so `s t u` make no column (≤1,000 of run 336's papers: 2508.03314,
+2011.14178, 1309.2819).
+
+Minimal trigger: `\begin{IEEEeqnarray}{rCCCl}a&=&b&=&c\end{IEEEeqnarray}` → "Extra alignment tab".
+
+Fixed in Rust (64ra, OD #491). Guards `perfect_kernel_batch64ra::{ieeeeqnarray_column_specification,
+ieeeeqnarray_two_columns_keep_their_numbers, eqnarray_extra_tab_keeps_three_columns}`.
+
+## 581. A cell holding only a size-less constructor is dropped as empty
+
+Alignment.pm:458-470 marks a cell empty when its boxes measure under 1sp; the QED constructors (IEEEtran
+`\IEEEQEDclosed`, amsthm/llncs/svjour/elsart `\qed`, A&A `\squareforqed`, mn2e `\sq`/`\squareforqed`, whose
+`\proofbox` is `\let` to it) have no sizer, so a cell or `\mbox` holding only the QED measures 0 and its material is
+dropped (an IEEEeqnarray `& \hfill\IEEEQEDhere` cell, 2201.11150, 1903.06134; an amsthm `&\qed` cell, 1905.10621).
+TeX measures the class's box (a 1.3ex rule, `\openbox`, the `\sqcup` or `\Box` glyph box).
+
+Minimal trigger: `\documentclass{IEEEtran}\begin{document}\begin{eqnarray*}a &=& \mbox{\IEEEQED}\end{eqnarray*}
+\end{document}` → the third cell empty (pdflatex ■); `\documentclass{llncs}` with `\mbox{\qed}` likewise.
+
+Fixed in Rust (64ra, OD #490): the QED constructors sized as their boxes (`latex_constructs::symbol_box_size`). Guards
+`perfect_kernel_batch64ra::{ieeeproof_qed_switches, llncs_qed_alone_in_a_cell}`.

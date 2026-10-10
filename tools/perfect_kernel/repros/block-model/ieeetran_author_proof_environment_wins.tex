@@ -1,0 +1,15 @@
+% witness: 1002.0117, 1010.1899 (IEEEtran papers with their own `\newenvironment{proof}`); the binding's `\proof` alias (Perl IEEEtran.cls.ltxml:423) — IEEEtran 1.8b defines no `\proof`
+%          (IEEEtran.cls:6332), so a document defines its own
+% oracle:  pdflatex 0 errors, "My proof. Since x1 = 0."
+% engines: rust 64h4 = 0 errors, the document's `{proof}` ignored ("Ignoring redefinition"): an IEEEproof, "My proof."
+%          lost; Perl the same
+% expect:  0 errors, 0 warnings; the document's `{proof}`: "My proof." in the text, no `ltx:proof`
+% status:  RED (64h4) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\newenvironment{proof}{\par\noindent\textit{My proof.} }{\par}
+\begin{document}
+\begin{proof}
+Since $x_1 = 0$.
+\end{proof}
+\end{document}

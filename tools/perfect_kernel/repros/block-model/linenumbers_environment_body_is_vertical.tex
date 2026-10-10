@@ -1,0 +1,22 @@
+% witness: review of 64ra (lineno's `{linenumbers*}`/`{runninglinenumbers*}` DefEnvironments)
+% oracle:  pdflatex 0 errors (lineno.sty:1157-1165: the environments are macros, `\par` and the switch)
+% engines: rust 64h4 = 3 errors "Script _/^ can only appear in math mode" (the body boxed in restricted horizontal
+%          mode); Perl 3 errors
+% expect:  0 errors, 0 warnings; each `$$` an `ltx:equation`, the `\section` a section of the document
+% status:  RED (64h4) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{lineno}
+\begin{document}
+\begin{linenumbers*}
+Text
+$$
+W = x_1^2
+$$
+\section{Inside}
+More text.
+\end{linenumbers*}
+\begin{runninglinenumbers*}[1]
+After $$y_2 = 0$$
+\end{runninglinenumbers*}
+\end{document}

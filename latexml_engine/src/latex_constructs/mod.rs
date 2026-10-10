@@ -392,6 +392,48 @@ pub fn note_size_in_line(whatsit: &Whatsit) -> Result<(Dimension, Dimension, Dim
   Ok(out_of_line_size())
 }
 
+/// The unit of a [`symbol_box_size`]: the font's em (quad) or ex (x-height).
+#[derive(Clone, Copy, Debug)]
+pub enum FontUnit {
+  Em,
+  Ex,
+}
+
+/// A symbol box `width` × `height` `unit`s of the whatsit's font, no depth: the size TeX measures for a class's QED
+/// box (a rule, `\openbox`, `\hbox{\rlap{$\sqcap$}$\sqcup$}`), given to a size-less constructor so a cell or box holding
+/// only it is not empty — alignment emptiness is by measured size (alignment/normalize.rs, Perl Alignment.pm:458-470),
+/// and a size-less whatsit alone in a cell was dropped. The constants are TFM ratios of the glyph font's design size
+/// (or the class's em/ex dimensions), applied as multiples of the current font's em or ex — equal at 10pt, where
+/// cmsy10's QUAD is 1.000003 of the design size.
+pub fn symbol_box_size(
+  whatsit: &Whatsit,
+  width: f64,
+  height: f64,
+  unit: FontUnit,
+) -> (Dimension, Dimension, Dimension) {
+  let font = whatsit
+    .get_font()
+    .ok()
+    .flatten()
+    .unwrap_or_else(|| Rc::new(Font::text_default()));
+  let scale = match unit {
+    FontUnit::Em => font.get_em_width(),
+    FontUnit::Ex => font.get_ex_height(),
+  } as f64;
+  (
+    Dimension::new((width * scale) as i64),
+    Dimension::new((height * scale) as i64),
+    Dimension::new(0),
+  )
+}
+
+/// llncs.cls:400, svjour3.cls (v3.2) :959, svmult.cls (v5.4) :1027, aa.cls (v5.3-7.0, :805-:914) and mn2e.cls:410
+/// `\squareforqed`/`\qedsymbol`
+/// `\hbox{\rlap{$\sqcap$}$\sqcup$}`: the glyph box of cmsy10's `\sqcup` (0.666669 × 0.555557 em).
+pub fn sqcup_qed_size(whatsit: &Whatsit) -> (Dimension, Dimension, Dimension) {
+  symbol_box_size(whatsit, 0.666669, 0.555557, FontUnit::Em)
+}
+
 /// The size in its line of material set out of it: a `\footnotetext`/`\endnotetext` (an
 /// insertion with no mark there) or a `\marginpar` (a float insertion, tex.web §1100) — nothing.
 pub fn out_of_line_size() -> (Dimension, Dimension, Dimension) {
@@ -1718,14 +1760,11 @@ fn retract_equation() {
 }
 /// Perl: latex_constructs.pool.ltxml lines 2287-2325
 /// eqnarrayBindings — creates alignment with equationgroup/equation/_Capture_ hooks
-pub fn eqnarray_bindings() -> Result<()> {
-  // Ensure @equationgroup counter exists — it's normally created by article.cls,
-  // but standalone classes (appolb, jpsj2, etc.) may not define it.
-  if lookup_definition(&T_CS!("\\the@equationgroup@ID"))?.is_none() {
-    NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
-  }
+pub fn eqnarray_bindings() -> Result<()> { eqnarray_bindings_with_columns(eqnarray_columns()) }
 
-  // Perl: 3-column template: col1=right, col2=center, col3=left
+/// The eqnarray's three columns (Perl latex_constructs.pool.ltxml:2231-2236): right, centre and left, math in
+/// `\displaystyle`.
+fn eqnarray_columns() -> Vec<Cell> {
   let col1 = Cell {
     before: Some(Tokens::new(vec![
       T_CS!("\\hfil"),
@@ -1752,8 +1791,23 @@ pub fn eqnarray_bindings() -> Result<()> {
     empty: true,
     ..Cell::default()
   };
+  vec![col1, col2, col3]
+}
+
+/// [`eqnarray_bindings`] over the given columns: an eqnarray-style alignment whose rows are numbered equations,
+/// rearranged at the end by `rearrange_eqnarray` (IEEEtrantools' `\IEEEeqnarray`, whose column specification makes
+/// its own preamble, IEEEtrantools.sty:1996 `\@IEEEbuildpreamble`).
+pub fn eqnarray_bindings_with_columns(columns: Vec<Cell>) -> Result<()> {
+  // Ensure @equationgroup counter exists — it's normally created by article.cls,
+  // but standalone classes (appolb, jpsj2, etc.) may not define it.
+  if lookup_definition(&T_CS!("\\the@equationgroup@ID"))?.is_none() {
+    NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
+  }
+  // The template's width, for `rearrange_eqnarray`: a row with an extra `&` grows the alignment past it
+  // (`next_column`), and Perl reads the eqnarray's columns 0/1/2 whatever the rows hold.
+  let ncolumns = columns.len().to_string();
   let template = Template::new(TemplateConfig {
-    columns: Some(vec![col1, col2, col3]),
+    columns: Some(columns),
     ..TemplateConfig::default()
   });
   let mut xml_attrs = HashMap::default();
@@ -1798,6 +1852,7 @@ pub fn eqnarray_bindings() -> Result<()> {
         props.insert(String::from("xml:id"), id.clone());
       }
       props.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
+      props.insert(String::from("_ncolumns"), ncolumns.clone());
       document
         .open_element("ltx:equationgroup", Some(props), None)
         .map(Some)
@@ -1881,14 +1936,30 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     labelled: bool,
   }
 
-  // Scan the equations (rows)
+  // Scan the equations (rows). Perl reads the eqnarray's three columns; an `\IEEEeqnarray` has as many as its
+  // specification (`eqnarray_bindings_with_columns`, which records the template's width on the group), read the same
+  // way: the first column (`l`), the last (`r`) and any between (`m`) — with three columns, Perl's. With fewer than
+  // three there is no `r`: `{rl}`'s second column is the relation's (`m`).
+  let ncols = equationgroup
+    .get_attribute("_ncolumns")
+    .and_then(|n| n.parse::<usize>().ok())
+    .unwrap_or(3);
+  let _ = equationgroup.remove_attribute("_ncolumns");
+  let row_cells: Vec<(Node, Vec<Node>)> = document
+    .findnodes("ltx:equation", Some(equationgroup))
+    .into_iter()
+    .map(|rownode| {
+      let cells = document.findnodes("ltx:_Capture_", Some(&rownode));
+      (rownode, cells)
+    })
+    .collect();
   let mut rows: Vec<EqRow> = Vec::new();
-  let equation_nodes: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
-  for rownode in equation_nodes {
-    let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&rownode));
-    let has_l = cells.first().is_some_and(|c| c.get_first_child().is_some());
-    let has_m = cells.get(1).is_some_and(|c| c.get_first_child().is_some());
-    let has_r = cells.get(2).is_some_and(|c| c.get_first_child().is_some());
+  for (rownode, cells) in row_cells {
+    let used = |c: &Node| c.get_first_child().is_some();
+    let has_l = cells.first().is_some_and(used);
+    let last_m = if ncols >= 3 { ncols - 1 } else { ncols };
+    let has_m = cells.iter().take(last_m).skip(1).any(used);
+    let has_r = ncols >= 3 && cells.get(ncols - 1).is_some_and(used);
     let numbered = !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
     // OXIDIZED_DESIGN #54: Perl checks hasAttribute('label') (singular), but
     // LaTeXML only ever sets the plural 'labels' attribute (LaTeXML-common.rnc
@@ -1908,24 +1979,22 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     });
   }
 
-  let n_l = rows.iter().filter(|r| r.has_l).count();
-  let n_m = rows.iter().filter(|r| r.has_m).count();
-  let n_r = rows.iter().filter(|r| r.has_r).count();
+  // The columns any row uses.
+  let used_columns: Vec<usize> = (0..ncols)
+    .filter(|&c| {
+      rows.iter().any(|row| {
+        row
+          .cols
+          .get(c)
+          .is_some_and(|cell| cell.get_first_child().is_some())
+      })
+    })
+    .collect();
 
   // Only a single column was used
-  if (n_l > 0 && n_m == 0 && n_r == 0)
-    || (n_l == 0 && n_m > 0 && n_r == 0)
-    || (n_l == 0 && n_m == 0 && n_r > 0)
-  {
-    let keepcol = if n_l > 0 {
-      0
-    } else if n_m > 0 {
-      1
-    } else {
-      2
-    };
+  if let [keepcol] = used_columns[..] {
     // Remove empty columns (in reverse order to preserve indices)
-    for c in (0..3).rev() {
+    for c in (0..ncols).rev() {
       if c == keepcol {
         continue;
       }
@@ -1960,7 +2029,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     return Ok(());
   }
 
-  // All 3 columns case — analyze continuation patterns
+  // Several columns used — analyze continuation patterns
   let mut eqs: Vec<Vec<Node>> = Vec::new();
   let mut numbered = false;
 
@@ -5162,6 +5231,7 @@ mod sect11;
 mod sect12;
 mod sect13;
 pub use sect08::declare_bound_text_symbols;
+pub use sect10::math_array_bindings;
 pub use sect13::nfss_selected_font;
 
 LoadDefinitions!({

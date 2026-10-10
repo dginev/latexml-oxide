@@ -466,10 +466,6 @@ pub(crate) fn load() -> Result<()> {
   // Array and similar environments
   // Perl: latex_constructs.pool.ltxml lines 3792-3809
   DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[(pos, template)] {
-    let mut attrs = HashMap::default();
-    let attachment = pos.map(|a| translate_attachment(a.to_string()))
-      .unwrap_or_else(|| translate_attachment(""));
-    attrs.insert(String::from("vattach"), attachment.to_string());
     // A raw `\hbox\bgroup$…\@tabarray` scaffold (latex.ltx:16560 `\@tabular`,
     // copied by deluxetable-style classes: aguplus.cls:305 `\pt@tabular`,
     // sgame, mdwtab, fcolumn, plarray) closes with `\endtabular`'s trailing
@@ -485,50 +481,12 @@ pub(crate) fn load() -> Result<()> {
     // clean; Perl 8-10). Guard:
     // `perfect_kernel_batch56::tabarray_cell_mode_follows_classz`.
     if x_equals(&T_CS!("\\@classz"), &T_CS!("\\@tabclassz")) {
+      let mut attrs = HashMap::default();
+      attrs.insert(String::from("vattach"), array_attachment(pos.as_ref()));
       tabular_bindings(template, SymHashMap::default(), attrs)?;
       return Ok(Vec::new());
     }
-    attrs.insert(String::from("role"), String::from("ARRAY"));
-    // Determine column and row separations, if non default
-    let colsep = lookup_dimension("\\arraycolsep");
-    if let Some(sep) = colsep
-      && sep.value_of()
-        != lookup_dimension("\\lx@default@arraycolsep")
-          .unwrap_or_default()
-          .value_of()
-      {
-        attrs.insert(String::from("colsep"), sep.to_attribute());
-      }
-    let astr = do_expand(T_CS!("\\arraystretch"))?.to_string();
-    if astr != "1"
-      && let Ok(astr_f) = astr.parse::<f64>()
-        && astr_f != 1.0 {
-          let rowsep = Dimension::from_str(&s!("{}em", astr_f - 1.0))?;
-          attrs.insert(String::from("rowsep"), rowsep.to_attribute());
-        }
-    let mut properties = SymHashMap::default();
-    if array_zeroes_interline() {
-      properties.insert("zero_interline", Stored::Bool(true));
-    }
-    if let Some(strut) = array_strut() {
-      properties.insert("strut", strut);
-    }
-    alignment_bindings(template, String::from("math"), properties, attrs);
-    // Perl: if display math, switch to text mathstyle
-    if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
-      MergeFont!(mathstyle => "text");
-    }
-    Let!("\\\\", "\\lx@alignment@newline");
-    // latex.ltx:16576 `\let\tabularnewline\\` in `\@array` — for `array` as
-    // for `tabular` (the text binding does it). Without it a column template
-    // that re-lets `\\` after opening a box (tabvar.sty:118 `>{\begin{varwidth}
-    // …\let\\=\TVtabularnewline $}` with `\TVtabularnewline` → `\tabularnewline`)
-    // got latex.ltx's top-level `\relax`, the row break vanished inside the
-    // last cell's box and every later `&` was an "Extra alignment tab" (tabvar
-    // demo ×80; KPE #192). Guard:
-    // `perfect_kernel_batch54::math_array_lets_tabularnewline_to_the_row_break`.
-    Let!("\\tabularnewline", "\\\\");
-    Let!("\\lx@intercol", "\\lx@math@intercol");
+    math_array_bindings(pos.as_ref(), template)?;
   });
 
   // latex.ltx:16550 `\array` `\let\@classz\@arrayclassz` (math cells).
@@ -570,5 +528,64 @@ pub(crate) fn load() -> Result<()> {
   );
   DefMacro!("\\@tabarray", r"\m@th\@ifnextchar[\@array{\@array[c]}");
 
+  Ok(())
+}
+
+/// The `vattach` of an array or tabular positioned `[pos]` (Perl latex_constructs.pool.ltxml:3792-3809).
+fn array_attachment(pos: Option<&Tokens>) -> String {
+  pos
+    .map(|a| translate_attachment(a.to_string()))
+    .unwrap_or_else(|| translate_attachment(""))
+    .to_string()
+}
+
+/// The math-cell alignment `\@array@bindings` opens (Perl latex_constructs.pool.ltxml:3792-3809) for a template its
+/// caller built: `\array`'s from its column letters, IEEEtrantools' `\IEEEeqnarraybox` from the IEEEtrantools column
+/// types (`ieeetrantools_sty.rs`).
+pub fn math_array_bindings(pos: Option<&Tokens>, template: Template) -> Result<()> {
+  let mut attrs = HashMap::default();
+  attrs.insert(String::from("vattach"), array_attachment(pos));
+  attrs.insert(String::from("role"), String::from("ARRAY"));
+  // Determine column and row separations, if non default
+  let colsep = lookup_dimension("\\arraycolsep");
+  if let Some(sep) = colsep
+    && sep.value_of()
+      != lookup_dimension("\\lx@default@arraycolsep")
+        .unwrap_or_default()
+        .value_of()
+  {
+    attrs.insert(String::from("colsep"), sep.to_attribute());
+  }
+  let astr = do_expand(T_CS!("\\arraystretch"))?.to_string();
+  if astr != "1"
+    && let Ok(astr_f) = astr.parse::<f64>()
+    && astr_f != 1.0
+  {
+    let rowsep = Dimension::from_str(&s!("{}em", astr_f - 1.0))?;
+    attrs.insert(String::from("rowsep"), rowsep.to_attribute());
+  }
+  let mut properties = SymHashMap::default();
+  if array_zeroes_interline() {
+    properties.insert("zero_interline", Stored::Bool(true));
+  }
+  if let Some(strut) = array_strut() {
+    properties.insert("strut", strut);
+  }
+  alignment_bindings(template, String::from("math"), properties, attrs);
+  // Perl: if display math, switch to text mathstyle
+  if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
+    MergeFont!(mathstyle => "text");
+  }
+  Let!("\\\\", "\\lx@alignment@newline");
+  // latex.ltx:16576 `\let\tabularnewline\\` in `\@array` — for `array` as
+  // for `tabular` (the text binding does it). Without it a column template
+  // that re-lets `\\` after opening a box (tabvar.sty:118 `>{\begin{varwidth}
+  // …\let\\=\TVtabularnewline $}` with `\TVtabularnewline` → `\tabularnewline`)
+  // got latex.ltx's top-level `\relax`, the row break vanished inside the
+  // last cell's box and every later `&` was an "Extra alignment tab" (tabvar
+  // demo ×80; KPE #192). Guard:
+  // `perfect_kernel_batch54::math_array_lets_tabularnewline_to_the_row_break`.
+  Let!("\\tabularnewline", "\\\\");
+  Let!("\\lx@intercol", "\\lx@math@intercol");
   Ok(())
 }

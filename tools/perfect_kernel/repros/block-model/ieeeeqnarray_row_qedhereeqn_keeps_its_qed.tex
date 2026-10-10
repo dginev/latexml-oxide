@@ -1,0 +1,20 @@
+% witness: review of 64ra round 6 (`\IEEEQEDhereeqn` in a numbered `{IEEEeqnarray}` row)
+% oracle:  pdflatex 1 error ("You can't use `\eqno' in math mode": the row is no display), then typesets ■ beside (2)
+% engines: rust 64ra round 5 = 0 errors, the row's ∎ lost (a second `ltx:tags` the row join dropped); Perl 1 error
+%          (`\IEEEQEDhereeqn` undefined)
+% expect:  0 errors (we read the QED as the row's tag material, not an error — more lenient than pdflatex); row 2's
+%          one `ltx:tags`: ∎ then "(2)", refnum 2; `\eqref{r2}` "(2)"
+% status:  RED (64ra round 5) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\usepackage{amsmath}
+\begin{document}
+\begin{IEEEproof}
+Rows
+\begin{IEEEeqnarray}{rCl}
+a &=& b\\
+c &=& d \IEEEQEDhereeqn\label{r2}
+\end{IEEEeqnarray}
+\end{IEEEproof}
+See \eqref{r2}.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: review of 64ra (an eqnarray row with an extra `&`; run 336's "Extra alignment tab" eqnarray papers)
+% oracle:  pdflatex 1 error, "Too many columns in eqnarray environment" (latex.ltx:15790-15794; its `\halign` has a
+%          fourth, number column, :15764), as here; the PDF numbers the rows (1) and (2)
+% engines: rust 64h4 = 1 error; 64ra v1 (9fcd4598e3) = 1 error but the rows regrouped (the extra cell widened the
+%          columns `rearrange_eqnarray` read: the `&&+d` row "new", not a continuation); Perl 1 error
+% expect:  1 error; the equationgroup byte-identical to 64h4 (columns 0/1/2, Perl latex_constructs.pool.ltxml:2307-2309):
+%          one equation, one number — the `&&+d` row joined as a continuation, the base/Perl rule
+%          (latex_constructs.pool.ltxml:2357-2364), not pdflatex's two numbers
+% status:  RED (64ra v1) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+a &=& b & c\\
+&& +d
+\end{eqnarray}
+\end{document}

@@ -310,10 +310,13 @@ LoadDefinitions!({
   // amsthm L141). Without it, `\qed` at end of proof in vertical mode
   // emits the U+220E text node outside any <ltx:p>.
   DefMacro!("\\qed", "\\ltx@qed");
+  // Sized as svjour3.cls (v3.2) :959 / svmult.cls (v5.4) :1027's `\hbox{\rlap{$\sqcap$}$\sqcup$}` (a glyph box), so a cell or `\mbox`
+  // holding only it is not dropped as empty (Perl Alignment.pm:458-470).
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
     enter_horizontal => true,
-    reversion => "\\qed");
+    reversion => "\\qed",
+    sizer => sub[whatsit] { Ok(engine::latex_constructs::sqcup_qed_size(whatsit)) });
   Let!("\\smartqed", "\\qed");
   Let!("\\squareforqed", "\\qed");
 

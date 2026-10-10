@@ -14921,3 +14921,79 @@ walk skips `.git`/`.svn`/`.hg`/`CVS`; a single-file input counts only that file,
 decompressed a second time for its dates. A non-numeric `SOURCE_DATE_EPOCH` falls back to the local clock (Perl's `gmtime("abc")` would give 1970-01-01; as
 before this batch); `\pdfcreationdate` appends `Z` also when the registers hold the local clock (an undated bundle under
 a non-UTC `TZ`; pdftex.rs).
+
+### 487. `$$` is display math in IEEEproof, linenomath, linenumbers, OmniBus frontmatter and autart pf; IEEEproof takes its title (Perl: boxed DefEnvironments, "Proof:")
+
+**Perl behavior**: IEEEtran.cls.ltxml:199-222 `{IEEEproof}`, lineno.sty.ltxml `{linenomath}`/`{linenomath*}`/
+`{linenumbers*}`/`{runninglinenumbers*}`/`{pagewiselinenumbers*}`, OmniBus `{frontmatter}`/`{mainmatter}`/
+`{backmatter}` are DefEnvironments with no `mode`, so their body is a restricted horizontal box where `$$` is no display
+(KPE #576); IEEEproof's title is a fixed "Proof:" (KPE #579); `\proof` is `\let` to `\IEEEproof` for good.
+**Rust behavior**: as the classes define them — IEEEproof a constructor pair (`\IEEEproof OptionalUndigested` opening
+`ltx:proof`, `\endIEEEproof` closing it with `maybe_close_element`, as amsthm's `\@proof`), titled `#1:` with `#1`
+defaulting to `\IEEEproofname` (IEEEtran.cls:5547-5548; Perl's bold italic kept); lineno's environments macros
+(lineno.sty:1157-1271, its `\linenomathNonumbers`/`\linenomathWithnumbers` bodies under `\ifLineNumbers`); OmniBus's and
+arximspdf's `{frontmatter}` plain groups (elsarticle.cls:1303, imsart.sty:1802); autart's `{pf}`/`{pf*}` a constructor
+pair (autart.cls:537-543). The `\proof` alias is a fallback (`DefinitionOrigin::Fallback`): IEEEtran 1.8b defines no
+`\proof` (IEEEtran.cls:6332), so a document's own `\newenvironment{proof}` wins (1002.0117, 1010.1899).
+**Why**: content — the formulas ran as text with Script errors in ~2,000 run-336 papers (1203.1892, 1402.4543,
+2307.10980, 2101.05047); 2601.10891 lost three sections inside a boxed `{linenomath}`. Residual: 64 more mode-less
+`"#body"` DefEnvironments (census in the 64ra report), mn2e's `{proof}`.
+
+### 488. IEEEproof's QED follows IEEEtran's own switch (Perl: the QED stack amsthm shares)
+
+**Perl behavior**: `\IEEEproof` pushes `\qed` on `QED@stack`, `\endIEEEproof` pops and digests it, and `\IEEEQEDhere`
+pops it (IEEEtran.cls.ltxml:193-196, 205-221) — the stack amsthm's `\qedhere` uses too (KPE #577).
+**Rust behavior**: IEEEtran.cls:5543-5556 — `\newif\if@IEEEQEDshow` true at class load, `\IEEEproof` sets it true
+locally, `\endIEEEproof` typesets the document's `\IEEEQED` while it is true, `\IEEEQEDoff` = `\global\@IEEEQEDshowfalse`,
+`\IEEEQEDhere` = `\IEEEQEDoff\IEEEQED`. An IEEEQED command in an amsthm proof leaves amsthm's ∎, amsthm's `\qedhere` in an
+IEEEproof leaves IEEEproof's (2001.04812), a nested IEEEproof's `\IEEEQEDhere` suppresses the outer QED (the false is
+global), a document's `\IEEEQED` or `\@IEEEQEDshowfalse` applies.
+**Why**: faithful to IEEEtran (2201.01339, 2201.11150, 1410.7694); Perl's stack lost amsthm's QED.
+
+### 489. `\IEEEQEDhereeqn`: one tag "∎(1)" (Perl: undefined)
+
+**Perl behavior**: undefined (KPE #578).
+**Rust behavior**: IEEEtran.cls:5551-5552 — `\IEEEQEDoff`, then the QED as the display's `\eqno` material
+(`\lx@IEEEQED@eqno`, the `\lx@eqno` template), a second `\IEEEQEDhereeqn` relaxed inside it as `\eqno` is, adding to the
+same tag. In a numbered display the QED material joins the number's displayed (role-less) tag before the number: one
+`ltx:tags`, `<tag>∎(1)</tag><tag role="refnum">1</tag>`, so `\ref` gives the number and the page "∎(1)" as pdflatex's
+single "■(1)"; twice "∎∎(1)". In an amsmath `align`/`gather`/`multline`/`split` row or an `{IEEEeqnarray}` row pdflatex
+errors ("You can't use `\eqno' in math mode") and then typesets ■; we merge the ∎ into the row's tag silently.
+**Why**: 1903.06134, 2201.03502, 2105.07617 use it. Residuals (invalid input): `a &=& b \IEEEQEDhereeqn &
+\IEEEQEDhereeqn` in a row gives three tags with a nested text; `\hbox{\IEEEQEDhereeqn}` 5 errors (64h4: 1; a plain
+`\hbox{\eqno(*)}` cascades alike); `$…\IEEEQEDhereeqn$` inline.
+
+### 490. The class QED symbols are sized as their boxes, so a cell holding only one is kept (Perl: the cell dropped as empty)
+
+**Perl behavior**: a cell whose boxes measure under 1sp is empty and skipped (Alignment.pm:458-470); the QED constructors
+have no sizer, so `\mbox{\IEEEQED}` alone in an eqnarray cell, or `& \hfill\IEEEQEDhere` in an IEEEeqnarray `x` cell,
+loses its QED (KPE #581).
+**Rust behavior**: the QED constructors carry the size TeX measures (`latex_constructs::symbol_box_size`): IEEEtran
+`\IEEEQEDclosed` and its `\qed` the 1.3ex rule (IEEEtran.cls:5533), amsthm's and autart's mirror `\qed` amsthm's
+`\openbox` (.77778 × .675em, amsthm.sty:422-426, one function `openbox_size`), cmsy10's `\sqcup` glyph box for llncs
+`\squareforqed`/`\qed` (llncs.cls:400), svjour3/svmult `\qed` (svjour3.cls v3.2 :959, svmult.cls v5.4 :1027), A&A's
+direct `\squareforqed` (aa.cls v5.3/5.4 :805, v6.0 :893, v6.1 :905, v7.0 :914; v8+ define none) and mn2e's
+`\squareforqed`/`\sq` (mn2e.cls:410; its `\proofbox`, a 6.5×6.5 picture at :871, is `\let` to it) — glyph boxes, not
+rules — and elsart/elsarticle's `\qed` a `\Box` glyph (elsart.cls:457, TL elsarticle.cls:1238 `\hbox{}\hfill$\Box$`;
+latexsym's lasy or amssymb's msam `\Box`, of comparable size). The emptiness test is Perl's. Residual: the binding's
+A&A `\sq`/`\qed` are plain characters (□, ∎; aa_support_sty.rs), not Perl's `\squareforqed` lets
+(aa_support.sty.ltxml:321-324) — a pre-existing difference.
+**Why**: the QED is author content (2201.11150, 1903.06134; 1905.10621's elsarticle cells, kept by amsthm's
+`openbox_size` since its krudces.sty:188 loads amsthm after the class; 12 IEEEtran papers now match pdflatex's QED
+count). A general rule (a constructor with visible content keeps its cell) is proposed as a K-row in the 64ra report.
+
+### 491. `\IEEEeqnarray` and `IEEEeqnarraybox` build their columns from the IEEEtrantools column table (Perl: a three-column eqnarray, L/C/R)
+
+**Perl behavior**: `\IEEEeqnarray{cols}` is `\eqnarray` with the specification dropped (IEEEtran.cls.ltxml:289-295, a
+TODO); `IEEEeqnarraybox` reads standard column letters plus L/C/R (:300-307) (KPE #580).
+**Rust behavior**: both read the specification as `\@@IEEEbuildpreamble` (IEEEtrantools.sty:2289-2310): a letter or
+braced name is a column of that `\IEEEeqnarraydefcol` type (:1485-1539, a document's own types honoured), glue
+punctuation and digits make none, other characters the package's errors. `\IEEEeqnarray[*]` is an eqnarray-style
+alignment over those columns (`eqnarray_bindings_with_columns`, numbering and `\IEEEyesnumber` etc. as before); the
+eqnarray rearrangement reads the template's width (an extra `&` regroups nothing) with a last `r` column only from
+three columns. The box's text columns (`s t u`) are text cells. `L C R` drop the package's `{}` spacing atom.
+`\IEEEeqnarraymulticol` uses the column type. IEEEtran and IEEEtrantools share one definition.
+**Why**: content — rows of more than three columns overran the eqnarray (2508.03314, 2011.14178, 1309.2819; ≤1,000
+run-336 papers). Residuals: the IEEEeqnarraybox `tex=` carries the columns' `\displaystyle`; no catcode normalisation
+of the specification (`\IEEEnormalcatcodes`); an empty specification makes no "No column specifiers declared" error;
+column glue, `[decl]`, struts and the box's default `[b]` position not modelled.

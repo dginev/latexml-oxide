@@ -1,6 +1,12 @@
 //! IEEEtran.cls — IEEE Transactions document class
 //! Perl: IEEEtran.cls.ltxml — 458 lines
-use crate::{engine::base_utilities::names_continue, prelude::*};
+use crate::{
+  engine::{
+    base_utilities::names_continue,
+    latex_constructs::{FontUnit, symbol_box_size},
+  },
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -350,103 +356,158 @@ LoadDefinitions!({
   DefMacro!("\\thetable", "\\Roman{table}");
 
   // QED symbols (Perl L194-198)
+  // Sized as IEEEtran.cls:5533's `\mbox{\rule[0pt]{1.3ex}{1.3ex}}`: a size-less whatsit alone in an alignment cell
+  // made the cell "empty" (Alignment::normalize, Perl Alignment.pm:458-470) and the QED was dropped — an
+  // `{IEEEeqnarray}` text cell `& \hfill\IEEEQEDhere` (2201.11150, 1903.06134), an eqnarray `\mbox{\IEEEQED}`
+  // (synthetic). The other classes' QEDs alike (`symbol_box_size`; llncs, svjour3/svmult, A&A, mn2e, elsart, amsthm).
   DefConstructor!("\\IEEEQEDclosed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
-    enter_horizontal => true);
+    enter_horizontal => true,
+    sizer => sub[whatsit] { Ok(symbol_box_size(whatsit, 1.3, 1.3, FontUnit::Ex)) });
   Let!("\\IEEEQEDopen", "\\IEEEQEDclosed");
   Let!("\\IEEEQED", "\\IEEEQEDclosed");
+  // IEEEtran.cls:5543 `\newif\if@IEEEQEDshow \@IEEEQEDshowtrue`, the class's own switch (a document may set it), true
+  // at class load: a bare `\endIEEEproof` prints its QED too.
+  RawTeX!(r"\newif\if@IEEEQEDshow \@IEEEQEDshowtrue");
 
-  // Perl IEEEtran.cls.ltxml L200-203: \IEEEQEDhere pops top of QED@stack,
-  // pushes empty Tokens() back, returns popped value. Intended to move
-  // the QED symbol from proof-end to an explicit in-body position. Mirrors
-  // the amsthm.sty `\qedhere` pattern (amsthm_sty.rs L154-162). The
-  // IEEEproof environment (defined below) pushes `\qed` in
-  // after_digest_begin and pops-and-digests in before_digest_end, so the
-  // full Perl stack discipline is in place: inline `\IEEEQEDhere` pulls
-  // the token out of the stack (replacing it with empty Tokens), causing
-  // the proof-end pop to produce nothing.
-  DefMacro!("\\IEEEQEDhere", sub[_args] {
-    let t = pop_value("QED@stack");
-    let _ = push_value("QED@stack", Stored::Tokens(Tokens!()));
-    if let Ok(Some(Stored::Tokens(tokens))) = t {
-      Ok(tokens)
-    } else {
-      Ok(Tokens!())
-    }
-  });
 
-  // IEEEproof environment (Perl L206-229)
-  // Perl digests \\textbf{\\textit{Proof:}} producing font="bold italic".
-  // Our codegen treats \\word as literal text, so use explicit attributes instead.
-  //
-  // Perl L213-228: afterDigestBegin pushes T_CS('\qed') onto QED@stack, and
-  // beforeDigestEnd pops it and digests — firing the QED symbol at proof-end
-  // unless \IEEEQEDhere already consumed the token inline. Mirrors the amsthm
-  // \@proof / \end@proof stack pattern.
-  // Template drops the explicit </ltx:proof> close so the Tag-level
-  // auto_close (latex_constructs.rs:6176) handles cleanup. Mirrors
-  // amsthm's `\@proof` pattern (constructor template opens but doesn't
-  // close; `\end@proof` calls maybe_close_element). Without this, when
-  // \end{IEEEproof}'s end_mode triggers a mode-error and auto-closes
-  // <ltx:proof> early, the template's strict </ltx:proof> close emits
-  // a spurious "malformed:ltx:proof isn't open" cascade. Witnesses:
-  // 1001.3714, 0801.0061 (R=Δ+1 vs Perl, both Δ=1 cosmetic cascade).
-  DefEnvironment!("{IEEEproof}[]",
-    "<ltx:proof><ltx:title font='#font' _force_font='true' class='ltx_runin'>#title</ltx:title>#body#qed",
-    properties => sub[_args] {
-      // Perl digests \textbf{\textit{Proof:}} producing font="bold italic".
-      // Build a bold-italic font via digestion so the title attribute matches.
-      // Template engine auto-binds `"font"` prop to the element's font= attr.
-      let title = digest(mouth::tokenize_internal(
-        "{\\bfseries\\itshape Proof:}"
-      ))?;
+  // IEEEproof (Perl IEEEtran.cls.ltxml:199-222), a constructor pair as amsthm's `\@proof`/`\end@proof`
+  // (amsthm.sty.ltxml:147-175): IEEEtran.cls:5547-5549 makes it two macros, `\IEEEproof` (`\par\noindent…{\itshape
+  // #1: }`, #1 defaulting to `\IEEEproofname`) and `\endIEEEproof` (the QED, `\par`), so its body stays in the mode
+  // around it and a `$$` there is display math (tex.web:21715 `init_math`). Perl's DefEnvironment boxes the body in
+  // restricted horizontal mode, where `$$` is two empty inline formulas (TeX_Math.pool.ltxml:65) and the formula ran
+  // as text: "Script _ can only appear in math mode" (1203.1892, 1402.4543, 0802.1555, 1612.01904). A bare
+  // `\endIEEEproof` (author error) closes a `ltx:proof` only when one is open (`maybe_close_element`), never a mode
+  // frame (2009.01572: a mode-bound IEEEproof's `\endIEEEproof` popped the locked document frame, Fatal), and an
+  // `\end{IEEEproof}` after the element closed reports no "ltx:proof isn't open" (1001.3714, 0801.0061).
+  // The title is the optional argument (IEEEtran.cls:5548), which Perl's fixed "Proof:" dropped; the font is Perl's
+  // bold italic. Perl (L205-221) pushes `\qed` on the QED@stack amsthm shares and digests it at the end unless Perl's
+  // `\IEEEQEDhere` took it; here, as IEEEtran.cls:5543-5556, the end typesets `\IEEEQED` while IEEEtran's own switch
+  // `\if@IEEEQEDshow` is true — set locally by `\@IEEEproof`, cleared globally by `\IEEEQEDoff`/`\IEEEQEDhere`/
+  // `\IEEEQEDhereeqn` — so no switch reaches an amsthm proof's QED nor amsthm's `\qedhere` this one's, and a global
+  // false outlives a nested IEEEproof's local true (repros block-model/ieeeproof_dollardollar_is_display,
+  // block-model/ieeeproof_qed_switches).
+  DefConstructor!("\\IEEEproof OptionalUndigested",
+    "<ltx:proof class='#class'><ltx:title font='#titlefont' _force_font='true' class='#titleclass'>#title</ltx:title>",
+    after_digest => sub[whatsit] {
+      // IEEEtran.cls:5548 `\@IEEEQEDshowtrue`, local to the environment's group.
+      digest(Tokens!(T_CS!("\\@IEEEQEDshowtrue")))?;
+    },
+    properties => sub[args] {
+      let mut title_tokens = vec![T_BEGIN!(), T_CS!("\\bfseries"), T_CS!("\\itshape")];
+      match args.first() {
+        Some(Some(arg)) => title_tokens.extend(arg.revert()?.unlist()),
+        _ => title_tokens.push(T_CS!("\\IEEEproofname")),
+      }
+      title_tokens.push(T_OTHER!(":"));
+      title_tokens.push(T_END!());
+      let title = digest(Tokens::new(title_tokens))?;
+      // The template engine binds the `"font"` prop to the element's font attribute (amsthm_sty.rs `\@proof`).
       let titlefont = title.get_font().ok().flatten().map(|f| (*f).clone());
-      // Digest `\qed` directly into a prop — the template references `#qed`
-      // at body-end so the QED symbol lands inside <ltx:proof>.
-      let qed = digest(mouth::tokenize_internal("\\qed"))?;
       let mut map = SymHashMap::default();
       map.insert("title", title.into());
-      map.insert("qed", qed.into());
       if let Some(f) = titlefont {
         map.insert("font", Stored::Font(Rc::new(f)));
       }
+      map.insert("titleclass", "ltx_runin".into());
       Ok(map)
-    },
-    // Cycle 302 cleanup: removed after_digest_begin (push \qed) +
-    // before_digest_end (pop+digest \qed) hooks. The QED symbol is
-    // now emitted via the `#qed` template prop above (properties
-    // closure digests `\qed` once at construction time). These
-    // hooks never fired correctly in the DefEnvironment absorber
-    // context — cycle 301 probe confirmed Digest! from
-    // before_digest_end didn't reach the body. The properties-prop
-    // approach is simpler and works. Note: `\IEEEQEDhere` inline
-    // consumption (Perl IEEEtran.cls.ltxml L200-203) now emits an
-    // extra symbol that Perl would have suppressed via the stack
-    // machinery — tracked as a known minor divergence; no test
-    // exercises \IEEEQEDhere against Perl ground truth, so accepting
-    // the simplification.
-    //
-    // NB: Perl IEEEtran.cls.ltxml L206 declares `{IEEEproof}` with NO
-    // `mode =>`, so it stays in the ambient (restricted_horizontal)
-    // mode. We must match that. A previous `mode => "internal_vertical"`
-    // was a surpass-Perl tweak so that `$$..$$` inside `\begin{IEEEproof}`
-    // would be recognized as display math (`$$` is display only when
-    // BOUND_MODE ends with "vertical" — tex_math.rs / Perl TeX_Math L65,
-    // identical). But Perl is ground truth, and Perl does NOT treat such
-    // `$$` as display: it emits the cascading "Script _/^ can only appear
-    // in math mode" errors (verified on a synthetic IEEEproof with `$$`).
-    // Worse, the vertical mode meant `\endIEEEproof` ended `internal_vertical`,
-    // which matches the BOUND_MODE bound on the LOCKED document frame by
-    // `\begin{document}`'s `begin_mode_opt("internal_vertical")`; so a
-    // *bare* `\endIEEEproof` (author error, no matching `\begin{IEEEproof}`)
-    // popped the locked frame → `Fatal:TargetUnexpected:Endgroup "attempt
-    // to pop last locked stack frame"`, aborting the whole run (empty
-    // HTML). With no mode, `\endIEEEproof` ends restricted_horizontal,
-    // which never matches the locked frame, so Perl's recover-branch
-    // ("Attempt to end mode") fires and the run completes — matching Perl.
-    // Witness 2009.01572 (bare `\endIEEEproof` at line 570: FATAL/empty →
-    // completes, matching Perl's 1-error output).
-    );
+    });
+  DefConstructor!("\\endIEEEproof", sub[document, _args] {
+    document.maybe_close_element("ltx:proof")?;
+  },
+  // IEEEtran.cls:5549 `\if@IEEEQEDshow … \IEEEQED\fi`: the document's `\IEEEQED`, and nothing an amsthm `\qedhere`
+  // could take (2001.04812).
+  before_digest => {
+    if x_equals(&T_CS!("\\if@IEEEQEDshow"), &T_CS!("\\iftrue")) {
+      return Ok(vec![digest(Tokens!(T_CS!("\\IEEEQED")))?]);
+    }
+    Ok(vec![])
+  });
+  // IEEEtran.cls:5556 `\IEEEQEDoff` = `\global\@IEEEQEDshowfalse`: no QED at the end of this IEEEproof (synthetic, no
+  // live witness found). :5554 `\IEEEQEDhere` the same and the QED where it stands (2201.01339, at the end of an
+  // itemize item, `\hfill \IEEEQEDhere`; 2201.11150, IEEEeqnarray cells; 1410.7694); :5551-5552 `\IEEEQEDhereeqn` the
+  // same with the QED as the display's equation number (1903.06134, 2201.03502). Perl's `\IEEEQEDhere`
+  // (IEEEtran.cls.ltxml:193-196) took the top of the QED@stack an amsthm proof shares; Perl has no `\IEEEQEDhereeqn`.
+  RawTeX!(r"\def\IEEEQEDoff{\global\@IEEEQEDshowfalse}");
+  DefMacro!("\\IEEEQEDhere", "\\IEEEQEDoff\\IEEEQED");
+  // The `\eqno` material is the QED and, in a numbered `equation`, LaTeX's own `\eqno\hbox{\@eqnnum}` after it — the
+  // `\let\eqno\relax` makes it ONE tag, "■(1)", and a second `\IEEEQEDhereeqn` adds to it ("■■(1)"). The equation's
+  // number is already its `ltx:tags`, so the QED's material moves into that tags' displayed (role-less) tag, before the
+  // number: one `ltx:tags`, the scan's refnum still the number's (its `refnum` tag comes last), the page "∎(1)"; a
+  // numbered `{IEEEeqnarray}` row's alike. A QED's material is moved as elements only (its element children, or an
+  // `ltx:text` holding them when text nodes are among them — libxml merges, and frees, adjacent text nodes on
+  // insertion), marked `_qed` so a later QED goes after the earlier ones, before the number. A second
+  // `\IEEEQEDhereeqn` inside the first's material is relaxed as `\eqno` is (IEEEtran.cls:5551), adding to its tag.
+  RawTeX!(r"\def\IEEEQEDhereeqn{\IEEEQEDoff\lx@IEEEQED@eqno\let\lx@IEEEQED@eqno\relax\let\eqno\relax\let\leqno\relax\let\veqno\relax\hbox{\IEEEQED}}");
+  DefConstructor!("\\lx@IEEEQED@eqno EqnoTag",
+    "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
+    reversion => "",
+    after_construct => sub[document, _whatsit] {
+      let node = document.get_node().clone();
+      let Some(equation) = document
+        .findnodes("ancestor-or-self::ltx:equation[1]", Some(&node))
+        .into_iter()
+        .next()
+      else {
+        return Ok(());
+      };
+      let tags = document.findnodes("ltx:tags", Some(&equation));
+      let Some(mut qed_tags) = tags.last().cloned() else {
+        return Ok(());
+      };
+      let Some(mut qed_tag) = document.findnodes("ltx:tag", Some(&qed_tags)).into_iter().next() else {
+        return Ok(());
+      };
+      // The QED's material as marked elements: its element children, or one `ltx:text` holding them when text nodes are
+      // among them.
+      let children = qed_tag.get_child_nodes();
+      let mut material: Vec<Node> = if children.iter().all(|child| child.get_type() == Some(NodeType::ElementNode)) {
+        children
+      } else {
+        let mut wrapper = document.open_element_at(&mut qed_tag, "ltx:text", None, None)?;
+        for mut child in children {
+          child.unlink_node();
+          if child.get_type() == Some(NodeType::TextNode) {
+            wrapper.append_text(&child.get_content()).ok();
+          } else {
+            wrapper.add_child(&mut child).ok();
+          }
+        }
+        document.close_element_at(&mut wrapper)?;
+        let _ = wrapper.remove_attribute("font");
+        vec![wrapper]
+      };
+      for element in material.iter_mut() {
+        element.set_attribute("_qed", "1").ok();
+      }
+      // The equation's own displayed tag, when it has one before ours.
+      let Some(number_tags) = tags.first().filter(|first| **first != qed_tags) else {
+        return Ok(());
+      };
+      let Some(mut number_tag) = document
+        .findnodes("ltx:tag[not(@role)]", Some(number_tags))
+        .into_iter()
+        .next()
+      else {
+        return Ok(());
+      };
+      let before = number_tag
+        .get_child_nodes()
+        .into_iter()
+        .find(|child| child.get_attribute("_qed").is_none());
+      for element in material.iter_mut() {
+        element.unlink_node();
+        match &before {
+          Some(before) => {
+            before.clone().add_prev_sibling(element).ok();
+          },
+          None => {
+            number_tag.add_child(element).ok();
+          },
+        }
+      }
+      qed_tags.unlink_node();
+    });
 
   // IEEEbiography (Perl IEEEtran.cls.ltxml L238-247) — two-column
   // tabular-in-float: photo/placeholder on left, bolded author + body
@@ -473,175 +534,9 @@ LoadDefinitions!({
       </ltx:tabular>\
     </ltx:float>");
 
-  // IEEEeqnarray (Perl IEEEtran.cls.ltxml L298-302) — Perl uses
-  //   DefMacroI('\IEEEeqnarray', '{}', '\eqnarray')
-  // Consumes `{rCl}` column spec, expands to `\eqnarray`.
-  //
-  // KNOWN BUG: Rust translation below drops row-1 cell-1 of the
-  // expanded env (emits `<td colspan="2">` merging cells 1+2 where
-  // Perl emits three separate `<td>` cells). Plain `\eqnarray` via
-  // direct `\begin{eqnarray}` works correctly; rows 2+ of
-  // IEEEeqnarray also work correctly. Failing mode scoped to row 1.
-  //
-  // Cycle 294 diagnostic probes (all still broken):
-  //   1. Zero-arg `\IEEEeqnarray` (leave `{rCl}` in stream)
-  //   2. Trailing space after `\eqnarray` in body
-  //   3. Inlined `\eqnarray` expansion directly
-  //   4. `\@gobble`-style intermediate macro indirection
-  //   5. `\relax` barrier before `\eqnarray`
-  //   6. `RawTeX!(r"\long\def\IEEEeqnarray#1{\eqnarray}…")` (replace
-  //      compile-time DefMacro! with runtime \def in ltxml class-load)
-  //   7. `LATEXML_NODUMP=1` (bypass dump cache)
-  //
-  // **Works:** an in-`.tex` document-preamble `\def\IEEEeqnarray#1{\eqnarray}`
-  // correctly rescues row 1 cell 1. Also a rename probe — `\myeqnarray`
-  // via `\def\myeqnarray#1{\eqnarray}` + `\def\endmyeqnarray{\endeqnarray}`
-  // under the same IEEEtran class load — works.
-  //
-  // So the bug is SPECIFIC to the `\IEEEeqnarray` CS binding installed
-  // from this `.cls.ltxml` (probably interacting with the dump cache
-  // or a pre-class `\let` against `\IEEEeqnarray`). The runtime \def
-  // workaround via RawTeX does NOT override it, suggesting the
-  // binding is installed before this RawTeX runs, or persists via a
-  // path that \def can't supersede. Needs dumper-trace next cycle —
-  // grep the .model / dump files for `\IEEEeqnarray` pre-existing
-  // bindings, and investigate `AssignMeaning` vs `Let` lock-out.
-  //
-  // Affects ~56 <Math>, ~38 <td> across IEEE.tex.
-  //
-  // Cycle 295 probe: defer \def to post-preamble time — the proven-working
-  // context for `\def\IEEEeqnarray#1{\eqnarray}`.
-  DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
-  DefMacro!("\\endIEEEeqnarray", "\\endeqnarray");
-  at_begin_document(TokenizeInternal!(
-    r"\def\IEEEeqnarray#1{\eqnarray}\def\endIEEEeqnarray{\endeqnarray}\expandafter\def\csname IEEEeqnarray*\endcsname#1{\csname eqnarray*\endcsname}\expandafter\def\csname endIEEEeqnarray*\endcsname{\csname endeqnarray*\endcsname}"
-  ))?;
-  // Perl L301-302: `\IEEEeqnarray*` → `\eqnarray*` (unnumbered form).
-  // Port was missing — absence surfaced as undefined-macro errors on
-  // any `\begin{IEEEeqnarray*}…\end{IEEEeqnarray*}` in source, shifting
-  // subsequent equation numbering by 3 in tests/structure/IEEE.tex
-  // (the test uses 3 unnumbered IEEEeqnarray* env pairs interleaved
-  // with numbered ones). Fixing this + the matching \endIEEEeqnarray*
-  // should recover the ~3-equation drift between Rust and the
-  // IEEE.xml reference under TL2025.
-  // Starred ENV handler: the CS name must literally be `\IEEEeqnarray*`
-  // (env-begin csname lookup); the string prototype form would parse the
-  // `*` as a literal PARAMETER and clobber the unstarred definition
-  // ([[feedback_defmacro_starred]]).
-  DefMacro!(T_CS!("\\IEEEeqnarray*"), Some(parse_parameters("{}", &T_CS!("\\IEEEeqnarray*"), true)?.unwrap()), Some(ExpansionBody::Tokens(Tokenize!(TeXString::assembled(r"\eqnarray*".to_string())))));
-  Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
-  def_macro_noop("\\IEEEeqnarraynumspace")?;
-  // IEEEeqnarraybox (Perl IEEEtran.cls.ltxml L315-332), shared with the IEEEtrantools binding.
-  ieeetrantools_sty::define_eqnarraybox()?;
-  DefMacro!("\\IEEEeqnarraymulticol{}{}{}", "\\multicolumn{#1}{#2}{#3}");
-  def_macro_noop("\\IEEEeqnarraydefcol{}{}{}")?;
-  def_macro_noop("\\IEEEeqnarraydefcolsep{}{}")?;
-
-  // IEEEnonumber/yesnumber/sub-numbering — Perl L252-294.
-  // Flip EQUATION_NUMBERING (starred form) or EQUATIONROW_TAGS (unstarred)
-  // retract/noretract/counter keys to match Perl's in-place hash mutation
-  // of LookupValue-returned refs. Previous Rust port was a DefMacro stub
-  // that aliased to \nonumber (or was empty) and lost the row-tag
-  // retraction entirely.
-  DefPrimitive!("\\IEEEnonumber OptionalMatch:*", sub[(star)] {
-    let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
-    with_value_mut(key, |v| {
-      if let Some(Stored::HashStored(m)) = v {
-        m.insert("retract", Stored::Bool(true));
-        m.remove("counter");
-      }
-    });
-    Ok(())
-  });
-  DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(star)] {
-    // Perl: if EQUATION_NUMBERING.counter == 'subequation', step the equation counter
-    let subeq = with_value("EQUATION_NUMBERING", |v| {
-      if let Some(Stored::HashStored(m)) = v {
-        matches!(m.get("counter"),
-          Some(Stored::String(s)) if to_string(*s) == "subequation")
-      } else { false }
-    });
-    if subeq {
-      RefStepCounter!("equation", false)?;
-    }
-    if star.is_some() {
-      with_value_mut("EQUATION_NUMBERING", |v| {
-        if let Some(Stored::HashStored(m)) = v {
-          m.insert("retract", Stored::Bool(false));
-          m.remove("counter");
-        }
-      });
-    } else {
-      with_value_mut("EQUATIONROW_TAGS", |v| {
-        if let Some(Stored::HashStored(m)) = v {
-          m.insert("noretract", Stored::Bool(true));
-          m.remove("counter");
-        }
-      });
-    }
-    Ok(())
-  });
-  DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(star)] {
-    let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
-    with_value_mut(key, |v| {
-      if let Some(Stored::HashStored(m)) = v {
-        m.insert("counter", Stored::String(pin!("subequation")));
-      }
-    });
-    let preset = with_value("EQUATION_NUMBERING", |v| {
-      matches!(v, Some(Stored::HashStored(m)) if m.contains_key("preset"))
-    }) || with_value("EQUATIONROW_TAGS", |v| {
-      matches!(v, Some(Stored::HashStored(m)) if m.contains_key("preset"))
-    });
-    if preset {
-      RefStepCounter!("subequation", false)?;
-    }
-    Ok(())
-  });
-  DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(star)] {
-    let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
-    with_value_mut(key, |v| {
-      if let Some(Stored::HashStored(m)) = v {
-        m.insert("counter", Stored::String(pin!("equation")));
-      }
-    });
-    Ok(())
-  });
-
-  // Column types (Perl IEEEtran.cls.ltxml L308-314): L/C/R add
-  // \hfil-before/after hooks — the same pattern aas_support_sty:313
-  // uses for its `h`/`B` columns. Porting all three so IEEEeqnarraybox
-  // actually aligns by the user's spec instead of Rust's
-  // center-defaulted fallthrough.
-  //
-  //   L  = after \hfil        (flush left)
-  //   C  = before + after     (center)
-  //   R  = before \hfil       (flush right)
-  DefColumnType!("L", {
-    with_building_template(|template| {
-      template.add_column(Cell {
-        after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
-  });
-  DefColumnType!("C", {
-    with_building_template(|template| {
-      template.add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        after:  Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
-  });
-  DefColumnType!("R", {
-    with_building_template(|template| {
-      template.add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
-  });
+  // IEEEeqnarray, IEEEeqnarraybox, the (sub)numbering switches and the L/C/R column types (Perl IEEEtran.cls.ltxml
+  // L242-332; IEEEtran.cls carries the code IEEEtrantools.sty ships), shared with the IEEEtrantools binding.
+  ieeetrantools_sty::define_ieeeeqnarray()?;
 
   // IEEEtran.cls:5752-5775: `\appendices` numbers the appendices `\Roman` ("Appendix I") under the
   // `romanappendices` option and `\Alph` ("Appendix A") otherwise; `\appendix` gives `\Alph`. Perl lets
@@ -796,9 +691,17 @@ LoadDefinitions!({
   DefMacro!("\\qed", "\\ltx@qed");
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
-    enter_horizontal => true, reversion => "\\qed");
-  Let!("\\proof", "\\IEEEproof");
-  Let!("\\endproof", "\\endIEEEproof");
+    enter_horizontal => true, reversion => "\\qed",
+    sizer => sub[whatsit] { Ok(symbol_box_size(whatsit, 1.3, 1.3, FontUnit::Ex)) });
+  // Perl L423-424 `\proof` → `\IEEEproof`: IEEEtran 1.8b defines no `\proof` (IEEEtran.cls:6332, commented
+  // out with the V1.7 aliases), so the alias is a fallback a document's own `\newenvironment{proof}` replaces
+  // (1002.0117, 1010.1899; `DefinitionOrigin::Fallback`, `is_definable_latex`).
+  {
+    use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+    let _fallback = OriginGuard::new(DefinitionOrigin::Fallback);
+    Let!("\\proof", "\\IEEEproof");
+    Let!("\\endproof", "\\endIEEEproof");
+  }
   // IEEEtran proofs route through amsthm's `\@proof` / `\end@proof`
   // machinery (the magic `\begin{proof}` CS from amsthm_sty.rs:220 —
   // `\begin{proof}` → `\begin{@proof}`). We re-override `\th@proof`

@@ -32,7 +32,7 @@ Stuff, More Stuff
       </para>
     </theorem>
     <proof>
-      <title class="ltx_runin" font="bold italic">Proof:</title>
+      <title class="ltx_runin" font="bold italic">Proof of Theorem <ref labelref="LABEL:th1"/>:</title>
       <para xml:id="S1.p1">
         <p>Because I say so.</p>
       </para>
@@ -799,7 +799,7 @@ Stuff, More Stuff
     </para>
     <para xml:id="S2.p10">
       <p>And boxed?
-<Math mode="inline" tex="\begin{IEEEeqnarraybox}{rCl}N&amp;=&amp;14\\&#10;N&amp;=&amp;14\end{IEEEeqnarraybox}" text="Array[[N, =, 14], [N, =, 14]]" xml:id="S2.p10.m1">
+<Math mode="inline" tex="\begin{IEEEeqnarraybox}{rCl}\displaystyle N&amp;\displaystyle=&amp;\displaystyle 14\\&#10;\displaystyle N&amp;\displaystyle=&amp;\displaystyle 14\end{IEEEeqnarraybox}" text="Array[[N, =, 14], [N, =, 14]]" xml:id="S2.p10.m1">
           <XMath>
             <XMArray role="ARRAY" vattach="middle">
               <XMRow>
@@ -847,7 +847,7 @@ Stuff, More Stuff
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle x_{1}" text="x _ 1" xml:id="S2.E15.m1">
+              <td align="center"><Math mode="inline" tex="\displaystyle x_{1}" text="x _ 1" xml:id="S2.E15.m1">
                   <XMath>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -875,7 +875,7 @@ Stuff, More Stuff
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle x_{2}" text="x _ 2" xml:id="S2.E15.E2.m1">
+              <td align="center"><Math mode="inline" tex="\displaystyle x_{2}" text="x _ 2" xml:id="S2.E15.E2.m1">
                   <XMath>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -903,7 +903,7 @@ Stuff, More Stuff
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle x_{3}" text="x _ 3" xml:id="S2.E15.E3.m1">
+              <td align="center"><Math mode="inline" tex="\displaystyle x_{3}" text="x _ 3" xml:id="S2.E15.E3.m1">
                   <XMath>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -931,7 +931,7 @@ Stuff, More Stuff
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle x_{4}" text="x _ 4" xml:id="S2.E16.E2.m1">
+              <td align="center"><Math mode="inline" tex="\displaystyle x_{4}" text="x _ 4" xml:id="S2.E16.E2.m1">
                   <XMath>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -959,7 +959,7 @@ Stuff, More Stuff
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle x_{5}" text="x _ 5" xml:id="S2.E16.E3.m1">
+              <td align="center"><Math mode="inline" tex="\displaystyle x_{5}" text="x _ 5" xml:id="S2.E16.E3.m1">
                   <XMath>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -987,7 +987,7 @@ Stuff, More Stuff
               </XMath>
             </Math>
             <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle x_{6}" text="x _ 6" xml:id="S2.E18.m1">
+              <td align="center"><Math mode="inline" tex="\displaystyle x_{6}" text="x _ 6" xml:id="S2.E18.m1">
                   <XMath>
                     <XMApp>
                       <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>

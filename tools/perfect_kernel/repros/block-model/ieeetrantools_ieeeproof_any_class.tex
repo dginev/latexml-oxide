@@ -1,0 +1,17 @@
+% witness: review of 64ra round 5 (IEEEtrantools.sty:2726-2747 defines `{IEEEproof}`, `\IEEEQED`, `\IEEEQEDhere`,
+%          `\IEEEQEDhereeqn`, `\IEEEQEDoff` for any class; ieeetrantools_sty.rs defines none and the binding blocks the
+%          raw .sty)
+% oracle:  pdflatex 0 errors, "Proof: Since x1 = 0. ■"
+% engines: rust 64ra = 2 errors ("The environment {IEEEproof} is not defined", "\IEEEQEDhere is not defined"); Perl 2
+%          errors, 1 warning (no IEEEtrantools binding, the raw file not loaded)
+% expect:  0 errors, 0 warnings; an `ltx:proof` titled "Proof:" with the ∎ inline, none at the end
+% status:  RED (64ra) — not fixed in 64ra (move the IEEEproof/QED block from ieeetran_cls.rs into the shared
+%          `define_ieeeeqnarray` family, or a sibling shared definer, called by both bindings)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEproof}
+Since $x_1 = 0$. \IEEEQEDhere
+\end{IEEEproof}
+\end{document}

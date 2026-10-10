@@ -1,0 +1,102 @@
+% witness: 2201.01339, 2201.11150 (in IEEEeqnarray cells), 1410.7694 (`\IEEEQEDhere`); 1903.06134 (`\IEEEQEDhereeqn` in an
+%          `equation*` in the outer proof of a nested pair, :3279-3281), 2201.03502; 2001.04812 (amsthm `\qedhere` in
+%          an IEEEproof)
+% oracle:  pdflatex 0 errors (IEEEtran.cls:5549-5556: `\IEEEQEDhere` = `\global\@IEEEQEDshowfalse\IEEEQED`,
+%          `\IEEEQEDhereeqn` the same with the QED as the equation number, `\endIEEEproof` typesets `\IEEEQED` while
+%          the switch is true); the inner proof's QED where `\IEEEQEDhere` stands and none at the outer's end (the
+%          false is global), amsthm's box kept after an `\IEEEQEDhere` in it, the numbered display's one tag "■(1)",
+%          twice "■■(2)", IEEEproof's end QED kept after amsthm's `\qedhere`, a document's `\IEEEQED` ("X") at the
+%          end, the IEEEeqnarray `x` cell's ■ (2201.11150 :1366, :2285; 1903.06134 treepin.tex:2217-2226), an
+%          eqnarray `\mbox{\IEEEQED}`
+% engines: rust 64h4 = 5 errors (`\IEEEQEDhereeqn`, `\IEEEQEDoff`, `\@IEEEQEDshowfalse`, `\if@IEEEQEDshow` undefined;
+%          the `{rCl+x*}` row "Extra alignment tab"), the
+%          nested pairs mis-nested (outer proofs never closed), the amsthm proof's own QED taken by `\IEEEQEDhere`
+%          (Perl IEEEtran.cls.ltxml:193-196 pops the shared QED@stack), the eqnarray `\mbox{\IEEEQED}` cell empty (a
+%          size-less whatsit makes the cell "empty", Perl Alignment.pm:458-470); Perl the same 5 errors
+% expect:  0 errors, 0 warnings; "Inner. ∎", "OuterEnd." without ∎; "Ams. ∎∎"; the `$$` and `equation*` displays
+%          tagged ∎, no end QED; the numbered `equation`'s one `ltx:tags`, its displayed tag ∎ then "(1)" (refnum 1,
+%          `\eqref{e}` "(1)"), twice ∎∎ then "(2)"; the align proof ends with ∎; the last proof ends "X"; the `x` cell
+%          and the `\mbox` cell hold ∎; the class's own switch (IEEEtran.cls:5543 `\newif\if@IEEEQEDshow`): A1 (global
+%          false), A2 (local false), A4 (`\IEEEQEDoff`) and A5's outer end without ∎, A3 and A6 (the local false undone,
+%          each proof resets it) and A5's inner with it, "SHOWFALSE" after a global false
+% status:  RED (64h4) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\begin{document}
+\begin{IEEEproof}
+Outer.
+\begin{IEEEproof}
+Inner. \IEEEQEDhere
+\end{IEEEproof}
+OuterEnd.
+\end{IEEEproof}
+\begin{proof}
+Ams. \IEEEQEDhere
+\end{proof}
+\begin{IEEEproof}
+Hence
+$$ x = y \IEEEQEDhereeqn $$
+\end{IEEEproof}
+\begin{IEEEproof}
+Outer.
+\begin{IEEEproof}
+Inner.
+\end{IEEEproof}
+Thus
+\begin{equation*}
+a = b. \hfill\IEEEQEDhereeqn
+\end{equation*}
+\end{IEEEproof}
+\begin{IEEEproof}
+Numbered
+\begin{equation}\label{e}
+c = d \IEEEQEDhereeqn
+\end{equation}
+\end{IEEEproof}
+\begin{IEEEproof}
+Twice
+\begin{equation}
+g = h \IEEEQEDhereeqn \IEEEQEDhereeqn
+\end{equation}
+\end{IEEEproof}
+\begin{IEEEproof}
+Cell
+\begin{IEEEeqnarray*}{rCl+x*}
+a &=& b. & \hfill\IEEEQEDhere
+\end{IEEEeqnarray*}
+\end{IEEEproof}
+\begin{eqnarray*}
+a &=& \mbox{\IEEEQED}
+\end{eqnarray*}
+See \eqref{e}.
+\begin{IEEEproof}
+Then
+\begin{align*}
+e &= f. \qedhere
+\end{align*}
+\end{IEEEproof}
+{\renewcommand\IEEEQED{X}
+\begin{IEEEproof}
+Own.
+\end{IEEEproof}}
+\makeatletter
+\begin{IEEEproof} A1. \global\@IEEEQEDshowfalse
+\end{IEEEproof}
+\begin{IEEEproof} A2 local. \@IEEEQEDshowfalse
+\end{IEEEproof}
+\begin{IEEEproof} A3 plain.
+\end{IEEEproof}
+\begin{IEEEproof} A4 off. \IEEEQEDoff
+\end{IEEEproof}
+\begin{IEEEproof} A5 outer
+\begin{IEEEproof} A5 inner \hfill\IEEEQEDhere
+\end{IEEEproof}
+A5 outer tail.
+\end{IEEEproof}
+After: \if@IEEEQEDshow SHOWTRUE\else SHOWFALSE\fi.
+\begin{IEEEproof} A6 reset.
+\end{IEEEproof}
+\makeatother
+\end{document}

@@ -361,8 +361,13 @@ LoadDefinitions!({
   // Perl L314-324: math small caps, QED square
   DefConstructor!("\\mathsc{}", "#1", bounded => true, require_math => true,
     font => { family => "smallcaps", series => "medium", shape => "upright" });
+  // Sized as aa.cls's `\squareforqed` `\hbox{\rlap{$\sqcap$}$\sqcup$}` (a glyph box; v5.3/5.4 :805, v6.0 :893, v6.1
+  // :905, v7.0 :914; v8+ define none, `\sq` is `\Box`), so a cell or `\mbox` holding only a direct `\squareforqed` is
+  // not dropped as empty (Perl Alignment.pm:458-470). `\sq`/`\qed` are redefined below as plain characters (already
+  // sized; Perl aa_support.sty.ltxml:321-324 keeps them `\squareforqed`, a pre-existing difference).
   DefConstructor!("\\squareforqed",
-    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    sizer => sub[whatsit] { Ok(engine::latex_constructs::sqcup_qed_size(whatsit)) });
   Let!("\\sq", "\\squareforqed");
   Let!("\\qed", "\\squareforqed");
 
