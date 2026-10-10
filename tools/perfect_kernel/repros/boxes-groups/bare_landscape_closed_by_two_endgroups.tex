@@ -1,0 +1,14 @@
+% witness: review 64y round 4 (t2)
+% oracle:  pdflatex 0 errors (the first \endgroup unsaves \landscape's \begingroup, the second closes the \begingroup)
+% engines: rust 64w 2E+1W -> 64y r4 1E -> 64y 0/0; Perl 2E
+% expect:  0 errors 0 warnings
+% status:  GREEN (64y r5); guard perfect_kernel_batch64y::bare_landscape_closed_by_two_endgroups
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{setspace,lscape,multicol}
+\begin{document}
+Intro.
+
+\begingroup\landscape Landscape text.\endgroup\endgroup After.
+
+Closing text.
+\end{document}

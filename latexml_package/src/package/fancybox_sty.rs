@@ -42,7 +42,9 @@ LoadDefinitions!({
       if let Ok(Some(body)) = whatsit.get_body() {
         assign_value("Sbox", Stored::Digested(body), Some(Scope::Global));
       }
-    });
+    },
+    // The begin code opens a TeX group of its own: fancybox.sty:167 `\global\setbox\@Sbox\hbox\bgroup`.
+    tex_group => { TexGroup::Box });
   DefPrimitive!("\\TheSbox", {
     let stashed = lookup_value("Sbox");
     assign_value("Sbox", Stored::None, Some(Scope::Global));

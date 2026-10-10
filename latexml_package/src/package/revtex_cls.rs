@@ -4,9 +4,14 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: revtex.cls.ltxml
   // Ignorable options
-  for option in ["manuscript", "eqsecnum", "preprint", "tighten", "floats"].iter() {
+  for option in ["manuscript", "eqsecnum", "preprint", "tighten"].iter() {
     DeclareOption!(*option, None);
   }
+  // Read by revtex3_support: REVTeX 3's `figure` is a float only under
+  // `floats` (aps.sty:614-630).
+  DeclareOption!("floats", {
+    assign_value("revtex3@floats", true, Some(Scope::Global));
+  });
   // Sub-styles
   for substyle in ["aps", "osa", "aip", "pra", "prb", "prc", "prd", "prl", "rmp", "seg"].iter() {
     DeclareOption!(*substyle, None);

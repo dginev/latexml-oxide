@@ -72,6 +72,45 @@ pub fn child_span(d: &Digested) -> Option<Locator> {
   }
 }
 
+/// The TeX group an environment's begin code leaves open for its end code, in tex.web's group codes (§269):
+/// none (`\trivlist`, `\list`: the bare `\X` opens no group at all), a `semi_simple_group` (`\begingroup`, or a
+/// nested `\begin`: setspace's `spacing`, lscape's `landscape`, `multicols`, beamer's blocks), or a box group (a
+/// `\vbox\bgroup`/`\hbox\bgroup`/`\color@hbox`: a float's `\@xfloat`, latex.ltx:17421-17479; `\minipage`, :16310).
+/// §1063 `end_group` against a `semi_simple_group` just unsaves; against a box group it is `off_save`'s "Missing }
+/// inserted" (§1064). `}` against a `semi_simple_group` is §1069 `extra_right_brace` ("Extra }, or forgotten
+/// \endgroup"); against a box group §1068 packages the box, with no error there, and TeX reports the mismatch later.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TexGroup {
+  /// no group of its own
+  #[default]
+  None,
+  /// a `\begingroup` (`semi_simple_group`)
+  SemiSimple,
+  /// a box or colour group
+  Box,
+}
+
+impl TexGroup {
+  /// The name stored on the environment's frame (`lx@env@tex@group`) and in a binding's run-time override.
+  pub fn as_str(self) -> &'static str {
+    match self {
+      TexGroup::None => "none",
+      TexGroup::SemiSimple => "semi_simple",
+      TexGroup::Box => "box",
+    }
+  }
+
+  /// The kind named by [`TexGroup::as_str`]; `None` for anything else.
+  pub fn from_name(name: &str) -> Option<TexGroup> {
+    match name {
+      "none" => Some(TexGroup::None),
+      "semi_simple" => Some(TexGroup::SemiSimple),
+      "box" => Some(TexGroup::Box),
+      _ => None,
+    }
+  }
+}
+
 /// configuration for creating a new Constructor
 #[derive(Clone)]
 pub struct ConstructorOptions {
@@ -106,6 +145,10 @@ pub struct ConstructorOptions {
   pub properties:         PropertiesClosure,
   /// should it capture the body as `#body` (default: false)
   pub capture_body:       bool,
+  /// environment-specific: the TeX group the LaTeX source's begin code leaves open for its end code
+  /// ([`TexGroup`]), which decides whether a plain closer of an enclosing group meeting the environment is a TeX
+  /// error (stomach.rs `close_environment_frame`)
+  pub tex_group:          TexGroup,
   /// specify a font to use, or instructions how to compute which font to use
   pub font:               Option<FontDirective>,
   /// custom code to run as digestion begins
@@ -142,6 +185,7 @@ impl Default for ConstructorOptions {
       forbid_math:        false,
       properties:         Rc::new(|_whatsit| Ok(SymHashMap::default())),
       capture_body:       false,
+      tex_group:          TexGroup::None,
       font:               None,
       after_digest_begin: vec![],
       before_digest_end:  vec![],

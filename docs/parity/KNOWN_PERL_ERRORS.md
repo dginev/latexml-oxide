@@ -12251,3 +12251,26 @@ Minimal trigger: `\documentstyle[version2,aps]{revtex}\begin{document}\begin{tit
 
 Fixed in Rust (64u): REVTeX 2.1's `{title}`, `{instit}`, `\receipt`, `\nonum` in revtex3_support (OD #496). Guard
 `perfect_kernel_batch64u::revtex2_title_and_instit_environments`.
+
+## 583. An environment ended by the enclosing group's closer errors and swallows the rest of the document
+Stomach.pm:343-375 keeps an environment's mode frame when a `}`/`\endgroup` meets it, so a bare `{\quote …}` or a
+`\begin{flushleft} … \endgroup` (valid LaTeX) never closes.
+
+Minimal trigger: `\documentclass{article}\begin{document}{\quote Quoted.} After.\end{document}` (pdflatex 0, Perl 3
+Errors); `\begin{flushleft} a \endgroup b` (pdflatex 0, Perl 3).
+
+Fixed in Rust (64y): OD #497. Guards `perfect_kernel_batch64y::*`.
+
+## 584. Perl's `\end` runs no `\@checkend`
+A macro-defined environment ended by a different `\end` is not reported as LaTeX reports it.
+
+Minimal trigger: `\newenvironment{foo}{\par}{\par}` then `\begin{foo}\begin{center}x\end{foo}` (pdflatex 2 errors,
+"\begin{center} … ended by \end{foo}"; Perl only a mode-frame Error).
+
+Fixed in Rust (64y): `\lx@checkend` (OD #497).
+
+## 585. natbib's `\bibpostamble` is never typeset
+Minimal trigger: `\usepackage{natbib}\renewcommand{\bibpostamble}{\par Postamble note.}` with a `thebibliography`
+(pdflatex prints the note after the last entry; Perl drops it, and a `\bibpreamble` group it should close stays open).
+
+Fixed in Rust (64y): OD #499.

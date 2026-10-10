@@ -1,0 +1,17 @@
+% witness: control for cond-mat9607130: REVTeX 3 with `floats`
+% oracle:  pdflatex 5 errors (Missing } inserted: \figure is \@float{figure}, aps.sty:614-616)
+% engines: rust 64y 1E; Perl 3E
+% expect:  1 Error
+% status:  GREEN (64y r3); guard perfect_kernel_batch64y::revtex3_floats_figure_closed_by_endgroup_is_an_error
+% preload: ar5iv.sty
+\documentstyle[aps,preprint,floats]{revtex}
+\begin{document}
+Text.
+\begin{references}
+\bibitem{a} A reference.
+\end{references}
+\begingroup
+\figure{1} The first figure caption.
+\endgroup
+After.
+\end{document}

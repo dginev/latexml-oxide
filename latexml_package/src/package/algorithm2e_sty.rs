@@ -259,6 +259,8 @@ LoadDefinitions!({
       DefEnvironment!($name,
         "<ltx:float xml:id='#id' class='ltx_algorithm'>#tags<ltx:listing class='ltx_lst_numbers_left'><ltx:listingline>#body</ltx:listingline></ltx:listing></ltx:float>",
         mode => "internal_vertical",
+        // The begin code opens a TeX group of its own: algorithm2e.sty:2487-2488 `\@float{algocf}`.
+        tex_group => { TexGroup::Box },
         before_digest => {
           use crate::engine::latex_constructs::before_float;
           // Perl L73-86: mirror full beforeDigest sequence.

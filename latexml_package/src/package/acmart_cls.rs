@@ -636,6 +636,8 @@ LoadDefinitions!({
   // markup added over the figure).
   DefEnvironment!("{teaserfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_teaserfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",
+    // A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
@@ -670,6 +672,8 @@ LoadDefinitions!({
 
   DefEnvironment!("{marginfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_marginfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",
+    // A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
@@ -677,6 +681,8 @@ LoadDefinitions!({
 
   DefEnvironment!("{margintable}[]",
     "<ltx:table xml:id='#id' inlist='#inlist' class='ltx_margintable' ?#1(placement='#1')>#tags#body</ltx:table>",
+    // A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
@@ -697,7 +703,9 @@ LoadDefinitions!({
   // optional labels/id attributes resolve via LaTeXML's normal
   // xml:id/labels machinery on DefEnvironment bodies.
   DefEnvironment!("{sidebar}{} Undigested [] {}",
-    "<ltx:sidebar xml:id='#id'>#body</ltx:sidebar>");
+    "<ltx:sidebar xml:id='#id'>#body</ltx:sidebar>",
+    // A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{sidebar}` (acmart.cls:987-988).
+    tex_group => { TexGroup::Box });
 
   //======================================================================
   // Theorem styles via RawTeX

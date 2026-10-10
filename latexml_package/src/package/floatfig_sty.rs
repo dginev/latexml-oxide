@@ -66,6 +66,8 @@ LoadDefinitions!({
   // after_digest (needs live `\@captype`). See floatflt_sty.rs for full details.
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:figure>",
+    // The begin code opens a TeX group of its own: a float box, as floatflt.sty:88 `\vbox\bgroup`.
+    tex_group => { TexGroup::Box },
     before_digest => {
       engine::latex_constructs::before_float("figure", None)?;
     },

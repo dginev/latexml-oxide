@@ -1,0 +1,19 @@
+% witness: floatrow's raw \float@end shape (2106.02397 itself keeps 64w's 5 errors: there the float.sty binding's no-op \float@end wins, so no end code closes the box)
+% oracle:  pdflatex 0 errors (the end code's \@endfloatbox closes \@xfloat's box group; \end's \endgroup closes \begin's)
+% engines: rust 64ra 1E+1W -> 64y 0/0 (Info: \lx@endfloatbox@close clears the frame's box-group marker); Perl 4E
+% expect:  0 errors 0 warnings; the float ends before 'After.'
+% status:  GREEN (64y r2); guard perfect_kernel_batch64y::raw_float_end_code_closes_its_box
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\newenvironment{myfig}{\@float{figure}}{\@endfloatbox\global\setbox\@currbox\box\voidb@x}
+\makeatother
+\begin{document}
+Intro.
+
+\begin{myfig}
+Fig text.
+\end{myfig}
+
+After.
+\end{document}

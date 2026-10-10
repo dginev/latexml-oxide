@@ -31,10 +31,14 @@ LoadDefinitions!({
   // dimen assignment, `]` (Perl multicol.sty.ltxml:21 shares both).
   DefEnvironment!("{multicols}{Number}[][Dimension]",
     r###"?#2(<ltx:para><ltx:p>#2<ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
-    mode => "internal_vertical");
+    mode => "internal_vertical",
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: multicol.sty:145-199 `\mult@cols` `\begingroup`.
+    tex_group => { TexGroup::SemiSimple });
   DefEnvironment!("{multicols*}{Number}[][Dimension]",
     r###"?#2(<ltx:para><ltx:p>#2<ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
-    mode => "internal_vertical");
+    mode => "internal_vertical",
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: multicol.sty:145-199 `\mult@cols` `\begingroup`.
+    tex_group => { TexGroup::SemiSimple });
 
   def_macro_noop("\\botmark")?;
   def_macro_noop("\\topmark")?;

@@ -1,0 +1,16 @@
+% witness: review 64y round 2 (e2: the epilogue exception hid this)
+% oracle:  pdflatex 7 errors
+% engines: rust 64w 1E+1W -> 64y r2 0E (Info) -> 64y 1E 0W; Perl 3E
+% expect:  1 Error; 'After.' outside the figure
+% status:  GREEN (64y r3); guard perfect_kernel_batch64y::raw_end_after_bare_figure
+% preload: ar5iv.sty
+\documentclass{article}
+\newenvironment{refs}{\par}{\par}
+\begin{document}
+Intro.
+\begin{refs}
+Ref one.
+\figure One caption text.
+\end{refs}
+After.
+\end{document}

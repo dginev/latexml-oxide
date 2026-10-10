@@ -1,0 +1,14 @@
+% witness: review 64y round 1 (proof_brace)
+% oracle:  pdflatex 0 errors; the proof ends with the brace group (no QED)
+% engines: rust 64ra 0/0 and 64y 0/0, but 'After proof.' and 'Next para.' land inside <ltx:proof>; Perl 0/0, same
+% expect:  0 errors; proof ends before 'After proof.'
+% status:  RED (64y side finding): amsthm's \proof is \@proof, a DefConstructor that opens <ltx:proof> and leaves it to \end@proof (amsthm_sty.rs:197-264), so no environment frame exists for close_environment_frame to see; covering it needs the open element tied to the group it was opened in (an afterGroup closer that runs \end@proof unless it already ran)
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{amsthm}\newtheorem{thm}{Theorem}
+\begin{document}
+Intro.
+
+{\proof Proof text.} After proof.
+
+Next para.
+\end{document}

@@ -783,6 +783,10 @@ LoadDefinitions!({
   // defines it empty and never typesets it (natbib.sty.ltxml:454; KPE #325).
   def_macro_noop("\\bibpreamble")?;
   DefMacro!("\\lx@bibliography@preamble", "\\bibpreamble");
+  // natbib.sty:1090 `\let\bibpostamble\@empty`, run by its `thebibliography` end before `\endlist`
+  // (:1079-1086): the kernel bibliography's `\lx@bibliography@postamble` (sect11.rs).
+  def_macro_noop("\\bibpostamble")?;
+  DefMacro!("\\lx@bibliography@postamble", "\\bibpostamble");
   def_macro_noop("\\bibfont")?;
   def_macro_noop("\\citenumfont")?;
   DefMacro!("\\bibnumfmt{}", "#1");

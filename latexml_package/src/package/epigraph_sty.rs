@@ -69,7 +69,9 @@ LoadDefinitions!({
   DefEnvironment!("{epigraphs}", "#body",
     before_digest => {
       Let!("\\qitem", "\\epigraph");
-    }
+    },
+    // The begin code opens a TeX group of its own: epigraph.sty:82-85 `\begin{\epigraphflush}`, `\begin{minipage}`.
+    tex_group => { TexGroup::Box }
   );
 
   DefMacro!("\\epigraphhead[]{}", "#1");

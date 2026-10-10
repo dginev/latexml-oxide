@@ -1237,6 +1237,49 @@ LoadDefinitions!({
       Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
   });
 
+  // latex.ltx:15394 `\@checkend`, for `\end{name}` of an environment defined
+  // by macros (mod.rs `end_environment_by_macro`, latex.ltx:15386-15391):
+  // `\begin{X}` ended by `\end{name}` is LaTeX's error (`\@badend`). Neither
+  // Perl's `\end` (latex_constructs.pool.ltxml:216) nor ours ran it; the
+  // mismatch surfaced only as the mode-frame Error of the `\endgroup` that
+  // follows, which now ends a `\begin{X}` frame (stomach.rs
+  // `close_environment_frame`). Checked on the frames, as that `\endgroup`
+  // will meet them, and on `\@currenvir`, as `\@checkend` reads it: bare `\Y`
+  // frames above are skipped because a bare `\Y` never sets `\@currenvir` (only
+  // `\begin` does, latex.ltx:15349) — even one whose begin code opens a group
+  // (`\figure`), which its own recovery reports; the first `\begin{X}` frame
+  // below must be `name`'s.
+  DefPrimitive!("\\lx@checkend{}", sub[(env)] {
+    let name = env.to_string();
+    let depth = get_frame_depth();
+    let mut frame = 0;
+    while frame < depth && is_value_bound("lx@env@bare@end", Some(frame)) {
+      frame += 1;
+    }
+    // TeX's own condition too: `\@currenvir` names another environment. A frame
+    // misaligned by a binding while `\@currenvir` agrees (an `@atbegin` hook's
+    // `\begin{samepage}` above a theorem, 2001.02707) is no LaTeX error.
+    let currenvir = Expand!(Tokens::new(vec![T_CS!("\\@currenvir")])).to_string();
+    if frame < depth
+      && currenvir != name
+      && is_value_bound("lx@env@begin@end", Some(frame))
+      && let Some(Stored::Token(end)) = value_in_frame("lx@env@begin@end", frame)
+      && end != T_CS!(s!("\\end{{{name}}}"))
+    {
+      // latex.ltx `\@badend`: "\begin{X} on input line N ended by \end{Y}".
+      let open = end.to_string().replacen("\\end", "\\begin", 1);
+      let line = match value_in_frame("groupInitiatorLocator", frame) {
+        Some(Stored::Locator(loc)) if loc.from_line > 0 => s!(" on input line {}", loc.from_line),
+        _ => String::new(),
+      };
+      Error!(
+        "unexpected",
+        s!("\\end{{{name}}}"),
+        s!("{open}{line} ended by \\end{{{name}}}")
+      );
+    }
+  });
+
   //======================================================================
   // 14. The makeindex stand-in. A LaTeX document prints its index and its
   // change history by `\input`ting what makeindex made of the `.idx`/`.glo`

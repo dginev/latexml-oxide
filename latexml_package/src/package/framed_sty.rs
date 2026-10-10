@@ -89,7 +89,9 @@ LoadDefinitions!({
         rule: Some("\\FrameRule".to_string()),
         ..FramedOptions::default()
       }))
-    }
+    },
+    // The begin code opens a TeX group of its own: framed.sty:289-326 `\MakeFramed` (`\begingroup`, `\setbox\@tempboxa\vbox\bgroup`).
+    tex_group => { TexGroup::Box }
   );
 
   // {oframed} "open" framed box — same as framed for our purposes
@@ -112,7 +114,9 @@ LoadDefinitions!({
         rule: Some("\\FrameRule".to_string()),
         ..FramedOptions::default()
       }))
-    }
+    },
+    // The begin code opens a TeX group of its own: framed.sty:289-326 `\MakeFramed` (`\begingroup`, `\setbox\@tempboxa\vbox\bgroup`).
+    tex_group => { TexGroup::Box }
   );
 
   // {shaded} a shaded box; uses "shadecolor" for background color
@@ -136,7 +140,9 @@ LoadDefinitions!({
         margin: Some("\\FrameSep".to_string()),
         ..FramedOptions::default()
       }))
-    }
+    },
+    // The begin code opens a TeX group of its own: framed.sty:289-326 `\MakeFramed` (`\begingroup`, `\setbox\@tempboxa\vbox\bgroup`).
+    tex_group => { TexGroup::Box }
   );
 
   // {shaded*} Same as {shaded}
@@ -160,7 +166,9 @@ LoadDefinitions!({
         margin: Some("\\FrameSep".to_string()),
         ..FramedOptions::default()
       }))
-    }
+    },
+    // The begin code opens a TeX group of its own: framed.sty:289-326 `\MakeFramed` (`\begingroup`, `\setbox\@tempboxa\vbox\bgroup`).
+    tex_group => { TexGroup::Box }
   );
 
   // {snugshade} Same as {shaded} — #2829 switched it to \FrameSep too
@@ -184,7 +192,9 @@ LoadDefinitions!({
         margin: Some("\\FrameSep".to_string()),
         ..FramedOptions::default()
       }))
-    }
+    },
+    // The begin code opens a TeX group of its own: framed.sty:289-326 `\MakeFramed` (`\begingroup`, `\setbox\@tempboxa\vbox\bgroup`).
+    tex_group => { TexGroup::Box }
   );
 
   // {snugshade*}
@@ -214,7 +224,9 @@ LoadDefinitions!({
         "backgroundcolor" => bg,
         "cssstyle" => css
       ))
-    }
+    },
+    // The begin code opens a TeX group of its own: framed.sty:289-326 `\MakeFramed` (`\begingroup`, `\setbox\@tempboxa\vbox\bgroup`).
+    tex_group => { TexGroup::Box }
   );
 
   // {leftbar}
@@ -241,7 +253,9 @@ LoadDefinitions!({
       );
       props.insert("padleft", Stored::Dimension(Dimension!("13pt")));
       Ok(props)
-    }
+    },
+    // The begin code opens a TeX group of its own: framed.sty:289-326 `\MakeFramed` (`\begingroup`, `\setbox\@tempboxa\vbox\bgroup`).
+    tex_group => { TexGroup::Box }
   );
 
   // {titled-frame}
@@ -279,7 +293,9 @@ LoadDefinitions!({
         rule: Some("2pt".to_string()),
         ..FramedOptions::default()
       }))
-    }
+    },
+    // The begin code opens a TeX group of its own: framed.sty:289-326 `\MakeFramed` (`\begingroup`, `\setbox\@tempboxa\vbox\bgroup`).
+    tex_group => { TexGroup::Box }
   );
   DefMacro!(
     "\\@titledframe@title{}",

@@ -335,6 +335,8 @@ pub(crate) fn load() -> Result<()> {
     #body\
     </ltx:figure>",
     properties   => { stored_map!("layout" => "vertical") },
+    // The begin code opens a TeX group of its own: `\@float` -> `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("figure", None)?; reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
@@ -346,6 +348,8 @@ pub(crate) fn load() -> Result<()> {
     #body\
     </ltx:figure>",
     properties   => { stored_map!("layout" => "vertical") },
+    // The begin code opens a TeX group of its own: `\@float` -> `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("figure", None, true)?; reset_float_box()?; }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
@@ -354,6 +358,8 @@ pub(crate) fn load() -> Result<()> {
   DefEnvironment!("{table}[]",
     "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     properties   => { stored_map!("layout" => "vertical") },
+    // The begin code opens a TeX group of its own: `\@float` -> `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("table", None)?; reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
@@ -361,6 +367,8 @@ pub(crate) fn load() -> Result<()> {
   DefEnvironment!("{table*}[]",
     "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     properties   => { stored_map!("layout" => "vertical") },
+    // The begin code opens a TeX group of its own: `\@float` -> `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("table", None, true)?; reset_float_box()?; }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
@@ -380,6 +388,8 @@ pub(crate) fn load() -> Result<()> {
       reset_float_box()?;
       Ok(stored_map!("layout" => "vertical"))
     },
+    // The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+    tex_group => { TexGroup::Box },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
   DefEnvironment!("{@dblfloat}{}[]",
@@ -393,6 +403,8 @@ pub(crate) fn load() -> Result<()> {
       reset_float_box()?;
       Ok(stored_map!("layout" => "vertical"))
     },
+    // The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+    tex_group => { TexGroup::Box },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
@@ -466,6 +478,12 @@ pub(crate) fn load() -> Result<()> {
     let on_the_float = matches!(lookup_value("lx@float@frame"),
       Some(Stored::Number(n)) if n.0 as u64 == current_frame_id());
     Ok(if on_the_float {
+      // The raw end code closes `\@xfloat`'s box group here, as TeX does: a
+      // closer that meets the binding's frame afterwards no longer meets a box
+      // group (stomach.rs `close_environment_frame`; 2106.02397).
+      if is_value_bound("lx@env@tex@group", Some(0)) {
+        assign_frame_value("lx@env@tex@group", TexGroup::None.as_str());
+      }
       Tokens::default()
     } else {
       Tokens!(T_CS!("\\egroup"), T_CS!("\\color@endbox"))

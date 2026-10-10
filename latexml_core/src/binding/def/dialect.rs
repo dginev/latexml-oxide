@@ -19,7 +19,7 @@ use crate::{
     SizingClosure,
     argument::ArgWrap,
     conditional::{Conditional, ConditionalOptions, ConditionalType},
-    constructor::{Constructor, ConstructorOptions},
+    constructor::{Constructor, ConstructorOptions, TexGroup},
     expandable::{Expandable, ExpandableOptions},
     math_primitive::{MathPrimitive, MathPrimitiveOptions},
     primitive::{Primitive, PrimitiveOptions},
@@ -1404,6 +1404,16 @@ pub fn env_hook_has_code(name: &str, point: &str) -> bool {
     Err(_) => false,
   }
 }
+/// The TeX group an environment's begin code leaves open: its definition's
+/// `tex_group`, unless a binding set `\begin{X}:tex_group` (a
+/// [`TexGroup::as_str`] name) for the begin code a class or package gives it.
+fn environment_tex_group(key: &str, declared: TexGroup) -> TexGroup {
+  if lookup_value(key).is_none() {
+    return declared;
+  }
+  TexGroup::from_name(&lookup_string(key)).unwrap_or(declared)
+}
+
 /// Defines an Environment that generates a specific XML fragment.
 ///
 /// `compiled_replacement` is of the same form as for DefConstructor, but will generally include
@@ -1453,8 +1463,25 @@ pub fn def_environment(
     let forbid_math_closure = before_digest_simple!({ forbidMath!(forbid_name) });
     before_digest_env.push(forbid_math_closure);
   }
+  let begin_frame_end = T_CS!(end_name.as_str());
+  let tex_group = options.tex_group;
+  // A binding whose class or package redefines the environment's begin code
+  // overrides the kind at run time (REVTeX 3's `figure` without `floats`).
+  let tex_group_key = s!("\\begin{{{name}}}:tex_group");
+  let begin_tex_group_key = tex_group_key.clone();
   let bgroup_closure = before_digest_simple!({
     bgroup();
+    // This frame stands for the `\begingroup` of LaTeX's `\begin`
+    // (latex.ltx:15355); a plain `\endgroup` meeting it ends the environment
+    // by its `\end{X}` (stomach.rs `close_environment_frame`). Marked here,
+    // before an `@atbegin` hook can open a group of its own above it: marked
+    // after the hook, 2001.02707's `\AtBeginEnvironment{defn}{\begin{samepage}}`
+    // put the marker on samepage's group and its errors rose 27 -> 77.
+    assign_frame_value_sym(crate::pin!("lx@env@begin@end"), begin_frame_end);
+    let kind = environment_tex_group(&begin_tex_group_key, tex_group);
+    if kind != TexGroup::None {
+      assign_frame_value_sym(crate::pin!("lx@env@tex@group"), kind.as_str());
+    }
   });
   before_digest_env.push(bgroup_closure);
   let atbegin_key = s!("@environment@{name}@atbegin");
@@ -1674,13 +1701,17 @@ pub fn def_environment(
   let end_hook_name = name.clone();
   let atend_hook_closure = before_digest_simple!({
     let mut boxes = Vec::new();
-    if let Some(e) = lookup_tokens(&atend_key) {
-      boxes.push(digest(e.unlist())?);
-    }
-    if let Some(hook) = end_hook_tokens.clone()
-      && env_hook_has_code(&end_hook_name, "end")
-    {
-      boxes.push(digest(hook.unlist())?);
+    // `\end`'s hooks (latex.ltx:15386-15393) never run when a plain
+    // `\endgroup` closed `\begin`'s group (stomach.rs `close_environment_frame`).
+    if !environment_ended_by_group() {
+      if let Some(e) = lookup_tokens(&atend_key) {
+        boxes.push(digest(e.unlist())?);
+      }
+      if let Some(hook) = end_hook_tokens.clone()
+        && env_hook_has_code(&end_hook_name, "end")
+      {
+        boxes.push(digest(hook.unlist())?);
+      }
     }
     boxes
   });
@@ -1699,8 +1730,18 @@ pub fn def_environment(
   // For the uncommon case opened by \csname env\endcsname
   // Perl Package.pm lines 1949-1969: \FOO gets the same hook pipeline as \begin{FOO}
   let mut before_digest_bare: Vec<BeforeDigestClosure> = Vec::new();
+  // The bare `\X` opens no TeX group (latex.ltx:15346-15355: only `\begin`
+  // does), so this frame is LaTeXML's alone; a `}` or `\endgroup` of an
+  // enclosing group meeting it ends the environment by its `\endX` first
+  // (stomach.rs `close_environment_frame`).
+  let bare_frame_end = T_CS!(s!("\\end{}", &name));
   before_digest_bare.push(before_digest_simple!({
     bgroup();
+    assign_frame_value_sym(crate::pin!("lx@env@bare@end"), bare_frame_end);
+    let kind = environment_tex_group(&tex_group_key, tex_group);
+    if kind != TexGroup::None {
+      assign_frame_value_sym(crate::pin!("lx@env@tex@group"), kind.as_str());
+    }
   }));
   if declared_mode.enter_horizontal {
     before_digest_bare.push(before_digest_simple!({

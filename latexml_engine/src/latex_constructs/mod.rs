@@ -2544,8 +2544,14 @@ pub fn define_new_theorem(
   });
   options.after_digest_begin.push(after_digest_begin_closure);
 
-  // before_digest_end
+  // before_digest_end. A theorem ended by a plain group closer (`{\Proof …}`)
+  // never reaches its `\endX` in TeX, so neither the end mark (ntheorem's
+  // `[thmmarks]` symbol) nor the postwork is set (stomach.rs
+  // `close_environment_frame`).
   let before_digest_end_closure: BeforeDigestClosure = Rc::new(move || {
+    if environment_ended_by_group() {
+      return Ok(Vec::new());
+    }
     let digested = digest(mouth::tokenize_internal(
       "\\thm@doendmark\\the\\thm@postwork",
     ))?;
@@ -4301,6 +4307,20 @@ pub(crate) fn end_environment_by_macro(name: &str) -> Vec<Token> {
   let end = T_CS!(format!("\\end{name}"));
   if is_defined_token(&end) {
     out.push(end);
+  }
+  // latex.ltx:15389 `\@checkend{#1}` before the `\endgroup`. Not for a
+  // nameless `\end` (AMS-TeX's document end read as LaTeX's `\end`, 0902.2535,
+  // alg-geom9410004): there `\end` + "" is `\end` itself, which would take
+  // `\lx@checkend` as its argument, as TeX's `\end` would take `\@checkend`,
+  // and leave `{}` behind. A nameless `\end` names no environment to check;
+  // skipping it is this binding's choice (no latex.ltx or tex.web rule), kept
+  // because the doubled diagnostic carries nothing (cond-mat9211014 shows the
+  // same capture through a `\let\endX\end`, which is left as TeX does it).
+  if !name.is_empty() {
+    out.push(T_CS!("\\lx@checkend"));
+    out.push(T_BEGIN!());
+    out.extend(Explode!(name));
+    out.push(T_END!());
   }
   out.push(T_CS!("\\endgroup"));
   out.extend(env_hook_tokens(name, "after"));

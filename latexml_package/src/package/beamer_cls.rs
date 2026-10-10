@@ -659,33 +659,53 @@ LoadDefinitions!({
   def_macro_noop("\\insertoverlaynumber")?;
 
   // Overlay environments
-  DefEnvironment!("{onlyenv}", "#body");
+  DefEnvironment!("{onlyenv}", "#body",
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: beamerbaseoverlay.sty:593-596 `\begin{altenv}`.
+    tex_group => { TexGroup::SemiSimple });
   DefEnvironment!("{altenv}{}{}{}{}", "#body");
   DefEnvironment!("{alertenv}", "#body");
-  DefEnvironment!("{uncoverenv}", "#body");
+  DefEnvironment!("{uncoverenv}", "#body",
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: beamerbaseoverlay.sty:593-596 `\begin{altenv}`.
+    tex_group => { TexGroup::SemiSimple });
   DefEnvironment!("{actionenv}", "#body");
-  DefEnvironment!("{visibleenv}", "#body");
-  DefEnvironment!("{invisibleenv}", "#body");
-  DefEnvironment!("{overlayarea}{}{}", "#body");
+  DefEnvironment!("{visibleenv}", "#body",
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: beamerbaseoverlay.sty:593-596 `\begin{altenv}`.
+    tex_group => { TexGroup::SemiSimple });
+  DefEnvironment!("{invisibleenv}", "#body",
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: beamerbaseoverlay.sty:593-596 `\begin{altenv}`.
+    tex_group => { TexGroup::SemiSimple });
+  DefEnvironment!("{overlayarea}{}{}", "#body",
+    // The begin code opens a TeX group of its own: beamerbaseoverlay.sty:655-659 `\setbox\beamer@areabox=\vbox to…\bgroup`.
+    tex_group => { TexGroup::Box });
   DefEnvironment!("{overprint}", "#body");
 
   // Block environments — Perl L1189 beamerbaseblocks.sty
   DefEnvironment!(
     "{block} OptionalAngled {}",
-    "<ltx:theorem class='ltx_theorem_block'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>"
+    "<ltx:theorem class='ltx_theorem_block'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>",
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: beamerbaselocalstructure.sty:107-108 `\begin{actionenv}`.
+    tex_group => { TexGroup::SemiSimple }
   );
   DefEnvironment!(
     "{alertblock} OptionalAngled {}",
-    "<ltx:theorem class='ltx_theorem_alertblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>"
+    "<ltx:theorem class='ltx_theorem_alertblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>",
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: beamerbaselocalstructure.sty:107-108 `\begin{actionenv}`.
+    tex_group => { TexGroup::SemiSimple }
   );
   DefEnvironment!(
     "{exampleblock} OptionalAngled {}",
-    "<ltx:theorem class='ltx_theorem_exampleblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>"
+    "<ltx:theorem class='ltx_theorem_exampleblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>",
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: beamerbaselocalstructure.sty:107-108 `\begin{actionenv}`.
+    tex_group => { TexGroup::SemiSimple }
   );
 
   // Columns environment — Perl L1230-1240 beamerbaseboxes.sty
-  DefEnvironment!("{columns} OptionalAngled []", "#body");
-  DefEnvironment!("{column} OptionalAngled {}", "#body");
+  DefEnvironment!("{columns} OptionalAngled []", "#body",
+    // The begin code opens a TeX group of its own: beamerbaseframecomponents.sty:212-235 `\begin{actionenv}`, `\hbox to\textwidth\bgroup`.
+    tex_group => { TexGroup::Box });
+  DefEnvironment!("{column} OptionalAngled {}", "#body",
+    // The begin code opens a TeX group of its own: beamerbaseframecomponents.sty:259-270 `\beamer@columnenv` `\begin{actionenv}`.
+    tex_group => { TexGroup::Box });
   // beamerbasecolor.sty:149 `{beamercolorbox}[keys]{color}` — the coloured box
   // every theme builds on (mirage's `pullquote`, beamerthemeMirage.sty:82-92);
   // article mode (:241) collapses it to a transparent pair, the shape a class
@@ -697,7 +717,9 @@ LoadDefinitions!({
   // Guard: `perfect_kernel_batch56::beamer_theme_compat_aliases_and_colorbox`.
   DefEnvironment!(
     "{beamercolorbox} [] {}",
-    "<ltx:inline-block class='ltx_beamercolorbox'>#body</ltx:inline-block>"
+    "<ltx:inline-block class='ltx_beamercolorbox'>#body</ltx:inline-block>",
+    // The begin code opens a TeX group of its own: beamerbasecolor.sty:149-159 `\setbox\beamer@tempbox=\hbox\bgroup\color@begingroup`.
+    tex_group => { TexGroup::Box }
   );
   def_macro_noop("\\column OptionalAngled {}")?;
 

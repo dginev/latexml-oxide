@@ -202,6 +202,9 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
 
   let mut options = ConstructorOptions {
     mode: Some("internal_vertical".into()),
+    // The begin code opens a TeX group of its own: float.sty:44 `\@float`
+    // (latex.ltx:17479 `\color@vbox`), :85 `\vbox\bgroup` for `[H]`.
+    tex_group: TexGroup::Box,
     ..Default::default()
   };
 

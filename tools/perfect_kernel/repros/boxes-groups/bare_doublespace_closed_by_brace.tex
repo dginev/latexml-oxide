@@ -1,0 +1,14 @@
+% witness: 2310.08233 (`{\doublespace …}`); review 64y round 4 (s2)
+% oracle:  pdflatex 1 error (! Extra }, or forgotten \endgroup: the } meets \doublespace's \begingroup, setspace.sty:542-547)
+% engines: rust 64w 0/0 and 64y 0/0; Perl 1E
+% expect:  1 Error, as pdflatex
+% status:  RED (64y side finding): setspace_sty.rs:96-100 binds the bare \doublespace/\onehalfspace as no-ops, so no environment frame exists and TeX's error is suppressed; follow-up on the setspace binding
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{setspace,lscape,multicol}
+\begin{document}
+Intro.
+
+{\doublespace Text in group.} After.
+
+Closing text.
+\end{document}

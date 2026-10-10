@@ -512,7 +512,10 @@ use crate::{
   comment::Comment,
   common::{arena, arena::SymHashMap as HashMap, error::*, font, font::Font},
   definition::{
-    Definition, constructor::Constructor, expandable::Expandable, register::RegisterValue,
+    Definition,
+    constructor::{Constructor, TexGroup},
+    expandable::Expandable,
+    register::RegisterValue,
   },
   gullet,
   list::List,
@@ -952,6 +955,148 @@ pub fn current_frame_id() -> u64 {
   }
 }
 
+/// A group closer `closer` (`}`/`\egroup`, or `\endgroup` when `semi_simple`)
+/// meeting the frame of an environment: end the environment first, as its own
+/// closer would. Returns true when it acted.
+///
+/// LaTeX's `\begin` is `\begingroup` + `\X` (latex.ltx:15346-15355) and its
+/// `\end` is `\endX` + `\endgroup` (latex.ltx:15386-15393); the environment's
+/// local state goes with whichever closer ends that group. LaTeXML keeps a
+/// mode frame for the environment's body (Perl Package.pm:1919-1925 `bgroup`
+/// then `beginMode`, :1972 `beginMode` for the bare `\X`), which a plain
+/// closer cannot pop (Perl Stomach.pm:343-375 errors and keeps the frame), so
+/// the body swallowed the rest of the document. The recovery is tex.web
+/// §1064-1065 `off_save`'s shape — back-input the closer, insert what the
+/// innermost group expects:
+/// * a bare `\X` frame (`{\thm …}`, `{\quote …}`, `\begingroup\rem …\endgroup`):
+///   insert `\endX` and re-read the closer, which then ends the enclosing group
+///   (or meets that group's own mismatch, reported there);
+/// * a `\begin{X}` frame met by `\endgroup` (the ALICE author block): that
+///   `\endgroup` closes `\begin`'s group (tex.web §1063 `end_group` against a
+///   `semi_simple_group`: `unsave`), so the environment's own `\end{X}` takes
+///   its place and pops the frame — the group is closed once.
+///
+/// What TeX itself reports decides the diagnostic, by the kind of group the
+/// environment's begin code leaves open (`lx@env@tex@group`, a [`TexGroup`]
+/// name; tex.web §269 group codes):
+/// * none (`\trivlist`, `\list`): TeX has no mismatch at all (a bare `\X` opens
+///   no group; `\begin`'s group is any `\endgroup`'s) — an Info;
+/// * a `semi_simple_group` (`\begingroup` or a nested `\begin`: setspace,
+///   lscape, multicols, beamer's blocks): `}` is §1068-1069 `extra_right_brace`
+///   — an Error; `\endgroup` just unsaves it (§1063), which is clean for a bare
+///   `\X` (`\begingroup\multicols{2} …\endgroup` — an Info: `\endX` takes the
+///   `\endgroup`'s place and the enclosing group stays open, as in TeX) but
+///   leaves `\begin`'s own group open for a `\begin{X}`, reported at the next
+///   `\end` — an Error;
+/// * a box or colour group (a float's `\@xfloat`, a minipage's `\vbox\bgroup`):
+///   §1064 `off_save` "Missing } inserted" for `\endgroup`, the box ended early
+///   for `}` (§1068 `handle_right_brace`) — an Error.
+///
+/// The kind is a frame value that follows TeX's group state: raw end code that
+/// closes the box group without the binding's own closer (floatrow's
+/// `\float@end` calling latex.ltx's `\@endfloatbox` against the bound `\@float`)
+/// sets it to none (sect09.rs `\lx@endfloatbox@close`), so a closer that meets
+/// the frame afterwards is clean in TeX and logs the Info. A `}` against a
+/// `\begin{X}` frame (§1068-1069 `extra_right_brace`, "Extra }, or forgotten
+/// \endgroup", the brace deleted) and any closer against an environment in math
+/// mode (its `$` or `$$` opened a `math_shift_group`, §1064/§1069) are not
+/// recovered here: both stay with the caller's Error. One attempt per frame:
+/// the marker is taken, so a redefined `\endX` that does not close the frame
+/// falls back to the Error. The frame is flagged (`environment_ended_by_group`) so that end
+/// code TeX would not run — `\end`'s hooks, a theorem's end mark — is skipped.
+/// Witnesses: 1210.5866 1111.2539 2405.03639 1703.03321 2202.11643 0812.1147
+/// 1009.2722 1312.6689 1905.06220 2207.12734 2308.09714 2503.00772 1403.7312
+/// 2104.03038 (`{\thm …}`), 2412.14057 (`{\quote …}`), 1702.01612 1909.03158
+/// (`\begin{flushleft} … \endgroup`). A REVTeX 3 `\figure{N}` caption line
+/// opens no group without the `floats` option (aps.sty:614-630, revtex3_support
+/// overrides the flag): cond-mat9607130 is pdflatex-clean and gets the Info.
+fn close_environment_frame(closer: Token, semi_simple: bool) -> Result<bool> {
+  // Only the closer itself is re-read: a binding that calls `egroup()` /
+  // `endgroup()` from its own code (a cell, a box argument) keeps the Error.
+  let is_closer = if semi_simple {
+    x_equals(&closer, &T_CS!("\\endgroup"))
+  } else {
+    gullet::is_right_brace(&closer)
+  };
+  if !is_closer {
+    return Ok(false);
+  }
+  if matches!(
+    lookup_string_from_sym(crate::pin!("MODE")).as_str(),
+    "math" | "display_math"
+  ) {
+    return Ok(false);
+  }
+  let (end, bare) = if is_value_bound("lx@env@bare@end", Some(0)) {
+    (remove_value("lx@env@bare@end"), true)
+  } else if semi_simple && is_value_bound("lx@env@begin@end", Some(0)) {
+    (remove_value("lx@env@begin@end"), false)
+  } else {
+    return Ok(false);
+  };
+  let Some(Stored::Token(end)) = end else {
+    return Ok(false);
+  };
+  let environment = lookup_token_sym(crate::pin!("groupInitiator"))
+    .map(|t| t.to_string())
+    .unwrap_or_default();
+  assign_frame_value_sym(crate::pin!("lx@env@ended@by@group"), true);
+  let kind = if is_value_bound("lx@env@tex@group", Some(0)) {
+    TexGroup::from_name(&lookup_string("lx@env@tex@group")).unwrap_or(TexGroup::None)
+  } else {
+    TexGroup::None
+  };
+  let tex_error = match kind {
+    TexGroup::None => None,
+    TexGroup::SemiSimple if !semi_simple => Some(
+      "TeX: Extra }, or forgotten \\endgroup (the } meets the \\begingroup the begin code opened)",
+    ),
+    TexGroup::SemiSimple if !bare => Some(
+      "TeX: the \\endgroup closes the \\begingroup the begin code opened; \\begin's own group stays open \
+       and TeX reports the mismatch at the next \\end",
+    ),
+    TexGroup::SemiSimple => None,
+    TexGroup::Box if semi_simple => Some(
+      "TeX: the \\endgroup meets the box group the begin code opened, and TeX reports a group mismatch \
+       (Missing } inserted, or a later error once the group is gone)",
+    ),
+    TexGroup::Box => Some(
+      "TeX: the } ends the box group the begin code opened, not the enclosing one, and TeX reports a mismatch later",
+    ),
+  };
+  if let Some(tex) = tex_error {
+    Error!(
+      "unexpected",
+      closer,
+      s!("Environment {environment} opened a TeX group of its own: ending it with {end}"),
+      tex
+    );
+  } else {
+    Info!(
+      "unexpected",
+      closer,
+      s!("ends the group around environment {environment}: inserting {end}")
+    );
+  }
+  // A bare `\X` frame normally re-reads the closer for the enclosing group;
+  // but an `\endgroup` against the `\begingroup` a bare `\X` opened only unsaves
+  // that group (§1063), so `\endX` takes its place and the enclosing group
+  // stays open, as in TeX (`{\multicols{2} …\endgroup}`).
+  let reread = bare && !(semi_simple && kind == TexGroup::SemiSimple);
+  if reread {
+    gullet::unread(Tokens::new(vec![end, closer]));
+  } else {
+    gullet::unread_one(end);
+  }
+  Ok(true)
+}
+
+/// Whether the environment whose frame is on top is being ended by a plain
+/// group closer (`close_environment_frame`) rather than by its own `\end`:
+/// end code TeX never runs then (`\end`'s hooks, latex.ltx:15386-15393; a
+/// theorem's end mark and postwork) is skipped by the bindings that emit it.
+pub fn environment_ended_by_group() -> bool { is_value_bound("lx@env@ended@by@group", Some(0)) }
+
 pub fn bgroup() {
   push_stack_frame(false);
   // Perl's bgroup does NOT touch $ALIGN_STATE — it's tracked only at the scan level
@@ -975,6 +1120,12 @@ pub fn egroup() -> Result<()> {
       );
     }
     // Last stack frame was a mode switch!?!?!
+    // A bare `\X` environment inside the closed group ends first.
+    if let Some(closer) = get_current_token()
+      && close_environment_frame(closer, false)?
+    {
+      return Ok(());
+    }
     // Don't pop if there's an error; maybe we'll recover?
     // Perl Stomach.pm:347-349 passes currentFrameMessage as a SEPARATE
     // Error detail (its own line), not merged into the primary message.
@@ -1072,6 +1223,13 @@ pub fn endgroup() -> Result<()> {
       );
     }
     // Last stack frame was a mode switch!?!?!
+    // An environment's frame: a bare `\X` ends inside the group, a
+    // `\begin{X}` ends with it.
+    if let Some(closer) = get_current_token()
+      && close_environment_frame(closer, true)?
+    {
+      return Ok(());
+    }
     let mode = lookup_string_from_sym(crate::pin!("MODE"));
     if mode == "math" || mode == "display_math" {
       // tex.web §1063/§1064 `off_save`: `\endgroup` against a math_shift_group

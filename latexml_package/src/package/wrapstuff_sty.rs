@@ -36,6 +36,8 @@ LoadDefinitions!({
      (?#isfigure(<ltx:figure xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:figure>)\
      (<ltx:float xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:float>))",
     mode => "internal_vertical",
+    // The begin code opens a TeX group of its own: wrapstuff.sty:312 `\hbox_gset:Nw`.
+    tex_group => { TexGroup::Box },
     after_digest_begin => sub[whatsit] {
       let (ftype, side, width) = wrapstuff_keys(whatsit);
       whatsit.set_property("float", Stored::String(pin(side)));

@@ -28,7 +28,9 @@ LoadDefinitions!({
             whatsit.set_property(k, v);
           }
         }
-    });
+    },
+    // The begin code opens a TeX group of its own: rotating.sty:69-92 `\setbox\z@\color@hbox`.
+    tex_group => { TexGroup::Box });
 
   DefEnvironment!("{turn}{Float}",
     "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
@@ -42,7 +44,9 @@ LoadDefinitions!({
             whatsit.set_property(k, v);
           }
         }
-    });
+    },
+    // The begin code opens a TeX group of its own: rotating.sty:69-92 `\setbox\z@\color@hbox`.
+    tex_group => { TexGroup::Box });
 
   DefEnvironment!("{rotate}{Float}",
     "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
@@ -54,7 +58,9 @@ LoadDefinitions!({
             whatsit.set_property(k, v);
           }
         }
-    });
+    },
+    // The begin code opens a TeX group of its own: rotating.sty:69-92 `\setbox\z@\color@hbox`.
+    tex_group => { TexGroup::Box });
 
   // rotating.sty:100-107 `\turnbox` is `\leavevmode` then `\setbox\z@\hbox{{#2}}`: it starts or
   // continues the paragraph and sets its body in a restricted horizontal box, as graphicx's
@@ -82,6 +88,8 @@ LoadDefinitions!({
   DefEnvironment!("{sidewaysfigure}[]",
     "^^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
+    // The begin code opens a TeX group of its own: rotating.sty:109-115 `\@rotfloat` -> `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => {
       engine::latex_constructs::before_float("figure", None)?;
       engine::latex_constructs::reset_float_box()?;
@@ -103,6 +111,8 @@ LoadDefinitions!({
   DefEnvironment!("{sidewaysfigure*}[]",
     "^^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
+    // The begin code opens a TeX group of its own: rotating.sty:109-115 `\@rotfloat` -> `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => {
       engine::latex_constructs::before_float("figure", None)?;
       engine::latex_constructs::reset_float_box()?;
@@ -123,6 +133,8 @@ LoadDefinitions!({
   DefEnvironment!("{sidewaystable}[]",
     "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
     mode => "internal_vertical",
+    // The begin code opens a TeX group of its own: rotating.sty:109-115 `\@rotfloat` -> `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => {
       engine::latex_constructs::before_float("table", None)?;
       engine::latex_constructs::reset_float_box()?;
@@ -143,6 +155,8 @@ LoadDefinitions!({
   DefEnvironment!("{sidewaystable*}[]",
     "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
     mode => "internal_vertical",
+    // The begin code opens a TeX group of its own: rotating.sty:109-115 `\@rotfloat` -> `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => {
       engine::latex_constructs::before_float("table", None)?;
       engine::latex_constructs::reset_float_box()?;

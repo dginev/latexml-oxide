@@ -1,0 +1,11 @@
+% witness: isolation (\begin{samepage}\rem ...\end{samepage} in the run-336 rc_groups repro)
+% oracle:  pdflatex 0 errors
+% engines: rust 1 Error:unexpected:\endgroup + 1 Warning (64ra) -> 0/0 (64y); Perl 1 Error + 2 Warning
+% expect:  0 errors; theorem ends before the \endgroup closes the \begingroup; 'After words.' follows it
+% status:  RED (base) -> GREEN (64y); guard perfect_kernel_batch64y::bare_theorem_closed_by_endgroup
+% preload: ar5iv.sty
+\documentclass{article}
+\newtheorem{thm}{Theorem}
+\begin{document}
+\begingroup\thm Bare theorem.\endgroup\ After words.
+\end{document}

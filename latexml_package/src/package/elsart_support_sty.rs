@@ -144,6 +144,8 @@ LoadDefinitions!({
   DefEnvironment!("{algorithm}",
     "<ltx:theorem xml:id='#id' class='ltx_theorem_algorithm'>#tags#body</ltx:theorem>",
     mode => "internal_vertical",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => {
       use crate::engine::latex_constructs::before_float;
       before_float("algorithm", None)?;

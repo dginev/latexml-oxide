@@ -1,0 +1,19 @@
+% witness: 2001.02707 (\AtBeginEnvironment{defn}{\begin{samepage}} / \AtEndEnvironment{defn}{\end{samepage}}, 25 errors)
+% oracle:  pdflatex 0 errors (env/defn/begin opens samepage's group B above \begin's group A; env/defn/end closes B, \end closes A)
+% engines: rust 1 Error:unexpected:\endgroup (64ra and 64y); Perl 1 Error (same message)
+% expect:  0 errors; 'Text.' in the definition, 'After.' a paragraph after it
+% status:  RED (64y side finding, not fixed): DefEnvironment's \begin{X} binds its mode with beginMode($mode, 1)
+%          (Perl Package.pm:1908, dialect.rs begin_mode_opt noframe) into the TOP frame, which after an @atbegin hook
+%          that opened a group is the hook's group B, not the environment's frame A; samepage's \endgroup then meets a
+%          mode frame. 64y marks A at bgroup time, so its recovery does not fire here (it did in a first cut and turned
+%          2001.02707's 27 errors into 77).
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{etoolbox}
+\newtheorem{defn}{Definition}
+\AtBeginEnvironment{defn}{\begin{samepage}}
+\AtEndEnvironment{defn}{\end{samepage}}
+\begin{document}
+\begin{defn} Text. \end{defn}
+After.
+\end{document}

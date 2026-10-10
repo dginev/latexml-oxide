@@ -2602,6 +2602,25 @@ pub fn is_value_bound(key: &str, frame_opt: Option<usize>) -> bool {
   }
 }
 
+/// The value `key` has in stack frame `frame` (0 = innermost): Perl State.pm:280-286 `valueInFrame`, which skips
+/// the bindings the frames above it made.
+pub fn value_in_frame(key: &str, frame: usize) -> Option<Stored> {
+  let key_sym = arena::pin(key);
+  let state = state!();
+  let p: usize = state
+    .undo
+    .iter()
+    .take(frame)
+    .map(|f| {
+      f.table(TableName::Value)
+        .get(&key_sym)
+        .copied()
+        .unwrap_or(0)
+    })
+    .sum();
+  state.value.get(&key_sym).and_then(|v| v.get(p)).cloned()
+}
+
 //======================================================================
 /// Lookup & assign a character's Catcode
 pub fn lookup_catcode(c: char) -> Option<Catcode> {

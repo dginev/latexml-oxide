@@ -660,6 +660,9 @@ pub(crate) fn load() -> Result<()> {
       Ok(())
     },
     // Perl #2798: minipage is an inline block — internal_vertical, no leaveHorizontal.
+    // The begin code opens a TeX group of its own: latex.ltx:16305-16310
+    // `\@iiiminipage` `\setbox\@tempboxa\vbox\bgroup`.
+    tex_group => { TexGroup::Box },
     mode => "inline_internal_vertical",
     // latex.ltx:16305-16306 `\@iiiminipage` begins with `\leavevmode`, as `\@iiiparbox` does
     // (57d): a minipage met between paragraphs starts one, and the text after it continues that

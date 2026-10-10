@@ -49,7 +49,7 @@ pub use latexml_core::{
     ReplacementClosure, Reversion,
     argument::ArgWrap,
     conditional::{Conditional, ConditionalOptions, ConditionalType},
-    constructor::ConstructorOptions,
+    constructor::{ConstructorOptions, TexGroup},
     expandable::{Expandable, ExpandableOptions},
     math_primitive::{MathPrimitive, MathPrimitiveOptions},
     primitive::{Primitive, PrimitiveOptions},

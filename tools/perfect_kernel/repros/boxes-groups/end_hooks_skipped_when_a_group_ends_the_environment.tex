@@ -1,0 +1,25 @@
+% witness: review 64y round 2 (h1)
+% oracle:  pdflatex 0 errors; no [ATEND-*]/[HOOKEND-*]/[AFTEREND-*] text where \endgroup or } ends the environment, all of them for the delimited control
+% engines: rust 64w 3E+1W -> 64y 0/0; Perl 6E
+% expect:  0 errors; the end hooks' text appears only around the control flushleft
+% status:  GREEN (64y r3); guard perfect_kernel_batch64y::end_hooks_skipped_when_a_group_ends_the_environment
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{etoolbox}
+\newtheorem{thm}{Theorem}
+\AtEndEnvironment{flushleft}{[ATEND-FL]}
+\AfterEndEnvironment{flushleft}{[AFTEREND-FL]}
+\AddToHook{env/flushright/end}{[HOOKEND-FR]}
+\AddToHook{env/flushright/after}{[HOOKAFTER-FR]}
+\AtEndEnvironment{thm}{[ATEND-THM]}
+\begin{document}
+Intro.
+
+\begin{flushleft} Left words. \endgroup Following one.
+
+\begin{flushright} Right words. \endgroup Following two.
+
+{\thm Bare thm.} Following three.
+
+\begin{flushleft} Control. \end{flushleft} Following four.
+\end{document}

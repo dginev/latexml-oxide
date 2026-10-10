@@ -1,0 +1,15 @@
+% witness: review 64y round 1 (\let\x=} and \egroup)
+% oracle:  pdflatex 0 errors
+% engines: rust 64ra 2E+1W -> 64y 0/0; Perl 2E
+% expect:  0 errors; both theorems end before their 'After' paragraph
+% status:  GREEN (64y); guard perfect_kernel_batch64y::bare_theorem_closed_by_let_brace
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{amsthm}\newtheorem{thm}{Theorem}
+\let\x=}
+\begin{document}
+Intro.
+
+{\thm Thm one\x After one.
+
+{\thm Thm two\egroup After two.
+\end{document}

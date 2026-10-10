@@ -355,6 +355,12 @@ pub(crate) fn load() -> Result<()> {
   // `ltx:biblist` (LaTeXML-structure.rnc:237). Perl never typesets it (KPE #325). Guard
   // `perfect_kernel_gemini::bibpreamble_is_printed`.
   DefMacro!("\\lx@bibliography@preamble", None);
+  // Its counterpart at the list's end: natbib's `thebibliography` ends with `\bibitem@fin\bibpostamble`
+  // before `\endlist` (natbib.sty:1079-1086). Empty in the kernel; natbib points it at `\bibpostamble`. A
+  // preamble that opens an environment (`\begin{multicols}{2}`) is closed by its postamble
+  // (`\end{multicols}`, 2009.08029); without it the environment outlived the bibliography and met the
+  // `\endgroup` of `\end{thebibliography}`. Guard `perfect_kernel_batch64y::bibpostamble_closes_the_preamble`.
+  DefMacro!("\\lx@bibliography@postamble", None);
   // A package's title for the bibliography, in place of `\bibsection`'s or `\refname`/`\bibname`
   // (`begin_bibliography_clean`): biblatex's `\printbibliography[title=…]` (biblatex.sty:9694), defined in its group.
   // Empty in the kernel.
@@ -391,6 +397,7 @@ pub(crate) fn load() -> Result<()> {
     document.maybe_close_element("ltx:biblist")?;
     document.maybe_close_element("ltx:bibliography")?;
   },
+    before_digest => { Digest!(T_CS!("\\lx@bibliography@postamble"))? },
     // Disarm the `setupPseudoBibitem` redirection that `\thebibliography`
     // installed — the same three `\let`s `\restoring@bibitem` performs, minus
     // its trailing `\bibitem`. Perl (latex_constructs.pool.ltxml L4014-4017)

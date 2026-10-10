@@ -1,0 +1,17 @@
+% witness: review 64y round 1 (alignment-template closer >{\bgroup}...<{\egroup})
+% oracle:  pdflatex 0 errors
+% engines: rust 64ra 17E+1W -> 64y 0/0; Perl 17E
+% expect:  0 errors; each quote inside its p-cell, 'After.' outside the tabular
+% status:  GREEN (64y); guard perfect_kernel_batch64y::bare_quote_in_template_closed_cell
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{array}
+\begin{document}
+\begin{tabular}{p{3cm}c}
+\quote a & b \\
+\end{tabular}
+
+\begin{tabular}{>{\bgroup}p{3cm}<{\egroup}c}
+\quote c & d \\
+\end{tabular}
+After.
+\end{document}

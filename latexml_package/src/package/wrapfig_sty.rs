@@ -29,6 +29,8 @@ LoadDefinitions!({
       // box). Mirrors the {minipage} width idiom. See OXIDIZED_DESIGN.
       set_wrap_width(whatsit);
     },
+    // The begin code opens a TeX group of its own: wrapfig.sty:58 `\vtop\bgroup`.
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("figure", None) },
     after_digest => sub[whatsit] { after_float(whatsit); Ok(Vec::new()) }
   );
@@ -53,6 +55,8 @@ LoadDefinitions!({
       // declared wrap width (Perl discards it). See OXIDIZED_DESIGN.
       set_wrap_width(whatsit);
     },
+    // The begin code opens a TeX group of its own: wrapfig.sty:58 `\vtop\bgroup`.
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("table", None) },
     after_digest => sub[whatsit] { after_float(whatsit); Ok(Vec::new()) }
   );

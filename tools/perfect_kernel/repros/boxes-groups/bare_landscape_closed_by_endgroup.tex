@@ -1,0 +1,14 @@
+% witness: review 64y round 3 (s6)
+% oracle:  pdflatex 0 errors (\landscape opens only a \begingroup, lscape.sty:38-42; pdflatex logs "(\end occurred inside a group at level 1)": the enclosing \begingroup stays open)
+% engines: rust 64w 1E+1W -> 64y r3 1E -> 64y r4 0/0 -> 64y 0E+1W (Info); Perl 1E
+% expect:  0 errors and 1 Warning (the \begingroup left open at \end{document}, as TeX); the environment ends before 'After.'
+% status:  GREEN (64y r4/r5); guard perfect_kernel_batch64y::bare_landscape_closed_by_endgroup
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{setspace,lscape,multicol}
+\begin{document}
+Intro.
+
+\begingroup\landscape Landscape text.\endgroup After.
+
+Closing text.
+\end{document}

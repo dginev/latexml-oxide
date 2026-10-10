@@ -1,0 +1,12 @@
+% witness: review 64y round 1 (m4_rawenv_bare)
+% oracle:  pdflatex 0 errors (\thm opens no group; \@checkend{foo} passes)
+% engines: rust 64ra 1E+1W -> 64y 0/0; Perl 1E
+% expect:  0 errors; theorem ends before 'After.'
+% status:  GREEN (64y); guard perfect_kernel_batch64y::raw_end_around_bare_theorem
+% preload: ar5iv.sty
+\documentclass{article}\newtheorem{thm}{Theorem}\newenvironment{foo}{\par}{\par}
+\begin{document}
+Intro.
+
+\begin{foo}\thm Thm text\end{foo} After.
+\end{document}

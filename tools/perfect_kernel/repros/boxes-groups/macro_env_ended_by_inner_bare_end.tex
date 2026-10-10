@@ -1,0 +1,13 @@
+% witness: review 64y round 2 (n2)
+% oracle:  pdflatex 2 errors (\endquote closes quote's list, then \@checkend{foo} meets \@currenvir = quote: \begin{quote} ended by \end{foo})
+% engines: rust 64w 0/0 and 64y 0/0; Perl 0/0
+% expect:  the \@badend Error
+% status:  RED (predates 64y): \lx@checkend reads both LaTeXML's frames and \@currenvir, but Rust's bound \endquote pops the quote frame and with it restores \@currenvir to foo, so both agree at \end{foo}; in TeX \endquote (\endlist) leaves \@currenvir = quote
+% preload: ar5iv.sty
+\documentclass{article}
+\newenvironment{foo}{\begin{quote}}{\endquote}
+\begin{document}
+Intro.
+\begin{foo} quoted \end{foo}
+After.
+\end{document}

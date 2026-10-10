@@ -63,7 +63,9 @@ LoadDefinitions!({
         digest(Tokens::new(tokens))?;
       }
     },
-    before_digest_end => { leave_horizontal()?; });
+    before_digest_end => { leave_horizontal()?; },
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: setspace.sty:525-547 `\begingroup`.
+    tex_group => { TexGroup::SemiSimple });
   DefEnvironment!("{singlespace}", "#body", mode => "internal_vertical",
     after_digest_begin => { Digest!("\\setstretch{\\setspace@singlespace}")?; },
     before_digest_end => { leave_horizontal()?; });
@@ -72,10 +74,14 @@ LoadDefinitions!({
   // paragraph and its `<p>` closes after it, where the text that follows starts a new one.
   DefEnvironment!("{onehalfspace}", sub[document, _args, props] {
     body_closing_its_paragraph(document, props)
-  }, after_digest_begin => { Digest!("\\onehalfspacing")?; });
+  }, after_digest_begin => { Digest!("\\onehalfspacing")?; },
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: setspace.sty:525-547 `\begingroup`.
+    tex_group => { TexGroup::SemiSimple });
   DefEnvironment!("{doublespace}", sub[document, _args, props] {
     body_closing_its_paragraph(document, props)
-  }, after_digest_begin => { Digest!("\\doublespacing")?; });
+  }, after_digest_begin => { Digest!("\\doublespacing")?; },
+    // The begin code opens a `\begingroup` (a semi_simple_group) of its own: setspace.sty:525-547 `\begingroup`.
+    tex_group => { TexGroup::SemiSimple });
   // Standalone-switch overrides: some papers (witness 2310.08233 IEEEtran)
   // use `\singlespace` as a SWITCH inside an arg-grabbing context such as
   // `\title{\singlespace ...}`. DefEnvironment binds `\singlespace` to the

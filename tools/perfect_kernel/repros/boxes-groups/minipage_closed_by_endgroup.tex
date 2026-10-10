@@ -1,0 +1,14 @@
+% witness: review 64y round 1 (TeX errors on this shape)
+% oracle:  pdflatex 6 errors (\endgroup meets minipage's \vbox\bgroup: Missing } inserted, latex.ltx:16310)
+% engines: rust 64ra 1E+1W -> 64y r1 0E (Info, error hidden) -> 64y 1E 0W; Perl 3E
+% expect:  1 Error (TeX's classification: error); minipage ends before 'After mini.'
+% status:  GREEN (64y r2); guard perfect_kernel_batch64y::minipage_closed_by_endgroup_is_an_error
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{amsthm}\newtheorem{thm}{Theorem}
+\begin{document}
+Intro.
+
+\begin{minipage}{3cm} Mini text. \endgroup After mini.
+
+Next para.
+\end{document}

@@ -112,6 +112,8 @@ LoadDefinitions!({
      \\end{figure}");
   DefEnvironment!("{@half@doublefigure}",
     "<ltx:figure xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:figure>#tags",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
@@ -124,6 +126,8 @@ LoadDefinitions!({
      \\end{table}");
   DefEnvironment!("{@half@doubletable}",
     "<ltx:table xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:table>#tags",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
@@ -132,6 +136,8 @@ LoadDefinitions!({
   // the `{Dimension}` width arg that the standalone floatfig package uses.
   DefEnvironment!("{floatingfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:figure>",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     properties    => sub[args] {
@@ -142,6 +148,8 @@ LoadDefinitions!({
     mode => "internal_vertical");
   DefEnvironment!("{floatingtable}[]",
     "<ltx:table xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:table>",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     properties    => sub[args] {

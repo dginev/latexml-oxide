@@ -162,6 +162,9 @@ pub(crate) fn load() -> Result<()> {
       ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
     </ltx:picture>",
     // Perl #2798: picture is an inline block — internal_vertical, no leaveHorizontal.
+    // The begin code opens a TeX group of its own: latex.ltx:16771-16778
+    // `\@picture` `\setbox\@picbox\hb@xt@\@tempdimc\bgroup`.
+    tex_group => { TexGroup::Box },
     mode => "inline_internal_vertical",
     before_digest => {
       // Perl: before_picture — Let \raisebox to \pic@raisebox

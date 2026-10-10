@@ -233,6 +233,8 @@ LoadDefinitions!({
       </ltx:figure>",
       mode => "internal_vertical",
       properties => sub[args] { subcaption_width_props(args) },
+      // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
+      tex_group => { TexGroup::Box },
       before_digest => { before_float("subfigure", Some("figure"))?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
@@ -247,6 +249,8 @@ LoadDefinitions!({
     </ltx:figure>",
     mode => "internal_vertical",
     properties => sub[args] { subcaption_width_props(args) },
+    // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("subfigure", Some("figure"), true)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
@@ -261,6 +265,8 @@ LoadDefinitions!({
     </ltx:figure>",
     mode => "internal_vertical",
     properties => sub[args] { subcaption_width_props(args) },
+    // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float("subfigure", Some("figure"))?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
@@ -271,6 +277,8 @@ LoadDefinitions!({
     </ltx:figure>",
     mode => "internal_vertical",
     properties => sub[args] { subcaption_width_props(args) },
+    // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("subfigure", Some("figure"), true)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
@@ -289,6 +297,8 @@ LoadDefinitions!({
       </ltx:table>",
       mode => "internal_vertical",
       properties => sub[args] { subcaption_width_props(args) },
+      // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
+      tex_group => { TexGroup::Box },
       before_digest => { before_float("subtable", Some("table"))?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
@@ -302,6 +312,8 @@ LoadDefinitions!({
     </ltx:table>",
     mode => "internal_vertical",
     properties => sub[args] { subcaption_width_props(args) },
+    // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("subtable", Some("table"), true)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );

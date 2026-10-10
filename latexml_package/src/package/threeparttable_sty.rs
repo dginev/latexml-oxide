@@ -30,7 +30,9 @@ LoadDefinitions!({
   DefEnvironment!("{threeparttable}[]", "#body",
     before_digest => {
       Digest!("\\@ifundefined{@captype}{\\def\\@captype{table}}{}\\let\\TPToverlap\\relax")?;
-    });
+    },
+    // The begin code opens a TeX group of its own: threeparttable.sty:107-109, :156-160 `\TPT@common` (`\vtop\bgroup`, `\color@begingroup`).
+    tex_group => { TexGroup::Box });
   // Perl L30: DefMacroI('\begin{tablenotes}', '[]', '\begin{itemize}');
   // ie the {tablenotes} env optionally takes [keyvals] (para/flushleft/online/normal)
   // and discards them — the body is just an itemize list. Previously Rust used
@@ -54,5 +56,7 @@ LoadDefinitions!({
   DefEnvironment!("{measuredfigure}[]", "#body",
     before_digest => {
       Digest!("\\@ifundefined{@captype}{\\def\\@captype{figure}}{}")?;
-    });
+    },
+    // The begin code opens a TeX group of its own: threeparttable.sty:122-128 `\TPT@common`, `\setbox\@tempboxb\hbox\bgroup`.
+    tex_group => { TexGroup::Box });
 });

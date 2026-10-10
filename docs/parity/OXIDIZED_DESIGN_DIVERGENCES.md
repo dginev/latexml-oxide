@@ -15172,3 +15172,48 @@ token (KPE #582; 750 of run 336's papers: hep-ph9301226, cond-mat9311041 "I").
 3 papers unchanged. Guard `perfect_kernel_batch64u::revtex2_title_and_instit_environments`. Under `{revtex}` the unknown
 options still load OmniBus after the binding, so `\author{A and B}` gives the affiliation to B only (RED
 `sectioning-frontmatter/revtex3_omnibus_author_group_address`, awaiting a ruling).
+
+### 497. An environment frame met by a plain `}`/`\endgroup` ends the environment as tex.web's `off_save` does (Perl: Error, the frame kept)
+
+**Perl behavior**: Stomach.pm:343-375 errors on a `}`/`\endgroup` that meets an environment's mode frame and keeps the
+frame, so `{\thm …}`, `{\quote …}`, `\begingroup\rem …\endgroup` and `\begin{flushleft} … \endgroup` (valid LaTeX: a bare
+`\X` opens no group, latex.ltx:15346-15355; `\begin`'s group is closed by any `\endgroup`) swallow the rest of the
+document (KPE #583).
+**Rust behavior**: stomach.rs `close_environment_frame` ends the environment first, in the shape of tex.web §1064
+`off_save`: a bare `\X` frame back-inputs the closer and inserts `\endX`; a `\begin{X}` frame met by `\endgroup` runs
+`\end{X}` in the `\endgroup`'s place. The diagnostic follows the kind of group the environment's begin code leaves open
+(DefEnvironment `tex_group` = none | semi_simple | box, tex.web §269): none → Info; semi_simple → Error for `}` (§1069
+`extra_right_brace`) and for `\endgroup` against a `\begin{X}` frame (`\begin`'s own group stays open), Info for a bare
+`\X` met by `\endgroup` (§1063 unsave: `\endX` takes its place and the enclosing group stays open); box → Error for
+`\endgroup` (§1064 `off_save`) and for `}` (§1068 packages the box early; TeX reports the mismatch later). The kind is a
+frame value, cleared where raw end code closes `\@xfloat`'s box (`\lx@endfloatbox@close`). `}` against a `\begin{X}`
+frame and math-mode frames keep their Errors. End code TeX never runs when a group ends an environment is skipped
+(`\end`'s `@atend`/`env/X/end` hooks, a theorem's end mark and postwork). A macro-defined environment's `\end{Y}` runs
+`\lx@checkend` (latex.ltx `\@checkend`, which Perl's `\end` does not run; KPE #584), reporting "\begin{X} on input line N
+ended by \end{Y}" when the frames and `\@currenvir` both disagree. The 71 environments whose begin code opens a group
+are marked with their source lines (audit in `agent_reports/payload_64y_ab/envlist2.tsv`).
+**Why**: content: the rest of the document after such a closer. Witnesses 1210.5866, 2412.14057, 1702.01612,
+1909.03158; 17/17 witnesses clean (139 → 0 errors); 150 of the ≈2,060 run-336 papers with that first error: 141 → 82
+erroring (1172 → 642 errors); 0 regressions over 300 random + 100 theorem/list-heavy papers. Guards
+`perfect_kernel_batch64y::*`.
+
+### 498. REVTeX 3's `figure` without the `floats` option opens no group (Perl: a LaTeX float)
+
+**Perl behavior**: `\begin{figure}` is the kernel float under REVTeX 3, so a `\figure{N}` caption-list line closed by
+`\endgroup` errors.
+**Rust behavior**: aps.sty:614-630 makes `\figure` a caption-list entry that opens no group unless `floats` is given;
+revtex3_support (and revtex.cls's `floats` option) override the environment's group kind to none at run time
+(`\begin{figure}:tex_group`), so cond-mat9607130's `\figure{N}` lines are clean as in pdflatex with the REVTeX 3.1 files
+(1 → 0). `table` keeps its group (aps.sty:674-687). Residual: `\documentstyle[osa,floats]{revtex}` keeps the Error
+(osa.sty:554-566 defines a list entry regardless); aipproc reaches the override through revtex3_support.
+**Why**: faithful to the class the paper uses. Guards `perfect_kernel_batch64y::revtex3_figure_list_entry_closed_by_endgroup`,
+`revtex3_floats_figure_closed_by_endgroup`.
+
+### 499. natbib's `\bibpostamble` is typeset at the end of the bibliography (Perl: neither preamble nor postamble)
+
+**Perl behavior**: natbib.sty.ltxml typesets neither `\bibpreamble` nor `\bibpostamble` (KPE #585).
+**Rust behavior**: natbib's `thebibliography` runs `\bibpostamble` before `\endlist` (natbib.sty:1079-1086); the kernel
+bibliography digests a new hook `\lx@bibliography@postamble` at `\endthebibliography` (sect11.rs), which natbib points at
+`\bibpostamble`. A postamble closes what `\bibpreamble` opened (2009.08029's `\begin{multicols}{2}` … `\end{multicols}`,
+1 → 0 errors) and its content is kept (it ends the last bibblock).
+**Why**: content and group balance. Guard `perfect_kernel_batch64y::bibpostamble_closes_the_preamble`.

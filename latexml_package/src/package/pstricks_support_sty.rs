@@ -1272,7 +1272,9 @@ LoadDefinitions!({
     </ltx:picture>",
     mode => "inline_internal_vertical",
     before_digest => { Let!("\\par", "\\relax"); assign_value("lx_in_pspicture", Stored::Bool(true), None); },
-    properties => sub[args] { pspicture_properties(args[2].as_ref(), args[3].as_ref()) }
+    properties => sub[args] { pspicture_properties(args[2].as_ref(), args[3].as_ref()) },
+    // The begin code opens a TeX group of its own: pst-code-pspicture.tex:111, :161 `\begingroup`, `\setbox\pst@hbox=\hbox\bgroup`.
+    tex_group => { TexGroup::Box }
   );
   DefEnvironment!("{pspicture*} OptionalMatch:* [] PSCoord OptionalPSCoord",
     "<ltx:picture width='#width' height='#height' origin-x='#origin-x' origin-y='#origin-y'\
@@ -1281,7 +1283,9 @@ LoadDefinitions!({
     </ltx:picture>",
     mode => "inline_internal_vertical",
     before_digest => { Let!("\\par", "\\relax"); assign_value("lx_in_pspicture", Stored::Bool(true), None); },
-    properties => sub[args] { pspicture_properties(args[2].as_ref(), args[3].as_ref()) }
+    properties => sub[args] { pspicture_properties(args[2].as_ref(), args[3].as_ref()) },
+    // The begin code opens a TeX group of its own: pst-code-pspicture.tex:111, :161 `\begingroup`, `\setbox\pst@hbox=\hbox\bgroup`.
+    tex_group => { TexGroup::Box }
   );
 
   // II Basic graphics objects — Perl pstricks_support.sty.ltxml:661-843,

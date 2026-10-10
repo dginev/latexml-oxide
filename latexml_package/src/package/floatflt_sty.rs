@@ -87,6 +87,8 @@ LoadDefinitions!({
   // still live there — the reason after_digest_body is avoided).
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:figure>",
+    // The begin code opens a TeX group of its own: floatflt.sty:88 `\global\setbox\figbox=\vbox\bgroup`.
+    tex_group => { TexGroup::Box },
     before_digest => {
       engine::latex_constructs::before_float("figure", None)?;
     },
@@ -105,6 +107,8 @@ LoadDefinitions!({
   // (OXIDIZED_DESIGN #317).
   DefEnvironment!("{floatingtable}[]{}",
     "<ltx:table xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #2 #body</ltx:table>",
+    // The begin code opens a TeX group of its own: floatflt.sty:135 `\global\setbox\tabbox=\vbox\bgroup`.
+    tex_group => { TexGroup::Box },
     before_digest => {
       engine::latex_constructs::before_float("table", None)?;
     },

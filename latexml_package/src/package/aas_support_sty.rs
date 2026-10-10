@@ -228,12 +228,16 @@ LoadDefinitions!({
   // to match the floats produced by \newfloat-style envs (acmart, rotating).
   DefEnvironment!("{plate}[]",
     "<ltx:float xml:id='#id' inlist='#inlist' ?#1(placement='#1') class='ltx_float_plate'>#tags#body</ltx:float>",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("plate", None, false)?; engine::latex_constructs::reset_float_box()?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
   DefEnvironment!("{plate*}[]",
     "<ltx:float xml:id='#id' inlist='#inlist' ?#1(placement='#1') class='ltx_float_plate'>#tags#body</ltx:float>",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("plate", None, true)?; engine::latex_constructs::reset_float_box()?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"

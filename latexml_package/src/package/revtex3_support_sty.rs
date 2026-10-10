@@ -13,7 +13,29 @@ LoadDefinitions!({
   DeclareOption!("amsmath", {
     RequirePackage!("amsmath");
   });
+  DeclareOption!("floats", {
+    assign_value("revtex3@floats", true, Some(Scope::Global));
+  });
   ProcessOptions!();
+  // aps.sty:614-630 (REVTeX 3.1): only with the `floats` option is `figure`
+  // `\@float{figure}`; otherwise `\figure` is a list entry (`\vskip1pc`, the
+  // caption type, "FIGURES" in preprint) that opens no TeX group, so a figure
+  // ended by an enclosing `\endgroup` is clean in TeX (cond-mat9607130, whose
+  // `\figure{N}` caption lines sit in `{references}`). `\table` keeps its
+  // `\bgroup` either way (aps.sty:674-687). Known residual: osa.sty:554-566
+  // makes `\figure` a list entry whatever the options, so
+  // `\documentstyle[osa,floats]{revtex}` keeps the box-group Error where TeX is
+  // clean (no substyle is told apart here). aipproc reaches this through its
+  // `RequirePackage!("revtex3_support")` (aipproc_sty.rs:5).
+  if !lookup_bool("revtex3@floats") {
+    for env in ["figure", "figure*"] {
+      assign_value(
+        &s!("\\begin{{{env}}}:tex_group"),
+        TexGroup::None.as_str(),
+        Some(Scope::Global),
+      );
+    }
+  }
 
   RequirePackage!("revtex4_support");
 
