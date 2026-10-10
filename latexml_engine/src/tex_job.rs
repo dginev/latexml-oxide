@@ -11,6 +11,39 @@ use crate::prelude::*;
 static SOURCE_DATE_EPOCH: Lazy<Option<String>> =
   Lazy::new(|| std::env::var("SOURCE_DATE_EPOCH").ok());
 
+/// `SOURCE_DATE_EPOCH` (Unix seconds), when set and numeric: the reproducible-build clock Perl reads in
+/// TeX_Job.pool.ltxml:42.
+fn source_date_epoch_env() -> Option<i64> {
+  SOURCE_DATE_EPOCH
+    .as_deref()
+    .and_then(|epoch| epoch.trim().parse::<i64>().ok())
+}
+
+/// Sets the job's clock — `\year`, `\month`, `\day`, `\time` (globally) — to the instant `epoch` (Unix seconds) on the
+/// UTC clock, as Perl TeX_Job.pool.ltxml:42-46 does for `SOURCE_DATE_EPOCH` (`gmtime`). `\today` and
+/// `\pdfcreationdate` read these registers. Returns whether `epoch` is a representable instant (the clock is left
+/// untouched when it is not).
+pub fn assign_date_registers(epoch: i64) -> bool {
+  match DateTime::from_timestamp(epoch, 0) {
+    Some(utc) => {
+      assign_clock_registers(&utc);
+      true
+    },
+    None => false,
+  }
+}
+
+fn assign_clock_registers<Tz: TimeZone>(dt: &DateTime<Tz>) {
+  AssignValue!("\\day", Number!(dt.day()), Scope::Global);
+  AssignValue!("\\month", Number!(dt.month()), Scope::Global);
+  AssignValue!("\\year", Number!(dt.year()), Scope::Global);
+  AssignValue!(
+    "\\time",
+    Number!(60 * dt.hour() + dt.minute()),
+    Scope::Global
+  );
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Job Family of primitive control sequences
@@ -33,26 +66,11 @@ LoadDefinitions!({
   DefRegister!("\\mag", Number!(1000));
 
   // TODO: This may mess up Daemon state? Reinit when setting jobname?
-  // Respect SOURCE_DATE_EPOCH env var for reproducible builds (like Perl)
-  let dt: DateTime<Local> = if let Some(epoch_str) = SOURCE_DATE_EPOCH.as_deref() {
-    if let Ok(epoch) = epoch_str.trim().parse::<i64>() {
-      DateTime::from_timestamp(epoch, 0)
-        .map(|utc| utc.with_timezone(&Local))
-        .unwrap_or_else(Local::now)
-    } else {
-      Local::now()
-    }
-  } else {
-    Local::now()
-  };
-  AssignValue!("\\day", Number!(dt.day()), Scope::Global);
-  AssignValue!("\\month", Number!(dt.month()), Scope::Global);
-  AssignValue!("\\year", Number!(dt.year()), Scope::Global);
-  AssignValue!(
-    "\\time",
-    Number!(60 * dt.hour() + dt.minute()),
-    Scope::Global
-  );
+  // Perl TeX_Job.pool.ltxml:42-46: SOURCE_DATE_EPOCH (reproducible builds) on the UTC clock (`gmtime`), else the
+  // local clock (`localtime`).
+  if !source_date_epoch_env().is_some_and(assign_date_registers) {
+    assign_clock_registers(&Local::now());
+  }
 
   //======================================================================
   // Random Job related things

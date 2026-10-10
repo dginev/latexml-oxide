@@ -914,6 +914,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     || source.ends_with(".tgz")
     || source.ends_with(".zip")
     || source.ends_with(".tar");
+  // The source's date (`latexml::source_date`): ar5iv's archival clock for `\today`.
+  let mut source_date_epoch = None;
   let source = if is_archive_mode {
     let (tempdir, main_tex) = match unpack_archive(&source) {
       Ok(r) => r,
@@ -922,6 +924,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         process::exit(1);
       },
     };
+    // Read from the archive's entries: the extracted files carry the extraction's clock.
+    let main_in_archive = Path::new(&main_tex)
+      .strip_prefix(tempdir.path())
+      .ok()
+      .map(|p| p.to_string_lossy().into_owned());
+    source_date_epoch =
+      latexml::source_date::of_archive(Path::new(&source), main_in_archive.as_deref());
     let dir_str = tempdir.path().to_string_lossy().to_string();
     path_flags.push(dir_str);
     _archive_on_exit = Some(latexml_core::watchdog::remove_on_exit(tempdir.path()));
@@ -944,6 +953,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // Supplementary-Material documents (joined onto the output below).
     match latexml::main_tex::find_top_level_texs(dir_path) {
       Ok(mut tops) => {
+        source_date_epoch = latexml::source_date::of_directory(dir_path, Some(&tops[0]));
         let main_tex = tops.remove(0).to_string_lossy().to_string();
         for supp in tops {
           supplement_sources.push(supp.to_string_lossy().to_string());
@@ -958,6 +968,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   } else {
     source
   };
+  // A single-file input dates by its own modification time; an archive's extracted main file never does.
+  if !is_archive_mode && !is_directory_mode && Path::new(&source).is_file() {
+    source_date_epoch = latexml::source_date::of_file(Path::new(&source));
+  }
 
   // Perl latexmlc parity (bin/latexmlc L103-120): ALWAYS write a conversion
   // log — `--log` names it, otherwise `<jobname>.latexml.log` in the current
@@ -1075,6 +1089,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // (default utf-8 when unset).
     inputencoding: cli.inputencoding.clone(),
     streaming: resolve_streaming(cli.streaming, resolve_max_memory(cli.max_memory), &source),
+    source_date_epoch,
   };
   // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
   // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base

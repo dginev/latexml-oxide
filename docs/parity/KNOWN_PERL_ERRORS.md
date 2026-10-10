@@ -12156,3 +12156,16 @@ Minimal trigger: `\usepackage{epsfig}\begin{document}\epsfxsize=3cm\epsfbox{exam
 `<graphics>`).
 
 Open (RED `singletons/ws_procs_psfig.tex`; its own batch with an epsfig A/B).
+## 575. ar5iv's `\relax` `\today` arrives at begin-document, so the preamble reads the conversion's day
+
+ar5iv.sty.ltxml:23-25 installs its archival `\today` (`\relax`, locked) in an `AtBeginDocument` hook. Everything the
+preamble or a class does with `\today` before that — an `\edef`, a `\next` parse (ptapap.cls:322-325, 1801.05985) —
+still reads LaTeX's `\today` on the conversion's clock, so an archival conversion's output depends on the day it ran.
+
+Minimal trigger, with `--preload=ar5iv.sty`:
+`\documentclass{article}\edef\d{\today}\begin{document}\d\end{document}` prints the conversion's date (Perl,
+2026-10-10: the ptapap repro printed "oct").
+
+Rust (64s, OD #486): the ar5iv clock is the paper's source date, set before the format loads, so preamble readings agree
+with the body; with no source date the `\relax` is bound when ar5iv loads, before the preamble. Repro
+`singletons/ar5iv_today_split_by_class_1801.05985.tex`.

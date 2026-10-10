@@ -198,6 +198,8 @@ pub(crate) fn make_config(uri: &str) -> Config {
     // Server input is editor buffer text (already UTF-8); no override needed.
     inputencoding:           None,
     streaming:               None,
+    // An editor buffer is no dated source bundle: ar5iv keeps Perl's empty `\today`.
+    source_date_epoch:       None,
   }
 }
 

@@ -14885,3 +14885,39 @@ digested in a discarded `\hbox`: each `\affil`/`\email` adds its frontmatter, wh
 mdpi's `\history` keeps the last call (mdpi.cls:384 `\gdef`), gated by the `submit`/`accept` status.
 **Why**: content (run 336: ptephy 204 papers with errors → 27, starred-author emails 28 → 146; quantumarticle 61 → 4).
 Guards `perfect_kernel_batch64qa`.
+### 486. ar5iv's archival `\today` is the paper's source date (Perl: `\relax` at begin-document)
+
+**Perl behavior**: ar5iv.sty.ltxml:23-25 locks `\today` to `\relax` `AtBeginDocument`, so an archival conversion prints
+no date where the paper printed `\today` (`\date{\today}` gives an empty `<date>`). A preamble or class reading of
+`\today` still sees the conversion's day (KPE #575). `SOURCE_DATE_EPOCH` sets `\year`/`\month`/`\day`/`\time` on the
+UTC clock (`gmtime`, TeX_Job.pool.ltxml:42-46), else the local clock.
+**Rust behavior**: under the ar5iv preload the job's clock (`\year`, `\month`, `\day`, `\time`, hence LaTeX's and
+babel's `\today`, `\pdfcreationdate` and the l3kernel's `\c_sys_*_int`) is the paper's own date: the newest recorded
+modification time among the TeX source files of its bundle (`latexml::source_date`: `.tex .ltx .latex .sty .cls .clo
+.def .cfg .fd .bbl .bib` and the main file; a zip entry's Info-ZIP UT timestamp, else its DOS time read as UTC; a tar
+entry's mtime; a directory's or single file's filesystem mtimes; a time at the DOS epoch is no date), on the UTC clock,
+set before the format loads (`latex.rs` runs `\__kernel_sys_everyjob:`, which copies the clock into `\c_sys_*_int`).
+Only the bundle's date counts: `SOURCE_DATE_EPOCH` (exported by Nix shells and Debian builds, often as 315532800) never
+dates an ar5iv `\today`; it seeds tex_job's registers only. The CLI and `cortex_worker` read the date from the input
+(`Config::source_date_epoch`); stdin, `literal:` input, the library API and the LSP have none. With no date (stdin, an
+editor buffer, the ~30% of arXiv zips that are single-file submissions with undated entries) the locked `\relax`
+`\today` stays, bound at load time. The `SOURCE_DATE_EPOCH` clock moved from local time to UTC to match Perl's
+`gmtime`, which shifts the manual sweeps' pinned 1767225600 by one date word (2025-12-31 → 2026-01-01 on a US-Eastern
+host).
+**Why**: user ruling 2026-10-10: `\today` prints what arXiv's PDF shows, and a class that parses `\today` gets a date —
+ptapap.cls:322-325 splits the `\edef`'d `\today` with `\def\next#1#2#3#4\relax`, which on `\relax` ran away
+("Paragraph ended before \next was complete", 95 papers of run 336, 1801.05985); 1811.05851's `\item[] \today` gives
+"November 14, 2018". A/B: the 95 ptapap papers lose that error (203 → 108 errors, the rest is a separate
+`\oldfnum@figure` cluster) with unchanged XML; of 60 random dated papers using `\today`, 48 change, every change a date
+where `\today` was (43 `<date>` elements filled), none worse; 10 undated papers unchanged. Guards
+`perfect_kernel_batch64s::{ptapap_splits_the_source_date, title_block_today_is_the_source_date,
+pdf_creation_date_keeps_the_source_clock, undated_source_keeps_the_empty_today}`, `source_date::tests`.
+Deterministic per zip/tar bundle only: directory and single-file inputs read filesystem mtimes, which a checkout or copy
+resets. A dated plain-TeX document now raises `Error:undefined:\today` (plain has no `\today`, as pdftex; before, ar5iv
+defined it as `\relax`); a document defining its own `\today` now prints it. Residual (as Perl, the ruling covers
+`\today` only): an undated bundle's `\time`, `\pdfcreationdate`, `\the\year` and `\c_sys_*_int` still read the
+conversion's clock. Known limits of the date: an entry dated in the future wins (no clock is consulted); a directory
+walk skips `.git`/`.svn`/`.hg`/`CVS`; a single-file input counts only that file, not what it `\input`s; a `.tar.gz` is
+decompressed a second time for its dates. A non-numeric `SOURCE_DATE_EPOCH` falls back to the local clock (Perl's `gmtime("abc")` would give 1970-01-01; as
+before this batch); `\pdfcreationdate` appends `Z` also when the registers hold the local clock (an undated bundle under
+a non-UTC `TZ`; pdftex.rs).

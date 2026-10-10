@@ -1,0 +1,15 @@
+% witness: 1801.05985 ptapap.cls:322-325 (class shipped with the paper, raw since 62k; 95 ptapap papers of run 336)
+% oracle:  pdflatex 0 errors: the page prints the date's first three letters, lowercased ("oct" on 2026-10-10)
+% engines: rust 64k22 = 1 error "Paragraph ended before \next was complete" (ar5iv's `\today` is `\relax`);
+%          rust 64s = 0 errors, the file's own date's month; Perl ar5iv (2026-10-10) = 0 errors, "oct" — the conversion's
+%          month: its `\relax` arrives AtBeginDocument (ar5iv.sty.ltxml:23-25), after the class has read `\today`
+% expect:  0 errors; the paragraph holds the source file's modification month, three lowercase letters
+% status:  RED (64k22) -> GREEN (64s)
+% preload: ar5iv.sty
+\documentclass{article}
+\edef\ptaJournalDate{\today}
+\def\next#1#2#3#4\relax{\lowercase{\edef\next{#1#2#3}}}%
+\expandafter\next\ptaJournalDate\relax
+\begin{document}
+\next
+\end{document}

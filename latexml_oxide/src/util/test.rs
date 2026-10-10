@@ -964,6 +964,7 @@ pub fn convert_with_setup_then<R: Send + 'static>(
     tex.as_bytes(),
     &[],
     preload,
+    None,
     GUARD_TIMEOUT_SECS,
     setup,
     move |xml, _| inspect(xml),
@@ -979,6 +980,7 @@ pub fn convert_with_status(tex: &str, preload: Option<&str>) -> (String, String,
     tex.as_bytes(),
     &[],
     preload,
+    None,
     GUARD_TIMEOUT_SECS,
     || {},
     |_, _| (),
@@ -1001,6 +1003,7 @@ pub fn convert_files_with(
     tex.as_bytes(),
     &files,
     preload,
+    None,
     GUARD_TIMEOUT_SECS,
     || {},
     |_, _| (),
@@ -1018,13 +1021,45 @@ pub fn convert_bytes_files_then<R: Send + 'static>(
   preload: Option<&str>,
   inspect: impl FnOnce(&str, &std::path::Path) -> R + Send + 'static,
 ) -> (String, String, R) {
-  let run = convert_in_process(tex, files, preload, GUARD_TIMEOUT_SECS, || {}, inspect);
+  let run = convert_in_process(
+    tex,
+    files,
+    preload,
+    None,
+    GUARD_TIMEOUT_SECS,
+    || {},
+    inspect,
+  );
   (run.log, run.xml, run.inspected)
+}
+
+/// [`convert_files_with`] of a source dated `source_date_epoch` (Unix seconds, UTC) — what the CLI and cortex read
+/// from a paper's bundle (`latexml::source_date`) — for a guard of the job's clock under ar5iv's archival preload.
+pub fn convert_dated_files_with(
+  tex: &str,
+  files: &[(&str, &str)],
+  preload: Option<&str>,
+  source_date_epoch: i64,
+) -> (String, String) {
+  let files: Vec<(&str, &[u8])> = files
+    .iter()
+    .map(|(name, content)| (*name, content.as_bytes()))
+    .collect();
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &files,
+    preload,
+    Some(source_date_epoch),
+    GUARD_TIMEOUT_SECS,
+    || {},
+    |_, _| (),
+  );
+  (run.log, run.xml)
 }
 
 /// [`convert_with`] under a `secs` deadline instead of [`GUARD_TIMEOUT_SECS`] — for a guard of a heavy document.
 pub fn convert_with_timeout(tex: &str, preload: Option<&str>, secs: u64) -> (String, String) {
-  let run = convert_in_process(tex.as_bytes(), &[], preload, secs, || {}, |_, _| ());
+  let run = convert_in_process(tex.as_bytes(), &[], preload, None, secs, || {}, |_, _| ());
   (run.log, run.xml)
 }
 
@@ -1050,6 +1085,7 @@ fn convert_in_process<R: Send + 'static>(
   tex: &[u8],
   files: &[(&str, &[u8])],
   preload: Option<&str>,
+  source_date_epoch: Option<i64>,
   timeout_secs: u64,
   setup: impl FnOnce() + Send + 'static,
   inspect: impl FnOnce(&str, &std::path::Path) -> R + Send + 'static,
@@ -1082,6 +1118,7 @@ fn convert_in_process<R: Send + 'static>(
         preload: preload.map(|p| vec![p]),
         bindings_dispatch: Some(std::rc::Rc::new(latexml_package::dispatch)),
         extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+        source_date_epoch,
         ..latexml_core::common::Config::default()
       };
       let mut converter = crate::converter::Converter::from_config(opts.clone());

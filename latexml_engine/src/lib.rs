@@ -50,7 +50,7 @@ mod tex_fonts; // Perl: TeX_Fonts.pool.ltxml
 mod tex_glue; // Perl: TeX_Glue.pool.ltxml
 mod tex_hyphenation; // Perl: TeX_Hyphenation.pool.ltxml
 mod tex_inserts; // Perl: TeX_Inserts.pool.ltxml
-mod tex_job; // Perl: TeX_Job.pool.ltxml
+pub mod tex_job; // Perl: TeX_Job.pool.ltxml
 mod tex_kern; // Perl: TeX_Kern.pool.ltxml
 mod tex_logic; // Perl: TeX_Logic.pool.ltxml
 mod tex_macro; // Perl: TeX_Macro.pool.ltxml

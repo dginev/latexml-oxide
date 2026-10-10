@@ -4213,6 +4213,15 @@ std::thread_local! {
 pub fn set_pdf_driver_option(pdf: bool) { PDF_DRIVER_OPTION.with(|c| c.set(pdf)); }
 /// Whether the document is a pdflatex one by its class options ([`set_pdf_driver_option`]).
 pub fn pdf_driver_option() -> bool { PDF_DRIVER_OPTION.with(std::cell::Cell::get) }
+std::thread_local! {
+  static SOURCE_DATE_EPOCH: std::cell::Cell<Option<i64>> = const { std::cell::Cell::new(None) };
+}
+/// Records the date of the document's source (Unix seconds, UTC): the newest modification time among the TeX source
+/// files of the bundle it came in (`Config::source_date_epoch`), `None` when the source carries none; set per
+/// conversion before the session's preloads load. ar5iv's archival preload reads it as the job's clock.
+pub fn set_source_date_epoch(epoch: Option<i64>) { SOURCE_DATE_EPOCH.with(|c| c.set(epoch)); }
+/// The date of the document's source ([`set_source_date_epoch`]).
+pub fn source_date_epoch() -> Option<i64> { SOURCE_DATE_EPOCH.with(std::cell::Cell::get) }
 
 /// Snapshot of all registered (name, ext) binding pairs across all
 /// dispatchers. Used by `find_file(notex=true)` to detect compiled-binding

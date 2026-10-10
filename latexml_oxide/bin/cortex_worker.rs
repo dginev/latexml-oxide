@@ -347,6 +347,13 @@ impl LatexmlWorker {
 
     // 1. Unpack the input archive
     let (tempdir, main_tex) = unpack_archive(input_path)?;
+    // The paper's date (`latexml::source_date`), ar5iv's archival clock for `\today`: read from the archive's entries,
+    // as the CLI does, since the extracted files carry the extraction's clock.
+    let main_in_archive = Path::new(&main_tex)
+      .strip_prefix(tempdir.path())
+      .ok()
+      .map(|p| p.to_string_lossy().into_owned());
+    let bundle_date = latexml::source_date::of_archive(input_path, main_in_archive.as_deref());
     // Removed by the watchdog's and the allocation hook's exits too, which skip the `TempDir`'s drop: a timed-out
     // paper left its source tree in the worker's scratch directory for the life of the container.
     let _sources_on_exit = latexml_core::watchdog::remove_on_exit(tempdir.path());
@@ -381,6 +388,7 @@ impl LatexmlWorker {
       // Corpus sweeps don't override input decoding — default (UTF-8) applies.
       inputencoding:           None,
       streaming:               None,
+      source_date_epoch:       bundle_date,
     };
 
     let mut converter = Converter::from_config(opts.clone());

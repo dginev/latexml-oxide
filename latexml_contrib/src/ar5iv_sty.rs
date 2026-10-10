@@ -1,6 +1,24 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // An archival conversion never stamps the conversion's day. Perl L23-25 makes `\today` print nothing:
+  //   AtBeginDocument(sub {
+  //     DefMacroI('\today', undef, '\relax', locked => 1, scope => 'global');
+  //   });
+  // Beyond Perl (user ruling 2026-10-10): the job's clock is the paper's own date instead — the newest modification
+  // time among the TeX source files of its bundle (`latexml::source_date`) — so LaTeX's and babel's `\today` print
+  // the date arXiv's PDF shows, and a class parsing `\today` gets a date: ptapap.cls:322-325 splits `\edef`'d `\today`
+  // with `\def\next#1#2#3#4\relax`, which on `\relax` ran away to "Paragraph ended before \next was complete" (run
+  // 336, 1801.05985); 1811.05851's `\item[] \today` prints "November 14, 2018". Only the bundle's date counts, never
+  // `SOURCE_DATE_EPOCH` (exported by every Nix shell and Debian build, often as 1980-01-01): an undated bundle keeps
+  // Perl's `\relax` whatever that variable says, which then only seeds tex_job's registers. `\pdfcreationdate` reads
+  // the same registers. The clock is set before the format loads (`RequirePackage!("latexml")` below): the l3kernel
+  // copies it into `\c_sys_year_int` &c. at the job's start (`\g__sys_everyjob_tl`), which must agree with `\today`.
+  // (Perl's begin-document `\relax` leaves the preamble reading the conversion's day: its ptapap papers print the
+  // conversion's month.)
+  let archival_date =
+    source_date_epoch().is_some_and(latexml_engine::tex_job::assign_date_registers);
+
   // Perl: PassOptions('latexml', 'sty', ...) + RequirePackage('latexml')
   // Mirror Perl ar5iv.sty.ltxml: pass `rawstyles` (INCLUDE_STYLES => true,
   // kpsewhich enabled, system-wide texmf reachable). Earlier the Rust
@@ -97,10 +115,7 @@ LoadDefinitions!({
   // Practical maximum for warnings
   AssignValue!("MAX_WARNINGS" => 10000i64, Scope::Global);
 
-  // No \today in archival conversions. Perl L23-25:
-  //   AtBeginDocument(sub {
-  //     DefMacroI('\today', undef, '\relax', locked => 1, scope => 'global');
-  //   });
+  // No date in the source (stdin, a single-file submission's undated entry): Perl's `\relax`.
   // We bind at load time with `locked => true, Scope::Global` instead of
   // wrapping in `\AtBeginDocument{\def\today{\relax}}` (which loses both
   // flags — `\def` is plain-TeX, with no LaTeXML lock). The lock rejects a
@@ -113,7 +128,9 @@ LoadDefinitions!({
   // `\AddToHook` autoloads LaTeX.pool); a change that defers the format load
   // to `\documentclass` must move this to begin-document, as Perl does
   // (repro loader/latexml_preload_keeps_plain.tex).
-  DefMacro!("\\today", "\\relax", locked => true, scope => Some(Scope::Global));
+  if !archival_date {
+    DefMacro!("\\today", "\\relax", locked => true, scope => Some(Scope::Global));
+  }
 
   // Perl L30-35: drop all non-remote <ltx:resource> nodes (keep only `http*`
   // src so the archival run doesn't embed default local CSS / JS).

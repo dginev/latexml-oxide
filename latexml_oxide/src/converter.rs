@@ -429,6 +429,9 @@ impl Converter {
     state::set_plain_tex_document(self.compile_route.plain_tex);
     state::set_dvi_driver_option(self.compile_route.dvi);
     state::set_pdf_driver_option(self.compile_route.pdf);
+    // The source bundle's date, ar5iv's archival clock — reset every session, so a persistent worker thread never
+    // carries one paper's date into the next.
+    state::set_source_date_epoch(self.opts.source_date_epoch);
     // Install the binding-resolution priority chain (rhai > contrib > package)
     // — the single source of resolution policy, shared with the integration-test
     // harness via `install_binding_dispatch`.

@@ -19,6 +19,7 @@ pub mod main_tex;
 pub mod multidoc;
 pub mod post;
 pub mod render_workers;
+pub mod source_date;
 pub mod streaming_restart;
 pub mod util;
 
