@@ -155,6 +155,7 @@ mod perfect_kernel_batch64qa;
 mod perfect_kernel_batch64qb;
 mod perfect_kernel_batch64ra;
 mod perfect_kernel_batch64s;
+mod perfect_kernel_batch64u;
 mod perfect_kernel_batch64w;
 mod perfect_kernel_gemini;
 mod pgfkeys_native_accessors;

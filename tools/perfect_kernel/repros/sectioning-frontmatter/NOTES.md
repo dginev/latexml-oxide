@@ -125,3 +125,32 @@ the same), so the redefinition is dropped with its flag and the class's own chec
 loads shipped classes raw (DIVERGENCES #444), so JINST papers (1310.6454, 1504.01965) meet it; on OmniBus they did
 not. SHARED with Perl under `rawclasses`; same lock as DIVERGENCES #253. Fix site: the locked-definition path, which
 would have to run the class's redefinition for its effects while keeping the kernel's frontmatter capture.
+
+## Journal styles neither in TeX Live nor shipped (64u): l-aa, epl2, OSA, REVTeX 2.1
+Four run-336 first-error clusters (843 `\thesaurus`, 740 `\Name`, 759 `\address`, 750 `{instit}`) whose class or
+style the paper names but neither TeX Live nor the paper has; Perl errors the same (SHARED), so each fix is a
+beyond-Perl binding read from a copy found elsewhere in arXiv.
+- l_aa_documentstyle_is_the_aa_class / l_aa_thesaurus_ends_at_par (GREEN, 64u): `l-aa`/`laa` = L-AA 3.0 (copy in
+  astro-ph9601070), the `aa` class's predecessor: contrib `l_aa_cls.rs` loads the `aa` class binding and adds
+  `\thesaurus` (l-aa.sty:453, a classification; read non-`\long`, so a `%`-commented brace ends at the `\par` as in
+  pdflatex, astro-ph9405007) and `\picplace`. Bound as a class: `\documentstyle` prefers a `.cls` binding
+  (latex_constructs.pool.ltxml:105-108), and the `aa` class brings plain `\cases` in displays (astro-ph9908044).
+- epl_class_frontmatter_and_bibliography (GREEN, 64u): epl2.cls v1.1 (copy in 1201.0004): contrib `epl_cls.rs` for
+  `epl2`/`epl`; `\institute` entries begin at their `\inst` marks (a `\\` inside one is a line break: 1803.06254).
+- osa_style_marked_addresses (GREEN, 64u): opex3/ol2/osajnl/osajnl2 (copies in 0901.2165, 0901.2997, 0707.0735,
+  0901.2793): contrib `osa_journal_sty.rs`; `\author` appends per call (0906.4563), `\address` is a marked list.
+- revtex2_title_and_instit_environments (GREEN, 64u): REVTeX 2.1 (embedded in hep-lat9302012.tex:465-2231):
+  `{title}`, `{instit}`, `\receipt`, `\nonum`, `\moreauthors`, `\tablenotes` added to revtex3_support_sty.rs, which
+  both `\documentstyle[preprint,revtex]{aps}` and `[version2,aps]{revtex}` reach.
+Review round 1 (GREEN, 64u): l_aa_keywords_without_argument (l-aa.sty:648 `\keywords` takes no argument),
+l_aa_marked_institute_names_its_authors (a `$^n$`-marked `\institute` with marked names is a labelled list; one
+institute every author's), epl_unmarked_institute_one_entry (an unmarked `\institute`'s `\\` is a line break),
+osa_style_address_email_line (an email line is the marked author's email contact, named by its label; `$^{1,2*}$`
+marks 1, 2 and *).
+Residual (not this batch; RED revtex3_omnibus_author_group_address): under `\documentstyle[aps]{revtex}` the unknown options load OmniBus after revtex
+(latex_constructs.pool.ltxml:137-153 `\compat@loadpackages`), whose `\author{A and B}` leaves an `annotate=new` affiliation on B only
+(REVTeX 3 `\address` the same on the base). Mixed marks `$^{1,2*}$` are split by the OSA binding only (osa_journal_sty.rs `symbol_marks_apart`).
+A line marked with several labels (`$^{1,2}$Dept`, 1406.0824) is one line a label in the OSA binding only
+(osa_journal_sty.rs `lines_per_label`): the kernel's `\lx@set@frontmatter@label` takes the first label, as Perl's
+(Base_Utility.pool.ltxml:568), on the request path (an author whose marks were taken as requests); where the marks stay
+visible in the names (IEEEtran `\IEEEauthorblockA`, llncs `\institute`) relocation pairs by the marks shown, all of them.

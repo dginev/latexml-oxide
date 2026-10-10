@@ -1,0 +1,21 @@
+% mechanism: an l-aa `\institute` whose entries carry their own `$^n$` marks, names marked alike, is an
+%   affiliation list labelled by them (l-aa.sty:405-427 numbers only `\and`-separated institutes); as one numbered
+%   entry it went whole to the author of `\inst{1}`. A single institute is every author's.
+% witness: atom-ph9605001, astro-ph9609131 (4 of 20 papers shipping l-aa.sty), astro-ph9405007
+% oracle:  pdflatex (with l-aa.sty v3.0) 0 errors; "A. Able1,2 and B. Baker3" over the three marked institutes
+% engines: rust 64u round 1: all three institutes on one author; base (raw shipped l-aa): none attached
+% expect:  0 errors; Able with Warsaw and Garching, Baker with Potsdam
+% status:  RED (64u round 1) -> GREEN (64u)
+% preload: ar5iv.sty
+\documentstyle{l-aa}
+\begin{document}
+\thesaurus{08}
+\title{Galaxies}
+\author{A. Able$^{1,2}$ \and B. Baker$^{3}$}
+\institute{$^1$ Copernicus Center, Warsaw \\ $^2$ MPE, Garching \\ $^3$ AIP, Potsdam}
+\maketitle
+\begin{abstract}
+We study galaxies.
+\end{abstract}
+Text.
+\end{document}

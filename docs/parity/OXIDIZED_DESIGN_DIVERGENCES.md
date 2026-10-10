@@ -803,6 +803,14 @@ trailing-empties semantics is otherwise preserved exactly.
 **Witness:** none in the corpus (defensive); decided at plan time —
 `docs/archive/frontmatter_api_refactor.md` decisions log #5.
 
+**Font switches (64u):** Perl strips only `\rm` from the labels
+(`$labels =~ s/\\rm//g`, Base_Utility.pool.ltxml:365); Rust strips the
+font switches `\rm`, `\bf`, `\it`, `\mathbf`, `\mathrm`, `\textbf`,
+`\textrm` alike (keeping the character after), so a mark set in bold
+(`Hui Cao$^{\bf{1,4},*}$`, 1109.3726) labels the affiliations 1 and 4
+its plain twin labels. Guard
+`perfect_kernel_batch64u::osa_mark_font_switch_is_no_label`.
+
 ---
 
 ### 35. etoolbox `\robustify` is a no-op on native (closure) bindings
@@ -15043,3 +15051,124 @@ OmniBus for the unmet option (gr-qc9906006, hep-ph9805291: creators 5 → 1 and 
 option). latex+dvips renders of witness diagrams (hep-ph0509118, 1411.6845, 0802.1498) match the browser's SVG.
 Approximations: a rotated oval's stroke is uniform (v1 scales it with the ellipse), `\PText` anchors by `\makebox`
 (v1's mode table), `\DashCurve` drops the dash offset. Guards `perfect_kernel_batch64w::*`.
+
+### 493. `\documentstyle{l-aa}` is the `aa` class with L-AA's own commands (Perl: OmniBus, `\thesaurus` undefined)
+
+**Perl behavior**: `l-aa.sty`/`laa.sty`/`l-aa-ps.sty` (Springer's LaTeX 2.09 A&A style, L-AA 3.0; not in TL, seldom
+shipped) has no binding: `\documentstyle{l-aa}` loads OmniBus (latex_constructs.pool.ltxml:123-127), which lacks
+`\thesaurus`, `\offprints`, `\la`, `\degr`… (843 of run 336's papers stop at `\thesaurus`: astro-ph9804097).
+**Rust behavior**: a class binding (`l_aa_cls.rs`; `\documentstyle` prefers a `.cls` binding, :105-108) that loads the
+`aa` class binding (aa.cls kept L-AA's document syntax; the class brings plain `\cases` in displays, astro-ph9908044)
+and adds what L-AA has itself, from the copy in astro-ph9601070: `\thesaurus` (:453) as
+`ltx:classification[scheme=thesaurus]` (printed in the head box, :502-516; the aa binding drops it, aa_support.sty.ltxml:160),
+read non-`\long` as the `\def` is: a `%`-commented closing brace ends the argument at the blank line with pdflatex's
+"Paragraph ended before \thesaurus was complete" and the codes are lost, as in the PDF (tex.web §396; astro-ph9405007);
+`\keywords` with no argument (:648): the text after it to the paragraph's end, a `{keywords}` environment's body, or a
+group (astro-ph9609156, astro-ph0001079), named "Key words:" as l-aa sets it; an `\institute` of `$^n$`-marked entries,
+the names marked alike, an affiliation list labelled by the marks (atom-ph9605001, astro-ph9609131), and a single
+institute (no `\and`), unnumbered in l-aa (:419-424), every author's though it carries a mark the names do not
+(astro-ph9405007, astro-ph9609156); the captions "Fig. 1. text" / "Table 1. text", no colon (:381, :392, :371-377
+`{\bf #1} #2`); `\picplace` (:24-26). A shipped copy
+gets the binding too (a binding outranks a raw file).
+**Why**: content: the frontmatter, keywords and thesaurus codes of 843 papers. A/B: 80 witnesses with errors 80 → 2
+(185 → 2), 20 shipping the file 20 → 2, the 29 keyword-form papers 29 → 1 with no keyword text lost. Guards
+`perfect_kernel_batch64u::{l_aa_documentstyle_is_the_aa_class, l_aa_thesaurus_ends_at_par,
+l_aa_keywords_without_argument, l_aa_keywords_text_to_paragraph_end, l_aa_marked_institute_names_its_authors,
+l_aa_caption_labels}`. `\documentstyle[l-aa]{article}` (l-aa as an option) still finds no style.
+
+### 494. `epl2`/`epl` have a class binding (Perl: OmniBus, the bibliography macros undefined)
+
+**Perl behavior**: the EPL class (epl2.cls, not in TL, seldom shipped) falls to OmniBus: `\Name`, `\REVIEW`, `\Book`…
+undefined (740 of run 336's papers: 0911.3858), `\pacs{code}{description}` spills the description into the body, the
+`\inst`-marked `\institute` becomes one affiliation, OmniBus's `\Section` a document section (1810.04508).
+**Rust behavior**: `epl_cls.rs`, from epl2.cls v1.1 (copy in 1201.0004; written after article.cls, :13-16): article with
+color/graphicx/bm/cite per the options; `\institute` one line per entry, an entry beginning at its `\inst{n}` (or `\[n]`,
+:726) mark, a `\\` inside an entry a line break that does not end it (1803.06254); an unmarked `\institute` one
+institution of every author, its `\\` lines breaks in it (:684-686, :788; 0802.1166, 0704.3325, 1110.0608);
+`\pacs{}{}` a classification "code – description";
+`\abstract{}`, and under `comment`/`reply` (which print none, :817) the abstract as `ltx:rdf[property=dcterms:abstract]`
+metadata (0907.0855); a note that is only a label and an address — `\thanks{E-mail: \email{…}}`,
+`\footnote{\email{E-mail:…}}`, among the names or in an unmarked `\institute` — the author's email contact named by
+that label (1110.0608, 1212.3881, 1107.1575), an `\email` among the names after a comma, or with its address in markup
+(`\email{\href{mailto:…}{…}}`, 0907.0855), the author's email too, `\email` elsewhere the class's `\texttt` (:1332); sections unnumbered (:874); `\acknowledgments` opens the acknowledgements; `{widetext}` (a `figure*`
+in the class, :1057) the text where it stands; the bibliography macros as the class has them (:1347-1377). The class's
+`\renewcommand{\year}` (:545) is not followed, so `\year` stays the TeX date parameter.
+**Why**: content: the bibliography, PACS descriptions and author affiliations of 740 papers. A/B: 80 witnesses with
+errors 74 → 0 (346 → 0), the 46 unmarked-institute papers 46 → 0, every affiliation on its authors. Guards
+`perfect_kernel_batch64u::{epl_class_frontmatter_and_bibliography, epl_unmarked_institute_one_entry,
+epl_comment_abstract_is_metadata, epl_email_forms_among_names}`. epl2's `\[n]` among the names (no corpus case) is
+display math.
+
+### 495. The OSA journal styles have a binding (Perl: a missing package)
+
+**Perl behavior**: `\usepackage{opex3}` (or `ol2`, `osajnl`, `osajnl2`; not in TL, often not shipped) under article
+leaves `\address`, `\email`, `\ocis` and the journal abbreviations undefined (759 of run 336's papers: 1006.2188); a
+shipped copy read raw typesets title, names and addresses into the text (no title, no creators: 0901.2165).
+**Rust behavior**: `osa_journal_sty.rs`, one binding for the four (copies in 0901.2165, 0901.2997, 0707.0735,
+0901.2793): `\author` appends a group per call (each typesets where it stands, opex3.sty:46/:63; 0906.4563), its start
+marked for placement (`\lx@frontmatter@group@start`), a footnote symbol in a mark a mark of its own (`$^{1,2*}$` marks
+1, 2 and *; `$^{*1}$`, 1310.5176), a mark after the comma ending a name moved before it (`E. Hirose,$^{1,4,*}$`,
+0909.0010; a bare symbol, `David R. Leibrandt,*`, 1104.1413); `\address`/`\affil`/`\affiliation` a marked affiliation
+list, a line at each `\\` or blank line (1109.5493), a line marked with several labels one line a label (`$^{1,2}$Dept`,
+1406.0824: an entry takes one label, Perl's `\lx@set@frontmatter@label`, Base_Utility.pool.ltxml:568), or the
+institution of the group before it. An email line — in `\email`, or a line of `\address` or its piece from an
+inner mark on (1204.5397; a superscript glued to a letter or digit, `5$^{th}$`, is no mark) — is an optional mark
+(`$^*$`, `$*$`, a bare `*`, `\textit{$^3$}`), an empty or short label (a few plain words ending in `:`, babel French's active `:` and `;` read as
+the characters, 1210.1049), and addresses separated by commas or semicolons (a bare "and" between them dropped), each
+perhaps marked before or after it, a parenthesis after it naming its owner (`x@y (A. Able)`) no part of the address the
+contact links to: each address is an email contact named by the label, placed by the Rust-only kernel
+`\lx@add@contact@placed` ([`placed_contact_owner`], base_utilities.rs): (1) the one author requesting the address's own
+mark (of several, the one it spells; a numeric mark by its label, so it is answered and leaves the name, a symbol by
+the author's position) — the address's own mark outranks the spelling, where an author block's email lines rank the
+spelling above a correspondence note's mark (1710.00802), a mark on the address being the stronger evidence; (2) the
+author whose surname its local part spells; (3) the current group's only author; (4) the block's shared creator
+(1306.2982, 1004.2645, 0901.2914, 2001.05892, 1312.7046). Anything else (`… Italy (stefano.longhi@polimi.it)`,
+1411.7144) stays an affiliation. `\homepage` is placed the same way, a `\url` (1004.2645's institute page was the last
+author's). `\ocis`/`\pacs` a classification `scheme=ocis`; `{abstract*}`; `{References}`, `{OEReflinks}`,
+`{OSAJNLReferences}`; `\onlinecite`; the 36 abbreviations every opex3.sty version `\def`s (opex3.sty:237-273): a paper's
+`\def`/`\renewcommand` of one wins (60 of 751 papers), a `\newcommand` keeps the style's as in pdflatex; the later
+version's `\boe`, `\ome`, `\aop`, `\as`, `\jocn`, `\opn`, `\pr` (1406.6489 :245-280) are left out, as papers define
+those names themselves (0909.4968, 1104.3859 `\as`; 1104.0806 `\pr`). Two kernel helpers came with it:
+`queued_name` (the surname keys of a queued author read from its name, not from the
+`\lx@add@frontmatter@now{ltx:creator}[role=author]` around it, whose words "creator", "author" read as surnames —
+`run_in_author_order` reads the same keys, with no observable change there: the wrapper words matched every author
+alike, so no address spelled one author), and a mark's font switch is no part of its label
+(`$^{\bf{1}}$`, 1109.3726; OD #34); relocation does not give a creator a second annotation identical to one it holds
+under another label (the per-label copies under an author marked with two of the labels; two entries under one label
+stay two, as printed; an annotation without text is not compared), nor shares on the block creator a copy whose label
+no author carries when an author holds it under another (`$^{1,5}$Laboratoire …` with no author marked 5, 1101.5841). The visible strings are the styles':
+`\figurename` "Fig.", `\tablename` "Table", the caption `#1. #2` (opex3.sty:84-96, ol2.sty:91-100, osajnl2.sty:89-100),
+`\refname` "References and links" (opex3.sty:86) or "References" (ol2.sty:122, osajnl2.sty:111), a section number
+followed by "." (`\@seccntformat`, opex3.sty:156), `\thesubsection`/`\thesubsubsection` per version (opex3.sty:157-158
+`1.1`, `1.1.1`; ol2.sty:160-161 `A`, `1`; osajnl2.sty:150-151 `1.A`, `1.A.1`); the abstract keeps the name "Abstract"
+(opex3 prints "Abstract:", ol2/osajnl2 no heading), and the copyright line its end prints is page furniture. After
+`\appendix` a section's title keeps the kernel's "Appendix A" where OSA's `\@seccntformat` prints "A." (pre-existing,
+not this binding's). A
+shipped copy gets the binding too: over 129 papers shipping one, title 40 → 129, named creators 7 → 129,
+affiliations 7 → 129, emails 5 → 110, no email of the raw copy on another owner; 1104.0806's copy is the author's own
+edit with private abbreviations (`\sci`, `\jap`, `\jctn`, `\joapao`, `\pr`), which the binding lacks (5 errors where the
+raw copy had none).
+**Why**: content: title, authors, affiliations and emails of 759 papers (a missing `\usepackage` has no generic
+fallback — pdflatex fails there too; user ruling 2026-10-10). A/B (base 64ra): the 622 OSA papers that ship no style,
+with errors 622 → 7 (3,060 → 17), affiliations 0 → 622 papers, emails 0 → 529; over all 751, no email on an author its
+address does not spell while another one is spelled, except where the paper's own mark says so (1401.3528), its marks
+are macros of its own (`\CU$^{,}$\NIST$^{,*}$`, 1201.5125), or its combined line names two (0901.1282); an address
+spelling no surname, or claimed by several marks, goes to the block (12). Guards
+`perfect_kernel_batch64u::{osa_style_marked_addresses, osa_style_author_groups_append, osa_style_address_email_line,
+osa_email_line_forms, osa_style_address_blank_lines, osa_homepage_placed, osa_paper_abbreviation_is_the_papers,
+osa_mark_font_switch_is_no_label, osa_group_only_author_owns_the_email, osa_email_line_mark_shapes,
+osa_several_labels_one_line_each, osa_names_captions_and_headings}`.
+
+### 496. REVTeX 2.1's frontmatter environments are part of revtex3_support (Perl: `{instit}` undefined, the title a first token)
+
+**Perl behavior**: REVTeX 2.1 papers (`\documentstyle[preprint,revtex]{aps}`, `[version2,aps]{revtex}`) reach the REVTeX 3
+binding, which has no `{instit}`, `\receipt`, `\nonum`; `\begin{title}…\end{title}` runs `\title` on the body's first
+token (KPE #582; 750 of run 336's papers: hep-ph9301226, cond-mat9311041 "I").
+**Rust behavior**: from revtex.sty v2.1 (embedded in hep-lat9302012.tex:978-2231): `{title}` is the title (:1340-1350),
+`{instit}` REVTeX 4's `\affiliation` of the authors before it (:1383-1389), `\moreauthors` = `\author` (:1374),
+`\receipt` the received date (:1391), `\nonum` the next heading starred, past paragraph ends and column switches
+(:1057-1072; cond-mat9303008), `\tablenotes` small text below the table (:1858-1860).
+**Why**: content: title, affiliations and date of 750 papers. A/B: 80 witnesses with errors 80 → 3 (120 → 3); 40 REVTeX
+3 papers unchanged. Guard `perfect_kernel_batch64u::revtex2_title_and_instit_environments`. Under `{revtex}` the unknown
+options still load OmniBus after the binding, so `\author{A and B}` gives the affiliation to B only (RED
+`sectioning-frontmatter/revtex3_omnibus_author_group_address`, awaiting a ruling).

@@ -112,4 +112,100 @@ LoadDefinitions!({
   // so the bib key is still resolved. Surpass-Perl (Perl LaTeXML also
   // errors here).
   Let!("\\CITE", "\\cite");
+
+  //======================================================================
+  // REVTeX 2.1 (revtex.sty v2.1, APS 1991): not in TeX Live, its source survives embedded in arXiv papers
+  // (hep-lat9302012.tex:978-2231, cited below as `revtex.sty v2.1:<line of that file>`). Papers written for it,
+  // `\documentstyle[preprint,revtex]{aps}` or `\documentstyle[version2,aps]{revtex}` (an option REVTeX 3.0's
+  // revtex.sty does not declare), reach this binding through the `revtex` option or class. Rust-only: Perl LaTeXML has
+  // none of these, and `\begin{instit}` stops each such paper (750 run-336 papers: hep-ph9301226, cond-mat9408057,
+  // cond-mat9311041, hep-lat9402019).
+  //
+  // The title is the body of a `{title}` environment (revtex.sty v2.1:1340-1350), which `\begin{title}` otherwise
+  // read as `\title`'s one-token argument (the title "I", cond-mat9311041), and an `{instit}` environment
+  // (:1383-1389) after an `\author` is that author's institution: the affiliation of the authors before it, as
+  // REVTeX 4's `\affiliation`.
+  DefMacro!(T_CS!("\\begin{title}"), None, {
+    Ok(environment_body_as_argument(T_CS!("\\title"), "title")?)
+  });
+  DefMacro!(T_CS!("\\end{title}"), None, "");
+  DefMacro!(T_CS!("\\begin{instit}"), None, {
+    Ok(environment_body_as_argument(T_CS!("\\affiliation"), "instit")?)
+  });
+  DefMacro!(T_CS!("\\end{instit}"), None, "");
+  // revtex.sty v2.1:1374 `\let\moreauthors=\author`
+  Let!("\\moreauthors", "\\author");
+  // revtex.sty v2.1:1391: the received date, centred as "(Received #1)"
+  DefMacro!("\\receipt{}", "\\lx@add@date[role=received,name={\\lx@date@received@name}]{#1}");
+  // revtex.sty v2.1:1057-1058, 1064-1072: `\nonum` leaves the next section heading unnumbered (its
+  // `\acknowledgments` is `\nonum\section{ACKNOWLEDGMENTS}`, :1123), the starred heading here; the paragraph ends and
+  // column switches between them are kept (`\nonum\narrowtext\section`, cond-mat9303008; `\nonum` and a blank line,
+  // hep-ph9206205).
+  DefMacro!("\\nonum", {
+    let headings = [T_CS!("\\section"), T_CS!("\\subsection"), T_CS!("\\subsubsection")];
+    let between = [T_CS!("\\par"), T_CS!("\\narrowtext"), T_CS!("\\widetext"), T_CS!("\\mediumtext")];
+    let mut read: Vec<Token> = Vec::new();
+    while let Some(t) = read_token()? {
+      read.push(t);
+      if headings.contains(&t) {
+        read.push(T_OTHER!("*"));
+        break;
+      }
+      if t.get_catcode() != Catcode::SPACE && !between.contains(&t) {
+        break;
+      }
+    }
+    Ok(Tokens::new(read))
+  });
+  // revtex.sty v2.1:1858-1860 `\tablenotes`: a table's notes, set below it in small type
+  DefMacro!("\\tablenotes{}", "\\par{\\footnotesize #1}");
 });
+
+/// `cs{<body>}`, the body of the environment `name` as the argument of `cs`: see [`read_environment_body`].
+fn environment_body_as_argument(cs: Token, name: &str) -> Result<Tokens> {
+  let mut call = vec![cs, T_BEGIN!()];
+  call.extend(read_environment_body(name)?.unlist());
+  call.push(T_END!());
+  Ok(Tokens::new(call))
+}
+
+/// The tokens of the environment `name`'s body, up to its `\end{name}` (a nested `\end{...}` is body), which is put
+/// back so that the environment ends as usual; without the spaces around it (the line ends after `\begin{title}` and
+/// before `\end{title}`), which REVTeX's environments ignore (revtex.sty v2.1:1340-1350 `\ignorespaces`, `\par`).
+fn read_environment_body(name: &str) -> Result<Tokens> {
+  let mut body: Vec<Token> = Vec::new();
+  while let Some(token) = read_token()? {
+    if token.get_catcode() == Catcode::BEGIN {
+      body.push(token);
+      body.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
+      body.push(T_END!());
+    } else if token == T_CS!("\\end") {
+      let env = read_arg(ExpansionLevel::Off)?;
+      if env.to_string() == name {
+        let mut end = vec![token, T_BEGIN!()];
+        end.extend(env.unlist());
+        end.push(T_END!());
+        unread_vec(end);
+        break;
+      }
+      body.push(token);
+      body.push(T_BEGIN!());
+      body.extend(env.unlist());
+      body.push(T_END!());
+    } else {
+      body.push(token);
+    }
+  }
+  while body
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    body.pop();
+  }
+  let lead = body
+    .iter()
+    .take_while(|t| t.get_catcode() == Catcode::SPACE)
+    .count();
+  body.drain(..lead);
+  Ok(Tokens::new(body))
+}

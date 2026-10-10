@@ -161,6 +161,7 @@ pub mod bidi_sty;
 pub mod cecs_cls;
 pub mod compositio_cls;
 pub mod czipreprint_cls;
+pub mod epl_cls;
 pub mod gauss_sty;
 pub mod hha_cls;
 pub mod hvfloat_sty;
@@ -184,6 +185,7 @@ pub mod jpc_sty;
 pub mod koma_script;
 pub mod kotexutf_sty;
 pub mod l3draw_sty;
+pub mod l_aa_cls;
 pub mod lanlmac_tex;
 pub mod latexmlman_sty;
 pub mod latexrelease_sty;
@@ -226,6 +228,7 @@ pub mod oldgerm_sty;
 pub mod oldlfont_sty;
 pub mod openmoss_cls;
 pub mod optica_article_cls;
+pub mod osa_journal_sty;
 pub mod oup_authoring_template_cls;
 pub mod pasj00_cls;
 pub mod pasj01_cls;
@@ -481,6 +484,24 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("alggeom", "cls", alggeom_cls::load_definitions),
   ("moduli", "cls", moduli_cls::load_definitions),
   ("hha", "cls", hha_cls::load_definitions),
+  // Journal styles not in TeX Live: EPL, A&A's LaTeX 2.09 style (bound as the class it stands for), OSA
+  ("epl2", "cls", epl_cls::load_definitions),
+  ("epl", "cls", epl_cls::load_definitions),
+  ("l-aa", "cls", l_aa_cls::load_definitions),
+  ("l-aa-ps", "cls", l_aa_cls::load_definitions),
+  ("laa", "cls", l_aa_cls::load_definitions),
+  ("opex3", "sty", osa_journal_sty::opex3_sty::load_definitions),
+  ("ol2", "sty", osa_journal_sty::ol2_sty::load_definitions),
+  (
+    "osajnl",
+    "sty",
+    osa_journal_sty::osajnl_sty::load_definitions,
+  ),
+  (
+    "osajnl2",
+    "sty",
+    osa_journal_sty::osajnl2_sty::load_definitions,
+  ),
   ("jhrs", "cls", jhrs_cls::load_definitions),
   ("jcm", "cls", jcm_cls::load_definitions),
   ("pasj00", "cls", pasj00_cls::load_definitions),

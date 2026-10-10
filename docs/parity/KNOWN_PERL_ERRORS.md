@@ -12242,3 +12242,12 @@ Minimal trigger: `\documentclass{IEEEtran}\begin{document}\begin{eqnarray*}a &=&
 
 Fixed in Rust (64ra, OD #490): the QED constructors sized as their boxes (`latex_constructs::symbol_box_size`). Guards
 `perfect_kernel_batch64ra::{ieeeproof_qed_switches, llncs_qed_alone_in_a_cell}`.
+
+## 582. REVTeX 2's `{title}` environment is read as `\title` with one token
+`\begin{title}` finds no `{title}` environment and runs `\title`, whose argument is the body's first token; the rest is
+body text, and `{instit}` is undefined (750 of run 336's papers: hep-ph9301226, cond-mat9311041's title "I").
+
+Minimal trigger: `\documentstyle[version2,aps]{revtex}\begin{document}\begin{title}On scattering\end{title}`.
+
+Fixed in Rust (64u): REVTeX 2.1's `{title}`, `{instit}`, `\receipt`, `\nonum` in revtex3_support (OD #496). Guard
+`perfect_kernel_batch64u::revtex2_title_and_instit_environments`.

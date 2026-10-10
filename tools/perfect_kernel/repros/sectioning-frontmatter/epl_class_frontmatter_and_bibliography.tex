@@ -1,0 +1,36 @@
+% mechanism: `\documentclass{epl2}` (EPL, Italian Physical Society; not in TeX Live, seldom shipped) fell to
+%   OmniBus: the bibliography macros (`\Name`, `\REVIEW`, `\Book`, `\Publ`, `\Year`; epl2.cls:1347-1377) undefined,
+%   `\pacs{code}{description}`'s description spilled into the text, and the `\inst`-marked `\institute` lines
+%   (:682, :725) went to an empty creator. The `epl2`/`epl` class binding (article + the class's frontmatter routed
+%   to the frontmatter API, its bibliography macros as the class defines them; sections unnumbered, :870).
+% witness: 0911.3858, 1904.03227, 1602.05654, 1803.06254 (740 run-336 papers, first error `\Name`)
+% oracle:  pdflatex (with epl2.cls v1.1 from 1201.0004) 0 errors; "Ann Able1 and Bob Baker2", the two institutes,
+%   "PACS 73.43.-f – Quantum Hall effects", "Introduction. –", "[1] A. Kitaev, Phys. Usp., 44 (2001) 131."
+% engines: rust 64k: 5 errors (\Name, \REVIEW, \Book, \Publ, \Year undefined), an empty creator with one
+%   affiliation; perl: the same 5 errors
+% expect:  0 errors; each author with the institute of its mark (a `\\` inside an entry is no new entry); the PACS
+%   codes with their descriptions; the references as the class sets them
+% status:  RED (base) -> GREEN (64u)
+% preload: ar5iv.sty
+\documentclass[doublecol]{epl2}
+\title{Majorana fermions in junctions}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\shortauthor{A. Able \etal}
+\institute{
+  \inst{1} School of Physics, Henan University,\\ Luoyang, China\\
+  \inst{2} Department of Physics, Nanjing University, Nanjing, China
+}
+\pacs{73.43.-f}{Quantum Hall effects}
+\pacs{74.45.+c}{Proximity effects}
+\abstract{We study tunnel junctions.}
+\begin{document}
+\maketitle
+\section{Introduction}
+Text cites~\cite{r1}.
+\acknowledgments
+We thank the funders.
+\begin{thebibliography}{0}
+\bibitem{r1} \Name{A. Kitaev} \REVIEW{Phys. Usp.}{44}{2001}{131}.
+\bibitem{r2} \Name{F. Wilczek} \Book{Fractional Statistics} \Publ{World Scientific, Singapore} \Year{1990}.
+\end{thebibliography}
+\end{document}

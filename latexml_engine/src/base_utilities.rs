@@ -1094,6 +1094,43 @@ LoadDefinitions!({
     "\\lx@add@email [] Semiverbatim",
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=email,#1]{#2}"
   );
+  // Rust-only: a contact a class's command gives apart from the names (OSA's `\email{x@y}` and `\homepage{…}` after
+  // the author groups, opex3.sty:52/:57), placed among the queued authors by [`placed_contact_owner`] (`label=author:N`,
+  // or the mark's own label, or `label=addresses:block`, the shared creator of #159). `#1` is the contact's keyvals
+  // (its `role`, its `name`), `#2` the operand of the mark written on it (`$^*$x@y`: `*`; empty for none), `#3` its
+  // content, already read.
+  DefMacro!("\\lx@add@contact@placed[]{}{}", sub[(attr, mark, content)] {
+    let mark: Tokens = mark;
+    let content: Tokens = content;
+    let placement = match placed_contact_owner(&mark, &content) {
+      ContactOwner::Mark(label) => s!("label={label}"),
+      ContactOwner::Author(author) => s!("label=author:{author}"),
+      ContactOwner::Block => s!("label=addresses:block"),
+    };
+    let mut keyvals = mouth::tokenize_internal(TeXString::assembled(placement)).unlist();
+    if let Some(attr) = attr.as_ref().filter(|a| !a.is_empty()) {
+      keyvals.push(T_OTHER!(","));
+      keyvals.extend(attr.unlist_ref().iter().copied());
+    }
+    Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"), vec![
+      Some(mouth::tokenize_internal("ltx:creator")),
+      Some(mouth::tokenize_internal("ltx:contact")),
+      Some(Tokens::new(keyvals)),
+      Some(content)
+    ]))
+  });
+  // Rust-only: the start of an author group of a class whose `\author` adds a group per call (OSA's, each typesetting
+  // its names where it stands): a contact placed after it ([`placed_contact_owner`]) is the group's only author's
+  // (`\author{D. L. Boiko}\address{…}\email{…}\author{N. J. Gunther}…`, 0906.4563; guard
+  // `perfect_kernel_batch64u::osa_group_only_author_owns_the_email`).
+  DefPrimitive!("\\lx@frontmatter@group@start", {
+    let first = queued_author_marks().len() + 1;
+    assign_value(
+      "lx_frontmatter_group_first",
+      Stored::Number(Number::new(first as i64)),
+      Some(Scope::Global),
+    );
+  });
   // Rust-only (OXIDIZED_DESIGN #479): what the document says about an author but does not print (AASTeX 7's `\email`
   // without `[show]`, aastex701.cls:13341-13353; 2608.05283) — an `ltx:rdf` annotation of the creator, `property` the
   // RDFa term and `content` the value, hidden in HTML. An empty value records nothing (AASTeX 7's `\email{}` placeholder).
@@ -2984,6 +3021,114 @@ fn requesting_authors(authors: &[Vec<Vec<Token>>], mark: &[Token]) -> Vec<usize>
     .collect()
 }
 
+/// The name a queued author entry holds: the content of its `\lx@personname` (inside `\lx@author@withinst`), not the
+/// `\lx@add@frontmatter@now{ltx:creator}[role=author]` around it, whose words read as surnames ("author" spelled in
+/// `Corresponding author: …`; guard `perfect_kernel_batch64u::osa_style_address_email_line`).
+fn queued_name(entry: &Tokens) -> Tokens {
+  let tokens = entry.unlist_ref();
+  for cs in ["\\lx@author@withinst", "\\lx@personname"] {
+    if let Some(at) = tokens.iter().position(|t| *t == T_CS!(cs))
+      && tokens
+        .get(at + 1)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+    {
+      let mut depth = 0usize;
+      for (j, t) in tokens.iter().enumerate().skip(at + 1) {
+        match t.get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => {
+            depth -= 1;
+            if depth == 0 {
+              return Tokens::new(tokens[at + 2..j].to_vec());
+            }
+          },
+          _ => {},
+        }
+      }
+    }
+  }
+  entry.clone()
+}
+
+/// The surname keys ([`surname_keys`]) of each queued author's name ([`queued_name`]), in queue order (the n-th digests
+/// with `author:n`).
+fn queued_author_surname_keys() -> Vec<Vec<String>> {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| {
+        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+      })
+      .map(|entry| surname_keys(&queued_name(&entry.2)))
+      .collect(),
+    _ => Vec::new(),
+  })
+}
+
+/// Where a contact placed apart from the names goes ([`placed_contact_owner`]).
+enum ContactOwner {
+  /// to the authors requesting the mark's label, which pairs them as an affiliation's mark does (and so the mark,
+  /// answered, is not left standing on the name)
+  Mark(String),
+  /// to the author at this queue position (from 1)
+  Author(usize),
+  /// to the whole block, the shared creator below the authors (#159)
+  Block,
+}
+
+/// The owner of a contact placed apart from the names (`\lx@add@contact@placed`), in this order:
+/// 1. the mark written on the contact itself (`$^*$x@y`), when one queued author requests it — the contact's own mark
+///    is the strongest evidence, stronger than the spelling (`*b@x` under `A$^*$` and `B` is A's); when several
+///    request it, the one of them the address spells (1312.7046);
+/// 2. the author whose surname the address's local part spells ([`spelled_owners`]: 0901.2914);
+/// 3. the only author of the current group (`\lx@frontmatter@group@start`; the whole queue when no class marks
+///    groups);
+/// 4. else the block's.
+///
+/// An author block's labelled email lines rank otherwise ([`block_email_calls`]): there the spelling outranks the mark
+/// of a correspondence NOTE before the line (1710.00802's `aleder@` under another author's "Corresponding Author"),
+/// a mark on a nearby note being weaker evidence than one on the address.
+fn placed_contact_owner(mark: &Tokens, content: &Tokens) -> ContactOwner {
+  let authors = queued_author_marks();
+  let keys = queued_author_surname_keys();
+  let requesting = if mark.is_empty() {
+    Vec::new()
+  } else {
+    requesting_authors(&authors, mark.unlist_ref())
+  };
+  let spelled: Vec<usize> = address_owners(&keys, content)
+    .into_iter()
+    .map(|at| at + 1)
+    .collect();
+  if let [author] = requesting.as_slice() {
+    // (a footnote-symbol mark stays shown on the name and pairs by no label of its own: the author's position)
+    return match mark_label(mark.unlist_ref()) {
+      Some(label) if !is_symbol_mark(mark.unlist_ref()) => ContactOwner::Mark(label),
+      _ => ContactOwner::Author(*author),
+    };
+  }
+  if let [author] = requesting
+    .iter()
+    .copied()
+    .filter(|author| spelled.contains(author))
+    .collect::<Vec<_>>()
+    .as_slice()
+  {
+    return ContactOwner::Author(*author);
+  }
+  if let [author] = spelled.as_slice() {
+    return ContactOwner::Author(*author);
+  }
+  let first = match lookup_value("lx_frontmatter_group_first") {
+    Some(Stored::Number(n)) => usize::try_from(n.value_of()).unwrap_or(1).max(1),
+    _ => 1,
+  };
+  if authors.len() == first {
+    return ContactOwner::Author(first);
+  }
+  ContactOwner::Block
+}
+
 /// Where the addresses of a line in an author block go.
 enum AddressPlacement {
   /// The whole line is one contact, attached as an unlabelled email is.
@@ -3523,16 +3668,7 @@ fn queued_author_marks() -> Vec<Vec<Vec<Token>>> {
 
 /// Whether the addresses of `lines` may be the queued authors' in order ([`addresses_in_order`]).
 fn run_in_author_order(lines: &[(Vec<Token>, Tokens)]) -> bool {
-  let keys: Vec<Vec<String>> = with_value("frontmatter_raw", |v| match v {
-    Some(Stored::FrontmatterRaw(queue)) => queue
-      .iter()
-      .filter(|entry| {
-        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-      })
-      .map(|entry| surname_keys(&entry.2))
-      .collect(),
-    _ => Vec::new(),
-  });
+  let keys = queued_author_surname_keys();
   let addresses: Vec<String> = lines
     .iter()
     .flat_map(|(_, line)| email_addresses(line).unwrap_or_default())
@@ -4077,7 +4213,12 @@ fn read_frontmatter_sup_operand() -> Result<Tokens> {
 
 /// Perl: cleanFrontmatterLabels($labels, $prefix).
 fn clean_frontmatter_labels(labels: &str, prefix: &str) -> Vec<String> {
-  let labels = labels.replace("\\rm", "");
+  // (a mark's font switch is no part of it: `$^{\bf{1}}$`, 1109.3726; Perl strips `\rm` only,
+  // Base_Utility.pool.ltxml:365 — OXIDIZED_DESIGN #34)
+  static FONT_SWITCH: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"\\(?:rm|bf|it|mathbf|mathrm|textbf|textrm)([^a-zA-Z]|$)").unwrap()
+  });
+  let labels = FONT_SWITCH.replace_all(labels, "$1");
   let mut cleaned = Vec::new();
   let mut pieces: Vec<&str> = labels.split(',').collect();
   // Perl split drops trailing empty fields
@@ -6029,6 +6170,28 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
     }
   }
   let mut shared_creator: Option<Node> = None;
+  // An orphan's owners among the authors (below), by its label and role.
+  let owned_by = |label: &str, note: &Node| {
+    owners.get(label).filter(|named| {
+      named.len() == 1 || is_institute_role(&note.get_attribute("role").unwrap_or_default())
+    })
+  };
+  // The annotations an author takes, by kind and text, with their labels: a copy of one under another label that no
+  // author takes is no orphan to share (`\address{$^{1,5}$Lab …}` with no author marked 5, osa_journal_sty.rs
+  // `lines_per_label`, 1101.5841). Read before placing any, as the orphan copy may come first (`$^{5,1}$`).
+  let mut taken: Vec<(String, Option<String>, String, String)> = Vec::new();
+  for pending in &pending_nodes {
+    for note in element_nodes(pending) {
+      let label = note.get_attribute("_label").unwrap_or_default();
+      let content = annotation_value(&note).trim().to_string();
+      if !label.is_empty()
+        && !content.is_empty()
+        && (find_targets(&label).is_some() || owned_by(&label, &note).is_some())
+      {
+        taken.push((note.get_name(), note.get_attribute("role"), content, label));
+      }
+    }
+  }
   for mut pending in pending_nodes {
     let mut promote_this = false;
     // the stub's notes placed elsewhere, which a promoted stub must not keep a second time
@@ -6071,12 +6234,42 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
       if let Some(targets) = targets {
         placed.push(note.clone());
         for target in targets {
+          // (nor twice under two labels: an entry marked with several labels is one copy a label — OSA's
+          // `\address{$^{1,2}$Univ X}`, osa_journal_sty.rs `lines_per_label`, 1406.0824 — which reaches an author
+          // marked with two of them once; two entries under one label are two, as the PDF prints them; an annotation
+          // without text, an icon's link, is compared by nothing. Guards
+          // `perfect_kernel_batch64u::osa_several_labels_one_line_each`,
+          // `perfect_kernel_batch61::marked_affiliation_review_shapes`)
+          let (role, content) = (note.get_attribute("role"), annotation_value(&note));
+          if !content.trim().is_empty()
+            && element_nodes(&target).iter().any(|c| {
+              c.get_name() == note.get_name()
+                && c.get_attribute("role") == role
+                && c.get_attribute("_label").is_some_and(|l| l != label)
+                && annotation_value(c).trim() == content.trim()
+            })
+          {
+            continue;
+          }
           DebugFeature!("frontmatter", "FRONT Moving annotation for {label}");
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
           contact_in_title_as_note(document, &target)?;
         }
       } else {
+        let content = annotation_value(&note);
+        if !unlabelled
+          && owned_by(&label, &note).is_none()
+          && taken.iter().any(|(name, role, text, other)| {
+            *name == note.get_name()
+              && *role == note.get_attribute("role")
+              && *text == content.trim()
+              && *other != label
+          })
+        {
+          placed.push(note.clone());
+          continue;
+        }
         if !unlabelled && !shared_orphan(&note) {
           let mut known: Vec<&String> = labeltable.keys().collect();
           known.sort();
@@ -6096,10 +6289,7 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
         }
         // (an institute several authors share is each one's; its `\email`/`\url` names one of them, which, unknown,
         // stays shared: `kono@rice.edu` under one `L. Ren, Q. Zhang, S. Nanot, and J. Kono \at …` piece, 1205.6171)
-        let owned = owners.get(&label).filter(|named| {
-          named.len() == 1 || is_institute_role(&note.get_attribute("role").unwrap_or_default())
-        });
-        if let Some(named) = owned {
+        if let Some(named) = owned_by(&label, &note) {
           placed.push(note.clone());
           DebugFeature!(
             "frontmatter",
@@ -12404,7 +12594,8 @@ struct EmailOwners {
 /// names corresponding (JINST's
 /// `S.~Bityukov$^a$\thanks{Corresponding author.}` over `E-mail: \email{Serguei.Bitioukov@cern.ch}`, 1302.2651); else a
 /// contact of the whole block (`label=addresses:block`, the shared creator of #159). The label as written is the
-/// contact's `name`.
+/// contact's `name`. (Here the spelling outranks a note's mark; a mark on the address itself outranks the spelling for a
+/// contact placed apart from the names, [`placed_contact_owner`].)
 fn block_email_calls(
   label: Option<&Tokens>,
   addresses: Vec<EmailAddress>,
