@@ -1,0 +1,23 @@
+% witness: 2601.17161, 0704.3706, 0801.2206 (JINST.cls; 293 of run 336's papers), hep-th0201170 (CECS.cls, 16)
+% oracle:  pdflatex 0 errors (this excerpt keeps JINST.cls's frontmatter: setters, flags, \auto@maketitle at
+%          \begin{document} typesetting \@maketitle, the \AtBeginDocument checks)
+% engines: rust 64h = Error ×2 "Some \author{...} should appear", "\abstract{...} should appear" + undefined
+%          \abstract@cs; the class's title page typeset a second title and author block in the body; keywords and
+%          dates only there; Perl the same under --includestyles
+% expect:  0 errors; the creators, abstract, keywords and received date in the frontmatter, once; the body opens
+%          with the document's own text (side file JINST.cls — the guard writes it)
+%          the same requested as JINST-Sample-files/JINST (class in a subdirectory: 1504.01965) and as a
+%          renamed copy JINST_mod (1307.5525): each reads its own class file, the same creators (guard
+%          family_binding_reads_requested_class)
+% status:  RED (64h) -> GREEN (64k)
+% preload: ar5iv.sty
+\documentclass{JINST}
+\title{A detector}
+\author{A. Name\\ Lab X\\ \email{a@x.org}}
+\author{B. Name\\ Lab Y}
+\abstract{Short abstract.}
+\keywords{Detectors; Calorimeters}
+\received{May 1, 2020}
+\begin{document}
+Text.
+\end{document}

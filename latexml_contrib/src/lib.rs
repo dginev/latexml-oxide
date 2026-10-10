@@ -26,6 +26,7 @@ pub mod script_bindings;
 pub mod discard_env;
 pub mod keysetopt_sty;
 pub mod meta_class;
+pub mod shipped_class;
 // mykeyval_sty / myxkeyval_sty: test-local keyval fixtures, now local `.rhai`
 // next to tests/keyval_rhai (Perl t/keyval/{mykeyval,myxkeyval}.sty.ltxml).
 pub mod mytemplate_sty;
@@ -152,11 +153,15 @@ pub mod ieeeojcsys_cls;
 pub mod ieeetaes_cls;
 pub mod ifacconf_cls;
 // ifdraft_sty: consolidated into latexml_package (Perl Package/ifdraft.sty.ltxml)
+pub mod alggeom_cls;
 pub mod assoccnt_sty;
 pub mod atlasdoc_cls;
 pub mod bidi_sty;
+pub mod cecs_cls;
+pub mod compositio_cls;
 pub mod czipreprint_cls;
 pub mod gauss_sty;
+pub mod hha_cls;
 pub mod hvfloat_sty;
 pub mod ieeetj_cls;
 pub mod ifoddpage_sty;
@@ -167,8 +172,11 @@ pub mod interspeech_cls;
 pub mod interspeech_sty;
 pub mod jabbrv_sty;
 pub mod jair_sty;
+pub mod jcm_cls;
 pub mod jfm_cls;
 pub mod jgcc_cls;
+pub mod jhrs_cls;
+pub mod jinst_cls;
 pub mod jmlr2e_sty;
 pub mod jmlr_cls;
 pub mod jpc_sty;
@@ -200,6 +208,7 @@ pub mod minted_frozencache;
 pub mod minted_sty;
 pub mod mnsymbol_sty;
 pub mod modernposter_cls;
+pub mod moduli_cls;
 pub mod morefloats_sty;
 pub mod mrm_cls;
 pub mod mssymb_tex;
@@ -463,6 +472,14 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("rotfloat", "sty", rotfloat_sty::load_definitions),
   ("tabls", "sty", tabls_sty::load_definitions),
   ("chemnum", "sty", chemnum_sty::load_definitions),
+  ("JINST", "cls", jinst_cls::load_definitions),
+  ("CECS", "cls", cecs_cls::load_definitions),
+  ("compositio", "cls", compositio_cls::load_definitions),
+  ("alggeom", "cls", alggeom_cls::load_definitions),
+  ("moduli", "cls", moduli_cls::load_definitions),
+  ("hha", "cls", hha_cls::load_definitions),
+  ("jhrs", "cls", jhrs_cls::load_definitions),
+  ("jcm", "cls", jcm_cls::load_definitions),
   ("pasj00", "cls", pasj00_cls::load_definitions),
   ("pasj01", "cls", pasj01_cls::load_definitions),
   ("pasj02", "cls", pasj02_cls::load_definitions),

@@ -1456,6 +1456,10 @@ LoadDefinitions!({
       // below — its affiliation commands answer no mark (an IEEE block's `\IEEEauthorblockA`, amsart's `\address`) —
       // unless the block holds its marked affiliations itself (2401.14196's `\author[*]{… \\ $^1$DeepSeek-AI …}`))
       let mut entries: Vec<(AuthorLineKind, Tokens)> = Vec::new();
+      // the entries that are notes naming the corresponding author, each its own mark-led line (`$^\spadesuit$
+      // Corresponding author`, 1305.7027): the next labelled email line, unless an author or affiliation line comes
+      // first, goes to whom its mark names ([`block_email_calls`])
+      let mut correspondence_notes: Vec<usize> = Vec::new();
       let mut prefix_marked_names = false;
       // Split on the `\and` family FIRST so an `\and` is a HARD author boundary:
       // a marker-less line — an author whose only superscript is macro-delivered
@@ -1501,6 +1505,12 @@ LoadDefinitions!({
               // affiliation's text (KNOWN_PERL_ERRORS #75, witness 2605.23553).
               if line_is_email_list(&line) {
                 entries.push((AuthorLineKind::Email, line));
+              } else if let Some(email_line) = labelled_email_line(&line)? {
+                // A labelled email line (`Email: \email{x}`, JINST/JHEP author blocks) is the authors' emails, not a
+                // continuation of the affiliation above it: under the last mark it went to that mark's authors
+                // (0903.0326's `\llap{$^d$}… \\ Email: \email{demitri.muna@nyu.edu}` to the four authors marked d,
+                // not D. Muna). Placed by the names the addresses spell ([`block_email_calls`]).
+                entries.push((AuthorLineKind::LabelledEmail, email_line));
               } else if entries
                 .last()
                 .is_some_and(|(kind, _)| *kind == AuthorLineKind::Author)
@@ -1515,13 +1525,36 @@ LoadDefinitions!({
                 for author in split_author_line(line) {
                   entries.push((AuthorLineKind::Author, author));
                 }
-              } else if entries.len() > group_start {
+              } else if entries.len() > group_start
+                && entries[group_start..]
+                  .iter()
+                  .all(|(kind, _)| *kind == AuthorLineKind::LabelledEmail)
+              {
+                // (only email lines before it in its `\and` group: its own entry, not a new author)
+                entries.push((AuthorLineKind::Affiliation, line));
+              } else if let Some(continued) = entries[group_start..]
+                .iter()
+                .rposition(|(kind, _)| *kind != AuthorLineKind::LabelledEmail)
+                .map(|at| group_start + at)
+              {
                 // continues an entry from THIS `\and` group; Append, with the delimiter that split the lines
                 // (`\\` → break, `\quad`/`\qquad` → space) put back where it stood: Perl (Base_Utility.pool.ltxml:701-703 `Tokens($entries[-1][1],
                 // $line)`) welds the two lines' words ("Department of PhysicsUniversity of Somewhere";
                 // KNOWN_PERL_ERRORS #446, witness jacow-collaboration). Repro
                 // sectioning-frontmatter/author_continuation_line_keeps_its_break.
-                let last = entries.last_mut().unwrap();
+                // A labelled email line between them is its own entry: the line continues the one before it
+                // (1503.08624's `E-mail: \email{…}\\ \textbf{Proceeding of …}`, both lost when welded together).
+                // …and after an email line under a name, its own entry: welded, it read as part of the name
+                // (`A.~Able$^a$ \\ E-mail: \email{x} \\ More text`)
+                if entries[continued].0 == AuthorLineKind::Author
+                  && entries[continued + 1..]
+                    .iter()
+                    .any(|(kind, _)| *kind == AuthorLineKind::LabelledEmail)
+                {
+                  entries.push((AuthorLineKind::Affiliation, line));
+                  continue;
+                }
+                let last = &mut entries[continued];
                 let mut appended = last.1.clone().unlist();
                 appended.extend(delimiter);
                 appended.extend(line.unlist());
@@ -1635,6 +1668,9 @@ LoadDefinitions!({
                   if spacing_end(seg.unlist_ref()) == 0 {
                     continue;
                   }
+                  if names_correspondence(&visible_name_text(seg.unlist_ref())) {
+                    correspondence_notes.push(entries.len());
+                  }
                   entries.push((AuthorLineKind::Affiliation, seg));
                 }
               }
@@ -1660,12 +1696,42 @@ LoadDefinitions!({
         .map(|(_, author, _)| surname_keys(author))
         .collect();
       let author_count = author_keys.len();
+      // the one author a `\thanks{Corresponding author.}` names, who an address spelling no name belongs to
+      let corresponding = corresponding_author(
+        entries
+          .iter()
+          .filter(|(k, ..)| *k == AuthorLineKind::Author)
+          .map(|(_, author, _)| author),
+      );
       // the addresses given to the authors in order so far; every email contact advances the `labelseq` count, so after
       // a line kept whole no later address is the next author's (2403.00801's `benhe@…` under two such lines)
       let mut sequenced = Some(0);
-      for (kind, line, email) in entries {
+      // the mark of the note just read that names the corresponding author (`$^\spadesuit$ Corresponding author`,
+      // 1305.7027): an email line after it that spells no one goes to whom that mark says
+      let mut correspondence_mark: Option<String> = None;
+      // the marks of the authors queued so far and of this call's, for the authors a note's mark names (a note in a later
+      // `\author` call than its author, 1305.7027)
+      let author_marks: Vec<Vec<Vec<Token>>> = queued_author_marks()
+        .into_iter()
+        .chain(
+          entries
+            .iter()
+            .filter(|(k, ..)| *k == AuthorLineKind::Author)
+            .map(|(_, author, _)| author_mark_operands(author.unlist_ref())),
+        )
+        .collect();
+      // `author:N` counts every author numbered so far: those queued, and those an earlier flush digested and kept
+      // (not when this call replaces them: `lx_authors_superseded`)
+      let numbered_kept = if lookup_bool("lx_authors_superseded") {
+        0
+      } else {
+        lookup_mapping_int("num_ltx:creator", "author") as usize
+      };
+      let numbered_before = numbered_kept + queued_author_count();
+      for (index, (kind, line, email)) in entries.into_iter().enumerate() {
         match kind {
           AuthorLineKind::Author => {
+            correspondence_mark = None;
             let mut content = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]).unlist();
             if let Some(email) = email {
               content
@@ -1682,10 +1748,42 @@ LoadDefinitions!({
             );
           },
           AuthorLineKind::Affiliation => {
+            // a note's own mark, not that of an affiliation a symbol-marked note was welded into (`$^*$Corresponding
+            // author` reads as a continuation: `rewrite_symbol_superscripts`)
+            correspondence_mark = correspondence_notes
+              .contains(&index)
+              .then(|| entry_mark(line.unlist_ref()).and_then(|mark| mark_label(&mark)))
+              .flatten();
             let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
             calls.extend(
               Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist(),
             );
+          },
+          AuthorLineKind::LabelledEmail => {
+            if let Some((label, addresses)) = labelled_emails(&line)? {
+              calls.extend(block_email_calls(
+                label.as_ref(),
+                addresses,
+                &author_keys,
+                EmailOwners {
+                  corresponding: corresponding.map(|author| numbered_before + author),
+                  marked: correspondence_mark
+                    .as_ref()
+                    .map(|label| {
+                      authors_requesting(&author_marks, label)
+                        .into_iter()
+                        .map(|author| numbered_kept + author)
+                        .collect()
+                    })
+                    .unwrap_or_default(),
+                  numbered_before,
+                },
+              )?);
+            }
+            // (a note's mark decides one labelled email line, the next one)
+            correspondence_mark = None;
+            // (its contacts are labelled, not sequenced; a later address line is not placed by the count)
+            sequenced = None;
           },
           AuthorLineKind::Email => {
             // A shared email line otherwise attaches to whatever creator is
@@ -3665,6 +3763,12 @@ pub fn typesets_content(d: &Digested) -> bool {
   }
 }
 
+/// While a raw class's own frontmatter setter replays for its side effects (`replay_class_setter`, OXIDIZED_DESIGN
+/// #482), the frontmatter is the kernel's alone: nothing is queued (an entry, an annotation) or removed
+/// (`\lx@clear@frontmatter`, which the kernel's `\lx@add@title`, `\lx@add@date`, `\lx@add@abstract` and
+/// `\lx@add@keywords` run first), whatever path a body takes to the queue.
+fn frontmatter_frozen_for_replay() -> bool { lookup_bool("lx_replaying_class_setter") }
+
 /// frontmatter_raw contains the undigested commands to create frontmatter,
 /// along with the tag & attributes that would be created.
 /// Digestion is deferred until \maketitle, or something similar,
@@ -3673,6 +3777,9 @@ pub fn typesets_content(d: &Digested) -> bool {
 /// Use dequeue_front_matter or \lx@clear@frontmatter if there should be only 1 entry of $tag
 /// Perl: queueFrontMatter($stomach, $tag, $attr, $command).
 pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
   // Convert KeyVals to a hash, but be concerned about multiple values!?!?
   // (Perl: ToString($attr->getValue($_)) — the last value for multi-valued keys)
   let mut attr_hash = TagAttrs::default();
@@ -3785,6 +3892,9 @@ pub fn has_front_matter(tag: &str) -> bool {
 /// It matches the tag and any stored attributes in `attr`.
 /// Perl: dequeueFrontMatter($tag, %attr).
 pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
   with_value_mut("frontmatter_raw", |val_opt| {
     if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
       queue.retain(|entry| {
@@ -4116,7 +4226,8 @@ fn takes_accumulate(options: &mut TagAttrs) -> bool {
 /// `\section{Keywords:}` inside an abstract, 2401.13568).
 /// Witnesses 2301.10468, 2401.11672, 2503.07022 (imsart supplement frontmatter), 2405.10566, 2503.16707, 2510.20036.
 pub fn seal_digested_frontmatter() {
-  if frontmatter_entry_in_progress() {
+  // (nor a sectioning command a replayed class setter's body typesets: `replay_class_setter`, sect05.rs)
+  if frontmatter_entry_in_progress() || lookup_bool("lx_replaying_class_setter") {
     return;
   }
   let keys = with_mapping_keys("frontmatter_digested", |keys| {
@@ -12189,11 +12300,24 @@ fn address_owner(name_keys: &[Vec<String>], address: &Tokens) -> Option<usize> {
   spelled_owner(name_keys, &text)
 }
 
-/// The one name (index into `name_keys`) whose surname the local part of `address` spells ([`address_owner`]).
-fn spelled_owner(name_keys: &[Vec<String>], address: &str) -> Option<usize> {
-  let local: String = address
-    .split('@')
-    .next()?
+/// Every name (index into `name_keys`) whose surname the local part of `address` spells ([`spelled_owners`]).
+fn address_owners(name_keys: &[Vec<String>], address: &Tokens) -> Vec<usize> {
+  let text: String = address
+    .unlist_ref()
+    .iter()
+    .filter(|t| matches!(t.code, Catcode::LETTER | Catcode::OTHER))
+    .map(|t| t.to_string())
+    .collect();
+  spelled_owners(name_keys, &text)
+}
+
+/// Every name (index into `name_keys`) whose surname the local part of `address` spells — whole, or its first six
+/// letters (`leyaouan@…` for "A.~Le~Yaouanc").
+fn spelled_owners(name_keys: &[Vec<String>], address: &str) -> Vec<usize> {
+  let Some(local) = address.split('@').next() else {
+    return Vec::new();
+  };
+  let local: String = local
     .chars()
     .filter(|c| c.is_alphabetic())
     .collect::<String>()
@@ -12202,13 +12326,20 @@ fn spelled_owner(name_keys: &[Vec<String>], address: &str) -> Option<usize> {
     local.contains(key.as_str())
       || (key.chars().count() >= 6 && local.contains(&key.chars().take(6).collect::<String>()))
   };
-  let mut owners = name_keys
+  name_keys
     .iter()
     .enumerate()
     .filter(|(_, keys)| keys.iter().any(spells))
-    .map(|(at, _)| at);
-  let owner = owners.next()?;
-  owners.next().is_none().then_some(owner)
+    .map(|(at, _)| at)
+    .collect()
+}
+
+/// The one name (index into `name_keys`) whose surname the local part of `address` spells ([`address_owner`]).
+fn spelled_owner(name_keys: &[Vec<String>], address: &str) -> Option<usize> {
+  match spelled_owners(name_keys, address).as_slice() {
+    [owner] => Some(*owner),
+    _ => None,
+  }
 }
 
 /// The email calls for `addresses`: under the author's `label`, `\lx@add@email` named by it; without one, the class's
@@ -12237,6 +12368,163 @@ fn email_calls(label: Option<&Tokens>, addresses: Vec<EmailAddress>) -> Result<V
     }
   }
   Ok(calls)
+}
+
+/// The authors (indices into `author_marks`) whose marks request the affiliation label `label` ([`mark_label`]).
+fn authors_requesting(author_marks: &[Vec<Vec<Token>>], label: &str) -> Vec<usize> {
+  author_marks
+    .iter()
+    .enumerate()
+    .filter(|(_, marks)| {
+      marks.iter().any(|operand| {
+        clean_frontmatter_labels(&Tokens::new(operand.clone()).to_string(), "affiliation")
+          .iter()
+          .any(|requested| requested == label)
+      })
+    })
+    .map(|(at, _)| at)
+    .collect()
+}
+
+/// Who the addresses of a labelled email line may belong to besides the authors they spell ([`block_email_calls`]).
+struct EmailOwners {
+  /// the one author a `\thanks` names corresponding (as `author:N` numbers it, from 0)
+  corresponding:   Option<usize>,
+  /// the authors (numbered so) the mark of a note just before the line names, a note naming the corresponding author
+  marked:          Vec<usize>,
+  /// the authors numbered before this call's (`author:N` counts them)
+  numbered_before: usize,
+}
+
+/// The `\lx@add@email` calls for a labelled email line of a marked author block ([`labelled_emails`]): each address to
+/// the author whose surname its local part spells (`label=author:N`, [`address_owner`]), as an unmarked block's lines
+/// give theirs (counted among all numbered authors, those of earlier calls too); one spelling no name, after a note
+/// naming the corresponding author, to the one author that note's mark names; a lone one to the one author a `\thanks`
+/// names corresponding (JINST's
+/// `S.~Bityukov$^a$\thanks{Corresponding author.}` over `E-mail: \email{Serguei.Bitioukov@cern.ch}`, 1302.2651); else a
+/// contact of the whole block (`label=addresses:block`, the shared creator of #159). The label as written is the
+/// contact's `name`.
+fn block_email_calls(
+  label: Option<&Tokens>,
+  addresses: Vec<EmailAddress>,
+  author_keys: &[Vec<String>],
+  owners: EmailOwners,
+) -> Result<Vec<Token>> {
+  let mut calls = Vec::new();
+  let lone = addresses.len() == 1;
+  for EmailAddress { address, .. } in addresses {
+    // the address itself, not the class's email command around it (`\email{x}` it does not count as one): the contact
+    // is what that command stands for, and a class that kills it once its title page is typeset (JINST copies as
+    // `arxiv.cls`, `\global\let\email\@gobble`) left the contact empty (1111.1180, 1210.0427)
+    let address = match whole_line_cs_wrapper(&address) {
+      Some((command, inner)) if is_email_wrapper(&command) => inner,
+      _ => address,
+    };
+    let mut keyvals = Vec::new();
+    if let Some(label) = label {
+      keyvals.extend(mouth::tokenize_internal("name=").unlist());
+      keyvals.push(T_BEGIN!());
+      keyvals.extend(label.unlist_ref().iter().copied());
+      keyvals.push(T_SPACE!());
+      keyvals.push(T_END!());
+      keyvals.push(T_OTHER!(","));
+    }
+    // the author the address spells; spelling no one, a lone address is the corresponding author's; spelling several
+    // (`X.~Wang`, `Y.~Wang`), the corresponding author's only if among them
+    let spelled: Vec<usize> = address_owners(author_keys, &address)
+      .into_iter()
+      .map(|author| owners.numbered_before + author)
+      .collect();
+    let owner = match spelled.as_slice() {
+      [owner] => Some(*owner),
+      [] => owners.corresponding.filter(|_| lone),
+      several => owners
+        .corresponding
+        .filter(|author| several.contains(author)),
+    };
+    // spelled by one name: that author's, though a note marked otherwise precedes it (1710.00802's `aleder@` is A.
+    // Leder's, under "Corresponding Author"); else after a note naming the corresponding author, the one author its
+    // mark names (1305.7027's `$^\spadesuit$`)
+    // (a lone address only, and among several it spells only one of them)
+    let owner = match (spelled.len(), owners.marked.as_slice()) {
+      (1, _) => owner,
+      (0, [marked]) if lone => Some(*marked),
+      (_, [marked]) if lone && spelled.contains(marked) => Some(*marked),
+      _ => owner,
+    };
+    let placement = match owner {
+      // (`author:N` counts every numbered author, those of an earlier `\author` call too: 1805.09245's collaboration)
+      Some(author) => s!("label=author:{}", author + 1),
+      None => s!("label=addresses:block"),
+    };
+    keyvals.extend(mouth::tokenize_internal(TeXString::assembled(placement)).unlist());
+    calls.extend(
+      Invocation!(T_CS!("\\lx@add@email"), vec![
+        Some(Tokens::new(keyvals)),
+        Some(address)
+      ])
+      .unlist(),
+    );
+  }
+  Ok(calls)
+}
+
+/// A labelled email line ([`labelled_emails`]) behind what prints nothing before it — spacing, declarations, the
+/// paragraph break of a blank line in the block (1112.1037's `…Davis,\\ <blank line> E-mail: \email{…}`) — without
+/// that lead or a like tail, or `None`.
+fn labelled_email_line(line: &Tokens) -> Result<Option<Tokens>> {
+  let toks = line.unlist_ref();
+  let mut lead = 0;
+  loop {
+    let start = lead;
+    while toks.get(lead).is_some_and(|t| *t == T_CS!("\\par")) {
+      lead += 1;
+    }
+    lead += leading_unprinted_end(&toks[lead..]);
+    if lead == start {
+      break;
+    }
+  }
+  // …and a blank line or spacing after it (1311.3535's `E-mail: \email{…}<blank line>}`)
+  let mut end = toks.len();
+  while end > lead && (toks[end - 1] == T_CS!("\\par") || is_spacing(&toks[end - 1])) {
+    end -= 1;
+  }
+  let rest = Tokens::new(toks[lead..end].to_vec());
+  Ok(labelled_emails(&rest)?.is_some().then_some(rest))
+}
+
+/// Whether a note's text names its author the corresponding one ("Corresponding author.", "Correspondence to …",
+/// "to whom correspondence should be addressed"; not a "corresponding member" of an academy).
+fn names_correspondence(text: &str) -> bool {
+  let text = text.to_lowercase();
+  text.contains("corresponding author") || text.contains("correspondence")
+}
+
+/// The one author (index among `authors`) whose own `\thanks`/`\footnote` note names them the corresponding author
+/// ("Corresponding author.", "Correspondence to …"), or `None` when no author's or several authors' do.
+fn corresponding_author<'a>(authors: impl Iterator<Item = &'a Tokens>) -> Option<usize> {
+  let notes = [T_CS!("\\thanks"), T_CS!("\\footnote")];
+  let mut owners = authors.enumerate().filter(|(_, author)| {
+    let toks = author.unlist_ref();
+    toks.iter().enumerate().any(|(i, t)| {
+      // (past an optional argument: `\thanks[1]{…}`)
+      let mut at = i + 1;
+      if notes.contains(t) && toks.get(at) == Some(&T_OTHER!("[")) {
+        at += toks[at..]
+          .iter()
+          .position(|t| *t == T_OTHER!("]"))
+          .map_or(0, |close| close + 1);
+      }
+      notes.contains(t)
+        && toks
+          .get(at)
+          .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+        && names_correspondence(&visible_name_text(&toks[at..skip_group(toks, at)]))
+    })
+  });
+  let (owner, _) = owners.next()?;
+  owners.next().is_none().then_some(owner)
 }
 
 /// A line's leading email label — "E-mail:", "Email:", "e-mails:", "E-mail address:", up to its colon, or the same
@@ -12561,6 +12849,8 @@ enum AuthorLineKind {
   Author,
   Affiliation,
   Email,
+  /// An email line behind a label or the class's email command (`Email: \email{x}`, [`labelled_emails`]).
+  LabelledEmail,
 }
 
 /// Converts tokens to a string in the fashion of \message and others

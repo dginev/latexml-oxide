@@ -1800,3 +1800,532 @@ fn kernel_counters_have_hyperref_names() {
     "<para xml:id=\"S1.SS1.p1\"><p xml:id=\"S1.SS1.p1.1\">Names: 1; 1.1; 1.1.1; 1.1.1.1; 0; 0.</p></para>",
   );
 }
+
+/// 64k: a raw class's own `\author`/`\abstract`, refused by the kernel lock, still run for the flags they set
+/// (`replay_class_setter`): JINST.cls:755-762/:819-823 and its `\AtBeginDocument` check (:1595-1596), the JHEP family
+/// (2601.17161, 1310.6454, gr-qc0406095, hep-th0201170; 340 of run 336's papers). Repro
+/// sectioning-frontmatter/raw_class_author_flag_jinst.
+#[test]
+fn raw_class_author_flag_jinst() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/raw_class_author_flag_jinst.tex"
+  ));
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>A. Name</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Name</personname>\n  </creator>",
+  ]);
+  assert_element(
+    &xml,
+    "abstract",
+    &[],
+    "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Short abstract.</p></abstract>",
+  );
+}
+
+/// 64k: the Foundation Compositio class family (compositio, alggeom, moduli, hha, jhrs, jcm; `compositio_cls.rs`): the
+/// shipped class read raw, its `\address`/`\curraddr`/`\email` the last author's contacts — they errored once the lock
+/// refused the class's `\author` (2606.19241, 1109.5540, math0409234; 224 of run 336's papers) — and its stored
+/// `\keywords`, `\classification`, `\thanks`, `\received` and `\dedication` the frontmatter's, and its `\maketitle`, which lays
+/// out only those, not deposited. Repro sectioning-frontmatter/compositio_family_frontmatter.
+#[test]
+fn compositio_family_frontmatter() {
+  let xml = convert_clean_files(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/compositio_family_frontmatter.tex"
+    ),
+    &[(
+      "compositio.cls",
+      include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/compositio.cls"),
+    )],
+  );
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Author</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann@uni.edu</contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Dept. of Mathematics, Uni A</contact>\n    <contact name=\"Current address: \" role=\"current_address\">Institute B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Writer</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">bob@uni.edu</contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Uni C</contact>\n  </creator>",
+  ]);
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Keywords: \">moduli, sheaves</keywords>",
+  );
+  assert_element(
+    &xml,
+    "classification",
+    &[],
+    "<classification name=\"2010 Mathematics Subject Classification \" scheme=\"Mathematics Subject Classification\">14J60</classification>",
+  );
+  assert_element(
+    &xml,
+    "pubnote",
+    &[],
+    "<pubnote>Supported by a grant.</pubnote>",
+  );
+  assert_element(
+    &xml,
+    "pubnote",
+    &["role=\"dedication\""],
+    "<pubnote name=\"Dedication:\u{a0}\" role=\"dedication\">To C.</pubnote>",
+  );
+  assert_element(
+    &xml,
+    "date",
+    &[],
+    "<date name=\"Received\" role=\"received\">1 May 2020</date>",
+  );
+  // the class's `\maketitle` not deposited: the body opens with the document's own text
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Text.</p></para>",
+  );
+  for element in ["<keywords ", "<classification ", "<date "] {
+    assert_eq!(xml.matches(element).count(), 1, "{element} once: {xml}");
+  }
+  // the thanks and the dedication, each once
+  assert_eq!(xml.matches("<pubnote").count(), 2, "{xml}");
+}
+
+/// 64k: the JHEP family as shipped (JINST, CECS; `jinst_cls.rs`): the class read raw, its `\author`/`\abstract`
+/// checks satisfied by the replayed setters (`replay_class_setter`), its keywords and dates the frontmatter's, and its
+/// `\auto@maketitle` title page, which lays out only those, not typeset as a second title, author block and abstract
+/// in the body (2601.17161, 0704.3706, 0801.2206; 309 of run 336's papers). Repro
+/// sectioning-frontmatter/jhep_family_title_page.
+#[test]
+fn jhep_family_title_page() {
+  let xml = convert_clean_files(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/jhep_family_title_page.tex"
+    ),
+    &[(
+      "JINST.cls",
+      include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/JINST.cls"),
+    )],
+  );
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>A. Name</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab X</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">a@x.org</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Name</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab Y</contact>\n  </creator>",
+  ]);
+  assert_element(
+    &xml,
+    "abstract",
+    &[],
+    "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Short abstract.</p></abstract>",
+  );
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Keywords:\u{a0}\">Detectors; Calorimeters</keywords>",
+  );
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"received\""],
+    "<date name=\"Received:\" role=\"received\">May 1, 2020</date>",
+  );
+  // the class's title page not typeset: the body opens with the document's own text
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Text.</p></para>",
+  );
+  for element in ["<abstract ", "<keywords ", "<date "] {
+    assert_eq!(xml.matches(element).count(), 1, "{element} once: {xml}");
+  }
+}
+
+/// 64k review r2: while a class setter replays, the frontmatter is frozen (`frontmatter_frozen_for_replay`): a body
+/// calling a saved kernel `\date` — which clears before it adds — keeps the document's date; and a group the body
+/// leaves open is closed, so `\footnote` and the frontmatter are not left gobbled and inert for the rest of the
+/// document. Repro sectioning-frontmatter/replayed_setter_keeps_frontmatter.
+#[test]
+fn replayed_setter_keeps_frontmatter() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/replayed_setter_keeps_frontmatter.tex"
+  ));
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Alice</personname>\n  </creator>",
+  ]);
+  assert_element(
+    &xml,
+    "date",
+    &[],
+    "<date role=\"creation\">1 May 2020</date>",
+  );
+  assert_eq!(xml.matches("<date ").count(), 1, "{xml}");
+  assert_element(
+    &xml,
+    "note",
+    &["role=\"footnote\""],
+    "<note mark=\"1\" role=\"footnote\" xml:id=\"footnote1\"><tags>\n          <tag>1</tag>\n          <tag role=\"refnum\">1</tag>\n          <tag role=\"typerefnum\">footnote 1</tag>\n        </tags>A note.</note>",
+  );
+}
+
+/// 64k review r3: the groups a replayed class setter leaves open are closed in a reading context of their own — an
+/// `\aftergroup` token it queued is not typeset in the document — whatever their kind: a mode switch (minipage) no
+/// longer keeps the replay's group, and with it the inert frontmatter and gobbled notes, open for the rest of the
+/// document. Repro sectioning-frontmatter/replayed_setter_closes_its_groups.
+#[test]
+fn replayed_setter_closes_its_groups() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/replayed_setter_closes_its_groups.tex"
+  );
+  let minipage = tex.replace("\\begingroup\\aftergroup\\leak", "\\begin{minipage}{1cm}");
+  for tex in [tex, minipage.as_str()] {
+    let xml = convert_clean(tex);
+    assert!(!xml.contains("LEAKED"), "{xml}");
+    assert_eq!(creators(&xml), vec![
+      "<creator role=\"author\">\n    <personname>Alice</personname>\n  </creator>",
+    ]);
+    assert_element(
+      &xml,
+      "date",
+      &[],
+      "<date role=\"creation\">1 May 2020</date>",
+    );
+    assert_element(
+      &xml,
+      "note",
+      &["role=\"footnote\""],
+      "<note mark=\"1\" role=\"footnote\" xml:id=\"footnote1\"><tags>\n          <tag>1</tag>\n          <tag role=\"refnum\">1</tag>\n          <tag role=\"typerefnum\">footnote 1</tag>\n        </tags>A note.</note>",
+    );
+  }
+}
+
+/// 64k: a labelled email line of a marked author block (`E-mail: \\email{…}` under `\\llap{$^b$}` affiliations) is
+/// its own entry, not the last affiliation's continuation: the address goes to the author whose name it spells
+/// (0903.0326), a lone address spelling none to the author a `\\thanks` names corresponding (1302.2651), and a line
+/// after it continues the entry before it (1503.08624). Repro sectioning-frontmatter/marked_block_email_line_owner.
+#[test]
+fn marked_block_email_line_owner() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_block_email_line_owner.tex"
+  );
+  // the repro as written: the address spelling B. Muna is his, the proceedings line after it Lab B's continuation
+  let v_base: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">bob.muna@x.org</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n  </creator>",
+  ];
+  assert_eq!(creators(&convert_clean(tex)), v_base);
+  let v_spell: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id5\"/>Lab A<break/>City A</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">carl.cole@x.org</text></contact>\n  </creator>",
+  ];
+  let v_corr: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">contact@x.org</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n  </creator>",
+  ];
+  let v_shared: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id3\">Proceedings of a workshop</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id4\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">contact@x.org</text></contact>\n  </creator>",
+  ];
+  let v_wang: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>X.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Y.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Z.\u{a0}Li</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id3\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id4\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id5\">Proceedings of a workshop</text></contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">ywang@x.org</text></contact>\n  </creator>",
+  ];
+  let v_killed: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\">bob.muna@x.org</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id5\"/>Lab A<break/>City A</contact>\n  </creator>",
+  ];
+  let v_jinst2: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>The X Collaboration</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">bob.muna@x.org</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n  </creator>",
+  ];
+  let v_note: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab B<break/>City B</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Corresponding author<break/><text font=\"bold\" xml:id=\"id3\">Proceedings of a workshop</text></contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">contact@x.org</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id5\"/>Lab A<break/>City A</contact>\n  </creator>",
+  ];
+  let v_dagger: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><sup xml:id=\"id4\">\u{2020}</sup> Deceased<break/><text font=\"bold\" xml:id=\"id5\">Proceedings of a workshop</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id7\">carl.cole@x.org</text></contact>\n  </creator>",
+  ];
+  let v_star: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab B<break/>City B<break/><sup xml:id=\"id3\">*</sup>Corresponding author<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id5\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">contact@x.org</text></contact>\n  </creator>",
+  ];
+  let v_star2: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab B<break/>City B<break/><sup xml:id=\"id3\">*</sup>Equal contribution, corresponding author<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id5\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id7\">contact@x.org</text></contact>\n  </creator>",
+  ];
+  let v_wang2: Vec<&str> = vec![
+    "<creator role=\"author\">\n    <personname>X.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Y.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Z.\u{a0}Li</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Corresponding author<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">xwang@x.org</text></contact>\n  </creator>",
+  ];
+  // the address spells C. Cole: theirs, not the corresponding author's
+  assert_eq!(
+    creators(&convert_clean(
+      &tex.replace("bob.muna@x.org", "carl.cole@x.org")
+    )),
+    v_spell
+  );
+  // spelling no one: the corresponding author's
+  assert_eq!(
+    creators(&convert_clean(
+      &tex.replace("bob.muna@x.org", "contact@x.org")
+    )),
+    v_corr
+  );
+  // spelling no one, and no corresponding author: the block's (#159)
+  assert_eq!(
+    creators(&convert_clean(
+      &tex
+        .replace("bob.muna@x.org", "contact@x.org")
+        .replace("\\thanks{Corresponding author.}", "")
+    )),
+    v_shared
+  );
+  // spelling several (two Wangs) of whom the corresponding author is not one: the block's
+  assert_eq!(
+    creators(&convert_clean(
+      &tex
+        .replace(
+          "A.~Able$^a$, B.~Muna$^b$\\thanks{Corresponding author.}, C.~Cole$^a$",
+          "X.~Wang$^a$, Y.~Wang$^a$, Z.~Li$^b$\\thanks{Corresponding author.}"
+        )
+        .replace("bob.muna@x.org", "ywang@x.org")
+    )),
+    v_wang
+  );
+  // a class's own `\email`, killed once its title page is typeset (JINST copies as `arxiv.cls`: 1111.1180): the
+  // address is the contact's content
+  assert_eq!(
+    creators(&convert_clean(
+      &tex
+        .replace(
+          "\\documentclass{article}",
+          "\\documentclass{article}\\makeatletter\\newcommand\\email[1]{{\\tt #1}}\\AtBeginDocument{\\global\\let\\email\\@gobble}\\makeatother"
+        )
+        .replace("\\texttt{bob.muna@x.org}", "\\email{bob.muna@x.org}")
+    )),
+    v_killed
+  );
+  // an earlier `\author` call's authors count in `author:N` (a class whose `\author` appends: 1805.09245's
+  // collaboration)
+  assert_eq!(
+    creators(&convert_clean_files(
+      &tex
+        .replace("\\documentclass{article}", "\\documentclass{JINST}")
+        .replace("\\author{A", "\\author{The X Collaboration}\n\\author{A")
+        .replace(
+          "\\begin{document}",
+          "\\abstract{Short abstract.}\n\\begin{document}"
+        ),
+      &[(
+        "JINST.cls",
+        include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/JINST.cls")
+      )]
+    )),
+    v_jinst2
+  );
+  // after a symbol-marked note naming the corresponding author, the email line continues it: the mark says whose
+  // (1305.7027's `$^\spadesuit$ Corresponding author\newline E-mail: \email{…}`)
+  assert_eq!(
+    creators(&convert_clean(
+      &tex
+        .replace(
+          "B.~Muna$^b$\\thanks{Corresponding author.}",
+          "B.~Muna$^{b,\\spadesuit}$"
+        )
+        .replace(
+          "E-mail: \\texttt{bob.muna@x.org}",
+          "$^\\spadesuit$ Corresponding author\\\\\nE-mail: \\texttt{contact@x.org}"
+        )
+    )),
+    v_note
+  );
+  // after a note under a symbol mark that names no corresponding author (`$^\dagger$ Deceased`), the address goes to
+  // whom it spells, not to whom the mark names
+  assert_eq!(
+    creators(&convert_clean(
+      &tex
+        .replace("C.~Cole$^a$\\\\", "C.~Cole$^{a,\\dagger}$\\\\")
+        .replace(
+          "E-mail: \\texttt{bob.muna@x.org}",
+          "$^\\dagger$ Deceased\\\\\nE-mail: \\texttt{carl.cole@x.org}"
+        )
+    )),
+    v_dagger
+  );
+  let corresponding_author = "A.~Able$^a$, B.~Muna$^b$\\thanks{Corresponding author.}, C.~Cole$^a$";
+  let email_line = "E-mail: \\texttt{bob.muna@x.org}";
+  // a symbol-marked note (`$^*$`) reads as the affiliation above's continuation: its mark is not the
+  // affiliation's, and decides nothing (the block's), never the author the affiliation marks
+  assert_eq!(
+    creators(&convert_clean(
+      &tex
+        .replace(
+          corresponding_author,
+          "A.~Able$^a$, B.~Muna$^b$, C.~Cole$^{a,*}$"
+        )
+        .replace(
+          email_line,
+          "$^*$Corresponding author\\\\\nE-mail: \\texttt{contact@x.org}"
+        )
+    )),
+    v_star
+  );
+  // …and the `\thanks` corresponding author still is the fallback after it
+  assert_eq!(
+    creators(&convert_clean(
+      &tex
+        .replace(
+          corresponding_author,
+          "A.~Able$^a$, B.~Muna$^b$, C.~Cole$^{a}$\\thanks{Corresponding author.}"
+        )
+        .replace(
+          email_line,
+          "$^*$Equal contribution, corresponding author\\\\\nE-mail: \\texttt{contact@x.org}"
+        )
+    )),
+    v_star2
+  );
+  // an address spelling several, after a note whose mark names someone it does not spell: the block's
+  assert_eq!(
+    creators(&convert_clean(
+      &tex
+        .replace(
+          corresponding_author,
+          "X.~Wang$^a$, Y.~Wang$^a$, Z.~Li$^{b,\\spadesuit}$"
+        )
+        .replace(
+          email_line,
+          "$^\\spadesuit$ Corresponding author\\\\\nE-mail: \\texttt{xwang@x.org}"
+        )
+    )),
+    v_wang2
+  );
+}
+
+/// 64k: the shipped class a family binding reads is the one the document asked for, wherever the paper keeps it: a
+/// path-prefixed request (`\documentclass{JINST-Sample-files/JINST}`, matched to the binding by its basename; 1504.01965,
+/// 1410.4420, 1805.09245) and a renamed copy (`JINST_mod`, answered by the versioned fallback; 1307.5525, 1407.3938) read
+/// their own class file, where a bare `JINST.cls` is missing — not OmniBus, whose author block split "Bat. 200, 9140,
+/// Orsay, France." into four more creators. Repro sectioning-frontmatter/jhep_family_title_page.
+#[test]
+fn family_binding_reads_requested_class() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/jhep_family_title_page.tex"
+  );
+  let class = include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/JINST.cls");
+  for request in ["JINST-Sample-files/JINST", "JINST_mod"] {
+    let tex = tex.replace(
+      "\\documentclass{JINST}",
+      &format!("\\documentclass{{{request}}}"),
+    );
+    let (log, xml) = latexml::util::test::convert_files_with(
+      &tex,
+      &[(&format!("{request}.cls"), class)],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(error_count(&log), 0, "{request}: {log}");
+    assert_eq!(warning_count(&log), 0, "{request}: {log}");
+    assert_eq!(
+      creators(&xml),
+      vec![
+        "<creator role=\"author\">\n    <personname>A. Name</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab X</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">a@x.org</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Name</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab Y</contact>\n  </creator>",
+      ],
+      "{request}"
+    );
+    assert_element(
+      &xml,
+      "keywords",
+      &[],
+      "<keywords name=\"Keywords:\u{a0}\">Detectors; Calorimeters</keywords>",
+    );
+    // the JINST binding's date (OmniBus has no `\received`)
+    assert_element(
+      &xml,
+      "date",
+      &["role=\"received\""],
+      "<date name=\"Received:\" role=\"received\">May 1, 2020</date>",
+    );
+  }
+}
+
+/// 64k review r1: a class `\author` that calls a saved kernel `\author` (authoraftertitle.sty:11-15, hausarbeit-jura.cls,
+/// aguplus.cls) runs it inertly when replayed — the replay group's frontmatter entry points add nothing
+/// (`\lx@replay@inert`) — so the author is one creator. Repro sectioning-frontmatter/replayed_setter_calls_kernel_author.
+#[test]
+fn replayed_setter_calls_kernel_author() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/replayed_setter_calls_kernel_author.tex"
+  ));
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Alice</personname>\n  </creator>",
+  ]);
+}
+
+/// 64k review r1: the older Foundation Compositio classes (hha, jhrs, jcm): one-argument `\address`/`\email`/`\homepage`
+/// contacts, keywords and MSC labelled as the class prints them ("Key words and phrases:", "2000 Mathematics Subject
+/// Classification:"), `\submitted`'s communicating editor a publication note; jcm's two-argument `\homepage{url}{text}`
+/// a url contact keeping its text (math0409234, 0805.3030, quant-ph0412067). Repro
+/// sectioning-frontmatter/compositio_family_old_variant.
+#[test]
+fn compositio_family_old_variant() {
+  let xml = convert_clean_files(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/compositio_family_old_variant.tex"
+    ),
+    &[(
+      "hha.cls",
+      include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/hha.cls"),
+    )],
+  );
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Author</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann@uni.edu</contact>\n    <contact name=\"URL:\u{a0}\" role=\"url\">http://uni.edu/ann</contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Dept. of Mathematics, Uni A</contact>\n  </creator>",
+  ]);
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Key words and phrases: \">homotopy, spectra</keywords>",
+  );
+  assert_element(
+    &xml,
+    "classification",
+    &[],
+    "<classification name=\"2000 Mathematics Subject Classification: \" scheme=\"Mathematics Subject Classification\">55P42</classification>",
+  );
+  assert_element(
+    &xml,
+    "pubnote",
+    &[],
+    "<pubnote name=\"communicated by\" role=\"communicated\">C. Editor</pubnote>",
+  );
+  assert_element(
+    &xml,
+    "date",
+    &[],
+    "<date name=\"Received\" role=\"received\">1 May 2004</date>",
+  );
+  let jcm = convert_clean_files(
+    "\\documentclass{jcm}\n\\usepackage{hyperref}\n\\author{Ann}\n\\homepage{http://x.org}{x.org}\n\\begin{document}\nText.\n\\end{document}\n",
+    &[(
+      "jcm.cls",
+      include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/jcm.cls"),
+    )],
+  );
+  assert_eq!(creators(&jcm), vec![
+    "<creator role=\"author\">\n    <personname>Ann</personname>\n    <contact name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_href\" font=\"typewriter\" href=\"http://x.org\">x.org</ref></contact>\n  </creator>",
+  ]);
+}

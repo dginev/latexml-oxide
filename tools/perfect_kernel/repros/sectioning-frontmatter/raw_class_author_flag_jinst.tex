@@ -1,18 +1,31 @@
-% witness: arXiv 1310.6454, 1504.01965 (JINST.cls:753 \renewcommand\author sets \@authortrue; :1595 checks it)
+% witness: 2601.17161, 1310.6454, 1504.01965 (JINST.cls:755-762 \author sets \@authortrue, :819-823 \abstract sets
+%          \@abstracttrue, :1595-1596 check both); gr-qc0406095 (a JHEP copy, MCPlane1.cls), hep-th0201170 (CECS.cls)
+%          — 340 of run 336's papers
 % oracle:  pdflatex 0 errors
-% engines: rust=1 (2026-10-05, 62k12) perl=locked \author too (latex_constructs.pool.ltxml:1076)
-% expect:  0 errors; the creator A. Name is kept
-% status:  RED
+% engines: rust 64h = Error ×2 "Class jflag Error: Some \author{...} should appear…", "\abstract{...} should appear…"
+%          (the kernel lock refused the class's \author/\abstract, their flags never set; read raw since 62k);
+%          Perl the same under --includestyles (latex_constructs.pool.ltxml:1076)
+% expect:  0 errors; the creators A. Name and B. Name (no author-block row from the class's \@author layout) and the
+%          abstract kept
+% status:  RED (64h) -> GREEN (64k)
 % preload: ar5iv.sty
 \begin{filecontents*}{jflag.cls}
 \NeedsTeXFormat{LaTeX2e}\ProvidesClass{jflag}
 \LoadClass{article}
 \newif\if@author\@authorfalse
-\renewcommand\author[1]{\global\@authortrue\gdef\@author{#1}}
-\AtBeginDocument{\if@author\else\ClassError{jflag}{Some \protect\author{...} should appear}{}\fi}
+\newif\if@abstract\@abstractfalse
+\newtoks\prev@t \newtoks\cur@t
+% JINST.cls:755-762: each \author appends its own layout to \@author
+\renewcommand\author[1]{\global\@authortrue\prev@t=\expandafter{\@author}%
+  \cur@t={\vskip 6pt\vtop\bgroup #1\egroup\par}\long\xdef\@author{\the\prev@t\the\cur@t}}
+\renewcommand{\abstract}[1]{\gdef\abstract@cs{#1}\global\@abstracttrue\let\abstract\gobble}
+\AtBeginDocument{\if@author\else\ClassError{jflag}{Some \protect\author{...} should appear}{}\fi
+  \if@abstract\else\ClassError{jflag}{\protect\abstract{...} should appear}{}\fi}
 \end{filecontents*}
 \documentclass{jflag}
 \author{A. Name}
+\author{B. Name}
+\abstract{Short abstract.}
 \begin{document}
 Text.
 \end{document}

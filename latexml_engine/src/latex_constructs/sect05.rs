@@ -975,8 +975,22 @@ pub(crate) fn load() -> Result<()> {
   // 56fl: `\lx@add@authors@adaptive` appends when a raw class redefined
   // `\author`, and `\lx@author@trailing` absorbs the class's surplus argument
   // (base_utilities.rs, OXIDIZED_DESIGN #253); both are no-ops otherwise.
+  // 64k: the class's own `\author`, refused by the lock, still runs for its flags and stores (`replay_class_setter`).
+  DefPrimitive!("\\lx@replay@class@setter{}{}{}", sub[(name, opt, arg)] {
+    replay_class_setter(&name.to_string(), opt, arg)?;
+  });
+  // the replay group's inert frontmatter: each entry point a local no-op taking the same arguments
+  DefPrimitive!("\\lx@replay@inert", {
+    for cs in FRONTMATTER_ENTRY_POINTS {
+      let token = T_CS!(cs);
+      if let Some(definition) = lookup_definition(&token)? {
+        let params = definition.get_parameters().cloned();
+        def_macro(token, params, ExpansionBody::Tokens(Tokens::default()), None)?;
+      }
+    }
+  });
   DefMacro!("\\author[]{}",
-    r"\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@handed\lx@author@trailing",
+    r"\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@handed\lx@author@trailing",
     locked => true);
   // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
   // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically
@@ -1117,7 +1131,7 @@ pub(crate) fn load() -> Result<()> {
         (d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
           || dropped_maketitle_takes_options())
           && match d.get_expansion() {
-            Some(ExpansionBody::Tokens(body)) => body_vocabulary_is_defined(body.unlist_ref()),
+            Some(ExpansionBody::Tokens(body)) => body_vocabulary_is_defined(body.unlist_ref(), "\\maketitle"),
             _ => false,
           }
       },
@@ -1376,7 +1390,13 @@ pub(crate) fn load() -> Result<()> {
       };
       if class_nargs >= 1 {
         let body = read_arg(ExpansionLevel::Off)?;
-        let mut toks = vec![T_CS!("\\lx@add@abstract"), T_BEGIN!()];
+        // …after the class's own `\abstract` ran for its flags and stores (`replay_class_setter`, 64k)
+        let mut toks = Tokens!(T_CS!("\\lx@replay@class@setter"), T_BEGIN!()).unlist();
+        toks.extend(ExplodeText!("abstract"));
+        toks.extend([T_END!(), T_BEGIN!(), T_END!(), T_BEGIN!()]);
+        toks.extend(body.unlist_ref().iter().copied());
+        toks.push(T_END!());
+        toks.extend([T_CS!("\\lx@add@abstract"), T_BEGIN!()]);
         toks.extend(body.unlist_ref().iter().copied());
         toks.push(T_END!());
         return Ok(Tokens::new(toks));
@@ -1635,11 +1655,13 @@ pub(crate) fn options_pi_spelling(arg: Option<&Digested>) -> SymHashMap<Stored> 
 ///   `\path`, defined only inside a `tikzpicture`, uantwerpenletter.cls:285-292; `defined_environment_span`);
 /// - the arguments of a definition marked `replay_gate_skips_arguments:<cs>` are not checked: they are digested
 ///   under their own diagnostics hold (eso-pic's one-shot overlay);
-/// - a rejection logs an `Info` naming the first undefined control sequence;
+/// - a rejection logs an `Info` naming the first undefined control sequence and the replay `what` it stops;
+/// - since 64k, a `\let`'s source is not checked: TeX lets a control sequence to an undefined one silently
+///   (JINST.cls:823 `\let\abstract\gobble`, with no `\gobble` in the class);
 /// - since 61o, a control sequence the body itself defines before using it counts as defined: uiucthesis.cls:134-137
 ///   `\newcommand{\thesis@small}{\small}` then `{\thesis@small …}`, :147 `\newdimen\thesis@dim` (its title page,
 ///   degree statement and Urbana-Champaign line were lost; thesis-ex 86.1 %).
-fn body_vocabulary_is_defined(body: &[Token]) -> bool {
+fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
   let body = live_branches(body);
   let body = &body[..];
   let mut definees: Vec<Token> = Vec::new();
@@ -1666,6 +1688,22 @@ fn body_vocabulary_is_defined(body: &[Token]) -> bool {
       && matches!(definee.get_catcode(), Catcode::CS | Catcode::ACTIVE)
     {
       definees.push(*definee);
+      if *t == T_CS!("\\let") {
+        // past the definee, spaces, an optional `=` and one space, and the source (tex.web §1221)
+        let is_space = |n: &Token| n.get_catcode() == Catcode::SPACE;
+        let mut j = i + body[i..].iter().position(|n| n == definee).unwrap_or(0) + 1;
+        while body.get(j).is_some_and(is_space) {
+          j += 1;
+        }
+        if body.get(j).is_some_and(|n| *n == T_OTHER!("=")) {
+          j += 1;
+          if body.get(j).is_some_and(is_space) {
+            j += 1;
+          }
+        }
+        i = j + 1;
+        continue;
+      }
     }
     if definees.contains(t) {
       continue;
@@ -1673,9 +1711,9 @@ fn body_vocabulary_is_defined(body: &[Token]) -> bool {
     let Some(meaning) = lookup_meaning(t) else {
       Info!(
         "ignore",
-        "\\maketitle",
+        what,
         s!(
-          "The \\maketitle body was not replayed: it uses {}, which is undefined here",
+          "The {what} body was not replayed: it uses {}, which is undefined here",
           t.to_string()
         )
       );
@@ -1913,6 +1951,228 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
   }
   i + 1
 }
+
+/// Run a raw class's own frontmatter setter that the lock refused (`\lx@dropped@<name>`, state.rs) for its side
+/// effects, its output discarded: the kernel's `\<name>` keeps the frontmatter, and the class keeps the flags and stores
+/// its other code tests (OXIDIZED_DESIGN #482). JINST.cls:755-762 `\renewcommand\author[1]{\global\@authortrue…}` and :819-823
+/// `\abstract` (`\global\@abstracttrue`), checked by its `\AtBeginDocument` (:1592-1607, "Some \author{...} should
+/// appear", the JHEP family: JHEP copies, CECS); compositio.cls:117-123 `\author[2][]` sets `\@curr@author`, which its
+/// `\email`/`\address` (:141-165) require (the CPM family: alggeom, hha, jhrs, jcm, moduli). 564 of run 336's papers,
+/// read raw since 62k (OXIDIZED_DESIGN #444); iosart2x.cls:3139-3150's `\author` registers the `\ead` addresses its
+/// `\address` prints with `\printead` (71 papers: 1912.00288, 2601.17156). Only a body shaped `[opt]{arg}`, `{arg}`
+/// or reading its own arguments (no parameters: given the call's `[opt]{arg}`) whose vocabulary is defined
+/// (`body_vocabulary_is_defined`) runs, in a group, with `\thanks`, `\footnote` and `\label` gobbled (the kernel makes
+/// the author's notes and labels), not re-entrant; afterwards the kernel's `\@author`/`\@shortauthor` and every store the
+/// body `\def`s are as before (empty if undefined), so what stays is the class's flags, counters, lists and `\let`s; an absent optional argument (`opt` empty) takes the class's default.
+/// A replay that raises an error is dropped with its diagnostics (Info), as the `\maketitle` deposit is. Perl never
+/// runs a refused definition (State.pm:502-517).
+fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
+  if !lookup_bool(&s!("\\{name}:redefined")) || lookup_bool("lx_replaying_class_setter") {
+    return Ok(());
+  }
+  let dropped = T_CS!(s!("\\lx@dropped@{name}"));
+  let stores: Vec<Token>;
+  let takes_opt = match lookup_meaning(&dropped) {
+    Some(Stored::Expandable(ref d)) => {
+      let shape: Vec<SymStr> = d
+        .get_parameters()
+        .map(|p| p.get_parameters().iter().map(|q| q.name).collect())
+        .unwrap_or_default();
+      let takes_opt = match shape.as_slice() {
+        // a body that reads its own arguments (iosart2x.cls:3139 `\def\author{\@ifnextchar[…}`) gets the call's
+        [] => true,
+        [p] if *p == pin!("Plain") => false,
+        [o, p] if *o == pin!("Optional") && *p == pin!("Plain") => true,
+        _ => return Ok(()),
+      };
+      match d.get_expansion() {
+        Some(ExpansionBody::Tokens(body))
+          if body_vocabulary_is_defined(body.unlist_ref(), &s!("\\{name}")) =>
+        {
+          stores = defined_stores(body.unlist_ref());
+          takes_opt
+        },
+        _ => return Ok(()),
+      }
+    },
+    _ => return Ok(()),
+  };
+  // A class `\abstract` keeps nothing of its text the kernel needs (JINST.cls:819-823 sets `\@abstracttrue`; the store
+  // is restored below), and a body that typesets it would step its counters (uwthesis.cls:805-839): it gets none.
+  let arg = if name == "abstract" {
+    Tokens::default()
+  } else {
+    arg
+  };
+  // In a group whose kernel frontmatter is inert (`\lx@replay@inert`: a body that calls a saved kernel `\author`,
+  // authoraftertitle.sty:11-15 `\let\Originalauthor\author`, would add every author twice), notes, marks and labels
+  // gobbled, and the footnote and equation counters as they were.
+  let mut replay = mouth::tokenize_internal(
+    r"{\lx@replay@inert\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\relax\let\label\@gobble\xdef\lx@replay@counts{\global\c@footnote=\the\c@footnote\relax\global\c@equation=\the\c@equation\relax}",
+  )
+  .unlist();
+  replay.push(dropped);
+  if takes_opt && !opt.is_empty() {
+    replay.push(T_OTHER!("["));
+    replay.extend(opt.unlist());
+    replay.push(T_OTHER!("]"));
+  }
+  replay.push(T_BEGIN!());
+  replay.extend(arg.unlist());
+  replay.push(T_END!());
+  replay.push(T_END!());
+  replay.push(T_CS!("\\lx@replay@counts"));
+  // The stores stay as they were: the kernel's (JINST.cls:757-761 `\xdef`s `\@author`, its layout of every author so
+  // far, which `\lx@author@flush` would then hand to the previous author as an author-block row) and those the body
+  // itself defines (`\gdef\abstract@cs{…}`, JINST.cls:820), which the class's title layout prints — the kernel is the
+  // one source of the frontmatter, and a store the body would define is empty if it was undefined (state.rs, the
+  // dropped setter's internals; afthesis.cls:520).
+  let mut kernel_stores = vec![T_CS!("\\@author"), T_CS!("\\@shortauthor")];
+  kernel_stores.extend(stores);
+  let saved: Vec<Option<Stored>> = kernel_stores.iter().map(lookup_meaning).collect();
+  // …and the lock's own record of the class's definition: a `\let\abstract…` or `\def\author…` the body itself
+  // makes is refused again, globally (state.rs), and would replace it.
+  let lock_keys = [s!("\\{name}:redefined"), s!("\\{name}:redefined@nargs")];
+  let lock_values: Vec<Option<Stored>> = lock_keys.iter().map(|k| lookup_value(k)).collect();
+  let dropped_meaning = lookup_meaning(&dropped);
+  let depth = get_frame_depth();
+  AssignValue!("lx_replaying_class_setter" => true, Some(Scope::Global));
+  let hold = util::logger::DiagnosticsHold::begin();
+  let result = digest(Tokens::new(replay));
+  // A body that read past the replay's closing brace, or opened a `\begingroup`, an environment or a mode switch
+  // (minipage) it does not close, leaves groups open: each is closed whatever its kind (a setter has no reason to
+  // leave one), and with the replay's own group its bindings end (`\lx@replay@inert`, the gobbled notes). Closed in a
+  // reading context and box list of their own, discarded: an `\aftergroup` token or a group-end box (`{center}`'s
+  // `\@add@centering`) of a frame closed here belongs to the replay, not to the document.
+  let unwound = reading_from_mouth(Mouth::default(), || {
+    new_local_box_list();
+    while get_frame_depth() > depth {
+      let before = get_frame_depth();
+      let nobox = lookup_bool("groupNonBoxing");
+      if pop_stack_frame(nobox).is_err() || get_frame_depth() >= before {
+        break;
+      }
+    }
+    expire_local_box_list();
+    Ok(())
+  });
+  // groups left open, or groups of the document the body closed (a stray `\egroup` closing the replay's group
+  // early, whose own `}` then closed the document's `{frontmatter}`)
+  let unbalanced = get_frame_depth() as isize - depth as isize;
+  AssignValue!("lx_replaying_class_setter" => false, Some(Scope::Global));
+  for (key, value) in lock_keys.iter().zip(lock_values) {
+    if let Some(value) = value {
+      assign_value(key, value, Some(Scope::Global));
+    }
+  }
+  if let Some(meaning) = dropped_meaning
+    && !same_meaning(lookup_meaning(&dropped).as_ref(), Some(&meaning))
+  {
+    assign_meaning(&dropped, meaning, Some(Scope::Global));
+  }
+  for (cs, meaning) in kernel_stores.iter().zip(saved) {
+    // only what the body changed past its group (a global `\gdef`/`\xdef`): a store a group of the document holds
+    // locally stays local (iosart2x's `\author`s inside `{frontmatter}`)
+    if same_meaning(lookup_meaning(cs).as_ref(), meaning.as_ref()) {
+      continue;
+    }
+    let meaning = meaning.or_else(|| {
+      Expandable::new(
+        *cs,
+        None,
+        Some(ExpansionBody::Tokens(Tokens::new(Vec::new()))),
+        None,
+      )
+      .ok()
+      .map(|empty| Stored::Expandable(Rc::new(empty)))
+    });
+    assign_meaning(cs, meaning.unwrap_or(Stored::None), Some(Scope::Global));
+  }
+  if let Err(err) = result {
+    hold.commit();
+    return Err(err);
+  }
+  let errors = hold.errors_raised();
+  if errors > 0 {
+    hold.discard();
+    Info!(
+      "ignore",
+      s!("\\{name}"),
+      s!("The class's own \\{name} was not replayed: it raised {errors} error(s)")
+    );
+  } else {
+    hold.commit();
+  }
+  unwound?;
+  if unbalanced != 0 {
+    let what = if unbalanced > 0 {
+      s!("left {unbalanced} group(s) open that could not be closed")
+    } else {
+      s!("closed {} group(s) of the document", -unbalanced)
+    };
+    Error!(
+      "unexpected",
+      s!("\\{name}"),
+      s!("The class's own \\{name}, replayed, {what}"),
+      current_frame_message()
+    );
+  }
+  Ok(())
+}
+
+/// The control sequences a body defines with `\def`, `\gdef`, `\edef` or `\xdef` (the targets the lock's drop gives an
+/// empty definition, state.rs).
+fn defined_stores(body: &[Token]) -> Vec<Token> {
+  let definers = ["\\def", "\\gdef", "\\edef", "\\xdef"];
+  let mut stores: Vec<Token> = Vec::new();
+  for (i, t) in body.iter().enumerate() {
+    if t.get_catcode() == Catcode::CS
+      && t.with_cs_name(|n| definers.contains(&n))
+      && let Some(target) = body.get(i + 1)
+      && matches!(target.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      && !stores.contains(target)
+    {
+      stores.push(*target);
+    }
+  }
+  stores
+}
+
+/// Whether two meanings are the same definition (the same definition object, not an equal copy; the same character for
+/// a `\let` to one).
+fn same_meaning(a: Option<&Stored>, b: Option<&Stored>) -> bool {
+  match (a, b) {
+    (None, None) => true,
+    (Some(Stored::Expandable(x)), Some(Stored::Expandable(y))) => Rc::ptr_eq(x, y),
+    (Some(Stored::Primitive(x)), Some(Stored::Primitive(y))) => Rc::ptr_eq(x, y),
+    (Some(Stored::MathPrimitive(x)), Some(Stored::MathPrimitive(y))) => Rc::ptr_eq(x, y),
+    (Some(Stored::Constructor(x)), Some(Stored::Constructor(y))) => Rc::ptr_eq(x, y),
+    (Some(Stored::Conditional(x)), Some(Stored::Conditional(y))) => Rc::ptr_eq(x, y),
+    (Some(Stored::Register(x)), Some(Stored::Register(y))) => Rc::ptr_eq(x, y),
+    (Some(Stored::Token(x)), Some(Stored::Token(y))) => x == y,
+    _ => false,
+  }
+}
+
+/// The kernel's frontmatter entry points a replayed class setter must not reach (`replay_class_setter`): made inert in
+/// the replay's group by `\lx@replay@inert`, each reading its arguments as before and adding nothing.
+const FRONTMATTER_ENTRY_POINTS: [&str; 15] = [
+  "\\lx@add@frontmatter",
+  "\\lx@add@frontmatter@container",
+  "\\lx@add@frontmatter@now",
+  "\\lx@add@frontmatter@until",
+  "\\lx@annotate@frontmatter",
+  "\\lx@annotate@frontmatter@now",
+  "\\lx@request@frontmatter@annotation",
+  "\\lx@add@authors",
+  "\\lx@add@authors@adaptive",
+  "\\lx@add@authors@append",
+  "\\lx@add@authors@list",
+  "\\lx@add@creator@rdf",
+  "\\lx@author@flush",
+  "\\lx@author@handed",
+  "\\lx@author@trailing",
+];
 
 /// Whether the class `\maketitle` the lock dropped takes a plain optional
 /// argument (`\renewcommand*{\maketitle}[1][]{…}`) and nothing else.

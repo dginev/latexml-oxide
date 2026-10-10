@@ -1,0 +1,31 @@
+% witness: 0903.0326 (JINST: `\llap{$^d$}… \\ Email: \email{demitri.muna@nyu.edu}` went to the four authors marked d,
+%          not D. Muna), 1302.2651 (`S.~Bityukov$^a$\thanks{Corresponding author.}` over `E-mail:
+%          \email{Serguei.Bitioukov@cern.ch}`, spelled otherwise), 1503.08624 (a `\textbf{Proceeding…}` line after the
+%          email welded to it, both lost), 1112.1037 / 1311.3535 (a blank line before / after the email line)
+% oracle:  pdflatex 0 errors; the email printed under the affiliations, the proceedings line after it
+% engines: rust 64h = the email line continued the last marked affiliation (its authors' email, or lost); Perl the
+%          same continuation
+% expect:  0 errors; the email the contact of B. Muna (whose name it spells). The guard's variants: an address spelling
+%          C. Cole is Cole's; one spelling no one is the corresponding author's, and with no `\thanks` the block's (#159);
+%          one spelling two Wangs, neither corresponding, the block's; a class `\email` killed at begin-document leaves
+%          the address; under an earlier `\author` call (JINST appends) `author:N` counts its authors (1805.09245); after
+%          a `$^\spadesuit$ Corresponding author` note, the author its mark names (1305.7027); after a `$^\dagger$
+%          Deceased` note, still whom the address spells (1710.00802's `aleder@` under "Corresponding Author"); after
+%          a `$^*$ Corresponding author` note (a footnote symbol, so it continues the affiliation above), the block's,
+%          never that affiliation's author, and with a `\thanks` corresponding author that author; an address spelling
+%          two Wangs after a note marking Z. Li, the block's
+% status:  RED (64h) -> GREEN (64k)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A detector}
+\author{A.~Able$^a$, B.~Muna$^b$\thanks{Corresponding author.}, C.~Cole$^a$\\
+\llap{$^a$}Lab A,\\
+  City A\\
+\llap{$^b$}Lab B,\\
+  City B\\
+E-mail: \texttt{bob.muna@x.org}\\
+\textbf{Proceedings of a workshop}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

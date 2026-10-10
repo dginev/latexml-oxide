@@ -1668,6 +1668,37 @@ stays whole with its author, its marks shown (2609.39576; RED
 
 Full suite green (1532/0); clippy clean.
 
+
+**(m) A labelled email line of a marked author block is the authors' (64k).** In `\lx@add@authors`' marked path a
+marker-less line continued the affiliation above it (Perl Base_Utility.pool.ltxml:701-703), so `E-mail: \email{x}`
+under the last `\llap{$^d$}` affiliation became that affiliation's — every author marked d had the address (0903.0326:
+four New Mexico authors for D. Muna's), or, nested in it, none did. A labelled email line (`labelled_emails`, its lead
+and tail of blank lines or spacing aside: 1112.1037, 1311.3535) is now an entry of its own, each address placed by
+`author:N` (which counts every numbered author: those of an earlier `\author` call, 1805.09245's collaboration, and
+those an earlier flush kept): to the one author whose surname its local part spells (`address_owners`; 1710.00802's
+`aleder@` is A. Leder's though under a "Corresponding Author" note); else a lone address, after a note naming the corresponding
+author, to the one author that note's own mark names (`$^\spadesuit$ Corresponding author\newline E-mail: …`, 1305.7027,
+the note in a later `\author` call than F. Simon; one spelling several only if among them) — the mark of the note's own
+marker-led line, never that of an affiliation a symbol-marked note (`$^*$`, read as a footnote symbol) continues, for
+the next labelled email line only, unless an author or affiliation line comes first; else a lone address to the one author whose `\thanks`/`\footnote` (optional
+argument aside) names them corresponding ("corresponding author", "correspondence"; `S.~Bityukov$^a$\thanks{Corresponding
+author.}` over `Serguei.Bitioukov@cern.ch`, 1302.2651), one spelling several to that author only if among them; else one
+contact of the whole block (`label=addresses:block`, #159). The address is the contact's content, not the class's email
+command around it (a JINST copy as `arxiv.cls` kills `\email` at begin-document: 1111.1180). A line after it continues
+the entry before it (1503.08624's proceedings line, welded to the email and both lost); after an email under a name, or
+after only email lines in its `\and` group, its own entry, not part of a name or a new author. Residuals: an email line
+inside a braced affiliation, with no `\\` before it, still goes with that affiliation (1905.04066, 0910.1682, 1304.6289,
+2406.11067); an address under the last mark that only one author holds, spelling no one, goes to the block, not to that
+author (1605.02067's `ravi2ramana@`, which continuing the mark had given K. Raveendrababu; the `place_address_runs`
+one-requester rule would also send 1302.0278's `elmaddin@` to Madatov, wrongly); a `$^*$` note's mark is not resolved
+against the authors' marks (`C.~Cole$^{a,*}$`), so its address goes to the block; a replacing `\author` after digested authors
+with no later `\maketitle` to supersede them numbers its own from 1, while those authors stay (as in Perl), so its
+`author:N` names an old creator; the spelling is matched on surnames only, so `xwang@` under a note marking Y. Wang goes to
+Y. Wang, not X. Wang (the old continuation did the same); a later `\author{$^\spadesuit$ Corresponding author\\ E-mail: …}`
+(JINST appends) reads its marker-led first line as a name, a creator `Corresponding author`, its email the block's
+(before: 2 errors, the address lost).
+Guard `perfect_kernel_batch64::marked_block_email_line_owner` (eleven variants).
+
 ### 53. `inst`-style `\author[marks]{name}` accepts the optional marks and accumulates
 
 **Decision:** `inst_support.sty`'s `\author` (used by classes following the
@@ -13725,9 +13756,9 @@ a no-op), and pasj00's `\email[<name>]` drops the name it prints ("E-mail(<name>
 RED (`captions-floats/class_caption_bypasses_kernel_caption`).
 Open (classes whose raw code meets LaTeXML's own machinery), each worse than OmniBus: raa.cls's crossed `\begin{flushleft}\begingroup … \end{flushleft}\endgroup` (TeX accepts it; Rust's environment
 frames do not; 0802.3215, 0904.0674, 0709.2807, 1–2 → 3–6 errors); mn.sty's `\newauthor`, which closes a tabular
-inside an author, against `\lx@personname` (sig-alternate/sigchi `\alignauthor` fixed by 62m, #445); JINST's `\renewcommand\author` flag check (1504.01965, 1011.5969: +1–3
-errors, though its authors come out right where OmniBus split one into fake creators; RED
-`sectioning-frontmatter/raw_class_author_flag_jinst`, the locked `\author` of #253); a paper's `\let\ifpdf\relax` (fixed by 62p, KNOWN_PERL_ERRORS #487); a section inside an item, now an error as
+inside an author, against `\lx@personname` (sig-alternate/sigchi `\alignauthor` fixed by 62m, #445); JINST's `\renewcommand\author` flag check (1504.01965, 1011.5969, 1310.6454;
+fixed by 64k: the refused setters replayed and the JINST binding, #482; GREEN
+`sectioning-frontmatter/raw_class_author_flag_jinst`); a paper's `\let\ifpdf\relax` (fixed by 62p, KNOWN_PERL_ERRORS #487); a section inside an item, now an error as
 in Perl (0812.3424, OD #189); the `\@ifundefined{figure}` counter guard (fixed by 62m, KNOWN_PERL_ERRORS #485); IOS-Book-Article's `\fnms`/`\snm`, defined inside its own `\author`,
 which the lock drops (2407.04130; fixed by 62zj: when the lock refused a class's `\author`, author content reads the
 author markup still undefined there — `\fnms`, `\snm`, `\inits`, `\prefix`, `\particle`, `\suffix`, `\degs`, `\roles`,
@@ -14724,3 +14755,63 @@ had bound the bytes to inputenc's `\@inpenc@undefined`, which only inputenc defi
 erred on every such byte (746 of run 336's papers; 2605.05335, 1809.07457, 1503.05450). Depends on `\everyjob` not
 being run in full: if it is, this becomes pdflatex's error. Guards
 `perfect_kernel_batch64::{cjk_stray_byte_is_text, byte_mouth_bib_field_last_character}`.
+
+### 482. A raw class's own `\author`/`\abstract`, refused by the lock, still run for their side effects (Perl: never run)
+
+**Perl behavior**: the kernel `\author` and `\abstract` are locked (latex_constructs.pool.ltxml:1076-1079, :1136-1143;
+State.pm:502-517), so a class's redefinition is dropped whole, with the flags and stores the class's other code reads.
+**Rust behavior**: the dropped definition is kept as `\lx@dropped@<name>` (state.rs), and the kernel `\author` and the
+argument-taking `\abstract` first run it (`\lx@replay@class@setter`, `replay_class_setter`, sect05.rs) when it is
+shaped `[opt]{arg}`, `{arg}` or reads its own arguments (no parameters, iosart2x.cls:3139 `\def\author{\@ifnextchar[…}`:
+given the call's `[opt]{arg}`; an absent optional argument takes the class's default) and its vocabulary is defined
+(`body_vocabulary_is_defined`). It runs isolated: in a group whose kernel frontmatter entry points (`\lx@add@frontmatter*`,
+`\lx@annotate@frontmatter*`, `\lx@request@frontmatter@annotation`, `\lx@add@authors*`, `\lx@author@flush/handed/trailing`,
+`\lx@add@creator@rdf`) are inert — each reads its arguments and adds nothing (`\lx@replay@inert`), so a body that calls a
+saved kernel `\author` (authoraftertitle.sty:11-15 `\let\Originalauthor\author`) adds no second author — with `\thanks`,
+`\footnote`, `\footnotemark`, `\label` gobbled, the footnote and equation counters reset after it, no frontmatter
+sealed by a sectioning command it typesets, the frontmatter queue frozen while it runs (`frontmatter_frozen_for_replay`:
+nothing queued, annotated or removed — a saved kernel `\date` clears before it adds), the `\abstract` given an empty
+argument (its text is the kernel's; a body that typesets it would step counters, uwthesis.cls:805-839), not
+re-entrant, its output discarded; the groups it left open — `\begingroup`, environments, mode switches — are closed in
+a reading context and box list of their own, so their `\aftergroup` tokens and group-end boxes are discarded with it,
+and an imbalance that cannot be closed (or a document group it closed) is an Error. One that raises an error is
+dropped with its diagnostics (Info), as the `\maketitle` deposit is (#265).
+Afterwards the lock's own record (`\lx@dropped@<name>`, `<name>:redefined@nargs`, which a `\let`/`\def` of the name in
+the body would rewrite globally) is as before, and so are the kernel's `\@author`/`\@shortauthor` and every store the
+dropped body `\def`s/`\gdef`s/`\edef`s/`\xdef`s — where the body changed them past its group; empty if undefined, the
+convention the lock's drop already keeps (state.rs; afthesis.cls:520). What stays is the class's flags, counters,
+`\g@addto@macro` lists and `\let`s: the stores a class's title layout prints carry no second copy (JINST.cls:757-761
+`\xdef\@author`, :820 `\gdef\abstract@cs`), but a list the class appends to does (compositio's `\@authors`), which is why
+its family has a binding. A class `\author` that sets PDF metadata keeps it (ryethesis.cls:260
+`\hypersetup{pdfauthor={#1}}`: `<rdf property="dcterms:creator">`). The vocabulary check no longer reads a `\let`'s
+source as used (tex.web §1221: `\let\abstract\gobble` with no `\gobble`, JINST.cls:823).
+The Foundation Compositio family (compositio, alggeom, moduli, hha, jhrs, jcm; latexml_contrib `compositio_cls.rs`, one
+binding, the union of their commands) reads the shipped class raw and routes what it stores for its own title page and
+closing address block to the frontmatter: `\address`, `\curraddr`, `\email`, `\homepage` (jcm.cls:157's `{url}{text}`
+too) as the last author's contacts, `\keywords`, `\classification`/`\subjclass` labelled as the class prints them (its
+keywords label and MSC year and colon), the kernel `\thanks`, the dates (`\revised`/`\online` keeping their optional
+label), the dedication, `\submitted` (hha/jhrs "communicated by") a publication note; its own `\maketitle` (which lays out
+only those) is not deposited. The JHEP family as shipped (JINST,
+CECS; `jinst_cls.rs`) reads the class raw likewise and routes its dates (after the class's setter, for the flags its
+`published` mode checks), keywords, dedication, preprint, conference and `\email` as the JHEP binding does (Perl
+JHEP.cls.ltxml), its `\@maketitle` (the title page `\auto@maketitle` typesets at `\begin{document}`) empty, and the
+frontmatter made (the kernel `\maketitle`) where `\auto@maketitle` typesets that page, before it kills the commands the
+page used (JINST.cls:488-506, CECS.cls:404-420: `\global\let\email\@gobble`, `\thanks`, `\author`, `\title`, …),
+which the `\author` blocks digested any later still need (empty emails: 0704.3706, gr-qc0303113, 41 of 2,918
+papers). Each family binding reads the class the document asked for (`requested_shipped_class`): a path-prefixed
+request matched by basename (`JINST-Sample-files/JINST`, `\@currname`; 1504.01965, 1410.4420, 1805.09245) or a renamed
+copy the fallback answered (`JINST_mod`, `fallback_request`; 1307.5525, 1407.3938), not OmniBus. Open (SYNC):
+the 31 renamed JHEP3 copies (QCEMDA, AKRSX, jhepLike, MCPlane1, …; `\ProvidesClass{JHEP3}` in 29) need a class route by
+content, not name.
+**Why**: since 62k reads shipped classes raw (#444), the refused setters left the classes' checks failing: JINST.cls's
+`\AtBeginDocument` "Some \author{...} should appear" / "\abstract{...} should appear" (:1592-1607; the JHEP family,
+JHEP copies and CECS: 340 of run 336's papers; 2601.17161, 1310.6454, gr-qc0406095, hep-th0201170), and compositio's
+`\email`/`\address` "with no \author" (`\@curr@author` unset; 224 papers: 2606.19241, 1109.5540, math0409234,
+0805.3030, quant-ph0412067, 2111.06381), whose contacts were lost. Guards
+`perfect_kernel_batch64::{raw_class_author_flag_jinst, compositio_family_frontmatter, compositio_family_old_variant,
+jhep_family_title_page, family_binding_reads_requested_class, replayed_setter_calls_kernel_author,
+replayed_setter_keeps_frontmatter, replayed_setter_closes_its_groups}`; RED
+`sectioning-frontmatter/family_wrapper_loads_family_class` (a renamed wrapper `\LoadClass`ing the family class re-enters
+the binding; no corpus witness),
+`perfect_kernel_batch54::locked_setter_internals_are_defined_empty`,
+`perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.

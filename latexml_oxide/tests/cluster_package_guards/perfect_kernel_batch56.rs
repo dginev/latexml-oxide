@@ -6131,10 +6131,21 @@ Body.
     ] {
       assert!(xml.contains(field), "{field}: {xml}");
     }
+    // displayed once; ryethesis.cls:260's `\author` also sets `\hypersetup{pdfauthor={#1}}`, the PDF's metadata,
+    // run since 64k with the class's refused setter (`replay_class_setter`): `<rdf property="dcterms:creator">`
     assert_eq!(
-      xml.matches("A. E. Ryerson").count(),
+      xml.matches(">A. E. Ryerson<").count(),
       1,
       "the author once: {xml}"
+    );
+    // and nowhere else: the creator and the metadata record
+    assert_eq!(xml.matches("A. E. Ryerson").count(), 2, "{xml}");
+    assert_eq!(
+      xml
+        .matches("content=\"A. E. Ryerson\" property=\"dcterms:creator\"")
+        .count(),
+      1,
+      "{xml}"
     );
   }
 }

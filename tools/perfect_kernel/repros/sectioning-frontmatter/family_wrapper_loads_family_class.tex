@@ -1,0 +1,19 @@
+% witness: 64k review r2 (finding 6): a paper's renamed class that wraps the family's (`JINST_mod.cls`:
+%          `\LoadClass{JINST}` and more), answered by the JINST binding through the versioned fallback
+% oracle:  pdflatex 0 errors (JINST_mod.cls, JINST.cls side files)
+% engines: rust 64k = the binding reads JINST_mod.cls, whose `\LoadClass{JINST}` meets the binding's own load in
+%          progress ("Binding-load re-entrance", JINST.cls never read): no `\auto@maketitle`, so the binding leaves the
+%          class as it is, and `\keywords`, `\received` are undefined (2 errors); no corpus witness found
+% expect:  0 errors; the frontmatter as jhep_family_title_page's; "Wrapped." in the body
+% status:  RED (64k)
+% preload: ar5iv.sty
+\documentclass{JINST_mod}
+\title{A detector}
+\author{A. Name\\ Lab X\\ \email{a@x.org}}
+\author{B. Name\\ Lab Y}
+\abstract{Short abstract.}
+\keywords{Detectors; Calorimeters}
+\received{May 1, 2020}
+\begin{document}
+Text. \jinstmodnote
+\end{document}

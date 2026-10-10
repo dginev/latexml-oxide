@@ -1,0 +1,13 @@
+% witness: amsart \urladdr{…/~user} (common in math papers), compositio-family \homepage (math0409234's hha.cls :133)
+% oracle:  pdflatex "http://x.org/~y" (amsart prints \urladdr with \url, a literal tilde)
+% engines: rust 64k = <contact role="url">http://x.org/˜y — the Semiverbatim `~` (an other character) typeset in the
+%          OT1 text font, whose slot 0x7E is the tilde accent; Perl the same \lx@add@url (Base_Utility.pool.ltxml:657)
+% expect:  <contact name="URL: " role="url">http://x.org/~y</contact>
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A}\urladdr{http://x.org/~y}
+\maketitle
+Text.
+\end{document}

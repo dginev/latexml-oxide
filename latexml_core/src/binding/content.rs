@@ -943,8 +943,16 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
         // The request the fallback answers, for a binding that reads its version from its name: Perl's `\@currname`
         // holds the request while the fallback loads (Package.pm:2618 defines it from `$name`), ours the fallback's
         // name. neurips_sty.rs reads the year of `Styles/neurips_2026` here (2609.20831).
+        // `fallback_target`: the binding answering it, so a binding tells its own request from an outer load's
+        // (shipped_class.rs).
         let outer_request = lookup_string("fallback_request");
+        let outer_target = lookup_string("fallback_target");
         assign_value("fallback_request", name.to_string(), Some(Scope::Global));
+        assign_value(
+          "fallback_target",
+          fallback_name.clone(),
+          Some(Scope::Global),
+        );
         // Forward the original options + after-hook so fallback bindings see
         // user-supplied class/package options (Perl-faithful: in Perl FindFile
         // returns a path and the caller's options/after stay attached to the
@@ -962,6 +970,7 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
           ..InputDefinitionOptions::default()
         });
         assign_value("fallback_request", outer_request, Some(Scope::Global));
+        assign_value("fallback_target", outer_target, Some(Scope::Global));
         if fb_result.is_ok() {
           assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
           // latex.ltx:18484-18486 `\@pr@videpackage`: the requested name takes the
@@ -3334,12 +3343,14 @@ fn class_binding_alternate(name: &str) -> Option<&'static str> {
     .or_else(|| {
       // Path-prefixed class (`misc/ieeetran`, `JINST-Sample-files/JINST`):
       // strip the directory and match the basename against a binding, so
-      // `misc/ieeetran` → IEEEtran (Perl loads IEEEtran.cls.ltxml for it)
-      // while `JINST-Sample-files/JINST` → no basename binding → OmniBus.
+      // `misc/ieeetran` → IEEEtran (Perl loads IEEEtran.cls.ltxml for it);
+      // `JINST-Sample-files/JINST` (Perl: no binding → OmniBus) has the contrib
+      // JINST binding since 64k, which reads the class in its directory
+      // (OXIDIZED_DESIGN #482).
       // Case-insensitive FULL equality only (not prefix) — mirrors the
       // capitalization-only ci fallback above and avoids a basename like
       // `AAAI-Std` wrongly prefix-matching the 2-char `aa` binding.
-      // Witnesses 1504.01965 (JINST→OmniBus), 2105.02087 (misc/ieeetran).
+      // Witnesses 1504.01965 (JINST), 2105.02087 (misc/ieeetran).
       let basename = name.rsplit(['/', '\\']).next().unwrap_or(name);
       if basename != name {
         sorted
@@ -3399,8 +3410,8 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // undefined, where Perl (OmniBus) is clean. Witness 1504.01965; the
   // misc/ieeetran case (2105.02087) now matches Perl via the basename binding.
   // That holds under `notex` (INCLUDE_CLASSES off). The arXiv profile's `localrawclasses` (62k, DIVERGENCES #444)
-  // interprets a paper-local class with no binding route raw, path-prefixed or not — JINST included, whose
-  // begin-document checks then fire (1504.01965, 1310.6454: an open item there).
+  // interprets a paper-local class with no binding route raw, path-prefixed or not. JINST's begin-document checks,
+  // which then fired (1504.01965, 1011.5969, 1310.6454), are met by its binding since 64k (OXIDIZED_DESIGN #482).
   let notex_default = !lookup_bool("INCLUDE_CLASSES");
   // Perl Package.pm:2705-2707: LoadClass can be limited to local SEARCHPATHS when
   // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
@@ -3515,7 +3526,9 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     // `input_definitions`): a binding serving a family of classes reads which one was asked for
     // (informs_cls.rs: `informs3noheader` prints no blind-review notice, 2609.04127).
     let outer_request = lookup_string("fallback_request");
+    let outer_target = lookup_string("fallback_target");
     assign_value("fallback_request", name.to_string(), Some(Scope::Global));
+    assign_value("fallback_target", target.to_string(), Some(Scope::Global));
     let loaded = input_definitions(target, InputDefinitionOptions {
       extension: Some(Cow::Borrowed("cls")),
       options,
@@ -3527,6 +3540,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
       ..InputDefinitionOptions::default()
     });
     assign_value("fallback_request", outer_request, Some(Scope::Global));
+    assign_value("fallback_target", outer_target, Some(Scope::Global));
     // Perl Package.pm L2715: after loading the alternate class binding, scan
     // the raw class file for \usepackage/\RequirePackage/\LoadClass — the
     // alternate rarely covers all dependencies the renamed class adds.
