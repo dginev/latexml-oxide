@@ -1,0 +1,18 @@
+% witness: astro-ph0002202 (cjour), gr-qc0207046 (ajour): `\begin{references}` with \bibitem — the class's own list
+%          (ajour.cls:2395-2427; cjour.cls:2223-2236, :2252-2253 in astro-ph0002202), 8 of run 336's PushbackLimit
+%          papers left after the first 64p cut
+% oracle:  pdflatex 0 errors; References [1] [2]
+% engines: rust 64qb = 4 errors (with more items: PushbackLimit, the class's list reopened per \bibitem); rust 64p = 0;
+%          Perl 0.8.8 --includestyles = 2 Fatal
+% expect:  one bibliography with both items: \bibitem opens the kernel's bibliography (not the class's \let one) inside
+%          the class's list, which its own end closes at \end{references}
+% status:  RED (64qb) -> GREEN (64p)
+% preload: ar5iv.sty
+\documentclass{bibrefs}
+\begin{document}
+Text \cite{a}.
+\begin{references}
+\bibitem{a} A. Author, Title A.
+\bibitem{b} B. Author, Title B.
+\end{references}
+\end{document}

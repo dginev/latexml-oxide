@@ -425,6 +425,8 @@ pub(crate) fn load() -> Result<()> {
     },
     locked=>true);
   Let!("\\saved@endthebibliography", "\\endthebibliography");
+  // the kernel's own, for `\lx@mung@bibliography` when a class has `\let` its list over it
+  Let!("\\lx@kernel@thebibliography", "\\thebibliography");
   // auto close the bibliography and contained biblist.
   Tag!("ltx:biblist",      auto_close => true);
   // arXiv-fork: the bibliography joins the navigation TOC (its xml:id is
@@ -585,9 +587,45 @@ pub(crate) fn load() -> Result<()> {
       ]);
     }
     // else ? it probably isn't going to work??
-    //Now, try to open {thebibliography}
+    else if tag == "thebibliography" {
+      // (OXIDIZED_DESIGN_DIVERGENCES #484, KNOWN_PERL_ERRORS #569) In `{thebibliography}` with no bibliography open,
+      // the class's own list stands in the kernel's:
+      // `\let\thebibliography\bibreferences` (ajour, cjour, IEEE-Con-Sys-mag: 0711.2301, astro-ph0005341, 2310.12571;
+      // `\let` ignores the lock, State.pm assignMeaning), whose list reopened here per `\bibitem`, nested without end
+      // (Perl --includestyles: the same loop; run 336's PushbackLimit Fatals). Its own end closes its list now
+      // (ajour.cls/cjour.cls `\endreferences` = `\endlist`), the kernel's bibliography making the environment's end
+      // its own (`before_digest_bibliography`).
+      tokens.push(T_CS!("\\endthebibliography"));
+    }
+    // In another environment (a class's `{references}` list: astro-ph0002202, gr-qc0207046; an author's
+    // `\begin{list}{}{}`), its end closes the kernel's bibliography first and then runs as its own (the class's `\endlist`
+    // ending its list's frame), so what follows the environment follows the bibliography, as pdflatex prints it
+    // (OXIDIZED_DESIGN_DIVERGENCES #484, KNOWN_PERL_ERRORS #569). The saved end is `\csname end<env>\endcsname`,
+    // `\relax` for an environment with none (`{small}`).
+    else if !tag.is_empty() {
+      let end_env = T_CS!(format!("\\end{tag}"));
+      tokens.extend([
+        T_CS!("\\expandafter"),
+        T_CS!("\\let"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\lx@mung@saved@end"),
+        T_CS!("\\csname"),
+      ]);
+      tokens.extend(Explode!(format!("end{tag}")));
+      tokens.extend([
+        T_CS!("\\endcsname"),
+        T_CS!("\\def"),
+        end_env,
+        T_BEGIN!(),
+        T_CS!("\\saved@endthebibliography"),
+        T_CS!("\\lx@mung@saved@end"),
+        T_END!(),
+      ]);
+    }
+    // Then open the kernel's bibliography: not `\thebibliography`, which a class's `\let` may have made its own list
+    // (the loop above).
     tokens.push(T_CS!("\\lx@mung@bibliography@pre"));
-    tokens.push(T_CS!("\\thebibliography"));
+    tokens.push(T_CS!("\\lx@kernel@thebibliography"));
     Ok(Tokens::new(tokens))
   });
   // Perl: maybeCloseElement($tag) if tag =~ /^ltx:(?:itemize|enumerate|description)$/

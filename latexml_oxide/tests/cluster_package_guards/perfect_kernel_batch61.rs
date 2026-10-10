@@ -2156,10 +2156,11 @@ See \doiurl{10.1214/09-AOS1} and \arxivurl{math.PR/0603300}.
 
 /// 62d: amsmath.sty:754-758 makes each `\DeclareMathAccent` accent `\mathaccentV{<name>}<family><slot>` (`\hat` is
 /// `\mathaccentV{hat}05E`); the binding keeps LaTeXML's own accents, so the call arrives only written out, in a revtex
-/// bibnote's `.bbl` (`\protect\mathaccentV {hat}05E{D}`; 2008.11212, 1309.7027, 2004.12163, 1811.07295). It reads as
-/// the named accent; an accent name LaTeXML lacks keeps its base.
+/// bibnote's `.bbl` (`\protect\mathaccentV {hat}05E{D}`; 2008.11212, 1309.7027, 2004.12163, 1811.07295). Since 64p it
+/// is amsmath's `\mathaccent"\accentclass@<family><slot>` (amsmath.sty:822): the slot's accent whatever the name, as
+/// pdflatex prints "D̂ + x̂".
 #[test]
-fn mathaccent_v_reads_as_the_named_accent() {
+fn mathaccent_v_reads_as_the_slot_accent() {
   let xml = assert_elements(
     r"\documentclass{article}
 \usepackage{amsmath}
@@ -2174,7 +2175,7 @@ $\protect\mathaccentV{hat}05E{D}+\mathaccentV{nosuchaccent}05E{x}$
     &xml,
     "XMath",
     &[],
-    r#"<XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="italic" role="UNKNOWN">D</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath>"#,
+    r#"<XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="italic" role="UNKNOWN">D</XMTok></XMApp><XMApp><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMath>"#,
   );
 }
 

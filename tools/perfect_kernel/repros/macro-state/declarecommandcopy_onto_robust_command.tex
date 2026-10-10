@@ -1,0 +1,21 @@
+% witness: synthetic (64p review): \DeclareCommandCopy onto an existing robust command, twice, then the source
+%          redeclared in terms of the copy (the 0810.0695 \let\origref\ref idiom through ltcmd)
+% oracle:  pdflatex 0 errors; "See ?? and ??. bold"
+% engines: rust 64qb = 0 errors; rust 64p first cut = Fatal Recursion (no body copy over an existing \mytt<space>);
+%          rust 64p = 0; Perl 0.8.8 = 0
+% expect:  bold italic "bold" (\mytt is the original \bfseries body), both \ref forms resolve
+% status:  GREEN (64p)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\DeclareCommandCopy\origref\ref
+\DeclareCommandCopy\origref\ref
+\DeclareRobustCommand\ref{\@ifstar\origref\origref}
+\DeclareRobustCommand\mytt{\ttfamily}
+\DeclareCommandCopy\mytt\bfseries
+\DeclareRobustCommand\bfseries{\mytt\itshape}
+\makeatother
+\begin{document}
+\section{A}\label{s}
+See \ref{s} and \ref*{s}. {\bfseries bold}
+\end{document}

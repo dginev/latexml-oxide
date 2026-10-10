@@ -2908,13 +2908,18 @@ pub fn is_definition_locked(token: &Token) -> bool { token.with_cs_name(is_name_
 /// Whether the control sequence named `cs` is locked while state is not unlocked: against every definition
 /// (`"{cs}:locked"`), or against those the class and package files make (`"{cs}:locked@files"`), which leaves the
 /// document free to define it, as LaTeX and Perl do (the kernel minipage: sect12.rs, OXIDIZED_DESIGN_DIVERGENCES #453).
-pub fn is_name_locked(cs: &str) -> bool {
+pub fn is_name_locked(cs: &str) -> bool { !state_is_unlocked() && name_carries_lock(cs) }
+
+/// Whether the control sequence named `cs` carries a lock ([`is_name_locked`]'s two), read as a value whatever the
+/// unlocked state: Perl's `\newenvironment`/`\renewenvironment` test `LookupValue('\name:locked')` directly
+/// (latex_constructs.pool.ltxml:2787-2803), so a class's `\renewenvironment{thebibliography}` that a binding's hook runs
+/// unlocked (as Perl runs before/after-digest code, Primitive.pm:44/:52) still leaves the locked environment alone
+/// (wiley2sp's w2sp-pss.clo:444 in `\AtEndOfClass`: 100 of run 336's PushbackLimit papers, 0710.1676, 0809.3379;
+/// ptptex: 0706.0316).
+pub fn name_carries_lock(cs: &str) -> bool {
   // Probe-only: if "{cs}:locked" was never interned it cannot be bound, so
   // skip both the intern (which permanently grew the arena by one ":locked"
   // twin per defined cs) and the table lookup (2026-08-23 audit R6).
-  if state_is_unlocked() {
-    return false;
-  }
   let locked = |key: String| arena::get(&key).is_some_and(lookup_bool_sym);
   locked(s!("{cs}:locked"))
     || (crate::definition::origin::current_origin()
@@ -3945,12 +3950,20 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // `\ifpdf...\else \let\origref\ref \DeclareRobustCommand\ref{
   // \@ifstar\origref\origref}\fi` triggers via the else-branch
   // when `\ifpdf` is false; its `\pdfoutput=1` makes it true since K6).
+  //
+  // Not when the body calls `\<token1><space>` itself: copied there it would call itself, so `\<token1><space>` is left
+  // alone, as TeX's `\let` leaves it, and `\<token1>` takes `\<token2>`'s wrapper. mathfixs' autobold
+  // (mathfixs.sty:24-32) builds `\mafx@bfseries` by one-step expansion of the robust `\bfseries` — its body
+  // `\protect\bfseries<space>\ifmmode…` — and then `\let\bfseries=\mafx@bfseries` (33 of run 336's papers ran to
+  // PushbackLimit, 2205.10090, 2211.07279). A copy over an existing body slot is still a copy (`\DeclareCommandCopy`
+  // onto a robust command, `\let\origref\ref` run twice).
   if let Stored::Expandable(ref defn) = meaning
     && let Some(token2_space) = robust_wrapper_body(defn, token2)
+    && !token1.with_str(|s| body_mentions(&token2_space, &s!("{s} ")))
   {
+    let token1_space = crate::T_CS!(token1.with_str(|s| s!("{s} ")));
     // (1) Copy `\<token2><space>` body to `\<token1><space>`
     // so the two CSes have independent body slots.
-    let token1_space = crate::T_CS!(token1.with_str(|s| s!("{s} ")));
     let body_meaning = lookup_meaning(&token2_space).unwrap_or(Stored::None);
     let body_csname_sym = token1_space.pin_cs_name();
     state_mut!().assign_internal(TableName::Meaning, body_csname_sym, body_meaning, scope);
@@ -3986,6 +3999,20 @@ pub fn x_equals(token1: &Token, token2: &Token) -> bool {
     (Some(def1), Some(def2)) => def1 == def2 || same_robust_body(token1, &def1, token2, &def2),
     (None, None) => true, // true if both undefined
     (..) => false,        // False, if only one has 'meaning'
+  }
+}
+
+/// Whether the macro `cs`'s token body mentions the control sequence named `name` (a closure body is opaque: no). By
+/// name, so no token is interned for a name that may never exist.
+fn body_mentions(cs: &Token, name: &str) -> bool {
+  match lookup_meaning(cs) {
+    Some(Stored::Expandable(defn)) => match defn.expansion {
+      Some(ExpansionBody::Tokens(ref tks)) => {
+        tks.unlist_ref().iter().any(|t| t.with_str(|s| s == name))
+      },
+      _ => false,
+    },
+    _ => false,
   }
 }
 

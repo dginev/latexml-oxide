@@ -1,0 +1,17 @@
+% witness: 0711.2301 (ajour), astro-ph0005341 (cjour), 2310.12571 (IEEE-Con-Sys-mag): `\let\thebibliography
+%          \bibreferences` (run 336 PushbackLimit)
+% oracle:  pdflatex 0 errors; References [1] [2]
+% engines: rust 64qb = 4 errors (the class's list reopened per \bibitem); rust 64p = 0; Perl 0.8.8 --includestyles =
+%          out of memory (8 GB cap, ~53 s; without it Perl never reads the class: OmniBus)
+% expect:  one bibliography with both items: in a class's {thebibliography} with no bibliography open, \bibitem
+%          ends the class's list and opens the kernel's bibliography
+% status:  RED (64qb) -> GREEN (64p)
+% preload: ar5iv.sty
+\documentclass{biblet}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Title A.
+\bibitem{b} B. Author, Title B.
+\end{thebibliography}
+\end{document}

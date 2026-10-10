@@ -1,0 +1,14 @@
+% witness: 1503.00176, 1710.11113 (a document's own \bar via \mathaccentV; 21 of run 336's PushbackLimit papers)
+% oracle:  pdflatex 0 errors; a bar over p
+% engines: rust 64qb = Fatal PushbackLimit (\mathaccentV{bar} called \bar, which is the document's \mathaccentV call);
+%          rust 64p = 0; Perl 0.8.8 = 2 errors
+% expect:  an OVERACCENT ¯ (name bar) over p: amsmath's \mathaccent"\accentclass@<family><slot> (amsmath.sty:822)
+% status:  RED (64qb) -> GREEN (64p)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\DeclareSymbolFont{boldoperators}{OT1}{cmr}{bx}{n}
+\edef\bar{\unexpanded{\protect\mathaccentV{bar}}\number\symboldoperators16}
+\begin{document}
+$\bar{p} < 1/2$
+\end{document}

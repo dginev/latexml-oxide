@@ -976,17 +976,27 @@ LoadDefinitions!({
   // made `\theequation` call itself: `\tag*{(\theequation)$_i$}` (2408.12869) and `\tag{\thesection.\theequation}`
   // ran to `PushbackLimit` (Perl: out of memory; KPE #475). Real amsmath never redefines `\theequation`: the tag text
   // goes to `\df@tag` (amsmath.sty:1224-1227), so a `\theequation` in it is the counter's own. `\lx@ams@tag@text`
-  // gives the tag text that meaning: `\theequation` is defined as the text with each `\theequation` in it, at any
-  // depth, the meaning it had (inside `\lx@equation@settag`'s group).
+  // gives the tag text that meaning: the text is kept in `\lx@ams@tag@body` and `\theequation` is `\lx@ams@tag@print`,
+  // which typesets it with `\theequation` the meaning it had (inside `\lx@equation@settag`'s group) — a `\theequation`
+  // the text reaches through another macro too (`\tag{\thesubeqn}`, `\thesubeqn` = `\theequation\alph{subeqn}`: 74 of
+  // run 336's papers looped: 1208.5957, 1209.0051). `\lx@ams@tag@print` is protected and takes no argument, so an
+  // `\edef` keeps it whole rather than expanding the text into the macro again. Its group keeps the `\let` to the text
+  // (a later `\theequation`, the refnum's, is the tag again), so a font switch in the text ends with it (amsmath's
+  // `\maketag@@@` sets the parentheses in the same box: `\tag{\bfseries X}` has a bold closing parenthesis there).
   // Driver for OOM regression: 2311.16416 proof.tex L287 with
   // `\tag{$\binom{n}{m} \le n^{m}/m!$ and …}` (the text is not expanded).
+  DefMacro!(
+    "\\lx@ams@tag@print",
+    "{\\let\\theequation\\lx@ams@theequation\\lx@ams@tag@body}",
+    protected => true
+  );
   DefPrimitive!("\\lx@ams@tag@text{}", sub[(text)] {
-    let theequation = T_CS!("\\theequation");
-    let outer = T_CS!("\\lx@ams@theequation");
-    Let!(&outer, &theequation);
-    let body: Vec<Token> =
-      text.unlist().into_iter().map(|t| if t == theequation { outer } else { t }).collect();
-    DefMacro!(theequation, None, Tokens::new(body));
+    // (a second `\tag` in the equation keeps the counter's meaning, not the first one's print)
+    if !x_equals(&T_CS!("\\theequation"), &T_CS!("\\lx@ams@tag@print")) {
+      Let!("\\lx@ams@theequation", "\\theequation");
+    }
+    DefMacro!(T_CS!("\\lx@ams@tag@body"), None, text);
+    Let!("\\theequation", "\\lx@ams@tag@print");
   });
   DefMacro!(
     "\\tag OptionalMatch:* {}",
@@ -1969,11 +1979,21 @@ LoadDefinitions!({
   // amsmath.sty:754-758 makes each `\DeclareMathAccent` accent `\mathaccentV{<name>}<family><slot>` (`\hat` is
   // `\mathaccentV{hat}05E`) and :811-831 typesets it. The binding keeps LaTeXML's own accents, so the call arrives
   // only written out: a revtex bibnote's `.bbl` carries pdflatex's `\protect\mathaccentV {hat}05E{D}` (2008.11212,
-  // 1309.7027, 2004.12163, 1811.07295; undefined in Perl too). It reads as the named accent; a name LaTeXML lacks
-  // keeps its base.
+  // 1309.7027, 2004.12163, 1811.07295; undefined in Perl too), and a document makes an accent of its own with it
+  // (`\edef\bar{\unexpanded{\protect\mathaccentV{bar}}\number\symboldoperators16}`; 21 of run 336's papers, 1503.00176,
+  // 1710.11113). In math it is amsmath's `\mathaccent"\accentclass@<family><slot>` (amsmath.sty:822), the slot's
+  // accent in the family's font — never the macro the name names, which is that document's `\bar` itself (read as
+  // LaTeXML's accent, it called itself to the PushbackLimit); outside math amsmath's error (:829, :902-903). amsmath's
+  // depth test and `\macc@nested` branch (:814-826) are left out: a nested accent is a plain `\mathaccent` too, which
+  // changes only TeX's kerning.
   DefMacro!(
     "\\mathaccentV{}{}{}{}{}",
-    "\\ifcsname #1\\endcsname\\csname #1\\endcsname{#5}\\else #5\\fi"
+    "\\ifmmode\\mathaccent\"\\accentclass@#2#3#4{#5}\\else\\expandafter\\nonmatherr@\\csname #1\\endcsname\\fi"
+  );
+  DefMacro!("\\@amsmath@err", "\\PackageError{amsmath}");
+  DefMacro!(
+    "\\nonmatherr@{}",
+    "\\@amsmath@err{\\protect#1 allowed only in math mode}\\@ehd"
   );
   // amsmath.sty:740, :800-802, :809, :832-891: the accent machinery behind `\mathaccentV`, which a widely copied
   // `\widebar` snippet drives directly (it rebinds `\mathaccent` to an `\overline` of `\macc@nucleus`, sets

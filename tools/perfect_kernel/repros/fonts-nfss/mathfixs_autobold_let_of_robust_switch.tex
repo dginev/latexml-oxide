@@ -1,0 +1,12 @@
+% witness: 2205.10090, 2211.07279 (mathfixs [autobold]; 33 of run 336's PushbackLimit papers)
+% oracle:  pdflatex 0 errors; "Plain Bold x text."
+% engines: rust 64qb = Fatal PushbackLimit (\let\bfseries=\mafx@bfseries copied \mafx@bfseries's body, which calls
+%          \bfseries<space>, into \bfseries<space>); rust 64p = 0; Perl 0.8.8 = 0
+% expect:  "Bold x" bold: \let leaves an existing \bfseries<space> alone, as TeX's \let does (mathfixs.sty:24-32)
+% status:  RED (64qb) -> GREEN (64p)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[autobold]{mathfixs}
+\begin{document}
+Plain \textbf{Bold $x$} text.
+\end{document}

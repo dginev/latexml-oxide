@@ -10179,7 +10179,13 @@ wrapper `\protect \x␣` and copies the body to `\x␣`. TeX's `\let` copies the
 is robust where latex.ltx's is not (witness arXiv 0810.0695, PlanarMain.tex's `\else` branch; since
 K6 its `\pdfoutput=1` makes `\ifpdf` true, and the branch forced false still converts with 0 errors).
 Two consequences: `\meaning\x` reads `\protect \x  ` where pdflatex reads `\protect \bfseries  `
-(documented, not changed: sharing the wrapper brings the loop back), and `\ifx` of two robust wrappers
+(documented, not changed: sharing the wrapper brings the loop back). The body is not copied when it calls `\x␣`
+itself: `\x␣` is then left alone, as TeX's `\let` leaves it, and `\x` shares `\cs`'s wrapper (64p: mathfixs' autobold
+builds `\mafx@bfseries` by one-step expansion of `\bfseries`, so its body calls `\bfseries␣`, and
+`\let\bfseries=\mafx@bfseries` copied that body into `\bfseries␣` itself — 33 of run 336's papers to PushbackLimit,
+2205.10090, 2211.07279; guards `perfect_kernel_batch64p::{mathfixs_autobold_let_of_robust_switch,
+declarecommandcopy_onto_robust_command}`, the second a `\DeclareCommandCopy` onto an existing robust command, whose
+body is still copied). And `\ifx` of two robust wrappers
 `\protect \A␣`/`\protect \B␣` with equal parameters compares the meanings of `\A␣` and `\B␣`
 (`same_robust_body`, worker W17), so `\ifx\x\bfseries`, `\ifx\reset@font\normalfont` and, in the
 preamble, amsthm's `\nonslanted` (`\let\@tempa\csname\f@shape shape\endcsname\ifx\@tempa\itshape`,
@@ -14837,3 +14843,25 @@ caption2 papers raised `\captionstyle` undefined and printed the stray style nam
 37, none worse, no creator or abstract lost. Guards `perfect_kernel_batch64qb::{paspconf_revtex3_frontmatter,
 caption2_interface}`. `\captionlabelfalse` (caption2.sty:144-149) is not honoured (the label kept); a `\kern` delimiter
 shows as `\kern…` text in the close (Perl the same).
+
+### 484. A `\bibitem` outside an open bibliography opens the kernel's bibliography, closed at its environment's end (Perl: the current `\thebibliography`, open to the end)
+
+**Perl behavior**: `\lx@mung@bibliography` (latex_constructs.pool.ltxml:4109-4122) closes an enclosing
+`enumerate`/`itemize`/`description` and invokes `\thebibliography`, whatever it currently is; the bibliography stays open
+until something closes it (the document's end, the next sectioning unit).
+**Rust behavior** (sect11.rs `\lx@mung@bibliography`): it opens the kernel's own bibliography,
+`\lx@kernel@thebibliography`: a class's list `\let` over `\thebibliography` no longer reopens per `\bibitem` (KPE #569).
+In `{thebibliography}` (that class list), the class's `\endthebibliography` first ends its list, and the kernel's end is
+the environment's; in another environment (a class's `{references}`, an author's `\begin{list}{}{}`), the environment's end
+closes the bibliography first and then runs as its own (the class's `\endlist` ending its list frame), so text and floats
+after `\end{references}` follow the bibliography, as pdflatex prints them, instead of landing in the last entry.
+**Why**: content placement and the PushbackLimit loops (run 336: ajour, cjour, IEEE-Con-Sys-mag; 0711.2301,
+astro-ph0005341, 2310.12571, astro-ph0002202, gr-qc0207046). Guards `perfect_kernel_batch64p::{class_lets_its_own_bibliography,
+class_references_list_with_bibitems, class_references_list_followed_by_text, bibitem_in_an_environment_without_an_end_macro}`. Residuals (synthetic, RED repros): a class
+end that prints text after its list prints it before the entries (`class_bibliography_end_prints_text`); a class
+bibliography built on `{enumerate}` leaves a group open (`class_bibliography_as_enumerate`); a `{references}` inside an
+`{itemize}` and an `\item[]` before the first `\bibitem` still misplace the list item and the bibliography; an
+environment whose end is a constructor (`\end{multicols}`, `minipage`; `quote`/`center` close by autoclose) and a
+bibliography opened inside a group nested in the environment (a command-form `\references … \endreferences` in `{small}`)
+leave what follows in the last entry, as before. For an environment with no `\end<env>` (`{small}`) its end closes the bibliography, the saved
+end being `\relax`.

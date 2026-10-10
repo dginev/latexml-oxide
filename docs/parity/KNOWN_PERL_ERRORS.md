@@ -10216,7 +10216,12 @@ amsmath keeps the text in `\df@tag` (amsmath.sty:1224-1227) and never redefines 
 pdflatex: the tag "(0)i". Perl: out of memory; Rust before 62i: `PushbackLimit` (2408.12869; also
 `\tag{\thesection.\theequation}`). Rust (62i, `amsmath_sty.rs` `\lx@ams@tag@text`): `\theequation` is the text with
 each `\theequation` in it the meaning it had. Guard
-`perfect_kernel_batch61::tag_text_mentioning_theequation_gets_the_counter`.
+`perfect_kernel_batch61::tag_text_mentioning_theequation_gets_the_counter`. A `\theequation` the text reaches through
+another macro still looped (`\tag{\thesubeqn}`, `\thesubeqn` = `\theequation\alph{subeqn}`: 74 of run 336's papers,
+1208.5957, 1209.0051; Perl 4 errors): since 64p the text is kept in `\lx@ams@tag@body` and `\theequation` is
+`\lx@ams@tag@print`, a protected macro without argument typesetting the text with `\theequation` the counter's (an
+`\edef` keeps it whole). Guard
+`perfect_kernel_batch64p::amsmath_tag_reaches_theequation_indirectly`.
 
 ## 476. A document's `\let\@@cite\cite` makes `\cite` call itself
 
@@ -12069,3 +12074,37 @@ Minimal trigger: `\usepackage{amsmath}\makeatletter` `$\macc@depth\@ne\macc@set@
 
 Fixed in Rust (64qb): the chain transcribed (amsmath_sty.rs), with `\skewchar` a font register (its Rust port read
 only the font token; Perl TeX_Math.pool.ltxml:1207-1215). Guard `perfect_kernel_batch64qb::amsmath_widebar_snippet`.
+
+## 568. amsmath's `\mathaccentV` is missing, so a document's own accent made of it is undefined
+
+amsmath.sty:754-758 makes each `\DeclareMathAccent` accent `\mathaccentV{<name>}<family><slot>` and :811-831 typesets
+it with `\mathaccent"\accentclass@<family><slot>`; amsmath.sty.ltxml defines no `\mathaccentV` (it keeps LaTeXML's own
+accents). A document that builds an accent of its own with it — `\edef\bar{\unexpanded{\protect\mathaccentV{bar}}
+\number\symboldoperators16}` (21 of run 336's papers, 1503.00176, 1710.11113) — or a `.bbl` written out by pdflatex
+(`\protect\mathaccentV {hat}05E{D}`, 2008.11212) gets an undefined-macro error per use and loses the accent.
+
+Minimal trigger: `\usepackage{amsmath}\DeclareSymbolFont{boldoperators}{OT1}{cmr}{bx}{n}`
+`\edef\bar{\unexpanded{\protect\mathaccentV{bar}}\number\symboldoperators16}` … `$\bar{p}$` (Perl: 2 errors).
+
+Fixed in Rust (62d, 64p): in math `\mathaccentV` is amsmath's `\mathaccent"\accentclass@#2#3#4{#5}`, the slot's accent
+in the family's font (62d's reading of the name as LaTeXML's accent made that document's `\bar` call itself to the
+PushbackLimit); outside math amsmath's `\nonmatherr@` (:902-903). Guard
+`perfect_kernel_batch64p::amsmath_mathaccent_v_document_accent`.
+
+## 569. A class's own bibliography list `\let` over `\thebibliography` reopens per `\bibitem`, without end
+
+The kernel's `\bibitem` (latex_constructs.pool.ltxml:4074-4076), outside an open bibliography, calls
+`\lx@mung@bibliography{\@currenvir}`, which invokes the current `\thebibliography` (:4121). A class that `\let`s its own
+list over it — ajour.cls:2427, cjour.cls:2252 `\let\thebibliography\bibreferences` (a `\section*` and a `\list`),
+IEEE-Con-Sys-mag — makes that a class list again, whose first `\bibitem` reopens it: Perl (with `--includestyles`, which
+reads such a class) loops, out of memory under an 8 GB cap after ~53 s; Rust ran to PushbackLimit (run 336: 0711.2301, astro-ph0005341, 2310.12571), or with few
+entries nested `<ltx:itemize>`s with bibitems in them.
+
+Minimal trigger: a class `\LoadClass{article}\def\bibreferences#1{\section*{\refname}\list{\@biblabel{\@arabic
+\c@enumiv}}{\usecounter{enumiv}}}\let\endbibreferences\endlist\let\thebibliography\bibreferences
+\let\endthebibliography\endbibreferences` and a document with
+`\begin{thebibliography}{9}\bibitem{a} A.\bibitem{b} B.\end{thebibliography}` (repro
+`index-bib/class_lets_its_own_bibliography.tex`; `biblet.cls`).
+
+Fixed in Rust (64p, OD #484): the mung opens the kernel's bibliography. Guards
+`perfect_kernel_batch64p::{class_lets_its_own_bibliography, class_references_list_with_bibitems}`.
