@@ -7,6 +7,15 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // mdpi.cls:109-110, 120: the `submit` (the default) and `accept` statuses; a submitted manuscript's title page
+  // prints "Version … submitted to …" where an accepted one prints its `\history` (mdpi.cls:664-670). The journal and
+  // type options are the printed page's, and the rest, which mdpi.cls:117 passes to article (size, paper), set only
+  // its layout, so none is passed on.
+  RawTeX!(r"\def\@status{submit}\def\lx@mdpi@submit{submit}");
+  DeclareOption!("submit", "\\gdef\\@status{submit}");
+  DeclareOption!("accept", "\\gdef\\@status{accept}");
+  DeclareOption!(None, {});
+  ProcessOptions!();
   LoadClass!("article");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
@@ -191,6 +200,17 @@ LoadDefinitions!({
     "\\historypublished{}",
     "\\@add@frontmatter{ltx:note}[role=published]{#1}"
   );
+  // mdpi.cls:384 `\newcommand{\history}[1]{\gdef\@history{#1}}`: the author's dates, labels and all ("Received: 7
+  // October 2020; Accepted: …"), printed under the abstract unless the status is `submit` (mdpi.cls:664-670, 679-685);
+  // a later `\history` replaces it (`\gdef`).
+  // Witnesses 1003.3225, 1910.14533, 2010.14300, 2109.09102, 2002.09734.
+  DefMacro!(
+    "\\history{}",
+    "\\ifx\\@status\\lx@mdpi@submit\\else\\lx@clear@frontmatter{ltx:note}[role=history]\\@add@frontmatter{ltx:note}[role=history]{#1}\\fi"
+  );
+  // mdpi.cls:295 `\newcommand{\changeurlcolor}[1]{\hypersetup{urlcolor=#1}}` (the class's own title-page DOI links,
+  // and papers calling it). Witnesses as for `\history`.
+  DefMacro!("\\changeurlcolor{}", "\\hypersetup{urlcolor=#1}");
   def_macro_noop("\\SetCaptionDefault")?;
 
   // Newer mdpi.cls L668-685 — additional date/metadata setters.

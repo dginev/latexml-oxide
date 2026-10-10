@@ -78,6 +78,12 @@ LoadDefinitions!({
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
   Let!("\\acknowledgements", "\\acknowledgments");
   Let!("\\endacknowledgements", "\\endacknowledgments");
+  // quantumarticle.cls:1266-1279: at `\begin{document}` the class loads tikz when installed (`\IfFileExists`, :1266),
+  // for its title-page logo; tikz brings graphicx (pgfcore.sty:10), which papers then use without loading it
+  // (`\includegraphics` undefined, 2110.03913). The xstring it loads there too (:1270, :933) serves only its own
+  // date check and title URL code, which this binding does not run. Perl's binding (quantumarticle.cls.ltxml) loads
+  // neither.
+  RawTeX!(r"\AtBeginDocument{\IfFileExists{tikz.sty}{\RequirePackage{tikz}\usetikzlibrary{calc}}{}}");
   // quantumarticle.cls:22 `\def\quantumarticleversion{6.1}` (quantum-template).
   DefMacro!("\\quantumarticleversion", "6.1");
 });

@@ -27,6 +27,12 @@ LoadDefinitions!({
   load_class_with_options("book", Tokens!())?;
   RequirePackage!("sv_support");
   RequirePackage!("url");
+  // svmult.cls v1.0:939/942 (CR line ends), svmultln.cls:1810/1813: `\newtoks\tocauthor`, `\newtoks\toctitle`, the
+  // table-of-contents forms of the author and title — token registers, as in llncs (llncs_cls.rs), so
+  // `\toctitle{…}` assigns and a bare `\tocauthor\toctitle\maketitle` never eats what follows. Witnesses 0704.1469,
+  // astro-ph0103277, astro-ph9905256, gr-qc0307119, 1504.06158 (svmultln).
+  DefRegister!("\\tocauthor" => Tokens!());
+  DefRegister!("\\toctitle" => Tokens!());
 
   // \title with optional * to affect numbering (* => numart, none => book)
   DefMacro!("\\title OptionalMatch:* {}",

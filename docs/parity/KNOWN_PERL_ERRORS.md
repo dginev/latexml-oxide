@@ -12108,3 +12108,51 @@ Minimal trigger: a class `\LoadClass{article}\def\bibreferences#1{\section*{\ref
 
 Fixed in Rust (64p, OD #484): the mung opens the kernel's bibliography. Guards
 `perfect_kernel_batch64p::{class_lets_its_own_bibliography, class_references_list_with_bibitems}`.
+
+## 570. The iopart binding lacks the class's `\ioptwocol`
+
+iopart.cls:1096-1097 `\def\ioptwocol{…\twocolumn}`; iopart.cls.ltxml defines no `\ioptwocol` (1,058 of run 336's papers
+first-error on it: 1004.1944, 1704.06471, 2012.05676).
+
+Minimal trigger: `\documentclass{iopart}\begin{document}\ioptwocol x\end{document}` (Perl: 1 error).
+
+Fixed in Rust (64qa): `\ioptwocol` = `\twocolumn`. Guard `perfect_kernel_batch64qa`.
+
+## 571. revtex4_support's `\rev@citealpnum` is missing (Rust: aliased to a `\citealpnum` that does not exist)
+
+revtex4-1.cls:6939-6945 (revtex4-2.cls:6961) `\rev@citealpnum` = citealp with `\@cite` = `\NAT@citenum`; an apsrev4-1
+`.bbl` note uses it. Perl revtex4_support has none; Rust `Let!("\\rev@citealpnum","\\citealpnum")` pointed at an
+undefined name (1,023 first-error papers: 1002.2610, 1511.04077, 1903.06404).
+
+Minimal trigger: an apsrev4-1 `.bbl` note `\rev@citealpnum{k}` (Perl: undefined).
+
+Fixed in Rust (64qa): `\rev@citealpnum` = natbib's `\citenum` (natbib_sty.rs; Perl natbib.sty.ltxml:246).
+
+## 572. svmult.cls.ltxml lacks the `\toctitle`/`\tocauthor` registers
+
+svmult.cls:939/942 (v1.14 :1683/:1686) `\newtoks\toctitle`, `\newtoks\tocauthor`; Perl's binding defines neither, so
+`\toctitle{T}` is undefined and prints "T" (786 + 174 first-error papers: 0704.1469, astro-ph0103277, gr-qc0307119).
+
+Minimal trigger: `\documentclass{svmult}\begin{document}\toctitle{T}\maketitle\end{document}` (Perl: 2 errors, "T" printed).
+
+Fixed in Rust (64qa): token registers, as llncs_cls.rs has them (a register so `\toctitle{…}` does not eat `\maketitle`).
+
+## 573. quantumarticle.cls.ltxml does not load tikz, so a bare `\includegraphics` is undefined
+
+quantumarticle.cls:1266-1279 loads tikz (and so graphicx) at `\AtBeginDocument`; Perl's binding skips it (61
+first-error papers: 2110.03913).
+
+Minimal trigger: `\documentclass{quantumarticle}\begin{document}\includegraphics{x}\end{document}`.
+
+Fixed in Rust (64qa): tikz (with its `calc` library) at `\begin{document}` as the class does (OD #485).
+
+## 574. epsfig's `\epsfbox` is a no-op, so its figure is lost
+
+epsfig.sty.ltxml:69 `DefPrimitive('\epsfbox[]{}', undef)` (Rust epsfig_sty.rs the same); TL epsfig.sty:61-100 includes the
+graphic at `\epsfxsize`. Every `\epsfbox`/`\epsffile` figure of a `\usepackage{epsfig}` paper is dropped (found with the
+ws classes' psfig/epsfig loading, 0908.3524).
+
+Minimal trigger: `\usepackage{epsfig}\begin{document}\epsfxsize=3cm\epsfbox{example-image-a.pdf}\end{document}` (no
+`<graphics>`).
+
+Open (RED `singletons/ws_procs_psfig.tex`; its own batch with an epsfig A/B).

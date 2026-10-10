@@ -1,0 +1,19 @@
+% witness: 1703.03659 (ptephy_v1: `\address{\affil{1}$^{1}${Nagoya University, …} \\ \affil{2}$^{2}${…} …}`); 1606.03167,
+%          2311.07297 (authblk-TI's `\affil{text}` after the names, ptephy_v1.cls:485)
+% oracle:  pdflatex (1807.02967's ptephy_v1.cls and authblk-TI.sty, a stand-in for the logo `newlogo`, TL 2025) 0
+%          errors: "^1 Univ A, Tokyo / ^2 Lab B, Kyoto" under the names (and authblk's own affiliation lines "1", "2")
+% engines: rust 64h4 = 1 error (\name undefined)
+% expect:  0 errors; Ann with Univ A, Bob with Lab B, each line's first mark its label (the author's own `$^{1}$`
+%          after it shown)
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy_v1}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{1} and \name{Bob Baker}{2}}
+\address{\affil{1}$^{1}${Univ A, Tokyo} \\
+\affil{2}$^{2}${Lab B, Kyoto}}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

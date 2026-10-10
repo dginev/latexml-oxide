@@ -380,4 +380,9 @@ LoadDefinitions!({
   DefMacro!("\\varindent", "\\itemize");
   DefMacro!("\\endvarindent", "\\enditemize");
   DefMacro!("\\nonum", "\\par");
+
+  // iopart.cls:1095-1097 ("2012 new option for twocolumn output"): the two-column page geometry, then `\twocolumn`.
+  // Witnesses 1004.1944, 1704.06471, 2012.05676, 2406.14105, 2212.07640.
+  RawTeX!(r"\def\ioptwocol{\setlength\hoffset{-0.5in}\setlength\voffset{-0.5in}\setlength\textwidth{6.75in}
+\setlength\columnsep{0.2in}\setlength\textheight{9.25in}\mathindent=0in\twocolumn}");
 });

@@ -1,0 +1,19 @@
+% witness: 2311.07297, 1606.03167 (ptephy_v1: authblk-TI's `\author{…}\affil{text}`, authblk-TI.sty:104-121: an
+%          unmarked `\affil` belongs to the authors given since the one before it)
+% oracle:  pdflatex (1807.02967's ptephy_v1.cls and authblk-TI.sty, a stand-in for the logo `newlogo`, TL 2025) 0
+%          errors: "Ann Able / Univ A and Bob Baker / Lab B", each name over its own affiliation
+% engines: rust 64h4 = 1 error (\name undefined)
+% expect:  0 errors; Ann with Univ A, Bob with Lab B
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy_v1}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{}}
+\affil{Univ A}
+\author{\name{Bob Baker}{}}
+\affil{Lab B}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

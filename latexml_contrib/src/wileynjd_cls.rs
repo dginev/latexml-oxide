@@ -42,6 +42,12 @@ LoadDefinitions!({
   RequirePackage!("varwidth");
   RequirePackage!("dcolumn");
 
+  // WileyNJD-v2.cls:1217-1221 (WileyNJDv5.cls:3636-3640, WileyASNA-v1 through WileyNJD-v1): the address parts of an
+  // affiliation, each printing its argument; OmniBus has the others, but leaves `\state` out (omnibus_cls.rs: a
+  // `\newcount\state` in some classes) — here it is only `\orgaddress{\state{NY}, \country{USA}}`, as in mrm_cls.rs.
+  // Witnesses 1705.06379, 1910.04517, 2210.01555, 2605.24284.
+  def_macro_identity("\\state{}")?;
+
   // Wiley frontmatter — preserve author content as ltx:note.
   DefMacro!("\\authormark{}", "\\textsuperscript{#1}");
   DefMacro!(

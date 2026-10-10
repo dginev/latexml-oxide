@@ -1,0 +1,21 @@
+% witness: 1211.4904, 1412.6580, 1807.02967 (ptephy_v1), 2206.10540 (`\author{\name{…}{1} and …}`,
+%          `\address{\affil{1}{…}…}`; ptephy.cls:426, 1318, 1388-1390)
+% oracle:  pdflatex (1412.6580's ptephy.cls and a stand-in for its logo graphic `newlogo`, TL 2025) 0 errors: "Ann
+%          Able^1, Bob Baker^{1,2,*}, and Cy Coe^2" over "^1 Univ A, Tokyo / ^2 Lab B, Kyoto / *E-mail: bob@example.org"
+% engines: rust 64h4 = 1 error (\name undefined); perl 0.8.8 = 1 (\name)
+% expect:  0 errors; three creators, each with the affiliations its marks name (Bob both), the email Bob's (the `\ast`
+%          author, not the last: 1206.6924, 1212.6803, 1504.01717); of the marks only Bob's ∗ shown, as
+%          a symbol
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{1}, \name{Bob Baker}{1,2,\ast}, and \name{Cy Coe}{2}}
+\address{\affil{1}{Univ A, Tokyo}
+\affil{2}{Lab B, Kyoto}
+\email{bob@example.org}}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: 1008.0611, 1008.0438, 1202.5868, physics0701118, hep-ex0611057 (`\psfig{file=…}` with no package of its own;
+%          ws-procs9x6.cls:614-617 `\InputIfFileExists{psfig.sty}…`, `\InputIfFileExists{epsfig.sty}…`)
+% oracle:  pdflatex (0704.0883's ws-procs9x6.cls, TL 2025: no psfig.sty, epsfig.sty's `\psfig`) 0 errors: the image,
+%          "Fig. 1. A figure."
+% engines: rust 64h4 = 2 errors (\bodymatter, \psfig undefined); 64qa = 1 (\psfig). Loading psfig+epsfig in the ws
+%          binding (tried in 64qa) fixes it but loses `\epsfbox` figures (0908.3524): epsfig_sty.rs makes `\epsfbox` a
+%          no-op, as Perl's epsfig.sty.ltxml:69 does, where epsfig.sty:61-100 includes the graphic at `\epsfxsize`
+% expect:  0 errors; the figure's one <graphics> of example-image-a
+% status:  RED (64qa): needs epsfig's `\epsfbox` first (a binding used far beyond ws), then the ws class load
+% preload: ar5iv.sty
+\documentclass{ws-procs9x6}
+\begin{document}
+\title{T}
+\bodymatter
+\section{Intro}
+\begin{figure}
+\centerline{\psfig{file=example-image-a.pdf,width=2cm}}
+\caption{A figure.}
+\end{figure}
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 1512.04524 (D. Naito `{1\ast}`), 1504.04965 (`{1*}`), 1408.5182 (`{1\ast}`, `{2\dagger}`), 1502.00715,
+%          1401.4647 (`\email{…}, {\dag}ohnishi@…, {\ddag}…` after the `\affil`s); ptephy.cls:1388 `\name#1#2{#1$^{#2}$}`
+% oracle:  pdflatex (1412.6580's ptephy.cls and a stand-in for its logo graphic `newlogo`, TL 2025) 0 errors: "Ann
+%          Able^1, Bob Baker^{1∗}, Cy Coe^{2†}, and Di Dee^2" over "^1 Univ A / ^2 Lab B / ∗E-mail: bob@example.org,
+%          †cy@example.org"
+% engines: rust 64h4 = 1 error (\name undefined)
+% expect:  0 errors; Ann and Bob with Univ A, Cy and Di with Lab B; Bob's email his, Cy's his (its `†`); Bob's ∗ and
+%          Cy's † shown after their names, as the PDF prints them
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{1}, \name{Bob Baker}{1\ast}, \name{Cy Coe}{2\dagger}, and \name{Di Dee}{2}}
+\address{\affil{1}{Univ A}
+\affil{2}{Lab B}
+\email{bob@example.org}, {\dag}cy@example.org}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

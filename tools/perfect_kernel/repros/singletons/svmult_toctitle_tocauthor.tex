@@ -1,0 +1,17 @@
+% witness: 0704.1469, astro-ph0103277, astro-ph9905256, gr-qc0307119; 1504.06158 (svmultln)
+% oracle:  pdflatex (the witness's svmult.cls v1.0, TL 2025) 0 errors: "A Title / A. Author / Text." (svmult.cls
+%          :939/942 `\newtoks\tocauthor`, `\newtoks\toctitle`)
+% engines: rust 64h4 = 2 errors (\toctitle, \tocauthor undefined); perl 0.8.8 = 2 errors
+% expect:  0 errors; title "A Title", one creator "A. Author", the paragraph "Text." (the toks assignments print nothing)
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\title*{A Title}
+\toctitle{A Title}
+\titlerunning{Short}
+\author{A. Author}
+\tocauthor{A. Author}
+\maketitle
+Text.
+\end{document}

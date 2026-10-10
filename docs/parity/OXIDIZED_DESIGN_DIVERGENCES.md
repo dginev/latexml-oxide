@@ -14865,3 +14865,23 @@ environment whose end is a constructor (`\end{multicols}`, `minipage`; `quote`/`
 bibliography opened inside a group nested in the environment (a command-form `\references … \endreferences` in `{small}`)
 leave what follows in the last entry, as before. For an environment with no `\end<env>` (`{small}`) its end closes the bibliography, the saved
 end being `\relax`.
+
+### 485. quantumarticle loads tikz at `\begin{document}`; ptephy's author block is read by the binding (Perl: neither)
+
+**Perl behavior**: quantumarticle.cls.ltxml loads no tikz/graphicx (KPE #573); ptephy has no Perl binding (the raw class's
+`\name`/`\affil`/`\address` are undefined).
+**Rust behavior**: quantumarticle loads tikz with its `calc` library at `\begin{document}` as the class does
+(quantumarticle.cls:1266-1279), not the xstring it also loads there (date check, title URL) — ~0.1 s per paper.
+ptephy (ptephy.cls/ptephy_v1.cls/ptephy_v2): (1) `\name{}{marks}` marks expanded and normalized before the kernel splits
+the names — footnote symbols one character each, a symbol glued to a mark a mark of its own (`{1\ast}` = `1,∗`), spacing
+dropped; numbers and letters requested together and each footnote symbol on its own, so the kernel shows it as the PDF
+prints it; two `\name`s with only spaces/notes/line breaks between them two people (a `~`, `\quad` or `\par` between
+still joins them; none of 204 papers); `\collaborator{X}` (ptephy_v1.cls:1403) a name of its own; (2) `\email` routed by
+the `∗` mark, a symbol-led piece of an email or of the address text by its symbol, else a block contact; an `\address`
+before the `\author` sees no starred author yet (its email the block's); (3) in an `\address` with single-argument
+`\affil`s, emails taken out before the kernel's list parser, an email after a mark-only `\affil{\dag}` that mark's; (4)
+unlabelled `\affil`s attach `annotate=run` (authblk-TI.sty:104-121); (5) an `\address` of two-argument `\affil`s is
+digested in a discarded `\hbox`: each `\affil`/`\email` adds its frontmatter, what it prints beside them is set aside.
+mdpi's `\history` keeps the last call (mdpi.cls:384 `\gdef`), gated by the `submit`/`accept` status.
+**Why**: content (run 336: ptephy 204 papers with errors → 27, starred-author emails 28 → 146; quantumarticle 61 → 4).
+Guards `perfect_kernel_batch64qa`.

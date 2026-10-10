@@ -246,7 +246,9 @@ LoadDefinitions!({
   // equivalents so .bbl files referencing them resolve cleanly.
   // Witness 2412.13042 (revtex4-2 + main.bbl using \rev@citealp).
   Let!("\\rev@citealp",     "\\citealp");
-  Let!("\\rev@citealpnum",  "\\citealpnum");
+  // revtex4-1.cls:6939-6945 (revtex4-2.cls:6961): `\citealp` with `\@cite` let to `\NAT@citenum`, the bare number
+  // — natbib's `\citenum`; there is no `\citealpnum`. Witnesses 1002.2610, 1511.04077, 1903.06404 (their .bbl).
+  Let!("\\rev@citealpnum",  "\\citenum");
   Let!("\\rev@citet",       "\\citet");
   Let!("\\rev@citenum",     "\\citenum");
   Let!("\\rev@citemark",    "\\citenum");

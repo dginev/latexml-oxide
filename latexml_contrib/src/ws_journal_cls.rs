@@ -81,4 +81,17 @@ LoadDefinitions!({
   // citation; the bare-vs-bracketed number is a post-processing nuance). Accepts
   // comma-separated keys like \cite. Witness 2306.15982 (ws-ijmpd).
   DefMacro!("\\refcite{}", "\\cite{#1}");
+
+  // ws-procs9x6.cls:721-731, ws-ijmpa.cls:685-694 (every ws class, the lengths differing; ws-ijmpb.cls:653-658 in
+  // cond-mat0509290's copy; ws-rv9x6.cls:618-620 an `\hline` for `\Hline`): the table rules. `\Hline` is a
+  // double-weight `\hline`; the others add a rule (or `\crule`'s argument, a `\cline`) between rows that are empty and
+  // of negative height, which the alignment drops, so each is the rule it draws. Witness 0704.0076 (ws-ijmpa).
+  RawTeX!(
+    r"\def\Hline{\noalign{\ifnum0=`}\fi\hrule \@height 2\arrayrulewidth \futurelet\@tempa\@xhline}
+\def\toprule{\Hline\\[-6.5pt]}
+\def\colrule{\\[-7pt]\hline\\[-6pt]}
+\def\TMcolrule{\\[-9.5pt]\hline\\[-9.5pt]}
+\def\botrule{\\[-7pt]\Hline}
+\def\crule#1{\\[-7pt]#1\\[-6pt]}"
+  );
 });

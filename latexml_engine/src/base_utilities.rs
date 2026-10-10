@@ -10655,7 +10655,8 @@ fn normalize_hspace_separators(tokens: Tokens) -> Tokens {
 /// note relation — NEVER an affiliation (which is numbered). Kept deliberately to
 /// pure symbols so a numeric (`1`) or lettered (`a`) affiliation mark is never
 /// misread as a note. Mirrors the note-vs-affiliation split already documented in
-/// `starts_with_affiliation_mark`.
+/// `starts_with_affiliation_mark`. The ptephy binding normalizes the same symbols (latexml_contrib ptephy_cls.rs
+/// `footnote_symbol`): keep the two lists in step.
 fn is_footnote_symbol_operand(sym: &[Token]) -> bool {
   const SYMBOL_CHARS: &[&str] = &[
     "*", "\u{2217}", "\u{2020}", "\u{2021}", "\u{A7}", "\u{B6}", "\u{22C6}", "\u{2605}",

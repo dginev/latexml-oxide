@@ -1,0 +1,24 @@
+% witness: 0704.0883, 1008.0906, 2202.11015 (`\bodymatter`, ws-procs9x6.cls:586-591); 0704.0076 (`\toprule`, ws-ijmpa.cls:685-693)
+% oracle:  pdflatex (the witness's ws-procs9x6.cls, TL 2025) 0 errors: "1. Intro", text with footnote "a", a table
+%          ruled above, below the head and at the bottom
+% engines: rust 64h4 = 4 errors (\bodymatter, \toprule, \colrule, \botrule undefined); perl 0.8.8 = 5 (the same, and \tbl)
+% expect:  0 errors; footnote mark "a"; three rows, the head ruled above (t), the body's first row below it (t), the
+%          last row ruled below (b), no empty row
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ws-procs9x6}
+\begin{document}
+\title{T}
+\bodymatter
+\section{Intro}
+Text.\footnote{Note.}
+\begin{table}
+\tbl{Data.}
+{\begin{tabular}{@{}cc@{}}
+\toprule
+A & B \\\colrule
+1 & 2 \\
+3 & 4 \\ \botrule
+\end{tabular}}
+\end{table}
+\end{document}

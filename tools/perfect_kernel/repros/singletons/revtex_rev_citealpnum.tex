@@ -1,0 +1,17 @@
+% witness: 1002.2610, 1511.04077, 1903.06404 (their apsrev4-1 .bbl: `\bibinfo{note}{… \rev@citealpnum{key}}`)
+% oracle:  pdflatex (revtex4-1, TL 2025) 0 errors: "[2] Obtained in Ref. 1." (revtex4-1.cls:6939-6945: `\citealp` with
+%          `\@cite` = `\NAT@citenum`, the bare number)
+% engines: rust 64h4 = 1 error (\rev@citealpnum let to a nonexistent \citealpnum); perl 0.8.8 = 1 error
+% expect:  0 errors; the second item's text cites k as a bare number, linked to bib.bib1
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass[aps,prb]{revtex4-1}
+\begin{document}
+See Ref.~\cite{k}.
+\begin{thebibliography}{1}
+\makeatletter
+\bibitem{k} A. B., Phys. Rev. B \textbf{1}, 2 (2000).
+\bibitem{n} Obtained in Ref.~\rev@citealpnum{k}.
+\makeatother
+\end{thebibliography}
+\end{document}

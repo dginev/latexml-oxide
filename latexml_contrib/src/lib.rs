@@ -321,6 +321,7 @@ pub mod wileynjd_cls;
 pub mod wlpeerj_cls;
 pub mod ws_journal_cls;
 pub mod ws_p8_50x6_00_cls;
+pub mod ws_procs_cls;
 pub mod xkeymask_sty;
 pub mod xltabular_sty;
 pub mod xr_sty;
@@ -770,9 +771,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ws-ijmpe", "cls", ws_journal_cls::load_definitions),
   ("ws-mplb", "cls", ws_journal_cls::load_definitions),
   ("ws-mpla", "cls", ws_journal_cls::load_definitions),
-  ("ws-rv9x6", "cls", ws_journal_cls::load_definitions),
-  ("ws-procs9x6", "cls", ws_journal_cls::load_definitions),
-  ("ws-procs961x669", "cls", ws_journal_cls::load_definitions),
+  ("ws-rv9x6", "cls", ws_procs_cls::load_definitions),
+  ("ws-procs9x6", "cls", ws_procs_cls::load_definitions),
+  ("ws-procs961x669", "cls", ws_procs_cls::load_definitions),
 ];
 
 /// Runtime lookup: route `filename` (e.g. `"MnSymbol.sty"`) through its

@@ -1,0 +1,18 @@
+% witness: 1605.07339 (`\affil{}{…}` under two names), 1902.10888; ptephy.cls:1390 prints each `\affil{}{…}` under
+%          all the names
+% oracle:  pdflatex (1412.6580's ptephy.cls and a stand-in for its logo graphic `newlogo`, TL 2025) 0 errors: "Ann Able
+%          and Bob Baker" over "Univ A / Lab B"
+% engines: rust 64h4 = 1 error (\name undefined)
+% expect:  0 errors; both authors with Univ A and Lab B
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{} and \name{Bob Baker}{}}
+\address{\affil{}{Univ A}
+\affil{}{Lab B}}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

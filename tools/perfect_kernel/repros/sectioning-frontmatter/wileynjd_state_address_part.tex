@@ -1,0 +1,18 @@
+% witness: 1705.06379, 1910.04517, 2210.01555, 2605.24284 (WileyNJDv5) (`\orgaddress{\state{…}, \country{…}}`)
+% oracle:  pdflatex (1705.06379's WileyNJD-v2.cls, TL 2025; `\def\reserveinserts#1{}` first, as the class's etex call
+%          fails on TL 2025) 0 errors: "1 Naval Surface Warfare Center, Florida, United States" (WileyNJD-v2.cls:1220
+%          `\newcommand{\state}[1]{#1}`)
+% engines: rust 64h4 = 1 error (\state undefined: OmniBus leaves it out); perl 0.8.8 = 4 (\state, \orgname, \orgaddress, \country)
+% expect:  0 errors; the author's address contact reads "Naval Surface Warfare Center, Florida, United States"
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass[AMS,STIX1COL]{WileyNJD-v2}
+\begin{document}
+\articletype{Article Type}
+\title{A Title}
+\author[1]{Ann Able}
+\address[1]{\orgname{Naval Surface Warfare Center}, \orgaddress{\state{Florida}, \country{United States}}}
+\abstract{An abstract.}
+\maketitle
+Text.
+\end{document}

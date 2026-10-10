@@ -1,0 +1,27 @@
+% witness: 2210.05569 (`\name{Ryuichiro Kitano}{1,2}` then, on the next line, `\name{Hiromasa Takaura}{1,\ast}`),
+%          1512.04524, 2404.08725, 2101.03480 (the comma between two `\name`s commented out; and
+%          `\collaborator{(The Super-Kamiokande Collaboration)}`, ptephy_v1.cls:1403), 1409.7469 (a `\\` before the last
+%          `\name`)
+% oracle:  pdflatex (1412.6580's ptephy.cls with ptephy_v1.cls:1403's `\collaborator`, a stand-in for the logo
+%          `newlogo`, TL 2025) 0 errors: "Ann Able^{1,2} Bob Baker^{1,∗} Cy Coe^2", on the next line "Di Dee^1", then
+%          "(The X Collaboration)" in bold
+% engines: rust 64h4 = 1 error (\name undefined)
+% expect:  0 errors; five creators, Ann with Univ A and Lab B, Bob with Univ A, the email and his ∗,
+%          Cy with Lab B, Di with Univ A, "(The X Collaboration)" with none
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\providecommand\collaborator[1]{\textbf{#1}\par}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{1,2}
+\name{Bob Baker}{1,\ast}%,
+\name{Cy Coe}{2}\\
+\name{Di Dee}{1}\\ \collaborator{(The X Collaboration)}}
+\address{\affil{1}{Univ A}
+\affil{2}{Lab B}
+\email{bob@example.org}}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}
