@@ -3,9 +3,9 @@
 %          pdflatex prints arabic in every version (aastex.cls 5.x `\@arabic{\c@section}`, aastex63.cls:1117,
 %          aastex701.cls:7629). Perl the same (aastex.cls.ltxml:44, revtex4_support.sty.ltxml:111)
 % oracle:  pdflatex 0 errors: "1. INTRODUCTION", "1.1. Data", "see Section 1"
-% engines: rust 64e4 = section "I", subsection "I.1"(?), ref text "I"
+% engines: rust 64e4 = section "I", subsection "I.1", ref text "I"
 % expect:  0 errors; section tag 1, subsection 1.1, \ref text 1
-% status:  RED (64e4)
+% status:  RED (64e4) -> GREEN (64f)
 \documentclass{aastex701}
 \begin{document}
 \section{Introduction}\label{s:i}

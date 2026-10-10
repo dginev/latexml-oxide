@@ -199,7 +199,15 @@ LoadDefinitions!({
   RawTeX!(r"\def\ext@plate{lof}");
   DefMacro!("\\platename", "Plate");
   def_macro_noop("\\platewidth{Dimension}")?;
-  DefMacro!("\\platenum{}", "\\def\\theplate{#1}");
+  // aastex.cls 5.x:1691-1695: the plate takes the given number, and the counter steps back so the next plate keeps its
+  // own (Perl's only redefined `\theplate`, aas_support.sty.ltxml:206).
+  DefMacro!("\\platenum{}", "\\def\\theplate{#1}\\let\\@currentlabel\\theplate\\addtocounter{plate}{\\m@ne}");
+  // AASTeX 5.x's other commands the later classes dropped (aastex.cls 5.2): `\subsubsubsection` a level-4 heading
+  // (:1088-1091, `\@startsection{subsubsection}{4}…`, unnumbered at secnumdepth 3), `\supportfrom[…]{…}` its text
+  // (:1988-1989); aastex_cls.rs undefines both for a 6+ class, where they are the paper's own. `\subsubsubsection`:
+  // 0804.1946 ("Synthetic Secular Theory"; `Error:undefined` before), 0803.0586.
+  DefMacro!("\\subsubsubsection", "\\paragraph");
+  DefMacro!("\\supportfrom[]{}", "#2");
 
   // Plate environments — Perl aas_support.sty.ltxml L179-201.
   // Each variant calls beforeFloat (sets \@captype, rebinds \\ → \lx@newline,
@@ -303,8 +311,9 @@ LoadDefinitions!({
     }
   });
   // `\fig` and its kin outside a gridline are the class's panel too — no AAS class has a numbered `\fig` (Perl's
-  // float form was its own guess, aas_support.sty.ltxml:210); not followed by a brace, a `\ref` shorthand some papers
-  // define (astro-ph/0003209, astro-ph/0503342), LaTeXML's peek.
+  // float form was its own guess, aas_support.sty.ltxml:210); not followed by a brace, LaTeXML's peek reads it as a
+  // `\ref` (aas_support.sty.ltxml:211-221). The papers that define their own `\fig` shorthand are AASTeX 5.x or
+  // emulateapj ones, where aastex_cls.rs leaves `\fig` undefined for theirs (astro-ph/0003209, astro-ph/0503342).
   DefMacro!("\\fig Semiverbatim Token", sub[(arg, test)] { aas_fig_dispatch(arg, test, "\\lx@aas@fig@panel") });
   DefMacro!("\\leftfig Semiverbatim Token", sub[(arg, test)] { aas_fig_dispatch(arg, test, "\\lx@aas@sidefig@panel") });
   DefMacro!("\\rightfig Semiverbatim Token", sub[(arg, test)] { aas_fig_dispatch(arg, test, "\\lx@aas@sidefig@panel") });

@@ -11872,3 +11872,43 @@ aastex_bare_fig_panels_keep_numbering, aastex_gridline_rows_kept, aastex_rotatef
 aastex5_plate_float}`. With them, AASTeX 5.x's `{plate}` (aastex.cls:1685-1704, the class 0908.0069 bundles; 6+ dropped it):
 the binding's plate float referred to an undefined `\ext@plate` (`Error:undefined`, `inlist="\ext@plate"`), now `lof`
 as the class has it — the family binding serves every version.
+
+## 557. AASTeX sections numbered in Roman; AASTeX 5.x commands the later classes dropped
+
+Perl's aastex binding loads revtex4 (aastex.cls.ltxml:44), whose support file sets `\thesection` to `\Roman{section}`
+("Apparently the desired style", revtex4_support.sty.ltxml:111). No AASTeX numbers sections that way: aastex.cls 5.x:1076
+and aastex701.cls:7629-7636 are arabic (`1`, `1.1`, `1.1.1`), as is emulateapj.cls:676 (whose binding loads aastex's), so
+every AAS paper's sections, subsections and section references read "I", "I.1" against the PDF's "1", "1.1" (2609.21324,
+astro-ph/0003209).
+
+The binding also misses three AASTeX 5.x commands (aastex.cls 5.2, the class 0908.0069 bundles): `\subsubsubsection`
+(:1088, a level-4 heading — aas_support.sty.ltxml:171 notes it, defines nothing; 0804.1946 `Error:undefined`, 0803.0586),
+`\supportfrom[]{}` (:1988, prints its
+text) and `\platenum` stepping the plate counter back so the next plate keeps its own number (:1691-1695; Perl's only
+redefines `\theplate`, :206). Under 5.x and emulateapj, which have no `\fig`, an author's own `\newcommand{\fig}` is
+skipped for the binding's (:211; `\newcommand` ignores a defined name, Info only; under emulateapj even a `\def`, as
+emulateapj.sty.ltxml:24-38 locks the binding's `\fig`): its peek reads `\fig{f1}` as a `\ref`
+of the wrong label or a figure — astro-ph/0003209 (aastex) and astro-ph/0503342 (emulateapj) lose "Fig." and point at
+`LABEL:example` where the label is `fig:example`.
+
+Minimal triggers: `\documentclass{aastex} … \section{Intro}\label{s:i} … Section~\ref{s:i}`;
+`\subsubsubsection{Deep}`; `\supportfrom[NSF]{NSF grant.}`; `\begin{plate}…\platenum{5}\caption{…}\end{plate}`;
+`\newcommand{\fig}[1]{Fig.~\ref{#1}}`.
+
+Fixed in Rust (64f): aastex_cls.rs restores the arabic `\the<section>` chain after the revtex4 load; aas_support_sty.rs
+defines `\subsubsubsection` as `\paragraph`, `\supportfrom` as its text, and `\platenum` as the 5.x class does. One
+binding serves every AASTeX version, and a command only some versions define is the paper's own in the others: a class
+name carrying version digits (`aastex6` … `aastex701`, direct or through the versioned fallback) is 6+ and leaves
+`\subsubsubsection`/`\supportfrom` undefined; plain `aastex` is 5.x and leaves the `\fig` family and `\gridline`
+undefined — unless the paper ships an `aastex.cls` that defines `\gridline`, a 6+ class under the old name (aastex6.cls:85
+`\ProvidesClass{aastex}`; 1810.04684, 2010.06977, 2103.01741; the 5.0b9/5.2 ones stay 5.x: 0704.0478, 0908.1913,
+1402.6181, 1506.08265, 1512.07697). emulateapj, a revtex4 class of its own (emulateapj.cls:165-167) whose binding loads
+aastex's, leaves the commands the binding dispatches by version undefined (the `\fig` family, `\gridline`,
+`\subsubsubsection`, `\supportfrom`); `\platenum` and `{plate}` stay for every class (the union of features). 0003209 and 0503342 now print "Fig. <ref fig:example>". A direct `aastex7`/`aastex70`
+now loads rotating as aastex7.cls:11484 does (only the fallback's `aastex701` did; 2505.08870). Residual: `\platenum`
+after `\caption` (pdflatex: the caption keeps the stepped number, a later `\label` gets the given one; ours refers to the
+caption's), no witness. Residual: the `.sty` entry points (`\usepackage{aastex}`, aaspp4, aasms4, emulateapj5:
+aastex_sty.rs, aaspp_sty.rs, aasms_sty.rs) load aas_support without the version dispatch, so the 6+ `\fig` family stays
+defined there (Perl the same; the papers sampled `\def\fig`, which overrides it: astro-ph/0002091, 0002170). Guards `perfect_kernel_batch64::{aastex_sections_arabic, aastex5_author_fig_command,
+aastex5_dropped_commands, aastex6_author_subsubsubsection, emulateapj_author_fig_sections}`,
+`perfect_kernel_batch61::aastex7_rotate_and_rotatetable`.

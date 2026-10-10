@@ -3,8 +3,8 @@
 %          pre-empts it (`\newcommand` skips a defined name) and its brace peek reads `{\it top}` as a panel argument
 % oracle:  pdflatex 0 errors WITH aastex.cls 5.x: "Same as Fig. 1top."
 % engines: rust 64e4 = a fake panel (graphic "f1", caption "."), "Fig. 1" lost; 64c7 a numbered Figure 3
-% expect:  0 errors; Figure 2's caption "Same as Fig. 1 top." with a ref to f1
-% status:  RED (64e4) — family-binding version dispatch (memory feedback_class_family_single_binding)
+% expect:  0 errors; Figure 2's caption "Same as Fig. 1top." with a ref to f1
+% status:  RED (64e4) -> GREEN (64f)
 \documentclass{aastex}
 \newcommand{\fig}[1]{Fig.~\ref{#1}}
 \begin{document}

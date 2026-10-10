@@ -4258,7 +4258,8 @@ Text $$x^2$$ more and $y$.
 /// 62y: aastex7/aastex701 load rotating before their own `\rotate` (aastex701.cls:11416, 12196), so a
 /// deluxetable's `\rotate` stays the no-op it is here (deluxetable_sty.rs) rather than rotating's `{rotate}`
 /// environment, which the class file's dependency scan had loaded after the binding; `rotatetable` (:12212) sets its
-/// body. Witnesses 2609.09266 (Fatal TooManyErrors → 2 errors, both its .bib's), 2609.01052.
+/// body. Witnesses 2609.09266 (Fatal TooManyErrors → 2 errors, both its .bib's), 2609.01052. The same under a direct
+/// `aastex7` (64f: the binding read only the versioned fallback's request; 2505.08870).
 #[test]
 fn aastex7_rotate_and_rotatetable() {
   let tex = r"\documentclass{aastex701}\begin{document}
@@ -4274,14 +4275,13 @@ x & y \\
 Turned text.
 \end{rotatetable}
 \end{document}";
-  let cases: [(&str, &str, &str, &str); 2] = [
-    (
-      tex,
-      "tr",
-      "S0.T1.2.2",
-      "<tr xml:id=\"S0.T1.2.2\"><td align=\"left\" border=\"b t\" xml:id=\"S0.T1.2.2.1\">x</td><td align=\"left\" border=\"b t\" xml:id=\"S0.T1.2.2.2\">y</td></tr>",
-    ),
+  let tex7 = tex.replace("{aastex701}", "{aastex7}");
+  let row = "<tr xml:id=\"S0.T1.2.2\"><td align=\"left\" border=\"b t\" xml:id=\"S0.T1.2.2.1\">x</td><td align=\"left\" border=\"b t\" xml:id=\"S0.T1.2.2.2\">y</td></tr>";
+  let cases: [(&str, &str, &str, &str); 4] = [
+    (tex, "tr", "S0.T1.2.2", row),
     (tex, "p", "p1.1", "<p xml:id=\"p1.1\">Turned text.</p>"),
+    (&tex7, "tr", "S0.T1.2.2", row),
+    (&tex7, "p", "p1.1", "<p xml:id=\"p1.1\">Turned text.</p>"),
   ];
   for (tex, tag, id, element) in cases {
     let (log, xml) = convert_with(tex, Some("ar5iv.sty"));

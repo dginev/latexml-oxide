@@ -1,0 +1,17 @@
+% witness: 0804.1946, 0803.0586 (`\subsubsubsection`); 64e review r2 finding 4 — AASTeX 5.x commands the later
+%          classes dropped, under the shared binding:
+%          `\subsubsubsection` (aastex.cls 5.2:1088-1091, a level-4 heading), `\supportfrom[…]{…}` (:1988-1989, prints
+%          its text), `\platenum` (:1691-1695: the plate takes the number, the counter steps back)
+% oracle:  pdflatex 0 errors WITH aastex.cls 5.x (bundled in 0908.0069): "Deep" heading, "NSF grant." in the text,
+%          "Plate 5." then "Plate 1."
+% engines: rust 64e4 = Error:undefined \subsubsubsection and \supportfrom; the second plate "Plate 2"
+% expect:  0 errors; a paragraph heading "Deep"; "Supported by NSF grant."; plates tagged 5 and 1
+% status:  RED (64e4) -> GREEN (64f)
+\documentclass{aastex}
+\begin{document}
+\section{Intro}
+\subsubsubsection{Deep}
+Supported by \supportfrom[NSF]{NSF grant.}
+\begin{plate}\plotone{figs/a.eps}\platenum{5}\caption{First.}\end{plate}
+\begin{plate}\plotone{figs/a.eps}\caption{Second.}\end{plate}
+\end{document}

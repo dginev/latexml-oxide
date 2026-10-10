@@ -1,0 +1,14 @@
+% witness: 64f review r1 finding 1 — `\subsubsubsection`/`\supportfrom` are AASTeX 5.x only (aastex.cls 5.2:1088, :1988); a 6+
+%          paper's own definitions are the paper's, which the family binding must not pre-empt (`\newcommand` skips a
+%          defined name)
+% oracle:  pdflatex (aastex701, TL 2025) 0 errors: "1. INTRO / Deep: Text here. Support: NSF."
+% engines: rust 64f1 = Info:ignore, `<paragraph><title>Deep</title>` (the colon lost), "NSF." without "Support:"
+% expect:  0 errors; a paragraph "Deep: Text here. Support: NSF." with "Deep:" bold
+% status:  RED (64f1) -> GREEN (64f)
+\documentclass{aastex701}
+\newcommand{\subsubsubsection}[1]{\textbf{#1:}~}
+\newcommand{\supportfrom}[1]{Support: #1}
+\begin{document}
+\section{Intro}
+\subsubsubsection{Deep} Text here. \supportfrom{NSF}.
+\end{document}

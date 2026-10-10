@@ -786,3 +786,87 @@ fn aastex5_plate_float() {
     "<float class=\"ltx_float_plate\" inlist=\"lof\" xml:id=\"plate1\"><tags><tag>Plate 1</tag><tag role=\"autoref\">Plate\u{a0}1<text xml:id=\"plate1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Plate 1</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"plate1.g1\"/><toccaption><tag close=\" \">1</tag>A plate.</toccaption><caption><tag close=\" \">Plate 1</tag>A plate.</caption></float>",
   );
 }
+
+/// 64f: every AASTeX numbers its sections in arabic (aastex.cls 5.x:1076, aastex701.cls:7629) — the binding's revtex4
+/// load made them Roman, "I", "I.1", in every AAS paper (Perl the same, KPE #557).
+/// Repro sectioning-frontmatter/aastex_sections_arabic.
+#[test]
+fn aastex_sections_arabic() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex_sections_arabic.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_element(
+    &xml,
+    "section",
+    &["labels=\"LABEL:s:i\""],
+    "<section inlist=\"toc\" labels=\"LABEL:s:i\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\" \">1</tag>Introduction</title><subsection inlist=\"toc\" labels=\"LABEL:s:d\" xml:id=\"S1.SS1\"><tags><tag>1.1</tag><tag role=\"autoref\">subsection\u{a0}1.1<text xml:id=\"S1.SS1.1\"/></tag><tag role=\"refnum\">1.1</tag><tag role=\"typerefnum\">\u{a7}1.1</tag></tags><title><tag close=\" \">1.1</tag>Data</title><para xml:id=\"S1.SS1.p1\"><p xml:id=\"S1.SS1.p1.1\">See Section\u{a0}<ref labelref=\"LABEL:s:i\"/> and <ref labelref=\"LABEL:s:d\"/>.</p></para></subsection></section>",
+  );
+}
+
+/// 64f: under AASTeX 5.x, which has no `\fig`, an author's own `\newcommand{\fig}` is the paper's — the family binding
+/// defines the 6+ `\fig` family and `\gridline` only for 6+ (one binding for every version; 64e review r2).
+/// Repro captions-floats/aastex5_author_fig_command.
+#[test]
+fn aastex5_author_fig_command() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/aastex5_author_fig_command.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "figure",
+    &["labels=\"LABEL:f2\""],
+    "<figure inlist=\"lof\" labels=\"LABEL:f2\" xml:id=\"S0.F2\"><tags><tag>Figure 2</tag><tag role=\"autoref\">Figure\u{a0}2<text xml:id=\"S0.F2.1\"/></tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Figure 2</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"S0.F2.g1\"/><toccaption><tag close=\" \">2</tag>Same as Fig.\u{a0}<ref labelref=\"LABEL:f1\"/><text font=\"italic\" xml:id=\"S0.F2.2\">top</text>.</toccaption><caption><tag close=\": \">Figure 2</tag>Same as Fig.\u{a0}<ref labelref=\"LABEL:f1\"/><text font=\"italic\" xml:id=\"S0.F2.3\">top</text>.</caption></figure>",
+  );
+}
+
+/// 64f: AASTeX 5.x commands the later classes dropped — `\subsubsubsection` a level-4 heading, `\supportfrom` its text,
+/// `\platenum` stepping the counter back (aastex.cls 5.2:1088, :1988, :1691). Repro captions-floats/aastex5_dropped_commands.
+/// The plate ids come from the counter, Perl's `plateN` shape: `\platenum` steps it back to 0 before the caption steps it.
+#[test]
+fn aastex5_dropped_commands() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/aastex5_dropped_commands.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\" \">1</tag>Intro</title><paragraph inlist=\"toc\" xml:id=\"S1.SS0.SSS0.Px1\"><title>Deep</title><para xml:id=\"S1.SS0.SSS0.Px1.p1\"><p xml:id=\"S1.SS0.SSS0.Px1.p1.1\">Supported by NSF grant.</p></para><float class=\"ltx_float_plate\" inlist=\"lof\" xml:id=\"plate0\"><tags><tag>Plate 5</tag><tag role=\"autoref\">Plate\u{a0}5<text xml:id=\"plate0.1\"/></tag><tag role=\"refnum\">5</tag><tag role=\"typerefnum\">Plate 5</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"plate0.g1\"/><toccaption><tag close=\" \">5</tag>First.</toccaption><caption><tag close=\" \">Plate 5</tag>First.</caption></float><float class=\"ltx_float_plate\" inlist=\"lof\" xml:id=\"plate1\"><tags><tag>Plate 1</tag><tag role=\"autoref\">Plate\u{a0}1<text xml:id=\"plate1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Plate 1</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"plate1.g1\"/><toccaption><tag close=\" \">1</tag>Second.</toccaption><caption><tag close=\" \">Plate 1</tag>Second.</caption></float></paragraph></section>",
+  );
+}
+
+/// 64f review r1: `\subsubsubsection`/`\supportfrom` are AASTeX 5.x only; in a 6+ paper they are the paper's own, which the
+/// family binding leaves undefined for it. Repro sectioning-frontmatter/aastex6_author_subsubsubsection.
+#[test]
+fn aastex6_author_subsubsubsection() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex6_author_subsubsubsection.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\" \">1</tag>Intro</title><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\"><text font=\"bold\" xml:id=\"S1.p1.1.1\">Deep:</text>\u{a0} Text here. Support: NSF.</p></para></section>",
+  );
+}
+
+/// 64f review r1-r2: emulateapj loads the aastex binding but is a revtex4 class of its own (emulateapj.cls:165-167) — the
+/// author's `\fig`, `\subsubsubsection` and `\supportfrom` are theirs, and the sections are arabic (:676; astro-ph/0503342).
+/// Repro captions-floats/emulateapj_author_fig_sections.
+#[test]
+fn emulateapj_author_fig_sections() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/emulateapj_author_fig_sections.tex"
+  );
+  let xml = convert_clean_files(tex, &[("figs/a.eps", SQUARE_EPS)]);
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" labels=\"LABEL:s:i\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\". \">1</tag>Intro</title><toctitle><tag close=\" \">1</tag>Intro</toctitle><figure inlist=\"lof\" labels=\"LABEL:f1\" xml:id=\"S1.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S1.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"S1.F1.g1\"/><toccaption><tag close=\" \">1</tag>One.</toccaption><caption><tag close=\".\u{2014} \">Figure 1</tag>One.</caption></figure><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">See Fig.\u{a0}<ref labelref=\"LABEL:f1\"/> and Section\u{a0}<ref labelref=\"LABEL:s:i\"/>.</p></para><subsection inlist=\"toc\" labels=\"LABEL:s:m\" xml:id=\"S1.SS1\"><tags><tag>1.1</tag><tag role=\"autoref\">subsection\u{a0}1.1<text xml:id=\"S1.SS1.1\"/></tag><tag role=\"refnum\">1.1</tag><tag role=\"typerefnum\">\u{a7}1.1</tag></tags><title><tag close=\". \">1.1</tag>More</title><toctitle><tag close=\" \">1.1</tag>More</toctitle><para xml:id=\"S1.SS1.p1\"><p xml:id=\"S1.SS1.p1.1\">In <ref labelref=\"LABEL:s:m\"/>.<text font=\"bold\" xml:id=\"S1.SS1.p1.1.1\">Deep:</text>\u{a0} Text here. Support: NSF.</p></para></subsection></section>",
+  );
+}
