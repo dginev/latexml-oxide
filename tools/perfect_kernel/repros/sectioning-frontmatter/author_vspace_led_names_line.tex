@@ -1,0 +1,11 @@
+% witness: negative: a `\vspace`-led NAMES line (`\vspace{2mm}Cat Cole$^{1}$`) stays names
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_vspace_led_affiliation_line.md)
+% engines: rust 64e4 = the same
+% expect:  0 errors; 3 creators: Ann Able and Cat Cole (Univ A), Bob Baker (Univ B) — unchanged
+% status:  GUARD (64d)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ \vspace{2mm}Cat Cole$^{1}$ \\ $^{1}$Univ A \\ $^{2}$Univ B}
+\maketitle
+\end{document}

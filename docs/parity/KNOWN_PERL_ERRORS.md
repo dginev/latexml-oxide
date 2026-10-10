@@ -11897,14 +11897,15 @@ Minimal triggers: `\documentclass{aastex} … \section{Intro}\label{s:i} … Sec
 
 Fixed in Rust (64f): aastex_cls.rs restores the arabic `\the<section>` chain after the revtex4 load; aas_support_sty.rs
 defines `\subsubsubsection` as `\paragraph`, `\supportfrom` as its text, and `\platenum` as the 5.x class does. One
-binding serves every AASTeX version, and a command only some versions define is the paper's own in the others: a class
-name carrying version digits (`aastex6` … `aastex701`, direct or through the versioned fallback) is 6+ and leaves
-`\subsubsubsection`/`\supportfrom` undefined; plain `aastex` is 5.x and leaves the `\fig` family and `\gridline`
-undefined — unless the paper ships an `aastex.cls` that defines `\gridline`, a 6+ class under the old name (aastex6.cls:85
+binding serves every AASTeX version with the union of their commands (user 2026-10-09/10: the 5.x
+`\subsubsubsection`/`\supportfrom` stay for a 6+ class too, where a paper's own `\newcommand` of them is skipped: its
+heading or text kept, its own markup lost — the bold "Deep:" and the "Support:" pdflatex prints). The version is dispatched only where a version's command would take the paper's own away: a class name carrying
+version digits (`aastex6` … `aastex701`, direct or through the versioned fallback) is 6+; plain `aastex` is 5.x and
+leaves the `\fig` family and `\gridline` undefined — unless the paper ships an `aastex.cls` that defines `\gridline`, a 6+ class under the old name (aastex6.cls:85
 `\ProvidesClass{aastex}`; 1810.04684, 2010.06977, 2103.01741; the 5.0b9/5.2 ones stay 5.x: 0704.0478, 0908.1913,
 1402.6181, 1506.08265, 1512.07697). emulateapj, a revtex4 class of its own (emulateapj.cls:165-167) whose binding loads
-aastex's, leaves the commands the binding dispatches by version undefined (the `\fig` family, `\gridline`,
-`\subsubsubsection`, `\supportfrom`); `\platenum` and `{plate}` stay for every class (the union of features). 0003209 and 0503342 now print "Fig. <ref fig:example>". A direct `aastex7`/`aastex70`
+aastex's, leaves the `\fig` family and `\gridline` undefined too; the 5.x commands, `\platenum` and `{plate}` stay for
+every class (the union). 0003209 and 0503342 now print "Fig. <ref fig:example>". A direct `aastex7`/`aastex70`
 now loads rotating as aastex7.cls:11484 does (only the fallback's `aastex701` did; 2505.08870). Residual: `\platenum`
 after `\caption` (pdflatex: the caption keeps the stepped number, a later `\label` gets the given one; ours refers to the
 caption's), no witness. Residual: the `.sty` entry points (`\usepackage{aastex}`, aaspp4, aasms4, emulateapj5:
@@ -11912,3 +11913,36 @@ aastex_sty.rs, aaspp_sty.rs, aasms_sty.rs) load aas_support without the version 
 defined there (Perl the same; the papers sampled `\def\fig`, which overrides it: astro-ph/0002091, 0002170). Guards `perfect_kernel_batch64::{aastex_sections_arabic, aastex5_author_fig_command,
 aastex5_dropped_commands, aastex6_author_subsubsubsection, emulateapj_author_fig_sections}`,
 `perfect_kernel_batch61::aastex7_rotate_and_rotatetable`.
+
+## 558. An author block's names read as one author, or its affiliations as authors, around unmarked rows and leading spacing
+
+Perl's author-line reader (Base_Utility.pool.ltxml:690-710) appends a marker-less line to the previous entry
+(`Tokens($entries[-1][1], $line)`, :701-703) and reads a line as an affiliation only when its mark comes within its first
+eight tokens (`elsif ($p < 8)`, :706). So:
+- the rows of a wrapped name list whose first line carries only a symbol mark weld onto that line's last author:
+  `\author{Ann Able$^{*}$, Bob Baker, \\ Cat Cole, Dan Dee, \\ Eve Eck$^{1}$, …}` gives "Bob Baker Cat Cole, Dan Dee"
+  (2411.13503, 2410.07701, 2401.05566, 2510.11639, 2304.07193);
+- an affiliation line led by spacing reads as authors: `\\ \vspace{0.1cm} $^{1}$ Univ A, $^{2}$ Univ B` gives creators
+  "Univ A", "Univ B" and leaves the authors unlinked (2407.15815).
+
+Minimal triggers: the two `\author{…}` lines above, under `\documentclass{article}` and `\maketitle`.
+
+Fixed in Rust (64d): an unmarked first line read as several names is a names line that later unmarked rows of names
+continue, whatever markup a row opens with when the block's authors carry marks (`names_list_continues`; a bold row of
+symbol-marked names after marked names, 2307.00040, was Rust-only: Perl keeps `$^{\dagger}$` a mark); `marker_leads`
+reads a line from its first glyph, past the spacing and declarations that print nothing (`leading_unprinted_end`:
+`\vspace`, `\vspace*`, `\addvspace`, `\vskip`/`\hskip`/`\kern`/`\penalty` with their glue, `\rule`, `\smallskip` …,
+interleaved with `\noindent`, `\small`; a `\kern2pt` lead was Rust-only), so the unit letters of a length are no name
+before the mark; the affiliation keeps none of that spacing. Guards `perfect_kernel_batch64::{author_unmarked_first_line_list_wraps,
+author_unmarked_rows_without_trailing_comma, author_bold_row_after_marked_names, author_bf_rows_with_blank_line,
+author_bold_group_rows_after_marked_names, author_unmarked_affiliation_after_marked_names,
+author_styled_place_after_marked_names, author_vspace_led_marked_affiliation_line,
+author_vspacestar_noindent_led_affiliation_line, author_group_declaration_vspace_affiliation_line,
+author_kern_led_affiliation_line, author_vspace_led_names_line, author_declaration_vspace_led_affiliation_line,
+author_wrapped_lead_declarations_after_spacing}`. Residual: a row of two-word places after unmarked
+names reads as names too ("Palo Alto, Menlo Park" — no non-name word in it), silently where the merged-creator check
+flagged it before (RED sectioning-frontmatter/author_place_row_after_unmarked_names). Also open: an unwrapped line's
+leading declarations (`\footnotesize\vspace{2pt}\noindent $^{1}$Univ A, $^{2}$Univ B`) style only its first institution, where
+TeX scopes them over the whole line (no witness; a wrapped group's are repeated on every piece; RED
+author_unwrapped_lead_declarations_style_every_institution), as do declarations between a wrapped list and its next
+mark (`{…} \color{blue} $^3$Univ C`; RED author_declaration_after_wrapped_affiliation_list).

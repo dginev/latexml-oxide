@@ -1,0 +1,12 @@
+% witness: negative for HF2 S3 (a place line, not names, after marked names)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_hf2_s3_unmarked_names_line.md)
+% engines: rust 64b7 = the same
+% expect:  0 errors; unchanged: Ann Able (sup 1); "Bob Baker<break/>Department of Physics, University of Somewhere" (Univ B) — Perl-identical weld
+% status:  GUARD (64d)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\\ Department of Physics, University of Somewhere\\ $^{2}$Univ B}
+\begin{document}
+\maketitle
+x
+\end{document}

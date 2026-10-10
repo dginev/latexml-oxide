@@ -1,0 +1,12 @@
+% witness: 2401.05566 (iclr; `\bf`-led rows of names and a blank row)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_hf2_s3_unmarked_names_line.md)
+% engines: rust 64b7 = merged creators; Error:frontmatter:merged_creators
+% expect:  0 errors; 6 creators: Ann Able (+ thanks note), Bob Baker, Cat Cole, Dan Dee, Eve Eck (Univ A), Fay Fox
+% status:  RED (64b7) -> GREEN (64d)
+\documentclass{article}
+\title{T}
+\author{\bf Ann Able\thanks{Core.}, Bob Baker, \\\bf Cat Cole, Dan Dee \\ \\\bf Eve Eck$^{1}$, Fay Fox \\ $^{1}$Univ A}
+\begin{document}
+\maketitle
+x
+\end{document}

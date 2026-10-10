@@ -7315,12 +7315,12 @@ Text.
       creator(
         false,
         "Ann Able",
-        &affiliation("<text color=\"#0000FF\" xml:id=\"id1\"> Univ A</text>")
+        &affiliation("<text color=\"#0000FF\" xml:id=\"id1\">Univ A</text>")
       ),
       creator(
         true,
         "Bob Baker",
-        &affiliation("<text color=\"#0000FF\" xml:id=\"id2\"> Univ B</text>")
+        &affiliation("<text color=\"#0000FF\" xml:id=\"id2\">Univ B</text>")
       )
     ]
   );

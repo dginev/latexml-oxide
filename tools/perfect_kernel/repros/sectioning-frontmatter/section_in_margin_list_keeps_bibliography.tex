@@ -1,0 +1,24 @@
+% witness: 2201.06926, 2505.05767 (a whole paper inside a `changemargin` list, `\list{}{…}\item[]`: its sections, then its
+%          bibliography and acknowledgements)
+% oracle:  pdflatex 0 errors: "1 Intro / … see [1] and Section 2. / 2 More / References [1] … [2] …"
+% engines: rust 64f3 = 2 Error:malformed (section in item); 64d1 = the sections in an inline sectional block and 1
+%          Error:malformed (bibliography not allowed there; in 2201.06926 a cascade of 90 bibitem errors follows)
+% expect:  an unlabelled `\item[]` is a margin list's, no list: Perl's nesting with its 2 errors (section in item), the
+%          next section closing the previous as its sibling, the bibliography in S2 — the inline sectional block would
+%          leave the paper's appendix, acknowledgements and bibliography no place (OD #189)
+% status:  ACCEPTED (64d: as 64f3)
+\documentclass{article}
+\def\changemargin#1#2#3{\list{}{\topmargin#3\rightmargin#2\leftmargin#1}\item[]}
+\let\endchangemargin=\endlist
+\begin{document}
+\begin{changemargin}{-1cm}{-9mm}{-5mm}
+\section{Intro}\label{s:i}
+Text, see \cite{a} and Section~\ref{s:m}.
+\section{More}\label{s:m}
+More text.
+\begin{thebibliography}{1}
+\bibitem{a} A. Author, A paper.
+\bibitem{b} B. Author, Another.
+\end{thebibliography}
+\end{changemargin}
+\end{document}

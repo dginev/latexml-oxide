@@ -427,6 +427,33 @@ LoadDefinitions!({
       }
     }
     let accumulate = takes_accumulate(&mut options);
+    match get_frontmatter_name(options.get("name"), &tag, &role)? {
+      Some(name) => { options.insert("name".to_string(), name); },
+      None => { options.remove("name"); },
+    }
+    // Replaceable tags (title/toctitle/subtitle/date) keep only one entry — a later
+    // one replaces earlier ones. Ported from upstream `%ReplaceableFrontmatterTags`
+    // (the vendored copy pushes unconditionally → duplicate <title> when a document
+    // re-adds it, e.g. arXiv 2002.09766's appendix `\icmltitle`). OXIDIZED_DESIGN #154.
+    // An `accumulate` entry adds to the ones before (acmart's `\received` history, 2307.05988).
+    let replaceable = REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) && !accumulate;
+    // …unless the document body began after the one it would replace: that one is the paper's, this a supplement's
+    // ([`seal_digested_frontmatter`]), dropped — with the authors a supplement's frontmatter lists — before it is counted
+    // (a later flush's last-author conjunction reads the count).
+    let seal = frontmatter_seal_key(&tag, options.get("name").map(String::as_str), &role, replaceable);
+    if let Some(ref key) = seal
+      && frontmatter_sealed(key)
+    {
+      Info!("frontmatter", "sealed", s!("{tag} after the document body began is a supplement's; the paper's is kept"));
+      // …and the annotations this flush attaches to it, which would otherwise land on the paper's.
+      let sealed_off = lookup_string("lx_frontmatter_sealed_off");
+      assign_value(
+        "lx_frontmatter_sealed_off",
+        Stored::String(pin(s!("{sealed_off}\u{1}{tag}"))),
+        Some(Scope::Global),
+      );
+      return Ok(Vec::new());
+    }
     // extract (possibly multiple!) labels
     let mut labels = clean_frontmatter_labels(
       options.get("annotations").map(String::as_str).unwrap_or(""), "");
@@ -438,10 +465,6 @@ LoadDefinitions!({
       // record sequence position as potential attachment label
       labels.push(clean_label(&n.to_string(), Some(&role)).into_owned());
     }
-    match get_frontmatter_name(options.get("name"), &tag, &role)? {
-      Some(name) => { options.insert("name".to_string(), name); },
-      None => { options.remove("name"); },
-    }
     options.insert("_annotations".to_string(), labels.join(","));
     let entry = TagData {
       tag: tag.clone(),
@@ -450,18 +473,17 @@ LoadDefinitions!({
     };
     DebugFeature!("frontmatter", "FRONT Add {}\n   for: {}",
       show_frontmatter(&entry), content);
-    // Replaceable tags (title/toctitle/subtitle/date) keep only one entry — a later
-    // one replaces earlier ones. Ported from upstream `%ReplaceableFrontmatterTags`
-    // (the vendored copy pushes unconditionally → duplicate <title> when a document
-    // re-adds it, e.g. arXiv 2002.09766's appendix `\icmltitle`). OXIDIZED_DESIGN #154.
-    // An `accumulate` entry adds to the ones before (acmart's `\received` history, 2307.05988).
-    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) && !accumulate {
+    if replaceable {
       frontmatter_clear_same_name(&tag, entry.attr.get("name").map(String::as_str));
     }
     let index = frontmatter_push(&tag, entry);
     // REPLACE only 'place_keeper'!!
     let digested = digest_frontmatter_item(&tag, content)?;
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
+    if let Some(key) = seal {
+      note_digested_frontmatter(&key);
+    }
+    Ok(Vec::new())
   }, bounded => true);
 
   // This is a variant of \lx@add@frontmatter which digests immediately
@@ -485,6 +507,22 @@ LoadDefinitions!({
       }
     }
     let accumulate = takes_accumulate(&mut options);
+    match get_frontmatter_name(options.get("name"), &tag, &role)? {
+      Some(name) => { options.insert("name".to_string(), name); },
+      None => { options.remove("name"); },
+    }
+    let replaceable = REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) && !accumulate;
+    let seal = frontmatter_seal_key(&tag, options.get("name").map(String::as_str), &role, replaceable);
+    // An abstract (or keywords) after the document body began, where the paper's own came before it, is a
+    // supplement's: its text stays where it is, as body paragraphs (the schema admits `ltx:abstract` only in a
+    // document, sidebar, bibliography or titlepage, LaTeXML-structure.rnc:668-673), and the paper's stays at the head
+    // ([`seal_digested_frontmatter`]; 2301.10468, 2401.11672, 2405.10566, 2503.16707).
+    if let Some(ref key) = seal
+      && frontmatter_sealed(key)
+    {
+      Info!("frontmatter", "sealed", s!("{tag} after the document body began is a supplement's; kept in place"));
+      return digest_next_body(Some(end));
+    }
     // extract (possibly multiple!) labels
     let mut labels = clean_frontmatter_labels(
       options.get("annotations").map(String::as_str).unwrap_or(""), "");
@@ -496,10 +534,6 @@ LoadDefinitions!({
       // record sequence position as potential attachment label
       labels.push(clean_label(&n.to_string(), Some(&role)).into_owned());
     }
-    match get_frontmatter_name(options.get("name"), &tag, &role)? {
-      Some(name) => { options.insert("name".to_string(), name); },
-      None => { options.remove("name"); },
-    }
     options.insert("_annotations".to_string(), labels.join(","));
     let entry = TagData {
       tag: tag.clone(),
@@ -510,10 +544,7 @@ LoadDefinitions!({
     // same-tag `@until` is already in progress (open PlaceKeeper), so a nested/malformed
     // `\begin{abstract}\begin{abstract}…` isn't corrupted by clearing a parent's still-
     // open entry. OXIDIZED_DESIGN #154. Witness 2511.21969 (nested abstract env).
-    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str())
-      && !accumulate
-      && !frontmatter_has_open_placekeeper(&tag)
-    {
+    if replaceable && !frontmatter_has_open_placekeeper(&tag) {
       frontmatter_clear_same_name(&tag, entry.attr.get("name").map(String::as_str));
     }
     let index = frontmatter_push(&tag, entry);
@@ -525,6 +556,10 @@ LoadDefinitions!({
     let digested = Digested::from(List::new(body));
     DebugFeature!("frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
+    if let Some(key) = seal {
+      note_digested_frontmatter(&key);
+    }
+    Ok(Vec::new())
   }, bounded => true);
 
   // Some frontmatter elements are "structured" in the sense of having a main bit of data
@@ -573,6 +608,11 @@ LoadDefinitions!({
     sub[(parenttag_tks, tag_tks, kv, content)] {
     let parenttag = parenttag_tks.to_string();
     let tag = tag_tks.to_string();
+    // An annotation of an entry this flush dropped as a supplement's ([`seal_digested_frontmatter`]) goes with it,
+    // instead of landing on the paper's (a supplement's `\address[A]` on the paper's author labelled A).
+    if lookup_string("lx_frontmatter_sealed_off").split('\u{1}').any(|sealed| sealed == parenttag) {
+      return Ok(Vec::new());
+    }
     let preformatted = tag == "preformatted"; // Obsolete API? $content is constructor!
     let mut options = TagAttrs::default();
     if let Some(kv) = kv
@@ -1427,7 +1467,7 @@ LoadDefinitions!({
                 .is_some_and(|(kind, _)| *kind == AuthorLineKind::Author)
                 && last_names
                   .as_ref()
-                  .is_some_and(|names| names_continue(names, &line))
+                  .is_some_and(|names| names_list_continues(names, &line))
               {
                 // An unfinished name list goes on past the break, as in an unmarked block ([`names_continue`]):
                 // `Gus Gray\IEEEauthorrefmark{1}, …, Ida Ivy,~\IEEEmembership{Fellow,~IEEE,}\\ Jon Jay, … and~Kim
@@ -1454,6 +1494,10 @@ LoadDefinitions!({
                 // (`Aghil Alaee\footnote{…} \,\,and Hari K. Kunduri\footnote{…}\\ … $^a$ Department …`,
                 // 1407.0988), as the merged-author check would otherwise report.
                 if name_count(&visible_name_text(line.unlist_ref())) >= 2 {
+                  // …a names line an unmarked row of more names continues, as a later one does (`Ann Able$^{*}$, Bob
+                  // Baker, \\ Cat Cole, Dan Dee, \\ Eve Eck$^{1}$`: the first line's symbol mark is no affiliation mark;
+                  // 2411.13503, 2410.07701, 2401.05566, 2510.11639, 2304.07193).
+                  last_names = Some(line.clone());
                   for author in split_author_line(line) {
                     entries.push((AuthorLineKind::Author, author));
                   }
@@ -1544,7 +1588,10 @@ LoadDefinitions!({
                 // (reusing the `\thanks`-abuse splitter, which never breaks a
                 // superscript glued INSIDE an institution name) so each numbered
                 // institution becomes its own affiliation and attaches to its authors
-                // by number, instead of merging into one.
+                // by number, instead of merging into one. The spacing that leads the line prints nothing and is no part
+                // of its first institution (`\kern2pt$^{1}$Univ A`, `\vspace{0.1cm} $^{1}$ …`; 2407.15815).
+                let line =
+                  Tokens::new(line.unlist_ref()[leading_spacing_end(line.unlist_ref())..].to_vec());
                 for seg in split_wrapped_affiliation_marks(line) {
                   if spacing_end(seg.unlist_ref()) == 0 {
                     continue;
@@ -2059,7 +2106,12 @@ LoadDefinitions!({
   // `\lx@maketitle@body`: the class's stores (`\@address`, `\@email`, which `\@maketitle`
   // reads again) are handed to the new authors by the `\lx@store@defaults` after it.
   DefPrimitive!("\\lx@maketitle@supersede", sub[_args] {
-    if lookup_bool("lx_authors_superseded") && queued_author_count() > 0 {
+    // Not after the document body began over authors digested before it: those are the paper's, the queued ones a
+    // supplement's, which the seal drops ([`seal_digested_frontmatter`]).
+    if lookup_bool("lx_authors_superseded")
+      && queued_author_count() > 0
+      && lookup_mapping_int("frontmatter_sealed", &frontmatter_seal_key_of("ltx:creator", "author")) < FINAL_SEAL
+    {
       assign_value("lx_authors_superseded", Stored::Bool(false), Some(Scope::Global));
       if supersede_digested_authors() {
         assign_value("lx_stores_harvested", Stored::Bool(false), Some(Scope::Global));
@@ -2084,7 +2136,12 @@ LoadDefinitions!({
     place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter)?;
   },
   after_digest => {
-    digest_front_matter()?;
+    // A `\maketitle`'s flush: it may replace what the fallback flushed provisionally ([`frontmatter_sealed`]).
+    let outer = lookup_bool("lx_frontmatter_explicit");
+    assign_value("lx_frontmatter_explicit", true, Some(Scope::Global));
+    let flushed = digest_front_matter();
+    assign_value("lx_frontmatter_explicit", outer, Some(Scope::Global));
+    flushed?;
     assign_value("frontmatter_deferred", true, Some(Scope::Global));
   });
 
@@ -2146,7 +2203,14 @@ LoadDefinitions!({
     // A raw class's stores the document set, read where the frontmatter is, before its queue is
     // digested (frontmatter_stores.rs): the authors' marks are still there to match.
     crate::frontmatter_stores::harvest_stores(false)?;
-    digest_front_matter()?;
+    // What the fallback flushes is sealed provisionally: a class that prints its frontmatter without `\maketitle`
+    // (imsart's `{frontmatter}`) printed it, and a supplement's later frontmatter must not replace it; but where a
+    // `\maketitle` follows a starred section, the PDF printed only that one ([`seal_digested_frontmatter`]).
+    let outer = lookup_bool("lx_frontmatter_provisional");
+    assign_value("lx_frontmatter_provisional", true, Some(Scope::Global));
+    let flushed = digest_front_matter();
+    assign_value("lx_frontmatter_provisional", outer, Some(Scope::Global));
+    flushed?;
     assign_value("frontmatter_deferred", true, Some(Scope::Global));
   });
 
@@ -3993,12 +4057,6 @@ fn supersede_digested_authors() -> bool {
   true
 }
 
-/// Drop the `frontmatter{tag}` entries that carry the same `name` as a new one (Perl:
-/// `$$frontmatter{$tag} = []`), so a later `REPLACEABLE_FRONTMATTER_TAGS` entry
-/// replaces a re-emission of itself (arXiv 2002.09766's second `\icmltitle`). An
-/// entry under another name is another element and stays: a bilingual document's
-/// "Abstract" and "摘要" abstracts (beamertheme-mirage-doc lost its English one).
-/// OXIDIZED_DESIGN #154.
 /// Whether a frontmatter entry's options ask it to `accumulate` (any value but `false`), the key taken out of them so it
 /// is no attribute.
 fn takes_accumulate(options: &mut TagAttrs) -> bool {
@@ -4007,6 +4065,100 @@ fn takes_accumulate(options: &mut TagAttrs) -> bool {
     .is_some_and(|value| value.trim() != "false")
 }
 
+/// Seal the frontmatter digested so far: called where the document body begins — a sectioning unit
+/// (`\@@numbered@section`, `\@@unnumbered@section`, digested after `\@startsection@hook`'s flush) or a
+/// `thebibliography`. A replaceable entry (a title, date, abstract, keywords) or the author list digested before then is
+/// the paper's; a later one under the same name is a supplement's, which `\lx@add@frontmatter@now` drops (with the
+/// annotations its flush attaches to it) and `\lx@add@frontmatter@until` keeps in place as body text (user ruling
+/// 2026-10-09: keep the main paper's frontmatter, as page 1 of the PDF; OXIDIZED_DESIGN_DIVERGENCES #154). Only what was
+/// digested is sealed: a starred section before the first `\maketitle` seals nothing it did not flush (2412.04315,
+/// 2609.05314), and what the fallback flushed there (a preamble `\title`) only provisionally — a later `\maketitle` still
+/// replaces it, as the PDF prints only that one; nothing is sealed while a frontmatter entry is still being digested (a
+/// `\section{Keywords:}` inside an abstract, 2401.13568).
+/// Witnesses 2301.10468, 2401.11672, 2503.07022 (imsart supplement frontmatter), 2405.10566, 2503.16707, 2510.20036.
+pub fn seal_digested_frontmatter() {
+  if frontmatter_entry_in_progress() {
+    return;
+  }
+  let keys = with_mapping_keys("frontmatter_digested", |keys| {
+    keys.into_iter().map(to_string).collect::<Vec<_>>()
+  });
+  for key in keys {
+    let level = lookup_mapping_int("frontmatter_digested", &key);
+    if lookup_mapping_int("frontmatter_sealed", &key) < level {
+      assign_mapping("frontmatter_sealed", &key, Some(Stored::Int(level)));
+    }
+  }
+}
+
+/// The key a frontmatter entry is sealed under ([`seal_digested_frontmatter`]): a replaceable one by its tag, `name` and
+/// role (an "Abstract" and a "摘要" are two, as are a `published` and a `copyrightyear` date: acmart's copyright year,
+/// added after the body, 2503.04003, 2601.12690), an author creator by its role; any other is never sealed.
+fn frontmatter_seal_key(
+  tag: &str,
+  name: Option<&str>,
+  role: &str,
+  replaceable: bool,
+) -> Option<String> {
+  if replaceable {
+    Some(frontmatter_seal_key_of(
+      tag,
+      &s!("{}\u{2}{role}", name.unwrap_or("")),
+    ))
+  } else if tag == "ltx:creator" && role == "author" {
+    Some(frontmatter_seal_key_of(tag, "author"))
+  } else {
+    None
+  }
+}
+
+fn frontmatter_seal_key_of(tag: &str, name: &str) -> String { s!("{tag}\u{1}{name}") }
+
+/// How firmly a frontmatter entry is held: `PROVISIONAL_SEAL` for what the fallback flushed at the first section,
+/// which a later `\maketitle` may still replace (the PDF printed it only where the class prints its frontmatter
+/// without one); `FINAL_SEAL` for what a `\maketitle` or a frontmatter environment digested.
+const PROVISIONAL_SEAL: i64 = 1;
+const FINAL_SEAL: i64 = 2;
+
+fn note_digested_frontmatter(key: &str) {
+  let level = if lookup_bool("lx_frontmatter_provisional") {
+    PROVISIONAL_SEAL
+  } else {
+    FINAL_SEAL
+  };
+  if lookup_mapping_int("frontmatter_digested", key) < level {
+    assign_mapping("frontmatter_digested", key, Some(Stored::Int(level)));
+  }
+}
+
+/// Whether a new entry under `key` is a supplement's: sealed finally, or provisionally where no `\maketitle` flushes
+/// it (`lx_frontmatter_explicit`, set around `\lx@frontmatterhere`'s flush).
+fn frontmatter_sealed(key: &str) -> bool {
+  match lookup_mapping_int("frontmatter_sealed", key) {
+    FINAL_SEAL => true,
+    PROVISIONAL_SEAL => !lookup_bool("lx_frontmatter_explicit"),
+    _ => false,
+  }
+}
+
+/// Whether a frontmatter entry is being digested (its content still a lone `PlaceKeeper`).
+fn frontmatter_entry_in_progress() -> bool {
+  with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(frnt)) => frnt.values().any(|list| {
+      list
+        .iter()
+        .any(|e| matches!(e.content.as_slice(), [TagContent::PlaceKeeper]))
+    }),
+    _ => false,
+  })
+}
+
+/// Drop the `frontmatter{tag}` entries that carry the same `name` as a new one (Perl:
+/// `$$frontmatter{$tag} = []`), so a later `REPLACEABLE_FRONTMATTER_TAGS` entry
+/// replaces a re-emission of itself (arXiv 2002.09766's second `\icmltitle`). An
+/// entry under another name is another element and stays: a bilingual document's
+/// "Abstract" and "摘要" abstracts (beamertheme-mirage-doc lost its English one).
+/// OXIDIZED_DESIGN #154.
 fn frontmatter_clear_same_name(tag: &str, name: Option<&str>) {
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
@@ -4097,6 +4249,14 @@ pub fn digest_front_matter() -> Result<()> {
     Some(Stored::FrontmatterRaw(commands)) => commands,
     _ => Vec::new(),
   };
+  // The entries a seal drops in this flush, whose annotations go with them ([`seal_digested_frontmatter`]) — this
+  // flush's own, the outer flush's restored after it (a queued entry may flush again, `\maketitle` in an abstract).
+  let outer_sealed_off = lookup_string("lx_frontmatter_sealed_off");
+  assign_value(
+    "lx_frontmatter_sealed_off",
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
   // The authors digested here are the current ones: no later `\maketitle` supersedes
   // them unless another `\author` replaces them first (`\lx@maketitle@supersede`).
   if commands.iter().any(|entry| {
@@ -4189,6 +4349,11 @@ pub fn digest_front_matter() -> Result<()> {
       }
     });
   }
+  assign_value(
+    "lx_frontmatter_sealed_off",
+    Stored::String(pin(&outer_sealed_off)),
+    Some(Scope::Global),
+  );
   egroup()?;
   Ok(())
 }
@@ -9429,9 +9594,47 @@ fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tok
 fn leading_spacing_end(v: &[Token]) -> usize {
   let mut i = 0;
   while i < v.len() {
-    if is_spacing(&v[i]) {
+    if is_spacing(&v[i]) || PARAMETERLESS_SPACING.iter().any(|cs| v[i] == T_CS!(*cs)) {
       i += 1;
-    } else if v[i] == T_CS!("\\vspace") || v[i] == T_CS!("\\hspace") {
+    } else if v[i] == T_CS!("\\penalty") {
+      // an integer follows (tex.web §1103 `\penalty` scans an int: `\penalty10000`, `\penalty -50`)
+      let mut j = i + 1;
+      while v
+        .get(j)
+        .is_some_and(|t| *t == T_SPACE!() || *t == T_OTHER!("-") || *t == T_OTHER!("+"))
+      {
+        j += 1;
+      }
+      while v.get(j).is_some_and(|t| {
+        t.get_catcode() == Catcode::OTHER && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit()))
+      }) {
+        j += 1;
+      }
+      i = j;
+    } else if ["\\vskip", "\\hskip", "\\kern"]
+      .iter()
+      .any(|cs| v[i] == T_CS!(*cs))
+    {
+      // a glue or dimension follows (tex.web §1057, §1061: `\kern2pt`, `\vskip 1em plus 1fil`)
+      i = past_glue(v, i + 1);
+    } else if v[i] == T_CS!("\\rule") {
+      // latex.ltx:16359 `\rule[raise]{width}{height}`, a rule box, no glyph
+      let mut j = i + 1;
+      if v.get(j) == Some(&T_OTHER!("[")) {
+        while j < v.len() && v[j] != T_OTHER!("]") {
+          j += 1;
+        }
+        j += 1;
+      }
+      for _ in 0..2 {
+        if v.get(j).is_none_or(|t| t.get_catcode() != Catcode::BEGIN) {
+          break;
+        }
+        j = skip_group(v, j).min(v.len());
+      }
+      i = j;
+    } else if v[i] == T_CS!("\\vspace") || v[i] == T_CS!("\\hspace") || v[i] == T_CS!("\\addvspace")
+    {
       let mut j = i + 1;
       if v.get(j) == Some(&T_OTHER!("*")) {
         j += 1;
@@ -10700,6 +10903,12 @@ fn starts_with_affiliation_mark(content: &Tokens) -> bool {
 /// `affiliation:N` label that the authors' own marks already request
 /// (`relocate_annotations` links them).
 fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
+  split_marked_pieces(tokens, true)
+}
+
+/// [`split_before_affiliation_marks`] of a line (`line_start`) or of what follows a wrapper in one (`{…} \vspace{1mm}
+/// $^3$Univ C`), where a lead that prints nothing is a separator, not the start of the first institution.
+fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
   // Trim the institution SEPARATOR that clings to the end of a segment when the
   // affiliations are comma-joined (`\textsuperscript{1}Univ A, \textsuperscript{2}
   // Univ B`) rather than space-joined: without this the affiliation contact reads
@@ -10733,13 +10942,24 @@ fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
     // "Center for R$^2$ Studies" — is not a boundary, so the name is not
     // wrongly split (reviewer-flagged). The first mark (current empty) always
     // opens segment 0.
-    // Declarations alone before the first mark (`\color{blue} $^1$…`) are no segment: they open the first one.
-    let only_declarations = || {
-      current.iter().any(|t| t.get_catcode() == Catcode::CS)
-        && opening_declarations(&Tokens::new(current.clone())).len() == current.len()
+    // A lead that prints nothing before the first mark — declarations (`\color{blue} $^1$…`), spacing (`\small \vspace{1mm}
+    // $^{1}$Univ A`, 2407.15815) — is no segment: it opens the first one.
+    // (a bare space is no lead: `\textit{$^1$A, $^2$B} $^3$C` keeps its boundary before `$^3$`)
+    let prints_nothing = || {
+      line_start
+        && segments.is_empty()
+        && current.iter().any(|t| t.get_catcode() == Catcode::CS)
+        && leading_unprinted_end(&current) == current.len()
     };
-    if is_mark_start && depth == 0 && current.last() == Some(&T_SPACE!()) && !only_declarations() {
-      segments.push(trim_trailing_separator(std::mem::take(&mut current)));
+    if is_mark_start && depth == 0 && current.last() == Some(&T_SPACE!()) {
+      if prints_nothing() {
+        // …nor is the space between it and the mark the institution's
+        while current.last() == Some(&T_SPACE!()) {
+          current.pop();
+        }
+      } else {
+        segments.push(trim_trailing_separator(std::mem::take(&mut current)));
+      }
     }
     match t.get_catcode() {
       Catcode::BEGIN => depth += 1,
@@ -10763,10 +10983,10 @@ fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
 /// repeated: its mark-led content is the affiliation list (the `\thanks` idiom of `\lx@add@thanks`; 2609.24896).
 fn split_wrapped_affiliation_marks(line: Tokens) -> Vec<Tokens> {
   if let Some((cmd, inner, trailing)) = leading_wrapper(&line) {
-    // A bare group's opening declarations (`\small`, `\it`, `\color{blue}` with its argument), repeated in each
-    // later piece.
+    // A bare group's opening declarations (`\small`, `\it`, `\color{blue}` with its argument, among the spacing that
+    // prints nothing: `{\small\vspace{1mm}\noindent\it $^{1}$…}`, 2407.15815), repeated in each later piece.
     let opening = if cmd.is_none() {
-      opening_declarations(&inner)
+      lead_declarations(inner.unlist_ref())
     } else {
       Vec::new()
     };
@@ -10793,7 +11013,7 @@ fn split_wrapped_affiliation_marks(line: Tokens) -> Vec<Tokens> {
         .collect();
       // What follows the wrapper is split at its own marks too (`\textit{$^1$A, $^2$B} $^3$C`): its first piece stays
       // with the last wrapped one, the rest are pieces of their own.
-      let mut after = split_before_affiliation_marks(Tokens::new(trailing)).into_iter();
+      let mut after = split_marked_pieces(Tokens::new(trailing), false).into_iter();
       if let (Some(first), Some(last_piece)) = (after.next(), out.last_mut()) {
         let mut joined = last_piece.clone().unlist();
         joined.extend(first.unlist());
@@ -10809,20 +11029,66 @@ fn split_wrapped_affiliation_marks(line: Tokens) -> Vec<Tokens> {
 /// Does a mark lead `line` — no text before its first mark, looking inside a leading font command or group past the
 /// declarations that open it (`{\color{blue} $^1$Univ A, $^2$Univ B}`: the letters of `blue` are no name)?
 fn marker_leads(line: &Tokens) -> bool {
+  // What the line prints from its first glyph on: the spacing and declarations before it print nothing, nor do the unit
+  // letters of their lengths, which read as a name before the mark (`\\ \vspace{0.1cm} $^{1}$ Univ A`: Univ A … read as
+  // authors, 2407.15815; `\kern2pt$^{1}$Univ A`).
+  let printed = |tokens: &[Token]| Tokens::new(tokens[leading_unprinted_end(tokens)..].to_vec());
+  let line = &printed(line.unlist_ref());
   let probe = match leading_wrapper(line) {
-    Some((_, inner, _)) => {
-      let skip = opening_declarations(&inner).len();
-      Tokens::new(inner.unlist_ref()[skip..].to_vec())
-    },
-    None => {
-      let skip = opening_declarations(line).len();
-      Tokens::new(line.unlist_ref()[skip..].to_vec())
-    },
+    Some((_, inner, _)) => printed(inner.unlist_ref()),
+    None => line.clone(),
   };
   match position_of(&probe, &authorsup_markers()) {
     Some(p) => !name_precedes_marker(&probe, p),
     // No mark inside the wrapper (`{}$^1$Univ A`, `\noindent{}$^1$…`): the whole line decides, as before.
     None => position_of(line, &authorsup_markers()).is_some_and(|p| !name_precedes_marker(line, p)),
+  }
+}
+
+/// The spacing commands a line's unprinted lead may hold that take no argument (latex.ltx:9391-9393 `\smallskip` …
+/// `\vspace\…amount`; `\hfill`, `\newline`, `\protect`).
+const PARAMETERLESS_SPACING: [&str; 7] = [
+  "\\smallskip",
+  "\\medskip",
+  "\\bigskip",
+  "\\hfill",
+  "\\hfil",
+  "\\newline",
+  "\\protect",
+];
+
+/// The declarations among a line's unprinted lead, its spacing left out (`\small\vspace{1mm}\noindent\it` → `\small`,
+/// `\noindent`, `\it`; [`leading_unprinted_end`]; 2407.15815).
+fn lead_declarations(v: &[Token]) -> Vec<Token> {
+  let mut declarations = Vec::new();
+  let mut i = 0;
+  loop {
+    let start = i;
+    i += leading_spacing_end(&v[i..]);
+    let found = opening_declarations(&Tokens::new(v[i..].to_vec()));
+    i += found.len();
+    declarations.extend(found);
+    if i == start {
+      // (the space after them is no institution's: `{\color{blue} $^1$A, $^2$B}`)
+      while declarations.last() == Some(&T_SPACE!()) {
+        declarations.pop();
+      }
+      return declarations;
+    }
+  }
+}
+
+/// Where a line's unprinted lead ends: its spacing ([`leading_spacing_end`]) and its declarations
+/// ([`opening_declarations`]), as often as they interleave (`\vspace*{2mm}\noindent`, `\small\vspace{1mm}`).
+fn leading_unprinted_end(v: &[Token]) -> usize {
+  let mut i = 0;
+  loop {
+    let start = i;
+    i += leading_spacing_end(&v[i..]);
+    i += opening_declarations(&Tokens::new(v[i..].to_vec())).len();
+    if i == start {
+      return i;
+    }
   }
 }
 
@@ -10848,6 +11114,22 @@ fn opening_declarations(inner: &Tokens) -> Vec<Token> {
       .get(i + 1)
       .is_some_and(|n| n.get_catcode() == Catcode::BEGIN);
     let with_arguments = WITH_ARGUMENTS.iter().any(|cs| t == T_CS!(*cs));
+    // (spacing that takes a length or a rule's dimensions is no declaration: [`leading_spacing_end`] reads it whole)
+    if [
+      "\\vspace",
+      "\\hspace",
+      "\\addvspace",
+      "\\vskip",
+      "\\hskip",
+      "\\kern",
+      "\\penalty",
+      "\\rule",
+    ]
+    .iter()
+    .any(|cs| t == T_CS!(*cs))
+    {
+      break;
+    }
     if t == T_SPACE!() {
       out.push(t);
       i += 1;
@@ -11443,9 +11725,15 @@ fn name_count(text: &str) -> usize {
 /// Mathematik, Bonn" (math0208081), `John Smith,\\ {\it Bell Labs, Murray Hill}` and `Pierre Fernandez\\ Meta FAIR \&
 /// Inria Rennes` (2402.14904: joined by "&" alone, as institutions are) stay affiliations.
 pub fn names_continue(names: &Tokens, line: &Tokens) -> bool {
-  if leading_markup(line) != leading_markup(names) {
-    return false;
-  }
+  leading_markup(line) == leading_markup(names) && names_list_continues(names, line)
+}
+
+/// [`names_continue`]'s text test alone, whatever markup either line opens with: in a block whose authors carry marks,
+/// a row of names after names continues them however it is styled (`Ann Able$^{1}$, Bob Baker$^{2}$,\\
+/// \textbf{Cat Cole}$^{\dagger}$, \textbf{Dan Dee}$^{\dagger}$`, 2307.00040; `\textbf{Cat Cole, Dan Dee,}`, 2510.11639) —
+/// its words tell names from places there, as the unmarked block's styled-affiliation alternation needs the markup too
+/// (hep-ph9306253, 0811.1526).
+fn names_list_continues(names: &Tokens, line: &Tokens) -> bool {
   let names_text = visible_name_text(names.unlist_ref());
   let names_text = names_text.trim_end();
   let text = visible_name_text(line.unlist_ref());

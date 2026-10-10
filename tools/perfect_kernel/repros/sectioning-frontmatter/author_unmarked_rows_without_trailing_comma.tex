@@ -1,0 +1,12 @@
+% witness: 2410.07701 (IEEEtran; rows of names without trailing commas)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_hf2_s3_unmarked_names_line.md)
+% engines: rust 64b7 = one merged creator; Error:frontmatter:merged_creators
+% expect:  0 errors; the same 6 creators
+% status:  RED (64b7) -> GREEN (64d)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{*}$, Bob Baker \\ Cat Cole, Dan Dee \\ Eve Eck$^{1}$, Fay Fox$^{1}$\\ $^{1}$Univ A}
+\begin{document}
+\maketitle
+x
+\end{document}

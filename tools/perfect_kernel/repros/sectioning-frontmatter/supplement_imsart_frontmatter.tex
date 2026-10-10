@@ -1,0 +1,33 @@
+% witness: 2301.10468, 2401.11672, 2503.07022 (imsart: a second `{frontmatter}` for the supplement after the bibliography)
+% oracle:  pdflatex 0 errors WITH the imsart.cls/.sty 2301.10468 bundles: page 1 "Main Paper Title / Ann Able 1 / 1 University
+%          A / Abstract: Main abstract text."; the supplement's frontmatter printed again after the references
+% engines: rust 64f3 = root title "Supplement to …", abstract "Supplement abstract text.", Ann Able twice
+% expect:  0 errors; root title "Main Paper Title", abstract "Main abstract text.", one creator (Ann Able, University A);
+%          the supplement's abstract text kept in the body
+% status:  RED (64f3) -> GREEN (64d)
+%          (imsart.sty here an empty stand-in for the shipped file, which TeX Live lacks; the binding reads imsart)
+\begin{filecontents*}{imsart.sty}
+\ProvidesPackage{imsart}
+\end{filecontents*}
+\documentclass{imsart}
+\begin{document}
+\begin{frontmatter}
+\title{Main Paper Title}
+\begin{aug}
+\author[A]{\fnms{Ann}~\snm{Able}}
+\address[A]{University A}
+\end{aug}
+\begin{abstract}Main abstract text.\end{abstract}
+\end{frontmatter}
+\section{Intro} Body.
+\begin{thebibliography}{1}\bibitem{a} A. Ref.\end{thebibliography}
+\begin{frontmatter}
+\title{Supplement to ``Main Paper Title''}
+\begin{aug}
+\author[A]{\fnms{Ann}~\snm{Able}}
+\address[A]{University A}
+\end{aug}
+\begin{abstract}Supplement abstract text.\end{abstract}
+\end{frontmatter}
+\section{More} Extra.
+\end{document}

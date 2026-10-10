@@ -151,7 +151,12 @@ LoadDefinitions!({
   // Witness 2402.04924 (icml2024.sty L535).
   DefMacro!("\\icmlProjectLead",
     "\\textsuperscript{\\char`\u{2020}}Project lead");
-  DefMacro!("\\icmlkeywords{}", "\\lx@add@keywords{#1}");
+  // Every icml20xx.sty sends the keywords only to the PDF metadata (icml2018.sty:530-541 … icml2026.sty:546-550
+  // `\ifdefined\nohyperref\else\ifdefined\hypersetup\hypersetup{pdfkeywords={#1}}\fi\fi`; the printed "Keywords:" line is
+  // commented out in each), which hyperref_sty.rs writes as RDFa (`dcterms:subject`), not a displayed keywords block
+  // (Perl `\lx@add@keywords`, icml_support.sty.ltxml:55; user ruling 2026-10-09; 2602.13503).
+  DefMacro!("\\icmlkeywords{}",
+    "\\ifdefined\\nohyperref\\else\\ifdefined\\hypersetup\\hypersetup{pdfkeywords={#1}}\\fi\\fi");
   // \iclrfinalcopy — some icml*-bundled papers also use ICLR's
   // `\iclrfinalcopy` macro (bundled icml2023.sty L: `\def\iclrfinalcopy
   // {\iclrfinaltrue}`). Stub both as no-op. Witness 2206.06661.

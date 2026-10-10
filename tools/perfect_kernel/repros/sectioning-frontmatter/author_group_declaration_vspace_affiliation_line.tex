@@ -1,0 +1,11 @@
+% witness: 2407.15815 (`{\small \vspace{1mm} $^{1}$Univ A, $^{2}$Univ B}`)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_vspace_led_affiliation_line.md)
+% engines: rust 64e4 = 3 creators, one named "Univ A, Univ B" (Perl 3 creators, 0 affiliations)
+% expect:  0 errors; Ann Able (Univ A), Bob Baker (Univ B)
+% status:  RED (64e4) -> GREEN (64d)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ {\small \vspace{1mm} $^{1}$Univ A, $^{2}$Univ B}}
+\maketitle
+\end{document}

@@ -1,0 +1,12 @@
+% witness: negative for HF2 S3 (a styled place after marked names: "Labs" is no name)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_hf2_s3_unmarked_names_line.md)
+% engines: rust 64b7 = the same
+% expect:  0 errors; unchanged: Ann Able; "Bob Baker<break/>Bell Labs, Murray Hill"
+% status:  GUARD (64d)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$,\\ {\it Bell Labs, Murray Hill}\\ $^{1}$Univ A}
+\begin{document}
+\maketitle
+x
+\end{document}

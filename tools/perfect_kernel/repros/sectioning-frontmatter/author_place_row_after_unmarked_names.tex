@@ -1,0 +1,14 @@
+% witness: 64d review r1 finding 5 (synthetic) — a row of two-word places after unmarked names
+% oracle:  pdflatex 0 errors (places printed under the names)
+% engines: rust 64f3 = Error:frontmatter:merged_creators ("Bob Baker<break/>Palo Alto, Menlo Park"); 64d = "Palo Alto" and
+%          "Menlo Park" read as two more authors, silently (HF2 S3 site A; KPE #558 residual)
+% expect:  0 errors; Ann Able, Bob Baker; "Palo Alto, Menlo Park" not authors (a place) — needs place knowledge beyond
+%          name shape ("Palo", "Menlo" are no non-name words)
+% status:  RED (64d)
+\documentclass{article}
+\title{T}
+\author{Ann Able, Bob Baker\\ \textit{Palo Alto, Menlo Park}\\ Cat Cole$^{1}$\\ $^{1}$Univ C}
+\begin{document}
+\maketitle
+x
+\end{document}

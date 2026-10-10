@@ -832,7 +832,7 @@ pushing a one-shot swallow (e.g. `\lx@begin@abstract` sets `\let\lx@abstract@rbr
 hook `\def`s an active `}`/sentinel that `\@gobble`s the next brace, or — cleaner — the braced branch
 re-emits not a bare `{` but `\bgroup…\egroup`-less `\lx@hidden@bgroup` whose reversion drops the
 brace so a dangling source `}` lands on a sentinel group). (B) DOCUMENT-LEVEL RELOCATION (mirrors
-section-in-item leniency, document.rs `is_lenient_sectioning_container`, OD #189): when a sectioning
+section-in-item handling, document.rs `AUTO_OPEN_BRIDGES` item row and its unlabelled-item sibling clause since 64d, OD #189): when a sectioning
 `qsym` arrives with `<ltx:abstract>` (a Block.model frontmatter that can't hold sections) as the open
 insertion element, auto-close `<ltx:abstract>` in `find_insertion_point_qsym` and place the section as
 its sibling — but this only fixes the `<ltx:section> in <ltx:abstract>` tree error, NOT the stomach

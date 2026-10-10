@@ -1,12 +1,12 @@
-% witness: astro-ph/0503342 (emulateapj, `\newcommand{\fig}`); 64f review r1 finding 2, r2 finding 1 — emulateapj loads the
-%          aastex binding (emulateapj_cls.rs) but is a revtex4 class of its own (:165-167): neither the 6+ `\fig` family
-%          nor the 5.x `\subsubsubsection`/`\supportfrom`; arabic sections (:676)
+% witness: astro-ph/0503342 (emulateapj, `\newcommand{\fig}`); 64f review r1 finding 2 — emulateapj loads the aastex
+%          binding (emulateapj_cls.rs) but is a revtex4 class of its own (:165-167) without the 6+ `\fig` family; arabic
+%          sections (:676); the 5.x `\subsubsubsection`/`\supportfrom` stay (the family's union, user 2026-10-10)
 % oracle:  pdflatex (TL 2025 emulateapj.cls) 0 errors: "1. INTRO / See Fig. 1 and Section 1. / 1.1. More / In 1.1. /
 %          Deep: Text here. Support: NSF."
-% engines: rust 64e4 = the binding's `\fig` reads `{f1}` as a `\ref`, "Fig." lost; sections "I", "I.1"; 64f2 = the author's
-%          `\subsubsubsection`/`\supportfrom` skipped ("Support:" and the colon lost)
-% expect:  0 errors; "See Fig. <ref f1> and Section <ref s:i>."; section tags 1 and 1.1; "Deep: Text here. Support: NSF."
-% status:  RED (64e4) -> GREEN (64f)
+% engines: rust 64e4 = the binding's `\fig` reads `{f1}` as a `\ref`, "Fig." lost; sections "I", "I.1"
+% expect:  0 errors; "See Fig. <ref f1> and Section <ref s:i>."; section tags 1 and 1.1; ACCEPTED (union): the author's
+%          `\subsubsubsection`/`\supportfrom` skipped — a `<paragraph>` "Deep", "NSF."
+% status:  RED (64e4) -> GREEN (64f); union ACCEPTED (64d)
 \documentclass{emulateapj}
 \newcommand{\fig}[1]{Fig.~\ref{#1}}
 \newcommand{\subsubsubsection}[1]{\textbf{#1:}~}

@@ -1,0 +1,14 @@
+% witness: 2201.03696, 2401.14483 (64d A/B: a bibliography after an appendix's subsection moved into it under a too-broad
+%          back-matter rule)
+% oracle:  pdflatex 0 errors: the references after the appendix, unnumbered
+% engines: rust 64f3 = <bibliography> after </appendix> (document level); 64d5 = inside the appendix's subsection
+% expect:  0 errors; <bibliography> a child of <document>, after </appendix>
+% status:  GUARD (64d)
+\documentclass{article}
+\begin{document}
+\section{Intro} Text \cite{a}.
+\appendix
+\section{Extra}
+\subsection{Sub} More.
+\begin{thebibliography}{1}\bibitem{a} A. Ref.\end{thebibliography}
+\end{document}

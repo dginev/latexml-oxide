@@ -5319,6 +5319,12 @@ mid-line-end scan would benefit Perl `comment.sty.ltxml`).
 
 **Guard**: `06_cluster_bibliography::comment_midline_end_keeps_bibliography`.
 
+**Indented end lines (64d, user ruling 2026-10-09).** An end line indented by spaces or tabs ends the block, as Perl's
+`/^\s*\Q$endmark\E\s*$/` (comment.sty.ltxml:30) and LaTeX before 2024-11 (TAB not in `\dospecials`) did, where TL2025
+pdflatex runs on to the end of the file: the acmart papers indenting `\end{CCSXML}` by a TAB lost their whole body
+(2401.14656, 2405.12964, 2411.10188, 2501.06699, 2504.19287). Text before or after it on the line still does not end it.
+Guard `perfect_kernel_batch64::comment_indented_end_line`.
+
 ### 134. `--urlstyle` defaults to `file`, not Perl's `server`
 
 **Perl**: `Config.pm` L482 defaults `urlstyle` to `server`, so `latexml`'s
@@ -6125,7 +6131,30 @@ re-entrancy guard leaves the malformed-nesting case exactly as before.
 `{abstract}` env). Guard `cluster_frontmatter_replaceable_dedup`.
 
 **Upstream**: already fixed upstream (`%ReplaceableFrontmatterTags`); this forward-ports
-it into the vendored engine.
+it into the vendored engine. (Correction, 64d: LaTeXML-master, Base_Utility.pool.ltxml:391-417, also pushes
+unconditionally — no `%ReplaceableFrontmatterTags` there either; the replacement is a Rust-only surpass.)
+
+**Sealed by the document body (64d, user ruling 2026-10-09).** "Latest wins" let a supplement's or an appendix's
+frontmatter replace the paper's: a second `{abstract}` after the sections (2503.16707, 2405.10566), imsart's second
+`{frontmatter}` after the bibliography (2301.10468, 2401.11672, 2503.07022: title, abstract, and the authors stacked
+twice), acl's appendix `\title{Appendix}\maketitle`, which its self-disabling `\maketitle` never prints (2510.20036),
+2002.09766's `(Appendix)` title. Where the document body begins — a sectioning unit or a `thebibliography`
+(`seal_digested_frontmatter`) — the replaceable entries (keyed by tag, name and role: acmart's `published` and
+`copyrightyear` dates are two, 2503.04003, 2601.12690) and the author list digested so far are sealed, at one of two
+levels: what a `\maketitle` or a frontmatter environment digested is sealed finally; what the fallback flushed at the
+first section (no `\maketitle` yet) provisionally — only a later explicit `\maketitle` (`\lx@frontmatterhere`) may replace
+it, as the PDF then prints only that one (a `\section*` before a late `\title…\maketitle`), while a class that prints its
+frontmatter without one (imsart) keeps its paper's over its supplement's. A sealed title, date or keywords given later is
+dropped, with the annotations its flush attaches to it; a sealed abstract given later stays in place as body paragraphs
+in its environment form (`\lx@add@frontmatter@until`; the schema admits `ltx:abstract` only at the head), and is dropped
+in its command form; a later `\maketitle` does not supersede finally sealed authors, and later authors flushed over them —
+a supplement's, or an `\author` after a fallback flush with no `\maketitle` (pdflatex prints neither; Perl adds it) — are
+dropped. Nothing is sealed while an entry is still being digested (a `\section{Keywords:}` inside an abstract). Census over
+2,154 A/B papers: 4 change, all toward the paper's own; none away from page 1 of the PDF. Perl stacks both copies at the
+head. A bilingual document with a section between its two `\maketitle`s, and a beamer deck with a second title frame after
+a section, now keep the first title, as page 1 shows. Guards `perfect_kernel_batch64::{supplement_abstract_kept_in_place,
+supplement_title_after_body_dropped, supplement_imsart_frontmatter, starred_section_before_late_maketitle,
+beamer_second_title_frame_after_a_section}`, `perfect_kernel_batch59::author_after_a_fallback_flush_is_sealed_off`.
 
 ### 155. A `.bbl` preamble no longer emits a phantom empty `(N)` bibliography entry
 
@@ -6984,28 +7013,25 @@ take the same change.
 hbox_reader_is_one_frame}`, `mbox_argument_is_bounded::unbraced_box_argument_is_one_token`.
 **Upstream**: not filed.
 
-### 189. A sectioning unit inside a list item closes the previous one as its sibling (Perl: nests it)
+### 189. A sectioning unit inside a list item or a float opens an inline sectional block there (Perl: errs, nests it)
 
 **Perl behavior**: `Document.pm` openElement errors `<ltx:subsection> isn't
 allowed in <ltx:item>` and inserts the nested node anyway; a second heading in
 the same item nests inside the first, with a second error.
-**Rust behavior**: the same error count, and the node inserted anyway (since
-62g, user ruling 2026-10-04 — every diagnostic once; until then the
-sectioning-in-frontmatter leniency suppressed them inside `ltx:item` and
-`ltx:figure`). The remaining divergence is structural: in an `ltx:item` or
-`ltx:figure` the next sectioning unit closes the previous one and becomes its
-sibling there, as latex.ltx's `\@startsection` ends the previous heading's
-scope, not the list — so its error names the item or figure where Perl's names
-the previous heading. In a `table` or other float the second heading nests as
-in Perl.
+**Rust behavior**: since 62zs (floats) and 64d (list items) the unit opens an
+`ltx:inline-sectional-block` there — in a float body directly, in an item inside a
+paragraph of it — with no error (the two paragraphs below); a second heading is
+the first's sibling in the block, as latex.ltx's `\@startsection` ends the previous
+heading's scope, not the list. (62g–64c: Perl's error and nesting, with the next
+unit closing the previous as its sibling in the item or figure.)
 **Why**: LaTeX runs `\section`/`\paragraph` inside an `\item` or a float
-body (the heading is set in the list's indentation), pdflatex is clean, and
-both engines build the nested node. Auto-closing the list/figure was
-rejected: it produces a structure neither engine emits and mis-nests the
-following items.
+body (the heading is set in the list's indentation), pdflatex is clean; the
+inline sectional block keeps the heading where it is printed, schema-valid.
+Auto-closing the list/figure was rejected: it produces a structure neither
+engine emits and mis-nests the following items.
 **Witnesses**: ddphonism/ddphonism, phonrule, prerex/prerex, pdfmarginpar
 (TeX Live doc corpus).
-**Guards**: `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_errors`,
+**Guards**: `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_opens_a_block`,
 `perfect_kernel_batch54::next_sectioning_unit_in_an_item_is_a_sibling`.
 **Upstream**: not filed.
 
@@ -7019,8 +7045,27 @@ the figure is S1.F1 where its caption made S2.F1 — in Perl too; the caption st
 `ltx_appendix` (the block holds sections), its letter and id kept; a `minipage` holding such a unit is captured as the
 inline sectional block, which keeps its class but not its `width`/`vattach` (layout only). 38 2609 papers, 117 errors
 (A/B over 187 2609 papers: 1,089 → 980 errors, 36 improved, 0 regressed; 2609.00179, 00943,
-03590, 05680). A list item keeps Perl's error. Guard `perfect_kernel_batch54::sections_inside_floats_keep_number_id_and_ref`;
+03590, 05680). Guard `perfect_kernel_batch54::sections_inside_floats_keep_number_id_and_ref`;
 repro sectioning-frontmatter/sections_inside_floats_keep_number_id_and_ref.
+
+**In a list item (64d, user ruling 2026-10-09).** A sectioning unit in an itemize, enumerate or description item, nested
+or not, opens the same block in a paragraph of the item (`item_model = tags?, Para.model`, LaTeXML-block.rnc:257: the
+chain is `ltx:para` → `ltx:inline-sectional-block`), without an error: the list stays one list, a later `\item` or the
+list's end closes the block, and a second heading in the item is the first's sibling in it. No id work: an item's id is
+made when it is digested, before the heading steps any counter, and later lists, equations and floats take theirs in
+sequence. This reverses the 2026-09-22/10-04 "keep Perl's error" for items. Residual: `\section` after `\appendix` in an
+item builds `ltx:appendix`, which the block (body content only) does not admit (no witness); a `thebibliography` after
+the item's sections goes in the last of them (`adjust_backmatter_element`), the block holding no back matter. Only a
+labelled item opens the block: an unlabelled `\item[]` is a margin list's (`changemargin`, `\list{}{…}\item[]`), no list
+but a margin — 2201.06926 and 2505.05767 set the whole paper in one, appendix, acknowledgements and bibliography
+included, which the block would leave no place (90 bibitem errors cascaded); there the sections nest as Perl's do, with
+its errors, the next closing the previous as its sibling. Residual: an empty-label item of a real list (a description's
+`\item[]`, an enumitem `label={}` list) is told apart from a margin list's by nothing, and keeps the error too. Witnesses 2304.10050, 2312.11556, 2406.02069,
+2411.15124, 2412.04099, 2501.07868, 2501.07938, 2511.00839 (14 errors). Guards
+`perfect_kernel_batch54::{sectioning_unit_inside_item_or_figure_opens_a_block,
+next_sectioning_unit_in_an_item_is_a_sibling}`, `perfect_kernel_batch64::{section_in_list_item_inline_block,
+section_in_margin_list_keeps_bibliography}`; repros sectioning-frontmatter/section_in_list_item_inline_block,
+section_in_margin_list_keeps_bibliography.
 
 ### 190. Math content in a ref-family element auto-opens an inline `ltx:Math` (Perl: schema error)
 
@@ -12958,16 +13003,17 @@ stores (`\@address`, `\@email`, which its `\@maketitle` reads again) to the new 
 after the new `\author` was handed to them when it was set and is not handed twice; one set before it
 went to the replaced authors and is handed again. A store handed when it was set comes before the
 re-handed ones (Alice's email before the address the class prints first). The latest `\maketitle`
-wins, as for the title (#154). A `\thanks` in the new `\author` is its author's note: the digest of
+wins, as for the title (#154) — until the document body begins over authors a `\maketitle` digested: a later one is a
+supplement's, its authors dropped (#154, 64d). A `\thanks` in the new `\author` is its author's note: the digest of
 an author line makes `\thanks` a note whatever its meaning, and the line split matches an alias of a
 delimiter's own definition only, so an `\and` disabled by the last `\maketitle` matches itself — by meaning it split at
 every `\relax` alias (`\protect`, a disabled `\thanks`; 59d, Rust-only: Perl matches delimiters by token,
 #36). Open, shared with Perl:
 under KOMA ≥ 3.12, which keeps `\thanks` live after `\maketitle` (scrbook.cls:3264), a body `\thanks`
-after the title is inline text (pdflatex: a footnote). Without a later `\maketitle` nothing typesets the new authors again, and they
-are added — as in Perl when a fallback placed the frontmatter; after a `\maketitle` Perl has disabled
-`\author`, and the name is body text. Guards `perfect_kernel_batch59::{author_after_a_digesting_maketitle,
-author_after_a_fallback_flush_is_added, author_superseded_keeps_contacts_with_owners,
+after the title is inline text (pdflatex: a footnote). Without a later `\maketitle` nothing typesets the new authors again: since
+64d they are dropped when a section has sealed the authors a fallback flushed before them (#154; pdflatex prints
+neither, Perl adds them); after a `\maketitle` Perl has disabled `\author`, and the name is body text. Guards `perfect_kernel_batch59::{author_after_a_digesting_maketitle,
+author_after_a_fallback_flush_is_sealed_off, author_superseded_keeps_contacts_with_owners,
 superseding_maketitle_rehands_class_stores, thanks_in_a_superseding_author,
 store_set_before_a_superseding_author, thanks_after_a_late_author_stays_the_documents,
 relax_aliases_do_not_split_a_late_author}`; repro
@@ -14577,3 +14623,15 @@ under each search directory — the source directory and `SEARCHPATHS` too, beyo
 glued it. Witness 2409.13454 (`\folder` = `/example_1/`, 42 graphics, 0 → 42 found). Guards
 `perfect_kernel_batch64::{graphic_exact_name_first, graphic_exact_name_over_other_directories,
 graphic_bare_name_listed_last, graphicspath_leading_slash_name}`.
+
+### 478. `\icmlkeywords` is PDF metadata, written as RDFa (Perl: a displayed keywords block)
+
+**Perl behavior**: icml_support.sty.ltxml:55 `DefMacro('\icmlkeywords{}', '\lx@add@keywords{#1}')` — a visible
+`<ltx:keywords>` block at the head.
+**Rust behavior**: `\icmlkeywords{#1}` is every icml20xx.sty's own definition, `\ifdefined\nohyperref\else
+\ifdefined\hypersetup\hypersetup{pdfkeywords={#1}}\fi\fi` (icml2018.sty:530-541 … icml2026.sty:546-550; the printed
+"Keywords:" line is commented out in each), so with hyperref the keywords become hyperref_sty.rs's RDFa
+`<ltx:rdf property="dcterms:subject" content="…" about=""/>`, and without it nothing, as the PDF prints nothing.
+**Why**: user ruling 2026-10-09 (HF10 F8): keywords a class sends only to the PDF metadata are metadata, not displayed
+content. Witness 2602.13503. Guard `perfect_kernel_batch64::icml_keywords_pdf_metadata`; repro
+sectioning-frontmatter/icml_keywords_pdf_metadata.

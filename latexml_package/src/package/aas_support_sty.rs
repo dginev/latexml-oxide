@@ -204,8 +204,9 @@ LoadDefinitions!({
   DefMacro!("\\platenum{}", "\\def\\theplate{#1}\\let\\@currentlabel\\theplate\\addtocounter{plate}{\\m@ne}");
   // AASTeX 5.x's other commands the later classes dropped (aastex.cls 5.2): `\subsubsubsection` a level-4 heading
   // (:1088-1091, `\@startsection{subsubsection}{4}…`, unnumbered at secnumdepth 3), `\supportfrom[…]{…}` its text
-  // (:1988-1989); aastex_cls.rs undefines both for a 6+ class, where they are the paper's own. `\subsubsubsection`:
-  // 0804.1946 ("Synthetic Secular Theory"; `Error:undefined` before), 0803.0586.
+  // (:1988-1989); kept for every AASTeX version, the family's union (user 2026-10-10), where a 6+ paper's own
+  // `\newcommand` of them is skipped. `\subsubsubsection`: 0804.1946 ("Synthetic Secular Theory"; `Error:undefined`
+  // before), 0803.0586.
   DefMacro!("\\subsubsubsection", "\\paragraph");
   DefMacro!("\\supportfrom[]{}", "#2");
 

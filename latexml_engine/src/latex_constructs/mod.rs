@@ -3813,7 +3813,22 @@ pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> 
     _ => "ltx:bibliography".to_string(),
   };
   if let Some(asif) = asif_opt {
-    let target = backmatter_insertion_target(document, &asif, &element);
+    let mut target = backmatter_insertion_target(document, &asif, &element);
+    // Where the unit it stands as would go cannot hold it — an inline sectional block, whose model is body content only
+    // (a list item's or a float's sections, OXIDIZED_DESIGN_DIVERGENCES #189, then a `thebibliography` in it) — it goes
+    // where it can go from here, inside the last unit. Decided before any node is closed.
+    let mut ancestor = Some(document.get_node().clone());
+    while let Some(node) = ancestor {
+      if document::can_contain(&node, &target) {
+        if document::get_node_qname(&node) == pin!("ltx:inline-sectional-block")
+          && !document::can_contain(&node, &element)
+        {
+          target = element.clone();
+        }
+        break;
+      }
+      ancestor = node.get_parent();
+    }
     let point = document.find_insertion_point(&target, None)?;
     document.set_node(&point);
   }
@@ -3823,6 +3838,9 @@ pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> 
 // Do this before digesting the body of a bibliography
 // Perl: beforeDigestBibliography in latex_constructs.pool.ltxml L3900
 pub fn before_digest_bibliography() -> Result<()> {
+  // The document body has begun: a sectionless letter's bibliography seals its frontmatter as a heading would
+  // (`seal_digested_frontmatter`; a PRL body before its supplement, 2609.07332).
+  seal_digested_frontmatter();
   AssignValue!("inPreamble" => false);
   Digest!("\\@lx@inbibliographytrue")?;
   def_macro_noop("\\bibliographystyle{}")?;

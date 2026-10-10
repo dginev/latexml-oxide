@@ -1,0 +1,22 @@
+% witness: 2401.14656, 2405.12964, 2411.10188, 2501.06699, 2504.19287 (acmart `\end{CCSXML}` indented by a TAB)
+% oracle:  pdflatex TL 2025 (LaTeX 2025-11-01): 3 errors, the comment runs to EOF — LaTeX before 2024-11 ended it (TAB
+%          not in `\dospecials`, skipped at the line start); Perl comment.sty.ltxml:30 `/^\s*\Q$endmark\E\s*$/` ends it
+% engines: rust 64f3 = Error:unexpected:EOF, everything after `\begin{CCSXML}` lost
+% expect:  0 errors; "Before.", "After the block.", "And after the second." (ruling 2026-10-09: accept both variants)
+% status:  RED (64f3) -> GREEN (64d)
+\documentclass{article}
+\usepackage{comment}
+\excludecomment{CCSXML}
+\begin{document}
+Before.
+\begin{CCSXML}
+<ccs2012>
+<concept_id>10010147</concept_id>
+</ccs2012>
+	\end{CCSXML}
+After the block.
+\begin{comment}
+hidden
+  \end{comment}
+And after the second.
+\end{document}

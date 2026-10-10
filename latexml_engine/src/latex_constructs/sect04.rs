@@ -250,6 +250,8 @@ pub(crate) fn load() -> Result<()> {
       precede_heading_with_its_pagebreaks(&section)?;
     },
     properties => sub[args] {
+      // The document body begins: the frontmatter digested so far is the paper's (`seal_digested_frontmatter`).
+      seal_digested_frontmatter();
       let stype = args[0].as_ref().unwrap();
       // let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();
@@ -332,6 +334,8 @@ pub(crate) fn load() -> Result<()> {
     },
     properties => sub[args] {
       use DigestedData::*;
+      // The document body begins (`seal_digested_frontmatter`), as for a numbered unit.
+      seal_digested_frontmatter();
       let stype = args[0].as_ref().unwrap();
       // let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();

@@ -62,13 +62,10 @@ LoadDefinitions!({
     RequirePackage!("rotating", options => vec![s!("figuresright")]);
   }
   RequirePackage!("aas_support");
-  // One binding for every AASTeX version (user directive 2026-10-09): a command only some versions define is the
-  // paper's own in the others, which the binding's must not pre-empt (`\newcommand` skips a defined name).
-  if aastex6_plus {
-    // `\subsubsubsection`, `\supportfrom`: AASTeX 5.x only (aastex.cls 5.2:1088, :1988).
-    Let!("\\subsubsubsection", "\\@undefined");
-    Let!("\\supportfrom", "\\@undefined");
-  } else {
+  // One binding for every AASTeX version, the union of their commands (user directives 2026-10-09, 2026-10-10: the 5.x
+  // `\subsubsubsection`/`\supportfrom` stay for a 6+ class too, where a paper's own `\newcommand` of them is skipped and
+  // its text kept) — dispatched by version only where a version's command would take the paper's own away:
+  if !aastex6_plus {
     // The `\fig` family and `\gridline`: AASTeX 6+ only (aastex6.cls:4909). A 5.x paper's `\fig` is its own:
     // astro-ph/0003209 `\newcommand{\fig}…` now prints "Fig. <ref>", where the binding's `\fig` read the argument as a
     // `\ref` of the wrong label (64e review r2).

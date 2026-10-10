@@ -16,12 +16,16 @@ LoadDefinitions!({
       // (`\ProcessCommentLine#1^^M{\def\test{#1}\csarg\ifx{End…Test}\test`):
       // only a line that IS `\end{name}` ends the comment — TeX's line
       // reader strips trailing spaces (tex.web §362), so `\end{name}   ` does,
-      // while leading spaces, a trailing `%` (innocent, so literal), text
+      // while a trailing `%` (innocent, so literal), text
       // before it, or text after it do not, and the comment then runs to the
       // end of the file where pdflatex stops with "File ended while scanning
       // use of \next" (verified on each shape, 2026-09-05). The earlier
       // mid-line detection (OXIDIZED_DESIGN #133, since retracted) showed
       // MORE than pdflatex; we now report TeX's error at EOF instead.
+      // An end line indented by spaces or tabs ends it too, as Perl's `/^\s*\Q$endmark\E\s*$/` does
+      // (comment.sty.ltxml:30), where pdflatex runs on to the end of the file: a TAB indent ended it in LaTeX until
+      // 2024-11, which put TAB in `\dospecials`, and the acmart papers that indent `\end{CCSXML}` lost their whole body
+      // to it (2401.14656, 2405.12964, 2411.10188, 2501.06699, 2504.19287; user ruling 2026-10-09: accept both).
       // The terminator is handed to the CURRENT `\end` macro (K3, #199).
       // Guards: `00_tokenize::comment_test` (golden), `06_cluster_bibliography::
       // comment_midline_end_runs_to_eof_like_pdflatex`,
@@ -31,7 +35,7 @@ LoadDefinitions!({
       let mut ended = false;
       read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
       while let Some(line) = read_raw_line() {
-        if line.trim_end_matches(' ') == end_line {
+        if line.trim() == end_line {
           let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
           end_tokens.extend(ExplodeText!(&name_clone));
           end_tokens.push(T_END!());

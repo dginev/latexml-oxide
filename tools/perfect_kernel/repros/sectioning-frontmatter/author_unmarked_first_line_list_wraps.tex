@@ -1,0 +1,12 @@
+% witness: 2411.13503 (IEEEtran; a symbol-marked first line of names, wrapped)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_hf2_s3_unmarked_names_line.md)
+% engines: rust 64b7 = "Bob Baker<break/>Cat Cole, Dan Dee" one creator; Error:frontmatter:merged_creators
+% expect:  0 errors; 6 creators: Ann Able (sup *), Bob Baker, Cat Cole, Dan Dee, Eve Eck (Univ A), Fay Fox (Univ A)
+% status:  RED (64b7) -> GREEN (64d)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{*}$, Bob Baker, \\ Cat Cole, Dan Dee, \\ Eve Eck$^{1}$, Fay Fox$^{1}$\\ $^{1}$Univ A}
+\begin{document}
+\maketitle
+x
+\end{document}

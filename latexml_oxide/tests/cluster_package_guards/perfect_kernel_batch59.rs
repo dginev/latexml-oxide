@@ -345,21 +345,22 @@ fn abstract_after_body_text() {
   );
 }
 
-/// 59e: an `\author` after a fallback flush (no later `\maketitle`) adds its author.
-/// Repro sectioning-frontmatter/author_after_a_fallback_flush_is_added.
+/// 59e: an `\author` after a fallback flush (no later `\maketitle`) keeps the flushed author — a replace at the
+/// `\author` itself (59e first cut) dropped "Alice A". 64d: the late author, flushed at the document's end over the
+/// author the first section flushed, is sealed off as a supplement's would be (user ruling 2026-10-09,
+/// OXIDIZED_DESIGN_DIVERGENCES #154; pdflatex prints neither, there being no `\maketitle`; Perl adds it). Repro
+/// sectioning-frontmatter/author_after_a_fallback_flush_is_sealed_off.
 #[test]
-fn author_after_a_fallback_flush_is_added() {
+fn author_after_a_fallback_flush_is_sealed_off() {
   let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_after_a_fallback_flush_is_added.tex"
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_after_a_fallback_flush_is_sealed_off.tex"
   );
   let xml = assert_elements(tex, RAW, (0, 0), &[]);
   let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 2, "two creators in {xml}");
+  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
   assert!(
-    flat.contains(
-      "<creatorrole=\"author\"><personname>AliceA</personname></creator><creatorbefore=\"\"role=\"author\"><personname>LateL</personname></creator>"
-    ),
-    "both authors in {xml}"
+    flat.contains("<creatorrole=\"author\"><personname>AliceA</personname></creator>"),
+    "the flushed author in {xml}"
   );
 }
 

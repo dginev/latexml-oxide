@@ -1,0 +1,12 @@
+% witness: 2510.11639 (acl; `\textbf{…}` rows of unmarked names after marked names)
+% oracle:  pdflatex 0 errors (rc 2026-10-09_rc_hf2_s3_unmarked_names_line.md)
+% engines: rust 64b7 = "Bob Baker<break/>Cat Cole, Dan Dee,<break/>Eve Eck, Fay Fox"; Error:frontmatter:merged_creators
+% expect:  0 errors; 6 creators: Ann Able (Univ A), Bob Baker (Univ A), Cat Cole, Dan Dee, Eve Eck, Fay Fox
+% status:  RED (64b7) -> GREEN (64d)
+\documentclass{article}
+\title{T}
+\author{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{1},\\\textbf{Cat Cole, Dan Dee,}\\\textbf{Eve Eck, Fay Fox}\\ \textsuperscript{1}Univ A}
+\begin{document}
+\maketitle
+x
+\end{document}

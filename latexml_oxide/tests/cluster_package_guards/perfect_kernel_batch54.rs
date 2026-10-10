@@ -4320,14 +4320,12 @@ Model: \extractedmodel, Spec: \extractedspec
   assert!(xml.contains("Model: cmyk, Spec: 0.8,0.2,0.5,0.3"), "{xml}");
 }
 
-/// LaTeX runs `\section`/`\paragraph` inside an `\item` or a float body (the
-/// heading is set in the list's indentation; ddphonism, phonrule, prerex,
-/// pdfmarginpar — pdflatex clean). Both engines build the nested
-/// `<ltx:item><ltx:subsection>`; Perl errors "isn't allowed" and inserts anyway
-/// (Document.pm openElement), and so does Rust again (62g, user ruling 2026-10-04:
-/// every diagnostic once; OD #189 had suppressed it).
+/// LaTeX runs `\section`/`\paragraph` inside an `\item` or a float body (the heading is set in the list's indentation;
+/// ddphonism, phonrule, prerex, pdfmarginpar — pdflatex clean). Both open an `ltx:inline-sectional-block` there — in a
+/// paragraph of the item, which holds paragraphs only — without an error (user rulings 2026-10-06 for floats,
+/// 2026-10-09 for items; OD #189), where Perl errors "isn't allowed" and nests the unit in the item.
 #[test]
-fn sectioning_unit_inside_item_or_figure_errors() {
+fn sectioning_unit_inside_item_or_figure_opens_a_block() {
   let tex = r"\documentclass{article}
 \begin{document}
 \begin{itemize}
@@ -4342,30 +4340,22 @@ Figure body text.
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
-  // The item errs as Perl's does (OD #189); the figure's unit opens an inline sectional block (ruling 2026-10-06).
-  assert_eq!(error_count(&stderr), 1, "{stderr}");
-  let line = "Error:malformed:ltx:subsection <ltx:subsection> isn't allowed in <ltx:item>";
-  assert!(
-    stderr.lines().any(|l| l == line),
-    "missing `{line}`:\n{stderr}"
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
   );
-  // Inserted where they are, nothing closed: the subsection inside the item, the paragraph inside the figure's
-  // inline sectional block.
-  let at = |needle: &str| {
-    xml
-      .find(needle)
-      .unwrap_or_else(|| panic!("no `{needle}`:\n{xml}"))
-  };
-  assert!(
-    at("<item") < at("<subsection") && at("<subsection") < at("</item>"),
-    "{xml}"
+  latexml::util::test::assert_element(
+    &xml,
+    "itemize",
+    &[],
+    "<itemize xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p>First item.</p></para><para xml:id=\"S0.I1.i1.p2\"><inline-sectional-block><subsection inlist=\"toc\" xml:id=\"S0.SS1\"><tags><tag>0.1</tag><tag role=\"refnum\">0.1</tag><tag role=\"typerefnum\">\u{a7}0.1</tag></tags><title><tag close=\" \">0.1</tag>Heading inside item</title><para xml:id=\"S0.SS1.p1\"><p>More text.</p></para></subsection></inline-sectional-block></para></item></itemize>",
   );
-  assert!(
-    at("<figure") < at("<inline-sectional-block")
-      && at("<inline-sectional-block") < at("<paragraph")
-      && at("<paragraph") < at("</inline-sectional-block>")
-      && at("</inline-sectional-block>") < at("</figure>"),
-    "{xml}"
+  latexml::util::test::assert_element(
+    &xml,
+    "figure",
+    &[],
+    "<figure xml:id=\"fig1\"><p class=\"ltx_figure_panel\">Figure body text.</p><break class=\"ltx_break\"/><inline-sectional-block class=\"ltx_figure_panel\"><paragraph inlist=\"toc\" xml:id=\"S0.SS1.SSS0.Px1\"><title>Notes</title><para xml:id=\"S0.SS1.SSS0.Px1.p1\"><p>inside the figure.</p></para></paragraph></inline-sectional-block></figure>",
   );
 }
 
@@ -4606,11 +4596,9 @@ fn aftergroup_in_a_tabular_cell_fires_inside_the_cell() {
   assert!(xml.contains("[FIRED]"), "{xml}");
 }
 
-/// After a sectioning unit is nested in a list item (an error, OD #189), the
-/// NEXT sectioning command closes it and becomes its SIBLING inside the item
-/// (its own error, as Perl's second) — latex.ltx's `\@startsection` ends the
-/// previous heading's scope, not the list; a `\section` after `\end{itemize}`
-/// is at the outer level (ddphonism; Perl nests Y inside X).
+/// A second sectioning command in the same list item closes the first and becomes its sibling in the item's inline
+/// sectional block — latex.ltx's `\@startsection` ends the previous heading's scope, not the list; a `\section` after
+/// `\end{itemize}` is at the outer level (ddphonism; Perl nests Y inside X, with two errors). OD #189.
 #[test]
 fn next_sectioning_unit_in_an_item_is_a_sibling() {
   let tex = r"\documentclass{article}
@@ -4622,23 +4610,23 @@ fn next_sectioning_unit_in_an_item_is_a_sibling() {
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
-  assert_eq!(error_count(&stderr), 2, "{stderr}");
-  let line = "Error:malformed:ltx:subsection <ltx:subsection> isn't allowed in <ltx:item>";
-  assert_eq!(stderr.lines().filter(|l| *l == line).count(), 2, "{stderr}");
-  let x = xml
-    .find(r#"<subsection inlist="toc" xml:id="S0.SS1">"#)
-    .expect("X");
-  let x_end = xml[x..].find("</subsection>").expect("X end") + x;
-  let y = xml
-    .find(r#"<subsection inlist="toc" xml:id="S0.SS2">"#)
-    .expect("Y");
-  assert!(y > x_end, "Y must follow X's close as a sibling:\n{xml}");
-  let item_end = xml.find("</item>").expect("item end");
-  assert!(y < item_end, "Y stays inside the item:\n{xml}");
-  let z = xml
-    .find(r#"<section inlist="toc" xml:id="S1">"#)
-    .expect("Z");
-  assert!(z > xml.find("</itemize>").unwrap(), "{xml}");
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "itemize",
+    &[],
+    "<itemize xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p>A</p></para><para xml:id=\"S0.I1.i1.p2\"><inline-sectional-block><subsection inlist=\"toc\" xml:id=\"S0.SS1\"><tags><tag>0.1</tag><tag role=\"refnum\">0.1</tag><tag role=\"typerefnum\">\u{a7}0.1</tag></tags><title><tag close=\" \">0.1</tag>X</title><para xml:id=\"S0.SS1.p1\"><p>text</p></para></subsection><subsection inlist=\"toc\" xml:id=\"S0.SS2\"><tags><tag>0.2</tag><tag role=\"refnum\">0.2</tag><tag role=\"typerefnum\">\u{a7}0.2</tag></tags><title><tag close=\" \">0.2</tag>Y</title><para xml:id=\"S0.SS2.p1\"><p>more</p></para></subsection></inline-sectional-block></para></item></itemize>",
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\" \">1</tag>Z</title></section>",
+  );
 }
 
 /// beamer.cls:144-156 `\beamer@size` = the size .clo the class inputs (:363);

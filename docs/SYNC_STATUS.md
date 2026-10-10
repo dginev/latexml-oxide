@@ -856,12 +856,11 @@ consolidate): the climb's stops are per-tag (list, alignment, float), and a box 
 moves the insertion point past the open quote, so the text after the box escapes it (RED
 repros/boxes-groups/bibliography_in_minipage_in_quote_keeps_the_quote.tex); Perl's `floatToElement` restores the
 insertion point after floating past an open container, the likely single rule, but the xebaposter/juradiss hoists
-(surpass) must keep working — needs its own A/B. The mnras-binding gaps rasti papers inherited landed in 62ze. NEEDS A RULING: a `\section` inside a float (38 papers in 2609, 117 errors; 29 have no
+(surpass) must keep working — needs its own A/B. The mnras-binding gaps rasti papers inherited landed in 62ze. RULED (applied 62zs/64d): a `\section` inside a float (38 papers in 2609, 117 errors; 29 have no
 other error: 2609.03590, 00943, 05680) is valid TeX — `\@startsection` needs only vertical mode — and could open in an
 `ltx:inline-sectional-block` in the float (schema-valid, the appendix as its `ltx:section` stand-in; prototyped, 0
-errors, jing-clean), but the 2026-10-04 ruling restored Perl's `Error:malformed` for sectioning in items and figures
-(OXIDIZED_DESIGN_DIVERGENCES #189, `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_errors`), so it is
-not applied. Guards `perfect_kernel_batch61::{rasti_loads_as_mnras, appendix_in_a_minipage_stays_in_its_float,
+errors, jing-clean) — applied in 62zs for floats (ruling 2026-10-06) and in 64d for list items (ruling 2026-10-09;
+OXIDIZED_DESIGN_DIVERGENCES #189, `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_opens_a_block`). Guards `perfect_kernel_batch61::{rasti_loads_as_mnras, appendix_in_a_minipage_stays_in_its_float,
 cas_common_helpers_can_be_renewed}`.
 
 62zc: class bindings that skipped what the class loads or defines. optica-article's binding runs the class file's own

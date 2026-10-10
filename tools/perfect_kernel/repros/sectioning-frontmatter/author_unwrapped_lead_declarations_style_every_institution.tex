@@ -1,0 +1,13 @@
+% witness: 64d review r3 nit / KPE #558 residual (synthetic) — an unwrapped line's leading declarations scope over the
+%          whole line in TeX
+% oracle:  pdflatex 0 errors: both institutions footnotesize
+% engines: rust 64d = only Univ A footnotesize (Univ B plain)
+% expect:  0 errors; Ann (Univ A), Bob (Univ B), both at 80%
+% status:  RED (64d)
+\documentclass{article}
+\title{T}
+\author{Ann$^{1}$ and Bob$^{2}$ \\ \footnotesize\vspace{2pt}\noindent $^{1}$Univ A, $^{2}$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

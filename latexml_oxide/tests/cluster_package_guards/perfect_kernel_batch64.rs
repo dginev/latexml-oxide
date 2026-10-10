@@ -838,8 +838,9 @@ fn aastex5_dropped_commands() {
   );
 }
 
-/// 64f review r1: `\subsubsubsection`/`\supportfrom` are AASTeX 5.x only; in a 6+ paper they are the paper's own, which the
-/// family binding leaves undefined for it. Repro sectioning-frontmatter/aastex6_author_subsubsubsection.
+/// 64d: `\subsubsubsection`/`\supportfrom` are AASTeX 5.x only, kept for every version — the family's union (user
+/// 2026-10-10): a 6+ paper's own `\newcommand` of them is skipped (Info), its heading text kept, the author's "Support:" and
+/// colon not reproduced (accepted). Repro sectioning-frontmatter/aastex6_author_subsubsubsection.
 #[test]
 fn aastex6_author_subsubsubsection() {
   let tex = include_str!(
@@ -850,12 +851,13 @@ fn aastex6_author_subsubsubsection() {
     &xml,
     "section",
     &["xml:id=\"S1\""],
-    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\" \">1</tag>Intro</title><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\"><text font=\"bold\" xml:id=\"S1.p1.1.1\">Deep:</text>\u{a0} Text here. Support: NSF.</p></para></section>",
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\" \">1</tag>Intro</title><paragraph inlist=\"toc\" xml:id=\"S1.SS0.SSS0.Px1\"><title>Deep</title><para xml:id=\"S1.SS0.SSS0.Px1.p1\"><p xml:id=\"S1.SS0.SSS0.Px1.p1.1\">Text here. NSF.</p></para></paragraph></section>",
   );
 }
 
 /// 64f review r1-r2: emulateapj loads the aastex binding but is a revtex4 class of its own (emulateapj.cls:165-167) — the
-/// author's `\fig`, `\subsubsubsection` and `\supportfrom` are theirs, and the sections are arabic (:676; astro-ph/0503342).
+/// author's `\fig` is theirs and the sections are arabic (:676; astro-ph/0503342); the 5.x `\subsubsubsection`/`\supportfrom`
+/// stay (the family's union, user 2026-10-10), so the author's own are skipped (accepted).
 /// Repro captions-floats/emulateapj_author_fig_sections.
 #[test]
 fn emulateapj_author_fig_sections() {
@@ -867,6 +869,422 @@ fn emulateapj_author_fig_sections() {
     &xml,
     "section",
     &["xml:id=\"S1\""],
-    "<section inlist=\"toc\" labels=\"LABEL:s:i\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\". \">1</tag>Intro</title><toctitle><tag close=\" \">1</tag>Intro</toctitle><figure inlist=\"lof\" labels=\"LABEL:f1\" xml:id=\"S1.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S1.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"S1.F1.g1\"/><toccaption><tag close=\" \">1</tag>One.</toccaption><caption><tag close=\".\u{2014} \">Figure 1</tag>One.</caption></figure><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">See Fig.\u{a0}<ref labelref=\"LABEL:f1\"/> and Section\u{a0}<ref labelref=\"LABEL:s:i\"/>.</p></para><subsection inlist=\"toc\" labels=\"LABEL:s:m\" xml:id=\"S1.SS1\"><tags><tag>1.1</tag><tag role=\"autoref\">subsection\u{a0}1.1<text xml:id=\"S1.SS1.1\"/></tag><tag role=\"refnum\">1.1</tag><tag role=\"typerefnum\">\u{a7}1.1</tag></tags><title><tag close=\". \">1.1</tag>More</title><toctitle><tag close=\" \">1.1</tag>More</toctitle><para xml:id=\"S1.SS1.p1\"><p xml:id=\"S1.SS1.p1.1\">In <ref labelref=\"LABEL:s:m\"/>.<text font=\"bold\" xml:id=\"S1.SS1.p1.1.1\">Deep:</text>\u{a0} Text here. Support: NSF.</p></para></subsection></section>",
+    "<section inlist=\"toc\" labels=\"LABEL:s:i\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\". \">1</tag>Intro</title><toctitle><tag close=\" \">1</tag>Intro</toctitle><figure inlist=\"lof\" labels=\"LABEL:f1\" xml:id=\"S1.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S1.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=345.0pt,keepaspectratio=true\" xml:id=\"S1.F1.g1\"/><toccaption><tag close=\" \">1</tag>One.</toccaption><caption><tag close=\".\u{2014} \">Figure 1</tag>One.</caption></figure><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">See Fig.\u{a0}<ref labelref=\"LABEL:f1\"/> and Section\u{a0}<ref labelref=\"LABEL:s:i\"/>.</p></para><subsection inlist=\"toc\" labels=\"LABEL:s:m\" xml:id=\"S1.SS1\"><tags><tag>1.1</tag><tag role=\"autoref\">subsection\u{a0}1.1<text xml:id=\"S1.SS1.1\"/></tag><tag role=\"refnum\">1.1</tag><tag role=\"typerefnum\">\u{a7}1.1</tag></tags><title><tag close=\". \">1.1</tag>More</title><toctitle><tag close=\" \">1.1</tag>More</toctitle><para xml:id=\"S1.SS1.p1\"><p xml:id=\"S1.SS1.p1.1\">In <ref labelref=\"LABEL:s:m\"/>.</p></para><paragraph inlist=\"toc\" xml:id=\"S1.SS1.SSS0.Px1\"><title>Deep</title><para xml:id=\"S1.SS1.SSS0.Px1.p1\"><p xml:id=\"S1.SS1.SSS0.Px1.p1.1\">Text here. NSF.</p></para></paragraph></subsection></section>",
   );
+}
+
+/// 64d (HF7 A, user ruling 2026-10-09): a `\subsection` inside an open list item opens an inline sectional block in a
+/// paragraph of the item — no error, the list one list, numbering, ids, labels and refs as pdflatex prints them (OD #189;
+/// 2304.10050, 2312.11556, 2406.02069, 2411.15124, 2412.04099, 2501.07868, 2501.07938, 2511.00839).
+/// Repro sectioning-frontmatter/section_in_list_item_inline_block.
+#[test]
+fn section_in_list_item_inline_block() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/section_in_list_item_inline_block.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_element(
+    &xml,
+    "itemize",
+    &["xml:id=\"S1.I1\""],
+    "<itemize xml:id=\"S1.I1\"><item xml:id=\"S1.I1.i1\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S1.I1.i1.p1\"><p xml:id=\"S1.I1.i1.p1.1\"><text font=\"bold\" xml:id=\"S1.I1.i1.p1.1.1\">Alpha</text> first term.</p></para><para xml:id=\"S1.I1.i1.p2\"><inline-sectional-block xml:id=\"S1.I1.i1.p2.1\"><subsection inlist=\"toc\" labels=\"LABEL:mg\" xml:id=\"S1.SS1\"><tags><tag>1.1</tag><tag role=\"refnum\">1.1</tag><tag role=\"typerefnum\">\u{a7}1.1</tag></tags><title><tag close=\" \">1.1</tag>Mathematics</title><para xml:id=\"S1.SS1.p1\"><p xml:id=\"S1.SS1.p1.1\">Intro text of the subsection.</p></para></subsection></inline-sectional-block></para></item><item xml:id=\"S1.I1.i2\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">2nd item</tag></tags><para xml:id=\"S1.I1.i2.p1\"><p xml:id=\"S1.I1.i2.p1.1\"><text font=\"bold\" xml:id=\"S1.I1.i2.p1.1.1\">Beta</text> second term, see <ref labelref=\"LABEL:mg\"/>.</p></para></item></itemize>",
+  );
+  assert_element(
+    &xml,
+    "subsection",
+    &["xml:id=\"S1.SS2\""],
+    "<subsection inlist=\"toc\" labels=\"LABEL:lt\" xml:id=\"S1.SS2\"><tags><tag>1.2</tag><tag role=\"refnum\">1.2</tag><tag role=\"typerefnum\">\u{a7}1.2</tag></tags><title><tag close=\" \">1.2</tag>Later</title><para xml:id=\"S1.SS2.p1\"><p xml:id=\"S1.SS2.p1.1\">See <ref labelref=\"LABEL:mg\"/> and <ref labelref=\"LABEL:lt\"/>.</p></para></subsection>",
+  );
+}
+
+/// 64d (HF7 C, user ruling 2026-10-09): an `\end{CCSXML}` / `\end{comment}` line indented by a TAB or spaces ends the
+/// excluded block, as Perl's `/^\s*…\s*$/` (comment.sty.ltxml:30) and LaTeX before 2024-11 did (2401.14656, 2405.12964,
+/// 2411.10188, 2501.06699, 2504.19287). Repro loader/comment_indented_end_line.
+#[test]
+fn comment_indented_end_line() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/comment_indented_end_line.tex");
+  let xml = convert_clean(tex);
+  assert_element(
+    &xml,
+    "document",
+    &[],
+    "<document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><para xml:id=\"p1\"><p xml:id=\"p1.1\">Before. After the block. And after the second.</p></para></document>",
+  );
+}
+
+/// 64d (F8, user ruling 2026-10-09): `\icmlkeywords` sends the keywords to the PDF metadata only, as every icml20xx.sty
+/// does, which hyperref writes as RDFa — no displayed keywords block (2602.13503).
+/// Repro sectioning-frontmatter/icml_keywords_pdf_metadata.
+#[test]
+fn icml_keywords_pdf_metadata() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/icml_keywords_pdf_metadata.tex"
+  );
+  let xml = convert_clean(tex);
+  assert!(!xml.contains("<keywords"), "{xml}");
+  assert_element(
+    &xml,
+    "rdf",
+    &["property=\"dcterms:subject\""],
+    "<rdf about=\"\" content=\"Machine Learning, ICML\" property=\"dcterms:subject\"/>",
+  );
+}
+
+/// 64d (F6, user ruling 2026-10-09): a supplement's `{abstract}` after the document body began keeps the paper's at the
+/// head and stays in place as body text (`seal_digested_frontmatter`; 2503.16707, 2405.10566).
+/// Repro sectioning-frontmatter/supplement_abstract_kept_in_place.
+#[test]
+fn supplement_abstract_kept_in_place() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/supplement_abstract_kept_in_place.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_element(
+    &xml,
+    "abstract",
+    &[],
+    "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Main abstract text.</p></abstract>",
+  );
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\" \">1</tag>Intro</title><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">Body.</p><pagination role=\"newpage\"/><p align=\"center\" xml:id=\"S1.p1.2\"><text fontsize=\"144%\" xml:id=\"S1.p1.2.1\">Supplementary Material</text></p></para><para xml:id=\"S1.p2\"><p xml:id=\"S1.p2.1\">Supplement abstract text.</p></para></section>",
+  );
+}
+
+/// 64d (F6): a title after the document body began is a supplement's or appendix's, dropped — the paper's stays
+/// (2510.20036's appendix `\title{Appendix}\maketitle`, which acl's self-disabling `\maketitle` never prints; 2002.09766).
+/// Repro sectioning-frontmatter/supplement_title_after_body_dropped.
+#[test]
+fn supplement_title_after_body_dropped() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/supplement_title_after_body_dropped.tex"
+  );
+  let xml = convert_clean(tex);
+  assert!(!xml.contains("Appendix"), "{xml}");
+  assert_element(&xml, "title", &[], "<title>Main Paper Title</title>");
+}
+
+/// 64d (F6): imsart's second `{frontmatter}` for the supplement after the bibliography — its title, authors (with their
+/// addresses) and abstract are the supplement's: the paper's stay, its authors not stacked twice (2301.10468, 2401.11672,
+/// 2503.07022). Repro sectioning-frontmatter/supplement_imsart_frontmatter.
+#[test]
+fn supplement_imsart_frontmatter() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/supplement_imsart_frontmatter.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann\u{a0}Able</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">University A</contact>\n  </creator>",
+  ]);
+  assert_element(&xml, "title", &[], "<title>Main Paper Title</title>");
+  assert_element(
+    &xml,
+    "abstract",
+    &[],
+    "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Main abstract text.</p></abstract>",
+  );
+  // the supplement's abstract text kept in the body
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Supplement abstract text.</p></para>",
+  );
+}
+
+/// 64d (HF2 S3, site A): a block's unmarked first line of names is a names line later unmarked rows of names continue (2411.13503). Repro sectioning-frontmatter/author_unmarked_first_line_list_wraps.
+#[test]
+fn author_unmarked_first_line_list_wraps() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_unmarked_first_line_list_wraps.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">*</sup></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Eve Eck</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Fay Fox</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64d (HF2 S3, site A): rows of names without trailing commas continue the first line's names (2410.07701). Repro sectioning-frontmatter/author_unmarked_rows_without_trailing_comma.
+#[test]
+fn author_unmarked_rows_without_trailing_comma() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_unmarked_rows_without_trailing_comma.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">*</sup></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Eve Eck</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Fay Fox</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64d (HF2 S3, site B): a bold row of symbol-marked names after marked names continues them, whatever markup it opens with (2307.00040; Perl's 4 authors). Repro sectioning-frontmatter/author_bold_row_after_marked_names.
+#[test]
+fn author_bold_row_after_marked_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_bold_row_after_marked_names.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id1\">†</sup></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee<sup xml:id=\"id2\">†</sup></personname>\n  </creator>",
+  ]);
+}
+
+/// 64d (HF2 S3): `\bf`-led rows of names and a blank row (2401.05566). Repro sectioning-frontmatter/author_bf_rows_with_blank_line.
+#[test]
+fn author_bf_rows_with_blank_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_bf_rows_with_blank_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\"><text font=\"bold\" xml:id=\"id1.1\">Core.</text></note>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Eve Eck</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Fay Fox</personname>\n  </creator>",
+  ]);
+}
+
+/// 64d (HF2 S3, site B): `\textbf{…}` rows of names after marked names (2510.11639). Repro sectioning-frontmatter/author_bold_group_rows_after_marked_names.
+#[test]
+fn author_bold_group_rows_after_marked_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_bold_group_rows_after_marked_names.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Eve Eck</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Fay Fox</personname>\n  </creator>",
+  ]);
+}
+
+/// 64d (HF2 S3) negative: a place line after marked names stays the last author's continuation (Perl-identical weld; unchanged). Repro sectioning-frontmatter/author_unmarked_affiliation_after_marked_names.
+#[test]
+fn author_unmarked_affiliation_after_marked_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_unmarked_affiliation_after_marked_names.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<break/>Department of Physics, University of Somewhere</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64d (HF2 S3) negative: a styled place ("Bell Labs, Murray Hill") after marked names is no names row (unchanged). Repro sectioning-frontmatter/author_styled_place_after_marked_names.
+#[test]
+fn author_styled_place_after_marked_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_styled_place_after_marked_names.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<break/><text font=\"italic\" xml:id=\"id1\">Bell Labs, Murray Hill</text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64d: an affiliation line led by `\vspace{0.1cm}` is mark-led — the unit letters of a spacing length are no name before the mark (`marker_leads` past `leading_unprinted_end`; 2407.15815). Repro sectioning-frontmatter/author_vspace_led_marked_affiliation_line.
+#[test]
+fn author_vspace_led_marked_affiliation_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_vspace_led_marked_affiliation_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ C</contact>\n  </creator>",
+  ]);
+}
+
+/// 64d: `\vspace*{2mm}\noindent` before the mark — spacing and declarations interleaved (2407.15815). Repro sectioning-frontmatter/author_vspacestar_noindent_led_affiliation_line.
+#[test]
+fn author_vspacestar_noindent_led_affiliation_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_vspacestar_noindent_led_affiliation_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64d: `{\small \vspace{1mm} $^{1}$Univ A, …}` — the wrapper's inside past its unprinted lead (2407.15815). Repro sectioning-frontmatter/author_group_declaration_vspace_affiliation_line.
+#[test]
+fn author_group_declaration_vspace_affiliation_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_group_declaration_vspace_affiliation_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
+  ]);
+}
+
+/// 64d: a `\kern2pt`-led affiliation line (glue read whole, not a declaration then a digit; Rust-only). Repro sectioning-frontmatter/author_kern_led_affiliation_line.
+#[test]
+fn author_kern_led_affiliation_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_kern_led_affiliation_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64d negative: a `\vspace`-led line of NAMES stays names (a letter before its mark). Repro sectioning-frontmatter/author_vspace_led_names_line.
+#[test]
+fn author_vspace_led_names_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_vspace_led_names_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 64d: a paper set wholly inside a margin list (`changemargin`, `\list{}{…}\item[]`) — the unlabelled item is no list
+/// item, so its sections open no inline sectional block: Perl's nesting with its errors, the next closing the previous
+/// as its sibling, the bibliography in the last (OD #189; 2201.06926, 2505.05767, where the block left the appendix,
+/// acknowledgements and bibliography no place). Repro sectioning-frontmatter/section_in_margin_list_keeps_bibliography.
+#[test]
+fn section_in_margin_list_keeps_bibliography() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/section_in_margin_list_keeps_bibliography.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&log), 2, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  let line = "Error:malformed:ltx:section <ltx:section> isn't allowed in <ltx:item>";
+  assert_eq!(log.lines().filter(|l| *l == line).count(), 2, "{log}");
+  assert_element(
+    &xml,
+    "itemize",
+    &[],
+    "<itemize xml:id=\"p1.1\"><item xml:id=\"S0.I1.ix1\"><section inlist=\"toc\" labels=\"LABEL:s:i\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">\u{a7}1</tag></tags><title><tag close=\" \">1</tag>Intro</title><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">Text, see <cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"a\" separator=\",\" yyseparator=\",\"/>]</cite> and Section\u{a0}<ref labelref=\"LABEL:s:m\"/>.</p></para></section><section inlist=\"toc\" labels=\"LABEL:s:m\" xml:id=\"S2\"><tags><tag>2</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">\u{a7}2</tag></tags><title><tag close=\" \">2</tag>More</title><para xml:id=\"S2.p1\"><p xml:id=\"S2.p1.1\">More text.</p></para><bibliography inlist=\"toc\" xml:id=\"bib\"><title>References</title><biblist><bibitem key=\"a\" xml:id=\"bib.bib1\"><tags><tag>[1]</tag><tag role=\"refnum\">1</tag></tags><bibblock> A. Author, A paper.</bibblock></bibitem><bibitem key=\"b\" xml:id=\"bib.bib2\"><tags><tag>[2]</tag><tag role=\"refnum\">2</tag></tags><bibblock> B. Author, Another.</bibblock></bibitem></biblist></bibliography></section></item></itemize>",
+  );
+}
+
+/// 64d review r1: the fallback flush at a starred section digests a preamble title the PDF never prints — provisional,
+/// so the later `\title…\maketitle` is the paper's, with all its authors (`seal_digested_frontmatter`).
+/// Repro sectioning-frontmatter/starred_section_before_late_maketitle.
+#[test]
+fn starred_section_before_late_maketitle() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/starred_section_before_late_maketitle.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+  ]);
+  assert_element(&xml, "title", &[], "<title>Final Title</title>");
+}
+
+/// 64d negative: a bibliography after an appendix's subsection stays at the document level — the back-matter rule for an
+/// inline sectional block (`adjust_backmatter_element`) applies to that block only (2201.03696, 2401.14483).
+/// Repro sectioning-frontmatter/bibliography_after_appendix_at_document_level.
+#[test]
+fn bibliography_after_appendix_at_document_level() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bibliography_after_appendix_at_document_level.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_element(
+    &xml,
+    "appendix",
+    &[],
+    "<appendix inlist=\"toc\" xml:id=\"A1\"><tags><tag>Appendix A</tag><tag role=\"refnum\">A</tag><tag role=\"typerefnum\">Appendix A</tag></tags><title><tag close=\" \">Appendix A</tag>Extra</title><toctitle><tag close=\" \">A</tag>Extra</toctitle><subsection inlist=\"toc\" xml:id=\"A1.SS1\"><tags><tag>A.1</tag><tag role=\"refnum\">A.1</tag><tag role=\"typerefnum\">\u{a7}A.1</tag></tags><title><tag close=\" \">A.1</tag>Sub</title><para xml:id=\"A1.SS1.p1\"><p xml:id=\"A1.SS1.p1.1\">More.</p></para></subsection></appendix>",
+  );
+  // the bibliography a child of the document, right after the appendix
+  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
+  assert!(flat.contains("</appendix><bibliography"), "{xml}");
+}
+
+/// 64d review r2: a beamer deck's second title frame after a section is a later part's — the first title and author are
+/// sealed, as page 1 of the PDF shows them (OXIDIZED_DESIGN_DIVERGENCES #154; 64f3 mixed "Part Two" with both authors).
+/// Repro sectioning-frontmatter/beamer_second_title_frame_after_a_section.
+#[test]
+fn beamer_second_title_frame_after_a_section() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/beamer_second_title_frame_after_a_section.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann</personname>\n  </creator>",
+  ]);
+  assert_element(&xml, "title", &[], "<title>Part One</title>");
+}
+
+/// 64d review r3: an unwrapped affiliation line led by a declaration and spacing (`\small \vspace{1mm} $^{1}$Univ A,
+/// $^{2}$Univ B`) — the lead prints nothing and is no institution (`split_before_affiliation_marks`; 2407.15815).
+/// Repro sectioning-frontmatter/author_declaration_vspace_led_affiliation_line.
+#[test]
+fn author_declaration_vspace_led_affiliation_line() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_declaration_vspace_led_affiliation_line.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 64d review r3: a wrapped affiliation lead's declarations after its spacing (`{\small\vspace{1mm}\noindent\it …}`)
+/// are repeated on every piece, as TeX scopes them over the group (`lead_declarations`; 2407.15815).
+/// Repro sectioning-frontmatter/author_wrapped_lead_declarations_after_spacing.
+#[test]
+fn author_wrapped_lead_declarations_after_spacing() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_wrapped_lead_declarations_after_spacing.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
+  ]);
+}
+
+/// 64d review r4: after a wrapped affiliation list, a spacing lead before the next mark is a separator — the absorb rule
+/// for an unprinted lead holds at a line's start only (`split_marked_pieces`). Repro
+/// sectioning-frontmatter/author_spacing_after_wrapped_affiliation_list.
+#[test]
+fn author_spacing_after_wrapped_affiliation_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_spacing_after_wrapped_affiliation_list.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact>\n  </creator>",
+  ]);
 }

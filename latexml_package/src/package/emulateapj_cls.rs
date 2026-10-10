@@ -12,13 +12,10 @@ LoadDefinitions!({
   RequireResource!("ltx-apj.css");
   RequirePackage!("emulateapj");
   // emulateapj.cls is a revtex4 class of its own (:165-167 `\LoadClass…{\@revtex@cls}`), not an AASTeX version: it has
-  // neither AASTeX 5.x's `\subsubsubsection`/`\supportfrom` nor AASTeX 6's `\fig` family and `\gridline` (the aastex
-  // binding defines them by version, aastex_cls.rs), so a paper's own are its own (astro-ph/0503342 `\newcommand{\fig}`;
-  // KNOWN_PERL_ERRORS #557).
-  for command in [
-    "\\subsubsubsection", "\\supportfrom",
-    "\\fig", "\\leftfig", "\\rightfig", "\\boxedfig", "\\rotatefig", "\\gridline",
-  ] {
+  // no AASTeX 6 `\fig` family or `\gridline` (which the aastex binding defines for a 6+ class only, aastex_cls.rs), so a
+  // paper's own `\fig` is its own (astro-ph/0503342 `\newcommand{\fig}`; KNOWN_PERL_ERRORS #557). The 5.x
+  // `\subsubsubsection`/`\supportfrom` stay, the family's union (user 2026-10-10).
+  for command in ["\\fig", "\\leftfig", "\\rightfig", "\\boxedfig", "\\rotatefig", "\\gridline"] {
     Let!(T_CS!(command), "\\@undefined");
   }
   // …and unlocked: emulateapj_sty.rs locks the `\fig` it found defined, which a 6+ `aastex.cls` the paper ships leaves

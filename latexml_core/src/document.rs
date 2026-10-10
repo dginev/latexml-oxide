@@ -3429,16 +3429,14 @@ impl Document {
           close_to = Some(node);
           break;
         }
-        // A sectioning unit nested in a list item / figure (an error, below) is
-        // CLOSED by the next sectioning unit, which becomes its
-        // sibling inside the item — latex.ltx's `\@startsection` ends the
-        // previous heading's scope but not the list (`\begin{itemize}\item A
-        // \subsection{X}… \subsection{Y}…`; ddphonism; Perl nests Y inside X
-        // with a second error). OD #189. Guard:
-        // `perfect_kernel_batch54::next_sectioning_unit_in_an_item_is_a_sibling`.
+        // A sectioning unit nested in an unlabelled list item (a margin list's `\item[]`, which opens no inline
+        // sectional block; an error below) is CLOSED by the next sectioning unit, which becomes its sibling inside the
+        // item — latex.ltx's `\@startsection` ends the previous heading's scope but not the list (2201.06926; Perl
+        // nests Y inside X with a second error). OD #189. Guard
+        // `perfect_kernel_batch64::section_in_margin_list_keeps_bibliography`.
         if is_lenient_sectioning_unit(qsym)
           && is_lenient_sectioning_unit(get_node_qname(&node))
-          && is_lenient_sectioning_container(parent_name)
+          && parent_name == pin!("ltx:item")
         {
           close_to = Some(node);
           break;
@@ -3487,13 +3485,8 @@ impl Document {
         // build-leniency for the narrow sectioning-into-frontmatter case so
         // we don't out-strict Perl. Same `return self.node` "insert anyway"
         // mechanism as the math-leaf cascade above.
-        // A sectioning unit inside a list item is NOT lenient: both engines build
-        // the nested `<ltx:item><ltx:subsection>`, and Perl errors "isn't allowed"
-        // then inserts it anyway (Document.pm openElement) — the generic path below
-        // does the same (user ruling 2026-10-04, OD #189: every diagnostic once;
-        // ddphonism, phonrule, prerex, pdfmarginpar). In a float body it opens an
-        // `ltx:inline-sectional-block` (the bridge below; ruling 2026-10-06).
-        // Guard: `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_errors`.
+        // A sectioning unit inside a list item or a float body is not lenient here: it opens an
+        // `ltx:inline-sectional-block` (the bridges below; rulings 2026-10-06, 2026-10-09; OD #189).
         let is_sectioning_unit = is_lenient_sectioning_unit(qsym);
         // Container is either a frontmatter block (abstract/acknowledgements,
         // Block.model — no sectioning units) OR another sectioning unit that
@@ -3570,59 +3563,78 @@ impl Document {
           applies: fn(cur: &str, qsym: &str) -> bool,
           /// Extra attributes on the outermost wrapper.
           attrs:   &'static [(&'static str, &'static str)],
+          /// The row's predicate on the current node itself.
+          holder:  fn(node: &Node) -> bool,
         }
         const AUTO_OPEN_BRIDGES: &[AutoOpenBridge] = &[
           AutoOpenBridge {
             chain:   &["ltx:Math", "ltx:XMath"],
             applies: |_cur, qsym| qsym.starts_with("ltx:XM"),
             attrs:   &[("mode", "inline")],
+            holder:  |_| true,
           },
           AutoOpenBridge {
             chain:   &["ltx:inline-block"],
             applies: |_cur, qsym| qsym != "ltx:inline-block",
             attrs:   &[],
+            holder:  |_| true,
           },
           AutoOpenBridge {
             chain:   &["svg:foreignObject"],
             applies: |cur, qsym| cur.starts_with("svg:") && qsym != "svg:foreignObject",
             attrs:   &[],
+            holder:  |_| true,
           },
           AutoOpenBridge {
             chain:   &["ltx:itemize"],
             applies: |_cur, qsym| qsym == "ltx:item",
             attrs:   &[],
+            holder:  |_| true,
           },
           // A sectioning unit in a float body (`\section` in a `figure`, `\subsection` in a `table`; 38 2609 papers,
           // 117 errors) opens an `ltx:inline-sectional-block` there: the heading keeps its number in the sequence,
           // its id and its labels, as the PDF prints it, and the float stays whole (user ruling 2026-10-06,
-          // OXIDIZED_DESIGN_DIVERGENCES #189); in a list item it still errors as Perl's does. The float's own id is
-          // fixed before the unit steps the counters it is made within (`pin_float_id_before_its_sectioning`).
-          // Guard `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_errors`.
+          // OXIDIZED_DESIGN_DIVERGENCES #189). The float's own id is fixed before the unit steps the counters it is
+          // made within (`pin_float_id_before_its_sectioning`).
           AutoOpenBridge {
             chain:   &["ltx:inline-sectional-block"],
             applies: |cur, qsym| {
               matches!(cur, "ltx:figure" | "ltx:table" | "ltx:float")
-                && matches!(
-                  qsym,
-                  "ltx:section"
-                    | "ltx:subsection"
-                    | "ltx:subsubsection"
-                    | "ltx:paragraph"
-                    | "ltx:subparagraph"
-                )
+                && is_sectioning_unit_name(qsym)
             },
             attrs:   &[],
+            holder:  |_| true,
+          },
+          // …and in a list item (an itemize, enumerate or description item, nested or not; 2304.10050, 2312.11556,
+          // 2406.02069, 2411.15124, 2412.04099, 2501.07868, 2501.07938, 2511.00839; the TeX Live manuals ddphonism,
+          // phonrule, prerex, pdfmarginpar) the same block, in a paragraph of the
+          // item, since an item holds paragraphs only (LaTeXML-block.rnc:257 `item_model = tags?, Para.model`): the
+          // list stays one list, a later `\item` or the list's end closes the block, and a second heading in the item
+          // is the first's sibling in it (user ruling 2026-10-09, OXIDIZED_DESIGN_DIVERGENCES #189). Only a labelled
+          // item: an unlabelled `\item[]` is a margin list's (`changemargin`, `\list{}{…}\item[]`, a whole paper in it:
+          // 2201.06926, 2505.05767), no list but a margin, whose sections nest as Perl's do, its back matter in the last
+          // of them — the block would leave the appendix, acknowledgements and bibliography no place. An item's id is
+          // made when it is digested, before the heading steps any counter. Guards
+          // `perfect_kernel_batch54::{sectioning_unit_inside_item_or_figure_opens_a_block,
+          // next_sectioning_unit_in_an_item_is_a_sibling}`.
+          AutoOpenBridge {
+            chain:   &["ltx:para", "ltx:inline-sectional-block"],
+            applies: |cur, qsym| cur == "ltx:item" && is_sectioning_unit_name(qsym),
+            attrs:   &[],
+            holder:  item_has_label,
           },
           AutoOpenBridge {
             chain:   &["ltx:item", "ltx:para"],
             applies: |cur, qsym| cur == qsym,
             attrs:   &[],
+            holder:  |_| true,
           },
         ];
         for bridge in AUTO_OPEN_BRIDGES {
           let first = arena::pin(bridge.chain[0]);
           let last = arena::pin(bridge.chain[bridge.chain.len() - 1]);
-          let applies = arena::with2(cur_qname, qsym, |cur, q| (bridge.applies)(cur, q));
+          let applies = arena::with2(cur_qname, qsym, |cur, q| (bridge.applies)(cur, q))
+            && (bridge.holder)(&self.node);
           if applies && can_contain_qsym(cur_qname, first) && can_contain_qsym(last, qsym) {
             let node_font = self.get_node_font(&self.node).clone();
             for (i, wrapper) in bridge.chain.iter().enumerate() {
@@ -7393,8 +7405,8 @@ pub fn sym_can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
 //  You can generically allow an element to autoClose using Tag.
 // OR you can indicate a specific node can autoClose, or forbid it, using
 // the _autoclose or _noautoclose attributes!
-/// The sectioning units a list item or a figure may hold, with an error (OD #189): the whole
-/// `\section`…`\subparagraph` family; the next one closes the previous as its sibling.
+/// The sectioning units `\section`…`\subparagraph` open, which a frontmatter block takes without an error, as Perl's
+/// builder does (the leniency in `find_insertion_point_qsym`).
 fn is_lenient_sectioning_unit(qsym: SymStr) -> bool {
   qsym == pin!("ltx:section")
     || qsym == pin!("ltx:subsection")
@@ -7403,10 +7415,22 @@ fn is_lenient_sectioning_unit(qsym: SymStr) -> bool {
     || qsym == pin!("ltx:subparagraph")
 }
 
-/// The containers LaTeX lets a sectioning command run inside without ending
-/// them: a list item and a float body (OD #189; the nesting itself errors).
-fn is_lenient_sectioning_container(qsym: SymStr) -> bool {
-  qsym == pin!("ltx:item") || qsym == pin!("ltx:figure")
+/// Whether a list item carries its label (`ltx:tags`: a bullet, a number, a description term); a margin list's
+/// `\item[]` has none.
+fn item_has_label(node: &Node) -> bool {
+  node
+    .get_child_elements()
+    .iter()
+    .any(|child| get_node_qname(child) == pin!("ltx:tags"))
+}
+
+/// Whether `qname` is one of the sectioning units `\section`…`\subparagraph` open, by name (the auto-open bridges'
+/// predicates see names).
+fn is_sectioning_unit_name(qname: &str) -> bool {
+  matches!(
+    qname,
+    "ltx:section" | "ltx:subsection" | "ltx:subsubsection" | "ltx:paragraph" | "ltx:subparagraph"
+  )
 }
 
 /// A `\trivlist`'s list (`_trivlist`, latex_constructs sect06.rs): ended by its `\endtrivlist` or at its group's
