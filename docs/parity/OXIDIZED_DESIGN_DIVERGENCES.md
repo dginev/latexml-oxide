@@ -14815,3 +14815,25 @@ replayed_setter_keeps_frontmatter, replayed_setter_closes_its_groups}`; RED
 the binding; no corpus witness),
 `perfect_kernel_batch54::locked_setter_internals_are_defined_empty`,
 `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.
+
+### 483. paspconf is bound to aaspp, caption2 by its own name, and a keyless `\reference` starts an unkeyed entry (Perl: OmniBus, the caption fallback, the first letter as key)
+
+**Perl behavior**: `paspconf.sty` (RevTeX 3's PASP substyle, not in TL; 868 of run 336's papers, 298 shipping it) has no
+binding and no fallback (Package.pm:2177-2189 strips nothing from it): Perl raw-loads a shipped copy and errors without
+one, or an unmet `\documentstyle` option loads OmniBus (its `\affil`; `{answer}` undefined). `caption2` falls back to
+caption.sty.ltxml by the version-suffix rule (Package.pm:2180). aas_support's `\reference` is `\bibitem` (KPE #563).
+**Rust behavior**: `paspconf_sty.rs` requires aaspp (aas_support: `\affil`, `\altaffil*`, references, `\plotone`, journal
+abbreviations, astro symbols, table notes) and adds paspconf.sty v1.6's own `question`/`answer` (:163-170),
+`\mathwithsecnums` (:171-173), `\deg` (:228), `\upper`, `\loosenlines`; its `\keywords`/`\subjectheadings`, which the
+class gobbles (:121-122), are RDFa `dcterms:subject` (ruling 2026-10-10, as icml_support). It replaces the old
+`("paspconf","sty",spconf_sty)` alias to the ICASSP binding (no `\affil`), on which no paspconf paper relied.
+`caption2_sty.rs`, registered by exact name so it outranks the fallback, requires caption and stores caption2.sty
+v2.2's parameters and style registry (:46-142, options :179-224; layout, never typeset); its
+`\captionlabeldelim`/`\captionlabelsep` close the caption tag (`\format@title@figure/table` = `\lx@tag[][…]`), so
+w-art.cls's `\captionlabeldelim{\enskip}` closes with an en space. `\reference` with no braced key starts an unkeyed
+`\bibitem`.
+**Why**: content: paspconf papers lost every `\affil` (860 first-error papers) and every reference's first letter;
+caption2 papers raised `\captionstyle` undefined and printed the stray style name. A/B 332 papers: with errors 301 →
+37, none worse, no creator or abstract lost. Guards `perfect_kernel_batch64qb::{paspconf_revtex3_frontmatter,
+caption2_interface}`. `\captionlabelfalse` (caption2.sty:144-149) is not honoured (the label kept); a `\kern` delimiter
+shows as `\kern…` text in the close (Perl the same).

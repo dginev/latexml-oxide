@@ -447,7 +447,12 @@ LoadDefinitions!({
       document.maybe_close_element("ltx:bibliography")?;
     }
   );
-  Let!("\\reference", "\\bibitem");
+  // AASTeX's `\reference{key}` needs its key (aastex701.cls:8013-8016, aaspp4.sty:221-224 `\@ifnextchar\bgroup
+  // {\@reference}{\@latexerr …Missing key…}`); RevTeX 3 v1.6's takes none, it starts a hanging paragraph
+  // (paspconf.sty:188 `\def\reference{\relax\refpar}`). Perl's `Let('\reference','\bibitem')` (aas_support.sty.ltxml:299) read the next
+  // token of a keyless one as its key: every reference lost its first letter ("Kent" → key K, "ent, S. M.") and a
+  // `$\O$stensen` entry left math open over the rest of the list (astro-ph9909358, astro-ph9905150).
+  DefMacro!("\\reference", "\\@ifnextchar\\bgroup{\\bibitem}{\\bibitem{}}");
 
   RequirePackage!("graphicx");
 

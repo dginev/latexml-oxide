@@ -960,9 +960,25 @@ impl Digested {
   }
 
   /// builds an attribute-friendly String form of the digested object, suitable for XML attributes
+  /// (Perl `toAttribute`): a list joins its items' forms (List.pm:85-87); a whatsit whose definition
+  /// gives an attribute form — carried here as its `attributeForm` property, which Perl also reads first
+  /// (Whatsit.pm:217-228) — is that text, `\hskip`'s spaces (TeX_Glue.pool.ltxml:85) rather than the
+  /// reverted `\enskip`; anything else is its string.
   pub fn to_attribute(&self) -> String {
     match *self.0 {
       DigestedData::RegisterValue(ref v) => v.to_attribute(),
+      DigestedData::List(ref list) => list
+        .borrow()
+        .boxes
+        .iter()
+        .map(Digested::to_attribute)
+        .collect(),
+      DigestedData::Whatsit(ref whatsit) => {
+        match whatsit.borrow().properties.get("attributeForm") {
+          Some(Stored::String(form)) => arena::with(*form, str::to_string),
+          _ => self.to_string(),
+        }
+      },
       _ => self.to_string(),
     }
   }

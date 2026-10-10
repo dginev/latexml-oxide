@@ -1,0 +1,21 @@
+% witness: 1804.03859 (~186 run-336 svmult/svmono papers with stray `_` after `\sidecaption`; rc_struct M7)
+% oracle:  pdflatex 0 errors (svmult.cls shipped by the witness): each framed box beside "Fig. N <caption>"
+% engines: rust 64h4 = 0 errors, but `\sidecaption {}` reads `[` as its argument (Figure 1 prints "t]") and the
+%          next token otherwise (Figure 2 loses its `\fbox`; in the corpus an `\includegraphics`, its file name
+%          then text with `_` errors); Perl 0.8.8 the same (sv_support.sty.ltxml:135)
+% expect:  svmult.cls:1827-1831 `\sidecaption` takes only `[pos]`; both figures keep their framed box
+% status:  RED (64h4) -> GREEN (64qb)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\begin{figure}[b]
+\sidecaption[t]
+\fbox{my\_saddle\_plot}
+\caption{Phase portrait.}
+\end{figure}
+\begin{figure}[b]
+\sidecaption
+\fbox{second\_plot}
+\caption{Second.}
+\end{figure}
+\end{document}

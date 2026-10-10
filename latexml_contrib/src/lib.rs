@@ -68,6 +68,7 @@ pub mod breqn_sty;
 pub mod bussproofs_sty;
 pub mod bytedance_seed_cls;
 pub mod capt_of_sty;
+pub mod caption2_sty;
 pub mod cas_dc_cls;
 pub mod catchfile_sty;
 pub mod ccaption_sty;
@@ -283,6 +284,7 @@ pub mod xecjk_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
 pub mod ltxtable_sty;
+pub mod paspconf_sty;
 pub mod pnas_new_cls;
 pub mod scis2024_cls;
 pub mod scrlayer_scrpage_sty;
@@ -570,6 +572,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
   ("backref", "sty", backref_sty::load_definitions),
   ("ccaption", "sty", ccaption_sty::load_definitions),
+  ("caption2", "sty", caption2_sty::load_definitions),
   ("curve2e", "sty", curve2e_sty::load_definitions),
   ("dhucs", "sty", dhucs_sty::load_definitions),
   ("mathpartir", "sty", mathpartir_sty::load_definitions),
@@ -662,7 +665,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nic-series", "cls", nicseries_cls::load_definitions),
   ("czipreprint", "cls", czipreprint_cls::load_definitions),
   ("spconf", "sty", spconf_sty::load_definitions),
-  ("paspconf", "sty", spconf_sty::load_definitions),
+  ("paspconf", "sty", paspconf_sty::load_definitions),
   ("INTERSPEECH2021", "sty", interspeech_sty::load_definitions),
   ("INTERSPEECH2022", "sty", interspeech_sty::load_definitions),
   ("INTERSPEECH2023", "sty", interspeech_sty::load_definitions),

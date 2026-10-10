@@ -101,7 +101,12 @@ LoadDefinitions!({
   //======================================================================
   // 2.15.3 Content of deluxetable
 
-  def_macro_noop("\\tablebreak")?;
+  // aastex701.cls:12652 `\newcommand\tablebreak{\\[-11pt]\noalign{\break}}`: the row ends and the
+  // page may break after it (the negative space hides the break's empty row). Its explicit `[…]`
+  // keeps a next row led by `[` (`[Fe/H]`) from being read as the row spacing, as `\nl` above.
+  // Perl's deluxetable.sty.ltxml:94 overrides its own `\\[0pt]` (L89) with nothing, so the next
+  // row ran into this one: an extra `&` per cell (astro-ph0604363, 1811.07447).
+  DefMacro!("\\tablebreak", "\\\\[0pt]");
   def_macro_noop("\\nodata")?;
 
   DefMacro!("\\cutinhead{}", "\\hline\\multicolumn{\\lx@alignment@ncolumns}{c}{#1}\\\\\\hline");

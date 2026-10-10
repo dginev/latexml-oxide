@@ -1009,7 +1009,8 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
     // `if/elsif` flow (Package.pm:2118-2125) RETURNS on success and skips
     // the raw-tex branch entirely. Rust's port uses sequential `let`
     // bindings, so we must explicitly check `_loaded` here. Without this
-    // gate, `\RequirePackage{caption2}` loads `caption.sty.ltxml` via
+    // gate, `\RequirePackage{caption2}` (before caption2_sty.rs bound it by
+    // name) loaded `caption.sty.ltxml` via
     // `find_file_fallback` (caption2 → caption strips trailing digit) AND
     // then ALSO loads raw `caption2.sty`, which fires its
     // `\@ifpackageloaded{caption}` mutual-exclusivity error. Same pattern
@@ -1748,8 +1749,8 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     // route through `input_definitions`, which gives us the full Step
     // 1 → Step 3 → Step 4 ladder including `find_file_fallback`'s
     // version-suffix strip. This is what makes `\input{psfig.sty}`
-    // pick up `psfig_sty.rs` AND `\input{caption2.sty}` fall back to
-    // `caption_sty.rs` exactly as Perl Package.pm:2266 does via
+    // pick up `psfig_sty.rs` AND a versioned `\input{<pkg>2.sty}` fall back to
+    // `<pkg>_sty.rs` exactly as Perl Package.pm:2266 does via
     // `RequirePackage($name)`.
     if !has_dir {
       let ext = clean_req.rsplit('.').next().unwrap_or("");

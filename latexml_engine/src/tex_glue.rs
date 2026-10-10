@@ -167,8 +167,12 @@ LoadDefinitions!({
       DigestedData::RegisterValue(v) => v.into(),
       _ => Dimension::default()
     };
+    // Perl `attributeForm => sub { DimensionToSpaces($_[1]) }` (TeX_Glue.pool.ltxml:85): in an attribute value
+    // the skip is its spaces (a caption tag's `close` from w-art.cls's `\captionlabeldelim{\enskip}`, 1012.0703).
+    let spaces = dimension_to_spaces(width, None);
     Ok(stored_map!(
-      "width" => width, "isSpace" => true, "isSkip" => true))
+      "width" => width, "isSpace" => true, "isSkip" => true,
+      "attributeForm" => Stored::String(pin(&spaces))))
   });
 
   //======================================================================

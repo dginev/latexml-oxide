@@ -572,7 +572,13 @@ fn inverted_ligatures(font: &Font) -> bool {
 /// Witness: tests/structure/glossary.tex `\Gls{cabbage}` → "Cabbage" needs
 /// expl3's `c__codepoint_uppercase_index_intarray`, an alias made by
 /// `\cs_gset_eq:cc { c__... } { g__... }` (= `\let`).
-fn font_parameters_key(token: Token) -> String {
+fn font_parameters_key(token: Token) -> String { font_state_key("fontdimen", token) }
+
+/// The state key of the per-font value `kind` (`fontdimen`, `hyphenchar`,
+/// `skewchar`) of the font `token` selects, shared as [`font_parameters_key`]
+/// describes — Perl keeps all three in the one fontinfo hash of the font
+/// (TeX_Fonts.pool.ltxml:104-107).
+pub(crate) fn font_state_key(kind: &str, token: Token) -> String {
   let canonical_cs = lookup_meaning(&token)
     .and_then(|meaning| match meaning {
       Stored::Primitive(primitive) => primitive.font_id,
@@ -588,8 +594,8 @@ fn font_parameters_key(token: Token) -> String {
     })
     .unwrap_or_else(|| token.to_string());
   with_value(&s!("font_shared_key_{canonical_cs}"), |value| match value {
-    Some(Stored::String(shared_key)) => with(*shared_key, |sk| s!("fontdimen_{sk}")),
-    _ => s!("fontdimen_{canonical_cs}"),
+    Some(Stored::String(shared_key)) => with(*shared_key, |sk| s!("{kind}_{sk}")),
+    _ => s!("{kind}_{canonical_cs}"),
   })
 }
 

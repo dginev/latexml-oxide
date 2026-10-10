@@ -1975,6 +1975,69 @@ LoadDefinitions!({
     "\\mathaccentV{}{}{}{}{}",
     "\\ifcsname #1\\endcsname\\csname #1\\endcsname{#5}\\else #5\\fi"
   );
+  // amsmath.sty:740, :800-802, :809, :832-891: the accent machinery behind `\mathaccentV`, which a widely copied
+  // `\widebar` snippet drives directly (it rebinds `\mathaccent` to an `\overline` of `\macc@nucleus`, sets
+  // `\macc@depth\@ne`, and calls `\macc@nested@a\relax111{#1}` through `\macc@palette` = `\mathpalette`); undefined
+  // in Perl's binding too. Transcribed as amsmath.sty has it; the box measurements only feed the `\kern`s.
+  // Witnesses 1205.2794, 1801.00980, 2201.03882, 2601.00167.
+  RawTeX!(
+    r#"\def\accentclass@{7}
+\def\noaccents@{\def\accentclass@{0}}
+\def\acc@check{\@ifnextchar\@empty\relax\acc@error}
+\def\acc@error{\@amsmath@err{Improper argument for math accent:\MessageBreak
+Extra braces must be added to prevent wrong output}\@ehc}
+\newcount\macc@depth
+\def\macc@test#1#2#3#4{\xdef\macc@tmp{\macc@tmp\advance\macc@depth\@ne}}
+\def\macc@group{-1}
+\def\macc@nested#1#2#3#4{\begingroup
+\let\math@bgroup\@empty \let\math@egroup\macc@set@skewchar
+\mathsurround\z@ \frozen@everymath{\mathgroup\macc@group\relax}%
+\macc@set@skewchar\relax
+\let\mathaccentV\macc@nested@a
+\macc@nested@a\relax#1#2#3{#4}\endgroup}
+\let\macc@palette\mathpalette
+\def\macc@nested@a#1#2#3#4#5{%
+\ifnum\macc@group=\mathgroup
+\else \macc@set@skewchar\relax \edef\macc@group{\the\mathgroup}%
+\fi
+\mathchardef\macc@code "\accentclass@ #2#3#4\relax
+\macc@palette\macc@a{#5}}
+\def\macc@set@skewchar#1{\begingroup
+\ifnum\mathgroup=\m@ne \let\@tempa\@ne
+\else
+\ifnum\skewchar\textfont\mathgroup=\m@ne \let\@tempa\@ne
+\else \let\@tempa\mathgroup
+\fi
+\fi
+\count@=\skewchar\textfont\@tempa
+\advance\count@"7100
+\edef\@tempa{\endgroup
+\mathchardef\noexpand\macc@skewchar=\number\count@\relax}%
+\@tempa
+#1}
+\def\macc@a#1#2{\begingroup
+\let\macc@style#1\relax
+\def\macc@palette##1{##1\macc@style}%
+\advance\macc@depth\m@ne
+\ifnum\macc@depth=\z@
+\gdef\macc@nucleus{#2}%
+\setbox\z@\hbox{$#1#2\@empty{}\macc@skewchar$}%
+\setbox\tw@\hbox{$#1#2\@empty\macc@skewchar$}%
+\dimen@\tw@\wd\tw@ \advance\dimen@-\tw@\wd\z@
+\xdef\macc@kerna{\the\dimen@\relax}%
+\setbox4\hbox{$#1#2\acc@check\@empty$}%
+\global\setbox\@ne\hbox to\wd4{}%
+\ht\@ne\ht4 \dp\@ne\dp4
+\xdef\macc@kernb{\the\wd4\relax}%
+\mathaccent\macc@code{\box\@ne\kern\macc@kerna}%
+\else
+\mathaccent\macc@code{\let\macc@adjust\@empty #1#2\@empty}%
+\macc@adjust
+\fi
+\endgroup}
+\def\macc@adjust{\dimen@\macc@kerna\advance\dimen@\macc@kernb
+\kern-\dimen@}"#
+  );
 
   // Preamble: trivial macros
   def_macro_noop("\\AmSfont")?;

@@ -12010,3 +12010,62 @@ Minimal trigger: `\usepackage{spverbatim}` … `\begin{spverbatim}` a line, a bl
 Fixed in Rust (64h): the line end is active in `\lx@@verbatim`, a newline of the verbatim text. Guard
 `perfect_kernel_batch64::spverbatim_blank_line`.
 
+## 563. aas_support's `\reference` takes a keyless RevTeX 3 entry's first letter as its key
+
+aas_support.sty.ltxml:299 `Let('\reference','\bibitem')`; AASTeX (aastex701.cls:8013-8016) and aaspp4.sty:221-224
+require `\reference{key}`, but RevTeX 3 v1.6 (paspconf.sty:188 `\def\reference{\relax\refpar}`) and the aaspp papers
+write `\reference Kent, S. M. 1988 …` with none: Perl reads `K` as the key (the entry prints "ent, S. M."), and
+`\reference $\O$stensen` leaves math open — every entry losing its first letter (astro-ph9806197, 47 astro-ph papers of
+the paspconf A/B, 16 with errors).
+
+Minimal trigger: `\documentstyle[aaspp]{article}\begin{document}\begin{references}\reference Kent, S. M. 1988\end{references}\end{document}`.
+
+Fixed in Rust (64qb): `\reference` = `\@ifnextchar\bgroup{\bibitem}{\bibitem{}}`. Guard
+`perfect_kernel_batch64qb::paspconf_revtex3_frontmatter` (the biblist). Open: omnibus_cls.rs's identical
+`Let!("\\reference","\\bibitem")` (its own A/B).
+
+## 564. deluxetable's `\tablebreak` is empty, so the next row runs into the one before
+
+deluxetable.sty.ltxml:94 defines `\tablebreak` as nothing, overriding its own :89 (`\\[0pt]`); AASTeX's
+`\tablebreak` ends the row (aastex701.cls:12652 `\\[-11pt]\noalign{\break}`): `x & 1 \\ y & 2 \tablebreak z & 3` has an
+extra `&` (38 of run 336's papers; astro-ph0604363, 1811.07447).
+
+Minimal trigger: `\begin{deluxetable}{cc}\startdata x & 1 \\ y & 2 \tablebreak z & 3 \enddata\end{deluxetable}`.
+
+Fixed in Rust (64qb): `\tablebreak` = `\\[0pt]` (an explicit spacing, so a next row's `[Fe/H]` is not read as one).
+Guard `perfect_kernel_batch64qb::aastex_tablebreak_ends_row`.
+
+## 565. sv_support's `\sidecaption` takes an argument the class's does not
+
+sv_support.sty.ltxml:135 `\sidecaption {}`; svmult.cls:1827-1831 takes only an optional `[pos]`, so Perl swallows the
+next token — the figure's `\includegraphics` (its options printed as text, then `_` errors from the file name), a
+`\fbox`, or the `t]` of `\sidecaption[t]` (186 of run 336's papers; 1804.03859, 1306.6205, 2402.08146).
+
+Minimal trigger: `\documentclass{svmult}` … `\begin{figure}\sidecaption[t]\fbox{x}\caption{C}\end{figure}`.
+
+Fixed in Rust (64qb): `\sidecaption[]`. Guard `perfect_kernel_batch64qb::svmult_sidecaption_position_only`.
+
+## 566. caption2 falls back to the caption binding, which lacks its interface
+
+Package.pm:2180/:2209-2211 strip the version suffix, so `\usepackage{caption2}` loads caption.sty.ltxml, which has
+none of caption2.sty v2.2's commands (`\captionstyle` :127, `\captionlabeldelim`/`\captionlabelsep` :147, the style
+registry :97-142, `\setcaptionmargin`…) — 843 of run 336's papers, directly or through w-art.cls:1458-1459, SCGE, POWFI,
+rmf-d (math0601389, 1307.4815, 1911.03646, 2507.04618).
+
+Minimal trigger: `\usepackage{caption2}\captionstyle{center}`.
+
+Fixed in Rust (64qb): a caption2 binding registered by its exact name (OD #483). Guard
+`perfect_kernel_batch64qb::caption2_interface`.
+
+## 567. amsmath's accent internals are missing, so a copied `\widebar` fails
+
+amsmath.sty.ltxml has none of amsmath.sty's `\macc@` chain (:809 `\macc@depth`, :832-891 `\macc@test`…`\macc@adjust`),
+`\accentclass@` (:740) or `\acc@check` (:800-802); the `\widebar` snippet authors copy from tex.stackexchange (a
+`\widebar` that sets `\macc@depth\@ne`, `\let\math@egroup\macc@set@skewchar` and calls `\macc@nested@a\relax111{#1}`)
+raises three undefined errors per use (817 of run 336's papers; 1205.2794, 1801.00980, 2201.03882, 2601.00167).
+
+Minimal trigger: `\usepackage{amsmath}\makeatletter` `$\macc@depth\@ne\macc@set@skewchar\relax\macc@nested@a\relax111{X}$`
+(the whole snippet: repro `macro-state/amsmath_widebar_snippet.tex`).
+
+Fixed in Rust (64qb): the chain transcribed (amsmath_sty.rs), with `\skewchar` a font register (its Rust port read
+only the font token; Perl TeX_Math.pool.ltxml:1207-1215). Guard `perfect_kernel_batch64qb::amsmath_widebar_snippet`.

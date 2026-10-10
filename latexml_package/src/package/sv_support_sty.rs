@@ -212,7 +212,11 @@ LoadDefinitions!({
 
   //======================================================================
   def_macro_noop("\\nocaption{}")?;
-  def_macro_noop("\\sidecaption {}")?;
+  // svmult.cls:1827-1831 `\def\sidecaption{\@ifnextchar[\sidec@ption{\sidec@ption[b]}}`: only the optional
+  // vertical position is an argument; the float's body up to `\caption` is set beside the caption, which is
+  // layout. Perl's `\sidecaption {}` (sv_support.sty.ltxml:135) swallowed the body's first token — an
+  // `\includegraphics` left its options and file name as text, with `_` errors (1804.03859).
+  def_macro_noop("\\sidecaption[]")?;
 
   def_macro_noop("\\capstrut")?;
   DefMacro!("\\captionstyle", "\\normalfont\\small");

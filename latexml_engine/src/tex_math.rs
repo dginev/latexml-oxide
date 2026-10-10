@@ -4,7 +4,7 @@
 
 use latexml_core::common::{font::standard_metrics::STDMETRICS, mathchar::decode_math_char};
 
-use crate::{prelude::*, tex_character};
+use crate::{prelude::*, tex_character, tex_fonts::font_state_key};
 
 /// Perl's mergeLimits (TeX_Math.pool.ltxml): walks backward through the
 /// digest list, extracts any existing script level from the previous
@@ -1839,17 +1839,25 @@ LoadDefinitions!({
   DefRegister!("\\predisplaypenalty", Number!(10000));
   DefRegister!("\\postdisplaypenalty", Number!(0));
 
-  DefRegister!("\\skewchar{}", Number::new(0));
-  // TODO:
-  //  getter => sub {
-  //     my ($font) = @_;
-  //     my $info = lookupFontinfo($font);
-  //     return ($info && $$info{skewchar}) || Number(0); },
-  //   setter => sub {
-  //     my ($value, $scope, $font) = @_;
-  //     if (my $info = lookupFontinfo($font)) {
-  //       $$info{skewchar} = $value; } }
-  // );
+  // Perl TeX_Math.pool.ltxml:1207-1215: `\skewchar FontDef`, kept in the font's fontinfo beside its
+  // `\hyphenchar` (unscoped, as Perl writes the shared hash) and initialized from `\defaultskewchar` when the
+  // font is loaded (tex_fonts.rs `install_font_def`). The font is a `<font>` (tex.web §577), so
+  // `\skewchar\textfont\mathgroup` reads the family number too: read as one plain argument, its number was
+  // left behind and typeset — amsmath.sty:859 `\count@=\skewchar\textfont\@tempa` (`\macc@set@skewchar`,
+  // :851-864) printed `\char1` (Δ) before each accent of the copied `\widebar` snippet (1205.2794).
+  DefRegister!("\\skewchar FontToken", Number::new(0),
+    getter => sub[args] {
+      let key = font_state_key("skewchar", args.remove(0).expected_token());
+      with_value(&key, |v| match v {
+        Some(Stored::Number(n)) => *n,
+        _ => Number::new(0),
+      })
+    },
+    setter => sub[value, _scope, args] {
+      let key = font_state_key("skewchar", args.remove(0).expected_token());
+      assign_value(&key, Stored::Number(value.into()), Some(Scope::Global));
+    }
+  );
   DefRegister!("\\defaultskewchar", Number!(-1));
 
   // Dimen registers; TeXBook p. 274

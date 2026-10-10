@@ -106,6 +106,20 @@ LoadDefinitions!({
     "{keywords}",
     "<ltx:classification scheme='keywords'>#body</ltx:classification>"
   );
+  // jmlr2e.sty:151-153 defines only the environment, whose begin code (a group, "Keywords:") a
+  // `\keywords{A, B}` written as a command runs: pdflatex prints the braced list after the
+  // label and leaves the group open to the end of the document (a warning). Here the command
+  // form is the environment around its argument; the open classification otherwise swallowed
+  // the rest of the document (1401.6686).
+  Let!("\\lx@jmlr@keywords@begin", "\\keywords");
+  DefMacro!(
+    "\\keywords",
+    "\\@ifnextchar\\bgroup\\lx@jmlr@keywords@arg\\lx@jmlr@keywords@begin"
+  );
+  DefMacro!(
+    "\\lx@jmlr@keywords@arg{}",
+    "\\begin{keywords}#1\\end{keywords}"
+  );
 
   // Theorem-likes JMLR papers commonly use.
   RawTeX!(
