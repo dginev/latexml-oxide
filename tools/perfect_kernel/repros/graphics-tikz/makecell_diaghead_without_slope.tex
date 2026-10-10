@@ -1,0 +1,12 @@
+% witness: 2111.10338: makecell `\diaghead{$V_i$}{a}{b}` without the optional slope pair
+% oracle:  pdflatex 0 errors
+% engines: rust 64g = Error "Script _" (the Pair reader stripped the first argument's braces); Perl 0 errors
+% expect:  0 errors; the picture holds both labels
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{article}
+\usepackage{makecell}
+\begin{document}
+\begin{tabular}{cc}
+\diaghead{$V_{i}$ $f^{a}_d$}{$V_{i}$}{$f^{a}_d$} & 0N\\
+\end{tabular}
+\end{document}

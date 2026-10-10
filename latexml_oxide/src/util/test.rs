@@ -960,7 +960,14 @@ pub fn convert_with_setup_then<R: Send + 'static>(
   setup: impl FnOnce() + Send + 'static,
   inspect: impl FnOnce(&str) -> R + Send + 'static,
 ) -> (String, String, R) {
-  let run = convert_in_process(tex, &[], preload, GUARD_TIMEOUT_SECS, setup, inspect);
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &[],
+    preload,
+    GUARD_TIMEOUT_SECS,
+    setup,
+    move |xml, _| inspect(xml),
+  );
   (run.log, run.xml, run.inspected)
 }
 
@@ -968,7 +975,14 @@ pub fn convert_with_setup_then<R: Send + 'static>(
 /// `ConversionResponse::status` ("4 errors; 4 undefined macros[…]", the CLI's "Conversion complete" summary) and
 /// `status_code` (3 = fatal, 2 = error, lower = OK/warnings).
 pub fn convert_with_status(tex: &str, preload: Option<&str>) -> (String, String, String, usize) {
-  let run = convert_in_process(tex, &[], preload, GUARD_TIMEOUT_SECS, || {}, |_| ());
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &[],
+    preload,
+    GUARD_TIMEOUT_SECS,
+    || {},
+    |_, _| (),
+  );
   (run.log, run.xml, run.status, run.status_code)
 }
 
@@ -979,13 +993,38 @@ pub fn convert_files_with(
   files: &[(&str, &str)],
   preload: Option<&str>,
 ) -> (String, String) {
-  let run = convert_in_process(tex, files, preload, GUARD_TIMEOUT_SECS, || {}, |_| ());
+  let files: Vec<(&str, &[u8])> = files
+    .iter()
+    .map(|(name, content)| (*name, content.as_bytes()))
+    .collect();
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &files,
+    preload,
+    GUARD_TIMEOUT_SECS,
+    || {},
+    |_, _| (),
+  );
   (run.log, run.xml)
+}
+
+/// [`convert_files_with`] for sources that are not UTF-8 text — a legacy-encoded document or `.bib`, written byte for
+/// byte — also running `inspect` on the XML and the source directory in the conversion's thread, while its state and
+/// that directory live (the post stage's recursive `.bib` session digests in the document's own state, bib_session.rs,
+/// and finds the `.bib` beside the source). Returns (log, XML, `inspect`'s result).
+pub fn convert_bytes_files_then<R: Send + 'static>(
+  tex: &[u8],
+  files: &[(&str, &[u8])],
+  preload: Option<&str>,
+  inspect: impl FnOnce(&str, &std::path::Path) -> R + Send + 'static,
+) -> (String, String, R) {
+  let run = convert_in_process(tex, files, preload, GUARD_TIMEOUT_SECS, || {}, inspect);
+  (run.log, run.xml, run.inspected)
 }
 
 /// [`convert_with`] under a `secs` deadline instead of [`GUARD_TIMEOUT_SECS`] — for a guard of a heavy document.
 pub fn convert_with_timeout(tex: &str, preload: Option<&str>, secs: u64) -> (String, String) {
-  let run = convert_in_process(tex, &[], preload, secs, || {}, |_| ());
+  let run = convert_in_process(tex.as_bytes(), &[], preload, secs, || {}, |_, _| ());
   (run.log, run.xml)
 }
 
@@ -1008,12 +1047,12 @@ struct InProcessRun<R> {
 ///
 /// [`Converter::convert`]: crate::converter::Converter::convert
 fn convert_in_process<R: Send + 'static>(
-  tex: &str,
-  files: &[(&str, &str)],
+  tex: &[u8],
+  files: &[(&str, &[u8])],
   preload: Option<&str>,
   timeout_secs: u64,
   setup: impl FnOnce() + Send + 'static,
-  inspect: impl FnOnce(&str) -> R + Send + 'static,
+  inspect: impl FnOnce(&str, &std::path::Path) -> R + Send + 'static,
 ) -> InProcessRun<R> {
   let workdir = tempfile::tempdir().expect("create tempdir");
   for (name, content) in files {
@@ -1026,6 +1065,7 @@ fn convert_in_process<R: Send + 'static>(
   let source = workdir.path().join(format!("{GUARD_JOBNAME}.tex"));
   std::fs::write(&source, tex).expect("write the guard source");
   let source = source.to_string_lossy().into_owned();
+  let source_dir = workdir.path().to_path_buf();
   let preload = preload.map(String::from);
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
@@ -1060,7 +1100,7 @@ fn convert_in_process<R: Send + 'static>(
         },
       };
       let xml = resp.result.unwrap_or_default();
-      let inspected = inspect(&xml);
+      let inspected = inspect(&xml, &source_dir);
       latexml_core::stomach::set_timeout(0);
       latexml_core::reset_thread_engine();
       InProcessRun {
@@ -1073,7 +1113,8 @@ fn convert_in_process<R: Send + 'static>(
     })
     .expect("spawn test worker")
     .join()
-    .expect("test worker panicked")
+    // the worker's own panic (an `inspect` assertion) as the test's, message intact
+    .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
 }
 
 /// Count of lines carrying a `Warning:<category>:` diagnostic anywhere in the line (WISDOM 85: a diagnostic can

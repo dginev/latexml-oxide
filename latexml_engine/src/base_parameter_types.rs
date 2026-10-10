@@ -552,11 +552,25 @@ LoadDefinitions!({
     // 101 errs) works exactly like the plain form. Mirror it here: a BEGIN
     // group ahead of a Pair is unwrapped and its content re-scanned. Perl's
     // ReadPair lacks this (shared failure with the braced form).
+    // A group that is no pair (`\diaghead{$V_i$}{a}{b}`, makecell's `OptionalPair` with no slope) is put back whole: its
+    // braces are the next argument's (2111.10338).
     if if_next(T_BEGIN!())? {
       read_token()?; // consume {  (counted; the group read below balances)
       let group = read_balanced(ExpansionLevel::Off, false, false)?;
-      unread(group);
-      let _ = skip_spaces();
+      let pair = group
+        .unlist_ref()
+        .iter()
+        .find(|t| t.get_catcode() != Catcode::SPACE)
+        .is_some_and(|t| *t == T_OTHER!("("));
+      if pair {
+        unread(group);
+        let _ = skip_spaces();
+      } else {
+        let mut whole = vec![T_BEGIN!()];
+        whole.extend(group.unlist());
+        whole.push(T_END!());
+        unread(Tokens::new(whole));
+      }
     }
     if if_next(T_OTHER!("("))? {
       read_token()?; // consume (

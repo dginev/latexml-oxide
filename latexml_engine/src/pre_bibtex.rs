@@ -553,10 +553,10 @@ impl PreBibTeX {
     // way). Beyond Perl: keep one space after an odd run of backslashes
     // (OXIDIZED_DESIGN_DIVERGENCES #229). Guard:
     // `06_cluster_bibliography::bib_field_trailing_control_space_survives_trimming`.
-    let trimmed = out.trim_end();
+    let trimmed = out.trim_end_matches(is_bib_white);
     let backslashes = trimmed.chars().rev().take_while(|&c| c == '\\').count();
     let keep_space = backslashes % 2 == 1 && trimmed.len() < out.len();
-    let mut value = trimmed.trim_start().to_string();
+    let mut value = trimmed.trim_start_matches(is_bib_white).to_string();
     if keep_space {
       value.push(' ');
     }
@@ -668,8 +668,8 @@ impl PreBibTeX {
   /// on a non-empty line, false on EOF.
   fn skip_white(&mut self) -> bool {
     loop {
-      // Trim leading whitespace (any unicode whitespace, like Perl `\s`).
-      let trimmed = self.line.trim_start_matches(char::is_whitespace);
+      // Trim leading whitespace (BibTeX's, `is_bib_white`).
+      let trimmed = self.line.trim_start_matches(is_bib_white);
       if trimmed.len() < self.line.len() {
         self.line = trimmed.to_string();
       }
@@ -841,7 +841,7 @@ impl PreBibTeX {
       }
       for (name, value) in &self.entries[i].fields {
         if name == "crossref" {
-          queue.push(value.trim().to_lowercase());
+          queue.push(value.trim_matches(is_bib_white).to_lowercase());
         } else {
           collect_cited_keys(value, &mut queue);
         }
@@ -850,6 +850,14 @@ impl PreBibTeX {
     selected
   }
 }
+
+/// BibTeX's whitespace: ASCII only (bibtex.web's `white_space` class is the space and the tab, every character above 127
+/// `alpha`), where Perl's `\s` (BibTeX.pm:272-273, :324) takes Unicode's. Under the byte mouth (CJK, kotex) a `.bib`
+/// line arrives one character per byte, and Unicode's whitespace would take the continuation bytes 0x85 and 0xA0
+/// (★ E2 98 85, † E2 80 A0) and cut a field short (2606.26332's `keywords={★}`; "Università" → "UniversitÃ"); the
+/// bytes stay as they are, for the byte mouth's readers to decode in whatever encoding the document declares.
+/// Guard: `perfect_kernel_batch64::byte_mouth_bib_field_last_character`.
+fn is_bib_white(c: char) -> bool { c.is_ascii_whitespace() }
 
 /// Push every key of every `\cite`-family call in `value` onto `out`,
 /// lowercased. Deliberately loose — over-collecting only keeps an extra entry,
@@ -876,7 +884,7 @@ fn collect_cited_keys(value: &str, out: &mut Vec<String>) {
       continue;
     };
     for k in stripped[..end].split(',') {
-      let k = k.trim();
+      let k = k.trim_matches(is_bib_white);
       if !k.is_empty() {
         out.push(k.to_lowercase());
       }

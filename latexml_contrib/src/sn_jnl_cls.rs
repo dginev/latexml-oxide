@@ -97,9 +97,8 @@ LoadDefinitions!({
   // \headtype{...} / \extralength{...} are layout knobs (no author body).
   def_macro_noop("\\headtype{}")?;
   def_macro_noop("\\extralength{}")?;
-  // \theHfigure / \theHtable are hyperref H-counter overrides (no body).
-  def_macro_noop("\\theHfigure{}")?;
-  def_macro_noop("\\theHtable{}")?;
+  // \theHfigure / \theHtable: the kernel's (every counter has its `\theH<counter>`, counter/dialect.rs), which
+  // hyperref's `\hyper@makecurrent` reads inside an `\xdef` — not argument-taking stubs, which took its `}`.
 
   // Author-block — attach author names, affiliations and emails to structured
   // `<ltx:creator>`/`<ltx:contact>` frontmatter, NOT loose top-level notes.

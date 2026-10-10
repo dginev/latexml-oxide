@@ -11970,3 +11970,43 @@ Open: text after such a call on the line becomes an email contact (RED
 sectioning-frontmatter/email_call_with_trailing_text_on_author_line, since 64f).
 Not a defect: an address typed with a bare `_` prints as a dot accent in an OT1 roman font (`i˙j@x.org` — pdflatex,
 revtex4-1 `\email{i_j@x.org}`), and both engines show that; the recorded RDFa keeps the `_`.
+
+## 560. aipproc's `\tablehead` sets its text in a `\parbox` whose width is the head's position letter
+
+aipproc.cls.ltxml:112 `\multicolumn{#1}{#2}{\parbox{#3}{#4}}`; the class's own `\tablehead{n}{align}{pos}{text}`
+(aipproc.cls:668-672, the copy astro-ph0107145 ships) sets the head in `\begin{tabular}[#3]{@{}#2@{}}…\end{tabular}`:
+`#3` is `t`/`c`/`b`, a vertical position. Perl warns "Missing number (Dimension)" twice per head; with aipproc's calc
+(:169) Rust reports calc's own error, "`b' invalid at this point" (calc.sty:144-160; since 56jr) — ~428 of run 336's
+papers (2009.01991, 2003.06860, 1610.04387; also `c`/`t` heads).
+
+Minimal trigger: `\documentclass{aipproc}` … `\begin{tabular}{rr}\tablehead{1}{r}{b}{First\\head}&x\\\end{tabular}`.
+
+Fixed in Rust (64h): the class's tabular. Guard `perfect_kernel_batch64::aipproc_tablehead_position`.
+
+## 561. The elsart binding lacks elsart.cls's own `\if@TwoColumn`, `\if@ussrhead` and `\@frontmatterwidth`
+
+elsart.cls.ltxml takes `onecolumn`/`twocolumn`/`ussrhead` as ignorable options and declares none of elsart.cls (v2.18, 2001/01/05):35
+`\newif\if@TwoColumn`, :50 `\newif\if@ussrhead`, :90 `\newdimen\@frontmatterwidth`. Elsevier's esl.dtx wrapper
+classes (phbauth, phb-proc4-auth, LT23auth, PHYEAUTH, cpcauth, phc-proc4-auth, epnt1p, synmet…) `\LoadClass{elsart}`
+and use all three: 3 undefined errors each when the wrapper is read (Perl with `--includestyles`, Rust since 62k's
+raw shipped classes) — 367 of run 336's papers (2010.00445, cond-mat0406419, 0708.1700).
+
+Minimal trigger: a class file `\LoadClass{elsart}\if@ussrhead\fi\if@TwoColumn\fi\@frontmatterwidth=1pt` and a
+document of that class.
+
+Fixed in Rust (64h): the three declared, and elsart.cls:47-51's options setting them. Guard
+`perfect_kernel_batch64::elsart_wrapper_class_internals`.
+
+## 562. The `\@verbatim` stand-in does not obey lines
+
+latex_constructs.pool.ltxml:1713-1722 `\@verbatim` → `\lx@@verbatim` only starts semiverbatim reading; latex.ltx:15455
+`\@verbatim` runs `\obeylines`, so a line end is active and a blank line is no `\par`. A package that reads the body
+itself through `\@verbatim` — spverbatim's `\spv@xverbatim#1\end{spverbatim}` (not `\long`) — meets a `\par` at the
+first blank line: "Paragraph ended before \@xverbatim was complete" since the §392 check (62h; 107 of run 336's papers,
+2608.30983, 2608.26131), and the line ends were lost before.
+
+Minimal trigger: `\usepackage{spverbatim}` … `\begin{spverbatim}` a line, a blank line, a line `\end{spverbatim}`.
+
+Fixed in Rust (64h): the line end is active in `\lx@@verbatim`, a newline of the verbatim text. Guard
+`perfect_kernel_batch64::spverbatim_blank_line`.
+

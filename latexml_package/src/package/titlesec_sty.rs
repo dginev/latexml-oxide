@@ -325,7 +325,7 @@ LoadDefinitions!({
     if lookup_meaning(&cmd).is_some() {
       return Ok(vec![]); // \section & co keep their (locked) bindings
     }
-    let shift = if lookup_definition(&T_CS!("\\c@chapter"))?.is_none() { 1 } else { 0 };
+    let shift = if has_chapter_counter() { 0 } else { 1 };
     def_macro(
       cmd,
       None,

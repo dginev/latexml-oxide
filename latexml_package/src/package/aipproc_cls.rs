@@ -112,7 +112,11 @@ LoadDefinitions!({
   DefMacro!("\\source{}", "\\lx@note{source}{#1}");
   def_macro_noop("\\spaceforfigure{}{}")?;
 
-  DefMacro!("\\tablehead{}{}{}{}", "\\multicolumn{#1}{#2}{\\parbox{#3}{#4}}");
+  // aipproc.cls:668-672 `\multicolumn{#1}{#2}{\AIPtableheadfont\begin{tabular}[#3]{@{}#2@{}}\vrule…#4\unskip\vrule…
+  // \end{tabular}}`: `#3` is the head's vertical position (t/c/b), not a width. Perl's `\parbox{#3}{#4}`
+  // (aipproc.cls.ltxml:112) set a width of `b`, which calc rejects (calc.sty:144-160, since 56jr: "`b' invalid at this
+  // point", ~428 of run 336's papers; KNOWN_PERL_ERRORS #560); the struts and head font are print layout.
+  DefMacro!("\\tablehead{}{}{}{}", "\\multicolumn{#1}{#2}{\\begin{tabular}[#3]{@{}#2@{}}\\ignorespaces#4\\unskip\\end{tabular}}");
   // Perl aipproc.cls.ltxml L101 body references `#1` (the OptionalMatch:*
   // star flag), silently dropping the note content. See
   // docs/parity/KNOWN_PERL_ERRORS.md #16. Rust deliberately indexes `#2` (the

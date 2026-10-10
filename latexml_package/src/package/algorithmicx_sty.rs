@@ -170,13 +170,22 @@ LoadDefinitions!({
 
 /// Open the `ltx:listingline` of an algorithmicx `\item`, with its id and tags, or — inside a line still open
 /// (algpseudocodex's `varwidth` box, see `\lx@algorithmicx@@item`) — break that line.
+///
+/// The nearest listing bounds the walk, as algorithm2e's `line_reach` does: in a listing nested in a line (an
+/// `{algorithmic}` inside an algorithm2e float's line or inside another `{algorithmic}`'s `\State`) a line opens in
+/// that listing; walking on to the outer line put breaks and bare text in the inner listing (112 TooManyErrors papers
+/// of run 336: 1203.4481, 2410.01553, 2510.14887, 1604.06452).
 fn open_algorithmicx_line(document: &mut Document, props: &SymHashMap<Stored>) -> Result<()> {
   let open_line = document.maybe_close_element("ltx:listingline")?.is_none() && {
     let mut n = Some(document.get_node().clone());
     let mut found = false;
     while let Some(node) = n {
-      if document::get_node_qname(&node) == pin!("ltx:listingline") {
+      let qname = document::get_node_qname(&node);
+      if qname == pin!("ltx:listingline") {
         found = true;
+        break;
+      }
+      if qname == pin!("ltx:listing") {
         break;
       }
       n = node.get_parent();

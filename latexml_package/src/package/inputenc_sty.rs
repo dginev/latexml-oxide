@@ -38,19 +38,33 @@ pub fn enable_pdftex_byte_mouth() -> Result<bool> {
 /// {inputenc}` after the switch).
 pub fn install_utf8_byte_activation() -> Result<()> {
   // utf8.def:174-176 and :190-192: 0x80..0xC1 and 0xF5..0xFF are active and
-  // invalid on their own — inputenc's undefined-character handler here
-  // (`\@inpenc@undefined`, the same "keyboard character undefined" report as
-  // `\UTFviii@invalid@err`). PROTECTED, as utf8.def's
-  // `\protected\edef~{\noexpand\UTFviii@invalid@err\string~}`: an `\edef` over a
-  // multi-byte character keeps its continuation bytes for the lead byte's
-  // reader instead of reporting them (enumitem `\protected@xdef`s an enumerate
-  // label, so `label=•\arabic*` under CJKutf8 printed "â0numi"). Repro:
-  // unicode-catcodes/byte_mouth_continuation_bytes_are_protected.
-  let undef_cs = T_CS!("\\@inpenc@undefined");
+  // invalid on their own — `\protected\edef~{\noexpand\UTFviii@invalid@err\string~}`,
+  // the byte itself after `\UTFviii@invalid@err`. The format leaves that `\string`
+  // (latex.ltx:22231), and the dump carries it so; pdflatex's `\everyjob` (:22235-22237)
+  // restores utf8.def:113's "Invalid UTF-8 byte" error, which drops the byte, but
+  // the engine runs only the `\__kernel_sys_everyjob:` part of it (latex.rs). The
+  // byte stays as text, its Latin-1 character, as the native mouth keeps an
+  // undecodable line (mouth.rs `decode_input_bytes`; Perl's file mouth makes it a
+  // space, Mouth/file.pm:72-77) and as pdfTeX before TL 2018 printed it:
+  // OXIDIZED_DESIGN_DIVERGENCES #481. Not
+  // inputenc's `\@inpenc@undefined`, which only inputenc defines: a CJK paper
+  // with stray GBK/cp1252 punctuation and no inputenc erred on every such byte
+  // (746 of run 336's papers; 2605.05335, 1809.07457, 1503.05450). PROTECTED, as
+  // utf8.def has it: an `\edef` over a multi-byte character keeps its
+  // continuation bytes for the lead byte's reader instead of reporting them
+  // (enumitem `\protected@xdef`s an enumerate label, so `label=•\arabic*` under
+  // CJKutf8 printed "â0numi"). Repros: unicode-catcodes/byte_mouth_continuation_bytes_are_protected,
+  // unicode-catcodes/cjk_stray_byte_is_text.
+  let invalid_cs = T_CS!("\\UTFviii@invalid@err");
+  // (a plain TeX document has no format to define it: latex.ltx:22231's meaning, global as the bytes are)
+  if lookup_meaning(&invalid_cs).is_none() {
+    Let!("\\UTFviii@invalid@err", "\\string", Scope::Global);
+  }
   for code in (0x80..=0xC1u8).chain(0xF5..=0xFFu8) {
     let ch = code as char;
     assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
-    DefMacro!(T_ACTIVE!(ch), None, Tokens!(undef_cs), scope => Some(Scope::Global), protected => true);
+    DefMacro!(T_ACTIVE!(ch), None, Tokens!(invalid_cs, T_OTHER!(&ch.to_string())), scope => Some(Scope::Global),
+      protected => true);
   }
   // utf8.def:177-190: each lead byte is a PARAMETERLESS protected active
   // character expanding to its octet reader applied to itself

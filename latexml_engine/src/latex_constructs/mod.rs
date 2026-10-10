@@ -264,6 +264,18 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
 
 pub fn start_appendices(kind: &str) { begin_appendices(kind) }
 
+/// Whether `chapter` is a LaTeX counter — `\c@chapter` AND its reset list `\cl@chapter`, as every `\newcounter`
+/// (latex.ltx:10139 `\@definecounter`, our `new_counter`) makes both — so a class has chapters. Perl tests `\c@chapter`
+/// alone (latex_constructs.pool.ltxml:690-693), safe while its kernel `\chapter` stayed defined; since
+/// OXIDIZED_DESIGN #179 retracts it in a chapterless class, tcilatex's no-chapters branch makes a bare count register
+/// (`\newcount\c@chapter`, tcilatex_tex.rs), and the appendix numbered `\thechapter.\Alph{section}` with `\thechapter`
+/// undefined (537 of run 336's papers: 1509.06343, quant-ph0609144). Not `\thechapter`: under OmniBus it is an autoload
+/// stub that loads book.cls (omnibus_cls.rs).
+pub fn has_chapter_counter() -> bool {
+  let defined = |name: &str| lookup_definition(&T_CS!(name)).ok().flatten().is_some();
+  defined("\\c@chapter") && defined("\\cl@chapter")
+}
+
 pub fn begin_appendices(counter: &str) {
   let the_ctr = s!("\\the{counter}");
   let the_ctr_id = s!("\\the{counter}@ID");
@@ -289,11 +301,7 @@ pub fn begin_appendices(counter: &str) {
     "ltx:appendix",
     Some(s!("ltx:{counter}")),
   );
-  let has_chapter = lookup_definition(&T_CS!("\\c@chapter"))
-    .ok()
-    .flatten()
-    .is_some();
-  if has_chapter && counter != "chapter" {
+  if has_chapter_counter() && counter != "chapter" {
     let _ = new_counter(
       counter,
       "chapter",

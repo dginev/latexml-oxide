@@ -944,6 +944,16 @@ pub(crate) fn load() -> Result<()> {
     merge_font(fontmap!(family => "typewriter", series => "medium", shape => "upright"));
     assign_catcode(' ', Catcode::ACTIVE, None);  // Do NOT (necessarily) skip spaces after \verb!!!
     Let!(&T_ACTIVE!(' '), T_SPACE!());
+    // latex.ltx:15455 `\obeylines`: each line end is active, a newline of the verbatim text, so a blank line is no
+    // `\par` — spverbatim's `\spv@xverbatim#1\end{spverbatim}` (not `\long`) met one at the first blank line ("Paragraph
+    // ended before \@xverbatim was complete", 107 of run 336's papers since §392's check, 62h; Perl's stand-in,
+    // latex_constructs.pool.ltxml:1713-1722, lacks it too: KNOWN_PERL_ERRORS #562).
+    assign_catcode('\r', Catcode::ACTIVE, None);
+    Let!(&T_ACTIVE!('\r'), T_CS!("\\lx@verbatim@newline"));
+  });
+  // The verbatim text's newline, as `after_digest_verbatim` ends each line of `{verbatim}`.
+  DefPrimitive!("\\lx@verbatim@newline", {
+    Tbox::new(pin!("\n"), None, None, Tokens!(T_CS!("\\lx@verbatim@newline")), SymHashMap::default())
   });
   DefConstructor!(r"\lx@end@verbatim", "</ltx:verbatim>",
     before_digest => { end_semiverbatim()?; });

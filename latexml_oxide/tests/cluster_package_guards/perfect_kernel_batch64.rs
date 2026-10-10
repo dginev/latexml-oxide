@@ -582,36 +582,41 @@ fn aastex7_email_hidden_without_show() {
 
 /// The core `xml` through the embedded `stylesheet` (`LaTeXML-html5.xsl`, `LaTeXML-epub3.xsl`), in-process, with no POST
 /// error.
-fn post_with(xml: &str, stylesheet: &str) -> String {
+fn post_with(xml: &str, stylesheet: &str) -> String { post_in(xml, stylesheet, None) }
+
+/// [`post_with`] for a document whose post stage reads files beside its source (a `.bib`) in `source_directory`, its
+/// page written beside it as the CLI's `--dest` (so a link renders as the reader sees it).
+fn post_in(xml: &str, stylesheet: &str, source_directory: Option<&str>) -> String {
   latexml_core::util::logger::bind_log();
+  let destination = source_directory.map(|dir| format!("{dir}/guard.html"));
   let opts = latexml::post::PostOptions {
-    pmml:                      true,
-    cmml:                      false,
-    keep_xmath:                false,
-    stylesheet:                Some(stylesheet),
-    destination:               None,
-    source_directory:          None,
-    site_directory:            None,
-    search_paths:              &[],
-    nodefaultresources:        true,
-    css_files:                 &[],
-    js_files:                  &[],
-    noinvisibletimes:          false,
-    plane1:                    true,
-    hackplane1:                false,
-    mathtex:                   false,
-    url_style:                 latexml_post::crossref::UrlStyle::File,
-    navigationtoc:             None,
-    schemadocs:                false,
-    split:                     false,
-    split_xpath:               None,
-    split_naming:              None,
-    xslt_parameters:           &[],
+    pmml: true,
+    cmml: false,
+    keep_xmath: false,
+    stylesheet: Some(stylesheet),
+    destination: destination.as_deref(),
+    source_directory,
+    site_directory: None,
+    search_paths: &[],
+    nodefaultresources: true,
+    css_files: &[],
+    js_files: &[],
+    noinvisibletimes: false,
+    plane1: true,
+    hackplane1: false,
+    mathtex: false,
+    url_style: latexml_post::crossref::UrlStyle::File,
+    navigationtoc: None,
+    schemadocs: false,
+    split: false,
+    split_xpath: None,
+    split_naming: None,
+    xslt_parameters: &[],
     graphics_svg_threshold_kb: 0,
-    graphicimages:             false,
-    timestamp:                 None,
-    icon:                      None,
-    whatsout:                  latexml_post::extract::Whatsout::default(),
+    graphicimages: false,
+    timestamp: None,
+    icon: None,
+    whatsout: latexml_post::extract::Whatsout::default(),
   };
   let out = latexml::post::run_post_processing(xml, &opts);
   let log = latexml_core::util::logger::flush_log();
@@ -1522,4 +1527,276 @@ fn author_spacing_after_wrapped_affiliation_list() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact>\n  </creator>",
   ]);
+}
+
+/// The XML of `tex` (raw bytes: a non-UTF-8 source) converted under ar5iv, which must give no error and no warning.
+fn convert_bytes_clean(tex: &[u8]) -> String {
+  let (log, xml, ()) =
+    latexml::util::test::convert_bytes_files_then(tex, &[], Some("ar5iv.sty"), |_, _| ());
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  xml
+}
+
+/// 64h: hyperref's `\hyper@makecurrent` is hyperref.sty's (:6832-6877), so tex.sx 149807's appendix-autoref
+/// `\patchcmd` finds its text, where an empty stub failed the patch (129 of run 336's papers: 2608.07656, 2606.29844).
+/// Repro loader/hyperref_makecurrent_patchable.
+#[test]
+fn hyperref_makecurrent_patchable() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/loader/hyperref_makecurrent_patchable.tex"
+  ));
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"S1.p1\""],
+    "<para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">See <ref class=\"ltx_refmacro_autoref\" labelref=\"LABEL:a:x\" show=\"autoref\"/>.</p></para>",
+  );
+}
+
+/// 64h: the `pdftex` class option selects PDF output whatever PostScript the source also ships, and DVI output needs
+/// figures that are PostScript only (AutoTeX): an MDPI template's `logo-*.eps` beside PNG figures failed expl3's
+/// backend check (47 of run 336's papers: 2210.04612). Repro loader/pdftex_option_with_eps_figures.
+#[test]
+fn pdftex_option_with_eps_figures() {
+  let xml = convert_clean_files(
+    include_str!("../../../tools/perfect_kernel/repros/loader/pdftex_option_with_eps_figures.tex"),
+    &[
+      (
+        "logo.eps",
+        "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 10 10\n",
+      ),
+      ("fig.png", ""),
+    ],
+  );
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"fig.png\""],
+    "<graphics candidates=\"fig.png\" graphic=\"fig.png\" options=\"width=28.45274pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>",
+  );
+}
+
+/// 64h: the `pdftex` class option selects PDF output, the mirror of the `dvips` option cue, even where every figure the
+/// source ships is PostScript, which alone selects DVI output (OXIDIZED_DESIGN_DIVERGENCES #285). Repro
+/// loader/pdftex_option_selects_pdf_mode.
+#[test]
+fn pdftex_option_selects_pdf_mode() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/pdftex_option_selects_pdf_mode.tex");
+  let eps = [("logo.eps", SQUARE_EPS)];
+  let xml = convert_clean_files(tex, &eps);
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Mode: PDF.</p></para>",
+  );
+  // without the option, the PostScript-only figures select DVI output
+  let xml = convert_clean_files(&tex.replace("[pdftex]", ""), &eps);
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Mode: DVI.</p></para>",
+  );
+}
+
+/// 64h: under CJK's byte mouth a stray non-UTF-8 byte is `\UTFviii@invalid@err` + itself, as utf8.def binds it — text
+/// inside a document (latex.ltx:22231) — not inputenc's `\@inpenc@undefined` (746 of run 336's papers: 2605.05335,
+/// 1809.07457). Repro unicode-catcodes/cjk_stray_byte_is_text.
+#[test]
+fn cjk_stray_byte_is_text() {
+  let xml = convert_bytes_clean(include_bytes!(
+    "../../../tools/perfect_kernel/repros/unicode-catcodes/cjk_stray_byte_is_text.tex"
+  ));
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">A \u{a1}\u{b0}twisted\u{a1}\u{b1} state.</p>",
+  );
+}
+
+/// 64h: the `.bib` parser trims only BibTeX's ASCII whitespace (`is_bib_white`), so under the byte mouth a field's
+/// last multi-byte character keeps its continuation bytes 0x85/0xA0 (2606.26332's `keywords={★}`). Repro
+/// index-bib/byte_mouth_bib_field_last_character. HTML: the post stage builds the bibliography from the `.bib`.
+#[test]
+fn byte_mouth_bib_field_last_character() {
+  let (log, _, html) = latexml::util::test::convert_bytes_files_then(
+    include_bytes!(
+      "../../../tools/perfect_kernel/repros/index-bib/byte_mouth_bib_field_last_character.tex"
+    ),
+    &[(
+      "byte_mouth_bib_field_last_character.bib",
+      include_bytes!(
+        "../../../tools/perfect_kernel/repros/index-bib/byte_mouth_bib_field_last_character.bib"
+      ),
+    )],
+    Some("ar5iv.sty"),
+    |xml, source_dir| {
+      // post in the conversion's own thread, whose live state the recursive `.bib` session digests in (bib_session.rs)
+      post_in(xml, "resources/XSLT/LaTeXML-html5.xsl", source_dir.to_str())
+    },
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  let item =
+    latexml::util::test::xml_element(&html, "li", &["id=\"bib.bib1\""]).unwrap_or_default();
+  assert_eq!(
+    item,
+    "<li class=\"ltx_bibitem ltx_bib_article\" id=\"bib.bib1\"><span class=\"ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem\">[1]</span><span class=\"ltx_bibblock\"><span class=\"ltx_text ltx_bib_author\">Jane Doe</span><span class=\"ltx_text ltx_bib_year\"> (2020)</span></span><span class=\"ltx_bibblock\"><span class=\"ltx_text ltx_bib_title\">Disks</span>.</span><span class=\"ltx_bibblock\"><span class=\"ltx_text ltx_bib_journal\">ApJ</span>.</span><span class=\"ltx_bibblock\">Note: <span class=\"ltx_text ltx_bib_note\">Deceased†</span></span><span class=\"ltx_bibblock ltx_bib_cited\">Cited by: <a class=\"ltx_ref\" href=\"#p1.1\" title=\"\">p1.1</a>.</span></li>",
+    "{html}"
+  );
+}
+
+/// 64h: "has chapters" means `chapter` is a LaTeX counter (`\c@chapter` and its reset list `\cl@chapter`): tcilatex's bare
+/// `\newcount\c@chapter` in a chapterless class numbered the appendix `\thechapter.A` (537 of run 336's papers:
+/// 1509.06343). Repro sectioning-frontmatter/tcilatex_chapter_counter_appendix.
+#[test]
+fn tcilatex_chapter_counter_appendix() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/tcilatex_chapter_counter_appendix.tex"
+  ));
+  assert_element(
+    &xml,
+    "appendix",
+    &["xml:id=\"A1\""],
+    "<appendix inlist=\"toc\" xml:id=\"A1\"><tags><tag>Appendix A</tag><tag role=\"refnum\">A</tag><tag role=\"typerefnum\">Appendix A</tag></tags><title><tag close=\" \">Appendix A</tag>App</title><toctitle><tag close=\" \">A</tag>App</toctitle><para xml:id=\"A1.p1\"><p xml:id=\"A1.p1.1\">More.</p></para></appendix>",
+  );
+}
+
+/// 64h: a `#` name in `\input` is a macro's argument, no preamble: the plain paper stays plain, its own `\chapter`
+/// kept (hep-ph9210212, hep-th0703274). Repro loader/plain_input_parameter_stays_plain.
+#[test]
+fn plain_input_parameter_stays_plain() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/loader/plain_input_parameter_stays_plain.tex"
+  ));
+  assert!(!xml.contains("<chapter"), "{xml}");
+  // the text of its own `\chapter` (a bold first letter apart is SHARED with Perl: RED
+  // boxes-groups/plain_bold_group_starting_a_paragraph)
+  let para =
+    latexml::util::test::xml_element(&xml, "para", &["xml:id=\"id1\""]).unwrap_or_default();
+  let mut text = String::new();
+  let mut in_tag = false;
+  for c in para.chars() {
+    match c {
+      '<' => in_tag = true,
+      '>' => in_tag = false,
+      _ if !in_tag => text.push(c),
+      _ => {},
+    }
+  }
+  assert_eq!(text.trim(), "Intro", "{xml}");
+}
+
+/// 64h: aipproc's `\tablehead{n}{align}{pos}{text}` sets the head in a `tabular[pos]` (aipproc.cls:668-672), not a
+/// `\parbox` of width `pos` (~428 of run 336's papers: 2009.01991). Repro alignment-bindings/aipproc_tablehead_position.
+#[test]
+fn aipproc_tablehead_position() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/aipproc_tablehead_position.tex"
+  ));
+  assert_element(
+    &xml,
+    "td",
+    &["xml:id=\"S0.T1.1.1.1\""],
+    "<td align=\"right\" border=\"t\" xml:id=\"S0.T1.1.1.1\"><tabular vattach=\"bottom\" xml:id=\"S0.T1.1.1.1.1\"><tr xml:id=\"S0.T1.1.1.1.1.1\"><td align=\"right\" class=\"ltx_nopad_r\" xml:id=\"S0.T1.1.1.1.1.1.1\">First</td></tr><tr xml:id=\"S0.T1.1.1.1.1.2\"><td align=\"right\" class=\"ltx_nopad_r\" xml:id=\"S0.T1.1.1.1.1.2.1\">head</td></tr></tabular></td>",
+  );
+}
+
+/// 64h: an esl.dtx wrapper class on elsart finds elsart.cls's own internals (`\if@ussrhead`, `\if@TwoColumn`,
+/// `\@frontmatterwidth`; 367 of run 336's papers: 2010.00445). Repro loader/elsart_wrapper_class_internals.
+#[test]
+fn elsart_wrapper_class_internals() {
+  let xml = convert_clean_files(
+    include_str!("../../../tools/perfect_kernel/repros/loader/elsart_wrapper_class_internals.tex"),
+    &[(
+      "eslwrap-auth.cls",
+      include_str!("../../../tools/perfect_kernel/repros/loader/eslwrap-auth.cls"),
+    )],
+  );
+  assert_eq!(creators(&xml), vec![
+    "<creator role=\"author\">\n    <personname>A. Author</personname>\n  </creator>",
+  ]);
+}
+
+/// 64h: an algorithmicx line in a listing nested in a line opens in that listing (112 TooManyErrors papers of run
+/// 336: 1604.06452, 2410.01553). Repro list-structure/algorithmic_nested_in_algorithmic.
+#[test]
+fn algorithmic_nested_in_algorithmic() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/list-structure/algorithmic_nested_in_algorithmic.tex"
+  ));
+  assert!(!xml.contains("<break"), "{xml}");
+  assert_element(
+    &xml,
+    "listing",
+    &["xml:id=\"algx1.l1.1.1\""],
+    "<listing xml:id=\"algx1.l1.1.1\"><listingline xml:id=\"algx2.l1\"><tags><tag role=\"refnum\">1</tag></tags>inner one</listingline><listingline xml:id=\"algx2.l2\"><tags><tag role=\"refnum\">2</tag></tags>inner two</listingline></listing>",
+  );
+}
+
+/// 64h: the `\@verbatim` stand-in obeys lines (latex.ltx:15455): a blank line in spverbatim is no `\par` and the line
+/// ends stay (107 of run 336's papers). Repro string-mouth/spverbatim_blank_line.
+#[test]
+fn spverbatim_blank_line() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/string-mouth/spverbatim_blank_line.tex"
+  ));
+  assert_element(
+    &xml,
+    "verbatim",
+    &["xml:id=\"p2.1\""],
+    "<verbatim font=\"typewriter\" xml:id=\"p2.1\">a_b\u{a0}{x}\u{a0}\\foo second\u{a0}para</verbatim>",
+  );
+  // (the line ends themselves, which the element comparison normalizes away)
+  assert!(xml.contains("\\foo\n\nsecond"), "{xml}");
+}
+
+/// 64h: nomencl's `[prefix]` is read sanitized (nomencl.sty:216-221), so `R_alpha` is a sort key, not a script (12 of
+/// run 336's papers). Repro index-bib/nomencl_prefix_sanitized.
+#[test]
+fn nomencl_prefix_sanitized() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/nomencl_prefix_sanitized.tex"
+  ));
+  assert_element(
+    &xml,
+    "glossaryphrase",
+    &["role=\"name\""],
+    "<glossaryphrase key=\"nomencl.1\" role=\"name\"><Math mode=\"inline\" tex=\"x_{\\beta}\" text=\"x _ beta\" xml:id=\"p1.m2\"><XMath xml:id=\"p1.m2.1\"><XMApp xml:id=\"p1.m2.1.1\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok font=\"italic\" fontsize=\"70%\" name=\"beta\" role=\"UNKNOWN\">\u{3b2}</XMTok></XMApp></XMath></Math></glossaryphrase>",
+  );
+}
+
+/// 64h: a group ahead of an `OptionalPair` that holds no pair keeps its braces for the next argument (makecell's
+/// `\diaghead{$V_i$}{a}{b}`, 2111.10338). Repro graphics-tikz/makecell_diaghead_without_slope.
+#[test]
+fn makecell_diaghead_without_slope() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/makecell_diaghead_without_slope.tex"
+  ));
+  assert_element(
+    &xml,
+    "td",
+    &["align=\"center\""],
+    "<td align=\"center\" class=\"ltx_nopad\" thead=\"column row\" xml:id=\"p1.1.1.1\"><picture height=\"14.13\" tex=\"\\diaghead(5,-2){$V_{i}$ $f^{a}_{d}$}{{\\footnotesize\\shortstack[l]{$V_{i}$}}}{{\\footnotesize\\shortstack[r]{$f^{a}_{d}$}}}\" width=\"35.32\" xml:id=\"p1.pic1\"><line points=\"0,14.128 35.32,0\" stroke=\"#000000\" stroke-width=\"0.4\"/><g innerheight=\"8.94\" innerwidth=\"14.29\" transform=\"translate(0,0)\"><inline-block xml:id=\"p1.pic1.1\"><inline-block align=\"left\" xml:id=\"p1.pic1.1.1\"><p xml:id=\"p1.pic1.1.1.1\"><Math mode=\"inline\" tex=\"V_{i}\" text=\"V _ i\" xml:id=\"p1.pic1.m1\"><XMath xml:id=\"p1.pic1.m1.1\"><XMApp xml:id=\"p1.pic1.m1.1.1\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" fontsize=\"80%\" role=\"UNKNOWN\">V</XMTok><XMTok font=\"italic\" fontsize=\"56%\" role=\"UNKNOWN\">i</XMTok></XMApp></XMath></Math></p></inline-block></inline-block></g><g innerheight=\"9.84\" innerwidth=\"13.56\" transform=\"translate(21.76,4.288)\"><inline-block xml:id=\"p1.pic1.2\"><inline-block align=\"right\" xml:id=\"p1.pic1.2.1\"><p xml:id=\"p1.pic1.2.1.1\"><Math mode=\"inline\" tex=\"f^{a}_{d}\" text=\"(f ^ a) _ d\" xml:id=\"p1.pic1.m2\"><XMath xml:id=\"p1.pic1.m2.1\"><XMApp xml:id=\"p1.pic1.m2.1.1\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMApp xml:id=\"p1.pic1.m2.1.1.2\"><XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" fontsize=\"80%\" role=\"UNKNOWN\">f</XMTok><XMTok font=\"italic\" fontsize=\"56%\" role=\"UNKNOWN\">a</XMTok></XMApp><XMTok font=\"italic\" fontsize=\"56%\" role=\"UNKNOWN\">d</XMTok></XMApp></XMath></Math></p></inline-block></inline-block></g></picture></td>",
+  );
+}
+
+/// 64h: every counter has the kernel's `\theH<counter>` (latex.ltx:10145 `\@definecounter`, :10157 `\@addtoreset`),
+/// which hyperref's `\hyper@makecurrent` and pgfplots' `\theHpgfplotslink{\theHsection.…}` build anchors from
+/// (2609.14858, 2609.16926, 2609.26478). Repro macro-state/kernel_counters_have_hyperref_names.
+#[test]
+fn kernel_counters_have_hyperref_names() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/macro-state/kernel_counters_have_hyperref_names.tex"
+  ));
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"S1.SS1.p1\""],
+    "<para xml:id=\"S1.SS1.p1\"><p xml:id=\"S1.SS1.p1.1\">Names: 1; 1.1; 1.1.1; 1.1.1.1; 0; 0.</p></para>",
+  );
 }

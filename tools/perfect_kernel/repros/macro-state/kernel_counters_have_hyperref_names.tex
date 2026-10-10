@@ -1,0 +1,15 @@
+% witness: 2609.14858, 2609.16926, 2609.26478 (pgfplots `\label` under hyperref: `\theHpgfplotslink{\theHsection.…}`)
+% oracle:  pdflatex "Names: 1; 1.1; 1.1.1; 1.1.1.1; 0; 0." (TL 2025 kernel, no hyperref)
+% engines: rust 64h1 = every name undefined (Error:undefined:\theHsection once `\hyper@makecurrent` is hyperref's); Perl the same
+% expect:  latex.ltx:10145/10157 — every counter has `\the\value{<ctr>}`, prefixed `\theH<within>.` once reset
+% status:  RED (64h1) -> GREEN (64h)
+\documentclass{article}
+\newcounter{foo}[subsection]
+\newcounter{bar}
+\counterwithin{bar}{foo}
+\begin{document}
+\section{One}
+\subsection{Two}
+\stepcounter{foo}\stepcounter{bar}
+Names: \theHsection; \theHsubsection; \theHfoo; \theHbar; \theHequation; \theHfigure.
+\end{document}

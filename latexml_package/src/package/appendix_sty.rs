@@ -47,7 +47,7 @@ LoadDefinitions!({
   def_macro_noop("\\addappheadtotoc")?;
 
   DefPrimitive!("\\lx@pp@appendix@begin", {
-    if lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some() {
+    if has_chapter_counter() {
       begin_appendices("chapter");
     } else {
       begin_appendices("section");
@@ -64,7 +64,7 @@ LoadDefinitions!({
 
   // Adjust numbering!!!
   DefPrimitive!("\\lx@pp@subappendix@begin", {
-    if lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some() {
+    if has_chapter_counter() {
       begin_appendices("section");
     } else {
       begin_appendices("subsection");

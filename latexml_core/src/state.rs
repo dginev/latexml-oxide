@@ -4178,6 +4178,14 @@ std::thread_local! {
 pub fn set_dvi_driver_option(dvi: bool) { DVI_DRIVER_OPTION.with(|c| c.set(dvi)); }
 /// Whether the document is a latex+dvips one by its class options ([`set_dvi_driver_option`]).
 pub fn dvi_driver_option() -> bool { DVI_DRIVER_OPTION.with(std::cell::Cell::get) }
+std::thread_local! {
+  static PDF_DRIVER_OPTION: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+/// Records whether the main file's `\documentclass` names the `pdftex` driver option: the document is a pdflatex one,
+/// whatever PostScript files it also ships (the K6 ruling's PDF cue, mirroring [`set_dvi_driver_option`]).
+pub fn set_pdf_driver_option(pdf: bool) { PDF_DRIVER_OPTION.with(|c| c.set(pdf)); }
+/// Whether the document is a pdflatex one by its class options ([`set_pdf_driver_option`]).
+pub fn pdf_driver_option() -> bool { PDF_DRIVER_OPTION.with(std::cell::Cell::get) }
 
 /// Snapshot of all registered (name, ext) binding pairs across all
 /// dispatchers. Used by `find_file(notex=true)` to detect compiled-binding

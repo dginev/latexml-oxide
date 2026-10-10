@@ -1,9 +1,10 @@
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
-/// hyperref: batch 55b added a `\hyper@makecurrent` noop, which makes
+/// hyperref: a defined `\hyper@makecurrent` (a noop from batch 55b, hyperref.sty's own since 64h) makes
 /// pgfplots take its PDF-anchor branch and call `\hyper@anchorstart`/
 /// `\hyper@anchorend` — undefined until the companion NoHyper-shape defs were
-/// added (hyperref.sty:6152-6154). A pgfplots crossref `\label` under
+/// added (hyperref.sty:6152-6154) — and read `\theHpgfplotslink{\theHsection.…}`, the kernel's `\theH<counter>`
+/// names (64h). A pgfplots crossref `\label` under
 /// hyperref must not error, and the plot must still render (~39 papers).
 #[test]
 fn hyperref_pgfplots_label_anchor_no_error() {

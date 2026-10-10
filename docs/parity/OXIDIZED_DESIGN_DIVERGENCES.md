@@ -6889,8 +6889,15 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Perl behavior**: `DefMacroI('\chapter', undef, '\@startsection{chapter}…', locked => 1)` in the kernel pool (latex_constructs.pool.ltxml:557), so `\@ifundefined{chapter}` is FALSE under article/scrartcl. blindtext.sty:243 `\blinddocument`, hvfloat's 50 test documents, coseoul, xassoccnt take the chapter branch and error `undefined:\thechapter` (53 docs, sweep 30).
 **Rust behavior**: after `\documentclass` loads its class, `\chapter` is `\let` undefined when `\c@chapter` is undefined (Perl's own "has chapters" probe, pool:690) — except under the OmniBus fallback for an unknown class, which may have chapters (it autoloads book.cls on `\thechapter`, arXiv:2602.10407).
 **Why**: latex.ltx defines no `\chapter`; only report/book-like classes do. An arXiv paper never uses `\chapter` in a chapterless class (pdflatex would refuse to compile it).
+**Consequence** (batch 64h): a package's own no-chapters branch can then make a bare count register — tcilatex's
+`\@ifundefined{chapter}{…\newcount\c@chapter}{}` — which Perl's "has chapters" probe (`\c@chapter` defined) read as
+chapters: the appendix numbered `\thechapter.\Alph{section}` with `\thechapter` undefined (537 of run 336's papers:
+1509.06343, quant-ph0609144). "Has chapters" is now "`chapter` is a LaTeX counter" (`\c@chapter` and its reset list
+`\cl@chapter`, as `\newcounter` makes both; not `\thechapter`, which OmniBus defines as a book.cls autoload stub;
+`latex_constructs::has_chapter_counter`), at `\appendix`, appendix.sty and titlesec.
 **Witnesses**: coseoul/cosexamp, hvfloat ×50, modular, sillypage, xassoccnt_totalcounters_example.
-**Guard**: `perfect_kernel_batch54::chapter_is_undefined_in_a_chapterless_class`, `06_cluster_regressions::cluster_omnibus_chapter_book_autoload`.
+**Guard**: `perfect_kernel_batch54::chapter_is_undefined_in_a_chapterless_class`, `06_cluster_regressions::cluster_omnibus_chapter_book_autoload`,
+`perfect_kernel_batch64::tcilatex_chapter_counter_appendix`.
 **Upstream**: not filed.
 
 ### 180. `\@trivlist` is the shared list opener (Perl neutralizes it to `\relax`) — PLANS P38
@@ -9239,7 +9246,7 @@ latex.ltx allocates its lengths with `\newdimen`/`\newskip` (`\columnsep` is `\d
 
 **Guard**: `class_census::kernel_length_is_an_allocated_dimen`.
 
-### 285. PDF output is the default; a source shipping EPS/PS figures keeps DVI (Perl: always DVI)
+### 285. PDF output is the default; a source whose figures are EPS/PS only keeps DVI (Perl: always DVI)
 
 Perl sets `\pdfoutput=0` (pdfTeX.pool.ltxml:23) and `\ifpdf` FALSE, so every
 document takes its DVI branches. pdflatex's own format sets `\pdfoutput=1`
@@ -9272,12 +9279,20 @@ full-arXiv run 329). A main file naming no class is read with the files it input
 (`converter.rs` `compile_route`), so the cue may come from an `\input` preamble; the
 main file's own `\pdfoutput=1` still selects PDF.
 
-**Known limitation**: a source with EPS figures that its author compiles with
+**PDF cues** (batch 64h): DVI needs figures that are PostScript only, AutoTeX's own test — a source shipping
+EPS/PS beside a PDF/PNG/JPEG file is a pdflatex one (latex+dvips cannot include those; `core_interface.rs`
+`source_figures_are_postscript_only`); and a `pdftex` class option selects PDF (`state::pdf_driver_option`, the
+mirror of the DVI-driver cue). Witness 2210.04612: an MDPI template's `logo-*.eps` beside PNG figures, under
+`\documentclass[…,pdftex]{Definitions/mdpi}`, was taken as DVI, and expl3's backend check stopped it ("Backend
+request inconsistent with engine: using 'dvips'", expl3-code.tex:8036-8041; 47 of run 336's papers).
+
+**Known limitation**: a source with EPS figures only that its author compiles with
 pdflatex+epstopdf is taken as DVI, as arXiv's own cue would.
 
 **Guards**: `class_census::ifpdf_follows_pdfoutput`,
 `core_interface::tests::postscript_figures_select_dvi_output`,
-`perfect_kernel_batch61::dvips_class_option_is_dvi`.
+`perfect_kernel_batch61::dvips_class_option_is_dvi`, `perfect_kernel_batch64::{pdftex_option_with_eps_figures, pdftex_option_selects_pdf_mode}`,
+`converter::tests::compile_route_of_main_sources`.
 
 ### 286. The bibliography formatter prints subtitles, a host's publisher and place, and access dates (Perl: dropped)
 
@@ -14667,3 +14682,45 @@ Guards `perfect_kernel_batch64::{aastex7_email_hidden_without_show, aastex7_emai
 aastex7_email_corresponding_author_last, aastex7_email_recorded_verbatim, aastex7_email_hidden_without_show_html,
 aastex7_email_ahead_of_every_author, aastex7_email_ahead_of_authors_shown_later, aastex7_email_on_nameless_author,
 aastex7_email_inside_author, aastex7_email_on_author_line, aastex7_email_show_on_author_line}`; KNOWN_PERL_ERRORS #559.
+
+### 480. Every counter has the kernel's `\theH<counter>` (Perl: none)
+
+**Perl behavior**: Package.pm `NewCounter` and latex_constructs.pool.ltxml's `\@addtoreset` define no `\theH<ctr>`, and
+hyperref.sty.ltxml has no `\hyper@makecurrent`, so a package's `\theH` names are never read.
+**Rust behavior**: as the 2024-11-01 kernel (latex.ltx:10145 `\@definecounter`, :10157 `\@addtoreset`), `new_counter`
+defines `\theH<ctr>` as `\the\value{<ctr>}` and every reset registration (`\newcounter{c}[p]`, `\@addtoreset`,
+`\counterwithin`) as `\theH<p>.\the\value{<ctr>}` (`define_hyper_counter_name`, latexml_core counter/dialect.rs);
+LaTeXML's pseudo-counter `document` adds no prefix. The hyperref binding takes hyperref.sty's `\hyper@makecurrent` (batch
+64h, so `\patchcmd` on it finds its text) and, as hyperref does on such a kernel, no `\providecommand\theH…` list of its
+own (hyperref.sty:6607).
+**Why**: with hyperref's `\hyper@makecurrent`, pgfplots' `\label` (pgfplots.code.tex:6123, `\theHpgfplotslink` =
+`\theHsection.…` at :6138) and every package that names `\theH<ctr>` need the names the kernel makes (witnesses
+2609.14858, 2609.16926, 2609.26478: `Error:undefined:\theHsection`). hyperref's own list for an older format tests
+`\@ifundefined{thechapter}`, which a class on OmniBus satisfies without a `chapter` counter (its `\thechapter` is a
+book.cls autoload stub, omnibus_cls.rs; cas-dc, 2609.16926: 28 "Counter 'chapter' was not defined" warnings). Guard `perfect_kernel_batch64::kernel_counters_have_hyperref_names` (pdflatex's
+"1; 1.1; 1.1.1; 1.1.1.1; 0; 0."), `regress_2605_clusters::hyperref_pgfplots_label_anchor_no_error`.
+
+### 481. An invalid UTF-8 byte is its Latin-1 character, silently (Perl: a space; pdflatex TL ≥ 2018: an error, the byte dropped)
+
+**Perl behavior**: every front-end decodes input as UTF-8 by default (Common/Config.pm:387 `inputencoding`; Core.pm:60-61
+fills it in for any that passes none, kept as `PERL_INPUT_ENCODING`), and the file mouth replaces each undecodable byte
+by U+FFFD and then by a space, with `Info:misdefined` "input isn't valid under encoding utf-8" (Core/Mouth/file.pm:72-77). Its `.bib` reader trims Perl's `\s` (BibTeX.pm:272-273, :324), Unicode's.
+**pdflatex (TL 2025)**: under utf8.def a byte 0x80-0xC1 or 0xF5-0xFF outside a sequence is
+`\UTFviii@invalid@err` + the byte (utf8.def:174-192), which the `\everyjob` the format adds (latex.ltx:22235-22237)
+makes utf8.def:113's "Invalid UTF-8 byte" error, the byte dropped. The format itself leaves it `\string` (latex.ltx:22231), as LaTeX before
+2018 printed the byte.
+**Rust behavior**: the byte is its Latin-1 character, with no diagnostic, under both mouths: the native mouth decodes an
+undecodable line as Latin-1 (`Mouth::decode_bytes`, by default: with no `--inputencoding`; given `--inputencoding=utf-8`
+it makes Perl's space and Info), and under the pdfTeX byte mouth (CJK, kotex) the byte is
+`\UTFviii@invalid@err` + itself (inputenc_sty.rs `install_utf8_byte_activation`), with the format's `\string` meaning,
+which the dump carries (the engine runs only the `\__kernel_sys_everyjob:` part of `\everyjob`, latex.rs). The
+`.bib` reader keeps the bytes too: its whitespace is BibTeX's ASCII (pre_bibtex.rs `is_bib_white`), not Unicode's,
+which took the continuation bytes 0x85/0xA0 for blanks and cut a field short (2606.26332's `keywords={★}`) — for every
+`.bib`, so a real U+00A0 or U+3000 at a field's edge in a UTF-8 `.bib` is kept, as BibTeX keeps its bytes, where Perl
+trims it.
+**Why**: the document's text is kept, not lost or blanked as in Perl: the stray bytes of these papers are a legacy encoding's punctuation
+(GBK, cp1252 `\x92`) in papers written for a pdfTeX that printed them; decoding GBK/Big5 is CJK, out of scope. Batch 56bl
+had bound the bytes to inputenc's `\@inpenc@undefined`, which only inputenc defines, so a CJK paper with no inputenc
+erred on every such byte (746 of run 336's papers; 2605.05335, 1809.07457, 1503.05450). Depends on `\everyjob` not
+being run in full: if it is, this becomes pdflatex's error. Guards
+`perfect_kernel_batch64::{cjk_stray_byte_is_text, byte_mouth_bib_field_last_character}`.

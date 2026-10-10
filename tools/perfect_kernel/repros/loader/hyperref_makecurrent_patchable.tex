@@ -1,0 +1,23 @@
+% witness: 2608.07656, 2606.29844, 2606.30452 (129 of run 336's papers): tex.sx 149807's appendix autoref patch
+% oracle:  pdflatex 0 errors ("See Appendix A.")
+% engines: rust 64g = Error:errmessage "failed to patch" (`\hyper@makecurrent` an empty stub, hyperref_sty.rs);
+%          Perl the patch fails silently (undefined)
+% expect:  0 errors: the patch finds hyperref.sty:6836-6838's text and succeeds
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd{\hyper@makecurrent}{%
+    \ifx\Hy@param\Hy@chapterstring
+        \let\Hy@param\Hy@chapapp
+    \fi
+}{\iftoggle{inappendix}{\def\Hy@param{appendix}}{}}{}{\errmessage{failed to patch}}
+\makeatother
+\newtoggle{inappendix}
+\apptocmd{\appendix}{\toggletrue{inappendix}}{}{\errmessage{failed to patch}}
+\begin{document}
+\section{Intro}\label{s:i} See \autoref{a:x}.
+\appendix
+\section{Extra}\label{a:x} Back to \autoref{s:i}.
+\end{document}

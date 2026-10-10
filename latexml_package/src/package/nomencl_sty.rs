@@ -57,8 +57,13 @@ LoadDefinitions!({
   // the test is ltcmd's `\IfBlankF` (blank = empty or spaces), not
   // `\ifx\relax#1`, which is true of `\meter`.
   // Guard: `package_leads_56::nomentbl_unit_column_is_a_siunitx_unit`.
-  DefMacro!("\\nomenclature", "\\@ifnextchar[{\\lx@nomencl@entry}{\\lx@nomencl@entry[\\nomprefix]}");
+  // nomencl.sty:216-221 reads the `[prefix]` — a makeindex sort key — under `\@sanitize`: `\nomenclature[R_alpha]{…}`'s
+  // `_` is a character, where a live one erred in the sort phrase (12 of run 336's papers). Only the prefix: the symbol
+  // and description, digested here rather than written out, keep their catcodes.
+  DefMacro!("\\nomenclature",
+    "\\begingroup\\@sanitize\\@ifnextchar[{\\lx@nomencl@prefixed}{\\endgroup\\lx@nomencl@entry[\\nomprefix]}");
   RawTeX!(r"\makeatletter
+\def\lx@nomencl@prefixed[#1]{\endgroup\lx@nomencl@entry[#1]}
 \def\lx@nomencl@entry[#1]#2#3{\if@nomentbl\expandafter\lx@nomencl@entrytbl\else\expandafter\lx@nomencl@entryplain\fi{#1}{#2}{#3}}
 \def\lx@nomencl@entrytbl#1#2#3#4#5{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{\lx@nomencl@unit{#4}}{\IfBlankF{#5}{#5}}{\lx@nomencl@group{#1}}}
 \def\lx@nomencl@unit#1{\IfBlankF{#1}{\unit{#1}}}

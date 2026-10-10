@@ -1,0 +1,16 @@
+% witness: 2001.09329, 2209.14133, 2509.20384: tex.sx 43526's `\patchcmd{\lsthk@TextStyle}{\let\lst@DefEsc\@empty}{}…`
+% oracle:  pdflatex 0 errors ("Code abc.")
+% engines: rust 64h = Error:errmessage "failed to patch" (`\lst@AddToHook` a no-op in listings_sty.rs, so
+%          `\lsthk@TextStyle`, which lstmisc.sty:341 builds, is undefined); Perl the same no-op (listings.sty.ltxml:1624)
+% expect:  0 errors: the hook holds lstmisc's contributions, the patch succeeds
+% status:  RED (64h)
+\documentclass{article}
+\usepackage{listings}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd{\lsthk@TextStyle}{\let\lst@DefEsc\@empty}{}{}{\errmessage{failed to patch}}
+\makeatother
+\lstset{escapechar=@}
+\begin{document}
+Code \lstinline{a@\textbf{b}@c}.
+\end{document}

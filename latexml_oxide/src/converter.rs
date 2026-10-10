@@ -169,6 +169,8 @@ pub struct CompileRoute {
   pub plain_tex: bool,
   /// A latex+dvips document by its class options.
   pub dvi:       bool,
+  /// A pdflatex document by its class options (`pdftex`).
+  pub pdf:       bool,
 }
 
 /// The [`CompileRoute`] of the main file `source` (a path, `.tex` resolved as the Mouth does, or `literal:` content).
@@ -221,8 +223,14 @@ fn compile_route(source: &str) -> CompileRoute {
           let Some(name) = captures.get(1).or_else(|| captures.get(2)) else {
             continue;
           };
-          // A name only TeX can resolve (`\input{\pre}`) may be the preamble: lean to LaTeX, the previous default.
-          if name.as_str().contains(['\\', '#']) {
+          // A name only TeX can resolve (`\input{\pre}`) may be the preamble: lean to LaTeX, the previous default. A `#`
+          // name is a macro's call-time argument (hep-ph9210212 `\def\inputrefs#1{…\input #1…}`, hep-th0703274
+          // `\input #1.aux`), no preamble: leaning to LaTeX there read a plain paper as LaTeX, whose locked `\chapter`
+          // refused its own (`\thechapter` undefined).
+          if name.as_str().contains('#') {
+            continue;
+          }
+          if name.as_str().contains('\\') {
             latex = true;
             continue;
           }
@@ -248,19 +256,20 @@ fn compile_route(source: &str) -> CompileRoute {
       level = next_level;
     }
   }
-  let dvi = !PDFOUTPUT_ONE.is_match(&code)
-    && code.find("\\documentclass").is_some_and(|at| {
+  let class_option = |driver: &dyn Fn(&str) -> bool| {
+    code.find("\\documentclass").is_some_and(|at| {
       let rest = code[at + "\\documentclass".len()..].trim_start();
       rest
         .strip_prefix('[')
         .and_then(|r| r.split_once(']'))
-        .is_some_and(|(options, _)| {
-          options
-            .split(',')
-            .any(|o| DVI_DRIVER_OPTIONS.contains(&o.trim()))
-        })
-    });
-  CompileRoute { plain_tex: !latex, dvi }
+        .is_some_and(|(options, _)| options.split(',').any(|o| driver(o.trim())))
+    })
+  };
+  let dvi = !PDFOUTPUT_ONE.is_match(&code) && class_option(&|o| DVI_DRIVER_OPTIONS.contains(&o));
+  // the `pdftex` driver option: a pdflatex document whatever PostScript it also ships (MDPI templates' `logo-*.eps`
+  // beside PNG figures, 2210.04612: expl3's backend check, expl3-code.tex:8036-8041, errs under DVI output)
+  let pdf = !dvi && class_option(&|o| o == "pdftex");
+  CompileRoute { plain_tex: !latex, dvi, pdf }
 }
 
 /// Install the binding-resolution **priority chain** as the single dispatcher
@@ -419,6 +428,7 @@ impl Converter {
     // (`core_interface::establish_pdf_output_mode`).
     state::set_plain_tex_document(self.compile_route.plain_tex);
     state::set_dvi_driver_option(self.compile_route.dvi);
+    state::set_pdf_driver_option(self.compile_route.pdf);
     // Install the binding-resolution priority chain (rhai > contrib > package)
     // — the single source of resolution policy, shared with the integration-test
     // harness via `install_binding_dispatch`.
@@ -1160,14 +1170,22 @@ mod tests {
     const PLAIN_TEX: CompileRoute = CompileRoute {
       plain_tex: true,
       dvi:       false,
+      pdf:       false,
     };
     const LATEX_PDF: CompileRoute = CompileRoute {
       plain_tex: false,
       dvi:       false,
+      pdf:       false,
     };
     const LATEX_DVI: CompileRoute = CompileRoute {
       plain_tex: false,
       dvi:       true,
+      pdf:       false,
+    };
+    const LATEX_PDF_OPTION: CompileRoute = CompileRoute {
+      plain_tex: false,
+      dvi:       false,
+      pdf:       true,
     };
     let route_of = |code: &str| compile_route(&format!("literal:{code}"));
     assert_eq!(route_of("Hello.\n\\bye\n"), PLAIN_TEX);
@@ -1229,6 +1247,17 @@ mod tests {
     assert_eq!(
       route_of("\\pdfoutput=10\n\\documentclass[dvips]{article}\n"),
       LATEX_DVI
+    );
+    // The `pdftex` driver option: a pdflatex document (2210.04612's MDPI template, `logo-*.eps` beside PNG figures).
+    assert_eq!(
+      route_of("\\documentclass[journal,article,pdftex]{Definitions/mdpi}\n"),
+      LATEX_PDF_OPTION
+    );
+    // A `#` name is a macro's call-time argument, no preamble: plain TeX stays plain (hep-ph9210212's
+    // `\def\inputrefs#1{…\input #1…}`, hep-th0703274's `\input #1.aux`).
+    assert_eq!(
+      route_of("\\def\\inputrefs#1{\\input #1 }\n\\inputrefs{refs}\n\\bye\n"),
+      PLAIN_TEX
     );
     // A wrapper main file naming only its preamble and body (one level of `\input`/`\include`).
     let dir = tempfile::tempdir().expect("tempdir");

@@ -60,7 +60,38 @@ pub fn add_to_counter_reset(ctr: &str, within: &str) -> Result<()> {
     toks.extend(prev.unlist());
   }
   assign_value(&reg, Stored::Tokens(Tokens::new(toks)), Some(Scope::Global));
-  sync_reset_list_macro(within)
+  sync_reset_list_macro(within)?;
+  define_hyper_counter_name(ctr, within)
+}
+
+/// The `\theH<ctr>` hyperref builds a counter's anchor from (`\hyper@makecurrent`), as the
+/// kernel makes it since 2024-11-01: latex.ltx:10145 `\@definecounter` xdefs it as
+/// `\the\value{<ctr>}`, and :10157 `\@addtoreset` as `\theH<within>.\the\value{<ctr>}`, so
+/// hyperref.sty:6607 skips its own `\providecommand` list. Perl's counters have none. A package
+/// building on them needs them: pgfplots' `\theHpgfplotslink{\theHsection.…}`
+/// (pgfplots.code.tex:6138, through `\hyper@makecurrent{pgfplotslink}` at :6123). LaTeXML's
+/// pseudo-counter `document` is no parent: no `\theHdocument` prefix.
+/// Guard: `perfect_kernel_batch64::kernel_counters_have_hyperref_names`.
+fn define_hyper_counter_name(ctr: &str, within: &str) -> Result<()> {
+  let mut body: Vec<Token> = Vec::new();
+  if !within.is_empty() && within != "document" {
+    body.push(T_CS!(s!("\\theH{within}")));
+    body.push(T_OTHER!("."));
+  }
+  body.push(T_CS!("\\the"));
+  body.push(T_CS!("\\value"));
+  body.push(T_BEGIN!());
+  body.extend(ExplodeText!(ctr));
+  body.push(T_END!());
+  def_macro(
+    T_CS!(s!("\\theH{ctr}")),
+    None,
+    ExpansionBody::from(Tokens::new(body)),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+  )
 }
 
 /// Perl `remfromCounterReset` (latex_constructs.pool.ltxml:3014-3022): drop `\<ctr>` and
@@ -213,6 +244,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     );
     sync_reset_list_macro(within)?;
   }
+  define_hyper_counter_name(ctr, within)?;
 
   if let Some(ref options) = options_opt
     && !options.nested.is_empty()

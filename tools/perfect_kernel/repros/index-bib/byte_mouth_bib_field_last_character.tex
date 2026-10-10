@@ -1,0 +1,14 @@
+% witness: 2606.26332 (`keywords={★}` in a CJK paper's .bib): a field's last multi-byte character under the byte mouth;
+%          side file byte_mouth_bib_field_last_character.bib (`note={Deceased†}`)
+% oracle:  pdflatex+bibtex 0 errors
+% engines: rust 64g = the .bib read byte by byte, trimmed as characters: † (E2 80 A0) lost its 0xA0 as "whitespace",
+%          the lone bytes then Error:undefined:\@inpenc@undefined
+% expect:  0 errors; the note reads "Deceased†"
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{article}
+\usepackage{CJK}
+\begin{document}
+See \cite{m}.
+\bibliographystyle{plain}
+\bibliography{byte_mouth_bib_field_last_character}
+\end{document}

@@ -2138,11 +2138,11 @@ impl DigestionAPI for Core {
 
 /// The output mode a document is compiled in (K6 ruling, 2026-09-24).
 /// pdflatex's format sets `\pdfoutput=1` (pdftexconfig.tex), and arXiv
-/// compiles a source with pdflatex unless it ships EPS/PS figures, which it
+/// compiles a source with pdflatex unless its figures are EPS/PS only, which it
 /// runs through latex+dvips (a document's own `\pdfoutput=1` in its first lines
 /// still selects pdflatex, and still sets the register here). So PDF output
-/// is the default, DVI the exception for a source directory holding
-/// PostScript figures. Under the `luatex` profile the output is always PDF
+/// is the default, DVI the exception for a source directory whose figures are
+/// PostScript only. Under the `luatex` profile the output is always PDF
 /// (luatex85's `\pdfoutput` is `\outputmode`); under `xetex` there is no
 /// `\pdfoutput` and `\ifpdf` stays false. arXiv 2605: 95.8 % of 30,079
 /// sources are pdflatex ones, and 1,646 of the 1,692 that test `\ifpdf` had
@@ -2154,9 +2154,11 @@ fn establish_pdf_output_mode(dir: &str) {
   // The colour stacks `\pdfcolorstackinit` numbers belong to one document.
   state::assign_value("pdfcolorstack_count", 0i64, Some(Scope::Global));
   // A DVI driver class option is the same cue (stream F; `state::dvi_driver_option`): 0908.4150's
-  // `\documentclass[12pt,dvips]{article}` ships no figures but is a latex+dvips document.
+  // `\documentclass[12pt,dvips]{article}` ships no figures but is a latex+dvips document; the `pdftex` one the
+  // opposite (`state::pdf_driver_option`, 2210.04612).
   let pdf = state::lookup_bool("LUATEX_PROFILE")
-    || (!source_ships_postscript_figures(dir) && !state::dvi_driver_option());
+    || state::pdf_driver_option()
+    || (!source_figures_are_postscript_only(dir) && !state::dvi_driver_option());
   let _ = state::assign_register(
     "\\pdfoutput",
     latexml_core::common::number::Number(i64::from(pdf)).into(),
@@ -2165,10 +2167,11 @@ fn establish_pdf_output_mode(dir: &str) {
   );
 }
 
-/// Whether the source directory tree holds an EPS/PS figure (arXiv's cue for
-/// latex+dvips). The walk is bounded: a document converted from a large
-/// directory (a home directory, say) is not read end to end.
-fn source_ships_postscript_figures(dir: &str) -> bool {
+/// Whether the source directory tree's figures are PostScript only: it holds an EPS/PS file and no PDF/PNG/JPEG one —
+/// arXiv AutoTeX's cue for latex+dvips, which cannot include the others (a source shipping both, an MDPI template's
+/// `logo-*.eps` beside PNG figures, 2210.04612, is a pdflatex one). The walk is bounded: a document converted from a
+/// large directory (a home directory, say) is not read end to end.
+fn source_figures_are_postscript_only(dir: &str) -> bool {
   const MAX_DEPTH: usize = 4;
   const MAX_ENTRIES: usize = 20_000;
   if dir.is_empty() {
@@ -2176,6 +2179,7 @@ fn source_ships_postscript_figures(dir: &str) -> bool {
   }
   let mut stack = vec![(std::path::PathBuf::from(dir), 0usize)];
   let mut seen = 0usize;
+  let mut postscript = false;
   while let Some((path, depth)) = stack.pop() {
     let Ok(entries) = std::fs::read_dir(&path) else {
       continue;
@@ -2190,21 +2194,23 @@ fn source_ships_postscript_figures(dir: &str) -> bool {
         if depth < MAX_DEPTH {
           stack.push((entry_path, depth + 1));
         }
-      } else if entry_path
+        continue;
+      }
+      let Some(extension) = entry_path
         .extension()
         .and_then(|e| e.to_str())
-        .is_some_and(|e| {
-          matches!(
-            e.to_ascii_lowercase().as_str(),
-            "eps" | "ps" | "epsf" | "epsi"
-          )
-        })
-      {
-        return true;
+        .map(str::to_ascii_lowercase)
+      else {
+        continue;
+      };
+      match extension.as_str() {
+        "eps" | "ps" | "epsf" | "epsi" => postscript = true,
+        "pdf" | "png" | "jpg" | "jpeg" => return false,
+        _ => {},
       }
     }
   }
-  false
+  postscript
 }
 
 /// Establish the document-global *source context* for a **top-level** document
@@ -2685,23 +2691,24 @@ fn renumber_collect_dfs(
 
 #[cfg(test)]
 mod tests {
-  use super::{LATEXML_VERSION, parse_preload_spec, source_ships_postscript_figures};
+  use super::{LATEXML_VERSION, parse_preload_spec, source_figures_are_postscript_only};
 
-  /// arXiv's latex+dvips cue (the K6 ruling): an EPS/PS figure anywhere in the
-  /// source tree keeps DVI output; a PDF/PNG-only source and a literal (no
+  /// arXiv's latex+dvips cue (the K6 ruling, AutoTeX): figures that are PostScript only keep DVI output; a PDF/PNG
+  /// figure beside them (2210.04612's MDPI `logo-*.eps` beside PNG figures), a PDF/PNG-only source and a literal (no
   /// directory) take PDF output.
   #[test]
   fn postscript_figures_select_dvi_output() {
     let dir = tempfile::tempdir().expect("tempdir");
     let root = dir.path();
     std::fs::write(root.join("paper.tex"), "x").expect("write");
-    std::fs::write(root.join("fig.png"), "x").expect("write");
     let root_str = root.to_str().expect("utf-8 path");
-    assert!(!source_ships_postscript_figures(root_str));
+    assert!(!source_figures_are_postscript_only(root_str));
     std::fs::create_dir(root.join("figs")).expect("mkdir");
     std::fs::write(root.join("figs").join("plot.EPS"), "x").expect("write");
-    assert!(source_ships_postscript_figures(root_str));
-    assert!(!source_ships_postscript_figures(""));
+    assert!(source_figures_are_postscript_only(root_str));
+    std::fs::write(root.join("fig.png"), "x").expect("write");
+    assert!(!source_figures_are_postscript_only(root_str));
+    assert!(!source_figures_are_postscript_only(""));
   }
 
   fn opts(v: &[&str]) -> Vec<String> { v.iter().map(|s| s.to_string()).collect() }

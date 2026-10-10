@@ -643,8 +643,7 @@ LoadDefinitions!({
   // Internals raw hyperref-dependent packages test or call: hyperref.sty:2555
   // sets `\Hy@driver` to `hpdftex` under pdfTeX (hrefhide.sty:154 compares it
   // against `\hrefhide@driver`); :1788 `\HyPsd@UTFviii` is the PDF-string
-  // UTF-8 octet setup and :6832 `\hyper@makecurrent{type}` the anchor namer —
-  // no pdfstrings or anchors here (dvdcoll/pdfnotiz.sty:263, ucalgmthesis).
+  // UTF-8 octet setup — no pdfstrings here (dvdcoll/pdfnotiz.sty:263, ucalgmthesis).
   DefMacro!("\\Hy@driver", "hpdftex");
   def_macro_noop("\\HyPsd@UTFviii")?;
   // hyperref.sty:1185 `\let\HyPsd@AMSclassfix\relax` and the PDF-string
@@ -659,7 +658,33 @@ LoadDefinitions!({
   // `\pdfoutput=0` persona: no PDF objects here, and the `Raw={…}` PostScript
   // must not leak as text (`_` scripts).
   RawTeX!(r"\def\pdfmark{\@ifnextchar[\lx@pdfmark{\lx@pdfmark[]}}\long\def\lx@pdfmark[#1]#2{}");
-  def_macro_noop("\\hyper@makecurrent{}")?;
+  // hyperref.sty:6832-6877 `\hyper@makecurrent{type}`, the anchor namer, as the file has it (with its internals, :348-363,
+  // :6777-6826): raw callers run it (dvdcoll/pdfnotiz.sty:263, ucalgmthesis), and a document's `\patchcmd` of its body —
+  // tex.sx 149807's appendix autoref, `\patchcmd{\hyper@makecurrent}{\ifx\Hy@param\Hy@chapterstring
+  // \let\Hy@param\Hy@chapapp \fi}{…}{}{\errmessage{failed to patch}}` — must find the text (129 run-336 papers:
+  // 2608.07656, 2606.29844, 2606.30452; an empty stub failed the patch). Our anchors do not call it.
+  RawTeX!(
+    r"\def\Hy@GlobalStepCount#1{\global\advance#1 by 1 }\newcount\Hy@linkcounter
+\def\Hy@safe@activestrue{\csname @safe@activestrue\endcsname}\def\Hy@safe@activesfalse{\csname @safe@activesfalse\endcsname}
+\begingroup\expandafter\expandafter\expandafter\endgroup\expandafter\ifx\csname chapter\endcsname\relax
+\def\Hy@chapterstring{section}\else\def\Hy@chapterstring{chapter}\fi
+\def\Hy@appendixstring{appendix}\def\Hy@chapapp{\Hy@chapterstring}
+\def\Hy@Test@alph#1{\ifcase#1\or a\or b\or c\or d\or e\or f\or g\or h\or i\or j\or k\or l\or m\or n\or o\or p\or q\or r\or s\or t\or u\or v\or w\or x\or y\or z\else\@ctrerr\fi}
+\def\Hy@Test@Alph#1{\ifcase#1\or A\or B\or C\or D\or E\or F\or G\or H\or I\or J\or K\or L\or M\or N\or O\or P\or Q\or R\or S\or T\or U\or V\or W\or X\or Y\or Z\else\@ctrerr\fi}
+\def\hyper@makecurrent#1{\begingroup\Hy@safe@activestrue\edef\Hy@param{#1}\ifx\Hy@param\Hy@chapterstring\let\Hy@param\Hy@chapapp\fi
+\ifHy@hypertexnames\let\@number\@firstofone\def\@fnsymbol##1{fnsymbol\number##1}\def\@arabic##1{\number##1}%
+\ifx\@alph\Hy@Test@alph\else\def\@alph{alph\number}\fi\ifx\@Alph\Hy@Test@Alph\else\def\@Alph{Alph\number}\fi
+\ifHy@naturalnames\let\textlatin\@firstofone\xdef\HyperGlobalCurrentHref{\csname the#1\endcsname}%
+\else\xdef\HyperGlobalCurrentHref{\csname the\expandafter\ifx\csname theH#1\endcsname\relax\else H\fi#1\endcsname}\fi
+\xdef\HyperGlobalCurrentHref{\Hy@param.\expandafter\strip@prefix\meaning\HyperGlobalCurrentHref}%
+\else\Hy@GlobalStepCount\Hy@linkcounter\xdef\HyperGlobalCurrentHref{\Hy@param.\the\Hy@linkcounter}\fi
+\endgroup\let\HyperLocalCurrentHref\HyperGlobalCurrentHref
+\ifHy@localanchorname\let\@currentHref\HyperLocalCurrentHref\else\global\let\@currentHref\HyperGlobalCurrentHref\fi
+\UseHook{__hyp/target/setname}}"
+  );
+  // The `\theH<counter>` names it builds anchors from are the kernel's (2024-11-01 on), made by
+  // every counter (`define_hyper_counter_name`, latexml_core counter/dialect.rs), so
+  // hyperref.sty:6607's `\providecommand` list for an older format is skipped here as there.
 
   // \nolinkurl{url} — Perl L197-199: enterHorizontal=>1
   DefConstructor!(
