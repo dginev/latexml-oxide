@@ -124,6 +124,7 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
 | 146 (61p6) | 0 | 0 | 0 | 0 | 0 | 68 |
 | 147 (61q2) | 0 | 0 | 0 | 0 | 0 | 68 |
 | 148 (61t2) | 0 | 0 | 0 | 0 | 0 | 68 |
+| 149 (64x, e57be39640) | 1 | 1 | 0 | 0 | 2 | 66 |
 
 **Close status (2026-10-04).** Sweeps #146, #147 and #148 (61p6, 61q2, 61t2) meet G1-G5 on the goal set (0 / 0 / 0 /
 0, the same 68 crash canaries), and every batch's arXiv A/B was neutral or explained. The ranked path is done: the bar
@@ -150,6 +151,15 @@ s136), title pages and letters (59o, 59p), arabi (59r) and the rulings 7a-7e. Th
   6.32 %, fatal 0.87 % → 0.27 %; the 16,827 papers worse into error/fatal are clustered, root-caused and in fix batches
   64h-64p (`SYNC_STATUS.md` row G). The host's AppArmor `gs` profile had blocked the bare-host fleet's TMPDIR since
   2026-10-05 (every EPS/PS figure failed in runs 332-335); fixed 2026-10-07.
+- sweep #149 (e57be39640, 2026-10-11, after 50+ batches incl. the M1/D1 kernel changes), compared with `ab_audit` to
+  #148: errors 11,511 → 11,364, fatals 66 → 61, in-scope valid 1,580 → 1,585, missing words 13,739 → 13,715. Of 322
+  goal-set regression rows, 318 are benign or improvements (UTC `\today`, frontmatter cleanup, TOC titles,
+  bibliography numbering). The four open bars: G1 chessboard_and_beamer is an improvement (Fatal → status 2) whose
+  `accepted_residuals.tsv` key is stale; G2 heria-proposal nests a captioned panel figure in a rotated float (62q);
+  G4 pgf-interference-de/en timed out on SMT siblings of busy cores (`instructions:u` flat across the bisect, no
+  regression). Real losses besides heria-proposal: recipebook's per-recipe `\author`/`\title` after the body and a
+  bold font leak, and ascelike's "M.ASCE" split off as a creator. All are batch 65a. Triage:
+  `~/data/pk_agents/main/agent_reports/2026-10-11_sweep149_triage.md`.
 The sweep narratives #135-148, the ranked path steps 1-8 and the stream-G log are archived in
 [`perfect_kernel/archive/PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md).
 
