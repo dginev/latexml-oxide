@@ -1707,6 +1707,35 @@ Y. Wang, not X. Wang (the old continuation did the same); a later `\author{$^\sp
 (before: 2 errors, the address lost).
 Guard `perfect_kernel_batch64::marked_block_email_line_owner` (eleven variants).
 
+**(n) Name lists that read as no names (64zd).** The per-author class bindings' cautious split (`\lx@add@authors@append`:
+revtex, aastex/aas, amsart, sprocl) splits a name list only where its visible text reads as two or more names
+(`split_author_line_cautious`, `name_count`); four shapes read as none, so the list stayed one personname, and a block
+of alternating plain lines lost a name:
+- a `\cite` note mark after a name: its key read as a word (`Itay Furman \cite{itay} and Ofer Biham \cite{ofer}`,
+  cond-mat9611093; cond-mat9912430). `\cite` is a name annotation (`NAME_ANNOTATIONS`). The same for a surname set in
+  math to carry its mark (`M. ${\rm Schreiber}^{*}$`, cond-mat9402093): a run of two or more letters in math, outside
+  its scripts and their operands (`$^\mathrm{ab}$`), is name text, a lone letter (`$e^+e^-$`) none; a byline's leading
+  "by" is dropped (hep-ph9507223, hep-ph9404319); a run of bare asterisks after a comma is a mark (`S. F. Pereira,* Z.
+  Y. Ou,** and H. J. Kimble`, quant-ph0003094). Guards `revtex_marked_author_list_splits_each_name`,
+  `revtex_asterisk_marked_authors_split`; hep-ex9910016's 190 `$^{n}$`-marked BES names split again.
+- initials glued to a surname in capitals (`M.CACCIA, R.CAMPAGNOLO`, hep-ex9910019): `unglued_initials` unglues before
+  a capitals surname of three letters or more, not before an abbreviation's last letter (`I.N.F.N`). Guard
+  `author_caps_glued_initials_split`.
+- a doubled separator (`Barrientos, \& and Omar López-Cruz`, astro-ph9612009): a separator alone is no part
+  (`name_parts`), and an "and" opening a piece after a separator is the separator too (`split_author_names`). Guard
+  `author_doubled_separator_ampersand_and`.
+- in an article author block of alternating lines, a name line carrying an author's `\thanks`/`\footnote` after
+  affiliation lines opens the next author when the block's first names carry the same note command (`name_groups`,
+  `author_note_of`; `A.M. Green\thanks{…},\\ … \\ C. Michael\thanks{…},\\ DAMTP …`, hep-lat9404004; 1410.7277,
+  1706.02584, 1403.1404); under plain names a noted affiliation stays one (`Ann Able and Bob Baker\\ Department of
+  Physics\\ Ohio State\footnote{Visiting.}`). Guards `author_note_name_line_opens_next_author`,
+  `author_noted_affiliation_stays_affiliation`. Residual (RED `article_plain_name_line_between_affiliations`): the
+  same alternation with no notes, a place reading as a name too. The note command must be the first names' own
+  (`\thanks` names over a `\footnote`d affiliation: the affiliation stays one; guard
+  `author_other_note_command_stays_affiliation`); with `\footnote` on names and affiliations alike the block is
+  ambiguous and a noted affiliation name-shaped line opens an author (RED `author_footnote_everywhere_ambiguous`).
+Residual: `$^{a}$Sahng-kyoon.Yoo and $^{b}$D.K.Park` (hep-th9707026; a surname glued at a period) stays one creator.
+
 ### 53. `inst`-style `\author[marks]{name}` accepts the optional marks and accumulates
 
 **Decision:** `inst_support.sty`'s `\author` (used by classes following the
@@ -15170,8 +15199,8 @@ token (KPE #582; 750 of run 336's papers: hep-ph9301226, cond-mat9311041 "I").
 (:1057-1072; cond-mat9303008), `\tablenotes` small text below the table (:1858-1860).
 **Why**: content: title, affiliations and date of 750 papers. A/B: 80 witnesses with errors 80 → 3 (120 → 3); 40 REVTeX
 3 papers unchanged. Guard `perfect_kernel_batch64u::revtex2_title_and_instit_environments`. Under `{revtex}` the unknown
-options still load OmniBus after the binding, so `\author{A and B}` gives the affiliation to B only (RED
-`sectioning-frontmatter/revtex3_omnibus_author_group_address`, awaiting a ruling).
+options loaded OmniBus after the binding, so `\author{A and B}` gave the affiliation to B only; resolved by the user
+rulings of 2026-10-10 and 2026-10-11 (#504, #505; `sectioning-frontmatter/revtex3_omnibus_author_group_address` GREEN).
 
 ### 497. An environment frame met by a plain `}`/`\endgroup` ends the environment as tex.web's `off_save` does (Perl: Error, the frame kept)
 
@@ -15358,3 +15387,70 @@ pdflatex's `\texttt{\~{}}` is ectt slot 3, the raised `˜`; we print the author'
 **Why**: Perl parity for the font, and the character the author typed. Body text changes on 6 of 13 sampled `\~{}`
 papers, each a run joined or a `~`: 1001.1367, 1001.1793, 1301.6104, 1301.6221, 1901.07113, 2101.11048. Guard
 `perfect_kernel_batch64zc::accent_of_empty_letter_keeps_the_run`.
+
+### 504. REVTeX 3's own options, numbering and author lists belong to revtex3_support (Perl: its options missing, OmniBus loaded over the binding)
+
+**Perl behavior**: revtex3_support.sty.ltxml declares only `amsfonts`/`amssymb`/`amsmath`, so every
+`\documentstyle[aps,…]{revtex}` paper (29,730 in 92xx-99xx; `aps` 29,619, `preprint` 13,230, `prl` 7,170, `eqsecnum`
+3,654) has a missing option and `\compat@loadpackages` (latex_constructs.pool.ltxml:137-153) loads OmniBus after the
+binding; OmniBus's `\author` keeps the last call, so a paper with two author groups keeps one. Sections number as
+article's ("II.1"), `eqsecnum` does nothing.
+**Rust behavior**: revtex3_support declares revtex.sty v3.0's and v3.1's `\ds@` options (astro-ph9601167,
+adap-org9608001): the society `aps`/`osa`/`seg` (v3.1:24-27; under `osa` `figure` is never a float, osa.sty:554-566),
+`preprint`/`manuscript`/`abstract` (`\ifpreprintsty`, `\ifsegabssty`), `eqsecnum` (equations reset by each section,
+`\arabic{section}.\arabic{equation}`, aps.sty:358-365), the layout-only `tighten`, `legalsize` and journals
+(`pra`…`prl`, `josaa`, `josab`, `aplop`, `geo`, `tle`), and the distribution's option files as no-ops (`version2`, `rmp`,
+`prabib`, `prbbib`, `osabib`, `segbib`, `aps10/12`, `osa10/12`, `seg10/12`; a paper's shipped copy is not raw-loaded:
+raw `rmp.sty` over the binding dropped every address, hep-lat9608098, cond-mat9804141, hep-ph9610451). The substyle's
+numbering is set (aps.sty:220-227, osa.sty:195-202 arabic sections, seg.sty:247-253 without `\p@subsection`, the `rmp`
+option's dotted "II.A", rmp.sty:140-145): "II", "II A", "II A 1", and in the appendix (aps10.sty:178-186) "A 1" and
+equations A1 (seg A-1, seg10.sty:205-221); an unnumbered appendix steps the section counter (aps.sty:280-295 `\@ssect`;
+cond-mat0006498, chao-dyn9906002, gr-qc9803087, hep-th9605027). The author list of one `\author` splits
+into its names when they carry REVTeX 3's marks as well — through the class-independent rules of #52(n). An option revtex.sty does not declare still loads as a
+package, or OmniBus provide-only (#505) if missing. A paper's shipped `aps.sty` is no longer raw-loaded (base raw-loaded
+it before the OmniBus overlay).
+**Why**: user ruling 2026-10-10 (REVTeX 3's real options; no OmniBus for REVTeX 3) and 2026-10-11 (numbering as aps.sty,
+marked lists split). Witnesses hep-th9610203, cond-mat9403039 (grouping), hep-lat9608098 (numbering). A/B against
+44ff2ac956 (64zc) over 150 REVTeX 3, 40 REVTeX 2 `{instit}`, 149 other-class missing-option papers, 400 more
+option-stratified ones and 46 of the bound style families, in the 64zd report
+(`agent_reports/2026-10-10_payload_64zd.md`). Guards `perfect_kernel_batch64zd::{revtex3_*,
+revtex2_version2_instit_author_group, revtex_marked_author_list_splits_each_name}`.
+
+### 505. OmniBus loaded for a missing `\documentstyle` option only provides (Perl: loaded whole over the class)
+
+**Perl behavior**: `\compat@loadpackages` (latex_constructs.pool.ltxml:148-151) loads OmniBus after the class or binding
+whenever an option is neither declared nor a style file; its `\author`, `\address`, `\title`, `\keywords`,
+`\references`… replace the class's own.
+**Rust behavior**: it loads under `ProvideOnlyGuard` (definition/origin.rs), and never overrides a definition made before
+it. While the guard lives, any binding's definition — OmniBus's own (`DefinitionOrigin::Fallback`) and those of the
+bindings it requires (`Binding`: inst_support's `\author[]{}`, epsf's `\epsfbox`) — through a binding definer
+(`def_macro`, `def_primitive`, `def_constructor`, `def_register` with its value, `def_conditional`, `def_math`) or `Let!`
+is declined when the name was defined before the guard: defined in the `\providecommand` sense (a meaning other than
+`\relax`), not a fallback guess, and not assigned since the guard began (`provide_only_assigned`, so the load may
+redefine its own names; `state::provide_only_declines`). An environment is declined whole when `\begin{X}` or `\X` was
+defined. The files first loaded under the guard (graphicx, epsf, aas_macros, inst_support when not loaded before) are
+unmarked when it ends (`end_provide_only`), and with them the packages they pulled in (graphics, keyval, …): loaded
+only partly, a later `\usepackage{graphicx}` loads them whole (`omnibus_provide_only_package_loads_whole_later`). So
+after the load `\@ifpackageloaded{graphicx}`/`{epsf}` read false while `\includegraphics`/`\epsfbox` still work — as in
+pdflatex, which never loaded them for a missing option. OmniBus's `LoadClass('article')` is skipped (a class is loaded already: `\documentstyle[foobarx]{report}`
+keeps report's "1.1"/(1.1)). TeX's own `\def`/`\let` and the loader's bookkeeping (made at its caller's origin) are not
+declined, so TeX code run during the load (a hook appended to) keeps its effect. OmniBus locks only names it provided.
+A definition that wraps and delegates to the current meaning is marked `extends` and installs anyway (OmniBus's
+`\bibitem`, natbib for a `[\protect\citeauthoryear…]` label, else the saved `\bibitem`: cond-mat9808262).
+OmniBus as the class itself (no binding, no file) loads whole. Exposed and fixed alongside: epsfig's `\epsfbox` (KPE
+#574) and aas_support's titled `\references` (Perl's aas_support.sty.ltxml:289-293), which OmniBus had covered.
+**Why**: user ruling 2026-10-11: OmniBus must never override a class definition; it keeps Perl's recovery intent (a 2.09
+journal option's frontmatter commands). Witnesses hep-th9610203, cond-mat9403039; `\documentstyle[myjunkx]{elsart}`
+with labelled `\author[a]`/`\address[a]` (inst_support's `\author` had broken the labels). Guards
+`perfect_kernel_batch64zd::{omnibus_provide_only_keeps_bound_class_grouping, omnibus_provide_only_keeps_bound_class_commands,
+omnibus_provide_only_labelled_elsart_addresses, omnibus_provide_only_keeps_report_numbering,
+omnibus_provide_only_provides_missing_address,
+omnibus_citeauthoryear_bibitem_under_provide_only, epsfig_epsffile_includes_the_graphic,
+aas_references_environment_has_its_title}`. Class definitions now winning over OmniBus's (A/B of 149 papers):
+running-title `<toctitle>` (13, crckapb), acknowledgements without a name (13, aaspp4 prints none), `citestyle` on 5
+aipproc bibliographies. The 2.09 option styles whose own `\author` appends, which OmniBus's whole load used to stand in
+for, are bound instead (author content first; widened A/B of 400 option-stratified papers): World Scientific's
+`sprocl`/`mprocl`/`stwol` (ws_procl_sty.rs, sprocl.sty:18-21 `\@aabuffer`; hep-ph9611287, gr-qc9710030,
+hep-th9610159; their `\address` an affiliation, as Perl's iopart_support.sty.ltxml:53 takes iopart's, routed by a
+leading mark as REVTeX's `\affiliation`, hep-lat9806004) and AASTeX's substyles `aas2pp4`, `aaspptwo`, `apjpt4`, `aj_pt4` as the aaspp binding (astro-ph9703136,
+astro-ph9303008, astro-ph9801307).

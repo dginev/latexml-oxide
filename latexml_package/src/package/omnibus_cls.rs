@@ -3,7 +3,7 @@
 //!
 //! Defines common frontmatter commands, theorem environments, natbib autoloads,
 //! and various compatibility macros encountered in real-world arxiv submissions.
-use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard, provide_only};
 
 use crate::prelude::*;
 
@@ -46,8 +46,11 @@ fn is_all_ascii_digits(arg: &Tokens) -> bool {
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl L33: LoadClass('article');
-  LoadClass!("article");
+  // Perl L33: LoadClass('article'). Loaded provide-only (`\compat@loadpackages`), a class is loaded already, and
+  // article's numbering and layout are not that class's (`\documentstyle[foobarx]{report}` numbers "1.1", not "1").
+  if !provide_only() {
+    LoadClass!("article");
+  }
   // What OmniBus itself defines is a guess about a class it does not know: a document's own `\newcommand` of
   // the name wins over it (`DefinitionOrigin::Fallback`, `is_definable_latex`; OXIDIZED_DESIGN_DIVERGENCES #408).
   let _fallback = OriginGuard::new(DefinitionOrigin::Fallback);
@@ -123,8 +126,12 @@ LoadDefinitions!({
     require_package(&pkg.to_string(), RequireOptions::default())?;
     hoist_top_frame_package_load(&pre_keys);
   });
+  // It extends the class's `\bibitem` (delegates to the one saved above), so a provide-only load installs it too:
+  // a class without natbib and `[\protect\citeauthoryear…]` labels got natbib loaded inside the first bibitem's tag
+  // otherwise (cond-mat9808262, crckapb: "<ltx:tags> isn't allowed in <ltx:tag>").
   DefMacro!("\\bibitem",
-    "\\@ifnext@n{[\\protect\\citeauthoryear}{\\lx@late@usepackage{natbib}\\bibitem}{\\lx@OmniBus@saved@bibitem}");
+    "\\@ifnext@n{[\\protect\\citeauthoryear}{\\lx@late@usepackage{natbib}\\bibitem}{\\lx@OmniBus@saved@bibitem}",
+    extends => true);
 
   // Perl L58-60: frontmatter section environments. Perl's DefEnvironments box the body in restricted horizontal
   // mode, where a `$$` is two empty inline formulas (TeX_Math.pool.ltxml:65) and the formula ran as text ("Script _
@@ -764,6 +771,9 @@ LoadDefinitions!({
     "\\keywords", "\\kword", "\\kwd", "\\begin{keyword}", "\\begin{keywords}", "\\classification",
     "\\correspondingauthor", "\\subtitle", "\\titlenote", "\\dedicated",
   ] {
-    AssignValue!(&s!("{cs}:locked") => true, Some(Scope::Global));
+    // Loaded provide-only (`\compat@loadpackages`), it locks only the names it provided.
+    if !provide_only() || is_fallback_meaning(&T_CS!(cs)) {
+      AssignValue!(&s!("{cs}:locked") => true, Some(Scope::Global));
+    }
   }
 });

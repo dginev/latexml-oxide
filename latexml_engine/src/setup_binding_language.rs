@@ -1267,30 +1267,30 @@ macro_rules! IsDefinable {
 #[macro_export]
 macro_rules! Let {
   ($token1:literal, $token2:literal) => {
-    state::let_i(&T_CS!($token1), &T_CS!($token2), None)
+    state::let_definition(&T_CS!($token1), &T_CS!($token2), None)
   };
   ($token1:literal, $token2:literal, None) => {
-    state::let_i(&T_CS!($token1), &T_CS!($token2), None)
+    state::let_definition(&T_CS!($token1), &T_CS!($token2), None)
   };
   ($token1:literal, $token2:literal, $scope:expr_2021) => {
-    state::let_i(&T_CS!($token1), &T_CS!($token2), Some($scope))
+    state::let_definition(&T_CS!($token1), &T_CS!($token2), Some($scope))
   };
   // half-packaged args
   ($token1:literal, $token2:expr_2021) => {
-    state::let_i(&T_CS!($token1), &$token2, None)
+    state::let_definition(&T_CS!($token1), &$token2, None)
   };
   ($token1:expr_2021, $token2:literal) => {
-    state::let_i(&$token1, &T_CS!($token2), None)
+    state::let_definition(&$token1, &T_CS!($token2), None)
   };
   // internal form, pre-packaged arguments
   ($token1:expr_2021, $token2:expr_2021) => {
-    state::let_i(&$token1, &$token2, None)
+    state::let_definition(&$token1, &$token2, None)
   };
   ($token1:expr_2021, $token2:expr_2021, None) => {
-    state::let_i(&$token1, &$token2, None)
+    state::let_definition(&$token1, &$token2, None)
   };
   ($token1:expr_2021, $token2:expr_2021, $scope:expr_2021) => {
-    state::let_i(&$token1, &$token2, Some($scope))
+    state::let_definition(&$token1, &$token2, Some($scope))
   };
 }
 

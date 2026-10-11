@@ -73,6 +73,10 @@ pub struct ExpandableOptions {
   /// Declared with TeX's long-ness: the `\def` family, LaTeX's starred `\newcommand` family. Such a macro, made
   /// by a format, a raw-loaded file or the document, checks its arguments for `\par` ([`Expandable::checks_par`]).
   pub tex_declared:       bool,
+  /// Wraps the name's current meaning and delegates to it (OmniBus's `\bibitem`, which loads natbib for a
+  /// `[\protect\citeauthoryear…]` label and otherwise calls the `\bibitem` it saved): it extends the name rather
+  /// than replacing it, so a provide-only load installs it too (`state::provide_only_declines`).
+  pub extends:            bool,
 }
 
 #[derive(Debug, Clone)]

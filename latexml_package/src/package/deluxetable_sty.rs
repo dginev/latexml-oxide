@@ -37,10 +37,14 @@ LoadDefinitions!({
     AssignValue!("@deluxetable@template", template);
   });
 
+  // (`\iflx@deluxetable@data`: the data is open, for an end that closes it itself — AASTeX 3's `{planotable}`,
+  // aas_support_sty.rs)
+  RawTeX!("\\newif\\iflx@deluxetable@data");
   DefMacro!("\\startdata",
-    "\\bgroup\\@deluxetable@bindings\\@@deluxetabular\\lx@begin@alignment\\hline\\hline\\@deluxetable@header");
+    "\\global\\lx@deluxetable@datatrue\
+     \\bgroup\\@deluxetable@bindings\\@@deluxetabular\\lx@begin@alignment\\hline\\hline\\@deluxetable@header");
   DefMacro!("\\enddata",
-    "\\\\\\hline\\lx@end@alignment\\@end@deluxetabular\\egroup");
+    "\\global\\lx@deluxetable@datafalse\\\\\\hline\\lx@end@alignment\\@end@deluxetabular\\egroup");
 
   // Perl: DefPrimitive('\@deluxetable@bindings', sub { tabularBindings(LookupValue('@deluxetable@template')); });
   DefPrimitive!("\\@deluxetable@bindings", {

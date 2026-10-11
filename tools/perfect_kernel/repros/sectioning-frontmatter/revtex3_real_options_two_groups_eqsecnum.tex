@@ -1,0 +1,33 @@
+% mechanism: revtex.sty v3.0/v3.1 declares its options as `\ds@<option>` (v3.1:17-76): the society `aps`/`osa`/`seg`,
+%   `preprint`/`manuscript`, the journal `pra`…`prl`, `tighten`, `floats`, `eqsecnum`. revtex3_support declares them,
+%   so none is a missing option that loads OmniBus over REVTeX's `\author`/`\address`; `eqsecnum` numbers equations
+%   within sections, `\arabic{section}.\arabic{equation}` (aps.sty:358-365).
+% witness: hep-th9610203, cond-mat9403039 (the options); census of 29,730 `\documentstyle[…]{revtex}` papers 92-99
+% oracle:  pdflatex with REVTeX 3.1 (adap-org9608001): 0 errors; "Ann Able and Bob Baker" over "Univ X, City",
+%   "Cy Cole" over "Univ Y, Town"; equations (1.1) and (2.1); "See (2.1)"
+% engines: rust 64y: OmniBus loaded, the first address on Bob Baker only, equations (1) and (2); perl: OmniBus loaded,
+%   only "Cy Cole" (OmniBus's `\author` keeps the last), equations (1) and (2)
+% expect:  0 errors; each author with the address after its `\author`; equations 1.1 and 2.1; no OmniBus
+% status:  RED (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps,prl,preprint,eqsecnum,tighten,floats]{revtex}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\address{Univ X, City}
+\author{Cy Cole}
+\address{Univ Y, Town}
+\maketitle
+\begin{abstract}
+A.
+\end{abstract}
+\section{One}
+\begin{equation}
+a=b \label{e1}
+\end{equation}
+\section{Two}
+\begin{equation}
+c=d \label{e2}
+\end{equation}
+See (\ref{e2}).
+\end{document}

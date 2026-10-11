@@ -1,0 +1,28 @@
+% mechanism: the revtex binding's `\author` splits a name list only when its visible text reads as two or more names
+%   (`split_author_line_cautious`). A REVTeX 3 mark made it read as none: a `\cite` note mark's key read as a word
+%   (`Itay Furman \cite{itay} and …`), a surname set in math to carry its mark was invisible (`M. ${\rm
+%   Schreiber}^{*}$`), a byline's "by" read as a non-name word. `\cite` is now a name annotation, a word set in math is
+%   name text, a leading "by" is dropped. OmniBus's `\author`, loaded over REVTeX 3 before 64zd, had split them.
+% witness: cond-mat9402093, cond-mat9611093, cond-mat9912430, hep-ph9507223, hep-ph9404319, hep-ex9910016 (190 BES
+%   names); residual hep-th9707026 (`$^{a}$Sahng-kyoon.Yoo`, a surname glued at a period)
+% oracle:  pdflatex with REVTeX 3.1: 0 errors; "Ann Ablea and Bob Baker1" over "Univ X, City", "by Cy Cole and D.
+%   Dorn*" over "Univ Y, Town"
+% engines: rust 64y: 4 creators, each address on the group's last name only, "by Cy Cole"; rust 64zd r1: 2 (each
+%   list one personname); perl: 0 errors,
+%   one creator "by Cy Cole and D. Dorn*" (OmniBus's `\author` keeps the last)
+% expect:  0 errors; four creators, each with its group's address, the marks kept on their names
+% status:  RED (64zd r1) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps]{revtex}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$ and Bob Baker\cite{bb}}
+\address{Univ X, City}
+\author{by Cy Cole and D. ${\rm Dorn}^{*}$}
+\address{Univ Y, Town}
+\maketitle
+Text.
+\begin{references}
+\bibitem{bb} Email bob.
+\end{references}
+\end{document}

@@ -1,0 +1,17 @@
+% mechanism: in an article author block of alternating lines, a noted name line opens the next author only when its
+%   note command is the one the block's first names carry (`name_groups`, `author_note_of`): `\thanks` names over an
+%   affiliation with a `\footnote` (a visiting address) keep that line an affiliation.
+% witness: review 64zd round 3 (au5.tex); the wins it keeps: hep-lat9404004, 1706.02584 (`\thanks`), 1410.7277,
+%   1403.1404 (`\footnote`)
+% oracle:  pdflatex: 0 errors; "Ann Able*", "Dept", "Ohio State¹", "Bob Baker†", "Dept Y"
+% engines: rust 64zd r5: a creator "Ohio State"; perl: one creator, Ann Able
+% expect:  0 errors; Ann Able with Dept and Ohio State, Bob Baker with Dept Y; each `\thanks` a note
+% status:  RED (64zd r5) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{x}\\ Dept\\ Ohio State\footnote{Visiting}\\ Bob Baker\thanks{y}\\ Dept Y}
+\maketitle
+Text.
+\end{document}

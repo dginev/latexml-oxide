@@ -1,0 +1,25 @@
+% mechanism: marked affiliations are placed by their marks at the end (deferred), so an unmarked affiliation of a
+%   later author group, `annotate=new`, walks back over the marked authors as authors without one and gives them its
+%   text too: here "Univ Z, Burg" reaches A. Able and B. Baker as well as C. Cole. The same under revtex4's
+%   `\affiliation` (kernel `\lx@annotate@frontmatter`).
+% witness: review 64zd round 2 (ws1.tex, sprocl)
+% oracle:  pdflatex with hep-ph9701265's sprocl.sty: 0 errors; A. Able over Univ X, B. Baker over Univ Y, C. Cole over
+%   Univ Z and Second Inst
+% engines: rust 64zd: A. Able [Univ Z, Univ X], B. Baker [Univ Z, Univ Y], C. Cole [Univ Z, Second Inst]
+% expect:  0 errors; A. Able with Univ X only, B. Baker with Univ Y only, C. Cole with Univ Z and Second Inst
+% status:  RED (64zd)
+% preload: ar5iv.sty
+\documentstyle[sprocl]{article}
+\begin{document}
+\title{T}
+\author{A. ABLE$^a$, B. BAKER$^b$}
+\address{$^a$Univ X, City}
+\address{$^b$Univ Y, Town}
+\author{C. COLE}
+\address{Univ Z, Burg}
+\address{Second Inst, Place}
+\maketitle
+\abstracts{The abstract.}
+\section{Intro}
+Text.
+\end{document}

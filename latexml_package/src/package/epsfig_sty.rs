@@ -1,3 +1,5 @@
+use latexml_core::definition::register::RegisterValue;
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -75,7 +77,22 @@ LoadDefinitions!({
   def_primitive_noop("\\pssilent")?;
   def_primitive_noop("\\psnoisy")?;
   def_primitive_noop("\\psfigdriver{}")?;
-  def_primitive_noop("\\epsfbox[]{}")?;
+  // epsfig.sty:61-100: `\epsfbox` includes the graphic (`\Ginclude@graphics`) at `\epsfxsize` or `\epsfysize`, then
+  // resets both. Perl's binding makes it a no-op (epsfig.sty.ltxml:69), which dropped every `\epsffile` figure once
+  // nothing else loaded epsf over it (cond-mat9908394, `\documentstyle[aps,prl,…,epsfig]{revtex}`).
+  DefConstructor!("\\epsfbox [] Semiverbatim",
+    "<ltx:graphics graphic='#graphic' candidates='#candidates' options='#options'/>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      let bb   = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let path = args[1].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
+      Ok(epsf_sty::epsfbox_properties(&bb, &path, "epsfclip"))
+    },
+    after_digest => {
+      for size in ["\\epsfxsize", "\\epsfysize"] {
+        assign_register(size, RegisterValue::Dimension(Dimension::new(0)), None, Vec::new())?;
+      }
+    });
   Let!("\\epsffile", "\\epsfbox");
   DefPrimitive!("\\epsfclipon", {
     assign_value("epsfclip", Stored::from(1), None);

@@ -144,12 +144,13 @@ LoadDefinitions!({
         token2 = read_primitive_token()?;
       }
     }
-    Let!(token1, token2.unwrap_or_else(|| T_CS!("\\relax")));
+    // TeX's `\let`, never declined by a provide-only load (`let_definition`).
+    let_i(&token1, &token2.unwrap_or_else(|| T_CS!("\\relax")), None);
   });
   DefPrimitive!("\\futurelet RedefinableToken Token Token", sub[(cs, token1, token2)] {
     // NOT expandable, but puts tokens back
     unread(Tokens!(token1,token2));
-    Let!(cs, token2);
+    let_i(&cs, &token2, None);
   });
   //======================================================================
   // Expansion control

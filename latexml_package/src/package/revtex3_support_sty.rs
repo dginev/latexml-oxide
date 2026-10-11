@@ -1,5 +1,12 @@
 use crate::prelude::*;
 
+/// The option files of the REVTeX 3 distribution (v3.0 astro-ph9601167, v3.1 adap-org9608001) a paper may pass as
+/// `\documentstyle` options.
+const REVTEX3_OPTION_FILES: [&str; 11] = [
+  "version2", "prabib", "prbbib", "osabib", "segbib", "aps10", "aps12", "osa10", "osa12", "seg10",
+  "seg12",
+];
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: revtex3_support.sty.ltxml
@@ -16,18 +23,68 @@ LoadDefinitions!({
   DeclareOption!("floats", {
     assign_value("revtex3@floats", true, Some(Scope::Global));
   });
+  // The other options of REVTeX 3's revtex.sty (v3.0 <27 October 92>, astro-ph9601167; v3.1 <1 July 96>,
+  // adap-org9608001), its `\ds@<option>`s, declared so that under `\documentstyle[aps,preprint]{revtex}` they are
+  // REVTeX's and not left for `\compat@loadpackages`, whose missing option loads OmniBus over this binding (Perl
+  // latex_constructs.pool.ltxml:137-153) and gives an `\address` after `\author{A and B}` to B alone
+  // (hep-th9610203, cond-mat9403039). Rust-only: Perl declares none of them here. `11pt`, `12pt`, `twoside`,
+  // `draft`, `titlepage` and `twocolumn` (revtex.sty v3.1:17-18, 30-44) are article.cls's options as well, which the
+  // `\documentstyle` article underneath has used.
+  //
+  // The society (revtex.sty v3.1:24-27), which picks the substyle `\input \@society.sty` loads (:194).
+  for society in ["aps", "osa", "seg"] {
+    DeclareOption!(society, {
+      assign_value("revtex3@society", society, Some(Scope::Global));
+    });
+  }
+  // revtex.sty v3.1:21-22: the preprint layout, `\global\preprintstytrue`; `abstract` (:70-75, SEG) too, with
+  // `\global\segabsstytrue`.
+  for option in ["preprint", "manuscript"] {
+    DeclareOption!(option, {
+      assign_value("revtex3@preprint", true, Some(Scope::Global));
+    });
+  }
+  DeclareOption!("abstract", {
+    assign_value("revtex3@preprint", true, Some(Scope::Global));
+    assign_value("revtex3@segabs", true, Some(Scope::Global));
+  });
+  // revtex.sty v3.1:53 `\global\secnumberstrue`: equations numbered within sections (aps.sty:358-365).
+  DeclareOption!("eqsecnum", {
+    assign_value("revtex3@eqsecnum", true, Some(Scope::Global));
+  });
+  // Layout only: `tighten` (:47, single spacing), `legalsize` (:76), and the journal (:55-68), which picks the
+  // bibliography's typesetting (aps.sty:539-545 `prbbib`/`prabib`).
+  for option in [
+    "tighten", "legalsize",
+    "pra", "prb", "prc", "prd", "pre", "prl", "josaa", "josab", "aplop", "geo", "tle",
+  ] {
+    DeclareOption!(option, None);
+  }
+  // Option files of the REVTeX 3 distribution, which a 2.09 `\documentstyle` option inputs after revtex.sty (latex.tex
+  // `\@options`, for an option revtex.sty does not declare): `version2.sty`, the REVTeX 2 commands (its `{title}`,
+  // `\author` and `{instit}` are the REVTeX 2.1 section below), `rmp.sty` (below), the bibliography and type-size
+  // layouts `prabib`, `prbbib`, `osabib`, `segbib`, `aps10`, `aps12`, `osa10`,
+  // `osa12`, `seg10`, `seg12`. Not in TeX Live; layout this binding does not emulate, so nothing, also when the paper
+  // ships the file: raw over the binding, `rmp.sty`'s `\def\address` (hep-lat9608098, cond-mat9804141, hep-ph9610451)
+  // dropped every address and added an error, which only OmniBus loaded after it used to cover.
+  for option in REVTEX3_OPTION_FILES {
+    DeclareOption!(option, None);
+  }
+  // `rmp.sty` (Rev. Mod. Phys.): otherwise title and heading layout, its headings referenced with dots, "II.A", "II.A.1"
+  // (rmp.sty:140-145)
+  DeclareOption!("rmp", {
+    assign_value("revtex3@rmp", true, Some(Scope::Global));
+  });
   ProcessOptions!();
   // aps.sty:614-630 (REVTeX 3.1): only with the `floats` option is `figure`
   // `\@float{figure}`; otherwise `\figure` is a list entry (`\vskip1pc`, the
   // caption type, "FIGURES" in preprint) that opens no TeX group, so a figure
   // ended by an enclosing `\endgroup` is clean in TeX (cond-mat9607130, whose
   // `\figure{N}` caption lines sit in `{references}`). `\table` keeps its
-  // `\bgroup` either way (aps.sty:674-687). Known residual: osa.sty:554-566
-  // makes `\figure` a list entry whatever the options, so
-  // `\documentstyle[osa,floats]{revtex}` keeps the box-group Error where TeX is
-  // clean (no substyle is told apart here). aipproc reaches this through its
+  // `\bgroup` either way (aps.sty:674-687). osa.sty:554-566 makes `\figure` a
+  // list entry whatever the options. aipproc reaches this through its
   // `RequirePackage!("revtex3_support")` (aipproc_sty.rs:5).
-  if !lookup_bool("revtex3@floats") {
+  if !lookup_bool("revtex3@floats") || lookup_string("revtex3@society") == "osa" {
     for env in ["figure", "figure*"] {
       assign_value(
         &s!("\\begin{{{env}}}:tex_group"),
@@ -53,6 +110,57 @@ LoadDefinitions!({
   // errors. Witness: hep-th0109174, cond-mat0005077.
   DefConditional!("\\iffirstfig");
   DefConditional!("\\iffirsttab");
+  // The switches the options set (revtex.sty v3.1:21-23, 53, 70-75).
+  if lookup_bool("revtex3@preprint") {
+    RawTeX!("\\global\\preprintstytrue");
+  }
+  if lookup_bool("revtex3@segabs") {
+    RawTeX!("\\global\\segabsstytrue");
+  }
+  // The substyle's numbering (aps.sty:220-227; seg.sty:247-253 the same without `\p@subsection`; osa.sty:195-202
+  // with arabic sections): sections I, II, …, subsections A, B, … referenced with their section ("II A"),
+  // subsubsections 1, 2, … ("II A 1").
+  let society = lookup_string("revtex3@society");
+  let rmp = lookup_bool("revtex3@rmp");
+  RawTeX!(&s!(
+    "\\def\\thesection{{{}}}\\def\\p@section{{}}\
+     \\def\\thesubsection{{\\Alph{{subsection}}}}\\def\\p@subsection{{{}}}\
+     \\def\\thesubsubsection{{\\arabic{{subsubsection}}}}\\def\\p@subsubsection{{{}}}\
+     \\def\\theparagraph{{\\alph{{paragraph}}}}\\def\\thesubparagraph{{\\theparagraph.\\arabic{{subparagraph}}}}",
+    if society == "osa" { "\\arabic{section}" } else { "\\Roman{section}" },
+    if rmp {
+      "\\thesection."
+    } else if society == "seg" {
+      ""
+    } else {
+      "\\thesection\\,"
+    },
+    if rmp { "\\thesection.\\thesubsection." } else { "\\thesection\\,\\thesubsection\\," }
+  ));
+  // aps.sty:358-365 (osa.sty:336-343, seg.sty:412-419): equations numbered `\theequation@prefix\arabic{equation}`;
+  // under `eqsecnum` the counter is reset by each section and the prefix is the section's number in arabic, whatever
+  // `\thesection` shows.
+  RawTeX!("\\def\\theequation@prefix{}\\def\\theequation{\\theequation@prefix\\arabic{equation}}");
+  if lookup_bool("revtex3@eqsecnum") {
+    RawTeX!("\\global\\secnumberstrue\\@addtoreset{equation}{section}\\def\\theequation@prefix{\\arabic{section}.}");
+  }
+  // The appendix of the substyle's size file (aps12.sty:157-165, aps10.sty:178-186, osa12.sty:167-174): sections A,
+  // B, …, subsections 1, 2, … ("A 1"), subsubsections a, b, …, equations A1, A2, … reset by each appendix (seg: A-1,
+  // seg10.sty:205-221, seg12.sty:198-221). An unnumbered appendix steps the section counter all the same (aps.sty:280-295
+  // `\@ssect`: `\ifappendixon\if@mainhead\stepcounter{section}`), so its equations are A1… too (cond-mat0006498,
+  // chao-dyn9906002, gr-qc9803087, hep-th9605027).
+  Let!("\\lx@revtex@saved@appendix", "\\appendix");
+  RawTeX!(&s!(
+    "\\def\\appendix{{\\lx@revtex@saved@appendix\\global\\appendixontrue\
+     \\def\\thesubsection{{\\arabic{{subsection}}}}\\def\\thesubsubsection{{\\alph{{subsubsection}}}}\
+     \\def\\theequation@prefix{{\\thesection{}}}\\@addtoreset{{equation}}{{section}}}}",
+    if society == "seg" { "-" } else { "" }
+  ));
+  // (the appendix's `\section` is the kernel's `\@@appendix`, `\let` to it by `\appendix`)
+  Let!("\\lx@revtex@saved@@appendix", "\\@@appendix");
+  DefMacro!("\\@@appendix", "\\@ifstar\\lx@revtex@appendix@ssect\\lx@revtex@saved@@appendix");
+  DefMacro!("\\lx@revtex@appendix@ssect", "\\stepcounter{section}\\lx@revtex@saved@@appendix*");
+  RawTeX!("\\newif\\ifappendixon");
 
   def_macro_noop("\\eqsecnum")?;
   def_macro_noop("\\tightenlines")?;

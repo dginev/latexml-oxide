@@ -1,13 +1,16 @@
-% mechanism: under `\documentstyle[aps]{revtex}` the options revtex3_support does not declare (`aps`, `preprint`,
-%   `version2`, …) make `\compat@loadpackages` load OmniBus after the revtex binding (Perl
-%   latex_constructs.pool.ltxml:137-153); OmniBus's `\author` replaces REVTeX's, so the `annotate=new` address after
-%   `\author{A and B}` reaches B only. The same for a REVTeX 2 `{instit}` (hep-th9610203, cond-mat9403039). Fix
-%   needs a ruling: declaring REVTeX 3.0's real options stops the OmniBus overlay for every REVTeX 3 paper.
+% mechanism: under `\documentstyle[aps]{revtex}` the options revtex3_support did not declare (`aps`, `preprint`,
+%   `version2`, …) made `\compat@loadpackages` load OmniBus after the revtex binding (Perl
+%   latex_constructs.pool.ltxml:137-153); OmniBus's `\author` replaced REVTeX's, so the `annotate=new` address after
+%   `\author{A and B}` reached B only. The same for a REVTeX 2 `{instit}` (hep-th9610203, cond-mat9403039).
+%   revtex3_support now declares revtex.sty v3.0/v3.1's own options and the REVTeX 3 distribution's option files
+%   (user ruling 2026-10-10), so no OmniBus is loaded; and OmniBus, when a missing option does load it, only provides
+%   (user ruling 2026-10-11).
 % witness: hep-th9610203, cond-mat9403039
-% oracle:  pdflatex (REVTeX 3.0 revtex.sty/aps.sty from astro-ph9601167): both names over the address
-% engines: rust 64k and 64u: the address on Bob Baker only; perl: one creator "Ann Able and Bob Baker" with it
-% expect:  0 errors; both authors with the address
-% status:  RED (64u)
+% oracle:  pdflatex (REVTeX 3.0 revtex.sty/aps.sty from astro-ph9601167; REVTeX 3.1 from adap-org9608001): 0 errors,
+%   both names over the address
+% engines: rust 64k, 64u and 64y: the address on Bob Baker only; perl: one creator "Ann Able and Bob Baker" with it
+% expect:  0 errors; both authors with the address; no OmniBus
+% status:  RED (64u) -> GREEN (64zd)
 % preload: ar5iv.sty
 \documentstyle[aps]{revtex}
 \begin{document}

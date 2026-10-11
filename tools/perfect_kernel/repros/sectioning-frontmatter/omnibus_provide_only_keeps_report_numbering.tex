@@ -1,0 +1,16 @@
+% mechanism: OmniBus's `LoadClass('article')` (Perl OmniBus.cls.ltxml:33) ran whole over `report` when a missing option
+%   loaded it, so sections numbered "1" and equations "(1)" where report numbers "1.1" and "(1.1)". Provide-only, a class
+%   is loaded already: article is skipped, and any of its definitions would be declined.
+% witness: review 64zd round 1 (p1/rep.tex; amsart, aa, mn, book the same)
+% oracle:  pdflatex with an empty foobarx.sty: 0 errors; "Chapter 1", "1.1 S", "(1.1)", "\ref" 1.1
+% engines: rust 64zd-base (OmniBus whole): refnums 1, 1, 1; perl: 1, 1, 1
+% expect:  0 errors; refnums 1 (chapter), 1.1, 1.1
+% status:  RED (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[foobarx]{report}
+\begin{document}
+\chapter{C}
+\section{S}\label{s}
+\begin{equation}x\end{equation}
+\ref{s}
+\end{document}

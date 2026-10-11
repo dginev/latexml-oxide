@@ -1,0 +1,27 @@
+% mechanism: AASTeX 4's two-column preprint substyle aas2pp4.sty (`\revtex@genre{2-column preprint}`) is aaspp4.sty's
+%   twin, not in TeX Live; the version fallback (`aas2pp4` → `aas2pp`) found no binding, so it was a missing option.
+%   Provide-only OmniBus kept article's `\author` (the last call): Bob Baker only. Routed to the aaspp binding.
+% witness: astro-ph9703136, astro-ph9805342, astro-ph9905325, astro-ph9702121, astro-ph9803131, astro-ph9909259,
+%   astro-ph9611182
+% oracle:  pdflatex with astro-ph9703136's aas2pp4.sty: 0 errors; "Ann Able" over "Univ X, City", "Bob Baker" over
+%   "Univ Y, Town"; ABSTRACT; the reference
+% engines: rust 64zd-base (OmniBus whole): both authors with their affiliations; rust 64zd r3: Bob Baker only; perl:
+%   Bob Baker only
+% expect:  0 errors; both authors, each with its affiliation; the abstract and the reference
+% status:  RED (64zd r3) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[11pt,aas2pp4]{article}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affil{Univ X, City}
+\author{Bob Baker}
+\affil{Univ Y, Town}
+\begin{abstract}
+A.
+\end{abstract}
+Text.
+\begin{references}
+\reference{a} Able, A. 1990, ApJ, 1, 1
+\end{references}
+\end{document}

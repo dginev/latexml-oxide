@@ -1,0 +1,16 @@
+% mechanism: the control of author_note_name_line_opens_next_author: under plain names (no `\thanks` on the block's
+%   first names), an affiliation line carrying a `\footnote` stays an affiliation; only a block whose first names carry
+%   a note reads a later noted name line as the next author.
+% witness: review 64zd round 2 (fn5.tex; hep-ph0404114, hep-ph9812260, hep-ph0004006, 1908.04598 the shape)
+% oracle:  pdflatex: 0 errors; "Ann Able and Bob Baker" over "Department of Physics", "Ohio State¹", "Columbus OH"
+% engines: rust 64zd r4: a creator "Ohio State"; perl: two creators, the three lines their affiliations
+% expect:  0 errors; Ann Able and Bob Baker, each with the three affiliation lines; the footnote kept
+% status:  RED (64zd r4) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker\\ Department of Physics\\ Ohio State\footnote{Visiting.}\\ Columbus OH}
+\maketitle
+Text.
+\end{document}

@@ -57,6 +57,13 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("aastex", "sty", package::aastex_sty::load_definitions),
   ("aasms", "sty", package::aasms_sty::load_definitions),
   ("aaspp", "sty", package::aaspp_sty::load_definitions),
+  // AASTeX's other substyles, aaspp4.sty's kin (each `\revtex@org{AAS}`, one document syntax), not reached by the
+  // version fallback: aas2pp4.sty (v4.0 2-column preprint, astro-ph9703136), aaspptwo.sty (v3.0 2-column preprint,
+  // astro-ph9303008), apjpt4.sty and aj_pt4.sty (v4.0 ApJ and AJ plano tables, astro-ph9801307)
+  ("aas2pp4", "sty", package::aaspp_sty::load_definitions),
+  ("aaspptwo", "sty", package::aaspp_sty::load_definitions),
+  ("apjpt4", "sty", package::aaspp_sty::load_definitions),
+  ("aj_pt4", "sty", package::aaspp_sty::load_definitions),
   (
     "aas_macros",
     "sty",

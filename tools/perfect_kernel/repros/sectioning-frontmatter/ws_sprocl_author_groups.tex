@@ -1,0 +1,24 @@
+% mechanism: World Scientific's sprocl.sty (and mprocl.sty), a LaTeX 2.09 option of `article` not in TeX Live:
+%   `\author` and `\address` append a line each to the title block (sprocl.sty:18-21, hep-ph9701265's copy), so each
+%   address belongs to the authors given since the one before. Missing, provide-only OmniBus could not replace
+%   article's `\author`, which keeps the last call: only "E. KEITH" was left. Bound now (ws_procl_sty.rs).
+% witness: hep-ph9611287, hep-ph9611291, hep-ph9602339, hep-ex9910019, hep-ex9608006, nucl-th9809087, gr-qc9806116,
+%   hep-ph9905201 (sprocl), gr-qc9710030 (mprocl)
+% oracle:  pdflatex with hep-ph9701265's sprocl.sty: 0 errors; "N. G. DESHPANDE, B. DUTTA" over the Oregon address,
+%   "E. KEITH" over the California one; the abstract
+% engines: rust 64zd-base (OmniBus whole): three creators, the first without an address; rust 64zd r3: only E. KEITH;
+%   perl: only E. KEITH
+% expect:  0 errors; three creators, each with its group's address; the abstract
+% status:  RED (64zd r3) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[sprocl]{article}
+\begin{document}
+\title{T}
+\author{N. G. DESHPANDE, B. DUTTA}
+\address{Institute of Theoretical Science, University of Oregon}
+\author{E. KEITH}
+\address{Department of Physics, University of California}
+\maketitle
+\abstracts{An abstract.}
+Text.
+\end{document}

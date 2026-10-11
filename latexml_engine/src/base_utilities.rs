@@ -1102,13 +1102,24 @@ LoadDefinitions!({
   DefMacro!("\\lx@add@contact@placed[]{}{}", sub[(attr, mark, content)] {
     let mark: Tokens = mark;
     let content: Tokens = content;
+    // (`owner=first` in the keyvals: a contact that names no one goes to the group's first author, not to the block —
+    // AASTeX's `\authoremail` given before the authors, aas_support_sty.rs)
+    let attr_text = attr.as_ref().map(ToString::to_string).unwrap_or_default();
+    let owner_first = attr_text.split(',').any(|kv| kv.trim() == "owner=first");
+    let attr_rest: Vec<&str> = attr_text.split(',').map(str::trim).filter(|kv| !kv.is_empty() && *kv != "owner=first").collect();
     let placement = match placed_contact_owner(&mark, &content) {
       ContactOwner::Mark(label) => s!("label={label}"),
       ContactOwner::Author(author) => s!("label=author:{author}"),
+      ContactOwner::Block if owner_first => s!("label=author:{}", frontmatter_group_first()),
       ContactOwner::Block => s!("label=addresses:block"),
     };
     let mut keyvals = mouth::tokenize_internal(TeXString::assembled(placement)).unlist();
-    if let Some(attr) = attr.as_ref().filter(|a| !a.is_empty()) {
+    if owner_first {
+      if !attr_rest.is_empty() {
+        keyvals.push(T_OTHER!(","));
+        keyvals.extend(mouth::tokenize_internal(TeXString::assembled(attr_rest.join(","))).unlist());
+      }
+    } else if let Some(attr) = attr.as_ref().filter(|a| !a.is_empty()) {
       keyvals.push(T_OTHER!(","));
       keyvals.extend(attr.unlist_ref().iter().copied());
     }
@@ -3135,14 +3146,20 @@ fn placed_contact_owner(mark: &Tokens, content: &Tokens) -> ContactOwner {
   if let [author] = spelled.as_slice() {
     return ContactOwner::Author(*author);
   }
-  let first = match lookup_value("lx_frontmatter_group_first") {
-    Some(Stored::Number(n)) => usize::try_from(n.value_of()).unwrap_or(1).max(1),
-    _ => 1,
-  };
+  let first = frontmatter_group_first();
   if authors.len() == first {
     return ContactOwner::Author(first);
   }
   ContactOwner::Block
+}
+
+/// The queue position of the current author group's first author (`\lx@frontmatter@group@start`; 1 when no class marks
+/// groups).
+fn frontmatter_group_first() -> usize {
+  match lookup_value("lx_frontmatter_group_first") {
+    Some(Stored::Number(n)) => usize::try_from(n.value_of()).unwrap_or(1).max(1),
+    _ => 1,
+  }
 }
 
 /// Where the addresses of a line in an author block go.
@@ -9470,6 +9487,9 @@ pub fn split_author_line(line: Tokens) -> Vec<Tokens> {
 /// ([`name_count`]: `Klemens Fellner and Bao Quoc Tang`), and otherwise stays one author as written (`John Smith,
 /// Max Planck Institute for Mathematics`; a name the shape test cannot read).
 fn split_author_line_cautious(line: Tokens) -> Vec<Tokens> {
+  // (a byline's "by" before the names is no name: `\author{by T. Gisiger and M. B. Paranjape}`, hep-ph9507223,
+  // hep-ph9404319)
+  let line = without_leading_by(&line).unwrap_or(line);
   if name_count(&visible_name_text(line.unlist_ref())) >= 2 {
     split_author_line(line)
   } else {
@@ -9506,6 +9526,14 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
     separators.extend(tied_ampersands());
     for (delimiter, piece) in split_tokens_delimited(tokens, separators) {
       carried.extend(delimiter);
+      // (a doubled separator: the "and" after `\&` is the separator too, `Barrientos, \& and Omar López-Cruz`,
+      // astro-ph9612009)
+      let piece = if pieces.is_empty() {
+        None
+      } else {
+        without_leading_and(&piece)
+      }
+      .unwrap_or(piece);
       if !piece.is_empty() {
         pieces.push((std::mem::take(&mut carried), piece));
       }
@@ -10257,6 +10285,15 @@ fn leading_marks_end(tokens: &[Token]) -> usize {
       sup_operand_at(tokens, i + 2)
         .filter(|(_, next)| tokens.get(*next) == Some(&T_MATH!()))
         .map(|(_, next)| next + 1)
+    } else if first == T_OTHER!("*") {
+      // a run of bare asterisks, a footnote mark written after the comma (`S. F. Pereira,* Z. Y. Ou,** and …`,
+      // quant-ph0003094)
+      Some(
+        i + tokens[i..]
+          .iter()
+          .take_while(|t| **t == T_OTHER!("*"))
+          .count(),
+      )
     } else {
       None
     };
@@ -11633,6 +11670,9 @@ const NAME_ANNOTATIONS: &[&str] = &[
   // a footnote-symbol mark, rewritten before the parse (`rewrite_symbol_superscripts`: `$^{*}$`)
   "\\lx@frontmatter@keepsup",
   "\\lx@frontmatter@symbolmark",
+  // REVTeX 3's note mark on a name (`Itay Furman \cite{itay} and Ofer Biham \cite{ofer}`, cond-mat9611093;
+  // `A. V. Germanenko, \cite{cont}`, cond-mat9912430): the cited bibitem is the author's note
+  "\\cite",
 ];
 
 /// The letter a letter command stands for (latex.ltx / the OT1 and T1 encodings: `\L` Ł, `\o` ø, `\ss` ß), as a
@@ -11736,15 +11776,39 @@ fn visible_name_text(tokens: &[Token]) -> String {
         continue;
       },
       Catcode::MATH => {
+        // a word set in math is name text — a surname given in math to carry its mark (`M. ${\rm Schreiber}^{*}$`,
+        // cond-mat9402093): a run of two or more letters, broken by anything but a command or a brace; a script and its
+        // operand (`$^{a}$`, `$^\mathrm{ab}$`) and a lone letter (`$e^+e^-$`) are not
         i += 1;
+        let mut word = String::new();
+        let end_word = |word: &mut String, text: &mut String| {
+          if word.chars().count() >= 2 {
+            text.push_str(word);
+          }
+          word.clear();
+        };
         while i < tokens.len() && tokens[i].get_catcode() != Catcode::MATH {
+          match tokens[i].get_catcode() {
+            Catcode::SUPER | Catcode::SUB => {
+              end_word(&mut word, &mut text);
+              i = skip_script_operand(tokens, i + 1);
+              continue;
+            },
+            Catcode::LETTER => tokens[i].with_str(|s| word.push_str(s)),
+            Catcode::CS | Catcode::BEGIN | Catcode::END => {},
+            _ => end_word(&mut word, &mut text),
+          }
           i += 1;
         }
+        end_word(&mut word, &mut text);
       },
       Catcode::SUPER | Catcode::SUB => {
-        i = skip_group(tokens, i + 1);
+        i = skip_script_operand(tokens, i + 1);
         continue;
       },
+      // a run of bare asterisks after a name is its mark (`S. F. Pereira,* Z. Y. Ou,** and H. J. Kimble`,
+      // quant-ph0003094)
+      Catcode::OTHER if t == T_OTHER!("*") => {},
       Catcode::LETTER | Catcode::OTHER => t.with_str(|s| text.push_str(s)),
       Catcode::SPACE => text.push(' '),
       // `~` is a space; another active character (babel's `"`) is no text
@@ -11754,6 +11818,22 @@ fn visible_name_text(tokens: &[Token]) -> String {
     i += 1;
   }
   text
+}
+
+/// The index after a script's operand at `i`: a brace group, a command with its brace group (`^\mathrm{ab}`), or one
+/// token.
+fn skip_script_operand(tokens: &[Token], i: usize) -> usize {
+  if tokens
+    .get(i)
+    .is_some_and(|t| t.get_catcode() == Catcode::CS)
+    && tokens
+      .get(i + 1)
+      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+  {
+    skip_group(tokens, i + 1)
+  } else {
+    skip_group(tokens, i)
+  }
 }
 
 /// The index after the brace group (or single token) at `i`.
@@ -12030,7 +12110,11 @@ fn unglued_initials(word: &str) -> Vec<&str> {
       _ => break,
     }
   }
-  if parts.is_empty() || !rest.chars().skip(1).any(char::is_lowercase) {
+  // (a surname in capitals too, of three letters or more: `M.CACCIA`, hep-ex9910019; not an abbreviation's last letter,
+  // `I.N.F.N`)
+  let capitals_surname =
+    rest.chars().count() >= 3 && rest.chars().all(|c| c.is_uppercase() || "'’-".contains(c));
+  if parts.is_empty() || !(rest.chars().skip(1).any(char::is_lowercase) || capitals_surname) {
     return vec![word];
   }
   parts.push(rest);
@@ -12109,7 +12193,8 @@ fn name_parts(text: &str) -> Vec<String> {
         .trim()
         .to_string()
     })
-    .filter(|part| !part.is_empty())
+    // (a separator alone, of a doubled one: `Barrientos, \& and Omar López-Cruz`, astro-ph9612009)
+    .filter(|part| !part.is_empty() && part != "&" && part != "and")
     .collect()
 }
 
@@ -12203,7 +12288,10 @@ fn leading_markup(line: &Tokens) -> Vec<Token> {
 ///    an affiliation styled as that one follows it — the alternation (hep-ph9306253's `T. Stelzer` between `{\small
 ///    \em …}` affiliations; 0811.1526's `Ingo Rehberg and Reinhard Richter` between `{\sl …}` ones). A last line
 ///    (a city: `Los Angeles, CA 90095, USA`) or an affiliation styled as the names ("University of X" under a plain
-///    name) stays an affiliation.
+///    name) stays an affiliation;
+///  - after affiliations, a line of names carrying an author's note (`\thanks`, `\footnote`) opens the next pair
+///    when the block's first names carry the same note command ([`author_note_of`]; hep-lat9404004's `C.
+///    Michael\thanks{…},`).
 fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens, Vec<Tokens>)> {
   let mut groups: Vec<(Tokens, Vec<Tokens>)> = Vec::new();
   let mut names_markup: Vec<Token> = Vec::new();
@@ -12238,6 +12326,8 @@ fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens, Vec<Tokens>)> {
       opens_pair = false;
       continue;
     }
+    // (the author's note the block's first names carry, below)
+    let first_names_note = groups.first().and_then(|(first, _)| author_note_of(first));
     let (names, affiliations) = groups.last_mut().expect("a pair is open");
     let alternates = affiliations.last().is_some_and(|last| {
       let affiliation_markup = leading_markup(last);
@@ -12284,6 +12374,17 @@ fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens, Vec<Tokens>)> {
       groups.push((names_line, Vec::new()));
     } else if alternates && leading_markup(line) == names_markup && name_count(text) > 0 {
       groups.push((line.clone(), Vec::new()));
+    } else if name_count(text) > 0
+      && first_names_note.is_some()
+      && author_note_of(line) == first_names_note
+    {
+      // after affiliations, names carrying an author's note open the next pair, however they are styled, when the
+      // block's first names carry the same note command — the block's shape (`A.M. Green\thanks{…},\\ Research
+      // Institute …\\ C. Michael\thanks{…},\\ DAMTP …`, hep-lat9404004, 1706.02584; `\footnote` throughout, 1410.7277,
+      // 1403.1404); an affiliation with a note under plain names stays one (`Ann Able and Bob Baker\\ Department of
+      // Physics\\ Ohio State\footnote{Visiting.}`), and so does one with another note command than the names'
+      // (`Ann Able\thanks{x}\\ Dept\\ Ohio State\footnote{Visiting}\\ Bob Baker\thanks{y}`)
+      groups.push((line.clone(), Vec::new()));
     } else {
       affiliations.push(line.clone());
     }
@@ -12297,6 +12398,39 @@ fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens, Vec<Tokens>)> {
     affiliations.push(and_line);
   }
   groups
+}
+
+/// The author's note command `line` carries at its top level, `\thanks` or `\footnote` (the first one), if any.
+fn author_note_of(line: &Tokens) -> Option<Token> {
+  let mut depth = 0i32;
+  line.unlist_ref().iter().copied().find(|t| {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    depth == 0 && (*t == T_CS!("\\thanks") || *t == T_CS!("\\footnote"))
+  })
+}
+
+/// `line` without the byline word "by"/"By" that opens it, when names follow it (see [`without_leading_and`]).
+fn without_leading_by(line: &Tokens) -> Option<Tokens> {
+  let v = line.unlist_ref();
+  let first = v.iter().position(|t| t.get_catcode() == Catcode::LETTER)?;
+  if !(v[first] == T_LETTER!("b") || v[first] == T_LETTER!("B"))
+    || v.get(first + 1) != Some(&T_LETTER!("y"))
+    || v.get(first + 2) != Some(&T_SPACE!())
+  {
+    return None;
+  }
+  let mut rest = first + 2;
+  while v.get(rest) == Some(&T_SPACE!()) {
+    rest += 1;
+  }
+  let mut out = v[..first].to_vec();
+  out.extend_from_slice(&v[rest..]);
+  let out = Tokens::new(out);
+  (name_count(&visible_name_text(out.unlist_ref())) >= 1).then_some(out)
 }
 
 /// `line` without the word "and" its text opens with — after its leading markup, which is kept (`{\it and Zhenghan

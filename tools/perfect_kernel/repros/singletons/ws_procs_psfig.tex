@@ -3,10 +3,10 @@
 % oracle:  pdflatex (0704.0883's ws-procs9x6.cls, TL 2025: no psfig.sty, epsfig.sty's `\psfig`) 0 errors: the image,
 %          "Fig. 1. A figure."
 % engines: rust 64h4 = 2 errors (\bodymatter, \psfig undefined); 64qa = 1 (\psfig). Loading psfig+epsfig in the ws
-%          binding (tried in 64qa) fixes it but loses `\epsfbox` figures (0908.3524): epsfig_sty.rs makes `\epsfbox` a
-%          no-op, as Perl's epsfig.sty.ltxml:69 does, where epsfig.sty:61-100 includes the graphic at `\epsfxsize`
+%          binding (tried in 64qa) lost `\epsfbox` figures (0908.3524) while epsfig's `\epsfbox` was a no-op, as Perl's
+%          epsfig.sty.ltxml:69 is; since 64zd it includes the graphic at `\epsfxsize` (epsfig.sty:61-100, KPE #574)
 % expect:  0 errors; the figure's one <graphics> of example-image-a
-% status:  RED (64qa): needs epsfig's `\epsfbox` first (a binding used far beyond ws), then the ws class load
+% status:  RED (64qa): epsfig's `\epsfbox` includes its graphic since 64zd (KPE #574); the ws class load remains
 % preload: ar5iv.sty
 \documentclass{ws-procs9x6}
 \begin{document}

@@ -283,6 +283,7 @@ pub mod uiucthesis_cls;
 pub mod underscore_ltx_sty;
 pub mod unicode_math_sty;
 pub mod versonotes_sty;
+pub mod ws_procl_sty;
 pub mod xecjk_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
@@ -502,6 +503,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     osa_journal_sty::osajnl2_sty::load_definitions,
   ),
+  // World Scientific's proceedings styles, LaTeX 2.09 options of `article`, not in TeX Live
+  ("sprocl", "sty", ws_procl_sty::sprocl_sty::load_definitions),
+  ("mprocl", "sty", ws_procl_sty::mprocl_sty::load_definitions),
+  ("stwol", "sty", ws_procl_sty::stwol_sty::load_definitions),
   ("jhrs", "cls", jhrs_cls::load_definitions),
   ("jcm", "cls", jcm_cls::load_definitions),
   ("pasj00", "cls", pasj00_cls::load_definitions),

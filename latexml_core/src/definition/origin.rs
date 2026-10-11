@@ -81,6 +81,38 @@ impl Drop for OriginGuard {
   fn drop(&mut self) { CURRENT_ORIGIN.with(|c| c.set(self.0)); }
 }
 
+thread_local! {
+  static PROVIDE_ONLY: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Is a provide-only load in progress ([`ProvideOnlyGuard`])?
+pub fn provide_only() -> bool { PROVIDE_ONLY.with(|c| c.get()) }
+
+/// RAII guard: while it lives, a load only provides — a binding's definition (the fallback class OmniBus, or any binding it
+/// requires) of a name defined before the guard began is dropped, as a `\providecommand` of it is
+/// (`state::provide_only_declines`); the previous mode is restored on drop.
+pub struct ProvideOnlyGuard(bool);
+
+impl ProvideOnlyGuard {
+  pub fn new() -> Self {
+    crate::state::reset_provide_only_assigned();
+    ProvideOnlyGuard(PROVIDE_ONLY.with(|c| c.replace(true)))
+  }
+}
+
+impl Default for ProvideOnlyGuard {
+  fn default() -> Self { Self::new() }
+}
+
+impl Drop for ProvideOnlyGuard {
+  fn drop(&mut self) {
+    PROVIDE_ONLY.with(|c| c.set(self.0));
+    if !self.0 {
+      crate::state::end_provide_only();
+    }
+  }
+}
+
 /// Run `f` with `origin` as the current definition origin.
 pub fn with_origin<R>(origin: DefinitionOrigin, f: impl FnOnce() -> R) -> R {
   let _guard = OriginGuard::new(origin);

@@ -1,0 +1,17 @@
+% mechanism: a package OmniBus requires under provide-only (graphicx) loads only what it can provide — here graphics'
+%   `\includegraphics` stays — but was marked loaded, so a later explicit `\usepackage{graphicx}` was a no-op and
+%   `[width=2cm]` was dropped. The guard now unmarks the files first loaded during it (`end_provide_only`), so a later
+%   request loads them whole.
+% witness: review 64zd round 2 (gfx3.tex)
+% oracle:  latex in 2.09 mode refuses `\usepackage` after `\documentstyle` ("LaTeX2e command \usepackage in LaTeX 2.09
+%   document"), so graphicx never loads there; Rust and Perl accept the request, as arXiv 2.09 papers make it, and then
+%   graphicx must load whole
+% engines: rust 64zd-base (OmniBus whole): width=56.9055pt; rust 64zd r4: no options; perl: width
+% expect:  0 errors; the graphic with width=56.9055pt
+% status:  RED (64zd r4) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[graphics,myjunkx]{article}
+\usepackage{graphicx}
+\begin{document}
+A \includegraphics[width=2cm]{w0} B
+\end{document}

@@ -312,12 +312,20 @@ pub(crate) fn load() -> Result<()> {
         );
       }
     }
+    // Perl loads OmniBus whole here (latex_constructs.pool.ltxml:148-151), over the class or binding just loaded,
+    // so its `\author`, `\address`, `\title`… replace ones the class defines well: under
+    // `\documentstyle[aps,prl,preprint]{revtex}` REVTeX's author–address grouping was lost (hep-th9610203,
+    // cond-mat9403039). Rust loads it provide-only (`ProvideOnlyGuard`): it adds the commands and environments
+    // still undefined, the frontmatter a 2.09 journal option may bring, and replaces none (user ruling
+    // 2026-10-11). OmniBus as the class itself, for a class with no binding or file (`\documentstyle`'s third
+    // branch, tex_job.rs), loads whole.
     if had_missing && !lookup_bool("OmniBus.cls_loaded") {
       Info!(
         "note",
         "OmniBus",
-        "Loading OmniBus class to attempt to cover missing options"
+        "Loading OmniBus class provide-only to attempt to cover missing options"
       );
+      let _provide_only = definition::origin::ProvideOnlyGuard::new();
       load_class("OmniBus", Vec::new(), Tokens!())?;
     }
     assign_value(

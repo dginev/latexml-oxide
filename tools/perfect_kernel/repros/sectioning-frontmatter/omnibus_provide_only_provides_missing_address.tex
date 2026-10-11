@@ -1,0 +1,20 @@
+% mechanism: the recovery `\compat@loadpackages` keeps: a missing 2.09 journal option (`myjournalx`) loads OmniBus,
+%   which provide-only still defines what the class leaves undefined, here `\address` that article lacks (Perl
+%   latex_constructs.pool.ltxml:137-153).
+% witness: none (the provide-only control of omnibus_provide_only_keeps_bound_class_grouping)
+% oracle:  pdflatex with a myjournalx.sty that defines `\address` (as a 2.09 journal option does): 0 errors
+% engines: rust 64y and 64zd: Ann Able with the address; perl: the same
+% expect:  0 errors; Ann Able with the address
+% status:  GREEN (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[myjournalx]{article}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ X, City}
+\maketitle
+\begin{abstract}
+A.
+\end{abstract}
+Text.
+\end{document}

@@ -4,17 +4,30 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: revtex.cls.ltxml
   // Ignorable options
-  for option in ["manuscript", "eqsecnum", "preprint", "tighten"].iter() {
-    DeclareOption!(*option, None);
+  DeclareOption!("tighten", None);
+  // Read by revtex3_support, as from `\documentstyle[...]{revtex}`: the preprint switch (revtex.sty v3.1:21-22)
+  // and equations numbered within sections (revtex.sty v3.1:53, aps.sty:358-365).
+  for option in ["manuscript", "preprint"] {
+    DeclareOption!(option, {
+      assign_value("revtex3@preprint", true, Some(Scope::Global));
+    });
   }
+  DeclareOption!("eqsecnum", {
+    assign_value("revtex3@eqsecnum", true, Some(Scope::Global));
+  });
   // Read by revtex3_support: REVTeX 3's `figure` is a float only under
   // `floats` (aps.sty:614-630).
   DeclareOption!("floats", {
     assign_value("revtex3@floats", true, Some(Scope::Global));
   });
-  // Sub-styles
-  for substyle in ["aps", "osa", "aip", "pra", "prb", "prc", "prd", "prl", "rmp", "seg"].iter() {
-    DeclareOption!(*substyle, None);
+  // Sub-styles; the society (revtex.sty v3.1:24-27) is read by revtex3_support.
+  for society in ["aps", "osa", "seg"] {
+    DeclareOption!(society, {
+      assign_value("revtex3@society", society, Some(Scope::Global));
+    });
+  }
+  for substyle in ["aip", "pra", "prb", "prc", "prd", "prl", "rmp"] {
+    DeclareOption!(substyle, None);
   }
   // Perl revtex.cls.ltxml L30-35 + L45: `amsfonts`/`amssymb` options
   // add to a load list, `noamsfonts`/`noamssymb` remove. After

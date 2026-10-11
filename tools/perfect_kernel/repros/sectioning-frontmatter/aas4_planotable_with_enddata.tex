@@ -1,0 +1,22 @@
+% mechanism: AASTeX 4's `{planotable}` (aaspp4.sty: `\let\endplanotable=\enddeluxetable`) after an explicit
+%   `\enddata`: the end must not end the data twice (`\iflx@deluxetable@data` is false by then).
+% witness: review 64zd round 2 (pt4.tex)
+% oracle:  pdflatex with astro-ph9701025's aaspp4.sty: 0 errors; Table 1 "Data." with its two rows and the note
+% engines: rust 64zd-base and 64zd: identical, 0 errors; perl: 0 errors
+% expect:  0 errors; the tabular with the header and two rows; "After table."
+% status:  GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[12pt,aaspp4]{article}
+\begin{document}
+\begin{planotable}{lcc}
+\tablewidth{0pt}
+\tablecaption{Data.\label{t1}}
+\tablehead{\colhead{Name} & \colhead{A} & \colhead{B}}
+\startdata
+X & 1 & 2 \nl
+Y & 3 & 4 \nl
+\enddata
+\tablenotetext{a}{A note.}
+\end{planotable}
+After table.
+\end{document}

@@ -340,6 +340,13 @@ pub struct State {
   /// The names whose current meaning a fallback class installed (`DefinitionOrigin::Fallback`, OmniBus), until
   /// something else assigns them: a document's `\newcommand` may define them (`is_fallback_meaning`).
   pub fallback_meanings:       rustc_hash::FxHashSet<SymStr>,
+  /// The names assigned while a provide-only load lives ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)):
+  /// the load's own definitions, which it may define again (`provide_only_declines`).
+  pub provide_only_assigned:   rustc_hash::FxHashSet<SymStr>,
+  /// The files first marked loaded while a provide-only load lives: loaded partly (their definitions of names defined
+  /// before were declined), so the guard unmarks them when it ends and a later request loads them whole
+  /// (`end_provide_only`).
+  pub provide_only_loaded:     Vec<String>,
 }
 // SAFETY: `State` holds `Rc`/`RefCell`/`libxml::tree::Node` (!Send). Marked
 // Send so callers can build it on one thread and then transition to another
@@ -408,6 +415,8 @@ impl Default for State {
       binding_names:           Vec::new(),
       label_mapping_hook:      None,
       fallback_meanings:       rustc_hash::FxHashSet::default(),
+      provide_only_assigned:   rustc_hash::FxHashSet::default(),
+      provide_only_loaded:     Vec::new(),
     }
   }
 }
@@ -930,6 +939,23 @@ impl State {
       } else if !self.fallback_meanings.is_empty() {
         self.fallback_meanings.remove(&key);
       }
+      if crate::definition::origin::provide_only() {
+        self.provide_only_assigned.insert(key);
+      }
+    } else if table_name == TableName::Value
+      && crate::definition::origin::provide_only()
+      && matches!(value, Stored::Bool(true))
+    {
+      // (`<file>_loaded`, `load_ltxml`: a file loaded under the guard)
+      arena::with(key, |name| {
+        if let Some(file) = name.strip_suffix("_loaded")
+          && !file.ends_with(".ltxml")
+          && !file.ends_with("_raw")
+          && !self.provide_only_loaded.iter().any(|f| f == file)
+        {
+          self.provide_only_loaded.push(file.to_string());
+        }
+      });
     }
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized.
@@ -1613,6 +1639,86 @@ pub fn install_undefined_error_constructor(token: Token, content: &str) {
     },
     Some(Scope::Global),
   );
+}
+
+/// Does a provide-only load ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)) decline this
+/// definition of `token`? While the guard lives, a binding's definition (`DefinitionOrigin::Binding` or `Fallback`:
+/// OmniBus and every binding it requires, inst_support's `\author[]{}` and epsf's `\epsfbox` among them) is declined when
+/// the name was defined before the guard: defined now in the `\providecommand` sense (latex.ltx `\@ifundefined`: a
+/// meaning other than `\relax`, `binding::def::dialect::is_defined_token`), not a fallback guess (`is_fallback_meaning`),
+/// and not assigned since the guard began (`provide_only_assigned`: the load's own names, which it may define again —
+/// OmniBus's `\keywords{}` before its `\keywords` that also opens `{keywords}`). An environment `\begin{X}`/`\end{X}`
+/// counts as defined when `\X` is (latex.ltx `\begin` runs `\X`), and `\end{X}` also when `\endX` is. The binding
+/// definers (`def_macro`, `def_primitive`, `def_constructor`, `def_register`, `def_conditional`, `def_environment`,
+/// `def_math`) and `Let!` consult it before they assign anything; TeX's own `\def`/`\let` do not, so TeX code run
+/// during the load keeps its usual effect (a hook appended to, a scratch macro), nor does the loader's bookkeeping, made
+/// at its caller's origin. A macro marked `extends` (it wraps and delegates to the name's current meaning) is not
+/// declined.
+pub fn provide_only_declines(token: &Token) -> bool {
+  use crate::{
+    binding::def::dialect::is_defined_token,
+    definition::origin::{DefinitionOrigin, current_origin, provide_only},
+  };
+  if !provide_only()
+    || !matches!(
+      current_origin(),
+      DefinitionOrigin::Binding | DefinitionOrigin::Fallback
+    )
+  {
+    return false;
+  }
+  let defined = |token: &Token| {
+    is_defined_token(token)
+      && !is_fallback_meaning(token)
+      && !state!().provide_only_assigned.contains(&meaning_key(token))
+  };
+  if defined(token) {
+    return true;
+  }
+  token.with_cs_name(|name| {
+    let env = |prefix: &str| {
+      name
+        .strip_prefix(prefix)
+        .and_then(|rest| rest.strip_suffix('}'))
+    };
+    if let Some(env) = env("\\begin{") {
+      defined(&T_CS!(s!("\\{env}")))
+    } else if let Some(env) = env("\\end{") {
+      defined(&T_CS!(s!("\\{env}"))) || defined(&T_CS!(s!("\\end{env}")))
+    } else {
+      false
+    }
+  })
+}
+
+/// Begin a provide-only load: no name assigned in it yet.
+pub fn reset_provide_only_assigned() {
+  let mut state = state_mut!();
+  state.provide_only_assigned.clear();
+  state.provide_only_loaded.clear();
+}
+
+/// End a provide-only load: the files first loaded during it (but the fallback class itself) loaded only what they
+/// could provide, so they are marked unloaded again — `<file>_loaded`, its `.ltxml_loaded` twin, `_load_attempted` and
+/// the kernel's `\ver@<file>` — and a later `\usepackage`/`\RequirePackage` of one loads it whole
+/// (`\documentstyle[graphics,myjunkx]{article}\usepackage{graphicx}`: graphicx's keyval `\includegraphics`).
+pub fn end_provide_only() {
+  let files = std::mem::take(&mut state_mut!().provide_only_loaded);
+  for file in files {
+    if file == "OmniBus.cls" {
+      continue;
+    }
+    for flag in ["_loaded", ".ltxml_loaded", "_load_attempted"] {
+      if lookup_bool(&s!("{file}{flag}")) {
+        assign_value(&s!("{file}{flag}"), false, Some(Scope::Global));
+      }
+    }
+    assign_meaning(
+      &T_CS!(s!("\\ver@{file}")),
+      Stored::None,
+      Some(Scope::Global),
+    );
+  }
 }
 
 /// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`) or a kernel stub
@@ -4156,6 +4262,14 @@ pub fn with_let<R>(cs: &Token, target: &Token, body: impl FnOnce() -> Result<R>)
     None => assign_meaning(cs, Stored::None, None),
   }
   result
+}
+
+/// A binding's `\let` (`Let!`): [`let_i`], unless a provide-only load declines it ([`provide_only_declines`]).
+/// TeX's own `\let` and `\futurelet` are `let_i`.
+pub fn let_definition(token1: &Token, token2: &Token, scope: Option<Scope>) {
+  if !provide_only_declines(token1) {
+    let_i(token1, token2, scope);
+  }
 }
 
 pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {

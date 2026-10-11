@@ -1,0 +1,19 @@
+% mechanism: the same alternation without notes: `Ann Able\\ Univ X…\\ Bob Baker\\ Univ Y…`, all plain. "Bob Baker"
+%   reads as a name, but so does a place ("Ann Arbor", "Los Angeles"); with no note, mark or styling to tell them apart
+%   `name_groups` keeps it an affiliation of Ann Able.
+% witness: hep-lat9404004 (its notes-free shape)
+% oracle:  pdflatex: 0 errors; "Ann Able" over "Univ X, Helsinki, Finland", "Bob Baker" over "Univ Y, Liverpool, UK"
+% engines: rust 64zd-base and 64zd: Ann Able with three affiliations, the second "Bob Baker"; perl: one creator per line
+% expect:  0 errors; two creators, each with its affiliation
+% status:  RED (64zd)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\
+Univ X, Helsinki, Finland \\
+Bob Baker\\
+Univ Y, Liverpool, UK}
+\maketitle
+Text.
+\end{document}

@@ -134,6 +134,9 @@ pub fn def_conditional(
   test: Option<ConditionalClosure>,
   options: ConditionalOptions,
 ) -> Result<()> {
+  if provide_only_declines(&cs) {
+    return Ok(());
+  }
   let locked_key_opt = if let Some(true) = options.locked {
     Some(arena::with(cs.get_sym(), |cs_name| s!("{cs_name}:locked")))
   } else {
@@ -251,10 +254,13 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   expansion: T,
   options_opt: Option<ExpandableOptions>,
 ) -> Result<()> {
+  let mut options = options_opt.unwrap_or_default();
+  if !options.extends && provide_only_declines(&cs) {
+    return Ok(());
+  }
   let expansion_opt: Option<ExpansionBody> = expansion.into();
   // TODO: The None case could be refactored to feel much cleaner.
   // For now it's equivalent to Tokens!()
-  let mut options = options_opt.unwrap_or_default();
   let scope = options.scope.take();
   if options.mathactive && cs.with_str(|s| s.len()) == 1 {
     assign_mathcode(
@@ -324,6 +330,9 @@ pub fn def_register<T: Into<RegisterValue>>(
   value: T,
   options: Option<RegisterOptions>,
 ) -> Result<()> {
+  if provide_only_declines(&cs) {
+    return Ok(());
+  }
   let mut options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
   let has_address_option = options.address.is_some();
@@ -424,6 +433,9 @@ pub fn def_primitive(
   compiled_replacement: Option<PrimitiveBody>,
   options: PrimitiveOptions,
 ) -> Result<()> {
+  if provide_only_declines(&cs) {
+    return Ok(());
+  }
   let options_locked = options.locked;
   let scope = options.scope;
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
@@ -1229,6 +1241,9 @@ pub fn def_constructor(
   compiled_replacement: Option<ReplacementClosure>,
   mut options: ConstructorOptions,
 ) {
+  if provide_only_declines(&cs) {
+    return;
+  }
   // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
   //*latexml_codegen::constructable::NARGS = $paramlist.get_num_args();
   let scope = options.scope;
@@ -1442,6 +1457,10 @@ pub fn def_environment(
   compiled_replacement: Option<ReplacementClosure>,
   options: ConstructorOptions,
 ) {
+  // One environment, all or none of its names (`\begin{X}`, `\end{X}`, `\X`, `\endX`).
+  if provide_only_declines(&T_CS!(s!("\\begin{{{name}}}"))) {
+    return;
+  }
   // This is for the common case where the environment is opened by \begin{env}
   let begin_name = s!("\\begin{{{name}}}");
   let end_name = s!("\\end{{{name}}}");
@@ -1995,6 +2014,9 @@ pub fn def_math(
   presentation: impl Into<MathPresentation>,
   mut options: MathPrimitiveOptions,
 ) -> Result<()> {
+  if provide_only_declines(&cs) {
+    return Ok(());
+  }
   let presentation_in = presentation.into();
   // Perl compares the name with the presentation as a string (`$name eq $presentation`, a Tokens
   // presentation stringified).

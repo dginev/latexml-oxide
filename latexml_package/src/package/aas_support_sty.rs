@@ -99,7 +99,9 @@ LoadDefinitions!({
   // The orcid goes to the last author the block makes, after it (inside, it rode on the last `\\` line).
   // `\author` ends a corresponding author's `\email` run (aastex701.cls:12678 `\global\correspauthorfalse`; aastex_cls.rs).
   DefMacro!("\\author[]{}",
-    "\\global\\lx@aas@correspauthorfalse\\lx@add@authors@append{#2}\\lx@aas@checkorcid{#1}");
+    "\\global\\lx@aas@correspauthorfalse\\lx@add@authors@append{#2}\\lx@aas@checkorcid{#1}\\lx@aas@pending@emails\
+     \\gdef\\lx@aas@pending@emails{}\\gdef\\lx@aas@authored{}");
+  def_macro_noop("\\lx@aas@pending@emails")?;
   DefMacro!("\\lx@aas@checkorcid{}", "\\lx@aas@checkorcid@#1,\\done");
   // In later aas, $junk may be keywords? (gname,sname,suffix,...?)
   DefMacro!("\\lx@aas@checkorcid@ Until:, Until:\\done", sub[(possibleid, _junk)] {
@@ -149,7 +151,30 @@ LoadDefinitions!({
     "\\lx@request@frontmatter@annotation[altaffil]{#1}");
   DefMacro!("\\altaffiltext Semiverbatim {}",
     "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}");
-  DefMacro!("\\authoremail", "\\email"); // Obsolete form
+  // The obsolete `\authoremail{…}` (Perl aas_support.sty.ltxml:134 `\email`; aaspp4.sty:129 and aas2pp4.sty:136
+  // gobble it, the address unprinted): after authors, `\email`'s, the last author's (astro-ph9612041 gives one after
+  // each `\author`); given before any `\author` (astro-ph9803018's `\authoremail{ecford@astro.uva.nl}\author{Eric C.
+  // Ford…}`), it waits for the first `\author` and goes to the author its address spells, else to that `\author`'s
+  // first (`\lx@add@contact@placed[owner=first]`), never a creator of its own.
+  DefMacro!("\\authoremail{}", sub[(address)] {
+    // (after an `\author`: `\lx@aas@authored`, which the creators' queue does not tell once they are digested)
+    if lookup_meaning(&T_CS!("\\lx@aas@authored")).is_some() {
+      let mut call = vec![T_CS!("\\email"), T_BEGIN!()];
+      call.extend(address.unlist());
+      call.push(T_END!());
+      Ok(Tokens::new(call))
+    } else {
+      let mut call = vec![T_CS!("\\lx@add@contact@placed"), T_OTHER!("[")];
+      call.extend(mouth::tokenize_internal("role=email,owner=first").unlist());
+      call.extend([T_OTHER!("]"), T_BEGIN!(), T_END!(), T_BEGIN!(), T_CS!("\\lx@address@textfont"), T_BEGIN!()]);
+      call.extend(address.unlist());
+      call.extend([T_END!(), T_END!()]);
+      let mut wait = vec![T_CS!("\\g@addto@macro"), T_CS!("\\lx@aas@pending@emails"), T_BEGIN!()];
+      wait.extend(call);
+      wait.push(T_END!());
+      Ok(Tokens::new(wait))
+    }
+  });
 
   // Redefine to straight email address after document begin.
   // (Perl PR #2767 disables the former \@startsection@hook \let\email\@@email.)
@@ -433,14 +458,15 @@ LoadDefinitions!({
   // nucl-th0010030) → "malformed:ltx:bibitem isn't allowed in <ltx:X>".
   //
   // Matching revtex4_support_sty.rs:146-159's pattern for its own
-  // `\references` (which already calls begin_bibliography). The Perl
-  // attribute set (bibstyle/citestyle/sort/title) is richer than what
-  // the Rust template currently emits — that's a separate enhancement;
+  // `\references` (which already calls begin_bibliography);
   // landing the afterDigest hook alone is what closes the 4-paper
-  // malformed:ltx:bibitem cluster.
+  // malformed:ltx:bibitem cluster. The attributes and the title are Perl's (aas_support.sty.ltxml:289-293): the
+  // AAS `{references}` heading (aaspp4.sty:207 `\subsection*{REFERENCES}`, astro-ph9701025), which a bare `<ltx:bibliography>` dropped once
+  // OmniBus no longer replaced this `\references` (astro-ph9708112, astro-ph9510040, `[11pt,aaspp4,tighten]{article}`).
   DefConstructor!(
     "\\references",
-    "<ltx:bibliography xml:id='#id'><ltx:biblist>",
+    "<ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
+       <ltx:title>#title</ltx:title><ltx:biblist>",
     after_digest => sub[whatsit] {
       engine::latex_constructs::begin_bibliography(whatsit)?;
     }
@@ -497,7 +523,10 @@ LoadDefinitions!({
   // 2.15 Tables
   RequirePackage!("deluxetable");
   Let!("\\planotable", "\\deluxetable");
-  Let!("\\endplanotable", "\\enddeluxetable");
+  // AASTeX 3's `{planotable}` ends its data itself, without `\enddata` (aaspptwo.sty:252-256 `\endplanotable`:
+  // `\crcr\noalign{\vskip .7ex}\hline\endtabular…`; astro-ph9502038); AASTeX 4's (aas2pp4.sty:322) is
+  // `\enddeluxetable`, after an `\enddata`
+  DefMacro!("\\endplanotable", "\\iflx@deluxetable@data\\enddata\\fi\\enddeluxetable");
 
   // Perl: aas_support.sty.ltxml L380-383
   Let!("\\splitdeluxetable", "\\deluxetable");

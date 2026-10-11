@@ -1,0 +1,28 @@
+% mechanism: `version2` is an option file of the REVTeX 3 distribution (version2.sty, the REVTeX 2 commands), not in
+%   TeX Live: a missing option, it loaded OmniBus over the revtex binding, whose `\author` split "A and B" with the
+%   `{instit}` on B only. revtex3_support declares it (its commands are revtex3_support's REVTeX 2.1 section).
+% witness: hep-th9610203, cond-mat9403039
+% oracle:  pdflatex with REVTeX 3.1 (version2.sty): 0 errors; "Ann Able and Bob Baker" over "Univ X, City", "Cy Cole"
+%   over "Univ Y, Town"
+% engines: rust 64y: the first institution on Bob Baker only; perl: `{instit}` undefined (1 error),
+%   only "Cy Cole"
+% expect:  0 errors; each author with the institution after its `\author`
+% status:  RED (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[preprint,aps,version2]{revtex}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\begin{instit}
+Univ X, City
+\end{instit}
+\author{Cy Cole}
+\begin{instit}
+Univ Y, Town
+\end{instit}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

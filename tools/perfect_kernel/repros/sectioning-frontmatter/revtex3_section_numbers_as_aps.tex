@@ -1,0 +1,25 @@
+% mechanism: REVTeX 3's substyle numbers sections I, II, …, subsections A, B, … and subsubsections 1, 2, …, each
+%   referenced with the numbers above it (`\p@subsection` = `\thesection\,`: "II A", "II A 1"; aps.sty:220-227), and its
+%   size file's `\appendix` (aps10.sty:178-186, aps12.sty:157-165) makes appendix subsections 1, 2, … ("A 1") and
+%   equations A1, A2, … reset by each appendix (`\theequation@prefix`, aps.sty:358-365). revtex3_support set none of
+%   this: the binding's subsections were "II.1".
+% witness: hep-lat9608098 (rmp, subsections "A" under base's raw rmp.sty)
+% oracle:  pdflatex with REVTeX 3.1: 0 errors; "I. ONE", "II. TWO", "A. Sub", "1. Subsub", "See II, II A, II A 1.",
+%   "APPENDIX A: APP", "1. AppSub", "(A1)", "See A, A 1, (A1)."
+% engines: rust 64y: refnums I, II, II.1, II.1.1, A, A.1, 1; perl: the same
+% expect:  0 errors; refnums I, II, II A, II A 1, A, A 1, A1
+% status:  RED (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps]{revtex}
+\begin{document}
+\section{One}
+\section{Two}\label{s2}
+\subsection{Sub}\label{ss}
+\subsubsection{Subsub}\label{sss}
+See \ref{s2}, \ref{ss}, \ref{sss}.
+\appendix
+\section{App}\label{a}
+\subsection{AppSub}\label{as}
+\begin{equation} x=1 \label{ea}\end{equation}
+See \ref{a}, \ref{as}, (\ref{ea}).
+\end{document}

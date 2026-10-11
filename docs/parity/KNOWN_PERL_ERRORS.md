@@ -12162,7 +12162,8 @@ ws classes' psfig/epsfig loading, 0908.3524).
 Minimal trigger: `\usepackage{epsfig}\begin{document}\epsfxsize=3cm\epsfbox{example-image-a.pdf}\end{document}` (no
 `<graphics>`).
 
-Open (RED `singletons/ws_procs_psfig.tex`; its own batch with an epsfig A/B).
+Fixed in Rust (64zd, OD #505; witness cond-mat9908394): `\epsfbox`/`\epsffile` include the graphic at `\epsfxsize`/`\epsfysize`
+and reset both. Open: the ws classes' psfig/epsfig loading (RED `singletons/ws_procs_psfig.tex`).
 ## 575. ar5iv's `\relax` `\today` arrives at begin-document, so the preamble reads the conversion's day
 
 ar5iv.sty.ltxml:23-25 installs its archival `\today` (`\relax`, locked) in an `AtBeginDocument` hook. Everything the
@@ -12293,3 +12294,14 @@ and a `mailto:ann˙able@a.edu` link, where pdflatex prints "ann_able@a.edu" in C
 T1), REVTeX 4.1/4.2, AASTeX, svjour3. Witness 1001.1076.
 
 Fixed in Rust (64zc): OD #501-502.
+## 587. REVTeX 3 sections number as article's
+
+revtex3_support.sty.ltxml (and revtex4_support's `\thesection` alone) leaves REVTeX 3's numbering unset: aps.sty:220-227
+numbers subsections `\Alph` referenced with their section (`\p@subsection` = `\thesection\,`: "II A") and
+subsubsections `\arabic` ("II A 1"); the size file's `\appendix` (aps10.sty:178-186, aps12.sty:157-165) makes appendix
+subsections arabic ("A 1") and equations A1. Perl gives "II.1", "II.1.1", "A.1", equation 1.
+
+Minimal trigger: `\documentstyle[aps]{revtex}\begin{document}\section{A}\section{B}\subsection{C}\label{c}\ref{c}\end{document}`
+("II.1"; pdflatex "II A").
+
+Fixed in Rust (64zd, OD #504): `sectioning-frontmatter/revtex3_section_numbers_as_aps`.

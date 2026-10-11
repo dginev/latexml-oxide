@@ -1,0 +1,18 @@
+% mechanism: a run of bare asterisks after a name's comma is its footnote mark (`S. F. Pereira,* Z. Y. Ou,** and H. J.
+%   Kimble`): it read as text, so the list read as no names and stayed one creator. The asterisks are marks now
+%   (`leading_marks_end`, `visible_name_text`): moved before the comma, kept on their names.
+% witness: quant-ph0003094
+% oracle:  pdflatex with REVTeX 3.1: 0 errors; "S. F. Pereira,* Z. Y. Ou,** and H. J. Kimble" over the address
+% engines: rust 64zd r1: 1 creator; 64zd-base (OmniBus whole): 4, one a bare "**"; perl: "S. F. Pereira", "* Z. Y. Ou",
+%   "** and H. J. Kimble"
+% expect:  0 errors; three creators, "S. F. Pereira*", "Z. Y. Ou**", "H. J. Kimble", each with the address
+% status:  RED (64zd r1) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps]{revtex}
+\begin{document}
+\title{T}
+\author{S. F. Pereira,* Z. Y. Ou,** and H. J. Kimble}
+\address{Norman Bridge Laboratory, Pasadena}
+\maketitle
+Text.
+\end{document}

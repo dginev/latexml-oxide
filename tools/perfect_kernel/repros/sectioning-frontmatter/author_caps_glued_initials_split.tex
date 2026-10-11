@@ -1,0 +1,17 @@
+% mechanism: initials glued to a surname in capitals (`M.CACCIA`) read as one word, not a name, so the list stayed one
+%   personname; `unglued_initials` now unglues them before a capitals surname of three letters or more (not an abbreviation's
+%   last letter, `I.N.F.N`).
+% witness: hep-ex9910019
+% oracle:  pdflatex with hep-ph9701265's sprocl.sty: 0 errors; "M.CACCIA, R.CAMPAGNOLO, C.MERONI" over the address
+% engines: rust 64zd-base (OmniBus whole): three creators, the address on the last; perl: the same
+% expect:  0 errors; three creators, each with the address
+% status:  RED (64zd r3) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[sprocl]{article}
+\begin{document}
+\title{T}
+\author{M.CACCIA, R.CAMPAGNOLO, C.MERONI}
+\address{Dipartimento di Fisica, Milano}
+\maketitle
+Text.
+\end{document}

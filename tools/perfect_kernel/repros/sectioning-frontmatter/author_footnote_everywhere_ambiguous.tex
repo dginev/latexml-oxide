@@ -1,0 +1,15 @@
+% mechanism: the same alternation with `\footnote` on the names and on an affiliation alike: the block cannot tell a
+%   noted affiliation ("Ohio State\footnote{Visiting}") from a noted name line, and opens a creator "Ohio State".
+% witness: review 64zd round 3 (au5.tex's all-`\footnote` variant)
+% oracle:  pdflatex: 0 errors; "Ann Able¹", "Dept", "Ohio State²", "Bob Baker³", "Dept Y"
+% engines: rust 64zd: three creators, the second "Ohio State"; perl: one creator, Ann Able
+% expect:  0 errors; Ann Able with Dept and Ohio State, Bob Baker with Dept Y
+% status:  RED (64zd)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\footnote{x}\\ Dept\\ Ohio State\footnote{Visiting}\\ Bob Baker\footnote{y}\\ Dept Y}
+\maketitle
+Text.
+\end{document}

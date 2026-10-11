@@ -1,0 +1,24 @@
+% mechanism: an article `\author` block alternating name lines and affiliation lines, all plain: after an affiliation
+%   the next name line was read as one more affiliation. A name line carrying an author's `\thanks` opens the next
+%   author (`name_groups`, `author_note_of`): an affiliation carries no `\thanks`, and the block's first names carry the same
+%   note command.
+% witness: hep-lat9404004 (`A.M. Green\thanks{…},\\ … \\ C. Michael\thanks{…},\\ DAMTP …`)
+% oracle:  pdflatex: 0 errors; "Ann Able*," over "Univ X, Helsinki, Finland,", "Bob Baker†," over "Univ Y, …", "and
+%   Cy Cole‡" over "Univ X, …"
+% engines: rust 64zd-base: Ann Able with "Univ X…", "Bob Baker," and "Univ Y…" as affiliations, Cy Cole; perl: one
+%   creator per line
+% expect:  0 errors; three creators, each with its note and affiliation
+% status:  RED (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{E-mail: ann@x.fi},\\
+Univ X, Helsinki, Finland, \\
+Bob Baker\thanks{E-mail: bob@y.uk},\\
+Univ Y, Liverpool, UK, \\
+and Cy Cole\thanks{E-mail: cy@x.fi}\\
+Univ X, Helsinki, Finland.}
+\maketitle
+Text.
+\end{document}

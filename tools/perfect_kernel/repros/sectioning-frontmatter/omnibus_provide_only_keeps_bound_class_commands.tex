@@ -1,0 +1,13 @@
+% mechanism: provide-only OmniBus (loaded for the missing option `myjunkx`) requires inst_support, epsf, graphicx and
+%   aas_macros, bindings loaded under their own origin: inst_support's `\author[]{}` (inst_support_sty.rs) replaced
+%   REVTeX's. While the guard lives, every binding definition of a name defined before it is declined, whatever its origin.
+% witness: hep-th9610203, cond-mat9403039 (REVTeX grouping); review 64zd round 1 (`\meaning\author`)
+% oracle:  pdflatex with REVTeX 3.1 and an empty myjunkx.sty: 0 errors; `\meaning\author` is revtex.sty's
+% engines: rust 64zd r1: inst_support's `\lx@splitting{\lx@add@author@split}…`; perl: OmniBus's `\lx@clear@creators…`
+% expect:  0 errors; `\meaning\author` is the revtex binding's `\lx@add@authors@append`
+% status:  RED (64zd r1) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps,myjunkx]{revtex}
+\begin{document}
+\texttt{\meaning\author}
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: a `\documentstyle` option that is neither declared nor a style file (`myjournalx`) loads OmniBus after
+%   the class (Perl latex_constructs.pool.ltxml:137-153 `\compat@loadpackages`); loaded whole, its `\author`/`\address`
+%   replaced REVTeX's, splitting "A and B" from the address. It now loads provide-only (user ruling 2026-10-11): it
+%   defines what is still undefined and replaces nothing the class defines.
+% witness: hep-th9610203, cond-mat9403039 (the REVTeX author-address grouping)
+% oracle:  pdflatex with REVTeX 3.1 and an empty myjournalx.sty (an option that changes layout only): 0 errors; "Ann
+%   Able and Bob Baker" over "Univ X, City", "Cy Cole" over "Univ Y, Town"
+% engines: rust 64y: the first address on Bob Baker only; perl: only "Cy Cole" with his
+%   address (OmniBus's `\author` keeps the last)
+% expect:  0 errors; each author with the address after its `\author`; OmniBus loaded provide-only (Info)
+% status:  RED (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aps,myjournalx]{revtex}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\address{Univ X, City}
+\author{Cy Cole}
+\address{Univ Y, Town}
+\maketitle
+\begin{abstract}
+A.
+\end{abstract}
+Text.
+\end{document}
