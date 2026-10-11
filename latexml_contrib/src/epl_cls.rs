@@ -199,8 +199,11 @@ LoadDefinitions!({
   Let!("\\acknowledgements", "\\acknowledgments");
   Let!("\\stars", "\\acknowledgments");
   // (:1009 `\appendix` letters the sections after it, as the kernel's does)
-  // :1057 `{widetext}`, a full-width float of the text it holds: the text, where it stands
-  DefEnvironment!("{widetext}", "#body");
+  // :1057 `{widetext}`, a full-width float of the text it holds: the text, where it stands — a TeX group like the
+  // class's environment, not a boxed `#body` DefEnvironment, so display math `$$…$$` inside stays display math
+  // (0810.4982: 14 `Script _` errors from a boxed `$$`; the same class as 64ra's mode-less `"#body"` environments).
+  // Repro block-model/epl_widetext_dollardollar_is_display.
+  RawTeX!("\\newenvironment{widetext}{}{}");
   // :1095-1118 the class's graphics inclusion: one centred figure, or two side by side
   DefMacro!("\\onefigure[]{}", "\\includegraphics*[#1]{#2}");
   DefMacro!(

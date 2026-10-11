@@ -789,3 +789,19 @@ fn osa_names_captions_and_headings() {
     "<tag role=\"refnum\">1</tag>",
   ]);
 }
+
+/// 64u fix: EPL's `{widetext}` is a TeX group, as epl2.cls:1057 defines it, so display math `$$…$$` in it stays a
+/// display equation (0810.4982: 14 `Script _` errors from the boxed `#body` environment). Repro
+/// block-model/epl_widetext_dollardollar_is_display.
+#[test]
+fn epl_widetext_dollardollar_is_display() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/block-model/epl_widetext_dollardollar_is_display.tex"
+  ));
+  assert_element(
+    &xml,
+    "equation",
+    &[],
+    r##"<equation xml:id="S0.Ex1"><Math mode="display" tex="a_{1}+b_{2}=c^{3}" text="a _ 1 + b _ 2 = c ^ 3" xml:id="S0.Ex1.m1"><XMath xml:id="S0.Ex1.m1.1"><XMApp xml:id="S0.Ex1.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp xml:id="S0.Ex1.m1.1.1.2"><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp xml:id="S0.Ex1.m1.1.1.2.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMApp xml:id="S0.Ex1.m1.1.1.2.3"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMApp><XMApp xml:id="S0.Ex1.m1.1.1.3"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok></XMApp></XMApp></XMath></Math></equation>"##,
+  );
+}

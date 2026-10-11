@@ -1,0 +1,16 @@
+% witness: 0810.4982 (`\documentclass[doublecol]{epl2}`, `\begin{widetext}$$…_…$$\end{widetext}`): the epl2 binding's
+%          `{widetext}` was a boxed `#body` DefEnvironment, so the `$$` in it was no display math
+% oracle:  pdflatex (with the class's own epl2.cls) — the display equation in the text, 0 errors
+% engines: rust 64u 734180d0bf = 3 Error:unexpected:_ "Script _ can only appear in math mode"; 64w (no binding) = 1
+%          Error:undefined:{widetext}; Perl = no epl2 binding
+% expect:  0 errors, 0 warnings; one `ltx:equation` holding the formula
+% status:  RED (64u) -> GREEN (64u fix)
+% preload: ar5iv.sty
+\documentclass{epl2}
+\begin{document}
+Before the formula
+\begin{widetext}
+$$a_1+b_2=c^3$$
+\end{widetext}
+after it.
+\end{document}
