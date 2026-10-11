@@ -133,7 +133,7 @@ LoadDefinitions!({
   // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
   // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
-    properties => { Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?)) });
+    properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\acknowledgmentsname"))?)) });
   DefConstructor!("\\endacknowledgments", sub[document, _whatsit, _props] {
     let cur = document.get_node().clone();
     let has_open = document.findnode("ancestor-or-self::ltx:acknowledgements", Some(&cur)).is_some();

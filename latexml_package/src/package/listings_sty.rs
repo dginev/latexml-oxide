@@ -3327,7 +3327,7 @@ LoadDefinitions!({
   DefConstructor!("\\lstlistoflistings",
     "<ltx:TOC lists='lol' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => {
-      let name_toks = DigestIf!(T_CS!("\\lstlistlistingname"))?;
+      let name_toks = digest_in_group_if(T_CS!("\\lstlistlistingname"))?;
       stored_map!("name" => name_toks)
     });
 

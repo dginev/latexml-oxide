@@ -47,7 +47,7 @@ LoadDefinitions!({
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
     properties => sub[_args] {
       Ok(stored_map!("name" =>
-        digest(T_CS!("\\acknowledgmentsname"))?))
+        digest_in_group(T_CS!("\\acknowledgmentsname"))?))
     });
   DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
   // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in

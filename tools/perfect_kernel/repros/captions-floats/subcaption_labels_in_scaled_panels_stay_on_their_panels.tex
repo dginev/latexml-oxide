@@ -1,0 +1,25 @@
+% Two \subcaption panels, each a minipage in a \scalebox, under the figure's own \caption: each \label names its
+% panel (pdflatex: "1a", "1b"). Both labels land on the outer figure (labels="LABEL:sa LABEL:sb" on S0.F1 here, S0.F3 in ib3), so
+% each \ref reads the figure's number. Found by the 65a review (ib3.tex); unchanged by 65a, which keeps Perl's
+% container for these panels (caption_hoist_is_safe refuses: the float holds three captions). Queued with the
+% figure-panel follow-up (an ltx_figure_panel that keeps its own id, labels and tags; task #193).
+% witness: 65a review probe ib3.tex.
+% oracle:  pdflatex 0 errors: "Panel A. Panel B. (a) Sub A (b) Sub B Figure 1: Whole See 1a, 1b.".
+% engines: rust 64ze and 65a: labels="LABEL:sa LABEL:sb" on the outer figure S0.F1, the panels S0.F1.fig1/fig2 without
+%          labels; perl: not run.
+% expect:  0 errors; labels="LABEL:sa" on the first panel and labels="LABEL:sb" on the second, the outer figure
+%          labelled by neither.
+% status:  RED (64ze, 65a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\begin{document}
+See \ref{sa}, \ref{sb}.
+\begin{figure}
+\centering
+\scalebox{0.9}{\begin{minipage}{.4\linewidth}Panel A.\subcaption{Sub A}\label{sa}\end{minipage}}
+\scalebox{0.9}{\begin{minipage}{.4\linewidth}Panel B.\subcaption{Sub B}\label{sb}\end{minipage}}
+\caption{Whole}
+\end{figure}
+\end{document}

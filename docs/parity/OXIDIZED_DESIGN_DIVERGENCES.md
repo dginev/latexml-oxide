@@ -15772,3 +15772,129 @@ Witnesses 2306.10087, 2511.12320 (no stacked `border="bbbb…"`), math0403005. G
 `perfect_kernel_batch65::{misplaced_noalign_body_is_typeset, stray_hline_in_a_paragraph_is_one_error,
 misplaced_commands_are_each_reported, misplaced_hline_in_a_cell_draws_no_rule, misplaced_noalign_leaves_span_alone,
 misplaced_noalign_in_math_keeps_its_braces}`.
+
+### 526. A late class `\title`/`\author` the frontmatter seal turns away runs the class's own definition when it provably keeps no value (Perl: never runs a refused definition)
+
+A raw class's redefinition of the locked `\title`/`\author` is refused (Perl State.pm:502-517; OD #500 D1) and kept as
+`\lx@dropped@<name>`. When the document body has sealed the frontmatter (OD #154, ruling 2026-10-09) a later call is
+a supplement's and the kernel drops it. sect05.rs `sealed_class_call` hands such a call to the class's own definition,
+digested in place (`\lx@sealed@class@run`), only when that definition provably keeps no value
+(`class_command_stores`, fail-safe):
+- **store → dropped** (= base): any assignment in its body or one level of the macros it calls — a definer (`\def`,
+  `\gdef`, `\edef`, `\xdef`, `\let`, `\protected@*`, `\g@addto@macro`, `\addto@hook`, `\appto`, `\csgdef`,
+  `\renewcommand`, `\setlength`, `\setcounter` …), an expl3 `…_set`/`_put`/`_add`/`_incr`/`_concat`/`_clear`
+  function, a token register named other than after `\the`/`\showthe`/`\number`/`\romannumeral`/`\showtokens` (tex.web
+  §1226 reads the right-hand side with `get_x_token`), or a box filled and not printed. The xparse `\<name> code` hop
+  costs no level. A class's own helpers and expl3 functions are followed; the kernel's dispatchers and expl3 modules
+  are not. Reaching the kernel's command from inside the run (`\let\origauthor\author`) also counts as a store; a
+  re-entry guard keeps it from looping.
+- **not a store:** a definition or call of page furniture (fancyhdr.sty:144-149, :270-281; latex.ltx's marks and
+  `\@oddhead`/`\@evenhead`/`\@oddfoot`/`\@evenfoot`, :18305-18312), and a box the body fills and prints.
+- **print → in place:** the class's output stays where the call stands: RecipeBook.cls:284-286's per-recipe titles
+  (recipebook/LongSample).
+- **page furniture only → unit creator** (OD #527).
+- **otherwise dropped:** a class call that shows nothing and hands the author to no page furniture (`\typeout{#1}`, a
+  warning, an empty body), with an Info.
+
+Residuals, all dropped as the base drops them:
+- **the largest:** a body that both stores and prints (`\gdef\@author{#1}\par\noindent\textit{#1}\par`), which pdflatex
+  prints;
+- a scratch `\toks@{#1}` used only to typeset it;
+- formatting `{\let\\\newline #1}` (brace pairs are not counted as groups, since most are macro arguments);
+- a store two helper levels down (`\author`→`\@setauthor`→`\@@setauthor`) runs the class's code but adds nothing.
+
+Guards `perfect_kernel_batch65a::{sealed_title_runs_the_class_title_in_place,
+storing_class_title_after_the_body_is_dropped, author_kept_in_a_register_or_a_box_is_a_store,
+class_command_calling_the_kernels_does_not_loop, class_title_with_a_length_default_typesets_in_place}`.
+
+### 527. A late `\author` the class hands only to page furniture is the author of its sectional unit (Perl: dropped with the refused definition)
+
+User ruling 2026-10-11. A sealed-off `\author` (OD #526) becomes an `ltx:creator` of the enclosing sectional unit
+(`\lx@unit@creator`; LaTeXML-structure.rnc:666 `SectionalFrontMatter.class`) only when three things hold: its class
+call shows nothing in the flow, it stores nothing, and the class's OWN body hands the author straight to page
+furniture (`hands_author_to_page_furniture`).
+- **The class's own body** is the macro's own expansion or, for an xparse command, its `\<name> code` macro.
+- **What counts:** that body must directly hold a call of `\lfoot`/`\fancyfoot`/`\fancyhead`/`\markboth`/`\markright`
+  …, or a definition of `\@oddfoot`/`\@evenfoot`/`\@oddhead`/`\@evenhead` …, whose argument holds the author's own
+  parameter, alone or beside other text (`\markboth{#1 et al.}{}`).
+- **The author's own parameter** is the last mandatory one: `#1` of `[1]`, `#2` of `[2][]`. For an xparse command it is
+  the position of the last `m` in the argument specification, counting `m`, `o` and `O{…}`; a specification with any
+  other kind (`d`, `s`, `t`, `e`, `r`, `v` …) or without an `m` gives no unit author. An all-`m` command is optimized
+  to its code macro (`\__cmd_start_optimized:`), whose last parameter is the author. A delimited
+  `\def\author[#1]#2` is never run (the sealed call's shape gate refuses it): dropped, = base.
+- **Only furniture the body itself runs counts:** at the body's top brace level, outside any `\begingroup`/`\bgroup`
+  group (known by meaning; a local setting is discarded at its end, fancyhdr.sty:34, :50-51), and outside any
+  conditional (known by meaning, a `\newif` flag included; `\unless` is a prefix). A `\fi`/`\else`/`\or` that closes no
+  known conditional means one was opened by something unrecognised: no unit author.
+- **Nothing is followed:** no helper, no dispatcher.
+
+**Dropped (fail-safe residuals, = base), though some put the author in a head or foot:**
+- furniture reached only through a helper (`\@runhead{#1}`, `\@runhead{#2}` of `[2][]`, `\@runhead{#1 et al.}`, an
+  expl3 `\my_mark:n{#1}`);
+- furniture reached through a dispatcher (`\@ifnextchar[\@authoropt\@authornoopt`, `\@ifstar`);
+- a helper's own parameter filled with something else (`\@runhead{Draft}`, `\@runfoot{\thepage}`);
+- the optional label (`\renewcommand\author[2][]{\markboth{#1}{}}`);
+- the author stored in a macro the furniture reads (`\def\@runauthor{#1}\markboth{\@runauthor}{}`): a store;
+- an xparse optional in the foot instead of the author (`{m O{Anon}}{\lfoot{#2}}`, `{m o}`);
+- furniture inside another macro's argument (`\@gobble{\lfoot{#1}}`) or a conditional (`\if@authfoot\lfoot{#1}\fi`,
+  `\iffalse…\fi`), including the empty-check `\ifx\relax#1\relax\else\lfoot{#1}\fi`;
+- a conditional opened through a macro (`\def\ifauthfoot{\iffalse}` … `\ifauthfoot\lfoot{#1}\fi`), and furniture inside
+  a group (`\begingroup\lfoot{#1}\endgroup`; a `\markboth` in a group too).
+
+**Kept as before:**
+- **Placement:** after the unit's tags, title, toctitle and earlier creators, before its first body element.
+- **Label:** the call's optional argument, or the class's default for it (a `\newcommand` `[default]` or an xparse
+  `O{default}`), goes in `before` (`span.ltx_author_before`), so it is styled and CSS-hideable.
+- **Outside a sectional unit:** nothing.
+
+Witness recipebook/LongSample: RecipeBook.cls:300-302 `\RenewDocumentCommand{\author}{O{Author: } m}{\lfoot{\textcolor
+{black!20}{#1#2}}}`, its xparse code macro handing `#2` to `\lfoot` directly, so each recipe's attribution is its
+subsection's author. Guards
+`perfect_kernel_batch65a::{author_handed_to_page_furniture_is_the_units_author,
+author_after_section_text_joins_the_units_front_matter, author_kept_in_a_register_or_a_box_is_a_store}`.
+
+### 528. Heading names are digested in a group of their own (Perl: `DigestText` for the list names, `DigestIf` for `\refname`/`\bibname`/`\indexname`)
+
+latexml_core `digest_in_group` digests `{\name}`, as a class's `\section*{\name}` sets it. It is used for:
+`\contentsname`, `\listfigurename`, `\listtablename`, `\refname`/`\bibname`, `\indexname`, `\acknowledgmentsname`,
+`\ackname`, `\acknowlname`, `\notesname`, `\nomname`, `\listtheoremname`, `\lstlistlistingname`. An unbraced font
+switch stays in the heading (RecipeBook.cls:207-209), and a `\centering` still centres it (tidyres-doc.tex:9).
+- **The list names' leak was Rust-only:** Perl's `DigestText` (latex_constructs.pool.ltxml:734; Package.pm:405-411)
+  runs in a restricted-horizontal mode frame, which scopes the font but drops the `\centering`; the port's bare
+  digest leaked.
+- **The bibliography and index titles leak in Perl too** (`DigestIf`, :3885, :4523; KPE #606).
+
+Witnesses recipebook/LongSample, korigamik-example, sugconf-skeleton, chetdoc, and the arXiv bibliographies of
+1512.01863 and 2103.15856. Guard `perfect_kernel_batch65a::contents_name_font_stays_in_the_toc_title`.
+
+### 529. A closing caption moves out of a rotate/scale box to its float when nothing else would move (Perl: the panel figure nested in the transform's inline-block)
+
+insert_block (base_utilities.rs) keeps Perl's container order (TeX_Box.pool.ltxml:503-509: fits all and allowed,
+else fits all). One Rust-only case: when that container is one the context cannot hold (a figure in a transform's
+`ltx:inline-block`), the box's leading content becomes a block and its *closing* caption moves to the float the box is
+in, read in the same order. All of these must hold (`caption_hoist_is_safe`):
+- every element from the transform up to that float — or up to a `{center}`/`{flushleft}`/`{flushright}` directly in
+  the float that holds only the transform — was built from the box alone;
+- no element on that path is a paragraph;
+- the float holds no other caption.
+
+Witnesses heria/heria-proposal (heria.cls:737-745 `SidewaysFigure`), 1810.08269.
+
+**Limit — these keep Perl's schema-invalid nesting:**
+- a box that opens with its caption;
+- two captioned panels in transforms;
+- a transform beside the float's own `\caption`;
+- `\subcaption`, `\subfloat` and `\subfigure` panels;
+- a frame or paragraph with more content;
+- a transform with more content;
+- an alignment environment with more content;
+- any other environment around the transform (`{minipage}`, whose panel width a hoist would shrink; `{framed}`, whose
+  frame would move onto the float);
+- an environment not directly in the float.
+
+The `ltx_figure_panel` wrap that would keep such a box valid with its own id, labels and tags is a follow-up
+(task #193; RED `captions-floats/subcaption_labels_in_scaled_panels_stay_on_their_panels`). Guards
+`perfect_kernel_batch65a::{caption_in_a_rotated_parbox_stays_with_its_figure,
+caption_first_box_in_a_transform_keeps_its_content, captioned_box_beside_other_content_in_a_transform_stays_inside,
+caption_hoist_never_merges_two_captions, caption_hoist_never_moves_content_beside_the_box,
+caption_hoist_through_an_environment_holding_only_the_transform}`.

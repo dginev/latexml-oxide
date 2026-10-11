@@ -165,7 +165,7 @@ LoadDefinitions!({
   DefConstructor!("\\acknowledgements",
   "<ltx:acknowledgements name='#name'>",
   properties => {
-    Ok(stored_map!("name" => Digest!(T_CS!("\\ackname"))?))
+    Ok(stored_map!("name" => digest_in_group(T_CS!("\\ackname"))?))
   });
   DefMacro!("\\acknowledgement", "\\acknowledgements");
   DefConstructor!("\\endacknowledgements", "</ltx:acknowledgements>");

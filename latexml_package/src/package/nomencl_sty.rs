@@ -95,7 +95,7 @@ LoadDefinitions!({
     "<ltx:glossary xml:id='#id' lists='nomenclature' role='nomenclature'>\
      <ltx:title>#title</ltx:title></ltx:glossary>",
     properties => sub[_args] {
-      let title = digest(T_CS!("\\nomname")).map(|d| d.to_string()).unwrap_or_default();
+      let title = digest_in_group(T_CS!("\\nomname")).map(|d| d.to_string()).unwrap_or_default();
       let docid = lookup_value("thedocument@ID")
         .and_then(|v| match v { Stored::String(s) => Some(to_string(s)), _ => None })
         .unwrap_or_default();

@@ -147,7 +147,7 @@ LoadDefinitions!({
   // surfaces a `@name` attribute would miss the heading.
   DefConstructor!("\\acknowledgements", "<ltx:acknowledgements name='#name'>",
     properties => sub[_args] {
-      let name = digest(T_CS!("\\acknowledgmentsname"))
+      let name = digest_in_group(T_CS!("\\acknowledgmentsname"))
         .map(|d| d.to_string()).unwrap_or_default();
       Ok(stored_map!("name" => name))
     });

@@ -4401,6 +4401,28 @@ pub fn digest_if(token: Token) -> Result<Option<Digested>> {
   }
 }
 
+/// A name macro a heading is set from (`\contentsname`, `\refname`, `\indexname`, `\acknowledgmentsname`, …)
+/// digested in a group of its own, `{\name}`, as a class's `\section*{\name}` sets it: a font switch it makes
+/// unbraced stays in the heading (RecipeBook.cls:207-209 `\renewcommand{\contentsname}{\hypertarget{contents}{\bfseries
+/// \fontsize{…}{…}\selectfont Recipes}}` leaked into every later heading and paragraph; recipebook/LongSample), and a
+/// `\centering` in it, applied at the group's end, still centres the heading (tidyres-doc.tex:9). Perl digests the
+/// list names as text (`DigestText`, latex_constructs.pool.ltxml:734; Package.pm:405-411, a restricted-horizontal
+/// mode frame that scopes the font but drops the `\centering`; the port's bare digest leaked, Rust-only) and
+/// `\refname`/`\bibname`/`\indexname` bare (`DigestIf`, :3885, :4523), which leaks the font in Perl too.
+/// OXIDIZED_DESIGN #528, KNOWN_PERL_ERRORS #606.
+pub fn digest_in_group(token: Token) -> Result<Digested> {
+  digest(Tokens::new(vec![T_BEGIN!(), token, T_END!()]))
+}
+
+/// [`digest_in_group`] for a name that may be undefined (Perl's `DigestIf`).
+pub fn digest_in_group_if(token: Token) -> Result<Option<Digested>> {
+  if lookup_definition(&token)?.is_some() {
+    digest_in_group(token).map(Some)
+  } else {
+    Ok(None)
+  }
+}
+
 /// Test a conditional `\ifXXX` and return its boolean result (Perl: IfCondition).
 /// Looks up the conditional's test closure and invokes it.
 pub fn if_condition(if_token: &Token) -> Result<Option<bool>> {

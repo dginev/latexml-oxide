@@ -4110,9 +4110,9 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   } else if let Some(bt) = bibtitle {
     Some(Digest!(bt)?)
   } else {
-    match DigestIf!("\\refname")? {
+    match digest_in_group_if(T_CS!("\\refname"))? {
       Some(v) => Some(v),
-      None => DigestIf!("\\bibname")?,
+      None => digest_in_group_if(T_CS!("\\bibname"))?,
     }
   };
   if let Some(title) = title_opt {

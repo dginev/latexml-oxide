@@ -884,8 +884,51 @@ pub(crate) fn load() -> Result<()> {
     // `\date{\def\$##1: ##2 ##3${##2}\$Revision: 3.1 $}` (ulineno.tex:16, 2
     // errors; Perl pool:1066 shares the raw copy). KNOWN_PERL_ERRORS #145.
     // Guard: `perfect_kernel_batch54::frontmatter_copies_the_halved_macro`.
-    r"\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}",
+    // 65a: a call the document body sealed off goes to the class's own `\title` (`sealed_class_call`).
+    r"\lx@sealed@class@call{title}{#1}{#2}{\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}}",
     locked => true);
+  // The class's own call (`sealed_class_call`) when the document body sealed this one off, else the kernel's.
+  DefMacro!("\\lx@sealed@class@call{}{}{}{}", sub[(name, opt, arg, kernel)] {
+    Ok(sealed_class_call(&name.to_string(), &opt, &arg).unwrap_or(kernel))
+  });
+  DefPrimitive!("\\lx@sealed@class@run{}{}{}", sub[(name, opt, arg)] {
+    sealed_class_run(&name.to_string(), opt, arg)
+  });
+  // The author of the sectional unit the call stands in (`sealed_class_run`, user ruling 2026-10-11): an
+  // `ltx:creator` among the unit's front matter (after its tags, title and earlier creators;
+  // LaTeXML-structure.rnc:666), `#1` its label (`before`, `span.ltx_author_before` in HTML). Outside a sectional
+  // unit there is none.
+  DefConstructor!("\\lx@unit@creator{}{}", sub[document, args] {
+    let save = document.float_to_element("ltx:creator", true)?;
+    let unit = document.get_element();
+    if let Some(unit) = unit.filter(|u| with(document::get_node_qname(u), |q| SECTIONAL_UNITS.contains(&q))) {
+      let label = args[0].as_ref().map(ToString::to_string).unwrap_or_default();
+      let mut attributes = HashMap::default();
+      attributes.insert("role".to_string(), "author".to_string());
+      if !label.trim().is_empty() {
+        attributes.insert("before".to_string(), label);
+      }
+      let mut creator = document.open_element("ltx:creator", Some(attributes), None)?;
+      document.open_element("ltx:personname", None, None)?;
+      if let Some(name) = &args[1] {
+        document.absorb(name, None)?;
+      }
+      document.close_element("ltx:personname")?;
+      document.close_element("ltx:creator")?;
+      let front = ["ltx:tags", "ltx:title", "ltx:toctitle", "ltx:creator"];
+      if let Some(mut body) = unit
+        .get_child_elements()
+        .into_iter()
+        .find(|c| *c != creator && !with(document::get_node_qname(c), |q| front.contains(&q)))
+      {
+        creator.unlink();
+        body.add_prev_sibling(&mut creator)?;
+      }
+    }
+    if let Some(save) = save {
+      document.set_node(&save);
+    }
+  });
   DefMacro!("\\@date", "\\@empty");
   DefMacro!(
     "\\date{}",
@@ -978,6 +1021,7 @@ pub(crate) fn load() -> Result<()> {
   // `\author`, and `\lx@author@trailing` absorbs the class's surplus argument
   // (base_utilities.rs, OXIDIZED_DESIGN #253); both are no-ops otherwise.
   // 64k: the class's own `\author`, refused by the lock, still runs for its flags and stores (`replay_class_setter`).
+  // 65a: a call the document body sealed off goes to the class's own `\author`, output kept (`sealed_class_call`).
   DefPrimitive!("\\lx@replay@class@setter{}{}{}", sub[(name, opt, arg)] {
     replay_class_setter(&name.to_string(), opt, arg)?;
   });
@@ -992,7 +1036,7 @@ pub(crate) fn load() -> Result<()> {
     }
   });
   DefMacro!("\\author[]{}",
-    r"\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@handed\lx@author@trailing",
+    r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@handed\lx@author@trailing}",
     locked => true);
   // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
   // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically
@@ -1992,31 +2036,8 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
     return Ok(());
   }
   let dropped = T_CS!(s!("\\lx@dropped@{name}"));
-  let stores: Vec<Token>;
-  let takes_opt = match lookup_meaning(&dropped) {
-    Some(Stored::Expandable(ref d)) => {
-      let shape: Vec<SymStr> = d
-        .get_parameters()
-        .map(|p| p.get_parameters().iter().map(|q| q.name).collect())
-        .unwrap_or_default();
-      let takes_opt = match shape.as_slice() {
-        // a body that reads its own arguments (iosart2x.cls:3139 `\def\author{\@ifnextchar[…}`) gets the call's
-        [] => true,
-        [p] if *p == pin!("Plain") => false,
-        [o, p] if *o == pin!("Optional") && *p == pin!("Plain") => true,
-        _ => return Ok(()),
-      };
-      match d.get_expansion() {
-        Some(ExpansionBody::Tokens(body))
-          if body_vocabulary_is_defined(body.unlist_ref(), &s!("\\{name}")) =>
-        {
-          stores = defined_stores(body.unlist_ref());
-          takes_opt
-        },
-        _ => return Ok(()),
-      }
-    },
-    _ => return Ok(()),
+  let Some((takes_opt, stores)) = dropped_class_setter(name) else {
+    return Ok(());
   };
   // A class `\abstract` keeps nothing of its text the kernel needs (JINST.cls:819-823 sets `\@abstracttrue`; the store
   // is restored below), and a body that typesets it would step its counters (uwthesis.cls:805-839): it gets none.
@@ -2142,6 +2163,750 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   }
   Ok(())
 }
+
+/// The class's own definition of `\<name>` that the lock refused (`\lx@dropped@<name>`, state.rs), when a call can be
+/// handed to it: shaped `{arg}`, `[opt]{arg}` or reading its own arguments (no parameters: given the call's
+/// `[opt]{arg}`), with its vocabulary defined (`body_vocabulary_is_defined`). Whether it takes the optional argument,
+/// and the stores its body defines.
+fn dropped_class_setter(name: &str) -> Option<(bool, Vec<Token>)> {
+  let Some(Stored::Expandable(d)) = lookup_meaning(&T_CS!(s!("\\lx@dropped@{name}"))) else {
+    return None;
+  };
+  let shape: Vec<SymStr> = d
+    .get_parameters()
+    .map(|p| p.get_parameters().iter().map(|q| q.name).collect())
+    .unwrap_or_default();
+  let takes_opt = match shape.as_slice() {
+    // a body that reads its own arguments (iosart2x.cls:3139 `\def\author{\@ifnextchar[…}`; an xparse command's
+    // wrapper, RecipeBook.cls:284 `\RenewDocumentCommand{\title}{O{…} m}`) gets the call's
+    [] => true,
+    [p] if *p == pin!("Plain") => false,
+    [o, p] if *o == pin!("Optional") && *p == pin!("Plain") => true,
+    _ => return None,
+  };
+  match d.get_expansion() {
+    Some(ExpansionBody::Tokens(body))
+      if body_vocabulary_is_defined(body.unlist_ref(), &s!("\\{name}")) =>
+    {
+      Some((takes_opt, defined_stores(body.unlist_ref())))
+    },
+    _ => None,
+  }
+}
+
+/// The class's in-body call of a frontmatter command (65a): a `\title` or `\author` the document body has sealed off
+/// ([`crate::base_utilities::seal_digested_frontmatter`]: the paper's came before the first section) adds nothing to
+/// the frontmatter, so the lock has no markup to keep for it, and a raw class that redefined the command
+/// (`\<name>:redefined`) as one that keeps no value ([`class_command_stores`]) defines what the call does, as in
+/// pdflatex: `\lx@sealed@class@run` runs the class's own definition in its place ([`sealed_class_run`]).
+/// RecipeBook.cls:284-286 typesets each recipe's `\title` where it stands (recipebook/LongSample, whose later recipes'
+/// titles were dropped). Without a class definition, or with one that stores what it is given (a frontmatter setter:
+/// imsart.sty:1958, schooldocs.sty:70), the call is still dropped (user ruling 2026-10-09, a supplement's frontmatter:
+/// cmpj/template, schooldocs-examples, 2301.10468). Not while such a call runs: a class command that calls the kernel's
+/// (`\let\origtitle\title`, beamerbasetitle.sty:69-70, authoraftertitle.sty:11-23) reaches the kernel's, once.
+/// OXIDIZED_DESIGN #526.
+fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens) -> Option<Tokens> {
+  let (tag, role) = match name {
+    "title" => ("ltx:title", ""),
+    "author" => ("ltx:creator", "author"),
+    _ => return None,
+  };
+  // the kernel's own command reached from inside the class's run: the class keeps its value through the kernel
+  if lookup_bool("lx_sealed_class_call") {
+    AssignValue!("lx_sealed_class_call_reached_kernel" => true, Some(Scope::Global));
+    return None;
+  }
+  if !lookup_bool(&s!("\\{name}:redefined"))
+    || lookup_bool("lx_replaying_class_setter")
+    || !frontmatter_entry_sealed(tag, role)
+  {
+    return None;
+  }
+  dropped_class_setter(name)?;
+  if class_command_stores(name) {
+    return None;
+  }
+  let mut call = vec![T_CS!("\\lx@sealed@class@run"), T_BEGIN!()];
+  call.extend(mouth::tokenize(TeXString::assembled(name.to_string())).unlist());
+  call.push(T_END!());
+  call.push(T_BEGIN!());
+  call.extend(opt.unlist_ref().iter().copied());
+  call.push(T_END!());
+  call.push(T_BEGIN!());
+  call.extend(arg.unlist_ref().iter().copied());
+  call.push(T_END!());
+  Some(Tokens::new(call))
+}
+
+/// [`sealed_class_call`]'s run: the class's `\lx@dropped@<name>[opt]{arg}`, digested where the call stands, its output
+/// kept. An `\author` whose class call sets nothing in the flow — RecipeBook.cls:300-302 hands it to fancyhdr's
+/// `\lfoot`, page furniture LaTeXML drops (fancyhdr.sty.ltxml:68) — is the author of the sectional unit it stands in
+/// (user ruling 2026-10-11): an `ltx:creator` of that unit (`\lx@unit@creator`, LaTeXML-structure.rnc:666
+/// `SectionalFrontMatter.class`), the call's optional argument, or the class's default for it (RecipeBook's
+/// `O{Author: }`), as its label. OXIDIZED_DESIGN #526, #527.
+fn sealed_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested>> {
+  let Some((takes_opt, _)) = dropped_class_setter(name) else {
+    return Ok(Vec::new());
+  };
+  let mut call = vec![T_CS!(s!("\\lx@dropped@{name}"))];
+  if takes_opt && !opt.is_empty() {
+    call.push(T_OTHER!("["));
+    call.extend(opt.unlist_ref().iter().copied());
+    call.push(T_OTHER!("]"));
+  }
+  call.push(T_BEGIN!());
+  call.extend(arg.unlist_ref().iter().copied());
+  call.push(T_END!());
+  AssignValue!("lx_sealed_class_call" => true, Some(Scope::Global));
+  AssignValue!("lx_sealed_class_call_reached_kernel" => false, Some(Scope::Global));
+  let digested = digest(Tokens::new(call));
+  AssignValue!("lx_sealed_class_call" => false, Some(Scope::Global));
+  let digested = digested?;
+  let in_flow = typesets_content(&digested);
+  // A class command that reached the kernel's (through a helper the one-level look did not follow, `\@author@line`
+  // calling a saved `\origauthor`) handed the author to the frontmatter, which the seal dropped: a store, not page
+  // furniture.
+  let reached_kernel = lookup_bool("lx_sealed_class_call_reached_kernel");
+  let mut out = vec![digested];
+  if name == "author" && !in_flow && !reached_kernel && hands_author_to_page_furniture(name) {
+    Info!(
+      "frontmatter",
+      "sealed",
+      "\\author after the document body began sets nothing in the flow: the author of its sectional unit"
+    );
+    let label = if opt.is_empty() {
+      dropped_optional_default(name).unwrap_or_default()
+    } else {
+      opt
+    };
+    let mut creator = vec![T_CS!("\\lx@unit@creator"), T_BEGIN!()];
+    creator.extend(label.unlist());
+    creator.push(T_END!());
+    creator.push(T_BEGIN!());
+    creator.extend(arg.unlist());
+    creator.push(T_END!());
+    out.push(digest(Tokens::new(creator))?);
+  } else if in_flow {
+    Info!(
+      "frontmatter",
+      "sealed",
+      s!("\\{name} after the document body began runs the class's own \\{name} in place")
+    );
+  } else if reached_kernel {
+    Info!(
+      "frontmatter",
+      "sealed",
+      s!(
+        "\\{name} after the document body began is dropped: the class's own \\{name} hands it to the kernel's \\{name}, a store"
+      )
+    );
+  } else {
+    Info!(
+      "frontmatter",
+      "sealed",
+      s!(
+        "\\{name} after the document body began is dropped: the class's own \\{name} shows nothing and hands it to no page furniture"
+      )
+    );
+  }
+  Ok(out)
+}
+
+/// The default of the optional argument of the class's own `\<name>` (`\lx@dropped@<name>`): a `\newcommand`'s
+/// `[default]`, or an xparse command's `O{default}` (its wrapper's argument specification, RecipeBook.cls:300
+/// `\RenewDocumentCommand{\author}{O{Author: } m}`).
+fn dropped_optional_default(name: &str) -> Option<Tokens> {
+  let Some(Stored::Expandable(d)) = lookup_meaning(&T_CS!(s!("\\lx@dropped@{name}"))) else {
+    return None;
+  };
+  if let Some(first) = d
+    .get_parameters()
+    .and_then(|p| p.get_parameters().first().cloned())
+  {
+    return (first.name == pin!("Optional"))
+      .then(|| first.extra.first().cloned())
+      .flatten();
+  }
+  // `\__cmd_start:nNNnnn {<spec>}…`: a leading `O{<default>}` in the specification
+  let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+    return None;
+  };
+  let body = body.unlist_ref();
+  let open = body
+    .iter()
+    .position(|t| t.get_catcode() == Catcode::BEGIN)?;
+  let spec = &body[open + 1..];
+  let first = spec.iter().find(|t| t.get_catcode() != Catcode::SPACE)?;
+  if !(first.with_str(|s| s == "O")
+    && spec
+      .get(1)
+      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN))
+  {
+    return None;
+  }
+  let mut depth = 0usize;
+  let mut default = Vec::new();
+  for t in &spec[2..] {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END if depth == 0 => return Some(Tokens::new(default)),
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    default.push(*t);
+  }
+  None
+}
+
+/// Whether the class's own `\<name>` (`\lx@dropped@<name>`) may keep a value — a frontmatter setter, whose later call
+/// is a supplement's, dropped as the base drops it — rather than only typesetting or setting page furniture. Fail-safe:
+/// a body is free of stores only on positive evidence ([`body_keeps_a_value`]), since a late author made the author of
+/// a section where pdflatex prints nothing would invent content. imsart.sty:1958-1968 `\xdef\@title{#1}`; a token
+/// register filled in any form (`\authtoks\expandafter{\the\authtoks #1}`), a box filled and not printed
+/// (`\setbox\authbox\vbox{\unvbox\authbox\hbox{#1}}`) likewise.
+fn class_command_stores(name: &str) -> bool {
+  let Some(Stored::Expandable(d)) = lookup_meaning(&T_CS!(s!("\\lx@dropped@{name}"))) else {
+    return false;
+  };
+  let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+    return false;
+  };
+  // (the command's own name in its body, or the robust `\<name>\ ` beside it, is an xparse wrapper's handle for its
+  // messages, `\__cmd_start:nNNnnn`'s `N`s, not code the class wrote)
+  body_keeps_a_value(body.unlist_ref(), Some(&T_CS!(s!("\\{name}"))))
+}
+
+/// The page furniture a class sets instead of the flow: fancyhdr.sty:144-149 (`\fancyhead`, `\fancyfoot`,
+/// `\fancyhf` and their offsets) and :270-281 (`\lhead` … `\rfoot`); latex.ltx's marks (`\markboth`, `\markright`,
+/// `\@mkboth`) and the page style's heads and feet (`\@oddhead`, `\@evenhead`, `\@oddfoot`, `\@evenfoot`,
+/// latex.ltx:18305-18312 `\ps@empty`/`\ps@plain`). A call of one, or a definition of one, keeps no frontmatter value.
+const PAGE_FURNITURE: &[&str] = &[
+  "\\lhead",
+  "\\chead",
+  "\\rhead",
+  "\\lfoot",
+  "\\cfoot",
+  "\\rfoot",
+  "\\fancyhead",
+  "\\fancyfoot",
+  "\\fancyhf",
+  "\\fancyheadoffset",
+  "\\fancyfootoffset",
+  "\\fancyhfoffset",
+  "\\markboth",
+  "\\markright",
+  "\\@mkboth",
+  "\\@oddhead",
+  "\\@evenhead",
+  "\\@oddfoot",
+  "\\@evenfoot",
+];
+
+/// The dispatchers whose own bodies are the kernel's mechanism, not the class's: their targets are followed instead.
+const DISPATCHERS: &[&str] = &[
+  "\\@ifnextchar",
+  "\\kernel@ifnextchar",
+  "\\@ifstar",
+  "\\@dblarg",
+  "\\@testopt",
+  "\\@protected@testopt",
+  "\\@ifundefined",
+  "\\protect",
+];
+
+/// The LaTeX kernel's expl3 modules (`\__cmd_start:nNNnnn`, `\tl_set:Nn`, `\prg_do_nothing:`): their functions are the
+/// kernel's mechanism, not followed. A class's own expl3 functions (`\my_store_author:n`, made with `\cs_new:Npn`) are.
+const KERNEL_EXPL3_MODULES: &[&str] = &[
+  "cmd", "prg", "tl", "cs", "exp", "use", "seq", "clist", "prop", "int", "bool", "str", "token",
+  "peek", "keys", "msg", "iow", "ior", "file", "box", "coffin", "fp", "dim", "skip", "muskip",
+  "regex", "char", "quark", "scan", "sys", "kernel", "hook", "color", "draw", "pdf", "sort",
+  "text", "intarray", "flag", "legacy", "mode", "if", "group", "c", "l", "g", "q", "s",
+];
+
+/// The body of the macro `t`, called from a class command's body (`itself`: the command, not followed), that the store
+/// check ([`body_keeps_a_value`]) looks into, and whether that look is free: an xparse command's `\<name> code` (its
+/// wrapper hands the arguments over: the class's real body, RecipeBook.cls:300) costs no level. Not followed: the
+/// kernel's dispatchers and expl3 functions, and the command's own name or robust `\<name>\ `. (The unit-author check
+/// follows nothing: [`hands_author_to_page_furniture`].)
+fn followed_body(t: &Token, itself: &Token) -> Option<(Tokens, bool)> {
+  if t.get_catcode() != Catcode::CS {
+    return None;
+  }
+  let (skip, free) = t.with_cs_name(|n| {
+    let module = n
+      .trim_start_matches('\\')
+      .trim_start_matches("__")
+      .split(['_', ':'])
+      .next()
+      .unwrap_or("");
+    let kernel_expl3 =
+      n.contains(':') && !n.ends_with(" code") && KERNEL_EXPL3_MODULES.contains(&module);
+    let own_name = itself.with_cs_name(|m| n.trim_end() == m);
+    (
+      DISPATCHERS.contains(&n) || kernel_expl3 || own_name,
+      n.ends_with(" code"),
+    )
+  });
+  if skip {
+    return None;
+  }
+  match lookup_meaning(t) {
+    Some(Stored::Expandable(callee)) => match callee.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => Some((body.clone(), free)),
+      _ => None,
+    },
+    _ => None,
+  }
+}
+
+/// Whether the class's own `\<name>` body hands the AUTHOR straight to page furniture (OXIDIZED_DESIGN #527, user
+/// ruling 2026-10-11): the macro's own expansion — or, for an xparse command, its `\<name> code` macro, where the
+/// arguments arrive (RecipeBook.cls:300 `\RenewDocumentCommand{\author}{O{Author: } m}{\lfoot{#1#2}}`) — directly
+/// holds a call of [`PAGE_FURNITURE`] (`\lfoot{…}`, `\fancyhead[RO]{…}`, `\markboth{…}{…}`) or a definition of it
+/// (`\def\@oddfoot{…}`), run by the body itself (top brace level, outside any conditional), whose argument holds the
+/// author's own parameter (`#1` of `[1]`, `#2` of `[2][]`; for xparse, the last `m` of the specification,
+/// [`xparse_author_parameter`]), alone or beside other text (`{#1 et al.}`). No helper and no dispatcher is followed:
+/// a body that reads its own arguments (`\@ifnextchar[…`, `\@ifstar`), or hands the author to a macro of its own
+/// (`\@runhead{#1}`, an expl3 `\my_mark:n{#1}`), is dropped — the fail-safe residual, recorded in #527. The positive
+/// evidence a late `\author` that shows nothing in the flow and stores nothing needs to become its unit's author.
+fn hands_author_to_page_furniture(name: &str) -> bool {
+  let Some(Stored::Expandable(d)) = lookup_meaning(&T_CS!(s!("\\lx@dropped@{name}"))) else {
+    return false;
+  };
+  let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+    return false;
+  };
+  let (own, author) = if let Some(author) = author_parameter(&d) {
+    (d.clone(), author)
+  } else {
+    // an xparse command's wrapper reads no parameters; its `\<name> code` takes them, numbered as the wrapper's
+    // argument specification lists them
+    let Some(code) = body.unlist_ref().iter().find_map(|t| {
+      match t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n.ends_with(" code")) {
+        true => match lookup_meaning(t) {
+          Some(Stored::Expandable(code)) => Some(code),
+          _ => None,
+        },
+        false => None,
+      }
+    }) else {
+      return false;
+    };
+    // (a specification of `m`s only is optimized away, ltcmd.dtx `\__cmd_start_optimized:`: the code macro's
+    // parameters are the arguments, all mandatory)
+    let optimized = body.unlist_ref().iter().any(|t| {
+      t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n == "\\__cmd_start_optimized:")
+    });
+    let author = if optimized {
+      author_parameter(&code)
+    } else {
+      xparse_author_parameter(body.unlist_ref())
+    };
+    let Some(author) = author else {
+      return false;
+    };
+    (code, author)
+  };
+  let Some(ExpansionBody::Tokens(own_body)) = own.get_expansion() else {
+    return false;
+  };
+  furniture_takes_the_author(own_body.unlist_ref(), author)
+}
+
+/// The position of the author in an xparse command's argument specification (its wrapper's first brace group,
+/// `\__cmd_start:nNNnnn {O{Author: } m}…`): the last `m`, counting `m`, `o` and `O{…}` (a `+` prefix skipped). `None`
+/// for a specification with any other kind (`d`, `D`, `s`, `t`, `e`, `E`, `r`, `R`, `v`, `>{…}`) or without an `m`:
+/// fail-safe, no unit author. `{m O{Anon}}{\lfoot{#2}}` puts the optional in the foot, not the author.
+fn xparse_author_parameter(wrapper: &[Token]) -> Option<usize> {
+  let open = wrapper
+    .iter()
+    .position(|t| t.get_catcode() == Catcode::BEGIN)?;
+  let spec = &wrapper[open + 1..];
+  let mut position = 0usize;
+  let mut author = None;
+  let mut i = 0usize;
+  while let Some(t) = spec.get(i) {
+    match t.get_catcode() {
+      Catcode::END => return author,
+      Catcode::SPACE => {},
+      _ => match t.with_str(|s| s.to_string()).as_str() {
+        "+" => {},
+        "m" => {
+          position += 1;
+          author = Some(position);
+        },
+        "o" => position += 1,
+        "O" => {
+          position += 1;
+          // its default, a brace group
+          if spec
+            .get(i + 1)
+            .is_some_and(|n| n.get_catcode() == Catcode::BEGIN)
+          {
+            let mut depth = 0usize;
+            for (j, n) in spec.iter().enumerate().skip(i + 1) {
+              match n.get_catcode() {
+                Catcode::BEGIN => depth += 1,
+                Catcode::END => {
+                  depth = depth.saturating_sub(1);
+                  if depth == 0 {
+                    i = j;
+                    break;
+                  }
+                },
+                _ => {},
+              }
+            }
+          }
+        },
+        _ => return None,
+      },
+    }
+    i += 1;
+  }
+  None
+}
+
+/// The number of a macro's author parameter: its last mandatory value-carrying one; `None` for a macro without one.
+/// (Defensive: a delimited `\def\author[#1]#2` is never run — `dropped_class_setter`'s shape gate refuses it, so the
+/// late author is dropped, as the base drops it — but its literal `[`/`]` matches carry no value and take no number.)
+fn author_parameter(d: &Expandable) -> Option<usize> {
+  let parameters = d.get_parameters()?.get_parameters();
+  let values: Vec<_> = parameters.iter().filter(|p| !p.novalue).collect();
+  values
+    .iter()
+    .rposition(|p| p.name != pin!("Optional"))
+    .map(|i| i + 1)
+}
+
+/// [`hands_author_to_page_furniture`] over the command's own body, `author` the number of its author parameter.
+fn furniture_takes_the_author(body: &[Token], author: usize) -> bool {
+  let is_cs = |t: &Token| t.get_catcode() == Catcode::CS;
+  let named = |t: &Token, set: &[&str]| is_cs(t) && t.with_cs_name(|n| set.contains(&n));
+  // the end of the brace group opening at or after `from`
+  let group_end = |from: usize| -> Option<(usize, usize)> {
+    let open = body[from..]
+      .iter()
+      .position(|n| n.get_catcode() == Catcode::BEGIN)?
+      + from;
+    let mut depth = 0usize;
+    for (j, n) in body.iter().enumerate().skip(open) {
+      match n.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth = depth.saturating_sub(1);
+          if depth == 0 {
+            return Some((open, j));
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let author = author.to_string();
+  let holds_author = |span: &[Token]| {
+    span
+      .iter()
+      .any(|n| n.get_catcode() == Catcode::ARG && n.with_str(|s| s == author))
+  };
+  // Only furniture the body itself runs counts: at its top brace level (not inside another macro's argument,
+  // `\@gobble{\lfoot{#1}}`) and outside any conditional (`\if@authfoot\lfoot{#1}\fi`, `\iffalse…\fi`; a
+  // conditional known by its meaning, a `\newif` flag included). Fail-safe: an empty-check
+  // `\ifx\relax#1\relax\else\lfoot{#1}\fi` is dropped too, as the base drops it.
+  // A group `\begingroup…\endgroup`/`\bgroup…\egroup` (known by meaning, as a `\let` alias) counts as a brace level: a
+  // local furniture setting there is discarded at its end (fancyhdr.sty:34, :50-51 `\lfoot` is local). `\unless` is a
+  // prefix of the conditional it negates, not one of its own.
+  let begingroup = lookup_meaning(&T_CS!("\\begingroup"));
+  let endgroup = lookup_meaning(&T_CS!("\\endgroup"));
+  let group_change = |t: &Token| -> i32 {
+    match lookup_meaning(t) {
+      Some(Stored::Token(ref x)) if x.get_catcode() == Catcode::BEGIN => 1,
+      Some(Stored::Token(ref x)) if x.get_catcode() == Catcode::END => -1,
+      m if m.is_some() && same_meaning(m.as_ref(), begingroup.as_ref()) => 1,
+      m if m.is_some() && same_meaning(m.as_ref(), endgroup.as_ref()) => -1,
+      _ => 0,
+    }
+  };
+  let ends_conditional = |t: &Token| t.with_cs_name(|n| n == "\\fi");
+  let inside_conditional = |t: &Token| t.with_cs_name(|n| n == "\\else" || n == "\\or");
+  let opens_conditional = |t: &Token| {
+    !ends_conditional(t)
+      && !inside_conditional(t)
+      && !t.with_cs_name(|n| n == "\\unless")
+      && matches!(lookup_meaning(t), Some(Stored::Conditional(_)))
+  };
+  // A `\fi`, `\else` or `\or` with no conditional known to be open closes one opened by something not recognised
+  // (`\def\ifauthfoot{\iffalse}` then `\ifauthfoot\lfoot{#1}\fi`): no unit author can be read from the body.
+  let mut depth = 0usize;
+  for t in body.iter().filter(|t| t.get_catcode() == Catcode::CS) {
+    if ends_conditional(t) || inside_conditional(t) {
+      if depth == 0 {
+        return false;
+      }
+      if ends_conditional(t) {
+        depth -= 1;
+      }
+    } else if opens_conditional(t) {
+      depth += 1;
+    }
+  }
+  let mut braces = 0usize;
+  let mut conditionals = 0usize;
+  for (i, t) in body.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => braces += 1,
+      Catcode::END => braces = braces.saturating_sub(1),
+      Catcode::CS => {
+        if ends_conditional(t) {
+          conditionals = conditionals.saturating_sub(1);
+        } else if opens_conditional(t) {
+          conditionals += 1;
+        } else {
+          match group_change(t) {
+            1 => braces += 1,
+            -1 => braces = braces.saturating_sub(1),
+            _ => {},
+          }
+        }
+      },
+      _ => {},
+    }
+    if braces > 0 || conditionals > 0 {
+      continue;
+    }
+    if named(t, PAGE_FURNITURE) {
+      // a call: its optional `[…]` and up to two brace groups (`\markboth{…}{…}`)
+      let mut at = i + 1;
+      let mut groups = 0;
+      while let Some(n) = body.get(at) {
+        if n.get_catcode() == Catcode::SPACE {
+          at += 1;
+        } else if n.get_catcode() == Catcode::OTHER && n.with_str(|s| s == "[") {
+          at += body[at..]
+            .iter()
+            .position(|c| c.with_str(|s| s == "]"))
+            .unwrap_or(body.len() - at)
+            + 1;
+        } else if n.get_catcode() == Catcode::BEGIN && groups < 2 {
+          let Some((open, close)) = group_end(at) else {
+            break;
+          };
+          if holds_author(&body[open..=close]) {
+            return true;
+          }
+          groups += 1;
+          at = close + 1;
+        } else {
+          break;
+        }
+      }
+    } else if named(t, BODY_DEFINERS_FOR_FURNITURE)
+      && let Some(target) = body[i + 1..]
+        .iter()
+        .position(|n| is_cs(n) && !named(n, BODY_DEFINERS_FOR_FURNITURE))
+      && named(&body[i + 1 + target], PAGE_FURNITURE)
+      && let Some((open, close)) = group_end(i + 2 + target)
+      && holds_author(&body[open..=close])
+    {
+      return true;
+    }
+  }
+  false
+}
+
+/// The definers a page-furniture definition is made with (`\def\@oddfoot{#1}`, `\global\def…`, `\renewcommand{…}`).
+const BODY_DEFINERS_FOR_FURNITURE: &[&str] = &[
+  "\\def",
+  "\\gdef",
+  "\\edef",
+  "\\xdef",
+  "\\global",
+  "\\long",
+  "\\protected",
+  "\\renewcommand",
+  "\\newcommand",
+  "\\providecommand",
+];
+
+/// [`class_command_stores`] over one body; `follow` (the command itself, not followed) for the one level of macros it
+/// calls. A store is any assignment: a definer (`\def` `\gdef` `\edef` `\xdef` `\let` `\futurelet` `\protected@edef`
+/// `\protected@xdef` `\global` `\g@addto@macro` `\addto@hook` `\appto` `\gappto` `\csdef` `\csgdef` `\cslet`
+/// `\renewcommand` `\newcommand` `\providecommand` `\DeclareRobustCommand` `\advance` `\multiply` `\divide`
+/// `\chardef` `\countdef` `\toksdef` `\setlength` `\addtolength` `\setcounter` `\addtocounter` `\stepcounter`, the
+/// expl3 `…_set`/`_put`/`_add`/`_incr`/`_concat`/`_clear` families), or a token register named other than after a reader
+/// (`\the`, `\showthe`, `\number`, `\romannumeral`, `\showtokens`, a box printer): tex.web §1226 reads a token
+/// register's right-hand side with `get_x_token`, so `\authtoks\expandafter{…}`, `\expandafter\authtoks\expandafter{…}`
+/// and `\authtoks\othertoks` all assign it. Not stores: a definition of page furniture ([`PAGE_FURNITURE`]), and a box
+/// filled (`\setbox`, `\sbox`, `\savebox`) when the body prints a box outside the fillers' own box specifications
+/// (`\sbox\@tempboxa{…}…\usebox\@tempboxa`: typesetting; the `\unvbox` inside `\setbox\authbox\vbox{\unvbox\authbox…}`
+/// appends, it does not print). Residuals, dropped as the base drops them: a scratch `\toks@{#1}` used only to typeset
+/// it, and formatting `{\let\\\newline #1}` (a brace pair is most often a macro's argument, so no group is counted).
+fn body_keeps_a_value(body: &[Token], follow: Option<&Token>) -> bool {
+  const DEFINERS: &[&str] = &[
+    "\\def",
+    "\\gdef",
+    "\\edef",
+    "\\xdef",
+    "\\let",
+    "\\futurelet",
+    "\\protected@edef",
+    "\\protected@xdef",
+    "\\global",
+    "\\g@addto@macro",
+    "\\addto@hook",
+    "\\appto",
+    "\\gappto",
+    "\\csdef",
+    "\\csgdef",
+    "\\csedef",
+    "\\csxdef",
+    "\\cslet",
+    "\\csletcs",
+    "\\renewcommand",
+    "\\newcommand",
+    "\\providecommand",
+    "\\DeclareRobustCommand",
+    "\\advance",
+    "\\multiply",
+    "\\divide",
+    "\\chardef",
+    "\\mathchardef",
+    "\\countdef",
+    "\\dimendef",
+    "\\skipdef",
+    "\\toksdef",
+    "\\setlength",
+    "\\addtolength",
+    "\\setcounter",
+    "\\addtocounter",
+    "\\stepcounter",
+    "\\refstepcounter",
+  ];
+  const EXPL3_ASSIGNMENTS: &[&str] = &[
+    "_set", "_gset", "_put", "_gput", "_add", "_gadd", "_incr", "_gincr", "_concat", "_gconcat",
+    "_clear", "_gclear",
+  ];
+  const BOX_FILLERS: &[&str] = &["\\setbox", "\\sbox", "\\savebox"];
+  const BOX_PRINTERS: &[&str] = &[
+    "\\usebox",
+    "\\box",
+    "\\copy",
+    "\\unhbox",
+    "\\unvbox",
+    "\\unhcopy",
+    "\\unvcopy",
+  ];
+  const READERS: &[&str] = &[
+    "\\the",
+    "\\showthe",
+    "\\number",
+    "\\romannumeral",
+    "\\showtokens",
+  ];
+
+  let is_cs = |t: &Token| t.get_catcode() == Catcode::CS;
+  let named = |t: &Token, set: &[&str]| is_cs(t) && t.with_cs_name(|n| set.contains(&n));
+  // each box filler's own specification: from the filler to the end of the first brace group after it
+  let mut in_filler = vec![false; body.len()];
+  for (i, t) in body.iter().enumerate() {
+    if !named(t, BOX_FILLERS) {
+      continue;
+    }
+    let Some(open) = body[i..]
+      .iter()
+      .position(|n| n.get_catcode() == Catcode::BEGIN)
+      .map(|o| o + i)
+    else {
+      continue;
+    };
+    let mut depth = 0usize;
+    for (j, n) in body.iter().enumerate().skip(open) {
+      match n.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+      if depth == 0 {
+        in_filler[i..=j].iter_mut().for_each(|f| *f = true);
+        break;
+      }
+    }
+  }
+  let prints_box = body
+    .iter()
+    .enumerate()
+    .any(|(i, t)| !in_filler[i] && named(t, BOX_PRINTERS));
+  for (i, t) in body.iter().enumerate() {
+    if !is_cs(t) {
+      continue;
+    }
+    let (definer, expl3_assignment, filler, furniture) = t.with_cs_name(|n| {
+      (
+        DEFINERS.contains(&n),
+        n.contains(':') && EXPL3_ASSIGNMENTS.iter().any(|a| n.contains(a)),
+        BOX_FILLERS.contains(&n),
+        PAGE_FURNITURE.contains(&n),
+      )
+    });
+    if filler {
+      if prints_box {
+        continue;
+      }
+      return true;
+    }
+    if definer || expl3_assignment {
+      // (what it defines: the first control sequence after it, `\def\@oddfoot`, `\renewcommand{\@oddfoot}`)
+      let target = body[i + 1..]
+        .iter()
+        .find(|n| is_cs(n) && !named(n, DEFINERS) && !named(n, &["\\long", "\\protected"]));
+      if target.is_some_and(|n| named(n, PAGE_FURNITURE)) {
+        continue;
+      }
+      return true;
+    }
+    if furniture {
+      continue;
+    }
+    let reader = body[..i]
+      .iter()
+      .rev()
+      .find(|p| p.get_catcode() != Catcode::SPACE)
+      .is_some_and(|p| named(p, READERS) || named(p, BOX_PRINTERS) || named(p, BOX_FILLERS));
+    match lookup_meaning(t) {
+      // a token register named other than after a reader: assigned in some form (a dimension or count used as a
+      // value, `O{\recipetitlefontsize}`, is not; their assignments go through `\setlength`, `\advance` …)
+      Some(Stored::Register(ref r))
+        if !reader && matches!(r.register_type, RegisterType::Tokens) =>
+      {
+        return true;
+      },
+      _ => {
+        if let Some(itself) = follow
+          && let Some((callee, free)) = followed_body(t, itself)
+          && body_keeps_a_value(callee.unlist_ref(), if free { Some(itself) } else { None })
+        {
+          return true;
+        }
+      },
+    }
+  }
+  false
+}
+
+/// The sectional units an `\lx@unit@creator` belongs to (LaTeXML-structure.rnc: their models open with
+/// `SectionalFrontMatter.class*`).
+const SECTIONAL_UNITS: [&str; 9] = [
+  "ltx:part",
+  "ltx:chapter",
+  "ltx:section",
+  "ltx:subsection",
+  "ltx:subsubsection",
+  "ltx:paragraph",
+  "ltx:subparagraph",
+  "ltx:appendix",
+  "ltx:slide",
+];
 
 /// The control sequences a body defines with `\def`, `\gdef`, `\edef` or `\xdef` (the targets the lock's drop gives an
 /// empty definition, state.rs).

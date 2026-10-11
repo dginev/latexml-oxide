@@ -131,7 +131,7 @@ LoadDefinitions!({
   // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
   // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
-    properties => { Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?)) });
+    properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\acknowledgmentsname"))?)) });
   // Tolerant close — see omnibus_cls.rs commentary on the
   // \begin{acknowledgments} ... \bibliography ... \end{acknowledgments}
   // pattern that auto-closes the env via \bibliography opening

@@ -1,0 +1,40 @@
+% A class whose \title typesets its argument where it stands (RecipeBook.cls:284-286
+% `\RenewDocumentCommand{\title}{O{\recipetitlefontsize} m}{\begingroup\fontsize{#1}{#1}\selectfont\bf #2\endgroup}`)
+% calls it once per recipe, after the body began. The kernel's \title (locked) took the first for the frontmatter
+% and the frontmatter seal (64d) dropped the others; a call the seal turns away now runs the class's own \title in
+% place when it only typesets (sect05.rs sealed_class_call, class_command_stores). The class's \author hands its
+% argument to fancyhdr's \lfoot (RecipeBook.cls:300-302), page furniture LaTeXML drops (fancyhdr.sty.ltxml:68): a
+% sealed-off \author whose class call sets nothing in the flow and stores nothing is the author of the sectional unit
+% it stands in (user ruling 2026-10-11), an ltx:creator of that section labelled with the class's default "Author: ".
+% Second defect: \contentsname's unbraced \bfseries\Large (RecipeBook.cls:207-209) leaked from the TOC title into
+% every later heading and paragraph (the TOC name was digested without a group; content.rs digest_in_group).
+% witness: recipebook/LongSample (sweep 149: one "Curried butternut squash soup" title and the per-recipe "Author:"
+%          attributions lost; bold 169 % on 101 elements).
+% oracle:  pdflatex 0 errors: "Recipes / 1 Beef ... / Beef / French dip / Slice the roast. / Pork / Italian calzones /
+%          Knead the dough. / Soup / Squash soup / Simmer the squash." (footer "Author: Brad, dough recipe from Chef Rider").
+% engines: rust s149/64ze: titles 2-3 and the second author dropped, every heading bold 144 %; rust 65a: titles 2-3
+%          typeset in place in bold, section 2's creator "Brad, dough recipe from Chef Rider" (before="Author: "),
+%          headings in the normal font; perl: raw class refused, all titles and authors to the document frontmatter.
+% expect:  0 errors; <title>French dip</title> and the document creator Brad (the first, before the seal); "Italian
+%          calzones" and "Squash soup" each a bold paragraph in its section; section 2's ltx:creator; no leaked font.
+% status:  RED (base) -> GREEN (65a)
+% preload: ar5iv.sty
+% Guard: perfect_kernel_batch65a::sealed_title_runs_the_class_title_in_place.
+\documentclass{recipemini}
+\begin{document}
+\tableofcontents
+\section{Beef}
+\author{Brad}
+\title{French dip}
+
+Slice the roast.
+\section{Pork}
+\author{Brad, dough recipe from Chef Rider}
+\title{Italian calzones}
+
+Knead the dough.
+\section{Soup}
+\title{Squash soup}
+
+Simmer the squash.
+\end{document}

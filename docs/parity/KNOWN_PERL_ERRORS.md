@@ -12464,3 +12464,12 @@ expands to nothing for `0pt` (`\ifdim#1=\z@ \else …\fi`), so `\tablewidth{0pt}
 `tabular` leaves both `\hline`s as the row's `\noalign`s. Perl's assignment opens a cell and the `\hline`s become
 misplaced. Trigger: `class-bindings/aastex_tablewidth_zero_in_tabular.tex`. Rust (65b):
 `\ifdim#1=\z@\else\pt@width=#1\relax\fi`. Witness 1805.09353.
+
+## 606. A font switch in `\refname`, `\bibname` or `\indexname` leaks into the bibliography or index
+
+Perl digests the bibliography's and the index's title bare (`DigestIf('\refname') || DigestIf('\bibname')`,
+latex_constructs.pool.ltxml:3885; `DigestIf('\indexname')`, :4523), outside any group, so an unbraced switch in the name
+stays in force for the entries. pdflatex sets the name in `\section*{\refname}`, whose group scopes it. Trigger
+`\documentclass{article}\renewcommand{\refname}{\bfseries\Large References}\begin{document}\cite{a}
+\begin{thebibliography}{9}\bibitem{a} A. Author, Some title.\end{thebibliography}\end{document}` → the `<bibblock>`
+in bold 144 % (Perl 0.8.8). Fixed in Rust (65a, OD #528; repro index-bib/refname_font_stays_in_the_bibliography_title).

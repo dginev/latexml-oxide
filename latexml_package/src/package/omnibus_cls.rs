@@ -630,7 +630,7 @@ LoadDefinitions!({
   // Perl L226-235: acknowledgments
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
     properties => {
-      Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?))
+      Ok(stored_map!("name" => digest_in_group(T_CS!("\\acknowledgmentsname"))?))
     });
   // \endacknowledgments — tolerant close. A common pattern is
   //   \begin{acknowledgments} ... \bibliography{...} \end{acknowledgments}

@@ -467,7 +467,7 @@ pub(crate) fn load() -> Result<()> {
       }
 
       Ok(stored_map!("select" => s_depth.join(" | "),
-        "name" => digest(T_CS!("\\contentsname"))?))
+        "name" => digest_in_group(T_CS!("\\contentsname"))?))
     }
   );
 
@@ -484,12 +484,12 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\listoffigures", "\\lx@kernel@listoffigures\\lx@kernel@listbody{\\@starttoc{lof}}");
   DefConstructor!("\\lx@kernel@listoffigures",
     "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
-    properties => { Ok(stored_map!("name" => digest(T_CS!("\\listfigurename"))?)) });
+    properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\listfigurename"))?)) });
 
   DefMacro!("\\listoftables", "\\lx@kernel@listoftables\\lx@kernel@listbody{\\@starttoc{lot}}");
   DefConstructor!("\\lx@kernel@listoftables",
     "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
-    properties => { Ok(stored_map!("name" => digest(T_CS!("\\listtablename"))?)) });
+    properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\listtablename"))?)) });
 
   // The three under names of their own, for a binding that interprets a package raw and puts them back (tocloft_sty.rs:
   // tocloft's own run `\@starttoc`, which reads a `.toc` LaTeXML never writes; 1811.09408).

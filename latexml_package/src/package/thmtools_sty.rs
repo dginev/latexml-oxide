@@ -185,7 +185,7 @@ LoadDefinitions!({
   DefConstructor!("\\listoftheorems[]",
     "<ltx:TOC lists='#lists' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => sub[_args] {
-      let title = Stored::from(Digest!(T_CS!("\\listtheoremname"))?);
+      let title = Stored::from(digest_in_group(T_CS!("\\listtheoremname"))?);
       let lists = String::from("thm");
       Ok(stored_map!("name" => title, "lists" => lists))
     });

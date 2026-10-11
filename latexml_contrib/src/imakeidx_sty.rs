@@ -146,7 +146,7 @@ LoadDefinitions!({
     let id = if docid.is_empty() { s!("idx.{name}") } else { s!("{docid}.idx.{name}") };
     whatsit.set_property("id", id);
     whatsit.set_property("list", list);
-    if let Some(title) = DigestIf!("\\indexname")? {
+    if let Some(title) = digest_in_group_if(T_CS!("\\indexname"))? {
       if let Some(titlefont) = title.get_font()? {
         whatsit.set_property("titlefont", titlefont);
       }

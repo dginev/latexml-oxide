@@ -20,8 +20,7 @@ pdfmarginpar	pdfmarginpar	jing	1	section-in-item 2026-09-22	as biblatex
 phonrule	phonrule-doc	jing	1	section-in-item 2026-09-22	as biblatex
 srdp-mathematik	srdp-mathematik	jing	3	section-in-item 2026-09-22	as biblatex
 zx-calculus	zx-calculus	jing	8	section-in-item 2026-09-22	as biblatex
-chessboard	chessboard_and_beamer	fatal	3	D14 2026-09-10	beamer overlays run in one pass (user: keep Perl's single pass); skak's game state leaks between \only<n> branches, Mouth:EoF (DIFFICULT_CASES §D14)
-chessboard	chessboard_and_beamer	jing	1	D14 2026-09-10	the same Fatal's partial document
+chessboard	chessboard_and_beamer	errors	4	D14 2026-09-10	beamer overlays run in one pass (user: keep Perl's single pass); skak's game state leaks between \only<n> branches: since sweep 149 status 2, two skak \errmessage mainline errors, \EatNumberA runaway, \end{frame} mode error; the document is valid (DIFFICULT_CASES §D14)
 prerex	prerex	jing	1	section-in-item 2026-09-22	a sectioning unit the source puts inside a figure (prerex.tex:31-85, \paragraph at :70; Perl parity, OXIDIZED_DESIGN_DIVERGENCES #189)
 beamerappendixnote	example-basic	recall	1	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
 beamertheme-gotham	gotham-exampleSimple	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)

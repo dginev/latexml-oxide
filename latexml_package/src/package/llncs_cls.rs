@@ -104,7 +104,7 @@ LoadDefinitions!({
   DefMacro!("\\ackname", "Acknowledgements");
   DefConstructor!("\\acknowledgements", "<ltx:acknowledgements name='#name'>",
     properties => sub[_args] {
-      let name = Stored::from(digest(T_CS!("\\ackname"))?);
+      let name = Stored::from(digest_in_group(T_CS!("\\ackname"))?);
       Ok(stored_map!("name" => name))
     });
   DefMacro!("\\acknowledgement", "\\acknowledgements");

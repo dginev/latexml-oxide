@@ -154,8 +154,9 @@ s136), title pages and letters (59o, 59p), arabi (59r) and the rulings 7a-7e. Th
 - sweep #149 (e57be39640, 2026-10-11, after 50+ batches incl. the M1/D1 kernel changes), compared with `ab_audit` to
   #148: errors 11,511 → 11,364, fatals 66 → 61, in-scope valid 1,580 → 1,585, missing words 13,739 → 13,715. Of 322
   goal-set regression rows, 318 are benign or improvements (UTC `\today`, frontmatter cleanup, TOC titles,
-  bibliography numbering). The four open bars: G1 chessboard_and_beamer is an improvement (Fatal → status 2) whose
-  `accepted_residuals.tsv` key is stale; G2 heria-proposal nests a captioned panel figure in a rotated float (62q);
+  bibliography numbering). The four open bars: G1 chessboard_and_beamer is an improvement (Fatal → status 2), its
+  `accepted_residuals.tsv` row now `errors 4` (65a); G2 heria-proposal nests a captioned panel figure in a rotated
+  float (62q);
   G4 pgf-interference-de/en timed out on SMT siblings of busy cores (`instructions:u` flat across the bisect, no
   regression). Real losses besides heria-proposal: recipebook's per-recipe `\author`/`\title` after the body and a
   bold font leak, and ascelike's "M.ASCE" split off as a creator. All are batch 65a. Triage:

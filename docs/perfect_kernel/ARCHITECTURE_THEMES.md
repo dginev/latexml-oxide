@@ -18,8 +18,10 @@ were recorded from batches 56jm–56kc and sweep #126.
 
 Ranking (2026-10-02): by in-scope scoreboard mass. At sweep #134 the 1,602 in-scope manuals carried 351 errors (168
 in CJK manuals since ruled out), 23 schema-invalid documents and 14,437 missing words; since then 59e-59n cleared
-every in-scope error (tabularray's `evaluate=` outer key last, 59n) but chessboard_and_beamer's Fatal (beamer
-overlays, ruled D14); sweeps #146-148 meet the goal bar. No theme has an open in-scope error witness; themes 2 and 4a stay standing policy on every fix, theme 9
+every in-scope error (tabularray's `evaluate=` outer key last, 59n) but chessboard_and_beamer's errors (beamer
+overlays, ruled D14; a Fatal until sweep #149, 4 errors since);
+sweeps #146-148 meet the goal bar. No theme has an open in-scope error witness; themes 2 and 4a stay standing policy on
+every fix, theme 9
 (bibliographies, K16) is the largest content lever, and the rest wait for the post-goal generalization audit (user,
 2026-10-01).
 

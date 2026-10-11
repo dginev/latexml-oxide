@@ -1,0 +1,22 @@
+% An ASCE membership grade glued to the society, after the name and a comma (ascelike's own example,
+% ascexmpl.tex:48 `\author[1]{Matthew R. Kuhn, M.ASCE}`; ASCE's S.M./A.M./M./F./Dist.M. grades), qualifies the name as
+% "Member, IEEE" and "PhD" do (base_utilities.rs NAME_GRADE_ABBREVIATIONS): sweep 149 split "M.ASCE" into a creator of
+% its own (it reads as an initial and a surname).
+% witness: ascelike/ascexmpl.
+% oracle:  pdflatex 0 errors: "Matthew R. Kuhn, M.ASCE1 / Second Author2 / ...".
+% engines: rust s149: creators "Matthew R. Kuhn", "M.ASCE"; rust 65a: "Matthew R. Kuhn, M.ASCE"; perl: one creator.
+% expect:  0 errors; two creators, "Matthew R. Kuhn, M.ASCE" and "Second Author", each with its affiliation.
+% status:  RED (base) -> GREEN (65a)
+% preload: ar5iv.sty
+% Guard: perfect_kernel_batch65a::asce_membership_grade_qualifies_the_name.
+\documentclass{article}
+\usepackage{authblk}
+\title{Ascelike authors}
+\author[1]{Matthew R. Kuhn, M.ASCE}
+\author[2]{Second Author}
+\affil[1]{Univ. of Portland, Portland, OR 97203.}
+\affil[2]{Affiliation of the second author.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

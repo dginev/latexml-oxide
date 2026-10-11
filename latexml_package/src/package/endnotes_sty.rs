@@ -81,7 +81,7 @@ LoadDefinitions!({
   // Note: NOT called \printendnotes!
   DefConstructor!(T_CS!("\\lx@theendnotes"), None,
     "<ltx:TOC lists='ent' scope='global' show='refnum > note'><ltx:title>#name</ltx:title></ltx:TOC>",
-    properties => { stored_map!("name" => digest(T_CS!("\\notesname"))?) });
+    properties => { stored_map!("name" => digest_in_group(T_CS!("\\notesname"))?) });
 
   RawTeX!(
     r"

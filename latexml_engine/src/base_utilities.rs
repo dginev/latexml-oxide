@@ -4475,6 +4475,13 @@ fn frontmatter_seal_key(
 
 fn frontmatter_seal_key_of(tag: &str, name: &str) -> String { s!("{tag}\u{1}{name}") }
 
+/// Whether a new `tag` entry under `role`, without a `name`, would now be turned away as a supplement's
+/// ([`seal_digested_frontmatter`]): a title (replaceable), or an author creator.
+pub fn frontmatter_entry_sealed(tag: &str, role: &str) -> bool {
+  let replaceable = REPLACEABLE_FRONTMATTER_TAGS.contains(&tag);
+  frontmatter_seal_key(tag, None, role, replaceable).is_some_and(|key| frontmatter_sealed(&key))
+}
+
 /// How firmly a frontmatter entry is held: `PROVISIONAL_SEAL` for what the fallback flushed at the first section,
 /// which a later `\maketitle` may still replace (the PDF printed it only where the class prints its frontmatter
 /// without one); `FINAL_SEAL` for what a `\maketitle` or a frontmatter environment digested.
@@ -7958,6 +7965,223 @@ fn number_caption_float(
   Ok(float)
 }
 
+/// Whether the element `node` was built from one thing that shows: its box is a whatsit whose last argument — a
+/// constructor's body (`\rotatebox`, `\scalebox`, `\resizebox`, `\fbox`, `\colorbox`) — has exactly one item,
+/// nested groups flattened, that shows something ([`typesets_content`]). Any other box refuses. An alignment
+/// environment around the transform is read by [`environment_is_sole_content`] instead.
+fn box_is_sole_content(document: &Document, node: &Node) -> bool {
+  fn shown(d: &Digested) -> usize {
+    match d.data() {
+      DigestedData::List(l) => l.borrow().boxes.iter().map(shown).sum(),
+      _ => usize::from(typesets_content(d)),
+    }
+  }
+  let Some(whatsit) = document.get_node_box(node) else {
+    return false;
+  };
+  let DigestedData::Whatsit(w) = whatsit.data() else {
+    return false;
+  };
+  let w = w.borrow();
+  matches!(w.get_args().last(), Some(Some(body)) if shown(body) == 1)
+}
+
+/// Whether the environment an `ltx:_CaptureBlock_` is being built for is an alignment wrapper (`{center}`,
+/// `{flushleft}`, `{flushright}`: its box is the environment's whatsit, whose body is what it holds between `\begin`
+/// and `\end`) holding one thing that shows: the transform alone, not a transform and a tabular after it. Any other
+/// environment refuses (`{minipage}`, `{framed}`).
+fn environment_is_sole_content(document: &Document, capture: &Node) -> bool {
+  fn shown(d: &Digested) -> usize {
+    match d.data() {
+      DigestedData::List(l) => l.borrow().boxes.iter().map(shown).sum(),
+      _ => usize::from(typesets_content(d)),
+    }
+  }
+  let Some(whatsit) = document.get_node_box(capture) else {
+    return false;
+  };
+  let DigestedData::Whatsit(w) = whatsit.data() else {
+    return false;
+  };
+  let w = w.borrow();
+  // only the alignment wrappers, which make no box of their own (a `{minipage}` keeps its width and class as a panel,
+  // which the caption would leave: two minipages side by side shrank to the rotated box; a `{framed}` frame would move
+  // onto the float)
+  [
+    "\\begin{center}",
+    "\\begin{flushleft}",
+    "\\begin{flushright}",
+  ]
+  .contains(&w.get_definition().get_cs_name().as_ref())
+    && matches!(w.get_body(), Ok(Some(body)) if shown(&body) == 1)
+}
+
+/// Whether a box's closing caption may be moved from inside the transform `context` to the float `home` its climb
+/// found ([`insert_block_as`]): every element from `context` up to `home` was built from this box alone
+/// ([`box_is_sole_content`]: no content beside or after it would follow the moved insertion point out of a frame
+/// or a transform) and none is a paragraph, and `home` is a float whose own content holds no other caption (one
+/// `\@@caption`: a second would make the two one float, with one number for two `\label`s — two `\resizebox`ed
+/// captioned panels, a float's own `\caption` after the box, `\subcaption` panels). Otherwise Perl's container
+/// stands. Witnesses heria/heria-proposal (heria.cls:737-745 `SidewaysFigure`), 1810.08269; guards
+/// `perfect_kernel_batch65a::caption_in_a_rotated_parbox_stays_with_its_figure`,
+/// `caption_hoist_never_merges_two_captions`, `caption_hoist_never_moves_content_beside_the_box`.
+/// OXIDIZED_DESIGN #529.
+fn caption_hoist_is_safe(document: &Document, context: &Node, home: &Node) -> bool {
+  fn captions(d: &Digested) -> usize {
+    match d.data() {
+      DigestedData::List(l) => l.borrow().boxes.iter().map(captions).sum(),
+      DigestedData::Whatsit(w) => {
+        let w = w.borrow();
+        usize::from(w.get_definition().get_cs_name() == "\\@@caption")
+          + w.get_args().iter().flatten().map(captions).sum::<usize>()
+          + w
+            .get_body()
+            .ok()
+            .flatten()
+            .map_or(0, |body| captions(&body))
+      },
+      _ => 0,
+    }
+  }
+  let is_float = |n: &Node| with(document::get_node_qname(n), |q| PANEL_FLOATS.contains(&q));
+  // The home an alignment environment's capture block (`{center}`, `{flushleft}`, `{flushright}` around the
+  // transform: the caption lands in what the environment builds, which its float then holds): the environment holds
+  // the transform alone, and the float right above it is the one whose captions count.
+  let float = if is_float(home) {
+    home.clone()
+  } else if with(document::get_node_qname(home), |q| {
+    q == "ltx:_CaptureBlock_"
+  }) && environment_is_sole_content(document, home)
+    && let Some(parent) = home.get_parent().filter(is_float)
+  {
+    parent
+  } else {
+    return false;
+  };
+  let mut node = Some(context.clone());
+  while let Some(n) = node {
+    if &n == home {
+      return document
+        .get_node_box(&float)
+        .is_some_and(|float| captions(&float) == 1);
+    }
+    // A paragraph on the way is open to what follows the box in it (`\fbox{\rotatebox…} trailing text`): its
+    // node box is only what opened it, so nothing tells the rest of it is not there.
+    if with(document::get_node_qname(&n), |q| {
+      q == "ltx:p" || q == "ltx:para"
+    }) {
+      return false;
+    }
+    if !box_is_sole_content(document, &n) {
+      return false;
+    }
+    node = n.get_parent();
+  }
+  false
+}
+
+/// Where the content a box cannot hold is placed after it ([`insert_block_as`]'s hoist): the nearest ancestor of
+/// `context` that holds all of `tail_tags`, climbing only through text containers, never out of a list, an alignment
+/// or a float, and the node it follows there (the box itself, or the ancestor's child the climb came from).
+fn tail_home(
+  context: &Node,
+  container: &Node,
+  tail_tags: &[SymStr],
+  kept_empty: bool,
+) -> Option<(Node, Node)> {
+  let flow = |n: &Node| {
+    document::can_contain(n, "#PCDATA")
+      || with(document::get_node_qname(n), |t| {
+        document::can_contain_somehow(t, "ltx:p")
+      })
+  };
+  // LIST: the climb never leaves a list. Perl floats nothing out of a list
+  // (`adjustBackmatterElement` autocloses only `canAutoClose` nodes and a
+  // drawing's `svg:g` is not one, latex_constructs.pool.ltxml:3936 /
+  // Document.pm find_insertion_point): a bibliography arriving ALONE from a
+  // tcolorbox inside an `\item` (`kept` empty, so the TEXT guard above did
+  // not hold it) climbed through the `ltx:item`/`ltx:itemize` to the
+  // section, which closed the list under the remaining items — they then
+  // nested inside one another (biblatex-ext.tex:1301/1326 `optionlist` +
+  // `bibexample`, 4 schema errors; RUST-ONLY). The block stays in the box
+  // and the model reports it, as Perl does (SHARED `ltx:bibliography` in
+  // `ltx:block`). The list-free hoists keep their surpass (xebaposter,
+  // juradiss, the parbox caption). Guard
+  // `bibliography_in_a_list_item_box_keeps_the_list`.
+  let list_boundary = |n: &Node| {
+    with(document::get_node_qname(n), |t| {
+      matches!(
+        t,
+        "ltx:item"
+          | "ltx:inline-item"
+          | "ltx:itemize"
+          | "ltx:enumerate"
+          | "ltx:description"
+          | "ltx:inline-itemize"
+          | "ltx:inline-enumerate"
+          | "ltx:inline-description"
+      )
+    })
+  };
+  let mut anchor = container.clone();
+  let mut ancestor = context.clone();
+  loop {
+    if tail_tags
+      .iter()
+      .all(|t| with(*t, |s| document::can_contain(&ancestor, s)))
+    {
+      return Some((anchor, ancestor));
+    }
+    if list_boundary(&ancestor) || (!flow(&ancestor) && !kept_empty) {
+      break;
+    }
+    // Never out of an alignment: the hoist moves the insertion point too, past a cell whose `</td>` (and row, and
+    // table) the alignment still owes at its `&`, `\\` and `\end` — a caption in a minipage in a tabular cell left
+    // `<td>` open in the figure (1601.03744, 5 malformed errors); a math `array` likewise. Perl's `floatToElement`
+    // (Document.pm:1061-1072) floats past such nodes without closing them and restores the insertion point after;
+    // a box the climb leaves here (the rotated `\parbox`) is closed already.
+    let alignment = |n: &Node| {
+      with(document::get_node_qname(n), |t| {
+        matches!(
+          t,
+          "ltx:td"
+            | "ltx:tr"
+            | "ltx:thead"
+            | "ltx:tbody"
+            | "ltx:tfoot"
+            | "ltx:tabular"
+            | "ltx:XMCell"
+            | "ltx:XMRow"
+            | "ltx:XMArray"
+        )
+      })
+    };
+    // Nor out of a float: an appendix section (or a bibliography) in a minipage in a `table` was lifted past it,
+    // leaving the table empty and its caption at the document's top level, with no diagnostic; it now stays in the
+    // float and errors there, as Perl's does (a sectioning unit in a float errors, OXIDIZED_DESIGN_DIVERGENCES #189
+    // ruling). Witness 2609.05763 (a nomenclature glossary in a framed minipage in a table); guard
+    // `perfect_kernel_batch61::appendix_in_a_minipage_stays_in_its_float`.
+    // The climb now has three per-tag stops (list, alignment, float), and a quote still leaks
+    // (repros/boxes-groups/bibliography_in_minipage_in_quote_keeps_the_quote.tex): SYNC_STATUS 62zd.
+    let float = |n: &Node| {
+      with(document::get_node_qname(n), |t| {
+        matches!(t, "ltx:table" | "ltx:figure" | "ltx:float")
+      })
+    };
+    if alignment(&ancestor) || float(&ancestor) {
+      break;
+    }
+    match ancestor.get_parent() {
+      Some(p) if matches!(p.get_type(), Some(NodeType::ElementNode)) => {
+        anchor = ancestor;
+        ancestor = p;
+      },
+      _ => break,
+    }
+  }
+  None
+}
+
 /// This attempts to be a generalize vbox construction;
 ///
 /// The idea is to receeive block-like material, possibly wrapped in appropriate
@@ -8240,15 +8464,53 @@ fn insert_block_as(
     }
   }
   let holds_all = |c: SymStr| node_tags.iter().all(|t| holds(c, *t));
-  let container_tag = candidate_set
+  // Perl's order (TeX_Box.pool.ltxml:503-509): the first candidate that holds all the content and that the context
+  // holds, else the first that holds all the content.
+  let allowed = |c: SymStr| document::can_contain_qsym(context_tag, c);
+  let fits_all = candidate_set
     .iter()
     .copied()
-    .find(|c| holds_all(*c))
-    .or_else(|| {
-      node_tags
-        .first()
-        .and_then(|first| candidate_set.iter().copied().find(|c| holds(*c, *first)))
-    });
+    .find(|c| holds_all(*c) && allowed(*c))
+    .or_else(|| candidate_set.iter().copied().find(|c| holds_all(*c)));
+  let container_tag = match fits_all {
+    // One the context does not hold (a figure for a `\parbox` with a closing `\caption` in a `\rotatebox`'s
+    // `ltx:inline-block`, LaTeXML-misc.rnc:28: heria.cls:737-745 `SidewaysFigure`, schema-invalid) gives way to one it
+    // holds for the box's leading content, when what that one cannot hold is the caption closing the box and it has
+    // a home after it ([`tail_home`]: the caption goes to the figure the box is in, read in the same order; 1810.08269).
+    // A box that opens with its caption (`\rotatebox{90}{\begin{minipage}…\caption…\begin{tabular}…}`) keeps Perl's
+    // choice: hoisting the caption would put it after the content it precedes, and an empty box would be left in the
+    // transform; so does one whose closing part holds more than a caption, one beside other content in the
+    // transform or a frame around it (`\scalebox{…}{minipage \hfill minipage}`, 2605.06364: the hoist moves the
+    // insertion point, so the next panel would leave the transform), and one whose float holds another caption
+    // ([`caption_hoist_is_safe`]: two captions would become one float).
+    Some(c) if !allowed(c) => candidate_set
+      .iter()
+      .copied()
+      .filter(|alt| allowed(*alt))
+      .find(|alt| {
+        let kept = node_tags.iter().take_while(|t| holds(*alt, **t)).count();
+        let tail = &node_tags[kept..];
+        kept > 0
+          && !tail.is_empty()
+          && tail
+            .iter()
+            .all(|t| !holds(*alt, *t) && with(*t, |q| q == "ltx:caption" || q == "ltx:toccaption"))
+          && tail_home(
+            &context,
+            &container,
+            tail,
+            nodes[..kept]
+              .iter()
+              .all(|n| n.get_content().trim().is_empty()),
+          )
+          .is_some_and(|(_, home)| caption_hoist_is_safe(document, &context, &home))
+      })
+      .or(Some(c)),
+    Some(c) => Some(c),
+    None => node_tags
+      .first()
+      .and_then(|first| candidate_set.iter().copied().find(|c| holds(*c, *first))),
+  };
   let hoisted: Vec<bool> = node_tags
     .iter()
     .map(|t| container_tag.is_none_or(|c| !holds(c, *t)))
@@ -8292,99 +8554,8 @@ fn insert_block_as(
     // where it is; Perl's `adjustBackmatterElement` cannot cross at all —
     // `ltx:bibliography` isn't allowed in `ltx:block`, SHARED; batch 56bq).
     let kept_empty = kept.iter().all(|n| n.get_content().trim().is_empty());
-    let flow = |n: &Node| {
-      document::can_contain(n, "#PCDATA")
-        || with(document::get_node_qname(n), |t| {
-          document::can_contain_somehow(t, "ltx:p")
-        })
-    };
-    // LIST: the climb never leaves a list. Perl floats nothing out of a list
-    // (`adjustBackmatterElement` autocloses only `canAutoClose` nodes and a
-    // drawing's `svg:g` is not one, latex_constructs.pool.ltxml:3936 /
-    // Document.pm find_insertion_point): a bibliography arriving ALONE from a
-    // tcolorbox inside an `\item` (`kept` empty, so the TEXT guard above did
-    // not hold it) climbed through the `ltx:item`/`ltx:itemize` to the
-    // section, which closed the list under the remaining items — they then
-    // nested inside one another (biblatex-ext.tex:1301/1326 `optionlist` +
-    // `bibexample`, 4 schema errors; RUST-ONLY). The block stays in the box
-    // and the model reports it, as Perl does (SHARED `ltx:bibliography` in
-    // `ltx:block`). The list-free hoists keep their surpass (xebaposter,
-    // juradiss, the parbox caption). Guard
-    // `bibliography_in_a_list_item_box_keeps_the_list`.
-    let list_boundary = |n: &Node| {
-      with(document::get_node_qname(n), |t| {
-        matches!(
-          t,
-          "ltx:item"
-            | "ltx:inline-item"
-            | "ltx:itemize"
-            | "ltx:enumerate"
-            | "ltx:description"
-            | "ltx:inline-itemize"
-            | "ltx:inline-enumerate"
-            | "ltx:inline-description"
-        )
-      })
-    };
-    let mut anchor = container.clone();
-    let mut ancestor = context.clone();
-    let mut placed = false;
-    loop {
-      if tail_tags
-        .iter()
-        .all(|t| with(*t, |s| document::can_contain(&ancestor, s)))
-      {
-        placed = true;
-        break;
-      }
-      if list_boundary(&ancestor) || (!flow(&ancestor) && !kept_empty) {
-        break;
-      }
-      // Never out of an alignment: the hoist moves the insertion point too, past a cell whose `</td>` (and row, and
-      // table) the alignment still owes at its `&`, `\\` and `\end` — a caption in a minipage in a tabular cell left
-      // `<td>` open in the figure (1601.03744, 5 malformed errors); a math `array` likewise. Perl's `floatToElement`
-      // (Document.pm:1061-1072) floats past such nodes without closing them and restores the insertion point after;
-      // a box the climb leaves here (the rotated `\parbox`) is closed already.
-      let alignment = |n: &Node| {
-        with(document::get_node_qname(n), |t| {
-          matches!(
-            t,
-            "ltx:td"
-              | "ltx:tr"
-              | "ltx:thead"
-              | "ltx:tbody"
-              | "ltx:tfoot"
-              | "ltx:tabular"
-              | "ltx:XMCell"
-              | "ltx:XMRow"
-              | "ltx:XMArray"
-          )
-        })
-      };
-      // Nor out of a float: an appendix section (or a bibliography) in a minipage in a `table` was lifted past it,
-      // leaving the table empty and its caption at the document's top level, with no diagnostic; it now stays in the
-      // float and errors there, as Perl's does (a sectioning unit in a float errors, OXIDIZED_DESIGN_DIVERGENCES #189
-      // ruling). Witness 2609.05763 (a nomenclature glossary in a framed minipage in a table); guard
-      // `perfect_kernel_batch61::appendix_in_a_minipage_stays_in_its_float`.
-      // The climb now has three per-tag stops (list, alignment, float), and a quote still leaks
-      // (repros/boxes-groups/bibliography_in_minipage_in_quote_keeps_the_quote.tex): SYNC_STATUS 62zd.
-      let float = |n: &Node| {
-        with(document::get_node_qname(n), |t| {
-          matches!(t, "ltx:table" | "ltx:figure" | "ltx:float")
-        })
-      };
-      if alignment(&ancestor) || float(&ancestor) {
-        break;
-      }
-      match ancestor.get_parent() {
-        Some(p) if matches!(p.get_type(), Some(NodeType::ElementNode)) => {
-          anchor = ancestor;
-          ancestor = p;
-        },
-        _ => break,
-      }
-    }
-    if placed {
+    let home = tail_home(&context, &container, &tail_tags, kept_empty);
+    if let Some((anchor, ancestor)) = home {
       // `anchor` is an element and a box's content nodes are already
       // coalesced, so no two adjacent text nodes reach `add_next_sibling`
       // (libxml2 merges those and frees the second — see `replace_node`).
@@ -12162,14 +12333,19 @@ fn ends_with_abbreviation(name: &str) -> bool {
 
 /// The societies whose membership grade follows an author's name (`Senior Member, IEEE`).
 const NAME_GRADE_SOCIETIES: &[&str] = &[
-  "IEEE", "ACM", "OSA", "SPIE", "IET", "IEICE", "AAAI", "SIAM", "APS", "IAPR", "IFAC",
+  "IEEE", "ACM", "OSA", "SPIE", "IET", "IEICE", "AAAI", "SIAM", "APS", "IAPR", "IFAC", "ASCE",
+  "ASME",
 ];
+/// The abbreviated grades glued to a society's name (`M.ASCE`, `F.ASCE`, `A.M.ASCE`: ascelike's own
+/// `\author[1]{Matthew R. Kuhn, M.ASCE}`, ascexmpl.tex:48; ASCE's Student, Associate, full and Distinguished Members
+/// and Fellows).
+const NAME_GRADE_ABBREVIATIONS: &[&str] = &["S.M.", "A.M.", "M.", "F.", "Dist.M."];
 /// Generational suffixes and academic degrees written after a name, comma-separated (`John Smith, Jr.`, `Jane Doe,
 /// MD, PhD`).
 const NAME_SUFFIXES: &[&str] = &[
   "Jr", "Jr.", "Sr", "Sr.", "Jun.", "Sen.", "II", "III", "IV", "PhD", "Ph.D.", "Ph.D", "MD",
   "M.D.", "MSc", "M.Sc.", "BSc", "B.Sc.", "MA", "M.A.", "MS", "M.S.", "MBA", "MPH", "MBBS",
-  "DPhil", "D.Phil.", "DSc", "D.Sc.", "FRS", "RN", "Esq.",
+  "DPhil", "D.Phil.", "DSc", "D.Sc.", "FRS", "RN", "Esq.", "P.E.",
 ];
 
 /// Whether an author-list part qualifies the name before it instead of naming a person: a generational suffix or a
@@ -12178,6 +12354,15 @@ const NAME_SUFFIXES: &[&str] = &[
 fn is_name_qualifier(text: &str) -> bool {
   let text = strip_glued_marks(text);
   if NAME_SUFFIXES.contains(&text) {
+    return true;
+  }
+  // an abbreviated grade before its society, glued or spaced (`M.ASCE`, `M. ASCE`, `A. M. ASCE`)
+  let compact: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+  if NAME_GRADE_ABBREVIATIONS.iter().any(|grade| {
+    compact
+      .strip_prefix(grade)
+      .is_some_and(|society| NAME_GRADE_SOCIETIES.contains(&society))
+  }) {
     return true;
   }
   let words: Vec<&str> = text.split([' ', ',']).filter(|w| !w.is_empty()).collect();
@@ -12230,7 +12415,11 @@ fn name_parts(text: &str) -> Vec<String> {
 fn name_count(text: &str) -> usize {
   let parts = name_parts(text);
   if parts.iter().all(|p| name_shaped(p) || is_name_qualifier(p)) {
-    parts.iter().filter(|p| name_shaped(p)).count()
+    // (a qualifier is no name, whatever its shape: `M.ASCE` reads as a glued initial and surname)
+    parts
+      .iter()
+      .filter(|p| name_shaped(p) && !is_name_qualifier(p))
+      .count()
   } else {
     0
   }

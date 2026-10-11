@@ -175,7 +175,8 @@ Every witness below except xebaposter and elzcards is lualatex/pdflatex-unclean 
 
 ## D14. beamer overlays are one pass here, many passes in beamer
 
-**Witness:** chessboard/chessboard_and_beamer (pdflatex-clean, in scope; 3 errors + `Fatal:Mouth:EoF`). Real beamer
+**Witness:** chessboard/chessboard_and_beamer (pdflatex-clean, in scope; since sweep #149 status 2: 4 errors, no
+Fatal, schema-valid; before it 3 errors + `Fatal:Mouth:EoF`). Real beamer
 typesets a frame once per overlay slide (beamerbaseframe.sty), so each `\only<n>` sees a fresh skak game; our binding and
 Perl (beamer.cls.ltxml:793-834) take every overlay in one pass. **User decision 2026-09-10: keep Perl's single pass**;
 documented residue (RED `expl3/s41msg_chessboard_beamer_only_gamestate`).

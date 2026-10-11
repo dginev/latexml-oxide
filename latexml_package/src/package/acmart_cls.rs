@@ -607,7 +607,7 @@ LoadDefinitions!({
   // matches the Perl form.
   DefConstructor!("\\acks", "<ltx:acknowledgements name='#name'>",
     properties => {
-      let name_toks = DigestIf!(T_CS!("\\acknowledgmentsname"))?;
+      let name_toks = digest_in_group_if(T_CS!("\\acknowledgmentsname"))?;
       stored_map!("name" => name_toks)
     });
   DefConstructor!("\\endacks", "</ltx:acknowledgements>");

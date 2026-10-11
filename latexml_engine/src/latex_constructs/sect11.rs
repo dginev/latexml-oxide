@@ -1198,7 +1198,7 @@ pub(crate) fn load() -> Result<()> {
       s!("{docid}.idx")
     };
     whatsit.set_property("id", id);
-    if let Some(title) = DigestIf!("\\indexname")? {
+    if let Some(title) = digest_in_group_if(T_CS!("\\indexname"))? {
       if let Some(titlefont) = title.get_font()? {
         whatsit.set_property("titlefont", titlefont);
       }

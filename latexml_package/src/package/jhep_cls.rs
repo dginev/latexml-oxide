@@ -203,7 +203,7 @@ LoadDefinitions!({
   // "Acknowledgments" was breaking non-English JHEP submissions.
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
     properties => {
-      let name_toks = DigestIf!(T_CS!("\\acknowlname"))?;
+      let name_toks = digest_in_group_if(T_CS!("\\acknowlname"))?;
       stored_map!("name" => name_toks)
     });
   DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
