@@ -78,6 +78,11 @@ path = "bin/binding_audit.rs"
 required-features = ["test-utils"]
 
 [[bin]]
+name = "ab_audit"
+path = "bin/ab_audit/main.rs"
+required-features = ["test-utils"]
+
+[[bin]]
 name = "cortex_worker"
 path = "bin/cortex_worker.rs"
 required-features = ["cortex"]
@@ -105,8 +110,10 @@ dhat-heap = ["dep:dhat"]
 # --features cortex` for the worker) to drop `glob` and `phf` from the
 # binary's dependency graph (audit DEP-02, 2026-05-18). Saves the compile
 # cost of `phf` + `phf_macros` (proc-macro) + their `phf_generator` /
-# `phf_shared` build-deps, plus a small `.text` footprint.
-test-utils = ["dep:glob", "dep:phf"]
+# `phf_shared` build-deps, plus a small `.text` footprint. `roxmltree` and `similar`
+# serve only the `ab_audit` A/B comparator (`bin/ab_audit/`): a pure-Rust XML reader
+# per worker thread (rust-libxml is not shared across threads) and its line diff.
+test-utils = ["dep:glob", "dep:phf", "dep:roxmltree", "dep:similar"]
 # Source-map precision build (docs/performance/SOURCE_PROVENANCE.md §3.1.1): widen `Token`
 # with a per-token origin handle (8→12) so each token carries its exact source
 # start through expansion to digestion. OFF by default. Propagates to every
@@ -161,6 +168,8 @@ once_cell = "1.17.0"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 glob = { version = "0.3", optional = true }
 phf = { version = "0.14.0", features = ["macros"], optional = true }
+roxmltree = { version = "0.21", optional = true }
+similar = { version = "3", optional = true }
 rustc-hash = "2.0.0"
 latexml_codegen = {path = "../latexml_codegen", version = "0.4.2"}
 latexml_core = {path = "../latexml_core", version = "0.6.0"}

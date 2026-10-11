@@ -31,7 +31,7 @@ static GLOBAL: dhat::Alloc = dhat::Alloc;
 
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
-#[command(name = "latexml_oxide", version, about)]
+#[command(name = "latexml_oxide", version = latexml::identity::VERSION_WITH_REVISION, about)]
 struct Cli {
   /// The TeX/LaTeX source file(s) to convert (overridden by --source). A `.bib`,
   /// a `.zip`/`.tar.gz` archive, or a directory is auto-detected. Several files
