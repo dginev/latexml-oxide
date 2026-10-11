@@ -15,6 +15,9 @@ LoadDefinitions!({
   ].iter() {
     DeclareOption!(*option, None);
   }
+  // svmult.cls:182-208 (svmono.cls:183-210): `graybox` loads color and framed and sets `{svgraybox}` and
+  // `{svtintedbox}` shaded; without it they are a quotation-like list (svmult.cls:822-850).
+  DeclareOption!("graybox", { AssignValue!("svmult_graybox" => true); });
 
   // Other options could load sv<option>.clo
   // Anything else gets passed to book.
@@ -118,8 +121,72 @@ LoadDefinitions!({
   DefMacro!("\\toctitlestyle",    "\\bfseries");
   DefMacro!("\\tocaftauthskip",   "\\z@");
 
-  DefMacro!("\\preface{}",   "\\chapter*{#1}");
+  // svmult.cls:668 (v5.4 2007 to v5.6 2018; svmono.cls:554 the same): the title is optional, `\prefacename` by
+  // default. Perl's `\preface{}` (svmult.cls.ltxml:111) took the next token for it: the bare `\preface` of a blank
+  // line titled the chapter `\par` (1001.3294, 1508.02595, svmono).
   DefMacro!("\\prefacename", "Preface");
+  RawTeX!(r"\newcommand{\preface}[1][\prefacename]{\chapter*{#1}}");
+  // svmult.cls:669-674 (svmono.cls:555-559): the other unnumbered chapters of the front and back matter (1003.4850,
+  // 0912.2110).
+  DefMacro!("\\forewordname", "Foreword");
+  RawTeX!(r"\newcommand{\foreword}[1][\forewordname]{\chapter*{#1}}
+\newcommand{\contributors}[1][\contriblistname]{\chapter*{#1}}");
+  DefMacro!("\\extrachap{}", "\\chapter*{#1}");
+  DefMacro!("\\Extrachap{}", "\\chapter*{#1}");
+  // svmult.cls:441-442: the text on the back of a part's title page, plain text here.
+  RawTeX!(r"\newenvironment{partbacktext}{}{}");
+  // svmult.cls:1296-1298: a rule twice `\arrayrulewidth` thick, the tables' top and bottom rule — a `\hline`.
+  // 1511.08212, 1607.05986.
+  Let!("\\svhline", "\\hline");
+  // svmult.cls:1731-1733 (svmono.cls:1521-1523): `{prob}`, a problem numbered without a caption (`\nocaption`), and
+  // `{sol}{<label>}`, its solution, headed by the problem's number in bold (1509.02295, 1001.3294).
+  // With no caption a reference to a problem is its number alone, not the theorem's "<name> <number>".
+  RawTeX!(r"\spnewtheorem{prob}{}{\bfseries}{\rmfamily}\def\typerefnum@prob{\theprob}
+\newcommand{\probref}[1]{\textbf{\ref{#1}} }
+\newenvironment{sol}{\par\noindent\probref}{\par}");
+  // svmult.cls:182-208, 822-850 (svmono.cls:183-210, 690-719): the gray and tinted boxes — shaded (framed.sty) under
+  // `graybox`; otherwise the class warns and sets a quotation-like list. v5.5/v5.6 (2018, svmult.cls:2430-2441)
+  // redefine `{svgraybox}` `\AtBeginDocument` on a `\MakeFramed` `{newshaded}` box whatever the options, which
+  // needs framed.sty — loaded only under `graybox` — so there a document without it errors in pdflatex (an undefined
+  // `\MakeFramed`); the binding keeps the per-option definitions. 0801.0527, 0805.1759, 0808.3224.
+  if lookup_bool("svmult_graybox") {
+    RequirePackage!("color");
+    RequirePackage!("framed");
+    RawTeX!(r"\definecolor{shadecolor}{gray}{.85}\definecolor{tintedcolor}{gray}{.80}
+\newenvironment{svgraybox}{\begin{shaded}}{\end{shaded}}
+\newenvironment{svtintedbox}{\definecolor{shadecolor}{gray}{.80}\begin{shaded}}{\end{shaded}}");
+  } else {
+    RawTeX!(r#"\newenvironment{svgraybox}{\ClassWarning{Springer-SVMono}{Environment "svgraybox" not available,\MessageBreak
+switching over to "quotation" environment;\MessageBreak specify documentclass option "graybox",\MessageBreak
+see SVMono documentation -}\begin{quotation}}{\end{quotation}}
+\newenvironment{svtintedbox}{\ClassWarning{Springer-SVMono}{Environment "svtintedbox" not available,\MessageBreak
+switching over to "quotation" environment;\MessageBreak specify documentclass option "graybox",\MessageBreak
+see SVMono documentation -}\begin{quotation}}{\end{quotation}}"#);
+  }
+
+  // svmult.cls:321-322, 538-541, 570-571 (svmono.cls:318-319, 424-427): `\motto[<width>]{<text>}` and `\chapauthor
+  // {<names>}` store what the next chapter head sets under its title (`\processchapauthor`, `\processmotto` in
+  // `\@makechapterhead`, :634-635; a starred head only the motto, `\@makeschapterhead` :649): the
+  // chapter's author a creator of that chapter, the motto a quotation in the class's motto font, read through the
+  // kernel's `\lx@startsection@afterhook` inside the new chapter (0911.4644, 1112.2297 `\motto`; 1010.1304, 1009.1542
+  // `\chapauthor`).
+  RawTeX!(r"\newcommand{\mottosize}{\small}\newcommand{\mottostyle}{\itshape\unboldmath\raggedright}
+\newdimen\mottowidth
+\newcommand\motto[2][77mm]{\setlength{\mottowidth}{#1}\gdef\m@ttotext{#2}}
+\newcommand{\chapauthor}[1]{\gdef\ch@pauthor{#1}}
+\def\lx@sv@chapterhead{\@ifundefined{ch@pauthor}{}{\lx@sv@chapauthor{\ch@pauthor}\global\let\ch@pauthor\undefined}%
+\lx@sv@schapterhead}
+\def\lx@sv@schapterhead{\@ifundefined{m@ttotext}{}{\begin{quote}\mottosize\mottostyle\m@ttotext\end{quote}%
+\global\let\m@ttotext\undefined}}");
+  DefConstructor!("\\lx@sv@chapauthor{}",
+    "<ltx:creator role='author'><ltx:personname>#1</ltx:personname></ltx:creator>");
+  DefMacro!("\\lx@startsection@afterhook{}{}", sub[(stype, inlist)] {
+    Ok(match (stype.to_string().as_str(), inlist.to_string().is_empty()) {
+      ("chapter", false) => Tokens!(T_CS!("\\lx@sv@chapterhead")),
+      ("chapter", true) => Tokens!(T_CS!("\\lx@sv@schapterhead")),
+      _ => Tokens!(),
+    })
+  });
 
   DefMacro!("\\propositionname", "Proposition");
 

@@ -1,0 +1,15 @@
+% witness: 0711.3034 (ships the 1696-line mn2e.cls v2.2, whose :1575-1686 define the AAS journal abbreviations; the
+%          common 1574-line copy with the same stamp defines none: reviewer's sample, 0 of 213 shipping papers)
+% oracle:  pdflatex 0 errors with 0711.3034's mn2e.cls: "ApJ" and "MNRAS" in the entry (the 1574-line copy: \apj,
+%          \mnras undefined)
+% engines: rust 64zc = 2 errors (\apj, \mnras undefined); Perl the same (mn2e_support.sty.ltxml has none)
+% expect:  0 errors with no copy shipped (the binding's fallback set); "ApJ" and "MNRAS" in the entry
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass{mn2e}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{1}
+\bibitem{a} Smith J., 2001, \apj, 550, 1; Jones K., 2002, \mnras, 330, 2
+\end{thebibliography}
+\end{document}

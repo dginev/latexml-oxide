@@ -14,6 +14,9 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("booktabs");
   RequirePackage!("graphicx");
+  // interact.cls:134-138 (v1.01-v1.05): `\def\bm#1{\mathchoice{\mbox{\boldmath$\displaystyle#1$}}…}`, bold math the
+  // class defines itself, as bm.sty's `\bm` (bm_sty.rs) — 2310.17051, 1803.04839, 2212.00021.
+  DefConstructor!("\\bm{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
 
   // interact.cls:266-274: `\author{\name{…}\affil{…}}` holds the whole block, and `\name{X}` prints `X\\`, `\affil{Y}`
   // and `\email{Z}` lines of their own: the names line and the affiliation lines the kernel author parse reads, so a

@@ -1,0 +1,14 @@
+% witness: 0801.0527 (svmult v5.4 without the `graybox` option)
+% oracle:  pdflatex 0 errors, 1 class warning (svmult.cls v5.4 2007, :822-836): 'Environment "svgraybox" not available,
+%          switching over to "quotation" environment'; v5.5/v5.6 (2018) instead redefine it at \begin{document} on
+%          framed.sty's \MakeFramed, undefined without `graybox`: 3 errors there
+% engines: rust 64zc = 1 error ({svgraybox} undefined)
+% expect:  0 errors, 1 warning (the class's); the text a quotation
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\begin{svgraybox}
+Boxed TEXT.
+\end{svgraybox}
+\end{document}

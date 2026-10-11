@@ -234,16 +234,18 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   // A fallback class's guess (OmniBus's `\let\abst\abstract`, for a class with no binding): a document that
   // compiles with its real class and `\newcommand`s the name shows that class leaves it undefined, so the
   // document's definition wins (2605.05619's `\newcommand{\abst}[1]{|#1|}`; 59g, OXIDIZED_DESIGN_DIVERGENCES #408).
-  // The document's only: a raw class or package loaded beside OmniBus (apa7.cls) yields to it, as raw files yield
-  // to bindings.
+  // The document's, and its author's own files' (K22: the author's files outrank our guesses; a raw file the author
+  // shipped beside the source, `binding::content::reading_author_file` — 0901.4335's `mn2e_journal_style.sty`): a
+  // TeX Live class or package loaded beside OmniBus (apa7.cls) yields to it, as raw files yield to bindings.
   // A kernel stub (`DefinitionOrigin::Stub`: aaai's `\equalcontrib`, sect05.rs) yields to a raw file's own definition
   // as well, since the real class or style defines the name (copernicus.cls:1673).
   if is_fallback_meaning(cs) {
     let origin = definition::origin::current_origin();
     if origin == definition::origin::DefinitionOrigin::Document
       || (origin == definition::origin::DefinitionOrigin::File
-        && lookup_definition(cs)?
-          .is_some_and(|prev| prev.get_origin() == definition::origin::DefinitionOrigin::Stub))
+        && (reading_author_file()
+          || lookup_definition(cs)?
+            .is_some_and(|prev| prev.get_origin() == definition::origin::DefinitionOrigin::Stub)))
     {
       return Ok((true, false));
     }
@@ -3930,6 +3932,8 @@ pub fn before_digest_bibliography() -> Result<()> {
   assign_value("lx_bibliography_lonely", false, Some(Scope::Global));
   // …nor does natbib's pending entry stop of an earlier one (`\@bibstop`, natbib.sty:880-905) carry into its first entry
   Let!("\\@bibstop", "\\@undefined");
+  // …and it has a list end of its own (sect11.rs `\lx@bibliography@nolistend`)
+  assign_value("lx_bibliography_no_list_end", false, Some(Scope::Global));
   def_macro_noop("\\bibliographystyle{}")?;
   def_macro_noop("\\bibliography {}")?;
   // avoid \let-based redefinitions of the ending.

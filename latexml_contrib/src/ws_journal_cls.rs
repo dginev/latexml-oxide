@@ -17,6 +17,10 @@ LoadDefinitions!({
   RequirePackage!("graphicx");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
+  // ws-ijmpe.cls:226-230 (ws-ijmpcs.cls:155, ws-mpla.cls:147, ws-rv9x6.cls:160 the same): `\def\bm#1{\mathchoice
+  // {\mbox{\boldmath$#1$}}…}`, bold math the class defines itself, as bm.sty's `\bm` (bm_sty.rs) — 1308.3116,
+  // 2304.11343, hep-ph0401137 (ws-procs9x6).
+  DefConstructor!("\\bm{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
 
   // \catchline{vol}{issue}{year}{pageStart}{pageEnd} — bibliographic
   // running-header metadata. Preserve as frontmatter note.

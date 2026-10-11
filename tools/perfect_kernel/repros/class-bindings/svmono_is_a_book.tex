@@ -1,0 +1,24 @@
+% witness: 1508.02595, 2601.04515, 0801.1245 (svmono: 72 run-336 papers, first error \frontmatter; then \mainmatter,
+%          \chapter, \backmatter, \preface undefined)
+% oracle:  pdflatex 0 errors (svmono.cls v5.5 shipped by 1209.3257): Preface, Contents, "Chapter 1 Intro", 1.1 First,
+%          Glossary
+% engines: rust 64zc = 6 errors (svmono read as the journal class svjour3); Perl raw-loads the shipped class
+% expect:  0 errors; an unnumbered Preface chapter, numbered chapter 1 with section 1.1, an unnumbered Glossary chapter
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass[graybox,envcountchap]{svmono}
+\begin{document}
+\frontmatter
+\preface
+
+Preface TEXT.
+
+\mainmatter
+\chapter{Intro}
+Chapter TEXT.
+\section{First}
+Section TEXT.
+\backmatter
+\extrachap{Glossary}
+Glossary TEXT.
+\end{document}

@@ -16,6 +16,7 @@ pub extern crate latexml_engine as engine;
 // plus package-specific symbols.
 #[macro_use]
 pub mod prelude;
+pub mod shipped_class;
 // XMath helper functions for building XMDual token streams
 pub mod xmath_helpers;
 // Supported LaTeX packages
@@ -542,7 +543,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("svjour1", "cls", package::svjour3_cls::load_definitions),
   ("svjour2", "cls", package::svjour3_cls::load_definitions),
   ("svjour3", "cls", package::svjour3_cls::load_definitions),
-  ("svmono", "cls", package::svjour3_cls::load_definitions),
+  // svmono.cls is svmult.cls's monograph twin (same Springer code base and versions, v5.4 2007 to v5.11 2023: a book,
+  // with chapters and front/main/back matter), not the journal class svjour3 (1508.02595, 2601.04515, 0801.1245).
+  ("svmono", "cls", package::svmult_cls::load_definitions),
   (
     "inst_support",
     "sty",

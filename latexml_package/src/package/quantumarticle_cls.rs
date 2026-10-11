@@ -6,8 +6,72 @@ LoadDefinitions!({
   // See https://github.com/quantum-journal/quantum-journal
 
   load_class("article", Vec::new(), Tokens!())?;
+  // quantumarticle.cls:197-205: a REVTeX journal option turns on its REVTeX compatibility. That provides the REVTeX
+  // front-matter commands, which it does not print (:1462-1471, at `\begin{document}`, so a document's own stays its
+  // own), and the journal abbreviations of REVTeX's `.rtx` files (:1429-1460). What `\pacs` and `\preprint` discard is
+  // kept as metadata only, not displayed: each `\pacs`'s codes as RDFa `dcterms:subject` (every call, beside the
+  // author's own `pdfkeywords`), `\preprint`'s report number as RDFa `dcterms:identifier`. Witnesses 1705.03968,
+  // 1709.01098 (`\pacs`), 2006.05524, 2212.01355 (`\preprint`).
+  for option in ["aps", "pra", "prb", "pre", "prl", "prx", "aip"] {
+    DeclareOption!(option, { AssignValue!("quantumarticle_revtex_compat" => true); });
+  }
   ProcessOptions!();
+  if lookup_bool("quantumarticle_revtex_compat") {
+    RawTeX!(r"\providecommand{\ao}{Appl.\  Opt.}
+\providecommand{\ap}{Appl.\  Phys.}
+\providecommand{\apl}{Appl.\ Phys.\ Lett.}
+\providecommand{\apj}{Astrophys.\ J.}
+\providecommand{\bell}{Bell Syst.\ Tech.\ J.}
+\providecommand{\jqe}{IEEE J.\ Quantum Electron.}
+\providecommand{\assp}{IEEE Trans.\ Acoust.\ Speech Signal Process.}
+\providecommand{\aprop}{IEEE Trans.\ Antennas Propag.}
+\providecommand{\mtt}{IEEE Trans.\ Microwave Theory Tech.}
+\providecommand{\iovs}{Invest.\ Ophthalmol.\ Vis.\ Sci.}
+\providecommand{\jcp}{J.\ Chem.\ Phys.}
+\providecommand{\jmo}{J.\ Mod.\ Opt.}
+\providecommand{\josa}{J.\ Opt.\ Soc.\ Am.}
+\providecommand{\josaa}{J.\ Opt.\ Soc.\ Am.\ A}
+\providecommand{\josab}{J.\ Opt.\ Soc.\ Am.\ B}
+\providecommand{\jpp}{J.\ Phys.\ (Paris)}
+\providecommand{\nat}{Nature (London)}
+\providecommand{\oc}{Opt.\ Commun.}
+\providecommand{\ol}{Opt.\ Lett.}
+\providecommand{\pl}{Phys.\ Lett.}
+\providecommand{\pra}{Phys.\ Rev.\ A}
+\providecommand{\prb}{Phys.\ Rev.\ B}
+\providecommand{\prc}{Phys.\ Rev.\ C}
+\providecommand{\prd}{Phys.\ Rev.\ D}
+\providecommand{\pre}{Phys.\ Rev.\ E}
+\providecommand{\prl}{Phys.\ Rev.\ Lett.}
+\providecommand{\rmp}{Rev.\ Mod.\ Phys.}
+\providecommand{\pspie}{Proc.\ Soc.\ Photo-Opt.\ Instrum.\ Eng.}
+\providecommand{\sjqe}{Sov.\ J.\ Quantum Electron.}
+\providecommand{\vr}{Vision Res.}
+\AtBeginDocument{\providecommand{\pacs}[1]{\lx@add@frontmatter{ltx:rdf}[property=dcterms:subject]{#1}}%
+\providecommand{\preprint}[1]{\lx@add@frontmatter{ltx:rdf}[property=dcterms:identifier]{#1}}\providecommand{\volumeyear}[1]{}%
+\providecommand{\volumenumber}[1]{}\providecommand{\issuenumber}[1]{}\providecommand{\eid}[1]{}%
+\providecommand{\startpage}[1]{}\def\endpage#1{\gdef\@endpage{#1}}}");
+    // :1426-1429, 1474-1495: the compatibility passes natbib `numbers,sort&compress` (a document's own
+    // `\usepackage{natbib}` gets them too) and at the end of the preamble loads it, unless the document loaded natbib or
+    // biblatex itself, providing REVTeX's `\textcite` and `\onlinecite` on it (1705.03968). Its `plainnat` default for a
+    // `\bibliography` with no `\bibliographystyle` only names the `.bst` BibTeX runs.
+    pass_options("natbib", "sty", vec!["numbers".to_string(), "sort&compress".to_string()])?;
+    DefPrimitive!("\\lx@quantumarticle@natbib", {
+      if !lookup_bool("natbib.sty_loaded") && !lookup_bool("biblatex.sty_loaded") {
+        RequirePackage!("natbib");
+      }
+    });
+    RawTeX!(r"\AtBeginDocument{\lx@quantumarticle@natbib
+\providecommand\textcite[1]{\citet{#1}}\providecommand\onlinecite[1]{\cite{#1}}}");
+  }
 
+  // quantumarticle.cls:1392-1394: hyperref, loaded at `\begin{document}` (after the compatibility's natbib).
+  DefPrimitive!("\\lx@quantumarticle@hyperref", {
+    if !lookup_bool("hyperref.sty_loaded") {
+      RequirePackage!("hyperref");
+    }
+  });
+  RawTeX!(r"\AtBeginDocument{\lx@quantumarticle@hyperref}");
   RequirePackage!("bbm");
   // Pre-load with [dvipsnames, table] so user xcolor calls don't
   // silently option-clash. Quantum papers commonly use \cellcolor.

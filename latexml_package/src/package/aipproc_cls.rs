@@ -86,6 +86,9 @@ LoadDefinitions!({
   DefMacro!("\\keywordsname", "Keywords");
   DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordsname:~}]{#1}");
   DefMacro!("\\classification{}", "\\lx@add@classification{#1}");
+  // aipxfm.sty:266-269 (loaded by aipproc.cls): `\let\pacs\classification`, the REVTeX name the AIP templates keep
+  // (cond-mat0701310, 0911.1625).
+  Let!("\\pacs", "\\classification");
 
   DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");
   DefMacro!("\\revised{}", "\\lx@add@date[role=revised]{#1}");

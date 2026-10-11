@@ -723,7 +723,18 @@ pub(crate) fn load() -> Result<()> {
     tokens.extend(mouth::tokenize_internal(TeXString::assembled(
       r"\let\bibliography\lx@mung@saved@bibliography\let\bibliographystyle\lx@mung@saved@bibliographystyle".to_string(),
     )).unlist());
+    // A bibliography opened for a `\bibitem` outside `{thebibliography}` ends where the environment around it does (or
+    // the document, or a heading), never at a bibliography list's own end: what that end does — natbib's
+    // `\bibitem@fin` stop (natbib.sty:1080) — is not done (`lx_bibliography_no_list_end`). Guards
+    // `perfect_kernel_batch64ze::natbib_lonely_entries_spend_no_stop`,
+    // `perfect_kernel_batch64ze::natbib_lonely_entry_closed_by_its_environment_spends_no_stop`.
+    if tag != "thebibliography" {
+      tokens.push(T_CS!("\\lx@bibliography@nolistend"));
+    }
     Ok(Tokens::new(tokens))
+  });
+  DefPrimitive!("\\lx@bibliography@nolistend", {
+    assign_value("lx_bibliography_no_list_end", true, Some(Scope::Global));
   });
   // Perl: maybeCloseElement($tag) if tag =~ /^ltx:(?:itemize|enumerate|description)$/
   // The unit the `\bibitem` opens the bibliography in is marked: the PDF prints its heading over the entries, the

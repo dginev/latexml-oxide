@@ -12369,3 +12369,16 @@ index-bib/kernel_bibitem_then_real_bibliography).
 `bibstyle`, `citestyle`, `sort` go on the first `//ltx:bibliography` of the document (latex_constructs.pool.ltxml:3972-3977;
 ours sect11.rs:302), so after an implicit bibliography they land on that one, not on the `.bbl`'s that follows (repro
 index-bib/kernel_bibitem_then_real_bibliography: `bibstyle="plain"` on `bib`). No visible change.
+
+## 598. svmult's `\preface` takes a mandatory title
+
+Perl svmult.cls.ltxml:111 `DefMacro('\preface{}', '\chapter*{#1}')`; every svmult/svmono version (v5.4–v5.11) has
+`\newcommand{\preface}[1][\prefacename]`. Trigger `\documentclass{svmult}\begin{document}\preface` + blank line +
+`Text.` → a chapter titled `\par`. Fixed in Rust (64ze).
+
+## 599. natbib's bibliography-entry interface is missing
+
+Perl has no natbib `\BibitemOpen`/`\BibitemShut`/`\bibinfo`/`\bibfield` (natbib.sty:880-958), which apsrev4-x,
+ACM-Reference-Format and elsarticle `.bbl` files use. Trigger `\documentclass{revtex4-1}…\bibitem{a}\BibitemOpen
+\bibinfo{note}{X}\BibitemShut{NoStop}` → 3 undefined. Fixed in Rust (64ze; natbib entries cluster 80 → 2 papers with
+errors).

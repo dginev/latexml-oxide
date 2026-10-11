@@ -296,7 +296,8 @@ pub(crate) fn load() -> Result<()> {
       props.insert("title", xtitle.into());
 
       Ok(props)
-    }
+    },
+    after_digest => sub[whatsit] { after_heading_hook(whatsit)?; }
   );
 
   // No tags, at all? Consider...
@@ -369,7 +370,8 @@ pub(crate) fn load() -> Result<()> {
             props.insert("toctitle", toctitle_digested.into());
           }
       Ok(props)
-    }
+    },
+    after_digest => sub[whatsit] { after_heading_hook(whatsit)?; }
   );
 
   //----------------------------------------------------------------------
@@ -597,6 +599,31 @@ fn precede_heading_with_its_pagebreaks(section: &Node) -> Result<()> {
       anchor.add_next_sibling(&mut b)?;
       anchor = b;
     }
+  }
+  Ok(())
+}
+
+/// latex.ltx's chapter heads (`\@makechapterhead`) and a class's own (svmult.cls:620-649 `\processchapauthor`,
+/// `\processmotto`) set material of the unit after its title. A binding that has some defines
+/// `\lx@startsection@afterhook{<type>}{<inlist>}` — `<inlist>` empty for a starred heading, whose class head may set less
+/// (svmult's `\@makeschapterhead` only the motto, :649) — and the heading puts it back to be read right after itself,
+/// inside the new unit (0911.4644 `\motto`, 1010.1304 `\chapauthor`). Undefined in the kernel, so no heading reads
+/// anything more.
+fn after_heading_hook(whatsit: &mut Whatsit) -> Result<()> {
+  if has_meaning(&T_CS!("\\lx@startsection@afterhook"))
+    && let Some(stype) = whatsit.get_arg(1)
+  {
+    let inlist = whatsit
+      .get_arg(2)
+      .map(|inlist| inlist.revert().map(|t| t.to_string()).unwrap_or_default())
+      .unwrap_or_default();
+    let mut tokens = vec![T_CS!("\\lx@startsection@afterhook"), T_BEGIN!()];
+    tokens.extend(Explode!(type_name(stype)));
+    tokens.push(T_END!());
+    tokens.push(T_BEGIN!());
+    tokens.extend(Explode!(inlist.trim()));
+    tokens.push(T_END!());
+    unread(Tokens::new(tokens));
   }
   Ok(())
 }

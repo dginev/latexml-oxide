@@ -1,0 +1,20 @@
+% witness: 0911.4644, 1112.2297 (\motto: 26 run-336 svmult/svmono papers), 1010.1304, 1009.1542 (\chapauthor)
+% oracle:  pdflatex 0 errors (svmult.cls v5.5 shipped by 2002.09381): the starred "Preface" sets only the motto
+%          (svmult.cls:649 \@makeschapterhead), "Chapter 1 / Intro" the authors held over to it (:634-635), then
+%          "Chapter 2 / Second" with the second motto
+% engines: rust 64zc = 2 errors (\motto, \chapauthor undefined); Perl the same (svmult.cls.ltxml)
+% expect:  0 errors; Preface opens with the motto quote and no creator; Intro has the creator; Second the second motto
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\motto{A motto TEXT.}
+\chapauthor{Ann Author and Bob Bauer}
+\chapter*{Preface}
+Preface TEXT.
+\chapter{Intro}
+Chapter TEXT.
+\motto{Second motto.}
+\chapter{Second}
+Second TEXT.
+\end{document}

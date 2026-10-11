@@ -8,6 +8,9 @@ LoadDefinitions!({
   // Frontmatter environment (Perl PR #2767)
   DefPrimitive!(T_CS!("\\begin{frontmatter}"), None, None);
   DefPrimitive!(T_CS!("\\end{frontmatter}"), None, None);
+  // The environment's begin macro, which `\newenvironment{frontmatter}{}{\maketitle}` (elsarticle.cls:1303) defines
+  // empty: a bare `\frontmatter` before `\maketitle` is a no-op (1111.1604, 2007.04268, 1309.1731), as OmniBus's.
+  Let!("\\frontmatter", "\\@empty");
 
   // \author[mark]{name}
   // One \author per author! possibly with a mark to connect to affiliation

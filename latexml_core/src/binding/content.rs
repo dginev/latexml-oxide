@@ -221,6 +221,23 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   input_definitions_impl(raw_file, options)
 }
 
+/// Is the file now being read one the author shipped: under the document's own source directory
+/// (`SOURCEDIRECTORY`), not the TeX Live tree? K22's ownership rule — the author's files outrank our guesses — reads
+/// it for a fallback meaning (`is_definable_latex`): a `\newcommand` in the paper's own `.sty` replaces a binding's
+/// guess as the document's does (0901.4335's `mn2e_journal_style.sty` `\newcommand{\araa}{ARAA}`).
+pub fn reading_author_file() -> bool {
+  let dir = lookup_string("SOURCEDIRECTORY");
+  if dir.is_empty() {
+    return false;
+  }
+  let source = arena::to_string(gullet::get_locator().get_source());
+  if source.is_empty() {
+    return false;
+  }
+  let canonical = |p: &str| std::fs::canonicalize(p).unwrap_or_else(|_| Path::new(p).to_path_buf());
+  canonical(&source).starts_with(canonical(&dir))
+}
+
 fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -> Result<()> {
   let trimmed = raw_file.trim();
   // A compiled binding keyed by BASENAME raw-loads its own name (`noltxml`), but

@@ -1,0 +1,16 @@
+% witness: 1801.06113, 1605.08256 (svjour, epj), 2305.07696 (svjour3 v3.3): 30 run-336 papers, first error \preprint
+% oracle:  pdflatex 0 errors (svjour3.cls v3.3 + svepjc3.clo shipped by 2305.07696): "CERN-TH-2024-001" at the top right
+%          of the title page (svjour3.cls:392-393 stores it, svepjc3.clo:129 prints it; svjour.cls:489-492 for epj)
+% engines: rust 64zc = 1 error (\preprint undefined); Perl the same (svjour.cls.ltxml)
+% expect:  0 errors; the report number a frontmatter note of role preprint
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass[epjc3]{svjour3}
+\begin{document}
+\title{A title}
+\author{A. Author}
+\institute{Somewhere}
+\preprint{CERN-TH-2024-001}
+\maketitle
+Body TEXT.
+\end{document}

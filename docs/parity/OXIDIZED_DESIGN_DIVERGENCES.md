@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#512** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#518** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
 
 ---
 
@@ -13149,7 +13149,7 @@ leaves it undefined.
 
 **Rust** (59g): what OmniBus defines carries `DefinitionOrigin::Fallback`; `State::assign_internal` records the
 names whose current meaning a fallback installed (`fallback_meanings`, until anything else assigns them), and
-`is_definable_latex` treats such a name as definable when the document itself defines it (`DefinitionOrigin::Document`)
+`is_definable_latex` treats such a name as definable when the document itself defines it (`DefinitionOrigin::Document`) or, since 64ze (OD #516), a file under the paper's own source directory defines it
 — for `\newcommand`, `\providecommand`, `\newenvironment` and `\@ifdefinable` — unless the OmniBus definition is
 locked. OmniBus's semantic frontmatter commands are locked (user ruling 2026-10-01): `\doi`, `\orcid`, `\email`,
 `\emailaddr`, `\ead`, `\address`, `\affil`, `\affiliation`, `\keywords`, `\kword`, `\kwd`, `{keyword}`, `{keywords}`,
@@ -15530,3 +15530,54 @@ Errors, bibliography structure kept), 1411.7266 (CS18's open `\acknowledgments` 
 `perfect_kernel_batch64x::{natbib_bibitem_in_the_document_body_is_reported,
 natbib_bibitem_in_a_class_references_environment, bibliography_after_an_implicit_one_is_printed,
 lonely_bibliography_does_not_reach_the_next_document}`.
+
+### 512. svmono uses the svmult binding (Perl: no svmono binding, the class raw-loaded)
+
+svmono and svmult are one Springer family (svmono.cls and svmult.cls share their sectioning, `\frontmatter`,
+`\preface`, `{svgraybox}`, `\svhline`); svmono documents now convert as books through the svmult binding. Witnesses
+from the K22 census `\frontmatter` cluster (94 papers: 94 → 26 with errors; svmult/svmono family 167 → 14).
+
+### 513. mn2e's journal abbreviations follow the copy the paper ships (Perl: none)
+
+Two mn2e.cls copies carry the same "2001/02/06 v2.2" stamp; only some define `\apj`, `\mnras`, … (the 1574-line copy
+none; a 1695-line copy plain `\def`s; the 1696-line copy on `\ref@jnl`; another on `\reff@jnl`). The binding reads the
+shipped copy's own one-line definitions and their `@` helpers (a line filter: Latin-1, `\iffalse` blocks skipped,
+one-line definitions only); a copy without them gives none. With no copy shipped, the 1696-line v2.2 set is installed as
+a `Fallback`, which yields to the document's own and to the author's own shipped files' definitions (OD #516).
+Witnesses 0901.1150, 0901.4335 (author's `mn2e_journal_style.sty`), 1403.4079. Guards
+`perfect_kernel_batch64ze::{mn2e_*, mn2e_fallback_yields_to_the_authors_own_style}`.
+
+### 514. `\noalign\\` is an empty noalign and the row end; "Missing { inserted" unless the kernel's text tabular newline (Perl: Missing `{` and a cascade)
+
+`\noalign` followed by `\\` (or `\tabularnewline`, past spaces and `\relax`) is read as an empty noalign and the row
+end. It is silent only for a text alignment whose `\\` is the kernel `\@tabularcr` (no array.sty, not longtable), where
+pdflatex is clean (latex.ltx:16590); math `array`, amsmath `align`, array.sty `tabular`, longtable and tabularx raise
+`Error:expected:{` "Missing { inserted" once, as TeX does (pdflatex: 5-114 cascaded errors). Witness 2309.15248 (its
+44 bibitems restored). Residuals: `\let\mytcr\@tabularcr` + `\noalign\mytcr` (RED
+kernel-alignment/noalign_let_tabularcr), `\noalign\cr` still cascades.
+
+### 515. Kernel `\lx@startsection@afterhook{<type>}{<inlist>}` after a heading (Perl: none; svmult `\motto`/`\chapauthor` undefined)
+
+A binding may define `\lx@startsection@afterhook`; the kernel reads it after a sectional heading (the kernel defines
+none, so it costs nothing). svmult uses it: `\chapauthor` becomes a creator of the next numbered chapter and `\motto` a
+quote opening the next chapter (starred chapters take the motto only, svmult.cls:649 `\@makeschapterhead`). Witnesses
+0911.4644, 1010.1304. Residual: svmult numbers front-matter chapters (svmult.cls:592-594), ours does not (RED
+class-bindings/svmult_frontmatter_chapter_numbered).
+
+### 516. A `Fallback` meaning yields to a definition from a file the author shipped (Perl: only the document's)
+
+Amends OD #408: a meaning installed as a `Fallback` (OmniBus, a binding's guess) yields to a definition read from an
+author-shipped file — the gullet's current source, after resolving symlinks, lies under `SOURCEDIRECTORY` (also
+resolved) — as well as to the document's own. Measured limits: a file under the directory counts even when it is a
+vendored copy of a TeX Live package; a file reached through `../` does not; a TeX Live tree placed inside the source
+directory counts. TeX Live files still yield to the fallback. Witness 0901.4335. Guards
+`perfect_kernel_batch64ze::{mn2e_fallback_yields_to_the_authors_own_style, ws_fallback_yields_to_the_authors_own_style}`.
+
+### 517. quantumarticle's REVTeX-compatibility `\pacs`/`\preprint` are kept as RDFa metadata (Perl: undefined)
+
+quantumarticle.cls (:1462-1471) accepts and discards `\pacs` and `\preprint` in its REVTeX-compatibility mode. Per the
+rulings (#6 2026-10-10, F8 2026-10-09) they are kept as RDFa, not displayed: one `dcterms:subject` per `\pacs` (beside
+the author's `pdfkeywords`) and `dcterms:identifier` per `\preprint`. hyperref is loaded at `\begin{document}` as the
+class does (:1392-1394), and natbib with `numbers,sort&compress` (:1428-1429) unless natbib or biblatex is loaded.
+Witnesses 1705.03968, 1704.06662, 1709.01098, 2212.01355. Guards `quantumarticle_revtex_compatibility`,
+`quantumarticle_pacs_keep_the_authors_keywords`.

@@ -1,0 +1,21 @@
+% witness: 0709.4622 (`\classification{\pacs 12.38 Mh, 24.85.+p, 25.75 Nq, 25.75 Ld}`)
+% oracle:  pdflatex 0 errors (aipproc.cls 2005/11/11 + aipxfm.sty): `\let\pacs\classification` (aipxfm.sty:266-269),
+%          `\classification` only stores its argument (`\gdef\xfm@classification{\pacs 12.38 …}`); printed nowhere here
+% engines: rust 64ze = 0 errors, but two classifications: "2.38 Mh, 24.85.+p" and, out of order, "1" (the inner `\pacs`
+%          read the first digit as its argument)
+% expect:  0 errors; one classification, "12.38 Mh, 24.85.+p"
+% status:  RED (64ze)
+% preload: ar5iv.sty
+\documentclass[final]{aipproc}
+\layoutstyle{6x9}
+\begin{document}
+\title{A title}
+\author{A. Author}{address={Somewhere}}
+\begin{abstract}
+Abstract TEXT.
+\end{abstract}
+\maketitle
+\classification{\pacs 12.38 Mh, 24.85.+p}
+\keywords{quarks}
+Body TEXT.
+\end{document}

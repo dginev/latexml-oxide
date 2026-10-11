@@ -1,0 +1,16 @@
+% witness: 1111.1604, 2007.04268, 1309.1731 (elsarticle: 12 run-336 papers, first error \frontmatter)
+% oracle:  pdflatex 0 errors (TL elsarticle.cls): `\newenvironment{frontmatter}{}{\maketitle}` (:1303) defines
+%          \frontmatter empty, so a bare `\frontmatter` before `\maketitle` does nothing
+% engines: rust 64zc = 1 error (\frontmatter undefined; the binding defines only \begin/\end{frontmatter}); Perl the same
+% expect:  0 errors; the title and author kept
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\title{A title}
+\author{A. Author}
+\frontmatter
+\maketitle
+\section{Intro}
+Body TEXT.
+\end{document}

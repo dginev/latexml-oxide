@@ -1,0 +1,23 @@
+% witness: 1705.03968, 1709.01098 (\pacs), 2006.05524, 2212.01355 (\preprint): 14 run-336 quantumarticle papers
+% oracle:  pdflatex 1 error, the class's own under TL 2025 (an empty quantumarticle document gives it: "Sorting rule for
+%          'begindocument' hook applied too late"); quantumarticle.cls 2022/11/08: the REVTeX option `pra` turns on
+%          its compatibility (:197-205): \pacs and \preprint provided printing nothing (:1462-1471), \prl (:1456),
+%          natbib loaded at the end of the preamble with \textcite = \citet, \onlinecite = \cite (:1474-1495)
+% engines: rust 64zc = 5 errors (\pacs, \preprint, \prl, \textcite, \onlinecite undefined)
+% expect:  0 errors; no PACS or preprint text; "Phys. Rev. Lett." in the body; natbib's \citet and \cite
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+
+\documentclass[pra,twocolumn,a4paper,nopdfoutputerror]{quantumarticle}
+\begin{document}
+\title{A title}
+\author{A. Author}
+\affiliation{Somewhere}
+\pacs{03.67.-a}
+\preprint{QQ-2020-1}
+\maketitle
+Body TEXT in \prl, see \textcite{a} and \onlinecite{a}.
+\begin{thebibliography}{1}
+\bibitem{a} A. Author, Phys. Rev. Lett. 1, 1 (2020).
+\end{thebibliography}
+\end{document}

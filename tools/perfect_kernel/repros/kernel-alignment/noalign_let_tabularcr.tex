@@ -1,0 +1,19 @@
+% witness: review of 64ze round 3 (/tmp/rev64ze3/na/m8.tex)
+% oracle:  pdflatex 0 errors: `\mytcr` is `\let` to the kernel `\@tabularcr`, whose `{` the `\noalign` scans, as for
+%          `\\` (latex.ltx:16590); rows a/b and c/d, "After TEXT."
+% engines: rust 64ze = 1 error (Error:expected:{ "Missing { inserted": the kernel-tabularcr test reads the unexpanded
+%          token's meaning against `\\`/`\@tabularcr`, and the `\let` copy taken before the tabular holds the
+%          outer meaning)
+% expect:  0 errors; rows a/b and c/d
+% status:  RED (64ze)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter\let\mytcr\@tabularcr\makeatother
+\begin{document}
+\begin{tabular}{|l|l|}
+a & b \\
+\noalign\mytcr
+c & d \\
+\end{tabular}
+After TEXT.
+\end{document}

@@ -415,6 +415,9 @@ impl Alignment {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Support for building an alignment's Rows & Columns
   pub fn is_in_row(&self) -> bool { self.in_row }
+
+  /// A math alignment (`array`, amsmath's environments), not a text one (`tabular`).
+  pub fn is_math(&self) -> bool { self.is_math }
   pub fn is_in_column(&self) -> bool { self.in_column }
   pub fn start_row(&mut self, pseudorow: bool) -> Result<()> {
     self.new_row();

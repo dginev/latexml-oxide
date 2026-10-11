@@ -186,6 +186,14 @@ LoadDefinitions!({
   RawTeX!(
     r"\providecommand\@ifxundefined[1]{\ifx#1\@undefined\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}"
   );
+  // natbib.sty:157-166: its other test and list helpers, which its bibliography interface below is written in.
+  RawTeX!(
+    r"\providecommand\@ifnum[1]{\ifnum#1\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\providecommand\@ifx[1]{\ifx#1\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\providecommand\appdef[2]{\toks@\expandafter{#1}\@temptokena{#2}\edef#1{\the\toks@\the\@temptokena}}"
+  );
+  // natbib.sty:237, no `mcite`/`merge`/`elide` option bound: entries are never merged.
+  RawTeX!(r"\let\NAT@merge\z@");
   DeclareOption!("nonamebreak", "");
 
   // Perl: setCitationStyle(round => 1, semicolon => 1);
@@ -786,7 +794,23 @@ LoadDefinitions!({
   // natbib.sty:1090 `\let\bibpostamble\@empty`, run by its `thebibliography` end before `\endlist`
   // (:1079-1086): the kernel bibliography's `\lx@bibliography@postamble` (sect11.rs).
   def_macro_noop("\\bibpostamble")?;
-  DefMacro!("\\lx@bibliography@postamble", "\\bibpostamble");
+  // `\bibitem@fin` first: the stop the last entry's `\BibitemShut` asked for (natbib.sty:1080) — at the end of a list
+  // only: a bibliography opened for a `\bibitem` outside one (`lx_bibliography_no_list_end`: a lonely `\bibitem` closed
+  // by `\end{document}` or `\end{small}`) has none, and pdflatex prints no stop there. Guards
+  // `perfect_kernel_batch64ze::natbib_lonely_entries_spend_no_stop`,
+  // `perfect_kernel_batch64ze::natbib_lonely_entry_closed_by_its_environment_spends_no_stop`.
+  DefMacro!("\\lx@NAT@bibitem@fin@listend", {
+    Ok(if lookup_bool("lx_bibliography_no_list_end") {
+      assign_value("lx_bibliography_no_list_end", false, Some(Scope::Global));
+      Tokens!(T_CS!("\\let"), T_CS!("\\@bibstop"), T_CS!("\\@undefined"))
+    } else {
+      Tokens!(T_CS!("\\bibitem@fin"))
+    })
+  });
+  DefMacro!(
+    "\\lx@bibliography@postamble",
+    "\\lx@NAT@bibitem@fin@listend\\bibpostamble"
+  );
   def_macro_noop("\\bibfont")?;
   def_macro_noop("\\citenumfont")?;
   DefMacro!("\\bibnumfmt{}", "#1");
@@ -1049,6 +1073,41 @@ LoadDefinitions!({
            fullauthors.or_else(empty), Some(key)]))
   });
 
+  // natbib.sty:880-958: the entry interface the `apsrev`/`apsrev4-1` (REVTeX) styles write into a `.bbl` —
+  // `\BibitemOpen <fields>\BibitemShut{Stop|NoStop}` around each entry, `\bibinfo{<field>}{<text>}`,
+  // `\bibfield{<field>}{<text>}`. The styles also `\providecommand` them in the `.bbl` preamble (apsrev4-1.bst:
+  // 3367-3420), which a bibliography pasted into the `.tex` without that preamble lacks: natbib's are the ones
+  // pdflatex then uses (1008.0439, revtex4-1; acmart and elsarticle load natbib too). `\BibitemShut` only records
+  // the stop; `\bibitem@fin` puts it at the start of the next entry (`\@lbibitem` below, natbib.sty:864) or at the
+  // list's end (`\lx@bibliography@postamble`, natbib.sty:1080), so it ends the entry it belongs to. The entry
+  // merging behind `\NAT@merge` (natbib's `mcite`/`merge`/`elide`) is kept as written and never taken.
+  RawTeX!(
+    r"\def\bibitem@fin{\@ifxundefined\@bibstop{}{\csname bibitem@\@bibstop\endcsname}}
+\def\NAT@bibitem@init{\let\@bibstop\@undefined}
+\def\NAT@bibitem@cont{\let\bibitem@Stop\bibitemContinue\let\bibitem@NoStop\bibitemContinue}
+\def\BibitemOpen{\bibitemOpen}
+\def\BibitemShut#1{\def\@bibstop{#1}\let\bibitem@Stop\bibitemStop\let\bibitem@NoStop\bibitemNoStop
+ \@ifx{\bibitemShut\relax}{\let\@bibitemShut\@empty}{\expandafter\def\expandafter\@bibitemShut\expandafter{\bibitemShut}}}
+\def\@bibitemShut{}
+\def\bibitemStop{\@bibitemShut}
+\def\bibitemNoStop{\@ifx{\@empty\@bibitemShut}{.\spacefactor\@mmm\space}{\@bibitemShut}}
+\def\bibitemContinue{\@ifx{\@empty\@bibitemShut}{;\spacefactor\@mmm\space}{\@bibitemShut}}
+\mathchardef\@mmm=3000
+\let\bibitemOpen\relax
+\let\bibitemShut\relax
+\def\bibfield{\@ifnum{\NAT@merge>\tw@}{\@bibfield}{\@secondoftwo}}
+\def\@bibfield#1#2{\begingroup\let\Doi\@gobble\let\bibinfo\relax\let\restore@protect\@empty
+ \protected@edef\@tempa{#2}\aftergroup\def\aftergroup\@tempa\expandafter\endgroup\expandafter{\@tempa}%
+ \expandafter\@ifx\expandafter{\csname @bib#1\endcsname\@tempa}{\expandafter\let\expandafter\@tempa\csname @bib@X#1\endcsname}%
+ {\expandafter\let\csname @bib#1\endcsname\@tempa\expandafter\let\expandafter\@tempa\csname @bib@Y#1\endcsname}%
+ \@ifx{\@tempa\relax}{\let\@tempa\@firstofone}{}\@tempa{#2}}
+\def\bibinfo#1{\expandafter\let\expandafter\@tempa\csname bibinfo@X@#1\endcsname\@ifx{\@tempa\relax}{\@firstofone}{\@tempa}}
+\def\@bib@Xauthor#1{\let\@bib@Xjournal\@gobble}
+\def\@bib@Xjournal#1{\begingroup\let\bibinfo@X@journal\@bib@Z@journal#1\endgroup}
+\def\@bibibid@#1{\textit{ibid}.}
+\appdef\NAT@bibitem@init{\let\@bibauthor\@empty\let\@bibjournal\@empty\let\@bib@Z@journal\@bibibid@}"
+  );
+
   // \lx@nat@bibitem — natbib's version of \bibitem (Perl natbib.sty.ltxml:489-493), opening
   // the bibliography first when none is open, as the kernel's `\bibitem` does (Perl
   // latex_constructs.pool.ltxml:4074-4076, sect11.rs): Perl's natbib `\bibitem` lacks that
@@ -1145,7 +1204,7 @@ LoadDefinitions!({
   // default; Rust's `{}` arg type preserves the source catcodes faithfully.
   // 54 occurrences of `Error:unexpected:_` in Stage-16 v5 cluster here.
   DefMacro!("\\@lbibitem[] Semiverbatim",
-    "\\lx@NAT@labelled{#1}\\@@lbibitem{#2}\\lx@NAT@parselabel{#1}{#2}\\newblock",
+    "\\bibitem@fin\\lx@NAT@labelled{#1}\\@@lbibitem{#2}\\NAT@bibitem@init\\lx@NAT@parselabel{#1}{#2}\\newblock",
     locked => true);
   // Whether the entry carries the author's label (`\bibitem[Baker(2001)]{}`), for `\@@lbibitem`'s `_labelled`: a
   // printed entry however empty, as under the kernel (sect11.rs `is_phantom_entry`).

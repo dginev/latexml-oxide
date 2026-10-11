@@ -1195,32 +1195,82 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         // The kernel's own `\hline` = `\noalign{\@@alignment@hline}` never
         // hit it. Guard: `perfect_kernel_batch54::noalign_body_is_executed_to_its_group_end`.
         // §785 `align_peek`: `scan_left_brace` — expanded, past spaces and `\relax` (`\noalign\relax{\hrule}`).
-        scan_left_brace()?;
-        // The one-frame reader shape of `predigest_box_contents_in_mode`:
-        // execute the material (so `\ifnum0=`}` consumes its char-constant
-        // `}` during expansion) and STOP at the `}` that closes the group
-        // without invoking it — the alignment's own cell machinery must not
-        // see it as a cell end.
-        bgroup();
-        // tex.web §15513: `\noalign` material runs in -vmode; bound in the
-        // group's own frame, so `egroup` below restores the cell mode.
-        assign_frame_value_sym(pin!("MODE"), "internal_vertical");
-        let level = get_frame_depth();
-        new_local_box_list();
-        loop {
-          let next = match get_pending_comment() {
-            Some(comment) => Some(comment),
-            None => read_x_token(Some(true), false, None)?,
-          };
-          let Some(token) = next else { break };
-          if is_right_brace(&token) && level >= get_frame_depth() {
-            break;
+        // `\noalign\\`: in a text `tabular` the kernel's `\\` (and `\tabularnewline`, latex.ltx:16576 `\let`) is
+        // `\@tabularcr` (latex.ltx:16590), `{\ifnum0=`}\fi…`, so the brace `\noalign` scans is the one `\\` opens and
+        // its `\ifnum0=`{\fi}` closes, before the `\cr` that ends an empty row: pdflatex is clean (2309.15248, svmult's
+        // `\svhline\noalign\\`; `\tabular…\endtabular` the same). Every other `\\` — array.sty's and the kernel's
+        // `\@arraycr` (`\relax\iffalse{\fi…`) of a math array, longtable's, amsmath's `\math@cr` — opens with no
+        // brace: "Missing { inserted", as TeX says. Ours expands to `\lx@hidden@cr{…}` everywhere, so the shape is told
+        // before expansion — past spaces and `\relax`, as `scan_left_brace` reads (§785) — from the token's meaning,
+        // the alignment (text, not `\halign`), array.sty and longtable; either way the noalign material is empty and
+        // the row end is put back (it was a noalign group that never closed, and the rest of the document was lost).
+        let mut skipped = Vec::new();
+        let raw = loop {
+          match read_token()? {
+            Some(t) if t.get_catcode() == Catcode::SPACE || t.defined_as(&TOKEN_RELAX) => {
+              skipped.push(t)
+            },
+            other => break other,
           }
-          check_timeout()?;
-          extend_box_list(invoke_token(&token)?);
+        };
+        let kernel_tabularcr = raw.as_ref().is_some_and(|t| {
+          t.defined_as(&T_CS!("\\\\"))
+            || t.defined_as(&T_CS!("\\@tabularcr"))
+            || *t == T_CS!("\\tabularnewline")
+        }) && !lookup_bool("array.sty_loaded")
+          && {
+            let alignment = alignment.borrow();
+            !alignment.is_math() && !alignment.is_halign
+          }
+          && !Expand!(Tokens!(T_CS!("\\@currenvir")))
+            .to_string()
+            .starts_with("longtable");
+        if let Some(t) = raw {
+          unread_one(t);
         }
-        let mut body = expire_local_box_list();
-        egroup()?;
+        for t in skipped.into_iter().rev() {
+          unread_one(t);
+        }
+        let empty_noalign = match read_non_blank_non_relax()? {
+          Some(t) => {
+            let is_cr = t.defined_as(&T_CS!("\\lx@hidden@cr"));
+            unread_one(t);
+            is_cr
+          },
+          None => false,
+        };
+        if empty_noalign && !kernel_tabularcr {
+          Error!("expected", "{", "Missing { inserted");
+        }
+        let mut body = Vec::new();
+        if !empty_noalign {
+          scan_left_brace()?;
+          // The one-frame reader shape of `predigest_box_contents_in_mode`:
+          // execute the material (so `\ifnum0=`}` consumes its char-constant
+          // `}` during expansion) and STOP at the `}` that closes the group
+          // without invoking it — the alignment's own cell machinery must not
+          // see it as a cell end.
+          bgroup();
+          // tex.web §15513: `\noalign` material runs in -vmode; bound in the
+          // group's own frame, so `egroup` below restores the cell mode.
+          assign_frame_value_sym(pin!("MODE"), "internal_vertical");
+          let level = get_frame_depth();
+          new_local_box_list();
+          loop {
+            let next = match get_pending_comment() {
+              Some(comment) => Some(comment),
+              None => read_x_token(Some(true), false, None)?,
+            };
+            let Some(token) = next else { break };
+            if is_right_brace(&token) && level >= get_frame_depth() {
+              break;
+            }
+            check_timeout()?;
+            extend_box_list(invoke_token(&token)?);
+          }
+          body = expire_local_box_list();
+          egroup()?;
+        }
         // As `digest` does: a single box stands alone (the rule-only
         // `\noalign{\hrule}` becomes the next row's border via that shape).
         let r: Digested = if body.len() == 1 {
