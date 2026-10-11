@@ -51,7 +51,8 @@ LoadDefinitions!({
   // (iopart_support.sty.ltxml:53) dequeues the affiliations before it, so only the last `\address` survived
   // (KNOWN_PERL_ERRORS #511; 21 of the 41 2609 iopart papers call it more than once, 2609.01831 lost three of four).
   DefMacro!("\\address{}", "\\lx@add@affiliation@marked{#1}");
-  DefMacro!("\\ead Semiverbatim", "\\lx@add@email{#1}");
+  // iopart.cls:354-355 `\ead` → `\mailto{#1}` = `{\tt #1}` (2301.12119, 2501.12730)
+  DefMacro!("\\ead Semiverbatim", "\\lx@add@email{\\lx@address@urlfont{#1}}");
   // iopart.cls:225-231: each `\author[short]{names}` typesets its names where it stands, as `\address` does, so each
   // call adds its authors (split as the article `\author` splits them). Perl has no iopart `\author`, and the kernel's
   // replaces the authors before it (latex_constructs.pool.ltxml:1076), keeping the last call's only

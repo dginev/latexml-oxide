@@ -1,0 +1,25 @@
+% mechanism: an address in typewriter type (`\lx@address@urlfont`) split by a character set in another font — `\~{}`,
+%   whose empty letter has no font of its own, or a Semiverbatim `$\sim$`/`$^\dagger$` — left the contact as text runs
+%   around one bare character, and the HTML link took that character ("http://%CB%9C"). The accent of an empty letter
+%   is the current font's (cmtt 0x7E is `~`), and the link of an address held in text runs is all of its text
+%   (LaTeXML-structure-xhtml.xsl `contact-address`).
+% witness: 1601.03451 (`\urladdr{http://www.math.canterbury.ac.nz/\~{}bcreutz}`), 1601.06529, 1601.02576, 1601.02586
+% oracle:  pdflatex 0 errors; "Email address: † ann@a.edu", "URL: http://a.edu/~ann", "URL: http://b.edu/∼bob"
+% engines: rust 64u: roman "http://a.edu/˜ann" (link `%CB%9Cann`); 64zc round 1: links "http://%CB%9C"-like; perl: roman
+%   "˜", "$ˆ†$"
+% expect:  "http://a.edu/~ann" one typewriter run; every link the whole address text
+% status:  RED (64zc round 1) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\address{University of A}
+\email{$^\dagger$ ann@a.edu}
+\urladdr{http://a.edu/\~{}ann}
+\author{Bob Bee}
+\address{University of B}
+\urladdr{http://b.edu/$\sim$bob}
+\maketitle
+Text.
+\end{document}

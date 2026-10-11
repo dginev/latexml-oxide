@@ -87,8 +87,11 @@ LoadDefinitions!({
   DefMacro!("\\address{}", "\\lx@add@address[annotate=new]{#1}");
   // These add contacts to most recent author
   // The optional arguments here are a sort of prefix to the footnote. (NOT label)
-  DefMacro!("\\email[] Semiverbatim",    "\\lx@add@email[name={#1}]{#2}");
-  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{#2}");
+  // REVTeX 4.1/4.2 set the address with `\href`, without hyperref `\@href`: in the current font
+  // (revtex4-1.cls:1959-1961, 2383-2391), its `_` as typed (revtex4_cls.rs sets REVTeX 4.0's in typewriter type;
+  // 2301.03570, 2301.03067)
+  DefMacro!("\\email[] Semiverbatim",    "\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
   DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}"); // ?
 

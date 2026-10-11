@@ -1170,6 +1170,22 @@ LoadDefinitions!({
     "\\lx@add@url [] Semiverbatim",
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=url,#1]{#2}"
   );
+  // Rust-only: an email or web address set as a class sets it with `\url`, `\texttt` or `\ttfamily` — url.sty's
+  // `\UrlFont` (url_sty.rs `\UrlFont`): the typewriter family, in the identity ASCII encoding. A class that reads the
+  // address with `_` and `~` made other (revtex4.cls:4476-4493 `\sanitize@url` … `\href{mailto:#2}{#2}`, `\href` the
+  // `\url` = `\texttt` of :4490-4493) prints them as cmtt does, '_' and '~'; the same characters in the roman OT1 font
+  // are its dot and tilde accents (Perl TeX_Fonts.pool.ltxml:214), "ann˙able@a.edu" (1001.1076). A class binding
+  // passes its address through this only where the class sets it in typewriter type.
+  DefMacro!(
+    "\\lx@address@urlfont{}",
+    "{\\lx@fontencoding{ASCII}\\ttfamily #1}"
+  );
+  // Rust-only: an email or web address a class sets in the current (roman) font — revtex4-1/4-2's `\href`, which
+  // without hyperref is `\@href` (revtex4-1.cls:1959-1961), AASTeX's, svjour3's, jmlr's — in that font, but in the
+  // identity ASCII encoding: its `_` and `~` print as typed. In the OT1 font pdflatex prints them as the dot and tilde
+  // accents ("ann˙able@a.edu", 2301.03570, 2301.03067); the address is the author's, not the accident of the font (user
+  // ruling 2026-10-11).
+  DefMacro!("\\lx@address@textfont{}", "{\\lx@fontencoding{ASCII}#1}");
   // The ORCID iD logo — the green "iD" badge — as ONE self-contained SVG asset,
   // defined in the kernel so every orcid rendering path reuses it (orcidlink.sty's
   // \orcidlogo aliases this; \lx@add@orcid embeds it). Adapted from
@@ -1954,7 +1970,7 @@ LoadDefinitions!({
               let owner = owner_of(&address.address, count);
               bodies[owner].extend(email_calls(label.as_ref(), vec![address])?);
             }
-          } else if let Some(addresses) = bare_email_addresses(&line) {
+          } else if let Some(addresses) = bare_email_addresses(&line)? {
             // A bare email line (\texttt{user@host}; `a@x, b@y`; `{a,b}@dom`) is the names' emails, not an
             // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315): each address to the name it spells, as a
             // labelled line's are, else the last (2401.15897, 2402.02746, 63m).
@@ -3150,9 +3166,10 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
   // A wrapper is kept on each address (`\texttt`, `\small`, `\url`), but an email command's (`\email`, `\mailto`,
   // `\emailaddr`) is the contact `\lx@add@email` stands for — nested, it made a second (empty) contact and advanced
   // the `labelseq` count twice, so the second address found no author (llncs `\institute{… \\ \email{a@x, b@y}}`).
+  // (the address set as the command sets it, [`email_command_address`])
   let unwrapped = |line: Tokens| match whole_line_cs_wrapper(&line) {
-    Some((cmd, inner)) if is_email_wrapper(&cmd) => inner,
-    _ => line,
+    Some((cmd, inner)) if is_email_wrapper(&cmd) => email_command_address(&cmd, inner),
+    _ => Ok(line),
   };
   let addrs = email_addresses(&line).unwrap_or_default();
   let options: Vec<Option<Tokens>> = match placement {
@@ -3175,7 +3192,7 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
       let opts = matches!(placement, AddressPlacement::Shared)
         .then(|| mouth::tokenize_internal("label=addresses:block"));
       calls
-        .extend(Invocation!(T_CS!("\\lx@add@email"), vec![opts, Some(unwrapped(line))]).unlist());
+        .extend(Invocation!(T_CS!("\\lx@add@email"), vec![opts, Some(unwrapped(line)?)]).unlist());
       return Ok(calls);
     },
   };
@@ -3183,13 +3200,13 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
     calls.extend(
       Invocation!(T_CS!("\\lx@add@email"), vec![
         opts.clone(),
-        Some(unwrapped(line))
+        Some(unwrapped(line)?)
       ])
       .unlist(),
     );
     return Ok(calls);
   }
-  for (address, opts) in address_tokens(&line, addrs).into_iter().zip(options) {
+  for (address, opts) in address_tokens(&line, addrs)?.into_iter().zip(options) {
     calls.extend(Invocation!(T_CS!("\\lx@add@email"), vec![opts, Some(address)]).unlist());
   }
   Ok(calls)
@@ -3200,12 +3217,40 @@ fn is_email_wrapper(cmd: &Token) -> bool {
   cmd.with_str(|name| name.to_lowercase().contains("mail"))
 }
 
+/// The address of a call of the email command `cmd` (`\email{x}`) as that command sets it: in the font the class's
+/// command gives its address, `\lx@address@urlfont` (llncs's `\email`, `{\tt#1}` at llncs.cls:897; amsart's, JHEP's)
+/// or `\lx@address@textfont` (svjour3's, REVTeX 4.1's), else as written — so a contact the author block makes of the
+/// call (`\institute{… \\ \email{a@x}}`, `E-mail: \email{x}`) is set as the command's own is. Only the command's own
+/// expansion body is read, one level: a command reaching the address macro through another macro is not seen.
+fn email_command_address(cmd: &Token, address: Tokens) -> Result<Tokens> {
+  let fonts = [
+    T_CS!("\\lx@address@urlfont"),
+    T_CS!("\\lx@address@textfont"),
+  ];
+  let font = match lookup_definition(cmd)?
+    .as_ref()
+    .and_then(|def| def.get_expansion())
+  {
+    Some(ExpansionBody::Tokens(body)) => body
+      .unlist_ref()
+      .iter()
+      .find(|t| fonts.contains(t))
+      .copied(),
+    _ => None,
+  };
+  Ok(match font {
+    Some(font) => Invocation!(font, vec![Some(address)]),
+    None => address,
+  })
+}
+
 /// The addresses `addrs` of an email `line` as tokens, the line's whole-line wrapper (`\texttt`, `\small`, `\url`)
 /// repeated on each — but not an email command's, the contact itself.
-fn address_tokens(line: &Tokens, addrs: Vec<String>) -> Vec<Tokens> {
-  let wrapper = whole_line_cs_wrapper(line)
-    .map(|(cmd, _)| cmd)
-    .filter(|cmd| !is_email_wrapper(cmd));
+fn address_tokens(line: &Tokens, addrs: Vec<String>) -> Result<Vec<Tokens>> {
+  let line_wrapper = whole_line_cs_wrapper(line).map(|(cmd, _)| cmd);
+  let wrapper = line_wrapper.filter(|cmd| !is_email_wrapper(cmd));
+  // (an email command's address set as the command sets it, [`email_command_address`])
+  let email_command = line_wrapper.filter(is_email_wrapper);
   addrs
     .into_iter()
     .map(|addr| {
@@ -3216,7 +3261,10 @@ fn address_tokens(line: &Tokens, addrs: Vec<String>) -> Vec<Tokens> {
         wrapped.push(T_END!());
         toks = wrapped;
       }
-      Tokens::new(toks)
+      match email_command {
+        Some(cmd) => email_command_address(&cmd, Tokens::new(toks)),
+        None => Ok(Tokens::new(toks)),
+      }
     })
     .collect()
 }
@@ -3361,12 +3409,14 @@ fn name_and_trailing_email(line: &Tokens) -> Result<(Tokens, Option<Tokens>)> {
 /// The addresses of an author-block line that is only email addresses (`\texttt{a@x, b@y}`, `{a,b}@dom`), each as
 /// tokens ([`address_tokens`]); a line of one address is itself (`\href{mailto:a@x}{a@x}` stays a link). `None` for
 /// any other line.
-fn bare_email_addresses(line: &Tokens) -> Option<Vec<Tokens>> {
-  let addrs = email_addresses(line).filter(|addrs| !addrs.is_empty())?;
+fn bare_email_addresses(line: &Tokens) -> Result<Option<Vec<Tokens>>> {
+  let Some(addrs) = email_addresses(line).filter(|addrs| !addrs.is_empty()) else {
+    return Ok(None);
+  };
   if addrs.len() == 1 {
-    return line_is_email(line).then(|| vec![line.clone()]);
+    return Ok(line_is_email(line).then(|| vec![line.clone()]));
   }
-  Some(address_tokens(line, addrs))
+  address_tokens(line, addrs).map(Some)
 }
 
 /// The definitions in force where a class's title code reads `\@author`: the statements of the groups still open there
@@ -12549,6 +12599,20 @@ fn email_calls(label: Option<&Tokens>, addresses: Vec<EmailAddress>) -> Result<V
     match (&keyvals, call) {
       // no label of the author's: the class's own command, with the name it gives (amsart's "Email address: ")
       (None, Some(call)) => calls.extend(call.unlist()),
+      // under the label, the address as the class's command sets it (JHEP's `E-mail: \email{x}`)
+      (Some(_), Some(call)) => {
+        let address = match call.unlist_ref().first() {
+          Some(cmd) => email_command_address(cmd, address)?,
+          None => address,
+        };
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@email"), vec![
+            keyvals.clone(),
+            Some(address)
+          ])
+          .unlist(),
+        )
+      },
       _ => calls.extend(
         Invocation!(T_CS!("\\lx@add@email"), vec![
           keyvals.clone(),
@@ -12604,13 +12668,17 @@ fn block_email_calls(
 ) -> Result<Vec<Token>> {
   let mut calls = Vec::new();
   let lone = addresses.len() == 1;
-  for EmailAddress { address, .. } in addresses {
+  for EmailAddress { address, call } in addresses {
     // the address itself, not the class's email command around it (`\email{x}` it does not count as one): the contact
     // is what that command stands for, and a class that kills it once its title page is typeset (JINST copies as
-    // `arxiv.cls`, `\global\let\email\@gobble`) left the contact empty (1111.1180, 1210.0427)
-    let address = match whole_line_cs_wrapper(&address) {
-      Some((command, inner)) if is_email_wrapper(&command) => inner,
-      _ => address,
+    // `arxiv.cls`, `\global\let\email\@gobble`) left the contact empty (1111.1180, 1210.0427); set as the command
+    // sets it ([`email_command_address`])
+    let (address, command) = match whole_line_cs_wrapper(&address) {
+      Some((command, inner)) if is_email_wrapper(&command) => (inner, Some(command)),
+      _ => (
+        address,
+        call.and_then(|call| call.unlist_ref().first().copied()),
+      ),
     };
     let mut keyvals = Vec::new();
     if let Some(label) = label {
@@ -12650,6 +12718,10 @@ fn block_email_calls(
       None => s!("label=addresses:block"),
     };
     keyvals.extend(mouth::tokenize_internal(TeXString::assembled(placement)).unlist());
+    let address = match command {
+      Some(command) => email_command_address(&command, address)?,
+      None => address,
+    };
     calls.extend(
       Invocation!(T_CS!("\\lx@add@email"), vec![
         Some(Tokens::new(keyvals)),

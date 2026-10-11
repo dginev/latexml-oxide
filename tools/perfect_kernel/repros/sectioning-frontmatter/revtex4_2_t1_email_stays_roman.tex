@@ -1,0 +1,19 @@
+% mechanism: REVTeX 4.2 sets an `\email` address with `\href`, which without hyperref is `\@href`, the address in the
+%   current font (revtex4-2.cls:1980, :2404-2407); under T1 its `_` is '_'. The control for revtex4: the 4.2 address
+%   keeps the roman font.
+% witness: (construct) 2 run-336 revtex4-2 T1 papers with a `_` in an `\email`, 7 sampled months
+% oracle:  pdflatex 0 errors; "ann_able@a.edu" in SFRM0800 (roman T1)
+% engines: rust 64u: "ann_able@a.edu" in roman; perl: the same
+% expect:  unchanged: the address as typed, in roman
+% status:  GREEN (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass[aps]{revtex4-2}
+\usepackage[T1]{fontenc}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\email{ann_able@a.edu}
+\affiliation{University of A}
+\maketitle
+Text.
+\end{document}

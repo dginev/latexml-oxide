@@ -1,0 +1,16 @@
+% mechanism: an author line labelled `E-mail: \email{…}` gives the label as the contact name and the address as the
+%   class command sets it (`email_calls`): REVTeX 4.2 in the current roman font (revtex4-1.cls:1959-1961), the `_` kept
+%   (user ruling 2026-10-11).
+% witness: (construct; the `E-mail: \email{…}` author line of 0911.0568, 0911.0082 under JHEP3)
+% oracle:  pdflatex 0 errors; "E-mail: ann˙able@a.edu" in roman
+% engines: rust 64u: "ann˙able@a.edu"; perl: "ann˙able@a.edu" named "Email: "
+% expect:  one email contact named "E-mail: ", "ann_able@a.edu" in roman
+% status:  RED (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass[aps]{revtex4-2}
+\begin{document}
+\title{Title}
+\author{Ann Able \\ University of A \\ E-mail: \email{ann\string_able@a.edu}}
+\maketitle
+Text.
+\end{document}

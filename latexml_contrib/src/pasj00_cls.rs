@@ -71,7 +71,9 @@ fn pasj_frontmatter() -> Result<()> {
       Ok(Invocation!("\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}", vec![Some(label), Some(text)]))
     }
   });
-  DefMacro!("\\email[]{}", "\\lx@add@email{#2}");
+  // pasj00.cls:68-69, the address in `\small\itshape`; the binding keeps the current font, not that size and shape
+  // (1001.5133)
+  DefMacro!("\\email[]{}", "\\lx@add@email{\\lx@address@textfont{#2}}");
   def_macro_noop("\\altemailmark")?;
   DefMacro!("\\orcid Semiverbatim", "\\lx@add@orcid{#1}");
   DefMacro!("\\Received{}", "\\lx@add@date[role=received]{#1}");

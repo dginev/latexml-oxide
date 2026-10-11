@@ -94,7 +94,8 @@ LoadDefinitions!({
   // \orcidID should be used within each author in \author
   DefMacro!("\\orcidID{}", "\\lx@add@orcid{#1}");
   // \email, \url, \mail should be within an institute in \institute!!
-  DefMacro!("\\email Semiverbatim", "\\lx@add@email[name={\\emailname~}]{#1}");
+  // llncs.cls:897 `\def\email#1{{\tt#1}}` (2101.08426, 2501.08296)
+  DefMacro!("\\email Semiverbatim", "\\lx@add@email[name={\\emailname~}]{\\lx@address@urlfont{#1}}");
   DefMacro!("\\url Semiverbatim",   "\\lx@add@url{#1}");
   DefMacro!("\\mail {}",            "\\lx@add@address[name={\\mailname~}]{#1}");
   DefMacro!("\\keywordname",        "\\textbf{Keywords}");

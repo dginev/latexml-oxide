@@ -174,10 +174,12 @@ LoadDefinitions!({
   DefMacro!("\\address[]{}", "\\lx@add@address[name={#1}]{#2}");
   DefMacro!("\\curraddr[]{}",
     "\\lx@add@contact[role=current_address,name={\\curraddrname\\ifx.#1.\\else{, #1}\\fi:\\ }]{#2}");
+  // amsart.cls:538-546 (amsproc.cls:516-524, amsbook.cls:486-494) set the address in `\ttfamily`: an
+  // `ann\string_able@a.edu` reads '_' (2101.10462, 2501.04035).
   DefMacro!("\\email[]{}",
-    "\\lx@add@email[name={\\emailaddrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{#2}");
+    "\\lx@add@email[name={\\emailaddrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{\\lx@address@urlfont{#2}}");
   DefMacro!("\\urladdr[]{}",
-    "\\lx@add@url[name={\\urladdrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{#2}");
+    "\\lx@add@url[name={\\urladdrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{\\lx@address@urlfont{#2}}");
   DefMacro!("\\dedicatory{}",   "\\lx@add@contact[role=dedicatory]{#1}");
   // amsart's raw `\maketitle` internals, reached when a derivative class
   // redefines `\maketitle`/`\@maketitle` on top of `\LoadClass{amsart}`

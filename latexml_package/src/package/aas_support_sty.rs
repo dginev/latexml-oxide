@@ -136,7 +136,8 @@ LoadDefinitions!({
   // AASTeX 7 `\email[show]{…}` (aastex701.cls:13341 `\@ifnextchar[\@email{\@email[]}`; `show` prints it in the
   // title footnote "Email: …", :2455-2456): the option is no part of the address (2608.21320; Perl's `\email{}`,
   // aas_support.sty.ltxml:122, left "[" as the address and "show]…" in the body).
-  DefMacro!("\\email[]{}",        "\\lx@add@email{#2}");
+  // (in the current font, aastex631.cls:6924-6930 `\href{mailto: #1}{#1}`; 2301.02349, 2101.08512)
+  DefMacro!("\\email[]{}",        "\\lx@add@email{\\lx@address@textfont{#2}}");
 
   // \collaboration{n}{name} applies to previous authors w/o collab; n is how many to SHOW
   // \nocollaboration{n} ditto, but says they are not in a collaboration group.

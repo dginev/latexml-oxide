@@ -1,0 +1,21 @@
+% mechanism: REVTeX 4.0 reads an `\email`/`\homepage` address with `_` and `~` made other (revtex4.cls:4476-4482
+%   `\sanitize@url`) and sets it with `\href`, which without hyperref is `\url` = `\texttt` (:4490-4493): cmtt prints
+%   '_' and '~'. revtex4_support's `\email` (Perl revtex4_support.sty.ltxml:55) set it in the roman OT1 font, whose
+%   0x5F and 0x7E are the dot and tilde accents (Perl TeX_Fonts.pool.ltxml:214).
+% witness: 1001.1076 ("aiwen˙fan@pku.edu.cn"); 40 of 41 run-336 revtex4 papers (OT1, no hyperref) with a `_` in an
+%   `\email` in 7 sampled months
+% oracle:  pdflatex 0 errors; "Electronic address: ann_able@a.edu; URL: http://a.edu/~ann_able/", the addresses in CMTT8
+% engines: rust 64u: "ann˙able@a.edu", "http://a.edu/˜ann˙able/" in roman; perl: the same
+% expect:  the addresses as typed, in typewriter type
+% status:  RED (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass[aps]{revtex4}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\email{ann_able@a.edu}
+\homepage{http://a.edu/~ann_able/}
+\affiliation{University of A}
+\maketitle
+Text.
+\end{document}

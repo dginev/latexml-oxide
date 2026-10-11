@@ -3,6 +3,8 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: revtex4.cls.ltxml — RevTeX 4 document class
+  // REVTeX 4.0 itself, not the 4.2 this binding also serves (the name it loads under, read before the classes it loads)
+  let revtex4_0 = Expand!(Tokens!(T_CS!("\\@currname"))).to_string() == "revtex4";
 
   // Generally ignorable options
   for option in [
@@ -92,6 +94,14 @@ LoadDefinitions!({
     Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
   }
   RequirePackage!("revtex4_support");
+  // REVTeX 4.0 sets an `\email` or `\homepage` address with `\url`, the `\texttt` its `\href` falls back to
+  // (revtex4.cls:4476-4493), so its `_` and `~` read as typed (1001.1076 "aiwen_fan@pku.edu.cn"). REVTeX 4.2, which
+  // this binding also serves, sets it in the current font (revtex4-2.cls:1980, its `\href` = `\@href`), as
+  // revtex4_support_sty.rs's commands do.
+  if revtex4_0 {
+    DefMacro!("\\email[] Semiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
+  }
 
   // Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.
   // Load AMS packages BEFORE the `.rty` input — Perl revtex4.cls.ltxml runs

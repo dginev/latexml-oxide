@@ -209,9 +209,12 @@ fn email_call(symbol: Option<&str>, email: Vec<Token>) -> Result<Vec<Token>> {
     options.push_str(&s!(",name={{{name} }}"));
   }
   Ok(
+    // (in the current font, ptephy.cls:1318 `E-mail: #1`; 1206.6924, 1408.5182)
     Invocation!(T_CS!("\\lx@add@email"), vec![
       Some(mouth::tokenize_internal(TeXString::assembled(options))),
-      Some(Tokens::new(email))
+      Some(Invocation!(T_CS!("\\lx@address@textfont"), vec![Some(
+        Tokens::new(email)
+      )]))
     ])
     .unlist(),
   )

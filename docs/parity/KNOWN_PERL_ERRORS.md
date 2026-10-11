@@ -12274,3 +12274,15 @@ Minimal trigger: `\usepackage{natbib}\renewcommand{\bibpostamble}{\par Postamble
 (pdflatex prints the note after the last entry; Perl drops it, and a `\bibpreamble` group it should close stays open).
 
 Fixed in Rust (64y): OD #499.
+
+## 586. A class's email or web address prints `_` as a dot accent
+
+Minimal trigger:
+`\documentclass[aps]{revtex4}\begin{document}\author{A}\email{ann_able@a.edu}\affiliation{U}\maketitle\end{document}`.
+revtex4_support.sty.ltxml:55 reads the address Semiverbatim and digests it in the current font; in OT1 roman the
+catcode-12 `_` is slot 0x5F, the dot accent (TeX_Fonts.pool.ltxml:214): `<contact role="email">ann˙able@a.edu</contact>`
+and a `mailto:ann˙able@a.edu` link, where pdflatex prints "ann_able@a.edu" in CMTT8 (revtex4.cls:4476-4493 sets it with
+`\url`). The same for amsart `\email{a\string_b@x}`/`\urladdr{…/~y}`, llncs, JHEP, iopart, aa, elsarticle (Perl loads no
+T1), REVTeX 4.1/4.2, AASTeX, svjour3. Witness 1001.1076.
+
+Fixed in Rust (64zc): OD #501-502.

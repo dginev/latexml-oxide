@@ -1,0 +1,17 @@
+% mechanism: an accent command's box takes the font of its digested letter; an empty letter (`\~{}`, `\^{}`, `\'{}`)
+%   has none of its own, so the accent came out font-less between two runs of the surrounding font. Perl's Box
+%   defaults an undefined font to the current one (Box.pm:31): the accent is now the current font's, one run. In
+%   typewriter type or the ASCII encoding `\~{}`/`\^{}` give `~`/`^` (cmtt 0x7E/0x5E; Perl `˜`/`ˆ`: the empty letter
+%   has no font at TeX_Character.pool.ltxml:67, so the replacement at :80-83 is skipped and :84-87 is the accent); under T1 pdflatex's `\texttt{\~{}}` is ectt slot 3, the raised `˜`, and we
+%   keep the author's `~`.
+% witness: 1001.1367, 1001.1793, 1301.6104, 1301.6221, 1901.07113, 2101.11048 (`\~{}` in body text), 1601.03451
+% oracle:  pdflatex 0 errors; "a~b a^b" in CMTT10, "a˜b" in CMTI10, "a´b" in CMSS10
+% engines: rust 64u: `<text typewriter>a</text>˜<text typewriter>b a</text>ˆ…`, each accent split from its run;
+%   perl: no split, one run per font, with `˜`/`ˆ` in typewriter
+% expect:  one run per font: "a~b a^b" typewriter, "a˜b" italic, "a´b" sansserif
+% status:  RED (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\texttt{a\~{}b a\^{}b} \textit{a\~{}b} \textsf{a\'{}b}
+\end{document}

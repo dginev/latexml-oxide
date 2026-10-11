@@ -2,8 +2,9 @@
 % oracle:  pdflatex "http://x.org/~y" (amsart prints \urladdr with \url, a literal tilde)
 % engines: rust 64k = <contact role="url">http://x.org/˜y — the Semiverbatim `~` (an other character) typeset in the
 %          OT1 text font, whose slot 0x7E is the tilde accent; Perl the same \lx@add@url (Base_Utility.pool.ltxml:657)
-% expect:  <contact name="URL: " role="url">http://x.org/~y</contact>
-% status:  RED
+% expect:  <contact name="URL: " role="url"><text font="typewriter">http://x.org/~y</text></contact> (amsart.cls:543-546 sets
+%          `\urladdr` in `\ttfamily`; 64zc `\lx@address@urlfont`)
+% status:  RED -> GREEN (64zc)
 % preload: ar5iv.sty
 \documentclass{amsart}
 \begin{document}

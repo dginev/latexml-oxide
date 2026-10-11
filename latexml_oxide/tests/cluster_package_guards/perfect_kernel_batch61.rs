@@ -1497,7 +1497,7 @@ Theory.
     &xml,
     "contact",
     &[r#"role="url""#],
-    r#"<contact name="URL: " role="url">http://www.math.mcgill.ca/˜louigi/</contact>"#,
+    r#"<contact name="URL: " role="url"><text font="typewriter">http://www.math.mcgill.ca/~louigi/</text></contact>"#,
   );
   let xml = assert_elements(
     r"\documentclass{JHEP3}
@@ -6787,7 +6787,7 @@ Text.
     found[0],
     vec![
       affiliation(" Univ A"),
-      "<contact name=\"Email:\u{a0}\" role=\"email\">a@x.y</contact>".to_string()
+      "<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">a@x.y</text></contact>".to_string()
     ],
     "{xml}"
   );
@@ -6799,7 +6799,7 @@ Text.
     bob,
     vec![
       &affiliation(" Univ B"),
-      &"<contact name=\"Email:\u{a0}\" role=\"email\">b@x.y</contact>".to_string()
+      &"<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">b@x.y</text></contact>".to_string()
     ],
     "{xml}"
   );
@@ -6831,6 +6831,12 @@ fn marked_affiliation_review_shapes() {
   };
   let email =
     |addr: &str| format!("<contact name=\"Email:\u{a0}\" role=\"email\">{addr}</contact>");
+  // (an llncs `\email`'s address, set in typewriter type as llncs.cls:897 sets it, 64zc)
+  let email_tt = |addr: &str, id: usize| {
+    format!(
+      "<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id{id}\">{addr}</text></contact>"
+    )
+  };
   assert_eq!(
     contacts(
       r"\documentclass{article}
@@ -7002,12 +7008,12 @@ Text.
       creator(
         false,
         "Ann Able",
-        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
+        &format!("{}{}", affiliation(" Univ A"), email_tt("ann@x.y", 1))
       ),
       creator(
         true,
         "Bob Baker",
-        &format!("{}{}", affiliation(" Univ B"), email("bob@x.y"))
+        &format!("{}{}", affiliation(" Univ B"), email_tt("bob@x.y", 2))
       )
     ]
   );
@@ -7091,7 +7097,7 @@ Text.
           affiliation(" Univ B")
         )
       ),
-      shared(&email("ann@x.y, bob@x.y"))
+      shared(&email_tt("ann@x.y, bob@x.y", 1))
     ]
   );
   assert_eq!(
@@ -7109,7 +7115,7 @@ Text.
       creator(
         false,
         "Ann Able",
-        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
+        &format!("{}{}", affiliation(" Univ A"), email_tt("ann@x.y", 1))
       ),
       creator(
         true,
@@ -7118,7 +7124,7 @@ Text.
           "{}{}{}",
           affiliation(" Univ B"),
           affiliation(" Corresponding author"),
-          email("bob@x.y")
+          email_tt("bob@x.y", 2)
         )
       )
     ]
@@ -7271,7 +7277,7 @@ Text.
       creator(true, "Bob Baker", &affiliation(" Univ B")),
       format!(
         "<creator role=\"author\">{}</creator>",
-        email("a@x.y, b@x.y, c@x.y")
+        email_tt("a@x.y, b@x.y, c@x.y", 1)
       )
     ]
   );
@@ -7333,12 +7339,12 @@ Text.
       creator(
         false,
         "Ann Able",
-        &format!("{}{}", affiliation(" Univ A"), email("a@x.y"))
+        &format!("{}{}", affiliation(" Univ A"), email_tt("a@x.y", 1))
       ),
       creator(
         true,
         "Bob Baker",
-        &format!("{}{}", affiliation(" Univ B"), email("b@x.y"))
+        &format!("{}{}", affiliation(" Univ B"), email_tt("b@x.y", 2))
       )
     ]
   );

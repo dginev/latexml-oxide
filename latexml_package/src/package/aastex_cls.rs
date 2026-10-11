@@ -69,6 +69,13 @@ LoadDefinitions!({
   // stands (2608.02190 ahead of the authors, 2608.00173 after them). AASTeX 6.x prints every `\email`
   // (aastex631.cls:6924-6931, the copy 2505.20669 ships), as aas_support_sty.rs's `\email` does (Perl
   // aas_support.sty.ltxml:122 for every version; KNOWN_PERL_ERRORS #559).
+  // AASTeX 6+ sets `\homepage` with `\href{#2}{#2}` in the current font — 6.x through REVTeX 4.1
+  // (aastex631.cls:284-308, the copy 2101.06145 ships; revtex4-1.cls:2387-2390), 7 itself
+  // (aastex701.cls:2213-2216) — not in REVTeX 4.0's typewriter type, which revtex4_cls.rs installs (this binding loads
+  // under that name)
+  if aastex6_plus {
+    DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+  }
   if requested.starts_with("aastex7") {
     // (one `\lx@add@` call, so an author line holding `\email{…}` reads it as the class's frontmatter command:
     // `adds_to_frontmatter`)
@@ -79,16 +86,25 @@ LoadDefinitions!({
     DefMacro!("\\lx@add@aas@email{}{}",
       "\\iflx@aas@correspauthor\\expandafter\\lx@aas@email@corresp\\else\\expandafter\\lx@aas@email@author\\fi{#1}{#2}\\global\\lx@aas@correspauthorfalse");
     DefMacro!("\\lx@aas@email@corresp{}{}",
-      "\\ifx\\lx@aas@correspondent\\empty\\lx@add@email{#2}\\else\\lx@add@email[label={fuzzy:\\lx@aas@correspondent}]{#2}\\fi");
+      "\\ifx\\lx@aas@correspondent\\empty\\lx@add@email{\\lx@address@textfont{#2}}\\else\\lx@add@email[label={fuzzy:\\lx@aas@correspondent}]{\\lx@address@textfont{#2}}\\fi");
     DefMacro!("\\lx@aas@email@author{}{}", sub[(option, address)] {
-      let add = if option.to_string().trim() == "show" { "\\lx@add@email" } else { "\\lx@add@email@metadata" };
-      Ok(Invocation!(T_CS!(add), vec![None, Some(address)]))
+      // (a printed address in the current font, aastex701.cls:2455-2456 and :13348; the metadata is its text;
+      // 2501.12613's `j_serna@…`)
+      Ok(if option.to_string().trim() == "show" {
+        Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(Invocation!(T_CS!("\\lx@address@textfont"), vec![Some(address)]))])
+      } else {
+        Invocation!(T_CS!("\\lx@add@email@metadata"), vec![None, Some(address)])
+      })
     });
   }
   // One binding for every AASTeX version, the union of their commands (user directives 2026-10-09, 2026-10-10: the 5.x
   // `\subsubsubsection`/`\supportfrom` stay for a 6+ class too, where a paper's own `\newcommand` of them is skipped and
   // its text kept) — dispatched by version only where a version's command would take the paper's own away:
   if !aastex6_plus {
+    // AASTeX 5.x is an article class (aastex.cls:136) whose `\email` sets the address in `\tt` (:841, :903-905 in the
+    // 5.2 copy 1001.0026 ships): typewriter type, not the current font of the 6+ classes (aas_support_sty.rs).
+    // emulateapj, which loads this binding, sets it in roman (emulateapj_cls.rs).
+    DefMacro!("\\email[]{}", "\\lx@add@email{\\lx@address@urlfont{#2}}");
     // The `\fig` family and `\gridline`: AASTeX 6+ only (aastex6.cls:4909). A 5.x paper's `\fig` is its own:
     // astro-ph/0003209 `\newcommand{\fig}…` now prints "Fig. <ref>", where the binding's `\fig` read the argument as a
     // `\ref` of the wrong label (64e review r2).

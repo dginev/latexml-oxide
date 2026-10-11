@@ -176,12 +176,11 @@ LoadDefinitions!({
   // \ead[type]{address} — author email/url, preserve as contact. The address is read verbatim, as cas-common.sty
   // prints it, stringified (`\ttfamily \tl_to_str:n`, :362; the `[url]` form through `\url`, :338): 2410.07921's
   // `arash_khajooei@…`, its `_` an error. The type is `email` by default, as elsarticle's, through the same contact
-  // API (elsart_support_core_sty.rs; an empty `role` before). The contact holds the address as its own text, which
-  // the HTML link is made of (LaTeXML-structure-xhtml.xsl `concat('mailto:',text())`); its `_` prints in the T1 font
-  // the class loads.
+  // API (elsart_support_core_sty.rs; an empty `role` before), in the typewriter type cas-common.sty sets it in; the
+  // HTML link is made of the address text inside it (LaTeXML-structure-xhtml.xsl `contact-address`).
   DefMacro!(
     "\\ead Optional:email Semiverbatim",
-    "\\lx@add@contact[role=#1]{#2}"
+    "\\lx@add@contact[role=#1]{\\lx@address@urlfont{#2}}"
   );
   // \sep — author/affil separator that cas-common defines.
   DefMacro!("\\sep", ",");

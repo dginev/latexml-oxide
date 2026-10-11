@@ -23,7 +23,8 @@ LoadDefinitions!({
   // \note{} appears inside author?
   DefMacro!("\\note{}", "\\lx@add@contact[role=note]{#1}");
   // The n-th \emailAdd is attached to the n-th author!
-  DefMacro!("\\emailAdd Semiverbatim", "\\lx@add@contact[role=email,labelseq=author]{#1}");
+  // jheppub.sty:127-131, each address `\href{mailto:#1}{\tt #1}` (2301.03278)
+  DefMacro!("\\emailAdd Semiverbatim", "\\lx@add@contact[role=email,labelseq=author]{\\lx@address@urlfont{#1}}");
 
   // Keywords
   DefMacro!("\\keywordname", "\\textbf{Keywords}");

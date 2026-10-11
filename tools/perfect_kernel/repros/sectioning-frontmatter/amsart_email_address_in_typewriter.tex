@@ -1,0 +1,19 @@
+% mechanism: amsart sets an `\email`/`\urladdr` address in `\ttfamily` (amsart.cls:538-546); an address spelled with
+%   `\string_` prints '_' in cmtt. The binding set it in the roman OT1 font, where 0x5F is the dot accent (Perl
+%   TeX_Fonts.pool.ltxml:214).
+% witness: 2101.10462, 2501.04035, 2501.08733 (`\email{yulong\string_wu@whu.edu.cn}`)
+% oracle:  pdflatex 0 errors; "Email address: ann_able@a.edu", "URL: http://a.edu/~ann_able" in CMTT8
+% engines: rust 64u: "ann˙able@a.edu", "http://a.edu/˜ann˙able" in roman; perl: the same
+% expect:  the addresses as typed, in typewriter type
+% status:  RED (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\address{University of A}
+\email{ann\string_able@a.edu}
+\urladdr{http://a.edu/\string~ann\string_able}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% mechanism: hyperref's `\url` with an accent command in its argument (`\'{\i}`) gives the text and the link the
+%   accent's expansion, `\lxaccentacute{\global\let\ASCII\i\OT1\i\ASCII\i}`: the argument is expanded and then
+%   stringified. Pre-existing (64u the same); a side finding of 64zc's review.
+% witness: (construct, 64zc review)
+% oracle:  pdflatex 0 errors, but it too prints the kernel's expansion of `\'` ("http://x.org/\unhbox\voidb@x\bgroup…")
+% engines: rust 64u and 64zc: href and text `http://x.org/\lxaccentacute{\global\let\ASCII\i\OT1\i\ASCII\i}`; perl:
+%   not measured (timed out)
+% expect:  0 errors; no kernel internals in the link or the text: "http://x.org/í" (or the argument as written,
+%   `\'{\i}`) (beyond pdflatex)
+% status:  RED (64zc)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{url}
+\usepackage{hyperref}
+\begin{document}
+\url{http://x.org/\'{\i}}
+\end{document}

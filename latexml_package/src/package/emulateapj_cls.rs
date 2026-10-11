@@ -21,4 +21,10 @@ LoadDefinitions!({
   // …and unlocked: emulateapj_sty.rs locks the `\fig` it found defined, which a 6+ `aastex.cls` the paper ships leaves
   // (aastex_cls.rs), and a lock on an undefined `\fig` would refuse the paper's own (64f review r3).
   assign_value("\\fig:locked", Stored::None, Some(Scope::Global));
+  // emulateapj loads REVTeX 4.1 when it is installed (emulateapj.cls:76-78, :151-167; copies since 11/10/2009, 1601.00007's
+  // too), whose `\email`/`\homepage` set the address with `\href`, in the current font (revtex4-1.cls:1959-1961,
+  // 2383-2391): roman, as pdflatex prints them (CMR8, also under `[revtex4]`), not AASTeX 5.x's `\tt` or REVTeX 4.0's
+  // `\url` that the aastex binding it loads installs. The `_` is kept (user ruling 2026-10-11).
+  DefMacro!("\\email[]{}", "\\lx@add@email{\\lx@address@textfont{#2}}");
+  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
 });

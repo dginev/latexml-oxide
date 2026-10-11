@@ -61,7 +61,9 @@ LoadDefinitions!({
     "\\begingroup\\def\\\\{ }\\def\\and{ }\\def\\AND{ }\\let\\addr\\lx@jmlr@addr#1\\lx@jmlr@endaddr\\endgroup"
   );
   DefMacro!("\\Name[]{}", "\\lx@add@creator[role=author]{#2}");
-  DefMacro!("\\Email{}", "\\lx@add@email{#1}");
+  // jmlr.cls:447 `{\@email #1}`, the address in the current family's small capitals; the binding keeps the current
+  // font, not the small capitals (2101.03309)
+  DefMacro!("\\Email{}", "\\lx@add@email{\\lx@address@textfont{#1}}");
   DefMacro!(
     "\\lx@jmlr@addr Until:\\lx@jmlr@endaddr",
     "\\lx@add@affiliation{#1}"

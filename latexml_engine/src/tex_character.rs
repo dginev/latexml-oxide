@@ -304,9 +304,13 @@ pub fn apply_accent(
 ) -> Result<Tbox> {
   let letter_box = digest(letter)?;
   let locator = letter_box.get_locator();
-  let font = letter_box.get_font()?.map(|f| Rc::new((*f).clone()));
-
   let mut string: String = letter_box.to_string();
+  // The accent is set in the current font; an empty letter (`\~{}`) has none of its own, so it is that font's
+  // (cmtt's 0x7E is `~`): a typewriter address's `http://a.edu/\~{}ann` keeps its `~` in the run (1601.03451).
+  let font = match letter_box.get_font()? {
+    Some(f) if !string.trim().is_empty() => Some(Rc::new((*f).clone())),
+    _ => lookup_font().map(|f| Rc::new((*f).clone())),
+  };
   // Perl: only replace dotless i/j with dotted for over-accents.
   // Over-accents are those placed above the letter (combiner range U+0300–U+0315 approx.).
   // Below accents (cedilla U+0327, dot-below U+0323, macron-below U+0331, comma-below U+0326)

@@ -1331,7 +1331,7 @@ fn frontmatter_llncs_institute_shared_email() {
     "llncs shared email did not attach to both authors:\n{x}"
   );
   assert!(
-    x.matches(">{alice,bob}@univ.edu</contact>").count() >= 2,
+    x.matches(">{alice,bob}@univ.edu</text></contact>").count() >= 2,
     "llncs shared email content missing on both authors:\n{x}"
   );
   // ...with no empty pending-stub affiliation leaking through.
@@ -1361,8 +1361,8 @@ fn frontmatter_llncs_and_separated_institutes() {
   // structured emails and neither institution is split off the wrong author.
   assert!(
     x.matches("role=\"email\"").count() >= 2
-      && x.contains(">alice@foo.edu</contact>")
-      && x.contains(">bob@bar.edu</contact>"),
+      && x.contains(">alice@foo.edu</text></contact>")
+      && x.contains(">bob@bar.edu</text></contact>"),
     "llncs \\and per-institution emails not structured onto both authors:\n{x}"
   );
   assert!(

@@ -25,8 +25,10 @@ LoadDefinitions!({
   DefMacro!("\\address{}", "\\lx@add@contact[annotate=new,role=address]{#1}");
   // These add contacts to most recent author
   // The optional arguments here are a sort of prefix to the footnote (NOT label!)
-  DefMacro!("\\email[] Semiverbatim",    "\\lx@add@contact[role=email,name={#1}]{#2}");
-  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@contact[role=url,name={#1}]{#2}");
+  // quantumarticle.cls:1220-1225 `\href{mailto:#2}{#2}`, `\href{#2}{#2}`: in the current font (no corpus `_`
+  // witness)
+  DefMacro!("\\email[] Semiverbatim",    "\\lx@add@contact[role=email,name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@contact[role=url,name={#1}]{\\lx@address@textfont{#2}}");
   DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}");
 

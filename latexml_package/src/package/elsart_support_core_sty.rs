@@ -76,9 +76,11 @@ LoadDefinitions!({
   def_macro_noop("\\runauthor{}")?;
   def_macro_noop("\\runtitle{}")?;
   DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
-  // \ead[label]{email} provides email address for the preceding \author (no marks used)
+  // \ead[label]{email} provides email address for the preceding \author (no marks used), set in typewriter type
+  // (elsarticle.cls:215-219 `{\ttfamily\expandafter\strip@prefix\meaning\@@tmp}`, :232-235 a `[url]`'s;
+  // 1601.03650 `vuongbv_56@…`)
   DefMacro!("\\ead Optional:email Semiverbatim",
-    "\\lx@add@contact[role=#1]{#2}");
+    "\\lx@add@contact[role=#1]{\\lx@address@urlfont{#2}}");
   DefMacro!("\\sep", "\\unskip,\\space");
   DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");
   DefMacro!("\\revised{}", "\\lx@add@date[role=revised]{#1}");

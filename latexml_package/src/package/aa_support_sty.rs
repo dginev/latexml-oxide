@@ -103,7 +103,8 @@ LoadDefinitions!({
 
   // Correspondence (Perl PR #2767)
   DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint]{#1}");
-  DefMacro!("\\email Semiverbatim", "\\lx@add@contact[role=email]{#1}");
+  // aa.cls:824 `e-mail: {\aa@emailfont #1}`, `\aa@emailfont` = `\ttfamily` (:600); 2101.02014, 2101.04399
+  DefMacro!("\\email Semiverbatim", "\\lx@add@contact[role=email]{\\lx@address@urlfont{#1}}");
   // aa.cls 2026 (:812): `\corrauth{<email>}` is `\thanks{Corresponding author: <email>}` on the current author.
   // 58 2609 papers (2609.06653).
   DefMacro!("\\corrauth{}", "\\lx@add@contact[role=corresponding,name={Corresponding author: }]{#1}");

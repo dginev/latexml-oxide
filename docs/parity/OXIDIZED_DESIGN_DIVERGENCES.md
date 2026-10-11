@@ -15306,3 +15306,55 @@ A/B vs 8542e1b1a5:
 - witnesses 2405.18512 45 → 0 (its appendices now `<appendix>`), 1406.2544 31 → 0, 1511.05179 1 → 0.
 
 Guards `perfect_kernel_batch64zb::*`; repros `macro-state/m5_*`.
+
+### 501. An email or web address a class sets in typewriter type is `<text font="typewriter">` in its contact, its `_` and `~` as typed (Perl: roman, `˙` and `˜`)
+
+**Perl behavior**: every class binding's address (`\email`, `\homepage`, `\urladdr`, `\ead`) is a Semiverbatim argument
+digested in the current font (revtex4_support.sty.ltxml:55, Base_Utility.pool.ltxml:655-659): in OT1 roman its
+catcode-12 `_` and `~` are slots 0x5F/0x7E, the dot and tilde accents (TeX_Fonts.pool.ltxml:214), "ann˙able@a.edu",
+and the HTML `mailto:` link is made of that text (KPE #586).
+**Rust behavior**: a binding whose class sets the address with `\url`, `\texttt` or `\ttfamily` passes it through the
+kernel `\lx@address@urlfont` (url.sty's `\UrlFont`: the ASCII encoding, the typewriter family): REVTeX 4.0
+(revtex4.cls:4476-4493), amsart/amsproc/amsbook (amsart.cls:538-546), llncs (:897), JHEP.cls (:806), jheppub
+(:127-131), iopart (:354-355), aa (:600, :824), elsarticle (:215-219, :232-235), cas (cas-common.sty:362), imsart
+(imsart.sty:1162). The contact holds `<text font="typewriter">ann_able@a.edu</text>`; the author block's contacts made
+of such a command's call (`\institute{… \\ \email{x}}`, `E-mail: \email{x}`) are set the same (`email_command_address`).
+The accent of an empty letter (`\~{}`) is the current font's, so a typewriter address keeps its `~` in the run
+(1601.03451), and the HTML link of an address held in typewriter runs is all of its text (`contact-address`). The
+ASCII fontmap's 0x10/0x11 are the dotless ı/ȷ (Perl: none), so `\'{\i}` in an address is "í".
+Perl's own golden `tests/structure/amsarticle.xml` has `joe@blow` in roman; ours carries the typewriter font.
+REVTeX 4.0 with the paper's own `\usepackage{hyperref}` sets the address with hyperref's `\href`, in roman ('˙' in OT1);
+revtex4_support always loads hyperref (as Perl's, revtex4_support.sty.ltxml:23), so the binding cannot tell, and every
+REVTeX 4.0 address is typewriter (user ruling 2026-10-11, 3 of 41 sampled revtex4 underscore papers). AASTeX 6+, which
+loads under the revtex4 binding, sets `\homepage` in roman (revtex4-1.cls:2387-2390, aastex701.cls:2213-2216) and keeps
+it so (#502); AASTeX 5.x's `\email` is typewriter (aastex.cls:903-905, `\tt`; 1001.0026).
+**Why**: the address as the PDF prints it, and a working `mailto:` link. Witnesses 1001.1076 (40 of 41 sampled revtex4
+papers), 2101.10462, 2501.04035. Guards `perfect_kernel_batch64zc::*`.
+
+### 502. An email or web address a class sets in roman keeps its `_` (Perl and pdflatex: `˙` in OT1)
+
+**Perl behavior**: as #501; the address in the OT1 roman font prints `_` as the dot accent.
+**Rust behavior**: a binding whose class sets the address in the current roman font — REVTeX 4.1/4.2 (`\href` without
+hyperref is `\@href`, revtex4-1.cls:1959-1961), AASTeX 6+, emulateapj (on REVTeX 4.1, emulateapj.cls:151-167),
+svjour3/svmult, quantumarticle, jmlr, pasj00, ptephy —
+passes it through the kernel `\lx@address@textfont` (the ASCII encoding, the current font): roman, its `_` and `~` as
+typed, no element added.
+**Why**: pdflatex prints "ann˙able@a.edu" there too; the address is the author's, not the accident of the font (user
+ruling 2026-10-11). 12 of 175 sampled underscore papers (revtex4-2 9, revtex4-1 3). Guards
+`perfect_kernel_batch64zc::revtex4_2_ot1_email_keeps_its_underscore`, `class_email_paths_keep_their_font_and_underscore`.
+
+### 503. The accent of an empty letter is the current font's, one run with the text around it (Perl: the same font; `˜`/`ˆ` in typewriter type)
+
+**Perl behavior**: `applyAccent` (TeX_Character.pool.ltxml:62-87) takes the font of the digested letter (:67); an
+empty letter has none, so the typewriter replacement (:80-83, which would give `~`) is skipped and the standalone
+accent (:84-87) is a Box with no font, which takes the current one (Box.pm:31). `\textsf{a\~{}b}` is one sansserif run;
+in typewriter type `\~{}`/`\^{}` are `˜`/`ˆ`, one run per font.
+**Rust behavior**: `apply_accent` (tex_character.rs) took the font of the empty letter's box, which has none: the accent
+came out font-less between two runs, `<text font="sansserif">a</text>˜<text font="sansserif">b</text>` (also under
+`\textit`, `\texttt`) — a Rust-only split. An empty letter (or one without a font) now takes the current font, as
+Perl's: one run. Beyond Perl, in typewriter type or the ASCII encoding `\~{}`/`\^{}` give `~`/`^`, cmtt's 0x7E/0x5E
+as pdflatex prints them under OT1 (a typewriter address keeps its `~` in its run, 1601.03451, 1601.06529). Under T1
+pdflatex's `\texttt{\~{}}` is ectt slot 3, the raised `˜`; we print the author's ASCII `~`.
+**Why**: Perl parity for the font, and the character the author typed. Body text changes on 6 of 13 sampled `\~{}`
+papers, each a run joined or a `~`: 1001.1367, 1001.1793, 1301.6104, 1301.6221, 1901.07113, 2101.11048. Guard
+`perfect_kernel_batch64zc::accent_of_empty_letter_keeps_the_run`.

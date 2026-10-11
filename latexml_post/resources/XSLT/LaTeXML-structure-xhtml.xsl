@@ -864,9 +864,14 @@
 
   <!-- The address a contact links to: its own text, or, when the address sits in an element of its own (a font
        change, \texttt), the first text inside it. Perl takes text() alone, so such a contact linked to `mailto:`
-       alone. -->
+       alone. An address held in typewriter runs, split by a character set in another font (a typewriter address's
+       `$\sim$`, 1601.02576), is all of its text, not the one character between the runs. (A nested run's font is only
+       its change from the run around it, so an italic or bold run inside the address is still the address.) -->
   <xsl:template name="contact-address">
     <xsl:choose>
+      <xsl:when test="* and not(*[not(self::ltx:text[contains(@font,'typewriter')])])">
+        <xsl:value-of select="normalize-space(.)"/>
+      </xsl:when>
       <xsl:when test="text()[normalize-space()]">
         <xsl:value-of select="normalize-space(text()[normalize-space()][1])"/>
       </xsl:when>

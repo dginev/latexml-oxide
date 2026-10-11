@@ -10,7 +10,7 @@
     <personname>Joe Blow</personname>
     <contact name="Address: " role="address">Somewhere, USA</contact>
     <contact name="Current address: " role="current_address">same as above</contact>
-    <contact name="Email address: " role="email">joe@blow</contact>
+    <contact name="Email address: " role="email"><text font="typewriter">joe@blow</text></contact>
   </creator>
   <creator before=", " role="author">
     <personname>Frank Zappa</personname>

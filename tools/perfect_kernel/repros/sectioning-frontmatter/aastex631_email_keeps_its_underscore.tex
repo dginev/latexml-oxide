@@ -1,0 +1,22 @@
+% mechanism: AASTeX 6.x sets `\email` with `\href{mailto: #1}{#1}` in the current roman font (aastex631.cls:6924-6930),
+%   and `\homepage` with REVTeX 4.1's `\href{#2}{#2}` (revtex4-1.cls:2387-2390, the class it loads, aastex631.cls:284-308);
+%   OT1 pdflatex prints its `_` as the dot accent, and by the user's ruling (2026-10-11) we keep the author's `_`
+%   (`\lx@address@textfont`).
+% witness: 2301.02349, 2101.08512
+% oracle:  pdflatex (aastex631.cls from 2101.06145) 0 errors; "ann˙able@a.edu" in CMR8 (divergence: we keep `_`); the
+%   copy's title block does not print the `\homepage` REVTeX 4.1 records, whose `\href` would set it in roman
+% engines: rust 64u: "ann˙able@a.edu", "http://a.edu/˜ann˙able/"; 64zc round 2: the homepage in typewriter; perl:
+%   "ann˙able@a.edu"
+% expect:  "ann_able@a.edu", "http://a.edu/~ann_able/" in roman
+% status:  RED (base) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass{aastex631}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\affiliation{University of A}
+\email{ann\string_able@a.edu}
+\homepage{http://a.edu/\string~ann\string_able/}
+\begin{abstract}A.\end{abstract}
+Text.
+\end{document}

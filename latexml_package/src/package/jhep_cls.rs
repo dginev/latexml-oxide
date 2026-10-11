@@ -48,7 +48,9 @@ LoadDefinitions!({
   DefMacro!("\\author{}", "\\lx@add@authors@list{#1}");
   DefMacro!("\\speaker{}", "\\lx@add@creator[role=speaker]{#1}");
   DefMacro!("\\abstract{}", "\\lx@add@abstract[name={\\abstractname~}]{#1}");
-  DefMacro!("\\email Semiverbatim", "\\lx@add@email{#1}");
+  // JHEP.cls:806 `\newcommand\email[1]{{\tt\href{mailto:#1}{#1}}}` (no corpus `_` witness; JHEP3's
+  // `E-mail: \email{…}` author lines, 0911.0568, 0911.0082)
+  DefMacro!("\\email Semiverbatim", "\\lx@add@email{\\lx@address@urlfont{#1}}");
   // Perl L50-52: each date macro ships `name={\<role>name}` so the localized
   // label is attached to the frontmatter date entry. Restored to match.
   DefMacro!("\\received{}", "\\lx@add@date[role=received,name={\\receivedname}]{#1}");

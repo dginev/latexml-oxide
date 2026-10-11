@@ -70,10 +70,11 @@ LoadDefinitions!({
     "\\lx@request@frontmatter@annotation[affiliation]{#1}"
   );
 
-  // \email should be used within \institute, (but CAN be used anywhere; it only formats)
+  // \email should be used within \institute, (but CAN be used anywhere; it only formats); svjour3 sets the address
+  // in the current font (svjour3.cls:303 `\emailname: #1`), as svmult's prints (2101.02062, 1901.06371)
   DefMacro!(
     "\\email Semiverbatim",
-    "\\lx@add@email[name={\\emailname: }]{#1}"
+    "\\lx@add@email[name={\\emailname: }]{\\lx@address@textfont{#1}}"
   );
 
   // Are these actually defined in svjour?
@@ -93,7 +94,7 @@ LoadDefinitions!({
   );
   DefMacro!(
     "\\homepage[] Semiverbatim",
-    "\\lx@add@contact[role=url,name={\\ifx.#1.URL:~\\else#1\\fi}]{#2}"
+    "\\lx@add@contact[role=url,name={\\ifx.#1.URL:~\\else#1\\fi}]{\\lx@address@textfont{#2}}"
   );
   DefMacro!(
     "\\thanks[]{}",

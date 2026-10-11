@@ -35,11 +35,13 @@ LoadDefinitions!({
   // and left `label=e1]{…}` in the author's name (2201.11773, 2507.12447). `\printead[presep=…]{e1,u1}` (:965)
   // reprints, in an address, the addresses `\ead` gave the authors, each already their contact. `\author[A,B]{…}`
   // and `\address[A]{…}` (:2003, :2088) link an author to the addresses its marks label, as revtex's and elsarticle's
-  // do (revtex4_support_sty.rs, elsart_support_core_sty.rs).
+  // do (revtex4_support_sty.rs, elsart_support_core_sty.rs). The address prints in typewriter type (imsart.sty:1162
+  // `\setattribute{ead}{size}{\upshape\ttfamily}`; 1601.00202's `\ead[url]`).
   DefMacro!("\\ead[] Semiverbatim", sub[(keys, address)] {
     let url = keys.as_ref().is_some_and(|keys| {
       keys.to_string().split(',').any(|key| key.split('=').next().is_some_and(|k| k.trim() == "url"))
     }) || address.to_string().contains("://");
+    let address = Invocation!(T_CS!("\\lx@address@urlfont"), vec![Some(address)]);
     Ok(if url {
       Invocation!(T_CS!("\\lx@add@url"), vec![None, Some(address)])
     } else {
