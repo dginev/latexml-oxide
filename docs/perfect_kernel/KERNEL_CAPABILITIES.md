@@ -56,9 +56,9 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K12 | pTeX control-word letters under a pLaTeX class | CJK (D9) | jsarticle `\if西暦`, ptex-manual `\黄マーカー` | — | LANDED (56ds, `PTEX_PROFILE` + upTeX `kcatcode`); the pTeX residual is PARKED, SHARED with Perl; witnesses out of scope (CJK, 2026-10-01) |
 | K20 | Gullet expansion fidelity: four tex.web algorithms the gullet deviates from (column ends by command code §342/§789, `\left`/`\middle`/`\right` as primitives with `scan_delimiter` §1160/§1188-1192, §395 extra `}` in a delimited argument, peeking macros as one unexpandable step §380/§440-445/§506/§785) | C5 (study 2026-10-11) | ~400-700 arXiv papers: X1 62 IfLimit Fatals in `\xymatrix`, redefined `\span` ~127, V1b cell-head `_` ~61, part of Mouth:EoF 338; 8 REDs; queued rows 64n/64o/64v; OD #500's expansion-only residual | 2 (after P0) | OPEN, ordered G4 → G2 → G3 → G1 (user 2026-10-11) |
 | K21 | Environments as TeX does them: `Streamed` (group + element opened/closed) vs `Captured` (`#body` box) DefEnvironments, no default mode, the XML element stack independent of the save stack | C2; extends K9, K2 | M1 residual 82/150 (64y), `$$` in 64 mode-less `#body` environments (~1,700 fixed by 64ra), `\endlx@list` 839, ~5k first errors, 15 REDs, HF6 | 3 (behind P0) | OPEN; HIGH risk, staged |
-| K22 | Binding provenance and ownership: a FileIdentity per class/package load, an owned set per binding over a raw-loaded real file, the shipped-copy delta, a corpus-copy conformance audit | C1; generalizes K1 step 3 and K13 stage 3 | `undefined:` 63% of run-336 first errors (227 clusters of ≥100 papers ≈54k tasks), binding surplus over the paper (OSA abbreviations, PoS/JHEP macros, EPL `{widetext}`), 31 renamed JHEP3 copies, ~15 REDs | read-only audit in parallel with K20 | OPEN — census + audit first, no behaviour change |
+| K22 | Binding provenance and ownership: a FileIdentity per class/package load, an owned set per binding over a raw-loaded real file, the shipped-copy delta, a corpus-copy conformance audit | C1; generalizes K1 step 3 and K13 stage 3 | `undefined:` 63% of run-336 first errors (227 clusters of ≥100 papers ≈54k tasks), binding surplus over the paper (OSA abbreviations, PoS/JHEP macros, EPL `{widetext}`), 31 renamed JHEP3 copies, ~15 REDs | read-only audit in parallel with K20 | step 2 census DONE 2026-10-11 (83.6% of the not-in-TL bound families' papers ship the file); FileIdentity + owned-set overlay OPEN |
 | K23 | Frontmatter author-block event model: a lexer of author blocks into events (name, mark, separator, affiliation, contact, note, layout, group), per-binding association policy, one resolver, one emission | C4 (beyond Perl) | 49 REDs, HF2 residual 16, A2 rows, ~24 KPE / ~15 OD frontmatter entries, 20+ batches and 30+ NO-SHIP rounds | after K24's frontmatter extractor | OPEN — shadow mode first (user: needs very careful testing) |
-| K24 | One audited A/B comparator: stamped revisions or refuse, per-qname element counts, attribute text, canonical XML diff with mapped ids, frontmatter tuples; entry numbers allocated at integration | P0; extends K17 to arXiv; seed of the A4 audit | ≥7 missed or near-missed regressions in one week (64zc r1, 64x r1/r4, 63w4, 64k5, 64u EPL, 64b), 122 ad-hoc compare scripts, 3 renumberings | 1 | IN PROGRESS (payload p0, 2026-10-11) |
+| K24 | One audited A/B comparator: stamped revisions or refuse, per-qname element counts, attribute text, canonical XML diff with mapped ids, frontmatter tuples; entry numbers allocated at integration | P0; extends K17 to arXiv; seed of the A4 audit | ≥7 missed or near-missed regressions in one week (64zc r1, 64x r1/r4, 63w4, 64k5, 64u EPL, 64b), 122 ad-hoc compare scripts, 3 renumberings | 1 | LANDED (p0 `1e47551e6c`, 2026-10-11): `ab_audit run/compare/audit` + `tools/perfect_kernel/next_entry_numbers.sh` |
 
 ## K1 — Definition provenance and raw-load-then-overlay bindings
 
@@ -556,6 +556,19 @@ stage 3); (e) legacy-absent styles keep their emulation.
 64-series ship the file (confirms or kills (b)); (3) the audit; (4) one shipped-heavy family overlay (iopart or svmult),
 byte-identical but for intended changes; (5) owned sets for the frontmatter bindings; (6) the delta handler.
 
+**Census (step 2, 2026-10-11, read-only; data `~/data/pk_agents/main/c1_census/`, report
+`agent_reports/2026-10-11_c1_census.md`).** Of the 11,993 run-336 cluster papers behind the 64-series binding fixes,
+54.6% ship the family's file (exact 6,198, variant 351). By kind:
+- not in TL with a binding (aipproc, elsart, tcilatex, JINST, compositio, ws, iopart, svmult, mdpi, WileyNJD, ptephy,
+  paspconf, PoS): **83.6%** — so (b) matters;
+- legacy-absent (l-aa, EPL, OSA, REVTeX 2, axodraw v1): 0.2% — the emulation owns every name.
+
+Shipped copies drift: mdpi 393 distinct hashes over 844 papers, WileyNJD 200/558, ws 86/1,077.
+A textual form of (d) — names a shipped copy defines that the binding's closure lacks — lists 41 of the 59 names fixed
+this week at the pre-batch commit. Its misses are `@` names, wrong meanings under the right name, and kernel-side
+fixes. Ranked by papers whose own `.tex` uses the name, 26 of its top 30 at head are run-336 first-error undefined
+commands.
+
 **Class guard:** the audit lists this week's 20 hand-fixed gaps (`\ioptwocol`, `\toctitle`, `\history`, `\state`,
 `\bodymatter`, the PoS/OSA surplus). **Risk:** LOW for (1)-(3), MED-HIGH per family after.
 
@@ -587,3 +600,23 @@ integration by a script reading the current maxima. It is the seed of the A4 ful
 
 **Class guard:** replayed on this week's misses (64u EPL `{widetext}`, 64x r4's lost graphics panels, 64zc r1's
 one-character mailto links, 63w4's orcid slot), it flags each. **Risk:** LOW (tooling).
+
+**As landed (p0, `1e47551e6c`; six review rounds).** `latexml_oxide/bin/ab_audit/` (`test-utils` only; pure-Rust
+`roxmltree`, one parser per thread). Usage:
+- `ab_audit run --bin-a A --expect-a SHA --bin-b B --expect-b SHA --papers ids.txt --out DIR -j 16 --cores 80-95`
+  converts each paper with both binaries (`--preload=ar5iv.sty`, 8 GB, 300 s), refusing a binary whose stamp
+  (`--version` revision, else the log banner) is not the expected commit, two byte-identical binaries, one stamp
+  behind two expected commits, or a binary older than its commit; `--accept-stamp` replays history loudly. Resume
+  is keyed on the binary hash, the run settings and the inherited `LATEXML_*`/`LXML_*`/`TEX*`/`PATH`/`HOME`.
+- `ab_audit compare A_ROOT B_ROOT -o PREFIX` and `ab_audit audit ROOT -o PREFIX` (the A4 seed) write a TSV, a
+  summary and per-paper details; exit 0 = only change/identical rows, 1 = a regression or review row, 2 = refused or
+  nothing to compare.
+- Fails toward flagging: a timeout, crash, OOM, missing/unparsable XML or log, a status line outside 0–3, a status
+  that disagrees with the log's diagnostics, a mid-line diagnostic, or an unrecognised directory is a flagged row.
+  Regression flags include lost text by element class (single characters and inter-word spaces kept), lost
+  elements per qname, creator/contact loss in the frontmatter tuples, `geometry-collapsed`, `leaked-dimension`;
+  review flags include `attrs-changed:<qname@attr>`, `space-lost`, `moved-text`, `text-jitter`, `gained-number`.
+- `tools/perfect_kernel/next_entry_numbers.sh [--renumber report.md]` prints the next free OD/KPE numbers and maps
+  `OD #NEWk`/`KPE #NEWk` placeholders at integration, refusing a report with leftover placeholders.
+Measured: `audit` ≈ 3,400 docs/s and `compare` ≈ 2,400 pairs/s at `-j 16`; s147 → s148 = 73 regression / 7 review /
+43 change / 2,251 identical, every sampled regression genuine. Report: `agent_reports/2026-10-11_payload_p0.md`.

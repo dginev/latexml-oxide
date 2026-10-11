@@ -4,6 +4,13 @@ This file documents issues in the original Perl LaTeXML codebase.
 These are upstream behaviors or design quirks — NOT bugs introduced by the Rust port.
 For Rust-specific error bookkeeping, see `docs/SYNC_STATUS.md`.
 
+> **Numbers #80–#86 occur twice** (a historical merge; the `## N` numbers are cited from code, so neither series is
+> renumbered). The first series runs from `pdfcol.sty` (#80) to `\@ifundefined{r@LABEL}` forward references (#86);
+> the second from `\define@cmdkey` (#80) to `\maketitle` inside box captures (#86). Code comments citing #80, #82
+> and #83 (keyval, the locked `\newtheorem`, the `\index` phrase splitter) mean the second series. Cite these by
+> number *and* title. New entries take the next free number from
+> `tools/perfect_kernel/next_entry_numbers.sh`, allocated at integration.
+
 ---
 
 ## 1. `packParameters` spurious warning for alignment templates
