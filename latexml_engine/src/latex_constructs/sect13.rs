@@ -44,9 +44,10 @@ pub(crate) fn load() -> Result<()> {
     // Matches Perl: only \\ is rebound (Perl does NOT rebind \lx@hidden@cr).
     // \lx@newline is also rebound because \\ is Let to \lx@newline at the
     // top level, so \lx@newline tokens in content must also become @shortstack@cr.
-    // NOTE: \lx@hidden@cr must NOT be rebound — doing so causes is_column_end()
-    // to match \\ as a column end inside alignments, because is_column_end
-    // compares meanings and \lx@hidden@cr is a COLUMN_END sentinel.
+    // NOTE: \lx@hidden@cr must NOT be rebound — it is a COLUMN_END sentinel,
+    // recognized by its command code (gullet.rs `is_column_end`), so `\let`ting
+    // it to `\@shortstack@cr` would stop it ending the rows of an alignment
+    // built inside the stack.
     Let!("\\\\", "\\@shortstack@cr");
     Let!("\\lx@newline", "\\@shortstack@cr");
     AssignRegister!("\\baselineskip" , Glue::new_spec("-1pt", None, None, None, None).into());

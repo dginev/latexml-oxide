@@ -937,9 +937,18 @@ pub fn recover_at_file_end() -> Result<FileEndRecovery> {
   Error!("expected", "}", message);
   close_mouth(false)?;
   unread_expansion(if status == ScannerStatus::Aligning {
-    // TeX inserts `frozen_cr`, the primitive whatever `\cr` means now; this
-    // is the `\cr` token (a redefined `\cr` is not modelled).
-    Tokens!(T_CS!("\\cr"), T_END!())
+    // TeX inserts `frozen_cr` (§339), the primitive whatever `\cr` means now:
+    // the engine's `\lx@frozen@cr`, a `\let` copy of the primitive taken when
+    // `\cr` is defined (tex_tables.rs), so an author's `\def\cr` does not run
+    // here (`is_column_end` takes the copy for `\cr`). Guard:
+    // `perfect_kernel_batch65::file_end_in_a_preamble_inserts_the_frozen_cr`.
+    let frozen_cr = T_CS!("\\lx@frozen@cr");
+    let cr = if with_meaning(&frozen_cr, |defn| defn.is_some()) {
+      frozen_cr
+    } else {
+      T_CS!("\\cr")
+    };
+    Tokens!(cr, T_END!())
   } else {
     Tokens!(T_END!())
   });
@@ -4539,27 +4548,38 @@ pub fn do_expand_partially<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   })
 }
 
+/// Is `token` an alignment column end — a tab or a row end — and which one: the `COLUMN_ENDS` entry (the token
+/// to act on, its keyword, whether it is hidden), or `(token, "align", false)` for a tab.
+///
+/// tex.web §342/§789 insert the v-template when `get_next` yields `cur_cmd` ∈ {`tab_mark`, `car_ret`}: a column
+/// end is recognized by its COMMAND CODE, which `\let` copies and `\def` replaces. So `\let\myspan\span` ends a
+/// cell, while after `\def\span{\mathrm{span}}` a `\span` is a macro call — expanded, never a column end. A
+/// LaTeXML primitive's command code is its defining cs: `\let` copies the `Primitive`/`Constructor` with that cs
+/// (and the format dump restores such copies as aliases of the cs), while `\def`/`\newcommand` make an
+/// `Expandable`. So a binding that re-`DefPrimitive`s/`DefConstructor`s `\cr`, `\crcr` or `\span` under that name
+/// makes a column end too; the frozen copies `\lx@span`/`\lx@frozen@cr` (tex_tables.rs) are column ends for the
+/// same reason. Perl `Gullet.pm` L266-277 compares the token's meaning with the CURRENT meaning of each
+/// end instead, so a redefined `\span` (or `\cr`) still matched itself and ended the cell (math0004102:
+/// `\def\span{{\mathrm{span}}}` in an `eqnarray` cell split the cell at the `\span` and ran `^` out of math).
+/// Guard: `perfect_kernel_batch65::redefined_span_is_a_macro_not_a_column_end`.
 pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
   match token.get_catcode() {
     Catcode::ALIGN => Some((*token, "align", false)),
-    Catcode::CS | Catcode::ACTIVE => {
-      // Embedded version of Equals, knowing both are tokens
-      let defn = lookup_meaning(token).unwrap_or_else(|| Stored::Token(*token));
-      // Perl Gullet.pm L273: if meaning is a Token with CC_ALIGN, treat as alignment tab
-      if let Stored::Token(t) = &defn
-        && t.get_catcode() == Catcode::ALIGN
-      {
-        return Some((*token, "align", false));
-      }
-      for end in *COLUMN_ENDS {
-        let e = &end.0;
-        // Would be nice to cache the defns, but don't know when they're present & constant!
-        if defn == lookup_meaning(e).unwrap_or_else(|| Stored::Token(*e)) {
-          return Some(end);
-        }
-      }
-      None
-    },
+    Catcode::CS | Catcode::ACTIVE => with_meaning(token, |defn| {
+      let primitive_cs = match defn? {
+        // Perl Gullet.pm L273: if meaning is a Token with CC_ALIGN, treat as alignment tab
+        Stored::Token(t) if t.get_catcode() == Catcode::ALIGN => {
+          return Some((*token, "align", false));
+        },
+        Stored::Primitive(p) => p.cs,
+        Stored::Constructor(c) => c.cs,
+        _ => return None,
+      };
+      COLUMN_ENDS
+        .iter()
+        .find(|end| end.0 == primitive_cs)
+        .copied()
+    }),
     _ => None,
   }
 }

@@ -246,10 +246,24 @@ LoadDefinitions!({
 
   // Perl: DefMacro('\longtab{}', '') with comment "just let it do the table
   // contents as usual." Usage: `\longtab{N}{table-body}` — the {N} number is
-  // consumed; the table-body block flows through as normal tokens. Perl does
-  // NOT define a `{longtab}` environment, so we don't either; an extra
-  // DefEnvironment trips the mode-switch on `\end{...}` matching.
-  def_macro_noop("\\longtab{}")?;
+  // consumed; the table-body block flows through as normal tokens. aa.cls:1430
+  // `\Newassociation{longtab}{Longtab}{\jobname}` (answers.sty) makes `{longtab}`
+  // an environment as well, which files the tables away and reads them back at
+  // the document's end; there the one-argument `\longtab` took the `\begin` of
+  // the `{longtable}` inside as its argument (1611.08428; Perl the same). The
+  // environment is a plain wrapper here (the tables stay where they are), told
+  // apart from the command by `\@currenvir`, which `\begin{longtab}` sets before
+  // it calls `\longtab` (latex.ltx:15371-15377). No DefEnvironment: it trips the
+  // mode-switch on `\end{...}` matching. Guard:
+  // `perfect_kernel_batch65::aa_longtab_environment_wraps_its_longtable`.
+  DefMacro!("\\longtab", sub[_args] {
+    if Expand!(T_CS!("\\@currenvir")).to_string() == "longtab" {
+      vec![]
+    } else {
+      vec![T_CS!("\\@gobble")]
+    }
+  });
+  DefMacro!("\\endlongtab", "");
   Let!("\\tablefoot", "\\footnote");
   DefMacro!("\\tablefootmark{}", "\\footnotemark[$#1$]");
   DefMacro!("\\tablefoottext{}{}", "\\footnotetext[$#1$]{#2}");

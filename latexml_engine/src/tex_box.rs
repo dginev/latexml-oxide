@@ -1704,7 +1704,7 @@ LoadDefinitions!({
     whatsit.set_property("cached_depth", cdepth);
     // hrule defaults to full width — don't cache a specific width
 
-    if let Some(_alignment) = lookup_alignment() {
+    if lookup_alignment().is_some() {
       // Perl: set isHorizontalRule only if dimensions suggest a real rule
       // A full-width (default) rule with an explicit height is a horizontal
       // rule too — `\noalign{\hrule height 1pt}` fell through the former
@@ -1717,8 +1717,10 @@ LoadDefinitions!({
         (Some(h), Some(w)) => w > 3.0 * h,
       };
       if dominated_by_width {
-        _alignment.alignment_cell().unwrap().borrow_mut()
-          .add_line("t", Vec::new());
+        // no border from a misplaced `\noalign`'s body (`tex_tables::alignment_to_rule`)
+        if let Some(alignment) = crate::tex_tables::alignment_to_rule() {
+          alignment.alignment_cell().unwrap().borrow_mut().add_line("t", Vec::new());
+        }
         whatsit.set_property("isHorizontalRule", true);
       }
     }

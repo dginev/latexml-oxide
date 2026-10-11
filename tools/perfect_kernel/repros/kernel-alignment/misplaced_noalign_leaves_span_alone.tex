@@ -1,0 +1,19 @@
+% witness: none (reviewer probe 65b r1; shape of a stray `\hline` in body text before a `\multicolumn` table)
+% oracle:  pdflatex 1 error (`Misplaced \noalign`): "AB" spans two columns, "C" in the third, then d|e|f
+% engines: rust 64ze = 7 errors (the recovery's `\let\span\relax` leaked past its group and every `\relax` became a
+%          span); rust 65b r1 = 1 error but no colspan, "C" in column 2 (the leaked `\span`=`\relax` no longer
+%          spanned); Perl lets inside its never-closed group (TeX_Tables.pool:120-127)
+% expect:  1 error (`\noalign cannot be used here`); first row "AB" colspan=2 | "C", second row d|e|f
+% status:  CONTROL; guard perfect_kernel_batch65::misplaced_noalign_leaves_span_alone
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text before.
+\hline
+More text.
+
+\begin{tabular}{|l|c|r|}
+\multicolumn{2}{|c|}{AB} & C \\
+d & e & f \\
+\end{tabular}
+\end{document}

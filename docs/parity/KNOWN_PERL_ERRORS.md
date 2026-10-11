@@ -5875,6 +5875,30 @@ luck of its group model). tex.web §1128 `align_error`: "Misplaced \omit" is
 reported and nothing else happens. Trigger: `A{\multicolumn{1}{c}{B}}C`.
 Rust: error only. Guard: `perfect_kernel_batch54::misplaced_omit_does_not_open_a_group`.
 
+`\noalign` too (TeX_Tables.pool:120-127): a misplaced `\noalign` opens a `bgroup` it never closes and `\let`s
+`&`/`\noalign`/`\omit`/`\span` to `\relax` inside it. Every later misplaced `\noalign`/`\omit`/`\span` in that group
+is silenced, and the open group swallows the next `}`. tex.web §1126 → §1129 `no_align_error` reports and changes
+no meaning.
+
+Trigger:
+```latex
+\documentclass{article}
+\begin{document}
+Text \hline more \hline again \omit x \span y.
+
+\begin{tabular}{|l|c|r|}
+\multicolumn{2}{|c|}{AB} & C \\
+d & e & f \\
+\end{tabular}
+\end{document}
+```
+- pdflatex: 4 errors (2× Misplaced `\noalign`, `\omit`, `\span`).
+- Perl (installed latexml): 7 errors + 1 warning. One `\noalign cannot be used here`, then six
+  `Extra alignment tab '&'` (the `\let\span\relax` breaks the `\multicolumn`), then
+  `Attempt to end document with open groups`.
+- Rust 64ze: 7 errors.
+- Rust 65b: 4 errors, "AB" spans (OD #525). Guard `perfect_kernel_batch65::misplaced_commands_are_each_reported`.
+
 ## 192. `array` never lets `\tabularnewline` to the row break (Rust fixes)
 
 latex_constructs.pool.ltxml:3792-3809 (`\@array@bindings`) lets `\\` to the
@@ -12382,3 +12406,39 @@ Perl has no natbib `\BibitemOpen`/`\BibitemShut`/`\bibinfo`/`\bibfield` (natbib.
 ACM-Reference-Format and elsarticle `.bbl` files use. Trigger `\documentclass{revtex4-1}…\bibitem{a}\BibitemOpen
 \bibinfo{note}{X}\BibitemShut{NoStop}` → 3 undefined. Fixed in Rust (64ze; natbib entries cluster 80 → 2 papers with
 errors).
+
+## 603. Alignment column ends are matched by their current meaning
+
+`Gullet.pm:266-277` `isColumnEnd` returns a column end when the token's meaning `equals` the CURRENT meaning of
+`\cr`/`\crcr`/`\span`/the hidden ends. Three consequences:
+- a redefined `\span` (or `\cr`) matches itself and ends the cell;
+- after `\let\span\relax` (TeX_Tables.pool:126, the misplaced-`\noalign` recovery), every `\relax` is a column span;
+- the preamble reader tests `\tabskip` (TeX_Tables.pool:209) and `\span` (:212) by name.
+
+TeX tests the command code (tex.web §342/§789/§783). Trigger:
+```latex
+\documentclass{article}
+\def\span{{\mathrm{span}}}
+\begin{document}
+\begin{eqnarray} g = \span\{h\} && x \end{eqnarray}
+\end{document}
+```
+Perl gives `Error:unexpected:^` and `\mathrm should only appear in math mode`; pdflatex 0. Fixed in Rust (65b,
+OD #522), witness math0004102.
+
+## 604. aa's `\longtab{}` takes the `\begin` inside aa.cls's `{longtab}` environment
+
+Perl aa_support.sty.ltxml `DefMacro('\longtab{}','')` (the old `\longtab{N}{body}` use). aa.cls:1430
+`\Newassociation{longtab}{Longtab}{\jobname}` (answers.sty) also makes `{longtab}` an environment, so
+`\begin{longtab}\begin{longtable}…` hands the inner `\begin` to `\longtab` as its argument. Trigger:
+`class-bindings/aa_longtab_environment.tex`. Rust (65b): in the environment (`\@currenvir` = `longtab`, set by
+`\begin` before `\longtab` runs) it expands to nothing, otherwise it gobbles one argument. Witness 1611.08428
+(71 errors → 0, the table's 236 rows recovered).
+
+## 605. deluxetable's `\tablewidth` is an assignment, so it opens a cell at a `tabular` row start
+
+Perl deluxetable.sty.ltxml:70 `DefMacro('\tablewidth{Dimension}', '\pt@width=#1\relax')`. aastex62.cls:1849-1858
+expands to nothing for `0pt` (`\ifdim#1=\z@ \else …\fi`), so `\tablewidth{0pt}\hline\hline` at the start of a
+`tabular` leaves both `\hline`s as the row's `\noalign`s. Perl's assignment opens a cell and the `\hline`s become
+misplaced. Trigger: `class-bindings/aastex_tablewidth_zero_in_tabular.tex`. Rust (65b):
+`\ifdim#1=\z@\else\pt@width=#1\relax\fi`. Witness 1805.09353.

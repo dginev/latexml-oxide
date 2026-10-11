@@ -1,0 +1,13 @@
+% witness: none (tex.web §339: a file ending in an `\halign` preamble inserts `frozen_cr`, not the current `\cr`)
+% oracle:  pdflatex 1 error (`File ended while scanning preamble of \halign`), then "after"
+% engines: rust 64ze = 1 error, "after"; rust 65b r1 = 1 error and NO "after" (the inserted `\cr` was the author's
+%          macro, no longer a column end, and the preamble read on to the end)
+% expect:  1 error (`File ended while scanning preamble of \halign`); a paragraph "after"
+% status:  CONTROL; guard perfect_kernel_batch65::file_end_in_a_preamble_inserts_the_frozen_cr
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\def\cr{X}
+\input{file_end_in_preamble_frozen_cr.snippet}
+after
+\end{document}

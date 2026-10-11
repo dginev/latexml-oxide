@@ -219,6 +219,9 @@ LoadDefinitions!({
   //\tabskip          pg is optional glue put between columns in a table.
   DefConstructor!("\\cr", "\n");
   DefConstructor!("\\crcr", "\n");
+  // tex.web §339 `frozen_cr`: the `\cr` TeX inserts when a file ends inside an alignment's preamble, whatever
+  // `\cr` means by then (gullet.rs `recover_at_file_end`).
+  Let!("\\lx@frozen@cr", "\\cr");
   // These are useful for reversion of higher-level macros that use alignment
   // internally, but don't use explicit &,\cr in the user markup
   DefConstructor!("\\lx@hidden@cr",    "\n", alias => "");
@@ -235,34 +238,44 @@ LoadDefinitions!({
   // \omit             c  is used in the body of a table to change an entry's template from the one
   // in the preamble. \span             c  combines adjacent entries in a table into a single
   // entry.
+  // A misplaced `\noalign` is tex.web §1126 `any_mode(no_align)` → §1129 `no_align_error`: report "Misplaced
+  // \noalign" and carry on ("I'll ignore this case"). No meaning changes; the `{…}` (or `\bgroup…\egroup`) that
+  // follows is an ordinary group, its material typeset where it stands (pdflatex: `Text \noalign{visible words}
+  // end.` reads "Text visible words end."). The group's first token is `\lx@noalign@misplaced@mark`, so inside that
+  // body no rule marker borders a row (`alignment_to_rule`: TeX's `\hrule` in a cell errors and draws nothing; a
+  // stray `\hline`/`\cline` used to stack `border="bbbb…"`, 2306.10087, 2511.12320); the real `{` primitive opens
+  // the group, so math `tex=` keeps its braces (`a{b+c}d`). Perl TeX_Tables.pool:120-127 opens a `bgroup` it never
+  // closes with `\let`s of `&`/`\noalign`/`\omit`/`\span` to `\relax` inside, silencing every later misplaced
+  // `\noalign`/`\omit`/`\span` until that group ends (KPE #191's `\omit`/`\span` case). Dead end: consuming the body
+  // unread (to keep a `bgroup` balanced, REG-1 / math0403005) dropped its text. Guards:
+  // `perfect_kernel_batch65::{misplaced_noalign_leaves_span_alone, misplaced_noalign_body_is_typeset,
+  // stray_hline_in_a_paragraph_is_one_error, misplaced_commands_are_each_reported,
+  // misplaced_hline_in_a_cell_draws_no_rule, misplaced_noalign_in_math_keeps_its_braces}`.
   DefPrimitive!("\\noalign", {
-    // Perl `DefPrimitiveI('\noalign', ...)`: bgroup() + error + lets.
-    // We MATCH Perl's bgroup but then read+discard the `{...}` body and
-    // egroup so the body's closing `}` doesn't leak past the bgroup
-    // frame. Without this body-consume, the user's `\hline`
-    // (= `\noalign{\@@alignment@hline}`) hitting the bad path (cell
-    // content rather than INNER 1's noalign branch) leaves the bgroup
-    // pushed AND its `{` pushes a SECOND frame, while only the body's
-    // `}` pops one — the `\noalign`'s primitive-bgroup leaks. The leak
-    // then cascades into \vtop/\hbox mode-end mismatches in p{}-column
-    // arrays (REG-1 / math0403005).
-    bgroup();
     Error!("unexpected", "\\noalign", "\\noalign cannot be used here");
-    // Consume the `{...}` body so its `}` matches our bgroup frame.
-    if let Some(tok) = read_token()? {
-      if tok.get_catcode() == Catcode::BEGIN {
-        let _ = read_balanced(ExpansionLevel::Off, false, false)?;
-      } else {
-        unread_one(tok);
+    // Spaces before the group are typeset as they come. §1129 reads nothing more: the brace is opened on the next
+    // `main_control` pass (§1063 `non_math(left_brace)`: `new_save_level(simple_group)`; §1150 `mmode+left_brace`),
+    // for a left brace by meaning (`cur_cmd=left_brace`, so `\bgroup` too); it gets the mark as its group's first token.
+    // A macro that expands to a brace is not looked through, so its body is not marked (a rule in it borders a row).
+    let mut ahead = Vec::new();
+    while let Some(t) = read_token()? {
+      let space = t.get_catcode() == Catcode::SPACE;
+      let brace = !space && is_left_brace(&t);
+      ahead.push(t);
+      if brace {
+        ahead.push(T_CS!("\\lx@noalign@misplaced@mark"));
+      }
+      if !space {
+        break;
       }
     }
-    egroup()?;
-    Let!(&T_ALIGN!(), T_RELAX!());
-    Let!(&T_CS!("\\noalign"), T_RELAX!());
-    Let!(&T_CS!("\\omit"), T_RELAX!());
-    Let!(&T_CS!("\\span"), T_RELAX!());
+    unread(Tokens::new(ahead));
   });
-  // A misplaced `\omit`/`\span` is tex.web §1128 `align_error`: report and
+  // The first token of a misplaced `\noalign`'s group: marks the body (locally) so no rule marker in it borders a row.
+  DefPrimitive!("\\lx@noalign@misplaced@mark", {
+    assign_value("lx@noalign@misplaced", Stored::Bool(true), None);
+  });
+  // A misplaced `\omit` is tex.web §1129 `omit_error`, a misplaced `\span` §1127-1128 `align_error`: report and
   // continue, no group. Perl TeX_Tables.pool:128-135 opens a `bgroup` it never
   // closes (with `\let`s to `\relax` inside it) — the group then swallows the
   // next `}` and every enclosing frame drifts by one (nicematrix manual:
@@ -276,6 +289,18 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\span", {
     Error!("unexpected", "\\span", "\\span cannot be used here");
+  });
+  // The frozen `\span` of the alignment machinery (user ruling 2026-10-11): `\multicolumn`
+  // (`\lx@alignment@multicolumn`), `\multispan` and latex.ltx's `\sp@n` span their columns with this copy of the
+  // primitive (a `Primitive` with cs `\span`, so `gullet::is_column_end` takes it for `\span`), which a document's
+  // `\def\span{\mathrm{span}}` cannot reach. TeX and Perl use `\span` itself: there the redefinition breaks every
+  // `\multicolumn` ("Misplaced \omit", latex.ltx:16603/16749/16753). See `frozen_span`.
+  Let!("\\lx@span", "\\span");
+  // Expands to nothing after `report_redefined_span`: the token-bodied users of `\lx@span` (latex.ltx's `\sp@n`,
+  // overridden in latex_constructs_rust_only.rs) report the clash through it.
+  DefMacro!("\\lx@span@check", sub[_args] {
+    report_redefined_span();
+    Vec::<Token>::new()
   });
 
   //======================================================================
@@ -515,7 +540,7 @@ LoadDefinitions!({
   DefMacro!("\\hline", "\\noalign{\\@@alignment@hline}");
   DefConstructor!("\\@@alignment@hline", "",
     after_digest => sub[_whatsit] {
-      if let Some(alignment_stored) = lookup_alignment() {
+      if let Some(alignment_stored) = alignment_to_rule() {
         alignment_stored.alignment_cell().unwrap().borrow_mut()
           .add_line("t", Vec::new());
       }
@@ -582,7 +607,7 @@ LoadDefinitions!({
     // First part, like \multispan
     let mut tks = vec![T_CS!("\\omit")];
     for _ in 1..n {
-      tks.push(T_CS!("\\span"));
+      tks.push(frozen_span());
       tks.push(T_CS!("\\omit"));
     }
     // A paragraph (p/m/b) multicolumn cell must render as a *VBox* via
@@ -876,6 +901,8 @@ pub fn alignment_bindings(
   } else {
     mode
   };
+  // A new alignment's own `\hline`s rule its rows, even inside a misplaced `\noalign`'s body.
+  assign_value("lx@noalign@misplaced", Stored::Bool(false), None);
   let is_math = mode.ends_with("math");
   let (container, rowtype, coltype) = if is_math {
     ("ltx:XMArray", "ltx:XMRow", "ltx:XMCell")
@@ -1783,61 +1810,36 @@ fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
   Ok((star, optional))
 }
 
-// Recognise "implicit alignment tab" CS tokens, i.e. `\let\amp=&`.
-// Real TeX treats `\amp` (whose meaning is the `&` char-token with
-// catcode ALIGN) as an alignment tab in `\halign` preambles and
-// bodies — see texbook.tex p.~277 ("implicit characters") and
-// tex.web @<Manufacture a control...@> (cur_cmd dispatch by meaning,
-// not by token catcode).
-fn is_implicit_align(t: &Token) -> bool {
-  // tex.web §783 `get_preamble_token` dispatches on `cur_cmd`, so an ACTIVE
-  // character `\let` to a tab or to `\cr` is a separator too (the body path
-  // `gullet::is_column_end` already accepts both). Batch 56bb: metre's
-  // `\obeylines`+`\let\par=\cr` preamble terminator ran the template away.
-  if !t.get_catcode().is_active_or_cs() {
-    return false;
-  }
-  matches!(
-    lookup_meaning(t),
-    Some(Stored::Token(tt)) if tt.get_catcode() == Catcode::ALIGN
-  )
+/// The alignment whose rows a rule marker (`\hline`'s `\@@alignment@hline`, `\cline`, an `\hrule`) borders: the
+/// current one, except inside a misplaced `\noalign`'s body, where TeX's `\hrule` errors in the cell and draws nothing
+/// (tex.web §1126/§1129; see `\noalign`). A stray `\cline`/`\hline` there used to stack `border="bbbb…"`
+/// (2306.10087). Guard: `perfect_kernel_batch65::misplaced_hline_in_a_cell_draws_no_rule`.
+pub fn alignment_to_rule() -> Option<Digested> {
+  lookup_alignment().filter(|_| !lookup_bool("lx@noalign@misplaced"))
 }
 
-// `\cr` / `\crcr` `\let`-equivalents. Less common in the wild than
-// implicit `&` but covered by the same Knuth-TeX semantics. The body
-// path uses the analogous `gullet::is_column_end` which does meaning-
-// equality against the COLUMN_ENDS table — keep both code paths in
-// sync. Two shapes of implicit-CR are observed:
-//
-//   - `\let\rowEnd=\cr` while `\cr` is a Constructor (LaTeXML's normal state): meaning of `\rowEnd`
-//     becomes `Stored::Constructor` with the same `.cs` as `\cr`. Use meaning-equality against
-//     `lookup_meaning(\cr)`.
-//   - `\let\rowEnd=<token-CS>`: meaning is `Stored::Token(<\cr>)`. Use the by-name fallback
-//     (matches when no engine binding has shipped a proper `\cr` Constructor / Primitive yet).
-fn is_implicit_cr(t: &Token) -> bool {
-  if !t.get_catcode().is_active_or_cs() {
-    return false;
+/// Report, once per document, that the frozen `\span` stands in for a redefined one: the document's `\span` no longer
+/// has the primitive's command code ([`is_column_end`]), so the alignment machinery's own spans (`\multicolumn`,
+/// `\multispan`, `\sp@n`; user ruling 2026-10-11) make a recovery TeX does not make (there the author's macro runs and
+/// the span breaks: "Misplaced \omit"). Witnesses 1405.2652, 0710.0886, math0409364 (`\span` redefined, `\lefteqn`'s
+/// `\multicolumn` in `eqnarray`). Guard: `perfect_kernel_batch65::multicolumn_spans_with_the_frozen_span`.
+pub fn report_redefined_span() {
+  let redefined = !matches!(is_column_end(&T_CS!("\\span")), Some((_, "span", _)));
+  if redefined && !already_reported("lx@frozen@span@reported") {
+    Warn!(
+      "unexpected",
+      "\\span",
+      "the document redefines \\span; alignment spans (\\multicolumn, \\multispan) use the primitive (TeX: \
+       Misplaced \\omit)"
+    );
   }
-  let defn = lookup_meaning(t);
-  let Some(defn) = defn else {
-    return false;
-  };
-  // Meaning-equality (handles `\let \rowEnd \cr` where `\cr` is a
-  // Constructor / Primitive — the LaTeXML-default state).
-  for cr_cs in &[T_CS!("\\cr"), T_CS!("\\crcr")] {
-    if let Some(cr_defn) = lookup_meaning(cr_cs)
-      && defn == cr_defn
-    {
-      return true;
-    }
-  }
-  // Fallback: meaning IS the CS token `\cr` / `\crcr` (raw alias form).
-  if let Stored::Token(tt) = defn
-    && tt.get_catcode() == Catcode::CS
-  {
-    return tt.with_str(|s| s == "\\cr" || s == "\\crcr");
-  }
-  false
+}
+
+/// The frozen `\span` token, `\lx@span`, for the alignment machinery's own column spans, after
+/// [`report_redefined_span`].
+pub fn frozen_span() -> Token {
+  report_redefined_span();
+  T_CS!("\\lx@span")
 }
 
 /// True when `t` is a control sequence `\let` to a catcode-PARAM `#` (array.sty's
@@ -1899,11 +1901,22 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
       None => break,
     };
     let cc = t.get_catcode();
-    if t == T_CS!("\\tabskip") {
+    // tex.web §783 `get_preamble_token` dispatches on the command code (`cur_cmd`), like the body's column ends
+    // (`gullet::is_column_end`): `\let\myspan\span` expands the next token and `\let\rowEnd=\cr` (an ACTIVE
+    // character too: metre's `\obeylines`+`\let\par=\cr` terminator, batch 56bb) ends the preamble, while a
+    // `\def\span`/`\def\cr` macro is an ordinary template token, expanded only when the cell is read.
+    let column_end = is_column_end(&t).map(|(_, kind, hidden)| (kind, hidden));
+    // §783 tests `\tabskip` by command too (`assign_glue`, `tab_skip_code`): a `\let` copy sets it, a macro does not.
+    let is_tabskip = t.get_catcode().is_active_or_cs()
+      && with_meaning(
+        &t,
+        |defn| matches!(defn, Some(Stored::Register(r)) if *r.get_cs() == T_CS!("\\tabskip")),
+      );
+    if is_tabskip {
       // Read the tabskip assignment
       read_keyword(&["="])?;
       nexttabskip = read_glue()?;
-    } else if t == T_CS!("\\span") {
+    } else if matches!(column_end, Some(("span", _))) {
       // ex-span-ded next token
       let expanded = read_x_token(Some(false), false, None)?;
       if let Some(xt) = expanded {
@@ -1918,12 +1931,7 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
       // token. Guard: `perfect_kernel_batch54::ialign_template_accepts_the_sharp_placeholder`.
       before = false;
       tokens.push(if cc == Catcode::PARAM { t } else { T_PARAM!() });
-    } else if cc == Catcode::ALIGN
-      || t == T_CS!("\\cr")
-      || t == T_CS!("\\crcr")
-      || is_implicit_align(&t)
-      || is_implicit_cr(&t)
-    {
+    } else if matches!(column_end, Some(("align", _) | ("cr" | "crcr", false))) {
       // End the column
       if before {
         // Leading & means repeated columns
@@ -1954,7 +1962,7 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
         post.clear();
         before = true;
       }
-      if cc != Catcode::ALIGN && !is_implicit_align(&t) {
+      if column_end != Some(("align", false)) {
         break; // \cr or \crcr (explicit or implicit) ends the template
       }
       tokens.push(t);

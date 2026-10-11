@@ -383,6 +383,10 @@ was mostly iosart2x, fixed in 64k.) Queued as 64o.
 
 **Test** `~/data/pk_agents/main/agent_reports/rc_struct/repro_span_redef.tex` (pdflatex 0).
 
+**Status: LANDED 65b.** The implemented design is equality on the defining cs of a Primitive/Constructor (OD #522),
+not frozen copies. Frozen `\lx@span`/`\lx@frozen@cr` (Base-pool `\let` copies) serve only the machinery's own
+emissions (OD #523, #524). W1 (179 `\span` redefiners): errors 1730 → 839. Guards `perfect_kernel_batch65::*`.
+
 ### G5. `scan_toks` ordering
 
 **tex.web**

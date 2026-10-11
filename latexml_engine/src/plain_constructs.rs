@@ -272,7 +272,7 @@ LoadDefinitions!({
     let n = span.value_of();
     let mut tks = vec![T_CS!("\\omit")];
     for _ in 1..n {
-      tks.push(T_CS!("\\span"));
+      tks.push(crate::tex_tables::frozen_span()); // the frozen `\span` (user ruling 2026-10-11)
       tks.push(T_CS!("\\omit"));
     }
     Ok(Tokens::new(tks))

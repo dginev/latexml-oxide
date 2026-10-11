@@ -501,8 +501,12 @@ delimited argument meeting an unmatched `}` backs it up with "Argument of \x has
 unexpandable `\let`, :1756-1760). Evidence and per-step tests: [`KERNEL_CAPABILITY_GAPS_2026-10-11.md` §4](KERNEL_CAPABILITY_GAPS_2026-10-11.md#4-c5--gullet-expansion-fidelity-seed-6-in-depth).
 
 **Abstraction, one step each, in this order:**
-- **G4:** column ends compare against frozen primitive meanings (the command code), not current meanings
-  (`gullet.rs` `is_column_end`; Perl `Gullet.pm:266-277` the same).
+- **G4 (LANDED 65b):** a column end is recognized by its command code. `gullet.rs` `is_column_end` takes a
+  `Primitive`/`Constructor` whose defining cs is a column end, or a `\let` to `&`. This is equality on the defining
+  cs, which `\let` copies and the dump keep; it is not the frozen-copy design planned here. The `\halign` preamble
+  uses the same test, and `\tabskip` by register identity. Frozen copies `\lx@span` (the machinery's own spans, user
+  ruling 2026-10-11) and `\lx@frozen@cr` (a file end in a preamble) exist only for emitted tokens. Perl
+  `Gullet.pm:266-277` compares current meanings (KPE #603). OD #522-#525.
 - **G2:** port Perl's `TeXDelimiter` (WISDOM #44; `TeX_Math.pool.ltxml:773`) as §1160; `\left`/`\middle`/`\right`
   become constructors; `\left` pushes a `math_left` group code (K9 stage 0) that the other two check (Rust-only deviation
   today: `\left` is an expandable macro trampolining to `\lx@delim@left`).

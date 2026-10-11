@@ -1,0 +1,14 @@
+% witness: none (reviewer probes 65b r3/r4; tex.web §1126/§1129, then §1150: the `{…}` after a misplaced `\noalign`
+%          is an ordinary group)
+% oracle:  pdflatex 7 errors: `Misplaced \noalign` three times, and latex.ltx's `\hline` body (`\hrule`) ends the
+%          second formula (Missing $, Missing }, Too many }'s, Missing $); "ab + cd", "xyz" with their groups
+% engines: rust 65b r3 = 2 errors, tex="{ab+c}d" and "{p\hline}q" (the recovery swallowed the `{` and opened its own
+%          group, so the `{` primitive never ran); 65b r4 = tex="a{b+c}d", "p{\hline}q", "x{y}z" (`\bgroup` a brace by
+%          meaning)
+% expect:  3 errors; the formulas revert as `a{b+c}d`, `p{\hline}q`, `x{y}z`
+% status:  CONTROL; guard perfect_kernel_batch65::misplaced_noalign_in_math_keeps_its_braces
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Math $a \noalign{b+c} d$ and $p \hline q$ and $x \noalign\bgroup y\egroup z$.
+\end{document}

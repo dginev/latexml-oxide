@@ -1,0 +1,20 @@
+% witness: 1102.5033 (aalongtable.sty: `\def\longtable{\par\onecolumn\clearpage\begingroup\@ifnextchar[\LT@array
+%          {\LT@array[x]}}`)
+% oracle:  pdflatex 0 errors (longtable.sty defines `\LT@array`)
+% engines: rust 64ze = 4 errors + 1 warning, 65b r3 = 5 + 1: the longtable binding does not define `\LT@array`, so a
+%          package `\longtable` that calls it breaks the table (and then the `\hline`s are misplaced)
+% expect:  0 errors; one longtable, caption "Cap", one row a|b
+% status:  RED (65b r3): needs `\LT@array` in the longtable binding (longtable.sty), not attempted in 65b
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\makeatletter
+\def\longtable{\par\begingroup\@ifnextchar[\LT@array{\LT@array[x]}}
+\makeatother
+\begin{document}
+\begin{longtable}{ll}
+\caption{Cap}\\
+\hline
+a & b \\
+\end{longtable}
+\end{document}

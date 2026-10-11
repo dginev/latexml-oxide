@@ -1,0 +1,18 @@
+% witness: 2511.12320 (`\vspace{-4pt}` then `\bottomrule` at a row start), 2306.10087
+% oracle:  pdflatex 4 errors: `Misplaced \noalign`, then the body's `\hrule` in the cell ("You can't use \hrule
+%          here"): no rule drawn, rows a|b and c|d
+% engines: rust 64ze = 3 errors and a colspan; 65b r2 = 1 error (body dropped); a 65b r3 draft that typeset the body: the
+%          `\@@alignment@hline` ruled the next row (`border="t"`; in the witnesses `border="bbbb…"` and empty rows)
+% expect:  1 error (`\noalign cannot be used here`); rows a|b, c|d, e|f; only e|f (after a proper `\hline`)
+%          carries a top border: the misplaced body's mark is local to its group
+% status:  CONTROL; guard perfect_kernel_batch65::misplaced_hline_in_a_cell_draws_no_rule
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{tabular}{|l|l|}
+a & b \\
+\vspace{2pt}\hline
+c & d \\
+\hline e & f \\
+\end{tabular}
+\end{document}

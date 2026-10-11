@@ -1,0 +1,13 @@
+% witness: none (amsmath `\hdotsfor` under a redefined `\span`)
+% oracle:  pdflatex 22 errors (amsmath.sty's `\hdotsfor` spans with `\multispan`, which runs the author's `\span`)
+% engines: rust 65b r1 = 0 errors: the binding (amsmath_sty.rs `\hdotsfor`) fills the cells with `&`, no `\span`
+% expect:  0 errors, 0 warnings (no frozen `\span` needed, so no clash reported); the dots row has 3 cells
+% status:  GREEN (65b); guard perfect_kernel_batch65::hdotsfor_ignores_a_redefined_span
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\renewcommand{\span}{\operatorname{span}}
+\begin{document}
+Let $V=\span\{v_1,v_2\}$.
+\[\begin{matrix} a & b & c \\ \hdotsfor{3} \\ d & e & f \end{matrix}\]
+\end{document}

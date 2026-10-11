@@ -414,7 +414,7 @@ pub(crate) fn load() -> Result<()> {
           cols_vec.push(this_num);
         }
       }
-      if let Some(alignment_stored) = lookup_alignment() {
+      if let Some(alignment_stored) = crate::tex_tables::alignment_to_rule() {
         alignment_stored.alignment_cell().unwrap().borrow_mut()
           .add_line("t", cols_vec);
       }

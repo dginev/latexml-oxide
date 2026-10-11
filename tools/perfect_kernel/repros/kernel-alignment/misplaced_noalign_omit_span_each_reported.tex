@@ -1,0 +1,16 @@
+% witness: none (reviewer probe 65b r2; KPE #191 extended to `\noalign`)
+% oracle:  pdflatex 4 errors: two `Misplaced \noalign`, `Misplaced \omit`, `Misplaced \span`; then "AB" spans
+% engines: rust 64ze = 7 errors; rust 65b r2/r3 = 4; Perl: its never-closed `bgroup` with `\let`s to `\relax`
+%          (TeX_Tables.pool:120-127) silences every later misplaced `\noalign`/`\omit`/`\span`
+% expect:  4 errors, one per misplaced command; "AB" colspan=2 in the table
+% status:  CONTROL; guard perfect_kernel_batch65::misplaced_commands_are_each_reported
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \hline more \hline again \omit x \span y.
+
+\begin{tabular}{|l|c|r|}
+\multicolumn{2}{|c|}{AB} & C \\
+d & e & f \\
+\end{tabular}
+\end{document}

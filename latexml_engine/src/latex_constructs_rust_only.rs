@@ -1411,6 +1411,17 @@ LoadDefinitions!({
     },
     sizer => 0
   );
+
+  // 15. latex.ltx:16753 `\def\sp@n{\span\omit\advance\@multicnt\m@ne}` (from the dump), the step of `\multispan`
+  // (:16749-16752) and so of every raw-loaded `\multicolumn`, spans with the frozen `\span` `\lx@span` (user ruling
+  // 2026-10-11): a document's `\renewcommand{\span}{\operatorname{span}}` keeps its column spans; `\lx@span@check`
+  // reports the clash once (tex_tables.rs). Witness: none among the 219 A/B'd `\span` redefiners (IEEEtran's
+  // `\IEEEeqnarraymulticol`, defined in 1111.3160, is the nearest shape; the paper never calls it). Guard:
+  // `perfect_kernel_batch65::multispan_spans_with_the_frozen_span`.
+  DefMacro!(
+    "\\sp@n",
+    r"\lx@span@check\lx@span\omit\advance\@multicnt\m@ne"
+  );
 });
 
 /// The pTeX formats' own registers, allocated where a document declares pTeX (`\NeedsTeXFormat{pLaTeX2e}`, or

@@ -1,0 +1,18 @@
+% witness: none (the other side of math0004102's `\def\span`: `\let` copies the command code)
+% oracle:  pdflatex 0 errors: rows "[a] [b]" and a spanned "[c] [d]" — in the preamble both the primitive `\span` and
+%          its `\let` copy `\myspan` expand `\pre` (tex.web §783 `get_preamble_token` tests cur_cmd), `\mycr` ends
+%          the preamble and the first row, and in the body `\myspan` spans the two columns
+% engines: rust 64ze = 2 errors (`Extra alignment tab`): the preamble recognized `\span` by NAME, so `\myspan\pre`
+%          stayed in the template and spanned every second cell; Perl 0.8.8 0 errors but no table at all
+% expect:  0 errors, 0 warnings; row 1 "[a]" | "[b]", row 2 one cell spanning 2 columns, "[c] [d]"
+% status:  RED (64ze) -> GREEN (65b); guard perfect_kernel_batch65::let_copies_of_span_and_cr_keep_their_command
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\def\pre{[##]}
+\let\myspan\span
+\let\mycr\cr
+\halign{\span\pre\quad&\myspan\pre\mycr
+a&b\mycr
+c\myspan d\cr}
+\end{document}

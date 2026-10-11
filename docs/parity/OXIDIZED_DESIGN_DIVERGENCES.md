@@ -15598,3 +15598,81 @@ the author's `pdfkeywords`) and `dcterms:identifier` per `\preprint`. hyperref i
 class does (:1392-1394), and natbib with `numbers,sort&compress` (:1428-1429) unless natbib or biblatex is loaded.
 Witnesses 1705.03968, 1704.06662, 1709.01098, 2212.01355. Guards `quantumarticle_revtex_compatibility`,
 `quantumarticle_pacs_keep_the_authors_keywords`.
+
+### 522. Alignment column ends are recognized by command code: equality on the defining cs (Perl: current meaning)
+
+tex.web §342/§789 insert the v-template when `get_next` yields `cur_cmd` ∈ {tab_mark, car_ret}, and §783 reads an
+`\halign` preamble the same way: a column end is its command code, which `\let` copies and `\def` replaces.
+`gullet.rs` `is_column_end` takes a token for a column end when its meaning is either:
+- a `Primitive`/`Constructor` whose DEFINING cs is a `COLUMN_ENDS` entry (`\cr`, `\crcr`, `\span`, `\lx@hidden@cr`,
+  `\lx@hidden@crcr`, `\lx@hidden@align`), or
+- a `\let` to an ALIGN character.
+
+A `\let` copy carries the defining cs, and the format dump restores such a copy as `PA <cs>`. A `\def`/`\newcommand`
+makes an `Expandable`, which is a macro call, so after `\def\span{\mathrm{span}}` a `\span` no longer ends the cell.
+
+`parse_halign_template` dispatches on the same predicate: `\let\myspan\span` expands the next preamble token, and a
+`\def\cr` macro is a template token. It also tests `\tabskip` by register identity (`\let\mytabskip\tabskip`).
+
+This is the implemented design; KERNEL_CAPABILITIES.md's earlier frozen-copy plan (`\lx@prim@span`) is not it, and
+nothing new is stored. Fragility: any future binding that re-`DefPrimitive`s/`DefConstructor`s `\cr`, `\crcr` or
+`\span` under that name counts as a column end, as does any `\let` copy of one (`\lx@span`, `\lx@frozen@cr`,
+`\endline`).
+
+Perl `Gullet.pm:266-277` compares with the current meaning of each end (KPE #603). Witnesses math0004102 (W1 sample:
+179 `\span`-redefining papers, errors 1730 → 935 from this rule alone, → 839 with OD #523), 0712.0807, 0911.3696, 2005.01884, 2509.05743, q-alg9706021,
+1802.10337. Guards `perfect_kernel_batch65::{redefined_span_is_a_macro_not_a_column_end,
+redefined_cr_is_a_macro_not_a_row_end, let_copies_of_span_and_cr_keep_their_command,
+let_copy_of_tabskip_sets_the_preamble_glue}`.
+
+### 523. A frozen `\span` spans the alignment machinery's own columns (user ruling 2026-10-11; TeX and Perl: the author's `\span`)
+
+`\lx@alignment@multicolumn`, plain `\multispan` and latex.ltx's `\sp@n` span with `\lx@span`. latex.ltx's `\sp@n`
+(:16753) is overridden in `latex_constructs_rust_only.rs` as the token body
+`\lx@span@check\lx@span\omit\advance\@multicnt\m@ne`. `\lx@span` is a Base-pool `\let` copy of the primitive
+(tex_tables.rs), so OD #522 takes it for `\span`; it is present in every format and not a dump record.
+
+A document's `\def`/`\renewcommand`/`\let`/`\DeclareMathOperator` of `\span` keeps its meaning in math, and its
+tables keep their column spans. In TeX and Perl, `\multicolumn` → `\multispan` → `\sp@n` runs the author's `\span`
+(latex.ltx:16603/16749/16753, "Misplaced \omit").
+
+The recovery is reported once per document (`tex_tables::report_redefined_span`, also behind
+`\lx@span@check`): `Warning:unexpected:\span the document redefines \span; alignment spans (\multicolumn,
+\multispan) use the primitive (TeX: Misplaced \omit)`.
+
+amsmath's `\hdotsfor` binding fills cells with `&` and never needed it. Witnesses 1405.2652, 0710.0886, math0409364
+(`\lefteqn`'s `\multicolumn` in `eqnarray`). Guards `perfect_kernel_batch65::{multicolumn_spans_with_the_frozen_span,
+multispan_spans_with_the_frozen_span, hdotsfor_ignores_a_redefined_span}`.
+
+### 524. A file ending inside an `\halign` preamble inserts the frozen `\cr` (Perl: not modelled)
+
+`gullet.rs` `recover_at_file_end` inserts `\lx@frozen@cr`, a Base-pool `\let` copy of the primitive `\cr`
+(tex_tables.rs), as tex.web §339 inserts `frozen_cr`. So an author's `\def\cr` does not run there. The old Rust
+inserted `\cr` by name. Perl does not model the insert: there is no "File ended while scanning" in LaTeXML/lib.
+Guard `perfect_kernel_batch65::file_end_in_a_preamble_inserts_the_frozen_cr`.
+
+### 525. A misplaced `\noalign` changes no meaning; its body is an ordinary group with rule markers inert (Perl: never-closed group masking later errors)
+
+A misplaced `\noalign` (tex.web §1126 `any_mode(no_align)` → §1129 `no_align_error`) is reported
+(`\noalign cannot be used here`) and changes no meaning. The `{…}` that follows, or a `\let` copy such as
+`\bgroup…\egroup`, is an ordinary group: the real `{` opens it (§1063 `non_math(left_brace)`, §1150
+`mmode+left_brace`), so math `tex=` keeps the braces (`a{b+c}d`), and the material is typeset in place.
+
+The group's first token, the internal `\lx@noalign@misplaced@mark`, marks the body locally. Inside it no rule marker
+(`\hline`'s `\@@alignment@hline`, `\cline`, an `\hrule`) borders a row (`tex_tables::alignment_to_rule`; TeX's
+`\hrule` in a cell errors and draws nothing). Limit: only a literal `{` or a `\let` copy gets the mark, not a macro
+that expands to one (`\def\mybody{{\@@alignment@hline}}` … `\noalign\mybody` still rules a row, where TeX would not).
+
+Perl (TeX_Tables.pool:120-127) opens a `bgroup` it never closes, with `\let`s of `&`/`\noalign`/`\omit`/`\span` to
+`\relax` inside, which silences every later misplaced `\noalign`/`\omit`/`\span` until the group ends (KPE #191).
+Each is reported here, as TeX reports each. TeX-faithful per-site counting was decided by the main session
+(2026-10-11). On the reviewer's 24 `\noalign` papers, errors go 164 → 430 against 65c, with no XML loss.
+
+Dead ends:
+- consuming the body unread to balance a `bgroup` (REG-1 / math0403005) dropped its text;
+- `\let`ting after the `egroup` leaked, so a stray `\hline` disabled every later `\multicolumn`.
+
+Witnesses 2306.10087, 2511.12320 (no stacked `border="bbbb…"`), math0403005. Guards
+`perfect_kernel_batch65::{misplaced_noalign_body_is_typeset, stray_hline_in_a_paragraph_is_one_error,
+misplaced_commands_are_each_reported, misplaced_hline_in_a_cell_draws_no_rule, misplaced_noalign_leaves_span_alone,
+misplaced_noalign_in_math_keeps_its_braces}`.

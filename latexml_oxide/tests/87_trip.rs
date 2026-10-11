@@ -79,7 +79,8 @@ fn sb_in_amsppt_refs() {
 #[test]
 fn halign_body_implicit_cr() {
   // `\let\rowEnd=\cr` followed by `\halign{...\rowEnd ... \rowEnd}`.
-  // Before the fix in `is_implicit_cr` (tex_tables.rs), the preamble
+  // Before the fix in `is_implicit_cr` (tex_tables.rs; since batch 65b the
+  // preamble parser `parse_halign_template` asks `gullet::is_column_end`), the preamble
   // parser only recognised implicit \cr when its meaning was
   // Stored::Token(\cr). But `\let \rowEnd \cr` against a Constructor
   // `\cr` produces Stored::Constructor — the parser missed it, ate

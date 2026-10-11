@@ -1,8 +1,9 @@
 % CONTROL: \clearpage is NOT redefined by longtable.sty, so it is a GENUINE error in a
 %   longtable body in pdflatex too (2 errors). The fix must redefine only \newpage/\pagebreak/
 %   \nopagebreak (longtable.sty:135-137), NOT tolerate every vertical command between rows.
-% oracle:  pdflatex 2 errors ; rust 3 errors — must STAY erroring
-% expect:  3
+% oracle:  pdflatex 2 errors ; rust 1 error (65b) — must STAY erroring
+% expect:  1 (65b: was 3 — the recovery's `\let\span\relax` made every `\relax` a column span, two
+%          cascaded "Extra alignment tab"; column ends now go by command code, gullet.rs `is_column_end`)
 % status:  CONTROL
 \documentclass{article}\usepackage{longtable}
 \begin{document}

@@ -83,7 +83,11 @@ LoadDefinitions!({
   // gobbling — author body, not config.
   DefMacro!("\\tabletail{}",
     "\\@add@frontmatter{ltx:note}[role=tabletail]{#1}");
-  DefMacro!("\\tablewidth{Dimension}", "\\pt@width=#1\\relax");
+  // aastex62.cls:1849-1858 `\def\tablewidth#1{\ifdim#1=\z@ \else …\fi}`: for `0pt`, the common use, it
+  // expands to nothing, so `\tablewidth{0pt}` at the start of a `tabular` row leaves the row's `\hline` a
+  // `\noalign`. Perl's `\pt@width=#1\relax` (deluxetable.sty.ltxml:70) is an assignment, which opened a cell and
+  // made the `\hline` misplaced (1805.09353). Guard: `perfect_kernel_batch65::tablewidth_zero_is_expandable`.
+  DefMacro!("\\tablewidth{}", r"\ifdim#1=\z@\else\pt@width=#1\relax\fi");
   def_macro_noop("\\tableheadfrac{}")?;
   DefMacro!("\\tablenum{}", "\\def\\thetable{#1}");
 

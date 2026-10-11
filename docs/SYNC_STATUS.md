@@ -389,6 +389,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   99.6%), 1907.09124, 1902.00853. Guards `perfect_kernel_batch65c::*`. The regained content of arXiv papers whose
   environment or math an upstream defect leaves open now surfaces as `malformed:*` placement errors (1507.01637 and
   hep-lat9811036 reach `TooManyErrors`; 2110.01778's cause is RED `boxes-groups/boldsymbol_text_dollars_inside_math`).
+- **65b** (landed; C5 step G4):
+  - **Column ends by command code** (`is_column_end`; the `\halign` preamble incl. `\tabskip`; OD #522, KPE #603).
+  - **Frozen `\span`** for `\multicolumn`/`\multispan`/`\sp@n` (user ruling 2026-10-11, one Warning per document;
+    OD #523).
+  - **Frozen `\cr`** at a preamble's file end (OD #524).
+  - **Misplaced `\noalign`** reported per site, its body typeset as an ordinary group with rule markers inert (OD #525,
+    KPE #191 extended).
+  - **aa `{longtab}`** wrapper (KPE #604, 1611.08428) and **aastex `\tablewidth{0pt}`** expandable (KPE #605,
+    1805.09353).
+
+  W1 (179 `\span`-redefining papers, run 336): errors 1730 → 839, papers with errors 138 → 57. W2: 280 → 218. Manual
+  net 797: 0 XML changes. Guards `perfect_kernel_batch65::*`.
+
+  Open:
+  - RED `class-bindings/aalongtable_lt_array`: the longtable binding lacks `\LT@array`, which aalongtable.sty's
+    `\longtable` calls (1102.5033).
+  - Math readings of ambiguous formulas can flip between builds with no input change (2205.06656, 2503.00718,
+    1708.09355). Each is deterministic per binary; likely an interning-order tie-break in the math parser.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the
