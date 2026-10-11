@@ -533,6 +533,12 @@ pub(crate) fn load() -> Result<()> {
       // because the top frame is the dangling group, not the document.
       let top_is_document = is_value_bound("current_environment", Some(0))
         && lookup_string("current_environment") == "document";
+      // The groups abandoned here end with no closer of their own (§1335): what a
+      // group's end checks (setspace_sty.rs `\lx@setspace@check`, run by
+      // `abandon_stack_frame`'s beforeAfterGroup hooks) does not apply. Set even when
+      // nothing is unwound, so it also covers the document frame's own hooks at its
+      // close (`end_mode_opt`).
+      AssignValue!("lx@ending@document" => true, Some(Scope::Global));
       if !top_is_document || if_stack_depth() > 0 {
         let mut popped_lines: Vec<String> = Vec::new();
         let mut plain_groups = 0usize;

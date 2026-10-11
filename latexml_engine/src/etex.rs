@@ -6,7 +6,10 @@
 //!
 //! Section numbering in comments below references that manual.
 
-use latexml_core::common::glue::FillCode;
+use latexml_core::common::{
+  glue::FillCode,
+  numeric_ops::{MAX_DIMEN, MAX_INTEGER},
+};
 
 use crate::prelude::*;
 
@@ -88,7 +91,26 @@ LoadDefinitions!({
     // recovery / LHS-typed arithmetic can return a mismatched variant (e.g.
     // Number(0) for \dimexpr), which then panics the register getter's
     // expect_dimension(). Coerce to the declared type so the getter stays total.
-    Ok(value.coerce_to(rtype))
+    let value = value.coerce_to(rtype);
+    // etex.ch `scan_expr`: a result past `infinity` (2^31 − 1, an integer) or
+    // `max_dimen` (any other type) is "Arithmetic overflow", and the
+    // expression's value is zero (pdfTeX: `\dimexpr-16383pt*3\relax` = 0.0pt).
+    // A Warning: the value is TeX's own (the severity of `number_too_big`; OXIDIZED_DESIGN #519).
+    let ceiling = if matches!(rtype, RegisterType::Number) {
+      MAX_INTEGER
+    } else {
+      MAX_DIMEN
+    };
+    if value.clone().value_of().abs() > ceiling {
+      Warn!(
+        "expected",
+        "<number>",
+        "Arithmetic overflow.",
+        "the expression's value is out of range, so it is zero (etex.ch scan_expr)"
+      );
+      return Ok(RegisterValue::default().coerce_to(rtype));
+    }
+    Ok(value)
   }
 
   fn etex_readexpr_i(rtype: RegisterType, prec: usize) -> Result<RegisterValue> {

@@ -850,7 +850,9 @@ pub fn execute_before_after_group() -> Result<()> {
 }
 
 /// Removes the last/current stack frame, ending a TeX group
-pub fn pop_stack_frame(nobox: bool) -> Result<()> {
+pub fn pop_stack_frame(nobox: bool) -> Result<()> { pop_stack_frame_with(nobox, true) }
+
+fn pop_stack_frame_with(nobox: bool, run_after_group: bool) -> Result<()> {
   if *TRACE_FRAMES {
     let current_token = get_current_token().unwrap_or_else(|| T_CS!("\\relax"));
     eprintln!(
@@ -861,7 +863,7 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
       lookup_string_from_sym(crate::pin!("BOUND_MODE"))
     );
   }
-  let after = remove_value("afterGroup");
+  let mut after = remove_value("afterGroup");
   let depth_before = get_frame_depth();
   execute_before_after_group()?;
   if *TRACE_FRAMES && get_frame_depth() != depth_before {
@@ -871,11 +873,29 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
       current_frame_id()
     );
   }
+  // Guard: `perfect_kernel_batch64zf::setspace_switch_in_a_plain_group_rearms_on_the_enclosing_group`.
+  // Perl Stomach.pm:308-314 takes the frame's afterGroup list by REFERENCE before
+  // the beforeAfterGroup hooks run, and pushValue (State.pm:218-223) appends to that
+  // same array, so an `\aftergroup` a hook performs is honoured after the pop. Here
+  // the list was taken by value, and a hook's push re-created the frame's slot,
+  // which the pop then discarded: append what the hooks queued on this frame.
+  if get_frame_depth() == depth_before
+    && let Some(Stored::VecDequeStored(queued)) = remove_value("afterGroup")
+    && !queued.is_empty()
+  {
+    match after {
+      Some(Stored::VecDequeStored(ref mut entries)) => entries.extend(queued),
+      _ => after = Some(Stored::VecDequeStored(queued)),
+    }
+  }
   pop_frame()?;
   if !nobox {
     {
       stomach_mut!().boxing.pop(); // For begingroup/endgroup
     }
+  }
+  if !run_after_group {
+    after = None;
   }
   if let Some(Stored::VecDequeStored(after_entries)) = after {
     for entry in after_entries.into_iter().rev() {
@@ -1188,31 +1208,14 @@ pub fn endgroup() -> Result<()> {
       );
     }
   }
-  // BAND-AID (commit 3088dbd17 — under root-cause investigation, see
-  // `project_explsyntax_midload.md`): during raw .sty/.tex load
-  // (INTERPRETING_DEFINITIONS=true), suppress strict BOUND_MODE check.
-  // Empirically Perl emits zero errors on the same inputs while strict
-  // checks fire 19 times in our Rust during expl3-code.tex raw load.
-  // Latent bugs found 2026-04-25 when removing this guard:
-  //   - `#` (catcode PARAM) escapes to stomach
-  //   - `\q_stop` recursion
-  //   - residual `\group_end:` mode-switch error (not caught by strict end_mode_opt either —
-  //     separate divergence point)
-  //   - `\xparse-2018-04-12.sty-h@@k` undefined
-  // Each of those needs its own root-cause investigation.
-  let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
-  if interpreting {
-    // Diagnostic: capture band-aid suppression occurrences for analysis.
-    if *TRACE_BOUND_MODE && is_value_bound("BOUND_MODE", Some(0)) {
-      let mode = lookup_string_from_sym(crate::pin!("MODE"));
-      let bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
-      let frame_keys = dump_top_frame_keys();
-      eprintln!(
-        "[trace] endgroup SUPPRESSED-ERR: BOUND_MODE={bound} MODE={mode} frame0_keys={frame_keys:?}",
-      );
-    }
-    pop_stack_frame(true)?;
-  } else if is_value_bound("BOUND_MODE", Some(0)) {
+  // No exemption for raw `.sty`/`.tex` loading (INTERPRETING_DEFINITIONS): a
+  // band-aid once popped the frame silently there, for 19 latent errors of the
+  // expl3-code.tex raw load (`#` reaching the stomach, `\q_stop` recursion,
+  // `\group_end:`); both `--init`s now log zero errors without it, with the
+  // same dumps. A raw file's `\endgroup` against an `\hbox` frame is Perl's
+  // Error at that line (Stomach.pm:363-372), and the frame stays (mybad.sty
+  // probe: one Error, where the silent pop cost three later ones).
+  if is_value_bound("BOUND_MODE", Some(0)) {
     // Diagnostic: dump BOUND_MODE binding context for cluster investigation.
     if *TRACE_BOUND_MODE {
       let mode = lookup_string_from_sym(crate::pin!("MODE"));
@@ -2399,8 +2402,8 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
 /// 30-41), so the body's own loop never sees the token. LaTeX's rule for an
 /// environment end met inside an open group is `\@checkend`'s "\begin{X}
 /// ended by \end{Y}" (latex.ltx:15394) with the groups closed by the error
-/// recovery; here the groups above the body are abandoned (tex.web §1335
-/// shape: popped, `\aftergroup` discarded) with a Warning, and the body's
+/// recovery; here the groups above the body are abandoned ([`abandon_stack_frame`]:
+/// popped, `\aftergroup` discarded) with a Warning, and the body's
 /// loop is told its terminal arrived (`lx@until@terminal@hit`). Returns true
 /// when it acted. Witness: screenplay-pkg.tex:67 `\abstract{…\section` —
 /// the section then lands at document level, as the brace-less form does.
@@ -2459,10 +2462,15 @@ thread_local! {
 /// `\end{document}` lost the inner one whole (`\begin{quote}Q1. \begin{quote}Q2. After.`), and a
 /// list or math left open by an upstream defect lost the rest of the document. Witnesses: the
 /// powerdotDE manual (recall 26% → 98%), arXiv 1902.00853 (27,484 words), 2110.01778.
+///
+/// The frame's beforeAfterGroup hooks still run, and what they queue on `\aftergroup` is
+/// discarded with the rest (setspace's `\lx@setspace@rearm`). This is a LaTeXML recovery
+/// modelled on §1335 (groups left open, `\aftergroup` never run); TeX itself recovers a closer
+/// met inside a group by `off_save`, whose inserted closer runs `unsave` and so does run
+/// `\aftergroup`. Guard: `perfect_kernel_batch64zf::abandoned_group_discards_hook_queued_aftergroup`.
 pub fn abandon_stack_frame() -> Result<()> {
-  let _ = remove_value("afterGroup");
   let nonboxing = lookup_bool_sym(crate::pin!("groupNonBoxing"));
-  pop_stack_frame(nonboxing)?;
+  pop_stack_frame_with(nonboxing, false)?;
   ABANDONED_FRAMES.with(|count| count.set(count.get() + 1));
   Ok(())
 }

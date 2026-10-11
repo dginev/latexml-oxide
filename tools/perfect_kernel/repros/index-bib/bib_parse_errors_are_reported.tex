@@ -1,0 +1,21 @@
+% mechanism: the .bib reader (pre_bibtex.rs) reports what Perl's Pre/BibTeX.pm reports: a malformed entry (b, a missing
+%   comma) is `Error:expected:}` (parseMatch, BibTeX.pm:248), resynced at the next `@` and dropped as bibtex drops it;
+%   a macro neither the `.bst` (MACRO commands, read through kpathsea: plain.bst has no `apj`) nor the `.bib` defines
+%   is `Error:unexpected:apj` (BibTeX.pm:307-310), its name kept as the value. Was: a Warning for the first, nothing
+%   for the second. A style macro (plain.bst `MACRO {jan}`) is no error, and neither is an undefined macro of an entry
+%   that is not digested (d, uncited): bibtex reads only the cited entries' fields (Perl reports every entry's).
+% witness: diagnostics audit 2026-10-11 A1/A2 (probe code/bibparse); `.bib`-without-`.bbl` papers
+% oracle:  pdflatex 0 errors; bibtex: "I was expecting a `,' or a `}'---line 9" (entry b skipped) and
+%          "Warning--string name "apj" is undefined" (nothing for d, uncited); a and c typeset
+% engines: rust 64zd = 0 errors (1 Warning:bibtex:unbalanced); 64zf = 2 errors; Perl (latexmlc --format=html5) = the
+%          same 2 errors and a third, `unexpected:nosuchjournal` for the uncited d
+% expect:  2 errors; bibitems a (journal "apj") and c. The `.bib` is read by the post stage: the errors show with
+%          `--format=html5` (or `--dest=*.html`), not in an XML-only run
+% status:  RED (64zd) -> GREEN (64zf)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\cite{a,b,c}
+\bibliographystyle{plain}
+\bibliography{bib_parse_errors_are_reported}
+\end{document}

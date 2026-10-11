@@ -903,9 +903,36 @@ impl Mouth {
       // passthrough for non-UTF-8 bytes. This happens after inputenc
       // disables PERL_INPUT_ENCODING and the remaining file lines contain
       // high bytes. (`decode_input_bytes` for one line.)
+      //
+      // The decode stays the Latin-1 passthrough (OXIDIZED_DESIGN_DIVERGENCES
+      // #481: the bytes are kept as text, where Perl blanks them), but the
+      // report is Perl's: with no `inputenc` declaring a non-UTF-8 encoding,
+      // the file is read as UTF-8 and an undecodable line raises
+      // `Info:misdefined` "input isn't valid under encoding utf-8"
+      // (Core/Mouth/file.pm:72-77). An Info, as in Perl; pdflatex's own
+      // "Invalid UTF-8 byte" Error (utf8.def:113) is not raised here.
       match str::from_utf8(raw_line) {
         Ok(s) => (s.to_string(), false),
-        Err(_) => (raw_line.iter().map(|&b| b as char).collect(), true),
+        Err(_) => {
+          let declared = lookup_string("lx@inputenc@encoding");
+          if declared.is_empty() || declared.starts_with("utf8") {
+            let encoding_name = lookup_string("PERL_INPUT_ENCODING");
+            let encoding_name = if encoding_name.is_empty() {
+              s!("utf-8")
+            } else {
+              encoding_name
+            };
+            Info!(
+              "misdefined",
+              &encoding_name,
+              s!("input isn't valid under encoding {}", &encoding_name),
+              "",
+              "",
+              location
+            );
+          }
+          (raw_line.iter().map(|&b| b as char).collect(), true)
+        },
       }
     }
   }

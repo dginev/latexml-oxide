@@ -150,6 +150,10 @@ pub fn utf8_octets(lead: u8, args: &[ArgWrap]) -> Tokens {
 
 //**********************************************************************
 fn set_input_encoding(encoding: &str) -> Result<()> {
+  // The encoding the document declared, read by the Mouth: a line that is not
+  // UTF-8 under a declared non-UTF-8 encoding is that encoding's text, not an
+  // invalid byte (mouth.rs `decode_bytes`).
+  AssignValue!("lx@inputenc@encoding" => encoding.trim().to_ascii_lowercase(), Some(Scope::Global));
   // Initially disable all odd & upper half-plane chars
   let undef_cs = T_CS!("\\@inpenc@undefined");
   for code in (0..=8u8)

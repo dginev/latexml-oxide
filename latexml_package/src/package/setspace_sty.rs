@@ -1,5 +1,7 @@
 //! setspace.sty — line spacing
 //! Perl: setspace.sty.ltxml
+use latexml_core::common::error::emit_error;
+
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -95,10 +97,170 @@ LoadDefinitions!({
   // form remains correct.
   def_macro_noop("\\singlespace")?;
   def_macro_noop("\\endsinglespace")?;
-  def_macro_noop("\\onehalfspace")?;
-  def_macro_noop("\\endonehalfspace")?;
-  def_macro_noop("\\doublespace")?;
-  def_macro_noop("\\enddoublespace")?;
+  // `\onehalfspace`/`\doublespace` as switches: setspace.sty:534-547 makes each a
+  // `\begingroup` and the spacing, ended by its `\end…` (`\restore@spacing`'s
+  // `\endgroup`, :516-523). The spacing is presentational and the group is not
+  // modelled: a real `\begingroup` there now keeps every word (65c, guard
+  // perfect_kernel_batch65c::unclosed_nested_environments_keep_their_text) but nests
+  // a later sibling environment inside the earlier one at `\end{document}`; the
+  // checked no-op keeps the author's sibling structure (content and semantics ahead
+  // of PDF fidelity). What the group does to TeX is reported, where TeX reports
+  // it: when the group a switch opened in ends with the switch still open.
+  // - A brace or box group: TeX's "Extra }, or forgotten \endgroup" — `{\doublespace
+  //   text}` (witness 2310.08233's shape), a tabular cell, `\footnote{…}`, and an
+  //   environment whose body is a box: its frame sets `\hsize` (a float's
+  //   `\@xfloat`/`\@endfloatbox`, `{minipage}`, subcaption's `{subfigure}`, wrapfig,
+  //   float.sty's `{algorithm}`), and its end's `}` meets the switch's group.
+  // - Another environment: its `\end`'s `\endgroup` closes the switch's group, not the
+  //   environment's, which stays open until the next `\end` — the enclosing
+  //   environment's: LaTeX "\begin{itemize} on input line N ended by \end{quote}",
+  //   or "… by \end{document}" (`{quote}`, an `\item`'s list, `{center}`). The closer
+  //   named is right when no group sits between the environment and the next one out;
+  //   with one between (`{\begin{itemize}…}`, a `\parbox` or `{minipage}` around it,
+  //   review 5 probes p6/p14/p15/p5) TeX says "Extra }" instead, and a plain group
+  //   around the environment is no error in TeX (RED
+  //   boxes-groups/plain_group_around_itemize_doublespace). The `\hsize` test is a
+  //   proxy: an author's `\hsize=` in a non-box environment, or `{list}`'s inner
+  //   frame, reads as a box (wording only, the count is right: probes p21, p4).
+  // - A plain `\begingroup … \endgroup`: the `\endgroup` closes the switch's group and
+  //   the plain group stays open: the switch re-arms on the enclosing group (Perl
+  //   `\aftergroup` order, stomach.rs `pop_stack_frame`), so a plain group inside
+  //   `{quote}` still makes the quote's error, and at the document level TeX only
+  //   logs "(\end occurred inside a group at level 1)": no error (Perl errs).
+  // An `\end…` closes the innermost switch of its own group (a frame-local stack, so
+  // of two switches one `\end…` leaves the outer open and named: review 6 probe h4). One met in a nested
+  // group closes nothing here, so the switch's group still reports. That errs toward
+  // flagging: a switch closed by `\end<name>` from inside a nested plain group still
+  // reports, where TeX's `\endgroup`s pair off cleanly (review 4 probe r9, pdflatex 0:
+  // RED boxes-groups/doublespace_end_in_a_nested_plain_group).
+  // One report per group, however many switches it holds (q6: 120 `\doublespace` in
+  // one `{quote}` are one LaTeX error); it names the innermost. A group digested twice
+  // (a `\section` title, for the heading and the toc) reports twice, like every error
+  // there (Perl and ours alike: RED sectioning-frontmatter/section_title_errors_reported_twice).
+  // At the document level the switch runs to `\end{document}` with no error, as in TeX.
+  // OXIDIZED_DESIGN #520.
+  for (name, spacing) in [
+    ("onehalfspace", "\\onehalfspacing"),
+    ("doublespace", "\\doublespacing"),
+  ] {
+    DefPrimitive!(T_CS!(s!("\\{name}")), None, {
+      // A switch read from a token list (`\footnote{…}`, a `\section` title) is placed
+      // where the document reads that list.
+      let at = get_location();
+      let at = if at.contains("Anonymous String") {
+        get_source_location().unwrap_or_default()
+      } else {
+        at
+      };
+      open_setspace_switch(name, at)?;
+      Digest!(T_CS!(spacing))?;
+    });
+    DefPrimitive!(T_CS!(s!("\\end{name}")), None, {
+      // A switch opened in this group: its `\endgroup` closes the innermost one, whatever
+      // its name (setspace.sty:516-523); the next one out names the report, the last one
+      // closes the check.
+      if is_value_bound("lx@setspace@open", Some(0)) {
+        let mut stack = lookup_string("lx@setspace@stack")
+          .split('\u{2}')
+          .filter(|entry| !entry.is_empty())
+          .map(str::to_string)
+          .collect::<Vec<_>>();
+        stack.pop();
+        let (open, at) = match stack.last().and_then(|top| top.split_once('\u{1}')) {
+          Some((open, at)) => (Stored::String(pin(open)), Stored::String(pin(at))),
+          None => (Stored::None, Stored::None),
+        };
+        assign_value("lx@setspace@open", open, Some(Scope::Local));
+        assign_value("lx@setspace@open@at", at, Some(Scope::Local));
+        assign_value(
+          "lx@setspace@stack",
+          Stored::String(pin(stack.join("\u{2}"))),
+          Some(Scope::Local),
+        );
+      }
+    });
+  }
+  // Run before the group pops (`beforeAfterGroup`), where the frame still says what
+  // it is. The tokens are digested from a string of their own, so the report is
+  // placed at the switch (where it opened), its object the group's closer.
+  DefPrimitive!(T_CS!("\\lx@setspace@check"), None, {
+    let name = lookup_string("lx@setspace@open");
+    if name.is_empty() || lookup_bool("lx@ending@document") {
+      return Ok(Vec::new());
+    }
+    let switch_at = lookup_string("lx@setspace@open@at");
+    // An environment's frame binds `current_environment` (the `{abstract}` binding
+    // captures its body in a frame of its own, `\lx@add@frontmatter@until`, so it
+    // reads as a box: "Extra }", where LaTeX reports "\begin{abstract} … ended by").
+    let environment =
+      is_value_bound("current_environment", Some(0)).then(|| lookup_string("current_environment"));
+    let extra_brace = || {
+      (
+        s!("}}"),
+        s!(
+          "Extra }}, or forgotten \\endgroup: \\{name}'s \\begingroup (setspace.sty:534-547) is still open"
+        ),
+      )
+    };
+    let (object, message) = match environment {
+      // A box environment: its frame sets `\hsize` (latex.ltx `\@xfloat`
+      // `\hsize\columnwidth`, `\@iiiminipage` `\hsize #4`), its end closes the box.
+      Some(_) if is_value_bound("\\hsize", Some(0)) => extra_brace(),
+      Some(environment) => {
+        // The environment stays open until the next `\end`: the enclosing one's.
+        let outer = match value_in_frame("current_environment", 1) {
+          Some(Stored::String(outer)) => to_string(outer),
+          _ => String::new(),
+        };
+        let closer = if outer.is_empty() {
+          s!("\\end{{document}}")
+        } else {
+          s!("\\end{{{outer}}}")
+        };
+        (
+          s!("\\end{{{environment}}}"),
+          s!(
+            "\\end{{{environment}}} closes \\{name}'s \\begingroup (setspace.sty:534-547) instead of \
+             {{{environment}}}'s group; {{{environment}}} stays open (LaTeX: \\begin{{{environment}}} … ended by {closer})"
+          ),
+        )
+      },
+      None if lookup_bool("groupNonBoxing") => {
+        // A plain `\begingroup`: its `\endgroup` closes the innermost switch's group, and
+        // the plain group stands open in its place: every switch of this group re-arms on
+        // the enclosing one, outermost first (review 7 probes k1, k3).
+        assign_value(
+          "lx@setspace@rearm",
+          Stored::String(pin(lookup_string("lx@setspace@stack"))),
+          Some(Scope::Global),
+        );
+        push_value(
+          "afterGroup",
+          Stored::Tokens(Tokens::new(vec![T_CS!("\\lx@setspace@rearm")])),
+        )?;
+        return Ok(Vec::new());
+      },
+      None => extra_brace(),
+    };
+    let at = if switch_at.is_empty() {
+      String::new()
+    } else {
+      s!("\n\t{switch_at} (the switch)")
+    };
+    emit_error(
+      "unexpected",
+      &object,
+      &s!("{message}{at}\n\tIn latexml_package/src/package/setspace_sty.rs\n"),
+    );
+  });
+  DefPrimitive!(T_CS!("\\lx@setspace@rearm"), None, {
+    let rearm = lookup_string("lx@setspace@rearm");
+    for entry in rearm.split('\u{2}') {
+      if let Some((name, at)) = entry.split_once('\u{1}') {
+        open_setspace_switch(name, at.to_string())?;
+      }
+    }
+  });
 });
 
 /// A setspace environment's body, then the `\par` its end runs (`\restore@spacing`, setspace.sty:516)
@@ -108,5 +270,47 @@ fn body_closing_its_paragraph(document: &mut Document, props: &SymHashMap<Stored
     document.absorb(body, None)?;
   }
   document.maybe_close_element("ltx:p")?;
+  Ok(())
+}
+
+/// A setspace switch (`\onehalfspace`, `\doublespace`) opened, or still open as a
+/// plain group it was opened in ends (`\lx@setspace@rearm`), in a group other than
+/// the document's: record it and where it opened (the innermost switch names the
+/// report), and arm the group's end check once per group (`\lx@setspace@check`,
+/// run before the group pops). The group stacks its open switches
+/// (`lx@setspace@stack`), the innermost closed by an `\end…` in the group.
+fn open_setspace_switch(name: &str, at: String) -> Result<()> {
+  let at_document_level = is_value_bound("current_environment", Some(0))
+    && lookup_string("current_environment") == "document";
+  if !at_document_level {
+    assign_value(
+      "lx@setspace@open",
+      Stored::String(pin(name)),
+      Some(Scope::Local),
+    );
+    assign_value(
+      "lx@setspace@open@at",
+      Stored::String(pin(&at)),
+      Some(Scope::Local),
+    );
+    let mut stack = if is_value_bound("lx@setspace@stack", Some(0)) {
+      lookup_string("lx@setspace@stack")
+    } else {
+      String::new()
+    };
+    if !stack.is_empty() {
+      stack.push('\u{2}');
+    }
+    stack.push_str(&s!("{name}\u{1}{at}"));
+    assign_value(
+      "lx@setspace@stack",
+      Stored::String(pin(&stack)),
+      Some(Scope::Local),
+    );
+    if !is_value_bound("lx@setspace@armed", Some(0)) {
+      assign_value("lx@setspace@armed", true, Some(Scope::Local));
+      unshift_value("beforeAfterGroup", vec![T_CS!("\\lx@setspace@check")]);
+    }
+  }
   Ok(())
 }

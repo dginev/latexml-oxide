@@ -1,7 +1,12 @@
 % CONTROL: a verbatim env inside a \parbox{}{ARG} is illegal in real TeX too.
 % oracle:  pdflatex 7 errors ("Argument of \lst@next has an extra }") — must stay erroring
 % expect:  1
-% status:  CONTROL (2026-09-23: pdflatex rejects the shape and writes NO PDF, so no content is lost vs the oracle; rust gives 0 errors: the \parbox argument is pre-tokenized onto one line and the lstlisting reader drops the begin-line leftover that now holds the whole body. A run-out Error was tried and withdrawn: listings in table cells run out legitimately and recover)
+% engines: rust 64zd 0 errors (an empty listing: the body tokens were dropped with the begin line); 64zf 1 error
+%          (Error:expected:\end{lstlisting}: the end already read as tokens, listings_sty.rs
+%          `listings_read_raw_lines_with_outer`); Perl 1 error (expected:\fi, its listing holds "\end{document}")
+% status:  CONTROL (2026-09-23: pdflatex rejects the shape and writes NO PDF; 64zf reports the lost body. A run-out Error
+%          was tried and withdrawn: listings in table cells run out legitimately and recover; this one keys on the
+%          environment's own `\end` already tokenized in the pushback, which no line scan can reach)
 % mechanism: \parbox reads its body as a normal (pre-tokenized) macro argument, so the
 %   lstlisting's catcode/verbatim scan breaks — unlike a p{}-cell / minipage which read live.
 \documentclass{article}\usepackage{listings}

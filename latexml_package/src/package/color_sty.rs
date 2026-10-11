@@ -1,6 +1,6 @@
 use latexml_core::{
   common::{
-    color::{self, Color, color_from_model_spec},
+    color::{self, Color, color_from_model_spec, is_core_model},
     error::emit_error,
   },
   definition::ExpansionBody,
@@ -31,6 +31,15 @@ pub(crate) fn trim_color_spec(spec: &str) -> &str {
 /// Perl: ParseColor($model, $spec) in color.sty.ltxml
 pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
   let spec = trim_color_spec(spec);
+  // Under xcolor, a model is xcolor's to read (xcolor.sty.ltxml ParseXColor): its
+  // derived models (`HTML`, `RGB`, `Gray`, …) are no unknown model here (nicematrix
+  // `\cellcolor[HTML]{…}` in a `\CodeBefore`: the nicematrix manual, 64zf review probe col/nm.tex).
+  if let Some(model) = model
+    && !model.trim().is_empty()
+    && (lookup_bool("xcolor.sty_loaded") || lookup_bool("xcolor.sty_raw_loaded"))
+  {
+    return xcolor_sty::parse_xcolor(Some(model), spec, None);
+  }
   if let Some(model) = model {
     let model_lc = model.to_lowercase();
     if model_lc == "named" {
@@ -56,10 +65,28 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
       }
       return lookup_color_obj(&key);
     }
+    // color.sty.ltxml:44 `Color($model, …)`, whose constructor reports a model
+    // that is neither core nor derived (Color.pm:59-61); the recovery is Black,
+    // as LaTeX's "Undefined color model" leaves the current color alone.
+    if !is_core_model(&model_lc) {
+      report_unrecognized_model(&model_lc);
+    }
     color_from_model_spec(&model_lc, spec)
   } else {
     lookup_color_obj(spec)
   }
+}
+
+/// Perl Color.pm:61 `Error('unexpected', $model, undef, "Unrecognized color
+/// model '$model'")`, raised by `Color::new` for a model that is neither core
+/// nor registered by `DefColorModel`.
+pub(crate) fn report_unrecognized_model(model: &str) {
+  // `emit_error` (no `Error!`: the callers return a `Color`), with the locator.
+  emit_error(
+    "unexpected",
+    model,
+    &latexml_core::generate_message!(format!("Unrecognized color model '{model}'")),
+  );
 }
 
 /// Parse xcolor's color-algebra `!` operator. Supports:

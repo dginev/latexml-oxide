@@ -2,11 +2,13 @@
 % the picture object (latex_constructs.pool.ltxml:4992). The Rust \line peeks for ( and falls back
 % to the box (OXIDIZED_DESIGN_DIVERGENCES #316).
 % witness: 2306.13101 (\diagbox[height=2.5\line]{...}{...})
-% oracle:  pdflatex "Left ... Right" across the line, then the picture line
+% oracle:  pdflatex 2 errors ("Use of \line doesn't match its definition", "Too many }'s": LaTeX's `\line` is only the
+%          picture object), then the picture line; re-measured 64zf (the former "Left ... Right" was stale)
 % engines: Perl = 3 errors (Missing argument Pair:Number, Float) and Fatal:misdefined
 %          (slopeToPicCoord "Can't call method 'getX'"): the conversion fails
-% expect:  0 errors; a \hsize-wide text "Left Right"; the picture \line as Perl draws it
-% status:  GREEN (guard node_box_append::line_outside_a_picture_is_a_full_width_box)
+% expect:  0 errors, 1 warning (Warning:unexpected:\line, the TeX error recovered); a \hsize-wide text "Left Right"; the
+%          picture \line as Perl draws it
+% status:  GREEN (guard node_box_append::line_outside_a_picture_is_a_full_width_box; 64zf adds the warning)
 \documentclass{article}
 \begin{document}
 \noindent\line{Left\hfil Right}

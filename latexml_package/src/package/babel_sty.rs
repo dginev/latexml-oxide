@@ -280,14 +280,41 @@ LoadDefinitions!({
   // other character is "not a shorthand", unchanged): off, an active character becomes other
   // (catcode 12); on, a character with an active meaning becomes active again. Demoting every
   // character broke `^` (a superscript, catcode 7) after `\shorthandoff*{~^}` (babel.dtx:3786-3794).
-  // babel's "not a shorthand" error is not raised: our language bindings make their shorthands
-  // active only at `\begin{document}`, so a preamble call cannot tell one from another character.
-  fn shorthand_off(chars: Tokens) {
+  // babel's "not a shorthand" error (babel.def:1558, errbabel.def:93-97) is raised for a character
+  // that cannot be one: in the body, where our language bindings have made their shorthands active,
+  // one that is neither active nor of catcode 12 (a shorthand our bindings deactivated, or one a
+  // language switch turned off, is 12) and has no babel record (`\bbl@oricat@<c>`), such as `^`.
+  // In the preamble the bindings' shorthands are not active yet, so no character is judged there.
+  // Repro babel-lang/shorthandoff_star_reads_the_star (babel.dtx:3786-3794's `\shorthandoff*{~^}`);
+  // RED babel-lang/shorthandoff_quote_in_english_is_no_shorthand (a catcode-12 non-shorthand passes).
+  fn shorthand_off(chars: Tokens) -> Result<()> {
     for c in shorthand_chars(chars) {
       if lookup_catcode(c) == Some(Catcode::ACTIVE) {
         assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
+      } else {
+        report_not_a_shorthand(c)?;
       }
     }
+    Ok(())
+  }
+  /// errbabel.def:93-97 `not-a-shorthand-b`, through `\PackageError{babel}` (the
+  /// `latex:(babel)` diagnostic of make_message, as Perl's raw babel reports it).
+  fn report_not_a_shorthand(c: char) -> Result<()> {
+    let cs = T_CS!(s!("\\bbl@oricat@{c}"));
+    if lookup_bool("inPreamble")
+      || matches!(lookup_catcode(c), Some(Catcode::OTHER) | Some(Catcode::ACTIVE))
+      || is_set(&cs)
+    {
+      return Ok(());
+    }
+    Error!(
+      "latex",
+      "(babel)",
+      s!(
+        "Package babel Error: I can't switch '{c}' on or off--not a shorthand\nThis character is not a shorthand. Maybe you made\na typing mistake? I will ignore your instruction."
+      )
+    );
+    Ok(())
   }
   // babel.sty:1428-1430 `\shorthandoff` is `\@ifstar{\bbl@shorthandoff\tw@}{\bbl@shorthandoff\z@}`:
   // the starred form restores each character's original catcode and meaning, as babel recorded
@@ -296,7 +323,7 @@ LoadDefinitions!({
   // is LaTeX's 12 (`:;!?"`). Read without the star, `*` was the argument and `{:}` typeset.
   DefPrimitive!("\\shorthandoff OptionalMatch:* {}", sub[(star, chars)] {
     if star.is_none() {
-      shorthand_off(chars);
+      shorthand_off(chars)?;
       return Ok(Vec::new());
     }
     let mut restore: Vec<Token> = Vec::new();
@@ -310,6 +337,8 @@ LoadDefinitions!({
         }
       } else if lookup_catcode(c) == Some(Catcode::ACTIVE) {
         assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
+      } else {
+        report_not_a_shorthand(c)?;
       }
     }
     if !restore.is_empty() {
@@ -321,6 +350,8 @@ LoadDefinitions!({
     for c in shorthand_chars(chars) {
       if lookup_meaning(&T_ACTIVE!(c)).is_some() {
         assign_catcode(c, Catcode::ACTIVE, Some(Scope::Local));
+      } else {
+        report_not_a_shorthand(c)?;
       }
     }
   });

@@ -1,0 +1,17 @@
+% mechanism: a `\section` title is digested twice, for the heading and for the toc entry, so an Error raised while
+%   digesting it is reported twice: `\color[foo]{1}` in a title gives two "Unrecognized color model" Errors. Perl
+%   does the same (2 × its two errors), so this is SHARED. The toc copy should not re-raise the heading's
+%   diagnostics. A setspace switch in a title is reported twice the same way (`\section{\doublespace T}`: 2 Errors,
+%   pdflatex 1; guard perfect_kernel_batch64zf::setspace_switch_in_a_section_title_reports_like_any_title_error).
+% witness: review 4 of 64zf (probe s3, `\section{\doublespace T}`)
+% oracle:  pdflatex 2 errors: "Undefined color model `foo'" once (the title is typeset once), then xcolor's cascade "Extra }"
+% engines: rust 64zf = 2 errors; Perl = 4 errors (Color.pm:61 + Derived.pm:33, twice)
+% expect:  1 "Unrecognized color model" error; the section title "T"
+% status:  RED (64zf review: shared double digestion)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\section{\color[foo]{1}T}
+Z.
+\end{document}

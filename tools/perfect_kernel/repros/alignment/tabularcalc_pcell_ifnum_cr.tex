@@ -1,8 +1,13 @@
 % witness: tabularcalc/tabularcalc_doc_en (also _fr,_vn ~153 err), floatrow/floatrow-rus, epslatex-fr/fepslatex
-% oracle: pdflatex/lualatex 0 errors (the manual's tables typeset fine)
+% oracle: pdflatex/lualatex 0 errors on the witness manuals (the comparison TRUE there); this minimized shape (`\nb`=1,
+%   the comparison FALSE) gives pdflatex 101 errors: the digit lookahead expands `\\` (tex.web §445 scan_int
+%   reads with get_x_token) and the false-branch skip then splits its expansion ("Missing } inserted", "Extra }";
+%   re-measured 64zf, `\nb`=2: 0 errors)
 % engines: latexml_oxide.sweep67 vs ~/perl5/bin/latexml (0.8.8)
 % expect: 0 Error lines and one <ltx:tabular>/<ltx:inline-block> for the p/m cell
-% status: GREEN (batch 56bi, 2026-09-09)
+% status: GREEN (batch 56bi, 2026-09-09) for the witness shape; SILENT for this one (64zf audit: TeX 101 errors, Perl 7,
+%   ours 0). Reporting it needs `\\` expanded inside the number scan as TeX does, which the 56bi gate
+%   (gullet.rs NUMBER_SCAN_DEPTH) deliberately prevents; kept, a larger kernel change
 % mechanism: in a p/m-column cell (\lx@tabular@p@ VBoxContents mode frame), an
 %   \ifnum whose 2nd operand is a MACRO number immediately followed by the row-break
 %   \\ (=\lx@alignment@newline) forces a digit-terminator lookahead that expands/

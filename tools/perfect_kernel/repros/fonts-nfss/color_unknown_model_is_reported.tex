@@ -1,0 +1,14 @@
+% mechanism: an unknown color model is Perl's `Error:unexpected:<model>` "Unrecognized color model" (Color.pm:59-61,
+%   raised by Color::new; color.sty.ltxml:44), the color falling back to black. Was: black, silently
+%   (common/color.rs `from_model_components` `_ => BLACK`).
+% witness: diagnostics audit 2026-10-11 A3 (probe code/colorspec)
+% oracle:  pdflatex 1 error ("Undefined color model `foo'"), z in the current color
+% engines: rust 64zd = 0 errors; 64zf = 1 error; Perl = 2 errors for the one `foo` (Color.pm:61 and Derived.pm:33)
+% expect:  1 error; z black
+% status:  RED (64zd) -> GREEN (64zf)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{color}
+\begin{document}
+x \color[foo]{1}z
+\end{document}

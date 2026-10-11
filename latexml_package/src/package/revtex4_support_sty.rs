@@ -459,3 +459,24 @@ LoadDefinitions!({
   def_macro_noop("\\replace@environment{}{}")?;
   def_macro_noop("\\glet@environment{}{}")?;
 });
+
+/// The bibliography style REVTeX writes when the document names none:
+/// `\bibliographystyle{\@bibstyle}` at the end of the document
+/// (revtex4-1.cls:7113-7120, revtex4-2.cls:7134-7141), `\@bibstyle` set by the
+/// society's `.rtx` — `apsrev\substyle@post` (aps4-1.rtx:630, aps4-2.rtx:667;
+/// REVTeX 4.0's apsrev.bst), `aipauth`/`aipnum\substyle@post` by citation style
+/// (aip4-1.rtx:617-640). Recorded for the `.bib` reader only (pre_bibtex.rs
+/// `new_from_gullet` reads the style's `MACRO`s: apsrev's `prl`, `jan`, …), not
+/// as `BIBSTYLE`, which also decides the bibliography's numbering. `post` is the
+/// version's `\substyle@post` ("4-1", "4-2", or "" for REVTeX 4.0). Witness
+/// 2603.22119 (revtex4-1, no `\bibliographystyle`).
+pub(crate) fn record_implicit_bibstyle(post: &str) {
+  let authoryear = lookup_string("revtex_cite_style") == "authoryear";
+  let style = match lookup_string("revtex_society").as_str() {
+    "" | "aps" => s!("apsrev{post}"),
+    "aip" if authoryear => s!("aipauth{post}"),
+    "aip" => s!("aipnum{post}"),
+    _ => return,
+  };
+  assign_value("lx@implicit@bibstyle", pin(style), Some(Scope::Global));
+}

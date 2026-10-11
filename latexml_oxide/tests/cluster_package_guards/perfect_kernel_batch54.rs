@@ -613,8 +613,9 @@ fn xkeyval_usevalue_is_replaced_eagerly_at_setkeys() {
 /// errors. Witness: forest-doc (1001 errors + TooManyErrors).
 #[test]
 fn listings_writefile_truncates_on_fresh_begin() {
+  // forest-doc.sty:27 loads lstdoc, whose `\RequirePackage[writefile]{listings}` (lstdoc.sty:14) loads the aspect.
   let tex = r"\documentclass{article}
-\usepackage{listings}
+\usepackage[writefile]{listings}
 \begin{document}
 \makeatletter
 \lst@BeginAlsoWriteFile{\jobname.tmp}
@@ -5498,9 +5499,11 @@ c & d \\
     )
     .replace(r"\end{lstlisting} & b", r"\end{lstlisting}} & b");
   let (stderr, _xml) = convert(&control, false);
+  // 64zf: the third is the listing's body, read ahead with the `\parbox` argument and lost
+  // (`Error:expected:\end{lstlisting}`).
   assert_eq!(
     error_count(&stderr),
-    2,
+    3,
     "CONTROL: pdflatex errors here too\n{stderr}"
   );
 }

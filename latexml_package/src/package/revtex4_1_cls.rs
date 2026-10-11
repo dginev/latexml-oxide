@@ -59,6 +59,11 @@ LoadDefinitions!({
     assign_value("revtex_load_graphics", true, Some(Scope::Global));
     DefMacro!("\\ocis", "\\pacs");
   });
+  // The `aip` society (revtex4-1.cls:6317 `\@process@society`) picks AIP's
+  // bibliography style (`implicit_bibstyle`); the class ignores it otherwise.
+  DeclareOption!("aip", {
+    assign_value("revtex_society", pin("aip"), Some(Scope::Global));
+  });
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
   });
@@ -87,6 +92,7 @@ LoadDefinitions!({
     Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
   }
   RequirePackage!("revtex4_support");
+  revtex4_support_sty::record_implicit_bibstyle("4-1");
 
   // Load the AMS packages requested via options BEFORE the `.rty` input.
   // Perl revtex4-1.cls.ltxml runs `map { RequirePackage($_) } @revtex_toload`

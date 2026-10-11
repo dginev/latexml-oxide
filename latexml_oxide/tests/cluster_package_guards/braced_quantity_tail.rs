@@ -464,7 +464,8 @@ fn undefined_cs_in_a_length_is_discarded() {
 /// Between alignment rows a command's argument rest has no place: booktabs'
 /// unused widths are read untyped, and `\cmidrule[lr]{1-2} \cmidrule[lr]{3-4}`
 /// (a typo for `(lr)`) keeps both rules and puts nothing in the next row
-/// (2605.27476, 2605.25272); `\addlinespace[2pt plus 1pt]` neither.
+/// (2605.27476, 2605.25272); `\addlinespace[2pt plus 1pt]` neither. The two widths that are no <dimen>
+/// warn as Perl's `[Dimension]` read does (64zf, Gullet.pm:972).
 #[test]
 fn between_rows_tail_opens_no_row() {
   let tex = include_str!(
@@ -472,7 +473,7 @@ fn between_rows_tail_opens_no_row() {
   );
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 2, "{stderr}");
   assert_eq!(xml.matches("<tr>").count(), 3, "{xml}");
   assert_element(
     &xml,

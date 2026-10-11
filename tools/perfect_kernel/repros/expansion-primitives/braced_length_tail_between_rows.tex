@@ -7,9 +7,10 @@
 % oracle:  pdflatex 4 errors (Missing number, Illegal unit, per `[lr]`), "lr" printed between the
 %          rows, both rules
 % engines: rust (56jm) = 0 errors, 2 "Missing number" warnings, both rules; the first 56jr cut "lr lr" in the next row's first
-%          cell, "\noalign cannot be used here", the second rule lost
-% expect:  0 errors, 0 warnings; row 2 cells e f g h with border "t"
-% status:  GREEN (56jr)
+%          cell, "\noalign cannot be used here", the second rule lost; 56jr..64zd 0 diagnostics; 64zf 2 warnings
+%          (the width judged as a <dimen> by its text, booktabs_sty.rs `width_shape`); Perl 2 warnings
+% expect:  0 errors, 2 warnings ("Missing number (Dimension), treated as zero."); row 2 cells e f g h with border "t"
+% status:  GREEN (56jr; 64zf reports Perl's warnings)
 \documentclass{article}
 \usepackage{booktabs}
 \begin{document}

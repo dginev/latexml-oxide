@@ -330,11 +330,13 @@ More text~\ref{f}.
 /// A `\lstnewenvironment` whose body is diverted to a file
 /// (`\lst@BeginWriteFile`) still runs its end code (pst-exa.sty:163-170
 /// closes a start-code `\hbox` there and reads the result back; pst-exa-doc,
-/// RUST-ONLY).
+/// RUST-ONLY). The `writefile` aspect is loaded, as showexpl.sty:41 loads it for
+/// pst-exa (64zf: without it the commands are undefined, as in listings).
 #[test]
 fn lstnewenvironment_writefile_runs_the_end_code() {
   let tex = r"\documentclass{article}
 \usepackage{listings}
+\lstloadaspects{writefile}
 \makeatletter
 \def\SX@put@code@result{RESULTMARK}
 \lstnewenvironment{myex}[1][]
@@ -5378,20 +5380,22 @@ fn index_sort_key_undefined_word_is_text() {
   assert!(xml.contains("key=\"\\AB\""), "{xml}");
 }
 
-/// Batch 56bq: a scanned dimension past the i64 range is TeX's arith_error
+/// Batch 56bq: a scanned dimension past the range is TeX's arith_error
 /// (tex.web §460 "Dimension too large" → max_dimen), not a wrapped i128
 /// product (`100899720527872.0pt`; chinesechess.sty:2016-2020's coffin
-/// scale by a `\dim_ratio:nn` with a zero box dimension). Conservative:
-/// the clamp fires only past the i64 range — LaTeXML's headroom above
-/// max_dimen (pgf intermediates re-scanned as `<factor><internal dimen>`)
-/// stays, so `200000000000\dimen0` at -1pt prints as computed.
+/// scale by a `\dim_ratio:nn` with a zero box dimension). Batch 64zf: at
+/// TeX's own bounds, as pdfTeX prints them — the factor is "Number too big"
+/// (§445, 2^31 − 1), the product +max_dimen (§460 negates only for the scan's
+/// own sign, not the negative unit's), and a `\dimexpr` out of range is
+/// "Arithmetic overflow" and zero (etex.ch `scan_expr`); each a Warning.
 #[test]
 fn dimension_overflow_clamps_to_max_dimen() {
   let tex = "\\documentclass{article}\n\\begin{document}\n\\dimen0=-16383pt\n\\dimen2=2000000000000000\\dimen0\nB=[\\the\\dimen2]\\par\n\\dimen1=\\dimexpr\\dimen0*100000000000\\relax\nA=[\\the\\dimen1]\\par\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("B=[-16383.99998pt]"), "{xml}");
-  assert!(xml.contains("A=[-16383.99998pt]"), "{xml}");
+  assert_eq!(warning_count(&stderr), 4, "{stderr}");
+  assert!(xml.contains("B=[16383.99998pt]"), "{xml}");
+  assert!(xml.contains("A=[0.0pt]"), "{xml}");
 }
 
 /// Batch 56bq: `\@raw@opt@<file>` exists after an option-less load too
@@ -12121,7 +12125,7 @@ C, D. </bibblock><bibblock>(2002).
 
 /// 57m: OmniBus's `\doi` reads its DOI as a url (`HyperVerbatim`), so the `.bbl` of an apa6 paper — a class with
 /// no `\doi` of its own, falling to OmniBus — keeps `\doi{10.1000/j_x~y.2002}` whole (Perl OmniBus.cls.ltxml:154's
-/// `\doi{}` gives Error:unexpected:_). apa7, bound since 62zl, keeps the DOI a link (apa7_cls.rs), where apacite's
+/// `\doi{}` gives Error:unexpected:_; pdflatex errors too, under apacite's `\doi`, and 64zf warns). apa7, bound since 62zl, keeps the DOI a link (apa7_cls.rs), where apacite's
 /// own `\doi` would set url-styled text only (apacite.sty:1812-1815): semantic markup before PDF fidelity.
 #[test]
 fn omnibus_doi_reads_as_a_url() {
@@ -12143,6 +12147,15 @@ fn omnibus_doi_reads_as_a_url() {
     .count();
   assert_eq!(foreign, 0, "{stderr}");
   assert!(stderr.contains("Warning:missing_file:apa6"), "{stderr}");
+  // 64zf: apacite's `\doi` reads the DOI as TeX, so pdflatex errors on its `_`; the link is a semantic recovery,
+  // reported as one Warning.
+  assert_eq!(
+    stderr
+      .matches("Warning:unexpected:\\doi The DOI '10.1000/j_x~y.2002' holds '_'")
+      .count(),
+    1,
+    "{stderr}"
+  );
   latexml::util::test::assert_element(
     &xml,
     "bibitem",
@@ -12791,7 +12804,8 @@ fn afterendpreamble_in_the_body_runs_now() {
   latexml::util::test::assert_element(&xml, "p", &[], r##"<p>A LateZ</p>"##);
 }
 
-/// 57r: babel's `\shorthandoff*` reads its star (babel.sty:1428-1430) and restores the original catcode.
+/// 57r: babel's `\shorthandoff*` reads its star (babel.sty:1428-1430) and restores the original catcode. 64zf: `^`,
+/// no shorthand, is babel's one "not a shorthand" Error (errbabel.def:93-97), as in pdflatex.
 #[test]
 fn shorthandoff_star_reads_the_star() {
   let (stderr, xml) = convert_with(
@@ -12800,7 +12814,7 @@ fn shorthandoff_star_reads_the_star() {
     ),
     None,
   );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(
     &xml,

@@ -243,12 +243,25 @@ fn bezier_is_stroked_and_counts_its_points() {
 /// `\line` without `(` is plain TeX's `\hbox to\hsize` (OXIDIZED_DESIGN_DIVERGENCES
 /// #316; witness 2306.13101), where Perl reads a picture object: three errors and
 /// a Fatal (`slopeToPicCoord`), and the conversion fails; `\line(…)` stays the
-/// picture object.
+/// picture object. pdflatex errors ("Use of \line doesn't match its definition"),
+/// so the recovery is one Warning (64zf).
 #[test]
 fn line_outside_a_picture_is_a_full_width_box() {
-  let xml = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/graphics-tikz/picture_line_outside_picture.tex"
-  ));
+  let (stderr, xml) = convert(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/picture_line_outside_picture.tex"
+    ),
+    true,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_eq!(
+    stderr
+      .matches("Warning:unexpected:\\line Use of \\line doesn't match its definition")
+      .count(),
+    1,
+    "{stderr}"
+  );
   assert_element(
     &xml,
     "para",

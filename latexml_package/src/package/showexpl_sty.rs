@@ -48,6 +48,9 @@ LoadDefinitions!({
   RequirePackage!("refcount");
   RequirePackage!("varwidth");
   RequirePackage!("float");
+  // showexpl.sty:41 `\lst@RequireAspects{writefile}`: the aspect's commands are
+  // there for whatever builds on showexpl (pst-exa.sty:163 `\lst@BeginWriteFile`).
+  listings_sty::require_listings_aspects("writefile");
   // {LTXexample}[keys] — showexpl's whole point: typeset the SOURCE as a
   // listing AND its RESULT (real showexpl routes the body through listings'
   // write-file layer into \jobname.tmp and \input's it back). Reproduce that

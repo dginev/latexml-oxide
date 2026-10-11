@@ -128,6 +128,112 @@ fn default_macros() -> HashMap<String, String> {
     .collect()
 }
 
+/// The `MACRO {name} {"value"}` definitions of the `.bst` named `style`,
+/// found beside the document or through kpathsea as `\bibliographystyle` would
+/// find it; `None` when there is no style name or no such file. Names are
+/// lower-cased, as BibTeX macro names are case-insensitive (and
+/// `parse_field_name` lower-cases uses).
+fn bst_macros(style: &str) -> Option<HashMap<String, String>> {
+  use latexml_core::binding::content::{FindFileOptions, find_file};
+  if style.trim().is_empty() {
+    return None;
+  }
+  let path = find_file(
+    style.trim(),
+    Some(FindFileOptions {
+      ext_type: Some("bst".into()),
+      ..FindFileOptions::default()
+    }),
+  )?;
+  let bytes = std::fs::read(path).ok()?;
+  Some(parse_bst_macros(&latexml_core::mouth::decode_input_bytes(
+    &bytes,
+  )))
+}
+
+/// Scan `.bst` source for its `MACRO {name} {"value"}` commands (btxhak.tex:230-236;
+/// command names ignore case, :170-171). A `%` outside a string literal
+/// comments out the rest of its line (:117-118); a quoted literal is skipped
+/// whole, so a `MACRO` spelled inside one is not a command.
+fn parse_bst_macros(bst: &str) -> HashMap<String, String> {
+  let mut macros = HashMap::default();
+  let chars: Vec<char> = bst.chars().collect();
+  let skip_white = |mut i: usize| {
+    while i < chars.len() {
+      if chars[i] == '%' {
+        while i < chars.len() && chars[i] != '\n' {
+          i += 1;
+        }
+      } else if chars[i].is_whitespace() {
+        i += 1;
+      } else {
+        break;
+      }
+    }
+    i
+  };
+  // `{ <name> }` at `i` (after white space): the name and the index past `}`.
+  let braced = |i: usize| -> Option<(String, usize)> {
+    let i = skip_white(i);
+    if chars.get(i) != Some(&'{') {
+      return None;
+    }
+    let end = i + 1 + chars[i + 1..].iter().position(|&c| c == '}')?;
+    Some((chars[i + 1..end].iter().collect(), end + 1))
+  };
+  // `{ "<value>" }` at `i`: the value, read to its closing quote (a bst string
+  // has no escape, and braces in it are TeX: `{"S{\'e}ances"}`, besjournals.bst),
+  // and the index past `}`.
+  let quoted = |i: usize| -> Option<(String, usize)> {
+    let i = skip_white(i);
+    if chars.get(i) != Some(&'{') {
+      return None;
+    }
+    let open = skip_white(i + 1);
+    if chars.get(open) != Some(&'"') {
+      return None;
+    }
+    let close = open + 1 + chars[open + 1..].iter().position(|&c| c == '"')?;
+    let end = skip_white(close + 1);
+    (chars.get(end) == Some(&'}')).then(|| (chars[open + 1..close].iter().collect(), end + 1))
+  };
+  let mut i = 0;
+  while i < chars.len() {
+    i = skip_white(i);
+    let Some(&c) = chars.get(i) else { break };
+    if c == '"' {
+      i += 1
+        + chars[i + 1..]
+          .iter()
+          .position(|&c| c == '"')
+          .map_or(chars.len(), |p| p + 1);
+      continue;
+    }
+    if !(c.is_alphanumeric() || c == '.' || c == '$' || c == '_') {
+      i += 1;
+      continue;
+    }
+    let start = i;
+    while i < chars.len() && !chars[i].is_whitespace() && !matches!(chars[i], '{' | '}' | '%' | '"')
+    {
+      i += 1;
+    }
+    let word: String = chars[start..i].iter().collect();
+    if !word.eq_ignore_ascii_case("MACRO") {
+      continue;
+    }
+    let Some((name, after_name)) = braced(i) else {
+      continue;
+    };
+    let Some((value, after_value)) = quoted(after_name) else {
+      continue;
+    };
+    i = after_value;
+    macros.insert(name.trim().to_ascii_lowercase(), value);
+  }
+  macros
+}
+
 /// Match Perl's `%CLOSE = ("{" => "}", "(" => ")")` (L154).
 fn close_for(open: char) -> char {
   match open {
@@ -182,6 +288,16 @@ pub struct PreBibTeX {
   /// entries). Set when the document uses biblatex, whose `.bib` biber reads
   /// (DIVERGENCES #296).
   percent_comments: bool,
+  /// The undefined macros `parse_value` met in the value being parsed: an
+  /// `@string` or `@preamble` reports them at once, an entry keeps them for
+  /// `to_tex` (`ParsedEntry::undefined_macros`).
+  undefined_macros: Vec<(String, usize)>,
+  /// Whether the `MACRO`s of the bibliography style are known: its `.bst` was
+  /// read, or the reader is biber's (`percent_comments`), whose only macros are
+  /// the month names. When not (no style, or a `.bst` that cannot be found) a
+  /// name the `.bib` leaves undefined may be the style's, so it is reported as a
+  /// Warning.
+  style_known:      bool,
 }
 
 /// One parsed entry. Mirrors Perl `LaTeXML::Pre::BibTeX::Entry` (only
@@ -189,13 +305,17 @@ pub struct PreBibTeX {
 /// `bibtex::BibEntry` and are populated by the pool orchestration).
 #[derive(Debug, Clone)]
 pub struct ParsedEntry {
-  pub entry_type: String,
-  pub key:        String,
+  pub entry_type:       String,
+  pub key:              String,
   /// (field-name, macro-expanded-value) — Perl `fieldlist`.
-  pub fields:     Vec<(String, String)>,
+  pub fields:           Vec<(String, String)>,
   /// (field-name, raw-source-value, *before* macro expansion) — Perl
   /// `rawfieldlist`.
-  pub raw_fields: Vec<(String, String)>,
+  pub raw_fields:       Vec<(String, String)>,
+  /// The undefined `@string` macros its fields use, with their line: reported
+  /// only if the entry is digested (`to_tex`), as bibtex reports them only for
+  /// the entries it reads for the `.bbl`.
+  pub undefined_macros: Vec<(String, usize)>,
 }
 
 /// Parse errors. The Perl side calls `Error(...)` (recoverable) for
@@ -212,9 +332,10 @@ pub enum BibParseError {
   ExpectedDelimitedString { lineno: usize },
   /// `extend_line` hit EOF while scanning a string.
   UnexpectedEof { lineno: usize },
-  /// `parse_value` encountered a name that isn't a defined macro.
-  /// (Perl emits Error but defaults the value to the name itself; we
-  /// follow that recovery — this variant is for tests / diagnostics.)
+  /// An `@string`/`@preamble` used a name that isn't a defined macro. Perl
+  /// emits an Error and defaults the value to the name itself, and so do we;
+  /// this variant only carries the parse out once that Error has escalated to
+  /// a Fatal (too many errors).
   UndefinedMacro { name: String, lineno: usize },
 }
 
@@ -235,6 +356,8 @@ impl PreBibTeX {
       parsed: false,
       raw_witness: None,
       percent_comments: false,
+      undefined_macros: Vec::new(),
+      style_known: true,
     }
   }
 
@@ -283,8 +406,32 @@ impl PreBibTeX {
     // (`biblatex`, or `biblatex-giveninits`: biblatex_sty.rs
     // `\biblatex@printbibliography`); a split post session (`--whatsin=xml`)
     // only has biblatex loaded from the preloads.
-    me.percent_comments = latexml_core::state::lookup_string("BIBSTYLE").starts_with("biblatex")
-      || latexml_core::state::lookup_bool("biblatex.sty_loaded");
+    // With no `\bibliographystyle`, a class's implicit one (REVTeX's apsrev,
+    // revtex4_support_sty.rs `record_implicit_bibstyle`) supplies the MACROs.
+    let named_style = latexml_core::state::lookup_string("BIBSTYLE");
+    let bibstyle = if named_style.is_empty() {
+      latexml_core::state::lookup_string("lx@implicit@bibstyle")
+    } else {
+      named_style
+    };
+    me.percent_comments =
+      bibstyle.starts_with("biblatex") || latexml_core::state::lookup_bool("biblatex.sty_loaded");
+    // bibtex(1) runs the style's `MACRO` commands before its `READ` of the
+    // `.bib`s, so `journal = apj` resolves against the `.bst` in force
+    // (btxhak.tex:174-177 "all MACRO commands … must precede the READ
+    // command"; :236 "The user's database may override any definition").
+    // Perl seeds only its fixed `%default_macros` (BibTeX.pm:34-57) and so
+    // raises `undefined` for every abbreviation a journal style supplies;
+    // resolving the style first keeps that Error for the names that really are
+    // undefined. The style's value wins over the default, as in bibtex
+    // (IEEEtran.bst:238 `MACRO {jan} {"Jan."}`). A biblatex `.bib` is read by
+    // biber, which knows only the month names (Perl's defaults cover them).
+    if !me.percent_comments {
+      match bst_macros(&bibstyle) {
+        Some(macros) => me.macros.extend(macros),
+        None => me.style_known = false,
+      }
+    }
     me
   }
 
@@ -322,7 +469,12 @@ impl PreBibTeX {
   /// (`bibtex.web`), which is the behaviour authors' `.bbl` files are built
   /// against. `skip_junk` is already exactly that resync, so the loop simply
   /// keeps going. The malformed entry itself is dropped (as BibTeX drops it).
-  /// Corpus: 19 papers / 298 messages carry `bibtex:unbalanced`.
+  /// The resync is the divergence; the report is not: each lost entry raises
+  /// the Error Perl raises at the point of failure (`parseMatch`'s
+  /// `Error('expected', $delims, …)`, BibTeX.pm:248; `extendLine`'s
+  /// `Error('unexpected', '<EOF>', …)`, :292), so the paper is flagged as one
+  /// whose bibliography lost entries. Corpus: 19 papers / 298 messages carried
+  /// the former `Warning:bibtex:unbalanced`.
   pub fn parse_top_level(&mut self) -> Result<(), BibParseError> {
     while self.skip_junk() {
       let typ = match self.parse_entry_type() {
@@ -335,24 +487,132 @@ impl PreBibTeX {
         "comment" => self.parse_comment(),
         _ => self.parse_entry(&typ),
       };
-      if let Err(e) = outcome {
-        // Loud, never silent: the entry IS lost, and the reader must know
-        // WHICH one. NB `Warn!` takes a pre-formatted message and appends any
-        // further args as separate detail LINES — it does NOT interpolate
-        // `{}`, so the message must be built with `s!` first.
-        latexml_core::Warn!(
-          "bibtex",
-          "unbalanced",
-          s!(
-            "{} line {}: {:?}; resyncing at the next '@'",
-            self.to_string_label(),
-            self.lineno,
-            e
-          )
-        );
+      match outcome {
+        Ok(()) => {},
+        // Already reported, and the report escalated to a Fatal (too many
+        // errors): stop, as Perl's `Fatal` would.
+        Err(BibParseError::UndefinedMacro { .. }) => break,
+        Err(e) => {
+          // The lost entry's macros are not reported: bibtex skips it whole.
+          self.undefined_macros.clear();
+          if self.report_parse_error(&e).is_err() {
+            break;
+          }
+        },
       }
     }
     self.parsed = true;
+    Ok(())
+  }
+
+  /// Report a parse error as Perl does, with Perl's `category:object` and
+  /// message; the locator line names WHICH entry is lost, since the caller
+  /// resyncs at the next `@`. NB the diagnostic macros take a pre-formatted
+  /// message and append further args as detail LINES — they do not
+  /// interpolate `{}`, so every message is built with `s!` first.
+  fn report_parse_error(&self, error: &BibParseError) -> latexml_core::Result<()> {
+    let (category, object, message) = match error {
+      // BibTeX.pm:248 `Error('expected', $delims, undef, "Expected one of " . join(' ', split(//, $delims)))`
+      BibParseError::Expected { delims, .. } => {
+        let one_of = delims
+          .chars()
+          .map(String::from)
+          .collect::<Vec<_>>()
+          .join(" ");
+        ("expected", delims.clone(), s!("Expected one of {one_of}"))
+      },
+      // BibTeX.pm:315 `Error('expected', '<value>', undef, "Expected a BibTeX value")`
+      BibParseError::ExpectedValue { .. } => {
+        ("expected", s!("<value>"), s!("Expected a BibTeX value"))
+      },
+      // BibTeX.pm:269-270
+      BibParseError::ExpectedDelimitedString { .. } => (
+        "expected",
+        s!("<delimitedstring>"),
+        s!("Expected a string delimited by \"..\", (..) or {{..}}"),
+      ),
+      // BibTeX.pm:292-293 `Error('unexpected', '<EOF>', undef, "Input ended while parsing string")`
+      BibParseError::UnexpectedEof { .. } => (
+        "unexpected",
+        s!("<EOF>"),
+        s!("Input ended while parsing string"),
+      ),
+      BibParseError::UndefinedMacro { name, .. } => (
+        "unexpected",
+        name.clone(),
+        s!("The BibTeX macro '{name}' is not defined"),
+      ),
+    };
+    self.report_at(
+      true,
+      category,
+      &object,
+      &message,
+      self.lineno,
+      "resyncing at the next '@'",
+    );
+    Ok(())
+  }
+
+  /// Emit a diagnostic at the `.bib`'s own line (`at refs; line 9`), not at the
+  /// anonymous string the reader was handed — an improvement on Perl, whose report
+  /// says `at String; line 0 col 1` (OXIDIZED_DESIGN #518).
+  /// The cap bookkeeping is `emit_error`'s (no `Error!` here: its location is
+  /// the gullet's).
+  fn report_at(
+    &self,
+    error: bool,
+    category: &str,
+    object: &str,
+    message: &str,
+    lineno: usize,
+    detail: &str,
+  ) {
+    let file = std::path::Path::new(&self.file_label)
+      .file_stem()
+      .and_then(|stem| stem.to_str())
+      .unwrap_or(&self.file_label);
+    let text = s!("{message}\n\tat {file}; line {lineno}\n\t{detail}\n");
+    if error {
+      latexml_core::common::error::emit_error(category, object, &text);
+    } else {
+      latexml_core::common::error::emit_warn(category, object, &text);
+    }
+  }
+
+  /// BibTeX.pm:307-310: an undefined macro is an Error, and the recovery
+  /// leaves the name as-is (bibtex(1) itself warns "string name … is
+  /// undefined" and uses the empty string). The table holds the `.bst`'s
+  /// `MACRO`s (see `new_from_gullet`), so only a name neither the style nor
+  /// the `.bib` defines lands here. Reported for an `@string`/`@preamble` and
+  /// for a digested entry only: Perl reports every entry's, but bibtex reads
+  /// only the cited ones — a 41 MB `crypto.bib` against an older `abbrev3.bib`
+  /// (2606.21799) has a thousand uses in uncited entries, whose Errors tripped
+  /// the too-many-errors Fatal and cost the bibliography 15 of its 22 items.
+  fn report_undefined_macro(&self, name: &str, lineno: usize) -> latexml_core::Result<()> {
+    if self.style_known {
+      let message = s!("The BibTeX macro '{name}' is not defined");
+      self.report_at(
+        true,
+        "unexpected",
+        name,
+        &message,
+        lineno,
+        "its name is kept as the value",
+      );
+    } else {
+      let message = s!(
+        "The BibTeX macro '{name}' is not defined by the .bib, and the bibliography style that may define it is unknown"
+      );
+      self.report_at(
+        false,
+        "unexpected",
+        name,
+        &message,
+        lineno,
+        "its name is kept as the value",
+      );
+    }
     Ok(())
   }
 
@@ -361,6 +621,7 @@ impl PreBibTeX {
     let open = self.parse_match("({")?;
     let (value, _raw) = self.parse_value()?;
     self.preamble.push(value);
+    self.report_undefined_macros()?;
     self.parse_match(&close_for(open).to_string())?;
     Ok(())
   }
@@ -371,6 +632,17 @@ impl PreBibTeX {
     let (fields, _raw) = self.parse_fields("@string", open)?;
     for (name, value) in fields {
       self.macros.insert(name, value);
+    }
+    self.report_undefined_macros()
+  }
+
+  /// Report the undefined macros of the `@string`/`@preamble` just parsed: bibtex
+  /// reads those whatever is cited.
+  fn report_undefined_macros(&mut self) -> Result<(), BibParseError> {
+    for (name, lineno) in std::mem::take(&mut self.undefined_macros) {
+      if self.report_undefined_macro(&name, lineno).is_err() {
+        return Err(BibParseError::UndefinedMacro { name, lineno });
+      }
     }
     Ok(())
   }
@@ -403,6 +675,7 @@ impl PreBibTeX {
       key,
       fields,
       raw_fields,
+      undefined_macros: std::mem::take(&mut self.undefined_macros),
     });
     Ok(())
   }
@@ -643,11 +916,11 @@ impl PreBibTeX {
         let is_digits = !name.is_empty() && name.chars().all(|c| c.is_ascii_digit());
         let resolved = if is_digits {
           name.clone()
+        } else if let Some(value) = self.macros.get(&name) {
+          value.clone()
         } else {
-          self.macros.get(&name).cloned().unwrap_or_else(|| {
-            // Perl recovery: leave the name as-is.
-            name.clone()
-          })
+          self.undefined_macros.push((name.clone(), self.lineno));
+          name.clone()
         };
         raw.push_str(&name);
         value.push_str(&resolved);
@@ -802,9 +1075,14 @@ impl PreBibTeX {
       out.push('\n');
     }
     out.push_str("\\begin{bibtex@bibliography}\n");
+    let mut reporting = true;
     for (i, entry) in self.entries.iter().enumerate() {
       if selected.as_ref().is_some_and(|s| !s.contains(&i)) {
         continue;
+      }
+      // Stop reporting once a report escalated to the too-many-errors Fatal.
+      for (name, lineno) in &entry.undefined_macros {
+        reporting = reporting && self.report_undefined_macro(name, *lineno).is_ok();
       }
       out.push_str("\\ProcessBibTeXEntry{");
       out.push_str(&entry.key);
@@ -1252,6 +1530,31 @@ mod tests {
 "#,
     );
     assert_eq!(p.entries[0].fields[0].1, "January");
+  }
+
+  #[test]
+  fn bst_macros_are_read_with_comments_and_strings_skipped() {
+    let macros = parse_bst_macros(
+      r#"% MACRO {commented} {"no"}
+MACRO {jan} {"Jan."}
+macro {ApJ}
+  { "Astrophys. J." }
+FUNCTION {f} { "MACRO {inside} {\"no\"}" write$ }
+MACRO {mnras} {"MNRAS"} % trailing comment
+MACRO {cra} {"Comptes Rendus des S{\'e}ances de l'Acad{\'e}mie"}
+MACRO {andgeo} {"Annales de Geophysique"}
+"#,
+    );
+    assert_eq!(macros.len(), 5, "{macros:?}");
+    // A brace in a value is TeX, kept as bibtex passes it on.
+    assert_eq!(
+      macros["cra"],
+      "Comptes Rendus des S{\\'e}ances de l'Acad{\\'e}mie"
+    );
+    assert_eq!(macros["andgeo"], "Annales de Geophysique");
+    assert_eq!(macros["jan"], "Jan.");
+    assert_eq!(macros["apj"], "Astrophys. J.");
+    assert_eq!(macros["mnras"], "MNRAS");
   }
 
   #[test]

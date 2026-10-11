@@ -1,8 +1,10 @@
 % witness: 2310.08233 (`{\doublespace …}`); review 64y round 4 (s2)
 % oracle:  pdflatex 1 error (! Extra }, or forgotten \endgroup: the } meets \doublespace's \begingroup, setspace.sty:542-547)
-% engines: rust 64w 0/0 and 64y 0/0; Perl 1E
-% expect:  1 Error, as pdflatex
-% status:  RED (64y side finding): setspace_sty.rs:96-100 binds the bare \doublespace/\onehalfspace as no-ops, so no environment frame exists and TeX's error is suppressed; follow-up on the setspace binding
+% engines: rust 64w 0/0 and 64y 0/0 (no-op switches); 64zf: 1 Error, `Error:unexpected:}` "Extra }, or forgotten
+%          \endgroup: \doublespace's \begingroup … is still open", the `}` its object and the location printed the
+%          switch's (setspace_sty.rs: a checked no-op, `\lx@setspace@check` at the end of the group it opened in); Perl 1E
+% expect:  1 Error, as pdflatex; "Text in group. After." kept
+% status:  RED (64y side finding) -> GREEN (64zf)
 % preload: ar5iv.sty
 \documentclass{article}\usepackage{setspace,lscape,multicol}
 \begin{document}

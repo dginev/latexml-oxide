@@ -1,5 +1,5 @@
 use base64::Engine as _;
-use latexml_core::common::error::emit_warn;
+use latexml_core::common::error::{emit_error, emit_warn};
 
 use crate::prelude::*;
 
@@ -135,6 +135,22 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
   // input` → Fatal). Guard:
   // `perfect_kernel_batch56::forest_docinput_lstenv_writefile_gobbles_doc_percent`.
   let begin = format!("\\begin{{{environment}}}");
+  // The listing's END already read as tokens: its body was tokenized ahead as a
+  // macro argument (`\parbox{3cm}{\begin{lstlisting}…\end{lstlisting}}`), so no
+  // line holds it any more and listings' line scan cannot find its end — TeX
+  // runs out ("Argument of \lst@next has an extra }", listings.sty:2142-2147
+  // dropping the begin line's text). The body is lost, so this is an Error.
+  let end = format!("\\end{{{environment}}}");
+  if pushback_text().contains(&end) {
+    emit_error(
+      "expected",
+      &end,
+      &latexml_core::generate_message!(format!(
+        "{end} was read ahead with the listing's body as a macro argument; listings reads its body \
+         line by line, so the body is lost"
+      )),
+    );
+  }
   let mut first_line = if pushback_holds_nonspace() {
     // A begin-line argument the environment's mapping could not consume
     // leaves non-space pushback while the mouth is STILL on the `\begin`
@@ -153,7 +169,36 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
     // leftover of the \begin line — not content, EXCEPT a tcolorbox listing
     // box's arguments written after `\begin{env}`.
     let leftover = read_raw_line();
+    // A tcolorbox listing box reads its arguments from that line; anything else
+    // there is dropped, with listings' own warning (listings.sty:2142-2145
+    // `\lstenv@DroppedWarning`).
+    let tcb_line = matches!(
+      lookup_value("tcb_pending_mode_opts"),
+      Some(Stored::Tokens(_))
+    );
     tcb_begin_line_arguments(environment, leftover.as_deref());
+    // An optional argument after a space (`\begin{lstlisting} [frame=single]`) is
+    // still the options to listings (`\@ifnextchar[` skips the space), so no text
+    // is dropped there; this reader leaves them in the line, unread (1606.07935).
+    let options_after_space = leftover
+      .as_deref()
+      .is_some_and(|l| l.starts_with(char::is_whitespace) && l.trim_start().starts_with('['));
+    // A `%` comment is not dropped text (TeX discards it reading the line): only
+    // what precedes it counts (`\begin{lstlisting}[language=C] % note`, review probe
+    // lst1). The line after a begin-line comment is KEPT as the listing's first line,
+    // where pdflatex drops it with this warning (content first; OXIDIZED_DESIGN #521).
+    if !tcb_line
+      && !options_after_space
+      && leftover
+        .as_deref()
+        .is_some_and(|l| !strip_tex_comment(l).trim().is_empty())
+    {
+      Warn!(
+        "latex",
+        "(Listings)",
+        "Package Listings Warning: Text dropped after begin of listing"
+      );
+    }
     None
   };
   let mut end_patterns = vec![
@@ -2634,26 +2679,26 @@ LoadDefinitions!({
   def_macro_noop("\\lst@InstallFamily{}{}{}{}{}")?;
   def_macro_noop("\\lst@InstallFamily@{}{}{}{}{}{}{}{}")?;
 
-  // listings aspect machinery — `\lst@RequireAspects{<aspect-name>}`
+  // listings aspect machinery — `\lst@RequireAspects{<aspect-list>}`
   // is listings's plug-in loader for optional behaviour like
   // `writefile` (loaded by `showexpl.sty` to capture rendered code
-  // for re-display). We don't expand aspects (they're typesetting
-  // concerns — actual code rendering goes via our listings model,
-  // not via aspect-mediated file I/O), so the require call is a no-op.
-  // Witness: arXiv:1604.00381 / 1706.09226 (`\usepackage{showexpl}`
-  // calls `\lst@RequireAspects{writefile}` at load time → cascade
-  // of `Error:undefined:\lst@RequireAspects` + `\lstKV@OptArg` +
-  // `\lst@EndWriteFile` + downstream `\SX@put@code@result` from
-  // showexpl. Adding the no-op breaks the cascade.
-  def_macro_noop("\\lst@RequireAspects{}")?;
+  // for re-display). Most aspects are typesetting concerns our listings
+  // model renders natively, so requiring them does nothing; `writefile`
+  // is the one whose commands exist only once it is required
+  // (lstmisc.sty:30 `\lst@BeginAspect{writefile}`), so it defines them
+  // (`require_listings_aspects`). Witness: arXiv:1604.00381 / 1706.09226
+  // (`\usepackage{showexpl}` calls `\lst@RequireAspects{writefile}` at
+  // load time → cascade of `Error:undefined:\lst@RequireAspects` +
+  // `\lstKV@OptArg` + `\lst@EndWriteFile` + downstream
+  // `\SX@put@code@result` from showexpl).
+  DefPrimitive!("\\lst@RequireAspects{}", sub[(aspects)] {
+    require_listings_aspects(&do_expand(aspects)?.to_string());
+  });
   // `\lstKV@OptArg` is a keyval helper used by aspect modules. The
   // listings binding doesn't expose listings's key parser; this no-op
   // matches the same content-preserving philosophy as the aspects.
   // Signature from lstmisc.sty: `\lstKV@OptArg[default]{arg}{body}`.
   def_macro_noop("\\lstKV@OptArg[]{}{}")?;
-  // writefile aspect entry points — stubbed as no-ops since we
-  // don't capture/re-include code-listings via file I/O.
-  def_macro_noop("\\lst@EndWriteFile")?;
 
   // Initialize state values
   assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
@@ -2940,7 +2985,7 @@ LoadDefinitions!({
   // tagpdfdocu-patches.sty calls it when hooking \lstlisting.
   RawTeX!(r"\def\lst@XConvert#1\@nil{}\def\lst@TestEOLChar#1{}\long\def\lstnewenvironment@#1#2#3{}");
   // listings.sty:291 \let\lstloadaspects\lst@RequireAspects
-  DefMacro!("\\lstloadaspects{}", "");
+  Let!("\\lstloadaspects", "\\lst@RequireAspects");
 
   // \lstnewenvironment — define new listing environments
   // Perl: DefPrimitive('\lstnewenvironment {}[Number][] DefPlain DefPlain', sub { ... })
@@ -3407,26 +3452,37 @@ LoadDefinitions!({
   // re-begins `\jobname.tmp` per example; without the truncation a frozen
   // `\usepackage[linguistics]{forest}` line was re-`\input` 440× (witness:
   // forest-doc, 1001 errors + TooManyErrors).
-  DefPrimitive!("\\lst@BeginWriteFile{}", sub[(file)] {
+  // The aspect's commands are installed under their listings names only when
+  // the aspect is required (`require_listings_aspects`): without it real
+  // listings leaves `\lst@BeginWriteFile` undefined, and so do we (pst-exa-doc
+  // relies on showexpl having required it).
+  DefPrimitive!("\\lx@lst@BeginWriteFile{}", sub[(file)] {
     let f = do_expand(file)?.to_string();
     lst_writefile_open(f.trim());
     assign_value("LST@WF@also", Stored::from(false), Some(Scope::Global));
   });
-  DefPrimitive!("\\lst@BeginAlsoWriteFile{}", sub[(file)] {
+  DefPrimitive!("\\lx@lst@BeginAlsoWriteFile{}", sub[(file)] {
     let f = do_expand(file)?.to_string();
     lst_writefile_open(f.trim());
     assign_value("LST@WF@also", Stored::from(true), Some(Scope::Global));
   });
-  DefPrimitive!(T_CS!("\\lst@EndWriteFile"), None, {
+  DefPrimitive!(T_CS!("\\lx@lst@EndWriteFile"), None, {
     assign_value("LST@WF@file", Stored::String(pin("")), Some(Scope::Global));
   });
   // Catcode-robust aliases for injection into GENERATED env start/end code
   // that gets tokenized under DOCUMENT catcodes (tcolorbox
   // tcb_listing_startend): at a document-level `\newtcblisting` call `@` is
   // OTHER, which would split `\lst@BeginAlsoWriteFile` into `\lst` + text
-  // (witness: doc-level `use counter`/`listing file` min-repro).
-  DefMacro!("\\lxlstbeginwritefile{}", "\\lst@BeginAlsoWriteFile{#1}");
-  DefMacro!("\\lxlstendwritefile", "\\lst@EndWriteFile");
+  // (witness: doc-level `use counter`/`listing file` min-repro). The tee is
+  // our tcolorbox binding's own, so it needs no aspect.
+  DefMacro!("\\lxlstbeginwritefile{}", "\\lx@lst@BeginAlsoWriteFile{#1}");
+  DefMacro!("\\lxlstendwritefile", "\\lx@lst@EndWriteFile");
+  // listings.sty:2294-2309: a package option names an aspect to load
+  // (`\RequirePackage[writefile]{listings}`, lstdoc.sty:14); `!<aspect>` drops one.
+  DeclareOption!(None, {
+    require_listings_aspects(&Expand!(T_CS!("\\CurrentOption")).to_string());
+  });
+  ProcessOptions!();
   DefKeyVal!("LST", "resetmargins", "");
   DefKeyVal!("LST", "breaklines", "", "true");
   DefKeyVal!("LST", "prebreak", "");
@@ -4390,6 +4446,42 @@ fn lst_writefile_open(file: &str) {
     Stored::String(pin(&file)),
     Some(Scope::Global),
   );
+}
+
+/// `line` up to its first unescaped `%` while `%` is a comment character (tex.web
+/// §347: catcode 14 ends the line; `\%` is a control symbol). Under doc.sty's
+/// `\MakePercentIgnore` (`\DocInput`) `%` is ignored, not a comment: the line is kept.
+fn strip_tex_comment(line: &str) -> &str {
+  if lookup_catcode('%') != Some(Catcode::COMMENT) {
+    return line;
+  }
+  let mut escaped = false;
+  for (at, c) in line.char_indices() {
+    if c == '%' && !escaped {
+      return &line[..at];
+    }
+    escaped = !escaped && c == '\\';
+  }
+  line
+}
+
+/// `\lst@RequireAspects{<list>}` (listings.sty:289-291): load the named
+/// aspects. Only `writefile` has commands of its own here (lstmisc.sty:30-74
+/// `\lst@BeginAspect{writefile}` … `\lst@EndAspect`), installed globally as
+/// an aspect's definitions are.
+pub(crate) fn require_listings_aspects(aspects: &str) {
+  if aspects
+    .split(',')
+    .any(|aspect| aspect.trim() == "writefile")
+  {
+    for (name, internal) in [
+      ("\\lst@BeginWriteFile", "\\lx@lst@BeginWriteFile"),
+      ("\\lst@BeginAlsoWriteFile", "\\lx@lst@BeginAlsoWriteFile"),
+      ("\\lst@EndWriteFile", "\\lx@lst@EndWriteFile"),
+    ] {
+      Let!(T_CS!(name), T_CS!(internal), Scope::Global);
+    }
+  }
 }
 
 /// Write-file tee (lstmisc.sty aspect): when `\lst@BeginWriteFile`/

@@ -11,19 +11,48 @@ LoadDefinitions!({
   // `\addlinespace[2pt plus 1pt]` put "plus 1pt" there (booktabs.sty:80-82 reads
   // a skip). Perl reads `[Dimension]` (booktabs.sty.ltxml) and drops the rest.
 
+  // The width is still a <dimen> to TeX (booktabs.sty:85-114 `\@BTrule[#1]`
+  // assigns it), so one that is not reports what Perl's `[Dimension]` read
+  // reports — "Missing number (Dimension)" / "Illegal unit" Warnings
+  // (Gullet.pm:969-972), at the rule — judged on its text (`width_shape`, the
+  // shapes of tex.web §448-458) at expansion time, so nothing is left between the
+  // rows (witnesses 2605.27476, 2605.25272: `\cmidrule[lr]`). pdflatex: the same as Errors. Under
+  // tabularray (its `booktabs` library, `\toprule[2pt,red]`) the brackets hold
+  // tabularray's keys, not a width.
+  DefMacro!("\\lx@booktabs@width{}", sub[(width)] {
+    if !width.is_empty() && !(lookup_bool("tabularray.sty_loaded") || lookup_bool("tabularray.sty_raw_loaded")) {
+      match width_shape(&width.to_string()) {
+        WidthShape::Dimension => {},
+        WidthShape::NoUnit => Warn!(
+          "expected",
+          "<unit>",
+          "Illegal unit of measure (pt inserted).",
+          s!("in the rule width [{width}]")
+        ),
+        WidthShape::NoNumber => Warn!(
+          "expected",
+          "<number>",
+          "Missing number (Dimension), treated as zero.",
+          s!("in the rule width [{width}]")
+        ),
+      }
+    }
+    Ok(Tokens!())
+  });
+
   // \toprule[thickness]  doubled
-  DefMacro!("\\toprule[]", "\\hline\\hline");
+  DefMacro!("\\toprule[]", "\\lx@booktabs@width{#1}\\hline\\hline");
   // \midrule[thickness]
-  DefMacro!("\\midrule[]", "\\hline");
+  DefMacro!("\\midrule[]", "\\lx@booktabs@width{#1}\\hline");
   // \bottomrule[thickness] doubled
-  DefMacro!("\\bottomrule[]", "\\hline\\hline");
+  DefMacro!("\\bottomrule[]", "\\lx@booktabs@width{#1}\\hline\\hline");
 
   // \cmidrule[thickness](trim){col-col}
   DefMacro!("\\@afterfi Until:\\fi", "\\fi#1");
   // Whether a width was given: `\detokenize`'s emptiness test, as `\ifx.#1.` is true for `[.5pt]`, whose leading `.`
   // it compares with its own, so "5pt." was typeset into the next cell (2405.01314; Perl booktabs.sty.ltxml:31-33).
   DefMacro!("\\cmidrule[]",
-    r"\@ifnextchar({\if\relax\detokenize{#1}\relax\expandafter\ltx@@cmidrule\else\@afterfi\ltx@@cmidrule[#1]\fi}{\if\relax\detokenize{#1}\relax\expandafter\ltx@cmidrule\else\@afterfi\ltx@cmidrule[#1]\fi}"
+    r"\lx@booktabs@width{#1}\@ifnextchar({\if\relax\detokenize{#1}\relax\expandafter\ltx@@cmidrule\else\@afterfi\ltx@@cmidrule[#1]\fi}{\if\relax\detokenize{#1}\relax\expandafter\ltx@cmidrule\else\@afterfi\ltx@cmidrule[#1]\fi}"
   );
   // The cmidrule helpers draw the partial rule via `\cline`. They route through
   // a PRIVATE saved copy (`\ltx@saved@cline`, captured at load below) rather than
@@ -117,3 +146,31 @@ LoadDefinitions!({
   \ifnum0=`{\fi}}
 ");
 });
+
+/// How a booktabs rule width reads as a TeX `<dimen>` (tex.web §448-458).
+enum WidthShape {
+  /// A factor and a unit (`.5pt`, `2.5\arrayrulewidth`), or a register or macro (`\heavyrulewidth`).
+  Dimension,
+  /// A number with no unit (`0`): "Illegal unit of measure (pt inserted)".
+  NoUnit,
+  /// No number (`lr`, a typo for `(lr)`): "Missing number, treated as zero".
+  NoNumber,
+}
+
+fn width_shape(width: &str) -> WidthShape {
+  static DIMENSION: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+      // TeX's unit keywords ignore case (tex.web §407 scan_keyword: `\toprule[1PT]`).
+      r"(?i)^\s*[-+\s]*(?:(?:\d+[.,]?\d*|[.,]\d+)\s*(?:true\s*)?(?:pt|pc|in|bp|cm|mm|dd|cc|sp|em|ex|px|nd|nc)|(?:\d+[.,]?\d*|[.,]\d+)?\s*\\[A-Za-z@])",
+    )
+    .unwrap()
+  });
+  static NUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*[-+\s]*(?:\d|[.,]\d)").unwrap());
+  if DIMENSION.is_match(width) {
+    WidthShape::Dimension
+  } else if NUMBER.is_match(width) {
+    WidthShape::NoUnit
+  } else {
+    WidthShape::NoNumber
+  }
+}

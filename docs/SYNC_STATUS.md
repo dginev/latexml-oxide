@@ -389,6 +389,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   99.6%), 1907.09124, 1902.00853. Guards `perfect_kernel_batch65c::*`. The regained content of arXiv papers whose
   environment or math an upstream defect leaves open now surfaces as `malformed:*` placement errors (1507.01637 and
   hep-lat9811036 reach `TooManyErrors`; 2110.01778's cause is RED `boxes-groups/boldsymbol_text_dollars_inside_math`).
+- **64zf** (landed; diagnostics honesty, stage 1 — user directive 2026-10-11): Error/Fatal emitted at Perl's
+  severity where Perl reports, and where only TeX errs a Warning when the recovery yields good markup, else an Error.
+  `.bib` undefined macros at the entry's line with the `.bst`'s `MACRO`s (OD #518), overflow clamps (OD #519),
+  setspace switches as checked no-ops (OD #520), listings begin-line text (OD #521), an unknown colour model, the
+  open conditional at `\end{document}` (65c's report, guarded here), Perl's `Info:misdefined:utf-8`, picture `\line`
+  outside a picture, booktabs widths, `\IEEEQEDhereeqn` in a row, the CLI's unusable inputs as a Fatal with a log;
+  addenda OD #207/#316/#317/#481/#489; KPE #600-#602. Guards `perfect_kernel_batch64zf::*`,
+  `119_final_status_report::unusable_archive_is_a_fatal_conversion`. Open REDs: sectioning-frontmatter/
+  section_title_errors_reported_twice (task: the toc digestion re-raises the heading's diagnostics, shared with
+  Perl), loader/plain_input_defining_documentstyle_routes_plain (hep-lat9301012), babel-lang/
+  shorthandoff_quote_in_english_is_no_shorthand, expansion-primitives/uppercase_brace_hunt_file_end,
+  alignment/tabularcalc_pcell_ifnum_cr, and the setspace REDs boxes-groups/{lrbox_doublespace_group_end,
+  abstract_begingroup_doublespace_group_end, plain_group_around_itemize_doublespace,
+  doublespace_end_in_a_nested_plain_group}. Stage 2 (the remaining Error/Fatal classes) is open.
 - **65b** (landed; C5 step G4):
   - **Column ends by command code** (`is_column_end`; the `\halign` preamble incl. `\tabskip`; OD #522, KPE #603).
   - **Frozen `\span`** for `\multicolumn`/`\multispan`/`\sp@n` (user ruling 2026-10-11, one Warning per document;

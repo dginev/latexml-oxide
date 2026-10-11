@@ -3,7 +3,7 @@ use latexml_core::common::color::{
 };
 
 use crate::{
-  package::color_sty::{lookup_color_obj, trim_color_spec},
+  package::color_sty::{lookup_color_obj, report_unrecognized_model, trim_color_spec},
   prelude::*,
 };
 
@@ -125,7 +125,14 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
       };
       Color::Hsb(h / 6.0, 1.0, bb).to_rgb()
     },
-    _ => color_from_model_spec(model, spec),
+    _ => {
+      // A model neither core nor one of xcolor.sty.ltxml's `DefColorModel`s
+      // (:85-168: RGB HTML Hsb HSB tHsb Gray wave) is Perl's Color.pm:61 Error.
+      if !matches!(model, "tHsb") {
+        report_unrecognized_model(model);
+      }
+      color_from_model_spec(model, spec)
+    },
   }
 }
 

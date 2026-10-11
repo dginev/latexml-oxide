@@ -6,9 +6,11 @@
 %   (babel.dtx:3786-3794's `\shorthandoff*{~^}`).
 % witness: K13 stage-2 audit (57h) babel row (0 of 3,003 A/B papers)
 % oracle:  pdflatex "XY a:b", "c d" (a no-break space), x² — and one "not a shorthand" error for `^`
-% engines: rust 57p: 0 errors, "X :Y"; perl: "XY", with 3 babel errors (no binding; raw babel)
-% expect:  0 errors; "XY a:b", `~` a no-break space, `$x^2$` a superscript
-% status:  GREEN (57r)
+% engines: rust 57p: 0 errors, "X :Y"; 57r..64zd: 0 errors (the "not a shorthand" error dropped); 64zf: 1 error
+%          (Error:latex:(babel), errbabel.def:93-97); perl: "XY", with 3 babel errors (no binding; raw babel)
+% expect:  1 error (babel's "I can't switch '^' on or off--not a shorthand"); "XY a:b", `~` a no-break space,
+%          `$x^2$` a superscript
+% status:  GREEN (57r; 64zf reports the error)
 \documentclass{article}
 \usepackage[french]{babel}
 \begin{document}

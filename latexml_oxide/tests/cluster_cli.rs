@@ -1059,9 +1059,11 @@ mod whatsinout {
       );
       if !ok {
         // The case must reach the early Fatal exit after the unpacking, not fail inside it (whose `TempDir` drops).
+        let stderr = stderr_of(&out);
         assert!(
-          stderr_of(&out)
-            .contains("Fatal:invalid:not_tex_source PDF magic detected in source file"),
+          stderr.contains("Fatal:invalid:not_tex_source ")
+            && stderr.contains("PDF magic detected in source file")
+            && stderr.contains("Status:conversion:3"),
           "{source}: stderr:\n{}",
           stderr_of(&out)
         );

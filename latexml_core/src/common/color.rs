@@ -373,6 +373,14 @@ fn parse_components(spec: &str) -> Vec<f64> {
   }
 }
 
+/// Is `model` one of the core color models (Perl Color.pm
+/// `%core_color_models`: rgb, cmy, cmyk, hsb, gray)? Any other model must be
+/// a derived one (xcolor's `DefColorModel`), else Perl's `Color::new` reports
+/// `Error:unexpected:<model>` "Unrecognized color model" (Color.pm:59-61).
+pub fn is_core_model(model: &str) -> bool {
+  matches!(model, "rgb" | "cmy" | "cmyk" | "hsb" | "gray")
+}
+
 /// Create a Color from model name and component values
 pub fn from_model_components(model: &str, comps: &[f64]) -> Color {
   match model {

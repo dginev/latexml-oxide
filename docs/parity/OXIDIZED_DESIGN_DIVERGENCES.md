@@ -7589,13 +7589,18 @@ KNOWN_PERL_ERRORS #203.
 revert to nothing, so a math left open to `\end{document}` (whose whole body reverts
 into its `tex=`) carries no internal names: ours `tex="x+yTailwords.\par"`, Perl
 `tex="x+yTailwords.\lx@frontmatter@fallback\par\end{document}"`.
+**Addendum (64zf)**: each frame's beforeAfterGroup hooks still run (Perl's popFrame runs none,
+latex_constructs.pool.ltxml:373); what they queue on `\aftergroup` is discarded too (guard
+`perfect_kernel_batch64zf::abandoned_group_discards_hook_queued_aftergroup`); a group-end check that presumes a
+closer (setspace's `\lx@setspace@check`) is skipped under `lx@ending@document`.
 **Witnesses**: screenplay-pkg/screenplay-pkg (6 → 0); powerdotDE (recall 26.3 → 97.8%),
 csvsimple-legacy (88.9 → 99.6%), arXiv 1902.00853, 1907.09124 (batch 65c).
 **Guards**: `perfect_kernel_batch56::unbalanced_abstract_brace_unwinds_at_end`,
 `perfect_kernel_batch54::braced_abstract_reads_its_body_incrementally`,
 `perfect_kernel_batch65c::{unclosed_nested_quotes_at_end_document,
 unclosed_quotes_in_runaway_abstract_keep_their_text, abandoned_document_close_runs_bibliography_hooks,
-abandoned_document_close_invents_no_bibliography_title, math_open_at_end_document_reverts_no_internal_names}`.
+abandoned_document_close_invents_no_bibliography_title, math_open_at_end_document_reverts_no_internal_names}`,
+`perfect_kernel_batch64zf::conditional_open_at_end_document`.
 
 ### 208. A locked `\abstract` honours the class's argument-taking signature
 
@@ -10316,6 +10321,11 @@ Perl's `displayedpoints` for a nonzero count only.
 **Guards**: `node_box_append::{line_takes_box_free_arguments, line_outside_a_picture_is_a_full_width_box,
 bezier_is_stroked_and_counts_its_points}`.
 
+Addendum (64zf): `\line` without `(` in a LaTeX document is the plain `\hbox to\hsize` plus a Warning (pdflatex
+errs); in a plain TeX or AMS-TeX document it is plain's macro, no Warning. Residual: a macro package defining
+`\documentstyle` routes as LaTeX (RED loader/plain_input_defining_documentstyle_routes_plain; hep-lat9301012).
+Repro graphics-tikz/picture_line_outside_picture.
+
 ---
 ### 317. What follows the value in a braced typed argument stays in the input; assignments scan by the register's type; calc evaluates a braced length whole (Perl: dropped silently; `{Dimension}`; the first term)
 
@@ -10499,6 +10509,11 @@ latex.ltx:10253-10254 define them, so `\setlength{\oddsidemargin 0.5cm}\setlengt
 `\setlength` runs after (six sandbox papers erred "A <variable> was supposed to be here"); guard
 `perfect_kernel_batch61::setlength_reads_its_register_and_value_as_one_stream`. A target that is not a register now
 has its value typeset, as pdflatex does (`A\setlength{\undefinedbar}{4pt}B` gives "A 4ptB"; Perl drops it).
+
+Addendum (64zf): booktabs rule widths (`\toprule[w]`, `\cmidrule[w]`) stay untyped between rows; a width that is not
+a `<dimen>` (case-insensitive units) gives Perl's Warning at the rule, and tabularray's key forms are exempt. Guards
+`perfect_kernel_batch64zf::{booktabs_width_that_is_no_dimension_warns, booktabs_width_shapes,
+tabularray_booktabs_keys_are_no_width}`.
 
 ### 318. `\glossary` entries are index marks; a missing makeindex output is stood in for; MakeIndex builds every list; entries are read as makeindex reads them (Perl: `\glossary` dropped in text; "No file"; one list; default characters)
 
@@ -14807,7 +14822,7 @@ own (hyperref.sty:6607).
 book.cls autoload stub, omnibus_cls.rs; cas-dc, 2609.16926: 28 "Counter 'chapter' was not defined" warnings). Guard `perfect_kernel_batch64::kernel_counters_have_hyperref_names` (pdflatex's
 "1; 1.1; 1.1.1; 1.1.1.1; 0; 0."), `regress_2605_clusters::hyperref_pgfplots_label_anchor_no_error`.
 
-### 481. An invalid UTF-8 byte is its Latin-1 character, silently (Perl: a space; pdflatex TL ≥ 2018: an error, the byte dropped)
+### 481. An invalid UTF-8 byte is its Latin-1 character, with Perl's Info (Perl: a space; pdflatex TL ≥ 2018: an error, the byte dropped)
 
 **Perl behavior**: every front-end decodes input as UTF-8 by default (Common/Config.pm:387 `inputencoding`; Core.pm:60-61
 fills it in for any that passes none, kept as `PERL_INPUT_ENCODING`), and the file mouth replaces each undecodable byte
@@ -14816,7 +14831,7 @@ by U+FFFD and then by a space, with `Info:misdefined` "input isn't valid under e
 `\UTFviii@invalid@err` + the byte (utf8.def:174-192), which the `\everyjob` the format adds (latex.ltx:22235-22237)
 makes utf8.def:113's "Invalid UTF-8 byte" error, the byte dropped. The format itself leaves it `\string` (latex.ltx:22231), as LaTeX before
 2018 printed the byte.
-**Rust behavior**: the byte is its Latin-1 character, with no diagnostic, under both mouths: the native mouth decodes an
+**Rust behavior**: the byte is its Latin-1 character (with Perl's Info, see the 64zf addendum below), under both mouths: the native mouth decodes an
 undecodable line as Latin-1 (`Mouth::decode_bytes`, by default: with no `--inputencoding`; given `--inputencoding=utf-8`
 it makes Perl's space and Info), and under the pdfTeX byte mouth (CJK, kotex) the byte is
 `\UTFviii@invalid@err` + itself (inputenc_sty.rs `install_utf8_byte_activation`), with the format's `\string` meaning,
@@ -14831,6 +14846,10 @@ had bound the bytes to inputenc's `\@inpenc@undefined`, which only inputenc defi
 erred on every such byte (746 of run 336's papers; 2605.05335, 1809.07457, 1503.05450). Depends on `\everyjob` not
 being run in full: if it is, this becomes pdflatex's error. Guards
 `perfect_kernel_batch64::{cjk_stray_byte_is_text, byte_mouth_bib_field_last_character}`.
+
+Addendum (64zf): the passthrough carries Perl's `Info:misdefined:utf-8` (Core/Mouth/file.pm:72-77), one per line as
+in Perl, when no inputenc declares a non-UTF-8 encoding; none under latin1/cp1252 inputenc. Guards
+`perfect_kernel_batch64zf::{invalid_utf8_byte_without_inputenc_is_an_info, latin1_inputenc_bytes_are_no_misdefined_info}`.
 
 ### 482. A raw class's own `\author`/`\abstract`, refused by the lock, still run for their side effects (Perl: never run)
 
@@ -15032,6 +15051,10 @@ errors ("You can't use `\eqno' in math mode") and then typesets ■; we merge th
 **Why**: 1903.06134, 2201.03502, 2105.07617 use it. Residuals (invalid input): `a &=& b \IEEEQEDhereeqn &
 \IEEEQEDhereeqn` in a row gives three tags with a nested text; `\hbox{\IEEEQEDhereeqn}` 5 errors (64h4: 1; a plain
 `\hbox{\eqno(*)}` cascades alike); `$…\IEEEQEDhereeqn$` inline.
+
+Addendum (64zf): outside display math (an `{IEEEeqnarray}` row's cell) the merge is no longer silent: one Warning,
+pdflatex's "You can't use `\eqno' in math mode" (tex.web §1140), the QED kept with the row's number. Repro
+block-model/ieeeeqnarray_row_qedhereeqn_keeps_its_qed.
 
 ### 490. The class QED symbols are sized as their boxes, so a cell holding only one is kept (Perl: the cell dropped as empty)
 
@@ -15598,6 +15621,79 @@ the author's `pdfkeywords`) and `dcterms:identifier` per `\preprint`. hyperref i
 class does (:1392-1394), and natbib with `numbers,sort&compress` (:1428-1429) unless natbib or biblatex is loaded.
 Witnesses 1705.03968, 1704.06662, 1709.01098, 2212.01355. Guards `quantumarticle_revtex_compatibility`,
 `quantumarticle_pacs_keep_the_authors_keywords`.
+
+### 518. An undefined `@string` macro is reported for entries that reach the bibliography; the `.bst`'s `MACRO`s define them (Perl: every entry, Perl's defaults, `at String; line 0`)
+
+Perl's BibTeX parser reports an undefined macro in any entry of the `.bib` (BibTeX.pm:307-310); bibtex warns only for
+cited entries. Ours reports it ("The BibTeX macro 'x' is not defined", `Error:unexpected:x`, its value the name
+itself as in Perl) for entries that are digested (cited) and for `@string`/`@preamble`, located at the `.bib` line
+(`<stem>; line N`), where Perl's report says `at String; line 0 col 1`. The bibliography style's `MACRO {name} {"value"}` commands (quote-aware: a value with TeX
+braces is read to its closing quote) override Perl's built-in month/journal defaults, as bibtex does; with no
+`\bibliographystyle`, REVTeX's implicit style supplies its own. With no style (no `\bibliographystyle` and no
+class-implicit one), or one that is not found, an undefined macro is a Warning (the style may define it; Perl:
+`Error:unexpected` at `String; line 0 col 1`). Witnesses 2606.21799, 2603.22119. Guards `perfect_kernel_batch64zf::{bib_parse_errors_are_reported,
+revtex_implicit_bibstyle_defines_its_macros, bst_macros_after_a_braced_value_resolve}`. KNOWN_PERL_ERRORS #600.
+
+### 519. Numbers and dimensions out of TeX's range clamp at its bounds with a Warning (Perl: the raw value, silently)
+
+An integer constant past 2^31−1 is 2^31−1 with "Number too big" (tex.web §445); a dimension past `\maxdimen` is
+`\maxdimen`, negated only for the scan's own sign, with "Dimension too large" (§460); an e-TeX expression out of range
+is 0 with "Arithmetic overflow" (etex.ch `\numexpr`/`\dimexpr`). TeX errs on each and recovers with the same value;
+the recovery is the value, so these are Warnings. Replaces batch 56bq's i64-only clamp. Guards
+`perfect_kernel_batch64zf::{number_and_dimension_overflow_clamp_and_warn, integer_constant_overflow_is_infinity}`;
+repro expansion-primitives/dimension_overflow_max_dimen.
+
+### 520. setspace's `\onehalfspace`/`\doublespace` switches are checked no-ops (Perl: an environment frame)
+
+setspace.sty:534-547 makes each switch a `\begingroup` plus the spacing, ended by its `\end…` (`\restore@spacing`'s
+`\endgroup`, :516-523). The spacing is presentational and the group is not modelled: a real `\begingroup` keeps every
+word since 65c but nests a later sibling environment inside the earlier one at `\end{document}`, so the checked no-op
+keeps the author's sibling structure. What the group does to TeX is reported where TeX reports it: one
+`Error:unexpected` per group that ends with a switch still open, at the innermost open switch.
+- A brace group, or an environment whose frame binds `\hsize` (a box: floats, minipage, subfigure, wrapfigure,
+  algorithm): "Extra }, or forgotten \endgroup", object `}` (witness 2310.08233's `{\doublespace text}`).
+- Another environment: "\end{X} closes \<switch>'s \begingroup instead of {X}'s group; {X} stays open (LaTeX:
+  \begin{X} … ended by \end{<enclosing>})", naming the enclosing environment's end, or `\end{document}`.
+- A plain `\begingroup … \endgroup`: its `\endgroup` closes the innermost switch's group and the plain group stands
+  open in its place, so every switch of the group re-arms on the enclosing one, outermost first (stomach.rs
+  `pop_stack_frame` honours the `\aftergroup` a group-end hook queues, as Perl's popStackFrame does, Stomach.pm:
+  308-314). At the document level that is no error, as in TeX ("(\end occurred inside a group at level 1)";
+  KNOWN_PERL_ERRORS #602).
+- An `\end…` closes the innermost switch of its own group (a frame-local stack; the next one out names the report).
+- A group digested twice (a `\section` title: heading and toc) reports twice, like any error there (RED
+  sectioning-frontmatter/section_title_errors_reported_twice, shared with Perl).
+- Groups abandoned at `\end{document}` run no check (`lx@ending@document`, OD #207). At a bounded body's terminal
+  the check runs, but the re-arm it queues is discarded (guard `abandoned_group_discards_hook_queued_aftergroup`).
+
+Residuals, erring toward flagging: a switch closed by `\end<name>` from inside a nested plain group still reports
+(RED boxes-groups/doublespace_end_in_a_nested_plain_group: review probes r9, h5, h9 pdflatex 0, ours 1; h7 pdflatex 1,
+ours 2). The closer named is the enclosing environment's end only when no group intervenes; with one between
+(`{\begin{itemize}…}`, a `\parbox`/minipage around it, figure > center) TeX says "Extra }", and a plain group around
+the environment is no error in TeX (RED boxes-groups/plain_group_around_itemize_doublespace, count). The `\hsize`
+proxy reads an author's `\hsize=` in a non-box environment (`\newgeometry`, geometry_sty.rs:154) and `{list}`'s inner
+frame as a box; `{abstract}{\doublespace …\end{abstract}` names "Extra }" though the closer is `\lx@end@abstract`
+(wording only, counts right). TeX's follow-on errors from the same mismatch (the environment left open to
+`\end{document}`, "Missing } inserted", "Extra \endgroup") are not reported separately: one Error per chain (probes
+p9, p10, h10; c1 minipage pdflatex 7 / ours 1, c3 footnote 4 / 1). Under-reports: RED boxes-groups/lrbox_doublespace_group_end,
+abstract_begingroup_doublespace_group_end. Guards `perfect_kernel_batch64zf::{bare_doublespace_closed_by_brace_is_an_error,
+setspace_switch_reports_where_tex_errs, setspace_switch_is_quiet_where_tex_is, setspace_switches_in_one_group_are_one_error,
+setspace_switch_in_a_plain_group_rearms_on_the_enclosing_group, setspace_box_environments_are_known_by_their_frame,
+setspace_report_names_the_enclosing_end, setspace_end_closes_only_a_switch_of_its_own_group,
+setspace_plain_group_rearms_every_switch, abandoned_group_discards_hook_queued_aftergroup}`.
+
+### 521. Text after `\begin{lstlisting}` on its line: a Warning, a `%` comment is no text, the next line kept (Perl: dropped silently, or kept)
+
+Text on the `\begin{lstlisting}` line after the options is dropped with listings' own "Package Listings Warning: Text
+dropped after begin of listing" (listings.sty:2142-2145). Not dropped text: a tcolorbox listing box's arguments,
+options after a space (`\@ifnextchar[` skips it; 1606.07935), and a `%` comment while `%` has comment catcode (under
+doc.sty's `\MakePercentIgnore` it is text). After a begin-line comment the next line is kept as the listing's first
+line, where pdflatex drops it with the warning; the base already kept it. Perl drops it after a bare
+`\begin{lstlisting}% c` (like pdflatex) and keeps it after `[language=C] % c`. Flagged on purpose: a single leftover
+character warns, where pdflatex is silent (`\begin{lstlisting}d`, catcode-9 `% d`; two characters warn in both).
+Witnesses: 2104.03678 (Favalon-en.tex:663/783 `…{*}]]`) is the single-character, pdflatex-silent case (pdflatex takes
+the `]` as lstlisting's #2, listings.sty:2267-2276); 1606.07935 (spedoc.tex:274 `…][t!]`) is a real drop pdflatex also
+warns about. Guards `perfect_kernel_batch64zf::{lstlisting_begin_line_text_is_dropped_with_a_warning,
+lstlisting_begin_line_percent_that_is_no_comment_is_dropped_text}`.
 
 ### 522. Alignment column ends are recognized by command code: equality on the defining cs (Perl: current meaning)
 

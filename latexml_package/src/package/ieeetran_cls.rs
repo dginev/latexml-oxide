@@ -439,8 +439,21 @@ LoadDefinitions!({
   // insertion), marked `_qed` so a later QED goes after the earlier ones, before the number. A second
   // `\IEEEQEDhereeqn` inside the first's material is relaxed as `\eqno` is (IEEEtran.cls:5551), adding to its tag.
   RawTeX!(r"\def\IEEEQEDhereeqn{\IEEEQEDoff\lx@IEEEQED@eqno\let\lx@IEEEQED@eqno\relax\let\eqno\relax\let\leqno\relax\let\veqno\relax\hbox{\IEEEQED}}");
+  // `\eqno` is a display-math command (tex.web §1140): in a `{IEEEeqnarray}` row,
+  // an alignment cell, pdflatex reports "You can't use `\eqno' in math mode" and
+  // typesets the QED beside the number anyway — what we build, so a Warning.
   DefConstructor!("\\lx@IEEEQED@eqno EqnoTag",
     "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
+    before_digest => {
+      if lookup_string("MODE") != "display_math" {
+        Warn!(
+          "unexpected",
+          "\\eqno",
+          "You can't use `\\eqno' in math mode: \\IEEEQEDhereeqn outside a display (IEEEtran.cls:5551-5552); \
+           the QED is set with the row's number"
+        );
+      }
+    },
     reversion => "",
     after_construct => sub[document, _whatsit] {
       let node = document.get_node().clone();

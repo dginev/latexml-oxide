@@ -463,8 +463,36 @@ LoadDefinitions!({
   // did. In the frontmatter the characters are set in the ASCII encoding, as `\UrlFont` does.
   // (locked with OmniBus's other semantic frontmatter commands, at the end)
   DefMacro!("\\doi", "\\@ifnextchar\\bgroup\\lx@doi@verbatim\\lx@doi@token");
+  // A DOI with a character TeX cannot set in text (`_`, `^`, `#`, `&`, `$`) is an
+  // error under the `\doi` TeX would use when that reads its argument as TeX:
+  // apacite's `\providecommand{\doi}[1]` (apacite.sty:1812-1816; a class falling
+  // to OmniBus defines none) — pdflatex "Missing $ inserted", Perl
+  // `Error:unexpected:_`. doi.sty's `\doi` reads a URL (no error). Read as a URL
+  // here, it is a correct link, so the report is a Warning
+  // (omnibus_doi_reads_as_a_url).
+  DefMacro!("\\lx@doi@check{}", sub[(doi)] {
+    if !(lookup_bool("apacite.sty_loaded") || lookup_bool("apacite.sty_raw_loaded")) || (lookup_bool("doi.sty_loaded") || lookup_bool("doi.sty_raw_loaded")) {
+      return Ok(Tokens!());
+    }
+    let doi = doi.to_string();
+    // An escaped one (`10.1000/j\_x`) is text to TeX too.
+    let mut escaped = false;
+    let special = doi.chars().find(|&c| {
+      let found = !escaped && matches!(c, '_' | '^' | '#' | '&' | '$');
+      escaped = !escaped && c == '\\';
+      found
+    });
+    if let Some(c) = special {
+      Warn!(
+        "unexpected",
+        "\\doi",
+        s!("The DOI '{doi}' holds '{c}', which TeX cannot set as text; it is kept as a link to the DOI")
+      );
+    }
+    Ok(Tokens!())
+  });
   DefMacro!("\\lx@doi@verbatim HyperVerbatim",
-    "\\if@in@preamble{\\lx@add@pubnote[role=doi]{{\\lx@fontencoding{ASCII}\\selectfont #1}}\
+    "\\lx@doi@check{#1}\\if@in@preamble{\\lx@add@pubnote[role=doi]{{\\lx@fontencoding{ASCII}\\selectfont #1}}\
      \\else\\lx@doi{#1}\\fi");
   DefMacro!("\\lx@doi@token{}",
     "\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\\else\\lx@doi{#1}\\fi");

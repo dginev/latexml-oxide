@@ -885,6 +885,24 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   };
   let target = cli.dest.clone();
 
+  // Named from the source ARGUMENT (bin/latexmlc:107-117 `pathname_split($source)`), before an archive or a
+  // directory resolves it to its main file, so a run that fails to open its input and one that converts write the
+  // same `<stem>.latexml.log`.
+  // Perl latexmlc parity (bin/latexmlc L103-120): ALWAYS write a conversion
+  // log — `--log` names it, otherwise `<jobname>.latexml.log` in the current
+  // directory (literal/anonymous sources fall back to plain `latexml.log`),
+  // and a pre-existing file is removed up front so the log is always this
+  // run's. The archive output packs its log into the zip instead, exactly as
+  // before. Reported missing on the 0.7.5-rc5 witness UAT (2026-08-03): a
+  // fatal scrolled away with nothing on disk to consult.
+  let cli_log: Option<String> = cli.log.clone().or_else(|| {
+    // Dump-building (`--init`) is not a conversion; no default log there.
+    if cli.init.is_some() {
+      return None;
+    }
+    Some(default_log_name(&source))
+  });
+
   // Resolve `--whatsout <mode>` (Perl Pack.pm `whatsout` option +
   // Config.pm L421-439). Explicit `--whatsout` wins; otherwise a `.zip`
   // destination extension implies `archive` (Config.pm L421-426).
@@ -919,10 +937,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   let source = if is_archive_mode {
     let (tempdir, main_tex) = match unpack_archive(&source) {
       Ok(r) => r,
-      Err(e) => {
-        eprintln!("Failed to unpack archive '{}': {}", source, e);
-        process::exit(1);
-      },
+      Err(failure) => fatal_before_conversion(cli_log.as_deref(), &failure, &mut archive_tempdir),
     };
     // Read from the archive's entries: the extracted files carry the extraction's clock.
     let main_in_archive = Path::new(&main_tex)
@@ -960,10 +975,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         }
         main_tex
       },
-      Err(e) => {
-        eprintln!("Failed to find main .tex file in '{}': {}", source, e);
-        exit_removing(&mut archive_tempdir, 1);
-      },
+      Err(e) => fatal_before_conversion(
+        cli_log.as_deref(),
+        &InputFailure::no_main_tex(&source, &e),
+        &mut archive_tempdir,
+      ),
     }
   } else {
     source
@@ -973,28 +989,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     source_date_epoch = latexml::source_date::of_file(Path::new(&source));
   }
 
-  // Perl latexmlc parity (bin/latexmlc L103-120): ALWAYS write a conversion
-  // log — `--log` names it, otherwise `<jobname>.latexml.log` in the current
-  // directory (literal/anonymous sources fall back to plain `latexml.log`),
-  // and a pre-existing file is removed up front so the log is always this
-  // run's. The archive output packs its log into the zip instead, exactly as
-  // before. Reported missing on the 0.7.5-rc5 witness UAT (2026-08-03): a
-  // fatal scrolled away with nothing on disk to consult.
-  let cli_log: Option<String> = cli.log.clone().or_else(|| {
-    // Dump-building (`--init`) is not a conversion; no default log there.
-    if cli.init.is_some() {
-      return None;
-    }
-    let name = if source.starts_with("literal:") {
-      "latexml.log".to_string()
-    } else {
-      match Path::new(&source).file_stem().and_then(|s| s.to_str()) {
-        Some(stem) => format!("{stem}.latexml.log"),
-        None => "latexml.log".to_string(),
-      }
-    };
-    Some(name)
-  });
   if let Some(ref lp) = cli_log
     && Path::new(lp).is_file()
   {
@@ -1006,11 +1000,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // with a single Fatal; without this guard the binary catcode-tokenizes
   // the PDF stream and emits ~100 Error:undefined / Error:unexpected lines.
   if Path::new(&source).is_file() && latexml::main_tex::is_pdf_magic(Path::new(&source)) {
-    eprintln!(
-      "Fatal:invalid:not_tex_source PDF magic detected in source file '{}'",
-      source
-    );
-    exit_removing(&mut archive_tempdir, 1);
+    let failure = InputFailure {
+      category: "invalid".into(),
+      object:   "not_tex_source".into(),
+      message:  format!("PDF magic detected in source file '{source}'"),
+    };
+    fatal_before_conversion(cli_log.as_deref(), &failure, &mut archive_tempdir);
   }
 
   // Stash a copy of the resolved main-tex path for end-of-run telemetry,
@@ -1912,7 +1907,111 @@ fn exit_removing(archive_tempdir: &mut Option<tempfile::TempDir>, code: i32) -> 
   process::exit(code)
 }
 
-fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box<dyn Error>> {
+/// Perl latexmlc's default log (bin/latexmlc L103-120): `<name>.latexml.log` in the
+/// working directory, plain `latexml.log` for a literal source, `<name>` the source
+/// argument's with its LAST extension stripped (Util/Pathname.pm:101 `pathname_split`:
+/// `paper.tar.gz` gives `paper.tar.latexml.log`).
+fn default_log_name(source: &str) -> String {
+  if source.starts_with("literal:") {
+    return "latexml.log".to_string();
+  }
+  match Path::new(source.trim_end_matches('/'))
+    .file_stem()
+    .and_then(|s| s.to_str())
+  {
+    Some(stem) => format!("{stem}.latexml.log"),
+    None => "latexml.log".to_string(),
+  }
+}
+
+/// Why an input could not even be opened as a conversion: the `category:object`
+/// of its Fatal and the message.
+struct InputFailure {
+  category: String,
+  object:   String,
+  message:  String,
+}
+
+impl InputFailure {
+  /// An archive that cannot be read: Perl's `Fatal('I/O', 'Archive', …, "Can't read in
+  /// source archive")` (Util/Pack/Zip.pm:37-38).
+  fn unreadable(archive: &str, error: &dyn std::fmt::Display) -> Self {
+    InputFailure {
+      category: "I/O".into(),
+      object:   "Archive".into(),
+      message:  format!("Can't read in source archive '{archive}': {error}"),
+    }
+  }
+
+  /// Sources with no convertible main `.tex`, in the categories cortex_worker records for
+  /// the same failures (`find_main_tex`: `invalid:not_tex_source` for a PDF named `.tex`,
+  /// `invalid:no_tex_source`, `invalid:no_viable_tex`); Perl reaches them as
+  /// `Fatal('invalid', 'empty_input', …)` (Core.pm:136) once `detect_source` finds no main
+  /// file (Util/Pack.pm:220). `reason` is `main_tex::find_main_tex`'s message, which spells
+  /// out its own `Fatal:<category>:<object>` for the PDF case.
+  fn no_main_tex(source: &str, reason: &str) -> Self {
+    let (category, object, message) = if let Some(rest) = reason.strip_prefix("Fatal:")
+      && let Some((category, rest)) = rest.split_once(':')
+      && let Some((object, message)) = rest.split_once(' ')
+    {
+      (category, object, message)
+    } else if reason.starts_with("No .tex files") {
+      ("invalid", "no_tex_source", reason)
+    } else {
+      ("invalid", "no_viable_tex", reason)
+    };
+    InputFailure {
+      category: category.into(),
+      object:   object.into(),
+      message:  format!("{message} ('{source}')"),
+    }
+  }
+}
+
+/// End a run whose input could not be opened as a conversion, as a Fatal conversion
+/// ends: the `Fatal:` line, the verdict and `Status:conversion:3` (Perl latexmlc's
+/// last lines), the log at `log_path` (`--log`, or the default `<stem>.latexml.log`), and
+/// the Fatal exit code. A failed
+/// unpack once printed a bare message and exited 1 with no Fatal, no status line and
+/// no log (astro-ph9407095, astro-ph9409032, cs9610101: PostScript sources), where
+/// cortex_worker and Perl both record a Fatal.
+fn fatal_before_conversion(
+  log_path: Option<&str>,
+  failure: &InputFailure,
+  archive_tempdir: &mut Option<tempfile::TempDir>,
+) -> ! {
+  latexml_core::common::error::emit_fatal(&failure.category, &failure.object, &failure.message);
+  let code = latexml_core::common::error::get_status_code().max(3);
+  let verdict = latexml_core::common::error::conversion_verdict(code);
+  let status = latexml_core::common::error::conversion_status_line(code);
+  if let Some(log_path) = log_path {
+    let log = format!(
+      "Fatal:{}:{} {}\n{verdict}\n{status}\n",
+      failure.category, failure.object, failure.message
+    );
+    if let Err(e) = std::fs::write(log_path, log) {
+      eprintln!("Failed to write log '{log_path}': {e}");
+    }
+  }
+  eprintln!("{verdict}");
+  eprintln!("{status}");
+  exit_removing(archive_tempdir, 1)
+}
+
+fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), InputFailure> {
+  let unreadable = |e: &dyn std::fmt::Display| InputFailure::unreadable(archive_path, e);
+  let (tempdir, dest) = unpack_archive_files(archive_path).map_err(|e| unreadable(&e))?;
+  // Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
+  // or one containing \documentclass)
+  let main_tex = latexml::main_tex::find_main_tex(&dest)
+    .map_err(|e| InputFailure::no_main_tex(archive_path, &e))?;
+  Ok((tempdir, main_tex.to_string_lossy().to_string()))
+}
+
+/// Extract `archive_path` into a fresh temporary directory, returned with its path.
+fn unpack_archive_files(
+  archive_path: &str,
+) -> Result<(tempfile::TempDir, std::path::PathBuf), Box<dyn Error>> {
   let tempdir = tempfile::tempdir()?;
   let dest = tempdir.path();
 
@@ -1945,12 +2044,8 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
   } else {
     return Err(format!("Unsupported archive format: {}", archive_path).into());
   }
-
-  // Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
-  // or one containing \documentclass)
-  let main_tex =
-    latexml::main_tex::find_main_tex(dest).map_err(|e| -> Box<dyn Error> { e.into() })?;
-  Ok((tempdir, main_tex.to_string_lossy().to_string()))
+  let dest = dest.to_path_buf();
+  Ok((tempdir, dest))
 }
 
 // Output-zip packing moved to `latexml_post::pack::pack_archive`
@@ -1959,6 +2054,41 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
 // `add_dir_to_zip` here and the parallel pair in `cortex_worker.rs`
 // have been replaced by a single shared implementation — mirrors
 // Perl `LaTeXML::Post::Pack`.
+
+#[cfg(test)]
+mod input_failure_tests {
+  use super::*;
+
+  /// `InputFailure::no_main_tex` classifies `find_main_tex`'s messages by their text:
+  /// each one the finder actually returns lands in cortex_worker's category.
+  #[test]
+  fn find_main_tex_messages_have_their_categories() {
+    let category = |files: &[(&str, &[u8])]| {
+      let dir = tempfile::tempdir().expect("tempdir");
+      for (name, bytes) in files {
+        std::fs::write(dir.path().join(name), bytes).expect("write fixture");
+      }
+      let reason = latexml::main_tex::find_main_tex(dir.path()).expect_err("no main file");
+      let failure = InputFailure::no_main_tex("src.zip", &reason);
+      (failure.category, failure.object)
+    };
+    assert_eq!(
+      category(&[("paper.tex", b"%PDF-1.4\n%%EOF\n")]),
+      ("invalid".to_string(), "not_tex_source".to_string())
+    );
+    assert_eq!(
+      category(&[("fig.eps", b"%!PS\n")]),
+      ("invalid".to_string(), "no_tex_source".to_string())
+    );
+    assert_eq!(
+      category(&[(
+        "paper.tex",
+        b"%!PS-Adobe-2.0\n%%Creator: dvips\n/TeXDict 250 dict def\n"
+      )]),
+      ("invalid".to_string(), "no_viable_tex".to_string())
+    );
+  }
+}
 
 #[cfg(test)]
 mod streaming_activation_tests {

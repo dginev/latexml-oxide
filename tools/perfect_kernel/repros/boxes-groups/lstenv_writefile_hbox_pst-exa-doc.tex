@@ -2,10 +2,13 @@
 % preload: [rawstyles,rawclasses,luatex]latexml.sty
 % class:   RUST-ONLY (Perl completes the witness with 0 PSTexample errors; the
 %          \endgroup/\hbox restricted_horizontal errors are Rust-only).
-% oracle:  lualatex 0 errors
-% engines: rust=3 perl=n/a(needs showexpl) ; witness rust=6 perl=3(unrelated) (2026-09-04)
-% expect:  0 errors; body marker RESULTMARK present (proves end code ran)
-% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
+% oracle:  lualatex 2 errors: `\lst@BeginWriteFile` and `\lst@EndWriteFile` undefined, as no `writefile` aspect is
+%          loaded (lstmisc.sty:30 `\lst@BeginAspect{writefile}`; pst-exa-doc gets it from showexpl.sty:41)
+% engines: rust=3 perl=n/a(needs showexpl) ; witness rust=6 perl=3(unrelated) (2026-09-04); 64zd 0 errors (the
+%          aspect's commands defined unconditionally); 64zf 2 errors; Perl 4 errors (the same undefined)
+% expect:  2 errors (undefined \lst@BeginWriteFile, \lst@EndWriteFile); body marker RESULTMARK present (proves end code
+%          ran). The aspect loaded: lstenv_writefile_aspect_loaded, 0 errors
+% status:  GREEN (re-graded 2026-09-23 on s113; 64zf: the two undefined reported, as lualatex)
 % mechanism: listings_sty.rs \lx@lstenv@body (:2589) write-file-DIVERT branch
 %   (`if !lst_writefile_tee(&text)` :2597) returns ONLY `\endgroup`, DROPPING the
 %   env end code. When the start code opened `\setbox\@tempboxa=\hbox\bgroup`

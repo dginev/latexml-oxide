@@ -1,0 +1,14 @@
+% mechanism: with no inputenc declaring a non-UTF-8 encoding, a line that is not UTF-8 is reported as Perl reports it,
+%   `Info:misdefined:utf-8` "input isn't valid under encoding utf-8" (Core/Mouth/file.pm:72-77), and its bytes are kept
+%   as Latin-1 text (OXIDIZED_DESIGN_DIVERGENCES #481; Perl blanks them). Was: the same text, silently. An Info, as in
+%   Perl: raising it to pdflatex's Error ("Invalid UTF-8 byte", utf8.def:113) needs its own ruling.
+% witness: diagnostics audit 2026-10-11 A5 (probe code/badutf); ~7.6% of arXiv sources carry such bytes
+% oracle:  pdflatex "Invalid UTF-8 byte "92", then the lead byte \xe9 reads on past the line: Emergency stop, no PDF
+% engines: rust 64zd = 0 diagnostics; 64zf = 0 errors, 1 Info:misdefined; Perl = 1 Info:misdefined (the bytes as spaces)
+% expect:  0 errors, 0 warnings, 1 Info:misdefined; "It's a test" with the bytes as U+0092/U+00E9
+% status:  RED (64zd) -> GREEN (64zf)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+It’s a testé.
+\end{document}

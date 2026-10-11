@@ -59,6 +59,11 @@ LoadDefinitions!({
     DefMacro!("\\ocis", "\\pacs");
   });
 
+  // The `aip` society (revtex4-2.cls `\@process@society`) picks AIP's
+  // bibliography style (`implicit_bibstyle`); the class ignores it otherwise.
+  DeclareOption!("aip", {
+    assign_value("revtex_society", pin("aip"), Some(Scope::Global));
+  });
   // Anything else is for article
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
@@ -94,6 +99,7 @@ LoadDefinitions!({
     Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
   }
   RequirePackage!("revtex4_support");
+  revtex4_support_sty::record_implicit_bibstyle(if revtex4_0 { "" } else { "4-2" });
   // REVTeX 4.0 sets an `\email` or `\homepage` address with `\url`, the `\texttt` its `\href` falls back to
   // (revtex4.cls:4476-4493), so its `_` and `~` read as typed (1001.1076 "aiwen_fan@pku.edu.cn"). REVTeX 4.2, which
   // this binding also serves, sets it in the current font (revtex4-2.cls:1980, its `\href` = `\@href`), as

@@ -12407,6 +12407,28 @@ ACM-Reference-Format and elsarticle `.bbl` files use. Trigger `\documentclass{re
 \bibinfo{note}{X}\BibitemShut{NoStop}` → 3 undefined. Fixed in Rust (64ze; natbib entries cluster 80 → 2 papers with
 errors).
 
+## 600. An undefined `@string` macro is reported for entries that are never cited
+
+Perl's BibTeX parser reports an undefined macro wherever it appears in the `.bib` (BibTeX.pm:307-310), so an uncited
+`@article{d, journal = nosuchjournal}` raises `undefined` though bibtex warns only for cited entries; it also seeds only
+its fixed defaults (BibTeX.pm:34-57), so every abbreviation a journal style's `MACRO`s define is reported. Fixed in Rust
+(64zf, OD #518).
+
+## 601. An unknown colour model is reported twice
+
+`\color[foo]{1}` raises two errors in Perl for the one unknown model: "Unrecognized color model 'foo'" (Color.pm:61)
+and "Color is not in valid model 'foo'" (Derived.pm:33). Ours
+reports it once, `Error:unexpected:foo` (64zf; repro fonts-nfss/color_unknown_model_is_reported). In a `\section`
+title it is reported once per digestion (heading and toc), in Perl and ours alike (RED
+sectioning-frontmatter/section_title_errors_reported_twice).
+
+## 602. A setspace switch in a plain group at the document level errs
+
+`\usepackage{setspace} … \begingroup\onehalfspace Beta.\endgroup` → Perl `Error:unexpected:\endgroup` "Attempt to
+close a group that switched to mode restricted_horizontal": its setspace environment frame is closed by the author's
+`\endgroup`. pdflatex is clean (0 errors; "(\end occurred inside a group at level 1)" only). Ours is clean (64zf, OD
+#520; guard `perfect_kernel_batch64zf::setspace_switch_is_quiet_where_tex_is`).
+
 ## 603. Alignment column ends are matched by their current meaning
 
 `Gullet.pm:266-277` `isColumnEnd` returns a column end when the token's meaning `equals` the CURRENT meaning of

@@ -1,0 +1,20 @@
+% mechanism: `\begingroup\begin{itemize}\item\doublespace x\end{itemize}\endgroup`: in TeX `\end{itemize}`'s
+%   `\@checkend` passes (`\@currenvir` is itemize), its `\endgroup` closes the switch's `\begingroup`
+%   (setspace.sty:542-547), the author's `\endgroup` then closes itemize's group, and the outer `\begingroup` runs to
+%   `\end{document}`, whose `\@checkend` sees `document`: only "(\end occurred inside a group at level 1)", no error.
+%   setspace_sty.rs `\lx@setspace@check` reports itemize's end as closing the switch's group: it does not carry the
+%   still-open environment past the next group end (that machinery is not built; OXIDIZED_DESIGN #520 residuals).
+% witness: review 5 of 64zf (probe p7)
+% oracle:  pdflatex 0 errors
+% engines: rust 64zf = 1 error ("\end{itemize} closes \doublespace's \begingroup …"); Perl = 4 errors ("\end{itemize}
+%   Attempt to end mode internal_vertical", "\endgroup Attempt to close a group that switched to mode
+%   restricted_horizontal", two ltx:document/ltx:itemize malformed) + 3 warnings
+% expect:  0 errors; "Item text." and "D." kept
+% status:  RED (64zf review 5: over-report, since round 4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{setspace}
+\begin{document}
+\begingroup\begin{itemize}\item \doublespace Item text.\end{itemize}\endgroup
+D.
+\end{document}

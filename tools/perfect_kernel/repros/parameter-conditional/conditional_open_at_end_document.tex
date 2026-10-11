@@ -1,0 +1,15 @@
+% mechanism: `\end{document}` reports a conditional still open, as Perl's latex_constructs.pool.ltxml:357,374-377 does
+%   (`Warning:unexpected:\end{document}`, a tab-indented "Conditional \iftrue started …" line: Perl's extra-line format)
+%   and TeX's final_cleanup ("(\end occurred when \iftrue on line 13 was incomplete)", tex.web §1335). Was (64zd): nothing.
+% witness: diagnostics audit 2026-10-11 A4 (probe code/ifopen)
+% oracle:  pdflatex 0 errors, the log line "(\end occurred when \iftrue on line 13 was incomplete)"
+% engines: rust 64zd = 0 diagnostics; 65c = 1 warning; Perl = 1 warning
+% expect:  0 errors, 1 warning; both paragraphs
+% status:  RED (64zd) -> GREEN (65c); guard perfect_kernel_batch64zf::conditional_open_at_end_document
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text.
+\iftrue
+More.
+\end{document}

@@ -301,10 +301,23 @@ pub(crate) fn load() -> Result<()> {
   // Intentional divergence (WISDOM #44 class: dual-use CS): a `DefMacro`
   // front for Perl's `DefConstructor('\line Pair:Number {Float}')`, the
   // constructor itself being `\lx@pic@line`.
+  // In a LaTeX document the fallback recovers a TeX error: LaTeX's `\line` is
+  // only the picture object (latex.ltx `\def\line(#1,#2)#3`), so pdflatex
+  // reports "Use of \line doesn't match its definition" there. The recovered box
+  // is what the author meant, so the report is a Warning. A plain TeX document
+  // (phyzzx: hep-th9312131) or an AMS-TeX one (`\input amstex`, which arXiv's
+  // route reads as LaTeX: funct-an9211010, hep-th9304061) means plain's.
   DefMacro!("\\line", sub[_args] {
     if if_next(T_OTHER!("("))? {
       Ok(Tokens!(T_CS!("\\lx@pic@line")))
     } else {
+      if !plain_tex_document() && !lookup_bool("AmSTeX.pool_loaded") {
+        Warn!(
+        "unexpected",
+        "\\line",
+        "Use of \\line doesn't match its definition \\line(x,y){length}; read as plain TeX's \\hbox to\\hsize"
+        );
+      }
       Ok(mouth::tokenize_internal("\\hbox to \\hsize"))
     }
   });

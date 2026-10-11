@@ -357,13 +357,25 @@ X</text></p></para></proof>"#,
 }
 
 /// 64ra: `\IEEEQEDhereeqn` in a numbered `{IEEEeqnarray}` row (pdflatex: "You can't use `\eqno' in math mode", then
-/// ■ beside the number) keeps its QED in the row's one `ltx:tags`, before the number. Repro
-/// block-model/ieeeeqnarray_row_qedhereeqn_keeps_its_qed.
+/// ■ beside the number) keeps its QED in the row's one `ltx:tags`, before the number; pdflatex's error is one Warning
+/// (64zf). Repro block-model/ieeeeqnarray_row_qedhereeqn_keeps_its_qed.
 #[test]
 fn ieeeeqnarray_row_qedhereeqn_keeps_its_qed() {
-  let xml = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/block-model/ieeeeqnarray_row_qedhereeqn_keeps_its_qed.tex"
-  ));
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/ieeeeqnarray_row_qedhereeqn_keeps_its_qed.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 1, "{log}");
+  assert_eq!(
+    log
+      .matches("Warning:unexpected:\\eqno You can't use")
+      .count(),
+    1,
+    "{log}"
+  );
   assert_eq!(xml.matches("<tags>").count(), 2, "{xml}");
   assert_element(
     &xml,
