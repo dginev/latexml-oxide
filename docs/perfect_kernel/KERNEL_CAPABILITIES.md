@@ -54,6 +54,11 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K10 | A pdfTeX byte mouth (256-entry catcode table over U+0000..U+00FF) | new (7 CJK/kotex manuals, D9) | cjk-ko-doc, kotex-doc, kotex-utf-doc, oblivoir-simpledoc, sample-bxcjkjatype-beamer (`\가`/`\japanese`/`\ifx 가가`) | 8 | steps 1+2 LANDED (56bl); step 3 dropped — witnesses out of scope (CJK, 2026-10-01) |
 | K11 | Raw classes' title-page stores reroute to the frontmatter API | surpass (user-approved 2026-09-18) | jpsj2, ptptex; 390 of 655 TL classes define store setters | — | steps 1-2 LANDED (56di, 56dj); extended 58m, 58q, 59d, 59e; OPEN: list-append stores other than `\@author` (verify a witness first) |
 | K12 | pTeX control-word letters under a pLaTeX class | CJK (D9) | jsarticle `\if西暦`, ptex-manual `\黄マーカー` | — | LANDED (56ds, `PTEX_PROFILE` + upTeX `kcatcode`); the pTeX residual is PARKED, SHARED with Perl; witnesses out of scope (CJK, 2026-10-01) |
+| K20 | Gullet expansion fidelity: four tex.web algorithms the gullet deviates from (column ends by command code §342/§789, `\left`/`\middle`/`\right` as primitives with `scan_delimiter` §1160/§1188-1192, §395 extra `}` in a delimited argument, peeking macros as one unexpandable step §380/§440-445/§506/§785) | C5 (study 2026-10-11) | ~400-700 arXiv papers: X1 62 IfLimit Fatals in `\xymatrix`, redefined `\span` ~127, V1b cell-head `_` ~61, part of Mouth:EoF 338; 8 REDs; queued rows 64n/64o/64v; OD #500's expansion-only residual | 2 (after P0) | OPEN, ordered G4 → G2 → G3 → G1 (user 2026-10-11) |
+| K21 | Environments as TeX does them: `Streamed` (group + element opened/closed) vs `Captured` (`#body` box) DefEnvironments, no default mode, the XML element stack independent of the save stack | C2; extends K9, K2 | M1 residual 82/150 (64y), `$$` in 64 mode-less `#body` environments (~1,700 fixed by 64ra), `\endlx@list` 839, ~5k first errors, 15 REDs, HF6 | 3 (behind P0) | OPEN; HIGH risk, staged |
+| K22 | Binding provenance and ownership: a FileIdentity per class/package load, an owned set per binding over a raw-loaded real file, the shipped-copy delta, a corpus-copy conformance audit | C1; generalizes K1 step 3 and K13 stage 3 | `undefined:` 63% of run-336 first errors (227 clusters of ≥100 papers ≈54k tasks), binding surplus over the paper (OSA abbreviations, PoS/JHEP macros, EPL `{widetext}`), 31 renamed JHEP3 copies, ~15 REDs | read-only audit in parallel with K20 | OPEN — census + audit first, no behaviour change |
+| K23 | Frontmatter author-block event model: a lexer of author blocks into events (name, mark, separator, affiliation, contact, note, layout, group), per-binding association policy, one resolver, one emission | C4 (beyond Perl) | 49 REDs, HF2 residual 16, A2 rows, ~24 KPE / ~15 OD frontmatter entries, 20+ batches and 30+ NO-SHIP rounds | after K24's frontmatter extractor | OPEN — shadow mode first (user: needs very careful testing) |
+| K24 | One audited A/B comparator: stamped revisions or refuse, per-qname element counts, attribute text, canonical XML diff with mapped ids, frontmatter tuples; entry numbers allocated at integration | P0; extends K17 to arXiv; seed of the A4 audit | ≥7 missed or near-missed regressions in one week (64zc r1, 64x r1/r4, 63w4, 64k5, 64u EPL, 64b), 122 ad-hoc compare scripts, 3 renumberings | 1 | IN PROGRESS (payload p0, 2026-10-11) |
 
 ## K1 — Definition provenance and raw-load-then-overlay bindings
 
@@ -337,6 +342,8 @@ content is store rerouting (ptptex first), keeping those with non-store shapes.
 
 ## Ordering
 
+**Since 2026-10-11 (user):** K20–K24 are scheduled on their own, in this order: manual sweep #149 → K24 (P0) → K20 (G4 → G2 → G3 → G1) → K21, with K22's read-only census and audit in parallel → K23 in shadow mode. Evidence for each: [`KERNEL_CAPABILITY_GAPS_2026-10-11.md`](KERNEL_CAPABILITY_GAPS_2026-10-11.md). The rule below still governs K1–K19.
+
 Capabilities are not scheduled on their own (user re-steer 2026-10-01): a batch item from the scoreboard (S3 missing words → schema-invalid → timeouts, in-scope manuals) that belongs to a capability lands as that capability's step, with its class guard, not as a site patch. The remaining steps resume with the whole-branch generalization audit after the goal. Math (K19) is parked with the math stream (2026-10-02).
 
 ## Status log
@@ -483,3 +490,100 @@ route and pure ASF read a formula alike, and so does the same route with its rea
 **Class guard:** the RED repro turns green; the grouped parse goldens read identically in reversed order.
 
 **Risk:** MED — every formula whose readings all failed some pragma may move; A/B and Perl sample per step.
+
+## K20 — Gullet expansion fidelity
+
+**Model:** tex.web, read where the gullet deviates: §342/§789 (a column ends when `get_next` yields `cur_cmd` ∈
+{tab_mark, car_ret} at align_state 0, so a `\def\span` is a call), §1160/§1188-1192 (`\left`/`\middle`/`\right` are one
+unexpandable `left_right` command that scans its delimiter; `\middle`/`\right` check `cur_group`), §392-396 (a
+delimited argument meeting an unmatched `}` backs it up with "Argument of \x has an extra }" and inserts `\par`), and
+§380/§440-445/§506/§785 (readers stop at the first unexpandable token, and latex.ltx's `\@ifnextchar` starts with an
+unexpandable `\let`, :1756-1760). Evidence and per-step tests: [`KERNEL_CAPABILITY_GAPS_2026-10-11.md` §4](KERNEL_CAPABILITY_GAPS_2026-10-11.md#4-c5--gullet-expansion-fidelity-seed-6-in-depth).
+
+**Abstraction, one step each, in this order:**
+- **G4:** column ends compare against frozen primitive meanings (the command code), not current meanings
+  (`gullet.rs` `is_column_end`; Perl `Gullet.pm:266-277` the same).
+- **G2:** port Perl's `TeXDelimiter` (WISDOM #44; `TeX_Math.pool.ltxml:773`) as §1160; `\left`/`\middle`/`\right`
+  become constructors; `\left` pushes a `math_left` group code (K9 stage 0) that the other two check (Rust-only deviation
+  today: `\left` is an expandable macro trampolining to `\lx@delim@left`).
+- **G3:** `read_until` on a catcode-2 token at depth 0 backs it up with the §395 Error; non-`\long` takes 62h's
+  `abandon_argument_at_par`, `\long` appends `\par` (today: Fatal Mouth:EoF, Rust-only; Perl reads on, `Gullet.pm:654-665`).
+- **G1:** a definition whose first TeX step is an unexpandable assignment expands to one unexpandable `\lx@peek⟨id⟩`
+  step; executing it runs the peek. Retires the per-reader patches (`scan_stops_at_futurelet_peek`,
+  `optional_arg_protected`, `AlignPeekMode`). Measure the dump's own `\@ifnextchar` first; G1 is on the hot path.
+
+**Invariant:** each reader stops where TeX stops and reports what TeX reports; minimal expansion chains match
+pdflatex's log and output.
+
+**Class guard:** one harness of expansion-chain repros (the five G1 chains, the five G2 tests, the G3 pair, the `\span`
+repro), whole output pinned, plus the REDs `expansion-primitives/ifnextchar_inside_if_operand`,
+`macro-state/m5_locked_name_in_expansion_only_context`, `math-parse/left_delimiter_outside_the_map`.
+
+**Risk:** MED; per step an arXiv A/B on the cluster witnesses, 300 random papers and the manual net; a perf check for G1.
+
+## K21 — Environments as TeX does them
+
+**Model:** `\begin{X}` = `\begingroup` + `\X`; `\end{X}` = `\endX` + `\@checkend` + `\endgroup`; the group kind comes from
+the begin code (tex.web §269) and the mode changes only if that code changes it. Perl captures a body and defaults the
+mode to restricted horizontal (`Package.pm:1899-1990`, :1902). Extends K9 (group codes) and K2.
+
+**Abstraction:** `DefEnvironment` gets two body models — `Captured` (as today: minipage, tabular, floats, picture,
+tcolorbox) and `Streamed` (begin = a semi_simple group + a constructor opening the element; end = close the element,
+`\lx@checkend`, endgroup); no default mode; the XML element stack independent of the save stack, so 64y's group-kind
+table becomes derived and a closer ending an environment is §1064 `off_save`.
+
+**Landing:** (1) K24; (2) the 64 mode-less `#body` sites (census in 64ra's report) drop their boxed mode, A/B per batch,
+then "no mode" is the default with a `Captured` allowlist; (3) itemize/enumerate/description stream; (4) quote,
+quotation, center, flush*, theorems, proof; (5) retire the marker path in `close_environment_frame`.
+
+**Class guard:** byte-identical XML on 300 random + 100 theorem/list-heavy papers; the boxes-groups REDs go green; the
+M1 sample drops from 82/150 to ≤20. **Risk:** HIGH (ids, `#body` hooks, reversions, sizers).
+
+## K22 — Binding provenance and ownership
+
+**Model:** K1's overlay, extended to classes and to author-shipped copies; the class-family ruling (one binding, the
+union of a family's features). What cannot be done: infer the XML an author's edited `\maketitle`/`\author` was meant
+for — those keep the binding's semantics, and one Info says so.
+
+**Abstraction:** (a) a FileIdentity per class/package resolution (requested name, resolved path, provenance —
+binding-only / TL / shipped / shipped variant / legacy-absent —, `\Provides*` version and date, content hash; one Info
+line; queryable by bindings, generalizing `requested_shipped_class`); (b) an owned set per binding, installed over the
+raw-loaded real file when present; (c) the shipped-copy delta by the K13 walker (non-owned edits stand, owned edits keep
+the binding's semantics with an Info, renamed copies route by fingerprint); (d) a corpus-copy conformance audit (K13
+stage 3); (e) legacy-absent styles keep their emulation.
+
+**Landing:** (1) FileIdentity logging, no behaviour change; (2) the census — what share of the ≈14k papers fixed in the
+64-series ship the file (confirms or kills (b)); (3) the audit; (4) one shipped-heavy family overlay (iopart or svmult),
+byte-identical but for intended changes; (5) owned sets for the frontmatter bindings; (6) the delta handler.
+
+**Class guard:** the audit lists this week's 20 hand-fixed gaps (`\ioptwocol`, `\toctitle`, `\history`, `\state`,
+`\bodymatter`, the PoS/OSA surplus). **Risk:** LOW for (1)-(3), MED-HIGH per family after.
+
+## K23 — Frontmatter author-block event model
+
+**Model:** none in TeX for "a name" (beyond Perl: Perl emits one creator, KPE #521) — the reason per-shape fixes do not
+converge. **Abstraction:** Layer A, a lexer of an author block into events with source spans (Name, Mark, Sep, Affil,
+Contact, Note, Layout, Group); Layer B, per binding and syntax only (which commands make which events, the association
+policy, the block shape); Layer C, one class-independent resolver recording the rule behind each association; Layer D,
+one emission with no relocation pass.
+
+**Landing:** (0) K24's frontmatter-tuple extractor and a snapshot of ~10k frontmatter-bearing papers by family; (1)
+Layer A in shadow mode beside today's path, logging disagreements, no output change; (2) one family at a time, new and
+small first (OSA/EPL/l-aa, interact, elsarticle/cas, IEEE, acmart, generic article last), byte-identical on the family
+corpus plus every frontmatter guard, any intended change a RED→GREEN repro with a ruling; (3) delete the superseded
+heuristics in `base_utilities.rs`.
+
+**Class guard:** shadow disagreement < 0.5% per family before migrating; the 49 frontmatter REDs go green without new
+per-shape rules. **Risk:** HIGH; needs very careful testing (user 2026-10-11).
+
+## K24 — One audited A/B comparator
+
+**Model:** K17's `manual_net_compare.py`, which fails toward flagging, carried to arXiv and to XML content.
+**Abstraction:** one Rust tool that refuses to compare binaries whose stamped revisions differ from the requested
+commits, and reports per paper the status and diagnostics by class, element counts for every qname, text by element
+class including attribute text, a canonical XML diff with ids mapped (not stripped, no wrapper stripping), and
+frontmatter tuples; a TSV plus a summary ranking regressions first. Entry numbers (OD/KPE) are allocated at
+integration by a script reading the current maxima. It is the seed of the A4 full-arXiv fidelity audit.
+
+**Class guard:** replayed on this week's misses (64u EPL `{widetext}`, 64x r4's lost graphics panels, 64zc r1's
+one-character mailto links, 63w4's orcid slot), it flags each. **Risk:** LOW (tooling).
