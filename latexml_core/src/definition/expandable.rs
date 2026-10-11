@@ -97,6 +97,10 @@ pub struct Expandable {
   pub paramlist:          Option<Parameters>,
   pub expansion:          Option<ExpansionBody>,
   pub origin:             crate::definition::origin::DefinitionOrigin,
+  /// A document's parameterless override (a value) of a locked binding that owns its calls (`state::install_definition`): a call — the
+  /// next raw token an explicit `{`, or a `[`/`*` the binding's signature opens with — runs the binding, kept as
+  /// `\lx@locked@<cs>`; any other use expands this definition. Not part of the meaning (`PartialEq`).
+  pub yields_calls:       bool,
   /// The token-list body's [`Tokens::substitution_plan`], built at the first call that substitutes.
   pub plan:               std::cell::OnceCell<Box<[BodyPiece]>>,
 }
@@ -115,6 +119,7 @@ impl Default for Expandable {
       paramlist:          None,
       expansion:          None,
       origin:             crate::definition::origin::current_origin(),
+      yields_calls:       false,
       plan:               std::cell::OnceCell::new(),
     }
   }
@@ -173,6 +178,11 @@ impl Definition for Expandable {
     // on every macro expansion (\~350k calls in si.tex alone per
     // callgrind). Removed — re-introduce only alongside the actual
     // tracing/profiling features if/when they land.
+    if self.yields_calls
+      && let Some(owner) = self.call_owner()?
+    {
+      return Ok(Tokens!(owner));
+    }
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {
         // Harder to emulate \tracingmacros here.
@@ -241,6 +251,12 @@ impl Definition for Expandable {
   /// body is pushed as stored, a body with parameters through its substitution plan
   /// ([`crate::gullet::unread_substituted`]). Closures and argument-only definitions take the general path.
   fn invoke_onto_input(&self, once_only: bool) -> Result<()> {
+    if self.yields_calls
+      && let Some(owner) = self.call_owner()?
+    {
+      crate::gullet::unread_expansion(Tokens!(owner));
+      return Ok(());
+    }
     let Some(ExpansionBody::Tokens(tokens)) = &self.expansion else {
       crate::gullet::unread_expansion(self.invoke(once_only)?);
       return Ok(());
@@ -280,6 +296,22 @@ impl Definition for Expandable {
 }
 
 impl Expandable {
+  /// For a [`Self::yields_calls`] override: `\lx@locked@<cs>`, the locked binding, when the next raw token opens a
+  /// call of it — an explicit catcode-1 `{`, or a `[`/`*` its signature opens with
+  /// ([`crate::state::call_openers`]) — and `None` for any other use, which expands the override. The peek reads
+  /// without expanding and puts the token back. Like TeX's argument scan it may read past the end of the macro body
+  /// the override was met in: `\def\wrap{\text}\wrap{x}` runs the binding on `{x}`. In an expansion-only context
+  /// (`\edef`, `\write`) the kept name `\lx@locked@<cs>` is what remains (OXIDIZED_DESIGN #500 residual).
+  fn call_owner(&self) -> Result<Option<Token>> {
+    let Some(next) = crate::gullet::peek_token()? else {
+      return Ok(None);
+    };
+    let owner = locked_binding_token(&self.cs);
+    let opens_call = next.get_catcode() == Catcode::BEGIN
+      || next.get_catcode() == Catcode::OTHER && call_openers(&owner).contains(&next);
+    Ok(opens_call.then_some(owner))
+  }
+
   /// The expansion of a parameterless body: the body, or nothing when it expands into itself
   /// ([`Self::expands_into_itself`]), with `Error:recursion` (Perl Expandable.pm L81-89). The one place for
   /// both [`Definition::invoke`] and [`Definition::invoke_onto_input`].

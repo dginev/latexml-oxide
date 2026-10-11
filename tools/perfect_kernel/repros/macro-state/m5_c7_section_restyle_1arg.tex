@@ -1,0 +1,12 @@
+% witness: synthetic (m5study c7: `\renewcommand\section[1]` to bold text)
+% oracle: pdflatex clean; PDF text: Intro Text. 1 
+% engines: rust base 64w-rel (8542e1b1a5; the lock code is unchanged through 72cefe8821) E/F/W=0/0/0; 64zb E/F/W=0/0/0; Perl refuses every :locked redefinition (State.pm:502-517), log m5study/perl/c7_section_restyle_1arg.perl.log
+% expect: as today under D1: every use is a braced call (or the binding reads downstream / takes no argument), so the binding keeps the semantic element; byte-identical to base
+% status: GREEN (base) -> GREEN (64zb), unchanged
+% preload: ar5iv.sty
+\documentclass{article}
+\renewcommand\section[1]{\par\bigskip\noindent{\large\bfseries #1}\par}
+\begin{document}
+\section{Intro}
+Text.
+\end{document}

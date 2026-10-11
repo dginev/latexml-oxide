@@ -1,0 +1,12 @@
+% witness: synthetic (64zb review probes p1, p6)
+% oracle: pdflatex clean (TL 2025, 0 errors): "macro:->V{z}" — `\text` is the document's value there, so `\text{z}` is `V{z}`
+% engines: rust base 72cefe8821 (refused: "macro:->\text {z}"); 64zb "macro:->\lx@locked@text {z}" (the call dispatched in an expansion-only context leaves the binding's kept name); Perl refuses the redefinition
+% expect: D1 keeps the call: "macro:->\text {z}" (the locked name, dispatched again where the capture is used); `\lx@locked@<cs>` never shows in \meaning, \typeout or \write
+% status: RED (64zb), residual of OXIDIZED_DESIGN #500 (needs an expansion-only-context signal in Expandable::invoke)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\def\text{V}
+\edef\y{\text{z}}\texttt{\meaning\y}
+\end{document}

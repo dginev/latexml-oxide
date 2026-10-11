@@ -1,0 +1,15 @@
+% witness: 2405.18512, 1406.2544, 2604.23335 (pgffor `\foreach \i/\text in {…}`, run-336 M5 cluster)
+% oracle: pdflatex clean; PDF text: v1 v2 1 
+% engines: rust base 64w-rel (8542e1b1a5; the lock code is unchanged through 72cefe8821) E/F/W=15/0/1; 64zb E/F/W=0/0/0; Perl refuses every :locked redefinition (State.pm:502-517), log m5study/perl/a1_foreach_text.perl.log
+% expect: D1 (locked bindings own their calls): the uses without an argument take the document's definition, as in pdflatex; calls keep the binding
+% status: RED (base) -> GREEN (64zb)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\foreach \i/\text in {1/{$v_1$},2/{$v_2$}}
+  {\node at (\i,0) {\text};}
+\end{tikzpicture}
+\end{document}

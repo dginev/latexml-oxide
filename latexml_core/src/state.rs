@@ -1294,6 +1294,33 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     assign_value_sym(stub_sym, false, Some(Scope::Global));
   }
   if is_definition_locked(&token) {
+    // A LOCKED BINDING OWNS ITS CALLS. The lock keeps the semantic markup of a call (Perl acb3b27e: commands "that
+    // lose semantics when redefined"), and a use without an argument cannot produce that markup: the binding would
+    // read the next token as its argument (a pgffor `\foreach \i/\text` loop variable: 15 errors; `\@for\text:=`:
+    // Fatal; `\def\title{On Widgets}` then `\section*{\title}`). So a VALUE the document defines — a definition
+    // without parameters — of a binding that takes a braced argument ([`owns_calls`]) becomes the meaning: what
+    // `\ifx`, `\meaning` and every use without an argument see, as in pdflatex; the binding stays the handler of
+    // its calls, as `\lx@locked@<cs>` ([`crate::definition::expandable::Expandable::yields_calls`]). A definition
+    // with parameters defines a command, not a value, so every use of it stays the binding's (`\renewcommand\mathbf
+    // [1]{\boldsymbol{#1}}` with `\mathbf a`; 2006.08408's `\renewcommand{\sqrt}[2][\mkern8mu]{…}` with
+    // `\sqrt k`). Raw class and package code stays refused, as in Perl (State.pm:502-517), and so does a binding
+    // without a braced interface (sectioning, `\footnote`, `\url`, `\maketitle`). The records below are written
+    // either way, so calls behave as before. Accepted residual: a parameterless forwarder used without braces
+    // (`\def\mathcal{\mathscr}` with `\mathcal C`; the `\mathpalette` `\sqrt` hack with `\sqrt n`, 1806.09639,
+    // 1904.10871) runs the document's definition, as pdflatex does: author code is not analysed.
+    // OXIDIZED_DESIGN #500; repros macro-state/m5_*; witnesses 2405.18512, 1406.2544, 1511.05179.
+    let call_owner = match definition {
+      Stored::Expandable(ref defn)
+        if crate::definition::origin::current_origin()
+          == crate::definition::origin::DefinitionOrigin::Document
+          && defines_value(&token, defn) =>
+      {
+        lookup_meaning(&token)
+          .filter(|binding| owns_calls(&token, binding))
+          .map(|binding| (Rc::clone(defn), binding))
+      },
+      _ => None,
+    };
     // THE DROPPED SETTER'S INTERNALS EXIST, EMPTY. A raw class that
     // redefines a locked frontmatter command as a plain setter —
     // afthesis.cls:520 `\def\author#1{\def\auth@r{#1}}` — expects the
@@ -1378,6 +1405,40 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
         Stored::Number(Number::new(nargs as i64)),
         Some(Scope::Global),
       );
+    }
+    if let Some((defn, binding)) = call_owner {
+      // The binding, kept on the first override (a later one, a loop's next iteration, overrides an override).
+      if !matches!(binding, Stored::Expandable(ref b) if b.yields_calls) {
+        let owner = locked_binding_token(&token);
+        state_mut!().assign_internal(
+          TableName::Meaning,
+          owner.get_cs_name(),
+          binding,
+          Some(Scope::Global),
+        );
+      }
+      let mut overriding = (*defn).clone();
+      overriding.yields_calls = true;
+      state_mut!().assign_internal(
+        TableName::Meaning,
+        cs_sym,
+        Stored::Expandable(Rc::new(overriding)),
+        scope,
+      );
+      // One report per control sequence and document (a loop overrides it on every iteration).
+      let reported_key = arena::pin(token.with_cs_name(|cs| s!("{cs}:lock@reported")));
+      if !lookup_bool_sym(reported_key) {
+        assign_value_sym(reported_key, true, Some(Scope::Global));
+        let cs_name = token.with_cs_name(ToString::to_string);
+        Info!(
+          "lock",
+          cs_name,
+          s!(
+            "{cs_name} is locked: its calls keep the binding; its other uses take the document's definition"
+          )
+        );
+      }
+      return;
     }
     if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source
@@ -2944,6 +3005,167 @@ pub fn name_carries_lock(cs: &str) -> bool {
     || (crate::definition::origin::current_origin()
       != crate::definition::origin::DefinitionOrigin::Document
       && locked(s!("{cs}:locked@files")))
+}
+
+/// Whether the locked `binding` of `cs` owns its calls, so that the document's own definition of `cs` takes its other
+/// uses ([`install_definition`]): its signature reads a braced argument — its first mandatory parameter is one of
+/// [`BRACED_ARGUMENT_TYPES`], after optional ones only (`\text{}`, `\title[]{}`, `\cite OptionalMatch:* [][]
+/// Semiverbatim`) — or it is itself such an override (a loop redefining it on every iteration). Derived from the
+/// binding's own parameter list; a binding that reads its argument downstream (`\section`'s `\@startsection`,
+/// `\footnote`, `\url`) or none (`\maketitle`) stays absolutely locked. So does the machinery (user ruling
+/// 2026-10-11: the machinery stays absolutely locked): LaTeX's internal namespace, a name with `@`, which LaTeX's
+/// convention keeps out of a document's reach until `\makeatletter` (clsguide.tex:187, latex.ltx:1797).
+/// Its locks keep LaTeXML's engine model against code that re-implements it (`\alloc@{}{}{}{}{}`, called
+/// `\alloc@0\count\countdef\insc@unt`; `\@startsection`, `\@caption`, `\@lbibitem`).
+pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
+  if cs.with_cs_name(|name| name.contains('@')) {
+    return false;
+  }
+  let params = match binding {
+    Stored::Expandable(defn) if defn.yields_calls => return true,
+    Stored::Expandable(defn) => defn.get_parameters(),
+    Stored::Constructor(defn) => defn.get_parameters(),
+    Stored::Primitive(defn) => defn.get_parameters(),
+    Stored::MathPrimitive(defn) => defn.get_parameters(),
+    _ => None,
+  };
+  params
+    .and_then(|params| {
+      params
+        .get_parameters()
+        .into_iter()
+        .find(|param| !param.optional)
+    })
+    .is_some_and(|param| arena::with(param.name, |name| BRACED_ARGUMENT_TYPES.contains(&name)))
+}
+
+/// Whether the document's definition `defn` of `cs` is a VALUE — no parameters — rather than a command
+/// ([`install_definition`]): neither it nor what it wraps reads an argument. A robust wrapper (`\protect \cs␣`,
+/// [`robust_wrapper_body`]: `\DeclareRobustCommand\mathit[1]{…}`) is judged by its inner `\cs␣`, an ltcmd wrapper
+/// (`\__cmd_start_optimized: \cs code`, `\__cmd_start:nNNnnn {o m}…`, `\__cmd_start_expandable:nNNNNn {…}…`:
+/// `\RenewDocumentCommand\mathbf{m}{…}`) by its signature: written out (braced) in the general and expandable wrappers,
+/// and for the optimized one the argument count ltcmd generates `\cs code` from right after the wrapper
+/// (`\l__cmd_current_arg_int`, latex.ltx:1963-1983 `\__cmd_declare_cmd_optimized:Nnn`) (2306.08511, 2306.10719,
+/// 2306.05287).
+fn defines_value(cs: &Token, defn: &Expandable) -> bool {
+  let reads_arguments = |params: Option<&crate::parameter::Parameters>| {
+    params.is_some_and(|params| !params.get_parameters().is_empty())
+  };
+  let wrapped_reads_arguments = |inner: &Token| {
+    lookup_definition(inner)
+      .ok()
+      .flatten()
+      .is_some_and(|inner| reads_arguments(inner.get_parameters()))
+  };
+  if reads_arguments(defn.get_parameters()) {
+    return false;
+  }
+  if let Some(inner) = robust_wrapper_body(defn, cs) {
+    return !wrapped_reads_arguments(&inner);
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return true;
+  };
+  let body = body.unlist_ref();
+  if !body
+    .first()
+    .is_some_and(|first| first.with_str(|name| name.starts_with("\\__cmd_start")))
+  {
+    return true;
+  }
+  // `\__cmd_start:nNNnnn {<signature>}…`: a non-empty signature reads arguments.
+  let signature_reads = body
+    .get(1)
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+    && body.get(2).is_some_and(|t| t.get_catcode() != Catcode::END);
+  let optimized_count = lookup_definition(&T_CS!("\\l__cmd_current_arg_int"))
+    .ok()
+    .flatten()
+    .and_then(|count| count.value_of(Vec::new()))
+    .is_some_and(|count| matches!(count, RegisterValue::Number(n) if n.value_of() > 0));
+  let optimized = body
+    .first()
+    .is_some_and(|first| first.with_str(|name| name == "\\__cmd_start_optimized:"));
+  // Not `\cs code`: ltcmd installs the wrapper before it rebuilds `\cs code`, which is still the previous
+  // declaration's (`\RenewDocumentCommand\text{m}{…}` then `\RenewDocumentCommand\text{}{V}` is a value).
+  !signature_reads && !(optimized && optimized_count)
+}
+
+/// The parameter types that read one TeX argument, a braced group (`read_arg`/`read_balanced`, base_parameter_types.rs):
+/// a binding whose first mandatory parameter is one of them takes a braced argument ([`owns_calls`]).
+pub const BRACED_ARGUMENT_TYPES: &[&str] = &[
+  "Plain",
+  "Semiverbatim",
+  "ExpandedSemiverbatim",
+  "Undigested",
+  "Digested",
+  "Expanded",
+  "ExpandedPartially",
+  "ProtectedExpanded",
+  "Verbatim",
+  "HyperVerbatim",
+  "RequiredKeyVals",
+  "RequiredKeyValsStar",
+  "RequiredKeyValsPlus",
+  "RequiredKeyValsStarPlus",
+  "DisplayStyle",
+  "TextStyle",
+  "ScriptStyle",
+  "ScriptscriptStyle",
+  "InFractionStyle",
+  "InScriptStyle",
+];
+
+/// `\lx@locked@<cs>`: where a document's override of the locked `cs` keeps the binding that handles its calls
+/// ([`install_definition`]). The binding object itself, so its reversion still names `cs`.
+pub fn locked_binding_token(cs: &Token) -> Token {
+  T_CS!(cs.with_cs_name(|name| s!("\\lx@locked@{}", name.trim_start_matches('\\'))))
+}
+
+/// The other tokens that open a call of `binding` (a [`locked_binding_token`]) besides an explicit `{`: the `[` of
+/// each optional argument its signature opens with, and the token of an `OptionalMatch:*`.
+pub fn call_openers(binding: &Token) -> Vec<Token> {
+  let Ok(Some(defn)) = lookup_definition(binding) else {
+    return Vec::new();
+  };
+  let mut openers = Vec::new();
+  if let Some(params) = defn.get_parameters() {
+    for param in params
+      .get_parameters()
+      .into_iter()
+      .take_while(|param| param.optional)
+    {
+      if arena::with(param.name, |name| name == "OptionalMatch") {
+        openers.extend(
+          param
+            .extra
+            .first()
+            .and_then(|extra| extra.unlist_ref().first().copied()),
+        );
+      } else if !param.novalue {
+        openers.push(T_OTHER!("["));
+      }
+    }
+  }
+  openers
+}
+
+/// Every control sequence carrying a `"{cs}:locked"` lock, sorted: for the census of which own their calls
+/// ([`owns_calls`]).
+pub fn locked_control_sequences() -> Vec<String> {
+  let state = state!();
+  let mut names: Vec<String> = state
+    .value
+    .iter()
+    .filter(|(_, values)| matches!(values.front(), Some(Stored::Bool(true))))
+    .filter_map(|(key, _)| {
+      arena::with(*key, |key| {
+        key.strip_suffix(":locked").map(ToString::to_string)
+      })
+    })
+    .collect();
+  names.sort();
+  names
 }
 
 /// $meaning should be a definition (for defining active control sequences)

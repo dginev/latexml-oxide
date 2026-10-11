@@ -1,0 +1,11 @@
+% witness: synthetic control (m5study b1: `\emph` is not locked)
+% oracle: pdflatex clean; PDF text: An important word. 1 
+% engines: rust base 64w-rel (8542e1b1a5; the lock code is unchanged through 72cefe8821) E/F/W=0/0/0; 64zb E/F/W=0/0/0; Perl refuses every :locked redefinition (State.pm:502-517)
+% expect: no lock involved (\emph not locked): restyle applies
+% status: GREEN (base) control
+% preload: ar5iv.sty
+\documentclass{article}
+\renewcommand{\emph}[1]{\textbf{#1}}
+\begin{document}
+An \emph{important} word.
+\end{document}

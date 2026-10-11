@@ -268,8 +268,15 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   } else {
     None
   };
-  let defcs = if options.robust {
-    def_robust_cs(cs, options.locked, options.scope)?
+  // A robust macro's body goes under `\cs␣` FIRST, its `\protect \cs␣` wrapper after — the reverse of Perl's
+  // DefMacroI (Package.pm:1166 calls `defRobustCS`, :1143-1149, before installing the body), unobservable otherwise:
+  // nothing reads the inner in between, and the wrapper's install can then judge what it wraps, so a document's
+  // `\DeclareRobustCommand\mathit[1]{…}` of a locked binding defines a command, not a value
+  // (`state::install_definition`; 2306.10719). The wrapper takes the definition's scope, as `defRobustCS` does
+  // (Package.pm:1148).
+  let (robust, locked) = (options.robust, options.locked);
+  let defcs = if robust {
+    T_CS!(cs.with_str(|cstr| format!("{cstr} ")))
   } else {
     cs
   };
@@ -277,6 +284,9 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     Expandable::new(defcs, paramlist, expansion_opt, Some(options))?,
     scope,
   );
+  if robust {
+    def_robust_cs(cs, locked, scope)?;
+  }
   if let Some(locked_key) = locked_key_opt {
     assign_value(&locked_key, true, Some(Scope::Global));
   }

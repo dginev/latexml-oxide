@@ -114,19 +114,29 @@ names as plain macros (`\foreach \i/\text`, `\@for\text:=`, `\def\title{…}` us
 as a value), and the binding then reads the wrong token as its argument: errors,
 a fatal runaway, or corrupt text. Policy **D1** (adopted 2026-10-11) keeps the
 lock for calls only:
-- When the document redefines a locked command whose binding takes a braced
-  argument, the author's definition becomes the TeX meaning.
+- When the document makes a **parameterless** redefinition (a value) of a locked
+  command whose binding takes a braced argument, the author's definition becomes
+  the TeX meaning.
 - A use followed by `{`, or by the binding's own leading `[`/`*`, still runs the
   binding, with its semantic markup.
 - Any other use runs the author's definition, as pdflatex does.
-- Class/package code stays refused, and 0-parameter readers (sectioning,
+- A redefinition that takes arguments — robust (`\DeclareRobustCommand`) and
+  ltcmd (`\RenewDocumentCommand`) forms included — defines a command: it stays
+  refused, and every use keeps the binding.
+- Names with `@` (LaTeX's internal namespace) never own their calls.
+- Class/package code stays refused (code a package runs while the document is
+  read counts as the document's, #500), and 0-parameter readers (sectioning,
   `\footnote`, `\url`, `\maketitle`, environments) stay fully locked.
+
+The accepted residual: a parameterless forwarder used without braces
+(`\def\mathcal{\mathscr}` with `\mathcal C`, a `\mathpalette` `\sqrt` hack with
+`\sqrt\rho`) runs the author's code, as pdflatex does; author code is not analysed.
 
 Design note, with Perl's lock history, the arXiv collision census, the four
 candidate designs on 28 minimal repros, and the scoping rulings:
 **[Locked Bindings Own Their Calls](https://claude.ai/artifact/6SJPLQMKmkxLSHmAu7WPxQ)**.
-The numbered divergence entry lands with the implementation in
-[OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md).
+The implementation, its residuals and its A/B are
+[OXIDIZED_DESIGN_DIVERGENCES #500](OXIDIZED_DESIGN_DIVERGENCES.md).
 
 ---
 

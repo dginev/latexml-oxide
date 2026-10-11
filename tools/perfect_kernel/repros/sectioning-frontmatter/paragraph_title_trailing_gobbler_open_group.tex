@@ -1,0 +1,12 @@
+% witness: 2604.23335 (Manuscript.tex:385 `\paragraph[]{Why high masking ratio? \eatpunct}`, :137 `\newcommand\eatpunct[1]{}`); unmasked by 64zb (the paper's earlier `\foreach \r/\text` error cascade had closed the group)
+% oracle: pdflatex clean (TL 2025, 0 errors): "Why high masking ratio? When masking is high." — elsarticle's run-in \paragraph appends its own punctuation, which \eatpunct eats
+% engines: rust base 64w 0 errors 1 warning (Warning:unexpected:\end{document} "inside a group at level 1", group opened by \lx@hidden@bgroup); 64zb the same; Perl not run
+% expect: no open group: the trailing one-argument gobbler in the heading eats the class's punctuation, not the binding's hidden group end; 0 warnings
+% status: RED (base) -> RED (64zb), filed for its own batch
+% preload: ar5iv.sty
+\documentclass[preprint,5p]{elsarticle}
+\newcommand\eatpunct[1]{}
+\begin{document}
+\paragraph[]{Why high masking ratio? \eatpunct}
+When masking is high.
+\end{document}

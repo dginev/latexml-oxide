@@ -15217,3 +15217,92 @@ bibliography digests a new hook `\lx@bibliography@postamble` at `\endthebibliogr
 `\bibpostamble`. A postamble closes what `\bibpreamble` opened (2009.08029's `\begin{multicols}{2}` … `\end{multicols}`,
 1 → 0 errors) and its content is kept (it ends the last bibblock).
 **Why**: content and group balance. Guard `perfect_kernel_batch64y::bibpostamble_closes_the_preamble`.
+
+### 500. A locked binding owns its calls: a document's parameterless redefinition is the meaning for every use without an argument (Perl: every TeX-source redefinition refused)
+
+**Perl behavior**: `installDefinition` refuses every redefinition of a `:locked` name from TeX sources
+(State.pm:502-517), logging `Info:ignore` "Ignoring redefinition of \cs". A document that uses a locked name as a
+plain value then has the binding read the next token as its argument. A pgffor loop variable
+`\foreach \i/\text in {…}` gives 15 errors (Perl 17; 2405.18512, 1406.2544). `\@for\text:=…` is a Fatal runaway (Perl
+102 errors). `\def\title{On Widgets}` then `\section*{\title}` gives 1 error and an empty title (1511.05179).
+**Rust behavior** (policy D1, user rulings 2026-10-11): `install_definition` (state.rs) installs a redefinition
+instead of refusing it when it is all of the following:
+- of Document origin;
+- a **parameterless** Expandable — `defines_value`: a robust wrapper `\protect \cs␣` is judged by its inner `\cs␣`,
+  and an ltcmd wrapper `\__cmd_start…` by its signature — braced in `\__cmd_start:nNNnnn`/`\__cmd_start_expandable:nNNNNn`,
+  and for `\__cmd_start_optimized:` the argument count in `\l__cmd_current_arg_int`, set before ltcmd rebuilds
+  `\cs code` (latex.ltx:1963-1983; `\cs code` itself is still the previous declaration's then) — so
+  `\DeclareRobustCommand\mathit[1]{…}` and `\RenewDocumentCommand\mathbf{m}{…}` are commands (2306.08511,
+  2306.10719, 2306.05287), while `\DeclareRobustCommand\text{V}`, `\RenewDocumentCommand\text{}{V}` and a robust or
+  ltcmd `{V}` after a `[1]`/`{m}` declaration are values. `def_macro` installs a robust macro's inner `\cs␣` before its
+  wrapper, the reverse of Perl's DefMacroI, so the wrapper's install can judge what it wraps; unobservable otherwise;
+- of a binding that `owns_calls`, i.e. its first mandatory parameter reads a braced argument (Plain, Semiverbatim,
+  Digested, Undigested, …) after optional ones only, or it is itself an earlier override (loop iterations).
+
+The installed definition carries `Expandable::yields_calls`. The binding is kept globally as `\lx@locked@<cs>`, and
+expanding the override first peeks one raw token:
+- an explicit catcode-1 `{`, or a `[`/`*` the binding's signature opens with, runs the binding;
+- anything else expands the document's definition, as pdflatex does.
+
+`\ifx`, `\meaning` and `\let` see the document's macro, since `PartialEq` compares `paramlist`/`expansion` only.
+Reversions and `tex=` still name `<cs>`. The refusal records (`\lx@dropped@<cs>`, `<cs>:redefined`,
+`<cs>:redefined@nargs`, empty internals) are written as before, so calls behave as today. One `Info:lock` per cs per
+document replaces the per-iteration "Ignoring redefinition".
+
+Scope of the rule:
+- **Commands stay refused.** A redefinition with parameters — `\renewcommand\cite[1]`, `\def\author(s)`, robust and
+  ltcmd forms included — defines a command, not a value. It stays refused as in Perl, and the binding keeps every
+  use, `\mathbf x` included.
+- **Absolutely locked.**
+  - Bindings with no braced interface: sectioning (whose 0-parameter macro reads its argument downstream in
+    `\@startsection`), `\footnote`, `\url`, `\maketitle`, `\abstract`, environments, font defaults, `\def`, and robust
+    bindings (the kernel `\cite` without natbib, `\protect \cite␣`, sect11.rs:792: a group-local `\def\cite{CITEV}`
+    used as `[\cite]` still has the binding read `]` as its key, RED `macro-state/m5_robust_cite_value_in_group`).
+  - Every name containing `@`, LaTeX's internal namespace (clsguide.tex:187, latex.ltx:1797): `\alloc@`,
+    `\@startsection`, `\@caption`, `\@lbibitem`, ….
+- **Unchanged paths.** Class/package code (File origin) stays refused with records and replay; `replay_class_setter`
+  and the `\maketitle` deposit run under File origin. So do `\newcommand` (LaTeX refuses a defined name too), `\font`,
+  `\newenvironment`, and `\let`, which bypasses the lock as in Perl.
+
+The derived classes under article+amsmath,amssymb,natbib,url,hyperref are pinned in `locked_names_derived_classes`: 25
+owners, 110 absolute.
+- **Machinery without `@` owns its calls too.** `\newcounter`, `\DeclareTextAccentDefault`,
+  `\Declare{Lower,Upper,Titlecase}Mapping` and `\multicolumn` follow ruling 3 and the `@`-only exclusion; there is no
+  name list. Their braced calls are unchanged. Only a parameterless document redefinition used without braces runs the
+  author's code, which is pdflatex's behaviour.
+- **"Document origin" covers package code run while the document is read.** pgf's diamond shape defines its anchor
+  macro as `\savedanchor\text` (pgflibraryshapes.geometric.code.tex:277) at node time. That is now the meaning inside
+  the node, and 2006.09271 logs `Info:lock:\text`. Definitions made while a package is loaded keep File origin
+  (ruling 2).
+- **The peek is raw and may read past the end of a macro body.** `\def\wrap{\text}\wrap{x}` runs the binding on
+  `{x}`, as TeX's argument scan would read `{x}`.
+
+Accepted residuals:
+- **(a) Unbraced use of a parameterless forwarder.** It runs the author's code, as pdflatex does; author code is not
+  analysed. Examples: `\def\mathcal{\mathscr}` with `\mathcal C` (script, while a braced `\mathcal{C}` stays
+  calligraphic: 1004.3646, 1407.2007); `\renewcommand\mathbf{\boldsymbol}` with `\mathbf a` (1806.00338); the
+  `\mathpalette` `\sqrt` hack with `\sqrt\rho` (an hbox/vrule rendering around the binding's root: 1806.09639,
+  1904.10871).
+- **(b) The binding's kept name leaks in expansion-only contexts.** `\edef\y{\text{z}}` gives `\meaning\y` =
+  `macro:->\lx@locked@text {z}`, and `\typeout{[\text{a}]}` prints `\lx@locked@text{a}`. `tex=` and reversions are
+  clean. RED `macro-state/m5_locked_name_in_expansion_only_context`; review probes p1/p6.
+- A robust value followed by a robust command (`\DeclareRobustCommand\text{V}` then `\DeclareRobustCommand\text[1]{X#1}`)
+  gives `[X]` for `[\text]`, as pdflatex does: the value's wrapper `\protect \text␣` stays the meaning (the command's
+  wrapper is refused), and its inner `\text␣`, which is not locked, is now `X#1` and reads `]`; `\text{c}` stays the
+  binding's.
+- **(c) Deferred, rulings 4/5.** e2 `{\def\section{Sec.}…}` and d2 `\let\text\relax\def\text{v}` stay as Perl;
+  m5_e2/m5_d2 are RED-deferred.
+
+**Why**: the lock exists to keep the semantic markup of a call (Perl acb3b27e, "commonly redefined macros that lose
+semantics when redefined"). A use without an argument cannot produce that markup; it only made the binding consume the
+wrong token. D1 keeps every call's markup and gives the document TeX's meaning everywhere else. The full study is in
+OXIDIZED_DESIGN.md "Locked definitions".
+
+A/B vs 8542e1b1a5:
+- the M5 cluster (369 papers): errors 11,882 → 2,500, 140 papers fewer, 125 to zero, none more, no Fatal change;
+- census 314/320 identical, the 6 changes intended or residual (a);
+- restyle 100/100 identical;
+- random 298/300 identical (2 fewer errors);
+- witnesses 2405.18512 45 → 0 (its appendices now `<appendix>`), 1406.2544 31 → 0, 1511.05179 1 → 0.
+
+Guards `perfect_kernel_batch64zb::*`; repros `macro-state/m5_*`.

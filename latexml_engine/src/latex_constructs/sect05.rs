@@ -3,6 +3,8 @@
 //! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
 //! definitions run in the original order from `super::load_definitions`.
 
+use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
+
 use super::*;
 
 /// latex.ltx `\@parse@version`: `YYYY-MM-DD` / `YYYY/MM/DD` → `YYYYMMDD`, 0 if unparsable.
@@ -1166,7 +1168,9 @@ pub(crate) fn load() -> Result<()> {
       // itself!" ×2 in 20 papers of arXiv 2605 (2605.02049) and 154 of 2606
       // (aaskaiid.sty too). Perl never replays (State.pm:502-517).
       let hold = util::logger::DiagnosticsHold::begin();
-      let body = digest(Tokens::new(replay));
+      // The class's code, read as the class's: a `\def` of a locked name it makes stays refused (state.rs
+      // `install_definition`), not a document override.
+      let body = with_origin(DefinitionOrigin::File, || digest(Tokens::new(replay)));
       // Reset before propagating an error, so a failed deposit does not disable
       // every later one. A hard error still propagates on purpose (Fatal stays
       // Fatal): only a recursion/resource Fatal gets here — an undefined internal
@@ -2038,7 +2042,9 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   let depth = get_frame_depth();
   AssignValue!("lx_replaying_class_setter" => true, Some(Scope::Global));
   let hold = util::logger::DiagnosticsHold::begin();
-  let result = digest(Tokens::new(replay));
+  // The class's code, read as the class's: a `\def\author…` the body makes stays refused (state.rs
+  // `install_definition`), not a document override.
+  let result = with_origin(DefinitionOrigin::File, || digest(Tokens::new(replay)));
   // A body that read past the replay's closing brace, or opened a `\begingroup`, an environment or a mode switch
   // (minipage) it does not close, leaves groups open: each is closed whatever its kind (a setter has no reason to
   // leave one), and with the replay's own group its bindings end (`\lx@replay@inert`, the gobbled notes). Closed in a

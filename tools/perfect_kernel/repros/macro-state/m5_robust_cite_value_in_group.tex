@@ -1,0 +1,11 @@
+% witness: synthetic (64zb review probe p5: a group-local value of the kernel `\cite`)
+% oracle: pdflatex clean (TL 2025, 0 errors): "[CITEV] and [1]."
+% engines: rust base 64w-rel and 64zb: `[<cite>[<bibref bibrefs="]"/>]</cite>` — the kernel `\cite` is a robust binding (`\protect \cite␣`, sect11.rs) whose 0-parameter wrapper does not own its calls, so the value is refused and the binding reads `]` as its key; Perl refuses the redefinition too (State.pm:502-517)
+% expect: "[CITEV] and " then the real citation: the robust binding's braced interface (its inner `\cite␣`) owns its calls, so the value takes uses without an argument (OXIDIZED_DESIGN #500, a step-2 candidate)
+% status: RED (base) -> RED (64zb), residual of OXIDIZED_DESIGN #500
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+{\def\cite{CITEV}[\cite]} and \cite{knuth}.
+\begin{thebibliography}{9}\bibitem{knuth} D. Knuth, TeXbook.\end{thebibliography}
+\end{document}
