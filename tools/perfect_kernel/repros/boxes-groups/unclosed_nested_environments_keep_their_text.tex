@@ -1,0 +1,24 @@
+% mechanism: at `\end{document}` an environment left open INSIDE another open one loses its whole content: the inner
+%   `{quote}` (opened while the first is still open, its `\end{quote}` having closed a `\begingroup` instead) and the
+%   text after it vanish, with no Error. One open environment keeps its text; two nested ones drop the inner. The
+%   minimal shape is `\begin{quote}Q1. \begin{quote}Q2. After. \end{document}` (inner quote lost). Kernel: the
+%   end-of-document frame pop (sect02.rs `\lx@finalize@document`) and the bodies the open environments' captures
+%   (`digest_next_body`) hand back; Perl keeps both quotes (finishDigestion), and TeX prints every word with
+%   "(\end occurred inside a group at level 2)".
+% witness: review of 64zf (setspace's `\onehalfspace` as a `\begingroup` hit it); real shape: sweep #149 powerdotDE, arXiv 1902.00853
+% oracle:  pdflatex 1 error ("\begin{quote} on input line 6 ended by \end{document}"), "Before. Q1. Middle. Q2. After."
+% engines: rust 64zf = 2 errors (the `\end{quote}`s against the `\begingroup`), "Q2." and "After." lost; base 64zd alike;
+%          Perl = both quotes kept (5 errors)
+%          65c = 2 errors, every word kept (the inner quote inside the outer one)
+% expect:  2 errors; "Q2." and "After." in the output
+% status:  RED (64zf review: kernel, not fixed in the batch) -> GREEN (65c); guard
+%          perfect_kernel_batch65c::unclosed_nested_environments_keep_their_text
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Before.
+\begin{quote}\begingroup Q1.\end{quote}
+Middle.
+\begin{quote}\begingroup Q2.\end{quote}
+After.
+\end{document}

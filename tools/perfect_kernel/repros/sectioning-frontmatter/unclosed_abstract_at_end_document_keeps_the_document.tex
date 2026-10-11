@@ -1,0 +1,19 @@
+% witness: review r2 of 65c (probes q8, q11); same symptom class as the 65c environments, different mechanism
+% mechanism: `\begin{abstract}` reads its body as a deferred frontmatter entry (`\lx@add@frontmatter@until` up to
+%   `\lx@end@abstract`, base_utilities.rs). Left open, that body runs to `\end{document}`: it holds the finalize
+%   whatsit and the rest of the document, and is never placed -- the output is an EMPTY `<document/>`, with or without
+%   a following `\section` (q8; q11 = `\begin{abstract}Abstract words. \begin{quote} Quote words.`). The 65c
+%   dummy-trailer rule does not reach it: the loss is the deferred entry never being inserted, not a trailer split.
+% oracle:  pdflatex 1 error ("\begin{abstract} on input line 3 ended by \end{document}"), "Abstract Abstract only text.
+%          1 Body Body text."
+% engines: rust 64ze = 0 errors, 2 warnings (unexpected:\end{document}, expected:\lx@end@abstract), `<document/>`;
+%          65c = the same; Perl = 1 error, 2 warnings, a document with only its resources (no text)
+% expect:  0 errors; the abstract with "Abstract only text.", then section 1 "Body" with "Body text."
+% status:  RED (65c review r2 side finding; deferred abstract body never placed when left open)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{abstract}Abstract only text.
+\section{Body}
+Body text.
+\end{document}

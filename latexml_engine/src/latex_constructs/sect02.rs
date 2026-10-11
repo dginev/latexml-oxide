@@ -507,9 +507,15 @@ pub(crate) fn load() -> Result<()> {
       // #246/#247 position markers never reach the output (the core finalize
       // sweeps stragglers too).
       remove_frontmatter_marks(document);
-      if lookup_bool("lx@end@document@open@groups") {
-        document.close_element_lenient("ltx:document", "groups still open at \\end{document}")?;
-      } else {
+      // When groups or environments were abandoned (before_digest below),
+      // this whatsit may sit inside the innermost one's body, built before the
+      // constructors around it close their elements: the `ltx:document` close
+      // then waits until the whole document is absorbed
+      // (`close_abandoned_document`, core_interface.rs), so every element
+      // still open closes with it, close-time hooks included (repros
+      // boxes-groups/abandoned_document_close_*; tikz-optics,
+      // jpnedumathsymbols-doc).
+      if !lookup_bool("lx@end@document@abandoned") {
         document.close_element("ltx:document")?;
       }
     },
@@ -525,23 +531,21 @@ pub(crate) fn load() -> Result<()> {
       // \begin{thebibliography}{99}`) trigger
       // "Attempt to end mode `internal_vertical` in `internal_vertical`"
       // because the top frame is the dangling group, not the document.
-      // Note: Rust port omits Perl's open-conditional report here
-      // (latex_constructs.pool.ltxml:357,374-377; the stack is
-      // `state::top_if_frame`/`if_stack_depth`) — SYNC_STATUS row.
       let top_is_document = is_value_bound("current_environment", Some(0))
         && lookup_string("current_environment") == "document";
-      if !top_is_document {
+      if !top_is_document || if_stack_depth() > 0 {
         let mut popped_lines: Vec<String> = Vec::new();
         let mut plain_groups = 0usize;
         while !(is_value_bound("current_environment", Some(0))
           && lookup_string("current_environment") == "document")
           && get_frame_depth() > 0
         {
-          let initiator = lookup_string("groupInitiator");
-          let initiator = if initiator.is_empty() {
-            "<unknown>".to_string()
-          } else {
-            initiator
+          // Perl: `ToString($tok) . ' ' . $loc` (latex_constructs.pool.ltxml:364-372).
+          let initiator = lookup_token("groupInitiator")
+            .map_or_else(|| "<unknown>".to_string(), |token| token.to_string());
+          let locator = match lookup_value("groupInitiatorLocator") {
+            Some(Stored::Locator(locator)) => locator.to_string(),
+            _ => "<unknown>".to_string(),
           };
           let env_bound = is_value_bound("current_environment", Some(0));
           let env_name = if env_bound {
@@ -550,48 +554,53 @@ pub(crate) fn load() -> Result<()> {
             String::new()
           };
           if !env_name.is_empty() {
-            popped_lines.push(s!("Environment {env_name} opened by {initiator}"));
+            popped_lines.push(s!("Environment {env_name} opened by {initiator} {locator}"));
           } else {
             // tex.web §1335 `final_cleanup`: a plain group still open at `\end`
             // is reported ("(\end occurred inside a group at level N)") and
             // simply abandoned — its `\aftergroup` list never runs.
             plain_groups += 1;
-            popped_lines.push(s!("Group opened by {initiator}"));
+            popped_lines.push(s!("Group opened by {initiator} {locator}"));
           }
-          // Pop the STACK frame (frame + its `boxing` entry), not only the
+          // Abandon the STACK frame (frame + its `boxing` entry), not only the
           // undo frame: a `{` left open by an unbalanced `\abstract{…`
           // (screenplay-pkg.tex:67) otherwise kept `boxing` one deeper than
           // the frames, and the bounded primitive reading that body closed
           // the document frame instead of its own. The abandoned group's
-          // `\aftergroup` tokens are discarded (§1335).
-          let _ = remove_value("afterGroup");
-          let nonboxing = lookup_bool("groupNonBoxing");
-          pop_stack_frame(nonboxing)?;
+          // `\aftergroup` tokens are discarded (§1335), and every body still
+          // digesting inside it ends as at end of input, keeping its boxes
+          // (`abandon_stack_frame`).
+          abandon_stack_frame()?;
         }
-        if plain_groups > 0 {
-          // Elements those groups left open close with the document — a
-          // warning, as pdflatex treats the unclosed group (the content is
-          // already typeset). Read by the `ltx:document` close below.
-          AssignValue!("lx@end@document@open@groups" => true, Some(Scope::Global));
+        let abandoned_frames = popped_lines.len();
+        // Perl latex_constructs.pool.ltxml:374-377: conditionals still open
+        // are closed and reported ("(\end occurred when \iftrue on line N was
+        // incomplete)", tex.web §1335).
+        while let Some(frame) = pop_if_frame() {
+          let frame = frame.borrow();
+          popped_lines.push(s!("Conditional {} started {}", frame.token, frame.start));
         }
-        let detail = if popped_lines.is_empty() {
-          String::new()
-        } else {
-          s!("\n{}", popped_lines.join("\n"))
-        };
+        if abandoned_frames > 0 {
+          // Read by the constructor above: the `ltx:document` close is
+          // deferred to the end of the build.
+          AssignValue!("lx@end@document@abandoned" => true, Some(Scope::Global));
+        }
         // tex.web §1335 reports ONE line with the total level count.
         let level_note = if plain_groups > 0 {
           s!(" (\\end occurred inside a group at level {plain_groups})")
         } else {
           String::new()
         };
-        Warn!(
-          "unexpected",
-          "\\end{document}",
-          s!(
-            "Attempt to end document with open groups, environments or conditionals{level_note}{detail}"
-          )
+        let message = s!(
+          "Attempt to end document with open groups, environments or conditionals{level_note}"
         );
+        // Perl passes the lines as the warning's details, one per line after
+        // the locator.
+        if popped_lines.is_empty() {
+          Warn!("unexpected", "\\end{document}", message);
+        } else {
+          Warn!("unexpected", "\\end{document}", message, popped_lines.join("\n\t"));
+        }
       }
       // Perl: endMode('internal_vertical', 1) — noframe=1
       // End mode without popping stack frame (executes beforeAfterGroup).
@@ -610,7 +619,10 @@ pub(crate) fn load() -> Result<()> {
       }
       flush();
       boxes
-  });
+    },
+    // Perl's constructor is `\end{document}` itself; this internal half reverts to nothing
+    // (a math left open to `\end{document}` reverts through it into its `tex=`).
+    reversion => "");
 
   // \enddocument is used directly in e.g. standalone.cls
   Let!("\\enddocument", "\\end{document}", Scope::Global);

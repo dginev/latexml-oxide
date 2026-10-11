@@ -7556,15 +7556,24 @@ bounded primitive still digesting are left inconsistent, so an unbalanced
 `\abstract{…` cascades into mode-close and malformed-XML errors.
 **Rust behavior**: the same unwinding pops STACK frames (frame + `boxing`), discards
 their `\aftergroup` lists (tex.web §1335 never runs them), reports "(\end occurred
-inside a group at level N)" for plain groups, and sets `lx@end@document@open@groups`;
-the `ltx:document` close is then lenient (`close_element_lenient`: descendants the
-abandoned groups left open close with a Warning, not an Error); a `bounded => true`
+inside a group at level N)" for plain groups, and sets `lx@end@document@abandoned`.
+Every body still digesting inside an abandoned group then ends as at end of input
+with a dummy trailer (stomach.rs `abandon_stack_frame`), as Perl's bodies do after
+its undo-frame pop and gullet flush (Stomach.pm:111,130), so the `\end{document}`
+whatsit may be built inside the innermost open environment; its `ltx:document`
+close is therefore DEFERRED to the end of the build (core_interface.rs
+`close_abandoned_document`, eager and streaming), where every element still open
+closes with it — close-time hooks included — and the descendants that do not
+auto-close are listed in an Info line (`Document::close_abandoned_element`). Perl
+closes it at the whatsit and reports `malformed:ltx:document` / `malformed:<env>`
+construction artifacts, which are not reproduced (batch 65c). A `bounded => true`
 primitive closes only the frame it opened (the opener writes its cs as the frame's group code, `lx@group@code`, as tex.web §274 `new_save_level` does; the closer checks it as §1068 checks `cur_group`), so one unwound by
 `\end{document}` does not close the document frame; and
 because the deferred body then carries the `\end{document}` whatsit — absorbed
-when the frontmatter is inserted at finalization, which is when the document
-actually closes — that constructor is idempotent (`lx@document@closed`) and a
-frontmatter entry's own close is scoped (`close_element_if_open`, #202).
+when the frontmatter is inserted at finalization; the constructor is idempotent
+(`lx@document@closed`) and, under abandonment, leaves the close to
+`close_abandoned_document` — a frontmatter entry's own close is scoped
+(`close_element_if_open`, #202).
 **Why**: pdflatex treats the unclosed group as a warning; the content is typeset.
 A `\section` inside the open group ENDS the abstract as in the brace-less form:
 the braced branch arms `\@startsection@hook` too, and because a `{` group is a
@@ -7576,9 +7585,17 @@ inside the body (§1335 shape, one Warning — LaTeX's `\@checkend` "\begin{X}
 ended by \end{Y}", latex.ltx:15394, is the analogue) and flags the body's loop
 (`lx@until@terminal@hit`), so the section lands at document level (batch 56aa).
 KNOWN_PERL_ERRORS #203.
-**Witnesses**: screenplay-pkg/screenplay-pkg (6 → 0).
+**Addendum (65c, `tex=`)**: `\lx@finalize@document` and `\lx@frontmatter@fallback`
+revert to nothing, so a math left open to `\end{document}` (whose whole body reverts
+into its `tex=`) carries no internal names: ours `tex="x+yTailwords.\par"`, Perl
+`tex="x+yTailwords.\lx@frontmatter@fallback\par\end{document}"`.
+**Witnesses**: screenplay-pkg/screenplay-pkg (6 → 0); powerdotDE (recall 26.3 → 97.8%),
+csvsimple-legacy (88.9 → 99.6%), arXiv 1902.00853, 1907.09124 (batch 65c).
 **Guards**: `perfect_kernel_batch56::unbalanced_abstract_brace_unwinds_at_end`,
-`perfect_kernel_batch54::braced_abstract_reads_its_body_incrementally`.
+`perfect_kernel_batch54::braced_abstract_reads_its_body_incrementally`,
+`perfect_kernel_batch65c::{unclosed_nested_quotes_at_end_document,
+unclosed_quotes_in_runaway_abstract_keep_their_text, abandoned_document_close_runs_bibliography_hooks,
+abandoned_document_close_invents_no_bibliography_title, math_open_at_end_document_reverts_no_internal_names}`.
 
 ### 208. A locked `\abstract` honours the class's argument-taking signature
 

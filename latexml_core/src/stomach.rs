@@ -2417,9 +2417,7 @@ pub fn until_terminal_inside_group(terminal: &Token) -> Result<bool> {
   }
   let mut popped = 0usize;
   while !is_value_bound("lx@until@terminal", Some(0)) && get_frame_depth() > 0 && popped < 64 {
-    let _ = remove_value("afterGroup");
-    let nonboxing = lookup_bool_sym(crate::pin!("groupNonBoxing"));
-    pop_stack_frame(nonboxing)?;
+    abandon_stack_frame()?;
     popped += 1;
   }
   Warn!(
@@ -2437,6 +2435,39 @@ pub fn until_terminal_inside_group(terminal: &Token) -> Result<bool> {
   );
   Ok(true)
 }
+
+thread_local! {
+  /// How many stack frames [`abandon_stack_frame`] has popped on this thread: a body whose
+  /// boxing level was popped by an abandonment ends as at end of input (`digest_next_body`).
+  static ABANDONED_FRAMES: Cell<u64> = const { Cell::new(0) };
+}
+
+/// Abandons the current group, tex.web §1335 `final_cleanup` style: the stack frame (and its
+/// `boxing` entry, unless the group is non-boxing) is popped and its `\aftergroup` list is
+/// discarded, never run. Used where open groups are unwound wholesale — `\end{document}`
+/// (`\lx@finalize@document`, Perl latex_constructs.pool.ltxml:353-386) and a bounded body's
+/// terminal met inside a group ([`until_terminal_inside_group`]).
+///
+/// Every body digesting inside an abandoned group then ends the way Perl's does: Perl pops only
+/// the undo frame (`$STATE->popFrame`, latex_constructs.pool.ltxml:373) and flushes the gullet
+/// (:386), so each enclosing `digestUntil` reads END OF INPUT (Stomach.pm:111) and pushes a dummy
+/// trailer (Stomach.pm:130) — every body keeps its boxes. Here the `boxing` entry goes too (an
+/// unbalanced `\abstract{…` otherwise leaves a bounded primitive closing the document frame,
+/// screenplay-pkg.tex:67), so the bodies stop on the depth check instead; `digest_next_body`
+/// counts that exit as running out, not as a close whose last box is the closer. Without it the
+/// trailer split took each enclosing body's LAST REAL BOX: two nested environments open at
+/// `\end{document}` lost the inner one whole (`\begin{quote}Q1. \begin{quote}Q2. After.`), and a
+/// list or math left open by an upstream defect lost the rest of the document. Witnesses: the
+/// powerdotDE manual (recall 26% → 98%), arXiv 1902.00853 (27,484 words), 2110.01778.
+pub fn abandon_stack_frame() -> Result<()> {
+  let _ = remove_value("afterGroup");
+  let nonboxing = lookup_bool_sym(crate::pin!("groupNonBoxing"));
+  pop_stack_frame(nonboxing)?;
+  ABANDONED_FRAMES.with(|count| count.set(count.get() + 1));
+  Ok(())
+}
+
+fn abandoned_frame_count() -> u64 { ABANDONED_FRAMES.with(Cell::get) }
 
 pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   let start_location = { gullet::get_locator() };
@@ -2541,6 +2572,7 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
         init_depth
       );
     }
+    let abandoned_before = abandoned_frame_count();
     let invoked = invoke_token(&token)?;
     extend_box_list(invoked);
 
@@ -2569,7 +2601,14 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
           init_depth
         );
       }
-      ran_out = false;
+      // A level popped by an abandonment during THIS token (`\end{document}` with the
+      // environment still open, a bounded terminal inside a group) did not close the body: it
+      // ends as Perl's does at end of input, with the dummy trailer below
+      // (`abandon_stack_frame`; witnesses powerdotDE, arXiv 1902.00853). Keyed on the token, so
+      // a body that merely ran BEFORE an abandonment elsewhere (a `{quote}` around a runaway
+      // `\abstract{…`, screenplay-pkg.tex:67) still ends on its own `\end`, its trailer the
+      // closer.
+      ran_out = abandoned_frame_count() != abandoned_before;
       break;
     }
     // Fragment yield (streaming pass 1): between top-level constructs, at a

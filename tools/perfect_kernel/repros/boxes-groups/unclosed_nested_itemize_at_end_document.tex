@@ -1,0 +1,18 @@
+% witness: RC 65c probe q6
+% mechanism: environments still open at `\end{document}` are abandoned by `\lx@finalize@document` (stack frame +
+%   boxing entry popped, sect02.rs), so every enclosing `digest_next_body` stops on its depth check; it took its LAST
+%   box as the trailer (whatsit.rs `set_body`), which for the outer of two nested open environments is the whole inner
+%   one. Perl pops only the undo frame and flushes the gullet: each body reads end of input and gets a dummy trailer
+%   (latex_constructs.pool.ltxml:353-386, Stomach.pm:111,130). Fix: an abandoned body ends as at end of input
+%   (stomach.rs `abandon_stack_frame`).
+% oracle:  pdflatex 1 error ("\begin{itemize} on input line 3 ended by \end{document}", "(\end occurred inside a
+%          group at level 2)"), "Before. * I1. - I2. After."
+% engines: rust 64ze = 0 errors, the inner list lost; 65c = 0 errors, both lists; Perl = every word, 3 errors
+%          (malformed, construction artifacts)
+% expect:  0 errors, 1 warning; the outer item holds "I1." and the inner `ltx:itemize` with "I2. After."
+% status:  RED (64ze) -> GREEN (65c); guard perfect_kernel_batch65c::unclosed_nested_itemize_at_end_document
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Before. \begin{itemize}\item I1. \begin{itemize}\item I2. After.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: review r1 of 65c (probe r05); arXiv 1411.7605, 1611.07505, 1907.09124, astro-ph9402030 (a math left open
+%   to the end of the document)
+% mechanism: the math's `tex=` reverts its whole body, which now ends with the end-of-document internals
+%   (`\lx@frontmatter@fallback`, `\lx@finalize@document`); both revert to nothing (`reversion => ""`).
+% oracle:  pdflatex 1 error (the math runs to `\end{document}`), "Before. Text x + yTailwords."
+% engines: rust 64ze = `tex="x+yTailwords.\lx@frontmatter@fallback\par"`; 65c r1 = also `\lx@finalize@document`;
+%          65c r2 = `tex="x+yTailwords.\par"`; Perl = `tex="x+yTailwords.\lx@frontmatter@fallback\par\end{document}"`
+% expect:  0 errors, 1 warning; no `\lx@` name in any `tex=`
+% status:  GREEN (65c r2; guard perfect_kernel_batch65c::math_open_at_end_document_reverts_no_internal_names)
+% preload: ar5iv.sty
+\documentclass{article}
+
+\begin{document}
+Before. Text $x+y Tail words.
+\end{document}

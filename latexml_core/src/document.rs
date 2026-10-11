@@ -84,6 +84,16 @@ pub static FONT_ELEMENT_NAME: &str = "ltx:text";
 pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
 pub static MATH_HINT_NAME: &str = "ltx:XMHint";
 
+/// How [`Document::close_element`] and its variants treat open descendants that do not
+/// auto-close.
+#[derive(Clone, Copy)]
+enum CloseDescendants {
+  /// An Error (`malformed`).
+  Strict,
+  /// An Info line: the source groups were abandoned and reported already.
+  Abandoned,
+}
+
 pub struct Document {
   pub document:                  XmlDoc,
   pub pending:                   Vec<Node>,
@@ -1426,25 +1436,7 @@ impl Document {
   /// it already. Used for a replacement's closing tag of an element the same
   /// replacement opened (OXIDIZED_DESIGN_DIVERGENCES #202).
   pub fn close_element_if_open(&mut self, qname: &str) -> Result<Option<Node>> {
-    let qsym = arena::pin(qname);
-    let mut node = if self.node.get_type() == Some(NodeType::TextNode) {
-      self.node.get_parent()
-    } else {
-      Some(self.node.clone())
-    };
-    let mut open = false;
-    while let Some(n) = node {
-      if n.get_type() != Some(NodeType::ElementNode) {
-        break;
-      }
-      if get_node_qname(&n) == qsym && !(qsym == pin!("ltx:text") && n.has_attribute("_fontswitch"))
-      {
-        open = true;
-        break;
-      }
-      node = n.get_parent();
-    }
-    if open {
+    if self.is_open_on_chain(qname) {
       self.close_element(qname)
     } else {
       Debug!(
@@ -1456,20 +1448,53 @@ impl Document {
     }
   }
 
+  /// Whether a `qname` element is open on the current ancestor chain (a font-switch `ltx:text`
+  /// does not count as an open `ltx:text`).
+  fn is_open_on_chain(&self, qname: &str) -> bool {
+    let qsym = arena::pin(qname);
+    let mut node = if self.node.get_type() == Some(NodeType::TextNode) {
+      self.node.get_parent()
+    } else {
+      Some(self.node.clone())
+    };
+    while let Some(n) = node {
+      if n.get_type() != Some(NodeType::ElementNode) {
+        break;
+      }
+      if get_node_qname(&n) == qsym && !(qsym == pin!("ltx:text") && n.has_attribute("_fontswitch"))
+      {
+        return true;
+      }
+      node = n.get_parent();
+    }
+    false
+  }
+
+  /// Closes a still-open `qname` element whose source groups were ABANDONED (tex.web §1335: the
+  /// groups open at `\end` are reported once, then dropped): every descendant still open closes
+  /// with it — running each one's close-time hooks: the bare-`\bibitem` bibliography's heading
+  /// absorption (repros boxes-groups/abandoned_document_close_runs_bibliography_hooks,
+  /// …_invents_no_bibliography_title), the empty-para prune (jpnedumathsymbols-doc), the `ltx:p`
+  /// whitespace trim (tikz-optics). The descendants that do not auto-close are listed in an Info
+  /// line (biblatex-ms: `itemize`), not a Warning: the abandonment was reported already. A no-op
+  /// when no `qname` element is open.
+  pub fn close_abandoned_element(&mut self, qname: &str) -> Result<Option<Node>> {
+    if self.is_open_on_chain(qname) {
+      self.close_element_impl(qname, CloseDescendants::Abandoned)
+    } else {
+      Ok(None)
+    }
+  }
+
   pub fn close_element(&mut self, qname: &str) -> Result<Option<Node>> {
-    self.close_element_impl(qname, None)
+    self.close_element_impl(qname, CloseDescendants::Strict)
   }
 
-  /// `close_element`, but descendants that do not auto-close are closed with
-  /// a Warning naming `reason` instead of an Error — for a close the source
-  /// itself leaves unbalanced with only a warning in TeX (tex.web §1335: a
-  /// group still open at `\end` is reported and abandoned; the elements it
-  /// left open end with the document).
-  pub fn close_element_lenient(&mut self, qname: &str, reason: &str) -> Result<Option<Node>> {
-    self.close_element_impl(qname, Some(reason))
-  }
-
-  fn close_element_impl(&mut self, qname: &str, lenient: Option<&str>) -> Result<Option<Node>> {
+  fn close_element_impl(
+    &mut self,
+    qname: &str,
+    descendants: CloseDescendants,
+  ) -> Result<Option<Node>> {
     Debug!(
       "document",
       "close_element",
@@ -1530,10 +1555,15 @@ impl Document {
             .collect::<Vec<String>>()
             .join(",")
         );
-        if let Some(reason) = lenient {
-          Warn!("malformed", qname, s!("{message} ({reason})"));
-        } else {
-          Error!("malformed", qname, message);
+        match descendants {
+          CloseDescendants::Strict => Error!("malformed", qname, message),
+          CloseDescendants::Abandoned => {
+            Info!(
+              "malformed",
+              qname,
+              s!("{message} (their groups were abandoned)")
+            )
+          },
         }
       }
       // So, now close up to the desired node.

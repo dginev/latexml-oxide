@@ -2413,7 +2413,10 @@ LoadDefinitions!({
     assign_value("lx_frontmatter_provisional", outer, Some(Scope::Global));
     flushed?;
     assign_value("frontmatter_deferred", true, Some(Scope::Global));
-  });
+  },
+  // An internal hook (`\@startsection@hook`, the end-document hook): nothing of it belongs in a
+  // reverted `tex=` (a math left open to `\end{document}` reverts through it).
+  reversion => "");
 
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
@@ -8859,6 +8862,36 @@ fn float_meta_out_of_math(document: &mut Document, mathnode: &Node) -> Result<()
   Ok(())
 }
 
+/// Whether an `ltx:XMath` of `mathnode` holds real math: Perl TeX_Math.pool.ltxml:197-201
+/// `findnodes('ltx:XMath/ltx:*[local-name() != "XMText" and local-name() != "XMHint" and
+/// not(local-name() = "XMTok" and (@role="PUNCT" or @role="PERIOD") and not(preceding-sibling::*)
+/// and not(following-sibling::*))]')` is non-empty. Evaluated as one walk over the children: the
+/// sibling axes, evaluated per child, made the query quadratic in the XMath's width — a math left
+/// open to `\end{document}` holds the rest of the document (1907.09124: 265 s of building).
+fn has_real_math(mathnode: &Node) -> bool {
+  mathnode
+    .get_child_elements()
+    .iter()
+    .filter(|xmath| document::with_node_qname(xmath, |qname| qname == "ltx:XMath"))
+    .any(|xmath| {
+      let children = xmath.get_child_elements();
+      let alone = children.len() == 1;
+      children.iter().any(|child| {
+        document::with_node_qname(child, |qname| match qname {
+          "ltx:XMText" | "ltx:XMHint" => false,
+          "ltx:XMTok" => {
+            !(alone
+              && matches!(
+                child.get_attribute("role").as_deref(),
+                Some("PUNCT" | "PERIOD")
+              ))
+          },
+          other => other.starts_with("ltx:"),
+        })
+      })
+    })
+}
+
 pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
   float_meta_out_of_math(document, &mathnode)?;
   // Cleanup ltx:Math elements; particularly if they aren't "really" math.
@@ -8866,13 +8899,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
 
   // If the Math ONLY contains XMath/XMText and XMHint, it apparently isn't math at all!?!
   // Single token PUNCTs can also be taken out of math.
-  let xpath = concat!(
-    "ltx:XMath/ltx:*[local-name() != 'XMText' and local-name() != 'XMHint'",
-    " and not(",
-    "local-name() = 'XMTok' and (@role='PUNCT' or @role='PERIOD')",
-    " and not(preceding-sibling::*) and not(following-sibling::*) )]"
-  );
-  if document.findnodes(xpath, Some(&mathnode)).is_empty() {
+  if !has_real_math(&mathnode) {
     // Surpass-Perl schema-validity guard (frege.tex witness; batch 56eg). Perl's
     // cleanup_Math unwraps unconditionally (TeX_Math.pool.ltxml:219) even when
     // the parent is a <MathFork> main branch, splicing a bare <rule>/<inline-block>

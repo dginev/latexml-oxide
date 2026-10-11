@@ -277,8 +277,8 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     (`~/data/pk_agents/main/agent_reports/2026-10-02_biblatex_idref_rootcause.md`).
   - *kernel*: RED `singletons/register_value_absorbs_as_its_text` (`digested.rs:378`; KPE #403); RED
     `macro-state/generic_command_hooks_run`; the loader ignores `\ver@<pkg>.sty` (memoir `\EmulatedPackage{setspace}`
-    loads the setspace binding; see the K13 row); Perl's open-conditional reports at `\end{document}`
-    (latex_constructs.pool.ltxml:357,374-377) and end of input (Core.pm:229-233) are unported (sect02.rs); the raw
+    loads the setspace binding; see the K13 row); Perl's open-conditional report at end of input
+    (Core.pm:229-233) is unported (the `\end{document}` one landed in 65c, sect02.rs); the raw
     babel `.ldf` load stays parked on the `\mdqoff` note (latexml_package lib.rs).
   - *pgfmath/TikZ* (59a-59c): RED `graphics-tikz/{tikzmath_function_draws, pgfmath_width_of_formatted_text}` (both SHARED);
     `random(m,n)` integer, `.5`/`1.` pass through (DIVERGENCES #404); a missing `:` in a chained ternary is silent;
@@ -330,6 +330,18 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   expansion. RED `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`. The same for an AASTeX 7 address recorded as
   `schema:email` metadata (`\email{\url{…}}` → `content="\url{…}"`; RED
   `sectioning-frontmatter/aastex7_email_markup_recorded_as_text`, OXIDIZED_DESIGN_DIVERGENCES #479).
+- **A `{abstract}` left open at `\end{document}` empties the document** (SHARED; 65c review side finding): the deferred
+  abstract body (`\lx@add@frontmatter@until … \lx@end@abstract`) runs to the end, holding the finalize whatsit and the
+  rest of the document, and is never placed — `<document/>` with or without a following `\section` (Perl: resources
+  only, 1 error); pdflatex prints every word with 1 error. RED `sectioning-frontmatter/unclosed_abstract_at_end_document_keeps_the_document`.
+- **`\boldsymbol{… $ and $ …}` leaves the math open** (RUST-ONLY; 2110.01778): amsbsy.sty:28-34 typesets the argument
+  in `\hbox{$…$}`, so the inner `$…$` is text; ours closes the outer math at the inner `$` and the math runs to
+  `\end{document}`. RED `boxes-groups/boldsymbol_text_dollars_inside_math`.
+- **hyperref's `\hyperpage`/`\hyperindexformat` are unbound** (SHARED; 1703.08480): a hyperref `.ind`
+  (`\hyperindexformat{\see{X}}{20}`) leaks a `{` group and leaves `{theindex}` open. RED
+  `index/hyperref_hyperindexformat_see_in_theindex`.
+- **An alignment left open at `\end{document}` drops its last cell's content** (SHARED, low priority; 65c review
+  probes r16 `c & d` → `<td/>`, r21 `c&=d` loses `=d`): invalid input (pdflatex prints nothing); no repro.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
 ### Fidelity audit round 2 (2026-10-08) — findings and their state
@@ -366,6 +378,17 @@ completion, row G). **63a** (landed): the `Fatal:Stomach:Recursion` cluster's fi
 class's own `\list` (KPE #517), etex's register-block allocators (KPE #516), the autoref tag's `~` bound to the kernel
 space where it is digested (1601.02132), and arxbj's IMS markup through a binding shared with arximspdf
 (`ims_support`); guards `perfect_kernel_batch63::*`. Open:
+- **65c** (landed; RUST-ONLY): the content of environments left open at `\end{document}` (and inside a runaway
+  `\abstract{…` ended by a section) is kept: every body digesting inside an abandoned group ends as at end of input
+  with Perl's dummy trailer (stomach.rs `abandon_stack_frame`; Stomach.pm:111,130), where the trailer split used to
+  take each enclosing body's last real box (the inner environment, or the rest of the document). The `ltx:document`
+  close is deferred to the end of the build so every still-open element's close hooks run (`close_abandoned_document`,
+  OD #207); the warning prints Perl's detail lines (initiator + locator) and closes and reports open conditionals; the
+  end-of-document internals revert to nothing in `tex=`; `cleanup_math`'s real-math test is a linear walk
+  (`has_real_math`; 1907.09124 265 s → 5 s). Witnesses powerdotDE (recall 26.3 → 97.8%), csvsimple-legacy (88.9 →
+  99.6%), 1907.09124, 1902.00853. Guards `perfect_kernel_batch65c::*`. The regained content of arXiv papers whose
+  environment or math an upstream defect leaves open now surfaces as `malformed:*` placement errors (1507.01637 and
+  hep-lat9811036 reach `TooManyErrors`; 2110.01778's cause is RED `boxes-groups/boldsymbol_text_dollars_inside_math`).
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

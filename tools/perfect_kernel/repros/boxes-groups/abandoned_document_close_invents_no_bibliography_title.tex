@@ -1,0 +1,20 @@
+% witness: review r1 of 65c (probe r11); the base 64ze already right, 65c r1 invented `<title>References</title>`
+% mechanism: as abandoned_document_close_runs_bibliography_hooks, without a heading: the deferred `ltx:document`
+%   close runs the bibliography's close hooks, which add no title the source does not print (frontmatter ruling
+%   2026-10-10: no invented headings) -- r1 skipped the close and the later default kicked in.
+% oracle:  pdflatex 7 errors (bare `\bibitem`s, the open `{myenv}`): ill-formed on purpose; "S Text. Emph. A ref.
+%          B ref." -- no heading
+% engines: rust 64ze = 0 errors, `<bibliography>` without title; 65c r1 = `inlist="toc"` + `<title>References</title>`;
+%          65c r2 = as 64ze; Perl = 0 errors
+% expect:  0 errors, 1 warning; `ltx:bibliography` with no `ltx:title` and no `inlist`
+% status:  GREEN (65c r2; guard perfect_kernel_batch65c::abandoned_document_close_invents_no_bibliography_title)
+% preload: ar5iv.sty
+\documentclass{article}
+\newenvironment{myenv}{\begingroup\itshape}{\endgroup}
+\begin{document}
+\section{S}Text. \begin{myenv} Emph.
+
+\bibitem{a} A ref.
+
+\bibitem{b} B ref.
+\end{document}

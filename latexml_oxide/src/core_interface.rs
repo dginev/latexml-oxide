@@ -542,6 +542,21 @@ fn build_document_head(preloads: &[String]) -> Result<Document> {
   Ok(document)
 }
 
+/// The `ltx:document` close that `\lx@finalize@document` defers when `\end{document}` abandoned
+/// open groups or environments (sect02.rs; tex.web §1335): its whatsit may have been built inside
+/// the innermost one's body, before the constructors around it closed their elements, so the close
+/// waits until the whole document is absorbed. Every element still open then closes with
+/// `ltx:document` — their close-time hooks run: the bibliography heading absorption (repros
+/// boxes-groups/abandoned_document_close_runs_bibliography_hooks, …_invents_no_bibliography_title),
+/// the empty-para prune (jpnedumathsymbols-doc), the `ltx:p` whitespace trim (tikz-optics), the
+/// late id hook — with an Info line, not a Warning, the abandonment having been reported already.
+fn close_abandoned_document(document: &mut Document) -> Result<()> {
+  if state::lookup_bool("lx@end@document@abandoned") {
+    document.close_abandoned_element("ltx:document")?;
+  }
+  Ok(())
+}
+
 /// Load the source-adjacent `.latexml` rewrite-rules file, if present.
 /// Perl does this during initialization; we do it post-build so the rules can
 /// compile against the built document. Extracted so the streaming path can
@@ -1461,6 +1476,12 @@ impl DigestionAPI for Core {
       }
       drop(fragment);
       let finishing = stopped || (!yielded && !gullet::has_more_input());
+      if finishing
+        && !fatal_stop
+        && let Err(e) = state::with_build_floor(|| close_abandoned_document(document))
+      {
+        e.log_fatal();
+      }
       // Spill policy at the end: a conversion that NEVER yielded fits in RAM
       // whole — spilling it would buy no headroom and cost a full
       // serialize→reparse→reserialize cycle in pass 2 (measured +38% wall
@@ -1974,6 +1995,8 @@ impl DigestionAPI for Core {
           e.target, e.category
         ),
       );
+    } else if let Err(e) = close_abandoned_document(&mut document) {
+      e.log_fatal();
     }
     note_end("Building");
 
