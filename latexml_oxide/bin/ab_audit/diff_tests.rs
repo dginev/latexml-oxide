@@ -620,6 +620,27 @@ fn a_missing_log_reads_fatals_from_stderr_and_137_with_oom_is_oom() {
 }
 
 #[test]
+fn an_unfinished_log_flags_the_fatal_its_captured_output_holds() {
+  // The watchdog's timeout line went to the runner's stdout capture; the log stops before its status.
+  let x = doc("<para><p>x</p></para>");
+  let cut = DocInput {
+    stderr: Some(
+      "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after 240s\n".into(),
+    ),
+    ..input(&x, "(Loading article.cls)\n")
+  };
+  let row = compare("x", &input(&x, OK), &cut);
+  for flag in ["no-status:B", "fatal-in-stderr:B"] {
+    assert!(row.flags.contains(&flag.to_string()), "{flag}: {row:?}");
+  }
+  assert!(
+    row.details.contains("stderr B: Fatal:timeout:wallclock"),
+    "{}",
+    row.details
+  );
+}
+
+#[test]
 fn a_fatal_that_exits_zero_is_a_contract_violation() {
   let x = doc("<para><p>x</p></para>");
   let side = |rc: i32| DocInput {

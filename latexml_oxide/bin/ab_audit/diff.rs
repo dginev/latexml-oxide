@@ -174,7 +174,8 @@ struct Side {
   canon:         Option<Canon>,
   meta:          Option<RunMeta>,
   present:       bool,
-  /// The diagnostics of the captured stderr, read when the log is missing or the run was killed.
+  /// The diagnostics of the captured stderr/stdout, read when the log is missing or unfinished or the run
+  /// was cut short (see `DocInput::stderr`).
   stderr:        Option<LogFacts>,
   /// Its first `Fatal:` lines, for the detail file.
   stderr_fatals: Vec<String>,
@@ -241,7 +242,12 @@ fn side_problems(side: &Side, tag: &str, flags: &mut Vec<String>) {
       }
     },
     Some(log) if log.status_bad => flags.push(format!("status-unparsable:{tag}")),
-    Some(log) if log.status.is_none() => flags.push(format!("no-status:{tag}")),
+    Some(log) if log.status.is_none() => {
+      flags.push(format!("no-status:{tag}"));
+      if side.stderr.as_ref().is_some_and(|e| e.fatals > 0) {
+        flags.push(format!("fatal-in-stderr:{tag}"));
+      }
+    },
     Some(log) => {
       if log.status_mismatch() {
         flags.push(format!("status-diag-mismatch:{tag}"));

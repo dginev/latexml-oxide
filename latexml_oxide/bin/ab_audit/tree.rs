@@ -77,8 +77,11 @@ pub struct DocInput {
   pub xml:     Option<Vec<u8>>,
   pub log:     Option<String>,
   pub meta:    Option<RunMeta>,
-  /// The captured stderr (`stderr.txt`, a sweep's `<name>.log`), read when the conversion log is missing
-  /// or the run was killed (exit 137): its `Fatal:` lines say why.
+  /// The captured output — stderr (`stderr.txt`, a sweep's `<name>.log`) then stdout (`stdout.txt`,
+  /// `<name>.stdout`), every capture present — read when the conversion log is missing, has no
+  /// `Status:conversion:` line, or the run timed out or was killed (exit 124/137): its `Fatal:` lines say
+  /// why. A runner that sends stderr into its stdout capture leaves the watchdog's `Fatal:timeout` only in
+  /// `stdout.txt` (diagnostic-honesty audit, 2026-10-11).
   pub stderr:  Option<String>,
 }
 
@@ -209,17 +212,27 @@ pub fn load(root: &Path, key: &str) -> DocInput {
       .map(|b| String::from_utf8_lossy(&b).into_owned())
   };
   let log = files.log.and_then(read_text);
-  let killed = meta.as_ref().and_then(|m| m.rc) == Some(137);
-  let stderr = if log.is_none() || killed {
+  let cut_short = matches!(meta.as_ref().and_then(|m| m.rc), Some(124 | 137));
+  let unfinished = log
+    .as_deref()
+    .is_none_or(|l| !l.lines().any(|line| line.contains("Status:conversion:")));
+  let stderr = if unfinished || cut_short {
     let name = dir
       .file_name()
       .map(|n| n.to_string_lossy().into_owned())
       .unwrap_or_default();
-    ["stderr.txt".to_string(), format!("{name}.log")]
-      .into_iter()
-      .map(|f| dir.join(f))
-      .find(|p| p.is_file())
-      .and_then(read_text)
+    let captures: Vec<String> = [
+      "stderr.txt".to_string(),
+      format!("{name}.log"),
+      "stdout.txt".to_string(),
+      format!("{name}.stdout"),
+    ]
+    .into_iter()
+    .map(|f| dir.join(f))
+    .filter(|p| p.is_file())
+    .filter_map(read_text)
+    .collect();
+    (!captures.is_empty()).then(|| captures.concat())
   } else {
     None
   };
@@ -345,6 +358,34 @@ mod tests {
       (meta.rc, meta.secs, meta.timed_out),
       (Some(124), Some(180.1), true)
     );
+    fs::remove_dir_all(&root).unwrap();
+  }
+
+  #[test]
+  fn a_fatal_only_in_the_stdout_capture_is_read() {
+    // A runner that sends stderr into stdout.txt: the watchdog's `Fatal:timeout` is there and nowhere else,
+    // and the log stops before its `Status:conversion:` line.
+    let root = std::env::temp_dir().join(format!("ab_audit_stdout_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    let doc = root.join("2101.00001");
+    fs::create_dir_all(&doc).unwrap();
+    fs::write(doc.join("out.log"), "(Loading article.cls)\n").unwrap();
+    fs::write(
+      doc.join("stdout.txt"),
+      "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after 240s\n",
+    )
+    .unwrap();
+    let input = load(&root, "2101.00001");
+    assert!(
+      input
+        .stderr
+        .as_deref()
+        .is_some_and(|e| e.contains("Fatal:timeout:wallclock")),
+      "{input:?}"
+    );
+    // A finished log needs no capture.
+    fs::write(doc.join("out.log"), "Status:conversion:0\n").unwrap();
+    assert!(load(&root, "2101.00001").stderr.is_none());
     fs::remove_dir_all(&root).unwrap();
   }
 
