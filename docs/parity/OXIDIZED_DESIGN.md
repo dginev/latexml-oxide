@@ -105,5 +105,30 @@ flat XMath) → **Serialization**. (The post-processing pipeline lives in
 
 ---
 
+## Locked definitions: a locked binding owns its calls (D1)
+
+Perl LaTeXML locks a binding's definition (`locked => 1`) so a later redefinition
+cannot cost its semantic markup; Perl refuses every redefinition from TeX
+sources (State.pm `installDefinition`). On arXiv, documents also reuse locked
+names as plain macros (`\foreach \i/\text`, `\@for\text:=`, `\def\title{…}` used
+as a value), and the binding then reads the wrong token as its argument: errors,
+a fatal runaway, or corrupt text. Policy **D1** (adopted 2026-10-11) keeps the
+lock for calls only:
+- When the document redefines a locked command whose binding takes a braced
+  argument, the author's definition becomes the TeX meaning.
+- A use followed by `{`, or by the binding's own leading `[`/`*`, still runs the
+  binding, with its semantic markup.
+- Any other use runs the author's definition, as pdflatex does.
+- Class/package code stays refused, and 0-parameter readers (sectioning,
+  `\footnote`, `\url`, `\maketitle`, environments) stay fully locked.
+
+Design note, with Perl's lock history, the arXiv collision census, the four
+candidate designs on 28 minimal repros, and the scoping rulings:
+**[Locked Bindings Own Their Calls](https://claude.ai/artifact/6SJPLQMKmkxLSHmAu7WPxQ)**.
+The numbered divergence entry lands with the implementation in
+[OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md).
+
+---
+
 For the detailed catalogue of divergences, math-grammar rules, type improvements,
 and future work, follow the theme files in the table above.
