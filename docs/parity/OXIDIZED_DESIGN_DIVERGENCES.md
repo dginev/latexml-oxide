@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#553** (#550–552 reserved for 65m) (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#568** (#565–567 reserved for 65s) (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
 
 ---
 
@@ -16676,44 +16676,6 @@ Package.pm:819ff the same) also reads `[` as the key, but runs only under a labe
 helper `labelled_tex.rs` sets. **Guard**: `perfect_kernel_batch65m::cleveref_label_type_after_caption`
 (repros captions-floats/cleveref_label_type_after_{caption,procedure_caption,captionof}).
 
-### 559. A `\multicolumn` paragraph cell lets `\\` to a line break inside its box; its nested alignments keep their own `\\` (Perl: the cell's `\\` ends the outer row)
-
-latex.ltx `\multicolumn` (:16603) splices the column's whole `\@preamble` after `\omit`, so a `\\` (`\@tabularcr`)
-in a `p{}`/`m{}`/`b{}`/`X` cell puts its `\cr` inside the open `\vtop` group: "Missing } inserted" in pdflatex, unless a
-`\centering`/`\raggedright` in the cell has let `\\` to `\@centercr`, which makes it a line break of the cell's
-paragraph (`\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`: A and B stack in the merged cell). Perl's live
-`\lx@alignment@multicolumn` is the second of its two definitions (TeX_Tables.pool.ltxml:704-713):
-`\lx@alignment@altcolumn{<template>}\relax <body>`, whose `replaceColumn` makes the multicolumn's column the cell's
-template, so the column's before and after tokens wrap the body; its `\\` ends the outer row: B becomes a new row
-(KNOWN_PERL_ERRORS #626).
-
-**Rust** (`tex_tables.rs` `\lx@alignment@multicolumn`) ports the first, overridden definition (:693-702), the column's
-before tokens (through `beforeCellUnlist`), the body and the after tokens (through `afterCellUnlist`) spliced after the
-`\omit`s (OXIDIZED_DESIGN_DIVERGENCES #474), with `\let\\\lx@newline\let\tabularnewline\lx@newline` inside the box
-group the before tokens open when the column is a paragraph column (`align=Justify`): after the column type's own
-before tokens, ahead of its `>{…}` tokens (`Cell::prefix_at`, set by `Template::add_column`), so a prefix macro that
-takes arguments takes the `\ignorespaces` and the body, not the `\let`, and an `\arraybackslash` there keeps the same
-recovery (pdflatex: `\arraybackslash` lets `\\` to `\tabularnewline`, i.e. `\@tabularcr`, array.sty:247 and
-latex.ltx:16576, so pdflatex errs as without it, "Missing \endgroup inserted" with array.sty loaded: tex.web do_endv
-meets the cell box's group). The cell's `\\` is a line break, what pdflatex prints with `\centering` and the recovery of its error
-without (that error is not yet a Warning: repro `kernel-alignment/multicolumn_pcol_plain_newline_unwarned`, RED); a
-nested `tabular`/`array`/`tabularx` lets `\\` to its own row end and keeps its rows, and so does a math alignment in the
-cell (`pmatrix`, `cases`, `array`, `aligned` collapsed into one row). This replaces a rewrite of the body's brace-depth-0 `\\`
-tokens to `\lx@newline`, which also rewrote the row ends of a nested `\begin{tabular}…\end{tabular}` (an environment is
-no brace group): its rows collapsed into one cell, a multi-column one overflowed ("Extra alignment tab", then "\noalign
-cannot be used here" at the next `\hline`) and a one-column one lost its rows silently. And it replaces a re-boxing of
-tabularx `X`/tabulary `J`/tabu `X` cells as `\lx@tabular@p t{}{…}`, whose empty width was a "Missing number" Warning and
-`width="0.0pt"`; their `\vtop{` is spliced as Perl splices it, as in their ordinary cells. Witnesses 2607.14806
-(4 → 0 errors), 2010.13561 (29 → 0), 1808.05579 (18 → 0), unchanged 1610.00974 and 1805.01525 (`L{5cm}` =
-`>{\raggedright\arraybackslash}m{5cm}`).
-
-**Guards**: `perfect_kernel_batch65p::{multicolumn_pcol_nested_tabular_keeps_its_rows,
-multicolumn_pcol_nested_one_column_tabular_keeps_its_rows, multicolumn_x_nested_ruled_tabular_keeps_its_rows,
-multicolumn_pcol_text_then_nested_ptabular_keeps_its_rows, multicolumn_pcol_embedded_newline_is_a_line_break,
-multicolumn_pcol_pmatrix_keeps_its_rows, multicolumn_pcol_prefix_with_arguments_reads_the_body}`; repros
-`kernel-alignment/multicolumn_*`. Open: pdflatex's `>{\two}p{3cm}` reads `[|]xy` (array.sty `\insert@pcolumn`'s
-`\relax`), ours `[|x]y` as before 65p (RED repro `kernel-alignment/pcol_prefix_argument_takes_relax`).
-
 ### 553. TeX's math-group recovery for an inline formula outside alignments: a math shift closes the groups opened in it, `\par` or an environment's end ends it, a `}` at its math shift ends it when it closes a construct digested as a unit, else is deleted (Perl: none of the three)
 
 tex.web: a math shift with `cur_group` not the math shift group goes through `off_save` (§1193 `mmode+math_shift`,
@@ -16869,6 +16831,44 @@ environment's end. A raw `\cr` skips `\@@eqncr`, so TeX's `\@eqcnt` is not reset
 **Guards**: `perfect_kernel_batch65o::{eqnarray_number_column, eqnarray_number_column_too_many,
 eqnarray_empty_cell_keeps_later_column}`, `perfect_kernel_batch64ra::eqnarray_extra_tab_keeps_three_columns`; repros
 `alignment/eqnarray_number_column*`, `alignment/eqnarray_empty_cell_keeps_later_column`.
+
+### 559. A `\multicolumn` paragraph cell lets `\\` to a line break inside its box; its nested alignments keep their own `\\` (Perl: the cell's `\\` ends the outer row)
+
+latex.ltx `\multicolumn` (:16603) splices the column's whole `\@preamble` after `\omit`, so a `\\` (`\@tabularcr`)
+in a `p{}`/`m{}`/`b{}`/`X` cell puts its `\cr` inside the open `\vtop` group: "Missing } inserted" in pdflatex, unless a
+`\centering`/`\raggedright` in the cell has let `\\` to `\@centercr`, which makes it a line break of the cell's
+paragraph (`\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`: A and B stack in the merged cell). Perl's live
+`\lx@alignment@multicolumn` is the second of its two definitions (TeX_Tables.pool.ltxml:704-713):
+`\lx@alignment@altcolumn{<template>}\relax <body>`, whose `replaceColumn` makes the multicolumn's column the cell's
+template, so the column's before and after tokens wrap the body; its `\\` ends the outer row: B becomes a new row
+(KNOWN_PERL_ERRORS #626).
+
+**Rust** (`tex_tables.rs` `\lx@alignment@multicolumn`) ports the first, overridden definition (:693-702), the column's
+before tokens (through `beforeCellUnlist`), the body and the after tokens (through `afterCellUnlist`) spliced after the
+`\omit`s (OXIDIZED_DESIGN_DIVERGENCES #474), with `\let\\\lx@newline\let\tabularnewline\lx@newline` inside the box
+group the before tokens open when the column is a paragraph column (`align=Justify`): after the column type's own
+before tokens, ahead of its `>{…}` tokens (`Cell::prefix_at`, set by `Template::add_column`), so a prefix macro that
+takes arguments takes the `\ignorespaces` and the body, not the `\let`, and an `\arraybackslash` there keeps the same
+recovery (pdflatex: `\arraybackslash` lets `\\` to `\tabularnewline`, i.e. `\@tabularcr`, array.sty:247 and
+latex.ltx:16576, so pdflatex errs as without it, "Missing \endgroup inserted" with array.sty loaded: tex.web do_endv
+meets the cell box's group). The cell's `\\` is a line break, what pdflatex prints with `\centering` and the recovery of its error
+without (that error is not yet a Warning: repro `kernel-alignment/multicolumn_pcol_plain_newline_unwarned`, RED); a
+nested `tabular`/`array`/`tabularx` lets `\\` to its own row end and keeps its rows, and so does a math alignment in the
+cell (`pmatrix`, `cases`, `array`, `aligned` collapsed into one row). This replaces a rewrite of the body's brace-depth-0 `\\`
+tokens to `\lx@newline`, which also rewrote the row ends of a nested `\begin{tabular}…\end{tabular}` (an environment is
+no brace group): its rows collapsed into one cell, a multi-column one overflowed ("Extra alignment tab", then "\noalign
+cannot be used here" at the next `\hline`) and a one-column one lost its rows silently. And it replaces a re-boxing of
+tabularx `X`/tabulary `J`/tabu `X` cells as `\lx@tabular@p t{}{…}`, whose empty width was a "Missing number" Warning and
+`width="0.0pt"`; their `\vtop{` is spliced as Perl splices it, as in their ordinary cells. Witnesses 2607.14806
+(4 → 0 errors), 2010.13561 (29 → 0), 1808.05579 (18 → 0), unchanged 1610.00974 and 1805.01525 (`L{5cm}` =
+`>{\raggedright\arraybackslash}m{5cm}`).
+
+**Guards**: `perfect_kernel_batch65p::{multicolumn_pcol_nested_tabular_keeps_its_rows,
+multicolumn_pcol_nested_one_column_tabular_keeps_its_rows, multicolumn_x_nested_ruled_tabular_keeps_its_rows,
+multicolumn_pcol_text_then_nested_ptabular_keeps_its_rows, multicolumn_pcol_embedded_newline_is_a_line_break,
+multicolumn_pcol_pmatrix_keeps_its_rows, multicolumn_pcol_prefix_with_arguments_reads_the_body}`; repros
+`kernel-alignment/multicolumn_*`. Open: pdflatex's `>{\two}p{3cm}` reads `[|]xy` (array.sty `\insert@pcolumn`'s
+`\relax`), ours `[|x]y` as before 65p (RED repro `kernel-alignment/pcol_prefix_argument_takes_relax`).
 
 ### 561. elsarticle's `1p`/`3p`/`5p` load geometry, and the one-column layouts give it their text width (Perl: the load is commented out)
 
