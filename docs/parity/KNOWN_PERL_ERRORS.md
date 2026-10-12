@@ -12535,3 +12535,20 @@ reads `\input{file}` as the file's name in plain TeX too, and TL 2025's pstricks
 pstricks's own `\ExplSyntaxOn` (pst-code-pspicture.tex:76) loading expl3 anyway, gating it alone rescued neither
 math0305287 nor math0111222 (65f measurement).
 
+
+## 612. The longtable binding has no `\LT@array`, so a package `\longtable` in longtable.sty's shape breaks the table
+
+Perl `longtable.sty.ltxml` defines `\longtable[]{}` in one piece. longtable.sty splits it: `\longtable` opens a group
+and calls `\LT@array[#1]#2` (:105-108), which builds the table, and `\endlongtable` closes the group (:278).
+aalongtable.sty (EDP Sciences 2004, shipped with A&A papers; anlongtable.sty the same) redefines `\longtable` as
+`\par\onecolumn\clearpage\begingroup\@ifnextchar[\LT@array{\LT@array[x]}`. Under Perl's binding `\LT@array` is
+undefined, and the table becomes text with a misplaced `\noalign` per `\hline`. Perl reaches this whenever the package
+is read raw (`INCLUDE_STYLES`, ar5iv's raw styles).
+
+Trigger: `\documentclass{article}\usepackage{longtable}\makeatletter\def\longtable{\begingroup\@ifnextchar[\LT@array
+{\LT@array[x]}}\makeatother\begin{document}\begin{longtable}{ll}\caption{Cap}\\\hline a & b \\\end{longtable}
+\end{document}`. Perl (latexmlc, this host): 3 errors (`\LT@array` undefined, `\caption` outside a float, `\noalign`
+cannot be used here). pdflatex: 0.
+
+Fixed in Rust (65h, OD #541; repro class-bindings/aalongtable_lt_array). Witnesses 1102.5033, 0707.2342, 0708.2676,
+0804.2184, 1908.10340.

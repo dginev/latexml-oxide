@@ -1,0 +1,27 @@
+% witness: 2512.09430 (combined.tex `\usepackage{standalone}` + `\input{Manuscript}` whose own preamble loads xcolor;
+%          every later table is broken: 64ze 84 errors, 65b+ 101 + Fatal:TooManyErrors, each table's misplaced
+%          `\toprule` now an Error)
+% oracle:  pdflatex 0 errors (standalone skips the sub-file's preamble: xcolor is not loaded by it; booktabs' rules)
+% engines: rust 64ze = 10 errors, 65f = 12: `\@xcolor@tabular@before`/`\@tabular@row@before@xcolor`/`\@xcolor@row@after`
+%          undefined (xcolor's tabular hooks installed without their definitions), then the tabular is no alignment
+% expect:  0 errors; one tabular, row a|b with booktabs rules
+% status:  RED (65h): not the 65h mechanism (SYNC row)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{standalone_xcolor_sub.tex}
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+Sub text.
+\end{document}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{standalone}
+\usepackage{booktabs}
+\begin{document}
+\input{standalone_xcolor_sub}
+\begin{tabular}{ll}
+\toprule
+a & b \\
+\bottomrule
+\end{tabular}
+\end{document}

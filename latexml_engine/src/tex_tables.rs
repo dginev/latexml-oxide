@@ -78,8 +78,21 @@ LoadDefinitions!({
 
   // & gives an error except within the right context
   // (which should redefine it!)
-  DefConstructor!("&", {
-    Error!("unexpected", "&", "Stray alignment \"&\"");
+  // In the cascade of a misplaced `\noalign`/`\omit`/`\span` it is a Warning: Perl lets `&` to `\relax` there
+  // (TeX_Tables.pool:120-135), see `report_misplaced_alignment` (astro-ph0407419, a pasj00 table read outside any
+  // alignment). Decided where it is digested, reported where it is constructed (Perl's construction-time error).
+  DefConstructor!("&", sub[_document, _args, props] {
+    if props.get("misplaced_cascade").is_some() {
+      Warn!("unexpected", "&", "Stray alignment \"&\" (in the cascade of a misplaced alignment command above)");
+    } else {
+      Error!("unexpected", "&", "Stray alignment \"&\"");
+    }
+  },
+  after_digest => sub[whatsit] {
+    if lookup_bool(MISPLACED_ALIGNMENT) {
+      whatsit.set_property("misplaced_cascade", Stored::Bool(true));
+    }
+    Ok(Vec::new())
   });
 
   Tag!("ltx:td", after_close => sub[doc, node] { doc.trim_node_whitespace(node)?; });
@@ -252,7 +265,7 @@ LoadDefinitions!({
   // stray_hline_in_a_paragraph_is_one_error, misplaced_commands_are_each_reported,
   // misplaced_hline_in_a_cell_draws_no_rule, misplaced_noalign_in_math_keeps_its_braces}`.
   DefPrimitive!("\\noalign", {
-    Error!("unexpected", "\\noalign", "\\noalign cannot be used here");
+    report_misplaced_alignment("\\noalign")?;
     // Spaces before the group are typeset as they come. §1129 reads nothing more: the brace is opened on the next
     // `main_control` pass (§1063 `non_math(left_brace)`: `new_save_level(simple_group)`; §1150 `mmode+left_brace`),
     // for a left brace by meaning (`cur_cmd=left_brace`, so `\bgroup` too); it gets the mark as its group's first token.
@@ -285,10 +298,10 @@ LoadDefinitions!({
   // / `omit_column`). Guard:
   // `perfect_kernel_batch54::misplaced_omit_does_not_open_a_group`.
   DefPrimitive!("\\omit", {
-    Error!("unexpected", "\\omit", "\\omit cannot be used here");
+    report_misplaced_alignment("\\omit")?;
   });
   DefPrimitive!("\\span", {
-    Error!("unexpected", "\\span", "\\span cannot be used here");
+    report_misplaced_alignment("\\span")?;
   });
   // The frozen `\span` of the alignment machinery (user ruling 2026-10-11): `\multicolumn`
   // (`\lx@alignment@multicolumn`), `\multispan` and latex.ltx's `\sp@n` span their columns with this copy of the
@@ -903,6 +916,8 @@ pub fn alignment_bindings(
   };
   // A new alignment's own `\hline`s rule its rows, even inside a misplaced `\noalign`'s body.
   assign_value("lx@noalign@misplaced", Stored::Bool(false), None);
+  // ... and its own misplaced commands start no cascade of an outer one ([`report_misplaced_alignment`]).
+  assign_value(MISPLACED_ALIGNMENT, Stored::Bool(false), None);
   let is_math = mode.ends_with("math");
   let (container, rowtype, coltype) = if is_math {
     ("ltx:XMArray", "ltx:XMRow", "ltx:XMCell")
@@ -1029,6 +1044,10 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
       break;
     } else if vtype.as_deref() == Some("align") {
       alignment_cell.borrow_mut().end_column()?;
+      // A longtable caption's row with an `&` after the caption holds more than the caption: kept (see below).
+      if lookup_bool("LONGTABLE_CAPTION_ROW") {
+        remove_value("LONGTABLE_CAPTION_ROW");
+      }
       if !hidden {
         reversion.push(next.unwrap()); // and record the &
         creversion.push(next.unwrap()); // and record the &
@@ -1042,8 +1061,13 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
       // so discard the just-committed (now box-balanced) row. Ending via the
       // normal cr path closes the column boxes cleanly first (avoiding the
       // locked-frame FATAL of removing it mid-cell). Witness 2010.09763.
+      // A longtable `\caption`'s row, the caption's alone, goes the same way: its text is the table's `<caption>`
+      // (OXIDIZED_DESIGN_DIVERGENCES #103, longtable_sty.rs `\lx@longtable@caption@row`).
       if lookup_bool("LONGTABLE_KILL_NEXT") {
         remove_value("LONGTABLE_KILL_NEXT");
+        alignment_cell.borrow_mut().remove_row();
+      } else if lookup_bool("LONGTABLE_CAPTION_ROW") {
+        remove_value("LONGTABLE_CAPTION_ROW");
         alignment_cell.borrow_mut().remove_row();
       }
       if !hidden {
@@ -1816,6 +1840,41 @@ fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
 /// (2306.10087). Guard: `perfect_kernel_batch65::misplaced_hline_in_a_cell_draws_no_rule`.
 pub fn alignment_to_rule() -> Option<Digested> {
   lookup_alignment().filter(|_| !lookup_bool("lx@noalign@misplaced"))
+}
+
+/// The group-local flag of [`report_misplaced_alignment`]: a misplaced alignment command was reported in this group.
+const MISPLACED_ALIGNMENT: &str = "lx@misplaced@alignment";
+
+/// Report a misplaced `\noalign`, `\omit` or `\span` (tex.web §1127-1129 `align_error`/`no_align_error`/`omit_error`;
+/// none changes a meaning, as in TeX). The first in a group is an Error; the later ones in that group, and its stray
+/// `&`s, are its cascade and Warnings: Perl's recovery reports the first and `\let`s `&`/`\noalign`/`\omit`/`\span` to
+/// `\relax` in a group around the rest (TeX_Tables.pool:120-135), so they are silent there; TeX reports each, but its
+/// 100-error stop counts one paragraph (tex.web §76, reset by §1096 `end_graf`) and every `\hline`'s `\hrule` ends one,
+/// where a document-wide count of 100 (Perl's, `Fatal:TooManyErrors`) made a table read outside any alignment fatal:
+/// 107 of run 340's 287 Error→Fatal papers (astro-ph0407419 pasj00 without its class, 1405.2337, 1411.6016; 64ze, with
+/// Perl's `\let`s, gave 13 errors on astro-ph0407419; 65b, each an Error, 101 + Fatal). A new alignment clears the
+/// flag in its own group ([`alignment_bindings`]); at top level the group is the document body, the flag cleared at
+/// `\begin{document}` ([`end_misplaced_alignment_cascade`]). Guards
+/// `perfect_kernel_batch65h::{misplaced_alignment_cascade_is_one_error,
+/// misplaced_alignment_cascade_ends_with_its_group}`, `perfect_kernel_batch65::misplaced_commands_are_each_reported`.
+fn report_misplaced_alignment(cs: &str) -> Result<()> {
+  if lookup_bool(MISPLACED_ALIGNMENT) {
+    Warn!(
+      "unexpected",
+      cs,
+      format!("{cs} cannot be used here (in the cascade of a misplaced alignment command above)")
+    );
+  } else {
+    Error!("unexpected", cs, format!("{cs} cannot be used here"));
+    assign_value(MISPLACED_ALIGNMENT, Stored::Bool(true), None);
+  }
+  Ok(())
+}
+
+/// End the cascade of a misplaced alignment command (`report_misplaced_alignment`) at `\begin{document}`: one in the
+/// preamble, where no group closes before the body, does not make the body's first one a Warning.
+pub fn end_misplaced_alignment_cascade() {
+  assign_value(MISPLACED_ALIGNMENT, Stored::Bool(false), None);
 }
 
 /// Report, once per document, that the frozen `\span` stands in for a redefined one: the document's `\span` no longer

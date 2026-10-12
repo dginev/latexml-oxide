@@ -4178,10 +4178,14 @@ machinery already discards it (`tests/alignment/longtable.{tex,xml}` shows the
 clean head-grabbed case, unchanged by this fix).
 
 **Divergence** (surpass-Perl): because the whole row was only ever the caption,
-drop it entire. `\lx@longtable@caption@` sets the existing `LONGTABLE_KILL_NEXT`
-row-discard flag (the very flag `\lx@longtable@kill@flag` uses for `\kill`); the
+drop it entire. `\lx@longtable@caption` ends with `\lx@longtable@caption@row`, which
+sets `LONGTABLE_CAPTION_ROW` (beside `\kill`'s `LONGTABLE_KILL_NEXT`); the
 caption's terminating `\\` (vtype `cr`) consumes it in `tex_tables.rs` and pops
-the just-ended empty row via `remove_row`. Uniform across caption position
+the just-ended empty row via `remove_row`. An `&` after the caption in its row clears
+the flag and the row is kept (65h): the caption spans every column, so the row holds
+more than the caption — a `\caption{…}\label{…}` with no `\\` before `\hline` and the
+head row, which pdflatex typesets with "Extra alignment tab" (guard
+`perfect_kernel_batch65h::longtable_caption_row_without_its_cr_keeps_the_next_row`). Uniform across caption position
 (start/middle/end) and body-vs-grabbed-head; the caption text is still hoisted
 (and, in a grabbed head/foot, still moves `LONGTABLE_CAPTIONS→…_HEAD_CAPTIONS`
 before the grab). `longtable_bindings` resets the flag per table so a malformed
@@ -15772,7 +15776,9 @@ that expands to one (`\def\mybody{{\@@alignment@hline}}` … `\noalign\mybody` s
 Perl (TeX_Tables.pool:120-127) opens a `bgroup` it never closes, with `\let`s of `&`/`\noalign`/`\omit`/`\span` to
 `\relax` inside, which silences every later misplaced `\noalign`/`\omit`/`\span` until the group ends (KPE #191).
 Each is reported here, as TeX reports each. TeX-faithful per-site counting was decided by the main session
-(2026-10-11). On the reviewer's 24 `\noalign` papers, errors go 164 → 430 against 65c, with no XML loss.
+(2026-10-11). On the reviewer's 24 `\noalign` papers, errors go 164 → 430 against 65c, with no XML loss. 65h: the
+first in a group is the Error and the rest of that group Warnings (OD #540; run 340's tables read outside an alignment
+went `Fatal:TooManyErrors`).
 
 Dead ends:
 - consuming the body unread to balance a `bgroup` (REG-1 / math0403005) dropped its text;
@@ -16217,3 +16223,79 @@ A cooperative deadline set a grace before the watchdog's would settle the race (
 **Guards**: `perfect_kernel_batch65f::repeated_file_text_is_no_expansion_loop` (also: a two-token expansion loop and a
 `\scantokens` self-recursion past the floor still trip), `perfect_kernel_batch65f::self_input_stops_at_the_text_input_level_limit`.
 
+
+### 540. Misplaced alignment commands: the first in a group is an Error, the rest of that group its cascade, Warnings (TeX: an error each; Perl: silenced by `\let`s to `\relax`)
+
+A misplaced `\noalign`, `\omit` or `\span` (tex.web §1127-1129 `align_error`, `no_align_error`, `omit_error`) changes
+no meaning (OD #525). Since 65b each one was an Error, as TeX reports each. TeX stops at 100 errors only within one
+paragraph (§76, `error_count` reset by §1096 `end_graf`), and every `\hline`'s `\hrule` ends one. Perl's limit (and
+ours, `Fatal:TooManyErrors`) counts the whole document. So a table read outside any alignment went Fatal: `{longtable}`
+undefined, or a package `\longtable` calling a missing `\LT@array`. That was 107 of run 340's 287 Error→Fatal papers
+(astro-ph0407419: 64ze 13 errors, 65b 101 + Fatal).
+
+Perl (TeX_Tables.pool:120-135) reports the first one, then `\let`s `&`/`\noalign`/`\omit`/`\span` to `\relax` in a
+group around the rest, so it never reports them (KPE #191). Perl's Stomach.pm:187-189 does the same to a stray `&`
+"to prevent error flood".
+
+**Rust** (65h, `tex_tables::report_misplaced_alignment`): the first misplaced command in a group is the Error and sets
+a group-local flag (`lx@misplaced@alignment`). While the flag is set, each later misplaced `\noalign`/`\omit`/`\span`,
+and the first stray `&` (the later ones are Perl's `\relax` already), is a Warning naming the cascade. No meaning
+changes, so the content is what 65b gives. The cascade ends with the group (braced, `\begingroup…\endgroup`, or an
+environment), and a new alignment clears the flag in its own group (`alignment_bindings`), so a later table's misplaced
+command is an Error again. At top level the group is the document body: `\begin{document}` clears the flag
+(`tex_tables::end_misplaced_alignment_cascade`), so a misplaced command in the preamble does not make the body's
+Warnings (65h r1: a preamble `\noalign{}` left the whole body at 1 error + 8 warnings where pdflatex has 9 errors).
+
+Measured on the 107: 64ze 2147 errors, 65h 350, every paper Fatal-free and none with more errors than 64ze. Warnings
+rose from 667 to 1670. The remaining `\noalign` Errors are one per group, e.g. astro-ph0701701's
+`\caption{…}\hline\hline` without `\\` in each of 14 longtables, which TeX rejects too.
+
+Superseded: 65b's "each is an Error". OD #525 records that per-site counting as a main-session decision (2026-10-11),
+so this is an open question for the main session.
+
+**Guards**: `perfect_kernel_batch65h::{misplaced_alignment_cascade_is_one_error,
+misplaced_alignment_cascade_ends_with_its_group}` (the latter: braced groups, `\begingroup`, `{center}`, the preamble;
+6 errors + 3 warnings, pdflatex 9 errors), `perfect_kernel_batch65::misplaced_commands_are_each_reported`
+(4 → 1 error + 3 warnings).
+
+### 541. `\longtable` opens a group and calls `\LT@array`, as longtable.sty does; pasj00 without its class keeps `{longtable}` (Perl: `\longtable[]{}`, no `\LT@array`; no PASJ binding)
+
+Perl's binding is one macro, `\longtable[]{}`, with no `\LT@array`. A package that redefines `\longtable` in
+longtable.sty's shape, `\begingroup\@ifnextchar[\LT@array{\LT@array[x]}` (longtable.sty:105-106), calls an
+undefined `\LT@array` (KPE #612). Such packages include aalongtable.sty (EDP Sciences 2004, shipped by A&A papers)
+and anlongtable.sty. Each of their tables is then text, with a misplaced `\noalign` per `\hline`. That covered 81 of
+run 340's 107 longtable Error→Fatal papers: 0707.2342, 0708.2676, 0804.2184, 1102.5033, 1908.10340.
+
+**Rust** (65h, `longtable_sty.rs`): `\longtable` = `\begingroup\LT@array`. `\LT@array[]{}` carries Perl's body:
+the bindings, `\@@longtable`, `\lx@begin@alignment`. `\endlongtable` adds the `\endgroup` (longtable.sty:278). The same
+applies to `{longtable*}`.
+
+A wrapper that `\let`s and calls the original `\LT@array` now wraps ours. Examples are KOMA's (scrartcl.cls:6347-6360)
+and caption's ltcaption.sty:60-73, which set captions and the counter, then call it. Before 65h, `\renewcommand\LT@array`
+met an undefined command. floatrow likewise loads fr-longtable.sty when `\LT@array` is defined (floatrow.sty:1468-1469;
+fr-longtable.sty:27-43 wraps it): 2210.03190 gains the `fr-longtable` package line, its XML otherwise identical.
+
+One paper gains an error: 0906.4336 (emulateapj `deluxetable` markup inside `{longtable}`) goes 5 → 6 errors with a
+"`\endgroup` Attempt to close non-boxing group" from the new group; its XML is identical, the table was broken already.
+
+pasj00/pasj01/pasj02 (`pasj00_cls::pasj_unshipped_longtable`): a paper without the shipped class falls to OmniBus,
+which has no `{longtable}`. The class defines its own (pasj00.cls:884-916, pasj01.cls:967-1000, pasj02.cls:956-989),
+with longtable.sty's `\endfirsthead`/`\endhead`/`\endfoot`/`\endlastfoot` (pasj00.cls:1241-1244), so the binding
+builds it with the longtable binding's table. Its `\caption` and `\label` are the class's, not longtable.sty's: the
+class's `\@lt@init` lets them to `\@lt@setcaption`/`\@lt@label` (pasj00.cls:1068-1070, pasj01.cls:1152-1154,
+pasj02.cls:1141-1143), each a `\noalign` that gobbles a following `\\` if there is one (`\@lt@remove@cr`,
+pasj00.cls:1245-1270). So a caption is no row, and PASJ papers write `\caption{…}\label{…}`, then `\hline` and the
+head row; all 51 in-table captions of the eight witnesses do. The binding's `\longtable` lets the longtable binding's
+`\lx@longtable@caption`/`\lx@longtable@label` to `\noalign`s of the caption's text and the label
+(`\lx@longtable@caption@text`), reading past a `\\` as the class does. 65h r1 used longtable.sty's caption, a row
+ended by `\\`, so the head row after each caption was the caption's row and was dropped (OD #103): astro-ph0701701's
+"Trigger" appeared 28 times at 64ze, 0 at r1, 21 in pdflatex with the class. The optional argument
+(`\@lt@captionnumber`, a number in place of the counter's) is read as the kernel `\caption`'s short caption, as the
+binding reads every PASJ `\caption`; no witness uses it in a table. Witnesses astro-ph0407419, 0704.1713, 0705.1365,
+1108.4491, astro-ph0511689, astro-ph0605217, astro-ph0612753, astro-ph0701701.
+
+Open for the PASJ fallback (not attempted): the class's `\SetRunningHead`, `\FigureFile`, `\draft`, `\timeform` and
+amssymb's `\lesssim`/`\gtrsim` (pasj00.cls:3446).
+
+**Guards**: `perfect_kernel_batch65h::{package_longtable_calls_lt_array, pasj00_without_its_class_keeps_longtable,
+longtable_caption_row_without_its_cr_keeps_the_next_row}` (the last for OD #103's row drop).

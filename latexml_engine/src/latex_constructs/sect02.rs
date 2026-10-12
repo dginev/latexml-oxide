@@ -87,6 +87,8 @@ pub(crate) fn load() -> Result<()> {
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"));
     whatsit.set_property("id", expanded_id);
     Let!("\\@nodocument", "\\relax", Scope::Global);
+    // A misplaced alignment command in the preamble starts no cascade in the body (OXIDIZED_DESIGN_DIVERGENCES #540).
+    crate::tex_tables::end_misplaced_alignment_cascade();
     // Clear \everypar at document start (Perl `AssignRegister('\everypar', Tokens(), 'global')`,
     // latex_constructs.pool L319) through its current meaning, as latex.ltx:9498 `\everypar{}`
     // does. A package that re-pointed `\everypar` in the preamble at a register chained from the

@@ -7,15 +7,21 @@ LoadDefinitions!({
   // to generate empty rows.
 
   // Environment \begin{longtable}[align]{pattern} ... \end{longtable}
-  DefMacro!("\\longtable[]{}",
+  // Perl `\longtable[]{}` → the table, split as longtable.sty splits it: `\longtable` opens a group and calls
+  // `\LT@array[#1]#2` (longtable.sty:105-108), which builds the table, and `\endlongtable` closes that group
+  // (:278). A package that redefines `\longtable` and calls `\LT@array` keeps the table: aalongtable.sty (EDP
+  // Sciences 2004, shipped with A&A papers; anlongtable.sty the same) is `\def\longtable{\par\onecolumn\clearpage
+  // \begingroup\@ifnextchar[\LT@array{\LT@array[x]}}` (81 of run 340's 107 longtable Error→Fatal papers: 0707.2342,
+  // 0708.2676, 0804.2184, 1102.5033, 1908.10340). Guard `perfect_kernel_batch65h::package_longtable_calls_lt_array`.
+  DefMacro!("\\longtable", r"\begingroup\LT@array");
+  DefMacro!("\\LT@array[]{}",
     r"\lx@longtable@bindings{#2}\@@longtable[#1]{#2}\lx@begin@alignment");
   DefMacro!("\\endlongtable",
-    r"\lx@end@alignment\@end@tabular");
+    r"\lx@end@alignment\@end@tabular\endgroup");
   // {longtable*} is defined in revtex4-1 to be able to span a two column document
-  DefMacro!("\\csname longtable*\\endcsname []{}",
-    r"\lx@longtable@bindings{#2}\@@longtable[#1]{#2}\lx@begin@alignment");
+  DefMacro!("\\csname longtable*\\endcsname", r"\begingroup\LT@array");
   DefMacro!("\\csname endlongtable*\\endcsname",
-    r"\lx@end@alignment\@end@tabular");
+    r"\lx@end@alignment\@end@tabular\endgroup");
   // acro.sty's `patch/longtable` (default true) `\patchcmd`s longtable.sty's `\endlongtable` at
   // begindocument/before to switch acronyms off in repeated table heads, which a table here never
   // has; this `\endlongtable` is not longtable.sty's, so the patch failed with "Patching `longtable'
@@ -164,7 +170,35 @@ LoadDefinitions!({
     "\\lx@longtable@captionsetup OptionalMatch:* {}",
     "\\noalign{\\lx@longtable@saved@captionsetup{#2}}"
   );
+  // BEYOND-PERL (issue #534, OXIDIZED_DESIGN divergence): drop the now-empty
+  // caption row. In real longtable.sty the caption is ONE full-width row —
+  // `\LT@makecaption` emits `\LT@mcol\LT@cols c{..}` (longtable.sty:476), and
+  // `\LT@mcol` is `\multicolumn` (longtable.sty:127) — i.e. a single
+  // \multicolumn{ncols}{c}{caption} cell spanning every column, terminated by
+  // the user's `\\`. LaTeXML hoists that text into <ltx:caption> above, so the
+  // spanning row is left holding nothing; because LaTeXML models it with the
+  // plain column template (not a \multicolumn), it degrades to a row of empty
+  // per-column cells rather than vanishing. Perl keeps that stray empty
+  // <ltx:tr> (byte-for-byte parity confirmed on 0.8.8); pdflatex shows the
+  // caption as spanning text with no blank body row. Since the whole row was
+  // only ever the caption, drop it entire: `\lx@longtable@caption@row` sets
+  // LONGTABLE_CAPTION_ROW and the caption's terminating `\\` (vtype "cr") consumes it at
+  // tex_tables.rs and pops the just-ended row, as `\kill`'s LONGTABLE_KILL_NEXT does. Uniform
+  // across positions (start/middle/end) and whether the caption sits in the body (no
+  // `\endhead`) or a grabbed head/foot — there the row is dropped before `\lx@longtable@grab`,
+  // the text still moves CAPTIONS→HEAD_CAPTIONS. A row with an `&` after the caption is not
+  // the caption's alone and is kept: the caption spans every column (`\LT@mcol\LT@cols`), so
+  // pdflatex reports "Extra alignment tab" and still typesets what follows, the cells of a
+  // `\caption{…}\label{…}` with no `\\` before the head row (65h). The reset in
+  // longtable_bindings guards the malformed caption-without-`\\` case from leaking the flag
+  // into the next table's first row. Guards `53_alignment::longtable_caption_test`,
+  // `perfect_kernel_batch65h::longtable_caption_row_without_its_cr_keeps_the_next_row`.
+  // The caption's text, `\lx@longtable@caption@text{<short>}{<caption>}`, is apart from the row the caption ends
+  // (`\lx@longtable@caption@row`): a class whose own longtable makes its caption a `\noalign` takes the text without
+  // the row (pasj00.cls `\@lt@setcaption`, latexml_contrib `pasj00_cls::pasj_class`).
   DefMacro!("\\lx@longtable@caption[]{}",
+    r"\lx@longtable@caption@text{#1}{#2}\lx@longtable@caption@row");
+  DefMacro!("\\lx@longtable@caption@text{}{}",
     r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\if\relax\detokenize{#1}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#2}{#1}}}{\lx@format@title@@{table}{#2}}");
   DefPrimitive!("\\lx@longtable@caption@{}{}", sub[(toccap, cap)] {
     // caption's `\LT@makecaption` (caption.sty:1167, :1171): `\caption@LT@settype` — the table
@@ -178,26 +212,10 @@ LoadDefinitions!({
     let cap_digested = digest_text(cap)?;
     let captions = Stored::VecDigested(vec![toccap_digested, cap_digested]);
     assign_value("LONGTABLE_CAPTIONS", captions, Some(Scope::Global));
-    // BEYOND-PERL (issue #534, OXIDIZED_DESIGN divergence): drop the now-empty
-    // caption row. In real longtable.sty the caption is ONE full-width row —
-    // `\LT@makecaption` emits `\LT@mcol\LT@cols c{..}` (longtable.sty:476), and
-    // `\LT@mcol` is `\multicolumn` (longtable.sty:127) — i.e. a single
-    // \multicolumn{ncols}{c}{caption} cell spanning every column, terminated by
-    // the user's `\\`. LaTeXML hoists that text into <ltx:caption> above, so the
-    // spanning row is left holding nothing; because LaTeXML models it with the
-    // plain column template (not a \multicolumn), it degrades to a row of empty
-    // per-column cells rather than vanishing. Perl keeps that stray empty
-    // <ltx:tr> (byte-for-byte parity confirmed on 0.8.8); pdflatex shows the
-    // caption as spanning text with no blank body row. Since the whole row was
-    // only ever the caption, drop it entire by reusing the `\kill` discard flag:
-    // the caption's terminating `\\` (vtype "cr") consumes LONGTABLE_KILL_NEXT at
-    // tex_tables.rs and pops the just-ended row, exactly as `\lx@longtable@kill@flag`
-    // does. Uniform across positions (start/middle/end) and whether the caption
-    // sits in the body (no `\endhead`) or a grabbed head/foot — there the row is
-    // dropped before `\lx@longtable@grab`, the text still moves CAPTIONS→HEAD_CAPTIONS.
-    // The reset in longtable_bindings guards the malformed caption-without-`\\`
-    // case from leaking the flag into the next table's first row.
-    assign_value("LONGTABLE_KILL_NEXT", true, Some(Scope::Global));
+    Ok(())
+  });
+  DefPrimitive!("\\lx@longtable@caption@row", sub[_args] {
+    assign_value("LONGTABLE_CAPTION_ROW", true, Some(Scope::Global));
     Ok(())
   });
   DefPrimitive!("\\lx@longtable@label Semiverbatim", sub[(label)] {
@@ -273,6 +291,7 @@ fn longtable_bindings(template: Template) -> Result<()> {
   // `\caption` with no terminator would otherwise carry it into this table's
   // first row. Fresh table ⇒ fresh flag.
   assign_value("LONGTABLE_KILL_NEXT", false, Some(Scope::Global));
+  assign_value("LONGTABLE_CAPTION_ROW", false, Some(Scope::Global));
   assign_value("LONGTABLE_HEAD_CAPTIONS", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_FOOT_CAPTIONS", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_HEAD", Stored::None, Some(Scope::Global));

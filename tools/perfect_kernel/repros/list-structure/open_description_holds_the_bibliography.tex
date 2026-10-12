@@ -1,0 +1,26 @@
+% witness: 1611.05714 (revtex4-1: `\description` used as a command inside nested `itemize`s in a `widetext`; 64ze
+%          1 error and no bibliography, 65c+ 99 `malformed:ltx:bibitem` + Fatal:TooManyErrors), 1507.01637, 2412.20775,
+%          1806.06901, 1101.1959 (malformed bibitem), 2007.11971 (theorem/equation), 1210.0368, 1003.1368, physics0505113,
+%          gr-qc9302019, nucl-th0401019, 2304.12226, astro-ph0411393, 1204.0071, math9805003, astro-ph0303604,
+%          1305.0086, 1211.3050, 2210.11107, cs0009011 (`Fatal:Document:Generic("add_child`)
+% oracle:  pdflatex 2 errors (`Something's wrong--perhaps a missing \item`), the bibliography typeset after the lists
+% engines: rust 64ze = 2 errors; 65c, 65f = 2 errors, `malformed:ltx:section`/`malformed:ltx:bibliography` (65c keeps
+%          the content of environments still open at `\end{document}`, which then hold the bibliography)
+% expect:  the bibliography a sibling of the lists (no malformed placement); 3 bibitems
+% status:  RED (65h): the 65c regression cluster of run 340 (SYNC row)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Intro.
+\begin{itemize}
+\item x
+\begin{itemize}
+\description Returns a value.
+\end{itemize}
+\end{itemize}
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Title.
+\bibitem{b} B. Author, Title.
+\bibitem{c} C. Author, Title.
+\end{thebibliography}
+\end{document}

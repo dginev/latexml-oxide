@@ -1,0 +1,26 @@
+% witness: astro-ph0407419 (pasj00 without its shipped class: {longtable} undefined, 101 errors + Fatal); 1405.2337,
+%          1411.6016 (longtable's `\endhead` rows in an emulateapj `deluxetable`); 287 run-340 Error->Fatal papers, 107 of them this shape
+% oracle:  pdflatex 178 errors, completes: `Environment longtable undefined`, 26 `Misplaced \noalign`, 50 `Misplaced
+%          \omit`, 25 `Misplaced \span`, 25 `Misplaced alignment tab character &`, 50 undefined, 1 `\begin{document}
+%          ended by \end{longtable}` (tex.web §76: 100 errors end a run only within one paragraph, and each `\hline`'s
+%          `\hrule` ends one); "AB" spans in the tabular after it
+% engines: rust 64ze = 2 errors (the misplaced `\noalign`'s `\let`s of `&`/`\noalign`/`\omit`/`\span` to `\relax`,
+%          Perl TeX_Tables.pool:120-135); 65b/65f = 101 errors + Fatal:TooManyErrors (each one an Error)
+% expect:  2 errors (`{longtable}`, the first `\noalign`), the later misplaced commands Warnings, no Fatal; "AB" spans
+% status:  RED (65f) -> GREEN (65h); guard perfect_kernel_batch65h::misplaced_alignment_cascade_is_one_error
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\R{\multicolumn{2}{c}{h} & c \\ \hline}
+\newcommand\T{\R\R\R\R\R}
+\begin{document}
+\begin{longtable}{lll}
+\hline
+\T\T\T\T\T
+\end{longtable}
+After.
+
+\begin{tabular}{|l|c|r|}
+\multicolumn{2}{|c|}{AB} & C \\
+d & e & f \\
+\end{tabular}
+\end{document}

@@ -1,0 +1,43 @@
+% witness: astro-ph0407419, 0704.1713, 0705.1365, 1108.4491, astro-ph0511689, astro-ph0605217, astro-ph0612753,
+%          astro-ph0701701 (pasj00 papers whose source lacks pasj00.cls: {longtable} undefined, then a misplaced-alignment
+%          cascade; every in-table `\caption{…}\label{…}` of the 51 is followed by `\hline` and the head row, no `\\`)
+% oracle:  pasj00.cls:884-916 (pasj01.cls:967-, pasj02.cls:956-) defines {longtable}/{longtable*} itself, with
+%          longtable.sty's `\endfirsthead`/`\endhead`/`\endfoot`/`\endlastfoot` (pasj00.cls:1241-1244); its `\@lt@init`
+%          lets `\caption`/`\label` to `\@lt@setcaption`/`\@lt@label` (:1068-1070), each a `\noalign` that gobbles a
+%          following `\\` if there is one (`\@lt@remove@cr`, :1245-1270), so a caption is no row. The class is not in
+%          TeX Live: pdflatex with the class shipped beside (astro-ph0701701's copy) gives 0 errors and prints
+%          "Table 1. Detections / Name Flux / a 1 / b 2", "Table 2. Limits / Name Limit / c 3", and "Table 1." for the \ref;
+%          without it pdflatex stops at `File pasj00.cls not found` (harness limit, not invalid source)
+% engines: rust 64ze = 8 errors (`{longtable}` undefined), 65f = 15, 65h r1 = 1 error and Table 1's head row
+%          "Name Flux" lost (the caption taken for a row that ends at the next `\\`, then dropped)
+% expect:  0 errors, 0 warnings; Table 1 "Detections" labelled t:det with head row Name|Flux, rows a|1 and b|2;
+%          Table 2 "Limits" (caption ended by `\\`) with head row Name|Limit and row c|3
+% status:  RED (65h r1) -> GREEN (65h r2); guard perfect_kernel_batch65h::pasj00_without_its_class_keeps_longtable
+% preload: ar5iv.sty
+\documentclass{pasj00}
+\begin{document}
+\begin{longtable}{lr}
+\caption{Detections}\label{t:det}
+\hline
+Name & Flux \\
+\hline
+\endfirsthead
+\hline
+Name & Flux \\
+\hline
+\endhead
+\hline
+\endfoot
+a & 1 \\
+b & 2 \\
+\end{longtable}
+Table~\ref{t:det}.
+\begin{longtable}{lr}
+\caption{Limits}\\
+\hline
+Name & Limit \\
+\hline
+\endhead
+c & 3 \\
+\end{longtable}
+\end{document}

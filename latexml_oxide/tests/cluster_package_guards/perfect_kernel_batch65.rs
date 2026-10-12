@@ -273,16 +273,19 @@ fn stray_hline_in_a_paragraph_is_one_error() {
 }
 
 /// Each misplaced `\noalign`, `\omit` and `\span` is reported, as TeX reports each (pdflatex 4 errors; Perl's
-/// never-closed recovery group silences the later ones; 64ze 7), and the table after them still spans.
+/// never-closed recovery group silences the later ones; 64ze 7), and the table after them still spans. 65h: the
+/// first in a group is the Error, the later ones its cascade, Warnings (Perl's count; run 340's 107 tables read
+/// outside an alignment went Fatal:TooManyErrors with one Error each, `perfect_kernel_batch65h`).
 #[test]
 fn misplaced_commands_are_each_reported() {
   let xml = convert_counted(
     repro!("misplaced_noalign_omit_span_each_reported"),
-    (4, 0),
+    (1, 3),
     &[
       "Error:unexpected:\\noalign \\noalign cannot be used here",
-      "Error:unexpected:\\omit \\omit cannot be used here",
-      "Error:unexpected:\\span \\span cannot be used here",
+      "Warning:unexpected:\\noalign \\noalign cannot be used here (in the cascade",
+      "Warning:unexpected:\\omit \\omit cannot be used here (in the cascade",
+      "Warning:unexpected:\\span \\span cannot be used here (in the cascade",
     ],
   );
   assert_element(

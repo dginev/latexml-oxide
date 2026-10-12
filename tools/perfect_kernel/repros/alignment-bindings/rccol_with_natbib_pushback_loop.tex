@@ -1,0 +1,18 @@
+% witness: 1101.1265 (mn2e + natbib), 0812.2309, 1104.5326, 1106.3121, 1202.3790, 1212.1181, 1304.2825, 1307.3777,
+%          1309.0372, 1404.0550, 1501.04632, 1509.07583, 1610.05509, 1610.09398, 1801.07259, 1810.01491, 2207.03232,
+%          2609.37147: the 18 run-340 Timeout:PushbackLimit papers, all rccol's `R{int}{frac}` columns
+% oracle:  pdflatex 0 errors; the cell reads "15,00" (rccol's default decimal comma)
+% engines: rust 64x = 1 error (`\rc@withsign` undefined, the column's `>{…}` code taken for template tokens:
+%          "Unrecognized tabular template"); 64ze, 65f, 65h = Fatal:Timeout:PushbackLimit with natbib loaded (64ze's
+%          natbib.sty:157-166/880-958 raw block); without natbib 1 error, as 64x
+% expect:  no Fatal; 0 errors; one tabular, row a|1.5 (the number as rccol formats it)
+% status:  RED (65h): a 64ze regression, not the 65h mechanism (SYNC row)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{rccol}
+\begin{document}
+\begin{tabular}{lR{1}{2}}
+a & 1.5 \\
+\end{tabular}
+\end{document}

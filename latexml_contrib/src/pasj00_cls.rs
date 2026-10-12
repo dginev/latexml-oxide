@@ -12,9 +12,9 @@ use latexml_package::prelude::*;
 /// - `\@maketitle` empty: everything its title page lays out (pasj01.cls:1912-1950) is in the frontmatter, and the
 ///   deposit of the rest left an empty "[ Received ; Accepted ]" frame in the body (1505.02769, 2005.13750).
 ///
-/// A paper whose source lacks the class falls to OmniBus, as before the binding. Either way the frontmatter macros the
-/// classes store for `\maketitle` to typeset (pasj01.cls:84-159) are the frontmatter's: they were lost under OmniBus
-/// and raw alike.
+/// A paper whose source lacks the class falls to OmniBus, as before the binding, with the class's own `{longtable}`
+/// ([`pasj_unshipped_longtable`]). Either way the frontmatter macros the classes store for `\maketitle` to typeset
+/// (pasj01.cls:84-159) are the frontmatter's: they were lost under OmniBus and raw alike.
 pub(crate) fn pasj_class(name: &str) -> Result<()> {
   let shipped = find_file(
     name,
@@ -31,8 +31,57 @@ pub(crate) fn pasj_class(name: &str) -> Result<()> {
     Let!("\\@maketitle", "\\@empty");
   } else {
     LoadClass!("OmniBus");
+    pasj_unshipped_longtable()?;
   }
   pasj_frontmatter()
+}
+
+/// The class's own `{longtable}`/`{longtable*}` (pasj00.cls:884-916, pasj01.cls:967-1000, pasj02.cls:956-989) for a
+/// paper whose source lacks the class: the longtable binding's table, which keeps the interface the class shares with
+/// longtable.sty (`\endfirsthead`/`\endhead`/`\endfoot`/`\endlastfoot`, pasj00.cls:1241-1244), with the class's own
+/// `\caption` and `\label`. Its `\@lt@init` lets them to `\@lt@setcaption` and `\@lt@label` (pasj00.cls:1068-1070,
+/// pasj01.cls:1152-1154, pasj02.cls:1141-1143): each is a `\noalign` that gobbles a following `\\` if there is one
+/// (`\@lt@remove@cr`; pasj00.cls:1245-1270, pasj01.cls:1329-1354, pasj02.cls:1318-1343), so a caption is no row and
+/// PASJ papers write `\caption{…}\label{…}`, then `\hline` and the head row. The optional argument
+/// (`\@lt@captionnumber`, a number in place of the counter's) is the list entry's, as the binding's kernel `\caption`
+/// reads it everywhere else; the star changes nothing, as in the class. Without the class's `{longtable}` the tables of
+/// astro-ph0407419, 0704.1713, 0705.1365, 1108.4491, astro-ph0511689, astro-ph0605217, astro-ph0612753 and
+/// astro-ph0701701 were text with a misplaced-alignment error per row; with longtable.sty's caption rule (a row ended
+/// by `\\`), the head row after each of their captions was lost.
+/// Guard `perfect_kernel_batch65h::pasj00_without_its_class_keeps_longtable`.
+fn pasj_unshipped_longtable() -> Result<()> {
+  RequirePackage!("longtable");
+  // The binding lets `\caption`/`\label` to these two at the table's start; the class's `\@lt@init` comes after.
+  DefMacro!(
+    "\\lx@pasj@lt@init",
+    r"\let\lx@longtable@caption\lx@pasj@lt@setcaption\let\lx@longtable@label\lx@pasj@lt@label"
+  );
+  DefMacro!("\\longtable", r"\begingroup\lx@pasj@lt@init\LT@array");
+  DefMacro!(
+    "\\csname longtable*\\endcsname",
+    r"\begingroup\lx@pasj@lt@init\LT@array"
+  );
+  Let!("\\lx@pasj@lt@@label", "\\lx@longtable@label");
+  DefMacro!("\\lx@pasj@lt@setcaption OptionalMatch:* []{}", sub[(_star, number, caption)] {
+    pasj_lt_remove_cr()?;
+    Ok(Invocation!(r"\noalign{\lx@longtable@caption@text{#1}{#2}}", vec![number, Some(caption)]))
+  });
+  DefMacro!("\\lx@pasj@lt@label Semiverbatim", sub[(label)] {
+    pasj_lt_remove_cr()?;
+    Ok(Invocation!(r"\noalign{\lx@pasj@lt@@label{#1}}", vec![Some(label)]))
+  });
+  Ok(())
+}
+
+/// pasj00.cls `\@lt@remove@cr` (:1254-1261): past spaces (`\@ifnextchar`), a `\\` is gobbled; any other token stays.
+/// Read where the class reads it, before its `\noalign` closes; the tokens read are not expanded.
+fn pasj_lt_remove_cr() -> Result<()> {
+  if let Some(next) = read_non_space()?
+    && !x_equals(&next, &T_CS!("\\\\"))
+  {
+    unread_one(next);
+  }
+  Ok(())
 }
 
 /// PASJ's frontmatter macros as the frontmatter. One `\author` lists every author, separated by commas and `\&`, its

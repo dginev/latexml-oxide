@@ -1,15 +1,17 @@
-% witness: 1102.5033 (aalongtable.sty: `\def\longtable{\par\onecolumn\clearpage\begingroup\@ifnextchar[\LT@array
-%          {\LT@array[x]}}`)
-% oracle:  pdflatex 0 errors (longtable.sty defines `\LT@array`)
+% witness: 1102.5033, 0707.2342, 0708.2676, 0804.2184, 1908.10340 (aalongtable.sty, EDP Sciences 2004, shipped by 81 of
+%          the 107 run-340 longtable papers: `\def\longtable{\par\onecolumn\clearpage\begingroup\@ifnextchar[\LT@array
+%          {\LT@array[x]}}`; anlongtable.sty the same)
+% oracle:  pdflatex 0 errors (longtable.sty:91-106 `\longtable` opens a group and calls `\LT@array[#1]#2`, which
+%          `\endlongtable` closes, :244-278)
 % engines: rust 64ze = 4 errors + 1 warning, 65b r3 = 5 + 1: the longtable binding does not define `\LT@array`, so a
 %          package `\longtable` that calls it breaks the table (and then the `\hline`s are misplaced)
 % expect:  0 errors; one longtable, caption "Cap", one row a|b
-% status:  RED (65b r3): needs `\LT@array` in the longtable binding (longtable.sty), not attempted in 65b
+% status:  RED (65b r3) -> GREEN (65h); guard perfect_kernel_batch65h::package_longtable_calls_lt_array
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{longtable}
 \makeatletter
-\def\longtable{\par\begingroup\@ifnextchar[\LT@array{\LT@array[x]}}
+\def\longtable{\par\onecolumn\clearpage\begingroup\@ifnextchar[\LT@array{\LT@array[x]}}
 \makeatother
 \begin{document}
 \begin{longtable}{ll}

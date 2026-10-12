@@ -2,7 +2,8 @@
 % oracle:  pdflatex 4 errors: two `Misplaced \noalign`, `Misplaced \omit`, `Misplaced \span`; then "AB" spans
 % engines: rust 64ze = 7 errors; rust 65b r2/r3 = 4; Perl: its never-closed `bgroup` with `\let`s to `\relax`
 %          (TeX_Tables.pool:120-127) silences every later misplaced `\noalign`/`\omit`/`\span`
-% expect:  4 errors, one per misplaced command; "AB" colspan=2 in the table
+%          65h = 1 error + 3 warnings: the first misplaced command of a group is the Error, the rest its cascade
+% expect:  1 error (the first `\noalign`), 3 warnings (the other three); "AB" colspan=2 in the table
 % status:  CONTROL; guard perfect_kernel_batch65::misplaced_commands_are_each_reported
 % preload: ar5iv.sty
 \documentclass{article}

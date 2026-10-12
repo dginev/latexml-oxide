@@ -447,8 +447,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   net 797: 0 XML changes. Guards `perfect_kernel_batch65::*`.
 
   Open:
-  - RED `class-bindings/aalongtable_lt_array`: the longtable binding lacks `\LT@array`, which aalongtable.sty's
-    `\longtable` calls (1102.5033).
+  - ~~RED `class-bindings/aalongtable_lt_array`~~: fixed in 65h (OD #541, KPE #612).
   - Math readings of ambiguous formulas can flip between builds with no input change (2205.06656, 2503.00718,
     1708.09355). Each is deterministic per binary; likely an interning-order tie-break in the math parser.
 - **65e** (RUST-ONLY regressions of run 338 against run 336; triage 2026-10-12): l-aa's plain `\matrix{…\cr}` (64u:
@@ -493,6 +492,38 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1810.08269. Guards `perfect_kernel_batch65a::*`. Residuals: a late class `\author` that both stores and prints is
   dropped (= base); the figure-panel wrap for refused caption hoists (task #193; RED
   `captions-floats/subcaption_labels_in_scaled_panels_stay_on_their_panels`).
+- **65h** (RUST-ONLY; run 340's Error→Fatal regressions, 287 papers against run 338):
+  - **`\LT@array`**: the longtable binding is split as longtable.sty splits it (`\longtable` = `\begingroup\LT@array`,
+    `\endlongtable` closes the group), so aalongtable.sty's and anlongtable.sty's `\longtable` build their tables
+    (81 papers; OD #541, KPE #612).
+  - **pasj00/pasj01/pasj02 without the shipped class** keep the class's `{longtable}` through the longtable binding,
+    with the class's `\noalign` `\caption`/`\label` that gobble a following `\\` (pasj00.cls:1245-1270), so the head
+    row after `\caption{…}\label{…}` is kept (astro-ph0407419, astro-ph0701701; OD #541).
+  - **longtable caption row** (OD #103): a caption's row with an `&` after the caption is kept, not dropped as the
+    caption's alone (`\caption{…}\label{…}` with no `\\` before the head row lost it).
+  - **Misplaced-alignment cascade**: the first misplaced `\noalign`/`\omit`/`\span` in a group is the Error, the rest
+    of that group Warnings; at top level the group is the document body (OD #540). This is open for the main session:
+    it supersedes 65b's per-site Errors.
+  - The 107 longtable papers: 107 Fatal → 0 Fatal, 2147 errors (64ze) → 350, 73 papers at 0 errors, none worse than
+    64ze. Of the other 121 non-infra papers, 56 are no longer Fatal. Guards `perfect_kernel_batch65h::*`.
+
+  Open, each a RED repro and none fixed here:
+  - **rccol + natbib** (64ze): `Fatal:Timeout:PushbackLimit` in all 18 PushbackLimit papers.
+    - Witnesses 1101.1265, 0812.2309, 1104.5326, 1106.3121, 1202.3790, 1212.1181, 1304.2825, 1307.3777, 1309.0372,
+      1404.0550, 1501.04632, 1509.07583, 1610.05509, 1610.09398, 1801.07259, 1810.01491, 2207.03232, 2609.37147.
+    - 64x converts them.
+    - RED `alignment-bindings/rccol_with_natbib_pushback_loop`.
+  - **Environments open at `\end{document}`** (65c): their kept content holds the bibliography or sections, and every
+    `malformed:*` placement is an Error. Of the 21 sampled TooManyErrors papers, 19 reached Fatal at 65c.
+    - Witnesses 1611.05714 (64ze: no bibliography, 1 error), 1507.01637, 2412.20775, 1806.06901, 1101.1959,
+      2007.11971, 1210.0368, 1003.1368, physics0505113.
+    - Near-threshold papers (64ze 96-99 errors): 1211.3050, 2210.11107, 1305.0086, astro-ph0303604, math9805003.
+    - cs0009011 ends in `Fatal:Document:Generic("add_child`.
+    - RED `list-structure/open_description_holds_the_bibliography`.
+  - **standalone sub-file preamble**: xcolor's tabular hooks are installed without their definitions, so every later
+    tabular is no alignment.
+    - Witness 2512.09430: 64ze 84 errors, 65b+ Fatal, one misplaced `\toprule` per table.
+    - RED `loader/standalone_subfile_xcolor_tabular_hooks`.
 - **65f** (RUST-ONLY + one recorded surpass; run-338 Error→Fatal kernel/mode clusters):
   - **Plain TeX documents** (`state::plain_tex_document`): the on-undefined LaTeX autoload no longer fires there, so a
     LaTeX kernel command is undefined as in TeX and Perl (1504.02513, 1402.1807, 1310.8121, 2405.04530 `\verbatim`
