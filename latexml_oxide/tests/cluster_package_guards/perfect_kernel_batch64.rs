@@ -2051,13 +2051,16 @@ fn marked_block_email_line_owner() {
   let v_dagger: Vec<&str> = vec![
     "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B<break/>City B<break/><sup xml:id=\"id4\">\u{2020}</sup> Deceased<break/><text font=\"bold\" xml:id=\"id5\">Proceedings of a workshop</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id7\">carl.cole@x.org</text></contact>\n  </creator>",
+    // (the `\dagger` no affiliation or contact answers stays shown on the name, as printed: 65e
+    // `show_unanswered_marks`; the address goes by its spelling, so it answers no mark)
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole<sup xml:id=\"id6\">\u{2020}</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id7\"/>Lab A<break/>City A</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id8\">carl.cole@x.org</text></contact>\n  </creator>",
   ];
   let v_star: Vec<&str> = vec![
     "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B.\u{a0}Muna</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab B<break/>City B<break/><sup xml:id=\"id3\">*</sup>Corresponding author<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id5\"/>Lab A<break/>City A</contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">contact@x.org</text></contact>\n  </creator>",
+    // (the `*` nothing answers stays shown on the name, as printed: 65e `show_unanswered_marks`)
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C.\u{a0}Cole<sup xml:id=\"id5\">\u{2217}</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id6\"/>Lab A<break/>City A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id7\">contact@x.org</text></contact>\n  </creator>",
   ];
   let v_star2: Vec<&str> = vec![
     "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A<break/>City A</contact>\n  </creator>",

@@ -48,7 +48,10 @@ LoadDefinitions!({
   RequirePackage!("kvdefinekeys");
   //RequirePackage("pdfescape");   // not ported
   //RequirePackage("hycolor");     // not ported
-  //RequirePackage("letltxmacro"); // not ported
+  // hyperref loaded letltxmacro until v7.01h (ChangeLog 2023-12-19 "remove letltxmacro package"), so papers of its
+  // years use `\LetLtxMacro` with hyperref alone (2106.06828, 1911.11856); one binding serves every version of the
+  // package, the union of what they provide. Perl comments the load out.
+  RequirePackage!("letltxmacro");
   //RequirePackage("auxhook");     // not ported
   RequirePackage!("kvoptions");
   //RequirePackage("intcalc");     // not ported

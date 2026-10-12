@@ -640,7 +640,21 @@ LoadDefinitions!({
   // The kernel's `\author`, given the line `author_line` reads: its splitter reads a name's own marks as names when
   // they are macros (a "12" person, a `\thanks` folded into the name, 2209.07273, 1801.03251).
   Let!("\\lx@ptephy@kernel@author", "\\author");
+  // Names marked with superscripts of their own instead (`\author{R.~Abbott$^{1}$, H.~Abe$^{2}$, …}` over authblk-TI's
+  // `\affil{$^{1}$LIGO Laboratory, … \\ $^{2}$…}`, 2203.01270) are a name list whose marks request the affiliations
+  // so labelled (`\lx@add@authors@list`, as l-aa's).
   DefMacro!("\\author[]{}", sub[(short, list)] {
+    if superscript_marked_names(&list) {
+      // the lines after the first `\\`, when each is led by a footnote symbol, are the names' legends
+      // (`{${}^{\ast}$Deceased, August 2020.}`, 2203.01270), no further names: each a note of the document's
+      // frontmatter, its mark shown
+      let (names, legends) = names_and_legends(list.unlist_ref());
+      let mut out = Invocation!(T_CS!("\\lx@add@authors@list"), vec![Some(Tokens::new(names))]).unlist();
+      for legend in legends {
+        out.extend(Invocation!(T_CS!("\\lx@add@pubnote"), vec![None, Some(Tokens::new(legend))]).unlist());
+      }
+      return Ok(Tokens::new(out));
+    }
     let (line, starred) = author_line(&list)?;
     let mut out = if starred {
       TokenizeInternal!(r"\gdef\lx@ptephy@starred{1}").unlist()
@@ -729,6 +743,16 @@ LoadDefinitions!({
       content.push(T_END!());
       content.extend(text);
       Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(Tokens::new(content))]).unlist()
+    } else if crate::l_aa_cls::leads_with_superscript_mark(&text) {
+      // one `\affil{…}` of `$^{n}$`-led lines (2203.01270: 288 of them under 1669 names) is the list of the
+      // affiliations those marks label, each to the names requesting it, not one affiliation of every name since the
+      // last (which copied the whole list into each: 83 MB of XML, 6.9 GB); `\lx@add@affiliation@marked` keeps it one
+      // when the names carry no marks
+      Invocation!(T_CS!("\\lx@add@affiliation@marked"), vec![
+        Some(TokenizeInternal!("annotate=run")),
+        Some(Tokens::new(text))
+      ])
+      .unlist()
     } else {
       Invocation!(T_CS!("\\lx@add@affiliation"), vec![
         Some(TokenizeInternal!("annotate=run")),
@@ -764,3 +788,149 @@ LoadDefinitions!({
     "<ltx:acknowledgements>#1</ltx:acknowledgements>"
   );
 });
+
+/// An author list split at its first top-level `\\` (with its `*` and `[length]`): the names before it, and the lines
+/// after it, each `\\`-separated line or brace group standing alone a line of its own (`\\ {${}^{\ast}$Deceased,
+/// August 2020. } {${}^{\dag}$Deceased, April 2021. }`, 2203.01270), spaces trimmed, empty ones dropped.
+fn names_and_legends(tokens: &[Token]) -> (Vec<Token>, Vec<Vec<Token>>) {
+  let is_break = |t: &Token| *t == T_CS!("\\\\") || *t == T_CS!("\\newline");
+  // the break's `*` and `[length]`
+  let past_break = |mut i: usize| {
+    i += 1;
+    if tokens.get(i) == Some(&T_OTHER!("*")) {
+      i += 1;
+    }
+    if tokens.get(i) == Some(&T_OTHER!("["))
+      && let Some(k) = tokens[i..].iter().position(|t| *t == T_OTHER!("]"))
+    {
+      i += k + 1;
+    }
+    i
+  };
+  let mut depth = 0usize;
+  let mut first_break = None;
+  for (i, t) in tokens.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if depth == 0 && is_break(t) => {
+        first_break = Some(i);
+        break;
+      },
+      _ => {},
+    }
+  }
+  let Some(at) = first_break else {
+    return (tokens.to_vec(), Vec::new());
+  };
+  let trimmed = |line: Vec<Token>| -> Option<Vec<Token>> {
+    let start = line
+      .iter()
+      .position(|t| t.get_catcode() != Catcode::SPACE)?;
+    let end = line
+      .iter()
+      .rposition(|t| t.get_catcode() != Catcode::SPACE)?;
+    Some(line[start..=end].to_vec())
+  };
+  let mut legends = Vec::new();
+  let mut line: Vec<Token> = Vec::new();
+  let mut i = past_break(at);
+  while i < tokens.len() {
+    let t = tokens[i];
+    if is_break(&t) {
+      legends.extend(trimmed(std::mem::take(&mut line)));
+      i = past_break(i);
+    } else if t.get_catcode() == Catcode::BEGIN
+      && let Some((group, next)) = argument_at(tokens, i)
+    {
+      if line.iter().all(|t| t.get_catcode() == Catcode::SPACE) {
+        legends.extend(trimmed(group));
+        line.clear();
+      } else {
+        line.extend_from_slice(&tokens[i..next]);
+      }
+      i = next;
+    } else {
+      line.push(t);
+      i += 1;
+    }
+  }
+  legends.extend(trimmed(line));
+  // only legends, every line led by its footnote symbol: a line of names after the break (`B.~Two$^{2}$,\\
+  // C.~Three$^{1}$`, as pdflatex prints it) keeps the whole list names
+  if legends.is_empty() || !legends.iter().all(|line| leads_with_footnote_symbol(line)) {
+    return (tokens.to_vec(), Vec::new());
+  }
+  (tokens[..at].to_vec(), legends)
+}
+
+/// Whether `line` opens with a footnote symbol (`${}^{\ast}$Deceased`, `$^{\dag}$`, `\dag Deceased`, `* Equal
+/// contribution`, `\textsuperscript{*}Deceased.`) past the spacing, math shifts, braces and superscript that carry it.
+fn leads_with_footnote_symbol(line: &[Token]) -> bool {
+  const SYMBOL_CS: &[&str] = &[
+    "\\ast",
+    "\\star",
+    "\\dag",
+    "\\dagger",
+    "\\ddag",
+    "\\ddagger",
+    "\\S",
+    "\\P",
+    "\\|",
+    "\\#",
+    "\\bullet",
+    "\\diamond",
+    "\\circ",
+    "\\sharp",
+  ];
+  const SYMBOL_CHARS: &[&str] = &[
+    "*", "\u{2217}", "\u{2020}", "\u{2021}", "\u{A7}", "\u{B6}", "\u{22C6}", "#",
+  ];
+  line
+    .iter()
+    .find(|t| {
+      !matches!(
+        t.get_catcode(),
+        Catcode::SPACE | Catcode::MATH | Catcode::BEGIN | Catcode::END | Catcode::SUPER
+      ) && **t != T_CS!("\\textsuperscript")
+    })
+    .is_some_and(|t| match t.get_catcode() {
+      Catcode::CS => t.with_str(|s| SYMBOL_CS.contains(&s)),
+      Catcode::OTHER => t.with_str(|s| SYMBOL_CHARS.contains(&s)),
+      _ => false,
+    })
+}
+
+/// Whether `list` names its authors with superscript marks of their own that label affiliations (`A.~One$^{1}$`,
+/// `B.~Two\textsuperscript{2,a}`: a digit or letter among them) rather than with ptephy's `\name{name}{marks}`; a
+/// superscript in a note (`\thanks{…$^{3}$He…}`) is no mark, and a corresponding-author `$^{*}$` alone requests no
+/// affiliation (1810.00422: the kernel's author line keeps it as printed).
+fn superscript_marked_names(list: &Tokens) -> bool {
+  let (tokens, _notes) = split_out(list.unlist_ref(), &["\\thanks", "\\footnote"]);
+  if tokens
+    .iter()
+    .any(|t| *t == T_CS!("\\name") || *t == T_CS!("\\collaborator"))
+  {
+    return false;
+  }
+  let labels_affiliation = |mark: &[Token]| {
+    mark.iter().any(|t| {
+      t.get_catcode() == Catcode::LETTER
+        || (t.get_catcode() == Catcode::OTHER
+          && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit())))
+    })
+  };
+  (0..tokens.len()).any(|i| {
+    let at = if tokens[i].get_catcode() == Catcode::SUPER {
+      i + 1
+    } else if tokens[i] == T_CS!("\\textsuperscript") {
+      skip_spaces(&tokens, i + 1)
+    } else {
+      return false;
+    };
+    match argument_at(&tokens, at) {
+      Some((mark, _)) => labels_affiliation(&mark),
+      None => false,
+    }
+  })
+}

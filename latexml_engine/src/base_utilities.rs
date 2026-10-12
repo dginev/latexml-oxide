@@ -797,12 +797,7 @@ LoadDefinitions!({
     let label = clean_frontmatter_labels(
       &label.to_string(),
       if prefix.is_empty() { "LABEL" } else { &prefix }).join(",");
-    with_pending_entry_attr(move |attr| {
-      let labels = attr.get("_annotations").cloned().unwrap_or_default();
-      let newval = if labels.is_empty() { label.clone() } else { s!("{labels},{label}") };
-      DebugFeature!("frontmatter", "FRONT add annotation label {label}");
-      attr.insert("_annotations".to_string(), newval);
-    });
+    add_annotation_labels(label, false);
   });
 
   // \lx@set@frontmatter@label Internal to digesting annotation contents.
@@ -1107,13 +1102,22 @@ LoadDefinitions!({
     let attr_text = attr.as_ref().map(ToString::to_string).unwrap_or_default();
     let owner_first = attr_text.split(',').any(|kv| kv.trim() == "owner=first");
     let attr_rest: Vec<&str> = attr_text.split(',').map(str::trim).filter(|kv| !kv.is_empty() && *kv != "owner=first").collect();
-    let placement = match placed_contact_owner(&mark, &content) {
-      ContactOwner::Mark(label) => s!("label={label}"),
-      ContactOwner::Author(author) => s!("label=author:{author}"),
-      ContactOwner::Block if owner_first => s!("label=author:{}", frontmatter_group_first()),
-      ContactOwner::Block => s!("label=addresses:block"),
+    // (`label=` and `_answers=` are fixed text; a value is a mark's label and is text: tokenized, `$^{1\#}$`'s `#` was
+    // a parameter token and a `%` a comment, so each of its characters is taken as it is)
+    let (value, answers) = match placed_contact_owner(&mark, &content) {
+      ContactOwner::Mark(label) => (label, None),
+      // (placed by a footnote-symbol mark its author requests: the contact answers that mark on that author,
+      // `show_unanswered_marks`)
+      ContactOwner::Author(author) => (s!("author:{author}"), answered_symbol_key(mark.unlist_ref())),
+      ContactOwner::Block if owner_first => (s!("author:{}", frontmatter_group_first()), None),
+      ContactOwner::Block => (s!("addresses:block"), None),
     };
-    let mut keyvals = mouth::tokenize_internal(TeXString::assembled(placement)).unlist();
+    let mut keyvals: Vec<Token> = mouth::tokenize_internal("label=").unlist();
+    keyvals.extend(text_tokens(&value));
+    if let Some(key) = answers {
+      keyvals.extend(mouth::tokenize_internal(",_answers=").unlist());
+      keyvals.extend(text_tokens(&key));
+    }
     if owner_first {
       if !attr_rest.is_empty() {
         keyvals.push(T_OTHER!(","));
@@ -2109,16 +2113,7 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@sup@request@affiliation"), None, {
     let operand = read_frontmatter_sup_operand()?;
     let label = clean_frontmatter_labels(&operand.to_string(), "affiliation").join(",");
-    with_pending_entry_attr(move |attr| {
-      let labels = attr.get("_annotations").cloned().unwrap_or_default();
-      let newval = if labels.is_empty() {
-        label.clone()
-      } else {
-        s!("{labels},{label}")
-      };
-      DebugFeature!("frontmatter", "FRONT add annotation label {label}");
-      attr.insert("_annotations".to_string(), newval);
-    });
+    add_annotation_labels(label, true);
     Ok(Vec::new())
   });
   DefPrimitive!(T_CS!("\\lx@sup@setlabel@affiliation"), None, {
@@ -3154,6 +3149,51 @@ fn placed_contact_owner(mark: &Tokens, content: &Tokens) -> ContactOwner {
     return ContactOwner::Author(first);
   }
   ContactOwner::Block
+}
+
+/// `text` as tokens of its characters, each as it is: an ASCII letter a letter, anything else other (no `#` parameter, no
+/// `%` comment, no `{`/`}` group: a keyval value that is text).
+fn text_tokens(text: &str) -> Vec<Token> {
+  text
+    .chars()
+    .map(|c| {
+      let c = c.to_string();
+      if c.chars().all(|c| c.is_ascii_alphabetic()) {
+        T_LETTER!(&c)
+      } else if c == " " {
+        T_SPACE!()
+      } else {
+        T_OTHER!(&c)
+      }
+    })
+    .collect()
+}
+
+/// The key a footnote-symbol mark (`$^\dagger$` on `$^\dagger$baker@y.edu`) answers on the author it places a contact
+/// for ([`symbol_mark_key`]). `None` for any other mark.
+fn answered_symbol_key(mark: &[Token]) -> Option<String> {
+  if mark.is_empty() || !is_symbol_mark(mark) {
+    return None;
+  }
+  let label = mark_label(mark)?;
+  symbol_mark_key(label.strip_prefix("affiliation:").unwrap_or(&label))
+}
+
+/// A symbol mark's key, made of its glyph (`unanswered_mark_text`: `\dag` and `\dagger` alike, `\ast` and `*` alike)
+/// as hexadecimal code points (`sym-2020`): only letters, digits and `-`, so it passes through a keyval's tokenization
+/// as it is (a `#`, `\#`'s glyph, read back as a parameter token raised `Error:misdefined:#`).
+fn symbol_mark_key(mark: &str) -> Option<String> {
+  let glyph = unanswered_mark_text(mark)?.replace('\u{2217}', "*");
+  (!glyph.chars().all(char::is_alphanumeric)).then(|| {
+    s!(
+      "sym-{}",
+      glyph
+        .chars()
+        .map(|c| format!("{:x}", c as u32))
+        .collect::<Vec<_>>()
+        .join("-")
+    )
+  })
 }
 
 /// The queue position of the current author group's first author (`\lx@frontmatter@group@start`; 1 when no class marks
@@ -5966,6 +6006,32 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
       continue;
     };
     let shown = shown_marks(document, &creator);
+    let shown_sups: Vec<String> = document
+      .findnodes("ltx:personname//ltx:sup", Some(&creator))
+      .iter()
+      .map(|sup| sup.get_content())
+      .collect();
+    // (a symbol mark nothing answers is shown too — 1807.01584, 1805.02699, 2203.01270 — except one that placed one of
+    // this author's contacts and was dropped from it, `$^\dagger$baker@y.edu`: answered on this author only,
+    // `answered_symbol_key`; one the author's email shows as well stays on the name too, as printed: 1910.00401)
+    let answered_here: Vec<String> = document
+      .findnodes(".//*[@_answers]", Some(&creator))
+      .iter()
+      .flat_map(|node| {
+        node
+          .get_attribute("_answers")
+          .unwrap_or_default()
+          .split(',')
+          .map(str::to_string)
+          .collect::<Vec<_>>()
+      })
+      .collect();
+    let text_marks: Vec<String> = creator
+      .get_attribute("_textmarks")
+      .unwrap_or_default()
+      .split(',')
+      .map(str::to_string)
+      .collect();
     let mut marks: Vec<String> = Vec::new();
     for label in creator
       .get_attribute("_annotations")
@@ -5975,16 +6041,30 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
       let Some(mark) = label.strip_prefix("affiliation:") else {
         continue;
       };
-      if mark.is_empty()
-        || !mark.chars().all(char::is_alphanumeric)
-        || answered.contains(label)
-        || answered.contains(mark)
-        || shown.iter().any(|known| known == mark)
-        || marks.iter().any(|known| known == mark)
-      {
+      if answered.contains(label) || answered.contains(mark) {
         continue;
       }
-      marks.push(mark.to_string());
+      let Some(mut text) = unanswered_mark_text(mark) else {
+        continue;
+      };
+      // (the glyph follows the mark's mode: a `*` requested in text is `*`, in math `∗`)
+      if mark == "*" && text_marks.iter().any(|m| m == label) {
+        text = "*".to_string();
+      }
+      if symbol_mark_key(mark).is_some_and(|key| answered_here.contains(&key)) {
+        continue;
+      }
+      // (a symbol the name shows in a superscript of its own is shown: a `$^*$`, `\lx@frontmatter@keepsup`, also
+      // requests; `*` and `∗` are one mark)
+      let unify = |text: &str| text.replace('\u{2217}', "*");
+      let symbol_shown = !text.chars().all(char::is_alphanumeric)
+        && shown_sups
+          .iter()
+          .any(|sup| unify(sup).contains(&unify(&text)));
+      if symbol_shown || shown.contains(&text) || marks.contains(&text) {
+        continue;
+      }
+      marks.push(text);
     }
     if marks.is_empty() {
       continue;
@@ -5997,6 +6077,58 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
     personname.add_child(&mut sup)?;
   }
   Ok(())
+}
+
+/// Add `label` (comma separated) to the requests of the frontmatter entry being digested (`_annotations`), and, for a
+/// superscript requested in text (`\textsuperscript{1,*}`, not `$^{1,*}$`: `superscript`), to its text-mode marks
+/// (`_textmarks`): such a `*` prints as `*`, a math one as `∗` (`show_unanswered_marks`). A mark command (`\inst`,
+/// `\IEEEauthorrefmark`) sets its mark in math (llncs.cls `\def\inst#1{\unskip$^{#1}$}`), whatever mode it is read in.
+fn add_annotation_labels(label: String, superscript: bool) {
+  let in_text = superscript && !lookup_bool("IN_MATH");
+  with_pending_entry_attr(move |attr| {
+    let labels = attr.get("_annotations").cloned().unwrap_or_default();
+    let newval = if labels.is_empty() {
+      label.clone()
+    } else {
+      s!("{labels},{label}")
+    };
+    DebugFeature!("frontmatter", "FRONT add annotation label {label}");
+    attr.insert("_annotations".to_string(), newval);
+    if in_text {
+      let text_marks = attr.get("_textmarks").cloned().unwrap_or_default();
+      let newval = if text_marks.is_empty() {
+        label.clone()
+      } else {
+        s!("{text_marks},{label}")
+      };
+      attr.insert("_textmarks".to_string(), newval);
+    }
+  });
+}
+
+/// How an unanswered affiliation mark prints: a number or letter as it is, a superscript footnote symbol (`$^{\dag}$`,
+/// which labels affiliations as a mark, `is_symbol_mark`; its label keeps the control sequence) as its glyph; `None`
+/// for anything else (a fuzzy or composite label).
+fn unanswered_mark_text(mark: &str) -> Option<String> {
+  if !mark.is_empty() && mark.chars().all(char::is_alphanumeric) {
+    return Some(mark.to_string());
+  }
+  let glyph = match mark {
+    "\\dag" | "\\dagger" => "\u{2020}",
+    "\\ddag" | "\\ddagger" => "\u{2021}",
+    // (pdflatex sets a math `*` as `∗`; one requested in text stays `*`, `show_unanswered_marks`)
+    "\\ast" | "*" => "\u{2217}",
+    "\\star" => "\u{22C6}",
+    "\\S" => "\u{A7}",
+    "\\P" => "\u{B6}",
+    "\\bullet" => "\u{2219}",
+    "\\sharp" => "\u{266F}",
+    "\\|" => "\u{2016}",
+    "\\#" | "#" => "#",
+    "\u{2020}" | "\u{2021}" | "\u{2217}" | "\u{A7}" | "\u{B6}" => mark,
+    _ => return None,
+  };
+  Some(glyph.to_string())
 }
 
 /// What a frontmatter annotation says: its text, or an `ltx:rdf`'s `content`/`resource` (OXIDIZED_DESIGN #479), which

@@ -2029,8 +2029,10 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
 /// (`body_vocabulary_is_defined`) runs, in a group, with `\thanks`, `\footnote` and `\label` gobbled (the kernel makes
 /// the author's notes and labels), not re-entrant; afterwards the kernel's `\@author`/`\@shortauthor` and every store the
 /// body `\def`s are as before (empty if undefined), so what stays is the class's flags, counters, lists and `\let`s; an absent optional argument (`opt` empty) takes the class's default.
-/// A replay that raises an error is dropped with its diagnostics (Info), as the `\maketitle` deposit is. Perl never
-/// runs a refused definition (State.pm:502-517).
+/// A replay that raises an error is dropped with its diagnostics (Info), as the `\maketitle` deposit is, and with
+/// every assignment it made (`AssignmentJournalGuard::rollback`): a setter that stopped half-way leaves no half-built
+/// state (jsty3-author.sty:542's xparse `\author`, whose expl3 author list its printer then looped over 991 times:
+/// 2607.24171). Perl never runs a refused definition (State.pm:502-517).
 fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   if !lookup_bool(&s!("\\{name}:redefined")) || lookup_bool("lx_replaying_class_setter") {
     return Ok(());
@@ -2080,6 +2082,7 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   let depth = get_frame_depth();
   AssignValue!("lx_replaying_class_setter" => true, Some(Scope::Global));
   let hold = util::logger::DiagnosticsHold::begin();
+  let journal = begin_assignment_journal();
   // The class's code, read as the class's: a `\def\author…` the body makes stays refused (state.rs
   // `install_definition`), not a document override.
   let result = with_origin(DefinitionOrigin::File, || digest(Tokens::new(replay)));
@@ -2100,6 +2103,16 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
     expire_local_box_list();
     Ok(())
   });
+  // An erring replay is undone, a clean one kept. A rollback that cannot apply (the body closed a frame of the
+  // document's, or the journal was not open) leaves the replay's assignments, so its diagnostics stay too.
+  let mut undone = false;
+  if let Some(journal) = journal {
+    if result.is_ok() && hold.errors_raised() > 0 {
+      undone = journal.rollback();
+    } else {
+      journal.keep();
+    }
+  }
   // groups left open, or groups of the document the body closed (a stray `\egroup` closing the replay's group
   // early, whose own `}` then closed the document's `{frontmatter}`)
   let unbalanced = get_frame_depth() as isize - depth as isize;
@@ -2137,15 +2150,26 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
     return Err(err);
   }
   let errors = hold.errors_raised();
-  if errors > 0 {
+  if errors > 0 && undone {
     hold.discard();
     Info!(
       "ignore",
       s!("\\{name}"),
-      s!("The class's own \\{name} was not replayed: it raised {errors} error(s)")
+      s!(
+        "The refused \\{name}'s replay raised {errors} error(s): its diagnostics and assignments were undone"
+      )
     );
   } else {
     hold.commit();
+    if errors > 0 {
+      Info!(
+        "ignore",
+        s!("\\{name}"),
+        s!(
+          "The refused \\{name}'s replay raised {errors} error(s) and could not be undone (its groups changed)"
+        )
+      );
+    }
   }
   unwound?;
   if unbalanced != 0 {

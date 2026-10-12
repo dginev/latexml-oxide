@@ -169,10 +169,13 @@ pub enum Catcodes {
 pub type AssignmentCount = HashMap<SymStr, usize>;
 /// The `(table_name, key, value)` contents of a stored table of assignments
 pub type StashTable = Vec<(TableName, SymStr, Stored)>;
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 /// For each of several tables (being "value", "meaning", "catcode" or other space of names),
 /// each table maintains the bound values, and "undo" defines the stack frames
 pub struct UndoFrame {
+  /// The frame's identity, unique to it (an assignment journal tells the frames it began with from later ones at the
+  /// same depth: `AssignmentJournalGuard::rollback`).
+  id:           u64,
   locked:       bool,
   meaning:      AssignmentCount,
   value:        AssignmentCount,
@@ -184,6 +187,28 @@ pub struct UndoFrame {
   delcode:      AssignmentCount,
   stash:        AssignmentCount,
   stash_active: AssignmentCount,
+}
+
+/// The next `UndoFrame::id`.
+static NEXT_FRAME_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+impl Default for UndoFrame {
+  fn default() -> Self {
+    UndoFrame {
+      id:           NEXT_FRAME_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+      locked:       false,
+      meaning:      AssignmentCount::default(),
+      value:        AssignmentCount::default(),
+      catcode:      AssignmentCount::default(),
+      mathcode:     AssignmentCount::default(),
+      sfcode:       AssignmentCount::default(),
+      lccode:       AssignmentCount::default(),
+      uccode:       AssignmentCount::default(),
+      delcode:      AssignmentCount::default(),
+      stash:        AssignmentCount::default(),
+      stash_active: AssignmentCount::default(),
+    }
+  }
 }
 
 impl UndoFrame {
@@ -234,6 +259,19 @@ impl UndoFrame {
 ///  stash & stash_active: support named scopes
 ///      (see also activateScope & deactivateScope)
 pub type Table = HashMap<SymStr, VecDeque<Stored>>;
+
+/// The bindings of every key assigned since an assignment journal began ([`begin_assignment_journal`]), as they were
+/// then: taken at the key's first assignment after, the key's values in its table and its assignment counts in each
+/// frame then open (by the frame's id), so that [`AssignmentJournalGuard::rollback`] can put them back. A key's first
+/// assignment is the first time anything touches it, so the frames opened since hold none of it.
+#[derive(Debug, Default)]
+pub struct AssignmentJournal {
+  /// the ids of the frames open when it began, from the bottom of the stack
+  frames: Vec<u64>,
+  saved:  rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
+}
+/// A key's values in its table (`None`: unbound) and its assignment counts by frame id.
+type JournalEntry = (Option<VecDeque<Stored>>, Vec<(u64, usize)>);
 
 /// The state efficiently bookkeeps the bindings in a TeX-like fashion.
 ///
@@ -350,6 +388,8 @@ pub struct State {
   /// before were declined), so the guard unmarks them when it ends and a later request loads them whole
   /// (`end_provide_only`).
   pub provide_only_loaded:     Vec<String>,
+  /// The open assignment journal, if any ([`begin_assignment_journal`]).
+  journal:                     Option<AssignmentJournal>,
 }
 // SAFETY: `State` holds `Rc`/`RefCell`/`libxml::tree::Node` (!Send). Marked
 // Send so callers can build it on one thread and then transition to another
@@ -420,6 +460,7 @@ impl Default for State {
       fallback_meanings:       rustc_hash::FxHashSet::default(),
       provide_only_assigned:   rustc_hash::FxHashSet::default(),
       provide_only_loaded:     Vec::new(),
+      journal:                 None,
     }
   }
 }
@@ -880,6 +921,31 @@ impl State {
     }
   }
 
+  /// Record `key`'s bindings in the open assignment journal before its first assignment since the journal began.
+  #[inline]
+  fn journal_touch(&mut self, table_name: TableName, key: SymStr) {
+    // (a journal whose guard is gone is stale: nothing records into it until the next begin discards it)
+    if !JOURNAL_GUARD_LIVE.get() {
+      return;
+    }
+    let Some(journal) = self.journal.as_ref() else {
+      return;
+    };
+    if journal.saved.contains_key(&(table_name, key)) {
+      return;
+    }
+    let values = self.table(table_name).get(&key).cloned();
+    let counts: Vec<(u64, usize)> = self
+      .undo
+      .iter()
+      .filter(|frame| journal.frames.contains(&frame.id))
+      .filter_map(|frame| frame.table(table_name).get(&key).map(|n| (frame.id, *n)))
+      .collect();
+    if let Some(journal) = self.journal.as_mut() {
+      journal.saved.insert((table_name, key), (values, counts));
+    }
+  }
+
   /// The `Scope::Local` binding itself: record one undo entry in the top
   /// frame (unless the key is already bound there — then replace) and push the
   /// value. Reached by every local assignment, and DIRECTLY by the save-frame
@@ -898,6 +964,7 @@ impl State {
     key: SymStr,
     value: Stored,
   ) {
+    self.journal_touch(table_name, key);
     // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state_tables
     let mut is_replace = false;
     // 1. Undo mutable logic
@@ -1013,6 +1080,7 @@ impl State {
     if matches!(scope, Scope::Local) && BUILD_FLOOR.get() == Some(self.undo.len()) {
       scope = Scope::Global;
     }
+    self.journal_touch(table_name, key);
     match scope {
       Scope::Global => {
         let mut undo_count = 0;
@@ -1083,6 +1151,7 @@ impl State {
             Some(Scope::Global),
           );
         }
+        self.journal_touch(TableName::Stash, scope_name);
         if let Some(Stored::Stash(stash)) =
           self.stash.get_mut(&scope_name).as_mut().unwrap().get_mut(0)
         {
@@ -1128,7 +1197,9 @@ impl State {
 
   /// mutably borrows a Stored value at the given key, from the Value table
   pub fn lookup_value_mut(&mut self, key: &str) -> Option<&mut Stored> {
-    match self.value.get_mut(&arena::pin(key)) {
+    let key = arena::pin(key);
+    self.journal_touch(TableName::Value, key);
+    match self.value.get_mut(&key) {
       None => None,
       Some(vvec) => match vvec.front_mut() {
         None | Some(Stored::None) => None,
@@ -1777,6 +1848,7 @@ pub fn assign_value_inplace(key: &str, value: impl Into<Stored>) {
 pub fn assign_value_inplace_sym(key_sym: SymStr, value: impl Into<Stored>) {
   let value = value.into();
   let state = &mut *state_mut!();
+  state.journal_touch(TableName::Value, key_sym);
   let table = &mut state.value;
   if let Some(vvec) = table.get_mut(&key_sym)
     && let Some(front) = vvec.front_mut()
@@ -1823,7 +1895,9 @@ pub fn remove_value(key: &str) -> Option<Stored> { remove_value_sym(arena::pin(k
 /// `crate::pin!`) — added for `after_assignment`, which fires on every
 /// `\def`/`\let`/register assignment.
 pub fn remove_value_sym(key_sym: SymStr) -> Option<Stored> {
-  match state_mut!().value.get_mut(&key_sym) {
+  let mut state = state_mut!();
+  state.journal_touch(TableName::Value, key_sym);
+  match state.value.get_mut(&key_sym) {
     None => None,
     Some(vvec) => match vvec.front_mut() {
       None | Some(&mut Stored::None) => None,
@@ -1833,14 +1907,20 @@ pub fn remove_value_sym(key_sym: SymStr) -> Option<Stored> {
 }
 /// Replaces the value in question with `Stored::None` (see `checkin_value` for returning it)
 pub fn checkout_value(key: &str) -> Option<Stored> {
-  match state_mut!().value.get_mut(&arena::pin(key)) {
+  let key = arena::pin(key);
+  let mut state = state_mut!();
+  state.journal_touch(TableName::Value, key);
+  match state.value.get_mut(&key) {
     None => None,
     Some(vvec) => vvec.front_mut().map(std::mem::take),
   }
 }
 /// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
 pub fn checkin_value(key: &str, value: Stored) {
-  match state_mut!().value.get_mut(&arena::pin(key)) {
+  let key_sym = arena::pin(key);
+  let mut state = state_mut!();
+  state.journal_touch(TableName::Value, key_sym);
+  match state.value.get_mut(&key_sym) {
     None => {
       // Key was never assigned — silently ignore the checkin
       emit_warn(
@@ -1875,6 +1955,7 @@ pub fn push_value<T: Into<Stored>>(key: &str, value: T) -> Result<()> {
   // panics "RefCell already mutably borrowed" (tikz-cd 2001.08973).
   let bug: Option<String> = {
     let mut state = state_mut!();
+    state.journal_touch(TableName::Value, key_sym);
     if !state.value.contains_key(&key_sym) {
       state.assign_internal(
         TableName::Value,
@@ -1926,6 +2007,7 @@ pub fn pop_value(key: &str) -> Result<Option<Stored>> {
   // borrow (mirrors push_value; tikz-cd 2001.08973).
   let popped: std::result::Result<Option<Stored>, ()> = {
     let mut state = state_mut!();
+    state.journal_touch(TableName::Value, key_sym);
     if !state.value.contains_key(&key_sym) {
       state.assign_internal(
         TableName::Value,
@@ -2644,6 +2726,7 @@ pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
   let values_iter = values.into_iter().map(Into::into);
   let key_sym = arena::pin(key);
   let mut state = state_mut!();
+  state.journal_touch(TableName::Value, key_sym);
   if !state.value.contains_key(&key_sym) {
     state.assign_internal(
       TableName::Value,
@@ -2687,6 +2770,7 @@ pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
 pub fn shift_value(key: &str) -> Result<Option<Stored>> {
   let key_sym = arena::pin(key);
   let mut state = state_mut!();
+  state.journal_touch(TableName::Value, key_sym);
   if !state.value.contains_key(&key_sym) {
     state.assign_internal(
       TableName::Value,
@@ -2721,6 +2805,7 @@ pub fn shift_value(key: &str) -> Result<Option<Stored>> {
 pub fn assign_mapping<T: Into<Stored>>(map: &str, key: &str, value: Option<T>) {
   let map_sym = arena::pin(map);
   let mut state = state_mut!();
+  state.journal_touch(TableName::Value, map_sym);
   if !state.value.contains_key(&map_sym) || state.value[&map_sym].is_empty() {
     state.assign_internal(
       TableName::Value,
@@ -3334,6 +3419,23 @@ pub fn rebind_let_copies(cs: &Token, new: &Stored) -> usize {
   let own = meaning_key(cs);
   let mut rebound = 0;
   let mut state = state_mut!();
+  // (the keys holding a copy, journaled before they are rewritten in place)
+  if state.journal.is_some() {
+    let copies: Vec<SymStr> = state
+      .meaning
+      .iter()
+      .filter(|(key, values)| {
+        **key != own
+          && values
+            .iter()
+            .any(|value| matches!(value, Stored::Expandable(def) if Rc::ptr_eq(def, &old_def)))
+      })
+      .map(|(key, _)| *key)
+      .collect();
+    for key in copies {
+      state.journal_touch(TableName::Meaning, key);
+    }
+  }
   'walk: for (key, values) in state.table_mut(TableName::Meaning).iter_mut() {
     if *key == own {
       continue;
@@ -3361,7 +3463,104 @@ pub fn rebind_let_copies(cs: &Token, new: &Stored) -> usize {
 /// LaTeX is INITEX-based and never defines it).
 pub fn remove_meaning_global(token: &Token) {
   let key = meaning_key(token);
-  state_mut!().meaning.remove(&key);
+  let mut state = state_mut!();
+  state.journal_touch(TableName::Meaning, key);
+  state.meaning.remove(&key);
+}
+
+/// Begin recording what assignments change, to undo them all ([`AssignmentJournalGuard::rollback`]) or keep them
+/// ([`AssignmentJournalGuard::keep`]; also on drop, so a panic leaves no journal open): a transaction over the binding
+/// tables, of every assignment however scoped and of the in-place edits of the tables (`push_value`,
+/// `assign_mapping`, `lookup_value_mut`, `checkout_value`/`checkin_value`, named-scope activation,
+/// `rebind_let_copies`, the graphics path list). Not of what lives outside the tables: a font's parameter array
+/// (`Stored::FontDimens`, edited in place) and the fallback/provide-only name sets. Made for the replay of a refused
+/// frontmatter setter (sect05.rs `replay_class_setter`), which a setter that errs half-way must not leave half-done
+/// (jsty3-author.sty:542's expl3 author list, which its printer then looped over: 2607.24171). `None`, recording
+/// nothing, while one is already open (journals do not nest); a journal its guard could not close (the state was
+/// borrowed when the guard dropped) is discarded here.
+pub fn begin_assignment_journal() -> Option<AssignmentJournalGuard> {
+  let mut state = state_mut!();
+  if state.journal.is_some() && JOURNAL_GUARD_LIVE.get() {
+    return None;
+  }
+  let frames = state.undo.iter().rev().map(|frame| frame.id).collect();
+  state.journal = Some(AssignmentJournal {
+    frames,
+    saved: rustc_hash::FxHashMap::default(),
+  });
+  JOURNAL_GUARD_LIVE.set(true);
+  Some(AssignmentJournalGuard { open: true })
+}
+
+#[thread_local]
+/// Whether an [`AssignmentJournalGuard`] is live: one that dropped while the state was borrowed leaves its journal
+/// for the next [`begin_assignment_journal`] to discard.
+static JOURNAL_GUARD_LIVE: std::cell::Cell<bool> = std::cell::Cell::new(false);
+
+/// The open assignment journal ([`begin_assignment_journal`]).
+#[must_use = "an assignment journal is kept or rolled back"]
+pub struct AssignmentJournalGuard {
+  open: bool,
+}
+
+impl AssignmentJournalGuard {
+  /// Close the journal, keeping every assignment made since it began.
+  pub fn keep(mut self) {
+    self.open = false;
+    JOURNAL_GUARD_LIVE.set(false);
+    state_mut!().journal = None;
+  }
+
+  /// Close the journal, undoing every assignment made since it began: each key's values and its counts in the frames
+  /// open then are put back as they were. Only when exactly those frames are open again — the same frames, by id,
+  /// each one opened since closed and none of them closed: false, undoing nothing (the assignments stay), otherwise.
+  pub fn rollback(mut self) -> bool {
+    self.open = false;
+    JOURNAL_GUARD_LIVE.set(false);
+    let mut state = state_mut!();
+    let Some(journal) = state.journal.take() else {
+      return false;
+    };
+    if !state
+      .undo
+      .iter()
+      .rev()
+      .map(|frame| frame.id)
+      .eq(journal.frames.iter().copied())
+    {
+      return false;
+    }
+    for ((table_name, key), (values, counts)) in journal.saved {
+      match values {
+        Some(values) => {
+          state.table_mut(table_name).insert(key, values);
+        },
+        None => {
+          state.table_mut(table_name).remove(&key);
+        },
+      }
+      for frame in state.undo.iter_mut() {
+        let id = frame.id;
+        let frame_table = frame.table_mut(table_name);
+        frame_table.remove(&key);
+        if let Some((_, n)) = counts.iter().find(|(at, _)| *at == id) {
+          frame_table.insert(key, *n);
+        }
+      }
+    }
+    true
+  }
+}
+
+impl Drop for AssignmentJournalGuard {
+  fn drop(&mut self) {
+    if self.open {
+      JOURNAL_GUARD_LIVE.set(false);
+      if let Ok(mut state) = STATE.try_borrow_mut() {
+        state.journal = None;
+      }
+    }
+  }
 }
 
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
@@ -3977,6 +4176,7 @@ pub fn activate_scope(scope: SymStr) {
   // Here we ALWAYS push the stashed values into the table
   // since they may be popped off by deactivateScope
   for (table_name, key, value) in actions {
+    state.journal_touch(table_name, key);
     let frame = &mut state.undo[0];
     let frame_table = frame.table_mut(table_name);
     let entry = frame_table.entry(key).or_insert(0);
@@ -4015,6 +4215,7 @@ pub fn deactivate_scope(scope: SymStr) {
   }
 
   for (table_name, key, value) in collected {
+    state.journal_touch(table_name, key);
     let front_is_value = if let Some(table_entry_peek) = state.table(table_name).get(&key) {
       if let Some(table_front) = table_entry_peek.front() {
         *table_front == value
@@ -4760,6 +4961,7 @@ pub fn graphics_paths_push_front(path: String) {
   let key = arena::pin("GRAPHICSPATHS");
   let entry = Stored::String(arena::pin(&path));
   let mut state = state_mut!();
+  state.journal_touch(TableName::Value, key);
   if !state.value.contains_key(&key) {
     state.assign_internal(
       TableName::Value,
@@ -5304,5 +5506,62 @@ mod let_copy_tests {
       rebind_let_copies(&T_CS!("\\lcsolo"), &macro_of("\\lcsolo", "y")),
       0
     );
+  }
+}
+
+#[cfg(test)]
+mod assignment_journal_tests {
+  use super::*;
+
+  /// A rollback puts back a global and a local assignment made since the journal began; a kept journal keeps them.
+  #[test]
+  fn rollback_undoes_and_keep_keeps() {
+    assign_value("j65e_probe", "before", Some(Scope::Global));
+    let journal = begin_assignment_journal().expect("no journal open");
+    push_frame();
+    assign_value("j65e_probe", "inner", None);
+    assign_value("j65e_probe", "global", Some(Scope::Global));
+    assert!(pop_frame().is_ok());
+    assert_eq!(lookup_string("j65e_probe"), "global");
+    assert!(journal.rollback(), "the frames it began with are open");
+    assert_eq!(lookup_string("j65e_probe"), "before");
+    let journal = begin_assignment_journal().expect("no journal open");
+    assign_value("j65e_probe", "kept", Some(Scope::Global));
+    journal.keep();
+    assert_eq!(lookup_string("j65e_probe"), "kept");
+  }
+
+  /// A journal that began inside a frame closed since cannot roll back: the assignments stay.
+  #[test]
+  fn rollback_refused_when_its_frames_changed() {
+    push_frame();
+    let journal = begin_assignment_journal().expect("no journal open");
+    assign_value("j65e_frames", "set", Some(Scope::Global));
+    assert!(pop_frame().is_ok());
+    assert!(!journal.rollback(), "a frame it began with is gone");
+    assert_eq!(lookup_string("j65e_frames"), "set");
+  }
+
+  /// A guard dropped while the state is borrowed leaves its journal stale: nothing records into it, and the next begin
+  /// discards it.
+  #[test]
+  fn stale_journal_records_nothing_and_is_discarded() {
+    let journal = begin_assignment_journal().expect("no journal open");
+    {
+      let _held = STATE.borrow_mut();
+      drop(journal);
+    }
+    assert!(state!().journal.is_some(), "the guard could not close it");
+    assign_value("j65e_stale", "x", Some(Scope::Global));
+    assert!(
+      state!()
+        .journal
+        .as_ref()
+        .is_some_and(|j| j.saved.is_empty()),
+      "a stale journal records nothing"
+    );
+    let journal = begin_assignment_journal().expect("the stale journal is discarded");
+    journal.keep();
+    assert!(state!().journal.is_none());
   }
 }

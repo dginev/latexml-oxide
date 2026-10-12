@@ -1,0 +1,22 @@
+% witness: astro-ph0003044, astro-ph9702104, astro-ph0003143, astro-ph0003144, 1806.03273 (`\keywords …` before
+%          `\end{abstract}`; crckapb.sty:389-395)
+% oracle:  pdflatex 0 errors (with the shipped crckapb.sty); "Key words: Sun: irradiance" after the abstract
+% engines: rust 65a = Fatal:Mouth:EoF (`\keywords#1\end@keywords`, whose delimiter the class's `\abstract#1\end#2`
+%          supplies, with that `\abstract` refused by the lock: read to the end of the file); 64zc 2 errors; Perl 1
+% expect:  0 errors; no Fatal; abstract "Text."; keywords "Sun: irradiance"
+% status:  RED (65a) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentstyle[proceedings]{crckapb}
+\begin{opening}
+\title{A title}
+\author{A. Author}
+\institute{An Institute}
+\end{opening}
+\begin{document}
+\begin{abstract}
+Text.
+\keywords Sun: irradiance
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

@@ -1,0 +1,13 @@
+% witness: 1910.00401 (`$^{*}$ghunt@wm.edu`, the starred author's email line in the author block)
+% oracle:  pdflatex 0 errors: "GREG HUNT1,∗", the email line "∗ GH@X.EDU" (amsart's capitals)
+% engines: rust 65e r4 = the name without `*` (the email showing it was taken to answer it); 65a the same; 65e: on both
+% expect:  0 errors; Greg Hunt's name shows `∗`, his email `<sup>*</sup>gh@x.edu`
+% status:  RED (65e r4) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Greg Hunt$^{1,*}$, Cody Ground$^{2}$\\ $^{1}$Univ A\\ $^{2}$Univ B\\ $^{*}$gh@x.edu}
+\maketitle
+Text.
+\end{document}

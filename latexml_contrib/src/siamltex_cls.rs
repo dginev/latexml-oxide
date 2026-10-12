@@ -37,12 +37,25 @@ fn push_classification_to_frontmatter(
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsthm");
+  // siamltex.cls:459-476 (and :756-759): the theorems share one counter, numbered within the section unless the
+  // `onethmnum` option (:102); `{example}`, `{remark}` and `{defthm}` among them. Declared here as the class does, the
+  // OmniBus theorem set, which declares only free names (OXIDIZED_DESIGN #533), no longer renumbers them all within the
+  // section at the first `{remark}` (2312.13144: "Remark 2.1", "Theorem 3.1" as the PDF prints them).
   RawTeX!(
-    r"\newtheorem{theorem}{Theorem}
+    r"\newif\if@onethmnum
+\@expandtwoargs\in@{,onethmnum,}{,\@classoptionslist,}\ifin@\@onethmnumtrue\fi
+\if@onethmnum
+  \newtheorem{theorem}{Theorem}
+\else
+  \newtheorem{theorem}{Theorem}[section]
+\fi
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{definition}[theorem]{Definition}"
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{defthm}[theorem]{Definition and Theorem}"
   );
   Let!("\\Appendix", "\\appendix");
   // Perl siamltex.cls.ltxml L27-40: `classification_tokens_for_env` unreads

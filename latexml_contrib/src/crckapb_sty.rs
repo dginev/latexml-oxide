@@ -886,4 +886,24 @@ LoadDefinitions!({
 
 \@addtoreset{equation}{chapter}   % Makes \chapter reset 'equation' counter.
 "#);
+  // crckapb.sty:389-395: `\keywords#1\end@keywords` reads to the `\end@keywords` that the class's
+  // `\abstract#1\end#2` appends to the abstract's text, so the keywords run to the abstract's `\end`. The lock
+  // refuses that `\abstract` (the kernel's {abstract} keeps the text, sect05.rs), and nothing supplies the delimiter:
+  // `\keywords` read to the end of the file (Fatal:Mouth:EoF; astro-ph0003044, astro-ph9702104, astro-ph0003143,
+  // astro-ph0003144, 1806.03273). It ends where the class's does, at the first `\end`, put back to close the
+  // abstract, and is labelled as `\make@abstract` prints it (crckapb.sty:411 `\keywordsname:`), without the spaces
+  // around it (the line's end before the `\end`).
+  RawTeX!(r"\long\def\keywords#1\end{\lx@crckapb@keywords{#1}\end}");
+  DefMacro!("\\lx@crckapb@keywords{}", sub[(keywords)] {
+    let mut keywords = keywords.unlist();
+    while keywords.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
+      keywords.pop();
+    }
+    let lead = keywords.iter().take_while(|t| t.get_catcode() == Catcode::SPACE).count();
+    keywords.drain(..lead);
+    Ok(Invocation!(T_CS!("\\lx@add@keywords"), vec![
+      Some(TokenizeInternal!(r"name={\keywordsname:~}")),
+      Some(Tokens::new(keywords))
+    ]))
+  });
 });

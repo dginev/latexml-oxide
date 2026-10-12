@@ -1,0 +1,14 @@
+% witness: 65e review (an author's `\newcommand{\thm}` under OmniBus, then an undeclared `{cor}`; the set's
+%          `\newtheorem{cor}[thm]{Corollary}` once its `thm` was refused for the author's macro)
+% oracle:  pdflatex (any class declaring {cor}) 0 errors; the author's \thm prints "Thm"
+% engines: rust 65e r1 = 1 error (`Error:undefined:\thethm`, "Counter 'thm' was not defined"); 65a 0 errors but the
+%          author's \thm replaced by the {thm} theorem
+% expect:  0 errors; "Corollary 1"; "See Thm." in bold
+% status:  RED (65e r1) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{nosuchclassxyz}
+\newcommand{\thm}{\textbf{Thm}}
+\begin{document}
+\begin{cor}A corollary.\end{cor}
+See \thm.
+\end{document}

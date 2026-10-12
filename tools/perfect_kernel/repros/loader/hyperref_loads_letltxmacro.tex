@@ -1,0 +1,16 @@
+% witness: 2106.06828, 1911.11856 (`\LetLtxMacro` with hyperref alone, as hyperref loaded letltxmacro until v7.01h,
+%          2023-12-19)
+% oracle:  pdflatex 5 errors with TL 2025's hyperref (`\LetLtxMacro` undefined, its cascade); 0 with letltxmacro
+%          loaded, as hyperref v7.01g or older (TL 2023) loads it, whose behaviour the binding keeps (one binding serves
+%          all versions)
+% engines: rust 65a = `\LetLtxMacro` undefined and its cascade; Perl the same
+% expect:  0 errors; "old new" emphasized text
+% status:  RED (65a) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\LetLtxMacro{\oldemph}{\emph}
+\renewcommand{\emph}[1]{\oldemph{#1} new}
+\begin{document}
+\emph{old}
+\end{document}

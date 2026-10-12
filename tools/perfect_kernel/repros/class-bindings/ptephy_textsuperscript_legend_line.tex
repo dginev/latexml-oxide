@@ -1,0 +1,16 @@
+% witness: 65e review round 4 (q4: a legend line led by `\textsuperscript{*}` after the names' `\\`)
+% oracle:  pdflatex 1 error (the class's `newlogo` graphic, not shipped; ptephy_v1.cls from 2203.01270): "A. One1,
+%          B. Two2,*", then "*Deceased."
+% engines: rust 65e r3 = "Deceased." a name (the legend gate did not see past `\textsuperscript`)
+% expect:  0 errors; two creators, B. Two's `*` shown; one pubnote "*Deceased."
+% status:  RED (65e r3) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{ptephy_v1}
+\begin{document}
+\title{T}
+\author{A.~One$^{1}$, B.~Two$^{2,*}$\\ \textsuperscript{*}Deceased.}
+\affil{$^{1}$Univ A \\ $^{2}$Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

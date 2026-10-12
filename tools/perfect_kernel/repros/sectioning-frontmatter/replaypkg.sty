@@ -1,0 +1,3 @@
+\ProvidesPackage{replaypkg}[2026/10/12 a package author setter (65e repro)]
+\newcounter{authcount}
+\renewcommand\author[1]{\global\advance\c@authcount by 1\relax}

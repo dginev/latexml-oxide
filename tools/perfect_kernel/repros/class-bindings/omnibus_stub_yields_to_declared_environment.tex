@@ -1,0 +1,14 @@
+% witness: cs0511055 (tlp.cls:494 `\newenvironment{proof}`, a raw class read over OmniBus, whose `\begin{proof}` stub
+%          `\begin` finds first)
+% oracle:  pdflatex (the class's own proof) 0 errors; "Pf. First."
+% engines: rust 65e r1 = timeout (the OmniBus theorem set, refusing the declared `proof`, re-ran the stub for ever);
+%          65a 0 errors, the proof a numbered "Proof 1" theorem (the set replaced the class's); Perl the same as 65a
+% expect:  0 errors; the first proof is the document's ("Pf." in italics), no ltx:proof before the theorem
+% status:  RED (65e r1) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{nosuchclassxyz}
+\newenvironment{proof}{\par\textit{Pf.}}{\par}
+\begin{document}
+\begin{proof}First.\end{proof}
+\begin{theorem}A theorem.\end{theorem}
+\end{document}

@@ -6780,6 +6780,13 @@ Text.
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let found = contacts(&xml);
+  // (Ann's `*`, whose legend line lands among Bob's affiliations, stays shown as printed: 65e `show_unanswered_marks`)
+  assert_element(
+    &xml,
+    "personname",
+    &[],
+    "<personname>Ann Able<sup xml:id=\"id1\">\u{2217}</sup></personname>",
+  );
   // Ann holds her affiliation and her address alone: each address of the line goes to its author in order
   // (`email_line_calls`), the legend is not folded into Univ B. (Where the legend goes, an unmarked line placed by
   // position, is not pinned: it is not an affiliation.)
@@ -6787,7 +6794,7 @@ Text.
     found[0],
     vec![
       affiliation(" Univ A"),
-      "<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">a@x.y</text></contact>".to_string()
+      "<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">a@x.y</text></contact>".to_string()
     ],
     "{xml}"
   );
@@ -6799,7 +6806,7 @@ Text.
     bob,
     vec![
       &affiliation(" Univ B"),
-      &"<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">b@x.y</text></contact>".to_string()
+      &"<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">b@x.y</text></contact>".to_string()
     ],
     "{xml}"
   );
@@ -7954,7 +7961,9 @@ fn author_thanks_and_footnote_keep_their_math() {
       r"\documentclass{article}\begin{document}\title{T}\author{Ann Able$^{\dag}$, Bob Baker$^{*}$\thanks{$^{\dag}$ Univ X. $^{*}$ Univ Y.}}\maketitle Text.\end{document}"
     ),
     vec![
-      "<creator role=\"author\"><personname>Ann Able</personname></creator>".to_string(),
+      // (her `$^{\dag}$`, whose legend went with Bob's note, stays shown, as printed: 65e `show_unanswered_marks`)
+      "<creator role=\"author\"><personname>Ann Able<sup>\u{2020}</sup></personname></creator>"
+        .to_string(),
       format!(
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname>{}</creator>",
         thanks("note", &format!("{} Univ X. <sup>*</sup> Univ Y.", it("†")))

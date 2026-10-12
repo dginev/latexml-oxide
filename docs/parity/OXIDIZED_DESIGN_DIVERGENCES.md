@@ -14873,7 +14873,7 @@ argument (its text is the kernel's; a body that typesets it would step counters,
 re-entrant, its output discarded; the groups it left open — `\begingroup`, environments, mode switches — are closed in
 a reading context and box list of their own, so their `\aftergroup` tokens and group-end boxes are discarded with it,
 and an imbalance that cannot be closed (or a document group it closed) is an Error. One that raises an error is
-dropped with its diagnostics (Info), as the `\maketitle` deposit is (#265).
+dropped with its diagnostics (Info), as the `\maketitle` deposit is (#265), and with its assignments (#534).
 Afterwards the lock's own record (`\lx@dropped@<name>`, `<name>:redefined@nargs`, which a `\let`/`\def` of the name in
 the body would rewrite globally) is as before, and so are the kernel's `\@author`/`\@shortauthor` and every store the
 dropped body `\def`s/`\gdef`s/`\edef`s/`\xdef`s — where the body changed them past its group; empty if undefined, the
@@ -14972,7 +14972,11 @@ still joins them; none of 204 papers); `\collaborator{X}` (ptephy_v1.cls:1403) a
 the `∗` mark, a symbol-led piece of an email or of the address text by its symbol, else a block contact; an `\address`
 before the `\author` sees no starred author yet (its email the block's); (3) in an `\address` with single-argument
 `\affil`s, emails taken out before the kernel's list parser, an email after a mark-only `\affil{\dag}` that mark's; (4)
-unlabelled `\affil`s attach `annotate=run` (authblk-TI.sty:104-121); (5) an `\address` of two-argument `\affil`s is
+unlabelled `\affil`s attach `annotate=run` (authblk-TI.sty:104-121), except one of `$^{n}$`-led lines, the list of the
+affiliations its marks label (`\lx@add@affiliation@marked`), with names marked `$^{n}$` (no `\name`) a name list whose
+marks request them (`\lx@add@authors@list`; 65e, 2203.01270: 1669 names each held all 288 lines, 83 MB, 6.9 GB),
+the lines after that list's first `\\` its legends (`{${}^{\ast}$Deceased, …}`), each a document `ltx:pubnote`
+with its mark, not one more creator; (5) an `\address` of two-argument `\affil`s is
 digested in a discarded `\hbox`: each `\affil`/`\email` adds its frontmatter, what it prints beside them is set aside.
 mdpi's `\history` keeps the last call (mdpi.cls:384 `\gdef`), gated by the `submit`/`accept` status.
 **Why**: content (run 336: ptephy 204 papers with errors → 27, starred-author emails 28 → 146; quantumarticle 61 → 4).
@@ -15158,6 +15162,9 @@ institute (no `\and`), unnumbered in l-aa (:419-424), every author's though it c
 (astro-ph9405007, astro-ph9609156); the captions "Fig. 1. text" / "Table 1. text", no colon (:381, :392, :371-377
 `{\bf #1} #2`); `\picplace` (:24-26). A shipped copy
 gets the binding too (a binding outranks a raw file).
+Plain TeX's `\matrix{…\cr}` (l-aa loads no amsmath) keeps its plain reading: the aa binding's `\@currenvir` dispatch,
+as for `\pmatrix` and `\cases`, which amsmath's environment-only `\matrix` lacked (65e; KPE #608; astro-ph9609122,
+astro-ph9809009, astro-ph9503122, astro-ph0002500, astro-ph9901229, astro-ph9610167: 101 errors + Fatal → 0).
 **Why**: content: the frontmatter, keywords and thesaurus codes of 843 papers. A/B: 80 witnesses with errors 80 → 2
 (185 → 2), 20 shipping the file 20 → 2, the 29 keyword-form papers 29 → 1 with no keyword text lost. Guards
 `perfect_kernel_batch64u::{l_aa_documentstyle_is_the_aa_class, l_aa_thesaurus_ends_at_par,
@@ -16022,6 +16029,79 @@ its `\let\mydelim\delimiter` twin (before: the code digested as math); 1207.4709
 etoolbox `\robustify\left` now errs "\left not a macro" as in pdflatex), zhlineskip.tex:234 (`\env@cases`). Guards `perfect_kernel_batch65d::*`, golden
 `tests/parse/left_right_delimiters`, `perfect_kernel_batch56::{let_at_left_left_does_not_loop,
 left_right_in_text_mode_are_plain_text}`.
+
+### 532. A `\par` or skip inside an item's inline sectional block ends no paragraph (Perl: no paragraph above a section)
+
+**Perl behavior**: a sectioning unit in a list item nests in it (OD #189), never inside a paragraph, so a `\par` in the
+section's content finds no `ltx:para` above the section to close.
+**Rust behavior**: the item's block is bridged as `ltx:para > ltx:inline-sectional-block` (#189). A `\par`
+(`\lx@normal@par`) or a `\vskip` whose paragraph-close walk would pass through an open `ltx:inline-sectional-block`
+closes nothing, as when it would pass through a list open inside the paragraph
+(`document::helpers::list_or_block_open_inside_para`; KPE #456). The block ends with the item or the list (#189).
+**Why**: a blank line between the `\bibitem`s of a bibliography in such a block (a list left open before the
+bibliography: 1805.06896's bare `\itemize`, 2304.12197's lonely `\item`s, 2307.13461, hep-ex0406049, 0705.0894,
+2511.04367) closed the bridge paragraph, the block, the section and the bibliography; every later entry nested in the
+previous `bibblock` (one error each, Fatal:TooManyErrors since 64d). Witnesses' errors 101+Fatal → 2, 3, 47, 30, 2, 7
+(64c: 1, 10, 51, 38, 4, 9). Open: `\appendix` after such a bibliography, `ltx:appendix isn't allowed in
+ltx:inline-sectional-block` (5 of the 6). Guard `perfect_kernel_batch65e::par_in_item_bibliography_keeps_the_block`.
+
+### 533. The OmniBus theorem set declares only the names that are free, and each stub fires once (Perl: overwrites)
+
+**Perl behavior**: the first undeclared theorem environment runs `\newtheorem` for all 31 names of OmniBus.cls.ltxml:160-209,
+overwriting an author's macro or environment of the same name (KPE #609).
+**Rust behavior**: each `\newtheorem{X}` of the set runs under `\@ifundefined{X}`, LaTeX's own refusal of a defined name
+(latex.ltx:17174-17195 `\@ifdefinable`), silent since the author never wrote it. The `\begin{X}` stub fires once: it
+removes itself, and steps aside for an environment declared since it was installed (`\begin` finds the stub before
+`\X`: a raw class's `\newenvironment{proof}`, tlp.cls:494, read over OmniBus, cs0511055), which the set would refuse
+and the stub then run again for ever. A name the set cannot declare is LaTeX's undefined environment. The set's amsthm
+load keeps amsthm's `{proof}` (the set's numbered "Proof" theorem is refused) — as pdflatex with amsthm.
+**Why**: 1308.6566 and 0811.3048 (`\newcommand{\conj}[1]{…}`), cs0511055 (`\fact`): math `\conj{y}` opened a theorem in
+XMath, 101 errors + Fatal → 0. A name numbered within another's counter (`\newtheorem{cor}[thm]`) whose owner was
+refused for an author's macro gets a counter of its own (`\@ifundefined{c@thm}`), not an undefined `\thethm`. A
+binding that declared fewer theorems than its class, which the set then
+re-declared within the section, declares them as the class does (siamltex.cls:459-476, `onethmnum`; 2312.13144).
+Residual (shared with Perl): the set's amsthm load replaces a document's own
+`\newenvironment{proof}` (amsthm's binding defines `\begin{proof}` over the document's `\proof`). Guards
+`perfect_kernel_batch65e::{omnibus_theorem_set_keeps_author_macro, omnibus_stub_yields_to_declared_environment,
+omnibus_dependent_theorem_without_owner_counter}`.
+
+### 534. A replayed setter that errs is undone whole, its assignments with its diagnostics (Perl: never runs it)
+
+Addendum to #482. The replay of a refused `\author`/`\abstract` (`replay_class_setter`, sect05.rs) is a beyond-Perl
+surpass (64k): Perl's binding owns `\author` and the refused setter never runs. The replay runs under an assignment
+journal (state.rs `begin_assignment_journal`, an `AssignmentJournalGuard`): the first touch of each key since the
+journal began records the key's values and its counts in the frames then open, by frame id (`UndoFrame::id`), and
+`AssignmentJournalGuard::rollback` puts them back when the replay raised an error; a clean replay keeps them. An
+erring replay therefore ends exactly as Perl does: as if never run. Where pdflatex errs too, the PDF keeps what the
+setter assigned before the error and we do not — a divergence by design, the fail-safe (`sectioning-frontmatter/
+replayed_setter_error_rolls_back`: pdflatex Count 1, ours 0; the 65e review's docset3 probe, a document setter that
+`\global\advance`s then errs: pdflatex "Authors: 1.", ours "Authors: 0."). The journal covers every assignment however
+scoped, `\global` included, and the in-place edits of the tables (`push_value`, `assign_mapping`, `lookup_value_mut`,
+`checkout_value`/`checkin_value`, named-scope activation, `rebind_let_copies`, the graphics path list); not a font's
+parameter array (`Stored::FontDimens`, edited in place), the fallback/provide-only name sets, `tag_properties`,
+`pending_resources`, the prefixes or the conditional stack (state fields outside the tables). A rollback needs the
+very frames it began with (each one opened since closed, none of them closed); when it cannot apply, the replay's
+assignments and its diagnostics both stay, with an Info saying so. A journal whose guard dropped while the state was
+borrowed is stale — nothing records into it — and is discarded at the next begin (unit tests
+`assignment_journal_tests`; guard `replayed_setter_unbalanced_keeps_its_diagnostics` for the branch that cannot roll
+back). Package and document setters stay replayed, as pdflatex runs whatever setter
+is in force (`sectioning-frontmatter/package_setter_is_replayed`, a CONTROL: Count 1 as pdflatex).
+**Why**: jsty3-author.sty:542's xparse `\author` (a package; 2607.24171) erred half-way at each of its 4 replays,
+leaving its expl3 author sequence half-built; the printer looped over it: 991 errors, Fatal:TooManyErrors → 3 errors
+(the package's own `[T009] Float without caption`, as 64h). Open (RED `sectioning-frontmatter/
+replayed_document_setter_keeps_its_store`): a clean replay still puts back every store its body `\gdef`s (#482), so a
+document setter's `\gdef\myauth{#1}` read in the body prints empty. Guards
+`perfect_kernel_batch65e::{replayed_setter_error_rolls_back, package_setter_is_replayed}`.
+
+### 535. hyperref loads letltxmacro (Perl: commented out)
+
+**Perl behavior**: hyperref.sty.ltxml:35 `#RequirePackage('letltxmacro')`, so `\LetLtxMacro` is undefined after
+`\usepackage{hyperref}` alone.
+**Rust behavior**: the binding requires letltxmacro (raw), as hyperref did until v7.01h (ChangeLog 2023-12-19 "remove
+letltxmacro package"): one binding serves every version of a package, the union of what they provide (user ruling).
+**Why**: papers of hyperref's 2010-2023 years use `\LetLtxMacro` with hyperref alone (2106.06828: 101 errors + Fatal
+→ 0; 1911.11856 → 0). TL 2025's pdflatex errs on them (5 errors on the repro); TL 2023's does not. Guard
+`perfect_kernel_batch65e::hyperref_loads_letltxmacro`.
 
 ### 536. A plain TeX document loads the LaTeX format only on a use of Perl's triggers, which it holds undefined (Perl: the triggers are defined macros)
 

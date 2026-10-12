@@ -511,33 +511,41 @@ LoadDefinitions!({
 
   // Perl L169-219: theorem env autoloads — if a common theorem env name is
   // used without being declared, load amsthm and define a standard set.
+  // Each only where the name is free: LaTeX's `\newtheorem` refuses a defined
+  // name (latex.ltx:17174-17195 `\@ifdefinable`, amsthm.sty:78-80), and the
+  // set, a fallback the author never wrote, refuses it silently. Perl defines
+  // them all, so an author's `\newcommand{\conj}[1]{\overline{#1}}` became the
+  // {conj} theorem at the first `\begin{theorem}`, and `\conj{y}` in math opened
+  // a theorem there (1308.6566, 0811.3048; cs0511055 `\fact`). A name numbered within another's counter
+  // (`\newtheorem{cor}[thm]{…}`) whose owner the set refused for an author's macro (`\newcommand{\thm}{…}`) has no
+  // such counter: it gets its own (`\@ifundefined{c@thm}`), not an undefined `\thethm`.
   let theorem_preload = concat!(
-    "\\newtheorem{theorem}{Theorem}[section]",
-    "\\newtheorem{conjecture}[theorem]{Conjecture}",
-    "\\newtheorem{proposition}[theorem]{Proposition}",
-    "\\newtheorem{proof}[theorem]{Proof}",
-    "\\newtheorem{lemma}[theorem]{Lemma}",
-    "\\newtheorem{corollary}[theorem]{Corollary}",
-    "\\newtheorem{example}[theorem]{Example}",
-    "\\newtheorem{exercise}[theorem]{Exercise}",
-    "\\newtheorem{definition}[theorem]{Definition}",
-    "\\newtheorem{problem}[theorem]{Problem}",
-    "\\newtheorem{question}[theorem]{Question}",
-    "\\newtheorem{remark}[theorem]{Remark}",
-    "\\newtheorem{solution}[theorem]{Solution}",
-    "\\newtheorem{step}[theorem]{Step}",
-    "\\newtheorem{note}[theorem]{Note}",
-    "\\newtheorem{thm}{Theorem}",
-    "\\newtheorem{cor}[thm]{Corollary}",
-    "\\newtheorem{lem}[thm]{Lemma}",
-    "\\newtheorem{claim}[thm]{Claim}",
-    "\\newtheorem{axiom}[thm]{Axiom}",
-    "\\newtheorem{conj}[thm]{Conjecture}",
-    "\\newtheorem{fact}[thm]{Fact}",
-    "\\newtheorem{hypo}[thm]{Hypothesis}",
-    "\\newtheorem{assum}[thm]{Assumption}",
-    "\\newtheorem{prop}[thm]{Proposition}",
-    "\\newtheorem{crit}[thm]{Criterion}",
+    "\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}[section]}{}",
+    "\\@ifundefined{conjecture}{\\@ifundefined{c@theorem}{\\newtheorem{conjecture}{Conjecture}}{\\newtheorem{conjecture}[theorem]{Conjecture}}}{}",
+    "\\@ifundefined{proposition}{\\@ifundefined{c@theorem}{\\newtheorem{proposition}{Proposition}}{\\newtheorem{proposition}[theorem]{Proposition}}}{}",
+    "\\@ifundefined{proof}{\\@ifundefined{c@theorem}{\\newtheorem{proof}{Proof}}{\\newtheorem{proof}[theorem]{Proof}}}{}",
+    "\\@ifundefined{lemma}{\\@ifundefined{c@theorem}{\\newtheorem{lemma}{Lemma}}{\\newtheorem{lemma}[theorem]{Lemma}}}{}",
+    "\\@ifundefined{corollary}{\\@ifundefined{c@theorem}{\\newtheorem{corollary}{Corollary}}{\\newtheorem{corollary}[theorem]{Corollary}}}{}",
+    "\\@ifundefined{example}{\\@ifundefined{c@theorem}{\\newtheorem{example}{Example}}{\\newtheorem{example}[theorem]{Example}}}{}",
+    "\\@ifundefined{exercise}{\\@ifundefined{c@theorem}{\\newtheorem{exercise}{Exercise}}{\\newtheorem{exercise}[theorem]{Exercise}}}{}",
+    "\\@ifundefined{definition}{\\@ifundefined{c@theorem}{\\newtheorem{definition}{Definition}}{\\newtheorem{definition}[theorem]{Definition}}}{}",
+    "\\@ifundefined{problem}{\\@ifundefined{c@theorem}{\\newtheorem{problem}{Problem}}{\\newtheorem{problem}[theorem]{Problem}}}{}",
+    "\\@ifundefined{question}{\\@ifundefined{c@theorem}{\\newtheorem{question}{Question}}{\\newtheorem{question}[theorem]{Question}}}{}",
+    "\\@ifundefined{remark}{\\@ifundefined{c@theorem}{\\newtheorem{remark}{Remark}}{\\newtheorem{remark}[theorem]{Remark}}}{}",
+    "\\@ifundefined{solution}{\\@ifundefined{c@theorem}{\\newtheorem{solution}{Solution}}{\\newtheorem{solution}[theorem]{Solution}}}{}",
+    "\\@ifundefined{step}{\\@ifundefined{c@theorem}{\\newtheorem{step}{Step}}{\\newtheorem{step}[theorem]{Step}}}{}",
+    "\\@ifundefined{note}{\\@ifundefined{c@theorem}{\\newtheorem{note}{Note}}{\\newtheorem{note}[theorem]{Note}}}{}",
+    "\\@ifundefined{thm}{\\newtheorem{thm}{Theorem}}{}",
+    "\\@ifundefined{cor}{\\@ifundefined{c@thm}{\\newtheorem{cor}{Corollary}}{\\newtheorem{cor}[thm]{Corollary}}}{}",
+    "\\@ifundefined{lem}{\\@ifundefined{c@thm}{\\newtheorem{lem}{Lemma}}{\\newtheorem{lem}[thm]{Lemma}}}{}",
+    "\\@ifundefined{claim}{\\@ifundefined{c@thm}{\\newtheorem{claim}{Claim}}{\\newtheorem{claim}[thm]{Claim}}}{}",
+    "\\@ifundefined{axiom}{\\@ifundefined{c@thm}{\\newtheorem{axiom}{Axiom}}{\\newtheorem{axiom}[thm]{Axiom}}}{}",
+    "\\@ifundefined{conj}{\\@ifundefined{c@thm}{\\newtheorem{conj}{Conjecture}}{\\newtheorem{conj}[thm]{Conjecture}}}{}",
+    "\\@ifundefined{fact}{\\@ifundefined{c@thm}{\\newtheorem{fact}{Fact}}{\\newtheorem{fact}[thm]{Fact}}}{}",
+    "\\@ifundefined{hypo}{\\@ifundefined{c@thm}{\\newtheorem{hypo}{Hypothesis}}{\\newtheorem{hypo}[thm]{Hypothesis}}}{}",
+    "\\@ifundefined{assum}{\\@ifundefined{c@thm}{\\newtheorem{assum}{Assumption}}{\\newtheorem{assum}[thm]{Assumption}}}{}",
+    "\\@ifundefined{prop}{\\@ifundefined{c@thm}{\\newtheorem{prop}{Proposition}}{\\newtheorem{prop}[thm]{Proposition}}}{}",
+    "\\@ifundefined{crit}{\\@ifundefined{c@thm}{\\newtheorem{crit}{Criterion}}{\\newtheorem{crit}[thm]{Criterion}}}{}",
     // Guard `\theoremstyle{definition}` with `\@ifundefined` so the
     // stub does NOT error when the document deliberately undefined
     // `\theoremstyle` (e.g. `\let\theoremstyle\@undefined` followed
@@ -548,12 +556,12 @@ LoadDefinitions!({
     // 2603.11265 (ifacconf.cls -> theorem.sty -> amsthm pre-loaded,
     // then user `\let\theoremstyle\@undefined`).
     "\\@ifundefined{theoremstyle}{}{\\theoremstyle{definition}}",
-    "\\newtheorem{defn}[thm]{Definition}",
-    "\\newtheorem{exmp}[thm]{Example}",
-    "\\newtheorem{rem}[thm]{Remark}",
-    "\\newtheorem{prob}[thm]{Problem}",
-    "\\newtheorem{prin}[thm]{Principle}",
-    "\\newtheorem{alg}{Algorithm}",
+    "\\@ifundefined{defn}{\\@ifundefined{c@thm}{\\newtheorem{defn}{Definition}}{\\newtheorem{defn}[thm]{Definition}}}{}",
+    "\\@ifundefined{exmp}{\\@ifundefined{c@thm}{\\newtheorem{exmp}{Example}}{\\newtheorem{exmp}[thm]{Example}}}{}",
+    "\\@ifundefined{rem}{\\@ifundefined{c@thm}{\\newtheorem{rem}{Remark}}{\\newtheorem{rem}[thm]{Remark}}}{}",
+    "\\@ifundefined{prob}{\\@ifundefined{c@thm}{\\newtheorem{prob}{Problem}}{\\newtheorem{prob}[thm]{Problem}}}{}",
+    "\\@ifundefined{prin}{\\@ifundefined{c@thm}{\\newtheorem{prin}{Principle}}{\\newtheorem{prin}[thm]{Principle}}}{}",
+    "\\@ifundefined{alg}{\\newtheorem{alg}{Algorithm}}{}",
   );
   // Only install autoload stubs for CSes that aren't already defined. If
   // amsthm was pre-loaded (e.g. via dep-scan of a local .cls that
@@ -590,8 +598,17 @@ LoadDefinitions!({
     if IsDefined!(&cs) { continue; }
     let beginenv_clone = beginenv.clone();
     let preload = theorem_preload.to_string();
+    let env_cs = T_CS!(s!("\\{env}"));
     def_macro(cs, None,
       ExpansionBody::Closure(Rc::new(move |_args| {
+        // The stub fires once: `\begin` looks it up before `\<env>`, so it steps aside for the environment the
+        // set declares, or one declared since it was installed (a raw class's `\newenvironment{proof}`, tlp.cls:494;
+        // cs0511055), which the set refuses; it would otherwise run again for ever. A name the set leaves alone (an
+        // author's macro of that name) is then `\begin`'s ordinary lookup: the macro, or LaTeX's undefined environment.
+        assign_meaning(&cs, Stored::None, Some(Scope::Global));
+        if IsDefined!(&env_cs) {
+          return Ok(mouth::tokenize_internal(TeXString::assembled(beginenv_clone.clone())));
+        }
         require_package("amsthm", RequireOptions::default())?;
         let mut expanded = preload.clone();
         expanded.push_str(&beginenv_clone);

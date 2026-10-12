@@ -451,6 +451,38 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     `\longtable` calls (1102.5033).
   - Math readings of ambiguous formulas can flip between builds with no input change (2205.06656, 2503.00718,
     1708.09355). Each is deterministic per binary; likely an interning-order tie-break in the math parser.
+- **65e** (RUST-ONLY regressions of run 338 against run 336; triage 2026-10-12): l-aa's plain `\matrix{…\cr}` (64u:
+  aa's amsmath gave the environment-only form; aa's `\@currenvir` dispatch, KPE #608); crckapb's `\keywords` ends at
+  the abstract's `\end` (64zd: read to EOF with the class `\abstract` refused); a `\par`/`\vskip` in an item's inline
+  sectional block closes no paragraph (64d; OD #532); collcell takes the template's `\ignorespaces` as its delimiter
+  and drops the trim (63v); the OmniBus theorem set declares only free names, each stub firing once (64y-amplified;
+  OD #533, KPE #609; siamltex's theorems declared as its class does); a refused setter's replay that errs is rolled
+  back by an assignment journal (64k; OD #534); ptephy's `$^{n}$` affiliation list goes to the names its marks label (64qa:
+  2203.01270 83 MB/6.9 GB/357 s → 1.8 MB/3 s; its legend lines after the names a document pubnote each — only when every line after the first `\\` is led
+  by a footnote symbol, else the whole list stays names: `ptephy_name_lines_after_break_stay_names`,
+  `ptephy_textsuperscript_legend_line`);
+  hyperref loads letltxmacro (OD #535, ruling Q5). Shared (`show_unanswered_marks`, base_utilities.rs): an author's
+  superscript symbol mark nothing answers is shown, as the PDF prints it, a math `*` as `∗` and a text one
+  (`\textsuperscript{1,*}`) as `*` (unless it placed one of that author's contacts that drops it; a mark the author's
+  email shows as well stays on the name too, 1910.00401); residual: a `$^{*}$` the kernel shows itself (keepsup, an
+  email line) keeps ASCII `*` where pdflatex prints `∗` (1910.00401 email, probe hb); four older guards flipped to the PDF's reading (batch61 `author_thanks_and_footnote_keep_their_math`,
+  `marked_affiliation_wrappers_and_legends`; batch63 `author_mark_comma_in_math`; batch64
+  `marked_block_email_line_owner`). Run-338 Fatal →
+  witnesses: astro-ph9609122, astro-ph9809009, astro-ph9503122, astro-ph0002500, astro-ph9901229, astro-ph9610167,
+  astro-ph0003044, astro-ph9702104, astro-ph0003143, astro-ph0003144, 1806.03273, 1912.00582, 2604.02352, 1308.6566,
+  0811.3048, cs0511055, 2106.06828, 1911.11856 → 0 errors; 1805.06896 2, 2304.12197 3, 2307.13461 47, hep-ex0406049 30,
+  0705.0894 2, 2511.04367 7, 1811.04820 1, 2607.24171 3 (all Error, below or at 64c/64h). Guards
+  `perfect_kernel_batch65e::*`. Open: `ltx:appendix isn't allowed in ltx:inline-sectional-block` after an item's
+  bibliography (5 of the C witnesses; RED `list-structure/bare_itemize_end_leaves_appendix_in_block`, witness
+  1805.06896: a bare `\itemize`'s `\end{itemize}` should also end the outer list); the set's amsthm load replaces a
+  document's own `\newenvironment{proof}` (shared with Perl); a clean replay of a document setter still empties the
+  stores its body `\gdef`s (RED `sectioning-frontmatter/replayed_document_setter_keeps_its_store`: "Written by ."
+  where the PDF has "Written by Alice."; the #482 store reset keeps class title-page copies out of the frontmatter,
+  and telling a body-read store from a title-page one needs the class's `\maketitle` reads, not the journal).
+  Not in scope (lost identically in 65a): a composite mark `$^{2*}$` or `$^{1\dagger}$` (2307.15337, 2604.24425) and
+  cas `\fnmark[$\dagger$]` (2511.01302, 2607.29394) lose their symbol. Also composite: under OSA a `$^{2\#}$` mark shows only its
+  symbol half on the name (c2h), and a `$^{2\%}$` address mark places its email on the block, not its author (both
+  as in 65a).
 - **65a** (landed; RUST-ONLY): sweep #149's regressions against #148. A `\title`/`\author` the 64d seal turns away
   runs the raw class's own definition in place when it provably keeps no value (fail-safe store classifier); an
   `\author` the class hands only to page furniture becomes the author of its sectional unit (ruling 2026-10-11); heading

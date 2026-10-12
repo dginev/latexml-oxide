@@ -84,11 +84,16 @@ pub fn prune_empty_para(document: &mut Document, node: &mut Node) -> Result<()> 
   Ok(())
 }
 
-/// Whether a list (`ltx:itemize`, `ltx:enumerate`, `ltx:description`) is open between the insertion point and the
-/// paragraph (`ltx:para`) that holds it: a `\par` or a skip there ends no paragraph (`\lx@normal@par`, `\vskip`),
-/// since closing that paragraph would end the list too. Only a list that can auto-close is affected — a `\trivlist`'s
-/// (`_autoclose`, latex_constructs sect06.rs); the others never closed this way.
-pub fn list_open_inside_para(document: &Document) -> bool {
+/// Whether a list (`ltx:itemize`, `ltx:enumerate`, `ltx:description`) or an inline sectional block
+/// (`ltx:inline-sectional-block`) is open between the insertion point and the paragraph (`ltx:para`) that holds it: a
+/// `\par` or a skip there ends no paragraph (`\lx@normal@par`, `\vskip`), since closing that paragraph would end the
+/// list or the block too. Only a list that can auto-close is affected — a `\trivlist`'s (`_autoclose`, latex_constructs
+/// sect06.rs); the others never closed this way. The block is the paragraph-bridged one a sectioning unit opens in a
+/// list item (document.rs `AUTO_OPEN_BRIDGES`, OXIDIZED_DESIGN #189), whose end is the item's or the list's: a blank
+/// line between the `\bibitem`s of a bibliography in it closed the bridge paragraph, the block, its section and the
+/// bibliography, and every later entry was misplaced (1805.06896, 2304.12197, 2307.13461, hep-ex0406049, 0705.0894,
+/// 2511.04367). Perl opens no paragraph above a section, so its `\par` finds none there.
+pub fn list_or_block_open_inside_para(document: &Document) -> bool {
   let mut node = Some(document.get_node().clone());
   while let Some(n) = node {
     let qname = get_node_qname(&n);
@@ -98,6 +103,7 @@ pub fn list_open_inside_para(document: &Document) -> bool {
     if qname == crate::pin!("ltx:itemize")
       || qname == crate::pin!("ltx:enumerate")
       || qname == crate::pin!("ltx:description")
+      || qname == crate::pin!("ltx:inline-sectional-block")
     {
       return true;
     }

@@ -11797,7 +11797,15 @@ Fixed in Rust (64a):
   text in the kernel author splitter (63z8 had read its digits as a name, joining the names around it).
 - An author mark nothing answers — no entry labelled by it, no affiliation printing it (`_bymark`: llncs's
   `$^{1,3}$ Univ A` answers an `\inst{3}`) — stays in the name, as LaTeX prints it (`show_unanswered_marks`; repro
-  sectioning-frontmatter/author_unmatched_numeric_mark, RED since 63x). In a marked author block a line of names
+  sectioning-frontmatter/author_unmatched_numeric_mark, RED since 63x); since 65e a superscript footnote symbol too
+  (`$^{\dag}$`, `$^{*}$`, which label affiliations as marks), shown as its glyph (`unanswered_mark_text`;
+  2203.01270, class-bindings/ptephy_symbol_marks_and_legend_lines), unless the mark placed one of that author's
+  contacts and was dropped from it (`$^\dagger$baker@y.edu`, `answered_symbol_key`), which answers it on that author
+  only; a mark the author's email shows as well (`$^{*}$ghunt@wm.edu`, 1910.00401) stays on the name too, as printed; its
+  glyph follows its mode (a math `*` is `∗`, a `\textsuperscript{*}` stays `*`). Residual: a `$^{*}$` the kernel shows
+  itself (keepsup, an email line) keeps ASCII `*` where pdflatex prints `∗` (1910.00401 email, probe hb)
+  (1807.01584,
+  1805.02699; repro sectioning-frontmatter/symbol_mark_shown_on_each_author). In a marked author block a line of names
   continuing an unfinished list goes on as names (`names_continue`, as in an unmarked block): `Gus
   Gray\IEEEauthorrefmark{1}, …, Ida Ivy,~\IEEEmembership{Fellow,~IEEE,}\\ Jon Jay, … and~Kim Key` (2408.02464).
 - `\IEEEauthorblockA` is a marked affiliation list (`\lx@add@affiliation@marked`). IEEEtran's `\IEEEauthorrefmark`
@@ -12485,6 +12493,28 @@ Trigger `\documentclass{article}\usepackage{braket}\begin{document}$\Set{\omega 
 lost; pdflatex prints one set. Fixed in Rust (65d): a bar right after `\left`/`\middle`/`\right` or a `\big` size is
 that command's delimiter (`braket_sty.rs` `reads_a_delimiter`). Witness 2107.02628 (`\Set{… \begin{array}{l}\left|…`,
 an "Extra \middle." once 65d checked the group). Guard `perfect_kernel_batch65d::braket_set_keeps_fence_bars`.
+
+## 608. aa's plain-TeX `\matrix{…\cr}` is read as amsmath's environment-only `\matrix`
+
+Perl aa.cls.ltxml:47-55 overrides `\pmatrix` and `\cases` with plain TeX's forms, as the old aa.cls loaded no amsmath,
+but not `\matrix`, which aa_support's amsmath (aa_support.sty.ltxml:55) makes the environment-only form
+(amsmath.sty.ltxml:802 `\lx@ams@matrix`, amsmath.sty:1068-1071 `\matrix@check`). An old A&A paper's
+`\left(\matrix{a&b\cr c&d\cr}\right)` opens an alignment nothing closes, and the display runs into the next section.
+Trigger `\documentclass{aa}\begin{document}\begin{equation}x=\left(\matrix{a & b\cr c & d\cr}\right).\end{equation}
+\section{Next}Text $a_1$.\end{document}` → 15 errors (`\@startsection Attempt to end mode display_math`, then `_`).
+Fixed in Rust (65e): aa_cls.rs gives `\matrix` the same `\@currenvir` dispatch as `\pmatrix`; the l-aa binding, which
+loads aa, regressed on it in 64u (astro-ph9609122, astro-ph9809009; repro class-bindings/laa_plain_matrix_in_display).
+
+## 609. The OmniBus theorem set replaces the author's macros and environments of the same names
+
+Perl OmniBus.cls.ltxml:160-209 runs `\newtheorem` for 31 names (`conj`, `fact`, `prop`, `proof`, `rem`, …) at the first
+undeclared theorem environment, and LaTeX.pool's `\newtheorem` overwrites a defined name, where latex.ltx:17174-17195
+(`\@ifdefinable`) and amsthm.sty:78-80 refuse it. The author's `\newcommand{\conj}[1]{\overline{#1}}` becomes the {conj}
+theorem, and `\conj{y}` in math opens a theorem there; a `\newtheorem{theorem}` of the document's own is renumbered;
+a class's `\newenvironment{proof}` becomes a numbered "Proof" theorem (the stub on `\begin{proof}` is found before
+`\proof`). Trigger `\documentclass{nosuchclassxyz}\newcommand{\conj}[1]{\overline{#1}}\begin{document}
+\begin{theorem}A theorem.\end{theorem}\begin{equation} x = \conj{y_1} + z_2 \end{equation}\end{document}` → 9 errors
+(`ltx:theorem isn't allowed in ltx:XMath`). Fixed in Rust (65e, OD #533; 1308.6566, 0811.3048, cs0511055).
 
 ## 610. TeX.pool's LaTeX autoload triggers answer generic-format probes with "LaTeX" in a plain TeX document
 

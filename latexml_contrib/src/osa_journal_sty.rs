@@ -687,9 +687,14 @@ fn address_item(item: &[Token]) -> Option<Address> {
     Some((mark, end)) => (Some(mark), skip_spaces_at(&tokens, end)),
     // a mark inside a font command (`\textit{$^3$}yinjuan@…`)
     None => match tokens.get(at) {
+      // (only with its braced argument: a bare `\textasteriskcentered able@x.edu` is the address's text, and a
+      // command without a brace after it sliced backwards, a panic)
       Some(t)
         if t.get_catcode() == Catcode::CS
-          && t.with_str(|s| s.starts_with("\\text") || s == "\\emph") =>
+          && t.with_str(|s| s.starts_with("\\text") || s == "\\emph")
+          && tokens
+            .get(skip_spaces_at(&tokens, at + 1))
+            .is_some_and(|t| t.get_catcode() == Catcode::BEGIN) =>
       {
         let open = skip_spaces_at(&tokens, at + 1);
         let end = after_argument(&tokens, open)?;

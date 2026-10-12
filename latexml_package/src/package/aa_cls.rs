@@ -25,6 +25,14 @@ LoadDefinitions!({
   // whose {pmatrix}/{cases} start with `\matrix@check` (amsmath.sty:1077-1082): the environment when `\@currenvir` names
   // it, the old Plain-TeX form otherwise. Perl's plain-only override read `\begin{cases}`'s first cell as its argument,
   // and the `&`s after it went stray (2609.02726, 2609.04318: Perl errors the same way).
+  // amsmath's {matrix} checks alike (amsmath.sty:1068-1071 `\matrix@check\matrix`): the old aa.cls and l-aa.sty (the
+  // `l-aa` binding loads this class) give plain TeX's `\matrix{…\cr}` (plain.tex:1093, latex.ltx:15634), whose
+  // amsmath reading opened an alignment that nothing closed, the display running into the next section
+  // (astro-ph9609122, astro-ph9809009, astro-ph9503122).
+  DefMacro!("\\matrix",
+    r"\expandafter\ifx\csname\@currenvir\endcsname\matrix\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
+{\lx@ams@matrix{name=matrix,datameaning=matrix}}
+{\lx@gen@plain@matrix{name=matrix,datameaning=matrix}}");
   DefMacro!("\\pmatrix",
     r"\expandafter\ifx\csname\@currenvir\endcsname\pmatrix\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
 {\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}}

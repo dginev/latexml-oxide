@@ -97,7 +97,7 @@ LoadDefinitions!({
   DefMacro!("\\institute{}", sub[(list)] {
     let list: Tokens = list;
     let several = list.unlist_ref().iter().any(|t| *t == T_CS!("\\and") || *t == T_CS!("\\And"));
-    let marked = leads_with_superscript_mark(&list);
+    let marked = leads_with_superscript_mark(list.unlist_ref());
     Ok(if marked && lookup_bool("lx@l@aa@marked@names") || marked && several {
       Invocation!(T_CS!("\\lx@add@affiliations"), vec![None, Some(list)])
     } else if !several {
@@ -108,12 +108,10 @@ LoadDefinitions!({
   });
 });
 
-/// Whether `list` begins with a superscript mark: `$^1$`, `$^{1}$`, `^1` or `\textsuperscript{1}`.
-fn leads_with_superscript_mark(list: &Tokens) -> bool {
-  let mut tokens = list
-    .unlist_ref()
-    .iter()
-    .filter(|t| t.get_catcode() != Catcode::SPACE);
+/// Whether `list` begins with a superscript mark: `$^1$`, `$^{1}$`, `^1` or `\textsuperscript{1}` (an affiliation
+/// list labelled by its marks: also ptephy's `\affil`).
+pub(crate) fn leads_with_superscript_mark(list: &[Token]) -> bool {
+  let mut tokens = list.iter().filter(|t| t.get_catcode() != Catcode::SPACE);
   match tokens.next() {
     Some(t) if t.get_catcode() == Catcode::MATH => tokens
       .next()

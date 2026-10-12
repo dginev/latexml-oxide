@@ -203,8 +203,9 @@ LoadDefinitions!({
         }
         // A `\par` ends a paragraph, never a list (a TeX list is a paragraph shape, not a group): a `\trivlist`
         // begun inside the paragraph, `_autoclose` as Perl's, stays open (csquotes' `{quotesample}`, a blank line
-        // before its first `\item`; KNOWN_PERL_ERRORS #456).
-        if !prop_bool!(props, "internal_par") && !document::helpers::list_open_inside_para(document) {
+        // before its first `\item`; KNOWN_PERL_ERRORS #456). Nor the inline sectional block an item's heading opens
+        // in its paragraph, with the section in it (`list_or_block_open_inside_para`; 1805.06896).
+        if !prop_bool!(props, "internal_par") && !document::helpers::list_or_block_open_inside_para(document) {
           document.maybe_close_element("ltx:para")?;
         }
       }

@@ -1,0 +1,18 @@
+% witness: 2607.24171 (jsty3-author.sty:542 `\RenewDocumentCommand{\author}{smmvmo}`, whose replay erred half-way and
+%          left its expl3 author list half-built: the printer looped, 991 errors, Fatal:TooManyErrors)
+% oracle:  pdflatex 1 error ("Unknown author Alice", the class's own), count 1: TeX keeps what the setter assigned
+%          before the error
+% engines: rust 65a = 0 errors, count 1 (the replay's error dropped, its \global\advance kept); Perl count 0 (never
+%          replays: its binding owns \author); the guard also runs a class setter that does not err (count 1)
+% expect:  0 errors; "Count: 0." — a DIVERGENCE from pdflatex by design (OXIDIZED_DESIGN #534): the replay is a
+%          beyond-Perl surpass (64k), and one that raises an error is undone with its diagnostics, which is Perl's
+%          behaviour; one creator Alice
+% status:  GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{replayerr}
+\title{A title}
+\author{Alice}
+\begin{document}
+\maketitle
+Count: \the\value{authcount}.
+\end{document}

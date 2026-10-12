@@ -1,0 +1,19 @@
+% witness: 65e review (a document `\renewcommand\author[1]{\gdef\myauth{#1}…}`, read back in the body)
+% oracle:  pdflatex 0 errors; "Written by Alice."
+% engines: rust 65a and 65e = "Written by ." (the replay of the refused setter runs, then every store its body
+%          `\gdef`s is put back as it was, empty when undefined: `replay_class_setter`, OXIDIZED_DESIGN #482, there
+%          to keep a class's title-page copies of the author out of the frontmatter); Perl the same (never replays,
+%          `\myauth` undefined: an Error)
+% expect:  0 errors; "Written by Alice."
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\author[1]{\gdef\myauth{#1}\gdef\@author{#1}}
+\makeatother
+\title{A title}
+\author{Alice}
+\begin{document}
+\maketitle
+Written by \myauth.
+\end{document}

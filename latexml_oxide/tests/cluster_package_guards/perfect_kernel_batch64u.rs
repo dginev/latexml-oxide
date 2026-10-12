@@ -581,10 +581,15 @@ fn osa_paper_abbreviation_is_the_papers() {
 #[test]
 fn osa_mark_font_switch_is_no_label() {
   // p1
+  let p1 = "\\documentclass{article}\n\\usepackage{opex3}\n\\begin{document}\n\\title{T}\n\\author{A. Able,$^{\\bf{1}}$ B. Baker,$^{\\bf{2,3},\\dagger}$ C. Cole$^{\\bf{1,3},*}$}\n\\address{$^1$Univ X\\\\\n$^2$Univ Y\\\\\n$^3$Univ Z\\\\\n}\n\\email{*cole@x.edu,$^\\dagger$baker@y.edu}\n\\begin{abstract}A.\\end{abstract}\nText.\n\\end{document}\n";
+  assert_eq!(creators(&convert_clean(p1)), vec![
+    "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Z</contact>\n    <contact name=\"Email: \" role=\"email\">baker@y.edu</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>C. Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Z</contact>\n    <contact name=\"Email: \" role=\"email\">cole@x.edu</contact>\n  </creator>",
+  ]);
+  // (65e) a `\#` mark places the same email as `\dagger`: its key is no parameter token (`symbol_mark_key`)
   assert_eq!(
-    creators(&convert_clean(
-      "\\documentclass{article}\n\\usepackage{opex3}\n\\begin{document}\n\\title{T}\n\\author{A. Able,$^{\\bf{1}}$ B. Baker,$^{\\bf{2,3},\\dagger}$ C. Cole$^{\\bf{1,3},*}$}\n\\address{$^1$Univ X\\\\\n$^2$Univ Y\\\\\n$^3$Univ Z\\\\\n}\n\\email{*cole@x.edu,$^\\dagger$baker@y.edu}\n\\begin{abstract}A.\\end{abstract}\nText.\n\\end{document}\n"
-    )),
+    creators(&convert_clean(&p1.replace("\\dagger", "\\#"))),
     vec![
       "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
       "<creator before=\"  \" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Z</contact>\n    <contact name=\"Email: \" role=\"email\">baker@y.edu</contact>\n  </creator>",

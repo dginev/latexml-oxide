@@ -1,0 +1,15 @@
+% witness: 1308.6566, 0811.3048 (`\newcommand{\conj}[1]{…}`), cs0511055 (`\newcommand{\fact}{…}`), under OmniBus
+% oracle:  pdflatex (with any class defining {theorem}) 0 errors; `\conj{y_1}` an overline
+% engines: rust 65a = 5 errors (the OmniBus theorem set's `\newtheorem{conj}` replaced the author's `\conj` at the
+%          first `\begin{theorem}`: "ltx:theorem isn't allowed in ltx:XMath"); Perl 9
+% expect:  0 errors; the equation reads x=\overline{y_{1}}+z_{2}; one theorem
+% status:  RED (65a) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{nosuchclassxyz}
+\newcommand{\conj}[1]{\overline{#1}}
+\begin{document}
+\begin{theorem}A theorem.\end{theorem}
+\begin{equation} x = \conj{y_1} + z_2 \end{equation}
+\section{Next}
+Text $a_1$.
+\end{document}

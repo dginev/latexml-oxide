@@ -4575,7 +4575,8 @@ fn author_mark_comma_in_math() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_comma_in_math.tex"
   );
   assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    // (the `\dagger` nothing answers stays shown, as printed: 65e `show_unanswered_marks`)
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">\u{2020}</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
   ]);
 }

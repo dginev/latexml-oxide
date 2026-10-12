@@ -1,0 +1,16 @@
+% witness: 65e review round 3 (the replay journal's cannot-roll-back branch: a class `\author` that closes a group of
+%          the document, then errs)
+% oracle:  pdflatex 2 errors ("Unknown author Alice", "Too many }'s"); count 1
+% engines: rust 65e = 3 errors (the class's error, "closed 1 group(s) of the document", the `}` the replay's group
+%          left over) and an Info that the replay could not be undone; count 1 (its \global\advance stays, as in the PDF);
+%          Perl never replays (count 0)
+% expect:  3 errors, pinned; "Count: 1."; the Info "could not be undone"
+% status:  CONTROL (65e)
+% preload: ar5iv.sty
+\documentclass{replayunbal}
+\title{A title}
+{\author{Alice}}
+\begin{document}
+\maketitle
+Count: \the\value{authcount}.
+\end{document}

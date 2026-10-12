@@ -1,0 +1,16 @@
+% witness: 1912.00582, 2604.02352 (`\collectcell` macros testing the cell with `\ifdim`)
+% oracle:  pdflatex 0 errors; cells "low" and "high"
+% engines: rust 65a = 2 errors (`\ifdim` got the template's `\ignorespaces`, the `#2\ignorespaces` delimiter of
+%          collcell.sty:76, as the cell's start); 62zu3g 2 (the trim mark); Perl 2
+% expect:  0 errors; the cells read "low" and "high"
+% status:  RED (65a) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{collcell}
+\newcommand\chk[1]{\ifdim#1pt<0.5pt low\else high\fi}
+\newcolumntype{C}{>{\collectcell\chk}c<{\endcollectcell}}
+\begin{document}
+\begin{tabular}{C C}
+0.2 & 0.7 \\
+\end{tabular}
+\end{document}
