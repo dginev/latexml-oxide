@@ -18,11 +18,12 @@
 # requires no rebuild.
 #
 # Usage:
-#   tools/make_formats.sh           # release build, latex.ltx
-#   PROFILE=debug tools/make_formats.sh   # debug build (faster compile)
+#   tools/make_formats.sh                  # debug build (default)
+#   PROFILE=release tools/make_formats.sh  # optimized build
 #
 # Env:
-#   PROFILE              release (default) | debug
+#   PROFILE              debug (default) | release | ci
+#   CARGO_TARGET_DIR     honoured (the binary is looked up under it)
 #   LATEXML_DUMP_DIR     optional override — where to write the dump
 #                        (default: resources/dumps/)
 
@@ -47,7 +48,7 @@ esac
 # `plain.dump.txt` instead of `plain.YYYY.dump.txt` (pre-year-stamping naming),
 # silently shipping dumps the runtime can't find. cargo is near-instant when
 # nothing changed, so building unconditionally costs nothing.
-BIN="target/$PROFILE/latexml_oxide"
+BIN="${CARGO_TARGET_DIR:-target}/$PROFILE/latexml_oxide"
 echo "[make_formats] building latexml_oxide ($PROFILE)..."
 cargo build $CARGO_PROFILE_FLAG --bin latexml_oxide
 
