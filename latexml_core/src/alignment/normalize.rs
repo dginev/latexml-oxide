@@ -44,6 +44,7 @@ use crate::{
 pub fn normalize_alignment(alignment: &mut Alignment) -> Result<()> {
   if !alignment.is_normalized {
     normalize_cell_sizes(alignment)?;
+    normalize_overprint_spans(alignment);
     normalize_mark_spans(alignment)?;
     normalize_prune_rows(alignment)?;
     normalize_prune_columns(alignment)?;
@@ -138,6 +139,72 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
     }
   }
   Ok(())
+}
+/// A cell whose content overprints to its right (`Cell::overprint`, an `\rlap` such as `\lefteqn`'s, latex.ltx:15800)
+/// spans the empty cells that follow it in its row, up to the first that holds content, spans or is spanned: TeX
+/// prints the zero-width box over them, and HTML, which cannot overprint, gives it their room instead. A following cell
+/// with content keeps its own column (OXIDIZED_DESIGN_DIVERGENCES #556; Perl spans a fixed `\multicolumn{3}`,
+/// latex_constructs.pool.ltxml:2194-2197, and the row's next `&` overflows; 0707.3929's and nucl-th9512020's
+/// `\lefteqn{lhs}&&\nonumber\\`). Runs between the sizes, which say which cells are empty, and
+/// `normalize_mark_spans`, which marks the cells covered.
+///
+/// TeX does not span here: each `&` closes the cell and opens the next preamble column whatever either holds (tex.web
+/// §791 `fin_col`), and the `\rlap`'s ink lies over the next cells' boxes. So a covered cell must be one TeX shows
+/// nothing for. A covered cell is never absorbed, so only a cell whose boxes are structurally skippable (spaces, empty
+/// or invisible boxes such as a `\phantom`, an empty math shell such as the eqnarray template's `$\displaystyle$`) is
+/// covered: a small cell is not an empty one, and an `\index` or a `\hypertarget` anchor ends the span and keeps
+/// its own column.
+fn normalize_overprint_spans(alignment: &mut Alignment) {
+  // Examines: overprint, skippable, boxes, colspan, rowspan, rowspanned, skipped
+  // Sets: colspan, border
+  // A row may stop short of the table (amsmath's repeating templates add cells as the row reaches them): the cells it
+  // lacks are empty too.
+  let width = alignment
+    .rows
+    .iter()
+    .map(|row| row.get_columns().len())
+    .max()
+    .unwrap_or(0);
+  for row in &mut alignment.rows {
+    let cells = row.get_columns_mut();
+    for j in 0..cells.len() {
+      if !cells[j].overprint || cells[j].skipped {
+        continue;
+      }
+      let start = j + cells[j].colspan.unwrap_or(1);
+      let end = (start..cells.len())
+        .find(|&k| {
+          let cell = &cells[k];
+          !cell.skippable
+            || cell.boxes.as_ref().is_some_and(|b| !b.is_skippable())
+            || cell.skipped
+            || cell.colspan.unwrap_or(1) != 1
+            || cell.rowspan.is_some_and(|n| n > 1)
+            || cell.rowspanned.is_some()
+        })
+        .unwrap_or(cells.len());
+      // Through the row's end: on over the cells it lacks.
+      let reach = if end == cells.len() {
+        width.max(end)
+      } else {
+        end
+      };
+      if reach > start {
+        // The span's right edge is the last covered cell's.
+        if end > start {
+          let right: String = cells[end - 1]
+            .border
+            .chars()
+            .filter(|c| matches!(c, 'r' | 'R'))
+            .collect();
+          let spanning = &mut cells[j];
+          spanning.border.retain(|c| !matches!(c, 'r' | 'R'));
+          spanning.border.push_str(&right);
+        }
+        cells[j].colspan = Some(reach - j);
+      }
+    }
+  }
 }
 /// Mark any cells that are covered by rowspan or colspan.
 /// Perl: normalize_mark_spans (Alignment.pm L667-726)

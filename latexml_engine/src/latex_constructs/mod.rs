@@ -1762,10 +1762,16 @@ fn retract_equation() {
 }
 /// Perl: latex_constructs.pool.ltxml lines 2287-2325
 /// eqnarrayBindings — creates alignment with equationgroup/equation/_Capture_ hooks
-pub fn eqnarray_bindings() -> Result<()> { eqnarray_bindings_with_columns(eqnarray_columns()) }
+pub fn eqnarray_bindings() -> Result<()> {
+  install_eqnarray_alignment(eqnarray_columns(), 3)?;
+  // latex.ltx:15793 (`\@@eqncr`): a row ended by `\\` in the number column has too many columns.
+  let_i(&T_CS!("\\\\"), &T_CS!("\\lx@eqnarray@newline"), None);
+  Ok(())
+}
 
-/// The eqnarray's three columns (Perl latex_constructs.pool.ltxml:2231-2236): right, centre and left, math in
-/// `\displaystyle`.
+/// The eqnarray's columns: Perl's three (latex_constructs.pool.ltxml:2231-2236), right, centre and left, math in
+/// `\displaystyle`, and latex.ltx's fourth (:15764, `\hb@xt@\z@\bgroup\hss##\egroup`), the equation number's, in
+/// text. A row ended by `\cr` may fill it (1804.05059: `&\cr`); `rearrange_eqnarray` drops it where empty.
 fn eqnarray_columns() -> Vec<Cell> {
   let col1 = Cell {
     before: Some(Tokens::new(vec![
@@ -1793,21 +1799,34 @@ fn eqnarray_columns() -> Vec<Cell> {
     empty: true,
     ..Cell::default()
   };
-  vec![col1, col2, col3]
+  let number = Cell {
+    before: Some(Tokens::new(vec![T_CS!("\\hfil")])),
+    empty: true,
+    ..Cell::default()
+  };
+  vec![col1, col2, col3, number]
 }
 
 /// [`eqnarray_bindings`] over the given columns: an eqnarray-style alignment whose rows are numbered equations,
 /// rearranged at the end by `rearrange_eqnarray` (IEEEtrantools' `\IEEEeqnarray`, whose column specification makes
 /// its own preamble, IEEEtrantools.sty:1996 `\@IEEEbuildpreamble`).
 pub fn eqnarray_bindings_with_columns(columns: Vec<Cell>) -> Result<()> {
+  let ncolumns = columns.len();
+  install_eqnarray_alignment(columns, ncolumns)
+}
+
+/// The eqnarray alignment over `columns`, of which the first `equation_columns` hold the equations
+/// (`rearrange_eqnarray` reads those; any after are the number column's).
+fn install_eqnarray_alignment(columns: Vec<Cell>, equation_columns: usize) -> Result<()> {
   // Ensure @equationgroup counter exists — it's normally created by article.cls,
   // but standalone classes (appolb, jpsj2, etc.) may not define it.
   if lookup_definition(&T_CS!("\\the@equationgroup@ID"))?.is_none() {
     NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
   }
-  // The template's width, for `rearrange_eqnarray`: a row with an extra `&` grows the alignment past it
-  // (`next_column`), and Perl reads the eqnarray's columns 0/1/2 whatever the rows hold.
-  let ncolumns = columns.len().to_string();
+  // The equation columns' count, for `rearrange_eqnarray`: a row with an extra `&` grows the alignment past the
+  // template (`next_column`), and Perl reads the eqnarray's columns 0/1/2 whatever the rows hold.
+  let ncolumns = equation_columns.to_string();
+  let has_number_column = equation_columns < columns.len();
   let template = Template::new(TemplateConfig {
     columns: Some(columns),
     ..TemplateConfig::default()
@@ -1836,6 +1855,14 @@ pub fn eqnarray_bindings_with_columns(columns: Vec<Cell>) -> Result<()> {
   }
   let mut properties = SymHashMap::default();
   properties.insert("preserve_structure", Stored::Bool(true));
+  // The columns past the equations' are the number column (latex.ltx:15764), which `\lx@eqnarray@number@check`
+  // guards.
+  if has_number_column {
+    properties.insert(
+      "eqnarray_columns",
+      Stored::Number(Number::new(equation_columns as i64)),
+    );
+  }
   // Use custom alignment hooks for equationgroup/equation/_Capture_
   // Perl: my %attr = RefStepID('@equationgroup') — but Perl runs it inside the
   // container-open hook, i.e. at ABSORB time, after ALL digestion: every
@@ -1855,6 +1882,9 @@ pub fn eqnarray_bindings_with_columns(columns: Vec<Cell>) -> Result<()> {
       }
       props.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
       props.insert(String::from("_ncolumns"), ncolumns.clone());
+      if has_number_column {
+        props.insert(String::from("_number_column"), String::from("true"));
+      }
       document
         .open_element("ltx:equationgroup", Some(props), None)
         .map(Some)
@@ -1947,11 +1977,19 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     .and_then(|n| n.parse::<usize>().ok())
     .unwrap_or(3);
   let _ = equationgroup.remove_attribute("_ncolumns");
+  // eqnarray's number column (latex.ltx:15764), which an `\IEEEeqnarray` lacks.
+  let number_column = equationgroup.get_attribute("_number_column").is_some();
+  let _ = equationgroup.remove_attribute("_number_column");
   let row_cells: Vec<(Node, Vec<Node>)> = document
     .findnodes("ltx:equation", Some(equationgroup))
     .into_iter()
     .map(|rownode| {
       let cells = document.findnodes("ltx:_Capture_", Some(&rownode));
+      let cells = if number_column {
+        drop_empty_number_cells(document, cells, ncols)
+      } else {
+        cells
+      };
       (rownode, cells)
     })
     .collect();
@@ -2088,6 +2126,57 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     equationgroup_join_rows(document, equationgroup, eqset)?;
   }
   Ok(())
+}
+
+/// The trailing run of empty cells past an eqnarray row's `equation_columns` (latex.ltx's number column, :15764, and
+/// any an extra `&` opened) is dropped, and a span reaching into it (a `\lefteqn`'s, over the empty cells after it)
+/// ends at the equations' last column: the eqnarray's rows keep Perl's three columns unless a row writes past them.
+/// An empty cell before a later one with content stays, so that content keeps its column (`k &=& l & & EXTRA`): each
+/// `&` opens the next preamble column whatever the cell before holds (tex.web §791 `fin_col`). A trailing empty cell
+/// is an empty unset box, which `fin_align` sets as it does a row that ended before it (§§800-810: a short row is set
+/// over the boxes it has), so dropping the run leaves what TeX prints. eqnarray only (`_number_column`): an
+/// `\IEEEeqnarray`'s cells are its specification's, kept as written.
+fn drop_empty_number_cells(document: &mut Document, cells: Vec<Node>, ncols: usize) -> Vec<Node> {
+  let spans: Vec<usize> = cells
+    .iter()
+    .map(|cell| {
+      cell
+        .get_attribute("colspan")
+        .and_then(|n| n.parse::<usize>().ok())
+        .unwrap_or(1)
+    })
+    .collect();
+  let starts: Vec<usize> = spans
+    .iter()
+    .scan(0, |start, span| {
+      let this = *start;
+      *start += span;
+      Some(this)
+    })
+    .collect();
+  // The kept cells: up to the last that holds content or starts within the equation columns.
+  let keep = (0..cells.len())
+    .rev()
+    .find(|&k| starts[k] < ncols || cells[k].get_first_child().is_some())
+    .map_or(0, |k| k + 1);
+  let mut kept = Vec::with_capacity(keep);
+  for (k, mut cell) in cells.into_iter().enumerate() {
+    if k >= keep {
+      document.safe_unlink(cell);
+      continue;
+    }
+    // The last kept cell's span ends where the dropped run begins: at the equations' last column.
+    if k + 1 == keep && starts[k] < ncols && starts[k] + spans[k] > ncols {
+      let width = ncols - starts[k];
+      if width > 1 {
+        let _ = cell.set_attribute("colspan", &width.to_string());
+      } else {
+        let _ = cell.remove_attribute("colspan");
+      }
+    }
+    kept.push(cell);
+  }
+  kept
 }
 
 fn clean_class_name(name: &str) -> String {

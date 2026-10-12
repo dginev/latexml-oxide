@@ -11616,9 +11616,9 @@ fdsymbol_requires_amsmath, wileyasna_apacite, cas_moreverb_comment, ulem_declara
 Fixed in Rust (63v): `\verb` matches its delimiter token as read within tabularx (`read_verb_invocation`), caption's
 longtable `\captionsetup` is bound, `\if@in@firstcolumn` is true only before the first cell, the template adds the
 `\ignorespaces`, and the rest of a listing's `\end` line stays the current line of its input (`restore_raw_line_rest`,
-the line with its `\endlinechar`), as TeX keeps one input line, so any raw reader begun on it reads on below. Open:
-`\lefteqn{x=} & …` in the first column still spans three columns and overruns (RED alignment/lefteqn_then_amp, a
-ruling); a tabularx `\verb` inside a `\footnote` or `\textbf` still errs (RED alignment/tabularx_verb_in_footnote); a
+the line with its `\endlinechar`), as TeX keeps one input line, so any raw reader begun on it reads on below. The
+first-column `\lefteqn{x=} & …` overrun is fixed in 65o (#624: the `\lefteqn` spans only the empty cells after it).
+Open: a tabularx `\verb` inside a `\footnote` or `\textbf` still errs (RED alignment/tabularx_verb_in_footnote); a
 `\lefteqn` in a middle column writes the joined `tex=` as an `\mbox` (RED alignment/lefteqn_rlap_tex_reversion);
 `\verb*` in a pre-read argument shows no visible spaces (its spaces were read as spaces); the rest of a `\end{verbatim}`
 line is still reopened as an input of its own, so a listing begun there loses its body (RED
@@ -12643,3 +12643,40 @@ ends the outer row: the rest of the cell becomes a new row. In pdflatex the `\mu
 `\begin{tabular}{|c|c|}\multicolumn{2}{|p{1cm}|}{\centering A\\ B} \\ y & z \\\end{tabular}` → Perl: A in the merged
 cell, B a new row `<td>B</td><td/>` (pdflatex: A and B stacked in the merged cell, then `y z`). Fixed in Rust (65p, OD
 #559, which splices the template as the overridden :693-702 does, OD #474; witness 1610.00974).
+
+## 624. `\lefteqn` spans three columns, eqnarray has no number column, the `ltx_eqn_lefteqn` row class is dead
+
+- latex_constructs.pool.ltxml:2194-2197 makes a first-column `\lefteqn{…}` a `\multicolumn{3}{l}`, where latex.ltx:15800
+  is `\rlap{$\displaystyle #1$}` in its own column, so the `&` an author writes after it overflow. Trigger
+  `\documentclass{article}\begin{document}\begin{eqnarray}\lefteqn{a+b}&&\nonumber\\&=&c\end{eqnarray}\end{document}`
+  → 2 x `Error:unexpected:&` (pdflatex: 0 errors). In a two-column `array{ll}` one `&` overflows. Run 340's `&`
+  cluster R1, about 2,050 papers (0707.3929, 0801.4655, 1209.6494, 1409.4633, nucl-th9512020).
+- eqnarrayBindings (:2231-2236) builds a three-column template; latex.ltx:15764 has a fourth, the equation number's.
+  Trigger `\begin{eqnarray}K &=& a &\cr&& + b\end{eqnarray}` → `Error:unexpected:&` (pdflatex: 0 errors; 1804.05059).
+- Base_XMath.pool.ltxml:956-957 classes a `\lefteqn` row `ltx_eqn_lefteqn`, reading the first `_Capture_`'s class,
+  but `\lx@add@cssclass` cannot set a class on the `_Capture_` (not in the schema), and `/\blefteqn\b/` would not
+  match `ltx_eqn_lefteqn` anyway (`_` is a word character): the class never lands. (Where it lands, it stays in the
+  XML: LaTeXML-block-xhtml.xsl:703/883 write the HTML row's own class.)
+
+Fixed in Rust (65o, OXIDIZED_DESIGN_DIVERGENCES #556-557): the `\lefteqn` cell stays in its column and spans the empty
+cells after it at normalization, the eqnarray has the number column (and latex.ltx's "Too many columns" error), and
+the row carries the class. Completes #547's open `\lefteqn{x=} & …` residual (2205.04522, 2411.04274).
+
+## 625. An alignment cell holding only an `\index` or an anchor is dropped; an eqnarray row drops what its math floated up
+
+- Alignment.pm:464-477 counts a cell empty when its content measures under 1pt (and holds no `alignmentPreserve`
+  box, which only `\label` sets, latex_constructs.pool.ltxml:3792), and skippable when empty; `beAbsorbed`
+  (Alignment.pm:370) absorbs only cells that are not skippable. A cell whose only content is an `\index` or a
+  `\hypertarget{…}{}` anchor (in an eqnarray, inside the template's math) measures 0pt, so the indexmark and the
+  anchor are lost. Trigger `\documentclass{article}\usepackage{makeidx}\makeindex\usepackage{hyperref}
+  \begin{document}\begin{eqnarray}a &\index{alone}& b\\ a &\hypertarget{tone}{}& b\end{eqnarray}
+  \hyperlink{tone}{one}\end{document}` → no `indexmark`, no anchor `tone`, a dangling `\hyperlink` (pdflatex: both
+  exist).
+- Base_XMath.pool.ltxml:951-960 (`equationgroupJoinRows`) rebuilds each eqnarray row from its `_Capture_` cells and
+  unbinds the row, so anything else the row holds is lost: in Rust, the indexmark that `float_meta_out_of_math`
+  (OXIDIZED_DESIGN_DIVERGENCES #272) moves from a cell's math up to the row (`a &=\index{withrel}& b`); Perl loses the
+  same entry.
+
+Open in Rust as in Perl (65o; RED alignment/eqnarray_side_content_only_cell). 65int2 kept the side content of a
+`\lefteqn` row's next cells only by accident: Perl's `\multicolumn{3}` left them overflow cells outside the template
+(review probe p1 of 65o).

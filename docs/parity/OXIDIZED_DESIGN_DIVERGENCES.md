@@ -16794,3 +16794,78 @@ stray_brace_in_a_formula_is_deleted, stray_brace_ending_a_unit_construct_ends_th
 alignment_cell_formula_keeps_its_recovery}`, `perfect_kernel_batch56::box_end_over_leaked_math_closes_it_into_the_box`;
 repros `paragraph-mode/*` (REDs cell_end_in_inline_math_inserts_dollar, brace_meeting_left_group_in_inline_math_is_deleted,
 forgotten_dollar_in_a_plain_group_keeps_the_text), boxes-groups/mbox_math_stray_brace_ends_box_not_math (GREEN).
+
+### 556. `\lefteqn` in a first column is one cell that spans the empty cells after it (Perl: `\multicolumn{3}`)
+
+latex.ltx:15800 defines `\lefteqn#1` as `\rlap{$\displaystyle #1$}`: a zero-width box inside its column's own u/v
+template (tex.web §788 `init_col`, §789), its ink printed over the columns to its right. TeX does not span there: each
+`&` closes the cell and opens the next preamble column whatever either holds (tex.web §791 `fin_col`), so the common
+`\lefteqn{lhs}&&\nonumber\\` and `\lefteqn{lhs}&\\` rows are three-cell rows, 0 errors in pdflatex. Perl
+(latex_constructs.pool.ltxml:2194-2197) makes a first-column `\lefteqn` a `\multicolumn{3}{l}`, so those `&` overflow
+the row (`Error:unexpected:&`, Perl and Rust alike; KNOWN_PERL_ERRORS #624), and the cells after it hold what they
+held as overflow cells (text-mode math, nucl-th9512020).
+
+**Rust** (batch 65o): the first-column `\lefteqn` is `\multicolumn{1}{l}{\lx@alignment@cell@overprint{ltx_eqn_lefteqn}
+…}`. `\lx@alignment@cell@overprint` (tex_tables.rs, Rust-only) marks the current cell `Cell::overprint` and classes it;
+`normalize_overprint_spans` (alignment/normalize.rs, between the cell sizes and `normalize_mark_spans`) extends an
+overprinting cell's span, since HTML cannot overprint, over the cells after it that TeX shows nothing for, up to the
+first that is not structurally skippable (`Digested::is_skippable`: spaces, empty or invisible boxes such as a
+`\phantom`, the template's empty `$\displaystyle$` shell), spans or is spanned, and on over the cells a short row lacks
+(amsmath's repeating templates; a row ended early has no boxes there, tex.web §§800-810) to the table's width. A cell
+measuring under 1pt is not therefore empty: an `\index` or a `\hypertarget` anchor ends the span (a covered cell is
+never absorbed). So the HTML keeps Perl's intent where the row is empty after the `\lefteqn` (one cell over the row:
+`colspan="3"` in an eqnarray, `2` in an `array{ll}` or an `align*`, where Perl's 3 overran the two columns), and a cell
+with content keeps its own column. The eqnarray's `_Capture_` carries the class, so `equationgroup_join_rows` classes
+the row `ltx_eqn_lefteqn` as Perl Base_XMath.pool.ltxml:956-957 means to; in Perl it never fires. The class is in the
+XML only: LaTeXML-block-xhtml.xsl writes the HTML row's own class (:703, :883), so LaTeXML.css's
+`tr.ltx_eqn_lefteqn + tr` rule never meets it. Run 340's `&` cluster R1 (about 2,050 papers, 29 of 55 sampled): the 31
+erroring witnesses go to 0 errors (0707.3929, 0801.4655, 0806.1442, 1103.1986, 1209.6494, 1409.4633, nucl-th9512020,
+0810.2247, 0810.2511, 1104.3567, 1109.2680, 1203.3852, 1301.5488, 1411.3238, 1503.01263, 1701.08456, 1704.07012,
+1706.08792, 1806.07473, 1903.02286, 2201.13255, astro-ph0111262, astro-ph0203455, cond-mat0209129, cond-mat9710308,
+hep-lat9711012, math0102211, math0407427, math9806075, 2411.04274, 2609.03020; 2205.04522 stays at 0).
+
+Residuals (RED repros): `\multicolumn{1}{l}` replaces column 1's template, so its `@{…}` material and `|` rules are
+lost, which TeX's `\rlap`, inside the template, keeps (alignment/lefteqn_overprint_keeps_template_material; Perl's
+`\multicolumn{3}` loses them too). An `\index` or anchor alone in the cell after the `\lefteqn` keeps its column but
+is still dropped, by the alignment's size-based skip that every eqnarray cell meets (KNOWN_PERL_ERRORS #625,
+alignment/eqnarray_side_content_only_cell); 65int2 kept it only as an overflow cell.
+
+**Guards**: `perfect_kernel_batch65o::{lefteqn_spans_empty_cells, lefteqn_spans_empty_cell, lefteqn_array_two_columns,
+lefteqn_cells_with_content, lefteqn_then_amp, lefteqn_stops_at_side_content}`,
+`perfect_kernel_batch61::eqnarray_continuation_after_lefteqn_does_not_panic`, `53_alignment::eqnarray_test`; repros
+`alignment/lefteqn_*`.
+
+### 557. eqnarray has latex.ltx's fourth column, the equation number's (Perl: three columns)
+
+latex.ltx:15756-15766 gives eqnarray's `\halign` four columns: the three of the equation and
+`\hb@xt@\z@\bgroup\hss##\egroup`, the zero-width number column that `\@@eqncr` (:15789-15796) fills with `\@eqnnum`.
+Columns 2-4 set `\@eqcnt` in their u-part; `\@@eqncr` reads it, pads the row with `&` to the number column, or raises
+"Too many columns in eqnarray environment" if the row reached it, and resets it. A row ended by `\cr` may write in the
+number column (`a &=& b &\cr`, 1804.05059; the text prints at the number's place, the row unnumbered). A fifth `&` is
+tex.web §792's "Extra alignment tab", which TeX turns into `\cr`. Perl's eqnarray template
+(latex_constructs.pool.ltxml:2231-2236) has three columns, so the fourth `&` overflows (`Error:unexpected:&`) wherever
+the row ends (KNOWN_PERL_ERRORS #624).
+
+**Rust** (batch 65o): `eqnarray_columns` adds the text column (`\hfil` before: right-aligned, as `\hss##`), the
+alignment records the equations' three columns (`eqnarray_columns` property; `_ncolumns` stays 3, so
+`rearrange_eqnarray` reads the rows as Perl), and, for eqnarray only (`_number_column` on the group; an
+`\IEEEeqnarray`'s cells are its specification's and stay as written), `drop_empty_number_cells` drops the trailing run
+of empty cells past the third column, ending a span that reaches into it at the third column: eqnarray rows keep their
+three `td`. An empty cell before a later one with content stays, since each `&` opens the next column whatever the
+cell holds (tex.web §791), so `k &=& l & & EXTRA` keeps `EXTRA` in the fifth `td`; a trailing empty cell is an empty
+unset box, set by `fin_align` as a row that ended before it (§§800-810), so dropping the run leaves what TeX prints. A
+written fourth cell keeps its text in a fourth `td`, where Perl's overflow cell put it (now `align="right"`, was
+`center`). `\lx@eqnarray@number@check` (sect07.rs), run by the eqnarray's `\\` (`\lx@eqnarray@newline`) and by
+`\endeqnarray` / `\endeqnarray*`, raises latex.ltx's error, `Error:unexpected:eqnarray Too many columns in eqnarray
+environment`, where the row has reached the fourth column; in the look-ahead before a cell the current column is the
+one before, so `&\\` counts the cell it opens, as TeX's u-part does (pdflatex's three errors on the repro, ours three).
+IEEEeqnarray (`eqnarray_bindings_with_columns`) has no number column and no check.
+
+Known residual: the check reads the current row's column, which is pdflatex's count only for rows ended by `\\` or the
+environment's end. A raw `\cr` skips `\@@eqncr`, so TeX's `\@eqcnt` is not reset and the next `\\` or end counts the
+`\cr` row's column (pdflatex 2 errors, ours 0: RED alignment/eqnarray_cr_row_column_count); for the same reason a
+`\cr`-ended row is unnumbered in TeX and numbered here, as in Perl (RED alignment/eqnarray_cr_row_unnumbered).
+
+**Guards**: `perfect_kernel_batch65o::{eqnarray_number_column, eqnarray_number_column_too_many,
+eqnarray_empty_cell_keeps_later_column}`, `perfect_kernel_batch64ra::eqnarray_extra_tab_keeps_three_columns`; repros
+`alignment/eqnarray_number_column*`, `alignment/eqnarray_empty_cell_keeps_later_column`.

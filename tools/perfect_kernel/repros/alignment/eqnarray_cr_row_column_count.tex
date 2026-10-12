@@ -1,0 +1,14 @@
+% witness: review of 65o round 1 (probe p7). latex.ltx:15756-15766: the column templates 2-4 set `\@eqcnt`, the
+%          first does not, and only `\@@eqncr` (:15789-15796) resets it. A row an author ends with `\cr` skips
+%          `\@@eqncr`, so the count goes on into the next row: the `\cr` row's `X` (column 4) leaves `\@eqcnt`=3, and the
+%          next `\\` or the environment's end reports "Too many columns" for the row after. Same root as
+%          alignment/eqnarray_cr_row_unnumbered (the `\cr` row skips `\@@eqncr`)
+% oracle:  pdflatex 2 errors "Too many columns in eqnarray environment" (one per eqnarray)
+% engines: rust 65o = 0 errors (reads the current row's column only); Perl 0.8.8 = 2 "Extra alignment tab"
+% expect:  2 errors `unexpected:eqnarray` "Too many columns in eqnarray environment"
+% status:  RED (65o)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}a&=&b&X\cr\end{eqnarray}
+\begin{eqnarray}a&=&b&X\cr c\\ d&=&e\end{eqnarray}
+\end{document}

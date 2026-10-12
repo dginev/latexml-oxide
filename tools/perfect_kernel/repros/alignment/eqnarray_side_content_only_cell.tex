@@ -1,0 +1,20 @@
+% witness: review of 65o round 1 (probe p1); also `a &\index{x}& b`, which no `\lefteqn` touches. An eqnarray cell
+%          holding only an `\index` or a `\hypertarget` anchor measures under 1pt, so the alignment counts it empty
+%          (Perl Alignment.pm:464-477, size-based) and skippable, and absorbs only cells that are not skippable
+%          (Alignment.pm:370): the indexmark and the anchor are lost. A cell with visible content keeps its anchor;
+%          its floated indexmark is dropped by the row join (Base_XMath.pool.ltxml:953-959 keeps only `_Capture_`)
+% oracle:  pdflatex 0 errors; the index entries and the link target exist
+% engines: rust 65int2, 65o and Perl 0.8.8 = no `indexmark` for `alone` or `withrel`, no anchor `tone`
+% expect:  0 errors; indexmarks `alone` and `withrel` and the anchor `tone` kept
+% status:  RED (65o: pattern reported, rule for the main session)
+\documentclass{article}
+\usepackage{makeidx}\makeindex
+\usepackage{hyperref}
+\begin{document}
+\begin{eqnarray}
+a &\index{alone}& b\\
+a &=\index{withrel}& b\\
+a &\hypertarget{tone}{}& b
+\end{eqnarray}
+\hyperlink{tone}{one}
+\end{document}

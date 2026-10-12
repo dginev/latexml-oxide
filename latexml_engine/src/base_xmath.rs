@@ -2017,10 +2017,19 @@ pub fn equationgroup_join_rows(
     }
     eq.unlink_node();
     let mut tr = document.open_element_at(&mut branch_node, "ltx:tr", None, None)?;
-    // Note: Perl also checks for lefteqn class on first _Capture_ to add ltx_eqn_lefteqn
-    // to <tr>, but in practice the class is on a child td (via \multicolumn), not on
-    // _Capture_ itself, so the condition never fires in Perl output.
     let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
+    // Perl Base_XMath.pool.ltxml:956-957: a row led by a `\lefteqn` is classed `ltx_eqn_lefteqn`. In Perl it never
+    // fires: `\lx@add@cssclass` cannot class the `_Capture_` (not in the schema), and `/\blefteqn\b/` misses
+    // `ltx_eqn_lefteqn` (`_` is a word character). The cell carries the class now (`\lx@alignment@cell@overprint`,
+    // OXIDIZED_DESIGN_DIVERGENCES #556). The class is in the XML only: LaTeXML-block-xhtml.xsl writes the HTML row's
+    // own class (:703, :883), so LaTeXML.css's `tr.ltx_eqn_lefteqn + tr` rule never meets it.
+    if cells
+      .first()
+      .and_then(|c| c.get_attribute("class"))
+      .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_eqn_lefteqn"))
+    {
+      document.set_attribute(&mut tr, "class", "ltx_eqn_lefteqn")?;
+    }
     for mut cell in cells {
       add_column_to_math_fork(document, &mut mainfork, &mut tr, &mut cell)?;
     }

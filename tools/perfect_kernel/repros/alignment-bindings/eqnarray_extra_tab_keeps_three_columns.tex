@@ -6,6 +6,8 @@
 % expect:  1 error; the equationgroup byte-identical to 64h4 (columns 0/1/2, Perl latex_constructs.pool.ltxml:2307-2309):
 %          one equation, one number — the `&&+d` row joined as a continuation, the base/Perl rule
 %          (latex_constructs.pool.ltxml:2357-2364), not pdflatex's two numbers
+%          65o: the fourth cell is the number column's (latex.ltx:15764), right-aligned, and the error is pdflatex's
+%          `Error:unexpected:eqnarray Too many columns in eqnarray environment` (was "Extra alignment tab")
 % status:  RED (64ra v1) -> GREEN (64ra)
 % preload: ar5iv.sty
 \documentclass{article}

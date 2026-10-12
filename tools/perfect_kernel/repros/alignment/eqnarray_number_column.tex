@@ -1,0 +1,21 @@
+% witness: 1804.05059 (run 340's `&` cluster, R4): `K &=& a+b &\cr&& + c + d`. latex.ltx:15764 gives eqnarray's
+%          `\halign` a fourth column, the equation number's (`\hb@xt@\z@\bgroup\hss##\egroup`), which a row ended by
+%          `\cr` may fill
+% oracle:  pdflatex 0 errors; pdftotext `K = a+b (star)` (the text at the number's place, row unnumbered) and
+%          `L = c+d (1)`
+% engines: rust 65int2 and Perl 0.8.8 = 1 x `Error:unexpected:&` each (a three-column template)
+% expect:  0 errors, 0 warnings; the fourth cell's text in a fourth `td`, right-aligned (as Perl's overflow cell kept it);
+%          an empty fourth cell leaves no `td`
+% status:  RED (65int2) -> GREEN (65o)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+K &=& a + b
+&\cr&&
++ c + d
+\end{eqnarray}
+\begin{eqnarray}
+K &=& a + b & (star)\cr
+L &=& c + d
+\end{eqnarray}
+\end{document}

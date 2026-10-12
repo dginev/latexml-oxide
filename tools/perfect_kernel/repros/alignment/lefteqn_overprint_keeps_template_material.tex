@@ -1,0 +1,16 @@
+% witness: review of 65o round 1 (probes p2, p8). A first-column `\lefteqn` is set as `\multicolumn{1}{l}{…}`, which
+%          replaces the column's template: its `@{…}` material and `|` rules go with it. TeX's `\rlap` sits inside
+%          the column's own u/v template (tex.web §788 `init_col` inserts the u_j template, §789 the v_j), which keeps both
+% oracle:  pdflatex 0 errors; `AAA :` (the `@{\;:\;}` after column 1) and the left rule of `|l|c|r|` printed
+% engines: rust 65o = no `:` in the first row (the `\lefteqn` cell holds `AAA` only), the `\lefteqn` cell's border `r`
+%          only; 65int2 and Perl 0.8.8 the same and 4 "Extra alignment tab" (`\multicolumn{3}`)
+% expect:  0 errors; the first row's `:` kept, the `\lefteqn` cell's left border `l`
+% status:  RED (65o)
+\documentclass{article}
+\begin{document}
+\[\begin{array}{l@{\;:\;}l@{\quad\dagger}r}\lefteqn{AAA}&&\\ BBB&CCC&DDD\end{array}\]
+\[\begin{array}{|l|c|r|}\hline
+\lefteqn{AAA = BBB} & & \\ \hline
+GGG & HHH & III \\ \hline
+\end{array}\]
+\end{document}

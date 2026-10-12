@@ -575,6 +575,26 @@ LoadDefinitions!({
   Let!("\\@tabular@begin@heading", "\\lx@alignment@begin@heading");
   Let!("\\@tabular@end@heading", "\\lx@alignment@end@heading");
 
+  // Rust-only: the current cell's content overprints the cells to its right, as an `\rlap` does (`\lefteqn`,
+  // latex.ltx:15800): at normalization the empty cells after it join its span, and a cell with content keeps its
+  // column (`Cell::overprint`, OXIDIZED_DESIGN_DIVERGENCES #556). The argument is a class for the cell (empty for
+  // none), which its column's element carries.
+  DefPrimitive!("\\lx@alignment@cell@overprint Semiverbatim", sub[(class)] {
+    let class = class.to_string();
+    if let Some(alignment_stored) = lookup_alignment()
+      && let Some(data) = alignment_stored.alignment_cell()
+      && let Some(cell) = data.borrow_mut().current_column()
+    {
+      cell.overprint = true;
+      if !class.trim().is_empty() {
+        cell.class = Some(match cell.class.take() {
+          Some(old) => s!("{old} {}", class.trim()),
+          None => class.trim().to_string(),
+        });
+      }
+    }
+  });
+
   //======================================================================
   // Multicolumn support
   // Perl: DefRegisterI('\lx@alignment@ncolumns', undef, Dimension(0), getter => sub { ... })

@@ -720,6 +720,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   cell_end_in_inline_math_inserts_dollar, (4) brace_meeting_left_group_in_inline_math_is_deleted. Round 3 (main-session
   decision): round 2's "partner outside" rule reverted to the unit-construct rule (it lost a1/a2/a16 and gained nothing);
   new RED (3) forgotten_dollar_in_a_plain_group_keeps_the_text.
+- **65o** (SHARED, PERL-ORIGIN; OD #556-557, KPE #624-625, completes KPE #547's `\lefteqn` residual): eqnarray's
+  alignment as latex.ltx defines it. A first-column `\lefteqn` is one cell (`\rlap`, latex.ltx:15800) that overprints:
+  at normalization it spans the structurally empty cells after it (`Cell::overprint`, `normalize_overprint_spans`; TeX
+  does not span, tex.web §791), so `\lefteqn{lhs}&&\nonumber\\` keeps Perl's one cell over the row with 0 errors, a
+  cell with content (or an `\index`/anchor) keeps its column, and the row is classed `ltx_eqn_lefteqn` in the XML
+  (Perl Base_XMath:956, dead there). eqnarray has the fourth, number column (:15764) a `\cr`-ended row may fill
+  (1804.05059), its trailing empty cells dropped (eqnarray only), and latex.ltx's "Too many columns in eqnarray
+  environment" where a `\\`-ended row reaches it. Run 340's `&` cluster R1 (about 2,050 papers) + R4 (about 71): the
+  32 witnesses (R1 list, R4, 2205.04522, 2411.04274) go from 178 errors on 31 papers to 0, no words lost, warnings
+  equal or fewer (nucl-th9512020's `\hat`-in-text and math0407427's `\span` warnings gone); 40 seeded random eqnarray
+  papers: 39 byte-identical, cond-mat0601437 2 → 0 errors (a `\lefteqn` row). Guards `perfect_kernel_batch65o::*`;
+  repros `alignment/{lefteqn_*,eqnarray_number_column*,eqnarray_empty_cell_keeps_later_column}` GREEN. Open (RED):
+  `alignment/eqnarray_cr_row_unnumbered` and `eqnarray_cr_row_column_count` (a raw `\cr` skips `\@@eqncr`: TeX leaves
+  the row unnumbered and counts on into the next row's "Too many columns"; we, as Perl, number it and count afresh);
+  `alignment/lefteqn_overprint_keeps_template_material` (the `\multicolumn{1}{l}` drops column 1's `@{…}` and `|`,
+  which TeX's `\rlap` keeps); `alignment/eqnarray_side_content_only_cell` (KPE #625: a cell holding only an `\index`
+  or anchor measures under 1pt and is never absorbed, and an eqnarray row join drops a floated indexmark; rule
+  proposed: size never decides dropping content, only `Digested::is_skippable` does).
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the
@@ -1263,7 +1281,8 @@ would break the schema (`ltx:document` takes its top matter first) — retire or
 `.bib` entries (40 papers; Perl's MathReview synthesis digests the reviewer too; the always-on stub was retracted by
 maintainer decision 2026-07-27, latex_constructs_rust_only.rs — needs a ruling); the tally's `_` cluster (216 papers) is
 mostly gone on HEAD (splncs04 `\doi{…_14}` in the `.bbl`, now clean); Perl-origin, pdflatex-clean: `\lefteqn{…} & &` in
-eqnarray (Perl's `\lefteqn` spans 3 columns, so the tabs the idiom writes are extra, 2609.03020) and an etoolbox
+eqnarray (Perl's `\lefteqn` spans 3 columns, so the tabs the idiom writes are extra, 2609.03020: fixed in 65o, 10 → 0
+errors, OD #556) and an etoolbox
 `\AtBeginEnvironment{table}{\begingroup…}` + `\AfterEndEnvironment{table}{\endgroup}` pair (Package.pm:1918-1925 binds the
 environment's mode into the hook's group, 2609.01057). Guards `perfect_kernel_batch61::{class_endminipage_does_not_replace_the_environment,
 document_endminipage_definition_is_kept, class_bindings_2609_clusters}`.

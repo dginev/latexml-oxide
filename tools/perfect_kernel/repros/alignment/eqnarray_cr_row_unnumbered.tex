@@ -1,0 +1,14 @@
+% witness: review of 65o (the number column, latex.ltx:15764; 1804.05059's `&\cr`): a row an author ends with `\cr`
+%          skips `\@@eqncr` (:15789-15795), which steps and prints the number, so TeX leaves it unnumbered
+% oracle:  pdflatex 0 errors; pdftotext `K = a+b (star)` (no number) and `L = c+d (1)`
+% engines: rust 65o = 0 errors, the `\cr` row numbered (1), the next (2); Perl 0.8.8 the same numbering and 1 error
+%          (its three-column template)
+% expect:  0 errors; the `K` row unnumbered, the `L` row (1)
+% status:  RED (65o)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+K &=& a + b & (star)\cr
+L &=& c + d
+\end{eqnarray}
+\end{document}

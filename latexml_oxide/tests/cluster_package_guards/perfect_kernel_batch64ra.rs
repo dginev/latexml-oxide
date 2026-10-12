@@ -167,7 +167,9 @@ fn autart_pf_dollardollar_is_display() {
 /// 64ra: an eqnarray row with an extra `&` grows the alignment past the template, but the rows are still read over the
 /// eqnarray's three columns (Perl latex_constructs.pool.ltxml:2307-2309): the `&&+d` row continues the equation, as
 /// in 64h4 (the column count is the template's, recorded by `eqnarray_bindings_with_columns`). pdflatex reports the
-/// extra tab too. Repro alignment-bindings/eqnarray_extra_tab_keeps_three_columns.
+/// extra tab too. 65o: the fourth cell is the number column's (latex.ltx:15764, right-aligned), and the error
+/// latex.ltx's "Too many columns" (OXIDIZED_DESIGN_DIVERGENCES #557). Repro
+/// alignment-bindings/eqnarray_extra_tab_keeps_three_columns.
 #[test]
 fn eqnarray_extra_tab_keeps_three_columns() {
   let (log, xml) = latexml::util::test::convert_with(
@@ -177,11 +179,18 @@ fn eqnarray_extra_tab_keeps_three_columns() {
     Some("ar5iv.sty"),
   );
   assert_eq!(error_count(&log), 1, "{log}");
+  assert_eq!(
+    log
+      .matches("Error:unexpected:eqnarray Too many columns in eqnarray environment")
+      .count(),
+    1,
+    "{log}"
+  );
   assert_element(
     &xml,
     "equationgroup",
     &[],
-    r#"<equationgroup class="ltx_eqn_eqnarray" xml:id="S0.EGx1"><equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags><MathFork><Math tex="\displaystyle a=b c+d" text="a = b * [c] + d" xml:id="S0.E2.m2"><XMath xml:id="S0.E2.m2.1"><XMApp xml:id="S0.E2.m2.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp xml:id="S0.E2.m2.1.1.3"><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp xml:id="S0.E2.m2.1.1.3.2"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok><XMText xml:id="S0.E2.m2.1.1.3.2.3">c</XMText></XMApp><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMApp></XMath></Math><MathBranch><tr xml:id="S0.E2.1"><td align="right" xml:id="S0.E2.1.1"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E1.m1"><XMath xml:id="S0.E1.m1.1"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="center" xml:id="S0.E2.1.2"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.E1.m2"><XMath xml:id="S0.E1.m2.1"><XMTok meaning="equals" role="RELOP">=</XMTok></XMath></Math></td><td align="left" xml:id="S0.E2.1.3"><Math mode="inline" tex="\displaystyle b" text="b" xml:id="S0.E1.m3"><XMath xml:id="S0.E1.m3.1"><XMTok font="italic" role="UNKNOWN">b</XMTok></XMath></Math></td><td align="center" xml:id="S0.E2.1.4">c</td></tr><tr xml:id="S0.E2.2"><td xml:id="S0.E2.2.1"/><td xml:id="S0.E2.2.2"/><td align="left" xml:id="S0.E2.2.3"><Math mode="inline" tex="\displaystyle+d" text="+ d" xml:id="S0.E2.m1"><XMath xml:id="S0.E2.m1.1"><XMApp xml:id="S0.E2.m1.1.1"><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math></td></tr></MathBranch></MathFork></equation></equationgroup>"#,
+    r#"<equationgroup class="ltx_eqn_eqnarray" xml:id="S0.EGx1"><equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags><MathFork><Math tex="\displaystyle a=b c+d" text="a = b * [c] + d" xml:id="S0.E2.m2"><XMath xml:id="S0.E2.m2.1"><XMApp xml:id="S0.E2.m2.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp xml:id="S0.E2.m2.1.1.3"><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp xml:id="S0.E2.m2.1.1.3.2"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok><XMText xml:id="S0.E2.m2.1.1.3.2.3">c</XMText></XMApp><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMApp></XMath></Math><MathBranch><tr xml:id="S0.E2.1"><td align="right" xml:id="S0.E2.1.1"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E1.m1"><XMath xml:id="S0.E1.m1.1"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="center" xml:id="S0.E2.1.2"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.E1.m2"><XMath xml:id="S0.E1.m2.1"><XMTok meaning="equals" role="RELOP">=</XMTok></XMath></Math></td><td align="left" xml:id="S0.E2.1.3"><Math mode="inline" tex="\displaystyle b" text="b" xml:id="S0.E1.m3"><XMath xml:id="S0.E1.m3.1"><XMTok font="italic" role="UNKNOWN">b</XMTok></XMath></Math></td><td align="right" xml:id="S0.E2.1.4">c</td></tr><tr xml:id="S0.E2.2"><td xml:id="S0.E2.2.1"/><td xml:id="S0.E2.2.2"/><td align="left" xml:id="S0.E2.2.3"><Math mode="inline" tex="\displaystyle+d" text="+ d" xml:id="S0.E2.m1"><XMath xml:id="S0.E2.m1.1"><XMApp xml:id="S0.E2.m1.1.1"><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math></td></tr></MathBranch></MathFork></equation></equationgroup>"#,
   );
 }
 

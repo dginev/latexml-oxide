@@ -608,7 +608,7 @@
             </XMath>
           </Math>
           <MathBranch>
-            <tr>
+            <tr class="ltx_eqn_lefteqn">
               <td align="left" colspan="3"><Math mode="inline" tex="\displaystyle w+x+y+z=" text="w + x + y + z = absent" xml:id="S0.Ex8.m1">
                   <XMath>
                     <XMApp>

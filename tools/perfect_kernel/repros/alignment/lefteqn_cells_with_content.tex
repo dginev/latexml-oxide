@@ -1,0 +1,13 @@
+% witness: nucl-th9512020 (run 340's `&` cluster, R1): `\lefteqn{A}& \phantom{A}& B`, the cells after the
+%          `\lefteqn` hold content; TeX overprints them
+% oracle:  pdflatex 0 errors
+% engines: rust 65int2 and Perl 0.8.8 = 2 x `Error:unexpected:&`
+% expect:  0 errors, 0 warnings; each cell in its own column, no span, nothing lost
+% status:  RED (65int2) -> GREEN (65o)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+\lefteqn{T\psi=(-1)^{I}\psi,}&\phantom{T\psi}&
+T\chi=(-1)^{s}\chi,
+\end{eqnarray}
+\end{document}

@@ -225,7 +225,7 @@ pub(crate) fn load() -> Result<()> {
      \\lx@begin@alignment",
     locked => true);
   DefMacro!("\\endeqnarray",
-    "\\cr\\lx@end@alignment\\end@eqnarray",
+    "\\lx@eqnarray@number@check\\cr\\lx@end@alignment\\end@eqnarray",
     locked => true);
   DefMacro!("\\csname eqnarray*\\endcsname",
     "\\@eqnarray@bindings\\@@eqnarray\
@@ -233,8 +233,40 @@ pub(crate) fn load() -> Result<()> {
      \\lx@begin@alignment",
     locked => true);
   DefMacro!("\\csname endeqnarray*\\endcsname",
-    "\\lx@end@alignment\\end@eqnarray",
+    "\\lx@eqnarray@number@check\\lx@end@alignment\\end@eqnarray",
     locked => true);
+  // latex.ltx:15789-15795 `\@@eqncr`, run by the eqnarray's `\\` and its end: a row that reached the fourth column,
+  // the equation number's (:15764), has too many columns, and the number goes after what it holds. Only a row ended
+  // by `\cr` may fill that column (1804.05059). Read in the look-ahead before a cell, the current column is the one
+  // before (as `\if@in@firstcolumn`), so `&\\` counts the cell it opens, as TeX's u-part does. Rust-only (Perl's
+  // template has three columns, and the fourth cell's `&` overflows it: OXIDIZED_DESIGN_DIVERGENCES #557).
+  DefMacro!("\\lx@eqnarray@number@check", {
+    if let Some(alignment_digested) = lookup_alignment()
+      && let Some(alignment_cell) = alignment_digested.alignment_cell()
+    {
+      let alignment = alignment_cell.borrow();
+      let equation_columns = match alignment.get_property("eqnarray_columns").as_deref() {
+        Some(Stored::Number(n)) => n.0,
+        _ => i64::MAX,
+      };
+      let column = if alignment.is_in_column() {
+        alignment.current_column_number()
+      } else if alignment.is_in_row() {
+        alignment.current_column_number() + 1
+      } else {
+        0
+      };
+      if column as i64 > equation_columns {
+        Error!(
+          "unexpected",
+          "eqnarray",
+          "Too many columns in eqnarray environment"
+        );
+      }
+    }
+    Tokens!()
+  });
+  DefMacro!("\\lx@eqnarray@newline", "\\lx@eqnarray@number@check\\lx@alignment@newline");
 
   DefConstructor!("\\@@eqnarray SkipSpaces DigestedBody",
     "#1",
@@ -271,11 +303,18 @@ pub(crate) fn load() -> Result<()> {
     }
   });
 
-  // Perl: latex_constructs.pool.ltxml lines 2251-2254
+  // Perl: latex_constructs.pool.ltxml lines 2251-2254 (2194-2197 in 0.8.8). latex.ltx:15800 is
+  // `\rlap{$\displaystyle #1$}`: in the first column the `\lefteqn` is one cell, and the author's `&` after it
+  // (`\lefteqn{lhs}&&\nonumber\\`) fill the next columns. Perl's `\multicolumn{3}` made them overflow (run 340's `&`
+  // cluster R1, about 2,050 papers: 0707.3929, 0801.4655, 1209.6494, 1409.4633's `array{ll}`, nucl-th9512020;
+  // KNOWN_PERL_ERRORS #624). The cell overprints, as the `\rlap` does: at normalization it spans the empty cells after
+  // it, so the HTML keeps Perl's one cell over an empty row, and a cell with content keeps its column
+  // (`\lx@alignment@cell@overprint`, OXIDIZED_DESIGN_DIVERGENCES #556). Elsewhere, an `\rlap` in its column (2205.04522,
+  // 2411.04274; KNOWN_PERL_ERRORS #547).
   DefMacro!(
     "\\lefteqn{}",
     "\\ifx.#1.\\else\
-      \\if@in@firstcolumn\\multicolumn{3}{l}{\\@ADDCLASS{ltx_eqn_lefteqn}\\lx@begin@inline@math \\displaystyle #1\\lx@end@inline@math\\mbox{}}\
+      \\if@in@firstcolumn\\multicolumn{1}{l}{\\lx@alignment@cell@overprint{ltx_eqn_lefteqn}\\lx@begin@inline@math \\displaystyle #1\\lx@end@inline@math\\mbox{}}\
       \\else\\rlap{\\lx@begin@inline@math\\displaystyle #1\\lx@end@inline@math}\\fi\\fi"
   );
 
