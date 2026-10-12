@@ -4869,6 +4869,29 @@ where FnR: FnOnce() -> Result<R> {
   Ok(results)
 }
 
+/// Whether the token just read ends an isolated reading context ([`reading_from_mouth`]: a token list digested on its
+/// own, such as a constructor's argument `{$x}`, which may come wrapped in a further brace pair): only `}`s left in
+/// its pushback and its mouth exhausted. A `}` read here is the argument's own closing brace, which TeX strips with the
+/// argument — one end of a construct digested as a unit (stomach.rs `formula_ends_with_its_unit`, OXIDIZED_DESIGN
+/// #553). `false` whenever a mouth of its own is still open in the context.
+pub fn isolated_input_ends_here() -> bool {
+  let mut g = gullet_mut!();
+  if g.ctx_stack.is_empty() {
+    return false;
+  }
+  match g.runtime.as_mut() {
+    Some(runtime) => {
+      !runtime.autoclose
+        && runtime
+          .pushback
+          .iter()
+          .all(|t| t.get_catcode() == Catcode::END)
+        && !runtime.mouth.has_more_input()
+    },
+    None => false,
+  }
+}
+
 /// Check if there is more input to be read from the current mouth
 pub fn has_more_input() -> bool {
   match runtime!() {

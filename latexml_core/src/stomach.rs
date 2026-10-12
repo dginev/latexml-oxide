@@ -2606,6 +2606,102 @@ fn brace_cannot_close() -> Option<&'static str> {
   }
 }
 
+/// Whether stack frame `n` (0 = innermost) is a group the document opened that tex.web §1064-1065 `off_save` closes:
+/// a `{`/`\bgroup` group (`simple_group`, closer `}`), a `\begingroup` group (`semi_simple_group`, `\endgroup`) or a
+/// `\left` group (`math_left_group`, `\right.`). The closer, or `None` for a frame LaTeXML's machinery opened — a
+/// mode switch (box, formula, cell), an environment, a constructor's argument (a K9 group code) — which TeX has no
+/// such group for. OXIDIZED_DESIGN #553.
+fn off_save_closer_at(n: usize) -> Option<Token> {
+  if is_value_bound("BOUND_MODE", Some(n)) {
+    return None;
+  }
+  if is_value_bound("lx@group@code", Some(n)) {
+    return value_in_frame("lx@group@code", n)
+      .is_some_and(|code| matches!(code, Stored::Token(t) if t == T_CS!("\\left")))
+      .then(|| T_CS!("\\right"));
+  }
+  if !is_value_bound("groupInitiator", Some(n)) {
+    return None;
+  }
+  match value_in_frame("groupInitiator", n) {
+    Some(Stored::Token(opener))
+      if opener.get_catcode() == Catcode::BEGIN || opener.defined_as(&T_BEGIN!()) =>
+    {
+      Some(T_END!())
+    },
+    Some(Stored::Token(opener)) if opener.defined_as(&T_CS!("\\begingroup")) => {
+      Some(T_CS!("\\endgroup"))
+    },
+    _ => None,
+  }
+}
+
+/// The closer tex.web §1064-1065 `off_save` inserts for the innermost group when the document opened it: `}` for a
+/// `{`/`\bgroup` group, `\endgroup` for a `\begingroup` group (`off_save_closer_at`; the `\left` group's `\right.`
+/// has its own callers, `insert_missing_right_before`). OXIDIZED_DESIGN #553.
+pub fn off_save_closer() -> Option<Token> {
+  off_save_closer_at(0).filter(|closer| *closer != T_CS!("\\right"))
+}
+
+/// Record that an inserted `closer` (`}` or `\endgroup`) took the place of the author's own: the innermost group owes
+/// it ([`OWED_BRACES`] / [`OWED_ENDGROUPS`]), so that closer, when it comes and meets a group it cannot close, is
+/// deleted as tex.web §1069 deletes it. OXIDIZED_DESIGN #530.
+pub fn owe_inserted_closer(closer: &Token) {
+  let owed = if *closer == T_END!() {
+    OWED_BRACES
+  } else {
+    OWED_ENDGROUPS
+  };
+  assign_frame_value(owed, Stored::Int(owed_closers(owed) + 1));
+}
+
+/// Marks the frame of a formula `$…$` (or `\(…\)`) opened by `\lx@begin@inline@math` (latexml_engine tex_math.rs):
+/// the inline formula tex.web §1046-1047 `insert_dollar_sign` ends. OXIDIZED_DESIGN #553.
+pub const INLINE_FORMULA: &str = "lx@inline@formula";
+
+/// Whether the innermost mode is an inline formula ([`INLINE_FORMULA`]) that a math shift read now would end: every
+/// group opened inside it is one `off_save` closes on the way (`off_save_closer_at`), so the `$` tex.web §1047
+/// inserts closes those groups (§1193 + §1064-1065) and then the formula. A formula held by a frame LaTeXML's
+/// machinery opened (a constructor's argument, an environment, an alignment inside it) is not reached, nor is a
+/// formula in an alignment, unmarked (latexml_engine tex_math.rs `\lx@begin@inline@math`).
+pub fn inline_formula_reachable() -> bool {
+  let depth = get_frame_depth();
+  for n in 0..depth {
+    if is_value_bound("BOUND_MODE", Some(n)) {
+      return is_value_bound(INLINE_FORMULA, Some(n));
+    }
+    if off_save_closer_at(n).is_none() {
+      return false;
+    }
+  }
+  false
+}
+
+/// tex.web §1046-1047 `insert_dollar_sign`: a command inline math cannot hold (`mmode+par_end`; an environment's end,
+/// whose `\endgroup` meets the math shift group, §1064) arriving in an inline formula — "Missing $ inserted", the
+/// formula's end read first and `again` after it. Returns whether it was inserted. An Error, as TeX's; Perl has no
+/// such recovery, and the formula ran on through the paragraphs to the next `$`, its text and the document's math
+/// swapped (OXIDIZED_DESIGN #553; 65d review probes f4, a18, a19). Guards
+/// `perfect_kernel_batch65n::{par_in_inline_math_ends_the_formula, environment_end_in_inline_math_ends_the_formula}`.
+pub fn insert_dollar_sign(again: Tokens) -> Result<bool> {
+  if lookup_string_from_sym(crate::pin!("MODE")) != "math" || !inline_formula_reachable() {
+    return Ok(false);
+  }
+  Error!(
+    "expected",
+    "$",
+    "Missing $ inserted",
+    s!(
+      "I've inserted an end-math symbol before {}, which inline math cannot hold.",
+      again
+    )
+  );
+  let mut tokens = vec![T_CS!("\\lx@end@inline@math@inserted")];
+  tokens.extend(again.unlist());
+  gullet::unread(Tokens::new(tokens));
+  Ok(true)
+}
+
 /// The `}` a `\left`/`\middle`/`\right` delimiter scan put back after "Missing delimiter" (latexml_engine tex_math.rs
 /// `missing_delimiter`, [`mark_put_back_brace`]). The mark lives as long as that brace: a serial bound on the frame
 /// innermost when it was put back — inside the formula, so it dies with the formula at the latest — and valid only
@@ -2660,10 +2756,9 @@ fn delete_put_back_brace() -> Result<bool> {
 /// * the `}` a delimiter scan put back ([`PUT_BACK_BRACE`]: `$\left\{ x \right}$`, `\mbox{$\left\{ x \right}$}`)
 ///   meeting the formula's own math shift — "Extra }, or forgotten $", an Error, as TeX and Perl err there.
 ///
-/// Every other `}` at the formula's frame keeps the recovery below that ends the math first: a general §1069 deletion
-/// needs §1046-1047 (`\par` or `\end{X}` in inline math inserts `$`) first — a follow-up batch (SYNC_STATUS, REDs
-/// paragraph-mode/par_in_inline_math_inserts_dollar, paragraph-mode/stray_brace_then_dollar_keeps_text). Checked before
-/// the digestion loops could take the brace for a group end (65d reviews r1/r3/r5). OXIDIZED_DESIGN #530.
+/// Any other `}` at the formula's frame is `digest_next_body`'s (the general §1069 deletion of an inline formula's stray
+/// brace, OXIDIZED_DESIGN #553). Checked before the digestion loops could take the brace for a group end (65d reviews
+/// r1/r3/r5). OXIDIZED_DESIGN #530.
 fn delete_extra_brace(token: &Token) -> Result<bool> {
   if !gullet::is_right_brace(token) {
     return Ok(false);
@@ -2715,6 +2810,24 @@ pub fn insert_missing_right_before(again: Tokens) {
   let mut tokens = vec![T_CS!("\\right"), T_OTHER!(".")];
   tokens.extend(again.unlist());
   gullet::unread(Tokens::new(tokens));
+}
+
+/// Whether a `}` meeting the formula's math shift group closes a construct digested as a unit that holds the formula:
+/// a box body (the mode frame just outside the formula, frame 1, switched by a command on its own `{` — `\mbox{$x}`,
+/// `\hbox{$x}`, `\fbox{$x}`; not an environment `\begin{X}`) or an argument digested on its own (`\caption{$x} cap}`,
+/// `\section{$x} sec}`: the `}` is the argument's own closing brace, [`gullet::isolated_input_ends_here`]). The formula
+/// cannot escape such a construct, so it ends at the `}` with it. Any other `}` there — at the paragraph's level, in an
+/// environment, in a plain `{…}` group (`{\bf $x} y$`) — is the extra brace tex.web §1069 deletes, and the formula goes on.
+/// OXIDIZED_DESIGN #553.
+fn formula_ends_with_its_unit() -> bool {
+  let box_body = get_frame_depth() > 1
+    && is_value_bound("BOUND_MODE", Some(1))
+    && match value_in_frame("groupInitiator", 1) {
+      Some(Stored::Token(opener)) => !opener.with_str(|name| name.starts_with("\\begin{")),
+      // A mode frame with no recorded opener: machinery's, ended with the formula as before.
+      _ => true,
+    };
+  box_body || gullet::isolated_input_ends_here()
 }
 
 /// Whether `token` is a DefEnvironment's own end: the constructor `\end{X}` that pops the environment's frame.
@@ -2785,6 +2898,12 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       insert_missing_right(token);
       continue;
     }
+    // The same end met inside an inline formula (`\begin{center}Before $x} after.\end{center}`, 65d review a12): the
+    // environment's `\endgroup` meets the math shift group, and §1064 `off_save` inserts the `$` — "Missing $ inserted",
+    // the formula ended first ([`insert_dollar_sign`]). Before, the end popped the formula's frame as its own.
+    if is_environment_end(&token) && insert_dollar_sign(Tokens!(token))? {
+      continue;
+    }
     // first, check for alignment case
     // Perl #2775: only fire at the original alignment nesting level,
     // not inside deeper boxing groups (e.g. \vbox inside a tabular cell).
@@ -2799,16 +2918,23 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       gullet::unread_one(token);
       return Ok(expire_local_box_list());
     }
-    // A group closer arriving while the frame on top is the math switch this
-    // body capture opened (`\mbox{$x}`, `\hbox{$}`: no group opened inside
-    // the math): tex.web §1069 drops the brace ("Extra }, or forgotten $")
-    // and §1047 inserts the `$` at the next forbidden token, so the math
-    // closes and the enclosing box then ends on its own `}`. Perl (Stomach.pm
-    // digestNextBody + egroup :339-349) reported the mismatch and kept
-    // reading, so the math swallowed the rest of the document (`\hbox{$}`:
-    // pdflatex 3 / Perl 7 + Fatal / Rust 6 with `<ltx:Math>` at the document
-    // root). Insert the math's own end token and re-read the brace.
-    // Guard: `perfect_kernel_batch56::box_end_over_leaked_math_closes_it_into_the_box`.
+    // A `}` meeting the formula's own math shift group (tex.web §1069 "Extra }, or forgotten $") — one Error, TeX's
+    // message, and one rule for an author's inline formula outside alignments:
+    // * the `}` closes a construct digested as a unit ([`formula_ends_with_its_unit`]: a box body `\mbox{$x}`,
+    //   `\hbox{$}`, `\fbox{$x}`; an argument digested on its own `\caption{$x} cap}`, `\section{$x} sec}`): the formula
+    //   cannot escape the construct, so it ends at the `}` (its end inserted, the `}` read again) and the text after the
+    //   construct stays text (65d review a6, a7, a9, a10, a14). pdflatex deletes the `}` and lets the box swallow the
+    //   following text up to a later `}` (`\mbox{$x}`: "Before xafterone.Second para.") — the content-first divergence
+    //   of OXIDIZED_DESIGN #553. Perl (Stomach.pm digestNextBody + egroup :339-349) reported the mismatch and read on,
+    //   the math swallowing the rest of the document (`\hbox{$}`: Perl 7 errors + Fatal, `<ltx:Math>` at the root).
+    //   Guard `perfect_kernel_batch56::box_end_over_leaked_math_closes_it_into_the_box`.
+    // * every other `}` (`$x}$ text`, `{\it a $x}$ y}`, `{\bf $x} y$`, `Before $x} after.`): deleted as TeX deletes it;
+    //   the formula goes on to its own `$` — or, missing that, to the `\par` or environment end where §1047 inserts it
+    //   ([`insert_dollar_sign`]), keeping a wrong guess inside the paragraph (65d review a1, a2, a8, a11, a12, a16,
+    //   a17, a18, f4). Guard `perfect_kernel_batch65n::stray_brace_in_a_formula_is_deleted`.
+    // Display math (§1047 not applied to it — a blank line in an `equation` is common and tolerated — so a deleted brace
+    // would run `{\equation x=1}` on through the document) and a formula in an alignment cell (its `$` may be the cell
+    // template's; RED paragraph-mode/cell_end_in_inline_math_inserts_dollar) end at the `}` whatever it closes.
     if gullet::is_right_brace(&token) && is_value_bound("BOUND_MODE", Some(0)) {
       let mode = lookup_string_from_sym(crate::pin!("MODE"));
       let ender = match mode.as_str() {
@@ -2817,13 +2943,21 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
         _ => None,
       };
       if let Some(ender) = ender {
+        let deleted = is_value_bound(INLINE_FORMULA, Some(0)) && !formula_ends_with_its_unit();
         Error!(
-          "expected",
-          "$",
-          "Missing $ inserted",
-          s!("Extra }}, or forgotten $: closing {mode} before the group ends.")
+          "unexpected",
+          "}",
+          "Extra }, or forgotten $",
+          if deleted {
+            "I've deleted a group-closing symbol because it seems to be spurious, as in `$x}$'."
+              .to_string()
+          } else {
+            s!("I've ended the {mode} formula before this group-closing symbol.")
+          }
         );
-        gullet::unread(Tokens::new(vec![T_CS!(ender), token]));
+        if !deleted {
+          gullet::unread(Tokens::new(vec![T_CS!(ender), token]));
+        }
         continue;
       }
     }

@@ -15990,9 +15990,10 @@ the constructor itself), so that a rejected `\middle` leaves nothing behind. Whe
 **Group ends inside the `\left` group** (Warnings: TeX-only errors with a semantic recovery, user ruling 2026-10-11):
 - a `}` closing it (stomach.rs `egroup`): "Extra }, or forgotten \right." — TeX deletes the brace (§1069); the group
   closes here, as Perl closes it silently. Deleting it as TeX does needs our `$` to close the `{` group it leaves open
-  (§1065 inserts the `}`; `end_math_or_defer` defers the math end to that group's end instead), so `$ {\left( a } b
-  \right) $` keeps an "Extra \right." Error pdflatex does not give — +1 Error vs 65a (review5 d2: 5 → 6), the content
-  intact (pdftotext "A (ab) B. / Next.") (SYNC_STATUS row MS);
+  (§1065 inserts the `}`), so `$ {\left( a } b \right) $` keeps an "Extra \right." Error pdflatex does not give — +1
+  Error vs 65a (review5 d2: 5 → 6), the content intact (pdftotext "A (ab) B. / Next.") (SYNC_STATUS row MS). Since 65n
+  the `$` does insert that `}` (#553), so the deletion is unblocked; not done there (RED
+  paragraph-mode/brace_meeting_left_group_in_inline_math_is_deleted);
 - the primitive that meets it (§1065 `off_save` at the mismatching primitive): a formula's end (`$`, `$$`, `\]`, `\)`:
   `\lx@dollar@default`, `tex_math::close_open_left`), an `\endgroup` (stomach.rs `endgroup`), a DefEnvironment's own
   end constructor `\end{X}` (`\begin{equation}\left( x \end{equation}`; stomach.rs `is_environment_end` in
@@ -16015,21 +16016,18 @@ digestion loops' `delete_extra_brace` and at `invoke_token`, the choke point: a 
 base_utilities.rs:7083) leaves the live serial set, which is harmless because the frame holding the mark closes with it
 (probe B1) (review r6: a global count outlived a cell's `}` and deleted a later, unrelated `}`; guard
 `perfect_kernel_batch65d::put_back_mark_lives_with_its_brace`). pdflatex: the same two
-diagnostics; pdftotext "Before {x c." for the `\mbox` shape. 65a closed the math at that `}` with 1 Error. Every other
-stray `}` at the formula's frame keeps 65a's recovery (it inserts `$`): a general §1069 deletion needs §1046-1047
-(`\par` or `\end{X}` in inline math inserts `$`) first, without which a deleted `}` leaves the formula running on
-through the paragraphs — queued as SYNC_STATUS row MS (REDs paragraph-mode/par_in_inline_math_inserts_dollar,
-paragraph-mode/stray_brace_then_dollar_keeps_text, boxes-groups/mbox_math_stray_brace_ends_box_not_math). Guards
+diagnostics; pdftotext "Before {x c." for the `\mbox` shape. 65a closed the math at that `}` with 1 Error. The
+general §1069 deletion needed §1046-1047 (`\par` or `\end{X}` in inline math inserts `$`) first, without which a
+deleted `}` left the formula running on through the paragraphs; both landed in 65n (#553). Guards
 `perfect_kernel_batch65d::{argument_group_owes_the_brace, stray_brace_at_the_formula_level_is_deleted}`.
 
 **Residuals.** The `\right` delimiter is digested after the group's `\aftergroup` tokens run (TeX scans it before
 `unsave`; Perl the same order as here), so mathtools' documented `\def\right{\aftergroup\egroup\@right}` leaves the
 delimiter outside the `\mathclose` group (unparsed, as before). A `\right` inside a constructor's argument
 (`\frac{a}{b \right)}`, `\mathbf{x \right)}`) drops the argument and the `)` silently (RED
-boxes-groups/right_inside_an_argument_drops_the_argument; 65a the same). A stray `}` at the formula's frame other than a put-back one inserts `$` (stomach.rs `digest_next_body`;
-TeX: "Extra }, or forgotten $"; 65a the same; row MS); a `$`
-meeting a document `{` group inside the formula defers the math end to the
-group's end (`end_math_or_defer`; TeX inserts the `}`) — both pre-existing.
+boxes-groups/right_inside_an_argument_drops_the_argument; 65a the same). A stray `}` at a display formula's frame, or at
+an inline one whose `{` partner lies outside the formula (a box body, an argument's braces, an enclosing group), ends
+the formula there (#553).
 
 Witnesses: run 336's X1 (48 Fatal:Timeout:IfLimit with first error `unexpected:\right`, an xy cell scanner expanding
 `\left\{`: 0705.0452 0802.0663 0804.1292 0809.0095 0903.4903 …, all 48 converting, errors 3541 → 826 over 109
@@ -16325,7 +16323,8 @@ inserts the `}` there ("Missing } inserted") and the `$` ends the formula, the r
 (`\showbox` of `Let $S^{x$ hold.`: `\mathon S \hbox{x} \mathoff`, then "hold."). tex_math.rs `end_math_or_defer`
 instead defers the math end to the end of that group, which an unbalanced paper never reaches, so the rest of the
 paper is digested as math until `\end{document}`. This entry only lets that formula close at the next structure; the
-deferral is RED paragraph-mode/dollar_closes_open_script_group, SYNC_STATUS row MS (task #204).
+deferral is RED paragraph-mode/dollar_closes_open_script_group, SYNC_STATUS row MS (task #204). Since 65n the `$`
+inserts the `}` and ends the formula there (#553); the auto-close stays for constructs the document really ended in.
 
 **Rust** (batch 65i): a construct the document ended inside of never ended. `\lx@finalize@document` records each end
 that abandons groups (`stomach::end_inside_groups`); a whatsit whose digestion — arguments, body, after-digest code —
@@ -16714,3 +16713,84 @@ multicolumn_pcol_text_then_nested_ptabular_keeps_its_rows, multicolumn_pcol_embe
 multicolumn_pcol_pmatrix_keeps_its_rows, multicolumn_pcol_prefix_with_arguments_reads_the_body}`; repros
 `kernel-alignment/multicolumn_*`. Open: pdflatex's `>{\two}p{3cm}` reads `[|]xy` (array.sty `\insert@pcolumn`'s
 `\relax`), ours `[|x]y` as before 65p (RED repro `kernel-alignment/pcol_prefix_argument_takes_relax`).
+
+### 553. TeX's math-group recovery for an inline formula outside alignments: a math shift closes the groups opened in it, `\par` or an environment's end ends it, a `}` at its math shift ends it when it closes a construct digested as a unit, else is deleted (Perl: none of the three)
+
+tex.web: a math shift with `cur_group` not the math shift group goes through `off_save` (§1193 `mmode+math_shift`,
+§1064-1065): "Missing } inserted" for a `{`/`\bgroup` group (`simple_group`), "Missing \endgroup inserted" for
+`\begingroup` (`semi_simple_group`), "Missing \right. inserted" for `\left`, and the shift is read again. A `\par` in
+math mode is `insert_dollar_sign` (§1046-1047 `mmode+par_end`): "Missing $ inserted" and the `\par` read again; LaTeX's
+`\end{X}` gets the same through its `\par` or its `\endgroup` meeting the math shift group (§1064). A `}` meeting the
+math shift group is `extra_right_brace` (§1068-1069): "Extra }, or forgotten $", the brace deleted. Perl has none of
+these: `$` in a group inside the formula is "Attempt to end mode math" with the frame left open, `\par` in math is
+silent, and a `}` at the formula's frame closes it with an Error.
+
+**Rust** (batch 65n), for an *inline formula outside alignments* — one `\lx@begin@inline@math` opened with no alignment
+current (frame value `stomach::INLINE_FORMULA`), reached from the innermost frame through groups `off_save` closes only
+(`stomach::inline_formula_reachable`):
+- tex_math.rs `end_math_or_defer`: the math ender meeting a `{`/`\bgroup` or `\begingroup` group inserts its closer
+  (`stomach::off_save_closer`), Error "Missing } inserted" / "Missing \endgroup inserted" (TeX's error, and Perl's
+  "Attempt to end mode math"), the closer owed by the group as 65d's `\right` path owes it (`owe_inserted_closer`), and
+  the ender read again; the ender met first reverts as nothing. Before, the math end was deferred to the group's end,
+  which an unbalanced paper never reaches, and the rest of the paper was digested as math. The deferral stays for a
+  constructor's argument frame (`$\bm{\hat{m}$} b`, kblocks-doc; nicefrac; titlecaps — TeX has no group there), for
+  formulas in alignments and for display math.
+- stomach.rs `insert_dollar_sign`, called by `\lx@normal@par` (before digest) and by `digest_next_body` at a
+  DefEnvironment's own end: Error "Missing $ inserted", `\lx@end@inline@math@inserted` (the ender, reverting to nothing)
+  and the command read again; the `\par` whatsit left in the formula reverts as nothing (`lx@par@reread`).
+- stomach.rs `digest_next_body`: a `}` meeting the formula's math shift group, one rule (`formula_ends_with_its_unit`).
+  The `}` **ends the formula** when it closes a construct digested as a unit that holds the formula: a box body (the
+  mode frame just outside the formula switched by a command on its own `{` — `\mbox{$x}`, `\hbox{$x}`, `\fbox{$x}`; not
+  an environment `\begin{X}`) or an argument digested on its own (`\caption{$x} cap}`, `\section{$x} sec}`: the `}` is
+  the argument's own closing brace, gullet.rs `isolated_input_ends_here` — only `}`s left in the isolated context's
+  pushback and its mouth exhausted). The formula cannot escape such a construct: its end is inserted, the `}` read again
+  ends the construct, and the text after it stays text. **Every other `}` is deleted**, as TeX deletes it (§1069), and
+  the formula goes on to its own `$` — or, missing that, to the `\par` or environment end where §1047 inserts it:
+  `Before $x} y$ after.` at the paragraph's level or in an environment, `{\it a $x}$ y} after one.` and
+  `{\bf $x} y$ after one.` in a plain group (pdflatex's shape and count, 1 error, "after one." text; 65d review a1, a2,
+  a8, a16). One Error either way, TeX's message "Extra }, or forgotten $" — also where a display formula or a formula
+  in an alignment cell ends at the `}` (below). The `}` a `\right`/`\middle` delimiter scan put back (#530,
+  `$\left\{ x \right}$`, `\mbox{$\left\{ x \right}$}`) is deleted before the rule is asked: the author wrote it as a
+  delimiter, never as a construct's closer (the box's own `}` follows the `$`), as pdflatex deletes it (65d review g1).
+
+**Content first, against TeX, for a unit construct** (main session decision 2026-10-12): pdflatex deletes the `}` there
+too and runs the formula on — `\mbox{$x} after one.` swallows "after one." and the next paragraph into the box (3
+errors, pdftotext "Before xafterone.Second para."), and a macro argument's formula ends at the box's or heading's end
+(§1047, `\caption{$x}`, `\footnote{note $x}`, `\parbox`, `\makebox`, `\raisebox`: "Missing $ inserted"). Ours ends the
+formula at the `}` with one Error, so the text after the construct stays text (65d review a6, a7, a9, a10, a14).
+A round-2 draft extended the ending to every `}` whose `{` partner lies outside the formula (a plain `{…}` group
+included); it gained nothing on the probe set and lost the shapes where the author did write the closing `$` after the
+stray `}` (a1, a2, a16: "after one." became math, 2-3 errors) — settled, not to be re-attempted without evidence.
+
+**Residual, as pdflatex**: in a plain `{…}` group a forgotten `$` (`Before {\bf see $x} more text.`) has its `}`
+deleted, and the formula runs the text on as math to the paragraph's end ("Missing $ inserted" at the `\par`; Math
+"xmoretext.", 2 errors + the open group at the document's end — pdflatex's count and shape). Possible refinement (RED
+paragraph-mode/forgotten_dollar_in_a_plain_group_keeps_the_text, SYNC_STATUS row MS): `$`-parity evidence in the rest
+of the paragraph — odd, the author's closing `$` exists, so delete; even, the `$` was forgotten, so end at the `}`.
+
+**Display math is tolerant of `\par`** (main session decision 2026-10-12): no §1047 for display math, a blank line in
+an `equation` being common and tolerated.
+
+**Why only there**: a cell's `$` may be its template's (`align*`'s `$\displaystyle…$`): math9805003's undefined
+`{Sb}` in an `align*`, whose row template `$` closed the environment's `\begingroup`, lost the whole alignment
+(repro paragraph-mode/alignment_cell_formula_keeps_its_recovery, CONTROL). Display math has no §1047 (above), so a deleted brace would run `{\equation x=1}` on through the document.
+Open (SYNC_STATUS row MS): an author's formula in a cell (RED paragraph-mode/cell_end_in_inline_math_inserts_dollar;
+1210.0368, 1907.09124, whose deferrals sit in alignments) needs the template's `$` told from the author's.
+
+**Diagnostics given up for TeX's**: `$x} after one.` with no closing `$` at the paragraph's level now sets "after
+one." as math to the paragraph's end, as pdflatex ("xaf terone."); 65a's inserted `$` had guessed "forgotten $" and
+kept it text, but swapped text and math wherever the `$` came later (`$x} y$ after.`). Open (SYNC_STATUS row MS): a `}`
+meeting a `\left` group in an inline formula is not yet deleted (RED
+paragraph-mode/brace_meeting_left_group_in_inline_math_is_deleted).
+
+**Witnesses** (65int2 → 65n; errors / warnings / text words outside math / runs of 20+ letters): 2007.11971 13 / 2,643 /
+5,268 / 179 → 1 / 43 / 9,865 / 0; 1710.02165 29 / 35 / 12,121 / 1 → 21 / 27 / 12,501 / 0; 2008.11762 14 → 15 (a
+pre-existing `$` desync in the paragraph now ends at its `\par`, content unchanged); 1210.0368, 1907.09124,
+math9805003, hep-lat9811036, nucl-th0401019 unchanged. Probes `~/data/pk_wt/scratch_65n/` (pdflatex oracle per probe).
+
+**Guards**: `perfect_kernel_batch65n::{math_shift_closes_a_group_opened_in_the_formula,
+par_in_inline_math_ends_the_formula, environment_end_in_inline_math_ends_the_formula,
+stray_brace_in_a_formula_is_deleted, stray_brace_ending_a_unit_construct_ends_the_formula,
+alignment_cell_formula_keeps_its_recovery}`, `perfect_kernel_batch56::box_end_over_leaked_math_closes_it_into_the_box`;
+repros `paragraph-mode/*` (REDs cell_end_in_inline_math_inserts_dollar, brace_meeting_left_group_in_inline_math_is_deleted,
+forgotten_dollar_in_a_plain_group_keeps_the_text), boxes-groups/mbox_math_stray_brace_ends_box_not_math (GREEN).

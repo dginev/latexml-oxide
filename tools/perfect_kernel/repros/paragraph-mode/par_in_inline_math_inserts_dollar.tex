@@ -8,9 +8,8 @@
 % expect:  1 error; the formula closed at the \par ("x after one." as pdflatex), "Second para." text, "Third $y$ para."
 %          with one formula y
 % preload: ar5iv.sty
-% status:  RED
-% The follow-up batch (SYNC_STATUS "§1046-1047 Missing $ at \par/\end{X} in inline math + general §1069 stray-}
-% deletion") makes the general stray-`}` deletion safe: without this recovery a deleted `}` leaves the formula open.
+% status:  GREEN (65n: tex.web §1046-1047 `insert_dollar_sign` at `mmode+par_end` — stomach.rs `insert_dollar_sign`
+%          from `\lx@normal@par`; OXIDIZED_DESIGN #553; guard perfect_kernel_batch65n::par_in_inline_math_ends_the_formula)
 \documentclass{article}
 \begin{document}
 Before $x after one.

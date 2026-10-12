@@ -1,0 +1,20 @@
+% witness: 65d review r6 probe h1 (a `}` meeting a `\left` group in an inline formula; 65d round 7 item 2, 65n Q4)
+% oracle:  pdflatex 2 errors ("Extra }, or forgotten \right." — tex.web §1069 deletes the `}` at the math_left_group —
+%          and "Missing } inserted" — the `$` meets the `{` group, §1193 + §1065 `off_save`); pdftotext "A (ab) B. / Next."
+% engines: rust 65n: 1 error + 2 warnings (Warning "Extra }, or forgotten \right.", Warning "Missing } inserted",
+%          Error "Extra \right."): the `}` ends the `\left` group with an inserted `\right.`, and the author's `\right)`
+%          is then extra; content intact (Math "{\left(ab}\right)", "B." text)
+% expect:  2 errors as pdflatex; the `}` deleted at the `\left` group, `\right)` closing it, the `$` closing the `{`
+%          group; Math "\left(ab\right)"
+% preload: ar5iv.sty
+% status:  RED (not in 65n by the main session's decision 2026-10-12; 65d round 7 implemented and reverted the deletion
+%          when `$` still deferred to the group's end — 65n's §1193 `off_save` for an inline formula now unblocks it.
+%          OXIDIZED_DESIGN #530, #553, SYNC_STATUS row MS)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+A $ {\left( a } b \right) $ B.
+
+Next.
+
+\end{document}

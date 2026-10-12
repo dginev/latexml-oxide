@@ -6,7 +6,9 @@
 %          "After para." set as math, `$z$` inverted
 % expect:  1 error; Math tex "x"; "text after.", "After para." and "$z$ final." as pdflatex
 % preload: ar5iv.sty
-% status:  RED
+% status:  GREEN (65n: tex.web §1069 `extra_right_brace` — the `}` meeting the formula's math shift is deleted, Error
+%          "Extra }, or forgotten $"; stomach.rs `digest_next_body`; OXIDIZED_DESIGN #553; guard
+%          perfect_kernel_batch65n::stray_brace_in_a_formula_is_deleted)
 \documentclass{article}
 \begin{document}
 Before $x}$ text after.

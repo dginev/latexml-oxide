@@ -3053,3 +3053,22 @@ alignment cells). Then sweep every class the mechanism reaches (59p: the 299 TL 
 minimal document each, before/after) and look at the result rendered: 59p's overlay passed every XML check and rendered
 upside-down (a picture nested in a picture, OXIDIZED_DESIGN_DIVERGENCES #414). Guards
 `perfect_kernel_batch59::{discarded_replay_takes_back_its_stubs, maketitle_replay_adds_nothing_the_frontmatter_has}`.
+
+## 97. A TeX recovery keyed on "the formula's math shift" must know whose `$` opened the formula
+
+LaTeXML's alignment templates carry real `$` tokens (amsmath `align*` cells are `\hfil$\displaystyle…$`, `\array`
+rebinds `$`), so a frame that switched to math is not always a formula the author opened. tex.web's recoveries at the
+math shift group (§1193 `off_save` at `$`, §1047 `insert_dollar_sign`, §1069 `extra_right_brace`) are faithful for an
+author's `$…$`, but applied to a template's `$` they close the author's groups at row ends: math9805003's undefined
+`{Sb}` in an `align*` lost the whole alignment when the row's template `$` closed its `\begingroup` (65n). Mark the
+author's formula where it opens (`stomach::INLINE_FORMULA`, set by `\lx@begin@inline@math` only with no alignment
+current) and gate every such recovery on it and on a frame walk of off_save-closable groups only
+(`stomach::inline_formula_reachable`), so the inserted `$` is guaranteed to reach the formula (no re-read loop). Probe
+each change on a math alignment holding an author group as well as on plain paragraphs. A `}` at the math shift
+group ends the formula only when it closes a construct digested as a unit (a box body: the mode frame just outside the
+formula; an argument digested on its own: gullet.rs `isolated_input_ends_here` — `stomach::formula_ends_with_its_unit`),
+which the formula cannot escape; any other `}` is deleted as TeX deletes it. Asking instead whether the `}` has a `{`
+partner outside the formula (a plain `{…}` group included) looks more general but guesses "forgotten `$`" wrongly
+wherever the author's `$` follows (`{\bf $x} y$ after.` — "after." became math); the frame stack cannot tell a
+forgotten `$` from a stray `}` inside a plain group, only `$`-parity in the rest of the paragraph could. OXIDIZED_DESIGN
+#553.

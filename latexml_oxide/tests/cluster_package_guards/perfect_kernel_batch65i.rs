@@ -84,19 +84,19 @@ fn open_list_gives_way_to_the_section() {
 }
 
 /// 65i: a superscript group left open in a formula in an enumerate (2007.11971: pst-all's `\si` eats the `}`): the
-/// `$` defers the math end to the script group's end (tex_math.rs `end_math_or_defer`), which never comes, so the
-/// document ends inside the script, the formula and the list — the script's whatsit is built by `script_handler`, not
-/// a constructor — and the section and the bibliography close them all. Pinned: that structure only. Known gap, not
-/// pinned: TeX inserts the `}` at the `$` and ends the formula there, so "hold." and "Text after." are spaced text
-/// after it; here "hold." stays in the formula and the text after it is run together in script font, and the two mode
-/// errors are the deferral's (RED paragraph-mode/dollar_closes_open_script_group, SYNC_STATUS row MS). Repro
-/// list-structure/open_math_script_holds_the_section.
+/// section and the bibliography after it are document children, outside the list and the formula. Since 65n the `$`
+/// inserts the `}` and ends the formula there (tex.web §1193 + §1064-1065 `off_save`, OXIDIZED_DESIGN #553) — before,
+/// it deferred the math end to the script group's end, the document ended inside the script, the formula and the list,
+/// and OXIDIZED_DESIGN #542's auto-close let the section close them. One error, = pdflatex ("Missing } inserted"), and
+/// "hold." and "Text after." spaced text as in the PDF. Repro list-structure/open_math_script_holds_the_section.
 #[test]
 fn open_formula_gives_way_to_the_section() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/list-structure/open_math_script_holds_the_section.tex"
   );
-  let (_log, xml) = convert_counted(tex, 2, 2);
+  let (_log, xml) = convert_counted(tex, 1, 0);
+  assert!(xml.contains("</Math> hold.</p>"), "{xml}");
+  assert!(xml.contains(">Text after.</p>"), "{xml}");
   assert!(
     xml.contains("    </enumerate>\n  </para>\n  <section inlist=\"toc\" xml:id=\"S1\">"),
     "{xml}"

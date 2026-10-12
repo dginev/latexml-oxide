@@ -217,16 +217,18 @@ fn abandoned_document_close_invents_no_bibliography_title() {
 }
 
 /// 65c r2: a math left open to `\end{document}` reverts its whole body into `tex=`; the end-of-document internals
-/// (`\lx@frontmatter@fallback`, `\lx@finalize@document`) revert to nothing. Repro
-/// boxes-groups/math_open_at_end_document_reverts_no_internal_names.
+/// (`\lx@frontmatter@fallback`, `\lx@finalize@document`) revert to nothing. Since 65n the end's `\par` ends the inline
+/// formula ("Missing $ inserted", tex.web §1046-1047, = pdflatex; OXIDIZED_DESIGN #553), so the `tex=` ends with its
+/// text. Repro boxes-groups/math_open_at_end_document_reverts_no_internal_names.
 #[test]
 fn math_open_at_end_document_reverts_no_internal_names() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/boxes-groups/math_open_at_end_document_reverts_no_internal_names.tex"
   );
-  let (_log, xml) = convert_counted(tex, 0, 1);
+  let (log, xml) = convert_counted(tex, 1, 0);
+  assert!(log.contains("Error:expected:$ Missing $ inserted"), "{log}");
   assert!(
-    xml.contains("<Math mode=\"inline\" tex=\"x+yTailwords.\\par\" text=\"x + y * T * a * i * l * w * o * r * d * s\" xml:id=\"p1.m1\">"),
+    xml.contains("<Math mode=\"inline\" tex=\"x+yTailwords.\" text=\"x + y * T * a * i * l * w * o * r * d * s\" xml:id=\"p1.m1\">"),
     "{xml}"
   );
   assert!(!xml.contains("\\lx@"), "{xml}");

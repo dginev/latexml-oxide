@@ -1,0 +1,22 @@
+% witness: 65n round 3 probe fg (the residual of the unit-construct rule: a forgotten `$` inside a plain `{…}` group;
+%          the same shape with the author's closing `$` present is 65d review a1/a16, stray_brace_in_formula_inside_a_group)
+% oracle:  pdflatex 2 errors ("Extra }, or forgotten $" — tex.web §1069 deletes the `}` — and "Missing $ inserted" at
+%          the `\par`, §1047) and "(\end occurred inside a group at level 1)"; pdftotext "Before see xmoretext. /
+%          Second para."
+% engines: rust 65n: as pdflatex — 2 errors + 1 warning (the open bold group at the document's end); Math
+%          "xmoretext.", "Second para." text
+% expect:  "more text." stays text: the formula "x" ends at the `}` and the `}` closes the bold group, 1 error
+%          ("Extra }, or forgotten $") and no open group — a content-first surpass of pdflatex, which needs evidence
+%          that the `$` was forgotten: the `$`-parity of the rest of the paragraph (odd: the author's closing `$`
+%          follows, so the `}` is extra and deleted, stray_brace_in_formula_inside_a_group; even: the `$` was
+%          forgotten, so the formula ends at the `}`)
+% preload: ar5iv.sty
+% status:  RED (65n round 3, main session decision 2026-10-12: only a `}` closing a construct digested as a unit — a box
+%          body, an argument digested on its own — ends the formula; a plain group's `}` is deleted as TeX deletes it.
+%          OXIDIZED_DESIGN #553, SYNC_STATUS row MS)
+\documentclass{article}
+\begin{document}
+Before {\bf see $x} more text.
+
+Second para.
+\end{document}

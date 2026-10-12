@@ -1241,7 +1241,7 @@ Next paragraph.
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 1, "{stderr}");
-  assert!(stderr.contains("Missing $ inserted"), "{stderr}");
+  assert!(stderr.contains("Extra }, or forgotten $"), "{stderr}");
   assert!(!stderr.contains("malformed"), "{stderr}");
   assert!(!stderr.contains("Fatal"), "{stderr}");
   assert_eq!(xml.matches("<Math ").count(), 1, "{xml}");

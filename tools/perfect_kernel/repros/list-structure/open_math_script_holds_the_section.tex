@@ -6,17 +6,14 @@
 % engines: rust 65bundle = 5 errors (the 2 mode errors; `malformed:ltx:section` ×2, `malformed:ltx:bibliography` in
 %          the script's XMArg), the rest of the document in the formula; Perl = 27 errors; 65i = 2 errors (the mode
 %          errors), 2 warnings
-% mechanism: the formula stays open because the `$` defers the math end to the end of the script group (tex_math.rs
-%          `end_math_or_defer`), where TeX inserts the `}` and ends the formula ("Missing } inserted"); that group never
-%          ends, so the document ends inside the script, the formula and the enumerate: each is `lx@unended`
-%          (stomach.rs `UNENDED`; the script whatsit is built by tex_math.rs `script_handler`), its elements
-%          auto-close, and the section closes them (OXIDIZED_DESIGN #542). The deferral is RED
-%          paragraph-mode/dollar_closes_open_script_group (SYNC_STATUS row MS): "hold." stays in the formula and the
-%          text after it is run together in script font ("Textafter", "A.Author,Title."), and the 2 mode errors are
-%          its own
-% expect:  2 errors, 2 warnings; the section and the bibliography outside the formula and the list, document children
-%          (the text expectation, "hold." and "Text after." spaced after the formula, is the known gap above)
-% status:  GREEN (65i)
+% mechanism: before 65n the formula stayed open because the `$` deferred the math end to the end of the script group
+%          (tex_math.rs `end_math_or_defer`), which never ended, so the document ended inside the script, the formula
+%          and the enumerate, each `lx@unended` (OXIDIZED_DESIGN #542), and the section closed them. Since 65n the `$`
+%          inserts the `}` and ends the formula there, as TeX (§1193 + §1064-1065 `off_save`, OXIDIZED_DESIGN #553):
+%          the document no longer ends inside it
+% expect:  1 error ("Missing } inserted", = pdflatex), 0 warnings; the section and the bibliography outside the
+%          formula and the list, document children; "hold." and "Text after." spaced text, as pdflatex
+% status:  GREEN (65i structure; 65n text and diagnostics)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

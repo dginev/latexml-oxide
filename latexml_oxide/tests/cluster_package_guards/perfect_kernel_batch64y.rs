@@ -342,7 +342,10 @@ fn bare_equation_closed_by_brace_stays_an_error() {
     "../../../tools/perfect_kernel/repros/boxes-groups/bare_equation_closed_by_brace.tex"
   ));
   assert_eq!(error_count(&log), 2, "{log}");
-  assert!(log.contains("Error:expected:$ Missing $ inserted"), "{log}");
+  assert!(
+    log.contains("Error:unexpected:} Extra }, or forgotten $"),
+    "{log}"
+  );
   assert!(!log.contains("inserting \\endequation"), "{log}");
 }
 

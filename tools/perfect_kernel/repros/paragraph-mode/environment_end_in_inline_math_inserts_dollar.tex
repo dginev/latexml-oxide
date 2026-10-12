@@ -1,0 +1,18 @@
+% witness: 65d review r5 probes a12 and a20 (`\begin{center}`/`\begin{quote}`), f3 (`\begin{abstract}`)
+% oracle:  pdflatex 3 errors ("Extra }, or forgotten $" — the `}` deleted, tex.web §1069; "LaTeX Error: Command
+%          \end{center} invalid in math mode"; "Missing $ inserted" — the environment's end meets the formula, §1046-1047
+%          and §1064), the formula "x after." (math italic) closed inside the centering; pdftotext "Before xaf ter. /
+%          Second para."
+% engines: rust 65int2: 2 errors; the `}` ended the formula ("Missing $ inserted") and the environment's end met the
+%          paragraph ("Attempt to close a group that switched to mode horizontal"); text "Before x after."
+% expect:  2 errors ("Extra }, or forgotten $", "Missing $ inserted"); Math tex "xafter." inside the center's paragraph,
+%          "Second para." a paragraph of its own, as pdflatex (the LaTeX math-mode check is not emulated)
+% preload: ar5iv.sty
+% status:  GREEN (65n: stomach.rs `digest_next_body` calls `insert_dollar_sign` at a DefEnvironment's end;
+%          OXIDIZED_DESIGN #553; guard perfect_kernel_batch65n::environment_end_in_inline_math_ends_the_formula)
+\documentclass{article}
+\begin{document}
+\begin{center}Before $x} after.\end{center}
+
+Second para.
+\end{document}

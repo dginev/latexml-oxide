@@ -4,8 +4,9 @@
 %   (`\lx@frontmatter@fallback`, `\lx@finalize@document`); both revert to nothing (`reversion => ""`).
 % oracle:  pdflatex 1 error (the math runs to `\end{document}`), "Before. Text x + yTailwords."
 % engines: rust 64ze = `tex="x+yTailwords.\lx@frontmatter@fallback\par"`; 65c r1 = also `\lx@finalize@document`;
-%          65c r2 = `tex="x+yTailwords.\par"`; Perl = `tex="x+yTailwords.\lx@frontmatter@fallback\par\end{document}"`
-% expect:  0 errors, 1 warning; no `\lx@` name in any `tex=`
+%          65c r2 = `tex="x+yTailwords.\par"`; Perl = `tex="x+yTailwords.\lx@frontmatter@fallback\par\end{document}"`;
+%          65n = 1 error ("Missing $ inserted" at the end's `\par`, tex.web §1046-1047, = pdflatex), `tex="x+yTailwords."`
+% expect:  1 error, 0 warnings; no `\lx@` name in any `tex=`
 % status:  GREEN (65c r2; guard perfect_kernel_batch65c::math_open_at_end_document_reverts_no_internal_names)
 % preload: ar5iv.sty
 \documentclass{article}

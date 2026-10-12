@@ -1,0 +1,18 @@
+% witness: 65d review r5 probes a16 and a1 (the stray `}` of a formula inside a font group)
+% oracle:  pdflatex 1 error ("Extra }, or forgotten $": tex.web §1069 deletes the `}`), the formula "x" ends at its own
+%          `$`, " y" stays in the italic group; pdftotext "Before a x y after one. / Second para."
+% engines: rust 65int2: 3 errors; the `}` ended the formula and closed the italic group, and the formula's own `$`
+%          opened a second one (Math "x", then Math "y" in the group); 65n round 2 (a `}` whose `{` partner lies outside
+%          the formula ended it): 3 errors, Math "x" and Math "yafterone."
+% expect:  1 error; Math tex "x", " y" italic text in the group, " after one." text, as pdflatex
+% preload: ar5iv.sty
+% status:  GREEN (65n round 3: a plain group's `}` is deleted — only one closing a construct digested as a unit ends
+%          the formula, stomach.rs `digest_next_body` / `formula_ends_with_its_unit`; OXIDIZED_DESIGN #553; guard
+%          perfect_kernel_batch65n::stray_brace_in_a_formula_is_deleted. The forgotten-`$` variant is the RED
+%          forgotten_dollar_in_a_plain_group_keeps_the_text)
+\documentclass{article}
+\begin{document}
+Before {\it a $x}$ y} after one.
+
+Second para.
+\end{document}

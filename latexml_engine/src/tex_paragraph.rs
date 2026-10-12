@@ -211,6 +211,13 @@ LoadDefinitions!({
       }
     },
     before_digest => {
+      // tex.web §1046-1047 `mmode+par_end`: "Missing $ inserted", the inline formula ended and this `\par` read again
+      // after it; this whatsit, left in the formula, reverts as nothing (`lx@par@reread`). OXIDIZED_DESIGN #553.
+      let again = get_current_token().unwrap_or_else(|| T_CS!("\\par"));
+      if insert_dollar_sign(Tokens!(again))? {
+        assign_value("lx@par@reread", true, None);
+        return Ok(Vec::new());
+      }
       // Perl: combine any digested horizontal material into a horizontal List
       let mode = lookup_string_from_sym(pin!("MODE"));
       let bound = lookup_string_from_sym(pin!("BOUND_MODE"));
@@ -227,6 +234,12 @@ LoadDefinitions!({
       assign_value("interlinepenalties", Stored::None, None);
     },
     after_digest => sub[whatsit] {
+      if lookup_bool("lx@par@reread") {
+        assign_value("lx@par@reread", false, None);
+        whatsit.set_property("noop", true);
+        whatsit.set_property("reversion", Tokens!());
+        return Ok(Vec::new());
+      }
       whatsit.set_property("mode", lookup_string_from_sym(pin!("MODE")));
       // When invoked by leave_horizontal: no reversion, don't close ltx:para
       if LookupBool!("INTERNAL_PAR") {

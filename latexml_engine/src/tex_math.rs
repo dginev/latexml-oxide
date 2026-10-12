@@ -459,11 +459,13 @@ fn script_sizer(
   ))
 }
 
-/// tex.web §1131 `off_save`: a math shift arriving while a group opened
+/// tex.web §1193 + §1064-1065 `off_save`: a math shift arriving while a group opened
 /// INSIDE the math is still on top (`$\bm{\hat{m}$} b`, kblocks-doc.tex:207;
 /// titlecaps' word-wrap splits `$x^2$` across its `{…}` groups) — TeX inserts
-/// the missing `}`, closing the group, and re-reads the `$`. Here the group
-/// is a bounded constructor's argument frame (`\bm{}` is `bounded`), which
+/// the missing `}`, closing the group, and re-reads the `$`. For a document
+/// group in an inline formula outside alignments that is done here (OXIDIZED_DESIGN
+/// #553, witness 2007.11971). Otherwise the group is typically a bounded constructor's
+/// argument frame (`\bm{}` is `bounded`), which
 /// its own digestion closes, so the math end is deferred to the moment the
 /// group ends (`\aftergroup`), and the enclosing math stays well nested; the
 /// two symmetric recoveries (`\endgroup` over math, `}` over math) live in
@@ -478,6 +480,31 @@ fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
     return Ok(());
   }
   if !is_value_bound("BOUND_MODE", Some(0)) && lookup_string("MODE") == mode {
+    // tex.web §1193 `mmode+math_shift`: `cur_group` is not the math shift group, so §1064-1065 `off_save` inserts the
+    // closer of the group the document opened inside the formula — `}` for `{`/`\bgroup` (a script group: `$S^{x$
+    // hold.`, 2007.11971's `$d(S^{\si})$` with pst-all's `\si` eating the `}`; 1210.0368, 1907.09124, math9805003),
+    // `\endgroup` for `\begingroup` — and reads the shift again, which ends the formula here. An Error, as TeX's and as
+    // Perl's ("Attempt to end mode math"). Before, the end was deferred to that group's end, which an unbalanced paper
+    // never reaches, and the rest of it was digested as math. OXIDIZED_DESIGN #553. Guard
+    // `perfect_kernel_batch65n::math_shift_closes_a_group_opened_in_the_formula`.
+    if let Some(closer) = off_save_closer().filter(|_| inline_formula_reachable()) {
+      Error!(
+        "expected",
+        closer.to_string(),
+        s!("Missing {closer} inserted"),
+        s!("A math shift arrived inside a group opened in {mode}; the group is closed first.")
+      );
+      owe_inserted_closer(&closer);
+      unread(Tokens::new(vec![closer, T_CS!(ender)]));
+      assign_value("lx@math@ender@reread", true, None);
+      return Ok(());
+    }
+    // Only for an author's inline formula every group inside which is one `off_save` closes (stomach.rs
+    // `inline_formula_reachable`). The deferral stays for a frame LaTeXML's machinery opened, which TeX has no group
+    // for: a bounded constructor's argument (`$\bm{\hat{m}$} b`), whose tokens TeX hands to a macro that typesets them
+    // in a box of its own; for any formula in an alignment (`a &= {$b$}`, and math9805003's undefined `{Sb}` in an
+    // `align*`, whose cell-template `$` closing the environment's `\begingroup` lost the whole alignment); and display
+    // math.
     Warn!(
       "expected",
       "}",
@@ -495,7 +522,10 @@ fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
     // nicefrac_sty.rs:64, egpeirce-doc.tex:1831 — with the raw ender it
     // re-deferred at every boundary and escaped past the math frame).
     // Guard: `perfect_kernel_batch56::deferred_math_end_never_escapes_the_math_frame`.
-    push_value("afterGroup", T_CS!(&s!("{ender}@atgroup")))?;
+    push_value(
+      "afterGroup",
+      T_CS!(&s!("{}@atgroup", ender.trim_end_matches("@inserted"))),
+    )?;
     return Ok(());
   }
   end_mode(mode)
@@ -772,7 +802,15 @@ LoadDefinitions!({
     reversion    => Tokens!(T_MATH!()),
     before_digest => {
       enter_horizontal();
+      let in_alignment = lookup_alignment().is_some();
       begin_mode("math")?;
+      // The formula `insert_dollar_sign` ends (tex.web §1046-1047) and a math shift ends through the groups opened in
+      // it (§1193 + §1064-1065) — outside alignments only: a cell's `$` may be its template's (`align*`'s
+      // `$\displaystyle…$`), and math9805003's undefined `{Sb}` in an `align*`, whose template `$` closed the
+      // environment's `\begingroup`, lost the whole alignment. OXIDIZED_DESIGN #553.
+      if !in_alignment {
+        assign_frame_value(INLINE_FORMULA, true);
+      }
     },
     properties   => { stored_map!("mode" => "math") },
     capture_body => true);
@@ -783,6 +821,16 @@ LoadDefinitions!({
       Ok(Vec::new())
     },
     reversion    => sub[whatsit, _args] { Ok(ender_reversion(whatsit, Tokens!(T_MATH!()))) }
+  );
+  // The `$` tex.web §1047 `insert_dollar_sign` inserts (stomach.rs `insert_dollar_sign`): the inline math ender,
+  // reverting to nothing — the author wrote no `$` there. OXIDIZED_DESIGN #553.
+  DefConstructor!(T_CS!("\\lx@end@inline@math@inserted"), None, None,
+    before_digest => { end_math_or_defer("math", "\\lx@end@inline@math@inserted")?; },
+    after_digest => sub[whatsit] {
+      if take_ender_reread() { whatsit.set_property("lx@reread", true); }
+      Ok(Vec::new())
+    },
+    reversion    => Tokens!()
   );
   // The deferred twins (see `end_math_or_defer` / `end_math_at_group`).
   DefConstructor!(T_CS!("\\lx@end@inline@math@atgroup"), None, None,
@@ -2415,14 +2463,7 @@ pub fn left_right_group(name: &str) -> Result<LeftRightGroup> {
     );
     return Ok(LeftRightGroup::Extra);
   }
-  let Some(opener) = lookup_token_sym(pin!("groupInitiator")) else {
-    return Ok(LeftRightGroup::Other);
-  };
-  let closer = if opener.get_catcode() == Catcode::BEGIN || opener.defined_as(&T_BEGIN!()) {
-    T_END!()
-  } else if opener.defined_as(&T_CS!("\\begingroup")) {
-    T_CS!("\\endgroup")
-  } else {
+  let Some(closer) = off_save_closer() else {
     return Ok(LeftRightGroup::Other);
   };
   Warn!(
@@ -2433,12 +2474,7 @@ pub fn left_right_group(name: &str) -> Result<LeftRightGroup> {
   );
   // The author's own closer has been used: owed by this group, and after its pop by whichever group is then innermost
   // (stomach.rs `pop_stack_frame`), where tex.web deletes it when it comes (§1069, stomach.rs `delete_extra_brace`).
-  let owed = if closer == T_END!() {
-    OWED_BRACES
-  } else {
-    OWED_ENDGROUPS
-  };
-  assign_frame_value(owed, Stored::Int(owed_closers(owed) + 1));
+  owe_inserted_closer(&closer);
   unread(Tokens::new(vec![closer, T_CS!(&s!("\\{name}"))]));
   Ok(LeftRightGroup::Retried)
 }

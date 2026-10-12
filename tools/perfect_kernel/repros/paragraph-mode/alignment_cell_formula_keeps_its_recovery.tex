@@ -1,0 +1,25 @@
+% witness: math9805003 (`\begin{Sb}` — amsmath's AMS-TeX substack environment, not defined by TL 2025's amsmath — in
+%          an `align*`; the `\\` inside it ends the alignment row)
+% oracle:  pdflatex 37 errors (Environment Sb undefined; the row's template `$` meets the environment's `\begingroup`:
+%          "Missing \endgroup inserted", …), every symbol printed: "Then we get that / q = 0. / = / … ξ ∈ H(ξ, H) = 0q = 0.
+%          / After."
+% engines: rust 65int2: 9 errors, the alignment kept (Math "\left\{\sum\Sb\xi\in H…q\right\}=0"); a 65n draft that
+%          applied the §1193 `off_save` to the cell's template `$` closed that `\begingroup` and lost the whole
+%          `align*` ("Then we get that After.")
+% expect:  CONTROL — as 65int2: the alignment and its symbols kept (the §1069/§1047/§1193 recoveries apply to formulas
+%          outside alignments only, OXIDIZED_DESIGN #553)
+% preload: ar5iv.sty
+% status:  CONTROL (65n; guard perfect_kernel_batch65n::alignment_cell_formula_keeps_its_recovery)
+\documentclass{amsart}
+\begin{document}
+Then we get that
+\begin{align*}
+=& \left\{\sum
+\begin{Sb}
+\xi \in H\\
+(\xi,H)=0
+\end{Sb}
+ q \right\}=0.
+\end{align*}
+After.
+\end{document}

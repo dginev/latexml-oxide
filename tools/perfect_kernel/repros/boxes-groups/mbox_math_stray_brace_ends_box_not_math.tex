@@ -4,10 +4,13 @@
 %          pdftotext "Before xafterone.Second para."
 % engines: rust 65a and 65d: 1 error ("Missing $ inserted": the box's `}` ends the math first, stomach.rs
 %          digest_next_body), "after one." and "Second para." kept as text after the box
-% expect:  a decision for SYNC_STATUS row MS — pdflatex's shape (the box swallowing the text, 3 errors) or the
-%          content-first recovery kept (1 error); not a plain RED
+% expect:  1 error ("Extra }, or forgotten $", TeX's message for a `}` meeting the math shift group); the formula "x"
+%          ends at the `}`, which closes the box body — a construct digested as a unit the formula cannot escape — and
+%          then ends the box; "after one." and "Second para." text: the content-first divergence from pdflatex's shape
+%          (main session decision 2026-10-12)
 % preload: ar5iv.sty
-% status:  DECISION
+% status:  GREEN (65n: stomach.rs `digest_next_body` / `formula_ends_with_its_unit`; OXIDIZED_DESIGN #553; guard
+%          perfect_kernel_batch65n::stray_brace_ending_a_unit_construct_ends_the_formula)
 \documentclass{article}
 \begin{document}
 Before \mbox{$x} after one.

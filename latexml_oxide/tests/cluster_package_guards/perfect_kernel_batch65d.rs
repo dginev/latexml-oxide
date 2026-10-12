@@ -427,17 +427,30 @@ fn environment_end_closes_an_open_left() {
 fn parameterless_commands_are_delimiters_only_as_symbols() {
   let (log, xml) = convert_with(
     "\\documentclass{article}\n\\begin{document}\n$y\\left\\displaystyle x\\right)$ $z\\left\\nonumber x\\right)$ \
-     $w\\left\\par x\\right)$ $\\left\\lmoustache x\\right\\rmoustache$ $\\frac{a\\left}{b}$\n\\end{document}\n",
+     $\\left\\lmoustache x\\right\\rmoustache$ $\\frac{a\\left}{b}$ $w\\left\\par x\\right)$\n\\end{document}\n",
     Some("ar5iv.sty"),
   );
-  assert_eq!(error_count(&log), 0, "{log}");
+  // The put-back `\par` then ends the inline formula (tex.web §1046-1047, "Missing $ inserted", the `\left` group first
+  // given its `\right.`), so `\right)` meets no `\left` ("Extra \right.") and the formula's own `$` opens one the
+  // document's end closes — pdflatex's sequence (5 errors; the delimiter and `\right.` ones are Warnings here, user ruling
+  // 2026-10-11). Kept last so the cascade reaches no other formula (65n, OXIDIZED_DESIGN #553).
+  assert_eq!(
+    error_lines(&log),
+    [
+      "Error:expected:$ Missing $ inserted",
+      "Error:unexpected:\\right Extra \\right.",
+      "Error:expected:$ Missing $ inserted"
+    ],
+    "{log}"
+  );
   assert_eq!(
     warning_lines(&log),
     [
       "Warning:unexpected:\\displaystyle Missing delimiter (. inserted)",
       "Warning:unexpected:\\lx@equation@nonumber Missing delimiter (. inserted)",
-      "Warning:unexpected:\\par Missing delimiter (. inserted)",
       "Warning:unexpected:\\left Missing delimiter (. inserted)",
+      "Warning:expected:\\right Missing \\right. inserted",
+      "Warning:unexpected:\\par Missing delimiter (. inserted)",
       "Warning:expected:\\right Missing \\right. inserted",
     ],
     "{log}"
@@ -720,9 +733,11 @@ fn argument_group_owes_the_brace() {
 /// own math shift and is deleted, "Extra }, or forgotten $" — an Error, as TeX and Perl err — whatever group is
 /// outside the formula, and the formula ends at its own `$`. y2 `$\left\{ x \right}$ c` (pdflatex "Missing delimiter",
 /// "Extra }, or forgotten $"; 65a 1 Error); g1 `\mbox{$\left\{ x \right}$} c.` (pdflatex the same two, pdftotext "Before
-/// {x c."; 65a: the `}` closed the math, 1 Error). Only that `}`: every other stray `}` at the formula's frame keeps 65a's
-/// recovery until §1046-1047 lands (REDs paragraph-mode/par_in_inline_math_inserts_dollar,
-/// paragraph-mode/stray_brace_then_dollar_keeps_text, boxes-groups/mbox_math_stray_brace_ends_box_not_math).
+/// {x c."; 65a: the `}` closed the math, 1 Error). The put-back `}` is the author's delimiter, never a construct's
+/// closer — the box's own `}` follows the `$` — so it is deleted even in a box body; every other `}` at an inline
+/// formula's math shift follows 65n's unit-construct rule (OXIDIZED_DESIGN #553: the formula ends when the brace closes a
+/// box body or an argument digested on its own, `boxes-groups/mbox_math_stray_brace_ends_box_not_math`, and the brace is
+/// deleted otherwise, `paragraph-mode/stray_brace_then_dollar_keeps_text`).
 #[test]
 fn stray_brace_at_the_formula_level_is_deleted() {
   for (body, paragraphs_expected, math) in [
@@ -766,23 +781,25 @@ fn stray_brace_at_the_formula_level_is_deleted() {
 }
 
 /// The put-back mark lives as long as its brace: the `}` an alignment cell digests after `\right}` clears it (the cell
-/// loop is not one of the digestion loops that delete it), so a later, unrelated `$x}` keeps 65a's recovery — the same
-/// errors and paragraphs as 65a (review r6: the stale mark deleted that later `}` and "after one. Second para." became
-/// math). Shapes P1 (`cases`), P2 (`pmatrix` in display math), N1 (`array`).
+/// loop is not one of the digestion loops that delete it), so the stale mark does not reach a later, unrelated `$x}`
+/// (review r6: it deleted that `}` while no `\par` ended the formula, and "after one. Second para." became math). Since
+/// 65n that `}` is deleted by the general tex.web §1069 rule ("Extra }, or forgotten $") and the `\par` ends the formula
+/// ("Missing $ inserted", §1046-1047), so "after one." is math to the paragraph's end and "Second para." text, as
+/// pdflatex (OXIDIZED_DESIGN #553). Shapes P1 (`cases`), P2 (`pmatrix` in display math), N1 (`array`).
 #[test]
 fn put_back_mark_lives_with_its_brace() {
   for (first, paragraphs_expected) in [
     (
       "$f=\\begin{cases} \\left( a \\right} & b \\\\ c & d \\end{cases}$ then.",
-      &["[M] then.", "Before [M] after one.", "Second para."][..],
+      &["[M] then.", "Before [M]", "Second para."][..],
     ),
     (
       "\\[ \\begin{pmatrix} \\left( a \\right} \\\\ c \\end{pmatrix} \\]",
-      &["Before [M] after one.", "Second para."][..],
+      &["Before [M]", "Second para."][..],
     ),
     (
       "$\\begin{array}{c} \\left( a \\right} \\\\ b \\end{array}$ then.",
-      &["[M] then.", "Before [M] after one.", "Second para."][..],
+      &["[M] then.", "Before [M]", "Second para."][..],
     ),
   ] {
     let tex = format!(
@@ -794,8 +811,8 @@ fn put_back_mark_lives_with_its_brace() {
     assert_eq!(
       errors[1..],
       [
-        "Error:expected:$ Missing $ inserted",
-        "Error:unexpected:} Attempt to close a group that switched to mode horizontal"
+        "Error:unexpected:} Extra }, or forgotten $",
+        "Error:expected:$ Missing $ inserted"
       ],
       "{first}: {log}"
     );

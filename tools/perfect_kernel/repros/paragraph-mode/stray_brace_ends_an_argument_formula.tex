@@ -1,0 +1,16 @@
+% witness: 65d review r5 probes a6 (`\caption{$x} cap}`) and a7 (`\section{$x} sec}`)
+% oracle:  pdflatex 2 errors ("Missing $ inserted", "Too many }'s"): the argument `$x` is set where the command puts it,
+%          its formula ended there (§1047 at the box's or heading's end); pdftotext "1 / x / sec Body para."
+% engines: rust 65int2: 3 errors, the title "x" (formula ended at the argument's closing brace), "secBody para."
+% expect:  3 errors — "Extra }, or forgotten $" for each digestion of the title (the heading and its contents
+%          entry) and the extra `}` after " sec" at the paragraph; the title "x": the `}` is the argument's own closing
+%          brace, which ends an argument digested on its own — a construct digested as a unit the formula cannot escape —
+%          so the formula ends there, as pdflatex ends it at the heading's end
+% preload: ar5iv.sty
+% status:  GREEN (65n: stomach.rs `formula_ends_with_its_unit` / gullet.rs `isolated_input_ends_here`; OXIDIZED_DESIGN
+%          #553; guard perfect_kernel_batch65n::stray_brace_ending_a_unit_construct_ends_the_formula)
+\documentclass{article}
+\begin{document}
+\section{$x} sec}
+Body para.
+\end{document}

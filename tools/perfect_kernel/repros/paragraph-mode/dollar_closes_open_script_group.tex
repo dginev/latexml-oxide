@@ -12,9 +12,10 @@
 % expect:  the "Missing } inserted" diagnostic only; Math tex "S^{x}"; "hold." and "Text after." as upright spaced text
 %          after the formula, as pdflatex
 % preload: ar5iv.sty
-% status:  RED
-% SYNC_STATUS row MS (task #204): a math shift meeting a script group opened inside the math inserts the `}` there
-% (§1131), not a deferred math end at the group's end, which an unbalanced paper never reaches.
+% status:  GREEN (65n: tex.web §1193 `mmode+math_shift` + §1064-1065 `off_save` — the `$` meeting the `{` group opened
+%          in the formula inserts the `}` (Error "Missing } inserted", as TeX's and Perl's "Attempt to end mode math")
+%          and is read again; tex_math.rs `end_math_or_defer`; OXIDIZED_DESIGN #553; guard
+%          perfect_kernel_batch65n::math_shift_closes_a_group_opened_in_the_formula)
 \documentclass{article}
 \begin{document}
 Let $S^{x$ hold.
