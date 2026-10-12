@@ -26,6 +26,12 @@ Non-negotiable rules:
   nodes passed to `add_next_sibling` are merged and one is freed; iterate snapshots.
 - Guards must assert whole-element structure, never a substring that passes
   vacuously; fixtures must be 0-error AND 0-warning.
+- A claim that output matches TeX needs TeX's own evidence, not the `tex=` attribute
+  alone (that is a reconstruction): pdflatex's `! …` log errors vs our diagnostics;
+  `\showbox`/`\showlists` (with `\showboxdepth`/`\showboxbreadth` raised) for which
+  atoms sit in which group or fence vs the XMath tree; pdftotext for the surrounding
+  text vs our paragraphs; and the emitted MathML. Spacing and parser semantics
+  (invisible times, roles) are not TeX's — say so rather than claim a match.
 - Never carry a witness id out of a comment; check that new comments name theirs.
 - Report findings ranked most-severe first, then the verdict. Do not restate the
   brief.

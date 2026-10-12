@@ -133,14 +133,17 @@ definitions in `.claude/agents/` pin this (`model: claude-opus-5-5`, `effort: hi
 `reviewer` (read-only pre-commit review of the diff), `log-scanner` (log tallying),
 `perf-measure` (one measurement question: a lever, a document, a profile),
 `math-diagnose` (one math-parse phenomenon → red golden rows + fix plan + open
-questions), `general-purpose` (fallback only). **Subagents are narrow, read-only and
-bounded** (user directive 2026-10-01): one question, a fixed deliverable, then stop —
-no long-lived writer agents; every write (edits, commits, goldens, docs) stays in the
-main session, and at most 2 subagents run at once. Definitions are discovered at
-session start; a new one needs a restart. Edits, builds, and test runs stay
-in the main session, which owns the tree. Brief agents with the main checkout,
-not a worktree: `LaTeXML/` (the Perl oracle) is gitignored and absent from
-every worktree, so a worktree agent greps nothing and reports "no gaps".
+questions), `payload-writer` (one payload batch on its own `pk/<batch>` branch and
+`~/data/pk_wt/<batch>` worktree; commits, never pushes), `general-purpose` (fallback
+only). **Subagents are narrow and bounded** (user directives 2026-10-01, 2026-10-10,
+2026-10-12): one question or one mechanism, a fixed deliverable, then stop. Analysis
+agents are read-only. The only writers are `payload-writer` agents, whose fix rounds
+run targeted checks only; the main checkout's tree, integration, the bundle-level full
+suite + A/B, and every push stay in the main session. At most 4 subagents run at once. Definitions are discovered at session start; a new one needs a
+restart. Brief read-only agents with the main checkout, not a worktree: `LaTeXML/`
+(the Perl oracle) is gitignored and absent from every worktree, so a worktree agent
+greps nothing and reports "no gaps" — a payload writer reads the oracle from the main
+checkout's path.
 
 ## Build & Test
 
