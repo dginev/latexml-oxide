@@ -248,6 +248,7 @@ pub mod pst_plot_sty;
 pub mod ptephy_cls;
 pub mod quotchap_sty;
 pub mod rasti_cls;
+pub mod rccol_sty;
 pub mod refstyle_sty;
 pub mod resphilosophica_cls;
 pub mod robustindex_sty;
@@ -514,6 +515,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pasj02", "cls", pasj02_cls::load_definitions),
   ("pax", "sty", pax_sty::load_definitions),
   ("figcaps", "sty", figcaps_sty::load_definitions),
+  ("rccol", "sty", rccol_sty::load_definitions),
   ("refstyle", "sty", refstyle_sty::load_definitions),
   ("envmath", "sty", envmath_sty::load_definitions),
   ("pst-all", "sty", pst_all_sty::load_definitions),

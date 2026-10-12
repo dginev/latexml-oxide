@@ -12552,3 +12552,28 @@ cannot be used here). pdflatex: 0.
 
 Fixed in Rust (65h, OD #541; repro class-bindings/aalongtable_lt_array). Witnesses 1102.5033, 0707.2342, 0708.2676,
 0804.2184, 1908.10340.
+
+## 614. A package a standalone sub-file's preamble loads leaves its tabular hooks undefined in the main document
+
+Perl standalone.sty.ltxml:24-33 runs a sub-file's preamble in a group, and `AddToMacro` (Package.pm:2545-2547) adds to
+a macro globally: xcolor's `\@xcolor@tabular@before`, `\@tabular@row@before@xcolor` and `\@xcolor@row@after` stay in
+the kernel's tabular hooks after the group has dropped their definitions. Trigger: a sub-file `sub.tex` holding
+`\documentclass{article}\usepackage{xcolor}\begin{document}Sub.\end{document}`, and
+`\documentclass{article}\usepackage{standalone}\begin{document}\input{sub}\begin{tabular}{ll}a&b\\\end{tabular}
+\end{document}` → 8 errors (`\@xcolor@tabular@before` undefined, then the alignment's groups mismatched); pdflatex 0
+(the sub-file's preamble is skipped). Fixed in Rust (65i, OD #543; 2512.09430, repro
+loader/standalone_subfile_xcolor_tabular_hooks).
+
+## 615. rccol's `R` column is read as tokens: the number unformatted and an extra alignment tab
+
+rccol.sty:46-69 rewrites `R[-][<in>][<out>]{<int>}{<frac>}` by assignments and an `\edef` (`\rc@digits{…}`,
+`\def\rc@withsign{…}`, `\edef\rc@rewrite@scratch{…}`) run by array.sty's column-type search. Perl's
+`ReadAlignmentTemplate` (Alignment.pm:895-921) expands `\NC@rewrite@R` and takes the assignments for template tokens
+("Unrecognized tabular template", skipped), so the cell is set unformatted. Trigger
+`\documentclass{article}\usepackage{natbib}\usepackage{rccol}\begin{document}\begin{tabular}{lR{1}{2}}a & 1.5 \\
+\end{tabular}\end{document}` → Perl 1 error ("Extra alignment tab '&'"), the cell "1.5"; pdflatex 0 errors,
+"15,00." (rccol's default decimal comma). Fixed in Rust (65i): a binding (latexml_contrib rccol_sty.rs) gives `R` the
+result of the `\edef`, and the raw cell code formats the number. 64ze-65h ran into `Fatal:Timeout:PushbackLimit`
+instead (natbib's `\appdef` left `\@temptokena` filled; the template reader now empties it as array.sty:361 does);
+witnesses 1101.1265, 0812.2309, 2609.37147 and 15 more run-340 papers; repro
+alignment-bindings/rccol_with_natbib_pushback_loop.

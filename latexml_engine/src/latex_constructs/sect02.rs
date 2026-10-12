@@ -592,6 +592,8 @@ pub(crate) fn load() -> Result<()> {
           // Read by the constructor above: the `ltx:document` close is
           // deferred to the end of the build.
           AssignValue!("lx@end@document@abandoned" => true, Some(Scope::Global));
+          // Every construct still digesting never ended (OXIDIZED_DESIGN #542; 1611.05714).
+          end_inside_groups();
         }
         // tex.web §1335 reports ONE line with the total level count.
         let level_note = if plain_groups > 0 {

@@ -368,6 +368,9 @@ impl Constructor {
       mode.ends_with("vertical") || mode == "horizontal"
     };
     let mut result = self.execute_before_digest()?;
+    // After the `before` code: `\lx@finalize@document`'s is what ends the document (1611.05714: an
+    // itemize left open by a `\description` used as a command).
+    let ends_before = crate::stomach::ends_inside_groups();
 
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
@@ -511,6 +514,13 @@ impl Constructor {
       post = vec![];
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
       // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());
+    }
+    // The document ended inside this construct's arguments or body (`stomach::UNENDED`, OXIDIZED_DESIGN
+    // #542; 1611.05714).
+    if crate::stomach::ends_inside_groups() != ends_before {
+      whatsit
+        .properties
+        .insert(crate::stomach::UNENDED, Stored::Bool(true));
     }
     let post_post = self.execute_after_digest_body(&mut whatsit)?;
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;

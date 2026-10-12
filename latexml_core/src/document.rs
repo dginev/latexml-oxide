@@ -144,7 +144,10 @@ pub struct Document {
   /// a buffer with pre-existing capacity instead of heap-allocating a fresh one.
   /// Cuts the `Vec<Node>::from_iter` hotspot that dominated absorb profiles.
   reusable_node_buffers:         Vec<Vec<Node>>,
-  localized_boxes:               Vec<Option<Digested>>,
+  localized_boxes:               Vec<(Option<Digested>, bool)>,
+  /// Whether `box_to_absorb` never ended ([`crate::stomach::UNENDED`]), read when it was set: an
+  /// alignment is absorbed while mutably borrowed.
+  box_unended:                   bool,
   box_to_absorb:                 Option<Digested>, // local $LaTeXML::BOX;
   /// Transient handoff from `open_text`'s verbatim-space exception to
   /// `open_text_internal`: whitespace-only TYPEWRITER text (verbatim
@@ -412,6 +415,7 @@ impl Document {
       localized_box_locators:      Vec::new(),
       context:                     None,
       localized_boxes:             Vec::new(),
+      box_unended:                 false,
       localized_fonts:             Vec::new(),
       spill_store:                 None,
       extra_rdfa_prefixes:         Vec::new(),
@@ -1341,13 +1345,30 @@ impl Document {
     // attributes such as `_box` and `_font` are bookkept in `node_boxes` /
     // `node_fonts` rather than as libxml attributes.
     let requested_box = self.box_to_absorb.clone();
-    let newnode = self.open_element_at_with_box(
+    let mut newnode = self.open_element_at_with_box(
       &mut point,
       qname,
       attributes,
       font_opt.cloned(),
       requested_box,
     )?;
+    // An element of a construct that never ended (its group abandoned, `stomach::UNENDED`)
+    // auto-closes: Perl's per-node `_autoclose` (Document.pm `canAutoClose`). OXIDIZED_DESIGN #542.
+    // So does an element auto-opened inside such an element (an implicit wrapper its parent's
+    // close would close).
+    let unended = self.absorbing_unended_box()
+      || (newnode.has_attribute("_autoopened")
+        && newnode
+          .get_parent()
+          .is_some_and(|parent| parent.has_attribute(UNENDED_ATTRIBUTE)));
+    // `_noautoclose` (an `\fbox`'s `ltx:text`, 1210.0368) holds against font switches in a box
+    // that ends; this one does not.
+    if unended {
+      let _ = newnode.remove_attribute("_noautoclose");
+      let _ = newnode.set_attribute("_autoclose", "true");
+      // Its closer finds it closed already when the structure after it closed it.
+      let _ = newnode.set_attribute(UNENDED_ATTRIBUTE, "true");
+    }
     self.set_node(&newnode);
 
     Ok(newnode)
@@ -1530,7 +1551,11 @@ impl Document {
     }
 
     if node.get_type() == Some(NodeType::DocumentNode) {
-      // Didn't find $qname at all!!
+      // Didn't find $qname at all!! Unless the construct closing it never ended: its element
+      // auto-closed already, when the structure after it arrived (OXIDIZED_DESIGN #542).
+      if self.absorbing_unended_box() {
+        return Ok(None);
+      }
       let qname_msg: String = match qname {
         "#PCDATA" => qname.to_owned(),
         _ => s!("</{qname}>"),
@@ -1685,8 +1710,9 @@ impl Document {
     }
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
-      // Perl: suppress error when $ifopen is true
-      if !ifopen {
+      // Perl: suppress error when $ifopen is true. Nor when the node's construct never ended:
+      // it auto-closed already (OXIDIZED_DESIGN #542).
+      if !ifopen && !node.has_attribute(UNENDED_ATTRIBUTE) {
         let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
         arena::with(get_node_qname(node), |qname_str| {
           {
@@ -1756,8 +1782,9 @@ impl Document {
       cant_close.clear(); // box completeness, see `close_to_node`
     }
     if t == Some(NodeType::DocumentNode) || t.is_none() {
-      // Didn't find $qname at all!!
-      if strict {
+      // Didn't find $qname at all!! (A node whose construct never ended auto-closed already,
+      // OXIDIZED_DESIGN #542.)
+      if strict && !node.has_attribute(UNENDED_ATTRIBUTE) {
         let qname = get_node_qname(node);
         arena::with(qname, |qname_str| {
           let message = s!(
@@ -6944,7 +6971,19 @@ impl Document {
   }
 
   pub fn set_box_to_absorb(&mut self, arg: Option<Digested>) {
-    self.localized_boxes.push(self.box_to_absorb.take());
+    self
+      .localized_boxes
+      .push((self.box_to_absorb.take(), self.box_unended));
+    // A whatsit the document ended inside of never ended (OXIDIZED_DESIGN #542). Any other box
+    // shares the state of the one absorbing it: an alignment is its `\lx@begin@alignment`
+    // whatsit's property, a cell's content opens the cell's `ltx:XMArg` (nucl-th0401019).
+    self.box_unended = match arg {
+      Some(ref tbox) if matches!(tbox.data(), DigestedData::Whatsit(_)) => {
+        tbox.get_property_bool(crate::stomach::UNENDED)
+      },
+      Some(_) => self.box_unended,
+      None => false,
+    };
     self
       .localized_box_locators
       .push(self.current_box_locator.take());
@@ -6958,8 +6997,12 @@ impl Document {
       None
     };
   }
+  /// Whether the box being absorbed never ended ([`crate::stomach::UNENDED`]): the elements it
+  /// opens auto-close ([`UNENDED_ATTRIBUTE`]).
+  fn absorbing_unended_box(&self) -> bool { self.box_unended }
+
   pub fn expire_box_to_absorb(&mut self) {
-    self.box_to_absorb = self.localized_boxes.pop().unwrap();
+    (self.box_to_absorb, self.box_unended) = self.localized_boxes.pop().unwrap();
     self.current_box_locator = self.localized_box_locators.pop().unwrap_or(None);
   }
 
@@ -7498,6 +7541,11 @@ pub fn can_auto_close(node: &Node) -> bool {
 /// Ie. using the registered prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
 /// NOTE: Should Deprecate! (use model)
+/// The internal attribute of an element opened by a construct the document ended inside of
+/// ([`crate::stomach::UNENDED`]), set with `_autoclose`: closing it once it auto-closed is no
+/// error. OXIDIZED_DESIGN #542.
+const UNENDED_ATTRIBUTE: &str = "_unended";
+
 /// The transient box-capture element of `insert_block` (`ltx:_CaptureBlock_`):
 /// a completed box, whose close force-closes its descendants.
 pub fn is_capture_block(node: &Node) -> bool {

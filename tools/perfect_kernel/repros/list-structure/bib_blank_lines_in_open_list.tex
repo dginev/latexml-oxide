@@ -4,8 +4,11 @@
 % engines: rust 65a = 3 errors (`ltx:bibitem isn't allowed in ltx:bibblock`: the blank line's `\par` closed the
 %          paragraph holding the item's inline sectional block, and the section and bibliography with it); 64c 1;
 %          Perl 4
-% expect:  0 errors; one biblist of 4 bibitems inside the item's inline sectional block
-% status:  RED (65a) -> GREEN (65e)
+%          65i = 0 errors: the outer list never ends, so the section closes it (OXIDIZED_DESIGN #542) and the
+%          unnumbered section and the bibliography follow the list; 65e's shape inside a list that ends is
+%          bib_blank_lines_in_closed_list
+% expect:  0 errors, 1 warning; one biblist of 4 bibitems, the section and the bibliography children of the document
+% status:  RED (65a) -> GREEN (65e; this shape 65i)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

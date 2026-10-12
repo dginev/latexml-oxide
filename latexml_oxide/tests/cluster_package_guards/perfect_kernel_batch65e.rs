@@ -103,17 +103,14 @@ fn crckapb_keywords_end_with_the_abstract() {
 /// A sectioning unit in a list item opens a paragraph-bridged `ltx:inline-sectional-block` (OXIDIZED_DESIGN #189); a
 /// blank line between the `\bibitem`s of a bibliography in it closed that paragraph — and the block, the section and
 /// the bibliography with it — so every later entry was misplaced (1805.06896, 2304.12197). A `\par` there ends no
-/// paragraph, as inside a list. One warning: the list left open at `\end{document}`. Repro
-/// list-structure/bib_blank_lines_in_open_list.
+/// paragraph, as inside a list. Repro list-structure/bib_blank_lines_in_closed_list (since 65i the witnesses' list,
+/// never closed, gives way to the section, OXIDIZED_DESIGN #542: repro list-structure/bib_blank_lines_in_open_list,
+/// `perfect_kernel_batch65i::open_list_gives_way_to_the_section`).
 #[test]
 fn par_in_item_bibliography_keeps_the_block() {
-  let xml = convert_files_warned(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/list-structure/bib_blank_lines_in_open_list.tex"
-    ),
-    &[],
-    1,
-  );
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/list-structure/bib_blank_lines_in_closed_list.tex"
+  ));
   assert_eq!(xml.matches("<biblist").count(), 1, "{xml}");
   assert_eq!(xml.matches("<inline-sectional-block").count(), 1, "{xml}");
   assert_element(
@@ -137,10 +134,10 @@ fn par_in_item_bibliography_keeps_the_block() {
   assert!(block.contains("</bibliography>"), "{xml}");
   // …while a blank line between two paragraphs of the section in the block still ends the first
   let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/list-structure/bib_blank_lines_in_open_list.tex"
+    "../../../tools/perfect_kernel/repros/list-structure/bib_blank_lines_in_closed_list.tex"
   )
   .replace("Thanks.\n", "Thanks.\n\nMore thanks.\n");
-  let xml = convert_files_warned(&tex, &[], 1);
+  let xml = convert_clean(&tex);
   assert_element(
     &xml,
     "para",

@@ -2665,6 +2665,7 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   } else {
     None
   };
+  let subfile_load = SubfilePackageLoad::enter(pre_keys.is_some());
   let result = input_definitions(name, InputDefinitionOptions {
     extension: options.extension,
     handleoptions: true,
@@ -2682,6 +2683,7 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     after: options.after,
     ..InputDefinitionOptions::default()
   });
+  drop(subfile_load);
   if let Some(pre_keys) = pre_keys {
     hoist_top_frame_conditional_delta(&pre_keys);
   }
@@ -2698,6 +2700,55 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     maybe_require_dependencies(name, "sty");
   }
   result
+}
+
+thread_local! {
+  /// How many package loads in a standalone subfile bracket ([`require_package`]) are running.
+  static SUBFILE_PACKAGE_LOAD: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// One package load's place in [`SUBFILE_PACKAGE_LOAD`]: entering counts the load when it runs in a
+/// standalone subfile bracket, and dropping restores the outer count — also when the load unwinds (a
+/// panic caught per paper by a reused worker thread), so a later conversion's `AddToMacro` is not
+/// left local.
+struct SubfilePackageLoad {
+  outer: usize,
+}
+
+impl SubfilePackageLoad {
+  fn enter(in_bracket: bool) -> Self {
+    let outer = SUBFILE_PACKAGE_LOAD.with(|depth| {
+      let outer = depth.get();
+      if in_bracket {
+        depth.set(outer + 1);
+      }
+      outer
+    });
+    SubfilePackageLoad { outer }
+  }
+}
+
+impl Drop for SubfilePackageLoad {
+  fn drop(&mut self) { let _ = SUBFILE_PACKAGE_LOAD.try_with(|depth| depth.set(self.outer)); }
+}
+
+/// Clears the count of package loads in a standalone subfile bracket, for a thread that starts over
+/// ([`crate::reset_thread_engine`]).
+pub fn reset_subfile_package_load() { SUBFILE_PACKAGE_LOAD.with(|depth| depth.set(0)); }
+
+/// The scope of a binding's `AddToMacro`: global (Perl Package.pm:2545-2547), except in a package
+/// loaded inside a standalone subfile bracket (OXIDIZED_DESIGN #63/#65), where the package's own
+/// definitions are local to the bracket: a global addition outlived them, and every later table of
+/// the main document called xcolor's undefined `\@xcolor@tabular@before` (2512.09430; Perl the
+/// same, KNOWN_PERL_ERRORS #614). The addition then lives as long as the package does — and as in
+/// pdflatex, where standalone.sty skips the sub-file's preamble, the main document's tables carry
+/// no hook of a package only a sub-file loaded. OXIDIZED_DESIGN #543.
+pub fn add_to_macro_scope() -> Scope {
+  if SUBFILE_PACKAGE_LOAD.with(std::cell::Cell::get) > 0 {
+    Scope::Local
+  } else {
+    Scope::Global
+  }
 }
 
 /// The calling file's option list — latex.ltx:18637 `\@loadwithoptions`

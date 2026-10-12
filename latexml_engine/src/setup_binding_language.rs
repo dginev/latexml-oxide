@@ -1988,7 +1988,7 @@ macro_rules! AddToMacro {
           None,
           ExpansionBody::Tokens($tokens.clone()),
           Some(ExpandableOptions {
-            scope: Some(Scope::Global),
+            scope: Some(::latexml_core::binding::content::add_to_macro_scope()),
             nopack_parameters: true,
             ..ExpandableOptions::default()
           }),
@@ -2027,7 +2027,7 @@ macro_rules! AddToMacro {
           None,
           ExpansionBody::Tokens(Tokens!(expansion)),
           Some(ExpandableOptions {
-            scope: Some(Scope::Global),
+            scope: Some(::latexml_core::binding::content::add_to_macro_scope()),
             nopack_parameters: true,
             ..ExpandableOptions::default()
           }),

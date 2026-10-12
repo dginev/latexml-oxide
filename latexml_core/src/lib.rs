@@ -164,6 +164,7 @@ pub fn reset_thread_engine() {
   binding::content::reset_fontmap_key_memo();
   common::font::tfm::reset_tfm_cache();
   binding::counter::dialect::reset_refstep_state();
+  binding::content::reset_subfile_package_load();
 }
 
 pub use crate::common::error::*;

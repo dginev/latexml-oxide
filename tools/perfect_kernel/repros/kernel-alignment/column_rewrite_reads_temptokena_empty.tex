@@ -1,0 +1,25 @@
+% witness: the 18 run-340 rccol papers (1101.1265, 0812.2309, 2609.37147, …): natbib's `\appdef` (natbib.sty:163-166)
+%          leaves its last argument in `\@temptokena`, which a column type's rewrite reads back (rccol.sty:63-68)
+% oracle:  pdflatex 0 errors, "a b": array.sty's `\NC@do` empties `\@temptokena` before every column-type search
+%          (array.sty:356-362), so `\the\@temptokena c` is the column `c`
+% engines: rust 65bundle = natbib's `\let\@bibauthor\@empty…\@bibibid@` spliced into the template, `\@bibibid@`
+%          eating the next token: the cell "b" lost; 65i = 0 errors, 3 warnings (`\@temptokena`, `\expandafter`,
+%          `\NC@find` are no template tokens: the reader expands a column type, it does not run it — the known gap
+%          named in SYNC_STATUS's 65i bullet; no pdflatex-valid rewrite reading `\@temptokena` avoids them, `\the` in
+%          a `\newcolumntype` body being "Illegal pream-token" to array.sty's `\@mkpream`)
+% mechanism: alignment.rs `empty_column_rewrite_accumulator`
+% expect:  0 errors, 3 warnings; row a|b, the second cell centered
+% status:  GREEN (65i)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{array}
+\makeatletter
+\newcolumntype{Y}{}
+\def\NC@rewrite@Y{\@temptokena\expandafter{\the\@temptokena c}\NC@find}
+\makeatother
+\begin{document}
+\begin{tabular}{lY}
+a & b \\
+\end{tabular}
+\end{document}

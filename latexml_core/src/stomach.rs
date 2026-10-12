@@ -2529,6 +2529,28 @@ pub fn abandon_stack_frame() -> Result<()> {
 
 fn abandoned_frame_count() -> u64 { ABANDONED_FRAMES.with(Cell::get) }
 
+thread_local! {
+  /// How many times the document ended inside open groups on this thread ([`end_inside_groups`]).
+  static ENDS_INSIDE_GROUPS: Cell<u64> = const { Cell::new(0) };
+}
+
+/// The whatsit property of a construct the document ended inside of: `\end{document}` came while
+/// its arguments or body were still being digested and abandoned their groups (tex.web §1335), so
+/// it never ended — whatever came after the defect that left it open (a section, a bibliography)
+/// is inside it. `Constructor::digest_to_whatsit` sets it ([`ends_inside_groups`] moved during the
+/// digestion); the document lets every element such a whatsit opens auto-close
+/// (`Document::open_element`), Perl's per-node `_autoclose` (Document.pm `canAutoClose`), so that
+/// structure closes it instead of being held inside as `malformed:*` (1611.05714, 1101.1959,
+/// physics0505113, math9805003). OXIDIZED_DESIGN #542.
+pub const UNENDED: &str = "lx@unended";
+
+/// Records that the document ended inside open groups (`\lx@finalize@document`): every
+/// construct still digesting is [`UNENDED`].
+pub fn end_inside_groups() { ENDS_INSIDE_GROUPS.with(|count| count.set(count.get() + 1)); }
+
+/// How many times the document ended inside open groups on this thread, for [`UNENDED`].
+pub fn ends_inside_groups() -> u64 { ENDS_INSIDE_GROUPS.with(Cell::get) }
+
 /// The closers a frame owes: `off_save` (tex.web §1064-1065, latexml_engine tex_math.rs `left_right_group`) inserted
 /// a `}` or `\endgroup` for a `\right`/`\middle` that met this group, so the author's own closer, when it comes, has
 /// already been used. The debt is a frame value; at every pop it moves to the frame then innermost

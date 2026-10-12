@@ -189,6 +189,9 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     }
     extend_box_list(putback);
     MergeFont!(scripted => true);
+    // An end of the document met while reading the script (2007.11971: `$d(S^{\si})$`, pst-all's `\si` eating the
+    // `}`) marks it below.
+    let ends_before = ends_inside_groups();
     let mut stuff = Vec::new();
     while let Some(tok) = read_x_token(Some(false), false, None)? {
       stuff = invoke_token(&tok)?;
@@ -222,6 +225,12 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
       };
       if let Some(pvs) = prevscript {
         properties.insert("prevscript", pvs.into());
+      }
+      // The document ended inside the script (a `^{` left open, 2007.11971; the `$` that should
+      // close it deferred by `end_math_or_defer`): as a constructor's whatsit (`stomach::UNENDED`,
+      // OXIDIZED_DESIGN #542).
+      if ends_inside_groups() != ends_before {
+        properties.insert(UNENDED, Stored::Bool(true));
       }
       if let Some(Stored::Digested(b)) = properties.get("base")
         && let Some(bsp) = b.get_property("scriptpos")

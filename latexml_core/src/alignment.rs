@@ -1014,6 +1014,7 @@ pub fn read_alignment_template() -> Result<Template> {
   // still enclose it: TeX scans the preamble as a macro argument inside
   // `\@mkpream`'s `\edef` (latex.ltx:16632), so an `&` in it never ends an
   // enclosing alignment's cell.
+  empty_column_rewrite_accumulator()?;
   increment_align_group_count();
   let parsed = gullet::reading_from_mouth(Mouth::create("", MouthOptions::default())?, || {
     gullet::unread(template);
@@ -1029,6 +1030,33 @@ pub fn read_alignment_template() -> Result<Template> {
     t.finish();
   });
   Ok(take_build_template().unwrap())
+}
+
+/// Empties `\@temptokena`, the accumulator array.sty's column-type search
+/// rewrites the preamble into: `\NC@do` empties it before every search
+/// (array.sty:361), `\NC@` appends the preamble read before the column type
+/// (array.sty:351-352), and a package's own `\NC@rewrite@<c>` reads it back
+/// (rccol.sty `\rc@rewrite@@@`: `\edef…{\the\@temptokena>{…}c<{…}}`). This
+/// reader has already taken that prefix as columns, so the faithful value is
+/// empty — not what a package left there at load time: natbib's `\appdef`
+/// (natbib.sty:163-166) leaves its last argument, which `\the\@temptokena`
+/// spliced into rccol's `R` column, its `\@bibibid@` swallowing the `>` and the
+/// cell code then expanded here until `Fatal:Timeout:PushbackLimit` (1101.1265,
+/// 0812.2309, 2609.37147). A local assignment: the environment's group bounds
+/// it, as `\@mkpream`'s `\@temptokena{#1}` (array.sty:393) is bounded.
+fn empty_column_rewrite_accumulator() -> Result<()> {
+  let cs = T_CS!("\\@temptokena");
+  if let Some(defn) = lookup_definition(&cs)?
+    && defn.is_register()
+    && matches!(defn.value_of(Vec::new()), Some(crate::definition::register::RegisterValue::Tokens(ref toks)) if !toks.is_empty())
+  {
+    defn.set_value(
+      crate::definition::register::RegisterValue::Tokens(Tokens::default()),
+      None,
+      Vec::new(),
+    );
+  }
+  Ok(())
 }
 
 /// The column-type loop of [`read_alignment_template`], reading the template

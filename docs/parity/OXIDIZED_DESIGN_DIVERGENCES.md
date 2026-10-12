@@ -7597,6 +7597,8 @@ into its `tex=`) carries no internal names: ours `tex="x+yTailwords.\par"`, Perl
 latex_constructs.pool.ltxml:373); what they queue on `\aftergroup` is discarded too (guard
 `perfect_kernel_batch64zf::abandoned_group_discards_hook_queued_aftergroup`); a group-end check that presumes a
 closer (setspace's `\lx@setspace@check`) is skipped under `lx@ending@document`.
+**Addendum (65i)**: a construct still digesting when `\end{document}` abandons groups never ended; its elements
+auto-close, so what follows the defect that left it open is placed by the schema, not held as `malformed:*` (#542).
 **Witnesses**: screenplay-pkg/screenplay-pkg (6 → 0); powerdotDE (recall 26.3 → 97.8%),
 csvsimple-legacy (88.9 → 99.6%), arXiv 1902.00853, 1907.09124 (batch 65c).
 **Guards**: `perfect_kernel_batch56::unbalanced_abstract_brace_unwinds_at_end`,
@@ -16299,3 +16301,85 @@ amssymb's `\lesssim`/`\gtrsim` (pasj00.cls:3446).
 
 **Guards**: `perfect_kernel_batch65h::{package_longtable_calls_lt_array, pasj00_without_its_class_keeps_longtable,
 longtable_caption_row_without_its_cr_keeps_the_next_row}` (the last for OD #103's row drop).
+
+### 542. A construct the document ended inside of auto-closes its elements (Perl: only the elements tagged autoClose)
+
+Perl's document builder makes room for an element the current node cannot hold by closing auto-closeable ancestors
+(Document.pm `find_insertion_point` L994-1010): a node auto-closes when it carries `_autoclose` or its tag is declared
+`autoClose` (`canAutoClose` L245-257: `ltx:item`, `ltx:para`, `ltx:p`, `ltx:section`, `ltx:theorem`, `ltx:bibitem`…).
+A list, a formula, a script argument, an alignment and an `\fbox`'s `ltx:text` (`_noautoclose`) are not, so a section
+or a bibliography arriving inside one is `Error:malformed:<qname> … isn't allowed in <…>`, and inserted there anyway.
+Since 65c (OD #207) a group still open at `\end{document}` keeps its content, as in Perl; when an upstream defect left
+a list or a formula open, everything after it arrives inside it, each section, theorem, equation and bibitem an Error
+(1611.05714, 2007.11971, 1210.0368, nucl-th0401019, physics0505113: `Fatal:TooManyErrors`; cs0009011
+`Fatal:Document:Generic("add_child encountered NULL pointer")`, the insertion point left on a capture block the
+framed text's close had freed). Perl gives the same Errors (27 on repro list-structure/open_math_script_holds_the_section;
+4 on list-structure/open_description_holds_the_bibliography: `ltx:section` and `ltx:bibliography` "isn't allowed in
+<ltx:para>", "Attempt to close </ltx:itemize>, which isn't open", "Closing </ltx:document> whose open descendents do
+not auto-close").
+
+**Why a formula is open at the end** (the 2007.11971 class: `$d(S^{\si})$`, pst-all's `\si` eating the `}`): not the
+document ending inside it, but our recovery of a `$` meeting the open script group. TeX (tex.web §1131 `off_save`)
+inserts the `}` there ("Missing } inserted") and the `$` ends the formula, the rest of the paragraph following as text
+(`\showbox` of `Let $S^{x$ hold.`: `\mathon S \hbox{x} \mathoff`, then "hold."). tex_math.rs `end_math_or_defer`
+instead defers the math end to the end of that group, which an unbalanced paper never reaches, so the rest of the
+paper is digested as math until `\end{document}`. This entry only lets that formula close at the next structure; the
+deferral is RED paragraph-mode/dollar_closes_open_script_group, SYNC_STATUS row MS (task #204).
+
+**Rust** (batch 65i): a construct the document ended inside of never ended. `\lx@finalize@document` records each end
+that abandons groups (`stomach::end_inside_groups`); a whatsit whose digestion — arguments, body, after-digest code —
+spanned one is marked `lx@unended` (`stomach::UNENDED`: `Constructor::digest_to_whatsit`, and tex_math.rs
+`script_handler`, which builds the script whatsit itself). Every element such a whatsit opens carries `_autoclose`
+(its `_noautoclose`, kept for a box that ends, dropped), and so does an element auto-opened inside one; a box that is
+not a whatsit (an alignment, a cell's content, a list) shares the state of the box absorbing it (`Document`
+`box_unended`, read when the box is set: an alignment is absorbed while mutably borrowed). The structure after the
+defect then closes the open list or formula through Perl's own `canAutoClose` walk, and lands where a closed one would
+have put it; the construct's own closer, finding its element closed already (`_unended`), closes nothing and reports
+nothing (`close_element`, `close_to_node`, `close_node_with_strictness`). The content stays (65c); what arrives while
+the construct is still the insertion point stays in it (the text of an open formula before the next section). Why
+the end is the test: a construct the end met while still digesting it has no end of its own in the document, so
+nothing after the defect belongs to it more than to its parent — the schema decides, as Perl's autoClose tags do.
+
+**Fidelity given up**: an environment the document ended inside of no longer marks the structure that closed it. An
+unended `center` (`Text A. \begin{center} open center \section{C} …`, pdflatex "\begin{center} … ended by
+\end{document}") kept `class="ltx_centering"` on the following `ltx:section` before 65i, as the PDF centres it; now the
+section closes the paragraph that held the centering and carries no class. An unended `minipage` around `\maketitle`
+and the sections likewise drops `class="ltx_minipage"` from the following section. Content and order are unchanged
+(probes `~/data/pk_wt/scratch_65i/review/` p3a, p7_fm).
+
+**Not changed**: a construct that ended keeps its rule — a `\section` inside a list that ends is an inline sectional
+block in its item (#189), the bibliography after it too (`perfect_kernel_batch65e::par_in_item_bibliography_keeps_the_block`);
+a body abandoned by a bounded terminal inside a group
+(`until_terminal_inside_group`, OD #207) is not marked (it ended at its terminal). Math content of an open formula
+arriving after its elements closed (`<ltx:XMTok> isn't allowed in <ltx:para>`, math9805003; XMArray/XMHint in a
+section, 2007.11971) is still an Error: those are the formula's own tokens outside it.
+
+**Witnesses** (65bundle → 65i): 1611.05714 2 → 1 Error (= 64ze), every bibitem kept; 1210.0368 Fatal → 30 (= 64ze);
+2007.11971 Fatal → 13 (64ze 9); physics0505113 Fatal → 75 (= 64ze); math9805003 Fatal → 97 (64ze 96); nucl-th0401019
+Fatal → 91 (64ze 89); 1204.0071 Fatal → 90 (64ze 88); cs0009011 Fatal → 13 (= 64ze; 3,164 → 41,531 text words, spaced).
+Where a formula was held open by the deferral above, the content after it is kept but run together, not regained
+words: 2007.11971 (text words outside math 1,698 → 5,268, of which 2,453 in script-font `ltx:text`, and 3,267 script-size
+letters still inside formulas; the review counts 7,157 run-together pseudo-words such as
+"Thenweextenddonatupleaofelementsof"), 1210.0368 (908 run-together runs of 20+ letters, ≈7,300 words by length), 1907.09124
+(148), math9805003 (25) — each with "Missing } inserted" warnings from `end_math_or_defer`; hep-lat9811036 (102) and
+nucl-th0401019 (40) run text together from another open math construct, not root-caused here. A bare `\itemize` ended by the outer list's
+`\end{itemize}` leaves that list open (65e's cluster C): 1805.06896 2 → 0, 2304.12197 3 → 0, 2511.04367 7 → 0,
+2307.13461 47 → 42, hep-ex0406049 30 → 29 (`ltx:appendix isn't allowed in ltx:inline-sectional-block` gone).
+**Guards**: `perfect_kernel_batch65i::{open_list_gives_way_to_the_bibliography, open_list_gives_way_to_the_section,
+open_formula_gives_way_to_the_section, unended_fbox_holding_figures_builds}`.
+
+### 543. A package loaded in a standalone sub-file's preamble adds to a macro locally (Perl: `AddToMacro` is global)
+
+Perl `AddToMacro` (Package.pm:2534-2548) redefines the macro with `scope => 'global'`. A standalone sub-file's preamble
+runs in a bracket (OD #63, #65; real standalone.sty skips it), where a package's own definitions are local: xcolor
+added `\@xcolor@tabular@before`/`\@tabular@row@before@xcolor`/`\@xcolor@row@after` to the kernel's tabular hooks for
+good, while their definitions ended with the bracket, so every table of the main document after the `\input` called
+three undefined macros and lost its alignment (2512.09430: 84 errors, 101 + `Fatal:TooManyErrors` once 65b reported
+each misplaced `\toprule`; Perl the same, KNOWN_PERL_ERRORS #614).
+
+**Rust** (batch 65i): `AddToMacro` in a package loaded inside the bracket (`require_package` with the
+`subfile:<depth>` scope active) assigns locally (binding/content.rs `add_to_macro_scope`), so the addition lives as
+long as the package's definitions. Outside the bracket the main document's tables carry no hook of a package only a
+sub-file loaded, as in pdflatex, where standalone.sty skips the sub-file's preamble. Everywhere else `AddToMacro` stays
+global. **Witness**: 2512.09430 84 → 5 Errors (the 5 left: fancyheadings' `\lhead`/`\chead`/`\rhead`/`\cfoot`/
+`\fancyplain` in the sub-file's own preamble, 64ze too). **Guard**: `perfect_kernel_batch65i::standalone_subfile_package_hooks_stay_in_its_preamble`.
