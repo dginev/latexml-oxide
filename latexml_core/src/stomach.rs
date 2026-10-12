@@ -894,7 +894,14 @@ fn pop_stack_frame_with(nobox: bool, run_after_group: bool) -> Result<()> {
       _ => after = Some(Stored::VecDequeStored(queued)),
     }
   }
+  // The closers this frame still owes move to the frame now innermost ([`OWED_BRACES`]).
+  let owed = [OWED_BRACES, OWED_ENDGROUPS].map(owed_closers);
   pop_frame()?;
+  for (key, debt) in [OWED_BRACES, OWED_ENDGROUPS].into_iter().zip(owed) {
+    if debt > 0 {
+      assign_frame_value(key, Stored::Int(owed_closers(key) + debt));
+    }
+  }
   if !nobox {
     {
       stomach_mut!().boxing.pop(); // For begingroup/endgroup
@@ -1176,6 +1183,20 @@ pub fn egroup() -> Result<()> {
       current_frame_message()
     );
   } else {
+    // A `}` that closes a `\left` group (its group code, latexml_engine tex_math.rs `\lx@math@left@group`): tex.web
+    // §1069 `extra_right_brace` reports "Extra }, or forgotten \right." and deletes the brace; here the group closes,
+    // as Perl closes it, so the formula stays well nested — a Warning (user ruling 2026-10-11 on TeX-only errors).
+    // Deleting it as TeX does leaves the enclosing `{` group open, which our `$` defers to rather than closing
+    // (65d round 7, h1/e1: open, SYNC row MS). OXIDIZED_DESIGN #530. Guard
+    // `perfect_kernel_batch65d::brace_closing_a_left_group_warns`.
+    if in_left_group() && get_current_token().is_some_and(|t| gullet::is_right_brace(&t)) {
+      Warn!(
+        "unexpected",
+        "}",
+        "Extra }, or forgotten \\right.",
+        "A } closed the group of a \\left; the group ends without its \\right."
+      );
+    }
     // Don't pop if there's an error; maybe we'll recover?
     pop_stack_frame(false)?;
   }
@@ -1212,6 +1233,28 @@ pub fn endgroup() -> Result<()> {
         "[trace] endgroup pre-depth={depth} bound_top={bound} tok={} at {}",
         tok, loc
       );
+    }
+  }
+  if get_current_token().is_some_and(|t| t.defined_as(&T_CS!("\\endgroup"))) {
+    // The author's `\endgroup` whose place an inserted one took ([`OWED_ENDGROUPS`]), met where it cannot close a
+    // group: deleted, as tex.web deletes an extra closer ("Extra \endgroup."), a Warning (65d review r3, b3).
+    if owed_closers(OWED_ENDGROUPS) > 0 && !lookup_bool_sym(crate::pin!("groupNonBoxing")) {
+      assign_frame_value(
+        OWED_ENDGROUPS,
+        Stored::Int(owed_closers(OWED_ENDGROUPS) - 1),
+      );
+      Warn!(
+        "unexpected",
+        "\\endgroup",
+        "Extra \\endgroup.",
+        "The \\endgroup of a group closed earlier by an inserted \\endgroup is deleted."
+      );
+      return Ok(());
+    }
+    // tex.web §1065 `off_save`: an `\endgroup` inside an open `\left` group gets `\right.` first.
+    if in_left_group() {
+      insert_missing_right(T_CS!("\\endgroup"));
+      return Ok(());
     }
   }
   // No exemption for raw `.sty`/`.tex` loading (INTERPRETING_DEFINITIONS): a
@@ -2374,6 +2417,9 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
       // site was digest_next_body), and the RSS soft cap / wall-clock
       // deadline were equally dead on this path. PR #249 review P2-6.
       check_timeout()?;
+      if delete_extra_brace(&token)? {
+        continue;
+      }
       // Done if we run out of tokens
       let invoked = invoke_token(&token)?;
       extend_box_list(invoked);
@@ -2483,6 +2529,184 @@ pub fn abandon_stack_frame() -> Result<()> {
 
 fn abandoned_frame_count() -> u64 { ABANDONED_FRAMES.with(Cell::get) }
 
+/// The closers a frame owes: `off_save` (tex.web §1064-1065, latexml_engine tex_math.rs `left_right_group`) inserted
+/// a `}` or `\endgroup` for a `\right`/`\middle` that met this group, so the author's own closer, when it comes, has
+/// already been used. The debt is a frame value; at every pop it moves to the frame then innermost
+/// ([`pop_stack_frame`]), so it follows the stack to wherever that closer arrives. OXIDIZED_DESIGN #530.
+pub const OWED_BRACES: &str = "lx@owed@braces";
+/// The `\endgroup` twin of [`OWED_BRACES`].
+pub const OWED_ENDGROUPS: &str = "lx@owed@endgroups";
+
+/// The debt `key` bound on the innermost frame (0 when none).
+pub fn owed_closers(key: &str) -> i64 {
+  if is_value_bound(key, Some(0)) {
+    lookup_int(key)
+  } else {
+    0
+  }
+}
+
+/// Whether the innermost group is the `math_left_group` a `\left` opened (its group code, latexml_engine tex_math.rs
+/// `\lx@math@left@group`).
+pub fn in_left_group() -> bool {
+  is_value_bound("lx@group@code", Some(0)) && lookup_token("lx@group@code") == Some(T_CS!("\\left"))
+}
+
+/// Whether the innermost group is the formula's own math shift (a frame that switched to math mode).
+fn in_math_shift_group() -> bool {
+  is_value_bound("MODE", Some(0))
+    && matches!(
+      lookup_string_from_sym(crate::pin!("MODE")).as_str(),
+      "math" | "display_math"
+    )
+}
+
+/// The closer a `}` is missing in the innermost group when that group is one `}` cannot close (tex.web §1069
+/// `extra_right_brace`) — any group not opened by a begin-group token: the formula's math shift (`$`), the `\left`
+/// group (`\right.`), a `\begingroup` group (`\endgroup`), and an argument group the engine opens to digest a
+/// constructor's argument (a K9 group code: `\frac`, `\sqrt`, `\mathbf`), whose closer is its constructor's own. TeX
+/// has no such group: LaTeX's `\frac` digests its argument inside `\begingroup…\endgroup`, so the message is TeX's for
+/// that (`\endgroup`), where for `\sqrt`/`\mathbf` TeX's group is a math group its `}` would close. `None` for a group
+/// `}` closes. OXIDIZED_DESIGN #530.
+fn brace_cannot_close() -> Option<&'static str> {
+  if in_math_shift_group() {
+    Some("$")
+  } else if in_left_group() {
+    Some("\\right.")
+  } else if (lookup_bool_sym(crate::pin!("groupNonBoxing"))
+    && lookup_token_sym(crate::pin!("groupInitiator"))
+      .is_some_and(|t| t.defined_as(&T_CS!("\\begingroup"))))
+    || is_value_bound("lx@group@code", Some(0))
+  {
+    Some("\\endgroup")
+  } else {
+    None
+  }
+}
+
+/// The `}` a `\left`/`\middle`/`\right` delimiter scan put back after "Missing delimiter" (latexml_engine tex_math.rs
+/// `missing_delimiter`, [`mark_put_back_brace`]). The mark lives as long as that brace: a serial bound on the frame
+/// innermost when it was put back — inside the formula, so it dies with the formula at the latest — and valid only
+/// while it equals the live serial ([`PUT_BACK_LIVE`]), which the next `}` digested anywhere clears
+/// (`take_put_back_mark` in `delete_extra_brace` and at [`invoke_token`]). OXIDIZED_DESIGN #530.
+pub const PUT_BACK_BRACE: &str = "lx@putback@brace";
+/// The serial of the one live put-back mark (0: none), global.
+pub const PUT_BACK_LIVE: &str = "lx@putback@live";
+
+/// Mark the `}` a delimiter scan is putting back ([`PUT_BACK_BRACE`]).
+pub fn mark_put_back_brace() {
+  let serial = lookup_int("lx@putback@serial") + 1;
+  assign_value(
+    "lx@putback@serial",
+    Stored::Int(serial),
+    Some(Scope::Global),
+  );
+  assign_value(PUT_BACK_LIVE, Stored::Int(serial), Some(Scope::Global));
+  assign_frame_value(PUT_BACK_BRACE, Stored::Int(serial));
+}
+
+/// Whether `token` is the `}` a delimiter scan put back; any `}` clears the mark.
+fn take_put_back_mark(token: &Token) -> bool {
+  // The hottest digestion path: no live mark (almost always) answers before the brace test's meaning lookup.
+  let live = lookup_int_sym(crate::pin!("lx@putback@live"));
+  if live == 0 || !gullet::is_right_brace(token) {
+    return false;
+  }
+  assign_value(PUT_BACK_LIVE, Stored::Int(0), Some(Scope::Global));
+  lookup_int(PUT_BACK_BRACE) == live
+}
+
+/// The put-back `}` meeting the formula's own math shift: deleted per §1069, "Extra }, or forgotten $", an Error, as TeX
+/// and Perl err there.
+fn delete_put_back_brace() -> Result<bool> {
+  if !in_math_shift_group() {
+    return Ok(false);
+  }
+  Error!(
+    "unexpected",
+    "}",
+    "Extra }, or forgotten $",
+    "The } a delimiter scan put back has no group to close in the formula; it is deleted."
+  );
+  Ok(true)
+}
+
+/// An author's `}` that tex.web §1069 `extra_right_brace` deletes:
+/// * one whose place an inserted one took (frame debt [`OWED_BRACES`]) meeting a group `}` cannot close — "Extra },
+///   or forgotten $" / "\right." / "\endgroup", a Warning (user ruling 2026-10-11: TeX-only, and the deletion is TeX's
+///   recovery for our own insertion);
+/// * the `}` a delimiter scan put back ([`PUT_BACK_BRACE`]: `$\left\{ x \right}$`, `\mbox{$\left\{ x \right}$}`)
+///   meeting the formula's own math shift — "Extra }, or forgotten $", an Error, as TeX and Perl err there.
+///
+/// Every other `}` at the formula's frame keeps the recovery below that ends the math first: a general §1069 deletion
+/// needs §1046-1047 (`\par` or `\end{X}` in inline math inserts `$`) first — a follow-up batch (SYNC_STATUS, REDs
+/// paragraph-mode/par_in_inline_math_inserts_dollar, paragraph-mode/stray_brace_then_dollar_keeps_text). Checked before
+/// the digestion loops could take the brace for a group end (65d reviews r1/r3/r5). OXIDIZED_DESIGN #530.
+fn delete_extra_brace(token: &Token) -> Result<bool> {
+  if !gullet::is_right_brace(token) {
+    return Ok(false);
+  }
+  let put_back = take_put_back_mark(token);
+  if owed_closers(OWED_BRACES) > 0
+    && let Some(forgotten) = brace_cannot_close()
+  {
+    assign_frame_value(OWED_BRACES, Stored::Int(owed_closers(OWED_BRACES) - 1));
+    Warn!(
+      "unexpected",
+      "}",
+      s!("Extra }}, or forgotten {forgotten}"),
+      "The } of a group closed earlier by an inserted } is deleted."
+    );
+    return Ok(true);
+  }
+  if put_back {
+    return delete_put_back_brace();
+  }
+  Ok(false)
+}
+
+/// Input ending inside a `\left` group (its group code, latexml_engine tex_math.rs `\lx@math@left@group`) — an
+/// argument such as `\frac{\left( a}{b}`, whose digestion reads its own tokens only, or the document's end: tex.web
+/// §1065 `off_save` inserts `\right.` ("Missing \right. inserted"), which closes the group where it stands; without it
+/// the group stayed open past the argument and the formula swallowed the paragraphs after it. A Warning: TeX errs,
+/// Perl reports the open group only at the document's end, and the inserted `\right.` is TeX's recovery (user ruling
+/// 2026-10-11 on TeX-only errors). Returns whether `\right.` was inserted. OXIDIZED_DESIGN #530. Guard
+/// `perfect_kernel_batch65d::formula_end_closes_an_open_left`.
+fn close_left_group_at_input_end() -> bool {
+  if !in_left_group() {
+    return false;
+  }
+  insert_missing_right_before(Tokens!());
+  true
+}
+
+/// tex.web §1065 `off_save` for the `\left` group: "Missing \right. inserted", and `\right.` read before `again` (the
+/// primitive that met the group, read again). A Warning: TeX errs, Perl does not model it, and the inserted `\right.`
+/// is TeX's recovery (user ruling 2026-10-11). OXIDIZED_DESIGN #530.
+pub fn insert_missing_right_before(again: Tokens) {
+  Warn!(
+    "expected",
+    "\\right",
+    "Missing \\right. inserted",
+    "A \\left group ended without its \\right; a null \\right. closes it."
+  );
+  let mut tokens = vec![T_CS!("\\right"), T_OTHER!(".")];
+  tokens.extend(again.unlist());
+  gullet::unread(Tokens::new(tokens));
+}
+
+/// Whether `token` is a DefEnvironment's own end: the constructor `\end{X}` that pops the environment's frame.
+fn is_environment_end(token: &Token) -> bool {
+  token.get_catcode() == Catcode::CS
+    && token.with_str(|name| name.starts_with("\\end{"))
+    && with_meaning(token, |meaning| {
+      matches!(meaning, Some(Stored::Constructor(_)))
+    })
+}
+
+/// [`insert_missing_right_before`] the one token `again`.
+fn insert_missing_right(again: Token) { insert_missing_right_before(Tokens!(again)); }
+
 pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   let start_location = { gullet::get_locator() };
   // A box body digested for a binding in mid-scan runs outside the scan
@@ -2520,10 +2744,25 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   // try reading a executable token
   while let Some(token) = match gullet::get_pending_comment() {
     Some(comment) => Some(comment),
-    None => gullet::read_x_token(Some(true), false, None)?,
+    None => match gullet::read_x_token(Some(true), false, None)? {
+      None if close_left_group_at_input_end() => gullet::read_x_token(Some(true), false, None)?,
+      next => next,
+    },
   } {
     // Check conversion timeout
     check_timeout()?;
+    if delete_extra_brace(&token)? {
+      continue;
+    }
+    // A DefEnvironment's own end (`\end{X}`, the constructor that pops the environment's frame; no TeX-level `\endX`
+    // exists to read again) met inside an open `\left` group: §1065 `off_save` at the primitive that mismatches —
+    // "Missing \right. inserted", `\right.` read first (`\begin{equation}\left( x \end{equation}`). Before, the end met
+    // the `\left` group ("Attempt to end mode display_math") and the formula ran on through the document. Guard
+    // `perfect_kernel_batch65d::environment_end_closes_an_open_left`.
+    if in_left_group() && is_environment_end(&token) {
+      insert_missing_right(token);
+      continue;
+    }
     // first, check for alignment case
     // Perl #2775: only fire at the original alignment nesting level,
     // not inside deeper boxing groups (e.g. \vbox inside a tabular cell).
@@ -2799,6 +3038,13 @@ fn read_x_token_after_expansion() -> Result<Option<Token>> {
 /// Otherwise, the token is simply digested: turned into an appropriate box.
 /// Returns a list of boxes/whatsits.
 pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
+  // The choke point: a cell's `}` and any `}` inside a `\noalign` body pass it, clearing the live put-back mark, and a
+  // put-back `}` is deleted here at the formula's own math shift ([`PUT_BACK_BRACE`]). A loop's own closing `}` (the
+  // `\noalign` loop, tex_tables.rs:1291; the box-body loop, base_utilities.rs:7083) does not pass it and leaves the
+  // live serial set, which is harmless: the frame holding the mark closes with that `}` (probe B1).
+  if take_put_back_mark(input_token) && delete_put_back_brace()? {
+    return Ok(Vec::new());
+  }
   // Perf: Token is Copy (SymStr + Catcode, ~5 bytes), so we pass by value
   // directly instead of wrapping in Cow<Token>.
   let mut maybe_token: Option<Token> = Some(*input_token);

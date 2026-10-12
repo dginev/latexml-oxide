@@ -342,6 +342,12 @@ Ruled 2026-10-10; queued as 64v.
 4. `$\left(a\middle|b\right)$` → the whole XMath pinned.
 5. The X1 xymatrix repro.
 
+**Status: LANDED 65d.** `scan_delimiter` matches by meaning (a `\delcode` character, `\delimiter`/`\Udelimiter` with its
+code, a math symbol); text mode takes any token, as Perl; `\middle` dispatches to `\lx@delim@middle`; a document
+`{`/`\begingroup` between `\left` and `\right` is §1064 `off_save` (OD #530). The X1 witnesses convert (48 Fatals → 0;
+109 witnesses' errors 3541 → 826); RED math-parse/left_delimiter_outside_the_map is green. Guards
+`perfect_kernel_batch65d::*`.
+
 ### G3. A delimited argument meets an unmatched `}`
 
 **tex.web**

@@ -1090,6 +1090,7 @@ mod parse_groups_are_warning_free {
     fenced_lists,
     function_application,
     integrals_and_differentials,
+    left_right_delimiters,
     math_lexemes,
     norm,
     operator_application,

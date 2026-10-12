@@ -97,6 +97,12 @@ LoadDefinitions!({
 ///
 /// Perl also detects `||` (two adjacent `|` OTHER tokens) as a D code,
 /// not two V splits — matches here via the lookahead on `tokens[0]`.
+///
+/// A bar that is the delimiter of `\left`, `\middle`, `\right` or a `\big` size (`\left|x\right|` inside `\Set{…}`)
+/// is no separator: braket.sty makes `|` math-active (`\mathcode`\|="8000`), which tex.web §1160 `scan_delimiter`
+/// never activates — it takes the character's `\delcode`. Perl splits there too (KNOWN_PERL_ERRORS #607; 2107.02628,
+/// whose `\Set{ω:\begin{array}{l}\left|…\right|…\end{array}}` became `\left\;\middle|` in an array cell). Guard
+/// `perfect_kernel_batch65d::braket_set_keeps_fence_bars`.
 fn split_braket_arg(arg: Tokens, mut maxbars: usize) -> (String, Vec<Tokens>) {
   let vbar = T_OTHER!("|");
   let dbar = T_CS!("\\|");
@@ -111,7 +117,9 @@ fn split_braket_arg(arg: Tokens, mut maxbars: usize) -> (String, Vec<Tokens>) {
     } else if t.get_catcode() == Catcode::END {
       depth -= 1;
     }
-    if depth == 0 && maxbars > 0 && t == vbar {
+    if current.last().is_some_and(reads_a_delimiter) {
+      current.push(t);
+    } else if depth == 0 && maxbars > 0 && t == vbar {
       // `||` — single D split (Perl L38-40)
       if tokens.front() == Some(&vbar) {
         tokens.pop_front();
@@ -131,6 +139,16 @@ fn split_braket_arg(arg: Tokens, mut maxbars: usize) -> (String, Vec<Tokens>) {
   }
   parts.push(Tokens::new(current));
   (codes, parts)
+}
+
+/// Whether `token` reads a delimiter next: TeX's `\left`/`\middle`/`\right` and plain's `\big` sizes, by meaning.
+fn reads_a_delimiter(token: &Token) -> bool {
+  const READERS: [&str; 19] = [
+    "\\left", "\\middle", "\\right", "\\big", "\\Big", "\\bigg", "\\Bigg", "\\bigl", "\\bigm",
+    "\\bigr", "\\Bigl", "\\Bigm", "\\Bigr", "\\biggl", "\\biggm", "\\biggr", "\\Biggl", "\\Biggm",
+    "\\Biggr",
+  ];
+  token.get_catcode() == Catcode::CS && READERS.iter().any(|name| token.defined_as(&T_CS!(*name)))
 }
 
 /// Build `\cs{arg1}{arg2}…` as a raw Token stream — mirrors Perl's

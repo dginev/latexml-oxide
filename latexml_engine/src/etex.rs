@@ -548,7 +548,23 @@ LoadDefinitions!({
   // \left's `role_side="left"` and \right's `role_side="right"` set
   // in tex_math.rs:\lx@delim@left and :\lx@delim@right, giving a uniform 3-way side
   // discriminator on side-aware fence-pair delimiters. Task #263.
-  DefConstructor!("\\middle DelimiterToken", "#1",
+  //
+  // `\middle` is TeX's `left_right` command (tex.web §1188), unexpandable; §1191-1192 require the `math_left_group` a
+  // `\left` opened, and without one ("Extra \middle.") the delimiter is still typeset
+  // (`tex_math::left_right_group`). Perl's `\middle` is the constructor itself (`DefConstructor('\middle Token')`,
+  // eTeX.pool.ltxml:306); here it dispatches to `\lx@delim@middle`, which reverts as `\middle`, as `\right` dispatches
+  // to `\lx@right` (TeX_Math.pool.ltxml:782-791), so that a `\middle` retried after an inserted closer (§1064
+  // `off_save`) is typeset once. OXIDIZED_DESIGN #530. Guard
+  // `perfect_kernel_batch65d::extra_right_and_middle_without_left`.
+  DefPrimitive!("\\middle", sub[_args] {
+    use crate::tex_math::LeftRightGroup;
+    // An "Extra \middle." keeps its delimiter too, as `\right`'s does (user ruling 2026-10-12).
+    if !matches!(crate::tex_math::left_right_group("middle")?, LeftRightGroup::Retried) {
+      unread(Tokens!(T_CS!("\\lx@delim@middle")));
+    }
+  });
+  DefConstructor!("\\lx@delim@middle DelimiterToken", "#1",
+  alias => "\\middle",
   after_construct => sub[document, _whatsit] {
     let current = document.get_node().clone();
     let delim_opt = current.get_child_nodes()

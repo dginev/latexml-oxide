@@ -15902,6 +15902,127 @@ caption_first_box_in_a_transform_keeps_its_content, captioned_box_beside_other_c
 caption_hoist_never_merges_two_captions, caption_hoist_never_moves_content_beside_the_box,
 caption_hoist_through_an_environment_holding_only_the_transform}`.
 
+### 530. `\left`, `\middle` and `\right` scan their delimiter as tex.web §1160 does, and `\middle`/`\right` require the `\left` group (Perl: `TeXDelimiter` invokes any token, no group check)
+
+tex.web §1188 makes `\left`, `\middle` and `\right` one unexpandable command, `left_right`; §1160 `scan_delimiter`
+reads its delimiter when it executes; §1191 opens a `math_left_group` for `\left` and requires one for `\middle` and
+`\right`. Until 65d the port deviated (Rust-only): `\left` was an expandable macro reading its delimiter as an XToken
+and trampolining to `\lx@delim@left` + `\lx@hidden@bgroup`, `\lx@right` a macro of the same shape, `\middle` unchecked.
+
+**Delimiter scan** (`tex_math::scan_delimiter`, the `DelimiterToken` parameter; Perl `TeXDelimiter`,
+TeX_Math.pool.ltxml:712-724). `get_x_token` past blanks and `\relax` (protected macros expand, as at execution in TeX),
+then by meaning:
+- a letter/other character, or a `\let` copy of one, with a `\delcode` ≥ 0 or in the delimiter map (the base route
+  loads no `\delcode` table; a Unicode fence typed directly is what unicode-math's `\Udelcode` gives one);
+- `\delimiter` (§1160 `delim_num`) and `\Udelimiter`, or a `\let` copy, matched by the defining cs: the code is scanned
+  right there and becomes its glyph's character token (the map's character when the glyph is in the map, else the
+  glyph — the null delimiter before);
+- a LaTeXML math symbol: a `DefMath` symbol, or a parameterless primitive/constructor other than `\left`/`\middle`/
+  `\right` that typesets one — digested in a group of its own it gives a glyph box or a construct with a math role
+  (`\lmoustache`, `\lx@math@lbrace`; `typesets_a_symbol`) — LaTeXML's stand-ins for TeX's `\delimiter` macros; TeX
+  would refuse a non-delimiter symbol such as `\alpha`, which these cannot tell apart. `\displaystyle`, `\nonumber`,
+  `\par`, `\hfill`, `\,` typeset nothing to fence with and are "Missing delimiter". The trial digestion reports
+  nothing (Perl's `IGNORE_ERRORS` probing scope, `set_ignore_diagnostics`): the command reports its diagnostics once,
+  where it is digested;
+- an undefined control sequence passes through (its digestion reports it);
+- the input ending (an argument's own tokens, `\frac{a\left}{b}`): the null delimiter, with the Warning below;
+- anything else — `{`, `}` (or `\bgroup`/`\egroup`), `$`, `&`, a command reading arguments (`\big`, `\mathopen`, `\vphantom`), a register — is
+  TeX's "Missing delimiter (. inserted)": the token put back, the null delimiter returned. A Warning (user ruling
+  2026-10-11: a TeX-only error whose recovery is semantic — pdflatex errs, Perl is silent, the token is still typeset).
+
+In text mode (a `\left` TeX would have refused after inserting `$`, reached where a beamer frame stripped the `$`) every
+token is taken, as Perl takes it. A brace takes TeX's path (§1160-1166), not Perl's unwrap (`readBalanced` on `{`, which
+turns the typo `\left{ x \right}` into a delimiter `x`) nor 65a's reading as `\{`: a brace cannot tell the typo from a
+brace-bodied macro (`\newcommand\lb{{[}}`, LaTeX's `\dag`), and the PDF shows no brace either way; the typo then reads
+as pdflatex shows it — null delimiters, `x` in a group, the trailing `}` deleted (16 of 3,194 sampled papers hold
+`\left{`/`\right}`, nearly all `\newcommand{\lt}{\left}`-style definitions). This closes both gaps WISDOM #41 recorded for `\left`: the
+single-token read is §1160's loop, and the number of `\delimiter` is scanned at the token level, so Perl's
+`undigested => 1` invoke (an `ArgWrap::Digested` or `Parameter.undigested`) is not needed. A delimiter outside the map
+is emitted as digested and made stretchy, as Perl's `augmentDelimiterProperties` makes it (:800-823) — before, it
+warned "Missing delimiter; '.' inserted" and kept `stretchy="false"` (`\llbracket`, `\lparen`, the corners,
+`\lmoustache`, a right `\backslash`).
+
+**Commands.** `\left` is `DefConstructor('\left DelimiterToken')` as in Perl, its after-digest unreading
+`\lx@hidden@bgroup \lx@math@left@group`; the marker, the first thing digested in that group, writes the K9 group code
+`lx@group@code = \left`. `\lx@left`/`\lx@right` are `\let` copies of the private `\lx@delim@left`/`\lx@delim@right`
+constructors (alias `\left`/`\right`). `\right` keeps Perl's dispatching constructor (`\lx@hidden@egroup@right
+\lx@right`); `\middle` becomes a primitive dispatching to `\lx@delim@middle` (alias `\middle`; Perl's `\middle Token` is
+the constructor itself), so that a rejected `\middle` leaves nothing behind. When the innermost group is not the
+`\left` group (`tex_math::left_right_group`):
+- the formula's own group (a frame that switched mode — §1192 `math_shift_group`): "Extra \right." / "Extra
+  \middle.", an Error as in Perl ("Unbalanced \right, no balancing \left."; `\middle` unchecked there). TeX drops the
+  delimiter; it is kept, typeset where it stands without closing any group (user ruling 2026-10-12: author content
+  first — the delimiter is the author's);
+- a group the document opened with `{`/`\bgroup` or `\begingroup` (by `groupInitiator`): §1064 `off_save` — "Missing }
+  inserted" / "Missing \endgroup inserted", the closer inserted and the command read again; a Warning (TeX-only,
+  semantic recovery). The author's own closer has been used: the group `off_save` closed owes it (frame values
+  `lx@owed@braces` / `lx@owed@endgroups`), and at every pop the debt moves to the group then innermost (stomach.rs
+  `pop_stack_frame`), so it follows the stack to where the author's closer arrives. There a `}` meeting a group `}`
+  cannot close — any group not opened by a begin-group token: the formula's math shift, the `\left` group, a
+  `\begingroup` group, and the argument groups the engine opens to digest a constructor's argument (they carry a K9
+  group code; the style parameters `DisplayStyle` … `InFractionStyle` write it, base_parameter_types.rs
+  `mark_argument_group`) — is deleted as §1069 `extra_right_brace` deletes it ("Extra }, or forgotten $" / "\right." /
+  "\endgroup", a Warning; stomach.rs `delete_extra_brace`, before the digestion loops could take it for a group end).
+  TeX has no argument group of ours: LaTeX's `\frac` digests its argument in `\begingroup…\endgroup`, so the message
+  for those is TeX's "forgotten \endgroup" (`\frac{\left( {a \right)}}{b}`, pdflatex the same), where for `\sqrt` or
+  `\mathbf` TeX's group is a math group its `}` would close; and an owed `\endgroup` meeting a
+  group it cannot close is deleted ("Extra \endgroup."); a closable group closes normally and passes the debt on.
+  Before, the `}` met the formula's frame, inserted `$` and set the rest of the paragraph, and the paragraphs after
+  it, as math (review r1/r3 of 65d; 1703.04019);
+- any other group (one LaTeXML's machinery opened): Perl's recovery — `\right` closes it, `\middle` goes on.
+
+**Group ends inside the `\left` group** (Warnings: TeX-only errors with a semantic recovery, user ruling 2026-10-11):
+- a `}` closing it (stomach.rs `egroup`): "Extra }, or forgotten \right." — TeX deletes the brace (§1069); the group
+  closes here, as Perl closes it silently. Deleting it as TeX does needs our `$` to close the `{` group it leaves open
+  (§1065 inserts the `}`; `end_math_or_defer` defers the math end to that group's end instead), so `$ {\left( a } b
+  \right) $` keeps an "Extra \right." Error pdflatex does not give — +1 Error vs 65a (review5 d2: 5 → 6), the content
+  intact (pdftotext "A (ab) B. / Next.") (SYNC_STATUS row MS);
+- the primitive that meets it (§1065 `off_save` at the mismatching primitive): a formula's end (`$`, `$$`, `\]`, `\)`:
+  `\lx@dollar@default`, `tex_math::close_open_left`), an `\endgroup` (stomach.rs `endgroup`), a DefEnvironment's own
+  end constructor `\end{X}` (`\begin{equation}\left( x \end{equation}`; stomach.rs `is_environment_end` in
+  `digest_next_body` — no TeX-level `\endX` exists to read again), each read again after the `\right.`, or the end
+  of an argument's input (`\frac{\left( a}{b}`; stomach.rs `close_left_group_at_input_end` in `digest_next_body`): "Missing \right.
+  inserted" and a null `\right.`. A LaTeX environment whose end code holds the `\right` (`\newenvironment{paren}
+  {\left(}{\right)}`) closes the group itself, unchecked (round 3's `\end`-time check broke it and looped in an
+  `\edef`). Before, the formula ran on to the next `$` and swallowed the
+  paragraphs after it. A math ender read again after the inserted `\right.` leaves an empty whatsit in the group that
+  reverts as nothing (state value `lx@math@ender@reread`, so no thread-local outlives a document).
+
+**The `}` a delimiter scan put back** (`$\left\{ x \right}$`, `\mbox{$\left\{ x \right}$}`): after "Missing
+delimiter" the `}` is read again (§1160); meeting the formula's own math shift it is deleted per §1069, "Extra }, or
+forgotten $" — an Error, as TeX and Perl err (a Warning when it pays debt) — whatever group is outside the formula
+(tex_math.rs `missing_delimiter` → stomach.rs `mark_put_back_brace`). The mark lives as long as its brace: a serial
+bound on the frame innermost when the brace was put back (inside the formula, so it dies with the formula at the latest),
+valid only while it equals the live serial `lx@putback@live`, which the next `}` digested anywhere clears — in the
+digestion loops' `delete_extra_brace` and at `invoke_token`, the choke point: a cell's `}` and any `}` inside a
+`\noalign` body pass it; a loop's own closing `}` (the `\noalign` loop, tex_tables.rs:1291; the box-body loop,
+base_utilities.rs:7083) leaves the live serial set, which is harmless because the frame holding the mark closes with it
+(probe B1) (review r6: a global count outlived a cell's `}` and deleted a later, unrelated `}`; guard
+`perfect_kernel_batch65d::put_back_mark_lives_with_its_brace`). pdflatex: the same two
+diagnostics; pdftotext "Before {x c." for the `\mbox` shape. 65a closed the math at that `}` with 1 Error. Every other
+stray `}` at the formula's frame keeps 65a's recovery (it inserts `$`): a general §1069 deletion needs §1046-1047
+(`\par` or `\end{X}` in inline math inserts `$`) first, without which a deleted `}` leaves the formula running on
+through the paragraphs — queued as SYNC_STATUS row MS (REDs paragraph-mode/par_in_inline_math_inserts_dollar,
+paragraph-mode/stray_brace_then_dollar_keeps_text, boxes-groups/mbox_math_stray_brace_ends_box_not_math). Guards
+`perfect_kernel_batch65d::{argument_group_owes_the_brace, stray_brace_at_the_formula_level_is_deleted}`.
+
+**Residuals.** The `\right` delimiter is digested after the group's `\aftergroup` tokens run (TeX scans it before
+`unsave`; Perl the same order as here), so mathtools' documented `\def\right{\aftergroup\egroup\@right}` leaves the
+delimiter outside the `\mathclose` group (unparsed, as before). A `\right` inside a constructor's argument
+(`\frac{a}{b \right)}`, `\mathbf{x \right)}`) drops the argument and the `)` silently (RED
+boxes-groups/right_inside_an_argument_drops_the_argument; 65a the same). A stray `}` at the formula's frame other than a put-back one inserts `$` (stomach.rs `digest_next_body`;
+TeX: "Extra }, or forgotten $"; 65a the same; row MS); a `$`
+meeting a document `{` group inside the formula defers the math end to the
+group's end (`end_math_or_defer`; TeX inserts the `}`) — both pre-existing.
+
+Witnesses: run 336's X1 (48 Fatal:Timeout:IfLimit with first error `unexpected:\right`, an xy cell scanner expanding
+`\left\{`: 0705.0452 0802.0663 0804.1292 0809.0095 0903.4903 …, all 48 converting, errors 3541 → 826 over 109
+witnesses); 2605.21750 (`\let\@left\left`); tests/parse/parens.tex:43 (`\left\delimiter"426830A`, byte-identical) and
+its `\let\mydelim\delimiter` twin (before: the code digested as math); 1207.4709 (byte-identical); 2008.11762 (an
+etoolbox `\robustify\left` now errs "\left not a macro" as in pdflatex), zhlineskip.tex:234 (`\env@cases`). Guards `perfect_kernel_batch65d::*`, golden
+`tests/parse/left_right_delimiters`, `perfect_kernel_batch56::{let_at_left_left_does_not_loop,
+left_right_in_text_mode_are_plain_text}`.
+
 ### 536. A plain TeX document loads the LaTeX format only on a use of Perl's triggers, which it holds undefined (Perl: the triggers are defined macros)
 
 Perl's `TeX.pool.ltxml` L33-39 defines sixteen LaTeX commands as autoload triggers (`\documentclass`, `\newcommand`,

@@ -1,0 +1,20 @@
+% witness: 65d review r1/r3 probe y2 (round 4: not covered — no inserted-brace debt, so the frame-debt rule does not
+%          apply; the pre-existing stomach.rs math-frame branch inserts `$` instead)
+% oracle:  pdflatex 2 errors ("Missing delimiter (. inserted)", "Extra }, or forgotten $"), the `}` deleted and the
+%          formula ended by its own `$`; pdftotext "{x c"
+% engines: rust 65a 1 Error, content kept (tex "{\left\{x\right}"); 65d round 4: "Missing delimiter" Warning, then the
+%          `}` meets the formula's frame, "Missing $ inserted" Error, and "c", "After para." and `$z$` are set as math
+% expect:  the formula `\left\{x\right.` ends at its `$`; "c", "After para." and "$z$ final." as text
+% preload: ar5iv.sty
+% status:  GREEN (65d rounds 5-6: the `}` the delimiter scan puts back is deleted at the formula's frame, an Error; guard
+%          perfect_kernel_batch65d::stray_brace_at_the_formula_level_is_deleted)
+\documentclass{article}
+\begin{document}
+Before
+
+$\left\{ x \right}$ c
+
+After para.
+
+$z$ final.
+\end{document}

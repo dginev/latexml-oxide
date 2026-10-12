@@ -453,6 +453,11 @@ fn script_sizer(
 /// the `\bm` shape (its argument is boxed), so this is a warning.
 /// Guard: `perfect_kernel_batch56::math_end_inside_open_group_defers_to_group_end`.
 fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
+  // An open `\left` group first gets its `\right.` (tex.web §1065); this ender's own whatsit then reverts as nothing.
+  if lookup_string("MODE") == mode && close_open_left(Tokens!(T_CS!(ender))) {
+    assign_value("lx@math@ender@reread", true, None);
+    return Ok(());
+  }
   if !is_value_bound("BOUND_MODE", Some(0)) && lookup_string("MODE") == mode {
     Warn!(
       "expected",
@@ -475,6 +480,26 @@ fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
     return Ok(());
   }
   end_mode(mode)
+}
+
+/// Set by [`end_math_or_defer`] (state value `lx@math@ender@reread`, local to the `\left` group) when a math ender is
+/// read again after an inserted `\right.`; the ender's whatsit, which stays in that group, takes it as `lx@reread`
+/// and reverts as nothing.
+fn take_ender_reread() -> bool {
+  let reread = lookup_bool("lx@math@ender@reread");
+  if reread {
+    assign_value("lx@math@ender@reread", false, None);
+  }
+  reread
+}
+
+/// The reversion of a math ender: `shift`, or nothing for one read again after an inserted `\right.`.
+fn ender_reversion(whatsit: &Whatsit, shift: Tokens) -> Tokens {
+  if whatsit.get_property_bool("lx@reread") {
+    Tokens!()
+  } else {
+    shift
+  }
 }
 
 /// The deferred twin fires when the group that swallowed the math shift
@@ -590,6 +615,10 @@ LoadDefinitions!({
     let mut op = "\\lx@begin@inline@math";
     {
       let mode = lookup_string_from_sym(pin!("MODE"));
+      // tex.web §1065: a math shift meeting an open `\left` group inserts `\right.` and is read again.
+      if (mode == "math" || mode == "display_math") && close_open_left(Tokens!(T_MATH!())) {
+        return Ok(Vec::new());
+      }
       if mode == "display_math" {
         if next_is_math_shift()? {
           read_token()?;
@@ -709,8 +738,12 @@ LoadDefinitions!({
     capture_body => true);
 
   DefConstructor!(T_CS!("\\lx@end@display@math"), None, None,
-    reversion => Tokens!(T_MATH!(),T_MATH!()),
-    before_digest => { end_math_or_defer("display_math", "\\lx@end@display@math")?; });
+  reversion => sub[whatsit, _args] { Ok(ender_reversion(whatsit, Tokens!(T_MATH!(),T_MATH!()))) },
+  before_digest => { end_math_or_defer("display_math", "\\lx@end@display@math")?; },
+  after_digest => sub[whatsit] {
+    if take_ender_reread() { whatsit.set_property("lx@reread", true); }
+    Ok(Vec::new())
+  });
 
   // Perl TeX_Math.pool.ltxml L142-153: DefConstructorI with NO xml:id,
   // beforeDigest = enterHorizontal + beginMode('math'),
@@ -726,7 +759,11 @@ LoadDefinitions!({
     capture_body => true);
   DefConstructor!(T_CS!("\\lx@end@inline@math"), None, None,
     before_digest => { end_math_or_defer("math", "\\lx@end@inline@math")?; },
-    reversion    => Tokens!(T_MATH!())
+    after_digest => sub[whatsit] {
+      if take_ender_reread() { whatsit.set_property("lx@reread", true); }
+      Ok(Vec::new())
+    },
+    reversion    => sub[whatsit, _args] { Ok(ender_reversion(whatsit, Tokens!(T_MATH!()))) }
   );
   // The deferred twins (see `end_math_or_defer` / `end_math_at_group`).
   DefConstructor!(T_CS!("\\lx@end@inline@math@atgroup"), None, None,
@@ -1049,71 +1086,37 @@ LoadDefinitions!({
   // sub lookup_delimiter {
   //   my ($delim) = @_;
   //   return $DELIMITER_MAP{$delim}; }
-  // This is a little messier than you'd think.
-  // These effectively create a group between the \left,\right.
-  // And this also gives us a single list of things to parse separately.
-  // Since \left,\right are TeX, primitives and must be paired up,
-  // we use a bit of macro trickery to simulate.
-  // [The \@hidden@bgroup/egroup keep from putting a {} into the UnTeX]
-  // HOWEVER, an additional complication is that it is a common mistake to omit the balancing
-  // \right! Using an \egroup (or hidden) makes it hard to recover, so use a special egroup
-  // Perl TeX_Math.pool.ltxml L773: `DefConstructor('\left TeXDelimiter', …)`
-  // using the `TeXDelimiter` parameter type (which digests the delimiter
-  // argument fully, resolving \delimiter<Number>, \. , \{, \langle, etc.
-  // into the delimiter glyph).
-  //
-  // Rust doesn't yet have a `TeXDelimiter` parameter type port, so the
-  // split is a DefMacro `\left XToken` trampoline + inline handling of
-  // the \delimiter<Number> case via `gullet::read_number` + the
-  // `decode_math_char` delimiter table. Same approach for `\lx@right
-  // XToken` at L1192 (which wraps `\lx@delim@right` to handle the Number form).
-  //
-  // Intentional DefConstructor → DefMacro kind divergence for both
-  // `\left` and `\lx@right` (audit tex_math.rs:836, tex_math.rs:1192)
-  // driven by the missing `TeXDelimiter` parameter type. WISDOM #44.
-  //
-  // When the delimiter is \delimiter<Number>, we must digest it to produce the glyph.
-  // For regular tokens (., \{, \langle, etc.), XToken suffices.
-  DefMacro!("\\left XToken", sub[(delim)] {
-    let delim_str = delim.to_string();
-    if delim_str == "\\delimiter" {
-      // \delimiter<Number>: read the number, shift, and decode to get the delimiter char
-      let n = read_number()?.value_of() >> 12;
-      let props = decode_math_char(n as u16, None)?;
-      if let Some(glyph) = props.glyph {
-        let mut glyph_buf = [0u8; 4];
-        let glyph_key = glyph.encode_utf8(&mut glyph_buf);
-        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
-          // Found the delimiter — unread it as a token
-          let tok = CharToken!(entry.char);
-          unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
-        } else {
-          // Unknown glyph, use dot delimiter
-          unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
-        }
-      } else {
-        unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
-      }
-    } else if delim_str == "\\Udelimiter" {
-      let _class = read_number()?;
-      let _fam = read_number()?;
-      let code = read_number()?.value_of();
-      if let Some(ch) = char::from_u32(code as u32) {
-        let mut glyph_buf = [0u8; 4];
-        let glyph_key = ch.encode_utf8(&mut glyph_buf);
-        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
-          let tok = CharToken!(entry.char);
-          unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
-        } else {
-          unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
-        }
-      } else {
-        unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
-      }
-    } else {
-      unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), delim, T_CS!("\\lx@hidden@bgroup")]));
-    }
+  // TeX's `\left`, `\middle` and `\right` are one unexpandable command, `left_right` (tex.web §1188), which scans its
+  // delimiter when it executes (§1160 `scan_delimiter`, the `DelimiterToken` parameter: [`scan_delimiter`]). `\left`
+  // opens a `math_left_group` (§1191 `push_math`); `\middle` and `\right` require it (§1191-1192). Perl's `\left` is
+  // the same constructor (`DefConstructor('\left TeXDelimiter')`, TeX_Math.pool.ltxml:773-778); its group is the
+  // `\lx@hidden@bgroup` read next, so the delimiter is digested before the group opens, and that group carries the
+  // group code `\left` (`\lx@math@left@group`, K9's `lx@group@code`). Until 65d `\left` was an expandable macro
+  // reading its delimiter by XToken: every reader that looks ahead expanded it — an `\xymatrix` cell scanner expanded
+  // `\left\{` and desynchronized its conditionals (X1, 62 Fatal:Timeout:IfLimit in run 336; witnesses 0705.0452
+  // 0802.0663 0804.1292 0809.0095 0903.4903), `\edef` stored its expansion, and a `\let\@left\left` copy re-emitted
+  // the trampoline (2605.21750, Fatal:Timeout:PushbackLimit). The macro existed because the Rust `TeXDelimiter` could
+  // neither read one token nor invoke `\delimiter` to consume its number (WISDOM #41, the case
+  // tests/parse/parens.tex:43 `\left\delimiter"426830A {a \over b} \right\delimiter"526930B`); §1160 scans that number
+  // at the token level, and a `}` met where the delimiter belongs is put back unconsumed (1207.4709's END-peek, which
+  // the `\big` reader keeps). OXIDIZED_DESIGN #530. Guards `perfect_kernel_batch65d::*`;
+  // `perfect_kernel_batch56::let_at_left_left_does_not_loop`.
+  DefConstructor!("\\left DelimiterToken",
+    "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
+      (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
+    after_digest => sub[whatsit] {
+      decorate_delimiter(whatsit, DelimiterSide::Left)?;
+      unread(Tokens::new(vec![T_CS!("\\lx@hidden@bgroup"), T_CS!("\\lx@math@left@group")]));
+      Ok(Vec::new())
+    },
+    after_construct => sub[document, whatsit] { stretch_delimiter(document, whatsit)?; });
+
+  // tex.web §1191 `push_math(math_left_group)`: the group `\left` opens is the `\lx@hidden@bgroup` that follows it,
+  // and this, the first thing digested inside it, records its group code.
+  DefPrimitive!("\\lx@math@left@group", sub[_args] {
+    assign_frame_value("lx@group@code", Stored::Token(T_CS!("\\left")));
   });
+
   // \lx@hidden@egroup@right: like \lx@hidden@egroup, but softer about missing \left
   DefConstructor!("\\lx@hidden@egroup@right", "",
     after_digest => {
@@ -1127,143 +1130,45 @@ LoadDefinitions!({
     reversion => None);
 
   // \right is a constructor (non-expandable), so that LaTeX3 kernel can use it as a separator
-  // in \numexpr contexts. It unreads \lx@hidden@egroup@right and \lx@right into the input stream.
+  // in \numexpr contexts. It unreads \lx@hidden@egroup@right and \lx@right into the input stream
+  // (Perl TeX_Math.pool.ltxml:782-791) — unless it has no `\left` to close (tex.web §1192).
   DefConstructor!("\\right", "",
     before_digest => {
-      unread(Tokens::new(vec![T_CS!("\\lx@hidden@egroup@right"), T_CS!("\\lx@right")]));
+      match left_right_group("right")? {
+        LeftRightGroup::Left | LeftRightGroup::Other => {
+          unread(Tokens::new(vec![T_CS!("\\lx@hidden@egroup@right"), T_CS!("\\lx@right")]));
+        },
+        // The delimiter alone, closing no group.
+        LeftRightGroup::Extra => {
+          unread(Tokens!(T_CS!("\\lx@right")));
+        },
+        LeftRightGroup::Retried => {},
+      }
     },
     // Empty reversion — \lx@right provides the actual \right reversion via alias
     reversion => Tokens!());
 
-  // The delimiter constructors behind the `\left`/`\right` trampolines are
-  // private names: the Rust port splits `\left` (Perl: one `TeXDelimiter`
-  // constructor) into a macro that re-emits this constructor, and when it was
-  // called `\@left`, a paper's mathtools-style `\let\@left\left
-  // \renewcommand\left{\mathopen{}\mathclose\bgroup\@left}` made the re-emitted
-  // token the trampoline itself — an endless `\lx@hidden@bgroup` push
-  // (arXiv 2605.21750, `Fatal:Timeout:PushbackLimit`). TeX and Perl leave
-  // `\@left`/`\@right` undefined. Guard:
-  // `perfect_kernel_batch56::let_at_left_left_does_not_loop`.
+  // `\lx@left`/`\lx@right` (Perl TeX_Math.pool.ltxml:764-770): `\left`/`\right` without the group. They are private
+  // names: `\@left`, the name the port first gave them, is a name papers take for a copy of `\left` (2605.21750's
+  // mathtools-style `\let\@left\left \renewcommand\left{\mathopen{}\mathclose\bgroup\@left}`); TeX and Perl leave
+  // `\@left`/`\@right` undefined. Guard: `perfect_kernel_batch56::let_at_left_left_does_not_loop`.
   DefConstructor!("\\lx@delim@left DelimiterToken",
     "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
       (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
     after_digest => sub[whatsit] {
-      // Perl `TeXDelimiter` (TeX_Math.pool.ltxml:712-724) digests the delimiter
-      // in the CURRENT mode and `augmentDelimiterProperties` (:804-811)
-      // decorates it only when it is an element: a `\left[ x \right]` reached
-      // in text mode (a beamer frame that strips `$$`, egpeirce's
-      // `\marginnote{…\left\lfloor…}`) is plain text there, while this
-      // constructor emitted `<ltx:XMTok>` unconditionally — an XMTok under
-      // `<p>`, schema-invalid (hitszbeamer/main, egpeirce-doc). Guard:
-      // `perfect_kernel_batch56::left_right_in_text_mode_are_plain_text`.
-      whatsit.set_property("inmath", lookup_bool("IN_MATH"));
-      let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
-      if delim == "." {
-        whatsit.set_property("hint", true); }
-      else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
-        whatsit.set_property("role", entry.left_role);
-        whatsit.set_property("char", entry.char);
-        // Tag the bar with the side that emitted it. Used by the
-        // math parser's lexer (util.rs) to distinguish LEFT_STRETCHY_VERTBAR
-        // from RIGHT_STRETCHY_VERTBAR — eliminates the combinatorial
-        // pairing of identical stretchy bars in the kerned-stack norm
-        // idioms (\vertii, \vertiii, …). VERTBAR is the only role
-        // where left and right are textually-identical fence
-        // delimiters; OPEN/CLOSE already discriminate by their
-        // role, and MULOP delimiters (`/`, `\backslash`) are not
-        // fence-paired. Task #263.
-        if entry.left_role == "VERTBAR" {
-          whatsit.set_property("role_side", "left");
-        }
-        if let Some(name) = entry.name {
-          whatsit.set_property("name", name);
-        }
-        // Preserve meaning from DefMath (e.g. "/" has meaning="divide")
-        // Look up math_token_attributes for the delimiter character.
-        let char_str = entry.char.to_string();
-        with_value(&format!("math_token_attributes_{}", char_str), |val| {
-          if let Some(Stored::HashString(attrs)) = val
-            && let Some(meaning) = attrs.get("meaning") {
-              whatsit.set_property("meaning", meaning.clone());
-            }
-        });
-        whatsit.set_property("stretchy", true);
-        whatsit.set_font(whatsit.get_arg(1).unwrap().get_font()?.unwrap());
-        // Set canonical reversion: \left + the user-facing delimiter token.
-        // XToken expands \{ → \lx@text@lbrace during macro reading, so the stored
-        // arg reverts to \lx@text@lbrace. Override with the canonical form.
-        let canonical = match entry.char {
-          '{' => Some("\\left\\{"),
-          '}' => Some("\\left\\}"),
-          _ => None,
-        };
-        if let Some(rev_str) = canonical {
-          whatsit.set_property("reversion", Stored::Tokens(Tokenize!(rev_str)));
-        }
-      }
-      else if whatsit.get_arg(1).unwrap().get_property_string("role") == "OPEN" {
-        whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
-      } else {
-        Warn!("unexpected", delim,
-          "Missing delimiter; '.' inserted");
-      }
+      decorate_delimiter(whatsit, DelimiterSide::Left)?;
       Ok(Vec::new())
     },
+    after_construct => sub[document, whatsit] { stretch_delimiter(document, whatsit)?; },
     alias => "\\left");
   DefConstructor!("\\lx@delim@right DelimiterToken",
     "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
       (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
     after_digest => sub[whatsit] {
-      // Perl `TeXDelimiter` (TeX_Math.pool.ltxml:712-724) digests the delimiter
-      // in the CURRENT mode and `augmentDelimiterProperties` (:804-811)
-      // decorates it only when it is an element: a `\left[ x \right]` reached
-      // in text mode (a beamer frame that strips `$$`, egpeirce's
-      // `\marginnote{…\left\lfloor…}`) is plain text there, while this
-      // constructor emitted `<ltx:XMTok>` unconditionally — an XMTok under
-      // `<p>`, schema-invalid (hitszbeamer/main, egpeirce-doc). Guard:
-      // `perfect_kernel_batch56::left_right_in_text_mode_are_plain_text`.
-      whatsit.set_property("inmath", lookup_bool("IN_MATH"));
-      let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
-      if delim == "." {
-        whatsit.set_property("hint", true); }
-      else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
-        whatsit.set_property("role", entry.right_role);
-        whatsit.set_property("char", entry.char);
-        // See `\lx@delim@left` for the side-tagging rationale. Task #263.
-        if entry.right_role == "VERTBAR" {
-          whatsit.set_property("role_side", "right");
-        }
-        if let Some(name) = entry.name {
-          whatsit.set_property("name", name);
-        }
-        // Preserve meaning from DefMath
-        let char_str = entry.char.to_string();
-        with_value(&format!("math_token_attributes_{}", char_str), |val| {
-          if let Some(Stored::HashString(attrs)) = val
-            && let Some(meaning) = attrs.get("meaning") {
-              whatsit.set_property("meaning", meaning.clone());
-            }
-        });
-        whatsit.set_property("stretchy", true);
-        whatsit.set_font(whatsit.get_arg(1).unwrap().get_font()?.unwrap());
-        // Set canonical reversion for brace delimiters (XToken expands \} → \lx@text@rbrace)
-        let canonical = match entry.char {
-          '{' => Some("\\right\\{"),
-          '}' => Some("\\right\\}"),
-          _ => None,
-        };
-        if let Some(rev_str) = canonical {
-          whatsit.set_property("reversion", Stored::Tokens(Tokenize!(rev_str)));
-        }
-      }
-      else if whatsit.get_arg(1).unwrap().get_property_string("role") == "CLOSE" {
-        whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
-      } else {
-        Warn!("unexpected", delim,
-          "Missing delimiter; '.' inserted");
-      }
+      decorate_delimiter(whatsit, DelimiterSide::Right)?;
       Ok(Vec::new())
     },
+    after_construct => sub[document, whatsit] { stretch_delimiter(document, whatsit)?; },
     alias => "\\right");
 
   //======================================================================
@@ -1494,47 +1399,9 @@ LoadDefinitions!({
     alias => ".",
     properties => { stored_map!("hint" => true) });
 
-  // \lx@left/\lx@right: like \left/\right but without extra grouping.
-  // Perl uses TeXDelimiter param type; we handle \delimiter specially.
+  // \lx@left/\lx@right: like \left/\right but without extra grouping (Perl TeX_Math.pool.ltxml:764-770).
   Let!("\\lx@left", "\\lx@delim@left");
-  // \lx@right wraps \lx@delim@right to handle \delimiter<Number> (TeXDelimiter logic)
-  DefMacro!("\\lx@right XToken", sub[(delim)] {
-    let delim_str = delim.to_string();
-    if delim_str == "\\delimiter" {
-      let n = read_number()?.value_of() >> 12;
-      let props = decode_math_char(n as u16, None)?;
-      if let Some(glyph) = props.glyph {
-        let mut glyph_buf = [0u8; 4];
-        let glyph_key = glyph.encode_utf8(&mut glyph_buf);
-        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
-          let tok = CharToken!(entry.char);
-          unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), tok]));
-        } else {
-          unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));
-        }
-      } else {
-        unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));
-      }
-    } else if delim_str == "\\Udelimiter" {
-      let _class = read_number()?;
-      let _fam = read_number()?;
-      let code = read_number()?.value_of();
-      if let Some(ch) = char::from_u32(code as u32) {
-        let mut glyph_buf = [0u8; 4];
-        let glyph_key = ch.encode_utf8(&mut glyph_buf);
-        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
-          let tok = CharToken!(entry.char);
-          unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), tok]));
-        } else {
-          unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));
-        }
-      } else {
-        unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));
-      }
-    } else {
-      unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), delim]));
-    }
-  });
+  Let!("\\lx@right", "\\lx@delim@right");
 
   // \lx@generalized@over{reversion}{keyvals}{top}{bottom}
   // keyvals: role, meaning, left, right, thickness
@@ -2187,6 +2054,387 @@ LoadDefinitions!({
     }
   );
 });
+
+/// The side of a fence a `\left`/`\right` delimiter stands on.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum DelimiterSide {
+  Left,
+  Right,
+}
+
+/// Perl `augmentDelimiterProperties` (TeX_Math.pool.ltxml:800-823) for a `\left`/`\right` whatsit, at digestion: a
+/// delimiter in [`DELIMITER_MAP`] is emitted by the constructor's own `XMTok` with the map's role and name; `.` is the
+/// null delimiter (`XMHint`). Any other delimiter `scan_delimiter` accepted is emitted as digested (`#1`) and made
+/// stretchy by [`stretch_delimiter`].
+///
+/// Perl `TeXDelimiter` (:712-724) digests the delimiter in the CURRENT mode and `augmentDelimiterProperties`
+/// decorates it only when it is an element: a `\left[ x \right]` reached in text mode (a beamer frame that strips
+/// `$$`, egpeirce's `\marginnote{…\left\lfloor…}`) is plain text there (hitszbeamer/main, egpeirce-doc). Guard:
+/// `perfect_kernel_batch56::left_right_in_text_mode_are_plain_text`.
+pub fn decorate_delimiter(whatsit: &mut Whatsit, side: DelimiterSide) -> Result<()> {
+  whatsit.set_property("inmath", lookup_bool("IN_MATH"));
+  let delim = whatsit
+    .get_arg(1)
+    .map(ToString::to_string)
+    .unwrap_or_default();
+  if delim == "." {
+    whatsit.set_property("hint", true);
+  } else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
+    let role = match side {
+      DelimiterSide::Left => entry.left_role,
+      DelimiterSide::Right => entry.right_role,
+    };
+    whatsit.set_property("role", role);
+    whatsit.set_property("char", entry.char);
+    // Tag the bar with the side that emitted it. Used by the math parser's lexer (util.rs) to distinguish
+    // LEFT_STRETCHY_VERTBAR from RIGHT_STRETCHY_VERTBAR — eliminates the combinatorial pairing of identical stretchy
+    // bars in the kerned-stack norm idioms (\vertii, \vertiii, …). VERTBAR is the only role where left and right are
+    // textually-identical fence delimiters; OPEN/CLOSE already discriminate by their role, and MULOP delimiters (`/`,
+    // `\backslash`) are not fence-paired. Task #263.
+    if role == "VERTBAR" {
+      whatsit.set_property("role_side", match side {
+        DelimiterSide::Left => "left",
+        DelimiterSide::Right => "right",
+      });
+    }
+    if let Some(name) = entry.name {
+      whatsit.set_property("name", name);
+    }
+    // Preserve meaning from DefMath (e.g. "/" has meaning="divide"): the math_token_attributes of the delimiter
+    // character.
+    let char_str = entry.char.to_string();
+    with_value(&format!("math_token_attributes_{}", char_str), |val| {
+      if let Some(Stored::HashString(attrs)) = val
+        && let Some(meaning) = attrs.get("meaning")
+      {
+        whatsit.set_property("meaning", meaning.clone());
+      }
+    });
+    whatsit.set_property("stretchy", true);
+    if let Some(font) = whatsit
+      .get_arg(1)
+      .map(|arg| arg.get_font())
+      .transpose()?
+      .flatten()
+    {
+      whatsit.set_font(font);
+    }
+    // The canonical reversion of a brace delimiter: the scanned token is the expansion of `\{` (`\lx@math@lbrace`).
+    let canonical = match (entry.char, side) {
+      ('{', DelimiterSide::Left) => Some("\\left\\{"),
+      ('}', DelimiterSide::Left) => Some("\\left\\}"),
+      ('{', DelimiterSide::Right) => Some("\\right\\{"),
+      ('}', DelimiterSide::Right) => Some("\\right\\}"),
+      _ => None,
+    };
+    if let Some(rev_str) = canonical {
+      whatsit.set_property("reversion", Stored::Tokens(Tokenize!(rev_str)));
+    }
+  } else {
+    let fence_role = match side {
+      DelimiterSide::Left => "OPEN",
+      DelimiterSide::Right => "CLOSE",
+    };
+    if let Some(arg) = whatsit.get_arg_mut(1)
+      && arg.get_property_string("role") == fence_role
+    {
+      arg.set_property("stretchy", true);
+    }
+  }
+  Ok(())
+}
+
+/// Perl `augmentDelimiterProperties`' `stretchy` (TeX_Math.pool.ltxml:810-811) for a delimiter outside
+/// [`DELIMITER_MAP`] (stmaryrd's `\llbracket`, a `\delimiter` glyph): the element the digested delimiter became is
+/// marked stretchy. Until 65d such a delimiter warned "Missing delimiter; '.' inserted" and stayed unstretched (RED
+/// `math-parse/left_delimiter_outside_the_map`); it was accepted by meaning when it was scanned (`scan_delimiter`).
+pub fn stretch_delimiter(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
+  if !whatsit.get_property_bool("inmath")
+    || whatsit.has_property("char")
+    || whatsit.has_property("hint")
+  {
+    return Ok(());
+  }
+  // Only the element this construct emitted: the current node's last child, holding the delimiter's own text — never
+  // a sibling before it (a delimiter that emitted no element left `y` of `y\left…` last).
+  let glyph = whatsit
+    .get_arg(1)
+    .map(ToString::to_string)
+    .unwrap_or_default();
+  let current = document.get_node().clone();
+  if let Some(mut delim) = current.get_last_child()
+    && delim.get_type() == Some(NodeType::ElementNode)
+    && !glyph.is_empty()
+    && delim.get_content() == glyph
+  {
+    document.set_attribute(&mut delim, "stretchy", "true")?;
+  }
+  Ok(())
+}
+
+/// Whether a character is a delimiter: tex.web §1160 takes a letter or other character by its `\delcode` (≥ 0;
+/// `\delcode`.=0` is the null delimiter, §240). The characters of [`DELIMITER_MAP`] count too: the base route
+/// (`LATEXML_NODUMP`) loads no `\delcode` table, and a Unicode fence character typed directly (`⟨`, `⌊`) is what
+/// unicode-math's `\Udelcode` gives one.
+fn is_delimiter_char(ch: &str) -> bool {
+  if ch == "." || DELIMITER_MAP.contains_key(ch) {
+    return true;
+  }
+  let mut chars = ch.chars();
+  match (chars.next(), chars.next()) {
+    // `\delcode` stores 16 bits (`assign_delcode`): an assigned -1 reads back as 0xFFFF.
+    (Some(c), None) => lookup_delcode(c).is_some_and(|code| code != u16::MAX),
+    _ => false,
+  }
+}
+
+/// The delimiter a `\delimiter`/`\Udelimiter` code names: its glyph's character token, or the null delimiter `.`.
+fn delimiter_glyph_token(glyph: Option<char>) -> Token {
+  match glyph {
+    Some(glyph) => {
+      let mut buf = [0u8; 4];
+      match DELIMITER_MAP.get(&*glyph.encode_utf8(&mut buf)) {
+        Some(entry) => CharToken!(entry.char),
+        None => CharToken!(glyph),
+      }
+    },
+    None => T_OTHER!("."),
+  }
+}
+
+/// What tex.web §1160 makes of the token `scan_delimiter` met, matched by meaning.
+enum DelimiterScan {
+  /// A delimiter character, a `\let` copy of one, a math symbol, or an undefined control sequence (whose digestion
+  /// reports it): the token itself.
+  Token(Token),
+  /// `\delimiter` (§1160 `delim_num`): a 27-bit code follows.
+  Delimiter,
+  /// XeTeX/LuaTeX `\Udelimiter`: a class, a family and a code follow.
+  UDelimiter,
+  /// A parameterless primitive or constructor: a delimiter when it typesets a symbol (`\lmoustache`).
+  Command(Token),
+  /// A `{` or `}` (or `\bgroup`/`\egroup`): "Missing delimiter" and the brace read again, as §1160-1166 does — a
+  /// brace cannot tell the typo `\left{` from a brace-bodied macro (`\newcommand\lb{{[}}`), and the PDF shows no
+  /// brace either way (65d review r3; the typo `\left{ x \right}` then reads as pdflatex shows it).
+  Brace,
+  /// Anything else: "Missing delimiter (. inserted)".
+  Missing,
+}
+
+/// Classify a character token (direct, or the meaning of a `\let` copy).
+fn scan_character(token: &Token, result: Token) -> DelimiterScan {
+  match token.get_catcode() {
+    Catcode::LETTER | Catcode::OTHER if is_delimiter_char(&token.to_string()) => {
+      DelimiterScan::Token(result)
+    },
+    Catcode::BEGIN | Catcode::END => DelimiterScan::Brace,
+    _ => DelimiterScan::Missing,
+  }
+}
+
+/// Classify an unexpandable command by its defining control sequence: `\delimiter` and `\Udelimiter` read their codes;
+/// a parameterless primitive or constructor other than `\left`, `\middle` and `\right` may be one of LaTeXML's
+/// stand-ins for a TeX delimiter macro (`\lmoustache`, `\lx@math@lbrace`), decided by what it typesets
+/// ([`typesets_a_symbol`]); one reading arguments (`\big`, `\mathopen`, `\vphantom`) is not a delimiter.
+fn scan_command(cs: &Token, nargs: usize, token: Token) -> DelimiterScan {
+  if *cs == T_CS!("\\delimiter") {
+    DelimiterScan::Delimiter
+  } else if *cs == T_CS!("\\Udelimiter") {
+    DelimiterScan::UDelimiter
+  } else if nargs == 0 && ![T_CS!("\\left"), T_CS!("\\middle"), T_CS!("\\right")].contains(cs) {
+    DelimiterScan::Command(token)
+  } else {
+    DelimiterScan::Missing
+  }
+}
+
+/// tex.web §1160 `scan_delimiter` (Perl's `TeXDelimiter`, TeX_Math.pool.ltxml:712-724): `get_x_token` past blanks and
+/// `\relax`, then a delimiter by meaning — a character with a `\delcode` (or a `\let` copy of one), `\delimiter` or
+/// `\Udelimiter` with their codes, or one of LaTeXML's math symbols (`DefMath`, and the parameterless primitives and
+/// constructors that stand in for TeX's `\delimiter` macros: `\langle` is `\delimiter"426830A` in TeX). Anything else
+/// is TeX's "Missing delimiter (. inserted)": the token is put back and the null delimiter `.` returned. Perl invokes
+/// whatever token it reads and unwraps a brace group once; a `{`/`}` takes TeX's path (§1160-1166: "Missing
+/// delimiter", the brace read again). In text mode (a `\left` TeX would have refused, reached where a
+/// beamer frame stripped the `$`) every token is taken, as Perl takes it. OXIDIZED_DESIGN #530.
+pub fn scan_delimiter() -> Result<Token> {
+  let token = loop {
+    match read_x_token(None, false, None)? {
+      None => {
+        // The input ended (an argument's own tokens: `\frac{a\left}{b}`).
+        Warn!(
+          "unexpected",
+          "\\left",
+          "Missing delimiter (. inserted)",
+          "The input ended where a delimiter belongs."
+        );
+        return Ok(T_OTHER!("."));
+      },
+      Some(t) if t.get_catcode() == Catcode::SPACE || t.defined_as(&TOKEN_RELAX) => {},
+      Some(t) => break t,
+    }
+  };
+  if !lookup_bool("IN_MATH") {
+    return Ok(token);
+  }
+  let scan = match token.get_catcode() {
+    Catcode::LETTER | Catcode::OTHER | Catcode::BEGIN | Catcode::END => {
+      scan_character(&token, token)
+    },
+    Catcode::CS | Catcode::ACTIVE => with_meaning(&token, |meaning| match meaning {
+      None => DelimiterScan::Token(token),
+      Some(Stored::Token(letto)) => scan_character(letto, token),
+      Some(Stored::MathPrimitive(_)) => DelimiterScan::Token(token),
+      Some(Stored::Primitive(defn)) => scan_command(&defn.get_cs(), defn.get_num_args(), token),
+      Some(Stored::Constructor(defn)) => scan_command(&defn.get_cs(), defn.get_num_args(), token),
+      Some(_) => DelimiterScan::Missing,
+    }),
+    _ => DelimiterScan::Missing,
+  };
+  match scan {
+    DelimiterScan::Token(t) => Ok(t),
+    DelimiterScan::Delimiter => {
+      // `\delimiter` <27-bit number>: its small variant (the upper 15 bits after the class) is a math char.
+      let code = read_number()?.value_of() >> 12;
+      Ok(delimiter_glyph_token(
+        decode_math_char(code as u16, None)?.glyph,
+      ))
+    },
+    DelimiterScan::UDelimiter => {
+      let _class = read_number()?;
+      let _family = read_number()?;
+      let code = read_number()?.value_of();
+      Ok(delimiter_glyph_token(char::from_u32(code as u32)))
+    },
+    DelimiterScan::Command(t) => {
+      if typesets_a_symbol(t)? {
+        Ok(t)
+      } else {
+        missing_delimiter(t)
+      }
+    },
+    DelimiterScan::Brace | DelimiterScan::Missing => missing_delimiter(token),
+  }
+}
+
+/// Whether a parameterless command typesets a symbol: digested in a group of its own, as a delimiter, it gives a box
+/// with a glyph (`\lmoustache` ⎰) or a construct with a math role (a `DefMath` symbol), where `\displaystyle`,
+/// `\nonumber`, `\par`, `\hfill` or `\,` give nothing to fence with (TeX: "Missing delimiter"). The group keeps its
+/// assignments; the command is digested again where it is used.
+fn typesets_a_symbol(token: Token) -> Result<bool> {
+  fn carries_a_symbol(digested: &Digested) -> bool {
+    use latexml_core::digested::DigestedData;
+    match digested.data() {
+      DigestedData::TBox(_) => !digested.to_string().trim().is_empty(),
+      DigestedData::Whatsit(whatsit) => whatsit.borrow().has_property("role"),
+      DigestedData::List(list) => list.borrow().boxes.iter().any(carries_a_symbol),
+      _ => false,
+    }
+  }
+  // A trial: its diagnostics are dropped whole (Perl's `IGNORE_ERRORS` probing scope), as the command is digested
+  // again, and reports them, where it is used (65d review r3: `\left\hline` reported "\noalign" twice).
+  let ignoring = set_ignore_diagnostics(true);
+  begingroup();
+  let digested = digest_as_delimiter(|| digest(Tokens!(token)));
+  let closed = endgroup();
+  set_ignore_diagnostics(ignoring);
+  closed?;
+  Ok(carries_a_symbol(&digested?))
+}
+
+/// tex.web §1160's "Missing delimiter (. inserted)": `token` is put back and the null delimiter `.` returned. A Warning
+/// (user ruling 2026-10-11: TeX errs, Perl is silent, and the token is still typeset).
+fn missing_delimiter(token: Token) -> Result<Token> {
+  Warn!(
+    "unexpected",
+    token.to_string(),
+    "Missing delimiter (. inserted)",
+    "I was expecting to see something like `(' or `\\{' or `\\}' here."
+  );
+  if is_right_brace(&token) {
+    // The put-back `}` is marked for its own lifetime: meeting the formula's own math shift it is deleted (stomach.rs
+    // `PUT_BACK_BRACE`).
+    mark_put_back_brace();
+  }
+  unread_one(token);
+  Ok(T_OTHER!("."))
+}
+
+/// Whether the innermost group is the `math_left_group` a `\left` opened (the group code `\lx@math@left@group`
+/// records; tex.web §1191 `cur_group`).
+pub fn in_left_group() -> bool { stomach::in_left_group() }
+
+/// What `\middle` or `\right` does about the group it meets (tex.web §1191-1192).
+pub enum LeftRightGroup {
+  /// The `\left` group: the command goes on.
+  Left,
+  /// The formula's own group (§1192 `math_shift_group`; here a frame that switched mode): "Extra \right." /
+  /// "Extra \middle.", an Error as in Perl ("Unbalanced \right"). TeX drops the delimiter; it is kept here, typeset
+  /// where it stands, as Perl keeps it — it is the author's content (user ruling 2026-10-12).
+  Extra,
+  /// A group the document opened with `{`/`\bgroup` or `\begingroup`: §1064-1065 `off_save` inserted its closer
+  /// and the command is read again. A Warning: TeX errs, Perl closes that group silently, and the inserted closer is
+  /// the recovery TeX makes (user ruling 2026-10-11 on TeX-only errors).
+  Retried,
+  /// Any other group (one LaTeXML's machinery opened): Perl's recovery — `\right` closes it
+  /// (`\lx@hidden@egroup@right`), `\middle` goes on (TeX_Math.pool.ltxml:782-802).
+  Other,
+}
+
+/// tex.web §1191-1192 for `\middle` and `\right` (`name`): which group they meet, with its diagnostic and, for
+/// `off_save`, the closer inserted before the command. OXIDIZED_DESIGN #530. Guards
+/// `perfect_kernel_batch65d::{extra_right_and_middle_without_left, right_in_a_brace_group_inserts_the_brace}`.
+pub fn left_right_group(name: &str) -> Result<LeftRightGroup> {
+  if in_left_group() {
+    return Ok(LeftRightGroup::Left);
+  }
+  if is_value_bound("MODE", Some(0)) {
+    Error!(
+      "unexpected",
+      s!("\\{name}"),
+      s!("Extra \\{name}."),
+      s!("A \\{name} that had no matching \\left; its delimiter is kept.")
+    );
+    return Ok(LeftRightGroup::Extra);
+  }
+  let Some(opener) = lookup_token_sym(pin!("groupInitiator")) else {
+    return Ok(LeftRightGroup::Other);
+  };
+  let closer = if opener.get_catcode() == Catcode::BEGIN || opener.defined_as(&T_BEGIN!()) {
+    T_END!()
+  } else if opener.defined_as(&T_CS!("\\begingroup")) {
+    T_CS!("\\endgroup")
+  } else {
+    return Ok(LeftRightGroup::Other);
+  };
+  Warn!(
+    "expected",
+    closer.to_string(),
+    s!("Missing {closer} inserted"),
+    s!("A \\{name} met a group opened inside its \\left; the group is closed first.")
+  );
+  // The author's own closer has been used: owed by this group, and after its pop by whichever group is then innermost
+  // (stomach.rs `pop_stack_frame`), where tex.web deletes it when it comes (§1069, stomach.rs `delete_extra_brace`).
+  let owed = if closer == T_END!() {
+    OWED_BRACES
+  } else {
+    OWED_ENDGROUPS
+  };
+  assign_frame_value(owed, Stored::Int(owed_closers(owed) + 1));
+  unread(Tokens::new(vec![closer, T_CS!(&s!("\\{name}"))]));
+  Ok(LeftRightGroup::Retried)
+}
+
+/// tex.web §1065 `off_save` for a math shift (`$`, `$$`, `\]`, `\)`) that meets an open `\left` group: "Missing \right.
+/// inserted", the `\right.` inserted before `again` is read again. A Warning: TeX errs, Perl reports the mode
+/// mismatch only, and the inserted `\right.` is TeX's recovery (user ruling 2026-10-11). Base: the formula went on to
+/// the next `$` and swallowed the following paragraphs. Guard `perfect_kernel_batch65d::formula_end_closes_an_open_left`.
+pub fn close_open_left(again: Tokens) -> bool {
+  if !in_left_group() {
+    return false;
+  }
+  insert_missing_right_before(again);
+  true
+}
 
 /// A shorthand data structure for delimiter metadata
 pub struct DelimiterMeta {

@@ -10632,7 +10632,8 @@ $f(x) = \frac{1}{2}(a+b)$
 
 pdflatex: f(x) = ½(a+b) with stretched parentheses — tex.web §1160 `scan_delimiter` takes a letter or other character
 by its `\delcode`, never its `\mathcode`. Perl: `Fatal` deep recursion (`Constructor[\left T…` repeated). Rust (62y): the
-`DelimiterToken` parameter of `\lx@delim@left`/`\lx@delim@right`/`\middle` digests under
+`DelimiterToken` parameter of `\left`/`\lx@delim@left`/`\lx@delim@right`/`\lx@delim@middle` (65d: scanned as
+§1160 does, OXIDIZED_DESIGN #530) digests under
 `stomach::digest_as_delimiter`, in which a math-active character is the character itself; so does the one-token
 argument of `\bigl(` and its family (the `TeXDelimiter` parameter), where Perl's active-meaning reading lost the `)`.
 Witness 2609.40266. Guard `perfect_kernel_batch61::math_active_delimiter_is_its_character` (paragraphs p1.1, p2.1).
@@ -12473,6 +12474,17 @@ stays in force for the entries. pdflatex sets the name in `\section*{\refname}`,
 `\documentclass{article}\renewcommand{\refname}{\bfseries\Large References}\begin{document}\cite{a}
 \begin{thebibliography}{9}\bibitem{a} A. Author, Some title.\end{thebibliography}\end{document}` → the `<bibblock>`
 in bold 144 % (Perl 0.8.8). Fixed in Rust (65a, OD #528; repro index-bib/refname_font_stays_in_the_bibliography_title).
+
+## 607. braket's `\Set` splits at the bar of a `\left|`, losing the rest of the set
+
+Perl's `splitBraketArg` (braket.sty.ltxml:27-54) splits `\set`/`\Set`/`\braket` at the first `|` token, whatever comes
+before it. braket.sty makes `|` math-active inside `\Set` (`\mathcode`\|="8000`), but tex.web §1160 `scan_delimiter`
+never activates a delimiter — it takes the character's `\delcode` — so a `\left|`, `\right|` or `\bigl|` keeps its bar.
+Trigger `\documentclass{article}\usepackage{braket}\begin{document}$\Set{\omega : \left|f(\omega)\right| < 1}$
+\end{document}` → Perl (0.8.8) `\Set{\omega:\left.}{f(\omega)}`, "set@(omega colon absent, f * omega)", the `< 1`
+lost; pdflatex prints one set. Fixed in Rust (65d): a bar right after `\left`/`\middle`/`\right` or a `\big` size is
+that command's delimiter (`braket_sty.rs` `reads_a_delimiter`). Witness 2107.02628 (`\Set{… \begin{array}{l}\left|…`,
+an "Extra \middle." once 65d checked the group). Guard `perfect_kernel_batch65d::braket_set_keeps_fence_bars`.
 
 ## 610. TeX.pool's LaTeX autoload triggers answer generic-format probes with "LaTeX" in a plain TeX document
 

@@ -4,6 +4,17 @@
 
 use crate::prelude::*;
 
+/// The group a style parameter (`DisplayStyle` … `InFractionStyle`) opens to digest its argument carries a group code
+/// (K9, `lx@group@code` = the command whose argument it is): its closer is the parameter's own, never a `}` from the
+/// argument — an author's `}` an inserted one already replaced meets it as a group `}` cannot close and is deleted
+/// (stomach.rs `delete_extra_brace`; `\frac{\left( {a \right)}}{b}`, where LaTeX's `\frac` has `\begingroup`).
+/// OXIDIZED_DESIGN #530.
+fn mark_argument_group() {
+  if let Some(cs) = get_current_token() {
+    assign_frame_value("lx@group@code", Stored::Token(cs));
+  }
+}
+
 /// Shared reader body of the `Optional` / `OptionalAngled` parameter types:
 /// fold a (possibly absent) delimited `value` into the default / `inner`-reparse
 /// contract. The delimiters themselves are the caller's business — see
@@ -372,15 +383,14 @@ LoadDefinitions!({
     }
   });
 
-  // A `\left`/`\middle`/`\right` delimiter: read as `Token`, digested as a delimiter (tex.web §1160 `scan_delimiter`,
-  // `stomach::digest_as_delimiter`) — a character by its `\delcode`, so a math-active `(` is the parenthesis, not its
-  // active meaning. Perl's `TeXDelimiter` invokes the token, active meaning and all (TeX_Math.pool.ltxml:712-724), and
-  // recurses when that meaning is `\left(` (KNOWN_PERL_ERRORS #494, 2609.40266).
+  // A `\left`/`\middle`/`\right` delimiter (Perl `TeXDelimiter`, TeX_Math.pool.ltxml:712-724): scanned by tex.web
+  // §1160 `scan_delimiter` (`tex_math::scan_delimiter`: `get_x_token` past blanks and `\relax`, matched by meaning,
+  // "Missing delimiter (. inserted)" otherwise) and digested as a delimiter (`stomach::digest_as_delimiter`) — a
+  // character by its `\delcode`, so a math-active `(` is the parenthesis, not its active meaning. Perl's `TeXDelimiter`
+  // invokes the token, active meaning and all, and recurses when that meaning is `\left(` (KNOWN_PERL_ERRORS #494,
+  // 2609.40266). The `\big` family keeps its own `TeXDelimiter` reader below. OXIDIZED_DESIGN #530.
   DefParameterType!(DelimiterToken, sub[_inner, _extra] {
-    match read_primitive_token()? {
-      Some(t) => Ok(ArgWrap::Token(t)),
-      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
-    }
+    Ok(ArgWrap::Token(crate::tex_math::scan_delimiter()?))
   }, predigest => sub[arg] {
     Ok(Some(digest_as_delimiter(|| arg.be_digested())?))
   });
@@ -1478,28 +1488,24 @@ LoadDefinitions!({
   // in order to correctly deal with catcodes.
   // BEWARE: This is NOT a shorthand for a simple digested {}!
 
-  // Perl PR#2596: TeXDelimiter parameter type for \left, \right, \big, \bigl, etc.
+  // Perl PR#2596: TeXDelimiter parameter type for \big, \bigl, etc. (Perl's serves \left/\right too).
   // Reads a balanced {}-arg via read_arg, reverts WITHOUT braces.
   //
-  // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/parity/WISDOM.md #41
-  // for the full enhancement plan. Current impl works for
-  // \big/\Big/\bigg/\Bigg (math_common.rs) and, since 57j, revsymb's \biglb family
-  // (revsymb_sty.rs); \left/\lx@right still fall back to DefMacro workarounds (a delimiter
-  // outside their map warns, repro `math-parse/left_delimiter_outside_the_map`). The size \langle
-  // and \{ lost after \big was not this reader: they were DefMath constructors reading their
-  // font at construction, boxes since 57n (`MathPrimitiveOptions::has_complex_option`).
+  // INCOMPLETE vs Perl TeX_Math.pool.ltxml:709 — see docs/parity/WISDOM.md #41. Current impl works for
+  // \big/\Big/\bigg/\Bigg (math_common.rs) and, since 57j, revsymb's \biglb family (revsymb_sty.rs). The size \langle
+  // and \{ lost after \big was not this reader: they were DefMath constructors reading their font at construction,
+  // boxes since 57n (`MathPrimitiveOptions::has_complex_option`).
   //
-  // Gap has two dimensions:
+  // \left/\middle/\right no longer use it (65d, OXIDIZED_DESIGN #530): `DelimiterToken` above scans as tex.web §1160
+  // does, which closes both gaps for them — the single-X-token read is §1160's `get_x_token` loop, and `\delimiter`'s
+  // number is scanned at the token level (`delim_num`), so Perl's `undigested => 1` invoke is not needed (witness
+  // tests/parse/parens.tex:43 `\left\delimiter"426830A`, byte-identical). For this reader the gaps remain:
   //   - Reader shape (2 branches missing): single-X-token read instead of read_arg,
   //     and BEGIN-unwrap-and-re-read. (The third, `.`/undef → \lx@delimiterdot,
   //     IS implemented below — the None / END / "." arms — plus an END-peek
-  //     fallback Perl does not have. Corrected 2026-07-20; the doc said 3 too.)
+  //     fallback Perl does not have, witness arXiv:1207.4709. Corrected 2026-07-20.)
   //   - Architectural `undigested=>1`: ArgWrap has no Digested variant and Parameter has no
-  //     `undigested: bool` flag; closing this needs latexml_core changes. Required for
-  //     \left\delimiter<num>.
-  //
-  // Reader-only partial port closes ZERO DP audit entries because the
-  // call-site migrations need BOTH dimensions — don't commit half.
+  //     `undigested: bool` flag; closing this needs latexml_core changes.
   DefParameterType!(TeXDelimiter, sub[_inner, _extra] {
     skip_filler()?;
     // Peek at the next token. If it's END (catcode 2) or EOF,
@@ -1878,6 +1884,7 @@ LoadDefinitions!({
   DefParameterType!(DisplayStyle, sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(mathstyle => "display");
   },
   after_digest => { egroup()?; },
@@ -1887,6 +1894,7 @@ LoadDefinitions!({
   DefParameterType!(TextStyle, sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(mathstyle => "text");
   },
   after_digest => { egroup()?; },
@@ -1896,6 +1904,7 @@ LoadDefinitions!({
   DefParameterType!(ScriptStyle, sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(mathstyle => "script");
   },
   after_digest => { egroup()?; },
@@ -1907,6 +1916,7 @@ LoadDefinitions!({
     sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(mathstyle => "scriptscript");
   },
   after_digest => { egroup()?; },
@@ -1919,6 +1929,7 @@ LoadDefinitions!({
     read_arg(ExpansionLevel::Off) },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(scripted => true);
   },
   after_digest => { egroup()?; },
@@ -1933,6 +1944,7 @@ LoadDefinitions!({
   },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(scripted => true);
   },
   after_digest => {
@@ -1953,6 +1965,7 @@ LoadDefinitions!({
   },
   before_digest => {
     bgroup();
+    mark_argument_group();
     MergeFont!(fraction => true);
   },
   after_digest => {

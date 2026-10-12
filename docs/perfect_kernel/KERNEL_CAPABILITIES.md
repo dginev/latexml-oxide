@@ -507,9 +507,12 @@ unexpandable `\let`, :1756-1760). Evidence and per-step tests: [`KERNEL_CAPABILI
   uses the same test, and `\tabskip` by register identity. Frozen copies `\lx@span` (the machinery's own spans, user
   ruling 2026-10-11) and `\lx@frozen@cr` (a file end in a preamble) exist only for emitted tokens. Perl
   `Gullet.pm:266-277` compares current meanings (KPE #603). OD #522-#525.
-- **G2:** port Perl's `TeXDelimiter` (WISDOM #44; `TeX_Math.pool.ltxml:773`) as §1160; `\left`/`\middle`/`\right`
-  become constructors; `\left` pushes a `math_left` group code (K9 stage 0) that the other two check (Rust-only deviation
-  today: `\left` is an expandable macro trampolining to `\lx@delim@left`).
+- **G2 (LANDED 65d):** `\left`/`\middle`/`\right` are unexpandable (`\left` a constructor, `\middle` a primitive
+  dispatching to `\lx@delim@middle`) and scan their delimiter as tex.web §1160 (`tex_math::scan_delimiter`, the
+  `DelimiterToken` parameter; matched by meaning, `\delimiter` codes scanned at the token level, "Missing delimiter (.
+  inserted)" otherwise), which closes WISDOM #41's `\left` row without Perl's `undigested` invoke. `\left`'s group
+  carries the K9 code `\left` (`\lx@math@left@group`); `\middle`/`\right` give §1192 "Extra \right." at the formula's
+  group and §1064 `off_save` against a document `{`/`\begingroup`. OD #530.
 - **G3:** `read_until` on a catcode-2 token at depth 0 backs it up with the §395 Error; non-`\long` takes 62h's
   `abandon_argument_at_par`, `\long` appends `\par` (today: Fatal Mouth:EoF, Rust-only; Perl reads on, `Gullet.pm:654-665`).
 - **G1:** a definition whose first TeX step is an unexpandable assignment expands to one unexpandable `\lx@peek⟨id⟩`
@@ -521,7 +524,8 @@ pdflatex's log and output.
 
 **Class guard:** one harness of expansion-chain repros (the five G1 chains, the five G2 tests, the G3 pair, the `\span`
 repro), whole output pinned, plus the REDs `expansion-primitives/ifnextchar_inside_if_operand`,
-`macro-state/m5_locked_name_in_expansion_only_context`, `math-parse/left_delimiter_outside_the_map`.
+`macro-state/m5_locked_name_in_expansion_only_context` (`math-parse/left_delimiter_outside_the_map` green in 65d, now
+golden `tests/parse/left_right_delimiters`).
 
 **Risk:** MED; per step an arXiv A/B on the cluster witnesses, 300 random papers and the manual net; a perf check for G1.
 

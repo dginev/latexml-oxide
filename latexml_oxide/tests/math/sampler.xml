@@ -415,9 +415,9 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
                 <XMDual xml:id="S1.E7.m1.1">
                   <XMRef idref="S1.E7.m1.2"/>
                   <XMWrap>
-                    <XMTok role="OPEN" stretchy="false">(</XMTok>
+                    <XMTok role="OPEN" stretchy="true">(</XMTok>
                     <XMTok font="italic" role="UNKNOWN" xml:id="S1.E7.m1.2">x</XMTok>
-                    <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                    <XMTok role="CLOSE" stretchy="true">)</XMTok>
                   </XMWrap>
                 </XMDual>
                 <XMTok role="PUNCT" rpadding="20.0pt">,</XMTok>

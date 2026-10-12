@@ -1,0 +1,53 @@
+% `\left`, `\middle` and `\right` scan their delimiter as tex.web §1160 `scan_delimiter` does (65d, C5 G2;
+% OXIDIZED_DESIGN #530): `get_x_token` past blanks and `\relax`, then a delimiter by meaning — a character with a
+% `\delcode`, a `\let` copy of one, `\delimiter` with its code, or one of LaTeXML's math symbols. A delimiter in
+% the delimiter map is the constructor's own stretchy fence; any other is the symbol itself, made stretchy as Perl's
+% `augmentDelimiterProperties` makes it (TeX_Math.pool.ltxml:800-823).
+\documentclass{article}
+\usepackage{amsmath,amssymb,stmaryrd,mathtools}
+\begin{document}
+
+% formerly repro math-parse/left_delimiter_outside_the_map
+% witness: 57n root-cause side finding; a delimiter outside the map warned "Missing delimiter; '.' inserted" and
+%          stayed unstretched (~400 warnings in 7 A/B papers)
+% oracle:  pdflatex 0 errors; Perl 0 diagnostics, delimited-⟦⟧@(x)
+\section{A delimiter outside the map}
+$\left\llbracket x \right\rrbracket$
+
+% C5 G2 test 4: `\middle` inside the `math_left_group` of `\left` (tex.web §1191)
+\section{A middle delimiter}
+$\left(a\middle|b\right)$
+
+% Each pair pdflatex accepts (0 errors): characters by `\delcode`, `\let` copies, math symbols, `\delimiter` codes,
+% the null delimiter, and `\relax` and blanks skipped before the delimiter.
+\section{Delimiters by meaning}
+$\left( x \right)$\par
+$\left[ x \right]$\par
+$\left\{ x \right\}$\par
+$\left\lbrace x \right\rbrace$\par
+$\left\langle x \right\rangle$\par
+$\left\lfloor x \right\rfloor$\par
+$\left\lceil x \right\rceil$\par
+$\left| x \right|$\par
+$\left\vert x \right\vert$\par
+$\left\Vert x \right\Vert$\par
+$\left\| x \right\|$\par
+$\left\lvert x \right\rvert$\par
+$\left\lVert x \right\rVert$\par
+$\left\lbrack x \right\rbrack$\par
+$\left\uparrow x \right\downarrow$\par
+$\left\Uparrow x \right\Downarrow$\par
+$\left\updownarrow x \right\Updownarrow$\par
+$\left\lgroup x \right\rgroup$\par
+$\left\lmoustache x \right\rmoustache$\par
+$\left\arrowvert x \right\Arrowvert$\par
+$\left\bracevert x \right\bracevert$\par
+$\left\ulcorner x \right\urcorner$\par
+$\left\llcorner x \right\lrcorner$\par
+$\left\lparen x \right\rparen$\par
+$\left. x \right.$\par
+$\left< x \right>$\par
+$\left\delimiter"4266308 x \right\delimiter"5267309 $\par
+$\left\relax( x \right\relax)$\par
+$\left ( x \right ) $\par
+\end{document}

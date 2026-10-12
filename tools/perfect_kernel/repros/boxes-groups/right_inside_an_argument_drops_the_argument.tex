@@ -1,0 +1,18 @@
+% witness: 65d review r1 side finding (t1, t4); pre-existing, 65a the same
+% oracle:  pdflatex 2 errors ("Missing } inserted", "Extra }, or forgotten $") for the \frac shape; the fraction and
+%          `)` typeset
+% engines: rust 65a and 65d: no diagnostic; Math tex "\left(c" — the \frac{a}{b \right)} argument and `)` dropped
+%          silently (same for `\mathbf{x \right)}`)
+% expect:  the fraction and the `)` kept, the off_save diagnostics as for a plain `{` group
+% preload: ar5iv.sty
+% status:  RED
+\documentclass{article}
+\begin{document}
+Before
+
+$\left( \frac{a}{b \right)} c$ d
+
+$\left( \mathbf{x \right)} c$ d
+
+After para.
+\end{document}

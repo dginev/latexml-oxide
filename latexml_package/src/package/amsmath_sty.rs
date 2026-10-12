@@ -446,6 +446,12 @@ LoadDefinitions!({
   RawTeX!(
     r"\def\env@matrix{\hskip -\arraycolsep\let\@ifnextchar\new@ifnextchar\array{*\c@MaxMatrixCols c}}"
   );
+  // amsmath.sty:1121-1126 `\env@cases`, the same for `{cases}`: a document's `\newenvironment{originalcases}
+  // {\env@cases}{\endarray\right.}` (zhlineskip.tex:234) needs its `\left\lbrace`, without which the `\right.` meets
+  // the environment's group (65d: tex.web §1064 `off_save`, "Missing \endgroup inserted").
+  RawTeX!(
+    r"\def\env@cases{\let\@ifnextchar\new@ifnextchar\left\lbrace\def\arraystretch{1.2}\array{@{}l@{\quad}l@{}}}"
+  );
 
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 769-812

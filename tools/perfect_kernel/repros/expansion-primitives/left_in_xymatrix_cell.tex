@@ -1,0 +1,12 @@
+% witness: run-336 X1 (62 Fatal:Timeout:IfLimit; 0705.0452 0802.0663 0804.1292 0809.0095 0903.4903), C5 G2 test 5
+% oracle:  pdflatex 0 errors
+% engines: rust 65a 12 errors ("Unbalanced \right", "Didn't expect a \fi", "Attempt to close a group"): xy's cell
+%          scanner expanded the expandable `\left`, which read `\{` ahead and desynchronized the conditionals; 65d 0
+% expect:  0 errors, 0 warnings; the cell's Math is set@(x)
+% preload: ar5iv.sty
+% status:  GREEN (65d)
+\documentclass{article}
+\usepackage[all]{xy}
+\begin{document}
+\[\xymatrix{\left\{x\right\}\ar[r] & B}\]
+\end{document}

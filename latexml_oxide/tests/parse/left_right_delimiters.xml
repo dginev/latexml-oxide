@@ -1,0 +1,525 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb,stmaryrd,mathtools"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>A delimiter outside the map</title>
+    <para xml:id="S1.p1">
+      <p><Math mode="inline" tex="\left\llbracket x\right\rrbracket" text="delimited-⟦⟧@(x)" xml:id="S1.p1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⟦⟧"/>
+                <XMRef idref="S1.p1.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="llbracket" role="OPEN" stretchy="true">⟦</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S1.p1.m1.1">x</XMTok>
+                <XMTok name="rrbracket" role="CLOSE" stretchy="true">⟧</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>A middle delimiter</title>
+    <para xml:id="S2.p1">
+      <p><Math mode="inline" tex="\left(a\middle|b\right)" text="conditional@(a, b)" xml:id="S2.p1.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="conditional"/>
+                <XMRef idref="S2.p1.m1.1"/>
+                <XMRef idref="S2.p1.m1.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">(</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m1.1">a</XMTok>
+                <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S2.p1.m1.2">b</XMTok>
+                <XMTok role="CLOSE" stretchy="true">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S3">
+    <tags>
+      <tag>3</tag>
+      <tag role="refnum">3</tag>
+      <tag role="typerefnum">§3</tag>
+    </tags>
+    <title><tag close=" ">3</tag>Delimiters by meaning</title>
+    <para xml:id="S3.p1">
+      <p><Math mode="inline" tex="\left(x\right)" text="x" xml:id="S3.p1.m1">
+          <XMath>
+            <XMDual>
+              <XMRef idref="S3.p1.m1.1"/>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">(</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p1.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p2">
+      <p><Math mode="inline" tex="\left[x\right]" text="delimited-[]@(x)" xml:id="S3.p2.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-[]"/>
+                <XMRef idref="S3.p2.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">[</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p2.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p3">
+      <p><Math mode="inline" tex="\left\{x\right\}" text="set@(x)" xml:id="S3.p3.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S3.p3.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">{</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p3.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p4">
+      <p><Math mode="inline" tex="\left\{x\right\}" text="set@(x)" xml:id="S3.p4.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S3.p4.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">{</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p4.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p5">
+      <p><Math mode="inline" tex="\left\langle x\right\rangle" text="delimited-⟨⟩@(x)" xml:id="S3.p5.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⟨⟩"/>
+                <XMRef idref="S3.p5.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p5.m1.1">x</XMTok>
+                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p6">
+      <p><Math mode="inline" tex="\left\lfloor x\right\rfloor" text="floor@(x)" xml:id="S3.p6.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="floor"/>
+                <XMRef idref="S3.p6.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="lfloor" role="OPEN" stretchy="true">⌊</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p6.m1.1">x</XMTok>
+                <XMTok name="rfloor" role="CLOSE" stretchy="true">⌋</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p7">
+      <p><Math mode="inline" tex="\left\lceil x\right\rceil" text="ceiling@(x)" xml:id="S3.p7.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="ceiling"/>
+                <XMRef idref="S3.p7.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="lceil" role="OPEN" stretchy="true">⌈</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p7.m1.1">x</XMTok>
+                <XMTok name="rceil" role="CLOSE" stretchy="true">⌉</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p8">
+      <p><Math mode="inline" tex="\left|x\right|" text="absolute-value@(x)" xml:id="S3.p8.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="absolute-value"/>
+                <XMRef idref="S3.p8.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p8.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">|</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p9">
+      <p><Math mode="inline" tex="\left|x\right|" text="absolute-value@(x)" xml:id="S3.p9.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="absolute-value"/>
+                <XMRef idref="S3.p9.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p9.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">|</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p10">
+      <p><Math mode="inline" tex="\left\|x\right\|" text="norm@(x)" xml:id="S3.p10.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="norm"/>
+                <XMRef idref="S3.p10.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="||" role="OPEN" stretchy="true">‖</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p10.m1.1">x</XMTok>
+                <XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p11">
+      <p><Math mode="inline" tex="\left\|x\right\|" text="norm@(x)" xml:id="S3.p11.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="norm"/>
+                <XMRef idref="S3.p11.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="||" role="OPEN" stretchy="true">‖</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p11.m1.1">x</XMTok>
+                <XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p12">
+      <p><Math mode="inline" tex="\left\lvert x\right\rvert" text="absolute-value@(x)" xml:id="S3.p12.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="absolute-value"/>
+                <XMRef idref="S3.p12.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p12.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">|</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p13">
+      <p><Math mode="inline" tex="\left\lVert x\right\rVert" text="norm@(x)" xml:id="S3.p13.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="norm"/>
+                <XMRef idref="S3.p13.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="||" role="OPEN" stretchy="true">‖</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p13.m1.1">x</XMTok>
+                <XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p14">
+      <p><Math mode="inline" tex="\left[x\right]" text="delimited-[]@(x)" xml:id="S3.p14.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-[]"/>
+                <XMRef idref="S3.p14.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">[</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p14.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p15">
+      <p><Math mode="inline" tex="\left\uparrow x\right\downarrow" text="delimited-↑↓@(x)" xml:id="S3.p15.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-↑↓"/>
+                <XMRef idref="S3.p15.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="uparrow" role="OPEN" stretchy="true">↑</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p15.m1.1">x</XMTok>
+                <XMTok name="downarrow" role="CLOSE" stretchy="true">↓</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p16">
+      <p><Math mode="inline" tex="\left\Uparrow x\right\Downarrow" text="delimited-⇑⇓@(x)" xml:id="S3.p16.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⇑⇓"/>
+                <XMRef idref="S3.p16.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="Uparrow" role="OPEN" stretchy="true">⇑</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p16.m1.1">x</XMTok>
+                <XMTok name="Downarrow" role="CLOSE" stretchy="true">⇓</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p17">
+      <p><Math mode="inline" tex="\left\updownarrow x\right\Updownarrow" text="delimited-↕⇕@(x)" xml:id="S3.p17.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-↕⇕"/>
+                <XMRef idref="S3.p17.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="updownarrow" role="OPEN" stretchy="true">↕</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p17.m1.1">x</XMTok>
+                <XMTok name="Updownarrow" role="CLOSE" stretchy="true">⇕</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p18">
+      <p><Math mode="inline" tex="\left\lgroup x\right\rgroup" text="delimited-⟮⟯@(x)" xml:id="S3.p18.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⟮⟯"/>
+                <XMRef idref="S3.p18.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="lgroup" role="OPEN" stretchy="true">⟮</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p18.m1.1">x</XMTok>
+                <XMTok name="rgroup" role="CLOSE" stretchy="true">⟯</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p19">
+      <p><Math mode="inline" tex="\left\lmoustache x\right\rmoustache" text="⎰ * x * ⎱" xml:id="S3.p19.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="UNKNOWN" stretchy="true">⎰</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok role="UNKNOWN" stretchy="true">⎱</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p20">
+      <p><Math mode="inline" tex="\left\arrowvert x\right\Arrowvert" text="delimited-|‖@(x)" xml:id="S3.p20.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-|‖"/>
+                <XMRef idref="S3.p20.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="VERTBAR" role_side="left" stretchy="true">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p20.m1.1">x</XMTok>
+                <XMTok name="||" role="CLOSE" stretchy="true">‖</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p21">
+      <p><Math mode="inline" tex="\left\bracevert x\right\bracevert" text="absolute-value@(x)" xml:id="S3.p21.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="absolute-value"/>
+                <XMRef idref="S3.p21.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">|</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p21.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">|</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p22">
+      <p><Math mode="inline" tex="\left\ulcorner x\right\urcorner" text="ulcorner * x * urcorner" xml:id="S3.p22.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok name="ulcorner" role="UNKNOWN" stretchy="true">⌜</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok name="urcorner" role="UNKNOWN" stretchy="true">⌝</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p23">
+      <p><Math mode="inline" tex="\left\llcorner x\right\lrcorner" text="llcorner * x * lrcorner" xml:id="S3.p23.m1">
+          <XMath>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok name="llcorner" role="UNKNOWN" stretchy="true">⌞</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok name="lrcorner" role="UNKNOWN" stretchy="true">⌟</XMTok>
+            </XMApp>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p24">
+      <p><Math mode="inline" tex="\left\lparen x\right\rparen" text="x" xml:id="S3.p24.m1">
+          <XMath>
+            <XMDual>
+              <XMRef idref="S3.p24.m1.1"/>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">(</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p24.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p25">
+      <p><Math mode="inline" tex="\left.x\right." text="x" xml:id="S3.p25.m1">
+          <XMath>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p26">
+      <p><Math mode="inline" tex="\left&lt;x\right&gt;" text="delimited-⟨⟩@(x)" xml:id="S3.p26.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-⟨⟩"/>
+                <XMRef idref="S3.p26.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p26.m1.1">x</XMTok>
+                <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p27">
+      <p><Math mode="inline" tex="\left\{x\right\}" text="set@(x)" xml:id="S3.p27.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="set"/>
+                <XMRef idref="S3.p27.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">{</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p27.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">}</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p28">
+      <p><Math mode="inline" tex="\left(x\right)" text="x" xml:id="S3.p28.m1">
+          <XMath>
+            <XMDual>
+              <XMRef idref="S3.p28.m1.1"/>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">(</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p28.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+    <para xml:id="S3.p29">
+      <p><Math mode="inline" tex="\left(x\right)" text="x" xml:id="S3.p29.m1">
+          <XMath>
+            <XMDual>
+              <XMRef idref="S3.p29.m1.1"/>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="true">(</XMTok>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S3.p29.m1.1">x</XMTok>
+                <XMTok role="CLOSE" stretchy="true">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math></p>
+    </para>
+  </section>
+</document>
