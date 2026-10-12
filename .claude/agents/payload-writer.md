@@ -63,6 +63,12 @@ the cores, the reserved doc numbers and the witnesses. Everything below is stand
   grep for conflict markers before every `git add`; keep a backup branch.
 - Never `git clean -fd`, never `git checkout <file>`, `rm` only with absolute paths.
 
+## Lifetime (user 2026-10-12: no long-lived subagents)
+- You own ONE round. A later fix round is a fresh agent: if the brief says it is round N > 1, read the batch report
+  and the review findings first, then amend the existing commit.
+- Before your final reply, stop every background process you started (loops, sweeps, `systemd-run` units, waiters)
+  and say so in the reply. Never end with work still running that could wake you.
+
 ## Report
 Write `~/data/pk_agents/main/agent_reports/<date>_payload_<batch>.md` (append a section per round), or put it in
 your reply if you cannot write there. Final reply, concise: SHA; gates (Summary line, lint, inits + dump diff);
