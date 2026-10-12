@@ -344,6 +344,19 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `index/hyperref_hyperindexformat_see_in_theindex`.
 - **An alignment left open at `\end{document}` drops its last cell's content** (SHARED, low priority; 65c review
   probes r16 `c & d` → `<td/>`, r21 `c&=d` loses `=d`): invalid input (pdflatex prints nothing); no repro.
+- **A plain `\\` in a `\multicolumn` paragraph cell is recovered with no Warning** (RUST-ONLY diagnostic; Perl ends
+  the outer row, KPE #626): without a `\centering`/`\raggedright` in the cell, `\\` is `\@tabularcr`, whose `\cr`
+  lands inside the omitted span's `\vtop` group: pdflatex 101 errors, the first "Missing } inserted", no PDF. Ours
+  (65p, OXIDIZED_DESIGN_DIVERGENCES #559) makes it the line break the legal `\centering` case gives, 0 errors and 0
+  warnings; it wants one Warning. Telling the cases apart needs `\centering`/`\raggedright`/`\raggedleft` to
+  `\let\\\@centercr` as latex.ltx does (Perl's do not either), and the Warning must also come from the
+  `\tabularnewline` let: a `>{\raggedright\arraybackslash}` prefix makes `\\` the same `\@tabularcr` error.
+  RED `kernel-alignment/multicolumn_pcol_plain_newline_unwarned`.
+- **A `>{…}` prefix macro of a paragraph column takes the wrong arguments** (SHARED; synthetic, 65p review probe q6):
+  `\newcommand\two[2]{[#1|#2]}` with `>{\two}p{3cm}` reads `[|x]y`, pdflatex `[|]xy`: array.sty:106-110
+  `\insert@pcolumn` puts `\relax` before `\ignorespaces` for `p`/`m`/`b`, `Template::add_column` appends only the
+  `\insert@column` `\ignorespaces` (array.sty:97-101); and a `\multicolumn{2}{>{\two}l}{gh}` reads `[|g]h`, pdflatex
+  `[|gh]` (array.sty:267-278 reads the body as one `\@sharp`). RED `kernel-alignment/pcol_prefix_argument_takes_relax`.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
 ### Fidelity audit round 2 (2026-10-08) — findings and their state
@@ -681,6 +694,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\keywords` is defined inside the class's `wiley@abstract` body, which the locked `{abstract}` binding bypasses
   (2009.12523, 2007.02789); lmcs's `\titlecomment` under `\documentclass{LMCS}` (upper-case name, no binding: 1103.0510);
   ulem's `\ULforem`; tabu's `|[width]` rule spec (1907.07986).
+- **65p** (RUST-ONLY, Perl 0 errors; OD #559, KPE #626): a `\multicolumn` over a paragraph column (`p{}`, `m{}`, `b{}`,
+  tabularx `X`) lets `\\` to `\lx@newline` inside its cell box instead of rewriting the body's brace-depth-0 `\\`
+  tokens, so a nested `\begin{tabular}…\end{tabular}` keeps its rows (the rewrite made them line breaks: "Extra
+  alignment tab", "\noalign cannot be used here" at the next `\hline`, or, for a one-column table, rows lost with no
+  diagnostic), and a math alignment in the cell (`pmatrix`, `cases`, `array`, `aligned`) keeps its rows; the `\let`
+  precedes the column's `>{…}` tokens (`Cell::prefix_at`); `X`/`J` cells are spliced as `\vtop{` (no more "Missing
+  number" Warning and `width="0.0pt"`). Witnesses
+  2607.14806 4 → 0 errors, 2010.13561 29 → 0, 1808.05579 18 → 0; 1610.00974 and 1805.01525 byte-identical. Sample of 30
+  seeded random papers with a `p`/`m`/`b`/`X` `\multicolumn` (`~/data/pk_wt/scratch_65p/samp.tsv`): 28 byte-identical, 2112.08542
+  loses `width="0.0pt"` on its `X` cells, 2410.18046 a temporary path. Guards `perfect_kernel_batch65p::*`; repros
+  `kernel-alignment/multicolumn_*`. Open: two RED repros, rows in "Perfect-kernel RED repros without a row elsewhere"
+  (a plain `\\` in a multicolumn paragraph cell recovered with no Warning; a `>{…}` prefix's arguments).
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

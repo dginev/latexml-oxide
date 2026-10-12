@@ -63,6 +63,9 @@ pub struct Cell {
   pub has_intercol_after:  bool,
   /// Background color from \columncolor/\cellcolor (set during digestion by \@setcellcolor)
   pub backgroundcolor:     Option<String>,
+  /// Where the column's array.sty `>{…}` tokens begin in `before` (`Template::add_column`): right after the column
+  /// type's own before tokens (a paragraph column's box opening), ahead of the `>{…}` declarations and `\ignorespaces`.
+  pub prefix_at:           Option<usize>,
 }
 impl Cell {
   pub fn border_at(&self, side: BorderSpec) -> Option<usize> {

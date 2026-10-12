@@ -12632,3 +12632,14 @@ tokenized with the standard catcodes, so a `_` in the name is a subscript, diges
 `\documentclass{article}\newcounter{c_n}\begin{document}\refstepcounter{c_n}\label{x}A\end{document}` → Perl 1 error
 ("Script _ can only appear in math mode"); pdflatex 0. Fixed in Rust (65m, OD #551; 2606.16543, 1912.04210; repro
 macro-state/counter_name_with_underscore).
+
+## 626. A `\\` in a `\multicolumn` paragraph cell ends the outer row
+
+Perl's live `\lx@alignment@multicolumn` (TeX_Tables.pool.ltxml:704-713, which overrides :693-702) expands to
+`\lx@alignment@altcolumn{<template>}\relax <body>`; its `replaceColumn` makes the `p{}` column the cell's template, so
+`\lx@tabular@p t{<w>}{` … `}` wraps the cell body, and a `\\` in it is the tabular's `\lx@alignment@newline`, which
+ends the outer row: the rest of the cell becomes a new row. In pdflatex the `\multicolumn` cell is one box; with a
+`\centering` or `\raggedright` in it `\\` is `\@centercr`, a line break (without, "Missing } inserted"). Trigger
+`\begin{tabular}{|c|c|}\multicolumn{2}{|p{1cm}|}{\centering A\\ B} \\ y & z \\\end{tabular}` → Perl: A in the merged
+cell, B a new row `<td>B</td><td/>` (pdflatex: A and B stacked in the merged cell, then `y z`). Fixed in Rust (65p, OD
+#559, which splices the template as the overridden :693-702 does, OD #474; witness 1610.00974).

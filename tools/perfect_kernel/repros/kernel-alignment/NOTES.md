@@ -833,3 +833,27 @@ mode-frame root remains — do NOT re-open this family; its residue was b54q-sta
 Recommendation: retire this family from the alignment lane. The two remaining tails are
 non-alignment and already lane-owned elsewhere: pst-exa missing-`.inc` (IO/missing-file),
 shtthesis/suanpan-l3 luatexja (parked CJK), thesis-gwu `\fancyhf` (undefined-macro).
+
+## multicolumn_{pcol_nested_tabular_rows,pcol_nested_tabular_silent,X_nested_tabular_hline,pcol_nested_ptabular_hline,pcol_line_break_kept} (batch 65p, GREEN)
+RUST-ONLY (Perl 0 errors). `\lx@alignment@multicolumn` (tex_tables.rs) rewrote every brace-depth-0 `\\` of a
+paragraph-column (`p`/`m`/`b`/`X`, `align=Justify`) multicolumn body to `\lx@newline`; an environment is no brace
+group, so a nested tabular's row ends became line breaks (overflowing `&`, a misplaced `\noalign` at its `\hline`, or
+silently merged rows; a `pmatrix`/`cases`/`aligned` in the cell collapsed into one row). Fix: the splice of Perl's
+overridden first definition (TeX_Tables.pool.ltxml:693-702, OD #474; Perl's live one is :704-713,
+`\lx@alignment@altcolumn` + `replaceColumn`) plus `\let\\\lx@newline\let\tabularnewline\lx@newline` inside the cell
+box, ahead of the column's `>{…}` tokens (`Cell::prefix_at`: a prefix macro taking arguments reads the body, not the
+`\let`; an `\arraybackslash` there keeps the recovery, a pdflatex error as without it), so the cell's own `\\` stays a line break (OD
+#559, KPE #626: pdflatex's `\centering` reading, Perl's new row) and nested alignments rebind `\\`. The X/J re-boxing
+as `\lx@tabular@p t{}` (empty width: "Missing number", `width="0.0pt"`) went with it. Witnesses 2607.14806,
+2010.13561, 1808.05579; kept 1610.00974, 1805.01525.
+
+## multicolumn_pcol_plain_newline_unwarned (batch 65p, RED)
+OPEN residual, not a dead end: a plain `\\` (no `\centering`/`\raggedright`) in a multicolumn p cell is a pdflatex error
+(101 errors, the first "Missing } inserted", no PDF); we give 0 errors, 0 warnings and a line break (Perl: a new outer
+row). Wanted: one Warning, the same line break. Needs `\centering`/`\raggedright`/`\raggedleft` to `\let\\\@centercr`
+as latex.ltx does (Perl's do not either), so the legal case can be told from the error.
+
+## pcol_prefix_argument_takes_relax (batch 65p, RED; pre-existing)
+`>{\two}p{3cm}` with a two-argument `\two` reads `[|x]y`, pdflatex `[|]xy`: array.sty:106-110 `\insert@pcolumn` puts
+`\relax` before `\ignorespaces` for p/m/b; `Template::add_column` appends only `\insert@column`'s `\ignorespaces`.
+`\multicolumn{2}{>{\two}l}{gh}` reads `[|g]h`, pdflatex `[|gh]` (array.sty:267-278: the body is one `\@sharp`).

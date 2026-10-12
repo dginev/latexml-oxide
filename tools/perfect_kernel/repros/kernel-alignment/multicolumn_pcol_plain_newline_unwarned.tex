@@ -1,0 +1,27 @@
+% witness: synthetic (the TeX-error side of 1610.00974's `\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`, without
+%   the `\centering`)
+% oracle:  pdflatex 101 errors, the first "Missing \endgroup inserted" ("Missing } inserted" without array.sty;
+%   a plain `\\` is `\@tabularcr`, whose `\cr` lands inside the omitted span's `\vtop` group: latex.ltx `\multicolumn` splices the whole `\@preamble` after `\omit`);
+%   no PDF. With `\centering`/`\raggedright` in the cell `\\` is `\@centercr`, a line break (pdflatex 0 errors).
+%   The second cell's `>{\raggedright\arraybackslash}` errs the same: `\arraybackslash` lets `\\` to
+%   `\tabularnewline` = `\@tabularcr` (array.sty:247, latex.ltx:16576), and tex.web do_endv meets the `\vtop` group.
+% engines: rust base=0 (65int2), rust 65p=0 errors, 0 warnings: AAA/BBB and CCC/DDD two <p> each, no diagnostic;
+%   perl=0 (2026-10-12; BBB a new outer row, KPE #626)
+% expect:  2 Warnings (a `\\` in a `\multicolumn` paragraph cell that no `\centering`/`\raggedright` in the body has
+%   let to a line break is a TeX error, recovered as the line break), and the same output: AAA and BBB two <p> of one
+%   colspan="2" cell, CCC and DDD likewise, yyy|zzz the last row
+% status:  RED (batch 65p, 2026-10-12; SYNC_STATUS "multicolumn plain \\")
+% mechanism: `\lx@alignment@multicolumn` (tex_tables.rs) lets `\\` to `\lx@newline` in every paragraph multicolumn
+%   cell, so the legal `\centering` case and this error case read the same. Telling them apart needs
+%   `\centering`/`\raggedright`/`\raggedleft` to `\let\\\@centercr` as latex.ltx does (Perl's and ours do not), and
+%   the cell's let to warn, both the `\\` let and the `\tabularnewline` let (the `\arraybackslash` path).
+\documentclass{article}
+\usepackage{array}
+\begin{document}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|p{3cm}|}{AAA\\ BBB} \\ \hline
+\multicolumn{2}{|>{\raggedright\arraybackslash}p{3cm}|}{CCC\\ DDD} \\ \hline
+yyy & zzz \\ \hline
+\end{tabular}
+\end{document}

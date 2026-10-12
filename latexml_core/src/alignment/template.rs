@@ -367,6 +367,7 @@ impl Template {
     if let Some(prop_before) = col.before {
       before.extend(prop_before.unlist());
     }
+    let prefix_at = before.len();
     if !self.save_before.is_empty() {
       before.extend(self.save_before.clone());
       // array.sty's `\insert@column` (array.sty:97-101): the `>{…}` tokens, then `\ignorespaces`, then the cell, so a
@@ -379,6 +380,7 @@ impl Template {
     } else {
       None
     };
+    col.prefix_at = Some(prefix_at);
     col.has_intercol_before = has_intercol_before;
     let mut after = vec![T_CS!("\\lx@column@trimright")];
     if let Some(prop_after) = col.after {

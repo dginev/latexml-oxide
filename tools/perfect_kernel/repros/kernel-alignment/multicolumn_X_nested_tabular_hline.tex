@@ -1,0 +1,25 @@
+% witness: 2010.13561 (tabularx `\multicolumn{1}{|X}{` around a ruled nested tabular)
+% oracle:  pdflatex 0 errors; pdftotext shows u v / s t as two rows of the nested table
+% engines: rust base=2 (65int2: 2 errors, 1 warning), rust 65p=0, perl=0 (2026-10-12)
+% expect:  0 errors, 0 warnings; the inner //ltx:tabular has 2 tr of 2 ruled td
+% status:  GREEN (batch 65p, 2026-10-12)
+% mechanism: the depth-0 `\\` rewrite made the nested row end a line break, so `s & t` overflowed
+%   ("Extra alignment tab") and the second \hline was "\noalign cannot be used here". The X column's
+%   \vtop{ is now spliced as Perl splices it (the rewrite to `\lx@tabular@p t{}` gave an empty width:
+%   "Missing number" Warning and width="0.0pt").
+\documentclass{article}
+\usepackage{tabularx}
+\begin{document}
+\begin{tabularx}{\textwidth}{|X|l|}
+a & b \\
+\multicolumn{1}{|X}{
+\begin{tabular}{|l|l|}
+\hline
+u & v \\
+\hline
+s & t \\
+\end{tabular}
+}
+&\\
+\end{tabularx}
+\end{document}
