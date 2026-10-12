@@ -15,8 +15,10 @@ LoadDefinitions!({
   RequirePackage!("booktabs");
   RequirePackage!("graphicx");
   // interact.cls:134-138 (v1.01-v1.05): `\def\bm#1{\mathchoice{\mbox{\boldmath$\displaystyle#1$}}…}`, bold math the
-  // class defines itself, as bm.sty's `\bm` (bm_sty.rs) — 2310.17051, 1803.04839, 2212.00021.
-  DefConstructor!("\\bm{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
+  // class defines itself, its argument in a box — 2310.17051, 1803.04839, 2212.00021. A `\left` without its `\right`
+  // in the argument is TeX's error at the box's end; it is set at the outer level with a Warning, as bm.sty would set
+  // it (bm_sty.rs `define_grouped_bm`, OXIDIZED_DESIGN #544).
+  bm_sty::define_grouped_bm()?;
 
   // interact.cls:266-274: `\author{\name{…}\affil{…}}` holds the whole block, and `\name{X}` prints `X\\`, `\affil{Y}`
   // and `\email{Z}` lines of their own: the names line and the affiliation lines the kernel author parse reads, so a

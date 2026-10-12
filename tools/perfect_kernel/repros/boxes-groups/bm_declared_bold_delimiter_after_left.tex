@@ -1,0 +1,16 @@
+% witness: 1205.4484 (macros.tex: \boldlangle/\boldrangle/\boldlvert/\boldrvert via \DeclareBoldMathCommand, used
+%          after \left/\right)
+% oracle:  pdflatex 0 errors; a stretchy bold ⟨ and a stretchy ⟩ around x. bm.sty's \bm@define (:307-316)
+%          \xdef's \blangle to a bold \delimiter (\bm@delimiter, :416), which \left's delimiter scan expands to
+% engines: rust 65bundle = Warning "\bm Missing delimiter (. inserted)", 65j = the same naming \lx@bm@bold (\bm
+%          expands to it); both a null \left and a non-stretchy bold ⟨ after it (tex="\left.\bm{\langle}x
+%          \right\rangle"): our \blangle is \bm{\langle}, a constructor \left's delimiter scan cannot read
+% expect:  0 errors, 0 warnings; ⟨ the \left delimiter, bold and stretchy, x fenced by ⟨ ⟩
+% status:  RED (65j)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{bm}
+\DeclareBoldMathCommand\blangle{\langle}
+\begin{document}
+Fence $\left\blangle x\right\rangle$ end.
+\end{document}

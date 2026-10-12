@@ -1,0 +1,18 @@
+% witness: synthetic (65j round 2; RevTeX's `\bm` without bm.sty, Perl revtex4_support.sty.ltxml:167); corpus
+%          witnesses in the 65j report
+% oracle:  pdflatex (revtex4-2) 2 errors, "Extra }, or forgotten \right." and "Missing } inserted", and the class
+%          warning "To use \bm, please load the bm package!": revtex4-2.cls:7573-7586 `\REV@bm` drops the first
+%          `\bm{y}` and `\global\let\bm\relax`, so later arguments are `{…}` groups; PDF "First , group (a), pair ⟨x⟩
+%          and z."
+% engines: rust 65a = 0 errors, the pair unparsed, ⟩ lost; 65bundle and 65j round 1 = 1 error ("\bm Attempt to close
+%          a group that switched to mode math") + "Missing \right. inserted", ⟩ lost; Perl 0.8.8 bounded \bm (KPE
+%          #616)
+% expect:  0 errors; 2 warnings (the unpaired \left and \right, one per \bm); bold ⟨ x ⟩ fenced in one formula;
+%          the paired \bm{\left( a \right)} one bounded bold group as before
+% status:  RED (65bundle, 65j r1) -> GREEN (65j r2)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-2}
+\newcommand*\lin[1]{\bm{\left\langle} #1 \bm{\right\rangle}}
+\begin{document}
+First $\bm{y}$, group $\bm{\left( a \right)}$, pair $\lin{x}$ and $\bm{z}$.
+\end{document}

@@ -1046,3 +1046,34 @@ xsavebox's `\xsbox{name}{content}` saves the content as a PDF XObject and `\xuse
 the box (`<text align="center" width="22.5pt"/>`) but prints nothing, 0 diagnostics. Reaches biblatex-ext's
 open-access symbols (biblatex-ext-oasymb-*.sty save their logos with `\xsbox`; biblatex-ext.tex:3938, 3948,
 4021-4022). Not root-caused.
+
+### bm_left_right_at_the_outer_level — GREEN (65j)
+bm.sty's `\bm` scans its argument token by token and emits it ungrouped (`\bm@general`, bm.sty:162-217; `\left`/
+`\right` `\let` to `\holdinginserts` while scanning, :173-174; bold delimiter `\bm@delimiter`, :416). Our bounded
+`\bm` (Perl bm.sty.ltxml:20) digested `\left` in an argument group, which since 65d (OD #530) the `\left` group
+cannot straddle: 2204.13665 0 → 587 errors. RUST-ONLY regression (Perl: SHARED content loss, KPE #616). Fix site
+bm_sty.rs `bold_math`/`bold_run`/`bold_delimiter` (OD #544); guards `perfect_kernel_batch65j::*`. Round 3: a
+paired `\left…\right` inside one `\bm` argument stays the bounded `\lx@bm@bold` (byte-identical to the bundle); only
+an unpaired one is set at the outer level, a script's argument after it bolded whole (`\bm@expand`).
+
+### formula_end_after_extra_brace_in_left_group — RED (65j side finding)
+`${\left( } x$`: the `}` inside the `\left` group warns "Extra }, or forgotten \right." and the formula's `$` then
+does not end it; the math runs to `\end{document}` (65a and the 65 bundle alike). tex.web deletes the `}` (§1069) and
+at the `$` inserts `\right.` and `}` (§1065 off_save). The same class as SYNC row MS's `}`-meets-`\left`-group
+residual. Not root-caused.
+
+### bm_revtex_unpaired_left_right, bm_ws_class_unpaired_left_right, bm_interact_unpaired_left_right, boldsymbol_unpaired_left_right — GREEN (65j round 2)
+The `\bm` of RevTeX (Perl revtex4_support.sty.ltxml:167), of the World Scientific classes (ws-ijmpe.cls:226-230)
+and of interact.cls (:134-138), and amsbsy's `\boldsymbol`/`\pmb` (amsbsy.sty:28-37) set their argument in a box or
+group. `\bm{\left\langle} x \bm{\right\rangle}` is pdflatex's "Missing \right. inserted"/"Extra \right." with ⟩ lost;
+the 65 bundle (65d's `math_left_group`, OD #530) gave "\bm Attempt to close a group that switched to mode math".
+RUST-ONLY regression (Perl and 65a: ⟩ lost silently, KPE #616). Fix bm_sty.rs `bold_math` with
+`BoldArgument::Grouped`: a paired `\left…\right` stays the bounded constructor, an unpaired one is set at the outer
+level with a Warning (OD #544); guards `perfect_kernel_batch65j::*_unpaired_left_right_at_the_outer_level`.
+
+### bm_declared_bold_delimiter_after_left — RED (65j round 3 review)
+`\DeclareBoldMathCommand\blangle{\langle}` then `$\left\blangle x\right\rangle$` (witness 1205.4484, `\boldlangle`).
+bm.sty's `\bm@define` (:307-316) `\xdef`s `\blangle` to a bold `\delimiter` (`\bm@delimiter`, :416), so pdflatex sets a
+stretchy bold ⟨ with 0 errors. Ours defines it as `\bm{\langle}`, which `\left`'s delimiter scan cannot read: Warning
+"Missing delimiter (. inserted)" (naming `\bm` on the 65 bundle, `\lx@bm@bold` on 65j), a null `\left`, a non-stretchy
+bold ⟨ after it. SYNC_STATUS row BD. Not fixed.

@@ -12577,3 +12577,15 @@ result of the `\edef`, and the raw cell code formats the number. 64ze-65h ran in
 instead (natbib's `\appdef` left `\@temptokena` filled; the template reader now empties it as array.sty:361 does);
 witnesses 1101.1265, 0812.2309, 2609.37147 and 15 more run-340 papers; repro
 alignment-bindings/rccol_with_natbib_pushback_loop.
+
+## 616. The bounded `\bm` swallows the `\right` of a `\left` it holds
+
+Perl bm.sty.ltxml:20 `DefConstructor('\bm{}', '#1', bounded => 1, …)` digests the argument in a group, while bm.sty
+emits `\left`/`\right` at the level `\bm` is used at with a bold delimiter (bm.sty:162-217, :416). With the `\left` in
+one `\bm` and the `\right` in another, the hidden group `\left` opens (`\lx@hidden@bgroup`, TeX_Math.pool.ltxml:773-778)
+nests with the argument groups: the `\right\rangle` is lost and the text between is bolded (Perl 0.8.8, same host).
+Trigger: `\usepackage{bm}` … `$\bm{\left\langle} x \bm{\right\rangle}$` → `tex="\bm{\left\langle}x\bm{}"`, ⟨ and a
+bold x, unparsed (pdflatex: bold ⟨ x ⟩). The same bounded constructor is Perl's amsbsy `\boldsymbol`
+(amsbsy.sty.ltxml:23, with `\pmb` Let to it) and RevTeX's `\bm` (revtex4_support.sty.ltxml:167), with the same loss;
+there pdflatex errs as well (the argument is boxed), and loses the ⟩. Fixed in Rust (65j, OD #544; 2204.13665).
+

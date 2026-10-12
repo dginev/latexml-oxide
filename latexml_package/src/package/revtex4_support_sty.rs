@@ -212,8 +212,12 @@ LoadDefinitions!({
   DefConstructor!("\\text{}", "<ltx:text _noautoclose='true'>#1</ltx:text>",
     mode => "restricted_horizontal", locked => true);
 
-  // RevTeX3 bold math (obsolete in RevTeX4) — Perl L165-171
-  DefConstructor!("\\bm{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
+  // RevTeX3 bold math (obsolete in RevTeX4) — Perl L165-171. RevTeX 4.x's own `\bm` (revtex4-2.cls:7573-7586,
+  // revtex4-1.cls:7552-7565, revtex4.cls:6018-6032) asks for bm.sty ("To use \bm, please load the bm package!"),
+  // drops its first argument and leaves later ones in a `\relax{…}` group; Perl keeps a bold `\bm`, its argument in a
+  // group: a `\left` without its `\right` there is set at the outer level with a Warning (bm_sty.rs
+  // `define_grouped_bm`, OXIDIZED_DESIGN #544).
+  bm_sty::define_grouped_bm()?;
   // Perl L166-168: `locked => 1` keeps \bbox bold-wrapped even when a
   // user or co-loaded package redefines it.
   DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true,

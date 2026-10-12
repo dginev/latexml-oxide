@@ -16384,6 +16384,74 @@ sub-file loaded, as in pdflatex, where standalone.sty skips the sub-file's pream
 global. **Witness**: 2512.09430 84 → 5 Errors (the 5 left: fancyheadings' `\lhead`/`\chead`/`\rhead`/`\cfoot`/
 `\fancyplain` in the sub-file's own preamble, 64ze too). **Guard**: `perfect_kernel_batch65i::standalone_subfile_package_hooks_stay_in_its_preamble`.
 
+### 544. A `\left`, `\middle` or `\right` without its partner in a `\bm` or `\boldsymbol` argument stands at the command's level, its delimiter bold (Perl: the bounded `\bm` digests it in its argument group)
+
+**Perl behavior**: bm.sty.ltxml:20 `DefConstructor('\bm{}', '#1', bounded => 1, requireMath => 1, font => { forcebold
+=> 1 })` digests the whole argument in a group. `\bm{\left\langle} x \bm{\right\rangle}` then loses the ⟩ and bolds
+`x` (KPE #616). Since 65d `\left` opens a `math_left_group` (OD #530), and the argument's end closed it with "Missing
+\right. inserted", the next `\bm`'s `\right` closed that `\bm`'s own group, "\bm Attempt to close a group that
+switched to mode math" (2204.13665, macros.tex:37 `\newcommand*\lin[1]{\bm{\left\langle} #1 \bm{\right\rangle}}`:
+0 errors on 65a → 587 on the 65 bundle).
+**Rust behavior** (batch 65j, bm_sty.rs `bold_math`): bm.sty's `\bm` scans its argument token by token at the level it is
+used at (`\bm@general`, bm.sty:162-217), with `\left` and `\right` `\let` to `\holdinginserts` while it scans
+(:173-174): they are emitted as they are and the delimiter after them becomes a bold `\delimiter`
+(`\bm@delimiter`, :416). `\bm` is a protected macro (bm.sty:219-221 `\DeclareRobustCommand`): an argument without a
+top-level `\left`/`\middle`/`\right` (by meaning) is the bounded `\lx@bm@bold`, Perl's constructor reverting as
+`\bm`, unchanged, and so is an argument whose `\left`/`\middle`/`\right` pair up (each `\middle` and `\right`
+inside an open `\left`, every `\left` closed): the `math_left_group` opens and closes inside the bounded group, so
+the fenced whole keeps its scripts and primes, byte-identical to the 65 bundle (`\bm{\left(A+B\right)^\mathsf{T}}`,
+`\bm{x \left( y \right)_\text{L}}`, `\bm{\left(x\right)'}`; 2107.08152 `\bm{\left\langle z \right\rangle_{L,R}}`,
+1703.10645). With an unpaired one, the runs between the commands are each a `\lx@bm@bold{…}`, and each command stands
+outside them with its delimiter (one token after blanks and `\relax`, a `\delimiter`/`\Udelimiter` with its number),
+followed by `\lx@bm@delimiter`, which makes the delimiter's element (the current node's last element, as Perl's
+`augmentDelimiterProperties` finds it) bold; the null delimiter (`XMHint`) has nothing to bold. A run's leading
+scripts stay outside its group, on the fence before them, as bm.sty emits `_`/`^` where they stand, and their
+argument is bolded whole: bm.sty expands the argument as it scans it (`\bm@expand`, with `\protect` `\let` to
+`\@empty`, bm.sty:166-167, 286-287), so a command's own arguments go with it. A script argument that starts with a
+control sequence takes as many arguments as its definition has parameters (`\bm{\right\rangle_\mathrm{L}}` bolds
+`\mathrm{L}`; a `BRACED_ARGUMENT_TYPES` parameter takes an argument, an optional one its `[…]` when present). When
+that cannot be told without expanding (an undefined command, `\bgroup`, another parameter type, a parameterless
+macro before a `{`), the rest of the run is the script's argument, with a Warning `unexpected` "Cannot tell the
+argument of _ (starting \foo) after a \left, \middle or \right in the argument of \bm; the rest of the argument
+is taken as it". A leading prime is a bold `^{\prime}` (bm.sty:177 `\def'{\bm@prime\prime\relax}`), joined by a
+superscript right after it as `\active@math@prime` joins it. `\boldsymbol`, `\hm`
+and `\heavysymbol` are `\let` to `\bm` there, as bm.sty:468-469 lets them. Outside math the argument is the bounded
+constructor, and `\bm` itself warns "\bm should only appear in math mode" (Perl's `requireMath`).
+**Differences from pdflatex**: bm.sty treats a character after `\middle` as a math character (its `\ifx\bm@previous
+\left` sees `\left` and `\right` only), so `\bm{\middle|}` is pdflatex's "Missing delimiter (. inserted)" and a bold
+`|` that does not grow; here it is a bold MIDDLE delimiter, as Perl and 65a give it. `\bm{\left\relax[}` (bm.sty: a
+`\relax` between hides the delimiter, the same error) takes `[`, as tex.web §1160 does. The `tex` attribute of a
+formula keeps `\bm{…}` around the bolded runs only (`\left\langle x\right\rangle` for 2204.13665's `\lin{x}`).
+**Commands that box or group their argument** (`BoldArgument::Grouped`, 65j round 2): amsbsy's `\boldsymbol` (and
+`\pmb`, Let to it, Perl amsbsy.sty.ltxml:28) boxes its argument (amsbsy.sty:28-37, `\hbox{$…$}` in a `\mathchoice`),
+as do the `\bm` the World Scientific classes (ws-ijmpe.cls:226-230) and interact.cls (:134-138) define themselves;
+RevTeX 4.x asks for bm.sty (revtex4-2.cls:7573-7586 `\REV@bm` drops its first argument with "To use \bm, please load
+the bm package!" and leaves later ones as `\relax{…}`), and Perl keeps a bold bounded `\bm` there
+(revtex4_support.sty.ltxml:167). Each is a protected macro over a bounded constructor of its own reverting as the
+command (`\lx@boldsymbol@bold`, `\lx@bm@bold`; bm_sty.rs `define_grouped_bm` for the three classes). An argument
+whose top-level `\left`/`\middle`/`\right` pair up (each `\middle` and `\right` inside an open `\left`, every
+`\left` closed) is the bounded constructor, unchanged and byte-identical: TeX's box holds the pair too. An argument
+with an unpaired one (`\boldsymbol{\left\langle} x \boldsymbol{\right\rangle}`) is pdflatex's "Missing \right.
+inserted" at the box's end and "Extra \right." at the next box, ⟩ lost; here it is set at the outer level as bm.sty
+would set it, a bold ⟨ x ⟩ fenced in one formula, with one Warning per command, `unexpected` "\left, \middle or
+\right without its partner in the argument of \bm, whose box or group ends it in TeX ("Missing \right. inserted");
+set at the outer level" (a TeX error whose recovery is semantic). The 65 bundle and round 1 gave "\bm Attempt to
+close a group that switched to mode math" and lost the ⟩; 65a lost the ⟩ silently, the formula unparsed. RevTeX's
+own "please load the bm package" class warning is not reported (Perl keeps the bold `\bm` silently).
+Two or more bold primes after an unpaired `\right` (`\bm{\right)''}`) lose their bold when the math parser joins
+them into one `prime2` token, as `x^{\bm{\prime\prime}}` does on the 65 bundle (math parser, not this binding).
+`\DeclareBoldMathCommand\blangle{\langle}` used after `\left` is not a delimiter here (repro
+`bm_declared_bold_delimiter_after_left`, RED; witness 1205.4484).
+**Guards**: `perfect_kernel_batch65j::{bm_left_and_right_in_separate_arguments, bm_left_right_in_one_argument,
+bm_paired_left_right_keeps_its_superscript, bm_middle_bar, bm_without_delimiters_is_unchanged,
+bm_delimiter_codes_and_the_null_delimiter, bm_in_text_warns_naming_bm, bm_script_after_paired_right_stays_bounded,
+bm_script_command_argument_after_unpaired_right, bm_prime_after_unpaired_right_is_bold,
+bm_script_argument_that_cannot_be_told_warns, revtex_bm_unpaired_left_right_at_the_outer_level,
+ws_class_bm_unpaired_left_right_at_the_outer_level, interact_bm_unpaired_left_right_at_the_outer_level,
+boldsymbol_unpaired_left_right_at_the_outer_level, boldsymbol_paired_or_without_delimiters_is_unchanged}`; repros
+`tools/perfect_kernel/repros/boxes-groups/{bm_left_right_at_the_outer_level, bm_revtex_unpaired_left_right,
+bm_ws_class_unpaired_left_right, bm_interact_unpaired_left_right, boldsymbol_unpaired_left_right}.tex`.
+
 ### 545. The MnSymbol binding declares every MnSymbol name, and a name already defined keeps its definition (Perl: no binding; MnSymbol.sty redeclares the whole AMS set)
 
 **Perl behavior**: there is no MnSymbol binding. Perl reads MnSymbol.sty raw, where `\DeclareMathSymbol` into its

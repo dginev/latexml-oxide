@@ -172,6 +172,7 @@ mod perfect_kernel_batch65e;
 mod perfect_kernel_batch65f;
 mod perfect_kernel_batch65h;
 mod perfect_kernel_batch65i;
+mod perfect_kernel_batch65j;
 mod perfect_kernel_batch65l;
 mod perfect_kernel_gemini;
 mod pgfkeys_native_accessors;

@@ -1,0 +1,15 @@
+% witness: synthetic (65j round 2; the World Scientific classes' own `\bm`, ws_journal_cls.rs: ws-ijmpe.cls:226-230,
+%          ws-ijmpcs.cls:155 `\def\bm#1{\mathchoice{\mbox{\boldmath$#1$}}…}`; class witnesses 1308.3116, 2304.11343)
+% oracle:  pdflatex with ws-ijmpcs.cls (from 1308.3116) 8 errors: 4 "Missing \right. inserted" and 4 "Extra \right."
+%          (one per \mathchoice branch); PDF "First y, group (a), pair ⟨ x and z." (⟩ lost)
+% engines: rust 65a = 0 errors, the pair unparsed, ⟩ lost; 65bundle and 65j round 1 = 1 error ("\bm Attempt to close
+%          a group that switched to mode math") + "Missing \right. inserted", ⟩ lost
+% expect:  0 errors; 2 warnings (the unpaired \left and \right); bold ⟨ x ⟩ fenced in one formula; the paired
+%          \bm{\left( a \right)} one bounded bold group as before
+% status:  RED (65bundle, 65j r1) -> GREEN (65j r2)
+% preload: ar5iv.sty
+\documentclass{ws-ijmpc}
+\newcommand*\lin[1]{\bm{\left\langle} #1 \bm{\right\rangle}}
+\begin{document}
+First $\bm{y}$, group $\bm{\left( a \right)}$, pair $\lin{x}$ and $\bm{z}$.
+\end{document}
