@@ -403,8 +403,11 @@ LoadDefinitions!({
   // `#1(#2)#3@`; a caption with no `(` is all name.
   DefMacro!("\\lx@algocf@proccaption[]{}",
     r"\@ifnextchar\label{\lx@algocf@proccaption@postlabel{#2}}{\lx@algocf@proccaption@{#2}}");
-  DefMacro!("\\lx@algocf@proccaption@postlabel{} SkipMatch:\\label Semiverbatim",
-    r"\lx@algocf@proccaption@{#1\label{#2}}");
+  // cleveref's `\label[type]{key}` after a procedure's caption: the optional type is read and dropped, the key is the
+  // label — as `\@caption@postlabel` does (the mechanism of 2404.11739; OXIDIZED_DESIGN #552). Guard
+  // `perfect_kernel_batch65m::cleveref_label_type_after_caption`.
+  DefMacro!("\\lx@algocf@proccaption@postlabel{} SkipMatch:\\label [] Semiverbatim",
+    r"\lx@algocf@proccaption@{#1\label{#3}}");
   DefMacro!("\\lx@algocf@proccaption@{}", sub[(long)] {
     let toks = long.unlist();
     let mut labels = Vec::new();

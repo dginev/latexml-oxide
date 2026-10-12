@@ -1,0 +1,17 @@
+% witness: 2606.16543, 1912.04210 (~423 run-340 papers: `\newcounter{claim_nb}`, `\newfloat{ilp_formulation}`)
+% oracle:  pdflatex 0 errors: a counter name is a string (`\c@c_n`, `\thec_n`), never typeset
+% engines: rust 65i = 1 Error:unexpected:_ per stepped counter (its `\the<ctr>@ID` was built by tokenizing a string
+%          holding the name); Perl 0.8.8 the same (PERL-ORIGIN: Package.pm:695-702)
+% expect:  0 errors; the claim's id holds its counter's name: xml:id="Thmthm1.claim_nb1"
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcounter{c_n}
+\newtheorem{thm}{Theorem}
+\newcounter{claim_nb}[thm]
+\newtheorem{claim}[claim_nb]{Claim}
+\begin{document}
+\refstepcounter{c_n}\label{x} A \ref{x}.
+\begin{thm}A\end{thm}
+\begin{claim}\label{c}B\end{claim}
+\end{document}

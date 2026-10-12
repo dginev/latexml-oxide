@@ -340,13 +340,23 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
           // semantics — `create_xmrefs`/`get_xmarg_id`). Witness
           // math0402448 (plain TeX + 3464 formulae): "Conversion failed:
           // 1 fatal error" with no Fatal: line in the log.
-          mouth::tokenize_internal(TeXString::assembled(s!(
-            "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\lx@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
-            idwithin,
-            idwithin,
-            prefix,
-            ctr_string
-          )))
+          // The names are spliced in as characters (`id_name_chars`, as `define_hyper_counter_name` does), never
+          // re-read from a string: a counter named `claim_nb` or `c_n` (2606.16543, 1912.04210) made the `_` a
+          // subscript, digested for the id ("Script _ can only appear in math mode"; Perl Package.pm:695-702 alike,
+          // KNOWN_PERL_ERRORS #621). Guard `perfect_kernel_batch65m::counter_name_with_underscore_is_its_id`.
+          let mut body = vec![T_CS!("\\expandafter"), T_CS!("\\ifx"), T_CS!("\\csname")];
+          body.extend(id_name_chars(&s!("the{idwithin}@ID")));
+          body.extend([
+            T_CS!("\\endcsname"),
+            T_CS!("\\lx@empty"),
+            T_CS!("\\else"),
+            T_CS!("\\csname"),
+          ]);
+          body.extend(id_name_chars(&s!("the{idwithin}@ID")));
+          body.extend([T_CS!("\\endcsname"), T_OTHER!("."), T_CS!("\\fi")]);
+          body.extend(id_name_chars(&prefix));
+          body.extend(counter_id_number(&ctr_string));
+          Tokens::new(body)
         })),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
@@ -357,9 +367,11 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Tokens(mouth::tokenize_internal(
-          TeXString::assembled(s!("{prefix}\\csname @{ctr_string}@ID\\endcsname",)),
-        ))),
+        Some(ExpansionBody::Tokens({
+          let mut body = id_name_chars(&prefix);
+          body.extend(counter_id_number(&ctr_string));
+          Tokens::new(body)
+        })),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
@@ -378,6 +390,31 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   }
 
   Ok(())
+}
+/// A name in a `\the<ctr>@ID` body as characters: letters and `@` letters, the rest other, as `tokenize_internal`
+/// reads a name made of them (the format dump keeps those bodies), but a `_`, `^` or `&` in the name is a character too.
+fn id_name_chars(name: &str) -> Vec<Token> {
+  name
+    .chars()
+    .map(|c| {
+      let mut buf = [0u8; 4];
+      let c_str: &str = c.encode_utf8(&mut buf);
+      if c == ' ' {
+        T_SPACE!()
+      } else if c == '@' || c.is_alphabetic() {
+        T_LETTER!(c_str)
+      } else {
+        T_OTHER!(c_str)
+      }
+    })
+    .collect()
+}
+/// `\csname @<ctr>@ID\endcsname`, the counter's number in an id, the name spliced in as characters.
+fn counter_id_number(ctr: &str) -> Vec<Token> {
+  let mut toks = vec![T_CS!("\\csname")];
+  toks.extend(id_name_chars(&s!("@{ctr}@ID")));
+  toks.push(T_CS!("\\endcsname"));
+  toks
 }
 /// Fetches the value associated with the counter C<$ctr>.
 pub fn counter_value(ctr: &str) -> Result<Number> {

@@ -64,7 +64,14 @@ pub const STORE_SETTERS: &[(&str, &str)] = &[
   ("issue", "\\lx@add@pubnote[role=issue]{#1}"),
   ("pubinfo", "\\lx@add@pubnote{#1}"),
   ("origin", "\\lx@add@pubnote{#1}"),
-  ("doi", "\\lx@add@pubnote[role=doi]{#1}"),
+  // A DOI is a string, as the classes print it (sig-alternate-05-2015.cls:1639-1641 `\def\doi#1{\def\@doi{#1}}`,
+  // `\printdoi` = `\url`): its `_` was digested as a subscript in the pubnote (1610.03579, 1710.01977; OXIDIZED_DESIGN
+  // #551). It is set as ASCII text, as `\lx@address@textfont` sets an address. Guard
+  // `perfect_kernel_batch65m::raw_class_doi_is_a_string`.
+  (
+    "doi",
+    "\\lx@add@pubnote[role=doi]{\\lx@address@textfont{\\detokenize{#1}}}",
+  ),
   ("conferenceinfo", "\\lx@add@pubnote[role=conference]{#1}"),
   ("articletype", "\\lx@add@pubnote[role=type]{#1}"),
   ("orcid", "\\lx@add@orcid{#1}"),

@@ -527,7 +527,10 @@ LoadDefinitions!({
     assign_value("lx@float@captionof", false, Some(Scope::Global));
   });
   DefMacro!("\\@captionof{}[]{}", r"\@ifnextchar\label{\@captionof@postlabel{#1}{#2}{#3}}{\@captionof@{#1}{#2}{#3}}");
-  DefMacro!("\\@captionof@postlabel{}{}{} SkipMatch:\\label Semiverbatim", r"\@captionof@{#1}{#2}{#3\label{#4}}");
+  // cleveref's `\label[type]{key}` after `\captionof`: the optional type is read and dropped, the key is the label — as
+  // `\@caption@postlabel` does (the mechanism of 2404.11739; OXIDIZED_DESIGN #552). Guard
+  // `perfect_kernel_batch65m::cleveref_label_type_after_caption`.
+  DefMacro!("\\@captionof@postlabel{}{}{} SkipMatch:\\label [] Semiverbatim", r"\@captionof@{#1}{#2}{#3\label{#5}}");
   // Perl wraps the caption in the named environment — "it isn't necessarily IN
   // a figure or any float, so we'll wrap it in an otherwise empty one!"
   // (`caption.sty.ltxml` L124-125) — and that is FATAL when the environment

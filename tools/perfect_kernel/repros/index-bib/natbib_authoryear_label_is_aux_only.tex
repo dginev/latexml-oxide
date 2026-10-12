@@ -1,0 +1,17 @@
+% witness: 1904.06560 (numeric sibling: natbib_bibitem_label_is_aux_only); the ACM `\citeauthoryear{??}{eu_}` shape
+% oracle:  pdflatex 0 errors: in author-year mode natbib's list prints no label (natbib.sty:822 writes it to the .aux)
+% engines: rust 65i = 5 Error:unexpected:_ (the authors, fullauthors and refnum tags); Perl 0.8.8 the same
+%          (natbib.sty.ltxml:622-631)
+% expect:  0 errors; the tags as plain text: authors "Data_Set", year "2020", refnum "Data_Set (2020)"; the second
+%          entry's authors "Eu_B", fullauthors "Eu_A"
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+Text \nocite{ds}.
+\begin{thebibliography}{1}
+\bibitem[{Data_Set(2020)}]{ds} A data set.
+\bibitem[\protect\citeauthoryear{Eu_A}{Eu_B}{2019}]{eu} Another.
+\end{thebibliography}
+\end{document}

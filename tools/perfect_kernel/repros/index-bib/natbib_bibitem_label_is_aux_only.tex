@@ -1,0 +1,16 @@
+% witness: 1904.06560, 2205.04819, 2109.10085, 1605.08253, 2109.10374, 0807.3242, 1505.07850, 2102.09024, 2111.04920
+%          (~1,900 run-340 papers: `\bibitem[{MS_()}]` in a numeric revtex/natbib .bbl)
+% oracle:  pdflatex 0 errors: natbib.sty:822 `\NAT@wrout` only writes the label to the .aux (`\bibcite`); the
+%          numeric list prints "[1]", and only a `\citet` would typeset the authors
+% engines: rust 65i = 1 Error:unexpected:_ (Script _ in the authors tag); Perl 0.8.8 the same (PERL-ORIGIN:
+%          natbib.sty.ltxml:622-631 digests the label as typeset text)
+% expect:  0 errors; <tag role="authors">MS_</tag>, the label kept as plain text
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+Text \cite{MS_QDK}.
+\begin{thebibliography}{1}
+\bibitem [{MS_()}]{MS_QDK} The Microsoft Quantum Development Kit.
+\end{thebibliography}
+\end{document}

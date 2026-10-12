@@ -75,7 +75,14 @@ LoadDefinitions!({
     "\\altaffiliation[]{}",
     "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
   );
-  DefMacro!("\\email{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  // achemso.cls:513-520 `\email` stores the address for the author's footnote (`\@email@<n>`): an address, read as
+  // the other classes' are (`\lx@address@textfont`, revtex4_support_sty.rs), so `ranojoy_bose@apple.com` is no
+  // subscript ("Script _ can only appear in math mode", 1803.03591; OXIDIZED_DESIGN #551). Guard
+  // `perfect_kernel_batch65m::file_arguments_are_not_typeset`.
+  DefMacro!(
+    "\\email Semiverbatim",
+    "\\lx@add@email{\\lx@address@textfont{#1}}"
+  );
   DefMacro!("\\phone{}", "\\@add@frontmatter{ltx:note}[role=phone]{#1}");
   DefMacro!("\\fax{}", "\\@add@frontmatter{ltx:note}[role=fax]{#1}");
   // achemso.cls:1115-1124: `suppinfo` is an environment that opens an unnumbered "Supporting Information Available"

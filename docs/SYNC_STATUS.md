@@ -567,6 +567,34 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     kernel-alignment/column_rewrite_reads_temptokena_empty, alignment-bindings/rccol_with_natbib_pushback_loop,
     loader/standalone_subfile_xcolor_tabular_hooks (all GREEN); RED paragraph-mode/dollar_closes_open_script_group
     (row MS).
+- **65m** (recorded surpass + Perl-origin fixes; run 340's first-error cluster `Script _ can only appear in math mode`,
+  6,357 papers, root-cause table `~/data/pk_agents/main/run340/clusters/underscore_rootcauses.md`): text TeX only
+  stores, writes to an auxiliary file, or gobbles is not digested as typeset content.
+  - **Written copies** (A1+A2, ≈2,750 papers): natbib's `\bibitem` label (natbib.sty:822, .aux only) and a caption's
+    or heading's `[short]` form (.lof/.toc) are digested with `tex_math::WRITTEN_COPY` set (`\lx@written@copy` in
+    `\lx@toc@copy@neutralize`; natbib's `\NAT@@wrout`), where a text-mode `_`/`^` is its character without the Error
+    (OD #550, KPE #620).
+  - **Names and gobbled arguments** (A3-A6, B1-B3): imsart's `\bdoi` gobbles (imsart.sty:2583); feynmp's `{fmffile}`,
+    cas's `\bio`, aastex's `{interactive}` read their file arguments Semiverbatim; achemso's `\email` is the author's
+    `ltx:contact`; a raw class's rerouted `\doi` store is a detokenized string; `\the<ctr>@ID` splices the counter's
+    name as characters (OD #551, KPE #621). **A7**: cleveref's `\label[type]{key}` after `\caption`, a procedure's caption (algorithm2e) or
+    `\captionof` (OD #552).
+  - Witnesses (base 138cf5b167 → 65m, Errors): 23 of the table's 26 → 0; 2102.09024 3 → 1 (`\captionof`),
+    1511.07613 3 → 2 (imsart `\setattribute`, `\endbibitem`), 2303.02355 28 → 7. 25 more found by grep (natbib
+    labels, `\caption[…_…]`, `\newcounter{…_…}`): 17 with errors, all → 0. 60 random natbib/`\caption[` papers:
+    byte-identical XML. Visible changes: imsart entries lose their DOI (as the PDF), 2404.11739's floats get their
+    labels (`labels="LABEL:["` before), 1803.03591's e-mails are the authors' contacts.
+  - **Open**: aastex's `\tablenotetext{^a}` digests its mark as text (deluxetable_sty.rs:128; aastex631.cls:5382 sets
+    it `$^{…$#1$}$`: 2303.02355's 6 left); a `.bbl` call of a raw class's `\doi` adds a second DOI pubnote
+    (1710.01977); cleveref's `[type]` is dropped, so `\cref` says "table" where the PDF says "Appendix Table"
+    (2404.11739). Guards `perfect_kernel_batch65m::*`; repros index-bib/natbib_bibitem_label_is_aux_only,
+    index-bib/natbib_authoryear_label_is_aux_only, captions-floats/caption_short_form_is_lof_only,
+    captions-floats/cleveref_label_type_after_caption, captions-floats/cleveref_label_type_after_procedure_caption,
+    captions-floats/cleveref_label_type_after_captionof, macro-state/counter_name_with_underscore,
+    class-bindings/imsart_bdoi_is_gobbled, class-bindings/cas_bio_photo_file_is_not_typeset,
+    class-bindings/achemso_email_is_an_address, class-bindings/aastex_interactive_arguments_are_not_typeset,
+    graphics-tikz/feynmp_fmffile_name_is_not_typeset, sectioning-frontmatter/raw_class_doi_store_is_a_string (all
+    GREEN).
 - **65f** (RUST-ONLY + one recorded surpass; run-338 Error→Fatal kernel/mode clusters):
   - **Plain TeX documents** (`state::plain_tex_document`): the on-undefined LaTeX autoload no longer fires there, so a
     LaTeX kernel command is undefined as in TeX and Perl (1504.02513, 1402.1807, 1310.8121, 2405.04530 `\verbatim`

@@ -12613,3 +12613,22 @@ Perl hyperref.sty.ltxml:68 declares `backref` and `pagebackref` as no-op options
 \usepackage[pagebackref]{hyperref}\begin{document}\begin{thebibliography}{1}\backrefparscanfalse\bibitem{b} B.
 \end{thebibliography}\end{document}` → `Error:undefined:\backrefparscanfalse` (pdflatex: 0 errors). Fixed in Rust (65k,
 OD #547; witness 1809.07574).
+
+## 620. A natbib label and a caption's or heading's short form are digested as typeset text
+
+natbib.sty.ltxml:622-631 digests the `\bibitem[label]` pieces into `ltx:tag`s, and latex_constructs.pool.ltxml:3189 and
+:3370 digest a `\caption[short]` / `\section[short]` into `ltx:toccaption` / `ltx:toctitle`, all as typeset text; TeX
+only writes them to the .aux / .lof / .toc (natbib.sty:822, latex.ltx:17403-17404, `\@sect`). Trigger
+`\documentclass{revtex4-2}\begin{document}Text \cite{k}.\begin{thebibliography}{1}\bibitem [{MS_()}]{k} A.
+\end{thebibliography}\end{document}` → Perl 1 error ("Script _ can only appear in math mode"); likewise
+`\documentclass{article}\begin{document}\begin{figure}A\caption[fig_a]{A.}\end{figure}\end{document}` → 1; pdflatex 0.
+Fixed in Rust (65m, OD #550; 1904.06560, 1303.1693; repros index-bib/natbib_bibitem_label_is_aux_only,
+captions-floats/caption_short_form_is_lof_only).
+
+## 621. A counter whose name holds `_` errs at every step: its `\the<ctr>@ID` re-reads the name with live catcodes
+
+Package.pm:695-702 `NewCounter` defines `\the<ctr>@ID` from a string holding the counter's (and its parent's) name,
+tokenized with the standard catcodes, so a `_` in the name is a subscript, digested whenever an id is made. Trigger
+`\documentclass{article}\newcounter{c_n}\begin{document}\refstepcounter{c_n}\label{x}A\end{document}` → Perl 1 error
+("Script _ can only appear in math mode"); pdflatex 0. Fixed in Rust (65m, OD #551; 2606.16543, 1912.04210; repro
+macro-state/counter_name_with_underscore).

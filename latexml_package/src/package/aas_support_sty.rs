@@ -715,7 +715,10 @@ LoadDefinitions!({
   DefMacro!("\\phs", "\\phantom{+}");
   DefMacro!("\\phm{}", "\\phantom{string}");
 
-  DefEnvironment!("{interactive}{}{}", "#body");
+  // aastex701.cls:13650-13674 `\interactive#1#2` only tests its arguments (the type `lc`/`js`/`animation`, the file),
+  // never typesets them: a file `rolling_ns3.mp4` raised "Script _ can only appear in math mode" (2303.02355;
+  // OXIDIZED_DESIGN #551). Guard `perfect_kernel_batch65m::file_arguments_are_not_typeset`.
+  DefEnvironment!("{interactive} Semiverbatim Semiverbatim", "#body");
   DefEnvironment!("{longrotatetable}", "#body");
   // aastex701.cls TL :12212-12231 — `rotatetable(*)` sets its table turned 90° on its own page, page layout as for
   // `longrotatetable` (2609.01052).

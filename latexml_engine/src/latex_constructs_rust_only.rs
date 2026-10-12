@@ -74,9 +74,15 @@ LoadDefinitions!({
   // (`\label[algorithm]{…}`, cleveref, after a caption: 2605.13648).
   DefMacro!("\\lx@gobble@om[]{}", "");
   DefMacro!("\\lx@gobble@som OptionalMatch:* [] {}", "");
+  // The copy is text TeX writes and does not typeset there, so a `_` or `^` in a caption's `[short_x]` or a heading's
+  // `[sec_a]` is its character (`tex_math::WRITTEN_COPY`, OXIDIZED_DESIGN #550; 1303.1693, 1206.2108,
+  // astro-ph0412052, hep-lat9812022). Guard `perfect_kernel_batch65m::short_forms_are_list_text`.
+  DefPrimitive!("\\lx@written@copy", {
+    assign_value(crate::tex_math::WRITTEN_COPY, true, Some(Scope::Local));
+  });
   DefMacro!(
     "\\lx@toc@copy@neutralize",
-    r"\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
+    r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
   );
 
   //======================================================================

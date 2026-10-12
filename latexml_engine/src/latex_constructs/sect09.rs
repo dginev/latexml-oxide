@@ -69,9 +69,12 @@ pub(crate) fn load() -> Result<()> {
     locked=>true
   );
   // Check for trailing \label, move it into the caption
+  // cleveref's `\label[type]{key}` (cleveref.sty `\label` takes an optional type; our `\lx@cleverref@label[]` drops it)
+  // gives its `[type]` here too: read as the key, `[` became the label and the key was typeset (2404.11739; OXIDIZED_DESIGN
+  // #552). Guard `perfect_kernel_batch65m::cleveref_label_type_after_caption`.
   DefMacro!(
-    r"\@caption@postlabel{}{}{} SkipMatch:\label Semiverbatim",
-    r"\@caption@{#1}{#2}{#3\label{#4}}"
+    r"\@caption@postlabel{}{}{} SkipMatch:\label [] Semiverbatim",
+    r"\@caption@{#1}{#2}{#3\label{#5}}"
   );
   DefMacro!(
     r"\@caption@{}{}{}",

@@ -1,0 +1,15 @@
+% witness: 2303.02355 (`\begin{interactive}{animation}{rolling_ns3.mp4}`)
+% oracle:  pdflatex 0 errors: aastex701.cls:13650-13674 `\interactive#1#2` only tests the type and the file
+% engines: rust 65i = 1 Error:unexpected:_ (aas_support_sty.rs digested both); Perl 0.8.8 = 1 (aas_support.sty.ltxml:229)
+% expect:  0 errors; the figure holds "A" and its caption, no "animation" or file name text
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\begin{figure}
+\begin{interactive}{animation}{rolling_ns3.mp4}
+\centering A
+\end{interactive}
+\caption{C}
+\end{figure}
+\end{document}

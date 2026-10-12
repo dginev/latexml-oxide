@@ -931,6 +931,11 @@ LoadDefinitions!({
     before_digest => {
       bgroup();
       Let!(T_ALIGN!(), T_CS!("\\&"));
+      // The label is what natbib.sty:822 `\NAT@wrout` writes to the .aux (`\bibcite`), not typeset by the list: its
+      // `_`/`^` are characters (`tex_math::WRITTEN_COPY`, OXIDIZED_DESIGN #550; KNOWN_PERL_ERRORS #620). Witnesses
+      // 1904.06560, 2205.04819, 2109.10085 (`\bibitem [{MS_()}]`). Guard
+      // `perfect_kernel_batch65m::natbib_label_is_tag_text`.
+      assign_value(latexml_engine::tex_math::WRITTEN_COPY, true, Some(Scope::Local));
     },
     after_digest => sub[_whatsit] {
       // Soft egroup: pop_stack_frame directly, bypassing the standard

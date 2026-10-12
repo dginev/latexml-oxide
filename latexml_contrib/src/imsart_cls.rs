@@ -175,7 +175,10 @@ LoadDefinitions!({
   def_macro_identity("\\baddress{}")?;
   def_macro_identity("\\borganization{}")?;
   def_macro_identity("\\bcollaboration{}")?;
-  def_macro_identity("\\bdoi{}")?;
+  // Except `\bdoi`, which imsart.sty gobbles "for compatibility with old bibtex style" (:2583 `\def\bdoi#1{\ignorespaces}`,
+  // :4151 in later copies): printed, its DOI's `_` raised "Script _ can only appear in math mode" (1405.0671,
+  // 1511.07613, 2110.07639; OXIDIZED_DESIGN #551). Guard `perfect_kernel_batch65m::imsart_bdoi_is_gobbled`.
+  DefMacro!("\\bdoi{}", "\\ignorespaces");
   def_macro_identity("\\burl{}")?;
   def_macro_identity("\\bothertype{}")?;
   def_macro_identity("\\bparticle{}")?;

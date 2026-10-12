@@ -1,0 +1,15 @@
+% witness: 2203.04264 (`\bio{Figures/chamara_sandeepa.png}`)
+% oracle:  pdflatex 1 error, the missing photo only (cas-common.sty:2402-2412 `\bio{O{} m}` includes #2 as a graphic,
+%          `\WrapFigure` :2375; it never typesets the name)
+% engines: rust 65i = 1 Error:unexpected:_ (cas_dc_cls.rs digested the file name); Perl 0.8.8 = 3
+% expect:  0 errors; <note role="biography"> holding "C. S. is a student.", no file name text
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title[mode=title]{T}
+\maketitle
+Text.
+\bio{Figures/chamara_sandeepa.png}\textbf{C. S.} is a student.
+\endbio
+\end{document}

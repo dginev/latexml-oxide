@@ -216,8 +216,13 @@ LoadDefinitions!({
   DefEnvironment!("{graphicalabstract}[]",
     "<ltx:note role='graphicalabstract'>#body</ltx:note>",
     mode => "internal_vertical");
-  DefEnvironment!("{bio}{}",
-    "<ltx:note role='biography' name='#1'>#body</ltx:note>",
+  // cas-common.sty:2402 `\NewDocumentCommand \bio { O{} m }`: the options and the photo's file, which `\WrapFigure`
+  // includes (`\includegraphics{#2}`, :2376) and never typesets: `\bio{Figures/chamara_sandeepa.png}` raised "Script _
+  // can only appear in math mode" (2203.04264; OXIDIZED_DESIGN #551), and `\bio[width=…]{…}` read `[` as the file.
+  // The photo is not carried: `ltx:note` has no attribute for it (the schema drops a `name`). Guard
+  // `perfect_kernel_batch65m::file_arguments_are_not_typeset`.
+  DefEnvironment!("{bio}[] Semiverbatim",
+    "<ltx:note role='biography'>#body</ltx:note>",
     mode => "internal_vertical");
   // \newproof{env}{display-name} — cas-common's environment factory
   // for proof-like environments. Define a basic environment that

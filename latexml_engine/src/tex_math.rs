@@ -49,6 +49,13 @@ fn merge_limits(pos: &str) {
 // Sub/superscript handling (Perl: TeX_Math.pool.ltxml L353-570)
 // Moved from tex_scripts.rs to match Perl's single-file organization.
 //======================================================================
+/// The state value naming a copy that TeX only writes to an auxiliary file or a list (natbib's `\bibitem` label,
+/// natbib.sty:822 `\NAT@wrout` to the .aux; a caption's or heading's list entry, latex.ltx:17403-17404 and `\@sect` to
+/// the .lof/.toc): set locally while such a copy is digested (`\lx@written@copy`, natbib's `\NAT@@wrout`). TeX never
+/// typesets the copy where it is made, so a `_` or `^` in its text is that character, with no Error — pdflatex gives
+/// none (OXIDIZED_DESIGN #550). Witnesses 1904.06560, 2205.04819 (natbib labels), 1303.1693, 1206.2108 (`\caption[short_x]`).
+pub const WRITTEN_COPY: &str = "lx@written@copy";
+
 static SCRIPT_NAME_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\lx@(floating|post)@(subscript|superscript)$").unwrap());
 
@@ -264,11 +271,14 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     // Perl-faithful lowercase category — matches TeX_Math.pool.ltxml:424
     // `Error('unexpected', $c, $stomach, "Script $c can only appear in math
     // mode")` and the rest of the engine's lowercase categories. Was a typo.
-    Error!(
-      "unexpected",
-      c,
-      format!("Script {c} can only appear in math mode")
-    );
+    // In a written copy (`WRITTEN_COPY`) the character is the copy's text: TeX does not typeset it there.
+    if !lookup_bool(WRITTEN_COPY) {
+      Error!(
+        "unexpected",
+        c,
+        format!("Script {c} can only appear in math mode")
+      );
+    }
     let placeholder = if cc == Catcode::SUPER {
       T_SUPER!()
     } else {

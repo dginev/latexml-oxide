@@ -29,7 +29,10 @@ pub(crate) fn feynmf_graph_environments() -> Result<()> {
     mode => "internal_vertical");
   // {fmffile}{name} - wraps a Feynman-diagram session. Render as no-op
   // env (the diagrams inside are rendered by {fmfgraph}/{fmfgraph*}).
-  DefEnvironment!("{fmffile}{}", "#body", mode => "internal_vertical");
+  // The argument is the METAFONT/MetaPost file's name (feynmp.sty:97-109 `\def\thefmffile{#1}`, `\openout`), never
+  // typeset: `{sde_feynman}` raised "Script _ can only appear in math mode" (1906.06341, 2512.17695; OXIDIZED_DESIGN
+  // #551). Guard `perfect_kernel_batch65m::file_arguments_are_not_typeset`.
+  DefEnvironment!("{fmffile} Semiverbatim", "#body", mode => "internal_vertical");
   Ok(())
 }
 

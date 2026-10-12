@@ -12912,7 +12912,8 @@ all but one corpus case (2605.26800's second `dh`, pinned) and the colon stop wr
 material (latex_constructs.pool.ltxml:627-628, :3187-3190), so a `\protect\footnote` in a heading
 steps the counter twice and a caption's note appears twice; every later note's number shifts
 (KNOWN_PERL_ERRORS #417). **Rust** digests the copy under `\lx@toc@copy@neutralize` (the note
-constructors, the current footnote hooks, `\label`, `\index`, `\glossary` gobbled by plain `o m`/`s o m` macros — LaTeX's ltcmd expandable
+constructors, the current footnote hooks, `\label`, `\index`, `\glossary` gobbled by plain `o m`/`s o m` macros, and since 65m
+a `_`/`^` in its text a character, `tex_math::WRITTEN_COPY`, #550 — LaTeX's ltcmd expandable
 `\@gobble@om` left a constructor argument's frame open, 2605.13648), inside
 `\lx@format@toctitle@@`'s group and around the direct `\@@toccaption` callers (listings,
 algorithm2e). Witnesses 2605.15775, 2605.09284, 2605.19033 (20 of the 3,003 A/B papers). Guards
@@ -16601,3 +16602,77 @@ achemso 1710.02414, 2006.15922, 2112.07721, 2202.05883.
 
 **Guards**: `perfect_kernel_batch65k::{pnas_new_dates_dropcap_and_tikz, pnas_new_show_matmethods_acknow,
 achemso_section_abstract_switches}`.
+
+### 550. A copy TeX only writes to an auxiliary file is text: a `_` or `^` in a natbib label or a `[short]` form is its character (Perl: digested as typeset text, "Script _ can only appear in math mode")
+
+natbib's `\bibitem[label]` hands the label to `\NAT@wrout` (natbib.sty:822), which only writes it to the .aux as
+`\bibcite{key}{{num}{year}{{authors}}{{fullauthors}}}`; the numeric list prints `[num]`, the author-year list nothing,
+and only a `\citet`/`\citeauthor` typesets the authors. A caption's `[short]` form goes to the .lof
+(`\addcontentsline`, latex.ltx:17403-17404) and a heading's to the .toc (`\@sect`), typeset only by
+`\listoffigures`/`\tableofcontents`. So pdflatex raises nothing for `\bibitem[{MS_()}]{key}` or `\caption[fig_a]{…}`
+in a document without such a use. Perl digests the label into the `ltx:tags` (natbib.sty.ltxml:622-631) and the short
+form into `ltx:toccaption`/`ltx:toctitle` (latex_constructs.pool.ltxml:3189, :3370) as typeset text, and each `_` is
+"Script _ can only appear in math mode" (KNOWN_PERL_ERRORS #620): the first error of about 2,750 run-340 papers.
+
+**Rust** (batch 65m): such a copy is digested with the state value `tex_math::WRITTEN_COPY` set locally — by
+`\lx@written@copy`, which `\lx@toc@copy@neutralize` (latex_constructs_rust_only.rs, the toc copy's neutralization of
+notes and labels, #399) runs first, and by natbib's `\NAT@@wrout` in its own group. There a `_` or `^` met in text mode
+is its character, the box the script handler builds for it anyway, without the Error; in math it is a script as
+always. The text stays where we show it: the tags read `MS_`, `Data_Set (2020)`, the toccaption `fig_a`. A `\citet` that
+later shows the authors tag shows the text where pdflatex would err; no diagnostic is given at that use (the tag is
+copied in post-processing). **Witnesses** (65m base → 65m, Errors): natbib 1904.06560 1 → 0, 2205.04819 1 → 0,
+2109.10085 4 → 0, 1605.08253 1 → 0, 2109.10374 1 → 0, 0807.3242 1 → 0, 1505.07850 1 → 0, 2102.09024 3 → 1 (`\captionof`
+undefined), 2111.04920 2 → 0; `\caption[short_x]` 1303.1693 21 → 0, 1206.2108 1 → 0, astro-ph0412052 3 → 0,
+hep-lat9812022 3 → 0. **Guards**: `perfect_kernel_batch65m::{natbib_label_is_tag_text, short_forms_are_list_text}`.
+
+### 551. Arguments TeX gobbles or reads as names are not typeset: imsart's `\bdoi`, feynmp's `{fmffile}`, cas's `\bio`, aastex's `{interactive}`, achemso's `\email`, a raw class's stored `\doi`, a counter's name in its id (Perl: digested as text, or no binding)
+
+Each of these arguments is never typeset by TeX, and digested as text its `_` raised "Script _ can only appear in math
+mode":
+- imsart.sty:2583 (`:4151` in later copies) `\def\bdoi#1{\ignorespaces}` gobbles a .bbl entry's DOI; the binding
+  (latexml_contrib imsart_cls.rs) printed it with the other field macros. It gobbles now, so the DOI is absent from the
+  entry as in the PDF (Perl: `\bdoi` undefined, 2 errors). 1405.0671 2 → 0, 1511.07613 3 → 2 (imsart's `\setattribute`
+  and `\endbibitem` undefined), 2110.07639 1 → 0.
+- feynmp.sty:97-109 `\fmffile#1` names the MetaPost file; `{fmffile}` reads it Semiverbatim (Perl 6 errors).
+  1906.06341 2 → 0, 2512.17695 2 → 0.
+- cas-common.sty:2402-2412 `\bio{O{} m}` includes `#2` as the author's photo (`\WrapFigure`, :2375); `{bio}[]
+  Semiverbatim` (the optional was read as the file before). 2203.04264 3 → 0.
+- aastex701.cls:13650-13674 `\interactive#1#2` only tests the type and the file; both Semiverbatim (Perl
+  aas_support.sty.ltxml:229 the same as before). 2303.02355 28 → 7 (6 left are `\tablenotetext{^a}`,
+  deluxetable_sty.rs:128, not this mechanism).
+- achemso.cls:513-520 `\email` stores the address for the author's footnote; read Semiverbatim and given to the author
+  as the other classes' addresses are (`\lx@add@email{\lx@address@textfont{…}}`), an `ltx:contact role="email"` of the
+  creator instead of a frontmatter `ltx:note` (Perl raw-loads the class, 0 errors). 1803.03591 1 → 0.
+- A raw class's `\doi` store (sig-alternate-05-2015.cls:1639-1641 `\def\doi#1{\def\@doi{#1}}`, printed by `\url`),
+  rerouted to the frontmatter (K11, `store_setters.rs`), is set as a string: `\lx@add@pubnote[role=doi]{\lx@address@textfont
+  {\detokenize{#1}}}`. The DOI's source text is deliberate: the class prints `\@doi` through `\url`, which prints
+  `\_` and `\textless` as written (pdflatex: `\doi{10.1002/a\_b\textless{}c}` shows "10.1002/a\_b\textless{}c"), so
+  the pubnote holds `10.1002/a\_b` too. Residual: `\detokenize` adds a space after a control word (`\textless {}`),
+  which `\url` does not print. 1610.03579 1 → 0, 1710.01977 1 → 0. Open: a `.bbl` that calls the class's `\doi` again (1710.01977)
+  still adds a second DOI pubnote, where the class only re-sets the store that its title page had already printed.
+- A counter's `\the<ctr>@ID` (Perl Package.pm:695-702 builds it from a string tokenized with the standard catcodes) is
+  built from the counter's name as characters (`counter/dialect.rs` `id_name_chars`, letters and `@` letters as the
+  string reader made them, so the format dump's bodies are unchanged), so `\newcounter{claim_nb}` or
+  `\newfloat{ilp_formulation}` no longer puts a subscript into every id it steps (KNOWN_PERL_ERRORS #621). 2606.16543
+  17 → 0, 1912.04210 2 → 0.
+
+**Guards**: `perfect_kernel_batch65m::{imsart_bdoi_is_gobbled, file_arguments_are_not_typeset,
+raw_class_doi_is_a_string, counter_name_with_underscore_is_its_id}`.
+
+### 552. cleveref's `\label[type]{key}` right after `\caption` keeps its key (Perl: `[` is read as the label)
+
+`\@caption` moves a `\label` that follows the caption into it (`\@caption@postlabel … SkipMatch:\label Semiverbatim`,
+latex_constructs.pool.ltxml:3172), reading the label's key as the next argument. cleveref's `\label` takes an optional
+type, `\label[appendixtable]{tab:a_b}`, so the key read was `[`: `labels="LABEL:["`, the rest `appendixtable]tab:a_b`
+typeset in the float, and a `_` in the key an Error (Perl the same). **Rust** (batch 65m): `\@caption@postlabel` reads
+the optional and passes only the key on, as our cleveref binding's `\lx@cleverref@label[]` drops the type anyway.
+**Witness**: 2404.11739 8 → 0 (`labels="LABEL:tab:_app_sim_baranov_binM"`). Open: the type itself is lost, so `\cref`
+shows "table 1" where pdflatex shows "Appendix Table 1" (the binding's `[type]`, not this site); likewise a procedure's
+`\cref` shows our refnum `Proc` where pdflatex shows "Procedure -" (predates 65m). The two other sites that
+move a trailing `\label` the same way read the optional too: algorithm2e's procedure caption
+(`\lx@algocf@proccaption@postlabel`, algorithm2e_sty.rs) and caption.sty's `\captionof` (`\@captionof@postlabel`,
+caption_sty.rs; Perl caption.sty.ltxml:122 the same as pool:3172). subeqn's `\@lab@subeqnarray` (subeqn.sty:57 `[2]`, so
+pdflatex reads `[` too) is left as TeX has it. The label-mapping peek `maybe_peek_label` (counter/dialect.rs; Perl
+Package.pm:819ff the same) also reads `[` as the key, but runs only under a label-mapping hook, which only the test
+helper `labelled_tex.rs` sets. **Guard**: `perfect_kernel_batch65m::cleveref_label_type_after_caption`
+(repros captions-floats/cleveref_label_type_after_{caption,procedure_caption,captionof}).
