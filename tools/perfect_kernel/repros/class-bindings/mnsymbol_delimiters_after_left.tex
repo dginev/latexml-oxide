@@ -1,0 +1,11 @@
+% witness: 2112.14729 (`\lsem`), 2410.20575 (`\left\lsem {#1}\right\rsem`)
+% oracle:  pdflatex 0 errors (MnSymbol.sty:1670-1695 `\Decl@Mn@Open{\lsem}{largesymbols}{'102}`: a \delimiter)
+% engines: rust 65bundle = 4 errors (`\lsem`, `\rsem`, `\langlebar`, `\ranglebar` undefined)
+% expect:  0 errors, 0 warnings; each formula one fenced XMDual, ⟦…⟧ and ⦉…⦊ stretchy
+% status:  RED (65bundle) -> GREEN (65l); guard perfect_kernel_batch65l::mnsymbol_delimiters_fence_after_left
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{MnSymbol}
+\begin{document}
+$\left\lsem \frac{a}{b} \right\rsem$ and $\left\langlebar x \right\ranglebar$.
+\end{document}

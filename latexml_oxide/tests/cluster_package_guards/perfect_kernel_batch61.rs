@@ -5228,7 +5228,8 @@ fn ar5iv_profile_sets_its_runaway_limits() {
 /// the class's T1, `_` and all (2609.06007), lmcs.cls:696-761's theorem set with its `thmC` styles (2609.11893),
 /// informs3.cls's `\TheoremsNumberedThrough` and e-companion `\ECSwitch` renumbering sections, theorems and equations
 /// (2609.08001),
-/// MnSymbol's `\llangle`/`\rrangle` (2609.07645; the binding warns that it is a stub); and `\tracingmacros` stored as
+/// MnSymbol's `\llangle`/`\rrangle` (2609.07645; since 65l a native binding of the whole package, which no longer
+/// warns that it is a stub); and `\tracingmacros` stored as
 /// a number, which `\the` reads back (Perl TeX_Debugging.pool.ltxml:214-225; arabtex's aedpatch.sty:29-30, 2609.25833).
 #[test]
 fn the_2609_classes_load_their_packages_and_commands() {
@@ -5418,8 +5419,8 @@ $\llangle x\rrangle$
 \end{document}",
       ),
       "<XMWrap xml:id=\"p1.m1.2.1.2\"><XMTok name=\"llangle\" role=\"OPEN\" stretchy=\"false\">\u{27ea}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.1\">x</XMTok><XMTok name=\"rrangle\" role=\"CLOSE\" stretchy=\"false\">\u{27eb}</XMTok></XMWrap>",
-      1,
-      "MnSymbol.sty is only minimally stubbed",
+      0,
+      "Info:bindings:MnSymbol.sty MnSymbol.sty is provided by a native binding, not interpreted raw.",
     ),
     (
       "p",

@@ -16383,3 +16383,79 @@ long as the package's definitions. Outside the bracket the main document's table
 sub-file loaded, as in pdflatex, where standalone.sty skips the sub-file's preamble. Everywhere else `AddToMacro` stays
 global. **Witness**: 2512.09430 84 → 5 Errors (the 5 left: fancyheadings' `\lhead`/`\chead`/`\rhead`/`\cfoot`/
 `\fancyplain` in the sub-file's own preamble, 64ze too). **Guard**: `perfect_kernel_batch65i::standalone_subfile_package_hooks_stay_in_its_preamble`.
+
+### 545. The MnSymbol binding declares every MnSymbol name, and a name already defined keeps its definition (Perl: no binding; MnSymbol.sty redeclares the whole AMS set)
+
+**Perl behavior**: there is no MnSymbol binding. Perl reads MnSymbol.sty raw, where `\DeclareMathSymbol` into its
+seven symbol fonts (`MnSyA`…`MnSyD`, its own `symbols`/`largesymbols`) gives no usable glyph. Our former binding
+(`latexml_contrib/src/mnsymbol_sty.rs`) was a stub of four names over amssymb, so every other MnSymbol name was
+undefined: run 340 had 13,470 MnSymbol papers, 3,724 of them in Error, their first errors `\nin` 175, `\udots` 173,
+`\sumint` 165, `\cupdot` 130, `\strokedint` 113, `\lsem` 108 and a long tail.
+**Rust behavior** (batch 65l): the binding declares every name of MnSymbol.sty — the 1,307 `\Decl@Mn@Char`/
+`\Decl@Mn@Alias` names of :250-1584 (but the internal `\@cdots`/`\@vdots`) in declaration order, the 55
+`\Decl@Mn@Op`/`\Decl@Mn@Int` operators of :1586-1650 as variable-size SUMOP/INTOP (math_common's `\sum`/`\int`), the
+`symbols` font's fixed `\t…`/`\d…` operators with `mathstyle` text/display, the delimiters of :1651-1710 (`\lsem`,
+`\rsem`, `\langlebar`, `\lwavy`, … OPEN/CLOSE, so they fence after `\left`/`\right`, #530), the brace pieces, the
+accents of :1822-1851, the spoon composites and `\coloneq`. A name's glyph is unicode-math's for the same name
+(`unicode-math-table.tex`), else the Unicode TeX4ht gives its font slot (`tex4ht/ht-fonts/unicode/MnSymbol/*.htf`;
+the slot is the running `\Set@Mn@Sym` count), else the base glyph with U+0338 for a negated `\n…` name, else one chosen
+from MnSymbol.pdf; a glyph Unicode lacks (most diagonal arrows, filled spoons, the smile/frown stacks) takes its
+family's rightward member's code point, the XMTok keeping the command's name. Roles follow the declared class as the
+sibling symbol bindings do (ARROW for the arrow/harpoon/spoon/mapsto families, else RELOP; ADDOP for the
+cup/cap/vee/wedge/plus/minus/triangle/diamond families, else MULOP; ID for the dots).
+**The divergence**: MnSymbol's `\Decl@Mn@Sym` `\let`s each name undefined and redeclares it, so the package replaces
+the AMS set. Here a name the kernel, amsmath or amssymb (which the binding loads) already defines keeps that
+definition — its role and meaning are richer than the slot's class — and a name declared in the same slot and class
+as a defined name is `\let` to it (`\nin` → `\notin` with `meaning="not-element-of"`, `\meddiamond` → `\Diamond`,
+`\cupplus` → `\uplus`, `\lcurvearrowright` → `\curvearrowright`). The same rule as OmniBus's theorem set (#533).
+Consequences: `\Mn@Fake@Missing` (:29-78) has nothing to fake, and its `\let\eth\undefined`, `\mho`, `\Finv`, `\Game`,
+`\Bbbk`, `\digamma`, `\varkappa`, `\backepsilon` are not carried out (a document using them keeps them, where pdflatex
+reports them undefined); `\lneq`/`\gneq`/`\precneqq`/`\succneqq` keep amssymb's ⪇ ⪈ ⪵ ⪶ instead of MnSymbol's stand-ins
+`\nleq` ≰, `\ngeq` ≱, `\npreceq`, `\nsucceq` (:57-60; the author's symbol, not the font's stand-in); `\not` stays the kernel's (SYNC_STATUS "Kept as is", 2605.05506).
+A document that undefines a name for MnSymbol to declare (2210.15345 `\let\vec\undefined`) gets it declared. The
+package's declarators (`\Decl@Mn@Char`, `\Decl@Mn@Open`, …, :85-107) are defined for documents that use them after
+loading the package (2410.20575 `\Decl@Mn@Open{\lsem}{MNlargesymbols}{'102}`), under the same rule
+(`\Mn@ifundefined` for the `\let#1\undefined`): a name already defined is kept, and a new one takes the glyph and
+role the binding's tables give its slot — font and position, the font one of `MnSyA`…`MnSyD`, `symbols`,
+`largesymbols` (`\Decl@Mn@Char\myrel{MnSyA}{\mathrel}` at the running `\Set@Mn@Sym` count, `\Decl@Mn@Open{\mylsem}
+{largesymbols}{'102}` ⟦); a slot the tables do not map (another font name, as 2410.20575's `MNlargesymbols`, or an
+unlisted position) goes to the kernel's `\DeclareMathSymbol`/`\DeclareMathDelimiter` with an
+`Info:unmapped:MnSymbol.sty` naming the font and slot (the kernel's glyph for an unknown `U` font is the slot's code
+point, U+FFFD for a control position). `\Decl@Mn@Op` keeps amsmath's `\slimits@` (`\displaylimits`; MnSymbol.sty
+never sets it). The glyph derivation decodes TeX4ht's HTML entities (`&gt;` at MnSyD 65, `\gtr`); the hand picks follow
+MnSymbol.pdf's drawings: the footlines' bar is on the side the name says (`\rightfootline` ⟞, `\leftfootline` ⟝,
+`\upfootline` ⟙, `\downfootline` ⟘), `\upmodels` ⫫ / `\downmodels` ⫪ (2604.25507), `\upVdash` ⍊ / `\downVdash` ⍑ (the
+code points MnSymbol.pdf and TeX4ht both give), `\ocirc` ⊚ (unicode-math's `\ocirc` is the ring accent),
+`\filledlargestar` ★. `\middlebar`, `\middleslash`, `\strokethrough` and `\underlinesegment` stay accents of their
+combining overlay character (no sibling binding renders an overlay accent otherwise). The former stub's `\lcurvearrow…`/`\rcurvearrow…` glyphs were reversed
+(it gave the `l` family ↶); MnSymbol's `l` family is clockwise (`\lcurvearrowright` is `\curvearrowright` ↷,
+:456-457).
+**Witnesses** (MnSymbol_err sample, 40 papers of run 340): 30 Error → OK/Warning, 78 → 39 errors, the 10 left
+non-MnSymbol (`RedViolet`, `\numberofauthors`, `\declaretheorem`, …); 1012.3905, 2012.10201, 2503.13091 (`\nin`),
+2608.11129, 2408.06194, 2510.15838 (`\sumint`), 1710.02994, 2305.00125 (`\strokedint`), 1505.03695, 2311.12218
+(`\cupdot`), 2502.09381 (`\udots`), 2112.14729, 2410.20575 (`\lsem`), 2010.00736, 2306.06344 (`\medstar`),
+1704.05595, 2303.04612 (`\leftmapsto`), 2210.15345 (`\vec`); earlier 2508.12496 (`\checkmark`), 2609.07645
+(`\llangle`), atableau (`\bigcircle`), biblatex-apa6-test (`\rcurvearrowse`), univie-ling (`\blacktriangleright`).
+**Guards**: `perfect_kernel_batch65l::{mnsymbol_symbols_are_defined, mnsymbol_declares_every_name,
+mnsymbol_delimiters_fence_after_left, mnsymbol_declares_an_undefined_vec, mnsymbol_own_declarators_keep_the_binding,
+mnsymbol_declarators_take_slot_glyphs}`, `latexml_contrib` `mnsymbol_sty::tests::{mnsymbol_table_glyphs_are_characters,
+mnsymbol_slots_resolve_to_glyphs}`, `perfect_kernel_batch56::{font_symbol_packages_carry_amssymb,
+sweep44_single_name_gaps}`; repros
+`tools/perfect_kernel/repros/class-bindings/mnsymbol_*`.
+Approximations with no exact Unicode glyph: the negated stacks `\lessneqqgtr`/`\gtrneqqless` render as ⪋̸/⪌̸ (the
+U+0338 negation step, like `\nlesseqqgtr`); `\rightY`/`\leftY`/`\downY` and the smile/frown stacks (`\smileeq`,
+`\doublesmile`, `\frowneq`) collapse to the nearest single glyph; a document-declared `\mathord` takes `ID`, as the
+kernel's `\DeclareMathSymbol` does. Known residual: the `\t…` text-size operators (`\tsum`, `\tbigcupdot`, …) keep
+`mathstyle="text"` in display math, where TeX's `NEXTLARGER` grows the glyph.
+
+### 546. The MnSymbol binding announces itself as `Info`, not the stub's `Warn` (Perl: no binding)
+
+**Before**: `mnsymbol_sty.rs` emitted `Warning:missing_file:MnSymbol.sty` "MnSymbol.sty is only minimally stubbed and
+will not be interpreted raw." at every load. **Rust** (batch 65l): `Info:bindings:MnSymbol.sty` "MnSymbol.sty is
+provided by a native binding, not interpreted raw.", as biblatex's binding (#62): the binding now declares the whole
+package (#545), so "minimally stubbed" is false, and an unconditional Warn ranked every MnSymbol paper `warning`
+however it converted. **Severity impact — read before quoting corpus deltas**: run 340 counts 13,470 papers with the
+Warn; those without another warning move from `warning` to `no_problem` for a logging reason. A run-over-run
+comparison of MnSymbol papers is attributable only when both runs sit on the same side of 65l. Guard
+`perfect_kernel_batch61::the_2609_classes_load_their_packages_and_commands` (the MnSymbol case: 0 warnings).
+

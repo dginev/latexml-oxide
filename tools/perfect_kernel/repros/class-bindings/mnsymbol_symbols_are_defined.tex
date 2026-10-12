@@ -1,0 +1,17 @@
+% witness: 1012.3905 2012.10201 (`\nin`), 2608.11129 2408.06194 (`\sumint`), 1710.02994 (`\strokedint`), 1505.03695
+%          (`\cupdot`), 2502.09381 (`\udots`), 2010.00736 (`\medstar`), 1704.05595 (`\leftmapsto`), 2311.12218
+%          (`\bigcupdot`), 2407.13746 (`\plus`), 2604.25507 (`\upmodels`); run 340: 3,724 MnSymbol papers end in Error
+% oracle:  pdflatex 0 errors (MnSymbol.sty:250-1650 declares every name: `\Decl@Mn@Char`, `\Decl@Mn@Op`, `\Decl@Mn@Int`)
+% engines: rust 65bundle = 18 errors (each name undefined: the binding was a stub of 4 names); Perl reads the package
+%          raw (no binding)
+% expect:  0 errors, 0 warnings; `\nin` is `\notin`, `\sumint` an INTOP ⨋, `\cupdot` an ADDOP ⊍
+% status:  RED (65bundle) -> GREEN (65l); guard perfect_kernel_batch65l::mnsymbol_symbols_are_defined
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{MnSymbol}
+\begin{document}
+$a \nin B$, $x \udots y$, $\sumint_{i} f$, $A \cupdot B$, $\strokedint f$,
+$a \plus b \minus c$, $a \nequiv b$, $a \hateq b$, $\bigcupdot_{i} A_i$,
+$a \leftmapsto b$, $\twoheaduparrow$, $a \upmodels b$, $\medstar\filledstar$,
+$a \righthalfcup b$, $\lsem e \rsem$.
+\end{document}

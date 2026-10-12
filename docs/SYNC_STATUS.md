@@ -594,6 +594,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   - Open: math0305287, math0111222 stay Fatal: TL 2025 pstricks under plain TeX loads expl3 (pst-code-pspicture.tex:76
     `\ExplSyntaxOn`) and LaTeX with it, plus Perl's braced-`\input` LaTeX load (KPE #611). J (1911.11856, 2106.06828)
     is TeX-faithful once `\LetLtxMacro` is defined: both 0 E with letltxmacro loaded (65e's hyperref change).
+- **65l** (RUST-ONLY binding gap; OD #545-546): the MnSymbol binding declares every name of MnSymbol.sty — the 1,307
+  `\Decl@Mn@Char`/`\Decl@Mn@Alias` names, the 55 `\Decl@Mn@Op`/`\Decl@Mn@Int` operators, the `symbols` font's
+  `\t…`/`\d…` operators, delimiters (`\lsem`, `\langlebar`, … fence after `\left`), brace pieces, accents and the
+  package's own declarators — with unicode-math's code point, else TeX4ht's for the font slot, roles as the sibling
+  symbol bindings; a name already defined keeps its definition, a slot-and-class sibling of one is `\let` to it
+  (`\nin` → `\notin`). The stub's `Warning:missing_file` is now an `Info` (13,470 run-340 papers carried it: a status
+  confound, OD #546). Run 340's first errors `\nin` 175, `\udots` 173, `\sumint` 165, `\cupdot` 130, `\strokedint`
+  113, `\lsem` 108. A/B 65bundle-rel → 65l on the 80 witnesses (`run340/stubs/MnSymbol_{err,ok}.txt`): err set 40 → 10
+  papers with errors, 78 → 39 errors, the 10 left non-MnSymbol; ok set 0 → 0 errors, words and Math identical; XML
+  changes are `<ERROR>` → symbol, `\checkmark` amssymb's again (the stub overrode it), `\lcurvearrowright` ↶ → ↷ (the
+  stub had MnSymbol's `l` family reversed). Round 2 (review): TeX4ht's `&gt;` decoded (`\gtr`), the footlines and
+  `\upmodels`/`\downmodels` (2604.25507), `\ocirc`, `\filledlargestar` as MnSymbol.pdf draws them, a name a document
+  declares with `\Decl@Mn@Char`/`\Decl@Mn@Open` takes its slot's glyph from the tables (else an Info), `\slimits@`
+  left to amsmath. Guards `perfect_kernel_batch65l::*`, `mnsymbol_sty::tests::*`; repros `class-bindings/mnsymbol_*`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

@@ -3206,7 +3206,8 @@ Order: \lxorder; \lxhashed{ok}.
 /// Sweep-44 singles: fontspec's `\latinencoding` (textalpha-doc), CJK.sty's
 /// `\CJKspace`/`\CJKencfamily` (cjk-ko-doc, bxcjkjatype beamer), beamer
 /// `\subject` (shipunov), pdfmanagement `\pdfmanagement_add:nee` under
-/// `\DocumentMetadata` (zugferd), MnSymbol `\rcurvearrowse` (biblatex-apa6),
+/// `\DocumentMetadata` (zugferd), MnSymbol `\rcurvearrowse` (biblatex-apa6; Unicode has no diagonal arc, so the
+/// anticlockwise `r` family's rightward ⤻ — its `\rcurvearrowleft` is `\curvearrowleft` ↶, MnSymbol.sty:467-468),
 /// biblatex `\printorigdate` (cms-notes-sample).
 #[test]
 fn sweep44_single_name_gaps() {
@@ -3219,9 +3220,12 @@ Enc: \latinencoding; $a \rcurvearrowse b$.
 ";
   let (stderr, xml) = convert_with(luatex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(
-    xml.contains("Enc: TU;") && xml.contains("\u{21b7}"),
-    "{xml}"
+  assert!(xml.contains("Enc: TU;"), "{xml}");
+  latexml::util::test::assert_element(
+    &xml,
+    "XMTok",
+    &[r#"name="rcurvearrowse""#],
+    "<XMTok name=\"rcurvearrowse\" role=\"ARROW\">\u{293b}</XMTok>",
   );
   let cjk = r"\documentclass{article}
 \usepackage{CJK}
