@@ -1,0 +1,17 @@
+% witness: 2604.08274, 2508.00595, 2103.08686 (`\DefineSimpleKey`, amsrefs.sty:213 rkeyval); 1904.00652, 2008.03630
+%          (`\begin{biblist}[\resetbiblist{99}]`, :651); `[lite]` loads neither textcmds nor mathscinet (:214-218)
+% oracle:  pdflatex 0 errors
+% engines: rust 65int2 = 2 errors (`\DefineSimpleKey`, `\resetbiblist` undefined)
+% expect:  0 errors, 0 warnings; one bibentry, `\cprime` left undefined under `lite` (not used here)
+% status:  RED (65int2) -> GREEN (65r)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage[lite]{amsrefs}
+\DefineSimpleKey{bib}{myfield}
+\begin{document}
+Cite \cite{A}.
+\makeatletter\@ifundefined{cprime}{No cprime.}{Cprime.}\makeatother
+\begin{bibdiv}\begin{biblist}[\resetbiblist{99}]
+\bib{A}{article}{author={Able, Ann}, title={First}, journal={J}, year={2001}}
+\end{biblist}\end{bibdiv}
+\end{document}

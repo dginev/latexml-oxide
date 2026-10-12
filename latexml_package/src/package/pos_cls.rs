@@ -12,6 +12,10 @@ LoadDefinitions!({
   RequirePackage!("times");
   RequirePackage!("mathptmx");
   RequirePackage!("graphicx");
+  // PoS.cls loads color (v1.2.1 :174, v1.2.4 and v1.2.6 :162), so a paper's `\textcolor`, `\color` and
+  // `\definecolor` need no package of its own (witnesses 1904.06989, 1309.7883, 1411.7592, 1708.03575,
+  // 1811.03840). Perl's PoS.cls.ltxml:24-27 loads ifpdf, times, mathptmx and graphicx only (KNOWN_PERL_ERRORS #629).
+  RequirePackage!("color");
 
   DefMacro!("\\ShortTitle{}",     "\\lx@add@toctitle{#1}");
   DefMacro!("\\PoScopydate{}",    "\\lx@add@date[role=accepted]{#1}");

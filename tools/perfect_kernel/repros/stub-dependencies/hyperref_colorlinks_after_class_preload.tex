@@ -1,0 +1,13 @@
+% witness: 2609.24844, 2609.13110, 1711.02465 (elsarticle/revtex4/PoS: the class binding loads hyperref, the real
+%          class does not; the author's `\usepackage[colorlinks]{hyperref}` loads color, hyperref.sty:4532-4537)
+% oracle:  pdflatex 0 errors ("red" in red)
+% engines: rust 65int2 = 1 error (`\textcolor` undefined: the repeat load dropped colorlinks); Perl the same
+%          (KNOWN_PERL_ERRORS #628)
+% expect:  0 errors, 0 warnings; `<text color="#FF0000">red</text>`
+% status:  RED (65int2) -> GREEN (65r)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\usepackage[colorlinks=true,linkcolor=blue]{hyperref}
+\begin{document}
+Some \textcolor{red}{red} text.
+\end{document}

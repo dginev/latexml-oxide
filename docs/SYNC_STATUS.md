@@ -676,6 +676,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch65j::{bm_paired_left_right_keeps_its_superscript, bm_script_command_argument_after_unpaired_right,
   bm_prime_after_unpaired_right_is_bold, bm_script_argument_that_cannot_be_told_warns}`. RED row **BD**
   (`\DeclareBoldMathCommand` delimiter after `\left`, 1205.4484).
+- **65r** (bindings load what their TeX Live files load, round 2; OD #561-564, KPE #627-629): amsrefs loads url,
+  rkeyval, textcmds and mathscinet (`\cprime`, `\germ`, `\scr`, `\url`, `\DefineSimpleKey`; `lite` skips the last two),
+  `\bibselect` reads its `.ltb` database (cited entries printed, `\bibselect*` all; the author's `.bbl` when no
+  database ships), `{biblist}[…]`/`{biblist*}`, `\resetbiblist`, `\BibSpecAlias`, `\bysame`, `\ocite`; a repeat
+  `\usepackage[…]{hyperref}` after a class binding's own hyperref load takes its new options through `\hypersetup`
+  (`<file>_keyval_setter`), so `colorlinks` loads color (revtex4, elsarticle, …); PoS loads color as PoS.cls does;
+  thm-restate loads thmtools (the mutual-require cycle is an Info, as LaTeX's `\ver@` ends it); elsarticle `1p`/`3p`/`5p`
+  load geometry (one-column layouts give it their text width); xy's frame feature requires curve (xypdf-fr.tex:60:
+  `\usepackage{xypic}` curved arrows, `\crvi`); revtex defines `\sanitize@url`. Run-340 first-error estimates: amsrefs
+  ~1,860, colorlinks ~860, thm-restate ~477, xy curve ~380, `\sanitize@url` ~375, elsarticle geometry ~287. Witness A/B
+  65int2 → 65r (`~/data/pk_wt/scratch_65r/ab/`, ≥4 Error + 4 OK/Warning papers per item, 61): 32 of 34 Error papers
+  lose errors (28 to 0), none gains; no OK/Warning paper changes beyond tmp-path noise, save 1907.13203's placeholder
+  `pdftitle`/`pdfauthor` now RDFa. Next first errors: revtex `\@AF@join` (2006.04679, 1702.04290, 1510.07897,
+  2508.01050, from JASA.cls/ujp.sty); thmtools `\declaretheorem{theorem}` prints no "Theorem" name (shared with 65int2).
+  Guards `perfect_kernel_batch65r::*`, `06_cluster_bibliography::amsrefs_bibselect_{database,star_database}`; repros
+  `stub-dependencies/*` (7), `index-bib/amsrefs_bibselect_*`.
 - **65k** (stub bindings load what their packages load; OD #547-548, KPE #618-619): mdframed loads zref-abspage,
   needspace and color (mdframed.sty:72-77) and its `framemethod` package (tikz/pst-node), `\mdfsetup` reads the keys;
   backref loads kvoptions/kvsetkeys/rerunfilecheck and defines its language hooks, `\ifbackrefparscan`, `\backref`,

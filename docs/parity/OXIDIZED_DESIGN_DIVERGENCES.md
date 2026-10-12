@@ -16869,3 +16869,69 @@ environment's end. A raw `\cr` skips `\@@eqncr`, so TeX's `\@eqcnt` is not reset
 **Guards**: `perfect_kernel_batch65o::{eqnarray_number_column, eqnarray_number_column_too_many,
 eqnarray_empty_cell_keeps_later_column}`, `perfect_kernel_batch64ra::eqnarray_extra_tab_keeps_three_columns`; repros
 `alignment/eqnarray_number_column*`, `alignment/eqnarray_empty_cell_keeps_later_column`.
+
+### 561. elsarticle's `1p`/`3p`/`5p` load geometry, and the one-column layouts give it their text width (Perl: the load is commented out)
+
+elsarticle.cls:1252-1300 loads geometry for the journal layouts and sets the page with `\geometry{twoside,
+paperwidth=210mm, paperheight=297mm, textheight=…, textwidth=…, centering, …}` (1p 384pt, 3p 468pt, 5p 522pt with
+`columnsep=18pt` and `\@twocolumntrue`). Perl's binding has `# RequirePackage('geometry')` (elsarticle.cls.ltxml:44,
+KNOWN_PERL_ERRORS #629), so a document's `\geometry`, `\newgeometry` or `\restoregeometry` is undefined.
+
+**Rust** (batch 65r, `elsarticle_cls.rs`): the three layouts load geometry. The one-column ones (1p, and 3p without
+`twocolumn`) pass the class's page and text width to it, which the geometry binding uses for measured SVG pictures only
+(#99); the two-column ones (5p, 3p with `twocolumn`) load it without the class's call, because our geometry has no
+column model: a full-width picture there is a column (252pt for 5p) wide, and `\Gm@tw` would make it the text width.
+Witnesses 2609.13883, 2404.14059, 2103.06107, 1904.12395 (`\geometry`), 2406.15044 (`\newgeometry`). **Guards**:
+`perfect_kernel_batch65r::{elsarticle_3p_loads_geometry, elsarticle_layouts_set_geometry_text_width}`; repro
+`stub-dependencies/elsarticle_3p_loads_geometry`.
+
+### 562. A repeat load of hyperref takes its new options through `\hypersetup`; a package that requires its requirer back ends the cycle with an Info (Perl: the options are dropped; Perl marks the package loaded first)
+
+A class binding may load a package its real class does not: revtex4_support (revtex4_support.sty.ltxml:23),
+elsarticle (elsarticle.cls.ltxml:52), PoS, jmlr and sagej load hyperref. The author's later
+`\usepackage[colorlinks]{hyperref}` is then a repeat load, which LaTeX would refuse with "Option clash" — but in real
+LaTeX it is the first hyperref load, and colorlinks loads color (hyperref.sty:4532-4537). Perl drops the options
+(KNOWN_PERL_ERRORS #628), so `\textcolor`, `\color` and `\definecolor` are undefined (about 860 run-340 first errors).
+
+**Rust** (batch 65r, `binding/content.rs` `apply_new_options_on_reload`): a binding may name its key-value setter in
+`<file>_keyval_setter`; the options a repeat load has that the first did not are digested as `<setter>{options}`, with
+an Info ("Applying options … from a repeat load"). hyperref names `\hypersetup`, whose `colorlinks` loads color. The
+"Option clash" Info stays. Witnesses 2609.24844, 2609.13110, 1711.02465, 1904.06989 (PoS). Guard
+`perfect_kernel_batch65r::hyperref_colorlinks_after_class_preload`.
+
+A binding-load re-entrance — a package required while it is itself being loaded — was a Warning. LaTeX ends such a
+cycle silently: `\ProvidesPackage` defines `\ver@<file>` before the body runs, and Perl marks `<request>_loaded` before
+`do $pathname` (Package.pm:2332). thm-restate.sty:26 and thmtools.sty:47-49 require each other, so a `.sty`/`.cls`
+re-entrance is now an Info; any other (a pool, task #260's natbib loop) keeps the Warning. Guard
+`perfect_kernel_batch65r::thm_restate_loads_thmtools`.
+
+### 563. amsrefs loads what amsrefs.sty loads, and `\bibselect` reads its database, printing the cited entries (Perl: no loads, no `\bibselect`)
+
+amsrefs.sty loads url (:45-46), rkeyval (:213) and, unless `lite` (:179, :214-218), textcmds and mathscinet, so a
+`\bib` entry's `\cprime`, `\germ`, `\scr`, `\Dbar` and `\url`, and a document's `\DefineSimpleKey`, are defined. Its
+`\bibselect{db}` (:1291-1340) reads the records of `db.ltb` (`.ltx`, `.tex`) that start with `\bib`, writes the cited
+ones (`\bibselect*`: all) to `\jobname.bbl` and inputs it. Perl's amsrefs binding loads nothing and has no
+`\bibselect` (KNOWN_PERL_ERRORS #627; about 1,860 run-340 first errors).
+
+**Rust** (batch 65r, `amsrefs_sty.rs`): the loads as amsrefs.sty (rkeyval and textcmds, which have no binding, only
+where raw loading is on); `\bibselect` reads the database records as `\ReadBibLoop` does (a record is a line extended
+while its braces are open) and digests them; with no database shipped it inputs the author's `\jobname.bbl` (the
+selection of their run). A non-starred selection marks its entries `class="ltx_bib_library"` (`bibtex.rs`
+`{bib@entry}`), and the bibliography (`latexml_post` make_bibliography) prints those when cited, as the entries of a
+`.bib` — an amsrefs `biblist`'s own `\bib`s stay printed whether cited or not (#57, 1012.2719). Also `{biblist}[…]`
+and `{biblist*}` take their settings (`\resetbiblist`, :569, :651), `\BibSpecAlias` is ignored as `\BibSpec` is,
+`\bysame` is its rule, `\ocite`/`\ocites` cite. Witnesses 1907.08888, 2602.02342, math0410226 (`\cprime`, `\germ`),
+1904.05225 (`CF.ltb`), 2103.06687 (`.bbl`), 2604.08274 (`\DefineSimpleKey`), 1904.00652 (`\resetbiblist`). **Guards**:
+`perfect_kernel_batch65r::{amsrefs_loads_mathscinet_url, amsrefs_lite_rkeyval}`,
+`06_cluster_bibliography::{amsrefs_bibselect_database, amsrefs_bibselect_star_database}`.
+
+### 564. xy's frame feature requires curve, as the pdf driver's frame support does (Perl: curve only on request)
+
+Under pdflatex xy.sty selects the pdf driver, whose frame support (xypdf-fr.tex:60) does `\xyrequire{curve}`; so
+`\usepackage{xypic}` (xyv2.tex:154 `\xyrequire{frame}`) has curves, and a curved arrow `\ar@/^/[r]`
+(xyarrow.tex:517-519) its `\crvi` (xycurve.tex:69). Our latexml driver supports frames in the pdf driver's place
+(`xylatexml_tex.rs` `\xyaddsupport{frame}`), but curve loaded only through `[all]` or `\xyoption{curve}`, so
+`\crvi` was undefined (about 380 run-340 first errors).
+
+**Rust** (batch 65r, `xy_sty.rs`): loading the frame feature requires curve. Witnesses 2604.10154, 1207.7025,
+2004.14742, 2508.01041. Guard `perfect_kernel_batch65r::xypic_curved_arrow`; repro `stub-dependencies/xypic_curved_arrow`.

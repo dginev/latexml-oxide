@@ -630,9 +630,16 @@ impl MakeBibliography {
     // This bibliography's own entries (an amsrefs `biblist`) are its References as written: amsrefs typesets every
     // `\bib` of a biblist, cited or not, where a `.bib` is a library to take the cited entries from (1012.2719: 34
     // entries, 29 cited, the PDF lists 34). Each bibliography prints its own (two `bibdiv`s, two lists).
+    // An entry an amsrefs `\bibselect` read from its database (`class="ltx_bib_library"`) is a library entry:
+    // printed when cited, as amsrefs.sty:1291 selects them (1904.05225).
     let mut inline_keys: Vec<String> = doc
       .findnodes_at(".//ltx:bibentry", Some(bib_node))
       .iter()
+      .filter(|entry| {
+        !entry
+          .get_attribute("class")
+          .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_bib_library"))
+      })
       .filter_map(|entry| entry.get_attribute("key"))
       .collect();
     inline_keys.sort();

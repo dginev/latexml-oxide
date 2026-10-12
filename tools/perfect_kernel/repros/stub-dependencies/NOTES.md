@@ -23,6 +23,18 @@ load a subset (KNOWN_PERL_ERRORS #618, #619); fixed in batch 65k (OXIDIZED_DESIG
 | `pnas_new_show_matmethods_acknow` | pnas-new.cls:402-428 `\showmatmethods`, `\showacknow` | `pnas_new_cls.rs` |
 | `arydshln_longtable_shorthand` | arydshln.sty:697-715 `{Longtable}` after longtable | `arydshln_sty.rs` |
 
+| `amsrefs_loads_mathscinet_url` | amsrefs.sty:45-46, 213-217 loads url, rkeyval, textcmds, mathscinet (65r, KPE #627) | `amsrefs_sty.rs` |
+| `amsrefs_lite_rkeyval` | `[lite]` (:214-218) skips textcmds/mathscinet; `{biblist}[\resetbiblist{99}]` (:569, :651) | `amsrefs_sty.rs` |
+| `hyperref_colorlinks_after_class_preload` | a class binding's hyperref load; the repeat load's options via `\hypersetup` (65r, KPE #628) | `binding/content.rs`, `hyperref_sty.rs` |
+| `thm_restate_loads_thmtools` | thm-restate.sty:26 loads thmtools; the cycle ends with an Info (65r, KPE #629) | `thm_restate_sty.rs`, `binding/content.rs` |
+| `elsarticle_3p_loads_geometry` | elsarticle.cls:1252-1300 1p/3p/5p load geometry (65r, KPE #629) | `elsarticle_cls.rs` |
+| `xypic_curved_arrow` | xyv2 frame → curve (xypdf-fr.tex:60), `\crvi` (65r) | `xy_sty.rs` |
+| `revtex_sanitize_url` | revtex4-1.cls:2378, revtex4-2.cls:2399 `\sanitize@url` (65r) | `revtex4_support_sty.rs` |
+| `pos_loads_color` | PoS.cls:162 (v1.2.6) loads color (65r, KPE #629) | `pos_cls.rs` |
+
+`\bibselect` (amsrefs.sty:1291-1340) is guarded with post-processing: `index-bib/amsrefs_bibselect_{database,star_database}`
+(the fixtures and `amsrefs_bibselect_db.ltb` in `latexml_oxide/tests/cluster_regressions/`).
+
 Dead end (one line): a `framemethod` set by `\mdfsetup` after the package is loaded makes pdflatex error too (the
 `md-frame-1.mdf` re-input: "Command \mdf already defined"), so pdflatex has no clean oracle for it; the binding loads the package in the preamble
 and gives an Info in the body (`mdframed_body_framemethod_loads_nothing`, validated by `\typeout`).

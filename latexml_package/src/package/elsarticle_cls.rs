@@ -96,6 +96,24 @@ LoadDefinitions!({
   if jtype == 5 || (jtype == 3 && if_condition(&T_CS!("\\if@twocolumn"))?.unwrap_or(false)) {
     RequirePackage!("fleqn");
   }
+  // elsarticle.cls:1252-1300: the journal layouts `1p`, `3p` and `5p` load geometry and set the page with it, so
+  // a document may call `\geometry`, `\newgeometry` and `\restoregeometry` (witnesses 2609.13883, 2404.14059,
+  // 2103.06107, 1904.12395). Perl's binding has the load commented out (elsarticle.cls.ltxml:44,
+  // KNOWN_PERL_ERRORS #629). The class's page size and one-column text width (1p: 384pt; 3p: 468pt) reach the
+  // geometry binding, which sizes measured SVG pictures by them (OXIDIZED_DESIGN #99); the two-column layouts
+  // (5p, and 3p with `twocolumn`) keep the class default, since our geometry has no column model and a full-width
+  // picture there is a column wide (OXIDIZED_DESIGN #561).
+  if matches!(jtype, 1 | 3 | 5) {
+    RequirePackage!("geometry");
+    let twocolumn = jtype == 5 || if_condition(&T_CS!("\\if@twocolumn"))?.unwrap_or(false);
+    if !twocolumn {
+      let (textheight, textwidth, footskip) = if jtype == 1 { ("562pt", "384pt", "12pt") } else { ("622pt", "468pt", "18pt") };
+      Digest!(mouth::tokenize_internal(TeXString::assembled(s!(
+        "\\geometry{{twoside,paperwidth=210mm,paperheight=297mm,textheight={textheight},\
+         textwidth={textwidth},centering,headheight=50pt,headsep=12pt,footskip={footskip}}}"
+      ))))?;
+    }
+  }
   RequirePackage!("graphicx");
   RequirePackage!("pifont");
   // natbib with biboptions, unless the `nonatbib` option (elsarticle.cls:1242-1244): those papers bring biblatex or

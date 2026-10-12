@@ -1013,6 +1013,40 @@ fn amsrefs_uncited_entries_kept() {
   assert_eq!(bibliography_keys(&x), [["Able", "Baker", "Cole"]], "{x}");
 }
 
+/// 65r: amsrefs.sty:1291-1340 `\bibselect{db}` reads the `\bib` records of `db.ltb` and prints the cited ones, as a
+/// library (witness 1904.05225, `CF.ltb`). Repro index-bib/amsrefs_bibselect_database.
+#[test]
+fn amsrefs_bibselect_database() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_bibselect_database.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(bibliography_keys(&x), [["A"]], "{x}");
+}
+
+/// 65r: `\bibselect*` keeps every record of the database (amsrefs.sty:1291-1296 `\copy@bibdef`). Repro
+/// index-bib/amsrefs_bibselect_star_database.
+#[test]
+fn amsrefs_bibselect_star_database() {
+  let (x, log) =
+    convert_and_post_logging("tests/cluster_regressions/amsrefs_bibselect_star_database.tex");
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(bibliography_keys(&x), [["A", "B"]], "{x}");
+}
+
 /// 63g: each amsrefs bibliography prints its own entries — two `bibdiv`s, two lists — not every inline entry of the
 /// document. Repro index-bib/amsrefs_two_bibdivs_each_their_own.
 #[test]

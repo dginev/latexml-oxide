@@ -12680,3 +12680,30 @@ the row carries the class. Completes #547's open `\lefteqn{x=} & …` residual (
 Open in Rust as in Perl (65o; RED alignment/eqnarray_side_content_only_cell). 65int2 kept the side content of a
 `\lefteqn` row's next cells only by accident: Perl's `\multicolumn{3}` left them overflow cells outside the template
 (review probe p1 of 65o).
+
+## 627. amsrefs loads none of amsrefs.sty's packages and has no `\bibselect`
+
+Perl amsrefs.sty.ltxml loads only the BibTeX pool, where amsrefs.sty:45-46, 213, 216-217 load url, rkeyval, textcmds
+and mathscinet, and it defines no `\bibselect` (:1291), `\resetbiblist` (:651) or `{biblist*}` (:538). Trigger
+`\documentclass{amsart}\usepackage{amsrefs}\begin{document}\cite{G}\begin{bibdiv}\begin{biblist}
+\bib{G}{article}{author={Gel\cprime fand, I.}, title={On ${\germ g}$}, note={\url{http://x.org}}, journal={J},
+year={1950}}\end{biblist}\end{bibdiv}\end{document}` → 3 errors (`\cprime`, `\germ`, `\url` undefined); pdflatex 0.
+Fixed in Rust (65r, OD #563; 1907.08888, 1904.05225).
+
+## 628. A class binding's hyperref load swallows the author's hyperref options
+
+revtex4_support.sty.ltxml:23 and elsarticle.cls.ltxml:52 load hyperref where the real classes do not, so the author's
+`\usepackage[colorlinks]{hyperref}` is a repeat load whose options are dropped, and color (hyperref.sty:4532-4537)
+never loads. Trigger `\documentclass{elsarticle}\usepackage[colorlinks=true]{hyperref}\begin{document}
+\textcolor{red}{red}\end{document}` → 1 error (`\textcolor` undefined); pdflatex 0. Fixed in Rust (65r, OD #562;
+2609.24844, 1711.02465).
+
+## 629. A binding drops a load its real file makes: thm-restate → thmtools, elsarticle 1p/3p/5p → geometry, PoS → color
+
+thm-restate.sty.ltxml loads nothing (thm-restate.sty:26 `\RequirePackage{thmtools}`), and elsarticle.cls.ltxml:44 has
+`# RequirePackage('geometry')` (elsarticle.cls:1252-1300 loads it for the journal layouts), and PoS.cls.ltxml:24-27
+omits PoS.cls's `\RequirePackage{color}` (v1.2.6 :162; 1904.06989). Triggers
+`\documentclass{article}\usepackage{amsthm,thm-restate}\declaretheorem{theorem}\begin{document}
+\begin{theorem}x\end{theorem}\end{document}` → 2 errors (`\declaretheorem`, `{theorem}`);
+`\documentclass[3p]{elsarticle}\geometry{left=2cm}\begin{document}Text.\end{document}` → 1 error (`\geometry`);
+pdflatex 0 on both. Fixed in Rust (65r, OD #561, #562; 2412.02079, 2609.13883).

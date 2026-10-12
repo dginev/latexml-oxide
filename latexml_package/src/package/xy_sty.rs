@@ -150,6 +150,14 @@ LoadDefinitions!({
           def_macro_noop("\\CompileMatrices")?;
         }
         mark_xy_feature_loaded(single)?;
+        // The frame feature's driver support needs curves: under pdflatex the pdf driver's frame file does
+        // `\xyrequire{curve}` (xypdf-fr.tex:60), so `\usepackage{xypic}` (xyv2.tex:154 `\xyrequire{frame}`)
+        // has curved arrows `\ar@/^/[r]` and their `\crvi` (xycurve.tex:69, xyarrow.tex:517-519). Our latexml
+        // driver supports frames in its place (xylatexml_tex.rs `\xyaddsupport{frame}`), so it requires curve
+        // the same way. Witnesses 2604.10154, 1207.7025, 2004.14742.
+        if single == "frame" {
+          return Ok(Tokens!(T_CS!("\\xyrequire"), T_BEGIN!(), Explode!("curve"), T_END!()));
+        }
         return Ok(Tokens!());
       },
       _ => &[][..],

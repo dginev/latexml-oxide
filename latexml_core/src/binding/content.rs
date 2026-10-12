@@ -510,6 +510,13 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
   // ~483-paper \cellcolor error cluster in sandbox-arxiv-2605). For each
   // option of a repeat load that the first load did not have, digest the
   // surviving handler.
+  //
+  // A key-value package whose binding names its setter in `<file>_keyval_setter` (hyperref's
+  // `\hypersetup`) takes the new options of a repeat load through that setter, as its keys. This is the
+  // load a document makes after a class binding has loaded the package where the real class does not:
+  // revtex4_support, elsarticle, PoS, jmlr and sagej load hyperref, so the author's
+  // `\usepackage[colorlinks]{hyperref}` is the first hyperref load real LaTeX sees, and colorlinks loads
+  // color (hyperref.sty:4532-4537). Witnesses 2609.24844, 2609.13110, 1711.02465 (`\textcolor`).
   let apply_new_options_on_reload = |fkey: &str| -> Result<()> {
     if options.options.is_empty() || !options.handleoptions {
       return Ok(());
@@ -522,6 +529,31 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       } else {
         HashSet::default()
       };
+    if let Some(Stored::String(setter)) = lookup_value(&s!("{fkey}_keyval_setter")) {
+      let new_options: Vec<&str> = options
+        .options
+        .iter()
+        .map(|opt| opt.trim())
+        .filter(|opt| !opt.is_empty() && !prev.contains(*opt))
+        .collect();
+      if !new_options.is_empty() {
+        let keyvals = new_options.join(",");
+        Info!(
+          "unexpected",
+          "options",
+          s!(
+            "Applying options '{}' from a repeat load of {}",
+            keyvals,
+            fkey
+          )
+        );
+        let mut tokens = vec![T_CS!(arena::to_string(setter)), T_BEGIN!()];
+        tokens.extend(crate::mouth::tokenize_internal(TeXString::assembled(keyvals)).unlist());
+        tokens.push(T_END!());
+        digest(Tokens::new(tokens))?;
+      }
+      return Ok(());
+    }
     for opt in &options.options {
       let opt = opt.trim();
       if opt.is_empty() || prev.contains(opt) {
@@ -1312,17 +1344,24 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<Opti
   let request_key = request.to_string();
   let already_loading = IN_PROGRESS.with(|s| s.borrow().contains(&request_key));
   if already_loading {
-    Warn!(
-      "recursion",
-      &request_key,
-      s!(
-        "Binding-load re-entrance for '{}' (transitive require_package \
-         during its own LoadDefinitions). Short-circuiting to break the \
-         loop; binding's pending side-effects (DefMacro, Let, etc.) \
-         will still complete in the outer frame.",
-        request_key
-      )
+    // A package or class that requires a package which requires it back (thmtools.sty:47-49
+    // `\RequirePackage{thm-restate}`, thm-restate.sty:26 `\RequirePackage{thmtools}`) ends the cycle
+    // silently in LaTeX: `\ProvidesPackage` defines `\ver@<file>` before the body runs, so the inner
+    // `\RequirePackage` finds it loaded. Perl does the same by marking `<request>_loaded` before `do
+    // $pathname` (Package.pm:2332). So a re-entrant .sty/.cls request is an Info; any other re-entrance (a
+    // pool, task #260's natbib loop) keeps the Warning.
+    let message = s!(
+      "Binding-load re-entrance for '{}' (transitive require_package \
+       during its own LoadDefinitions). Short-circuiting to break the \
+       loop; binding's pending side-effects (DefMacro, Let, etc.) \
+       will still complete in the outer frame.",
+      request_key
     );
+    if request_key.ends_with(".sty") || request_key.ends_with(".cls") {
+      Info!("recursion", &request_key, message);
+    } else {
+      Warn!("recursion", &request_key, message);
+    }
     return Ok(Some(None));
   }
 

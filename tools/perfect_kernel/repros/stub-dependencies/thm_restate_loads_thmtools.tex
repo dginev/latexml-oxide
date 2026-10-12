@@ -1,0 +1,14 @@
+% witness: 2412.02079, 2411.02602, 2604.18239, 2508.14572 (`\usepackage{thm-restate}` then `\declaretheorem`;
+%          thm-restate.sty:26 `\RequirePackage{thmtools}`)
+% oracle:  pdflatex 0 errors ("Theorem 1. x")
+% engines: rust 65int2 = 2 errors (`\declaretheorem`, `{theorem}` undefined); Perl's thm-restate binding loads
+%          nothing (KNOWN_PERL_ERRORS #629)
+% expect:  0 errors, 0 warnings; one `<theorem class="ltx_theorem_theorem">`
+% status:  RED (65int2) -> GREEN (65r)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm,thm-restate}
+\declaretheorem{theorem}
+\begin{document}
+\begin{theorem}x\end{theorem}
+\end{document}

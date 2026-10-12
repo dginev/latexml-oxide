@@ -25,6 +25,11 @@ LoadDefinitions!({
   // LaTeX does — so we must provide its expected infrastructure.)
   // Witness: 1904.07479 (AIAA.cls). Format-version probing (\IfFormatAtLeastTF)
   // is omitted — not needed for the switch semantics.
+  // revtex4.cls:4476, revtex4-1.cls:2378, revtex4-2.cls:2399 `\sanitize@url`: `%`, `~` and `_` read as other
+  // characters, so an address keeps them. Classes and styles built on revtex call it for their own address
+  // commands: JASA.cls, ujp.sty, cej.cls (witnesses 2006.04679, 1702.04290, 1510.07897, 1309.5259,
+  // 2508.01050, 2103.00255).
+  TeX!(r"\def\sanitize@url{\@makeother\%\@makeother\~\@makeother\_}");
   TeX!(r"\long\def\true@sw#1#2{#1}%
 \long\def\false@sw#1#2{#2}%
 \def\@boolean#1#2{\long\def#1{#2\expandafter\true@sw\else\expandafter\false@sw\fi}}%

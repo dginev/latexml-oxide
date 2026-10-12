@@ -8,6 +8,26 @@ LoadDefinitions!({
   // Perl's amsrefs.sty.ltxml never overrides it (SHARED); pdflatex clean.
   // Guard: `perfect_kernel_batch56::sweep46_single_name_gaps`.
   AssignValue!("BibTeX_title_case" => "asis");
+
+  // What amsrefs.sty loads (Perl amsrefs.sty.ltxml loads nothing, KNOWN_PERL_ERRORS #627): url (:45-46, when
+  // url.sty exists), rkeyval (:213, `\DefineSimpleKey`, `\DefineAdditiveKey`), and unless the `lite` option
+  // (:179, :214-218) textcmds and mathscinet (`\cprime`, `\germ`, `\scr`, `\Dbar`: the MathSciNet
+  // transliterations a `\bib` entry carries). rkeyval and textcmds have no binding: they are read raw, so only
+  // where raw loading is on (as `--preload=ar5iv.sty` has it). Witnesses 1907.08888, 2602.02342, math0410226,
+  // 1503.01599, 1102.5022.
+  DeclareOption!("lite", { AssignValue!("amsrefs@lite" => true, Scope::Global); });
+  DeclareOption!(None, {});
+  ProcessOptions!();
+  RequirePackage!("url");
+  if lookup_bool("INCLUDE_STYLES") {
+    RequirePackage!("rkeyval");
+  }
+  if !lookup_bool("amsrefs@lite") {
+    if lookup_bool("INCLUDE_STYLES") {
+      RequirePackage!("textcmds");
+    }
+    RequirePackage!("mathscinet");
+  }
   // Perl: amsrefs.sty.ltxml — Leverage the BibTeX implementation
 
   // Perl: LoadPool('BibTeX');
@@ -54,6 +74,74 @@ LoadDefinitions!({
 
   // \BibSpec — ignore
   def_macro_noop("\\BibSpec{}{}")?;
+  // amsrefs.sty:339 `\BibSpecAlias{new}{old}` gives a type the print spec of another; we print by type
+  // ourselves, so it is ignored as `\BibSpec` is.
+  def_macro_noop("\\BibSpecAlias{}{}")?;
+  // amsrefs.sty:2511 `\bysame`: the rule that stands for a repeated author list.
+  DefMacro!("\\bysame", "\\leavevmode\\hbox to3em{\\hrulefill}\\thinspace\\kern\\z@");
+  // amsrefs.sty:651 `\resetbiblist{widest label}` sets the label width of the list it is given to (as
+  // `\begin{biblist}[\resetbiblist{99}]`); the width is presentation.
+  def_macro_noop("\\resetbiblist{}")?;
+  // amsrefs.sty:1564-1568, 3023-3026: `\ocite`/`\ocites` cite as an object of the sentence; they cite.
+  DefMacro!("\\ocite", "\\cite");
+  DefMacro!("\\ocites", "\\cites");
+
+  // amsrefs.sty:1291-1316 `\bibselect{db1,db2}` (`\bibselect*`, `[bblname]`): with `\if@filesw` it reads
+  // every `\bib` of each database `<db>.ltb` (else `.ltx`, `.tex`; `\ReadBibData`, :1324-1340, the
+  // `\ReadBibLoop` executes the lines that start with `\bib`, :1348-1369), writes the selected ones —
+  // the cited ones, all of them for `\bibselect*` — to `<bblname>.bbl` and inputs that. With no database
+  // shipped the `.bbl` of the author's run is input as it is. The entries of a database are marked
+  // `ltx_bib_library`, so the bibliography prints the cited ones (latexml_post make_bibliography), as a
+  // `.bib` library; `\bibselect*` keeps them all. Perl has no `\bibselect` (KNOWN_PERL_ERRORS #627).
+  // Witnesses 1904.05225 (`CF.ltb`), 2103.06687, 2508.05726 (the `.bbl`).
+  DefMacro!("\\bibselect", "\\@ifstar{\\lx@amsrefs@bibselect{*}}{\\lx@amsrefs@bibselect{}}");
+  DefMacro!("\\lx@amsrefs@bibselect{}[]{}", sub[(star, bblname, list)] {
+    let select_all = star.to_string() == "*";
+    let mut records = String::new();
+    let mut found = false;
+    for name in do_expand(list)?.to_string().split(',') {
+      let name = name.trim();
+      if name.is_empty() {
+        continue;
+      }
+      let text = ["ltb", "ltx", "tex"].iter().find_map(|ext| {
+        find_file(name, Some(FindFileOptions {
+          ext_type: Some(Cow::Borrowed(ext)),
+          forbid_ltxml: true,
+          ..Default::default()
+        }))
+        .filter(|path| path.ends_with(&format!(".{ext}")))
+        .and_then(|path| std::fs::read(path).ok())
+      });
+      match text {
+        Some(bytes) => {
+          found = true;
+          let text: String = String::from_utf8(bytes.clone())
+            .unwrap_or_else(|_| bytes.iter().map(|&b| b as char).collect());
+          for record in amsrefs_database_records(&text) {
+            if !select_all && let Some(key) = amsrefs_record_key(&record) {
+              assign_value(&s!("BIBENTRY_LIBRARY:{}", key.to_lowercase()), true, Scope::Global);
+            }
+            records.push_str(&record);
+            records.push('\n');
+          }
+        },
+        None => Info!("missing_file", name, s!("No data file {name}.ltb (.ltx, .tex) found")),
+      }
+    }
+    if found {
+      if !records.is_empty() {
+        open_mouth(Mouth::new(&records, None)?, true);
+      }
+      return Ok(Tokens!());
+    }
+    let bbl = match bblname {
+      Some(name) => name.to_string(),
+      None => s!("{}", do_expand(Tokens!(T_CS!("\\jobname")))?.to_string()),
+    };
+    Ok(Tokens!(T_CS!("\\InputIfFileExists"), T_BEGIN!(), Explode!(s!("{bbl}.bbl")), T_END!(),
+      T_BEGIN!(), T_END!(), T_BEGIN!(), T_END!()))
+  });
 
   // \cites = \cite
   Let!("\\cites", "\\cite");
@@ -112,8 +200,10 @@ LoadDefinitions!({
       Let!("\\par", "\\relax");
     });
 
-  // {biblist} environment
-  DefEnvironment!("{biblist}", "<ltx:biblist>#body</ltx:biblist>");
+  // {biblist} environment. amsrefs.sty:532-569 `\@biblist[#1]` takes the list's settings (`[\resetbiblist{99}]`,
+  // `[prefix=A]`), which are presentation; `{biblist*}` (:538) is the list that continues the numbering.
+  DefEnvironment!("{biblist}[]", "<ltx:biblist>#body</ltx:biblist>");
+  DefEnvironment!("{biblist*}[]", "<ltx:biblist>#body</ltx:biblist>");
 
   // \MR{...} — MathReviews link. Perl amsrefs.sty.ltxml L75-82:
   // properties closure patches old-style "12345 \# 67" → "12345:67" and
@@ -135,3 +225,60 @@ LoadDefinitions!({
   DefConstructor!("\\ndash", "\u{2013}"); // EN DASH
   DefConstructor!("\\mdash", "\u{2014}"); // EM DASH
 });
+
+/// The records of an amsrefs database (`.ltb`) that `\ReadBibLoop` (amsrefs.sty:1348-1369) executes: it `\read`s
+/// the file a record at a time — a line, extended while its braces are open — and executes the records whose first
+/// token is `\bib`; a record that starts with `\endinput` ends the file. `%` comments are dropped as TeX reads them.
+fn amsrefs_database_records(text: &str) -> Vec<String> {
+  let mut records = Vec::new();
+  let mut record = String::new();
+  let mut depth: i64 = 0;
+  for line in text.lines() {
+    // Strip the comment: the first `%` not escaped by a backslash.
+    let mut code = String::new();
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+      match c {
+        '\\' => {
+          code.push(c);
+          if let Some(next) = chars.next() {
+            code.push(next);
+          }
+        },
+        '%' => break,
+        '{' => {
+          depth += 1;
+          code.push(c);
+        },
+        '}' => {
+          depth -= 1;
+          code.push(c);
+        },
+        _ => code.push(c),
+      }
+    }
+    record.push_str(&code);
+    record.push('\n');
+    if depth > 0 {
+      continue;
+    }
+    depth = 0;
+    let head = record.trim_start();
+    if head.starts_with("\\endinput") && !head[9..].starts_with(|c: char| c.is_ascii_alphabetic()) {
+      break;
+    }
+    if head.starts_with("\\bib") && !head[4..].starts_with(|c: char| c.is_ascii_alphabetic()) {
+      records.push(head.to_string());
+    }
+    record.clear();
+  }
+  records
+}
+
+/// The key of a database record `\bib{key}{type}{…}` (or `\bib*{key}…`).
+fn amsrefs_record_key(record: &str) -> Option<String> {
+  let rest = record.strip_prefix("\\bib")?.trim_start();
+  let rest = rest.strip_prefix('*').unwrap_or(rest).trim_start();
+  let rest = rest.strip_prefix('{')?;
+  rest.find('}').map(|end| rest[..end].trim().to_string())
+}

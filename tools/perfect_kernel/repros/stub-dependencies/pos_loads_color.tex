@@ -1,0 +1,17 @@
+% witness: 1904.06989, 1309.7883, 1411.7592, 1708.03575 (`\documentclass{PoS}`, then `\textcolor`/`\color`/
+%          `\definecolor` with no color package; PoS.cls v1.2.1 :174, v1.2.4 and v1.2.6 :162 `\RequirePackage{color}`)
+% oracle:  pdflatex with the PoS.cls 1904.06989 ships: `\textcolor` defined; its TL 2025 errors are the 2017
+%          class's (`\@pdfcolorstack` in its `\set@color` under modern color, its `PoSlogo` shipped as .ps only)
+% engines: rust 65int2 = 1 error (`\textcolor` undefined); Perl's PoS.cls.ltxml loads no color (KNOWN_PERL_ERRORS #629)
+% expect:  0 errors, 0 warnings; `<text color="#FF0000">red</text>`
+% status:  RED (65int2) -> GREEN (65r)
+% preload: ar5iv.sty
+\documentclass{PoS}
+\title{T}
+\ShortTitle{T}
+\author{A}
+\abstract{Abs.}
+\FullConference{Conf}
+\begin{document}
+Some \textcolor{red}{red} text.
+\end{document}

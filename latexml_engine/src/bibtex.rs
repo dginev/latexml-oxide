@@ -2822,11 +2822,16 @@ LoadDefinitions!({
   // see audit divergence B1 (Rust uses a thread-local already set by
   // `\ProcessBibTeXEntry`).
   DefEnvironment!("{bib@entry} Semiverbatim Semiverbatim",
-  "<ltx:bibentry type='#1' key='#key' xml:id='#id'>#body</ltx:bibentry>",
+  "<ltx:bibentry type='#1' key='#key' class='#class' xml:id='#id'>#body</ltx:bibentry>",
   after_digest_begin => sub[whatsit] {
     let key_arg = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
     set_current_entry(&key_arg);
     whatsit.set_property("key", Stored::String(pin(&key_arg)));
+    // An entry read from an amsrefs database by `\bibselect` (amsrefs_sty.rs) is a library entry: the
+    // bibliography prints it when cited, as an entry of a `.bib` (latexml_post make_bibliography).
+    if lookup_bool(&s!("BIBENTRY_LIBRARY:{}", key_arg.to_lowercase())) {
+      whatsit.set_property("class", Stored::String(pin("ltx_bib_library")));
+    }
     // Merge in the {id, refnum, ...} from the @bibitem counter step.
     let id_props = RefStepCounter!("@bibitem")?;
     whatsit.set_properties(id_props);

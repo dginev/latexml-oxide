@@ -343,6 +343,9 @@ LoadDefinitions!({
   DefMacro!("\\@pdfremotestartview", "/Fit");
   DefMacro!("\\@pdfstartpage", "1");
 
+  // The options of a later `\usepackage[…]{hyperref}` are keys `\hypersetup` takes (the repeat load after a
+  // class binding's own hyperref load; binding/content.rs `apply_new_options_on_reload`).
+  AssignValue!("hyperref.sty_keyval_setter" => "\\hypersetup", Scope::Global);
   // Digest & store the options
   // Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
   //   hyperref_setoption($key, Digest($value)); });

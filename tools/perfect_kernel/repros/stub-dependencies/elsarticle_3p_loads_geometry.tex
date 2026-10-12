@@ -1,0 +1,13 @@
+% witness: 2609.13883, 2404.14059, 2103.06107, 1904.12395 (`\documentclass[3p]{elsarticle}` then `\geometry`;
+%          elsarticle.cls:1252-1300 loads geometry for 1p/3p/5p)
+% oracle:  pdflatex 0 errors
+% engines: rust 65int2 = 1 error (`\geometry` undefined); Perl has the load commented out (elsarticle.cls.ltxml:44,
+%          KNOWN_PERL_ERRORS #629)
+% expect:  0 errors, 0 warnings; the paragraph "Text."
+% status:  RED (65int2) -> GREEN (65r)
+% preload: ar5iv.sty
+\documentclass[3p]{elsarticle}
+\geometry{left=2cm}
+\begin{document}
+Text.
+\end{document}
