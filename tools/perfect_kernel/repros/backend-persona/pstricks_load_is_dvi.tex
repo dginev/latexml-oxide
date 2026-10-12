@@ -1,0 +1,16 @@
+% witness: 1002.1751 (pstricks in its \ifpdf false branch; three stale PDFs in figs/ that nothing includes: PDF mode
+%          dropped pstricks, its pspicture bodies became math, 6.3 GB, 501 Error:post:xpath)
+% oracle:  arXiv AutoTeX latex+dvips: "Mode: DVI." (latex 0 errors, side file figs/stale.pdf)
+% engines: rust 65a = "Mode: PDF."
+% expect:  0 errors; "Mode: DVI." — a pstricks load is latex+dvips' cue
+% status:  RED (65a) -> GREEN (65f)
+\documentclass{article}
+\usepackage{ifpdf}
+\ifpdf
+\usepackage{graphicx}
+\else
+\usepackage{pstricks}
+\fi
+\begin{document}
+Mode: \ifpdf PDF\else DVI\fi.
+\end{document}

@@ -9392,6 +9392,9 @@ mirror of the DVI-driver cue). Witness 2210.04612: an MDPI template's `logo-*.ep
 `\documentclass[…,pdftex]{Definitions/mdpi}`, was taken as DVI, and expl3's backend check stopped it ("Backend
 request inconsistent with engine: using 'dvips'", expl3-code.tex:8036-8041; 47 of run 336's papers).
 
+**Included figures** (batch 65f, #537): the figures the source includes decide before the tree's file inventory, and
+a pstricks load is a DVI cue; the tree walk above remains the fallback when no included figure resolves.
+
 **Known limitation**: a source with EPS figures only that its author compiles with
 pdflatex+epstopdf is taken as DVI, as arXiv's own cue would.
 
@@ -15898,3 +15901,118 @@ The `ltx_figure_panel` wrap that would keep such a box valid with its own id, la
 caption_first_box_in_a_transform_keeps_its_content, captioned_box_beside_other_content_in_a_transform_stays_inside,
 caption_hoist_never_merges_two_captions, caption_hoist_never_moves_content_beside_the_box,
 caption_hoist_through_an_environment_holding_only_the_transform}`.
+
+### 536. A plain TeX document loads the LaTeX format only on a use of Perl's triggers, which it holds undefined (Perl: the triggers are defined macros)
+
+Perl's `TeX.pool.ltxml` L33-39 defines sixteen LaTeX commands as autoload triggers (`\documentclass`, `\newcommand`,
+`\begin`, `\RequirePackage`, `\ProvidesPackage`, `\ProvidesFile`, …): each is a macro that loads `LaTeX.pool` and
+re-reads itself. Generic-format files probe exactly these names to tell LaTeX from plain TeX, so in a plain document
+Perl's defined triggers answered "LaTeX" and the file took its LaTeX branch, loading the format mid-document:
+- pst-xkey.tex:44 `\ifx\ProvidesFile\@undefined` (pstricks: math0305287, math0111222);
+- iftex.sty:31-33 `\csname ProvidesPackage\endcsname`, which eplain.tex:47-49 inlines (the eplain papers on TL 2025:
+  `\cite` then locked, eplain.tex:721's `\@Fornoop` mis-tokenized, `Fatal:ParamSpec:Expected` — 1504.02513,
+  1402.1807, 1310.8121, 2405.04530);
+- atbegshi.sty:155-156 and the other Oberdiek packages `\csname RequirePackage\endcsname`;
+- dual-mode files `\ifx\documentclass\undefined` — when the probe sits in a file the main file inputs: a main file
+  naming `\documentclass` anywhere is a LaTeX document by the classification below.
+
+**Rust** (batch 65f): in a plain TeX document (`state::plain_tex_document`, arXiv AutoTeX's test,
+`converter::compile_route`) `tex.rs` defines none of the triggers (`latex_kernel::LATEX_TRIGGERS`), so a probe sees
+what TeX sees. A *use* of one still loads the format, now through the on-undefined hook
+(`latex_kernel::autoload_latex_kernel`), with or without a dump — Perl's behaviour on use is kept. Every other LaTeX
+kernel command in a plain document is undefined, as TeX and Perl report it: the on-undefined autoload, which acts on any
+command the kernel dump defines in a LaTeX document, does not fire there (it loaded LaTeX's `\verbatim` on 1504.02513's
+`\verbatim`, which read to the end of the file, `Fatal:Mouth:EoF`; LaTeX's `\title` in math9810192; the whole format
+through 1901.09683's `\let\big=\eightbig` of an undefined name). graphics' begin-document epstopdf hook is registered
+as pdftex.def:681-700 registers it, only when `\AtEndOfPackage` exists, so under miniltx (whose `\AtBeginDocument`
+runs its argument at once, miniltx.tex:477) its `\@ifpackageloaded` no longer loads LaTeX (1710.04722, 1802.06281:
+`Fatal:Timeout:Recursion`). KPE #610.
+
+**Limit** (each as TeX has it): a capture such as `\let\x\begin` in a plain document captures an undefined name; a
+trigger met in an expanded collection (`\edef`, `\write`, `\message`) is `Error:undefined`, the hook running only in
+`read_x_token` and the stomach; an ungrouped `\csname RequirePackage\endcsname` probe leaves the name `\relax`, so a
+later use never reaches the hook. A plain document's own fallback for a probed name (`\ifx\newcommand\undefined
+\def\newcommand…\fi`) now runs. pstricks on TL
+2025 under plain TeX still loads expl3 (pst-code-pspicture.tex:76 `\ExplSyntaxOn`) and LaTeX with it, and Perl's
+braced `\input{…}` loads LaTeX too (KPE #611), so math0305287 and math0111222 stay Fatal.
+
+**Limit of the classification** (`converter::has_latex_cue`): a main file is a LaTeX document when `\documentclass` or
+`\documentstyle` appears in its code at all, even inside a dual-mode test such as `\ifx\documentclass\undefined`. That
+is arXiv's own choice: its TeX-or-LaTeX test keys on those names appearing in the file, so such a main file was most
+likely compiled as LaTeX there, and it is read as one here.
+
+**Guards**: `perfect_kernel_batch65f::{plain_kernel_command_stays_undefined, plain_miniltx_graphicx_loads_no_latex,
+plain_provides_probes_see_plain}`, `preclass_kernel_autoload::plain_document_leaves_kernel_cs_undefined`.
+
+### 537. The figures a source includes choose its output mode; a pstricks load is a DVI cue (Perl: always DVI; #285: any PDF/PNG/JPEG in the tree)
+
+**Oracle**: arXiv's own compile route, read from the Producer of arXiv's PDF (`pdfinfo`): "dvips + GPL Ghostscript"
+means latex+dvips (DVI), "pdfTeX" means pdflatex (PDF). pdflatex itself is no oracle here — it prints PDF by
+definition.
+
+#285's cue read the source tree's file inventory: any `.pdf`/`.png`/`.jpg` anywhere selected PDF output. 1012.0815
+ships all-EPS figures beside `IEEEtran/IEEEtran_HOWTO.pdf`: PDF mode made `\ifCLASSINFOpdf` true, and the source's
+unclosed `\ifCLASSINFOpdf … \else` (IEEE_manuscript_v9-1.tex:8-25) swallowed the text (`Fatal:Document:Malformed`;
+arXiv built it with latex+dvips). 1002.1751 loads pstricks in its `\ifpdf` false branch beside three stale PDFs that
+nothing includes: PDF mode dropped pstricks, its `pspicture` bodies became math, 6.3 GB and 501 `Error:post:xpath`.
+
+**Rust** (batch 65f): `converter::figure_output_cue` reads the targets of `\includegraphics`, `\epsfig`/`\psfig`,
+`\epsfbox`/`\epsffile` and AASTeX's `\plotone`/`\plottwo` in the main file and the files it inputs (`\input`,
+`\include`, `\subfile`; not in `\iffalse … \fi`; four levels, 200 files), resolved in the source directory and the
+`\graphicspath` directories, by the name as written or with the extensions pdfTeX and dvips try.
+- **PDF**: a figure that exists only as PDF/PNG/JPEG (latex+dvips cannot include it).
+- **DVI**: a pstricks load (`pstricks`, `pst-*`; not with pst-pdf, auto-pst-pdf or pdftricks, its pdflatex front
+  ends), or every included figure resolved and each one PostScript only. epstopdf's conversions beside the figures
+  (`<stem>-eps-converted-to.pdf`) and an epstopdf load change nothing: arXiv compiled such sources with latex+dvips.
+  Witnesses (Producer "dvips + GPL Ghostscript"): 1806.00093, 1806.00188, 1806.00370 (conversions shipped; 1806.00284
+  likewise, its Producer plain "GPL Ghostscript"), and the epstopdf-loading EPS-only papers 1804.02991, 2104.01314,
+  1209.6096, 2210.10273, 1701.08490; 1908.04811 (main file `main.tex` — its `IEEECS_confs_LaTeX/bare_conf.tex`, a
+  template that also names `\documentclass`, is a decoy a naive main-file finder picks). Round 2 of this batch took the conversions and the epstopdf load as PDF cues and
+  got 2 of 13 such papers right; round 1's rule, kept here, 13 of 13.
+- **Undecided**, and #285's tree walk decides (`core_interface::establish_pdf_output_mode`): an included figure that
+  does not resolve (a name TeX builds at run time, `\figdir/a`, `#1`; an absolute or `..` name; a missing file), or
+  one the tree holds as both EPS and PDF/PNG/JPEG under the figure's own name.
+
+The class-option cues (`pdftex`, `dvips`, …) and a document's own `\pdfoutput` still come first.
+
+**Guards**: `perfect_kernel_batch65f::included_figures_choose_the_output_mode`,
+`converter::tests::figure_output_cue_of_sources`.
+
+### 538. The gullet's cycle guard fingerprints a token read from a file with its source position; a file level past TeX's `max_in_open` is a Fatal (Rust-only guard; Perl has neither)
+
+The gullet's cycle guard (`cycle_guard.rs`, `gullet.rs` `read_internal_token_checked`) reports a window of up to ten
+tokens repeated 100 times, past its activation floor, as `Fatal:Timeout:Recursion`. It fingerprinted every token read,
+including the Mouth's own input, and its backlog gate takes a level pushback as a loop's. So finite file text with a
+short period was a loop: 1009.1698's gnuplot label file holds 626 lines of `\color{black}%`, read as one argument with
+the pushback empty ("a window of 8 token(s) repeated 100+ times").
+
+**Rust** (batch 65f): a token read from the Mouth is fingerprinted by its meaning and its source position (line,
+column), so a file's repeated text is no period; expansion output (the pushback) is fingerprinted by meaning, as before.
+A loop that re-reads the same text through a new Mouth each period reads it at the same positions, so it can still
+form a period; fingerprinting a Mouth token by its read alone could not (`\def\x{\scantokens{\x}}` ran to the memory
+cap — it now stops at the input-level limit below, as in etex).
+
+A macro that `\input`s the file it is read from (`\def\x{\input loopf }\x`, loopf.tex holding `\x`) nests files
+instead: pdftex stops at "TeX capacity exceeded, sorry [text input levels=15]" (`max_in_open`, texmf.cnf:868; tex.web
+§328). `gullet::mark_everyeof_mouth`, which makes each `\input` file and `\scantokens` pseudo-file a file level, now
+raises that Fatal (`Fatal:Mouth:Recursion`) when a sixteenth opens. Before, such a run nested files until the process
+watchdog (armed by `latexml_oxide` and `cortex_worker` at `--timeout`) ended it: `Fatal:timeout:wallclock`, exit 124,
+no output, ~0.75 MB of log a second (65a: 15 MB in a 20 s run).
+
+The gullet now also checks the cooperative conversion deadline once per 65,536 token reads
+(`stomach::conversion_deadline_passed`), raising `Fatal:Timeout:Convert`. Before, that in-process Fatal never fired
+for a loop that stays in the gullet (it was checked only from the digestion loops). It matters on its own only to a
+caller that arms no watchdog: the test harness (`util::test`, `set_timeout(GUARD_TIMEOUT_SECS)`), and an embedder
+of `latexml::api`, which sets no deadline at all. **Known limitation — a race**: where a watchdog is armed, it
+shares the cooperative deadline, and either may end the run. When the cooperative `Fatal:Timeout:Convert` comes
+first, the document is built and written (rc=1), unless the watchdog ends the process while it is being built or
+rewritten (`Fatal:timeout:wallclock`, exit 124, no XML, after the cooperative Fatal was logged); when the watchdog comes
+first, it alone ends the run. With `--timeout=5`, `\def\a#1{\a{#1x}}\a{}` gave the cooperative Fatal and its XML in 6
+of 6 review runs, and `\loop\hbox{x}\iftrue\repeat` the watchdog alone in 5 of 6 (the cooperative Fatal and its XML in
+1). Under cortex the harness reports a watchdog-ended child by its exit cause, `Fatal:timeout:wallclock`, tagged
+retryable (pk/65g `exit_report.rs` `retryable`); a cooperative Fatal logged before it appears only in the partial log.
+A cooperative deadline set a grace before the watchdog's would settle the race (task #205).
+
+**Guards**: `perfect_kernel_batch65f::repeated_file_text_is_no_expansion_loop` (also: a two-token expansion loop and a
+`\scantokens` self-recursion past the floor still trip), `perfect_kernel_batch65f::self_input_stops_at_the_text_input_level_limit`.
+

@@ -2088,8 +2088,7 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
   // Without the mark the reader ran into the enclosing document and looped at
   // its true end (tikzmarmots-doc 0→501 errors + Fatal, tikzlings-doc 35→536,
   // sweep 28). Guard: `perfect_kernel_batch51::input_file_end_inserts_everyeof`.
-  gullet::mark_everyeof_mouth();
-  Ok(())
+  gullet::mark_everyeof_mouth()
 }
 
 /// Pass the sequence of @options to the package $name (if $ext is 'sty'),

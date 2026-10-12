@@ -1,0 +1,13 @@
+% witness: 1710.04722, 1802.06281 (plain TeX: miniltx + graphicx + pictex)
+% oracle:  pdftex (plain) 0 errors: pdftex.def:681-700 registers its epstopdf load only when \AtEndOfPackage exists,
+%          which miniltx does not define
+% engines: rust 65a = Fatal:Timeout:Recursion (graphics' unguarded begin-document hook ran at once under miniltx's
+%          \AtBeginDocument, miniltx.tex:477; its \@ifpackageloaded loaded LaTeX.pool mid-file)
+% expect:  0 errors, no Info:autoload; "Hello" typeset
+% status:  RED (65a) -> GREEN (65f)
+\input miniltx
+\input graphicx.sty
+\input pictex
+\input color.sty
+Hello
+\bye

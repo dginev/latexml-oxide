@@ -12473,3 +12473,23 @@ stays in force for the entries. pdflatex sets the name in `\section*{\refname}`,
 `\documentclass{article}\renewcommand{\refname}{\bfseries\Large References}\begin{document}\cite{a}
 \begin{thebibliography}{9}\bibitem{a} A. Author, Some title.\end{thebibliography}\end{document}` → the `<bibblock>`
 in bold 144 % (Perl 0.8.8). Fixed in Rust (65a, OD #528; repro index-bib/refname_font_stays_in_the_bibliography_title).
+
+## 610. TeX.pool's LaTeX autoload triggers answer generic-format probes with "LaTeX" in a plain TeX document
+
+Perl `TeX.pool.ltxml` L33-39 `DefAutoload`s sixteen LaTeX commands (`\ProvidesFile`, `\ProvidesPackage`,
+`\RequirePackage`, `\documentclass`, …) as macros that load `LaTeX.pool`. A generic file's probe for one of them
+(pst-xkey.tex:44 `\ifx\ProvidesFile\@undefined`, iftex.sty:31-33 `\csname ProvidesPackage\endcsname`, inlined by
+eplain.tex:47-49, atbegshi.sty:155-156 `\csname RequirePackage\endcsname`) sees a defined command and takes its LaTeX branch,
+which loads the format in the middle of a plain document. Trigger: `\catcode`\@=11 \ifx\ProvidesFile\@undefined
+PLAIN\else LATEX\fi \bye` → "LATEX" (tex: "PLAIN"). Fixed in Rust (65f, OD #536; repro
+loader/plain_provides_probes_see_plain). Witnesses math0305287, math0111222, the eplain papers on TL 2025 (1504.02513).
+
+## 611. A braced `\input{…}` loads LaTeX.pool in a plain TeX document
+
+Perl `TeX_FileIO.pool.ltxml:161-170` loads `LaTeX.pool` whenever `\input`'s argument is braced. pdfTeX (1.40.21+)
+reads `\input{file}` as the file's name in plain TeX too, and TL 2025's pstricks.tex:1982 writes
+`\input{pstricks-dots}`, so a plain document that loads pstricks gets the LaTeX format mid-file. Trigger:
+`\input{story}\bye` → `LaTeX.pool` loaded (tex: story.tex read, no LaTeX). Kept in Rust (`tex_file_io.rs`); with
+pstricks's own `\ExplSyntaxOn` (pst-code-pspicture.tex:76) loading expl3 anyway, gating it alone rescued neither
+math0305287 nor math0111222 (65f measurement).
+

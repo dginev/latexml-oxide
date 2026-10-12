@@ -61,7 +61,7 @@ fn open_caught_file(file: Tokens) -> Result<()> {
     true,
     BalancedBoundary::Opaque,
   );
-  mark_everyeof_mouth();
+  mark_everyeof_mouth()?;
   Ok(())
 }
 

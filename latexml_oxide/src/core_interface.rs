@@ -2164,8 +2164,9 @@ impl DigestionAPI for Core {
 /// compiles a source with pdflatex unless its figures are EPS/PS only, which it
 /// runs through latex+dvips (a document's own `\pdfoutput=1` in its first lines
 /// still selects pdflatex, and still sets the register here). So PDF output
-/// is the default, DVI the exception for a source directory whose figures are
-/// PostScript only. Under the `luatex` profile the output is always PDF
+/// is the default, DVI the exception for a source whose included figures are
+/// PostScript only or that loads pstricks (its tree's files, when no included
+/// figure resolves). Under the `luatex` profile the output is always PDF
 /// (luatex85's `\pdfoutput` is `\outputmode`); under `xetex` there is no
 /// `\pdfoutput` and `\ifpdf` stays false. arXiv 2605: 95.8 % of 30,079
 /// sources are pdflatex ones, and 1,646 of the 1,692 that test `\ifpdf` had
@@ -2179,9 +2180,16 @@ fn establish_pdf_output_mode(dir: &str) {
   // A DVI driver class option is the same cue (stream F; `state::dvi_driver_option`): 0908.4150's
   // `\documentclass[12pt,dvips]{article}` ships no figures but is a latex+dvips document; the `pdftex` one the
   // opposite (`state::pdf_driver_option`, 2210.04612).
+  // The figures the source includes come next (`state::figure_output_cue`, OXIDIZED_DESIGN_DIVERGENCES #537); only
+  // when none resolves, and no pstricks is loaded, does the tree's file inventory decide.
   let pdf = state::lookup_bool("LUATEX_PROFILE")
     || state::pdf_driver_option()
-    || (!source_figures_are_postscript_only(dir) && !state::dvi_driver_option());
+    || (!state::dvi_driver_option()
+      && match state::figure_output_cue() {
+        state::FigureOutputCue::Pdf => true,
+        state::FigureOutputCue::Dvi => false,
+        state::FigureOutputCue::Undecided => !source_figures_are_postscript_only(dir),
+      });
   let _ = state::assign_register(
     "\\pdfoutput",
     latexml_core::common::number::Number(i64::from(pdf)).into(),
@@ -2190,7 +2198,8 @@ fn establish_pdf_output_mode(dir: &str) {
   );
 }
 
-/// Whether the source directory tree's figures are PostScript only: it holds an EPS/PS file and no PDF/PNG/JPEG one —
+/// Whether the source directory tree's figures are PostScript only, for a source whose included figures decide nothing
+/// (`state::FigureOutputCue::Undecided`): it holds an EPS/PS file and no PDF/PNG/JPEG one —
 /// arXiv AutoTeX's cue for latex+dvips, which cannot include the others (a source shipping both, an MDPI template's
 /// `logo-*.eps` beside PNG figures, 2210.04612, is a pdflatex one). The walk is bounded: a document converted from a
 /// large directory (a home directory, say) is not read end to end.

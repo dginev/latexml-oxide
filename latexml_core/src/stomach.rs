@@ -46,6 +46,12 @@ pub fn set_timeout(seconds: u64) {
   }
 }
 
+/// Whether the conversion's deadline ([`set_timeout`]) has passed — for a reader that may never return to a digestion
+/// loop (the gullet's token reads).
+pub fn conversion_deadline_passed() -> bool {
+  CONVERSION_DEADLINE.with(|d| d.get().is_some_and(|deadline| Instant::now() > deadline))
+}
+
 // Explicit override for the cooperative soft-RSS budget (bytes). When set it
 // takes precedence over the `LATEXML_RSS_CAP_BYTES` env; when `None` the env /
 // built-in default applies. The binary sets it from the single `--max-memory`

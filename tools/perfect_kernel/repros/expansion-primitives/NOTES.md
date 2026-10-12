@@ -68,3 +68,16 @@ xstring has NO Perl or Rust binding (loads raw both sides) => if Perl converts c
 RUST-ONLY full-expansion machinery; needs same-host Perl run to confirm + deeper isolation
 (babel+magyar chain). BORDERS string-mouth topic. Not fixed this checkpoint.
 DEAD END: minimal `\def\thenumspell{egy}` does NOT reproduce.
+
+## cycle_guard_repeated_file_input (65f)
+The gullet cycle guard fingerprinted the Mouth's own tokens; 700 × `\color{black}` read as one argument past the 20M
+activation floor, with the pushback empty, was "a window of 7/8 token(s) repeated 100+ times" (1009.1698). RUST-ONLY.
+GREEN since 65f (OD #538): a Mouth token's fingerprint carries its source position. Guard
+`perfect_kernel_batch65f::repeated_file_text_is_no_expansion_loop`.
+
+## input_self_recursion_text_input_levels (65f round 2)
+`\def\x{\input loopf }\x` with loopf.tex = `\x` nested file mouths without end and never returned to a digestion loop,
+so only the process watchdog ended it (`Fatal:timeout:wallclock` at `--timeout`, ~0.75 MB of log a second). RUST-ONLY.
+GREEN since 65f r2 (OD #538): a sixteenth file level is pdftex's "TeX capacity exceeded, sorry [text input levels=15]"
+(`gullet::mark_everyeof_mouth`, `MAX_IN_OPEN`), and the gullet checks the deadline every 65,536 reads. Guard
+`perfect_kernel_batch65f::self_input_stops_at_the_text_input_level_limit`.

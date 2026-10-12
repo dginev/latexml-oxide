@@ -845,10 +845,31 @@ pub fn open_mouth_with(mouth: Mouth, autoclose: bool, boundary: BalancedBoundary
 /// `\everyeof` token list (see [`MouthRuntime::insert_everyeof`]). Every
 /// `\input` file mouth is marked (`content.rs::load_tex_content`), and so is
 /// the `\scantokens` pseudo-file (`etex.rs`).
-pub fn mark_everyeof_mouth() {
-  if let Some(ref mut runtime) = gullet_mut!().runtime {
-    runtime.insert_everyeof = true;
+///
+/// The mark also makes the mouth a TeX file level, of which at most [`MAX_IN_OPEN`] may be open at once: one more is
+/// TeX's "TeX capacity exceeded, sorry [text input levels=15]" (tex.web §328), a Fatal. A macro that `\input`s the
+/// file it is read from (`\def\x{\input loopf }\x`, loopf.tex holding `\x`) otherwise nested files without end.
+pub fn mark_everyeof_mouth() -> Result<()> {
+  let levels = {
+    let mut gullet = gullet_mut!();
+    if let Some(ref mut runtime) = gullet.runtime {
+      runtime.insert_everyeof = true;
+    }
+    gullet
+      .runtime
+      .iter()
+      .chain(gullet.mouthstack.iter())
+      .filter(|r| r.insert_everyeof)
+      .count()
+  };
+  if levels > MAX_IN_OPEN {
+    Fatal!(
+      Mouth,
+      Recursion,
+      s!("TeX capacity exceeded, sorry [text input levels={MAX_IN_OPEN}]")
+    );
   }
+  Ok(())
 }
 
 pub fn close_mouth(forced: bool) -> Result<()> {
@@ -1079,9 +1100,19 @@ pub fn flush_mouth() {
     // then splice them into the stack's BOTTOM in reverse order so
     // that after the stack's existing top is popped, the mouth tokens
     // come out in the original mouth order (t1 first, then t2, …).
+    // Only the current line's: a comment ends it, and with source comments off (OD #2) the Mouth reads past a `%` to
+    // the next line, whose tokens TeX never reads (tex.web §362). atbegshi.sty:557's
+    // `\AtBegShi@AbortIfUndefined{AtBeginDocument}%`, whose `\endinput` comes from the macro's expansion, read on
+    // into line 558 under the restored `@` catcode (`\AtBegShi` undefined, the file's definitions unbalanced: math0305287, a
+    // plain TeX paper loading pstricks through pgfutil-plain.def; guard
+    // `perfect_kernel_batch65f::endinput_from_a_macro_ends_the_file_at_the_line`).
+    let line = runtime.mouth.line_number();
     let mut trailer: Vec<Token> = Vec::new();
     while !runtime.mouth.is_eol() {
       if let Some(token) = runtime.mouth.read_token() {
+        if runtime.mouth.line_number() != line {
+          break;
+        }
         trailer.push(token);
       }
     }
@@ -1225,7 +1256,8 @@ const CYCLE_GUARD_DUTY_ON: usize = 2_048;
 /// `\dont_expand` special-casing), so the guard sees the same stream
 /// regardless of which loop reads it. The reading-context serial is mixed
 /// into the fingerprint (see `Gullet::ctx_serial`) so windows never match
-/// across `reading_from_mouth` contexts. Activation is gated on
+/// across `reading_from_mouth` contexts; a token read from the Mouth (input,
+/// not expansion output) also carries its source position. Activation is gated on
 /// `progress > cycle_guard_activate` AND the duty window above.
 #[inline]
 fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
@@ -1233,6 +1265,7 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
     TokenLimit(usize),
     PushbackLimit(usize),
     Cycle(usize, Token),
+    Deadline,
   }
   let mut breach: Option<Breach> = None;
   let mut outcome = CheckedRead::Exhausted;
@@ -1252,6 +1285,12 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
       && rt.pushback.len() > limit
     {
       breach = Some(Breach::PushbackLimit(limit));
+    } else if g.progress & DEADLINE_CHECK_MASK == 0 && crate::stomach::conversion_deadline_passed()
+    {
+      // The cooperative conversion deadline (`stomach::set_timeout`), checked here too: an expansion that never
+      // returns to a digestion loop never met it, and only a process watchdog, where one is armed, ended the run
+      // (OD #538).
+      breach = Some(Breach::Deadline);
     } else {
       // Duty-cycled guard activation, computed BEFORE the read: the phase —
       // and the ON-window-start ring reset — depends only on `progress`,
@@ -1305,6 +1344,9 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
           break;
         }
       }
+      // Whether the token is expansion output (the pushback, `\everyeof`'s tokens included) rather than the current
+      // Mouth's own input, for the cycle guard below.
+      let mut expanded = next_token.is_some();
       if next_token.is_none() {
         while let Some(t) = rt.mouth.read_token() {
           if let Some(t) = route(t) {
@@ -1329,6 +1371,7 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
           while let Some(t) = rt.pushback.pop() {
             if let Some(t) = route(t) {
               next_token = Some(t);
+              expanded = true;
               break;
             }
           }
@@ -1358,7 +1401,19 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
           // without destroying the outer context's history. The multiplier
           // spreads the serial across the hash bits (splitmix64's odd
           // constant).
-          let fp = token.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+          //
+          // A token read from the Mouth is input, which advances: its fingerprint also carries where it starts in
+          // the file (line, column), so a file's repeated text is no period. Fingerprinted by meaning alone, it was a
+          // loop once the activation floor was passed: 1009.1698's gnuplot label file, 626 lines of
+          // `\color{black}%` read as one argument with the pushback empty, a window of 8 tokens "repeated 100+ times"
+          // (repro expansion-primitives/cycle_guard_repeated_file_input.tex). A loop that re-reads the same text
+          // through a new Mouth reads it at the same places every period, and is still one (a nesting one, as
+          // `\def\x{\scantokens{\x}}`, stops first at TeX's input-level limit, `mark_everyeof_mouth`).
+          let mut fp = token.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+          if !expanded {
+            let (line, column) = rt.mouth.last_token_start();
+            fp ^= (((line as u64) << 32) ^ column as u64).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+          }
           if let Some(period) = g.cycle_guard.push(fp, rt.pushback.len()) {
             breach = Some(Breach::Cycle(period, token));
           }
@@ -1375,8 +1430,16 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
     Some(Breach::TokenLimit(limit)) => token_limit_fatal(limit),
     Some(Breach::PushbackLimit(limit)) => pushback_limit_fatal(limit),
     Some(Breach::Cycle(period, token)) => cycle_trip_fatal(period, &token),
+    Some(Breach::Deadline) => fatal!(Timeout, Convert, "Conversion timed out!"),
   }
 }
+
+/// The gullet checks the conversion deadline once per this many token reads (a power of two, minus one).
+const DEADLINE_CHECK_MASK: usize = (1 << 16) - 1;
+
+/// TeX's limit on simultaneously open input files (`\input` files and `\scantokens` pseudo-files): `max_in_open`,
+/// texmf.cnf:868 (TL 2025; tex.web §328 `begin_file_reading` checks `in_open = max_in_open` before opening another).
+pub const MAX_IN_OPEN: usize = 15;
 
 /// Token-limit breach ([`read_internal_token_checked`]). The cycle guard
 /// already dumps its window when it trips, but a runaway that reaches THIS

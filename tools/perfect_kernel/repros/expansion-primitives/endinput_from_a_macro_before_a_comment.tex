@@ -1,0 +1,11 @@
+% witness: math0305287 (plain TeX + pstricks: pgfutil-plain.def loads atbegshi, whose line 557
+%          `\AtBegShi@AbortIfUndefined{AtBeginDocument}%` ends the file; pstricks_drawing::plain_input_pstricks_sizes_its_pictures once plain TeX took atbegshi's
+%          plain branch, batch 65f)
+% oracle:  etex 0 errors: "BACK" only — \endinput ends the file after the current line (tex.web §362)
+% engines: rust 65a = Error:undefined:\A — with source comments off the Mouth read past the `%` into the next line,
+%          under the `@` catcode the \endinput macro had just restored
+% expect:  0 errors; the paragraph "BACK"; the side file ei.sty's last line never read
+% status:  RED (65a) -> GREEN (65f)
+\input ei.sty
+BACK
+\bye

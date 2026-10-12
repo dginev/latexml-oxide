@@ -62,7 +62,15 @@
 //! reachable at all — there is no key set to test against, so
 //! [`latex_kernel_defines`] is always `false` and this mechanism never fires.
 //! Behaviour there is bit-identical to before: the Perl `TeX.pool` L33-56
-//! trigger list remains the only mechanism.
+//! trigger list remains the only mechanism — in a plain TeX document, where
+//! those triggers are held undefined ([`LATEX_TRIGGERS`]), it acts on them
+//! alone, as their definitions would.
+//!
+//! # Plain TeX documents
+//!
+//! A plain TeX document (`state::plain_tex_document`) is compiled by TeX, with
+//! no LaTeX to fall back on: a LaTeX kernel command there is undefined, and the
+//! format loads only on a use of one of Perl's triggers.
 
 use std::cell::OnceCell;
 
@@ -91,6 +99,35 @@ thread_local! {
   /// LaTeX format loaded.
   static KERNEL_CS: OnceCell<FxHashSet<Box<str>>> = const { OnceCell::new() };
 }
+
+/// The Perl `TeX.pool` LaTeX triggers (`TeX.pool.ltxml` L33-39), each a macro that loads the format and re-reads
+/// itself (`tex.rs`).
+///
+/// A plain TeX document holds them undefined (OXIDIZED_DESIGN_DIVERGENCES #536). Generic-format files probe these
+/// names to tell LaTeX from plain TeX — pst-xkey.tex:44 `\ifx\ProvidesFile\@undefined`, iftex.sty:31-33 (and
+/// eplain.tex:47-49, its inlined copy) `\csname ProvidesPackage\endcsname`, atbegshi.sty:155-156 and the other Oberdiek packages
+/// `\csname RequirePackage\endcsname`, dual-mode files `\ifx\documentclass\undefined` — and Perl's defined trigger
+/// answered "LaTeX": the file took its LaTeX branch, which loaded the format in the middle of a plain document
+/// (math0305287, math0111222: pstricks; the eplain papers on TL 2025). Held undefined, a probe sees what TeX sees, and a
+/// *use* still loads the format, now through [`autoload_latex_kernel`].
+pub const LATEX_TRIGGERS: [&str; 16] = [
+  "\\documentclass",
+  "\\newcommand",
+  "\\renewcommand",
+  "\\newenvironment",
+  "\\renewenvironment",
+  "\\NeedsTeXFormat",
+  "\\ProvidesPackage",
+  "\\RequirePackage",
+  "\\ProvidesFile",
+  "\\makeatletter",
+  "\\makeatother",
+  "\\begin",
+  "\\listfiles",
+  "\\nofiles",
+  "\\typeout",
+  "\\PassOptionsToPackage",
+];
 
 /// Load `LaTeX.pool`, the way the `\@load@latex@pool` trigger primitive does.
 ///
@@ -160,7 +197,17 @@ pub fn autoload_latex_kernel(token: &Token) -> bool {
   if lookup_bool(AUTOLOAD_ATTEMPTED) {
     return false;
   }
-  if !token.with_cs_name(latex_kernel_defines) {
+  // A plain TeX document (`state::plain_tex_document`, arXiv AutoTeX's test) is compiled by TeX without LaTeX: there a
+  // LaTeX kernel command is an undefined control sequence, as TeX and Perl report it. Loading the format on it put
+  // LaTeX's `\verbatim` into plain documents (read to the end of the file: 1504.02513, 1402.1807, 1310.8121,
+  // 2405.04530), LaTeX's `\title` (math9810192) and, through a `\let\big=\eightbig` of an undefined name, the whole
+  // format mid-file (1901.09683). Only Perl's own triggers, held undefined there ([`LATEX_TRIGGERS`]), load it on a
+  // use, as their definitions do in a LaTeX document — with or without a dump.
+  if plain_tex_document() {
+    if !token.with_cs_name(|cs| LATEX_TRIGGERS.contains(&cs)) {
+      return false;
+    }
+  } else if !token.with_cs_name(latex_kernel_defines) {
     return false;
   }
   // Claim the single attempt BEFORE loading. The pool load runs arbitrary

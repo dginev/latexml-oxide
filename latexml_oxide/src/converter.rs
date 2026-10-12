@@ -171,6 +171,8 @@ pub struct CompileRoute {
   pub dvi:       bool,
   /// A pdflatex document by its class options (`pdftex`).
   pub pdf:       bool,
+  /// What the figures the source includes say of its output mode (`figure_output_cue`).
+  pub figures:   state::FigureOutputCue,
 }
 
 /// The [`CompileRoute`] of the main file `source` (a path, `.tex` resolved as the Mouth does, or `literal:` content).
@@ -208,6 +210,7 @@ fn compile_route(source: &str) -> CompileRoute {
     },
   };
   let mut code = uncommented_code(&text);
+  let figures = figure_output_cue(&code, dir.as_deref());
   let mut latex = has_latex_cue(&code);
   // A main file naming no class: the files it inputs (not in `\iffalse … \fi`), breadth first, a few levels deep,
   // until one names the class; each using a LaTeX cue joins the main file's code for the DVI test.
@@ -269,7 +272,177 @@ fn compile_route(source: &str) -> CompileRoute {
   // the `pdftex` driver option: a pdflatex document whatever PostScript it also ships (MDPI templates' `logo-*.eps`
   // beside PNG figures, 2210.04612: expl3's backend check, expl3-code.tex:8036-8041, errs under DVI output)
   let pdf = !dvi && class_option(&|o| o == "pdftex");
-  CompileRoute { plain_tex: !latex, dvi, pdf }
+  CompileRoute {
+    plain_tex: !latex,
+    dvi,
+    pdf,
+    figures,
+  }
+}
+
+/// The output mode the figures a source includes call for (the K6 ruling's figure cue, OXIDIZED_DESIGN_DIVERGENCES
+/// #537): the targets of `\includegraphics`, `\epsfig`/`\psfig`, `\epsfbox`/`\epsffile` and AASTeX's
+/// `\plotone`/`\plottwo` in the main file's code `main_code` and the files it inputs (not in `\iffalse … \fi`, a few
+/// levels deep), each resolved in the source directory `dir` and the `\graphicspath` directories, as the name stands
+/// and with the extensions pdfTeX and dvips try.
+/// - PDF: a figure that exists only as PDF/PNG/JPEG (latex+dvips cannot include it).
+/// - DVI: a pstricks load (pstricks draws with PostScript specials; pst-pdf, auto-pst-pdf and pdftricks are its
+///   pdflatex front ends), or every included figure resolved and each PostScript only — whatever epstopdf
+///   conversions (`<stem>-eps-converted-to.pdf`) or epstopdf load the source also carries: arXiv compiled 1806.00093,
+///   1806.00188, 1806.00370, 1804.02991, 2104.01314, 1209.6096, 2210.10273 and 1701.08490 with latex+dvips (their
+///   PDFs' Producer is "dvips + GPL Ghostscript"), and 1806.00284 (Producer "GPL Ghostscript", Creator dvips(k)).
+/// - Otherwise undecided, and the tree's files decide: a figure that does not resolve (a name TeX builds at run time,
+///   `\figdir/a`, `#1`; a missing file), or one held in both forms.
+///
+/// A file the source never includes decides nothing: 1012.0815's EPS figures beside an IEEEtran manual PDF are a
+/// latex+dvips document whose `\ifCLASSINFOpdf` (unclosed) swallowed the whole text in PDF mode, and 1002.1751 loads
+/// pstricks only in its `\ifpdf` false branch, its tree's stale PDFs included by nothing.
+fn figure_output_cue(main_code: &str, dir: Option<&std::path::Path>) -> state::FigureOutputCue {
+  use state::FigureOutputCue;
+  static IFFALSE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)\\iffalse\b.*?\\(?:else|fi)\b").unwrap());
+  static INPUT: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\(?:input|include|subfile)(?:\s*\{\s*([^}]+?)\s*\}|\s+([^\s{}\\]+))").unwrap()
+  });
+  static FIGURE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(concat!(
+      r"\\includegraphics\*?\s*(?:<[^>]*>\s*)?(?:\[[^\]]*\]\s*){0,2}\{\s*([^}]+?)\s*\}",
+      r"|\\(?:epsfig|psfig)\s*\{[^}]*?\b(?:file|figure)\s*=\s*([^,}\s]+)",
+      r"|\\(?:epsfbox|epsffile)\s*(?:\[[^\]]*\]\s*)?\{\s*([^}]+?)\s*\}",
+      r"|\\plotone\s*\{\s*([^}]+?)\s*\}",
+      r"|\\plottwo\s*\{\s*([^}]+?)\s*\}\s*\{\s*([^}]+?)\s*\}",
+    ))
+    .unwrap()
+  });
+  static GRAPHICSPATH: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\graphicspath\s*\{((?:\s*\{[^{}]*\})+)\s*\}").unwrap());
+  static BRACED: Lazy<Regex> = Lazy::new(|| Regex::new(r"\{([^{}]*)\}").unwrap());
+  static PACKAGES: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\]\s*)?\{([^}]*)\}|\\input\s*\{?\s*(pstricks)\b").unwrap()
+  });
+  const MAX_INPUT_DEPTH: usize = 4;
+  const MAX_FILES: usize = 200;
+  // A name TeX resolves at run time (`#1`, `\figdir`), or one outside the source tree (absolute, `..`), is not read.
+  let outside_the_tree = |name: &str| {
+    name.contains(['#', '\\']) || name.starts_with('/') || name.split('/').any(|part| part == "..")
+  };
+  const POSTSCRIPT: [&str; 6] = ["eps", "ps", "epsf", "epsi", "eps.gz", "ps.gz"];
+  const NOT_POSTSCRIPT: [&str; 4] = ["pdf", "png", "jpg", "jpeg"];
+  // The source's code: the main file's and that of the files it inputs, breadth first.
+  let mut codes = vec![IFFALSE.replace_all(main_code, "").into_owned()];
+  if let Some(dir) = dir {
+    let mut visited = std::collections::HashSet::new();
+    let mut level = 0..1;
+    for _ in 0..MAX_INPUT_DEPTH {
+      let mut names = Vec::new();
+      for code in &codes[level.clone()] {
+        for captures in INPUT.captures_iter(code) {
+          if let Some(name) = captures.get(1).or_else(|| captures.get(2)) {
+            names.push(name.as_str().to_string());
+          }
+        }
+      }
+      let start = codes.len();
+      for name in names {
+        if codes.len() >= MAX_FILES {
+          break;
+        }
+        if outside_the_tree(&name) || !visited.insert(name.clone()) {
+          continue;
+        }
+        if let Some(input) = read_source_file(&dir.join(&name)) {
+          codes.push(
+            IFFALSE
+              .replace_all(&uncommented_code(&input), "")
+              .into_owned(),
+          );
+        }
+      }
+      level = start..codes.len();
+      if level.is_empty() {
+        break;
+      }
+    }
+  }
+  let mut pstricks = false;
+  let mut pstricks_for_pdf = false;
+  for captures in codes.iter().flat_map(|code| PACKAGES.captures_iter(code)) {
+    if captures.get(2).is_some() {
+      pstricks = true;
+    }
+    for package in captures
+      .get(1)
+      .map_or("", |m| m.as_str())
+      .split(',')
+      .map(str::trim)
+    {
+      match package {
+        "pst-pdf" | "auto-pst-pdf" | "pdftricks" => pstricks_for_pdf = true,
+        _ if package == "pstricks" || package.starts_with("pst-") => pstricks = true,
+        _ => {},
+      }
+    }
+  }
+  // Every included figure, resolved: how many, how many PostScript only, and whether one did not resolve.
+  let (mut figures, mut postscript_only, mut unresolved) = (0usize, 0usize, false);
+  if let Some(dir) = dir {
+    let mut search = vec![dir.to_path_buf()];
+    for captures in codes
+      .iter()
+      .flat_map(|code| GRAPHICSPATH.captures_iter(code))
+    {
+      for path in BRACED.captures_iter(&captures[1]) {
+        let path = path[1].trim();
+        if !path.is_empty() && !outside_the_tree(path) {
+          search.push(dir.join(path));
+        }
+      }
+    }
+    let is_file = |name: &str| search.iter().any(|base| base.join(name).is_file());
+    for captures in codes.iter().flat_map(|code| FIGURE.captures_iter(code)) {
+      for name in captures.iter().skip(1).flatten() {
+        let name = name.as_str().trim_matches('"');
+        if name.is_empty() {
+          continue;
+        }
+        if outside_the_tree(name) {
+          unresolved = true;
+          continue;
+        }
+        figures += 1;
+        let exists = |ext: &str| {
+          is_file(&format!("{name}.{ext}"))
+            || is_file(&format!("{name}.{}", ext.to_ascii_uppercase()))
+        };
+        let named = name.to_ascii_lowercase();
+        let named_ext = POSTSCRIPT
+          .iter()
+          .chain(NOT_POSTSCRIPT.iter())
+          .find(|ext| named.ends_with(&format!(".{ext}")));
+        let (ps, other) = match named_ext {
+          // A name with its extension is that file (graphicx, `\epsfbox`).
+          Some(ext) if is_file(name) => (POSTSCRIPT.contains(ext), NOT_POSTSCRIPT.contains(ext)),
+          Some(_) => (false, false),
+          None => (
+            POSTSCRIPT.iter().any(|ext| exists(ext)),
+            NOT_POSTSCRIPT.iter().any(|ext| exists(ext)),
+          ),
+        };
+        if other && !ps {
+          return FigureOutputCue::Pdf;
+        }
+        if ps && !other {
+          postscript_only += 1;
+        }
+        unresolved |= !ps && !other;
+      }
+    }
+  }
+  if (pstricks && !pstricks_for_pdf) || (figures > 0 && !unresolved && postscript_only == figures) {
+    FigureOutputCue::Dvi
+  } else {
+    FigureOutputCue::Undecided
+  }
 }
 
 /// Install the binding-resolution **priority chain** as the single dispatcher
@@ -429,6 +602,7 @@ impl Converter {
     state::set_plain_tex_document(self.compile_route.plain_tex);
     state::set_dvi_driver_option(self.compile_route.dvi);
     state::set_pdf_driver_option(self.compile_route.pdf);
+    state::set_figure_output_cue(self.compile_route.figures);
     // The source bundle's date, ar5iv's archival clock — reset every session, so a persistent worker thread never
     // carries one paper's date into the next.
     state::set_source_date_epoch(self.opts.source_date_epoch);
@@ -1174,21 +1348,25 @@ mod tests {
       plain_tex: true,
       dvi:       false,
       pdf:       false,
+      figures:   state::FigureOutputCue::Undecided,
     };
     const LATEX_PDF: CompileRoute = CompileRoute {
       plain_tex: false,
       dvi:       false,
       pdf:       false,
+      figures:   state::FigureOutputCue::Undecided,
     };
     const LATEX_DVI: CompileRoute = CompileRoute {
       plain_tex: false,
       dvi:       true,
       pdf:       false,
+      figures:   state::FigureOutputCue::Undecided,
     };
     const LATEX_PDF_OPTION: CompileRoute = CompileRoute {
       plain_tex: false,
       dvi:       false,
       pdf:       true,
+      figures:   state::FigureOutputCue::Undecided,
     };
     let route_of = |code: &str| compile_route(&format!("literal:{code}"));
     assert_eq!(route_of("Hello.\n\\bye\n"), PLAIN_TEX);
@@ -1312,5 +1490,78 @@ mod tests {
     // The main file's `\pdfoutput=1` holds against a followed file's `[dvips]`.
     std::fs::write(&main, "\\pdfoutput=1\n\\input{wpre}\n\\include{wbody}\n").unwrap();
     assert_eq!(compile_route(&main.to_string_lossy()), LATEX_PDF);
+  }
+
+  /// `figure_output_cue`: the figures a source includes, resolved in its tree, and a pstricks load (65f; 1012.0815's
+  /// EPS figures beside an unincluded PDF, 1002.1751's pstricks).
+  #[test]
+  fn figure_output_cue_of_sources() {
+    use state::FigureOutputCue::{Dvi, Pdf, Undecided};
+    let dir = tempfile::tempdir().expect("tempdir");
+    let write = |name: &str, content: &str| {
+      let path = dir.path().join(name);
+      std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+      std::fs::write(path, content).unwrap();
+    };
+    let cue = |code: &str| figure_output_cue(&uncommented_code(code), Some(dir.path()));
+    write("figs/a.eps", "");
+    write("figs/b.png", "");
+    write("figs/c.eps", "");
+    write("figs/c.pdf", "");
+    write("doc/manual.pdf", "");
+    write("img/d.EPS", "");
+    // An EPS-only figure, by name or extension-less; one that is PNG only; one in both forms decides nothing.
+    assert_eq!(cue("\\includegraphics[width=1cm]{figs/a.eps}"), Dvi);
+    assert_eq!(cue("\\includegraphics{figs/a}"), Dvi);
+    assert_eq!(
+      cue("\\includegraphics{figs/a}\\includegraphics{figs/b}"),
+      Pdf
+    );
+    assert_eq!(cue("\\includegraphics{figs/c}"), Undecided);
+    // A missing figure, a macro argument, a commented or `\iffalse`d include: nothing.
+    assert_eq!(cue("\\includegraphics{figs/none}"), Undecided);
+    assert_eq!(cue("\\includegraphics{../figs/a}"), Undecided);
+    assert_eq!(cue("\\def\\f#1{\\includegraphics{#1}}"), Undecided);
+    assert_eq!(cue("% \\includegraphics{figs/a}\n"), Undecided);
+    assert_eq!(cue("\\iffalse\\includegraphics{figs/a}\\fi"), Undecided);
+    // `\graphicspath`, an upper-case extension, the epsf/psfig family, AASTeX's `\plotone`.
+    assert_eq!(cue("\\graphicspath{{img/}}\\includegraphics{d}"), Dvi);
+    assert_eq!(cue("\\epsfig{file=figs/a.eps,width=3cm}"), Dvi);
+    assert_eq!(cue("\\psfig{figure=figs/b.png}"), Pdf);
+    assert_eq!(cue("\\epsfbox{figs/a.eps}"), Dvi);
+    assert_eq!(cue("\\plotone{figs/a.eps}"), Dvi);
+    // pstricks; its pdflatex front ends.
+    assert_eq!(cue("\\usepackage{pstricks,pst-node}"), Dvi);
+    assert_eq!(cue("\\usepackage{pst-plot}"), Dvi);
+    assert_eq!(cue("\\input pstricks"), Dvi);
+    assert_eq!(
+      cue("\\usepackage{pstricks}\\usepackage{auto-pst-pdf}"),
+      Undecided
+    );
+    assert_eq!(cue("\\usepackage{pstricks}\\includegraphics{figs/b}"), Pdf);
+    // Only when every included figure resolves: a missing or run-time-named one leaves the tree's files to decide.
+    assert_eq!(
+      cue("\\includegraphics{figs/a}\\includegraphics{figs/none}"),
+      Undecided
+    );
+    assert_eq!(
+      cue("\\includegraphics{figs/a}\\includegraphics{\\figdir/b}"),
+      Undecided
+    );
+    // epstopdf's conversions beside an EPS figure, or an epstopdf load, are no PDF cue: arXiv compiled such sources
+    // with latex+dvips (1806.00093, 1804.02991: Producer "dvips + GPL Ghostscript").
+    write("figs/e.eps", "");
+    write("figs/e-eps-converted-to.pdf", "");
+    assert_eq!(cue("\\includegraphics{figs/e}"), Dvi);
+    assert_eq!(cue("\\includegraphics{figs/e.eps}"), Dvi);
+    assert_eq!(cue("\\usepackage{epstopdf}\\includegraphics{figs/a}"), Dvi);
+    // A file the main file inputs.
+    write("sec.tex", "\\includegraphics{figs/b.png}\n");
+    assert_eq!(cue("\\input{sec}"), Pdf);
+    // No directory: nothing resolves.
+    assert_eq!(
+      figure_output_cue("\\includegraphics{figs/a}", None),
+      Undecided
+    );
   }
 }

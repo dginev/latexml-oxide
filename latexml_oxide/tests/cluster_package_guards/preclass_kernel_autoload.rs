@@ -27,12 +27,18 @@ const PRECLASS_TEX: &str = concat!(
   "\\end{document}\n"
 );
 
-/// The NODUMP twin of the witness idiom, as a plain-TeX body. Without a dump the
-/// degraded `LoadFormat` branch raw-loads `latex.ltx` + expl3 on the first
-/// trigger-list control sequence (`\documentclass`), which runs past the CLI's
-/// 60 s default timeout at opt-level 0 — killed after the `\IfFileExists` error
-/// was already printed, so the assertion passed without the conversion finishing.
-/// Nothing here is on the trigger list, so the run stays plain TeX and finishes.
+/// The NODUMP twin of the witness idiom. Without a dump the degraded `LoadFormat`
+/// branch raw-loads `latex.ltx` + expl3 on the first trigger-list control
+/// sequence (`\documentclass`), which runs past the CLI's 60 s default timeout at
+/// opt-level 0 — killed after the `\IfFileExists` error was already printed, so
+/// the assertion passed without the conversion finishing. Nothing executed here
+/// is on the trigger list, so the run finishes; the skipped `\documentclass` makes
+/// it a LaTeX document by arXiv AutoTeX's test (`converter::compile_route`), where
+/// the autoload may act.
+const LATEX_ROUTE_PRECLASS_TEX: &str = "\\iffalse\\documentclass{article}\\fi\n\\IfFileExists{ltxo-no-such-class.cls}\
+                                        {found-branch}{fallback-branch}\n\\bye\n";
+
+/// The same body as a plain TeX document: no class named anywhere.
 const PLAIN_PRECLASS_TEX: &str =
   "\\IfFileExists{ltxo-no-such-class.cls}{found-branch}{fallback-branch}\n\\bye\n";
 
@@ -90,21 +96,21 @@ fn pre_documentclass_kernel_cs_selects_the_right_class() {
 /// membership oracle of its own, change this test deliberately; do not delete
 /// it to make a run green.
 ///
-/// The same plain-TeX body is converted with and without the dump, so the only
+/// The same LaTeX-route body is converted with and without the dump, so the only
 /// variable is the dump: with it the autoload fires and the FALSE branch is
 /// typeset; without it `\IfFileExists` is undefined and all three arguments are
 /// typeset as text. Both runs must finish (exit 0, XML written) — a conversion
 /// killed mid-way must not pass for a checked limitation.
 #[test]
 fn nodump_leaves_pre_documentclass_kernel_cs_undefined() {
-  let (ok, stderr, xml) = convert(PLAIN_PRECLASS_TEX);
+  let (ok, stderr, xml) = convert(LATEX_ROUTE_PRECLASS_TEX);
   assert!(
     ok,
-    "the plain-TeX twin with a dump exited non-zero:\n{stderr}"
+    "the LaTeX-route twin with a dump exited non-zero:\n{stderr}"
   );
   assert!(
     !stderr.contains("Error:undefined:\\IfFileExists"),
-    "with a dump, \\IfFileExists in plain TeX must autoload the LaTeX kernel:\n{stderr}"
+    "with a dump, \\IfFileExists in a LaTeX document must autoload the LaTeX kernel:\n{stderr}"
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
@@ -116,10 +122,10 @@ fn nodump_leaves_pre_documentclass_kernel_cs_undefined() {
     r#"<para xml:id="p1"><p>fallback-branch</p></para>"#,
   );
 
-  let (ok, stderr, xml) = convert_nodump(PLAIN_PRECLASS_TEX);
+  let (ok, stderr, xml) = convert_nodump(LATEX_ROUTE_PRECLASS_TEX);
   assert!(
     ok,
-    "the NODUMP plain-TeX conversion exited non-zero:\n{stderr}"
+    "the NODUMP LaTeX-route conversion exited non-zero:\n{stderr}"
   );
   assert!(
     stderr.contains("Error:undefined:\\IfFileExists"),
@@ -129,6 +135,29 @@ fn nodump_leaves_pre_documentclass_kernel_cs_undefined() {
   assert_eq!(error_count(&stderr), 1, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   // The undefined `\IfFileExists` leaves its three arguments as text.
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para><ERROR class="undefined">\IfFileExists</ERROR>
+      <p>ltxo-no-such-class.clsfound-branchfallback-branch</p></para>"#,
+  );
+}
+
+/// A plain TeX document (arXiv AutoTeX's test: no class named) is TeX's: a LaTeX
+/// kernel command there is undefined, with or without a dump, as TeX and Perl
+/// report it — the autoload stays out (batch 65f; loading the format on a plain
+/// paper's `\verbatim` read to the end of its file, 1504.02513).
+#[test]
+fn plain_document_leaves_kernel_cs_undefined() {
+  let (ok, stderr, xml) = convert(PLAIN_PRECLASS_TEX);
+  assert!(ok, "the plain-TeX conversion exited non-zero:\n{stderr}");
+  assert!(
+    stderr.contains("Error:undefined:\\IfFileExists"),
+    "in a plain TeX document \\IfFileExists must stay undefined:\n{stderr}"
+  );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_element(
     &xml,
     "para",

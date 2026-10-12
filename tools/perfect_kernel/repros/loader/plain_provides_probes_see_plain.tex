@@ -1,0 +1,13 @@
+% witness: math0305287, math0111222 (pst-xkey.tex:44 \ifx\ProvidesFile\@undefined), the eplain papers on TL 2025
+%          (iftex.sty:31-33 \csname ProvidesPackage\endcsname; eplain.tex:47-49 inlines it)
+% oracle:  tex: "PLAIN PLAIN PLAIN"; Perl: "LATEX LATEX LATEX" (TeX.pool.ltxml:33-39's autoload triggers are defined
+%          macros), the PERL-ORIGIN half of cluster D (OXIDIZED_DESIGN_DIVERGENCES #536)
+% engines: rust 65a = "LATEX LATEX LATEX"
+% expect:  0 errors; "PLAIN PLAIN PLAIN" typeset, no Info:autoload
+% status:  RED (65a) -> GREEN (65f)
+\catcode`\@=11
+\ifx\ProvidesFile\@undefined PLAIN\else LATEX\fi\
+\ifx\ProvidesPackage\undefined PLAIN\else LATEX\fi\
+\begingroup\expandafter\expandafter\expandafter\endgroup
+\expandafter\ifx\csname ProvidesPackage\endcsname\relax PLAIN\else LATEX\fi
+\bye

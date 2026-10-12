@@ -748,11 +748,21 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@graphics@require@pdftexcmds", {
     RequirePackage!("pdftexcmds");
   });
+  // pdftex.def's guards as it writes them: the `\csname` tests leave both names undefined (`\begingroup` …
+  // `\endgroup`), and with no `\AtEndOfPackage` — graphics read by plain TeX through miniltx, whose `\AtBeginDocument`
+  // runs its argument at once (miniltx.tex:477) — there is no load at all. Unguarded, that `\@ifpackageloaded` was an
+  // undefined LaTeX command in a plain document (1710.04722, 1802.06281: miniltx + graphicx + pictex).
   RawTeX!(
-    r"\expandafter\ifx\csname DoNotLoadEpstopdf\endcsname\relax
-    \AtBeginDocument{\ifx\includegraphics\@undefined\else\lx@graphics@if@epstopdf@driver{%
-      \@ifpackageloaded{pst-pdf}{}{\@ifpackageloaded{pdftricks}{}{%
-        \ifx\@curroptions\@empty\else\lx@graphics@require@pdftexcmds\fi}}}{}\fi}\fi"
+    r"\begingroup\expandafter\expandafter\expandafter\endgroup
+    \expandafter\ifx\csname DoNotLoadEpstopdf\endcsname\relax
+      \begingroup\expandafter\expandafter\expandafter\endgroup
+      \expandafter\ifx\csname AtEndOfPackage\endcsname\relax
+      \else
+        \AtEndOfPackage{\AtBeginDocument{\ifx\includegraphics\@undefined\else\lx@graphics@if@epstopdf@driver{%
+          \@ifpackageloaded{pst-pdf}{}{\@ifpackageloaded{pdftricks}{}{%
+            \ifx\@curroptions\@empty\else\lx@graphics@require@pdftexcmds\fi}}}{}\fi}}%
+      \fi
+    \fi"
   );
 });
 

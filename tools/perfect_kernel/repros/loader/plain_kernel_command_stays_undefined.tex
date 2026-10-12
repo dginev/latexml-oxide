@@ -1,0 +1,13 @@
+% witness: 1504.02513, 1402.1807, 1310.8121, 2405.04530 (\verbatim), math9810192 (\title), 1901.09683 (\big) — plain TeX papers
+% oracle:  tex: "! Undefined control sequence" for \verbatim, one error; Perl: Error:undefined:\verbatim, 0 Fatal
+% engines: rust 65a = Fatal:Mouth:EoF "File ended while scanning use of a Until:\end{verbatim} argument" (the
+%          on-undefined LaTeX autoload loaded the format on \verbatim, whose LaTeX verbatim read to the end of the file);
+%          perl = 1 Error:undefined:\verbatim (2026-10-12)
+% expect:  1 error (Error:undefined:\verbatim), no Fatal, no Info:autoload; "More text." typeset
+% status:  RED (65a) -> GREEN (65f)
+Some text.
+\verbatim
+x
+|endverbatim
+More text.
+\bye

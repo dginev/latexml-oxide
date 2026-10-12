@@ -514,7 +514,7 @@ LoadDefinitions!({
     // loop, witnesses spath3/litetable-zh/zref-check), which the file-level
     // insertion cannot do.
     open_mouth(Mouth::new(&writable_tokens(&tokens), None)?, true);
-    mark_everyeof_mouth();
+    mark_everyeof_mouth()?;
     Tokens!()
   });
 

@@ -431,6 +431,34 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1810.08269. Guards `perfect_kernel_batch65a::*`. Residuals: a late class `\author` that both stores and prints is
   dropped (= base); the figure-panel wrap for refused caption hoists (task #193; RED
   `captions-floats/subcaption_labels_in_scaled_panels_stay_on_their_panels`).
+- **65f** (RUST-ONLY + one recorded surpass; run-338 Error→Fatal kernel/mode clusters):
+  - **Plain TeX documents** (`state::plain_tex_document`): the on-undefined LaTeX autoload no longer fires there, so a
+    LaTeX kernel command is undefined as in TeX and Perl (1504.02513, 1402.1807, 1310.8121, 2405.04530 `\verbatim`
+    Fatal → 0 E; math9810192 101 E Fatal → 55 E, its `gtmacros.tex` is missing; 1901.09683 Fatal → 1 E). Perl's
+    TeX.pool triggers are held undefined there, so generic probes see plain TeX, and a use still loads the format
+    (OD #536, KPE #610). graphics' epstopdf hook is guarded as pdftex.def:681-700 (1710.04722, 1802.06281 Fatal → 0 E).
+  - **PDF/DVI by included figures** (OD #537): 1012.0815 Fatal → 3 E (= 64g), 1002.1751 → 0 E. DVI when every
+    included figure resolves PostScript-only, epstopdf conversions or load notwithstanding, or pstricks is loaded;
+    oracle = the Producer of arXiv's PDF ("dvips + GPL Ghostscript"): 1806.00093, 1806.00188, 1806.00284, 1806.00370
+    flip from PDF (65a) to DVI; the epstopdf-loading EPS-only 1804.02991, 2104.01314, 1209.6096, 2210.10273, 1701.08490
+    stay DVI, as 65a had them.
+  - **Cycle guard**: a Mouth token's fingerprint carries its source position (OD #538; 1009.1698 Fatal → 1 E, = 64u).
+    A sixteenth open file level is pdftex's "TeX capacity exceeded, sorry [text input levels=15]" Fatal (a
+    self-`\input` macro ran to the watchdog's `Fatal:timeout:wallclock` at `--timeout`, ~0.75 MB of log a second; now
+    0.2 s). The gullet checks the cooperative deadline too (`Fatal:Timeout:Convert`, which mattered only where no
+    watchdog is armed: the test harness, `latexml::api`); open: under a watchdog sharing the deadline the two race, and
+    a run may end in the cooperative Fatal with its XML or in the watchdog's with none (OD #538; grace: task #205).
+  - **`\endinput`** through a macro on a line ending in `%` no longer reads the next line (comments off; atbegshi in
+    plain TeX).
+  - A/B 65a-rel → 65f (681 papers: 150 plain, 125 mode-flip, 66 pstricks, 98 EPS, 99 PDF-figure, 143 random): 639
+    identical; plain 2078 → 1829 errors. The 22 PostScript files submitted as `.tex` change both ways; among real TeX
+    sources 4 better (hep-lat9207024 Fatal → 26 E, 8k → 42k words), 4 worse by 1-8 `Error:undefined` (plain papers
+    whose missing macro files LaTeX used to stand in for: hep-ph9209216 mtexsis, hep-th9109002 jnl). Guards
+    `perfect_kernel_batch65f::*`, `preclass_kernel_autoload::plain_document_leaves_kernel_cs_undefined`,
+    `converter::tests::figure_output_cue_of_sources`.
+  - Open: math0305287, math0111222 stay Fatal: TL 2025 pstricks under plain TeX loads expl3 (pst-code-pspicture.tex:76
+    `\ExplSyntaxOn`) and LaTeX with it, plus Perl's braced-`\input` LaTeX load (KPE #611). J (1911.11856, 2106.06828)
+    is TeX-faithful once `\LetLtxMacro` is defined: both 0 E with letltxmacro loaded (65e's hyperref change).
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

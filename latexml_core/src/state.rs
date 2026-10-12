@@ -4569,6 +4569,28 @@ std::thread_local! {
 pub fn set_pdf_driver_option(pdf: bool) { PDF_DRIVER_OPTION.with(|c| c.set(pdf)); }
 /// Whether the document is a pdflatex one by its class options ([`set_pdf_driver_option`]).
 pub fn pdf_driver_option() -> bool { PDF_DRIVER_OPTION.with(std::cell::Cell::get) }
+/// What the figures a source includes say of its output mode (the K6 ruling's figure cue,
+/// OXIDIZED_DESIGN_DIVERGENCES #537): read from the `\includegraphics`-family targets the main file and the files it
+/// inputs name, resolved against the source tree, and from a pstricks load.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum FigureOutputCue {
+  /// No included figure resolves and no pstricks is loaded: the source tree's files decide.
+  #[default]
+  Undecided,
+  /// Every included figure that resolves has a PostScript form, one has no other, or pstricks is loaded: latex+dvips.
+  Dvi,
+  /// An included figure exists only as PDF/PNG/JPEG, which latex+dvips cannot include: pdflatex.
+  Pdf,
+}
+std::thread_local! {
+  static FIGURE_OUTPUT_CUE: std::cell::Cell<FigureOutputCue> =
+    const { std::cell::Cell::new(FigureOutputCue::Undecided) };
+}
+/// Records the output-mode cue of the figures the document's source includes ([`FigureOutputCue`]); set per conversion
+/// before the session's preloads load.
+pub fn set_figure_output_cue(cue: FigureOutputCue) { FIGURE_OUTPUT_CUE.with(|c| c.set(cue)); }
+/// The output-mode cue of the figures the document's source includes ([`set_figure_output_cue`]).
+pub fn figure_output_cue() -> FigureOutputCue { FIGURE_OUTPUT_CUE.with(std::cell::Cell::get) }
 std::thread_local! {
   static SOURCE_DATE_EPOCH: std::cell::Cell<Option<i64>> = const { std::cell::Cell::new(None) };
 }

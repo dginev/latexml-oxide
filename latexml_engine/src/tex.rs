@@ -235,26 +235,13 @@ LoadDefinitions!({
   // (witness 2305.08034), were retired into that mechanism. What the eager
   // triggers still buy over it: they fire on a legitimate *use*, before any
   // error is raised, and without consulting the dump.
-  for ltxtrigger in [
-    "\\documentclass",
-    "\\newcommand",
-    "\\renewcommand",
-    "\\newenvironment",
-    "\\renewenvironment",
-    "\\NeedsTeXFormat",
-    "\\ProvidesPackage",
-    "\\RequirePackage",
-    "\\ProvidesFile",
-    "\\makeatletter",
-    "\\makeatother",
-    "\\begin",
-    "\\listfiles",
-    "\\nofiles",
-    "\\typeout",
-    "\\PassOptionsToPackage",
-  ]
-  .iter()
-  {
+  //
+  // A plain TeX document holds them undefined, so generic-format probes see plain TeX; a use loads the format
+  // through `latex_kernel::autoload_latex_kernel` (OXIDIZED_DESIGN_DIVERGENCES #536).
+  for ltxtrigger in &crate::latex_kernel::LATEX_TRIGGERS {
+    if plain_tex_document() {
+      continue;
+    }
     DefMacro!(T_CS!(ltxtrigger), None, {
       Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(ltxtrigger))
     });

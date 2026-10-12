@@ -1575,6 +1575,12 @@ impl Mouth {
 
   pub fn at_eof(&self) -> bool { self.at_eof }
 
+  /// The number of the line the Mouth is reading (1-based once the first line is fetched).
+  pub fn line_number(&self) -> usize { self.lineno }
+
+  /// Where the most recently begun token starts: (line, 0-based column).
+  pub fn last_token_start(&self) -> (usize, usize) { self.last_token_start }
+
   /// §1 accurate-start locator (docs/performance/SOURCE_PROVENANCE.md): `from` = the captured
   /// start of the most recently *begun* token (`last_token_start`), `to` = the
   /// mouth's current position. Unlike `get_locator`, whose `from` is the
