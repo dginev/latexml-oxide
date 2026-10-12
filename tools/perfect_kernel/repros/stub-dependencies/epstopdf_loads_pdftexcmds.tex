@@ -1,0 +1,14 @@
+% witness: 2410.22009 (`\usepackage{epstopdf}`, then `\ifpdf` in the preamble; epstopdf.sty:149-152 loads infwarerr,
+%          kvoptions and pdftexcmds, whose iftex defines `\ifpdf`)
+% oracle:  pdflatex 0 errors
+% engines: rust 65bundle = 1 error (`\ifpdf` undefined)
+% expect:  0 errors; text "PDF output."
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\ifpdf\def\outputmode{PDF output.}\else\def\outputmode{DVI output.}\fi
+\begin{document}
+\outputmode
+\end{document}

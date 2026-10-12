@@ -8,10 +8,72 @@ LoadDefinitions!({
     "mdframed.sty",
     "mdframed.sty is only minimally stubbed and will not be interpreted raw."
   );
+  // mdframed.sty:154-169 `\define@key{mdf}{framemethod}`: the method, lowercased, picks the package to load.
+  DefMacro!("\\lx@mdf@framemethod{}", sub[(method)] {
+    let given = method.to_string();
+    let (name, package) = match given.trim().to_lowercase().as_str() {
+      "default" | "tex" | "latex" | "none" | "0" => (Some("default"), None),
+      "pgf" | "tikz" | "1" => (Some("tikz"), Some("tikz".to_string())),
+      "pstricks" | "ps" | "2" | "postscript" => (Some("pstricks"), Some("pst-node".to_string())),
+      _ => (None, Some(given.trim().to_string())),
+    };
+    let mut code = String::new();
+    if let Some(name) = name {
+      code.push_str(&format!("\\def\\mdf@@framemethod{{{name}}}"));
+    }
+    // In the body (`\newmdenv[framemethod=…]`, `\mdfsetup` after `\begin{document}`) the load is mdframed's
+    // `\RequirePackage`, `\@onlypreamble`: pdflatex reports "Can be used only in preamble" and goes on with the
+    // packages it has, and so does the binding, with an Info (the frame is ours whatever the method, so nothing the
+    // author wrote is lost).
+    if let Some(package) = package {
+      if lookup_bool_sym(pin!("inPreamble")) {
+        code.push_str(&format!("\\mdf@LoadFile@IfExist{{{package}}}"));
+      } else {
+        Info!(
+          "unexpected",
+          "framemethod",
+          s!("mdframed's framemethod={given} cannot load {package} after the preamble (LaTeX: Can be used only in preamble); the frame is drawn either way")
+        );
+      }
+    }
+    Ok(TokenizeInternal!(TeXString::assembled(code)))
+  });
+  // mdframed.sty:72-77 loads kvoptions, xparse, etoolbox, zref-abspage, needspace and color, and so does the
+  // binding: a document or class that uses `\needspace`, zref or `\ifpdf` (iftex, under zref-base's pdftexcmds)
+  // without loading them itself relies on these.
   RequirePackage!("kvoptions");
   RequirePackage!("xparse");
   RequirePackage!("etoolbox");
-  RequirePackage!("xcolor");
+  // zref-abspage has no binding: it is read raw, so only where raw loading is on (as `--preload=ar5iv.sty` has it);
+  // otherwise its load would only add a missing-file warning.
+  if lookup_bool("INCLUDE_STYLES") {
+    RequirePackage!("zref-abspage");
+  }
+  RequirePackage!("needspace");
+  RequirePackage!("color");
+  // mdframed.sty:150-190 the frame method: `framemethod=tikz` (or `pgf`, `1`, the void options `tikz`/`TikZ`) loads
+  // tikz, `framemethod=pstricks` (`ps`, `postscript`, `2`, the void options `ps`/`pstricks`/`PSTricks`) loads
+  // pst-node, any other value but the default ones loads the package of that name if it exists
+  // (`\mdf@LoadFile@IfExist`); the `xcolor` key loads xcolor (mdframed.sty:369-380, whose option list is never
+  // passed on). Documents and classes draw with the tikz the option loaded (witness 2101.02817:
+  // `[framemethod=TikZ]{mdframed}`, then `{tikzpicture}`). The frame drawing itself stays ours, so the other
+  // keys (mdframed.sty defines them in family `mdf`) are accepted and dropped, here and in `\mdfsetup`.
+  RawTeX!(
+    r"\def\mdf@LoadFile@IfExist#1{\IfFileExists{#1.sty}{\RequirePackage{#1}}{\PackageWarning{mdframed}{The file #1
+ does not exist\MessageBreak but needed by mdframed}}}
+\SetupKeyvalOptions{family=mdf,prefix=mdf@}
+\def\mdf@@framemethod{default}
+\define@key{mdf}{framemethod}[default]{\lx@mdf@framemethod{#1}}
+\DeclareVoidOption{tikz}{\setkeys{mdf}{framemethod=tikz}}
+\DeclareVoidOption{TikZ}{\setkeys{mdf}{framemethod=tikz}}
+\DeclareVoidOption{ps}{\setkeys{mdf}{framemethod=pstricks}}
+\DeclareVoidOption{pstricks}{\setkeys{mdf}{framemethod=pstricks}}
+\DeclareVoidOption{PSTricks}{\setkeys{mdf}{framemethod=pstricks}}
+\define@key{mdf}{xcolor}[]{\RequirePackage{xcolor}}
+\kv@set@family@handler{mdf}{}
+\DeclareDefaultOption{}
+\ProcessKeyvalOptions*\relax"
+  );
   // mdframed.sty:591 `\newmdtheoremenv[mdframed-opts]{env}[numbered like]
   // {caption}[within]` = `\newtheorem` inside a frame (presentational);
   // the no-op it replaced left every such theorem environment undefined
@@ -53,7 +115,7 @@ LoadDefinitions!({
   // `\newmdenv[opts]{name}` defines a new environment `name` that wraps
   // `mdframed` (mdframed.sty L578-585:
   //   \newenvironment{#2}{\mdfsetup{#1}\begin{mdframed}}{\end{mdframed}}).
-  // `\mdfsetup` is our no-op, so the body reduces to a mdframed wrapper.
+  // `\mdfsetup` only reads the keys, so the body reduces to a mdframed wrapper.
   // Surpass-Perl: ar5iv-bindings/mdframed.sty.ltxml L22 also no-ops this,
   // leaving the user's custom env undefined (Perl then errors with
   // `{name} is not defined`). Faithfully porting the real definer makes
@@ -79,7 +141,8 @@ LoadDefinitions!({
 \newcommand\mdfsubsubtitle[2][]{\par\noindent{\mdf@subsubtitlefont #2}\par}"
   );
   def_macro_noop("\\mdfapptodefinestyle{}{}")?;
-  def_macro_noop("\\mdfsetup{}")?;
+  // mdframed.sty:386 `\mdfsetup` = `\kvsetkeys{mdf}`: a `framemethod` set there loads its package too.
+  DefMacro!("\\mdfsetup{}", "\\kvsetkeys{mdf}{#1}");
   def_macro_noop("\\mdfdefinestyle{}{}")?;
   DefRegister!("\\mdflength" => Dimension::new(0));
   // The frame is inserted through `insert_block` (Perl TeX_Box.pool.ltxml:449

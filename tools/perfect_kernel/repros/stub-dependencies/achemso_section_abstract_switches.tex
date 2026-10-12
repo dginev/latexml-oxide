@@ -1,0 +1,16 @@
+% witness: 1710.02414 (`\AbstractOn`), 2006.15922 / 2112.07721 (`\setlength{\acs@tocentry@height}`),
+%          achemso.cls:1091-1102, 1160-1169, 1266-1269
+% oracle:  pdflatex 0 errors
+% engines: rust 65bundle = 3 errors (`\SectionsOn`, `\AbstractOn`, `\acs@tocentry@height` undefined)
+% expect:  0 errors; abstract "Short abstract." and section "Intro"
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\SectionsOn
+\AbstractOn
+\makeatletter\setlength{\acs@tocentry@height}{2in}\makeatother
+\title{T}\author{A}\affiliation{U}
+\begin{document}
+\begin{abstract}Short abstract.\end{abstract}
+\section{Intro}Text.
+\end{document}

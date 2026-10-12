@@ -43,6 +43,23 @@ LoadDefinitions!({
     DefMacro!("\\firsthdashline[]", "\\firsthline");
     DefMacro!("\\lasthdashline[]", "\\lasthline");
   }
+  // arydshln.sty:697-729 the shorthand environments `{Array}`, `{Tabular}`, `{Tabular*}` (and `{Longtable}` when
+  // longtable came first) are its tables with the dashed lines active, defined unless one of the names is taken
+  // (then a warning, :716-729). Here every table draws the dashed lines, so each is the plain environment
+  // (witnesses 2502.17812 `{Tabular}`, 2306.04970 `{Array}`: 5 and 1 errors before, 0 after).
+  RawTeX!(
+    r"\begingroup\def\@notdefinable{\gdef\adl@notdefinable{}}%
+\@ifdefinable\Array\relax\@ifdefinable\Tabular\relax\expandafter\@ifdefinable\csname Tabular*\endcsname\relax
+\ifx\longtable\undefined\else\@ifdefinable\Longtable\relax\fi\endgroup
+\ifx\adl@notdefinable\undefined
+  \def\Array{\begin{array}}\def\endArray{\end{array}}%
+  \def\Tabular{\begin{tabular}}\def\endTabular{\end{tabular}}%
+  \expandafter\def\csname Tabular*\endcsname{\begin{tabular*}}\expandafter\def\csname endTabular*\endcsname{\end{tabular*}}%
+  \ifx\longtable\undefined\else\def\Longtable{\begin{longtable}}\def\endLongtable{\end{longtable}}\fi
+\else
+  \PackageWarning{arydshln}{Array/Tabular/Longtable are not defined because\MessageBreak one of them has been defined}%
+\fi"
+  );
   DefRegister!("\\dashlinedash" => Dimension!("4pt"));
   DefRegister!("\\dashlinegap" => Dimension!("4pt"));
   Let!("\\hdashlinewidth", "\\dashlinedash");
@@ -51,7 +68,12 @@ LoadDefinitions!({
   // `\def\ADLdrawingmode#1` (arydshln.sty:677) reads its mode number (K13 stage-2 finding).
   def_macro_noop("\\ADLdrawingmode{}")?;
   def_macro_noop("\\ADLinactivate")?;
-  def_macro_noop("\\ADLnoshorthanded")?;
+  // arydshln.sty:731-740 `\ADLnoshorthanded` undefines the shorthands.
+  RawTeX!(
+    r"\def\ADLnoshorthanded{\let\Array\relax\let\Tabular\relax\expandafter\let\csname Tabular*\endcsname\relax
+\let\endArray\relax\let\endTabular\relax\expandafter\let\csname endTabular*\endcsname\relax
+\ifx\longtable\undefined\else\let\Longtable\relax\let\endLongtable\relax\fi}"
+  );
   def_macro_noop("\\ADLnullwide")?;
   def_macro_noop("\\ADLnullwidehline")?;
   def_macro_noop("\\ADLsomewide")?;

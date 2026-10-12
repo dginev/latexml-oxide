@@ -1,0 +1,12 @@
+% witness: hyperref.sty:2762-2810 (`backref=none`, `pagebackref=false` set `\Hy@backreffalse`), :4587-4589 (reviewer
+%          probe 65k c12)
+% oracle:  pdflatex 0 errors, prints "no backref, off"
+% engines: rust 65k round 1 = 0 errors, backref not loaded
+% expect:  0 errors, 0 warnings; paragraph "no backref, off"
+% status:  GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backref=none,pagebackref=false]{hyperref}
+\begin{document}
+\makeatletter\@ifpackageloaded{backref}{backref}{no backref}, \ifHy@backref on\else off\fi\makeatother
+\end{document}

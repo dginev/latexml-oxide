@@ -76,3 +76,4 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `class-bindings` | names a class (or a package it loads) defines that its binding must own: the K22 census of shipped class copies against run-336 first errors |
 | `paragraph-mode` | mode changes at paragraph boundaries: tex.web §1046-1047 `\par`/`\end{X}` in inline math ("Missing $ inserted"), the formula's end around a stray `}` |
 | `singletons` | one-off package defects whose mechanism has no topic of its own |
+| `stub-dependencies` | a stub binding (a package not interpreted raw) loads what the real package loads, option-driven loads included, and defines its public names; class bindings likewise for their classes |

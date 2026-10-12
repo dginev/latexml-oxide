@@ -1,0 +1,14 @@
+% witness: arydshln.sty:697-715 (`{Longtable}` defined when longtable came first)
+% oracle:  pdflatex 0 errors
+% engines: rust 65bundle = 1 error (`{Longtable}` undefined)
+% expect:  0 errors; a tabular with cells "a" "b", the first with a dashed right border
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\usepackage{arydshln}
+\begin{document}
+\begin{Longtable}{r:c}
+a & b \\
+\end{Longtable}
+\end{document}

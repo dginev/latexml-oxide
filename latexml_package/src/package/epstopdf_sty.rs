@@ -13,6 +13,12 @@ LoadDefinitions!({
   // run (arXiv 2606.05709, sweep of run 322). Our graphics lookup does not
   // read the list, so loading the real package raw is enough.
   InputDefinitions!("grfext", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // epstopdf.sty:149-152 (and epstopdf-base.sty:178-181) also load infwarerr, kvoptions and pdftexcmds, whose
+  // iftex gives the document `\ifpdf` (witnesses 2410.22009, 2305.04598, 2602.17971: `\usepackage{epstopdf}`,
+  // then `\ifpdf` in the preamble; Perl's stub loads none of them).
+  RequirePackage!("infwarerr");
+  RequirePackage!("kvoptions");
+  RequirePackage!("pdftexcmds");
   // `\epstopdfDeclareGraphicsRule{ext}{type}{ext-out}{cmd}` (epstopdf-base.sty)
   // registers an EPS→<other> conversion command for graphics inclusion.
   // We delegate graphics format conversion to mutool/gs at the post-

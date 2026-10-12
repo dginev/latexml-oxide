@@ -12589,3 +12589,27 @@ bold x, unparsed (pdflatex: bold ⟨ x ⟩). The same bounded constructor is Per
 (amsbsy.sty.ltxml:23, with `\pmb` Let to it) and RevTeX's `\bm` (revtex4_support.sty.ltxml:167), with the same loss;
 there pdflatex errs as well (the argument is boxed), and loses the ⟩. Fixed in Rust (65j, OD #544; 2204.13665).
 
+## 618. The ar5iv stub bindings drop their packages' dependency loads, option-driven loads and public switches
+
+ar5iv-bindings mdframed.sty.ltxml:15-18 loads kvoptions, xparse, etoolbox and xcolor, where mdframed.sty:72-77 loads
+kvoptions, xparse, etoolbox, zref-abspage, needspace and color, and its `\DeclareOption`s are absent, so
+`framemethod=TikZ` (mdframed.sty:154-169, which loads tikz) is ignored: a document that draws with the tikz mdframed
+loaded gets `{tikzpicture}` undefined. Trigger `\documentclass{article}\usepackage[framemethod=TikZ]{mdframed}
+\begin{document}\begin{tikzpicture}\draw (0,0)--(1,1);\end{tikzpicture}\end{document}` → `Error:undefined:{tikzpicture}`
+(pdflatex: 0 errors); `\usepackage{mdframed}` then `\ifpdf` (iftex, under zref-base) or `\needspace` likewise. The
+mciteplus binding (mciteplus.sty.ltxml:71) declares only `\ifmciteBstWouldAddEndPunct` of the package's switches, and an
+apsrevM `.bbl` opens with `\mciteErrorOnUnknownfalse` (mciteplus.sty:184): trigger `\usepackage{mciteplus}` then
+`\mciteErrorOnUnknownfalse` → `Error:undefined`. The arydshln binding comments out `{Array}`/`{Tabular}`
+(arydshln.sty.ltxml:48-50; arydshln.sty:697-715 defines them). LaTeXML's own epstopdf.sty.ltxml loads none of
+epstopdf.sty:149-152's infwarerr, kvoptions and pdftexcmds, so `\usepackage{epstopdf}\ifpdf…\fi` errors on `\ifpdf`
+(pdflatex: iftex, under pdftexcmds). Fixed in Rust (65k, OD #547; witnesses 2101.02817,
+0802.3383, 2410.22009).
+
+## 619. hyperref's `backref`/`pagebackref` options never load backref
+
+Perl hyperref.sty.ltxml:68 declares `backref` and `pagebackref` as no-op options, where hyperref.sty:2762-2810 and
+:4587-4589 load backref with its `hyperref`/`hyperpageref` option, so backref's `\ifbackrefparscan`, `\backrefsep`,
+`\backrefalt` and `\backref` stay undefined for the documents that set them. Trigger `\documentclass{article}
+\usepackage[pagebackref]{hyperref}\begin{document}\begin{thebibliography}{1}\backrefparscanfalse\bibitem{b} B.
+\end{thebibliography}\end{document}` → `Error:undefined:\backrefparscanfalse` (pdflatex: 0 errors). Fixed in Rust (65k,
+OD #547; witness 1809.07574).

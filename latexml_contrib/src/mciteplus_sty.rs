@@ -54,10 +54,36 @@ LoadDefinitions!({
   RawTeX!(
     r"\def\mcitetrackID{main}\def\@mcitereflabelprefix{MciteSubReferenceLabel}
 \def\mciteSubRef{\@ifnextchar[{\@mciteSubRef}{\@mciteSubRef[\mcitetrackID]}}
-\def\@mciteSubRef[#1]#2{\ref{\@mcitereflabelprefix:#1:#2}}"
+\def\@mciteSubRef[#1]#2{\ref{\@mcitereflabelprefix:#1:#2}}
+\def\mciteSubPageRef{\@ifnextchar[{\@mciteSubPageRef}{\@mciteSubPageRef[\mcitetrackID]}}
+\def\@mciteSubPageRef[#1]#2{\pageref{\@mcitereflabelprefix:#1:#2}}"
   );
   DefMacro!("\\endmcitethebibliography", "\\endthebibliography");
   DefConditional!("\\ifmciteBstWouldAddEndPunct");
+  // mciteplus.sty:72-87, 182-184 the package's public switches: a document, a `.bbl` or a bibliography style sets
+  // them (apsrevM.bst's `.bbl` opens with `\mciteErrorOnUnknownfalse`; witness 0802.3383), the counters number the
+  // entries (:105-108), `\mciteSetSublistLabelBeginEnd` is the user-level `\mciteSetBstSublistLabelBeginEnd`
+  // (:170), the max-width/count stores are what mciteplus writes to the `.aux` (:390-418), and
+  // `\mciteSubPageRef` is `\mciteSubRef`'s `\pageref` (:783-784).
+  RawTeX!(
+    r"\newif\ifmciteErrorOnUnknown\mciteErrorOnUnknowntrue
+\newif\ifmciteResetBibitemCount\mciteResetBibitemCounttrue
+\newif\ifmciteMacroOptArgI\mciteMacroOptArgIfalse
+\newif\ifmciteMacroOptArgII\mciteMacroOptArgIIfalse
+\newif\ifmciteMacroStarForm\mciteMacroStarFormfalse
+\newif\ifmciteCiteStarFwdArg\mciteCiteStarFwdArgfalse
+\newif\ifmciteBibitemOptArgI\mciteBibitemOptArgIfalse
+\newif\ifmciteCurheadBibitemOptArgI\mciteCurheadBibitemOptArgIfalse
+\newcounter{mcitebibitemcount}\setcounter{mcitebibitemcount}{0}
+\newcounter{mcitesubitemcount}
+\long\def\mciteSetSublistLabelBeginEnd#1#2#3{\long\def\mcitesublistlabel{#1}\long\def\mcitesublistbegin{#2}%
+\long\def\mcitesublistend{#3}}
+\def\mciteSetMaxWidth#1#2#3{\expandafter\xdef\csname @mciteMaxWidthStore@#1@#2\endcsname{#3}}
+\def\mciteGetMaxWidth#1#2#3{\expandafter\global\expandafter\let\expandafter#3\csname @mciteMaxWidthStore@#1@#2\endcsname}
+\def\mciteSetMaxCount#1#2#3{\expandafter\xdef\csname @mciteMaxCountStore@#1@#2\endcsname{#3}}
+\def\mciteGetMaxCount#1#2#3{\expandafter\global\expandafter\let\expandafter#3\csname @mciteMaxCountStore@#1@#2\endcsname}
+\def\mciteauxout{\@auxout}\def\mcitebibauxout{\@mainaux}\def\mcitebibtrackID{main}"
+  );
   // mciteplus sends every citation through `\\mciteCiteA` (mciteplus.sty:1020; natbib's commands :1079-1084): a key
   // with a leading `*` (`\\@mciteCheckKey`, :757-762) joins the previous entry's group, written to the aux as a
   // `\\citation` (:764) in its place among the others, so bibtex lists it, but left out of the citation the text prints

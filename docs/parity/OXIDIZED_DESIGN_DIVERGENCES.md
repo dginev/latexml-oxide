@@ -16527,3 +16527,77 @@ Warn; those without another warning move from `warning` to `no_problem` for a lo
 comparison of MnSymbol papers is attributable only when both runs sit on the same side of 65l. Guard
 `perfect_kernel_batch61::the_2609_classes_load_their_packages_and_commands` (the MnSymbol case: 0 warnings).
 
+### 547. Stub bindings load what their packages load, options included, and define the packages' public names (Perl: the ar5iv stubs load a subset and ignore the options)
+
+A stub binding stands in for a package that is not interpreted raw, so whatever the real package loads, a document or
+class may use without loading it. The ar5iv stubs (KPE #618, #619) load a subset and ignore the option-driven loads.
+
+**Rust** (batch 65k), each from the package's source:
+- mdframed (mdframed.sty:72-77) loads kvoptions, xparse, etoolbox, zref-abspage (whose zref-base brings pdftexcmds and
+  so iftex's `\ifpdf`), needspace and color; its `framemethod` key (:154-169; the void options `tikz`, `TikZ`, `ps`,
+  `pstricks`, `PSTricks`, :186-190) loads tikz for `pgf`/`tikz`/`1`, pst-node for `pstricks`/`ps`/`postscript`/`2`,
+  and the package named by any other non-default value if it exists; the `xcolor` key loads xcolor (:369-380, whose
+  option list is never passed on). `\mdfsetup` is `\kvsetkeys{mdf}` (:386), so a preamble `framemethod` loads its
+  package too; in the body the load is skipped with an Info (`unexpected:framemethod`), where pdflatex reports "Can be
+  used only in preamble" (mdframed's `\RequirePackage`, latex.ltx:18628 `\@onlypreamble`). The other keys are accepted and dropped (family handler): the frame is drawn by the binding. The
+  stub had loaded xcolor in place of color (Perl's choice); documents that use xcolor syntax load xcolor or tikz.
+  zref-abspage (and backref's rerunfilecheck below), which have no binding, load only where raw loading is on
+  (`INCLUDE_STYLES`, as `--preload=ar5iv.sty` sets it): without it their load would only add a missing-file warning.
+  Witness 2101.02817 (`{tikzpicture}`).
+- backref (backref.sty:61-62, 483) loads kvoptions, kvsetkeys and rerunfilecheck, and defines the language hooks
+  (:95-148, English by default), `\ifbackrefparscan` (:207-208), `\backref` by its options (`pageref`, the default,
+  `\backrefpagesname`; `ref` `\backrefsectionsname`; `hyperref`/`hyperpageref` empty, :79-92, 195-196),
+  `\backrefsetup` = `\kvsetkeys{backref}` (other keys dropped), `\backrefalt` and `\backrefentrycount` (:270-277),
+  which documents redefine; the back-reference line itself is still not rendered.
+- hyperref's `backref` (`section`/`slide` → backref's `hyperref` option, `page` → `hyperpageref`, `none`/`false` → none)
+  and `pagebackref` (`true` → `hyperpageref`) load backref after the options (hyperref.sty:2762-2810, 4587-4589), also
+  when `\PassOptionsToPackage` gives them, and set `\Hy@backreftrue` (:2775-2804), so `\ifHy@backref` is true while
+  backref is loaded. Witness 1809.07574. **Decision (main session, 65k review):** loaded through hyperref's option, the
+  backref stub's `missing_file` message is an **Info**, not a Warning — Perl is silent there (KPE #619), and the
+  back-reference lists are generated navigation, not author content; a document's own `\usepackage{backref}` keeps the
+  Warning. The hyperref binding sets `BACKREF_LOADED_BY_HYPERREF` before the load. Witness 2203.07162 (0 warnings, as
+  before 65k; round 1 had given it and 24 other OK/Warning sample papers +1 Warning).
+- mathpartir loads keyval (:34) and defines its separators `\mpr@and`, `\mpr@andcr`, `\mpr@cr`, `\mpr@goodbreakand`,
+  `\mpr@eqno` (:62-68), which ottalt.sty uses (2304.05276).
+- mciteplus defines its public switches (`\ifmciteErrorOnUnknown`, `\ifmciteResetBibitemCount`, … :72-87, 182-184),
+  its counters (:105-108), `\mciteSetSublistLabelBeginEnd` (:170), the `.aux` max-width/count stores (:390-418) and
+  `\mciteSubPageRef` (:783-784). Witness 0802.3383 (apsrevM `.bbl`).
+- arydshln defines `{Array}`, `{Tabular}`, `{Tabular*}` and (after longtable) `{Longtable}` when the names are free,
+  with arydshln's warning otherwise (:697-729), and `\ADLnoshorthanded` (:731-740). Witnesses 2502.17812
+  (`{Tabular}`, 5 → 0 errors), 2306.04970 (`{Array}`, 1 → 0).
+- epstopdf (a binding, not a stub) loads infwarerr, kvoptions and pdftexcmds (epstopdf.sty:149-152), whose iftex
+  defines `\ifpdf` (witnesses 2410.22009, 2305.04598, 2602.17971: `\ifpdf` after `\usepackage{epstopdf}`; a sample
+  of 52 epstopdf papers changed in these two only).
+- nag defines its rule commands with their arguments (`\ObsoleteEnv`, `\SuggestedPackage`, `\IncompatiblePackages`,
+  `\BadFileLoadOrder`, `\NotAnEnvironment`, `\NotASwitch`, `\NagDeclareFloat`; `\ObsoleteClass[reason]`), nag.sty:82-168,
+  265-334, 534. Witness 1303.5654 (`\ObsoleteEnv`, 1 → 0 errors).
+
+Cost: mdframed's loads add about 0.24 G instructions to a conversion (1.25 → 1.48 G on a one-frame document); a
+`framemethod=tikz` adds tikz's load (about 1.4 G).
+
+**Guards**: `perfect_kernel_batch65k::{mdframed_framemethod_tikz_loads_tikz, mdframed_loads_its_dependencies,
+mciteplus_bbl_switches, arydshln_shorthand_environments, nag_public_api, mathpartir_premise_separators,
+hyperref_pagebackref_loads_backref, hyperref_passoptions_pagebackref_info, backref_direct_load_warns,
+hyperref_backref_none_loads_nothing, mdframed_body_framemethod_loads_nothing, arydshln_longtable_shorthand,
+epstopdf_loads_pdftexcmds}`; repros `stub-dependencies/*`.
+
+### 548. The pnas-new and achemso class bindings load what their classes load and define their setters (Perl: no binding)
+
+pnas-new.cls (shipped with the paper, not in TeX Live) loads `[framemethod=tikz]{mdframed}` after xcolor and tikz
+(:53-55) and jabbrv (:173), and defines `\dates` (:270), `\dropcap` (:284), `\etal`, `\matmethods`/`\showmatmethods`,
+`\acknow`/`\showacknow` (:273-281, 402-428), `\verticaladjustment` (:321), `\numberthis`, `\addtabletext`,
+`\copyrightstatement`, the font commands (:61-68) and `{widetext}` (:441-450). achemso.cls loads xkeyval (:35), caption,
+float, graphicx, setspace and url (:309-315) and defines `\SectionsOn`/`\SectionsOff` (:1091-1102),
+`\AbstractOn`/`\AbstractOff` (:1160-1169) and the TOC graphic's lengths (:1266-1269).
+
+**Rust** (batch 65k): `pnas_new_cls.rs` loads mdframed with `framemethod=tikz` (hence tikz), jabbrv when the paper
+ships it (else `\JournalTitle{…}` prints its argument; pnas-new.bst writes it into every `.bbl` entry), and defines
+the commands: `\dates` is a frontmatter `ltx:date` (role `dates`), `\dropcap{T}` the letter, `\etal` and
+`\verticaladjustment` no-ops (page furniture), the stored sections printed where `\show…` is called. `achemso_cls.rs`
+loads xkeyval, caption, graphicx and url, and the section/abstract switches are no-ops (the content is kept either
+way). A `\caption*` in an achemso paper is now caption's unnumbered caption, so the figures after it keep their numbers
+(1804.04674). Witnesses: pnas-new 2304.12786, 2402.03593, 2507.04951, 2002.07301, 2303.10311, 1612.08995, 1708.03990;
+achemso 1710.02414, 2006.15922, 2112.07721, 2202.05883.
+
+**Guards**: `perfect_kernel_batch65k::{pnas_new_dates_dropcap_and_tikz, pnas_new_show_matmethods_acknow,
+achemso_section_abstract_switches}`.

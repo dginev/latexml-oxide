@@ -33,6 +33,8 @@ LoadDefinitions!({
     "mathpartir.sty",
     "mathpartir.sty is minimally stubbed — \\inferrule renders as a frac; mathpar / mathparpagebreakable wrap their body in a display equation."
   );
+  // mathpartir.sty:34 `\RequirePackage{keyval}`.
+  RequirePackage!("keyval");
 
   // \inferrule[label]{premises}{conclusion}
   //   → \ensuremath{\frac{premises}{conclusion}} with the label
@@ -114,6 +116,17 @@ LoadDefinitions!({
   // Perl 0). Guarding with `\@ifundefined` preserves proof's `\infer` and still
   // offers the alias to mathpartir-only documents.
   RawTeX!(r"\@ifundefined{infer}{\let\infer\inferrule}{}");
+  // mathpartir.sty:62-68 the separators a rule's premises and a `{mathpar}`'s rules are spaced with, which
+  // packages built on mathpartir use directly (ottalt.sty:33/90 separates premises with `\mpr@andcr`; witness
+  // 2304.05276).
+  RawTeX!(
+    r"\newskip\mpr@andskip \mpr@andskip 2em plus 0.5fil minus 0.5em
+\def\mpr@goodbreakand{\hskip -\mpr@andskip \penalty -1000\hskip \mpr@andskip}
+\def\mpr@and{\hskip \mpr@andskip}
+\def\mpr@andcr{\penalty 50\mpr@and}
+\def\mpr@cr{\penalty -10000\mpr@and}
+\def\mpr@eqno#1{\mpr@andcr #1\hskip 0em plus -1fil \penalty 10}"
+  );
 
   // `mathpar` environment: wrap body in a display equation.
   // Optional `[keys]` consumed and discarded — we don't honour

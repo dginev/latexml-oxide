@@ -1,0 +1,19 @@
+% witness: 2304.12786, 2402.03593, 2507.04951, 2002.07301 (`\dates` undefined, the first error; pnas-new.cls:270, 284,
+%          53-55 `[framemethod=tikz]{mdframed}` loads tikz)
+% oracle:  pdflatex 0 errors with the arXiv-shipped pnas-new.cls (2304.12786; not in TeX Live)
+% engines: rust 65bundle = 3 errors (`\dates`, `\dropcap`, `{tikzpicture}` undefined)
+% expect:  0 errors; a frontmatter date "Compiled on 1 May"; paragraph starts "This paper"
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{pnas-new}
+\title{T}
+\author[a]{A. Author}
+\affil[a]{U}
+\dates{Compiled on 1 May}
+\additionalelement{}
+\begin{abstract}Abstract.\end{abstract}
+\begin{document}
+\maketitle
+\dropcap{T}his paper.
+\begin{tikzpicture}\draw (0,0) -- (1,0);\end{tikzpicture}
+\end{document}

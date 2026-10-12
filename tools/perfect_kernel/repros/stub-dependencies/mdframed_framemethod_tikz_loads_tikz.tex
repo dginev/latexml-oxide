@@ -1,0 +1,12 @@
+% witness: 2101.02817 (`\usepackage[framemethod=TikZ]{mdframed}`, then `{tikzpicture}`; mdframed.sty:154-169)
+% oracle:  pdflatex 0 errors (the option loads tikz)
+% engines: rust 65bundle = 1 error (`{tikzpicture}` undefined: the stub ignored the option)
+% expect:  0 errors; a picture with the circle
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[framemethod=TikZ]{mdframed}
+\begin{document}
+\begin{mdframed}Framed.\end{mdframed}
+\begin{tikzpicture}\draw (0,0) circle (1);\end{tikzpicture}
+\end{document}

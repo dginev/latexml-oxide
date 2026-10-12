@@ -1,0 +1,18 @@
+% witness: 1809.07574 (`[pagebackref]{hyperref}`, then `\backrefparscanfalse` in `{thebibliography}`;
+%          hyperref.sty:2791-2810, 4587-4589; backref.sty:207-208)
+% oracle:  pdflatex 0 errors
+% engines: rust 65bundle = 1 error (`\backrefparscanfalse` undefined: hyperref never loaded backref)
+% expect:  0 errors, 0 warnings (backref's missing_file is an Info here, 65k round 2); one bibitem "B. Author, Book."
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[pagebackref]{hyperref}
+\renewcommand*\backrefsep{,~}
+\renewcommand*{\backref}[1]{}
+\begin{document}
+See \cite{b}.
+\begin{thebibliography}{1}
+\backrefparscanfalse
+\bibitem{b} B. Author, Book.\backrefprint
+\end{thebibliography}
+\end{document}

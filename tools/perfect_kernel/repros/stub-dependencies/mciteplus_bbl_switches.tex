@@ -1,0 +1,16 @@
+% witness: 0802.3383 (apsrevM.bst's `.bbl` opens with `\mciteErrorOnUnknownfalse`; mciteplus.sty:182-184)
+% oracle:  pdflatex 0 errors
+% engines: rust 65bundle = 2 errors (`\mciteErrorOnUnknownfalse`, `\mciteSetSublistLabelBeginEnd` undefined)
+% expect:  0 errors; one bibitem "A. Author, Journal 1 (2000)."
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mciteplus}
+\mciteSetSublistLabelBeginEnd{\alph{mcitesubitemcount})\space}{\relax}{\relax}
+\begin{document}
+See \cite{a}.
+\mciteErrorOnUnknownfalse
+\begin{mcitethebibliography}{1}
+\mcitebibitem{a} A. Author, Journal 1 (2000).
+\end{mcitethebibliography}
+\end{document}

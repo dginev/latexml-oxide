@@ -33,6 +33,12 @@ LoadDefinitions!({
   // Perl raw-loads the class). Guard:
   // `perfect_kernel_batch54::achemso_declares_its_scheme_floats`.
   RequirePackage!("float");
+  // achemso.cls:35 xkeyval and :309-315 the rest of the class's package list, caption, graphicx and url: documents
+  // use `\captionsetup`/`\captionof` without loading caption (witness 2202.05883).
+  RequirePackage!("xkeyval");
+  RequirePackage!("caption");
+  RequirePackage!("graphicx");
+  RequirePackage!("url");
   // achemso.cls:1413-1414 loads mciteplus when installed (`\mciteSubRef`).
   RequirePackage!("mciteplus");
   // achemso.cls:144-165 (its embedded notes2bib): `\bibnote[label]{text}` files
@@ -157,5 +163,17 @@ LoadDefinitions!({
   // wrapper for italicized Latin abbreviations. Witness 2312.12737.
   DefMacro!("\\SectionNumbersOn", None);
   DefMacro!("\\SectionNumbersOff", None);
+  // achemso.cls:1091-1102 `\SectionsOff`/`\SectionsOn` and :1160-1169 `\AbstractOff`/`\AbstractOn` switch the
+  // section headings and the abstract per manuscript type (preamble only); the content is kept either way, so
+  // both are no-ops here. :1266-1269 the TOC graphic's box size, which documents set (`{tocentry}` is skipped).
+  // Witnesses 1710.02414 (`\AbstractOn`), 2006.15922 and 2112.07721 (`\acs@tocentry@height`).
+  DefMacro!("\\SectionsOn", None);
+  DefMacro!("\\SectionsOff", None);
+  DefMacro!("\\AbstractOn", None);
+  DefMacro!("\\AbstractOff", None);
+  RawTeX!(
+    r"\newlength{\acs@tocentry@height}\newlength{\acs@tocentry@width}
+\setlength{\acs@tocentry@height}{1.75in}\setlength{\acs@tocentry@width}{3.25in}"
+  );
   DefMacro!("\\latin{}", "#1");
 });

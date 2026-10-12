@@ -1,0 +1,12 @@
+% witness: backref.sty:79-85, 195-196 (the `ref` option: `\backref` prints `\backrefsectionsname`); a document's own
+%          `\usepackage{backref}` keeps the stub's Warning (65k round 2 ruling; OXIDIZED_DESIGN_DIVERGENCES #547)
+% oracle:  pdflatex 0 errors, prints "[sections ]"
+% engines: rust 65k round 1 = 1 Warning, "[pages ]"
+% expect:  0 errors, 1 Warning (backref missing_file); paragraph "[sections ]"
+% status:  RED (65k round 1) -> GREEN (65k round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[ref]{backref}
+\begin{document}
+[\backref]
+\end{document}

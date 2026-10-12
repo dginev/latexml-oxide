@@ -635,6 +635,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch65j::{bm_paired_left_right_keeps_its_superscript, bm_script_command_argument_after_unpaired_right,
   bm_prime_after_unpaired_right_is_bold, bm_script_argument_that_cannot_be_told_warns}`. RED row **BD**
   (`\DeclareBoldMathCommand` delimiter after `\left`, 1205.4484).
+- **65k** (stub bindings load what their packages load; OD #547-548, KPE #618-619): mdframed loads zref-abspage,
+  needspace and color (mdframed.sty:72-77) and its `framemethod` package (tikz/pst-node), `\mdfsetup` reads the keys;
+  backref loads kvoptions/kvsetkeys/rerunfilecheck and defines its language hooks, `\ifbackrefparscan`, `\backref`,
+  `\backrefalt`; hyperref's `backref`/`pagebackref` options load backref; mathpartir loads keyval and defines its
+  separators; epstopdf loads pdftexcmds (`\ifpdf`); mciteplus its switches, counters and setters; arydshln `{Array}`/`{Tabular}`/`{Longtable}`; nag its rule
+  commands. Class bindings: pnas-new (`\dates`, `\dropcap`, the stored sections, `[framemethod=tikz]{mdframed}`,
+  jabbrv), achemso (caption/graphicx/url/xkeyval, `\SectionsOn`/`\AbstractOn`, the TOC-graphic lengths). A/B
+  65bundle → 65k over the run-340 witness samples (`~/data/pk_wt/scratch_65k/`, 40 Error + 40 OK/Warning papers per
+  stub, 560): Error papers 266 → 226 (40 Error → OK/Warning: mciteplus 39 → 14, mdframed 39 → 29, arydshln 37 → 35,
+  mathpartir 39 → 37, nag 37 → 36; tabu and backref unchanged); no OK/Warning
+  paper has more errors or fewer words or bibitems (1804.04674's figures renumbered by caption's `\caption*`). Loaded
+  through hyperref's option (or `\PassOptionsToPackage`), backref's `missing_file` message is an Info, a direct
+  `\usepackage{backref}` keeps the Warning (main-session decision; Perl is silent, the lists are generated navigation;
+  witness 2203.07162 back to 0 warnings). arydshln witnesses 2502.17812, 2306.04970; nag 1303.5654. Guards
+  `perfect_kernel_batch65k::*`; repros `stub-dependencies/*`. Not stub gaps (remaining first errors): wiley-article's
+  `\keywords` is defined inside the class's `wiley@abstract` body, which the locked `{abstract}` binding bypasses
+  (2009.12523, 2007.02789); lmcs's `\titlecomment` under `\documentclass{LMCS}` (upper-case name, no binding: 1103.0510);
+  ulem's `\ULforem`; tabu's `|[width]` rule spec (1907.07986).
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the
