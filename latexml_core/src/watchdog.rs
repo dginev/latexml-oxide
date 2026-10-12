@@ -512,14 +512,16 @@ pub const EXIT_OOM: i32 = 137;
 /// `Watchdog::new(0)` is a no-op — produces a handle that does nothing. This
 /// lets call-sites set a watchdog conditionally without special-casing the
 /// "no timeout" branch.
-/// Optional hook to run from the watchdog thread immediately before
-/// `exit(124)`. Used by `cortex_worker --standalone` to write a
+/// Optional hook to run from the watchdog thread immediately before its
+/// exit, called with the exit code it is about to take ([`EXIT_TIMEOUT`] or
+/// [`EXIT_OOM`]). Used by `cortex_worker --standalone` to write a
 /// structured `Status:conversion:3` placeholder to `--output` so the
-/// timeout produces a usable failure artifact instead of a missing
-/// file. Set once at startup via `set_pre_exit_hook`; the hook is
+/// exit produces a usable failure artifact instead of a missing
+/// file, and by a `cortex_worker` harness child to record the cause of its
+/// exit for the harness. Set once at startup via `set_pre_exit_hook`; the hook is
 /// invoked exactly once. Zero overhead on the happy path — only the
 /// watchdog firing reads it.
-type PreExitHook = Box<dyn FnOnce() + Send + 'static>;
+type PreExitHook = Box<dyn FnOnce(i32) + Send + 'static>;
 
 static PRE_EXIT_HOOK: std::sync::OnceLock<std::sync::Mutex<Option<PreExitHook>>> =
   std::sync::OnceLock::new();
@@ -531,12 +533,12 @@ pub fn set_pre_exit_hook(hook: PreExitHook) {
   }
 }
 
-fn run_pre_exit_hook() {
+fn run_pre_exit_hook(code: i32) {
   if let Some(cell) = PRE_EXIT_HOOK.get()
     && let Ok(mut guard) = cell.lock()
     && let Some(hook) = guard.take()
   {
-    hook();
+    hook(code);
   }
 }
 
@@ -670,7 +672,7 @@ impl Watchdog {
         // structured Status:conversion:3 placeholder to its --output path)
         // BEFORE exiting. The hook is invoked at most once per process.
         claim_exit(EXIT_TIMEOUT);
-        run_pre_exit_hook();
+        run_pre_exit_hook(EXIT_TIMEOUT);
         remove_registered_paths();
         // `std::process::exit(124)` instead of `abort()`: the watchdog must
         // terminate the whole process (the worker thread is presumed wedged
@@ -700,7 +702,7 @@ impl Watchdog {
           max_rss_kb / 1024
         );
         claim_exit(EXIT_OOM);
-        run_pre_exit_hook();
+        run_pre_exit_hook(EXIT_OOM);
         remove_registered_paths();
         std::process::exit(EXIT_OOM);
       }

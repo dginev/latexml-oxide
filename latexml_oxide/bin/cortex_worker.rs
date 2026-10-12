@@ -19,7 +19,7 @@ use std::{
   io::{Read, Write},
   panic::AssertUnwindSafe,
   path::{Path, PathBuf},
-  sync::atomic::{AtomicU64, Ordering},
+  sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
 use latexml_core::common::error::{emit_error, emit_warn};
@@ -44,6 +44,9 @@ use latexml::converter::Converter;
 use latexml_core::common::{Config, DataSize, OutputFormat};
 use pericortex::worker::Worker;
 use tempfile::TempDir;
+
+#[path = "cortex_worker/exit_report.rs"]
+mod exit_report;
 
 /// CorTeX worker for LaTeXML-Oxide: distributed TeX-to-HTML conversion
 #[derive(Parser, Debug)]
@@ -78,6 +81,12 @@ struct Cli {
   /// collide under `router_handover`). Not for manual use.
   #[arg(long, hide = true)]
   worker_slot: Option<u32>,
+
+  /// The harness's exit-report directory, set internally by `--harness` on each child it spawns:
+  /// the child keeps a claim on its in-flight task there, so the harness can return a result for
+  /// a task whose child died mid-conversion (`exit_report`). Not for manual use.
+  #[arg(long, hide = true)]
+  exit_report_dir: Option<PathBuf>,
 
   /// ZMQ message frame size in bytes
   #[arg(long, default_value = "100000")]
@@ -204,7 +213,7 @@ struct Cli {
   /// auto (`max(one per-child cap, 10% of RAM)`); `0` disables the governor;
   /// a positive value sets an explicit floor. While system `MemAvailable` is
   /// below the floor, the harness sheds its **largest-RSS** worker (its task is
-  /// re-leased) and pauses respawns until memory recovers past 1.5× the floor —
+  /// reported `Fatal:oom:shed`) and pauses respawns until memory recovers past 1.5× the floor —
   /// so the fleet may safely over-commit (the common case runs the full worker
   /// count) yet survives a rare cluster of heavy jobs with a deliberate,
   /// attributable shed instead of an uncontrolled kernel OOM-kill. Pair with an
@@ -344,6 +353,8 @@ impl LatexmlWorker {
     if self.profile.timeout > 0 {
       latexml_core::stomach::set_timeout(self.profile.timeout);
     }
+    #[cfg(debug_assertions)]
+    inject_test_fault()?;
 
     // 1. Unpack the input archive
     let (tempdir, main_tex) = unpack_archive(input_path)?;
@@ -548,11 +559,12 @@ impl LatexmlWorker {
     // Trim trailing newlines before joining so already-terminated segments
     // don't produce blank separator lines (cosmetic, but the log-noise class
     // 5f3c4a0566 removed).
-    let core_log = response.log.trim_end_matches('\n');
+    // A document's own `<severity>:cortex:` lines (a `\message`) must not read as CorTeX's tags.
+    let core_log = defuse_cortex_tags(response.log.trim_end_matches('\n'));
     let log = if post.log.is_empty() {
       format!("{core_log}\nInfo:runtime_ms:{runtime_ms}\n{status_str}")
     } else {
-      let post_log = post.log.trim_end_matches('\n');
+      let post_log = defuse_cortex_tags(post.log.trim_end_matches('\n'));
       format!("{core_log}\n{post_log}\nInfo:runtime_ms:{runtime_ms}\n{status_str}")
     };
 
@@ -615,6 +627,90 @@ impl LatexmlWorker {
   }
 }
 
+/// The harness tests' way to make a child die mid-conversion, as production children do: with
+/// `CORTEX_WORKER_TEST_FAULT` set, a conversion (its watchdog armed) logs one warning (the
+/// partial log the harness returns), then sleeps until the watchdog ends it (`sleep`), allocates
+/// past any address-space limit (`alloc`), raises SIGSEGV (`segv`), overflows its stack
+/// (`stack`), or fails cleanly with an `Err` (`fail`, the worker's own Fatal result). Compiled into
+/// builds with debug assertions only — never a release worker.
+#[cfg(debug_assertions)]
+fn inject_test_fault() -> Result<(), String> {
+  let Ok(fault) = std::env::var("CORTEX_WORKER_TEST_FAULT") else {
+    return Ok(());
+  };
+  latexml_core::util::logger::bind_log();
+  emit_warn(
+    "cortex_worker",
+    "test_fault",
+    &format!("injecting the test fault {fault}"),
+  );
+  match fault.as_str() {
+    "sleep" => loop {
+      std::thread::sleep(std::time::Duration::from_secs(3600));
+    },
+    "alloc" => {
+      let huge: Vec<u8> = Vec::with_capacity(1 << 40);
+      std::hint::black_box(huge);
+    },
+    "segv" => {
+      // SAFETY: raising a signal; the recorder handler records it and the default action ends the
+      // process.
+      unsafe {
+        libc::raise(libc::SIGSEGV);
+      }
+    },
+    "stack" => {
+      /// Recurse until the thread's stack guard page stops it.
+      fn deeper(depth: u64) -> u64 {
+        let frame = std::hint::black_box([depth; 64]);
+        if depth == u64::MAX {
+          return frame[0];
+        }
+        deeper(depth + 1).wrapping_add(frame[1])
+      }
+      std::hint::black_box(deeper(0));
+    },
+    "fail" => return Err("the test fault `fail`".to_string()),
+    _ => {},
+  }
+  Ok(())
+}
+
+/// `log` with every line shaped like a CorTeX message in the `cortex` category —
+/// `<severity>:cortex:…`, any severity in any case, as CorTeX's parser lowercases the severity and
+/// files an unknown one as `Info` — indented by one space, so the line-anchored parser reads it as
+/// plain text: such lines in a conversion log come from the document (a `\message`), never from
+/// latexml-oxide, and must not pose as CorTeX's own tags (`Info:cortex:retryable`, which the
+/// harness's exit reports carry).
+fn defuse_cortex_tags(log: &str) -> String {
+  if !log.to_ascii_lowercase().contains(":cortex:") {
+    return log.to_string();
+  }
+  let mut defused = String::with_capacity(log.len() + 16);
+  for (index, line) in log.split('\n').enumerate() {
+    if index > 0 {
+      defused.push('\n');
+    }
+    if is_cortex_message_line(line) {
+      defused.push(' ');
+    }
+    defused.push_str(line);
+  }
+  defused
+}
+
+/// Whether `line` has CorTeX's message shape in the `cortex` category: `^[^ :]+:cortex:` — the
+/// severity is anything but a space or a colon (a tab included), as CorTeX's own `^([^ :]+):`.
+fn is_cortex_message_line(line: &str) -> bool {
+  line.split_once(':').is_some_and(|(severity, rest)| {
+    !severity.is_empty()
+      && !severity.contains(' ')
+      && rest
+        .get(..7)
+        .is_some_and(|category| category.eq_ignore_ascii_case("cortex:"))
+  })
+}
+
 /// Read peak RSS in KB from /proc/self/status's VmHWM. 0 on failure.
 fn read_max_rss_kb_proc() -> u64 {
   fs::read_to_string("/proc/self/status")
@@ -651,12 +747,18 @@ fn read_child_rusage_us_proc() -> (u64, u64) {
 fn read_child_rusage_us_proc() -> (u64, u64) { (0, 0) }
 
 /// Maximum number of *consecutive* caught panics before the worker process
-/// exits for a clean supervisor restart. A single poison paper among healthy
+/// recycles (a clean exit, after returning the paper's Fatal result) for a fresh
+/// supervisor restart. A single poison paper among healthy
 /// ones never trips this (the streak resets on the next success); a sustained
 /// run of panics means the thread-local engine state is likely corrupted
 /// (an unwind left a lock/`RefCell` mid-mutation), so a fresh process is safer
-/// than risking silently-wrong output on subsequent papers.
+/// than risking silently-wrong output on subsequent papers. (It used to `exit(70)`
+/// before returning the result, which left the task to the lease reaper.)
 const MAX_CONSECUTIVE_PANICS: u32 = 5;
+
+/// Set once a worker thread reaches [`MAX_CONSECUTIVE_PANICS`]: every worker thread recycles
+/// after returning its current result ([`Worker::recycle_after_task`]).
+static RECYCLE_AFTER_PANICS: AtomicBool = AtomicBool::new(false);
 
 thread_local! {
   /// Consecutive caught-panic counter for *this* worker thread (each pool
@@ -696,6 +798,10 @@ fn install_panic_hook() {
     let bt = std::backtrace::Backtrace::force_capture();
     // Full backtrace → stderr (captured in the worker/harness log) for debugging.
     eprintln!("Fatal:panic:backtrace panicked at {loc}: {msg}\n{bt}");
+    // Under `panic = "abort"` this panic ends the process: a harness child tells the harness.
+    if cfg!(panic = "abort") {
+      exit_report::record_panic(&format!("panicked at {loc}: {msg}"));
+    }
     // Bounded location+message → the per-task failure artifact (parser-safe).
     LAST_PANIC_DETAIL.with(|p| *p.borrow_mut() = Some(format!("panicked at {loc}: {msg}")));
   }));
@@ -716,13 +822,18 @@ impl Worker for LatexmlWorker {
   /// Either way the dispatcher receives an attributable result for the paper
   /// instead of losing the task (and the worker), and the next paper proceeds.
   /// Timeouts / OOM are handled out-of-band by the `Watchdog` + alloc hook
-  /// (they exit the process; the dispatcher's lease reaper recovers the task).
+  /// (they exit the process); a harness child's task then gets its result from
+  /// the harness (`exit_report`), any other's is recovered by the dispatcher's lease reaper.
   fn convert(&self, path: &Path) -> Result<File, Box<dyn Error>> {
     let arxiv_id = path
       .file_stem()
       .and_then(|s| s.to_str())
       .unwrap_or("document")
       .to_string();
+    // pericortex names the leased archive `<taskid>.zip`: claim that task, so a death from here on
+    // still returns a result for it (a harness child only). The claim ends when `convert` returns,
+    // on every path: the task then has its result (or pericortex's empty reply).
+    let _claimed = exit_report::claim_task(self.get_identity(), &arxiv_id);
 
     // `AssertUnwindSafe`: the engine state is a thread-local singleton rebuilt
     // per paper (`prepare_session`), so a caught unwind does not hand a logically
@@ -788,11 +899,11 @@ impl Worker for LatexmlWorker {
             "panic",
             &format!(
               "{MAX_CONSECUTIVE_PANICS} consecutive panics — engine state is likely corrupted; \
-               exiting (code 70) for a clean supervisor restart. The dispatcher's lease reaper \
-               re-leases the in-flight task to another worker."
+               returning this paper's Fatal result, then recycling the worker (a clean exit) for \
+               a fresh process."
             ),
           );
-          process::exit(70);
+          RECYCLE_AFTER_PANICS.store(true, Ordering::Release);
         }
         failure_zip_on_exit(write_failure_zip(&arxiv_id, "panic", "caught", &msg)?)
       },
@@ -834,13 +945,18 @@ impl Worker for LatexmlWorker {
     self.worker_slot.map(|slot| format!("{slot:02}"))
   }
 
-  /// Recycle this worker (clean exit → fresh respawn) once its resident memory has
+  /// Recycle this worker (clean exit → fresh respawn) after [`MAX_CONSECUTIVE_PANICS`],
+  /// once its resident memory has
   /// grown past `--allocation-limit-mb`, or once its address space nears its
   /// `RLIMIT_AS` cap ([`address_space_near_cap`]). Called by `start_single` AFTER the
   /// result is returned, so no paper is lost. Reads current `VmRSS` (one cheap `/proc`
   /// read); `0` disables the RSS test. Bounds the engine's never-reset thread-local
   /// interner/arena by process replacement rather than a fragile mid-life reset.
   fn recycle_after_task(&self) -> bool {
+    if RECYCLE_AFTER_PANICS.load(Ordering::Acquire) {
+      eprintln!("recycle: {MAX_CONSECUTIVE_PANICS} consecutive panics");
+      return true;
+    }
     if self.alloc_limit_mb > 0
       && let Some(rss_kb) = latexml_core::watchdog::process_rss_kb()
       && rss_kb / 1024 > self.alloc_limit_mb
@@ -1447,7 +1563,7 @@ fn panic_message(panic: &(dyn std::any::Any + Send)) -> String {
 /// (`Status:conversion:3`), a `cortex.log` with one `Fatal:<category>:<what> …`
 /// line (so the dispatcher's log parse + telemetry count it as a fatal, never a
 /// silent "0 errors"), and a minimal `telemetry.json`. Mirrors the member shape
-/// of [`write_timeout_placeholder_zip`] so the same parser handles both. For an
+/// of [`write_exit_placeholder_zip`] so the same parser handles both. For an
 /// unprocessable input (no convertible TeX source) the caller passes
 /// `category = "invalid"` with a specific `what` (e.g. `no_tex_source`), mirroring
 /// Perl's `Fatal('invalid', …)` — the dispatcher maps a fatal/`invalid`-category
@@ -1476,11 +1592,21 @@ fn write_failure_zip(
     "paper_id": arxiv_id,
     "category": "conversion_fatal",
     "exit_code": 3,
-  })
-  .to_string();
+  });
 
-  let file = File::create(&output_path)?;
-  let mut zip = zip::ZipWriter::new(file);
+  write_failure_archive(File::create(&output_path)?, &log, &telemetry)?;
+  Ok(output_path)
+}
+
+/// Write a failure archive's members to `writer`: `status` (`Status:conversion:3`), the
+/// `cortex.log` the dispatcher parses, and `telemetry.json`. Shared by the worker's own failure
+/// results and the harness's exit reports (`exit_report`), so the dispatcher parses both alike.
+fn write_failure_archive<W: Write + std::io::Seek>(
+  writer: W,
+  log: &str,
+  telemetry: &serde_json::Value,
+) -> std::io::Result<()> {
+  let mut zip = zip::ZipWriter::new(writer);
   let options =
     zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
   zip.start_file("status", options)?;
@@ -1488,9 +1614,9 @@ fn write_failure_zip(
   zip.start_file("cortex.log", options)?;
   zip.write_all(log.as_bytes())?;
   zip.start_file("telemetry.json", options)?;
-  zip.write_all(telemetry.as_bytes())?;
+  zip.write_all(telemetry.to_string().as_bytes())?;
   zip.finish()?;
-  Ok(output_path)
+  Ok(())
 }
 
 /// A failure zip with its `remove_on_exit` registration, as `convert_archive` returns its output.
@@ -1499,18 +1625,21 @@ fn failure_zip_on_exit(path: PathBuf) -> (PathBuf, latexml_core::watchdog::Remov
   (path, on_exit)
 }
 
-/// Minimal "we timed out" placeholder zip. Written only from the
+/// Minimal "the watchdog ended this run" placeholder zip. Written only from the
 /// watchdog's pre-exit hook (`set_pre_exit_hook` in `latexml_core::
 /// watchdog`), so the happy-path overhead is zero. Contains just
 /// two members: `status` (`Status:conversion:3`) and `cortex.log`
-/// (a single `Fatal:timeout:wallclock …` line). The parent harness
+/// (a single `Fatal:timeout:wallclock …` line for the wall-clock exit, `exit_code`
+/// [`EXIT_TIMEOUT`](latexml_core::watchdog::EXIT_TIMEOUT), or `Fatal:oom:rss …` for the
+/// resident-memory one). The parent harness
 /// can stat the output file and parse `status` exactly as for any
 /// other failed conversion, instead of seeing a missing file plus
 /// an `Aborted (core dumped)` shell message.
-fn write_timeout_placeholder_zip(
+fn write_exit_placeholder_zip(
   output_path: &str,
   input_path: &str,
   timeout_secs: u64,
+  exit_code: i32,
 ) -> Result<(), Box<dyn Error>> {
   let file = File::create(output_path)?;
   let mut zip = zip::ZipWriter::new(file);
@@ -1519,13 +1648,22 @@ fn write_timeout_placeholder_zip(
   zip.start_file("status", options)?;
   zip.write_all(b"Status:conversion:3")?;
   zip.start_file("cortex.log", options)?;
-  let log = format!(
-    "Fatal:timeout:wallclock latexml-oxide hit the {timeout_secs}s \
-     main-level wall-clock timeout converting {input_path}; the worker \
-     thread was presumed wedged in a tight native loop and the watchdog \
-     exited the process via exit(124). No output produced.\n\
-     Status:conversion:3\n"
-  );
+  let log = if exit_code == latexml_core::watchdog::EXIT_TIMEOUT {
+    format!(
+      "Fatal:timeout:wallclock latexml-oxide hit the {timeout_secs}s \
+       main-level wall-clock timeout converting {input_path}; the worker \
+       thread was presumed wedged in a tight native loop and the watchdog \
+       exited the process via exit(124). No output produced.\n\
+       Status:conversion:3\n"
+    )
+  } else {
+    format!(
+      "Fatal:oom:rss latexml-oxide: resident memory exceeded the ceiling converting \
+       {input_path}; the watchdog exited the process via exit({exit_code}). No output \
+       produced.\n\
+       Status:conversion:3\n"
+    )
+  };
   zip.write_all(log.as_bytes())?;
   zip.finish()?;
   Ok(())
@@ -1555,6 +1693,9 @@ fn write_timeout_placeholder_zip(
 /// body (no `format!`, no string concat) because the global allocator
 /// has just failed: `eprintln!` writes via a stack-allocated formatter.
 fn custom_alloc_error_hook(layout: Layout) {
+  // First, before anything that could allocate (and fail again): a harness child tells the
+  // harness why it is exiting (allocation-free).
+  exit_report::record_cause(b"alloc", Some(layout.size() as u64));
   // Single Fatal: line on its own — matches `log_fatal` output shape
   // (`Fatal:<Target>:<Category> <message>`) so aggregation grep keys
   // on it cleanly. `oom`/`alloc_failed` are not enum variants of
@@ -1651,6 +1792,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 /// Each child's polled `--max-rss-mb` soft guard is set ~256 MiB under the hard
 /// `RLIMIT_AS` cap so the watchdog emits an attributable `Status:conversion:3`
 /// just before the hard `ENOMEM` kill.
+///
+/// A child that dies mid-conversion — the watchdog's timeout or RSS exit, an allocation failure
+/// under `RLIMIT_AS`, a governor shed, a fatal signal — has its task's result returned by the
+/// harness's exit reporter, a `Status:conversion:3` archive naming the cause (`exit_report`).
 fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   use pericortex::harness::{HarnessConfig, default_worker_count, supervise, total_ram_bytes};
 
@@ -1751,7 +1896,55 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     ..Default::default()
   };
 
-  supervise(&config, move |index| {
+  // Exit reports: each child claims its in-flight task in this directory, and the reporter thread
+  // returns a `Status:conversion:3` result, with the cause, for the task of every child that dies
+  // mid-conversion (`exit_report`). Without the directory the fleet runs as before, its dead
+  // children's tasks left to the dispatcher's lease reaper.
+  let tmp = std::env::temp_dir();
+  exit_report::remove_stale_dirs(&tmp);
+  let exit_report_dir = match exit_report::HarnessDir::create(&tmp) {
+    Ok(dir) => Some(dir),
+    Err(e) => {
+      eprintln!(
+        "exit report: could not create a directory in {} ({e}); dead workers' tasks are left to \
+         the lease reaper",
+        tmp.display()
+      );
+      None
+    },
+  };
+  let supervision_over = std::sync::Arc::new(AtomicBool::new(false));
+  let reporter = exit_report_dir.as_ref().and_then(|dir| {
+    let reporter = exit_report::Reporter::new(
+      dir.path().to_path_buf(),
+      cli.service.clone(),
+      cli.sink_address.clone(),
+      mem_pressure_floor_bytes.is_some(),
+    );
+    let over = std::sync::Arc::clone(&supervision_over);
+    let spawned = std::thread::Builder::new()
+      .name("exit-reporter".to_string())
+      .spawn(move || {
+        reporter.run(|| pericortex::harness::stop_requested() || over.load(Ordering::Acquire))
+      });
+    match spawned {
+      Ok(handle) => Some(handle),
+      Err(e) => {
+        eprintln!(
+          "exit report: could not start the reporter thread ({e}); dead workers' tasks are left \
+           to the lease reaper"
+        );
+        None
+      },
+    }
+  });
+  // Children claim their tasks only where a reporter reads the claims.
+  let child_exit_report_dir = reporter
+    .as_ref()
+    .and(exit_report_dir.as_ref())
+    .map(|dir| dir.path().to_path_buf());
+
+  let supervised = supervise(&config, move |index| {
     let mut cmd = process::Command::new(&exe);
     // jemalloc tuning for children (read at allocator init, so it must be set by
     // us before exec — too late from inside the child). Enable the background
@@ -1807,6 +2000,9 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
       // harness keeps exactly one live process per slot (no `router_handover` collision).
       .arg("--worker-slot")
       .arg(index.to_string());
+    if let Some(dir) = &child_exit_report_dir {
+      cmd.arg("--exit-report-dir").arg(dir);
+    }
     // Forwarding `--limit` recycles each child after N tasks (the harness
     // respawns it), bounding any slow per-process memory creep.
     if let Some(l) = limit {
@@ -1831,7 +2027,16 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
       cmd.arg("--quiet");
     }
     cmd
-  })
+  });
+  // `supervise` returns once every child is reaped after the shutdown signal.
+  supervision_over.store(true, Ordering::Release);
+  if let Some(handle) = reporter {
+    let _ = handle.join();
+  }
+  if let Some(dir) = exit_report_dir {
+    dir.remove();
+  }
+  supervised
 }
 
 fn real_main() -> Result<(), Box<dyn Error>> {
@@ -1953,8 +2158,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       let out_clone = out.clone();
       let input_clone = input.clone();
       let timeout_secs = worker.profile.timeout;
-      latexml_core::watchdog::set_pre_exit_hook(Box::new(move || {
-        let _ = write_timeout_placeholder_zip(&out_clone, &input_clone, timeout_secs);
+      latexml_core::watchdog::set_pre_exit_hook(Box::new(move |exit_code| {
+        let _ = write_exit_placeholder_zip(&out_clone, &input_clone, timeout_secs, exit_code);
       }));
     }
 
@@ -2002,10 +2207,76 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     eprintln!("  source: {}", cli.source_address);
     eprintln!("  sink:   {}", cli.sink_address);
 
+    // A harness child keeps a claim on its in-flight task, so the harness returns a result for it
+    // if this process dies mid-conversion (`exit_report`). The watchdog's two exits name their
+    // cause first; the allocation-failure hook and the fatal-signal handlers do the same.
+    if let Some(dir) = cli.exit_report_dir.as_deref() {
+      match exit_report::install_child(dir) {
+        Ok(()) => {
+          let (timeout_secs, max_rss_mb) = (cli.timeout, cli.max_rss_mb);
+          latexml_core::watchdog::set_pre_exit_hook(Box::new(move |exit_code| {
+            if exit_code == latexml_core::watchdog::EXIT_TIMEOUT {
+              exit_report::record_cause(b"timeout", Some(timeout_secs));
+            } else {
+              exit_report::record_cause(b"rss", Some(max_rss_mb));
+            }
+          }));
+        },
+        Err(e) => eprintln!(
+          "exit report: could not claim in {} ({e}); a death of this worker leaves its task to \
+           the dispatcher's lease reaper",
+          dir.display()
+        ),
+      }
+    }
+
     worker.start(cli.limit)?;
+    exit_report::remove_child_claim();
+    if RECYCLE_AFTER_PANICS.load(Ordering::Acquire) {
+      // The last paper's result is returned; exit non-zero so a supervisor restarts a fresh
+      // process (the harness respawns any exit; `Restart=on-failure` needs the failure code).
+      process::exit(70);
+    }
   }
 
   Ok(())
+}
+
+#[cfg(test)]
+mod defuse_tests {
+  use super::defuse_cortex_tags;
+
+  #[test]
+  fn every_severity_of_a_cortex_message_line_is_defused() {
+    // CorTeX lowercases a severity and files an unknown one as Info: each of these would parse as
+    // the retryable tag.
+    for line in [
+      "Note:cortex:retryable crash:SIGSEGV",
+      "INFO:cortex:retryable timeout:wallclock",
+      "info:CORTEX:retryable oom:shed",
+      "Whatever:cortex:x",
+      "\tInfo:cortex:retryable timeout:wallclock",
+    ] {
+      assert_eq!(defuse_cortex_tags(line), format!(" {line}"), "{line}");
+    }
+    for line in [
+      "Warning:x:cortex: y",
+      "two words:cortex:x",
+      ":cortex:x",
+      "cortex:x",
+    ] {
+      assert_eq!(defuse_cortex_tags(line), line, "{line}");
+    }
+  }
+
+  #[test]
+  fn a_documents_cortex_tag_lines_are_defused() {
+    assert_eq!(
+      defuse_cortex_tags("Info:a:b c\nInfo:cortex:retryable timeout:wallclock\nx Info:cortex:y"),
+      "Info:a:b c\n Info:cortex:retryable timeout:wallclock\nx Info:cortex:y"
+    );
+    assert_eq!(defuse_cortex_tags("Warning:x:y z"), "Warning:x:y z");
+  }
 }
 
 #[cfg(test)]

@@ -87,13 +87,19 @@ name = "cortex_worker"
 path = "bin/cortex_worker.rs"
 required-features = ["cortex"]
 
+# The harness's exit reports, end to end: spawns `cortex_worker --harness` against an in-test
+# dispatcher, so it needs the `cortex` feature (`cargo test -p latexml --features cortex`).
+[[test]]
+name = "cortex_worker_exit_reports"
+required-features = ["cortex"]
+
 [features]
 default = ["test-utils", "runtime-bindings"]
 # Enable building the cortex_worker binary (ZMQ-based CorTeX dispatcher client).
 # Off by default because pericortex pulls in zmq + zeromq-src (C library build),
 # rand, chrono, tempdir, walkdir — ~15 minutes of CI compile time we don't pay
 # for the core latexml_oxide / latexmlmath_oxide / latexmlpost_oxide binaries.
-cortex = ["dep:pericortex", "dep:hostname"]
+cortex = ["dep:pericortex", "dep:hostname", "dep:zmq"]
 # Use jemalloc instead of mimalloc as the global allocator in `cortex_worker`.
 # jemalloc returns freed memory to the OS via background decay, keeping a
 # long-lived worker's RSS bounded to the current paper (see the `tikv-jemallocator`
@@ -180,6 +186,9 @@ latexml_math_parser = {path = "../latexml_math_parser", version = "0.4.1"}
 latexml_post = {path = "../latexml_post", version = "0.5.0"}
 pericortex = { version = "0.2.8", optional = true }
 hostname = { version = "0.4", optional = true }
+# The harness's exit reporter returns a dead child's task to the CorTeX sink itself (the same
+# PUSH socket pericortex's workers use; 0.10 is pericortex's own version, so no second build).
+zmq = { version = "0.10", optional = true }
 # Replaces glibc malloc. glibc's per-arena mutex is a hard scaling bottleneck
 # for multi-process workloads like cortex_worker (arena contention via futex).
 # mimalloc gives each thread a private heap with lock-free fast paths.

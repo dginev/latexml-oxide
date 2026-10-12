@@ -1,6 +1,6 @@
 use std::{
   cell::RefCell,
-  sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+  sync::atomic::{AtomicBool, AtomicI32, AtomicU64, AtomicUsize, Ordering},
 };
 
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError, max_level};
@@ -76,6 +76,79 @@ static LOGGER: LatexmlLogger = LatexmlLogger;
 #[thread_local]
 static LOG_BUFFER: RefCell<Option<String>> = RefCell::new(None);
 
+/// A file descriptor that receives a copy of every text appended to a bound [`LOG_BUFFER`] (`-1` =
+/// none): the log of a conversion, kept on disk as it is written, for a process whose log buffer
+/// dies with it. `cortex_worker`'s harness children set it so the harness can return the partial
+/// log of a conversion the watchdog, an allocation failure or a signal ended. Process-global
+/// because those exits are taken from other threads than the converting one.
+static LOG_MIRROR_FD: AtomicI32 = AtomicI32::new(-1);
+/// Bytes written to [`LOG_MIRROR_FD`] since it was last emptied.
+static LOG_MIRROR_BYTES: AtomicU64 = AtomicU64::new(0);
+/// The size at which the mirror file is emptied and restarted, so it keeps the most recent text
+/// of a runaway log within this bound.
+static LOG_MIRROR_CAP: AtomicU64 = AtomicU64::new(0);
+
+/// Mirror the captured log into `fd` (a file opened for appending), emptying it whenever it
+/// would grow past `cap_bytes`; `None` stops mirroring. The caller owns the descriptor and keeps
+/// it open while it is set.
+pub fn set_log_mirror(fd: Option<i32>, cap_bytes: u64) {
+  LOG_MIRROR_CAP.store(cap_bytes, Ordering::Release);
+  LOG_MIRROR_BYTES.store(0, Ordering::Release);
+  LOG_MIRROR_FD.store(fd.unwrap_or(-1), Ordering::Release);
+}
+
+/// Empty the log mirror (a new conversion begins).
+pub fn reset_log_mirror() {
+  let fd = LOG_MIRROR_FD.load(Ordering::Acquire);
+  if fd >= 0 {
+    truncate_fd(fd);
+    LOG_MIRROR_BYTES.store(0, Ordering::Release);
+  }
+}
+
+/// Copy `text` (just appended to a bound log buffer) to the log mirror, if one is set.
+fn mirror_log_text(text: &str) {
+  let fd = LOG_MIRROR_FD.load(Ordering::Acquire);
+  if fd < 0 || text.is_empty() {
+    return;
+  }
+  let len = text.len() as u64;
+  let cap = LOG_MIRROR_CAP.load(Ordering::Acquire);
+  if cap > 0 && LOG_MIRROR_BYTES.fetch_add(len, Ordering::AcqRel) + len > cap {
+    truncate_fd(fd);
+    LOG_MIRROR_BYTES.store(len, Ordering::Release);
+  }
+  write_fd(fd, text.as_bytes());
+}
+
+#[cfg(unix)]
+fn truncate_fd(fd: i32) {
+  // SAFETY: `ftruncate` on a descriptor the mirror's owner keeps open; a failure is ignored (the
+  // mirror is best-effort and must never disturb the conversion).
+  unsafe {
+    libc::ftruncate(fd, 0);
+  }
+}
+#[cfg(not(unix))]
+fn truncate_fd(_fd: i32) {}
+
+#[cfg(unix)]
+fn write_fd(fd: i32, mut bytes: &[u8]) {
+  while !bytes.is_empty() {
+    // SAFETY: writes from a live slice to a descriptor the mirror's owner keeps open.
+    let n = unsafe { libc::write(fd, bytes.as_ptr().cast(), bytes.len()) };
+    if n < 0 && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
+      continue;
+    }
+    if n <= 0 {
+      return;
+    }
+    bytes = &bytes[n as usize..];
+  }
+}
+#[cfg(not(unix))]
+fn write_fd(_fd: i32, _bytes: &[u8]) {}
+
 /// Does stderr currently sit at the start of a line?
 ///
 /// A diagnostic record must begin on a fresh line so CorTeX's line-anchored
@@ -133,6 +206,7 @@ pub fn note_to_log(msg: &str) {
     && let Some(ref mut log) = *buf
   {
     let clean = strip_ansi(msg);
+    let start = log.len();
     if !log.is_empty() && !log.ends_with('\n') {
       log.push('\n');
     }
@@ -140,6 +214,7 @@ pub fn note_to_log(msg: &str) {
     if !log.ends_with('\n') {
       log.push('\n');
     }
+    mirror_log_text(&log[start..]);
   }
 }
 
@@ -204,6 +279,8 @@ pub fn replay_captured(d: CapturedDiagnostics) {
   {
     // The captured text is already per-record newline-terminated; just make
     // sure it starts on a fresh line so it can't glue onto an in-flight note.
+    // Not mirrored: a worker thread's own buffer already mirrored this text as it was written
+    // (a render worker *process*'s replayed log, `render_workers.rs`, is not in the mirror).
     if !log.is_empty() && !log.ends_with('\n') {
       log.push('\n');
     }
@@ -296,7 +373,9 @@ impl log::Log for LatexmlLogger {
         if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
           && let Some(ref mut log) = *buf
         {
+          let start = log.len();
           append_note(log, &strip_ansi(&note));
+          mirror_log_text(&log[start..]);
         }
         // The LOG append above is the log-file record (Perl `$LOG` write, always).
         // The STDERR echo is the live console indicator and is gated on the
@@ -398,6 +477,7 @@ fn write_record(level: Level, painted_message: String) {
   if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
     && let Some(ref mut log) = *buf
   {
+    let start = log.len();
     if !log.is_empty() && !log.ends_with('\n') {
       log.push('\n');
     }
@@ -409,6 +489,7 @@ fn write_record(level: Level, painted_message: String) {
     if !log.ends_with('\n') {
       log.push('\n');
     }
+    mirror_log_text(&log[start..]);
   }
 
   // Use `\n` (not `\r`) to guarantee each log line starts on a fresh

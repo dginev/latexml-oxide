@@ -99,15 +99,15 @@ Guards 1–4 bound a **single conversion** (per-process); guard 5 bounds the
    **single** runaway job.
 5. **Fleet memory-pressure governor** (`--mem-pressure-floor-mb`, in the harness
    process) — samples system `MemAvailable`; below the floor it SIGTERMs the
-   **largest-RSS** child (its task re-leased) and pauses respawns until memory
+   **largest-RSS** child (its task reported `Fatal:oom:shed`) and pauses respawns until memory
    recovers past 1.5× the floor. Contains the **aggregate** — a cluster of
    concurrently-heavy jobs that each stay under guard #4 but together threaten
    the host. This is what makes the deliberate worker over-commit safe.
 
 Guards 1–4 are deliberately staggered so the **inner, attributable** ones fire
-first: a paper is reported as a logged `Status:conversion:3` (and its task
-re-leased) rather than vanishing in a silent kill. Guard 5 likewise *chooses* a
-victim and re-leases it, in place of an indiscriminate kernel OOM-kill.
+first: a paper is reported as a logged `Status:conversion:3` rather than vanishing in a silent
+kill. Guard 5 likewise *chooses* a victim, in place of an indiscriminate kernel OOM-kill. A
+child that guards 2–5 end returns its result through the harness (see "Exit reports" below).
 
 For a hard host-level backstop beneath all five, run the harness inside a cgroup
 `memory.max` (a memory-limited container, or `systemd-run --scope -p
@@ -157,12 +157,70 @@ Standalone and pooled workers, which nothing respawns, never take it.
 
 ## Exit-code reference (per child)
 
-| Code | Meaning | Source |
-| --- | --- | --- |
-| `0` | success / warnings | normal |
-| `124` | wall-clock timeout | `Watchdog` |
-| `137` | memory ceiling / alloc failure | `Watchdog` RSS guard or `custom_alloc_error_hook` (incl. `RLIMIT_AS` `ENOMEM`) |
-| `70` | 5 consecutive caught panics → clean restart | `cortex_worker` `MAX_CONSECUTIVE_PANICS` |
+| Code / signal | Meaning | Source | Result the harness returns |
+| --- | --- | --- | --- |
+| `0` | success / warnings, or a recycle | normal | the worker's own |
+| `124` | wall-clock timeout | `Watchdog` | `Fatal:timeout:wallclock` (retryable) |
+| `137` | resident-memory ceiling | `Watchdog` RSS guard | `Fatal:oom:rss` |
+| `137` | allocation failure (incl. `RLIMIT_AS` `ENOMEM`) | `custom_alloc_error_hook` | `Fatal:oom:alloc_failed` |
+| SIGTERM | memory-pressure governor shed | pericortex governor | `Fatal:oom:shed` (retryable; `Fatal:crash:SIGTERM`, final, with the governor off) |
+| SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT | crash | — | `Fatal:crash:SIG<NAME>` (SIGSEGV then SIGABRT: a stack overflow) |
+| SIGKILL / no recorded cause | kernel OOM killer, the harness's unresponsive-worker watchdog, an operator, an `exit` inside a library | — | `Fatal:crash:unrecorded` (retryable; the harness log has the exit status) |
 
-All map to a `Status:conversion:3` failure the dispatcher records; the lease
-reaper recovers the in-flight task and the harness respawns the worker.
+After [`MAX_CONSECUTIVE_PANICS`](../../latexml_oxide/bin/cortex_worker.rs) caught panics a
+worker returns the last paper's `Fatal:panic:caught` result and then exits `70`; it used to
+`exit(70)` before returning it, leaving that task to the lease reaper.
+
+## Exit reports: the result of a child that dies mid-conversion
+
+A child that dies mid-conversion returns nothing itself, so its task used to wait for the
+dispatcher's lease reaper, be re-leased, and after the retry budget end as
+`Fatal:cortex:never_completed_with_retries` — the cause lost. The harness now returns a
+`Status:conversion:3` result for it, through the same sink path as any result
+(`latexml_oxide/bin/cortex_worker/exit_report.rs`):
+
+* The harness makes a fresh, randomly named `$TMPDIR/cortex_harness_*/` holding a
+  `harness.lock` for its life, and passes it to each child (`--exit-report-dir`, internal) once
+  its reporter thread runs. It never adopts an existing directory: in the Docker image the
+  harness is always PID 1 and `TMPDIR` a host mount, so a pid-named directory would hand a new
+  harness the stale claims of a killed one. A child keeps `child-<pid>-<nonce>.claim` there (the nonce keeps a reused pid off a dead
+  child's unread claim) under an exclusive
+  `flock` for its whole life, naming its worker identity and, while a conversion runs, the task
+  id; beside it `child-<pid>-<nonce>.log` mirrors the conversion log as it is written
+  (`logger::set_log_mirror`, emptied per task, capped at 8 MiB).
+* A child that knows why it is exiting appends a `cause` line first, without allocating: the
+  watchdog's pre-exit hook (timeout / RSS), the allocation-failure hook, and a handler for the
+  fatal signals (which then chains to the handler it replaced — Rust's guard-page handler — and
+  dies of the signal).
+* The kernel drops the lock however the process ends. The harness's `exit-reporter` thread polls
+  the claims every 250 ms; a claim it can lock is a dead child's, and if it names a task the
+  reporter sends `[identity, service, taskid, result.zip]` to the sink — under the child's own
+  identity, which the dispatcher uses to attribute the result to its dispatch attempt — with
+  the partial log, the cause's `Fatal:` line and `Status:conversion:3`.
+* A SIGTERM or unrecorded death while the harness itself is shutting down is not reported (the
+  dispatcher re-leases the task). A clean exit removes its claim. The harness removes its
+  directory on shutdown and, when it starts, every `cortex_harness_*` whose lock nobody holds,
+  without reporting from it (that fleet is gone; the dispatcher re-leases its tasks).
+* A cause is recorded only by the claim's owner process (not by a subprocess between `fork` and
+  `exec`, which inherits the handlers), and the allocation-failure hook records it before
+  anything that could allocate.
+* **Retry, then cause** (user ruling 2026-10-12). A watchdog timeout, a governor shed and an
+  unrecorded death may not repeat on another try: their report carries CorTeX's
+  `Info:cortex:retryable <category>:<what>` tag, and the dispatcher returns the task to its retry
+  budget instead of recording it, reporting the last such cause (not
+  `never_completed_with_retries`) once the budget is spent. A crash by a signal (a stack overflow
+  included) and the memory limits (`oom:rss`, `oom:alloc_failed`) are final on their first
+  occurrence. A document's own lines shaped `<severity>:cortex:…` (a `\message`; any severity, as
+  CorTeX lowercases it and files an unknown one as Info) are indented by a space in every log the
+  worker returns, so they cannot pose as the tag.
+* **Deploy order:** deploy the CorTeX dispatcher at `fix/late-results-and-exit-causes` (round 2 or
+  later) **before** a fleet built from this commit. An older dispatcher ignores the tag and records
+  every retryable cause as a final Fatal.
+
+Not covered: a death between a conversion's end and its result reaching the sink (the claim is
+idle by then) — the lease reaper is still the net there. Guards: the unit tests in
+`exit_report.rs`, and `latexml_oxide/tests/cortex_worker_exit_reports.rs`, which runs a
+one-worker harness against an in-test dispatcher for each cause (the faults come from
+`CORTEX_WORKER_TEST_FAULT`, compiled into debug-assertion builds only; CI never enables the
+`cortex` feature, so run locally with
+`cargo test -p latexml --features cortex --test cortex_worker_exit_reports`).
