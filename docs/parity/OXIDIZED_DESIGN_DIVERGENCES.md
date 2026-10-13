@@ -17003,8 +17003,10 @@ again (Fatal `Stomach:Recursion`).
 
 **Rust** (batch 66b, `def_macro`): a locked robust macro records `"\cs␣:locked@files"` as well, so raw class and package
 code redefining the inner is refused as the wrapper is; the document's own definition of the inner (its
-`\DeclareRobustCommand\cite`, or `\@namedef{cite }` in the preamble) stays its own, as in Perl. Only the kernel `\cite` is
-a locked robust macro today. The robust constructor path (`def_constructor`) records the lock under
+`\DeclareRobustCommand\cite`, or `\@namedef{cite }` in the preamble) stays its own, as in Perl. A `\let` of a locked
+robust binding to another robust command (a class's `\let\cite\mycite`) takes `\let`'s plain path rather than #315's body
+copy, which wrote the inner past the lock (guard `robust_let_over_a_locked_binding_keeps_its_inner`). Only the kernel
+`\cite` is a locked robust macro today. The robust constructor path (`def_constructor`) records the lock under
 the inner name only, the other half of the same asymmetry; no witness needs it. Witnesses 2210.02246, 2303.09770 (Fatal
 → 0 errors). Guard `perfect_kernel_batch66b::locked_robust_cite_keeps_its_inner_definition`; repro
 `macro-state/locked_robust_inner_cite`.
@@ -17025,7 +17027,8 @@ writes (`assign_meaning`: `\csname`'s `\relax`, `with_let` restores). A `\let` t
 (`"\cs:locked@cleared"`) and put back when the file's new meaning for the name is refused (`restore_cleared_binding`, from
 `install_definition` and `let_i`), whether the name is still undefined or `\csname` has made it `\relax` on the way
 (`\@namedef`, ltcmd's `\cs_set_eq:cc`), so the binding's other callers (a raw `\end`) still meet it. The lock is read at
-the origins `install_definition` reads it at (all but the document's). The same rule for a
+the origins `install_definition` reads it at (all but the document's). The binding comes back once: the stash is
+consumed, so a `\relax` the document gives the name later stays its own (guard `a_cleared_binding_is_restored_once`). The same rule for a
 binding whose begin half reads its body to the end: mn2e_support's `{keywords}` (`\lx@begin@keywords`) locks both
 `\keywords` and `\endkeywords` against the files, since mn2e-breakabs.sty:87-95 (shipped by MNRAS papers) redefines the
 end half alone as mn2e.cls's `\endlist` (1403.3615, 1607.03149), and a file redefining both halves would otherwise have

@@ -349,3 +349,76 @@ Body.
   );
   assert!(xml.contains("<p xml:id=\"p1.1\">Body.</p>"), "{xml}");
 }
+
+/// The kept-aside binding comes back once: after a restore, a `\relax` the document gives the name is its own, and a
+/// later package's refused `\@namedef` leaves it so (`state::restore_cleared_binding`).
+#[test]
+fn a_cleared_binding_is_restored_once() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{article}
+\usepackage{clra}
+\let\endabstract\relax
+\usepackage{clrb}
+\begin{document}
+\texttt{\meaning\endabstract}
+\end{document}
+",
+    &[
+      (
+        "clra.sty",
+        "\\ProvidesPackage{clra}\n\\let\\endabstract\\undefined\n\\def\\endabstract{\\par}\n",
+      ),
+      (
+        "clrb.sty",
+        "\\ProvidesPackage{clrb}\n\\@namedef{endabstract}{\\par}\n",
+      ),
+    ],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(">\\relax</text>"), "{xml}");
+}
+
+/// A class's `\let` of a locked robust binding to its own robust command takes `\let`'s plain path (TeX's, Perl's `Let`):
+/// the binding's inner `\cite␣`, locked against the files (OXIDIZED_DESIGN #568), is not overwritten by the robust
+/// wrapper copy.
+#[test]
+fn robust_let_over_a_locked_binding_keeps_its_inner() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{article}
+\usepackage{zqcite}
+\begin{document}
+\texttt{\expandafter\meaning\csname cite \endcsname}
+\end{document}
+",
+    &[(
+      "zqcite.sty",
+      "\\ProvidesPackage{zqcite}\n\\DeclareRobustCommand\\mycite[1]{MY(#1)}\n\\let\\cite\\mycite\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(">macro:#1#2-&gt;CODE("), "{xml}");
+  assert!(!xml.contains("MY("), "{xml}");
+}
+
+/// A definition the lock refuses defines no `\@xargdef` internal either: a package's `\renewcommand\title[2][x]{…}` of
+/// the locked `\title` leaves `\\title` undefined.
+#[test]
+fn refused_definition_defines_no_internal() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{article}
+\usepackage{rtitle}
+\begin{document}
+\expandafter\ifx\csname\string\title\endcsname\relax UNDEF\else DEF\fi
+\end{document}
+",
+    &[(
+      "rtitle.sty",
+      "\\ProvidesPackage{rtitle}\n\\renewcommand\\title[2][x]{T(#1:#2)}\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains("<p xml:id=\"p1.1\">UNDEF</p>"), "{xml}");
+}

@@ -3203,6 +3203,9 @@ fn restore_cleared_binding(token: &Token) {
       binding,
       Some(Scope::Global),
     );
+    // Once: a later `\relax` the document gives the name is its own, and a later clearing `\let` keeps the binding
+    // aside again.
+    assign_value(&cleared_key, Stored::None, Some(Scope::Global));
   }
 }
 
@@ -4571,9 +4574,16 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // `\protect\bfseries<space>\ifmmode…` — and then `\let\bfseries=\mafx@bfseries` (33 of run 336's papers ran to
   // PushbackLimit, 2205.10090, 2211.07279). A copy over an existing body slot is still a copy (`\DeclareCommandCopy`
   // onto a robust command, `\let\origref\ref` run twice).
+  //
+  // Not over a locked binding: the body copy writes `\<token1><space>` directly, so for a locked robust binding (the
+  // kernel `\cite`, whose inner is locked against the files, OXIDIZED_DESIGN #568) a class's `\let\cite\mycite` would
+  // put its body under the binding's own wrapper, whose reinstallation the lock then refuses. Such a `\let` takes
+  // TeX's (and Perl's `Let`) plain path below instead.
   if let Stored::Expandable(ref defn) = meaning
     && let Some(token2_space) = robust_wrapper_body(defn, token2)
     && !token1.with_str(|s| body_mentions(&token2_space, &s!("{s} ")))
+    && !is_definition_locked(token1)
+    && !token1.with_str(|s| is_name_locked(&s!("{s} ")))
   {
     let token1_space = crate::T_CS!(token1.with_str(|s| s!("{s} ")));
     // (1) Copy `\<token2><space>` body to `\<token1><space>`
