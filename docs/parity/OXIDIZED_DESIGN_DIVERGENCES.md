@@ -17128,24 +17128,37 @@ row's tag cell without an argument (`\def\tag{\global\tag@true…&&}` in `\align
 
 | shape (in `$$\align … \endalign$$`) | pdftex | ours |
 |---|---|---|
-| `a&=b\tag 1\displaybreak c&=d` | 3 errors ("Extra alignment tab has been changed to \cr", "Misplaced \crcr", "Misplaced \noalign": the measuring pass's tag cell is `\eat@{##}`, :655); tag "(1c)" | 0 errors, tag "(1)" on its row |
+| `a&=b\tag 1\displaybreak c&=d` | 4 errors ("Extra alignment tab has been changed to \cr" twice, "Misplaced \crcr", "Misplaced \noalign": the measuring pass's tag cell is `\eat@{##}`, :655); tag "(1c)" | 0 errors, tag "(1)" on its row |
 | `a&=b\tag 4\par\\ c&=d` | 8 errors, from "Paragraph ended before \align was complete" (`\csname align \endcsname#1\endalign`, :667/:687, not `\long`); the alignment is lost | 0 errors: the `\par` ends the tag cell |
 | `a&=b\tag{3\par}\\ c&=d` | 9 errors (the same, and "Too many }'s") | 0 errors: the `\par` stays in the tag's text, `(3)` |
 | `a&={b\tag 2} c\\ e&=f` | 100 errors ("Argument of \maketag@@@@ has an extra }" and "Paragraph ended before \maketag@@@@" twice each, 47 "Missing \cr inserted", 46 "Misplaced \cr", …), Fatal, no PDF | 0 errors: the `}` ends the tag cell, `(2)` |
-| `a&=b\tag{5\\ c&=d` | 3 errors ("Paragraph ended before \align was complete", "Missing $ inserted", "Display math should end with $$"; "Forbidden control sequence found while scanning use of \align" when the `\outer` `\enddocument` follows the display); the alignment is lost | 1 error ("Paragraph ended before \tag was complete", or "File ended while scanning use of \tag"); see below |
+| `a&=b\tag{5\\ c&=d` | 3 errors ("Paragraph ended before \align was complete", "Missing $ inserted", "Display math should end with $$"; "Forbidden control sequence found while scanning use of \align" when the `\outer` `\enddocument` follows the display); the alignment is lost | 1 error ("Missing } inserted before the row's end in \tag"); see below |
+| `{\it … $$\align a&=b\tag{5\\ c&=d\endalign$$ …}` | 3 errors, as the row above; the alignment is lost | 1 error, as the row above; the `{\it` group and its text after the display kept |
+| `\vbox{… $$\align a&=b\tag{5\\ c&=d\endalign$$ …}` | 6 errors (the same three, then "You can't use `\end' in internal vertical mode"), Fatal, no PDF | 1 error, as the row above; the `\vbox` and its text kept |
+| `a&=b\tag{{3\par}5\\ c&=d` | 9 errors, as `\tag{3\par}\\` | 1 error, as `\tag{5\\`; the tag is "(35)" |
+| `a&=b\tag{{5\\ 6}\par c&=d` | 7 errors (as `\tag 4\par\\`, less "Invalid use of \\"); the alignment is lost | 3 errors: "Missing } inserted …" twice, then the `}` after the row's end closes the display, as without a tag (`$$\align a&=b\\ 6} c&=d\endalign$$`, 1 error); the alignment is lost |
 
-TeX's errors on the row shapes are not `\tag`'s: they come from `\align` reading its body as a non-`\long` argument and
-from the measuring pass. Content comes first, so the row tag keeps the author's text and errs only where the tag's text
-cannot end.
+On rows 1-3 and 5-9 TeX's errors are not `\tag`'s: they come from `\align` reading its body as a non-`\long` argument
+and from the measuring pass. On row 4 they are the tag cell's own: its template reads the cell as `\maketag@##\maketag@`
+(amstex.tex:678, :700), and `\maketag@@@@#1\maketag@` (:604) meets the `}` closing the group opened before the tag
+("Argument of \maketag@@@@ has an extra }", then its runaway). Content comes first, so the row tag keeps the author's text
+and errs only where the tag's text cannot end.
 
 **Rust** (batch 66e, amstex.rs `amstex_tag`): in a row (an AMS-TeX alignment's, or a LaTeX equation row's when the
 AmSTeX pool is loaded, which no `\tag#1$$` governs either) a `\par` outside the tag's own groups, or a `}` closing a
-group opened before the tag, ends the tag cell with the text read so far and no error. A `\par` inside the tag's own
-group stays in its text if the group closes before the row's end. If the group is still open at the row's or
-environment's end (`\tag{5\\ c&=d\endalign$$`), then at the next `\par` (or the file's end) the tag raises TeX's runaway
-error under its own name, keeps the text up to the earlier of the group's first `\par` and that end, closes the group,
-and the input is read again from there (`close_runaway_row_tag`, which retracts the kept braces from the alignment
-ledger): the next row, the alignment, every later paragraph and `\enddocument` are kept. The `$$` form keeps TeX's
-errors (tex.web §395-396). Guards `perfect_kernel_batch66e::{amstex_row_tag_ends_at_every_row_ender,
-amstex_row_tag_cell_ends_at_par_and_extra_brace, amstex_tag_in_latex_equation_row_ends_at_extra_brace}`; repro
-`amstex/amstex_row_tag_runaway_group`.
+group opened before the tag (an enclosing group's `}` too), ends the tag cell with the text read so far and no error; it
+is never read into the tag. A `\par` inside a group of the tag stays in its text if that group closes before the row's
+end (`\tag{3\par}\\`, `\tag{{3\par}5…`). A row's or environment's end (`\\`, a token meaning `\cr`, `\endalign`, a
+display end, `$$`) read while a group of the tag is open stops the scan at once (`\tag{5\\ c&=d\endalign$$`): TeX's
+`\cr` inside a cell's braces is "Missing } inserted" (tex.web §1126-1127), so the tag raises it once per open group,
+or TeX's runaway error ("Paragraph ended before \tag was complete") when a `\par` was read in a group still open there;
+it keeps the text up to the earlier of that `\par` and that end, closes its groups, and the input is read again from
+there (`close_runaway_row_tag`, which retracts the kept braces from the alignment ledger). The file's end raises "File
+ended while scanning use of \tag" with the same recovery. The next row, the alignment, an enclosing group, every later
+paragraph and `\enddocument` are kept. Trade-off of this fail-safe rule: a row tag whose braces hold an inner
+alignment's row end (`\tag{$\matrix a\\b\endmatrix$}\\`, which TeX sets, the inner `\halign` resetting `align_state`)
+stops at that `\\`; no braced tag holding a row end, a `\par` or `matrix` occurs in a scan of 20,000 1992-1996 arXiv
+sources. The `$$` form keeps TeX's errors (tex.web §395-396). Guards `perfect_kernel_batch66e::{amstex_row_tag_ends_at_every_row_ender,
+amstex_row_tag_cell_ends_at_par_and_extra_brace, amstex_row_tag_open_group_stops_at_the_row_end,
+amstex_tag_in_latex_equation_row_ends_at_extra_brace}`; repros `amstex/amstex_row_tag_runaway_group`,
+`amstex/amstex_row_tag_open_group_in_enclosing_group`.

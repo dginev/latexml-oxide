@@ -1,7 +1,8 @@
 //! Red/green guards for batch 66e: AMS-TeX's `\tag` (amstex.tex:587-605 in a display, also after `\endmultline`,
 //! :903; :629-640, 718-739, 797 in `\align`, `\alignat`, `\gather`), with the markup amsmath's `\tag` gives. Repros
 //! `tools/perfect_kernel/repros/amstex/amstex_tag_with_math_text.tex`, `amstex/amstex_align_row_tags.tex`,
-//! `amstex/amstex_plain_input_tags.tex`.
+//! `amstex/amstex_plain_input_tags.tex`, `amstex/amstex_row_tag_runaway_group.tex`,
+//! `amstex/amstex_row_tag_open_group_in_enclosing_group.tex`.
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert_counted(tex: &str) -> (String, String) {
@@ -20,10 +21,11 @@ fn equation<'a>(xml: &'a str, id: &str) -> &'a str {
   &xml[start..end]
 }
 
-/// Assert that the equation `id` holds `tags`, its whole `ltx:tags`.
+/// Assert that the `ltx:tags` of the equation `id` is `tags`, the whole element (lines compared trimmed).
 fn assert_tags_on(xml: &str, id: &str, tags: &str) {
   let eq = equation(xml, id);
-  assert!(eq.contains(tags), "{id}: {tags}\n{eq}");
+  let tags = tags.lines().map(str::trim).collect::<Vec<_>>().join("\n");
+  assert_eq!(element(eq, "<tags>", "</tags>"), tags, "{id}\n{eq}");
 }
 
 /// `xml` from the first `open` to the end of its `close`, each line trimmed: a whole element, indentation-free.
@@ -69,12 +71,12 @@ fn amstex_display_tag_is_a_text_tag() {
     assert_tags_on(&xml, id, tags);
   }
   // `\tag {$*$}`: the tag's inline math, as in amsmath's `\tag{$*$}`
-  for tag in [
-    "<tags>\n        <tag>(<Math mode=\"inline\" tex=\"*\" text=\"*\" xml:id=\"equationx2.m2\">",
-    "<tag role=\"refnum\"><Math mode=\"inline\" tex=\"*\" text=\"*\" xml:id=\"equationx2.m3\">",
-  ] {
-    assert_tags_on(&xml, "equationx2", tag);
-  }
+  assert_tags_on(
+    &xml,
+    "equationx2",
+    "<tags>\n<tag>(<Math mode=\"inline\" tex=\"*\" text=\"*\" xml:id=\"equationx2.m2\">\n<XMath xml:id=\"equationx2.m2.1\">\n<XMTok meaning=\"times\" role=\"MULOP\">\u{2217}</XMTok>\n</XMath>\n</Math>)</tag>\n\
+     <tag role=\"refnum\"><Math mode=\"inline\" tex=\"*\" text=\"*\" xml:id=\"equationx2.m3\">\n<XMath xml:id=\"equationx2.m3.1\">\n<XMTok meaning=\"times\" role=\"MULOP\">\u{2217}</XMTok>\n</XMath>\n</Math></tag>\n</tags>",
+  );
   assert_eq!(xml.matches("<tags>").count(), 4, "{xml}");
   assert_eq!(xml.matches("<equation ").count(), 4, "{xml}");
   // the displays end where they end: one display Math each
@@ -367,14 +369,9 @@ fn amstex_tag_argument_errors() {
 /// A row's `\tag` takes no argument (`\def\tag{\global\tag@true…&&}` in `\align`, amstex.tex:633-635; `\def\tag{&}`
 /// in `\gather`, :797), so it raises no runaway or "extra }" error: a `\par` outside the tag's own groups, or a `}`
 /// closing a group opened before it, ends the tag cell, and the row goes on; a `\par` inside the tag's own group stays
-/// in its text when the group closes before the row ends (`\tag{3\par}\\`). A group that is still open at the row's
-/// end (`\tag{5\\ c&=d\endalign$$`) runs away: at the next `\par` (or the file's end) the tag raises TeX's runaway
-/// error, keeps the text before the row's end with its group closed, and the input goes on from that end, so the next
-/// row, the alignment, the paragraphs after it and `\enddocument` are read as they are (r3 read them all into the
-/// tag, or to the file's end). pdftex errs on each shape and recovers none: `\align` reads its body as a non-`\long`
-/// argument (amstex.tex:667, :687), "Paragraph ended before \align was complete" (or "Forbidden control sequence" at
-/// the `\outer` `\enddocument`) and two display-math errors; `a&={b\tag 2} c` cascades to 100 errors and no PDF.
-/// OXIDIZED_DESIGN_DIVERGENCES #575.
+/// in its text when the group closes before the row ends (`\tag{3\par}\\`). pdftex errs on each shape: `\align`
+/// reads its body as a non-`\long` argument (amstex.tex:667, :687), "Paragraph ended before \align was complete" and
+/// the display-math errors; `a&={b\tag 2} c` cascades to 100 errors and no PDF. OXIDIZED_DESIGN_DIVERGENCES #575.
 #[test]
 fn amstex_row_tag_cell_ends_at_par_and_extra_brace() {
   let (log, xml) = convert_counted(
@@ -422,50 +419,174 @@ fn amstex_row_tag_cell_ends_at_par_and_extra_brace() {
     );
   }
   assert_eq!(xml.matches("<tags>").count(), 3, "{xml}");
-  // the unbalanced group: a paragraph follows the display, or `\enddocument` right after it
-  for (tex, message, later) in [
+  assert_eq!(xml.matches("<equation ").count(), 6, "{xml}");
+}
+
+/// A row's or environment's end read while a group of a row's `\tag` is open (`\tag{5\\ c&=d\endalign$$`) stops the
+/// tag's scan there: TeX's `\cr` inside the cell's braces is "Missing } inserted" (tex.web §1126-1127, once per open
+/// group), and the scan never reads past that end. The tag keeps its text with its groups closed, and the row, the
+/// alignment, an enclosing group (`{\it …}`, `\vbox{…}`), the paragraphs after it and `\enddocument` are read as they
+/// are. A `\par` inside a group of the tag that closes before the row's end stays in the text (`\tag{{3\par}5\\`); a
+/// `\par` in a group still open there is TeX's runaway, and the input goes on from that `\par` (`\tag{5\par 6\\`).
+/// The scan stops at the first such end at any depth (`\tag{{5\\ 6}\par`): the `}` after the row's end is the
+/// next row's, where a stray `}` closes the display, as without a tag (`$$\align a&=b\\ 6} c&=d\endalign$$`, one
+/// error). r3 read the rest of the document into the tag or to the file's end; r4 read past the alignment's end when
+/// an enclosing group's `}` came first, and kept a `\par` or a row end recorded in a nested group that closed. pdftex
+/// errs on each shape and recovers none ("Paragraph ended before \align was complete" and the display-math errors; the
+/// `\vbox` one stops with "You can't use `\end' in internal vertical mode", no PDF). OXIDIZED_DESIGN_DIVERGENCES
+/// #575; repros `amstex/amstex_row_tag_runaway_group`, `amstex/amstex_row_tag_open_group_in_enclosing_group`.
+#[test]
+fn amstex_row_tag_open_group_stops_at_the_row_end() {
+  const MISSING: &str = "Missing } inserted before the row's end in \\tag";
+  const RUNAWAY: &str = "Paragraph ended before \\tag was complete";
+  const STRAY: &str = "Attempt to close a group that switched to mode display_math";
+  let tags = |n: &str| format!("<tags>\n<tag>({n})</tag>\n<tag role=\"refnum\">{n}</tag>\n</tags>");
+  let para = |id: &str, text: &str| {
+    format!("<para xml:id=\"{id}\">\n<p xml:id=\"{id}.1\">{text}</p>\n</para>")
+  };
+  let later = "\n\nLater {para}graph.\n\nLast paragraph.\n\\enddocument\n";
+  let align = "$$\\align a&=b\\tag{5\\\\ c&=d\\endalign$$";
+  // (body, end, errors, the tagged row's equation id and tag, its math, the paragraphs after it, equations)
+  type Case<'a> = (
+    String,
+    &'a str,
+    Vec<(&'a str, usize)>,
+    Option<(&'a str, &'a str, &'a str)>,
+    Vec<(&'a str, &'a str)>,
+    usize,
+  );
+  let cases: Vec<Case> = vec![
     (
-      "\\input amstex\n\\input amsppt.sty\n\\document\n$$\\align a&=b\\tag{5\\\\ c&=d\\endalign$$\n\n\
-       Later {para}graph.\n\nLast paragraph.\n\\enddocument\n",
-      "Paragraph ended before \\tag was complete",
-      true,
+      align.to_string(),
+      later,
+      vec![(MISSING, 1)],
+      Some(("id1.1.1", "5", "a=b")),
+      vec![("id2", "Later paragraph."), ("id3", "Last paragraph.")],
+      2,
     ),
     (
-      "\\input amstex\n\\input amsppt.sty\n\\document\n$$\\align a&=b\\tag{5\\\\ c&=d\\endalign$$\n\\enddocument\n",
-      "File ended while scanning use of \\tag",
-      false,
+      align.to_string(),
+      "\n\\enddocument\n",
+      vec![(MISSING, 1)],
+      Some(("id1.1.1", "5", "a=b")),
+      vec![],
+      2,
     ),
-  ] {
-    let (log, xml) = convert_counted(tex);
-    assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-    assert!(log.contains(message), "{log}");
-    assert_tags_on(
-      &xml,
-      "id1.1.1",
-      "<tags>\n          <tag>(5)</tag>\n          <tag role=\"refnum\">5</tag>\n        </tags>",
+    (
+      format!("{{\\it Before {align} inside}} after."),
+      later,
+      vec![(MISSING, 1)],
+      Some(("id1.2.1", "5", "a=b")),
+      vec![("id2", "Later paragraph."), ("id3", "Last paragraph.")],
+      2,
+    ),
+    (
+      format!("\\vbox{{Before {align} inside}} after."),
+      later,
+      vec![(MISSING, 1)],
+      Some(("id1.1.2.1", "5", "a=b")),
+      vec![
+        ("id2", "after."),
+        ("id3", "Later paragraph."),
+        ("id4", "Last paragraph."),
+      ],
+      2,
+    ),
+    (
+      "$$\\align a&=b\\tag{{3\\par}5\\\\ c&=d\\endalign$$".to_string(),
+      later,
+      vec![(MISSING, 1)],
+      Some(("id1.1.1", "35", "a=b")),
+      vec![("id2", "Later paragraph."), ("id3", "Last paragraph.")],
+      2,
+    ),
+    (
+      "$$\\align a&=b\\tag{5\\par 6\\\\ c&=d\\endalign$$".to_string(),
+      later,
+      vec![(RUNAWAY, 1)],
+      Some(("id1.1.1", "5", "a=b\\par 6")),
+      vec![("id2", "Later paragraph."), ("id3", "Last paragraph.")],
+      2,
+    ),
+    (
+      "$$\\align a&=b\\tag{{5\\\\ 6}\\par c&=d\\endalign$$".to_string(),
+      later,
+      vec![(MISSING, 2), (STRAY, 1)],
+      None,
+      vec![("id2", "Later paragraph."), ("id3", "Last paragraph.")],
+      1,
+    ),
+  ];
+  for (body, end, errors, tagged, paras, equations) in cases {
+    let tex = format!("\\input amstex\n\\input amsppt.sty\n\\document\n{body}{end}");
+    let (log, xml) = convert_counted(&tex);
+    let total: usize = errors.iter().map(|(_, n)| n).sum();
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (total, 0),
+      "{body}\n{log}"
     );
-    assert!(
-      equation(&xml, "id1.1.1").contains("<Math tex=\"\\displaystyle a=b\" text=\"a = b\""),
-      "{xml}"
-    );
-    let eq = equation(&xml, "id1.1.2");
-    assert!(
-      eq.contains("<Math tex=\"\\displaystyle c=d\" text=\"c = d\"") && !eq.contains("<tags>"),
-      "{xml}"
-    );
-    assert_eq!(xml.matches("<tags>").count(), 1, "{xml}");
-    if later {
-      assert_eq!(
-        element(&xml, "<para xml:id=\"id2\">", "</para>"),
-        "<para xml:id=\"id2\">\n<p xml:id=\"id2.1\">Later paragraph.</p>\n</para>"
-      );
-      assert_eq!(
-        element(&xml, "<para xml:id=\"id3\">", "</para>"),
-        "<para xml:id=\"id3\">\n<p xml:id=\"id3.1\">Last paragraph.</p>\n</para>"
+    for (message, n) in errors {
+      assert_eq!(log.matches(message).count(), n, "{body}: {message}\n{log}");
+    }
+    if let Some((id, n, math)) = tagged {
+      assert_tags_on(&xml, id, &tags(n));
+      let row = format!("<Math tex=\"\\displaystyle {math}\"");
+      assert!(equation(&xml, id).contains(&row), "{body}: {row}\n{xml}");
+      let second = format!("{}2", &id[..id.len() - 1]);
+      let eq = equation(&xml, &second);
+      assert!(
+        eq.contains("<Math tex=\"\\displaystyle c=d\" text=\"c = d\"") && !eq.contains("<tags>"),
+        "{body}\n{xml}"
       );
     }
-    assert!(xml.trim_end().ends_with("</document>"), "{xml}");
+    assert_eq!(
+      xml.matches("<tags>").count(),
+      usize::from(tagged.is_some()),
+      "{body}\n{xml}"
+    );
+    assert_eq!(
+      xml.matches("<equation ").count(),
+      equations,
+      "{body}\n{xml}"
+    );
+    for (id, text) in paras {
+      assert_eq!(
+        element(&xml, &format!("<para xml:id=\"{id}\">"), "</para>"),
+        para(id, text),
+        "{body}\n{xml}"
+      );
+    }
+    assert!(xml.trim_end().ends_with("</document>"), "{body}\n{xml}");
   }
+  // the enclosing group survives the tag: `inside` is in it, `after.` is not
+  let (_, xml) = convert_counted(&format!(
+    "\\input amstex\n\\input amsppt.sty\n\\document\n{{\\it Before {align} inside}} after.{later}"
+  ));
+  assert_eq!(
+    element(&xml, "<p xml:id=\"id1.3\">", "</p>"),
+    "<p xml:id=\"id1.3\"><text font=\"italic\" xml:id=\"id1.3.1\">inside</text> after.</p>",
+    "{xml}"
+  );
+  let (_, xml) = convert_counted(&format!(
+    "\\input amstex\n\\input amsppt.sty\n\\document\n\\vbox{{Before {align} inside}} after.{later}"
+  ));
+  assert_eq!(
+    element(
+      &xml,
+      "<logical-block vattach=\"bottom\" xml:id=\"id1\">",
+      "</logical-block>"
+    )
+    .lines()
+    .filter(|l| l.starts_with("<p ")
+      || l.starts_with("<logical-block")
+      || l.starts_with("</logical-block"))
+    .collect::<Vec<_>>()
+    .join("\n"),
+    "<logical-block vattach=\"bottom\" xml:id=\"id1\">\n<p xml:id=\"id1.1.1\">Before</p>\n\
+     <p xml:id=\"id1.1.3\">inside</p>\n</logical-block>",
+    "{xml}"
+  );
 }
 
 /// A LaTeX equation row with the AmSTeX pool loaded is a row too: no `\tag#1$$` governs it, so a `}` closing a group
@@ -492,20 +613,24 @@ fn amstex_tag_in_latex_equation_row_ends_at_extra_brace() {
       "<Math mode=\"display\" tex=\"{a}b\" text=\"a * b\"",
     ),
   ] {
-    let eq = equation(&xml, id);
-    assert!(
-      eq.contains(&format!("<tag>({n})</tag>"))
-        && eq.contains(&format!("<tag role=\"refnum\">{n}</tag>")),
-      "{id}\n{xml}"
+    assert_tags_on(
+      &xml,
+      id,
+      &format!("<tags>\n<tag>({n})</tag>\n<tag role=\"refnum\">{n}</tag>\n</tags>"),
     );
-    assert!(eq.contains(math), "{id}: {math}\n{xml}");
+    assert!(equation(&xml, id).contains(math), "{id}: {math}\n{xml}");
   }
   // the align's second row keeps its own number
-  let eq = equation(&xml, "S0.E1");
+  assert_tags_on(
+    &xml,
+    "S0.E1",
+    "<tags>\n<tag>(1)</tag>\n<tag role=\"refnum\">1</tag>\n</tags>",
+  );
   assert!(
-    eq.contains("<tag role=\"refnum\">1</tag>") && eq.contains("<Math tex=\"\\displaystyle e=f\""),
+    equation(&xml, "S0.E1").contains("<Math tex=\"\\displaystyle e=f\""),
     "{xml}"
   );
+  assert_eq!(xml.matches("<equation ").count(), 3, "{xml}");
   assert_eq!(xml.matches("<tags>").count(), 3, "{xml}");
 }
 
