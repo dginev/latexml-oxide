@@ -102,13 +102,14 @@ LoadDefinitions!({
   // declared. Stub to empty so it doesn't appear as red error text.
   def_macro_noop("\\dOi")?;
 
-  // lmcs.cls (1809.04468's copy :252-280; 1403.4094's :490-507), what papers call that the binding lacked (run 340
-  // first errors: `\titlecomment` 445, `\ACMCCS` 223, `\rsuper` 188, `{iteMize}` 22, `\amsclass` 14, `\qEd` 12;
+  // lmcs.cls (1809.04468's copy :252-280, :343; 1403.4094's :490-507), what papers call that the binding lacked (run
+  // 340 first errors: `\titlecomment` 445, `\ACMCCS` 223, `\rsuper` 188, `{iteMize}` 22, `\amsclass` 14, `\qEd` 12;
   // witnesses 2103.15292, 1309.5822, 2103.16592, 1107.1351, 1205.4458, cs0510066):
-  // - `\titlecomment` (the footnote to the title, :254 `\@footnotetext{\@settitlecomment}`) as a title note;
-  // - `\ACMCCS` and `\amsclass`, printed under the abstract as "2012 ACM CCS: …" and "2010 Mathematics Subject
-  //   Classification: …", as classifications;
-  // - `\rsuper`/`\lsuper`, the affiliation marks after and before an author's name (`\ifsuPer`, set by the class);
+  // - `\titlecomment` (the footnote to the title, :343 `\@footnotetext{\@settitlecomment}`) as a title note;
+  // - `\ACMCCS` and `\amsclass`, printed under the abstract as "\ACMCCSname: …" and "\amsclassname: …" (2012 ACM
+  //   CCS, 2010 Mathematics Subject Classification; 50 of 56 copies with them define the names), as classifications;
+  // - `\rsuper`/`\lsuper`, the affiliation marks after and before an author's name (`\ifsuPer`, set by the class; the
+  //   31 newer copies' braced `\MakeLowercase{#1}`, so `\rsuper{A,B}` is "a,b");
   // - `\qEd` (the class's QED box, :491-492) and `{iteMize}{label}`/`{desCription}` (:506-507): the enumerate
   //   package's lists whose items all carry the given label (`\begin{iteMize}{$\bullet$}`), or none; as `{list}`,
   //   since the enumitem the binding loads (as the 2015+ versions do) reads `[$\bullet$]` as a key and numbers the
@@ -117,18 +118,21 @@ LoadDefinitions!({
     "\\titlecomment{}",
     "\\@add@frontmatter{ltx:note}[role=titlenote]{#1}"
   );
+  RawTeX!(
+    r"\def\ACMCCSname{2012 ACM CCS}\def\amsclassname{2010 Mathematics Subject Classification}"
+  );
   DefMacro!(
     "\\ACMCCS{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=ccs,name={2012 ACM CCS}]{#1}"
+    "\\@add@frontmatter{ltx:classification}[scheme=ccs,name={\\ACMCCSname}]{#1}"
   );
   DefMacro!(
     "\\amsclass{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=AMS,name={2010 Mathematics Subject Classification}]{#1}"
+    "\\@add@frontmatter{ltx:classification}[scheme=AMS,name={\\amsclassname}]{#1}"
   );
   RawTeX!(
     r"\newif\ifsuPer \suPertrue
-\def\rsuper#1{\ifsuPer${\,}^{\MakeLowercase #1}$\fi}
-\def\lsuper#1{\ \hskip-2 pt\ifsuPer\hbox to0 pt{\hss${}^{\MakeLowercase #1}\ $\fi}}
+\def\rsuper#1{\ifsuPer${\,}^{\MakeLowercase{#1}}$\fi}
+\def\lsuper#1{\llap{${}^{\MakeLowercase{#1}\,}$}}
 \def\qEd{\ensuremath{\square}}
 \newenvironment{iteMize}[1]{\begin{list}{#1}{}}{\end{list}}
 \newenvironment{desCription}{\begin{list}{}{}}{\end{list}}"

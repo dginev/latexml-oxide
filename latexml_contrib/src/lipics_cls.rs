@@ -1,4 +1,5 @@
 //! Stub for LIPIcs class (Dagstuhl Leibniz International Proceedings).
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -216,13 +217,14 @@ LoadDefinitions!({
 \newtheorem*{claim*}{Claim}
 \theoremstyle{plain}"
   );
-  // :1041-1056 `{claimproof}` (a proof of a claim, its QED a ◁) and `\claimqedhere`; :1057-1060 `\lipicsEnd` (the
-  // ⌟ ending an example or remark); :380-383 `\proofsubparagraph` (a run-in subparagraph heading in proofs); :537-542
+  // :1041-1056 `{claimproof}` (a proof of a claim, its QED a ◁: the class renews `\qedsymbol` for its `\popQED`; our
+  // `\qed`, as Perl's, prints ∎ whatever `\qedsymbol` is, so the proof's own `\qed` is the ◁) and `\claimqedhere`; :1057-1060 `\lipicsEnd` (the
+  // ⌟ ending an example or remark); :380-383 `\proofsubparagraph` (a run-in subparagraph heading in proofs); :572-577
   // the `(i)`/`(a)`/`(1)` enumerates. Run 340 first errors: `{claimproof}` 348, `\lipicsEnd` 51,
   // `\proofsubparagraph` 60, `{romanenumerate}` 34, `{alphaenumerate}` 32 (witnesses 2508.16319, 2008.01422,
   // 2103.15659, 1904.11668, 2103.14599).
   RawTeX!(
-    r"\newenvironment{claimproof}[1][\proofname]{\begin{proof}[#1]\renewcommand\qedsymbol{\ensuremath{\vartriangleleft}}}{\end{proof}}
+    r"\newenvironment{claimproof}[1][\proofname]{\begin{proof}[#1]\def\qed{\ensuremath{\vartriangleleft}}}{\end{proof}}
 \newcommand{\claimqedhere}{\qedhere}
 \DeclareRobustCommand{\lipicsEnd}{\leavevmode\unskip\penalty9999 \hbox{}\nobreak\hfill\quad\hbox{$\lrcorner$}}
 \newcommand{\proofsubparagraph}{\@startsection{subparagraph}{5}{\z@}{3.25ex \@plus1ex \@minus .2ex}{-1em}{\sffamily\normalsize\bfseries}}
@@ -230,19 +232,24 @@ LoadDefinitions!({
 \def\alphaenumerate{\enumerate[(a)]}\let\endalphaenumerate\endenumerate
 \def\bracketenumerate{\enumerate[(1)]}\let\endbracketenumerate\endenumerate"
   );
-  // The front-matter setters of the 2016-2019 versions (lipics.cls, lipics-v2019.cls): `\EventShortName`,
-  // `\serieslogo`, `\volumeinfo{editors}{n}{event}{volume}{issue}{first page}`, `\DOI`, `\DOIPrefix` (lipics-v2021.cls:755)
-  // store what the page furniture prints (run 340: `\serieslogo` 123, 2103.15651); `\flag[width]{image}` (:410) is a
-  // margin icon. The event becomes the note `\event` makes.
-  RawTeX!(
-    r"\def\EventShortName#1{\gdef\@EventShortName{#1}}
+  // :1001-1005 `\flag[width]{image}`, an icon (an artifact badge) set in the margin: the image, inline.
+  RawTeX!(r"\newcommand\flag[2][0.9cm]{\includegraphics[width=#1]{#2}}");
+  // The front-matter setters of the 2016-2019 versions only (lipics.cls, lipics-v2019.cls; 17-19 of 92 sampled
+  // copies), guesses a paper's own definition replaces: `\EventShortName`, `\serieslogo`, `\DOIPrefix` store what the
+  // page furniture prints (run 340: `\serieslogo` 123, 2103.15651); `\DOI` the DOI the title block prints after the
+  // abstract (1507.03682's copy :391-393, `\doiHeading\doi{\@DOI}`), as a pubnote; `\volumeinfo{editors}{n}{event}
+  // {volume}{issue}{first page}` the event, the note `\event` makes.
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(
+      r"\def\EventShortName#1{\gdef\@EventShortName{#1}}
 \def\serieslogo#1{\gdef\@serieslogo{#1}}
-\def\DOI#1{\gdef\@DOI{#1}}
-\def\DOIPrefix#1{\gdef\@DOIPrefix{#1}}
-\newcommand\flag[2][0.9cm]{}"
-  );
-  DefMacro!(
-    "\\volumeinfo{}{}{}{}{}{}",
-    "\\if\\relax\\detokenize{#3}\\relax\\else\\@add@frontmatter{ltx:note}[role=event]{#3}\\fi"
-  );
+\def\DOI#1{\gdef\@DOI{#1}\lx@add@pubnote[role=doi]{#1}}
+\def\DOIPrefix#1{\gdef\@DOIPrefix{#1}}"
+    );
+    DefMacro!(
+      "\\volumeinfo{}{}{}{}{}{}",
+      "\\if\\relax\\detokenize{#3}\\relax\\else\\@add@frontmatter{ltx:note}[role=event]{#3}\\fi"
+    );
+  }
 });

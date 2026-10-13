@@ -137,7 +137,7 @@ LoadDefinitions!({
   def_macro_noop("\\vtexed{}")?;
 
   // ---- the URL, attribute and script helpers of the arximspdf.cls versions ---------------------------------------
-  // `\doiurl{<doi>}`, `\arxivurl{<id>}` (0911.2919's copy :3077-3140, as arxstspdf.cls:2902-2975) and `\surl{<url>}`
+  // `\doiurl{<doi>}`, `\arxivurl{<id>}` (0911.2919's copy :3057-3140, as arxstspdf.cls:2902-2975) and `\surl{<url>}`
   // (:3140-3162): a link to `http://dx.doi.org/<doi>`, `http://arxiv.org/abs/<id>` or `http://<url>`, printing the
   // argument; a full URL links as given, and a `\\` in it is only a break hint. 92 of 100 sampled copies define them
   // (run 340 first errors: `\doiurl` 288, `\arxivurl` 264, `\surl` 55; 1309.4864, 1309.5877, 1309.1380).

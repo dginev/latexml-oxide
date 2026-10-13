@@ -92,7 +92,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("amsproc", "cls", package::amsproc_cls::load_definitions),
   // arXiv IMS journal classes (Annals of Probability/Statistics/…). Self-contained
   // ~3000-line classes neither engine binds; one binding serves both (identical
-  // \b* bib macros; arxstspdf adds \doiurl/\arxivurl). See arximspdf_cls.rs.
+  // \b* bib macros, \doiurl/\arxivurl in both). See arximspdf_cls.rs.
   ("arximspdf", "cls", package::arximspdf_cls::load_definitions),
   (
     "arxstspdf",
