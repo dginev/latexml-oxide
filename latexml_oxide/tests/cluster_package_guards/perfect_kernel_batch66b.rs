@@ -402,9 +402,10 @@ fn robust_let_over_a_locked_binding_keeps_its_inner() {
   assert!(!xml.contains("MY("), "{xml}");
 }
 
-/// A package's `\let` of a locked constructor whose inner is free to its own robust command keeps the constructor:
-/// bera.sty:11-23 `\let\TeX=\fveTeX`, `\let\LaTeX=\fveLaTeX` (the enumitem, colorspace and mathador manuals) leave the
-/// logos, not the package's typeset boxes.
+/// A package's `\let` of a locked constructor whose inner is free to its own robust command keeps the constructor,
+/// while a `\let` to a plain macro takes `\let`'s plain path (Perl's `Let`): bera.sty:10-23 `\def\fveTeX`,
+/// `\let\TeX=\fveTeX` and `\DeclareRobustCommand{\fveLaTeX}`, `\let\LaTeX=\fveLaTeX` (the enumitem, colorspace and
+/// mathador manuals) leave the `\LaTeX` logo and the package's `\TeX`, as 65int8f did.
 #[test]
 fn robust_let_over_a_locked_constructor_keeps_it() {
   let (log, xml) = latexml::util::test::convert_files_with(
@@ -417,7 +418,7 @@ A \LaTeX{} and \TeX{} logo.
     &[(
       "zqlogo.sty",
       r"\ProvidesPackage{zqlogo}
-\DeclareRobustCommand{\zqTeX}{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}
+\def\zqTeX{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}
 \DeclareRobustCommand{\zqLaTeX}{L\kern-.3em{\sbox\z@ T\vbox to\ht\z@{\hbox{\scriptsize A}\vss}}\kern-.1em\zqTeX}
 \let\TeX=\zqTeX
 \let\LaTeX=\zqLaTeX
@@ -427,7 +428,7 @@ A \LaTeX{} and \TeX{} logo.
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(xml.matches("class=\"ltx_LaTeX_logo\"").count(), 1, "{xml}");
-  assert_eq!(xml.matches("class=\"ltx_TeX_logo\"").count(), 1, "{xml}");
+  assert_eq!(xml.matches("class=\"ltx_TeX_logo\"").count(), 0, "{xml}");
   assert!(!xml.contains("<inline-block"), "{xml}");
 }
 

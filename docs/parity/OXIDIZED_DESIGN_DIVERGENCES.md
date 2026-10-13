@@ -17010,13 +17010,19 @@ again (Fatal `Stomach:Recursion`).
 
 **Rust** (batch 66b, `def_macro`): a locked robust macro records `"\cs␣:locked@files"` as well, so raw class and package
 code redefining the inner is refused as the wrapper is; the document's own definition of the inner (its
-`\DeclareRobustCommand\cite`, or `\@namedef{cite }` in the preamble) stays its own, as in Perl. A `\let` of a locked
+`\DeclareRobustCommand\cite`, or `\@namedef{cite }` in the preamble) stays its own, as in Perl. A file's `\let` of a locked
 robust binding to another robust command (a class's `\let\cite\mycite`) takes `\let`'s plain path rather than #315's body
 copy, which wrote the inner past the lock (guard `robust_let_over_a_locked_binding_keeps_its_inner`). A locked binding
-whose inner is free (a constructor: the kernel `\LaTeX`, `\TeX`) keeps the copy, whose wrapper the lock refuses:
-bera.sty:11-23 `\let\LaTeX=\fveLaTeX` keeps the logo (the enumitem, colorspace and mathador manuals lost it while
+whose inner is free (a constructor: the kernel `\LaTeX`) keeps the copy, whose wrapper the lock refuses, at every
+origin but where D1 accepts the document's own override (`owns_calls` and a copied body that takes no argument):
+bera.sty:12-23 `\let\LaTeX=\fveLaTeX` keeps the logo (the enumitem, colorspace and mathador manuals lost it while
 every locked binding took the plain path, which leaves plain `:locked` to `\let`; guard
-`robust_let_over_a_locked_constructor_keeps_it`, repro `macro-state/robust_let_over_locked_constructor`). Only the kernel
+`robust_let_over_a_locked_constructor_keeps_it`, repro `macro-state/robust_let_over_locked_constructor`). Perl's `Let`
+(Package.pm:383-390) checks no lock and takes bera's logo, as pdflatex does; a `\let` to a non-robust meaning takes the
+plain path here too (bera.sty:10-11 `\def\fveTeX`, `\let\TeX=\fveTeX`, replaces `\TeX`), so the outcome follows the target's
+kind — 65int8f's behaviour, kept. Residual: the refused wrapper records `:redefined@nargs` 0 (state.rs, the dropped
+definition) even when the copied body takes arguments, so a class's `\let\abstract\myabs` (robust, `[1]`) is not read as a
+stored-argument setter. Only the kernel
 `\cite` is a locked robust macro today. The robust constructor path (`def_constructor`) records the lock under
 the inner name only, the other half of the same asymmetry; no witness needs it. Witnesses 2210.02246, 2303.09770 (Fatal
 → 0 errors). Guard `perfect_kernel_batch66b::locked_robust_cite_keeps_its_inner_definition`; repro

@@ -4514,8 +4514,9 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // A lock against the class and package files (`"{cs}:locked@files"`, [`name_carries_lock`]) holds for their `\let`
   // as for their `\def` ([`install_definition`]): arabtex's asect.sty:297 `\let\endabstract\endquotation`, which its
   // own raw `\end` (alatex.sty:105-109) then calls, closed the kernel abstract's body as a quotation (2401.14559). A
-  // plain `:locked` is left to `\let`, as Perl's `Let` checks none (Package.pm:383-390), and so are the engine's own
-  // meaning writes ([`assign_meaning`]: `\csname`'s `\relax`, restores). A `\let` to an undefined token only clears
+  // plain `:locked` is left to a `\let` to a non-robust meaning, as Perl's `Let` checks none (Package.pm:383-390); a
+  // `\let` to a robust command takes the body copy below, whose wrapper the lock refuses (OXIDIZED_DESIGN #568). So
+  // are the engine's own meaning writes ([`assign_meaning`]: `\csname`'s `\relax`, restores). A `\let` to an undefined token only clears
   // the name, and is kept: the "undefine, then define anew" idiom (projlib-author.sty:243-246 `\cs_undefine:N
   // \endabstract` before `\newenvsc{abstract}`, whose scontents `\NewDocumentEnvironment` "already defined" check
   // would fail; the homework and jwjournal manuals). The binding is kept aside (`"{cs}:locked@cleared"`) and back in
@@ -4579,9 +4580,10 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // kernel `\cite`, whose inner is locked against the files, OXIDIZED_DESIGN #568) a class's `\let\cite\mycite` would
   // put its body under the binding's own wrapper, whose reinstallation the lock then refuses. Such a `\let` takes
   // TeX's (and Perl's `Let`) plain path below instead. A locked binding whose inner is free (a constructor: the
-  // kernel `\LaTeX`, `\TeX`) keeps the copy, whose wrapper the lock refuses: bera.sty:11-23's `\let\LaTeX=\fveLaTeX`
-  // would otherwise replace the logo with its typeset boxes (enumitem, colorspace and mathador manuals; guard
-  // `perfect_kernel_batch66b::robust_let_over_a_locked_constructor_keeps_it`).
+  // kernel `\LaTeX`) keeps the copy, whose wrapper the lock refuses: bera.sty:12-23's `\let\LaTeX=\fveLaTeX` (a
+  // `\DeclareRobustCommand`) would otherwise replace the logo with its typeset boxes (enumitem, colorspace and mathador
+  // manuals); its `\let\TeX=\fveTeX` (:10-11, a `\def`) takes the plain path and replaces `\TeX`, as in Perl. Guard
+  // `perfect_kernel_batch66b::robust_let_over_a_locked_constructor_keeps_it`.
   if let Stored::Expandable(ref defn) = meaning
     && let Some(token2_space) = robust_wrapper_body(defn, token2)
     && !token1.with_str(|s| body_mentions(&token2_space, &s!("{s} ")))
