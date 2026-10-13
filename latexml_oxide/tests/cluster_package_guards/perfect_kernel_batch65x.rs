@@ -29,8 +29,7 @@ fn assert_styled(xml: &str, font: &str, text: &str) {
   );
 }
 
-/// PoS.cls :1395 `\PoS{<identifier>}`: the contribution's identifier, once (the class then gobbles `\PoS`), as a
-/// pubnote. Witnesses 0711.1871, 0806.0754, 1012.3355.
+/// PoS.cls :1395 `\PoS{<identifier>}`: the contribution's identifier as a pubnote. Witnesses 0711.1871, 0806.0754, 1012.3355.
 #[test]
 fn pos_identifier_is_a_pubnote() {
   let xml = convert(include_str!(
@@ -40,7 +39,6 @@ fn pos_identifier_is_a_pubnote() {
     r#"role="pubid">PoS(LAT2009)123</pubnote>"#,
     "Text.",
   ]);
-  assert!(!xml.contains("999"), "{xml}");
 }
 
 /// dmtcs-episciences.cls :225-236 `\publicationdetails{volume}{year}{issue}{number}{id}`: the head's reference as a
@@ -54,6 +52,8 @@ fn dmtcs_publication_details_are_the_reference() {
     r#"role="journalref">DMTCS vol. 19:3, 2017, #12</pubnote>"#,
     r#"<XMTok font="blackboard" role="UNKNOWN">N</XMTok>"#,
     r#"<XMTok font="blackboard" role="UNKNOWN">Z</XMTok>"#,
+    r#"<XMTok font="blackboard" role="UNKNOWN">P</XMTok>"#,
+    r#"<pubnote role="license">Distributed under a Creative Commons Attribution 4.0 International License</pubnote>"#,
   ]);
 }
 
@@ -74,11 +74,15 @@ fn svmult_class_commands_are_defined() {
     "References are listed alphabetically.",
     "Detail",
   ]);
-  let (hook, list) = (
+  // Under the first bibliography's heading, before its list, and once (the class's hook is one-shot, :2045).
+  let bib = xml.find("<bibliography").unwrap();
+  let (title, hook, list) = (
+    bib + xml[bib..].find("</title>").unwrap(),
     xml.find("References are listed").unwrap(),
-    xml.find("<biblist").unwrap(),
+    bib + xml[bib..].find("<biblist").unwrap(),
   );
-  assert!(hook < list, "{xml}");
+  assert!(title < hook && hook < list, "{xml}");
+  assert_eq!(xml.matches("References are listed").count(), 1, "{xml}");
 }
 
 /// The svmult 2018+ additions are guesses for older copies: a paper's own `{important}` stands.
@@ -101,6 +105,7 @@ fn iopart_newer_journals_are_defined() {
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/iopart_journals.tex"
   ));
+  assert_contains(&xml, &[r#"Theor.</text> <text font="bold""#]);
   for journal in [
     "J. Phys. A: Math. Theor.",
     "J. Stat. Mech.",
@@ -132,7 +137,17 @@ fn acmart_class_commands_are_defined() {
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/acmart_class_commands.tex"
   ));
-  assert_contains(&xml, &["Head", "Our tool works.", "Hooked."]);
+  assert_contains(&xml, &[
+    "Head",
+    "Our tool works.",
+    "Hooked.",
+    r#"<date role="copyrightyear">2022"#,
+  ]);
+  // The hook's `\setcopyright{none}` ran before the title block read the copyright: no license statement.
+  assert!(
+    !xml.contains(r#"role="license""#) && !xml.contains("acmlicensed"),
+    "{xml}"
+  );
   for absent in ["badge-file", "example.org/badge", "example.org/code"] {
     assert!(!xml.contains(absent), "{absent}\n{xml}");
   }
@@ -158,9 +173,11 @@ fn elsarticle_marks_are_the_references() {
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/elsarticle_marks.tex"
   ));
-  assert_contains(&xml, &[
-    "Corresponding author.",
-    "Now elsewhere.",
-    "Supported by a grant.",
+  let creator = &xml[xml.find("<creator").unwrap()..xml.find("</creator>").unwrap()];
+  assert_contains(creator, &[
+    r#"role="correspondent">Corresponding author.</contact>"#,
+    r#"role="note">Now elsewhere.</contact>"#,
+    r#"role="note">Also here.</contact>"#,
   ]);
+  assert_contains(&xml, &["Supported by a grant."]);
 }

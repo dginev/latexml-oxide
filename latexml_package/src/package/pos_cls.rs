@@ -33,7 +33,8 @@ LoadDefinitions!({
     "\\href{http://pos.sissa.it/cgi-bin/reader/contribution.cgi?id=#1}{\\tt #1}");
   // PoS.cls (0711.1871's copy :1395, as every sampled copy at :1358-1395): `\PoS{PoS(LAT2009)123}` sets the
   // contribution's identifier (`\PoSsplit@ident`), which the class prints as the grey watermark down the page edge,
-  // then `\let\PoS\gobble`: the identifier, once, as a pubnote. Run 340: 79 of 120 sampled PoS papers call it, ~360
+  // then `\let\PoS\gobble` (`\gobble`, which no copy defines, so a second call is undefined): the identifier as a
+  // pubnote. Run 340: 79 of 120 sampled PoS papers call it, ~360
   // first errors (0711.1871, 0806.0754, 1012.3355).
-  RawTeX!(r"\newcommand\PoS[1]{\lx@add@pubnote[role=pubid]{#1}\let\PoS\@gobble}");
+  RawTeX!(r"\newcommand\PoS[1]{\lx@add@pubnote[role=pubid]{#1}\let\PoS\gobble}");
 });

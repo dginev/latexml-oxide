@@ -11,9 +11,12 @@ use crate::prelude::*;
 /// Replacing the per-call `DefMacro!` macro arms with this runtime
 /// helper collapses the repeated macro expansion to one inlined fn.
 /// Per [[wisdom_data_drive_min_call_sites]]: 74 ≫ 5 threshold.
+/// iopart.cls ends each with a space (`\newcommand{\jpa}{{\it J. Phys. A: Math. Theor.} }`, 2603.00348's
+/// :1059-1118), so `\jpa \textbf{40}` reads "J. Phys. A: Math. Theor. 40"; Perl's dropped it (KNOWN_PERL_ERRORS #634).
 fn def_iop_journal(cs: &str, name: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(cs, true)?;
-  let body_toks = mouth::tokenize_internal(TeXString::assembled(format!("\\textit{{{name}}}")));
+  let body_toks =
+    mouth::tokenize_internal(TeXString::assembled(format!("\\textit{{{name}}}\\space")));
   def_macro(cs_tok, params, ExpansionBody::Tokens(body_toks), None)?;
   Ok(())
 }

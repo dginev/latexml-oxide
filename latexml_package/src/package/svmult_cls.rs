@@ -225,7 +225,7 @@ see SVMono documentation -}\begin{quotation}}{\end{quotation}}"#);
   //   closing rule; the title bold, the text below (the circled marks of three of them, and the colours, dropped);
   // - `\biblstarthook{<text>}` (:2029), typeset under the bibliography's heading, once: through the kernel's
   //   `\lx@bibliography@preamble`, before what natbib's `\bibpreamble` adds there;
-  // - `\subsubruninhead` (:754-758), a run-in heading, bold; `{petit}` (:334), small text; `{refguide}` (:2555), the
+  // - `\subsubruninhead` (:754-758), a bold heading (its positive after-skip sets it on a line of its own); `{petit}` (:334), small text; `{refguide}` (:2555), the
   //   guide's sectioning; `\leftcaption`/`\rightcaption` (:1864-1881), captions of figures set side by side, and
   //   `\leftfigure`/`\rightfigure` (:1888-1889) their contents; `\samenumber` (:2024), the next caption keeps the
   //   number.

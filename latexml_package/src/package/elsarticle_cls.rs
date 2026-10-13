@@ -176,7 +176,7 @@ LoadDefinitions!({
   // 340: `\fnmark` 4 of 35 sampled papers that ship elsarticle.cls, `\cormark` 3, `\nonumnote` 3): `\fnmark[<keys>]`
   // and `\cormark[<key>]` mark the author as `\fnref`/`\corref` do (:165 `\def\fnref#1{\fnmark[#1]}`), and
   // `\nonumnote{<text>}` (:153-155) adds an unnumbered title-page footnote: a note. Perl's elsarticle binding lacks
-  // them.
+  // them. Witnesses 2609.13494, 2302.09410, 2106.01129.
   DefMacro!("\\fnmark[]", "\\fnref{#1}");
   DefMacro!("\\cormark[]", "\\corref{#1}");
   DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");

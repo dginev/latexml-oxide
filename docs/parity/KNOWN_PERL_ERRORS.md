@@ -12750,3 +12750,12 @@ Perl's aas_support.sty.ltxml covers AASTeX 5.2 and the 7 front matter but not th
 ~1,700 papers, `\listofchanges` 409, `\AuthorCallLimit` 369). Trigger `\documentclass{aastex631}\reportnum{X}` →
 Perl: undefined `\reportnum` (pdflatex with the class: 0 errors). Fixed in Rust (65t, aas_support_sty.rs and
 aas_macros_sty.rs; witnesses 2604.07983, 2508.14467, 2604.22347, 1609.08711, 2103.02219, 2103.07688).
+
+## 634. iopart journal abbreviations drop the class's trailing space
+
+iopart.cls defines each journal abbreviation with a space after the italic name (`\newcommand{\PRL}{{\it Phys. Rev.
+Lett.} }`, 2603.00348's :1035-1118), so `\PRL \textbf{98} 1` reads "Phys. Rev. Lett. 98". Perl's
+iopart_support.sty.ltxml:258-331 defines them as `\textit{…}` alone, so the volume follows the name with no space
+("Phys. Rev. Lett.98"). Trigger `\documentclass{iopart}\begin{document}\PRL \textbf{98}\end{document}` → Perl:
+"Phys. Rev. Lett.98". Fixed in Rust (65x, iopart_support_sty.rs `def_iop_journal`; witness 2603.00348).
+

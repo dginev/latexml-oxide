@@ -819,16 +819,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   document's start when the paper's copy loads it (`class_text_loads`; ~530). Guards `perfect_kernel_batch65w::*`; repros
   `class-bindings/{lmcs,lipics,atlasdoc,spieman,arximspdf}_class_commands`, `class-bindings/aa_online_floats{,_v8}`.
 - **65x**: seven more class bindings define what their versions define and papers call (run-340 first errors; census
-  of the shipped copies, `scratch_356a0c47/census_65x.txt`). PoS: `\PoS{<identifier>}` the contribution's identifier,
-  once, as a `role=pubid` pubnote (PoS.cls :1395; ~360). dmtcs-episciences (contrib): `\publicationdetails{volume}{year}
-  {issue}{number}{id}` the head's "DMTCS vol. 19:3, 2017, #12" as a `role=journalref` pubnote, and the class's number
-  sets (~320). svmult: the 2018+ additions as `DefinitionOrigin::Fallback` — `\orcidID` an ORCID contact (as llncs's),
+  of the shipped copies, `scratch_356a0c47/census_65x.txt`). PoS: `\PoS{<identifier>}` the contribution's identifier
+  as a `role=pubid` pubnote (PoS.cls :1395, a second call undefined as in the class; ~360). dmtcs-episciences (contrib): `\publicationdetails{volume}{year}
+  {issue}{number}{id}` the head's "DMTCS vol. 19:3, 2017, #12" and the license line as pubnotes, and the class's
+  number sets with `\primes` (~320). svmult: the 2018+ additions as `DefinitionOrigin::Fallback` — `\orcidID` an ORCID contact (as llncs's),
   `\ethics`/`\ethicssubhead`, the titled boxes (`{important}`, `{warning}`, `{tips}`, … : the title bold over the
   text), `\biblstarthook` under the bibliography heading (through `\lx@bibliography@preamble`), `\subsubruninhead`,
   `{petit}`, `{refguide}`, `\leftcaption`/`\rightcaption`, `\leftfigure`/`\rightfigure`, `\samenumber` (~350).
   iopart: the 55 journal abbreviations of the 2011-2014 iopart.cls and `\MLST`, which Perl's list predates, as Fallback
-  (~200). acmart: the 2.x additions as Fallback — `\noindentparagraph`, `\anon`, `\AtBeginMaketitle` (run at
-  `\maketitle`), the `acmcp` setters (stored), the translated title/subtitle/keywords as notes and
+  (~200); every journal abbreviation keeps the class's trailing space (KPE #634). acmart: the 2.x additions as Fallback — `\noindentparagraph`, `\anon`, `\AtBeginMaketitle` (run as
+  `\maketitle` begins, through the kernel's new `\lx@maketitle@begin`), the `acmcp` setters (stored), the translated title/subtitle/keywords as notes and
   `{translatedabstract}`; `\acmBadgeR`/`\acmBadgeL` take their arguments (Perl's `\acmBadgeL` printed them). IEEEtran:
   `{LaTeXdescription}`, `\yesnumber`, `\IEEEstrut`, `\IEEEsettopmargin`, `\IEEEeqnarraystrutmode`. elsarticle:
   `\fnmark[…]`/`\cormark[…]` as `\fnref`/`\corref`, `\nonumnote`, `\newpageafter` (Fallback). Residual: svmult's

@@ -66,16 +66,18 @@ LoadDefinitions!({
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
   // dmtcs-episciences.cls (1211.0978's copy :225-236, as 115 of 120 sampled):
   // `\publicationdetails{volume}{year}{issue}{number}{id}` sets the first page's head, "DMTCS vol. <volume>:<issue>,
-  // <year>, #<number>", linked to the volume's page, and the copyright line: the reference, as a pubnote. (Under the
+  // <year>, #<number>", linked to the volume's page, and the copyright line with its license (:231-235): the reference
+  // and the license, as pubnotes. (Under the
   // class's `ojs` option a four-argument form (:56-70) replaces it; no sampled paper passes `ojs`.) The number sets of
   // the class, :483-487. Run 340: 113 of 120 sampled papers call `\publicationdetails` (~320 first errors; 1211.0978).
   DefMacro!(
     "\\publicationdetails{}{}{}{}{}",
-    "\\lx@add@pubnote[role=journalref]{DMTCS vol. #1:#3, #2, \\##4}"
+    "\\lx@add@pubnote[role=journalref]{DMTCS vol. #1:#3, #2, \\##4}\
+     \\lx@add@pubnote[role=license]{Distributed under a Creative Commons Attribution 4.0 International License}"
   );
   RawTeX!(
     r"\newcommand{\reals}{\ensuremath{\mathbb R}}\newcommand{\rationals}{\ensuremath{\mathbb Q}}
 \newcommand{\naturals}{\ensuremath{\mathbb N}}\newcommand{\integers}{\ensuremath{\mathbb Z}}
-\newcommand{\complexes}{\ensuremath{\mathbb C}}"
+\newcommand{\complexes}{\ensuremath{\mathbb C}}\newcommand{\primes}{\ensuremath{\mathbb P}}"
   );
 });

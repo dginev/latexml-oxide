@@ -770,7 +770,8 @@ LoadDefinitions!({
   DefMacro!("\\newlineauthors", "\\par");
   // IEEEtran.cls (TL 2025 v1.8b, as nearly every sampled copy, 42-58 of 58), what papers call that the binding lacked
   // (run 340: `{LaTeXdescription}` 9 of 58 sampled papers that ship IEEEtran.cls, `\IEEEstrut` 5,
-  // `\IEEEsettopmargin` 4, `\yesnumber` 2, `\IEEEeqnarraystrutmode` 2; ~100 first errors):
+  // `\IEEEsettopmargin` 4, `\yesnumber` 2, `\IEEEeqnarraystrutmode` 2; ~100 first errors; witnesses 2009.01542,
+  // 2403.19006, 2001.00914, 2510.10761, 2001.00708):
   // - `{LaTeXdescription}` (:2226-2229), LaTeX's own description list, which the class keeps beside its IEEE one;
   // - `\yesnumber` (:3068), the opposite of `\nonumber`: `\IEEEyesnumber`;
   // - `\IEEEstrut[<height>][<depth>][<font>]` (:3585-3590), `\IEEEsettopmargin[<sample>]{<mode>}{<margin>}` (:1394),
