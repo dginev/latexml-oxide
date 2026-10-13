@@ -1,0 +1,13 @@
+% witness: none (review of 65z r4); titling under a class whose own setter reaches no slot
+% oracle:  pdflatex 0 errors; titling.sty:245-268 wraps the setter in force when it loads: TT[My Title] TA[A. Author]
+% engines: rust 65z r5 = TA[] (as the int7 head)
+% expect:  0 errors; "TT[My Title] TA[A. Author]"
+% status:  RED (llncs/acmart/elsarticle/svjour3/aastex \author store neither \@author nor call the slot)
+\documentclass{llncs}
+\usepackage{titling}
+\title{My Title}
+\author{A. Author}
+\begin{document}
+\maketitle
+TT[\thetitle] TA[\theauthor]
+\end{document}

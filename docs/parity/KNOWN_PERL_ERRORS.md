@@ -12777,7 +12777,7 @@ titling.sty.ltxml:85 instead `\let`s them to `\@title`, `\@author`, `\@date` at 
 `\usepackage{titling}\newcommand{\thetitle}{T}\title{\thetitle}\begin{document}\maketitle\thetitle\end{document}`
 → Perl: an endless expansion (pdflatex: "T"). Fixed in Rust (65z r3-r4): the kernel `\title`, `\author`, `\date`
 (and the revtex4 and authblk `\author`) run `\lx@title@after`, `\lx@author@after`, `\lx@date@after` with the stored
-argument, onto which titling_sty.rs chains titling's code; a class setter that reaches no slot (amsart, mnras) has
-the names set at `\begin{document}` from `\@title`/`\@author`/`\@date`. Guards
+argument, onto which titling_sty.rs chains titling's code; a name whose slot never fired (amsart, mnras, IEEEtran
+setters) is set at `\begin{document}` and at `\maketitle` from `\@title`/`\@author`/`\@date`. Guards
 `perfect_kernel_batch65z::{titling_own_thetitle_does_not_loop, titling_under_class_and_package_setters}`.
 

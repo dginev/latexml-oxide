@@ -360,7 +360,7 @@ fn omnibus_provide_only_keeps_bound_class_commands() {
     &xml,
     "para",
     &[r#"xml:id="p1""#],
-    r#"<para xml:id="p1"><p xml:id="p1.1"><text font="typewriter" xml:id="p1.1.1">macro:#1#2-&gt;\lx@add@authors@append [annotations={#1}]{#2}</text></p></para>"#,
+    r#"<para xml:id="p1"><p xml:id="p1.1"><text font="typewriter" xml:id="p1.1.1">macro:#1#2-&gt;\lx@add@authors@append [annotations={#1}]{#2}\lx@author@after {#2}</text></p></para>"#,
   );
 }
 

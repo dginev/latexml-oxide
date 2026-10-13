@@ -45,16 +45,26 @@ LoadDefinitions!({
 \def\lx@titling@title#1{\begingroup\lx@titling@nothanks\protected@xdef\thetitle{#1}\endgroup}
 \def\lx@titling@author#1{\begingroup\lx@titling@nothanks\def\and{\unskip, }\protected@xdef\theauthor{#1}\endgroup}
 \def\lx@titling@date#1{\begingroup\lx@titling@nothanks\protected@xdef\thedate{#1}\endgroup}
-\let\lx@titling@title@slot\lx@title@after\def\lx@title@after#1{\lx@titling@title@slot{#1}\lx@titling@title{#1}}
-\let\lx@titling@author@slot\lx@author@after\def\lx@author@after#1{\lx@titling@author@slot{#1}\lx@titling@author{#1}}
-\let\lx@titling@date@slot\lx@date@after\def\lx@date@after#1{\lx@titling@date@slot{#1}\lx@titling@date{#1}}");
+\let\lx@titling@title@slot\lx@title@after
+\def\lx@title@after#1{\lx@titling@title@slot{#1}\gdef\lx@titling@fired@title{}\lx@titling@title{#1}}
+\let\lx@titling@author@slot\lx@author@after
+\def\lx@author@after#1{\lx@titling@author@slot{#1}\gdef\lx@titling@fired@author{}\lx@titling@author{#1}}
+\let\lx@titling@date@slot\lx@date@after
+\def\lx@date@after#1{\lx@titling@date@slot{#1}\gdef\lx@titling@fired@date{}\lx@titling@date{#1}}");
   // A class or package binding whose own setter reaches no slot (titling's `\appendiargdef` wraps whatever setter
-  // exists when it loads) leaves the name to `\begin{document}`, where one still undefined is set the same way from
-  // what the setter stored (`\@title`, `\@author`, `\@date`; amsart, mnras), as Perl and the kernel before this did at
-  // `\maketitle`.
-  RawTeX!(r"\def\lx@titling@fallback#1#2{\@ifundefined{#1}{\csname lx@titling@#2\endcsname{\csname @#2\endcsname}}{}}
-\AtBeginDocument{\lx@titling@fallback{thetitle}{title}\lx@titling@fallback{theauthor}{author}%
-\lx@titling@fallback{thedate}{date}}");
+  // exists when it loads; amsart, mnras, IEEEtran) has the name set from what the setter stored (`\@title`,
+  // `\@author`, `\@date`) at `\begin{document}` and again at `\maketitle` (amsart's `\title`/`\author` go in the
+  // body), replacing a class's placeholder (IEEEtran's no-op `\theauthor`); nothing stored, an undefined name is
+  // defined empty, as Perl and the kernel before this left it after `\maketitle`. A name whose slot fired is the
+  // slot's; a paper's own `\thetitle` with no `\title` is kept.
+  RawTeX!(r"\def\lx@titling@fallback#1#2{\@ifundefined{lx@titling@fired@#2}{%
+\protected@edef\lx@titling@tmp{\csname @#2\endcsname}%
+\ifx\lx@titling@tmp\@empty\@ifundefined{#1}{\global\expandafter\let\csname #1\endcsname\@empty}{}%
+\else\csname lx@titling@#2\endcsname{\csname @#2\endcsname}\fi}{}}
+\def\lx@titling@fallbacks{\lx@titling@fallback{thetitle}{title}\lx@titling@fallback{theauthor}{author}%
+\lx@titling@fallback{thedate}{date}}
+\AtBeginDocument{\lx@titling@fallbacks}");
+  AddToMacro!("\\lx@maketitle@begin", "\\lx@titling@fallbacks");
   // titling.sty:166-180 — the title block titling's `\maketitle` typesets: each
   // field between its pre/post hooks. Perl's binding keeps the hooks but never
   // reads them (titling.sty.ltxml:28-33, "we'll just punt"), so a class that puts

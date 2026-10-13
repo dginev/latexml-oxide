@@ -92,8 +92,10 @@ fn titling_own_thetitle_does_not_loop() {
 }
 
 /// titling.sty:245-268's `\appendiargdef` wraps the setter in force when titling loads: a class's own `\title`/`\author`
-/// (amsart, revtex4-1) or authblk's `\author` sets `\thetitle`/`\theauthor` too — through the setter's slot call
-/// (revtex4, authblk) or, at `\begin{document}`, from what the setter stored (amsart).
+/// (amsart, revtex4-1, IEEEtran) or authblk's `\author` sets `\thetitle`/`\theauthor` too — through the setter's slot
+/// call (revtex4, authblk) or, at `\begin{document}` and `\maketitle`, from what the setter stored (amsart, also with
+/// its `\title`/`\author` in the body; IEEEtran, over its placeholder `\theauthor`). RED residual:
+/// `package-bindings/titling_setter_llncs` (llncs/acmart/elsarticle/svjour3/aastex setters store no `\@author`).
 #[test]
 fn titling_under_class_and_package_setters() {
   for tex in [
@@ -101,6 +103,12 @@ fn titling_under_class_and_package_setters() {
     include_str!("../../../tools/perfect_kernel/repros/package-bindings/titling_setter_revtex.tex"),
     include_str!(
       "../../../tools/perfect_kernel/repros/package-bindings/titling_setter_authblk.tex"
+    ),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/titling_setter_amsart_body.tex"
+    ),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/titling_setter_ieeetran.tex"
     ),
   ] {
     let xml = convert(tex);
