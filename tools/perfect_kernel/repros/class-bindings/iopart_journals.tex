@@ -1,0 +1,9 @@
+% witness: 2603.00348 (`\jpa`, `\JSTAT`); run 340 ~200 iopart papers' first error
+% oracle:  pdflatex with iopart.cls (2603.00348's :1059-1140): 0 errors; each journal name in italics
+% engines: rust 65w = errors (each undefined; Perl's journal list predates them)
+% expect:  0 errors; "J. Phys. A: Math. Theor.", "J. Stat. Mech.", "Nucl. Fusion", "Mach. Learn.: Sci. Technol." italic
+% status:  RED (65w) -> GREEN (65x)
+\documentclass{iopart}
+\begin{document}
+See \jpa \textbf{40} 1, \JSTAT P01001, \NF \textbf{1} 2 and \MLST \textbf{2} 3.
+\end{document}

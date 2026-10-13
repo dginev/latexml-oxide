@@ -1,3 +1,5 @@
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -212,4 +214,46 @@ see SVMono documentation -}\begin{quotation}}{\end{quotation}}"#);
   // orcid.org link + logo icon (vs a bare dagger note). html_feedback#6571.
   // Witness 2408.17087, 2411.17645 (2 svmult papers).
   DefMacro!("\\orcid{}", "\\lx@add@orcid{#1}");
+
+  // What the 2018+ svmult.cls versions add (2605.18420's copy; 82-117 of 120 sampled copies, so a paper whose copy
+  // lacks one keeps its own definition: `DefinitionOrigin::Fallback`). Run 340 first errors: `\orcidID` 80 of 120
+  // sampled svmult papers, `\ethics` 25, the boxes 5-9 each, `\biblstarthook` 10 (~350 papers; 2605.18420):
+  // - `\orcidID{<id>}` (:2192), an author's ORCID (the class prints it as a superscript), as llncs's;
+  // - `\ethics{<title>}{<text>}` and `\ethicssubhead` (:2575-2577), the declarations block, small, its title bold;
+  // - the titled boxes `{trailer}`, `{questype}`, `{important}`, `{warning}`, `{programcode}`, `{tips}`, `{overview}`,
+  //   `{backgroundinformation}`, `{legaltext}` (:2497-2525, `\formtmp`): a shaded title bar, bold, over the text and a
+  //   closing rule; the title bold, the text below (the circled marks of three of them, and the colours, dropped);
+  // - `\biblstarthook{<text>}` (:2029), typeset under the bibliography's heading, once: through the kernel's
+  //   `\lx@bibliography@preamble`, before what natbib's `\bibpreamble` adds there;
+  // - `\subsubruninhead` (:754-758), a run-in heading, bold; `{petit}` (:334), small text; `{refguide}` (:2555), the
+  //   guide's sectioning; `\leftcaption`/`\rightcaption` (:1864-1881), captions of figures set side by side, and
+  //   `\leftfigure`/`\rightfigure` (:1888-1889) their contents; `\samenumber` (:2024), the next caption keeps the
+  //   number.
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\orcidID{}", "\\lx@add@orcid{#1}");
+    RawTeX!(
+      r"\def\ethicssubhead#1#2{\par\noindent{\bfseries #1}\enspace#2}
+\def\ethics#1#2{\bgroup\small\if!#1!\else\par\noindent{\bfseries#1}\enspace\nobreak\fi{\noindent #2\endgraf}\egroup}
+\def\lx@sv@box#1{\par\noindent{\bfseries #1}\par}
+\newenvironment{trailer}[1]{\lx@sv@box{#1}}{\par}
+\newenvironment{questype}[1]{\lx@sv@box{#1}}{\par}
+\newenvironment{important}[1]{\lx@sv@box{#1}}{\par}
+\newenvironment{warning}[1]{\lx@sv@box{#1}}{\par}
+\newenvironment{programcode}[1]{\lx@sv@box{#1}}{\par}
+\newenvironment{tips}[1]{\lx@sv@box{#1}}{\par}
+\newenvironment{overview}[1]{\lx@sv@box{#1}}{\par}
+\newenvironment{backgroundinformation}[1]{\lx@sv@box{#1}}{\par}
+\newenvironment{legaltext}[1]{\lx@sv@box{#1}}{\par}
+\def\biblstarthook#1{\gdef\biblst@rthook{#1}}
+\AtBeginDocument{\let\lx@sv@bibpreamble\lx@bibliography@preamble
+  \def\lx@bibliography@preamble{\csname biblst@rthook\endcsname\global\let\biblst@rthook\undefined\lx@sv@bibpreamble}}
+\newcommand\subsubruninhead{\@startsection{paragraph}{4}{\z@}{-6\p@}{0.1\p@}{\normalfont\normalsize\bfseries}}
+\newenvironment{petit}{\par\small}{\par}
+\newenvironment{refguide}{}{}
+\def\leftcaption{\caption}\def\rightcaption{\caption}
+\newcommand{\leftfigure}[2][l]{#2}\let\rightfigure\leftfigure
+\def\samenumber{\addtocounter{\@captype}{-1}}"
+    );
+  }
 });

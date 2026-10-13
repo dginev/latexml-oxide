@@ -768,6 +768,22 @@ LoadDefinitions!({
   // \newcommand is silently ignored (Perl-parity: already-defined →
   // dropped on the floor).
   DefMacro!("\\newlineauthors", "\\par");
+  // IEEEtran.cls (TL 2025 v1.8b, as nearly every sampled copy, 42-58 of 58), what papers call that the binding lacked
+  // (run 340: `{LaTeXdescription}` 9 of 58 sampled papers that ship IEEEtran.cls, `\IEEEstrut` 5,
+  // `\IEEEsettopmargin` 4, `\yesnumber` 2, `\IEEEeqnarraystrutmode` 2; ~100 first errors):
+  // - `{LaTeXdescription}` (:2226-2229), LaTeX's own description list, which the class keeps beside its IEEE one;
+  // - `\yesnumber` (:3068), the opposite of `\nonumber`: `\IEEEyesnumber`;
+  // - `\IEEEstrut[<height>][<depth>][<font>]` (:3585-3590), `\IEEEsettopmargin[<sample>]{<mode>}{<margin>}` (:1394),
+  //   `\IEEEeqnarraystrutmode` and `\IEEEeqnarraystrutsize{<height>}{<depth>}[<font>]` (:3600-3613): struts and
+  //   page geometry, which set nothing here.
+  RawTeX!(r"\newenvironment{LaTeXdescription}{\begin{description}}{\end{description}}
+\providecommand{\yesnumber}{\IEEEyesnumber\relax}");
+  DefMacro!("\\IEEEstrut[][][]", "");
+  DefMacro!("\\IEEEsettopmargin[]{}{}", "");
+  if lookup_definition(&T_CS!("\\IEEEeqnarraystrutsize"))?.is_none() {
+    DefMacro!("\\IEEEeqnarraystrutsize{}{}[]", "");
+  }
+  def_macro_noop("\\IEEEeqnarraystrutmode")?;
 });
 
 /// Split `tokens` at each TOP-LEVEL (brace-depth 0) occurrence of `delim`.

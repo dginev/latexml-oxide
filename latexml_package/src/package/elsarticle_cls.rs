@@ -1,3 +1,5 @@
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -170,4 +172,18 @@ LoadDefinitions!({
   DefEnvironment!("{highlights}",
     "<ltx:note role='highlights'>#body</ltx:note>",
     mode => "internal_vertical", locked => true);
+  // elsarticle.cls (TL 2025 :153-176), the marks and notes under `\fnref`/`\corref`, which papers call directly (run
+  // 340: `\fnmark` 4 of 35 sampled papers that ship elsarticle.cls, `\cormark` 3, `\nonumnote` 3): `\fnmark[<keys>]`
+  // and `\cormark[<key>]` mark the author as `\fnref`/`\corref` do (:165 `\def\fnref#1{\fnmark[#1]}`), and
+  // `\nonumnote{<text>}` (:153-155) adds an unnumbered title-page footnote: a note. Perl's elsarticle binding lacks
+  // them.
+  DefMacro!("\\fnmark[]", "\\fnref{#1}");
+  DefMacro!("\\cormark[]", "\\corref{#1}");
+  DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
+  // The 2020+ copies' `\newpageafter{title|author|abstract}` (16 of 35 sampled), a page break in the title block: a
+  // guess a paper's own definition replaces.
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\def\newpageafter#1{\gdef\@elsarticlenewpageafter{#1}}");
+  }
 });

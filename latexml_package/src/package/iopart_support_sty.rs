@@ -1,6 +1,8 @@
 //! iopart_support.sty — IOP Publishing journal support
 //! Perl: iopart_support.sty.ltxml — 345 lines
 //! Used by Journal of Physics, Classical and Quantum Gravity, etc.
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 /// DEP-NEW (2026-05-19): data-drive helper for the 74 IOP-physics
@@ -372,6 +374,69 @@ LoadDefinitions!({
   def_iop_journal("\\JNE", "J. Neural Eng.")?;
   def_iop_journal("\\PB", "Phys. Biol.")?;
   def_iop_journal("\\SMS", "Smart Mater. Struct.")?;
+  // The journals of the 2011-2014 iopart.cls (2603.00348's copy :1059-1140, "More journals added 8 Mar 2011" and
+  // "6 Feb 2014"), which Perl's list predates: `\jpa` (J. Phys. A: Math. Theor.), `\NF`, `\JSTAT`, `\JHEP`, … and
+  // `\MLST` (the later copies' form). Older copies lack them, so a paper's own definition replaces them
+  // (`DefinitionOrigin::Fallback`). Run 340: `\jpa` 31 of 120 sampled iopart papers, ~200 first errors in all
+  // (2603.00348).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    def_iop_journal("\\GRG", "Gen. Rel. Grav.")?;
+    def_iop_journal("\\PF", "Phys. Fluids\\/")?;
+    def_iop_journal("\\SPJ", "Sov. Phys.--JETP\\/")?;
+    def_iop_journal("\\jpa", "J. Phys. A: Math. Theor.")?;
+    def_iop_journal("\\BF", "Biofabrication\\/")?;
+    def_iop_journal("\\BB", "Bioinspir. Biomim.")?;
+    def_iop_journal("\\BMM", "Biomed. Mater.")?;
+    def_iop_journal("\\CSD", "Comput. Sci. Disc.")?;
+    def_iop_journal("\\ERL", "Environ. Res. Lett.")?;
+    def_iop_journal("\\JBR", "J. Breath Res.")?;
+    def_iop_journal("\\JGE", "J. Geophys. Eng.")?;
+    def_iop_journal("\\JOPT", "J. Opt.")?;
+    def_iop_journal("\\JRP", "J. Radiol. Prot.")?;
+    def_iop_journal("\\MET", "Metrologia\\/")?;
+    def_iop_journal("\\NF", "Nucl. Fusion\\/")?;
+    def_iop_journal("\\PED", "Phys. Educ.")?;
+    def_iop_journal("\\TDM", "2D Mater.")?;
+    def_iop_journal("\\MRE", "Mater. Res. Express\\/")?;
+    def_iop_journal("\\MAF", "Methods Appl. Fluoresc.")?;
+    def_iop_journal("\\TMR", "Transl. Mater. Res.")?;
+    def_iop_journal("\\STMP", "Surf. Topogr.: Metrol. Prop.")?;
+    def_iop_journal("\\AJ", "AJ\\/")?;
+    def_iop_journal("\\APJ", "ApJ\\/")?;
+    def_iop_journal("\\APJL", "ApJL\\/")?;
+    def_iop_journal("\\APJS", "ApJS\\/")?;
+    def_iop_journal("\\ANSN", "Adv. Nat. Sci: Nanosci. Nanotechnol.")?;
+    def_iop_journal("\\CJCP", "Chin. J. Chem. Phys.")?;
+    def_iop_journal("\\CPB", "Chinese Phys. B\\/")?;
+    def_iop_journal("\\CPC", "Chinese Phys. C\\/")?;
+    def_iop_journal("\\CPL", "Chinese Phys. Lett.")?;
+    def_iop_journal("\\CTP", "Commun. Theor. Phys.")?;
+    def_iop_journal("\\EPL", "EPL\\/")?;
+    def_iop_journal("\\FDR", "Fluid Dyn. Res.")?;
+    def_iop_journal("\\IZV", "Izv. Math.")?;
+    def_iop_journal("\\JOS", "J. Semicond.")?;
+    def_iop_journal("\\PHU", "Phys.-Usp.")?;
+    def_iop_journal("\\PST", "Plasma Sci. Technol.")?;
+    def_iop_journal("\\QEL", "Quantum Electron.")?;
+    def_iop_journal("\\RAA", "Res. Astron. Astrophys.")?;
+    def_iop_journal("\\RCR", "Russ. Chem. Rev.")?;
+    def_iop_journal("\\RMS", "Russ. Math. Surv.")?;
+    def_iop_journal("\\MSB", "Sb. Math.")?;
+    def_iop_journal("\\SFC", "Science Foundation in China\\/")?;
+    def_iop_journal("\\STAM", "Sci. Technol. Adv. Mater.")?;
+    def_iop_journal("\\LP", "Laser Phys.")?;
+    def_iop_journal("\\LPL", "Laser Phys. Lett.")?;
+    def_iop_journal("\\APEX", "Appl. Phys. Express\\/")?;
+    def_iop_journal("\\JCAP", "JCAP\\/")?;
+    def_iop_journal("\\JHEP", "J. High Energy Phys.\\/")?;
+    def_iop_journal("\\JSTAT", "J. Stat. Mech.")?;
+    def_iop_journal("\\JINST", "JINST\\/")?;
+    def_iop_journal("\\JPCS", "J. Phys.: Conf. Ser.")?;
+    def_iop_journal("\\EES", "IOP Conf. Ser.: Earth Environ. Sci.")?;
+    def_iop_journal("\\MSE", "IOP Conf. Ser.: Mater. Sci. Eng.")?;
+    def_iop_journal("\\MLST", "Mach. Learn.: Sci. Technol.")?;
+  }
 
   // Mystery items — Perl L335-343
   DefMacro!("\\tqs", "\\hspace*{25pt}");
