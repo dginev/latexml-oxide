@@ -205,4 +205,44 @@ LoadDefinitions!({
 \newtheorem{claim}[theorem]{Claim}
 \newtheorem{conjecture}[theorem]{Conjecture}"
   );
+  // lipics-v2021.cls:1158-1176 (2609.11285's copy): the 2019+ versions add `{exercise}`, `{note}` and the starred
+  // `{note*}`, `{remark*}`, `{claim*}` (run 340: `{remark*}` 38 first errors, 2508.09892).
+  RawTeX!(
+    r"\newtheorem{exercise}[theorem]{Exercise}
+\theoremstyle{remark}
+\newtheorem{note}[theorem]{Note}
+\newtheorem*{note*}{Note}
+\newtheorem*{remark*}{Remark}
+\newtheorem*{claim*}{Claim}
+\theoremstyle{plain}"
+  );
+  // :1041-1056 `{claimproof}` (a proof of a claim, its QED a ◁) and `\claimqedhere`; :1057-1060 `\lipicsEnd` (the
+  // ⌟ ending an example or remark); :380-383 `\proofsubparagraph` (a run-in subparagraph heading in proofs); :537-542
+  // the `(i)`/`(a)`/`(1)` enumerates. Run 340 first errors: `{claimproof}` 348, `\lipicsEnd` 51,
+  // `\proofsubparagraph` 60, `{romanenumerate}` 34, `{alphaenumerate}` 32 (witnesses 2508.16319, 2008.01422,
+  // 2103.15659, 1904.11668, 2103.14599).
+  RawTeX!(
+    r"\newenvironment{claimproof}[1][\proofname]{\begin{proof}[#1]\renewcommand\qedsymbol{\ensuremath{\vartriangleleft}}}{\end{proof}}
+\newcommand{\claimqedhere}{\qedhere}
+\DeclareRobustCommand{\lipicsEnd}{\leavevmode\unskip\penalty9999 \hbox{}\nobreak\hfill\quad\hbox{$\lrcorner$}}
+\newcommand{\proofsubparagraph}{\@startsection{subparagraph}{5}{\z@}{3.25ex \@plus1ex \@minus .2ex}{-1em}{\sffamily\normalsize\bfseries}}
+\def\romanenumerate{\enumerate[(i)]}\let\endromanenumerate\endenumerate
+\def\alphaenumerate{\enumerate[(a)]}\let\endalphaenumerate\endenumerate
+\def\bracketenumerate{\enumerate[(1)]}\let\endbracketenumerate\endenumerate"
+  );
+  // The front-matter setters of the 2016-2019 versions (lipics.cls, lipics-v2019.cls): `\EventShortName`,
+  // `\serieslogo`, `\volumeinfo{editors}{n}{event}{volume}{issue}{first page}`, `\DOI`, `\DOIPrefix` (lipics-v2021.cls:755)
+  // store what the page furniture prints (run 340: `\serieslogo` 123, 2103.15651); `\flag[width]{image}` (:410) is a
+  // margin icon. The event becomes the note `\event` makes.
+  RawTeX!(
+    r"\def\EventShortName#1{\gdef\@EventShortName{#1}}
+\def\serieslogo#1{\gdef\@serieslogo{#1}}
+\def\DOI#1{\gdef\@DOI{#1}}
+\def\DOIPrefix#1{\gdef\@DOIPrefix{#1}}
+\newcommand\flag[2][0.9cm]{}"
+  );
+  DefMacro!(
+    "\\volumeinfo{}{}{}{}{}{}",
+    "\\if\\relax\\detokenize{#3}\\relax\\else\\@add@frontmatter{ltx:note}[role=event]{#3}\\fi"
+  );
 });

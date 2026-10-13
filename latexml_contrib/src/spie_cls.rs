@@ -1,4 +1,5 @@
 //! Stub for spie.cls (SPIE conference proceedings).
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -31,4 +32,17 @@ LoadDefinitions!({
   );
   def_macro_noop("\\skiplinehalf")?;
   DefMacro!("\\supit{}", "\\textsuperscript{#1}");
+  // spieman.cls, SPIE's journal manuscript class, which the loader gives this binding ("Can't find binding for class
+  // spieman (using spie)"; 87 of 99 sampled copies are its v1.10, 1703.03292's): `\linkable` (:82), an address or URL
+  // set blue and underlined but not linked (run 340: 640 first errors; 2604.17554, 2604.05004); the 2006 v1.00 copies'
+  // `\supscr`/`\supscrsm`, raised small text (1408.0407). spie.cls defines neither, so they are guesses a paper's own
+  // definition replaces (`DefinitionOrigin::Fallback`).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(
+      r"\newcommand{\linkable}[1]{\textcolor{blue}{\underline{#1}}}
+\def\supscr#1{\raisebox{0.8ex}{\small #1}\hspace{0.05em}}
+\def\supscrsm#1{\raisebox{0.8ex}{\footnotesize #1}\hspace{0.05em}}"
+    );
+  }
 });

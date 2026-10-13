@@ -794,6 +794,21 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   apply); `\oneappendix` keeps the appendix letter. Guards
   `perfect_kernel_batch65v::*` (with `perfect_kernel_batch64qa::mdpi_history_is_frontmatter`: lastpage's `LastPage`
   label ids the document); repros `class-bindings/{jfm,mdpi}_class_commands`.
+- **65w**: six more class bindings define what their versions define and papers call (the class-family rule, from
+  run-340 first errors and a census of the shipped copies). lmcs (contrib): `\titlecomment` a `role=titlenote` note,
+  `\ACMCCS`/`\amsclass` classifications, `\rsuper`/`\lsuper`, `\qEd`, `{iteMize}{label}`/`{desCription}` as `{list}`
+  (the enumitem the binding loads would read the label as a key; ~900). lipics (contrib): `{claimproof}`,
+  `\claimqedhere`, `\lipicsEnd`, `\proofsubparagraph`, the `(i)`/`(a)`/`(1)` enumerates, `{exercise}`, `{note}` and the
+  starred theorems, and the 2016-2019 setters (`\EventShortName`, `\serieslogo`, `\DOI`, `\DOIPrefix`, `\flag`,
+  `\volumeinfo`'s event as a `role=event` note; ~700). atlasdoc (contrib): the document-data setters store as
+  atlasdoc.cls does, the printed ones as pubnotes, `\AtlasPaperWebpage` from `\AtlasRefCode`, `\AtlasDate` as the
+  date, the cover-page commands no-ops (~700). spie (contrib, which the loader gives spieman): `\linkable` and v1.00's
+  `\supscr`/`\supscrsm` as `DefinitionOrigin::Fallback` (~650). arximspdf: `\doiurl`/`\arxivurl` (moved from the
+  arxstspdf-only loader; 92 of 100 arximspdf copies define them) and `\surl`, `\setattribute`/`\getattribute`,
+  `\tsup`/`\tsub`, `\OrigBibText…\endOrigBibText` (~700). aa: the online floats `\onltab`/`\onlfig`/`\onllongtab`/
+  `\onllongtabL`/`\longtabL` stay in place numbered N with the counter stepped as the class steps it, `\AANum`, `\psj`,
+  and hyperref when the paper's copy loads it (`class_text_loads`; ~530). Guards `perfect_kernel_batch65w::*`; repros
+  `class-bindings/{lmcs,lipics,atlasdoc,spieman,arximspdf}_class_commands`, `class-bindings/aa_online_floats`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

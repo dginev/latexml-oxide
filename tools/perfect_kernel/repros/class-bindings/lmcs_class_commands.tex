@@ -1,0 +1,20 @@
+% witness: 2103.15292 (`\titlecomment`), 1309.5822 (`\ACMCCS`), 2103.16592 (`\rsuper`), 1107.1351 (`{iteMize}`),
+%   1205.4458 (`\amsclass`), cs0510066 (`\qEd`); run 340 ~1,000 lmcs papers' first error
+% oracle:  pdflatex with a paper's lmcs.cls: 0 errors; the title footnote, "2012 ACM CCS: …", bulleted items
+% engines: rust 65v = errors (each command undefined); no Perl binding for lmcs
+% expect:  0 errors; a role=titlenote note, a ccs classification, an itemize-like list whose items are tagged •, □
+% status:  RED (65v) -> GREEN (65w)
+\documentclass{lmcs}
+\begin{document}
+\title{Title}
+\titlecomment{An extended abstract appeared at a conference.}
+\author{Ann Able\rsuper{a}}
+\ACMCCS{[{\bf Theory of computation}]: Logic}
+\amsclass{03B70}
+\maketitle
+\begin{iteMize}{$\bullet$}
+\item first
+\item second
+\end{iteMize}
+Proof done.\qEd
+\end{document}

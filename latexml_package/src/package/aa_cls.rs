@@ -1,4 +1,7 @@
-use crate::prelude::*;
+use crate::{
+  prelude::*,
+  shipped_class::{class_text_loads, shipped_class_text},
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -76,4 +79,24 @@ LoadDefinitions!({
   // require it (options irrelevant to the XML stubs). Perl's aa.cls.ltxml
   // lacks this (\nolinenumbers undefined there); candidate to upstream.
   RequirePackage!("lineno");
+
+  // aa.cls's online-only floats (65 of 98 sampled copies; 0709.2515's :925-941): `\onltab{N}{table}`,
+  // `\onlfig{N}{figure}`, `\onllongtab{N}{longtable}`, `\onllongtabL` and the landscape `\longtabL{N}{longtable}`. The
+  // class sets the float after the document under an "Online Material" page (`\Online`, empty here as in Perl's
+  // aa_support) numbered N, and steps the counter to N for what follows; as `\longtab` (aa_support), the float stays in
+  // place, numbered N. Run 340 first errors: `\onltab` 171, `\onlfig` 152, `\onllongtab` 111, `\longtabL` 49
+  // (witnesses 0709.2515, 0709.0404, 0709.4508, 0811.2397).
+  RawTeX!(r"\long\def\onltab#1#2{\setcounter{table}{#1}\addtocounter{table}{-1}#2\setcounter{table}{#1}}
+\long\def\onlfig#1#2{\setcounter{figure}{#1}\addtocounter{figure}{-1}#2\setcounter{figure}{#1}}
+\let\onllongtab\onltab \let\onllongtabL\onltab \let\longtabL\onltab");
+  // v9.x: `\AANum{N}` (56 copies), the article number the page furniture prints; `\psj` (the Planetary Science Journal,
+  // `PSJ` in 4 of the 6 copies with it; 44 first errors, 2508.13727).
+  RawTeX!(r"\providecommand*\aa@numarticle{}\newcommand*\AANum[1]{\renewcommand*\aa@numarticle{#1}}
+\providecommand*\psj{PSJ}");
+  // The v9.x copies load hyperref unless the paper has (`\@ifpackageloaded{hyperref}{}{\RequirePackage[colorlinks=true,
+  // …]{hyperref}}`, 17 of 98 sampled), so their papers call `\href` (60 first errors, 2406.05179): the paper's own copy
+  // decides.
+  if shipped_class_text("aa")?.is_some_and(|text| class_text_loads(&text, "hyperref")) {
+    RequirePackage!("hyperref");
+  }
 });

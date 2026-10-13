@@ -1,0 +1,14 @@
+% witness: 0709.2515 (`\onltab`), 0709.0404 (`\onlfig`), 0709.4508 (`\onllongtab`), 0811.2397 (`\longtabL`),
+%   2508.13727 (`\psj`); run 340 ~550 aa papers
+% oracle:  pdflatex with aa.cls: 0 errors; Table 2 (online), then Table 3 after it
+% engines: rust 65v = errors (each undefined; Perl's aa binding lacks them too)
+% expect:  0 errors; the online table numbered 2, the next table 3, figure 1; PSJ
+% status:  RED (65v) -> GREEN (65w)
+\documentclass{aa}
+\begin{document}
+\begin{table}\caption{First.}\end{table}
+\onltab{2}{\begin{table}\caption{Online.}\end{table}}
+\begin{table}\caption{Third.}\end{table}
+\onlfig{1}{\begin{figure}\caption{Online figure.}\end{figure}}
+\psj
+\end{document}
