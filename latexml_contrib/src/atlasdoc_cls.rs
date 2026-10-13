@@ -28,7 +28,8 @@ LoadDefinitions!({
   // `\maketitle` (:1074) the class picks one of four title headers (:991-1006) by its options (:82-91): with
   // `preprint`/`cernpreprint` (64 of 67 sampled papers) the CERN preprint header (:835-856), the journal reference or
   // else "Submitted to: <journal>", the DOI and the preprint number; otherwise with `HEPDATA` the HepData header
-  // (:866-893), the preprint number; with `BOOK` (:894ff) none of them; otherwise the default header (:746-747),
+  // (:866-893), the preprint number and the arXiv id (:878); with `BOOK` (:894ff; `PAPER`, `CONF` and `PUB` turn it off,
+  // :140-192) none of them; otherwise the default header (:746-747),
   // "<\subprepend> <journal>" ("Journal:" by default). The same, as the frontmatter notes, each prefix the note's
   // label. Run 340: nearly every atlasdoc paper calls them (`\AtlasRefCode` 470, `\PreprintIdNumber` 147,
   // `\AtlasJournalRef` 32, `\AtlasVersion` 52; witnesses 2508.20929, 2103.01029, 1904.03536, 2407.10879).
@@ -54,9 +55,16 @@ LoadDefinitions!({
   \ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint]{\ADOC@preprintnumber}\fi
 \else\iflx@atlas@hepdata
   \ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint]{\ADOC@preprintnumber}\fi
+  \ifx\AtlasArXivId\@empty\else\lx@add@pubnote[role=arxiv]{\AtlasArXivId}\fi
 \else\iflx@atlas@book\else
   \ifx\ADOC@journal\@empty\else\lx@add@pubnote[role=journal,name={\ADOC@subprepend~}]{\ADOC@journal}\fi
 \fi\fi\fi}
+\newcommand*{\AtlasArXivId}{}\newcommand*{\AtlasArXivURL}{}
+\newcommand*{\arXivId}[1]{\renewcommand*{\AtlasArXivId}{#1}\renewcommand*{\AtlasArXivURL}{https://arXiv.org/abs/#1}}
+\newcommand*{\AtlasArXivCat}{[hep-ex]}
+\newcommand*{\AtlasHEPDataRecord}{}
+\newcommand*{\HepDataRecord}[1]{\renewcommand*{\AtlasHEPDataRecord}{https://www.hepdata.net/record/ins#1}}
+\newcommand*{\HEPDataRecord}[1]{\renewcommand*{\AtlasHEPDataRecord}{https://www.hepdata.net/record/ins#1}}
 \newcommand*{\ADOC@subprepend}{Journal:}\newcommand*{\subprepend}[1]{\renewcommand*{\ADOC@subprepend}{#1}}"
   );
   // The class's kvoptions (`preprint`, `preprint=true`, `preprint = false`, …; the last setting wins) choose the header:
@@ -91,7 +99,7 @@ LoadDefinitions!({
     RawTeX!(r"\lx@atlas@cernpreprinttrue");
   } else if setting("HEPDATA") {
     RawTeX!(r"\lx@atlas@hepdatatrue");
-  } else if setting("BOOK") {
+  } else if setting("BOOK") && !["PAPER", "CONF", "PUB"].iter().any(|kind| setting(kind)) {
     RawTeX!(r"\lx@atlas@booktrue");
   }
   AddToMacro!("\\lx@maketitle@body", "\\lx@atlas@titlepage");

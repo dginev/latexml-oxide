@@ -163,8 +163,9 @@ fn atlasdoc_setters_are_defined() {
 
 /// atlasdoc.cls picks its title header by option (2504.04805's :82-91, :991-1006), each prefix the note's label: by
 /// default "<\\subprepend> <journal>" ("Journal:", :746-747) and neither the journal reference nor the DOI; with
-/// `preprint` (spaces and `=true` allowed) and no journal reference, "Submitted to: <journal>" (:835-841); with
-/// `HEPDATA` the preprint number only (:866-893); with `BOOK` none.
+/// `preprint` (spaces and `=true` allowed, the last setting winning) and no journal reference, "Submitted to: <journal>"
+/// (:835-841); with `HEPDATA` the preprint number and arXiv id (:866-893); with `BOOK` none, unless `PAPER` turns it
+/// off (:140-192). The arXiv and HEPData setters (:324-333) are defined.
 #[test]
 fn atlasdoc_title_header_follows_the_options() {
   let doc = |options: &str| {
@@ -174,6 +175,9 @@ fn atlasdoc_title_header_follows_the_options() {
 \AtlasJournal{{Phys. Lett. B}}
 \PreprintIdNumber{{CERN-EP-1}}
 \AtlasDOI{{10.1/x}}
+\arXivId{{2504.04805}}
+\HepDataRecord{{1234}}
+\HEPDataRecord{{1234}}
 \begin{{document}}
 \maketitle
 \end{{document}}
@@ -194,14 +198,21 @@ fn atlasdoc_title_header_follows_the_options() {
     r#"role="preprint">CERN-EP-1</pubnote>"#,
     r#"role="doi">10.1/x</pubnote>"#,
   ]);
+  let xml = doc("[preprint, preprint=false]");
+  assert_contains(&xml, &[&journal("Journal:")]);
   let xml = doc("[HEPDATA]");
-  assert_contains(&xml, &[r#"role="preprint">CERN-EP-1</pubnote>"#]);
+  assert_contains(&xml, &[
+    r#"role="preprint">CERN-EP-1</pubnote>"#,
+    r#"role="arxiv">2504.04805</pubnote>"#,
+  ]);
   assert!(
     !xml.contains(r#"role="journal""#) && !xml.contains(r#"role="doi""#),
     "{xml}"
   );
   let xml = doc("[BOOK]");
   assert!(!xml.contains("<pubnote"), "{xml}");
+  let xml = doc("[PAPER,BOOK]");
+  assert_contains(&xml, &[&journal("Journal:")]);
 }
 
 /// spieman.cls :82 `\linkable` (the loader gives spieman the spie binding) and the v1.00 `\supscr`. Witnesses

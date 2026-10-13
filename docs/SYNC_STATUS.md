@@ -806,8 +806,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\DOI` whose DOI, when set, becomes a pubnote once at `\maketitle`, `\volumeinfo`'s event as a `role=event` note;
   ~700). atlasdoc (contrib): the document-data setters store as atlasdoc.cls does (`\journal` too), and at `\maketitle`
   the title header the class options pick gives the notes, each prefix the note's label: with `preprint`/`cernpreprint`
-  the journal reference, or else "Submitted to: <journal>", DOI and preprint number; with `HEPDATA` the preprint number;
-  with `BOOK` none; otherwise "<\subprepend> <journal>" ("Journal:"); `\AtlasPaperWebpage`
+  the journal reference, or else "Submitted to: <journal>", DOI and preprint number; with `HEPDATA` the preprint number
+  and arXiv id; with `BOOK` (unless `PAPER`/`CONF`/`PUB`) none; otherwise "<\subprepend> <journal>" ("Journal:");
+  `\arXivId`/`\HepDataRecord` store; `\AtlasPaperWebpage`
   from `\AtlasRefCode`, `\AtlasDate` as the date, the cover-page commands no-ops (~700). spie (contrib, which the loader
   gives spieman): `\linkable` and v1.00's `\supscr`/`\supscrsm` as Fallback (~650). arximspdf: `\doiurl`/`\arxivurl`
   (moved from the arxstspdf-only loader; 92 of 100 arximspdf copies define them) and `\surl`, `\setattribute`/
