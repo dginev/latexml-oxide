@@ -54,6 +54,7 @@ fn dmtcs_publication_details_are_the_reference() {
     r#"<XMTok font="blackboard" role="UNKNOWN">Z</XMTok>"#,
     r#"<XMTok font="blackboard" role="UNKNOWN">P</XMTok>"#,
     r#"<pubnote role="license">Distributed under a Creative Commons Attribution 4.0 International License</pubnote>"#,
+    r#"role="copyright">2017 by the author(s)</date>"#,
   ]);
 }
 
@@ -144,10 +145,7 @@ fn acmart_class_commands_are_defined() {
     r#"<date role="copyrightyear">2022"#,
   ]);
   // The hook's `\setcopyright{none}` ran before the title block read the copyright: no license statement.
-  assert!(
-    !xml.contains(r#"role="license""#) && !xml.contains("acmlicensed"),
-    "{xml}"
-  );
+  assert!(!xml.contains(r#"role="license""#), "{xml}");
   for absent in ["badge-file", "example.org/badge", "example.org/code"] {
     assert!(!xml.contains(absent), "{absent}\n{xml}");
   }

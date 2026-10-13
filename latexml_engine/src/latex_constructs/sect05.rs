@@ -1341,7 +1341,8 @@ pub(crate) fn load() -> Result<()> {
   // (amsart.cls:599-621: `\authors` holds `\and`-joined names), so a class can empty the hook.
   RawTeX!(r"\def\lx@maketitle@clear@and{\global\let\and\relax}");
   // What a class runs as its `\maketitle` begins (acmart.cls:2217-2220 `\AtBeginMaketitle`): bindings extend
-  // `\lx@maketitle@begin`, ahead of the title block, as they extend `\lx@maketitle@body` behind it.
+  // `\lx@maketitle@begin`, ahead of the title block, as they extend `\lx@maketitle@body` behind it (acmart papers
+  // set their copyright and conference there: 2203.08314, 2603.15453).
   DefMacro!("\\lx@maketitle@begin", "");
   DefMacro!(
     "\\lx@maketitle@body",

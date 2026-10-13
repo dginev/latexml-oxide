@@ -12,7 +12,7 @@ use crate::prelude::*;
 /// helper collapses the repeated macro expansion to one inlined fn.
 /// Per [[wisdom_data_drive_min_call_sites]]: 74 ≫ 5 threshold.
 /// iopart.cls ends each with a space (`\newcommand{\jpa}{{\it J. Phys. A: Math. Theor.} }`, 2603.00348's
-/// :1059-1118), so `\jpa \textbf{40}` reads "J. Phys. A: Math. Theor. 40"; Perl's dropped it (KNOWN_PERL_ERRORS #634).
+/// :972-1125), so `\jpa \textbf{40}` reads "J. Phys. A: Math. Theor. 40"; Perl's dropped it (KNOWN_PERL_ERRORS #634).
 fn def_iop_journal(cs: &str, name: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(cs, true)?;
   let body_toks =
@@ -438,7 +438,8 @@ LoadDefinitions!({
     def_iop_journal("\\JPCS", "J. Phys.: Conf. Ser.")?;
     def_iop_journal("\\EES", "IOP Conf. Ser.: Earth Environ. Sci.")?;
     def_iop_journal("\\MSE", "IOP Conf. Ser.: Mater. Sci. Eng.")?;
-    def_iop_journal("\\MLST", "Mach. Learn.: Sci. Technol.")?;
+    // `\MLST` as the later copies (2501.05515's :972, 1907.13401's) define it, with no trailing space.
+    DefMacro!("\\MLST", "\\textit{Mach. Learn.: Sci. Technol.}");
   }
 
   // Mystery items — Perl L335-343

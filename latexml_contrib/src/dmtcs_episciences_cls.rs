@@ -73,6 +73,7 @@ LoadDefinitions!({
   DefMacro!(
     "\\publicationdetails{}{}{}{}{}",
     "\\lx@add@pubnote[role=journalref]{DMTCS vol. #1:#3, #2, \\##4}\
+     \\lx@add@copyright{#2 by the author(s)}\
      \\lx@add@pubnote[role=license]{Distributed under a Creative Commons Attribution 4.0 International License}"
   );
   RawTeX!(
