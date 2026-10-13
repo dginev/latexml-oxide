@@ -1,0 +1,14 @@
+% witness: none (review of 65z r5); a paper's \renewcommand{\thetitle} after \begin{document}, under amsart
+% oracle:  pdflatex 0 errors; titling only sets \thetitle as \title runs, so the paper's definition stands: TT[Custom Title]
+% engines: rust 65z r5 = TT[Preamble Title] (the \maketitle fallback re-set it from the unchanged \@title; int7 the same)
+% expect:  0 errors; "TT[Custom Title] TA[A. Author] TD[]" in the body
+% status:  RED -> GREEN (65z r6)
+\documentclass{amsart}
+\usepackage{titling}
+\title{Preamble Title}
+\author{A. Author}
+\begin{document}
+\renewcommand{\thetitle}{Custom Title}
+\maketitle
+TT[\thetitle] TA[\theauthor] TD[\thedate]
+\end{document}

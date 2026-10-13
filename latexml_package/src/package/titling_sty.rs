@@ -56,11 +56,14 @@ LoadDefinitions!({
   // `\@author`, `\@date`) at `\begin{document}` and again at `\maketitle` (amsart's `\title`/`\author` go in the
   // body), replacing a class's placeholder (IEEEtran's no-op `\theauthor`); nothing stored, an undefined name is
   // defined empty, as Perl and the kernel before this left it after `\maketitle`. A name whose slot fired is the
-  // slot's; a paper's own `\thetitle` with no `\title` is kept.
+  // slot's; the `\maketitle` run acts only on a field changed since `\begin{document}` (`\lx@titling@seen@<x>`), so a
+  // paper's own `\thetitle` — with no `\title`, or redefined in the body — is kept.
   RawTeX!(r"\def\lx@titling@fallback#1#2{\@ifundefined{lx@titling@fired@#2}{%
+\expandafter\ifx\csname @#2\expandafter\endcsname\csname lx@titling@seen@#2\endcsname\else
+\global\expandafter\let\csname lx@titling@seen@#2\expandafter\endcsname\csname @#2\endcsname
 \protected@edef\lx@titling@tmp{\csname @#2\endcsname}%
 \ifx\lx@titling@tmp\@empty\@ifundefined{#1}{\global\expandafter\let\csname #1\endcsname\@empty}{}%
-\else\csname lx@titling@#2\endcsname{\csname @#2\endcsname}\fi}{}}
+\else\csname lx@titling@#2\endcsname{\csname @#2\endcsname}\fi\fi}{}}
 \def\lx@titling@fallbacks{\lx@titling@fallback{thetitle}{title}\lx@titling@fallback{theauthor}{author}%
 \lx@titling@fallback{thedate}{date}}
 \AtBeginDocument{\lx@titling@fallbacks}");

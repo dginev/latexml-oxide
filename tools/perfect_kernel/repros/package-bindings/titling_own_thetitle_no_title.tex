@@ -1,0 +1,13 @@
+% witness: none (review of 65z r5); a paper's own \thetitle and no \title, under amsart
+% oracle:  pdflatex 0 errors; titling only sets \thetitle as \title runs, so the paper's definition stands: TT[Own Title]
+% engines: rust 65z r4 = TT[] (the begin-document fallback defined it from the empty \@title)
+% expect:  0 errors; "TT[Own Title] TA[A. Author] TD[]" in the body
+% status:  RED -> GREEN (65z r6)
+\documentclass{amsart}
+\usepackage{titling}
+\newcommand{\thetitle}{Own Title}
+\author{A. Author}
+\begin{document}
+\maketitle
+TT[\thetitle] TA[\theauthor] TD[\thedate]
+\end{document}

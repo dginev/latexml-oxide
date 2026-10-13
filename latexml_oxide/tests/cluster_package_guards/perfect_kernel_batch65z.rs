@@ -112,7 +112,31 @@ fn titling_under_class_and_package_setters() {
     ),
   ] {
     let xml = convert(tex);
-    assert_contains(&xml, &["TT[My Title] TA[A. Author]"]);
+    assert_contains(&xml, &[">TT[My Title] TA[A. Author]</p>"]);
+  }
+}
+
+/// A paper's own `\thetitle` stands where titling would not set it: with no `\title` at all, and redefined after
+/// `\begin{document}` (the `\maketitle` fallback acts only on a field changed since; amsart, whose setter reaches no
+/// slot).
+#[test]
+fn titling_keeps_a_papers_own_thetitle() {
+  for (tex, text) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/titling_own_thetitle_no_title.tex"
+      ),
+      ">TT[Own Title] TA[A. Author] TD[]</p>",
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/titling_own_thetitle_renewed.tex"
+      ),
+      ">TT[Custom Title] TA[A. Author] TD[]</p>",
+    ),
+  ] {
+    let xml = convert(tex);
+    assert_contains(&xml, &[text]);
   }
 }
 
