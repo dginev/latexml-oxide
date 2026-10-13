@@ -1,0 +1,13 @@
+% witness: 2103.15271, 1309.5701, 2407.19269 (`\widebar` over `\cc@style`), 2508.19844, 1904.08011
+%   (`\cc@accent {"705E}{p}` written to the .bbl); run 340: 98 + 56 first errors
+% oracle:  pdflatex 0 errors; a wide bar over x and a hat over p
+% engines: rust 65int7 = 2 errors (`\cc@style`, `\cc@accent` undefined)
+% expect:  0 errors; the second formula an XMApp of the hat accent (U+005E) on p
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{accents}
+\makeatletter
+\def\widebar{\accentset{{\cc@style\underline{\mskip10mu}}}}
+\begin{document}
+$\widebar{x}$ and $\cc@accent {"705E}{p}$.
+\end{document}

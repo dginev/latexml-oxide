@@ -33,6 +33,15 @@ LoadDefinitions!({
   DefRegister!("\\droptitle" =>       Glue::new(0));
   DefRegister!("\\thanksmarkwidth" => Glue!("1.8em"));
   DefRegister!("\\thanksmargin" =>    Glue!("-1.8em"));
+  // titling.sty:245-268 appends to `\title`, `\author` and `\date` the setting of `\thetitle`, `\theauthor`
+  // and `\thedate`: the argument without its `\thanks` (and with `\and` as a comma), usable before
+  // `\maketitle` (a custom title page's `\LARGE\thetitle`). The kernel `\title` (locked) stores the
+  // argument in `\@title`; these read it there, with titling's redefinitions applied as they are read.
+  // `\maketitle` then fixes them (below). Run 340: 62 first errors (witnesses 1904.02630, 2008.03410,
+  // 2008.01842).
+  RawTeX!(r"\def\thetitle{{\let\thanks\@gobble\let\thanksmark\@gobble\let\thanksgap\@gobble\@title}}
+\def\theauthor{{\let\thanks\@gobble\def\and{\unskip, }\let\thanksmark\@gobble\let\thanksgap\@gobble\@author}}
+\def\thedate{{\let\thanks\@gobble\let\thanksmark\@gobble\let\thanksgap\@gobble\@date}}");
   Let!("\\lx@titling@maketitle", "\\maketitle");
   DefMacro!("\\maketitle",
     "\\global\\let\\theauthor\\@author\\global\\let\\thedate\\@date\\global\\let\\thetitle\\@title\\lx@titling@maketitle");

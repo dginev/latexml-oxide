@@ -181,6 +181,33 @@ LoadDefinitions!({
     "\\Iac OptionalMatch:*",
     "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@Iac"
   );
+  // acronym.sty:624-637 `\@iaci{<acronym>}`, the indefinite article `\iac`/`\Iac` put before the acronym:
+  // the one `\acrodefindefinite`/`\newacroindefinite` gave it (`\fn@<acronym>@IL` before the long form,
+  // the first use or under `dua`; `\fn@<acronym>@IS` once used), else "a"; `\@firstupper@maybe` (:212-218)
+  // capitalizes it under `\ifAC@upper`. :208-211 `\@firstupper{<text>}` capitalizes the first character
+  // of its expansion (xstring's `\StrSplit`), as `\Iac` uses it. Perl's binding calls both and defines
+  // neither (acronym.sty.ltxml:103-118, the definition commented out). Run 340: `\@iaci` 110, `\@firstupper`
+  // 11 first errors (witnesses 1904.05584, 2406.06101, 2406.05175, 2407.19212, 1708.09121, 2411.15479).
+  DefConditional!("\\ifAC@upper");
+  DefMacro!("\\lx@AC@ifused{}{}{}", sub[(id, used, unused)] {
+    let key = s!("ACROUSED@{}", id.to_string());
+    Ok(if with_value(&key, |v| v.is_some()) { used } else { unused })
+  });
+  RawTeX!(
+    r"\newcommand*{\@iaci}[1]{\ifcsname fn@#1@IL\endcsname%
+\ifAC@dua\@firstupper@maybe{\csname fn@#1@IL\endcsname}%
+\else\lx@AC@ifused{#1}{\csname fn@#1@IS\endcsname}{\@firstupper@maybe{\csname fn@#1@IL\endcsname}}\fi%
+\else a\fi}
+\newcommand{\@firstupper@maybe}{\ifAC@upper\expandafter\@firstupper\else\expandafter\@firstofone\fi}
+\newcommand{\@firstupper}[1]{\begingroup\protected@edef\lx@AC@tmp{#1}\expandafter\lx@AC@firstupper\lx@AC@tmp\@empty\@nil}
+\def\lx@AC@firstupper#1#2\@nil{\endgroup\MakeUppercase{#1}#2}"
+  );
+  // acronym.sty:127 `\AtBeginDocument{\providecommand\texorpdfstring[2]{#1}}` — the package's own
+  // `\texorpdfstring`, which papers loading acronym without hyperref call (run 340: 17 first errors,
+  // witnesses 2508.18123, 2406.15258, 2303.16307).
+  RawTeX!(
+    r"\AtBeginDocument{\providecommand\texorpdfstring[2]{#1}\providecommand\pdfstringdefDisableCommands[1]{}}"
+  );
   DefMacro!(
     "\\@iac{}",
     "\\@iaci{#1} \\ifAC@starred\\ac*{#1}\\else\\ac{#1}\\fi"
@@ -323,9 +350,11 @@ LoadDefinitions!({
      </ltx:glossarydefinition>"
   );
 
+  // The indefinite articles are also `\fn@<acronym>@IS`/`@IL`, which `\@iaci` reads: acronym.sty:348-351
+  // `\newacroindefinite` defines them, `\acrodefindefinite` (:352-356) through the .aux (one pass here).
   DefMacro!(
     "\\acrodefindefinite{}{}{}",
-    "\\lx@acro@phrase{#1}{short-indefinite}{#2}\\lx@acro@phrase{#1}{long-indefinite}{#3}"
+    "\\expandafter\\gdef\\csname fn@#1@IS\\endcsname{#2}\\expandafter\\gdef\\csname fn@#1@IL\\endcsname{#3}\\lx@acro@phrase{#1}{short-indefinite}{#2}\\lx@acro@phrase{#1}{long-indefinite}{#3}"
   );
   Let!("\\acroindefinite", "\\acrodefindefinite");
   Let!("\\newacroindefinite", "\\acrodefindefinite");

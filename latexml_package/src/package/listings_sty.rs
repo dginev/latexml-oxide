@@ -2987,6 +2987,27 @@ LoadDefinitions!({
   // listings.sty:291 \let\lstloadaspects\lst@RequireAspects
   Let!("\\lstloadaspects", "\\lst@RequireAspects");
 
+  // listings' internals that documents' literate replacements, styles and patches read (the binding
+  // reimplements listings, so none ran before):
+  // - listings.sty:24-26 `\lst@CheckVersion{<version>}{<code>}`, which runs `<code>` unless listings is
+  //   that version (the shipped lstpatch.sty for 1.3 skips itself: `\lst@CheckVersion{1.3}{… \endinput}`;
+  //   run 340: 81 first errors, witnesses 2103.02487, 1310.1056, 2008.00343), `\lst@version` (:26, TL 2025's 1.11a);
+  // - :405-414, :458-459 `\lst@mode` (a count) and the modes `\lst@nomode`, `\lst@Pmode`, `\lst@GPmode`
+  //   (chardefs 0, 1, 2), which a literate replacement tests to color only outside strings and comments
+  //   (`\ifnum\lst@mode=\lst@Pmode\relax{\color{…}#1}\else#1\fi`; run 340: 42 first errors, witnesses
+  //   2508.14132, 2508.16318, 1811.09592) — never `\lst@Pmode` here, so the replacement's text as written;
+  // - :481 `\lst@token` (toks) and `\lst@length`, the current token, which keyword styles rewrite
+  //   (`\uppercase\expandafter{\expandafter\lst@token\expandafter{\the\lst@token}}`; run 340: 17 first errors,
+  //   witnesses 2004.05517, 2209.11103, 2109.02379) — empty: the binding styles the token itself;
+  // - :993-997 `\lst@SaveOutputDef{<charcode>}\cs`, the output of a character in a listing, saved for a
+  //   replacement to print (`\lst@SaveOutputDef{`_}\underscore@prolog`; run 340: 50 first errors, witnesses
+  //   2508.15166, 2407.20413, 2411.16111): the character itself.
+  RawTeX!(r"\def\lst@version{1.11a}
+\def\lst@CheckVersion#1{\edef\reserved@a{#1}\ifx\lst@version\reserved@a\expandafter\@gobble\else\expandafter\@firstofone\fi}
+\newcount\lst@mode \chardef\lst@nomode=0 \chardef\lst@Pmode=1 \chardef\lst@GPmode=2 \lst@mode=\lst@nomode
+\newtoks\lst@token \newcount\lst@length
+\def\lst@SaveOutputDef#1#2{\begingroup\lccode`\~=#1\relax\lowercase{\endgroup\edef#2{\string~}}}");
+
   // \lstnewenvironment — define new listing environments
   // Perl: DefPrimitive('\lstnewenvironment {}[Number][] DefPlain DefPlain', sub { ... })
   // Creates \begin{name} macro that digests start code (with arg substitution),

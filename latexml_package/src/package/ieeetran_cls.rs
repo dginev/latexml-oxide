@@ -781,6 +781,18 @@ LoadDefinitions!({
 \providecommand{\yesnumber}{\IEEEyesnumber\relax}");
   DefMacro!("\\IEEEstrut[][][]", "");
   DefMacro!("\\IEEEsettopmargin[]{}{}", "");
+  // :1190 `\IEEEsettextheight[<sample>]{<top margin>}{<bottom margin>}`, page geometry too (65z; witnesses 2605.04966, 1905.10846).
+  DefMacro!("\\IEEEsettextheight[]{}{}", "");
+  // The rest of that page-geometry family (65z): :1354 `\IEEEquantizetextheight[<unit>]{<mode>}`, :1113
+  // `\IEEEsettextwidth{<inner>}{<outer>}`, :1133 `\IEEEsetsidemargin{<mode>}{<margin>}`, :1478/:1570
+  // `\IEEEsetheadermargin`/`\IEEEsetfootermargin[<sample>][<text sample>]{<mode>}{<margin>}`; :3506
+  // `\IEEEeqnarraystrutsizeadd{<height>}{<depth>}[<font>]` beside the strut size below.
+  DefMacro!("\\IEEEquantizetextheight[]{}", "");
+  DefMacro!("\\IEEEsettextwidth{}{}", "");
+  DefMacro!("\\IEEEsetsidemargin{}{}", "");
+  DefMacro!("\\IEEEsetheadermargin[][]{}{}", "");
+  DefMacro!("\\IEEEsetfootermargin[][]{}{}", "");
+  DefMacro!("\\IEEEeqnarraystrutsizeadd{}{}[]", "");
   if lookup_definition(&T_CS!("\\IEEEeqnarraystrutsize"))?.is_none() {
     DefMacro!("\\IEEEeqnarraystrutsize{}{}[]", "");
   }

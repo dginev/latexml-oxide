@@ -5,6 +5,9 @@ LoadDefinitions!({
   // Perl: multirow.sty.ltxml
 
   DefPrimitive!("\\multirowsetup", None);
+  // multirow.sty:203: `\bigstrutjot` (`\jot`) unless bigstrut defined it — the `[<bigstruts>]` unit
+  // (:173-190), which tables also set themselves (run 340, witnesses 1906.02927, 2311.04185, hep-ph0507175).
+  RawTeX!(r"\@ifundefined{bigstrutjot}{\newdimen\bigstrutjot \bigstrutjot=\jot}{}");
   // \multirow: structural split into DefMacro wrapper + internal DefPrimitive
   // setup (2-layer pattern). Perl's single DefPrimitive digests all args;
   // Rust separates the alignment-cell state mutation (primitive, below)

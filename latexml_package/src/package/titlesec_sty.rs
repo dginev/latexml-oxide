@@ -335,6 +335,28 @@ LoadDefinitions!({
     )?;
   });
 
+  // titlesec.sty:103-106 the class layer a heading command runs: `\section` is
+  // `\ttl@straightclass{section}`, which reads the star, `[<toc>]` and title (`\ttl@useclass`,
+  // :97-101) and sets the heading at the command's level. Classes and packages call it to set a
+  // heading under the current format: the `\gdef\section{…{\ttl@straightclass{section}}}` that
+  // forbids a starred `\section` after `\maketitle` and the `\ttl@straightclass{subsection}*{…}`
+  // of an end-of-document report (an arXiv-shipped class; run 340: 9 first errors, witnesses
+  // 2411.16470, 2110.09815, 2405.10751). Ours are the kernel `\@startsection` at the command's
+  // level — the kernel one for the standard commands, else the `\titleclass` level, shifted as
+  // `\titleclass` shifts it.
+  DefMacro!("\\ttl@straightclass{}", sub[(name)] { Ok(ttl_class_heading(&name.to_string())) });
+  Let!("\\ttl@partclass", "\\ttl@straightclass");
+  Let!("\\ttl@topclass", "\\ttl@straightclass");
+  Let!("\\ttl@pageclass", "\\ttl@straightclass");
+
+  // titlesec.sty:1384-1414: without the `pagestyles` option, the first `\newpagestyle`,
+  // `\renewpagestyle` or `\widenhead` inputs titleps.sty and runs again (`\providecommand`, so a
+  // titleps already loaded keeps its own). Run 340: 94 first errors (witnesses 2103.06559,
+  // 2103.11758, 1309.0832).
+  RawTeX!(r"\providecommand\newpagestyle{\input{titleps.sty}\newpagestyle}
+\providecommand\renewpagestyle{\input{titleps.sty}\renewpagestyle}
+\providecommand\widenhead{\input{titleps.sty}\widenhead}");
+
   // titlesec.sty L1178 + L1385-1422: the `pagestyles` option (also the
   // deprecated `psfloats`/`pagegrids` aliases) makes titlesec
   // `\input{titleps.sty}` at the end of its load. Mirror that with the
@@ -352,3 +374,33 @@ LoadDefinitions!({
     assign_value("titlesec_explicit", true, Some(Scope::Global));
   }
 });
+
+/// The heading `\ttl@straightclass{<name>}` sets: the kernel `\@startsection{<name>}{<level>}…` (which
+/// reads the star, `[<toc>]` and title), at the kernel level of a standard sectioning command, else at
+/// the `\ttll@<name>` level `\titleclass` recorded, shifted by one in a chapterless class as
+/// `\titleclass` defines the command (titlesec's own level 0 is `\part` there, LaTeX's `\chapter`).
+fn ttl_class_heading(name: &str) -> Tokens {
+  let name = name.trim().trim_start_matches('\\');
+  let level = match name {
+    "part" => Some(-1),
+    "chapter" => Some(0),
+    "section" => Some(1),
+    "subsection" => Some(2),
+    "subsubsection" => Some(3),
+    "paragraph" => Some(4),
+    "subparagraph" => Some(5),
+    _ => None,
+  };
+  let level = level.unwrap_or_else(|| {
+    let shift = if has_chapter_counter() { 0 } else { 1 };
+    do_expand(Tokenize!(TeXString::assembled(s!(
+      "\\csname ttll@{name}\\endcsname"
+    ))))
+    .map(|t| t.to_string().trim().parse::<i64>().unwrap_or(0))
+    .unwrap_or(0)
+      + shift
+  });
+  mouth::tokenize_internal(TeXString::assembled(s!(
+    "\\@startsection{{{name}}}{{{level}}}{{}}{{}}{{}}{{}}"
+  )))
+}

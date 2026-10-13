@@ -1268,6 +1268,17 @@ LoadDefinitions!({
   Let!("\\citeasnoun", "\\cite");
 
   DefMacro!("\\natexlab{}", "#1");
+
+  // natbib.sty:1111-1115: the hyperref hooks natbib's citations and bibliography run, provided empty
+  // (`\hyper@natlinkbreak` its first argument) for hyperref to replace (hyperref_sty.rs defines them
+  // as links). Packages extend them: kotexutf.sty:233-234 (`\usepackage{kotex}` with natbib)
+  // `\expandafter\def\expandafter\hyper@natlinkend\expandafter{\hyper@natlinkend …}`, bibentry.sty:65-66
+  // its `\hyper@natanchorstart`. Run 340: 176 first errors (witnesses 2508.13812, 2508.10710, 2103.13674).
+  RawTeX!(
+    r"\providecommand\hyper@natanchorstart[1]{}\providecommand\hyper@natanchorend{}
+\providecommand\hyper@natlinkstart[1]{}\providecommand\hyper@natlinkend{}
+\providecommand\hyper@natlinkbreak[2]{#1}"
+  );
 });
 
 // Helper: peel a brace-delimited argument from a token list

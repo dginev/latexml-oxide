@@ -1,0 +1,16 @@
+% witness: 1904.05584, 2406.06101, 2406.05175 (`\iac` → `\@iaci`), 2407.19212, 1708.09121 (`\Iac` →
+%   `\@firstupper`), 2508.18123 (`\texorpdfstring`); run 340: 110 + 11 + 17 first errors
+% oracle:  pdflatex 0 errors; "A long short-term memory (LSTM) model. Then an LSTM again and a support vector machine (SVM)"
+% engines: rust 65int7 = errors (`\@iaci`, `\@firstupper`, `\texorpdfstring` undefined)
+% expect:  0 errors; the articles "A" (capitalized long-form IL), "an" (short IS) and "a" (none given) before the acronyms
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{acronym}
+\acrodefindefinite{LSTM}{an}{a}
+\begin{document}
+\Iac{LSTM} model. Then \iac{LSTM} again and \iac{SVM} and \texorpdfstring{text}{pdf}.
+\begin{acronym}
+\acro{LSTM}{long short-term memory}
+\acro{SVM}{support vector machine}
+\end{acronym}
+\end{document}

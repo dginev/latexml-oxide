@@ -1,0 +1,19 @@
+% witness: 2103.06559, 2103.11758, 1309.0832 (`\newpagestyle` without the pagestyles option),
+%   2411.16470, 2110.09815 (`\ttl@straightclass`); run 340: 94 + 9 first errors
+% oracle:  pdflatex 0 errors; sections "1 One" and "2 Two"
+% engines: rust 65int7 = 4 errors (`\newpagestyle`, `\ttl@straightclass` undefined)
+% expect:  0 errors; two numbered sections, titles One and Two
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{titlesec}
+\newpagestyle{main}[\small]{\sethead{}{Head}{}\setfoot{}{\thepage}{}}
+\pagestyle{main}
+\makeatletter
+\def\mysection{\ttl@straightclass{section}}
+\makeatother
+\begin{document}
+\section{One}
+Text.
+\mysection{Two}
+Text.
+\end{document}

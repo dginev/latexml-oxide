@@ -27,6 +27,35 @@ use crate::{
 #[rustfmt::skip]
 LoadDefinitions!({
   define_ieeeeqnarray()?;
+  // IEEEtrantools.sty's commands outside the IEEEeqnarray family, as the IEEEtran class binding has
+  // them (ieeetran_cls.rs; the class carries the same code): :1387 `\yesnumber`, the opposite of
+  // `\nonumber` (`\global\@eqnswtrue` there; `\IEEEyesnumber` on our equation rows); :1904-1920
+  // `\IEEEstrut[<height>][<depth>][<font>]`, a strut; :2756-2760 `\bstctlcite[<aux>]{<key>}`, which
+  // writes the IEEEtran.bst control entry to the .aux; :445 `\IEEEsettextheight[<sample>]{<top>}{<bottom>}`
+  // and the page geometry family papers call together (:365-860): `\IEEEsettextwidth{<inner>}{<outer>}`,
+  // `\IEEEsetsidemargin{<mode>}{<margin>}`, `\IEEEquantizetextheight[<unit>]{<mode>}`,
+  // `\IEEEsettopmargin[<sample>]{<mode>}{<margin>}`, `\IEEEsetheadermargin[<header sample>][<text sample>]{<mode>}{<margin>}`,
+  // `\IEEEsetfootermargin[…][…]{<mode>}{<margin>}`; and the strut settings of an IEEEeqnarray's declarations
+  // (:1769-1935 `\IEEEeqnarraystrutsize{<height>}{<depth>}[<font>]`, `\IEEEeqnarraystrutsizeadd`,
+  // `\IEEEeqnarraystrutmode`, as the class binding defines them) — layout and BibTeX
+  // control, which set nothing here. Run 340 first errors: `\bstctlcite` 88, `\IEEEstrut` 37,
+  // `\yesnumber` 26, `\IEEEsettextheight` 7 (witnesses 2103.12231, 1310.8585, 2008.05910, 1310.1135,
+  // 2008.05838, 2004.10847, 2211.06691, 2310.15756, 2306.14499).
+  RawTeX!(r"\providecommand{\yesnumber}{\IEEEyesnumber\relax}");
+  DefMacro!("\\IEEEstrut[][][]", "");
+  DefMacro!("\\bstctlcite[]{}", "");
+  DefMacro!("\\IEEEsettextheight[]{}{}", "");
+  DefMacro!("\\IEEEsettopmargin[]{}{}", "");
+  DefMacro!("\\IEEEquantizetextheight[]{}", "");
+  DefMacro!("\\IEEEsettextwidth{}{}", "");
+  DefMacro!("\\IEEEsetsidemargin{}{}", "");
+  DefMacro!("\\IEEEsetheadermargin[][]{}{}", "");
+  DefMacro!("\\IEEEsetfootermargin[][]{}{}", "");
+  if lookup_definition(&T_CS!("\\IEEEeqnarraystrutsize"))?.is_none() {
+    DefMacro!("\\IEEEeqnarraystrutsize{}{}[]", "");
+  }
+  DefMacro!("\\IEEEeqnarraystrutsizeadd{}{}[]", "");
+  def_macro_noop("\\IEEEeqnarraystrutmode")?;
 });
 
 /// The IEEEeqnarray family (IEEEtrantools.sty; Perl IEEEtran.cls.ltxml L242-332), shared with the IEEEtran class

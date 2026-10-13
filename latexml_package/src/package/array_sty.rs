@@ -153,4 +153,22 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\arraybackslash", r"\let\\\tabularnewline");
+
+  // array.sty's registers and preamble internals, which raw-loaded packages and classes build their
+  // own alignments with (our tables do not run array's preamble builder): :121-122 `\col@sep` (the
+  // column separation `\array`/`\tabular` set from `\arraycolsep`/`\tabcolsep`, :281/:302) and
+  // `\@acol` (adds it to the preamble); :370 `\NC@list`, array's list of `\newcolumntype` letters
+  // (`\NC@do<letter>`, which raw code reads and extends; ours keeps it empty: our column types do not
+  // run array's `\NC@find` rewriting, :336-362); :430-431 `\extratabsurround` (2pt, the space
+  // `\firsthline`/`\lasthline` add). Callers: eqnarray.sty:38 `{equationarray}`, ltxutil.sty:1122-1244
+  // (revtex's alignment code, raw-loaded by revtex-derived classes), dgruyter_NEW.sty:1480 `\@array`.
+  // Run 340: `\extratabsurround` 88, `\col@sep` 56, `\NC@list` 11, `\@acol` 8 first errors
+  // (witnesses 2508.08881, 2103.15196, 2103.08263, 2407.04867, 2004.09405, 2401.02879, 2006.15794,
+  // 2006.04593). Those callers then reach the rest of array's preamble builder (`\@mkpream`, :385ff:
+  // `\prepnext@tok`, `\@classx`, `\@classz`, `\d@llarbegin`, `\NC@do`), which is not defined: the
+  // next error in each, a separate gap.
+  RawTeX!(r"\newdimen\col@sep
+\def\@acol{\@addtopreamble{\hskip\col@sep}}
+\newtoks\NC@list
+\newlength{\extratabsurround}\setlength{\extratabsurround}{2pt}");
 });

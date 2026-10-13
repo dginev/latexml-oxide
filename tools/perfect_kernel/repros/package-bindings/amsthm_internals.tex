@@ -1,0 +1,18 @@
+% witness: 2103.16309, 0904.2645 (`\thm@headsep`), 2508.18305, 2305.08956 (`\dth@everypar`), 2406.02526,
+%   2110.02925 (`\displaymath@qed`); run 340: 60 + 18 + 22 first errors
+% oracle:  pdflatex 0 errors; a theorem and a proof whose display ends in the QED box
+% engines: rust 65int7 = 3 errors (`\thm@headsep`, `\dth@everypar`, `\displaymath@qed` undefined)
+% expect:  0 errors; the proof's display holds the QED symbol U+220E
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{amsmath,amsthm}
+\makeatletter
+\thm@headsep=.666em
+\dth@everypar=\expandafter{\the\dth@everypar}
+\def\QED{\displaymath@qed}
+\makeatother
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\begin{theorem}A claim.\end{theorem}
+\begin{proof}Indeed \[ x = y. \QED \]\end{proof}
+\end{document}

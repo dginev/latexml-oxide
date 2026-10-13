@@ -74,6 +74,7 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `math-parse` | the math parser: its grammar (signs, bigop operands, fences), cells' punctuation, math ligatures, unparsed-math reporting; green shapes live in `latexml_oxide/tests/parse/` (grouped golden pairs) |
 | `amstex` | AMS-TeX documents (`\input amstex`, `\documentstyle{amsppt}`) read under the LaTeX route: plain's `\end`, amstex.tex's own definitions (oracle: the `amstex` format) |
 | `class-bindings` | names a class (or a package it loads) defines that its binding must own: the K22 census of shipped class copies against run-336 first errors |
+| `package-bindings` | commands and internals a package's real `.sty` defines that its binding must own, because papers (or the raw code they load) call them: run-340 first-error "undefined" names |
 | `paragraph-mode` | mode changes at paragraph boundaries: tex.web §1046-1047 `\par`/`\end{X}` in inline math ("Missing $ inserted"), the formula's end around a stray `}` |
 | `singletons` | one-off package defects whose mechanism has no topic of its own |
 | `stub-dependencies` | a stub binding (a package not interpreted raw) loads what the real package loads, option-driven loads included, and defines its public names; class bindings likewise for their classes |

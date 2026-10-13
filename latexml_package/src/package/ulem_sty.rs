@@ -30,7 +30,14 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMWrap class='ltx_ulem_dotuline'>#1</ltx:XMWrap>)(<ltx:text class='ltx_ulem_dotuline'>#1</ltx:text>)",
     enter_horizontal => true);
 
-  DefMacro!("\\normalem", None, "");
+  // ulem.sty:310-317 `\ULforem` (`\useunder{\uline}{\em}{\emph}`: `\em`/`\emph` underline) and
+  // `\normalem` (back to italics, from the copies ulem takes at load). As Perl's binding, `\em` keeps
+  // its italics at load (ulem's own default is `\ULforem`, :317, unless `[normalem]`); a document's
+  // `\ULforem` switches to underlining, its `\normalem` back (run 340: 109 first errors, witnesses
+  // 2103.16561, 2004.14103, 1811.00488).
+  RawTeX!(r"\let\LA@em\em \let\LA@emph\emph");
+  DefMacro!("\\normalem", None, "\\let\\em\\LA@em \\let\\emph\\LA@emph");
+  DefMacro!("\\ULforem", None, "\\useunder{\\uline}{\\em}{\\emph}");
 
   // ulem L343: \newdimen\ULdepth (initialized to \maxdimen for auto-mode).
   // Witnesses 2406.02021, 2406.18999.
@@ -116,4 +123,12 @@ LoadDefinitions!({
   // xeCJKfntef.sty sets it directly (xdupgthesis, xduugthesis, xduugtp; class
   // census 2026-09-24).
   RawTeX!(r"\newbox\ULC@box");
+  // ulem.sty:63-66 `\ULset`, the underline set-up `\uline` runs before `\ULon` (its leaders at
+  // `\ULdepth`), and :69-73 `\UL@setULdepth`, which sets `\ULdepth` from the font when it is unset
+  // (`\maxdimen`): documents build their own lines from them (`\renewcommand\sout{\bgroup
+  // \color{red}\ULdepth=-.5ex \ULset}`, a red double underline `\UL@setULdepth …\markoverwith{…}\ULon`).
+  // The rule is drawing (as `\markoverwith`): the text is `\ULon`'s. Run 340: `\UL@setULdepth` 16,
+  // `\ULset` 6 first errors (witnesses 2411.10835, 2204.07159, 2109.10013, 0709.1684, 2001.10689, 1706.09467).
+  def_macro_noop("\\UL@setULdepth")?;
+  DefMacro!("\\ULset", "\\UL@setULdepth\\ULon");
 });

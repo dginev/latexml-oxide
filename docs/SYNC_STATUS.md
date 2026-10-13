@@ -854,6 +854,32 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `newtxmath_symbols,stmaryrd_oast,constants_labelled_constants}`, `ams-internals/{amsbsy_binrel_math_atom,mathtools_newcases}`.
   A/B (262 run-340 witnesses, `ab_65y`): errors 701→101, Error status 230→33; the 18 word-count drops are
   error-recovery tokens leaving the math (text outside math equal) and 1307.4858's forward `\Cr`.
+- **65z**: package bindings define the commands and internals their real `.sty` defines that papers, or the raw code
+  they load, call (run-340 first-error "undefined" cluster, row 7). caption: `\subcaptionsetup` (`\captionsetup[sub…]`),
+  `\captionlistentry` (the caption's counter step for a `\label`, no caption), `\captiontext*` (the float's label and
+  text, the panel "(a)" in a subcaption group). bigstrut/multirow: `\bigstrutjot`. natbib: the `\hyper@nat…` hooks
+  (kotex extends them). titlesec: `\newpagestyle`/`\renewpagestyle`/`\widenhead` load titleps; `\ttl@straightclass{X}`
+  is the kernel heading at X's level. titling: `\thetitle`/`\theauthor`/`\thedate` before `\maketitle` (the stored
+  title without `\thanks`). array: `\col@sep`, `\@acol`, `\NC@list`, `\extratabsurround` (raw eqnarray.sty, ltxutil.sty,
+  dgruyter). authblk: the state `\author`/`\affil` keep (`\AB@las`, `\AB@au@str`, `\AB@thenote`, …), which papers'
+  copies of `\affil` read. IEEEtrantools: `\bstctlcite`, `\IEEEstrut`, `\yesnumber`, `\IEEEsettextheight`,
+  `\IEEEsettopmargin` (IEEEtran: `\IEEEsettextheight`). accents: `\cc@accent` (a `\hat` written to the .bbl) and
+  `\cc@style` (`\widebar`). acronym: `\@iaci` (the `\acrodefindefinite` article, which now also defines
+  `\fn@<acr>@IS/IL`), `\@firstupper`, `\texorpdfstring` at begin-document (PERL-ORIGIN: acronym.sty.ltxml calls
+  `\@iaci`/`\@firstupper` undefined). crop: `\CROP@size`, the stock size, the corner marks. enumitem: `\labelindent`,
+  `\enit@format`, `\enit@type` set per list (0/1/2). ulem: `\ULforem`/`\normalem` (switching `\em`), `\ULset`,
+  `\UL@setULdepth`. footmisc: `\DefineFNsymbolsTM`. listings: `\lst@CheckVersion` (shipped lstpatch.sty skips itself),
+  `\lst@mode`/`\lst@Pmode`, `\lst@token`, `\lst@SaveOutputDef`. amsthm: `\thm@headsep`, `\dth@everypar`,
+  `\displaymath@qed`. feynmf/feynmp: `\fmfkeep` in a graph keeps it for `\fmfreuse`; `{fmffile}` sets `\thefmffile`.
+  Witnesses (2-3 per name) in the code comments and repro headers. Residuals: an `\affil` copy's extra text (an
+  `\email` written to `\AB@affillist`) is not in the frontmatter; `\@itemlabel` is still the kernel no-op; footmisc's
+  symbol sets are read, not used (`\fnsymbol` is native); `{fmffile}` opened in the preamble and closed in the body
+  (hep-ph0206138) is an environment-nesting error; the raw alignment code that calls array's internals
+  (eqnarray.sty, revtex's ltxutil.sty, dgruyter) next reaches the rest of array's/latex.ltx's preamble builder
+  (`\@mkpream`: `\prepnext@tok`, `\@classx`, `\@classz`, `\d@llarbegin`, `\NC@do`), undefined; IEEEtrantools' non-eqnarray
+  half (`{IEEEproof}`, `\IEEEQED…`, `{IEEEitemize}`, `\IEEEPARstart`), which the IEEEtran class binding has, is
+  missing from the package binding (2211.06691, 2310.15756). Guards `perfect_kernel_batch65z::*`; repros
+  `package-bindings/*`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

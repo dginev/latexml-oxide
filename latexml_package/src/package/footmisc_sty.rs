@@ -12,6 +12,10 @@ LoadDefinitions!({
   // could define & use these, but...
   DefMacro!("\\DefineFNsymbols OptionalMatch:* {}{}", None);
   DefMacro!("\\setfnsymbol{}",                        None);
+  // footmisc.sty:496-512 `\DefineFNsymbolsTM*{<name>}{<text/math pairs>}`, the text-or-math form of
+  // `\DefineFNsymbols` (a named footnote-symbol set for `\setfnsymbol`), read as that one is
+  // (run 340: 127 first errors, witnesses 1904.04281, 1904.11899, 1107.5789).
+  DefMacro!("\\DefineFNsymbolsTM OptionalMatch:* {}{}", None);
 
   DefMacro!("\\mpfootnotemark",    "\\footnotemark");
   DefMacro!("\\mpfootnoterule",    "\\footnoterule");

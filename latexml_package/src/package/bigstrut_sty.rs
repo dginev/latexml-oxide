@@ -12,4 +12,8 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   def_macro_noop("\\bigstrut[]")?;
+  // bigstrut.sty:28 `\bigstrutjot` (2pt), the strut's extra height/depth, which tables set
+  // (`\setlength{\bigstrutjot}{…}`) and multirow's `[<bigstruts>]` reads (multirow.sty:173-190).
+  // Run 340: 188 first errors (witnesses 2103.02346, 2103.03442, 2103.02074).
+  RawTeX!(r"\@ifundefined{bigstrutjot}{\newdimen\bigstrutjot}{}\bigstrutjot=2pt");
 });

@@ -1,0 +1,16 @@
+% witness: hep-lat0210017, 1411.4662 (`\fmfkeep` in a graph), hep-th9805098, hep-ph0606300 (`\fmfreuse`)
+% oracle:  pdflatex 0 errors but the METAFONT font of the first run (`diags.tfm` not yet made); the kept graph set twice
+% engines: rust 65int7 = 1 error (`feynmf: \fmfkeep outside of fmfgraph`)
+% expect:  0 errors; two feynman-diagram notes, the reused one 40x25 as the kept one
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{feynmf}
+\begin{document}
+\begin{fmffile}{diags}
+\begin{fmfgraph}(40,25)
+\fmfkeep{loop}
+\fmfleft{i}\fmfright{o}\fmf{fermion}{i,o}
+\end{fmfgraph}
+and again \fmfreuse{loop}.
+\end{fmffile}
+\end{document}

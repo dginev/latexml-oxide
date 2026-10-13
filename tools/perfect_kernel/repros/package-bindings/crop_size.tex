@@ -1,0 +1,14 @@
+% witness: 2508.14007, 2406.14864, 2406.10778 (oup-authoring-template.cls `\CROP@size`; run 340: 137 first errors)
+% oracle:  pdflatex 0 errors
+% engines: rust 65int7 = 1 error (`\CROP@size` undefined)
+% expect:  0 errors; the paragraph "Text."
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage[cam]{crop}
+\makeatletter
+\CROP@size{\paperwidth}{\paperheight}
+\renewcommand*\CROP@@ulc{}
+\makeatother
+\begin{document}
+Text.
+\end{document}

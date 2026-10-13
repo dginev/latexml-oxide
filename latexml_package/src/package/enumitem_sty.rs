@@ -7,16 +7,26 @@ use latexml_core::{
 
 use crate::prelude::*;
 
-/// Perl: beginEnumItemize($type, $counter, $keys) — enumitem.sty.ltxml L80-112. `enumerate_type`: the
-/// list is an enumerate (or an enumerate-type `\newlist`), the only kind whose label and ref enumitem
-/// reads for `*` counters (`\enit@enumerate@i`, enumitem.sty:1396-1397); an itemize or description
-/// label is used as written (:1425-1436, :1459ff).
+/// Perl: beginEnumItemize($type, $counter, $keys) — enumitem.sty.ltxml L80-112. `enit_type`: the list's
+/// kind, enumitem's `\enit@type` (enumitem.sty:130, :944 `\let\enit@type#1`): 0 an enumerate (or an
+/// enumerate-type `\newlist`), the only kind whose label and ref enumitem reads for `*` counters
+/// (`\enit@enumerate@i`, enumitem.sty:1396-1397), 1 an itemize, 2 a description; an itemize or
+/// description label is used as written (:1425-1436, :1459ff). The list sets `\enit@type` for its body,
+/// which documents test (`\ifnum\enit@type=\tw@` in an `\inlineitem` built on enumitem's internals;
+/// run 340: 28 first errors, witnesses 2004.08004, 2411.02902, 2303.05561).
 fn begin_enum_itemize(
   itype: &str,
   counter: &str,
-  enumerate_type: bool,
+  enit_type: i64,
   keys: Option<&KeyVals>,
 ) -> Result<SymHashMap<Stored>> {
+  let enumerate_type = enit_type == 0;
+  let kind = match enit_type {
+    0 => "\\z@",
+    1 => "\\@ne",
+    _ => "\\tw@",
+  };
+  let_i(&T_CS!("\\enit@type"), &T_CS!(kind), None);
   let counter_str = if counter.is_empty() { "@item" } else { counter };
   let level = lookup_int(&s!("{counter_str}level")) + 1;
   let postfix = roman_aux(level);
@@ -489,10 +499,14 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
   });
 
   let ln = listname.to_string();
-  let enumerate_type = basetype == "enumerate";
+  let enit_type = match basetype.as_str() {
+    "enumerate" => 0,
+    "description" => 2,
+    _ => 1,
+  };
   let properties: PropertiesClosure = Rc::new(move |args| {
     let kv = extract_keyvals(args);
-    begin_enum_itemize(&ln, &ln, enumerate_type, kv.as_ref())
+    begin_enum_itemize(&ln, &ln, enit_type, kv.as_ref())
   });
 
   // Perl #2798: a block list ends with \par; an INLINE list must NOT \par
@@ -644,6 +658,13 @@ LoadDefinitions!({
   DefKeyVal!("enumitem", "mode", "UndigestedKey");
   DefKeyVal!("enumitem", "align", "UndigestedKey");
   DefKeyVal!("enumitem", "labelindent", "Dimension");
+  // enumitem.sty:139 `\newlength\labelindent`, the list's label indent, which documents set directly
+  // (`\labelindent=10pt`; run 340: 51 first errors, witnesses 2508.14310, 2103.17124, 2411.13397); and
+  // :969 `\let\enit@format\@firstofone`, the `font` key's label format (:448-451), which classes' own
+  // `\makelabel`s apply (`\def\bj@list@makelabel#1{\hfill\enit@format{#1}}`; run 340: 55 first
+  // errors, witnesses 2406.17390, 2407.18801, 2204.10359). Layout only here, at their defaults. The
+  // IEEEtran class binding has `\labelindent` already (its `\IEEElabelindent`), which stays.
+  RawTeX!(r"\@ifundefined{labelindent}{\newlength\labelindent}{}\let\enit@format\@firstofone");
   DefKeyVal!("enumitem", "left", "Dimension");
   DefKeyVal!("enumitem", "leftmargin", "UndigestedKey");
   DefKeyVal!("enumitem", "itemindent", "Dimension");
@@ -679,7 +700,7 @@ LoadDefinitions!({
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("itemize", "@item", false, kv.as_ref())
+        begin_enum_itemize("itemize", "@item", 1, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       mode => "internal_vertical",
@@ -690,7 +711,7 @@ LoadDefinitions!({
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("enumerate", "enum", true, kv.as_ref())
+        begin_enum_itemize("enumerate", "enum", 0, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       mode => "internal_vertical",
@@ -701,7 +722,7 @@ LoadDefinitions!({
       before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("description", "@desc", false, kv.as_ref())
+        begin_enum_itemize("description", "@desc", 2, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       mode => "internal_vertical",
@@ -715,7 +736,7 @@ LoadDefinitions!({
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("inline@itemize", "@item", false, kv.as_ref())
+        begin_enum_itemize("inline@itemize", "@item", 1, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       // Perl #2798: inline lists are inline blocks — internal_vertical but NO
@@ -727,7 +748,7 @@ LoadDefinitions!({
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("inline@enumerate", "enum", true, kv.as_ref())
+        begin_enum_itemize("inline@enumerate", "enum", 0, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       // Perl #2798: inline lists stay inside the surrounding paragraph.
@@ -737,7 +758,7 @@ LoadDefinitions!({
       "<ltx:inline-description xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-description>",
       properties => sub[args] {
         let kv = extract_keyvals(args);
-        begin_enum_itemize("inline@description", "@desc", false, kv.as_ref())
+        begin_enum_itemize("inline@description", "@desc", 2, kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
       // Perl #2798: inline lists stay inside the surrounding paragraph.

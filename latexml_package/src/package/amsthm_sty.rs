@@ -185,6 +185,18 @@ LoadDefinitions!({
     }
   }, peeks_by_futurelet => true);
 
+  // amsthm.sty:177-178 `\thm@headsep` (a skip, 5pt plus1pt minus1pt), the space after a theorem head,
+  // which documents' own `\th@<style>` definitions set (`\thm@headsep=.666em`; run 340: 32 first errors
+  // with amsthm, 28 with amsart, witnesses 2103.16309, 0904.2645, 0811.1810); :180-194 `\dth@everypar`,
+  // the `\everypar` a deferred theorem head installs, which such definitions reset (`\dth@everypar={…}`;
+  // run 340: 18 first errors, witnesses 2508.18305, 2305.08956, 1105.5584) — layout, kept as registers.
+  // :316-327 `\displaymath@qed`, the QED symbol at the end of a display (`\eqno\hbox{\qedsymbol}`), which
+  // documents put in their own displays (`\def\QED{\displaymath@qed}`; run 340: 22 first errors,
+  // witnesses 2406.02526, 2110.02925, 2006.11753): our `\qed`, which sets the symbol in math too.
+  DefRegister!("\\thm@headsep" => Glue!("5pt plus 1pt minus 1pt"));
+  DefRegister!("\\dth@everypar", Tokens!());
+  Let!("\\displaymath@qed", "\\qed");
+
   DefMacro!("\\proofname", "Proof");
   DefPrimitive!("\\th@proof", {
     assign_register("\\thm@headfont",

@@ -708,6 +708,70 @@ LoadDefinitions!({
       Tokens!(T_CS!("\\refstepcounter"), T_BEGIN!(), Explode!("sub"), T_CS!("\\@captype"), T_END!())
     })
   });
+  // caption.sty:633-638 `\subcaptionsetup*[<type>]{<options>}` = `\captionsetup*[sub<type>]{<options>}`: the
+  // options of the sub-captions (of every type when `[<type>]` is absent: `[sub]`, which subcaption's
+  // `\captionsetup[sub]` reads too). Run 340: 148 first errors (witnesses 2508.10437, 2406.09241, 2406.12144).
+  DefMacro!("\\subcaptionsetup OptionalMatch:* []{}", "\\captionsetup#1[sub#2]{#3}");
+  // caption.sty:396-413 `\captionlistentry*[<type>]{<entry>}`: the list-of entry of a float that has no
+  // `\caption`; unstarred it steps the counter as a caption would (`\caption@refstepcounter`, :402-410),
+  // so a `\label` after it refers to the float. In a float that is `\phantomcaption`'s step keeping the
+  // float's list entry (an `[<type>]` steps that counter, as `\caption@refstepcounter@`); starred, only
+  // the entry. The entry's text is the List of Figures' only and has no place in the document (the
+  // list is built from the floats). Outside a float with no `[<type>]`, caption's
+  // `\caption@OutsideFloat` error. In subcaption a sub-float's entry steps the sub-counter
+  // (caption.sty:660 `\let\captionlistentry\caption@sublistentry`), which `\@captype` is here.
+  // Run 340: 207 first errors (witnesses 2604.10403, 2103.15767, 2103.01737).
+  DefMacro!("\\captionlistentry OptionalMatch:* []{}", sub[(star, captype, _entry)] {
+    if star.is_some() {
+      return Ok(Tokens!());
+    }
+    if let Some(captype) = captype {
+      let mut tokens = vec![T_CS!("\\refstepcounter"), T_BEGIN!()];
+      tokens.extend(captype.unlist());
+      tokens.push(T_END!());
+      return Ok(Tokens::new(tokens));
+    }
+    Ok(if !has_meaning(&T_CS!("\\@captype")) {
+      Error!("unexpected", "\\captionlistentry", "\\captionlistentry outside float");
+      Tokens!()
+    } else if lookup_bool("lx@in@float") {
+      Tokens!(T_CS!("\\lx@donecaptiontrue"), T_CS!("\\@@add@caption@counters"))
+    } else {
+      Tokens!(T_CS!("\\refstepcounter"), T_BEGIN!(), T_CS!("\\@captype"), T_END!())
+    })
+  });
+  // caption.sty:415-428 `\captiontext*[<number>]{<text>}`: the float's caption typeset without a counter
+  // step or a list entry — unstarred the caption (`\caption@@make`), starred its label and text alone
+  // (caption3.sty:1661 `\caption@@@make`, no box), as papers set a panel's "(a)" over its graphic with
+  // `\captiontext*{}` after a `\phantomcaption`. `[<number>]` is the counter's value for it, in a group
+  // (`\caption@@@text`). The label is the type's `\lx@fnum@@`, as a caption's; a sub-float's
+  // (`\@captype` a sub-type in subcaption's groups and sub-floats: caption.sty:661
+  // `\let\captiontext\caption@subtext`) is its "(a)". Outside a float, caption's `\caption@OutsideFloat`
+  // error, the arguments dropped. Run 340: 10 first errors (witnesses 2407.10358, 2409.07679, 2309.05387).
+  DefMacro!("\\captiontext OptionalMatch:* []{}", sub[(_star, number, text)] {
+    if !has_meaning(&T_CS!("\\@captype")) {
+      Error!("unexpected", "\\captiontext", "\\captiontext outside float");
+      return Ok(Tokens!());
+    }
+    let captype = do_expand(T_CS!("\\@captype"))?.to_string();
+    let captype = captype.trim();
+    let mut tokens = vec![T_CS!("\\begingroup")];
+    if let Some(number) = number {
+      tokens.push(T_CS!(&s!("\\c@{captype}")));
+      tokens.push(T_OTHER!("="));
+      tokens.extend(number.unlist());
+      tokens.push(T_CS!("\\relax"));
+    }
+    tokens.extend([T_CS!("\\lx@fnum@@"), T_BEGIN!()]);
+    tokens.extend(Explode!(captype));
+    tokens.push(T_END!());
+    if !text.is_empty() {
+      tokens.push(T_SPACE!());
+      tokens.extend(text.unlist());
+    }
+    tokens.push(T_CS!("\\endgroup"));
+    Ok(Tokens::new(tokens))
+  });
 });
 
 /// caption.sty:504-511, :519-533: a float continues only the type stepped last
