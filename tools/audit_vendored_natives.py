@@ -134,7 +134,7 @@ AUDITED = {
     # ---- Build-tooling and test fixtures: native files present, NOT linked into any
     # shipped binary, so no disclosure is owed. Each verdict verified by looking at the
     # file, not at the name. Recorded so the gate stays loud on substance and quiet here.
-    "cc": (("1.4.0", "1.4.2", "1.4.3", "1.4.4"),
+    "cc": (("1.4.0", "1.4.2", "1.4.3", "1.4.4", "1.8.0"),
         "src/detect_compiler_family.c -- a probe compiled to identify the host "
         "toolchain, never linked into our binary. The crate itself is pure Rust. "
         "Re-verified at 1.4.0: still the only non-Rust file in the crate, and still "
@@ -146,7 +146,12 @@ AUDITED = {
         "MIT OR Apache-2.0 unchanged. 1.4.3 -> 1.4.4 verified 2026-08-21: "
         "detect_compiler_family.c still the ONLY native file, sha256 unchanged "
         "(97ca4b021495611e828becea6187add37414186a16dfedd26c2947cbce6e8b2f), "
-        "license MIT OR Apache-2.0 unchanged.",
+        "license MIT OR Apache-2.0 unchanged. 1.4.4 -> 1.8.0 verified 2026-10-13: "
+        "detect_compiler_family.c byte-identical; one new native file, "
+        "src/detect_cpp_stdlib.cpp (tool.rs:452 include_bytes!), the same probe shape "
+        "for the C++ standard library: an #include <cstddef> and one #ifdef/#pragma "
+        "message, so diagnostics only, no object code, never linked; license MIT OR "
+        "Apache-2.0 unchanged.",
     ),
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
@@ -209,7 +214,7 @@ AUDITED = {
         "-- e.g. MiKTeX -- not a build-time one, so it does not avoid the static "
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
-    "libxml": ("0.3.21",
+    "libxml": (("0.3.21", "0.3.22"),
         "Binds libxml2 -- (c) Daniel Veillard, MIT -- whom the crate's own 'MIT' "
         "field does not name as holder. Linked via pkg-config + rustc-link-lib "
         "rather than compiled here, and STATIC on every release leg "
@@ -218,7 +223,10 @@ AUDITED = {
         "0.3.19 -> 0.3.21 diffed 2026-08-02 (crates.io tarballs): pure-Rust wrapper "
         "changes only (set_linked visibility, get_namespaces array free); build.rs "
         "still link-only, zero cc::Build, no native files, license field 'MIT' "
-        "unchanged."
+        "unchanged. 0.3.21 -> 0.3.22 diffed 2026-10-13 (registry sources): build.rs "
+        "and src/wrapper.h (the bindgen header) byte-identical, Rust-only changes "
+        "(the HTML well-formedness error handler removed from c_helpers.rs), license "
+        "field 'MIT' unchanged."
     ),
     "libxslt": ("0.1.5",
         "Binds libxslt/libexslt -- (c) Daniel Veillard, MIT -- same shape as libxml "
@@ -291,6 +299,8 @@ FINGERPRINTS = {
     "cc": {
         "src/detect_compiler_family.c":
             "97ca4b021495611e828becea6187add37414186a16dfedd26c2947cbce6e8b2f",
+        "src/detect_cpp_stdlib.cpp":
+            "b2ef811b2eaec1bfa305241d3a2ba26ed4c9898dc3a5a076a4ec6fcab8410540",
     },
 }
 
