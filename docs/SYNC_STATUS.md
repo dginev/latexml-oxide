@@ -982,8 +982,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\intertext`, `\vspace`, a token meaning `\cr`/`\crcr`/`\\` or a macro expanding to one), the row test needs an
   alignment opened in the display's own math, and a delimited `{…}` argument loses its braces (`\tag{"A"}$$` quoted). In
   the `$$` form a `\par` abandons the call with TeX's runaway error and a `}` closing an outer group with TeX's two
-  (tex.web §395-396: "extra }", then the inserted `\par`'s runaway; the input goes on with `\par }`); a row's tag takes
-  no argument, so there a `\par` or such a `}` ends the tag cell without error. In a LaTeX equation row a braced
+  (tex.web §395-396: "extra }", then the inserted `\par`'s runaway; the input goes on with `\par }`); a row's tag (a
+  LaTeX equation row's too) takes no argument, so there a `\par` outside the tag's own groups, or such a `}`, ends the
+  tag cell without error; a `\par` inside the tag's own balanced group stays in its text (`\tag{3\par}\\`), and a group
+  still open at the row's end (`\tag{5\\ c&=d\endalign$$`) runs away: one Error at the next `\par` (or the file's
+  end), the tag keeps its text up to the row's end with the group closed, and the rest is read again, so no later
+  paragraph or `\enddocument` is lost (r3 read them into the tag); the shapes where TeX errs and ours recovers are OD
+  #575. In a LaTeX equation row a braced
   `\tag{…}`/`\tag*{…}` is amsmath's (an `\input amstex` or `\NoBlackBoxes`-autoloaded LaTeX document read `a=b` into the
   tag before 66e r3). r2 A/B (66d6 → 66e r2, 122 AMS-TeX zips): E 721 → 692, F 5 → 5, no paper worse, the 17 r1
   regressions (math9412232, hep-th9308082, hep-th9206021, hep-th9111004, 1102.5649, …) back to 66d6's counts or better;

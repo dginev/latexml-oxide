@@ -190,7 +190,7 @@ fn plain_amstex_tags_need_no_latex_pool() {
 /// A row's tag ends at every AMS-TeX row ender, not only `\\`: `\displaybreak`, `\allowdisplaybreak` (amstex.tex:613-614
 /// `\crcr\noalign`), `\vspace` (`\vspace@`, amstex.rs), and a macro whose expansion starts with `\\` (`\def\nl{\\}`).
 /// The tag was "(1 c=d)". (pdftex errs on a row ender right after a tag here: the measuring pass's tag cell is
-/// `\eat@{##}`, amstex.tex:655; the recovery keeps the tag to its number.)
+/// `\eat@{##}`, amstex.tex:655; the recovery keeps the tag to its number, OXIDIZED_DESIGN_DIVERGENCES #575.)
 #[test]
 fn amstex_row_tag_ends_at_every_row_ender() {
   let (log, xml) = convert_counted(
@@ -312,6 +312,8 @@ fn amstex_display_tag_in_an_halign_cell_reads_to_the_display_end() {
 /// `{$$ a=b\tag 1}$$ x $$`, then "Missing $ inserted" and "Display math should end with $$" for the `\par` in the
 /// display; ours ignores a `\par` in math (as Perl), so the `}` ends the display with "Extra }, or forgotten $": 3
 /// errors for pdftex's 4. TeX drops the call, so the tag is dropped; `a=b` and `x` survive, each in its display.
+/// The `\par` in the first display's `tex="a=b\par"` is the one §395's recovery inserted before the `}`, not the
+/// author's; it is harmless (a `\par` in math is ignored, as in Perl).
 #[test]
 fn amstex_tag_argument_errors() {
   let (log, xml) = convert_counted(
@@ -363,10 +365,16 @@ fn amstex_tag_argument_errors() {
 }
 
 /// A row's `\tag` takes no argument (`\def\tag{\global\tag@true…&&}` in `\align`, amstex.tex:633-635; `\def\tag{&}`
-/// in `\gather`, :797), so it raises no runaway or "extra }" error: a `\par` (outside the tag's own groups) or a `}`
-/// closing a group opened before it ends the tag cell, and the row goes on. (pdftex errs on each: `\align` reads its
-/// body as an argument, "Paragraph ended before \align was complete"; `a&={b\tag 2} c` "Missing } inserted"; ours
-/// recovers the tag, KNOWN_PERL_ERRORS #643.)
+/// in `\gather`, :797), so it raises no runaway or "extra }" error: a `\par` outside the tag's own groups, or a `}`
+/// closing a group opened before it, ends the tag cell, and the row goes on; a `\par` inside the tag's own group stays
+/// in its text when the group closes before the row ends (`\tag{3\par}\\`). A group that is still open at the row's
+/// end (`\tag{5\\ c&=d\endalign$$`) runs away: at the next `\par` (or the file's end) the tag raises TeX's runaway
+/// error, keeps the text before the row's end with its group closed, and the input goes on from that end, so the next
+/// row, the alignment, the paragraphs after it and `\enddocument` are read as they are (r3 read them all into the
+/// tag, or to the file's end). pdftex errs on each shape and recovers none: `\align` reads its body as a non-`\long`
+/// argument (amstex.tex:667, :687), "Paragraph ended before \align was complete" (or "Forbidden control sequence" at
+/// the `\outer` `\enddocument`) and two display-math errors; `a&={b\tag 2} c` cascades to 100 errors and no PDF.
+/// OXIDIZED_DESIGN_DIVERGENCES #575.
 #[test]
 fn amstex_row_tag_cell_ends_at_par_and_extra_brace() {
   let (log, xml) = convert_counted(
@@ -413,6 +421,91 @@ fn amstex_row_tag_cell_ends_at_par_and_extra_brace() {
       "{id}: {row}\n{xml}"
     );
   }
+  assert_eq!(xml.matches("<tags>").count(), 3, "{xml}");
+  // the unbalanced group: a paragraph follows the display, or `\enddocument` right after it
+  for (tex, message, later) in [
+    (
+      "\\input amstex\n\\input amsppt.sty\n\\document\n$$\\align a&=b\\tag{5\\\\ c&=d\\endalign$$\n\n\
+       Later {para}graph.\n\nLast paragraph.\n\\enddocument\n",
+      "Paragraph ended before \\tag was complete",
+      true,
+    ),
+    (
+      "\\input amstex\n\\input amsppt.sty\n\\document\n$$\\align a&=b\\tag{5\\\\ c&=d\\endalign$$\n\\enddocument\n",
+      "File ended while scanning use of \\tag",
+      false,
+    ),
+  ] {
+    let (log, xml) = convert_counted(tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+    assert!(log.contains(message), "{log}");
+    assert_tags_on(
+      &xml,
+      "id1.1.1",
+      "<tags>\n          <tag>(5)</tag>\n          <tag role=\"refnum\">5</tag>\n        </tags>",
+    );
+    assert!(
+      equation(&xml, "id1.1.1").contains("<Math tex=\"\\displaystyle a=b\" text=\"a = b\""),
+      "{xml}"
+    );
+    let eq = equation(&xml, "id1.1.2");
+    assert!(
+      eq.contains("<Math tex=\"\\displaystyle c=d\" text=\"c = d\"") && !eq.contains("<tags>"),
+      "{xml}"
+    );
+    assert_eq!(xml.matches("<tags>").count(), 1, "{xml}");
+    if later {
+      assert_eq!(
+        element(&xml, "<para xml:id=\"id2\">", "</para>"),
+        "<para xml:id=\"id2\">\n<p xml:id=\"id2.1\">Later paragraph.</p>\n</para>"
+      );
+      assert_eq!(
+        element(&xml, "<para xml:id=\"id3\">", "</para>"),
+        "<para xml:id=\"id3\">\n<p xml:id=\"id3.1\">Last paragraph.</p>\n</para>"
+      );
+    }
+    assert!(xml.trim_end().ends_with("</document>"), "{xml}");
+  }
+}
+
+/// A LaTeX equation row with the AmSTeX pool loaded is a row too: no `\tag#1$$` governs it, so a `}` closing a group
+/// opened before an unbraced `\tag` ends the tag (amsmath's, `\lx@amstex@ams@tag`) without the `$$` form's "extra }"
+/// and runaway errors (r3 raised two per tag and put a `\par` in the row). A braced `\tag{…}` there is amsmath's
+/// before this test (`amstex_braced_tag_in_latex_equation_is_amsmaths`).
+#[test]
+fn amstex_tag_in_latex_equation_row_ends_at_extra_brace() {
+  let (log, xml) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\NoBlackBoxes\n\\begin{document}\n\
+     \\begin{align} a&={b\\tag 2} c\\\\ e&=f\\end{align}\n\
+     \\begin{equation} {a\\tag 6} b\\end{equation}\n\\end{document}\n",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (id, n, math) in [
+    (
+      "S0.Ex1",
+      "2",
+      "<Math tex=\"\\displaystyle a={b}c\" text=\"a = b * c\"",
+    ),
+    (
+      "S0.Ex2",
+      "6",
+      "<Math mode=\"display\" tex=\"{a}b\" text=\"a * b\"",
+    ),
+  ] {
+    let eq = equation(&xml, id);
+    assert!(
+      eq.contains(&format!("<tag>({n})</tag>"))
+        && eq.contains(&format!("<tag role=\"refnum\">{n}</tag>")),
+      "{id}\n{xml}"
+    );
+    assert!(eq.contains(math), "{id}: {math}\n{xml}");
+  }
+  // the align's second row keeps its own number
+  let eq = equation(&xml, "S0.E1");
+  assert!(
+    eq.contains("<tag role=\"refnum\">1</tag>") && eq.contains("<Math tex=\"\\displaystyle e=f\""),
+    "{xml}"
+  );
   assert_eq!(xml.matches("<tags>").count(), 3, "{xml}");
 }
 

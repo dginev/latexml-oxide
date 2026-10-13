@@ -17118,3 +17118,34 @@ redefinition, and `\title[\shorttitle]{…}` then set `\@shorttitle` to the alia
 **Rust** (batch 66d): the two aliases are kernel stubs (`DefinitionOrigin::Stub`), which `\newcommand` treats as
 undefined, as the AAAI `\equalcontrib` stubs. Guard `perfect_kernel_batch66d::shorttitle_is_the_documents_own`; repro
 `sectioning-frontmatter/shorttitle_newcommand_by_document`.
+
+### 575. AMS-TeX's `\tag` recovers where TeX errs
+
+AMS-TeX's `\tag` takes its text to the display's `$$` (`\def\tag#1$$`, amstex.tex:597-605) or, in a row, opens the
+row's tag cell without an argument (`\def\tag{\global\tag@true…&&}` in `\align`, :633-635; `\def\tag{&}` in `\gather`,
+:797). Perl's `\let\tag\eqno` (KNOWN_PERL_ERRORS #643) errs on these shapes too, in its own way. Measured with pdftex
+(TL 2025, `\input amstex`, `\input amsppt.sty`, `\document`; each shape followed by a paragraph and `\enddocument`):
+
+| shape (in `$$\align … \endalign$$`) | pdftex | ours |
+|---|---|---|
+| `a&=b\tag 1\displaybreak c&=d` | 3 errors ("Extra alignment tab has been changed to \cr", "Misplaced \crcr", "Misplaced \noalign": the measuring pass's tag cell is `\eat@{##}`, :655); tag "(1c)" | 0 errors, tag "(1)" on its row |
+| `a&=b\tag 4\par\\ c&=d` | 8 errors, from "Paragraph ended before \align was complete" (`\csname align \endcsname#1\endalign`, :667/:687, not `\long`); the alignment is lost | 0 errors: the `\par` ends the tag cell |
+| `a&=b\tag{3\par}\\ c&=d` | 9 errors (the same, and "Too many }'s") | 0 errors: the `\par` stays in the tag's text, `(3)` |
+| `a&={b\tag 2} c\\ e&=f` | 100 errors ("Argument of \maketag@@@@ has an extra }" and "Paragraph ended before \maketag@@@@" twice each, 47 "Missing \cr inserted", 46 "Misplaced \cr", …), Fatal, no PDF | 0 errors: the `}` ends the tag cell, `(2)` |
+| `a&=b\tag{5\\ c&=d` | 3 errors ("Paragraph ended before \align was complete", "Missing $ inserted", "Display math should end with $$"; "Forbidden control sequence found while scanning use of \align" when the `\outer` `\enddocument` follows the display); the alignment is lost | 1 error ("Paragraph ended before \tag was complete", or "File ended while scanning use of \tag"); see below |
+
+TeX's errors on the row shapes are not `\tag`'s: they come from `\align` reading its body as a non-`\long` argument and
+from the measuring pass. Content comes first, so the row tag keeps the author's text and errs only where the tag's text
+cannot end.
+
+**Rust** (batch 66e, amstex.rs `amstex_tag`): in a row (an AMS-TeX alignment's, or a LaTeX equation row's when the
+AmSTeX pool is loaded, which no `\tag#1$$` governs either) a `\par` outside the tag's own groups, or a `}` closing a
+group opened before the tag, ends the tag cell with the text read so far and no error. A `\par` inside the tag's own
+group stays in its text if the group closes before the row's end. If the group is still open at the row's or
+environment's end (`\tag{5\\ c&=d\endalign$$`), then at the next `\par` (or the file's end) the tag raises TeX's runaway
+error under its own name, keeps the text up to the earlier of the group's first `\par` and that end, closes the group,
+and the input is read again from there (`close_runaway_row_tag`, which retracts the kept braces from the alignment
+ledger): the next row, the alignment, every later paragraph and `\enddocument` are kept. The `$$` form keeps TeX's
+errors (tex.web §395-396). Guards `perfect_kernel_batch66e::{amstex_row_tag_ends_at_every_row_ender,
+amstex_row_tag_cell_ends_at_par_and_extra_brace, amstex_tag_in_latex_equation_row_ends_at_extra_brace}`; repro
+`amstex/amstex_row_tag_runaway_group`.

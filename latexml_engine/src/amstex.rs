@@ -719,8 +719,10 @@ fn in_equation_row() -> bool {
 /// `}` closing a group opened before it raises TeX's "extra }" error, backs the `}` up behind an inserted `\par` and
 /// goes on scanning, so the `\par` raises the runaway error too (tex.web §395-396); TeX drops the call and its tag, and
 /// the input goes on with `\par }`. A row's tag takes no argument (`\def\tag{\global\tag@true…&&}` in `\align`,
-/// amstex.tex:633-635; `\def\tag{&}` in `\gather`, :797): there a `\par` outside the tag's own groups, or such a `}`,
-/// ends the tag cell with the text read so far. In a LaTeX equation row a braced `\tag{…}` (`\tag*{…}`) is amsmath's,
+/// amstex.tex:633-635; `\def\tag{&}` in `\gather`, :797; nor does a LaTeX equation row's): there a `\par` outside the
+/// tag's own groups, or such a `}`, ends the tag cell with the text read so far, and a group of the tag still open at
+/// the row's end runs away at the next `\par` ([`close_runaway_row_tag`]; OXIDIZED_DESIGN_DIVERGENCES #575, where TeX
+/// errs on these shapes). In a LaTeX equation row a braced `\tag{…}` (`\tag*{…}`) is amsmath's,
 /// its argument only (an `\input amstex` LaTeX document, or one whose `\NoBlackBoxes` autoloads the AmSTeX pool,
 /// tex.rs).
 fn amstex_tag() -> Result<Vec<Token>> {
@@ -730,22 +732,46 @@ fn amstex_tag() -> Result<Vec<Token>> {
   }
   // in a row (`$$\align` is amsmath's `aligned` inside the display, opened in its math) the text runs to the row's
   // end; in the display itself, to its `$$` (`$$\tag 1 \pmatrix a\\b\endpmatrix$$` puts the matrix in the tag, as TeX
-  // does)
+  // does); a row's tag cell (an AMS-TeX alignment's, or a LaTeX equation row's) is no argument
   let in_row = in_equation || alignment_opened_in_current_math();
-  // the tag cell of an AMS-TeX alignment's row, no argument
-  let row_cell = in_row && !in_equation;
   let mut text: Vec<Token> = Vec::new();
   let mut depth = 0usize;
   let mut delimited = false;
+  // in a row cell, inside a group of the tag: where (index into `text`, and the depth there) the first `\par` and the
+  // first token that would end the cell outside the group were read, while the group is still open
+  let mut first_par: Option<(usize, usize)> = None;
+  let mut first_end: Option<(usize, usize)> = None;
   loop {
-    // TeX abandons a call whose argument runs away (tex.web §392, §395-396): the tag and its text are dropped
+    // TeX abandons a call whose argument runs away (tex.web §392, §395-396): the tag and its text are dropped (a row's
+    // tag keeps what it read, `close_runaway_row_tag`)
     let Some(t) = read_token()? else {
       Error!("expected", "$$", "File ended while scanning use of \\tag");
+      if in_row {
+        close_runaway_row_tag(&mut text, depth, first_par, first_end, None);
+        break;
+      }
       return Ok(Vec::new());
     };
-    if t == T_CS!("\\par") && !(row_cell && depth > 0) {
+    if t == T_CS!("\\par") {
+      if in_row && depth > 0 {
+        // a `\par` inside the tag's own group stays in its text if the group closes before the row ends
+        // (`\tag{3\par}\\`); after a row or environment end, the group never closes (`\tag{3\\ c&=d\endalign$$`
+        // and a paragraph): TeX's runaway error, and the input goes on from that end
+        if first_end.is_none() {
+          first_par.get_or_insert((text.len(), depth));
+          text.push(t);
+          continue;
+        }
+        Error!(
+          "unexpected",
+          "\\par",
+          "Paragraph ended before \\tag was complete"
+        );
+        close_runaway_row_tag(&mut text, depth, first_par, first_end, Some(t));
+        break;
+      }
       unread_one(t);
-      if row_cell {
+      if in_row {
         break;
       }
       Error!(
@@ -755,22 +781,28 @@ fn amstex_tag() -> Result<Vec<Token>> {
       );
       return Ok(Vec::new());
     }
+    // `$$`, a display end, or (in a row) the row's or environment's end
+    let ends = if t == T_MATH!() {
+      match read_token()? {
+        Some(next) => {
+          let display_end = next == T_MATH!();
+          unread_one(next);
+          display_end
+        },
+        None => false,
+      }
+    } else {
+      amstex_tag_display_end(&t) || (in_row && amstex_tag_row_end(&t))
+    };
     if depth == 0 {
-      if t == T_MATH!() {
-        match read_token()? {
-          Some(next) if next == T_MATH!() => {
-            unread_vec(vec![t, next]);
-            delimited = true;
-            break;
-          },
-          Some(next) => unread_one(next),
-          None => {},
+      if ends {
+        if t == T_MATH!() {
+          delimited = true;
         }
-      } else if amstex_tag_display_end(&t) || (in_row && amstex_tag_row_end(&t)) {
         unread_one(t);
         break;
       } else if t.get_catcode() == Catcode::END {
-        if row_cell {
+        if in_row {
           unread_one(t);
           break;
         }
@@ -784,10 +816,28 @@ fn amstex_tag() -> Result<Vec<Token>> {
         unread_vec(vec![T_CS!("\\par"), t]);
         return Ok(Vec::new());
       }
+    } else if ends && in_row {
+      // a `\par` read in the group before this end: the group cannot close before the row ends
+      if first_par.is_some() {
+        Error!(
+          "unexpected",
+          "\\par",
+          "Paragraph ended before \\tag was complete"
+        );
+        close_runaway_row_tag(&mut text, depth, first_par, first_end, Some(t));
+        break;
+      }
+      first_end.get_or_insert((text.len(), depth));
     }
     match t.get_catcode() {
       Catcode::BEGIN => depth += 1,
-      Catcode::END => depth -= 1,
+      Catcode::END => {
+        depth -= 1;
+        if depth == 0 {
+          first_par = None;
+          first_end = None;
+        }
+      },
       _ => {},
     }
     text.push(t);
@@ -854,6 +904,39 @@ fn amstex_tag() -> Result<Vec<Token>> {
     out.extend([T_END!(), T_END!()]);
   }
   Ok(out)
+}
+
+/// The recovery of a row tag cell whose group runs away (its `{` not closed before the row's or environment's end, a
+/// `\par` read in it; or the file's end): the text read from the earlier of the group's first `\par` and its first
+/// cell end (`first_par`, `first_end`: the index into `text` and the depth there) is put back with the token that
+/// stopped the scan (`current`), and the groups open there are closed, so the row, the alignment and every later
+/// paragraph are read again as if the tag had ended there. TeX's `\align` reads its body as a non-`\long` argument
+/// (amstex.tex:667, :687 `\csname align \endcsname#1\endalign`) and drops it at that `\par` ("Paragraph ended before
+/// \align was complete", then "Missing $ inserted" and "Display math should end with $$" for the `\par` in the
+/// display), OXIDIZED_DESIGN_DIVERGENCES #575.
+fn close_runaway_row_tag(
+  text: &mut Vec<Token>,
+  depth: usize,
+  first_par: Option<(usize, usize)>,
+  first_end: Option<(usize, usize)>,
+  current: Option<Token>,
+) {
+  let earliest = match (first_par, first_end) {
+    (Some(a), Some(b)) => Some(a.min(b)),
+    (a, b) => a.or(b),
+  };
+  let (open, mut rest) = match earliest {
+    Some((at, open)) => (open, text.split_off(at)),
+    None => (depth, Vec::new()),
+  };
+  rest.extend(current);
+  if !rest.is_empty() {
+    unread_vec(rest);
+  }
+  // the kept text's unclosed `{`s were counted when read and are counted again when its expansion is read with the
+  // added `}`s: retract its braces, or the alignment's brace ledger stays raised and the row's `\\` is no row end
+  retract_scanned_braces(text);
+  text.extend(std::iter::repeat_n(T_END!(), open));
 }
 
 /// Whether amsmath's `\tag{…}` or `\tag*{…}` follows (its next non-space token a `{`, or a `*` and then one): the
