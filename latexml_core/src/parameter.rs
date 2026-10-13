@@ -1416,126 +1416,6 @@ impl ToTokens for Parameter {
   }
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn parameter_default_has_expected_fields() {
-    let p = Parameter::default();
-    assert!(!p.novalue);
-    assert!(p.semiverbatim.is_none());
-    assert!(!p.optional);
-    assert!(p.inner.is_none());
-    assert!(p.extra.is_empty());
-    assert!(p.before_digest.is_empty());
-    assert!(p.after_digest.is_empty());
-    assert!(p.predigest.is_none());
-    assert!(p.reversion.is_none());
-    assert!(p.digested_reversion.is_none());
-    assert_eq!(arena::to_string(p.name), "parameter_default");
-    assert_eq!(arena::to_string(p.spec), "");
-  }
-
-  #[test]
-  fn parameter_display_is_name() {
-    let p = Parameter {
-      name: arena::pin("Plain"),
-      ..Default::default()
-    };
-    assert_eq!(format!("{p}"), "Plain");
-  }
-
-  #[test]
-  fn parameter_stringify_is_spec() {
-    let p = Parameter {
-      spec: arena::pin("{}"),
-      ..Default::default()
-    };
-    assert_eq!(p.stringify(), "{}");
-  }
-
-  #[test]
-  fn parameter_partial_eq_by_name() {
-    // PartialEq compares by name only — Perl parity (closures can't
-    // be structurally compared).
-    let mut a = Parameter::default();
-    let mut b = Parameter::default();
-    a.name = arena::pin("x");
-    b.name = arena::pin("x");
-    assert_eq!(a, b);
-    b.name = arena::pin("y");
-    assert_ne!(a, b);
-  }
-
-  #[test]
-  fn parameters_new_and_take() {
-    let p = Parameter::default();
-    let ps = Parameters::new(vec![p]);
-    let taken = ps.take_parameters();
-    assert_eq!(taken.len(), 1);
-  }
-
-  #[test]
-  fn parameters_get_num_args_counts_valued() {
-    // novalue=true parameters don't count toward num_args.
-    let mut a = Parameter::default();
-    let mut b = Parameter::default();
-    let mut c = Parameter::default();
-    a.novalue = false;
-    b.novalue = true;
-    c.novalue = false;
-    let ps = Parameters::new(vec![a, b, c]);
-    assert_eq!(ps.get_num_args(), 2);
-  }
-
-  #[test]
-  fn revert_arguments_skips_novalue_parameters() {
-    // Perl Parameters.pm:51-57: a novalue parameter (an environment's leading SkipSpaces)
-    // stores no argument, so the arguments pair with the valued parameters only.
-    // Before, each argument moved a slot left: "a[b]" (the last one dropped).
-    let wrapped = |open: &'static str, close: &'static str| Parameter {
-      reversion: Some(Rc::new(
-        move |tks: Vec<Token>, _: Option<&Parameters>, _: &[Tokens]| {
-          let mut out = vec![T_OTHER!(open)];
-          out.extend(tks);
-          out.push(T_OTHER!(close));
-          Ok(Tokens::new(out))
-        },
-      ) as ReversionClosure),
-      ..Parameter::default()
-    };
-    let skip = Parameter {
-      novalue: true,
-      ..Parameter::default()
-    };
-    let ps = Parameters::new(vec![skip, wrapped("[", "]"), wrapped("(", ")")]);
-    let args = vec![Some(Tokens!(T_OTHER!("a"))), Some(Tokens!(T_OTHER!("b")))];
-    let reverted = ps.revert_arguments(args).unwrap();
-    let expected = ["[", "a", "]", "(", "b", ")"].map(|s| T_OTHER!(s));
-    assert_eq!(reverted, expected.to_vec());
-  }
-
-  #[test]
-  fn parameters_empty() {
-    let ps = Parameters::new(vec![]);
-    assert_eq!(ps.get_num_args(), 0);
-    assert_eq!(ps.get_parameters().len(), 0);
-  }
-
-  #[test]
-  fn parameters_get_parameters_returns_refs_to_all() {
-    // get_parameters returns ALL, including novalue ones (num_args
-    // filters; get_parameters doesn't).
-    let mut a = Parameter::default();
-    let mut b = Parameter::default();
-    a.novalue = false;
-    b.novalue = true;
-    let ps = Parameters::new(vec![a, b]);
-    assert_eq!(ps.get_parameters().len(), 2);
-  }
-}
-
 /// What a definition primitive reads unexpanded after itself (tex.web §1215 `get_r_token`).
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum DefinitionNames {
@@ -1754,4 +1634,124 @@ fn neutralize_keeping_definition_names(value: Tokens, extraspecials: &[char]) ->
       })
       .collect(),
   )
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn parameter_default_has_expected_fields() {
+    let p = Parameter::default();
+    assert!(!p.novalue);
+    assert!(p.semiverbatim.is_none());
+    assert!(!p.optional);
+    assert!(p.inner.is_none());
+    assert!(p.extra.is_empty());
+    assert!(p.before_digest.is_empty());
+    assert!(p.after_digest.is_empty());
+    assert!(p.predigest.is_none());
+    assert!(p.reversion.is_none());
+    assert!(p.digested_reversion.is_none());
+    assert_eq!(arena::to_string(p.name), "parameter_default");
+    assert_eq!(arena::to_string(p.spec), "");
+  }
+
+  #[test]
+  fn parameter_display_is_name() {
+    let p = Parameter {
+      name: arena::pin("Plain"),
+      ..Default::default()
+    };
+    assert_eq!(format!("{p}"), "Plain");
+  }
+
+  #[test]
+  fn parameter_stringify_is_spec() {
+    let p = Parameter {
+      spec: arena::pin("{}"),
+      ..Default::default()
+    };
+    assert_eq!(p.stringify(), "{}");
+  }
+
+  #[test]
+  fn parameter_partial_eq_by_name() {
+    // PartialEq compares by name only — Perl parity (closures can't
+    // be structurally compared).
+    let mut a = Parameter::default();
+    let mut b = Parameter::default();
+    a.name = arena::pin("x");
+    b.name = arena::pin("x");
+    assert_eq!(a, b);
+    b.name = arena::pin("y");
+    assert_ne!(a, b);
+  }
+
+  #[test]
+  fn parameters_new_and_take() {
+    let p = Parameter::default();
+    let ps = Parameters::new(vec![p]);
+    let taken = ps.take_parameters();
+    assert_eq!(taken.len(), 1);
+  }
+
+  #[test]
+  fn parameters_get_num_args_counts_valued() {
+    // novalue=true parameters don't count toward num_args.
+    let mut a = Parameter::default();
+    let mut b = Parameter::default();
+    let mut c = Parameter::default();
+    a.novalue = false;
+    b.novalue = true;
+    c.novalue = false;
+    let ps = Parameters::new(vec![a, b, c]);
+    assert_eq!(ps.get_num_args(), 2);
+  }
+
+  #[test]
+  fn revert_arguments_skips_novalue_parameters() {
+    // Perl Parameters.pm:51-57: a novalue parameter (an environment's leading SkipSpaces)
+    // stores no argument, so the arguments pair with the valued parameters only.
+    // Before, each argument moved a slot left: "a[b]" (the last one dropped).
+    let wrapped = |open: &'static str, close: &'static str| Parameter {
+      reversion: Some(Rc::new(
+        move |tks: Vec<Token>, _: Option<&Parameters>, _: &[Tokens]| {
+          let mut out = vec![T_OTHER!(open)];
+          out.extend(tks);
+          out.push(T_OTHER!(close));
+          Ok(Tokens::new(out))
+        },
+      ) as ReversionClosure),
+      ..Parameter::default()
+    };
+    let skip = Parameter {
+      novalue: true,
+      ..Parameter::default()
+    };
+    let ps = Parameters::new(vec![skip, wrapped("[", "]"), wrapped("(", ")")]);
+    let args = vec![Some(Tokens!(T_OTHER!("a"))), Some(Tokens!(T_OTHER!("b")))];
+    let reverted = ps.revert_arguments(args).unwrap();
+    let expected = ["[", "a", "]", "(", "b", ")"].map(|s| T_OTHER!(s));
+    assert_eq!(reverted, expected.to_vec());
+  }
+
+  #[test]
+  fn parameters_empty() {
+    let ps = Parameters::new(vec![]);
+    assert_eq!(ps.get_num_args(), 0);
+    assert_eq!(ps.get_parameters().len(), 0);
+  }
+
+  #[test]
+  fn parameters_get_parameters_returns_refs_to_all() {
+    // get_parameters returns ALL, including novalue ones (num_args
+    // filters; get_parameters doesn't).
+    let mut a = Parameter::default();
+    let mut b = Parameter::default();
+    a.novalue = false;
+    b.novalue = true;
+    let ps = Parameters::new(vec![a, b]);
+    assert_eq!(ps.get_parameters().len(), 2);
+  }
 }

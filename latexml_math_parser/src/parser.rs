@@ -3867,7 +3867,7 @@ fn starts_with_a_variable_s_differential(denominator: &Node, document: &Document
     let mut subscripted = false;
     while let Some(script) = items
       .get(at)
-      .map(&role)
+      .map(role)
       .filter(|script| matches!(script.as_deref(), Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")))
     {
       subscripted |= script.as_deref() == Some("POSTSUBSCRIPT");

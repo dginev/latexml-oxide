@@ -29,7 +29,7 @@
 //!
 //! # Resource limits
 //!
-//! [`Watchdog::with_limits`](crate::watchdog::Watchdog::with_limits) guards
+//! [`Watchdog::with_limits`] guards
 //! **both** a wall-clock deadline and a
 //! resident-memory ceiling — the two defenses any executable that converts
 //! arbitrary input needs. It is the shared guard reused by both
@@ -43,13 +43,13 @@
 //!
 //! The wall-clock guard is portable (`std::thread` + `Instant`).
 //!
-//! **Portable:** [`total_memory_bytes`](crate::watchdog::total_memory_bytes) and [`available_disk_bytes`](crate::watchdog::available_disk_bytes) answer on
+//! **Portable:** [`total_memory_bytes`] and [`available_disk_bytes`] answer on
 //! Linux, macOS and Windows — `sysconf(_SC_PHYS_PAGES)`/`statvfs` are POSIX, and
 //! Windows uses `GlobalMemoryStatusEx`/`GetDiskFreeSpaceExW`. They back the
-//! machine-derived default ceiling ([`default_ceiling_mib`](crate::watchdog::default_ceiling_mib)) and the
+//! machine-derived default ceiling ([`default_ceiling_mib`]) and the
 //! spill-headroom check, so those behave identically on every supported OS.
 //!
-//! **Enforcement, also portable:** [`process_rss_kb`](crate::watchdog::process_rss_kb) — the half that actually
+//! **Enforcement, also portable:** [`process_rss_kb`] — the half that actually
 //! checks live usage against the ceiling — answers on all three: Linux samples
 //! `/proc/self/status`, macOS asks libproc (`proc_pidinfo`), and Windows uses
 //! `GetProcessMemoryInfo`. So the memory ceiling is both computed *and* checked

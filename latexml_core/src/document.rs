@@ -3208,7 +3208,7 @@ impl Document {
           let ligature_stored = ligatures.pop_front().unwrap();
           if let Stored::Ligature(ligature) = ligature_stored {
             if self.apply_math_ligature(node, ligature)? {
-              next_ligatures.extend(ligatures.drain(..));
+              next_ligatures.append(&mut ligatures);
               matched = true;
               break;
             }

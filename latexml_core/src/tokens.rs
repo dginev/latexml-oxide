@@ -757,8 +757,7 @@ impl Tokens {
         if next_cc == Some(Catcode::OTHER) {
           // only group clear match token cases
           rescanned.push(Token!(sym next_t.unwrap().get_sym(), Catcode::ARG));
-        } else if next_cc == Some(Catcode::PARAM)
-          || next_t.as_ref().map(&is_param_tok) == Some(true)
+        } else if next_cc == Some(Catcode::PARAM) || next_t.as_ref().map(is_param_tok) == Some(true)
         {
           rescanned.push(t);
         } else {

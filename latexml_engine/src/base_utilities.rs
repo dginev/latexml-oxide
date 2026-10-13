@@ -11482,7 +11482,7 @@ fn rewrite_ordinal_superscripts(tokens: Tokens) -> Tokens {
       .iter()
       .rev()
       .find(|t| **t != T_SPACE!())
-      .is_some_and(&is_digit)
+      .is_some_and(is_digit)
   };
   // The suffix is shown in text: a math-only wrapper takes its text form (`$^{\mathrm{th}}$`).
   let text_mode = |operand: Vec<Token>| -> Vec<Token> {
