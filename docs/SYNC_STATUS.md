@@ -1011,7 +1011,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\footnote{` whose `}` never comes reads to the file's end, the later paragraphs inside the `<note>` (amsppt_sty.rs
   `\footnote[]{}` reads `\long`, amsppt.sty:804/:814 `\nextiv@##1` does not; RED
   `amstex/amsppt_footnote_argument_runs_past_par`); an alignment open at `\enddocument` drops its open row's last cells
-  without an error (RED `amstex/amstex_align_unclosed_at_enddocument`, before 66e too). Guards
+  without an error (RED `amstex/amstex_align_unclosed_at_enddocument`, before 66e too); a display open at `\enddocument`
+  takes `\enddocument` into its formula's `tex` (RED `amstex/amstex_display_unclosed_at_enddocument`, before 66e too). Guards
   `perfect_kernel_batch66e::*`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no

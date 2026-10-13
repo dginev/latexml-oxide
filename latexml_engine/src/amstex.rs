@@ -687,8 +687,10 @@ fn amstex_tag_display_end(t: &Token) -> bool {
     && t.with_str(|s| matches!(s, "\\]" | "\\lx@end@display@math" | "\\end"))
 }
 
-/// The document's ends (amsppt's `\enddocument`, amsppt.sty:1091, plain's `\bye`, plain.tex): both are `\outer` in TeX,
-/// so no macro argument reads past them ("Forbidden control sequence found while scanning use of …", tex.web §336-339),
+/// The document's ends (amsppt's `\enddocument`, amsppt.sty:1091, and bare AMS-TeX's, amstex.tex:1794 `\let\enddocument\bye`,
+/// which copies the `\outer` of plain's `\bye`, plain.tex:724): `\outer` in AMS-TeX, so no macro argument reads past them
+/// ("Forbidden control sequence found while scanning use of …", tex.web §336-339; the AMS-TeX/plain message, as LaTeX's
+/// `\enddocument` is not `\outer`),
 /// and a tag's text never holds them (`$$\align a&=b\tag{5 c\enddocument` without its `\endalign`).
 fn amstex_tag_document_end(t: &Token) -> bool {
   t.get_catcode() == Catcode::CS && t.with_str(|s| matches!(s, "\\enddocument" | "\\bye"))
