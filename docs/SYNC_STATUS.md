@@ -892,6 +892,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   half (`{IEEEproof}`, `\IEEEQED…`, `{IEEEitemize}`, `\IEEEPARstart`), which the IEEEtran class binding has, is
   missing from the package binding (2211.06691, 2310.15756). Guards `perfect_kernel_batch65z::*`; repros
   `package-bindings/*`.
+  Integration 8 (65y + 65z, four review rounds): bundle A/B 912 papers (`ab_65int8`; 65y/65z witnesses + int7 sample)
+  errors 3056→2138, Error status 499→175, Fatal 1→1, bibliography/tables equal, the 18 word drops error tokens leaving
+  math; manual net 797 manuals 0 diffs, 30 repros fixed, 0 newly failing.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the
