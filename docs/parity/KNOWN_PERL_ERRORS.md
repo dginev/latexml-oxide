@@ -12736,3 +12736,17 @@ amsfonts.sty:117-138 keeps AMSTeX's `\newsymbol\cs <font><class><hex><hex>` (fon
 symbol are errors. Trigger `\usepackage{amsfonts}\newsymbol\mylneqq 2308` … `$a\mylneqq b$` → Perl: undefined
 `\newsymbol` (pdflatex 0 errors, 1 warning, ≨). Fixed in Rust (65s, amsfonts_sty.rs, through `\DeclareMathSymbol`
 of the same class, font and slot; witnesses 1302.6049, 2112.15557; run 340 ~300 papers).
+
+## 633. The AASTeX binding lacks the commands of the AASTeX 6.x class files
+
+Perl's aas_support.sty.ltxml covers AASTeX 5.2 and the 7 front matter but not the commands the 6.x class files
+(aastex6.cls, aastex61.cls, aastex62.cls, aastex63.cls, aastex631.cls) define: `\reportnum` (aastex631.cls:651),
+`\journalinfo` (:1494), `\submitted` (aastex6.cls:972), the edit switches `\turnoffedit`, `\turnoffedits`,
+`\turnoffediting`, `\turnoffeditone` and `\listofchanges` (:5789-5798, :6108), the layout switches
+`\suppressAffiliations`, `\NewPageAfterKeywords`, `\setwatermarkfontsize` (:7323, :6816, :5856), the author-limit count
+`\AuthorCollaborationLimit`/`\AuthorCallLimit` (:6427-6430), `\tablefontsize` (:1930), `\abovedeluxetableskip`
+(:2096), `\fullcollaborationName` (aastex6.cls:5212), `\lambdabar`, and the journal names `\aas`, `\dps`, `\jaavso`,
+`\maps`. A paper that ships one of these classes gets the binding in its place, so each use is "undefined" (run 340:
+~1,700 papers, `\listofchanges` 409, `\AuthorCallLimit` 369). Trigger `\documentclass{aastex631}\reportnum{X}` →
+Perl: undefined `\reportnum` (pdflatex with the class: 0 errors). Fixed in Rust (65t, aas_support_sty.rs and
+aas_macros_sty.rs; witnesses 2604.07983, 2508.14467, 2604.22347, 1609.08711, 2103.02219, 2103.07688).

@@ -379,6 +379,43 @@ LoadDefinitions!({
   // Witness 2606.04105.
   DefMacro!("\\watermark{}", "");
 
+  // AASTeX 6.2-6.3.1 commands the class files define (aastex62.cls, aastex63.cls, aastex631.cls; aastex701.cls), which
+  // the papers that ship those classes call and our binding shadows (run 340, ~1,700 papers by first error:
+  // `\listofchanges` 409, `\AuthorCallLimit` 369, `\turnoffedit` 154, `\reportnum` 128, `\journalinfo` 222,
+  // `\suppressAffiliations` 104, `\NewPageAfterKeywords` 93, `\setwatermarkfontsize` 65; witnesses 2604.07983,
+  // 2508.14467, 2604.22347, 2103.02219, 2103.05148, 1904.02673). Perl's aas_support.sty.ltxml defines none of them
+  // (KNOWN_PERL_ERRORS #633).
+  // The edit-tracking switches and the list of changes (aastex631.cls:5789-5798, :6108): the `\added`/`\deleted`
+  // marks above print as plain text here, so the switches change nothing, and the list, a print summary of those
+  // marks, is not typeset.
+  def_macro_noop("\\turnoffedit")?;
+  def_macro_noop("\\turnoffedits")?;
+  def_macro_noop("\\turnoffediting")?;
+  def_macro_noop("\\turnoffeditone")?;
+  def_macro_noop("\\listofchanges")?;
+  // aastex631.cls:651 `\reportnum{…}`: a report number set at the top right of the first page.
+  DefMacro!("\\reportnum{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // aastex631.cls:1494 `\journalinfo{…}`: the journal line of the first page's head ("Accepted to ApJ"); the same
+  // note emulateapj's makes (emulateapj_sty.rs).
+  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // aastex6.cls:972/984 `\submitted{…}` feeds the same journal line (`\journalinfo{\@submitted}`).
+  DefMacro!("\\submitted{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // aastex6.cls:5212 `\fullcollaborationName{…}` stores the collaboration's full name for the author block's note.
+  DefMacro!("\\fullcollaborationName{}", "\\def\\thefullcollaborationname{#1}");
+  // Layout switches (aastex631.cls:7323, :6816, :5856): affiliations hidden from the author block, a page break
+  // after the keywords, the watermark's font size.
+  def_macro_noop("\\suppressAffiliations")?;
+  def_macro_noop("\\NewPageAfterKeywords")?;
+  def_macro_noop("\\setwatermarkfontsize{}")?;
+  // aastex631.cls:6427-6430 the number of authors the author block shows before "et al." (`\AuthorCallLimit` its
+  // alias): every author is kept here, so the count is only set.
+  RawTeX!(r"\newcount\AuthorCollaborationLimit \AuthorCollaborationLimit=10000 \let\AuthorCallLimit\AuthorCollaborationLimit");
+  // aastex631.cls:1930 the old name of `\tabletypesize`; :2096 the skip above a deluxetable.
+  DefMacro!("\\tablefontsize", "\\tabletypesize");
+  RawTeX!(r"\newlength{\abovedeluxetableskip}");
+  // aastex701.cls:6737 `\lambdabar`, the barred lambda (as revsymb_sty.rs has it).
+  DefMath!("\\lambdabar", "\u{03BB}\u{0304}");
+
   // \uat{name}{id} — Unified Astronomy Thesaurus term link. Used in
   // \keywords by AASTeX 6.3+. Round-34 surpass: emit as a clickable
   // link to https://astrothesaurus.org/uat/<id> so the UAT id is

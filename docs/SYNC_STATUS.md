@@ -761,6 +761,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   read as an undelimited argument (spaces after `@` skipped) plus `\atdef@` and `\CDat`. Run-340 estimates: amsmath
   internals ~1,140 papers, amscd ~838, `\newsymbol` ~300 (run340/clusters/undefined_rootcauses.md rows 3, 5, 7).
   Guards `perfect_kernel_batch65s::*`; repros `ams-internals/*`.
+- **65t** (KPE #633): the AASTeX binding defines the commands of the AASTeX 6.x class files that papers shipping
+  those classes call: `\reportnum` and `\journalinfo`/`\submitted` as pubnotes, the edit and layout switches
+  (`\turnoffedit*`, `\listofchanges`, `\suppressAffiliations`, `\NewPageAfterKeywords`, `\setwatermarkfontsize`), the
+  author-limit count, `\tablefontsize`, `\abovedeluxetableskip`, `\fullcollaborationName`, `\lambdabar`, and the journal
+  names `\aas`, `\dps`, `\jaavso`, `\maps`. Run-340 estimate ~1,700 papers (undefined_rootcauses.md row 1, aastex
+  sub-family). Guard `perfect_kernel_batch65t::aastex6x_class_commands_are_defined`; repro
+  `class-bindings/aastex6x_class_commands`.
+  The World Scientific bindings (ws_journal_cls.rs, ws_procs_cls.rs; no Perl binding) load the figure packages the ws
+  classes input (epsfig, epsf; ws-ijmpa.cls:551-555, whose psfig.sty is not in TeX Live), and define `\pub{received}{revised}` as pubnotes,
+  `\cdash`, `{alphlist}`/`{arabiclist}`/`{romanlist}`/`{itemlist}` and ws-rv9x6's `\if@addchapnum`. Run-340 estimate
+  ~1,500 papers (`\psfig`/`\epsfig` ~650, `\pub` ~500, `\cdash` ~120, lists ~150, `\if@addchapnum` 113). Guards
+  `perfect_kernel_batch65t::{ws_journal_class_commands_are_defined, ws_rv9x6_defines_addchapnum}`; repro
+  `class-bindings/ws_journal_class_commands`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

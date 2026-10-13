@@ -23,6 +23,31 @@ LoadDefinitions!({
   // \bm{\right\rangle}`) is TeX's error at the box's end; it is set at the outer level with a Warning, as bm.sty
   // would set it (bm_sty.rs `define_grouped_bm`, OXIDIZED_DESIGN #544).
   bm_sty::define_grouped_bm()?;
+  // The figure packages the ws journal and proceedings classes input (ws-ijmpa.cls:551-555, ws-ijmpe.cls:658-662,
+  // ws-procs9x6.cls:614-618 `\InputIfFileExists{psfig.sty}…{epsfsafe.tex}…{epsfig.sty}…{epsf.sty}`; psfig.sty and
+  // epsfsafe.tex are not in TeX Live, so epsfig's `\psfig` serves), so `\psfig`, `\epsfig` and `\epsfbox` need no
+  // package of the paper's own (run 340 ~650 papers; witnesses 0709.0836, 1310.3924, 0709.3996). A class version that
+  // inputs none of them (ws-mpla.cls of 2508.15289) gets them too: one binding serves the family's union.
+  RequirePackage!("epsfig");
+  RequirePackage!("epsf");
+  // ws-mpla.cls:277-282 (ws-ijmpa.cls:288 the same) `\pub{received}{revised}`: the publication history under the
+  // author block, the template's "Received (Day Month Year)" kept as the paper gives it (run 340 ~500 papers;
+  // witnesses 2508.15289, gr-qc0206056, astro-ph0505113). An empty argument (`\pub{}{}`) makes no note.
+  DefMacro!(
+    "\\pub{}{}",
+    "\\if\\relax\\detokenize{#1}\\relax\\else\\lx@add@pubnote[role=received]{#1}\\fi\
+     \\if\\relax\\detokenize{#2}\\relax\\else\\lx@add@pubnote[role=revised]{#2}\\fi"
+  );
+  // ws-ijmpa.cls:152 (ws-ijmpe.cls:1184, ws-procs9x6.cls:348) `\cdash`: a raised en dash, as in "C\cdash H".
+  DefMacro!("\\cdash", "\\ensuremath{^{\\hbox{--}}}");
+  // ws-mpla.cls:451-482 the class's lists: `{alphlist}`, `{arabiclist}` and `{romanlist}` are numbered (a), (1), (i)
+  // lists with their second level, `{itemlist}` a bulleted one (its enumerate takes `\labelitemi` for every label).
+  RawTeX!(
+    r"\newenvironment{alphlist}{\def\theenumi{\alph{enumi}}\def\theenumii{\roman{enumii}}\def\labelenumi{(\theenumi)}\def\labelenumii{(\theenumii)}\begin{enumerate}}{\end{enumerate}}
+\newenvironment{romanlist}{\def\theenumi{\roman{enumi}}\def\theenumii{\alph{enumii}}\def\labelenumi{(\theenumi)}\def\labelenumii{(\theenumii)}\begin{enumerate}}{\end{enumerate}}
+\@ifundefined{arabiclist}{\newenvironment{arabiclist}{\def\theenumi{\arabic{enumi}}\def\theenumii{\alph{enumii}}\def\labelenumi{(\theenumi)}\def\labelenumii{(\theenumii)}\begin{enumerate}}{\end{enumerate}}}{}
+\newenvironment{itemlist}{\begin{itemize}}{\end{itemize}}"
+  );
 
   // \catchline{vol}{issue}{year}{pageStart}{pageEnd} — bibliographic
   // running-header metadata. Preserve as frontmatter note.

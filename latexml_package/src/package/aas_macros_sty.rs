@@ -16,6 +16,12 @@ LoadDefinitions!({
   DefMacro!("\\actaa", "\\ref@jnl{Acta Astron.}");    // Acta Astronomica
   DefMacro!("\\araa",  "\\ref@jnl{ARA\\&A}");          // Annual Review of Astron and Astrophys
   DefMacro!("\\apj",   "\\ref@jnl{ApJ}");             // Astrophysical Journal
+  // aastex631.cls's journal abbreviations the rest of this list lacks (KNOWN_PERL_ERRORS #633; witnesses 2103.07688,
+  // 1904.08859).
+  DefMacro!("\\aas",    "\\ref@jnl{AAS Meeting Abstracts}");
+  DefMacro!("\\dps",    "\\ref@jnl{AAS/DPS Meeting Abstracts}");
+  DefMacro!("\\jaavso", "\\ref@jnl{JAAVSO}");
+  DefMacro!("\\maps",   "\\ref@jnl{M\\&PS}");
   DefMacro!("\\apjl",  "\\ref@jnl{ApJ}");             // Astrophysical Journal, Letters
   DefMacro!("\\apjs",  "\\ref@jnl{ApJS}");            // Astrophysical Journal, Supplement
   DefMacro!("\\ao",    "\\ref@jnl{Appl.~Opt.}");      // Applied Optics

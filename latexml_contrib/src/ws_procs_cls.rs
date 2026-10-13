@@ -13,4 +13,8 @@ LoadDefinitions!({
     r"\def\body{\setcounter{footnote}{0}\def\thefootnote{\alph{footnote}}}
 \def\bodymatter{\body}"
   );
+  // ws-rv9x6.cls:27 the chapter-numbering switch `\if@addchapnum` (the class's `addchapnum` option, :44, sets it;
+  // numbering is presentation here), which papers test in their own numbering macros (run 340: 113 papers; witnesses
+  // 2103.07802, 2008.12305, 1609.07109).
+  RawTeX!(r"\newif\if@addchapnum");
 });
