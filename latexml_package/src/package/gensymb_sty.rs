@@ -8,6 +8,10 @@ LoadDefinitions!({
     protected => true);
   DefMacro!("\\celcius",    None, "\\ifmmode\\lx@math@celcius\\else\\lx@text@celcius\\fi",
     protected => true);
+  // gensymb.sty:38/64 names it `\celsius`; Perl's binding spells it `\celcius` (KNOWN_PERL_ERRORS #635), which
+  // we keep beside it. `\celsius` was the first error of 214 run-340 papers (witnesses 2604.04150, 2508.00245).
+  DefMacro!("\\celsius",    None, "\\ifmmode\\lx@math@celsius\\else\\lx@text@celsius\\fi",
+    protected => true);
   DefMacro!("\\perthousand", None, "\\ifmmode\\lx@math@perthou\\else\\lx@text@perthou\\fi",
     protected => true);
   DefMacro!("\\ohm",        None, "\\ifmmode\\lx@math@ohm\\else\\lx@text@ohm\\fi",
@@ -18,6 +22,8 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@text@degree",  "\u{00B0}",
     bounded => true, font => { encoding => "TS1" });
   DefPrimitive!("\\lx@text@celcius", "\u{2103}",
+    bounded => true, font => { encoding => "TS1" });
+  DefPrimitive!("\\lx@text@celsius", "\u{2103}",
     bounded => true, font => { encoding => "TS1" });
   DefPrimitive!("\\lx@text@perthou", "\u{2030}",
     bounded => true, font => { encoding => "TS1" });
@@ -30,6 +36,8 @@ LoadDefinitions!({
     bounded => true, font => { encoding => "TS1" }, alias => "\\degree");
   DefMath!("\\lx@math@celcius", None, "\u{2103}",
     bounded => true, font => { encoding => "TS1" }, alias => "\\celcius");
+  DefMath!("\\lx@math@celsius", None, "\u{2103}",
+    bounded => true, font => { encoding => "TS1" }, alias => "\\celsius");
   DefMath!("\\lx@math@perthou", None, "\u{2030}",
     bounded => true, font => { encoding => "TS1" }, alias => "\\perthousand");
   DefMath!("\\lx@math@ohm", None, "\u{2126}",

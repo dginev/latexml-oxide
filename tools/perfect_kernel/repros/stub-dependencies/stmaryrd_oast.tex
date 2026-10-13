@@ -1,0 +1,10 @@
+% witness: 2103.07308, 1904.01031; run 340: `\oast` the first error of 111 papers
+% oracle:  pdflatex with amssymb + stmaryrd (:149-150 `\let\oast\circledast`): 0 errors; ⊛ ⊚
+% engines: rust 65x = error (`\oast` undefined)
+% expect:  0 errors; ⊛ and ⊚ as binary operators
+% status:  RED (65x) -> GREEN (65y)
+\documentclass{article}
+\usepackage{stmaryrd}
+\begin{document}
+$a \oast b$ and $c \ocircle d$.
+\end{document}

@@ -24,4 +24,17 @@ LoadDefinitions!({
   // a bold for those glyphs.  Since we're just forcing the glyph to be bold,
   // \pmb is probably \boldsymbol. or... ??
   Let!("\\pmb", "\\boldsymbol");
+
+  // amsbsy.sty:38-39, 58-69: `\binrel@{X}` lets `\binrel@@` be `\mathbin`, `\mathrel` or `\relax` by the spacing a
+  // box measures around X, and `\math@atom{X}{Y}` sets Y as X's class. No box measures math spacing here, so
+  // `\binrel@@` passes Y through ungrouped: Y keeps the class its own content has (the operator a paper restyles is
+  // still one), where an ordinary group would hide it. Papers call them for their own operators: the first error of
+  // 161 run-340 papers (witnesses 2103.00817, 0709.1048, 1310.2330).
+  RawTeX!(
+    r"\makeatletter
+\def\binrel@#1{\let\binrel@@\@firstofone}
+\let\binrel@@\relax
+\def\math@atom#1#2{\binrel@{#1}\binrel@@{#2}}
+\makeatother"
+  );
 });

@@ -12759,3 +12759,10 @@ iopart_support.sty.ltxml:253-330 defines them as `\textit{…}` alone, so the vo
 ("Phys. Rev. Lett.98"). Trigger `\documentclass{iopart}\begin{document}\PRL \textbf{98}\end{document}` → Perl:
 "Phys. Rev. Lett.98". Fixed in Rust (65x, iopart_support_sty.rs `def_iop_journal`; witness 2603.00348).
 
+## 635. gensymb's `\celsius` is spelled `\celcius`
+
+gensymb.sty defines `\celsius` (:38 and :64, `\ifmmode\tccelsius\else\textcelsius\fi`). Perl's
+gensymb.sty.ltxml:20-34 defines `\celcius` (and its `\lx@text@celcius`/`\lx@math@celcius`) instead, so every
+`\celsius` is undefined. Trigger `\usepackage{gensymb}\begin{document}20\,\celsius\end{document}` → Perl:
+undefined `\celsius` (pdflatex: 20 ℃). Run 340: the first error of 214 papers. Fixed in Rust (65y,
+gensymb_sty.rs, `\celcius` kept beside it; witnesses 2604.04150, 2508.00245).

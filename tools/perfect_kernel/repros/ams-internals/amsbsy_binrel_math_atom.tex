@@ -1,0 +1,14 @@
+% witness: 2103.00817 (`\binrel@`), 0709.1048, 1310.2330 (`\math@atom`); run 340: 161 papers' first error
+% oracle:  pdflatex with amsmath (amsbsy.sty:38-39, 58-69): 0 errors; ⊕ as a binary operator, ∼ as a relation
+% engines: rust 65x = error (`\binrel@`, `\math@atom` undefined)
+% expect:  0 errors; the formula parses with ⊕ and ∼ in their own classes
+% status:  RED (65x) -> GREEN (65y)
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newcommand{\myop}{\math@atom{+}{\oplus}}
+\newcommand{\myrel}{\binrel@{=}\binrel@@{\sim}}
+\makeatother
+\begin{document}
+$x \myop y \myrel z$
+\end{document}

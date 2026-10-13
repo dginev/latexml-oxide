@@ -837,6 +837,23 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\subfigures` (3 of 120 sampled; its `merk` counter machinery). Guards `perfect_kernel_batch65x::*`; repros
   `class-bindings/{pos,dmtcs,svmult,acmart,ieeetran}_class_commands`,
   `class-bindings/{iopart_journals,elsarticle_marks}`.
+- **65y**: symbol and unit packages define the names papers call (run-340 first errors, `scratch_356a0c47/r7/still.txt`).
+  SIunits (440): its own `\addunit`, `\addprefix`, `\usk`/`\unitskip`, `\per`, `\power`, `\squared`…`\rpfourth`,
+  `\SIminus`, `\SIunits[…]`, `\SI@fstyle`, `\degreecelsius` (as ℃) and `\upmu`, by `\providecommand` over the siunitx
+  shim (its units stay `\relax` outside `\si`). constants (253): ported whole, `\Cl` recording at once (no `.aux`
+  round trip), `\null` as `\relax`. newtxmath (400): `\widebar`, `\Angstrom`, `\bigtimes`/`\varprod`, `\vv`,
+  `\mapsfrom`, `\transp`, `\lBrack`/`\rBrack`, `\uppartial`, `\lambdabar`, `\smallsum`, `\bigcupdot`, `\sumint`, `\cdotB`,
+  `\re@DeclareMathSymbol`. gensymb `\celsius` (214, KPE #635); eucal `\EuScript` + options (229); libertine `\useosf`
+  and the type1 figure-style commands (233); fourier's math symbols (163; names amssymb defined first keep theirs);
+  stmaryrd `\oast`/`\ocircle` (118); mathtools `\newcases`/`\renewcases` as `\lx@ams@cases` (93); amsbsy `\binrel@`,
+  `\binrel@@` (its content keeps its own class: no box measures math spacing here), `\math@atom` (161). Residual: a `\Cr` before its
+  `\Cl` prints LaTeX's first-run "C^st ??" with a warning (no `.aux` round trip; 1307.4858); the
+  parser does not pair `⦀` fences (`\VERT x \VERT`, math parked); not taken (below the bar): amsmath's
+  `\@mathmeasure` without amsmath (34), mathtools' `\delimsize` outside a paired delimiter (11). Guards `perfect_kernel_batch65y::*`; repros
+  `stub-dependencies/{siunits_unit_commands,gensymb_celsius,eucal_euscript,libertine_figure_styles,fourier_math_symbols,`
+  `newtxmath_symbols,stmaryrd_oast,constants_labelled_constants}`, `ams-internals/{amsbsy_binrel_math_atom,mathtools_newcases}`.
+  A/B (262 run-340 witnesses, `ab_65y`): errors 701→101, Error status 230→33; the 18 word-count drops are
+  error-recovery tokens leaving the math (text outside math equal) and 1307.4858's forward `\Cr`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

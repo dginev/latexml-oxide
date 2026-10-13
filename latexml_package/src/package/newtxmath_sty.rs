@@ -21,8 +21,37 @@ LoadDefinitions!({
   RawTeX!(
     r"\def\re@DeclareMathDelimiter#1#2#3#4#5#6{\let#1=\undefined\DeclareMathDelimiter{#1}{#2}{#3}{#4}{#5}{#6}}
 \def\re@DeclareMathAccent#1#2#3#4{\let#1=\undefined\DeclareMathAccent{#1}{#2}{#3}{#4}}
-\def\re@DeclareMathRadical#1#2#3#4{\let#1=\undefined\DeclareMathRadical{#1}{#2}{#3}{#4}}"
+\def\re@DeclareMathRadical#1#2#3#4{\let#1=\undefined\DeclareMathRadical{#1}{#2}{#3}{#4}}
+\def\re@DeclareMathSymbol#1#2#3#4{\if\relax\noexpand#1\let#1=\undefined \fi \DeclareMathSymbol{#1}{#2}{#3}{#4}}"
   );
+  // newtxmath's own symbols papers reach for (:928-988, 1216, 1399-1497, 1744, 2072, 2344, 2866, 3191; `\widebar`,
+  // `\Angstrom` and `\bigtimes` led the first errors of 400 run-340 papers, witnesses 2008.07007, 2604.11906,
+  // 2407.15192), as their glyphs. A name another package defined first keeps that definition.
+  if !is_defined("\\widebar") {
+    DefMath!("\\widebar Digested", "\u{00AF}", operator_role => "OVERACCENT");
+  }
+  DefMath!("\\Angstrom", None, "\u{212B}", font => { shape => "upright", forceshape => true });
+  if !is_defined("\\bigtimes") {
+    DefMath!("\\bigtimes", "\u{2A09}", meaning => "nary-times", role => "BIGOP", scriptpos => "mid",
+      variablesize_op => true);
+  }
+  RawTeX!(r"\let\varprod\bigtimes");
+  DefMath!("\\bigcupdot", "\u{2A03}", role => "BIGOP", scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\sumint", "\u{2A0B}", role => "INTOP", meaning => "summation-integral", variablesize_op => true);
+  DefMath!("\\smallsum", None, "\u{2211}", role => "SUMOP", meaning => "sum");
+  // :1216 `\protected\def\vv{\@ifstar{\vvstar}{\txvec}}`, the arrow accent (starred: the arrow over the whole
+  // argument), as esvect's `\vv`.
+  DefMacro!("\\vv OptionalMatch:* {}", "\\overrightarrow{#2}", protected => true);
+  if !is_defined("\\mapsfrom") {
+    DefMath!("\\mapsfrom", None, "\u{21A4}", role => "ARROW");
+  }
+  RawTeX!(r"\let\mappedfrom\mapsfrom\let\lBrack\llbracket\let\rBrack\rrbracket");
+  DefMath!("\\transp", None, "\u{22BA}", meaning => "transpose");
+  DefMath!("\\uppartial", None, "\u{2202}", font => { shape => "upright", forceshape => true });
+  if !is_defined("\\lambdabar") {
+    DefMath!("\\lambdabar", None, "\u{019B}");
+  }
+  DefMath!("\\cdotB", None, "\u{22C5}");
   // newtxmath.sty:2466-2467 and :2577: its own `\varmathbb` (txfonts' above), `\vmathbb` the
   // same, and a third blackboard variant `\vvmathbb` (the same font here). Constructors of their
   // own, so the reversion keeps the author's name.

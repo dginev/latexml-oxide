@@ -705,6 +705,15 @@ LoadDefinitions!({
     "\\lx@ams@cases{name=cases*,meaning=cases,left=\\lx@left\\{,style=\\textstyle,conditionmode=text}");
   DefMacro!("\\csname endcases*\\endcsname", "\\lx@end@ams@cases");
 
+  // mathtools.sty:1015-1024: `\newcases{name}{sep}{lpreamble}{rpreamble}{ldelim}{rdelim}` (and `\renewcases`) defines
+  // a cases environment of the predefined ones' shape, which the bindings above are as `\lx@ams@cases`: its
+  // delimiters, `\displaystyle` when the left preamble sets it, and math conditions when the right preamble is a
+  // `$…$` cell. `\newcases` was the first error of 93 run-340 papers (witnesses 2604.21785, 2103.12049).
+  DefMacro!("\\newcases{}{}{}{}{}{}", sub[(name, _sep, lpre, rpre, ldelim, rdelim)] {
+    Ok(mathtools_newcases(name, &lpre, &rpre, ldelim, rdelim))
+  });
+  Let!("\\renewcases", "\\newcases");
+
   // Perl mathtools.sty.ltxml L638 defines \MoveEqLeft as bare T_ALIGN —
   // i.e. the tokenizer-level `&` alignment tab. The string `"&"` below
   // tokenizes to the same alignment tab under the math catcode regime
@@ -1066,3 +1075,71 @@ LoadDefinitions!({
   DefMacro!("\\splitdfrac{}{}",
     "\\displaystyle\\@ams@multirow@bindings{name=splitdfrac}\\@@multlined\\lx@begin@alignment #1 \\\\\\\\ #2 \\lx@end@alignment\\@end@multline");
 });
+
+/// The definitions `\newcases` makes (mathtools.sty:1015-1019): `\<name>` opens `\lx@ams@cases` with the keys its
+/// arguments decide, `\end<name>` closes it. A `.` (or empty) delimiter is no delimiter.
+fn mathtools_newcases(
+  name: Tokens,
+  lpre: &Tokens,
+  rpre: &Tokens,
+  ldelim: Tokens,
+  rdelim: Tokens,
+) -> Tokens {
+  let name = name.untex();
+  let name = name.trim();
+  let display = lpre
+    .unlist_ref()
+    .iter()
+    .any(|t| *t == T_CS!("\\displaystyle"));
+  let math_conditions = rpre
+    .unlist_ref()
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::MATH);
+  let mut keys: Vec<Token> = ExplodeText!(&format!("name={name},meaning=cases,"));
+  for (key, delimiter, cs) in [
+    ("left", ldelim, "\\lx@left"),
+    ("right", rdelim, "\\lx@right"),
+  ] {
+    let text = delimiter.clone().untex();
+    if !matches!(text.trim(), "" | ".") {
+      keys.extend(ExplodeText!(&format!("{key}=")));
+      keys.push(T_CS!(cs));
+      keys.extend(delimiter.unlist());
+      keys.extend(ExplodeText!(","));
+    }
+  }
+  keys.extend(ExplodeText!("style="));
+  keys.push(T_CS!(if display {
+    "\\displaystyle"
+  } else {
+    "\\textstyle"
+  }));
+  keys.extend(ExplodeText!(&format!(
+    ",conditionmode={}",
+    if math_conditions { "math" } else { "text" }
+  )));
+  let mut toks = vec![T_CS!("\\expandafter"), T_CS!("\\def"), T_CS!("\\csname")];
+  toks.extend(ExplodeText!(name));
+  toks.extend([
+    T_CS!("\\endcsname"),
+    T_BEGIN!(),
+    T_CS!("\\lx@ams@cases"),
+    T_BEGIN!(),
+  ]);
+  toks.extend(keys);
+  toks.extend([
+    T_END!(),
+    T_END!(),
+    T_CS!("\\expandafter"),
+    T_CS!("\\def"),
+    T_CS!("\\csname"),
+  ]);
+  toks.extend(ExplodeText!(&format!("end{name}")));
+  toks.extend([
+    T_CS!("\\endcsname"),
+    T_BEGIN!(),
+    T_CS!("\\lx@end@ams@cases"),
+    T_END!(),
+  ]);
+  Tokens::new(toks)
+}

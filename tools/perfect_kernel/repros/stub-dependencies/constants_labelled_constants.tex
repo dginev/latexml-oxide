@@ -1,0 +1,11 @@
+% witness: 2508.09984, 2103.05634, 2508.14888; run 340: `\Cr` the first error of 253 papers
+% oracle:  pdflatex with constants.sty (second run): 0 errors; C_1, C_2 numbered, \Cr{x} = C_1
+% engines: rust 65x = error (`\Cr` undefined; `\C` dropped its C_n)
+% expect:  0 errors; C_1 + C_2, then \Cr{x} as C_1 and \Cr{y} as C_2
+% status:  RED (65x) -> GREEN (65y)
+\documentclass{article}
+\usepackage{constants}
+\begin{document}
+\begin{equation} a = \Cl{x} + \Cl{y} \end{equation}
+Then $\Cr{x}$ and $\Cr{y}$.
+\end{document}
