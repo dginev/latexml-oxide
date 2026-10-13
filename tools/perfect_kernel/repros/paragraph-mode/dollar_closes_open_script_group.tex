@@ -9,7 +9,7 @@
 %          formula runs on (Math tex "S^{{x$hold.\par Textafter.\par}}"); 65bundle keeps "Textafter" in the formula, 65i
 %          (OD #542) closes the unended formula at the paragraph and "Textafter." follows as italic 70% script-font text
 %          with its spaces dropped
-% expect:  the "Missing } inserted" diagnostic only; Math tex "S^{x}"; "hold." and "Text after." as upright spaced text
+% expect:  1 error, the "Missing } inserted" diagnostic only (TeX's Error); Math tex "S^{x}"; "hold." and "Text after." as upright spaced text
 %          after the formula, as pdflatex
 % preload: ar5iv.sty
 % status:  GREEN (65n: tex.web §1193 `mmode+math_shift` + §1064-1065 `off_save` — the `$` meeting the `{` group opened
