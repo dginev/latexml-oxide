@@ -3180,14 +3180,20 @@ where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R {
 /// Whether `token`'s definition is locked while state is not unlocked, so `install_definition` drops a redefinition.
 pub fn is_definition_locked(token: &Token) -> bool { token.with_cs_name(is_name_locked) }
 
+/// Whether `token` means nothing a lock protects: undefined, or `\relax`, what TeX's `\csname` makes of an undefined
+/// name (tex.web §372) on the way to every `\@namedef`, `\expandafter\def\csname…` and expl3 `\cs_set:cpn`/`…:cc`
+/// definition ([`restore_cleared_binding`]).
+fn is_cleared_meaning(token: &Token) -> bool {
+  matches!(lookup_meaning(token), None | Some(Stored::None))
+    || x_equals(token, &crate::T_CS!("\\relax"))
+}
+
 /// Puts back the binding of a files-locked name that a file's `\let` cleared ([`let_i`], `"{cs}:locked@cleared"`) when
 /// the file's new meaning for it is refused, so that the binding's other callers (a raw `\end` running `\csname
 /// end<env>\endcsname`, alatex.sty:105-109) still meet it rather than an undefined name.
 fn restore_cleared_binding(token: &Token) {
   let cleared_key = token.with_cs_name(|cs| s!("{cs}:locked@cleared"));
-  if arena::get(&cleared_key).is_none()
-    || !matches!(lookup_meaning(token), None | Some(Stored::None))
-  {
+  if arena::get(&cleared_key).is_none() || !is_cleared_meaning(token) {
     return;
   }
   if let Some(binding) = lookup_value(&cleared_key).filter(|b| !matches!(b, Stored::None)) {
@@ -4508,12 +4514,14 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // plain `:locked` is left to `\let`, as Perl's `Let` checks none (Package.pm:383-390), and so are the engine's own
   // meaning writes ([`assign_meaning`]: `\csname`'s `\relax`, restores). A `\let` to an undefined token only clears
   // the name, and is kept: the "undefine, then define anew" idiom (projlib-author.sty:243-246 `\cs_undefine:N
-  // \endabstract` before its `\NewDocumentEnvironment{abstract}`, whose "already defined" check would fail; the
-  // homework and jwjournal manuals). The binding is kept aside (`"{cs}:locked@cleared"`) and back in place when the
-  // file's new meaning is refused ([`restore_cleared_binding`]). OXIDIZED_DESIGN #569; guards
-  // `perfect_kernel_batch66b::file_let_*`.
+  // \endabstract` before `\newenvsc{abstract}`, whose scontents `\NewDocumentEnvironment` "already defined" check
+  // would fail; the homework and jwjournal manuals). The binding is kept aside (`"{cs}:locked@cleared"`) and back in
+  // place when the file's new meaning is refused ([`restore_cleared_binding`]), whether the name is still undefined or
+  // `\csname` has made it `\relax` on the way. Read at the origins `install_definition` reads the lock at (every one
+  // but the document's, [`name_carries_lock`]). OXIDIZED_DESIGN #569; guards `perfect_kernel_batch66b::file_let_*`,
+  // `…::refused_*_restores_the_binding`.
   if crate::definition::origin::current_origin()
-    == crate::definition::origin::DefinitionOrigin::File
+    != crate::definition::origin::DefinitionOrigin::Document
     && !state_is_unlocked()
     && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
     && token1.with_cs_name(|cs| arena::get(s!("{cs}:locked@files")).is_some_and(lookup_bool_sym))
@@ -4523,7 +4531,9 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
       after_assignment();
       return;
     }
-    if let Some(binding) = lookup_meaning(token1).filter(|m| !matches!(m, Stored::None)) {
+    if !is_cleared_meaning(token1)
+      && let Some(binding) = lookup_meaning(token1)
+    {
       let cleared_key = token1.with_cs_name(|cs| s!("{cs}:locked@cleared"));
       assign_value(&cleared_key, binding, Some(Scope::Global));
     }

@@ -16969,7 +16969,9 @@ for classes: the Cambridge University Press classes keep LaTeX's `\caption` ther
 **Rust** (batch 66b, sect09.rs): the constructor is `\lx@@caption`, which the kernel and the bindings (caption,
 listings, algorithm2e, aas_support, tabularray) call; `\@@caption` is `\let` to it for any other caller, so a class's
 own meaning for the name is the class's and its `\contcaption` repeats the figure number as in pdflatex. Witnesses
-1209.5152, 1311.2960, 1410.5131, 1610.02500, 2205.14586, 2212.13027, 1604.04575, 2112.07588 (Fatal → 0 errors).
+1209.5152, 1311.2960, 1410.5131, 1610.02500, 2205.14586, 2212.13027, 1604.04575, 2112.07588 (Fatal → 0 errors). The
+image fragments' prefix (latex_images.rs) gobbles `\lx@@caption` beside LaTeXImages.pm:411's `\@@caption`, since a
+fragment's `tex` reverts the caption under the new name.
 Guard `perfect_kernel_batch66b::cup_contcaption_keeps_its_caption`; repro `captions-floats/cup_contcaption_lets_caption`.
 
 ### 567. `\newcommand` with an optional argument also defines LaTeX's internal `\\cs` (Perl: only `\cs`)
@@ -17021,11 +17023,13 @@ writes (`assign_meaning`: `\csname`'s `\relax`, `with_let` restores). A `\let` t
 `\abstract`/`\endabstract` before its `\newenvsc{abstract}`, whose `\NewDocumentEnvironment` errs "End of environment
 'abstract' already defined" on a name still defined (the homework and jwjournal manuals). The binding is kept aside
 (`"\cs:locked@cleared"`) and put back when the file's new meaning for the name is refused (`restore_cleared_binding`, from
-`install_definition` and `let_i`), so the binding's other callers (a raw `\end`) still meet it. The same rule for a
+`install_definition` and `let_i`), whether the name is still undefined or `\csname` has made it `\relax` on the way
+(`\@namedef`, ltcmd's `\cs_set_eq:cc`), so the binding's other callers (a raw `\end`) still meet it. The lock is read at
+the origins `install_definition` reads it at (all but the document's). The same rule for a
 binding whose begin half reads its body to the end: mn2e_support's `{keywords}` (`\lx@begin@keywords`) locks both
 `\keywords` and `\endkeywords` against the files, since mn2e-breakabs.sty:87-95 (shipped by MNRAS papers) redefines the
 end half alone as mn2e.cls's `\endlist` (1403.3615, 1607.03149), and a file redefining both halves would otherwise have
 its begin half taken and its end half refused; mn2e.cls:992 `\ifSFB@keywords` is defined. Residual shared with #453: the
 lock reads the origin at run time, so a class's `\AtBeginDocument{\let…}` runs as the document's. Guards
-`perfect_kernel_batch66b::{file_let_*, refused_definition_of_a_cleared_name_restores_the_binding, mn2e_*}`; repros
+`perfect_kernel_batch66b::{file_let_*, refused_*_of_a_cleared_name_restores_the_binding, mn2e_*}`; repros
 `macro-state/{file_let_of_locked_end_half, file_let_clearing_locked_name}`.

@@ -321,3 +321,31 @@ fn every_xargdef_declarator_defines_the_internal_macro() {
     "{xml}"
   );
 }
+
+/// The restore holds on the `\csname` path most file definitions take (`\@namedef`, `\expandafter\def\csname…`, ltcmd's
+/// `\cs_set_eq:cc`): `\csname` makes the cleared name `\relax` (tex.web §372) before the refused definition, and the
+/// binding still comes back.
+#[test]
+fn refused_namedef_of_a_cleared_name_restores_the_binding() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{article}
+\usepackage{clearabs}
+\begin{document}
+\abstract Abstract text.
+\endabstract
+Body.
+\end{document}
+",
+    &[(
+      "clearabs.sty",
+      "\\ProvidesPackage{clearabs}\n\\let\\endabstract\\undefined\n\\@namedef{endabstract}{\\par}\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains("<p xml:id=\"abstract1.1\">Abstract text.</p>"),
+    "{xml}"
+  );
+  assert!(xml.contains("<p xml:id=\"p1.1\">Body.</p>"), "{xml}");
+}

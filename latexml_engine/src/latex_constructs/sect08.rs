@@ -158,7 +158,7 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
   sub[(star,cs,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
-    if opt.is_some() {
+    if opt.is_some() && cs.get_catcode() == Catcode::CS {
       let inner = T_CS!(cs.with_str(|cstr| s!("{cstr} ")));
       define_optional_internal(&inner, nargs, &body, star.is_some())?;
     }
@@ -1669,11 +1669,12 @@ pub(crate) fn load() -> Result<()> {
 /// `\\cs␣`). A starred
 /// declarator's internal is not `\long` either (`\l@ngrel@x`, :1229-1233). It reads `[…]` as `\@yargdef` does here (an
 /// optional argument, where LaTeX's requires the brackets). Not for an active character, whose `\string` names another
-/// control sequence (`~`'s would be `\~`). OXIDIZED_DESIGN #567; guards
+/// control sequence (`~`'s would be `\~`), nor for a definition the lock refuses (its internal would carry the refused
+/// body). OXIDIZED_DESIGN #567; guards
 /// `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
 /// every_xargdef_declarator_defines_the_internal_macro}`.
 fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool) -> Result<()> {
-  if cs.get_catcode() != Catcode::CS {
+  if cs.get_catcode() != Catcode::CS || is_definition_locked(cs) {
     return Ok(());
   }
   let internal = T_CS!(s!("\\{}", cs.to_string()));
