@@ -1,0 +1,15 @@
+% witness: math9412232 (`$$T_qQ = V_qQ \oplus \Cal H_q,\tag1$$`), hep-th9308082, hep-th9206021, hep-th9111004, 1102.5649 (66e r1: TooManyErrors)
+% oracle:  pdftex (\input amstex, \input amsppt.sty, no \documentstyle) 0 errors; amstex.tex:597-605 \def\tag#1$${\iftagsleft@\leqno\else\eqno\fi\maketag@#1\maketag@$$}, inside \align the row's tag cell (:629-640)
+% engines: rust 66e r1 = "\lx@equation@settag@float undefined" + "<ltx:tags> isn't allowed in <ltx:XMath>" per tag (the float path lived in the LaTeX pool, which a plain document never loads); rust 66d6 = 2 errors "Missing $" (\let\tag\eqno); perl \let\tag\eqno too (KNOWN_PERL_ERRORS #643)
+% expect:  0 errors; each display's tags on its own equation, amsmath's \tag markup: "(1)", "(1.2<sup>′</sup>)", the align row's "(2.1)"
+% status:  GREEN (66e r2)
+\input amstex
+\input amsppt.sty
+\document
+Text.
+$$ a=b\tag1$$
+More.
+$$ c=d\tag 1.2$'$ $$
+And
+$$\align a&=b\tag 2.1\\ c&=d\endalign$$
+\enddocument

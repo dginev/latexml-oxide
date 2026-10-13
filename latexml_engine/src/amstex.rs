@@ -265,18 +265,40 @@ LoadDefinitions!({
   Let!("\\tsize",  "\\textstyle");
   Let!("\\ssize",  "\\scriptstyle");
   Let!("\\sssize", "\\scriptscriptstyle");
-  // AMS-TeX's `\tag` (amstex.tex:597-605 `\def\tag#1$${\eqno\maketag@#1\maketag@$$}`; in `\align`, `\gather`,
-  // `\alignat`… :629-640, 718-760, 797-818, 876-900 it opens the row's tag cell, `&&`): the tag text runs to the
-  // display's `$$` or to its row's end, and is set as TEXT (`\tagform@` = `\hbox{\rm(#1)}`), so `$'$` in it is
-  // inline math. Perl's `\let\tag\eqno` (AmSTeX.pool.ltxml:228; ours before 66e) made it math up to the first `$`,
-  // closing the display there: "Missing $" and its cascade (1012.3760: 101 errors + TooManyErrors; 1112.1423
-  // `\tag 1.18$'$`; 1108.6264 `\tag {$*$}`), KNOWN_PERL_ERRORS #643. The text goes to amsmath's `\tag` (a row's or an
-  // equation's tag) or, in a plain `$$` display, floats to it (`\lx@equation@settag@float`); a quoted tag is the
-  // `\tag*` form (`\maketag@@@"#1"#2\maketag@{\hbox{\rm#1}}`), `\TagsAsMath` wraps the text in `$…$`. Guards
-  // `perfect_kernel_batch66e::{amstex_display_tag_is_a_text_tag, amstex_align_row_tags_run_to_the_row_end,
-  // amstex_tags_as_math_switch}`.
+  // AMS-TeX's `\tag` (amstex.tex:597-605 `\def\tag#1$${\iftagsleft@\leqno\else\eqno\fi\maketag@#1\maketag@$$}`; in
+  // `\align`, `\alignat`, `\gather` (:629-640, 718-739, 797) it opens the row's tag cell, `&&`; in `\multline` it comes
+  // after `\endmultline` (:903, 930), a display tag): the tag text runs to the display's `$$` or to its row's end, and
+  // is set as TEXT (`\tagform@` = `\hbox{\rm(#1)}`), so `$'$` in it is inline math. Perl's `\let\tag\eqno`
+  // (AmSTeX.pool.ltxml:228; ours before 66e) made it math up to the first `$`, closing the display there: "Missing $"
+  // and its cascade (1012.3760: 101 errors + TooManyErrors; 1112.1423 `\tag 1.18$'$`; 1108.6264 `\tag {$*$}`),
+  // KNOWN_PERL_ERRORS #643. The text goes to amsmath's `\tag` in an equation row (`in_equation`, a LaTeX
+  // `equation`/`align`) or, in a `$$` display and its math alignments, floats to it (`\lx@equation@settag@float`); a
+  // quoted tag is the `\tag*` form (`\maketag@@@"#1"#2\maketag@{\hbox{\rm#1}}`), `\TagsAsMath` wraps the text in
+  // `$…$`. The float path is defined here, so a plain `\input amstex` document without the LaTeX pool has it (math9412232,
+  // hep-th9308082, hep-th9206021, hep-th9111004, 1102.5649). `\TagsOnLeft`, AMS-TeX's default (:590), puts the PDF's
+  // tags on the left; ours are on the right. Guards `perfect_kernel_batch66e::{amstex_display_tag_is_a_text_tag,
+  // amstex_align_row_tags_run_to_the_row_end, amstex_tags_as_math_switch, plain_amstex_tags_need_no_latex_pool,
+  // amstex_row_tag_ends_at_every_row_ender, amstex_display_tag_in_an_halign_cell_reads_to_the_display_end,
+  // amstex_tag_argument_errors, amstex_tag_braced_argument_is_stripped, amstex_tag_in_latex_equation}`.
   Let!("\\lx@amstex@ams@tag", "\\tag");
   DefMacro!("\\tag", sub[_args] { amstex_tag()? });
+  // A tag for a display with no equation row to hold it (AMS-TeX's `\tag#1$$` in a `$$` display, amstex.tex:597-599):
+  // the tags `\lx@make@tags` builds — amsmath's `\tag` shape, `\lx@equation@settag@`'s — float to the display's
+  // `ltx:equation`, as `\eqno`'s do (tex_math.rs `\lx@eqno`). One floated out of a math alignment's row (AMS-TeX's
+  // `$$\align … \tag 2.1\\ … \endalign$$`, the row's tag cell, amstex.tex:629-640) is tied to its row (`_tags` on
+  // both), so the lone-`aligned` rearrangement (amsmath_sty.rs `rearrange_lone_ams_aligned`) gives it to that row's
+  // `ltx:equation`; elsewhere the internal marks are dropped (1012.3760).
+  DefConstructor!("\\lx@tags@float{}", "^ <ltx:tags>#1</ltx:tags>",
+    reversion => "",
+    after_construct => sub[document, _whatsit] {
+      tie_floated_tags_to_row(document)?;
+    });
+  DefPrimitive!("\\lx@equation@settag@float {}", sub[(content)] {
+    let mut tokens = vec![T_CS!("\\begingroup"), T_CS!("\\let"), T_CS!("\\lx@tags"), T_CS!("\\lx@tags@float")];
+    tokens.extend(content.unlist());
+    tokens.push(T_CS!("\\endgroup"));
+    Ok(vec![digest(Tokens::new(tokens))?])
+  });
   DefMath!("\\and", None, "\\&", role => "ADDOP", meaning => "and");
 
   // \\\\ — newline in math is XMHint, in text is <ltx:break/>.
@@ -594,11 +616,15 @@ LoadDefinitions!({
   def_macro_noop("\\syntax")?;
 });
 
-/// The tokens that end an AMS-TeX `\tag`'s text in an alignment row: the row's end (`\\` is `\cr` there, amstex.tex
-/// `\Let@`) or the environment's (`\endalign` …; `\end` for a LaTeX one).
+/// The tokens that end an AMS-TeX `\tag`'s text in an alignment row: the row's end (`\\` is `\cr` there, amstex.tex:486
+/// `\Let@`), the row enders an AMS-TeX alignment defines (`\displaybreak`, `\allowdisplaybreak` and `\intertext`
+/// begin `\crcr\noalign`, amstex.tex:613-618; `\vspace`, `\vspace@` beside :563), or the environment's end
+/// (`\endalign` …; `\end` for a LaTeX one). A token that MEANS `\cr`, `\crcr` or the row's `\\` (`\let\nl\\`), or a
+/// macro without parameters whose expansion starts with one (`\def\nl{\\}`), ends it too: TeX's tag cell ends where
+/// the expansion reaches the `\cr`.
 fn amstex_tag_row_end(t: &Token) -> bool {
   t.get_catcode() == Catcode::CS
-    && t.with_str(|s| {
+    && (t.with_str(|s| {
       matches!(
         s,
         "\\\\"
@@ -606,6 +632,10 @@ fn amstex_tag_row_end(t: &Token) -> bool {
           | "\\crcr"
           | "\\lx@hidden@cr"
           | "\\lx@hidden@crcr"
+          | "\\displaybreak"
+          | "\\allowdisplaybreak"
+          | "\\intertext"
+          | "\\vspace"
           | "\\endalign"
           | "\\endgather"
           | "\\endalignat"
@@ -617,7 +647,36 @@ fn amstex_tag_row_end(t: &Token) -> bool {
           | "\\endgathered"
           | "\\endalignedat"
       )
-    })
+    }) || means_row_end(t, 0))
+}
+
+/// Whether `t` means `\cr`, `\crcr` or the current `\\`, or is a macro without parameters whose expansion starts with
+/// such a token (followed a few levels).
+fn means_row_end(t: &Token, depth: u8) -> bool {
+  if x_equals(t, &T_CS!("\\cr")) || x_equals(t, &T_CS!("\\crcr")) || x_equals(t, &T_CS!("\\\\")) {
+    return true;
+  }
+  if depth >= 4 {
+    return false;
+  }
+  let Ok(Some(def)) = lookup_definition(t) else {
+    return false;
+  };
+  if !def.is_expandable()
+    || def
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = def.get_expansion() else {
+    return false;
+  };
+  body
+    .clone()
+    .unlist()
+    .first()
+    .is_some_and(|first| first.get_catcode() == Catcode::CS && means_row_end(first, depth + 1))
 }
 
 /// The tokens that end any AMS-TeX `\tag`'s text short of its `$$`, where TeX's `\tag#1$$` would run on into an error:
@@ -627,26 +686,66 @@ fn amstex_tag_display_end(t: &Token) -> bool {
     && t.with_str(|s| matches!(s, "\\]" | "\\lx@end@display@math" | "\\end"))
 }
 
+/// Whether the innermost alignment was opened inside the current math: its binding sits in a frame newer than the one
+/// the math's mode was bound in (`begin_mode`'s `BOUND_MODE`). An enclosing `tabular` or `\halign` cell holding the
+/// display is not the tag's row (`$$x\tag 1\matrix a\cr b\endmatrix$$` in a `p` column reads to the `$$`).
+fn alignment_opened_in_current_math() -> bool {
+  for frame in 0..undo_depth() {
+    if is_value_bound("Alignment", Some(frame)) {
+      return matches!(value_in_frame("Alignment", frame), Some(Stored::Digested(d))
+        if matches!(d.data(), DigestedData::Alignment(_)));
+    }
+    if is_value_bound("BOUND_MODE", Some(frame)) {
+      return false;
+    }
+  }
+  false
+}
+
+/// Whether the tag is in an equation row amsmath's `\tag` sets (a LaTeX `equation`, an `align` row): the equation
+/// numbering's `in_equation`, with the LaTeX pool's `\lx@equation@settag` that `\tag` calls.
+fn in_equation_row() -> bool {
+  with_value(
+    "EQUATION_NUMBERING",
+    |numbering| matches!(numbering, Some(Stored::HashStored(n)) if matches!(n.get("in_equation"), Some(&Stored::Bool(true)))),
+  ) && IsDefined!(&T_CS!("\\lx@equation@settag"))
+}
+
 /// AMS-TeX's `\tag` (amstex.tex:597-605, :629-900): read the tag text, unexpanded and brace-balanced, up to the
 /// display's closing `$$` (`\def\tag#1$$`) or the row's or environment's end (left in the input), and hand it to
 /// amsmath's `\tag` where an equation row holds it, else float it to the display (`\lx@equation@settag@float`). As
-/// `\tag#1$$` is not `\long`, a `\par` ends the text with TeX's error.
+/// `\tag#1$$` is not `\long`, a `\par` (at any depth) ends the call with TeX's runaway error, and a `}` closing a group
+/// opened before it with TeX's "extra }" one; the tag is dropped, as TeX drops the call.
 fn amstex_tag() -> Result<Vec<Token>> {
-  // in a row (`$$\align` is amsmath's `aligned` inside the display) the text runs to the row's end; in the display
-  // itself, to its `$$` (`$$\tag 1 \pmatrix a\\b\endpmatrix$$` puts the matrix in the tag, as TeX does)
-  let in_row = lookup_alignment().is_some();
+  let in_equation = in_equation_row();
+  // in a row (`$$\align` is amsmath's `aligned` inside the display, opened in its math) the text runs to the row's
+  // end; in the display itself, to its `$$` (`$$\tag 1 \pmatrix a\\b\endpmatrix$$` puts the matrix in the tag, as TeX
+  // does)
+  let in_row = in_equation || alignment_opened_in_current_math();
   let mut text: Vec<Token> = Vec::new();
   let mut depth = 0usize;
+  let mut delimited = false;
   loop {
+    // TeX abandons a call whose argument runs away (tex.web §392, §395-396): the tag and its text are dropped
     let Some(t) = read_token()? else {
-      Error!("expected", "$$", "File ended before \\tag was complete");
-      break;
+      Error!("expected", "$$", "File ended while scanning use of \\tag");
+      return Ok(Vec::new());
     };
+    if t == T_CS!("\\par") {
+      Error!(
+        "unexpected",
+        "\\par",
+        "Paragraph ended before \\tag was complete"
+      );
+      unread_one(t);
+      return Ok(Vec::new());
+    }
     if depth == 0 {
       if t == T_MATH!() {
         match read_token()? {
           Some(next) if next == T_MATH!() => {
             unread_vec(vec![t, next]);
+            delimited = true;
             break;
           },
           Some(next) => unread_one(next),
@@ -655,17 +754,10 @@ fn amstex_tag() -> Result<Vec<Token>> {
       } else if amstex_tag_display_end(&t) || (in_row && amstex_tag_row_end(&t)) {
         unread_one(t);
         break;
-      } else if t == T_CS!("\\par") {
-        Error!(
-          "expected",
-          "$$",
-          "Paragraph ended before \\tag was complete"
-        );
-        unread_one(t);
-        break;
       } else if t.get_catcode() == Catcode::END {
+        Error!("unexpected", "}", "Argument of \\tag has an extra }");
         unread_one(t);
-        break;
+        return Ok(Vec::new());
       }
     }
     match t.get_catcode() {
@@ -674,6 +766,11 @@ fn amstex_tag() -> Result<Vec<Token>> {
       _ => {},
     }
     text.push(t);
+  }
+  // `\def\tag#1$$`: a delimited argument that is one balanced group loses its braces (tex.web §400), so
+  // `\tag{"A"}$$` is the quoted form; a row's tag cell is no argument
+  if delimited && is_one_group(&text) {
+    text = text[1..text.len() - 1].to_vec();
   }
   // `\tagform@`'s `\ignorespaces#1\unskip`
   while text
@@ -701,10 +798,6 @@ fn amstex_tag() -> Result<Vec<Token>> {
     text.insert(0, T_MATH!());
     text.push(T_MATH!());
   }
-  let in_equation = with_value(
-    "EQUATION_NUMBERING",
-    |numbering| matches!(numbering, Some(Stored::HashStored(n)) if matches!(n.get("in_equation"), Some(&Stored::Bool(true)))),
-  );
   let mut out = Vec::new();
   if in_equation {
     out.push(T_CS!("\\lx@amstex@ams@tag"));
@@ -718,6 +811,16 @@ fn amstex_tag() -> Result<Vec<Token>> {
     out.extend([T_CS!("\\lx@equation@settag@float"), T_BEGIN!()]);
     if quoted {
       out.extend([T_CS!("\\let"), T_CS!("\\fnum@equation"), T_CS!("\\relax")]);
+    } else if !IsDefined!(&T_CS!("\\fnum@equation")) {
+      // no LaTeX pool (a plain `\input amstex` document): the tag is AMS-TeX's `\tagform@`, `(#1)` (amstex.tex:595),
+      // as LaTeX's `\fnum@equation` (`\@eqnnum`) sets it
+      out.extend([
+        T_CS!("\\def"),
+        T_CS!("\\fnum@equation"),
+        T_BEGIN!(),
+        T_OTHER!("("),
+      ]);
+      out.extend([T_CS!("\\theequation"), T_OTHER!(")"), T_END!()]);
     }
     out.extend([T_CS!("\\lx@ams@tag@text"), T_BEGIN!()]);
     out.extend(text);
@@ -726,4 +829,62 @@ fn amstex_tag() -> Result<Vec<Token>> {
     out.extend([T_END!(), T_END!()]);
   }
   Ok(out)
+}
+
+/// Whether `tokens` is one balanced group: a `{` whose matching `}` is the last token.
+fn is_one_group(tokens: &[Token]) -> bool {
+  if tokens.len() < 2 || tokens[0].get_catcode() != Catcode::BEGIN {
+    return false;
+  }
+  let mut depth = 0usize;
+  for (i, t) in tokens.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth -= 1;
+        if depth == 0 {
+          return i == tokens.len() - 1;
+        }
+      },
+      _ => {},
+    }
+  }
+  false
+}
+
+/// Tie the `ltx:tags` `\lx@tags@float` just floated (the last `ltx:tags` child of the nearest ancestor holding one) to
+/// the math alignment row it was built in, if any: both get the same `_tags` mark.
+fn tie_floated_tags_to_row(document: &mut Document) -> Result<()> {
+  let qname = |n: &Node| document::get_node_qname(n);
+  let mut row = Some(document.get_node().clone());
+  while let Some(n) = row.take() {
+    if qname(&n) == pin!("ltx:XMRow") {
+      row = Some(n);
+      break;
+    }
+    row = n.get_parent();
+  }
+  let Some(mut row) = row else {
+    return Ok(());
+  };
+  let mut ancestor = row.get_parent();
+  while let Some(a) = ancestor {
+    let last_tags = a
+      .get_child_elements()
+      .into_iter()
+      .rev()
+      .find(|c| qname(c) == pin!("ltx:tags"));
+    if let Some(mut tags) = last_tags {
+      if tags.get_attribute("_tags").is_none() {
+        let mark = lookup_int("lx@tags@row@mark") + 1;
+        assign_value("lx@tags@row@mark", Stored::Int(mark), Some(Scope::Global));
+        let mark = mark.to_string();
+        document.set_attribute(&mut tags, "_tags", &mark)?;
+        document.set_attribute(&mut row, "_tags", &mark)?;
+      }
+      break;
+    }
+    ancestor = a.get_parent();
+  }
+  Ok(())
 }

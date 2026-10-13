@@ -1,0 +1,10 @@
+% witness: math9412232 (line 1326 `$$\gather … \endgather$$`, 4 errors); 7 of the 122 AMS-TeX `\tag` population papers, 36 errors (66d6 and 66e alike)
+% oracle:  pdftex (\input amstex, \input amsppt.sty, no \documentstyle) 0 errors; amstex.tex:797 \gather inside $$ is AMS-TeX's own gather
+% engines: rust 66d6 and 66e = 1 error "\ams@return@opt@arg undefined": `$$\gather` is amsmath's `gathered`, whose `\lx@ams@start@box` (amsmath_sty.rs RawTeX, amsmath.sty:1441-1456) does `\let\ams@return@opt@arg\@empty`, and a plain document has no `\@empty` (the LaTeX pool's); perl not run
+% expect:  0 errors; the gathered rows a and b
+% status:  RED (follow-up: `\def\ams@return@opt@arg{}` / `\def\lx@ams@pos{}`, or `\@empty` for the plain route)
+\input amstex
+\input amsppt.sty
+\document
+$$\gather a\\ b\endgather$$
+\enddocument

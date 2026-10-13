@@ -1,0 +1,10 @@
+% witness: (synthetic; found reviewing 66e r2's row enders)
+% oracle:  pdftex (\input amstex) 0 errors; amstex.tex:615-618 inside \align `\intertext{…}` is `\crcr\noalign{… \vbox{\normalbaselines\noindent#1} …}`: a text paragraph between the rows
+% engines: rust 66d6 and 66e = 1 error "<ltx:p> isn't allowed in <ltx:XMArg>" (`$$\align` is amsmath's `aligned`, whose bindings leave `\intertext` the standalone constructor); perl not run
+% expect:  0 errors; the rows a=b and c=d with the text "and" between them
+% status:  RED (follow-up)
+\input amstex
+\input amsppt.sty
+\document
+$$\align a&=b\\ \intertext{and} c&=d\endalign$$
+\enddocument

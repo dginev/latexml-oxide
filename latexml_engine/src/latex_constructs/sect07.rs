@@ -138,25 +138,6 @@ pub(crate) fn load() -> Result<()> {
     mode => "restricted_horizontal"
   );
 
-  // A tag for a display with no equation row to hold it (AMS-TeX's `\tag#1$$` in a plain `$$` display,
-  // amstex.tex:597-599): the tags `\lx@make@tags` builds — amsmath's `\tag` shape, `\lx@equation@settag@`'s — float to
-  // the display's `ltx:equation`, as `\eqno`'s do (`\lx@eqno`). One floated out of a math alignment's row (AMS-TeX's
-  // `$$\align … \tag 2.1\\ … \endalign$$`, the row's tag cell, amstex.tex:629-640) is tied to its row (`_tags` on
-  // both), so the lone-`aligned` rearrangement (amsmath_sty.rs `rearrange_lone_ams_aligned`) gives it to that row's
-  // `ltx:equation`; elsewhere the internal marks are dropped. Guards `perfect_kernel_batch66e::
-  // amstex_display_tag_is_a_text_tag`, `::amstex_align_row_tags_run_to_the_row_end` (1012.3760).
-  DefConstructor!("\\lx@tags@float{}", "^ <ltx:tags>#1</ltx:tags>",
-    reversion => "",
-    after_construct => sub[document, _whatsit] {
-      tie_floated_tags_to_row(document)?;
-    });
-  DefPrimitive!("\\lx@equation@settag@float {}", sub[(content)] {
-    let mut tokens = vec![T_CS!("\\begingroup"), T_CS!("\\let"), T_CS!("\\lx@tags"), T_CS!("\\lx@tags@float")];
-    tokens.extend(content.unlist());
-    tokens.push(T_CS!("\\endgroup"));
-    Ok(vec![digest(Tokens::new(tokens))?])
-  });
-
   DefMacro!("\\[", "\\lx@begin@display@math");
   DefMacro!("\\]", "\\lx@end@display@math");
   DefMacro!("\\(", "\\lx@begin@inline@math");
@@ -623,42 +604,5 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\operator@font", None,
     font => {family => "serif", series => "medium", shape => "upright"});
 
-  Ok(())
-}
-
-/// Tie the `ltx:tags` `\lx@tags@float` just floated (the last `ltx:tags` child of the nearest ancestor holding one) to
-/// the math alignment row it was built in, if any: both get the same `_tags` mark.
-fn tie_floated_tags_to_row(document: &mut Document) -> Result<()> {
-  let qname = |n: &Node| document::get_node_qname(n);
-  let mut row = Some(document.get_node().clone());
-  while let Some(n) = row.take() {
-    if qname(&n) == pin!("ltx:XMRow") {
-      row = Some(n);
-      break;
-    }
-    row = n.get_parent();
-  }
-  let Some(mut row) = row else {
-    return Ok(());
-  };
-  let mut ancestor = row.get_parent();
-  while let Some(a) = ancestor {
-    let last_tags = a
-      .get_child_elements()
-      .into_iter()
-      .rev()
-      .find(|c| qname(c) == pin!("ltx:tags"));
-    if let Some(mut tags) = last_tags {
-      if tags.get_attribute("_tags").is_none() {
-        let mark = lookup_int("lx@tags@row@mark") + 1;
-        assign_value("lx@tags@row@mark", Stored::Int(mark), Some(Scope::Global));
-        let mark = mark.to_string();
-        document.set_attribute(&mut tags, "_tags", &mark)?;
-        document.set_attribute(&mut row, "_tags", &mark)?;
-      }
-      break;
-    }
-    ancestor = a.get_parent();
-  }
   Ok(())
 }
