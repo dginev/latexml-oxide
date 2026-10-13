@@ -989,7 +989,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   TeX's "Missing } inserted" per open group (tex.web §1126-1127; the runaway error if a `\par` was read in a group
   still open), the tag keeps its text with its groups closed, and the rest is read again, so no row, enclosing group
   (`{\it …}`, `\vbox{…}`), later paragraph or `\enddocument` is lost (r3 read them into the tag; r4 still did when an
-  enclosing group's `}` came first); the shapes where TeX errs and ours recovers are OD #575. In a LaTeX equation row a braced
+  enclosing group's `}` came first); the document's end (`\enddocument`, `\bye`) is never read into a tag (a row end;
+  in the `$$` form TeX's "Forbidden control sequence", the call dropped), and a `$` closing inline math in a tag is never
+  the start of `$$` (`\tag{$a$$b$}\\`); the shapes where TeX errs and ours recovers are OD #575. In a LaTeX equation row a braced
   `\tag{…}`/`\tag*{…}` is amsmath's (an `\input amstex` or `\NoBlackBoxes`-autoloaded LaTeX document read `a=b` into the
   tag before 66e r3). r2 A/B (66d6 → 66e r2, 122 AMS-TeX zips): E 721 → 692, F 5 → 5, no paper worse, the 17 r1
   regressions (math9412232, hep-th9308082, hep-th9206021, hep-th9111004, 1102.5649, …) back to 66d6's counts or better;
@@ -1005,7 +1007,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `amstex/amstex_plain_gather_return_opt_arg`); an unbraced inner alignment in a row tag (`\tag 1\matrix a\cr
   b\endmatrix\\`) stops the tag at the inner `\cr` and errs; an active character let to `\\` (`\let~\\`) does not end a
   row tag (`amstex_tag_row_end`'s `Catcode::CS` gate); a `\par` in `$$\align … \endalign$$` raises no error (TeX's
-  `\align` reads its body as an argument: "Paragraph ended before \align was complete"; before 66e too). Guards
+  `\align` reads its body as an argument: "Paragraph ended before \align was complete"; before 66e too); an amsppt
+  `\footnote{` whose `}` never comes reads to the file's end, the later paragraphs inside the `<note>` (amsppt_sty.rs
+  `\footnote[]{}` reads `\long`, amsppt.sty:804/:814 `\nextiv@##1` does not; RED
+  `amstex/amsppt_footnote_argument_runs_past_par`); an alignment open at `\enddocument` drops its open row's last cells
+  without an error (RED `amstex/amstex_align_unclosed_at_enddocument`, before 66e too). Guards
   `perfect_kernel_batch66e::*`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no

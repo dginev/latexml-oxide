@@ -589,6 +589,152 @@ fn amstex_row_tag_open_group_stops_at_the_row_end() {
   );
 }
 
+/// The document's end (amsppt's `\enddocument`, plain's `\bye`, both `\outer` in TeX) is never read into a tag's text:
+/// in a row it ends the row and the environment (`$$\align a&=b\\ c&=d\tag{5 e\enddocument` without its `\endalign`:
+/// "Missing } inserted" for the tag's open group, as at any row end), in the `$$` form it is TeX's "Forbidden control
+/// sequence found while scanning use of \tag" and the call is dropped (tex.web §336-339). r5 read `\enddocument` into
+/// the row's tag (the second row lost, "Mouth is unexpectedly already closed"). The file's end without either still
+/// raises "File ended while scanning use of \tag". In each shape the paragraph before the display is kept and the
+/// document ends. pdftex: `$$\align a&=b\tag{5 c\enddocument` 3 errors ("Forbidden control sequence found while
+/// scanning use of \align", "Missing $ inserted", "Display math should end with $$"), `$$ a=b\tag{5 c\enddocument` 3
+/// (the first `… use of \tag`). The open row's last cells at `\enddocument` are dropped with or without a tag (RED
+/// `amstex/amstex_align_unclosed_at_enddocument`). OXIDIZED_DESIGN_DIVERGENCES #575.
+#[test]
+fn amstex_tag_stops_at_the_document_end() {
+  const MISSING: &str = "Missing } inserted before the row's end in \\tag";
+  const FORBIDDEN: &str = "Forbidden control sequence found while scanning use of \\tag";
+  const FILE_ENDED: &str = "File ended while scanning use of \\tag";
+  const UNCLOSED: &str = "Closing tag \"ltx:document\" whose open descendents do not auto-close";
+  // (body, errors, the equation id and its math)
+  type Case<'a> = (&'a str, Vec<(&'a str, usize)>, (&'a str, &'a str));
+  let cases: [Case; 6] = [
+    (
+      "$$\\align a&=b\\\\ c&=d\\tag{5 e\n\\enddocument\n",
+      vec![(MISSING, 1)],
+      ("id2.1.1", "<Math tex=\"\\displaystyle a=b\" text=\"a = b\""),
+    ),
+    (
+      "$$\\align a&=b\\\\ c&=d\\tag{5 e\n\\bye\n",
+      vec![(MISSING, 1)],
+      ("id2.1.1", "<Math tex=\"\\displaystyle a=b\" text=\"a = b\""),
+    ),
+    (
+      "$$\\align a&=b\\tag{5 c\n",
+      vec![(FILE_ENDED, 1)],
+      ("id2.1.1", "<Math tex=\"\\displaystyle a\" text=\"a\""),
+    ),
+    (
+      "$$ a=b\\tag{5 c\n\\enddocument\n",
+      vec![(FORBIDDEN, 1), (UNCLOSED, 1)],
+      // the display never ends: `\enddocument` is read in it, as without the tag
+      (
+        "id2.1",
+        "<Math mode=\"display\" tex=\"a=b\\enddocument\" text=\"a = b\"",
+      ),
+    ),
+    (
+      "$$ a=b\\tag 5 c\n\\bye\n",
+      vec![(FORBIDDEN, 1)],
+      ("id2.1", "<Math mode=\"display\" tex=\"a=b\" text=\"a = b\""),
+    ),
+    (
+      "$$ a=b\\tag{5 c\n",
+      vec![(FILE_ENDED, 1)],
+      ("id2.1", "<Math mode=\"display\" tex=\"a=b\" text=\"a = b\""),
+    ),
+  ];
+  for (body, errors, (id, math)) in cases {
+    let tex =
+      format!("\\input amstex\n\\input amsppt.sty\n\\document\nBefore paragraph.\n\n{body}");
+    let (log, xml) = convert_counted(&tex);
+    let total: usize = errors.iter().map(|(_, n)| n).sum();
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (total, 0),
+      "{body}\n{log}"
+    );
+    for (message, n) in errors {
+      assert_eq!(log.matches(message).count(), n, "{body}: {message}\n{log}");
+    }
+    assert_eq!(
+      element(&xml, "<para xml:id=\"id1\">", "</para>"),
+      "<para xml:id=\"id1\">\n<p xml:id=\"id1.1\">Before paragraph.</p>\n</para>",
+      "{body}\n{xml}"
+    );
+    assert!(equation(&xml, id).contains(math), "{body}: {math}\n{xml}");
+    // no tag holds the document's end
+    assert!(!xml.contains("<tag"), "{body}\n{xml}");
+    assert!(xml.trim_end().ends_with("</document>"), "{body}\n{xml}");
+  }
+}
+
+/// Inline math inside a tag is tracked, so the `$` closing it is never the start of `$$`: `\tag{$a$$b$}\\` is two
+/// inline maths in a row's tag (r5 read the `$$` inside the tag's group as a display end and stopped after `$a`, with
+/// 10 errors), as is `\tag $a$$b$\\` in a row's tag cell (r5: 8 errors) and `\tag{$a$$b$}$$` in a display. pdftex: 0 errors on all
+/// three, the tag "(ab)". Only the `$$` form's own level matches `$$` as tokens (`\def\tag#1$$`).
+#[test]
+fn amstex_tag_inline_maths_are_not_a_display_end() {
+  let tag = |ids: [&str; 4]| {
+    let math = |id: &str, c: &str| {
+      format!(
+        "<Math mode=\"inline\" tex=\"{c}\" text=\"{c}\" xml:id=\"{id}\">\n<XMath xml:id=\"{id}.1\">\n\
+         <XMTok font=\"italic\" role=\"UNKNOWN\">{c}</XMTok>\n</XMath>\n</Math>"
+      )
+    };
+    format!(
+      "<tags>\n<tag>({}{})</tag>\n<tag role=\"refnum\">{}{}</tag>\n</tags>",
+      math(ids[0], "a"),
+      math(ids[1], "b"),
+      math(ids[2], "a"),
+      math(ids[3], "b")
+    )
+  };
+  let row = ["id1.1.1.1", "id1.1.1.2", "id1.1.1.3", "id1.1.1.4"];
+  for (body, id, ids, equations) in [
+    (
+      "$$\\align a&=b\\tag{$a$$b$}\\\\ c&=d\\endalign$$",
+      "id1.1.1",
+      row,
+      2,
+    ),
+    (
+      "$$\\align a&=b\\tag $a$$b$\\\\ c&=d\\endalign$$",
+      "id1.1.1",
+      row,
+      2,
+    ),
+    (
+      "$$ a=b\\tag{$a$$b$}$$",
+      "id1.1",
+      ["id1.1.2", "id1.1.3", "id1.1.4", "id1.1.5"],
+      1,
+    ),
+  ] {
+    let (log, xml) = convert_counted(&format!(
+      "\\input amstex\n\\input amsppt.sty\n\\document\n{body}\n\\enddocument\n"
+    ));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{body}\n{log}"
+    );
+    assert_tags_on(&xml, id, &tag(ids));
+    assert_eq!(xml.matches("<tags>").count(), 1, "{body}\n{xml}");
+    assert_eq!(
+      xml.matches("<equation ").count(),
+      equations,
+      "{body}\n{xml}"
+    );
+    if equations == 2 {
+      let eq = equation(&xml, "id1.1.2");
+      assert!(
+        eq.contains("<Math tex=\"\\displaystyle c=d\" text=\"c = d\"") && !eq.contains("<tags>"),
+        "{body}\n{xml}"
+      );
+    }
+  }
+}
+
 /// A LaTeX equation row with the AmSTeX pool loaded is a row too: no `\tag#1$$` governs it, so a `}` closing a group
 /// opened before an unbraced `\tag` ends the tag (amsmath's, `\lx@amstex@ams@tag`) without the `$$` form's "extra }"
 /// and runaway errors (r3 raised two per tag and put a `\par` in the row). A braced `\tag{…}` there is amsmath's

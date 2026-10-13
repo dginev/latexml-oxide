@@ -687,6 +687,13 @@ fn amstex_tag_display_end(t: &Token) -> bool {
     && t.with_str(|s| matches!(s, "\\]" | "\\lx@end@display@math" | "\\end"))
 }
 
+/// The document's ends (amsppt's `\enddocument`, amsppt.sty:1091, plain's `\bye`, plain.tex): both are `\outer` in TeX,
+/// so no macro argument reads past them ("Forbidden control sequence found while scanning use of …", tex.web §336-339),
+/// and a tag's text never holds them (`$$\align a&=b\tag{5 c\enddocument` without its `\endalign`).
+fn amstex_tag_document_end(t: &Token) -> bool {
+  t.get_catcode() == Catcode::CS && t.with_str(|s| matches!(s, "\\enddocument" | "\\bye"))
+}
+
 /// Whether the innermost alignment was opened inside the current math: its binding sits in a frame newer than the one
 /// the math's mode was bound in (`begin_mode`'s `BOUND_MODE`). An enclosing `tabular` or `\halign` cell holding the
 /// display is not the tag's row (`$$x\tag 1\matrix a\cr b\endmatrix$$` in a `p` column reads to the `$$`).
@@ -723,7 +730,9 @@ fn in_equation_row() -> bool {
 /// tag's own groups, or such a `}`, ends the tag cell with the text read so far; a `\par` inside a group of the tag
 /// that closes stays in the text; a row's or environment's end read while a group of the tag is open stops the scan
 /// there, and the tag's groups are closed ([`close_runaway_row_tag`]; OXIDIZED_DESIGN_DIVERGENCES #575, where TeX errs
-/// on these shapes). In a LaTeX equation row a braced `\tag{…}` (`\tag*{…}`) is amsmath's,
+/// on these shapes). A `$` closing inline math inside a row's tag cell or a group of the tag is never the start of
+/// `$$` (`\tag{$a$$b$}\\`), and the document's end is never read into the tag ([`amstex_tag_document_end`]). In a
+/// LaTeX equation row a braced `\tag{…}` (`\tag*{…}`) is amsmath's,
 /// its argument only (an `\input amstex` LaTeX document, or one whose `\NoBlackBoxes` autoloads the AmSTeX pool,
 /// tex.rs).
 fn amstex_tag() -> Result<Vec<Token>> {
@@ -741,6 +750,9 @@ fn amstex_tag() -> Result<Vec<Token>> {
   // in a row cell, inside a group of the tag: where the first `\par` was read (the index into `text`, and the depth
   // there), while that depth's group is still open
   let mut par_at: Option<(usize, usize)> = None;
+  // inside a row's tag cell, or a group of the tag: whether a `$` opened inline math, so the `$` closing it is never
+  // read as the start of `$$` (`\tag{$a$$b$}\\` is two inline maths)
+  let mut inline_math = false;
   loop {
     // TeX abandons a call whose argument runs away (tex.web §392, §395-396): the tag and its text are dropped (a row's
     // tag keeps what it read, `close_runaway_row_tag`)
@@ -771,18 +783,36 @@ fn amstex_tag() -> Result<Vec<Token>> {
       );
       return Ok(Vec::new());
     }
+    // the document's end: the `$$` form's argument runs away there (tex.web §336-339: the `\outer` token is backed up
+    // and the call dropped); in a row it ends the row and the environment, as below
+    if !in_row && amstex_tag_document_end(&t) {
+      Error!(
+        "unexpected",
+        &t.to_string(),
+        "Forbidden control sequence found while scanning use of \\tag"
+      );
+      unread_one(t);
+      return Ok(Vec::new());
+    }
+    // where `$` parity is tracked (a row's tag cell, a group of the tag)
+    let math_tracked = in_row || depth > 0;
     // `$$`, a display end, or (in a row) the row's or environment's end
     let ends = if t == T_MATH!() {
-      match read_token()? {
-        Some(next) => {
-          let display_end = next == T_MATH!();
-          unread_one(next);
-          display_end
-        },
-        None => false,
+      if math_tracked && inline_math {
+        false
+      } else {
+        match read_token()? {
+          Some(next) => {
+            let display_end = next == T_MATH!();
+            unread_one(next);
+            display_end
+          },
+          None => false,
+        }
       }
     } else {
-      amstex_tag_display_end(&t) || (in_row && amstex_tag_row_end(&t))
+      amstex_tag_display_end(&t)
+        || (in_row && (amstex_tag_row_end(&t) || amstex_tag_document_end(&t)))
     };
     if depth == 0 {
       if ends {
@@ -838,7 +868,12 @@ fn amstex_tag() -> Result<Vec<Token>> {
         if par_at.is_some_and(|(_, at)| at > depth) {
           par_at = None;
         }
+        // back at the `$$` form's own level, where `$$` is matched as tokens
+        if depth == 0 && !in_row {
+          inline_math = false;
+        }
       },
+      Catcode::MATH if math_tracked => inline_math = !inline_math,
       _ => {},
     }
     text.push(t);

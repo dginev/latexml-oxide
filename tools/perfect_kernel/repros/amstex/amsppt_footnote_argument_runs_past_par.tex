@@ -1,0 +1,14 @@
+% witness: synthetic (66e r5/r6 review: the runaway footnote of the `\vbox`/footnote `\tag{5` shapes; a `\footnote{` whose `}` never comes)
+% oracle:  pdftex (\input amstex, \input amsppt.sty) this file: 1 error, "Paragraph ended before \next@ was complete" (amsppt.sty:814 `\def\nextiv@##1{\footnotemark\footnotetext{##1}}`, :804 the same for `\footnotetext`, both not `\long`, so the argument stops at the first `\par`, tex.web §392); the footnote is dropped, "Later paragraph." and "Last paragraph." are set as paragraphs
+% engines: rust 66d6 = 66e r6 = 2 errors ("Gullet->readBalanced ran out of input in an unbalanced state", "Closing tag \"ltx:document\" whose open descendents do not auto-close"): amsppt_sty.rs `DefConstructor!("\\footnote[]{}", …)` reads its argument `\long` (as Perl's amsppt.sty.ltxml L268 `DefConstructor('\footnote[]{}', …)` does) to the file's end, so both later paragraphs land inside the `<note>` and lose their breaks
+% expect:  1 error (the footnote's argument runs away at the first `\par`); "Later paragraph." and "Last paragraph." are two `<para>`s outside any `<note>`
+% status:  RED (66e r6; not fixed in 66e, the footnote binding's argument is a separate mechanism)
+\input amstex
+\input amsppt.sty
+\document
+Text\footnote{A note.
+
+Later paragraph.
+
+Last paragraph.
+\enddocument

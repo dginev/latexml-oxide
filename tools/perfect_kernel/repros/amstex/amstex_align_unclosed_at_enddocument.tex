@@ -1,0 +1,10 @@
+% witness: synthetic (66e r6: the `\tag{5 c\enddocument` stop shape; the alignment around it, with or without a tag, never ends)
+% oracle:  pdftex (\input amstex, \input amsppt.sty) this file: 3 errors ("Forbidden control sequence found while scanning use of \align" at the `\outer` `\enddocument`, amsppt.sty:1091, amstex.tex:667/:687; "Missing $ inserted"; "Display math should end with $$"); the alignment is dropped
+% engines: rust 66d6 = 66e r6 = 0 errors, 0 warnings: the `\enddocument` read in the open alignment closes the document, row 1 `a=b` is kept, row 2 keeps `c` and silently loses its last cell `=d`
+% expect:  an Error for the alignment that never ends; row 2 is `c=d`, nothing dropped silently
+% status:  RED (66e r6; not fixed in 66e, the alignment's end at the document's end is a separate mechanism)
+\input amstex
+\input amsppt.sty
+\document
+$$\align a&=b\\ c&=d
+\enddocument
