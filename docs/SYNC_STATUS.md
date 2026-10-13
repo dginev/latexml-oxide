@@ -950,7 +950,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   gaceta, homework, jwjournal byte-identical. Errors 766 → 1006 only because the R1 papers now convert and show their
   authors' stray conditionals (1904.11818 594, 2012.08626 112, 2210.17505 97, 1602.01884 20; pdflatex reports each).
   Still erroring: AMS-TeX `\tag 1.2$'$` (1012.3760 Fatal → TooManyErrors, 1108.6264 3, 1112.1423 4; RED
-  `amstex/amstex_tag_with_math_text`, next); 1905.04581 (paracol `\ifinner`, known); unchanged pre-existing errors in
+  `amstex/amstex_tag_with_math_text`, next — fixed in 66e); 1905.04581 (paracol `\ifinner`, known); unchanged pre-existing errors in
   2304.05575 (`\BAmulticolumn`), gr-qc9405068/gr-qc9406008 (the author's `\beginabstract` pair), gr-qc9507042
   (merged creators), math0012150 (active `@`), 2401.14559 (3), and the AMS-TeX amams/gtmacros Fatals of the 66b residual.
   Bundle A/B (1009 papers, `~/data/pk_agents/main/ab_66bundle`, 66cr2 vs 66d2): identical tallies (E 2241, F 1), 12
@@ -969,6 +969,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `main_tex::tests::{driver_vetoes_the_preamble_it_inputs, wrapper_without_begin_document_keeps_its_main}`. Open:
   R2 aastex `D` vs preloaded dcolumn (~50), R7 xargs robustness (~21), R8 `\enddocument` tail (~21), R9 hyperref
   `\H@refstepcounter` (~12), R11 qbordermatrix IfLimit, R12 shipped core-file copies, R14-R16 singletons.
+- **66e** (AMS-TeX `\tag`, the 66d "next"): `\tag` was `\let` to `\eqno` (Perl too, KPE #643), whose tag is math up
+  to the first `$`, so `\tag 1.2$'$` closed the display ("Missing $" cascade). amstex.rs `amstex_tag` reads the tag
+  text as amstex.tex:597-605 does — unexpanded and brace-balanced up to the display's `$$` or, in a row (:629-640,
+  718-760, 797-818, 876-900), to `\\`/`\cr`/the environment's `\end…` — and sets it with amsmath's `\tag` markup
+  (`\tag*` for a quoted `"…"`, `$…$` under `\TagsAsMath`, amstex.tex:590-593, whose amsppt no-op stubs are gone). With no
+  equation row (a plain `$$` display, also `$$\align` = amsmath's `aligned`) the tags float to the display
+  (sect07.rs `\lx@equation@settag@float`); one built in an `aligned` row is tied to it, and
+  `rearrange_lone_ams_aligned` gives it to that row's equation. Witnesses (66d6 → 66e, `wit66`): 1112.1423 E 4 → 0,
+  1108.6264 E 3 → 1 (merged creators), 1012.3760 still E 101 + TooManyErrors, but its first error moved from line 134 to
+  904 (lines 1-902: E 7 → 1, all 60 tags text, 57 on their row/equation vs 51): the next class is `\Sb … \\ …
+  \endSb` after `\input pictex` (RED `amstex/amstex_pictex_sb_newline`). A/B over 30 AMS-TeX `\tag` papers: no paper
+  worse; math0001138 and math-ph0001014 E 2 → 0. Residual: `$$\gather … \tag 1\\ … \endgather$$` keeps both tags on
+  the one display equation (amsmath's `gathered` is not split into rows). Guards `perfect_kernel_batch66e::*`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

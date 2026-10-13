@@ -80,8 +80,9 @@ LoadDefinitions!({
   def_macro_noop("\\BlackBoxes")?;
   def_macro_noop("\\NoBlackBoxes")?;
 
-  def_macro_noop("\\TagsAsMath")?;
-  def_macro_noop("\\TagsAsText")?;
+  // amstex.tex:590-593: `\TagsAsMath` sets later tags in math (`\tagform@{$\m@th#1$}`), `\TagsAsText` (the
+  // default) as text; `\tag` reads the switch.
+  RawTeX!(r"\newif\ifmathtags@ \def\TagsAsMath{\global\mathtags@true}\def\TagsAsText{\global\mathtags@false}");
   def_macro_noop("\\TagsOnLeft")?;
   def_macro_noop("\\TagsOnRight")?;
   def_macro_noop("\\CenteredTagsOnSplits")?;
@@ -264,7 +265,18 @@ LoadDefinitions!({
   Let!("\\tsize",  "\\textstyle");
   Let!("\\ssize",  "\\scriptstyle");
   Let!("\\sssize", "\\scriptscriptstyle");
-  Let!("\\tag",    "\\eqno");
+  // AMS-TeX's `\tag` (amstex.tex:597-605 `\def\tag#1$${\eqno\maketag@#1\maketag@$$}`; in `\align`, `\gather`,
+  // `\alignat`… :629-640, 718-760, 797-818, 876-900 it opens the row's tag cell, `&&`): the tag text runs to the
+  // display's `$$` or to its row's end, and is set as TEXT (`\tagform@` = `\hbox{\rm(#1)}`), so `$'$` in it is
+  // inline math. Perl's `\let\tag\eqno` (AmSTeX.pool.ltxml:228; ours before 66e) made it math up to the first `$`,
+  // closing the display there: "Missing $" and its cascade (1012.3760: 101 errors + TooManyErrors; 1112.1423
+  // `\tag 1.18$'$`; 1108.6264 `\tag {$*$}`), KNOWN_PERL_ERRORS #643. The text goes to amsmath's `\tag` (a row's or an
+  // equation's tag) or, in a plain `$$` display, floats to it (`\lx@equation@settag@float`); a quoted tag is the
+  // `\tag*` form (`\maketag@@@"#1"#2\maketag@{\hbox{\rm#1}}`), `\TagsAsMath` wraps the text in `$…$`. Guards
+  // `perfect_kernel_batch66e::{amstex_display_tag_is_a_text_tag, amstex_align_row_tags_run_to_the_row_end,
+  // amstex_tags_as_math_switch}`.
+  Let!("\\lx@amstex@ams@tag", "\\tag");
+  DefMacro!("\\tag", sub[_args] { amstex_tag()? });
   DefMath!("\\and", None, "\\&", role => "ADDOP", meaning => "and");
 
   // \\\\ — newline in math is XMHint, in text is <ltx:break/>.
@@ -581,3 +593,137 @@ LoadDefinitions!({
   def_macro_noop("\\showallocations")?;
   def_macro_noop("\\syntax")?;
 });
+
+/// The tokens that end an AMS-TeX `\tag`'s text in an alignment row: the row's end (`\\` is `\cr` there, amstex.tex
+/// `\Let@`) or the environment's (`\endalign` …; `\end` for a LaTeX one).
+fn amstex_tag_row_end(t: &Token) -> bool {
+  t.get_catcode() == Catcode::CS
+    && t.with_str(|s| {
+      matches!(
+        s,
+        "\\\\"
+          | "\\cr"
+          | "\\crcr"
+          | "\\lx@hidden@cr"
+          | "\\lx@hidden@crcr"
+          | "\\endalign"
+          | "\\endgather"
+          | "\\endalignat"
+          | "\\endxalignat"
+          | "\\endxxalignat"
+          | "\\endmultline"
+          | "\\endsplit"
+          | "\\endaligned"
+          | "\\endgathered"
+          | "\\endalignedat"
+      )
+    })
+}
+
+/// The tokens that end any AMS-TeX `\tag`'s text short of its `$$`, where TeX's `\tag#1$$` would run on into an error:
+/// another display end (`\]`, a LaTeX environment's `\end`).
+fn amstex_tag_display_end(t: &Token) -> bool {
+  t.get_catcode() == Catcode::CS
+    && t.with_str(|s| matches!(s, "\\]" | "\\lx@end@display@math" | "\\end"))
+}
+
+/// AMS-TeX's `\tag` (amstex.tex:597-605, :629-900): read the tag text, unexpanded and brace-balanced, up to the
+/// display's closing `$$` (`\def\tag#1$$`) or the row's or environment's end (left in the input), and hand it to
+/// amsmath's `\tag` where an equation row holds it, else float it to the display (`\lx@equation@settag@float`). As
+/// `\tag#1$$` is not `\long`, a `\par` ends the text with TeX's error.
+fn amstex_tag() -> Result<Vec<Token>> {
+  // in a row (`$$\align` is amsmath's `aligned` inside the display) the text runs to the row's end; in the display
+  // itself, to its `$$` (`$$\tag 1 \pmatrix a\\b\endpmatrix$$` puts the matrix in the tag, as TeX does)
+  let in_row = lookup_alignment().is_some();
+  let mut text: Vec<Token> = Vec::new();
+  let mut depth = 0usize;
+  loop {
+    let Some(t) = read_token()? else {
+      Error!("expected", "$$", "File ended before \\tag was complete");
+      break;
+    };
+    if depth == 0 {
+      if t == T_MATH!() {
+        match read_token()? {
+          Some(next) if next == T_MATH!() => {
+            unread_vec(vec![t, next]);
+            break;
+          },
+          Some(next) => unread_one(next),
+          None => {},
+        }
+      } else if amstex_tag_display_end(&t) || (in_row && amstex_tag_row_end(&t)) {
+        unread_one(t);
+        break;
+      } else if t == T_CS!("\\par") {
+        Error!(
+          "expected",
+          "$$",
+          "Paragraph ended before \\tag was complete"
+        );
+        unread_one(t);
+        break;
+      } else if t.get_catcode() == Catcode::END {
+        unread_one(t);
+        break;
+      }
+    }
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    text.push(t);
+  }
+  // `\tagform@`'s `\ignorespaces#1\unskip`
+  while text
+    .first()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    text.remove(0);
+  }
+  while text
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    text.pop();
+  }
+  // `\maketag@@@"#1"#2\maketag@`: a quoted tag is set as it is, without parentheses, and the rest dropped
+  let quoted = text.first().is_some_and(|t| *t == T_OTHER!("\""));
+  if quoted {
+    let close = text
+      .iter()
+      .skip(1)
+      .position(|t| *t == T_OTHER!("\""))
+      .map_or(text.len(), |i| i + 1);
+    text = text[1..close].to_vec();
+  } else if x_equals(&T_CS!("\\ifmathtags@"), &T_CS!("\\iftrue")) {
+    text.insert(0, T_MATH!());
+    text.push(T_MATH!());
+  }
+  let in_equation = with_value(
+    "EQUATION_NUMBERING",
+    |numbering| matches!(numbering, Some(Stored::HashStored(n)) if matches!(n.get("in_equation"), Some(&Stored::Bool(true)))),
+  );
+  let mut out = Vec::new();
+  if in_equation {
+    out.push(T_CS!("\\lx@amstex@ams@tag"));
+    if quoted {
+      out.push(T_OTHER!("*"));
+    }
+    out.push(T_BEGIN!());
+    out.extend(text);
+    out.push(T_END!());
+  } else {
+    out.extend([T_CS!("\\lx@equation@settag@float"), T_BEGIN!()]);
+    if quoted {
+      out.extend([T_CS!("\\let"), T_CS!("\\fnum@equation"), T_CS!("\\relax")]);
+    }
+    out.extend([T_CS!("\\lx@ams@tag@text"), T_BEGIN!()]);
+    out.extend(text);
+    out.extend([T_END!(), T_CS!("\\lx@make@tags"), T_BEGIN!()]);
+    out.extend(Explode!("equation"));
+    out.extend([T_END!(), T_END!()]);
+  }
+  Ok(out)
+}

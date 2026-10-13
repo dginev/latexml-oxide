@@ -12826,3 +12826,14 @@ calls `\runaway@` (absent since amsppt 2.0). Perl's amsppt.sty.ltxml defines non
 `\topcaption`/`\botcaption#1#2\endcaption` (:820-836; q-alg9505010, q-alg9507011). Trigger `\input amstex
 \documentstyle{amsppt} \input amsppt1 \document Body. \enddocument` → Perl 4 undefined-macro errors; pdftex 0. Fixed in
 Rust (OXIDIZED_DESIGN #571).
+
+## 643. AMS-TeX's `\tag` is `\eqno`
+
+AmSTeX.pool.ltxml:228 `Let('\tag','\eqno')`. amstex.tex:597-605 `\def\tag#1$${\eqno\maketag@#1\maketag@$$}` takes
+the tag text up to the display's `$$` and sets it as text (`\tagform@` = `\hbox{\rm(#1)}`; `\tag"…"` without
+parentheses), and inside `\align`/`\gather`/`\alignat` (:629-640, 718-760, 797-818) `\tag` opens the row's tag cell.
+As `\eqno` the tag is math up to the first `$`, so a `$…$` in it closes the display. Trigger `\input amstex
+\documentstyle{amsppt} \document $$ a=b\tag 1.2$'$ $$ \enddocument` → "Missing $" and `^`/`_` errors (1012.3760:
+TooManyErrors; 1112.1423, 1108.6264); pdftex 0 errors. Row tags of `$$\align … \endalign$$` also land on the
+equationgroup rather than their rows. Fixed in Rust (amstex.rs `amstex_tag`: amsmath's `\tag` markup).
+

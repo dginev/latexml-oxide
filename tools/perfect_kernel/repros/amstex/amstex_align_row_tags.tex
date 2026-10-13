@@ -1,0 +1,17 @@
+% witness: 1012.3760 (`&=\sum_\alpha … \tag 2.1` before `\endalign`, `\tag 6.16\\`; 29 \align)
+% oracle:  pdftex (\input amstex) 0 errors; amstex.tex:629-640 inside \align `\tag` is `&&`/`&`: the tag is the row's tag cell, up to `\\` (\cr) or `\endalign`
+% engines: rust 66d6 = 0 errors, but every row's tag on the equationgroup as \eqno math, the ′ of `$'$` lost (\eqno stops at the $); perl \let\tag\eqno too
+% expect:  0 errors; each row equation tagged: "(6.16)", "(6.17<sup>′</sup>)" and "(2.1)" (amsmath's \tag markup)
+% status:  GREEN (66e)
+\input amstex
+\documentstyle{amsppt}
+\document
+Text
+$$
+\align
+a&=b\tag 6.16\\
+c&=d\tag 6.17$'$\\
+e&=\sum_\alpha f_\alpha \tag 2.1
+\endalign
+$$
+\enddocument

@@ -1,0 +1,11 @@
+% witness: 1012.3760 (line 904 `\sum_{\Sb {\alpha_1, \ldots, \alpha_n}\\{(4.4)}\endSb}` after `\input pictex`; its next error class once 66e's \tag fix stopped the "Missing $" cascade: 12 errors from this display, then the cascade to TooManyErrors)
+% oracle:  pdftex (\input amstex + \input pictex) 0 errors
+% engines: rust 66d6 and 66e = "Extra }, or forgotten $" + "Attempt to close a group that switched to mode vertical" (the `\\` in \Sb ends the display once pictex.tex is raw-loaded; without pictex, 0 errors); perl not run
+% expect:  0 errors; a substack under the sum
+% status:  RED (follow-up after 66e: what pictex.tex changes that `\Sb … \\ … \endSb` reads)
+\input amstex
+\documentstyle{amsppt}
+\input pictex
+\document
+$$ a=\sum_{\Sb x\\ y\endSb} b $$
+\enddocument

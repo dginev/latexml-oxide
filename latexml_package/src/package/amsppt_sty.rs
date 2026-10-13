@@ -641,8 +641,7 @@ LoadDefinitions!({
   // keeps documents compile without altering XML output.
   def_macro_noop("\\NoPageNumbers")?;
   def_macro_noop("\\BlackBoxes")?;
-  def_macro_noop("\\TagsAsMath")?;
-  def_macro_noop("\\TagsAsText")?;
+  // (`\TagsAsMath`/`\TagsAsText` are the pool's own switches, amstex.tex:590-593, which `\tag` reads.)
   def_macro_noop("\\TagsOnLeft")?;
   def_macro_noop("\\TagsOnRight")?;
   def_macro_noop("\\CenteredTagsOnSplits")?;
