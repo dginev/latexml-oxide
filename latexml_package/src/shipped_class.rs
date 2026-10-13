@@ -61,11 +61,7 @@ pub fn shipped_class_text(binding: &str) -> Result<Option<String>> {
 /// `\RequirePackage[colorlinks=true,⏎ linkcolor=blue, …]{hyperref}`)? A load inside a conditional or a hook
 /// (`\IfFileExists`, `\AtBeginDocument`) counts; `\RequirePackageWithOptions` does not.
 pub fn class_text_loads(text: &str, package: &str) -> bool {
-  let code: String = text
-    .lines()
-    .map(|line| line.split('%').next().unwrap_or_default())
-    .collect::<Vec<_>>()
-    .join("\n");
+  let code = class_code(text);
   ["\\RequirePackage", "\\usepackage"].iter().any(|command| {
     code.match_indices(command).any(|(at, _)| {
       let rest = code[at + command.len()..].trim_start();
@@ -83,6 +79,19 @@ pub fn class_text_loads(text: &str, package: &str) -> bool {
         .is_some_and(|(list, _)| list.split(',').any(|name| name.trim() == package))
     })
   })
+}
+
+/// Does `text` (a class file's) contain `needle` outside a comment? (mdpi.cls's `\begin{paracol}` in its
+/// `\AfterEndPreamble`, which a copy may have commented out.)
+pub fn class_code_contains(text: &str, needle: &str) -> bool { class_code(text).contains(needle) }
+
+/// `text` without its comments (`%` to the end of the line).
+fn class_code(text: &str) -> String {
+  text
+    .lines()
+    .map(|line| line.split('%').next().unwrap_or_default())
+    .collect::<Vec<_>>()
+    .join("\n")
 }
 
 /// `name` without a `.cls` extension, in any case.

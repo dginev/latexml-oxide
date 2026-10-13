@@ -326,10 +326,13 @@ impl LaTeXImages {
       th = th
     );
 
-    // Body prefix: neutralize page styles, captions, citations
+    // Body prefix: neutralize page styles, captions, citations. The kernel's caption constructor reverts as
+    // `\lx@@caption{…}` (sect09.rs; `\@@caption` is its alias, a CUP class's own `\caption` copy), so a fragment's
+    // `tex` holding a subfigure caption gobbles it under either name (Perl LaTeXImages.pm:411 `\let\@@caption\@gobble`).
     let body_prefix = "\\makeatletter\\thispagestyle{empty}\\pagestyle{empty}\n\
        \\let\\@@toccaption\\@gobble\n\
        \\let\\@@caption\\@gobble\n\
+       \\let\\lx@@caption\\@gobble\n\
        \\let\\cite\\@gobble\n\
        \\def\\@@bibref#1#2#3#4{}\n\
        \\renewcommand{\\cite}[2][]{}\n\

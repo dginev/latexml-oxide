@@ -16981,13 +16981,17 @@ argument itself (`convertLaTeXArgs`), so code that calls the internal directly f
 `\@abtitle` unset, and `\uppercasenonmath\@abtitle` then built a definition containing itself (Fatal
 `Stomach:Recursion`; KNOWN_PERL_ERRORS #638).
 
-**Rust** (batch 66b, sect08.rs `define_optional_internal`): `\newcommand`, `\renewcommand` and `\providecommand` with an
-optional argument also define `\\cs` with the same body, its first parameter the bracketed one; `\cs` itself is
-unchanged. Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors). Guard
-`perfect_kernel_batch66b::newcommand_optional_argument_defines_its_internal_macro`; repro
-`macro-state/newcommand_optional_internal_cs`.
+**Rust** (batch 66b, sect08.rs `define_optional_internal`): every declarator built on `\@xargdef` with an optional
+argument also defines `\\cs` with the same body, its first parameter the bracketed one: `\newcommand`, `\renewcommand`,
+`\providecommand`, the begin macro of `\newenvironment`/`\renewenvironment` (`\@newenv`'s `\new@command`,
+latex.ltx:1324-1331), and `\DeclareRobustCommand`'s inner `\cs␣` (:1412-1428; internal `\\cs␣`); a starred
+declarator's internal is not `\long` (`\l@ngrel@x`). `\cs` itself is unchanged. Residuals: the internal reads `[…]` as
+an optional argument, as our `\@yargdef` does, where LaTeX's requires the brackets; an active character gets none (its
+`\string` names another control sequence). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors).
+Guards `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
+every_xargdef_declarator_defines_the_internal_macro}`; repro `macro-state/newcommand_optional_internal_cs`.
 
-### 568. A locked robust binding also locks its inner `\cs␣` (Perl: the wrapper only)
+### 568. A locked robust binding locks its inner `\cs␣` against the files (Perl: the wrapper only)
 
 A robust binding is the wrapper `\protect\cs␣` around its body under `\cs␣` (Package.pm `defRobustCS`); the lock was
 recorded for `\cs` alone, so code that defines the inner by name took over every call. cmfne.cls:1772-1778 (cite.sty's
@@ -16995,29 +16999,33 @@ code, copied) runs `\@namedef{cite }{…\@citex…}` with `\def\@citex[#1]#2{\@c
 binding's `\let\citen\cite` (Perl cite.sty.ltxml) the kernel `\cite` reached the class's inner, which called `\cite`
 again (Fatal `Stomach:Recursion`).
 
-**Rust** (batch 66b, `def_macro`): a locked robust macro records `"\cs␣:locked"` as well, so raw class and package code
-redefining the inner is refused as the wrapper is, and a document's value-shaped definition of it follows D1 (#500). Only
-the kernel `\cite` is a locked robust macro today. The robust constructor path (`def_constructor`) records the lock under
+**Rust** (batch 66b, `def_macro`): a locked robust macro records `"\cs␣:locked@files"` as well, so raw class and package
+code redefining the inner is refused as the wrapper is; the document's own definition of the inner (its
+`\DeclareRobustCommand\cite`, or `\@namedef{cite }` in the preamble) stays its own, as in Perl. Only the kernel `\cite` is
+a locked robust macro today. The robust constructor path (`def_constructor`) records the lock under
 the inner name only, the other half of the same asymmetry; no witness needs it. Witnesses 2210.02246, 2303.09770 (Fatal
 → 0 errors). Guard `perfect_kernel_batch66b::locked_robust_cite_keeps_its_inner_definition`; repro
 `macro-state/locked_robust_inner_cite`.
 
-### 569. A lock against the files holds for their `\let` too; a binding's read-to-end environment locks its end half
+### 569. A lock against the files holds for their `\let` too; a binding's read-to-end environment locks both halves
 
 `:locked@files` (#453: the kernel minipage; the abstract's end half, sect05.rs) refuses a class's or package's
-redefinition while leaving the document free; `install_definition` applied it to a `\def`, but `\let` went through
-`assign_meaning`, which checked nothing (as Perl's `Let`, Package.pm:383-390, checks no lock). arabtex's
-asect.sty:297 `\let\endabstract\endquotation`, called by its own raw `\end` (alatex.sty:105-109), closed the kernel
-abstract's body as a quotation (2401.14559, 2 errors).
+redefinition while leaving the document free; `install_definition` applied it to a `\def`, but `\let` checked nothing (as
+Perl's `Let`, Package.pm:383-390, checks no lock). arabtex's asect.sty:297 `\let\endabstract\endquotation`, called by its
+own raw `\end` (alatex.sty:105-109), closed the kernel abstract's body as a quotation (2401.14559, 2 errors).
 
-**Rust** (batch 66c, `state::assign_meaning`): a `\let` from a class or package file of a name carrying
-`:locked@files` is refused; a plain `:locked` is still left to `\let`, as in Perl. A `\let` to an undefined token
-(expl3's `\cs_undefine:N`) only clears the name and is kept: projlib-author.sty:243-246 backs up and undefines
+**Rust** (batch 66c, `state::let_i`, TeX's `\let`): a `\let` from a class or package file of a name carrying
+`:locked@files` is refused; a plain `:locked` is still left to `\let`, as in Perl, and so are the engine's own meaning
+writes (`assign_meaning`: `\csname`'s `\relax`, `with_let` restores). A `\let` to an undefined token (expl3's
+`\cs_undefine:N`) only clears the name and is kept: projlib-author.sty:243-246 backs up and undefines
 `\abstract`/`\endabstract` before its `\newenvsc{abstract}`, whose `\NewDocumentEnvironment` errs "End of environment
-'abstract' already defined" on a name still defined (the homework and jwjournal manuals); the new definition then
-meets the lock as any `\def` does. The same rule for a binding whose
-begin half reads its body to the end: mn2e_support's `{keywords}` (`\lx@begin@keywords`) locks `\endkeywords` against
-the files, since mn2e-breakabs.sty:87-95 (shipped by MNRAS papers) redefines that end half alone as mn2e.cls's
-`\endlist` (1403.3615, 1607.03149); mn2e.cls:992 `\ifSFB@keywords` is defined. Guards
-`perfect_kernel_batch66b::{file_let_of_a_files_locked_end_half_is_refused, file_let_clearing_a_files_locked_name_is_kept,
-mn2e_breakabs_keeps_the_keywords_end_half}`; repros `macro-state/{file_let_of_locked_end_half, file_let_clearing_locked_name}`.
+'abstract' already defined" on a name still defined (the homework and jwjournal manuals). The binding is kept aside
+(`"\cs:locked@cleared"`) and put back when the file's new meaning for the name is refused (`restore_cleared_binding`, from
+`install_definition` and `let_i`), so the binding's other callers (a raw `\end`) still meet it. The same rule for a
+binding whose begin half reads its body to the end: mn2e_support's `{keywords}` (`\lx@begin@keywords`) locks both
+`\keywords` and `\endkeywords` against the files, since mn2e-breakabs.sty:87-95 (shipped by MNRAS papers) redefines the
+end half alone as mn2e.cls's `\endlist` (1403.3615, 1607.03149), and a file redefining both halves would otherwise have
+its begin half taken and its end half refused; mn2e.cls:992 `\ifSFB@keywords` is defined. Residual shared with #453: the
+lock reads the origin at run time, so a class's `\AtBeginDocument{\let…}` runs as the document's. Guards
+`perfect_kernel_batch66b::{file_let_*, refused_definition_of_a_cleared_name_restores_the_binding, mn2e_*}`; repros
+`macro-state/{file_let_of_locked_end_half, file_let_clearing_locked_name}`.

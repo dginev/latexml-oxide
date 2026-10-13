@@ -201,8 +201,8 @@ pub(crate) fn load() -> Result<()> {
   // the Cambridge University Press classes keep `\caption` there for their `\contcaption` (fac.cls:803-805,
   // ijsipaper.cls:876-878, mscs.cls:794-795), and with the kernel's `\@caption@@@` calling `\@@caption` every
   // caption then called itself (Perl `deep_recursion`, ours `Stomach:Recursion`; witnesses 1209.5152, 1311.2960,
-  // 1410.5131, 1610.02500, 2205.14586, 2212.13027, 1604.04575). The constructor is `\lx@@caption`, which the
-  // kernel and the bindings call; `\@@caption` stays its alias, so a class's own meaning for the name is the
+  // 1410.5131, 1610.02500, 2205.14586, 2212.13027, 1604.04575, 2112.07588). The constructor is `\lx@@caption`, which
+  // the kernel and the bindings call; `\@@caption` stays its alias, so a class's own meaning for the name is the
   // class's (OXIDIZED_DESIGN #566, KNOWN_PERL_ERRORS #637). Guard `perfect_kernel_batch66b::cup_contcaption_keeps_its_caption`.
   DefConstructor!("\\lx@@caption{}", sub[document, args, props] {
     let body = args[0].clone();

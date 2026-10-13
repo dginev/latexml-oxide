@@ -14,7 +14,7 @@ fn convert(tex: &str) -> String {
 /// `ltx:caption` (latex_constructs.pool.ltxml:3368), so every caption called itself (Perl: `deep_recursion`).
 /// The constructor is `\lx@@caption`; `\@@caption` stays its alias for bindings, and a class's own meaning
 /// for it is the class's. Witnesses 1209.5152, 1311.2960, 1410.5131, 1610.02500, 2205.14586, 2212.13027,
-/// 1604.04575.
+/// 1604.04575, 2112.07588.
 #[test]
 fn cup_contcaption_keeps_its_caption() {
   let xml = convert(include_str!(
@@ -58,10 +58,10 @@ fn newcommand_optional_argument_defines_its_internal_macro() {
   );
 }
 
-/// A locked robust binding owns its calls through its inner `\cs␣` too: cmfne.cls:1772-1778 copies cite.sty's
-/// `\@namedef{cite }{…\@citex…}` and `\@citex` (`\@cite{\citen{#2}}`), and with our cite binding's `\citen` = `\cite`
-/// (Perl cite.sty.ltxml) the kernel `\cite`'s wrapper reached the class's inner, which called `\cite` again (Fatal
-/// `Stomach:Recursion`). Witness 2210.02246.
+/// A locked robust binding keeps its inner `\cs␣` against the class and package files: cmfne.cls:1772-1778 copies
+/// cite.sty's `\@namedef{cite }{…\@citex…}` and `\@citex` (`\@cite{\citen{#2}}`), and with our cite binding's
+/// `\citen` = `\cite` (Perl cite.sty.ltxml) the kernel `\cite`'s wrapper reached the class's inner, which called `\cite`
+/// again (Fatal `Stomach:Recursion`). The repro's package stands for the class. Witnesses 2210.02246, 2303.09770.
 #[test]
 fn locked_robust_cite_keeps_its_inner_definition() {
   let xml = convert(include_str!(
@@ -107,6 +107,11 @@ Body text.
     );
     assert!(xml.contains("Body text."), "{xml}");
     assert!(xml.contains(">Introduction</title>"), "{xml}");
+    assert_eq!(
+      xml.matches("<title>A title</title>").count(),
+      1,
+      "{maketitle}{xml}"
+    );
   }
 }
 
@@ -142,8 +147,17 @@ fn file_let_of_a_files_locked_end_half_is_refused() {
     "../../../tools/perfect_kernel/repros/macro-state/file_let_of_locked_end_half.tex"
   ));
   assert_eq!(xml.matches("<abstract").count(), 1, "{xml}");
-  assert!(xml.contains("Abstract text."), "{xml}");
-  assert!(xml.contains("Body."), "{xml}");
+  let abstract_ = latexml::util::test::xml_element(&xml, "abstract", &[]).unwrap_or_default();
+  assert!(
+    abstract_.contains("Abstract text.") && !abstract_.contains("Body."),
+    "{xml}"
+  );
+  let body = xml.find("<para xml:id=\"p1\">").unwrap_or(0);
+  assert!(
+    body > xml.find("</abstract>").unwrap_or(usize::MAX),
+    "{xml}"
+  );
+  assert!(xml[body..].contains("Body."), "{xml}");
 }
 
 /// mn2e-breakabs.sty (shipped by MNRAS papers; :87-95) redefines only the end half of mn2e.cls's `{keywords}`
@@ -185,13 +199,47 @@ Text.
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(xml.contains("k1; k2"), "{xml}");
+  assert!(
+    xml.contains("<keywords name=\"Keywords:\u{a0}\">k1; k2\n</keywords>"),
+    "{xml}"
+  );
+  assert!(xml.contains("Text."), "{xml}");
+}
+
+/// A package redefining both halves of `{keywords}` (`\renewenvironment{keywords}{\begin{list}…}{\end{list}}`) is
+/// refused for both: the pair is locked against files, so the binding's begin half never meets the package's end half.
+#[test]
+fn mn2e_package_redefining_both_keywords_halves_keeps_the_pair() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{mn2e}
+\usepackage{kwboth}
+\begin{document}
+\title{T}\author{A}
+\maketitle
+\begin{keywords}
+k1; k2
+\end{keywords}
+\section{Intro}
+Text.
+\end{document}
+",
+    &[(
+      "kwboth.sty",
+      "\\ProvidesPackage{kwboth}\n\\renewenvironment{keywords}{\\begin{list}{}{}\\item[]}{\\end{list}}\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains("<keywords name=\"Keywords:\u{a0}\">k1; k2\n</keywords>"),
+    "{xml}"
+  );
   assert!(xml.contains("Text."), "{xml}");
 }
 
 /// A file may still clear a files-locked name before defining it anew (projlib-author.sty:245-246 `\cs_undefine:N
 /// \endabstract`, then scontents' `\NewDocumentEnvironment{abstract}`; the homework and jwjournal classes): a `\let`
-/// to undefined or `\relax` replaces nothing, so it is not refused, and expl3's "already defined" check passes as in
+/// to an undefined token replaces nothing, so it is not refused, and expl3's "already defined" check passes as in
 /// pdflatex.
 #[test]
 fn file_let_clearing_a_files_locked_name_is_kept() {
@@ -223,4 +271,53 @@ Body.
     "{xml}"
   );
   assert!(xml.contains("<p xml:id=\"p1.1\">Body.</p>"), "{xml}");
+}
+
+/// When the cleared name's new definition is refused, the binding is put back (`state::restore_cleared_binding`): the
+/// kernel's `\endabstract`, which the braceless `\abstract … \endabstract` form calls by name (as a raw `\end`,
+/// alatex.sty:105-109, would), still closes the abstract.
+#[test]
+fn refused_definition_of_a_cleared_name_restores_the_binding() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{article}
+\usepackage{clearabs}
+\begin{document}
+\abstract Abstract text.
+\endabstract
+Body.
+\end{document}
+",
+    &[(
+      "clearabs.sty",
+      "\\ProvidesPackage{clearabs}\n\\let\\endabstract\\undefined\n\\def\\endabstract{\\par}\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains("<p xml:id=\"abstract1.1\">Abstract text.</p>"),
+    "{xml}"
+  );
+  assert!(xml.contains("<p xml:id=\"p1.1\">Body.</p>"), "{xml}");
+}
+
+/// Every declarator built on `\@xargdef` defines the internal `\\cs` its optional argument reaches: the begin macro of
+/// `\newenvironment`/`\renewenvironment` (latex.ltx:1324-1331) and `\DeclareRobustCommand`'s inner `\cs␣`
+/// (:1412-1428, internal `\\cs␣`), as `\newcommand`'s. pdflatex: "E[a](b) Q[f](g) R[c](e)".
+#[test]
+fn every_xargdef_declarator_defines_the_internal_macro() {
+  let xml = convert(
+    r"\documentclass{article}
+\newenvironment{envx}[2][d]{E[#1](#2)}{}
+\renewenvironment{quote}[2][q]{Q[#1](#2)}{}
+\DeclareRobustCommand\rob[2][d]{R[#1](#2)}
+\begin{document}
+\csname\string\envx\endcsname[a]{b} \csname\string\quote\endcsname[f]{g} \csname\string\rob\space\endcsname[c]{e}
+\end{document}
+",
+  );
+  assert!(
+    xml.contains("<p xml:id=\"p1.1\">E[a](b) Q[f](g) R[c](e)</p>"),
+    "{xml}"
+  );
 }

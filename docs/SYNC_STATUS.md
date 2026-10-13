@@ -902,8 +902,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   alias, since the Cambridge UP classes keep `\caption` under `\@@caption` for `\contcaption` (fac/ijsipaper/mscs; OD
   #566, KPE #637); `\newcommand`/`\renewcommand`/`\providecommand` with an optional argument also define latex.ltx's
   internal `\\cs` that the amsart idiom `\edef\cs{\@dblarg\csname\string\cs\endcsname}` calls (bcp.cls `\abtitle`,
-  cmfne.cls; OD #567, KPE #638); a locked robust binding locks its inner `\cs␣` too, so a class's copy of cite.sty's
-  `\@namedef{cite }` no longer takes over the kernel `\cite` (cmfne, asme2e; OD #568). Guards
+  cmfne.cls; OD #567, KPE #638; review r2: every `\@xargdef` declarator, `\newenvironment` and `\DeclareRobustCommand`
+  too); a locked robust binding locks its inner `\cs␣` against the files, so a class's copy of cite.sty's
+  `\@namedef{cite }` no longer takes over the kernel `\cite` (cmfne, asme2e; OD #568); image fragments gobble
+  `\lx@@caption` as well as `\@@caption` (latex_images.rs, LaTeXImages.pm:411). Guards
   `perfect_kernel_batch66b::*`; repros `captions-floats/cup_contcaption_lets_caption`,
   `macro-state/{newcommand_optional_internal_cs,locked_robust_inner_cite}`. Residual: AMS-TeX `\documentstyle{X}`
   never raw-loads a paper-local `X.sty` (Perl the same, `notex => 1`), so amams.sty's `\title#1` meets amsppt's
@@ -917,9 +919,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\maketitlen`), so the binding loads paracol and opens it there too, and the template's `\end{paracol}` closes it (raw
   paracol.sty converts cleanly: the columns flow); a copy without paracol (1307.3961's 2013 one) and a paper shipping
   none are unchanged. And (R3 of the study, OD #569) a lock against the files holds for their `\let` as for their
-  `\def` (`state::assign_meaning`: arabtex's `\let\endabstract\endquotation`, 2401.14559), and mn2e_support's
-  `{keywords}` locks its end half against the files (mn2e-breakabs.sty's `\endkeywords`, 1403.3615, 1607.03149; plus
-  mn2e.cls:992 `\ifSFB@keywords`). Witnesses 2105.08579, 2201.05363. Guards `perfect_kernel_batch66b::{mdpi_opens_the_paracol_the_paper_closes,
+  `\def` (`state::let_i`: arabtex's `\let\endabstract\endquotation`, 2401.14559), except a `\let` that only clears the
+  name (projlib's `\cs_undefine:N \endabstract`: the homework/jwjournal manuals), whose binding comes back when the
+  file's new meaning is refused; mn2e_support's `{keywords}` locks both halves against the files (mn2e-breakabs.sty's
+  `\endkeywords`, 1403.3615, 1607.03149; plus mn2e.cls:992 `\ifSFB@keywords`). Residual (pre-existing, 65int8 too):
+  `\usepackage{arabtex}` sets the whole body italic (its `\all@wcmd` font wrappers; pdflatex cmr10) — RED follow-up. Witnesses 2105.08579, 2201.05363. Guards `perfect_kernel_batch66b::{mdpi_opens_the_paracol_the_paper_closes,
   mdpi_without_paracol_opens_nothing, file_let_of_a_files_locked_end_half_is_refused,
   mn2e_breakabs_keeps_the_keywords_end_half}`. A/B over 74 mdpi papers (`ab_66c`: 45 of 65v's, 29 of the empty-trigger
   list) vs 66b1: errors 154 → 100, Error status 37 → 17, none Fatal; the only word changes are error text gone

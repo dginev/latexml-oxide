@@ -86,7 +86,8 @@ LoadDefinitions!({
   // does so (1307.3961's 2013 copy does not); with no copy shipped, nothing is opened. Guards
   // `perfect_kernel_batch66b::{mdpi_opens_the_paracol_the_paper_closes, mdpi_without_paracol_opens_nothing}`.
   if shipped.as_deref().is_some_and(|text| {
-    crate::shipped_class::class_text_loads(text, "paracol") && text.contains("\\begin{paracol}")
+    crate::shipped_class::class_text_loads(text, "paracol")
+      && crate::shipped_class::class_code_contains(text, "\\begin{paracol}")
   }) {
     RawTeX!(r"\AfterEndPreamble{\begin{paracol}{2}\switchcolumn}");
   }

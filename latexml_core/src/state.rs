@@ -1394,6 +1394,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     assign_value_sym(stub_sym, false, Some(Scope::Global));
   }
   if is_definition_locked(&token) {
+    restore_cleared_binding(&token);
     // A LOCKED BINDING OWNS ITS CALLS. The lock keeps the semantic markup of a call (Perl acb3b27e: commands "that
     // lose semantics when redefined"), and a use without an argument cannot produce that markup: the binding would
     // read the next token as its argument (a pgffor `\foreach \i/\text` loop variable: 15 errors; `\@for\text:=`:
@@ -3179,6 +3180,26 @@ where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R {
 /// Whether `token`'s definition is locked while state is not unlocked, so `install_definition` drops a redefinition.
 pub fn is_definition_locked(token: &Token) -> bool { token.with_cs_name(is_name_locked) }
 
+/// Puts back the binding of a files-locked name that a file's `\let` cleared ([`let_i`], `"{cs}:locked@cleared"`) when
+/// the file's new meaning for it is refused, so that the binding's other callers (a raw `\end` running `\csname
+/// end<env>\endcsname`, alatex.sty:105-109) still meet it rather than an undefined name.
+fn restore_cleared_binding(token: &Token) {
+  let cleared_key = token.with_cs_name(|cs| s!("{cs}:locked@cleared"));
+  if arena::get(&cleared_key).is_none()
+    || !matches!(lookup_meaning(token), None | Some(Stored::None))
+  {
+    return;
+  }
+  if let Some(binding) = lookup_value(&cleared_key).filter(|b| !matches!(b, Stored::None)) {
+    state_mut!().assign_internal(
+      TableName::Meaning,
+      token.get_cs_name(),
+      binding,
+      Some(Scope::Global),
+    );
+  }
+}
+
 /// Whether the control sequence named `cs` is locked while state is not unlocked: against every definition
 /// (`"{cs}:locked"`), or against those the class and package files make (`"{cs}:locked@files"`), which leaves the
 /// document free to define it, as LaTeX and Perl do (the kernel minipage: sect12.rs, OXIDIZED_DESIGN_DIVERGENCES #453).
@@ -3365,29 +3386,7 @@ pub fn locked_control_sequences() -> Vec<String> {
 /// $meaning should be a definition (for defining active control sequences)
 /// or another token, for \let
 pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<Scope>) {
-  // A lock against the class and package files (`"{cs}:locked@files"`, [`name_carries_lock`]) holds for their `\let`
-  // as for their `\def` ([`install_definition`]): arabtex's asect.sty:297 `\let\endabstract\endquotation`, which its
-  // own raw `\end` (alatex.sty:105-109) then calls, closed the kernel abstract's body as a quotation (2401.14559). A
-  // plain `:locked` is left to `\let`, as Perl's `Let` checks none (Package.pm:383-390). OXIDIZED_DESIGN #569; guard
-  // `perfect_kernel_batch66b::file_let_of_a_files_locked_end_half_is_refused`. A `\let` to an undefined token only
-  // clears the name, and stays allowed: the "undefine, then define anew" idiom (projlib-author.sty:245-246
-  // `\cs_undefine:N \endabstract` before its `\NewDocumentEnvironment{abstract}`, the homework and jwjournal
-  // classes), whose new definition the lock then meets as any `\def` does; guard
-  // `perfect_kernel_batch66b::file_let_clearing_a_files_locked_name_is_kept`.
   let mut meaning = meaning.into();
-  if crate::definition::origin::current_origin()
-    == crate::definition::origin::DefinitionOrigin::File
-    && !state_is_unlocked()
-    && matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE)
-    && token.with_cs_name(|cs| arena::get(s!("{cs}:locked@files")).is_some_and(lookup_bool_sym))
-    && !match &meaning {
-      Stored::None => true,
-      Stored::Token(target) => matches!(lookup_meaning(target), None | Some(Stored::None)),
-      _ => false,
-    }
-  {
-    return;
-  }
   // short-circuit guard to avoid e.g. T_MATH let to itself
   if let Stored::Token(ref mt) = meaning
     && token == mt
@@ -4503,6 +4502,32 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     lookup_meaning(token2)
       .unwrap_or(Stored::None);
   // };
+  // A lock against the class and package files (`"{cs}:locked@files"`, [`name_carries_lock`]) holds for their `\let`
+  // as for their `\def` ([`install_definition`]): arabtex's asect.sty:297 `\let\endabstract\endquotation`, which its
+  // own raw `\end` (alatex.sty:105-109) then calls, closed the kernel abstract's body as a quotation (2401.14559). A
+  // plain `:locked` is left to `\let`, as Perl's `Let` checks none (Package.pm:383-390), and so are the engine's own
+  // meaning writes ([`assign_meaning`]: `\csname`'s `\relax`, restores). A `\let` to an undefined token only clears
+  // the name, and is kept: the "undefine, then define anew" idiom (projlib-author.sty:243-246 `\cs_undefine:N
+  // \endabstract` before its `\NewDocumentEnvironment{abstract}`, whose "already defined" check would fail; the
+  // homework and jwjournal manuals). The binding is kept aside (`"{cs}:locked@cleared"`) and back in place when the
+  // file's new meaning is refused ([`restore_cleared_binding`]). OXIDIZED_DESIGN #569; guards
+  // `perfect_kernel_batch66b::file_let_*`.
+  if crate::definition::origin::current_origin()
+    == crate::definition::origin::DefinitionOrigin::File
+    && !state_is_unlocked()
+    && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    && token1.with_cs_name(|cs| arena::get(s!("{cs}:locked@files")).is_some_and(lookup_bool_sym))
+  {
+    if !matches!(meaning, Stored::None) {
+      restore_cleared_binding(token1);
+      after_assignment();
+      return;
+    }
+    if let Some(binding) = lookup_meaning(token1).filter(|m| !matches!(m, Stored::None)) {
+      let cleared_key = token1.with_cs_name(|cs| s!("{cs}:locked@cleared"));
+      assign_value(&cleared_key, binding, Some(Scope::Global));
+    }
+  }
   // Deep-copy the robust-wrapper pair.
   //
   // Our `DefConstructor`/`DefMacro` with `robust => true` stores the

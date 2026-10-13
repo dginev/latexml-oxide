@@ -84,7 +84,7 @@ pub(crate) fn load() -> Result<()> {
       return Ok(vec![]);
     }
     if opt.is_some() {
-      define_optional_internal(&cs_token, nargs, &body)?;
+      define_optional_internal(&cs_token, nargs, &body, star.is_some())?;
     }
     let macro_args = convert_latex_args(nargs, opt)?;
     // When the CS came from the plain pool, bypass any `<cs>:locked`
@@ -100,7 +100,7 @@ pub(crate) fn load() -> Result<()> {
   sub[(star, cs, nargs_num, opt, body)] {
     let nargs = nargs_num.value_of() as usize;
     if opt.is_some() {
-      define_optional_internal(&cs, nargs, &body)?;
+      define_optional_internal(&cs, nargs, &body, star.is_some())?;
     }
     let macro_args = convert_latex_args(nargs, opt)?;
     DefMacro!(cs, macro_args, body, tex_declared => { star.is_some() && nargs > 0 });
@@ -147,7 +147,7 @@ pub(crate) fn load() -> Result<()> {
     if is_definable_latex(&cs)?.0 {
       let nargs = nargs.value_of() as usize;
       if opt.is_some() {
-        define_optional_internal(&cs, nargs, &body)?;
+        define_optional_internal(&cs, nargs, &body, star.is_some())?;
       }
       let cs_args = convert_latex_args(nargs, opt)?;
       DefMacro!(cs, cs_args, body, tex_declared => { star.is_some() && nargs > 0 });
@@ -158,6 +158,10 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
   sub[(star,cs,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
+    if opt.is_some() {
+      let inner = T_CS!(cs.with_str(|cstr| s!("{cstr} ")));
+      define_optional_internal(&inner, nargs, &body, star.is_some())?;
+    }
     let cs_args = convert_latex_args(nargs, opt)?;
     // latex.ltx `\DeclareRobustCommand` → `\@star@or@long`: starred, the inner `\cs␣` is not `\long`.
     DefMacro!(cs, cs_args, body, robust => true, tex_declared => { star.is_some() && nargs > 0 });
@@ -1217,6 +1221,9 @@ pub(crate) fn load() -> Result<()> {
     } else {
       // TODO: can we convince DefMacro! this is not a second mutable borrow of state::
       let nargs = nargs.value_of() as usize;
+      if opt.is_some() {
+        define_optional_internal(&name_cs, nargs, &begin, star.is_some())?;
+      }
       let converted_args = convert_latex_args(nargs, opt)?;
       let end_name_cs = T_CS!(s!("\\end{}",name));
       // latex.ltx `\newenvironment` → `\@star@or@long`: starred, the begin macro is not `\long`.
@@ -1237,6 +1244,9 @@ pub(crate) fn load() -> Result<()> {
       let name_cs = T_CS!(s!("\\{}",name));
       let end_name_cs = T_CS!(s!("\\end{}",name));
       let nargs = nargs.value_of() as usize;
+      if opt.is_some() {
+        define_optional_internal(&name_cs, nargs, &begin, star.is_some())?;
+      }
       let converted_args = convert_latex_args(nargs, opt)?;
 
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
@@ -1653,9 +1663,16 @@ pub(crate) fn load() -> Result<()> {
 /// Our `\cs` reads its optional argument itself (Perl's `convertLaTeXArgs`), so the internal is defined beside it for
 /// code that calls it directly: the amsart idiom `\edef\cs{\@dblarg\csname\string\cs\endcsname}` (bcp.cls:151-153,
 /// cmfne.cls:460,483), whose `\cs` otherwise never stored its argument (witnesses 1510.00296, 1704.01336, 1207.2066,
-/// 2003.00661, 2210.02246). OXIDIZED_DESIGN #567; guard
-/// `perfect_kernel_batch66b::newcommand_optional_argument_defines_its_internal_macro`.
-fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens) -> Result<()> {
+/// 2003.00661, 2210.02246). Every declarator built on `\@xargdef` has it: `\newcommand`, `\renewcommand`,
+/// `\providecommand`, the begin macro of `\newenvironment`/`\renewenvironment` (`\@newenv`'s `\new@command`,
+/// latex.ltx:1324-1331), and `\DeclareRobustCommand`'s inner `\cs␣` (`\new@command` of it, :1412-1428; the internal is
+/// `\\cs␣`). A starred
+/// declarator's internal is not `\long` either (`\l@ngrel@x`, :1229-1233). It reads `[…]` as `\@yargdef` does here (an
+/// optional argument, where LaTeX's requires the brackets). Not for an active character, whose `\string` names another
+/// control sequence (`~`'s would be `\~`). OXIDIZED_DESIGN #567; guards
+/// `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
+/// every_xargdef_declarator_defines_the_internal_macro}`.
+fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool) -> Result<()> {
   if cs.get_catcode() != Catcode::CS {
     return Ok(());
   }
@@ -1663,7 +1680,8 @@ fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens) -> Result<(
   DefMacro!(
     internal,
     convert_latex_args(nargs, Some(Tokens!()))?,
-    body.clone()
+    body.clone(),
+    tex_declared => { star && nargs > 0 }
   );
   Ok(())
 }
