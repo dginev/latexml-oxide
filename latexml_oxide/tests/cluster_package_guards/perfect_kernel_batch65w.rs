@@ -180,6 +180,7 @@ fn atlasdoc_title_header_follows_the_options() {
 \HEPDataRecord{{1234}}
 \begin{{document}}
 \maketitle
+\AtlasArXivURL{{}} \AtlasHEPDataRecord
 \end{{document}}
 "
     ))
@@ -198,12 +199,16 @@ fn atlasdoc_title_header_follows_the_options() {
     r#"role="preprint">CERN-EP-1</pubnote>"#,
     r#"role="doi">10.1/x</pubnote>"#,
   ]);
+  assert_contains(&xml, &[
+    "https://arXiv.org/abs/2504.04805",
+    "https://www.hepdata.net/record/ins1234",
+  ]);
   let xml = doc("[preprint, preprint=false]");
   assert_contains(&xml, &[&journal("Journal:")]);
   let xml = doc("[HEPDATA]");
   assert_contains(&xml, &[
     r#"role="preprint">CERN-EP-1</pubnote>"#,
-    r#"role="arxiv">2504.04805</pubnote>"#,
+    r#"role="arxiv">2504.04805 [hep-ex]</pubnote>"#,
   ]);
   assert!(
     !xml.contains(r#"role="journal""#) && !xml.contains(r#"role="doi""#),

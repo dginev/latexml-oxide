@@ -28,11 +28,11 @@ LoadDefinitions!({
   // `\maketitle` (:1074) the class picks one of four title headers (:991-1006) by its options (:82-91): with
   // `preprint`/`cernpreprint` (64 of 67 sampled papers) the CERN preprint header (:835-856), the journal reference or
   // else "Submitted to: <journal>", the DOI and the preprint number; otherwise with `HEPDATA` the HepData header
-  // (:866-893), the preprint number and the arXiv id (:878); with `BOOK` (:894ff; `PAPER`, `CONF` and `PUB` turn it off,
-  // :140-192) none of them; otherwise the default header (:746-747),
-  // "<\subprepend> <journal>" ("Journal:" by default). The same, as the frontmatter notes, each prefix the note's
-  // label. Run 340: nearly every atlasdoc paper calls them (`\AtlasRefCode` 470, `\PreprintIdNumber` 147,
-  // `\AtlasJournalRef` 32, `\AtlasVersion` 52; witnesses 2508.20929, 2103.01029, 1904.03536, 2407.10879).
+  // (:866-893), the preprint number and the arXiv id with its category (:878); with `BOOK` (:894ff; `PAPER`, `CONF` and
+  // `PUB` turn it off, :140-192) none of them; otherwise the default header (:746-747), "<\subprepend> <journal>"
+  // ("Journal:" by default). The same, as the frontmatter notes, each prefix the note's label. Run 340: nearly every
+  // atlasdoc paper calls them (`\AtlasRefCode` 470, `\PreprintIdNumber` 147, `\AtlasJournalRef` 32, `\AtlasVersion` 52;
+  // witnesses 2508.20929, 2103.01029, 1904.03536, 2407.10879).
   RawTeX!(
     r"\newcommand*{\ADOC@draftversion}{}\newcommand*{\draftversion}[1]{\renewcommand*{\ADOC@draftversion}{#1}}
 \newcommand*{\AtlasVersion}[1]{\renewcommand*{\ADOC@draftversion}{#1}}
@@ -55,7 +55,7 @@ LoadDefinitions!({
   \ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint]{\ADOC@preprintnumber}\fi
 \else\iflx@atlas@hepdata
   \ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint]{\ADOC@preprintnumber}\fi
-  \ifx\AtlasArXivId\@empty\else\lx@add@pubnote[role=arxiv]{\AtlasArXivId}\fi
+  \ifx\AtlasArXivId\@empty\else\lx@add@pubnote[role=arxiv]{\AtlasArXivId\ \AtlasArXivCat}\fi
 \else\iflx@atlas@book\else
   \ifx\ADOC@journal\@empty\else\lx@add@pubnote[role=journal,name={\ADOC@subprepend~}]{\ADOC@journal}\fi
 \fi\fi\fi}
