@@ -2335,7 +2335,7 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
       document.set_attribute(&mut eqn, "xml:id", &new_id)?;
     }
     // the row's own tags (AMS-TeX's `\tag` in `$$\align … \endalign$$`, floated out of the row and tied to it by
-    // sect07.rs `tie_floated_tags_to_row`; 1012.3760)
+    // amstex.rs `tie_floated_tags_to_row`, latexml_engine; 1012.3760)
     if let Some(mark) = row.get_attribute("_tags")
       && let Some(mut tags) = element_nodes(&eqgroup).into_iter().find(|c| {
         document::get_node_qname(c) == pin!("ltx:tags")

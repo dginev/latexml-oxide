@@ -12833,8 +12833,23 @@ AmSTeX.pool.ltxml:228 `Let('\tag','\eqno')`. amstex.tex:597-605 `\def\tag#1$${\i
 \maketag@#1\maketag@$$}` (`\TagsOnLeft` the default, :590) takes the tag text up to the display's `$$` and sets it as
 text (`\tagform@` = `\hbox{\rm(#1)}`; `\tag"…"` without parentheses), and inside `\align`/`\alignat`/`\gather`
 (:629-640, 718-739, 797) `\tag` opens the row's tag cell. As `\eqno` the tag is math up to the first `$`, so a `$…$` in
-it closes the display. Trigger `\input amstex \documentstyle{amsppt} \document $$ a=b\tag 1.2$'$ $$ \enddocument` →
-Perl (measured, `/usr/local/bin/latexml`, 2026-10-13): 2 errors "Missing $ closing display math" (line 4 col 17, 19),
-the tag math "1.2" with its ′ lost; pdftex 0 errors. In papers the stray `$` cascades (1012.3760: TooManyErrors;
-1112.1423, 1108.6264). Row tags of `$$\align … \endalign$$` also land on the equationgroup rather than their rows.
-Fixed in Rust (amstex.rs `amstex_tag`: amsmath's `\tag` markup).
+it closes the display. Trigger, as a five-line file (the measured positions are its line 4):
+
+```tex
+\input amstex
+\documentstyle{amsppt}
+\document
+$$ a=b\tag 1.2$'$ $$
+\enddocument
+```
+
+→ Perl (measured on that file, `/usr/local/bin/latexml`, 2026-10-13): 2 errors "Missing $ closing display math" (line 4
+col 17, the `$` after `'`; col 19, the closing `$$`), the tag math "1.2" with its ′ lost; pdftex 0 errors, tag
+"(1.2′)". In papers the stray `$` cascades (1012.3760: TooManyErrors; 1112.1423, 1108.6264). Row tags of
+`$$\align … \endalign$$` also land on the equationgroup rather than their rows. Fixed in Rust (amstex.rs `amstex_tag`:
+amsmath's `\tag` markup). Beyond TeX, ours keeps a row's tag where pdftex errs: a row ender right after it
+(`$$\align a&=b\tag 1\displaybreak c&=d\endalign$$`: pdftex "Extra alignment tab has been changed to \cr", "Misplaced
+\crcr", "Misplaced \noalign" — the measuring pass's tag cell is `\eat@{##}`, amstex.tex:655 — and sets "(1c)"; ours the
+tag "(1)" on the row, 0 errors), and a row tag ended by a `\par` or by a `}` closing a group opened before it (pdftex:
+"Paragraph ended before \align was complete", `\align` reads its body as an argument; "Missing } inserted" for
+`a&={b\tag 2} c`; ours ends the tag cell there, 0 errors, guard `amstex_row_tag_cell_ends_at_par_and_extra_brace`).

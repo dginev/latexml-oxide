@@ -273,13 +273,15 @@ LoadDefinitions!({
   // and its cascade (1012.3760: 101 errors + TooManyErrors; 1112.1423 `\tag 1.18$'$`; 1108.6264 `\tag {$*$}`),
   // KNOWN_PERL_ERRORS #643. The text goes to amsmath's `\tag` in an equation row (`in_equation`, a LaTeX
   // `equation`/`align`) or, in a `$$` display and its math alignments, floats to it (`\lx@equation@settag@float`); a
-  // quoted tag is the `\tag*` form (`\maketag@@@"#1"#2\maketag@{\hbox{\rm#1}}`), `\TagsAsMath` wraps the text in
-  // `$…$`. The float path is defined here, so a plain `\input amstex` document without the LaTeX pool has it (math9412232,
+  // quoted tag is the `\tag*` form (`\maketag@@@"#1"#2\maketag@{\hbox{\rm#1}}`), `\TagsAsMath` wraps the text in `$…$`.
+  // The float path is defined here, so a plain `\input amstex` document without the LaTeX pool has it (math9412232,
   // hep-th9308082, hep-th9206021, hep-th9111004, 1102.5649). `\TagsOnLeft`, AMS-TeX's default (:590), puts the PDF's
   // tags on the left; ours are on the right. Guards `perfect_kernel_batch66e::{amstex_display_tag_is_a_text_tag,
   // amstex_align_row_tags_run_to_the_row_end, amstex_tags_as_math_switch, plain_amstex_tags_need_no_latex_pool,
   // amstex_row_tag_ends_at_every_row_ender, amstex_display_tag_in_an_halign_cell_reads_to_the_display_end,
-  // amstex_tag_argument_errors, amstex_tag_braced_argument_is_stripped, amstex_tag_in_latex_equation}`.
+  // amstex_tag_argument_errors, amstex_row_tag_cell_ends_at_par_and_extra_brace,
+  // amstex_tag_braced_argument_is_stripped, amstex_tag_in_latex_equation,
+  // amstex_braced_tag_in_latex_equation_is_amsmaths}`.
   Let!("\\lx@amstex@ams@tag", "\\tag");
   DefMacro!("\\tag", sub[_args] { amstex_tag()? });
   // A tag for a display with no equation row to hold it (AMS-TeX's `\tag#1$$` in a `$$` display, amstex.tex:597-599):
@@ -617,11 +619,11 @@ LoadDefinitions!({
 });
 
 /// The tokens that end an AMS-TeX `\tag`'s text in an alignment row: the row's end (`\\` is `\cr` there, amstex.tex:486
-/// `\Let@`), the row enders an AMS-TeX alignment defines (`\displaybreak`, `\allowdisplaybreak` and `\intertext`
-/// begin `\crcr\noalign`, amstex.tex:613-618; `\vspace`, `\vspace@` beside :563), or the environment's end
+/// `\Let@`), the row enders an AMS-TeX alignment defines (`\displaybreak`, `\allowdisplaybreak` and `\intertext` begin
+/// `\crcr\noalign`, amstex.tex:613-618; `\vspace`, which `\vspace@`, amstex.tex:488, defines), or the environment's end
 /// (`\endalign` …; `\end` for a LaTeX one). A token that MEANS `\cr`, `\crcr` or the row's `\\` (`\let\nl\\`), or a
-/// macro without parameters whose expansion starts with one (`\def\nl{\\}`), ends it too: TeX's tag cell ends where
-/// the expansion reaches the `\cr`.
+/// macro without parameters whose expansion starts with one (`\def\nl{\\}`), ends it too: TeX's tag cell ends where the
+/// expansion reaches the `\cr`.
 fn amstex_tag_row_end(t: &Token) -> bool {
   t.get_catcode() == Catcode::CS
     && (t.with_str(|s| {
@@ -673,8 +675,7 @@ fn means_row_end(t: &Token, depth: u8) -> bool {
     return false;
   };
   body
-    .clone()
-    .unlist()
+    .unlist_ref()
     .first()
     .is_some_and(|first| first.get_catcode() == Catcode::CS && means_row_end(first, depth + 1))
 }
@@ -713,15 +714,26 @@ fn in_equation_row() -> bool {
 
 /// AMS-TeX's `\tag` (amstex.tex:597-605, :629-900): read the tag text, unexpanded and brace-balanced, up to the
 /// display's closing `$$` (`\def\tag#1$$`) or the row's or environment's end (left in the input), and hand it to
-/// amsmath's `\tag` where an equation row holds it, else float it to the display (`\lx@equation@settag@float`). As
-/// `\tag#1$$` is not `\long`, a `\par` (at any depth) ends the call with TeX's runaway error, and a `}` closing a group
-/// opened before it with TeX's "extra }" one; the tag is dropped, as TeX drops the call.
+/// amsmath's `\tag` where an equation row holds it, else float it to the display (`\lx@equation@settag@float`). The
+/// `$$` form's `#1` is a non-`\long` argument: a `\par` (at any depth) ends the call with TeX's runaway error, and a
+/// `}` closing a group opened before it raises TeX's "extra }" error, backs the `}` up behind an inserted `\par` and
+/// goes on scanning, so the `\par` raises the runaway error too (tex.web §395-396); TeX drops the call and its tag, and
+/// the input goes on with `\par }`. A row's tag takes no argument (`\def\tag{\global\tag@true…&&}` in `\align`,
+/// amstex.tex:633-635; `\def\tag{&}` in `\gather`, :797): there a `\par` outside the tag's own groups, or such a `}`,
+/// ends the tag cell with the text read so far. In a LaTeX equation row a braced `\tag{…}` (`\tag*{…}`) is amsmath's,
+/// its argument only (an `\input amstex` LaTeX document, or one whose `\NoBlackBoxes` autoloads the AmSTeX pool,
+/// tex.rs).
 fn amstex_tag() -> Result<Vec<Token>> {
   let in_equation = in_equation_row();
+  if in_equation && amsmath_braced_tag_follows()? {
+    return Ok(vec![T_CS!("\\lx@amstex@ams@tag")]);
+  }
   // in a row (`$$\align` is amsmath's `aligned` inside the display, opened in its math) the text runs to the row's
   // end; in the display itself, to its `$$` (`$$\tag 1 \pmatrix a\\b\endpmatrix$$` puts the matrix in the tag, as TeX
   // does)
   let in_row = in_equation || alignment_opened_in_current_math();
+  // the tag cell of an AMS-TeX alignment's row, no argument
+  let row_cell = in_row && !in_equation;
   let mut text: Vec<Token> = Vec::new();
   let mut depth = 0usize;
   let mut delimited = false;
@@ -731,13 +743,16 @@ fn amstex_tag() -> Result<Vec<Token>> {
       Error!("expected", "$$", "File ended while scanning use of \\tag");
       return Ok(Vec::new());
     };
-    if t == T_CS!("\\par") {
+    if t == T_CS!("\\par") && !(row_cell && depth > 0) {
+      unread_one(t);
+      if row_cell {
+        break;
+      }
       Error!(
         "unexpected",
         "\\par",
         "Paragraph ended before \\tag was complete"
       );
-      unread_one(t);
       return Ok(Vec::new());
     }
     if depth == 0 {
@@ -755,8 +770,18 @@ fn amstex_tag() -> Result<Vec<Token>> {
         unread_one(t);
         break;
       } else if t.get_catcode() == Catcode::END {
+        if row_cell {
+          unread_one(t);
+          break;
+        }
+        // §395: back up the `}`, insert `\par`, go on scanning; §396: the `\par` ends the call
         Error!("unexpected", "}", "Argument of \\tag has an extra }");
-        unread_one(t);
+        Error!(
+          "unexpected",
+          "\\par",
+          "Paragraph ended before \\tag was complete"
+        );
+        unread_vec(vec![T_CS!("\\par"), t]);
         return Ok(Vec::new());
       }
     }
@@ -829,6 +854,29 @@ fn amstex_tag() -> Result<Vec<Token>> {
     out.extend([T_END!(), T_END!()]);
   }
   Ok(out)
+}
+
+/// Whether amsmath's `\tag{…}` or `\tag*{…}` follows (its next non-space token a `{`, or a `*` and then one): the
+/// tokens read are put back either way.
+fn amsmath_braced_tag_follows() -> Result<bool> {
+  let mut seen: Vec<Token> = Vec::new();
+  let mut braced = false;
+  let mut starred = false;
+  while let Some(t) = read_token()? {
+    let catcode = t.get_catcode();
+    seen.push(t);
+    match catcode {
+      Catcode::SPACE => {},
+      Catcode::BEGIN => {
+        braced = true;
+        break;
+      },
+      _ if !starred && seen.last().is_some_and(|t| *t == T_OTHER!("*")) => starred = true,
+      _ => break,
+    }
+  }
+  unread_vec(seen);
+  Ok(braced)
 }
 
 /// Whether `tokens` is one balanced group: a `{` whose matching `}` is the last token.

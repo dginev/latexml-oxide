@@ -26,6 +26,20 @@ fn assert_tags_on(xml: &str, id: &str, tags: &str) {
   assert!(eq.contains(tags), "{id}: {tags}\n{eq}");
 }
 
+/// `xml` from the first `open` to the end of its `close`, each line trimmed: a whole element, indentation-free.
+fn element(xml: &str, open: &str, close: &str) -> String {
+  let start = xml.find(open).unwrap_or_else(|| panic!("no {open}\n{xml}"));
+  let end = xml[start..].find(close).map_or_else(
+    || panic!("no {close} after {open}\n{xml}"),
+    |e| start + e + close.len(),
+  );
+  xml[start..end]
+    .lines()
+    .map(str::trim)
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
 /// AMS-TeX's `\tag#1$$` takes the tag text up to the display's closing `$$` and sets it as text
 /// (`\tagform@` = `\hbox{\rm(#1)}`), so a `$'$` in it is inline math, not the display's end: `\let\tag\eqno` (Perl's
 /// too, KNOWN_PERL_ERRORS #643) closed the display there ("Missing $", 1012.3760, 1112.1423; `\tag {$*$}` 1108.6264).
@@ -229,26 +243,107 @@ fn amstex_display_tag_in_an_halign_cell_reads_to_the_display_end() {
      \\vbox{\\hsize=10cm $$x\\tag 1\\matrix a\\cr b\\endmatrix$$}\\cr}\n\\enddocument\n",
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_tags_on(
-    &xml,
-    "equationx1",
-    "<tags>\n                <tag>(<Math mode=\"inline\" tex=\"1\\begin{matrix}a\\cr b\\end{matrix}\"",
+  // the whole `ltx:tags`: "(1 matrix)" in math, both tags ({IT}: the invisible times)
+  assert_eq!(
+    element(equation(&xml, "equationx1"), "<tags>", "</tags>"),
+    r#"<tags>
+<tag>(<Math mode="inline" tex="1\begin{matrix}a\cr b\end{matrix}" text="1 * matrix@(Array[[a], [b]])" xml:id="equationx1.m2">
+<XMath xml:id="equationx1.m2.2">
+<XMApp xml:id="equationx1.m2.2.1">
+<XMTok meaning="times" role="MULOP">{IT}</XMTok>
+<XMTok meaning="1" role="NUMBER">1</XMTok>
+<XMDual xml:id="equationx1.m2.2.1.3">
+<XMApp xml:id="equationx1.m2.2.1.3.1">
+<XMTok meaning="matrix"/>
+<XMRef idref="equationx1.m2.1" xml:id="equationx1.m2.2.1.3.1.2"/>
+</XMApp>
+<XMArray xml:id="equationx1.m2.1">
+<XMRow xml:id="equationx1.m2.1.1">
+<XMCell align="center" xml:id="equationx1.m2.1.1.1">
+<XMTok font="italic" role="UNKNOWN">a</XMTok>
+</XMCell>
+</XMRow>
+<XMRow xml:id="equationx1.m2.1.2">
+<XMCell align="center" xml:id="equationx1.m2.1.2.1">
+<XMTok font="italic" role="UNKNOWN">b</XMTok>
+</XMCell>
+</XMRow>
+</XMArray>
+</XMDual>
+</XMApp>
+</XMath>
+</Math>)</tag>
+<tag role="refnum"><Math mode="inline" tex="1\begin{matrix}a\cr b\end{matrix}" text="1 * matrix@(Array[[a], [b]])" xml:id="equationx1.m3">
+<XMath xml:id="equationx1.m3.2">
+<XMApp xml:id="equationx1.m3.2.1">
+<XMTok meaning="times" role="MULOP">{IT}</XMTok>
+<XMTok meaning="1" role="NUMBER">1</XMTok>
+<XMDual xml:id="equationx1.m3.2.1.3">
+<XMApp xml:id="equationx1.m3.2.1.3.1">
+<XMTok meaning="matrix"/>
+<XMRef idref="equationx1.m3.1" xml:id="equationx1.m3.2.1.3.1.2"/>
+</XMApp>
+<XMArray xml:id="equationx1.m3.1">
+<XMRow xml:id="equationx1.m3.1.1">
+<XMCell align="center" xml:id="equationx1.m3.1.1.1">
+<XMTok font="italic" role="UNKNOWN">a</XMTok>
+</XMCell>
+</XMRow>
+<XMRow xml:id="equationx1.m3.1.2">
+<XMCell align="center" xml:id="equationx1.m3.1.2.1">
+<XMTok font="italic" role="UNKNOWN">b</XMTok>
+</XMCell>
+</XMRow>
+</XMArray>
+</XMDual>
+</XMApp>
+</XMath>
+</Math></tag>
+</tags>"#
+      .replace("{IT}", "\u{2062}"),
+    "{xml}"
   );
   assert_eq!(xml.matches("<tags>").count(), 1, "{xml}");
 }
 
-/// `\tag#1$$` is not `\long`: a `\par`, at any depth, ends the call with TeX's runaway error, and a `}` that closes a
-/// group opened before the `\tag` with "Argument of \tag has an extra }" (tex.web §392, §395); TeX drops the call, so
-/// the tag is dropped. (The `}` then ends the display: the second error.)
+/// `\tag#1$$` is not `\long`: a `\par`, at any depth, ends the call with TeX's runaway error (tex.web §396). A `}`
+/// that closes a group opened before the `\tag` raises "Argument of \tag has an extra }", is backed up behind an
+/// inserted `\par` and the scan goes on (§395), so the `\par` raises the runaway error too: pdftex reports both on
+/// `{$$ a=b\tag 1}$$ x $$`, then "Missing $ inserted" and "Display math should end with $$" for the `\par` in the
+/// display; ours ignores a `\par` in math (as Perl), so the `}` ends the display with "Extra }, or forgotten $": 3
+/// errors for pdftex's 4. TeX drops the call, so the tag is dropped; `a=b` and `x` survive, each in its display.
 #[test]
 fn amstex_tag_argument_errors() {
   let (log, xml) = convert_counted(
     "\\input amstex\n\\input amsppt.sty\n\\document\n{$$ a=b\\tag 1}$$ x $$\n\\enddocument\n",
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
-  assert!(log.contains("Argument of \\tag has an extra }"), "{log}");
-  assert!(log.contains("Extra }, or forgotten $"), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (3, 0), "{log}");
+  let first = log
+    .find("Argument of \\tag has an extra }")
+    .unwrap_or_else(|| panic!("{log}"));
+  let second = log
+    .find("Paragraph ended before \\tag was complete")
+    .unwrap_or_else(|| panic!("{log}"));
+  let third = log
+    .find("Extra }, or forgotten $")
+    .unwrap_or_else(|| panic!("{log}"));
+  assert!(first < second && second < third, "{log}");
   assert!(!xml.contains("<tags>"), "{xml}");
+  assert_eq!(
+    element(&xml, "<equation xml:id=\"id1.1\">", "</equation>"),
+    "<equation xml:id=\"id1.1\">\n<Math mode=\"display\" tex=\"a=b\\par\" text=\"a = b\" xml:id=\"id1.1.1\">\n\
+     <XMath xml:id=\"id1.1.1.1\">\n<XMApp xml:id=\"id1.1.1.1.1\">\n\
+     <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n<XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok>\n\
+     <XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok>\n</XMApp>\n</XMath>\n</Math>\n</equation>",
+    "{xml}"
+  );
+  assert_eq!(
+    element(&xml, "<equation xml:id=\"id1.2\">", "</equation>"),
+    "<equation xml:id=\"id1.2\">\n<Math mode=\"display\" tex=\"x\" text=\"x\" xml:id=\"id1.2.1\">\n\
+     <XMath xml:id=\"id1.2.1.1\">\n<XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n</XMath>\n</Math>\n</equation>",
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<equation ").count(), 2, "{xml}");
   for tex in [
     "\\input amstex\n\\input amsppt.sty\n\\document\n$$ c=d\\tag 2\\par$$\n\\enddocument\n",
     "\\input amstex\n\\input amsppt.sty\n\\document\n$$ c=d\\tag{2\\par$$\n\\enddocument\n",
@@ -260,7 +355,65 @@ fn amstex_tag_argument_errors() {
       "{log}"
     );
     assert!(!xml.contains("<tags>"), "{xml}");
+    assert!(
+      xml.contains("<Math mode=\"display\" tex=\"c=d\\par\" text=\"c = d\""),
+      "{xml}"
+    );
   }
+}
+
+/// A row's `\tag` takes no argument (`\def\tag{\global\tag@true…&&}` in `\align`, amstex.tex:633-635; `\def\tag{&}`
+/// in `\gather`, :797), so it raises no runaway or "extra }" error: a `\par` (outside the tag's own groups) or a `}`
+/// closing a group opened before it ends the tag cell, and the row goes on. (pdftex errs on each: `\align` reads its
+/// body as an argument, "Paragraph ended before \align was complete"; `a&={b\tag 2} c` "Missing } inserted"; ours
+/// recovers the tag, KNOWN_PERL_ERRORS #643.)
+#[test]
+fn amstex_row_tag_cell_ends_at_par_and_extra_brace() {
+  let (log, xml) = convert_counted(
+    "\\input amstex\n\\input amsppt.sty\n\\document\n\
+     $$\\align a&=b\\tag{3\\par}\\\\ c&=d\\endalign$$\n\n\
+     $$\\align a&=b\\tag 4\\par\\\\ c&=d\\endalign$$\n\n\
+     $$\\align a&={b\\tag 2} c\\\\ e&=f\\endalign$$\n\\enddocument\n",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (id, n, row) in [
+    (
+      "id1.1.1",
+      "3",
+      "<Math tex=\"\\displaystyle a=b\" text=\"a = b\"",
+    ),
+    (
+      "id2.1.1",
+      "4",
+      "<Math tex=\"\\displaystyle a=b\\par\" text=\"a = b\"",
+    ),
+    (
+      "id3.1.1",
+      "2",
+      "<Math tex=\"\\displaystyle a={b}c\" text=\"a = b * c\"",
+    ),
+  ] {
+    assert_tags_on(
+      &xml,
+      id,
+      &format!(
+        "<tags>\n          <tag>({n})</tag>\n          <tag role=\"refnum\">{n}</tag>\n        </tags>"
+      ),
+    );
+    assert!(equation(&xml, id).contains(row), "{id}: {row}\n{xml}");
+  }
+  for (id, row) in [
+    ("id1.1.2", "<Math tex=\"\\displaystyle c=d\" text=\"c = d\""),
+    ("id2.1.2", "<Math tex=\"\\displaystyle c=d\" text=\"c = d\""),
+    ("id3.1.2", "<Math tex=\"\\displaystyle e=f\" text=\"e = f\""),
+  ] {
+    let eq = equation(&xml, id);
+    assert!(
+      eq.contains(row) && !eq.contains("<tags>"),
+      "{id}: {row}\n{xml}"
+    );
+  }
+  assert_eq!(xml.matches("<tags>").count(), 3, "{xml}");
 }
 
 /// `\def\tag#1$$` strips the braces of a delimited argument that is one group (tex.web §400): `\tag{"A"}$$` is the
@@ -317,5 +470,48 @@ fn amstex_tag_in_latex_equation() {
     "S0.Ex3",
     "<tags>\n          <tag>Q</tag>\n          <tag role=\"refnum\">Q</tag>\n        </tags>",
   );
+  assert_eq!(xml.matches("<tags>").count(), 3, "{xml}");
+}
+
+/// A LaTeX document that loads the AmSTeX pool (`\NoBlackBoxes` autoloads it, tex.rs; `\input amstex` too) has
+/// AMS-TeX's `\tag`; in an equation row a braced `\tag{3}` (`\tag*{4}`) is amsmath's, its argument only: `a=b` stays
+/// in the equation's math (the `\eqno` reading of Perl's `\let\tag\eqno` and 66e r2's both read `3 a=b` into the tag).
+#[test]
+fn amstex_braced_tag_in_latex_equation_is_amsmaths() {
+  let (log, xml) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\NoBlackBoxes\n\\begin{document}\n\
+     \\begin{equation}\\tag{3} a=b\\end{equation}\n\
+     \\begin{align} a&=b \\tag*{4}\\\\ c&=d \\tag 5\\end{align}\n\\end{document}\n",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    element(&xml, "<equation xml:id=\"S0.Ex1\">", "</equation>"),
+    "<equation xml:id=\"S0.Ex1\">\n<tags>\n<tag>(3)</tag>\n<tag role=\"refnum\">3</tag>\n</tags>\n\
+     <Math mode=\"display\" tex=\"a=b\" text=\"a = b\" xml:id=\"S0.Ex1.m1\">\n<XMath xml:id=\"S0.Ex1.m1.1\">\n\
+     <XMApp xml:id=\"S0.Ex1.m1.1.1\">\n<XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n\
+     <XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok>\n<XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok>\n\
+     </XMApp>\n</XMath>\n</Math>\n</equation>",
+    "{xml}"
+  );
+  for (id, tag, row) in [
+    (
+      "S0.Ex2",
+      "<tag>4</tag>\n          <tag role=\"refnum\">4</tag>",
+      "a=b",
+    ),
+    (
+      "S0.Ex3",
+      "<tag>(5)</tag>\n          <tag role=\"refnum\">5</tag>",
+      "c=d",
+    ),
+  ] {
+    assert_tags_on(
+      &xml,
+      id,
+      &format!("<tags>\n          {tag}\n        </tags>"),
+    );
+    let math = format!("<Math tex=\"\\displaystyle {row}\"");
+    assert!(equation(&xml, id).contains(&math), "{id}: {math}\n{xml}");
+  }
   assert_eq!(xml.matches("<tags>").count(), 3, "{xml}");
 }
