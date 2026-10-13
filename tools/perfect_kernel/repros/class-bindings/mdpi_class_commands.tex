@@ -1,0 +1,24 @@
+% witness: 2008.03867 (`\doinum`), 2103.15665 (`\secondnote`), 2008.00705 (`\conference`), 2508.02963 (`\upmu`),
+%   1904.02732 (`\setitemize`), 2508.18441 (`\subfloat`), 2204.11608 (`\cellWidtha`); run 340 ~1,400 mdpi papers
+% oracle:  pdflatex with a paper's Definitions/mdpi.cls (accept option): 0 errors; the DOI on the journal line, the
+%   author notes under the affiliations, "Simple Summary:" before the abstract
+% engines: rust 65int5 = errors (each setter and the package commands undefined); no Perl binding for mdpi
+% expect:  0 errors; pubnote-like notes role=doi, secondnote, conference ("This paper is an extended version …") and
+%   simplesummary beside the abstract; µ; a subfigure
+% status:  RED (65int5) -> GREEN (65v)
+\documentclass[journal,article,accept,pdftex,moreauthors]{mdpi}
+\Title{Title}
+\Author{Author One and Author Two}
+\doinum{10.3390/x1010001}
+\secondnote{These authors contributed equally.}
+\conference{Proceedings of a Conference 2020}
+\simplesumm{A plain-language summary.}
+\abstract{The abstract.}
+\lastpage{12}\updates{yes}\appendixsections{multiple}
+\begin{document}
+\setitemize{noitemsep}
+Text with \highlighting{highlighted} words and $1\,\upmu$m.
+\setlength{\cellWidtha}{2cm}
+\begin{figure}\subfloat[left]{\rule{1cm}{1cm}}\caption{Panels.}\end{figure}
+\conflictofinterests{The authors declare no conflict of interest.}
+\end{document}

@@ -58,6 +58,17 @@ LoadDefinitions!({
   // 2605.22427, 2605.29102). Layout only; the bindings accept them.
   RequirePackage!("fancyhdr");
   RequirePackage!("geometry");
+  // The packages the mdpi.cls versions load that papers call into (of 119 sampled copies, 2012-2025): caption and
+  // lastpage (all 119; `\ContinuedFloat` 25, `\captionsetup` 22, `\captionof` 16 run-340 first errors), float (119),
+  // enumitem (105; `\setitemize` 72), mathpazo (105), setspace (105; `\setstretch`), epstopdf (101; `\epstopdfsetup`
+  // 7), upgreek (49; `\upmu` 97) and subfig (14; `\subfloat` 30). Witnesses 1904.12911, 2110.08429, 1904.02732,
+  // 2004.08650, 2508.02963, 2508.18441.
+  for package in [
+    "caption", "lastpage", "float", "enumitem", "mathpazo", "setspace", "epstopdf", "upgreek",
+    "subfig",
+  ] {
+    RequirePackage!(package);
+  }
   // mdpi.cls:178-262: amsthm with the `mdpi` style and the capitalised
   // environments on their own counters (`\begin{Proposition}`, `{Remark}`,
   // `{Lemma}` …). `{Algorithm}` is left out: its `algorithm` counter would
@@ -338,6 +349,8 @@ LoadDefinitions!({
   );
   // \patents — research patents declaration.
   DefMacro!("\\patents{}", "\\section*{Patents}#1");
+  // mdpi.cls (2021+) `\publishersnote`: the "Publisher's Note:" back-matter statement.
+  DefMacro!("\\publishersnote{}", "\\section*{Publisher's Note}#1");
   // \address[id]{text} — preserve as ltx:note.
   DefMacro!(
     "\\address[]{}",
@@ -361,6 +374,86 @@ LoadDefinitions!({
   // (preprints / preprintschicago / preprintsapa): a journal paper takes the
   // second branch (`\isPreprints{\centering}{}`, arXiv 2605.17530).
   DefMacro!("\\isPreprints{}{}", "#2");
+  // mdpi.cls:312 (2025) `\isAPAandChicago`, the same brancher for the journals that cite in both styles.
+  DefMacro!("\\isAPAandChicago{}{}", "#2");
+  // The title-page setters of the mdpi.cls versions (union of 119 sampled copies, 2012-2025; line numbers from
+  // 2207.12053's copy). Run 340 first errors: `\doinum` 312, `\lastpage` 148, `\secondnote` 145, `\updates` 111,
+  // `\orcidicon` 51, `\appendixsections` 42, `\cellWidtha` 31, `\startlandscape` 27, `\conference` 17 (witnesses
+  // 2008.03867, 1309.7149, 2103.15665, 2103.03626, 2103.07786, 1904.10935, 2204.11608, 2103.11824, 2008.00705).
+  // `\doinum` (:424): the article's DOI, which the journal line prints once the paper is accepted (:446, :646, :667),
+  // as `\history` is printed.
+  DefMacro!(
+    "\\doinum{}",
+    "\\ifx\\@status\\lx@mdpi@submit\\else\\@add@frontmatter{ltx:note}[role=doi]{#1}\\fi"
+  );
+  // `\secondnote`, `\thirdnote` (:560-563): the author notes after `\firstnote` (:970-980); `\conference` (:521): the
+  // note "This paper is an extended version of our paper published in …" (:964-965).
+  DefMacro!(
+    "\\secondnote{}",
+    "\\@add@frontmatter{ltx:note}[role=secondnote]{#1}"
+  );
+  DefMacro!(
+    "\\thirdnote{}",
+    "\\@add@frontmatter{ltx:note}[role=thirdnote]{#1}"
+  );
+  DefMacro!(
+    "\\conference{}",
+    "\\@add@frontmatter{ltx:note}[role=conference]{This paper is an extended version of our paper published in #1.}"
+  );
+  // `\featuredapplication`, `\simplesumm`, `\addhighlights` (:552-593): the "Featured Application", "Simple Summary"
+  // and "Highlights" blocks printed before the abstract (`\abstractkeywords`, :1019-1040), which papers call
+  // themselves in older versions (`\abstractkeywords` printed here by the frontmatter). Notes, not abstracts: a
+  // paper's `\abstract` replaces every frontmatter abstract (`\lx@add@abstract`).
+  DefMacro!(
+    "\\featuredapplication{}",
+    "\\@add@frontmatter{ltx:note}[role=featuredapplication]{#1}"
+  );
+  DefMacro!(
+    "\\simplesumm{}",
+    "\\@add@frontmatter{ltx:note}[role=simplesummary]{#1}"
+  );
+  DefMacro!(
+    "\\addhighlights{}",
+    "\\@add@frontmatter{ltx:note}[role=highlights]{#1}"
+  );
+  def_macro_noop("\\abstractkeywords")?;
+  // The 2012-2015 versions' back-matter titles (1307.3961's copy :1466-1473): the argument set as a bold paragraph.
+  // Later versions keep `\conflictofinterests` for compatibility with the statement as its argument under a
+  // "Conflicts of Interest:" label; papers use both, and the bold paragraph keeps either whole.
+  DefMacro!("\\acknowledgements{}", "\\par\\noindent\\textbf{#1}\\par");
+  DefMacro!(
+    "\\conflictofinterests{}",
+    "\\par\\noindent\\textbf{#1}\\par"
+  );
+  // Page and layout settings: `\lastpage`, `\continuouspages` (page ranges of the journal line), `\updates` (the
+  // check-for-updates logo link, :794), `\longauthorlist`, `\appendixsections`, the ORCID logo `\orcidicon` (an image
+  // file the papers' Definitions/ folder holds), `\startlandscape`/`\finishlandscape` and `\widefigure` (page
+  // geometry and caption margins, as `\widetable`'s).
+  for setter in [
+    "\\lastpage{}",
+    "\\continuouspages{}",
+    "\\updates{}",
+    "\\longauthorlist{}",
+    "\\appendixsections{}",
+  ] {
+    def_macro_noop(setter)?;
+  }
+  for switch in [
+    "\\orcidicon",
+    "\\startlandscape",
+    "\\finishlandscape",
+    "\\widefigure",
+    "\\widetable",
+  ] {
+    def_macro_noop(switch)?;
+  }
+  // `\highlighting` (a yellow `\colorbox`), the table column widths `\cellWidtha`…`\cellWidthz` and
+  // `\PreserveBackslash` (the XML2PDF column helper).
+  DefMacro!("\\highlighting{}", "\\colorbox{yellow}{#1}");
+  for letter in 'a'..='z' {
+    RawTeX!(&s!("\\newlength{{\\cellWidth{letter}}}"));
+  }
+  RawTeX!(r"\newcommand{\PreserveBackslash}[1]{\let\temp=\\#1\let\\=\temp}");
   // \acknowledgments — newer-mdpi spelling (vs \acknowledgements).
   // Render as structural ltx:acknowledgements so post-processors map it
   // to the canonical role/styling (vs flattening to a generic section).
