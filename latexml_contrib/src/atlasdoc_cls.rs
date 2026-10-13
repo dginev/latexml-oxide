@@ -24,11 +24,13 @@ LoadDefinitions!({
   // the source follows naturally); drop the ORCID decoration.
   DefMacro!("\\AtlasOrcid[]{}", "#2");
   // atlasdoc.cls (v15, 2504.04805's copy :286-345) the document-data setters, which store what the title page prints
-  // and what the cover pages and `\AtlasPaperWebpage` read; each stores as the class does, the last call winning. The
-  // title page (:835-856) prints the journal reference, or else "Submitted to: <journal>", then the DOI and the
-  // preprint number: the same, once, as the frontmatter notes. Run 340: nearly every atlasdoc paper calls them
-  // (`\AtlasRefCode` 470, `\PreprintIdNumber` 147, `\AtlasJournalRef` 32, `\AtlasVersion` 52; witnesses 2508.20929,
-  // 2103.01029, 1904.03536, 2407.10879).
+  // and what the cover pages and `\AtlasPaperWebpage` read; each stores as the class does, the last call winning. At
+  // `\maketitle` (:1074) the title page prints them: with the `preprint` or `cernpreprint` option (:82-91; 64 of 67
+  // sampled papers) the CERN preprint header (:835-856), the journal reference or else "Submitted to: <journal>", the
+  // DOI and the preprint number; otherwise the default header (:746-747) "<\subprepend> <journal>", "Journal:" by
+  // default. The same, as the frontmatter notes. Run 340: nearly every atlasdoc paper calls them (`\AtlasRefCode` 470,
+  // `\PreprintIdNumber` 147, `\AtlasJournalRef` 32, `\AtlasVersion` 52; witnesses 2508.20929, 2103.01029, 1904.03536,
+  // 2407.10879).
   RawTeX!(
     r"\newcommand*{\ADOC@draftversion}{}\newcommand*{\draftversion}[1]{\renewcommand*{\ADOC@draftversion}{#1}}
 \newcommand*{\AtlasVersion}[1]{\renewcommand*{\ADOC@draftversion}{#1}}
@@ -42,10 +44,13 @@ LoadDefinitions!({
 \newcommand*{\ADOC@journalref}{}
 \newcommand*{\AtlasJournalRef}[1]{\renewcommand*{\ADOC@journalref}{#1}}
 \newcommand*{\ADOC@doi}{}\newcommand*{\AtlasDOI}[1]{\renewcommand*{\ADOC@doi}{#1}}
-\AtBeginDocument{\ifx\ADOC@journalref\@empty\ifx\ADOC@journal\@empty\else
-  \lx@add@pubnote[role=journal]{Submitted to: \ADOC@journal}\fi\else\lx@add@pubnote[role=journalref]{\ADOC@journalref}\fi
-\ifx\ADOC@doi\@empty\else\lx@add@pubnote[role=doi]{\ADOC@doi}\fi
-\ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint]{\ADOC@preprintnumber}\fi}
+\newif\iflx@atlas@cernpreprint
+\def\lx@atlas@titlepage{\iflx@atlas@cernpreprint
+  \ifx\ADOC@journalref\@empty\ifx\ADOC@journal\@empty\else\lx@add@pubnote[role=journal]{Submitted to: \ADOC@journal}\fi
+  \else\lx@add@pubnote[role=journalref]{\ADOC@journalref}\fi
+  \ifx\ADOC@doi\@empty\else\lx@add@pubnote[role=doi]{\ADOC@doi}\fi
+  \ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint]{\ADOC@preprintnumber}\fi
+\else\ifx\ADOC@journal\@empty\else\lx@add@pubnote[role=journal]{\ADOC@subprepend\ \ADOC@journal}\fi\fi}
 \newcommand*{\AtlasArXivId}{}\newcommand*{\AtlasArXivURL}{}
 \newcommand*{\arXivId}[1]{\renewcommand*{\AtlasArXivId}{#1}\renewcommand*{\AtlasArXivURL}{https://arXiv.org/abs/#1}}
 \newcommand*{\AtlasArXivCat}{[hep-ex]}
@@ -54,6 +59,33 @@ LoadDefinitions!({
 \newcommand*{\HEPDataRecord}[1]{\renewcommand*{\AtlasHEPDataRecord}{https://www.hepdata.net/record/ins#1}}
 \newcommand*{\ADOC@subprepend}{Journal:}\newcommand*{\subprepend}[1]{\renewcommand*{\ADOC@subprepend}{#1}}"
   );
+  // The class's kvoptions `preprint`/`cernpreprint` (either alone or `=true`) choose the CERN preprint header.
+  let options = ["\\opt@atlasdoc.cls", "\\@classoptionslist"]
+    .iter()
+    .find_map(|list| {
+      lookup_definition(&T_CS!(list))
+        .ok()
+        .flatten()
+        .and_then(|defn| match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => Some(body.to_string()),
+          _ => None,
+        })
+    });
+  let cern_preprint = options.is_some_and(|options| {
+    options.split(',').map(str::trim).any(|option| {
+      [
+        "preprint",
+        "preprint=true",
+        "cernpreprint",
+        "cernpreprint=true",
+      ]
+      .contains(&option)
+    })
+  });
+  if cern_preprint {
+    RawTeX!(r"\lx@atlas@cernpreprinttrue");
+  }
+  AddToMacro!("\\lx@maketitle@body", "\\lx@atlas@titlepage");
   // :304-305 `\AtlasDate` (the title page's date, `\today` by default) as the document's date.
   DefMacro!("\\AtlasDate{}", "\\date{#1}");
   // The cover-page commands (the class's own, :339ff, for the `coverpage` option): the analysis team, editors,

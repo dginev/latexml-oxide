@@ -2,11 +2,22 @@
 //! the versions of those classes define and papers call. Repros `tools/perfect_kernel/repros/class-bindings/*`.
 use latexml::util::test::convert_files_with;
 
-use super::perfect_kernel_batch46::error_count;
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert(tex: &str) -> String {
   let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
-  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  xml
+}
+
+/// spieman has no binding of its own: the loader's one warning that it takes spie's, and nothing else.
+fn convert_spieman(tex: &str) -> String {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("Can't find binding for class spieman (using spie)"),
+    "{log}"
+  );
   xml
 }
 
@@ -59,7 +70,8 @@ fn lipics_class_commands_are_defined() {
   ));
   assert_contains(&xml, &[
     "<proof",
-    r#"It holds.<Math mode="inline" tex="\vartriangleleft""#,
+    r#"tex="\vartriangleleft""#,
+    "Inner.\u{220E}",
     "A remark.",
     ">(i)</tag>",
     ">(ii)</tag>",
@@ -70,6 +82,25 @@ fn lipics_class_commands_are_defined() {
     "A Conference",
     r#"<pubnote name="DOI: " role="doi">10.4230/LIPIcs.SAMPLE.2016.1</pubnote>"#,
   ]);
+  // The claim's own end is the ◁, not a ∎ besides it; the nested proof keeps its ∎.
+  assert_eq!(xml.matches('\u{220E}').count(), 1, "{xml}");
+  assert_eq!(xml.matches(r#"tex="\vartriangleleft""#).count(), 2, "{xml}");
+}
+
+/// lipics-v2021.cls:1001-1005 `\flag[width]{image}`: the image (an artifact badge the class sets in the margin),
+/// inline. The image is not shipped here, so its missing file warns.
+#[test]
+fn lipics_flag_is_the_image() {
+  let (log, xml) = latexml::util::test::convert_with(
+    r"\documentclass{lipics-v2021}
+\begin{document}
+Artifact.\flag[1cm]{badge-available}
+\end{document}
+",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_contains(&xml, &[r#"graphic="badge-available""#]);
 }
 
 /// The older lipics versions' setters are guesses (17-19 of 92 sampled copies): a lipics-v2021 paper's own `\DOI`
@@ -108,11 +139,47 @@ fn atlasdoc_setters_are_defined() {
   assert_eq!(xml.matches(r#"role="doi""#).count(), 1, "{xml}");
 }
 
+/// atlasdoc.cls without `preprint`/`cernpreprint`: the default title header (2504.04805's :746-747) prints
+/// "<\subprepend> <journal>", "Journal:" by default, and neither the journal reference nor the DOI; with `preprint` and
+/// no journal reference, "Submitted to: <journal>" (:835-841).
+#[test]
+fn atlasdoc_title_header_follows_the_options() {
+  let xml = convert(
+    r"\documentclass{atlasdoc}
+\AtlasTitle{T}
+\AtlasJournal{Phys. Lett. B}
+\AtlasJournalRef{Phys. Lett. B 800 (2025) 1}
+\AtlasDOI{10.1/x}
+\begin{document}
+\maketitle
+\end{document}
+",
+  );
+  assert_contains(&xml, &[
+    r#"role="journal">Journal: Phys. Lett. B</pubnote>"#,
+  ]);
+  for absent in [r#"role="journalref""#, r#"role="doi""#, "Submitted to"] {
+    assert!(!xml.contains(absent), "{absent}\n{xml}");
+  }
+  let xml = convert(
+    r"\documentclass[preprint]{atlasdoc}
+\AtlasTitle{T}
+\AtlasJournal{Phys. Lett. B}
+\begin{document}
+\maketitle
+\end{document}
+",
+  );
+  assert_contains(&xml, &[
+    r#"role="journal">Submitted to: Phys. Lett. B</pubnote>"#,
+  ]);
+}
+
 /// spieman.cls :82 `\linkable` (the loader gives spieman the spie binding) and the v1.00 `\supscr`. Witnesses
 /// 2604.17554, 1408.0407.
 #[test]
 fn spieman_linkable_is_defined() {
-  let xml = convert(include_str!(
+  let xml = convert_spieman(include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/spieman_class_commands.tex"
   ));
   assert_contains(&xml, &[
@@ -124,7 +191,7 @@ fn spieman_linkable_is_defined() {
 /// spieman's `\linkable` is a guess for spie's binding (`DefinitionOrigin::Fallback`): a paper's own definition wins.
 #[test]
 fn spieman_linkable_yields_to_the_paper() {
-  let xml = convert(
+  let xml = convert_spieman(
     r"\documentclass{spieman}
 \newcommand{\linkable}[1]{X#1}
 \begin{document}
@@ -153,8 +220,8 @@ fn arximspdf_helpers_are_defined() {
 }
 
 /// aa.cls up to v7's online-only floats (0801.4139's :931-940): set at the document's end, numbered N, the counter
-/// stepped to N for what follows (`\onllongtab` with a longtable); `\psj`. Witnesses 0709.2515, 0709.0404, 0709.4508,
-/// 2508.13727.
+/// stepped to N for what follows (`\onllongtab` with a longtable); `\longtabL` in place, numbered N (:939); `\psj`.
+/// Witnesses 0709.2515, 0709.0404, 0709.4508, 2508.13727.
 #[test]
 fn aa_online_floats_keep_their_numbers() {
   let xml = convert(include_str!(
@@ -167,12 +234,14 @@ fn aa_online_floats_keep_their_numbers() {
     "Figure 1</tag>Online figure.",
     "Table 4</tag>Long online.",
     "Table 5</tag>Fifth.",
+    "Table 6</tag>Landscape.",
     "PSJ",
   ]);
   assert_in_order(&xml, &[
     "First.",
     "Third.",
     "Fifth.",
+    "Landscape.",
     "Online.",
     "Online figure.",
     "Long online.",
