@@ -402,23 +402,42 @@ fn robust_let_over_a_locked_binding_keeps_its_inner() {
   assert!(!xml.contains("MY("), "{xml}");
 }
 
-/// A definition the lock refuses defines no `\@xargdef` internal either: a package's `\renewcommand\title[2][x]{…}` of
-/// the locked `\title` leaves `\\title` undefined.
+/// A definition the lock refuses still defines its `\@xargdef` internal, which the class's own `\@dblarg` wrapper calls
+/// when its refused setter is replayed: cmfne.cls:462-483 `\renewcommand{\author}[2][]{…\gdef\firstshortauthor{#1}…}`
+/// then `\edef\author{\@dblarg\csname\string\author\endcsname}`, whose `\enddoc@text` prints the name line
+/// (2210.02246). The kernel keeps the author.
 #[test]
-fn refused_definition_defines_no_internal() {
+fn refused_dblarg_setter_reaches_its_internal() {
   let (log, xml) = latexml::util::test::convert_files_with(
-    r"\documentclass{article}
-\usepackage{rtitle}
+    r"\documentclass{cmfx}
+\title{A title}
+\author[Valeriy V. Katrakhov (1949--2010)]{V.~V.~Katrakhov}
 \begin{document}
-\expandafter\ifx\csname\string\title\endcsname\relax UNDEF\else DEF\fi
+\maketitle
+Text.
 \end{document}
 ",
     &[(
-      "rtitle.sty",
-      "\\ProvidesPackage{rtitle}\n\\renewcommand\\title[2][x]{T(#1:#2)}\n",
+      "cmfx.cls",
+      r"\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{cmfx}
+\LoadClass{article}
+\renewcommand{\author}[2][]{\gdef\firstshortauthor{#1}\gdef\authors{#2}}
+\edef\author{\noexpand\@dblarg\expandafter\noexpand\csname\string\author\endcsname}
+\let\firstshortauthor\@empty
+\AtEndDocument{\par\firstshortauthor\par}
+",
     )],
     Some("ar5iv.sty"),
   );
-  assert_eq!(error_count(&log), 0, "{log}");
-  assert!(xml.contains("<p xml:id=\"p1.1\">UNDEF</p>"), "{xml}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(xml.matches("<personname>").count(), 1, "{xml}");
+  assert!(
+    xml.contains("<personname>V.\u{a0}V.\u{a0}Katrakhov</personname>"),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(">Valeriy V. Katrakhov (1949–2010)</p>"),
+    "{xml}"
+  );
 }

@@ -16987,11 +16987,16 @@ argument itself (`convertLaTeXArgs`), so code that calls the internal directly f
 argument also defines `\\cs` with the same body, its first parameter the bracketed one: `\newcommand`, `\renewcommand`,
 `\providecommand`, the begin macro of `\newenvironment`/`\renewenvironment` (`\@newenv`'s `\new@command`,
 latex.ltx:1324-1331), and `\DeclareRobustCommand`'s inner `\cs␣` (:1412-1428; internal `\\cs␣`); a starred
-declarator's internal is not `\long` (`\l@ngrel@x`). `\cs` itself is unchanged. Residuals: the internal reads `[…]` as
+declarator's internal is not `\long` (`\l@ngrel@x`). `\cs` itself is unchanged. A definition the lock refuses still
+defines its internal, as `\@xargdef` does: only the class's own `\csname\string\cs\endcsname` reaches it, and the replay
+of a refused class setter goes through it (cmfne.cls:462-483 `\renewcommand{\author}[2][]` + the `\@dblarg` `\edef`,
+whose `\enddoc@text` prints `\firstshortauthor`: 2210.02246 lost its two author lines while the internal was skipped);
+an internal a binding owns carries its own lock. Residuals: the internal reads `[…]` as
 an optional argument, as our `\@yargdef` does, where LaTeX's requires the brackets; an active character gets none (its
 `\string` names another control sequence). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors).
 Guards `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
-every_xargdef_declarator_defines_the_internal_macro}`; repro `macro-state/newcommand_optional_internal_cs`.
+every_xargdef_declarator_defines_the_internal_macro, refused_dblarg_setter_reaches_its_internal}`; repros
+`macro-state/newcommand_optional_internal_cs`, `sectioning-frontmatter/refused_dblarg_setter_reaches_its_internal`.
 
 ### 568. A locked robust binding locks its inner `\cs␣` against the files (Perl: the wrapper only)
 
