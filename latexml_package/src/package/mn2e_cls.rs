@@ -1,6 +1,6 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
-use crate::{prelude::*, shipped_class::requested_shipped_class};
+use crate::{prelude::*, shipped_class::shipped_class_text};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -46,19 +46,8 @@ LoadDefinitions!({
   // paper ships: its own definition lines of those names, none when it has none (a document's own
   // `\newcommand{\apjl}{ApJL}` then stands, 0901.1150); with no copy shipped, the 1696-line set as a fallback a
   // document's own definition replaces.
-  match requested_shipped_class("mn2e")? {
-    Some(class) => {
-      let text = find_file(
-        &class,
-        Some(FindFileOptions {
-          ext_type: Some(Cow::Borrowed("cls")),
-          forbid_ltxml: true,
-          ..Default::default()
-        }),
-      )
-      .and_then(|path| std::fs::read(path).ok())
-      .map(|bytes| bytes.iter().map(|&b| b as char).collect::<String>())
-      .unwrap_or_default();
+  match shipped_class_text("mn2e")? {
+    Some(text) => {
       let lines = shipped_journal_abbreviations(&text);
       if !lines.is_empty() {
         RawTeX!(&lines);

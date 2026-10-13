@@ -17,25 +17,32 @@ LoadDefinitions!({
   RequirePackage!("natbib");
   // jfm.cls:663-712 builds subeqnarray in (2512.18771: `{subeqnarray}` undefined, its body read as text).
   RequirePackage!("subeqnarray");
-  // jfm.cls (v1.27/v1.28 headers, which every copy keeps through the press's 2020 version) :58, :72
-  // `\newif\ifCUPmtlplainloaded`, set by the `prodtf` option for the press's own fonts (CUPTimes, jfm2esym, :79; not
-  // distributed): the class and the template preamble test it around their font checks (`\ifCUPmtlplainloaded \else
-  // \checkfont{eurm10} …`; run 340: 597 papers' first error; witnesses 2103.10260, 2103.05851, 1904.02498). The 2020
-  // version's `lineno` option (:172, :186, :2239) loads the lineno-FLM.sty the papers ship at the start of the
-  // document (`\nolinenumbers` in a title: 2401.13479, 2406.10975).
+  // jfm.cls (v1.27/v1.28 headers, which every copy keeps; line numbers from 2103.10260's v1.28 copy unless said)
+  // :58, :72 `\newif\ifCUPmtlplainloaded`, set by the `prodtf` option for the press's own fonts (CUPTimes, jfm2esym,
+  // :79; not distributed): the class and the template preamble test it around their font checks
+  // (`\ifCUPmtlplainloaded \else \checkfont{eurm10} …`; run 340: 597 papers' first error; witnesses 2103.10260,
+  // 2103.05851, 1904.02498). The newer copies' `lineno` option (2604.22963's :172, :186, :2239) loads the
+  // lineno-FLM.sty the papers ship at the start of the document (`\nolinenumbers` in a title: 2401.13479, 2406.10975).
   RawTeX!(r"\newif\ifCUPmtlplainloaded\newif\iflineno");
   DeclareOption!("prodtf", "\\CUPmtlplainloadedtrue");
   DeclareOption!("lineno", "\\linenotrue");
   DeclareOption!(None, {});
   ProcessOptions!();
   RawTeX!(r"\iflineno\AtBeginDocument{\usepackage{lineno-FLM}}\fi");
-  // The 2020 version's caption (:1837, `labelsep=period`, the "Figure 1." the older versions' own `\@makecaption`
-  // prints too, :1042-1047), whose `\captionsetup` papers call (run 340: 51; 2406.15733).
-  RequirePackage!("caption", options => vec![s!("labelsep=period")]);
+  // The paper's own copy decides what follows where the versions differ: caption, which 35 of 119 sampled copies load
+  // (`\captionsetup`, run 340: 51; 2406.15733); the msam10 check's `\let\le=\leqslant` (73 copies, active); the
+  // bold-italic sans `\mathsfbi` (below). Without a copy, the newer versions' choices.
+  let shipped = crate::shipped_class::shipped_class_text("jfm")?;
+  if shipped
+    .as_deref()
+    .is_none_or(|text| crate::shipped_class::class_text_loads(text, "caption"))
+  {
+    RequirePackage!("caption");
+  }
   // jfm.cls:1176-1183 `\checkfont` and the font checks every version runs (:1324-1365): amsbsy, and upmath when the
   // Euler fonts are found and the paper ships upmath.sty (TeX Live has none, so `\upi` is the class's `\pi`; witnesses
-  // 2103.06961, 1904.11981). The msam10 check's `\let\le=\leqslant` (74 of 119 sampled copies; the 2020 version
-  // comments it out) is a glyph shape, the same relation, and is not carried.
+  // 2103.06961, 1904.11981); msam10 is found, so amssymb loads and, where the copy has it, `\le`, `\leq`, `\ge`, `\geq`
+  // become the slanted ⩽ ⩾ (:1355-1363).
   RawTeX!(
     r"\newif\iffontfound
 \newcommand\checkfont[1]{\batchmode\font\test=#1\relax\errorstopmode\fontfoundfalse\ifx\test\nullfont\else\fontfoundtrue\fi}
@@ -45,6 +52,11 @@ LoadDefinitions!({
   \iffontfound\IfFileExists{upmath.sty}{\usepackage{upmath}}{\providecommand\upi{\pi}}\else\providecommand\upi{\pi}\fi
 \fi"
   );
+  if shipped.as_deref().is_none_or(slants_inequalities) {
+    RawTeX!(
+      r"\ifCUPmtlplainloaded\else\let\le=\leqslant\let\leq=\leqslant\let\ge=\geqslant\let\geq=\geqslant\fi"
+    );
+  }
   // The author conveniences of the class versions (union of 119 sampled copies): what one version defines another may
   // not, so a paper whose copy lacks one defines it itself, and its own `\newcommand` wins over ours
   // (`DefinitionOrigin::Fallback`, as a fallback class's guesses do). Run 340 first errors: `\Rey` 321, `\mathsfbi`
@@ -103,19 +115,31 @@ LoadDefinitions!({
 \newcommand\etc{etc.\ }
 \newcommand\eg{e.g.\ }"
     );
-    // 2020 version :173-187: the sans-serif math alphabets, bold-italic sans from Helvetica where its font
-    // description is installed (TeX Live has t1phv.fd), as pdflatex picks it; `\mathbi` (:1443) is `\boldsymbol`.
+    // The sans-serif math alphabets (2103.09196's copy :173-187): the newer copies' bold-italic sans comes from
+    // Helvetica where its font description is installed (TeX Live has t1phv.fd), as pdflatex picks it; the older
+    // copies' `\mathsfbi` is slanted medium cmss (0712.2739's :166). `\mathbi` (:1443) is `\boldsymbol`.
     RawTeX!(
       r"\DeclareTextFontCommand\textsfi{\usefont{OT1}{cmss}{m}{sl}}
 \DeclareMathAlphabet\mathsfi{OT1}{cmss}{m}{sl}
 \DeclareTextFontCommand\textsfb{\usefont{OT1}{cmss}{bx}{n}}
 \DeclareMathAlphabet\mathsfb{OT1}{cmss}{bx}{n}
-\DeclareTextFontCommand\textsfbi{\usefont{T1}{phv}{b}{it}}
-\DeclareMathAlphabet\mathsfbi{T1}{phv}{b}{it}
 \let\mathbi\boldsymbol"
     );
-    // :385-389 a single appendix (`\appendix` titled without a letter); :1378 `\aunote` (`\corresp`'s twin); the 2020
-    // version's `\corresau` (:2193), printed under the title as "Corresponding author: …" (2604.22963).
+    if shipped
+      .as_deref()
+      .is_none_or(|text| text.contains("{phv}{b}{it}"))
+    {
+      RawTeX!(
+        r"\DeclareTextFontCommand\textsfbi{\usefont{T1}{phv}{b}{it}}\DeclareMathAlphabet\mathsfbi{T1}{phv}{b}{it}"
+      );
+    } else {
+      RawTeX!(
+        r"\DeclareTextFontCommand\textsfbi{\usefont{OT1}{cmss}{m}{sl}}\DeclareMathAlphabet\mathsfbi{OT1}{cmss}{m}{sl}"
+      );
+    }
+    // :385-389 `\oneappendix`, a single appendix (the class titles it "Appendix" without a letter, which this
+    // `\appendix` still prints: a residual); :1378 `\aunote` (`\corresp`'s twin); the newest copies' `\corresau`
+    // (2604.22963's :2193), printed under the title as "Corresponding author: …".
     RawTeX!(
       r"\newif\ifappendix\newif\ifoneappendix\newcommand\oneappendix{\global\oneappendixtrue\appendix}"
     );
@@ -153,3 +177,15 @@ LoadDefinitions!({
   // \keywords{...} — JFM has its own keywords macro.
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 });
+
+/// Does this copy of jfm.cls set `\le`/`\ge` to the slanted ⩽ ⩾ when it finds the AMS symbol fonts (an uncommented
+/// `\let\le=\leqslant`, 2103.10260's :1361)?
+fn slants_inequalities(class: &str) -> bool {
+  class.lines().any(|line| {
+    line
+      .split('%')
+      .next()
+      .unwrap_or_default()
+      .contains("\\let\\le=\\leqslant")
+  })
+}

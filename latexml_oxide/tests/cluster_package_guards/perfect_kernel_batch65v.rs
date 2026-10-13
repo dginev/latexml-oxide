@@ -1,6 +1,6 @@
 //! Red/green guards for batch 65v: the jfm and mdpi bindings define what the versions of those author-shipped classes
 //! define and papers call. Repros `tools/perfect_kernel/repros/class-bindings/{jfm,mdpi}_class_commands.tex`.
-use super::perfect_kernel_batch46::error_count;
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// jfm.cls :58 `\ifCUPmtlplainloaded` (the template preamble's font checks), :1176-1183 `\checkfont`, the 2020
 /// version's caption (:1837) and the author conveniences of the versions (:1107-1108, :1263-1321, :173-187).
@@ -11,12 +11,15 @@ fn jfm_class_commands_are_defined() {
     include_str!("../../../tools/perfect_kernel/repros/class-bindings/jfm_class_commands.tex");
   let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
   assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
   for text in [
     "NOCUP", "FOUND", ">Re<", ">Pr<", ">Ra<", "\u{2202}", "\u{03C0}",
   ] {
     assert!(xml.contains(text), "{text}\n{xml}");
   }
   assert!(!xml.contains(">CUP<"), "{xml}");
+  // jfm.cls:1361 (73 of 119 sampled copies, and with no copy shipped): `\le` is the slanted ⩽ once amssymb loads
+  assert!(xml.contains("\u{2A7D}"), "{xml}");
 }
 
 /// A convenience one jfm.cls version defines and another lacks yields to the paper's own definition, as a paper
@@ -47,6 +50,7 @@ fn mdpi_class_commands_are_defined() {
     include_str!("../../../tools/perfect_kernel/repros/class-bindings/mdpi_class_commands.tex");
   let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
   assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
   for (role, text) in [
     ("doi", "10.3390/x1010001"),
     ("secondnote", "These authors contributed equally."),
@@ -59,10 +63,66 @@ fn mdpi_class_commands_are_defined() {
     assert_eq!(note_text(&xml, role), Some(text), "{role}\n{xml}");
   }
   assert!(xml.contains("\u{03BC}"), "{xml}");
+  // the later versions' `\conflictofinterests` (43 of the 62 sampled copies that define it, and with no copy
+  // shipped): the statement under a bold label
   assert!(
-    xml.contains("The authors declare no conflict of interest."),
+    xml.contains("Conflicts of Interest:</text> The authors declare no conflict of interest."),
     "{xml}"
   );
+  assert!(xml.contains(r#"<text font="bold" xml:id="#), "{xml}");
+}
+
+/// mdpi.cls:592-593, :1035-1039: `\addhighlights{yes}` switches the "Highlights" block on, and the block is the
+/// paper's own redefinition of `\addhighlights` (the class comment: "redefined in .tex to use itemize"); the switch
+/// alone, or the setter left as it is, prints nothing.
+#[test]
+fn mdpi_highlights_are_the_papers_redefinition() {
+  let (log, xml) = latexml::util::test::convert_with(
+    r"\documentclass[journal,article,accept]{mdpi}
+\Title{Title}
+\addhighlights{yes}
+\renewcommand{\addhighlights}{\textbf{What are the main findings?}\begin{itemize}\item First bullet.\end{itemize}}
+\begin{document}
+Text.
+\end{document}
+",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  let note = note_text(&xml, "highlights").expect("a highlights note");
+  assert!(note.contains("What are the main findings?"), "{xml}");
+  assert!(note.contains("First bullet."), "{xml}");
+  assert!(!xml.contains(">yes<"), "{xml}");
+  let (log, xml) = latexml::util::test::convert_with(
+    r"\documentclass[journal,article,accept]{mdpi}
+\Title{Title}
+\addhighlights{yes}
+\begin{document}
+Text.
+\end{document}
+",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(note_text(&xml, "highlights").is_none(), "{xml}");
+}
+
+/// What one mdpi.cls version defines and another lacks yields to the paper's own definition
+/// (`DefinitionOrigin::Fallback`): a paper whose copy lacks `\orcidicon` or `\highlighting` defines its own.
+#[test]
+fn mdpi_conveniences_yield_to_the_paper() {
+  let (log, xml) = latexml::util::test::convert_with(
+    r"\documentclass[journal,article,accept]{mdpi}
+\newcommand{\orcidicon}{ORC}
+\newcommand{\highlighting}[1]{HL(#1)}
+\begin{document}
+Body \orcidicon{} and \highlighting{x}.
+\end{document}
+",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains("Body ORC and HL(x)."), "{xml}");
 }
 
 /// A submitted manuscript (mdpi's default status) prints no DOI: the journal line is "Version … submitted to …"

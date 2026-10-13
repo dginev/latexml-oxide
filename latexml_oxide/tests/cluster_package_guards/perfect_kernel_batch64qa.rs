@@ -111,13 +111,14 @@ fn mdpi_history_is_frontmatter() {
   let xml = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/mdpi_history_is_frontmatter.tex"
   ));
-  // a later `\history` replaces the earlier (mdpi.cls:384 `\gdef`)
+  // a later `\history` replaces the earlier (mdpi.cls:384 `\gdef`); the document's own id (`id1`) is lastpage's
+  // `LastPage` label (65v: the mdpi versions load lastpage), so the note is `id1.1`
   assert_eq!(xml.matches(r#"role="history""#).count(), 1, "{xml}");
   assert_element(
     &xml,
     "note",
     &[r#"role="history""#],
-    r#"<note role="history" xml:id="id1">Received: 28 March 2020; Accepted: 7 May 2020</note>"#,
+    r#"<note role="history" xml:id="id1.1">Received: 28 March 2020; Accepted: 7 May 2020</note>"#,
   );
 }
 

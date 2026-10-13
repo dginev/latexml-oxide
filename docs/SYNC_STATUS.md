@@ -775,20 +775,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch65t::{ws_journal_class_commands_are_defined, ws_rv9x6_defines_addchapnum}`; repro
   `class-bindings/ws_journal_class_commands`.
 - **65v**: the jfm and mdpi bindings (contrib; no Perl binding) define what the versions of those author-shipped classes
-  define and papers call (union of 119 sampled copies each, the class-family rule). jfm: `\ifCUPmtlplainloaded` (the
-  template preamble's font checks; 597 first errors), the class's `\checkfont` block (amsbsy, upmath when shipped,
-  `\upi`), the 2020 version's `lineno` option and caption, `\aunote`, `\corresau` (a `role=corresponding` note),
-  `\oneappendix`, and the author conveniences (`\Rey`, `\Pran`, `\ls`, `\ns`, `\p`, `\bnabla`, `\mathsfbi`, …) as
-  `DefinitionOrigin::Fallback`, so a paper whose copy lacks one keeps its own `\newcommand`. The msam10 check's
-  `\let\le=\leqslant` (74 of 119 copies; the 2020 version drops it) is a glyph shape and is not carried. mdpi: the
-  packages its versions load (caption, lastpage, float, enumitem, mathpazo, setspace, epstopdf, upgreek, subfig), the title-page
-  setters as frontmatter notes (`\doinum` once accepted, `\secondnote`/`\thirdnote`, `\conference`,
-  `\featuredapplication`, `\simplesumm`, `\addhighlights`), `\conflictofinterests`/`\acknowledgements` (the 2012-2015
-  bold paragraph; later versions read the argument as the statement), `\publishersnote`, the page and layout setters (`\widetable` among them), `\highlighting`,
-  `\cellWidtha`…`\cellWidthz`, `\PreserveBackslash`, `\isAPAandChicago`. Run-340 estimate ~1,800 jfm + ~1,400 mdpi
-  papers' first error (undefined_rootcauses.md row 1). Residual: our caption binding declares `labelsep` but does not
-  apply it (captions keep ": "). Guards `perfect_kernel_batch65v::*`; repros
-  `class-bindings/{jfm,mdpi}_class_commands`.
+  define and papers call (union of 119 sampled copies each, the class-family rule), and follow the paper's own copy
+  where the versions conflict (`shipped_class_text`, `class_text_loads` in latexml_package/src/shipped_class.rs, as
+  mn2e's journal abbreviations). jfm: `\ifCUPmtlplainloaded` (the template preamble's font checks; 597 first errors),
+  the class's `\checkfont` block (amsbsy, upmath when shipped, `\upi`), the `lineno` option, `\aunote`, `\corresau` (a
+  `role=corresponding` note), `\oneappendix`, and the author conveniences (`\Rey`, `\Pran`, `\ls`, `\ns`, `\p`,
+  `\bnabla`, `\mathsfbi`, …) as `DefinitionOrigin::Fallback`, so a paper whose copy lacks one keeps its own
+  `\newcommand`; by the copy: caption (35 of 119), `\le`/`\ge` as ⩽ ⩾ (73 of 119, jfm.cls:1361), `\mathsfbi` bold-italic
+  Helvetica (newer) or slanted cmss (older). mdpi: by the copy, the packages its versions load (caption, lastpage,
+  float, enumitem, mathpazo, setspace, epstopdf, upgreek, subfig; a 2013 copy loads no enumitem, so the paper's
+  `[shortlabels]` load is the first) and `\conflictofinterests` (the statement under "Conflicts of Interest:", or the
+  2012-2015 title form); as fallback guesses, the title-page setters as frontmatter notes (`\doinum` once accepted,
+  `\secondnote`/`\thirdnote`, `\conference`, `\featuredapplication`, `\simplesumm`), `\addhighlights` (the switch; the
+  block is the paper's own redefinition), `\acknowledgements`, `\publishersnote`, the page and layout setters,
+  `\highlighting`, `\cellWidtha`…`\cellWidthz`, `\PreserveBackslash`, `\isAPAandChicago`. Run-340 estimate ~1,800 jfm +
+  ~1,400 mdpi papers' first error (undefined_rootcauses.md row 1). Residuals: our caption binding declares `labelsep`
+  but does not apply it (captions keep ": "); `\oneappendix` keeps the appendix letter. Guards
+  `perfect_kernel_batch65v::*` (with `perfect_kernel_batch64qa::mdpi_history_is_frontmatter`: lastpage's `LastPage`
+  label ids the document); repros `class-bindings/{jfm,mdpi}_class_commands`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

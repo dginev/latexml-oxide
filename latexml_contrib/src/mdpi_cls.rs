@@ -4,6 +4,7 @@
 //! url, booktabs, ragged2e (for \justify), cleveref. Mirror those so
 //! papers using \href, \hypersetup, \url, \justify, \crefrangelabelformat
 //! don't error out. Witness 2410.21443.
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -62,12 +63,19 @@ LoadDefinitions!({
   // lastpage (all 119; `\ContinuedFloat` 25, `\captionsetup` 22, `\captionof` 16 run-340 first errors), float (119),
   // enumitem (105; `\setitemize` 72), mathpazo (105), setspace (105; `\setstretch`), epstopdf (101; `\epstopdfsetup`
   // 7), upgreek (49; `\upmu` 97) and subfig (14; `\subfloat` 30). Witnesses 1904.12911, 2110.08429, 1904.02732,
-  // 2004.08650, 2508.02963, 2508.18441.
+  // 2004.08650, 2508.02963, 2508.18441. The paper's own copy decides which it loads (a 2013 copy loads no enumitem, so a
+  // paper's `\usepackage[shortlabels]{enumitem}` is the first load); without one, all of them.
+  let shipped = crate::shipped_class::shipped_class_text("mdpi")?;
   for package in [
     "caption", "lastpage", "float", "enumitem", "mathpazo", "setspace", "epstopdf", "upgreek",
     "subfig",
   ] {
-    RequirePackage!(package);
+    if shipped
+      .as_deref()
+      .is_none_or(|text| crate::shipped_class::class_text_loads(text, package))
+    {
+      RequirePackage!(package);
+    }
   }
   // mdpi.cls:178-262: amsthm with the `mdpi` style and the capitalised
   // environments on their own counters (`\begin{Proposition}`, `{Remark}`,
@@ -349,8 +357,12 @@ LoadDefinitions!({
   );
   // \patents — research patents declaration.
   DefMacro!("\\patents{}", "\\section*{Patents}#1");
-  // mdpi.cls (2021+) `\publishersnote`: the "Publisher's Note:" back-matter statement.
-  DefMacro!("\\publishersnote{}", "\\section*{Publisher's Note}#1");
+  // mdpi.cls (2021+) `\publishersnote`: the "Publisher's Note:" back-matter statement (a version's convenience, as the
+  // setters below).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\publishersnote{}", "\\section*{Publisher's Note}#1");
+  }
   // \address[id]{text} — preserve as ltx:note.
   DefMacro!(
     "\\address[]{}",
@@ -374,86 +386,99 @@ LoadDefinitions!({
   // (preprints / preprintschicago / preprintsapa): a journal paper takes the
   // second branch (`\isPreprints{\centering}{}`, arXiv 2605.17530).
   DefMacro!("\\isPreprints{}{}", "#2");
-  // mdpi.cls:312 (2025) `\isAPAandChicago`, the same brancher for the journals that cite in both styles.
-  DefMacro!("\\isAPAandChicago{}{}", "#2");
-  // The title-page setters of the mdpi.cls versions (union of 119 sampled copies, 2012-2025; line numbers from
-  // 2207.12053's copy). Run 340 first errors: `\doinum` 312, `\lastpage` 148, `\secondnote` 145, `\updates` 111,
-  // `\orcidicon` 51, `\appendixsections` 42, `\cellWidtha` 31, `\startlandscape` 27, `\conference` 17 (witnesses
-  // 2008.03867, 1309.7149, 2103.15665, 2103.03626, 2103.07786, 1904.10935, 2204.11608, 2103.11824, 2008.00705).
-  // `\doinum` (:424): the article's DOI, which the journal line prints once the paper is accepted (:446, :646, :667),
-  // as `\history` is printed.
-  DefMacro!(
-    "\\doinum{}",
-    "\\ifx\\@status\\lx@mdpi@submit\\else\\@add@frontmatter{ltx:note}[role=doi]{#1}\\fi"
-  );
-  // `\secondnote`, `\thirdnote` (:560-563): the author notes after `\firstnote` (:970-980); `\conference` (:521): the
-  // note "This paper is an extended version of our paper published in …" (:964-965).
-  DefMacro!(
-    "\\secondnote{}",
-    "\\@add@frontmatter{ltx:note}[role=secondnote]{#1}"
-  );
-  DefMacro!(
-    "\\thirdnote{}",
-    "\\@add@frontmatter{ltx:note}[role=thirdnote]{#1}"
-  );
-  DefMacro!(
-    "\\conference{}",
-    "\\@add@frontmatter{ltx:note}[role=conference]{This paper is an extended version of our paper published in #1.}"
-  );
-  // `\featuredapplication`, `\simplesumm`, `\addhighlights` (:552-593): the "Featured Application", "Simple Summary"
-  // and "Highlights" blocks printed before the abstract (`\abstractkeywords`, :1019-1040), which papers call
-  // themselves in older versions (`\abstractkeywords` printed here by the frontmatter). Notes, not abstracts: a
-  // paper's `\abstract` replaces every frontmatter abstract (`\lx@add@abstract`).
-  DefMacro!(
-    "\\featuredapplication{}",
-    "\\@add@frontmatter{ltx:note}[role=featuredapplication]{#1}"
-  );
-  DefMacro!(
-    "\\simplesumm{}",
-    "\\@add@frontmatter{ltx:note}[role=simplesummary]{#1}"
-  );
-  DefMacro!(
-    "\\addhighlights{}",
-    "\\@add@frontmatter{ltx:note}[role=highlights]{#1}"
-  );
-  def_macro_noop("\\abstractkeywords")?;
-  // The 2012-2015 versions' back-matter titles (1307.3961's copy :1466-1473): the argument set as a bold paragraph.
-  // Later versions keep `\conflictofinterests` for compatibility with the statement as its argument under a
-  // "Conflicts of Interest:" label; papers use both, and the bold paragraph keeps either whole.
-  DefMacro!("\\acknowledgements{}", "\\par\\noindent\\textbf{#1}\\par");
-  DefMacro!(
-    "\\conflictofinterests{}",
-    "\\par\\noindent\\textbf{#1}\\par"
-  );
-  // Page and layout settings: `\lastpage`, `\continuouspages` (page ranges of the journal line), `\updates` (the
-  // check-for-updates logo link, :794), `\longauthorlist`, `\appendixsections`, the ORCID logo `\orcidicon` (an image
-  // file the papers' Definitions/ folder holds), `\startlandscape`/`\finishlandscape` and `\widefigure` (page
-  // geometry and caption margins, as `\widetable`'s).
-  for setter in [
-    "\\lastpage{}",
-    "\\continuouspages{}",
-    "\\updates{}",
-    "\\longauthorlist{}",
-    "\\appendixsections{}",
-  ] {
-    def_macro_noop(setter)?;
+  // The versions' title-page setters and conveniences (union of 119 sampled copies, 2012-2025; line numbers from
+  // 2207.12053's copy). One version defines what another lacks, and a paper whose copy lacks one defines it itself, so
+  // they are a fallback's guesses its own definition replaces (`DefinitionOrigin::Fallback`, as jfm_cls.rs). Run 340
+  // first errors: `\doinum` 312, `\lastpage` 148, `\secondnote` 145, `\updates` 111, `\orcidicon` 51,
+  // `\appendixsections` 42, `\cellWidtha` 31, `\startlandscape` 27, `\conference` 17 (witnesses 2008.03867,
+  // 1309.7149, 2103.15665, 2103.03626, 2103.07786, 1904.10935, 2204.11608, 2103.11824, 2008.00705).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    // mdpi.cls:312 (2025) `\isAPAandChicago`, the same brancher for the journals that cite in both styles.
+    DefMacro!("\\isAPAandChicago{}{}", "#2");
+    // `\doinum` (:424): the article's DOI, which the journal line prints once the paper is accepted (:446, :646,
+    // :667), as `\history` is printed.
+    DefMacro!(
+      "\\doinum{}",
+      "\\ifx\\@status\\lx@mdpi@submit\\else\\@add@frontmatter{ltx:note}[role=doi]{#1}\\fi"
+    );
+    // `\secondnote`, `\thirdnote` (:560-563): the author notes after `\firstnote` (:970-980); `\conference` (:521):
+    // the note "This paper is an extended version of our paper published in …" (:964-965).
+    DefMacro!(
+      "\\secondnote{}",
+      "\\@add@frontmatter{ltx:note}[role=secondnote]{#1}"
+    );
+    DefMacro!(
+      "\\thirdnote{}",
+      "\\@add@frontmatter{ltx:note}[role=thirdnote]{#1}"
+    );
+    DefMacro!(
+      "\\conference{}",
+      "\\@add@frontmatter{ltx:note}[role=conference]{This paper is an extended version of our paper published in #1.}"
+    );
+    // `\featuredapplication`, `\simplesumm` (:552-575): the "Featured Application" and "Simple Summary" blocks
+    // printed before the abstract (`\abstractkeywords`, :1019-1034). Notes, not abstracts: a paper's `\abstract`
+    // replaces every frontmatter abstract (`\lx@add@abstract`).
+    DefMacro!(
+      "\\featuredapplication{}",
+      "\\@add@frontmatter{ltx:note}[role=featuredapplication]{#1}"
+    );
+    DefMacro!(
+      "\\simplesumm{}",
+      "\\@add@frontmatter{ltx:note}[role=simplesummary]{#1}"
+    );
+    // `\addhighlights{yes}` (:592-593) only switches the "Highlights" block on: the class prints `\addhighlights`
+    // again (:1035-1039), which the paper has redefined to hold the highlights ("redefined in .tex to use itemize").
+    // So the block is the paper's own `\addhighlights`, when the switch is set and the paper replaced the setter.
+    RawTeX!(
+      r"\def\@addhighlights{}
+\newcommand\lx@mdpi@addhighlights[1]{\gdef\@addhighlights{#1}}
+\let\addhighlights\lx@mdpi@addhighlights
+\AtBeginDocument{\ifx\@addhighlights\@empty\else\ifx\addhighlights\lx@mdpi@addhighlights\else
+  \@add@frontmatter{ltx:note}[role=highlights]{\addhighlights}\fi\fi}"
+    );
+    def_macro_noop("\\abstractkeywords")?;
+    // The 2012-2015 versions' `\acknowledgements`/`\conflictofinterests` set their argument, the section's title, as a
+    // bold paragraph (1307.3961's copy :1466-1473); later versions keep `\conflictofinterests` for compatibility with
+    // the statement as its argument under a bold "Conflicts of Interest:" label (43 of the 62 sampled copies that
+    // define it; one sets the argument alone). The paper's own copy decides; without one, the label form.
+    DefMacro!("\\acknowledgements{}", "\\par\\noindent\\textbf{#1}\\par");
+    let conflicts = match shipped.as_deref().map(conflict_of_interests_form) {
+      Some(ConflictForm::Title) => "\\par\\noindent\\textbf{#1}\\par",
+      Some(ConflictForm::Plain) => "\\par\\noindent #1\\par",
+      _ => "\\par\\noindent\\textbf{Conflicts of Interest:} #1\\par",
+    };
+    RawTeX!(&s!("\\def\\conflictofinterests#1{{{conflicts}}}"));
+    // Page and layout settings: `\lastpage`, `\continuouspages` (page ranges of the journal line), `\updates` (the
+    // check-for-updates logo link, :794), `\longauthorlist`, `\appendixsections`, the ORCID logo `\orcidicon` (an
+    // image file the papers' Definitions/ folder holds), `\startlandscape`/`\finishlandscape`, `\widefigure` and
+    // `\widetable` (page geometry and caption margins).
+    for setter in [
+      "\\lastpage{}",
+      "\\continuouspages{}",
+      "\\updates{}",
+      "\\longauthorlist{}",
+      "\\appendixsections{}",
+    ] {
+      def_macro_noop(setter)?;
+    }
+    for switch in [
+      "\\orcidicon",
+      "\\startlandscape",
+      "\\finishlandscape",
+      "\\widefigure",
+      "\\widetable",
+    ] {
+      def_macro_noop(switch)?;
+    }
+    // `\highlighting` (a yellow `\colorbox`), the table column widths `\cellWidtha`…`\cellWidthz` and
+    // `\PreserveBackslash` (the XML2PDF column helper).
+    DefMacro!("\\highlighting{}", "\\colorbox{yellow}{#1}");
+    for letter in 'a'..='z' {
+      RawTeX!(&s!("\\newlength{{\\cellWidth{letter}}}"));
+    }
+    RawTeX!(r"\newcommand{\PreserveBackslash}[1]{\let\temp=\\#1\let\\=\temp}");
   }
-  for switch in [
-    "\\orcidicon",
-    "\\startlandscape",
-    "\\finishlandscape",
-    "\\widefigure",
-    "\\widetable",
-  ] {
-    def_macro_noop(switch)?;
-  }
-  // `\highlighting` (a yellow `\colorbox`), the table column widths `\cellWidtha`…`\cellWidthz` and
-  // `\PreserveBackslash` (the XML2PDF column helper).
-  DefMacro!("\\highlighting{}", "\\colorbox{yellow}{#1}");
-  for letter in 'a'..='z' {
-    RawTeX!(&s!("\\newlength{{\\cellWidth{letter}}}"));
-  }
-  RawTeX!(r"\newcommand{\PreserveBackslash}[1]{\let\temp=\\#1\let\\=\temp}");
   // \acknowledgments — newer-mdpi spelling (vs \acknowledgements).
   // Render as structural ltx:acknowledgements so post-processors map it
   // to the canonical role/styling (vs flattening to a generic section).
@@ -466,3 +491,28 @@ LoadDefinitions!({
   def_macro_noop("\\appendixtitles{}")?;
   def_macro_noop("\\appendixstart")?;
 });
+
+/// How the paper's copy of mdpi.cls sets `\conflictofinterests`'s argument.
+enum ConflictForm {
+  /// The 2012-2015 versions: the argument is the section's title, set bold (`\textbf{#1}`).
+  Title,
+  /// The later versions: the statement under a bold "Conflicts of Interest:" label.
+  Label,
+  /// One version: the argument alone.
+  Plain,
+}
+
+/// The form of the `\conflictofinterests` definition in `class` (a copy of mdpi.cls); the label form when it has none.
+fn conflict_of_interests_form(class: &str) -> ConflictForm {
+  let Some((_, rest)) = class.split_once("\\newcommand{\\conflictofinterests}") else {
+    return ConflictForm::Label;
+  };
+  let body: String = rest.chars().take(300).collect();
+  if body.contains("Conflicts of Interest:") {
+    ConflictForm::Label
+  } else if body.contains("\\textbf{#1}") {
+    ConflictForm::Title
+  } else {
+    ConflictForm::Plain
+  }
+}
