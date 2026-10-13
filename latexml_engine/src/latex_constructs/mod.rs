@@ -2865,7 +2865,7 @@ fn begin_float(
   )
   .ok();
   // Scoped to the float's group: a `\caption` digested with `\@captype` set but
-  // without this marker is outside any float (sect09.rs `\@@caption`).
+  // without this marker is outside any float (sect09.rs `\lx@@caption`).
   assign_value("lx@in@float", true, Some(Scope::Local));
   // The float's own frame: latex.ltx's `\@endfloatbox` closes a float box only when a raw
   // opener made one on top of it (sect09.rs).

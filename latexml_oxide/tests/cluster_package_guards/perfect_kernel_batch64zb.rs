@@ -271,6 +271,8 @@ fn locked_names_derived_classes() {
     r"\author",
     r"\bibliography",
     r"\cite",
+    // The robust `\cite`'s inner, locked with it since 66b (OXIDIZED_DESIGN #568).
+    r"\cite ",
     r"\citep",
     r"\citet",
     r"\mathbf",

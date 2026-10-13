@@ -299,7 +299,7 @@ LoadDefinitions!({
     Ok(if text.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
       Tokens!()
     } else {
-      let mut caption = vec![T_CS!("\\@@caption"), T_BEGIN!()];
+      let mut caption = vec![T_CS!("\\lx@@caption"), T_BEGIN!()];
       caption.extend(font.unlist());
       caption.extend(text.unlist());
       caption.push(T_END!());

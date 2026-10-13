@@ -8152,7 +8152,7 @@ fn environment_is_sole_content(document: &Document, capture: &Node) -> bool {
 /// found ([`insert_block_as`]): every element from `context` up to `home` was built from this box alone
 /// ([`box_is_sole_content`]: no content beside or after it would follow the moved insertion point out of a frame
 /// or a transform) and none is a paragraph, and `home` is a float whose own content holds no other caption (one
-/// `\@@caption`: a second would make the two one float, with one number for two `\label`s — two `\resizebox`ed
+/// `\lx@@caption`: a second would make the two one float, with one number for two `\label`s — two `\resizebox`ed
 /// captioned panels, a float's own `\caption` after the box, `\subcaption` panels). Otherwise Perl's container
 /// stands. Witnesses heria/heria-proposal (heria.cls:737-745 `SidewaysFigure`), 1810.08269; guards
 /// `perfect_kernel_batch65a::caption_in_a_rotated_parbox_stays_with_its_figure`,
@@ -8164,7 +8164,7 @@ fn caption_hoist_is_safe(document: &Document, context: &Node, home: &Node) -> bo
       DigestedData::List(l) => l.borrow().boxes.iter().map(captions).sum(),
       DigestedData::Whatsit(w) => {
         let w = w.borrow();
-        usize::from(w.get_definition().get_cs_name() == "\\@@caption")
+        usize::from(w.get_definition().get_cs_name() == "\\lx@@caption")
           + w.get_args().iter().flatten().map(captions).sum::<usize>()
           + w
             .get_body()

@@ -83,6 +83,9 @@ pub(crate) fn load() -> Result<()> {
       }
       return Ok(vec![]);
     }
+    if opt.is_some() {
+      define_optional_internal(&cs_token, nargs, &body)?;
+    }
     let macro_args = convert_latex_args(nargs, opt)?;
     // When the CS came from the plain pool, bypass any `<cs>:locked`
     // guard so latex.ltx can layer over plain. RAII guard ensures the
@@ -96,6 +99,9 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
   sub[(star, cs, nargs_num, opt, body)] {
     let nargs = nargs_num.value_of() as usize;
+    if opt.is_some() {
+      define_optional_internal(&cs, nargs, &body)?;
+    }
     let macro_args = convert_latex_args(nargs, opt)?;
     DefMacro!(cs, macro_args, body, tex_declared => { star.is_some() && nargs > 0 });
   });
@@ -140,6 +146,9 @@ pub(crate) fn load() -> Result<()> {
     // there. See [[project_newenvironment_autoload_clobber]].
     if is_definable_latex(&cs)?.0 {
       let nargs = nargs.value_of() as usize;
+      if opt.is_some() {
+        define_optional_internal(&cs, nargs, &body)?;
+      }
       let cs_args = convert_latex_args(nargs, opt)?;
       DefMacro!(cs, cs_args, body, tex_declared => { star.is_some() && nargs > 0 });
     }
@@ -1636,6 +1645,26 @@ pub(crate) fn load() -> Result<()> {
     ExplodeText!(radix::radix_format_str(CounterValue!(&ctr).value_of(), FNSYMBOLS))
   });
 
+  Ok(())
+}
+
+/// latex.ltx:1245-1257 `\@xargdef`: a command with an optional argument is `\@protected@testopt\cs\\cs{<default>}`,
+/// and the macro reading `[#1]` and the rest is the internal `\\cs`, the name `\csname\string\cs\endcsname` reaches.
+/// Our `\cs` reads its optional argument itself (Perl's `convertLaTeXArgs`), so the internal is defined beside it for
+/// code that calls it directly: the amsart idiom `\edef\cs{\@dblarg\csname\string\cs\endcsname}` (bcp.cls:151-153,
+/// cmfne.cls:460,483), whose `\cs` otherwise never stored its argument (witnesses 1510.00296, 1704.01336, 1207.2066,
+/// 2003.00661, 2210.02246). OXIDIZED_DESIGN #567; guard
+/// `perfect_kernel_batch66b::newcommand_optional_argument_defines_its_internal_macro`.
+fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens) -> Result<()> {
+  if cs.get_catcode() != Catcode::CS {
+    return Ok(());
+  }
+  let internal = T_CS!(s!("\\{}", cs.to_string()));
+  DefMacro!(
+    internal,
+    convert_latex_args(nargs, Some(Tokens!()))?,
+    body.clone()
+  );
   Ok(())
 }
 

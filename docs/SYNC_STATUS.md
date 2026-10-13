@@ -895,6 +895,21 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Integration 8 (65y + 65z, four review rounds): bundle A/B 912 papers (`ab_65int8`; 65y/65z witnesses + int7 sample)
   errors 3056→2138, Error status 499→175, Fatal 1→1, bibliography/tables equal, the 18 word drops error tokens leaving
   math; manual net 797 manuals 0 diffs, 30 repros fixed, 0 newly failing.
+- **66b** (run-340 Fatal origins still Fatal on the int8 head; sample of 273 over the classes in
+  `~/data/pk_agents/main/run340/fatal/`: Stomach:Recursion 22/25, PushbackLimit 22/25, Mouth:EoF 24/24, Malformed 24/25,
+  Timeout:Recursion 19/25, IfLimit 11/23 still Fatal). Three mechanisms, 14 of the 22 Recursion witnesses Fatal → 0
+  errors (~215 papers by the sample rate): the kernel's caption constructor is `\lx@@caption` with `\@@caption` its
+  alias, since the Cambridge UP classes keep `\caption` under `\@@caption` for `\contcaption` (fac/ijsipaper/mscs; OD
+  #566, KPE #637); `\newcommand`/`\renewcommand`/`\providecommand` with an optional argument also define latex.ltx's
+  internal `\\cs` that the amsart idiom `\edef\cs{\@dblarg\csname\string\cs\endcsname}` calls (bcp.cls `\abtitle`,
+  cmfne.cls; OD #567, KPE #638); a locked robust binding locks its inner `\cs␣` too, so a class's copy of cite.sty's
+  `\@namedef{cite }` no longer takes over the kernel `\cite` (cmfne, asme2e; OD #568). Guards
+  `perfect_kernel_batch66b::*`; repros `captions-floats/cup_contcaption_lets_caption`,
+  `macro-state/{newcommand_optional_internal_cs,locked_robust_inner_cite}`. Residual: AMS-TeX `\documentstyle{X}`
+  never raw-loads a paper-local `X.sty` (Perl the same, `notex => 1`), so amams.sty's `\title#1` meets amsppt's
+  `\title … \endtitle` and the file ends in the argument (math0402285, math0101270, math9906120; ~33 papers; raw-loading
+  needs an A/B against gr-qc9507042's fic.sty, which the amsppt fallback fixed); gtmacros papers ship no gtmacros.tex
+  (math9804003, math9902122, math9905203: harness).
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

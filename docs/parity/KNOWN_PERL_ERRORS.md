@@ -12781,3 +12781,18 @@ argument, onto which titling_sty.rs chains titling's code; a name whose slot nev
 setters) is set at `\begin{document}` and at `\maketitle` from `\@title`/`\@author`/`\@date`. Guards
 `perfect_kernel_batch65z::{titling_own_thetitle_does_not_loop, titling_under_class_and_package_setters}`.
 
+
+## 637. The caption constructor is named `\@@caption`, a name classes use for LaTeX's `\caption`
+
+latex_constructs.pool.ltxml:3368 defines the `ltx:caption` constructor as `\@@caption`, and the kernel's `\@caption`
+path (pool:3190) calls it. The Cambridge University Press classes save `\caption` under that name for `\contcaption`
+(fac.cls:803-805, ijsipaper.cls:876-878, mscs.cls:794-795). Trigger
+`\makeatletter\let\@@caption\caption\makeatother\begin{document}\begin{figure}\caption{A}\end{figure}` → Perl
+`Fatal:perl:deep_recursion`; pdflatex "Figure 1: A". Fixed in Rust (OXIDIZED_DESIGN #566).
+
+## 638. `\newcommand` with an optional argument does not define the internal `\\cs`
+
+latex.ltx:1245-1257 `\@xargdef` defines the macro taking `[#1]` as `\\cs`, which `\@protected@testopt\cs\\cs{<default>}`
+calls; Perl's `\newcommand` (convertLaTeXArgs) defines `\cs` only. Trigger
+`\newcommand{\foo}[2][d]{(#1/#2)} \csname\string\foo\endcsname[a]{b}` → Perl "[a]b"; pdflatex "(a/b)". The amsart idiom
+`\edef\cs{\@dblarg\csname\string\cs\endcsname}` (bcp.cls, cmfne.cls) depends on it. Fixed in Rust (OXIDIZED_DESIGN #567).

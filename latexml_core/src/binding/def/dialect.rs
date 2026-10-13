@@ -295,6 +295,14 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   }
   if let Some(locked_key) = locked_key_opt {
     assign_value(&locked_key, true, Some(Scope::Global));
+    // A locked robust binding owns its calls through its inner `\cs␣` as well: the wrapper calls that name, so a
+    // class's `\@namedef{cite }{…}` (cmfne.cls:1774, cite.sty's code copied) took over every `\cite`, and its
+    // `\@citex` reached our cite binding's `\citen` = `\cite` again (Fatal `Stomach:Recursion`, 2210.02246).
+    // Perl locks the wrapper only (Package.pm DefMacroI). OXIDIZED_DESIGN #568; guard
+    // `perfect_kernel_batch66b::locked_robust_cite_keeps_its_inner_definition`.
+    if robust {
+      assign_value(&format!("{defcs}:locked"), true, Some(Scope::Global));
+    }
   }
   Ok(())
 }

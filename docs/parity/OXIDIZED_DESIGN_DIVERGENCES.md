@@ -16957,3 +16957,47 @@ paper's later `\newcommand` of one of these names (`\rem`, `\rad`, `\gal`, `\are
 Witnesses 0709.1649, 2103.01586, 1904.06264, 2407.13230. Guard `perfect_kernel_batch65y::siunits_unit_commands`; repro
 `stub-dependencies/siunits_unit_commands`.
 
+
+### 566. The kernel's caption constructor is `\lx@@caption`; `\@@caption` is its alias (Perl: the constructor is `\@@caption`)
+
+Perl defines the `ltx:caption` constructor as `\@@caption` (latex_constructs.pool.ltxml:3368), a name LaTeX leaves free
+for classes: the Cambridge University Press classes keep LaTeX's `\caption` there for their `\contcaption`
+(fac.cls:803-805, ijsipaper.cls:876-878, mscs.cls:794-795: `\let\@@caption\caption`). Raw-loaded (`localrawclasses`,
+#444), that made every caption call itself through the kernel's `\@caption@@@` (ours `Stomach:Recursion`, Perl
+`deep_recursion`; KNOWN_PERL_ERRORS #637).
+
+**Rust** (batch 66b, sect09.rs): the constructor is `\lx@@caption`, which the kernel and the bindings (caption,
+listings, algorithm2e, aas_support, tabularray) call; `\@@caption` is `\let` to it for any other caller, so a class's
+own meaning for the name is the class's and its `\contcaption` repeats the figure number as in pdflatex. Witnesses
+1209.5152, 1311.2960, 1410.5131, 1610.02500, 2205.14586, 2212.13027, 1604.04575, 2112.07588 (Fatal → 0 errors).
+Guard `perfect_kernel_batch66b::cup_contcaption_keeps_its_caption`; repro `captions-floats/cup_contcaption_lets_caption`.
+
+### 567. `\newcommand` with an optional argument also defines LaTeX's internal `\\cs` (Perl: only `\cs`)
+
+latex.ltx:1245-1257 `\@xargdef` makes `\cs` `\@protected@testopt\cs\\cs{<default>}` and puts the macro reading `[#1]`
+under the internal `\\cs` (`\csname\string\cs\endcsname`). Perl's `\newcommand` builds one macro that reads its optional
+argument itself (`convertLaTeXArgs`), so code that calls the internal directly found it undefined: the amsart idiom
+`\edef\cs{\@dblarg\csname\string\cs\endcsname}`, copied by bcp.cls:151-153 for `\abtitle` and cmfne.cls:460,483, left
+`\@abtitle` unset, and `\uppercasenonmath\@abtitle` then built a definition containing itself (Fatal
+`Stomach:Recursion`; KNOWN_PERL_ERRORS #638).
+
+**Rust** (batch 66b, sect08.rs `define_optional_internal`): `\newcommand`, `\renewcommand` and `\providecommand` with an
+optional argument also define `\\cs` with the same body, its first parameter the bracketed one; `\cs` itself is
+unchanged. Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors). Guard
+`perfect_kernel_batch66b::newcommand_optional_argument_defines_its_internal_macro`; repro
+`macro-state/newcommand_optional_internal_cs`.
+
+### 568. A locked robust binding also locks its inner `\cs␣` (Perl: the wrapper only)
+
+A robust binding is the wrapper `\protect\cs␣` around its body under `\cs␣` (Package.pm `defRobustCS`); the lock was
+recorded for `\cs` alone, so code that defines the inner by name took over every call. cmfne.cls:1772-1778 (cite.sty's
+code, copied) runs `\@namedef{cite }{…\@citex…}` with `\def\@citex[#1]#2{\@cite{\citen{#2}}{#1}}`; under our cite
+binding's `\let\citen\cite` (Perl cite.sty.ltxml) the kernel `\cite` reached the class's inner, which called `\cite`
+again (Fatal `Stomach:Recursion`).
+
+**Rust** (batch 66b, `def_macro`): a locked robust macro records `"\cs␣:locked"` as well, so raw class and package code
+redefining the inner is refused as the wrapper is, and a document's value-shaped definition of it follows D1 (#500). Only
+the kernel `\cite` is a locked robust macro today. The robust constructor path (`def_constructor`) records the lock under
+the inner name only, the other half of the same asymmetry; no witness needs it. Witnesses 2210.02246, 2303.09770 (Fatal
+→ 0 errors). Guard `perfect_kernel_batch66b::locked_robust_cite_keeps_its_inner_definition`; repro
+`macro-state/locked_robust_inner_cite`.

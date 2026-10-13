@@ -470,9 +470,9 @@ LoadDefinitions!({
       r"\lx@donecaptiontrue\ifthenelse{\boolean{algocf@nokwfunc}}{}{\SetKwFunction{#1}{#1}}%
 \ifthenelse{\boolean{algocf@procnumbered}}{\@@add@caption@counters
   \@@toccaption{{\lx@toc@copy@neutralize\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator\nobreakspace#1}}%
-  \@@caption{{\ProcSty{\ProcFnt\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator}\nobreakspace#2}}}%
+  \lx@@caption{{\ProcSty{\ProcFnt\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator}\nobreakspace#2}}}%
 {\lx@algocf@proc@counters{#1}\@@toccaption{{\lx@toc@copy@neutralize\algocf@procname\nobreakspace#1}}%
-  \@@caption{{\ProcSty{\ProcFnt\algocf@procname}\nobreakspace#2}}}",
+  \lx@@caption{{\ProcSty{\ProcFnt\algocf@procname}\nobreakspace#2}}}",
       vec![Some(Tokens::new(name)), Some(Tokens::new(text))]
     ))
   });

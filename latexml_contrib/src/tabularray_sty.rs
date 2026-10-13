@@ -1433,7 +1433,7 @@ LoadDefinitions!({
         before.push(T_CS!("\\lx@tblr@nolist"));
       }
       if caption_shown {
-        before.push(T_CS!("\\@@caption"));
+        before.push(T_CS!("\\lx@@caption"));
         before.extend(tblr_braced(&caption));
       }
     }
