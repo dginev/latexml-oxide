@@ -1,0 +1,25 @@
+% witness: 1109.5733 (`\maketag@@@`), 1904.06459 (`\ltx@label`), 2103.10644 (`\@mathmeasure`),
+%          2008.12422 (`\start@align`), 2506.12131 (`\intertext@`), math0012138 (`\mdots@`);
+%          amsmath.sty:149, :497-509, :1187, :1210-1211, :1228, :1340, :1724
+% oracle:  pdflatex 0 errors
+% engines: rust 65int2 = 6 errors (each internal undefined)
+% expect:  0 errors; tag "[A]" text, label e2 on its equation, a numbered {align} from \start@align,
+%          the math dots of \mdots@
+% status:  RED (65int2) -> GREEN (65s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newcommand{\mytag}[1]{\maketag@@@{[#1]}}
+\newcommand\Label[1]{&\refstepcounter{equation}(\theequation)\ltx@label{#1}&}
+\newcommand{\measured}[1]{\@mathmeasure\z@\displaystyle{#1}#1}
+\newenvironment{myalign}{\start@align\@ne\st@rredfalse\m@ne}{\endalign}
+\newcommand{\cdotsdots}{\mdots@}
+\makeatother
+\begin{document}
+Tag \mytag{A}.
+\begin{eqnarray} a=b \Label{e2} \end{eqnarray}
+\begin{myalign} x &= y \label{e3}\\ z &= w \end{myalign}
+\[ \measured{x+y} + a_1 + \cdotsdots + a_n \]
+See \ref{e2} and \eqref{e3}.
+\end{document}

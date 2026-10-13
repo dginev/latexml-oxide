@@ -1,0 +1,13 @@
+% witness: 1403.4347, 2112.10343, 1304.1461; amscd.sty:56-62 (`\at@@#1`, an undelimited argument)
+% oracle:  pdflatex 0 errors
+% engines: rust 65int2 = Error `@ ` undefined; Perl amscd.sty.ltxml:42-44 `\cd@ Token` takes the space
+%          (KNOWN_PERL_ERRORS #631)
+% expect:  0 errors; each diagram with spaces after `@` is the one without
+% status:  RED (65int2) -> GREEN (65s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amscd}
+\begin{document}
+\[\begin{CD} A @>f>> B @<g<< C\\ @VVV @AaAbA @| \\ D @= E @. F\end{CD}\]
+\[\begin{CD} A @ >f>> B @ <g<< C\\ @ VVV @ AaAbA @ | \\ D @ = E @ . F\end{CD}\]
+\end{document}

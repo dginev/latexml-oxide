@@ -1770,6 +1770,8 @@ LoadDefinitions!({
   // `(#1)`; `\@@italiccorr` is the dump's `\/`). Witness 2004.10115.
   DefMacro!("\\tagform@{}", "{(\\ignorespaces#1\\unskip\\@@italiccorr)}");
 
+  ams_author_called_internals()?;
+
   // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
   // dispatch frozen under \write/\edef (moving formulas in toc etc.).
   DefMacro!(
@@ -2091,6 +2093,184 @@ Extra braces must be added to prevent wrong output}\@ehc}
   // `\if@fleqn` moved up (before the options block, Perl L53 / #2835) so the
   // `fleqn` option can `\Let` it to `\iftrue`.
 });
+
+/// The font size of a delimiter `\bBigg@{<factor>}` sizes. amsmath makes the delimiter
+/// `<factor>\big@size` tall (amsmath.sty:726-738), its four sizes being `\big` = `\bBigg@\@ne`,
+/// `\Big` = `\bBigg@{1.5}`, `\bigg` = `\bBigg@\tw@`, `\Bigg` = `\bBigg@{2.5}` (:721-724). Those four
+/// are the named sizes `\big` … `\Bigg` have here (Perl Font.pm:191, 1.2/1.6/2.1/2.6 times the
+/// nominal size); any other factor is read between and beyond them along the same scale, so a
+/// document's `\vast` = `\bBigg@{4}` is larger than `\Bigg` and `\bBigg@{0.8}` smaller than `\big`.
+fn bbigg_font_size(factor: f64) -> f64 {
+  const NAMED: [(f64, &str, f64); 4] = [
+    (1.0, "big", 1.2),
+    (1.5, "Big", 1.6),
+    (2.0, "bigg", 2.1),
+    (2.5, "Bigg", 2.6),
+  ];
+  if let Some((_, name, _)) = NAMED.iter().find(|(f, ..)| (f - factor).abs() < 1e-6) {
+    return font::rationalize_font_size(name);
+  }
+  let ratio = if factor <= 1.0 {
+    1.2 * factor.max(0.0)
+  } else if factor >= 2.5 {
+    2.6 + (factor - 2.5)
+  } else {
+    let i = NAMED.iter().rposition(|(f, ..)| *f <= factor).unwrap_or(0);
+    let ((f0, _, r0), (f1, _, r1)) = (NAMED[i], NAMED[i + 1]);
+    r0 + (r1 - r0) * (factor - f0) / (f1 - f0)
+  };
+  ratio * font::rationalize_font_size("normal")
+}
+
+/// amsmath internals that documents call from their own macros (run 340: `\bBigg@` 595 papers,
+/// `\Let@` 264, `\big@size` 132, `\maketag@@@` 44, `\start@align` 32, `\@mathmeasure` 23,
+/// `\ltx@label` 16, `\ints@a` 10, `\spread@equation` 9, `\intertext@` 8, `\mdots@` 7; witnesses
+/// 1412.0919, 2509.20301, 1606.05562, 2508.13749, 2103.12630, 2103.14974, 1109.5733, 2008.12422,
+/// 2103.10644, 1904.06459, 2004.13893). Perl's amsmath.sty.ltxml defines none of them
+/// (KNOWN_PERL_ERRORS #630). Each is amsmath's own definition where that is plain TeX our engine
+/// runs, and otherwise the amsmath construct it stands for here.
+fn ams_author_called_internals() -> Result<()> {
+  // amsmath.sty:149-150 (kernel ≥ 2018/12) and :739 (`\big@size` is `1.2\ht\Mathstrutbox@` plus
+  // `1.2\dp\Mathstrutbox@`, the `(` of cmr10 at 10pt: 7.5pt + 2.5pt).
+  RawTeX!(
+    r"\def\@mathmeasure#1#2#3{\setbox#1\hbox{\m@th$#2#3$}}
+\newdimen\big@size \big@size=12pt"
+  );
+  // amsmath.sty:726-734 `\bBigg@#1#2`: `\left#2\vcenter to#1\big@size{}\right.`, the scaled
+  // delimiter `\big` and its siblings make (`\big` = `\bBigg@\@ne`, which documents restate:
+  // 2103.12630 `\renewcommand{\big}{\bBigg@\@ne}` … `\newcommand{\Biggg}{\bBigg@{3.5}}`). The
+  // factor is read as TeX reads `#1\big@size`, a number or a count (`\@ne`, `\thr@@`) before a
+  // dimension; it is peeked, not consumed, so it reverts with the delimiter.
+  DefConstructor!("\\bBigg@ Undigested TeXDelimiter", "#2",
+    bounded => true,
+    before_digest => {
+      let factor_tokens = read_arg(ExpansionLevel::Off)?;
+      let mut probe = factor_tokens.clone().unlist();
+      probe.push(T_CS!("\\p@"));
+      let factor = reading_from_mouth(Mouth::new("", None)?, move || {
+        unread(Tokens::new(probe));
+        read_dimension()
+      })?;
+      let mut again = vec![T_BEGIN!()];
+      again.extend(factor_tokens.unlist());
+      again.push(T_END!());
+      unread(Tokens::new(again));
+      let size = bbigg_font_size(factor.value_of() as f64 / 65536.0);
+      MergeFont!(size => size);
+    },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "")?; },
+    reversion => "\\bBigg@{#1}#2");
+
+  // amsmath.sty:1144-1145, :1176-1186 — `\\` in amsmath's own alignments (`\Let@`), which a
+  // document's `\subalign` or `{subarray}` copy sets up before its `\ialign` (2103.14974,
+  // 2103.07815), with `\restore@math@cr` and `\default@tag` (:1205-1209).
+  RawTeX!(
+    r"\@ifundefined{dspbrk@lvl}{\newcount\dspbrk@lvl \dspbrk@lvl=-1 }{}
+\protected\def\math@cr{\relax\iffalse{\fi\ifnum0=`}\fi
+  \@ifstar{\global\@eqpen\@M\math@cr@}%
+          {\global\@eqpen
+             \ifnum\dspbrk@lvl <\z@ \interdisplaylinepenalty
+              \else -\@getpen\dspbrk@lvl \fi
+           \math@cr@}}
+\def\math@cr@{\new@ifnextchar[\math@cr@@{\math@cr@@[\z@]}}
+\def\math@cr@@[#1]{\ifnum0=`{\fi \iffalse}\fi\math@cr@@@
+  \noalign{\vskip#1\relax}}
+\def\Let@{\let\\\math@cr}
+\def\restore@math@cr{\def\math@cr@@@{\cr}}
+\restore@math@cr
+\def\gobble@tag{\@ifstar\@gobble\@gobble}
+\def\invalid@tag#1{\@amsmath@err{#1}{tag cannot be used at this point.}\gobble@tag}
+\def\dft@tag{\invalid@tag{\string\tag\space not allowed here}}
+\def\default@tag{\let\tag\dft@tag}"
+  );
+
+  // amsmath.sty:1210-1211: the box an equation tag is set in (`\tagform@` above is
+  // `\maketag@@@{(…)}`); a document's own `\tagform@` calls it (1109.5733, 2411.16085).
+  RawTeX!(
+    r"\def\maketag@@{\@ifstar\maketag@@@\tagform@}
+\def\maketag@@@#1{\hbox{\m@th\normalfont#1}}"
+  );
+
+  // amsmath.sty:1228 `\AddToHook{begindocument/end}{\let\ltx@label\label}`: the kernel's
+  // `\label`, which a document reaches from inside a display (1904.06459 `\Label`).
+  Let!("\\ltx@label", "\\label");
+  RawTeX!(r"\AtBeginDocument{\let\ltx@label\label}");
+
+  // amsmath.sty:1340-1342 and :733-735: `\spread@equation` opens the lines of an alignment by
+  // `\jot`, once.
+  RawTeX!(
+    r"\newbox\strutbox@
+\def\strut@{\copy\strutbox@}
+\def\reset@strutbox@{\global\setbox\strutbox@\hbox{\lower.5\normallineskiplimit
+  \vbox{\kern-\normallineskiplimit\copy\strutbox}}}
+\def\spread@equation{\reset@strutbox@\openup\jot \let\spread@equation\@empty}
+\let\@spread@equation\spread@equation"
+  );
+
+  // amsmath.sty:1187 `\intertext@` makes `\intertext` the in-alignment one, which is
+  // `\@ams@intertext` here (the alignment bindings `\let` it so; 2506.12131).
+  DefMacro!("\\intertext@", "\\let\\intertext\\@ams@intertext");
+
+  // amsmath.sty:497-509: math `\dots` is `\mdots@`, which looks at the next token to choose the
+  // dots — `\lx@math@dots` here; text `\dots` is `\tdots@` (m3-macs.tex in math0012138).
+  Let!("\\mdots@", "\\lx@math@dots");
+  Let!("\\tdots@", "\\lx@ldots");
+
+  // amsmath.sty:670-687: the integral sign's limits test that a document's own
+  // `\MultiIntegral` copy runs (`\futurelet\@let@token\ints@a`, 2004.13893); `\ints@c` is the
+  // document's own `\edef`.
+  RawTeX!(
+    r"\def\ints@a{%
+  \ifx\limits\@let@token \ints@b
+  \else \ifx\displaylimits\@let@token \ints@b
+  \else\ifx\ilimits@\displaylimits \ints@b
+  \fi\fi\fi
+  \ints@c}
+\def\ints@b{%
+  \mkern-7mu\mathchoice{\mkern-2mu}{}{}{}%
+  \mathop\bgroup
+    \mkern7mu\mathchoice{\mkern2mu}{}{}{}%
+    \let\ilimits@\egroup}"
+  );
+
+  // amsmath.sty:1724 `\start@align#1#2#3`: the start of `{align}` (`\@ne\st@rredfalse\m@ne`),
+  // `{align*}`, `{flalign}` (`\tw@`), `{alignat}` (`\z@`, then the column count), `{xalignat}`
+  // and `{xxalignat}`, which a document's own environment calls (2008.12422
+  // `\newenvironment{mathouteq}{…\start@align\tw@\st@rredtrue\m@ne}{\endalign…}`). It starts
+  // the same environment here, closed by that environment's `\endalign`.
+  DefMacro!("\\start@align{}{}{}", sub[(level, starred, columns)] {
+    let number = |tokens: Tokens| -> Result<i64> {
+      let mut probe = tokens.unlist();
+      probe.push(T_CS!("\\relax"));
+      Ok(reading_from_mouth(Mouth::new("", None)?, move || {
+        unread(Tokens::new(probe));
+        read_number()
+      })?.value_of() as i64)
+    };
+    let star = starred.unlist().first().is_some_and(|t| *t == T_CS!("\\st@rredtrue"));
+    let level = number(level)?;
+    let columns_tokens = columns.clone();
+    let columns = number(columns)?;
+    let star_name = |name: &str| if star { s!("{name}*") } else { name.to_string() };
+    let mut out = Vec::new();
+    if columns < 0 {
+      let name = if level == 2 { star_name("flalign") } else { star_name("align") };
+      out.push(T_CS!(&s!("\\{name}")));
+    } else {
+      let name = match level {
+        0 => star_name("alignat"),
+        1 => star_name("xalignat"),
+        _ => "xxalignat".to_string(),
+      };
+      out.push(T_CS!(&s!("\\{name}")));
+      out.push(T_BEGIN!());
+      out.extend(columns_tokens.unlist());
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
+  });
+  Ok(())
+}
 
 use latexml_core::document;
 

@@ -1,0 +1,26 @@
+% witness: 2103.14974, 2103.16537, 2103.13392 (`\subalign`), 2103.07815 (`{subarray}`);
+%          amsmath.sty:1176-1186, :1205-1209
+% oracle:  pdflatex 0 errors
+% engines: rust 65int2 = 4 errors (`\Let@`, `\restore@math@cr`, `\default@tag` undefined, extra `&`)
+% expect:  0 errors; the sum's limit is a two-row, two-column XMArray
+% status:  RED (65int2) -> GREEN (65s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newcommand{\subalign}[1]{%
+  \vcenter{%
+    \Let@ \restore@math@cr \default@tag
+    \baselineskip\fontdimen10 \scriptfont\tw@
+    \advance\baselineskip\fontdimen12 \scriptfont\tw@
+    \lineskip\thr@@\fontdimen8 \scriptfont\thr@@
+    \lineskiplimit\lineskip
+    \ialign{\hfil$\m@th\scriptstyle##$&$\m@th\scriptstyle{}##$\hfil\crcr
+      #1\crcr
+    }%
+  }%
+}
+\makeatother
+\begin{document}
+\[ \sum_{\subalign{i&<n\\ j&<m}} a_{ij} \]
+\end{document}

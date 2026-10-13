@@ -1,0 +1,19 @@
+% witness: 1408.6469, 1506.06775, 1002.0255 (`\CDat`), math0101071 cdextra.sty, 0709.3322 (`\atdef@`);
+%          amscd.sty:43-55, :87-97
+% oracle:  pdflatex 0 errors
+% engines: rust 65int2 = `\atdef@`, `\CDat` undefined; Perl the same (KNOWN_PERL_ERRORS #631)
+% expect:  0 errors; the document's `@III` connector in the diagram, `@>\alpha>>` an arrow outside {CD}
+% status:  RED (65int2) -> GREEN (65s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amscd}
+\makeatletter
+\atdef@ I#1I#2I{\CD@check{I..I..I}{\llap{$\m@th\vcenter{\hbox
+  {$\scriptstyle#1$}}$}
+  \rlap{$\m@th\vcenter{\hbox{$\scriptstyle#2$}}$}&&}}
+\makeatother
+\begin{document}
+\[\begin{CD} A @>>> B\\ @III @VVV\\ C @>>> D\end{CD}\]
+{\CDat
+\[ X @>\alpha>> Y \]}
+\end{document}

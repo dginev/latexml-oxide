@@ -10,6 +10,25 @@ LoadDefinitions!({
   // LaTeX document preloading amsfonts gets the format here, as before.
   if !plain_tex_document() || lookup_bool("LaTeX.pool_loaded") {
     RawTeX!(r"\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}\DeclareSymbolFont{AMSb}{U}{msb}{m}{n}");
+    // amsfonts.sty:117-138: `\newsymbol\cs <font><class><hex><hex>`, the AMSTeX 1.x way of
+    // declaring a symbol of msam (font 1) or msbm (font 2), obsolete in favour of
+    // `\DeclareMathSymbol` and warned as such (run 340: ~300 papers; witnesses 1302.6049,
+    // 2112.15557). amsfonts makes it `\global\mathchardef\cs"<class><\hexnumber@\symAMSx><hex>`;
+    // the symbol here is the `\DeclareMathSymbol` of the same class, font and slot, which looks
+    // the glyph up in the AMS font maps. Perl's binding lacks it (KNOWN_PERL_ERRORS #632). A
+    // plain TeX document's `\input amssym.def` defines its own (amssym.def:40-43).
+    RawTeX!(
+      r##"\@ifundefined{@obsolete}{\def\@obsolete#1#2#3{\PackageWarning{#1}{%
+    Obsolete command \protect#2; \protect#3 should be used instead}}}{}
+\gdef\newsymbol#1#2#3#4#5{%
+  \@obsolete{amsfonts}\newsymbol\DeclareMathSymbol
+  \@ifdefinable#1{%
+     \ifcase #2 \PackageError{amsfonts}{\Invalid@@\newsymbol}\@ehd
+     \or \DeclareMathSymbol#1{#3}{AMSa}{"#4#5}%
+     \or \DeclareMathSymbol#1{#3}{AMSb}{"#4#5}%
+     \else \PackageError{amsfonts}{\Invalid@@\newsymbol}\@ehd
+     \fi}}"##
+    );
   }
   //
   // See amsfndoc

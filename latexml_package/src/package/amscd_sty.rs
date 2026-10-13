@@ -21,13 +21,46 @@ LoadDefinitions!({
     Let!("\\\\", "\\lx@alignment@newline@noskip");
     assign_mathcode('@', 0x8000u16, None);
     Let!("@", "\\cd@");
+    // amscd.sty:89-91: inside `{CD}` `\ampersand@` is `&` and `\ifCD@` is true.
+    Let!("\\ampersand@", "\\lx@hidden@align");
+    Let!("\\ifCD@", "\\iftrue");
+  });
+
+  // amscd.sty:43-55, :87, :93-97: the internals a document's own connectors are written with
+  // (`\atdef@ I#1I#2I{\CD@check{I..I..I}{…&&}}`, cdextra.sty in math0101071; 0709.3322,
+  // 2008.00405), and `\CDat`, which makes `@` the connector reader in any formula (amscd makes
+  // `@` math-active at load; `\CDat` lets it to `\Iat`; 1408.6469, 1506.06775, 1002.0255). A
+  // connector `@<token>` is the control sequence `@<token>` here (`\cd@` above), which `\atdef@`
+  // defines (amscd's connector is `\csname\space @\string#1\endcsname`). Perl's binding has none of them
+  // (KNOWN_PERL_ERRORS #631).
+  RawTeX!(
+    r"\newif\ifCD@
+\let\ampersand@\relax
+\@ifundefined{bigaw@}{\newdimen\bigaw@}{}
+\def\CD@check#1#2{\ifCD@\DN@{#2}\else
+  \DN@{\PackageError{amscd}{@\protect#1 not
+    allowed outside of the CD environment}\@eha}%
+  \fi\next@}"
+  );
+  DefMacro!("\\atdef@ Token", sub[(connector)] {
+    let name = s!("@{}", connector.to_string());
+    Ok(Tokens!(T_CS!("\\def"), T_CS!(&*name)))
+  });
+  DefPrimitive!(T_CS!("\\CDat"), None, {
+    assign_mathcode('@', 0x8000u16, None);
+    Let!("@", "\\cd@");
   });
 
   // Perl: DefMacro('\cd@ Token', sub {
   //     my ($gullet, $token) = @_;
   //     (T_CS('@' . ToString($token))); });
   // Implemented as a primitive that reads a token and unreads the appropriate CS.
+  // The connector is read as amscd.sty:56-62 reads it, `\at@@#1`, an undelimited argument: the
+  // spaces before it are skipped, so `A @ >>> B` and `@ VVV` are the arrows `@>>>` and `@VVV`
+  // (Perl's `\cd@ Token` took the space, making the undefined `@ `; KNOWN_PERL_ERRORS #631;
+  // witnesses 1403.4347, 2112.10343, 1304.1461).
   DefPrimitive!(T_CS!("\\cd@"), None, {
+    skip_spaces()?;
     // `\cd@` requires a following token to build the `@<token>` connector CS; on
     // input-exhaustion emit the parity "file ended" error instead of panicking.
     let Some(token) = read_token_required("\\cd@")? else {
@@ -43,22 +76,22 @@ LoadDefinitions!({
   DefMacro!(
     T_CS!("@>"),
     "Until:> Until:>",
-    "\\lx@hidden@align\\lx@amscd@stack{>}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align"
+    "\\ampersand@\\lx@amscd@stack{>}{\\lx@amscd@rightarrow}{#1}{#2}\\ampersand@"
   );
   DefMacro!(
     T_CS!("@)"),
     "Until:) Until:)",
-    "\\lx@hidden@align\\lx@amscd@stack{)}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align"
+    "\\ampersand@\\lx@amscd@stack{)}{\\lx@amscd@rightarrow}{#1}{#2}\\ampersand@"
   );
   DefMacro!(
     T_CS!("@<"),
     "Until:< Until:<",
-    "\\lx@hidden@align\\lx@amscd@stack{<}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align"
+    "\\ampersand@\\lx@amscd@stack{<}{\\lx@amscd@leftarrow}{#1}{#2}\\ampersand@"
   );
   DefMacro!(
     T_CS!("@("),
     "Until:( Until:(",
-    "\\lx@hidden@align\\lx@amscd@stack{(}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align"
+    "\\ampersand@\\lx@amscd@stack{(}{\\lx@amscd@leftarrow}{#1}{#2}\\ampersand@"
   );
   DefMacro!(
     T_CS!("@="),

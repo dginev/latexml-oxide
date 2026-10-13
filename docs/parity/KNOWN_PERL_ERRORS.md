@@ -12707,3 +12707,32 @@ omits PoS.cls's `\RequirePackage{color}` (v1.2.6 :162; 1904.06989). Triggers
 \begin{theorem}x\end{theorem}\end{document}` → 2 errors (`\declaretheorem`, `{theorem}`);
 `\documentclass[3p]{elsarticle}\geometry{left=2cm}\begin{document}Text.\end{document}` → 1 error (`\geometry`);
 pdflatex 0 on both. Fixed in Rust (65r, OD #561, #562; 2412.02079, 2609.13883).
+
+## 630. amsmath's internals that documents call are undefined
+
+amsmath.sty defines internals that authors reach from their own macros: `\bBigg@` (:726-734, the scaled delimiter
+behind `\big` … `\Bigg`, restated as `\newcommand{\vast}{\bBigg@{4}}`), `\big@size` (:739), `\Let@`,
+`\restore@math@cr` and `\default@tag` (:1144-1145, :1176-1209, used by `\subalign` and `{subarray}` copies),
+`\maketag@@@` (:1210-1211), `\@mathmeasure` (:149-150), `\spread@equation` (:1340-1342), `\start@align`,
+`\intertext@`, `\mdots@`, and the kernel `\ltx@label` amsmath keeps (:1228). Perl's amsmath.sty.ltxml defines none of
+them, so each use is "undefined" (run 340: `\bBigg@` 595 papers, `\Let@` 264, `\big@size` 132). Trigger
+`\makeatletter\newcommand{\vast}{\bBigg@{4}}\makeatother` … `\[\vast( x \vast)\]` → Perl: undefined `\bBigg@`
+(pdflatex 0 errors). Fixed in Rust (65s, amsmath_sty.rs `ams_author_called_internals`; witnesses 1412.0919,
+2509.20301, 1606.05562, 2508.13749, 2103.12630, 2103.14974, 1109.5733).
+
+## 631. amscd reads the space after `@` as the connector, and lacks `\atdef@` and `\CDat`
+
+amscd.sty:56-62 reads the connector after `@` as an undelimited argument (`\at@@#1`), so `A @ >f>> B` and `@ VVV` are
+the arrows `@>>>` and `@VVV`. Perl's amscd.sty.ltxml:42-44 reads it with `\cd@ Token`, which takes the space: the
+connector is the undefined `@ `. Perl also lacks amscd's `\atdef@` (:43-55, a document's own connector) and `\CDat`
+(:93-97, `@` as the connector reader outside `{CD}`). Trigger `\begin{CD} A @ >>> B\end{CD}` → Perl: undefined `@ `
+(pdflatex 0 errors). Fixed in Rust (65s, amscd_sty.rs; witnesses 1403.4347, 2112.10343, 1304.1461, 0709.3322,
+1408.6469; run 340 ~838 papers).
+
+## 632. amsfonts' `\newsymbol` is undefined
+
+amsfonts.sty:117-138 keeps AMSTeX's `\newsymbol\cs <font><class><hex><hex>` (font 1 = msam, 2 = msbm), with an
+"Obsolete command" warning. Perl's amsfonts.sty.ltxml lacks it, so the declaration and every use of the declared
+symbol are errors. Trigger `\usepackage{amsfonts}\newsymbol\mylneqq 2308` … `$a\mylneqq b$` → Perl: undefined
+`\newsymbol` (pdflatex 0 errors, 1 warning, ≨). Fixed in Rust (65s, amsfonts_sty.rs, through `\DeclareMathSymbol`
+of the same class, font and slot; witnesses 1302.6049, 2112.15557; run 340 ~300 papers).

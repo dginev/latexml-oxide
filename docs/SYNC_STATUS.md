@@ -754,6 +754,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   which TeX's `\rlap` keeps); `alignment/eqnarray_side_content_only_cell` (KPE #625: a cell holding only an `\index`
   or anchor measures under 1pt and is never absorbed, and an eqnarray row join drops a floated indexmark; rule
   proposed: size never decides dropping content, only `Digested::is_skippable` does).
+- **65s** (KPE #630, #631, #632): the AMS bindings provide what the real packages define and documents call:
+  amsmath's internals (`\bBigg@` on the scaled-delimiter path, `\big@size`, `\Let@`/`\restore@math@cr`/`\default@tag`,
+  `\maketag@@@`, `\@mathmeasure`, `\spread@equation`, `\start@align`, `\intertext@`, `\mdots@`, `\ltx@label`), amsfonts'
+  `\newsymbol` (through `\DeclareMathSymbol`; the msbm table is now also the `U`/`msb` font map), and amscd's connector
+  read as an undelimited argument (spaces after `@` skipped) plus `\atdef@` and `\CDat`. Run-340 estimates: amsmath
+  internals ~1,140 papers, amscd ~838, `\newsymbol` ~300 (run340/clusters/undefined_rootcauses.md rows 3, 5, 7).
+  Guards `perfect_kernel_batch65s::*`; repros `ams-internals/*`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

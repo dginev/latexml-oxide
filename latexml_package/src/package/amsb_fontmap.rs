@@ -2,9 +2,12 @@
 //! Perl: uppercase_mathstyle => { family => 'blackboard' }
 use crate::prelude::*;
 
-LoadDefinitions!({
-  #[rustfmt::skip]
-  DeclareFontMap!("AMSb", mixrc![
+/// The msbm glyph table (also served as the `U`-encoding `msb` family map by
+/// `u_fontmap.rs`, for `\DeclareSymbolFont{AMSb}{U}{msb}{m}{n}`, which amsfonts' `\newsymbol`
+/// and `\DeclareMathSymbol{…}{AMSb}` decode through).
+#[rustfmt::skip]
+pub fn amsb_table() -> Rc<[Option<char>]> {
+  mixrc![
     // 0x00-0x07
     '\u{2268}', '\u{2269}', '\u{2270}', '\u{2271}', '\u{226E}', '\u{226F}', '\u{2280}', '\u{2281}',
     // 0x08-0x0F: Perl has multi-char entries at 0x0A,0x0B ("\x{2A7D}\x{0338}", "\x{2A7E}\x{0338}")
@@ -38,7 +41,11 @@ LoadDefinitions!({
     '\u{2223}', '\u{2225}', '\u{2216}', '\u{223C}', '\u{2248}', '\u{224A}', '\u{2AB8}', '\u{2AB7}',
     // 0x78-0x7F
     '\u{21B6}', '\u{21B7}', '\u{03DD}', '\u{03F0}', '\u{1D55C}', '\u{210F}', '\u{210F}', '\u{03F6}'
-  ]);
+  ]
+}
+
+LoadDefinitions!({
+  DeclareFontMap!("AMSb", amsb_table());
   // The six negated relations of `msbm`. Perl stores each as a TWO-character
   // string — base glyph plus U+0338 COMBINING LONG SOLIDUS OVERLAY —
   // (amsb.fontmap.ltxml L20, L21, L23). A Rust fontmap slot is a single
