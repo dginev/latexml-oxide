@@ -39,7 +39,7 @@ sha2 = { version = "0.11", default-features = false }
 # `flate2` is the deflate backend selected by zip's `deflate-flate2` feature
 # (zip 8 expects the consumer to add it explicitly; the feature only flips
 # the routing inside zip itself).
-zip = { version = "8", default-features = false, features = ["deflate-flate2", "time"] }
+zip = { version = "9", default-features = false, features = ["deflate-flate2", "time"] }
 flate2 = "1"
 # PATHEXT-aware executable lookup for the Windows Ghostscript delegate probe
 # (graphics.rs `gs_program`). Same crate the kpathsea backend uses to resolve
