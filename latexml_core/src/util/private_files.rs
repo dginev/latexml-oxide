@@ -14,13 +14,15 @@ pub fn user_id() -> u32 {
 #[cfg(not(unix))]
 pub fn user_id() -> u32 { 0 }
 
-/// Whether `path` is this user's own and no one else can write to it — not a symbolic link, whose
-/// mode lets everyone write.
+/// Whether `path` is this user's own and no one else can write to it, and is not a symbolic link.
 #[cfg(unix)]
 pub fn private_to_user(path: &Path) -> bool {
   use std::os::unix::fs::MetadataExt;
-  std::fs::symlink_metadata(path)
-    .is_ok_and(|meta| meta.uid() == user_id() && meta.mode() & 0o022 == 0)
+  // A symbolic link is never private: its own mode bits are 0o777 on Linux but follow the umask on
+  // macOS (0o755), so the write-bit test alone trusts a link there.
+  std::fs::symlink_metadata(path).is_ok_and(|meta| {
+    !meta.file_type().is_symlink() && meta.uid() == user_id() && meta.mode() & 0o022 == 0
+  })
 }
 /// No ownership to check off Unix.
 #[cfg(not(unix))]
