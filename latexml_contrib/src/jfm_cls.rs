@@ -31,7 +31,8 @@ LoadDefinitions!({
   RawTeX!(r"\iflineno\AtBeginDocument{\usepackage{lineno-FLM}}\fi");
   // The paper's own copy decides what follows where the versions differ: caption, which 35 of 119 sampled copies load
   // (`\captionsetup`, run 340: 51; 2406.15733); the msam10 check's `\let\le=\leqslant` (73 copies, active); the
-  // bold-italic sans `\mathsfbi` (below). Without a copy, the newer versions' choices.
+  // bold-italic sans `\mathsfbi` (below). Without a readable copy, the newer versions' choices. (The copies without
+  // caption print "Figure 1." from their own `\@makecaption`, 0712.2739's :953-958; our captions keep ": ", a residual.)
   let shipped = crate::shipped_class::shipped_class_text("jfm")?;
   if shipped
     .as_deref()
@@ -116,8 +117,9 @@ LoadDefinitions!({
 \newcommand\eg{e.g.\ }"
     );
     // The sans-serif math alphabets (2103.09196's copy :173-187): the newer copies' bold-italic sans comes from
-    // Helvetica where its font description is installed (TeX Live has t1phv.fd), as pdflatex picks it; the older
-    // copies' `\mathsfbi` is slanted medium cmss (0712.2739's :166). `\mathbi` (:1443) is `\boldsymbol`.
+    // Helvetica where its font descriptions are installed (they test t1phv.fd, then ot1phv.fd, and TeX Live has both,
+    // so pdflatex ends with OT1/phv/b/it); the older copies' `\mathsfbi` is slanted medium cmss (0712.2739's :166).
+    // `\mathbi` (:1443) is `\boldsymbol`.
     RawTeX!(
       r"\DeclareTextFontCommand\textsfi{\usefont{OT1}{cmss}{m}{sl}}
 \DeclareMathAlphabet\mathsfi{OT1}{cmss}{m}{sl}
@@ -130,7 +132,7 @@ LoadDefinitions!({
       .is_none_or(|text| text.contains("{phv}{b}{it}"))
     {
       RawTeX!(
-        r"\DeclareTextFontCommand\textsfbi{\usefont{T1}{phv}{b}{it}}\DeclareMathAlphabet\mathsfbi{T1}{phv}{b}{it}"
+        r"\DeclareTextFontCommand\textsfbi{\usefont{OT1}{phv}{b}{it}}\DeclareMathAlphabet\mathsfbi{OT1}{phv}{b}{it}"
       );
     } else {
       RawTeX!(

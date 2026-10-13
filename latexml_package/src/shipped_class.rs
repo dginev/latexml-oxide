@@ -37,11 +37,12 @@ pub fn requested_shipped_class(binding: &str) -> Result<Option<String>> {
   )
 }
 
-/// The text of the class file [`requested_shipped_class`] finds, its bytes read as Latin-1 characters (empty when the
-/// file cannot be read); `None` when the source does not have it. A family binding reads the copy the paper ships to
-/// follow its version where the versions conflict (`mn2e_cls`, `mdpi_cls`, `jfm_cls`).
+/// The text of the class file [`requested_shipped_class`] finds, its bytes read as Latin-1 characters; `None` when
+/// the source does not have it or it cannot be read (so a family binding takes its no-copy choices). A family binding
+/// reads the copy the paper ships to follow its version where the versions conflict (`mn2e_cls`, `mdpi_cls`,
+/// `jfm_cls`).
 pub fn shipped_class_text(binding: &str) -> Result<Option<String>> {
-  Ok(requested_shipped_class(binding)?.map(|class| {
+  Ok(requested_shipped_class(binding)?.and_then(|class| {
     find_file(
       &class,
       Some(FindFileOptions {
@@ -52,31 +53,34 @@ pub fn shipped_class_text(binding: &str) -> Result<Option<String>> {
     )
     .and_then(|path| std::fs::read(path).ok())
     .map(|bytes| bytes.iter().map(|&b| b as char).collect::<String>())
-    .unwrap_or_default()
   }))
 }
 
 /// Does `text` (a class file's) load `package` with `\RequirePackage`/`\usepackage` outside a comment, alone or in a
-/// list (`\RequirePackage{graphicx,epstopdf}`)?
+/// list (`\RequirePackage{graphicx,epstopdf}`), its options spanning lines or not (aa.cls's
+/// `\RequirePackage[colorlinks=true,⏎ linkcolor=blue, …]{hyperref}`)? A load inside a conditional or a hook
+/// (`\IfFileExists`, `\AtBeginDocument`) counts; `\RequirePackageWithOptions` does not.
 pub fn class_text_loads(text: &str, package: &str) -> bool {
-  text.lines().any(|line| {
-    let line = line.split('%').next().unwrap_or_default();
-    ["\\RequirePackage", "\\usepackage"].iter().any(|command| {
-      line.match_indices(command).any(|(at, _)| {
-        let rest = &line[at + command.len()..];
-        let rest = match rest.trim_start().strip_prefix('[') {
-          Some(options) => options
-            .split_once(']')
-            .map(|(_, after)| after)
-            .unwrap_or_default(),
-          None => rest,
-        };
-        rest
-          .trim_start()
-          .strip_prefix('{')
-          .and_then(|list| list.split_once('}'))
-          .is_some_and(|(list, _)| list.split(',').any(|name| name.trim() == package))
-      })
+  let code: String = text
+    .lines()
+    .map(|line| line.split('%').next().unwrap_or_default())
+    .collect::<Vec<_>>()
+    .join("\n");
+  ["\\RequirePackage", "\\usepackage"].iter().any(|command| {
+    code.match_indices(command).any(|(at, _)| {
+      let rest = code[at + command.len()..].trim_start();
+      let rest = match rest.strip_prefix('[') {
+        Some(options) => options
+          .split_once(']')
+          .map(|(_, after)| after)
+          .unwrap_or_default(),
+        None => rest,
+      };
+      rest
+        .trim_start()
+        .strip_prefix('{')
+        .and_then(|list| list.split_once('}'))
+        .is_some_and(|(list, _)| list.split(',').any(|name| name.trim() == package))
     })
   })
 }
@@ -88,5 +92,25 @@ fn strip_cls(name: &str) -> &str {
       &name[..cut]
     },
     _ => name,
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::class_text_loads;
+
+  #[test]
+  fn class_text_loads_reads_the_load_commands() {
+    let class = "\\RequirePackage[T1]{fontenc}\n\\RequirePackage{graphicx,epstopdf}\n%\\RequirePackage{subfig}\n\
+                 \\RequirePackageWithOptions{article}\n\\@ifpackageloaded{hyperref}{}{\\RequirePackage[colorlinks=true,\n\
+                 urlcolor=blue]{hyperref}}\n\\usepackage{lineno} % \\RequirePackage{caption}\n\\RequirePackage[a]{float}[2001/01/01]";
+    for package in [
+      "fontenc", "graphicx", "epstopdf", "hyperref", "lineno", "float",
+    ] {
+      assert!(class_text_loads(class, package), "{package}");
+    }
+    for package in ["subfig", "article", "caption", "T1", "colorlinks"] {
+      assert!(!class_text_loads(class, package), "{package}");
+    }
   }
 }

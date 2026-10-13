@@ -789,8 +789,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\secondnote`/`\thirdnote`, `\conference`, `\featuredapplication`, `\simplesumm`), `\addhighlights` (the switch; the
   block is the paper's own redefinition), `\acknowledgements`, `\publishersnote`, the page and layout setters,
   `\highlighting`, `\cellWidtha`…`\cellWidthz`, `\PreserveBackslash`, `\isAPAandChicago`. Run-340 estimate ~1,800 jfm +
-  ~1,400 mdpi papers' first error (undefined_rootcauses.md row 1). Residuals: our caption binding declares `labelsep`
-  but does not apply it (captions keep ": "); `\oneappendix` keeps the appendix letter. Guards
+  ~1,400 mdpi papers' first error (undefined_rootcauses.md row 1). Residuals: captions keep ": " where these classes print
+  "Figure 1." (their own `\@makecaption`, or caption's `labelsep=period`, which our caption binding declares but does not
+  apply); `\oneappendix` keeps the appendix letter. Guards
   `perfect_kernel_batch65v::*` (with `perfect_kernel_batch64qa::mdpi_history_is_frontmatter`: lastpage's `LastPage`
   label ids the document); repros `class-bindings/{jfm,mdpi}_class_commands`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;

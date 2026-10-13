@@ -44,7 +44,7 @@ LoadDefinitions!({
   // `\def\apj{ApJ}%` and the rest of the AAS set (0804.2668; 92 of the run-336 papers whose first error was one ship
   // it), the 1696-line one the same set on `\ref@jnl` (0711.3034, mn2e.cls:1575-1686). So they follow the copy the
   // paper ships: its own definition lines of those names, none when it has none (a document's own
-  // `\newcommand{\apjl}{ApJL}` then stands, 0901.1150); with no copy shipped, the 1696-line set as a fallback a
+  // `\newcommand{\apjl}{ApJL}` then stands, 0901.1150); with no (readable) copy shipped, the 1696-line set as a fallback a
   // document's own definition replaces.
   match shipped_class_text("mn2e")? {
     Some(text) => {
