@@ -16987,13 +16987,15 @@ argument itself (`convertLaTeXArgs`), so code that calls the internal directly f
 argument also defines `\\cs` with the same body, its first parameter the bracketed one: `\newcommand`, `\renewcommand`,
 `\providecommand`, the begin macro of `\newenvironment`/`\renewenvironment` (`\@newenv`'s `\new@command`,
 latex.ltx:1324-1331), and `\DeclareRobustCommand`'s inner `\cs␣` (:1412-1428; internal `\\cs␣`); a starred
-declarator's internal is not `\long` (`\l@ngrel@x`). `\cs` itself is unchanged. A definition the lock refuses still
-defines its internal, as `\@xargdef` does: only the class's own `\csname\string\cs\endcsname` reaches it, and the replay
-of a refused class setter goes through it (cmfne.cls:462-483 `\renewcommand{\author}[2][]` + the `\@dblarg` `\edef`,
-whose `\enddoc@text` prints `\firstshortauthor`: 2210.02246 lost its two author lines while the internal was skipped);
-an internal a binding owns carries its own lock. Residuals: the internal reads `[…]` as
+declarator's internal is not `\long` (`\l@ngrel@x`). `\cs` itself is unchanged. A `\renewcommand`,
+`\DeclareRobustCommand` or `\newenvironment` the lock refuses still defines its internal, as `\@xargdef` does: only the
+class's own `\csname\string\cs\endcsname` reaches it, and the replay of a refused class setter goes through it
+(cmfne.cls:462-483 `\renewcommand{\author}[2][]` + the `\@dblarg` `\edef`, whose `\enddoc@text` prints
+`\firstshortauthor`: 2210.02246 lost its two author lines while the internal was skipped). No binding defines or calls a
+`\\cs` internal; a locked `\renewenvironment` is refused whole (its stores recorded), and a `\newcommand` of a defined
+name defines none, as LaTeX's. Residuals: the internal reads `[…]` as
 an optional argument, as our `\@yargdef` does, where LaTeX's requires the brackets; an active character gets none (its
-`\string` names another control sequence). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors).
+`\string` names another control sequence). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors), 2210.02246 (cmfne's author lines).
 Guards `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
 every_xargdef_declarator_defines_the_internal_macro, refused_dblarg_setter_reaches_its_internal}`; repros
 `macro-state/newcommand_optional_internal_cs`, `sectioning-frontmatter/refused_dblarg_setter_reaches_its_internal`.
@@ -17010,7 +17012,11 @@ again (Fatal `Stomach:Recursion`).
 code redefining the inner is refused as the wrapper is; the document's own definition of the inner (its
 `\DeclareRobustCommand\cite`, or `\@namedef{cite }` in the preamble) stays its own, as in Perl. A `\let` of a locked
 robust binding to another robust command (a class's `\let\cite\mycite`) takes `\let`'s plain path rather than #315's body
-copy, which wrote the inner past the lock (guard `robust_let_over_a_locked_binding_keeps_its_inner`). Only the kernel
+copy, which wrote the inner past the lock (guard `robust_let_over_a_locked_binding_keeps_its_inner`). A locked binding
+whose inner is free (a constructor: the kernel `\LaTeX`, `\TeX`) keeps the copy, whose wrapper the lock refuses:
+bera.sty:11-23 `\let\LaTeX=\fveLaTeX` keeps the logo (the enumitem, colorspace and mathador manuals lost it while
+every locked binding took the plain path, which leaves plain `:locked` to `\let`; guard
+`robust_let_over_a_locked_constructor_keeps_it`, repro `macro-state/robust_let_over_locked_constructor`). Only the kernel
 `\cite` is a locked robust macro today. The robust constructor path (`def_constructor`) records the lock under
 the inner name only, the other half of the same asymmetry; no witness needs it. Witnesses 2210.02246, 2303.09770 (Fatal
 → 0 errors). Guard `perfect_kernel_batch66b::locked_robust_cite_keeps_its_inner_definition`; repro

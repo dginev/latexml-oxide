@@ -2047,6 +2047,10 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
 /// (`body_vocabulary_is_defined`) runs, in a group, with `\thanks`, `\footnote` and `\label` gobbled (the kernel makes
 /// the author's notes and labels), not re-entrant; afterwards the kernel's `\@author`/`\@shortauthor` and every store the
 /// body `\def`s are as before (empty if undefined), so what stays is the class's flags, counters, lists and `\let`s; an absent optional argument (`opt` empty) takes the class's default.
+/// Only the dropped body itself is read for stores (`defined_stores`): a store defined inside an internal it calls is
+/// kept, as the amsart `\@dblarg\csname\string\author\endcsname` wrapper's `\\author` sets them (cmfne.cls:462-483
+/// `\firstshortauthor`, which its `\enddoc@text` prints at the end of the document, 2210.02246; the class's own
+/// `\maketitle`, which would print them again, is refused).
 /// A replay that raises an error is dropped with its diagnostics (Info), as the `\maketitle` deposit is, and with
 /// every assignment it made (`AssignmentJournalGuard::rollback`): a setter that stopped half-way leaves no half-built
 /// state (jsty3-author.sty:542's xparse `\author`, whose expl3 author list its printer then looped over 991 times:

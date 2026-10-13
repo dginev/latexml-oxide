@@ -959,7 +959,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   unchanged); five print amsfonts `\bold` bold (1210.0557, 1811.00558, 1903.00970, 2005.01953, 2303.01678); and
   2210.02246 had lost cmfne's end-of-document author lines — 66c r3 skipped the `\@xargdef` internal of a refused
   definition, which the replayed `\@dblarg` setter calls; restored (OD #567, guard
-  `perfect_kernel_batch66b::refused_dblarg_setter_reaches_its_internal`).
+  `perfect_kernel_batch66b::refused_dblarg_setter_reaches_its_internal`). Manual net (65int8f vs 66d4, `mnet_66d4`): 0
+  regressions, 13 repros fixed; 4 manuals changed, all from 66c r4 sending every locked binding down `\let`'s plain
+  path, which leaves plain `:locked` to `\let` — bera.sty:11-23 `\let\LaTeX=\fveLaTeX` replaced the logo constructors
+  with the package's typeset boxes (enumitem, colorspace, mathador-doc; tikzbrickfigurines-doc's node widths). The skip
+  now covers a locked inner only; the 4 manuals are byte-identical to 65int8f again (OD #568, guard
+  `perfect_kernel_batch66b::robust_let_over_a_locked_constructor_keeps_it`); no witness or A/B paper's logo count moved.
   Guards `perfect_kernel_batch66d::*`,
   `main_tex::tests::{driver_vetoes_the_preamble_it_inputs, wrapper_without_begin_document_keeps_its_main}`. Open:
   R2 aastex `D` vs preloaded dcolumn (~50), R7 xargs robustness (~21), R8 `\enddocument` tail (~21), R9 hyperref

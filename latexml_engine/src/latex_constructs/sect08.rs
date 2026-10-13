@@ -1669,10 +1669,12 @@ pub(crate) fn load() -> Result<()> {
 /// `\\cs␣`). A starred
 /// declarator's internal is not `\long` either (`\l@ngrel@x`, :1229-1233). It reads `[…]` as `\@yargdef` does here (an
 /// optional argument, where LaTeX's requires the brackets). Not for an active character, whose `\string` names another
-/// control sequence (`~`'s would be `\~`). A definition the lock refuses still defines its internal, as `\@xargdef`
-/// does: only `\csname\string\cs\endcsname` reaches it, the class's own code, and that is how the class's refused
-/// setter is replayed (cmfne.cls:462-483 `\renewcommand{\author}[2][]` then the `\@dblarg` `\edef`, whose
-/// `\firstshortauthor` its `\enddoc@text` prints; 2210.02246); an internal a binding owns carries its own lock.
+/// control sequence (`~`'s would be `\~`). A `\renewcommand`, `\DeclareRobustCommand` or `\newenvironment` the lock
+/// refuses still defines its internal, as `\@xargdef` does: only `\csname\string\cs\endcsname` reaches it, the class's own
+/// code, and that is how the class's refused setter is replayed (cmfne.cls:462-483 `\renewcommand{\author}[2][]` then
+/// the `\@dblarg` `\edef`, whose `\firstshortauthor` its `\enddoc@text` prints; 2210.02246). No binding defines or calls
+/// a `\\cs` internal (a locked one would refuse the class's). A locked `\renewenvironment` is refused whole, its stores
+/// recorded; a `\newcommand`/`\providecommand` of a defined name defines none, as LaTeX's.
 /// OXIDIZED_DESIGN #567; guards `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
 /// every_xargdef_declarator_defines_the_internal_macro, refused_dblarg_setter_reaches_its_internal}`.
 fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool) -> Result<()> {

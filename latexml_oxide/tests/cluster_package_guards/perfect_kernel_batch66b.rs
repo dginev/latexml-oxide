@@ -402,6 +402,35 @@ fn robust_let_over_a_locked_binding_keeps_its_inner() {
   assert!(!xml.contains("MY("), "{xml}");
 }
 
+/// A package's `\let` of a locked constructor whose inner is free to its own robust command keeps the constructor:
+/// bera.sty:11-23 `\let\TeX=\fveTeX`, `\let\LaTeX=\fveLaTeX` (the enumitem, colorspace and mathador manuals) leave the
+/// logos, not the package's typeset boxes.
+#[test]
+fn robust_let_over_a_locked_constructor_keeps_it() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{article}
+\usepackage{zqlogo}
+\begin{document}
+A \LaTeX{} and \TeX{} logo.
+\end{document}
+",
+    &[(
+      "zqlogo.sty",
+      r"\ProvidesPackage{zqlogo}
+\DeclareRobustCommand{\zqTeX}{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}
+\DeclareRobustCommand{\zqLaTeX}{L\kern-.3em{\sbox\z@ T\vbox to\ht\z@{\hbox{\scriptsize A}\vss}}\kern-.1em\zqTeX}
+\let\TeX=\zqTeX
+\let\LaTeX=\zqLaTeX
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(xml.matches("class=\"ltx_LaTeX_logo\"").count(), 1, "{xml}");
+  assert_eq!(xml.matches("class=\"ltx_TeX_logo\"").count(), 1, "{xml}");
+  assert!(!xml.contains("<inline-block"), "{xml}");
+}
+
 /// A definition the lock refuses still defines its `\@xargdef` internal, which the class's own `\@dblarg` wrapper calls
 /// when its refused setter is replayed: cmfne.cls:462-483 `\renewcommand{\author}[2][]{…\gdef\firstshortauthor{#1}…}`
 /// then `\edef\author{\@dblarg\csname\string\author\endcsname}`, whose `\enddoc@text` prints the name line
@@ -436,8 +465,10 @@ Text.
     xml.contains("<personname>V.\u{a0}V.\u{a0}Katrakhov</personname>"),
     "{xml}"
   );
-  assert!(
-    xml.contains(">Valeriy V. Katrakhov (1949–2010)</p>"),
-    "{xml}"
-  );
+  // The class's end-of-document line, once and after the body: printed by the replayed setter's store, not a leaked
+  // short author.
+  assert_eq!(xml.matches("Valeriy").count(), 1, "{xml}");
+  let text = xml.find("<p xml:id=\"p1.1\">Text.</p>");
+  let line = xml.find("<p xml:id=\"p2.1\">Valeriy V. Katrakhov (1949–2010)</p>");
+  assert!(text.is_some() && line.is_some() && text < line, "{xml}");
 }

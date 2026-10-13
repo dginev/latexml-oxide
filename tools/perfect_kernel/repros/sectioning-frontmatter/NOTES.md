@@ -154,3 +154,13 @@ A line marked with several labels (`$^{1,2}$Dept`, 1406.0824) is one line a labe
 (osa_journal_sty.rs `lines_per_label`): the kernel's `\lx@set@frontmatter@label` takes the first label, as Perl's
 (Base_Utility.pool.ltxml:568), on the request path (an author whose marks were taken as requests); where the marks stay
 visible in the names (IEEEtran `\IEEEauthorblockA`, llncs `\institute`) relocation pairs by the marks shown, all of them.
+
+## refused_dblarg_setter_reaches_its_internal (GREEN, 66d r2)
+
+cmfne.cls:462-483 (2210.02246) is the amsart `\@dblarg` idiom over a locked `\author`: `\renewcommand{\author}[2][]{…}`
+(refused, but `\@xargdef` still defines `\\author`, latex.ltx:1245-1257) and `\edef\author{\@dblarg\csname\string
+\author\endcsname}` (refused; kept as `\lx@dropped@author`). The refused-setter replay (sect05.rs `replay_class_setter`)
+runs `\@dblarg\\author[opt]{arg}`, which sets `\firstshortauthor` for the class's `\enddoc@text` line. 66c r3 skipped
+the internal of a refused definition, so the replay's vocabulary gate dropped the call and the line was lost; restored
+in 66d r2 (sect08.rs `define_optional_internal`, OD #567). Guard
+`perfect_kernel_batch66b::refused_dblarg_setter_reaches_its_internal`.
