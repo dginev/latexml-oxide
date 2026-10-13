@@ -980,9 +980,13 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@text@rbrace", "}", alias => "\\}",
   font => { shape => "upright" }, bounded => true); // Since not DefMath!
   Let!("\\lbrace", "\\{");
-  Let!(&T_CS!("\\lbrack"), T_OTHER!("["));
+  // plain.tex:509, latex.ltx:562 `\def\lbrack{[} \def\rbrack{]}`: macros, not Perl's `\let` to the characters
+  // (math_common.pool.ltxml:565, KNOWN_PERL_ERRORS #640), which `\@ifnextchar[`/`\pgfutil@ifnextchar[` took for an
+  // options bracket: a tikzcd whose first cell opens with `\lbrack` read its matrix as options and looped (Fatal
+  // `Timeout:PushbackLimit`, 2212.11079). Guard `perfect_kernel_batch66d::lbrack_is_a_macro`.
+  DefMacro!("\\lbrack", "[");
   Let!("\\rbrace", "\\}");
-  Let!(&T_CS!("\\rbrack"), T_OTHER!("]"));
+  DefMacro!("\\rbrack", "]");
   DefMath!("\\lceil",  None, "\u{2308}", role => "OPEN",  stretchy => false); // LEFT CEILING
   DefMath!("\\rceil",  None, "\u{2309}", role => "CLOSE", stretchy => false); // RIGHT CEILING
   DefMath!("\\lfloor", None, "\u{230A}", role => "OPEN",  stretchy => false); // LEFT FLOOR

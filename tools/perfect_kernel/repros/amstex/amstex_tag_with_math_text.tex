@@ -1,0 +1,21 @@
+% witness: 1012.3760 (\tag 1.2$'$ in AMS-TeX displays; after 66d's \Bbb fix its next error class: 46 "Missing $" + TooManyErrors)
+% oracle:  pdftex (\input amstex) 0 errors; amstex.tex:597-606 \def\tag#1$${\eqno\maketag@#1\maketag@$$}: the tag is text (\tagform@ = \hbox{\rm(#1)}), \tag"…" without parentheses
+% engines: rust 66d1 = errors "Missing $ closing display math" (amstex.rs \let\tag\eqno: the tag is math and stops at the first $); perl \let\tag\eqno too
+% expect:  0 errors; equation tags "(1.2′)" and "(2)", and a quoted tag "A"
+% status:  RED (follow-up: AMS-TeX \tag; mind amstex.tex:633/718/738, \tag inside \align/\gather rows)
+\input amstex
+\documentstyle{amsppt}
+\document
+Text
+$$
+a=b\tag 1.2$'$
+$$
+and
+$$
+c=d\tag 2
+$$
+and
+$$
+e=f\tag"A"
+$$
+\enddocument

@@ -1190,6 +1190,8 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   static RE_END_BYE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
   static RE_END_BYE2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_BEGIN_DOCUMENT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\begin\s*\{document\}").unwrap());
   static RE_MAC_TEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
   static RE_METAFONT: Lazy<Regex> = Lazy::new(|| Regex::new(r"beginchar\(").unwrap());
@@ -1217,6 +1219,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   // we record the vetoer and apply the veto post-loop with the score
   // comparison. Witness 2307.13586.
   let mut vetoed: Vec<(PathBuf, PathBuf)> = Vec::new();
+  // A driver with a `\begin{document}` line vetoes whatever the scores, as Perl's every veto does (Pack.pm:180-182):
+  // its `\input{preamble}` names the `\documentclass` file, which outscores it (1402.3465, 2503.12837, 1505.07539,
+  // hep-th0609123). Kept in step with `latexml::main_tex::find_main_tex` (guard
+  // `main_tex::tests::driver_vetoes_the_preamble_it_inputs`).
+  let mut drivers: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
   // Phase D pre-screen: track sentinel reasons so the empty-candidates
   // branch can return a categorized `Fatal:invalid:<reason>` (per
   // SYNC_STATUS.md "Phase E asymptote: convert intractable papers to
@@ -1278,6 +1285,9 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
       }
       if RE_MAYBE_TEX.is_match(line) {
         maybe_tex = true;
+      }
+      if RE_BEGIN_DOCUMENT.is_match(line) {
+        drivers.insert(tex_file.clone());
       }
       if let Some(cap) = RE_INPUT_INCLUDE.captures(line) {
         maybe_tex = true;
@@ -1354,7 +1364,7 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   for (vetee, vetoer) in &vetoed {
     let vetee_score = likelihood.get(vetee).copied().unwrap_or(0.0);
     let vetoer_score = likelihood.get(vetoer).copied().unwrap_or(0.0);
-    if vetoer_score >= vetee_score {
+    if vetoer_score >= vetee_score || drivers.contains(vetoer) {
       likelihood.remove(vetee);
     }
   }

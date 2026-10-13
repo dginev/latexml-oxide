@@ -80,9 +80,16 @@ pub(crate) fn load() -> Result<()> {
     r"\@caption@{}{}{}",
     r"\@hack@caption@{#1}{#2}{}#3\label\endcaption"
   );
+  // The test closes before either branch runs, as latex.ltx's `\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi`
+  // idiom does: Perl's form (latex_constructs.pool.ltxml:3178-3180) digests the caption inside `\ifx.#5. … \else …
+  // \fi`, so a stray `\fi` in the caption (listings' `basicstyle=\lst@ifdisplaystyle\small\fi` with `@` not a letter,
+  // in an `\lstinline`: 2012.08626, 2210.17505) or an `\if` without its `\fi` (0807.3034's `\def\arcs{\ifmmode …
+  // \else …}`; 1904.11818, 1602.01884) took the wrapper's own `\else`/`\fi`, and the `\label` scan read to the end of
+  // the file (Fatal `Mouth:EoF`; Perl the same, KNOWN_PERL_ERRORS #641). OXIDIZED_DESIGN #570; guards
+  // `perfect_kernel_batch66d::caption_hoist_*`.
   DefMacro!(
     r"\@hack@caption@{}{}{} Until:\label Until:\endcaption",
-    r"\ifx.#5.\@caption@@@{#1}{#2}{#3#4}\else\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption\fi"
+    r"\ifx.#5.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\@caption@@@{#1}{#2}{#3#4}}{\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption}"
   );
   DefMacro!(
     r"\@@@hack@caption@{}{}{} Semiverbatim Until:\label Until:\endcaption",

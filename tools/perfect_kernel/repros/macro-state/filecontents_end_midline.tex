@@ -1,0 +1,15 @@
+% witness: 1909.03404, 2311.02007, 2503.03764
+% oracle:  pdflatex 0 errors (latex.ltx:19048-19066: a line is split at \end{<env>}; text before it is written, text after it ignored, with warnings)
+% engines: rust 66b1 = Fatal:Document:Malformed (the whole-line end marker never matched; the rest of the file was captured); perl 0
+% expect:  0 errors; "Body. Hello from b." in the document
+% status:  GREEN (66d)
+\documentclass{article}
+\begin{filecontents*}[overwrite]{a.tikz}
+\begin{tikzpicture}\draw (0,0)--(1,1);
+\end{tikzpicture}\end{filecontents*}
+\begin{filecontents}[overwrite]{b.tex}
+Hello from b.
+\end{filecontents}{b.tex}
+\begin{document}
+Body. \input{b.tex}
+\end{document}

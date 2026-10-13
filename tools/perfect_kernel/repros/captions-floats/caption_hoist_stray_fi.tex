@@ -1,0 +1,13 @@
+% witness: 2012.08626, 2210.17505 (listings basicstyle=\lst@ifdisplaystyle\small\fi with @ not a letter: a stray \fi in a caption's \lstinline)
+% oracle:  pdflatex "Extra \fi" (4), the figure and its caption print
+% engines: rust 66b1 = Fatal:Mouth:EoF (the stray \fi closed the hoist's \ifx.#5., Until:\endcaption read to the end); perl 101E+F
+% expect:  2 errors ("Didn't expect \fi", as pdflatex's Extra \fi); one caption with the figure's label
+% status:  GREEN (66d)
+\documentclass{article}
+\begin{document}
+\begin{figure}
+\caption{A stray \fi\ here.}
+\label{f:a}
+\end{figure}
+Text.
+\end{document}

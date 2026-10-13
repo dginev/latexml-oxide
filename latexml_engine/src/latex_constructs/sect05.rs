@@ -1018,9 +1018,16 @@ pub(crate) fn load() -> Result<()> {
   // `\def\shorttitle#1{…}` (gaceta.cls:744) into a 0-arg macro, so the later
   // `\shorttitle{RUNNING HEAD}` left its argument to typeset as a `<para>`
   // before the frontmatter (gaceta/plantilla-articulo-suelto, RUST-ONLY).
-  // Guard: `perfect_kernel_batch56::a_class_shorttitle_survives_the_kernel_title`.
-  DefMacro!("\\shortauthor", "\\@shortauthor");
-  DefMacro!("\\shorttitle", "\\@shorttitle");
+  // Guard: `perfect_kernel_batch56::a_class_shorttitle_survives_the_kernel_title`. Kernel stubs
+  // (`DefinitionOrigin::Stub`), since latex.ltx has neither name: the document's own `\newcommand{\shorttitle}{…}`
+  // defines it, where the refused definition left `\title[\shorttitle]{…}` setting `\@shorttitle` to the alias of
+  // itself (Fatal `Timeout:Recursion`: 1105.4905, 0909.2464). Guard
+  // `perfect_kernel_batch66d::shorttitle_is_the_documents_own`.
+  with_origin(DefinitionOrigin::Stub, || -> Result<()> {
+    DefMacro!("\\shortauthor", "\\@shortauthor");
+    DefMacro!("\\shorttitle", "\\@shorttitle");
+    Ok(())
+  })?;
   // Perl (PR #2767): '\def\@shortauthor{#1}\def\@author{#2}\lx@add@authors{#2}'.
   // 59d: `\lx@author@flush`/`\lx@author@handed` hand each call's author-block tail to the creators it
   // made, `\lx@author@tail` the last call's at `\maketitle` (frontmatter_stores.rs).

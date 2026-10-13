@@ -1,0 +1,11 @@
+% witness: 1112.1423, 1108.6264, 1012.3760 (\def\mathbb{\Bbb}), 1201.0265 (\def\mathbb{\bold})
+% oracle:  pdftex (\input amstex) 0 errors; amstex.tex:1263-1266, 1358-1361: \bold/\Bbb are font switches of their own
+% engines: rust 66b1 = Fatal:Timeout:Recursion (\Bbb{}→\mathbb{#1}, amsfonts_sty.rs); perl loops (terminated at 180 s)
+% expect:  0 errors; R and Z in blackboard bold, B in bold
+% status:  GREEN (66d)
+\input amstex
+\documentstyle{amsppt}
+\def\mathbb{\Bbb}
+\document
+Let $h:\mathbb R\to \Bbb Z$ and $\bold B$ be given.
+\enddocument

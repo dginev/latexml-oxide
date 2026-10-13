@@ -33,6 +33,8 @@ LoadDefinitions!({
   DefMacro!("\\predefine{}{}", "\\let#1#2");
   // \undefine \foo  ≡  \let\foo\relax  (Perl L58-60)
   DefMacro!("\\undefine Token", "\\let#1\\relax");
+  // amstex.tex:80-85 the error reporter its packages call (amsppt.sty's `\add@missing`); `\errhelp\defaulthelp@` left out.
+  RawTeX!(r"\def\err@#1{\errmessage{AmS-TeX error: #1}}\def\Err@{\err@}");
 
   //======================================================================
   // Style choices (Perl L62-119)
@@ -248,6 +250,15 @@ LoadDefinitions!({
   RequirePackage!("amsopn");
   RequirePackage!("amsxtra");
   RequirePackage!("amscd");
+  // AMS-TeX's `\Bbb` and `\bold` are font switches of their own (amstex.tex:1358-1361 `\Bbb@@#1{\noaccents@\fam
+  // \msbfam\relax#1}`, :1263-1266 `\bold@@#1{\fam\bffam\relax#1}`), not the amsfonts binding's aliases of `\mathbb`
+  // (Perl's too, AmSTeX.pool loading amsfonts.sty.ltxml:22-23), which the AMS-TeX idiom `\def\mathbb{\Bbb}` turned
+  // into a loop (1112.1423, 1108.6264, 1012.3760; `\def\mathbb{\bold}` 1201.0265). KNOWN_PERL_ERRORS #639; guard
+  // `perfect_kernel_batch66d::amstex_bbb_and_bold_are_font_switches`.
+  DefConstructor!("\\Bbb{}", "#1", bounded => true, require_math => true, scope => Some(Scope::Global),
+    font => { family => "blackboard", series => "medium", shape => "upright" });
+  DefConstructor!("\\bold{}", "#1", bounded => true, require_math => true, scope => Some(Scope::Global),
+    font => { family => "serif", series => "bold", shape => "upright" });
 
   Let!("\\dsize",  "\\displaystyle");
   Let!("\\tsize",  "\\textstyle");

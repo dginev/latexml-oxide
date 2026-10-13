@@ -1,5 +1,5 @@
 % A `\columncolor` in a p/m column, followed by a cell whose content starts with
-% `\lbrack` (a CS \let to `[`), used to make the overhang-arg gobble run forward
+% `\lbrack` (then a CS \let to `[`; a macro since 66d, latex.ltx:562), used to make the overhang-arg gobble run forward
 % past the row's `\\` and cascade the paragraph-column mode
 % (`\@end@tabular ... internal_vertical`), truncating the document and losing the
 % bibliography below. `\toprule[1pt]` (a booktabs rule with an optional-width arg)

@@ -9195,7 +9195,7 @@ T1 gives the typed `ÿ` where pdflatex prints slot 255 `ß`. Witness russ/russ_d
 (recall 69.9 → 82.7; `Çäðàâåé`-style mojibake → Cyrillic); 150 other 8-bit-input corpus
 manuals unchanged. Guard `perfect_kernel_batch56::recatcoded_input_bytes_decode_through_their_declaration`
 (its UTF-8 control line reads `Cafй na й.` without the line-provenance gate).
-The raw-line readers decode the same way (`Mouth::read_raw_line_decoded`, `decode_eight_bit`): the `.bib` reader and, since batch 56ir, `{verbatim}` and verbatim.sty bodies. Their text reaches the output as typeset, including a first line that a wrapper's optional-argument check pushed back. Readers that WRITE a file (filecontents, `VerbatimOut`, `\writeverbatim`: `capture_raw_lines_until`) stay byte-exact, as TeX writes the bytes and decodes them when the file is read. Guard `perfect_kernel_batch56::verbatim_decodes_the_input_encoding`.
+The raw-line readers decode the same way (`Mouth::read_raw_line_decoded`, `decode_eight_bit`): the `.bib` reader and, since batch 56ir, `{verbatim}` and verbatim.sty bodies. Their text reaches the output as typeset, including a first line that a wrapper's optional-argument check pushed back. Readers that WRITE a file (filecontents, `VerbatimOut`, `\writeverbatim`) stay byte-exact, as TeX writes the bytes and decodes them when the file is read. Guard `perfect_kernel_batch56::verbatim_decodes_the_input_encoding`.
 
 ### 267. `\everypar` runs in front of the character that starts a paragraph (Perl: `\everypar` never fires)
 
@@ -17036,3 +17036,68 @@ its begin half taken and its end half refused; mn2e.cls:992 `\ifSFB@keywords` is
 lock reads the origin at run time, so a class's `\AtBeginDocument{\let…}` runs as the document's. Guards
 `perfect_kernel_batch66b::{file_let_*, refused_*_of_a_cleared_name_restores_the_binding, mn2e_*}`; repros
 `macro-state/{file_let_of_locked_end_half, file_let_clearing_locked_name}`.
+
+### 570. The caption-label hoist closes its test before the caption is digested (Perl: inside it)
+
+Perl's `\@hack@caption@` (latex_constructs.pool.ltxml:3178-3180) is `\ifx.#5.\@caption@@@{…}{…}{#3#4}\else
+\@@@hack@caption@…#5\endcaption\fi`: the caption is digested inside the conditional, so a stray `\fi` in it (listings'
+`basicstyle=\lst@ifdisplaystyle\small\fi` written with `@` not a letter, in an `\lstinline`; 2012.08626, 2210.17505) or
+an `\if` without its `\fi` (0807.3034's `\def\arcs{\ifmmode … \else …}`; 1904.11818, 1602.01884) took the wrapper's own
+`\else`/`\fi`, and the `\label` scan read to the end of the file (Fatal `Mouth:EoF`, Perl the same; KPE #641).
+
+**Rust** (batch 66d, sect09.rs): `\ifx.#5.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{…}{…}`, latex.ltx's
+idiom: the test closes before either branch runs. A stray `\fi` is then "Didn't expect \fi" (pdflatex's "Extra \fi"),
+an open `\if` stays open as in TeX. The 5 witnesses lose their Fatal (0807.3034: 0 errors). Guards
+`perfect_kernel_batch66d::caption_hoist_*`; repros `captions-floats/caption_hoist_{stray_fi,unbalanced_if}`.
+
+### 571. AMS-TeX's `\abstract` is not the LaTeX kernel's locked one; amsppt.sty's own state for amsppt1.tex
+
+The kernel `\abstract` is locked (sect05.rs), and the lock survived into AMS-TeX mode, where the amsppt binding rebinds
+`\abstract`: TL amsppt1.tex:57's 1.x shim `\let\ab@\abstract \long\def\abstract#1{\ab@#1\endabstract}` was refused,
+so `\abstract{…}` read `Until:\endabstract` past `\document` (Fatal `Document:Malformed`; Perl's amsppt `\abstract` is
+unlocked, as AMS-TeX loads no LaTeX.pool there). amsppt1.tex:105-135 then redefines `\enddocument` from amsppt.sty's
+state, or keeps an older version calling `\runaway@` (gone since amsppt 2.0) when `\add@missing` is undefined, as it was
+in both Perl and Rust (4 undefined-macro errors; KPE #642).
+
+**Rust** (batch 66d, amsppt_sty.rs): the binding clears `\abstract:locked`, and defines amsppt.sty's environment-end
+tracker `\add@missing`/`\envir@end` (:107-111; `\envir@end` a sentinel for :126's `\enddocument␣`; the binding's environments close themselves, so none fires), the
+address count (:330-331), `\ifmonograph@` (:441) and `\thetranslator@` (:506), and its captions
+`\topcaption`/`\botcaption#1#2\endcaption` (:820-836: the label in `\smc`, `.\enspace`, the text; a paragraph, as the
+inserts are no-ops here; q-alg9505010, q-alg9507011). Witnesses alg-geom9505028, alg-geom9606011,
+2310.08131, q-alg9505010, q-alg9507011. Guards `perfect_kernel_batch66d::{amsppt1_abstract_shim_is_kept, amsppt_captions_are_paragraphs}`; repros
+`amstex/{amsppt1_abstract_braced, amsppt_botcaption}`.
+
+### 572. `{filecontents}` ends at its `\end{…}` anywhere in a line, as LaTeX's does
+
+latex.ltx:19047-19066 reads each line as `##1\E##2\E##3\relax`: the text before `\end{<currenvir>}` is written as the
+file's last line ("Writing text … before \end{…} as last line"), the text after it ignored ("Ignoring text … after
+\end{…}"). The port matched the whole trimmed line (fancyvrb's rule, the former `capture_raw_lines_until`, now removed), so
+`\end{tikzpicture}\end{filecontents*}` or `\end{filecontents}{b.tex}` captured the rest of the document (Fatal
+`Document:Malformed`; Perl's unanchored regex, latex_constructs.pool.ltxml:4274/4292, ends there too).
+
+**Rust** (batch 66d, `cache_filecontents`): the capture ends at the marker anywhere in a line, with LaTeX's two warnings;
+a prefix of spaces only is neither written nor warned about (LaTeX writes it as a blank last line, with the warning,
+latex.ltx:19055-19058, its spaces being of category other). Witnesses 1909.03404, 2311.02007,
+2503.03764. Guard `perfect_kernel_batch66d::filecontents_ends_mid_line`; repro `macro-state/filecontents_end_midline`.
+
+### 573. A driver with `\begin{document}` vetoes the preamble it inputs whatever their scores
+
+Perl's main-file pick (Pack.pm:180-182) removes every `\input` argument from the candidates; the port honoured a veto
+only when the vetoer scored at least the vetee's score (a 2-line `\input{main}` wrapper beside the real main.tex,
+2307.13586). A driver that `\input{preamble}`s its `\documentclass` file scores lower than the preamble, so the preamble
+was converted alone (Fatal `Document:Malformed`: 1402.3465, 2503.12837, 1505.07539, hep-th0609123).
+
+**Rust** (batch 66d, main_tex.rs `find_main_tex` and its cortex_worker.rs copy): a vetoer with a `\begin{document}` line
+vetoes unconditionally, as Perl; one without keeps the score gate. Guards
+`main_tex::tests::{driver_vetoes_the_preamble_it_inputs, wrapper_without_begin_document_keeps_its_main}`.
+
+### 574. The kernel's `\shorttitle`/`\shortauthor` aliases yield to the document's `\newcommand`
+
+sect05.rs predefines `\shorttitle`→`\@shorttitle` and `\shortauthor`→`\@shortauthor` (Rust-only, for templates that read
+them before `\author`, 2406.14142); latex.ltx has neither. A document's `\newcommand{\shorttitle}{…}` was refused as a
+redefinition, and `\title[\shorttitle]{…}` then set `\@shorttitle` to the alias of itself (Fatal `Timeout:Recursion`:
+1105.4905, 0909.2464; pdflatex and Perl 0).
+
+**Rust** (batch 66d): the two aliases are kernel stubs (`DefinitionOrigin::Stub`), which `\newcommand` treats as
+undefined, as the AAAI `\equalcontrib` stubs. Guard `perfect_kernel_batch66d::shorttitle_is_the_documents_own`; repro
+`sectioning-frontmatter/shorttitle_newcommand_by_document`.

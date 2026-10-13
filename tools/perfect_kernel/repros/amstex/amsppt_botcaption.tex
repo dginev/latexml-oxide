@@ -1,0 +1,22 @@
+% witness: q-alg9505010, q-alg9507011 (\midinsert … \botcaption{Figure 1} text \endcaption \endinsert)
+% oracle:  pdftex (\input amstex) 0 errors; amsppt.sty:820-836 \topcaption/\botcaption#1#2\endcaption: the label in \captionfont@ (\smc), ".\enspace" when both are given, then the text
+% engines: rust 66d1 = 2 errors (\botcaption, \endcaption undefined); perl the same (amsppt.sty.ltxml defines neither)
+% expect:  0 errors; "Figure 1. Variables organized in a pattern", "Table 2. Values", "Unlabelled plate" (no separator) as paragraphs; "More text." upright
+% status:  GREEN (66d)
+\input amstex
+\documentstyle{amsppt}
+\document
+Text.
+\midinsert
+\botcaption{Figure 1}
+Variables organized in a pattern
+\endcaption
+\endinsert
+\topinsert
+\topcaption{Table 2} Values\endcaption
+\endinsert
+\midinsert
+\botcaption{}{\it Unlabelled} plate\endcaption
+\endinsert
+More text.
+\enddocument

@@ -12796,3 +12796,33 @@ latex.ltx:1245-1257 `\@xargdef` defines the macro taking `[#1]` as `\\cs`, which
 calls; Perl's `\newcommand` (convertLaTeXArgs) defines `\cs` only. Trigger
 `\newcommand{\foo}[2][d]{(#1/#2)} \csname\string\foo\endcsname[a]{b}` → Perl "[a]b"; pdflatex "(a/b)". The amsart idiom
 `\edef\cs{\@dblarg\csname\string\cs\endcsname}` (bcp.cls, cmfne.cls) depends on it. Fixed in Rust (OXIDIZED_DESIGN #567).
+
+## 639. AMS-TeX's `\Bbb`/`\bold` are aliases of `\mathbb`, and amsfonts' `\bold` is blackboard
+
+AmSTeX.pool loads amsfonts.sty.ltxml, whose `\Bbb{}` and `\bold{}` (:22-23) both expand to `\mathbb{#1}`. In AMS-TeX
+they are font switches (amstex.tex:1263-1266, 1358-1361), and in LaTeX amsfonts.sty:115-116 maps `\bold` to `\mathbf`.
+Trigger `\input amstex \documentstyle{amsppt} \def\mathbb{\Bbb} \document $\mathbb R$ \enddocument` → Perl loops
+(terminated at 180 s); pdftex 0 errors. Fixed in Rust (amstex.rs `\Bbb`/`\bold` constructors; amsfonts `\bold`→`\mathbf`).
+
+## 640. `\lbrack`/`\rbrack` are `\let` to the bracket characters
+
+math_common.pool.ltxml:565 `Let('\lbrack','[')`; plain.tex:509 and latex.ltx:562 have `\def\lbrack{[}`. An
+`\@ifnextchar[` peek then sees an options bracket: a tikzcd whose first cell starts with `\lbrack` reads its matrix as
+options. Trigger `\begin{tikzcd} \lbrack A , B \rbrack \arrow[r] & C \end{tikzcd}` → Perl 55 errors; pdflatex 0.
+Fixed in Rust (math_common.rs `DefMacro`).
+
+## 641. The caption-label hoist digests the caption inside its own conditional
+
+latex_constructs.pool.ltxml:3178-3180 `\@hack@caption@` runs `\@caption@@@{…}` between `\ifx.#5.` and `\else`, so an
+unbalanced conditional in the caption takes the wrapper's `\else`/`\fi`. Trigger
+`\begin{figure}\caption{A stray \fi\ here.}\label{f:a}\end{figure}` → Perl 101 errors and Fatal (`Until:\label` to the
+end of the file); pdflatex 4 "Extra \fi" and the figure. Fixed in Rust (OXIDIZED_DESIGN #570).
+
+## 642. amsppt's binding lacks the amsppt.sty state amsppt1.tex reads
+
+TL amsppt1.tex:105-137 redefines `\enddocument` from `\add@missing`, `\envir@end`, `\addresscount@`, `\ifmonograph@` and
+`\thetranslator@` (amsppt.sty:107-126, 330, 441, 506), or, when `\add@missing` is undefined, keeps an older version that
+calls `\runaway@` (absent since amsppt 2.0). Perl's amsppt.sty.ltxml defines none of them, nor amsppt.sty's
+`\topcaption`/`\botcaption#1#2\endcaption` (:820-836; q-alg9505010, q-alg9507011). Trigger `\input amstex
+\documentstyle{amsppt} \input amsppt1 \document Body. \enddocument` → Perl 4 undefined-macro errors; pdftex 0. Fixed in
+Rust (OXIDIZED_DESIGN #571).

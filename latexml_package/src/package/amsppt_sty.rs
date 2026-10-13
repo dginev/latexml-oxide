@@ -91,6 +91,43 @@ LoadDefinitions!({
   Let!("\\endsubjclass", "\\relax");
   DefMacro!("\\abstract", "\\lx@begin@abstract");
   DefMacro!("\\endabstract", "\\lx@end@abstract\\let\\maybe@end@abstract\\relax");
+  // AMS-TeX's `\abstract … \endabstract` is not the LaTeX kernel's environment, whose lock (sect05.rs) it would
+  // otherwise inherit: Perl's is unlocked (amsppt.sty.ltxml:70; AMS-TeX loads no LaTeX.pool there), and TL
+  // amsppt1.tex:57's AMS-TeX 1.x shim `\let\ab@\abstract \long\def\abstract#1{\ab@#1\endabstract}` was refused, so
+  // `\abstract{…}` read `Until:\endabstract` past `\document` (Fatal `Document:Malformed`: alg-geom9505028,
+  // alg-geom9606011, 2310.08131, q-alg9505010, q-alg9507011). OXIDIZED_DESIGN #571; guard
+  // `perfect_kernel_batch66d::amsppt1_abstract_shim_is_kept`.
+  AssignValue!("\\abstract:locked" => false, Some(Scope::Global));
+  // amsppt.sty's own state, which TL amsppt1.tex:105-135 reads when it redefines `\enddocument` (it does so only when
+  // `\add@missing` is defined, and otherwise keeps its older `\runaway@{proclaim}` version, a macro gone since amsppt
+  // 2.0): the environment-end tracker `\add@missing`/`\envir@end` (amsppt.sty:107-111; `\envir@end` a sentinel for
+  // :126's `\enddocument␣`), the address count (:330-331), `\ifmonograph@` (:441) and `\thetranslator@` (:506). The binding's environments close themselves, so
+  // `\envir@end` stays `\enddocument` and no `\add@missing` fires. Undefined, they were 4 errors in every
+  // `\input amsppt1` paper (alg-geom9505028, alg-geom9606011, 2310.08131, q-alg9505010, q-alg9507011; Perl the same).
+  RawTeX!(r"\def\add@missing#1{\expandafter\ifx\envir@end#1\Err@{You seem to have a missing or misspelled
+\expandafter\string\envir@end ...}\envir@end\fi}\global\let\envir@end\enddocument
+\newcount\addresscount@ \addresscount@\z@ \newif\ifmonograph@ \def\thetranslator@{}");
+  // amsppt.sty:820-836 `\topcaption#1#2\endcaption`/`\botcaption#1#2\endcaption`: the label in the caption font
+  // (`\captionfont@`, `\smc`), `.\enspace` when both label and text are given, then the text in `\rm`, all in a group
+  // as there; a paragraph of its own, not centred (amsppt centres it), since `\midinsert`/`\topinsert` are no-ops here
+  // (plain_base.rs). Perl's binding has neither: 2
+  // undefined-macro errors in q-alg9505010, q-alg9507011 (KNOWN_PERL_ERRORS #642). Guard
+  // `perfect_kernel_batch66d::amsppt_captions_are_paragraphs`.
+  DefMacro!("\\captionfont@", "\\smc");
+  DefMacro!("\\topcaption{} Until:\\endcaption", sub[(label, text)] {
+    let blank = |t: &Tokens| t.unlist_ref().iter().all(|t| t.get_catcode() == Catcode::SPACE);
+    let mut toks = vec![T_CS!("\\par"), T_BEGIN!(), T_CS!("\\noindent"), T_BEGIN!(), T_CS!("\\captionfont@")];
+    toks.extend(label.unlist_ref().iter().copied());
+    toks.push(T_END!());
+    if !blank(&label) && !blank(&text) {
+      toks.extend([T_OTHER!("."), T_CS!("\\enspace")]);
+    }
+    toks.extend([T_CS!("\\rm"), T_CS!("\\ignorespaces")]);
+    toks.extend(text.unlist_ref().iter().copied());
+    toks.extend([T_CS!("\\par"), T_END!()]);
+    Ok(Tokens::new(toks))
+  });
+  Let!("\\botcaption", "\\topcaption");
 
   // Section structure — Perl L112-147. AmSTeX uses terminator-delimited
   // syntax (`\head Foo \endhead`) not balanced `\section{Foo}`.

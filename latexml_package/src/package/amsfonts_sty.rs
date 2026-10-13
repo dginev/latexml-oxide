@@ -36,7 +36,10 @@ LoadDefinitions!({
   DefConstructor!("\\mathbb{}", "#1", bounded => true, require_math => true, scope => Some(Scope::Global),
   font => { family => "blackboard", series => "medium", shape => "upright" });
   DefMacro!("\\Bbb{}", "\\mathbb{#1}");
-  DefMacro!("\\bold{}", "\\mathbb{#1}");
+  // amsfonts.sty:115-116 `\DeclareRobustCommand{\bold}[1]{{\@subst@obsolete{amsfonts}\bold\mathbf{#1}}}`: bold, not
+  // blackboard (Perl amsfonts.sty.ltxml:23 maps it to `\mathbb`, KNOWN_PERL_ERRORS #639), and the paper's
+  // `\renewcommand{\mathbb}{\bold}` looped through it (1611.03179). Guard `perfect_kernel_batch66d::amsfonts_bold_is_mathbf`.
+  DefMacro!("\\bold{}", "\\mathbf{#1}");
   // Also defined in eufrak
   DefConstructor!("\\mathfrak{}", "#1", bounded => true, require_math => true, scope => Some(Scope::Global),
   font => { family => "fraktur", series => "medium", shape => "upright" });

@@ -1,0 +1,13 @@
+% witness: 2212.11079 (a tikzcd whose first cell starts with \lbrack)
+% oracle:  pdflatex 0 errors (latex.ltx:562, plain.tex:509 \def\lbrack{[}: \pgfutil@ifnextchar[ does not see an options bracket)
+% engines: rust 66b1 = 13 errors + Fatal:Timeout:PushbackLimit (math_common.rs \let\lbrack[); perl 55 errors
+% expect:  0 errors; the diagram converts
+% status:  GREEN (66d)
+\documentclass{article}
+\usepackage{tikz-cd}
+\begin{document}
+\[
+\begin{tikzcd}
+   \lbrack A , B \rbrack \arrow[r] & C
+\end{tikzcd}\]
+\end{document}

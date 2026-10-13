@@ -833,10 +833,36 @@ LoadDefinitions!({
     }
     // Discard remainder of \begin{filecontents} line
     read_raw_line();
-    // Read raw lines until the end marker (whole-line match; see
-    // capture_raw_lines_until).
-    let (captured, _terminator) = capture_raw_lines_until(&[&end_marker]);
-    lines.extend(captured);
+    // latex.ltx:19047-19066 `\reserved@b ##1\E##2\E##3\relax`: each line is split at `\end{<currenvir>}` wherever it
+    // stands; the text before it is written as the file's last line ("Writing text `…' before \end{…} as last line"),
+    // the text after it ignored ("Ignoring text `…' after \end{…}"). A whole-line match (fancyvrb's rule, the former
+    // `capture_raw_lines_until`) never saw `\end{tikzpicture}\end{filecontents*}` or `\end{filecontents}{b.tex}`, and
+    // captured the rest of the document (Fatal `Document:Malformed`: 1909.03404, 2311.02007, 2503.03764). A prefix of
+    // spaces only is not written (LaTeX writes it, a blank last line). OXIDIZED_DESIGN #572; guard
+    // `perfect_kernel_batch66d::filecontents_ends_mid_line`.
+    while let Some(line) = read_raw_line() {
+      let Some(at) = line.find(end_marker.as_str()) else {
+        lines.push(line);
+        continue;
+      };
+      let (before, after) = (&line[..at], line[at + end_marker.len()..].trim_end());
+      if !before.trim().is_empty() {
+        Warn!(
+          "unexpected",
+          "filecontents",
+          s!("Writing text `{before}' before {end_marker} as last line of {filename}")
+        );
+        lines.push(before.to_string());
+      }
+      if !after.is_empty() {
+        Warn!(
+          "unexpected",
+          "filecontents",
+          s!("Ignoring text `{after}' after {end_marker}")
+        );
+      }
+      break;
+    }
     let n = lines.len();
     Info!(
       "note",

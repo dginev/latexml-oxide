@@ -161,31 +161,6 @@ pub fn GetKeyVal(keyval_opt: &Option<Digested>, key: &str) -> Option<Digested> {
 //   - wisdom_helper_monomorphization_trap (no generic T: Into<X>)
 // ============================================================
 
-/// Shared raw-line verbatim capture — the write-out half of TeX's
-/// aux-file round trip (see `latexml_core::binding::virtual_files`).
-/// Reads raw lines until one whose TRIMMED text equals an entry in
-/// `end_markers` (trailing content defeats a marker, matching fancyvrb's
-/// whole-line end check — fancybox-doc writes `\end{VerbatimOut}%.`
-/// inside a captured body on purpose). Returns the captured lines and,
-/// when the terminator matched, that marker line — the caller decides
-/// whether to replay it (an `\end{env}` closing a wrapping environment)
-/// or swallow it (a plain `\endfoo` sentinel). Call sites: filecontents
-/// (both forms), fancyvrb/fancybox `{VerbatimOut}`, memoir
-/// `\writeverbatim`.
-pub fn capture_raw_lines_until(end_markers: &[&str]) -> (Vec<String>, Option<String>) {
-  let mut lines: Vec<String> = Vec::new();
-  let mut matched: Option<String> = None;
-  while let Some(line) = read_raw_line() {
-    let t = line.trim();
-    if end_markers.contains(&t) {
-      matched = Some(line);
-      break;
-    }
-    lines.push(line);
-  }
-  (lines, matched)
-}
-
 /// Whether the LaTeX counter `name` exists: latex.ltx's `\@ifundefined{c@#1}`
 /// test in `\setcounter`/`\addtocounter` (:10115-10122).
 pub fn counter_is_defined(name: &str) -> bool {

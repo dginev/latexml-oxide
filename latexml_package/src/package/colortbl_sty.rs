@@ -72,8 +72,9 @@ LoadDefinitions!({
   // colortbl.sty.ltxml L50 `DefMacro('\columncolor[]{}[][]', …)`. The two trailing
   // overhang args are layout-only (ignored) but must be consumed. Read them with
   // LaTeXML's optional-arg reader (the `[]{}[][]` signature), NOT TeX's
-  // `\@ifnextchar[` + a delimited `[#1]`: `\@ifnextchar[` matches a `\lbrack` (a CS
-  // `\let` to `[`) via `\ifx`, but the delimited reader then runs forward hunting a
+  // `\@ifnextchar[` + a delimited `[#1]`: `\@ifnextchar[` matched a `\lbrack` (then a CS
+  // `\let` to `[`; a macro since batch 66d, as latex.ltx:562 has it, so no `\ifx` match now) via `\ifx`, but the
+  // delimited reader then ran forward hunting a
   // LITERAL `[`, swallowing the row's `\\` and cascading the p/m-column mode
   // (`\@end@tabular … internal_vertical`, document + bibliography lost). LaTeXML's
   // `[]` reader matches only a literal `[` char, so a cell that starts with

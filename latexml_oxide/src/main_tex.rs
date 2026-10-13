@@ -104,6 +104,11 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
   // 2-line wrapper file (e.g. `\input{main}`) from removing the
   // documentclass-bearing main.tex. Witness 2307.13586.
   let mut vetoed: Vec<(PathBuf, PathBuf)> = Vec::new();
+  // The files with a `\begin{document}` line: a driver whose veto holds whatever the scores, as Perl's every veto does
+  // (Pack.pm:180-182) — its `\input{preamble}` names the `\documentclass` file, which outscores it (1402.3465,
+  // 2503.12837, 1505.07539, hep-th0609123: the preamble was converted, Fatal `Document:Malformed`). The wrapper of
+  // 2307.13586 has none. Guard `tests::driver_vetoes_the_preamble_it_inputs`.
+  let mut drivers: rustc_hash::FxHashSet<PathBuf> = rustc_hash::FxHashSet::default();
   let mut had_auto_ignore = false;
 
   for tex_file in &tex_files {
@@ -159,6 +164,9 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
       }
       if RE_MAYBE_TEX.is_match(line) {
         maybe_tex = true;
+      }
+      if RE_BEGIN_DOCUMENT.is_match(line) {
+        drivers.insert(tex_file.clone());
       }
       // Perl L133-148: \input/\include → veto the included file
       if let Some(cap) = RE_INPUT_INCLUDE.captures(line) {
@@ -230,7 +238,7 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
   for (vetee, vetoer) in &vetoed {
     let vetee_score = likelihood.get(vetee).copied().unwrap_or(0.0);
     let vetoer_score = likelihood.get(vetoer).copied().unwrap_or(0.0);
-    if vetoer_score >= vetee_score {
+    if vetoer_score >= vetee_score || drivers.contains(vetoer) {
       likelihood.remove(vetee);
     }
   }
@@ -687,6 +695,8 @@ static RE_INPUT_INCLUDE: Lazy<Regex> =
 static RE_END_BYE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
 static RE_END_BYE2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
+static RE_BEGIN_DOCUMENT: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"\\begin\s*\{document\}").unwrap());
 static RE_MAC_TEX: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
 static RE_METAFONT: Lazy<Regex> = Lazy::new(|| Regex::new(r"beginchar\(").unwrap());
@@ -738,6 +748,39 @@ mod tests {
       "\\documentclass{article}\n\\begin{document}x\\end{document}",
     );
     write(d.path(), "intro.tex", "\\input{intro_body}\n");
+    let pick = find_main_tex(d.path()).unwrap();
+    assert_eq!(pick.file_name().unwrap(), "main.tex");
+  }
+
+  // Pack.pm:180-182 vetoes every `\input` argument; a driver with `\begin{document}` vetoes the `\documentclass` preamble
+  // it inputs although the preamble scores higher (1402.3465, 2503.12837, 1505.07539, hep-th0609123), while a wrapper
+  // without one keeps the score gate (2307.13586).
+  #[test]
+  fn driver_vetoes_the_preamble_it_inputs() {
+    let d = tempdir().unwrap();
+    write(
+      d.path(),
+      "paper.tex",
+      "\\input{preamble}\n\\begin{document}\nMain body text.\n\\end{document}\n",
+    );
+    write(
+      d.path(),
+      "preamble.tex",
+      "\\documentclass{article}\n\\usepackage{amsmath}\n",
+    );
+    let pick = find_main_tex(d.path()).unwrap();
+    assert_eq!(pick.file_name().unwrap(), "paper.tex");
+  }
+
+  #[test]
+  fn wrapper_without_begin_document_keeps_its_main() {
+    let d = tempdir().unwrap();
+    write(d.path(), "wrapper.tex", "%\n\\input{main}\n");
+    write(
+      d.path(),
+      "main.tex",
+      "\\documentclass{article}\n\\begin{document}x\\end{document}\n",
+    );
     let pick = find_main_tex(d.path()).unwrap();
     assert_eq!(pick.file_name().unwrap(), "main.tex");
   }
