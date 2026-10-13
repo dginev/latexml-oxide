@@ -24,7 +24,7 @@ LoadDefinitions!({
   // own unit objects inside its argument). The unit-building commands and aliases (`\meter`, `\deka`) are SIunits.sty
   // L51-193 and 266; `\no@qsk`
   // (L117) removes the quantity skip of SIunits' own `\unit`, which is siunitx's here; `\SI@square` (L162) is
-  // `\squaren` or the `\square` SIunits defines, both `\power{#1}{2}`.
+  // `\squaren` or the `\square` SIunits defines, both `\power{#1}{2}`. Beyond Perl's shim: OXIDIZED_DESIGN_DIVERGENCES #565.
   RawTeX!(r"\providecommand\SI@fstyle[1]{\mathrm{#1}}
 \providecommand{\addunit}[2]{\newcommand{#1}{\ensuremath{\SI@fstyle{#2}}}}
 \providecommand{\addprefix}[2]{\newcommand{#1}{\ensuremath{\SI@fstyle{#2}}}}

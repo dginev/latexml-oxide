@@ -91,6 +91,23 @@ fn titling_own_thetitle_does_not_loop() {
   assert_contains(&xml, &["T=Own Title; A=B. Writer, C. Writer; D=2020."]);
 }
 
+/// titling.sty:245-268's `\appendiargdef` wraps the setter in force when titling loads: a class's own `\title`/`\author`
+/// (amsart, revtex4-1) or authblk's `\author` sets `\thetitle`/`\theauthor` too — through the setter's slot call
+/// (revtex4, authblk) or, at `\begin{document}`, from what the setter stored (amsart).
+#[test]
+fn titling_under_class_and_package_setters() {
+  for tex in [
+    include_str!("../../../tools/perfect_kernel/repros/package-bindings/titling_setter_amsart.tex"),
+    include_str!("../../../tools/perfect_kernel/repros/package-bindings/titling_setter_revtex.tex"),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/titling_setter_authblk.tex"
+    ),
+  ] {
+    let xml = convert(tex);
+    assert_contains(&xml, &["TT[My Title] TA[A. Author]"]);
+  }
+}
+
 /// array.sty:121-122, :370, :430-431 the registers raw alignment code uses. Witnesses 2508.08881, 2103.08263,
 /// 2004.09405, 2006.15794.
 #[test]

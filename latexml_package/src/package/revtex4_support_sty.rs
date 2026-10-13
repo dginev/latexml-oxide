@@ -60,7 +60,8 @@ LoadDefinitions!({
   // otherwise, \author should be followed by \affiliation
   // `\author{Brent Preston and Eric Poisson}` names two (gr-qc0606093): the article `\author`'s parse, each author
   // with the labels (Perl revtex4_support makes it one author; 63e).
-  DefMacro!("\\author[]{}",    "\\lx@add@authors@append[annotations={#1}]{#2}");
+  // `\lx@author@after` (sect05.rs): what a package appends to `\author` (titling's `\theauthor`) runs here too.
+  DefMacro!("\\author[]{}",    "\\lx@add@authors@append[annotations={#1}]{#2}\\lx@author@after{#2}");
   // An `\affiliation` that starts with a letter or number mark (all `\author{Name$^{a}$}`s first, then `$^{a}$`-marked
   // lines: 2011.01984, 2301.08449) is labelled by its marks under marked authors, and goes to the authors showing them
   // (relocate_annotations); any other is revtex's group rule, every author before it without one (`annotate=new`): a

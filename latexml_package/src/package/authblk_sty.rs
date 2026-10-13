@@ -45,6 +45,10 @@ LoadDefinitions!({
     state.push(T_BEGIN!());
     state.extend(author.unlist_ref().iter().copied());
     state.push(T_END!());
+    // What a package appends to `\author` (`\lx@author@after`, sect05.rs; titling's `\theauthor`).
+    state.extend([T_CS!("\\lx@author@after"), T_BEGIN!()]);
+    state.extend(author.unlist_ref().iter().copied());
+    state.push(T_END!());
     let state = Tokens::new(state);
     Ok(Tokens::new([author_call(label, author)?.unlist(), state.unlist()].concat()))
   });

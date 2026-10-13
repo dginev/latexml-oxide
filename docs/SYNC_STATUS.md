@@ -843,7 +843,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\SIminus`, `\SIunits[…]`, `\SI@fstyle`, `\degreecelsius` (as ℃) and `\upmu`, its 198 units and prefixes (a table of
   SIunits.sty:195-543; the `derived`/`derivedinbase` sets and begin-document `\micro`/`\square`/`\gray` by its options;
   `\meter`/`\deka` aliases; `\degree`/`\arcminute`/`\arcsecond` as glyphs), all by `\providecommand` over the siunitx
-  shim's `\relax` placeholders, so a unit outside `\si` keeps its symbol (2103.01586's `$221\usk\meter$` lost it). constants (253): ported whole, `\Cl` recording at once (no `.aux`
+  shim's `\relax` placeholders, so a unit outside `\si` keeps its symbol (2103.01586's `$221\usk\meter$` lost it; OD #565). constants (253): ported whole, `\Cl` recording at once (no `.aux`
   round trip), `\null` as `\relax`. newtxmath (400): `\widebar`, `\Angstrom`, `\bigtimes`/`\varprod`, `\vv`,
   `\mapsfrom`, `\transp`, `\lBrack`/`\rBrack`, `\uppartial`, `\lambdabar`, `\smallsum`, `\bigcupdot`, `\sumint`, `\cdotB`,
   `\re@DeclareMathSymbol` (names defined first keep theirs, as `\DeclareMathSymbol` refuses them; `\vv*{x}{i}` the
@@ -867,8 +867,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (kotex extends them). titlesec: `\newpagestyle`/`\renewpagestyle`/`\widenhead` load titleps; `\ttl@straightclass{X}`
   is the kernel heading at X's level (`\lx@startsection`, as `\titleclass`'s commands now: a paper's own `\@startsection`
   is not called). titling: `\thetitle`/`\theauthor`/`\thedate` set by `\protected@xdef` as `\title`/`\author`/`\date`
-  run (titling.sty:245-268, appended to new kernel slots `\lx@title@after`/`\lx@author@after`/`\lx@date@after`), not
-  at load, nor re-`\let` at `\maketitle` (KPE #636: `\title{\thetitle}` looped). array: `\col@sep`, `\@acol`, `\NC@list`, `\extratabsurround` (raw eqnarray.sty, ltxutil.sty,
+  run (titling.sty:245-268, chained onto new kernel slots `\lx@title@after`/`\lx@author@after`/`\lx@date@after`, which
+  the revtex4 and authblk `\author` call too; other class setters' names set at `\begin{document}` from
+  `\@title`/`\@author`/`\@date`), not at load, nor re-`\let` at `\maketitle` (KPE #636: `\title{\thetitle}` looped). array: `\col@sep`, `\@acol`, `\NC@list`, `\extratabsurround` (raw eqnarray.sty, ltxutil.sty,
   dgruyter). authblk: the state `\author`/`\affil` keep (`\AB@las`, `\AB@au@str`, `\AB@thenote`, …), which papers'
   copies of `\affil` read. IEEEtrantools: `\bstctlcite`, `\IEEEstrut`, `\yesnumber`, `\IEEEsettextheight`,
   `\IEEEsettopmargin` (IEEEtran: `\IEEEsettextheight`). accents: `\cc@accent` (a `\hat` written to the .bbl) and

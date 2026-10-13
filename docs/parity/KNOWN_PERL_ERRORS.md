@@ -12775,7 +12775,9 @@ template idiom `\newcommand{\thetitle}{T}\title{\thetitle}` takes the paper's te
 titling.sty.ltxml:85 instead `\let`s them to `\@title`, `\@author`, `\@date` at `\maketitle`; with `\title{\thetitle}`,
 `\@title` is `\thetitle`, so `\thetitle` expands to itself. Trigger
 `\usepackage{titling}\newcommand{\thetitle}{T}\title{\thetitle}\begin{document}\maketitle\thetitle\end{document}`
-→ Perl: an endless expansion (pdflatex: "T"). Fixed in Rust (65z r2): the kernel `\title`, `\author`, `\date` run
-`\lx@title@after`, `\lx@author@after`, `\lx@date@after`, to which titling_sty.rs appends titling's code; guard
-`perfect_kernel_batch65z::titling_own_thetitle_does_not_loop`.
+→ Perl: an endless expansion (pdflatex: "T"). Fixed in Rust (65z r3-r4): the kernel `\title`, `\author`, `\date`
+(and the revtex4 and authblk `\author`) run `\lx@title@after`, `\lx@author@after`, `\lx@date@after` with the stored
+argument, onto which titling_sty.rs chains titling's code; a class setter that reaches no slot (amsart, mnras) has
+the names set at `\begin{document}` from `\@title`/`\@author`/`\@date`. Guards
+`perfect_kernel_batch65z::{titling_own_thetitle_does_not_loop, titling_under_class_and_package_setters}`.
 

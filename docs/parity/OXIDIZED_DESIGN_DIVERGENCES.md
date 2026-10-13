@@ -16935,3 +16935,25 @@ Under pdflatex xy.sty selects the pdf driver, whose frame support (xypdf-fr.tex:
 
 **Rust** (batch 65r, `xy_sty.rs`): loading the frame feature requires curve. Witnesses 2604.10154, 1207.7025,
 2004.14742, 2508.01041. Guard `perfect_kernel_batch65r::xypic_curved_arrow`; repro `stub-dependencies/xypic_curved_arrow`.
+
+### 565. SIunits defines its own commands and units over the siunitx shim (Perl: a siunitx shim with `\squaren` only)
+
+Perl's SIunits.sty.ltxml requires siunitx, lets `\unit` be `\SI` and defines `\squaren`; SIunits.sty's own
+commands (`\addunit`, `\usk`, `\per`, `\power`, `\reciprocal`, `\rp…`, `\SIunits[…]`, L51-193) and its units
+(`\metre`, `\meter`, `\second`, `\kilo`, … `\addunit`/`\addprefix` at L195-543) are undefined there, and the shim leaves
+siunitx's unit names `\relax` outside `\si`, so `$221\usk\meter$` lost its unit (2103.01586; run 340: 440 first
+errors in SIunits' own commands).
+
+**Rust** (batch 65y, `siunits_sty.rs`): the commands, and the units and prefixes as a table of SIunits.sty's top-level
+calls, all by `\providecommand`, which replaces the shim's `\relax` and keeps a definition a paper or package made
+first; `\si`/`\SI` still rebind siunitx's names in their argument. Also: the `derived`/`derivedinbase` sets
+(L302-393) for those options and `\SIunits[…]`; `\micro`, `\square` (an amssymb `\square` is kept, SIunits' error
+for it is not raised) and `\gray`/`\Gray` at the document's start as the options decide (L125-150, 201-209, 271-301);
+`\meter`/`\deka`/`\dekad` (L92-94); `\degree`, `\arcminute`, `\arcsecond` and `\degreecelsius` as their glyphs (° ′ ″
+℃) so a number before them parses. Left out: SIunits' global `\cdot` and `\stepcounter` redefinitions (L80-91,
+L104), the `italian` option's names, the `DeclareOption*` warning. Like the real `\addunit` (`\newcommand`), a
+paper's later `\newcommand` of one of these names (`\rem`, `\rad`, `\gal`, `\are`, `\bel`, `\ton`, `\hour`,
+`\minute`, `\ohm`) keeps the unit — pdflatex stops on "already defined", we drop the paper's definition silently.
+Witnesses 0709.1649, 2103.01586, 1904.06264, 2407.13230. Guard `perfect_kernel_batch65y::siunits_unit_commands`; repro
+`stub-dependencies/siunits_unit_commands`.
+

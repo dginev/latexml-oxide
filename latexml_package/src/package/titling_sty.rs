@@ -42,12 +42,19 @@ LoadDefinitions!({
   // instead, a loop for `\title{\thetitle}` (KNOWN_PERL_ERRORS #636). Run 340: 62 first errors (witnesses
   // 1904.02630, 2008.03410, 2008.01842).
   RawTeX!(r"\def\lx@titling@nothanks{\def\thanks##1{}\def\thanksmark##1{}\def\thanksgap##1{}}
-\def\lx@titling@title{\begingroup\lx@titling@nothanks\protected@xdef\thetitle{\@title}\endgroup}
-\def\lx@titling@author{\begingroup\lx@titling@nothanks\def\and{\unskip, }\protected@xdef\theauthor{\@author}\endgroup}
-\def\lx@titling@date{\begingroup\lx@titling@nothanks\protected@xdef\thedate{\@date}\endgroup}");
-  AddToMacro!("\\lx@title@after", "\\lx@titling@title");
-  AddToMacro!("\\lx@author@after", "\\lx@titling@author");
-  AddToMacro!("\\lx@date@after", "\\lx@titling@date");
+\def\lx@titling@title#1{\begingroup\lx@titling@nothanks\protected@xdef\thetitle{#1}\endgroup}
+\def\lx@titling@author#1{\begingroup\lx@titling@nothanks\def\and{\unskip, }\protected@xdef\theauthor{#1}\endgroup}
+\def\lx@titling@date#1{\begingroup\lx@titling@nothanks\protected@xdef\thedate{#1}\endgroup}
+\let\lx@titling@title@slot\lx@title@after\def\lx@title@after#1{\lx@titling@title@slot{#1}\lx@titling@title{#1}}
+\let\lx@titling@author@slot\lx@author@after\def\lx@author@after#1{\lx@titling@author@slot{#1}\lx@titling@author{#1}}
+\let\lx@titling@date@slot\lx@date@after\def\lx@date@after#1{\lx@titling@date@slot{#1}\lx@titling@date{#1}}");
+  // A class or package binding whose own setter reaches no slot (titling's `\appendiargdef` wraps whatever setter
+  // exists when it loads) leaves the name to `\begin{document}`, where one still undefined is set the same way from
+  // what the setter stored (`\@title`, `\@author`, `\@date`; amsart, mnras), as Perl and the kernel before this did at
+  // `\maketitle`.
+  RawTeX!(r"\def\lx@titling@fallback#1#2{\@ifundefined{#1}{\csname lx@titling@#2\endcsname{\csname @#2\endcsname}}{}}
+\AtBeginDocument{\lx@titling@fallback{thetitle}{title}\lx@titling@fallback{theauthor}{author}%
+\lx@titling@fallback{thedate}{date}}");
   // titling.sty:166-180 — the title block titling's `\maketitle` typesets: each
   // field between its pre/post hooks. Perl's binding keeps the hooks but never
   // reads them (titling.sty.ltxml:28-33, "we'll just punt"), so a class that puts
