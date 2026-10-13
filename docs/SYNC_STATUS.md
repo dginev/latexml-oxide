@@ -798,14 +798,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   run-340 first errors and a census of the shipped copies). lmcs (contrib): `\titlecomment` a `role=titlenote` note,
   `\ACMCCS`/`\amsclass` classifications named by `\ACMCCSname`/`\amsclassname`, `\rsuper`/`\lsuper` (the newer copies'
   braced `\MakeLowercase{#1}`), `\qEd`, `{iteMize}{label}`/`{desCription}` as `{list}` (the enumitem the binding loads
-  would read the label as a key; ~900). lipics (contrib): `{claimproof}` ending ◁ (a proof nested inside keeping ∎),
+  would read the label as a key; ~900). lipics (contrib): `{claimproof}` ending ◁, at its own end or `\claimqedhere`
+  (other proofs end ∎: the class's grey ◀ for every proof is not reproduced, our `\qed` ignoring `\qedsymbol` as Perl's does),
   `\claimqedhere`, `\lipicsEnd`,
   `\proofsubparagraph`, the `(i)`/`(a)`/`(1)` enumerates, `{exercise}`, `{note}` and the starred theorems, `\flag`'s
   image, and the 2016-2019 setters as `DefinitionOrigin::Fallback` (`\EventShortName`, `\serieslogo`, `\DOIPrefix`,
   `\DOI` whose DOI, when set, becomes a pubnote once at `\maketitle`, `\volumeinfo`'s event as a `role=event` note;
   ~700). atlasdoc (contrib): the document-data setters store as atlasdoc.cls does (`\journal` too), and at `\maketitle`
-  the title page's notes follow the class options: with `preprint`/`cernpreprint` the journal reference, or else
-  "Submitted to: <journal>", DOI and preprint number; otherwise "<\subprepend> <journal>" ("Journal:"); `\AtlasPaperWebpage`
+  the title header the class options pick gives the notes, each prefix the note's label: with `preprint`/`cernpreprint`
+  the journal reference, or else "Submitted to: <journal>", DOI and preprint number; with `HEPDATA` the preprint number;
+  with `BOOK` none; otherwise "<\subprepend> <journal>" ("Journal:"); `\AtlasPaperWebpage`
   from `\AtlasRefCode`, `\AtlasDate` as the date, the cover-page commands no-ops (~700). spie (contrib, which the loader
   gives spieman): `\linkable` and v1.00's `\supscr`/`\supscrsm` as Fallback (~650). arximspdf: `\doiurl`/`\arxivurl`
   (moved from the arxstspdf-only loader; 92 of 100 arximspdf copies define them) and `\surl`, `\setattribute`/

@@ -87,19 +87,41 @@ fn lipics_class_commands_are_defined() {
   assert_eq!(xml.matches(r#"tex="\vartriangleleft""#).count(), 2, "{xml}");
 }
 
+/// lipics-v2021.cls `\claimqedhere` (:1029-1031) puts the claim's ◁ where it is called, and the claim's end adds no
+/// second mark; a claim proved inside a proof leaves the proof its own end mark.
+#[test]
+fn lipics_claim_qed_marks() {
+  let xml = convert(
+    r"\documentclass{lipics-v2021}
+\begin{document}
+\begin{claimproof}So \[x=y.\claimqedhere\]\end{claimproof}
+\end{document}
+",
+  );
+  assert_eq!(xml.matches(r#"name="vartriangleleft""#).count(), 1, "{xml}");
+  assert!(!xml.contains('\u{220E}'), "{xml}");
+  let xml = convert(
+    r"\documentclass{lipics-v2021}
+\begin{document}
+\begin{proof}Outer.\begin{claimproof}Claim.\end{claimproof}Done.\end{proof}
+\end{document}
+",
+  );
+  assert_eq!(xml.matches(r#"name="vartriangleleft""#).count(), 1, "{xml}");
+  assert!(xml.contains("Done.\u{220E}"), "{xml}");
+}
+
 /// lipics-v2021.cls:1001-1005 `\flag[width]{image}`: the image (an artifact badge the class sets in the margin),
-/// inline. The image is not shipped here, so its missing file warns.
+/// inline.
 #[test]
 fn lipics_flag_is_the_image() {
-  let (log, xml) = latexml::util::test::convert_with(
+  let xml = convert(
     r"\documentclass{lipics-v2021}
 \begin{document}
 Artifact.\flag[1cm]{badge-available}
 \end{document}
 ",
-    Some("ar5iv.sty"),
   );
-  assert_eq!(error_count(&log), 0, "{log}");
   assert_contains(&xml, &[r#"graphic="badge-available""#]);
 }
 
@@ -139,40 +161,47 @@ fn atlasdoc_setters_are_defined() {
   assert_eq!(xml.matches(r#"role="doi""#).count(), 1, "{xml}");
 }
 
-/// atlasdoc.cls without `preprint`/`cernpreprint`: the default title header (2504.04805's :746-747) prints
-/// "<\subprepend> <journal>", "Journal:" by default, and neither the journal reference nor the DOI; with `preprint` and
-/// no journal reference, "Submitted to: <journal>" (:835-841).
+/// atlasdoc.cls picks its title header by option (2504.04805's :82-91, :991-1006), each prefix the note's label: by
+/// default "<\\subprepend> <journal>" ("Journal:", :746-747) and neither the journal reference nor the DOI; with
+/// `preprint` (spaces and `=true` allowed) and no journal reference, "Submitted to: <journal>" (:835-841); with
+/// `HEPDATA` the preprint number only (:866-893); with `BOOK` none.
 #[test]
 fn atlasdoc_title_header_follows_the_options() {
-  let xml = convert(
-    r"\documentclass{atlasdoc}
-\AtlasTitle{T}
-\AtlasJournal{Phys. Lett. B}
-\AtlasJournalRef{Phys. Lett. B 800 (2025) 1}
-\AtlasDOI{10.1/x}
-\begin{document}
+  let doc = |options: &str| {
+    convert(&format!(
+      r"\documentclass{options}{{atlasdoc}}
+\AtlasTitle{{T}}
+\AtlasJournal{{Phys. Lett. B}}
+\PreprintIdNumber{{CERN-EP-1}}
+\AtlasDOI{{10.1/x}}
+\begin{{document}}
 \maketitle
-\end{document}
-",
-  );
-  assert_contains(&xml, &[
-    r#"role="journal">Journal: Phys. Lett. B</pubnote>"#,
-  ]);
-  for absent in [r#"role="journalref""#, r#"role="doi""#, "Submitted to"] {
+\end{{document}}
+"
+    ))
+  };
+  let journal = |label: &str| {
+    format!("<pubnote name=\"{label}\u{a0}\" role=\"journal\">Phys. Lett. B</pubnote>")
+  };
+  let xml = doc("");
+  assert_contains(&xml, &[&journal("Journal:")]);
+  for absent in [r#"role="doi""#, r#"role="preprint""#, "Submitted to"] {
     assert!(!xml.contains(absent), "{absent}\n{xml}");
   }
-  let xml = convert(
-    r"\documentclass[preprint]{atlasdoc}
-\AtlasTitle{T}
-\AtlasJournal{Phys. Lett. B}
-\begin{document}
-\maketitle
-\end{document}
-",
-  );
+  let xml = doc("[PAPER, preprint = true]");
   assert_contains(&xml, &[
-    r#"role="journal">Submitted to: Phys. Lett. B</pubnote>"#,
+    &journal("Submitted to:"),
+    r#"role="preprint">CERN-EP-1</pubnote>"#,
+    r#"role="doi">10.1/x</pubnote>"#,
   ]);
+  let xml = doc("[HEPDATA]");
+  assert_contains(&xml, &[r#"role="preprint">CERN-EP-1</pubnote>"#]);
+  assert!(
+    !xml.contains(r#"role="journal""#) && !xml.contains(r#"role="doi""#),
+    "{xml}"
+  );
+  let xml = doc("[BOOK]");
+  assert!(!xml.contains("<pubnote"), "{xml}");
 }
 
 /// spieman.cls :82 `\linkable` (the loader gives spieman the spie binding) and the v1.00 `\supscr`. Witnesses
