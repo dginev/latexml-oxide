@@ -2782,15 +2782,51 @@ fn delete_extra_brace(token: &Token) -> Result<bool> {
   Ok(false)
 }
 
-/// Input ending inside a `\left` group (its group code, latexml_engine tex_math.rs `\lx@math@left@group`) — an
-/// argument such as `\frac{\left( a}{b}`, whose digestion reads its own tokens only, or the document's end: tex.web
-/// §1065 `off_save` inserts `\right.` ("Missing \right. inserted"), which closes the group where it stands; without it
-/// the group stayed open past the argument and the formula swallowed the paragraphs after it. A Warning: TeX errs,
-/// Perl reports the open group only at the document's end, and the inserted `\right.` is TeX's recovery (user ruling
-/// 2026-10-11 on TeX-only errors). Returns whether `\right.` was inserted. OXIDIZED_DESIGN #530. Guard
-/// `perfect_kernel_batch65d::formula_end_closes_an_open_left`.
+/// The reading context a `\left` was read in ([`gullet::reading_context`]: serial and depth), bound on its group's
+/// frame by `\lx@math@left@group` (latexml_engine tex_math.rs) through [`record_left_group_input`].
+const LEFT_INPUT: &str = "lx@left@input";
+/// The depth half of [`LEFT_INPUT`].
+const LEFT_INPUT_DEPTH: &str = "lx@left@input@depth";
+
+/// Record on the innermost frame — the `\left` group, whose group code `\lx@math@left@group` has just set — the reading
+/// context the `\left` was read in, for `close_left_group_at_input_end`.
+pub fn record_left_group_input() {
+  let (serial, depth) = gullet::reading_context();
+  assign_frame_value(LEFT_INPUT, Stored::Int(serial as i64));
+  assign_frame_value(LEFT_INPUT_DEPTH, Stored::Int(depth as i64));
+}
+
+/// Whether the input that just ran out is the one the innermost `\left` group was opened in, or encloses it: the
+/// group's recorded reading context ([`record_left_group_input`]) is the current one, or one nested in it that has
+/// ended. Not when the `\left` was read outside the input that ended — a binding's `\left( \lx@xmarg{…}{#1} \right)`
+/// (physics.sty's `\left(#1\right)`, 2605.02768 `\cosh(a\over 2)`, 2606.01486 `\expval{a \over b}`) digests its
+/// argument from a mouth of its own, and that argument's end is no end of the `\left`'s input. A group without a
+/// record (none bound on its frame) counts as opened here.
+fn left_group_input_ended() -> bool {
+  let (Some(Stored::Int(serial)), Some(Stored::Int(depth))) = (
+    value_in_frame(LEFT_INPUT, 0),
+    value_in_frame(LEFT_INPUT_DEPTH, 0),
+  ) else {
+    return true;
+  };
+  let (current, current_depth) = gullet::reading_context();
+  serial == current as i64 || depth > current_depth as i64
+}
+
+/// Input ending inside a `\left` group (its group code, latexml_engine tex_math.rs `\lx@math@left@group`) that was
+/// opened in that input ([`left_group_input_ended`]) — an argument such as `\frac{\left( a}{b}`, whose digestion reads
+/// its own tokens only, or the document's end: tex.web §1065 `off_save` inserts `\right.` ("Missing \right. inserted"),
+/// which closes the group where it stands; without it the group stayed open past the argument and the formula
+/// swallowed the paragraphs after it. A `\left` read outside the ending input stays open: tex.web §1191-1192, only its
+/// `\right` or an error closes the `math_left_group`, and an argument's end is no end of input for TeX at all — the
+/// argument is a `{…}` group inside the `\left` group (physics.sty's `\left(#1\right)`: closing the outer group there
+/// made the binding's own `\right` "Extra \right.", 2605.02768, or a later `\lx@hidden@egroup` meet an `aligned` row's
+/// `\begingroup`, 2606.01486). A Warning: TeX errs, Perl reports the open group only at the document's end, and the
+/// inserted `\right.` is TeX's recovery (user ruling 2026-10-11 on TeX-only errors). Returns whether `\right.` was
+/// inserted. OXIDIZED_DESIGN #530. Guards `perfect_kernel_batch65d::formula_end_closes_an_open_left`,
+/// `perfect_kernel_batch66g::*`.
 fn close_left_group_at_input_end() -> bool {
-  if !in_left_group() {
+  if !in_left_group() || !left_group_input_ended() {
     return false;
   }
   insert_missing_right_before(Tokens!());

@@ -1077,3 +1077,12 @@ bm.sty's `\bm@define` (:307-316) `\xdef`s `\blangle` to a bold `\delimiter` (`\b
 stretchy bold ⟨ with 0 errors. Ours defines it as `\bm{\langle}`, which `\left`'s delimiter scan cannot read: Warning
 "Missing delimiter (. inserted)" (naming `\bm` on the 65 bundle, `\lx@bm@bold` on 65j), a null `\left`, a non-stretchy
 bold ⟨ after it. SYNC_STATUS row BD. Not fixed.
+
+### left_outside_an_argument_survives_its_end, left_outside_an_argument_in_aligned — GREEN (66g); left_inside_an_argument_closes_at_its_end — CONTROL
+physics.sty sets `\cosh(#1)`/`\expval{#1}` as `\left(#1\right)` / `\left\langle#1\right\rangle`; our binding digests `#1`
+in `\lx@xmarg`, from a mouth of its own. Since 65d (OD #530) the end of that argument's input closed the OUTER `\left`
+group the binding opened ("Missing \right. inserted"), so the binding's own `\right` was "Extra \right." (2605.02768
+`\cosh(\beta\lambda\over 2)`) or met an `aligned` row's `\begingroup` and lost the equation (2606.01486). RUST-ONLY
+regression (65c and Perl 0). Fix stomach.rs `close_left_group_at_input_end`: only a `\left` read in the input that ran
+out (the reading context `\lx@math@left@group` records, `gullet::reading_context`) is closed there. Guards
+`perfect_kernel_batch66g::*`.

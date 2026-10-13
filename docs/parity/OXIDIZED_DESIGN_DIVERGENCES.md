@@ -16000,7 +16000,16 @@ the constructor itself), so that a rejected `\middle` leaves nothing behind. Whe
   end constructor `\end{X}` (`\begin{equation}\left( x \end{equation}`; stomach.rs `is_environment_end` in
   `digest_next_body` — no TeX-level `\endX` exists to read again), each read again after the `\right.`, or the end
   of an argument's input (`\frac{\left( a}{b}`; stomach.rs `close_left_group_at_input_end` in `digest_next_body`): "Missing \right.
-  inserted" and a null `\right.`. A LaTeX environment whose end code holds the `\right` (`\newenvironment{paren}
+  inserted" and a null `\right.`. Only the end of the input the `\left` was read in closes its group: `\lx@math@left@group`
+  records the reading context (`gullet::reading_context`, the serial and depth of the `reading_from_mouth` context, 0
+  for the document's own input) on the group's frame, and an input's end closes the group when that context is the one
+  ending or one nested in it that has already ended. A `\left` read outside the ending input stays open, as tex.web
+  §1191-1192 keeps a `math_left_group` until its `\right` or an error: for TeX an argument's end is no end of input, the
+  argument being a `{…}` group inside the `\left` group. A binding's `\left( \lx@xmarg{…}{#1} \right)` (physics.sty's
+  `\left(#1\right)`) digests its argument from a mouth of its own, and from 65d to 66g that argument's end closed the
+  binding's own `\left`: "Extra \right." and a dangling XMRef for `\cosh(a\over 2)` (2605.02768), an `\expval{a \over b}`
+  in `aligned` whose `\right\rangle` met the row's `\begingroup` and lost the equation (2606.01486). Guards
+  `perfect_kernel_batch66g::*`. A LaTeX environment whose end code holds the `\right` (`\newenvironment{paren}
   {\left(}{\right)}`) closes the group itself, unchecked (round 3's `\end`-time check broke it and looped in an
   `\edef`). Before, the formula ran on to the next `$` and swallowed the
   paragraphs after it. A math ender read again after the inserted `\right.` leaves an empty whatsit in the group that
@@ -16034,7 +16043,8 @@ Witnesses: run 336's X1 (48 Fatal:Timeout:IfLimit with first error `unexpected:\
 `\left\{`: 0705.0452 0802.0663 0804.1292 0809.0095 0903.4903 …, all 48 converting, errors 3541 → 826 over 109
 witnesses); 2605.21750 (`\let\@left\left`); tests/parse/parens.tex:43 (`\left\delimiter"426830A`, byte-identical) and
 its `\let\mydelim\delimiter` twin (before: the code digested as math); 1207.4709 (byte-identical); 2008.11762 (an
-etoolbox `\robustify\left` now errs "\left not a macro" as in pdflatex), zhlineskip.tex:234 (`\env@cases`). Guards `perfect_kernel_batch65d::*`, golden
+etoolbox `\robustify\left` now errs "\left not a macro" as in pdflatex), zhlineskip.tex:234 (`\env@cases`); 2605.02768 and 2606.01486 (physics' `\left(#1\right)` around an isolated argument,
+66g). Guards `perfect_kernel_batch65d::*`, `perfect_kernel_batch66g::*`, golden
 `tests/parse/left_right_delimiters`, `perfect_kernel_batch56::{let_at_left_left_does_not_loop,
 left_right_in_text_mode_are_plain_text}`.
 

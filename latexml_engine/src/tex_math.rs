@@ -1179,9 +1179,11 @@ LoadDefinitions!({
     after_construct => sub[document, whatsit] { stretch_delimiter(document, whatsit)?; });
 
   // tex.web §1191 `push_math(math_left_group)`: the group `\left` opens is the `\lx@hidden@bgroup` that follows it,
-  // and this, the first thing digested inside it, records its group code.
+  // and this, the first thing digested inside it, records its group code — and the input the `\left` was read in, so
+  // that only that input's end closes the group (stomach.rs `close_left_group_at_input_end`; 2605.02768, 2606.01486).
   DefPrimitive!("\\lx@math@left@group", sub[_args] {
     assign_frame_value("lx@group@code", Stored::Token(T_CS!("\\left")));
+    record_left_group_input();
   });
 
   // \lx@hidden@egroup@right: like \lx@hidden@egroup, but softer about missing \left

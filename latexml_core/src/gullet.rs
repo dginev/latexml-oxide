@@ -4869,6 +4869,15 @@ where FnR: FnOnce() -> Result<R> {
   Ok(results)
 }
 
+/// The reading context tokens are read in now, as `(serial, depth)`: the serial [`reading_from_mouth`] gives each
+/// isolated context (a constructor's argument digested on its own; 0 for the document's own input, `\input` files
+/// included), and how many such contexts are open. A `\left` records it (stomach.rs `record_left_group_input`), so that
+/// only the end of the input it was read in closes its group (OXIDIZED_DESIGN #530).
+pub fn reading_context() -> (u64, usize) {
+  let g = gullet!();
+  (g.ctx_serial, g.ctx_stack.len())
+}
+
 /// Whether the token just read ends an isolated reading context ([`reading_from_mouth`]: a token list digested on its
 /// own, such as a constructor's argument `{$x}`, which may come wrapped in a further brace pair): only `}`s left in
 /// its pushback and its mouth exhausted. A `}` read here is the argument's own closing brace, which TeX strips with the
