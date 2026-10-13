@@ -68,7 +68,7 @@ LoadDefinitions!({
   let shipped = crate::shipped_class::shipped_class_text("mdpi")?;
   for package in [
     "caption", "lastpage", "float", "enumitem", "mathpazo", "setspace", "epstopdf", "upgreek",
-    "subfig",
+    "subfig", "paracol",
   ] {
     if shipped
       .as_deref()
@@ -76,6 +76,19 @@ LoadDefinitions!({
     {
       RequirePackage!(package);
     }
+  }
+  // The copies that load paracol (2105.08579's, 2201.05363's, 1809.00601's: :55 `\RequirePackage{paracol}`) open
+  // `\begin{paracol}{2}` for the first page's side column (citation, editor, dates) and `\switchcolumn` to the body,
+  // in `\AfterEndPreamble` after the class's own `\maketitle` (2105.08579's :880-887, directly; 1809.00601's :908-912,
+  // through `\maketitlen`), and the template's paper closes it with `\end{paracol}` before its references: without
+  // the opening, that `\end{paracol}` closed the wrong group (run 340: the `\endgroup` error of ~470 mdpi papers). The
+  // side column's content is the frontmatter's here, so the body starts at the switch. Only a copy that opens paracol
+  // does so (1307.3961's 2013 copy does not); with no copy shipped, nothing is opened. Guards
+  // `perfect_kernel_batch66b::{mdpi_opens_the_paracol_the_paper_closes, mdpi_without_paracol_opens_nothing}`.
+  if shipped.as_deref().is_some_and(|text| {
+    crate::shipped_class::class_text_loads(text, "paracol") && text.contains("\\begin{paracol}")
+  }) {
+    RawTeX!(r"\AfterEndPreamble{\begin{paracol}{2}\switchcolumn}");
   }
   // mdpi.cls:178-262: amsthm with the `mdpi` style and the capitalised
   // environments on their own counters (`\begin{Proposition}`, `{Remark}`,

@@ -910,6 +910,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\title … \endtitle` and the file ends in the argument (math0402285, math0101270, math9906120; ~33 papers; raw-loading
   needs an A/B against gr-qc9507042's fic.sty, which the amsppt fallback fixed); gtmacros papers ship no gtmacros.tex
   (math9804003, math9902122, math9905203: harness).
+- **66c** (run-340 `\endgroup` cluster, the empty-trigger frame: 937 papers have an `\endgroup` error whose frame was opened
+  by no token, half of a 40-paper sample mdpi papers closing `\end{paracol}`): the mdpi binding follows the copy the
+  paper ships — a copy that loads paracol (mdpi.cls:55) opens `\begin{paracol}{2}\switchcolumn` (the first page's side
+  column) in its `\AfterEndPreamble`, after its own `\maketitle` (2105.08579's :880-887; 1809.00601's :908-912 via
+  `\maketitlen`), so the binding loads paracol and opens it there too, and the template's `\end{paracol}` closes it (raw
+  paracol.sty converts cleanly: the columns flow); a copy without paracol (1307.3961's 2013 one) and a paper shipping
+  none are unchanged. And (R3 of the study, OD #569) a lock against the files holds for their `\let` as for their
+  `\def` (`state::assign_meaning`: arabtex's `\let\endabstract\endquotation`, 2401.14559), and mn2e_support's
+  `{keywords}` locks its end half against the files (mn2e-breakabs.sty's `\endkeywords`, 1403.3615, 1607.03149; plus
+  mn2e.cls:992 `\ifSFB@keywords`). Witnesses 2105.08579, 2201.05363. Guards `perfect_kernel_batch66b::{mdpi_opens_the_paracol_the_paper_closes,
+  mdpi_without_paracol_opens_nothing, file_let_of_a_files_locked_end_half_is_refused,
+  mn2e_breakabs_keeps_the_keywords_end_half}`. A/B over 74 mdpi papers (`ab_66c`: 45 of 65v's, 29 of the empty-trigger
+  list) vs 66b1: errors 154 → 100, Error status 37 → 17, none Fatal; the only word changes are error text gone
+  (`{paracol} 2 \switchcolumn` printed by the undefined environment). Residual: 1905.04581's own `\begin{paracol}`
+  after pgfplots figures raises paracol's `\ifinner` "Not in outer par mode" (2 errors; a mode left inner upstream,
+  not reproduced minimally). The rest of the `\endgroup` study
+  (`run340/clusters/endgroup_rootcauses.md`): R1 an eqnarray cell `a}{b` (latex.ltx:15760-15765 `{##}` templates; the
+  gullet's before-column marker already resets align_state as tex.web §324, but real braces would put `{…}` into every
+  eqnarray `tex` attribute: needs a hidden template group, ~86 papers), R2 diagrams stub body read raw inside an
+  alignment cell (~51), R4/R5 singletons; the parked mode-switch family (29/56) beyond mdpi.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

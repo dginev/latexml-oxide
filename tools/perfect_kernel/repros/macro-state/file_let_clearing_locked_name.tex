@@ -1,0 +1,21 @@
+% witness: manuals homework-demo-cn, jwjournal-demo-en (projlib-author.sty:243-246 \cs_undefine:N \abstract/\endabstract, then \newenvsc{abstract})
+% oracle:  pdflatex 0 errors (\NewDocumentEnvironment{abstract} on the cleared names)
+% engines: rust 66c1 = 1 error (End of environment 'abstract' already defined: the clearing \let refused); rust 65int8 = 0
+% expect:  0 errors; "Body." prints
+% status:  GREEN (66c)
+\begin{filecontents*}[overwrite]{clearabs.sty}
+\ProvidesPackage{clearabs}
+\ExplSyntaxOn
+\cs_undefine:N \abstract
+\cs_undefine:N \endabstract
+\NewDocumentEnvironment { abstract } { } { } { }
+\ExplSyntaxOff
+\end{filecontents*}
+\documentclass{article}
+\usepackage{clearabs}
+\begin{document}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+Body.
+\end{document}

@@ -69,3 +69,158 @@ fn locked_robust_cite_keeps_its_inner_definition() {
   ));
   assert!(xml.contains(r#"<cite class="ltx_citemacro_cite">[<bibref bibrefs="a" separator="," yyseparator=","/>]</cite>"#), "{xml}");
 }
+
+/// A paper's mdpi.cls (2105.08579's, 2201.05363's, 1809.00601's, abridged) loads paracol (:55) and, after the preamble,
+/// runs its own `\maketitle` and opens `\begin{paracol}{2}` for the first page's side column, then `\switchcolumn`s to
+/// the body (`\AfterEndPreamble`, 2105.08579's :880-887); the template's paper closes it with `\end{paracol}` before
+/// the references. The binding follows the copy the paper ships, so that `\end{paracol}` closes the environment the
+/// class opened, as in pdflatex (run 340: the `\endgroup` error of ~470 mdpi papers) — once, whether or not the paper
+/// also calls `\maketitle` (which the class has made a no-op).
+#[test]
+fn mdpi_opens_the_paracol_the_paper_closes() {
+  for maketitle in ["", "\\maketitle\n"] {
+    let (log, xml) = latexml::util::test::convert_files_with(
+      &format!(
+        r"\documentclass{{Definitions/mdpi}}
+\Title{{A title}}
+\begin{{document}}
+{maketitle}\section{{Introduction}}
+Body text.
+\end{{paracol}}
+\reftitle{{References}}
+\end{{document}}
+"
+      ),
+      &[(
+        "Definitions/mdpi.cls",
+        r"\ProvidesClass{mdpi}[2021/01/01 MDPI paper class]
+\RequirePackage{paracol}
+\AfterEndPreamble{\maketitle\let\maketitle\relax\columnratio{0.23}\begin{paracol}{2}\switchcolumn}
+",
+      )],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{maketitle}{log}"
+    );
+    assert!(xml.contains("Body text."), "{xml}");
+    assert!(xml.contains(">Introduction</title>"), "{xml}");
+  }
+}
+
+/// An mdpi.cls copy that never opens paracol (1307.3961's 2013 one) leaves `\maketitle` as it was: nothing is left
+/// open at `\end{document}`.
+#[test]
+fn mdpi_without_paracol_opens_nothing() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{Definitions/mdpi}
+\Title{A title}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
+",
+    &[(
+      "Definitions/mdpi.cls",
+      "\\ProvidesClass{mdpi}[2013/04/05 MDPI paper class]\n\\RequirePackage{graphicx}\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("Body text."), "{xml}");
+}
+
+/// `:locked@files` (the kernel abstract's end half, sect05.rs, the IMjournal fix) is a lock against class and package
+/// files, which `install_definition` applied to a `\def` but a `\let` bypassed: arabtex's asect.sty:297
+/// `\let\endabstract\endquotation`, with alatex.sty:105-109's raw `\end` calling it, closed the kernel abstract's body
+/// as a quotation (2 errors). Witness 2401.14559.
+#[test]
+fn file_let_of_a_files_locked_end_half_is_refused() {
+  let xml = convert(include_str!(
+    "../../../tools/perfect_kernel/repros/macro-state/file_let_of_locked_end_half.tex"
+  ));
+  assert_eq!(xml.matches("<abstract").count(), 1, "{xml}");
+  assert!(xml.contains("Abstract text."), "{xml}");
+  assert!(xml.contains("Body."), "{xml}");
+}
+
+/// mn2e-breakabs.sty (shipped by MNRAS papers; :87-95) redefines only the end half of mn2e.cls's `{keywords}`
+/// (:992-1012, a `\list`): the binding's keywords begin half reads its body, so the package's `\endlist` met no list
+/// (2 errors). The binding's end half is locked against files, as the abstract's is (sect05.rs). Witnesses 1403.3615,
+/// 1607.03149.
+#[test]
+fn mn2e_breakabs_keeps_the_keywords_end_half() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{mn2e}
+\usepackage{mn2e-breakabs}
+\begin{document}
+\title{T}\author{A}
+\maketitle
+\begin{abstract}
+Abs.
+\end{abstract}
+\begin{keywords}
+k1; k2
+\end{keywords}
+\section{Intro}
+Text.
+\end{document}
+",
+    &[(
+      "mn2e-breakabs.sty",
+      r"\ProvidesPackage{mn2e-breakabs}[2009/04/07 v1.0 abstract breaking package]
+\def\endkeywords{\if@twocolumn
+  \endlist\addvspace{37pt plus 0.5\baselineskip}\finish@SFBbox
+ \else
+  \endlist
+ \fi
+ \@thanks
+ \gdef\@thanks{}
+ \SFB@keywordstrue
+}
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("k1; k2"), "{xml}");
+  assert!(xml.contains("Text."), "{xml}");
+}
+
+/// A file may still clear a files-locked name before defining it anew (projlib-author.sty:245-246 `\cs_undefine:N
+/// \endabstract`, then scontents' `\NewDocumentEnvironment{abstract}`; the homework and jwjournal classes): a `\let`
+/// to undefined or `\relax` replaces nothing, so it is not refused, and expl3's "already defined" check passes as in
+/// pdflatex.
+#[test]
+fn file_let_clearing_a_files_locked_name_is_kept() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    r"\documentclass{article}
+\usepackage{clearabs}
+\begin{document}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+Body.
+\end{document}
+",
+    &[(
+      "clearabs.sty",
+      r"\ProvidesPackage{clearabs}
+\ExplSyntaxOn
+\cs_undefine:N \abstract
+\cs_undefine:N \endabstract
+\NewDocumentEnvironment { abstract } { } { } { }
+\ExplSyntaxOff
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains("<p xml:id=\"abstract1.1\">Abstract text.</p>"),
+    "{xml}"
+  );
+  assert!(xml.contains("<p xml:id=\"p1.1\">Body.</p>"), "{xml}");
+}

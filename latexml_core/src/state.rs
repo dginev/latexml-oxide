@@ -3365,7 +3365,29 @@ pub fn locked_control_sequences() -> Vec<String> {
 /// $meaning should be a definition (for defining active control sequences)
 /// or another token, for \let
 pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<Scope>) {
+  // A lock against the class and package files (`"{cs}:locked@files"`, [`name_carries_lock`]) holds for their `\let`
+  // as for their `\def` ([`install_definition`]): arabtex's asect.sty:297 `\let\endabstract\endquotation`, which its
+  // own raw `\end` (alatex.sty:105-109) then calls, closed the kernel abstract's body as a quotation (2401.14559). A
+  // plain `:locked` is left to `\let`, as Perl's `Let` checks none (Package.pm:383-390). OXIDIZED_DESIGN #569; guard
+  // `perfect_kernel_batch66b::file_let_of_a_files_locked_end_half_is_refused`. A `\let` to an undefined token only
+  // clears the name, and stays allowed: the "undefine, then define anew" idiom (projlib-author.sty:245-246
+  // `\cs_undefine:N \endabstract` before its `\NewDocumentEnvironment{abstract}`, the homework and jwjournal
+  // classes), whose new definition the lock then meets as any `\def` does; guard
+  // `perfect_kernel_batch66b::file_let_clearing_a_files_locked_name_is_kept`.
   let mut meaning = meaning.into();
+  if crate::definition::origin::current_origin()
+    == crate::definition::origin::DefinitionOrigin::File
+    && !state_is_unlocked()
+    && matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    && token.with_cs_name(|cs| arena::get(s!("{cs}:locked@files")).is_some_and(lookup_bool_sym))
+    && !match &meaning {
+      Stored::None => true,
+      Stored::Token(target) => matches!(lookup_meaning(target), None | Some(Stored::None)),
+      _ => false,
+    }
+  {
+    return;
+  }
   // short-circuit guard to avoid e.g. T_MATH let to itself
   if let Stored::Token(ref mt) = meaning
     && token == mt

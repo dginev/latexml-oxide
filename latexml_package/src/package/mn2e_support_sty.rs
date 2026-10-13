@@ -62,6 +62,12 @@ LoadDefinitions!({
   // (\nokeywords no-op is defined further below in this file.)
   DefMacro!("\\keywords", "\\lx@begin@keywords");
   DefMacro!("\\endkeywords", "\\lx@end@keywords");
+  // The begin half reads the body up to its end (`\lx@begin@keywords`), so the end half is locked against the class
+  // and package files (`:locked@files`, as the kernel abstract's, sect05.rs): mn2e-breakabs.sty:87-95 (shipped by MNRAS
+  // papers) redefines `\endkeywords` alone as mn2e.cls:1004-1012's `\endlist`, which then met no list (1403.3615,
+  // 1607.03149). mn2e.cls:992 `\ifSFB@keywords`, which that package's end half and `\nokeywords` set and read.
+  AssignValue!("\\endkeywords:locked@files" => true, Some(Scope::Global));
+  RawTeX!(r"\newif\ifSFB@keywords");
 
   // Perl L186: `\bsp` is a no-op DefMacro (not DefConstructor).
   def_macro_noop("\\bsp")?;

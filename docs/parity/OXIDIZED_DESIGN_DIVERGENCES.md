@@ -17001,3 +17001,23 @@ the kernel `\cite` is a locked robust macro today. The robust constructor path (
 the inner name only, the other half of the same asymmetry; no witness needs it. Witnesses 2210.02246, 2303.09770 (Fatal
 → 0 errors). Guard `perfect_kernel_batch66b::locked_robust_cite_keeps_its_inner_definition`; repro
 `macro-state/locked_robust_inner_cite`.
+
+### 569. A lock against the files holds for their `\let` too; a binding's read-to-end environment locks its end half
+
+`:locked@files` (#453: the kernel minipage; the abstract's end half, sect05.rs) refuses a class's or package's
+redefinition while leaving the document free; `install_definition` applied it to a `\def`, but `\let` went through
+`assign_meaning`, which checked nothing (as Perl's `Let`, Package.pm:383-390, checks no lock). arabtex's
+asect.sty:297 `\let\endabstract\endquotation`, called by its own raw `\end` (alatex.sty:105-109), closed the kernel
+abstract's body as a quotation (2401.14559, 2 errors).
+
+**Rust** (batch 66c, `state::assign_meaning`): a `\let` from a class or package file of a name carrying
+`:locked@files` is refused; a plain `:locked` is still left to `\let`, as in Perl. A `\let` to an undefined token
+(expl3's `\cs_undefine:N`) only clears the name and is kept: projlib-author.sty:243-246 backs up and undefines
+`\abstract`/`\endabstract` before its `\newenvsc{abstract}`, whose `\NewDocumentEnvironment` errs "End of environment
+'abstract' already defined" on a name still defined (the homework and jwjournal manuals); the new definition then
+meets the lock as any `\def` does. The same rule for a binding whose
+begin half reads its body to the end: mn2e_support's `{keywords}` (`\lx@begin@keywords`) locks `\endkeywords` against
+the files, since mn2e-breakabs.sty:87-95 (shipped by MNRAS papers) redefines that end half alone as mn2e.cls's
+`\endlist` (1403.3615, 1607.03149); mn2e.cls:992 `\ifSFB@keywords` is defined. Guards
+`perfect_kernel_batch66b::{file_let_of_a_files_locked_end_half_is_refused, file_let_clearing_a_files_locked_name_is_kept,
+mn2e_breakabs_keeps_the_keywords_end_half}`; repros `macro-state/{file_let_of_locked_end_half, file_let_clearing_locked_name}`.
