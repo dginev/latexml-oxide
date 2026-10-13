@@ -65,7 +65,7 @@ LoadDefinitions!({
   DefMath!("\\varoast",             None, "\u{229B}",         role => "MULOP");
   // stmaryrd.sty:149-150 `\let\oast\circledast`, `\let\ocircle\circledcirc`: amssymb's glyphs
   // (amssymb_sty.rs), defined here whether or not amssymb came first. `\oast` was the first error of 111
-  // run-340 papers (witnesses 2103.07308, 1904.01031).
+  // run-340 papers still failing at the int7 head (121 in all of run 340; witnesses 2103.07308, 1904.01031).
   DefMath!("\\oast",                None, "\u{229B}",         role => "MULOP");
   DefMath!("\\ocircle",             None, "\u{229A}",         role => "MULOP");
   DefMath!("\\varobar",             None, "\u{29B6}",         role => "RELOP");

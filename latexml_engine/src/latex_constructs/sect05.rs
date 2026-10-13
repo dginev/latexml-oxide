@@ -868,6 +868,12 @@ pub(crate) fn load() -> Result<()> {
 
   Let!("\\@title", "\\@empty");
   Let!("\\@shorttitle", "\\@empty");
+  // What a package appends to `\title`, `\author` and `\date` (titling.sty:245-268's `\appendiargdef`), run after the
+  // kernel stored the argument (`\@title`, `\@author`, `\@date`): the kernel `\title` and `\author` are locked, so a
+  // binding adds to these instead (`AddToMacro!`), as to `\lx@maketitle@begin`.
+  DefMacro!("\\lx@title@after", "");
+  DefMacro!("\\lx@author@after", "");
+  DefMacro!("\\lx@date@after", "");
   // Perl (PR #2767): '\gdef\@shorttitle{#1}\gdef\@title{#2}
   //   \ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}'.
   // Rust-only: also \gdef the non-@ \shorttitle, which user styles reference
@@ -885,7 +891,7 @@ pub(crate) fn load() -> Result<()> {
     // errors; Perl pool:1066 shares the raw copy). KNOWN_PERL_ERRORS #145.
     // Guard: `perfect_kernel_batch54::frontmatter_copies_the_halved_macro`.
     // 65a: a call the document body sealed off goes to the class's own `\title` (`sealed_class_call`).
-    r"\lx@sealed@class@call{title}{#1}{#2}{\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}}",
+    r"\lx@sealed@class@call{title}{#1}{#2}{\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}\lx@title@after}",
     locked => true);
   // The class's own call (`sealed_class_call`) when the document body sealed this one off, else the kernel's.
   DefMacro!("\\lx@sealed@class@call{}{}{}{}", sub[(name, opt, arg, kernel)] {
@@ -932,7 +938,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\@date", "\\@empty");
   DefMacro!(
     "\\date{}",
-    r"\def\@date{#1}\expandafter\lx@add@date@halved\expandafter{\@date}"
+    r"\def\@date{#1}\expandafter\lx@add@date@halved\expandafter{\@date}\lx@date@after"
   );
   DefMacro!(
     "\\lx@add@date@halved{}",
@@ -1036,7 +1042,7 @@ pub(crate) fn load() -> Result<()> {
     }
   });
   DefMacro!("\\author[]{}",
-    r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@handed\lx@author@trailing}",
+    r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@handed\lx@author@trailing\lx@author@after}",
     locked => true);
   // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
   // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically

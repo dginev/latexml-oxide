@@ -741,8 +741,8 @@ LoadDefinitions!({
     })
   });
   // caption.sty:415-428 `\captiontext*[<number>]{<text>}`: the float's caption typeset without a counter
-  // step or a list entry — unstarred the caption (`\caption@@make`), starred its label and text alone
-  // (caption3.sty:1661 `\caption@@@make`, no box), as papers set a panel's "(a)" over its graphic with
+  // step or a list entry — unstarred the caption (`\caption@@make`), starred the same unboxed
+  // (caption3.sty:1661 `\caption@@@make`): the label, the separator and the text, as papers set a panel's "(a)" over its graphic with
   // `\captiontext*{}` after a `\phantomcaption`. `[<number>]` is the counter's value for it, in a group
   // (`\caption@@@text`). The label is the type's `\lx@fnum@@`, as a caption's; a sub-float's
   // (`\@captype` a sub-type in subcaption's groups and sub-floats: caption.sty:661
@@ -765,8 +765,11 @@ LoadDefinitions!({
     tokens.extend([T_CS!("\\lx@fnum@@"), T_BEGIN!()]);
     tokens.extend(Explode!(captype));
     tokens.push(T_END!());
+    // With text, the label's separator before it, the ": " of a kernel caption (`\format@title@<type>`, sect09.rs),
+    // here as text: what `\captiontext` sets is text in the float, not its `ltx:caption`. Without text, the label
+    // alone (caption3's empty-text form, the "(a)" over a panel).
     if !text.is_empty() {
-      tokens.push(T_SPACE!());
+      tokens.extend(ExplodeText!(": "));
       tokens.extend(text.unlist());
     }
     tokens.push(T_CS!("\\endgroup"));

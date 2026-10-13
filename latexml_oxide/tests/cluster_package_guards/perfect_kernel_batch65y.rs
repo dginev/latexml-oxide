@@ -3,17 +3,11 @@
 //! `tools/perfect_kernel/repros/{stub-dependencies,ams-internals}/*`.
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
-fn convert_with_warnings(tex: &str, warnings: usize) -> (String, String) {
+fn convert(tex: &str) -> String {
   let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
-  assert_eq!(
-    (error_count(&log), warning_count(&log)),
-    (0, warnings),
-    "{log}"
-  );
-  (log, xml)
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  xml
 }
-
-fn convert(tex: &str) -> String { convert_with_warnings(tex, 0).1 }
 
 fn assert_contains(xml: &str, texts: &[&str]) {
   for text in texts {
@@ -21,19 +15,22 @@ fn assert_contains(xml: &str, texts: &[&str]) {
   }
 }
 
-/// SIunits.sty L51-193, 266: `\addunit`, `\power`, `\usk`, `\reciprocal`, `\rpsquare`, `\degreecelsius`, `\upmu`.
-/// Witnesses 0709.1649, 2103.01586, 1904.06264, 2407.13230.
+/// SIunits.sty L51-193, 266 and its units (L195-543): `\addunit`, `\power`, `\usk`, `\reciprocal`, `\rpsquare`,
+/// `\degreecelsius`, `\upmu`, and the unit names a paper uses outside `\si` (`$221\usk\meter$`, which lost its
+/// metre while the siunitx shim left the name `\relax`). Witnesses 0709.1649, 2103.01586, 1904.06264, 2407.13230.
 #[test]
 fn siunits_unit_commands() {
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/stub-dependencies/siunits_unit_commands.tex"
   ));
   assert_contains(&xml, &[
-    r#"tex="3\,\mathrm{Pa}""#,
-    r#"<XMTok role="UNKNOWN">Pa</XMTok>"#,
+    r#"tex="3\,\mathrm{Pa}" text="3 * Pa""#,
+    r#"tex="221\;\mathrm{m}" text="221 * m""#,
+    r#"text="5 * (m * s ^ (- 1))""#,
+    r#"tex="90\mathrm{\degree}" text="90 * degree""#,
+    r#"text="kg""#,
     r#"<XMTok name="degreecelsius" role="UNKNOWN">℃</XMTok>"#,
     r#"<XMTok name="upmu" role="UNKNOWN">μ</XMTok>"#,
-    r#"<XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>"#,
   ]);
 }
 
@@ -71,18 +68,13 @@ fn libertine_figure_styles() {
   assert_contains(&xml, &["2</sup> and 123 with 45."]);
 }
 
-/// fourier.sty's math symbols. The one warning: the parser does not pair `⦀` fences (math parked). Witnesses
-/// 2008.00463, 2508.01413, 1708.05248.
+/// fourier.sty's math symbols (the `\VERT x \VERT` fence pair the parser does not pair:
+/// RED repro math-parse/fourier_vert_fences.tex, math parked). Witnesses 2008.00463, 2508.01413, 1708.05248.
 #[test]
 fn fourier_math_symbols() {
-  let (log, xml) = convert_with_warnings(
-    include_str!("../../../tools/perfect_kernel/repros/stub-dependencies/fourier_math_symbols.tex"),
-    1,
-  );
-  assert!(
-    log.contains("Warning:unparsed_math:VERTBAR_UNKNOWN_VERTBAR"),
-    "{log}"
-  );
+  let xml = convert(include_str!(
+    "../../../tools/perfect_kernel/repros/stub-dependencies/fourier_math_symbols.tex"
+  ));
   assert_contains(&xml, &[
     r#"<XMTok name="llbracket" role="OPEN">⟦</XMTok>"#,
     r#"<XMTok name="rrbracket" role="CLOSE">⟧</XMTok>"#,
@@ -94,7 +86,7 @@ fn fourier_math_symbols() {
   ]);
 }
 
-/// newtxmath's own symbols. Witnesses 2008.07007, 2604.11906, 2407.15192.
+/// newtxmath's own symbols; `\vv*{x}{i}` (:1217) the arrow over x with i as its subscript. Witnesses 2008.07007, 2604.11906, 2407.15192.
 #[test]
 fn newtxmath_symbols() {
   let xml = convert(include_str!(
@@ -105,6 +97,7 @@ fn newtxmath_symbols() {
     "<XMTok name=\"Angstrom\" role=\"UNKNOWN\">\u{212B}</XMTok>",
     r#"meaning="nary-times" name="bigtimes" role="BIGOP" scriptpos="mid">⨉</XMTok>"#,
     r#"<XMTok name="overrightarrow" role="OVERACCENT" stretchy="true">→</XMTok>"#,
+    r#"tex="{\overrightarrow{x}}_{\mkern-1.0mui}""#,
     r#"<XMTok name="mapsfrom" role="ARROW">↤</XMTok>"#,
     r#"meaning="transpose" name="transp" role="UNKNOWN">⊺</XMTok>"#,
     r#"<XMTok name="llbracket" role="OPEN">⟦</XMTok>"#,
@@ -154,16 +147,30 @@ fn amsbsy_binrel_math_atom() {
   assert!(!xml.contains("ltx_math_unparsed"), "{xml}");
 }
 
-/// mathtools.sty :1015-1024 `\newcases`: a cases construct with both delimiters and text conditions. Witnesses
-/// 2604.21785, 2103.12049.
+/// mathtools.sty :1015-1024 `\newcases`: a cases construct with the delimiters the call names (`.` for none) and the
+/// conditions in the mode its right preamble sets (text in `lrcases`, math in `mrcases`). Witnesses 2604.21785,
+/// 2103.12049.
 #[test]
 fn mathtools_newcases() {
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/ams-internals/mathtools_newcases.tex"
   ));
   assert_contains(&xml, &[
-    r#"<XMTok role="OPEN" stretchy="true">{</XMTok>"#,
-    r#"<XMTok role="CLOSE" stretchy="true">}</XMTok>"#,
-    "otherwise",
+    r#"text="f = cases@(1, [if &gt;x0], 0, [otherwise])""#,
+    r#"text="cases@(a, x &gt; 0, b, x &lt; 0) = g""#,
   ]);
+  assert_eq!(
+    xml
+      .matches(r#"role="OPEN" stretchy="true">{</XMTok>"#)
+      .count(),
+    1,
+    "{xml}"
+  );
+  assert_eq!(
+    xml
+      .matches(r#"role="CLOSE" stretchy="true">}</XMTok>"#)
+      .count(),
+    2,
+    "{xml}"
+  );
 }

@@ -23,8 +23,8 @@ LoadDefinitions!({
   if !is_defined("\\geqslant") { DefMath!("\\geqslant", None, "\u{2A7E}", role => "RELOP", meaning => "greater-than-or-equals"); }
   if !is_defined("\\nleqslant") { DefMath!("\\nleqslant", None, "\u{2A7D}\u{0338}", role => "RELOP"); }
   if !is_defined("\\ngeqslant") { DefMath!("\\ngeqslant", None, "\u{2A7E}\u{0338}", role => "RELOP"); }
-  DefMath!("\\parallelslant", None, "\u{2AFD}", role => "RELOP");
-  DefMath!("\\nparallelslant", None, "\u{2AFD}\u{0338}", role => "RELOP");
+  if !is_defined("\\parallelslant") { DefMath!("\\parallelslant", None, "\u{2AFD}", role => "RELOP"); }
+  if !is_defined("\\nparallelslant") { DefMath!("\\nparallelslant", None, "\u{2AFD}\u{0338}", role => "RELOP"); }
   if !is_defined("\\nparallel") { DefMath!("\\nparallel", None, "\u{2226}", role => "RELOP"); }
   if !is_defined("\\vDash") { DefMath!("\\vDash", None, "\u{22A8}", role => "RELOP"); }
   if !is_defined("\\nvDash") { DefMath!("\\nvDash", None, "\u{22AD}", role => "RELOP"); }
@@ -47,9 +47,9 @@ LoadDefinitions!({
   if !is_defined("\\llbracket") { DefMath!("\\llbracket", None, "\u{27E6}", role => "OPEN"); }
   if !is_defined("\\rrbracket") { DefMath!("\\rrbracket", None, "\u{27E7}", role => "CLOSE"); }
   RawTeX!(r"\def\dblbrackleft{\llbracket}\def\dblbrackright{\rrbracket}");
-  DefMath!("\\VERT", None, "\u{2980}", role => "VERTBAR");
+  if !is_defined("\\VERT") { DefMath!("\\VERT", None, "\u{2980}", role => "VERTBAR"); }
   if !is_defined("\\wideparen") { DefMath!("\\wideparen Digested", "\u{23DC}", operator_role => "OVERACCENT"); }
-  DefMath!("\\widearc Digested", "\u{23DC}", operator_role => "OVERACCENT");
+  if !is_defined("\\widearc") { DefMath!("\\widearc Digested", "\u{23DC}", operator_role => "OVERACCENT"); }
   if !is_defined("\\iint") {
     DefMath!("\\iint", None, "\u{222C}", role => "INTOP", meaning => "double-integral", variablesize_op => true);
   }

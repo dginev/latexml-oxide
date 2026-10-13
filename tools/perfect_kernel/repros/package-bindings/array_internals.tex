@@ -2,7 +2,7 @@
 %   2004.09405, 2401.02879 (`\NC@list`, ltxutil.sty), 2006.15794, 2006.04593 (`\@acol`); run 340: 88 + 56 + 11 + 8
 % oracle:  pdflatex 0 errors
 % engines: rust 65int7 = 4 errors (`\extratabsurround`, `\col@sep`, `\NC@list`, `\@acol` undefined)
-% expect:  0 errors; the cell "A"
+% expect:  0 errors; the cell "A" and "Sep 2.0pt, surround 4.0pt." (the registers as set)
 % status:  RED (65int7) -> GREEN (65z)
 \documentclass{article}
 \usepackage{array}
@@ -14,4 +14,5 @@
 \makeatother
 \begin{document}
 \begin{tabular}{c}A\end{tabular}
+\makeatletter Sep \the\col@sep, surround \the\extratabsurround.\makeatother
 \end{document}

@@ -12766,3 +12766,16 @@ gensymb.sty.ltxml:20-34 defines `\celcius` (and its `\lx@text@celcius`/`\lx@math
 `\celsius` is undefined. Trigger `\usepackage{gensymb}\begin{document}20\,\celsius\end{document}` → Perl:
 undefined `\celsius` (pdflatex: 20 ℃). Run 340: the first error of 214 papers. Fixed in Rust (65y,
 gensymb_sty.rs, `\celcius` kept beside it; witnesses 2604.04150, 2508.00245).
+
+## 636. titling's `\thetitle` loops when the title is `\thetitle`
+
+titling.sty:245-268 appends to `\title`, `\author` and `\date` a `\protected@xdef` of `\thetitle`, `\theauthor` and
+`\thedate` from the argument (with `\thanks` dropped, `\and` as a comma), so they exist from the call on and the
+template idiom `\newcommand{\thetitle}{T}\title{\thetitle}` takes the paper's text once. Perl's
+titling.sty.ltxml:85 instead `\let`s them to `\@title`, `\@author`, `\@date` at `\maketitle`; with `\title{\thetitle}`,
+`\@title` is `\thetitle`, so `\thetitle` expands to itself. Trigger
+`\usepackage{titling}\newcommand{\thetitle}{T}\title{\thetitle}\begin{document}\maketitle\thetitle\end{document}`
+→ Perl: an endless expansion (pdflatex: "T"). Fixed in Rust (65z r2): the kernel `\title`, `\author`, `\date` run
+`\lx@title@after`, `\lx@author@after`, `\lx@date@after`, to which titling_sty.rs appends titling's code; guard
+`perfect_kernel_batch65z::titling_own_thetitle_does_not_loop`.
+

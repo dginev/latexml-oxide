@@ -17,7 +17,7 @@ fn assert_contains(xml: &str, texts: &[&str]) {
 }
 
 /// caption.sty:633-638 `\subcaptionsetup`, :396-413 `\captionlistentry` (the counter step a `\label` after it
-/// refers to), :415-428 `\captiontext*` (the panel's label, "(a)"). Witnesses 2508.10437, 2604.10403, 2407.10358.
+/// refers to), :415-428 `\captiontext*` (the panel's label, "(a)") and `\captiontext` (label, separator, text). Witnesses 2508.10437, 2604.10403, 2407.10358.
 #[test]
 fn caption_subcaption_setup_list_entry_and_text() {
   let xml = convert(include_str!(
@@ -27,6 +27,7 @@ fn caption_subcaption_setup_list_entry_and_text() {
     r#"<p xml:id="S0.F1.2"><text fontsize="90%" xml:id="S0.F1.2.1">(a)</text></p>"#,
     r#"<figure inlist="lof" labels="LABEL:fig:entry" xml:id="S0.F2">"#,
     r#"<tag role="refnum">2</tag>"#,
+    ">Figure 2</text>: Text only</p>",
   ]);
 }
 
@@ -63,7 +64,9 @@ fn titlesec_pagestyle_and_straight_class() {
   assert_contains(&xml, &[
     r#"<title><tag close=" ">1</tag>One</title>"#,
     r#"<title><tag close=" ">2</tag>Two</title>"#,
+    r#"<title><tag close=" ">3</tag>Three</title>"#,
   ]);
+  assert!(!xml.contains("BROKEN"), "{xml}");
 }
 
 /// titling.sty:245-252 `\thetitle` is the title, without its `\thanks`, before `\maketitle`. Witnesses 1904.02630,
@@ -76,6 +79,18 @@ fn titling_thetitle_before_maketitle() {
   assert_contains(&xml, &[r#"<p xml:id="p1.1">Title: The Title</p>"#]);
 }
 
+/// titling.sty:245-268 sets `\thetitle`, `\theauthor` and `\thedate` by `\protected@xdef` when `\title`, `\author`,
+/// `\date` run, so `\newcommand{\thetitle}{…}\title{\thetitle}` takes that text once; `\maketitle`'s
+/// `\global\let\thetitle\@title` (Perl titling.sty.ltxml:85, KNOWN_PERL_ERRORS #636) made it expand to itself, a Fatal
+/// timeout.
+#[test]
+fn titling_own_thetitle_does_not_loop() {
+  let xml = convert(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/titling_own_thetitle.tex"
+  ));
+  assert_contains(&xml, &["T=Own Title; A=B. Writer, C. Writer; D=2020."]);
+}
+
 /// array.sty:121-122, :370, :430-431 the registers raw alignment code uses. Witnesses 2508.08881, 2103.08263,
 /// 2004.09405, 2006.15794.
 #[test]
@@ -83,7 +98,10 @@ fn array_internal_registers() {
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/package-bindings/array_internals.tex"
   ));
-  assert_contains(&xml, &[r#"<td align="center" xml:id="p1.1.1.1">A</td>"#]);
+  assert_contains(&xml, &[
+    r#"<td align="center" xml:id="p1.1.1.1">A</td>"#,
+    "Sep 2.0pt, surround 4.0pt.",
+  ]);
 }
 
 /// authblk.sty:98-167 the state an `\affil`-derived `\email` reads; the frontmatter as without it. Witnesses
@@ -152,7 +170,7 @@ fn crop_size_and_marks() {
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/package-bindings/crop_size.tex"
   ));
-  assert_contains(&xml, &[r#"<p xml:id="p1.1">Text.</p>"#]);
+  assert_contains(&xml, &["Text. Stock 100.0pt by 200.0pt."]);
 }
 
 /// enumitem.sty:139 `\labelindent`, :969 `\enit@format`, :944 `\enit@type` (0 in an enumerate: the inline item

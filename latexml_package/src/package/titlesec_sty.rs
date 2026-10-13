@@ -330,7 +330,7 @@ LoadDefinitions!({
       cmd,
       None,
       mouth::tokenize_internal(TeXString::assembled(
-        s!("\\@startsection{{{name}}}{{{}}}{{}}{{}}{{}}{{}}", ttll + shift))),
+        s!("\\lx@startsection{{{name}}}{{{}}}{{}}{{}}{{}}{{}}", ttll + shift))),
       None,
     )?;
   });
@@ -375,7 +375,8 @@ LoadDefinitions!({
   }
 });
 
-/// The heading `\ttl@straightclass{<name>}` sets: the kernel `\@startsection{<name>}{<level>}…` (which
+/// The heading `\ttl@straightclass{<name>}` sets: the kernel `\@startsection{<name>}{<level>}…` (under its own name
+/// `\lx@startsection`, which a raw class that re-lets `\@startsection` does not reach; sect04.rs) (which
 /// reads the star, `[<toc>]` and title), at the kernel level of a standard sectioning command, else at
 /// the `\ttll@<name>` level `\titleclass` recorded, shifted by one in a chapterless class as
 /// `\titleclass` defines the command (titlesec's own level 0 is `\part` there, LaTeX's `\chapter`).
@@ -401,6 +402,6 @@ fn ttl_class_heading(name: &str) -> Tokens {
       + shift
   });
   mouth::tokenize_internal(TeXString::assembled(s!(
-    "\\@startsection{{{name}}}{{{level}}}{{}}{{}}{{}}{{}}"
+    "\\lx@startsection{{{name}}}{{{level}}}{{}}{{}}{{}}{{}}"
   )))
 }

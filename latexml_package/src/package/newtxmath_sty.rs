@@ -26,32 +26,50 @@ LoadDefinitions!({
   );
   // newtxmath's own symbols papers reach for (:928-988, 1216, 1399-1497, 1744, 2072, 2344, 2866, 3191; `\widebar`,
   // `\Angstrom` and `\bigtimes` led the first errors of 400 run-340 papers, witnesses 2008.07007, 2604.11906,
-  // 2407.15192), as their glyphs. A name another package defined first keeps that definition.
+  // 2407.15192), as their glyphs. A name a paper or another package defined first keeps that definition, as
+  // `\DeclareMathSymbol` refuses one (the reason for `\re@DeclareMathSymbol` above).
   if !is_defined("\\widebar") {
     DefMath!("\\widebar Digested", "\u{00AF}", operator_role => "OVERACCENT");
   }
-  DefMath!("\\Angstrom", None, "\u{212B}", font => { shape => "upright", forceshape => true });
+  if !is_defined("\\Angstrom") {
+    DefMath!("\\Angstrom", None, "\u{212B}", font => { shape => "upright", forceshape => true });
+  }
   if !is_defined("\\bigtimes") {
     DefMath!("\\bigtimes", "\u{2A09}", meaning => "nary-times", role => "BIGOP", scriptpos => "mid",
       variablesize_op => true);
   }
   RawTeX!(r"\let\varprod\bigtimes");
-  DefMath!("\\bigcupdot", "\u{2A03}", role => "BIGOP", scriptpos => "mid", variablesize_op => true);
-  DefMath!("\\sumint", "\u{2A0B}", role => "INTOP", meaning => "summation-integral", variablesize_op => true);
-  DefMath!("\\smallsum", None, "\u{2211}", role => "SUMOP", meaning => "sum");
-  // :1216 `\protected\def\vv{\@ifstar{\vvstar}{\txvec}}`, the arrow accent (starred: the arrow over the whole
-  // argument), as esvect's `\vv`.
-  DefMacro!("\\vv OptionalMatch:* {}", "\\overrightarrow{#2}", protected => true);
+  if !is_defined("\\bigcupdot") {
+    DefMath!("\\bigcupdot", "\u{2A03}", role => "BIGOP", scriptpos => "mid", variablesize_op => true);
+  }
+  if !is_defined("\\sumint") {
+    DefMath!("\\sumint", "\u{2A0B}", role => "INTOP", meaning => "summation-integral", variablesize_op => true);
+  }
+  if !is_defined("\\smallsum") {
+    DefMath!("\\smallsum", None, "\u{2211}", role => "SUMOP", meaning => "sum");
+  }
+  // :1216-1217 `\protected\def\vv{\@ifstar{\vvstar}{\txvec}}`, the arrow accent, and `\vvstar#1#2`, the arrow over
+  // #1 with #2 as its subscript (as esvect.sty:44's).
+  RawTeX!(
+    r"\protected\def\vv{\@ifstar\vvstar\overrightarrow}
+\def\vvstar#1#2{{\overrightarrow{#1}}_{\mkern-1mu\relax#2}}"
+  );
   if !is_defined("\\mapsfrom") {
     DefMath!("\\mapsfrom", None, "\u{21A4}", role => "ARROW");
   }
   RawTeX!(r"\let\mappedfrom\mapsfrom\let\lBrack\llbracket\let\rBrack\rrbracket");
-  DefMath!("\\transp", None, "\u{22BA}", meaning => "transpose");
-  DefMath!("\\uppartial", None, "\u{2202}", font => { shape => "upright", forceshape => true });
+  if !is_defined("\\transp") {
+    DefMath!("\\transp", None, "\u{22BA}", meaning => "transpose");
+  }
+  if !is_defined("\\uppartial") {
+    DefMath!("\\uppartial", None, "\u{2202}", font => { shape => "upright", forceshape => true });
+  }
   if !is_defined("\\lambdabar") {
     DefMath!("\\lambdabar", None, "\u{019B}");
   }
-  DefMath!("\\cdotB", None, "\u{22C5}");
+  if !is_defined("\\cdotB") {
+    DefMath!("\\cdotB", None, "\u{22C5}");
+  }
   // newtxmath.sty:2466-2467 and :2577: its own `\varmathbb` (txfonts' above), `\vmathbb` the
   // same, and a third blackboard variant `\vvmathbb` (the same font here). Constructors of their
   // own, so the reversion keeps the author's name.

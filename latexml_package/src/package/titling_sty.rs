@@ -33,18 +33,21 @@ LoadDefinitions!({
   DefRegister!("\\droptitle" =>       Glue::new(0));
   DefRegister!("\\thanksmarkwidth" => Glue!("1.8em"));
   DefRegister!("\\thanksmargin" =>    Glue!("-1.8em"));
-  // titling.sty:245-268 appends to `\title`, `\author` and `\date` the setting of `\thetitle`, `\theauthor`
-  // and `\thedate`: the argument without its `\thanks` (and with `\and` as a comma), usable before
-  // `\maketitle` (a custom title page's `\LARGE\thetitle`). The kernel `\title` (locked) stores the
-  // argument in `\@title`; these read it there, with titling's redefinitions applied as they are read.
-  // `\maketitle` then fixes them (below). Run 340: 62 first errors (witnesses 1904.02630, 2008.03410,
-  // 2008.01842).
-  RawTeX!(r"\def\thetitle{{\let\thanks\@gobble\let\thanksmark\@gobble\let\thanksgap\@gobble\@title}}
-\def\theauthor{{\let\thanks\@gobble\def\and{\unskip, }\let\thanksmark\@gobble\let\thanksgap\@gobble\@author}}
-\def\thedate{{\let\thanks\@gobble\let\thanksmark\@gobble\let\thanksgap\@gobble\@date}}");
-  Let!("\\lx@titling@maketitle", "\\maketitle");
-  DefMacro!("\\maketitle",
-    "\\global\\let\\theauthor\\@author\\global\\let\\thedate\\@date\\global\\let\\thetitle\\@title\\lx@titling@maketitle");
+  // titling.sty:245-268 appends to `\title`, `\author` and `\date` the setting of `\thetitle`, `\theauthor` and
+  // `\thedate`: the argument expanded once (`\protected@xdef`) with its `\thanks` dropped and `\and` as a comma, so
+  // they exist from the call on (a custom title page's `\LARGE\thetitle` before or without `\maketitle`). The kernel
+  // `\title` and `\author` are locked; their after-slots take the appended code. As in titling, nothing defines them
+  // before the call, so a paper's own `\thetitle` stands until its `\title`, and `\title{\thetitle}` takes that
+  // definition's text instead of looping. Perl (titling.sty.ltxml:85) `\let`s them to `\@title` at `\maketitle`
+  // instead, a loop for `\title{\thetitle}` (KNOWN_PERL_ERRORS #636). Run 340: 62 first errors (witnesses
+  // 1904.02630, 2008.03410, 2008.01842).
+  RawTeX!(r"\def\lx@titling@nothanks{\def\thanks##1{}\def\thanksmark##1{}\def\thanksgap##1{}}
+\def\lx@titling@title{\begingroup\lx@titling@nothanks\protected@xdef\thetitle{\@title}\endgroup}
+\def\lx@titling@author{\begingroup\lx@titling@nothanks\def\and{\unskip, }\protected@xdef\theauthor{\@author}\endgroup}
+\def\lx@titling@date{\begingroup\lx@titling@nothanks\protected@xdef\thedate{\@date}\endgroup}");
+  AddToMacro!("\\lx@title@after", "\\lx@titling@title");
+  AddToMacro!("\\lx@author@after", "\\lx@titling@author");
+  AddToMacro!("\\lx@date@after", "\\lx@titling@date");
   // titling.sty:166-180 — the title block titling's `\maketitle` typesets: each
   // field between its pre/post hooks. Perl's binding keeps the hooks but never
   // reads them (titling.sty.ltxml:28-33, "we'll just punt"), so a class that puts

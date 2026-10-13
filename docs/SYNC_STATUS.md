@@ -837,18 +837,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\subfigures` (3 of 120 sampled; its `merk` counter machinery). Guards `perfect_kernel_batch65x::*`; repros
   `class-bindings/{pos,dmtcs,svmult,acmart,ieeetran}_class_commands`,
   `class-bindings/{iopart_journals,elsarticle_marks}`.
-- **65y**: symbol and unit packages define the names papers call (run-340 first errors, `scratch_356a0c47/r7/still.txt`).
+- **65y**: symbol and unit packages define the names papers call (run-340 first errors still undefined at the int7
+  head, per package, `scratch_356a0c47/r7/still.txt`).
   SIunits (440): its own `\addunit`, `\addprefix`, `\usk`/`\unitskip`, `\per`, `\power`, `\squared`…`\rpfourth`,
-  `\SIminus`, `\SIunits[…]`, `\SI@fstyle`, `\degreecelsius` (as ℃) and `\upmu`, by `\providecommand` over the siunitx
-  shim (its units stay `\relax` outside `\si`). constants (253): ported whole, `\Cl` recording at once (no `.aux`
+  `\SIminus`, `\SIunits[…]`, `\SI@fstyle`, `\degreecelsius` (as ℃) and `\upmu`, its 198 units and prefixes (a table of
+  SIunits.sty:195-543; the `derived`/`derivedinbase` sets and begin-document `\micro`/`\square`/`\gray` by its options;
+  `\meter`/`\deka` aliases; `\degree`/`\arcminute`/`\arcsecond` as glyphs), all by `\providecommand` over the siunitx
+  shim's `\relax` placeholders, so a unit outside `\si` keeps its symbol (2103.01586's `$221\usk\meter$` lost it). constants (253): ported whole, `\Cl` recording at once (no `.aux`
   round trip), `\null` as `\relax`. newtxmath (400): `\widebar`, `\Angstrom`, `\bigtimes`/`\varprod`, `\vv`,
   `\mapsfrom`, `\transp`, `\lBrack`/`\rBrack`, `\uppartial`, `\lambdabar`, `\smallsum`, `\bigcupdot`, `\sumint`, `\cdotB`,
-  `\re@DeclareMathSymbol`. gensymb `\celsius` (214, KPE #635); eucal `\EuScript` + options (229); libertine `\useosf`
+  `\re@DeclareMathSymbol` (names defined first keep theirs, as `\DeclareMathSymbol` refuses them; `\vv*{x}{i}` the
+  two-argument `\vvstar`). gensymb `\celsius` (214, KPE #635); eucal `\EuScript` + options (229); libertine `\useosf`
   and the type1 figure-style commands (233); fourier's math symbols (163; names amssymb defined first keep theirs);
   stmaryrd `\oast`/`\ocircle` (118); mathtools `\newcases`/`\renewcases` as `\lx@ams@cases` (93); amsbsy `\binrel@`,
   `\binrel@@` (its content keeps its own class: no box measures math spacing here), `\math@atom` (161). Residual: a `\Cr` before its
   `\Cl` prints LaTeX's first-run "C^st ??" with a warning (no `.aux` round trip; 1307.4858); the
-  parser does not pair `⦀` fences (`\VERT x \VERT`, math parked); not taken (below the bar): amsmath's
+  parser does not pair `⦀` fences (RED `math-parse/fourier_vert_fences`, math parked); `\newcases` variants revert as
+  `\begin{cases}` (the shared kernel reversion, base_xmath.rs:1471, as Perl's for `dcases` too); acronym's first-use
+  double space after `\AC@placelabel` is Perl's (acronym.sty.ltxml:85-86; structure/acro.xml), kept; not taken (below the bar): amsmath's
   `\@mathmeasure` without amsmath (34), mathtools' `\delimsize` outside a paired delimiter (11). Guards `perfect_kernel_batch65y::*`; repros
   `stub-dependencies/{siunits_unit_commands,gensymb_celsius,eucal_euscript,libertine_figure_styles,fourier_math_symbols,`
   `newtxmath_symbols,stmaryrd_oast,constants_labelled_constants}`, `ams-internals/{amsbsy_binrel_math_atom,mathtools_newcases}`.
@@ -857,10 +863,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
 - **65z**: package bindings define the commands and internals their real `.sty` defines that papers, or the raw code
   they load, call (run-340 first-error "undefined" cluster, row 7). caption: `\subcaptionsetup` (`\captionsetup[sub…]`),
   `\captionlistentry` (the caption's counter step for a `\label`, no caption), `\captiontext*` (the float's label and
-  text, the panel "(a)" in a subcaption group). bigstrut/multirow: `\bigstrutjot`. natbib: the `\hyper@nat…` hooks
+  text, the panel "(a)" in a subcaption group; with text, "Figure 2: text", the label's separator as a caption's). bigstrut/multirow: `\bigstrutjot`. natbib: the `\hyper@nat…` hooks
   (kotex extends them). titlesec: `\newpagestyle`/`\renewpagestyle`/`\widenhead` load titleps; `\ttl@straightclass{X}`
-  is the kernel heading at X's level. titling: `\thetitle`/`\theauthor`/`\thedate` before `\maketitle` (the stored
-  title without `\thanks`). array: `\col@sep`, `\@acol`, `\NC@list`, `\extratabsurround` (raw eqnarray.sty, ltxutil.sty,
+  is the kernel heading at X's level (`\lx@startsection`, as `\titleclass`'s commands now: a paper's own `\@startsection`
+  is not called). titling: `\thetitle`/`\theauthor`/`\thedate` set by `\protected@xdef` as `\title`/`\author`/`\date`
+  run (titling.sty:245-268, appended to new kernel slots `\lx@title@after`/`\lx@author@after`/`\lx@date@after`), not
+  at load, nor re-`\let` at `\maketitle` (KPE #636: `\title{\thetitle}` looped). array: `\col@sep`, `\@acol`, `\NC@list`, `\extratabsurround` (raw eqnarray.sty, ltxutil.sty,
   dgruyter). authblk: the state `\author`/`\affil` keep (`\AB@las`, `\AB@au@str`, `\AB@thenote`, …), which papers'
   copies of `\affil` read. IEEEtrantools: `\bstctlcite`, `\IEEEstrut`, `\yesnumber`, `\IEEEsettextheight`,
   `\IEEEsettopmargin` (IEEEtran: `\IEEEsettextheight`). accents: `\cc@accent` (a `\hat` written to the .bbl) and
