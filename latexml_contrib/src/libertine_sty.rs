@@ -27,8 +27,7 @@ LoadDefinitions!({
   // (`\useosf` was the first error of 233 run-340 papers; witnesses 2103.15770, 2103.03800). `\useosf`
   // records the old-style figure style the families are named by; superior figures are superscripts.
   RawTeX!(
-    r"\makeatletter
-\def\libertine@figurealign{T}\def\libertine@figurestyle{LF}
+    r"\def\libertine@figurealign{T}\def\libertine@figurestyle{LF}
 \def\biolinum@figurealign{T}\def\biolinum@figurestyle{LF}
 \providecommand*\useosf{\edef\libertine@figurestyle{OsF}\edef\biolinum@figurestyle{OsF}}
 \providecommand*\sufigures{}
@@ -41,7 +40,6 @@ LoadDefinitions!({
 \DeclareTextFontCommand{\tabularnums}{\fontfamily{LinuxLibertineT-T\libertine@figurestyle}\selectfont}
 \DeclareTextFontCommand{\proportionalnums}{\fontfamily{LinuxLibertineT-\libertine@figurestyle}\selectfont}
 \DeclareTextFontCommand{\tabularnumsf}{\fontfamily{LinuxBiolinumT-T\biolinum@figurestyle}\selectfont}
-\DeclareTextFontCommand{\proportionalnumsf}{\fontfamily{LinuxBiolinumT-\biolinum@figurestyle}\selectfont}
-\makeatother"
+\DeclareTextFontCommand{\proportionalnumsf}{\fontfamily{LinuxBiolinumT-\biolinum@figurestyle}\selectfont}"
   );
 });

@@ -22,8 +22,7 @@ LoadDefinitions!({
   // siunitx owns: its unit names are
   // `\relax` outside `\si`, which `\providecommand` treats as undefined, and `\si`
   // rebinds them to its own unit objects inside its argument.
-  RawTeX!(r"\makeatletter
-\providecommand\SI@fstyle[1]{\mathrm{#1}}
+  RawTeX!(r"\providecommand\SI@fstyle[1]{\mathrm{#1}}
 \providecommand{\addunit}[2]{\newcommand{#1}{\ensuremath{\SI@fstyle{#2}}}}
 \providecommand{\addprefix}[2]{\newcommand{#1}{\ensuremath{\SI@fstyle{#2}}}}
 \providecommand*{\usk}{\ensuremath{\;}}
@@ -53,8 +52,7 @@ LoadDefinitions!({
 \providecommand*\SIunits@opt@thinspace{\renewcommand*{\usk}{\ensuremath{\,}}}
 \providecommand*\SIunits@opt@thickqspace{}
 \providecommand*\SIunits@opt@mediumqspace{}
-\providecommand*\SIunits@opt@thinqspace{}
-\makeatother");
+\providecommand*\SIunits@opt@thinqspace{}");
   // `\degreecelsius` (L266, `\degree\Celsius`: a raised ring before an upright C) as the one glyph ℃, as gensymb's
   // `\celsius`, so a number before it parses as the quantity it is.
   DefMath!("\\lx@siunits@degreecelsius", None, "\u{2103}", alias => "\\degreecelsius");

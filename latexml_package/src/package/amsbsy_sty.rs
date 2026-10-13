@@ -31,10 +31,8 @@ LoadDefinitions!({
   // still one), where an ordinary group would hide it. Papers call them for their own operators: the first error of
   // 161 run-340 papers (witnesses 2103.00817, 0709.1048, 1310.2330).
   RawTeX!(
-    r"\makeatletter
-\def\binrel@#1{\let\binrel@@\@firstofone}
+    r"\def\binrel@#1{\def\binrel@@##1{##1}}
 \let\binrel@@\relax
-\def\math@atom#1#2{\binrel@{#1}\binrel@@{#2}}
-\makeatother"
+\def\math@atom#1#2{\binrel@{#1}\binrel@@{#2}}"
   );
 });
