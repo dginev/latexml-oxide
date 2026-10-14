@@ -1056,6 +1056,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   13 long-standing slow or memory-heavy). Open from it: libmarpa `marpa_g_new` aborts on allocation failure with no
   Fatal line (SIGABRT; fix in the marpa-asf fork: an overridable OOM hook → `Fatal:oom:alloc_failed`), XPath OOM floods as
   one `Fatal:oom`, a 2.7-3.1 GB peak RSS for 4-10 s papers. Runs 348/349 (E/F rerun on `a7f5e7308e`) started 13:15Z.
+- **67a** (frequency-first; ruled 2026-10-14 "provide-only fallback"): under the ar5iv preload a paper that uses
+  `\url`/`\href` with neither url.sty nor hyperref loaded gets hyperref's definitions at `\begin{document}`, as arXiv's
+  build (which loads hyperref into every paper) gives them — only the ones still undefined (OD #588;
+  `perfect_kernel_batch67a`). Cluster: 812 `\url` + 473 `\href` papers live in run 349.
 - **66z** (frequency-first, ruled 2026-10-14: the image-conversion Error cluster, ~1,240 papers live in run 349): a
   MetaPost figure (`prologues:=0`, fonts left to dvips in `%*Font:` comments) is converted from a copy holding the fonts
   dvips would download — Type1 programs via `pdftex.map` + kpathsea, TeX names bound, MetaPost's `fshow` (OD #587;

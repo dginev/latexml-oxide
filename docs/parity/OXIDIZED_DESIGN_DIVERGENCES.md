@@ -17325,3 +17325,16 @@ through kpathsea, inlined as PFA), its TeX name bound to the font, and MetaPost'
 converted and removed. Fonts whose map entry re-encodes (`ptmr8r`) or is missing are not supplied — the figure fails as
 before. Witnesses gr-qc0001079 (`foliation.ps`), math0102124 (38 figures), cs0005010 (34): each E → 0; guard
 `postscript_fonts::tests::metapost_figure_gets_the_fonts_dvips_would_download`.
+
+### 588. Under the ar5iv preload, `\url`/`\href` are hyperref's when nothing defined them (Perl: undefined)
+
+arXiv's build loads hyperref into every paper (a 00README `nohypertex` opts out; 2101.07380's PDF says "LaTeX with
+hyperref" though its source never loads it), so a paper that uses `\url` or `\href` with neither url.sty nor hyperref
+loaded builds there; pdflatex alone, Perl and we stopped at "Undefined control sequence" (812 `\url` + 473 `\href`
+papers live in run 349, ~80% of a 40-paper sample loading neither package). Provide-only (user ruling 2026-10-14): the
+ar5iv preload (`latexml_contrib/src/ar5iv_sty.rs`) queues `\lx@arxiv@provide@hyper@urls` at `\begin{document}`, which
+defines whichever of the two is still undefined as hyperref's (`hyperref_sty.rs` `define_hyper_urls`, shared with the
+hyperref binding), with url.sty's default `\UrlFont`/`\UrlLeft`/`\UrlRight` where missing. A paper that loads either
+package, or defines the command itself in its preamble, keeps its own; nothing is supplied without the ar5iv preload, and
+hyperref is not loaded for every paper (the rejected option). Witnesses cond-mat0407333, cs0409028, hep-th0411273,
+1001.4826 (`\doi` → `\href`); guards `perfect_kernel_batch67a`.

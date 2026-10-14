@@ -451,78 +451,7 @@ LoadDefinitions!({
   // #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // # Additional User Macros
 
-  // \href{url}{text}
-  //
-  // `protected => true`: in real hyperref `\href` is a *robust* command
-  // (`\DeclareRobustCommand`/`\protected`), so an `\edef`/`\xdef` over it
-  // leaves the literal `\href{url}{text}` in the macro body rather than
-  // expanding it. LaTeXML's expansion re-emits `\href` itself (for the
-  // `\lx@hyper@url@` reversion `#1`), so WITHOUT the protected flag a
-  // partial-expansion context re-expands that re-emitted `\href` forever:
-  // `\href` → `\lx@hyper@url@\href{}{}…` → (constructor kept) → `\href` →
-  // … an unbounded expansion loop. Perl LaTeXML omits the flag and so
-  // *hangs* on `\xdef\x{\href{u}{t}}` (rc=124); marking it protected is
-  // both faithful to real-TeX robustness and fixes the loop. At top-level
-  // digestion `fully_expand` is true, so normal `\href{…}{…}` still
-  // expands exactly as before — only edef-family contexts defer it.
-  // Witness 2110.10227 (ems-journal.sty `\Emsaffil`→`\build@ffil`'s
-  // `\xdef\ems@temp{…\href{mailto:…}{\mbox{…}}…}`).
-  //
-  // The `protected` flag alone is NOT enough, because one seam legitimately
-  // expands protected macros: `Parameter::digest`'s semiverbatim
-  // pre-expansion (`parameter.rs`, Perl `Core/Parameter.pm` L123-132 —
-  // "If semiverbatim, Expand (before digest), so tokens can be neutralized")
-  // calls `readXToken` with `$toplevel=1`, hence `fully_expand=1`, hence
-  // protected macros DO expand there (Perl `Core/Gullet.pm` L408-409). That
-  // pass linearizes tokens one at a time and never reaches
-  // `\lx@hyper@url@`'s parameter list — `\lx@hyper@url@` is a Constructor, so
-  // it is kept as-is and the next token read is the re-emitted `\href`, which
-  // expands again. Rust matches Perl at that seam, so the flag cannot be the
-  // fix.
-  //
-  // So the reversion slot carries the command NAME rather than the live
-  // command: an OTHER-catcode `\href` is inert to every expansion regime
-  // while stringifying and reverting exactly as the control sequence did.
-  // This is what the sibling `\url` path (`\lx@hyper@url` below) has always
-  // done — `Tokens!(cmd.as_other())` — so the two now agree, and the
-  // self-reference is structurally impossible rather than flag-dependent.
-  //
-  // Witnesses: `doi = {\href{https://doi.org/…}{…}}` in a `.bib` reaches
-  // `\bib@field@default@doi Semiverbatim` and looped until the gullet cycle
-  // guard fired — 2605.00181, 2605.19650, 2606.06645 (all
-  // `Fatal:Timeout:Recursion`, bibliography lost, document aborted). Perl
-  // `latexmlc` HANGS on the same input, so this is a shared upstream bug
-  // (`KNOWN_PERL_ERRORS.md`). Guard:
-  // `latexml_oxide/tests/59_href_semiverbatim_loop.rs`.
-  //
-  // Kept as a Token body (not a closure) so the definition still serializes
-  // into a dump (CLAUDE.md strict-LoadFormat rule 3); `T_OTHER!` is the only
-  // thing a `DefMacro!` string literal cannot spell.
-  {
-    let (href_cs, href_params) = parse_prototype("\\href HyperVerbatim {}", true)?;
-    def_macro(
-      href_cs,
-      href_params,
-      ExpansionBody::Tokens(Tokens!(
-        T_CS!("\\lx@hyper@url@"),
-        T_OTHER!("\\href"),
-        T_BEGIN!(),
-        T_END!(),
-        T_BEGIN!(),
-        T_END!(),
-        T_BEGIN!(),
-        T_ARG!(1),
-        T_END!(),
-        T_BEGIN!(),
-        T_ARG!(2),
-        T_END!()
-      )),
-      Some(ExpandableOptions {
-        protected: true,
-        ..ExpandableOptions::default()
-      }),
-    )?;
-  }
+  define_hyper_urls(true, true)?;
 
   // \XeTeXLinkBox{content} — hyperref.sty L4915/4947 wraps content in
   // a XeTeX hyperlink target box. We don't model XeTeX-specific link
@@ -530,103 +459,6 @@ LoadDefinitions!({
   // Witness 2408.00362 (orcidlink-using paper).
   DefMacro!("\\XeTeXLinkBox{}", "#1");
 
-  // Redefine \url{url} from url.sty...
-  // It's slightly different in that it expands the argument
-  // Redefine \@url to sanitize the argument less
-  DefMacro!("\\lx@hyper@url Token", sub[(cmd)] {
-    // `\url` requires a following delimiter/argument token; on input-exhaustion
-    // `read_token_required` emits the parity "file ended while scanning use of
-    // \url" error (real TeX "Emergency stop"). Don't panic — close the
-    // `\begingroup` `\url` opened (see the `\url` def below) and emit nothing.
-    let Some(open) = read_token_required(&cmd.to_string())? else {
-      return Ok(Tokens::new(vec![T_CS!("\\endgroup")]));
-    };
-    begin_semiverbatim(Some(&['%']));
-    let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
-    // URLs are verbatim: any character a shorthand package made ACTIVE must
-    // appear literally, not expand. We read the arg with partial expansion
-    // ("expand as we go", below) to allow `\macro`s in URLs, but that also
-    // expands active chars — and an active char whose meaning is a `\newif`
-    // conditional (e.g. `"` made active by bosisio quotes.sty →
-    // `\@VIRGOLETTE` = `\if@virgolette…\else…\fi`) leaks its `\fi` through
-    // `read_balanced`, so the conditional "falls off end". Neutralise the
-    // common shorthand-active chars to OTHER (same `\let`-to-literal trick as
-    // `~` above). `:` is doubly important — French babel makes it active and
-    // it is ubiquitous in `http://…` URLs. Witness 1910.09629 (revtex4 →
-    // hyperref `\url`, quotes.sty active `"`, `.bbl` `\url{"http://…"}`).
-    for ch in ['"', ':', ';', '!', '?', '\'', '`'] {
-      if lookup_catcode(ch) == Some(Catcode::ACTIVE) {
-        assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
-      }
-    }
-    // url.sty's defined escapes expand to their character DURING the read (its
-    // first pass, `\edef`), so `\%`/`\_`/… resolve here rather than by later
-    // digestion. This mirrors the `HyperVerbatim` parameter type
-    // (base_parameter_types.rs) so `\url` and `\href` agree, and it leaves ONLY
-    // genuinely-leftover control sequences (e.g. `\def`) as CS tokens, which the
-    // filter below stringifies.
-    DefMacro!(T_CS!("\\%"),              None, T_OTHER!("%"), scope => Some(Scope::Local));
-    DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
-    DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
-    DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
-    let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None);
-    DefMacro!(T_CS!("\\hyper@tilde"),    None, T_OTHER!("~"), scope => Some(Scope::Local));
-    let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
-    let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
-    DefMacro!(T_CS!("\\^"), None, T_OTHER!("^"), scope => Some(Scope::Local));
-    let_i(&T_CS!("\\textasciicircum"), &T_CS!("\\^"), None);
-    let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
-    DefMacro!(T_CS!("\\textbackslash"), None, T_OTHER!("\\"), scope => Some(Scope::Local));
-    let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
-      ( T_OTHER!("{"), T_OTHER!("}"),
-        read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!
-    } else {
-      ( T_OTHER!("{"), T_OTHER!("}"),
-        Tokens!(open.as_other()) )
-    };
-    end_semiverbatim()?;
-    let toks : Vec<Token> = url.unlist().into_iter()
-      .filter(|t| t.get_catcode() != Catcode::SPACE)
-      // url.sty `\meaning`-stringifies leftover control sequences: recatcode any
-      // surviving CS (e.g. `\def`) to `other` so it is LITERAL href text, not
-      // digested/executed (#723). The escapes above already resolved during the
-      // read. (Perl "let CS's through!" to digestion — the divergence we surpass.)
-      .map(|t| t.as_other())
-      .collect();
-    let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
-    url_wrapped.extend(toks.clone());
-    url_wrapped.push(T_CS!("\\UrlRight"));
-    let mut invocation_tokens = Invocation!(T_CS!("\\lx@hyper@url@"),vec![
-        Tokens!(cmd.as_other()),
-        Tokens!(open),
-        Tokens!(close),
-        Tokens::new(toks),
-        Tokens::new(url_wrapped)]).unlist();
-    invocation_tokens.push(T_CS!("\\endgroup"));
-    Tokens::new(invocation_tokens)
-  });
-
-  // RE-define from url w. Robust, as hyperref.sty:4801
-  // `\DeclareRobustCommand*{\url}` (see url_sty.rs).
-  DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true, protected => true);
-
-  // Perl hyperref.sty.ltxml L187-194: bounded + enterHorizontal both
-  // present. enter_horizontal => true was missing in the Rust port —
-  // a `\url{...}` between paragraphs at top level opened <ltx:ref>
-  // outside any <ltx:p>, producing invalid block-level structure.
-  DefConstructor!("\\lx@hyper@url@ Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
-    "?#isMath(<ltx:XMWrap class='#class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
-    bounded   => true, enter_horizontal => true,
-    properties => sub[args] {
-      unref!(args => cmd, _open, _close, url, _formattedurl);
-      let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
-      Ok(stored_map!(
-        "href" => compose_url(&lookup_string("BASE_URL"), &url.to_string(), None),
-        "class"=> ltx_cmd
-      ))
-    },
-    sizer     => "#5",
-    reversion => "#1#2#4#3");
   // hyperref's low-level URL chain, reached by raw packages and manual
   // definitions (biblatex.tex:170-171 `\DeclareRobustCommand\fnurl
   // {\hyper@normalise\fnurl@}` → `\footnote{\url@{#1}}`; btxdockit `\href`):
@@ -2135,5 +1967,187 @@ fn localized_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
     },
     None => insert_bare_anchor(document, id)?,
   }
+  Ok(())
+}
+
+/// hyperref's `\href` and its `\url` (hyperref.sty:4801 `\DeclareRobustCommand*{\url}`), with the reader and the
+/// constructor they share; `href`/`url` choose which of the two user commands are defined. The ar5iv preload gives a
+/// document that never loaded hyperref the ones it lacks at `\begin{document}`, as arXiv's build, which loads hyperref
+/// into every paper, does (`ar5iv_sty.rs`, OXIDIZED_DESIGN #588).
+pub fn define_hyper_urls(href: bool, url: bool) -> Result<()> {
+  if href {
+    // \href{url}{text}
+    //
+    // `protected => true`: in real hyperref `\href` is a *robust* command
+    // (`\DeclareRobustCommand`/`\protected`), so an `\edef`/`\xdef` over it
+    // leaves the literal `\href{url}{text}` in the macro body rather than
+    // expanding it. LaTeXML's expansion re-emits `\href` itself (for the
+    // `\lx@hyper@url@` reversion `#1`), so WITHOUT the protected flag a
+    // partial-expansion context re-expands that re-emitted `\href` forever:
+    // `\href` → `\lx@hyper@url@\href{}{}…` → (constructor kept) → `\href` →
+    // … an unbounded expansion loop. Perl LaTeXML omits the flag and so
+    // *hangs* on `\xdef\x{\href{u}{t}}` (rc=124); marking it protected is
+    // both faithful to real-TeX robustness and fixes the loop. At top-level
+    // digestion `fully_expand` is true, so normal `\href{…}{…}` still
+    // expands exactly as before — only edef-family contexts defer it.
+    // Witness 2110.10227 (ems-journal.sty `\Emsaffil`→`\build@ffil`'s
+    // `\xdef\ems@temp{…\href{mailto:…}{\mbox{…}}…}`).
+    //
+    // The `protected` flag alone is NOT enough, because one seam legitimately
+    // expands protected macros: `Parameter::digest`'s semiverbatim
+    // pre-expansion (`parameter.rs`, Perl `Core/Parameter.pm` L123-132 —
+    // "If semiverbatim, Expand (before digest), so tokens can be neutralized")
+    // calls `readXToken` with `$toplevel=1`, hence `fully_expand=1`, hence
+    // protected macros DO expand there (Perl `Core/Gullet.pm` L408-409). That
+    // pass linearizes tokens one at a time and never reaches
+    // `\lx@hyper@url@`'s parameter list — `\lx@hyper@url@` is a Constructor, so
+    // it is kept as-is and the next token read is the re-emitted `\href`, which
+    // expands again. Rust matches Perl at that seam, so the flag cannot be the
+    // fix.
+    //
+    // So the reversion slot carries the command NAME rather than the live
+    // command: an OTHER-catcode `\href` is inert to every expansion regime
+    // while stringifying and reverting exactly as the control sequence did.
+    // This is what the sibling `\url` path (`\lx@hyper@url` below) has always
+    // done — `Tokens!(cmd.as_other())` — so the two now agree, and the
+    // self-reference is structurally impossible rather than flag-dependent.
+    //
+    // Witnesses: `doi = {\href{https://doi.org/…}{…}}` in a `.bib` reaches
+    // `\bib@field@default@doi Semiverbatim` and looped until the gullet cycle
+    // guard fired — 2605.00181, 2605.19650, 2606.06645 (all
+    // `Fatal:Timeout:Recursion`, bibliography lost, document aborted). Perl
+    // `latexmlc` HANGS on the same input, so this is a shared upstream bug
+    // (`KNOWN_PERL_ERRORS.md`). Guard:
+    // `latexml_oxide/tests/59_href_semiverbatim_loop.rs`.
+    //
+    // Kept as a Token body (not a closure) so the definition still serializes
+    // into a dump (CLAUDE.md strict-LoadFormat rule 3); `T_OTHER!` is the only
+    // thing a `DefMacro!` string literal cannot spell.
+    {
+      let (href_cs, href_params) = parse_prototype("\\href HyperVerbatim {}", true)?;
+      def_macro(
+        href_cs,
+        href_params,
+        ExpansionBody::Tokens(Tokens!(
+          T_CS!("\\lx@hyper@url@"),
+          T_OTHER!("\\href"),
+          T_BEGIN!(),
+          T_END!(),
+          T_BEGIN!(),
+          T_END!(),
+          T_BEGIN!(),
+          T_ARG!(1),
+          T_END!(),
+          T_BEGIN!(),
+          T_ARG!(2),
+          T_END!()
+        )),
+        Some(ExpandableOptions {
+          protected: true,
+          ..ExpandableOptions::default()
+        }),
+      )?;
+    }
+  }
+
+  // Redefine \url{url} from url.sty...
+  // It's slightly different in that it expands the argument
+  // Redefine \@url to sanitize the argument less
+  DefMacro!("\\lx@hyper@url Token", sub[(cmd)] {
+    // `\url` requires a following delimiter/argument token; on input-exhaustion
+    // `read_token_required` emits the parity "file ended while scanning use of
+    // \url" error (real TeX "Emergency stop"). Don't panic — close the
+    // `\begingroup` `\url` opened (see the `\url` def below) and emit nothing.
+    let Some(open) = read_token_required(&cmd.to_string())? else {
+      return Ok(Tokens::new(vec![T_CS!("\\endgroup")]));
+    };
+    begin_semiverbatim(Some(&['%']));
+    let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
+    // URLs are verbatim: any character a shorthand package made ACTIVE must
+    // appear literally, not expand. We read the arg with partial expansion
+    // ("expand as we go", below) to allow `\macro`s in URLs, but that also
+    // expands active chars — and an active char whose meaning is a `\newif`
+    // conditional (e.g. `"` made active by bosisio quotes.sty →
+    // `\@VIRGOLETTE` = `\if@virgolette…\else…\fi`) leaks its `\fi` through
+    // `read_balanced`, so the conditional "falls off end". Neutralise the
+    // common shorthand-active chars to OTHER (same `\let`-to-literal trick as
+    // `~` above). `:` is doubly important — French babel makes it active and
+    // it is ubiquitous in `http://…` URLs. Witness 1910.09629 (revtex4 →
+    // hyperref `\url`, quotes.sty active `"`, `.bbl` `\url{"http://…"}`).
+    for ch in ['"', ':', ';', '!', '?', '\'', '`'] {
+      if lookup_catcode(ch) == Some(Catcode::ACTIVE) {
+        assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
+      }
+    }
+    // url.sty's defined escapes expand to their character DURING the read (its
+    // first pass, `\edef`), so `\%`/`\_`/… resolve here rather than by later
+    // digestion. This mirrors the `HyperVerbatim` parameter type
+    // (base_parameter_types.rs) so `\url` and `\href` agree, and it leaves ONLY
+    // genuinely-leftover control sequences (e.g. `\def`) as CS tokens, which the
+    // filter below stringifies.
+    DefMacro!(T_CS!("\\%"),              None, T_OTHER!("%"), scope => Some(Scope::Local));
+    DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
+    DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
+    DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
+    let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None);
+    DefMacro!(T_CS!("\\hyper@tilde"),    None, T_OTHER!("~"), scope => Some(Scope::Local));
+    let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
+    let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
+    DefMacro!(T_CS!("\\^"), None, T_OTHER!("^"), scope => Some(Scope::Local));
+    let_i(&T_CS!("\\textasciicircum"), &T_CS!("\\^"), None);
+    let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
+    DefMacro!(T_CS!("\\textbackslash"), None, T_OTHER!("\\"), scope => Some(Scope::Local));
+    let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
+      ( T_OTHER!("{"), T_OTHER!("}"),
+        read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!
+    } else {
+      ( T_OTHER!("{"), T_OTHER!("}"),
+        Tokens!(open.as_other()) )
+    };
+    end_semiverbatim()?;
+    let toks : Vec<Token> = url.unlist().into_iter()
+      .filter(|t| t.get_catcode() != Catcode::SPACE)
+      // url.sty `\meaning`-stringifies leftover control sequences: recatcode any
+      // surviving CS (e.g. `\def`) to `other` so it is LITERAL href text, not
+      // digested/executed (#723). The escapes above already resolved during the
+      // read. (Perl "let CS's through!" to digestion — the divergence we surpass.)
+      .map(|t| t.as_other())
+      .collect();
+    let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
+    url_wrapped.extend(toks.clone());
+    url_wrapped.push(T_CS!("\\UrlRight"));
+    let mut invocation_tokens = Invocation!(T_CS!("\\lx@hyper@url@"),vec![
+        Tokens!(cmd.as_other()),
+        Tokens!(open),
+        Tokens!(close),
+        Tokens::new(toks),
+        Tokens::new(url_wrapped)]).unlist();
+    invocation_tokens.push(T_CS!("\\endgroup"));
+    Tokens::new(invocation_tokens)
+  });
+
+  // RE-define from url w. Robust, as hyperref.sty:4801
+  // `\DeclareRobustCommand*{\url}` (see url_sty.rs).
+  if url {
+    DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true, protected => true);
+  }
+
+  // Perl hyperref.sty.ltxml L187-194: bounded + enterHorizontal both
+  // present. enter_horizontal => true was missing in the Rust port —
+  // a `\url{...}` between paragraphs at top level opened <ltx:ref>
+  // outside any <ltx:p>, producing invalid block-level structure.
+  DefConstructor!("\\lx@hyper@url@ Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
+    "?#isMath(<ltx:XMWrap class='#class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
+    bounded   => true, enter_horizontal => true,
+    properties => sub[args] {
+      unref!(args => cmd, _open, _close, url, _formattedurl);
+      let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
+      Ok(stored_map!(
+        "href" => compose_url(&lookup_string("BASE_URL"), &url.to_string(), None),
+        "class"=> ltx_cmd
+      ))
+    },
+    sizer     => "#5",
+    reversion => "#1#2#4#3");
   Ok(())
 }

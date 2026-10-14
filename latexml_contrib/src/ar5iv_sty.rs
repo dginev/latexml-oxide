@@ -112,6 +112,31 @@ LoadDefinitions!({
   ])?;
   RequirePackage!("latexml");
 
+  // arXiv's build loads hyperref into every paper (a 00README `nohypertex` opts out), so a paper that uses `\url` or
+  // `\href` without loading url.sty or hyperref builds there, while pdflatex alone stops at "Undefined control
+  // sequence" (~1,300 papers in run 349: cond-mat0407333, cs0409028, hep-th0411273; 2101.07380's PDF says "LaTeX with
+  // hyperref" though its source never loads it). Provide-only (user ruling 2026-10-14): at `\begin{document}` the one of
+  // the two still undefined is defined as hyperref's, with url.sty's default `\UrlFont`/`\UrlLeft`/`\UrlRight` where
+  // missing; a paper that loads either package, or defines the command itself in its preamble, keeps its own.
+  // OXIDIZED_DESIGN #588; guard `perfect_kernel_batch67a`.
+  DefPrimitive!("\\lx@arxiv@provide@hyper@urls", {
+    let href = !IsDefined!(&T_CS!("\\href"));
+    let url = !IsDefined!(&T_CS!("\\url"));
+    if href || url {
+      if !IsDefined!(&T_CS!("\\UrlFont")) {
+        DefMacro!("\\UrlFont", "\\lx@fontencoding{ASCII}\\ttfamily");
+      }
+      if !IsDefined!(&T_CS!("\\UrlLeft")) {
+        Let!("\\UrlLeft", "\\@empty");
+      }
+      if !IsDefined!(&T_CS!("\\UrlRight")) {
+        Let!("\\UrlRight", "\\@empty");
+      }
+      hyperref_sty::define_hyper_urls(href, url)?;
+    }
+  });
+  at_begin_document(Tokens!(T_CS!("\\lx@arxiv@provide@hyper@urls")))?;
+
   // Practical maximum for warnings
   AssignValue!("MAX_WARNINGS" => 10000i64, Scope::Global);
 
