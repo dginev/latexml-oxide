@@ -1050,6 +1050,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   heuristic firing on a package that sets `_` a letter itself (etextools, 2606.06323), N7 NFSS shape probes
   `\try@load@fontshape`/`\DeclareFontShape` no-ops (2606.07112, Perl the same), N10 a sectioning unit in `ltx:quote`
   (2606.19241) and an `\item[]` excluded from the OD #189 item bridge (2606.00118) — both await a ruling.
+- **66t** (K9 study row H, 54 papers losing their whole body): a bare `\endX` ends the mode only when the top frame
+  is an environment's (any: amsmath ends `\equation*` with `\endequation`); a box's frame gets one Warning and no frame work, as
+  LaTeX's list-ending `\endquotation` does none — an IEEE Open Journal `\IEEEkeywords` `\vbox\bgroup` box ended by
+  `\par\endquotation\egroup` no longer loses its frame and the body (2301.00752 words 0→16,663, 2602.19492 0→6,164;
+  KPE #674, OD #584; `perfect_kernel_batch66t`). K9 Stage 1's general frame-ownership rule and Stage 2 stay open.
 - **66s** (K9 study row G, 74 papers, all 2511+): a Semiverbatim identifier field's TeX escapes and grouping braces
   are not part of the identifier (bibtex.rs `identifier_data`): MathSciNet's DOI `…3\{_}10` is balanced for BibTeX
   (it counts the escaped brace) but the Semiverbatim reader took `\{` for a control symbol and met a stray `}`;

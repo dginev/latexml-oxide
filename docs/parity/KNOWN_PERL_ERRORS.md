@@ -13169,3 +13169,16 @@ unclosed). Minimal trigger: `\newif\ifmulticol\multicoltrue` then
 `\ifmulticol\twocolumn[\begin{@twocolumnfalse}\fi Title \ifmulticol\end{@twocolumnfalse}]\fi` (1810.09262, 1812.09662,
 1904.00825, 1912.04806). Fixed in Rust (sect05.rs `\twocolumn` tests the header for emptiness in Rust and emits it
 outside any conditional; repro sectioning-frontmatter/twocolumn_header_spans_a_conditional).
+
+## 674. A bare `\endX` without its environment ends another environment's mode
+
+Package.pm:1970-1975 gives a `DefEnvironment` with a mode a bare `\endX` that calls `endMode($mode)`, which pops the
+top frame whenever it binds the same mode — whether or not `\X` opened it. LaTeX's `\endquotation` is
+`\endlist`/`\endtrivlist` (latex.ltx), which does no group work, so a class that ends a `\vbox\bgroup` box with
+`\par\endquotation\egroup` (IEEE Open Journal `\IEEEkeywords`, ieeetmlcn.cls:3711-3715) is clean in pdflatex. Perl ends
+the box's internal-vertical frame there ("Attempt to end mode", content kept); our box reader, its frame gone, read the
+whole body into the box (2301.00752: 0 words of 16,663; 2602.19492; 54 papers 2301-2608). Minimal trigger:
+`\def\kw{\global\setbox\keybox\vbox\bgroup}\def\endkw{\par\endquotation\egroup}` then `\begin{kw} x \end{kw}\box\keybox
+Body.` Fixed in Rust (dialect.rs: a bare `\endX` ends the mode only when the top frame is an environment's; a box's or
+other non-environment frame is left alone with one Warning; OXIDIZED_DESIGN #584; repro
+sectioning-frontmatter/bare_end_without_its_begin_keeps_the_box).

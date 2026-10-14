@@ -1,0 +1,14 @@
+% witness: 2301.00752 (ieeetmlcn.cls:3711-3715), 2602.19492 (IEEElmagForArxiv), ieee-ojvt, IEEEjmw, iaria (54 papers, 2301-2608)
+% oracle: pdflatex 0 errors (\endquotation without \quotation = latex.ltx \endtrivlist, no group; \egroup ends the \vbox, tex.web 1085-1086)
+% expect: 0 Errors, 1 Warning (\endquotation without an environment open); "Body." in the document after the keywords
+% mechanism: dialect.rs bare \endquotation runs end_mode("internal_vertical"), which pops the \vbox's mode frame (same mode string); the box reader (base_utilities.rs:7201,7215) never sees its own frame again and reads to \end{document}: the whole body is lost
+% status: GREEN (66t: dialect.rs bare \endX ends only its own frame; one Warning)
+\documentclass{article}
+\newbox\keybox
+\def\kw{\global\setbox\keybox\vbox\bgroup\noindent{\bfseries Index terms}\hspace*{3pt}}
+\def\endkw{\par\endquotation\egroup\normalfont}
+\begin{document}
+\begin{kw} LiDAR, point cloud \end{kw}
+\box\keybox
+Body.
+\end{document}

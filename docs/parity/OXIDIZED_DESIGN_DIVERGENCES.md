@@ -17292,3 +17292,12 @@ block whose end met the environment's `\endgroup` (KPE #664; 2006.10005, 2008.05
 the `Fallback` origin (#408, `is_definable_latex`), unlocked: the document's definition wins, and without one the
 convenience works as before. Guards `perfect_kernel_batch66m::{ieeetran_document_keywords_macro_wins,
 ieeetran_keywords_fallback_still_works}`.
+
+### 584. A bare `\endX` ends only an environment's frame (Perl: any frame of the same mode)
+
+Perl's bare `\endX` (Package.pm:1970-1975) pops the top frame if it binds the environment's mode. Ours ends the mode only
+when the top frame is an environment's — a bare `\X`'s (`lx@env@bare@end`), a `\begin{X}`'s (`lx@env@begin@end`) or one a
+group's end handed back (`lx@env@ended@by@group`); any environment's, since amsmath ends a `\equation*` display with
+`\endequation` (tcolorbox `ams equation*`, 2211.17024). A frame no environment opened (a box's) is left alone with one
+Warning, as LaTeX's list-ending `\endX` does no group work. Witnesses 2301.00752, 2602.19492 (IEEE Open Journal keywords
+boxes; the body was read into the box). KPE #674; guard `perfect_kernel_batch66t::bare_end_without_its_begin_keeps_the_box`.

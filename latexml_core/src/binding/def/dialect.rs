@@ -1841,8 +1841,34 @@ pub fn def_environment(
   match mode {
     Some(ref emode) => {
       let emode = emode.clone();
+      // The frames a bare `\endFOO` may end are environments' frames: a bare `\X`'s (marked `lx@env@bare@end`), a
+      // `\begin{X}`'s (`lx@env@begin@end`), or one a group's end handed back (`lx@env@ended@by@group`, stomach.rs
+      // `close_environment_frame`) — any environment's, not only FOO's: amsmath ends a `\equation*` display with
+      // `\endequation` (tcolorbox's `ams equation*`, tcbtheorems.code.tex:301; 2211.17024), and `end_mode` still checks the
+      // mode. A frame no environment opened is left alone, with one Warning: LaTeX's `\endquotation` is
+      // `\endlist`/`\endtrivlist` (latex.ltx), no group work, so an IEEE Open Journal `\IEEEkeywords` box's
+      // `\vbox\bgroup … \par\endquotation\egroup` (ieeetmlcn.cls:3711-3715) must not lose the box's frame — ending the
+      // mode there made the box reader read the whole body into the box (2301.00752, 2602.19492; 54 papers). Perl ends
+      // the mode there too (an Error, content kept; KNOWN_PERL_ERRORS #674, OD #584). Guard:
+      // `perfect_kernel_batch66t::bare_end_without_its_begin_keeps_the_box`.
+      let own_end = end_name.clone();
       after_digest_end.push(Rc::new(move |_whatsit: &mut Whatsit| {
-        end_mode(&emode)?;
+        let owns_top_frame = [
+          "lx@env@ended@by@group",
+          "lx@env@bare@end",
+          "lx@env@begin@end",
+        ]
+        .iter()
+        .any(|key| is_value_bound(key, Some(0)));
+        if owns_top_frame {
+          end_mode(&emode)?;
+        } else {
+          Warn!(
+            "unexpected",
+            T_CS!(own_end.as_str()),
+            s!("{own_end} without an environment open: no environment frame to end")
+          );
+        }
         Ok(Vec::new())
       }));
     },
