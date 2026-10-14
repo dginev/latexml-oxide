@@ -1049,6 +1049,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   heuristic firing on a package that sets `_` a letter itself (etextools, 2606.06323), N7 NFSS shape probes
   `\try@load@fontshape`/`\DeclareFontShape` no-ops (2606.07112, Perl the same), N10 a sectioning unit in `ltx:quote`
   (2606.19241) and an `\item[]` excluded from the OD #189 item bridge (2606.00118) — both await a ruling.
+- **66k** (K1's word-loss roots, root-causer report `agent_reports/2026-10-14_k1_wordloss_triggers.md`: in 19 of the
+  20 papers our engine read the `_`/`^` in text where pdflatex reads it in math): `\cancel`/`\bcancel`/`\xcancel` are
+  robust, as cancel.sty:70-78, so an aligned cell's start (§791) does not expand them before the template's `$`
+  (1801.01765, 2404.04195, 2505.00286, 2505.10361, 2512.10194); pstricks keeps graphics' boxing `\scalebox` (2104.00361,
+  2504.03865; KPE #658; 1208.6481 still 0 errors). Guards `perfect_kernel_batch66k::*`. Open from the report: raw
+  `eqnarray.sty` (`equationarray`, 1605.07858, 2507.02169), array `w`/`W` columns, graphicx `alt` typeset, `\multicolumn`
+  in `aligned`, `\lx@marginpar` mode, forest `math content`, `\opt@` string re-tokenized, ytableau, two xy-pic gaps.
 - **66j** (2605/2606 sandbox regressions, root-causer reports `agent_reports/2026-10-13_sbx2605_regressions.md`,
   `…_sbx2606_regressions.md`): an option no `\DeclareOption` declared runs its `\ds@<option>` when defined, latex.ltx's
   `\@process@pti@ns` (C12; 2.09-style classes: gji.cls 2605.19951, biom.cls `usenatbib` 2606.12015; KPE #657); revtex's

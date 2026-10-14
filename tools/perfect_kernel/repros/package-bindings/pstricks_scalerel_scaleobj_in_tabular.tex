@@ -1,0 +1,18 @@
+% witness: 2504.03865 (mapper-loss-main.tex:198 `\Lpl` = `L_{\scaleobj{.7}{\Parallelograml}}` with pstricks loaded;
+%   sections/subsec-TheList.tex:10 `& $\Lpl^{S_\tau, S_\sigma}$` in a p{1cm} cell)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; "AFTERWORDS survive."
+% mechanism: scalerel's `\scaleobj` boxes `$\SavedStyle#2$` with graphics' `\scalebox`, which pstricks never redefines
+%   (pstricks.sty:98); the binding's box-less redefinition let the inner `$` close the cell's math. Fixed:
+%   pstricks_support_sty.rs.
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{pstricks}
+\usepackage{scalerel}
+\begin{document}
+\begin{tabular}{|r|p{1cm}|c|}
+a & $L_{\scaleobj{.7}{X}}^{S_\tau, S_\sigma}$ & b \\
+\end{tabular}
+AFTERWORDS survive.
+\end{document}

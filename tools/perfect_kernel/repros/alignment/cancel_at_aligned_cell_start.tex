@@ -1,0 +1,21 @@
+% witness: 1801.01765 (kappa_Pauli-Jordan_v18.tex:1862 `& \cancel{… F_{bc} …}` opening an aligned cell); also
+%   2404.04195, 2505.00286, 2505.10361, 2512.10194
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the cancelled F_{bc} a formula in the second row; "AFTERWORDS survive."
+% mechanism: cancel.sty:70-78 `\DeclareRobustCommand`s `\cancel`, so an alignment cell's start (tex.web §791, which
+%   expands up to the first unexpandable token) does not expand it before the u-template's `$`; our binding's macro was
+%   expandable, took its text branch, and its scripts were in text ("Script _ can only appear in math mode").
+%   Fixed: cancel_sty.rs (robust).
+% status:  GREEN
+\documentclass{article}
+\usepackage{amsmath,cancel}
+\begin{document}
+Before.
+\begin{equation}
+\begin{aligned}
+x &= a + \\
+  & \cancel{F_{bc}} + 1
+\end{aligned}
+\end{equation}
+After the equation, AFTERWORDS survive.
+\end{document}

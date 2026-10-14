@@ -48,18 +48,24 @@ LoadDefinitions!({
 
   DefMacro!("\\CancelColor", None);
 
-  // Basic macros — dispatch to math or text mode
+  // Basic macros — dispatch to math or text mode. Robust, as cancel.sty:70-78 `\DeclareRobustCommand`s them: an
+  // alignment cell's start (tex.web §791) expands up to the first unexpandable token, and an expandable `\cancel` there
+  // took its text branch before the u-template's `$` (1801.01765, 2404.04195, 2505.00286, 2505.10361, 2512.10194: its
+  // scripts then in text).
   DefMacro!(
     "\\cancel{}",
-    "\\ifmmode\\@@math@cancel{#1}\\else\\@@text@cancel{#1}\\fi"
+    "\\ifmmode\\@@math@cancel{#1}\\else\\@@text@cancel{#1}\\fi",
+    robust => true
   );
   DefMacro!(
     "\\bcancel{}",
-    "\\ifmmode\\@@math@bcancel{#1}\\else\\@@text@bcancel{#1}\\fi"
+    "\\ifmmode\\@@math@bcancel{#1}\\else\\@@text@bcancel{#1}\\fi",
+    robust => true
   );
   DefMacro!(
     "\\xcancel{}",
-    "\\ifmmode\\@@math@xcancel{#1}\\else\\@@text@xcancel{#1}\\fi"
+    "\\ifmmode\\@@math@xcancel{#1}\\else\\@@text@xcancel{#1}\\fi",
+    robust => true
   );
 
   // Math mode constructors

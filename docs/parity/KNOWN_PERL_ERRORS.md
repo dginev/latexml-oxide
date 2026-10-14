@@ -13002,3 +13002,13 @@ and 2.09-style classes `\def` their handlers directly: gji.cls:61-70 (2605.19951
 undefined). Minimal trigger: a class with `\def\ds@extra{\RC@extratrue}\ProcessOptions` loaded as
 `\documentclass[extra]{…}`. Fixed in Rust (content.rs `process_options_by`; repro
 loader/ds_option_handler_without_declareoption).
+
+## 658. pstricks_support redefines `\scalebox` without a box
+
+pstricks_support.sty.ltxml:1010-1011 defines `\scalebox{}{}` as its argument (through `\@@scalebox` = `\@secondoftwo`),
+over graphics' `\scalebox`, which boxes it; pstricks itself never defines `\scalebox` (pstricks.sty:98 only saves it,
+pstricks.tex scales with `\psscalebox`). An inner `$…$` then closes the surrounding math: 2104.00361's
+`\newcommand*{\Scale}[2][4]{\scalebox{#1}{$#2$}}` inside `\substack` in an eqnarray, 2504.03865's scalerel `\scaleobj`.
+Minimal trigger: `\usepackage{graphicx,pstricks}` and `$F_{\scalebox{1}{$b_1$}}$`. Fixed in Rust (pstricks_support_sty.rs
+keeps a defined `\scalebox`; repros package-bindings/pstricks_keeps_graphics_scalebox,
+package-bindings/pstricks_scalerel_scaleobj_in_tabular).

@@ -1,0 +1,19 @@
+% witness: 2104.00361 (PhDThesisMaglio.tex:78-80 `\Scale` = `\scalebox{#1}{$#2$}` inside `\substack` in eqnarray, with
+%   epsfig/rotating loading graphicx before pstricks)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; "AFTERWORDS survive." as text after the equation
+% mechanism: pstricks.sty:98 only saves `\scalebox` (`\let\saved@scalebox\scalebox`); graphics' `\scalebox` boxes its
+%   argument, so the inner `$b_1$` is a formula inside an hbox. The binding (as Perl pstricks_support.sty.ltxml:1010)
+%   redefined it without a box, so the inner `$` closed the surrounding math. Fixed: pstricks_support_sty.rs keeps a
+%   defined `\scalebox`.
+% status:  GREEN
+\documentclass{article}
+\usepackage{amsmath,graphicx}
+\usepackage{pstricks}
+\begin{document}
+Before.
+\begin{equation}
+F\left(\substack{\scalebox{1}{$b_1$} \\ \scalebox{1}{$c$}}\right) = 1
+\end{equation}
+After the equation, AFTERWORDS survive.
+\end{document}
