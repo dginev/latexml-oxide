@@ -1877,7 +1877,27 @@ impl Graphics {
   /// Convert a graphics file using ImageMagick's `convert` command.
   /// Perl: image_graphicx_complex via Image::Magick / convert CLI.
   /// `page` is 1-based (graphicx convention); converted to 0-based for ImageMagick.
-  fn convert_image(source: &str, dest: &str, _dpi: u32, page: Option<u32>) -> bool {
+  fn convert_image(source: &str, dest: &str, dpi: u32, page: Option<u32>) -> bool {
+    // A MetaPost figure that leaves its fonts to dvips is converted from a copy that holds them, as dvips would give
+    // them (`postscript_fonts`, OXIDIZED_DESIGN #587; gr-qc0001079, math0102124).
+    let with_fonts = crate::postscript_fonts::with_downloaded_fonts(source, dest);
+    let converted = Self::convert_image_from(
+      with_fonts
+        .as_ref()
+        .and_then(|copy| copy.to_str())
+        .unwrap_or(source),
+      dest,
+      dpi,
+      page,
+    );
+    if let Some(copy) = with_fonts {
+      let _ = std::fs::remove_file(copy);
+    }
+    converted
+  }
+
+  /// [`Self::convert_image`] of the file `source` as it is.
+  fn convert_image_from(source: &str, dest: &str, _dpi: u32, page: Option<u32>) -> bool {
     // Build the source argument with optional page selector
     // Perl: image_read reads "$source[$page]" where $page = ($page // 1) - 1
     let source_arg = if let Some(p) = page {

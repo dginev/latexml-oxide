@@ -1056,6 +1056,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   13 long-standing slow or memory-heavy). Open from it: libmarpa `marpa_g_new` aborts on allocation failure with no
   Fatal line (SIGABRT; fix in the marpa-asf fork: an overridable OOM hook → `Fatal:oom:alloc_failed`), XPath OOM floods as
   one `Fatal:oom`, a 2.7-3.1 GB peak RSS for 4-10 s papers. Runs 348/349 (E/F rerun on `a7f5e7308e`) started 13:15Z.
+- **66z** (frequency-first, ruled 2026-10-14: the image-conversion Error cluster, ~1,240 papers live in run 349): a
+  MetaPost figure (`prologues:=0`, fonts left to dvips in `%*Font:` comments) is converted from a copy holding the fonts
+  dvips would download — Type1 programs via `pdftex.map` + kpathsea, TeX names bound, MetaPost's `fshow` (OD #587;
+  `latexml_post/src/postscript_fonts.rs`). 40/40 sampled failing figures were MetaPost (≈2/3 of the cluster's papers);
+  12-witness HTML A/B: 10 papers E → 0 (math0102124 38 figures, cs0005010 34), none worse. Rest of the cluster:
+  dvips-prolog fragments (`startTexFig`, `@endspecial`, `xxxprolog.ps` blocked by `-dSAFER`), re-encoded fonts (`ptmr8r`),
+  `.eps` files that are TeX sources.
 - **66y** (K1 roots, ruled 2026-10-14 "park K1, fix the roots"): an `array` outside math is an inline formula of its
   own, its cells math as latex.ltx `\@arrayclassz` sets them (1611.02392 E 24 → 0; KPE #677), and `\raisebox` in a
   picture reads its box in text mode (0902.1321 E 101 + F → 0; KPE #678); `perfect_kernel_batch66y`. The other K1

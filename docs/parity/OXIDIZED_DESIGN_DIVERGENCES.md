@@ -17311,3 +17311,17 @@ Ours marks it a bare environment's frame, ended by `\endlx@list`: a `}` or `\end
 goes into the last item. `\endlx@list`, not `\endlist`: a group's end does not undo `\list`'s global `\@listdepth` step.
 Witnesses astro-ph9806019 (iopconf `\references`), 0902.3464 (jT `resume`), 2106.10067 (INFORMS `\Trivlist`); KPE #676;
 guards `perfect_kernel_batch66x`.
+
+### 587. A MetaPost figure gets the fonts dvips would download (Perl: the figure fails to convert)
+
+MetaPost's default PostScript (`prologues:=0`) is not self-contained: its text is `(S) cmmi10 9.96265 fshow`, the fonts
+are named by their TeX names and listed only in `%*Font:` header comments, which dvips reads to download them when it
+includes the figure (`finclude.pro` supplies `fshow`) — so arXiv's PDF shows them. Ghostscript alone stops at
+`/undefined in cmmi10`; Perl's ImageMagick path and ours reported `Error:imageprocessing:failed_to_convert` and left the
+figure out (about two thirds of the run-349 image-conversion Error papers; 40/40 sampled were MetaPost). Before converting,
+ours does what dvips does (`latexml_post/src/postscript_fonts.rs`, called from `graphics.rs` `convert_image`): a copy of
+the figure gets, before its `%%EndProlog`, each listed font's Type1 program (TeX Live's `pdftex.map` entry, the `.pfb`
+through kpathsea, inlined as PFA), its TeX name bound to the font, and MetaPost's own `prologues:=1` `fshow`; the copy is
+converted and removed. Fonts whose map entry re-encodes (`ptmr8r`) or is missing are not supplied — the figure fails as
+before. Witnesses gr-qc0001079 (`foliation.ps`), math0102124 (38 figures), cs0005010 (34): each E → 0; guard
+`postscript_fonts::tests::metapost_figure_gets_the_fonts_dvips_would_download`.
