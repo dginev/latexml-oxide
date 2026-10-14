@@ -1050,6 +1050,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   heuristic firing on a package that sets `_` a letter itself (etextools, 2606.06323), N7 NFSS shape probes
   `\try@load@fontshape`/`\DeclareFontShape` no-ops (2606.07112, Perl the same), N10 a sectioning unit in `ltx:quote`
   (2606.19241) and an `\item[]` excluded from the OD #189 item bridge (2606.00118) — both await a ruling.
+- **Runs 346/347** (E/F rerun on `3ad0bbe622`, 66f-66h; vs runs 344/345 end): E 105,835 → 101,776, F 4,625 → 4,478;
+  E→OK 1,290, E→W 2,814, F→E 171, F→W 97, E→F 126 — none a regression (agent_reports/2026-10-14_ef347_triage.md: 113
+  not reproducible locally, fleet contention at the 5632 MB child cap / 180 s on an E/F-only rerun of the heaviest papers;
+  13 long-standing slow or memory-heavy). Open from it: libmarpa `marpa_g_new` aborts on allocation failure with no
+  Fatal line (SIGABRT; fix in the marpa-asf fork: an overridable OOM hook → `Fatal:oom:alloc_failed`), XPath OOM floods as
+  one `Fatal:oom`, a 2.7-3.1 GB peak RSS for 4-10 s papers. Runs 348/349 (E/F rerun on `a7f5e7308e`) started 13:15Z.
 - **66t** (K9 study row H, 54 papers losing their whole body): a bare `\endX` ends the mode only when the top frame
   is an environment's (any: amsmath ends `\equation*` with `\endequation`); a box's frame gets one Warning and no frame work, as
   LaTeX's list-ending `\endquotation` does none — an IEEE Open Journal `\IEEEkeywords` `\vbox\bgroup` box ended by
