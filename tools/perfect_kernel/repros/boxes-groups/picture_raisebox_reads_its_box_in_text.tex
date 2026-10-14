@@ -1,0 +1,12 @@
+% witness: 0902.1321 (\te{$4\!u\!\raisebox{.2ex}{\tiny $+$}\!2\!u\!^2$} in a \put; E 101 F 1 -> 0)
+% oracle: pdflatex 0 errors (latex.ltx \@argrsbox sets #2 in \hbox: the inner $+$ is a formula of its own)
+% engines: rust 66x = 4 errors (^ in text, \lx@pic@put mode end, Missing $, \end{picture}); Perl 4 errors (PERL-ORIGIN)
+% expect: 0 Errors; one outer formula 4u...2u^2 holding the raised + as its own formula
+% mechanism: \raisebox is \pic@raisebox in a picture (sect13.rs before_picture); its {} argument was read in the current mode, math
+% status: RED (66x) -> GREEN (66y: \pic@raisebox reads its box restricted_horizontal, bounded, as \raisebox does)
+\documentclass{article}
+\begin{document}
+\begin{picture}(50,20)
+\put(0,0){$4u\raisebox{.2ex}{\tiny $+$}2u^2$}
+\end{picture}
+\end{document}

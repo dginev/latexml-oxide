@@ -13193,3 +13193,22 @@ which open no TeX group. A document environment whose begin code calls `\list` a
 mode frame: "Attempt to close a group that switched to mode internal_vertical", and the text after the environment goes
 into the last item. Minimal trigger: `\def\refs{\list{}{}}` then `\begin{refs}\item One.\end{refs} After.` Fixed in Rust
 (sect06.rs `\lx@list` marks its frame a bare environment's; OXIDIZED_DESIGN #586; repros lists/).
+
+## 677. An `array` outside math reads its cells as text
+
+latex_constructs.pool.ltxml:3755 `\array` opens a math alignment (`alignmentBindings($template, 'math')`, ltx:XMArray)
+but digests its cells in the surrounding mode. In pdflatex an array in text is clean — latex.ltx `\@arrayclassz` sets
+every cell as `$\relax\@sharp$`, so the cells are math wherever the array is — while LaTeXML reports "Script _ can only
+appear in math mode" for each script in a cell and "<ltx:XMArray> isn't allowed in <ltx:p>" (or `<ltx:td>`). Minimal
+trigger: `Before \begin{array}{ll} x_1 & y^2 \end{array} after.`; witness 1611.02392 (kdefs.tex:453 `bnfarray`, an array
+in a tabular cell). Fixed in Rust (sect10.rs `\array` outside math opens an inline formula, `\endarray` closes it; repro
+alignment/array_in_text_has_math_cells.tex; `perfect_kernel_batch66y`).
+
+## 678. `\raisebox` in a picture reads its box in the current mode
+
+latex_constructs.pool.ltxml:4936 lets `\raisebox` to `\pic@raisebox` in a picture, and :5085 `\pic@raisebox` reads its
+box argument with no mode, so inside a formula in a `\put` the box is math: `$4u\raisebox{.2ex}{\tiny $+$}2u^2$` closes
+the formula at the inner `$`, and the `^2` that follows is "Script ^ can only appear in math mode", then the picture's
+frames unwind with errors. latex.ltx `\@argrsbox` sets the box in an `\hbox` (pdflatex clean). Witness 0902.1321 (101
+errors + Fatal → 0). Fixed in Rust (sect13.rs `\pic@raisebox` reads its box restricted_horizontal, bounded, as `\raisebox`
+does; repro boxes-groups/picture_raisebox_reads_its_box_in_text.tex; `perfect_kernel_batch66y`).

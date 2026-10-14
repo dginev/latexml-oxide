@@ -490,11 +490,21 @@ pub(crate) fn load() -> Result<()> {
   });
 
   // latex.ltx:16550 `\array` `\let\@classz\@arrayclassz` (math cells).
+  // Outside math the array is a formula of its own: TeX sets each cell as `$\relax\@sharp$` (`\@arrayclassz` above),
+  // so the cells are math wherever the array is; LaTeXML's math cells need math mode, so `\array` opens an inline
+  // formula and `\endarray` closes it (Perl reads the cells as text — "Script _ can only appear in math mode",
+  // "<ltx:XMArray> isn't allowed in <ltx:p>", KNOWN_PERL_ERRORS #677; 1611.02392 `bnfarray` in a tabular cell).
+  // Guard: `perfect_kernel_batch66y::array_in_text_has_math_cells`.
+  Let!("\\lx@array@text@close", "\\relax");
   DefMacro!(
     "\\array[]{}",
-    r"\let\@classz\@arrayclassz\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
+    r"\ifmmode\let\lx@array@text@close\relax\else\lx@begin@inline@math\let\lx@array@text@close\lx@end@inline@math\fi\let\@classz\@arrayclassz\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
   );
-  DefMacro!("\\endarray", None, r"\lx@end@alignment\@end@array");
+  DefMacro!(
+    "\\endarray",
+    None,
+    r"\lx@end@alignment\@end@array\lx@array@text@close"
+  );
   DefPrimitive!("\\@end@array", {
     egroup()?;
     restore_dollar_outside_alignment();

@@ -798,7 +798,8 @@ pub(crate) fn load() -> Result<()> {
   // \pic@raisebox — simplified raisebox for picture mode
   DefConstructor!("\\pic@raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:g y='#1'>#4</ltx:g>",
-    alias => "\\raisebox"
+    alias => "\\raisebox",
+    mode => "restricted_horizontal", bounded => true
   );
 
   // Perl: latex_constructs.pool.ltxml line 4862
