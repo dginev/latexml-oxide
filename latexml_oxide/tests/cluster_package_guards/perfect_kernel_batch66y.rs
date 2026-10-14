@@ -74,6 +74,13 @@ fn centred_array_in_text_is_missing_dollar() {
     1,
     "{log}"
   );
+  assert!(
+    xml.contains(
+      r#"<p xml:id="p1.1">Out <Math mode="inline" tex="\begin{array}[]{c}k_{1}\end{array}" "#
+    ),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<Math ").count(), 1, "{xml}");
   assert!(xml.contains("</Math> tail.</p>"), "{xml}");
   assert!(!log.contains("Script _"), "{log}");
 }

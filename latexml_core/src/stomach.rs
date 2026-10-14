@@ -2959,9 +2959,16 @@ fn par_lookahead_verdict(upcoming: impl Iterator<Item = Token>) -> Option<bool> 
     let after_command = position != ArgumentPosition::None;
     match code {
       Catcode::SPACE | Catcode::COMMENT | Catcode::MARKER => continue,
-      // TeX's alphabetic constant: the token after a `` ` `` is a character code (`\char`_`, `\lccode`^`), inert.
+      // TeX's alphabetic constant: a `_` or `^` after a `` ` `` is a character code (`\char`_`, `\lccode`^`),
+      // inert. Only those two are stepped over: a quoted `` `$x_1$' `` or `` `\ref{a_b}' `` keeps its `$` or its
+      // command, which decide as they would anywhere else.
       Catcode::OTHER if token == T_OTHER!("`") => {
-        tokens.next();
+        if tokens
+          .peek()
+          .is_some_and(|next| matches!(next.get_catcode(), Catcode::SUB | Catcode::SUPER))
+        {
+          tokens.next();
+        }
         position = ArgumentPosition::None;
         continue;
       },

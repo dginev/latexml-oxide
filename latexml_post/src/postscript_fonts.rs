@@ -141,8 +141,9 @@ fn download_prolog(fonts: &[String], defines_fshow: bool) -> Option<String> {
   Some(prolog)
 }
 
-/// A converted figure's temporary copy, removed when dropped — on every return, panic unwinding (the canvas
-/// `catch_unwind`) included, so it never stays in the packaged output.
+/// A converted figure's temporary copy, removed when dropped — on every return and on panic unwinding (the canvas
+/// `catch_unwind`). A `panic = "abort"` build (`maxperf`) or a process killed by a timeout runs no drop and leaves the
+/// copy behind.
 pub(crate) struct FontCopy(PathBuf);
 
 impl FontCopy {

@@ -322,6 +322,31 @@ fn par_before_a_character_code_ends_the_formula() {
   assert_eq!(math_tex(&xml), vec!["a=b", "x"], "{xml}");
 }
 
+/// A quoted formula `` `$x_1$' ``: the `$` after the backquote is a math shift, not a character code, so it ends the
+/// look-ahead and the formula before the `\par` (review of 66w r2, finding 1).
+#[test]
+fn par_before_a_backquoted_formula_ends_the_formula() {
+  let tex = "\\documentclass{article}\n\\begin{document}\nWe have $a = b\n\nSee `$x_1$' here and $y$ there.\n\\end{document}\n";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    error_lines(&log),
+    vec!["Error:expected:$ Missing $ inserted"],
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert_eq!(math_tex(&xml), vec!["a=b", "x_{1}", "y"], "{xml}");
+}
+
+/// A quoted reference `` `\ref{fig_1}' ``: the command after the backquote keeps its arguments, so the `_` of the
+/// label continues no formula (review of 66w r2, finding 1).
+#[test]
+fn par_before_a_backquoted_ref_ends_the_formula() {
+  let tex = "\\documentclass{article}\n\\begin{document}\nWe have $a = b\n\nSee `\\ref{fig_1}' and $x$ here.\n\\end{document}\n";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(math_tex(&xml), vec!["a=b", "x"], "{xml}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+}
+
 /// natbib's `\citep[e.g.][]{a_b}`: every `[…]` and `{…}` in a row after the command is its argument.
 #[test]
 fn par_before_citep_with_two_notes_ends_the_formula() {

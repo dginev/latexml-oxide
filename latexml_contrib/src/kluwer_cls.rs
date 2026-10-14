@@ -12,7 +12,10 @@ LoadDefinitions!({
   RequirePackage!("amssymb");
   RequirePackage!("wasysym");
   // :124-125 `\if@thms`, set by the `thms` option only: the class's theorem and display environments (:2411-2432)
-  // exist only under it, so a paper's own `\case`, `\rem` or `\Note` is its own otherwise.
+  // exist only under it, so a paper's own `\case`, `\rem` or `\Note` is its own otherwise. The class's `\rmtheorem`
+  // (:2365, :2422-2426) sets {alg}, {defn} and {exmp} upright; here they are defined under an upright
+  // `\thm@bodyfont`, which each theorem keeps from its definition. The public `\rmtheorem` stays unbound: a theorem
+  // keeps its style from `\newtheorem`, so a later call has nothing to change.
   RawTeX!(r"\newif\if@thms");
   DeclareOption!("thms", "\\@thmstrue");
   DeclareOption!(None, {});
@@ -54,9 +57,10 @@ LoadDefinitions!({
   \newtheorem{exer}[thm]{EXERCISE}
   \newtheorem{REM}[thm]{REMARK}
   \newtheorem{prob}[thm]{PROBLEM}
+  {\thm@bodyfont{\rmfamily\upshape}%
   \newtheorem{alg}{ALGORITHM}
   \newtheorem{defn}[thm]{DEFINITION}
-  \newtheorem{exmp}[thm]{EXAMPLE}
+  \newtheorem{exmp}[thm]{EXAMPLE}}
   \newdisplay{crit}{Criterion}
   \newdisplay{rem}{Remark}
   \newdisplay{Note}{Note}

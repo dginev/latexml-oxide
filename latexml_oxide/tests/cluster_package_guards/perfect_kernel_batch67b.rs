@@ -51,13 +51,22 @@ fn kluwer_displays_only_under_thms() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(!xml.contains("<theorem"), "{xml}");
   assert!(
-    xml.contains("NOTE-MACRO") && xml.contains("My remark:"),
+    xml.contains("<p xml:id=\"p1.1\">CASE¡one¿ and NOTE-MACRO.\nMy remark: Body of rem.</p>"),
     "{xml}"
   );
   let thms = "\\documentclass[thms]{kluwer}\n\\begin{document}\n\\begin{article}\n\\begin{thm}A theorem.\\end{thm}\n\
-              \\begin{case}A case.\\end{case}\n\\end{article}\n\\end{document}\n";
+              \\begin{defn}A definition.\\end{defn}\n\\begin{case}A case.\\end{case}\n\\end{article}\n\\end{document}\n";
   let (log, xml) = convert_counted(thms);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(xml.contains(r#"class="ltx_theorem_thm""#), "{xml}");
   assert!(xml.contains(r#"class="ltx_theorem_case""#), "{xml}");
+  // `\rmtheorem{defn}` (:2424): the body is upright, a theorem's italic.
+  assert!(
+    xml.contains(r#"<p xml:id="Thmthm1.p1.1"><text font="italic" xml:id="Thmthm1.p1.1.1">A theorem.</text></p>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<p xml:id="Thmthm2.p1.1">A definition.</p>"#),
+    "{xml}"
+  );
 }
