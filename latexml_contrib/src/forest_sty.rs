@@ -17,13 +17,17 @@ pub struct ForestKey {
 /// that reaches the node (`resolve_forest_node`): forest.sty:3923 `edge
 /// label` (TikZ code drawn after the edge path, :3913-3920), :3903 `tier`,
 /// :3924 `phantom` (the node is not drawn, :7628-7631) and :3780-3788
-/// `name`/`name'`. Every other forest option is layout and stays ignored.
+/// `name`/`name'` and :3944 `content format`, the code a node's content is
+/// typeset through (`\forestoption{content}` standing for the content; `math
+/// content` makes it `\ensuremath{…}`, :3946). Every other forest option is
+/// layout and stays ignored.
 #[derive(Debug, Clone, Default)]
 pub struct ForestNodeKeys {
-  pub edge_label: Option<Vec<Token>>,
-  pub tier:       Option<String>,
-  pub phantom:    bool,
-  pub name:       Option<String>,
+  pub edge_label:     Option<Vec<Token>>,
+  pub tier:           Option<String>,
+  pub phantom:        bool,
+  pub name:           Option<String>,
+  pub content_format: Option<Vec<Token>>,
 }
 
 /// A node in the parsed forest bracket tree.
@@ -558,6 +562,7 @@ fn apply_node_keys(
       ("phantom", None) => node.phantom = forest_boolean(value),
       ("not phantom", None) => node.phantom = false,
       ("name" | "name'", None) => node.name = value.map(tokens_text).filter(|n| !n.is_empty()),
+      ("content format", None) => node.content_format = value.map(<[Token]>::to_vec),
       ("for tree", None) => {
         let subtree_keys = parse_forest_keylist(value.unwrap_or(&[]));
         // The descendants re-run the whole keylist, so a nested `for tree`
@@ -910,6 +915,41 @@ fn edge_label_texts(code: &[Token]) -> Vec<Vec<Token>> {
   texts
 }
 
+/// The node's content set through its `content format` (forest.sty:3944-3951):
+/// the format is expanded once by `\foresteoption` inside the `node format`'s
+/// `\edef`, where `\forestoption{content}` gives the content's tokens
+/// (`\expandonce`, :1679) and `\noexpand` keeps the next token as it is.
+fn format_content(format: &[Token], content: &[Token]) -> Vec<Token> {
+  let mut out = Vec::with_capacity(format.len() + content.len());
+  let mut i = 0;
+  while i < format.len() {
+    let t = &format[i];
+    if *t == T_CS!("\\noexpand") {
+      if let Some(next) = format.get(i + 1) {
+        out.push(*next);
+      }
+      i += 2;
+    } else if (*t == T_CS!("\\forestoption") || *t == T_CS!("\\forestov"))
+      && format
+        .get(i + 1)
+        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+    {
+      let end = skip_delimited(format, i + 1, '{', '}');
+      let name = tokens_text(&format[i + 2..end.saturating_sub(1).max(i + 2)]);
+      if name.trim() == "content" {
+        out.extend_from_slice(content);
+      } else {
+        out.extend_from_slice(&format[i..end]);
+      }
+      i = end;
+    } else {
+      out.push(*t);
+      i += 1;
+    }
+  }
+  out
+}
+
 /// Digests a label's tokens: plain content as TeX, anything else as its
 /// string (`is_plain_label`).
 fn digest_label(tokens: Tokens) -> Result<(Option<Digested>, Option<String>)> {
@@ -960,7 +1000,12 @@ fn resolve_forest_node(
 
   // A phantom node's content is still typeset (forest typesets every node)
   // but never drawn (forest.sty:7628-7631), so it is digested, not emitted.
-  let (digested, text) = digest_label(Tokens::new(node.label_tokens.clone()).strip_braces())?;
+  let content = Tokens::new(node.label_tokens.clone()).strip_braces();
+  let content = match &keys.content_format {
+    Some(format) => Tokens::new(format_content(format, content.unlist_ref())),
+    None => content,
+  };
+  let (digested, text) = digest_label(content)?;
   node.label_digested = digested;
   node.label_text = text;
   // An edge, and the label drawn with its path, exists only when the node
@@ -1284,6 +1329,8 @@ LoadDefinitions!({
     ctx.report_runaway()?;
     Ok(Vec::new())
   });
+  // forest.sty:3945-3946, the two content formats forest names.
+  RawTeX!(r"\forestset{plain content/.style={content format={\forestoption{content}}},math content/.style={content format={\noexpand\ensuremath{\forestoption{content}}}}}");
   DefMacro!("\\forestoption{}", "\\relax");
   DefMacro!("\\foresteoption{}", "\\relax");
   DefMacro!("\\forestregister{}", "\\relax");

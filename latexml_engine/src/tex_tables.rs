@@ -665,7 +665,23 @@ LoadDefinitions!({
         // beforeCellUnlist: reorder $ and \hfil (move \hfil before $)
         tks.extend(before_cell_unlist(before));
       }
+    // In TeX an `\omit`ted cell is restricted horizontal mode: the math of an amsmath alignment's cells comes from its
+    // template's `$` (`template_math`, amsmath_sty.rs), so the spanned cell of an `aligned` is text and a `$f_0(x)$` in
+    // it a formula (1808.07192 `&\min &\multicolumn{2}{l}{$f_0(x)$}`; Perl keeps the cell math, its `$` opened text
+    // and the scripts erred: KNOWN_PERL_ERRORS #662). An array's `\multicolumn` re-inserts its `$` (latex.ltx
+    // `\@arrayclassz`), so its cells stay math. Guard: `perfect_kernel_batch66l::multicolumn_in_aligned_is_text`.
+    let text_cell = lookup_alignment().is_some_and(|alignment| {
+      alignment.alignment_cell().is_some_and(|cell| {
+        matches!(cell.borrow().get_property("template_math").as_deref(), Some(Stored::Bool(true)))
+      })
+    });
+    if text_cell {
+      tks.extend([T_CS!("\\hbox"), T_BEGIN!()]);
+    }
     tks.extend(body.unlist_ref().iter().copied());
+    if text_cell {
+      tks.push(T_END!());
+    }
     // afterCellUnlist: reorder $ and \hfil (move \hfil after $)
     if let Some(col) = column
       && let Some(after) = &col.after {

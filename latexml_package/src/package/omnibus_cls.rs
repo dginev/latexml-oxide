@@ -3,7 +3,7 @@
 //!
 //! Defines common frontmatter commands, theorem environments, natbib autoloads,
 //! and various compatibility macros encountered in real-world arxiv submissions.
-use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard, provide_only};
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard, provide_only, with_origin};
 
 use crate::prelude::*;
 
@@ -57,10 +57,17 @@ LoadDefinitions!({
   // Perl L34: ProcessOptions();
   ProcessOptions!();
 
-  // Perl L37-45: Various common packages
+  // Perl L37-45: Various common packages. inst_support (`\inst`, `\institute`) and aas_macros (`\apj`, `\mnras`) are
+  // conventions guessed for the class, so they load as part of the guess (`Fallback`, `input_definitions`): a
+  // document's own `\newcommand{\inst}` replaces them (2603.21740, cas-sc: whose class defines no `\inst`). epsf and
+  // graphicx are packages whose commands are their own: they keep a binding's standing, and a document's
+  // `\providecommand{\includegraphics}` stays declined.
   RequirePackage!("inst_support");
-  RequirePackage!("epsf");
-  RequirePackage!("graphicx");
+  with_origin(DefinitionOrigin::Binding, || -> Result<()> {
+    RequirePackage!("epsf");
+    RequirePackage!("graphicx");
+    Ok(())
+  })?;
   RequirePackage!("aas_macros");
 
   // Perl L48-51: natbib autoloads — `DefAutoload($trigger, 'natbib.sty.ltxml')`

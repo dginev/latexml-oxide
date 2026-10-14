@@ -1,0 +1,14 @@
+% witness: 2407.14297 (chapters/bins.tex:449-453 `bNiceArray{w{c}{0.75cm}w{c}{0.45cm}:w{c}{0.45cm}}`, cell `\mathbf{0}_{1\times 3}`)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; both array cells are math (the subscripted bold zero is one formula); "AFTERWORDS survive."
+% mechanism: array.sty:463-474 `w`/`W` set the cell as a `c` column does (`\d@llarbegin`: `$` in an array) into a box,
+%   then `\makebox[#2][#1]`; the binding (as Perl array.sty.ltxml:50-63) wrapped it in `\vtop{…}`, internal vertical
+%   mode, and the math cell's scripts were text. Fixed: array_sty.rs `w`/`W` keep the alignment's mode (KPE #660).
+% status:  GREEN
+\documentclass{article}
+\usepackage{array}
+\begin{document}
+Before.
+\[ D = \begin{array}{w{c}{1cm}W{c}{1cm}} A & a\\ \mathbf{0}_{1\times 3} & y_2 \end{array} \]
+After the equation, AFTERWORDS survive.
+\end{document}

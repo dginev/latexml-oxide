@@ -559,7 +559,14 @@ pub(crate) fn load() -> Result<()> {
   // `perfect_kernel_batch54::marginpar_optional_keeps_its_own_brackets`.
   DefMacro!("\\@xmpar[]{}", "\\lx@marginpar[{#1}]{#2}");
   DefMacro!("\\@ympar{}", "\\lx@marginpar{#1}");
+  // The note's text is set in a box of its own (latex.ltx `\@xympar` → `\@savemarbox`: `\vtop{… #2}`, internal vertical
+  // mode), so it is text wherever `\marginpar` is called: a `$…$` in a note called from a formula opens math there, as
+  // `\lx@note`'s body does (sect03.rs). Perl's constructor (latex_constructs.pool.ltxml:3487) takes no mode, so a note
+  // called from math digested `$#1$` as the formula's own `$`s: the next formula of the paragraph met its scripts in
+  // text (2002.06461's `\newcommand{\defineNotation}[1]{#1\marginnote{$#1$}}` inside `$…$`; KNOWN_PERL_ERRORS #661).
+  // Guard: `perfect_kernel_batch66l::marginnote_formula_called_from_math`.
   DefConstructor!("\\lx@marginpar[]{}", r###"?#1(<ltx:note role='margin' class='ltx_marginpar_left'><ltx:inline-logical-block>#1</ltx:inline-logical-block></ltx:note>?#2(<ltx:note role='margin' class='ltx_marginpar_right'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>))(<ltx:note role='margin' class='ltx_marginpar'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>)"###,
+    mode => "inline_internal_vertical",
     bounded => true, reversion => r"\marginpar[#1]{#2}",
     sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 

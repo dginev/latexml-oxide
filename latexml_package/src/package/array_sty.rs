@@ -2,6 +2,23 @@ use std::collections::VecDeque;
 
 use crate::prelude::*;
 
+/// A `w{align}{width}` / `W{align}{width}` column (array.sty:463-474): the cell in the alignment's own mode, its
+/// width and alignment on the cell.
+fn add_width_column(align: &str, width: Dimension) {
+  let alignment = match align {
+    "l" => Align::Left,
+    "r" => Align::Right,
+    _ => Align::Center,
+  };
+  with_building_template(|template| {
+    template.add_column(Cell {
+      align: Some(alignment),
+      width: Some(width),
+      ..Cell::default()
+    });
+  });
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: array.sty.ltxml
@@ -70,42 +87,18 @@ LoadDefinitions!({
     });
   });
 
-  // w column: specified alignment and width
+  // w and W columns: specified alignment and width. array.sty:463-474 sets the cell as a `c` column does, in the
+  // array's own mode (`\d@llarbegin`: `$` in an array, a group in a tabular), into `\ar@cellbox`, then
+  // `\makebox[#2][#1]` (`W` lets `\hss` be `\hfil` first, so wide content overflows to the right): one line, never a
+  // paragraph. Perl array.sty.ltxml:50-63 wraps the cell in `\vtop{…}`, internal vertical mode, so a math array's
+  // `w` cell left math and its scripts were "can only appear in math mode" (KNOWN_PERL_ERRORS #660; 2407.14297
+  // `bNiceArray{w{c}{0.75cm}…}`). The cell keeps the alignment's mode; its width and alignment ride on the cell.
+  // Guard: `perfect_kernel_batch66l::array_w_column_keeps_math_mode`.
   DefColumnType!("w{}{Dimension}", sub[(align_arg, width)] {
-    let align_str = align_arg.to_string();
-    let alignment = match align_str.as_str() {
-      "l" => Align::Left,
-      "r" => Align::Right,
-      _ => Align::Center,
-    };
-    with_building_template(|template| {
-      template.add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
-        after: Some(Tokens!(T_END!())),
-        align: Some(alignment),
-        width: Some(width),
-        ..Cell::default()
-      });
-    });
+    add_width_column(&align_arg.to_string(), width);
   });
-
-  // W column: same as w
   DefColumnType!("W{}{Dimension}", sub[(align_arg, width)] {
-    let align_str = align_arg.to_string();
-    let alignment = match align_str.as_str() {
-      "l" => Align::Left,
-      "r" => Align::Right,
-      _ => Align::Center,
-    };
-    with_building_template(|template| {
-      template.add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
-        after: Some(Tokens!(T_END!())),
-        align: Some(alignment),
-        width: Some(width),
-        ..Cell::default()
-      });
-    });
+    add_width_column(&align_arg.to_string(), width);
   });
 
   // \newcolumntype — define new column types

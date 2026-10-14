@@ -161,6 +161,7 @@ pub mod epigraph_sty;
 pub mod epsf_sty;
 pub mod epsfig_sty;
 pub mod epstopdf_sty;
+pub mod eqnarray_sty;
 pub mod esint_sty;
 pub mod espcrc_sty;
 pub mod etex_sty;

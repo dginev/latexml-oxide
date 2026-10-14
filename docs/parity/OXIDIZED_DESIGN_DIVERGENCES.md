@@ -13211,7 +13211,13 @@ jpsj2.cls:841 and ptptex.cls:617 and shipped classes (jpsj3, pasj0x), which load
 absolute value (2605.05619, 2605.05645, 2501.01582); and one paper that uses it undefined as an abstract
 (astro-ph0003107, `PASJ95` not shipped), which the alias still serves. Witness 2605.05619 (its own
 `siamart250211.cls`; 12 formulas). Guards `perfect_kernel_batch59::omnibus_alias_yields_to_newcommand`,
-`perfect_kernel_batch56::omnibus_doi_reads_as_a_url` (the locked `\doi`).
+`perfect_kernel_batch56::omnibus_doi_reads_as_a_url` (the locked `\doi`). Since 66l the bindings OmniBus requires as part of its guess,
+inst_support (`\inst`, `\institute`, `\author[]{}`) and aas_macros (`\apj`, `\mnras`), load `Fallback` too
+(`input_definitions` and both binding dispatchers keep a requesting `Fallback` origin), so a document's
+`\newcommand{\inst}{\mathcal I}` wins (2603.21740, cas-sc, whose class and cas-common.sty define no `\inst`; before, inst_support's
+`\inst{}` took the formula's closing `$`). epsf and graphicx are packages, not guesses: OmniBus loads them as bindings
+(`with_origin(Binding)`), so a document's `\providecommand{\includegraphics}` stays declined. Guard
+`perfect_kernel_batch66l::omnibus_inst_yields_to_newcommand`.
 
 ### 409. A raw float end's `\@endfloatbox` closes only a box that was opened (Perl: it pops the float binding's frame)
 

@@ -347,6 +347,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("endnotes", "sty", package::endnotes_sty::load_definitions),
   ("enotez", "sty", package::enotez_sty::load_definitions),
   ("enumitem", "sty", package::enumitem_sty::load_definitions),
+  ("eqnarray", "sty", package::eqnarray_sty::load_definitions),
   ("epigraph", "sty", package::epigraph_sty::load_definitions),
   ("float", "sty", package::float_sty::load_definitions),
   ("floatfig", "sty", package::floatfig_sty::load_definitions),
@@ -1250,10 +1251,13 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     })
     .map(|(_, extension, loader)| {
       // K1 provenance: a binding's own definitions are `Binding`; a `.pool`
-      // entry is a pool.
-      use ::latexml_core::definition::origin::{DefinitionOrigin, with_origin};
+      // entry is a pool; a binding a fallback class requires stays part of its
+      // guess, `Fallback` (`input_definitions`).
+      use ::latexml_core::definition::origin::{DefinitionOrigin, current_origin, with_origin};
       let origin = if *extension == "pool" {
         DefinitionOrigin::Pool
+      } else if current_origin() == DefinitionOrigin::Fallback {
+        DefinitionOrigin::Fallback
       } else {
         DefinitionOrigin::Binding
       };

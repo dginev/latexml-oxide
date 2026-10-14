@@ -1,0 +1,18 @@
+% witness: 2002.06461 (paper.tex:204 `\newcommand{\defineNotation}[1]{#1\marginnote{$#1$}}`, used in math at :615)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the margin note holds a formula, and the paragraph's later formulas stay formulas; "AFTERWORDS survive."
+% mechanism: latex.ltx `\@xympar` → `\@savemarbox` sets a margin note in a `\vtop` (internal vertical mode), so its
+%   `$…$` is a formula even when `\marginpar` is called from math. `\lx@marginpar` (as Perl latex_constructs.pool.ltxml:3487)
+%   took no mode: the note's `$`s were the formula's own and the next formula's `^` met text. Fixed: sect09.rs
+%   `\lx@marginpar` digests in `inline_internal_vertical` as `\lx@note` does (KPE #661).
+% status:  GREEN
+\documentclass{article}
+\usepackage{amsmath,marginnote}
+\newcommand{\pullbackChiByF}[2]{\pullbackSymbol{#2}#1}
+\newcommand{\pullbackSymbol}[1]{#1^{*}}
+\newcommand{\defineNotation}[1]{#1\marginnote{$#1$}}
+\begin{document}
+For a character $\chi$ of $H$ and a morphism ${f \colon G \to H}$, we denote by $\defineNotation{\pullbackChiByF{\chi}{f}}$ the pull-back of $\chi$ by $f$. The pull-back is a character of $G$, with $\pullbackChiByF{\chi}{f}(g) = \chi(f(g))$.
+
+Next paragraph, AFTERWORDS survive.
+\end{document}

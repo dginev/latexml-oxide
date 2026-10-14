@@ -15,9 +15,13 @@ fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String
   use crate::engine::tex_tables::{alignment_bindings, array_strut};
   // amsmath's rows carry `\strut@`, `\strutbox`'s copy (amsmath.sty:714-718): an `aligned` in a table cell, where
   // `\@array` zeroed `\baselineskip`, keeps its rows' height (KNOWN_PERL_ERRORS #445)
-  let properties = array_strut()
+  let mut properties = array_strut()
     .map(|strut| stored_map!("strut" => strut))
     .unwrap_or_default();
+  // amsmath's `\halign` preambles make each cell math with their own `$` (amsmath.sty `\aligned@a`, `\gather@`:
+  // `$\m@th\displaystyle##$`): a cell whose template `\omit` drops (`\multicolumn`) is text, as an array's is not
+  // (its `\multicolumn` re-inserts `$`, latex.ltx `\@arrayclassz`). `\lx@alignment@multicolumn` reads this.
+  properties.insert("template_math", Stored::Bool(true));
   // Perl (amsmath.sty.ltxml L111-114):
   //   my $cur_jot = LookupDimension('\jot');
   //   if ($cur_jot && $cur_jot->valueOf != LookupDimension('\lx@default@jot')->valueOf)

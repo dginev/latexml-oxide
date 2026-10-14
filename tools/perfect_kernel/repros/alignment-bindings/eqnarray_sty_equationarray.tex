@@ -1,0 +1,21 @@
+% witness: 1605.07858 (revision_05_10_arXiv.tex:610-612 `\begin{equationarray}{rcl}`), 2507.02169
+%   (responsiveness_conf.tex:793 `equationarray{@{}c@{}r@{\,}c@{\,}l>{\,}l>{\,}l@{\;}}`)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; each environment is a numbered equation group whose cells are math; "AFTERWORDS survive."
+% mechanism: eqnarray.sty:36-100 builds its preamble with array.sty's `\@mkpream` internals, which the array binding
+%   replaces (`\@classx` undefined, the cells' scripts in text). Fixed: eqnarray_sty.rs maps `equationarray` onto the
+%   native eqnarray alignment over the specification's columns, each cell `$\displaystyle…$` (eqnarray.sty:39-40).
+% status:  GREEN
+\documentclass{article}
+\usepackage{array,eqnarray}
+\begin{document}
+Before.
+\begin{equationarray}{rcl}
+  H_\mathrm{el}(t) &=& \sum_\alpha E_\alpha \label{eq:h}\\
+  G_1 &=& x^2 \nonumber
+\end{equationarray}
+\begin{equationarray*}{@{}c@{}r@{\,}c@{\,}l>{\,}l}
+  & a_1 & = & b_2 & c^3
+\end{equationarray*}
+After the equation (\ref{eq:h}), AFTERWORDS survive.
+\end{document}

@@ -861,10 +861,14 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
         .find(|(name, extension, _)| matches_entry_nocase(base_only, name, extension))
     })
     .map(|(_, extension, loader)| {
-      // K1 provenance: a binding's own definitions are `Binding`.
-      use ::latexml_core::definition::origin::{DefinitionOrigin, with_origin};
+      // K1 provenance: a binding's own definitions are `Binding`; a `.pool`
+      // entry is a pool; a binding a fallback class requires stays part of its
+      // guess, `Fallback` (`input_definitions`).
+      use ::latexml_core::definition::origin::{DefinitionOrigin, current_origin, with_origin};
       let origin = if *extension == "pool" {
         DefinitionOrigin::Pool
+      } else if current_origin() == DefinitionOrigin::Fallback {
+        DefinitionOrigin::Fallback
       } else {
         DefinitionOrigin::Binding
       };

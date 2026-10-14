@@ -13022,3 +13022,32 @@ has its scripts in text, and in an alignment cell the error recovery opened math
 `alt={\Psi' = (\id_A \ot U)(\Psi)}` in `{alignat}`). Minimal trigger: `\includegraphics[alt={a_1}]{x}` in an `align`
 cell. Fixed in Rust (graphicx_sty.rs reads `alt` and `actualtext` undigested, spelled as TeX writes them; repro
 package-bindings/includegraphics_alt_is_a_string).
+
+## 660. array.sty's `w`/`W` columns leave math
+
+array.sty.ltxml:50-63 sets a `w{align}{width}` / `W{align}{width}` cell inside `\vtop{…}`, internal vertical mode.
+array.sty:463-474 sets it as a `c` column does, in the array's own mode (`\d@llarbegin`: `$` in an array, a group in a
+tabular), into a box, then `\makebox[#2][#1]`: one line, never a paragraph. In a math array the cell left math and its
+scripts were "can only appear in math mode" (2407.14297 `bNiceArray{w{c}{0.75cm}…}` with `\mathbf{0}_{1\times 3}`).
+Minimal trigger: `$\begin{array}{w{c}{1cm}} x_1 \end{array}$`. Fixed in Rust (array_sty.rs `w`/`W` keep the alignment's
+mode; repro alignment-bindings/array_w_column_keeps_math_mode).
+
+## 661. `\marginpar` called from math sets its note in math
+
+latex_constructs.pool.ltxml:3487 `\marginpar` takes no mode: its argument is digested in the caller's mode. latex.ltx
+`\@xympar` → `\@savemarbox` sets a margin note in a `\vtop` (internal vertical mode), so a `$…$` in a note called from a
+formula is a formula of its own. Perl digests the note's `$`s as the formula's own: the paragraph's `$`-parity flips
+and its next formula meets its scripts in text (2002.06461 `\newcommand{\defineNotation}[1]{#1\marginnote{$#1$}}` used
+inside `$…$`). Minimal trigger: `$a\marginpar{$b$}$ and $c^2$`. Fixed in Rust (sect09.rs `\lx@marginpar` digests in
+`inline_internal_vertical`, as `\lx@note`; repro sectioning-frontmatter/marginnote_formula_called_from_math).
+
+## 662. `\multicolumn` in an amsmath alignment keeps the cell math
+
+TeX_Tables.pool.ltxml:693-702 splices the spanned column's template around the body; in a math alignment the cell stays
+math. `\multicolumn` is `\multispan` (`\omit`): an amsmath alignment's cells are math by their template's own `$`
+(`$\m@th\displaystyle##$`), which `\omit` drops, so the spanned cell is restricted horizontal (array.sty `\d@llarbegin`
+= `\begingroup` outside `\array`) and a `$…$` in it a formula. Perl's `$` there opens text around the scripts
+(1808.07192 `&\min &\multicolumn{2}{l}{$f_0(x)$}` in `aligned`). An array's `\multicolumn` re-inserts its `$` (latex.ltx
+`\@arrayclassz`), so its cells stay math. Minimal trigger: `\begin{aligned}&\multicolumn{2}{l}{$f_0$}\end{aligned}` with
+array.sty. Fixed in Rust (tex_tables.rs `\lx@alignment@multicolumn` boxes the body as text in an alignment marked
+`template_math` by amsmath_sty.rs; repro alignment-bindings/multicolumn_in_aligned_is_text).

@@ -199,8 +199,12 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   // file, or a raw file the document loaded. A compiled binding found by the
   // dispatch below narrows its own code to `Binding` (latexml_package /
   // latexml_contrib `dispatch`), and its `InputDefinitions!(noltxml)` re-enters
-  // here as `File` for the real package's definitions.
-  use crate::definition::origin::{DefinitionOrigin, OriginGuard};
+  // here as `File` for the real package's definitions. A file a fallback class requires while it guesses (OmniBus's
+  // `inst_support`, `aas_macros`) is part of that guess: it stays `Fallback`, so the document's own `\newcommand` of
+  // one of its names wins as it does over the class's (2603.21740 `\newcommand{\inst}{\mathcal I}`; OXIDIZED_DESIGN
+  // #408).
+  use crate::definition::origin::{DefinitionOrigin, OriginGuard, current_origin};
+  let requested_by_fallback = current_origin() == DefinitionOrigin::Fallback;
   let base = raw_file
     .trim()
     .rsplit(['/', '\\'])
@@ -209,6 +213,8 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
     .to_string();
   let origin = if options.extension.as_deref() == Some("pool") || base.ends_with(".pool") {
     DefinitionOrigin::Pool
+  } else if requested_by_fallback {
+    DefinitionOrigin::Fallback
   } else if matches!(
     base.as_str(),
     "latex.ltx" | "plain.tex" | "expl3-code.tex" | "latex" | "plain" | "expl3-code"
