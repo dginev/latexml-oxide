@@ -111,6 +111,7 @@ pub mod ecai_cls;
 pub mod hld_cls;
 pub mod imakeidx_sty;
 pub mod jurabib_sty;
+pub mod kluwer_cls;
 pub mod knittingpattern_cls;
 pub mod midl_cls;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
@@ -421,6 +422,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("hepnames", "sty", hepnames_sty::load_definitions),
   ("hepparticles", "sty", hepparticles_sty::load_definitions),
   ("jpc", "sty", jpc_sty::load_definitions),
+  ("kluwer", "cls", kluwer_cls::load_definitions),
   ("kotexutf", "sty", kotexutf_sty::load_definitions),
   ("lanlmac", "tex", lanlmac_tex::load_definitions),
   ("latexmlman", "sty", latexmlman_sty::load_definitions),

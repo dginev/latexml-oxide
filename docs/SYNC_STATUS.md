@@ -1056,6 +1056,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   13 long-standing slow or memory-heavy). Open from it: libmarpa `marpa_g_new` aborts on allocation failure with no
   Fatal line (SIGABRT; fix in the marpa-asf fork: an overridable OOM hook → `Fatal:oom:alloc_failed`), XPath OOM floods as
   one `Fatal:oom`, a 2.7-3.1 GB peak RSS for 4-10 s papers. Runs 348/349 (E/F rerun on `a7f5e7308e`) started 13:15Z.
+- **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
+  these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
+  author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,
+  `\newdisplay`, `\newproof`/`{pf}`, the frontmatter setters. Run 349: `{article}` 384, `{opening}` 344, `\surname`
+  335, `\newdisplay` 128 papers; 40-paper A/B E 169 → 58, error-free 0 → 24, none worse
+  (`perfect_kernel_batch67b`). Open: `\author{A (1) and B (2)}` with parenthesised marks stays one creator (the
+  merged_creators cluster).
 - **67a** (frequency-first; ruled 2026-10-14 "provide-only fallback"): under the ar5iv preload a paper that uses
   `\url`/`\href` with neither url.sty nor hyperref loaded gets hyperref's definitions at `\begin{document}`, as arXiv's
   build (which loads hyperref into every paper) gives them — only the ones still undefined (OD #588;
