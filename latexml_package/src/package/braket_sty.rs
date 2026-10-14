@@ -130,9 +130,7 @@ fn split_braket_arg(
     } else if t.get_catcode() == Catcode::CS && t.defined_as(&T_CS!("\\right")) {
       fences -= 1;
     }
-    if current.last().is_some_and(reads_a_delimiter) {
-      current.push(t);
-    } else if fences > 0 {
+    if current.last().is_some_and(reads_a_delimiter) || fences > 0 {
       current.push(t);
     } else if depth == 0 && maxbars > 0 && t == vbar {
       // `||` — single D split (Perl L38-40)
