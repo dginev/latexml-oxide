@@ -1,7 +1,9 @@
 //! Shared helper: discard an environment body by reading tokens up to
 //! matching `\end{kind}`. Mirrors the Perl `discard_env_body` closures
 //! used in ar5iv-bindings/nicematrix / forest / diagrams / pb-diagram
-//! stub packages.
+//! stub packages. Here the users are pb-diagram's stub and the body readers
+//! of forest and animate; Paul Taylor's `diagrams` is a native binding
+//! (diagrams_tex.rs, OXIDIZED_DESIGN_DIVERGENCES #589).
 //!
 //! Perl reference (identical across those stubs):
 //! ```perl

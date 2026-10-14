@@ -5,8 +5,9 @@
 //! every `{diagram}` as `<ltx:ERROR>{diagram}</ltx:ERROR>`; this binding keeps the diagram, after
 //! the model of amscd's `{CD}` (amscd_sty.rs): a math array of objects and labelled arrows
 //! (OXIDIZED_DESIGN_DIVERGENCES #589). Witnesses: math0001049, math-ph0001006, math0003019,
-//! math-ph0007001, math0010298, math0012073, math0102115, math0104065, math0104175; plain TeX
-//! `\input diagrams`: math0105166.
+//! math-ph0007001, math0010298, math0012073, math0102115, math0104065, math0104175, math0109209,
+//! math0310311, math0404431, cs0204036; plain TeX `\input diagrams`: math0105166; the `amstex`
+//! option: math0104206, math0403203.
 //!
 //! The macro surface is the manual's (manual.tex v3.97, "Typing the diagram", "Labels",
 //! "Parallel arrows", "Defining arrow styles", "Diagonal lines", "Options"), checked against the
@@ -22,15 +23,18 @@
 //!   `(x,y)` (the cells a diagonal spans), positional `{f}{g}` (very old versions) and the labels
 //!   `^` above, `_` below, `<` left, `>` right, `~` middle, each a single token or a braced group.
 //!   "For reverse compatibility, above=left and below=right for vertical arrows"; for negative
-//!   gradient diagonals (rd, lu) above=right and below=left. Horizontal arrows "may also be used in
-//!   text, `$A \rTo^f B$`".
+//!   gradient diagonals (rd, lu) above=right and below=left. Outside a diagram the source reads
+//!   no span and no `<`/`>` (`\switch@arg`, diagrams.tex:301-306). Horizontal arrows "may also be
+//!   used in text, `$A \rTo^f B$`"; one outside maths is the package's error.
 //! - `\newarrow{Name}{tail}{filler}{middle}{filler}{head}` defines the eight arrows of `Name`
 //!   (diagrams.tex:449, the definitions made at the caller's group level with `\aftergroup`; a tip
 //!   or middle equal to its filler is empty; ignored within maths), and the arrows the source
 //!   declares in its section (24) are predefined, with its synonyms (`\rInto`, `\hLine`, `\NW`, …).
 //! - `\pile{\rTo^f \\ \rTo_g}`: parallel horizontal arrows, a one-column array.
-//! - Layout only, no output: `\diagramstyle[…]`, `\newarrowhead/tail/middle/filler`,
-//!   `\newdiagramgrid`, `\HonV`, `\VonH`, `\HmeetV`, the pullback corners `\SEpbk` etc.
+//! - Layout only, no output: `\diagramstyle[…]` (but its `amstex` loads amscd's `{CD}`),
+//!   `\newarrowhead/tail/middle/filler`, `\newdiagramgrid`, `\HonV`, `\VonH`, `\HmeetV`. The
+//!   pullback corners `\SEpbk` etc. are a visible mark not emitted (open, OD #589;
+//!   math0203179, math0306018).
 use latexml_package::prelude::*;
 
 /// The eight arrow directions of `\newarrow` (manual "Defining arrow styles").
@@ -265,10 +269,15 @@ struct Labels {
   mid:    Option<Tokens>,
 }
 
-/// Read what follows an arrow command (manual "Labels", "Options", "Diagonal lines").
-fn read_arrow_labels(dir: &str) -> Result<Labels> {
+/// Read what follows an arrow command (manual "Labels", "Options", "Diagonal lines"). Inside a
+/// diagram that is the source's `\CD@PB` (diagrams.tex:290-299, made `\switch@arg` at :729):
+/// `^`, `_`, `<`, `>`, `~`, `(`, `[`, `.`, a space or a `{`. Outside one it is `\switch@arg`
+/// (:301-306), which reads `^`, `_`, `[`, `.`, `~`, a space or a `{` and leaves a `(`, `<` or
+/// `>` to the formula (`$X\rTo (0,1)$` prints "X → (0, 1)"). A `.` is the dotted-shaft switch
+/// (`\CD@JJ`, :583), read and not drawn. A `{` is a positional label (`\positional@`, :578): the
+/// upper one while that is unread, then the lower one; after a lower label it ends the arrow.
+fn read_arrow_labels(dir: &str, in_diagram: bool) -> Result<Labels> {
   let mut labels = Labels::default();
-  let mut positional = 0usize;
   let mut any_label = false;
   // For a negative-gradient diagonal `<` is below and `>` above (manual "Labels").
   let negative = matches!(dir, "rd" | "lu");
@@ -284,15 +293,15 @@ fn read_arrow_labels(dir: &str) -> Result<Labels> {
       unread(Tokens::new(spaces));
       break;
     };
+    let other = |text: &str| token.get_catcode() == Catcode::OTHER && token.with_str(|s| s == text);
+    if other(".") {
+      continue;
+    }
     let slot: Option<u8> = match script_catcode(&token) {
       Some(Catcode::SUPER) => Some(1),
       Some(_) => Some(2),
-      None if token.get_catcode() == Catcode::OTHER && token.with_str(|s| s == "<") => {
-        Some(if negative { 2 } else { 1 })
-      },
-      None if token.get_catcode() == Catcode::OTHER && token.with_str(|s| s == ">") => {
-        Some(if negative { 1 } else { 2 })
-      },
+      None if in_diagram && other("<") => Some(if negative { 2 } else { 1 }),
+      None if in_diagram && other(">") => Some(if negative { 1 } else { 2 }),
       None if token.get_catcode() == Catcode::ACTIVE && token.with_str(|s| s == "~") => Some(3),
       None => None,
     };
@@ -313,7 +322,7 @@ fn read_arrow_labels(dir: &str) -> Result<Labels> {
     }
     if !any_label && token.get_catcode() == Catcode::OTHER {
       let opener = token.with_str(|s| match s {
-        "(" => Some((")", is_span as fn(&str) -> bool)),
+        "(" if in_diagram => Some((")", is_span as fn(&str) -> bool)),
         "[" => Some(("]", is_options as fn(&str) -> bool)),
         _ => None,
       });
@@ -325,15 +334,16 @@ fn read_arrow_labels(dir: &str) -> Result<Labels> {
         break;
       }
     }
-    // Very old versions' positional labels, `\rTo{f}{g}` (manual "Labels").
-    if !any_label && positional < 2 && token.get_catcode() == Catcode::BEGIN {
+    // Very old versions' positional labels, `\rTo{f}{g}`, `\rTo^f{g}` (manual "Labels").
+    if labels.second.is_none() && token.get_catcode() == Catcode::BEGIN {
       let group = read_balanced(ExpansionLevel::Off, false, false)?;
-      if positional == 0 {
-        labels.first = Some(group);
+      let place = if labels.first.is_none() {
+        &mut labels.first
       } else {
-        labels.second = Some(group);
-      }
-      positional += 1;
+        &mut labels.second
+      };
+      *place = Some(group);
+      any_label = true;
       continue;
     }
     unread_one(token);
@@ -360,10 +370,48 @@ LoadDefinitions!({
 \def\labelstyle{\ifincommdiag\textstyle\else\scriptstyle\fi}
 \let\objectstyle\displaystyle");
 
-  // `\lx@dg@arrow <cs>{<dir>}{<glyph>}`: an arrow command reads its options, span and labels.
-  DefMacro!("\\lx@dg@arrow Token {}{}", sub[(cs, dir, glyph)] {
+  // `\lx@dg@arrow <cs>{<dir>}{<glyph>}`: an arrow command. Unexpandable, as the source's arrows
+  // begin with `\relax` (`\CD@nB`, `\CD@pB`): the mode is tested when the arrow is digested, not
+  // when an alignment's look-ahead for `\omit` expands it at a cell's start, before the cell's
+  // math begins (`&\rTo` in `align*`, math0404431). A horizontal arrow belongs in a formula
+  // (manual "Typing the diagram": "You still need the dollars"); typed in text it is the
+  // package's error (diagrams.tex `\CD@nB` → `\CD@E`, "Horizontal arrows may be used outside
+  // diagrams, but must still be in maths"), and, where TeX's inserted `$` runs on to the
+  // paragraph's end, the arrow alone is set as a formula (`$`: plain TeX has no `\ensuremath`,
+  // math0105166).
+  DefPrimitive!("\\lx@dg@arrow Token {}{}", sub[(cs, dir, glyph)] {
+    let in_math = lookup_bool("IN_MATH");
+    if !in_math {
+      let kind = match dir.to_string().as_str() {
+        "r" | "l" => "horizontal",
+        "u" | "d" => "vertical",
+        _ => "diagonal",
+      };
+      Error!("unexpected", cs,
+        s!("Commutative Diagram: \"$\" inserted before {kind} map"));
+    }
+    let mut tokens = Vec::new();
+    if !in_math {
+      tokens.push(T_MATH!());
+    }
+    tokens.extend([T_CS!("\\lx@dg@read"), cs, T_BEGIN!()]);
+    tokens.extend(dir.unlist());
+    tokens.extend([T_END!(), T_BEGIN!()]);
+    tokens.extend(glyph.unlist());
+    tokens.extend([T_END!(), T_BEGIN!()]);
+    if !in_math {
+      tokens.push(T_MATH!());
+    }
+    tokens.push(T_END!());
+    unread(Tokens::new(tokens));
+    Ok(Vec::new())
+  });
+  // `\lx@dg@read <cs>{<dir>}{<glyph>}{<close>}`, in maths: the arrow reads its options, span and
+  // labels, then `<close>` (the `$` of a text arrow).
+  DefMacro!("\\lx@dg@read Token {}{}{}", sub[(cs, dir, glyph, close)] {
     let dir = dir.to_string();
-    let labels = read_arrow_labels(&dir)?;
+    let in_diagram = if_condition(&T_CS!("\\ifincommdiag"))?.unwrap_or(false);
+    let labels = read_arrow_labels(&dir, in_diagram)?;
     let constructor = if matches!(dir.as_str(), "u" | "d") { "\\lx@dg@side" } else { "\\lx@dg@stack" };
     let mut tokens = vec![T_CS!(constructor), T_BEGIN!()];
     tokens.push(cs);
@@ -375,17 +423,8 @@ LoadDefinitions!({
     tokens.extend(braced(labels.first));
     tokens.extend(braced(labels.second));
     tokens.extend(braced(labels.mid));
-    if lookup_bool("IN_MATH") {
-      Ok(Tokens::new(tokens))
-    } else {
-      // A horizontal arrow belongs in a formula (manual "Typing the diagram": "You still need
-      // the dollars"); one typed in text is set as one (`$`: plain TeX has no `\ensuremath`,
-      // math0105166).
-      let mut wrapped = vec![T_MATH!()];
-      wrapped.extend(tokens);
-      wrapped.push(T_MATH!());
-      Ok(Tokens::new(wrapped))
-    }
+    tokens.extend(close.unlist());
+    Ok(Tokens::new(tokens))
   });
 
   // The arrow itself, a stretchy operator as amscd's `\lx@amscd@rightarrow`.
@@ -516,10 +555,30 @@ LoadDefinitions!({
   DefMacro!("\\newarrowfiller{}{}{}{}{}", "");
   // Grid and style options set the drawing (manual "Options", diagrams.tex:615 `\diagramsstyle`).
   DefMacro!("\\newdiagramgrid{}{}{}", "");
-  DefMacro!("\\diagramstyle[]", "");
+  // `\diagramstyle[opts]`, or `\diagramstyle{opts}` (diagrams.tex `\CD@CF\CD@AE\CD@AE`, :282-285: a
+  // `[` read as the options, else the next argument; `\diagramstyle{PostScript=dvips,…}`,
+  // math0403203). The option `amstex` enables AmS-TeX's commutative-diagram commands (manual
+  // "Options", `\cds@amstex` defines `\CD`): the amscd binding's `{CD}` (math0104206).
+  DefMacro!("\\diagramstyle", {
+    let next = read_token()?;
+    let is_bracket = next
+      .as_ref()
+      .is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "["));
+    if let Some(next) = next {
+      unread_one(next);
+    }
+    let options = if is_bracket { read_optional(None)? } else { Some(read_arg(ExpansionLevel::Off)?) };
+    let amstex = options.is_some_and(|o| o.to_string().split(',').any(|o| o.trim() == "amstex"));
+    Ok(if amstex { Tokens!(T_CS!("\\lx@dg@amstex")) } else { Tokens!() })
+  });
+  DefPrimitive!("\\lx@dg@amstex", {
+    RequirePackage!("amscd");
+  });
   Let!("\\diagramsstyle", "\\diagramstyle");
-  // Lines meeting and crossing (manual "The Cube"), the pullback corners printed outside their
-  // cell (manual "Diagonal lines", diagrams.tex:1314-1331): drawing only.
+  // Lines meeting and crossing (manual "The Cube"): drawing only. The pullback corners (manual
+  // "Diagonal lines", diagrams.tex:1314-1331 `\make@pbk`) are a visible ⌟ ⌞ ⌝ ⌜ at the cell's
+  // corner, typed mid-expression (math0203179 `X\times_Z\SEpbk Y`, math0306018), so no inline
+  // token: not emitted, open (OXIDIZED_DESIGN_DIVERGENCES #589).
   DefMacro!("\\HonV[]", "");
   DefMacro!("\\VonH[]", "");
   DefMacro!("\\HmeetV[]", "");
@@ -534,17 +593,26 @@ LoadDefinitions!({
 
   // `\begin{diagram}[options]`: the options only when `[` follows at once (manual "Options").
   DefMacro!("\\diagram", {
-    let mut options = String::new();
+    let mut options = Tokens!();
     if let Some(next) = read_token()? {
       if next.get_catcode() == Catcode::OTHER && next.with_str(|s| s == "[") {
         unread_one(next);
         if let Some(opts) = read_optional(None)? {
-          options = opts.to_string();
+          options = opts;
         }
       } else {
         unread_one(next);
       }
     }
+    let mut tokens = vec![T_CS!("\\lx@dg@open"), T_BEGIN!()];
+    tokens.extend(options.unlist());
+    tokens.push(T_END!());
+    Ok(Tokens::new(tokens))
+  });
+  // The mode is tested when the diagram is digested, not when an alignment's look-ahead for
+  // `\omit` expands `\diagram` at a cell's start, before the cell's math begins (as the arrows).
+  DefPrimitive!("\\lx@dg@open{}", sub[(options)] {
+    let options = options.to_string();
     let has = |name: &str| options.split(',').any(|o| o.trim() == name);
     let source = if lookup_bool("IN_MATH") {
       r"\def\lx@dg@close{\lx@dg@end}\lx@dg@begin"
@@ -558,7 +626,8 @@ LoadDefinitions!({
       // `$$`, not LaTeX's `\[`: the package is plain TeX's too (`\input diagrams`, math0105166).
       r"\def\lx@dg@close{\lx@dg@end$$}$$\lx@dg@begin"
     };
-    Ok(TokenizeInternal!(source))
+    unread(TokenizeInternal!(source));
+    Ok(Vec::new())
   });
   DefMacro!("\\enddiagram", "\\lx@dg@close");
   DefMacro!("\\lx@dg@close", "");

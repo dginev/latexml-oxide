@@ -2,7 +2,7 @@
 //! papers) as a native binding (latexml_contrib/src/diagrams_tex.rs): a `{diagram}` is a math array of its objects
 //! and labelled arrows, where Perl's ar5iv binding put `<ERROR>{diagram}</ERROR>` (OXIDIZED_DESIGN_DIVERGENCES
 //! #589). Witnesses: math0001049, math-ph0001006, math0003019, math-ph0007001, math0010298, math0012073,
-//! math0102115, math0104065, math0104175.
+//! math0102115, math0104065, math0104175, math0104206, math0403203, math0404431.
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert_counted(tex: &str) -> (String, String) {
@@ -196,8 +196,8 @@ fn diagrams_newarrow_in_math_is_ignored() {
   );
 }
 
-/// The package is plain TeX's too (`\input diagrams`): a text-mode diagram is a `$$` display, a text arrow a `$`
-/// formula, neither LaTeX's `\[` nor `\ensuremath` (math0105166).
+/// The package is plain TeX's too (`\input diagrams`): a text-mode diagram is a `$$` display, not LaTeX's `\[`
+/// (math0105166).
 #[test]
 fn diagrams_plain_tex() {
   let (log, xml) = convert_counted(include_str!(
@@ -219,11 +219,109 @@ fn diagrams_plain_tex() {
     "{xml}"
   );
   assert!(
-    xml.contains(&format!(
-      r#"<p>and an arrow <Math mode="inline" tex="\rTo" text="→"><XMath>{RIGHT}</XMath></Math> here.</p>"#
-    )),
+    xml.contains(r#"</equation><p>and more text here.</p>"#),
     "{xml}"
   );
+}
+
+/// An arrow typed in text is the package's error (diagrams.tex `\CD@nB` → `\CD@E`, pdflatex `! Commutative Diagram:
+/// "$" inserted before horizontal map.`); the arrow alone is set as a `$` formula, not the paragraph's rest
+/// (OXIDIZED_DESIGN_DIVERGENCES #589; `$`, not `\ensuremath`, for plain TeX, math0105166).
+#[test]
+fn diagrams_text_arrow_is_the_package_error() {
+  for (preamble, end) in [
+    (
+      "\\documentclass{article}\n\\usepackage{diagrams}\n\\begin{document}\n",
+      "\\end{document}\n",
+    ),
+    ("\\input diagrams\n", "\\bye\n"),
+  ] {
+    let (log, xml) = convert_counted(&format!("{preamble}Text \\rTo{{}} word.\n{end}"));
+    assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+    assert!(
+      log.contains(
+        r#"Error:unexpected:\rTo Commutative Diagram: "$" inserted before horizontal map"#
+      ),
+      "{log}"
+    );
+    let xml = squashed(&xml);
+    assert!(
+      xml.contains(&format!(
+        r#"<p>Text <Math mode="inline" tex="\rTo" text="→"><XMath>{RIGHT}</XMath></Math> word.</p>"#
+      )),
+      "{xml}"
+    );
+  }
+}
+
+/// Outside a diagram an arrow reads `^ _ [ . ~`, a space or a `{` (diagrams.tex:301-306 `\switch@arg`); `(x,y)`, `<`
+/// and `>` are read only inside one (:290-299, :729), so `$X\rTo (0,1)$` keeps its pair (pdflatex "X → (0, 1)").
+/// A `{` after `^f` is the lower label, after a lower label content (`\positional@`); a `.` (dotted shaft) is read.
+#[test]
+fn diagrams_arrows_outside_a_diagram() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/diagrams_arrows_outside_a_diagram.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squashed(&xml);
+  for math in [
+    format!(
+      r#"<Math mode="inline" tex="X\rTo(0,1)" text="X → vector@(0, 1)"><XMath><XMApp>{RIGHT}<XMTok font="italic" role="UNKNOWN">X</XMTok><XMDual><XMApp><XMTok meaning="vector"/><XMRef idref="p1.m1.1"/><XMRef idref="p1.m1.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="0" role="NUMBER">0</XMTok><XMTok role="PUNCT">,</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"#
+    ),
+    String::from(
+      r#"<Math mode="inline" tex="f\colon X\rTo(0,\infty)" text="f colon X → open-interval@(0, infinity)">"#,
+    ),
+    String::from(r#"<Math mode="inline" tex="A\rTo&lt;B" text="A → absent &lt; B">"#),
+    String::from(r#"<Math mode="inline" tex="C\rTo&gt;D" text="C → absent &gt; D">"#),
+    format!(
+      r#"<Math mode="inline" tex="P\rTo Q" text="P → Q"><XMath><XMApp>{RIGHT}<XMTok font="italic" role="UNKNOWN">P</XMTok><XMTok font="italic" role="UNKNOWN">Q</XMTok></XMApp></XMath></Math>"#
+    ),
+    String::from(r#"<Math mode="inline" tex="R\rTo^{f}_{g}S" text="R (→ ^ f) _ g S">"#),
+    String::from(r#"<Math mode="inline" tex="T\rTo_{g}{h}U" text="T → _ g h * U">"#),
+    String::from(
+      r#"<Math mode="display" tex="f\colon X\rTo(0,1)" text="f colon X → vector@(0, 1)">"#,
+    ),
+  ] {
+    assert!(xml.contains(&math), "{math}\n{xml}");
+  }
+  // In the diagram the span is read and a vertical's `<`/`>` are its labels.
+  assert!(
+    xml.contains(r#"text="commutative-diagram@(Array[[G, →, H, x@↓@y, K]])""#),
+    "{xml}"
+  );
+}
+
+/// The `amstex` option, as a package option or in `\diagramstyle`, enables AmS-TeX's `{CD}` (manual "Options",
+/// diagrams.tex `\cds@amstex`), the amscd binding's; `\diagramstyle{…}` reads one braced argument when no `[` follows
+/// (diagrams.tex:282-285), so a body `\diagramstyle{centredisplay}` prints nothing (math0104206, math0403203).
+#[test]
+fn diagrams_amstex_option_enables_cd() {
+  for setup in [
+    "\\usepackage{diagrams}\n\\diagramstyle{PostScript=dvips,nohug,amstex,labelstyle=\\scriptstyle}\n",
+    "\\usepackage{diagrams}\n\\diagramstyle[amstex]\n",
+    "\\usepackage[amstex]{diagrams}\n",
+  ] {
+    let (log, xml) = convert_counted(&format!(
+      "\\documentclass{{article}}\n{setup}\\begin{{document}}\n$\\begin{{CD}} A @>f>> B \\end{{CD}}$\n\
+       \\diagramstyle{{centredisplay}}done.\n\\end{{document}}\n"
+    ));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{setup}\n{log}"
+    );
+    let xml = squashed(&xml);
+    assert!(
+      xml.contains(
+        r#"<Math mode="inline" tex="\begin{CD}A@&gt;{f}&gt;{}&gt;B\end{CD}" text="commutative-diagram@(Array[[A, rightarrow ^ f, B]])">"#
+      ),
+      "{setup}\n{xml}"
+    );
+    assert!(
+      xml.contains("done.") && !xml.contains("centredisplay"),
+      "{setup}\n{xml}"
+    );
+  }
 }
 
 /// In restricted horizontal mode (a `c` cell, an LR box) a diagram is an inline formula, `$$` being an empty
@@ -294,4 +392,27 @@ fn diagrams_row_may_begin_with_a_bracket() {
     ),
     "{xml}"
   );
+}
+
+/// An arrow or a diagram at the start of an alignment cell is in that cell's maths: the mode is tested when it is
+/// digested, not when the look-ahead for `\omit` expands it before the cell's math begins (the source's arrows begin
+/// with `\relax`; `&\rTo` in `align*`, math0404431).
+#[test]
+fn diagrams_at_alignment_cell_starts() {
+  let (log, xml) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{diagrams}\n\\begin{document}\n\
+     \\begin{align*}\n \\phi: H^0 &\\rTo H^1,\\\\\n f &\\rMapsto g.\n\\end{align*}\n\
+     \\begin{align}\nx &\\begin{diagram} A & \\rTo & B\\end{diagram}\\\\\n\\diagram C & \\rTo & D\\enddiagram & y\n\
+     \\end{align}\n\\end{document}\n",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squashed(&xml);
+  for math in [
+    r#"<Math tex="\displaystyle\phi:H^{0}\rTo H^{1}," text="phi colon H ^ 0 → H ^ 1">"#,
+    r#"<Math tex="\displaystyle f\rMapsto g." text="f ↦ g">"#,
+    r#"<Math tex="\displaystyle x\begin{diagram}A&amp;\rTo&amp;B\end{diagram}" text="x * commutative-diagram@(Array[[A, →, B]])">"#,
+    r#"<Math tex="\displaystyle\begin{diagram}C&amp;\rTo&amp;D\end{diagram}y" text="commutative-diagram@(Array[[C, →, D]]) * y">"#,
+  ] {
+    assert!(xml.contains(math), "{math}\n{xml}");
+  }
 }

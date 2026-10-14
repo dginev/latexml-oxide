@@ -17399,22 +17399,54 @@ undefined. Ours (latexml_contrib/src/diagrams_tex.rs, modelled on amscd's `{CD}`
 from the package manual (manual.tex v3.97) and checked against the 100 witness papers' use:
 `\begin{diagram}[opts]`/`\diagram … \enddiagram` is an `XMArray` (`name=diagram`, `datameaning=commutative-diagram`)
 whose cells are the objects and arrows (`&`, and `\\` as the package's `\cr`, diagrams.tex:729/739: no `[dim]`, a row
-may begin with a bracket, math0109209); outside maths it is a `$$` display (plain TeX's `\input diagrams` too), in
-restricted horizontal mode (a `c` cell, an LR box: math0010298, math0109209) or with `[inline]` an inline formula, with
-`[LaTeXeqno]` a numbered `equation` (manual FAQ "Display options", "Options"). An arrow `\<dir><Name>` (r l u d ru rd lu
-ld) reads `[opts]`, a span `(x,y)`, the positional `{f}{g}` and the labels `^ _ < > ~` (manual "Labels": above=left,
-below=right on verticals, the reverse sides on negative-gradient diagonals); a horizontal or diagonal arrow is a
-stretchy `ARROW` with its labels as scripts (amscd's `\lx@amscd@stack`, plus the role `ARROW` on a superscript-only
-stack so `$A \rTo^f B$` parses as a relation), a vertical one has its labels beside it (amscd's `\lx@amscd@adjacent`).
+may begin with a bracket, math0109209, math0403203); outside maths it is a `$$` display (plain TeX's `\input diagrams`
+too, math0105166), in restricted horizontal mode (a `c` cell, an LR box: math0010298, math0109209) or with `[inline]` an
+inline formula, with `[LaTeXeqno]` a numbered `equation` (manual FAQ "Display options", "Options"). An arrow
+`\<dir><Name>` (r l u d ru rd lu ld) reads what the source's reader reads: inside a diagram (`\CD@PB`, diagrams.tex:290-299)
+`[opts]`, a span `(x,y)`, the labels `^ _ < > ~`, a `.` and a positional `{f}{g}`; outside one (`\switch@arg`, :301-306)
+only `^ _ [ . ~` and `{`, so `$X\rTo (0,1)$` keeps its pair as pdflatex prints it (and a diagonal shorthand used in text,
+`\nNE` = `\ruTo(2,3)`, prints its span, as TeX does). The label sides are the manual's ("Labels": above=left,
+below=right on verticals, the reverse on negative-gradient diagonals); a positional `{g}` after `^f` is the lower label,
+after a lower label it ends the arrow (`\positional@`, :578). A horizontal or diagonal arrow is a stretchy `ARROW` with
+its labels as scripts (amscd's `\lx@amscd@stack`, plus the role `ARROW` on a superscript-only stack so `$A \rTo^f B$`
+parses as a relation), a vertical one has its labels beside it (amscd's `\lx@amscd@adjacent`). An arrow and
+`\diagram` test the mode when digested, not when expanded (the source's arrows begin with `\relax`), so one at an
+alignment cell's start, met by the look-ahead for `\omit` before the cell's maths begins, is in that cell's maths
+(`&\rTo` in `align*`, math0404431).
 `\newarrow{Name}{tail}{filler}{middle}{filler}{head}` (diagrams.tex:449, local definitions, ignored with a Warning in
 maths) draws each direction with the Unicode arrow of its components (`|--->` ↦, `C--->` ↪, `>--->` ↣, `----{>>}` ↠,
-`===={=>}` ⇒, `<--->` ↔, `.....` ⋯/⋮, `33333` ≡, …; an unknown component the plain arrow, no component nothing); the
-source's predefined arrows and synonyms (section (24): `\rInto`, `\hLine`, `\NW`, …) are defined, a synonym under its
-own name. `\pile` is a one-column array; `\diagramstyle`, `\newarrowhead/tail/middle/filler`, `\newdiagramgrid`,
-`\HonV`/`\VonH`/`\HmeetV` and the pullback corners `\SEpbk` etc. draw nothing here (layout). A text arrow's `(…)`/`[…]`
-that is no span/option stays in the formula (`\pi\rTo(\calf.\pi)^c`). **Why**: content — every commutative diagram of
-these papers was lost. Witnesses math0001049, math-ph0001006, math0003019, math-ph0007001, math0010298, math0012073,
-math0102115, math0104065, math0104175; repros `package-bindings/diagrams_*`; guards `perfect_kernel_batch67d`.
+`===={=>}` ⇒, `<--->` ↔, `.....` ⋯/⋮, `33333` ≡, …; an unknown component the plain arrow, no component nothing,
+math0310311); the source's predefined arrows and synonyms (section (24): `\rInto`, `\hLine`, `\NW`, …) are defined, a
+synonym under its own name. `\pile` is a one-column array. `\diagramstyle[opts]` or `\diagramstyle{opts}` (one argument
+when no `[` follows, :282-285; math0403203) and the package options set the drawing; their `amstex` (manual "Options",
+`\cds@amstex`) loads the amscd binding, so `{CD}` is AmS-TeX's (math0104206, math0403203). `\newarrowhead/tail/middle/
+filler`, `\newdiagramgrid` and `\HonV`/`\VonH`/`\HmeetV` draw nothing (layout).
+
+Recoveries and losses, each against what TeX does:
+- **A text-mode arrow** (`Text \rTo\ word`): TeX's `! Commutative Diagram: "$" inserted before horizontal map.` (`\CD@nB`
+  → `\CD@E`), then its inserted `$` runs on to the paragraph's end. Ours raises that Error (the noun is `vertical` or
+  `diagonal` for those arrows) and sets the arrow alone as a `$…$` formula, so the text after it stays text.
+- **A text arrow's `[…]` that is no option list** (`$f\colon X\rTo [0,1]$`; the test: it begins with a letter) and a
+  `(…)` in a diagram that is no span (`\rTo (B & C)`) stay in the formula; TeX reads them as options (warning "\relax
+  inserted before `[0'") and as a span.
+- **The pullback corners** `\SEpbk`, `\SWpbk`, `\NEpbk`, `\NWpbk` (diagrams.tex:1314-1331 `\make@pbk`) are a visible mark
+  (⌟ ⌞ ⌝ ⌜ at the cell's corner) that we do not emit; the witnesses type them mid-expression (math0203179:674/848/1052
+  `X\times_Z\SEpbk Y`, math0306018:825/1572), where an inline token would disturb the parse. Open; the proposal (a class
+  on the cell, the corner drawn by CSS) waits for the end-of-goal CSS review.
+- **Not implemented**: the `eqno=` option (its equation number is dropped), `\diagraminline`, the dotted-shaft `.` after
+  an arrow (read, but the arrow drawn solid), `\diagram[amstex]` inside one diagram (the `@` commands of `\CD@O`),
+  `\puncture`, `\lessthan`/`\greaterthan`, `\commdiag`, the `\HorizontalMap`/`\VerticalMap` family; the positional-label
+  message ("labels as positional arguments are obsolete") is not given. A vertical arrow outside a diagram, which TeX
+  ignores with an Error ("vertical map ignored outside diagram", `\CD@LK`), is drawn.
+- **The `tex` attribute** is a reconstruction: a plain-TeX `\diagram … \enddiagram` reverts as `\begin{diagram} …
+  \end{diagram}` (the shared matrix code's form); `\nNE`-style shorthands revert to `\ruTo` without the span, an
+  arrow's options are dropped, and labels revert in the canonical syntax (`\uTo^m_n` as `\uTo<{m}>{n}`).
+- **A `\\` inside braces in a cell** (`{A \\ A'} & \rTo & C`) splits the row silently; TeX's `! Missing } inserted`.
+
+**Why**: content — every commutative diagram of these papers was lost. Witnesses math0001049, math-ph0001006,
+math0003019, math-ph0007001, math0010298, math0012073, math0102115, math0104065, math0104175, math0104206, math0105166,
+math0109209, math0203179, math0306018, math0310311, math0403203, math0404431, cs0204036; repros
+`package-bindings/diagrams_*`; guards `perfect_kernel_batch67d`.
 
 ### 590. pict2e keeps the `\@tempdimd` of its pre-2020 versions and its graph-code layer (Perl: raw pict2e, TL 2025)
 

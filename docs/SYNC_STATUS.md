@@ -1061,12 +1061,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   from the package manual v3.97 and the 100 witnesses' use) where Perl's ar5iv stub put `<ERROR>{diagram}</ERROR>`:
   `{diagram}`/`\diagram` is a math array of objects and labelled arrows (display in text, inline in a `c` cell or LR
   box, `[LaTeXeqno]` numbered, `\\` = the package's `\cr`), `\newarrow` draws each direction with the Unicode arrow
-  of its components, `\pile`, text arrows, plain TeX `\input diagrams` (OD #589). A/B of 102 witnesses vs 66x1:
-  Errors 468 → 88, Fatals 0 → 0, words +52k, 1,089 `<ERROR>{diagram}` → 1,140 diagram arrays; no paper with more
-  Errors/Fatals; 12 with 2-71 fewer words, all the printed arguments of the undefined `\newarrow`/`\diagramstyle`
-  and `<ERROR>` macro names. Witnesses math0001049, math-ph0001006, math0003019, math-ph0007001, math0010298,
-  math0012073, math0102115, math0104065, math0104175, math0105166; repros `package-bindings/diagrams_*`; guards
-  `perfect_kernel_batch67d`. Open: the pullback corners (`\SEpbk`) and `\HonV`/`\VonH` draw nothing; a vertical
+  of its components, `\pile`, text arrows, plain TeX `\input diagrams` (OD #589). An arrow reads the source's
+  arguments: inside a diagram `(x,y)`, `<`, `>` too, outside one not (`$X\rTo (0,1)$` keeps its pair); a `.` and a
+  positional `{g}` after `^f` as the source reads them; arrows and `\diagram` are mode-tested when digested, so one
+  at an alignment cell's start is in the cell's maths (`&\rTo` in `align*`, math0404431); a text-mode arrow is the
+  package's Error ("Commutative Diagram: "$" inserted before horizontal map") with the arrow set as a formula; the
+  `amstex` option (package option, `\diagramstyle[…]` or `\diagramstyle{…}`) loads amscd's `{CD}` (math0104206,
+  math0403203). A/B of 102 witnesses vs 66x1: Errors 468 → 86, Fatals 0 → 0, words +53k, 1,089
+  `<ERROR>{diagram}` → 1,250 diagram arrays; no paper with more Errors/Fatals; 13 with 2-71 fewer words, all the
+  printed arguments of the undefined `\newarrow`/`\diagramstyle`/`{CD}` (`@>>>`) and `<ERROR>` macro names.
+  Witnesses math0001049, math-ph0001006, math0003019, math-ph0007001, math0010298, math0012073, math0102115,
+  math0104065, math0104175, math0104206, math0105166, math0109209, math0203179, math0306018, math0310311,
+  math0403203, math0404431, cs0204036; repros `package-bindings/diagrams_*`; guards `perfect_kernel_batch67d`.
+  Open: the pullback corners (`\SEpbk`, a visible ⌟; CSS-placed corner proposed for the end-of-goal CSS review) and
+  `\HonV`/`\VonH` draw nothing; `eqno=`, `\diagraminline` and the dotted `.` are not implemented; a vertical
   arrow's left label leaves its cell unparsed (`ltx_math_unparsed`, as amscd's `@VfVV`).
 - **Fleet TeX tree** (2026-10-14, host change, no code): the cortex fleet reads the distro TeX Live
   (`/usr/share/texlive`, worker.env sets no TEXMF*), which lacked whole collections the vendor TL 2025 of the gates and

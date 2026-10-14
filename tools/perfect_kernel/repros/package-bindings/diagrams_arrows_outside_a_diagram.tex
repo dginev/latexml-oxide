@@ -1,0 +1,21 @@
+% witness: 67d review probe p8 (`$X\rTo (0,1)$`); math0104175, math0012073 (arrows in text formulas)
+% oracle:  pdflatex (diagrams.sty v3.97 from www.PaulTaylor.EU/diagrams): "X → (0, 1)", "f : X → (0, ∞)",
+%          "A → < B", "R f→g S", "T →g hU", no `!` errors. Outside a diagram an arrow reads `^ _ [ . ~`, a space
+%          or a `{` (diagrams.sty:301-306 `\switch@arg`); `(x,y)`, `<` and `>` only inside one (:290-299 `\CD@PB`,
+%          made `\switch@arg` at :729). A `{` after `^f` is the lower label (`\positional@`, :578), after a lower
+%          label it is content; a `.` (dotted shaft, :583 `\CD@JJ`) is read
+% engines: rust 67d r0 = "(0,1)" and "(0,\infty)" lost as a span, `<`/`>` taken as labels; rust 66x1 = \rTo
+%          undefined; Perl = \rTo undefined (stub binding)
+% expect:  0 errors, 0 warnings; the pairs, `<` and `>` stay in their formulas
+% status:  RED (67d r0) -> GREEN (67d r1)
+\documentclass{article}
+\usepackage{diagrams}
+\begin{document}
+After $X\rTo (0,1)$ and $f\colon X \rTo (0,\infty)$ and $\rTo^{a}(x)$.
+Relations $A \rTo< B$ and $C\rTo>D$; dotted $P \rTo. Q$.
+Positional $R\rTo^f{g} S$ and $T\rTo_g{h} U$.
+\[ f\colon X\rTo(0,1) \]
+\begin{diagram}
+G & \rTo(1,2) & H & \dTo<{x}>{y} & K
+\end{diagram}
+\end{document}
