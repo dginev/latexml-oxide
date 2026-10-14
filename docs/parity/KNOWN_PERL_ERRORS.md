@@ -13065,3 +13065,13 @@ counts the same way (`perfect_kernel_batch58::notes_measure_as_their_mark` case 
 float). Undoing only the leaked mode when the open paragraph began before the argument, and keeping the note an item of
 its line, measures both as one line but changes the notes' trailing-space trimming in `50_structure::{enum,fancyhdr}`:
 a design of its own.
+## 669. An `\hrule` inside a cell's box restarts the row
+
+TeX_Box.pool.ltxml:846-851 adds a border row (`addLine('t')`) for any `\hrule` while an `Alignment` is visible, and
+Alignment.pm:126 `addLine` sets the current column back to 1. In TeX an `\hrule` is the alignment's own only on its
+vertical list, between rows (`\noalign`); in a cell it is the material of the box it is in (tex.web §1076 `begin_box`).
+ytableau frames every box with `\hrule`s in a `\vbox` in the cell (ytableau.sty:260-296), so each row kept only its
+first and last cells, and after an `\omit` cell (`\none`) the next cell lost its template's `$` ("Script _ can only
+appear in math mode"; 2308.07459). Minimal trigger: `\halign{&\vbox{\hrule}$#$\cr a & b & Z\cr}` (Perl: 2 cells).
+Fixed in Rust (tex_box.rs `\hrule` is a border only while the alignment is between rows; repro
+alignment/rule_in_a_cell_box_keeps_the_row).

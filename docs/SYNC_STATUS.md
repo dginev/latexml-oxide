@@ -1049,6 +1049,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   heuristic firing on a package that sets `_` a letter itself (etextools, 2606.06323), N7 NFSS shape probes
   `\try@load@fontshape`/`\DeclareFontShape` no-ops (2606.07112, Perl the same), N10 a sectioning unit in `ltx:quote`
   (2606.19241) and an `\item[]` excluded from the OD #189 item bridge (2606.00118) — both await a ruling.
+- **66n** (root-causer on 2308.07459's raw ytableau): an `\hrule` is an alignment's border only between its rows;
+  in an open cell it is the cell's (its box's) material — Perl adds a border row and `add_line` restarts the row's
+  columns, so every ytableau row with more than two cells lost its middle cells, and after a `\none` cell the next cell
+  left math (KPE #669; `perfect_kernel_batch66n::rule_in_a_cell_box_keeps_the_row`).
 - **66l** (the rest of K1's wrong-mode roots from the same report): array.sty `w`/`W` columns keep the alignment's
   mode, as array.sty:463-474 (2407.14297; KPE #660); `\lx@marginpar` digests in `inline_internal_vertical`, so a
   `$…$` note called from a formula is a formula (2002.06461; KPE #661); forest's `content format` (`plain content`,

@@ -1704,7 +1704,21 @@ LoadDefinitions!({
     whatsit.set_property("cached_depth", cdepth);
     // hrule defaults to full width — don't cache a specific width
 
-    if lookup_alignment().is_some() {
+    // An `\hrule` is the alignment's own only on the alignment's vertical list, between its rows (`\noalign`, an
+    // `\hline`, digested in a pseudo-row's column): in an open cell it is the cell's material — in TeX an error in the cell's restricted horizontal mode,
+    // the rule of a box's own vertical list inside it (tex.web §1076 `begin_box` starts that list; §1094
+    // `head_for_vmode`). Perl adds a border row for any `\hrule` while an `Alignment` is visible
+    // (TeX_Box.pool.ltxml:846-851) and `add_line` restarts the row's columns (Alignment.pm:126), so a cell's
+    // `\vbox{…\hrule…}` (ytableau's box frames, ytableau.sty:260-296) dropped the row's middle cells and, after an
+    // `\omit` cell, set the next cell outside its template's math (2308.07459; KNOWN_PERL_ERRORS #669). Guard:
+    // `perfect_kernel_batch66n::rule_in_a_cell_box_keeps_the_row`.
+    let between_rows = lookup_alignment().is_some_and(|alignment| {
+      alignment.alignment_cell().is_some_and(|cell| {
+        let cell = cell.borrow();
+        !cell.is_in_column() || cell.current_row().is_some_and(|row| row.is_pseudo())
+      })
+    });
+    if between_rows {
       // Perl: set isHorizontalRule only if dimensions suggest a real rule
       // A full-width (default) rule with an explicit height is a horizontal
       // rule too — `\noalign{\hrule height 1pt}` fell through the former

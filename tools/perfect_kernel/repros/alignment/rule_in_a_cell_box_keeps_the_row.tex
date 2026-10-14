@@ -1,0 +1,22 @@
+% witness: 2308.07459 (mainArxiv.tex:348-351, raw ytableau.sty: `\none[] & p_{11} & … & {p_{1(n-1)}} & p_{1n} \\`)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; every ytableau row keeps all its cells (4 and 4), each a formula; the plain \halign keeps 3 cells;
+%   "AFTERWORDS survive."
+% mechanism: ytableau draws each box's frame with `\hrule` inside a `\vbox` in the cell (ytableau.sty:260-296). Our
+%   `\hrule` (as Perl TeX_Box.pool.ltxml:846-851) added a border row whenever an alignment was visible, and
+%   `add_line` restarted the row's columns: the middle cells were overwritten and, after an `\omit` cell (`\none`),
+%   the next cell lost its template's `$`. In TeX the rule belongs to the box's own vertical list. Fixed: tex_box.rs
+%   `\hrule` is the alignment's border only between rows (KPE #669).
+% status:  GREEN
+\documentclass{article}
+\usepackage{ytableau}
+\begin{document}
+Before.
+\begin{ytableau}
+a & b & c & d \\
+p_{11} & \none & {p_{1}} & p_{1n} \\
+\end{ytableau}
+
+\halign{&\vbox{\hrule}$#$\cr a & b & Z\cr}
+After the tableau, AFTERWORDS survive.
+\end{document}
