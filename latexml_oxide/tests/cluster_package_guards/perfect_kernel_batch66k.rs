@@ -41,3 +41,17 @@ fn pstricks_scalerel_scaleobj_in_tabular() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(xml.contains("AFTERWORDS survive."), "{xml}");
 }
+
+/// graphicx's `alt` is a string, never typeset: a formula in it stays out of the alignment cell's math (2605.23217).
+#[test]
+fn includegraphics_alt_is_a_string() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/includegraphics_alt_is_a_string.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"description="\Psi' = (\mathrm{id}_A \otimes U)(\Psi)""#),
+    "{xml}"
+  );
+  assert!(xml.contains("AFTERWORDS survive."), "{xml}");
+}

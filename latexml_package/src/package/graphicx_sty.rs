@@ -64,11 +64,15 @@ LoadDefinitions!({
   DefKeyVal!("Gin", "clip", "", "true");
   DefKeyVal!("Gin", "scale", "");
   DefKeyVal!("Gin", "angle", "");
-  DefKeyVal!("Gin", "alt", "");
+  // `alt` and `actualtext` are tagging strings, never typeset (graphicx.sty:110 `\define@key{Gin}{alt}{}`): read
+  // undigested, not digested in the image's restricted horizontal mode, where a formula in one met its scripts in text
+  // and a `$` opened math in the alignment cell around (2605.23217 `alt={\Psi' = (\id_A \ot U)(\Psi)}` in `{alignat}`;
+  // Perl graphicx.sty.ltxml:36 digests it too, KNOWN_PERL_ERRORS #659).
+  DefKeyVal!("Gin", "alt", "UndigestedKey");
   // arXiv-fork e2b200fb: accessibility keys from recent graphicx —
   // actualtext (the replacement text) and artifact (decorative image,
   // hidden from assistive tech).
-  DefKeyVal!("Gin", "actualtext", "");
+  DefKeyVal!("Gin", "actualtext", "UndigestedKey");
   DefKeyVal!("Gin", "artifact", "", "true");
   // Perl graphicx.sty.ltxml L37-38 types both as `GraphixDimensions` (the
   // ≤4-dimension parser registered in graphics_sty.rs). With an empty type
@@ -177,12 +181,17 @@ LoadDefinitions!({
       if let Some(ref kv_digested) = args[1]
         && let DigestedData::KeyVals(kv) = kv_digested.data() {
           for (key, value) in kv.get_pairs() {
+            // Undigested strings, spelled as TeX writes them (a space after a control word: `\otimes U`).
+            let as_text = || match value.as_tokens() {
+              Ok(Some(tokens)) => tokens.into_owned().untex(),
+              _ => value.to_string(),
+            };
             if key == "alt" {
-              alt_value = Some(value.to_string());
+              alt_value = Some(as_text());
               continue;
             }
             if key == "actualtext" {
-              actualtext_value = Some(value.to_string());
+              actualtext_value = Some(as_text());
               continue;
             }
             if key == "artifact" {

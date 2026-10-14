@@ -1053,8 +1053,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   20 papers our engine read the `_`/`^` in text where pdflatex reads it in math): `\cancel`/`\bcancel`/`\xcancel` are
   robust, as cancel.sty:70-78, so an aligned cell's start (§791) does not expand them before the template's `$`
   (1801.01765, 2404.04195, 2505.00286, 2505.10361, 2512.10194); pstricks keeps graphics' boxing `\scalebox` (2104.00361,
-  2504.03865; KPE #658; 1208.6481 still 0 errors). Guards `perfect_kernel_batch66k::*`. Open from the report: raw
-  `eqnarray.sty` (`equationarray`, 1605.07858, 2507.02169), array `w`/`W` columns, graphicx `alt` typeset, `\multicolumn`
+  2504.03865; KPE #658; 1208.6481 still 0 errors); graphicx's `alt`/`actualtext` are read undigested, as graphicx.sty
+  never typesets them (2605.23217, KPE #659). Guards `perfect_kernel_batch66k::*`. Open from the report: raw
+  `eqnarray.sty` (`equationarray`, 1605.07858, 2507.02169), array `w`/`W` columns, `\multicolumn`
   in `aligned`, `\lx@marginpar` mode, forest `math content`, `\opt@` string re-tokenized, ytableau, two xy-pic gaps.
 - **66j** (2605/2606 sandbox regressions, root-causer reports `agent_reports/2026-10-13_sbx2605_regressions.md`,
   `…_sbx2606_regressions.md`): an option no `\DeclareOption` declared runs its `\ds@<option>` when defined, latex.ltx's

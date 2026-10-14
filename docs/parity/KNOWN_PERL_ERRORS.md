@@ -13013,3 +13013,12 @@ pstricks.tex scales with `\psscalebox`). An inner `$…$` then closes the surrou
 Minimal trigger: `\usepackage{graphicx,pstricks}` and `$F_{\scalebox{1}{$b_1$}}$`. Fixed in Rust (pstricks_support_sty.rs
 keeps a defined `\scalebox`; repros package-bindings/pstricks_keeps_graphics_scalebox,
 package-bindings/pstricks_scalerel_scaleobj_in_tabular).
+
+## 659. graphicx's `alt` is digested as text
+
+graphicx.sty.ltxml:36 `DefKeyVal('Gin','alt','')` digests the alt value under the image's `mode => 'restricted_horizontal'`
+(:77); graphicx.sty:110 `\define@key{Gin}{alt}{}` never typesets it — it is a tagging string. A formula in an alt then
+has its scripts in text, and in an alignment cell the error recovery opened math across the cell (2605.23217
+`alt={\Psi' = (\id_A \ot U)(\Psi)}` in `{alignat}`). Minimal trigger: `\includegraphics[alt={a_1}]{x}` in an `align`
+cell. Fixed in Rust (graphicx_sty.rs reads `alt` and `actualtext` undigested, spelled as TeX writes them; repro
+package-bindings/includegraphics_alt_is_a_string).

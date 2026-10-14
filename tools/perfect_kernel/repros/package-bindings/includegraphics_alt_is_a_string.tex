@@ -1,0 +1,16 @@
+% witness: 2605.23217 (report.tex:1340-1343 `\includegraphics[scale=1.0,alt={\Psi' = (\id_A \ot U)(\Psi)}]{…}` in alignat)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the graphics keeps the alt string as its description; "AFTERWORDS survive."
+% mechanism: graphicx.sty:110 `\define@key{Gin}{alt}{}` never typesets the alt string; the binding (as Perl
+%   graphicx.sty.ltxml:36) digested it in the image's restricted horizontal mode, its scripts in text. Fixed:
+%   graphicx_sty.rs reads `alt`/`actualtext` undigested (KPE #659).
+% status:  GREEN
+\documentclass{article}
+\usepackage{amsmath,graphicx}
+\begin{document}
+Before.
+\begin{alignat}{1}
+  \includegraphics[scale=1.0,alt={\Psi' = (\mathrm{id}_A \otimes U)(\Psi)}]{example-image}
+\end{alignat}
+After the equation, AFTERWORDS survive.
+\end{document}
