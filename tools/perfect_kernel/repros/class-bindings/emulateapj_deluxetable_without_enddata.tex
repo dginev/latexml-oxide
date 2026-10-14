@@ -1,0 +1,16 @@
+% witness: 1506.07185 1705.08932 (emulateapj.cls:1430-1460 longtable, :1497 \enddata only ends the last row)
+% oracle:  pdflatex 0 errors
+% engines: rust 66l = 6 errors; Perl 6 (deluxetable.sty.ltxml:35)
+% expect:  0 errors; one <table> with a 2-row tbody
+% status:  RED (66l) -> GREEN (66m)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\begin{deluxetable}{cc}
+\tablecaption{Runs}
+\tablehead{\colhead{prefix} & \colhead{description}}
+\startdata
+a & b\\
+c & d\\
+\end{deluxetable}
+\end{document}

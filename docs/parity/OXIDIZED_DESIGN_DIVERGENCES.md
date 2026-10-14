@@ -17258,3 +17258,36 @@ them works as in LaTeX. Residual: letter.cls, without floats, defines neither, b
 falls back to loads the article binding; so a letter-based class's `\newcommand` of them (newlfm.cls:1006/1012), which
 LaTeX accepts, is ignored with an Info `Ignoring redefinition`, and its captions keep the composed tag. Guard
 `perfect_kernel_batch66h::babel_ini_caption_template_needs_fnum`.
+
+### 580. The algorithm2e binding loads no float package (Perl: float)
+
+algorithm2e.sty loads no float package: its float is its own `\@float{algocf}` (algorithm2e.sty:2487-2488). Perl's
+binding requires float (algorithm2e.sty.ltxml:37), and so did ours, which put float's binding where TeX has none. Beside
+floatrow (floatrow.sty:34 marks float loaded and carries its interface) that replaced floatrow's `\float@end` with
+float_sty.rs's no-op whichever came first — after floatrow, float's binding redefined it; before, floatrow's
+`\newcommand`s were refused — and every restyled float's box stayed open (`\endgroup` errors; 1811.04370, 2007.08784,
+1609.05867, 1910.09976, 1807.05059: five of the nine floatrow papers of the run-347 `\endgroup` drill-down; the other
+four load float themselves after floatrow, which floatrow.sty:34 makes a no-op in LaTeX, KPE #668, open). The binding's
+float frames and top caption are float_sty.rs's Rust helpers (`add_float_frames`, `reposition_caption_top`), which need
+no load. A document using float's commands (`\restylefloat`, `\newfloat`) with algorithm2e and without
+`\usepackage{float}` now finds them undefined, as in LaTeX. Guard
+`perfect_kernel_batch66m::algorithm2e_beside_floatrow_keeps_floatrows_end`.
+
+### 581. `\lstinline` is robust (Perl: expandable)
+
+listings.sty:1941 `\newcommand\lstinline[1][]{…}` is `\@protected@testopt`: under `\@unexpandable@protect` it stays
+unexpanded. Perl's `\lstinline` (listings.sty.ltxml:54) is an expandable macro whose expansion opens the inline
+listing's group (listings_sty.rs `\lx@lstinline` `bgroup()`), so an `\edef`/`\xdef` that should keep it ran it: ifthen's
+`\ifthenelse{\equal{\lstinline|N|}{}}` evaluates its test in an `\xdef` (ifthen.sty:101-110), and the group it opened
+met the `\endgroup` after it (1406.5453: 729 errors; 1605.05104). Ours defines it `protected`. Guard
+`perfect_kernel_batch66m::lstinline_robust_in_ifthen_equal`.
+
+### 582. IEEEtran's convenience `\keywords` yields to the document's (Perl: locked)
+
+IEEEtran.cls (1.8b) defines no `\keywords`; the binding's (`\keywords{…}` or `\keywords … \endkeywords` as the
+keywords block, Perl IEEEtran.cls.ltxml:400-404) is a convenience Perl locks, so a document's
+`\newcommand{\keywords}{M-estimators, …}` was refused and `\keywords` in `{IEEEkeywords}` opened a second keywords
+block whose end met the environment's `\endgroup` (KPE #664; 2006.10005, 2008.05854, 2011.04315). Ours defines it with
+the `Fallback` origin (#408, `is_definable_latex`), unlocked: the document's definition wins, and without one the
+convenience works as before. Guards `perfect_kernel_batch66m::{ieeetran_document_keywords_macro_wins,
+ieeetran_keywords_fallback_still_works}`.

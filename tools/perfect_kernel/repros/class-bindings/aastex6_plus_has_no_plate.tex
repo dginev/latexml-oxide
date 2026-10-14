@@ -1,0 +1,15 @@
+% witness: 1909.00812 2006.16258 2305.06275 (aastex6+ have no {plate}; tikzlibrarybayesnet.code.tex:85 \newcommand{\plate}[4][])
+% oracle:  pdflatex 0 errors with aastex701.cls
+% engines: rust 66l = 2 errors (\plate refused, a float in a tikzpicture); Perl 22
+% expect:  0 errors; no ltx_float_plate float
+% status:  RED (66l) -> GREEN (66m)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\usepackage{tikz}
+\usetikzlibrary{bayesnet}
+\begin{document}
+\begin{tikzpicture}
+\node[obs] (y) {$y$};
+\plate {p} {(y)} {$N$} ;
+\end{tikzpicture}
+\end{document}

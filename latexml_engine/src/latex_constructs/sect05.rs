@@ -1481,10 +1481,13 @@ pub(crate) fn load() -> Result<()> {
       // When \abstract is used without braces (e.g. \abstract ... \section{...}),
       // add \maybe@end@abstract to \@startsection@hook so the abstract closes
       // when the next sectioning command starts.
+      // The brace-less form is the environment's bare begin code, which opens no TeX group
+      // (article.cls:377-387: under `twocolumn` a `\section*`, else `\quotation`), so the `\endgroup` of
+      // an enclosing group ends the abstract first, as for any bare `\X` (`\lx@abstract@bare@frame`).
       Tokens!(
         T_CS!("\\par"),
         T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
-        T_CS!("\\lx@begin@abstract"))
+        T_CS!("\\lx@begin@abstract"), T_CS!("\\lx@abstract@bare@frame"))
     }
   },
   locked => true);
@@ -1493,6 +1496,14 @@ pub(crate) fn load() -> Result<()> {
     "\\endabstract",
     "\\lx@end@abstract\\let\\maybe@end@abstract\\relax"
   );
+  // The first token of a brace-less `\abstract`'s body, read in the frame `\lx@add@frontmatter@until` digests it in:
+  // marks that frame as a bare environment's, ended by `\lx@end@abstract`, so the `\endgroup` of an enclosing group
+  // meeting it ends the abstract and then its own group (stomach.rs `close_environment_frame`; an Info, as TeX
+  // has no mismatch): `\twocolumn[\begin{@twocolumnfalse}\maketitle\abstract … \end{@twocolumnfalse}]`
+  // (witness 2305.17823).
+  DefPrimitive!("\\lx@abstract@bare@frame", {
+    assign_frame_value("lx@env@bare@end", T_CS!("\\lx@end@abstract"));
+  });
   // Locked against the class and package files (`:locked@files`, state.rs `is_name_locked`) with the
   // kernel's `\abstract`, which is locked against everyone (Perl locks an environment's pair,
   // Package.pm:1993-1997; its own `\endabstract`, latex_constructs.pool.ltxml:1144, is not): a

@@ -62,6 +62,13 @@ LoadDefinitions!({
     RequirePackage!("rotating", options => vec![s!("figuresright")]);
   }
   RequirePackage!("aas_support");
+  // AASTeX 5.x's `{plate}` (aastex.cls 5.x:1685-1704) is gone from 6 on (aastex6.cls … aastex701.cls define no plate):
+  // there, the name is the paper's own — tikz's bayesnet library `\newcommand{\plate}[4][]`
+  // (tikzlibrarybayesnet.code.tex:85), which the binding's environment refused, and `\plate` in a tikzpicture opened a
+  // float (witnesses 1909.00812, 2006.16258, 2305.06275).
+  if aastex6_plus {
+    undefine_plate();
+  }
   // AASTeX 7 prints an `\email` only with `[show]` (in the title footnote "Email: …", aastex701.cls:2455-2456) or after
   // `\correspondingauthor`/`\cofirstauthor` (a footnote, :13341-13353); any other address it discards, keeping only that
   // the author has one (:13350, for the check at :12441) (2608.05283, 2608.21320). The address is kept as the author's
@@ -137,4 +144,21 @@ fn bundled_aastex_is_6_plus() -> bool {
   )
   .and_then(|path| std::fs::read(path).ok())
   .is_some_and(|bytes| String::from_utf8_lossy(&bytes).contains("\\gridline"))
+}
+
+/// Leave `{plate}` and `{plate*}` (`\begin{plate}`, `\end{plate}`, `\plate`, `\endplate`; aas_support_sty.rs) undefined,
+/// for an AAS class that has no plate: AASTeX 6 and later, emulateapj.
+pub fn undefine_plate() {
+  for command in [
+    "\\plate",
+    "\\endplate",
+    "\\begin{plate}",
+    "\\end{plate}",
+    "\\plate*",
+    "\\endplate*",
+    "\\begin{plate*}",
+    "\\end{plate*}",
+  ] {
+    Let!(T_CS!(command), "\\@undefined");
+  }
 }

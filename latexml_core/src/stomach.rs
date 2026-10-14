@@ -1327,6 +1327,14 @@ pub fn endgroup() -> Result<()> {
       current_frame_message()
     );
   } else if !lookup_bool_sym(crate::pin!("groupNonBoxing")) {
+    // A bare environment whose body is read in a boxing frame of its own — a brace-less `\abstract`'s
+    // capture (`\lx@add@frontmatter@until`, marked by sect05.rs `\lx@abstract@bare@frame`) — ends as any
+    // bare `\X` does (witness 2305.17823).
+    if let Some(closer) = get_current_token()
+      && close_environment_frame(closer, true)?
+    {
+      return Ok(());
+    }
     // or group was opened with \bgroup
     Error!(
       "unexpected",

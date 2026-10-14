@@ -13065,6 +13065,58 @@ counts the same way (`perfect_kernel_batch58::notes_measure_as_their_mark` case 
 float). Undoing only the leaked mode when the open paragraph began before the argument, and keeping the note an item of
 its line, measures both as one line but changes the notes' trailing-space trimming in `50_structure::{enum,fancyhdr}`:
 a design of its own.
+## 664. IEEEtran's `\keywords` refuses the document's
+
+IEEEtran.cls.ltxml:400-404 defines `\keywords` with `locked => 1`; IEEEtran.cls has none, so a document's own
+`\newcommand{\keywords}{…}` — valid in LaTeX — is refused, and `\keywords` inside `{IEEEkeywords}` opens a second
+keywords block. Minimal trigger: `\documentclass{IEEEtran}\newcommand{\keywords}{a, b}` then
+`\begin{IEEEkeywords}\keywords\end{IEEEkeywords}` (Perl 5 errors, pdflatex 0; witnesses 2006.10005, 2008.05854,
+2011.04315). Fixed in Rust (ieeetran_cls.rs: a `Fallback` definition, OXIDIZED_DESIGN_DIVERGENCES #582; repro
+class-bindings/ieeetran_document_keywords_macro_wins).
+
+## 665. emulateapj's deluxetable needs an `\enddata`
+
+deluxetable.sty.ltxml:35 `\enddeluxetable` = `\spew@tblnotes\end{table}` never closes the data `\startdata` opened. In
+emulateapj the deluxetable is a longtable (emulateapj.cls:1430-1460) whose `\enddata` only ends the last row (:1497), so
+a table ended without it is complete in TeX. Minimal trigger: `\documentclass{emulateapj}` with
+`\begin{deluxetable}{cc}\startdata a & b\\ \end{deluxetable}` (Perl 6 errors, pdflatex 0; witnesses 1506.07185,
+1705.08932). Fixed in Rust (emulateapj_cls.rs `\enddeluxetable(*)` closes a still-open data first, as AASTeX 3's
+`{planotable}` does in aas_support_sty.rs; AASTeX's own `\startdata#1\enddata`, aastex701.cls:11385, needs its
+`\enddata`; repro class-bindings/emulateapj_deluxetable_without_enddata).
+
+## 666. AASTeX 6+ papers get AASTeX 5's `{plate}`
+
+aas_support.sty.ltxml (the `aastex701` → `aastex` fallback) defines `{plate}` for every AASTeX version; aastex6.cls …
+aastex701.cls define none, so a paper's `\plate` is its own — tikz's bayesnet library `\newcommand{\plate}[4][]`
+(tikzlibrarybayesnet.code.tex:85) is refused and `\plate` in a tikzpicture opens a float. Minimal trigger:
+`\documentclass{aastex701}\usepackage{tikz}\usetikzlibrary{bayesnet}` with `\plate {p} {(y)} {$N$};` in a
+tikzpicture (Perl 22 errors, pdflatex 0; witnesses 1909.00812, 2006.16258, 2305.06275). Fixed in Rust (aastex_cls.rs
+`undefine_plate` for a 6+ class, and for emulateapj, whose class has no plate either; repro
+class-bindings/aastex6_plus_has_no_plate).
+
+## 667. A brace-less `\abstract` ended by an enclosing group's end
+
+latex_constructs.pool.ltxml's brace-less `\abstract` reads its body until `\lx@end@abstract` (or the next section's
+hook); the `\endgroup` of an enclosing environment that ends it in LaTeX (article.cls:377-387: under `twocolumn` the
+begin code is a `\section*`, which opens no group) meets the capture's frame. Minimal trigger:
+`\documentclass[twocolumn]{article}` with `\twocolumn[\begin{@twocolumnfalse}\maketitle\abstract Text.
+\end{@twocolumnfalse}]` (Perl 1 error, pdflatex 0; witness 2305.17823). Fixed in Rust (sect05.rs
+`\lx@abstract@bare@frame` marks the capture frame a bare environment's, which stomach.rs `close_environment_frame` ends
+by `\lx@end@abstract`; repro sectioning-frontmatter/bare_abstract_ended_by_enclosing_endgroup).
+
+## 668. The loader ignores a `\ver@<file>` another file defined
+
+Package.pm:2559-2670 `InputDefinitions` skips a file only by its own `<file>_loaded` flag; latex.ltx:18750
+`\@onefilewithoptions` skips any file whose `\ver@<name>.<ext>` is defined (`\@ifl@aded`, :18397-18401), so a package
+that takes another's place (floatrow.sty:34 `\@namedef{ver@float.sty}`) or a document keeping one out loads its binding
+anyway. Minimal trigger: `\makeatletter\@namedef{ver@float.sty}{}\makeatother\usepackage{float}` then
+`\ifdefined\restylefloat` (Perl: defined; pdflatex: undefined). Perl does not raw-load floatrow by default, so its
+floatrow papers are clean. Open in Rust too (RED repro loader/ver_mark_skips_the_marked_package; witnesses 2010.00977,
+2003.11778, 2011.10793, 2105.04869, where float's binding, loaded after floatrow, replaced floatrow.sty:421-424's
+`\float@end` with its no-op and left every restyled float open): honouring the mark at the TeX-level requests fixes those
+four, but also keeps out the bindings that are the semantic layer for what a raw class emulates — memoir's
+`\EmulatedPackage{tocloft}` then lost three `<TOC>`s (2605.08402), `{adjustwidth}` under memoir+changepage became a list,
+and float's ruled style under floatrow+algorithm lost its frames (2206.13235, 2303.16210) — so it awaits a ruling.
 ## 669. An `\hrule` inside a cell's box restarts the row
 
 TeX_Box.pool.ltxml:846-851 adds a border row (`addLine('t')`) for any `\hrule` while an `Alignment` is visible, and

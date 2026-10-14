@@ -196,6 +196,7 @@ mod perfect_kernel_batch66h;
 mod perfect_kernel_batch66j;
 mod perfect_kernel_batch66k;
 mod perfect_kernel_batch66l;
+mod perfect_kernel_batch66m;
 mod perfect_kernel_batch66n;
 mod perfect_kernel_batch66o;
 mod perfect_kernel_gemini;

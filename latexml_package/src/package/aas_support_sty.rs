@@ -227,7 +227,8 @@ LoadDefinitions!({
   def_macro_noop("\\floattable")?;
   NewCounter!("plate");
   // AASTeX 5.x's plates list with the figures (aastex.cls:1685-1704 `\def\ext@plate{lof}`, "Plate N."; 0908.0069); the
-  // family binding keeps them for every version (aastex 6+ dropped `{plate}`).
+  // family binding defines them for every version, and the AASTeX 6+ and emulateapj class bindings, whose classes have no
+  // `{plate}`, undefine the environment (aastex_cls.rs `undefine_plate`).
   RawTeX!(r"\def\ext@plate{lof}");
   DefMacro!("\\platename", "Plate");
   def_macro_noop("\\platewidth{Dimension}")?;

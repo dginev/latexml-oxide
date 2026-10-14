@@ -2715,8 +2715,13 @@ LoadDefinitions!({
     lst_activate(Some(&kv));
   });
 
-  // \lstinline — inline listing
-  DefMacro!("\\lstinline", "\\leavevmode\\lx@lstinline");
+  // \lstinline — inline listing. Robust, as listings.sty:1941 `\newcommand\lstinline[1][]` is
+  // (`\@protected@testopt`): an `\edef`/`\xdef` under `\@unexpandable@protect` keeps it unexpanded —
+  // ifthen's `\ifthenelse{\equal{\lstinline|N|}{}}` evaluates its test in one (ifthen.sty:101-110),
+  // where expanding it opened the inline listing's group inside the `\xdef` and the `\endgroup`
+  // after it met that group (witnesses 1406.5453, 1605.05104). Perl's is an expandable macro
+  // (listings.sty.ltxml:54).
+  DefMacro!("\\lstinline", "\\leavevmode\\lx@lstinline", protected => true);
   DefMacro!("\\lx@lstinline OptionalKeyVals:LST", sub[(kv)] {
     bgroup();
     lst_activate(kv.as_ref());

@@ -659,16 +659,26 @@ LoadDefinitions!({
   //   \keywords … \endkeywords (env form) → \@IEEEkeywords
   // Rust was hardcoding the env-start path, so braced `\keywords{foo}`
   // never reached the one-arg expansion.
-  DefMacro!("\\keywords", sub[_args] {
-    let next = read_token()?;
-    if let Some(t) = next {
-      unread(Tokens!(t));
-      if t.get_catcode() == Catcode::BEGIN {
-        return Ok(Tokens!(T_CS!("\\keywords@onearg")));
+  // IEEEtran.cls (1.8b) defines no `\keywords`: the alias is a convenience, so it is a fallback a
+  // document's own `\newcommand{\keywords}{M-estimators, …}` replaces, as in TeX — Perl locks it
+  // (IEEEtran.cls.ltxml:400-404), which refused the definition, and `\keywords` in
+  // `{IEEEkeywords}` opened a second keywords block whose end met the environment's `\endgroup`
+  // (witnesses 2006.10005, 2008.05854, 2011.04315; KNOWN_PERL_ERRORS #664,
+  // `DefinitionOrigin::Fallback`, `is_definable_latex`).
+  {
+    use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+    let _fallback = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\keywords", sub[_args] {
+      let next = read_token()?;
+      if let Some(t) = next {
+        unread(Tokens!(t));
+        if t.get_catcode() == Catcode::BEGIN {
+          return Ok(Tokens!(T_CS!("\\keywords@onearg")));
+        }
       }
-    }
-    Ok(Tokens!(T_CS!("\\@IEEEkeywords")))
-  }, locked => true);
+      Ok(Tokens!(T_CS!("\\@IEEEkeywords")))
+    });
+  }
   DefMacro!("\\keywords@onearg{}",
     "\\@IEEEkeywords #1 \\@endIEEEkeywords");
   DefMacro!("\\endkeywords", "\\@endIEEEkeywords");

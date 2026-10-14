@@ -226,7 +226,12 @@ fn set_number_tag_text(tag: &Node, n: &str) {
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  RequirePackage!("float");
+  // No `RequirePackage!("float")` (Perl algorithm2e.sty.ltxml:37): algorithm2e.sty loads no float package — its float is
+  // its own `\@float{algocf}` (:2487-2488) — and float's binding, loaded here, replaced the interface floatrow.sty
+  // carries (floatrow.sty:34 marks float loaded): its no-op `\float@end` left every restyled float's box open, whether
+  // floatrow came before algorithm2e or after it (its `\newcommand`s then refused; `\endgroup` errors, witnesses
+  // 1811.04370, 2007.08784, 1609.05867, 1910.09976, 1807.05059; OXIDIZED_DESIGN_DIVERGENCES #580). The float frames and the top
+  // caption below are float_sty.rs's Rust helpers, which need no load.
 
   // Load the raw algorithm2e.sty for all its internal definitions
   InputDefinitions!("algorithm2e", extension => Some("sty".into()), noltxml => true);

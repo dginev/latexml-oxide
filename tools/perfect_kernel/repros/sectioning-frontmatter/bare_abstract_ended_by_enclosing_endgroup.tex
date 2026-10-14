@@ -1,0 +1,19 @@
+% witness: 2305.17823 (article.cls:377-387 twocolumn \abstract opens no group; the enclosing \end{@twocolumnfalse} ends it)
+% oracle:  pdflatex 0 errors
+% engines: rust 66l = 1 error (\endgroup against \lx@add@frontmatter@until); Perl 1
+% expect:  0 errors; one <abstract>, the section after it
+% status:  RED (66l) -> GREEN (66m)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\title{A Title}
+\author{A. Author}
+\begin{document}
+\twocolumn[
+\begin{@twocolumnfalse}
+\maketitle
+\abstract
+The abstract text.
+\end{@twocolumnfalse}]
+\section{Intro}
+Body.
+\end{document}

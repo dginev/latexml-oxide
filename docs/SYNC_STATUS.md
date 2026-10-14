@@ -166,7 +166,8 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     HTML guard; `\rotcaption*`/`\rotcaptionof` undefined, `\controtcaption` unnumbered (57l); a `\rule{\linewidth}` panel's
     `width="100%"` is unmeasured by the panel rows (57by, 2605.18774; KPE #389).
   - *loader/kernel*: neither the loader nor `\@ifpackageloaded` honours a `\ver@<pkg>.sty` mark (2605.20200; memoir
-    `\EmulatedPackage`; honouring it broke 2605.08402's `\listoffigures*` on the 57bu A/B); Rust's `\@addtoreset` omits
+    `\EmulatedPackage`; honouring it broke 2605.08402's `\listoffigures*` on the 57bu A/B; the loader half retried in
+    66m, KPE #668, awaits a ruling); Rust's `\@addtoreset` omits
     Perl's `defCounterID … unless \the<ctr>@ID` (latex_constructs.pool.ltxml:3044; 57ac).
   - *bibliography*: natbib's `\bibpostamble`; KOMA's `\setbibpreamble` without natbib; apacite's citation layer is natbib's
     (`\cite` textual, `\citeA` abbreviates).
@@ -1058,6 +1059,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in an open cell it is the cell's (its box's) material — Perl adds a border row and `add_line` restarts the row's
   columns, so every ytableau row with more than two cells lost its middle cells, and after a `\none` cell the next cell
   left math (KPE #669; `perfect_kernel_batch66n::rule_in_a_cell_box_keeps_the_row`).
+- **66m** (the low-risk mechanisms of the arXiv `\endgroup` cluster, report
+  `agent_reports/2026-10-14_endgroup_cluster.md`): the algorithm2e binding no longer loads float, which algorithm2e.sty
+  does not, so floatrow's `\float@end` stays (1811.04370, 2007.08784, 1609.05867, 1910.09976, 1807.05059; OD #580);
+  `\lstinline` robust, so ifthen's `\equal` keeps it unexpanded (1406.5453, 1605.05104; OD #581); IEEEtran's
+  convenience `\keywords` a `Fallback` the document's `\newcommand` replaces (2006.10005, 2008.05854, 2011.04315; OD
+  #582, KPE #664); `{plate}` undefined for AASTeX 6+ and emulateapj, whose classes have none (1909.00812, 2006.16258,
+  2305.06275; KPE #666); emulateapj's `\enddeluxetable` closes a still-open data (1506.07185, 1705.08932; KPE #665); a
+  brace-less `\abstract`'s capture frame is a bare environment's, so an enclosing `\endgroup` ends it (2305.17823; KPE
+  #667). Guards `perfect_kernel_batch66m`. Awaits a ruling: the loader honouring another file's `\ver@` mark (KPE #668,
+  RED `loader/ver_mark_skips_the_marked_package`: 2010.00977, 2003.11778, 2011.10793, 2105.04869; it keeps out the
+  bindings memoir's `\EmulatedPackage` and floatrow's float excerpt rely on). Open from the same report: E2, E7, E10,
+  E11 (E3: 66o).
 - **66l** (the rest of K1's wrong-mode roots from the same report): array.sty `w`/`W` columns keep the alignment's
   mode, as array.sty:463-474 (2407.14297; KPE #660); `\lx@marginpar` digests in `inline_internal_vertical`, so a
   `$…$` note called from a formula is a formula (2002.06461; KPE #661); forest's `content format` (`plain content`,
