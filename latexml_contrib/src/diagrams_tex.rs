@@ -25,7 +25,8 @@
 //!   "For reverse compatibility, above=left and below=right for vertical arrows"; for negative
 //!   gradient diagonals (rd, lu) above=right and below=left. Outside a diagram the source reads
 //!   no span and no `<`/`>` (`\switch@arg`, diagrams.tex:301-306). Horizontal arrows "may also be
-//!   used in text, `$A \rTo^f B$`"; one outside maths is the package's error.
+//!   used in text, `$A \rTo^f B$`"; one outside maths is the package's error, as is a vertical
+//!   arrow outside a diagram (in maths or not); a diagonal one outside a diagram raises nothing.
 //! - `\newarrow{Name}{tail}{filler}{middle}{filler}{head}` defines the eight arrows of `Name`
 //!   (diagrams.tex:449, the definitions made at the caller's group level with `\aftergroup`; a tip
 //!   or middle equal to its filler is empty; ignored within maths), and the arrows the source
@@ -378,17 +379,25 @@ LoadDefinitions!({
   // package's error (diagrams.tex `\CD@nB` → `\CD@E`, "Horizontal arrows may be used outside
   // diagrams, but must still be in maths"), and, where TeX's inserted `$` runs on to the
   // paragraph's end, the arrow alone is set as a formula (`$`: plain TeX has no `\ensuremath`,
-  // math0105166).
+  // math0105166). A vertical arrow outside a diagram, in maths or text, is the package's other
+  // error (`\CD@pB` sets `\CD@ZD` to `\CD@LK`, diagrams.tex:488, "vertical map ignored outside
+  // diagram", :497-498), with no `$` test; TeX drops the arrow, we keep the author's arrow, flagged
+  // by the Error, as for a horizontal one. A diagonal goes through `\Vector@Map`, which raises
+  // nothing: in text it is set as a formula without an Error.
   DefPrimitive!("\\lx@dg@arrow Token {}{}", sub[(cs, dir, glyph)] {
     let in_math = lookup_bool("IN_MATH");
-    if !in_math {
-      let kind = match dir.to_string().as_str() {
-        "r" | "l" => "horizontal",
-        "u" | "d" => "vertical",
-        _ => "diagonal",
-      };
-      Error!("unexpected", cs,
-        s!("Commutative Diagram: \"$\" inserted before {kind} map"));
+    match dir.to_string().as_str() {
+      "u" | "d" => {
+        if !if_condition(&T_CS!("\\ifincommdiag"))?.unwrap_or(false) {
+          Error!("unexpected", cs,
+            "Commutative Diagram: vertical map ignored outside diagram");
+        }
+      },
+      "r" | "l" if !in_math => {
+        Error!("unexpected", cs,
+          "Commutative Diagram: \"$\" inserted before horizontal map");
+      },
+      _ => {},
     }
     let mut tokens = Vec::new();
     if !in_math {

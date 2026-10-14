@@ -226,7 +226,10 @@ fn diagrams_plain_tex() {
 
 /// An arrow typed in text is the package's error (diagrams.tex `\CD@nB` → `\CD@E`, pdflatex `! Commutative Diagram:
 /// "$" inserted before horizontal map.`); the arrow alone is set as a `$` formula, not the paragraph's rest
-/// (OXIDIZED_DESIGN_DIVERGENCES #589; `$`, not `\ensuremath`, for plain TeX, math0105166).
+/// (OXIDIZED_DESIGN_DIVERGENCES #589; `$`, not `\ensuremath`, for plain TeX, math0105166). A vertical arrow outside a
+/// diagram, in text or maths, is the package's other error (`\CD@pB` → `\CD@LK`, diagrams.tex:488, pdflatex `!
+/// Commutative Diagram: vertical map ignored outside diagram.`), with no `$` error; the arrow is kept. A diagonal
+/// one raises nothing in pdflatex (`\Vector@Map`), so none here: in text it too is set as a `$` formula.
 #[test]
 fn diagrams_text_arrow_is_the_package_error() {
   for (preamble, end) in [
@@ -249,6 +252,34 @@ fn diagrams_text_arrow_is_the_package_error() {
       xml.contains(&format!(
         r#"<p>Text <Math mode="inline" tex="\rTo" text="→"><XMath>{RIGHT}</XMath></Math> word.</p>"#
       )),
+      "{xml}"
+    );
+    let vertical =
+      r#"Error:unexpected:\dTo Commutative Diagram: vertical map ignored outside diagram"#;
+    let (log, xml) = convert_counted(&format!("{preamble}Text \\dTo{{}} word.\n{end}"));
+    assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+    assert!(log.contains(vertical), "{log}");
+    assert!(
+      squashed(&xml).contains(
+        r#"<p>Text <Math mode="inline" tex="\dTo" text="↓"><XMath><XMTok role="ARROW" stretchy="true">↓</XMTok></XMath></Math> word.</p>"#
+      ),
+      "{xml}"
+    );
+    let (log, xml) = convert_counted(&format!("{preamble}Maths $A\\dTo B$ end.\n{end}"));
+    assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+    assert!(log.contains(vertical), "{log}");
+    assert!(
+      squashed(&xml).contains(
+        r#"<p>Maths <Math mode="inline" tex="A\dTo B" text="A ↓ B"><XMath><XMApp><XMTok role="ARROW" stretchy="true">↓</XMTok><XMTok font="italic" role="UNKNOWN">A</XMTok><XMTok font="italic" role="UNKNOWN">B</XMTok></XMApp></XMath></Math> end.</p>"#
+      ),
+      "{xml}"
+    );
+    let (log, xml) = convert_counted(&format!("{preamble}Text \\ruTo{{}} word.\n{end}"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert!(
+      squashed(&xml).contains(
+        r#"<p>Text <Math mode="inline" tex="\ruTo" text="↗"><XMath><XMTok role="ARROW">↗</XMTok></XMath></Math> word.</p>"#
+      ),
       "{xml}"
     );
   }

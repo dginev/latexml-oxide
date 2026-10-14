@@ -17404,8 +17404,8 @@ too, math0105166), in restricted horizontal mode (a `c` cell, an LR box: math001
 inline formula, with `[LaTeXeqno]` a numbered `equation` (manual FAQ "Display options", "Options"). An arrow
 `\<dir><Name>` (r l u d ru rd lu ld) reads what the source's reader reads: inside a diagram (`\CD@PB`, diagrams.tex:290-299)
 `[opts]`, a span `(x,y)`, the labels `^ _ < > ~`, a `.` and a positional `{f}{g}`; outside one (`\switch@arg`, :301-306)
-only `^ _ [ . ~` and `{`, so `$X\rTo (0,1)$` keeps its pair as pdflatex prints it (and a diagonal shorthand used in text,
-`\nNE` = `\ruTo(2,3)`, prints its span, as TeX does). The label sides are the manual's ("Labels": above=left,
+only `^ _ [ . ~` and `{`, so `$X\rTo (0,1)$` keeps its pair as pdflatex prints it (a diagonal shorthand used in text,
+`\nNE` = `\ruTo(2,3)`, prints its span `(2,3)`, where TeX prints the default span as well, `(2, 2)(2, 3)`). The label sides are the manual's ("Labels": above=left,
 below=right on verticals, the reverse on negative-gradient diagonals); a positional `{g}` after `^f` is the lower label,
 after a lower label it ends the arrow (`\positional@`, :578). A horizontal or diagonal arrow is a stretchy `ARROW` with
 its labels as scripts (amscd's `\lx@amscd@stack`, plus the role `ARROW` on a superscript-only stack so `$A \rTo^f B$`
@@ -17419,13 +17419,29 @@ maths) draws each direction with the Unicode arrow of its components (`|--->` �
 math0310311); the source's predefined arrows and synonyms (section (24): `\rInto`, `\hLine`, `\NW`, …) are defined, a
 synonym under its own name. `\pile` is a one-column array. `\diagramstyle[opts]` or `\diagramstyle{opts}` (one argument
 when no `[` follows, :282-285; math0403203) and the package options set the drawing; their `amstex` (manual "Options",
-`\cds@amstex`) loads the amscd binding, so `{CD}` is AmS-TeX's (math0104206, math0403203). `\newarrowhead/tail/middle/
+`\cds@amstex`) loads the amscd binding for `{CD}` (math0104206, math0403203). That is a substitution: the source's
+`\cds@amstex` (diagrams.tex:627-628) makes `\CD` mean `\diagram[amstex]` and `@` active throughout the document, so
+`@>>>`, `@VVV` are read by the diagrams code; ours are amscd's, the same syntax, and `@` keeps its catcode outside `{CD}`. `\newarrowhead/tail/middle/
 filler`, `\newdiagramgrid` and `\HonV`/`\VonH`/`\HmeetV` draw nothing (layout).
 
 Recoveries and losses, each against what TeX does:
-- **A text-mode arrow** (`Text \rTo\ word`): TeX's `! Commutative Diagram: "$" inserted before horizontal map.` (`\CD@nB`
-  → `\CD@E`), then its inserted `$` runs on to the paragraph's end. Ours raises that Error (the noun is `vertical` or
-  `diagonal` for those arrows) and sets the arrow alone as a `$…$` formula, so the text after it stays text.
+- **A horizontal arrow in text** (`Text \rTo\ word`): TeX's `! Commutative Diagram: "$" inserted before horizontal
+  map.` (`\CD@nB` → `\CD@E`), then its inserted `$` runs on to the paragraph's end. Ours raises that Error and sets the
+  arrow alone as a `$…$` formula, so the text after it stays text. After an earlier map TeX's wording is `between
+  vertical map and horizontal map` (`\CD@YF` holds the previous map's name); ours always says `before`.
+- **A vertical arrow outside a diagram**, in maths or text (`$A \dTo B$`, `A \dTo{} B`): TeX's `! Commutative Diagram:
+  vertical map ignored outside diagram.` (`\CD@pB` sets `\CD@ZD` to `\CD@LK`, diagrams.tex:488; the message :497-498),
+  with no `$` test, and the arrow is dropped. Ours raises that one Error and keeps the arrow, the author's content flagged
+  by the Error, as for a horizontal one (main-session ruling 2026-10-14, content first); in text it is set as a `$…$`
+  formula without a further Error.
+- **A diagonal arrow outside a diagram** (`A \ruTo{} B`): TeX raises nothing (diagonals go through `\Vector@Map`/`\CD@HK`,
+  not `\CD@nB`) and prints junk such as `(2, 2)`. Ours raises nothing and draws the arrow, in text as a `$…$` formula.
+- **A `\pile` in text** (`A \pile{\rTo^a\\ \lTo_b} B end.`): its cells are set in text mode, so each arrow is the
+  horizontal-arrow Error (2) and the paragraph's rest goes into the formula (`tex="$\rTo^{a}$\\ $\lTo_{b}$B end. …"`);
+  TeX's `"$" inserted between horizontal map and pile`, and its maths runs on too. No content is lost on either side.
+  Residual.
+- **Inside a diagram, an `(x,y)` or `[opts]` after a label** (`\rdTo^f(1,2)`) is not read (the `!any_label` test in
+  `read_arrow_labels`); the source's `\CD@PB` loop (:290-299) reads them in any position. No witness; residual.
 - **A text arrow's `[…]` that is no option list** (`$f\colon X\rTo [0,1]$`; the test: it begins with a letter) and a
   `(…)` in a diagram that is no span (`\rTo (B & C)`) stay in the formula; TeX reads them as options (warning "\relax
   inserted before `[0'") and as a span.
@@ -17436,8 +17452,7 @@ Recoveries and losses, each against what TeX does:
 - **Not implemented**: the `eqno=` option (its equation number is dropped), `\diagraminline`, the dotted-shaft `.` after
   an arrow (read, but the arrow drawn solid), `\diagram[amstex]` inside one diagram (the `@` commands of `\CD@O`),
   `\puncture`, `\lessthan`/`\greaterthan`, `\commdiag`, the `\HorizontalMap`/`\VerticalMap` family; the positional-label
-  message ("labels as positional arguments are obsolete") is not given. A vertical arrow outside a diagram, which TeX
-  ignores with an Error ("vertical map ignored outside diagram", `\CD@LK`), is drawn.
+  message ("labels as positional arguments are obsolete") is not given.
 - **The `tex` attribute** is a reconstruction: a plain-TeX `\diagram … \enddiagram` reverts as `\begin{diagram} …
   \end{diagram}` (the shared matrix code's form); `\nNE`-style shorthands revert to `\ruTo` without the span, an
   arrow's options are dropped, and labels revert in the canonical syntax (`\uTo^m_n` as `\uTo<{m}>{n}`).
