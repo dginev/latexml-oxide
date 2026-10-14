@@ -4902,12 +4902,18 @@ pub fn isolated_input_ends_here() -> bool {
 }
 
 /// The tokens the current input holds next, without reading them: the pushback, next-read first, then the current
-/// mouth's next `max_lines` source lines ([`Mouth::peek_text`]) tokenized by a scratch mouth under the current
-/// catcodes. Nothing is read, expanded or moved, so a catcode change the look-ahead runs past still applies to the
-/// text when it is really read. Only the current mouth: the input levels outside it are not reached. A look-ahead
-/// for a decision about what follows (stomach.rs `formula_continues_past_par`, OXIDIZED_DESIGN #553).
-pub fn peek_upcoming_tokens(max_lines: usize) -> Vec<Token> {
-  let (mut tokens, text) = {
+/// mouth's next `max_lines` source lines (at most `max_chars` characters of them, [`Mouth::peek_text`]) tokenized by
+/// a scratch mouth under the current catcodes as the iterator is drawn on, `max_tokens` in all. Nothing is read,
+/// expanded or moved, so a catcode change the look-ahead runs past still applies to the text when it is really read.
+/// Only the current mouth: the input levels outside it are not reached. The cost is bounded by the limits, not by the
+/// length of the line or of the pending expansion. A look-ahead for a decision about what follows (stomach.rs
+/// `formula_continues_past_par`, OXIDIZED_DESIGN #553).
+pub fn peek_upcoming_tokens(
+  max_lines: usize,
+  max_chars: usize,
+  max_tokens: usize,
+) -> impl Iterator<Item = Token> {
+  let (pending, text) = {
     let gullet = gullet!();
     match gullet.runtime.as_ref() {
       Some(runtime) => (
@@ -4915,19 +4921,23 @@ pub fn peek_upcoming_tokens(max_lines: usize) -> Vec<Token> {
           .pushback
           .iter()
           .rev()
+          .take(max_tokens)
           .copied()
           .collect::<Vec<Token>>(),
-        runtime.mouth.peek_text(max_lines),
+        runtime.mouth.peek_text(max_lines, max_chars),
       ),
-      None => return Vec::new(),
+      None => (Vec::new(), String::new()),
     }
   };
-  if let Ok(mut scratch) = Mouth::new(&text, None) {
-    while let Some(token) = scratch.read_token() {
-      tokens.push(token);
-    }
-  }
-  tokens
+  let mut scratch = if pending.len() < max_tokens && !text.is_empty() {
+    Mouth::new(&text, None).ok()
+  } else {
+    None
+  };
+  pending
+    .into_iter()
+    .chain(std::iter::from_fn(move || scratch.as_mut()?.read_token()))
+    .take(max_tokens)
 }
 
 /// Check if there is more input to be read from the current mouth

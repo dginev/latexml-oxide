@@ -1,0 +1,33 @@
+% witness: 66w review findings 1 and 3: `\lstinline|…|` (a macro whose body ends in code reading a verbatim argument),
+%          url.sty's `\url|…|` (the same), `\medskip` (a macro whose body holds `\vskip`, which ends a paragraph)
+% oracle:  pdflatex 5 errors ("Missing $ inserted" at each of the three \par; the `_` of x_1 in text and its formula
+%          left open at \end{document}), pdftotext "We have a = b / Run make all and x here. / We have c = d / Get
+%          a_b and y here. / We have g = h / Then x1 andwhere."; Perl 11 errors, the formulas run on to the next `$`
+% engines: rust 66v1: 4 errors (the `_` in text is LaTeXML's "Script _ can only appear in math mode"); 66w: 3
+%          errors and 1 warning, the listing and the url inside formulas, the third formula through \vskip and x_1
+% expect:  3 errors "Missing $ inserted" and 1 "Script _ can only appear in math mode"; each formula ends at its \par;
+%          paragraphs 2, 4 and 6 hold their own text, listing, url and formulas
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w r1):
+%          a command that reads a verbatim argument (by its parameter type, or a macro whose body hands the input to
+%          code) or that ends a paragraph by its meaning stops the look-ahead
+%          (stomach.rs `par_lookahead_verdict` / `lookahead_command`), so no math-only token precedes the `$` and
+%          tex.web §1047 ends the formula at the \par (`insert_dollar_sign`)
+% preload: ar5iv.sty
+% status:  GREEN (66w r1; guard perfect_kernel_batch66w::par_before_unfollowable_commands_ends_the_formula)
+\documentclass{article}
+\usepackage{listings}
+\usepackage{url}
+\begin{document}
+We have $a = b
+
+Run \lstinline|make_all| and $x$ here.
+
+We have $c = d
+
+Get \url|a_b| and $y$ here.
+
+We have $g = h
+
+\medskip
+Then x_1 and $w$ here.
+\end{document}

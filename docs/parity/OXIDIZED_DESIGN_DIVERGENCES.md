@@ -16761,26 +16761,48 @@ line is two formulas and the paragraph's `$`s stay in step. 65n had only the end
 paragraph opened where it should close: hep-th9402135 (`$Z_{YM}(\epsilon) =` ⏎⏎ `\int_{\cal A} … D A$`, eleven such splits)
 went Fatal TooManyErrors where Perl, whose `\par` in math is silent, has 0 errors and the formulas whole — the K1 cluster
 of run 345, 31 papers (agent_reports/2026-10-14_ef345_regressions.md, `_k1_arxiv_pdf_study.md`). The ruling keeps Perl's
-content where the formula clearly continues and §1047 where it does not. stomach.rs `formula_continues_past_par`, asked
-by `\lx@normal@par` before `insert_dollar_sign`: the input is looked at, not read (`gullet::peek_upcoming_tokens`: the
-pushback, then the current mouth's next 40 source lines tokenized by a scratch mouth under the current catcodes —
-nothing expanded, consumed or frozen), up to the formula's would-be closer (the next `$`, or `\)`), within 2,000 tokens.
-A math-only token before it — by its current meaning: a sub/sup mark (or a `\let` to one), a DefMath symbol, a
-constructor or primitive requiring math, one of tex.web §1046's math-only primitives (`\left`/`\right`, `\over`,
-`\mathchar`, the math classes and styles…) — keeps the formula open and the `\par` reverts as nothing (no Error; Perl's
-`tex=` keeps `\par`, which is no formula's TeX). Otherwise §1047 ends it as before: no math-only token first (that `$`
-opens the next paragraph's own formula), or undecided — the paragraph ends first (`\par`, `\end`, `\begin`, `\vskip`,
-`\hrule`…, `\(`, `\[`), the closer sits in a group or is a `$$`, a `}` closes a group the look-ahead did not see open,
-the bounds run out. A brace group right after a control sequence (or after such a group) is that command's argument and
-is not looked into, its scripts being a label's or a key's, never typeset (`\ref{eq_1}`); any other group is
-(hep-th9402135's `{\cf^{1}/G}$`). Not done: §1046's re-opening itself (a stray `_` in text still takes Perl's "Script _
+content where the formula clearly continues and §1047 where it does not, and **any doubt ends the formula**.
+stomach.rs `formula_continues_past_par`, asked by `\lx@normal@par` before `insert_dollar_sign`: the input is looked at,
+not read (`gullet::peek_upcoming_tokens`: the pushback, then the current mouth's next 40 source lines tokenized lazily by
+a scratch mouth under the current catcodes — nothing expanded, consumed or frozen), up to the formula's would-be closer
+(the next `$`, or `\)`), within 2,000 tokens and 16,000 copied characters (so a `\par` costs the same however long its
+line: the 66w review's one-line 3,000/6,000-repetition probes had grown quadratically). A math-only token before it
+keeps the formula open and the `\par` reverts as nothing (no Error; Perl's `tex=` keeps `\par`, which is no formula's
+TeX): a sub/sup mark, or a control sequence by its current meaning (`stomach.rs lookahead_command`) — a `\let` to a
+mark, a DefMath symbol, a constructor or primitive requiring math, one of tex.web §1046's math-only primitives
+(`\left`/`\right`, `\over`, `\mathchar`, the math classes and styles…). Otherwise §1047 ends it as before: no math-only
+token first (that `$` opens the next paragraph's own formula), or a doubt:
+- the paragraph or the formula ends first, by name or by meaning (`\par`/`\endgraf`, `\end`, `\begin`, `\vskip`,
+  `\hrule`…, `\cr`, an `&`, `\(`, `\[`, a definition that leaves horizontal mode), also inside a macro's body
+  (`\medskip`'s `\vskip`, `\section`'s `\par`), the closer sits in a group, a bracket or a `$$`, a `}` closes a group
+  the look-ahead did not see open, or a bound runs out;
+- a command the look-ahead cannot follow: a parameter verbatim, semi-verbatim or delimited by its type (`\url{…}`,
+  `\ref{…}`, `\label`, `\def\a#1.{…}`), a macro whose expansion is code (`\verb`, which reads its own delimited
+  argument), a macro whose body holds one (`\lstinline` = `\leavevmode\lx@lstinline`, url.sty's `\url`), a `$` or `&`
+  in a macro's body, or a macro nested past 3 levels / 512 body tokens.
+A command's arguments are not looked into, their scripts being a key's or a file name's, never typeset: a `*` right
+after a command that is not math-only (a math-only one's groups are math: `\left[0,1\right)`, `\in [0,1)`), then
+every `[…]` and `{…}` in a row (`\cite[p.~2]{smith_2001}`, `\ref*{eq_1}`,
+`\includegraphics[width=1cm]{fig_1}`, `\citep[e.g.][]{a_b}`, `\hyperref[sec_a]{there}`; the 66w review's blocker, where
+66w had read the key's `_` as math and, for p_cite, run the next formula through `\begin{thebibliography}` — Perl's
+failure, KNOWN_PERL_ERRORS #679); any other group is looked into (hep-th9402135's `{\cf^{1}/G}$`). The look-ahead
+starts after the judged `\par`: a current line read to its end adds nothing (`Mouth::peek_text`), and leading tokens
+that mean `\par` are skipped (`means_par`) — under `\obeylines` a line end in a formula is an active `^^M` let to
+`\par`, and the math on the next line keeps the formula open as after a blank line (hep-ph9809328, hep-ph9706250,
+whose MTeXsis `\unobeylines` is missing; repro paragraph-mode/formula_split_by_an_obeyed_line_end_continues). A continuing
+formula's `\par` still clears `\parshape` and `\interlinepenalties`, as every `\par` (TeX_Paragraph.pool.ltxml:118-119);
+the rest of Perl's after-digest (:121-145: the `next_para_class` hand-over, the `\vadjust` material) is left to the
+`\par` that does end the paragraph — Perl runs it inside the formula, where a class meant for the next `ltx:para` and
+vertical material do not belong. Not done: §1046's re-opening itself (a stray `_` in text still takes Perl's "Script _
 can only appear in math mode" — the 66i draft, 32 papers worse on our wrong modes upstream); a continuation with no
 math-only token (`$a =` ⏎⏎ `b$, where $c$`) still ends at the `\par`, as pdflatex; a `\par` from a macro body
 (hep-th9402135's `\def\bull{\vrule height 1.5ex` ⏎⏎ `width …}` in `$\bull$`) is looked past like any other, and ends
 the formula there as pdflatex does (2 errors per use; Perl 0). Repros paragraph-mode/
 formula_split_by_blank_line_continues_with_math, formula_split_by_blank_line_braced_continuation,
 script_in_text_after_par_closed_formula_reenters_math (GREEN), par_in_inline_math_before_a_text_paragraph_ends_the_formula,
-par_in_inline_math_before_a_label_argument_ends_the_formula (CONTROLs); guards `perfect_kernel_batch66w::*`.
+par_in_inline_math_before_a_label_argument_ends_the_formula, and the 66w r1 controls
+par_in_inline_math_before_{a_cite_with_a_note,a_starred_ref,verb,includegraphics,citep_with_two_notes,hyperref,
+unfollowable_commands}_ends_the_formula; guards `perfect_kernel_batch66w::*`.
 
 **Display math is tolerant of `\par`** (main session decision 2026-10-12): no §1047 for display math, a blank line in
 an `equation` being common and tolerated.

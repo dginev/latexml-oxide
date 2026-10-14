@@ -13214,7 +13214,7 @@ the formula at the inner `$`, and the `^2` that follows is "Script ^ can only ap
 frames unwind with errors. latex.ltx `\@argrsbox` sets the box in an `\hbox` (pdflatex clean). Witness 0902.1321 (101
 errors + Fatal → 0). Fixed in Rust (sect13.rs `\pic@raisebox` reads its box restricted_horizontal, bounded, as `\raisebox`
 does; repro boxes-groups/picture_raisebox_reads_its_box_in_text.tex; `perfect_kernel_batch66y`).
-## 675. A `\par` in an inline formula is digested inside it: a forgotten `$` runs the formula through the paragraphs
+## 679. A `\par` in an inline formula is digested inside it: a forgotten `$` runs the formula through the paragraphs
 
 Perl's `\lx@normal@par` (TeX_Paragraph.pool.ltxml:97-145) does nothing in math mode but leave a whatsit in the formula,
 where tex.web §1046-1047 (`mmode+par_end`) inserts the missing `$` ("Missing $ inserted") and ends the paragraph. A
@@ -13225,4 +13225,7 @@ with" text, y₁ and z formulas). Where the formula does go on after the blank l
 Perl's content is right, but its `tex` attribute keeps the `\par` (`E(x)=\par\frac{1}{2}mv^{2}`), which is no formula's
 TeX. Fixed in Rust (OXIDIZED_DESIGN #553: 65n's §1047 ending, narrowed by 66w to where no math-only token precedes the
 next `$`; the `\par` kept in a continuing formula reverts as nothing); repros paragraph-mode/
-par_in_inline_math_before_a_text_paragraph_ends_the_formula, formula_split_by_blank_line_continues_with_math.
+par_in_inline_math_before_a_text_paragraph_ends_the_formula, formula_split_by_blank_line_continues_with_math. The runaway
+reaches the whole document when a citation follows: `We have $a = b` ⏎⏎ `See \cite[p.~2]{smith_2001} and $x$ here.`
+then `\begin{thebibliography}…`: Perl 15 errors, the second formula running through the bibliography (repro
+paragraph-mode/par_in_inline_math_before_a_cite_with_a_note_ends_the_formula).

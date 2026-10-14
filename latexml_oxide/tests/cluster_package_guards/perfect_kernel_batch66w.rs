@@ -190,3 +190,234 @@ fn par_before_a_label_argument_still_ends_the_formula() {
     ),
   );
 }
+
+/// The first paragraph of the 66w r1 controls: `We have $a = b` with its formula ended at the blank line.
+const FIRST_PARAGRAPH: &str = concat!(
+  r#"<p xml:id="p1.1">We have <Math mode="inline" tex="a=b" text="a = b" xml:id="p1.m1">"#,
+  r#"<XMath xml:id="p1.m1.1"><XMApp xml:id="p1.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok>"#,
+  r#"<XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath>"#,
+  r#"</Math></p>"#,
+);
+
+/// The formula `x` that closes the second paragraph of the 66w r1 controls, ` and $x$ here.`
+const X_HERE: &str = concat!(
+  r#" and <Math mode="inline" tex="x" text="x" xml:id="p2.m1"><XMath xml:id="p2.m1.1">"#,
+  r#"<XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> here.</p>"#,
+);
+
+/// A 66w r1 control (review finding 1): `We have $a = b` ⏎⏎ `<command with arguments> and $x$ here.` — the
+/// command's arguments are not looked into (a `*`, then every `[…]` and `{…}` in a row), or the command is one the
+/// look-ahead cannot follow, so no math-only token precedes the `$` and the `\par` ends the formula as 66v1 and
+/// pdflatex do: one "Missing $ inserted", the first paragraph and the second (`second`, up to ` and $x$ here.`)
+/// whole, no warning. Returns the XML.
+fn assert_par_ends_formula(source: &str, second: &str) -> String {
+  let (log, xml) = convert_with(source, Some("ar5iv.sty"));
+  assert_eq!(
+    error_lines(&log),
+    vec!["Error:expected:$ Missing $ inserted"],
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert_eq!(math_tex(&xml), vec!["a=b", "x"], "{xml}");
+  assert_element(&xml, "p", &[r#"xml:id="p1.1""#], FIRST_PARAGRAPH);
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p2.1""#],
+    &format!("{second}{X_HERE}"),
+  );
+  xml
+}
+
+/// Whether some `<Math>` of `xml` holds `needle`.
+fn some_formula_holds(xml: &str, needle: &str) -> bool {
+  xml.split("<Math ").skip(1).any(|m| {
+    m.split("</Math>")
+      .next()
+      .is_some_and(|m| m.contains(needle))
+  })
+}
+
+/// `\cite[p.~2]{smith_2001}`: the optional argument after the command, then the key, are its arguments. 66w read the
+/// key's `_` as math, and the paragraph's next formula ran through `\begin{thebibliography}` — `<section>` and
+/// `<bibliography>` inside `<XMath>` (Perl's failure, KNOWN_PERL_ERRORS #679).
+#[test]
+fn par_before_a_cite_with_a_note_ends_the_formula() {
+  let xml = assert_par_ends_formula(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/paragraph-mode/par_in_inline_math_before_a_cite_with_a_note_ends_the_formula.tex"
+    ),
+    concat!(
+      r#"<p xml:id="p2.1">See <cite class="ltx_citemacro_cite">[<bibref bibrefs="smith_2001" separator="," "#,
+      r#"yyseparator=","/>, "#,
+      "p.\u{a0}2]</cite>",
+    ),
+  );
+  assert!(xml.contains("<bibliography "), "{xml}");
+  assert!(!some_formula_holds(&xml, "<bibliography"), "{xml}");
+  assert!(!some_formula_holds(&xml, "<section"), "{xml}");
+}
+
+/// `\ref*{eq_1}`: a `*` right after the command keeps the look-ahead at its arguments.
+#[test]
+fn par_before_a_starred_ref_ends_the_formula() {
+  assert_par_ends_formula(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/paragraph-mode/par_in_inline_math_before_a_starred_ref_ends_the_formula.tex"
+    ),
+    r#"<p xml:id="p2.1">See <ref class="ltx_nolink" labelref="LABEL:eq_1"/>"#,
+  );
+}
+
+/// `\verb|make_all|`: `\verb`'s expansion is code reading a delimited argument, which the look-ahead cannot follow.
+#[test]
+fn par_before_verb_ends_the_formula() {
+  assert_par_ends_formula(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/paragraph-mode/par_in_inline_math_before_verb_ends_the_formula.tex"
+    ),
+    r#"<p xml:id="p2.1">Run <verbatim font="typewriter" xml:id="p2.1.1">make_all</verbatim>"#,
+  );
+}
+
+/// `\includegraphics[width=1cm]{fig_1}`: the key-value argument and the file name are the command's arguments.
+#[test]
+fn par_before_includegraphics_ends_the_formula() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/paragraph-mode/par_in_inline_math_before_includegraphics_ends_the_formula.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    error_lines(&log),
+    vec!["Error:expected:$ Missing $ inserted"],
+    "{log}"
+  );
+  assert_eq!(math_tex(&xml), vec!["a=b", "x"], "{xml}");
+  assert_element(&xml, "p", &[r#"xml:id="p1.1""#], FIRST_PARAGRAPH);
+  assert!(!some_formula_holds(&xml, "<graphics"), "{xml}");
+  assert!(xml.contains(r#"graphic="fig_1""#), "{xml}");
+}
+
+/// natbib's `\citep[e.g.][]{a_b}`: every `[…]` and `{…}` in a row after the command is its argument.
+#[test]
+fn par_before_citep_with_two_notes_ends_the_formula() {
+  let xml = assert_par_ends_formula(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/paragraph-mode/par_in_inline_math_before_citep_with_two_notes_ends_the_formula.tex"
+    ),
+    concat!(
+      r#"<p xml:id="p2.1">See <cite class="ltx_citemacro_citep">(<bibref bibrefs="a_b" separator=";" "#,
+      r#"show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>, e.g.)</cite>"#,
+    ),
+  );
+  assert!(!some_formula_holds(&xml, "<bibliography"), "{xml}");
+}
+
+/// hyperref's `\hyperref[sec_a]{there}`: the optional label and the link text are the command's arguments.
+#[test]
+fn par_before_hyperref_ends_the_formula() {
+  assert_par_ends_formula(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/paragraph-mode/par_in_inline_math_before_hyperref_ends_the_formula.tex"
+    ),
+    r#"<p xml:id="p2.1">See <ref labelref="LABEL:sec_a">there</ref>"#,
+  );
+}
+
+/// Commands the look-ahead cannot follow or that end a paragraph, by meaning: `\lstinline|make_all|` (its body hands
+/// the input to code reading a verbatim argument), url.sty's `\url|a_b|` (the same) and `\medskip` (its body's
+/// `\vskip`). Each formula ends at its `\par`; the `_` of `x_1` after `\medskip` is text's error, as in 66v1.
+#[test]
+fn par_before_unfollowable_commands_ends_the_formula() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/paragraph-mode/par_in_inline_math_before_unfollowable_commands_ends_the_formula.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    error_lines(&log),
+    vec![
+      "Error:expected:$ Missing $ inserted",
+      "Error:expected:$ Missing $ inserted",
+      "Error:expected:$ Missing $ inserted",
+      "Error:unexpected:_ Script _ can only appear in math mode",
+    ],
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert_eq!(
+    math_tex(&xml),
+    vec!["a=b", "x", "c=d", "y", "g=h", "w"],
+    "{xml}"
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p2.1""#],
+    concat!(
+      r#"<p xml:id="p2.1">Run <text class="ltx_lst_identifier ltx_lstlisting" xml:id="p2.1.1">make_all</text>"#,
+      r#" and <Math mode="inline" tex="x" text="x" xml:id="p2.m1"><XMath xml:id="p2.m1.1">"#,
+      r#"<XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> here.</p>"#,
+    ),
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p4.1""#],
+    concat!(
+      r#"<p xml:id="p4.1">Get <ref class="ltx_nolink ltx_url" font="typewriter" href="a_b">a_b</ref>"#,
+      r#" and <Math mode="inline" tex="y" text="y" xml:id="p4.m1"><XMath xml:id="p4.m1.1">"#,
+      r#"<XMTok font="italic" role="UNKNOWN">y</XMTok></XMath></Math> here.</p>"#,
+    ),
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p6.1""#],
+    concat!(
+      r#"<p xml:id="p6.1">Then x_1 and <Math mode="inline" tex="w" text="w" xml:id="p6.m1"><XMath xml:id="p6.m1.1">"#,
+      r#"<XMTok font="italic" role="UNKNOWN">w</XMTok></XMath></Math> here.</p>"#,
+    ),
+  );
+}
+
+/// Under `\obeylines` a line end in a formula is an active `^^M` let to `\par`: the look-ahead starts at the next line
+/// (the current one is read to its end) and skips the leading tokens that mean `\par`, so the math there (`b_1`)
+/// keeps the formula open, as for a blank line (hep-ph9809328, hep-ph9706250 with MTeXsis's `\unobeylines` missing).
+/// 66v1: 3 errors, the formula ended at the line end and the paragraph's `$` parity flipped.
+#[test]
+fn formula_split_by_an_obeyed_line_end_continues() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/paragraph-mode/formula_split_by_an_obeyed_line_end_continues.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    concat!(
+      r#"<p xml:id="p1.1">The pair <Math mode="inline" tex="(a+b_{1})" text="a + b _ 1" xml:id="p1.m1">"#,
+      r#"<XMath xml:id="p1.m1.2"><XMDual xml:id="p1.m1.2.1"><XMRef idref="p1.m1.1" xml:id="p1.m1.2.1.1"/>"#,
+      r#"<XMWrap xml:id="p1.m1.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="p1.m1.1">"#,
+      r#"<XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok>"#,
+      r#"<XMApp xml:id="p1.m1.1.3"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/>"#,
+      r#"<XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>"#,
+      r#"</XMApp></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math> and "#,
+      r#"<Math mode="inline" tex="c" text="c" xml:id="p1.m2"><XMath xml:id="p1.m2.1">"#,
+      r#"<XMTok font="italic" role="UNKNOWN">c</XMTok></XMath></Math> here.</p>"#,
+    ),
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p2.1""#],
+    r#"<p xml:id="p2.1">Next line.</p>"#,
+  );
+}

@@ -1,0 +1,23 @@
+% witness: 66w review finding 1 (p_cite): an optional argument before the citation key; arXiv math papers routinely cite
+%          `\cite[Lemma 2.1]{Smith_2010}`
+% oracle:  pdflatex 1 error ("Missing $ inserted" at the \par), pdftotext "We have a = b / See [?, p. 2] and x here. /
+%          References"; Perl 15 errors, the formula runs on through `\cite[...]{smith_2001}` and the next formula
+%          through `\begin{thebibliography}` (KNOWN_PERL_ERRORS #679)
+% engines: rust 66v1: as pdflatex; 66w: 3 errors, the `_` of the key read as math, `<section>`/`<bibliography>` inside
+%          `<XMath>`
+% expect:  1 error "Missing $ inserted"; Math "a=b" ends at the \par; "See", the citation and the formula x in paragraph 2;
+%          the bibliography outside any formula
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w r1):
+%          a `[…]` after a command is its argument as a `{…}` is, and neither is looked into
+%          (stomach.rs `par_lookahead_verdict` / `lookahead_command`), so no math-only token precedes the `$` and
+%          tex.web §1047 ends the formula at the \par (`insert_dollar_sign`)
+% preload: ar5iv.sty
+% status:  GREEN (66w r1; guard perfect_kernel_batch66w::par_before_a_cite_with_a_note_ends_the_formula)
+\documentclass{article}
+
+\begin{document}
+We have $a = b
+
+See \cite[p.~2]{smith_2001} and $x$ here.
+\begin{thebibliography}{9}\bibitem{smith_2001} S.\end{thebibliography}
+\end{document}

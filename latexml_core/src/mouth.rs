@@ -1355,11 +1355,24 @@ impl Mouth {
   }
 
   /// The source text this mouth will read next — the rest of the current line, then up to `max_lines` lines after it,
-  /// joined by `\n` — without reading it: nothing is consumed, tokenized or decoded in place. A look-ahead for a
-  /// decision about what follows (stomach.rs `formula_continues_past_par`, OXIDIZED_DESIGN #553). Lines not yet
-  /// decoded are read as UTF-8, lossily; their structure (`$`, `\int`, `_`) is all a look-ahead needs.
-  pub fn peek_text(&self, max_lines: usize) -> String {
-    let mut text: String = self.chars.iter().skip(self.colno).collect();
+  /// joined by `\n`, at most `max_chars` characters in all — without reading it: nothing is consumed, tokenized or
+  /// decoded in place. A look-ahead for a decision about what follows (stomach.rs `formula_continues_past_par`,
+  /// OXIDIZED_DESIGN #553); `max_chars` keeps its cost bounded on a source whose current line is the whole document.
+  /// Lines not yet decoded are read as UTF-8, lossily; their structure (`$`, `\int`, `_`) is all a look-ahead needs.
+  /// A current line read to its end contributes nothing: its end-of-line character is read already, and an empty line
+  /// in its place would tokenize as one more (a `\par`, or under `\obeylines` an active `^^M`; hep-ph9809328).
+  pub fn peek_text(&self, max_lines: usize, max_chars: usize) -> String {
+    // Whether a line is begun in `text` that the next must be joined to.
+    let mut joined = self.colno < self.nchars;
+    let mut text = String::new();
+    let mut room = max_chars;
+    for ch in self.chars.iter().skip(self.colno).take(max_chars) {
+      text.push(*ch);
+      room -= 1;
+    }
+    if room == 0 {
+      return text;
+    }
     if let Some(eol) = endline_char()
       && text.ends_with(eol)
     {
@@ -1374,8 +1387,16 @@ impl Mouth {
       .iter()
       .map(|line| String::from_utf8_lossy(line));
     for line in decoded.chain(raw).take(max_lines) {
-      text.push('\n');
-      text.push_str(&line);
+      if room == 0 {
+        break;
+      }
+      if joined {
+        text.push('\n');
+      }
+      joined = true;
+      let mut count = 0;
+      text.extend(line.chars().take(room).inspect(|_| count += 1));
+      room = room.saturating_sub(count + 1);
     }
     text
   }

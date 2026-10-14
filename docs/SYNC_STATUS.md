@@ -1093,8 +1093,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   formulas whole; left: `$\bull$` with a blank line in `\bull`'s body, as pdflatex, and `\References` non-long `\par`
   errors); hep-ph9809328, hep-ph9802283, hep-ph9706250, hep-ph9706246, 0903.4382 fewer errors or set-right formulas,
   still capped elsewhere; the 65n witnesses (2007.11971, 1710.02165, 2008.11762, 1210.0368, 1907.09124, math9805003,
-  hep-lat9811036, nucl-th0401019) and the other K1 papers byte-identical (39-paper A/B vs 66t2). KPE #675; guards
-  `perfect_kernel_batch66w::*`. Not done: §1046's re-opening itself (66i draft, parked).
+  hep-lat9811036, nucl-th0401019) and the other K1 papers byte-identical (39-paper A/B vs 66t2). KPE #679; guards
+  `perfect_kernel_batch66w::*`. Round 1 (review blocker): any doubt ends the formula — a command's `*`, `[…]` and
+  `{…}` arguments are not looked into (`\cite[p.~2]{smith_2001}`, `\ref*{eq_1}`, `\citep[e.g.][]{a_b}`), a command
+  it cannot follow (verbatim/semi-verbatim/delimited parameter, a code-bodied macro such as `\verb`, one reached
+  through a macro's body such as `\lstinline`) or a stop by meaning (`\medskip`'s `\vskip`, `&`, `\cr`) gives up
+  (`stomach.rs lookahead_command`); the look-ahead is lazy and bounded (2,000 tokens, 16,000 characters), and starts
+  after the judged `\par` (an `\obeylines` line end continues as a blank line does: hep-ph9809328, hep-ph9706250).
+  Not done:
+  §1046's re-opening itself (66i draft, parked).
 - **66v** (66m E1, ruled 2026-10-14): the floatrow binding records float.sty/rotfloat.sty loaded, as floatrow.sty:34-37
   marks them (`\ver@float.sty`), so a later `\usepackage{float}` no longer replaces floatrow's `\float@end` (2010.00977,
   2003.11778, 2011.10793, 2105.04869; KPE #668; `perfect_kernel_batch66v::floatrow_marks_float_loaded`). No general

@@ -4,6 +4,8 @@
 //! `tools/perfect_kernel/repros/expansion-primitives/{left_right_are_unexpandable,let_left_wrapped_in_mathclose,
 //! left_in_xymatrix_cell}.tex`, `math-parse/extra_right_and_middle_without_left.tex` (CONTROL); the delimiter table and
 //! `\middle` are the golden pair `tests/parse/left_right_delimiters`.
+use latexml::util::test::assert_element;
+
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
 /// The opening tags of every `<Math>`, in document order.
@@ -430,11 +432,13 @@ fn parameterless_commands_are_delimiters_only_as_symbols() {
      $\\left\\lmoustache x\\right\\rmoustache$ $\\frac{a\\left}{b}$ $w\\left\\par x\\right)$\n\\end{document}\n",
     Some("ar5iv.sty"),
   );
-  // The put-back `\par` is followed by math (`x\right)` before the formula's `$`), so it keeps the formula open and
-  // reverts as nothing, and `\right)` closes the `\left.` (66w, OXIDIZED_DESIGN #553 narrowed by the user ruling of
-  // 2026-10-14: Perl's content, 0 errors; pdflatex's §1047 ending there gives 5). Before 66w the `\par` ended the
-  // formula ("Missing $ inserted"), `\right)` met no `\left` and the formula's own `$` opened one the document's end
-  // closed. Kept last so a cascade would reach no other formula.
+  // The `\par` here is the one the delimiter scan put back after `\left`, not a blank line's: the 66w look-ahead
+  // judges every `\par` read in an inline formula alike. It is followed by math (`x\right)` before the formula's
+  // `$`), so it keeps the formula open and reverts as nothing, and `\right)` closes the `\left.` (66w,
+  // OXIDIZED_DESIGN #553 narrowed by the user ruling of 2026-10-14: Perl's content, 0 errors; pdflatex's §1047
+  // ending there gives 5). Before 66w the `\par` ended the formula ("Missing $ inserted"), `\right)` met no `\left`
+  // and the formula's own `$` opened one the document's end closed. Kept last so a cascade would reach no other
+  // formula.
   assert_eq!(error_lines(&log), Vec::<&str>::new(), "{log}");
   assert_eq!(
     warning_lines(&log),
@@ -447,7 +451,20 @@ fn parameterless_commands_are_delimiters_only_as_symbols() {
     ],
     "{log}"
   );
-  assert!(xml.contains(r#"tex="w\left.x\right)""#), "{xml}");
+  assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m5""#],
+    concat!(
+      r#"<Math mode="inline" tex="w\left.x\right)" text="delimited-)@(w * x)" xml:id="p1.m5">"#,
+      r#"<XMath xml:id="p1.m5.2"><XMDual xml:id="p1.m5.2.1"><XMApp xml:id="p1.m5.2.1.1">"#,
+      r#"<XMTok meaning="delimited-)"/><XMRef idref="p1.m5.1" xml:id="p1.m5.2.1.1.2"/></XMApp>"#,
+      r#"<XMWrap xml:id="p1.m5.2.1.2"><XMTok role="OPEN"/><XMApp xml:id="p1.m5.1">"#,
+      r#"<XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">w</XMTok>"#,
+      r#"<XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp><XMTok role="CLOSE" stretchy="true">)</XMTok>"#,
+      r#"</XMWrap></XMDual></XMath></Math>"#,
+    ),
+  );
   for letter in ["y", "z", "w"] {
     assert!(
       xml.contains(&format!(

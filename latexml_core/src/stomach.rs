@@ -518,7 +518,7 @@ use crate::{
   comment::Comment,
   common::{arena, arena::SymHashMap as HashMap, error::*, font, font::Font},
   definition::{
-    Definition,
+    Definition, ExpansionBody,
     constructor::{Constructor, TexGroup},
     expandable::Expandable,
     register::RegisterValue,
@@ -2714,6 +2714,13 @@ pub fn insert_dollar_sign(again: Tokens) -> Result<bool> {
 const PAR_LOOKAHEAD_LINES: usize = 40;
 /// How many tokens past such a `\par` it looks at.
 const PAR_LOOKAHEAD_TOKENS: usize = 2000;
+/// How many characters of source text it copies to tokenize (a one-line source holds the whole document on its
+/// current line), so that a `\par` costs at most this much however long the line.
+const PAR_LOOKAHEAD_CHARS: usize = 16_000;
+/// How deep it follows a macro into the macros of its body ([`lookahead_command`]).
+const PAR_LOOKAHEAD_DEPTH: usize = 3;
+/// How many body tokens it examines in all, following macros.
+const PAR_LOOKAHEAD_BODY_TOKENS: usize = 512;
 
 /// The primitives tex.web §1046 makes a non-math mode meet with `insert_dollar_sign` — math-only commands, whatever
 /// LaTeXML defines them as: `\left`/`\middle`/`\right` (`left_right`), the generalized fractions (`above`),
@@ -2757,11 +2764,13 @@ const MATH_ONLY_PRIMITIVES: &[&str] = &[
   "\\scriptscriptstyle",
 ];
 
-/// What the look-ahead past a `\par` stops at undecided: a paragraph's end, or a command inline math cannot hold
-/// (tex.web §1046 `mmode+par_end`, `stop`, `vskip`, `hrule`, `un_vbox`, `valign`; an environment's end or begin), or a
-/// formula's opener.
+/// What the look-ahead past a `\par` stops at undecided, by name or by meaning (`\let\endgraf\par`, a macro whose
+/// body holds one — `\medskip`'s `\vskip`, `\section`'s `\par`): a paragraph's end, or a command inline math cannot
+/// hold (tex.web §1046 `mmode+par_end`, `stop`, `vskip`, `hrule`, `un_vbox`, `valign`; an environment's end or begin;
+/// an alignment's `\cr`), or a formula's opener.
 const PAR_LOOKAHEAD_STOPS: &[&str] = &[
   "\\par",
+  "\\lx@normal@par",
   "\\endgraf",
   "\\end",
   "\\begin",
@@ -2774,111 +2783,247 @@ const PAR_LOOKAHEAD_STOPS: &[&str] = &[
   "\\unvbox",
   "\\unvcopy",
   "\\valign",
+  "\\cr",
+  "\\crcr",
   "\\(",
   "\\[",
   "\\]",
 ];
 
-/// Whether `token` is math-only by its current meaning — what tex.web §1046 meets with `insert_dollar_sign` outside
-/// math: a sub- or superscript mark, or a control sequence (`\let` to one included) whose definition is LaTeXML's
-/// for math only (a DefMath symbol; a constructor or primitive that requires math, Perl's `requireMath`) or one of
-/// TeX's math-only primitives ([`MATH_ONLY_PRIMITIVES`]).
-fn is_math_only_token(token: &Token) -> bool {
-  match token.get_catcode() {
-    Catcode::SUPER | Catcode::SUB => true,
-    code if code.is_active_or_cs() => with_meaning(token, |meaning| {
-      let defn: Option<&dyn Definition> = match meaning {
-        Some(Stored::Token(t)) => return matches!(t.get_catcode(), Catcode::SUPER | Catcode::SUB),
-        Some(Stored::MathPrimitive(_)) => return true,
-        Some(Stored::Constructor(d)) => Some(d.as_ref()),
-        Some(Stored::Primitive(d)) => Some(d.as_ref()),
-        Some(Stored::Expandable(d)) => Some(d.as_ref()),
-        _ => None,
+/// What a control sequence met by the look-ahead past a `\par` tells it ([`lookahead_command`]).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum LookaheadCommand {
+  /// Math-only by its current meaning — what tex.web §1046 meets with `insert_dollar_sign` outside math: a control
+  /// sequence (`\let` to a sub- or superscript mark included) whose definition is LaTeXML's for math only (a DefMath
+  /// symbol; a constructor or primitive that requires math, Perl's `requireMath`) or one of TeX's math-only
+  /// primitives ([`MATH_ONLY_PRIMITIVES`]).
+  MathOnly,
+  /// Neither: typeset in text, its arguments (if any) braced or bracketed groups the look-ahead steps over.
+  Neutral,
+  /// The look-ahead cannot go past it: it ends the paragraph or the formula ([`PAR_LOOKAHEAD_STOPS`], a definition
+  /// that leaves horizontal mode), or it reads what follows in a way the look-ahead cannot follow — a verbatim,
+  /// semi-verbatim or delimited parameter (`\url`, `\ref`, `\def\a#1.{…}`), a macro whose expansion is code
+  /// (`\verb`, whose argument's delimiter is any character), a `$` or `&` in its body, or bounds run out.
+  GiveUp,
+}
+
+/// What the control sequence or active character `token` tells the look-ahead past a `\par`, by its current meaning
+/// ([`LookaheadCommand`]), nothing expanded. A definition's parameters are read from its parameter list: any verbatim,
+/// semi-verbatim or delimited one gives up. A macro whose body is tokens is followed into the control sequences of
+/// that body, `depth` levels deep, for what it stops at or cannot follow (`\lstinline` = `\leavevmode\lx@lstinline`,
+/// whose code reads a verbatim argument; `\medskip` = `\vskip…`); `budget` bounds the body tokens examined.
+fn lookahead_command(token: &Token, depth: usize, budget: &mut usize) -> LookaheadCommand {
+  use LookaheadCommand::*;
+  if token.with_str(|name| PAR_LOOKAHEAD_STOPS.contains(&name)) {
+    return GiveUp;
+  }
+  let defn: Rc<dyn Definition> = match lookup_meaning(token) {
+    None => return Neutral,
+    Some(Stored::Token(t)) => {
+      return match t.get_catcode() {
+        Catcode::SUPER | Catcode::SUB => MathOnly,
+        Catcode::MATH | Catcode::ALIGN => GiveUp,
+        _ => Neutral,
       };
-      defn.is_some_and(|defn| {
-        defn.declared_mode().is_some_and(|mode| mode.require_math)
-          || defn
-            .get_cs()
-            .with_str(|name| MATH_ONLY_PRIMITIVES.contains(&name))
-      })
-    }),
-    _ => false,
+    },
+    Some(Stored::MathPrimitive(_)) => return MathOnly,
+    Some(Stored::Constructor(d)) => d,
+    Some(Stored::Primitive(d)) => d,
+    Some(Stored::Expandable(d)) => d,
+    Some(Stored::Conditional(d)) => d,
+    Some(_) => return Neutral,
+  };
+  if defn
+    .get_cs()
+    .with_str(|name| PAR_LOOKAHEAD_STOPS.contains(&name))
+  {
+    return GiveUp;
+  }
+  let mode = defn.declared_mode();
+  if mode.as_ref().is_some_and(|mode| mode.leave_horizontal) {
+    return GiveUp;
+  }
+  if defn.get_parameters().is_some_and(|params| {
+    params.get_parameters().iter().any(|param| {
+      param.semiverbatim.is_some()
+        || arena::with(param.name, |name| {
+          name.contains("erbatim") || name.contains("Until") || name == "Match"
+        })
+    })
+  }) {
+    return GiveUp;
+  }
+  if mode.is_some_and(|mode| mode.require_math)
+    || defn
+      .get_cs()
+      .with_str(|name| MATH_ONLY_PRIMITIVES.contains(&name))
+  {
+    return MathOnly;
+  }
+  match defn.get_expansion() {
+    Some(ExpansionBody::Closure(_)) => GiveUp,
+    Some(ExpansionBody::Tokens(body)) => {
+      if depth >= PAR_LOOKAHEAD_DEPTH {
+        return GiveUp;
+      }
+      for inner in body.unlist_ref() {
+        if *budget == 0 {
+          return GiveUp;
+        }
+        *budget -= 1;
+        match inner.get_catcode() {
+          Catcode::MATH | Catcode::ALIGN => return GiveUp,
+          code if code.is_active_or_cs() && inner != token => {
+            if lookahead_command(inner, depth + 1, budget) == GiveUp {
+              return GiveUp;
+            }
+          },
+          _ => {},
+        }
+      }
+      Neutral
+    },
+    None => Neutral,
   }
 }
 
 /// Whether the inline formula a `\par` is read in goes on past it: OXIDIZED_DESIGN #553 as narrowed (66w). The
 /// input is looked at, not read ([`gullet::peek_upcoming_tokens`], unexpanded, each token by its current meaning),
 /// as far as the formula's would-be closer — the next `$` or `\)` — within the paragraph after the `\par`. The
-/// formula continues when the material before that closer holds a math-only token (`is_math_only_token`): the
-/// author split the formula with a blank line and the math goes on (hep-th9402135 `$Z_{YM}(\epsilon) =` ⏎⏎
-/// `\int_{\cal A} … D A$`, whose ending put every later `$` of the paragraph out of step, Fatal TooManyErrors). It
-/// does not when no math-only token comes first — that `$` opens the next paragraph's own formula, and the `\par`
-/// ends this one (tex.web §1047, a forgotten `$`) — nor whenever the look-ahead cannot decide: no closer before the
-/// paragraph's end (`PAR_LOOKAHEAD_STOPS`), the bounds (`PAR_LOOKAHEAD_LINES`, `PAR_LOOKAHEAD_TOKENS`), a
-/// closer inside a group or a `$$`, a `}` closing a group the look-ahead did not see open. A brace group right after
-/// a control sequence (or after such a group) is that command's argument and is not looked into: its scripts may be
-/// a label's or a citation key's (`\ref{eq_1}`), never typeset; any other group is (`{\cf^{1}/G}$`).
+/// formula continues when the material before that closer holds a math-only token (a `_`/`^`, or a command that is
+/// `LookaheadCommand::MathOnly`): the author split the formula with a blank line and the math goes on (hep-th9402135
+/// `$Z_{YM}(\epsilon) =` ⏎⏎ `\int_{\cal A} … D A$`, whose ending put every later `$` of the paragraph out of step,
+/// Fatal TooManyErrors). It does not when no math-only token comes first — that `$` opens the next paragraph's own
+/// formula, and the `\par` ends this one (tex.web §1047, a forgotten `$`) — nor on any doubt: no closer before the
+/// paragraph's end (`PAR_LOOKAHEAD_STOPS`), the bounds (`PAR_LOOKAHEAD_LINES`, `PAR_LOOKAHEAD_TOKENS`,
+/// `PAR_LOOKAHEAD_CHARS`), a closer inside a group, a bracket or a `$$`, a `}` closing a group the look-ahead did not
+/// see open, an `&`, a command it cannot follow (`LookaheadCommand::GiveUp`: `\verb|make_all|`, `\lstinline`, `\url`).
+/// The arguments of a command that is not math-only are not looked into: a `*` right after it, then every `[…]` and
+/// `{…}` group in a row (`\cite[p.~2]{smith_2001}`, `\ref*{eq_1}`, `\includegraphics[width=1cm]{fig_1}`,
+/// `\citep[e.g.][]{a_b}`) — their scripts may be a key's or a file name's, never typeset; any other group is
+/// (`{\cf^{1}/G}$`, `\left[0,1\right)`). The look-ahead starts after the judged `\par`, its leading `\par`s and spaces
+/// skipped — an `\obeylines` line end's active `^^M` among them (hep-ph9809328).
 pub fn formula_continues_past_par() -> bool {
   if lookup_string_from_sym(crate::pin!("MODE")) != "math" || !inline_formula_reachable() {
     return false;
   }
-  par_lookahead_verdict(&gullet::peek_upcoming_tokens(PAR_LOOKAHEAD_LINES)) == Some(true)
+  let upcoming = gullet::peek_upcoming_tokens(
+    PAR_LOOKAHEAD_LINES,
+    PAR_LOOKAHEAD_CHARS,
+    PAR_LOOKAHEAD_TOKENS,
+  );
+  par_lookahead_verdict(upcoming) == Some(true)
 }
 
-/// [`formula_continues_past_par`]'s decision over the upcoming `tokens`: `Some(math_only_seen)` at the closer,
+/// Whether `token` is `\par` or means it (`\endgraf`, an active `^^M` under plain's `\obeylines`).
+fn means_par(token: &Token) -> bool {
+  *token == T_CS!("\\par")
+    || matches!(lookup_meaning(token), Some(Stored::Constructor(d))
+      if d.get_cs().with_str(|name| name == "\\lx@normal@par"))
+}
+
+/// Where the look-ahead past a `\par` is relative to a command's arguments.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ArgumentPosition {
+  /// Not after a command.
+  None,
+  /// Right after a control sequence that is not math-only: a `*`, a `[…]` or a `{…}` is its argument.
+  Command,
+  /// Right after such an argument: a `[…]` or a `{…}` is its next one.
+  Argument,
+}
+
+/// [`formula_continues_past_par`]'s decision over the `upcoming` tokens: `Some(math_only_seen)` at the closer,
 /// `None` when undecided.
-fn par_lookahead_verdict(tokens: &[Token]) -> Option<bool> {
+fn par_lookahead_verdict(upcoming: impl Iterator<Item = Token>) -> Option<bool> {
+  let mut tokens = upcoming.peekable();
   let mut math_only = false;
   let mut depth = 0usize;
-  // The depth below which every group is an argument, not looked into (`None`: none open).
+  // The brace depth below which every group is an argument, not looked into (`None`: none open).
   let mut opaque_from: Option<usize> = None;
-  // The previous significant token takes an argument group: a control sequence, or such a group just closed.
-  let mut after_command = false;
+  // The brace depth of an open bracketed argument `[…]`, not looked into.
+  let mut bracket_at: Option<usize> = None;
+  let mut position = ArgumentPosition::None;
   let mut leading = true;
-  for (index, token) in tokens.iter().enumerate().take(PAR_LOOKAHEAD_TOKENS) {
+  let mut budget = PAR_LOOKAHEAD_BODY_TOKENS;
+  // The commands already classified, so a repeated macro costs its body once.
+  let mut seen: Vec<(Token, LookaheadCommand)> = Vec::new();
+  while let Some(token) = tokens.next() {
     let code = token.get_catcode();
-    // The `\par`s and spaces of the blank lines themselves.
-    if leading && (code == Catcode::SPACE || *token == T_CS!("\\par")) {
+    // The `\par`s and spaces of the blank lines themselves (an active `^^M` let to `\par` under `\obeylines`).
+    if leading && (code == Catcode::SPACE || means_par(&token)) {
       continue;
     }
     leading = false;
+    let opaque = opaque_from.is_some() || bracket_at.is_some();
+    let after_command = position != ArgumentPosition::None;
     match code {
       Catcode::SPACE | Catcode::COMMENT | Catcode::MARKER => continue,
       Catcode::MATH => {
         let display = tokens
-          .get(index + 1)
+          .peek()
           .is_some_and(|next| next.get_catcode() == Catcode::MATH);
-        return (depth == 0 && !display).then_some(math_only);
+        return (depth == 0 && !opaque && !display).then_some(math_only);
       },
+      Catcode::ALIGN => return None,
       Catcode::BEGIN => {
-        if after_command && opaque_from.is_none() {
+        if after_command && !opaque {
           opaque_from = Some(depth);
         }
         depth += 1;
-        after_command = false;
+        position = ArgumentPosition::None;
         continue;
       },
       Catcode::END => {
         depth = depth.checked_sub(1)?;
-        after_command = opaque_from.is_some_and(|from| from == depth);
-        if after_command {
-          opaque_from = None;
+        if bracket_at.is_some_and(|at| at > depth) {
+          return None;
         }
+        position = ArgumentPosition::None;
+        if opaque_from == Some(depth) {
+          opaque_from = None;
+          position = ArgumentPosition::Argument;
+        }
+        continue;
+      },
+      Catcode::OTHER if !opaque && after_command => {
+        if position == ArgumentPosition::Command && token == T_OTHER!("*") {
+          continue;
+        }
+        if token == T_OTHER!("[") {
+          bracket_at = Some(depth);
+          position = ArgumentPosition::None;
+          continue;
+        }
+      },
+      Catcode::OTHER if bracket_at == Some(depth) && token == T_OTHER!("]") => {
+        bracket_at = None;
+        position = ArgumentPosition::Argument;
         continue;
       },
       _ => {},
     }
-    after_command = false;
+    position = ArgumentPosition::None;
     if code.is_active_or_cs() {
-      if *token == T_CS!("\\)") {
-        return (depth == 0).then_some(math_only);
+      if token == T_CS!("\\)") {
+        return (depth == 0 && !opaque).then_some(math_only);
       }
-      if token.with_str(|name| PAR_LOOKAHEAD_STOPS.contains(&name)) {
-        return None;
+      let command = match seen.iter().find(|(known, _)| *known == token) {
+        Some((_, command)) => *command,
+        None => {
+          let command = lookahead_command(&token, 0, &mut budget);
+          seen.push((token, command));
+          command
+        },
+      };
+      match command {
+        LookaheadCommand::GiveUp => return None,
+        LookaheadCommand::MathOnly => math_only |= !opaque,
+        // A math-only command's groups and brackets are math, looked into (`\left[0,1\right)`, `\in [0,1)`).
+        LookaheadCommand::Neutral if code == Catcode::CS => position = ArgumentPosition::Command,
+        LookaheadCommand::Neutral => {},
       }
-      after_command = code == Catcode::CS;
-    }
-    if opaque_from.is_none() && is_math_only_token(token) {
+    } else if !opaque && matches!(code, Catcode::SUPER | Catcode::SUB) {
       math_only = true;
     }
   }

@@ -212,10 +212,14 @@ LoadDefinitions!({
     },
     before_digest => {
       // A `\par` in an inline formula the math after it continues (a formula split by a blank line, hep-th9402135):
-      // the formula goes on, as Perl's, and this whatsit reverts as nothing (`lx@par@void`). Otherwise tex.web
-      // §1046-1047 `mmode+par_end`: "Missing $ inserted", the inline formula ended and this `\par` read again after
-      // it; this whatsit, left in the formula, reverts as nothing. OXIDIZED_DESIGN #553.
+      // the formula goes on, as Perl's, and this whatsit reverts as nothing (`lx@par@void`). It still clears the
+      // paragraph shape, as every `\par` (below); the `next_para_class` and `\vadjust` work of its after-digest is
+      // left to the `\par` that ends the paragraph, which this one does not. Otherwise tex.web §1046-1047
+      // `mmode+par_end`: "Missing $ inserted", the inline formula ended and this `\par` read again after it; this
+      // whatsit, left in the formula, reverts as nothing. OXIDIZED_DESIGN #553.
       if formula_continues_past_par() {
+        assign_value("parshape", Stored::None, None);
+        assign_value("interlinepenalties", Stored::None, None);
         assign_value("lx@par@void", true, None);
         return Ok(Vec::new());
       }

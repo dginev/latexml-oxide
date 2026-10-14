@@ -1,0 +1,19 @@
+% witness: 66w r1: hep-ph9809328 and hep-ph9706250 (`\obeylines` left on by MTeXsis's `\unobeylines`, missing): each
+%          line end in a formula is an active `^^M` let to `\par`, and the formula goes on on the next line
+% oracle:  pdflatex 2 errors ("Missing $ inserted" at the line end, then §1046 re-opening at `_`), pdftotext "The pair
+%          (a+ / b1 ) and c here. / Next line."; Perl 0 errors, Math "(a+\par b_{1})" and "c"
+% engines: rust 66v1: 3 errors, Math "(a+", "and", "here."; 66w: as expected; 66w r1 before the peek fix: as 66v1 (the
+%          exhausted current line peeked as an empty line, whose active `^^M` the by-meaning stop gave up at)
+% expect:  0 errors, 0 warnings; Math "(a+b_{1})" and "c" in the first paragraph, "Next line." the second
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w r1): the judged line end's `^^M` is read already, so the look-ahead
+%          starts at the next line (mouth.rs `peek_text`), and the leading tokens meaning `\par` are skipped by
+%          meaning (stomach.rs `means_par`); the `_` before the next `$` keeps the formula open
+% preload: ar5iv.sty
+% status:  GREEN (66w r1; guard perfect_kernel_batch66w::formula_split_by_an_obeyed_line_end_continues)
+\documentclass{article}
+\begin{document}
+{\obeylines
+The pair $(a+
+b_1)$ and $c$ here.
+Next line.}
+\end{document}

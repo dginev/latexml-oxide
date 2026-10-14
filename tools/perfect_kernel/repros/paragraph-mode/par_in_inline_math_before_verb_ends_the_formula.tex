@@ -1,0 +1,20 @@
+% witness: 66w review finding 1 (p_verb): a verbatim argument with no braces; `\verb|a_b|` is routine in CS papers
+% oracle:  pdflatex 1 error ("Missing $ inserted" at the \par), pdftotext "We have a = b / Run make_all and x here."; Perl
+%          3 errors, the formula runs on to the next `$` (Math "a=b\par Run\verb|make_all|and")
+% engines: rust 66v1: as pdflatex; 66w: 1 error, Math "a=bRun\verb|make_all|and", "x here." flipped
+% expect:  1 error "Missing $ inserted"; Math "a=b" ends at the \par; "Run", the verbatim make_all and the formula x in
+%          paragraph 2
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w r1):
+%          a macro whose expansion is code (`\verb` reads its own delimited argument) is one the look-ahead cannot follow,
+%          and it gives up
+%          (stomach.rs `par_lookahead_verdict` / `lookahead_command`), so no math-only token precedes the `$` and
+%          tex.web §1047 ends the formula at the \par (`insert_dollar_sign`)
+% preload: ar5iv.sty
+% status:  GREEN (66w r1; guard perfect_kernel_batch66w::par_before_verb_ends_the_formula)
+\documentclass{article}
+
+\begin{document}
+We have $a = b
+
+Run \verb|make_all| and $x$ here.
+\end{document}
