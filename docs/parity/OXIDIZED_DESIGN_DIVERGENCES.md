@@ -16700,7 +16700,7 @@ Package.pm:819ff the same) also reads `[` as the key, but runs only under a labe
 helper `labelled_tex.rs` sets. **Guard**: `perfect_kernel_batch65m::cleveref_label_type_after_caption`
 (repros captions-floats/cleveref_label_type_after_{caption,procedure_caption,captionof}).
 
-### 553. TeX's math-group recovery for an inline formula outside alignments: a math shift closes the groups opened in it, `\par` or an environment's end ends it, a `}` at its math shift ends it when it closes a construct digested as a unit, else is deleted (Perl: none of the three)
+### 553. TeX's math-group recovery for an inline formula outside alignments: a math shift closes the groups opened in it, `\par` ends it unless the math after it goes on (then it is kept open, as Perl's), an environment's end ends it, a `}` at its math shift ends it when it closes a construct digested as a unit, else is deleted (Perl: none of the three)
 
 tex.web: a math shift with `cur_group` not the math shift group goes through `off_save` (§1193 `mmode+math_shift`,
 §1064-1065): "Missing } inserted" for a `{`/`\bgroup` group (`simple_group`), "Missing \endgroup inserted" for
@@ -16721,9 +16721,10 @@ current (frame value `stomach::INLINE_FORMULA`), reached from the innermost fram
   which an unbalanced paper never reaches, and the rest of the paper was digested as math. The deferral stays for a
   constructor's argument frame (`$\bm{\hat{m}$} b`, kblocks-doc; nicefrac; titlecaps — TeX has no group there), for
   formulas in alignments and for display math.
-- stomach.rs `insert_dollar_sign`, called by `\lx@normal@par` (before digest) and by `digest_next_body` at a
-  DefEnvironment's own end: Error "Missing $ inserted", `\lx@end@inline@math@inserted` (the ender, reverting to nothing)
-  and the command read again; the `\par` whatsit left in the formula reverts as nothing (`lx@par@reread`).
+- stomach.rs `insert_dollar_sign`, called by `\lx@normal@par` (before digest; only where the math after the `\par` does
+  not go on, 66w below) and by `digest_next_body` at a DefEnvironment's own end: Error "Missing $ inserted",
+  `\lx@end@inline@math@inserted` (the ender, reverting to nothing) and the command read again; the `\par` whatsit left in
+  the formula reverts as nothing (`lx@par@void`).
 - stomach.rs `digest_next_body`: a `}` meeting the formula's math shift group, one rule (`formula_ends_with_its_unit`).
   The `}` **ends the formula** when it closes a construct digested as a unit that holds the formula: a box body (the
   mode frame just outside the formula switched by a command on its own `{` — `\mbox{$x}`, `\hbox{$x}`, `\fbox{$x}`; not
@@ -16753,6 +16754,33 @@ deleted, and the formula runs the text on as math to the paragraph's end ("Missi
 "xmoretext.", 2 errors + the open group at the document's end — pdflatex's count and shape). Possible refinement (RED
 paragraph-mode/forgotten_dollar_in_a_plain_group_keeps_the_text, SYNC_STATUS row MS): `$`-parity evidence in the rest
 of the paragraph — odd, the author's closing `$` exists, so delete; even, the `$` was forgotten, so end at the `}`.
+
+**`\par` ends the formula only where no math follows** (user ruling 2026-10-14, batch 66w). tex.web pairs §1047's
+ending with §1046's re-opening: a math-only token in the text after it inserts a `$` again, so a formula split by a blank
+line is two formulas and the paragraph's `$`s stay in step. 65n had only the ending, and every later `$` of the
+paragraph opened where it should close: hep-th9402135 (`$Z_{YM}(\epsilon) =` ⏎⏎ `\int_{\cal A} … D A$`, eleven such splits)
+went Fatal TooManyErrors where Perl, whose `\par` in math is silent, has 0 errors and the formulas whole — the K1 cluster
+of run 345, 31 papers (agent_reports/2026-10-14_ef345_regressions.md, `_k1_arxiv_pdf_study.md`). The ruling keeps Perl's
+content where the formula clearly continues and §1047 where it does not. stomach.rs `formula_continues_past_par`, asked
+by `\lx@normal@par` before `insert_dollar_sign`: the input is looked at, not read (`gullet::peek_upcoming_tokens`: the
+pushback, then the current mouth's next 40 source lines tokenized by a scratch mouth under the current catcodes —
+nothing expanded, consumed or frozen), up to the formula's would-be closer (the next `$`, or `\)`), within 2,000 tokens.
+A math-only token before it — by its current meaning: a sub/sup mark (or a `\let` to one), a DefMath symbol, a
+constructor or primitive requiring math, one of tex.web §1046's math-only primitives (`\left`/`\right`, `\over`,
+`\mathchar`, the math classes and styles…) — keeps the formula open and the `\par` reverts as nothing (no Error; Perl's
+`tex=` keeps `\par`, which is no formula's TeX). Otherwise §1047 ends it as before: no math-only token first (that `$`
+opens the next paragraph's own formula), or undecided — the paragraph ends first (`\par`, `\end`, `\begin`, `\vskip`,
+`\hrule`…, `\(`, `\[`), the closer sits in a group or is a `$$`, a `}` closes a group the look-ahead did not see open,
+the bounds run out. A brace group right after a control sequence (or after such a group) is that command's argument and
+is not looked into, its scripts being a label's or a key's, never typeset (`\ref{eq_1}`); any other group is
+(hep-th9402135's `{\cf^{1}/G}$`). Not done: §1046's re-opening itself (a stray `_` in text still takes Perl's "Script _
+can only appear in math mode" — the 66i draft, 32 papers worse on our wrong modes upstream); a continuation with no
+math-only token (`$a =` ⏎⏎ `b$, where $c$`) still ends at the `\par`, as pdflatex; a `\par` from a macro body
+(hep-th9402135's `\def\bull{\vrule height 1.5ex` ⏎⏎ `width …}` in `$\bull$`) is looked past like any other, and ends
+the formula there as pdflatex does (2 errors per use; Perl 0). Repros paragraph-mode/
+formula_split_by_blank_line_continues_with_math, formula_split_by_blank_line_braced_continuation,
+script_in_text_after_par_closed_formula_reenters_math (GREEN), par_in_inline_math_before_a_text_paragraph_ends_the_formula,
+par_in_inline_math_before_a_label_argument_ends_the_formula (CONTROLs); guards `perfect_kernel_batch66w::*`.
 
 **Display math is tolerant of `\par`** (main session decision 2026-10-12): no §1047 for display math, a blank line in
 an `equation` being common and tolerated.

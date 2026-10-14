@@ -211,11 +211,17 @@ LoadDefinitions!({
       }
     },
     before_digest => {
-      // tex.web §1046-1047 `mmode+par_end`: "Missing $ inserted", the inline formula ended and this `\par` read again
-      // after it; this whatsit, left in the formula, reverts as nothing (`lx@par@reread`). OXIDIZED_DESIGN #553.
+      // A `\par` in an inline formula the math after it continues (a formula split by a blank line, hep-th9402135):
+      // the formula goes on, as Perl's, and this whatsit reverts as nothing (`lx@par@void`). Otherwise tex.web
+      // §1046-1047 `mmode+par_end`: "Missing $ inserted", the inline formula ended and this `\par` read again after
+      // it; this whatsit, left in the formula, reverts as nothing. OXIDIZED_DESIGN #553.
+      if formula_continues_past_par() {
+        assign_value("lx@par@void", true, None);
+        return Ok(Vec::new());
+      }
       let again = get_current_token().unwrap_or_else(|| T_CS!("\\par"));
       if insert_dollar_sign(Tokens!(again))? {
-        assign_value("lx@par@reread", true, None);
+        assign_value("lx@par@void", true, None);
         return Ok(Vec::new());
       }
       // Perl: combine any digested horizontal material into a horizontal List
@@ -234,8 +240,8 @@ LoadDefinitions!({
       assign_value("interlinepenalties", Stored::None, None);
     },
     after_digest => sub[whatsit] {
-      if lookup_bool("lx@par@reread") {
-        assign_value("lx@par@reread", false, None);
+      if lookup_bool("lx@par@void") {
+        assign_value("lx@par@void", false, None);
         whatsit.set_property("noop", true);
         whatsit.set_property("reversion", Tokens!());
         return Ok(Vec::new());

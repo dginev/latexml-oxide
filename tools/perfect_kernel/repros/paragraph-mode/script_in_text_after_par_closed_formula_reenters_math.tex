@@ -4,13 +4,17 @@
 %          `\int` (math-only in text: a formula starts); the closing `$` then ends that formula, and every later `$...$`
 %          is a formula; pdftotext "The partition function is Z(ϵ) = ∫ exp(−F_A)DA, where F_A is the curvature of A_1 and
 %          B_2 and C_3 and D_4."
-% engines: rust 66h: 65n's §1047 without §1046 — the scripts after the blank line are text ("Script _ can only appear in
+% engines: rust 66h-66t2: 65n's §1047 without §1046 — the scripts after the blank line are text ("Script _ can only appear in
 %          math mode"), the formula's closing `$` opens one, and `$` parity is flipped for the rest of the paragraph
 %          (9 errors; F_A, A_1 ... text, ", where", " is the curvature of" formulas); Perl 0 errors (its `\par` does not
 %          end the formula)
-% expect:  2 errors; the formulas F_A, A_1, B_2, C_3, D_4 each a formula, ", where" and "is the curvature of" text
+% expect:  (user ruling 2026-10-14, OXIDIZED_DESIGN #553 narrowed) 0 errors, Perl's content: one formula
+%          Z(\epsilon)=\int_{A}\exp(-F_{A})DA across the blank line (the `\par` reverting as nothing), then the formulas
+%          F_A, A_1, B_2, C_3, D_4, ", where" and "is the curvature of" text
+% mechanism: stomach.rs `formula_continues_past_par`: the `\par` looks ahead, unexpanded, to the next `$`; `\int` and
+%          `_` before it are math-only, so the formula continues instead of tex.web §1047 ending it
 % preload: ar5iv.sty
-% status:  RED
+% status:  GREEN (66w; guard perfect_kernel_batch66w::split_formula_keeps_the_paragraphs_dollar_parity)
 \documentclass{article}
 \begin{document}
 The partition function is $Z(\epsilon) =

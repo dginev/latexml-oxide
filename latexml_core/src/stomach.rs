@@ -2710,6 +2710,181 @@ pub fn insert_dollar_sign(again: Tokens) -> Result<bool> {
   Ok(true)
 }
 
+/// How many source lines past a `\par` read in an inline formula [`formula_continues_past_par`] looks at.
+const PAR_LOOKAHEAD_LINES: usize = 40;
+/// How many tokens past such a `\par` it looks at.
+const PAR_LOOKAHEAD_TOKENS: usize = 2000;
+
+/// The primitives tex.web §1046 makes a non-math mode meet with `insert_dollar_sign` — math-only commands, whatever
+/// LaTeXML defines them as: `\left`/`\middle`/`\right` (`left_right`), the generalized fractions (`above`),
+/// `\mathchar`, `\delimiter`, `\radical`, `\mathaccent`, the math classes (`math_comp`; not `\underline`, which LaTeX
+/// makes good in text), `\mathchoice`, `\vcenter`, `\nonscript`, `\mkern`, `\mskip`, the limit switches and the
+/// styles. A token is matched by its meaning's own name, so `\let\lft\left` is one too.
+const MATH_ONLY_PRIMITIVES: &[&str] = &[
+  "\\left",
+  "\\middle",
+  "\\right",
+  "\\over",
+  "\\atop",
+  "\\above",
+  "\\overwithdelims",
+  "\\atopwithdelims",
+  "\\abovewithdelims",
+  "\\mathchar",
+  "\\delimiter",
+  "\\radical",
+  "\\mathaccent",
+  "\\mathord",
+  "\\mathop",
+  "\\mathbin",
+  "\\mathrel",
+  "\\mathopen",
+  "\\mathclose",
+  "\\mathpunct",
+  "\\mathinner",
+  "\\overline",
+  "\\mathchoice",
+  "\\vcenter",
+  "\\nonscript",
+  "\\mkern",
+  "\\mskip",
+  "\\limits",
+  "\\nolimits",
+  "\\displaylimits",
+  "\\displaystyle",
+  "\\textstyle",
+  "\\scriptstyle",
+  "\\scriptscriptstyle",
+];
+
+/// What the look-ahead past a `\par` stops at undecided: a paragraph's end, or a command inline math cannot hold
+/// (tex.web §1046 `mmode+par_end`, `stop`, `vskip`, `hrule`, `un_vbox`, `valign`; an environment's end or begin), or a
+/// formula's opener.
+const PAR_LOOKAHEAD_STOPS: &[&str] = &[
+  "\\par",
+  "\\endgraf",
+  "\\end",
+  "\\begin",
+  "\\vskip",
+  "\\vfil",
+  "\\vfill",
+  "\\vss",
+  "\\vfilneg",
+  "\\hrule",
+  "\\unvbox",
+  "\\unvcopy",
+  "\\valign",
+  "\\(",
+  "\\[",
+  "\\]",
+];
+
+/// Whether `token` is math-only by its current meaning — what tex.web §1046 meets with `insert_dollar_sign` outside
+/// math: a sub- or superscript mark, or a control sequence (`\let` to one included) whose definition is LaTeXML's
+/// for math only (a DefMath symbol; a constructor or primitive that requires math, Perl's `requireMath`) or one of
+/// TeX's math-only primitives ([`MATH_ONLY_PRIMITIVES`]).
+fn is_math_only_token(token: &Token) -> bool {
+  match token.get_catcode() {
+    Catcode::SUPER | Catcode::SUB => true,
+    code if code.is_active_or_cs() => with_meaning(token, |meaning| {
+      let defn: Option<&dyn Definition> = match meaning {
+        Some(Stored::Token(t)) => return matches!(t.get_catcode(), Catcode::SUPER | Catcode::SUB),
+        Some(Stored::MathPrimitive(_)) => return true,
+        Some(Stored::Constructor(d)) => Some(d.as_ref()),
+        Some(Stored::Primitive(d)) => Some(d.as_ref()),
+        Some(Stored::Expandable(d)) => Some(d.as_ref()),
+        _ => None,
+      };
+      defn.is_some_and(|defn| {
+        defn.declared_mode().is_some_and(|mode| mode.require_math)
+          || defn
+            .get_cs()
+            .with_str(|name| MATH_ONLY_PRIMITIVES.contains(&name))
+      })
+    }),
+    _ => false,
+  }
+}
+
+/// Whether the inline formula a `\par` is read in goes on past it: OXIDIZED_DESIGN #553 as narrowed (66w). The
+/// input is looked at, not read ([`gullet::peek_upcoming_tokens`], unexpanded, each token by its current meaning),
+/// as far as the formula's would-be closer — the next `$` or `\)` — within the paragraph after the `\par`. The
+/// formula continues when the material before that closer holds a math-only token (`is_math_only_token`): the
+/// author split the formula with a blank line and the math goes on (hep-th9402135 `$Z_{YM}(\epsilon) =` ⏎⏎
+/// `\int_{\cal A} … D A$`, whose ending put every later `$` of the paragraph out of step, Fatal TooManyErrors). It
+/// does not when no math-only token comes first — that `$` opens the next paragraph's own formula, and the `\par`
+/// ends this one (tex.web §1047, a forgotten `$`) — nor whenever the look-ahead cannot decide: no closer before the
+/// paragraph's end (`PAR_LOOKAHEAD_STOPS`), the bounds (`PAR_LOOKAHEAD_LINES`, `PAR_LOOKAHEAD_TOKENS`), a
+/// closer inside a group or a `$$`, a `}` closing a group the look-ahead did not see open. A brace group right after
+/// a control sequence (or after such a group) is that command's argument and is not looked into: its scripts may be
+/// a label's or a citation key's (`\ref{eq_1}`), never typeset; any other group is (`{\cf^{1}/G}$`).
+pub fn formula_continues_past_par() -> bool {
+  if lookup_string_from_sym(crate::pin!("MODE")) != "math" || !inline_formula_reachable() {
+    return false;
+  }
+  par_lookahead_verdict(&gullet::peek_upcoming_tokens(PAR_LOOKAHEAD_LINES)) == Some(true)
+}
+
+/// [`formula_continues_past_par`]'s decision over the upcoming `tokens`: `Some(math_only_seen)` at the closer,
+/// `None` when undecided.
+fn par_lookahead_verdict(tokens: &[Token]) -> Option<bool> {
+  let mut math_only = false;
+  let mut depth = 0usize;
+  // The depth below which every group is an argument, not looked into (`None`: none open).
+  let mut opaque_from: Option<usize> = None;
+  // The previous significant token takes an argument group: a control sequence, or such a group just closed.
+  let mut after_command = false;
+  let mut leading = true;
+  for (index, token) in tokens.iter().enumerate().take(PAR_LOOKAHEAD_TOKENS) {
+    let code = token.get_catcode();
+    // The `\par`s and spaces of the blank lines themselves.
+    if leading && (code == Catcode::SPACE || *token == T_CS!("\\par")) {
+      continue;
+    }
+    leading = false;
+    match code {
+      Catcode::SPACE | Catcode::COMMENT | Catcode::MARKER => continue,
+      Catcode::MATH => {
+        let display = tokens
+          .get(index + 1)
+          .is_some_and(|next| next.get_catcode() == Catcode::MATH);
+        return (depth == 0 && !display).then_some(math_only);
+      },
+      Catcode::BEGIN => {
+        if after_command && opaque_from.is_none() {
+          opaque_from = Some(depth);
+        }
+        depth += 1;
+        after_command = false;
+        continue;
+      },
+      Catcode::END => {
+        depth = depth.checked_sub(1)?;
+        after_command = opaque_from.is_some_and(|from| from == depth);
+        if after_command {
+          opaque_from = None;
+        }
+        continue;
+      },
+      _ => {},
+    }
+    after_command = false;
+    if code.is_active_or_cs() {
+      if *token == T_CS!("\\)") {
+        return (depth == 0).then_some(math_only);
+      }
+      if token.with_str(|name| PAR_LOOKAHEAD_STOPS.contains(&name)) {
+        return None;
+      }
+      after_command = code == Catcode::CS;
+    }
+    if opaque_from.is_none() && is_math_only_token(token) {
+      math_only = true;
+    }
+  }
+  None
+}
+
 /// The `}` a `\left`/`\middle`/`\right` delimiter scan put back after "Missing delimiter" (latexml_engine tex_math.rs
 /// `missing_delimiter`, [`mark_put_back_brace`]). The mark lives as long as that brace: a serial bound on the frame
 /// innermost when it was put back — inside the formula, so it dies with the formula at the latest — and valid only

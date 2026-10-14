@@ -1,0 +1,20 @@
+% witness: hep-th9402135:175-177 (`$Z_{YM}(\epsilon) =` <blank line> `\int_{\cal A} ... D A$`), the K1 cluster of run 345
+%          (31 papers Error -> Fatal since 65n; agent_reports/2026-10-14_ef345_regressions.md), reduced
+% oracle:  pdflatex 3 errors (tex.web §1047 "Missing $ inserted" at the blank line, §1046 at `\over` inside `\frac`'s
+%          group, "Extra }, or forgotten $"), pdftotext "The energy is E(x) = / 1 2mv2 +V0 , where m is the mass and v
+%          the speed."; Perl 0 errors, one formula tex="E(x)=\par\frac{1}{2}mv^{2}+V_{0}"
+% engines: rust 66t2: 5 errors, the formula ended at the blank line, the rest of the paragraph's `$` out of step
+%          (Math ",where", "isthemassand", "thespeed."; "m", "v" text)
+% expect:  0 errors; one formula E(x)=\frac{1}{2}mv^{2}+V_{0} (Perl's content, the `\par` reverting as nothing), then
+%          the formulas m and v, ", where" and "is the mass and" text
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w): a `\par` in an inline formula looks ahead, unexpanded, to the
+%          formula's would-be closer `$`; a math-only token before it (`\frac`, `^`, `_`) keeps the formula open
+%          (stomach.rs `formula_continues_past_par`)
+% preload: ar5iv.sty
+% status:  GREEN (66w; guard perfect_kernel_batch66w::formula_split_by_a_blank_line_continues_with_math)
+\documentclass{article}
+\begin{document}
+The energy is $E(x) =
+
+\frac{1}{2} m v^2 + V_{0}$, where $m$ is the mass and $v$ the speed.
+\end{document}

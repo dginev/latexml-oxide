@@ -1,0 +1,18 @@
+% witness: 66w design probe: an underscore in a command's argument (a label key, never typeset) is not math following
+%          the blank line
+% oracle:  pdflatex 1 error ("Missing $ inserted" at the \par), pdftotext "a=b / Before xaf terone. / As in ?? we have y
+%          here."; Perl 3 errors, the formula runs on to the next `$` (Math "xafterone.\par Asin\ref{eq_a}wehave")
+% engines: rust 66t2: as pdflatex (65n)
+% expect:  1 error "Missing $ inserted"; Math "xafterone." ends at the \par, "As in" text and the reference, formula y
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w): a brace group right after a control sequence is its argument and
+%          the look-ahead does not look into it (`\ref{eq_a}`), so no math-only token precedes the `$`
+%          (stomach.rs `formula_continues_past_par` false)
+% preload: ar5iv.sty
+% status:  GREEN (66w; guard perfect_kernel_batch66w::par_before_a_label_argument_still_ends_the_formula)
+\documentclass{article}
+\begin{document}
+\begin{equation}a=b\label{eq_a}\end{equation}
+Before $x after one.
+
+As in \ref{eq_a} we have $y$ here.
+\end{document}

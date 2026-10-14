@@ -430,19 +430,12 @@ fn parameterless_commands_are_delimiters_only_as_symbols() {
      $\\left\\lmoustache x\\right\\rmoustache$ $\\frac{a\\left}{b}$ $w\\left\\par x\\right)$\n\\end{document}\n",
     Some("ar5iv.sty"),
   );
-  // The put-back `\par` then ends the inline formula (tex.web §1046-1047, "Missing $ inserted", the `\left` group first
-  // given its `\right.`), so `\right)` meets no `\left` ("Extra \right.") and the formula's own `$` opens one the
-  // document's end closes — pdflatex's sequence (5 errors; the delimiter and `\right.` ones are Warnings here, user ruling
-  // 2026-10-11). Kept last so the cascade reaches no other formula (65n, OXIDIZED_DESIGN #553).
-  assert_eq!(
-    error_lines(&log),
-    [
-      "Error:expected:$ Missing $ inserted",
-      "Error:unexpected:\\right Extra \\right.",
-      "Error:expected:$ Missing $ inserted"
-    ],
-    "{log}"
-  );
+  // The put-back `\par` is followed by math (`x\right)` before the formula's `$`), so it keeps the formula open and
+  // reverts as nothing, and `\right)` closes the `\left.` (66w, OXIDIZED_DESIGN #553 narrowed by the user ruling of
+  // 2026-10-14: Perl's content, 0 errors; pdflatex's §1047 ending there gives 5). Before 66w the `\par` ended the
+  // formula ("Missing $ inserted"), `\right)` met no `\left` and the formula's own `$` opened one the document's end
+  // closed. Kept last so a cascade would reach no other formula.
+  assert_eq!(error_lines(&log), Vec::<&str>::new(), "{log}");
   assert_eq!(
     warning_lines(&log),
     [
@@ -451,10 +444,10 @@ fn parameterless_commands_are_delimiters_only_as_symbols() {
       "Warning:unexpected:\\left Missing delimiter (. inserted)",
       "Warning:expected:\\right Missing \\right. inserted",
       "Warning:unexpected:\\par Missing delimiter (. inserted)",
-      "Warning:expected:\\right Missing \\right. inserted",
     ],
     "{log}"
   );
+  assert!(xml.contains(r#"tex="w\left.x\right)""#), "{xml}");
   for letter in ["y", "z", "w"] {
     assert!(
       xml.contains(&format!(

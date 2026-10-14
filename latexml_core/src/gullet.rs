@@ -4901,6 +4901,35 @@ pub fn isolated_input_ends_here() -> bool {
   }
 }
 
+/// The tokens the current input holds next, without reading them: the pushback, next-read first, then the current
+/// mouth's next `max_lines` source lines ([`Mouth::peek_text`]) tokenized by a scratch mouth under the current
+/// catcodes. Nothing is read, expanded or moved, so a catcode change the look-ahead runs past still applies to the
+/// text when it is really read. Only the current mouth: the input levels outside it are not reached. A look-ahead
+/// for a decision about what follows (stomach.rs `formula_continues_past_par`, OXIDIZED_DESIGN #553).
+pub fn peek_upcoming_tokens(max_lines: usize) -> Vec<Token> {
+  let (mut tokens, text) = {
+    let gullet = gullet!();
+    match gullet.runtime.as_ref() {
+      Some(runtime) => (
+        runtime
+          .pushback
+          .iter()
+          .rev()
+          .copied()
+          .collect::<Vec<Token>>(),
+        runtime.mouth.peek_text(max_lines),
+      ),
+      None => return Vec::new(),
+    }
+  };
+  if let Ok(mut scratch) = Mouth::new(&text, None) {
+    while let Some(token) = scratch.read_token() {
+      tokens.push(token);
+    }
+  }
+  tokens
+}
+
 /// Check if there is more input to be read from the current mouth
 pub fn has_more_input() -> bool {
   match runtime!() {

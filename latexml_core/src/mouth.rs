@@ -1354,6 +1354,32 @@ impl Mouth {
     self.caret_bytes.clear();
   }
 
+  /// The source text this mouth will read next — the rest of the current line, then up to `max_lines` lines after it,
+  /// joined by `\n` — without reading it: nothing is consumed, tokenized or decoded in place. A look-ahead for a
+  /// decision about what follows (stomach.rs `formula_continues_past_par`, OXIDIZED_DESIGN #553). Lines not yet
+  /// decoded are read as UTF-8, lossily; their structure (`$`, `\int`, `_`) is all a look-ahead needs.
+  pub fn peek_text(&self, max_lines: usize) -> String {
+    let mut text: String = self.chars.iter().skip(self.colno).collect();
+    if let Some(eol) = endline_char()
+      && text.ends_with(eol)
+    {
+      text.pop();
+    }
+    let decoded = self
+      .buffer
+      .iter()
+      .map(|line| std::borrow::Cow::Borrowed(line.as_str()));
+    let raw = self
+      .raw_buffer
+      .iter()
+      .map(|line| String::from_utf8_lossy(line));
+    for line in decoded.chain(raw).take(max_lines) {
+      text.push('\n');
+      text.push_str(&line);
+    }
+    text
+  }
+
   pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {
     let mut line = String::new();
     if self.colno < self.nchars {

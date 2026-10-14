@@ -1,0 +1,18 @@
+% witness: 65d review r5 probe f4 (the 65n case), with the next paragraph opening formulas of its own; the CONTROL for
+%          66w's look-ahead
+% oracle:  pdflatex 1 error ("Missing $ inserted" at the \par), pdftotext "Before xaf terone. / Second para with y1 here
+%          and z there."; Perl 4 errors, the formula runs on through the blank line to the next `$` (Math "xafterone.\par
+%          Secondparawith") and every later `$` of the paragraph is out of step
+% engines: rust 66t2: as pdflatex (65n)
+% expect:  1 error "Missing $ inserted"; Math "xafterone." ends at the \par, "Second para with" text, formulas y_{1} and z
+% mechanism: OXIDIZED_DESIGN #553 as narrowed (66w): no math-only token before the next `$`, so that `$` opens the next
+%          paragraph's own formula and tex.web §1047 ends this one at the \par (stomach.rs `formula_continues_past_par`
+%          false, `insert_dollar_sign`)
+% preload: ar5iv.sty
+% status:  GREEN (65n, kept by 66w; guard perfect_kernel_batch66w::par_before_a_text_paragraph_still_ends_the_formula)
+\documentclass{article}
+\begin{document}
+Before $x after one.
+
+Second para with $y_1$ here and $z$ there.
+\end{document}
