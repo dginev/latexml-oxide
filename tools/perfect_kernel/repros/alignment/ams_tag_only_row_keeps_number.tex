@@ -1,0 +1,22 @@
+% witness: nlin0106009 (Scientific Word's `\nonumber \\ && \TCItag{27}`, \TCItag being amsmath's \tag; 11 rows; the
+%          eqnarray shape: package-bindings/tcilatex_tcitag_tags_eqnarray_rows)
+% oracle:  pdflatex 0 errors: align "(28)" on the row after a = b, (1) on e = f; gather "(29)" on the row after c = d
+% engines: rust 67j r0 = both tag-only rows dropped with their tags (amsmath's rearrange_ams_align drops an empty inner
+%          row, normalize_prune_rows a math alignment's empty last row; a \label kept them, 63j); Perl alike
+%          (KNOWN_PERL_ERRORS #682)
+% expect:  0 errors; (28) and (29) stand on their own rows; e = f keeps (1)
+%          (OXIDIZED_DESIGN_DIVERGENCES #591)
+% status:  RED (67j r0) -> GREEN (67j r1)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{align}
+a &= b \notag \\
+\tag{28} \\
+e &= f
+\end{align}
+\begin{gather}
+c = d \notag \\
+\tag{29}
+\end{gather}
+\end{document}

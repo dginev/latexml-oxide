@@ -647,6 +647,12 @@ impl BoxOps for Alignment {
       for (k, v) in &row.properties {
         open_row_attrs.insert(k.clone(), v.clone());
       }
+      if row.has_explicit_tags() {
+        open_row_attrs.insert(
+          template::TAGGED_ROW_ATTRIBUTE.to_string(),
+          Stored::from("true"),
+        );
+      }
       if let Some(x) = row.x {
         open_row_attrs.insert("x".to_string(), Stored::Dimension(x));
       }

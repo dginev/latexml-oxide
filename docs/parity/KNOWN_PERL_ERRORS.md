@@ -13245,7 +13245,26 @@ x} $\goth m$` gives 2 errors. tcilatex.tex.ltxml is the Scientific Word 2.5 copy
 269. Witnesses hep-ex0506002, astro-ph0610654, cond-mat0610259, hep-ph0506127, hep-ex0610011; 1010.2389, 1010.3788,
 1202.0149; hep-th9306127, adap-org9410001, solv-int9306003, hep-th9306053, alg-geom9410018; nlin0106009, hep-th0210191,
 hep-ph0210025, 0802.0560. Fixed in Rust (espcrc_sty.rs, svjour_cls.rs, amsppt_sty.rs, amstex.rs, tcilatex_tex.rs: running
-heads stored, never typeset; `\TCItag` is amsmath's `\tag`); the same holds for the Rust-only imsart and siamltex
+heads stored, never typeset; `\eightpoint`/`\tenpoint` set the roman in text and only the size in math, where the
+letters stay math italic as `\textfont\@ne\eighti` keeps them; `\TCItag` is amsmath's `\tag`, and a row holding only
+its `\TCItag` keeps it, #682); the same holds for the Rust-only imsart and siamltex
 bindings (`\endbibitem`, `\slugger`; SYNC_STATUS 67j). Repros class-bindings/espcrc_readrcs_and_running_heads,
 svjour_epjconf_session_title_is_stored, amstex/amsppt_point_sizes_and_goth,
 package-bindings/tcilatex_tcitag_tags_eqnarray_rows; guards `perfect_kernel_batch67j`.
+
+## 682. A math-alignment row whose only content is its tag is dropped with the tag
+
+A row that holds nothing but `\tag` (amsmath) or a tag set through `\lx@equation@settag` is empty to the alignment
+code, so Perl drops it and its number goes with it. `Alignment.pm` normalize_prune_rows removes the empty last row of
+a math alignment. latex_constructs.pool.ltxml `rearrangeEqnarray` ("All columns empty … Probably the trailling //";
+the comment itself says a numbered row should be kept or moved) removes any empty eqnarray row. amsmath.sty.ltxml
+`rearrangeAMSAlign`/`rearrangeAMSGather` ("Empty row? Remove it!", :417-418, :477-478; ":483 Numbered ones still show
+in print out!!!") do the same for `align` and `gather`. Minimal trigger: `\usepackage{amsmath}`, then
+`\begin{gather} c = d \notag \\ \tag{29} \end{gather}`. pdflatex prints (29) on the second row; Perl 0.8.8 emits one
+unnumbered equation. The same happens in `align` (`a &= b \notag \\ \tag{28} \\ e &= f`, an inner row) and with
+Scientific Word's eqnarray `… \nonumber \\ && \TCItag{27}`. nlin0106009 loses 11 such tags: (27), (32b-d), (34d), (37),
+(46b-d), (53a-b). An auto-numbered empty row (a trailing `\\`) is a different case: pdflatex prints a number there
+too, but Perl's drop of that row is kept. Fixed in Rust, OXIDIZED_DESIGN_DIVERGENCES #591. Repros
+alignment/ams_tag_only_row_keeps_number and package-bindings/tcilatex_tcitag_tags_eqnarray_rows; guards
+`perfect_kernel_batch67j::{ams_tag_only_row_keeps_number, tcilatex_tcitag_tags_eqnarray_rows,
+trailing_row_without_tag_is_still_pruned}`.

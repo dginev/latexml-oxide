@@ -399,6 +399,12 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
         prunable = false;
       }
     }
+    // A row the author tagged is not empty: its tag is its content. Perl prunes the empty last row with its tag
+    // (KNOWN_PERL_ERRORS #682, surpass OD #591) — Scientific Word's `… \nonumber \\ && \TCItag{27}`, amsmath's
+    // `\\ && \tag{27}`, where pdflatex prints (27) on that row (witness nlin0106009).
+    if prunable && row.has_explicit_tags() {
+      prunable = false;
+    }
     keep[i] = !prunable;
   }
 

@@ -1966,6 +1966,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     has_r:    bool,
     numbered: bool,
     labelled: bool,
+    tagged:   bool,
   }
 
   // Scan the equations (rows). Perl reads the eqnarray's three columns; an `\IEEEeqnarray` has as many as its
@@ -2008,6 +2009,8 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     // \label-ed continuation rows onto one number. We honor the intent (and match
     // pdfTeX) by reading the real 'labels' attribute. See KNOWN_PERL_ERRORS #46.
     let labelled = rownode.get_attribute("labels").is_some();
+    // a row its author tagged (`… \nonumber \\ && \TCItag{27}`; the alignment's `_tagged` row, `Template::has_explicit_tags`)
+    let tagged = rownode.get_attribute(TAGGED_ROW_ATTRIBUTE).is_some();
     rows.push(EqRow {
       node: rownode,
       cols: cells,
@@ -2016,6 +2019,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       has_r,
       numbered,
       labelled,
+      tagged,
     });
   }
 
@@ -2091,12 +2095,15 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       } else {
         class = "continue";
       }
-    } else if row.labelled && row.numbered {
+    } else if (row.labelled || row.tagged) && row.numbered {
       // All columns empty, but the row holds a `\label`: LaTeX numbers it all the same (latex.ltx:15795, `\@@eqncr`
       // steps `\@eqnnum` for every row), and the label binds to that number. Its number and label join the equation
       // above, or stand as their own when that one has a number already (Perl latex_constructs.pool.ltxml:2366-2369
       // notes the rows lost; 1011.4399, hep-th9412215, 1305.3072; repro alignment/eqnarray_empty_labelled_row_keeps_number).
-      // An unnumbered one (`\label{x}\nonumber`) names no number and stays flagged, as before.
+      // An unnumbered one (`\label{x}\nonumber`) names no number and stays flagged, as before. So does a row whose only
+      // content is its author's tag: Scientific Word's `… \nonumber \\ && \TCItag{27}` numbers the equation above it
+      // (pdflatex prints (27) on the tag's row; nlin0106009's 11 such rows; OXIDIZED_DESIGN_DIVERGENCES #591,
+      // KNOWN_PERL_ERRORS #682). An auto-numbered empty row (`\\ \\`) is removed, as in Perl.
       class = if eqs.is_empty() || numbered {
         "new"
       } else {

@@ -17476,3 +17476,20 @@ native path, so an ellipse's Bézier arcs are drawn; a path ended by `\pIIe@fill
 with 643 errors, then Fatal at the same-error cap once other errors no longer interleaved); run 349 had 23 papers with
 undefined `\CalculateSin`/`\UseCos` and 18 with undefined `\pIIe@addtoGraph`. Guard
 `perfect_kernel_batch67g::pict2e_ellipse_has_its_old_registers_and_trig`.
+
+### 591. A math-alignment row its author tagged is kept even when its cells are empty (Perl: dropped with its tag)
+
+pdflatex prints a tag on its own row: amsmath's `\notag \\ \tag{29}`, and Scientific Word's eqnarray
+`… \nonumber \\ && \TCItag{27}`, which SW uses for every wrapped numbered equation. Perl drops these rows together with
+their tags, in three places (KNOWN_PERL_ERRORS #682). Here, a row whose `EQUATIONROW_TAGS` were set by
+`\lx@equation@settag` counts as tagged: `tags` together with the `reset` from its retract
+(`Template::has_explicit_tags`, `latexml_core/src/alignment/template.rs`). Such a row is never pruned as empty
+(`normalize_prune_rows`), and its element carries the internal `_tagged` attribute (`TAGGED_ROW_ATTRIBUTE`, stripped
+at finalization). eqnarray's `rearrange_eqnarray` treats a tagged empty row as it already treated a numbered labelled
+one (#54, 63j): it joins the unnumbered equation above, which then carries the tag, or stands alone when that equation
+has a number. amsmath's `rearrange_ams_align`/`rearrange_ams_gather` (`empty_row_keeps_number`) keep it as an equation
+holding only its tags, which is where pdflatex prints it. An auto-numbered empty row still goes, as in Perl: the
+trailing `\\` of an eqnarray or align (pdflatex prints an empty numbered line in eqnarray, an accident of the markup),
+and an inner `\\ \\`. Witness nlin0106009: its 11 tag-only rows (27), (32b-d), (34d), (37), (46b-d), (53a-b) were lost
+once 67j made `\TCItag` amsmath's `\tag`. Guards `perfect_kernel_batch67j::{ams_tag_only_row_keeps_number,
+tcilatex_tcitag_tags_eqnarray_rows, trailing_row_without_tag_is_still_pruned}`.

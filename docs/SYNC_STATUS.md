@@ -1103,11 +1103,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\thanksmark` (mark dropped). siamltex: `\slugger` stored (siamltex1213.cls:184-204). amsppt `\tenpoint`/`\eightpoint`
   (amsppt.sty:153-214), AmSTeX `\goth` (amstex.tex:1509). tcilatex: the binding (the 2.5 copy, chosen over a shipped
   3.0-5.0 tcilatex.tex as bindings are) gains `\TCItag` = amsmath's `\tag` (5.0 :776-783) and 4.0's `\U`/`\UNICODE`
-  placeholders. KNOWN_PERL_ERRORS #681; repros class-bindings/{espcrc_*,svjour_epjconf_*,imsart_structured_*,
-  siamltex_slugger_*}, amstex/amsppt_point_sizes_and_goth, package-bindings/tcilatex_tcitag_*; guards
-  `perfect_kernel_batch67j`. A/B (82 papers, the 22 witnesses + ≤10 per family from the run-349 log scan): 275 → 155
-  Errors, none worse; the words lost are the ERROR text, the `$Id$` math, the running heads, slug and session lines,
-  "[author]", and math-held `\TCItag` numbers now row tags. Residual in those papers, other mechanisms: plain TeX's
+  placeholders. In math `\eightpoint`/`\tenpoint` change the size only (the math families are resized, letters stay
+  math italic: `\textfont\@ne\eighti`); the roman is text-only (1306.2523: 718 upright letters in r0 → 0). A row whose
+  only content is its tag (Scientific Word's `… \nonumber \\ && \TCItag{27}`, amsmath's `\notag \\ \tag{29}`) is
+  kept with its tag, where Perl drops it (KNOWN_PERL_ERRORS #682, OXIDIZED_DESIGN_DIVERGENCES #591; nlin0106009's 11
+  such tags, lost in r0, are back). imsart's `\thanksmark` is locked. KNOWN_PERL_ERRORS #681; repros
+  class-bindings/{espcrc_*,svjour_epjconf_*,imsart_structured_*,siamltex_slugger_*},
+  amstex/amsppt_point_sizes_and_goth, package-bindings/tcilatex_tcitag_*, alignment/ams_tag_only_row_keeps_number;
+  guards `perfect_kernel_batch67j`. A/B (82 papers, the 22 witnesses + ≤10 per family from the run-349 log scan): 275 →
+  155 Errors, none worse. Every `\TCItag` in the 13 tcilatex papers is emitted as a tag. The words lost are the ERROR
+  text, the `$Id$` math, the running heads, slug and session lines, "[author]", the `\U{…}` argument text (now the
+  PDF's square), and tag text that sat inside the formula as math tokens and is now one `<tag>`. RED repro
+  alignment/multline_notag_then_tag: multline ignores its `\tag` and `\notag` (always (n); hep-th0210191; Perl alike).
+  Residual in those papers, other mechanisms: plain TeX's
   `\settabs\+` under the LaTeX route (alg-geom9410018, hep-th9306053), amsppt internals papers copy
   (`\textonlyfont@`, `\ifsyntax@`, `\eightrm`: funct-an9706006, math0002200), imsart `{supplement}` without
   imsart.sty (1602.02055).

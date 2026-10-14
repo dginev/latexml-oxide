@@ -428,7 +428,22 @@ impl Template {
   pub fn set_pseudo(&mut self) { self.pseudorow = true; }
   pub fn unset_pseudo(&mut self) { self.pseudorow = false; }
   pub fn is_pseudo(&self) -> bool { self.pseudorow }
+
+  /// Whether this equation row carries tags its author set. `\lx@equation@settag` (amsmath's `\tag`, `\TCItag`,
+  /// AAS's `\eqnum`, …) first retracts the row's own number — `EQUATIONROW_TAGS` becomes `{id, reset}` — and then
+  /// stores the given `tags`; the after-row step (latex_constructs `after_equation`) copies those properties onto the
+  /// row. An auto-numbered row has `tags` without `reset`, a `\nonumber` row `reset` without `tags`. A tagged row is
+  /// never empty: its tag is its content (OXIDIZED_DESIGN_DIVERGENCES #591, KNOWN_PERL_ERRORS #682).
+  pub fn has_explicit_tags(&self) -> bool {
+    self.properties.contains_key("tags")
+      && matches!(self.properties.get("reset"), Some(Stored::Bool(true)))
+  }
 }
+
+/// The internal attribute a math alignment's row element carries when its author tagged it
+/// ([`Template::has_explicit_tags`]), so the equation-group rearrangements keep that row even when its cells are
+/// empty (`… \nonumber \\ && \tag{27}`); stripped with the other `_` attributes at finalization.
+pub const TAGGED_ROW_ATTRIBUTE: &str = "_tagged";
 
 #[cfg(test)]
 mod tests {

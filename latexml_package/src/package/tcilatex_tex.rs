@@ -386,7 +386,10 @@ freely copied and distributed.}
 %
 % Constructs added with Scientific Notebook, from the later copies (4.0 :497-507, 0802.0560 `\U`; 5.0 :521-533;
 % 3.0 :438-446 has \UNICODE and \CustomNote without \U): \U{code} and \UNICODE{code} stand for a character the
-% export could not name, a filled square in the PDF.
+% export could not name, a filled square in the PDF. The binding serves every version (2.5 to 5.0) and a binding
+% wins over a shipped copy, so these 4.0 definitions win over a paper's own later \newcommand{\U} (an Info, not a
+% redefinition; `$\U$` then reads the `$` as its argument) -- the union-of-versions ruling; a 160-paper tcilatex scan
+% (0210, 0802, 1202) found no paper that defines \U, \UNICODE or \CustomNote.
 \@ifundefined{correctchoice}{\def\correctchoice{\relax}}{}
 \@ifundefined{HTML}{\def\HTML#1{\relax}}{}
 \@ifundefined{TCIIcon}{\def\TCIIcon#1#2#3#4{\relax}}{}

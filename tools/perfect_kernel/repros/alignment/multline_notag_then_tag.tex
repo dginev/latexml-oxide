@@ -1,0 +1,21 @@
+% witness: hep-th0210191 (`\begin{multline} … \notag \\ … \tag{29} \end{multline}`, 67j review side finding)
+% oracle:  pdflatex 0 errors: "(29)" on the first multline, "(30)" on the second, the third unnumbered (its \notag)
+% engines: rust 67i1 = 67j r1 = (1), (2), (3): multline's \tag and \notag are ignored; Perl 0.8.8 the same
+% expect:  0 errors; the equations carry (29), (30) and no tag
+% status:  RED
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{multline}
+a + b \notag \\
++ c \tag{29}
+\end{multline}
+\begin{multline}
+d + e \\
++ f \tag{30}
+\end{multline}
+\begin{multline}
+g + h \notag \\
++ k
+\end{multline}
+\end{document}

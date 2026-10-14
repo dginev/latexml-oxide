@@ -137,10 +137,36 @@ fn amsppt_point_sizes_and_goth() {
     xml.contains("<XMTok font=\"fraktur\" role=\"UNKNOWN\">m</XMTok>"),
     "{xml}"
   );
+  // In math only the size changes: the math families are resized, the letters stay math italic (`\textfont\@ne
+  // \eighti`; 1306.2523, math0210423), in a display and in inline math in `\eightpoint` text.
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(
+      "<XMApp> <XMTok fontsize=\"80%\" meaning=\"equals\" role=\"RELOP\">=</XMTok> \
+       <XMApp> <XMTok fontsize=\"80%\" meaning=\"plus\" role=\"ADDOP\">+</XMTok> \
+       <XMTok font=\"italic\" fontsize=\"80%\" role=\"UNKNOWN\">x</XMTok> \
+       <XMTok font=\"italic\" fontsize=\"80%\" role=\"UNKNOWN\">y</XMTok> </XMApp> \
+       <XMTok font=\"italic\" fontsize=\"80%\" role=\"UNKNOWN\">z</XMTok> </XMApp>"
+    ),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(
+      "<XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok> <XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok> \
+       <XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok>"
+    ),
+    "{xml}"
+  );
+  assert!(
+    !xml.contains("mathvariant") && !xml.contains("font=\"upright\""),
+    "{xml}"
+  );
 }
 
 /// tcilatex.tex 3.0+ (:676-683 in 3.0, :776-783 in 5.0) `\TCItag{n}` / `\TCItag*{text}` tag an eqnarray row; the
-/// binding is the 2.5 copy, which had none (nlin0106009, hep-th0210191, hep-ph0210025).
+/// binding is the 2.5 copy, which had none (nlin0106009, hep-th0210191, hep-ph0210025). A row whose only content is
+/// its tag (Scientific Word's `… \nonumber \\ && \TCItag{27}`, inner and last; nlin0106009's 11 rows) numbers the
+/// equation above it, where Perl prunes it with its tag (KNOWN_PERL_ERRORS #682, OXIDIZED_DESIGN_DIVERGENCES #591).
 #[test]
 fn tcilatex_tcitag_tags_eqnarray_rows() {
   let (log, xml) = latexml::util::test::convert_with(
@@ -160,7 +186,66 @@ fn tcilatex_tcitag_tags_eqnarray_rows() {
         .unwrap_or_default()
     })
     .collect();
-  assert_eq!(tags, ["(3)", "(4)", "A"], "{xml}");
+  assert_eq!(tags, ["(3)", "(4)", "A", "(27)", "(28)"], "{xml}");
+  let xml = squash(&xml);
+  for (id, n, math) in [("S0.Ex5", 27, "u=v,"), ("S0.Ex7", 28, "w=t,")] {
+    let equation = format!(
+      "<equation xml:id=\"{id}\"> <tags> <tag>({n})</tag> <tag role=\"refnum\">{n}</tag> </tags> <MathFork> \
+       <Math tex=\"\\displaystyle {math}\""
+    );
+    assert!(xml.contains(&equation), "{equation}\n{xml}");
+  }
+  assert!(!xml.contains("_tagged"), "{xml}");
+}
+
+/// amsmath's own `\tag` on a row that holds nothing else (`\notag \\ \tag{28}` in `align`, an inner row; `\notag \\
+/// \tag{29}` in `gather`, the last): pdflatex prints the tag on that row, where Perl drops the row with its tag
+/// (KNOWN_PERL_ERRORS #682, OXIDIZED_DESIGN_DIVERGENCES #591; nlin0106009). An auto-numbered row keeps its number.
+#[test]
+fn ams_tag_only_row_keeps_number() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment/ams_tag_only_row_keeps_number.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  for (id, n) in [("S0.Ex2", 28), ("S0.Ex4", 29)] {
+    let equation = format!(
+      "<equation xml:id=\"{id}\"> <tags> <tag>({n})</tag> <tag role=\"refnum\">{n}</tag> </tags> </equation>"
+    );
+    assert!(xml.contains(&equation), "{equation}\n{xml}");
+  }
+  assert!(
+    xml.contains(
+      "<equation xml:id=\"S0.E1\"> <tags> <tag>(1)</tag> <tag role=\"refnum\">1</tag> </tags>"
+    ),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<equation ").count(), 5, "{xml}");
+  assert!(!xml.contains("_tagged"), "{xml}");
+}
+
+/// A trailing `\\` leaves an auto-numbered empty last row: still pruned (Perl Alignment.pm normalize_prune_rows), in
+/// `eqnarray` (its number spent, as LaTeX's) and `align`; only a row its author tagged is kept.
+#[test]
+fn trailing_row_without_tag_is_still_pruned() {
+  let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n\
+             \\begin{eqnarray}\na &=& b \\\\\n\\end{eqnarray}\n\
+             \\begin{align}\nc &= d \\\\\n\\end{align}\n\\end{document}\n";
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert_eq!(xml.matches("<equation ").count(), 2, "{xml}");
+  assert!(
+    xml.contains("<equation xml:id=\"S0.E1\"> <tags> <tag>(1)</tag>"),
+    "{xml}"
+  );
+  assert!(
+    xml.contains("<equation xml:id=\"S0.E3\"> <tags> <tag>(3)</tag>"),
+    "{xml}"
+  );
 }
 
 /// imsart.sty:464-466 `\setattribute`/`\getattribute` store and read a value (1306.0113, 1706.08519); :640-645

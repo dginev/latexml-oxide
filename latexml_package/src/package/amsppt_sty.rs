@@ -933,7 +933,26 @@ LoadDefinitions!({
   // amsppt.sty:153-214: `\tenpoint` and `\eightpoint` switch the whole text and math font set to 10pt / 8pt and end
   // in roman (`\normalbaselines\rm` / `\eightrm`); the style sets addresses, footnotes, references and running heads
   // in `\eightpoint` (:332, :856, :1123), and papers use it for small print (hep-th9306127, adap-org9410001,
-  // solv-int9306003).
-  DefPrimitive!("\\tenpoint", None, font => { family => "serif", series => "medium", shape => "upright", size => 10 });
-  DefPrimitive!("\\eightpoint", None, font => { family => "serif", series => "medium", shape => "upright", size => 8 });
+  // solv-int9306003). The roman is the text font: the math families are only resized (`\textfont\@ne\eighti`, math
+  // italic), so in math (`$$\eightpoint \split … $$`, 1306.2523, math0210423) only the size changes.
+  DefPrimitive!("\\tenpoint", { amsppt_point_size(10.0); });
+  DefPrimitive!("\\eightpoint", { amsppt_point_size(8.0); });
 });
+
+/// amsppt's `\tenpoint` / `\eightpoint` (amsppt.sty:153-214): the size, and in text the roman they end in.
+fn amsppt_point_size(size: f64) {
+  if lookup_bool("IN_MATH") {
+    merge_font(Font {
+      size: Some(size),
+      ..Font::default()
+    });
+  } else {
+    merge_font(Font {
+      family: Some(Cow::Borrowed("serif")),
+      series: Some(Cow::Borrowed("medium")),
+      shape: Some(Cow::Borrowed("upright")),
+      size: Some(size),
+      ..Font::default()
+    });
+  }
+}

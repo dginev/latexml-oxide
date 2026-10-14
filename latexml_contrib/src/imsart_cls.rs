@@ -77,8 +77,9 @@ LoadDefinitions!({
   );
   // `\thanksmark[mark]{m1}` (imsart.sty:640-645) prints, in an `\affiliation`, the mark the authors' `\thanksref{m1}`
   // point at; the authors' marks are not printed here (the `\thanksref` annotation links them), so the address's
-  // mark is dropped too (1202.6182, 1306.1438).
-  DefMacro!("\\thanksmark[]{}", "");
+  // mark is dropped too (1202.6182, 1306.1438). Locked as `\thanksref`/`\thankstext` are, so a paper that ships
+  // imsart.sty does not get its `\thanksmark`, which prints `<sup>??</sup>` here.
+  DefMacro!("\\thanksmark[]{}", "", locked => true);
   // imsart.sty:464-466: `\setattribute[…]{journal}{name}{…}` stores `\journal@name` (`\getattribute` reads it back);
   // papers blank the journal name with it (1306.0113, 1706.08519).
   RawTeX!(
