@@ -610,23 +610,10 @@ impl Parameter {
       end_semiverbatim()?;
     }
 
-    // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion. The argument's own list is
-    // expired by now (`stomach::digest`), so a paragraph it began holds its material there; when a paragraph is open on
-    // the list around it — an inline block's argument (a note, a margin note, `inline_internal_vertical`) read in the
-    // middle of one — only the leaked mode is undone: Perl's `leaveHorizontal_internal` repacked THAT paragraph as if it
-    // had ended at the block (tex.web §1100 ends the box's own paragraph, `end_graf`, not the one around it), so a
-    // footnote or margin note in a line measured as a line break (KNOWN_PERL_ERRORS #663). Guard:
-    // `perfect_kernel_batch58::notes_measure_as_their_mark`.
+    // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
     let newmode = lookup_string_from_sym(crate::pin!("MODE"));
     if mode != newmode && mode != "horizontal" {
-      if crate::stomach::paragraph_open() {
-        let bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
-        if newmode == "horizontal" && bound.ends_with("vertical") {
-          assign_value_inplace_sym(crate::pin!("MODE"), arena::pin(&bound));
-        }
-      } else {
-        crate::stomach::leave_horizontal_internal();
-      }
+      crate::stomach::leave_horizontal_internal();
     }
 
     Ok(digested_value)

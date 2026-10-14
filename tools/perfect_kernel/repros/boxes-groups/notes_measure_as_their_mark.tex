@@ -10,6 +10,8 @@
 %          measured unraised); "[5 footnotemark: 19.0695pt]" (ours 19.58339pt).
 % engines: rust 58b13: `\hbox{A\footnotemark B}` 50.69pt (the counter's name measured; pdflatex 19.07pt). 58b11: the note 513.7pt wide under cleveref; marginpar 36.14pt; 58a3 footnotetext 18.94pt.
 % Residual: a note in a measured line still breaks it (`\hbox{A\footnote{x}B}` 345pt wide; pdflatex 19.07pt).
+% Residual (66l): case 3 is 18.83pt — a margin note's text is now an inline block's, and the line around it is
+%   repacked at the note as a mid-paragraph `\footnote`'s is (KNOWN_PERL_ERRORS #663, shared with Perl, open).
 % expect:  0 errors, 0 warnings.
 \documentclass{article}
 \usepackage{hyperref}\usepackage{cleveref}

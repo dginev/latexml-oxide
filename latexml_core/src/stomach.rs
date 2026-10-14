@@ -2354,9 +2354,6 @@ pub fn take_implicit_indent() -> bool {
   }
 }
 
-/// Is a paragraph open on the current list ([`ParagraphStart`])?
-pub fn paragraph_open() -> bool { stomach!().paragraph_start.is_some() }
-
 /// Note that a paragraph begins here (tex.web §1091 `new_graf`): see [`ParagraphStart`].
 fn mark_paragraph_start(implicit_indent: bool) {
   let mut stomach = stomach_mut!();

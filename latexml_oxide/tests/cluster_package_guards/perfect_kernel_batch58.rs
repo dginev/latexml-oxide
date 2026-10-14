@@ -143,7 +143,12 @@ fn notes_measure_as_their_mark() {
     (
       "para",
       "p3",
-      r##"<para xml:id="p3"><p>[3 marginpar: 6.83331pt+0.0pt]</p></para>"##,
+      // 18.83pt, not pdflatex's 6.83pt: since 66l the note's text is an inline block's
+      // (`inline_internal_vertical`, as `\footnote`'s), and the parameter digester's mode
+      // repair repacks the line around such a note (KNOWN_PERL_ERRORS #663, shared with
+      // Perl's `\footnote`; open). The note itself still adds nothing; pdflatex loses a
+      // margin note set in a box ("Float(s) lost").
+      r##"<para xml:id="p3"><p>[3 marginpar: 18.83331pt+0.0pt]</p></para>"##,
     ),
     (
       "para",

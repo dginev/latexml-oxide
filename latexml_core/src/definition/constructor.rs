@@ -367,15 +367,6 @@ impl Constructor {
       let mode = lookup_string_from_sym(crate::pin!("MODE"));
       mode.ends_with("vertical") || mode == "horizontal"
     };
-    // An inline block (`inline_internal_vertical`: a note, a margin note, `\vbox`, `\parbox`) does not leave the
-    // paragraph it is met in (Perl #2798, `stomach::begin_mode_opt`): there it is an item of its line, as TeX's box and
-    // insertion nodes are (tex.web §1076, §1100), and the paragraph's repack keeps it with the line around it
-    // (`stomach::repack_paragraph`, `in_hlist`). Its whatsit's own `mode` is the one its contents were set in.
-    let inline_in_paragraph = self.declared_mode.is_some_and(|declared| {
-      declared.mode.is_some_and(|mode| {
-        crate::common::arena::with(mode, |mode| mode == "inline_internal_vertical")
-      })
-    }) && lookup_string_from_sym(crate::pin!("MODE")) == "horizontal";
     let mut result = self.execute_before_digest()?;
     // After the `before` code: `\lx@finalize@document`'s is what ends the document (1611.05714: an
     // itemize left open by a `\description` used as a command).
@@ -425,9 +416,6 @@ impl Constructor {
     });
     if in_paragraph {
       properties.insert("in_paragraph", Stored::Bool(true));
-    }
-    if inline_in_paragraph {
-      properties.insert("in_hlist", Stored::Bool(true));
     }
     // $properties{level}   = $stomach->getBoxingLevel;
 

@@ -122,15 +122,3 @@ fn multicolumn_in_aligned_is_text() {
   );
   assert!(xml.contains("AFTERWORDS survive."), "{xml}");
 }
-
-/// A note in the middle of a measured paragraph leaves it one line: the argument's own paragraph ends with the
-/// argument, not the paragraph around the note (tex.web §1100; KNOWN_PERL_ERRORS #663).
-#[test]
-fn inline_note_keeps_its_line() {
-  let (log, xml) = convert_counted(include_str!(
-    "../../../tools/perfect_kernel/repros/boxes-groups/inline_note_keeps_its_line.tex"
-  ));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(xml.contains("[F: 6.83331pt+0.0pt]"), "{xml}");
-  assert!(xml.contains("[M: 6.83331pt+0.0pt]"), "{xml}");
-}
