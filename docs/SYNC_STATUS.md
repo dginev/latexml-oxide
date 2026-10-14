@@ -1056,7 +1056,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (inst_support, aas_macros) loads `Fallback`, so a document's `\newcommand{\inst}` wins (2603.21740, cas-sc; OD #408);
   an eqnarray.sty binding maps `equationarray[pos]{cols}` onto the eqnarray alignment over the specification's columns,
   cells `$\displaystyle…$` (1605.07858, 2507.02169); a `\multicolumn` cell of an amsmath math alignment (`aligned`,
-  `gathered`, `split`, `multline`: `template_math`) is text, as `\omit` drops the template's `$` (1808.07192; KPE #662).
+  `gathered`, `split`, `multline`: `template_math`) is text, as `\omit` drops the template's `$` (1808.07192; KPE #662). A note's argument no longer ends the paragraph around it when measured (Parameter.pm:139-141's mode repair
+  repacked the outer paragraph; a mid-paragraph `\footnote` in a `\vbox` measured 30.83pt for one 6.83pt line; KPE #663;
+  `perfect_kernel_batch66l::inline_note_keeps_its_line`).
   Guards `perfect_kernel_batch66l::*`. Open: `\opt@` string re-tokenized (2407.02071), ytableau after `\omit`
   (2308.07459), two xy-pic gaps (1012.0388, 1103.1294); eqnarray.sty `\eqnnum`/`\yesnumber`, fleqn and `[pos]` not
   modelled.

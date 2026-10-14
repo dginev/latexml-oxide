@@ -13051,3 +13051,15 @@ math. `\multicolumn` is `\multispan` (`\omit`): an amsmath alignment's cells are
 `\@arrayclassz`), so its cells stay math. Minimal trigger: `\begin{aligned}&\multicolumn{2}{l}{$f_0$}\end{aligned}` with
 array.sty. Fixed in Rust (tex_tables.rs `\lx@alignment@multicolumn` boxes the body as text in an alignment marked
 `template_math` by amsmath_sty.rs; repro alignment-bindings/multicolumn_in_aligned_is_text).
+
+## 663. A note's argument ends the paragraph around it (as measured)
+
+Parameter.pm:139-141 repairs a mode change leaking out of an argument's digestion with `leaveHorizontal_internal`, but
+the argument's own list is already closed by then: what it repacks is the list around the command. For an inline block
+read in the middle of a paragraph (`\footnote`, `inline_internal_vertical`) whose argument began a paragraph of its
+own, that is the paragraph around the note, repacked as if it had ended there, so a measured box counts the text
+before and after the note as separate lines. tex.web §1100 ends the box's own paragraph (`end_graf` before `package`).
+Minimal trigger: `\setbox0\vbox{\hsize=5cm Text\footnote{F one.} more.\par}\the\ht0` (Perl and Rust before the fix:
+30.83pt; pdflatex 6.83pt). Fixed in Rust (parameter.rs undoes only the leaked mode when a paragraph is open outside;
+constructor.rs marks an inline block begun in a paragraph an item of its line, `in_hlist`; repro
+boxes-groups/inline_note_keeps_its_line).

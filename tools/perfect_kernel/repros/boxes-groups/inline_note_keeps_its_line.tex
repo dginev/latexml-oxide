@@ -1,0 +1,16 @@
+% witness: 2002.06461 (its `\marginnote` gained the note mode in 66l); perfect_kernel_batch58::notes_measure_as_their_mark
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; a note in the middle of a measured paragraph leaves it one line: "[F: 6.83331pt+0.0pt]",
+%   "[M: 6.83331pt+0.0pt]" (pdflatex: 6.83331pt; its margin note in a box is a lost float, measured the same)
+% mechanism: an argument's paragraph ends with the argument (tex.web §1100); the parameter digester's mode-leak
+%   repair (Perl Parameter.pm:139-141 `leaveHorizontal_internal`) repacked the paragraph AROUND the note, already
+%   back on the stomach's list, so "Text" and "more." were two lines (footnote 30.83pt before 66l). Fixed:
+%   parameter.rs undoes only the leaked mode when a paragraph is open outside; the note is an item of its line
+%   (constructor.rs `in_hlist`) (KPE #663).
+% status:  GREEN
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\hsize=5cm Text\footnote{F one.\par F two.} more.\par}[F: \the\ht0+\the\dp0]
+
+\setbox0\vbox{\hsize=5cm Text\marginpar{M one.\par M two.} more.\par}[M: \the\ht0+\the\dp0]
+\end{document}
