@@ -88,7 +88,7 @@ site) that have no Perl equivalent.
 | [`performance/WINDOWS_PERFORMANCE.md`](performance/WINDOWS_PERFORMANCE.md) | Windows performance profile (2026-08-21): the kpathsea backend comparison (subprocess vs in-process linked-libkpathsea 16× speedup). |
 | [`performance/STABILITY_WITNESSES.md`](performance/STABILITY_WITNESSES.md) | Living worklist of reliability witnesses (timeout/OOM/peak-RSS/hang) with current + Perl baselines. |
 | [`performance/MULTIDOC_JOIN.md`](performance/MULTIDOC_JOIN.md) | Joining a main paper + Supplementary-Material documents into one output. In-memory join LANDED (#639/#640); the streaming-scale post-join (reusing the two-pass Scan/ObjectDB split engine over N core-XML files) is designed + queued. |
-| [`performance/CORTEX_WORKER_HARNESS.md`](performance/CORTEX_WORKER_HARNESS.md) | `cortex_worker --harness` fleet orchestration: one-conversion-per-process, memory guards, deployment. |
+| [`performance/CORTEX_WORKER_HARNESS.md`](performance/CORTEX_WORKER_HARNESS.md) | `cortex_worker --harness` fleet orchestration: one-conversion-per-process, memory guards, deployment, and the host TeX Live apt list arXiv needs (not `texlive-full`). |
 | [`performance/TELEMETRY.md`](performance/TELEMETRY.md) | Per-job structured telemetry schema for `cortex_worker` runs. |
 | [`performance/SOURCE_PROVENANCE.md`](performance/SOURCE_PROVENANCE.md) | Design for the source↔preview showcase over a shared locator substrate (issues #47/#92). |
 | [`performance/SCHEMA_DOCUMENTATION.md`](performance/SCHEMA_DOCUMENTATION.md) | RelaxNG Compact schema → rustdoc-styled HTML doc site. |

@@ -1061,7 +1061,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   A/Bs has, so some clusters were fleet-only (`{fmffile}` 298, `\Tree` 302 papers in run 349). Installed at the same TL
   version (2025.20260124-1, 0 upgrades): texlive-metapost, -humanities, -music, -games, -formats-extra, -xetex, and
   Debian's separate `feynmf`. The live dumps are unaffected (their source stamps name latex.ltx/expl3, unchanged).
-  Before calling a cluster a code bug, compare the distro `kpsewhich` with the vendor one for its package. E/F rerun
+  The full apt list (texlive-full is not needed) and the host check: `performance/CORTEX_WORKER_HARNESS.md` "Host TeX
+  Live for arXiv coverage". Before calling a cluster a code bug, compare the distro `kpsewhich` with the vendor one
+  for its package. E/F rerun
   on 4f131f2b84 started 20:13Z (baseline 2026-10-14 19:25:48.785430).
 - **67g** (run 349 Error→Fatal regression 2109.06028): pict2e keeps `\@tempdimd`, which it allocated before v0.4b and
   which TeX Live's own ellipse.sty/longfbox.sty still use (TL 2025 pdflatex fails on both), loads trig as pict2e.sty:123

@@ -155,6 +155,50 @@ Standalone and pooled workers, which nothing respawns, never take it.
 * **Never `--pool-size N` for production** — it shares one RAM ceiling across N
   conversions.
 
+## Host TeX Live for arXiv coverage
+
+A worker resolves every `.sty`/`.cls`/`.tex` an arXiv paper loads through the host's libkpathsea tree — on Debian/Ubuntu
+the distro TeX Live in `/usr/share/texlive` (+ `/usr/share/texmf`), whatever `PATH`'s `kpsewhich` says. A package missing
+from that tree fails only on the fleet: the gates and local A/Bs read the vendor TL 2025 tree, so they cannot see it
+(run 349: `{fmffile}` 298 and `\Tree` 302 papers were such fleet-only errors).
+
+`texlive-full` is **not** needed. Its TeX collections are, minus documentation, command-line tools and ConTeXt:
+
+```bash
+sudo apt install --no-install-recommends \
+  texlive texlive-base texlive-binaries texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+  texlive-fonts-recommended texlive-fonts-extra texlive-fonts-extra-links texlive-font-utils \
+  texlive-bibtex-extra texlive-extra-utils texlive-formats-extra texlive-games texlive-humanities \
+  texlive-lang-all texlive-luatex texlive-metapost texlive-music texlive-pictures texlive-plain-generic \
+  texlive-pstricks texlive-publishers texlive-science texlive-xetex \
+  feynmf
+```
+
+- `feynmf` is its own Debian package (feynmf.sty/feynmp.sty); `texlive-metapost` only *Recommends* it, so
+  `--no-install-recommends` skips it unless it is named.
+- `texlive-humanities` carries qtree, `texlive-metapost` mfpic/feynmp-auto, `texlive-music` musixtex; these were the
+  collections the cortex host lacked until 2026-10-14.
+- Optional: `asymptote` (asymptote.sty, asycolors.sty, ocg.sty for papers that `\usepackage{asymptote}`; pulls the
+  `asy` program and 6 libraries).
+- What `texlive-full` adds beyond this list ships no LaTeX input arXiv papers load: the nine `texlive-*-doc` packages,
+  tools (`biber`, `latexmk`, `chktex`, `lacheck`, `latexdiff`, `psutils`, `purifyeps`, `dvidvi`, `fragmaster`,
+  `lcdf-typetools`, `prerex`, `vprerex`), `context` (ConTeXt, not LaTeX) and `texinfo` (texinfo.tex).
+
+Installing collections leaves the live dumps valid: their `# source` stamps name latex.ltx and expl3-code.tex, which
+these packages do not touch. Keep the distro TL version uniform (`apt-get -s install …` must show 0 upgraded).
+
+To check a host, compare its TeX input files with a full TeX Live (2026-10-14 on the cortex host, after the list
+above: 250 of 17,402 file names missing — ConTeXt ~190, texinfo 24, the arphic CJK `.fd` files, asymptote's 3, and a
+handful newer than the distro snapshot):
+
+```bash
+find /usr/local/texlive/2025/texmf-dist/tex -type f \( -name '*.sty' -o -name '*.cls' -o -name '*.tex' -o -name '*.def' \) \
+  -printf '%f\n' | LC_ALL=C sort -u > /tmp/full.txt
+find /usr/share/texlive/texmf-dist/tex /usr/share/texmf/tex -type f \( -name '*.sty' -o -name '*.cls' -o -name '*.tex' \
+  -o -name '*.def' \) -printf '%f\n' | LC_ALL=C sort -u > /tmp/host.txt
+LC_ALL=C comm -23 /tmp/full.txt /tmp/host.txt
+```
+
 ## Exit-code reference (per child)
 
 | Code / signal | Meaning | Source | Result the harness returns |
