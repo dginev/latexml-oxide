@@ -2767,7 +2767,8 @@ const MATH_ONLY_PRIMITIVES: &[&str] = &[
 /// What the look-ahead past a `\par` stops at undecided, by name or by meaning (`\let\endgraf\par`, a macro whose
 /// body holds one — `\medskip`'s `\vskip`, `\section`'s `\par`): a paragraph's end, or a command inline math cannot
 /// hold (tex.web §1046 `mmode+par_end`, `stop`, `vskip`, `hrule`, `un_vbox`, `valign`; an environment's end or begin;
-/// an alignment's `\cr`), or a formula's opener.
+/// an alignment's `\cr`), or a formula's opener. And `\catcode`: TeX tokenizes what follows it under the new codes,
+/// so the look-ahead's tokens past it are not the ones TeX reads (`\catcode`\_=12 a_b`, `\makeatletter`).
 const PAR_LOOKAHEAD_STOPS: &[&str] = &[
   "\\par",
   "\\lx@normal@par",
@@ -2788,6 +2789,7 @@ const PAR_LOOKAHEAD_STOPS: &[&str] = &[
   "\\(",
   "\\[",
   "\\]",
+  "\\catcode",
 ];
 
 /// What a control sequence met by the look-ahead past a `\par` tells it ([`lookahead_command`]).

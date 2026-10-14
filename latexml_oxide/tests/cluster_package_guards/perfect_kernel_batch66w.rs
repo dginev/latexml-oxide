@@ -347,6 +347,21 @@ fn par_before_a_backquoted_ref_ends_the_formula() {
   assert_eq!(warning_count(&log), 0, "{log}");
 }
 
+/// A `\catcode` change: TeX reads the `a_b` after it with `_` as other, so the look-ahead's tokens past it decide
+/// nothing and the formula ends at the `\par` (review of 66w r2, probe bq2).
+#[test]
+fn par_before_a_catcode_change_ends_the_formula() {
+  let tex = "\\documentclass{article}\n\\begin{document}\nWe have $a = b\n\nSee \\catcode`\\_=12 a_b and $x$ here.\n\
+             \\end{document}\n";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    error_lines(&log),
+    vec!["Error:expected:$ Missing $ inserted"],
+    "{log}"
+  );
+  assert_eq!(math_tex(&xml), vec!["a=b", "x"], "{xml}");
+}
+
 /// natbib's `\citep[e.g.][]{a_b}`: every `[…]` and `{…}` in a row after the command is its argument.
 #[test]
 fn par_before_citep_with_two_notes_ends_the_formula() {
