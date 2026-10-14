@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+  - **TikZ matrix and tikz-cd cells sit on their last row's baseline (#785).**
+    `openTikzAlignment` placed a matrix at `y = h + d`; Perl
+    (`pgfsys-latexml.def.ltxml` L952-975) subtracts the last row's depth, read
+    from the row sizes `Alignment.pm` passes to `openContainer` (L321-323). Rust
+    passed none, so every cell of a tikz-cd diagram or `\matrix` sat one
+    last-row depth above its arrows. The alignment now passes
+    `rowheights`/`rowdepths`/`columnwidths` to the container callback as Perl
+    does. Guard `picture_sizing::tikz_matrix_places_last_row_baseline_at_origin`.
+
   - **The XSLT recursion cap now applies in the statically linked release
     binaries.** `xsltMaxDepth = 1000` (Perl `XML::LibXSLT->max_depth(1000)`) was
     written through `dlsym`, which cannot see a global of a statically linked
