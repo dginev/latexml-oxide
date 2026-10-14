@@ -2959,6 +2959,12 @@ fn par_lookahead_verdict(upcoming: impl Iterator<Item = Token>) -> Option<bool> 
     let after_command = position != ArgumentPosition::None;
     match code {
       Catcode::SPACE | Catcode::COMMENT | Catcode::MARKER => continue,
+      // TeX's alphabetic constant: the token after a `` ` `` is a character code (`\char`_`, `\lccode`^`), inert.
+      Catcode::OTHER if token == T_OTHER!("`") => {
+        tokens.next();
+        position = ArgumentPosition::None;
+        continue;
+      },
       Catcode::MATH => {
         let display = tokens
           .peek()

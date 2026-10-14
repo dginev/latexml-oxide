@@ -294,10 +294,32 @@ fn par_before_includegraphics_ends_the_formula() {
     vec!["Error:expected:$ Missing $ inserted"],
     "{log}"
   );
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_eq!(math_tex(&xml), vec!["a=b", "x"], "{xml}");
   assert_element(&xml, "p", &[r#"xml:id="p1.1""#], FIRST_PARAGRAPH);
   assert!(!some_formula_holds(&xml, "<graphics"), "{xml}");
-  assert!(xml.contains(r#"graphic="fig_1""#), "{xml}");
+  assert!(
+    xml.contains(concat!(
+      r#"<p xml:id="p2.1">See <graphics graphic="fig_1" options="width=28.45274pt,keepaspectratio=true" "#,
+      r#"xml:id="p2.g1"/> and <Math mode="inline" tex="x""#
+    )),
+    "{xml}"
+  );
+}
+
+/// TeX's alphabetic constant: the `_` after `\char`` is a character code, not a subscript, so it continues no formula
+/// (review of 66w r1, finding 1).
+#[test]
+fn par_before_a_character_code_ends_the_formula() {
+  let tex = "\\documentclass{article}\n\\begin{document}\nWe have $a = b\n\nSee \\char`_ and $x$ here.\n\\end{document}\n";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    error_lines(&log),
+    vec!["Error:expected:$ Missing $ inserted"],
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert_eq!(math_tex(&xml), vec!["a=b", "x"], "{xml}");
 }
 
 /// natbib's `\citep[e.g.][]{a_b}`: every `[…]` and `{…}` in a row after the command is its argument.
