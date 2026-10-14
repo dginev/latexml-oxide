@@ -1049,6 +1049,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   heuristic firing on a package that sets `_` a letter itself (etextools, 2606.06323), N7 NFSS shape probes
   `\try@load@fontshape`/`\DeclareFontShape` no-ops (2606.07112, Perl the same), N10 a sectioning unit in `ltx:quote`
   (2606.19241) and an `\item[]` excluded from the OD #189 item bridge (2606.00118) — both await a ruling.
+- **66o** (`\endgroup` cluster E3): a natbib `\bibitem` label piece's math shifts are balanced within its brace
+  groups (1208.0605's `{Mantz}, $\, {Ebeling}, \& {Rapetti}`; revtex's `\citenamefont {Sasaki$}`, 1205.3745,
+  1508.02141) — natbib.sty:818-823 only writes the label to the .aux, but the binding typesets it as tags, and the open
+  math ran past the `\bibitem` into the bibliography; 6/6 witnesses lose that error (KPE #670;
+  `perfect_kernel_batch66o::natbib_unbalanced_dollar_in_label`).
 - **66n** (root-causer on 2308.07459's raw ytableau): an `\hrule` is an alignment's border only between its rows;
   in an open cell it is the cell's (its box's) material — Perl adds a border row and `add_line` restarts the row's
   columns, so every ytableau row with more than two cells lost its middle cells, and after a `\none` cell the next cell

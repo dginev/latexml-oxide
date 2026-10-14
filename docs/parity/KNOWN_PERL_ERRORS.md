@@ -13075,3 +13075,15 @@ first and last cells, and after an `\omit` cell (`\none`) the next cell lost its
 appear in math mode"; 2308.07459). Minimal trigger: `\halign{&\vbox{\hrule}$#$\cr a & b & Z\cr}` (Perl: 2 cells).
 Fixed in Rust (tex_box.rs `\hrule` is a border only while the alignment is between rows; repro
 alignment/rule_in_a_cell_box_keeps_the_row).
+
+## 670. An unbalanced `$` in a natbib `\bibitem` label runs math past the item
+
+natbib.sty.ltxml:609-629 `\NAT@wrout` passes the label's pieces (number, year, authors, full authors) to the
+`\NAT@@wrout` constructor, which typesets each as an `ltx:tag`. natbib.sty:818-823 only writes them to the .aux
+(`\bibcite`), so TeX never typesets the label in the list, and a piece with an odd number of `$` is harmless there.
+Typeset as a tag, the open math swallows the following tags and the rest of the `\bibitem`, and the group closes in the
+wrong frame ("`\endgroup` Attempt to close non-boxing group … current frame is boxing group due to `\NAT@@wrout`").
+Minimal triggers: `\bibitem[{{Mantz} {et~al.}(2008){Mantz}, $\, {Ebeling}, \& {Rapetti}}]{mae08}` (1208.0605) and
+revtex's `\bibitem [{\citenamefont {Sasaki$}(2011)}]{Sasaki_11}` (1205.3745, 1508.02141). Fixed in Rust (natbib_sty.rs
+`\NAT@wrout` balances each piece's math shifts within its brace groups: a group left in math is closed before its `}`,
+or its last-token `$` dropped so no `$$` forms; repro index-bib/natbib_unbalanced_dollar_in_label).

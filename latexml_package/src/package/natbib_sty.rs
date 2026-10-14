@@ -121,6 +121,44 @@ fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, 
   }
 }
 
+/// A label piece whose math shifts are balanced within each brace group (see `\NAT@wrout`): a group (or the piece)
+/// left in math is closed before its `}` (or at the piece's end), or, when its last token is that unpaired `$` (a
+/// BibTeX name split as `{Sasaki$}`), the `$` is dropped, so that no `$$` is formed.
+fn balance_math_shifts(piece: Option<Tokens>) -> Option<Tokens> {
+  piece.map(|tokens| {
+    let mut balanced = Vec::with_capacity(tokens.len() + 1);
+    // One parity per open brace group, the piece's own at the bottom.
+    let mut open_math = vec![false];
+    let close = |balanced: &mut Vec<Token>| {
+      if balanced
+        .last()
+        .is_some_and(|t: &Token| t.get_catcode() == Catcode::MATH)
+      {
+        balanced.pop();
+      } else {
+        balanced.push(T_MATH!());
+      }
+    };
+    for token in tokens.unlist() {
+      match token.get_catcode() {
+        Catcode::MATH => *open_math.last_mut().unwrap() ^= true,
+        Catcode::BEGIN => open_math.push(false),
+        Catcode::END if open_math.len() > 1 => {
+          if open_math.pop() == Some(true) {
+            close(&mut balanced);
+          }
+        },
+        _ => {},
+      }
+      balanced.push(token);
+    }
+    if open_math.pop() == Some(true) {
+      close(&mut balanced);
+    }
+    Tokens::new(balanced)
+  })
+}
+
 LoadDefinitions!({
   //======================================================================
   // 5. Package Options
@@ -866,10 +904,17 @@ LoadDefinitions!({
   // #484).
   DefMacro!("\\NAT@wrout{}{}{}{} Semiverbatim", sub[args] {
     let mut it = args.into_iter();
-    let number: Option<Tokens> = it.next().unwrap().into();
-    let year: Option<Tokens> = it.next().unwrap().into();
-    let authors: Option<Tokens> = it.next().unwrap().into();
-    let fullauthors: Option<Tokens> = it.next().unwrap().into();
+    // The label is natbib's written copy (natbib.sty:822 `\NAT@wrout` writes it to the .aux; the list never typesets
+    // it), so an unbalanced `$` in a piece opens no formula in TeX. Typeset here as tags, the open math ran past the
+    // `\bibitem` into the bibliography ("`\endgroup` Attempt to close non-boxing group"; 1208.0605's
+    // `{Mantz}, $\, {Ebeling}, \& {Rapetti}`; 1205.3745's and 1508.02141's revtex `\citenamefont {Sasaki$}`): each
+    // piece's math is balanced within its groups, silently (KNOWN_PERL_ERRORS #670). Guard:
+    // `perfect_kernel_batch66o::natbib_unbalanced_dollar_in_label`.
+    let mut piece = || balance_math_shifts(it.next().unwrap().into());
+    let number: Option<Tokens> = piece();
+    let year: Option<Tokens> = piece();
+    let authors: Option<Tokens> = piece();
+    let fullauthors: Option<Tokens> = piece();
     let key: Option<Tokens> = it.next().unwrap().into();
 
     let style = cite_style();
