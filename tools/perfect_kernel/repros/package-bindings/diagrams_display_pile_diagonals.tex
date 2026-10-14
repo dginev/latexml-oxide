@@ -1,0 +1,27 @@
+% witness: math0104065 (\HmeetV, \rDash~{r}), math0104175 (\rdTo(1,2)<{#6}), math0012073 (\pile{\rTo\\\rTo}),
+%          math0404431 (\renewcommand{\SE}), cs0204036 ([centredisplay] options); Paul Taylor's diagrams package
+% oracle:  diagrams.sty is not in TeX Live; manual.tex v3.97: outside maths a diagram is displayed ("Display options"),
+%          [LaTeXeqno] numbers it with LaTeX's equation counter and takes a \label, \pile stacks horizontal arrows,
+%          a diagonal takes a span (x,y), options [..] and a middle label ~{..}, the old positional labels {f}{g}
+% engines: rust 66x1 = errors (\newarrow, \SE undefined), every diagram an <ERROR>; Perl the same
+% expect:  0 errors, 0 warnings; the first diagram a display, the second a numbered equation referenced as (1); the
+%          pile a nested array; the labels h, k, p, q, x kept; "f(x) \rTo(\mathcal{F})" keeps its parenthesis as the target
+% status:  RED (66x1) -> GREEN (67d)
+\documentclass{article}
+\usepackage[centredisplay,PostScript=dvips]{diagrams}
+\renewcommand{\SE}{\mathrm{Sel}}
+\newarrow{Dash}{}{dash}{}{dash}{}
+\diagramstyle[labelstyle=\scriptstyle]
+\begin{document}
+Text before
+\begin{diagram}[size=2em]
+X & \pile{\rTo^a \\ \rTo_b} & Y \\
+  & \rdTo(2,2)>{h} \ldTo[abut]~{k} & \uTo{p}{q}\\
+U & \rDash~{x} & \HmeetV
+\end{diagram}
+and a numbered one
+\begin{diagram}[LaTeXeqno]
+P & \rMapsto & Q\label{eq:d}
+\end{diagram}
+as (\ref{eq:d}) shows; $\SE$ and $f(x) \rTo(\mathcal{F})$.
+\end{document}

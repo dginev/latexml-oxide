@@ -2007,8 +2007,9 @@ fn hashful_begin_document_chunk_under_a_package_label() {
   assert!(xml.contains("[v] (w)"), "{xml}");
 }
 
-/// The forest/diagrams discard stubs warn instead of erroring: the body is
-/// discarded cleanly (forest-quickstart, fragoli_doc, milsymb; pdflatex clean).
+/// The forest discard stub warns instead of erroring: the body is discarded
+/// cleanly (forest-quickstart, fragoli_doc, milsymb; pdflatex clean). The
+/// diagrams stub it shared this with is a binding since 67d (`perfect_kernel_batch67d`).
 #[test]
 fn forest_stub_is_a_warning() {
   let tex = r"\documentclass{article}

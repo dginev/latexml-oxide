@@ -17390,6 +17390,32 @@ supplied without the ar5iv preload, and hyperref is not loaded for every paper (
 is locked as the hyperref binding's is (OD #500), so a `\renewcommand\url` in the document body is ignored with an Info. Witnesses cond-mat0407333, cs0409028, hep-th0411273,
 1001.4826 (`\doi` → `\href`); guards `perfect_kernel_batch67a`.
 
+### 589. Paul Taylor's `diagrams`: a diagram is a math array of its objects and arrows (Perl: `<ERROR>{diagram}</ERROR>`)
+
+diagrams.tex/.sty (v3.97, www.PaulTaylor.EU/diagrams; not in TeX Live, in arXiv's tree: `\diagramstyle` 467, `\newarrow`
+441, `\rTo` 362 papers undefined in run 349) had only Perl's ar5iv-bindings `diagrams.tex.ltxml`, which discards every
+`{diagram}` body and puts `<ltx:ERROR>{diagram}</ltx:ERROR>` in its place; `\newarrow` and the arrow commands were
+undefined. Ours (latexml_contrib/src/diagrams_tex.rs, modelled on amscd's `{CD}`) keeps the diagram, its surface taken
+from the package manual (manual.tex v3.97) and checked against the 100 witness papers' use:
+`\begin{diagram}[opts]`/`\diagram … \enddiagram` is an `XMArray` (`name=diagram`, `datameaning=commutative-diagram`)
+whose cells are the objects and arrows (`&`, and `\\` as the package's `\cr`, diagrams.tex:729/739: no `[dim]`, a row
+may begin with a bracket, math0109209); outside maths it is a `$$` display (plain TeX's `\input diagrams` too), in
+restricted horizontal mode (a `c` cell, an LR box: math0010298, math0109209) or with `[inline]` an inline formula, with
+`[LaTeXeqno]` a numbered `equation` (manual FAQ "Display options", "Options"). An arrow `\<dir><Name>` (r l u d ru rd lu
+ld) reads `[opts]`, a span `(x,y)`, the positional `{f}{g}` and the labels `^ _ < > ~` (manual "Labels": above=left,
+below=right on verticals, the reverse sides on negative-gradient diagonals); a horizontal or diagonal arrow is a
+stretchy `ARROW` with its labels as scripts (amscd's `\lx@amscd@stack`, plus the role `ARROW` on a superscript-only
+stack so `$A \rTo^f B$` parses as a relation), a vertical one has its labels beside it (amscd's `\lx@amscd@adjacent`).
+`\newarrow{Name}{tail}{filler}{middle}{filler}{head}` (diagrams.tex:449, local definitions, ignored with a Warning in
+maths) draws each direction with the Unicode arrow of its components (`|--->` ↦, `C--->` ↪, `>--->` ↣, `----{>>}` ↠,
+`===={=>}` ⇒, `<--->` ↔, `.....` ⋯/⋮, `33333` ≡, …; an unknown component the plain arrow, no component nothing); the
+source's predefined arrows and synonyms (section (24): `\rInto`, `\hLine`, `\NW`, …) are defined, a synonym under its
+own name. `\pile` is a one-column array; `\diagramstyle`, `\newarrowhead/tail/middle/filler`, `\newdiagramgrid`,
+`\HonV`/`\VonH`/`\HmeetV` and the pullback corners `\SEpbk` etc. draw nothing here (layout). A text arrow's `(…)`/`[…]`
+that is no span/option stays in the formula (`\pi\rTo(\calf.\pi)^c`). **Why**: content — every commutative diagram of
+these papers was lost. Witnesses math0001049, math-ph0001006, math0003019, math-ph0007001, math0010298, math0012073,
+math0102115, math0104065, math0104175; repros `package-bindings/diagrams_*`; guards `perfect_kernel_batch67d`.
+
 ### 590. pict2e keeps the `\@tempdimd` of its pre-2020 versions and its graph-code layer (Perl: raw pict2e, TL 2025)
 
 pict2e before v0.4b (2020/09/30, "use of fewer system dimension registers", pict2e.dtx:3317-3318) allocated

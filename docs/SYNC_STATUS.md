@@ -933,7 +933,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (`run340/clusters/endgroup_rootcauses.md`): R1 an eqnarray cell `a}{b` (latex.ltx:15760-15765 `{##}` templates; the
   gullet's before-column marker already resets align_state as tex.web §324, but real braces would put `{…}` into every
   eqnarray `tex` attribute: needs a hidden template group, ~86 papers), R2 diagrams stub body read raw inside an
-  alignment cell (~51), R4/R5 singletons; the parked mode-switch family (29/56) beyond mdpi.
+  alignment cell (~51; the stub is a binding since 67d), R4/R5 singletons; the parked mode-switch family (29/56) beyond mdpi.
 - **66d** (run-340 Fatal origins round 2, `~/data/pk_agents/main/run340/fatal/fatal_rootcauses.md`: 110 papers still
   Fatal after 66b, 16 mechanisms). Seven fixed, red/green with repros: R1 the caption-label hoist closes its
   `\ifx.#5.` before the caption is digested (latex.ltx's `\@firstoftwo` idiom; a stray `\fi` or open `\if` in a caption
@@ -1056,6 +1056,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   13 long-standing slow or memory-heavy). Open from it: libmarpa `marpa_g_new` aborts on allocation failure with no
   Fatal line (SIGABRT; fix in the marpa-asf fork: an overridable OOM hook → `Fatal:oom:alloc_failed`), XPath OOM floods as
   one `Fatal:oom`, a 2.7-3.1 GB peak RSS for 4-10 s papers. Runs 348/349 (E/F rerun on `a7f5e7308e`) started 13:15Z.
+- **67d** (Paul Taylor's `diagrams`, not in TeX Live, in arXiv's tree; run 349: `\diagramstyle` 467, `\newarrow` 441,
+  `\rTo` 362 papers undefined): a native binding (latexml_contrib/src/diagrams_tex.rs, after amscd's `{CD}`; surface
+  from the package manual v3.97 and the 100 witnesses' use) where Perl's ar5iv stub put `<ERROR>{diagram}</ERROR>`:
+  `{diagram}`/`\diagram` is a math array of objects and labelled arrows (display in text, inline in a `c` cell or LR
+  box, `[LaTeXeqno]` numbered, `\\` = the package's `\cr`), `\newarrow` draws each direction with the Unicode arrow
+  of its components, `\pile`, text arrows, plain TeX `\input diagrams` (OD #589). A/B of 102 witnesses vs 66x1:
+  Errors 468 → 88, Fatals 0 → 0, words +52k, 1,089 `<ERROR>{diagram}` → 1,140 diagram arrays; no paper with more
+  Errors/Fatals; 12 with 2-71 fewer words, all the printed arguments of the undefined `\newarrow`/`\diagramstyle`
+  and `<ERROR>` macro names. Witnesses math0001049, math-ph0001006, math0003019, math-ph0007001, math0010298,
+  math0012073, math0102115, math0104065, math0104175, math0105166; repros `package-bindings/diagrams_*`; guards
+  `perfect_kernel_batch67d`. Open: the pullback corners (`\SEpbk`) and `\HonV`/`\VonH` draw nothing; a vertical
+  arrow's left label leaves its cell unparsed (`ltx_math_unparsed`, as amscd's `@VfVV`).
 - **Fleet TeX tree** (2026-10-14, host change, no code): the cortex fleet reads the distro TeX Live
   (`/usr/share/texlive`, worker.env sets no TEXMF*), which lacked whole collections the vendor TL 2025 of the gates and
   A/Bs has, so some clusters were fleet-only (`{fmffile}` 298, `\Tree` 302 papers in run 349). Installed at the same TL
@@ -1230,7 +1242,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   where an earlier wrong-mode bug puts a script in text — 2104.00361 `\scalebox{1}{$b_1$}` in `\substack` (the inner `$`
   closes the outer math), several at binding-built strings — so those go first; root-causer report
   `agent_reports/2026-10-14_k1_wordloss_triggers.md`),
-  K2a (19, missing macro files: shared), K2d (4, Paul Taylor's diagrams.tex not in TL, now converting 2k-11k words), K5b
+  K2a (19, missing macro files: shared), K2d (4, Paul Taylor's diagrams.tex not in TL, now converting 2k-11k words; a binding since 67d), K5b
   (2, L3 papers' unshipped physics.sty), 5 singletons; 1309.7562's `$$` meeting an open `{` (13 Errors on every binary,
   pdflatex 1); `\bibselect` does not read a `filecontents` `.ltb` (`Info:missing_file`).
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;

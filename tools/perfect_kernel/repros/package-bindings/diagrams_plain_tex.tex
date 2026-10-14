@@ -1,0 +1,13 @@
+% witness: math0105166 (plain TeX, \magnification=1200, \input diagrams, \diagram … \enddiagram in text and in $$)
+% oracle:  diagrams.tex is not in TeX Live; the package is plain TeX's as well as LaTeX's (manual.tex v3.97 "Typing
+%          the diagram": "In plain TeX you do the same thing, writing \diagram and \enddiagram"); outside maths the
+%          diagram is displayed, a text arrow is set in a formula
+% engines: rust 67d r0 = 3 errors (\[, \ensuremath and \] undefined: the binding used LaTeX's display and
+%          \ensuremath); rust 66x1 = errors, the diagrams lost; Perl the same
+% expect:  0 errors, 0 warnings; two displayed diagrams (A ->f B, C -> D) and the arrow of "an arrow \rTo here"
+% status:  RED (67d r0) -> GREEN (67d)
+\input diagrams
+Text $$\diagram A&\rTo^f&B\enddiagram$$ and a text-mode
+\diagram C&\rTo&D\enddiagram
+and an arrow \rTo{} here.
+\bye

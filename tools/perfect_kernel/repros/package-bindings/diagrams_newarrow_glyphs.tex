@@ -1,0 +1,27 @@
+% witness: math-ph0007001, math0010298, math0102115 (\newarrow{Mono}>--->, {Epi}----{>>}, {Corr}<--->,
+%          {Backwards}<----, {Dashto}{}{dash}{}{dash}>, {Congruent}33333, \diagram[h=.675cm] … \enddiagram);
+%          Paul Taylor's diagrams package
+% oracle:  diagrams.sty is not in TeX Live; manual.tex v3.97 "Defining arrow styles": \newarrow{Name}{tail}{filler}
+%          {middle}{filler}{head} defines \r \l \u \d \ru \rd \lu \ld<Name>, "<----" is a leftward \rBackwards; the
+%          source's section (24) predefines To, Mapsto, Implies, Eq, Line, Dots, … and \hLine \vLine \hEq \vEq
+% engines: rust 66x1 = errors (\newarrow, \diagram undefined); Perl the same
+% expect:  0 errors, 0 warnings; each arrow drawn with the Unicode arrow of its components (in order)
+%          ↣ ↠ ↔ ← ⇔ ⋮ ⇣ ⦀ ↧ ⇓ ↖ — = ↪ ⇀; \hLine \hEq \rInto keep their names in the source
+% status:  RED (66x1) -> GREEN (67d)
+\documentclass{article}
+\usepackage{diagrams}
+\newarrow{Mono}>--->
+\newarrow{Epi}----{>>}
+\newarrow{Corr}<--->
+\newarrow{Backwards}<----
+\newarrow{Iff}{<=}==={=>}
+\newarrow{Ddot}.....
+\newarrow{Dashto}{}{dash}{}{dash}>
+\newarrow{Congruent}33333
+\begin{document}
+\diagram[h=.675cm]
+A & \rMono & B & \rEpi & C & \rCorr & D & \rBackwards & E & \rIff & F \\
+\dDdot & & \dDashto & & \dCongruent & & \dMapsto & & \dImplies & & \luTo \\
+G & \hLine & H & \hEq & I & \rInto & J & \rPto & K
+\enddiagram
+\end{document}
