@@ -25,6 +25,9 @@ thread_local! {
   /// The current pict2e path: one point list per subpath (`\moveto` opens one),
   /// in `\unitlength` multiples. `\strokepath`/`\fillpath` consume it.
   static PICT2E_PATH: RefCell<Vec<Vec<(f64, f64)>>> = const { RefCell::new(Vec::new()) };
+  /// The points `\pIIe@add@nums`/`\pIIe@add@CP` put on the graph ahead of the operator `\pIIe@addtoGraph` adds
+  /// (pict2e.sty:206-217), in `\unitlength` multiples.
+  static PICT2E_OPERANDS: RefCell<Vec<(f64, f64)>> = const { RefCell::new(Vec::new()) };
 }
 
 /// `\unitlength` in sp, exact, as `{picture}`'s coordinates are scaled by it.
@@ -122,6 +125,12 @@ fn path_flush(closed: &str) -> Result<Tokens> {
 }
 
 LoadDefinitions!({
+  // pict2e.sty:123, the mode > 0 branch: trig.sty's `\CalculateSin`/`\UseCos` (ellipse.sty:107, longfbox.sty:107).
+  RequirePackage!("trig");
+  // pict2e before v0.4b (2020/09/30, "use of fewer system dimension registers", pict2e.dtx:3317-3318) allocated
+  // `\@tempdimd`; ellipse.sty:95 and longfbox.sty:107 still use it, and TeX Live 2025 pdflatex fails on both without it
+  // (2109.06028: 624 Errors, then the same-error cap's Fatal).
+  RawTeX!(r"\ifx\undefined\@tempdimd \newdimen\@tempdimd \fi");
   def_macro_noop("\\OriginalPictureCmds")?;
   // pict2e.sty:686-740 — the polygonal-line family that curve2e.sty:240
   // `\renewcommand*`s (sapthesis-doc, unifith-doc: `\polyline` undefined).
@@ -168,6 +177,33 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\pIIe@closepath", sub[()] {
     path_close();
+    Ok(Vec::new())
+  });
+  // The graph-code level a package may drive directly (ellipse.sty:222-245 `\pIIe@elliparc@draw`): operands, then
+  // the operator that takes them (pict2e.sty:164-217, the pdftex names of the mode 2 branch).
+  RawTeX!(
+    r"\def\pIIe@moveto@op{m}\def\pIIe@lineto@op{l}\def\pIIe@curveto@op{c}\def\pIIe@closepath@op{h}
+\def\pIIe@setlinewidth@op{w}\def\pIIe@stroke@op{S}\def\pIIe@fill@op{f}\def\pIIe@concat@op{cm}
+\def\pIIe@CPx{}\def\pIIe@CPy{}
+\def\pIIe@add@CP#1#2{\begingroup\@tempdima#1\xdef\pIIe@CPx{\the\@tempdima}\@tempdimb#2\xdef\pIIe@CPy{\the\@tempdimb}%
+  \lx@pIIe@operand\@tempdima\@tempdimb\endgroup}
+\def\pIIe@add@nums#1#2{\lx@pIIe@operand{#1}{#2}}"
+  );
+  DefPrimitive!("\\lx@pIIe@operand {Dimension}{Dimension}", sub[(x, y)] {
+    let point = (pic_dim(x)?, pic_dim(y)?);
+    PICT2E_OPERANDS.with(|o| o.borrow_mut().push(point));
+    Ok(Vec::new())
+  });
+  DefPrimitive!("\\pIIe@addtoGraph {}", sub[(op)] {
+    let operands = PICT2E_OPERANDS.with(|o| std::mem::take(&mut *o.borrow_mut()));
+    match (Expand!(op).to_string().trim(), operands.as_slice()) {
+      ("m" | "moveto", [.., point]) => path_push(*point, true),
+      ("l" | "lineto", [.., point]) => path_push(*point, false),
+      ("c" | "curveto", [.., c1, c2, end]) => path_curveto(*c1, *c2, *end),
+      ("h" | "closepath", _) => path_close(),
+      // A transformation or a drawing parameter: the picture's own XML carries neither.
+      _ => {},
+    }
     Ok(Vec::new())
   });
   DefMacro!("\\pIIe@strokeGraph", sub[()] { path_flush("0") });

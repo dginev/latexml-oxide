@@ -17389,3 +17389,16 @@ package, or defines the command itself in its preamble or in an `\AtBeginDocumen
 supplied without the ar5iv preload, and hyperref is not loaded for every paper (the rejected option). The supplied `\url`
 is locked as the hyperref binding's is (OD #500), so a `\renewcommand\url` in the document body is ignored with an Info. Witnesses cond-mat0407333, cs0409028, hep-th0411273,
 1001.4826 (`\doi` → `\href`); guards `perfect_kernel_batch67a`.
+
+### 590. pict2e keeps the `\@tempdimd` of its pre-2020 versions and its graph-code layer (Perl: raw pict2e, TL 2025)
+
+pict2e before v0.4b (2020/09/30, "use of fewer system dimension registers", pict2e.dtx:3317-3318) allocated
+`\@tempdimd`; TeX Live's own ellipse.sty:95 and longfbox.sty:107, which load pict2e, still use it, so TL 2025 pdflatex
+fails on both ("Undefined control sequence", 101 errors on a one-ellipse document; 0 with `\newdimen\@tempdimd`). Our
+pict2e binding (`latexml_package/src/package/pict2e_sty.rs`) allocates it when undefined, loads trig as pict2e.sty:123
+does in its mode > 0 branch (`\CalculateSin`/`\UseCos`), and binds the graph-code layer ellipse.sty drives directly
+(pict2e.sty:164-217: `\pIIe@add@nums`, `\pIIe@add@CP`, `\pIIe@addtoGraph` with the pdftex operator names) onto the
+native path, so an ellipse's Bézier arcs are drawn. Witness 2109.06028 (`\lfbox` around every hexdigest: run 349 Error
+with 643 errors, then Fatal at the same-error cap once other errors no longer interleaved); run 349 had 23 papers with
+undefined `\CalculateSin`/`\UseCos` and 18 with undefined `\pIIe@addtoGraph`. Guard
+`perfect_kernel_batch67g::pict2e_ellipse_has_its_old_registers_and_trig`.

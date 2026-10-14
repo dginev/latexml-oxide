@@ -1056,6 +1056,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   13 long-standing slow or memory-heavy). Open from it: libmarpa `marpa_g_new` aborts on allocation failure with no
   Fatal line (SIGABRT; fix in the marpa-asf fork: an overridable OOM hook → `Fatal:oom:alloc_failed`), XPath OOM floods as
   one `Fatal:oom`, a 2.7-3.1 GB peak RSS for 4-10 s papers. Runs 348/349 (E/F rerun on `a7f5e7308e`) started 13:15Z.
+- **67g** (run 349 Error→Fatal regression 2109.06028): pict2e keeps `\@tempdimd`, which it allocated before v0.4b and
+  which TeX Live's own ellipse.sty/longfbox.sty still use (TL 2025 pdflatex fails on both), loads trig as pict2e.sty:123
+  does, and binds the graph-code layer (`\pIIe@add@nums`/`\pIIe@add@CP`/`\pIIe@addtoGraph`) ellipse.sty drives
+  (OD #590; `perfect_kernel_batch67g`). 2109.06028: 643 errors, then the same-error cap's Fatal once 66l-67e removed the
+  alignment errors that had interleaved, → 0. Run 349: 23 papers with undefined `\CalculateSin`, 18 with undefined
+  `\pIIe@addtoGraph`. With it, 66w's look-ahead gives up at a `\catcode` (the tokens after it are not the ones TeX
+  reads; `par_before_a_catcode_change_ends_the_formula`) and steps over only a `_` or `^` after a backquote
+  (`par_before_a_backquoted_{formula,ref}_ends_the_formula`).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,
