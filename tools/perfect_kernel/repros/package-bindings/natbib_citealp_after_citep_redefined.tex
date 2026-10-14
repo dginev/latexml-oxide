@@ -1,0 +1,17 @@
+% witness: 2606.16139 (arxiv_main.tex:128-133), 2606.30583 (compile_baseline_v18.tex:24-33)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the \citealp cite has bibrefs="a", show AuthorsPhrase1Year, no parentheses
+% mechanism: natbib.sty:702-730 builds \citealp/\citealt and the capitalised forms over \NAT@citetp, never calling
+%   \citep/\citet; ours called the user-level names, which since D1 (64zb) the document's
+%   \renewcommand{\citep}{\oldcitep*} owns: keys lost, mode stack broken. Fixed: natbib_sty.rs private copies.
+% status:  GREEN
+\documentclass{article}
+\usepackage{natbib}
+\let\oldcitep\citep
+\renewcommand{\citep}{\oldcitep*}
+\begin{document}
+Polymatrix \citealp{a} games.
+\begin{thebibliography}{1}
+\bibitem[Aa(2023)]{a} A. Aa. Title. 2023.
+\end{thebibliography}
+\end{document}

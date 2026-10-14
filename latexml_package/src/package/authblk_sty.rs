@@ -53,8 +53,11 @@ LoadDefinitions!({
     Ok(Tokens::new([author_call(label, author)?.unlist(), state.unlist()].concat()))
   });
 
+  // Robust, as authblk.sty:148's `\newcommand\affil[2][]` is (`\@protected@testopt`): an `\affil` inside
+  // `\author` survives titling's `\protected@xdef\theauthor{\@author}` (witness 2605.03796, whose body was lost).
   DefMacro!("\\affil OptionalSemiverbatim {}",
-    "\\lx@add@contact[role=affiliation,annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}\\lx@AB@affil@state{#1}");
+    "\\lx@add@contact[role=affiliation,annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}\\lx@AB@affil@state{#1}",
+    robust => true);
 
   // authblk.sty's internal state, which documents copying its `\affil` code (a `\email` or second
   // `\affil` command built from it, as ACL/NAACL templates do: `\xdef\AB@authors{\the\@temptokena

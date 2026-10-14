@@ -251,6 +251,39 @@ fn nice_tabular_expansion(opts_toks: Tokens, pream: Vec<Token>, starter: Vec<Tok
   Tokens::new(out)
 }
 
+/// The fill color of a `\CodeBefore` color command. nicematrix.sty:5605-5616 (`\__nicematrix_color_opacity:w`) reads
+/// the optional argument as keys: `opacity=` sets the fill opacity (`\pgfsetfillopacity`), and what is left is the
+/// color model. A fill at opacity `o` over the white page shows as the color mixed with white at `o`. Witness
+/// 2605.25123 (`\columncolor[opacity=0.2]{blue}{3}`, an "Unrecognized color model" Error before).
+fn nice_color(model: Option<Tokens>, color: Tokens) -> Result<String> {
+  let mut opacity = None;
+  let mut keys = Vec::new();
+  if let Some(model) = model {
+    for key in do_expand(model)?
+      .to_string()
+      .split(',')
+      .map(str::trim)
+      .filter(|key| !key.is_empty())
+    {
+      match key.split_once('=') {
+        Some((name, value)) if name.trim() == "opacity" => {
+          opacity = value.trim().parse::<f64>().ok()
+        },
+        _ => keys.push(key.to_string()),
+      }
+    }
+  }
+  let model = (!keys.is_empty()).then(|| keys.join(","));
+  let color = parse_color(model.as_deref(), &do_expand(color)?.to_string());
+  Ok(
+    match opacity {
+      Some(opacity) => color.mix(&common::color::WHITE, opacity.clamp(0.0, 1.0)),
+      None => color,
+    }
+    .to_attribute(),
+  )
+}
+
 LoadDefinitions!({
   // nicematrix.sty:9595 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
@@ -400,8 +433,7 @@ LoadDefinitions!({
   // elsewhere (DRY). nicematrix.sty: \rectanglecolor 5752, \cellcolor, \rowcolor,
   // \columncolor, \arraycolor.
   DefPrimitive!("\\lx@nice@rectanglecolor[]{}{}{}", sub[(model, color, corner1, corner2)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     let a = do_expand(corner1)?.to_string();
     let b = do_expand(corner2)?.to_string();
     if let (Some((r1, c1)), Some((r2, c2))) = (nice_parse_cell(&a), nice_parse_cell(&b)) {
@@ -410,8 +442,7 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@nice@cellcolor[]{}{}", sub[(model, color, cells)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     for item in do_expand(cells)?.to_string().split(',') {
       if let Some((r, c)) = nice_parse_cell(item) {
         nice_push_rect(&hex, r, c, r, c);
@@ -420,24 +451,21 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@nice@rowcolor[]{}{}", sub[(model, color, rows)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     for (lo, hi) in nice_ranges(&do_expand(rows)?.to_string()) {
       nice_push_rect(&hex, lo, 1, hi, i32::MAX);
     }
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@nice@columncolor[]{}{}", sub[(model, color, cols)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     for (lo, hi) in nice_ranges(&do_expand(cols)?.to_string()) {
       nice_push_rect(&hex, 1, lo, i32::MAX, hi);
     }
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@nice@arraycolor[]{}", sub[(model, color)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     nice_push_rect(&hex, 1, 1, i32::MAX, i32::MAX);
     Ok(Vec::new())
   });

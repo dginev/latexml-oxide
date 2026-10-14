@@ -1,0 +1,22 @@
+% witness: 2606.17718 (bistatic2D_main.tex:128-137)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the affiliation holds "E-mail: a@b.c", not "x@y.z"
+% mechanism: an \if opened inside an \IEEEauthorblockA argument is closed by an \else/\fi after it; the 63x
+%   piecewise wrapping of the bare run emitted them bare ("Didn't expect \else"). Fixed: ieeetran_cls.rs
+%   wrap_bare_author_block_text wraps such a run whole. Residual: an empty affiliation contact from the skipped branch.
+% status:  GREEN
+\documentclass[conference]{IEEEtran}
+\def\arxivdisclaimer{1}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{A. Author}
+\IEEEauthorblockA{Univ \\
+\if\arxivdisclaimer1
+E-mail: a@b.c} \vspace{-5mm}
+\else
+E-mail: x@y.z
+\fi
+}
+\maketitle
+Text.
+\end{document}

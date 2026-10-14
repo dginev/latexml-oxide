@@ -1,0 +1,12 @@
+% witness: 2605.11518, 2605.12374, 2605.22763 (XCharter via berkeley.cls:116, googledeepmind.cls:122)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the formula after \boldmath is bold
+% mechanism: fontaxes.sty -> figureversions.sty:169-179 calls \mathversion{\l_tmpa_str}; latex.ltx:10545-10554
+%   expands the name (\csname mv@#1\endcsname, \edef\math@version{#1}); ours matched the unexpanded tokens:
+%   Error:unexpected:\l_tmpa_str "Unknown math version". Fixed: sect13.rs \mathversion Expanded.
+% status:  GREEN
+\documentclass{article}
+\usepackage{XCharter}
+\begin{document}
+\boldmath $x$ text
+\end{document}

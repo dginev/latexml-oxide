@@ -12848,3 +12848,85 @@ col 17, the `$` after `'`; col 19, the closing `$$`), the tag math "1.2" with it
 "(1.2′)". In papers the stray `$` cascades (1012.3760: TooManyErrors; 1112.1423, 1108.6264). Row tags of
 `$$\align … \endalign$$` also land on the equationgroup rather than their rows. Fixed in Rust (amstex.rs `amstex_tag`:
 amsmath's `\tag` markup). Where TeX itself errs on a `\tag`, ours recovers: OXIDIZED_DESIGN_DIVERGENCES #575.
+
+## 644. url's `\path` replaces a document's own `\path`
+
+url.sty.ltxml:85 `DefMacro('\path', …)` unconditionally; url.sty:204-205 declares it only if undefined
+(`\@ifundefined{path}{\DeclareUrlCommand\path{\urlstyle{tt}}}{}`, "picTeX defines \path"). Trigger:
+
+```latex
+\documentclass{article}
+\newcommand{\path}{\rho}
+\usepackage{url}
+\begin{document}
+A path $\path v\in W$ ends here.
+\end{document}
+```
+
+→ the math's `\path` reads `v\in W$ ends…` as a URL: "Missing $ inserted"; pdflatex 0 errors, ρ. Witness 2605.13185
+(url loaded late by orcidlink → hyperref). Fixed in Rust (url_sty.rs: `\path` only if undefined); repro
+package-bindings/url_path_keeps_user_definition.
+
+## 645. braket's lowercase `\set` splits at `\|`
+
+braket.sty.ltxml `splitBraketArg` splits `\set`'s argument at `|` or `\|` (L27-54, L117-121); braket.sty:61-64 makes
+only `|` special in `\set` (`\let|\midvert`), binding `\|` to `\SetDoubleVert` in `\Set` alone (:66-70). Trigger:
+
+```latex
+\documentclass{article}
+\usepackage{braket}
+\def\bz{\left(}\def\jz{\right)}
+\begin{document}
+$\set{D\bz a\|b\jz|M\in N}$
+\end{document}
+```
+
+→ the split falls inside the hidden `\left(…\right)`: "Extra \right."; pdflatex 0 errors. Witness 2605.31379. Fixed
+in Rust (braket_sty.rs `split_braket_arg(…, double_bar_splits)` false for `\set`); repro
+package-bindings/braket_set_double_bar_is_operand. The split also never cuts inside a visible `\left…\right` pair
+(`\braket{\phi|\left[m|R|^2\right]|\psi}`, 2606.06185; braket.sty:33's `\braket` splits nowhere); repro
+package-bindings/braket_bar_inside_left_right.
+
+## 646. `\mathversion` matches its argument unexpanded
+
+latex_constructs.pool.ltxml:5290-5297 `\mathversion{}` compares `ToString($version)` with `bold`/`normal`;
+latex.ltx:10545-10554 expands the name (`\csname mv@#1\endcsname`, `\edef\math@version{#1}`). figureversions.sty:169-179
+(XCharter, via fontaxes) calls `\mathversion{\l_tmpa_str}` from its `\boldmath`, an "Unknown math version" Error in both
+engines when the package is raw-loaded (Perl never loads XCharter: 0 errors there). Witnesses 2605.11518, 2605.12374,
+2605.22763. Fixed in Rust (sect13.rs `\mathversion Expanded`); repro fonts-nfss/mathversion_expands_its_argument.
+
+## 647. authblk's `\affil` is not robust
+
+authblk.sty.ltxml:57 `DefMacro('\affil OptionalSemiverbatim {}', …)`; authblk.sty:148 `\newcommand\affil[2][]` is
+robust (`\@protected@testopt`). An `\affil` inside `\author` is expanded by titling's `\protected@xdef\theauthor{\@author}`:
+
+```latex
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{titling}
+\begin{document}
+\title{T}
+\author{Ann Author$^1$ \affil{$^1$Some University}}
+\maketitle
+Body.
+\end{document}
+```
+
+→ "\fi \iffalse" and the body lost (witness 2605.03796: 7,748 words → 15); pdflatex 0 errors. Fixed in Rust
+(authblk_sty.rs `\affil` robust); repro sectioning-frontmatter/authblk_affil_in_author_under_titling.
+
+## 648. appendix.sty's internal layer is missing
+
+appendix.sty.ltxml:41-45 defines the `\if@do…@pp` switches but not `\if@chapter@pp`, `\@resets@pp`, `\@resets@ppsub` or
+`\clear@ppage` (appendix.sty:36-40, :100-101, :181-205, :246-264). Classes that re-dress `appendices` over them
+(sn-jnl.cls; wlscirep.cls:221-245, "copied from sn-jnl.cls") then meet `Error:undefined:\@resets@pp` (witness 2606.09094;
+repro sectioning-frontmatter/appendix_internals_resets_pp). Fixed in Rust (appendix_sty.rs: the counter resets and
+lettering `\appendices` makes too; `\clear@ppage` a page break, nothing).
+
+## 649. The AMS classes lack `\@classname` and `\subjclassname@<year>`
+
+ams_support.sty.ltxml:131-137 defines `\subjclassname` from `\@subjclassyear` only; amsart.cls:58-60 defines
+`\@classname` (the outermost class on `\@currnamestack`) and :781-789 `\subjclassname@1991/2000/2010/2020`. A class built on
+amsart that re-dresses `\subjclass` over them (quantumdust.cls:278-286 `\@ifundefined{subjclassname@#1}{\ClassWarning
+{\@classname}…}`) meets `Error:undefined:\@classname` (witness 2606.20943; repro
+class-bindings/amsart_classname_and_subjclass_editions). Fixed in Rust (ams_support_sty.rs).

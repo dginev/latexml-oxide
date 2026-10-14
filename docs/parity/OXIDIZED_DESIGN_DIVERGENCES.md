@@ -7137,7 +7137,8 @@ of section 1 is section 2, `xml:id` S2, and `\ref`s read 2). The float's own id 
 counters it is made within (`pin_float_id_before_its_sectioning`; the caption takes it, `\@@add@caption@counters`), so
 the figure is S1.F1 where its caption made S2.F1 — in Perl too; the caption still numbers the float, so under
 `\numberwithin{figure}{section}` it reads 2.1 as pdflatex prints it. An appendix unit there is a section of class
-`ltx_appendix` (the block holds sections), its letter and id kept; a `minipage` holding such a unit is captured as the
+`ltx_appendix` (the block holds sections), its letter and id kept — an unnumbered one (`\section*` after `\appendix`)
+too since 66f (2605.02378, 2605.25534; guard `perfect_kernel_batch66f::unnumbered_appendix_section_in_float`); a `minipage` holding such a unit is captured as the
 inline sectional block, which keeps its class but not its `width`/`vattach` (layout only). 38 2609 papers, 117 errors
 (A/B over 187 2609 papers: 1,089 → 980 errors, 36 improved, 0 regressed; 2609.00179, 00943,
 03590, 05680). Guard `perfect_kernel_batch54::sections_inside_floats_keep_number_id_and_ref`;
@@ -17170,3 +17171,17 @@ amstex_row_tag_cell_ends_at_par_and_extra_brace, amstex_row_tag_open_group_stops
 amstex_tag_in_latex_equation_row_ends_at_extra_brace, amstex_tag_stops_at_the_document_end,
 amstex_tag_inline_maths_are_not_a_display_end}`; repros `amstex/amstex_row_tag_runaway_group`,
 `amstex/amstex_row_tag_open_group_in_enclosing_group`.
+
+### 576. `\begin{document}` opens the `.aux` under the job's name, as latex.ltx's `\document` does (Perl: none)
+
+latex.ltx's `\document` (:9491-9494) does `\if@filesw \immediate\openout\@mainaux\jobname.aux
+\immediate\write\@mainaux{\relax}\fi`, so the `.aux` exists from then on. Perl's `\begin{document}` opens none; its only
+open is `latex_base`'s `\openout\@mainaux\jobname.aux` (latex_base.pool.ltxml:722, latex_base.rs:743) at format load,
+which under a dump is the dump's build (whose `output_file:*` streams the dump does not keep) and under a preload
+(`ar5iv.sty`) comes before the job's name is installed. A class or package `\enddocument` that does `\input
+\jobname.aux` under `\if@filesw` (jpsj3.cls:90-96, bio.cls, lamuphys.sty:1240-1247, caosp.sty:916) then met
+`Error:missing_file:<jobname>.aux`. Ours opens it in `\begin{document}`'s after-digest (latex_constructs/sect02.rs) in
+latex.ltx's place, so the `\input` reads the in-memory `.aux` (its `\relax` and whatever the document wrote). `\nofiles`
+stays Perl's no-op (latex_constructs.pool.ltxml:3773, sect11.rs), so `\if@filesw` stays true. Witnesses 2605.24927,
+2605.04825, 2605.28673, 2605.20125, cond-mat9607109, astro-ph9805185 (each 1 error → 0, text unchanged). Guard
+`perfect_kernel_batch66f::jobname_aux_exists_after_begin_document`; repro `loader/jobname_aux_exists_after_begin_document`.

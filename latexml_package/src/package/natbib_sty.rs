@@ -449,6 +449,13 @@ LoadDefinitions!({
     Tokens!()
   });
 
+  // natbib.sty:702-730: `\citealt`, `\citealp` and the capitalised forms are their own code over `\NAT@citetp`;
+  // none calls `\citet`/`\citep` by name. Ours build on those bindings through private copies, so a document's
+  // redefinition of a user-level name (`\let\oldcitep\citep \renewcommand{\citep}{\oldcitep*}`, which since D1
+  // owns the name's non-call uses) does not reach them (2606.16139, 2606.30583: keys lost, mode stack broken).
+  Let!("\\lx@natbib@citet", "\\citet");
+  Let!("\\lx@natbib@citep", "\\citep");
+
   // \citealt = \bgroup \@@cite@noparens \citet ... \egroup
   DefMacro!("\\citealt OptionalMatch:* [][] Semiverbatim", sub[args] {
     let mut it = args.into_iter();
@@ -457,7 +464,7 @@ LoadDefinitions!({
     let post: Option<Tokens> = it.next().unwrap().into();
     let keys: Option<Tokens> = it.next().unwrap().into();
     let mut result = vec![T_CS!("\\bgroup"), T_CS!("\\@@cite@noparens")];
-    let citet_inv = Invocation!(T_CS!("\\citet"),
+    let citet_inv = Invocation!(T_CS!("\\lx@natbib@citet"),
       vec![star, pre, post, keys]);
     result.extend(citet_inv.unlist());
     result.push(T_CS!("\\egroup"));
@@ -472,7 +479,7 @@ LoadDefinitions!({
     let post: Option<Tokens> = it.next().unwrap().into();
     let keys: Option<Tokens> = it.next().unwrap().into();
     let mut result = vec![T_CS!("\\bgroup"), T_CS!("\\@@cite@noparens")];
-    let citep_inv = Invocation!(T_CS!("\\citep"),
+    let citep_inv = Invocation!(T_CS!("\\lx@natbib@citep"),
       vec![star, pre, post, keys]);
     result.extend(citep_inv.unlist());
     result.push(T_CS!("\\egroup"));
@@ -580,10 +587,12 @@ LoadDefinitions!({
 
   //======================================================================
   // 2.5 Forcing Upper Cased Name (SUPPOSED to capitalize first letter)
-  DefMacro!("\\Citet", "\\citet");
-  DefMacro!("\\Citep", "\\citep");
-  DefMacro!("\\Citealt", "\\citealt");
-  DefMacro!("\\Citealp", "\\citealp");
+  Let!("\\lx@natbib@citealt", "\\citealt");
+  Let!("\\lx@natbib@citealp", "\\citealp");
+  DefMacro!("\\Citet", "\\lx@natbib@citet");
+  DefMacro!("\\Citep", "\\lx@natbib@citep");
+  DefMacro!("\\Citealt", "\\lx@natbib@citealt");
+  DefMacro!("\\Citealp", "\\lx@natbib@citealp");
   DefMacro!("\\Citeauthor", "\\citeauthor");
 
   //======================================================================

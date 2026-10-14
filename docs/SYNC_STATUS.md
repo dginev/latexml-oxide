@@ -1014,6 +1014,33 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   without an error (RED `amstex/amstex_align_unclosed_at_enddocument`, before 66e too); a display open at `\enddocument`
   takes `\enddocument` into its formula's `tex` (RED `amstex/amstex_display_unclosed_at_enddocument`, before 66e too). Guards
   `perfect_kernel_batch66e::*`.
+- **66f** (sandbox regressions, cortex runs 341/342 on 7a93c36531 vs the 2026-10-04/05 statuses; reports
+  `agent_reports/2026-10-13_sbx2605_regressions.md`, `_sbx2606_regressions.md`): of 412 (2605) + 444 (2606) OK/Warning →
+  Error/Fatal, 375 + 416 are intended signal (BibTeX undefined macros and parse errors, OD #518; `merged_creators`, 63e),
+  3 + 4 fleet-only OOM/xpath; the rest root-caused. Fixed: `\begin{document}` opens `\jobname.aux` as latex.ltx's
+  `\document` (OD #576; jpsj3/bio/lamuphys/caosp `\enddocument` re-reads; 2605.24927, 2605.04825, 2605.28673,
+  2605.20125, 2606.02098, 2606.24241, 2606.25242, cond-mat9607109, astro-ph9805185); `\mathversion` expands its name
+  (KPE #646; XCharter/figureversions, 2605.11518, 2605.12374, 2605.22763); an unnumbered appendix unit in a float
+  (OD #189; 2605.02378, 2605.25534); authblk `\affil` robust (KPE #647; 2605.03796, body 15 → 7,748 words); SNmult.cls →
+  svmult binding (2605.13070); url `\path` only if undefined (KPE #644; 2605.13185); jmlr `\jmlrissue`/`\jmlrpages`
+  (2605.20066); IEEEtran `\appendices` through a copy of the kernel `\appendix` (2605.23316, Fatal → 0); nicematrix
+  `[opacity=…]` color keys (2605.25123); braket `\set` splits only at `|` (KPE #645; 2605.31379). Every witness 0 errors,
+  text equal or recovered. From 2606: natbib `\citealp`/`\citealt` and the capitalised forms through private copies of
+  `\citep`/`\citet` (natbib.sty:702-730; since D1 a document's `\renewcommand{\citep}{\oldcitep*}` owned them,
+  2606.16139 E 11 → 0, 2606.30583 E 69 → 0); calc's `<optional equals>` (2606.05909); appendix.sty internals (KPE #648,
+  2606.09094); amsart `\@classname`/`\subjclassname@<year>` (KPE #649, 2606.20943); IEEEtran's author pre-scan keeps a
+  run whose `\else`/`\fi` close an `\if` from a block argument whole (2606.17718; residual: an empty affiliation contact
+  from the skipped branch); `\hypertarget` in math: empty anchor, text in place (hyperref.sty:4805-4811, 2606.15438);
+  braket's split never inside `\left…\right` (2606.06185, KPE #645). Each 2606 witness E → 0. Guards
+  `perfect_kernel_batch66f::*`. Open (2605 report): C3 nomencl glossary in a float, C5
+  `\left` group closed at an argument's input end (physics `\cosh(a\over 2)`), C6 standalone sub-preamble loads, C7
+  `\mathcolor` group, C8 bigfoot listing in a footnote, C11 JASA revtex4-2 internals (`\@AF@join`, `\@email`), C12
+  2.09-style `\ds@<opt>` handlers (KPE-class, Perl Package.pm:2470), babel's on-demand Lithuanian `\fnum@table` loop
+  (2605.29738; our kernel lacks `\fnum@figure`/`\fnum@table`), revtex4-2 `\frontmatter@footnote` (2605.04155); from
+  2606: N1 scrhack/floatbytocbasic patching our primitive `\newfloat` (2606.04906, 2606.11358), N6 the expl3 scope-exit
+  heuristic firing on a package that sets `_` a letter itself (etextools, 2606.06323), N7 NFSS shape probes
+  `\try@load@fontshape`/`\DeclareFontShape` no-ops (2606.07112, Perl the same), N10 a sectioning unit in `ltx:quote`
+  (2606.19241) and an `\item[]` excluded from the OD #189 item bridge (2606.00118) — both await a ruling.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the
@@ -1726,14 +1753,14 @@ From the 62h in-scope manual pass (each pdflatex-clean, so Rust-only; both were 
   `\EatNumberA(#1.#2)` (skak.sty:1319) finds no `.` — 62g1 Fatal at the end of the file, 62h 4 errors.
 
 From run 329 (62a-62c):
-- `\jobname.aux` re-read: lamuphys.sty:1240-1247 and caosp.sty:916 redefine `\enddocument` to `\input \jobname.aux`
-  under `\if@filesw` (true in Perl and Rust), a file pdflatex has written by then and LaTeXML never writes:
-  `Error:missing_file` (cond-mat9607109, astro-ph9805185; 0.7.6 clean).
+- `\jobname.aux` re-read: FIXED 66f — `\begin{document}` opens the `.aux` as latex.ltx's `\document` does (OD #576);
+  lamuphys.sty:1240-1247, caosp.sty:916, jpsj3.cls:90-96 and bio.cls `\input \jobname.aux` at `\enddocument`
+  (cond-mat9607109, astro-ph9805185, 2605.24927, 2605.04825, 2605.28673, 2605.20125: 1 error → 0).
 - Still Fatal after 62b, each erring under pdflatex too: 1409.3401 (pdflatex emergency stop), 2105.00771 (101 = 101), cs0702042 (citesort.sty missing from TL; Rust
   then 101 math-alignment errors, pdflatex 3).
 - Rust-only, still open: CJK GB `\@inpenc@undefined` (1007.1512); singles 1205.5844 (`\@journal`), 1711.06710
   (`\@rticle@options`), 1811.00686, 1907.03566, 2004.12109 (memoir font command), 2105.02164, 2203.13766, 2207.02360,
-  2306.10394, 2409.00304, astro-ph9805185 and cond-mat9607109 (`.aux` input).
+  2306.10394, 2409.00304.
 - AMSTeX `\documentstyle{amsppt}` documents still get the LaTeX format (Perl reads them plain). Kept plain they measured
   worse: 64 sampled 1996-99 amsppt papers, 192 → 319 errors, 1 → 2 Fatal (math9806005 0 → `TooManyErrors`; plain
   AMSTeX lacks `\ams@return@opt@arg`, `\rightpoint`; math9603201, math9709201, math9801043, math9803037). Fix the

@@ -210,6 +210,16 @@ LoadDefinitions!({
 
   DefMacro!("\\subjclassname", None,
     "\\textup{\\@subjclassyear} Mathematics Subject Classification");
+  // amsart.cls:58-60 (the class's name, the outermost on `\@currnamestack`: a class that `\LoadClass`es amsart) and
+  // :781-789 (the name of each MSC edition), which classes built on amsart read: quantumdust.cls:278-286 re-dresses
+  // `\subjclass` to warn `\ClassWarning{\@classname}` on an `\@ifundefined{subjclassname@#1}` edition (2606.20943).
+  RawTeX!(r"\def\@tempa#1#2\@nil{\edef\@classname{#1}}
+\expandafter\@tempa\@currnamestack{}{}{}\@nil
+\ifx\@classname\@empty \edef\@classname{\@currname}\fi
+\@namedef{subjclassname@1991}{\textup{1991} Mathematics Subject Classification}
+\@namedef{subjclassname@2000}{\textup{2000} Mathematics Subject Classification}
+\@namedef{subjclassname@2010}{\textup{2010} Mathematics Subject Classification}
+\@namedef{subjclassname@2020}{\textup{2020} Mathematics Subject Classification}");
   // Perl ams_support.sty.ltxml L141-144: pure expansion macro. Translate
   // `[Default:\@subjclassyear]` to `[\@subjclassyear]` (default-fill of
   // empty optional arg) and inline the `\ifx.#1.\else\xdef…\fi` guard so

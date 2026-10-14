@@ -486,8 +486,12 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
     }
     return Ok(CalcValue::Reg(value));
   }
-  // Else: literal value — put back token and read normally
-  unread_one(peek);
+  // Else: literal value — put back token and read normally. calc.sty:110 reads it by assigning to a register
+  // (`\calc@numeric` = `\afterassignment\calc@post@scan \global\calc@A`), whose `<optional equals>` (tex.web
+  // §1224) takes one `=`: `\resizebox{=0.93\textwidth}{!}{…}` (2606.05909).
+  if peek != T_OTHER!("=") {
+    unread_one(peek);
+  }
   if expr_type == "Number" {
     Ok(CalcValue::Reg(RegisterValue::Number(read_number()?)))
   } else {

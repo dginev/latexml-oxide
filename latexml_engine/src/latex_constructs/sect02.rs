@@ -89,6 +89,14 @@ pub(crate) fn load() -> Result<()> {
     Let!("\\@nodocument", "\\relax", Scope::Global);
     // A misplaced alignment command in the preamble starts no cascade in the body (OXIDIZED_DESIGN_DIVERGENCES #540).
     crate::tex_tables::end_misplaced_alignment_cascade();
+    // latex.ltx `\document` (:9491-9494): the `.aux` is opened under the job's name and starts with `\relax`, so a
+    // class `\enddocument` that `\input`s `\jobname.aux` (jpsj3.cls:90-96, bio.cls, lamuphys.sty:1240-1247,
+    // caosp.sty:916) finds it. Perl's `\begin{document}` opens none; its `latex_base` `\openout\@mainaux\jobname.aux`
+    // (latex_base.pool.ltxml:722, latex_base.rs:743) runs at format load, which under a dump is the dump's build and
+    // under a preload comes before the job's name, so the `.aux` was missing: `Error:missing_file:<jobname>.aux`
+    // (witnesses 2605.24927, 2605.04825, 2605.28673, 2605.20125, cond-mat9607109, astro-ph9805185).
+    // Repro loader/jobname_aux_exists_after_begin_document.
+    TeX!(r"\if@filesw\immediate\openout\@mainaux\jobname.aux \immediate\write\@mainaux{\relax}\fi");
     // Clear \everypar at document start (Perl `AssignRegister('\everypar', Tokens(), 'global')`,
     // latex_constructs.pool L319) through its current meaning, as latex.ltx:9498 `\everypar{}`
     // does. A package that re-pointed `\everypar` in the preamble at a register chained from the

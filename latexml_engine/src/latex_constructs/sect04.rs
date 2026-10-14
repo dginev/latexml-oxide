@@ -318,12 +318,18 @@ pub(crate) fn load() -> Result<()> {
       // Mirror the same schema sanitization as \@@numbered@section above.
       // Cluster A: strip trailing CS (e.g. \par) from stype.
       let stype_str = type_name(stype);
-      let tagname = section_element_for_type(&stype_str, false);
-      let section = document.open_element(&tagname,
-        Some(string_map!(
+      let mut tagname = section_element_for_type(&stype_str, false);
+      let mut attrs = string_map!(
           "xml:id" => clean_id(&id),
           "inlist"  => inlist.to_string()
-        )), None)?;
+        );
+      // An appendix unit in a float body, as in `\@@numbered@section` (a `\section*` after `\appendix` in a figure:
+      // 2605.02378, 2605.25534).
+      if tagname == "ltx:appendix" && props.get("in_float_body").is_some() {
+        tagname = "ltx:section".into();
+        attrs.insert("class".to_string(), "ltx_appendix".to_string());
+      }
+      let section = document.open_element(&tagname, Some(attrs), None)?;
       let title = prop_digested!(props, "title");
       document.insert_element("ltx:title", title, None)?;
 
@@ -345,6 +351,10 @@ pub(crate) fn load() -> Result<()> {
       // Cluster A sanitization (see \@@numbered@section).
       let stype_str = type_name(stype);
       let mut props = RefStepID!(&stype_str)?;
+      // Digested in a float body, as for a numbered unit.
+      if lookup_bool("lx@in@float") {
+        props.insert("in_float_body", Stored::Bool(true));
+      }
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix"
         && let Some(bme) = lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {

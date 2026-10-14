@@ -100,6 +100,16 @@ LoadDefinitions!({
     "\\jmlrvolume{}",
     "\\@add@frontmatter{ltx:note}[role=volume]{#1}"
   );
+  // jmlr.cls:551-556: the issue and the page range, printed with the volume in the title footnote (`\@titlefoot`,
+  // :492-521; witness 2605.20066, nesy2026.cls:41).
+  DefMacro!(
+    "\\jmlrissue{}",
+    "\\@add@frontmatter{ltx:note}[role=issue]{#1}"
+  );
+  DefMacro!(
+    "\\jmlrpages{}",
+    "\\@add@frontmatter{ltx:note}[role=pages]{#1}"
+  );
   // JMLR frontmatter — preserve author-typed metadata as ltx:note so
   // it reaches the XML (content-preserving). Year/page/workshop/dates
   // are short scalars but the editor list is real prose authors care

@@ -23,6 +23,21 @@ LoadDefinitions!({
   DefConditional!("\\if@dotitletoc@pp");
   DefConditional!("\\if@dohead@pp");
   DefConditional!("\\if@dopage@pp");
+  // appendix.sty:36-40 (whether the class has chapters) and the internals that classes copying its `appendices`
+  // call when they re-dress it (sn-jnl.cls; wlscirep.cls:221-245, 2606.09094): `\clear@ppage` (:100-101, a page
+  // break: nothing here) and `\@resets@pp`/`\@resets@ppsub` (:181-205, :246-264), the counter resets and letter
+  // numbering `\appendices`/`\subappendices` make too; their saved-section and hyperref steps have no XML
+  // counterpart.
+  DefConditional!("\\if@chapter@pp");
+  RawTeX!(r"\@ifundefined{chapter}{}{\@chapter@pptrue}
+\newcounter{@pps}
+\newcommand{\@resets@pp}{\par\stepcounter{@pps}\setcounter{section}{0}%
+  \if@chapter@pp\setcounter{chapter}{0}\renewcommand\@chapapp{\appendixname}\renewcommand\thechapter{\@Alph\c@chapter}%
+  \else\setcounter{subsection}{0}\renewcommand\thesection{\@Alph\c@section}\fi}
+\newcommand{\@resets@ppsub}{\par\stepcounter{@pps}%
+  \if@chapter@pp\setcounter{section}{0}\renewcommand{\thesection}{\setthesection}%
+  \else\setcounter{subsection}{0}\renewcommand{\thesubsection}{\setthesubsection}\fi}");
+  def_macro_noop("\\clear@ppage")?;
 
   DefMacro!("\\appendixtocon",       "\\@dotoc@pptrue");
   DefMacro!("\\appendixtocoff",      "\\@dotoc@ppfalse");

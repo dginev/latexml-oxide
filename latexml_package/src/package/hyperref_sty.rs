@@ -854,14 +854,22 @@ LoadDefinitions!({
   // `\hbox{\hypertarget{averylongtargetname}{}}` was 91.2pt wide where pdflatex gives 0pt, and each
   // glossaries-extra target grew its tcolorbox by 10pt. Perl L266 has no sizer either
   // (KNOWN_PERL_ERRORS #393).
-  DefConstructor!("\\hypertarget Semiverbatim {}",
+  // In math, hyperref.sty:4805-4811 (`\hyper@@anchor{#1}{\relax}#2`, `\Hy@nestingfalse`) sets the anchor and puts
+  // #2 after it in the current list, so a brace-less call takes one token there (`\hypertarget{e1}` before
+  // `\left( \frac{n}{p}\right)`, 2606.15438: its `\left(` read as the target's own text was closed at that
+  // argument's end, and the real `\right)` was "Extra"). The anchor holds no math, so it is empty there.
+  DefMacro!(
+    "\\hypertarget Semiverbatim {}",
+    "\\ifmmode\\lx@hypertarget{#1}{}#2\\else\\lx@hypertarget{#1}{#2}\\fi"
+  );
+  DefConstructor!("\\lx@hypertarget Semiverbatim {}",
   sub[document, args, props] {
     anchor_own_text(document, &prop_string!(props, "id"), args[1].as_ref())?;
   },
   properties => sub[args] {
     let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("id" => clean_id(&name)))
-  }, sizer => "#2");
+  }, sizer => "#2", reversion => "\\hypertarget{#1}{#2}");
 
   // # Should create an anchor with automatically chosen name;
   // # But it's to be used where LaTeXML already would have created an anchor & link...

@@ -1,0 +1,14 @@
+% witness: 2605.13070 (ships SNmult.cls v6.00, "Springer Nature global LaTeX document class for multi authored books")
+% oracle: pdflatex with the paper's SNmult.cls (clean); engine: pdflatex
+% expect: 0 errors; "Some University" is an affiliation contact, no \at text
+% mechanism: SNmult.cls is svmult.cls renamed (\institute/\at/\and at SNmult.cls:2265-2283); raw-loaded, its \at
+%   exists only inside \institutename, so our harvest of \institute met Error:undefined:\at. Fixed: lib.rs routes
+%   SNmult to the svmult binding.
+% status:  GREEN
+\documentclass{SNmult}
+\begin{document}
+\title*{T}\author{A. Author}
+\institute{A. Author \at Some University}
+\maketitle
+Text.
+\end{document}

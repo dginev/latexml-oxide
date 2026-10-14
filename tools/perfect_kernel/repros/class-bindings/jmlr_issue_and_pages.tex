@@ -1,0 +1,12 @@
+% witness: 2605.20066 (nesy2026.cls:41)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; notes role=issue "2" and role=pages "1--10" beside role=volume "1"
+% mechanism: jmlr.cls:551-556 \jmlrissue/\jmlrpages, printed in the title footnote (:492-521); our binding lacked
+%   them: Error:undefined. Fixed: jmlr_cls.rs.
+% status:  GREEN
+\documentclass[pmlr]{jmlr}
+\jmlrvolume{1}\jmlrissue{2}\jmlrpages{1--10}
+\begin{document}
+\title{T}\author{A}\maketitle
+Text.
+\end{document}

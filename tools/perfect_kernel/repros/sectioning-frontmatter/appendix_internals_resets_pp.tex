@@ -1,0 +1,22 @@
+% witness: 2606.09094 (wlscirep.cls:221-245, "copied from sn-jnl.cls")
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; one appendix "Appendix A Proofs"
+% mechanism: classes re-dressing appendix.sty's `appendices` call its internals \@resets@pp, \if@chapter@pp,
+%   \clear@ppage (appendix.sty:36-40, :100-101, :181-205); our binding (and Perl's) lacked them: Error:undefined.
+%   Fixed: appendix_sty.rs.
+% status:  GREEN
+\documentclass{article}
+\usepackage[title]{appendix}
+\makeatletter
+\let\oldappendices\appendices \let\oldendappendices\endappendices
+\renewenvironment{appendices}{\@resets@pp
+  \if@dotoc@pp\if@dopage@pp\clear@ppage\appendixpage\else\addappheadtotoc\fi\fi
+  \begin{oldappendices}\if@chapter@pp\else\renewcommand\thefigure{\thesection\arabic{figure}}\fi}%
+  {\end{oldappendices}}
+\makeatother
+\begin{document}
+\section{Intro} Text.
+\begin{appendices}
+\section{Proofs} Proof text.
+\end{appendices}
+\end{document}

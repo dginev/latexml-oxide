@@ -1153,7 +1153,10 @@ pub(crate) fn load() -> Result<()> {
   // version fell to `_ => {}`, silently swallowed where Perl raises
   // `Error('unexpected', …)`. Both now match Perl. (\mathversion has no
   // `forbidMath`, unlike \boldmath/\unboldmath — Perl doesn't either.)
-  DefPrimitive!("\\mathversion{}", sub[(version)] {
+  // The name is expanded, as latex.ltx:10545-10554 uses it only in `\csname mv@#1\endcsname` and
+  // `\edef\math@version{#1}`: figureversions.sty:169-179 (XCharter, via fontaxes) passes `\l_tmpa_str`
+  // (witnesses 2605.11518, 2605.12374, 2605.22763; Perl reads it unexpanded, but never raw-loads XCharter).
+  DefPrimitive!("\\mathversion Expanded", sub[(version)] {
     let set_forcebold = |bold: bool| {
       let mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
       let merged = mf.merge(Font { forcebold: Some(bold), ..Font::default() });

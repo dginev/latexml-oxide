@@ -555,9 +555,12 @@ LoadDefinitions!({
   // `romanappendices` option and `\Alph` ("Appendix A") otherwise; `\appendix` gives `\Alph`. Perl lets
   // `\appendices` be `\appendix` (KNOWN_PERL_ERRORS #491). Guard
   // `perfect_kernel_batch61::captions_and_2609_class_commands_keep_their_text`.
+  // IEEEtran's `\appendices` is its own code, not a call of `\appendix`, so it reaches the kernel's through a copy
+  // taken here: a document's `\let\appendix\appendices` (2605.23316) then runs once instead of looping.
+  Let!("\\lx@IEEE@appendix", "\\appendix");
   DefMacro!(
     "\\appendices",
-    "\\appendix\\ifCLASSOPTIONromanappendices\\gdef\\thesection{\\Roman{section}}\\fi"
+    "\\lx@IEEE@appendix\\ifCLASSOPTIONromanappendices\\gdef\\thesection{\\Roman{section}}\\fi"
   );
 
   // Bibliography style — Perl IEEEtran doesn't touch bibliography
@@ -902,7 +905,10 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
   // keeps its own tokens as written — an `\if…` with its test, each `\else`/`\or`/`\fi` — and the bare text between
   // them is wrapped piece by piece: wrapped whole, the `\if` and its `\else`/`\fi` landed in different arguments. A
   // conditional the run holds whole (`\ifdefined\x a@b.c\fi` after a block) is wrapped with it, as any bare text.
-  fn flush(run: &mut Vec<Token>, out: &mut Vec<Token>) {
+  // `open_in_blocks` counts the conditionals a block's argument opened and left open (`\IEEEauthorblockA{… \if\x1
+  // a@b.c} \vspace{-5mm} \else x@y.z \fi`, 2606.17718): the bare run's `\else`/`\fi` are theirs, so the run is wrapped
+  // whole, as before the piecewise split (63x), and its own net depth closes them.
+  fn flush(run: &mut Vec<Token>, out: &mut Vec<Token>, open_in_blocks: &mut i32) {
     let mut depth = 0i32;
     let mut whole = true;
     for t in run.iter() {
@@ -913,6 +919,11 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
         _ => {},
       }
       whole &= depth >= 0;
+    }
+    if *open_in_blocks > 0 {
+      *open_in_blocks = (*open_in_blocks + depth).max(0);
+      wrap(run, out);
+      return;
     }
     if whole && depth == 0 {
       wrap(run, out);
@@ -965,11 +976,12 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
   }
   let mut out: Vec<Token> = Vec::new();
   let mut run: Vec<Token> = Vec::new();
+  let mut open_in_blocks = 0i32;
   let mut i = 0;
   while i < toks.len() {
     let t = toks[i];
     if is_block(&t) {
-      flush(&mut run, &mut out);
+      flush(&mut run, &mut out, &mut open_in_blocks);
       out.push(t);
       i += 1;
       // Copy the block's balanced `{...}` argument verbatim.
@@ -982,6 +994,11 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
             Catcode::END => depth -= 1,
             _ => {},
           }
+          match lookup_conditional(&u) {
+            Some(ConditionalType::If) => open_in_blocks += 1,
+            Some(ConditionalType::Fi) => open_in_blocks = (open_in_blocks - 1).max(0),
+            _ => {},
+          }
           out.push(u);
           i += 1;
           if depth == 0 {
@@ -990,7 +1007,7 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
         }
       }
     } else if t == T_CS!("\\and") {
-      flush(&mut run, &mut out);
+      flush(&mut run, &mut out, &mut open_in_blocks);
       out.push(t);
       i += 1;
     } else {
@@ -998,7 +1015,7 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
       i += 1;
     }
   }
-  flush(&mut run, &mut out);
+  flush(&mut run, &mut out, &mut open_in_blocks);
   Tokens::new(out)
 }
 

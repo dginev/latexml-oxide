@@ -164,7 +164,12 @@ LoadDefinitions!({
     reversion => "#1#2#4#3");
 
   // These are the expansions of \DeclareUrlCommand
-  DefMacro!("\\path", r"\begingroup\urlstyle{tt}\lx@url@url\path", protected => true);
+  // Only when undefined, as url.sty:204-205 (`\@ifundefined{path}{\DeclareUrlCommand\path…}{}`: picTeX's, or a
+  // document's own `\path`, stays; Perl url.sty.ltxml:85 redefines it, KNOWN_PERL_ERRORS #644). Witness 2605.13185:
+  // its `\newcommand{\path}{\rho}` was replaced when orcidlink loaded hyperref and so url ("Missing $").
+  if !IsDefined!(&T_CS!("\\path")) {
+    DefMacro!("\\path", r"\begingroup\urlstyle{tt}\lx@url@url\path", protected => true);
+  }
   // `protected`: a `\url` in a moving argument must reach the typeset text
   // whole, as url.sty's own `\Url@unmove` (url.sty:166) writes `\protect\Url`
   // (and hyperref's `\url` is `\DeclareRobustCommand*`, hyperref.sty:4801).

@@ -1,0 +1,14 @@
+% witness: 2605.31379 (car_blocktop260529.tex:180-181,795)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; one set whose condition is M\in N and whose element holds D(a\|b)
+% mechanism: braket.sty:61-64 makes only | special in lowercase \set (\Set also binds \|, :66-70); ours (and Perl's
+%   splitBraketArg, KPE #645) also split at \|, cutting a \left(...\right) hidden in macros ("Extra \right").
+%   Fixed: braket_sty.rs split_braket_arg(…, double_bar_splits = false) for \set.
+% status:  GREEN
+\documentclass{article}
+\usepackage{braket}
+\def\bz{\left(}
+\def\jz{\right)}
+\begin{document}
+$\set{D\bz a\|b\jz|M\in N}$
+\end{document}
