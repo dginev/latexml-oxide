@@ -37,9 +37,18 @@ LoadDefinitions!({
   def_macro_noop("\\float@end")?;
   def_macro_noop("\\float@dblend")?;
 
+  // float.sty:54 `\newcommand\newfloat[3]{…}` is a macro, so code that patches it finds a body: scrhack's
+  // floatbytocbasic.sty:40-75 `\let\deffloat\newfloat` then `\xpretocmd\deffloat{…}{}{\PackageError…}`
+  // (2606.04906, 2606.11358: the failure branch's error, and floatbytocbasic.sty:73's own `\Messagebreak` typo in its help
+  // text).
+  // Perl's `\newfloat` is the primitive below (float.sty.ltxml:39), which etoolbox cannot patch.
+  DefMacro!(
+    "\\newfloat{}{}{}",
+    "\\@ifnextchar[{\\lx@float@newfloat{#1}{#2}{#3}}{\\lx@float@newfloat{#1}{#2}{#3}[]}"
+  );
   // Perl: DefPrimitive('\newfloat{}{}{}[]', sub { ... })
   // Creates a new float environment with counter, title format, etc.
-  DefPrimitive!("\\newfloat{}{}{}[]", sub[(ftype, _placement, auxext, within)] {
+  DefPrimitive!("\\lx@float@newfloat{}{}{}[]", sub[(ftype, _placement, auxext, within)] {
     let ftype = ftype.to_string();
     let auxext = auxext.to_string();
     let within = within.map(|t| t.to_string()).unwrap_or_default();

@@ -109,6 +109,15 @@ LoadDefinitions!( {
   DefMacro!("\\theequation", "\\arabic{equation}");
   DefMacro!("\\thefigure", "\\arabic{figure}");
   DefMacro!("\\thetable", "\\arabic{table}");
+  // article.cls:457/469 (report.cls, book.cls alike) define `\fnum@figure`/`\fnum@table`; letter.cls, without floats,
+  // has none, but a letter document gets these through the OmniBus fallback (OD #579). Perl's classes define neither
+  // and compose the tag in `\lx@@fnum@@`. Code that takes their current body needs one: babel's ini caption templates
+  // (babel.sty:2959-2965, `\gdef\fnum@table{…{\[fnum@table]}…}`) captured the undefined token itself, so the new
+  // `\fnum@table` called itself and the caption's `\refstepcounter` looped (2605.29738, Lithuanian on demand; Perl
+  // loops too, KNOWN_PERL_ERRORS #654). Each is the tag LaTeXML composes, so a caption reads as before
+  // (OXIDIZED_DESIGN_DIVERGENCES #579).
+  DefMacro!("\\fnum@figure", "\\lx@@fnum@@{figure}");
+  DefMacro!("\\fnum@table", "\\lx@@fnum@@{table}");
 
   DefMacro!("\\theenumi", "\\arabic{enumi}");
   DefMacro!("\\theenumii", "\\alph{enumii}");

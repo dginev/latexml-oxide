@@ -87,10 +87,16 @@ pub(crate) fn load() -> Result<()> {
   // \else …}`; 1904.11818, 1602.01884) took the wrapper's own `\else`/`\fi`, and the `\label` scan read to the end of
   // the file (Fatal `Mouth:EoF`; Perl the same, KNOWN_PERL_ERRORS #641). OXIDIZED_DESIGN #570; guards
   // `perfect_kernel_batch66d::caption_hoist_*`.
+  // The branch is a control sequence, not a braced argument: a caption that is a one-token box argument
+  // (`\parbox[b]{9cm}` then `\caption{…}`, mn2e astro-ph0107461) brings the box's `}` along as the `\@xdblarg`
+  // argument (Perl's readArg returns a lone `}` too, Gullet.pm:732-744), and that `}` closed a braced branch early,
+  // so the other branch ran and its `\label` scan read to the end of the file (16 run-345 papers; Perl: one "Attempt
+  // to close" Error). Guard `perfect_kernel_batch66h::caption_one_token_box_argument`.
   DefMacro!(
     r"\@hack@caption@{}{}{} Until:\label Until:\endcaption",
-    r"\ifx.#5.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\@caption@@@{#1}{#2}{#3#4}}{\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption}"
+    r"\ifx.#5.\expandafter\lx@caption@nolabel\else\expandafter\@@@hack@caption@\fi{#1}{#2}{#3#4}#5\endcaption"
   );
+  DefMacro!(r"\lx@caption@nolabel{}{} Until:\endcaption", r"\@caption@@@{#1}{#2}{#3}");
   DefMacro!(
     r"\@@@hack@caption@{}{}{} Semiverbatim Until:\label Until:\endcaption",
     r"\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption"

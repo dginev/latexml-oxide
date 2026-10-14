@@ -16,8 +16,13 @@ LoadDefinitions!({
   // where raw loading is on (as `--preload=ar5iv.sty` has it). Witnesses 1907.08888, 2602.02342, math0410226,
   // 1503.01599, 1102.5022.
   DeclareOption!("lite", { AssignValue!("amsrefs@lite" => true, Scope::Global); });
+  DeclareOption!("msc-links", { AssignValue!("amsrefs@msc-links" => true, Scope::Global); });
   DeclareOption!(None, {});
   ProcessOptions!();
+  // amsrefs.sty:198-205: `msc-links` loads hyperref, whose `\href` its `\MRhref` (below) links with.
+  if lookup_bool("amsrefs@msc-links") {
+    RequirePackage!("hyperref");
+  }
   RequirePackage!("url");
   if lookup_bool("INCLUDE_STYLES") {
     RequirePackage!("rkeyval");
@@ -186,7 +191,24 @@ LoadDefinitions!({
   // also defaults an absent title to `\refname`, matching `[\refname]`).
   // html_feedback #1393, witness arXiv 2405.18501 (`\documentclass{amsart}`,
   // `\usepackage[numeric]{amsrefs}`, 6 `\bib` entries).
+  // {bibchapter}[heading] — amsrefs.sty:1242-1250, the chapter-level heading `{bibdiv}` is under a class with chapters
+  // (:1265-1269), titled `\bibname`; a book that opens its references with it directly met `{bibchapter}` undefined
+  // (run 345's Fatal TooManyErrors in 1612.01009, 1706.05540). Both build the same bibliography.
   DefEnvironment!("{bibsection}[Default:\\refname]",
+    "<ltx:bibliography xml:id='#id' \
+     bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
+     <ltx:title font='#titlefont' _force_font='true'>#1</ltx:title>\
+     #body\
+     </ltx:bibliography>",
+    before_digest => {
+      engine::latex_constructs::before_digest_bibliography()?;
+    },
+    after_digest_begin => sub[whatsit] {
+      engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+      Let!("\\par", "\\relax");
+    });
+
+  DefEnvironment!("{bibchapter}[Default:\\bibname]",
     "<ltx:bibliography xml:id='#id' \
      bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
      <ltx:title font='#titlefont' _force_font='true'>#1</ltx:title>\
@@ -220,6 +242,15 @@ LoadDefinitions!({
       let href = format!("http://www.ams.org/mathscinet-getitem?mr={}", mr);
       Ok(stored_map!("mr" => mr, "href" => href))
     });
+
+  // amsrefs.sty:2673-2690: the `\MR` internals a paper's own `\MR` re-dress calls (0806.1269:627-634, 1612.01009,
+  // 1706.05540 and 2 more run-345 papers: `\strip@MRprefix#1\@nil`, then `\MRhref`), and `\MRhref`'s plain default;
+  // with `msc-links` (which loads hyperref, above), :2933-2950's linking `\MRhref` and its `\parse@MR`.
+  RawTeX!(r"\def\strip@MRprefix#1#2#3#4\@nil{\def\@tempa{#1#2#3#4}\if#1M\if#2R\def\@tempa{#3#4}\fi\fi}
+\providecommand{\MRhref}[2]{#1}");
+  if lookup_bool("amsrefs@msc-links") {
+    RawTeX!(r"\@ifundefined{href}{}{\def\parse@MR#1 (#2)#3\@nil{\def\MR@url{http://www.ams.org/mathscinet-getitem?mr=#1}\def\@tempd{#1}\def\@tempe{#2}}\def\MRhref#1#2{\begingroup\parse@MR#1 ()\@empty\@nil\href{\MR@url}{\@tempd\vphantom{()}}\ifx\@tempe\@empty\else\ \href{\MR@url}{(\@tempe)}\fi\endgroup}}");
+  }
 
   // \ndash, \mdash
   DefConstructor!("\\ndash", "\u{2013}"); // EN DASH

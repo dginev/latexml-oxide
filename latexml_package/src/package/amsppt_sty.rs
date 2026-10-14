@@ -61,7 +61,9 @@ LoadDefinitions!({
       def_macro(T_CS!(sz), None, None, None)?;
     }
   }
-  // Specific front matter commands (Perl PR #2767)
+  // Specific front matter commands (Perl PR #2767; amsppt.sty:298-414, which amstex.tex leaves undefined)
+  def_macro_noop("\\topmatter")?;
+  def_macro_noop("\\endtopmatter")?;
   DefMacro!("\\title Until:\\endtitle", "\\lx@add@title{#1}");
   Let!("\\endtitle", "\\relax");
   DefMacro!("\\author Until:\\endauthor", "\\lx@add@author{#1}");

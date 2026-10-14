@@ -1,0 +1,16 @@
+% witness: 0710.1022, 1201.4230 (cej.cls:88) and 5 more run-345 papers
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the email a@b.c an email contact; no "SHOULD-NOT-APPEAR" (the `%` stays a comment)
+% mechanism: revtex4-1.cls:2383-2392 `\email` = `\begingroup\sanitize@url\@email{#1}`, `\@email` closing the group;
+%   our REVTeX binding had `\sanitize@url` (65r) but not `\@email`/`\@homepage`, so a class re-dressing `\email` over
+%   them left `%` other to the end. Fixed: revtex4_support_sty.rs, revtex4_cls.rs.
+% status:  GREEN
+\documentclass{revtex4}
+\makeatletter
+% cej.cls:88 (0710.1022, 1201.4230): revtex4-1.cls:2383 \email with a default label
+\renewcommand*\email[1][E-mail: ]{\begingroup\sanitize@url\@email{#1}}
+\makeatother
+\begin{document}
+\title{T}\author{A. Author}\email{a@b.c}\maketitle
+Half of $x_1$. % SHOULD-NOT-APPEAR
+\end{document}

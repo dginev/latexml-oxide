@@ -16048,6 +16048,13 @@ etoolbox `\robustify\left` now errs "\left not a macro" as in pdflatex), zhlines
 `tests/parse/left_right_delimiters`, `perfect_kernel_batch56::{let_at_left_left_does_not_loop,
 left_right_in_text_mode_are_plain_text}`.
 
+Since 66h the `\right.` an input's end inserts into a `\left` group it opened is inserted once per group: a `\left` read
+in text (a document's `\newcommand\at[2]{\left.#1\right|_{#2}}` met outside math) opens a group the inserted `\right.`
+cannot close, which then met every later end of input and inserted it again without end (1404.4148 and 8 more svjour3
+papers: Fatal `Stomach:Recursion` after 25,640 Warnings). stomach.rs `close_left_group_at_input_end`, the frame value
+`lx@left@right@inserted`; repro `sectioning-frontmatter/svjour3_doubled_at_left_in_text_closes_once` (an `\at` the svjour3
+sentinel strip of KPE #652 leaves), guard `perfect_kernel_batch66h::svjour3_doubled_at_left_in_text_closes_once`.
+
 ### 532. A `\par` or skip inside an item's inline sectional block ends no paragraph (Perl: no paragraph above a section)
 
 **Perl behavior**: a sectioning unit in a list item nests in it (OD #189), never inside a paragraph, so a `\par` in the
@@ -17078,6 +17085,14 @@ idiom: the test closes before either branch runs. A stray `\fi` is then "Didn't 
 an open `\if` stays open as in TeX. The 5 witnesses lose their Fatal (0807.3034: 0 errors). Guards
 `perfect_kernel_batch66d::caption_hoist_*`; repros `captions-floats/caption_hoist_{stray_fi,unbalanced_if}`.
 
+Since 66h the branch is a control sequence, not a braced argument:
+`\ifx.#5.\expandafter\lx@caption@nolabel\else\expandafter\@@@hack@caption@\fi{#1}{#2}{#3#4}#5\endcaption`. A caption
+that is a one-token box argument (`\parbox[b]{9cm}` then `\caption{…}`, mn2e) carries the box's `}` in as its `\@xdblarg`
+argument (Perl's readArg likewise, Gullet.pm:732-744); in 66d's braced branches that `}` closed the first early, the
+second ran, and its `\label` scan read to the end of the file (astro-ph0107461 and 15 more run-345 papers, Fatal
+`Mouth:EoF`). Now it is the "Attempt to close" Errors of before 66d (66cr4's 2). Guard
+`perfect_kernel_batch66h::caption_one_token_box_argument`; repro `captions-floats/caption_one_token_box_argument`.
+
 ### 571. AMS-TeX's `\abstract` is not the LaTeX kernel's locked one; amsppt.sty's own state for amsppt1.tex
 
 The kernel `\abstract` is locked (sect05.rs), and the lock survived into AMS-TeX mode, where the amsppt binding rebinds
@@ -17223,3 +17238,17 @@ TeX is still expanding in search of `\omit` before the cell's math begins. Open:
 not the target's name, so a `\hyperlink` to it dangles, and the anchor parses as an operand (RED
 `package-bindings/hypertarget_math_anchor_keeps_its_id`). Code hyperref_sty.rs `\hypertarget`/`\lx@hypertarget`; guard
 `perfect_kernel_batch66f::hypertarget_braceless_in_math`.
+
+### 579. The article/report/book bindings define `\fnum@figure`/`\fnum@table` as the tag LaTeXML composes (Perl: undefined)
+
+article.cls:457/469 (report, book alike) define `\fnum@figure`/`\fnum@table`; Perl defines neither and composes the
+tag in `\lx@@fnum@@` (Base_Utility.pool.ltxml:1041-1056), which an undefined `\fnum@<type>` falls back to. Code that
+takes their current body then found nothing: babel's ini caption templates (babel.sty:2959-2965
+`\gdef\fnum@table{…{\[fnum@table]}…}`, for a language loaded on demand such as Lithuanian) captured the undefined token
+itself, and the new `\fnum@table` called itself at the first caption (2605.29738: Fatal IfLimit; Perl loops too, KPE
+#654). Ours defines each as `\lx@@fnum@@{figure}`/`{table}` in the article, report and book bindings, where LaTeX's
+classes define them, and every caption's tag is the one composed before; a class or package `\def`/`\renewcommand` of
+them works as in LaTeX. Residual: letter.cls, without floats, defines neither, but has no binding, and the OmniBus it
+falls back to loads the article binding; so a letter-based class's `\newcommand` of them (newlfm.cls:1006/1012), which
+LaTeX accepts, is ignored with an Info `Ignoring redefinition`, and its captions keep the composed tag. Guard
+`perfect_kernel_batch66h::babel_ini_caption_template_needs_fnum`.

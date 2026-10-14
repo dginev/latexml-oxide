@@ -98,7 +98,17 @@ LoadDefinitions!({
   // 2301.03570, 2301.03067)
   DefMacro!("\\email[] Semiverbatim",    "\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
   DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+  // revtex4-1.cls:2383-2392 (revtex4.cls:4481-4491, revtex4-2.cls:2404-2413): `\email` is `\begingroup\sanitize@url
+  // \@email{#1}`, and `\@email{label}{address}` closes that group. A class that re-dresses `\email` over them
+  // (cej.cls:88 `\renewcommand*\email[1][E-mail: ]{\begingroup\sanitize@url\@email{#1}}`; 0710.1022, 1201.4230 and 5
+  // more) left the group open without them, `%` other to the end of the document.
+  DefMacro!("\\@email{} Semiverbatim",    "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
   DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
+  // revtex4-2.cls:2472-2493 (revtex4.cls, revtex4-1.cls alike): the front-matter footnote under `\thanks` and the
+  // `\author`'s optional notes, a mark shared by identical texts; documents call it for a note on several authors
+  // (`\newcommand{\equalcontrib}{\frontmatter@footnote{…contributed equally…}}`, 2605.04155). Each author keeps it.
+  DefMacro!("\\frontmatter@footnote{}",  "\\lx@add@contact[role=thanks]{#1}");
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}"); // ?
 
   DefMacro!("\\collaboration{}",    "\\author{#1}");

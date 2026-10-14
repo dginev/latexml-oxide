@@ -1,0 +1,14 @@
+% witness: math0103177 (gtmacros.tex:806, agtout.tex:16) and 6 more AGT run-345 papers (Fatal Mouth:EoF)
+% oracle: pdftex (clean); engine: pdftex
+% expect: 0 errors; "The title is Generalized Orbifold Euler Characteristic."
+% mechanism: amstex.tex defines no \title (amsppt.sty:310 does); the document's own `\title#1` made before
+%   `\input amstex` stays. Our AmS-TeX pool (and Perl's, AmSTeX.pool.ltxml:135) defined `\title … \endtitle`, whose
+%   scan read to the end of the file. Fixed: the frontmatter moved to amsppt_sty.rs.
+% status:  GREEN
+\def\title#1{\def\thetitle{#1}}
+\input amstex
+\def\ifplaintex{\expandafter\ifx\csname documentclass\endcsname\relax}
+\ifplaintex\else\makeatletter\makeatother\fi
+\title{Generalized Orbifold Euler Characteristic}
+The title is \thetitle.
+\bye

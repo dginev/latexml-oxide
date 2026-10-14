@@ -1,0 +1,24 @@
+% witness: 1612.01009, 1706.05540 (run 345: Fatal TooManyErrors, each \bibselect entry a malformed bibentry)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; a bibliography titled Bibliography whose biblist holds the bibitem GiesekerGlobal
+% mechanism: amsrefs.sty:1242-1250 {bibchapter}, the chapter-level heading {bibdiv} is under a class with chapters;
+%   our amsrefs binding defined {bibsection} only. Fixed: amsrefs_sty.rs.
+% status:  GREEN
+\documentclass{book}
+\usepackage[alphabetic,initials]{amsrefs}
+\begin{document}
+\chapter{One} See \cite{GiesekerGlobal}.
+\begin{bibchapter}
+\begin{biblist}
+\bib{GiesekerGlobal}{article}{
+	author={Gieseker, David},
+	title={Global moduli for surfaces of general type},
+	journal={Invent. Math.},
+	volume={43},
+	date={1977},
+	pages={233--282},
+	review={\MR{0498596 (58 \#16687)}},
+}
+\end{biblist}
+\end{bibchapter}
+\end{document}

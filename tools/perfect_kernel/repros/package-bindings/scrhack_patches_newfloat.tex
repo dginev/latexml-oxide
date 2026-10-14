@@ -1,0 +1,15 @@
+% witness: 2606.04906, 2606.11358
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; a float of class ltx_float_program captioned "A program"
+% mechanism: scrhack loads floatbytocbasic after float; floatbytocbasic.sty:40-75 `\let\deffloat\newfloat` and
+%   `\xpretocmd\deffloat{…}{}{\PackageError…}`. float.sty:54's \newfloat is a macro; ours (and Perl's) was a
+%   primitive, so etoolbox took the failure branch (its \PackageError, and \Messagebreak undefined in its help).
+%   Fixed: float_sty.rs, \newfloat a macro over the primitive \lx@float@newfloat.
+% status:  GREEN
+\documentclass{article}
+\usepackage{scrhack}
+\usepackage{float}
+\newfloat{program}{tbp}{lop}
+\begin{document}
+\begin{program}Code\caption{A program}\end{program}
+\end{document}

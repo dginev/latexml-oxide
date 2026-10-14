@@ -1,0 +1,13 @@
+% witness: math9611223 (Michor's diag.tex) and 6 more run-345 papers (TooManyErrors after `Error:undefined:\RIfM@`; 6 of the 7
+%   out of their Fatal)
+% oracle: pdftex (clean); engine: pdftex
+% expect: 0 errors; "text" then a formula holding "math"
+% mechanism: amstex.tex:72-73 `\RIfM@`/`\RIfMIfI@`, the mode tests AmS-TeX's macro files use; our AmS-TeX pool (and
+%   Perl's) lacked them. Fixed: amstex.rs.
+% status:  GREEN
+\input amstex
+\catcode`\@=11
+\def\foo{\RIfM@ \text{math}\else text\fi}
+\catcode`\@=12
+\foo\ and $\foo$.
+\bye

@@ -2787,6 +2787,8 @@ fn delete_extra_brace(token: &Token) -> Result<bool> {
 const LEFT_INPUT: &str = "lx@left@input";
 /// The depth half of [`LEFT_INPUT`].
 const LEFT_INPUT_DEPTH: &str = "lx@left@input@depth";
+/// Set in a `\left` group's frame once input ending in it has had its `\right.` inserted.
+const LEFT_RIGHT_INSERTED: &str = "lx@left@right@inserted";
 
 /// Record on the innermost frame — the `\left` group, whose group code `\lx@math@left@group` has just set — the reading
 /// context the `\left` was read in, for `close_left_group_at_input_end`.
@@ -2826,9 +2828,16 @@ fn left_group_input_ended() -> bool {
 /// inserted. OXIDIZED_DESIGN #530. Guards `perfect_kernel_batch65d::formula_end_closes_an_open_left`,
 /// `perfect_kernel_batch66g::*`.
 fn close_left_group_at_input_end() -> bool {
-  if !in_left_group() || !left_group_input_ended() {
+  if !in_left_group()
+    || !left_group_input_ended()
+    || value_in_frame(LEFT_RIGHT_INSERTED, 0).is_some()
+  {
     return false;
   }
+  // Once per group: a `\left` read in text (a document's `\newcommand\at[2]{\left.#1\right|_{#2}}` met outside math:
+  // svjour3 1404.4148 and 8 more) opens a group the inserted `\right.` cannot close, which then met every later end of
+  // input and inserted it again without end (Fatal Stomach:Recursion after 25,640 Warnings).
+  assign_frame_value(LEFT_RIGHT_INSERTED, Stored::Int(1));
   insert_missing_right_before(Tokens!());
   true
 }

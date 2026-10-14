@@ -107,6 +107,8 @@ LoadDefinitions!({
   if revtex4_0 {
     DefMacro!("\\email[] Semiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
     DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\@email{} Semiverbatim", "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
   }
 
   // Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.

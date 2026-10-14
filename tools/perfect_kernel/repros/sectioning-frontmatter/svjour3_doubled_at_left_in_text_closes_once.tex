@@ -1,0 +1,17 @@
+% witness: 1404.4148 shape (review 66h r1, probe p11): a piece whose `\at` survives the sentinel strip
+% oracle: none (svjour3.cls not in TL); engine: none
+% expect: no Fatal; 3 Errors (the `_` in text, the frontmatter group the `\left` leaves open) and 2 Warnings, exactly one
+%   of them "Missing \right. inserted"; both affiliations; "Text body."
+% mechanism: the document's `\newcommand\at[2]{\left.#1\right|_{#2}}` runs in the affiliation's text (its second `\at`),
+%   a `\left` in text whose group the inserted `\right.` cannot close; it met every later end of input and inserted
+%   `\right.` again without end (Fatal Stomach:Recursion). Fixed: stomach.rs inserts it once per `\left` group.
+% status:  GREEN
+\documentclass{svjour3}
+\newcommand\at[2]{\left.#1\right|_{#2}}
+\begin{document}
+\title{T}
+\author{A. B. \and C. D.}
+\institute{A. B. \at Center for Risk \at \and C. D. \at Second Place}
+\maketitle
+Text body.
+\end{document}

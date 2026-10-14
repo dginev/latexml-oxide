@@ -54,11 +54,40 @@ LoadDefinitions!({
   RequirePackage!("comment");
   RawTeX!(r"\excludecomment{CCSXML}");
   RequirePackage!("amsthm");
-  // :193/:1015-1016: the `thm-restate` documentclass OPTION (`\DeclareOption{thm-restate}{\let\usethmrestate\relax}` →
-  // `\ifx\usethmrestate\relax\RequirePackage{thm-restate}\fi`) loads thm-restate, providing the `restatable`
-  // environment. The binding does not process class options; thm-restate's `restatable` is self-contained and harmless
-  // when unused, so it loads unconditionally. Witness 2211.04601 (`\documentclass[...,thm-restate]{lipics-v2021}`).
-  RequirePackage!("thm-restate");
+  // :188-193: the class's options, `\DeclareOption{thm-restate}{\let\usethmrestate\relax}` and the like, read from the
+  // class's own option list (`\opt@<class>.cls`, as a wrapper's `\LoadClass[thm-restate]{lipics-v2021}` passes it) or
+  // the document's.
+  let class_options: Vec<String> = [
+    "\\opt@lipics-v2024.cls",
+    "\\opt@lipics-v2021.cls",
+    "\\opt@lipics-v2019.cls",
+    "\\opt@lipics.cls",
+    "\\@classoptionslist",
+  ]
+  .iter()
+  .filter_map(|list| {
+    lookup_definition(&T_CS!(list))
+      .ok()
+      .flatten()
+      .and_then(|defn| match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => Some(body.to_string()),
+        _ => None,
+      })
+  })
+  .collect();
+  let class_option = |name: &str| {
+    class_options
+      .iter()
+      .any(|options| options.split(',').any(|option| option.trim() == name))
+  };
+  // :1015-1016: the `thm-restate` option (`\ifx\usethmrestate\relax\RequirePackage{thm-restate}\fi`) loads
+  // thm-restate, providing the `restatable` environment (witness 2211.04601, `\documentclass[...,thm-restate]
+  // {lipics-v2021}`). Only then: thm-restate loads thmtools, and a document's keytheorems refuses to load beside it
+  // (2604.22493).
+  let thm_restate = class_option("thm-restate");
+  if thm_restate {
+    RequirePackage!("thm-restate");
+  }
   // lipics-v2021.cls:1113 `\RequirePackage[capitalise,noabbrev]{cleveref}` (guarded by
   // the `cleveref` class option). Without it `\cref`/`\Cref` come out Error:undefined — Perl (no lipics binding:
   // OmniBus's dependency scan of the shipped class) gets cleveref. Must load AFTER hyperref. Witness 2606.01187.
@@ -193,30 +222,55 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=runningheads]{#1 / #2}"
   );
 
-  // LIPIcs L1158-1234: theorem-like environments.
-  RawTeX!(
-    r"\newtheorem{theorem}{Theorem}
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{observation}[theorem]{Observation}
-\newtheorem{remark}[theorem]{Remark}
-\newtheorem{example}[theorem]{Example}
-\newtheorem{claim}[theorem]{Claim}
-\newtheorem{conjecture}[theorem]{Conjecture}"
+  // lipics-v2021.cls:1119-1256: theorem-like environments (2609.11285's copy; the 2019+ versions add `{exercise}`,
+  // `{note}` and the starred `{note*}`, `{remark*}`, `{claim*}`; run 340: `{remark*}` 38 first errors, 2508.09892).
+  // `{theorem}` is numbered within sections under the `numberwithinsect` option (:1126-1128). Its siblings share its
+  // counter (`[theorem]`), except under `autoref` (which loads aliascnt, :1119-1121) without `thm-restate`
+  // (:1172-1236): there each sibling's counter is an aliascnt alias of `theorem`, with its `\<name>autorefname`, numbered
+  // within sections under `numberwithinsect`, so a document can number by it (keytheorems' `sibling=corollary`,
+  // 2604.22493: `No counter 'corollary'` six times).
+  let autoref = class_option("autoref");
+  let numberwithinsect = class_option("numberwithinsect");
+  let alias_counters = autoref && !thm_restate;
+  if autoref {
+    RequirePackage!("aliascnt");
+  }
+  let mut theorems = String::from("\\newtheorem{theorem}{Theorem}");
+  if numberwithinsect {
+    theorems.push_str("\\numberwithin{theorem}{section}");
+  }
+  for (name, title) in [
+    ("lemma", "Lemma"),
+    ("corollary", "Corollary"),
+    ("proposition", "Proposition"),
+    ("definition", "Definition"),
+    ("observation", "Observation"),
+    ("remark", "Remark"),
+    ("example", "Example"),
+    ("claim", "Claim"),
+    ("conjecture", "Conjecture"),
+    ("exercise", "Exercise"),
+    ("note", "Note"),
+  ] {
+    if name == "note" {
+      theorems.push_str("\\theoremstyle{remark}");
+    }
+    if alias_counters {
+      theorems.push_str(&format!(
+        "\\newaliascnt{{{name}}}{{theorem}}\\newtheorem{{{name}}}[{name}]{{{title}}}\\aliascntresetthe{{{name}}}\
+         \\newcommand{{\\{name}autorefname}}{{{title}}}"
+      ));
+      if numberwithinsect {
+        theorems.push_str(&format!("\\numberwithin{{{name}}}{{section}}"));
+      }
+    } else {
+      theorems.push_str(&format!("\\newtheorem{{{name}}}[theorem]{{{title}}}"));
+    }
+  }
+  theorems.push_str(
+    r"\newtheorem*{note*}{Note}\newtheorem*{remark*}{Remark}\newtheorem*{claim*}{Claim}\theoremstyle{plain}",
   );
-  // lipics-v2021.cls:1158-1176 (2609.11285's copy): the 2019+ versions add `{exercise}`, `{note}` and the starred
-  // `{note*}`, `{remark*}`, `{claim*}` (run 340: `{remark*}` 38 first errors, 2508.09892).
-  RawTeX!(
-    r"\newtheorem{exercise}[theorem]{Exercise}
-\theoremstyle{remark}
-\newtheorem{note}[theorem]{Note}
-\newtheorem*{note*}{Note}
-\newtheorem*{remark*}{Remark}
-\newtheorem*{claim*}{Claim}
-\theoremstyle{plain}"
-  );
+  RawTeX!(&theorems);
   // :1041-1056 `{claimproof}`, a proof of a claim, and `\claimqedhere`: the class renews `\qedsymbol` to a grey ◁
   // for its own `\popQED` only; our `\qed`, as Perl's, prints ∎ whatever `\qedsymbol` is, so the claim's end (and
   // `\claimqedhere`) set `\qed` to the ◁ just there, a proof nested inside keeping ∎. :1057-1060 `\lipicsEnd` (the ⌟

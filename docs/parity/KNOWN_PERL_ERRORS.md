@@ -12931,3 +12931,62 @@ amsart that re-dresses `\subjclass` over them (quantumdust.cls:278-286 `\@ifunde
 {\@classname}…}`) meets `Error:undefined:\@classname` (witness 2606.20943; repro
 class-bindings/amsart_classname_and_subjclass_editions). Fixed in Rust: `\@classname` in the class bindings
 (amsart_cls.rs, amsproc_cls.rs, amsbook_cls.rs, read in the class's own load), the editions in ams_support_sty.rs.
+
+## 650. The AMS-TeX pool defines amsppt.sty's front matter
+
+AmSTeX.pool.ltxml:133-138 defines `\topmatter`, `\title … \endtitle`, `\author`, `\thanks`, `\abstract`; amstex.tex
+defines none of them (amsppt.sty:298-414 does). A document that defines its own `\title#1` before `\input amstex` (AGT's
+gtmacros.tex:806, agtout.tex:16) has it replaced, and `\title{…}` scans for `\endtitle` to the end of the file
+(math0103177 and 6 more: Fatal `Mouth:EoF`). Minimal: `\def\title#1{\def\thetitle{#1}} \input amstex
+\title{T} \thetitle \bye`. Fixed in Rust: the front matter is amsppt_sty.rs's (repro
+loader/amstex_title_before_input_stays_the_documents).
+
+## 651. The AMS-TeX pool lacks `\RIfM@` and `\RIfMIfI@`
+
+amstex.tex:72-73 `\def\RIfM@{\relax\ifmmode}`, `\def\RIfMIfI@{\relax\ifmmode\ifinner}` are the mode tests AMS-TeX's
+macro files use (Michor's diag.tex: math9611223 and 6 more, `Error:undefined:\RIfM@` then too many errors; 6 of the 7
+out of their Fatal). Fixed in
+Rust (amstex.rs; repro macro-state/amstex_rifm_mode_test).
+
+## 652. sv_support's `\institute` keeps its `\at` sentinel in a labelled affiliation
+
+sv_support.sty.ltxml:43-47 splits `\institute{name \at place \and …}` with `\lx@sv@institute@#1\at\done` and `Until:\at
+Until:\done`, so a labelled piece's text ends with the sentinel `\at`. `\at` is `\relax` there, but a document may define
+its own (`\newcommand\at[2]{\left.#1\right|_{#2}}`; `\relax` counts as undefined), which then runs at the affiliation's
+end with its arguments missing (1404.4148; Perl 4 Errors, ours a Fatal before 66h). Fixed in Rust: sv_support_sty.rs
+strips the sentinel (repro sectioning-frontmatter/svjour3_institute_with_document_at_macro).
+
+## 653. float.sty's `\newfloat` is a primitive
+
+float.sty.ltxml:39 `DefPrimitive('\newfloat{}{}{}[]', …)`; float.sty:54 `\newcommand\newfloat[3]{…}` is a macro, and
+scrhack's floatbytocbasic.sty:40-75 patches it (`\let\deffloat\newfloat` then `\xpretocmd\deffloat{…}{}{\PackageError…}`):
+on the primitive the patch fails and the failure branch's error is raised, its help text `\edef`'d (floatbytocbasic.sty:73's
+own `\Messagebreak` typo becomes an undefined-command error; 2606.04906, 2606.11358). Fixed in Rust: float_sty.rs, a macro
+over the primitive `\lx@float@newfloat` (repro package-bindings/scrhack_patches_newfloat).
+
+## 654. `\fnum@figure`/`\fnum@table` are undefined, so babel's ini caption templates loop
+
+Base_Utility.pool.ltxml:1041-1056 composes a float's tag without `\fnum@<type>`, which LaTeX's classes define
+(article.cls:457/469). babel.sty:2959-2965 re-defines `\fnum@table` over its current body for a language whose ini file
+carries caption templates (`\foreignlanguage{lithuanian}{x}` loads babel-lt.ini on demand); undefined, the body is the
+token `\fnum@table` itself and the first table caption recurses (2605.29738; Perl terminated). Minimal:
+`\usepackage[english]{babel} … \foreignlanguage{lithuanian}{x} \begin{table}\caption{A}\end{table}`. Fixed in Rust
+(OXIDIZED_DESIGN_DIVERGENCES #579; repro captions-floats/babel_ini_caption_template_needs_fnum).
+
+## 655. The REVTeX binding lacks `\@email`, `\@homepage` and `\frontmatter@footnote`
+
+revtex4_support.sty.ltxml:55-56 binds `\email` and `\homepage` alone. revtex4-1.cls:2383-2392 (4.0 and 4.2 alike) has `\email` =
+`\begingroup\sanitize@url\@email{#1}` with `\@email` closing the group, which classes re-dress (cej.cls:88; 0710.1022,
+1201.4230: with only `\sanitize@url` defined the group stayed open, `%` other to the document's end); and revtex4-2.cls:2472
+`\frontmatter@footnote`, which documents call for a note on several authors (2605.04155). Fixed in Rust
+(revtex4_support_sty.rs, revtex4_cls.rs; repros class-bindings/revtex_email_redressed_over_sanitize_url,
+sectioning-frontmatter/revtex_frontmatter_footnote_on_two_authors).
+
+## 656. The amsrefs binding lacks `{bibchapter}` and the `\MR` internals
+
+amsrefs.sty.ltxml binds `{bibdiv}`/`{biblist}`; amsrefs.sty:1242-1250 `{bibchapter}` (the heading `{bibdiv}` is under a
+class with chapters) and :2673-2690 `\strip@MRprefix`/`\MRhref` (with `msc-links` and `\href`, :2933-2950's linking
+`\MRhref` and `\parse@MR`), which a paper's own `\MR` re-dress calls (0806.1269, 1612.01009, 1706.05540 and 2 more), are
+missing; nor does its `msc-links` load hyperref (amsrefs.sty:198-205). Fixed in Rust (amsrefs_sty.rs; repros
+index-bib/amsrefs_bibchapter, index-bib/amsrefs_document_mr_redress).
+

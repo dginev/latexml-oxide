@@ -35,6 +35,9 @@ LoadDefinitions!({
   DefMacro!("\\undefine Token", "\\let#1\\relax");
   // amstex.tex:80-85 the error reporter its packages call (amsppt.sty's `\add@missing`); `\errhelp\defaulthelp@` left out.
   RawTeX!(r"\def\err@#1{\errmessage{AmS-TeX error: #1}}\def\Err@{\err@}");
+  // amstex.tex:72-73, the mode tests its own macros and the macro files written for it use (Michor's diag.tex,
+  // `\RIfM@`: math9611223 and 6 more papers, 6 of the 7 out of their Fatal; Perl's pool lacks them too).
+  RawTeX!(r"\def\RIfM@{\relax\ifmmode}\def\RIfMIfI@{\relax\ifmmode\ifinner}");
 
   //======================================================================
   // Style choices (Perl L62-119)
@@ -161,13 +164,10 @@ LoadDefinitions!({
   });
 
   //======================================================================
-  // Front Matter (Perl PR #2767)
-  def_macro_noop("\\topmatter")?;
-  def_macro_noop("\\endtopmatter")?;
-  DefMacro!("\\title Until:\\endtitle", "\\lx@add@title{#1}");
-  DefMacro!("\\author Until:\\endauthor", "\\lx@add@author{#1}");
-  DefMacro!("\\thanks Until:\\endthanks", "\\lx@add@pubnote[role=thanks]{#1}");
-  DefMacro!("\\abstract Until:\\endabstract", "\\lx@add@abstract{#1}");
+  // Front Matter (Perl PR #2767, AmSTeX.pool.ltxml:133-138) is amsppt.sty's (:298-414), not amstex.tex's, which
+  // defines no `\topmatter`/`\title`/`\author`/`\thanks`/`\abstract`: amsppt_sty.rs. A document's own `\title#1`
+  // made before `\input amstex` (AGT's gtmacros.tex:806, agtout.tex:16; math0103177 and 6 more) stays its own, where
+  // Perl's pool replaced it with `\title … \endtitle` and the scan read to the end of the file.
 
   //======================================================================
   // Document structure (Perl L144-158)

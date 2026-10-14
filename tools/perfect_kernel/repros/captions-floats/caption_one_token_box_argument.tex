@@ -1,0 +1,17 @@
+% witness: astro-ph0107461 (MA1097fv.tex:686-690, mn2e) and 15 more run-345 papers (E → Fatal Mouth:EoF)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: no Fatal; the caption's text kept in the figure (66cr4's 2 Errors, Perl 1)
+% mechanism: `\parbox[b]{9.0cm}` takes `\caption` as its one-token box argument, which then reads the box's `}` as its
+%   own argument (Perl's readArg likewise). 66d's caption wrapper put both branches of its `\ifx` in braces, so that
+%   `}` closed one early, the other branch ran, and its `\label` scan read to the end of the file. Fixed: sect09.rs,
+%   the branch is a control sequence (`\lx@caption@nolabel`), not a braced argument.
+% status:  GREEN
+\documentclass{article}
+\begin{document}
+\begin{figure}
+\hfill \parbox[b]{9.0cm}
+\caption{The variation in the diffuse emission.}
+\label{difffrac_lb}
+\end{figure}
+Text after.
+\end{document}

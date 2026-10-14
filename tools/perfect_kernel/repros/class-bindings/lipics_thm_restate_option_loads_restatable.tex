@@ -1,0 +1,14 @@
+% witness: 2211.04601 (`\documentclass[...,thm-restate]{lipics-v2021}`)
+% oracle: none (lipics-v2021.cls ships with the papers, not TL); engine: pdflatex
+% expect: 0 errors; the theorem's body once ("Restated body."); `\mythm*` a reference to it, "See" + ref to
+%   LABEL:restatable:mythm (thm-restate.sty.ltxml:28 `\lx@thm@restate`, as Perl)
+% mechanism: lipics-v2021.cls:193/:1015-1016 loads thm-restate on its `thm-restate` option; the binding reads the option
+%   from the class's option list (lipics_cls.rs).
+% status:  GREEN
+\documentclass[a4paper,thm-restate]{lipics-v2021}
+\begin{document}
+\begin{restatable}{theorem}{mythm}
+Restated body.
+\end{restatable}
+\mythm*
+\end{document}

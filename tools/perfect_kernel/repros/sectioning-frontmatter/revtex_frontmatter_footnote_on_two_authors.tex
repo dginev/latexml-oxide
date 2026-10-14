@@ -1,0 +1,20 @@
+% witness: 2605.04155 (main.tex:32-45)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; each author carries a thanks contact "These two authors contributed equally to this work."
+% mechanism: revtex4-2.cls:2472-2493 \frontmatter@footnote, the front-matter footnote behind \thanks (one mark for
+%   identical texts), called by the document for a note on several authors; our REVTeX binding lacked it
+%   (Error:undefined). Fixed: revtex4_support_sty.rs, a thanks contact of the current author.
+% status:  GREEN
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\makeatletter
+\newcommand{\equalcontrib}{\frontmatter@footnote{These two authors contributed equally to this work.}}
+\makeatother
+\begin{document}
+\title{T}
+\author{Ann Author\equalcontrib}
+\affiliation{Some University}
+\author{Bob Author\equalcontrib}
+\affiliation{Some University}
+\maketitle
+Text.
+\end{document}

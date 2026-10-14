@@ -1053,6 +1053,35 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   records the input it was read in (`gullet::reading_context`), so physics' `\left( \lx@xmarg{…}{#1} \right)` keeps its
   pair when `#1` (`\cosh(a\over 2)`, `\expval{a \over b}` in `aligned`) ends (OD #530; 2605.02768, 2606.01486 E 1 → 0;
   65d's witnesses unchanged). Guards `perfect_kernel_batch66g::*`.
+- **66h** (run 345's Error → Fatal regressions, 118 confirmed against 64zf, root-causer report
+  `agent_reports/2026-10-14_ef345_regressions.md`, per-paper `~/data/pk_agents/main/ef344/attribution.tsv`; and three
+  2605/2606 sandbox regressions): the caption wrapper's branch is a control sequence, not a braced argument, so a
+  one-token box argument's `}` no longer splits it (K3, 16 of 17: astro-ph0107461 and more back to their pre-66d Errors,
+  OD #570); `\right.` is inserted once per `\left` group (OD #530) and svjour3's `\institute` drops its `\at` sentinel (K5a,
+  9: 1404.4148, 1705.07573, 1911.12144, 1912.03170, 2107.00750, 2107.11151, 2205.01215, 2210.16010, 2305.18835; KPE
+  #652); the AMS-TeX front matter is amsppt's (K2b, 7 AGT papers: math0103177; KPE #650); amstex.tex's `\RIfM@`/`\RIfMIfI@`
+  (K2c, 6 of 7 Michor diag.tex papers: math9611223; KPE #651); revtex `\@email`/`\@homepage` (K4a, 7: 0710.1022,
+  1201.4230; KPE #655); amsrefs `\strip@MRprefix`/`\MRhref`, `msc-links` loading hyperref and `{bibchapter}` (K4b/K4c, 6:
+  0806.1269, 1612.01009, 1706.05540; KPE #656); lipics loads thm-restate only on its option, read from the class's own
+  option list too (K4d, 2604.22493; 2211.04601 still restatable), and follows the class's `autoref` (aliascnt sibling
+  counters unless `thm-restate`, :1119-1236) and `numberwithinsect` options (2604.22493's keytheorems
+  `sibling=corollary`: 6 Errors → 0; over the 36 lipics papers in the A/B population only it changed counts, words
+  identical; `\autoref` names the sibling, "Proposition 2" for "Theorem 2" in 2103.15659; tags follow
+  `numberwithinsect`, "Problem 2.1" for "Problem 1" in 2406.18299). From the sandboxes: the article, report and book
+  bindings define `\fnum@figure`/`\fnum@table` as the composed tag (2605.29738 Fatal → 0, OD #579, KPE #654); revtex
+  `\frontmatter@footnote` (2605.04155, KPE #655); float.sty's `\newfloat` a macro scrhack can patch
+  (2606.04906, 2606.11358; KPE #653). Guards `perfect_kernel_batch66h::*`; A/B over pop.tsv (1,002 papers)
+  byte-identical in every fingerprint, and over the
+  E → F papers with a main file (75 of 121): papers with a Fatal 72 → 34, words 660k → 1.12M. Open from the report: K6
+  (2601.10843, 2602.04048): `\start@align` re-enters a re-dressed `{alignat}`; starting the binding's own alignment
+  instead (66h r1) only turned the Fatal into an Error over the same truncated document (review 66h: an empty
+  `<document/>` on the repro), so it was reverted — `\start@align` must open the alignment in a group whose `\egroup` ends
+  it, with `\black@`/`\totwidth@` (amsmath.sty:1364/:1316) defined (RED `alignment/start_align_under_redressed_alignat`);
+  K1 (31, 65n's
+  §1047 `\par`-closes-math without §1046's math-token-reopens-math: `$` parity flips; batch 66i, measured before landing),
+  K2a (19, missing macro files: shared), K2d (4, Paul Taylor's diagrams.tex not in TL, now converting 2k-11k words), K5b
+  (2, L3 papers' unshipped physics.sty), 5 singletons; 1309.7562's `$$` meeting an open `{` (13 Errors on every binary,
+  pdflatex 1); `\bibselect` does not read a `filecontents` `.ltb` (`Info:missing_file`).
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the

@@ -41,8 +41,19 @@ LoadDefinitions!({
   // sectioning-frontmatter/svjour3_epj_one_institute_shared, svjour3_two_institutes_pair_by_position).
   DefMacro!(
     "\\lx@sv@institute@ Until:\\at Until:\\done",
-    "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks#2}\\fi"
+    "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks\\lx@sv@institute@piece{#2}}\\fi"
   );
+  // A labelled piece's text, without the `\at` sentinel `\lx@sv@institute` appended (the `Until:\done` part keeps it):
+  // `\at` is `\relax` here, but a document may define its own (`\newcommand\at[2]{\left.#1\right|_{#2}}`, allowed as
+  // `\relax` counts as undefined), which then ran at the affiliation's end with its arguments missing (svjour3
+  // 1404.4148, 1705.07573, 1911.12144, 1912.03170, 2107.00750, 2107.11151, 2205.01215, 2210.16010, 2305.18835).
+  DefMacro!("\\lx@sv@institute@piece{}", sub[(piece)] {
+    let mut tokens = piece.unlist();
+    if tokens.last() == Some(&T_CS!("\\at")) {
+      tokens.pop();
+    }
+    Ok(Tokens::new(tokens))
+  });
   // A piece that starts with a mark (`$^{1}$Univ A`, or one piece of lines `$^1$… \\ $^2$…`: 1406.6147, 2405.03406)
   // is a marked list, its lines labelled by their marks, which the authors showing them get (OXIDIZED_DESIGN #159;
   // repro svjour3_marked_institutes_link_by_mark); any other piece is numbered.
