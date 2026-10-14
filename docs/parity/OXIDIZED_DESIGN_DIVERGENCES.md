@@ -17486,10 +17486,14 @@ their tags, in three places (KNOWN_PERL_ERRORS #682). Here, a row whose `EQUATIO
 (`Template::has_explicit_tags`, `latexml_core/src/alignment/template.rs`). Such a row is never pruned as empty
 (`normalize_prune_rows`), and its element carries the internal `_tagged` attribute (`TAGGED_ROW_ATTRIBUTE`, stripped
 at finalization). eqnarray's `rearrange_eqnarray` treats a tagged empty row as it already treated a numbered labelled
-one (#54, 63j): it joins the unnumbered equation above, which then carries the tag, or stands alone when that equation
-has a number. amsmath's `rearrange_ams_align`/`rearrange_ams_gather` (`empty_row_keeps_number`) keep it as an equation
+one (#54, 63j): in a multi-column eqnarray it joins the unnumbered equation above, which then carries the tag, or stands
+alone when that equation has a number; in an eqnarray using a single column (nlin0106009's (27), whose formula sits in
+the third column only) it stands as its own equation holding the tag, as in align and gather. amsmath's `rearrange_ams_align`/`rearrange_ams_gather` (`empty_row_keeps_number`) keep it as an equation
 holding only its tags, which is where pdflatex prints it. An auto-numbered empty row still goes, as in Perl: the
-trailing `\\` of an eqnarray or align (pdflatex prints an empty numbered line in eqnarray, an accident of the markup),
+trailing `\\` of an eqnarray or align (pdflatex prints an empty numbered line in both, an accident of the markup),
 and an inner `\\ \\`. Witness nlin0106009: its 11 tag-only rows (27), (32b-d), (34d), (37), (46b-d), (53a-b) were lost
 once 67j made `\TCItag` amsmath's `\tag`. Guards `perfect_kernel_batch67j::{ams_tag_only_row_keeps_number,
-tcilatex_tcitag_tags_eqnarray_rows, trailing_row_without_tag_is_still_pruned}`.
+tcilatex_tcitag_tags_eqnarray_rows, trailing_row_without_tag_is_still_pruned}`. RED residuals: `\TCItag` in
+`eqnarray*` or after `\nonumber` on its row prints a number pdflatex does not (tcilatex 5.0 `\@@eqncr` prints
+`\@taggnum` only under `\if@eqnsw`; repro alignment/tcitag_in_unnumbered_row_prints_nothing); amsmath `\tag{z}\notag`
+on one row loses the tag, as in Perl (repro alignment/ams_tag_then_notag_keeps_tag).

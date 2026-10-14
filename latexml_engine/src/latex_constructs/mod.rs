@@ -2103,7 +2103,8 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       // An unnumbered one (`\label{x}\nonumber`) names no number and stays flagged, as before. So does a row whose only
       // content is its author's tag: Scientific Word's `… \nonumber \\ && \TCItag{27}` numbers the equation above it
       // (pdflatex prints (27) on the tag's row; nlin0106009's 11 such rows; OXIDIZED_DESIGN_DIVERGENCES #591,
-      // KNOWN_PERL_ERRORS #682). An auto-numbered empty row (`\\ \\`) is removed, as in Perl.
+      // KNOWN_PERL_ERRORS #682) — in a multi-column eqnarray; a single-column one returned above, where the tagged row
+      // stands as its own equation. An auto-numbered empty row (`\\ \\`) is removed, as in Perl.
       class = if eqs.is_empty() || numbered {
         "new"
       } else {

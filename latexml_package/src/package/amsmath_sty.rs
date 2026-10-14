@@ -2782,19 +2782,19 @@ pub fn rearrange_ams_multirow(
   rearrange_ams_split(document, array)
 }
 
-/// Perl: rearrangeAMSGather (amsmath.sty.ltxml L400-415)
-/// Each equation row consists of single equation. Pull math content up past _Capture_.
 /// Whether an equation row with no content keeps its number: it is numbered and holds a `\label`, which binds to that
 /// number, or its author tagged it (`\notag \\ \tag{29}`, the alignment's `_tagged` row,
 /// [`TAGGED_ROW_ATTRIBUTE`]) — amsmath prints that row's number (Perl amsmath.sty.ltxml:483 "Numbered ones still show
-/// in print out!!!", which removes it; OXIDIZED_DESIGN_DIVERGENCES #591, KNOWN_PERL_ERRORS #682). An auto-numbered
-/// empty row is removed, as in Perl.
+/// in print out!!!", which removes it; OXIDIZED_DESIGN_DIVERGENCES #591, KNOWN_PERL_ERRORS #682; witness nlin0106009).
+/// An auto-numbered empty row is removed, as in Perl.
 fn empty_row_keeps_number(document: &mut Document, equation: &Node) -> bool {
   (equation.get_attribute("labels").is_some()
     || equation.get_attribute(TAGGED_ROW_ATTRIBUTE).is_some())
     && !document.findnodes("ltx:tags", Some(equation)).is_empty()
 }
 
+/// Perl: rearrangeAMSGather (amsmath.sty.ltxml L400-415)
+/// Each equation row consists of single equation. Pull math content up past _Capture_.
 pub fn rearrange_ams_gather(document: &mut Document, equationgroup: &mut Node) -> Result<()> {
   let equations: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
   for mut equation in equations {
