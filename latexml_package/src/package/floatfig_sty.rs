@@ -112,4 +112,8 @@ LoadDefinitions!({
   RawTeX!("\\newif\\ifpageafterfig  \\pageafterfigfalse");
   RawTeX!("\\newif\\ifoddpages");
   RawTeX!("\\newif\\ifoutput");
+  // As floatflt.sty:22-23, its successor (floatfig.sty is not in TL): `\DeclareOption*{\OptionNotUsed}\ProcessOptions`;
+  // its options take effect, and its handlers do not outlive it (content.rs `process_options_by`).
+  DeclareOption!(None, {});
+  ProcessOptions!();
 });

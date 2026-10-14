@@ -250,6 +250,10 @@ LoadDefinitions!({
     "setpagesize",
   ] {
     DeclareOption!(option, None);
+    // hyperref reads its options as keys (kvoptions), never as `\ds@<option>`; the binding processes none, so each
+    // handler is let to `\relax` at once, as a processed one is: left defined, a later package's undeclared `pdftex`
+    // or `draft` ran it instead of its own `\DeclareOption*` (content.rs `process_options_by`).
+    let_i(&T_CS!(&s!("\\ds@{option}")), &T_RELAX!(), None);
     // Rust-only divergence (paired with `21e730e71e` Info→Warn promotion):
     // also register each hyperref option as a Hyp keyval so `\hypersetup{
     // colorlinks=true,citecolor=…}` doesn't trip the unknown-key Warn path.

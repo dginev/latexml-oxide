@@ -1060,10 +1060,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `…_sbx2606_regressions.md`): an option no `\DeclareOption` declared runs its `\ds@<option>` when defined, latex.ltx's
   `\@process@pti@ns` (C12; 2.09-style classes: gji.cls 2605.19951, biom.cls `usenatbib` 2606.12015; KPE #657); revtex's
   `\@AF@join` for a class's own `\@email` (C11, JASA.cls: 2605.18495, 2605.23416; KPE #655); `\mathcolor` adds no group
-  and restores the color it found, as mathcolor.ltx:20-29, so its `\left`/`\right` pair across calls (C7, 2605.11792);
+  and restores the color it found, as mathcolor.ltx:20-29, so a `\left` and `\right` in two calls pair (C7, 2605.11792);
   the loader's expl3 scope-exit cleanup fires on expl3's own `\l__kernel_expl_bool`, not on `_` being a letter, so a
-  package that restores its own catcodes keeps them (N6, etextools: `/` stayed 8; 2606.06323). Guards
-  `perfect_kernel_batch66j::*`. RED: `loader/etextools_translations_begin_document` (2606.06323's second error,
+  package that restores its own catcodes keeps them (N6, etextools: `/` stayed 8; 2606.06323). Review r1: the `\ds@`
+  lookup is the kernel `\ProcessOptions`'s only (not the key=value processors'); option handlers a binding defines but
+  never processes are retired as processed ones are — REVTeX 3's under a revtex4 class (`retire_option_handlers`; a later
+  package's `[draft]` ran revtex's no-op), hyperref's and minted's key names — and preview/floatflt/floatfig process
+  their options as their packages do. Guards `perfect_kernel_batch66j::*`. RED: `loader/etextools_translations_begin_document` (2606.06323's second error,
   etextools + translations at `\begin{document}`); C3 (nomencl in a float) still open.
 - **66g** (payload, 2605/2606 cluster C5): an input's end closes only a `\left` group opened in that input — `\left`
   records the input it was read in (`gullet::reading_context`), so physics' `\left( \lx@xmarg{…}{#1} \right)` keeps its

@@ -652,7 +652,7 @@ LoadDefinitions!({
   // Witnesses 2405.19976, 2406.12553.
   DefMacro!("\\@ifundefinedcolor{}", "\\@firstoftwo");
 
-  // xcolor.sty L815: `\InputIfFileExists{mathcolor.ltx}` — pulls in
+  // xcolor.sty:819 `\InputIfFileExists{mathcolor.ltx}` — pulls in
   // `\mathcolor[<model>]{<color>}{<expr>}`, a math-mode color wrap
   // (witness 2402.00349: Error:undefined without it). mathcolor.ltx:20-29
   // pushes the current color (`\g__mathcolor_seq`), sets the new one,
@@ -660,9 +660,11 @@ LoadDefinitions!({
   // (`\seq_gpop:NN … \current@color` + `\reset@color`), so a `\left` in #3
   // pairs with a `\right` in another call (nlo-shower.sty:802
   // `\mathcolor{red}{\left[}…\mathcolor{red}{\right]}`, 2605.11792: a group
-  // here made it "Attempt to close boxing group"). LaTeX also colors the
-  // scripts that follow (`\__mathcolor_scan_for_scripts:w`); here they take
-  // the restored color.
+  // here made it "Attempt to close boxing group"). The scripts that follow
+  // take the surrounding color, as `\__mathcolor_handle_scripts:Nw` sets the
+  // pushed one on them (mathcolor.ltx:71-72). The restore is by TeX group,
+  // LaTeX's by the driver's color stack: a `\left` in one call and its
+  // `\right` outside one leave the text after `\right` in the new color.
   DefMacro!(
     "\\mathcolor[]{}{}",
     "\\lx@mathcolor@push\\color[#1]{#2}#3\\lx@mathcolor@pop"

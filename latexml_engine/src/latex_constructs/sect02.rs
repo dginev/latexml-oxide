@@ -385,11 +385,11 @@ pub(crate) fn load() -> Result<()> {
       inline_hooks.extend(hook_use_tokens("begindocument/end").unlist());
     }
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
-    // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
-    // L7122 `\bool_if:NTF \l__kernel_expl_bool { \ExplSyntaxOff } ...`) —
-    // packages like mhchem.sty end with an unmatched final `\ExplSyntaxOn`
-    // (see mhchem.sty tail, "legacy" block), and LaTeX's kernel relies on
-    // this scheduled cleanup to restore catcodes before the document body.
+    // document start. LaTeX restores expl3 syntax per file (the kernel's
+    // `\@expl@push@filename@@`/`\@expl@pop@filename@@`), so a package's
+    // unmatched `\ExplSyntaxOn` never reaches the document; packages like
+    // mhchem.sty end with one (its tail, "legacy" block), and this cleanup
+    // restores the catcodes before the document body where ours did not.
     // Without this, `\sum_{...}` tokenizes as the CS `\sum_` (letter `_`)
     // rather than `\sum` + `_` + `{...}`.
     if lookup_catcode('_') == Some(Catcode::LETTER)

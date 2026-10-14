@@ -93,6 +93,7 @@ LoadDefinitions!({
   }
   RequirePackage!("revtex4_support");
   revtex4_support_sty::record_implicit_bibstyle("4-1");
+  revtex4_support_sty::retire_option_handlers();
 
   // Load the AMS packages requested via options BEFORE the `.rty` input.
   // Perl revtex4-1.cls.ltxml runs `map { RequirePackage($_) } @revtex_toload`

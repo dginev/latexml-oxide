@@ -20,6 +20,8 @@ LoadDefinitions!({
   // Stub as listing for now
   RequirePackage!("listings");
   DeclareOption!("chapter", "");
+  // minted reads its options as keys; the handler is not left defined for a later package's `chapter` option.
+  let_i(&T_CS!("\\ds@chapter"), &T_RELAX!(), None);
   // INCOMPLETE IMPLEMENTATION — mostly stubs that allow content-preservation
   def_macro_noop("\\DeleteFile[]{}")?;
   DefMacro!("\\MintedPygmentize", "pygmentize");

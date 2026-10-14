@@ -5,7 +5,7 @@
 % expect: 0 errors; "Extra: yes."
 % mechanism: latex.ltx:18587-18592 `\@process@pti@ns`: an option no `\DeclareOption` declared runs its `\ds@<option>`
 %   when one is defined (2.09-style classes `\def` their handlers), `\default@ds` only otherwise. Perl
-%   (Package.pm:2470-2473) and our `process_options_by` sent every undeclared option to the default handler, so the
+%   (Package.pm:2476-2478) and our `process_options_by` sent every undeclared option to the default handler, so the
 %   class never saw its option. Fixed: content.rs `process_options_by`.
 % status:  GREEN
 \begin{filecontents*}[overwrite]{rcds.cls}

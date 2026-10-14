@@ -12993,9 +12993,10 @@ missing; nor does its `msc-links` load hyperref (amsrefs.sty:198-205). Fixed in 
 index-bib/amsrefs_bibchapter, index-bib/amsrefs_document_mr_redress).
 
 
-## 657. `ProcessOptions` never runs a `\ds@<option>` that `\DeclareOption` did not declare
+## 657. `\ProcessOptions` never runs a `\ds@<option>` that `\DeclareOption` did not declare
 
-Package.pm:2470-2473 sends every option outside `@declaredoptions` to `\default@ds`. latex.ltx:18587-18592
+In declared order (non-star `\ProcessOptions`), Package.pm:2476-2478 sends every option outside `@declaredoptions` to
+`\default@ds`. latex.ltx:18587-18592
 `\@process@pti@ns` runs such an option's `\ds@<option>` when it is defined (not `\relax`), the default only otherwise —
 and 2.09-style classes `\def` their handlers directly: gji.cls:61-70 (2605.19951), biom.cls:48
 `\def\ds@usenatbib{\@usenatbibtrue}` with natbib loaded only `\if@usenatbib` (:1564-1566; 2606.12015, `\citep`

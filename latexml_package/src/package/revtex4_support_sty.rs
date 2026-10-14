@@ -112,7 +112,9 @@ LoadDefinitions!({
   // revtex4-2.cls:2120/2160/2236 `\@AF@join{note}`: the join every `\email`, `\homepage`, `\thanks` and
   // `\altaffiliation` ends in (:2404-2421), dispatched to the title, author or affiliation last given. A class that
   // re-dresses `\@email` calls it directly (JASA.cls:1232-1238 `\def\@email#1#2{\endgroup\@AF@join{#1\href{mailto:#2}
-  // {#2}}}`; 2605.18495, 2605.23416: `\@AF@join` undefined). The note goes where our `\thanks` puts its notes.
+  // {#2}}}`; 2605.18495, 2605.23416: `\@AF@join` undefined). The note goes where our `\thanks` puts its notes, on the
+  // last author, whatever revtex's dispatch would join it to, and as a thanks note even when it holds an email: the
+  // content and its link are kept.
   DefMacro!("\\@AF@join{}",              "\\lx@add@contact[role=thanks]{#1}");
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}"); // ?
 
@@ -484,6 +486,41 @@ LoadDefinitions!({
   def_macro_noop("\\replace@environment{}{}")?;
   def_macro_noop("\\glet@environment{}{}")?;
 });
+
+/// The REVTeX 3 option handlers this binding defines (Perl L372-393), for a `\documentstyle[aps,…]{revtex}` to consume.
+/// A revtex4/4-1/4-2 class has processed its options before it loads this binding, so it lets them to `\relax`, as
+/// latex.ltx's `\@process@pti@ns` (:18593-18594) leaves the handlers it declared: otherwise a later package's
+/// undeclared `[draft]` ran revtex's no-op instead of its `\default@ds` (content.rs `process_options_by`).
+pub(crate) fn retire_option_handlers() {
+  for option in [
+    "preprint",
+    "twoside",
+    "draft",
+    "amsfonts",
+    "amssymb",
+    "titlepage",
+    "twocolumn",
+    "tighten",
+    "floats",
+    "eqsecnum",
+    "pra",
+    "prb",
+    "prc",
+    "prd",
+    "pre",
+    "prl",
+    "josaa",
+    "josab",
+    "aplop",
+    "manuscript",
+    "11pt",
+    "12pt",
+    "aps",
+    "osa",
+  ] {
+    let_i(&T_CS!(&s!("\\ds@{option}")), &T_RELAX!(), None);
+  }
+}
 
 /// The bibliography style REVTeX writes when the document names none:
 /// `\bibliographystyle{\@bibstyle}` at the end of the document

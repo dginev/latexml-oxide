@@ -65,3 +65,14 @@ fn expl_exit_cleanup_not_for_a_package_own_underscore() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(xml.contains("SLASH=12"), "{xml}");
 }
+
+/// A revtex4 class has processed its options before its binding defines REVTeX 3's `\ds@draft` & co., so they are let
+/// to `\relax`: a later package's undeclared `[draft]` reaches its own `\DeclareOption*` (review 66j #2).
+#[test]
+fn revtex_option_handlers_retired() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/loader/revtex_option_handlers_retired.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("Option: draft."), "{xml}");
+}

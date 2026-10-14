@@ -2417,9 +2417,11 @@ fn process_options_by(inorder: bool, keysets: &[&str], sets_curroptions: bool) -
     // latex.ltx:18587-18592 `\@process@pti@ns`: such an option still runs its `\ds@<option>` when one is defined
     // (`\@ifundefined`: not `\relax`) — a 2.09-style class `\def`s its handlers without `\DeclareOption` (gji.cls:61-70,
     // 2605.19951; biom.cls:48 `\def\ds@usenatbib`, 2606.12015) — and `\default@ds` only otherwise. Perl
-    // (Package.pm:2470-2473) sends every one to the default handler (KNOWN_PERL_ERRORS #657).
+    // (Package.pm:2476-2478) sends every one to the default handler (KNOWN_PERL_ERRORS #657). Only for the kernel's
+    // `\ProcessOptions` (`sets_curroptions`): the key=value processors (`ProcessKeyOptions!`: kvoptions, xkeyval,
+    // l3keys) do not look an undeclared option up as `\ds@<option>`.
     for option in &cur_options_list {
-      if cur_set.contains(option) && !execute_option_internal(*option, &[])? {
+      if cur_set.contains(option) && !(sets_curroptions && execute_option_internal(*option, &[])?) {
         execute_default_option_internal(*option)?;
       }
     }

@@ -42,4 +42,9 @@ LoadDefinitions!({
   DefEnvironment!("{nopreview}", "#body");
 
   DefRegister!("\\PreviewBorder", Dimension(0));
+  // preview.sty:147-148, 207: an option it does not declare looks for a `pr<option>.def` and is otherwise unused, and it
+  // processes its options (Perl's binding does not), so its declared handlers are consumed and let to `\relax` rather
+  // than left defined for a later package's undeclared option (content.rs `process_options_by`).
+  DeclareOption!(None, {});
+  ProcessOptions!();
 });
