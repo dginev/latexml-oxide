@@ -17186,12 +17186,22 @@ amstex_tag_inline_maths_are_not_a_display_end}`; repros `amstex/amstex_row_tag_r
 
 latex.ltx's `\document` (:9491-9494) does `\if@filesw \immediate\openout\@mainaux\jobname.aux
 \immediate\write\@mainaux{\relax}\fi`, so the `.aux` exists from then on. Perl's `\begin{document}` opens none; its only
-open is `latex_base`'s `\openout\@mainaux\jobname.aux` (latex_base.pool.ltxml:722, latex_base.rs:743) at format load,
-which under a dump is the dump's build (whose `output_file:*` streams the dump does not keep) and under a preload
-(`ar5iv.sty`) comes before the job's name is installed. A class or package `\enddocument` that does `\input
+open is `latex_base`'s `\openout\@mainaux\jobname.aux` (latex_base.pool.ltxml:722), run when the state is initialized
+with the format and preloads (Core.pm:143), before `\jobname` is installed (:152), so the stream is not under the job's
+name. Ours (latex_base.rs:743) ran at the same point, or, under a dump, at the dump's build, whose `output_file:*` streams
+the dump does not keep. A class or package `\enddocument` that does `\input
 \jobname.aux` under `\if@filesw` (jpsj3.cls:90-96, bio.cls, lamuphys.sty:1240-1247, caosp.sty:916) then met
 `Error:missing_file:<jobname>.aux`. Ours opens it in `\begin{document}`'s after-digest (latex_constructs/sect02.rs) in
 latex.ltx's place, so the `\input` reads the in-memory `.aux` (its `\relax` and whatever the document wrote). `\nofiles`
 stays Perl's no-op (latex_constructs.pool.ltxml:3773, sect11.rs), so `\if@filesw` stays true. Witnesses 2605.24927,
 2605.04825, 2605.28673, 2605.20125, cond-mat9607109, astro-ph9805185 (each 1 error → 0, text unchanged). Guard
 `perfect_kernel_batch66f::jobname_aux_exists_after_begin_document`; repro `loader/jobname_aux_exists_after_begin_document`.
+
+### 577. nicematrix `[opacity=…]` fills are flattened against a white page
+
+nicematrix.sty:5605-5616 (`\__nicematrix_color_opacity:w`) reads a `\CodeBefore` color command's optional argument as
+keys: `opacity=` sets the PDF fill opacity (`\pgfsetfillopacity`) over whatever lies beneath. Our cell and row fills are
+plain CSS background colors, so `opacity=o` is rendered as the color mixed with white at `o` — what the PDF shows on a
+white page and the same on a white HTML page, but not over a colored or dark background. Perl has no nicematrix binding.
+Witness 2605.25123 (`\columncolor[opacity=0.2]{blue}{3}`, "Unrecognized color model" Error before). Code
+latexml_contrib/src/nicematrix_sty.rs (`nice_color`); guard `perfect_kernel_batch66f::nicematrix_color_opacity_key`.

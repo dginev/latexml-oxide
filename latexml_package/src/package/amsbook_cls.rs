@@ -3,6 +3,12 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: amsbook.cls.ltxml
+  // amsbook.cls:58-60 (amsart.cls alike): `\@classname` is the file that loaded this class, the top of
+  // `\@currnamestack` (`\@pushfilename` prepends the loader, latex.ltx); loaded by `\documentclass` that entry is
+  // empty and the class names itself. Read here, in the class's own load, not in a file it loads.
+  RawTeX!(r"\def\@tempa#1#2\@nil{\edef\@classname{#1}}
+\expandafter\@tempa\@currnamestack{}{}{}\@nil
+\ifx\@classname\@empty \edef\@classname{\@currname}\fi");
   // Ignorable options (Perl L22-30); `oneside`/`twoside` go on to book's (KNOWN_PERL_ERRORS #469:
   // two-sided by default, amsbook.cls:103-104/:329-330).
   for option in ["a4paper", "letterpaper", "landscape", "portrait",

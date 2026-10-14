@@ -1028,11 +1028,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   text equal or recovered. From 2606: natbib `\citealp`/`\citealt` and the capitalised forms through private copies of
   `\citep`/`\citet` (natbib.sty:702-730; since D1 a document's `\renewcommand{\citep}{\oldcitep*}` owned them,
   2606.16139 E 11 → 0, 2606.30583 E 69 → 0); calc's `<optional equals>` (2606.05909); appendix.sty internals (KPE #648,
-  2606.09094); amsart `\@classname`/`\subjclassname@<year>` (KPE #649, 2606.20943); IEEEtran's author pre-scan keeps a
+  2606.09094); amsart `\@classname` (read in amsart/amsproc/amsbook's own load: the loading class) and `\subjclassname@<year>`
+(KPE #649, 2606.20943); IEEEtran's author pre-scan keeps a
   run whose `\else`/`\fi` close an `\if` from a block argument whole (2606.17718; residual: an empty affiliation contact
-  from the skipped branch); `\hypertarget` in math: empty anchor, text in place (hyperref.sty:4805-4811, 2606.15438);
-  braket's split never inside `\left…\right` (2606.06185, KPE #645). Each 2606 witness E → 0. Guards
-  `perfect_kernel_batch66f::*`. Open (2605 report): C3 nomencl glossary in a float, C6 standalone sub-preamble loads, C7
+  from the skipped branch); `\hypertarget`: hyperref.sty:4805-4811 (nesting off) puts `#2` after the anchor in every mode; our mode split keeps
+Perl's anchor-holds-its-text in text, and in math an empty anchor with `#2` placed after the `\ifmmode` test, so a
+brace-less `\frac` takes its own arguments (hyperref's `#2` precedes its `\fi`; 2606.15438);
+  braket's split never inside `\left…\right`, the count never below zero (2606.06185, KPE #645). Each 2606 witness
+  E → 0. Guards `perfect_kernel_batch66f::*`. RED from its review (pre-existing on 66e1):
+  `package-bindings/hypertarget_math_anchor_keeps_its_id` (a math anchor's `xml:id` is generated, so `\hyperlink`
+  dangles, and the anchor parses as an operand), `fonts-nfss/mathversion_normal_restores_the_normal_version`,
+  `sectioning-frontmatter/unnumbered_unit_in_float_pins_the_float_id` (Ax1.F1 for A1.F1),
+  `sectioning-frontmatter/chapter_star_in_float_is_an_inline_block` (`malformed:ltx:chapter` in report),
+  `package-bindings/biblatex_natbib_capitalized_cite_commands` (`\Citet` undefined; blx-natbib.def:49). Open (2605 report): C3 nomencl glossary in a float, C6 standalone sub-preamble loads, C7
   `\mathcolor` group, C8 bigfoot listing in a footnote, C11 JASA revtex4-2 internals (`\@AF@join`, `\@email`), C12
   2.09-style `\ds@<opt>` handlers (KPE-class, Perl Package.pm:2470), babel's on-demand Lithuanian `\fnum@table` loop
   (2605.29738; our kernel lacks `\fnum@figure`/`\fnum@table`), revtex4-2 `\frontmatter@footnote` (2605.04155); from

@@ -1,0 +1,13 @@
+% witness: reviewer probe for batch 66f (sbx341/review/p/app2.tex)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the \chapter* inside the figure is an inline sectional block, as a \section* there is
+% mechanism: OXIDIZED_DESIGN_DIVERGENCES #189 turns a sectioning unit inside a float into an inline sectional block;
+%   \chapter* in report escapes it: Error:malformed:ltx:chapter <ltx:chapter> isn't allowed in <ltx:figure>.
+% status:  RED
+\documentclass{report}
+\begin{document}
+\chapter{Intro} Text.
+\appendix
+\chapter{First} A.
+\begin{figure}\chapter*{Strategy C} body \caption{Cap}\end{figure}
+\end{document}

@@ -225,10 +225,23 @@ fn appendix_internals_resets_pp() {
 /// amsart.cls's `\@classname` and `\subjclassname@<year>`, which classes built on amsart read (witness 2606.20943).
 #[test]
 fn amsart_classname_and_subjclass_editions() {
-  let (log, _) = convert_counted(include_str!(
+  let (log, xml) = convert_counted(include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/amsart_classname_and_subjclass_editions.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("Class: amsart."), "{xml}");
+}
+
+/// amsart.cls:58-60 names the file that loaded amsart, the top of `\@currnamestack`: under a class that
+/// `\LoadClass`es amsart, that class (quantumdust.cls, witness 2606.20943). Read in a file amsart loads, it named
+/// `ams_core`.
+#[test]
+fn amsart_classname_is_the_loading_class() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/amsart_classname_is_the_loading_class.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("Class: amsloader."), "{xml}");
 }
 
 /// An `\if` opened inside an `\IEEEauthorblockA` argument and closed after it keeps its `\else`/`\fi` with it
@@ -239,12 +252,22 @@ fn ieeetran_author_conditional_from_block_argument() {
     "../../../tools/perfect_kernel/repros/class-bindings/ieeetran_author_conditional_from_block_argument.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(xml.contains("E-mail: a@b.c</contact>"), "{xml}");
+  // The second, empty affiliation is a residual: the block's `\vspace{-5mm}` and the conditional's tail stay in
+  // the `\author` argument after the block and are read as a further (empty) block line; pdflatex prints nothing.
+  assert_eq!(
+    element(&xml, "<creator", "</creator>"),
+    "<creator role=\"author\">\n<personname>A. Author</personname>\n\
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ <break/>\nE-mail: a@b.c</contact>\n\
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"/>\n</creator>",
+    "{xml}"
+  );
   assert!(!xml.contains("x@y.z"), "{xml}");
 }
 
-/// In math, `\hypertarget`'s text follows the anchor in the current list (hyperref.sty:4805-4811), so a brace-less
-/// call's one-token text is read in place (witness 2606.15438).
+/// `\hypertarget`'s text follows the anchor in the current list (hyperref.sty:4805-4811); in math the anchor is
+/// empty and a brace-less call's one-token text is read in place (witness 2606.15438), after the mode test, so a
+/// `\frac` there takes its own arguments, not the `\fi` (hyperref's own `#2` precedes its `\fi`). In text the
+/// anchor holds its text.
 #[test]
 fn hypertarget_braceless_in_math() {
   let (log, xml) = convert_counted(include_str!(
@@ -253,6 +276,14 @@ fn hypertarget_braceless_in_math() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
     xml.contains(r#"tex="\hypertarget{e1}{}\left(\frac{n}{p}\right)=1""#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"tex="a\hypertarget{e2}{}\frac{n}{p}b" text="a * [] * (n / p) * b""#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"See <anchor xml:id="t1">Target</anchor> here."#),
     "{xml}"
   );
 }
@@ -265,7 +296,14 @@ fn braket_bar_inside_left_right() {
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
-    xml.contains(r#"tex="\displaystyle D=\braket{\phi|\left[m\cdot r-m|R|^{2}\right]|\psi}""#),
+    xml.contains(
+      r#"text="D = quantum-operator-product@(phi, delimited-[]@(m cdot r - m * (absolute-value@(R)) ^ 2), psi)""#
+    ),
+    "{xml}"
+  );
+  // A `\right` whose `\left` is hidden in a macro does not take the count below zero.
+  assert!(
+    xml.contains(r#"text="inner-product@(a, delimited-[]@(conditional@(b, c)))""#),
     "{xml}"
   );
 }

@@ -1,0 +1,14 @@
+% witness: 2606.20943 (quantumdust.cls:278-286 `\ClassWarning{\@classname}` under `\LoadClass{amsart}`)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; \@classname typesets amsloader
+% mechanism: amsart.cls:58-60 takes \@classname from the top of \@currnamestack, the file that loaded amsart
+%   (\@pushfilename prepends the loader). Read in a file the class loads, it named that file's loader (ams_core).
+%   Fixed: amsart_cls.rs / amsproc_cls.rs / amsbook_cls.rs read it in the class's own load.
+% status:  GREEN
+\begin{filecontents*}[overwrite]{amsloader.cls}
+\LoadClass{amsart}
+\end{filecontents*}
+\documentclass{amsloader}
+\begin{document}
+\makeatletter Class: \@classname.\makeatother
+\end{document}

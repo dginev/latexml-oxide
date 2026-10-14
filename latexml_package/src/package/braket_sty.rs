@@ -128,7 +128,8 @@ fn split_braket_arg(
     } else if t.get_catcode() == Catcode::CS && t.defined_as(&T_CS!("\\left")) {
       fences += 1;
     } else if t.get_catcode() == Catcode::CS && t.defined_as(&T_CS!("\\right")) {
-      fences -= 1;
+      // A `\right` whose `\left` is outside the argument (hidden in a macro) leaves the count at zero.
+      fences = (fences - 1).max(0);
     }
     if current.last().is_some_and(reads_a_delimiter) || fences > 0 {
       current.push(t);

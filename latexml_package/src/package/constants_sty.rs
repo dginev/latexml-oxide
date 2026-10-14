@@ -6,9 +6,9 @@
 //! `\if@filesw … \makeatletter \input\jobname.aux \fi` to re-read the
 //! label `.aux` for the "constants may have changed, rerun" check.
 //!
-//! Until the kernel re-opened `\@mainaux` at load under the document's jobname
-//! (latex.rs, the dump branch), no in-memory `<jobname>.aux` existed under the
-//! dump and that raw `\input\jobname.aux` failed with
+//! Until `\begin{document}` opened `\jobname.aux` (sect02.rs, OXIDIZED_DESIGN
+//! #576), no in-memory `<jobname>.aux` existed and that raw `\input\jobname.aux`
+//! failed with
 //! `Error:missing_file:<jobname>.aux` (constants.sty uses the hard `\input`,
 //! not LaTeX's silent `\@input`). The re-read stays out of the port: there is
 //! no `.aux` round trip to check (see below).

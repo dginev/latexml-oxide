@@ -12926,7 +12926,8 @@ lettering `\appendices` makes too; `\clear@ppage` a page break, nothing).
 ## 649. The AMS classes lack `\@classname` and `\subjclassname@<year>`
 
 ams_support.sty.ltxml:131-137 defines `\subjclassname` from `\@subjclassyear` only; amsart.cls:58-60 defines
-`\@classname` (the outermost class on `\@currnamestack`) and :781-789 `\subjclassname@1991/2000/2010/2020`. A class built on
+`\@classname` (the top of `\@currnamestack`: the file that loaded amsart, or amsart itself under `\documentclass`) and :781-789 `\subjclassname@1991/2000/2010/2020`. A class built on
 amsart that re-dresses `\subjclass` over them (quantumdust.cls:278-286 `\@ifundefined{subjclassname@#1}{\ClassWarning
 {\@classname}…}`) meets `Error:undefined:\@classname` (witness 2606.20943; repro
-class-bindings/amsart_classname_and_subjclass_editions). Fixed in Rust (ams_support_sty.rs).
+class-bindings/amsart_classname_and_subjclass_editions). Fixed in Rust: `\@classname` in the class bindings
+(amsart_cls.rs, amsproc_cls.rs, amsbook_cls.rs, read in the class's own load), the editions in ams_support_sty.rs.

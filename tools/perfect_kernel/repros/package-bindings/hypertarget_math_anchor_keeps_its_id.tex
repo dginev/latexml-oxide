@@ -1,0 +1,13 @@
+% witness: reviewer probe for batch 66f (sbx341/review/p/ht2.tex); 2606.15438 shape
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the math anchor carries xml:id="e1" (the \hyperlink resolves) and is no operand: text="x = 1"
+% mechanism: hyperref.sty:4805-4811 sets a point destination named e1 before #2. Ours in math makes an ltx:anchor
+%   inside an XMText whose xml:id is generated (S0.E1.m1.1), so \hyperlink{e1} dangles, and the XMText is parsed
+%   as a multiplicand ("[] * x = 1").
+% status:  RED
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\begin{equation}\hypertarget{e1}{}x = 1\end{equation}
+See \hyperlink{e1}{one}.
+\end{document}
