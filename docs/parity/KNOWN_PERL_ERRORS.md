@@ -13157,3 +13157,15 @@ its own — `\begingroup`, set `\NAT@ctype`/`\ifNAT@swa`/`\ifNAT@par`, then call
 then `\citepos{omohundro_2008}` (2105.06268; 2104.01159's `\citenum` over `\NAT@citexnum[][]`). Fixed in Rust
 (natbib_sty.rs `\NAT@citetp`/`\NAT@citexnum` select the binding's citation command from the flags and close the
 caller's group; repro index-bib/natbib_internals_serve_user_cite_commands).
+
+## 672. A `\twocolumn` header that spans the document's conditional
+
+latex_constructs.pool.ltxml:1015 `DefMacro('\twocolumn[]', '\ifx.#1.\else\par\noindent#1\fi\par')` tests the header
+inside a conditional that also holds it. LaTeX typesets the header (`\@topnewpage`) in no conditional of its own, so a
+document whose header spans its own conditional — achemso's `\ifpreprint\else\twocolumn[…\fi … \ifpreprint\else]\fi`,
+price.sty's `\ifmulticol\twocolumn[\begin{@twocolumnfalse}\fi …` — is clean in pdflatex, but under the binding the
+header's `\fi` ends the `\ifx` and the document's later `\fi` is extra ("Extra \fi", the header's environment
+unclosed). Minimal trigger: `\newif\ifmulticol\multicoltrue` then
+`\ifmulticol\twocolumn[\begin{@twocolumnfalse}\fi Title \ifmulticol\end{@twocolumnfalse}]\fi` (1810.09262, 1812.09662,
+1904.00825, 1912.04806). Fixed in Rust (sect05.rs `\twocolumn` tests the header for emptiness in Rust and emits it
+outside any conditional; repro sectioning-frontmatter/twocolumn_header_spans_a_conditional).

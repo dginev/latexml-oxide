@@ -822,10 +822,22 @@ pub(crate) fn load() -> Result<()> {
   // has no cvpr binding and never runs `\maketitlesupplementary` at all.) Wrap
   // `#1` in a group with its own `\par`, matching the box scope real LaTeX
   // gives it. Witness html_feedback#6638 (arXiv:2511.14625v1).
-  DefMacro!(
-    "\\twocolumn[]",
-    "\\ifx.#1.\\else\\par{\\noindent#1\\par}\\fi\\par"
-  );
+  // The header is tested for emptiness here, not by an `\ifx.#1.` around it (Perl
+  // latex_constructs.pool.ltxml:1015): LaTeX typesets it (`\@topnewpage`) inside no conditional of its own, so a
+  // header spanning the document's conditional — achemso's `\ifpreprint\else\twocolumn[…\fi …\ifpreprint\else]\fi`,
+  // price.sty's `\ifmulticol\twocolumn[\begin{@twocolumnfalse}\fi …` — had its `\fi` end the test instead
+  // (1810.09262, 1812.09662, 1904.00825, 1912.04806; KNOWN_PERL_ERRORS #672). Guard:
+  // `perfect_kernel_batch66r::twocolumn_header_spans_a_conditional`.
+  DefMacro!("\\twocolumn[]", sub[args] {
+    let header: Option<Tokens> = args.into_iter().next().unwrap().into();
+    let mut tokens = vec![T_CS!("\\par")];
+    if let Some(header) = header.filter(|header| !header.is_empty()) {
+      tokens.extend([T_BEGIN!(), T_CS!("\\noindent")]);
+      tokens.extend(header.unlist());
+      tokens.extend([T_CS!("\\par"), T_END!(), T_CS!("\\par")]);
+    }
+    Ok(Tokens::new(tokens))
+  });
   // Perl: DefMacro('\onecolumn', '\par');
   DefMacro!("\\onecolumn", "\\par");
   DefMacro!("\\@onecolumna", "", locked => true);

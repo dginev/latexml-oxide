@@ -1050,6 +1050,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   heuristic firing on a package that sets `_` a letter itself (etextools, 2606.06323), N7 NFSS shape probes
   `\try@load@fontshape`/`\DeclareFontShape` no-ops (2606.07112, Perl the same), N10 a sectioning unit in `ltx:quote`
   (2606.19241) and an `\item[]` excluded from the OD #189 item bridge (2606.00118) — both await a ruling.
+- **66r** (two quick wins from the K9 mode-switch study, `agent_reports/2026-10-14_k9_mode_switch_study.md`): the
+  contrib emlines binding's `\emline` lost its two stray `}` (Rust-only typo; ~40 papers, 0911.1421 had 78 Errors), and
+  `\twocolumn[…]` tests its header in Rust instead of inside an `\ifx`, so a header spanning the document's own
+  conditional (achemso, price.sty; ~46 papers) keeps it balanced (KPE #672; `perfect_kernel_batch66r`). The study's
+  K9 Stage 1 (H, 54 papers losing their whole body) / Stage 2 (L 126, B 38) design and six ruling questions are open.
 - **66q** (K1 report row W2): natbib's internals `\NAT@citetp`/`\NAT@citexnum` defined over the binding's citation
   commands, selected by `\NAT@ctype`/`\ifNAT@swa`/`\ifNAT@par`/`\ifNAT@full` (natbib.sty:685-749), so a document's own
   citation commands built on them cite (2104.01159 E 35→0 with its 62 bibitems back, 2105.06268 E 10→0; KPE #671;
