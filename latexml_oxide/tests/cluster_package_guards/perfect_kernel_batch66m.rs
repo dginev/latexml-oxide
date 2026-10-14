@@ -1,6 +1,6 @@
 //! Red/green guards for batch 66m: the low-risk mechanisms of the arXiv `\endgroup` error cluster (root-causer
 //! report `agent_reports/2026-10-14_endgroup_cluster.md`, E1 E4 E5 E6 E8 E9). E1's loader half — another file's
-//! `\ver@` mark — awaits a ruling (RED repro `loader/ver_mark_skips_the_marked_package`, KNOWN_PERL_ERRORS #668).
+//! `\ver@` mark — landed as 66v (floatrow's marks only, `perfect_kernel_batch66v`, KNOWN_PERL_ERRORS #668).
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert_counted(tex: &str) -> (String, String) {

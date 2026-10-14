@@ -13117,12 +13117,13 @@ Package.pm:2559-2670 `InputDefinitions` skips a file only by its own `<file>_loa
 that takes another's place (floatrow.sty:34 `\@namedef{ver@float.sty}`) or a document keeping one out loads its binding
 anyway. Minimal trigger: `\makeatletter\@namedef{ver@float.sty}{}\makeatother\usepackage{float}` then
 `\ifdefined\restylefloat` (Perl: defined; pdflatex: undefined). Perl does not raw-load floatrow by default, so its
-floatrow papers are clean. Open in Rust too (RED repro loader/ver_mark_skips_the_marked_package; witnesses 2010.00977,
+floatrow papers are clean. It was open in Rust too (repro loader/floatrow_marks_float_loaded; witnesses 2010.00977,
 2003.11778, 2011.10793, 2105.04869, where float's binding, loaded after floatrow, replaced floatrow.sty:421-424's
 `\float@end` with its no-op and left every restyled float open): honouring the mark at the TeX-level requests fixes those
 four, but also keeps out the bindings that are the semantic layer for what a raw class emulates — memoir's
 `\EmulatedPackage{tocloft}` then lost three `<TOC>`s (2605.08402), `{adjustwidth}` under memoir+changepage became a list,
-and float's ruled style under floatrow+algorithm lost its frames (2206.13235, 2303.16210) — so it awaits a ruling.
+and float's ruled style under floatrow+algorithm lost its frames (2206.13235, 2303.16210). Ruled 2026-10-14: no general
+loader rule; the floatrow binding records float.sty/rotfloat.sty loaded as floatrow.sty:34-37 marks them (66v).
 ## 669. An `\hrule` inside a cell's box restarts the row
 
 TeX_Box.pool.ltxml:846-851 adds a border row (`addLine('t')`) for any `\hrule` while an `Alignment` is visible, and

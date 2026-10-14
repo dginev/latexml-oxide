@@ -9,6 +9,14 @@ LoadDefinitions!({
   // so the box stayed void and every foot was lost; the kernel's caption material goes through
   // `\lx@setfloatcapt` (sect09.rs), which a floatbox points at `\@floatcapt`.
   InputDefinitions!("floatrow", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // floatrow.sty:34-37 marks float.sty and rotfloat.sty loaded (`\@namedef{ver@float.sty}`: it carries its own excerpt
+  // of both), so LaTeX skips a later `\usepackage{float}` (latex.ltx `\@onefilewithoptions`). Our loader keys on its
+  // own record, not on `\ver@`, so the binding records the same; otherwise float's binding replaced floatrow's
+  // `\float@end` and every restyled float stayed open (2010.00977, 2003.11778, 2011.10793, 2105.04869;
+  // KNOWN_PERL_ERRORS #668; user ruling 2026-10-14: floatrow's marks, no general `\ver@` rule). Guard:
+  // `perfect_kernel_batch66v::floatrow_marks_float_loaded`.
+  AssignValue!("float.sty_loaded" => true, Some(Scope::Global));
+  AssignValue!("rotfloat.sty_loaded" => true, Some(Scope::Global));
 
   // `\FBget@box` runs once per floatbox (`\@@@floatbox`, :776), in its group, before every
   // measuring pass and the real one (`\FBsetbox@obj`); each pass refills `\@floatcapt`, as

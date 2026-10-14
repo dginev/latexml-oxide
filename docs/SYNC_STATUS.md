@@ -1056,6 +1056,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   13 long-standing slow or memory-heavy). Open from it: libmarpa `marpa_g_new` aborts on allocation failure with no
   Fatal line (SIGABRT; fix in the marpa-asf fork: an overridable OOM hook → `Fatal:oom:alloc_failed`), XPath OOM floods as
   one `Fatal:oom`, a 2.7-3.1 GB peak RSS for 4-10 s papers. Runs 348/349 (E/F rerun on `a7f5e7308e`) started 13:15Z.
+- **66v** (66m E1, ruled 2026-10-14): the floatrow binding records float.sty/rotfloat.sty loaded, as floatrow.sty:34-37
+  marks them (`\ver@float.sty`), so a later `\usepackage{float}` no longer replaces floatrow's `\float@end` (2010.00977,
+  2003.11778, 2011.10793, 2105.04869; KPE #668; `perfect_kernel_batch66v::floatrow_marks_float_loaded`). No general
+  loader `\ver@` rule (it kept out memoir's and floatrow's semantic-layer bindings).
 - **66t** (K9 study row H, 54 papers losing their whole body): a bare `\endX` ends the mode only when the top frame
   is an environment's (any: amsmath ends `\equation*` with `\endequation`); a box's frame gets one Warning and no frame work, as
   LaTeX's list-ending `\endquotation` does none — an IEEE Open Journal `\IEEEkeywords` `\vbox\bgroup` box ended by
@@ -1093,9 +1097,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   #582, KPE #664); `{plate}` undefined for AASTeX 6+ and emulateapj, whose classes have none (1909.00812, 2006.16258,
   2305.06275; KPE #666); emulateapj's `\enddeluxetable` closes a still-open data (1506.07185, 1705.08932; KPE #665); a
   brace-less `\abstract`'s capture frame is a bare environment's, so an enclosing `\endgroup` ends it (2305.17823; KPE
-  #667). Guards `perfect_kernel_batch66m`. Awaits a ruling: the loader honouring another file's `\ver@` mark (KPE #668,
-  RED `loader/ver_mark_skips_the_marked_package`: 2010.00977, 2003.11778, 2011.10793, 2105.04869; it keeps out the
-  bindings memoir's `\EmulatedPackage` and floatrow's float excerpt rely on). Open from the same report: E2, E7, E10,
+  #667). Guards `perfect_kernel_batch66m`. The loader's `\ver@` half was ruled 2026-10-14 (floatrow's marks only, no
+  general loader rule) and landed as 66v. Open from the same report: E2, E7, E10,
   E11 (E3: 66o).
 - **66l** (the rest of K1's wrong-mode roots from the same report): array.sty `w`/`W` columns keep the alignment's
   mode, as array.sty:463-474 (2407.14297; KPE #660); `\lx@marginpar` digests in `inline_internal_vertical`, so a

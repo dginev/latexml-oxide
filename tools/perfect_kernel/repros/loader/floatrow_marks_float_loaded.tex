@@ -4,8 +4,8 @@
 % oracle:  pdflatex 0 errors; one figure with the caption
 % engines: rust 66l = 1 error (\endgroup: float_sty.rs's no-op \float@end replaced floatrow's); Perl 0 (no floatrow raw-load)
 % expect:  0 errors; one float holding the caption
-% status:  RED (66m: honouring the mark at the TeX-level requests turns it green but keeps out memoir's and
-%          floatrow's semantic-layer bindings; awaits a ruling, KNOWN_PERL_ERRORS #668)
+% status:  GREEN (66v: floatrow_sty.rs records float.sty/rotfloat.sty loaded, as floatrow.sty:34-37 marks them;
+%          user ruling 2026-10-14, KNOWN_PERL_ERRORS #668)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{floatrow}
