@@ -75,6 +75,17 @@ LoadDefinitions!({
     "\\lx@add@contact[label={thanks:#2},role=thanks]{#3}",
     locked => true
   );
+  // `\thanksmark[mark]{m1}` (imsart.sty:640-645) prints, in an `\affiliation`, the mark the authors' `\thanksref{m1}`
+  // point at; the authors' marks are not printed here (the `\thanksref` annotation links them), so the address's
+  // mark is dropped too (1202.6182, 1306.1438).
+  DefMacro!("\\thanksmark[]{}", "");
+  // imsart.sty:464-466: `\setattribute[…]{journal}{name}{…}` stores `\journal@name` (`\getattribute` reads it back);
+  // papers blank the journal name with it (1306.0113, 1706.08519).
+  RawTeX!(
+    r"\def\setattribute{\@ifnextchar[\@setattribute{\@setattribute[]}}
+\def\@setattribute[#1]#2#3#4{\expandafter\gdef\csname #2@#3\endcsname{#4}}
+\def\getattribute#1#2{\csname #1@#2\endcsname}"
+  );
   // imsart.cls L149: \RequirePackage{imsart}.
   InputDefinitions!("imsart", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   // `\arxiv{id}` (imsart.sty:1186-1189) prints the paper's arXiv identifier as an unmarked title note: the paper's
@@ -134,17 +145,26 @@ LoadDefinitions!({
   // \def commands but they're used as environments in some .bbl files.
   // Provide as no-op envs (the actual bibliography rendering is handled
   // by biblatex/natbib elsewhere). Witness 2406.15844 (+4 imsart papers).
-  DefEnvironment!("{barticle}", "#body");
-  DefEnvironment!("{bbook}", "#body");
-  DefEnvironment!("{bbooklet}", "#body");
-  DefEnvironment!("{binbook}", "#body");
-  DefEnvironment!("{bincollection}", "#body");
-  DefEnvironment!("{bunpublished}", "#body");
-  DefEnvironment!("{bmisc}", "#body");
-  DefEnvironment!("{bproceedings}", "#body");
-  DefEnvironment!("{bphdthesis}", "#body");
-  DefEnvironment!("{bmastersthesis}", "#body");
-  DefEnvironment!("{btechreport}", "#body");
+  // Each reads an optional argument and drops it (imsart.sty 2012/08/16 :2585-2769, `\def\barticle{\@ifnextchar[
+  // {\@barticle}{\@barticle[]}}` `\def\@barticle[#1]{…}`), which the `.bbl`s fill with the entry's key list,
+  // `\begin{barticle}[author]`: read as text it printed "[author]" before every structured entry (0906.4329,
+  // 1010.4313, 1202.6182). `{binproceedings}` and `{bmanual}` (:2633, :2706) were missing.
+  DefEnvironment!("{barticle}[]", "#body");
+  DefEnvironment!("{bbook}[]", "#body");
+  DefEnvironment!("{bbooklet}[]", "#body");
+  DefEnvironment!("{binbook}[]", "#body");
+  DefEnvironment!("{bincollection}[]", "#body");
+  DefEnvironment!("{binproceedings}[]", "#body");
+  DefEnvironment!("{bmanual}[]", "#body");
+  DefEnvironment!("{bunpublished}[]", "#body");
+  DefEnvironment!("{bmisc}[]", "#body");
+  DefEnvironment!("{bproceedings}[]", "#body");
+  DefEnvironment!("{bphdthesis}[]", "#body");
+  DefEnvironment!("{bmastersthesis}[]", "#body");
+  DefEnvironment!("{btechreport}[]", "#body");
+  // imsart.sty :2514 `\let\endbibitem\relax`: the `.bbl`s close every `\bibitem` with `\endbibitem`
+  // (0906.4329, 1010.4313, 1202.6182).
+  Let!("\\endbibitem", "\\relax");
 
   // IMS bibliography field-tagging macros — imsart.sty defines these
   // as NLM/JATS-style 1-arg setters inside `{barticle}` etc. envs:

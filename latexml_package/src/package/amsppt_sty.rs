@@ -930,4 +930,10 @@ LoadDefinitions!({
   // Perl amsppt.sty.ltxml L497: \smc (smallcaps) — plain-TeX font
   // switch used in AMSTeX running heads and bib entries.
   DefPrimitive!("\\smc", None, font => { shape => "smallcaps" });
+  // amsppt.sty:153-214: `\tenpoint` and `\eightpoint` switch the whole text and math font set to 10pt / 8pt and end
+  // in roman (`\normalbaselines\rm` / `\eightrm`); the style sets addresses, footnotes, references and running heads
+  // in `\eightpoint` (:332, :856, :1123), and papers use it for small print (hep-th9306127, adap-org9410001,
+  // solv-int9306003).
+  DefPrimitive!("\\tenpoint", None, font => { family => "serif", series => "medium", shape => "upright", size => 10 });
+  DefPrimitive!("\\eightpoint", None, font => { family => "serif", series => "medium", shape => "upright", size => 8 });
 });

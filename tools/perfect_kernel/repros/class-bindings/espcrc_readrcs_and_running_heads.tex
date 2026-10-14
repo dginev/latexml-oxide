@@ -1,0 +1,20 @@
+% witness: hep-ex0506002, astro-ph0610654, cond-mat0610259, hep-ph0506127, hep-ex0610011 (run 349: \readRCS 530, \runauthor 488, \runtitle 485)
+% oracle:  pdflatex 0 errors with the shipped espcrc1.sty v1.2 (2004/02/24; 0906.2868): :27-31 \readRCS, :156-159 \runtitle/\runauthor
+% engines: rust 67i1 = 3 Error:undefined (\readRCS, \runtitle, \runauthor), the $Id$ set as math; Perl 0.8.8 = 3 (espcrc.sty.ltxml lacks them)
+% expect:  0 errors; no Math in the document, the running heads are not typeset, the title and the abstract are
+% status:  RED (67i1) -> GREEN (67j)
+% preload: ar5iv.sty
+\documentclass[fleqn,twoside]{article}
+\usepackage[headings]{espcrc1}
+\readRCS
+$Id: espcrc1.tex,v 1.2 2004/02/24 11:22:11 spepping Exp $
+\ProvidesFile{espcrc1.tex}[\filedate \space v\fileversion \space Elsevier 1-column CRC Author Instructions]
+\title{Real title}
+\author{A. Author\address{Somewhere}}
+\runtitle{Short title}
+\runauthor{A. Author}
+\begin{document}
+\begin{abstract}The abstract.\end{abstract}
+\maketitle
+Body text.
+\end{document}

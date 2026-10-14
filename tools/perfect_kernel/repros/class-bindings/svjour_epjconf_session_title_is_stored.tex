@@ -1,0 +1,17 @@
+% witness: 1010.2389, 1010.3788, 1202.0149 (run 349: \session 353, all `\documentclass[epjCONF…]{svjour}`)
+% oracle:  pdflatex 0 errors with the shipped svjour.cls v1.1 + svepjCONF.clo (1010.2389): :233-235 `\def\session-title#1{\gdef\@session-title{#1}}`
+% engines: rust 67i1 = 1 Error:undefined:\session and a paragraph "-titleThe conference"; Perl 0.8.8 = same (svjour.cls.ltxml declares no epjCONF)
+% expect:  0 errors; the session title is not typeset (running head only), the abstract and the body are
+% status:  RED (67i1) -> GREEN (67j)
+% preload: ar5iv.sty
+\documentclass[epjCONF]{svjour}
+\session-title{The conference}
+\begin{document}
+\title{Real title}
+\author{A. Author\inst{1}}
+\institute{Somewhere}
+\abstract{The abstract.}
+\maketitle
+\section{Intro}
+Body text.
+\end{document}

@@ -13229,3 +13229,23 @@ par_in_inline_math_before_a_text_paragraph_ends_the_formula, formula_split_by_bl
 reaches the whole document when a citation follows: `We have $a = b` ⏎⏎ `See \cite[p.~2]{smith_2001} and $x$ here.`
 then `\begin{thebibliography}…`: Perl 15 errors, the second formula running through the bibliography (repro
 paragraph-mode/par_in_inline_math_before_a_cite_with_a_note_ends_the_formula).
+
+## 681. Bindings that stand in for a class or a macro file lack its own user macros
+
+A native binding replaces the class or file it names (the shipped copy is never read), so every user macro the binding
+omits is "undefined" in Perl too. espcrc.sty.ltxml (espcrc1/espcrc2) has none of the 2004 v1.2 styles' `\readRCS`,
+`\runtitle`, `\runauthor` (espcrc1.sty:27-31, :156-159): `\usepackage{espcrc2}` ⏎ `\readRCS` ⏎ `$Id: x.tex,v 1.2
+2004/02/24 11:22:11 a Exp $` gives 1 error and the `$Id$` set as preamble math. svjour.cls.ltxml passes the `epjCONF`
+option on to article instead of reading svepjCONF.clo (svjour.cls:78-81), so `\session-title{…}` (svepjCONF.clo:234) is
+undefined and "-title…" a paragraph. amsppt.sty.ltxml has no `\tenpoint`/`\eightpoint` (amsppt.sty:153-214) and
+AmSTeX.pool.ltxml no `\goth` (amstex.tex:1509 `\let\goth\frak`): `\input amstex \documentstyle{amsppt}` ⏎ `{\eightpoint
+x} $\goth m$` gives 2 errors. tcilatex.tex.ltxml is the Scientific Word 2.5 copy, without the `\TCItag` of 3.0 and later
+(5.0 tcilatex.tex:776-783) that SW writes in every tagged eqnarray row, nor 4.0's `\U`/`\UNICODE` placeholders. Run 349:
+`\readRCS` 530, `\runauthor` 488, `\runtitle` 485 papers, `\session` 353, `\eightpoint` 297, `\TCItag` 277, `\goth`
+269. Witnesses hep-ex0506002, astro-ph0610654, cond-mat0610259, hep-ph0506127, hep-ex0610011; 1010.2389, 1010.3788,
+1202.0149; hep-th9306127, adap-org9410001, solv-int9306003, hep-th9306053, alg-geom9410018; nlin0106009, hep-th0210191,
+hep-ph0210025, 0802.0560. Fixed in Rust (espcrc_sty.rs, svjour_cls.rs, amsppt_sty.rs, amstex.rs, tcilatex_tex.rs: running
+heads stored, never typeset; `\TCItag` is amsmath's `\tag`); the same holds for the Rust-only imsart and siamltex
+bindings (`\endbibitem`, `\slugger`; SYNC_STATUS 67j). Repros class-bindings/espcrc_readrcs_and_running_heads,
+svjour_epjconf_session_title_is_stored, amstex/amsppt_point_sizes_and_goth,
+package-bindings/tcilatex_tcitag_tags_eqnarray_rows; guards `perfect_kernel_batch67j`.

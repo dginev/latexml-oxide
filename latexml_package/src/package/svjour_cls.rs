@@ -22,6 +22,16 @@ LoadDefinitions!({
   ].iter() {
     DeclareOption!(*option, None);
   }
+  // svjour.cls:78-81 inputs `sv<option>.clo` for any other option; `epjCONF` (EPJ Web of Conferences) is the one
+  // papers use. Its svepjCONF.clo:233-235 (2009/4/9 v1, the copy 1010.2389 ships) adds the session title,
+  // `\session-title{…}` (the parameter text is `-title#1`), which only its running head `\epjrunnhead` prints: print
+  // furniture, so stored and never typeset. The clo's layout (\maketitle, \abstract, \institutename) stays the
+  // binding's. Without it `\session` was undefined and "-title…" set as a paragraph (1010.2389, 1010.3788,
+  // 1202.0149).
+  DeclareOption!("epjCONF", {
+    RawTeX!(r"\def\session-title#1{\gdef\@session-title{#1}}
+\def\@session-title{Give the exact title of the conference}");
+  });
 
   // Other options get passed to article
   DeclareOption!(None, {

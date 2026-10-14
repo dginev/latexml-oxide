@@ -1,0 +1,15 @@
+% witness: nlin0106009, hep-th0210191, hep-ph0210025 (run 349: \TCItag 277; `\input{tcilatex}`, the binding is the 2.5 copy)
+% oracle:  pdflatex 0 errors with the shipped tcilatex.tex 5.0 (2002.12128): :776-783 `\TCItag` sets the row's tag "(n)"
+% engines: rust 67i1 = 1 Error:undefined:\TCItag, rows numbered (1), (2); Perl 0.8.8 = same (tcilatex.tex.ltxml is 2.5)
+% expect:  0 errors; the eqnarray rows carry the tags (3) and (4), the starred row "A"
+% status:  RED (67i1) -> GREEN (67j)
+% preload: ar5iv.sty
+\documentclass{article}
+\input{tcilatex}
+\begin{document}
+\begin{eqnarray}
+x &=& a \TCItag{3} \\
+y &=& b \TCItag{4} \\
+z &=& c \TCItag*{A}
+\end{eqnarray}
+\end{document}

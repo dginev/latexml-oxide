@@ -1,0 +1,14 @@
+% witness: math0610498, 1410.0201, 1410.1612 (run 349: \slugger 270; siamltex1213.cls / siamltex704.cls shipped)
+% oracle:  pdflatex 0 errors with the shipped siamltex704.cls (math0610498): :191-199 (siamltex1213.cls:186-194; its hyperref [dvips] load errs under pdflatex) `\def\slugger#1#2#3#4#5{\gdef\@slugger{…}}`
+% engines: rust 67i1 = 1 Error:undefined:\slugger, its five arguments set as text; Perl 0.8.8: no siamltex binding (raw class)
+% expect:  0 errors; the slug line (journal, year, volume) is not typeset, the title and the body are
+% status:  RED (67i1) -> GREEN (67j)
+% preload: ar5iv.sty
+\documentclass{siamltex704}
+\slugger{sisc}{xxxx}{xx}{x}{x--x}
+\title{Real title}
+\author{A. Author}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

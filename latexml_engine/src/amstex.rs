@@ -251,6 +251,9 @@ LoadDefinitions!({
   RequirePackage!("amsopn");
   RequirePackage!("amsxtra");
   RequirePackage!("amscd");
+  // amstex.tex:1507-1509: `\frak` is the Euler Fraktur switch, `\let\goth\frak` its older name (hep-th9306053,
+  // alg-geom9410018 `$\goth m_Z$`); `\frak` is the amsfonts binding's.
+  Let!("\\goth", "\\frak");
   // AMS-TeX's `\Bbb` and `\bold` are font switches of their own (amstex.tex:1358-1361 `\Bbb@@#1{\noaccents@\fam
   // \msbfam\relax#1}`, :1263-1266 `\bold@@#1{\fam\bffam\relax#1}`), not the amsfonts binding's aliases of `\mathbb`
   // (Perl's too, AmSTeX.pool loading amsfonts.sty.ltxml:22-23), which the AMS-TeX idiom `\def\mathbb{\Bbb}` turned

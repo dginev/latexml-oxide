@@ -1,0 +1,12 @@
+% witness: hep-th9306127, adap-org9410001, solv-int9306003 (\eightpoint, \tenpoint); hep-th9306053, alg-geom9410018 (\goth); run 349: \eightpoint 297, \goth 269
+% oracle:  pdftex (\input amstex) 0 errors; amsppt.sty:153-214 \tenpoint/\eightpoint (10pt / 8pt roman), amstex.tex:1509 \let\goth\frak
+% engines: rust 67i1 = 3 Error:undefined (\eightpoint, \tenpoint, \goth); perl the same (amsppt.sty.ltxml, AmSTeX.pool.ltxml define none)
+% expect:  0 errors; "Small print." at 8pt, "Normal print." at 10pt, the m of $\goth m$ in fraktur
+% status:  RED (67i1) -> GREEN (67j)
+\input amstex
+\documentstyle{amsppt}
+\document
+{\eightpoint Small print.}
+
+{\tenpoint Normal print.} The ideal $\goth m$.
+\enddocument

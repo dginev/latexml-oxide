@@ -113,6 +113,24 @@ LoadDefinitions!({
     "SIAM J.\\ S{\\fiveptsize CI.} C{\\fiveptsize OMPUT}"
   );
   DefMacro!("\\sirev", "SIAM R{\\fiveptsize EV}");
+  // siamltex1213.cls:184-204 (siamltex704.cls:189-209): `\slugger{journal}{year}{vol}{no}{pages}` stores the slug
+  // line, the journal's copyright and volume note `\@maketitle` sets above the title (:211). Print furniture, so
+  // stored and never typeset; the journal macros it names (`\sisc`, …) stay unexpanded (math0610498, 1410.0201,
+  // 1410.1612).
+  RawTeX!(
+    r"\def\@translation{}
+\def\slugger#1#2#3#4#5{\gdef\@slugger{\thispagestyle{plain}%
+\vspace*{-36pt}
+{\sixptsize\baselineskip10pt
+\noindent
+\expandafter\csname#1\endcsname.\hspace*{\fill}
+{\scriptsize{\copyright}} #2 Society for Industrial and
+Applied\vspace*{-1.2mm}  Mathematics\\
+Vol.\ #3, No.\ #4, pp.\ #5
+\hspace*{\fill} \@translation\par}
+\normalsize\vskip19.7pt}}
+\def\@slugger{}"
+  );
   DefMacro!("\\contentsname", "Contents");
   DefMacro!("\\listfigurename", "List of Figures");
   DefMacro!("\\listtablename", "List of Tables");

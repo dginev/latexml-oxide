@@ -1095,6 +1095,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\pIIe@addtoGraph`. With it, 66w's look-ahead gives up at a `\catcode` (the tokens after it are not the ones TeX
   reads; `par_before_a_catcode_change_ends_the_formula`) and steps over only a `_` or `^` after a backquote
   (`par_before_a_backquoted_{formula,ref}_ends_the_formula`).
+- **67j** (frequency-first, run 349 "undefined"): native bindings get their class's own user macros. espcrc (2004
+  v1.2): `\readRCS` reads the `$Id$` stamp (espcrc1.sty:27-31), `\runtitle`/`\runauthor` store the running heads
+  (:156-159). svjour `epjCONF` (svjour.cls:78-81 reads svepjCONF.clo): `\session-title` stored (svepjCONF.clo:234).
+  imsart: `\let\endbibitem\relax` (imsart.sty:2514), every structured entry drops its `[author]` key list (:2585-2769,
+  printed before every entry until now), `{binproceedings}`/`{bmanual}`, `\setattribute`/`\getattribute` (:464-466),
+  `\thanksmark` (mark dropped). siamltex: `\slugger` stored (siamltex1213.cls:184-204). amsppt `\tenpoint`/`\eightpoint`
+  (amsppt.sty:153-214), AmSTeX `\goth` (amstex.tex:1509). tcilatex: the binding (the 2.5 copy, chosen over a shipped
+  3.0-5.0 tcilatex.tex as bindings are) gains `\TCItag` = amsmath's `\tag` (5.0 :776-783) and 4.0's `\U`/`\UNICODE`
+  placeholders. KNOWN_PERL_ERRORS #681; repros class-bindings/{espcrc_*,svjour_epjconf_*,imsart_structured_*,
+  siamltex_slugger_*}, amstex/amsppt_point_sizes_and_goth, package-bindings/tcilatex_tcitag_*; guards
+  `perfect_kernel_batch67j`. A/B (82 papers, the 22 witnesses + ≤10 per family from the run-349 log scan): 275 → 155
+  Errors, none worse; the words lost are the ERROR text, the `$Id$` math, the running heads, slug and session lines,
+  "[author]", and math-held `\TCItag` numbers now row tags. Residual in those papers, other mechanisms: plain TeX's
+  `\settabs\+` under the LaTeX route (alg-geom9410018, hep-th9306053), amsppt internals papers copy
+  (`\textonlyfont@`, `\ifsyntax@`, `\eightrm`: funct-an9706006, math0002200), imsart `{supplement}` without
+  imsart.sty (1602.02055).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,
