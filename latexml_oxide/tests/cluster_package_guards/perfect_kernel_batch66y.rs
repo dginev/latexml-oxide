@@ -61,3 +61,60 @@ fn array_in_math_opens_no_formula() {
   assert_eq!(xml.matches("<XMArray ").count(), 2, "{xml}");
   assert!(xml.contains("</Math> after.</p>"), "{xml}");
 }
+
+/// A `[c]` array's `\vcenter` in text is TeX's "Missing $ inserted" (latex.ltx `\@array`); one Error, and the array is
+/// set as a formula of its own, the text after it outside.
+#[test]
+fn centred_array_in_text_is_missing_dollar() {
+  let tex = "\\documentclass{article}\n\\begin{document}\nOut \\begin{array}{c} k_1 \\end{array} tail.\n\\end{document}\n";
+  let (log, xml) = convert_counted(tex);
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert_eq!(
+    log.matches("Error:expected:$ Missing $ inserted").count(),
+    1,
+    "{log}"
+  );
+  assert!(xml.contains("</Math> tail.</p>"), "{xml}");
+  assert!(!log.contains("Script _"), "{log}");
+}
+
+/// An array built on `\@tabarray` (t-angles.sty:491, ucthesis.cls:626) inside a text array's cell does not close the
+/// outer formula: every `\@array` setup resets the close in its own group.
+#[test]
+fn inner_tabarray_inside_text_array() {
+  let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\myarr{\\let\\@classz\\@arrayclassz\\@tabarray}\
+             \\def\\endmyarr{\\endarray}\n\\makeatother\n\\begin{document}\nOut \\begin{array}[t]{c} \\begin{myarr}{c} \
+             k_1 \\end{myarr} \\\\ w_2 \\end{array} tail.\n\\end{document}\n";
+  let (log, xml) = convert_counted(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(xml.matches("<Math ").count(), 1, "{xml}");
+  assert_eq!(xml.matches("<XMArray ").count(), 2, "{xml}");
+  assert!(xml.contains("</Math> tail.</p>"), "{xml}");
+}
+
+/// delarray's `\array` (memoir.cls:5468 loads it) outside math is a formula of its own too, its delimiters inside it.
+#[test]
+fn delarray_array_in_text() {
+  for (preamble, body) in [
+    (
+      "\\usepackage{delarray}",
+      "\\begin{array}[t]{c} k_1 \\end{array}",
+    ),
+    (
+      "\\usepackage{delarray}",
+      "\\begin{array}[t]({c}) k_1 \\end{array}",
+    ),
+  ] {
+    let tex = format!(
+      "\\documentclass{{article}}\n{preamble}\n\\begin{{document}}\nOut {body} tail.\n\\end{{document}}\n"
+    );
+    let (log, xml) = convert_counted(&tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{body}: {log}"
+    );
+    assert_eq!(xml.matches("<Math ").count(), 1, "{body}: {xml}");
+    assert!(xml.contains("</Math> tail.</p>"), "{body}: {xml}");
+  }
+}

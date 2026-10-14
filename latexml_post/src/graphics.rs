@@ -1881,19 +1881,16 @@ impl Graphics {
     // A MetaPost figure that leaves its fonts to dvips is converted from a copy that holds them, as dvips would give
     // them (`postscript_fonts`, OXIDIZED_DESIGN #587; gr-qc0001079, math0102124).
     let with_fonts = crate::postscript_fonts::with_downloaded_fonts(source, dest);
-    let converted = Self::convert_image_from(
+    // (the copy is removed when `with_fonts` drops, on every path)
+    Self::convert_image_from(
       with_fonts
         .as_ref()
-        .and_then(|copy| copy.to_str())
+        .and_then(|copy| copy.path().to_str())
         .unwrap_or(source),
       dest,
       dpi,
       page,
-    );
-    if let Some(copy) = with_fonts {
-      let _ = std::fs::remove_file(copy);
-    }
-    converted
+    )
   }
 
   /// [`Self::convert_image`] of the file `source` as it is.

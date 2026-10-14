@@ -495,10 +495,28 @@ pub(crate) fn load() -> Result<()> {
   // formula and `\endarray` closes it (Perl reads the cells as text — "Script _ can only appear in math mode",
   // "<ltx:XMArray> isn't allowed in <ltx:p>", KNOWN_PERL_ERRORS #677; 1611.02392 `bnfarray` in a tabular cell).
   // Guard: `perfect_kernel_batch66y::array_in_text_has_math_cells`.
+  // A `[c]` array (latex.ltx `\@array`'s `\vcenter`) in text is TeX's "Missing $ inserted" too; a `[t]`/`[b]` one
+  // (`\vtop`/`\vbox`) is clean. Every array setup resets the close in its own group (`\@array` below), so an inner
+  // array never inherits an outer text array's.
   Let!("\\lx@array@text@close", "\\relax");
   DefMacro!(
+    "\\lx@array@text@open{}",
+    r"\ifmmode\let\lx@array@text@close\relax\else\lx@array@vcenter@check{#1}\lx@begin@inline@math\let\lx@array@text@close\lx@end@inline@math\fi"
+  );
+  DefPrimitive!("\\lx@array@vcenter@check{}", sub[(pos)] {
+    let pos = pos.to_string();
+    if !matches!(pos.trim(), "t" | "b") {
+      Error!(
+        "expected",
+        "$",
+        "Missing $ inserted",
+        "An array outside math is centred with \\vcenter, which only math can hold; it is set as a formula of its own."
+      );
+    }
+  });
+  DefMacro!(
     "\\array[]{}",
-    r"\ifmmode\let\lx@array@text@close\relax\else\lx@begin@inline@math\let\lx@array@text@close\lx@end@inline@math\fi\let\@classz\@arrayclassz\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
+    r"\lx@array@text@open{#1}\let\@classz\@arrayclassz\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
   );
   DefMacro!(
     "\\endarray",
@@ -534,7 +552,7 @@ pub(crate) fn load() -> Result<()> {
   // enclosing math); `\@arrayclassz` keeps `\@@array` (math cells).
   DefMacro!(
     "\\@array[]{}",
-    r"\@array@bindings[#1]{#2}\ifx\@classz\@tabclassz\expandafter\@@tabular\else\expandafter\@@array\fi[#1]{#2}\lx@begin@alignment"
+    r"\let\lx@array@text@close\relax\@array@bindings[#1]{#2}\ifx\@classz\@tabclassz\expandafter\@@tabular\else\expandafter\@@array\fi[#1]{#2}\lx@begin@alignment"
   );
   DefMacro!("\\@tabarray", r"\m@th\@ifnextchar[\@array{\@array[c]}");
 

@@ -17335,6 +17335,7 @@ papers live in run 349, ~80% of a 40-paper sample loading neither package). Prov
 ar5iv preload (`latexml_contrib/src/ar5iv_sty.rs`) queues `\lx@arxiv@provide@hyper@urls` at `\begin{document}`, which
 defines whichever of the two is still undefined as hyperref's (`hyperref_sty.rs` `define_hyper_urls`, shared with the
 hyperref binding), with url.sty's default `\UrlFont`/`\UrlLeft`/`\UrlRight` where missing. A paper that loads either
-package, or defines the command itself in its preamble, keeps its own; nothing is supplied without the ar5iv preload, and
-hyperref is not loaded for every paper (the rejected option). Witnesses cond-mat0407333, cs0409028, hep-th0411273,
+package, or defines the command itself in its preamble or in an `\AtBeginDocument` hook, keeps its own; nothing is
+supplied without the ar5iv preload, and hyperref is not loaded for every paper (the rejected option). The supplied `\url`
+is locked as the hyperref binding's is (OD #500), so a `\renewcommand\url` in the document body is ignored with an Info. Witnesses cond-mat0407333, cs0409028, hep-th0411273,
 1001.4826 (`\doi` → `\href`); guards `perfect_kernel_batch67a`.

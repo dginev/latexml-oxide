@@ -39,3 +39,25 @@ fn kluwer_opening_article() {
   assert!(xml.contains(r#"class="ltx_theorem_guess""#), "{xml}");
   assert!(xml.contains("A proof."), "{xml}");
 }
+
+/// kluwer.cls defines its theorem and display environments only under the `thms` option (:124-125, :2411-2432):
+/// without it a paper's own `\case`, `{rem}` and `\Note` are its own; with it `{thm}` and `{case}` exist.
+#[test]
+fn kluwer_displays_only_under_thms() {
+  let own = "\\documentclass{kluwer}\n\\newcommand{\\case}[1]{CASE<#1>}\n\\newenvironment{rem}{My remark: }{}\n\
+             \\newcommand{\\Note}{NOTE-MACRO}\n\\begin{document}\n\\begin{article}\n\\case{one} and \\Note.\n\
+             \\begin{rem}Body of rem.\\end{rem}\n\\end{article}\n\\end{document}\n";
+  let (log, xml) = convert_counted(own);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("<theorem"), "{xml}");
+  assert!(
+    xml.contains("NOTE-MACRO") && xml.contains("My remark:"),
+    "{xml}"
+  );
+  let thms = "\\documentclass[thms]{kluwer}\n\\begin{document}\n\\begin{article}\n\\begin{thm}A theorem.\\end{thm}\n\
+              \\begin{case}A case.\\end{case}\n\\end{article}\n\\end{document}\n";
+  let (log, xml) = convert_counted(thms);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(r#"class="ltx_theorem_thm""#), "{xml}");
+  assert!(xml.contains(r#"class="ltx_theorem_case""#), "{xml}");
+}

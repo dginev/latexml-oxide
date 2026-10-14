@@ -13197,12 +13197,14 @@ into the last item. Minimal trigger: `\def\refs{\list{}{}}` then `\begin{refs}\i
 ## 677. An `array` outside math reads its cells as text
 
 latex_constructs.pool.ltxml:3755 `\array` opens a math alignment (`alignmentBindings($template, 'math')`, ltx:XMArray)
-but digests its cells in the surrounding mode. In pdflatex an array in text is clean — latex.ltx `\@arrayclassz` sets
-every cell as `$\relax\@sharp$`, so the cells are math wherever the array is — while LaTeXML reports "Script _ can only
-appear in math mode" for each script in a cell and "<ltx:XMArray> isn't allowed in <ltx:p>" (or `<ltx:td>`). Minimal
-trigger: `Before \begin{array}{ll} x_1 & y^2 \end{array} after.`; witness 1611.02392 (kdefs.tex:453 `bnfarray`, an array
-in a tabular cell). Fixed in Rust (sect10.rs `\array` outside math opens an inline formula, `\endarray` closes it; repro
-alignment/array_in_text_has_math_cells.tex; `perfect_kernel_batch66y`).
+but digests its cells in the surrounding mode. In pdflatex a `[t]`/`[b]` array in text (`\vtop`/`\vbox`) is clean —
+latex.ltx `\@arrayclassz` sets every cell as `$\relax\@sharp$`, so the cells are math wherever the array is — while
+LaTeXML reports "Script _ can only appear in math mode" for each script in a cell and "<ltx:XMArray> isn't allowed in
+<ltx:p>" (or `<ltx:td>`). (A `[c]` array's `\vcenter` in text is pdflatex's "Missing $ inserted" too; Rust reports that
+one Error and sets the array as a formula.) Minimal trigger: `Before \begin{array}[t]{ll} x_1 & y^2 \end{array} after.`;
+witness 1611.02392 (kdefs.tex:453 `bnfarray`, an array in a tabular cell). Fixed in Rust (sect10.rs `\lx@array@text@open`:
+`\array` outside math opens an inline formula, `\endarray` closes it; delarray's `\array` the same; every `\@array`
+setup resets the close; repro alignment/array_in_text_has_math_cells.tex; `perfect_kernel_batch66y`).
 
 ## 678. `\raisebox` in a picture reads its box in the current mode
 

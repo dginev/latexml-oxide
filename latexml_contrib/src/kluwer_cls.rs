@@ -11,6 +11,10 @@ LoadDefinitions!({
   // kluwer.cls's own dependencies.
   RequirePackage!("amssymb");
   RequirePackage!("wasysym");
+  // :124-125 `\if@thms`, set by the `thms` option only: the class's theorem and display environments (:2411-2432)
+  // exist only under it, so a paper's own `\case`, `\rem` or `\Note` is its own otherwise.
+  RawTeX!(r"\newif\if@thms");
+  DeclareOption!("thms", "\\@thmstrue");
   DeclareOption!(None, {});
   ProcessOptions!();
   RawTeX!(
@@ -40,11 +44,25 @@ LoadDefinitions!({
 \long\def\classification#1#2{\lx@add@classification[scheme={#1}]{#2}}
 \newdimen\maxfloatwidth
 \def\newdisplay{\newtheorem}
-\newdisplay{crit}{Criterion}
-\newdisplay{rem}{Remark}
-\newdisplay{Note}{Note}
-\newdisplay{summ}{Summary}
-\newdisplay{case}{Case}
+\if@thms
+  \newtheorem{thm}{THEOREM}
+  \newtheorem{cor}[thm]{COROLLARY}
+  \newtheorem{lem}[thm]{LEMMA}
+  \newtheorem{claim}[thm]{CLAIM}
+  \newtheorem{conj}[thm]{CONJECTURE}
+  \newtheorem{prop}[thm]{PROPOSITION}
+  \newtheorem{exer}[thm]{EXERCISE}
+  \newtheorem{REM}[thm]{REMARK}
+  \newtheorem{prob}[thm]{PROBLEM}
+  \newtheorem{alg}{ALGORITHM}
+  \newtheorem{defn}[thm]{DEFINITION}
+  \newtheorem{exmp}[thm]{EXAMPLE}
+  \newdisplay{crit}{Criterion}
+  \newdisplay{rem}{Remark}
+  \newdisplay{Note}{Note}
+  \newdisplay{summ}{Summary}
+  \newdisplay{case}{Case}
+\fi
 \def\pr@@f#1{\par\noindent{\itshape #1.\/}\ \ignorespaces}
 \def\endpr@@f{\par}
 \def\newproof#1#2{\expandafter\def\csname #1\endcsname{\pr@@f{#2}}%

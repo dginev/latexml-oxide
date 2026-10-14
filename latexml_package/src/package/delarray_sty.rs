@@ -26,14 +26,16 @@ use crate::prelude::*;
 
 LoadDefinitions!({
   RequirePackage!("array");
-  // delarray.sty:43-44 — `\@tabarray`/`\@@array[pos]` peek for a brace.
+  // delarray.sty:43-44 — `\@tabarray`/`\@@array[pos]` peek for a brace. Outside math the array is its own formula,
+  // as the kernel `\array` is (sect10.rs `\lx@array@text@open`; memoir.cls:5468 loads delarray), its `\right`
+  // inside it.
   DefMacro!(
     "\\array",
     r"\@ifnextchar[{\lx@delarray@pos}{\lx@delarray@pos[c]}"
   );
   DefMacro!(
     "\\lx@delarray@pos[]",
-    r"\@ifnextchar\bgroup{\let\@arrayright\relax\lx@delarray@plain[#1]}{\lx@delarray@del[#1]}"
+    r"\lx@array@text@open{#1}\@ifnextchar\bgroup{\let\@arrayright\relax\lx@delarray@plain[#1]}{\lx@delarray@del[#1]}"
   );
   DefMacro!(
     "\\lx@delarray@plain[]{}",
@@ -47,7 +49,7 @@ LoadDefinitions!({
   DefMacro!(
     "\\endarray",
     None,
-    r"\lx@end@alignment\@end@array\@arrayright"
+    r"\lx@end@alignment\@end@array\@arrayright\lx@array@text@close"
   );
   DefMacro!("\\@arrayright", None, r"\relax");
 });

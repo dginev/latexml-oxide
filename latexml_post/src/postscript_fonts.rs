@@ -141,9 +141,21 @@ fn download_prolog(fonts: &[String], defines_fshow: bool) -> Option<String> {
   Some(prolog)
 }
 
+/// A converted figure's temporary copy, removed when dropped — on every return, panic unwinding (the canvas
+/// `catch_unwind`) included, so it never stays in the packaged output.
+pub(crate) struct FontCopy(PathBuf);
+
+impl FontCopy {
+  pub(crate) fn path(&self) -> &Path { &self.0 }
+}
+
+impl Drop for FontCopy {
+  fn drop(&mut self) { let _ = std::fs::remove_file(&self.0); }
+}
+
 /// A copy of the PostScript file `source`, beside `dest`, holding the fonts its `%*Font:` comments ask dvips for —
-/// `None` when it declares none or one is not available. The caller converts the copy and removes it.
-pub(crate) fn with_downloaded_fonts(source: &str, dest: &str) -> Option<PathBuf> {
+/// `None` when it declares none or one is not available. The caller converts the copy; dropping it removes it.
+pub(crate) fn with_downloaded_fonts(source: &str, dest: &str) -> Option<FontCopy> {
   // Only the header is read for the check; a figure that declares fonts is read whole.
   let mut head = Vec::new();
   std::io::Read::read_to_end(
@@ -194,7 +206,8 @@ pub(crate) fn with_downloaded_fonts(source: &str, dest: &str) -> Option<PathBuf>
   out.extend_from_slice(&bytes[..insert_at]);
   out.extend_from_slice(prolog.as_bytes());
   out.extend_from_slice(&bytes[insert_at..]);
-  std::fs::write(&copy, out).ok()?;
+  let copy = FontCopy(copy);
+  std::fs::write(copy.path(), out).ok()?;
   Some(copy)
 }
 
@@ -243,7 +256,7 @@ mod tests {
     let dest = dir.join("fig.png");
     let copy = with_downloaded_fonts(source.to_str().unwrap(), dest.to_str().unwrap())
       .expect("cmmi10 and cmr5 are found through pdftex.map");
-    let text = String::from_utf8_lossy(&std::fs::read(&copy).unwrap()).into_owned();
+    let text = String::from_utf8_lossy(&std::fs::read(copy.path()).unwrap()).into_owned();
     let prolog_at = text.find("%%BeginProcSet: latexml-dvips-fonts").unwrap();
     let end_prolog_at = text.find("%%EndProlog").unwrap();
     assert!(
@@ -258,6 +271,9 @@ mod tests {
     assert!(text.contains(FSHOW));
     assert!(text.ends_with("(S) cmmi10 9.96265 fshow\n(1) cmr5 4.98132 fshow\nshowpage\n%%EOF\n"));
     assert_eq!(std::fs::read_to_string(&source).unwrap(), figure);
+    let copy_path = copy.path().to_path_buf();
+    drop(copy);
+    assert!(!copy_path.exists());
     // A figure with no `%*Font:` comments, or one that is not PostScript, is converted as it is.
     std::fs::write(
       &source,

@@ -795,7 +795,10 @@ pub(crate) fn load() -> Result<()> {
     "\\pic@makebox@{\\framebox}{framed=true}(0,0)[bl]{#1}"
   );
 
-  // \pic@raisebox — simplified raisebox for picture mode
+  // \pic@raisebox — simplified raisebox for picture mode. Its box is an `\hbox` (latex.ltx `\@argrsbox`), read in
+  // text as `\raisebox`'s is: inside a formula in a `\put`, `\raisebox{.2ex}{\tiny $+$}` is a formula of its own, not
+  // the end of the outer one (Perl reads it in the current mode, KNOWN_PERL_ERRORS #678; 0902.1321). Guard:
+  // `perfect_kernel_batch66y::picture_raisebox_reads_its_box_in_text`.
   DefConstructor!("\\pic@raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:g y='#1'>#4</ltx:g>",
     alias => "\\raisebox",
