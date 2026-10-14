@@ -17276,16 +17276,17 @@ no load. A document using float's commands (`\restylefloat`, `\newfloat`) with a
 ### 581. `\lstinline` is robust (Perl: expandable)
 
 listings.sty:1941 `\newcommand\lstinline[1][]{…}` is `\@protected@testopt`: under `\@unexpandable@protect` it stays
-unexpanded. Perl's `\lstinline` (listings.sty.ltxml:54) is an expandable macro whose expansion opens the inline
-listing's group (listings_sty.rs `\lx@lstinline` `bgroup()`), so an `\edef`/`\xdef` that should keep it ran it: ifthen's
-`\ifthenelse{\equal{\lstinline|N|}{}}` evaluates its test in an `\xdef` (ifthen.sty:101-110), and the group it opened
-met the `\endgroup` after it (1406.5453: 729 errors; 1605.05104). Ours defines it `protected`. Guard
+unexpanded. Perl's `\lstinline` (listings.sty.ltxml:54) is an expandable macro, and ours was too: its expansion opens
+the inline listing's group (listings_sty.rs `\lx@lstinline` `bgroup()`, as Perl's `$STATE->getStomach->bgroup`), so in
+our engine an `\edef`/`\xdef` that should keep it ran it. ifthen's `\ifthenelse{\equal{\lstinline|N|}{}}` evaluates
+its test in an `\xdef` (ifthen.sty:101-110), and the group it opened met the `\endgroup` after it (ours: 1406.5453
+729 errors, 1605.05104 89; Perl's run of the repro gives 0, its recovery not traced). Ours defines it `protected`. Guard
 `perfect_kernel_batch66m::lstinline_robust_in_ifthen_equal`.
 
 ### 582. IEEEtran's convenience `\keywords` yields to the document's (Perl: locked)
 
 IEEEtran.cls (1.8b) defines no `\keywords`; the binding's (`\keywords{…}` or `\keywords … \endkeywords` as the
-keywords block, Perl IEEEtran.cls.ltxml:400-404) is a convenience Perl locks, so a document's
+keywords block, Perl IEEEtran.cls.ltxml:398-403) is a convenience Perl locks, so a document's
 `\newcommand{\keywords}{M-estimators, …}` was refused and `\keywords` in `{IEEEkeywords}` opened a second keywords
 block whose end met the environment's `\endgroup` (KPE #664; 2006.10005, 2008.05854, 2011.04315). Ours defines it with
 the `Fallback` origin (#408, `is_definable_latex`), unlocked: the document's definition wins, and without one the

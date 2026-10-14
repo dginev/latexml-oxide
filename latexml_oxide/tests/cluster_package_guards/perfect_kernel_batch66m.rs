@@ -96,7 +96,19 @@ fn aastex6_plus_has_no_plate() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(!xml.contains("ltx_float_plate"), "{xml}");
   assert_eq!(xml.matches("<picture").count(), 1, "{xml}");
-  assert!(xml.contains(r#"tex="N""#), "{xml}");
+  // bayesnet's plate is drawn inside the picture: its rounded frame (the node's circle is the other path) and its
+  // `$N$` label.
+  let picture = xml
+    .split("<picture")
+    .nth(1)
+    .and_then(|rest| rest.split("</picture>").next())
+    .unwrap_or_else(|| panic!("no picture: {xml}"));
+  assert_eq!(picture.matches("<svg:path").count(), 2, "{picture}");
+  assert!(
+    picture.contains(r#"<svg:path d="M 13.47 19 L -13.47 19 C"#),
+    "{picture}"
+  );
+  assert!(picture.contains(r#"tex="N""#), "{picture}");
 }
 
 #[test]
@@ -104,7 +116,7 @@ fn aastex5_keeps_its_plate() {
   let tex = "\\documentclass{aastex}\n\\begin{document}\n\\begin{plate}\nX\n\\caption{A plate.}\n\\end{plate}\n\
              \\end{document}\n";
   let (log, xml) = convert_counted(tex);
-  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
     xml.matches(r#"class="ltx_float_plate""#).count(),
     1,
@@ -145,6 +157,7 @@ fn algorithm2e_beside_floatrow_keeps_floatrows_end() {
   for tex in [before, after.as_str()] {
     let (log, xml) = convert_counted(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert!(log.contains("(Loading algorithm2e_sty.rs"), "{log}");
     assert!(!log.contains("(Loading float_sty.rs"), "{log}");
     assert_eq!(xml.matches("<caption>").count(), 1, "{xml}");
     let float = xml
@@ -156,5 +169,42 @@ fn algorithm2e_beside_floatrow_keeps_floatrows_end() {
       float.contains(r#"<caption><tag close=": ">Figure 1</tag>A caption.</caption>"#),
       "{xml}"
     );
+  }
+}
+
+/// E9's starred form: `\enddeluxetable*` closes a still-open data as the unstarred end does.
+#[test]
+fn emulateapj_starred_deluxetable_without_enddata() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/emulateapj_deluxetable_without_enddata.tex"
+  )
+  .replace("{deluxetable}", "{deluxetable*}");
+  assert!(tex.contains("{deluxetable*}"));
+  let (log, xml) = convert_counted(&tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(xml.matches("<table ").count(), 1, "{xml}");
+  assert_eq!(xml.matches("<tr ").count(), 3, "{xml}");
+}
+
+/// E5's recovery is a bare environment's only: an `\endgroup` meeting an ordinary box group keeps its one Error.
+#[test]
+fn endgroup_in_a_box_keeps_its_error() {
+  for body in [
+    "\\hbox{a\\endgroup}",
+    "\\begingroup\\hbox{\\endgroup}\\endgroup",
+  ] {
+    let tex = format!(
+      "\\documentclass{{article}}\n\\begin{{document}}\n{body}\nAFTERWORDS survive.\n\\end{{document}}\n"
+    );
+    let (log, xml) = convert_counted(&tex);
+    assert_eq!(error_count(&log), 1, "{body}: {log}");
+    assert_eq!(
+      log
+        .matches("Error:unexpected:\\endgroup Attempt to close")
+        .count(),
+      1,
+      "{body}: {log}"
+    );
+    assert!(xml.contains("AFTERWORDS survive."), "{body}: {xml}");
   }
 }

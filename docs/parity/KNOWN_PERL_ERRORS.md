@@ -13067,7 +13067,7 @@ its line, measures both as one line but changes the notes' trailing-space trimmi
 a design of its own.
 ## 664. IEEEtran's `\keywords` refuses the document's
 
-IEEEtran.cls.ltxml:400-404 defines `\keywords` with `locked => 1`; IEEEtran.cls has none, so a document's own
+IEEEtran.cls.ltxml:398-403 defines `\keywords` with `locked => 1`; IEEEtran.cls has none, so a document's own
 `\newcommand{\keywords}{…}` — valid in LaTeX — is refused, and `\keywords` inside `{IEEEkeywords}` opens a second
 keywords block. Minimal trigger: `\documentclass{IEEEtran}\newcommand{\keywords}{a, b}` then
 `\begin{IEEEkeywords}\keywords\end{IEEEkeywords}` (Perl 5 errors, pdflatex 0; witnesses 2006.10005, 2008.05854,
@@ -13081,7 +13081,7 @@ emulateapj the deluxetable is a longtable (emulateapj.cls:1430-1460) whose `\end
 a table ended without it is complete in TeX. Minimal trigger: `\documentclass{emulateapj}` with
 `\begin{deluxetable}{cc}\startdata a & b\\ \end{deluxetable}` (Perl 6 errors, pdflatex 0; witnesses 1506.07185,
 1705.08932). Fixed in Rust (emulateapj_cls.rs `\enddeluxetable(*)` closes a still-open data first, as AASTeX 3's
-`{planotable}` does in aas_support_sty.rs; AASTeX's own `\startdata#1\enddata`, aastex701.cls:11385, needs its
+`{planotable}` does in aas_support_sty.rs; AASTeX's own `\startdata#1\enddata`, aastex701.cls:11384, needs its
 `\enddata`; repro class-bindings/emulateapj_deluxetable_without_enddata).
 
 ## 666. AASTeX 6+ papers get AASTeX 5's `{plate}`
@@ -13093,6 +13093,9 @@ aastex701.cls define none, so a paper's `\plate` is its own — tikz's bayesnet 
 tikzpicture (Perl 22 errors, pdflatex 0; witnesses 1909.00812, 2006.16258, 2305.06275). Fixed in Rust (aastex_cls.rs
 `undefine_plate` for a 6+ class, and for emulateapj, whose class has no plate either; repro
 class-bindings/aastex6_plus_has_no_plate).
+Checked locally against aastex701.cls only (no `plate`; the one AASTeX 6+ class in TL 2025); the witnesses' own
+`\newcommand{\plate}` compiling on arXiv under aastex61 (1909.00812), aastex63 (2006.16258) and aastex631 (2305.06275)
+supports the same for those versions.
 
 ## 667. A brace-less `\abstract` ended by an enclosing group's end
 
@@ -13103,6 +13106,9 @@ begin code is a `\section*`, which opens no group) meets the capture's frame. Mi
 \end{@twocolumnfalse}]` (Perl 1 error, pdflatex 0; witness 2305.17823). Fixed in Rust (sect05.rs
 `\lx@abstract@bare@frame` marks the capture frame a bare environment's, which stomach.rs `close_environment_frame` ends
 by `\lx@end@abstract`; repro sectioning-frontmatter/bare_abstract_ended_by_enclosing_endgroup).
+Side effect: the frame mark sits between `\lx@begin@abstract[]` and the body, so `\abstract [x] text` no longer reads
+`[x]` as frontmatter keyvals as Perl does (latex_constructs.pool.ltxml:1140-1141); `[x]` is text, as in article.cls,
+whose `\abstract` takes no argument.
 
 ## 668. The loader ignores a `\ver@<file>` another file defined
 

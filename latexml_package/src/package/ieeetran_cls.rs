@@ -661,7 +661,7 @@ LoadDefinitions!({
   // never reached the one-arg expansion.
   // IEEEtran.cls (1.8b) defines no `\keywords`: the alias is a convenience, so it is a fallback a
   // document's own `\newcommand{\keywords}{M-estimators, …}` replaces, as in TeX — Perl locks it
-  // (IEEEtran.cls.ltxml:400-404), which refused the definition, and `\keywords` in
+  // (IEEEtran.cls.ltxml:398-403), which refused the definition, and `\keywords` in
   // `{IEEEkeywords}` opened a second keywords block whose end met the environment's `\endgroup`
   // (witnesses 2006.10005, 2008.05854, 2011.04315; KNOWN_PERL_ERRORS #664,
   // `DefinitionOrigin::Fallback`, `is_definable_latex`).

@@ -28,7 +28,7 @@ LoadDefinitions!({
   // the binding's `\enddata` closes the data's alignment, which `\enddeluxetable` left open and the table's
   // `\endgroup` met (witnesses 1506.07185, 1705.08932; Perl deluxetable.sty.ltxml:35 the same, KNOWN_PERL_ERRORS #665).
   // The end closes a still-open data first, as AASTeX 3's `{planotable}` does (aas_support_sty.rs); AASTeX's own
-  // `\startdata#1\enddata` (aastex701.cls:11385) needs its `\enddata`, so only this class's end does.
+  // `\startdata#1\enddata` (aastex701.cls:11384) needs its `\enddata`, so only this class's end does.
   DefMacro!("\\enddeluxetable", "\\iflx@deluxetable@data\\enddata\\fi\\spew@tblnotes\\end{table}");
   DefMacro!(T_CS!("\\enddeluxetable*"), None, "\\iflx@deluxetable@data\\enddata\\fi\\spew@tblnotes\\end{table}");
   // emulateapj loads REVTeX 4.1 when it is installed (emulateapj.cls:76-78, :151-167; copies since 11/10/2009, 1601.00007's

@@ -1503,6 +1503,8 @@ pub(crate) fn load() -> Result<()> {
   // (witness 2305.17823).
   DefPrimitive!("\\lx@abstract@bare@frame", {
     assign_frame_value("lx@env@bare@end", T_CS!("\\lx@end@abstract"));
+    // The frame is `\lx@add@frontmatter@until`'s; diagnostics about it name the environment.
+    assign_frame_value("groupInitiator", T_CS!("\\abstract"));
   });
   // Locked against the class and package files (`:locked@files`, state.rs `is_name_locked`) with the
   // kernel's `\abstract`, which is locked against everyone (Perl locks an environment's pair,
