@@ -1032,8 +1032,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   run whose `\else`/`\fi` close an `\if` from a block argument whole (2606.17718; residual: an empty affiliation contact
   from the skipped branch); `\hypertarget` in math: empty anchor, text in place (hyperref.sty:4805-4811, 2606.15438);
   braket's split never inside `\left…\right` (2606.06185, KPE #645). Each 2606 witness E → 0. Guards
-  `perfect_kernel_batch66f::*`. Open (2605 report): C3 nomencl glossary in a float, C5
-  `\left` group closed at an argument's input end (physics `\cosh(a\over 2)`), C6 standalone sub-preamble loads, C7
+  `perfect_kernel_batch66f::*`. Open (2605 report): C3 nomencl glossary in a float, C6 standalone sub-preamble loads, C7
   `\mathcolor` group, C8 bigfoot listing in a footnote, C11 JASA revtex4-2 internals (`\@AF@join`, `\@email`), C12
   2.09-style `\ds@<opt>` handlers (KPE-class, Perl Package.pm:2470), babel's on-demand Lithuanian `\fnum@table` loop
   (2605.29738; our kernel lacks `\fnum@figure`/`\fnum@table`), revtex4-2 `\frontmatter@footnote` (2605.04155); from
@@ -1041,6 +1040,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   heuristic firing on a package that sets `_` a letter itself (etextools, 2606.06323), N7 NFSS shape probes
   `\try@load@fontshape`/`\DeclareFontShape` no-ops (2606.07112, Perl the same), N10 a sectioning unit in `ltx:quote`
   (2606.19241) and an `\item[]` excluded from the OD #189 item bridge (2606.00118) — both await a ruling.
+- **66g** (payload, 2605/2606 cluster C5): an input's end closes only a `\left` group opened in that input — `\left`
+  records the input it was read in (`gullet::reading_context`), so physics' `\left( \lx@xmarg{…}{#1} \right)` keeps its
+  pair when `#1` (`\cosh(a\over 2)`, `\expval{a \over b}` in `aligned`) ends (OD #530; 2605.02768, 2606.01486 E 1 → 0;
+  65d's witnesses unchanged). Guards `perfect_kernel_batch66g::*`.
 - **63b** (landed): nameref's begin-document reset of `\ref`/`\pageref`/`\Ref` under its own hook label (KPE #519;
   2503.08060, 1908.01329, 1811.01873, which also needed nameref's `\NR@setref`), a nested alignment's rows run no
   enclosing row hook (KPE #518; arrays, `\halign`, TikZ matrices, tabbing), the 63a tag `~` binding narrowed to the
