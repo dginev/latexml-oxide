@@ -2768,7 +2768,8 @@ const MATH_ONLY_PRIMITIVES: &[&str] = &[
 /// body holds one — `\medskip`'s `\vskip`, `\section`'s `\par`): a paragraph's end, or a command inline math cannot
 /// hold (tex.web §1046 `mmode+par_end`, `stop`, `vskip`, `hrule`, `un_vbox`, `valign`; an environment's end or begin;
 /// an alignment's `\cr`), or a formula's opener. And `\catcode`: TeX tokenizes what follows it under the new codes,
-/// so the look-ahead's tokens past it are not the ones TeX reads (`\catcode`\_=12 a_b`, `\makeatletter`).
+/// so the look-ahead's tokens past it are not the ones TeX reads (`\catcode`\_=12 a_b`; a macro whose body holds one).
+/// A primitive that changes codes in its closure (`\makeatletter`, `\obeylines`) is not seen; only `\catcode` is.
 const PAR_LOOKAHEAD_STOPS: &[&str] = &[
   "\\par",
   "\\lx@normal@par",

@@ -380,13 +380,16 @@ pub(crate) fn load() -> Result<()> {
     Ok(pairs)
   }
   // Its `{terminators}{closed}` flags are text, so its size is stated: none,
-  // as the box-free `\line` measures (an auto-opened picture's size).
+  // as the box-free `\line` measures (an auto-opened picture's size). `closed` is `0` (open), `1` (closed) or `2`
+  // (closed and filled, unstroked, as `\circle*`: pict2e's `\fillpath`, `\polygon*`, ellipse.sty's `\ellipse*`).
   DefConstructor!("\\lx@pic@polyline{}{}",
-    "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='#terminators'/>",
+    "<ltx:line points='#points' stroke='#color' stroke-width='#thick' fill='#fill' terminators='#terminators'/>",
     sizer => 0,
     properties => sub[args] {
       let terminators = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
-      let closed = args[1].as_ref().map(|d| d.to_string() == "1").unwrap_or(false);
+      let mode = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      let filled = mode == "2";
+      let closed = filled || mode == "1";
       let unit = unitlength_pt()?;
       let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
@@ -402,7 +405,8 @@ pub(crate) fn load() -> Result<()> {
       Ok(stored_map!(
         "points" => Stored::String(pin(points)),
         "thick"  => Stored::String(pin(format!("{thick}"))),
-        "color"  => "#000000",
+        "color"  => if filled { "none" } else { "#000000" },
+        "fill"   => if filled { "#000000" } else { "" },
         "terminators" => Stored::String(pin(terminators))
       ))
     }

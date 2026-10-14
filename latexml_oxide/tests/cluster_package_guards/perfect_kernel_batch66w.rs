@@ -343,6 +343,11 @@ fn par_before_a_backquoted_formula_ends_the_formula() {
 fn par_before_a_backquoted_ref_ends_the_formula() {
   let tex = "\\documentclass{article}\n\\begin{document}\nWe have $a = b\n\nSee `\\ref{fig_1}' and $x$ here.\n\\end{document}\n";
   let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    error_lines(&log),
+    vec!["Error:expected:$ Missing $ inserted"],
+    "{log}"
+  );
   assert_eq!(math_tex(&xml), vec!["a=b", "x"], "{xml}");
   assert_eq!(warning_count(&log), 0, "{log}");
 }

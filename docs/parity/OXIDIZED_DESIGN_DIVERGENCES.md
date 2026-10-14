@@ -17471,7 +17471,8 @@ fails on both ("Undefined control sequence", 101 errors on a one-ellipse documen
 pict2e binding (`latexml_package/src/package/pict2e_sty.rs`) allocates it when undefined, loads trig as pict2e.sty:123
 does in its mode > 0 branch (`\CalculateSin`/`\UseCos`), and binds the graph-code layer ellipse.sty drives directly
 (pict2e.sty:164-217: `\pIIe@add@nums`, `\pIIe@add@CP`, `\pIIe@addtoGraph` with the pdftex operator names) onto the
-native path, so an ellipse's Bézier arcs are drawn. Witness 2109.06028 (`\lfbox` around every hexdigest: run 349 Error
+native path, so an ellipse's Bézier arcs are drawn; a path ended by `\pIIe@fillGraph` (`\fillpath`, `\ellipse*`,
+`\polygon*`) is one filled, unstroked `ltx:line` (`\lx@pic@polyline`'s mode `2`, as `\circle*` fills). Witness 2109.06028 (`\lfbox` around every hexdigest: run 349 Error
 with 643 errors, then Fatal at the same-error cap once other errors no longer interleaved); run 349 had 23 papers with
 undefined `\CalculateSin`/`\UseCos` and 18 with undefined `\pIIe@addtoGraph`. Guard
 `perfect_kernel_batch67g::pict2e_ellipse_has_its_old_registers_and_trig`.

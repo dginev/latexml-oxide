@@ -125,11 +125,12 @@ fn path_flush(closed: &str) -> Result<Tokens> {
 }
 
 LoadDefinitions!({
-  // pict2e.sty:123, the mode > 0 branch: trig.sty's `\CalculateSin`/`\UseCos` (ellipse.sty:107, longfbox.sty:107).
+  // pict2e.sty:123, the mode > 0 branch: trig.sty's `\CalculateSin`/`\UseCos` (ellipse.sty:121-124, :213-218;
+  // longfbox.sty:105-107).
   RequirePackage!("trig");
   // pict2e before v0.4b (2020/09/30, "use of fewer system dimension registers", pict2e.dtx:3317-3318) allocated
   // `\@tempdimd`; ellipse.sty:95 and longfbox.sty:107 still use it, and TeX Live 2025 pdflatex fails on both without it
-  // (2109.06028: 624 Errors, then the same-error cap's Fatal).
+  // (2109.06028: 643 Errors, then the same-error cap's Fatal).
   RawTeX!(r"\ifx\undefined\@tempdimd \newdimen\@tempdimd \fi");
   def_macro_noop("\\OriginalPictureCmds")?;
   // pict2e.sty:686-740 — the polygonal-line family that curve2e.sty:240
@@ -140,7 +141,10 @@ LoadDefinitions!({
   DefMacro!("\\Line", "\\lx@pic@polyline{}{0}");
   DefMacro!("\\polyvector", "\\lx@pic@polyline{->}{0}");
   DefMacro!("\\Vector", "\\lx@pic@polyline{->}{0}");
-  DefMacro!("\\polygon OptionalMatch:*", "\\lx@pic@polyline{}{1}");
+  // `\polygon*` fills the polygon (pict2e.sty:731-740 `\pIIe@polygon` → `\fillpath`).
+  DefMacro!("\\polygon OptionalMatch:*", sub[(star)] {
+    TokenizeInternal!(if star.is_some() { "\\lx@pic@polyline{}{2}" } else { "\\lx@pic@polyline{}{1}" })
+  });
   def_macro_noop("\\pIIe@vector@ltx")?;
   def_macro_noop("\\pIIe@vector@pst")?;
 
@@ -207,7 +211,7 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
   DefMacro!("\\pIIe@strokeGraph", sub[()] { path_flush("0") });
-  DefMacro!("\\pIIe@fillGraph", sub[()] { path_flush("1") });
+  DefMacro!("\\pIIe@fillGraph", sub[()] { path_flush("2") });
   // The user level, verbatim pict2e.sty:742-774 (the mode > 0 branch a
   // driver enables): `\@defaultunitsset` scales a bare number by
   // `\unitlength` and passes a dimension through. Plain macros, so

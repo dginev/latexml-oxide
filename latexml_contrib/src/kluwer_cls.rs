@@ -14,8 +14,9 @@ LoadDefinitions!({
   // :124-125 `\if@thms`, set by the `thms` option only: the class's theorem and display environments (:2411-2432)
   // exist only under it, so a paper's own `\case`, `\rem` or `\Note` is its own otherwise. The class's `\rmtheorem`
   // (:2365, :2422-2426) sets {alg}, {defn} and {exmp} upright; here they are defined under an upright
-  // `\thm@bodyfont`, which each theorem keeps from its definition. The public `\rmtheorem` stays unbound: a theorem
-  // keeps its style from `\newtheorem`, so a later call has nothing to change.
+  // `\thm@bodyfont`, which each theorem keeps from its definition. A paper's own later `\rmtheorem{x}` is accepted and
+  // changes nothing: a theorem keeps its style from `\newtheorem`. Divergence kept: kluwer's appended `\rmfamily`
+  // hides the optional `[Note]` of these three (printed as text, "DEFINITION 2. [Foo]"); ours reads it as the title.
   RawTeX!(r"\newif\if@thms");
   DeclareOption!("thms", "\\@thmstrue");
   DeclareOption!(None, {});
@@ -28,6 +29,7 @@ LoadDefinitions!({
 \def\author#1{\lx@add@authors@append{#1}}
 \def\institute#1{\lx@add@contact[role=affiliation,annotate=new]{#1}}
 \def\surname#1{#1}
+\def\rmtheorem#1{}
 \def\orf#1{#1}
 \def\nodagger{}
 \def\received#1{\lx@add@date[role=received]{#1}}
