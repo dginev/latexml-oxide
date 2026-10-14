@@ -159,6 +159,43 @@ fn balance_math_shifts(piece: Option<Tokens>) -> Option<Tokens> {
   })
 }
 
+/// The binding's command for the citation form natbib's flags select (natbib.sty:685-749): `\NAT@ctype` 0 a
+/// citation, 1 the author, 2 the year, 3 the alias; `\ifNAT@par` parenthesised, `\ifNAT@swa` the citation's
+/// bracketed (`p`) form, `\ifNAT@full` the starred one. The saved `\lx@natbib@…` copies are used, so a document's
+/// `\citealp` redefined over `\NAT@citetp` does not call itself. The caller's `\begingroup` is closed after it, as
+/// natbib's formatters close it (:355-362).
+fn cite_by_flags(
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+  keys: Option<Tokens>,
+) -> Result<Tokens> {
+  let same = |cs: &str, other: &str| {
+    let meaning = lookup_meaning(&T_CS!(cs));
+    meaning.is_some() && meaning == lookup_meaning(&T_CS!(other))
+  };
+  let par = same("\\ifNAT@par", "\\iftrue");
+  let swa = same("\\ifNAT@swa", "\\iftrue");
+  let star = same("\\ifNAT@full", "\\iftrue").then(|| Tokens!(T_OTHER!("*")));
+  let ctype = ["\\z@", "\\@ne", "\\tw@", "\\thr@@"]
+    .iter()
+    .position(|cs| same("\\NAT@ctype", cs))
+    .unwrap_or(0);
+  let (command, args) = match (ctype, par, swa) {
+    (1, ..) => ("\\lx@natbib@citeauthor", vec![star, pre, post, keys]),
+    (2, true, _) => ("\\lx@natbib@citeyearpar", vec![pre, post, keys]),
+    (2, false, _) => ("\\lx@natbib@citeyear", vec![pre, post, keys]),
+    (3, true, _) => ("\\lx@natbib@citepalias", vec![pre, post, keys]),
+    (3, false, _) => ("\\lx@natbib@citetalias", vec![pre, post, keys]),
+    (_, true, true) => ("\\lx@natbib@citep", vec![star, pre, post, keys]),
+    (_, true, false) => ("\\lx@natbib@citet", vec![star, pre, post, keys]),
+    (_, false, true) => ("\\lx@natbib@citealp", vec![star, pre, post, keys]),
+    (_, false, false) => ("\\lx@natbib@citealt", vec![star, pre, post, keys]),
+  };
+  let mut result = Invocation!(T_CS!(command), args).unlist();
+  result.push(T_CS!("\\endgroup"));
+  Ok(Tokens::new(result))
+}
+
 LoadDefinitions!({
   //======================================================================
   // 5. Package Options
@@ -692,6 +729,26 @@ LoadDefinitions!({
     Ok(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("citepalias")), Tokens::new(body)]))
   });
+  Let!("\\lx@natbib@citeauthor", "\\citeauthor");
+  Let!("\\lx@natbib@citeyear", "\\citeyear");
+  Let!("\\lx@natbib@citeyearpar", "\\citeyearpar");
+  Let!("\\lx@natbib@citetalias", "\\citetalias");
+  Let!("\\lx@natbib@citepalias", "\\citepalias");
+
+  // natbib's citation internals, which documents build their own citation commands on: the caller opens a group and
+  // sets the flags `cite_by_flags` reads, then `\NAT@citetp` reads the notes and keys (natbib.sty:688-690) and
+  // `\NAT@citexnum[pre][post]{keys}` is the numeric formatter (:375). Undefined here, each such command was "undefined
+  // `\NAT@citetp`" and its keys typeset as text, a `_` in them "Script _ can only appear in math mode" (2104.01159's
+  // `\citenum` over `\NAT@citexnum[][]`, 2105.06268's `\citepos` over `\NAT@citetp`; Perl the same,
+  // KNOWN_PERL_ERRORS #671). Guard: `perfect_kernel_batch66q::natbib_internals_serve_user_cite_commands`.
+  DefMacro!("\\NAT@citetp [][] Semiverbatim", sub[args] {
+    let mut it = args.into_iter();
+    let pre: Option<Tokens> = it.next().unwrap().into();
+    let post: Option<Tokens> = it.next().unwrap().into();
+    let keys: Option<Tokens> = it.next().unwrap().into();
+    cite_by_flags(pre, post, keys)
+  });
+  Let!("\\NAT@citexnum", "\\NAT@citetp");
 
   //======================================================================
   // 2.9 Selecting Citation Punctuation

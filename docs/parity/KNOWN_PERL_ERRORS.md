@@ -13139,3 +13139,15 @@ Minimal triggers: `\bibitem[{{Mantz} {et~al.}(2008){Mantz}, $\, {Ebeling}, \& {R
 revtex's `\bibitem [{\citenamefont {Sasaki$}(2011)}]{Sasaki_11}` (1205.3745, 1508.02141). Fixed in Rust (natbib_sty.rs
 `\NAT@wrout` balances each piece's math shifts within its brace groups: a group left in math is closed before its `}`,
 or its last-token `$` dropped so no `$$` forms; repro index-bib/natbib_unbalanced_dollar_in_label).
+
+## 671. natbib's citation internals are undefined
+
+natbib.sty.ltxml defines natbib's user commands (`\citet`, `\citep`, `\citenum`, …) but none of the internals they
+are built on in natbib.sty: `\NAT@citetp` (:688, the notes-and-keys reader every author-year command calls) and
+`\NAT@citexnum` (:375, the numeric formatter). A document that builds its own citation command the way natbib builds
+its own — `\begingroup`, set `\NAT@ctype`/`\ifNAT@swa`/`\ifNAT@par`, then call the internal — gets "undefined
+`\NAT@citetp`", and the keys that follow are typeset as text ("Script _ can only appear in math mode" for a key with
+`_`). Minimal trigger: `\DeclareRobustCommand\citepos{\begingroup\NAT@swafalse\let\NAT@ctype\z@\NAT@partrue\NAT@citetp}`
+then `\citepos{omohundro_2008}` (2105.06268; 2104.01159's `\citenum` over `\NAT@citexnum[][]`). Fixed in Rust
+(natbib_sty.rs `\NAT@citetp`/`\NAT@citexnum` select the binding's citation command from the flags and close the
+caller's group; repro index-bib/natbib_internals_serve_user_cite_commands).
