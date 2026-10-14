@@ -864,10 +864,13 @@ LoadDefinitions!({
   // #2 is placed after the conditional, not inside it. hyperref's own #2 sits before `\fi`, so a
   // brace-less `\hypertarget{e1}\frac{n}{p}` has `\frac` read `\fi` as its numerator (pdflatex:
   // an empty-over-n fraction, then p).
-  // `\ifmmode` is tested when the macro expands, so inside an `\edef` the expansion-time mode decides.
+  // `\ifmmode` is tested when the macro expands, so inside an `\edef` the expansion-time mode decides. `\relax` comes
+  // first, as amstex.tex:72's `\RIfM@`: at an alignment cell's start TeX is still expanding in search of `\omit`, before
+  // the cell's math begins, so without it a row-initial call in `align`/`aligned`/`array` took the text branch and
+  // its brace-less `\left(` was closed at the argument's end ("Extra \right.").
   DefMacro!(
     "\\hypertarget Semiverbatim {}",
-    "\\ifmmode\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
+    "\\relax\\ifmmode\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
      {\\lx@hypertarget{#1}{}#2}{\\lx@hypertarget{#1}{#2}}"
   );
   DefConstructor!("\\lx@hypertarget Semiverbatim {}",

@@ -17186,10 +17186,12 @@ amstex_tag_inline_maths_are_not_a_display_end}`; repros `amstex/amstex_row_tag_r
 
 latex.ltx's `\document` (:9491-9494) does `\if@filesw \immediate\openout\@mainaux\jobname.aux
 \immediate\write\@mainaux{\relax}\fi`, so the `.aux` exists from then on. Perl's `\begin{document}` opens none; its only
-open is `latex_base`'s `\openout\@mainaux\jobname.aux` (latex_base.pool.ltxml:722), run when the state is initialized
-with the format and preloads (Core.pm:143), before `\jobname` is installed (:152), so the stream is not under the job's
-name. Ours (latex_base.rs:743) ran at the same point, or, under a dump, at the dump's build, whose `output_file:*` streams
-the dump does not keep. A class or package `\enddocument` that does `\input
+open is `latex_base`'s `\openout\@mainaux\jobname.aux` (latex_base.pool.ltxml:722), run when LaTeX.pool loads. Without
+a preload that is at `\documentclass` (TeX.pool.ltxml:33-39), after `\jobname` is installed (Core.pm:152), and the
+in-memory `.aux` (TeX_FileIO.pool.ltxml:120-126) is found by a later `\input` (Package.pm:2104). With the format
+preloaded (a preload such as `ar5iv.sty`, as on arXiv) it runs when the state is initialized (Core.pm:143), before
+`\jobname`, so the stream is not under the job's name. Ours (latex_base.rs:743) ran at that early point too, or, under a
+dump, at the dump's build, whose `output_file:*` streams the dump does not keep. A class or package `\enddocument` that does `\input
 \jobname.aux` under `\if@filesw` (jpsj3.cls:90-96, bio.cls, lamuphys.sty:1240-1247, caosp.sty:916) then met
 `Error:missing_file:<jobname>.aux`. Ours opens it in `\begin{document}`'s after-digest (latex_constructs/sect02.rs) in
 latex.ltx's place, so the `\input` reads the in-memory `.aux` (its `\relax` and whatever the document wrote). `\nofiles`
@@ -17205,3 +17207,19 @@ plain CSS background colors, so `opacity=o` is rendered as the color mixed with 
 white page and the same on a white HTML page, but not over a colored or dark background. Perl has no nicematrix binding.
 Witness 2605.25123 (`\columncolor[opacity=0.2]{blue}{3}`, "Unrecognized color model" Error before). Code
 latexml_contrib/src/nicematrix_sty.rs (`nice_color`); guard `perfect_kernel_batch66f::nicematrix_color_opacity_key`.
+
+### 578. `\hypertarget` in math: an empty anchor, its text after the mode test
+
+hyperref.sty:4805-4811 (nesting off, its default :323) sets the destination and then `#2` in every mode
+(`\hyper@@anchor{#1}{\relax}#2`); Perl (hyperref.sty.ltxml:258-266) digests `#2` as the anchor's own text in every mode.
+In text ours keeps Perl's shape (the anchor holds its text, `anchor_own_text`). In math, where an `ltx:anchor` holds no
+math, the anchor is empty and `#2` follows it in place, so a brace-less call takes one token there and a formula opened
+by it stays whole (`\hypertarget{e1}` before `\left( \frac{n}{p}\right)`: 2606.15438's `\left(` read as the anchor's
+text was closed at that argument's end, its `\right)` "Extra"). `#2` comes after the conditional: hyperref's own `#2`
+sits before its `\fi`, so a brace-less `\hypertarget{e2}\frac{n}{p}` has `\frac` read `\fi` as its numerator
+(pdflatex `\showbox`: the destination, an empty-over-n fraction, then p); ours renders n over p. A `\relax` before
+`\ifmmode` (amstex.tex:72's `\RIfM@`) keeps a row-initial call in `align`/`aligned`/`array` on the math branch, where
+TeX is still expanding in search of `\omit` before the cell's math begins. Open: the math anchor's `xml:id` is generated,
+not the target's name, so a `\hyperlink` to it dangles, and the anchor parses as an operand (RED
+`package-bindings/hypertarget_math_anchor_keeps_its_id`). Code hyperref_sty.rs `\hypertarget`/`\lx@hypertarget`; guard
+`perfect_kernel_batch66f::hypertarget_braceless_in_math`.

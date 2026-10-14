@@ -92,10 +92,11 @@ pub(crate) fn load() -> Result<()> {
     // latex.ltx `\document` (:9491-9494): the `.aux` is opened under the job's name and starts with `\relax`, so a
     // class `\enddocument` that `\input`s `\jobname.aux` (jpsj3.cls:90-96, bio.cls, lamuphys.sty:1240-1247,
     // caosp.sty:916) finds it. Perl's `\begin{document}` opens none; its only open, `latex_base`'s
-    // `\openout\@mainaux\jobname.aux` (latex_base.pool.ltxml:722), runs when the state is initialized (Core.pm:143),
-    // before `\jobname` is installed (:152), so the stream is not under the job's name. Ours (latex_base.rs:743) ran at
-    // the same point, or, under a dump, at the dump's build, whose streams the dump does not keep. Either way the
-    // `.aux` was missing: `Error:missing_file:<jobname>.aux` (witnesses 2605.24927, 2605.04825, 2605.28673, 2605.20125, cond-mat9607109, astro-ph9805185).
+    // `\openout\@mainaux\jobname.aux` (latex_base.pool.ltxml:722), runs when LaTeX.pool loads: at `\documentclass`
+    // without a preload, after `\jobname` (Core.pm:152), so plain Perl finds the `.aux`; with the format preloaded
+    // (`ar5iv.sty`) at state initialization (Core.pm:143), before `\jobname`. Ours (latex_base.rs:743) ran at that early
+    // point or, under a dump, at the dump's build, whose streams the dump does not keep, and the `.aux` was missing:
+    // `Error:missing_file:<jobname>.aux` (witnesses 2605.24927, 2605.04825, 2605.28673, 2605.20125, cond-mat9607109, astro-ph9805185).
     // Repro loader/jobname_aux_exists_after_begin_document.
     TeX!(r"\if@filesw\immediate\openout\@mainaux\jobname.aux \immediate\write\@mainaux{\relax}\fi");
     // Clear \everypar at document start (Perl `AssignRegister('\everypar', Tokens(), 'global')`,

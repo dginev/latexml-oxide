@@ -278,8 +278,19 @@ fn hypertarget_braceless_in_math() {
     xml.contains(r#"tex="\hypertarget{e1}{}\left(\frac{n}{p}\right)=1""#),
     "{xml}"
   );
+  // The `[] *` is the anchor parsed as an operand, the defect RED `hypertarget_math_anchor_keeps_its_id` tracks: fixing
+  // that RED changes this expectation.
   assert!(
     xml.contains(r#"tex="a\hypertarget{e2}{}\frac{n}{p}b" text="a * [] * (n / p) * b""#),
+    "{xml}"
+  );
+  // At a math alignment row's start (`align`, `aligned`, `array`) the call takes the math branch too.
+  assert!(
+    xml.contains(r#"tex="\displaystyle\hypertarget{e3}{}\left(\frac{n}{p}\right)""#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"{c}\hypertarget{e5}{}\frac{n}{p}\end{array}""#),
     "{xml}"
   );
   assert!(
