@@ -770,6 +770,33 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // rather than re-deciding at each site.
   let resolved = ResolvedOptions::from_cli(&cli);
 
+  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
+  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
+  // → plain_constructs and the latex equivalent) reads
+  // `LATEXML_INI_MODE` to decide whether to fully load the format
+  // or stop after the bootstrap pool. If it's not set yet,
+  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
+  // pollutes the snapshot taken later in `ini_tex::dump_format` and
+  // silences the diff for everything raw plain.tex / latex.ltx defines
+  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
+  // problem from 2026-04-26).
+  //
+  // It must also be set before the kpathsea-prewarm thread below exists. Set
+  // after it, glibc's `setenv` reallocates `environ` while that thread's
+  // `kpathsea_init_format` walks it in `getenv`: `--init` segfaulted in
+  // `getenv("TEXMF_kpsewhich")` in ~3.5% of runs (7/200, Linux aarch64,
+  // TL2023), failing `tools/make_formats.sh` and `dump_gate_init`. The same
+  // use-after-free as the `init_kpathsea` ordering below.
+  if cli.init.is_some() {
+    // SAFETY: no other thread reads the environment yet: the only other
+    // thread, `main`, is blocked joining this one, and the prewarm thread is
+    // spawned below. `prepare_session` and `ini_tex::dump_format` read the var
+    // but never mutate the environment.
+    unsafe {
+      std::env::set_var("LATEXML_INI_MODE", "1");
+    }
+  }
+
   // Kick off kpathsea pre-init in a background thread. Force-runs
   // `kpathsea_init_db` + per-format `kpathsea_init_format` so the
   // first real `find_file` from digest sees the fast post-init path
@@ -1086,24 +1113,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     streaming: resolve_streaming(cli.streaming, resolve_max_memory(cli.max_memory), &source),
     source_date_epoch,
   };
-  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
-  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
-  // → plain_constructs and the latex equivalent) reads
-  // `LATEXML_INI_MODE` to decide whether to fully load the format
-  // or stop after the bootstrap pool. If it's not set yet,
-  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
-  // pollutes the snapshot taken later in `ini_tex::dump_format` and
-  // silences the diff for everything raw plain.tex / latex.ltx defines
-  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
-  // problem from 2026-04-26).
-  if cli.init.is_some() {
-    // SAFETY: setting the var before any thread is spawned. `prepare_session`
-    // and `ini_tex::dump_format` both read it but neither mutates env.
-    unsafe {
-      std::env::set_var("LATEXML_INI_MODE", "1");
-    }
-  }
-
   let mut converter = Converter::from_config(opts.clone());
   // `--whatsin=xml` forces the already-converted-XML input path regardless of the
   // file's extension (Perl-style: the input analog of `--format` for output),

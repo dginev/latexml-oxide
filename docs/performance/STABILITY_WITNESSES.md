@@ -521,6 +521,17 @@ ms, no longer overlapped with option parsing. Library callers (`latexml::api`)
 run construction on the single worker thread they spawn; a multi-threaded host
 should call `init_kpathsea()` once at start-up before converting concurrently.
 
+**Second writer, `--init` only (fixed 2026-10-14)**: `real_main` set
+`LATEXML_INI_MODE` *after* spawning the prewarm thread, whose
+`kpathsea_init_format` reads `getenv("TEXMF_kpsewhich")`; `setenv` of the new
+name reallocated `environ` under it. Witness: `--init=latex.ltx` exited 139 in
+7 of 200 runs on Linux aarch64 (Ubuntu 24.04, TL2023 apt, `ci` profile), gdb
+`__GI_getenv` ← `kpathsea_var_expand` ← `kpathsea_init_format` on thread
+`kpathsea-prewarm`; it failed `tools/make_formats.sh` and
+`dump_gate_init::latex_ltx_init_has_zero_errors`. Fix: the `set_var` moved to
+just after `Cli::parse()`, before `init_kpathsea()` and the spawn. Rule: every
+environment write in the binaries precedes the prewarm spawn.
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.
