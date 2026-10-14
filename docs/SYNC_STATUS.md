@@ -1056,6 +1056,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   13 long-standing slow or memory-heavy). Open from it: libmarpa `marpa_g_new` aborts on allocation failure with no
   Fatal line (SIGABRT; fix in the marpa-asf fork: an overridable OOM hook → `Fatal:oom:alloc_failed`), XPath OOM floods as
   one `Fatal:oom`, a 2.7-3.1 GB peak RSS for 4-10 s papers. Runs 348/349 (E/F rerun on `a7f5e7308e`) started 13:15Z.
+- **66x** (K9 study row L, ruled 2026-10-14 "fix the identified mode bugs, Perl wording"): the `\lx@list` frame of
+  `\list`/`\@trivlist` is marked a bare environment's, so a `}`/`\endgroup` meeting it ends the list (an Info) and then
+  its own group — iopconf `\references`, jT `resume`, INFORMS `\Trivlist` no longer swallow the rest of the document into
+  the last item (0902.3464: 28 sections inside list items → 0, 1611.07992 9 → 0, 2106.10067 19 → 11; 5 witnesses E → 0; KPE
+  #676, OD #586; `perfect_kernel_batch66x`). Row B (a preamble `\begingroup` around
+  `\begin{document}`, ~38 papers, 1 Error, content kept) stays open: faithful unwinding pops the document frame and
+  the author's group beneath it, then re-establishes the document frame (latex.ltx:9490 `\document`'s `\endgroup`).
 - **66v** (66m E1, ruled 2026-10-14): the floatrow binding records float.sty/rotfloat.sty loaded, as floatrow.sty:34-37
   marks them (`\ver@float.sty`), so a later `\usepackage{float}` no longer replaces floatrow's `\float@end` (2010.00977,
   2003.11778, 2011.10793, 2105.04869; KPE #668; `perfect_kernel_batch66v::floatrow_marks_float_loaded`). No general

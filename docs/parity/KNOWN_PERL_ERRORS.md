@@ -13183,3 +13183,13 @@ whole body into the box (2301.00752: 0 words of 16,663; 2602.19492; 54 papers 23
 Body.` Fixed in Rust (dialect.rs: a bare `\endX` ends the mode only when the top frame is an environment's; a box's or
 other non-environment frame is left alone with one Warning; OXIDIZED_DESIGN #584; repro
 sectioning-frontmatter/bare_end_without_its_begin_keeps_the_box).
+
+## 676. A list closed only by its environment's group swallows the rest of the document
+
+latex_constructs.pool.ltxml:1647-1653 opens `\lx@list` with `beginMode('internal_vertical')` for `\list`/`\@trivlist`,
+which open no TeX group. A document environment whose begin code calls `\list` and whose end code calls no `\endlist`
+(iopconf.sty:283 `\references`, astro-ph9806019; jT.cls:170 `resume`, 0902.3464) is clean in pdflatex — `\end{X}`'s
+`\endgroup` closes `\begin`'s group and the list's settings with it — but in LaTeXML that `\endgroup` meets the list's
+mode frame: "Attempt to close a group that switched to mode internal_vertical", and the text after the environment goes
+into the last item. Minimal trigger: `\def\refs{\list{}{}}` then `\begin{refs}\item One.\end{refs} After.` Fixed in Rust
+(sect06.rs `\lx@list` marks its frame a bare environment's; OXIDIZED_DESIGN #586; repros lists/).

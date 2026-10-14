@@ -17301,3 +17301,13 @@ group's end handed back (`lx@env@ended@by@group`); any environment's, since amsm
 `\endequation` (tcolorbox `ams equation*`, 2211.17024). A frame no environment opened (a box's) is left alone with one
 Warning, as LaTeX's list-ending `\endX` does no group work. Witnesses 2301.00752, 2602.19492 (IEEE Open Journal keywords
 boxes; the body was read into the box). KPE #674; guard `perfect_kernel_batch66t::bare_end_without_its_begin_keeps_the_box`.
+
+### 586. A list's frame is ended by the group around it (Perl: an Error, the rest swallowed)
+
+`\list`/`\@trivlist` open no TeX group (latex.ltx), so the `\lx@list` mode frame they open (OD #180) is LaTeXML's alone.
+Ours marks it a bare environment's frame, ended by `\endlx@list`: a `}` or `\endgroup` meeting it ends the list first
+(stomach.rs `close_environment_frame`, an Info) and then its own group. Perl's frame has no such mark: `\end{X}`'s
+`\endgroup` meets it ("Attempt to close a group that switched to mode internal_vertical") and the rest of the document
+goes into the last item. `\endlx@list`, not `\endlist`: a group's end does not undo `\list`'s global `\@listdepth` step.
+Witnesses astro-ph9806019 (iopconf `\references`), 0902.3464 (jT `resume`), 2106.10067 (INFORMS `\Trivlist`); KPE #676;
+guards `perfect_kernel_batch66x`.

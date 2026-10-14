@@ -649,6 +649,14 @@ pub(crate) fn load() -> Result<()> {
       // `\endtrivlist`; a raw `\@trivlist` … `\endtrivlist` pair) can tell
       // the list's own mode frame from an enclosing one.
       assign_value("groupInitiator", Stored::Token(T_CS!("\\lx@list")), None);
+      // The list opens no TeX group (latex.ltx `\list`/`\@trivlist`), so this frame is LaTeXML's alone: a `}` or
+      // `\endgroup` meeting it ends the list first, as for a bare `\X` (stomach.rs `close_environment_frame`, an Info),
+      // and then its own group — `\def\refs{\list{}{…}}` closed only by `\end{refs}`'s `\endgroup` (iopconf.sty:283
+      // `\references`, astro-ph9806019; jT.cls:170 `resume`, 0902.3464) or INFORMS's `\Trivlist` ended by its own
+      // `\endTrivlist` copy (2106.10067) swallowed the rest of the document into the last item. `\endlx@list`, not
+      // `\endlist`: a group's end does not undo `\list`'s global `\@listdepth` step in LaTeX either. Guard:
+      // `perfect_kernel_batch66x::list_closed_by_its_environments_group`.
+      assign_frame_value("lx@env@bare@end", T_CS!("\\endlx@list"));
     });
   // Close the anonymous list if we're still within one.
   //

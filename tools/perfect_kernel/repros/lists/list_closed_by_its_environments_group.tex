@@ -1,0 +1,15 @@
+% witness: astro-ph9806019 (iopconf.sty:283 \references), 0902.3464 (jT.cls:170 resume), 1109.3841 / 2306.13258 (APPENDICES)
+% oracle: pdflatex 0 errors (\list opens no TeX group; \end{refs}'s \endgroup closes \begin's semi_simple group, tex.web 1063)
+% expect: 0 Errors; both items kept inside one ltx:itemize; "After." outside it
+% mechanism: \lx@list mode frame (sect06.rs \lx@list begin_mode) has no TeX group; \endgroup meets it (stomach.rs endgroup BOUND_MODE branch)
+% status: GREEN (66x: sect06.rs \lx@list marks its frame a bare environment's, ended by \endlx@list)
+\documentclass{article}
+\makeatletter
+\def\refs{\list{}{\leftmargin=28pt}}
+\makeatother
+\begin{document}
+\begin{refs}
+\item One. \item Two.
+\end{refs}
+After.
+\end{document}

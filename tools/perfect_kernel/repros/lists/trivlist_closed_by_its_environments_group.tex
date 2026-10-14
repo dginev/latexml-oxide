@@ -1,0 +1,15 @@
+% witness: 2106.10067 (class_for_arxiv.cls:1193-1204,1637-1638 INFORMS \Trivlist), 1611.07992, 1109.3841 (\end{APPENDICES})
+% oracle: pdflatex 0 errors (\@trivlist opens no group; the class's \endTrivlist is a copy of latex.ltx \endtrivlist, not a call)
+% expect: 0 Errors; "After." outside the proof's list
+% mechanism: sect06.rs \@trivlist opens an \lx@list mode frame only \endtrivlist/\endlist close; \end{proof}'s \endgroup meets it
+% status: GREEN (66x: the \@trivlist frame is ended by \end{proof}'s \endgroup, an Info)
+\documentclass{article}
+\makeatletter
+\def\Trivlist{\@nmbrlistfalse\@trivlist\labelwidth\z@\leftmargin\z@\def\makelabel##1{##1}}
+\def\endTrivlist{\if@inlabel\indent\fi\ifhmode\unskip\par\fi\@endparenv}
+\def\proof#1{\Trivlist\item[{\it #1\enskip}]\ignorespaces}\def\endproof{\endTrivlist}
+\makeatother
+\begin{document}
+\begin{proof}{Proof.} Trivial. \end{proof}
+After.
+\end{document}
