@@ -595,15 +595,43 @@ fn copy_balanced_group(chars: &mut std::iter::Peekable<std::str::Chars>, out: &m
 /// and this reads that declaration back off the definition instead of keeping a
 /// second copy of the list that could drift from it.
 fn bib_field_source(value: &str, handler: &Rc<dyn Definition>) -> String {
-  let reads_raw = handler
+  let first = handler
     .get_parameters()
-    .and_then(|params| params.get_parameters().first().map(|p| reads_field_raw(p)))
-    .unwrap_or(false);
-  if reads_raw {
-    value.to_string()
-  } else {
-    escape_bib_data_specials(value)
+    .and_then(|params| params.get_parameters().first().cloned());
+  match first {
+    Some(p) if reads_field_raw(p) && with(p.name, |name| name != "Verbatim") => {
+      identifier_data(value)
+    },
+    Some(p) if reads_field_raw(p) => value.to_string(),
+    _ => escape_bib_data_specials(value),
   }
+}
+
+/// An identifier field's value (`doi`, `isbn`, `issn`, `lccn`, `pii`, `crossref`: the `Semiverbatim` handlers) as
+/// the identifier itself: TeX's escapes and grouping braces are not part of it. BibTeX counts every brace, escaped or
+/// not, so MathSciNet's DOI `10.1007/978-3-642-29849-3\{_}10` (its `url` reads `…3_10`) is balanced for BibTeX — but
+/// the `Semiverbatim` reader takes `\{` for a control symbol, and the `}` after `_` ended the argument, a stray `}`
+/// in the entry (2601.01900, 2511.01040, 2601.01772; 74 papers, all 2511+). An escape's backslash (`\_`, `\{`, `\&`)
+/// and every brace are dropped, so `\{_}`, `{\_}` and `\_` all read `_`. A value holding a control word is markup
+/// around the identifier (`\href{https://doi.org/…}{…}`, `\url{…}`; `href_semiverbatim_loop`) and is passed as it is.
+/// `url` (`Verbatim`) keeps its characters. Guard: `06_cluster_bibliography::bib_doi_with_escaped_brace`.
+fn identifier_data(value: &str) -> String {
+  let mut rest = value.chars().peekable();
+  while let Some(c) = rest.next() {
+    if c == '\\' && rest.peek().is_some_and(|next| next.is_ascii_alphabetic()) {
+      return value.to_string();
+    }
+  }
+  let mut out = String::with_capacity(value.len());
+  let mut chars = value.chars().peekable();
+  while let Some(c) = chars.next() {
+    match c {
+      '\\' if chars.peek().is_some_and(|next| !next.is_ascii_alphabetic()) => {},
+      '{' | '}' => {},
+      _ => out.push(c),
+    }
+  }
+  out
 }
 
 /// Whether `p` consumes its argument's characters as data rather than as TeX.
@@ -3630,6 +3658,21 @@ mod tests {
   }
 
   // --- process_identifier (Perl L784) ---
+
+  #[test]
+  fn identifier_data_drops_tex_escapes_and_braces() {
+    assert_eq!(
+      identifier_data(r"10.1007/978-3-642-29849-3\{_}10"),
+      "10.1007/978-3-642-29849-3_10"
+    );
+    assert_eq!(identifier_data(r"10.1000/a{\_}b"), "10.1000/a_b");
+    assert_eq!(identifier_data(r"10.1000/c\_d"), "10.1000/c_d");
+    // Markup around the identifier is left for the field's reader.
+    assert_eq!(
+      identifier_data(r"\href{https://doi.org/10.1/x}{10.1/x}"),
+      r"\href{https://doi.org/10.1/x}{10.1/x}"
+    );
+  }
 
   #[test]
   fn process_identifier_trims_whitespace() {

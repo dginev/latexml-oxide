@@ -4109,3 +4109,23 @@ fn bib_mathscinet_fields_without_preamble() {
     r#"<bibitem class="ltx_bib_article" fragid="bib.bib2" key="second" type="article" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Petrov</tag><tag class="ltx_bib_year" role="year">1991</tag><tag class="ltx_bib_title" role="title">Another problem</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Petr Petrov</text><text class="ltx_bib_year"> (1991)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Another problem</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Mat. Sb.</text></bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="mr ltx_bib_external" href="https://www.ams.org/mathscinet-getitem?mr=7654321">MathReview (A. A. Arsenʹev)</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"#,
   );
 }
+
+/// A `doi` field's TeX escapes and grouping braces are not part of the identifier: MathSciNet's `…3\{_}10`,
+/// `{\_}` and `\_` all give the DOI with `_`, and the entry after them is intact (bibtex.rs `identifier_data`;
+/// witnesses 2601.01900, 2511.01040, 2601.01772).
+#[test]
+fn bib_doi_with_escaped_brace() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_doi_escaped_brace.tex");
+  for (doi, href) in [
+    (
+      "10.1007/978-3-642-29849-3_10",
+      "https://dx.doi.org/10.1007/978-3-642-29849-3%5F10",
+    ),
+    ("10.1000/a_b", "https://dx.doi.org/10.1000/a%5Fb"),
+    ("10.1000/c_d", "https://dx.doi.org/10.1000/c%5Fd"),
+  ] {
+    assert!(x.contains(&format!("href=\"{href}\"")), "{doi}: {x}");
+  }
+  assert_eq!(x.matches("<bibitem").count(), 4, "{x}");
+  assert!(x.contains("The entry after the identifiers"), "{x}");
+}

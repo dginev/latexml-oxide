@@ -1,0 +1,8 @@
+% Driver for `bib_doi_escaped_brace.bib`: a `doi` field's TeX escapes and braces are not part of the identifier
+% (bibtex.rs `identifier_data`). Guard `06_cluster_bibliography::bib_doi_with_escaped_brace`.
+\documentclass{article}
+\begin{document}
+See \cite{mathscinet,bracedescape,plainescape,survivor}.
+\bibliographystyle{plain}
+\bibliography{bib_doi_escaped_brace}
+\end{document}

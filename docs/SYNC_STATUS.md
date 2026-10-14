@@ -1050,6 +1050,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   heuristic firing on a package that sets `_` a letter itself (etextools, 2606.06323), N7 NFSS shape probes
   `\try@load@fontshape`/`\DeclareFontShape` no-ops (2606.07112, Perl the same), N10 a sectioning unit in `ltx:quote`
   (2606.19241) and an `\item[]` excluded from the OD #189 item bridge (2606.00118) — both await a ruling.
+- **66s** (K9 study row G, 74 papers, all 2511+): a Semiverbatim identifier field's TeX escapes and grouping braces
+  are not part of the identifier (bibtex.rs `identifier_data`): MathSciNet's DOI `…3\{_}10` is balanced for BibTeX
+  (it counts the escaped brace) but the Semiverbatim reader took `\{` for a control symbol and met a stray `}`;
+  `\{_}`/`{\_}`/`\_` now read `_`, the DOI link matches the entry's `url`; values holding a control word (`\href`)
+  pass as before (2601.01900 E 2→0, 2511.01040 E 6→0, 2601.01772 E 2→0;
+  `06_cluster_bibliography::bib_doi_with_escaped_brace`).
 - **66r** (two quick wins from the K9 mode-switch study, `agent_reports/2026-10-14_k9_mode_switch_study.md`): the
   contrib emlines binding's `\emline` lost its two stray `}` (Rust-only typo; ~40 papers, 0911.1421 had 78 Errors), and
   `\twocolumn[…]` tests its header in Rust instead of inside an `\ifx`, so a header spanning the document's own
