@@ -1,0 +1,19 @@
+% witness: hep-th9402135:175-177 (run 345: Error → Fatal TooManyErrors since 65n; 30 more K1 papers, root-causer report
+%          agent_reports/2026-10-14_ef345_regressions.md), reduced
+% oracle:  pdflatex 2 errors, both "Missing $ inserted": tex.web §1047 at the blank line (the formula ends), §1046 at
+%          `\int` (math-only in text: a formula starts); the closing `$` then ends that formula, and every later `$...$`
+%          is a formula; pdftotext "The partition function is Z(ϵ) = ∫ exp(−F_A)DA, where F_A is the curvature of A_1 and
+%          B_2 and C_3 and D_4."
+% engines: rust 66h: 65n's §1047 without §1046 — the scripts after the blank line are text ("Script _ can only appear in
+%          math mode"), the formula's closing `$` opens one, and `$` parity is flipped for the rest of the paragraph
+%          (9 errors; F_A, A_1 ... text, ", where", " is the curvature of" formulas); Perl 0 errors (its `\par` does not
+%          end the formula)
+% expect:  2 errors; the formulas F_A, A_1, B_2, C_3, D_4 each a formula, ", where" and "is the curvature of" text
+% preload: ar5iv.sty
+% status:  RED
+\documentclass{article}
+\begin{document}
+The partition function is $Z(\epsilon) =
+
+\int_{A} \exp(-F_{A}) D A$, where $F_{A}$ is the curvature of $A_1$ and $B_2$ and $C_3$ and $D_4$.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 2605.18495, 2605.23416 (JASA.cls:1232-1238 re-dresses `\email` over revtex4-2's `\@email`/`\@AF@join`)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the author's creator holds a contact with "ann@example.org"
+% mechanism: revtex4-2.cls:2404-2421 ends every `\email`/`\homepage`/`\thanks`/`\altaffiliation` in `\@AF@join{note}`,
+%   dispatched (:2120/2160/2236) to the title, author or affiliation last given; the binding bound only the user-level
+%   commands, so a class's own `\@email` met `\@AF@join` undefined. Fixed: revtex4_support_sty.rs.
+% status:  GREEN
+\documentclass[aip]{revtex4-2}
+\makeatletter
+\renewcommand*\email[1][]{\begingroup\sanitize@url\@email{#1}}%
+\def\@email#1#2{\endgroup\@AF@join{#1\href{mailto:#2}{#2}}}%
+\makeatother
+\begin{document}
+\title{T}\author{Ann Author}\email{ann@example.org}
+\maketitle
+Text.
+\end{document}

@@ -2030,8 +2030,9 @@ fn load_tex_definitions(
     // OFF and re-breaks the xsavebox witness):
     if std::env::var("LATEXML_EXPL_TRACE").is_ok() {
       eprintln!(
-        "EXPL-EXIT request={request:?} is_core={is_expl3_core} grandparent={grandparent_in_expl3} handleopts={handleoptions} us_letter={} off_defined={}",
+        "EXPL-EXIT request={request:?} is_core={is_expl3_core} grandparent={grandparent_in_expl3} handleopts={handleoptions} us_letter={} expl_on={} off_defined={}",
         lookup_catcode('_') == Some(Catcode::LETTER),
+        expl_syntax_on(),
         lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
       );
     }
@@ -2045,10 +2046,14 @@ fn load_tex_definitions(
     // `\documentclass{ctexart}` (space=9/`:`=11/`_`=11 at document
     // level), garbling pgfutil-common's space-trick and cascading 1001
     // errors in every ctex+tikz doc (hfutexam ×4, beautybook, gckanbun).
+    // Only when the file left expl3 syntax ON, by expl3's own flag (`\l__kernel_expl_bool`, which `\ExplSyntaxOn`
+    // sets and the `\ExplSyntaxOff` it arms clears, expl3-code.tex:242-272), not by `_`'s catcode: etextools.sty:35-56
+    // makes `_` a letter for its own code and restores it in its own `\AtEndOfPackage` (:55); firing here left `/`
+    // catcode 8 after the load and broke siunitx's `\AtBeginDocument` code (2606.06323).
     if !is_expl3_core
       && handleoptions
       && !grandparent_in_expl3
-      && lookup_catcode('_') == Some(Catcode::LETTER)
+      && expl_syntax_on()
       && lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
     {
       let _ = invoke_token(&T_CS!("\\ExplSyntaxOff"));
@@ -2409,8 +2414,12 @@ fn process_options_by(inorder: bool, keysets: &[&str], sets_curroptions: bool) -
     // on left-to-right evaluation (e.g. `[aaspp4,tighten]` requires
     // aaspp4's bindings — \tightenlines — to be defined before tighten.sty
     // body fires; driver: astro-ph9707180).
+    // latex.ltx:18587-18592 `\@process@pti@ns`: such an option still runs its `\ds@<option>` when one is defined
+    // (`\@ifundefined`: not `\relax`) — a 2.09-style class `\def`s its handlers without `\DeclareOption` (gji.cls:61-70,
+    // 2605.19951; biom.cls:48 `\def\ds@usenatbib`, 2606.12015) — and `\default@ds` only otherwise. Perl
+    // (Package.pm:2470-2473) sends every one to the default handler (KNOWN_PERL_ERRORS #657).
     for option in &cur_options_list {
-      if cur_set.contains(option) {
+      if cur_set.contains(option) && !execute_option_internal(*option, &[])? {
         execute_default_option_internal(*option)?;
       }
     }
@@ -2420,6 +2429,17 @@ fn process_options_by(inorder: bool, keysets: &[&str], sets_curroptions: bool) -
     let_i(&T_CS!(s!("\\ds@{}", option)), &T_RELAX!(), None);
   }
   Ok(())
+}
+
+/// Whether expl3 syntax is on, by expl3's own flag: expl3-code.tex:242 `\chardef\l__kernel_expl_bool`, set to 1 by
+/// `\ExplSyntaxOn` and back to 0 by the `\ExplSyntaxOff` it arms (:243-272). False before expl3 is loaded.
+fn expl_syntax_on() -> bool {
+  lookup_definition(&T_CS!("\\l__kernel_expl_bool"))
+    .ok()
+    .flatten()
+    .filter(|defn| defn.is_register())
+    .and_then(|defn| defn.value_of(Vec::new()))
+    .is_some_and(|value| crate::common::numeric_ops::NumericOps::value_of(value) == 1)
 }
 
 fn execute_option_internal(option: SymStr, keysets: &[&str]) -> Result<bool> {

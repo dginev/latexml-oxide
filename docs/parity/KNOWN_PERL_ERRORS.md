@@ -12973,14 +12973,16 @@ token `\fnum@table` itself and the first table caption recurses (2605.29738; Per
 `\usepackage[english]{babel} … \foreignlanguage{lithuanian}{x} \begin{table}\caption{A}\end{table}`. Fixed in Rust
 (OXIDIZED_DESIGN_DIVERGENCES #579; repro captions-floats/babel_ini_caption_template_needs_fnum).
 
-## 655. The REVTeX binding lacks `\@email`, `\@homepage` and `\frontmatter@footnote`
+## 655. The REVTeX binding lacks `\@email`, `\@homepage`, `\@AF@join` and `\frontmatter@footnote`
 
 revtex4_support.sty.ltxml:55-56 binds `\email` and `\homepage` alone. revtex4-1.cls:2383-2392 (4.0 and 4.2 alike) has `\email` =
 `\begingroup\sanitize@url\@email{#1}` with `\@email` closing the group, which classes re-dress (cej.cls:88; 0710.1022,
 1201.4230: with only `\sanitize@url` defined the group stayed open, `%` other to the document's end); and revtex4-2.cls:2472
-`\frontmatter@footnote`, which documents call for a note on several authors (2605.04155). Fixed in Rust
-(revtex4_support_sty.rs, revtex4_cls.rs; repros class-bindings/revtex_email_redressed_over_sanitize_url,
-sectioning-frontmatter/revtex_frontmatter_footnote_on_two_authors).
+`\frontmatter@footnote`, which documents call for a note on several authors (2605.04155); and revtex4-2.cls:2120/2160/2236
+`\@AF@join`, the join every `\email`/`\homepage`/`\thanks`/`\altaffiliation` ends in, which JASA.cls:1232-1238 calls from
+its own `\@email` (2605.18495, 2605.23416: undefined). Fixed in Rust (revtex4_support_sty.rs, revtex4_cls.rs; repros
+class-bindings/revtex_email_redressed_over_sanitize_url, sectioning-frontmatter/revtex_frontmatter_footnote_on_two_authors,
+sectioning-frontmatter/revtex_af_join_from_redressed_email).
 
 ## 656. The amsrefs binding lacks `{bibchapter}` and the `\MR` internals
 
@@ -12990,3 +12992,13 @@ class with chapters) and :2673-2690 `\strip@MRprefix`/`\MRhref` (with `msc-links
 missing; nor does its `msc-links` load hyperref (amsrefs.sty:198-205). Fixed in Rust (amsrefs_sty.rs; repros
 index-bib/amsrefs_bibchapter, index-bib/amsrefs_document_mr_redress).
 
+
+## 657. `ProcessOptions` never runs a `\ds@<option>` that `\DeclareOption` did not declare
+
+Package.pm:2470-2473 sends every option outside `@declaredoptions` to `\default@ds`. latex.ltx:18587-18592
+`\@process@pti@ns` runs such an option's `\ds@<option>` when it is defined (not `\relax`), the default only otherwise —
+and 2.09-style classes `\def` their handlers directly: gji.cls:61-70 (2605.19951), biom.cls:48
+`\def\ds@usenatbib{\@usenatbibtrue}` with natbib loaded only `\if@usenatbib` (:1564-1566; 2606.12015, `\citep`
+undefined). Minimal trigger: a class with `\def\ds@extra{\RC@extratrue}\ProcessOptions` loaded as
+`\documentclass[extra]{…}`. Fixed in Rust (content.rs `process_options_by`; repro
+loader/ds_option_handler_without_declareoption).

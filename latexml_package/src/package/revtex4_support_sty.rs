@@ -109,6 +109,11 @@ LoadDefinitions!({
   // `\author`'s optional notes, a mark shared by identical texts; documents call it for a note on several authors
   // (`\newcommand{\equalcontrib}{\frontmatter@footnote{…contributed equally…}}`, 2605.04155). Each author keeps it.
   DefMacro!("\\frontmatter@footnote{}",  "\\lx@add@contact[role=thanks]{#1}");
+  // revtex4-2.cls:2120/2160/2236 `\@AF@join{note}`: the join every `\email`, `\homepage`, `\thanks` and
+  // `\altaffiliation` ends in (:2404-2421), dispatched to the title, author or affiliation last given. A class that
+  // re-dresses `\@email` calls it directly (JASA.cls:1232-1238 `\def\@email#1#2{\endgroup\@AF@join{#1\href{mailto:#2}
+  // {#2}}}`; 2605.18495, 2605.23416: `\@AF@join` undefined). The note goes where our `\thanks` puts its notes.
+  DefMacro!("\\@AF@join{}",              "\\lx@add@contact[role=thanks]{#1}");
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}"); // ?
 
   DefMacro!("\\collaboration{}",    "\\author{#1}");
