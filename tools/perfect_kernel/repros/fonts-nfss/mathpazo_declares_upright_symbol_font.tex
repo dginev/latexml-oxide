@@ -1,0 +1,14 @@
+% witness: 2605.15826, 2605.30950 (`\usepackage{mathpazo}` + `\usepackage[mathpazo]{flexisym}` via breqn)
+% oracle: pdflatex 0 errors; mathpazo.sty:63 `\DeclareSymbolFont{upright}{OT1}{zplm}{m}{n}` defines `\symupright`,
+%         which flexisym's mathpazo.sym:49 reads (`\hexnumber@\symupright`)
+% engines: rust 67o1 = `\symupright` undefined (our binding, like Perl's, declares no `upright` font); since 66i the
+%          flexisym .sym file is read (sandbox run 354: warning -> error)
+% expect: 0 Errors; "Upright font: declared."
+% mechanism: mathpazo binding declares the `upright` symbol font as mathpazo.sty does
+% status: RED (67o1) -> GREEN (67q)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mathpazo}
+\begin{document}
+Upright font: \ifdefined\symupright declared\else missing\fi.
+\end{document}

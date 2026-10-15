@@ -923,6 +923,10 @@ LoadDefinitions!({
   });
 
   Let!("\\HyOrg@addtoreset", "\\@addtoreset");
+  // hyperref.sty:7302 keeps the original `\maketitle` as `\HyOrg@maketitle` before wrapping it for its footnotes; a class
+  // that undoes the wrapping relies on it: pittetd.cls `\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` left
+  // `\maketitle` undefined (1509.06375: 101 errors then Fatal; Perl's binding saves none either).
+  Let!("\\HyOrg@maketitle", "\\maketitle");
   // Perl `hyperref.sty.ltxml:383` only does `Let('\H@refstepcounter',
   // '\refstepcounter')`. We go one step further and mirror the real
   // `hyperref.sty:6631+6638-6657`: redefine `\refstepcounter` to

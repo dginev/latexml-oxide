@@ -1231,6 +1231,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   documents (state.rs, arXiv AutoTeX's) names only `\documentclass`, `\documentstyle` and `\begin{document}`; eplain
   provides `\usepackage` in plain TeX, so the plain eplain papers 1207.1752 and 1401.4197 take the LaTeX route and keep
   their `\usepkg@options@…` Errors (routing unchanged here; needs a decision).
+- **Runs 354/355** (full sandbox reruns of 2605/2606 on 1a95291ef6 = 67n + 67o, the baseline before the rawclasses
+  lever). 2605 (run 354) vs its 2026-10-13 snapshot: E 1,443 → 1,332, F 32 → 29; 10 papers worse: 5 fleet-contention
+  `timeout:wallclock` Fatals (2605.04030, 2605.15781, 2605.20426, 2605.28027, 2605.14200: 40-72 s locally against the
+  fleet's 180 s, with local measurement runs sharing the unpinned host), and two code classes, fixed as 67q. 2606
+  (run 355) vs 2026-10-13: E 1,402 → 1,298, F 42 → 27; 2 worse: 2606.12944 (`\path`, 67q) and 2606.01369 (a
+  wall-clock timeout).
+- **67q** (run 354 regressions): (1) the arXiv hyperref fallback (67a, OXIDIZED_DESIGN #588) supplied `\href` but not
+  url.sty, which the injected hyperref loads; an elsarticle-num `.bbl` defines `\path` only when `\href` is undefined, so
+  its `{\path{doi:…}}` entries were undefined (2605.07373, 2605.08166, 2605.12003). The fallback now also loads url.sty
+  provide-only (`\path`, `\urlstyle`, `\urldef`, `\Url` where still undefined). Guard
+  `perfect_kernel_batch67a::url_path_kept_for_a_bbl_after_supplied_href`. (2) mathpazo.sty:63/67 declares the `upright`
+  symbol font, so `\symupright` exists; flexisym's mathpazo.sym:49 reads it under `\usepackage[mathpazo]{flexisym}`
+  (breqn), read since 66i. Our binding, like Perl's, declared none (2605.15826, 2605.30950). Guard
+  `perfect_kernel_batch67q::mathpazo_declares_the_upright_symbol_font`. Residual (not changed): our kernel's
+  `\DeclareSymbolFont` makes `\sym<name>` a `\let` to `\z@` (sect08.rs), where latex.ltx's `\new@mathgroup` allocates
+  a `\chardef` family number (`\the\symupright`: 0.0pt vs pdflatex's 4). (3) From the rawclasses regression study
+  (agent_reports/2026-10-15_rc_rawcls_regressions.md, R3): hyperref.sty:7302 keeps the original `\maketitle` as
+  `\HyOrg@maketitle`; pittetd.cls's `\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` left `\maketitle` undefined
+  (1509.06375: 101 errors then Fatal). Our binding (and Perl's) saved none; now `\let`. Guard
+  `perfect_kernel_batch67q::hyperref_keeps_the_original_maketitle`.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

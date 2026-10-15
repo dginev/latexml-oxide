@@ -118,6 +118,10 @@ LoadDefinitions!({
   // hyperref" though its source never loads it). Provide-only (user ruling 2026-10-14): at `\begin{document}` the one of
   // the two still undefined is defined as hyperref's, with url.sty's default `\UrlFont`/`\UrlLeft`/`\UrlRight` where
   // missing; a paper that loads either package, or defines the command itself in its preamble, keeps its own.
+  // hyperref loads url.sty, so url.sty follows, provide-only too: its `\path`, `\urlstyle`, `\urldef`, `\Url` for the
+  // names still undefined. An elsarticle-num `.bbl` defines `\path` only when `\href` is undefined
+  // (`\expandafter\ifx\csname href\endcsname\relax \def\href#1#2{#2} \def\path#1{#1}\fi`); with `\href` supplied,
+  // its `{\path{doi:…}}` entries were undefined (2605.07373, 2605.08166, 2605.12003).
   // OXIDIZED_DESIGN #588; guard `perfect_kernel_batch67a`.
   DefPrimitive!("\\lx@arxiv@provide@hyper@urls", {
     let href = !IsDefined!(&T_CS!("\\href"));
@@ -133,6 +137,8 @@ LoadDefinitions!({
         Let!("\\UrlRight", "\\@empty");
       }
       hyperref_sty::define_hyper_urls(href, url)?;
+      let _provide_only = definition::origin::ProvideOnlyGuard::new();
+      RequirePackage!("url");
     }
   });
   at_begin_document(Tokens!(T_CS!("\\lx@arxiv@provide@hyper@urls")))?;

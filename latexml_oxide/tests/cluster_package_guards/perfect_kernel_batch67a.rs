@@ -42,6 +42,22 @@ fn own_url_kept_missing_href_supplied() {
   );
 }
 
+/// The injected hyperref loads url.sty, so its `\path` is supplied too: a `.bbl` that defines `\path` only when
+/// `\href` is undefined keeps url.sty's (2605.07373, 2605.08166, 2605.12003; batch 67q).
+#[test]
+fn url_path_kept_for_a_bbl_after_supplied_href() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/url_path_bbl_after_supplied_href.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  latexml::util::test::assert_element(
+    &xml,
+    "bibblock",
+    &[],
+    r#"<bibblock> A. Author, J. 1 (2000) 1.<ref class="ltx_nolink ltx_path" font="typewriter" href="doi:10.1/x">doi:10.1/x</ref>.</bibblock>"#,
+  );
+}
+
 /// Without the ar5iv preload nothing is supplied: `\url` stays undefined, as in Perl and pdflatex.
 #[test]
 fn no_fallback_without_the_preload() {

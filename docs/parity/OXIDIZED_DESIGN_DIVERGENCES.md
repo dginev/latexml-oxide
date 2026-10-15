@@ -17405,8 +17405,11 @@ defines whichever of the two is still undefined as hyperref's (`hyperref_sty.rs`
 hyperref binding), with url.sty's default `\UrlFont`/`\UrlLeft`/`\UrlRight` where missing. A paper that loads either
 package, or defines the command itself in its preamble or in an `\AtBeginDocument` hook, keeps its own; nothing is
 supplied without the ar5iv preload, and hyperref is not loaded for every paper (the rejected option). The supplied `\url`
-is locked as the hyperref binding's is (OD #500), so a `\renewcommand\url` in the document body is ignored with an Info. Witnesses cond-mat0407333, cs0409028, hep-th0411273,
-1001.4826 (`\doi` → `\href`); guards `perfect_kernel_batch67a`.
+is locked as the hyperref binding's is (OD #500), so a `\renewcommand\url` in the document body is ignored with an Info.
+hyperref loads url.sty, so url.sty is then loaded provide-only too (67q): its `\path`, `\urlstyle`, `\urldef` and `\Url`
+for the names still undefined. An elsarticle-num `.bbl` defines `\path` only when `\href` is undefined, and its
+`{\path{doi:…}}` entries were undefined once `\href` was supplied (2605.07373, 2605.08166, 2605.12003). Witnesses
+cond-mat0407333, cs0409028, hep-th0411273, 1001.4826 (`\doi` → `\href`); guards `perfect_kernel_batch67a`.
 
 ### 589. Paul Taylor's `diagrams`: a diagram is a math array of its objects and arrows (Perl: `<ERROR>{diagram}</ERROR>`)
 
