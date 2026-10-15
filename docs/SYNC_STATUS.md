@@ -1169,6 +1169,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   a_watchdog_timeout_is_reported_as_fatal_timeout, an_allocation_past_rlimit_as_is_reported_as_fatal_oom}` (the
   `alloc_exhausted` test fault spends the address space through the raw allocator first). Residual: a hook whose sweep
   itself fails to allocate exits without finishing it.
+- **Runs 358/359** (E/F rerun of run 357 on 595ce52d9e: 67q, 67r, 67p, 67s, 67u, 67ps; marked 2026-10-15 20:16Z):
+  in progress; compare with run 357 when complete.
+- **Run 357** (E/F rerun of run 353 on 1a95291ef6: 67n, 67o; COMPLETE 2026-10-15 18:15:14Z in 4 h 05 min under host
+  load): E 89,338 → 89,367, F 4,145 → 4,091 (success 96.80 % → 96.80 %). Transitions vs run 353: E→OK 4, E→F 43, F→E 76,
+  F→OK 21. E→F: `timeout` 33 (contention: two writers and their builds shared the host), `TooManyErrors` 6, `oom` 2,
+  SIGABRT 1, Document 1; all 10 non-timeout ones convert locally on the same commit with no Fatal (Errors 0-90). The
+  fleet logs of the TooManyErrors papers (hep-th9703095, 1607.00237) are 68 and 101 × `Error:post:xpath XPath
+  evaluation failed (no libxml2 error detail)` plus EPS "every converter failed": a memory-pressure signature in a
+  fleet child. Candidate (open): treat a detail-less libxml2 XPath failure like an allocation failure (retryable,
+  67o).
 - **Run 353** (E/F rerun of run 351 on ba8dff38f3: 67d, 67j, 67l, 67m; COMPLETE 2026-10-15 05:52:14Z in 3 h 27 min,
   against 5 h 27 min for run 351 with the 67m deadlock): E 93,718 → 89,338, F 4,171 → 4,145 (success 96.65 % → 96.80 %).
   Transitions vs run 351: E→OK 4,360, F→OK 46, F→E 71, E→F 91 (`oom:alloc_failed` 59, `timeout:wallclock` 11,
