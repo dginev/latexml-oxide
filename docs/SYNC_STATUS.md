@@ -1195,7 +1195,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   as scratch — btxmac `\edef\cite{\the\catcode`@}` then `\let\@oldatcatcode=\cite` (eplain.tex:346-348) — which our
   locked `\cite` ignores ("Ignoring redefinition of \cite"), so `\catcode`@ = \@oldatcatcode` (:666) misses its
   number and `\def\@Fornoop#1\@@#2#3` (:721) is read as `\def\@` (math0308041, math0612670, 0705.2148, 0802.3843,
-  1207.1752, 1401.4197; queued as 67n). Per-paper cost (perf-measure 2026-10-15, CPU seconds: `perf_event_paranoid=4`
+  1207.1752, 1401.4197; fixed by 67n below). Per-paper cost (perf-measure 2026-10-15, CPU seconds: `perf_event_paranoid=4`
   on this host blocks `instructions:u`): no regression since the 2026-10-07 pass — 39 random 2609 papers HEAD/BASE
   median 1.000, 20 heavy fleet Fatals 0.989; 8 of the 9 fleet OOM papers peak under 3.9 GB and 8 of the 9 fleet
   timeouts finish in 5-140 s standalone, so the tail deaths are fleet limits and contention. Open from it: 1902.02884
@@ -1205,6 +1205,32 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   diagrams (3,152 → 3,196 formulae). Ops: the fleet's journald drops ~1M lines per 30 s (every child streams its whole
   log), and `/opt/cortex-scratch` holds 565,483 leaked `cortex_task*` input trees (434 GB, since 2026-07) awaiting a
   user-approved cleanup.
+- **67n** (run 351's 14 E→F `ParamSpec:Expected`; user ruling 2026-10-15 "extend D1 to robust"): a robust locked
+  binding owns its calls by what it wraps. The kernel `\cite` (sect11.rs, `robust => true, locked => true`, OD #88)
+  is the `\protect \cite␣` wrapper, whose own parameter list is empty, so `state::owns_calls` said no and eplain's
+  btxmac scratch `\edef\cite{\the\catcode`@}` (eplain.tex:346) was refused ("Ignoring redefinition of \cite"): its
+  `\let\@oldatcatcode=\cite` (:348) copied the binding, `\catcode`@ = \@oldatcatcode` (:666) read no number, `@`
+  became catcode 0 and `\def\@Fornoop#1\@@#2#3{}` (:721) raised Fatal `ParamSpec`. All six witnesses take the LaTeX
+  route before `\input eplain` (AMS-TeX's `\documentstyle{amsppt}`; eplain's own `\usepackage` for 1207.1752 and
+  1401.4197), which loads the locked `\cite`; Perl's `\cite` is not locked (math0308041: Perl 2 Errors, 0 Fatal).
+  `owns_calls` now judges a robust wrapper (`robust_wrapper_body`) by its inner `\cs␣`'s meaning and `call_openers`
+  takes the `[`/`*` openers from it, so the scratch value is the meaning for `\let` and every use without an
+  argument, while `\cite{x}`/`\cite[p.~3]{x}` after eplain's own `\def\cite{\@getoptionalarg\@cite}` (:445) stay the
+  binding's citations (OD #500 amended, OD #88 note). Witnesses (67m1 → 67n, Errors/Fatals): math0308041 1/1 → 0/0,
+  math0612670 1/1 → 0/0, 0802.3843 1/1 → 1/0 (`frontmatter:merged_creators`), 1207.1752 1/1 → 7/0, 1401.4197 1/1 → 4/0,
+  0705.2148 1/1 → 0/1 (side finding (a)). Repros macro-state/{m5_robust_cite_edef_scratch_eplain,
+  m5_robust_cite_calls_after_value}, m5_robust_cite_value_in_group RED → GREEN; guards `perfect_kernel_batch67n`.
+  A/B vs 67m1 (the M5 census's 95 `\def`/`\renewcommand`/`\let\cite` papers + 30 random natbib-free papers citing
+  with `\cite[…]{…}`): 125/125 byte-identical XML (606 Errors, 3 Fatal timeouts, 8,727 `<cite>` both sides); 4 take
+  the new path, parameterless forwarders whose every use is a call (`\renewcommand\cite{\citep}` 2306.00600,
+  `{\citeasnoun}` 2006.07780/2006.13934, a cite.sty-style `\def\cite{…\@ifnextchar[…}` 1806.11139).
+  Side findings, not chased: (a) 0705.2148 now ends in a Rust-only `Fatal:Timeout:PushbackLimit` while reading
+  amssym.tex, which needs eplain, amstex, amssym and `\documentstyle` together (Perl 1 Error at eplain.tex:50, pdftex
+  clean): RED amstex/eplain_amstex_amssym_pushback_limit. (b) `has_latex_cue` (latexml_oxide/src/converter.rs:136-146)
+  counts `\usepackage`/`\RequirePackage`/`\include` as LaTeX cues, while the test `state::set_plain_tex_document`
+  documents (state.rs, arXiv AutoTeX's) names only `\documentclass`, `\documentstyle` and `\begin{document}`; eplain
+  provides `\usepackage` in plain TeX, so the plain eplain papers 1207.1752 and 1401.4197 take the LaTeX route and keep
+  their `\usepkg@options@…` Errors (routing unchanged here; needs a decision).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

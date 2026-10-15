@@ -1,0 +1,13 @@
+% witness: 0705.2148 (`\input eplain \input amstex \input amssym \documentstyle{amsppt}`; the LaTeX route, taken for `\documentstyle`)
+% oracle:  pdftex (plain format, TL 2025) 0 errors
+% engines: rust 67m1 = Fatal:ParamSpec at eplain.tex:721 (the refused btxmac scratch `\cite`, fixed in 67n); rust 67n = Fatal:Timeout:PushbackLimit while reading amssym.tex; perl 1 error (`unexpected:\fi` at eplain.tex:50), no Fatal; each of eplain, amstex, amssym, `\documentstyle` is needed (drop any one: 0 errors)
+% expect:  no Fatal; at most Perl's eplain.tex:50 error
+% status:  RED (67n), side finding of 67n, not chased
+% preload: ar5iv.sty
+\input eplain
+\input amstex
+\input amssym
+\documentstyle{amsppt}
+\document
+X
+\enddocument

@@ -1,0 +1,12 @@
+% witness: math0308041, math0612670 (eplain.tex:445 `\def\cite{\@getoptionalarg\@cite}` after the btxmac scratch value)
+% oracle: pdflatex clean (TL 2025, 0 errors): "Value: CITEV. See CITEV[p. 3]knuth and CITEVknuth." — pdflatex runs the document's value for the calls too; D1 keeps the calls on the binding (the semantic citation)
+% engines: rust base 67m1-rel: the parameterless value of the robust kernel `\cite` is refused (Info:ignore), every use runs the binding, so `\cite.` reads `.` as its key: `Value: <cite>[<bibref bibrefs=".">]</cite> See`
+% expect: 0 errors; "Value: CITEV." from the value, then both calls — `\cite[p.~3]{knuth}` (a `[` opener of the inner `\cite␣`'s signature) and `\cite{knuth}` — are the binding's citations of knuth (OXIDIZED_DESIGN #500: the binding owns its calls)
+% status: RED (base 67m1) -> GREEN (67n)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\def\cite{CITEV}
+Value: \cite. See \cite[p.~3]{knuth} and \cite{knuth}.
+\begin{thebibliography}{9}\bibitem{knuth} D. Knuth, TeXbook.\end{thebibliography}
+\end{document}

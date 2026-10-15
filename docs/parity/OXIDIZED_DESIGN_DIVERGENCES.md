@@ -3612,7 +3612,10 @@ empty References section under bold `?` markers: *"N bibentries, **0 cited**"*.
 
 `\cite` now carries `locked => true`, exactly as natbib locks its own variants
 (`natbib.sty.ltxml` L151, L191, L225). Raw `.sty`/`.cls` and document-source
-redefinitions are ignored; native bindings still override freely, because
+redefinitions are ignored — except a document's parameterless value, which is
+the meaning for every use without an argument while the calls keep the binding
+(#500; the robust `\cite` is judged by its inner `\cite␣`, 67n: eplain's
+btxmac scratch, math0308041); native bindings still override freely, because
 binding loads run UNLOCKED (Perl `Package.pm:loadLTXML` L2318 →
 `local_state_unlocked_guard` in `binding/content.rs`).
 
@@ -15364,9 +15367,18 @@ Scope of the rule:
   use, `\mathbf x` included.
 - **Absolutely locked.**
   - Bindings with no braced interface: sectioning (whose 0-parameter macro reads its argument downstream in
-    `\@startsection`), `\footnote`, `\url`, `\maketitle`, `\abstract`, environments, font defaults, `\def`, and robust
-    bindings (the kernel `\cite` without natbib, `\protect \cite␣`, sect11.rs:792: a group-local `\def\cite{CITEV}`
-    used as `[\cite]` still has the binding read `]` as its key, RED `macro-state/m5_robust_cite_value_in_group`).
+    `\@startsection`), `\footnote`, `\url`, `\maketitle`, `\abstract`, environments, font defaults, `\def`.
+  - A robust binding is judged by what it wraps (user ruling 2026-10-15, "extend D1 to robust"): its own meaning is
+    the parameterless `\protect \cs␣`, so `owns_calls` reads the inner `\cs␣`'s parameter list, and `call_openers`
+    takes the `[`/`*` openers from it. The one robust locked binding is the kernel `\cite` without natbib
+    (sect11.rs, `[] Semiverbatim`): a group-local `\def\cite{CITEV}` used as `[\cite]` prints the value, and
+    `\cite[p.~3]{x}`/`\cite{x}` stay the binding's citations (67n; was RED `macro-state/m5_robust_cite_value_in_group`).
+    eplain's btxmac borrows `\cite` as scratch — `\edef\cite{\the\catcode`@}`, `\let\@oldatcatcode=\cite`
+    (eplain.tex:346-348), read back by `\catcode`@ = \@oldatcatcode` (:666) — and its own `\def\cite{\@getoptionalarg
+    \@cite}` (:445) becomes an override whose calls keep the binding. Refused, the scratch left `@` at catcode 0 and
+    ended in Fatal `ParamSpec` at :721 (math0308041, math0612670, 0705.2148, 0802.3843, 1207.1752, 1401.4197; Perl's
+    `\cite` is not locked). A wrapper whose inner macro the document replaced (`\DeclareRobustCommand\cite{V}` installs
+    `\cite␣` first) is judged by that replacement, so it stays refused, as before.
   - Every name containing `@`, LaTeX's internal namespace (clsguide.tex:187, latex.ltx:1797): `\alloc@`,
     `\@startsection`, `\@caption`, `\@lbibitem`, ….
 - **Unchanged paths.** Class/package code (File origin) stays refused with records and replay; `replay_class_setter`
@@ -15414,7 +15426,7 @@ A/B vs 8542e1b1a5:
 - random 298/300 identical (2 fewer errors);
 - witnesses 2405.18512 45 → 0 (its appendices now `<appendix>`), 1406.2544 31 → 0, 1511.05179 1 → 0.
 
-Guards `perfect_kernel_batch64zb::*`; repros `macro-state/m5_*`.
+Guards `perfect_kernel_batch64zb::*`, `perfect_kernel_batch67n::*` (robust bindings); repros `macro-state/m5_*`.
 
 ### 501. An email or web address a class sets in typewriter type is `<text font="typewriter">` in its contact, its `_` and `~` as typed (Perl: roman, `˙` and `˜`)
 

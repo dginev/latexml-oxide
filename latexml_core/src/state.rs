@@ -1399,7 +1399,8 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     // lose semantics when redefined"), and a use without an argument cannot produce that markup: the binding would
     // read the next token as its argument (a pgffor `\foreach \i/\text` loop variable: 15 errors; `\@for\text:=`:
     // Fatal; `\def\title{On Widgets}` then `\section*{\title}`). So a VALUE the document defines — a definition
-    // without parameters — of a binding that takes a braced argument ([`owns_calls`]) becomes the meaning: what
+    // without parameters — of a binding that takes a braced argument ([`owns_calls`]; a robust binding by its inner
+    // `\cs␣`, the kernel `\cite`: eplain's btxmac scratch, math0308041) becomes the meaning: what
     // `\ifx`, `\meaning` and every use without an argument see, as in pdflatex; the binding stays the handler of
     // its calls, as `\lx@locked@<cs>` ([`crate::definition::expandable::Expandable::yields_calls`]). A definition
     // with parameters defines a command, not a value, so every use of it stays the binding's (`\renewcommand\mathbf
@@ -3245,6 +3246,16 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
   if cs.with_cs_name(|name| name.contains('@')) {
     return false;
   }
+  // A robust binding is judged by what it wraps (user ruling 2026-10-15, D1 extends to robust bindings): its own
+  // meaning is the parameterless `\protect \cs␣` ([`robust_wrapper_body`]), its signature the inner `\cs␣`'s — the
+  // kernel `\cite` (sect11.rs) reads `[] Semiverbatim` there. Witnesses math0308041, math0612670, 0802.3843
+  // (eplain.tex:346 `\edef\cite{\the\catcode`@}`).
+  if let Stored::Expandable(defn) = binding
+    && !defn.yields_calls
+    && let Some(inner) = robust_wrapper_body(defn, cs)
+  {
+    return lookup_meaning(&inner).is_some_and(|inner_binding| owns_calls(&inner, &inner_binding));
+  }
   let params = match binding {
     Stored::Expandable(defn) if defn.yields_calls => return true,
     Stored::Expandable(defn) => defn.get_parameters(),
@@ -3347,9 +3358,14 @@ pub fn locked_binding_token(cs: &Token) -> Token {
 }
 
 /// The other tokens that open a call of `binding` (a [`locked_binding_token`]) besides an explicit `{`: the `[` of
-/// each optional argument its signature opens with, and the token of an `OptionalMatch:*`.
+/// each optional argument its signature opens with, and the token of an `OptionalMatch:*`. A robust binding's
+/// signature is its inner `\cs␣`'s, as in [`owns_calls`]: `\cite[p.~3]{x}` opens the kernel `\cite`.
 pub fn call_openers(binding: &Token) -> Vec<Token> {
-  let Ok(Some(defn)) = lookup_definition(binding) else {
+  let inner = match lookup_meaning(binding) {
+    Some(Stored::Expandable(ref wrapper)) => robust_wrapper_body(wrapper, &wrapper.get_cs()),
+    _ => None,
+  };
+  let Ok(Some(defn)) = lookup_definition(inner.as_ref().unwrap_or(binding)) else {
     return Vec::new();
   };
   let mut openers = Vec::new();
