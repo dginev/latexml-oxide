@@ -450,8 +450,10 @@ struct Cli {
 /// Allocation-failure hook — emits a `Fatal:` line in the project's
 /// logging convention so aggregation tooling records the failure, then
 /// exits with code 137. See `cortex_worker.rs::custom_alloc_error_hook`
-/// for full rationale + witness paper.
+/// for full rationale + witness paper; like it, it allocates nothing, takes no lock and ends at
+/// once on a re-entry (`watchdog::enter_alloc_failure_hook`).
 fn custom_alloc_error_hook(layout: Layout) {
+  latexml_core::watchdog::enter_alloc_failure_hook();
   // Attribute by alignment: the gullet pushback is a Vec<Token> (4-byte
   // items); any other alignment is a DIFFERENT runaway (align 8 = Vec of
   // boxes/pointers — e.g. nested-pgfmatrix churn; align 1 = a string
@@ -460,17 +462,18 @@ fn custom_alloc_error_hook(layout: Layout) {
   let site = if layout.align() == 4 {
     "likely runaway macro expansion (gullet pushback Vec<Token> growth)"
   } else {
-    "allocation site unknown for this alignment — rerun with RUST_BACKTRACE=1"
+    "allocation site unknown for this alignment — break on `__rust_alloc_error_handler` in a \
+     debugger to find it"
   };
-  eprintln!(
+  latexml_core::watchdog::write_stderr_unlocked(format_args!(
     "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; {}. \
-     Exiting with code 137.",
+     Exiting with code 137.\n",
     layout.size(),
     layout.align(),
     site
-  );
+  ));
   latexml_core::watchdog::try_remove_registered_paths();
-  process::exit(137);
+  latexml_core::watchdog::exit_now(137);
 }
 
 /// Read back which side of a `--opt`/`--noopt` boolean pair clap kept, or `None`

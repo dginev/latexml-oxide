@@ -1141,7 +1141,34 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   its own algorithm2e alone (its copy loads no algorithm package). Residual, the paper's own combination: algorithmic
   loaded before algpseudocode (1706.04918, 2506.05791, 2506.13672, 2506.01215) bails algorithmicx as in Perl, where
   pdflatex errs too ("Command \algorithmic already defined", then each `\State`). Not covered: IEEEtran (a Perl
-  binding) ignores an edited copy's algorithm packages (2506.04683).
+  binding) ignores an edited copy's algorithm packages (2506.04683). Perl's versioned fallback answers a paper's
+  icml20xx.sty with icml.sty.ltxml and forces the pair too (KNOWN_PERL_ERRORS #684): the ICML part is beyond Perl.
+  Open from the review: a nested dependency scan reads as "no copy" (`require_dependencies_filtered` returns `false`
+  under the re-entrancy guard, so ICML forces the pair over a shipped copy loaded from an unbound class's scan); the
+  pnas-new, siamltex and icml2019 raw-read paths have no guard; autart's caption period sits outside the bold
+  (autart.cls:568-569 `{\bfseries #1.}`).
+- **67m** (fleet throughput, run 351): an allocation that fails when the address space is spent no longer wedges the
+  worker. `custom_alloc_error_hook` (cortex_worker.rs, latexml_oxide.rs) formatted a backtrace under the fleet's
+  `RUST_BACKTRACE=1`; symbolizing it allocated while holding the standard library's backtrace lock, the failure
+  re-entered the hook, and the re-entry waited forever on that lock — with the stderr lock held, so the watchdog's
+  `Fatal:timeout` line blocked too and its 180 s exit never came. Children sat parked (conversion and watchdog
+  threads both in a futex wait, 3-5 GB resident) until the harness's 360 s no-CPU-progress SIGKILL, which re-leases
+  the paper as a retryable death: ≥574 such kills in 4 h of run 349/351 (journald dropped ~1M lines per 30 s, so a
+  lower bound), 17 of 53 children parked at one sample. A re-entry that did not deadlock recursed instead: one child
+  printed 6,048 nested `Fatal:oom:alloc_failed … 1 bytes (align 1)` lines in a millisecond (reading `RUST_BACKTRACE`'s
+  value). The hooks now allocate nothing and take no lock (`watchdog::write_stderr_unlocked`, a stack-formatted
+  `write(2)`; no backtrace), a re-entry ends the process at once and another thread's failure waits for the first's
+  exit (`watchdog::enter_alloc_failure_hook`), and they end with `watchdog::exit_now` (`_exit`). The watchdog writes
+  its two Fatal lines unlocked too. The harness child also registers pericortex's per-task input directory
+  (`cortex_task*`, a `TempDir` its loop drops) for the exit sweep: every timeout and OOM exit had left one behind —
+  565,483 of them, 434 GB, in the fleet's `/opt/cortex-scratch` since 2026-07. Stuck-child witnesses (fleet 4f131f2b84,
+  symbolized by rebuilding that commit with `STRIP=none` and the same embedded dumps): 1804.07640, and the tasks
+  33865595 (math parse, `XM` clone under ASF traversal) and 32779664 (`SymHashMap::insert`); 1804.07640 converts in
+  13 s standalone, so the state is a long-lived child's. Guards (need `--features cortex`, which CI and the default
+  suite do not enable) `cortex_worker_exit_reports::{an_allocation_failing_inside_the_hook_still_ends_in_one_fatal_oom,
+  a_watchdog_timeout_is_reported_as_fatal_timeout, an_allocation_past_rlimit_as_is_reported_as_fatal_oom}` (the
+  `alloc_exhausted` test fault spends the address space through the raw allocator first). Residual: a hook whose sweep
+  itself fails to allocate exits without finishing it.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

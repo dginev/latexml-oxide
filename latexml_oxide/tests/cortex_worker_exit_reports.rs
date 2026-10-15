@@ -159,6 +159,18 @@ impl Harness {
     mem_limit_mb: u64,
     extra: &[&str],
   ) -> Self {
+    Self::start_with_env(dispatcher, fault, timeout_secs, mem_limit_mb, extra, &[])
+  }
+
+  /// [`Harness::start`] with extra environment for the harness and its children.
+  fn start_with_env(
+    dispatcher: &Dispatcher,
+    fault: &str,
+    timeout_secs: u64,
+    mem_limit_mb: u64,
+    extra: &[&str],
+    env: &[(&str, &str)],
+  ) -> Self {
     let tmp = tempfile::tempdir().unwrap();
     let log = tmp.path().join("harness.log");
     let child = Command::new(env!("CARGO_BIN_EXE_cortex_worker"))
@@ -178,6 +190,7 @@ impl Harness {
       .args(extra)
       .env("CORTEX_WORKER_TEST_FAULT", fault)
       .env("TMPDIR", tmp.path())
+      .envs(env.iter().copied())
       .stdin(Stdio::null())
       .stdout(Stdio::null())
       .stderr(fs::File::create(&log).unwrap())
@@ -215,6 +228,24 @@ impl Harness {
   }
 
   fn output(&self) -> String { fs::read_to_string(&self.log).unwrap_or_default() }
+
+  /// pericortex's per-task directories (`cortex_task*`, in the harness's private TMPDIR) still
+  /// holding the leased archive: the dead child's, which its exit should have swept.
+  fn leased_archive_dirs(&self) -> Vec<PathBuf> {
+    fs::read_dir(self.tmp.path())
+      .into_iter()
+      .flatten()
+      .flatten()
+      .map(|entry| entry.path())
+      .filter(|dir| {
+        dir
+          .file_name()
+          .and_then(|name| name.to_str())
+          .is_some_and(|name| name.starts_with("cortex_task"))
+          && dir.join(format!("{TASK_ID}.zip")).exists()
+      })
+      .collect()
+  }
 
   /// The harness's exit-report directory (the only `cortex_harness_*` in its private TMPDIR).
   fn exit_report_dir(&self) -> Option<PathBuf> {
@@ -327,6 +358,13 @@ fn a_watchdog_timeout_is_reported_as_fatal_timeout() {
     fatal.starts_with("Fatal:timeout:wallclock ") && fatal.contains("3s"),
     "{fatal}\n{output}"
   );
+  // The exit skips destructors, so pericortex's own `TempDir` for the leased archive is swept
+  // with the run's trees, not left in the scratch directory (565,483 of them on the fleet).
+  assert!(
+    harness.leased_archive_dirs().is_empty(),
+    "the leased archive's directory outlived the exit: {:?}",
+    harness.leased_archive_dirs()
+  );
   // The reporter consumed the dead child's claim: none left names the task.
   thread::sleep(Duration::from_millis(500));
   let naming_the_task: Vec<_> = fs::read_dir(harness.exit_report_dir().expect("the directory"))
@@ -345,7 +383,7 @@ fn a_watchdog_timeout_is_reported_as_fatal_timeout() {
 
 #[test]
 fn an_allocation_past_rlimit_as_is_reported_as_fatal_oom() {
-  let (report, leased_to, output, _harness) = report_for("alloc", 60, 4096, None);
+  let (report, leased_to, output, harness) = report_for("alloc", 60, 4096, None);
   let fatal = fatal_of(&report, &leased_to, &output);
   assert!(
     !retry_tagged(&report),
@@ -356,6 +394,46 @@ fn an_allocation_past_rlimit_as_is_reported_as_fatal_oom() {
     fatal.starts_with("Fatal:oom:alloc_failed ") && fatal.contains("1099511627776 bytes"),
     "{fatal}\n{output}"
   );
+  assert!(
+    harness.leased_archive_dirs().is_empty(),
+    "the leased archive's directory outlived the exit: {:?}",
+    harness.leased_archive_dirs()
+  );
+}
+
+/// An allocation that fails once the address space is spent: the hook's own allocations fail too
+/// (the fleet sets `RUST_BACKTRACE=1`, whose value alone is an allocation). Its re-entry must not
+/// run it again. Fleet children did: one printed 6,048 nested `Fatal:oom:alloc_failed` lines in a
+/// millisecond, and others waited forever on the backtrace lock their first entry held, the
+/// watchdog's own exit stuck behind their stderr lock, until the harness killed them as
+/// unresponsive and re-leased the paper (2026-10-14, run 351; paper 1804.07640 among them).
+#[test]
+fn an_allocation_failing_inside_the_hook_still_ends_in_one_fatal_oom() {
+  let dispatcher = Dispatcher::start();
+  let harness = Harness::start_with_env(&dispatcher, "alloc_exhausted", 60, 4096, &[], &[(
+    "RUST_BACKTRACE",
+    "1",
+  )]);
+  let report = dispatcher
+    .receive(Duration::from_secs(120))
+    .unwrap_or_else(|| panic!("no result reached the sink:\n{}", harness.output()));
+  let leased_to = dispatcher.leased_to.lock().unwrap().clone().unwrap();
+  let output = harness.output();
+  let fatal = fatal_of(&report, &leased_to, &output);
+  assert!(
+    !retry_tagged(&report),
+    "retry, then cause: a final cause is not tagged\n{}",
+    report.log
+  );
+  assert!(
+    fatal.starts_with("Fatal:oom:alloc_failed "),
+    "{fatal}\n{output}"
+  );
+  let lines = output
+    .lines()
+    .filter(|line| line.starts_with("Fatal:oom:alloc_failed allocation of"))
+    .count();
+  assert_eq!(lines, 1, "one line for the one failure:\n{output}");
 }
 
 #[test]

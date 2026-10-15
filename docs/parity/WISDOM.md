@@ -3072,3 +3072,17 @@ partner outside the formula (a plain `{…}` group included) looks more general 
 wherever the author's `$` follows (`{\bf $x} y$ after.` — "after." became math); the frame stack cannot tell a
 forgotten `$` from a stray `}` inside a plain group, only `$`-parity in the rest of the paragraph could. OXIDIZED_DESIGN
 #553.
+
+## 98. A parked fleet child is read with gdb and the shipped binary's exact twin, built with symbols
+
+The fleet's `maxperf-cortex` worker is stripped, so a stuck child's `thread apply all bt` is a column of `?? ()`. Rebuild
+the deployed commit in a separate worktree and target directory with `CARGO_PROFILE_MAXPERF_CORTEX_STRIP=none`, after
+copying the main checkout's `resources/dumps/` into it: latexml_engine's build.rs generates code for the embedded dumps,
+so a worktree without them builds a `.text` 17 KB off (with them, 192 bytes, from the paths' lengths). Then map each
+frame by its call site, not by a fixed shift: take the 20 bytes before the return address in the fleet binary's
+`.text` (`objcopy -O binary --only-section=.text`), find them near the same offset in the twin's, and name the twin's
+function there (`nm -C`, sorted). Frames inside the standard library whose call bytes hold a relocated address do not
+match; a naive shift names those. Two process facts make a parked child stand out: all of its threads sleep in a futex
+(`/proc/<pid>/task/*/wchan`), and its CPU time stops growing between two `ps -o times` samples while its age runs past
+the timeout (a harness child converts many papers, so its age alone means nothing). This found the 67m
+allocation-failure-hook deadlock (SYNC_STATUS 67m).

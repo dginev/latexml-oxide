@@ -92,7 +92,12 @@ Guards 1–4 bound a **single conversion** (per-process); guard 5 bounds the
 3. **Alloc-error hook** (`custom_alloc_error_hook`) — when any *Rust* allocation
    returns null (e.g. an `ENOMEM` from the hard cap below; C libraries such as libxml2 call `malloc` directly and never
    reach it), emits
-   `Fatal:oom:alloc_failed` and exits `137`. Portable.
+   `Fatal:oom:alloc_failed` and exits `137`. Portable. The memory is spent, so the hook allocates nothing and takes no
+   lock: its line is formatted on the stack and written straight to fd 2 (`watchdog::write_stderr_unlocked`), it prints
+   no backtrace, and it ends with `_exit` (`watchdog::exit_now`). A re-entry (its own sweep failing to allocate) ends
+   the process at once (`watchdog::enter_alloc_failure_hook`). Before 67m it formatted a backtrace under the fleet's
+   `RUST_BACKTRACE=1` and could re-enter itself and wait forever on the backtrace lock, with stderr held, so the
+   watchdog's timeout blocked too; the harness's 360 s unresponsive kill then re-leased the paper (SYNC_STATUS 67m).
 4. **Hard `RLIMIT_AS` cap** (`--child-mem-limit-mb`, applied by the harness) —
    the kernel refuses allocations past the address-space ceiling, which surfaces
    as `ENOMEM` → guard #3 → clean attributable exit → respawn. Contains a
