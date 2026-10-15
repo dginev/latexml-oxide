@@ -6223,6 +6223,20 @@ the collision that motivated #2777) and `KeyVals::new` keeps the empty family;
 only an absent keyset list falls back to `_anonymous_`. Guard:
 `perfect_kernel_batch56::xkeyval_empty_family_is_searched_by_psset`.
 
+The same holds for an explicit empty family in option processing (67p). Perl's xkeyval.sty.ltxml front end keeps it
+(`\ProcessOptionsX` :330 `defined($keysets) ? …`, `\DeclareOptionX` :302-303), and `KeyVals` then drops it as above.
+`\key@ifundefined[sap]{}{english}` (:197 `split(',', '')`, which yields no entry) never searches it either, while
+xkeyval's `\XKV@sp@deflist`/`\XKV@whilist` (xkvutils.tex:110-126, :228-237) visit `{}` as one empty family. Minimal
+trigger: a class `\RequirePackage{xkeyval}\define@key[sap]{}{english}[]{\def\SAPlang{english}}
+\DeclareOptionX*{\ClassError{x}{Option '\CurrentOption' is not valid}{}}\ProcessOptionsX[sap]<>\LoadClass{article}`
+loaded as `\documentclass[english]{x}`, then `\SAPlang`. Under `[rawclasses]latexml.sty` Perl reports
+`\SAPlang` undefined; pdflatex prints "english". Our binding had a Rust-only defect of its own here: its
+`OptionalAngle` reader returned the same empty value for `<>` and for no `<…>`, so `<>` became the default family
+`\@currname.\@currext` and the class's `\DeclareOptionX*` rejected the option. Witnesses: sapthesis
+(`\ProcessOptionsX[sap]<>`) 2503.03277, 2403.20315. Repro
+package-bindings/xkeyval_empty_family_processoptionsx; guard
+`perfect_kernel_batch67p::xkeyval_empty_family_processoptionsx`.
+
 ## 213. `\batchmode` and a terminal `\read` are no-ops, so wrong-engine halts never halt (Rust fixes)
 
 tex.web §484: a `\read` whose stream is not open reads from the terminal, and
@@ -13320,6 +13334,55 @@ article.cls: ptptex, jpsj2, paper, artikel1). Witnesses jpsj2 cond-mat0510381, p
 (OXIDIZED_DESIGN_DIVERGENCES #593): the maths branch merges the alphabet's font for the rest of the group. Guard
 `perfect_kernel_batch67r::old_font_command_switches_the_math_alphabet`.
 
+## 686. theorem.sty's body font, header font and style are not the binding's: `\theorem@bodyfont` is undefined and `\theorembodyfont` is undone by the next `\theoremstyle`
+
+theorem.sty keeps three things apart (theorem.sty:6-13, :62-81): the style is a name in `\theorem@style`, the body
+font is the token register `\theorem@bodyfont` (`\theorembodyfont{X}` stores `\reset@font X`), and the head font is
+the global macro `\theorem@headerfont` (`\theoremheaderfont` takes effect once). `\newtheorem` builds each
+environment as `\th@<style> \the\theorem@bodyfont \@thm{<counter>}{<name>}` (:16-48), so the body font outlives a
+later `\theoremstyle`, a class's own `\th@<style>` runs at each theorem's start, and a body font may be code that
+takes the `\@thm{…}{…}` call as its delimited arguments. Perl's theorem.sty.ltxml relies on amsthm.sty.ltxml:
+`\theorembodyfont`/`\theoremheaderfont` assign the style registers, which the next `\theoremstyle` resets,
+`\theorem@bodyfont`/`\theorem@style`/`\theorem@headerfont` are undefined, and `\theoremstyle` digests a class's
+`\th@<style>` at once, outside a group, so its font switch lands in the preamble (fundam.cls's `\th@plain`
+`\normalfont\itshape` set the paper's title in italic: 1911.07591). Minimal triggers:
+`\usepackage{theorem}\theorembodyfont{\upshape}\theoremstyle{break}\newtheorem{note}{Note}` (pdflatex upright, Perl
+slanted); `\makeatletter\def\pre\@thm#1#2{\def\kind{#1}\@thm{#1}{#2}}\theorem@bodyfont{\pre}` before a
+`\newtheorem{thm}{Theorem}` that uses `\kind` (cc.cls's ccthm.sty:100-108; Perl: `\theorem@bodyfont` undefined and
+`expected:Match` for `\@thm`). Fixed in Rust (theorem_sty.rs): theorem.sty's `\theoremstyle`, `\theorembodyfont`,
+`\theoremheaderfont` and the three internals; the binding's head font register calls `\theorem@headerfont`; its
+`\newtheorem` gives the kernel's `define_new_theorem` the theorem.sty sequence as the theorem's body font (a binding
+style's own font in place of `\th@<style>`, unless a class redefined it, as ifacconf.cls does for `\th@plain`; the
+current style font before a class style that sets its font only in `\@begintheorem`, which the binding never calls,
+arXivclass.cls:1808-1817, 2505.07298), and the `\@thm{…}{…}` that ends it is gobbled by a `\let\@thm\@gobbletwo`
+the sequence starts with, local to the theorem's group, so a raw `\@thm` elsewhere (a theorem.sty-based class's
+`\newenvironment{myclaim}{\th@plain\@thm{claim}{Claim}}{\@endtheorem}`) keeps the kernel's head and counter step.
+theorem.sty does not load amsthm (nor does ntheorem.sty, :52), so both bindings borrow it with
+`require_package_borrowed` (binding/content.rs, on `state::mark_unloaded`, the half of `end_provide_only` that marks a
+file unloaded): unless the document had loaded it, amsthm stays unloaded and `\@ifpackageloaded{amsthm}` is false, as
+in LaTeX; a later `\usepackage{amsthm}` loads it and takes `\newtheorem` (amsthm.sty:77; `\lx@amsthm@newtheorem`, the
+`\newtheorem` in force at amsthm's first load) and the styles back, as the ifacconf template (`\let\theoremstyle
+\undefined\usepackage{amsthm}` after ifacconf.cls:593 `\RequirePackage{theorem}`) needs; Perl's no-op reload left
+`\theoremstyle` undefined there. The borrowed definitions stay in force until then: a document that defines its own
+`proof` when `\@ifpackageloaded{amsthm}` is false keeps amsthm's binding `proof`, where LaTeX takes the document's.
+
+Limits left (the binding is not theorem.sty's environment code): the style is applied when `\newtheorem` runs, not at
+each use. A binding style's font, head styling and swap are taken then, so a later `\gdef\th@plain` does not reach
+theorems already defined (pdflatex runs the new one: repro package-bindings/theorem_style_taken_at_newtheorem, pinned
+by `perfect_kernel_batch67p::theorem_style_taken_at_newtheorem`); a style the class defines starts from the
+`\thm@bodyfont` the last binding style left; and a style defined by amsthm's `\newtheoremstyle{foo}` and selected by
+theorem.sty's `\theoremstyle{foo}` loses its body font (`\th@foo` runs inside `\the\thm@bodyfont`, too late), a
+combination LaTeX rejects anyway. Applying binding styles at use time would make the saved body font call
+`\th@<style>`, which a redefined `\th@<style>` that does not reset `\thm@bodyfont` turns into a loop. After theorem.sty
+and amsthm, `\@thm` is the kernel's two-argument one: neither our amsthm binding nor Perl's defines amsthm.sty:129's
+three-argument `\@thm`, which only raw environment code calls. The Perl test golden latexml_oxide/tests/theorem/theorem.xml changed where pdflatex agrees:
+its last theorem (`\theoremstyle{definition}` after `\theorembodyfont{\itshape}`) is italic (CMTI10). Witnesses:
+1507.02955 (cc), 1911.07591 (fundam), 1911.07501, 1911.10645 (ifacconf), 2211.14033, 2512.06733, 2603.11260,
+2603.11265 (ifacconf + amsthm), math0505657. Repros package-bindings/{theorem_bodyfont_internals,
+theorem_user_style_and_headerfont, theorem_then_amsthm_takes_over, theorem_raw_thm_keeps_heads}; guards
+`perfect_kernel_batch67p::{theorem_bodyfont_internals, theorem_user_style_and_headerfont,
+theorem_bodyfont_outlives_theoremstyle, theorem_then_amsthm_takes_over, amsthm_before_theorem_stays_loaded,
+theorem_raw_thm_keeps_heads, ntheorem_borrows_amsthm_unloaded}`.
 ## 687. `\unboldmath` and `\mathversion{normal}` do not undo `\boldmath` (open)
 
 latex.ltx's `\boldmath` and `\unboldmath` select the math version (`\mathversion{bold}` / `{normal}`), so after

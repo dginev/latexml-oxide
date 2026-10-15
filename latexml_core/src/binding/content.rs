@@ -2769,6 +2769,26 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   result
 }
 
+/// Load the binding of package `name` for another binding to build on, without the package counting as loaded — a
+/// binding's way of borrowing a package the real one does not load (theorem.sty's and ntheorem.sty's bindings
+/// borrow amsthm's theorem machinery; neither real package loads amsthm). Unless the document had loaded `name`
+/// already, it is then marked unloaded ([`crate::state::mark_unloaded`]): `\@ifpackageloaded{name}` is false, as in
+/// LaTeX, and the document's own later `\usepackage{name}` loads the binding again, whose definitions then take over
+/// (amsthm.sty:77's `\newtheorem`, amsthm_sty.rs `\lx@amsthm@newtheorem`). The borrowed definitions stay in force
+/// until then: a document that tests `\@ifpackageloaded{amsthm}` and defines its own `proof` in the false branch
+/// still has amsthm's `proof` after the borrowing package (`\newenvironment` of a defined name), where LaTeX takes
+/// the document's. Guards `perfect_kernel_batch67p::{theorem_then_amsthm_takes_over,
+/// amsthm_before_theorem_stays_loaded}`.
+pub fn require_package_borrowed(name: &str) -> Result<()> {
+  let file = s!("{name}.sty");
+  let was_loaded = lookup_bool(&s!("{file}_loaded"));
+  require_package(name, RequireOptions::default())?;
+  if !was_loaded {
+    mark_unloaded(&file);
+  }
+  Ok(())
+}
+
 thread_local! {
   /// How many package loads in a standalone subfile bracket ([`require_package`]) are running.
   static SUBFILE_PACKAGE_LOAD: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };

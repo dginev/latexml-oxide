@@ -1,0 +1,20 @@
+% witness: review of 67p (A3): theorem.sty stores the style's `\th@<style>` token and runs it at each use
+%          (theorem.sty:16-48); the binding applies a binding style (`\lx@theorem@newtheoremstyle`) when
+%          `\newtheorem` runs
+% oracle:  pdflatex 0 errors; "Theorem 1 A theorem." with the body in CMSL10 (the `\th@plain` redefined after the
+%          `\newtheorem` is the one the theorem runs)
+% engines: rust 67o1 and 67p = the body italic (the plain style's font, taken at `\newtheorem`)
+% expect:  pdflatex's slanted body; today the documented definition-time limit (KNOWN_PERL_ERRORS #686), pinned by
+%          perfect_kernel_batch67p::theorem_style_taken_at_newtheorem
+% status:  RED (documented limit, not fixed)
+\documentclass{article}
+\usepackage{theorem}
+\newtheorem{thm}{Theorem}
+\makeatletter
+\gdef\th@plain{\normalfont\slshape
+  \def\@begintheorem##1##2{\item[\hskip\labelsep\theorem@headerfont ##1\ ##2]}%
+  \def\@opargbegintheorem##1##2##3{\item[\hskip\labelsep\theorem@headerfont ##1\ ##2\ (##3)]}}
+\makeatother
+\begin{document}
+\begin{thm}A theorem.\end{thm}
+\end{document}

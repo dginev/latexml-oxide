@@ -2,6 +2,12 @@ use crate::{engine::latex_constructs::*, prelude::*};
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("amsgen");
+  // amsthm.sty:77 `\renewcommand{\newtheorem}`: the binding's theorem definer is whatever `\newtheorem` is in
+  // force when amsthm FIRST loads (the kernel's, unless a binding loaded before it had replaced it), saved as
+  // `\lx@amsthm@newtheorem`. When amsthm loads again — after a binding that borrows it and leaves it unloaded
+  // (`require_package_borrowed`: theorem_sty.rs, ntheorem_sty.rs) — it takes that saved `\newtheorem` back from
+  // the borrower's. Witnesses (ifacconf.cls's theorem.sty, then the paper's amsthm): 2211.14033, 2512.06733.
+  RawTeX!(r"\@ifundefined{lx@amsthm@newtheorem}{\global\let\lx@amsthm@newtheorem\newtheorem}{\global\let\newtheorem\lx@amsthm@newtheorem}");
   // amsthm.sty:153: the theorem number's upright wrapper, which a raw class's theorem head calls (econsocart.cls;
   // 2609.06865). Perl's binding lacks it too (KNOWN_PERL_ERRORS #509).
   RawTeX!(r"\providecommand\@upn{\textup}");

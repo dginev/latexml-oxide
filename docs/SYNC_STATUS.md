@@ -1271,6 +1271,46 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   too. RED side finding, not fixed: `\unboldmath` and
   `\mathversion{normal}` do not undo `\boldmath` (both engines; `Font::merge` of `forcebold: false` is a no-op while the
   bold math font forces its series), KNOWN_PERL_ERRORS #687, repro fonts-nfss/boldmath_undone_by_unboldmath_and_group.
+- **67p** (raw TeX Live classes under the coming rawclasses lever, study 2026-10-15_rawclasses_lever.md §2): two
+  binding gaps. (1) xkeyval: the `OptionalAngle` reader returned the same empty value for `<>` and for no `<…>`, so
+  `\ProcessOptionsX[sap]<>` (sapthesis.cls) and `\DeclareOptionX[sap]<>` took the default family
+  `\@currname.\@currext` and the class's `\DeclareOptionX*` rejected `english`/`oneside`/`binding=…`; an absent
+  `<…>` is now `None` and `<>` the empty family (header `<prefix>@`, xkeyval.tex:83-87, as Perl's front end :330
+  keeps it), and `\key@ifundefined` searches the empty family too (xkvutils.tex:110-126, :228-237). Perl's
+  `KeyVals` drops the empty family (KPE #212, extended). (2) theorem.sty (theorem_sty.rs): `\theorem@bodyfont`,
+  `\theorem@style`, `\theorem@headerfont` defined as theorem.sty:62-81 does; `\theoremstyle` (grouped),
+  `\theorembodyfont`, `\theoremheaderfont` (once only) are theorem.sty's; the binding's `\newtheorem` hands
+  `define_new_theorem` the theorem.sty sequence `\th@<style> \the\theorem@bodyfont \@thm{<counter>}{<name>}` as the
+  theorem's body font (a binding style's font in place of its `\th@`, unless a class redefined it; the current style
+  font before a class style that sets its font in `\@begintheorem`), and `\@thm` ends it. theorem.sty does not load
+  amsthm, so the binding leaves the amsthm it borrows unloaded (unless the paper had loaded it) and a paper's later
+  `\usepackage{amsthm}` takes `\newtheorem` (amsthm.sty:77; amsthm_sty.rs `\lx@amsthm@newtheorem`) and the styles
+  back, as the ifacconf template needs (KPE #686). Round 2 (review): the no-op that ends the sequence is a
+  `\let\@thm\@gobbletwo` local to the theorem's group (round 1's global no-op `\@thm` silently dropped the heads and
+  counter steps of raw `\th@plain\@thm{claim}{Claim}` environments; guard `theorem_raw_thm_keeps_heads`); the borrow
+  is the kernel's `require_package_borrowed` on `state::mark_unloaded` (factored out of `end_provide_only`), used by
+  ntheorem's binding too (ntheorem.sty loads only ifthen); the definition-time style limits are in KPE #686. Round-2
+  A/B vs 67o1-rel, the 200 above + 30 ntheorem users (from a 29.7k-zip scan; 8 also load amsthm or theorem.sty), 218
+  converted: Errors 1,324 → 1,322, no paper worse, the same six changes, and byte-equal tallies with round 1 on all
+  190 shared papers; the 30 ntheorem papers unchanged. Open (a ruling): a borrowed binding's definitions block the
+  ones LaTeX would take, as the real package never defines them — a document's `proof` in the
+  `\@ifpackageloaded{amsthm}` false branch, and under the rawclasses lever cc.cls's ccproof.sty:56
+  `\newenvironment{proof}` ("Ignoring redefinition"), so 1507.02955's proofs have no □ (base the same; round 1 had
+  them only because its global no-op `\@thm` let ccqed.sty:74's wrapper leak `\@qedtrue`). Perl golden tests/theorem/theorem.xml: the
+  last theorem is italic, as pdflatex sets it (CMTI10). Witnesses, rawclasses lever (`--path=…/rawcls/rhai
+  --preload=lxrawclasses.sty`), Errors 67o1 → 67p: 2503.03277 2 → 0, 2403.20315 1 → 0, 1507.02955 4 → 1 (the
+  `\currentaddress` left; creators 3 both, theorems 38 now slanted under small-caps heads as thcc.sty sets them);
+  default profile unchanged for the three. A/B vs 67o1-rel, 190 papers (150 pop67o xkeyval/theorem.sty users + 50
+  grepped; 10 no main): Errors 1,316 → 1,314, no paper worse; 6 change, each checked against pdflatex: 2211.14033 and
+  2512.06733 (ifacconf + amsthm: `\theoremstyle` undefined / `{proof}` undefined gone, amsthm heads), 1911.07501 and
+  1911.10645 (ifacconf: italic heads, upright bodies, SFTI/SFRM in the PDF), 1911.07591 (fundam's `\th@plain` no
+  longer sets the title and abstract italic), math0505657 (`\theorembodyfont{\slshape}` survives
+  `\theoremstyle{plain}`, SFSL); 2603.11260/2603.11265 take amsthm's heads (with the period) and its ∎. Repros
+  package-bindings/{xkeyval_empty_family_processoptionsx (+ xkvemptyfam.cls), theorem_bodyfont_internals,
+  theorem_user_style_and_headerfont, theorem_then_amsthm_takes_over} RED → GREEN; guards `perfect_kernel_batch67p`.
+  RED side finding, not fixed (kernel, Perl shares): a `\newtheorem`'s shared counter named by a macro
+  (ccthm.sty `[\cc@thmcnter]`; latex.ltx `\@othm` expands it, `define_new_theorem` takes `ToString`): 1507.02955's
+  38 theorems unnumbered under the lever, repro package-bindings/newtheorem_shared_counter_named_by_a_macro.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

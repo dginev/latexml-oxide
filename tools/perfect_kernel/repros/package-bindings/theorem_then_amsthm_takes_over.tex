@@ -1,0 +1,24 @@
+% witness: ifacconf template 2211.14033, 2512.06733 (also 2603.11260, 2603.11265): ifacconf.cls:593
+%          `\RequirePackage{theorem}`, then the paper's `\let\theoremstyle\undefined\usepackage{amsthm}`
+% oracle:  pdflatex 0 errors; "Before: amsthm not loaded."; amsthm's heads (bold, with a period), Definition 1
+%          upright, Theorem 1 italic
+% engines: rust 67o1 = 1 error (`\theoremstyle` undefined: the theorem binding had loaded amsthm, so the paper's
+%          `\usepackage{amsthm}` did nothing) and the style name "definition" printed as text
+% expect:  0 errors; "Before: amsthm not loaded."; the Definition's body upright
+% status:  RED (67o1) -> GREEN (67p)
+\documentclass{article}
+\usepackage{theorem}
+\makeatletter
+\@ifpackageloaded{amsthm}{\def\before{amsthm loaded}}{\def\before{amsthm not loaded}}
+\makeatother
+\let\theoremstyle\undefined
+\usepackage{amsthm}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+Before: \before.
+\begin{definition}An upright body.\end{definition}
+\begin{theorem}An italic body.\end{theorem}
+\end{document}

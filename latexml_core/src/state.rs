@@ -1784,17 +1784,26 @@ pub fn end_provide_only() {
     if file == "OmniBus.cls" {
       continue;
     }
-    for flag in ["_loaded", ".ltxml_loaded", "_load_attempted"] {
-      if lookup_bool(&s!("{file}{flag}")) {
-        assign_value(&s!("{file}{flag}"), false, Some(Scope::Global));
-      }
-    }
-    assign_meaning(
-      &T_CS!(s!("\\ver@{file}")),
-      Stored::None,
-      Some(Scope::Global),
-    );
+    mark_unloaded(&file);
   }
+}
+
+/// Mark `file` (`amsthm.sty`) as not loaded, globally: its `<file>_loaded`, the `.ltxml_loaded` twin and
+/// `_load_attempted` are cleared and the kernel's `\ver@<file>` is undefined, so `\@ifpackageloaded` is false and a
+/// later `\usepackage`/`\RequirePackage` loads it again. The definitions it made stay in force. Used when a load
+/// provided only part of a file ([`end_provide_only`]) and for a binding's borrowed package
+/// (`binding::content::require_package_borrowed`).
+pub fn mark_unloaded(file: &str) {
+  for flag in ["_loaded", ".ltxml_loaded", "_load_attempted"] {
+    if lookup_bool(&s!("{file}{flag}")) {
+      assign_value(&s!("{file}{flag}"), false, Some(Scope::Global));
+    }
+  }
+  assign_meaning(
+    &T_CS!(s!("\\ver@{file}")),
+    Stored::None,
+    Some(Scope::Global),
+  );
 }
 
 /// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`) or a kernel stub

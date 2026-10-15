@@ -4,8 +4,10 @@ use crate::{engine::latex_constructs::*, prelude::*};
 #[rustfmt::skip]
 LoadDefinitions!({
   // Basically, this package is similar to amsthm.sty (or theorem.sty)
-  // with two main enhancements: endmarks, list of theorems
-  RequirePackage!("amsthm");
+  // with two main enhancements: endmarks, list of theorems.
+  // Perl RequirePackage('amsthm'); the real ntheorem.sty (:52) loads only ifthen, so the binding borrows
+  // amsthm (`require_package_borrowed`): `\@ifpackageloaded{amsthm}` stays false, as in LaTeX.
+  require_package_borrowed("amsthm")?;
   RequirePackage!("ifthen");
 
   // Re-redefine from amsthm from LaTeX; use same note font as head font

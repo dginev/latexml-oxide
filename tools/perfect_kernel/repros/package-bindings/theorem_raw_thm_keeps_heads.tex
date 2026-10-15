@@ -1,0 +1,20 @@
+% witness: theorem.sty-based classes build environments on the raw `\@thm` (review of 67p, probe p5); the binding's
+%          `\newtheorem` ends each body-font sequence with `\@thm{<counter>}{<name>}` (ccthm.sty's delimited
+%          `\theorempreamble\@thm#1#2`, 1507.02955)
+% oracle:  pdflatex 0 errors; "Theorem 1 A theorem." / "Claim 1 Raw one." / "Claim 2 Raw two." (bodies italic)
+% engines: rust 67o1 = all three heads; rust 67p round 1 = the Claim heads and counter steps gone, the two bodies
+%          merged into one paragraph, 0 errors 0 warnings (a global no-op `\@thm`)
+% expect:  0 errors; all three heads; the binding theorem before the raw ones leaves `\@thm` as it was
+% status:  RED (67p r1) -> GREEN (67p r2)
+\documentclass{article}
+\usepackage{theorem}
+\newtheorem{thm}{Theorem}
+\makeatletter
+\newcounter{claim}
+\newenvironment{myclaim}{\th@plain\@thm{claim}{Claim}}{\@endtheorem}
+\makeatother
+\begin{document}
+\begin{thm}A theorem.\end{thm}
+\begin{myclaim}Raw one.\end{myclaim}
+\begin{myclaim}Raw two.\end{myclaim}
+\end{document}

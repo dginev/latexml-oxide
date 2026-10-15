@@ -1,0 +1,14 @@
+% witness: cc.cls 1507.02955 (ccthm.sty `\def\cc@thmcnter{equation}\newtheorem{namedth@@r@m}[\cc@thmcnter]{…}`: 38
+%          theorems unnumbered under the rawclasses lever)
+% oracle:  pdflatex 0 errors, "Theorem 2 A claim." (latex.ltx `\@othm`: `\@ifundefined{c@#2}` expands the name)
+% engines: rust 67p = 1 error + 2 warnings (`\the\thmcnter` undefined, counter `\thmcnter` "assuming 0"); perl the
+%          same (latex_constructs.pool.ltxml:2892 `ToString($otherthmset)`): SHARED
+% expect:  0 errors; the theorem's refnum is 2
+% status:  RED (67p; side finding, kernel `define_new_theorem`, not fixed here)
+\documentclass{article}
+\def\thmcnter{equation}
+\newtheorem{thm}[\thmcnter]{Theorem}
+\begin{document}
+\begin{equation}x=y\end{equation}
+\begin{thm}A claim.\end{thm}
+\end{document}
