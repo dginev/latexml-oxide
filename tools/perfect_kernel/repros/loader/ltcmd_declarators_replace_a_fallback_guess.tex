@@ -1,18 +1,22 @@
 % witness: 2509.10728 (its own `\NewDocumentEnvironment{nomenclature}` over elsarticle v1.21's `{nomenclature}`, a
-%          release's command the binding provides as a guess, `DefinitionOrigin::Fallback`)
+%          release's command the binding provides as a guess, `DefinitionOrigin::Fallback`); a kernel stub
+%          (`DefinitionOrigin::Stub`, sect05.rs `\shorttitle`, which latex.ltx does not define) yields alike
 % oracle:  pdflatex 0 errors with TL's elsarticle.cls v3.4c, which has no `{nomenclature}` or `\email`: "MINE(2.5em)",
-%          the item, "Mail: a@b"
+%          the item, "Mail: a@b", "Running: Short"
 % engines: rust 67y draft = the guess kept silently: the paper's entries lost their layout (`\newenvironment` and
-%          `\newcommand` replace a guess; the ltcmd declarators kept it)
+%          `\newcommand` replace a guess; the ltcmd declarators kept it); 67u2 = the stub kept silently ("Running: ")
 % expect:  0 errors, 0 warnings; the document's environment and command
-% status:  RED (67y draft) -> GREEN (67y)
+% status:  RED (67y draft; 67u2 for the stub) -> GREEN (67y)
 % preload: ar5iv.sty
 \documentclass{elsarticle}
 \NewDocumentEnvironment{nomenclature}{O{2.5em}}{\par\noindent MINE(#1)\begin{itemize}}{\end{itemize}}
 \NewDocumentCommand{\email}{m}{Mail: #1}
+\NewDocumentCommand{\shorttitle}{}{Short}
 \begin{document}
 \begin{nomenclature}
 \item One
 \end{nomenclature}
 \email{a@b}
+
+Running: \shorttitle
 \end{document}

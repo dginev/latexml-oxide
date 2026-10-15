@@ -535,12 +535,13 @@ pub(crate) fn load() -> Result<()> {
           // but it's not yet an idiomatic Rust interface. Something to ponder...
           let mut node  = document.get_node().clone();
           let inlist_str = inlist.as_ref().map(|v|v.to_string()).unwrap_or_default();
-          let inlist_v = if let Some(lists) = node.get_attribute("inlist") {
-            if !lists.is_empty() {
-              s!("{lists} {inlist_str}")
-            } else { inlist_str }
-          } else {
-            inlist_str
+          // A list the node is already in is not added again (Perl latex_constructs.pool.ltxml:755-757 appends it
+          // regardless): amsart's `\@tocwriteb` (ams_support_sty.rs), which a paper's own sectioning calls, adds
+          // `toc` to a section the kernel already put in the contents, which read `inlist="toc toc"` (2004.14791).
+          let inlist_v = match node.get_attribute("inlist") {
+            Some(lists) if lists.split_whitespace().any(|list| list == inlist_str) => lists,
+            Some(lists) if !lists.is_empty() => s!("{lists} {inlist_str}"),
+            _ => inlist_str,
           };
           document.set_attribute(&mut node, "inlist", &inlist_v)?;
           document.set_node(&savenode);

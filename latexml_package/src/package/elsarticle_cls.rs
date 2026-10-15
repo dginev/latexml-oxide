@@ -1,6 +1,9 @@
-use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard, ProvideOnlyGuard};
 
-use crate::prelude::*;
+use crate::{
+  prelude::*,
+  shipped_class::{class_code_contains, shipped_class_text},
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -189,11 +192,14 @@ LoadDefinitions!({
   // elsarticle.cls (TL 2025, v3.4c) internals and setters papers call (run-347 inventory: 122 papers with one
   // undefined), as the class defines them:
   // - :145 `\tnotemark[<keys>]`, the title's note marks, as `\tnoteref` (:146; 10 papers; 2101.08044, 2203.02441).
-  // - :1021-1027 `\myfooter[<align>]{<text>}` and `\myfooterfont`, the first page's footer: page furniture, stored
-  //   (15 papers; 2209.12222, 2208.12518).
-  // - :671-673 `\abstracttitle{<title>}`, the abstract's heading (12 papers; 2204.07076, 2104.02951): the frontmatter abstract takes it as
-  //   its name (`\abstractname`), as the class's `{abstract}` prints it; :737-740 `\keywordtitle`/`\keywordtitlesep`,
-  //   stored.
+  // - :1021-1027 `\myfooter[<align>]<text>␣` (its text delimited by a space, as the class's) and `\myfooterfont`, the
+  //   first page's footer: page furniture, stored (15 papers; 2209.12222, 2208.12518).
+  // - :671-673 `\abstracttitle{<title>}`, the abstract's heading (12 papers; 2204.07076, 2104.02951): the class's
+  //   `{abstract}` prints `\@elsarticleabstitle` (:676; older copies a literal "Abstract"), never `\abstractname`, so the
+  //   frontmatter abstract takes its name from there (`\lx@abstract@name`), and `\abstractname` stays the document's;
+  //   :737-740 `\keywordtitle`/`\keywordtitlesep`, stored.
+  // - `\@journal` stays empty until `\journal` sets it (elsart_support_core_sty.rs): the class's :32 "Elsevier Ltd" is
+  //   only its `\ProvidesClass` line's, :1302 `\let\@journal\@empty` resets it.
   // - :192-193 `\resetTitleCounters` over the title-note counters `tnote`, `fnote`, `cnote` (:150, :157, :182; 8; 2407.02308).
   // - :670, :736 `\absbox`/`\keybox` and :755-756 `\Columnwidth`, which papers' own title code fills and reads (6; 1311.6418).
   // - :126-131 `\elsLabel`/`\Newlabel`/`\elsRef`, the class's note labels (5; 2011.11672, 2602.18725), :117 `\comma`, :249 `\@eadauthor`,
@@ -203,11 +209,12 @@ LoadDefinitions!({
   RawTeX!(
     r"\let\@elsarticlemyfooter\@empty
 \let\@elsarticlemyfooteralign\@empty
-\def\myfooter[#1]#2{\gdef\@elsarticlemyfooteralign{#1}\gdef\@elsarticlemyfooter{#2}}
+\def\myfooter[#1]#2 {\gdef\@elsarticlemyfooteralign{#1}\gdef\@elsarticlemyfooter{#2}}
 \def\myfooterfont#1{\gdef\@myfooterfont{#1}}
 \myfooterfont{\footnotesize\itshape}
-\def\abstracttitle#1{\gdef\@elsarticleabstitle{#1}\gdef\abstractname{#1}}
-\gdef\@elsarticleabstitle{Abstract}
+\def\abstracttitle#1{\gdef\@elsarticleabstitle{#1}}
+\abstracttitle{Abstract}
+\def\lx@abstract@name{\format@title@abstract{\@elsarticleabstitle}}
 \def\keywordtitle#1{\gdef\@elsarticlekwdtitle{#1}}
 \def\keywordtitlesep#1{\gdef\@elsarticlekeywordtitlesep{#1}}
 \keywordtitle{Keywords}
@@ -245,9 +252,18 @@ LoadDefinitions!({
   // - 1404.3867's :797-808 `\normalMode`, which takes back `\appendix`'s numbering (23 papers; 2404.00783, 1411.0092): the
   //   appendices end there (`end_appendices`, as appendix.sty's `{appendices}` ends), and the sections after it are
   //   sections again.
-  // Not ported: the astronomical journal abbreviations (`\apj`, `\mnras`, `\aap`… 7 to 16 papers each) are
-  // aas_macros.sty pasted into individual copies (1504.02326, 1807.02064, 2401.03908 `\newcommand\mnras{\ref@jnl
-  // {MNRAS}}`), no elsarticle release's.
+  // The astronomical journal abbreviations (`\apj`, `\mnras`, `\aap`… 7 to 16 papers each) are aas_macros.sty pasted
+  // into individual copies (0812.4232 `\def\apj{ApJ}`, 1504.02326, 1807.02064 `\newcommand*\apj{ApJ}`, 2003.05953,
+  // 2401.03908 `\newcommand\mnras{\ref@jnl{MNRAS}}`), no elsarticle release's: aas_macros' binding provides them
+  // where the paper's copy defines them, and only the names still undefined (`ProvideOnlyGuard`).
+  if shipped_class_text("elsarticle")?.is_some_and(|text| {
+    ["\\apj", "\\mnras", "\\aap"]
+      .iter()
+      .any(|name| class_code_contains(&text, name))
+  }) {
+    let _provide_only = ProvideOnlyGuard::new();
+    RequirePackage!("aas_macros");
+  }
   {
     let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
     DefMacro!("\\email{}", "\\lx@add@contact[role=email]{#1}");

@@ -990,10 +990,12 @@ LoadDefinitions!({
     let pool = lookup_definition(&cs)?.is_some_and(|prev| prev.get_origin().is_latexml_owned());
     Ok(if pool { if_tks } else { else_tks })
   });
-  // A fallback's guess (`DefinitionOrigin::Fallback`: OmniBus, a class binding's command of an older release) yields to
-  // the document's own `\NewDocumentCommand`/`\NewDocumentEnvironment`, as it yields to its `\newcommand` and
-  // `\newenvironment` (`state::is_fallback_meaning`): 2509.10728's own `\NewDocumentEnvironment{nomenclature}` over
-  // elsarticle v1.21's `{nomenclature}` (elsarticle_cls.rs) kept the guess and lost the paper's entry layout.
+  // A fallback's guess (`DefinitionOrigin::Fallback`: OmniBus, a class binding's command of an older release), a kernel
+  // stub (`DefinitionOrigin::Stub`: `\shorttitle`, `\equalcontrib`, sect05.rs) and a borrowed package's definition
+  // (`DefinitionOrigin::Borrowed`) yield to the document's own `\NewDocumentCommand`/`\NewDocumentEnvironment`, as
+  // they yield to its `\newcommand` and `\newenvironment` (`state::is_fallback_meaning`): 2509.10728's own
+  // `\NewDocumentEnvironment{nomenclature}` over elsarticle v1.21's `{nomenclature}` (elsarticle_cls.rs) kept the guess
+  // and lost the paper's entry layout; a `\NewDocumentCommand{\shorttitle}` kept the stub silently.
   DefMacro!("\\lx@if@fallbackdefined{}{}{}", sub[(name, if_tks, else_tks)] {
     let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
     Ok(if is_fallback_meaning(&cs) { if_tks } else { else_tks })

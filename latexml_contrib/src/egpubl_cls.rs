@@ -196,6 +196,8 @@ LoadDefinitions!({
   //   27 papers; 2604.14791 eurovis2026.sty:12; `\EuroVisPanelsTutorialsEditors` 20; `\EuroVisGDxDREditors`).
   // - :1000-1008 `\copyrightTextTitPag`, the title page's copyright line a paper gives (2404.02634 "\copyright\ 2024 The
   //   Authors. Proceedings published by Eurographics…"): the frontmatter copyright, and stored as the class stores it;
+  //   the frontmatter copyright prints its own © (`name="©"`), so a leading `\copyright`/`\textcopyright` (and the
+  //   space after it) is not given to it twice (OXIDIZED_DESIGN_DIVERGENCES #599);
   //   `\copyrightTextRunPag`, the running pages' copy, and :1107-1109 `\p@journalSubmissionText`, the submission line:
   //   page furniture, stored. `\pStartPage` (:914) stores the first page number.
   // - the paper-type and licence selectors of single copies (`\PaperL2P` :1744, `\ArxivPaper` 2509.17755,
@@ -206,7 +208,19 @@ LoadDefinitions!({
   RawTeX!(
     r"\let\shortcite=\cite
 \newcommand\CCScat[4]{#2 [#1]: #3---#4}
-\newcommand\copyrightTextTitPag[1]{\gdef\p@copyrightTextTitPag{#1}\lx@add@copyright{#1}}\gdef\p@copyrightTextTitPag{}
+\newcommand\copyrightTextTitPag[1]{\gdef\p@copyrightTextTitPag{#1}\lx@egpubl@copyright#1\lx@egpubl@cr@end}\gdef\p@copyrightTextTitPag{}
+\def\lx@egpubl@copyright{\futurelet\lx@egpubl@cr@next\lx@egpubl@cr@sign}
+\def\lx@egpubl@cr@sign{\let\lx@egpubl@cr@do\lx@egpubl@cr@keep
+  \ifx\lx@egpubl@cr@next\copyright\let\lx@egpubl@cr@do\lx@egpubl@cr@drop\fi
+  \ifx\lx@egpubl@cr@next\textcopyright\let\lx@egpubl@cr@do\lx@egpubl@cr@drop\fi
+  \lx@egpubl@cr@do}
+\def\lx@egpubl@cr@drop#1{\futurelet\lx@egpubl@cr@next\lx@egpubl@cr@space}
+\def\lx@egpubl@cr@space{\let\lx@egpubl@cr@do\lx@egpubl@cr@keep
+  \ifx\lx@egpubl@cr@next\ \let\lx@egpubl@cr@do\lx@egpubl@cr@drop@space\fi
+  \ifx\lx@egpubl@cr@next~\let\lx@egpubl@cr@do\lx@egpubl@cr@drop@space\fi
+  \lx@egpubl@cr@do}
+\def\lx@egpubl@cr@drop@space#1{\lx@egpubl@cr@keep}
+\def\lx@egpubl@cr@keep#1\lx@egpubl@cr@end{\lx@add@copyright{#1}}
 \newcommand\copyrightTextRunPag[1]{\gdef\p@copyrightTextRunPag{#1}}\gdef\p@copyrightTextRunPag{}
 \newcommand\p@journalSubmissionText[1]{submitted to COMPUTER GRAPHICS \textit{Forum} #1.}
 \newcommand\pStartPage[1]{\gdef\j@pStartPage{#1}}"

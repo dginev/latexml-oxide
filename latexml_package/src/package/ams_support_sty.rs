@@ -102,8 +102,10 @@ LoadDefinitions!({
   // amsart.cls:41-42 (amsproc.cls, amsbook.cls alike) marks amsthm.sty loaded (`\ver@amsthm.sty`), its theorem code
   // being the class's own; here amsthm's binding stands for it. A document that wants amsthm.sty itself unmarks it
   // (`\expandafter\let\csname ver@amsthm.sty\endcsname\relax`, then `\let\proof\relax…\usepackage{amsthm}`), which
-  // the loader honours as LaTeX's `\@ifl@aded` does (content.rs `unmarked_by_document`).
+  // the loader honours as LaTeX's `\@ifl@aded` does for this mark only (`amsthm.sty:class_marked`,
+  // `state::unmarked_by_document`; user ruling 2026-10-14: no general loader `\ver@` rule; 1510.08833, 2106.07418).
   RequirePackage!("amsthm");
+  AssignValue!("amsthm.sty:class_marked" => true, Some(Scope::Global));
   RequirePackage!("amsfonts");
   RequirePackage!("makeidx");
 
@@ -516,11 +518,13 @@ pub fn amsart_uppercase_nonmath() -> Result<()> {
 ///   document's own print of them (2510.22858 `\ifx\@keywords\@empty\else…`) prints nothing twice, as `\@dedicatory`.
 /// - :687-689 `\copyrightinfo{0000}{(copyright holder)}`, the defaults `\copyrightyear`/`\copyrightholder` (2403.17965).
 /// - :837, :856-864 `\abstractbox` and `\@setabstract`/`\@setabstracta`, which set a box an abstract-like environment
-///   of the document's fills (1512.02361 `{abstracts}`, 2303.07306 `{acknowledgements}`, 2201.00740, 2602.22909, all
-///   amsart's own `{abstract}` code under another name): `\maketitle` sets it and makes `\@setabstract` `\relax`, so one
-///   after the title is set where it ends (`\ifx\@setabstract\relax \@setabstracta \fi`). The kernel `{abstract}` gives
-///   the frontmatter and leaves the box void. Before, `\@setabstract` stayed an empty macro and the box was never set:
-///   the text was lost.
+///   of the document's fills (1512.02361 and 2602.22909 `{abstracts}`, 2303.07306 and 2201.00740 `{acknowledgements}`,
+///   all amsart's own `{abstract}` code under another name): `\maketitle` sets it and makes `\@setabstract` `\relax`,
+///   so one after the title is set where it ends (`\ifx\@setabstract\relax \@setabstracta \fi`; the acknowledgements).
+///   The box `\maketitle` sets is the title page's abstract, as amsart's `{abstract}` fills it: the frontmatter abstract
+///   (`<ltx:abstract>`, 1512.02361's English and French abstracts). The kernel `{abstract}` gives the frontmatter and
+///   leaves the box void. Before, `\@setabstract` was an empty macro and the box was never set (1512.02361 kept its text
+///   only through an Error's recovery, with a stray "=").
 /// - :1189-1218, :1240-1241 the contents-line code, `\@tocwrite`/`\@tocwriteb` (2004.14791's own `\chapter`, 1805.00244)
 ///   and `\l@figure`/`\l@table` (magyar.ldf:1696-1697 patches them; 2503.14638).
 /// - :1244 `\@defaultbiblabelstyle`, :1262 `\bibliofont` (2105.14892, 2312.03234).
@@ -569,7 +573,9 @@ pub fn amsart_class_internals() -> Result<()> {
 \let\@subjclass=\@empty
 \def\copyrightyear{0000}\def\copyrightholder{(copyright holder)}
 \newbox\abstractbox
-\def\@setabstract{\@setabstracta \global\let\@setabstract\relax}
+\def\@setabstract{\iflx@ams@depositing\else\ifvoid\abstractbox\else
+  \lx@add@frontmatter@now{ltx:abstract}{\box\abstractbox}\fi\fi
+  \global\let\@setabstract\relax}
 \def\@setabstracta{%
   \iflx@ams@depositing\else
   \ifvoid\abstractbox

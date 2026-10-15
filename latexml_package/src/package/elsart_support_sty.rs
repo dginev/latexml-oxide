@@ -36,8 +36,21 @@ LoadDefinitions!({
   DefMacro!("\\threehalf", "{\\textstyle\\frac{3}{2}}");
   DefMacro!("\\quart", "{\\textstyle\\frac{1}{4}}");
 
-  // Perl L48-49: differential and exponential unicode forms
-  DefMath!("\\d", "\u{2146}", role => "DIFFOP", meaning => "differential-d");
+  // Perl L48-49: differential and exponential unicode forms. The `\d` is elsart.cls's own (v2.18:1382, v2.20 alike:
+  // `\if@symbold\else\def\d{\,\mathrm{d}}\fi`, 98 of the 150 shipped copies of elsart*.cls; 0708.4004, 0712.3870),
+  // over the kernel's dot-under accent: where a paper ships a copy (elsart4.cls, elsart5.cls, elsartchimie.cls,
+  // 0709.3642's elsart.cls: cond-mat0610502, 0706.1711, cond-mat0504658) that does not redefine it, or the class's
+  // `symbold` option keeps it, `\d` stays the accent. With no copy the class as distributed redefines it.
+  let elsart_copy = crate::shipped_class::shipped_class_text("elsart")?;
+  let redefines_d = elsart_copy.as_deref().is_none_or(|text| {
+    crate::shipped_class::class_code_contains(text, "\\def\\d{\\,\\mathrm{d}}")
+  });
+  // `\if@symbold` is elsart_cls.rs's; the other users of this file (elsart.sty, arxbj.cls, OmniBus) have no option.
+  let symbold = T_CS!("\\if@symbold");
+  let symbold = lookup_definition(&symbold)?.is_some() && if_condition(&symbold)?.unwrap_or(false);
+  if redefines_d && !symbold {
+    DefMath!("\\d", "\u{2146}", role => "DIFFOP", meaning => "differential-d");
+  }
   DefMath!("\\e", "\u{2147}", role => "ID", meaning => "exponential-e");
 
   // Perl L58: \pol (rightwards arrow overaccent)

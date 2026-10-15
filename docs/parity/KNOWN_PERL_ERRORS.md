@@ -13558,12 +13558,18 @@ LaTeX's loaded test is `\ver@<file>` (latex.ltx `\@ifl@aded`: `\expandafter\ifx\
 amsart.cls:41-42 marks amsthm.sty loaded, so papers that want amsthm.sty's own `{proof}` unmark it,
 `\expandafter\let\csname ver@amsthm.sty\endcsname\relax`, remove the class's commands (`\let\proof\relax
 \let\endproof\relax`, `\let\theoremstyle\relax`…) and `\usepackage{amsthm}`. Perl's loader reads only
-`<file>_loaded` (Package.pm:2311), and ams_support.sty.ltxml:64 has loaded amsthm, so the request is skipped and
-`{proof}` stays undefined. Minimal trigger: tools/perfect_kernel/repros/loader/amsart_reloads_amsthm_after_unmarking_it.tex:
-Perl 1 error, pdflatex 0. Run 347: 71 amsart papers (1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418,
-2304.10644). Fixed in Rust: `state::unmarked_by_document` — a binding-loaded file whose `\ver@<file>` is `\relax` is
-loaded afresh (content.rs) and `\@ifl@aded` answers false (sect05.rs). Guard
-`perfect_kernel_batch67y::amsart_reloads_amsthm_after_unmarking_it`.
+`<file>_loaded` (Package.pm:2327-2329), and ams_support.sty.ltxml:64 has loaded amsthm, so the request is skipped
+and `{proof}` stays undefined. Minimal trigger: tools/perfect_kernel/repros/loader/amsart_reloads_amsthm_after_unmarking_it.tex:
+Perl 1 error, pdflatex 0 (and amsart_reloads_amsthm_after_undefining_its_version.tex, the `\let…\undefined` form,
+which `\@ifl@aded` takes for not loaded too). Run 347: 71 amsart papers (1510.08833, 1704.05671, 1707.00258, 1611.00843,
+2106.07418, 2304.10644). Fixed in Rust for the class's mark only (user ruling 2026-10-14: no general loader `\ver@`
+rule, as floatrow's marks, floatrow_sty.rs): ams_support_sty.rs records the mark it makes for amsart
+(`amsthm.sty:class_marked`), and `state::unmarked_by_document` takes a file so recorded whose `\ver@<file>` is `\relax`
+or undefined for unloaded — loaded afresh (content.rs, the mark then cleared: the load is the document's) and
+`\@ifl@aded` answers false (sect05.rs). Every other file keeps the loader's record, as in Perl: a package the
+document loaded itself stays loaded through a later `\let\ver@<file>\relax` (pdfx.sty:592 does it to inputenc), where
+LaTeX would load it again. Guards `perfect_kernel_batch67y::{amsart_reloads_amsthm_after_unmarking_it,
+amsart_reloads_amsthm_after_undefining_its_version, an_unmarked_document_package_stays_loaded}`.
 
 ## 721. amsart's switches, abstract box, stores and contents-line code are undefined
 
@@ -13576,7 +13582,9 @@ ams_support.sty.ltxml:261-264 leaves them a comment), :554/:564 `\@keywords`/`\@
 tools/perfect_kernel/repros/class-bindings/amsart_class_internals.tex: Perl 11 errors (8 commands), pdflatex 0. Run
 347: `\for` 89, `\except` 73, `\abstractbox` 55, `\bibliofont` 38, `\@tocwriteb` 16 papers (1304.2934, 1601.05128,
 1512.02361, 2105.14892, 2004.14791). Fixed in Rust: ams_support_sty.rs `amsart_class_internals` (the class lines),
-`\@setabstract` run at `\maketitle`. Guard `perfect_kernel_batch67y::amsart_class_internals_are_defined`.
+`\@setabstract` run at `\maketitle`, where the box it sets is the frontmatter `<ltx:abstract>` (1512.02361's English
+and French abstracts, 2602.22909); one set after the title stays where it ends (2303.07306's acknowledgements). Guard
+`perfect_kernel_batch67y::amsart_class_internals_are_defined`.
 
 ## 722. REVTeX 4.1/4.2's `\doi`, grid and front-matter internals are undefined
 
@@ -13592,25 +13600,43 @@ revtex4_2_class_internals.tex (Perl 16 errors), revtex4_1_class_internals.tex (P
 
 ## 723. elsarticle's internals and setters are undefined
 
-elsarticle.cls (TL v3.4c): :145 `\tnotemark`, :1021-1027 `\myfooter`/`\myfooterfont`, :671-673 `\abstracttitle`,
+elsarticle.cls (TL v3.4c): :145 `\tnotemark`, :1021-1027 `\myfooter`/`\myfooterfont`, :671-673 `\abstracttitle` (the
+abstract's name, `\@elsarticleabstitle`, which its `{abstract}` prints, :676, in place of `\abstractname`),
 :192-193 `\resetTitleCounters`, :670/:736 `\absbox`/`\keybox`, :126-131 `\elsRef`/`\Newlabel`, :1301-1302 `\@journal`;
 the older releases papers ship (v1.21: `\email`, `{nomenclature}`, `{deflist}`, `\correspondingauthor`,
 `\normalMode`). Perl's elsarticle.cls.ltxml defines none of them. Minimal triggers: tools/perfect_kernel/repros/
 class-bindings/elsarticle_class_internals.tex (Perl 7 errors), elsarticle_v1_21_commands.tex (Perl 7), pdflatex 0.
 Run 347: `\email` 85, `\@journal` 48 + 32, `\normalMode` 23, `\myfooter` 16 + 15 papers (1305.6441, 1212.6083,
 2404.00783, 2209.12222). Fixed in Rust: elsarticle_cls.rs (the older releases' commands as `Fallback` guesses),
-elsart_support_core_sty.rs (`\@journal`). Guards `perfect_kernel_batch67y::elsarticle_{class_internals,v1_21_commands}_are_defined`.
+elsart_support_core_sty.rs (`\@journal`); the copies with aas_macros.sty pasted in (`\apj`, `\mnras`: 0812.4232,
+1504.02326, 1807.02064, 2003.05953, 2401.03908) get aas_macros' binding provide-only. Guards
+`perfect_kernel_batch67y::{elsarticle_class_internals_are_defined, elsarticle_v1_21_commands_are_defined,
+elsarticle_class_details, elsarticle_copy_aas_journal_macros}`.
 
 ## 724. elsart's `{pf}` needs amsthm, `{pf*}` and the class internals are undefined
 
-elsart.cls:477-483 (v2.20, 0712.3870's copy) `{pf}` and `{pf*}{<heading>}`; elsart_support.sty.ltxml:104 makes `{pf}`
-amsthm's `{@proof}`, which elsart does not load, and defines no `{pf*}`; :47 `\cty`/`\cny`/`\jr`, :56 `\@blstr`, :36/:625
-`\if@nameyear`/`\if@natbibloaded`, :1006 `\output@glob@notes` are undefined too, and the MACMILLAN elsart5.cls copies'
-`\KEY`. Minimal triggers: tools/perfect_kernel/repros/class-bindings/elsart_class_commands.tex (Perl 7 errors; pdflatex
+elsart.cls `{pf}` and `{pf*}{<heading>}` (v2.18, 0708.4004's copy, :477-483; v2.20, 0712.3870's, :505-510);
+elsart_support.sty.ltxml:104 makes `{pf}` amsthm's `{@proof}`, which elsart does not load, and defines no `{pf*}`;
+`\cty`/`\cny`/`\jr` (v2.18 :47, v2.20 :59), `\@blstr` (:56, :68), `\if@nameyear` (:36 both) and `\if@natbibloaded`
+(:597, :625), `\output@glob@notes` (:1006, :1035) are undefined too, and the MACMILLAN elsart5.cls copies' `\KEY`.
+Its `\d` (elsart_support.sty.ltxml:48, the differential ⅆ) is the class's own `\if@symbold\else\def\d{\,\mathrm{d}}\fi`
+(v2.18 :1382, v2.20 :1413), which Perl applies to every copy and option: the elsart4/elsart5/elsartchimie copies have
+no such line and keep the dot-under accent (cond-mat0610502, 0706.1711, cond-mat0504658), as `[symbold]` does. Minimal triggers: tools/perfect_kernel/repros/class-bindings/elsart_class_commands.tex (Perl 7 errors; pdflatex
 0 with v2.20, v2.18's `\author` errs under TL 2025), elsart5_macmillan_key.tex (Perl 1). Run 347: `{pf*}` 25, `\KEY`
 34 + 7 papers (0708.4409, 0709.3642, 0801.1765). Fixed in Rust: elsart_support_sty.rs (`{pf}`/`{pf*}` an
-`<ltx:proof>` constructor pair as amsthm's), elsart_cls.rs. Guards
-`perfect_kernel_batch67y::{elsart_class_commands_are_defined,elsart5_macmillan_key_starts_the_keywords}`.
+`<ltx:proof>` constructor pair as amsthm's; the differential `\d` only where the paper's copy defines it, or it ships
+none), elsart_cls.rs. Guards `perfect_kernel_batch67y::{elsart_class_commands_are_defined,
+elsart5_macmillan_key_starts_the_keywords, elsart_d_follows_the_shipped_copy}`.
+
+## 725. `\addcontentsline` adds a list to `inlist` again: `inlist="toc toc"`
+
+latex_constructs.pool.ltxml:755-757 appends the list to the current node's `inlist` without looking whether it is there
+already. amsart's `\@tocwriteb` (amsart.cls:1213-1218), which papers' own sectioning commands call (2004.14791's
+`\chapter`, 1805.00244), runs `\addcontentsline{toc}` in a section the kernel already listed. Minimal trigger:
+`\documentclass{article}\begin{document}\section{A}\addcontentsline{toc}{section}{A}\end{document}` gives
+`<section inlist="toc toc">` (Perl and Rust before 67y). Fixed in Rust: sect04.rs `\addcontentsline` adds a list the
+node is not in yet. Guard `perfect_kernel_batch67y::amsart_class_internals_are_defined`.
+
 ## 770. `\IfFileExists` finds a binding standing in for an author's file the paper does not ship
 
 latex_constructs.pool.ltxml:5692-5697 `\IfFileExists` asks `FindFile`, which takes a `.ltxml` binding for the file

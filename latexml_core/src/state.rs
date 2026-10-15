@@ -1849,23 +1849,22 @@ pub fn end_borrow(outer: Vec<String>) {
   }
 }
 
-/// Has the document unloaded the binding-loaded `file` (`amsthm.sty`) by letting its `\ver@<file>` to `\relax`?
-/// LaTeX's loaded test is that macro (latex.ltx `\@ifl@aded`: `\expandafter\ifx\csname ver@#2.#1\endcsname\relax`),
-/// which a binding load defines (content.rs, Perl Package.pm:2326), so a relaxed one is a file the document took back:
-/// the amsart idiom `\expandafter\let\csname ver@amsthm.sty\endcsname\relax` before `\usepackage{amsthm}` (amsart.cls:41
-/// marks amsthm loaded; 1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418, 2304.10644). A file that un-marks
-/// itself (`<file>_unmarks_itself`, fontenc) is the loader's own case. Perl's loader reads only `<file>_loaded`
-/// (Package.pm:2311), KNOWN_PERL_ERRORS #720.
+/// Has the document unloaded `file` (`amsthm.sty`), which a class binding marked loaded on its class's behalf, by
+/// letting its `\ver@<file>` to `\relax` or `\undefined`? LaTeX's loaded test is that macro (latex.ltx `\@ifl@aded`:
+/// `\expandafter\ifx\csname ver@#2.#1\endcsname\relax`, true for both), which a binding load defines (content.rs, Perl
+/// Package.pm:2326). The rule is narrow, as floatrow's marks are (user ruling 2026-10-14: no general loader `\ver@`
+/// rule; floatrow_sty.rs): only a file a binding recorded as `<file>:class_marked` — ams_support_sty.rs for amsart's
+/// `\@namedef{ver@amsthm.sty}` (amsart.cls:41-42; amsproc, amsbook alike) — is so taken back; every other file keeps
+/// the loader's own record. The amsart idiom is `\expandafter\let\csname ver@amsthm.sty\endcsname\relax` before
+/// `\usepackage{amsthm}` (1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418, 2304.10644). Perl's loader reads
+/// only `<file>_loaded` (Package.pm:2327-2329), KNOWN_PERL_ERRORS #720.
 pub fn unmarked_by_document(file: &str) -> bool {
-  if !lookup_bool(&s!("{file}_loaded")) || lookup_bool(&s!("{file}_unmarks_itself")) {
+  if !lookup_bool(&s!("{file}:class_marked")) || !lookup_bool(&s!("{file}_loaded")) {
     return false;
   }
-  match (
-    lookup_meaning(&T_CS!(s!("\\ver@{file}"))),
-    lookup_meaning(&T_CS!("\\relax")),
-  ) {
-    (Some(ver), Some(relax)) => ver == relax,
-    _ => false,
+  match lookup_meaning(&T_CS!(s!("\\ver@{file}"))) {
+    None => true,
+    Some(ver) => lookup_meaning(&T_CS!("\\relax")).is_some_and(|relax| ver == relax),
   }
 }
 

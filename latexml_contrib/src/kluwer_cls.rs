@@ -48,7 +48,8 @@ LoadDefinitions!({
 \providecommand{\keywordsname}{Keywords}
 \providecommand{\abbreviationsname}{Abbreviations}
 \long\def\keywords#1{\lx@add@keywords[name={\keywordsname:~}]{#1}}
-\long\def\abbreviations#1{\lx@add@frontmatter{ltx:note}[role=abbreviations]{#1}}
+\def\abbrevnamefont{\bf}
+\long\def\abbreviations#1{\lx@add@frontmatter{ltx:note}[role=abbreviations]{{\abbrevnamefont \abbreviationsname:~}#1}}
 \def\abbrev#1#2{#1 -- #2}
 \long\def\classification#1#2{\lx@add@classification[scheme={#1}]{#2}}
 \newdimen\maxfloatwidth
@@ -84,20 +85,26 @@ LoadDefinitions!({
   // verbatim:
   // - :2007-2065, :2128-2145 the citation forms: under `numreferences` all are `\cite`; under the default named
   //   references `\cite{x}` is "(Author, Year)", `\inlinecite{x}` "Author (Year)", `\opencite{x}` "Author, Year",
-  //   `\shortcite{x}` "(Year)", over the `\citeauthoryear` labels kluwer.bst writes (`\inlinecite` 64, `\opencite` 48
-  //   papers; 1306.4881, 1408.6262, astro-ph0001448, 0802.0687, astro-ph0307528). kluwer.cls has its own author-year code,
-  //   natbib's in all but name: natbib stands for it here, as `\citep`, `\citet`, `\citealp` and `\citeyearpar`,
-  //   loaded before the class's forms are set (natbib's own `\shortcite` is `\cite`, natbib_sty.rs).
+  //   `\shortcite{x}` "(Year)", `\cite*{x}` "Year" (:2125 `\def\cite{\@ifstar{\citeyear}{\klu@cite}}`), over the
+  //   `\citeauthoryear` labels kluwer.bst writes (`\inlinecite` 64, `\opencite` 48 papers; 1306.4881, 1408.6262,
+  //   astro-ph0001448, 0802.0687, astro-ph0307528). kluwer.cls has its own author-year code, natbib's in all but name,
+  //   and never loads natbib: natbib stands for it here, borrowed (`\@ifpackageloaded{natbib}` stays false, as the
+  //   endnotes below), as `\citep`, `\citet`, `\citealp`, `\citeyear` and `\citeyearpar`, before the class's forms are
+  //   set (natbib's own `\shortcite` is `\cite`, natbib_sty.rs).
   // - :1909-1975 the endnotes, endnotes.sty's interface (klunote.sty) without loading it: borrowed (`\theendnotes`
   //   31 papers; 0910.2393, 0711.4475, 0904.2540).
   // - :147 `\I` (bold I); :162-176 the math symbols, which the class composes from overprinted glyphs (`\dR` is
   //   `I \! \! R`, `\lsim` a raised `<` over a `\sim`): here the symbols they draw, as the astronomy bindings set
   //   `\la`/`\ga` (aa_support_sty.rs) — ≲ ≳ ≢ and the double-struck ℂ ℙ ℕ ℝ ℤ ℚ (`\gsim`/`\lsim` 14/13 papers;
   //   astro-ph0309194, astro-ph0510296, astro-ph0401471; `\dZ`, `\dR`, `\dC`, `\dN`, `\dQ`, `\dP`, `\nequiv`;
-  //   math0308074, math0212055, astro-ph0410557). Their boxes made two letters of `\dZ` in the formula.
+  //   math0308074, math0212055, astro-ph0410557). Their boxes made two letters of `\dZ` in the formula
+  //   (OXIDIZED_DESIGN_DIVERGENCES #598).
   // - :1508, :1571, :1758 the caption fonts and dot (`\tabcapfont` 13 papers).
   // - :2292-2307 `{subequation}` (9 papers), :2343-2348 `\qed` (8), :1862-1864 `{kaprotate}`.
-  // - :955-960 `\nomenclature` (a title-page note, as `\abbreviations`) and `\nomen`.
+  // - :955-960 `\nomenclature` (a title-page note, as `\abbreviations`, :950-953) and `\nomen`: each note keeps the
+  //   heading the class prints before it, bold (`\nomennamefont`/`\abbrevnamefont`, :929-930): "Abbreviations:~" run
+  //   in; "Nomenclature:" is on a line of its own in the PDF, run in here, as a `\par` in a frontmatter note pulls the
+  //   formula after it into the heading's text (RED repro sectioning-frontmatter/frontmatter_note_par_then_math).
   // - :966-983 `{motto}`, set as a quote where it stands (its box went to the title block).
   // - :1097 `\crline` (the copyright line: page furniture), :1487-1488 `\rcline`, `\lcline`, `\lrcline`, `\rlcline`
   //   (rules over part of a row, as `\cline`), :48 `\filedate`.
@@ -112,7 +119,7 @@ LoadDefinitions!({
   DefMath!("\\dZ", "\u{2124}", role => "ID", meaning => "integers");
   DefMath!("\\dQ", "\u{211A}", role => "ID", meaning => "rationals");
   if !if_condition(&T_CS!("\\if@numreferences"))?.unwrap_or(false) {
-    RequirePackage!("natbib");
+    require_package_borrowed("natbib")?;
   }
   RawTeX!(
     r"\if@numreferences
@@ -120,7 +127,7 @@ LoadDefinitions!({
   \let\inlinecite\cite
   \let\opencite\cite
 \else
-  \def\cite{\citep}%
+  \def\cite{\@ifstar{\citeyear}{\citep}}%
   \def\shortcite{\citeyearpar}%
   \def\opencite{\citealp}%
   \def\inlinecite{\citet}%
@@ -157,7 +164,8 @@ LoadDefinitions!({
 \def\endkaprotate{\global\@kaprotatefalse}
 \providecommand{\nomenclaturename}{Nomenclature}
 \def\nomen#1#2{#1 -- #2}
-\long\def\nomenclature#1{\lx@add@frontmatter{ltx:note}[role=nomenclature]{#1}}
+\def\nomennamefont{\bf}
+\long\def\nomenclature#1{\lx@add@frontmatter{ltx:note}[role=nomenclature]{{\nomennamefont\nomenclaturename:} #1}}
 \newenvironment{motto}[1][]{\begin{quote}\footnotesize}{\end{quote}}
 \def\crline#1{\gdef\@crline{#1}}
 \let\rcline\cline \let\lcline\cline

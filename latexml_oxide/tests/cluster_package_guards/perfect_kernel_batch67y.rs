@@ -27,17 +27,23 @@ macro_rules! clean {
 }
 
 /// amsart.cls:75-96 `\for`/`\except` keep the long title in the body (1304.2934, 1601.05128); :837, :856-864 a
-/// document's `\abstractbox` environment is set at `\maketitle` and, after it, where it ends (1512.02361, 2303.07306);
-/// :554/:564 the stores, :687 `\copyrightyear`, :1262 `\bibliofont`, :1213-1241 the contents-line code (2105.14892,
-/// 2004.14791, 2503.14638).
+/// document's `\abstractbox` environment set at `\maketitle` is the frontmatter abstract, one after it is set where it
+/// ends (1512.02361, 2602.22909; 2303.07306, 2201.00740); :554/:564 the stores, :687 `\copyrightyear`, :1262
+/// `\bibliofont`, :1213-1241 the contents-line code, whose `\addcontentsline` does not list the section in the
+/// contents twice (2105.14892, 2004.14791, 2503.14638).
 #[test]
 fn amsart_class_internals_are_defined() {
   let xml = clean!("class-bindings/amsart_class_internals.tex");
   assert!(xml.contains(r#"<p xml:id="p1.1">Stores [].</p>"#), "{xml}");
   assert!(
     xml.contains(
-      r#"<p xml:id="S0.I1.ix1.p1.1"><text fontsize="80%" xml:id="S0.I1.ix1.p1.1.1">Before the title.</text></p>"#
+      r#"<abstract inlist="toc" name="Abstract." xml:id="abstract1"> <block vattach="top" xml:id="abstract1.1"> <itemize xml:id="abstract1.1.1"> <item xml:id="S0.I1.ix1"> <tags> <tag><text font="smallcaps" xml:id="S0.I1.ix1.1">Abstract.</text></tag> <tag role="typerefnum">item <text font="smallcaps" xml:id="S0.I1.ix1.2">Abstract.</text></tag> </tags> <para xml:id="S0.I1.ix1.p1"> <p xml:id="S0.I1.ix1.p1.1"><text fontsize="80%" xml:id="S0.I1.ix1.p1.1.1">Before the title.</text></p> </para> </item> </itemize> </block> </abstract>"#
     ),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<abstract ").count(), 1, "{xml}");
+  assert!(
+    xml.contains(r#"<section inlist="toc" xml:id="S1">"#),
     "{xml}"
   );
   assert!(
@@ -54,13 +60,16 @@ fn amsart_class_internals_are_defined() {
   assert!(
     xml.contains(
       r#"<tag><text font="smallcaps" xml:id="S1.I1.ix1.1">Acknowledgements.</text></tag>"#
-    ) && xml.contains("After the title."),
+    ) && xml.contains(
+      r#"<p xml:id="S1.I1.ix1.p1.1"><text fontsize="80%" xml:id="S1.I1.ix1.p1.1.1">After the title.</text></p>"#
+    ),
     "{xml}"
   );
 }
 
 /// amsart.cls:41-42 marks amsthm loaded; a document that lets `\ver@amsthm.sty` to `\relax` loads amsthm.sty again,
-/// as LaTeX's `\@ifl@aded` does (1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418, 2304.10644).
+/// as LaTeX's `\@ifl@aded` does (1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418, 2304.10644): the class
+/// binding's mark only (`amsthm.sty:class_marked`, `state::unmarked_by_document`).
 #[test]
 fn amsart_reloads_amsthm_after_unmarking_it() {
   let xml = clean!("loader/amsart_reloads_amsthm_after_unmarking_it.tex");
@@ -254,13 +263,13 @@ fn elsart5_macmillan_key_starts_the_keywords() {
 }
 
 /// egpubl.cls's `\p@ConfYear`, `\shortcite`, `\CCScat`, `\EuroVisTutorialEditors`, `\copyrightTextTitPag`
-/// (1409.5623, 1710.04867, 1102.4258, 2604.14791, 2404.02634).
+/// (1409.5623, 1710.04867, 1102.4258, 2604.14791, 2404.02634): the copyright prints its © once, the frontmatter's.
 #[test]
 fn egpubl_class_commands_are_defined() {
   let xml = clean!("class-bindings/egpubl_class_commands.tex");
   assert!(
     xml.contains(
-      r#"<date name="©" role="copyright">© 2025 The Authors.</date> <note role="year" xml:id="id1">2025</note> <note role="editors-tutorial" xml:id="id2">T. Editor</note>"#
+      r#"<date name="©" role="copyright">2025 The Authors.</date> <note role="year" xml:id="id1">2025</note> <note role="editors-tutorial" xml:id="id2">T. Editor</note>"#
     ),
     "{xml}"
   );
@@ -272,8 +281,8 @@ fn egpubl_class_commands_are_defined() {
   );
 }
 
-/// A document's `\NewDocumentEnvironment`/`\NewDocumentCommand` replaces a binding's guess (`Fallback`), as its
-/// `\newenvironment` does (2509.10728).
+/// A document's `\NewDocumentEnvironment`/`\NewDocumentCommand` replaces a binding's guess (`Fallback`) and a kernel
+/// stub (`Stub`: `\shorttitle`), as its `\newenvironment` and `\newcommand` do (2509.10728).
 #[test]
 fn ltcmd_declarators_replace_a_fallback_guess() {
   let xml = clean!("loader/ltcmd_declarators_replace_a_fallback_guess.tex");
@@ -282,4 +291,117 @@ fn ltcmd_declarators_replace_a_fallback_guess() {
     "{xml}"
   );
   assert!(xml.contains(r#"<p xml:id="p1.2">Mail: a@b</p>"#), "{xml}");
+  assert!(
+    xml.contains(r#"<p xml:id="p2.1">Running: Short</p>"#),
+    "{xml}"
+  );
+}
+
+/// amsart's mark again, by `\let\ver@amsthm.sty\undefined`, which `\@ifl@aded` takes for not loaded as it takes
+/// `\relax` (latex.ltx `\ifx\csname ver@…\endcsname\relax`).
+#[test]
+fn amsart_reloads_amsthm_after_undefining_its_version() {
+  let xml = clean!("loader/amsart_reloads_amsthm_after_undefining_its_version.tex");
+  assert!(
+    xml.contains(r#"<p xml:id="p1.1">amsthm loaded.</p>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(
+      r#"<proof xml:id="id1"> <title class="ltx_runin" font="italic">Proof.</title> <para xml:id="p2"> <p xml:id="p2.1"><text xml:id="p2.1.1">A proof. ∎</text></p> </para> </proof>"#
+    ),
+    "{xml}"
+  );
+}
+
+/// The loader takes back only a class binding's mark (user ruling 2026-10-14: no general loader `\ver@` rule): a
+/// package the document loaded itself stays loaded through a later `\let\ver@<file>\relax` (in LaTeX it would load
+/// again; floatrow_sty.rs is the same rule's other case), and its binding is not run twice.
+#[test]
+fn an_unmarked_document_package_stays_loaded() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{amsthm}
+\expandafter\let\csname ver@amsthm.sty\endcsname\relax
+\makeatletter
+\newcommand\amsthmstate{\@ifpackageloaded{amsthm}{loaded}{unloaded}}
+\makeatother
+\usepackage{amsthm}
+\begin{document}
+amsthm \amsthmstate.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(r#"<p xml:id="p1.1">amsthm loaded.</p>"#),
+    "{xml}"
+  );
+}
+
+/// kluwer.cls:2125 `\cite*` is `\citeyear`; :950-960 the abbreviations and nomenclature notes keep their bold
+/// headings; natbib is borrowed, not loaded (kluwer.cls never loads it).
+#[test]
+fn kluwer_cite_star_and_title_notes() {
+  let xml = clean!("class-bindings/kluwer_cite_star_and_title_notes.tex");
+  assert!(
+    xml.contains(
+      r#"<note role="abbreviations" xml:id="id1"><text font="bold" xml:id="id1.1">Abbreviations: </text>KAP – Kluwer Academic Publishers</note>"#
+    ),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(
+      r#"<note role="nomenclature" xml:id="id2"><text font="bold" xml:id="id2.1">Nomenclature:</text> <Math mode="inline" tex="x" text="x" xml:id="m1">"#
+    ) && xml.contains(r#"</Math> – a variable</note>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(
+      r#"<p xml:id="p1.1">Since <cite class="ltx_citemacro_citeyear"><bibref bibrefs="jones" separator=";" show="Year" yyseparator=","/></cite>; natbib not loaded.</p>"#
+    ),
+    "{xml}"
+  );
+}
+
+/// elsarticle.cls:672 `\abstracttitle` names the abstract only (its `{abstract}` prints `\@elsarticleabstitle`, :676),
+/// not `\abstractname`; :1022 `\myfooter[#1]#2␣`; `\@journal` empty until `\journal` (:1302).
+#[test]
+fn elsarticle_class_details() {
+  let xml = clean!("class-bindings/elsarticle_class_details.tex");
+  assert!(
+    xml.contains(
+      r#"<abstract inlist="toc" name="Summary" xml:id="abstract1"> <p xml:id="abstract1.1">The abstract.</p> </abstract>"#
+    ),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<p xml:id="p1.1">Name: Abstract. Footer: Footer text. Journal: .</p>"#),
+    "{xml}"
+  );
+}
+
+/// A paper's copy of elsarticle.cls with aas_macros.sty pasted in (0812.4232, 1504.02326, 1807.02064, 2003.05953,
+/// 2401.03908): its journal abbreviations, provided by aas_macros' binding.
+#[test]
+fn elsarticle_copy_aas_journal_macros() {
+  let xml = clean!("class-bindings/elsarticle_copy_aas_journal_macros.tex");
+  assert!(
+    xml.contains(r#"<p xml:id="p1.1">In ApJ and MNRAS.</p>"#),
+    "{xml}"
+  );
+}
+
+/// elsart.cls's `\if@symbold\else\def\d{\,\mathrm{d}}\fi` (v2.18:1382; 0708.4004, 0712.3870): the binding's
+/// differential `\d` (Perl elsart_support.sty.ltxml:48) where the paper's copy redefines it; the kernel's dot-under accent
+/// where the copy does not (elsart5.cls: cond-mat0610502, 0706.1711), here a minimal stand-in.
+#[test]
+fn elsart_d_follows_the_shipped_copy() {
+  let xml = clean!("class-bindings/elsart_d_follows_the_shipped_copy.tex");
+  assert!(
+    xml.contains(r#"<p xml:id="p1.1">Text ọ here, and"#),
+    "{xml}"
+  );
+  assert!(xml.contains(r#"tex="\int f(x)\d{x}""#), "{xml}");
 }

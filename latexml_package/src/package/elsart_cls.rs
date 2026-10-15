@@ -7,7 +7,7 @@ LoadDefinitions!({
   // Generally ignorable options
   for option in [
     "12pt", "11pt", "10pt", "oneside", "twoside",
-    "symbold", "doublespacing", "reviewcopy",
+    "doublespacing", "reviewcopy",
   ].iter() {
     DeclareOption!(option, None);
   }
@@ -26,6 +26,9 @@ LoadDefinitions!({
 \newif\if@natbibloaded\@natbibloadedfalse
 \AtBeginDocument{\@ifpackageloaded{natbib}{\@natbibloadedtrue}{}}");
   DeclareOption!("nameyear", "\\@nameyeartrue");
+  // elsart.cls:59-60 (v2.18): `symbold` keeps the kernel's `\d` (elsart_support_sty.rs).
+  RawTeX!(r"\newif\if@symbold\@symboldfalse");
+  DeclareOption!("symbold", "\\@symboldtrue");
 
   DeclareOption!("seceqn", {
     AssignValue!("@seceqn" => 1i64);
@@ -45,4 +48,7 @@ LoadDefinitions!({
   ProcessOptions!();
   load_class("article", Vec::new(), Tokens!())?;
   RequirePackage!("elsart_support");
+  // elsart.cls:28 (v2.18, 0708.4004's copy; v2.20:27 "Elsevier", 0712.3870's): `\@journal` is the publisher until
+  // `\journal` sets it (elsart_support_core_sty.rs).
+  RawTeX!(r"\def\@journal{Elsevier Science}");
 });

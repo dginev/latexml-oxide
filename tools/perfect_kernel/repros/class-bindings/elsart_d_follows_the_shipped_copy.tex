@@ -1,0 +1,18 @@
+% witness: elsart.cls v2.18:1382 `\if@symbold\else\def\d{\,\mathrm{d}}\fi` (0708.4004, 0712.3870; 98 of the 150 shipped
+%          elsart*.cls copies), absent from elsart4.cls/elsart5.cls/elsartchimie.cls and 0709.3642's elsart.cls
+%          (cond-mat0610502, 0706.1711, cond-mat0504658); here a minimal stand-in of a copy without it
+% oracle:  pdflatex 0 errors (with the stand-in): "Text ọ here" (the dot-under accent), and the accent over the
+%          formula's x
+% engines: rust 67y round 1 = 0 errors, but "Text ⅆo here" (the binding's differential `\d`, Perl
+%          elsart_support.sty.ltxml:48, whatever the copy)
+% expect:  0 errors, 0 warnings; the kernel's `\d` where the copy has no `\def\d`
+% status:  RED (67y round 1) -> GREEN (67y round 2)
+% preload: ar5iv.sty
+\begin{filecontents*}{elsart.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{elsart}
+\LoadClass{article}
+\end{filecontents*}
+\documentclass{elsart}
+\begin{document}
+Text \d{o} here, and $\int f(x)\d{x}$.
+\end{document}

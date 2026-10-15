@@ -1,0 +1,17 @@
+% witness: kluwer.cls:958-960 `\nomenclature` (a bold "Nomenclature:\par" heading, then the entries: TL's kluwer
+%          sampopen.tex; kluwer_cls.rs runs the heading in for this reason)
+% oracle:  pdflatex 0 errors ("Head:" bold on its own line, then "x – v" upright text with an italic x)
+% engines: rust 67y = 0 errors, `<note><text font="bold">Head:<Math …>x</Math></text> – v</note>`: the formula after
+%          the `\par` lands inside the heading's bold text; without the `\par` it follows it
+% expect:  0 errors, 0 warnings; `<text font="bold">Head:</text>` closed before the `<Math>`
+% status:  RED (67y)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\lx@add@frontmatter{ltx:note}[role=nomenclature]{{\bfseries Head:}\par\noindent $x$ -- v}
+\makeatother
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

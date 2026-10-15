@@ -17666,3 +17666,25 @@ alternative was to drop the two lines (every `\(…\)` an inline-block). Approve
 class, not the author, loads program; the authors write inline maths; content and semantics first. Perl's scan loads
 no program (no binding), so its `\(` is the kernel's and `\gt` is undefined. Repro class-bindings/snjnl_class_copy_loads_program; guard
 `perfect_kernel_batch67u::snjnl_class_copy_loads_program`.
+
+### 598. kluwer's overprinted symbols are their Unicode characters (Perl: no kluwer binding; the class draws them)
+
+kluwer.cls:162-176 composes `\lsim`/`\gsim` from a raised `<`/`>` over a `\sim`, `\nequiv` from `\not\equiv`, and the
+double-struck `\dC`, `\dP`, `\dN`, `\dR`, `\dZ`, `\dQ` from overprinted letters and rules (`\dR` is `I\!\!R`, a box of
+two letters). kluwer_cls.rs defines each as the symbol it draws, as the astronomy bindings set `\la`/`\ga`
+(aa_support_sty.rs): ≲ ≳ ≢ and ℂ ℙ ℕ ℝ ℤ ℚ, with their meanings (`less-than-or-similar-to`, `reals`, `integers`…).
+The faithful port made two letters and a kern of `\dZ` in the formula, which neither reads nor parses as one symbol;
+the PDF shows one glyph. Approved by the main session 2026-10-15 (round-1 open question). Papers: `\gsim`/`\lsim` 14/13
+(astro-ph0309194, astro-ph0510296, astro-ph0401471), `\dZ`/`\dR`… (math0308074, math0212055, astro-ph0410557).
+Repro class-bindings/kluwer_class_commands; guard `perfect_kernel_batch67y::kluwer_class_commands_are_defined`.
+
+### 599. egpubl's title-page copyright line is the frontmatter copyright (Perl: no egpubl binding)
+
+egpubl.cls:1000-1008 (v4.0, 2609.32222's copy) `\copyrightTextTitPag{<text>}` stores the copyright line its title
+page prints at the foot of the first column (2404.02634: "\copyright\ 2024 The Authors. Proceedings published by
+Eurographics…"). egpubl_cls.rs stores it as the class does and also gives it to the frontmatter
+(`\lx@add@copyright`, a `<ltx:date role="copyright">`), where the copyright of every other binding goes; the
+frontmatter prints its own © (`name="©"`), so a leading `\copyright`/`\textcopyright` and the space after it are not
+given to it twice. Its running-page copy (`\copyrightTextRunPag`) stays page furniture. Approved by the main session
+2026-10-15 (round-1 open question). Repro class-bindings/egpubl_class_commands; guard
+`perfect_kernel_batch67y::egpubl_class_commands_are_defined`.

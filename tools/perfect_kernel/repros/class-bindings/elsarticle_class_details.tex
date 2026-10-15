@@ -1,0 +1,25 @@
+% witness: 2204.07076, 2104.02951 (`\abstracttitle`: elsarticle.cls:672 sets `\@elsarticleabstitle` only, which the
+%          class's `{abstract}` prints, :676); 2209.12222, 2208.12518 (`\myfooter[#1]#2␣`, :1022, its text delimited
+%          by a space: `{Footer text}` and the line end); 1007.3192, 1212.6083 (`\@journal`, empty until `\journal`:
+%          :32's "Elsevier Ltd" is reset at :1302)
+% oracle:  pdflatex 0 errors ("Summary" over the abstract; "Name: Abstract. Footer: Footer text. Journal: .")
+% engines: rust 67y round 1 = 0 errors, but "Name: Summary." (`\abstracttitle` renamed `\abstractname` too)
+% expect:  0 errors, 0 warnings; the abstract named "Summary"; `\abstractname` the document's
+% status:  RED (67y round 1) -> GREEN (67y round 2)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\myfooter[L]{Footer text}
+\abstracttitle{Summary}
+\makeatletter
+\newcommand\showall{Name: \abstractname. Footer: \@elsarticlemyfooter. Journal: \@journal.}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{A title}
+\author{A. Author}
+\begin{abstract}
+The abstract.
+\end{abstract}
+\end{frontmatter}
+\showall
+\end{document}
