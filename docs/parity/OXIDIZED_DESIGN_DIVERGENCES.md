@@ -17507,8 +17507,11 @@ algpseudocode", 2402.05403), since loading it first bails algorithmicx (algorith
 leaves `\State`/`\For` undefined; WileyNJD-v2.cls:3331 and WileyNJDv5.cls:6820 load `algorithm, algorithmicx,
 algpseudocode` (one copy `algorithm2e`, 2002.02812); bmvc2k.cls `algorithm` with `algorithmic` or with `algpseudocode`
 by year; pnas-new.cls:110-111 `algorithm` and `algpseudocode[noend]`; edited copies of neurips_2023.sty (2402.18905)
-and siamltex.cls (2210.03478) load them where the distributed files load none. Perl has no binding for most of these
-files: it reads the paper's copy (icml20xx.sty) or scans it from OmniBus (the classes, Package.pm:2776-2813). Our bindings
+and siamltex.cls (2210.03478) load them where the distributed files load none. Perl has no binding for the classes and
+scans the paper's copy from OmniBus (Package.pm:2776-2813), so for them this is Perl's own behaviour. For icml20xx.sty
+it is beyond Perl (as pdflatex): Perl's `FindFile_aux` tries the versioned-name fallback binding before a raw copy it
+is not interpreting (Package.pm:2135-2138; the glued suffix `[vV]?[-_.\d]+`, :2180, maps icml2017 to icml.sty.ltxml),
+which loads the distributed pair whatever the copy says (KNOWN_PERL_ERRORS #684). Our bindings
 stand in for them (icml_support_sty.rs `load_icml_style` for icml2016-2025, icml2019_sty.rs after its raw read, icml_sty.rs
 when it answers a versioned fallback such as `icml2026` or `./icml2018`; wileynjd_cls.rs, bmvc2k_cls.rs, pnas_new_cls.rs,
 siamltex_cls.rs, neurips_sty.rs), and loaded either the distributed ICML pair or no algorithm package at all. Now each

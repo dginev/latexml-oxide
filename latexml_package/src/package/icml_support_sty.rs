@@ -6,8 +6,9 @@ LoadDefinitions!({
   icml_support(false)?;
 });
 
-/// icml2016.sty … icml2025.sty, which this binding stands in for (Perl has no binding for them and reads the paper's
-/// copy): every copy as ICML distributes it loads `algorithm` and `algorithmic` (icml2016.sty:70-71, icml2017.sty:72-73,
+/// icml2016.sty … icml2025.sty, which this binding stands in for (Perl has no binding for them; its versioned-name
+/// fallback answers them with icml.sty.ltxml, so the distributed pair loads whatever the copy says, KNOWN_PERL_ERRORS
+/// #684): every copy as ICML distributes it loads `algorithm` and `algorithmic` (icml2016.sty:70-71, icml2017.sty:72-73,
 /// icml2025.sty:95-96), but a paper using `algpseudocode` edits `algorithmic` out of its copy (icml2024.sty:94
 /// "removed due to conflict with algpseudocode", 2402.05403) — loaded, it bails algorithmicx (algorithmicx.sty.ltxml:9-12)
 /// and leaves `\State`/`\For` undefined (1706.03643, 1706.04918, 1706.04933, 1706.04964, 2002.06473, 2106.05074). The

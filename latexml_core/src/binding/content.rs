@@ -2964,8 +2964,10 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
 /// The same scan kept to the classes and packages in `only`: a binding that stands in for a file it does not
 /// interpret, and loads its own choice of that file's packages, leaves to the paper's copy of the file the ones
 /// whose choice differs between copies (the algorithm packages: icml2017.sty:72-73, which a paper edits to drop
-/// `algorithmic` for `algpseudocode`; bmvc2k.cls, `algorithmic` or `algpseudocode` by year). `false` when the
-/// source has no such file (or it cannot be read), so the binding takes its own default.
+/// `algorithmic` for `algpseudocode`; bmvc2k.cls, `algorithmic` or `algpseudocode` by year). The copy's
+/// `\addbibresource` files are registered as by every scan (the bibliography deduplicates them). `false` when the
+/// source has no such file (or it cannot be read), or when another scan is running (the re-entrancy guard), so the
+/// binding takes its own default.
 pub fn require_dependencies_only(file: &str, ext_type: &str, only: &[&str]) -> bool {
   require_dependencies_filtered(file, ext_type, &|name| only.contains(&name))
 }

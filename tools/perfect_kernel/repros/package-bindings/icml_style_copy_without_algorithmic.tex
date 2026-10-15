@@ -3,7 +3,8 @@
 %          paper loads algpseudocode); 52 papers of the run-349 \State/\For sample
 % oracle:  pdflatex (clean): icml2017.sty:72-73 of the copy loads algorithm only; algpseudocode loads algorithmicx
 % engines: rust 67k1 = 10+ errors (icml_support_sty.rs loaded the distributed pair, `algorithmic` bailed
-%          algorithmicx: \State, \For undefined, `#` reached the stomach); Perl has no icml20xx binding and reads the copy
+%          algorithmicx: \State, \For undefined, `#` reached the stomach); Perl falls back from icml2017 to icml.sty.ltxml
+%          (Package.pm:2135-2138), loads the same pair and ends with 31 errors (KNOWN_PERL_ERRORS #684)
 % expect:  0 errors, 0 warnings; one {algorithm} float, a listing of 4 lines (State, For, State, EndFor)
 % status:  RED (67k1) -> GREEN (67l); guard perfect_kernel_batch67l::icml_style_copy_decides_the_algorithm_packages
 \begin{filecontents*}[overwrite]{icml2017.sty}

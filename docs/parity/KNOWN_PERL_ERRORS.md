@@ -13271,9 +13271,9 @@ trailing_row_without_tag_is_still_pruned}`.
 
 ## 683. REVTeX 4.1/4.2's `\newfloat@ltx` is undefined, so a preamble's float repair undefines `\newfloat`
 
-revtex4-1.cls:3980-4031 and revtex4-2.cls:4001-4052 carry two copies of float.sty's `\newfloat`: `\newfloat@float`,
-float.sty's own, which `\document@inithook` compares `\newfloat` against, and `\newfloat@ltx`, the repaired copy it then
-lets `\newfloat` to; AASTeX 6.x loads revtex4-1 (aastex62.cls:278-292) and aastex701.cls:3689-3718 carries the
+revtex4-1.cls:3980-4031 and revtex4-2.cls:4001-4040 carry two copies of float.sty's `\newfloat`: `\newfloat@float`,
+float.sty's own, which `\document@inithook` (revtex4-2.cls:4043-4056) compares `\newfloat` against, and
+`\newfloat@ltx`, the repaired copy it then lets `\newfloat` to; AASTeX 6.x loads revtex4-1 (aastex62.cls:278-292) and aastex701.cls:3689-3718 carries the
 same code. Papers that need the repair in the preamble, before algorithm.sty's `\newfloat{algorithm}`, let it
 themselves. Perl's revtex4-1.cls.ltxml, revtex4.cls.ltxml (which also serves revtex4-2) and revtex4_support.sty.ltxml
 (and aastex.cls.ltxml, which loads revtex4) define neither copy, so `\newfloat` becomes undefined, algorithm.sty's `\newfloat` call errs and `{algorithm}` is never
@@ -13281,6 +13281,26 @@ defined. Minimal trigger: `\documentclass{revtex4-2}\usepackage{float}\makeatlet
 \makeatother\usepackage{algorithm}`, then a `{algorithm}`. pdflatex is clean. All 25 papers of the run-349 `\newfloat`
 sample do this; the paper-side `{algorithm}` errors follow. Witnesses 2210.07980, 2210.08566, 2210.07097, 2402.00653,
 2210.07984; 2002.07183 (aastex62). Fixed in Rust: revtex4_support_sty.rs `define_float_repair` defines both copies as
-float_sty.rs's `\newfloat`, for revtex4-1, revtex4-2 and AASTeX 6+ (revtex4.cls and AASTeX 5.x have neither). Repro class-bindings/revtex_float_repair_before_document;
+float_sty.rs's `\newfloat`, for revtex4-1, revtex4-2 and AASTeX 6+ (revtex4.cls and AASTeX 5.x have neither). One
+detail is kept from float.sty: `\newfloat@ltx` ends the caption name `\fname@#1{}%` (revtex4-2.cls:4033, revtex4-1.cls:4012,
+aastex701.cls:3700), so pdflatex prints "Algorithm1" (2002.07183); `\newfloat@float` (`{} %!`, revtex4-2.cls:4012) and float.sty:64 (`{}` at a line end)
+keep the space and print "Algorithm 1", as we do for both. Repro class-bindings/revtex_float_repair_before_document;
 guards `perfect_kernel_batch67l::{revtex_float_repair_defines_newfloat, revtex4_0_has_no_float_repair,
 aastex6_float_repair_defines_newfloat}`.
+
+## 684. A paper's own icml20xx.sty copy is replaced by the generic ICML binding, which forces `algorithm` + `algorithmic`
+
+Perl's `FindFile_aux` (Package.pm:2126-2142) takes an exact `.ltxml` binding first, a raw file only when it is
+interpreting, and otherwise the versioned-name fallback (`FindFile_fallback`, Package.pm:2191-2229) before the raw file in
+the paper's directory: the glued suffix `[vV]?[-_.\d]+` (:2180) turns `icml2017` into `icml`, and icml.sty.ltxml loads
+icml_support.sty.ltxml, whose `RequirePackage('algorithm')` + `RequirePackage('algorithmic')` (:22-23) run whatever the
+paper's copy says. Papers using algpseudocode comment `algorithmic` out of their copy (icml2024.sty:94 "removed due to
+conflict with algpseudocode"); loaded anyway, it bails algorithmicx (algorithmicx.sty.ltxml:9-12) and `\State`/`\For`
+stay undefined. Minimal trigger: tools/perfect_kernel/repros/package-bindings/icml_style_copy_without_algorithmic.tex
+(a `{filecontents*}` icml2017.sty loading only `algorithm`, then `\usepackage{icml2017}\usepackage{algpseudocode}` and an
+`{algorithmic}` with `\State`/`\For`): Perl prints `Info:fallback:icml2017.sty … falling back to generic icml.sty` and
+ends with 31 errors (`\State`, `\For` undefined); pdflatex is clean. Witnesses 1706.03643, 1706.04918, 1706.04933,
+1706.04964, 2002.06473, 2106.05074. Fixed in Rust (beyond Perl, OXIDIZED_DESIGN_DIVERGENCES #592): icml_support_sty.rs
+`load_icml_style` takes the algorithm packages from the paper's copy, and keeps the distributed pair without one. Guards
+`perfect_kernel_batch67l::{icml_style_copy_decides_the_algorithm_packages, icml_style_without_a_copy_keeps_the_distributed_pair,
+icml_versioned_fallback_follows_the_copy}`.
