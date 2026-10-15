@@ -302,6 +302,12 @@ pub trait Definition: Object {
   /// a primitive built by hand). The audit reads `None` on a primitive or constructor as
   /// declaring nothing.
   fn declared_mode(&self) -> Option<DeclaredMode> { None }
+  /// The font a primitive or constructor was declared with (its `font => {…}` option), which its
+  /// digestion merges into the current font; `None` for every other definition. latex.ltx's
+  /// `\@fontswitch` reads a math alphabet as a switch to the group's end (`\mathrm\relax` with
+  /// `\math@bgroup` let to `\relax`, latex.ltx:14312-14321): the binding's switch merges this font
+  /// (`\lx@math@alphabet@switch`, latex_constructs/sect13.rs).
+  fn declared_font(&self) -> Option<&FontDirective> { None }
   fn get_alias(&self) -> Option<&String>;
   fn is_protected(&self) -> bool { false }
   /// Whether this macro peeks at the next token the way latex.ltx's

@@ -1251,6 +1251,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\HyOrg@maketitle`; pittetd.cls's `\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` left `\maketitle` undefined
   (1509.06375: 101 errors then Fatal). Our binding (and Perl's) saved none; now `\let`. Guard
   `perfect_kernel_batch67q::hyperref_keeps_the_original_maketitle`.
+- **67r** (rawclasses study R1): in maths an old font command switches the math alphabet to the end of the group, as
+  latex.ltx's `\@fontswitch` (14312-14321) does by letting `\math@bgroup` to `\relax`: `{\rm LP-HF}` is all upright,
+  `{\cal H}` a calligraphic H. Ours and Perl's (latex_constructs.pool.ltxml:5200, :5315; KNOWN_PERL_ERRORS #685) ran the
+  alphabet with its own argument (`\mathrm{L}P-HF`, `\mathcal{}H`, "Missing sub/superscript argument", "Extra
+  \right"). `\lx@math@alphabet@switch` merges the font the alphabet's binding carries (`Definition::declared_font`,
+  kept on primitives and constructors); another `#2` is TeX's `#2\relax` (OXIDIZED_DESIGN_DIVERGENCES #593). Under the
+  rawclasses lever the `tex=` with an empty alphabet argument of 10 ptptex/jpsj2/paper witnesses go 3,214 → 0 (gr-qc0605108
+  919 → 0, cond-mat0510381 296 → 0), errors and words unchanged. A/B without the lever (67o1; 401 papers, 392 converted:
+  sources calling `\DeclareOldFontCommand` or amsart/revtex/aastex with `{\rm …}` in maths, and 100 of pop67o): 0 gain
+  Errors or Fatals, cond-mat0205657 loses its one Error, 33 change `tex=` (`\mathrm{o}ut` → `{\rm out}`), and the 24
+  word drops are maths tokens merging (`g`·`a`·`s` → `gas`; every maths character and text word kept). Guards
+  `perfect_kernel_batch67r::{old_font_command_switches_the_math_alphabet,
+  old_font_command_switches_package_and_declared_alphabets}`. Round 2 (review): an alphabet reached through a
+  parameterless macro or `\protect` is a switch too (`\newcommand\Bbbx{\mathbb}` as `#3`: round 1 gave
+  `tex="{\mathbb{}RZ}"` with both letters italic; guard `old_font_command_alphabet_through_a_macro`); the `{\cal AB}`
+  `tex=` round-trip is a recorded residual in OD #593; round-2 A/B on the same 401 papers (392 converted): every
+  output byte-equal to round 1's, so vs 67o1 still 0 gain Errors or Fatals; the 10 rawclasses witnesses byte-equal
+  too. RED side finding, not fixed: `\unboldmath` and
+  `\mathversion{normal}` do not undo `\boldmath` (both engines; `Font::merge` of `forcebold: false` is a no-op while the
+  bold math font forces its series), KNOWN_PERL_ERRORS #687, repro fonts-nfss/boldmath_undone_by_unboldmath_and_group.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

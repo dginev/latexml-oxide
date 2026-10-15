@@ -1,0 +1,12 @@
+% witness: review of 67p/67r (side finding, probe bm): `\boldmath` is a math version switch, local to its group
+% oracle: pdflatex 0 errors; x and u `\OML/cmm/b/it/10` (bold italic), y and v `\OML/cmm/m/it/10` (italic)
+% engines: rust 67o1/67r = all four bold; perl = all four bold (KNOWN_PERL_ERRORS #687). The cause is `\unboldmath`
+%          alone (merging `forcebold` false is a no-op); the group end does undo `\boldmath` (`{\boldmath $u$} $v$`
+%          alone gives v italic in both), here v is bold because the first `\boldmath` was never undone
+% expect: x and u bold, y and v not
+% status: RED (open; KNOWN_PERL_ERRORS #687, not fixed in 67r)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\boldmath $x$ \unboldmath $y$ {\boldmath $u$} $v$
+\end{document}

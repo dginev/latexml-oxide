@@ -1,0 +1,24 @@
+% witness: jpsj2 cond-mat0510381, 0711.1066, 1004.2823 (jpsj2.cls:214/:221); the ptptex (306), paper (71) and
+%          artikel1 (12) classes, raw-loaded under the rawclasses lever (511 outputs with an empty `\math..{}`)
+% oracle: pdflatex 0 errors; "LP-HF" upright (CMR7), calligraphic H (CMSY10), "8 Be", "(x)", bold v (CMBX10),
+%         italic w, "[]a" (the user macro reads `\relax`); "and text bold x", no space before the x
+% engines: rust 67o1 = `\chi^{\mathrm{L}P-HF}`, `\mathcal{}H`, `Error:expected:{ Missing sub/superscript argument`,
+%          `Error:unexpected:\right Extra \right.` + 4 warnings; perl = the same (latex_constructs.pool.ltxml:5200
+%          `\@fontswitch` and :5315 `\DeclareOldFontCommand` run the alphabet with its own argument)
+% expect: 0 Errors, 0 Warnings; every token of LP-HF upright, H caligraphic, v bold, w italic; `[]` then italic a
+% mechanism: latex.ltx:14312-14321 `\@fontswitch` lets `\math@bgroup` to `\relax`, so in maths `\mathrm\relax` is a
+%            switch of the math alphabet to the end of the group
+% status: RED (67o1) -> GREEN (67r)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\DeclareOldFontCommand{\rm}{\normalfont\rmfamily}{\mathrm}
+\DeclareOldFontCommand{\bf}{\normalfont\bfseries}{\mathbf}
+\DeclareRobustCommand*\cal{\@fontswitch\relax\mathcal}
+\newcommand\myalph[1]{[#1]}
+\DeclareOldFontCommand{\my}{\itshape}{\myalph}
+\makeatother
+\begin{document}
+$\chi^{\rm LP-HF}$ $\cal H$ ${\rm ^{8}Be}$ ${\rm \left( x \right)}$ ${\bf v} w$ ${\my a}$
+and {\rm text} {\bf bold} {\cal x}
+\end{document}

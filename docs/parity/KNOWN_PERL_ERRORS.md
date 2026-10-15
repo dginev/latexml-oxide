@@ -13304,3 +13304,31 @@ ends with 31 errors (`\State`, `\For` undefined); pdflatex is clean. Witnesses 1
 `load_icml_style` takes the algorithm packages from the paper's copy, and keeps the distributed pair without one. Guards
 `perfect_kernel_batch67l::{icml_style_copy_decides_the_algorithm_packages, icml_style_without_a_copy_keeps_the_distributed_pair,
 icml_versioned_fallback_follows_the_copy}`.
+
+## 685. In maths an old font command's alphabet reads the next token as its argument (`{\rm LP-HF}` → `\mathrm{L}P-HF`)
+
+latex.ltx's `\@fontswitch` (14312-14321) lets `\math@bgroup` to `\relax` before `#2\relax`, so in maths `\rm` (from
+`\DeclareOldFontCommand{\rm}{\normalfont\rmfamily}{\mathrm}`) is a switch of the math alphabet to the end of the group.
+Perl's `\@fontswitch` is `\ifmmode #2\relax\else #1 \fi` (latex_constructs.pool.ltxml:5200) and its
+`\DeclareOldFontCommand` returns the bare `#3` in maths (:5315-5320), so the alphabet constructor reads the next token
+as its argument. Minimal trigger: `\documentclass{article}\makeatletter
+\DeclareOldFontCommand{\rm}{\normalfont\rmfamily}{\mathrm}\DeclareRobustCommand*\cal{\@fontswitch\relax\mathcal}
+\makeatother\begin{document}$\chi^{\rm LP-HF}$ ${\cal H}$ ${\rm ^{8}Be}$ ${\rm \left( x \right)}$\end{document}`:
+`\mathrm{L}P-HF`, `\mathcal{}H`, "Missing sub/superscript argument" and "Extra \right"; pdflatex is clean, with every
+letter of LP-HF upright. It bites wherever a raw-loaded class or package re-declares the old font commands (copies of
+article.cls: ptptex, jpsj2, paper, artikel1). Witnesses jpsj2 cond-mat0510381, ptptex gr-qc0605108. Fixed in Rust
+(OXIDIZED_DESIGN_DIVERGENCES #593): the maths branch merges the alphabet's font for the rest of the group. Guard
+`perfect_kernel_batch67r::old_font_command_switches_the_math_alphabet`.
+
+## 687. `\unboldmath` and `\mathversion{normal}` do not undo `\boldmath` (open)
+
+latex.ltx's `\boldmath` and `\unboldmath` select the math version (`\mathversion{bold}` / `{normal}`), so after
+`\unboldmath` the maths is in the normal version again. Perl's `\boldmath`/`\unboldmath` (plain_base.pool.ltxml:612-617)
+merge `forcebold => 1` / `0` into the math font; Font.pm's merge (:934-935) acts on `forcebold` only when it is true, and
+then sets the series bold with the force-series flag, which also stops any later merge from changing the series. So
+`forcebold => 0` is a no-op and the bold version stays to the end of the group. `\mathversion` (latex_constructs.pool.ltxml
+:5290-5297) merges the same way. Ours is a faithful port (plain_constructs.rs `\boldmath`/`\unboldmath`, sect13.rs
+`\mathversion`, `Font::merge_ref`'s `forcebold == Some(true)`). The end of a group does undo it, as the assignment is
+local. Minimal trigger: `\documentclass{article}\begin{document}\boldmath $x$ \unboldmath $y$\end{document}`:
+pdflatex sets y in `\OML/cmm/m/it/10`, both engines make it `font="bold italic"`; the same with `\mathversion{normal}` in
+place of `\unboldmath`. Not fixed. Repro fonts-nfss/boldmath_undone_by_unboldmath_and_group (RED).

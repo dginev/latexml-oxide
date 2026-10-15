@@ -514,6 +514,7 @@ pub fn def_primitive(
   let size_switch = paramlist.is_none()
     && matches!(&options.font, Some(FontDirective::Asset(font))
       if font.size.is_some() && font.family.is_none() && font.series.is_none() && font.shape.is_none());
+  let declared_font = options.font.clone();
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
       // A pure size switch (`\small` … `\Huge`, `font => {size => N}` in the
@@ -643,6 +644,7 @@ pub fn def_primitive(
       reversion: options.reversion,
       font_id: options.font_id,
       declared_mode: Some(declared_mode),
+      font: declared_font,
     },
     scope,
   );
@@ -1343,6 +1345,7 @@ pub fn def_constructor(
   //  LaTeXML seems to currently rely on both the top-level "font" option but *also*
   //  has code checking for a second-tier "properties => { font => VALUE}" option
   //  Can we consolidate into a single, top-level, font handler?
+  let declared_font = options.font.clone();
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
       let merge_font_closure = before_digest_simple!({
@@ -1389,6 +1392,7 @@ pub fn def_constructor(
     capture_body: options.capture_body,
     properties: options.properties,
     declared_mode: Some(declared_mode),
+    font: declared_font,
     // outer
     // long
     ..Constructor::default()
@@ -1676,6 +1680,7 @@ pub fn def_environment(
     reversion:         options.reversion,
     alias:             options.alias,
     declared_mode:     Some(declared_mode),
+    font:              None,
   });
   install_definition(begin_name_constructor, options.scope);
 
@@ -1833,6 +1838,7 @@ pub fn def_environment(
     reversion: bare_reversion,
     alias: bare_alias,
     declared_mode: Some(declared_mode),
+    font: None,
   });
   install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);

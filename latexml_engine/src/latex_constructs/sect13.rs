@@ -21,6 +21,50 @@ fn pic_scale(coordinate: f64) -> Result<Dimension> {
 }
 
 #[rustfmt::skip]
+/// How many parameterless macros (or `\protect` wrappers) [`math_alphabet_font`] looks through. TeX itself
+/// expands without bound; a parameterless macro chain longer than this is a loop, which TeX's `#2\relax`
+/// would run anyway.
+const MATH_ALPHABET_LOOKTHROUGH: usize = 16;
+
+/// The font the math alphabet `alphabet` (the `#2` of latex.ltx's `\@fontswitch`, 14312-14321) selects, when it
+/// reaches one: a control sequence whose definition carries a font (`\mathrm`, `\mathbb`, a
+/// `\DeclareMathAlphabet`'d alphabet: `Definition::declared_font`, `\let` copies included), possibly behind
+/// parameterless macros with a token body (`\newcommand\Bbbx{\mathbb}`) and `\protect` (a robust command's
+/// `\protect\X␣`), which TeX's `#2\relax` expands on its way to the alphabet. A closure body is not run here, so a
+/// macro computed by a binding is not looked through. `None` for anything else.
+fn math_alphabet_font(alphabet: &[Token]) -> Result<Option<FontDirective>> {
+  let protect = T_CS!("\\protect");
+  let mut head: Vec<Token> = alphabet.to_vec();
+  for _ in 0..MATH_ALPHABET_LOOKTHROUGH {
+    match head.as_slice() {
+      [first, rest @ ..] if *first == protect && !rest.is_empty() => {
+        head = rest.to_vec();
+      },
+      [cs] if cs.code.is_active_or_cs() => {
+        let Some(defn) = lookup_definition(cs)? else {
+          return Ok(None);
+        };
+        if let Some(font) = defn.declared_font() {
+          return Ok(Some(font.clone()));
+        }
+        if !defn.is_expandable()
+          || defn
+            .get_parameters()
+            .is_some_and(|p| !p.get_parameters().is_empty())
+        {
+          return Ok(None);
+        }
+        match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => head = body.clone().unlist(),
+          _ => return Ok(None),
+        }
+      },
+      _ => return Ok(None),
+    }
+  }
+  Ok(None)
+}
+
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
   // C.14-C.15 Pictures, Fonts, Symbols
@@ -986,13 +1030,55 @@ pub(crate) fn load() -> Result<()> {
 
   Let!("\\reset@font", "\\normalfont");
 
-  // Perl: latex_constructs.pool.ltxml:5251
-  // \@fontswitch — LaTeX 2.09 compat helper used by article/book/letter
-  // classes to define \cal and \mit (math-mode font switches). Perl's
-  // override drops the kernel body's \math@bgroup/\math@egroup
-  // machinery (irrelevant outside real TeX boxing); the simpler form
-  // is functionally equivalent for LaTeXML's XML output.
-  DefMacro!("\\@fontswitch{}{}", "\\ifmmode #2\\relax\\else #1 \\fi");
+  // `\@fontswitch{text}{math}` (latex.ltx:14312-14321), the body of every `\DeclareOldFontCommand`
+  // and of article/book/report/letter's `\cal` (`\@fontswitch\relax\mathcal`) and `\mit`: in maths
+  // it lets `\math@bgroup` to `\relax` and runs `#2\relax`, so the alphabet `\mathrm\relax` takes
+  // the `\relax` as its argument and selects its math group to the end of the enclosing group —
+  // `{\rm LP-HF}` is `LP-HF` upright, `{\cal H}` a calligraphic H. Perl's
+  // `\ifmmode #2\relax\else #1 \fi` (latex_constructs.pool.ltxml:5200, KNOWN_PERL_ERRORS) runs the
+  // alphabet with its own grouping, so it read the next token as its argument: `\mathrm{L}P-HF`,
+  // `\mathcal{}H`, `{\rm ^{8}Be}` "Missing sub/superscript argument", `{\rm \left(…\right)}`
+  // "Extra \right" — 511 outputs once a raw class re-declares the old font commands (ptptex,
+  // jpsj2 cond-mat0510381, paper, artikel1; OXIDIZED_DESIGN_DIVERGENCES #593). The text branch is
+  // latex.ltx's `#1` (Perl's `#1 ` set a space after `{\cal x}`'s `\relax`).
+  DefMacro!(
+    "\\@fontswitch{}{}",
+    "\\ifmmode\\lx@math@alphabet@switch{}{#2}\\else#1\\fi"
+  );
+  // `\lx@math@alphabet@switch{reversion}{alphabet}`: the maths branch of `\@fontswitch`. An
+  // alphabet whose binding carries a font (`\mathrm`, `\mathbf`, `\mathcal`, `\mathnormal`, … and
+  // every `\DeclareMathAlphabet`'d one: `Definition::declared_font`) merges that font into the
+  // current one for the rest of the group, as the native `\rm`/`\bf` switches do in maths
+  // (plain_constructs.rs); its box reverts as `reversion` (the old font command's name, a character
+  // string so an `\edef` in maths cannot expand it into itself) or else as the alphabet. In TeX the
+  // `\math@bgroup` let to `\relax` makes ANY alphabet `#2` reaches a switch, so `#2` is looked
+  // through while its head is a parameterless macro or a `\protect` (`\newcommand\Bbbx{\mathbb}`
+  // `\DeclareOldFontCommand{\bbx}{\normalfont}{\Bbbx}`: `{\bbx RZ}` is a blackboard R and Z,
+  // `\U/msb/m/n/10` in pdflatex): [`math_alphabet_font`]. Any other `#2` (a macro with an argument,
+  // or one that ends somewhere else than an alphabet) is TeX's `#2\relax`: it reads the `\relax`,
+  // never the next maths token.
+  DefPrimitive!("\\lx@math@alphabet@switch{}{}", sub[(reversion, alphabet)] {
+    let alphabet = alphabet.unlist();
+    let font = math_alphabet_font(&alphabet)?;
+    let Some(font) = font.filter(|_| lookup_bool_sym(pin!("IN_MATH"))) else {
+      let mut call = alphabet;
+      call.push(T_RELAX!());
+      unread(Tokens::new(call));
+      return Ok(Vec::new());
+    };
+    merge_font_ref(&*font.get_font(None)?);
+    let name = reversion.to_string();
+    let revert = if name.is_empty() {
+      Tokens::new(alphabet)
+    } else if name.starts_with('\\') && name.len() > 1 {
+      Tokens::from(T_CS!(name))
+    } else {
+      Tokens::new(Explode!(name))
+    };
+    let mut props = SymHashMap::default();
+    props.insert("isEmpty", Stored::Bool(true));
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None, revert, props))])
+  });
 
   // Perl: latex_constructs.pool.ltxml L5204-5222.
   //
@@ -1014,7 +1100,10 @@ pub(crate) fn load() -> Result<()> {
   // hack Perl commits to.
   DefPrimitive!("\\selectfont", {
     let current = lookup_font().unwrap();
-    assign_font(Rc::new(nfss_selected_font(&current, true)?), Some(Scope::Local));
+    assign_font(
+      Rc::new(nfss_selected_font(&current, true)?),
+      Some(Scope::Local),
+    );
     crate::tex_fonts::pickup_font()?;
     // latex.ltx:12581: `\selectfont` ends by running the size update a
     // `\fontsize` armed (see `\set@fontsize` below; OXIDIZED_DESIGN_DIVERGENCES
@@ -1096,18 +1185,29 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else\\bgroup\\scshape #1\\expandafter\\egroup\\fi",        protected => true);
   DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else\\bgroup\\normalfont #1\\expandafter\\egroup\\fi", protected => true);
 
-  // Perl: latex_constructs.pool.ltxml line 5365
+  // Perl: latex_constructs.pool.ltxml:5315-5320
   // \DeclareOldFontCommand{\cmd}{text-font-switch}{math-font-cmd}
-  // Defines \cmd to use text-font-switch in text mode, math-font-cmd in math mode.
+  // Defines \cmd to use text-font-switch in text mode, math-font-cmd in math mode — latex.ltx's
+  // `\DeclareRobustCommand#1{\@fontswitch{#2}{#3}}` (14309-14311). In maths that is the alphabet as
+  // a switch to the group's end (`\lx@math@alphabet@switch`, above), reverting as `\cmd`; Perl's
+  // bare `#3` read the next token as the alphabet's argument (`{\rm LP-HF}` → `\mathrm{L}P-HF`,
+  // witnesses jpsj2 cond-mat0510381 and the ptptex/paper/artikel1 classes).
   DefPrimitive!("\\DeclareOldFontCommand{}{}{}", sub[(cmd, font, mathcmd)] {
     // cmd contains a CS token like \bf; get the first token
     let cmd_cs = *cmd.unlist_ref().first()
       .ok_or("DeclareOldFontCommand: expected a CS token")?;
-    // Move `font` and `mathcmd` directly into the closure capture —
+    let mut math = vec![T_CS!("\\lx@math@alphabet@switch"), T_BEGIN!()];
+    math.extend(Explode!(cmd_cs.to_string()));
+    math.push(T_END!());
+    math.push(T_BEGIN!());
+    math.extend(mathcmd.unlist());
+    math.push(T_END!());
+    let math = Tokens::new(math);
+    // Move `font` and `math` directly into the closure capture —
     // they're not used outside. Saves two Tokens clones at setup time.
     DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {
       if lookup_bool_sym(pin!("IN_MATH")) {
-        Ok(mathcmd.clone())
+        Ok(math.clone())
       } else {
         Ok(font.clone())
       }
@@ -1380,7 +1480,13 @@ pub(crate) fn load() -> Result<()> {
       .iter()
       .map(|(upper, lower)| (T_CS!(*lower), T_CS!(*upper)))
       .collect();
-    pairs.extend(listed.as_chunks::<2>().0.iter().map(|&[lower, upper]| (lower, upper)));
+    pairs.extend(
+      listed
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|&[lower, upper]| (lower, upper)),
+    );
     // `\i`/`\j` (assigned above) are constants too: a pair for them loses.
     let mut mapped_upper: std::collections::HashSet<String> =
       ["\\i ", "\\j "].into_iter().map(String::from).collect();

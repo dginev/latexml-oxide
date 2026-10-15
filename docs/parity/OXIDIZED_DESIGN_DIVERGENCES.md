@@ -17550,3 +17550,41 @@ pdflatex). The scan's comment pattern also drops a comment on a last line withou
 wileynjd_class_copy_loads_its_algorithm_packages, wileynjd_class_copy_with_algorithm2e,
 bmvc2k_class_copy_loads_its_algorithm_packages, icml_versioned_fallback_follows_the_copy,
 neurips_copy_loads_its_algorithm_packages}`.
+
+### 593. In maths an old font command switches the math alphabet to the group's end, as latex.ltx's `\@fontswitch` (Perl: the alphabet takes the next token)
+
+latex.ltx's `\DeclareOldFontCommand#1#2#3` is `\DeclareRobustCommand#1{\@fontswitch{#2}{#3}}` (14309-14311), and
+`\@fontswitch` (14312-14321) in maths lets `\math@bgroup` to `\relax` before `#2\relax`: the alphabet `\mathrm\relax`
+reads the `\relax` as its argument and selects its math group to the end of the enclosing group, so `{\rm LP-HF}` is
+`LP-HF` upright. Article/book/report/letter's `\cal` and `\mit` are `\@fontswitch\relax\mathcal` / `\mathnormal`.
+Perl's `\@fontswitch` (`\ifmmode #2\relax\else #1 \fi`, latex_constructs.pool.ltxml:5200) and `\DeclareOldFontCommand`
+(a closure returning the bare `#3`, :5315-5320) run the alphabet with its own grouping, so it reads the next token
+(KNOWN_PERL_ERRORS #685). We follow latex.ltx: `\@fontswitch` is `\ifmmode\lx@math@alphabet@switch{}{#2}\else#1\fi`
+(sect13.rs), and an old font command's maths branch is `\lx@math@alphabet@switch{<its name>}{#3}`. The switch merges the
+font an alphabet's binding carries (`font => {…}` on the constructor or primitive, kept on the definition as
+`Definition::declared_font`: `\mathrm`, `\mathbf`, `\mathcal`, `\mathbb`, every `\DeclareMathAlphabet`'d one) into the
+current font, as the native `\rm`/`\bf` primitives do in maths (plain_constructs.rs), and reverts as the old command's
+name (`{\rm LP-HF}`; through `\@fontswitch` directly, as the alphabet: `{\mathcal H}`). The name travels as a character
+string, so an `\edef` in maths cannot expand the command into itself. In TeX the `\relax`'d `\math@bgroup` makes
+any alphabet `#2` expands to a switch, so the switch looks through parameterless macros with a token body and
+`\protect` (a robust command's `\protect\X␣`) up to 16 deep (`math_alphabet_font`): `\newcommand\Bbbx{\mathbb}`
+`\DeclareOldFontCommand{\bbx}{\normalfont}{\Bbbx}` makes `{\bbx RZ}` a blackboard R and Z, as pdflatex sets them
+(`\U/msb/m/n/10`). A `#2` that reaches no font-carrying alphabet that way — a macro with an argument, a closure-bodied
+macro, a body that begins with anything else (`\def\Bbbx{\relax\mathbb}`) — is TeX's `#2\relax`, which is
+latex.ltx's behaviour when `#2` is not an alphabet and a residual when it is one reached otherwise. The text branch is latex.ltx's `#1` (Perl's `#1 ` set a space after `{\cal x}`'s `\relax`). It shows when a
+raw-loaded class or package re-declares the old font commands: under the ar5iv rawclasses lever 511 outputs had an
+empty `\math..{}` (ptptex 306, jpsj2 98, paper 71, artikel1 12) and about 8 papers new errors; under the bound article
+classes `\rm` is the native switch and was already right. Witnesses jpsj2 cond-mat0510381, 0711.1066, 1004.2823;
+ptptex gr-qc0605108, 0804.3840, 1101.1147, hep-th0507073; paper math0405417. Repro
+fonts-nfss/old_font_command_switches_math_alphabet; guards
+`perfect_kernel_batch67r::{old_font_command_switches_the_math_alphabet,
+old_font_command_switches_package_and_declared_alphabets, old_font_command_alphabet_through_a_macro}` (repro
+fonts-nfss/old_font_command_alphabet_through_a_macro).
+
+Residual (deferred): through `\@fontswitch` directly the box reverts as the alphabet, so a multi-token group's `tex=`
+does not round-trip: `{\cal AB}` reverts as `{\mathcal AB}`, which TeX reads as `\mathcal{A}B` (base: `{\mathcal{}AB}`,
+with the content wrong too). There is no standard switch form of `\mathcal`, and `\@fontswitch\relax\mathcal` round-trips
+only under `\makeatletter`. The only direct `\@fontswitch` users in TeX Live's standard classes are article.cls:497-498
+`\cal`/`\mit` (and the book/report/letter copies), which the kernel binds natively (reverting as `\cal`); a sound
+round-trip would revert as `\cal`/`\mit` when `#2` is `\mathcal`/`\mathnormal` and that command's current robust body is
+exactly `\@fontswitch\relax<alphabet>`.

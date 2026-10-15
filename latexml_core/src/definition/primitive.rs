@@ -65,6 +65,8 @@ pub struct Primitive {
   pub origin:        crate::definition::origin::DefinitionOrigin,
   /// The mode options `def_primitive` compiled into `before_digest` (K13).
   pub declared_mode: Option<crate::definition::DeclaredMode>,
+  /// The `font` option `def_primitive` compiled into `before_digest` ([`Definition::declared_font`]).
+  pub font:          Option<FontDirective>,
 }
 impl Default for Primitive {
   fn default() -> Self {
@@ -81,6 +83,7 @@ impl Default for Primitive {
       is_prefix:     false,
       font_id:       None,
       declared_mode: None,
+      font:          None,
     }
   }
 }
@@ -98,6 +101,7 @@ impl Object for Primitive {
 }
 impl Definition for Primitive {
   fn declared_mode(&self) -> Option<crate::definition::DeclaredMode> { self.declared_mode }
+  fn declared_font(&self) -> Option<&FontDirective> { self.font.as_ref() }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn is_prefix(&self) -> bool { self.is_prefix }
