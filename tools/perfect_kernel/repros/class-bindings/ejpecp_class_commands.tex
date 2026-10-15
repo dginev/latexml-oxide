@@ -1,0 +1,30 @@
+% witness: 1103.0392 (`\ACKNO`); 1104.1060 (`\ARXIVID`); 2103.00338 (`\HALID`); 1405.0815 (`{notation}`,
+%          `{hypothesis}`); 1406.6650 (`{condition}`)
+% oracle:  pdflatex with TL 2025's ejpecp.cls (clean; Theorem 1.1, Notation 1.2, …)
+% engines: rust 68d2 = 6 errors (undefined `\ARXIVID`, `\HALID`, `{notation}`, `{hypothesis}`, `{condition}`, `\ACKNO`)
+% expect:  0 errors, 0 warnings; the superseded versions as notes, the statements numbered 1.1-1.4 within the section,
+%          the acknowledgements
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass[EJP]{ejpecp}
+\TITLE{A Title}
+\AUTHORS{Ann Author}
+\KEYWORDS{one ; two}
+\AMSSUBJ{60K35}
+\SUBMITTED{January 1, 2025}
+\ACCEPTED{February 1, 2025}
+\ARXIVID{1234.5678}
+\HALID{hal-00000001}
+\VOLUME{0}
+\YEAR{2025}
+\PAPERNUM{0}
+\DOI{10.1214/YY-TN}
+\ABSTRACT{The abstract.}
+\begin{document}
+\section{One}
+\begin{theorem}A theorem.\end{theorem}
+\begin{notation}A notation.\end{notation}
+\begin{hypothesis}A hypothesis.\end{hypothesis}
+\begin{condition}A condition.\end{condition}
+\ACKNO{We thank everyone.}
+\end{document}

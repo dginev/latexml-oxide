@@ -1,0 +1,23 @@
+% witness: 1011.2269, 1012.2685, 1311.1922 (`{acknowledgment}`); 1212.4243, 1403.0296 (`{nomenclature}`, `\entry`);
+%          1610.03468 (`\qed`); 1805.06800 (`\tensfb`)
+% oracle:  pdflatex with 1212.4243's asme2ej.cls (clean)
+% engines: rust 68d2 = 5 errors (undefined `{nomenclature}`, `\entry`, `\tensfb`, `\qed`, `{acknowledgment}`)
+% expect:  0 errors, 0 warnings; the Nomenclature section, the box, the acknowledgements
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass{asme2ej}
+\usepackage{amssymb}
+\title{A Title}
+\author{Ann Author}
+\begin{document}
+\maketitle
+\begin{nomenclature}
+\entry{$x$}{Position}
+\entry{$t$}{Time}
+\end{nomenclature}
+\section{One}
+Text {\tensfb bold}. A proof ends.\qed
+\begin{acknowledgment}
+We thank everyone.
+\end{acknowledgment}
+\end{document}

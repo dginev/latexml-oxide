@@ -1,0 +1,39 @@
+% witness: 1802.08831, 2012.15392, 2102.04394 (`\sidewaystablefn`); 2111.06962 (`\nomail`); 2102.13454
+%          (`{tablenotes}`); 2203.15424 (`\artnote`); 2303.09648 (`{unenumerate}`); 2310.14485 (`{biography}`);
+%          2211.03599 (`{proof}` after `\let\proof\relax`)
+% oracle:  pdflatex with 1802.08831's sn-jnl.cls (clean)
+% engines: rust 68d2 = 12 errors (undefined `\nomail`, `\artnote`, `\miscnote`, `\Titlefont`, `\tablebodyfont`,
+%          `\toprule`, `\tnote`, `\midrule`, `{tablenotes}`, `\sidewaystablefn`, `{unenumerate}`, `{biography}`)
+% expect:  0 errors, 0 warnings; the notes in the frontmatter, the table notes a list, the unenumerate a list, the
+%          biography's text
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{rotating}
+\let\proof\relax\let\endproof\relax
+\usepackage{amsthm}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Author}}\email{ann@example.org}
+\author[1]{\fnm{Bob} \sur{Writer}}\nomail
+\affil[1]{\orgname{Some University}}
+\artnote{An article note.}
+\miscnote{A misc note.}
+\abstract{The abstract.}
+
+\maketitle
+\section{One}
+{\Titlefont Big} and {\tablebodyfont small}.
+\begin{table}[h]
+\caption{Cap}
+\begin{tabular}{cc}\toprule A & B\tnote{a}\\\midrule 1 & 2\\\botrule\end{tabular}
+\begin{tablenotes}\item[a] The note.\end{tablenotes}
+\end{table}
+\begin{sidewaystable}\sidewaystablefn
+\caption{Side}
+\begin{tabular}{c}x\\\end{tabular}
+\end{sidewaystable}
+\begin{unenumerate}\item First\item Second\end{unenumerate}
+\begin{proof}Trivial.\end{proof}
+\begin{biography}{}{\author{Ann Author} is a researcher.}More text.\end{biography}
+\end{document}

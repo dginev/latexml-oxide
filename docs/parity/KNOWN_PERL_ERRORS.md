@@ -13711,3 +13711,19 @@ Minimal trigger: `style/setup.sty`, `style/macros.sty` with `\RequirePackage{set
 `~/data/pk_agents/main/scratch_356a0c47/missing_file/repro/reqsub/`): pdflatex clean, Perl and Rust 1 warning. Not
 fixed: keying the flags by LaTeX's basename would also skip our binding for a later `\RequirePackage{natbib}` after a
 paper's `styles/natbib.sty` — LaTeX's outcome, but it drops the binding — so it waits for a ruling.
+
+## 730. aipproc.cls's binding leaves aipxfm.sty unloaded and lacks the class's designer commands
+
+aipproc.cls:405 `\RequirePackage{aipxfm}` loads the AIP front-matter package; the paper's own `\usepackage{aipxfm}`
+after the class (the AIP template's preamble) is then the no-op LaTeX makes a second load. Perl's aipproc.cls.ltxml
+(L55-70) defines the front matter itself and records no aipxfm, so the paper's request warns `missing_file:aipxfm`
+("Can't find binding for package aipxfm"; Perl reads no `.sty` raw without `--includestyles`), and the class's designer
+interface that the layout files and some papers call is undefined (aipproc.cls:212-216, 336-364, 383-386:
+`\SetInternalRegister`, `\DeclareParagraphLayout`, `\MakeSpaceNormal`, `\bodytextparindent`). Minimal trigger:
+tools/perfect_kernel/repros/class-bindings/aipproc_paper_loads_aipxfm.tex (`\documentclass{aipproc}\usepackage{aipxfm}`
+… `\SetInternalRegister\hyphenpenalty{2000}`): pdflatex clean (1010.4521's aipproc.cls, aipxfm.sty, aip-8s.clo),
+Perl 1 error (`\SetInternalRegister`) and 2 warnings (`missing_file:aipxfm`, the register's "Missing number"). Rust,
+which reads the shipped aipxfm.sty raw, ran its layout code into those undefined internals (aipxfm.sty:372-377
+`\DeclareParagraphLayout{AIPbodytext}…`, `\SetInternalRegister\hyphenpenalty{2000}`, the `aip-8s.clo` it reads: 117
+papers of the run-347 inventory, 1010.4521, 0705.1061, 0709.0115). Rust's binding records aipxfm.sty loaded, as the
+class does, and defines the designer commands. Guard `perfect_kernel_batch67z::aipproc_paper_loads_aipxfm`.

@@ -103,12 +103,41 @@ LoadDefinitions!({
   // Standard envs commonly used in probability papers.
   DefEnvironment!("{acks}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
-  RawTeX!(r"\newtheorem{theorem}{Theorem}");
-  RawTeX!(r"\newtheorem{lemma}[theorem]{Lemma}");
-  RawTeX!(r"\newtheorem{proposition}[theorem]{Proposition}");
-  RawTeX!(r"\newtheorem{corollary}[theorem]{Corollary}");
-  RawTeX!(r"\newtheorem{definition}[theorem]{Definition}");
-  RawTeX!(r"\newtheorem{remark}[theorem]{Remark}");
-  RawTeX!(r"\newtheorem{example}[theorem]{Example}");
-  RawTeX!(r"\newtheorem{assumption}[theorem]{Assumption}");
+  // ejpecp.cls:400-454 (TL 2025; every sampled copy numbers within sections, the older ones a subset): the class's
+  // theorem set on `{theorem}`'s counter, numbered within sections, the statements in its `ejpecpbodyit` style (an
+  // italic body), the examples and remarks in `ejpecpbodyrm` (`{notation}` 4 papers of the sample, `{hypothesis}` 3,
+  // `{condition}` 3, `{assumptions}` 1: 1405.0815, 1406.6650, 2309.13899), and the equations numbered within sections
+  // (:456-458) — under the AMS packages, which this binding loads whatever the `NOAMS` option.
+  RawTeX!(
+    r"\newtheoremstyle{ejpecpbodyit}{3pt}{3pt}{\itshape}{}{\bfseries\sffamily}{.}{ }{}
+\newtheoremstyle{ejpecpbodyrm}{3pt}{3pt}{}{}{\bfseries\sffamily}{.}{ }{}
+\theoremstyle{ejpecpbodyit}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{assumptions}[theorem]{Assumptions}\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{claim}[theorem]{Claim}\newtheorem{condition}[theorem]{Condition}\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}\newtheorem{definitions}[theorem]{Definitions}
+\newtheorem{definition}[theorem]{Definition}\newtheorem{facts}[theorem]{Facts}\newtheorem{fact}[theorem]{Fact}
+\newtheorem{heuristics}[theorem]{Heuristics}\newtheorem{hypothesis}[theorem]{Hypothesis}
+\newtheorem{hypotheses}[theorem]{Hypotheses}\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{notations}[theorem]{Notations}\newtheorem{notation}[theorem]{Notation}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{ejpecpbodyrm}
+\newtheorem{example}[theorem]{Example}\newtheorem{exercise}[theorem]{Exercise}\newtheorem{problem}[theorem]{Problem}
+\newtheorem{question}[theorem]{Question}\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{plain}
+\numberwithin{equation}{section}"
+  );
+  // ejpecp.cls:150-152: `\ARXIVID{id}` and `\HALID{id}`, the earlier versions the first page says the paper supersedes
+  // ("Supersedes arXiv:…", :316-328; 33 and 3 papers of the inventory: 1104.1060, 2103.00338), and `\ACKNO{text}`, the
+  // acknowledgments (46 papers: 1103.0392); 1210.2883's copy :122 `\ARXIVPASSWORD{…}`, which prints nothing (3).
+  DefMacro!(
+    "\\ARXIVID{}",
+    "\\@add@frontmatter{ltx:note}[role=supersedes]{Supersedes \\texttt{\\href{https://arXiv.org/abs/#1}{arXiv:#1}}.}"
+  );
+  DefMacro!(
+    "\\HALID{}",
+    "\\@add@frontmatter{ltx:note}[role=supersedes]{Supersedes \\texttt{\\href{https://hal.archives-ouvertes.fr/#1}{HAL:#1}}.}"
+  );
+  DefMacro!("\\ACKNO{}", "\\begin{acks}#1\\end{acks}");
+  def_macro_noop("\\ARXIVPASSWORD{}")?;
 });

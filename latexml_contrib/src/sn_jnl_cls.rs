@@ -74,10 +74,12 @@ LoadDefinitions!({
       r#"\AtBeginDocument{\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}\DeclareMathSymbol{\opensquare}{\mathord}{AMSa}{"03}\def\qedsymbol{\opensquare}}"#
     );
   }
-  if lookup_bool("program.sty_loaded")
-    && class_text
-      .as_deref()
-      .is_none_or(|text| class_code_contains(text, "\\let\\proof\\spiproof"))
+  // The hook's `\let` runs with or without program: a paper that clears the class's proof in its preamble
+  // (`\let\proof\relax\let\endproof\relax` before its own `\usepackage{amsthm}`, a no-op as the class loaded amsthm)
+  // has it back at `\begin{document}` (2211.03599, 2501.00469, whose copies load no program; 2009.01631, 2301.05288).
+  if class_text
+    .as_deref()
+    .is_none_or(|text| class_code_contains(text, "\\let\\proof\\spiproof"))
   {
     RawTeX!(r#"\AtBeginDocument{\let\proof\@proof\let\endproof\end@proof}"#);
   }
@@ -220,6 +222,123 @@ LoadDefinitions!({
   // bottom rules. Map to \hline so the table still renders.
   // Witness 2402.17342.
   Let!("\\botrule", "\\hline");
+
+  // The class's own commands the papers use, as sn-jnl.cls defines them (1802.08831's copy, line numbers of it unless
+  // said; 2006.16202's, 2203.15424's, 2404.03266's, 2603.28334's the same where they have them).
+  // :550 `\let\nomail\relax`, written in place of an e-mail (34 papers of the inventory: 2111.06962).
+  // :454-461 the title-page fonts and :1231-1235 the table and :1201 (2402.15353's copy) the figure-caption fonts
+  // (`\Titlefont` 6 papers, 2210.01472; `\tablebodyfont` 7, 2307.08421; `\figurecaptionfont` 3, 2402.15353), with the
+  // `\titraggedcenter` setting they end with (:443-444).
+  RawTeX!(
+    r"\let\nomail\relax
+\def\titraggedcenter{\leftskip=12pt plus 0.5fil\rightskip=12pt plus 0.5fil\parfillskip=0pt\let\hb=\break}
+\def\absraggedcenter{\leftskip=24pt plus 0.5fil\rightskip=24pt plus 0.5fil\parfillskip=0pt\let\hb=\break}
+\def\Artcatfont{\reset@font\fontsize{8bp}{10bp}\selectfont}
+\def\Titlefont{\reset@font\fontsize{17bp}{22.5bp}\selectfont\titraggedcenter}
+\def\SubTitlefont{\reset@font\fontsize{14bp}{16.5bp}\selectfont\titraggedcenter}
+\def\Authorfont{\reset@font\fontsize{12bp}{14.5bp}\selectfont\boldmath\titraggedcenter}
+\def\addressfont{\reset@font\fontsize{11bp}{13.5bp}\selectfont\titraggedcenter}
+\def\abstractheadfont{\reset@font\fontsize{9bp}{11bp}\bfseries\selectfont\titraggedcenter}
+\def\abstractsubheadfont{\reset@font\fontsize{9bp}{11bp}\bfseries\selectfont}
+\def\abstractfont{\reset@font\fontsize{9bp}{11bp}\selectfont\leftskip=24pt\rightskip=24pt}
+\def\tablecaptionfont{\reset@font\fontsize{8bp}{9.5bp}\selectfont}
+\def\tablebodyfont{\reset@font\fontsize{8bp}{9.5bp}\selectfont}
+\def\tablecolheadfont{\reset@font\fontsize{8bp}{9.5bp}\selectfont\bfseries\boldmath}
+\def\tablefootnotefont{\reset@font\fontsize{8bp}{9.5bp}\selectfont}
+\def\figurecaptionfont{\reset@font\fontfamily{\rmdefault}\fontsize{8}{9.5}\selectfont}"
+  );
+  // :1280-1292 `{tablenotes}`, a one-item list of the notes under a table, and `\tnote{a}`, a superscript mark (20 and 4
+  // papers: 2102.13454, 2108.07431). The table rules: the class as distributed loads booktabs (:307), the copies
+  // that do not (2006.16202's, :1292-1309) define its `\toprule`/`\midrule` themselves (13 and 12 papers had them
+  // undefined: 2006.16202).
+  RawTeX!(
+    r"\newenvironment{tablenotes}{\list{}{\setlength{\labelsep}{0pt}\setlength{\labelwidth}{0pt}\setlength{\leftmargin}{0pt}\setlength{\rightmargin}{0pt}\setlength{\topsep}{-6pt}\setlength{\itemsep}{2pt}\setlength{\partopsep}{0pt}\setlength{\listparindent}{0em}\setlength{\parsep}{0pt}}\item\relax}{\endlist}
+\def\tnote#1{$^{#1}$}"
+  );
+  RequirePackage!("booktabs");
+  // :1361-1364 `\sidewaystablefn` (74 papers: 1802.08831, 2012.15392, 2102.04394) makes `\footnotetext[a]{text}` in the
+  // `{sidewaystable}` print its text in the float under a superscript mark, as the class's renewed `{table}` does in
+  // every table (:1341-1349). This binding keeps the kernel's `{table}`, where the note is the kernel's footnote; the
+  // sideways one is the same, so `\sidewaystablefn` changes nothing here.
+  def_macro_noop("\\sidewaystablefn")?;
+  // :631-638 `\artnote{text}` and `\miscnote{text}` (8 and 3 papers: 2203.15424, 2605.14802), a note `\maketitle`
+  // prints as the title's footnote (:816-817); 2404.03266's copy :639-646 `\ackno{text}`, acknowledgments the title page
+  // prints under the abstract (3 papers).
+  DefMacro!(
+    "\\artnote{}",
+    "\\@add@frontmatter{ltx:note}[role=artnote]{#1}"
+  );
+  DefMacro!(
+    "\\miscnote{}",
+    "\\@add@frontmatter{ltx:note}[role=miscnote]{#1}"
+  );
+  DefMacro!(
+    "\\ackno{}",
+    "\\@add@frontmatter{ltx:acknowledgements}[name=Acknowledgments]{#1}"
+  );
+  // 2603.28334's copy :575-600 (2307.08214's :591-595, 2501.01157's :579-593): the further author notes beside
+  // `\equalcont`, each marking the authors before it and printed as a footnote of the title page — `\intern` (3 papers),
+  // `\equalsup` (3), `\equaladv` (2), `\equalcontribution` (2206.10381) — the switches they set (`\equalconttrue`, 2
+  // papers) and `\presentaddresstxt{label}`, the heading of `\presentaddress` (2 papers).
+  DefMacro!(
+    "\\intern{}",
+    "\\@add@frontmatter{ltx:note}[role=intern]{#1}"
+  );
+  DefMacro!(
+    "\\equalsup{}",
+    "\\@add@frontmatter{ltx:note}[role=equal-supervision]{#1}"
+  );
+  DefMacro!(
+    "\\equaladv{}",
+    "\\@add@frontmatter{ltx:note}[role=equal-advising]{#1}"
+  );
+  DefMacro!(
+    "\\equalcontribution{}",
+    "\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}"
+  );
+  RawTeX!(
+    r"\newif\ifequalcont\newif\ifpresentaddress\newif\ifintern\newif\ifequalsup\newif\ifequaladv
+\def\presentaddresstxt#1{\gdef\@presentaddresstxt{#1:}}\presentaddresstxt{Present Address}"
+  );
+  // 2307.08421's copy :491-492: `\Newlabel{key}{value}`, the class's cross-reference record a paper's `.aux` replays
+  // (3 papers), and `\jmkLabel` that writes it.
+  RawTeX!(
+    r"\def\jmkLabel#1{\@bsphack\protected@write\@auxout{}{\string\Newlabel{#1}{\@currentlabel}}\@esphack}
+\def\Newlabel#1#2{\expandafter\xdef\csname X@#1\endcsname{#2}}"
+  );
+  // 2303.09648's copy :1084-1116 `{unenumerate}[widest]`, an enumerate whose items print no label (4 papers).
+  RawTeX!(
+    r"\def\unenumerate{\@ifnextchar[{\@unenumerate}{\@unenumerate[0.]}}
+\def\@unenumerate[#1]{\par\ifnum \@enumdepth >3 \@toodeep\else\advance\@enumdepth \@ne\edef\@enumctr{enum\romannumeral\the\@enumdepth}\list{}{\setlength{\leftmargin}{\csname leftmargin\romannumeral\the\@enumdepth\endcsname}\usecounter{\@enumctr}\settowidth\labelwidth{#1}\def\makelabel##1{\hss\llap{##1}}}\fi}
+\let\endunenumerate\endlist"
+  );
+  // :1529-1547 `{biography}{photo}{text}`: the author's photo beside the opening text, then the body; `\author{name}`
+  // inside sets the name bold (5 papers: 2310.14485). The photo is set inline before the text, not wrapped. The
+  // kernel's `\author` is locked against a file's redefinition, so the binding makes it the bold name (unlocked, as
+  // before-digest code runs), in the environment's group.
+  DefConstructor!("\\lx@sn@biography@author", "",
+  before_digest => {
+    DefMacro!("\\author{}", "{\\bfseries #1}");
+  });
+  RawTeX!(
+    r"\newenvironment{biography}[2]{\par\lx@sn@biography@author\noindent#1{#2\par}\par}{\par}"
+  );
+  // 2512.12101's copy :1796-1802: `\orcidlogo`, the iD logo `\orcid` links (2 papers); the logo image is the class's
+  // `Orcidlogo` graphic, here the kernel's iD glyph.
+  DefMacro!("\\orcidlogo", "\\lx@orcidlogo");
+  // Commands some copies add under common names, defined only where the paper's copy has them, so a paper whose copy
+  // does not can define its own (2206.00975's :317-318, 2301.12731, 2407.15443: `\abs`, 3 papers; `\argmin`).
+  if let Some(text) = class_text.as_deref() {
+    if class_code_contains(
+      text,
+      "\\newcommand{\\abs}[1]{\\left\\lvert #1 \\right\\rvert}",
+    ) {
+      RawTeX!(r"\newcommand{\abs}[1]{\left\lvert #1 \right\rvert}");
+    }
+    if class_code_contains(text, "\\DeclareMathOperator*{\\argmin}{argmin}") {
+      RawTeX!(r"\DeclareMathOperator*{\argmin}{argmin}");
+    }
+  }
 
   // Do NOT override `\abstract` or the `{abstract}` environment here. The
   // kernel's `\abstract` (latex_constructs `\abstract`, L5153) is `locked`: the

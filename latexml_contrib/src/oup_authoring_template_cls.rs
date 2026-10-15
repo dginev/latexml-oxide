@@ -7,6 +7,8 @@
 //! Witness: 2503.21884 (\\journaltitle, \\DOI, \\access, ...).
 use latexml_package::prelude::*;
 
+use crate::shipped_class::{class_code_contains, shipped_class_text};
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -93,6 +95,59 @@ LoadDefinitions!({
     "\\address[]{}",
     "\\@add@frontmatter{ltx:note}[role=address]{#2}"
   );
+  // oup-authoring-template.cls:39 `\newif\if@numbib \@numbibtrue` (2407.13283's copy; TL 2025's :39 the same), the
+  // numbered-references switch a paper sets (3 papers of the inventory).
+  RawTeX!(r"\newif\if@numbib\@numbibtrue");
+  // oup-authoring-template.cls:1054 (TL 2025; 2312.04714's copy :1034) `\vol{N}`, the volume the running head
+  // prints (45 papers of the inventory: 2104.15079, 2204.11994, 2206.08262).
+  DefMacro!("\\vol{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
+  // :1117-1119 `\boxedtext{text}`, a boxed statement under the abstract, headed "Key Messages" (TL 2025, 14 of the
+  // sampled copies) or "Significance statement" (2312.04714's :1107, 7 copies; 18 papers: 2306.17210); the newer
+  // copies take the heading as a first argument, `\boxedtext{heading}{text}` (2604.25257's :1271-1272, 44 of the 65
+  // sampled copies). The heading leads the note's text, bold, as the box prints it.
+  let shipped = shipped_class_text("oup-authoring-template")?;
+  let has = |needle: &str| {
+    shipped
+      .as_deref()
+      .is_some_and(|text| class_code_contains(text, needle))
+  };
+  if has("\\newcommand{\\@@boxedtext}[2]") {
+    RawTeX!(r"\def\boxedtext#1#2{\@add@frontmatter{ltx:note}[role=boxedtext]{\textbf{#1} #2}}");
+  } else {
+    let heading = if has("\\textbf{Significance statement}\\par#1") {
+      "Significance statement"
+    } else {
+      "Key Messages"
+    };
+    raw_tex(&format!(
+      r"\def\boxedtext#1{{\@add@frontmatter{{ltx:note}}[role=boxedtext]{{\textbf{{{heading}}} #1}}}}"
+    ))?;
+  }
+  // :143-150 the sans-serif font switches the class's headings use, which papers call (`\sffamilyfont`,
+  // `\sffamilyfontbold`: 2505.18036).
+  RawTeX!(
+    r"\def\sffamilyfont{\sffamily}\def\sffamilyfontitalic{\sffamily\itshape\selectfont}
+\def\sffamilyfontbold{\sffamily\bfseries\selectfont}\def\sffamilyfontbolditalic{\sffamily\bfseries\itshape\selectfont}
+\def\sffamilyfontcn{\sffamily\fontseries{m}\fontshape{n}\selectfont}\def\sffamilyfontcnitalic{\sffamily\fontseries{m}\fontshape{it}\selectfont}
+\def\sffamilyfontcnbold{\sffamily\bfseries\selectfont}\def\sffamilyfontcnbolditalic{\sffamily\fontseries{b}\fontshape{it}\selectfont}"
+  );
+  // :1676-1720 `\secsize`, `\subsecsize`, `\subsubsecsize`, the heading fonts, bold in each of the class's styles (2
+  // papers: 2309.05250); their sizes and colours are print layout.
+  RawTeX!(r"\def\secsize{\bfseries}\def\subsecsize{\bfseries}\def\subsubsecsize{\bfseries}");
+  // Commands newer copies add (TL 2025's, of 2022, has neither): defined where the paper's copy has them, so a paper
+  // whose copy does not can define its own. 2602.07066's copy :1232 `\otherabstract[heading]{text}`, a further
+  // abstract under its own heading (5 papers), and :1935 `\figalttext[]{text}`, a figure's alternative text, which
+  // the class drops (4 papers).
+  if let Some(text) = shipped.as_deref() {
+    if class_code_contains(text, "\\newcommand\\otherabstract[2]") {
+      RawTeX!(
+        r"\newcommand\otherabstract[2][Other abstract heading]{\@add@frontmatter{ltx:abstract}[name={#1}]{#2}}"
+      );
+    }
+    if class_code_contains(text, "\\newcommand\\figalttext[2]") {
+      def_macro_noop("\\figalttext[]{}")?;
+    }
+  }
   // SetCrop/SetTrim/SetBleed are layout configs — gobble.
   def_macro_noop("\\SetCrop{}{}")?;
   def_macro_noop("\\SetTrim{}{}")?;

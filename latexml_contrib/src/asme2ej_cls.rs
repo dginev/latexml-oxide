@@ -40,6 +40,26 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=year]{#1}"
   );
 
+  // asme2ej.cls:301-311 (1212.4243's copy): the class's Helvetica fonts, which papers set headings and tables in
+  // (`\tensfb` 3 papers of the sample: 1805.06800).
+  RawTeX!(
+    r"\DeclareFixedFont{\ninsfb}{OT1}{phv}{b}{n}{9}\DeclareFixedFont{\ninsf}{OT1}{phv}{m}{n}{9}
+\DeclareFixedFont{\egtsf}{OT1}{phv}{m}{n}{8}\DeclareFixedFont{\egtsfb}{OT1}{phv}{b}{n}{8}
+\DeclareFixedFont{\sevsf}{OT1}{phv}{m}{n}{7}\DeclareFixedFont{\bannerfnt}{OT1}{phv}{b}{n}{10}
+\DeclareFixedFont{\pnumfnt}{OT1}{phv}{b}{n}{18}\DeclareFixedFont{\twlsfb}{OT1}{phv}{b}{n}{12}
+\DeclareFixedFont{\tensfb}{OT1}{phv}{b}{n}{10}\DeclareFixedFont{\tensf}{OT1}{phv}{m}{n}{10}
+\DeclareFixedFont{\phvtf}{OT1}{phv}{b}{n}{18}"
+  );
+  // asme2ej.cls:1218-1221 `{acknowledgment}`, the acknowledgements under their heading (93 papers of the inventory:
+  // 1011.2269, 1012.2685, 1311.1922).
+  DefEnvironment!("{acknowledgment}",
+    "<ltx:acknowledgements name='Acknowledgements'>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
+  // asme2ej.cls:1209-1216 `{nomenclature}`: under the heading "Nomenclature", each `\entry{symbol}{meaning}` a
+  // paragraph, the symbol, a quad, the meaning (33 and 31 papers: 1212.4243, 1403.0296).
+  RawTeX!(
+    r"\newenvironment{nomenclature}{\def\entry##1##2{\par\noindent{##1}\quad\ignorespaces##2\par}\section*{Nomenclature}}{\par}"
+  );
   // asme2ej.cls L1242-1245 defines its OWN trivlist `proof` environment.
   // Since we LoadClass("OmniBus") (not the real .cls), port it so asme2ej
   // papers that use `\begin{proof}` WITHOUT loading amsthm still render (as
@@ -53,4 +73,7 @@ LoadDefinitions!({
 \def\@optargproof[#1]{\trivlist \item[\hskip \labelsep{\it #1.}]}
 \def\endproof{\endtrivlist}"
   );
+  // asme2ej.cls:1246 (in the same `\AtEndOfClass`): `\qed`, a `\Box` at the right (4 papers: 1610.03468); the class
+  // backs up over the last line to set it there, print layout.
+  RawTeX!(r"\def\qed{\unskip\nobreak\hfill$\Box$}");
 });

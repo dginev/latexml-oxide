@@ -1,0 +1,14 @@
+% witness: 1205.2947, 1307.5990 (arxbj: every `\newtheorem` statement tagged "Remark 0", its refnum 1); found by 67z
+% oracle:  pdflatex with 1106.2467's arxbj.cls: "Remark 1. A." "Remark 2. B."
+% engines: rust 67z = 0 errors; both tags "Remark 0" (refnums 1 and 2) under the elsart_support binding (arxbj,
+%          elsart; `\usepackage{elsart_support_core}` alone and arximspdf tag them 1 and 2)
+% expect:  0 errors, 0 warnings; the tags "Remark 1" and "Remark 2"
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{elsart_support}
+\newtheorem{rem}{Remark}
+\begin{document}
+\begin{rem}A.\end{rem}
+\begin{rem}B.\end{rem}
+\end{document}

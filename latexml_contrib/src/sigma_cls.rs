@@ -44,6 +44,17 @@ LoadDefinitions!({
   // \Email{addr} — alternate variant in newer sigma.cls templates.
   // Witness 2306.12539, 2307.06355 (both fail with undefined:\\Email).
   DefMacro!("\\Email{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  // sigma.cls:77-83 (0705.3628's v3.0 and 1404.0720's v1.7 copies; v1.8, 2609.01661, keeps `\EmailD`, `\URLaddress`,
+  // `\URLaddressD`): the e-mail and URL lines under a doubly marked (`DD`) or a starred (`Marked`) author, each printing
+  // nothing for an empty argument (`\ifthenelse{\equal{#1}{}}{}{…}`; 66 papers of the inventory with `\EmailDD`
+  // undefined, 14 with `\URLaddressDD`: 0705.3628, 0707.2869, 0711.1671), and v1.8's `\mail{x}`, a `mailto:` link
+  // written inside `\EmailD` (sigma.cls:80 of 2609.01661).
+  RawTeX!(
+    r"\def\lx@sigma@contact#1#2{\def\lx@sigma@arg{#2}\ifx\lx@sigma@arg\@empty\else\@add@frontmatter{ltx:note}[role=#1]{#2}\fi}
+\def\EmailDD{\lx@sigma@contact{email}}\def\EmailMarked{\lx@sigma@contact{email}}
+\def\URLaddressDD{\lx@sigma@contact{url}}\def\URLaddressMarked{\lx@sigma@contact{url}}
+\def\mail#1{\href{mailto:#1}{#1}}"
+  );
   DefMacro!(
     "\\URLaddressD{}",
     "\\@add@frontmatter{ltx:note}[role=url]{#1}"
@@ -69,6 +80,29 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}"
   );
   def_macro_noop("\\LastPageEnding")?;
+  // sigma.cls:161-178 (every copy; the starred ones from v1.2 on, 0705.3628): the class's theorem set, each with its
+  // own counter, `{definition}`, `{example}`, `{remark}`, `{note}` in amsthm's definition style, and an unnumbered
+  // starred twin of each (`{theorem*}` 20 papers of the inventory, `{remark*}` 12, `{example*}` 6: 1301.4541,
+  // 1404.0720, 1601.01181). The class sets them in a group, which ends the style; amsthm defines the environments
+  // globally (amsthm.sty:81), so they outlive it. Without them OmniBus's fallback set numbered them by section on a
+  // shared counter.
+  RawTeX!(
+    r"\newtheorem{theorem}{Theorem}\newtheorem*{theorem*}{Theorem}
+\newtheorem{lemma}{Lemma}\newtheorem*{lemma*}{Lemma}
+\newtheorem{corollary}{Corollary}\newtheorem*{corollary*}{Corollary}
+\newtheorem{proposition}{Proposition}\newtheorem*{proposition*}{Proposition}
+\newtheorem{conjecture}{Conjecture}\newtheorem*{conjecture*}{Conjecture}
+{\theoremstyle{definition}\newtheorem{definition}{Definition}\newtheorem*{definition*}{Definition}
+\newtheorem{example}{Example}\newtheorem*{example*}{Example}
+\newtheorem{remark}{Remark}\newtheorem*{remark*}{Remark}
+\newtheorem{note}{Note}\newtheorem*{note*}{Note}}"
+  );
+  // sigma.cls:182-191 (v3.0 on: 0705.3628, 1404.0720): `\tsep{dim}` and `\bsep{dim}`, invisible struts that add
+  // `dim` above or below a table row (104 and 83 papers of the inventory: 0706.0314, 0708.0957).
+  RawTeX!(
+    r"\def\tsep#1{{\@tempdima=\ht\strutbox\advance\@tempdima #1\vrule height \@tempdima depth 0pt width 0pt\nobreak\hspace{0pt}}}
+\def\bsep#1{{\@tempdima=\dp\strutbox \advance\@tempdima #1\nobreak\hspace{0pt}\vrule height 0pt depth \@tempdima width 0pt}}"
+  );
   // SIGMA authors use \orcid for the ORCID identifier. Route through the kernel
   // `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable orcid.org link
   // (vs a bare dagger note). html_feedback#6571.

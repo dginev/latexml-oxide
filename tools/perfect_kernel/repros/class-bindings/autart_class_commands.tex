@@ -1,0 +1,27 @@
+% witness: 1106.2518 (`\sep`, `\PACS`); 1207.4104 (`\e`); 1112.0879 (`\half`); 1611.06692 (`\Rset`); 2001.10125
+%          (`{case}`)
+% oracle:  pdflatex with 1112.0879's autart.cls (clean)
+% engines: rust 68d2 = 7 errors (undefined `\sep`, `\PACS`, `\e`, `\half`, `\Rset`, `\Nset`, `{case}`)
+% expect:  0 errors, 0 warnings; the keywords and the PACS classification, the class's math shorthands, Theorem 1,
+%          Lemma 2, Case 1
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass{autart}
+\usepackage{amssymb}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author{Ann Author}
+\address{Some University}
+\begin{abstract}The abstract.\end{abstract}
+\begin{keyword}
+Control \sep Estimation \sep Filtering
+\PACS 13.85.Hd \sep 12.40.Ee
+\end{keyword}
+\end{frontmatter}
+\section{One}
+$\e^{x}$, $\half$, $\Rset$, $\Nset$.
+\begin{thm}A theorem.\end{thm}
+\begin{lem}A lemma.\end{lem}
+\begin{case}A case.\end{case}
+\end{document}

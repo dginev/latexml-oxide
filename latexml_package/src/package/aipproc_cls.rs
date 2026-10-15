@@ -1,4 +1,7 @@
-use crate::prelude::*;
+use crate::{
+  prelude::*,
+  shipped_class::{class_code_contains, shipped_class_text},
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -58,6 +61,55 @@ LoadDefinitions!({
   RequirePackage!("url");
   RequirePackage!("textcase");
   RequirePackage!("natbib");
+
+  // aipproc.cls:405 `\RequirePackage{aipxfm}`: the class's front matter (`\title`, `\author{name}{keys}`, `\keywords`,
+  // `\classification`, `{abstract}`, `\maketitle`), which this binding defines. The binding records it loaded, as the
+  // class does, so a paper's own `\usepackage{aipxfm}` is the no-op it is in LaTeX; it raw-loaded the shipped
+  // aipxfm.sty, whose layout code (aipxfm.sty:372-377 `\DeclareParagraphLayout`, `\SetInternalRegister\hyphenpenalty`,
+  // and the `.clo` it reads) ran into the undefined internals of the class (117 papers of the inventory: 1010.4521,
+  // 0705.1061, 0709.0115; Perl the same, KNOWN_PERL_ERRORS #730).
+  AssignValue!("aipxfm.sty_loaded" => true, Some(Scope::Global));
+  // aipproc.cls:212-216, 336-364, 383-386: the designer interface the class's layout files use — register setting,
+  // paragraph layouts, the space catcodes, the body-text dimensions (a paper's own layout code calls them:
+  // `\MakeSpaceNormal`, `\bodytextparindent`, 1010.4521).
+  RawTeX!(
+    r"\newcommand\MakeSpaceIgnore{\catcode`\~=10\relax\catcode`\ = 9\relax\catcode`\^^M = 9\relax}
+\newcommand\MakeSpaceNormal{\catcode`\~= 13\relax\catcode`\ = 10\relax\catcode`\^^M = 5\relax}
+\newcommand*\SetInternalRegister[2]{#1=#2\relax}
+\newcommand*\DeclareParagraphLayout[9]{\@namedef{#1Para}{\fontsize{#2}{#3}\selectfont#9\setlength\parindent{#4}\setlength\leftskip{#5}\setlength\rightskip{#6}\@rightskip\rightskip\setlength\parfillskip{#7}\setlength\parskip{#8}}}
+\newcommand*\UseParagraphLayout[1]{\@ifundefined{#1Para}{}{\@nameuse{#1Para}}}
+\newcommand*\DeclareParagraphLayoutAlias[2]{\@ifundefined{#2Para}{}{\expandafter\let\csname#1Para\expandafter\endcsname\csname#2Para\endcsname}}
+\newdimen\bodytextsize\newdimen\bodytextbaselineskip\newdimen\bodytextenspace\newdimen\bodytextparindent"
+  );
+  // The journal abbreviations some copies add (0809.4021's aipproc.cls:1042-1124, 1103.3992's, 5 of the sampled
+  // copies: `\apj`, `\apjl`, `\mnras`, `\nat` 5 papers, `\aap`, `\araa`, `\physrep`): defined where the paper's copy
+  // has them, so a paper whose copy does not can define its own.
+  if shipped_class_text("aipproc")?
+    .as_deref()
+    .is_some_and(|text| class_code_contains(text, "\\def\\ref@jnl#1{{\\jnl@style#1}}"))
+  {
+    RawTeX!(
+      r"\let\jnl@style=\rmfamily\def\ref@jnl#1{{\jnl@style#1}}
+\newcommand\aj{\ref@jnl{AJ}}\newcommand\araa{\ref@jnl{ARA\&A}}\newcommand\apj{\ref@jnl{ApJ}}\newcommand\apjl{\ref@jnl{ApJ}}
+\newcommand\apjs{\ref@jnl{ApJS}}\newcommand\ao{\ref@jnl{Appl.~Opt.}}\newcommand\apss{\ref@jnl{Ap\&SS}}
+\newcommand\aap{\ref@jnl{A\&A}}\newcommand\aapr{\ref@jnl{A\&A~Rev.}}\newcommand\aaps{\ref@jnl{A\&AS}}
+\newcommand\azh{\ref@jnl{AZh}}\newcommand\baas{\ref@jnl{BAAS}}\newcommand\jrasc{\ref@jnl{JRASC}}
+\newcommand\memras{\ref@jnl{MmRAS}}\newcommand\mnras{\ref@jnl{MNRAS}}\newcommand\pra{\ref@jnl{Phys.~Rev.~A}}
+\newcommand\prb{\ref@jnl{Phys.~Rev.~B}}\newcommand\prc{\ref@jnl{Phys.~Rev.~C}}\newcommand\prd{\ref@jnl{Phys.~Rev.~D}}
+\newcommand\pre{\ref@jnl{Phys.~Rev.~E}}\newcommand\prl{\ref@jnl{Phys.~Rev.~Lett.}}\newcommand\pasp{\ref@jnl{PASP}}
+\newcommand\pasj{\ref@jnl{PASJ}}\newcommand\qjras{\ref@jnl{QJRAS}}\newcommand\skytel{\ref@jnl{S\&T}}
+\newcommand\solphys{\ref@jnl{Sol.~Phys.}}\newcommand\sovast{\ref@jnl{Soviet~Ast.}}\newcommand\ssr{\ref@jnl{Space~Sci.~Rev.}}
+\newcommand\zap{\ref@jnl{ZAp}}\newcommand\nat{\ref@jnl{Nature}}\newcommand\iaucirc{\ref@jnl{IAU~Circ.}}
+\newcommand\aplett{\ref@jnl{Astrophys.~Lett.}}\newcommand\apspr{\ref@jnl{Astrophys.~Space~Phys.~Res.}}
+\newcommand\bain{\ref@jnl{Bull.~Astron.~Inst.~Netherlands}}\newcommand\fcp{\ref@jnl{Fund.~Cosmic~Phys.}}
+\newcommand\gca{\ref@jnl{Geochim.~Cosmochim.~Acta}}\newcommand\grl{\ref@jnl{Geophys.~Res.~Lett.}}
+\newcommand\jcp{\ref@jnl{J.~Chem.~Phys.}}\newcommand\jgr{\ref@jnl{J.~Geophys.~Res.}}
+\newcommand\jqsrt{\ref@jnl{J.~Quant.~Spec.~Radiat.~Transf.}}\newcommand\memsai{\ref@jnl{Mem.~Soc.~Astron.~Italiana}}
+\newcommand\nphysa{\ref@jnl{Nucl.~Phys.~A}}\newcommand\physrep{\ref@jnl{Phys.~Rep.}}\newcommand\physscr{\ref@jnl{Phys.~Scr}}
+\newcommand\planss{\ref@jnl{Planet.~Space~Sci.}}\newcommand\procspie{\ref@jnl{Proc.~SPIE}}
+\let\astap=\aap\let\apjlett=\apjl\let\apjsupp=\apjs\let\applopt=\ao"
+    );
+  }
 
   //======================================================================
   // Frontmatter

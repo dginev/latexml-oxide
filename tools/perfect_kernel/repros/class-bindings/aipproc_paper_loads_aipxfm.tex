@@ -1,0 +1,23 @@
+% witness: 1010.4521, 0705.1061, 0709.0115 (`\usepackage{aipxfm}` after the class: `\DeclareParagraphLayout`,
+%          `\SetInternalRegister` undefined in the raw aipxfm.sty)
+% oracle:  pdflatex with 1010.4521's aipproc.cls, aipxfm.sty, aip-8s.clo (clean)
+% engines: rust 68d2 = 1 error, 2 warnings (undefined `\SetInternalRegister`, `missing_file:aipxfm`); with the shipped
+%          aipxfm.sty beside it the raw load adds its own (`\DeclareParagraphLayout` …); Perl 1 error, 2 warnings
+%          (the same; KNOWN_PERL_ERRORS #730)
+% expect:  0 errors, 0 warnings; the frontmatter from the binding, the text
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass{aipproc}
+\usepackage{aipxfm}
+\layoutstyle{8x11single}
+\begin{document}
+\title{A Title}
+\author{Ann Author}{address={Some University}}
+\keywords{one, two}
+\classification{13.60.Fz}
+\begin{abstract}The abstract.\end{abstract}
+\maketitle
+\section{One}
+\SetInternalRegister\hyphenpenalty{2000}
+Text.
+\end{document}

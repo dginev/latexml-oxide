@@ -136,47 +136,10 @@ LoadDefinitions!({
   for cs in ["HPROOF","PROOF","CRC","psdraft","psfull"] { def_macro_noop(&format!("\\{cs}"))?; }
   def_macro_noop("\\vtexed{}")?;
 
-  // ---- the URL, attribute and script helpers of the arximspdf.cls versions ---------------------------------------
-  // `\doiurl{<doi>}`, `\arxivurl{<id>}` (0911.2919's copy :3057-3140, as arxstspdf.cls:2902-2975) and `\surl{<url>}`
-  // (:3140-3162): a link to `http://dx.doi.org/<doi>`, `http://arxiv.org/abs/<id>` or `http://<url>`, printing the
-  // argument; a full URL links as given, and a `\\` in it is only a break hint. 92 of 100 sampled copies define them
-  // (run 340 first errors: `\doiurl` 288, `\arxivurl` 264, `\surl` 55; 1309.4864, 1309.5877, 1309.1380).
-  DefMacro!("\\doiurl{}", sub[(arg)] { class_url_link("http://dx.doi.org/", "http://", arg) });
-  DefMacro!("\\arxivurl{}", sub[(arg)] { class_url_link("http://arxiv.org/abs/", "http://", arg) });
-  DefMacro!("\\surl{}", sub[(arg)] { class_url_link("http://", "://", arg) });
-  // :336-338 `\setattribute[…]{group}{key}{value}` and `\getattribute{group}{key}` (89 first errors, 1107.3284);
-  // `\tsup`/`\tsub` (`\textsuperscript`/`\textsubscript`, 1107.4192); `\OrigBibText…\endOrigBibText`, the source text
-  // of a reference kept for production (`\long\def\OrigBibText#1\endOrigBibText{}`; 12 of the sampled papers).
-  RawTeX!(
-    r"\def\setattribute{\@ifnextchar[\@setattribute{\@setattribute[]}}
-\def\@setattribute[#1]#2#3#4{\expandafter\gdef\csname #2@#3\endcsname{#4}}
-\def\getattribute#1#2{\csname #1@#2\endcsname}
-\let\tsup\textsuperscript
-\let\tsub\textsubscript
-\ifx\OrigBibText\undefined \long\def\OrigBibText#1\endOrigBibText{}\fi"
-  );
+  // The URL, attribute and script helpers of the arximspdf.cls versions (`\doiurl`, `\arxivurl`, `\surl`,
+  // `\setattribute`, `\tsup`, …) are the VTeX classes' shared markup (ims_support_sty.rs).
 });
 
 /// arxstspdf.cls is arximspdf.cls (its `\doiurl`/`\arxivurl`, arxstspdf.cls:2902-2975, are the arximspdf copies' too;
 /// 4 and 6 papers of run 329 had them undefined: 0903.0664).
 pub fn load_arxstspdf_definitions() -> Result<()> { load_definitions() }
-
-/// `\href{<base><arg>}{<arg>}`, or `\href{<arg>}{<arg>}` when the argument is already a full URL (it contains `full`:
-/// `http://` for `\doiurl`/`\arxivurl`, `://` for `\surl`), dropping the `\\` break hints.
-fn class_url_link(base: &'static str, full: &'static str, arg: Tokens) -> Result<Tokens> {
-  let text: Vec<Token> = arg
-    .unlist()
-    .into_iter()
-    .filter(|t| *t != T_CS!("\\\\"))
-    .collect();
-  let full = Tokens::new(text.clone()).untex().contains(full);
-  let mut out = vec![T_CS!("\\href"), T_BEGIN!()];
-  if !full {
-    out.extend(Tokenize!(base).unlist());
-  }
-  out.extend(text.iter().copied());
-  out.extend([T_END!(), T_BEGIN!()]);
-  out.extend(text);
-  out.push(T_END!());
-  Ok(Tokens::new(out))
-}

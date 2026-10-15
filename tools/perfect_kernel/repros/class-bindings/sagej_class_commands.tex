@@ -1,0 +1,23 @@
+% witness: 1412.4039, 1801.09386 (`{sm}`); 2101.10072 (`\sagesf`, `{refsize}`); 1801.00336, 1912.06398 (`{biogs}`)
+% oracle:  pdflatex with 2101.10072's sagej.cls (clean)
+% engines: rust 68d2 = 4 errors (undefined `\sagesf`, `\refsize`, `{sm}`, `{biogs}`)
+% expect:  0 errors, 0 warnings; the supplemental-material statement, the biographies section
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass[Afour,sageh,times]{sagej}
+\begin{document}
+\runninghead{Author}
+\title{A Title}
+\author{Ann Author\affilnum{1}}
+\affiliation{\affilnum{1}Some University}
+\corrauth{Ann Author}
+\email{ann@example.org}
+\begin{abstract}The abstract.\end{abstract}
+\keywords{one, two}
+\maketitle
+\section{One}
+Text {\sagesf sans} and {\refsize small}.
+\begin{acks}Thanks.\end{acks}
+\begin{sm}Supplementary material is online.\end{sm}
+\begin{biogs}Ann Author is a researcher.\end{biogs}
+\end{document}

@@ -3,7 +3,52 @@
 //! autart.cls is an article-derivative. The native binding fallback to
 //! OmniBus misses class-defined helpers like {ack} environment and
 //! several elsart-style frontmatter macros.
-use latexml_package::prelude::*;
+use latexml_package::{package::elsart_support_core_sty, prelude::*};
+
+use crate::shipped_class::{class_option_given, shipped_class_text};
+
+/// autart.cls:551-580 (1112.0879's copy): the theorem environments after `{thm}`, as the class declares them.
+const AUTART_THEOREMS: &[&str] = &[
+  r"\newtheorem{cor}[thm]{Corollary}",
+  r"\newtheorem{lem}[thm]{Lemma}",
+  r"\newtheorem{claim}[thm]{Claim}",
+  r"\newtheorem{axiom}[thm]{Axiom}",
+  r"\newtheorem{conj}[thm]{Conjecture}",
+  r"\newtheorem{fact}[thm]{Fact}",
+  r"\newtheorem{hypo}[thm]{Hypothesis}",
+  r"\newtheorem{assum}[thm]{Assumption}",
+  r"\newtheorem{prop}[thm]{Proposition}",
+  r"\newtheorem{crit}[thm]{Criterion}",
+  r"\newtheorem{defn}[thm]{Definition}",
+  r"\newtheorem{exmp}[thm]{Example}",
+  r"\newtheorem{rem}[thm]{Remark}",
+  r"\newtheorem{prob}[thm]{Problem}",
+  r"\newtheorem{prin}[thm]{Principle}",
+  r"\newtheorem{alg}{Algorithm}",
+  r"\newtheorem{note}{Note}",
+  r"\newtheorem{summ}{Summary}",
+  r"\newtheorem{case}{Case}",
+];
+
+/// The `\newtheorem{name}[counter]{Title}` / `\newtheorem{name}{Title}[within]` declarations of a copy of autart.cls,
+/// outside comments and other than `{thm}`'s (whose numbering the `secthm` option chooses), in the copy's order: each
+/// environment's name and its declaration.
+fn class_theorem_declarations(text: &str) -> Vec<(String, String)> {
+  let re =
+    Regex::new(r"\\newtheorem\{([A-Za-z]+)\}(\[[A-Za-z]+\])?\{([^{}]*)\}(\[[A-Za-z]+\])?").unwrap();
+  let mut out = Vec::new();
+  for line in text.lines() {
+    let code = line.split('%').next().unwrap_or_default();
+    for cap in re.captures_iter(code) {
+      let name = &cap[1];
+      if name == "thm" {
+        continue;
+      }
+      out.push((name.to_string(), cap[0].to_string()));
+    }
+  }
+  out
+}
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
@@ -57,6 +102,55 @@ LoadDefinitions!({
     r"\@namedef{pf*}#1{\par\begingroup\def\Elproofname{#1}\pf\endgroup\ignorespaces}
 \expandafter\let\csname endpf*\endcsname=\endpf"
   );
+
+  // autart.cls carries elsart.cls (its last line: "End of file `elsart.cls'"), and with it elsart's `{keyword}`
+  // (autart.cls:1248-1258 of 1106.2518's copy): `\sep` between the keywords, `\PACS` and `\MSC` heading the
+  // classifications that follow them (`\sep` 40 papers of the inventory, `\PACS` 5, `\MSC` 3: 1106.2518, 0807.2769),
+  // the markup the elsart binding gives them (elsart_support_core_sty.rs `define_keyword_markup`).
+  elsart_support_core_sty::define_keyword_markup()?;
+  RawTeX!(r"\def\sep{\unskip, }");
+  // autart.cls:1429-1456 (1112.0879's copy, every copy sampled): the class's math shorthands — `\e` the upright
+  // exponential (35 papers: 1207.4104), `\half`/`\threehalf`/`\quart` the text-style fractions (11: 1112.0879), the number
+  // sets `\Rset`, `\Nset`, `\Zset`, … (7, 1, 1: 1611.06692, 1705.01052, 2404.11194), `\nuc`/`\itnuc` the nuclide
+  // superscripts and `\pol` the arrow vector, saved as `\old@vec`.
+  RawTeX!(
+    r"\def\nuc#1#2{\relax\ifmmode{}^{#1}{\protect\text{#2}}\else${}^{#1}$#2\fi}
+\def\itnuc#1#2{\setbox\@tempboxa=\hbox{\scriptsize\it #1}\def\@tempa{{}^{\box\@tempboxa}\!\protect\text{\it #2}}\relax\ifmmode \@tempa \else $\@tempa$\fi}
+\let\old@vec\vec\def\pol#1{\old@vec{#1}}
+\def\half{{\textstyle\frac{1}{2}}}\def\threehalf{{\textstyle\frac{3}{2}}}\def\quart{{\textstyle\frac{1}{4}}}
+\def\e{\mathop{\mathrm{e}}\nolimits}
+\def\Cset{\mathbb{C}}\def\Hset{\mathbb{H}}\def\Nset{\mathbb{N}}\def\Qset{\mathbb{Q}}\def\Rset{\mathbb{R}}\def\Zset{\mathbb{Z}}"
+  );
+  // autart.cls:722-723: `\cv`, the authors' curriculum vitae text, and `{cv*}` with its heading (2204.06912).
+  RawTeX!(r"\def\cv{\small}\@namedef{cv*}{\section*{Curriculum Vitae}\cv}");
+  // autart.cls:545-580: the class's theorem set, defined when the class loads with the kernel's `\newtheorem` (amsthm
+  // only under the `amsthm` option, :90-91, :518-519): `{thm}` numbered within sections under `secthm` (:545-550), the
+  // statements numbered with it, `{alg}`, `{note}`, `{summ}`, `{case}` on their own counters (`{case}` 4 papers:
+  // 2001.10125). A copy's own additions in that list are defined as it declares them (`{assumption}` 4 papers,
+  // 1912.06343's copy :558 `\newtheorem{assumption}[thm]{Assumption}`; `{property}` 2, 1804.10435's :567), which a
+  // fallback set defined lazily could not number with `thm`.
+  let secthm = class_option_given("secthm")?;
+  RawTeX!(if secthm {
+    r"\@ifundefined{thm}{\newtheorem{thm}{Theorem}[section]}{}"
+  } else {
+    r"\@ifundefined{thm}{\newtheorem{thm}{Theorem}}{}"
+  });
+  let declared = shipped_class_text("autart")?
+    .map(|text| class_theorem_declarations(&text))
+    .unwrap_or_default();
+  let declared = if declared.is_empty() {
+    AUTART_THEOREMS
+      .iter()
+      .flat_map(|d| class_theorem_declarations(d))
+      .collect()
+  } else {
+    declared
+  };
+  // Each only where the name is free, as OmniBus's fallback set (omnibus_cls.rs): its lazy `{cor}`, `{lem}`, … are
+  // the class's, numbered with `{thm}`.
+  for (name, declaration) in declared {
+    raw_tex(&format!(r"\@ifundefined{{{name}}}{{{declaration}}}{{}}"))?;
+  }
 
   // Common elsart frontmatter macros (autart inherits elsart style) —
   // preserve author-supplied content as ltx:note frontmatter.

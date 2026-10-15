@@ -1,0 +1,32 @@
+% witness: 1501.01126, 1710.02642, 2008.02154 (`\BFx`, `\BFbeta`); 1011.5677 (`\halmos`); 1009.2653 (`\MSCCLASS`,
+%          `\ORMSCLASS`, `\NatBibNumeric`); 1402.4593 (`\up`/`\down`); 1704.09011 (`{repeattheorem}`); 1301.2609
+%          (`\proof{Proof.}` read as "Proof. Proof.")
+% oracle:  pdflatex with 1501.01126's informs3.cls (clean)
+% engines: rust 68d2 = 14 errors (undefined `\MSCCLASS`, `\ORMSCLASS`, `\SUBJECTCLASS`, `\AREAOFREVIEW`, `\BFx`,
+%          `\BFcalX`, `\BFbeta`, `\BFzero`, `\halmos`, `{repeattheorem}`, `\up`, `\down`, `\updown`, `\NatBibNumeric`);
+%          each proof titled "Proof." with its argument as its first text
+% expect:  0 errors, 0 warnings; the bold symbols, the four classifications, the proofs titled by their argument
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass[opre]{informs3}
+\TheoremsNumberedThrough
+\ECRepeatTheorems
+\begin{document}
+\TITLE{A Title}
+\ARTICLEAUTHORS{\AUTHOR{Ann Author}\AFF{Some University}}
+\ABSTRACT{The abstract.}
+\KEYWORDS{one; two}
+\MSCCLASS{90C15}
+\ORMSCLASS{Programming: stochastic}
+\SUBJECTCLASS{Inventory}
+\AREAOFREVIEW{Optimization}
+\maketitle
+\section{One}
+Let $\BFx\in\BFcalX$ and $\BFbeta$, $\BFzero$.
+\begin{theorem}A theorem.\end{theorem}
+\proof{Proof.} Trivial.\halmos\endproof
+\begin{proof}{Proof of Theorem 1.} Also trivial.\end{proof}
+\begin{repeattheorem}[Theorem 1]Again.\end{repeattheorem}
+\begin{tabular}{c}\up A\down\\\updown B\\\end{tabular}
+\NatBibNumeric
+\end{document}
