@@ -59,16 +59,27 @@ LoadDefinitions!({
   // of the run-353 sn-jnl papers) declares `\opensquare` (msa "03, □) and makes it the `\qedsymbol`, over
   // program.sty:971-973's `\let\qedsymbol=\blacksquare`, so pdflatex ends a proof with □ ("Proof Trivial. □";
   // 1907.11468, 2210.16458). This binding does not run the class body, so it runs these three lines of that hook
-  // itself, where the copy has them (or the paper ships none: the class as distributed); the rest of the hook,
-  // `{spiproof}` and `\let\proof\spiproof`, stays out, as amsthm's proof is kept against a class's own (67s).
+  // itself, where the copy has them (or the paper ships none: the class as distributed). The same hook then makes
+  // `\proof` its `{spiproof}` (`\let\proof\spiproof\let\endproof\endspiproof`), a copy of amsthm's interface
+  // (`[1][\proofname]`, `\pushQED{\qed}`), over program.sty:928's `\def\proof` (a head of its own, "Proof:", which the
+  // proof lock lets through, 67ps). A copy is the binding's `<ltx:proof>` (OXIDIZED_DESIGN_DIVERGENCES #596), so the
+  // hook's `\let` puts the binding's proof back, where the copy has it.
   // Without program the mark is amsthm's `\qed`, which does not read `\qedsymbol` (amsthm_sty.rs).
-  if shipped_class_text("sn-jnl")?
+  let class_text = shipped_class_text("sn-jnl")?;
+  if class_text
     .as_deref()
     .is_none_or(|text| class_code_contains(text, "\\def\\qedsymbol{\\opensquare}"))
   {
     RawTeX!(
       r#"\AtBeginDocument{\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}\DeclareMathSymbol{\opensquare}{\mathord}{AMSa}{"03}\def\qedsymbol{\opensquare}}"#
     );
+  }
+  if lookup_bool("program.sty_loaded")
+    && class_text
+      .as_deref()
+      .is_none_or(|text| class_code_contains(text, "\\let\\proof\\spiproof"))
+  {
+    RawTeX!(r#"\AtBeginDocument{\let\proof\@proof\let\endproof\end@proof}"#);
   }
 
   // Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/

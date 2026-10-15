@@ -1340,7 +1340,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   copies, through the class scan; 2010.12415, 2102.03176, 2104.02781; its `\(`…`\)` programbox kept the kernel's inline
   maths under the class, OXIDIZED_DESIGN #597, approved by the main session 2026-10-15; the proof mark is the class's
   begin-document `\opensquare` □, sn-jnl.cls:1571-1575 of 1907.11468's copy, over program's `\blacksquare` — round 2,
-  1907.11468, 2210.16458); bmvc2k → subfigure/subcaption/subfig/caption as the
+  1907.11468, 2210.16458; the same hook's `\let\proof\spiproof`, an amsthm copy over program.sty:928's `\def\proof`, puts
+  the binding's `<ltx:proof>` back — integration with 67ps, whose lock lets program's own-head `\proof` through); bmvc2k → subfigure/subcaption/subfig/caption as the
   paper's copy names them (bmvc2k.cls:121; 1507.05726, 1605.07146; shipped_class.rs `SUBFIGURE_PACKAGES`,
   `require_shipped_packages`); ieeeaccess → color, spotcolor unless `jtehm` (ieeeaccess.cls:121-131; 1901.05553,
   1712.00216); agujournal2019 → xcolor, url, lineno, indentfirst, ragged2e (:91-112; 1803.00457, 1902.01137);
