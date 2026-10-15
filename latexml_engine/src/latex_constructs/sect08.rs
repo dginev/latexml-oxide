@@ -1212,7 +1212,7 @@ pub(crate) fn load() -> Result<()> {
     // is the author's eqnarray wrapper).
     let (definable, _plain_origin) = is_definable_latex(&name_cs)?;
     if !definable {
-      let is_locked = name_carries_lock(&s!("\\{name}")) ||
+      let is_locked = lock_holds_against(&s!("\\{name}"), || opt.as_ref().is_some_and(|d| !d.is_empty())) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));
       if !is_locked {
         let message = s!("Ignoring redefinition (\\newenvironment) of Environment {:?}", name);
@@ -1234,11 +1234,14 @@ pub(crate) fn load() -> Result<()> {
   });
 
   // The lock is read as a value, also in a binding's hook that runs unlocked (`name_carries_lock`; Perl
-  // latex_constructs.pool.ltxml:2796-2803; wiley2sp 0710.1676).
+  // latex_constructs.pool.ltxml:2796-2803; wiley2sp 0710.1676), and against the redefinition's own interface: one
+  // that holds only against copies (amsthm's proof, `files_lock_holds`) holds against an environment taking an
+  // optional argument with a default (`takes_optional_first`), whose default the refusal records for the binding
+  // (`record_redefined_default`; smfart.cls:1194 `[1][\proofname]`, thuthesis.cls:4052 `[1][\thu@proof@name]`).
   DefPrimitive!("\\renewenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(star, name, nargs, opt, begin, end)] {
     let name = Expand!(name).to_string();
-    let is_locked = name_carries_lock(&s!("\\{name}")) ||
+    let is_locked = lock_holds_against(&s!("\\{name}"), || opt.as_ref().is_some_and(|d| !d.is_empty())) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));
     if !is_locked {
       let name_cs = T_CS!(s!("\\{}",name));
@@ -1252,6 +1255,9 @@ pub(crate) fn load() -> Result<()> {
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
       DefMacro!(end_name_cs, None, end);
     } else {
+      if let Some(default) = opt {
+        record_redefined_default(&T_CS!(s!("\\{name}")), default);
+      }
       record_dropped_environment_stores(&name, &[&begin, &end])?;
     }
     Ok(Vec::new())

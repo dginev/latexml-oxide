@@ -53,11 +53,12 @@ fn package_redefined_proof_keeps_the_binding() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(!xml.contains("trivlist"), "{xml}");
+  assert_eq!(xml.matches("<proof ").count(), 1, "{xml}");
   latexml::util::test::assert_element(
     &xml,
-    "title",
-    &["ltx_runin"],
-    r#"<title class="ltx_runin" font="italic">Proof of the claim.</title>"#,
+    "proof",
+    &[],
+    r#"<proof xml:id="id1"><title class="ltx_runin" font="italic">Proof of the claim.</title><para xml:id="p1"><p xml:id="p1.1"><text xml:id="p1.1.1">Because.∎</text></p></para></proof>"#,
   );
 }
 
@@ -145,11 +146,18 @@ fn newtheorem_counter_and_within_named_by_macros() {
     .map(|s| s.split('<').next().unwrap_or_default())
     .collect();
   assert_eq!(refnums, ["1", "2", "1", "1.1"], "{xml}");
+  latexml::util::test::assert_element(
+    &xml,
+    "theorem",
+    &["ltx_theorem_lem"],
+    r#"<theorem class="ltx_theorem_lem" inlist="thm theorem:lem" xml:id="S1.Thmlem1"><tags><tag>Lemma 1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">Lemma 1.1</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="S1.Thmlem1.1">Lemma 1.1</text></tag></title><para xml:id="S1.Thmlem1.p1"><p xml:id="S1.Thmlem1.p1.1"><text font="italic" xml:id="S1.Thmlem1.p1.1.1">Three.</text></p></para></theorem>"#,
+  );
 }
 
-/// apxproof wraps amsthm's proof (apxproof.sty:136-137 `\let\axp@oldproof\proof`, :393 `\def\proof`), so the lock
-/// yields while it loads: a `theoremrep`'s proof goes to the appendix after its restated theorem, as pdflatex prints
-/// it, and every other proof stays in place (2502.18805).
+/// apxproof wraps amsthm's proof (apxproof.sty:136-137 `\let\axp@oldproof\proof`, :393 `\def\proof`), whose
+/// parameterless wrappers the lock lets through (it holds only against copies of amsthm's interface, 67ps): a
+/// `theoremrep`'s proof goes to the appendix after its restated theorem, as pdflatex prints it, and every other proof
+/// stays in place (2502.18805).
 #[test]
 fn apxproof_wraps_the_locked_proof() {
   let (log, xml) = latexml::util::test::convert_with(
@@ -178,4 +186,10 @@ An inline proof.
     .expect("restated theorem");
   let moved = xml.find("Because.").expect("appendix proof");
   assert!(inline < restated && restated < moved, "{xml}");
+  latexml::util::test::assert_element(
+    &xml,
+    "proof",
+    &["xml:id=\"S1.2\""],
+    r#"<proof xml:id="S1.2"><title class="ltx_runin" font="italic">Proof.</title><para xml:id="S1.p2"><p xml:id="S1.p2.1"><text xml:id="S1.p2.1.1">Because. ∎</text></p></para></proof>"#,
+  );
 }

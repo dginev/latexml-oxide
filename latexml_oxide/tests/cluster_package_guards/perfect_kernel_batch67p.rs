@@ -122,9 +122,9 @@ fn theorem_bodyfont_outlives_theoremstyle() {
   );
 }
 
-/// theorem.sty does not load amsthm: after it, amsthm is not loaded, and the paper's own `\usepackage{amsthm}` takes
-/// over `\newtheorem` and the styles, as in the ifacconf template (2211.14033, 2512.06733; base: `\theoremstyle`
-/// undefined, the style name printed, the Definition italic).
+/// theorem.sty does not load amsthm: after it, amsthm is not loaded, and the paper's own `\usepackage{amsthm}` loads
+/// it (pdflatex "After: amsthm loaded.") and takes over `\newtheorem` and the styles, as in the ifacconf template
+/// (2211.14033, 2512.06733; base: `\theoremstyle` undefined, the style name printed, the Definition italic).
 #[test]
 fn theorem_then_amsthm_takes_over() {
   let xml = convert_clean(repro!("theorem_then_amsthm_takes_over.tex"), &[]);
@@ -133,6 +133,12 @@ fn theorem_then_amsthm_takes_over() {
     "p",
     &["xml:id=\"p1.1\""],
     r#"<p xml:id="p1.1">Before: amsthm not loaded.</p>"#,
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p2.1\""],
+    r#"<p xml:id="p2.1">After: amsthm loaded.</p>"#,
   );
   assert_element(
     &xml,

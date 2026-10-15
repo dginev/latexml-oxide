@@ -1,0 +1,19 @@
+% witness: thuthesis.cls:4052 `\renewenvironment{proof}[1][\thu@proof@name]` (also nxuthesis.cls:3489, hitreport.cls:1276):
+%          an amsthm copy whose default is not `\proofname`
+% oracle:  pdflatex 0 errors, "Nachweis: Body twelve." / "Sketch: Body twelve b."
+% engines: rust a03442572a = <proof> "Proof." (the lock kept the binding, titled by `\proofname`); rust 67o1 = an
+%          itemize "trivlist"; perl = the itemize
+% expect:  0 errors, 0 warnings; two <proof>, titled "Nachweis." (the copy's own default) and "Sketch."
+% status:  RED (a03442572a) -> GREEN (67ps); guard perfect_kernel_batch67ps::proof_copy_titled_by_its_own_default
+\begin{filecontents*}[overwrite]{thuxpkg.sty}
+\ProvidesPackage{thuxpkg}
+\def\thux@proofname{Nachweis}
+\renewenvironment{proof}[1][\thux@proofname]{\par\trivlist\item[\hskip\labelsep\bfseries #1:]}{\endtrivlist}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{thuxpkg}
+\begin{document}
+\begin{proof}Body twelve.\end{proof}
+\begin{proof}[Sketch]Body twelve b.\end{proof}
+\end{document}

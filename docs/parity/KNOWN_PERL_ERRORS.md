@@ -13347,12 +13347,12 @@ article.cls: ptptex, jpsj2, paper, artikel1). Witnesses jpsj2 cond-mat0510381, p
 
 ## 686. theorem.sty's body font, header font and style are not the binding's: `\theorem@bodyfont` is undefined and `\theorembodyfont` is undone by the next `\theoremstyle`
 
-theorem.sty keeps three things apart (theorem.sty:6-13, :62-81): the style is a name in `\theorem@style`, the body
-font is the token register `\theorem@bodyfont` (`\theorembodyfont{X}` stores `\reset@font X`), and the head font is
-the global macro `\theorem@headerfont` (`\theoremheaderfont` takes effect once). `\newtheorem` builds each
-environment as `\th@<style> \the\theorem@bodyfont \@thm{<counter>}{<name>}` (:16-48), so the body font outlives a
-later `\theoremstyle`, a class's own `\th@<style>` runs at each theorem's start, and a body font may be code that
-takes the `\@thm{…}{…}` call as its delimited arguments. Perl's theorem.sty.ltxml relies on amsthm.sty.ltxml:
+theorem.sty keeps three things apart (theorem.sty:6-13, :62-81): the style is a name in `\theorem@style`, the body font
+is the token register `\theorem@bodyfont` (`\theorembodyfont{X}` stores `\reset@font X`), and the head font is the
+global macro `\theorem@headerfont` (`\theoremheaderfont` takes effect once). `\newtheorem` builds each environment as
+`\th@<style> \the\theorem@bodyfont \@thm{<counter>}{<name>}` (:16-48), so the body font outlives a later
+`\theoremstyle`, a class's own `\th@<style>` runs at each theorem's start, and a body font may be code that takes the
+`\@thm{…}{…}` call as its delimited arguments. Perl's theorem.sty.ltxml relies on amsthm.sty.ltxml:
 `\theorembodyfont`/`\theoremheaderfont` assign the style registers, which the next `\theoremstyle` resets,
 `\theorem@bodyfont`/`\theorem@style`/`\theorem@headerfont` are undefined, and `\theoremstyle` digests a class's
 `\th@<style>` at once, outside a group, so its font switch lands in the preamble (fundam.cls's `\th@plain`
@@ -13365,17 +13365,28 @@ slanted); `\makeatletter\def\pre\@thm#1#2{\def\kind{#1}\@thm{#1}{#2}}\theorem@bo
 `\newtheorem` gives the kernel's `define_new_theorem` the theorem.sty sequence as the theorem's body font (a binding
 style's own font in place of `\th@<style>`, unless a class redefined it, as ifacconf.cls does for `\th@plain`; the
 current style font before a class style that sets its font only in `\@begintheorem`, which the binding never calls,
-arXivclass.cls:1808-1817, 2505.07298), and the `\@thm{…}{…}` that ends it is gobbled by a `\let\@thm\@gobbletwo`
-the sequence starts with, local to the theorem's group, so a raw `\@thm` elsewhere (a theorem.sty-based class's
+arXivclass.cls:1808-1817, 2505.07298), and the `\@thm{…}{…}` that ends it is gobbled by a `\let\@thm\@gobbletwo` the
+sequence starts with, local to the theorem's group, so a raw `\@thm` elsewhere (a theorem.sty-based class's
 `\newenvironment{myclaim}{\th@plain\@thm{claim}{Claim}}{\@endtheorem}`) keeps the kernel's head and counter step.
 theorem.sty does not load amsthm (nor does ntheorem.sty, :52), so both bindings borrow it with
 `require_package_borrowed` (binding/content.rs, on `state::mark_unloaded`, the half of `end_provide_only` that marks a
-file unloaded): unless the document had loaded it, amsthm stays unloaded and `\@ifpackageloaded{amsthm}` is false, as
-in LaTeX; a later `\usepackage{amsthm}` loads it and takes `\newtheorem` (amsthm.sty:77; `\lx@amsthm@newtheorem`, the
+file unloaded): unless the document had loaded it, amsthm stays unloaded and `\@ifpackageloaded{amsthm}` is false, as in
+LaTeX; a later `\usepackage{amsthm}` loads it and takes `\newtheorem` (amsthm.sty:77; `\lx@amsthm@newtheorem`, the
 `\newtheorem` in force at amsthm's first load) and the styles back, as the ifacconf template (`\let\theoremstyle
 \undefined\usepackage{amsthm}` after ifacconf.cls:593 `\RequirePackage{theorem}`) needs; Perl's no-op reload left
-`\theoremstyle` undefined there. The borrowed definitions stay in force until then: a document that defines its own
-`proof` when `\@ifpackageloaded{amsthm}` is false keeps amsthm's binding `proof`, where LaTeX takes the document's.
+`\theoremstyle` undefined there. What the borrow defines carries `DefinitionOrigin::Borrowed` (kept through the binding
+dispatch, latexml_package and latexml_contrib `lib.rs`, and `input_definitions`): in LaTeX those names do not exist, so
+they yield to any later definition, the document's or any raw file's, TeX Live's or the author's (`is_definable_latex`;
+a document's own `proof` in the `\@ifpackageloaded{amsthm}` false branch; cc.cls's ccproof.sty:56
+`\newenvironment{proof}`, 1507.02955), the borrow sets no proof lock (`"amsthm.sty:borrowing"`,
+OXIDIZED_DESIGN_DIVERGENCES #596), and the files first loaded during it are unloaded with it (amsgen;
+`state::{begin_borrow, end_borrow}`, `mark_unloaded` also clearing `_raw_loaded` and `\opt@<file>`). The real load after
+a borrow (`"amsthm.sty:borrowed"`) leaves a proof a file or the document has put in place, and amsthm's old-version
+`\theorembodyfont`/`\theoremheaderfont`/`\theorempreskipamount`/`\theorempostskipamount` are only provided (amsthm.sty
+defines none of them), so theorem.sty's stay. Residuals: a conditional still sees a borrowed name defined
+(`\@ifundefined{proof}{\newenvironment{proof}…}{}` after theorem.sty keeps the binding's proof; pdflatex prints the
+file's), and a local assignment of a borrowed name clears its mark for good (`fallback_meanings`), so after the group
+the restored borrowed meaning no longer yields.
 
 Limits left (the binding is not theorem.sty's environment code): the style is applied when `\newtheorem` runs, not at
 each use. A binding style's font, head styling and swap are taken then, so a later `\gdef\th@plain` does not reach
@@ -13393,7 +13404,12 @@ its last theorem (`\theoremstyle{definition}` after `\theorembodyfont{\itshape}`
 theorem_user_style_and_headerfont, theorem_then_amsthm_takes_over, theorem_raw_thm_keeps_heads}; guards
 `perfect_kernel_batch67p::{theorem_bodyfont_internals, theorem_user_style_and_headerfont,
 theorem_bodyfont_outlives_theoremstyle, theorem_then_amsthm_takes_over, amsthm_before_theorem_stays_loaded,
-theorem_raw_thm_keeps_heads, ntheorem_borrows_amsthm_unloaded}`.
+theorem_raw_thm_keeps_heads, ntheorem_borrows_amsthm_unloaded}`; repros package-bindings/{theorem_borrowed_proof_yields_to_a_class_def,
+theorem_borrowed_proof_yields_to_a_package_newenvironment, theorem_borrow_leaves_amsgen_unloaded,
+amsthm_reload_keeps_theorem_font_commands}, guards `perfect_kernel_batch67ps::{borrowed_proof_yields_to_a_class_def,
+borrowed_proof_yields_to_a_package_newenvironment, borrowed_proof_yields_to_a_package_renewenvironment,
+document_proof_after_theorem_is_its_own, borrow_leaves_what_it_loaded_unloaded, amsthm_reload_keeps_theorem_font_commands,
+amsthm_reload_keeps_a_files_proof}`.
 
 ## 687. `\unboldmath` and `\mathversion{normal}` do not undo `\boldmath` (open)
 
@@ -13420,7 +13436,8 @@ amsthm_proof_kept_against_a_class_renewenvironment.tex (a `{filecontents*}` clas
 `\renewenvironment{proof}`; `\begin{proof}Because.\end{proof}`): Perl `--includestyles` gives 0 `<proof>`; pdflatex
 prints "Démonstration. — Because.". Under the raw-class lever 86 papers lost their proofs (smfart 72, ijmart 11,
 smfbook 3; witnesses 1711.11547, 1902.02049, 2108.12000). Fixed in Rust (beyond Perl, OXIDIZED_DESIGN_DIVERGENCES
-#596): amsthm_sty.rs locks `\proof` and `\endproof` against the class and package files (`:locked@files`). Guards
+#596): amsthm_sty.rs locks `\proof` and `\endproof` against the class and package files (`:locked@files`), against
+copies of its interface only (`[1][<default>]`). Guards
 `perfect_kernel_batch67s::{class_renewed_proof_keeps_the_binding, package_redefined_proof_keeps_the_binding,
 document_renewed_proof_is_honoured}`.
 

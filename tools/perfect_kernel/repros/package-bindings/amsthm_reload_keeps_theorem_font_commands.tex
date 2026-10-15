@@ -1,0 +1,18 @@
+% witness: synthetic (67ps integrated review t8): the ifacconf template's `\usepackage{amsthm}` after theorem.sty
+%          (2211.14033, 2512.06733) followed by theorem.sty's own font commands
+% oracle:  pdflatex 0 errors; the head CMBX10, the body CMTI10 (theorem.sty's `\theorembodyfont`/`\theoremheaderfont`
+%          set theorem.sty's internals, which amsthm's theorems do not read)
+% engines: rust a03442572a (and 67o1) = a small-caps head and an upright body (amsthm's reload replaced theorem.sty's
+%          commands with the binding's old-amsthm ones); perl = theorem.sty.ltxml after amsthm.sty.ltxml
+% expect:  0 errors, 0 warnings; a bold head, an italic body
+% status:  RED (a03442572a) -> GREEN (67ps); guard perfect_kernel_batch67ps::amsthm_reload_keeps_theorem_font_commands
+\documentclass{article}
+\usepackage{theorem}
+\let\theoremstyle\undefined\let\newtheoremstyle\undefined
+\usepackage{amsthm}
+\theorembodyfont{\upshape}
+\theoremheaderfont{\scshape}
+\newtheorem{thm}{Theorem}
+\begin{document}
+\begin{thm}Body eight.\end{thm}
+\end{document}

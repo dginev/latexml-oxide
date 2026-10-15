@@ -205,6 +205,8 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   // #408).
   use crate::definition::origin::{DefinitionOrigin, OriginGuard, current_origin};
   let requested_by_fallback = current_origin() == DefinitionOrigin::Fallback;
+  // (and a file a borrowed binding requires is borrowed with it: amsthm's amsgen, `require_package_borrowed`)
+  let requested_by_borrow = current_origin() == DefinitionOrigin::Borrowed;
   let base = raw_file
     .trim()
     .rsplit(['/', '\\'])
@@ -215,6 +217,8 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
     DefinitionOrigin::Pool
   } else if requested_by_fallback {
     DefinitionOrigin::Fallback
+  } else if requested_by_borrow {
+    DefinitionOrigin::Borrowed
   } else if matches!(
     base.as_str(),
     "latex.ltx" | "plain.tex" | "expl3-code.tex" | "latex" | "plain" | "expl3-code"
@@ -2772,21 +2776,46 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
 /// Load the binding of package `name` for another binding to build on, without the package counting as loaded — a
 /// binding's way of borrowing a package the real one does not load (theorem.sty's and ntheorem.sty's bindings
 /// borrow amsthm's theorem machinery; neither real package loads amsthm). Unless the document had loaded `name`
-/// already, it is then marked unloaded ([`crate::state::mark_unloaded`]): `\@ifpackageloaded{name}` is false, as in
-/// LaTeX, and the document's own later `\usepackage{name}` loads the binding again, whose definitions then take over
-/// (amsthm.sty:77's `\newtheorem`, amsthm_sty.rs `\lx@amsthm@newtheorem`). The borrowed definitions stay in force
-/// until then: a document that tests `\@ifpackageloaded{amsthm}` and defines its own `proof` in the false branch
-/// still has amsthm's `proof` after the borrowing package (`\newenvironment` of a defined name), where LaTeX takes
-/// the document's. Guards `perfect_kernel_batch67p::{theorem_then_amsthm_takes_over,
-/// amsthm_before_theorem_stays_loaded}`.
+/// already, it is then marked unloaded ([`crate::state::mark_unloaded`]), and so is every file first loaded during the
+/// borrow (amsthm's amsgen, [`crate::state::end_borrow`]): `\@ifpackageloaded{name}` is false, as in LaTeX, and the
+/// document's own later `\usepackage{name}` loads the binding again, whose definitions then take over (amsthm.sty:77's
+/// `\newtheorem`, amsthm_sty.rs `\lx@amsthm@newtheorem`); `"{name}.sty:borrowed"` tells that load it follows a
+/// borrow. What the borrow defines carries `DefinitionOrigin::Borrowed`: in LaTeX those names do not exist, so they
+/// yield to any later definition — the document's, or any raw file's, TeX Live's or the author's (`\newcommand`,
+/// `\newenvironment`, `\providecommand`; latex_constructs `is_definable_latex`) — and the binding sets no lock while
+/// `"{name}.sty:borrowing"` is set (amsthm's proof lock). Not covered: a conditional (`\@ifundefined{proof}`) still
+/// sees a borrowed name defined, and a local assignment of a borrowed name clears its mark for good
+/// (`fallback_meanings`). Witnesses 2211.14033, 2512.06733 (ifacconf), 1507.02955 (cc.cls's ccproof.sty:56). Guards
+/// `perfect_kernel_batch67p::{theorem_then_amsthm_takes_over, amsthm_before_theorem_stays_loaded}`,
+/// `perfect_kernel_batch67ps::*`.
 pub fn require_package_borrowed(name: &str) -> Result<()> {
+  use crate::definition::origin::{DefinitionOrigin, OriginGuard};
   let file = s!("{name}.sty");
   let was_loaded = lookup_bool(&s!("{file}_loaded"));
-  require_package(name, RequireOptions::default())?;
-  if !was_loaded {
-    mark_unloaded(&file);
+  if was_loaded {
+    return require_package(name, RequireOptions::default());
   }
-  Ok(())
+  /// Clears `"{file}:borrowing"` and ends the borrow's file tracking on every path out of the load.
+  struct Borrowing(String, Option<Vec<String>>);
+  impl Drop for Borrowing {
+    fn drop(&mut self) {
+      assign_value(&s!("{}:borrowing", self.0), false, Some(Scope::Global));
+      if let Some(outer) = self.1.take() {
+        end_borrow(outer);
+      }
+    }
+  }
+  assign_value(&s!("{file}:borrowing"), true, Some(Scope::Global));
+  let borrowing = Borrowing(file.clone(), Some(begin_borrow()));
+  let result = {
+    let _origin = OriginGuard::new(DefinitionOrigin::Borrowed);
+    require_package(name, RequireOptions::default())
+  };
+  drop(borrowing);
+  // (the borrowed package itself, also when it was tracked under another name)
+  mark_unloaded(&file);
+  assign_value(&s!("{file}:borrowed"), true, Some(Scope::Global));
+  result
 }
 
 thread_local! {

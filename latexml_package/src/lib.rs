@@ -1252,12 +1252,16 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     .map(|(_, extension, loader)| {
       // K1 provenance: a binding's own definitions are `Binding`; a `.pool`
       // entry is a pool; a binding a fallback class requires stays part of its
-      // guess, `Fallback` (`input_definitions`).
+      // guess, `Fallback` (`input_definitions`), and one a binding borrows stays
+      // `Borrowed` (`require_package_borrowed`).
       use ::latexml_core::definition::origin::{DefinitionOrigin, current_origin, with_origin};
       let origin = if *extension == "pool" {
         DefinitionOrigin::Pool
-      } else if current_origin() == DefinitionOrigin::Fallback {
-        DefinitionOrigin::Fallback
+      } else if matches!(
+        current_origin(),
+        DefinitionOrigin::Fallback | DefinitionOrigin::Borrowed
+      ) {
+        current_origin()
       } else {
         DefinitionOrigin::Binding
       };

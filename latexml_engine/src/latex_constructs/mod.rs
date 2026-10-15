@@ -238,14 +238,18 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   // shipped beside the source, `binding::content::reading_author_file` — 0901.4335's `mn2e_journal_style.sty`): a
   // TeX Live class or package loaded beside OmniBus (apa7.cls) yields to it, as raw files yield to bindings.
   // A kernel stub (`DefinitionOrigin::Stub`: aaai's `\equalcontrib`, sect05.rs) yields to a raw file's own definition
-  // as well, since the real class or style defines the name (copernicus.cls:1673).
+  // as well, since the real class or style defines the name (copernicus.cls:1673), and so does what a binding borrows
+  // from a package the real one does not load (`DefinitionOrigin::Borrowed`, `require_package_borrowed`: in LaTeX the
+  // name does not exist) — cc.cls's ccproof.sty:56 `\newenvironment{proof}` after theorem.sty (1507.02955).
   if is_fallback_meaning(cs) {
+    use definition::origin::DefinitionOrigin;
     let origin = definition::origin::current_origin();
-    if origin == definition::origin::DefinitionOrigin::Document
-      || (origin == definition::origin::DefinitionOrigin::File
+    if origin == DefinitionOrigin::Document
+      || (origin == DefinitionOrigin::File
         && (reading_author_file()
           || lookup_definition(cs)?
-            .is_some_and(|prev| prev.get_origin() == definition::origin::DefinitionOrigin::Stub)))
+            .is_some_and(|prev| prev.get_origin() == DefinitionOrigin::Stub)
+          || fallback_meaning_origin(cs) == Some(DefinitionOrigin::Borrowed)))
     {
       return Ok((true, false));
     }

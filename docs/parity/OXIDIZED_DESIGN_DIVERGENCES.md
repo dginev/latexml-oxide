@@ -17589,30 +17589,48 @@ only under `\makeatletter`. The only direct `\@fontswitch` users in TeX Live's s
 round-trip would revert as `\cal`/`\mit` when `#2` is `\mathcal`/`\mathnormal` and that command's current robust body is
 exactly `\@fontswitch\relax<alphabet>`.
 
-### 596. amsthm's `{proof}` is kept against a class or package that redefines it (Perl: the file's environment replaces it)
+### 596. amsthm's `{proof}` is kept against a class or package that copies it (Perl: the file's environment replaces it)
 
 amsthm_sty.rs locks `\proof` and `\endproof` against the class and package files (`:locked@files`, state.rs
-`name_carries_lock`), as the kernel's `\endabstract` (sect05.rs) and `\minipage` (sect12.rs) are; Perl locks nothing
-there (amsthm.sty.ltxml:146-192, KNOWN_PERL_ERRORS #690). A file's `\renewenvironment{proof}` is skipped
-(`\renewenvironment` reads `name_carries_lock`, sect08.rs), its `\newenvironment{proof}` is ignored as already defined,
-and its `\def`/`\let` of either name is refused (`install_definition`, `let_i`, which also puts the binding back after a
-clearing `\let\proof\relax`). The proof stays `<ltx:proof>`, titled from `\proofname` or the optional argument, so the
-class's language still names it (smfart.cls:1288 "Démonstration"); its own head layout and punctuation do not carry
-(smfart's ` — ` after the head, ijmart's slanted head). The document's own `\newenvironment{proof}`/
-`\renewenvironment{proof}` is honoured, as in LaTeX and Perl (an author `{proof}` in paper.cls papers), and so is a
-class's redefinition made from an `\AtBeginDocument` hook, which runs with the document's origin (rawclasses study
-R7). The lock covers the names `\proof`/`\endproof` only: a file's `\newtheorem{proof}` after amsthm still defines the
-`\begin{proof}` that `\begin` looks up first (amsthm's own `\begin{proof}` alias points at the non-existent
-`\begin{@proof}`), and so still makes a `<theorem>`, as before. A package that builds on the binding's proof rather
-than replacing it has its own binding yield the lock while its raw file loads: apxproof keeps the binding as
-`\axp@oldproof` (apxproof.sty:136-137) and its `\def\proof` (:393-417) sends a `theoremrep`'s proof to the appendix,
-read back as `\begin{axp@oldproof}` (apxproof_sty.rs; amsthm_sty.rs locks only where no binding set the value first;
-witness 2502.18805, whose 53 proofs otherwise stayed in the body; guard
-`perfect_kernel_batch67s::apxproof_wraps_the_locked_proof`). Under the raw-class lever 86 papers had lost every
-proof (smfart 72, ijmart 11, smfbook 3; witnesses 1711.11547, 1902.02049, 2108.12000). Repro
-package-bindings/amsthm_proof_kept_against_a_class_renewenvironment; guards
-`perfect_kernel_batch67s::{class_renewed_proof_keeps_the_binding, package_redefined_proof_keeps_the_binding,
-document_renewed_proof_is_honoured}`.
+`name_carries_lock`), as the kernel's `\endabstract` (sect05.rs) and `\minipage` (sect12.rs) are, but only against a
+COPY of amsthm's interface (`\proof:locked@copies`, state.rs `files_lock_holds`): a redefinition whose first parameter
+is an optional argument with a non-empty default (`takes_optional_first`) — amsthm.sty:431's own
+`{proof}[1][\proofname]`, which smfart.cls:1194, smfbook.cls:1281, ijmart.cls:336 or thuthesis.cls:4052
+(`[1][\thu@proof@name]`) re-implement over a `\trivlist`. Perl locks nothing there (amsthm.sty.ltxml:146-192,
+KNOWN_PERL_ERRORS #690). A copy's `\renewenvironment{proof}` is skipped (`\renewenvironment` reads `lock_holds_against`,
+sect08.rs), its `\newenvironment` after a clearing `\let\proof\relax` is refused and the binding put back
+(`install_definition`, `let_i`: GT.cls:1469-1494, 2503.05183), and the proof stays `<ltx:proof>`, titled from the
+optional argument or else the copy's own default (`record_redefined_default`, `\proof:redefined@default`; an empty one
+falls back to `\proofname`), so the class's language and name still title it (smfart.cls:1288 "Démonstration",
+thuthesis's `\thu@proof@name`). A redefinition with a head of its own — no optional argument, or an empty default
+(fascicules.sty:142 "Démonstration:", NotesTeX.sty:124, beautybook.cls:1211, thmbox.sty:214 `[1][]` with `\proofname\
+#1`, a raw `\def\proof{…}`) — goes through with the head text and end mark it wrote; the end half `\endproof` follows
+its begin half (locked while `\proof` is still the binding's). The lock keeps the binding only while its proof is in
+force: once the document (or a definition the lock let through) has replaced or undefined `\proof`, it lapses and later
+definitions go through as in LaTeX (0705.0545: amsart, the document's `\let\proof\undefined`, then the author's
+nccthm.sty:173 `\newcommand*{\proof}[1][]`). It is not set by a borrow (`require_package_borrowed`, theorem.sty's and
+ntheorem.sty's bindings: LaTeX has no amsthm proof there, so a class's `\def\proof` after `\RequirePackage{theorem}`
+stays its own), nor by the real load that follows a borrow when a file or the document has already put its own proof in
+place (amsthm.sty:431's `\newenvironment{proof}` fails over it in LaTeX; the binding then leaves `\proof`/`\endproof`
+alone, with an `Info:ignore`). The document's own `\newenvironment{proof}`/`\renewenvironment{proof}` is honoured, as in
+LaTeX and Perl (an author `{proof}` in paper.cls papers), and so is a class's redefinition made from an
+`\AtBeginDocument` hook, which runs with the document's origin (rawclasses study R7). apxproof builds on the binding's
+proof: its parameterless wrappers (apxproof.sty:393-417 `\def \proof`, sending a `theoremrep`'s proof to the appendix,
+read back as `\begin{axp@oldproof}`) are not copies and go through, so apxproof_sty.rs needs no lift of the lock
+(witness 2502.18805, whose 53 proofs otherwise stayed in the body). Residuals of a kept copy: its head layout, font,
+case and punctuation do not carry (smfart's ` — ` after the head, ijmart's slanted head, isamms's small caps;
+theoretics.cls:418's `\MakeTextUppercase{#1}`, so 1609.05867's "PROOF SKETCH." is "Proof Sketch."), and its end mark is
+the binding's ∎ (theoretics's red `\blacksquare` `\qedsymbol`; a copy that prints no QED gets one). The lock covers the
+names `\proof`/`\endproof` only: a file's `\newtheorem{proof}` after amsthm still defines the `\begin{proof}` that
+`\begin` looks up first and makes a `<theorem>`. Under the raw-class lever 86 papers had lost every proof (smfart 72,
+ijmart 11, smfbook 3; witnesses 1711.11547, 1902.02049, 2108.12000); without the lever the copies in papers' own classes
+keep their proofs (jloganal.cls 1202.3460, theoretics.cls 1609.05867, gtart_h.cls math0003189, gtart.cls math0203159,
+math0302254, math0412216, smfart.cls 2309.14926, GT.cls 2503.05183). Repros
+package-bindings/{amsthm_proof_kept_against_a_class_renewenvironment, amsthm_proof_lock_lets_a_hardcoded_head_through,
+amsthm_proof_copy_titled_by_its_default, amsthm_proof_lock_lapses_after_the_document_undefines_it,
+theorem_borrowed_proof_yields_to_a_class_def}; guards `perfect_kernel_batch67s::{class_renewed_proof_keeps_the_binding,
+package_redefined_proof_keeps_the_binding, document_renewed_proof_is_honoured, apxproof_wraps_the_locked_proof}`,
+`perfect_kernel_batch67ps::*`.
 
 ### 597. Under sn-jnl, program.sty's programbox `\(`…`\)` stays inline maths
 

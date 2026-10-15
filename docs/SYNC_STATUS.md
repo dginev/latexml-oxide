@@ -1321,7 +1321,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   #691; 21 papers in both arms). Witnesses 1711.11547, 1902.02049, 2108.12000 (smfart), 1507.02955 (cc). Repros
   package-bindings/amsthm_proof_kept_against_a_class_renewenvironment, newtheorem_shared_counter_named_by_a_macro (67p
   RED → GREEN); guards `perfect_kernel_batch67s`. apxproof, which wraps the binding's proof to move a `theoremrep`'s
-  proof to the appendix, has its binding yield the lock while it loads (2502.18805). Witnesses under the lever (67o1 →
+  proof to the appendix, had its binding yield the lock while it loads (2502.18805; since 67ps the lock lets its
+  wrappers through). Witnesses under the lever (67o1 →
   67s, Errors / `<proof>`): 1711.11547 1/0 → 0/14, 1902.02049 1/0 → 0/30, 2108.12000 0/0 → 0/24, 2412.15231 (smfbook)
   1/0 → 0/256, 2306.11126 (smfbook) 0/0 → 0/44, ijmart 1001.1175 0 → 19, 1107.1667 0 → 8, 2207.06393 0 → 9 proofs;
   1507.02955 (cc) keeps its 4 theorem.sty Errors (67p) and loses 76 counter warnings. Word losses are generated text
@@ -1405,6 +1406,31 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   adjustbox's load, where pdflatex reads tc-pdftex.def and no pgf. 67u's adjustbox_sty.rs reads the file with `|` other
   (program.sty's active `|` broke pgf: 2202.10115, 2507.09618), a workaround; the root is the driver name graphics
   leaves empty.
+- **67ps** (the integrated 67p + 67s review, agent_reports/2026-10-15_67ps_integrated_review.md, NO-SHIP finding 1 and
+  the borrowed-definitions rule): (1) the borrow (`require_package_borrowed`, theorem.sty's and ntheorem.sty's bindings)
+  sets no proof lock — 67s had set it during the borrow, so a theorem.sty-based class's `\def\proof` was refused — and
+  what it defines carries `DefinitionOrigin::Borrowed`, which yields to any later definition, the document's or any
+  file's (`is_definable_latex`; `fallback_meanings` now records the origin), as in LaTeX, where amsthm is not loaded;
+  the files it loaded (amsgen) are unloaded with it, `mark_unloaded` also clears `_raw_loaded` and `\opt@<file>`, and
+  amsthm's real load after a borrow keeps a proof put in place meanwhile and only provides its old-version font commands
+  (KNOWN_PERL_ERRORS #686). (2) Under a real amsthm the proof lock holds only against a copy of amsthm's interface (an
+  optional argument with a non-empty default first, `state::files_lock_holds`/`takes_optional_first`), titles the kept
+  proof from that default (`record_redefined_default`: thuthesis's `\thu@proof@name`), lets a redefinition with its own
+  head through (head text and end mark kept), and lapses once the protected `\@proof` is no longer in force (0705.0545:
+  the document's `\let\proof\undefined`, then nccthm's `\newcommand*{\proof}[1][]`: 1 Error → 0); apxproof needs no lift
+  of the lock any more (OXIDIZED_DESIGN #596). Repros package-bindings/{theorem_borrowed_proof_yields_to_a_class_def,
+  theorem_borrowed_proof_yields_to_a_package_newenvironment, amsthm_proof_lock_lets_a_hardcoded_head_through,
+  amsthm_proof_copy_titled_by_its_default, amsthm_proof_lock_lapses_after_the_document_undefines_it,
+  theorem_borrow_leaves_amsgen_unloaded, amsthm_reload_keeps_theorem_font_commands} RED → GREEN; guards
+  `perfect_kernel_batch67ps` (13), with 67s/67p guards tightened. A/B vs 67o1 (613 papers: the 67s and 67p sets +
+  0705.0545): Errors 1838 → 1813, Fatals 5 → 5, 0 papers gain an Error or Fatal; vs the parent a03442572a 12 differ: 9
+  papers where a theorem.sty/ntheorem document or class defines its own proof now print it as pdflatex does, without
+  `<proof>` (2005.04068 22 Errors → 0, 2201.05175, math0505657 "Preuve.", 1911.07591 fundam.cls:169, math-ph0505075,
+  math0505275, 0807.2196, 1802.03066, 2505.07298), 2 take the document's own QED mark, 1 nondeterministic (2210.15126).
+  Under the raw-class lever 1507.02955's 19 proofs are ccproof.sty's theorems with their □, headed "Proof 1" where
+  pdflatex prints "Proof." (the class style's `\@begintheorem`, KNOWN_PERL_ERRORS #686); the smfart/ijmart/smfbook
+  witnesses are unchanged. Binding nets amsthm, tabls, amsart, amsbook, llncs, svjour3, elsarticle, siamart: 0 worse
+  than 67o1 or 67s1.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

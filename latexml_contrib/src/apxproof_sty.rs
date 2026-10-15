@@ -25,15 +25,14 @@ use latexml_package::prelude::*;
 //
 // apxproof builds on amsthm's proof rather than replacing it: it keeps the binding as `\axp@oldproof`
 // (apxproof.sty:136-137) and its `\def\proof` (:393-417) sends the proof of a `theoremrep` to the appendix file, which
-// reads it back as `\begin{axp@oldproof}`, and every other proof to `\axp@oldproof`. So amsthm's lock against the
-// class and package files (amsthm_sty.rs, OXIDIZED_DESIGN_DIVERGENCES #596) yields while the raw file loads — also to
-// its `\let\proof\apx@oldamsthmproof` (:46), which puts back a proof defined before amsthm — and holds again after
-// it: without the yield, 2502.18805's 53 proofs stayed in the body instead of the appendix, after its restated
-// theorems, where pdflatex prints them. Guard `perfect_kernel_batch67s::apxproof_wraps_the_locked_proof`.
+// reads it back as `\begin{axp@oldproof}`, and every other proof to `\axp@oldproof`. amsthm's lock against the class
+// and package files (amsthm_sty.rs, OXIDIZED_DESIGN_DIVERGENCES #596) holds only against a copy of its interface (a
+// redefinition taking an optional argument with a default first, state.rs `files_lock_holds`), so these parameterless
+// wrappers go through and no lift is needed; its `\let\proof\apx@oldamsthmproof` (:46), which puts back a proof defined
+// before amsthm, is refused only when that proof was a file's copy (the binding's own, borrowed by theorem.sty's
+// binding, goes through). Without the wrappers 2502.18805's 53 proofs stayed in the body instead of the appendix, after their
+// restated theorems, where pdflatex prints them. Guards `perfect_kernel_batch67s::apxproof_wraps_the_locked_proof`,
+// `perfect_kernel_batch67ps::theorem_then_apxproof_wraps_the_proof`.
 LoadDefinitions!({
-  AssignValue!("\\proof:locked@files" => false, Some(Scope::Global));
-  AssignValue!("\\endproof:locked@files" => false, Some(Scope::Global));
   InputDefinitions!("apxproof", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  AssignValue!("\\proof:locked@files" => true, Some(Scope::Global));
-  AssignValue!("\\endproof:locked@files" => true, Some(Scope::Global));
 });

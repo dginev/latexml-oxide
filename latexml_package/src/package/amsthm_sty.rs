@@ -1,6 +1,14 @@
 use crate::{engine::latex_constructs::*, prelude::*};
 #[rustfmt::skip]
 LoadDefinitions!({
+  // A borrow (`require_package_borrowed`: theorem_sty.rs, ntheorem_sty.rs) loads amsthm where LaTeX has none, so it
+  // sets no lock on the proof; the real load after it (`amsthm.sty:borrowed`) keeps a proof a file or the document
+  // has put in place of the borrowed one, as amsthm.sty:431's `\newenvironment{proof}` fails over it in LaTeX.
+  let borrowing = lookup_bool("amsthm.sty:borrowing");
+  let keep_their_proof = !borrowing
+    && lookup_bool("amsthm.sty:borrowed")
+    && is_defined("\\proof")
+    && !x_equals(&T_CS!("\\proof"), &T_CS!("\\@proof"));
   RequirePackage!("amsgen");
   // amsthm.sty:77 `\renewcommand{\newtheorem}`: the binding's theorem definer is whatever `\newtheorem` is in
   // force when amsthm FIRST loads (the kernel's, unless a binding loaded before it had replaced it), saved as
@@ -230,8 +238,14 @@ LoadDefinitions!({
       // "x.", not "x..". The end-char is taken from the RAW content token's
       // toString (matches Perl `$content[-1]->toString`), so e.g. `\proofname`
       // (ends in 'e') still gets a period; an empty arg also gets one.
+      // Without one, the default of the optional argument a file's refused copy of the proof takes (thuthesis.cls:4052
+      // `[1][\thu@proof@name]`; `record_redefined_default`), else amsthm.sty:431's `\proofname`.
       let content = if let Some(Some(arg)) = args.first() {
         arg.revert()?.unlist()
+      } else if let Some(Stored::Tokens(default)) = lookup_value("\\proof:redefined@default")
+        && !default.is_empty()
+      {
+        default.unlist()
       } else {
         vec![T_CS!("\\proofname")]
       };
@@ -281,36 +295,59 @@ LoadDefinitions!({
   },
   after_digest => { proof_hooks(&["postfoothook"]) });
 
-  Let!("\\proof",    "\\@proof");
-  Let!("\\endproof", "\\end@proof");
-  // Also need to handle \begin{proof} / \end{proof}
-  Let!("\\begin{proof}", "\\begin{@proof}");
-  Let!("\\end{proof}",   "\\end{@proof}");
+  if keep_their_proof {
+    Info!("ignore", "proof", "Ignoring redefinition (\\newenvironment) of Environment \"proof\"");
+  } else {
+    Let!("\\proof",    "\\@proof");
+    Let!("\\endproof", "\\end@proof");
+    // Also need to handle \begin{proof} / \end{proof}
+    Let!("\\begin{proof}", "\\begin{@proof}");
+    Let!("\\end{proof}",   "\\end{@proof}");
+  }
   // Locked against the class and package files (`:locked@files`, state.rs `name_carries_lock`), as the kernel's
-  // `\endabstract` (sect05.rs) and `\minipage` (sect12.rs) are: a class's `\renewenvironment{proof}` over a
-  // `\trivlist` (smfart.cls:1194, smfbook.cls:1281, ijmart.cls:336) replaced the binding's `<ltx:proof>` with an
-  // itemize (86 papers under the raw-class lever: smfart 72 — 1711.11547, 1902.02049, 2108.12000 — ijmart 11,
-  // smfbook 3). The class's own `\proofname` still titles it ("Démonstration", smfart.cls:1288). The document's own
-  // `\newenvironment{proof}`/`\renewenvironment{proof}` stays its own, as in LaTeX and Perl (paper.cls papers).
+  // `\endabstract` (sect05.rs) and `\minipage` (sect12.rs) are, but only against a COPY of amsthm's interface — a
+  // redefinition taking an optional argument with a default first (`:locked@copies`, naming the protected `\@proof`;
+  // state.rs `files_lock_holds`, `takes_optional_first`), and only while that proof is in force (0705.0545): a class's
+  // `\renewenvironment{proof}[1][\proofname]` over a `\trivlist` (smfart.cls:1194, smfbook.cls:1281, ijmart.cls:336)
+  // replaced the binding's `<ltx:proof>` with an itemize (86 papers under the raw-class lever: smfart 72 — 1711.11547,
+  // 1902.02049, 2108.12000 — ijmart 11, smfbook 3; a paper's own class: jloganal.cls 1202.3460, theoretics.cls
+  // 1609.05867, gtart.cls math0203159/math0302254/math0412216, GT.cls 2503.05183). The copy's own default titles the
+  // proof (`\proof:redefined@default`: the class's `\proofname`, "Démonstration", smfart.cls:1288). A redefinition with
+  // a head of its own (fascicules.sty:142 "Démonstration:", NotesTeX.sty:124, beautybook.cls:1211) goes through, with
+  // the head text and end mark it wrote. The document's own `\newenvironment{proof}`/`\renewenvironment{proof}` stays
+  // its own, as in LaTeX and Perl (paper.cls papers). Not set by a borrow, where LaTeX has no amsthm proof to keep
+  // (oldproof-style classes that `\def\proof` after `\RequirePackage{theorem}`), nor over a proof the real load keeps.
   // Perl locks nothing here (amsthm.sty.ltxml:146-192), KNOWN_PERL_ERRORS #690; OXIDIZED_DESIGN_DIVERGENCES #596.
-  // A package whose own binding has already set the lock (apxproof_sty.rs, whose raw file loads amsthm and then wraps
-  // its proof) keeps that setting. Guards `perfect_kernel_batch67s::*proof*`.
-  if lookup_value("\\proof:locked@files").is_none() {
+  // apxproof (apxproof_sty.rs) wraps the locked proof with parameterless definitions of its own, which go through.
+  // Guards `perfect_kernel_batch67s::*proof*`, `perfect_kernel_batch67ps::*`.
+  if !borrowing && !keep_their_proof {
     AssignValue!("\\proof:locked@files" => true, Some(Scope::Global));
     AssignValue!("\\endproof:locked@files" => true, Some(Scope::Global));
+    AssignValue!("\\proof:locked@copies" => Stored::Token(T_CS!("\\@proof")), Some(Scope::Global));
   }
 
-  // from older versions of amsthm.sty
-  DefPrimitive!("\\theorembodyfont{}", sub[(font)] {
-    assign_register("\\thm@bodyfont",
-      RegisterValue::Tokens(font), None, vec![])?;
-  });
-  DefPrimitive!("\\theoremheaderfont{}", sub[(font)] {
-    assign_register("\\thm@headfont",
-      RegisterValue::Tokens(font), None, vec![])?;
-  });
-  DefRegister!("\\theorempreskipamount"  => Glue::new(0));
-  DefRegister!("\\theorempostskipamount" => Glue::new(0));
+  // from older versions of amsthm.sty. amsthm.sty itself defines none of them, so they are provided only: after
+  // theorem.sty (whose binding borrowed amsthm), the real load keeps theorem.sty's own, which set theorem.sty's
+  // `\theorem@bodyfont`/`\theorem@headerfont` and leave amsthm's theorems alone (pdflatex: the head CMBX10, the body
+  // CMTI10, whatever `\theorembodyfont{\upshape}\theoremheaderfont{\scshape}` say).
+  if !is_defined("\\theorembodyfont") {
+    DefPrimitive!("\\theorembodyfont{}", sub[(font)] {
+      assign_register("\\thm@bodyfont",
+        RegisterValue::Tokens(font), None, vec![])?;
+    });
+  }
+  if !is_defined("\\theoremheaderfont") {
+    DefPrimitive!("\\theoremheaderfont{}", sub[(font)] {
+      assign_register("\\thm@headfont",
+        RegisterValue::Tokens(font), None, vec![])?;
+    });
+  }
+  if !is_defined("\\theorempreskipamount") {
+    DefRegister!("\\theorempreskipamount"  => Glue::new(0));
+  }
+  if !is_defined("\\theorempostskipamount") {
+    DefRegister!("\\theorempostskipamount" => Glue::new(0));
+  }
 });
 
 /// The thm-patch `[proof]` hooks `\thmt@proof@<point>` named by `points`, digested in order, when thmtools wrapped

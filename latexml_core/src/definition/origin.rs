@@ -41,6 +41,11 @@ pub enum DefinitionOrigin {
   /// `\equalcontrib`, set inside its `\@maketitle`): yields as `Fallback` does, and to a raw class's or package's own
   /// `\newcommand` of the name too, since the real file does define it (copernicus.cls:1673 `\equalcontrib[1]`).
   Stub,
+  /// What a binding borrows from a package the real one does not load (`binding::content::require_package_borrowed`:
+  /// theorem.sty's and ntheorem.sty's bindings borrow amsthm's): in LaTeX the names do not exist, so they yield as
+  /// `Fallback` does, and to every raw file's own definition too — TeX Live's or the author's (cc.cls's ccproof.sty:56
+  /// `\newenvironment{proof}` after theorem.sty; 1507.02955).
+  Borrowed,
   /// A raw format file read as definitions (latex.ltx, plain.tex, expl3-code.tex).
   Format,
   /// A raw `.sty`/`.cls`/`.def`/`.tex` the document loaded as definitions.

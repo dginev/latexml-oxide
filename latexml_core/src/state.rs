@@ -378,9 +378,10 @@ pub struct State {
   pub binding_names:           Vec<&'static [(&'static str, &'static str)]>,
   /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
   pub label_mapping_hook:      Option<LabelMappingHook>,
-  /// The names whose current meaning a fallback class installed (`DefinitionOrigin::Fallback`, OmniBus), until
-  /// something else assigns them: a document's `\newcommand` may define them (`is_fallback_meaning`).
-  pub fallback_meanings:       rustc_hash::FxHashSet<SymStr>,
+  /// The names whose current meaning a fallback class installed (`DefinitionOrigin::Fallback`, OmniBus), a kernel stub
+  /// or a borrow, with that origin, until something else assigns them: a document's `\newcommand` may define them
+  /// (`is_fallback_meaning`, `fallback_meaning_origin`).
+  pub fallback_meanings: rustc_hash::FxHashMap<SymStr, crate::definition::origin::DefinitionOrigin>,
   /// The names assigned while a provide-only load lives ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)):
   /// the load's own definitions, which it may define again (`provide_only_declines`).
   pub provide_only_assigned:   rustc_hash::FxHashSet<SymStr>,
@@ -388,6 +389,10 @@ pub struct State {
   /// before were declined), so the guard unmarks them when it ends and a later request loads them whole
   /// (`end_provide_only`).
   pub provide_only_loaded:     Vec<String>,
+  /// The files first marked loaded while a binding borrows a package (`DefinitionOrigin::Borrowed`,
+  /// `binding::content::require_package_borrowed`): the borrowed package and what it loads (amsthm's amsgen), which the
+  /// borrow unmarks again, as LaTeX never loaded them.
+  pub borrowed_loaded:         Vec<String>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
 }
@@ -457,9 +462,10 @@ impl Default for State {
       extra_bindings_dispatch: None,
       binding_names:           Vec::new(),
       label_mapping_hook:      None,
-      fallback_meanings:       rustc_hash::FxHashSet::default(),
+      fallback_meanings:       rustc_hash::FxHashMap::default(),
       provide_only_assigned:   rustc_hash::FxHashSet::default(),
       provide_only_loaded:     Vec::new(),
+      borrowed_loaded:         Vec::new(),
       journal:                 None,
     }
   }
@@ -998,34 +1004,45 @@ impl State {
     value: Stored,
     mut scope_opt: Option<Scope>,
   ) {
-    // (a meaning a fallback class or a kernel stub installs, until anything else assigns the name: `fallback_meanings`)
+    // (a meaning a fallback class, a kernel stub or a borrowed package installs, until anything else assigns the name:
+    // `fallback_meanings`)
     if table_name == TableName::Meaning {
+      let origin = crate::definition::origin::current_origin();
       if matches!(
-        crate::definition::origin::current_origin(),
+        origin,
         crate::definition::origin::DefinitionOrigin::Fallback
           | crate::definition::origin::DefinitionOrigin::Stub
+          | crate::definition::origin::DefinitionOrigin::Borrowed
       ) {
-        self.fallback_meanings.insert(key);
+        self.fallback_meanings.insert(key, origin);
       } else if !self.fallback_meanings.is_empty() {
         self.fallback_meanings.remove(&key);
       }
       if crate::definition::origin::provide_only() {
         self.provide_only_assigned.insert(key);
       }
-    } else if table_name == TableName::Value
-      && crate::definition::origin::provide_only()
-      && matches!(value, Stored::Bool(true))
-    {
-      // (`<file>_loaded`, `load_ltxml`: a file loaded under the guard)
-      arena::with(key, |name| {
-        if let Some(file) = name.strip_suffix("_loaded")
-          && !file.ends_with(".ltxml")
-          && !file.ends_with("_raw")
-          && !self.provide_only_loaded.iter().any(|f| f == file)
-        {
-          self.provide_only_loaded.push(file.to_string());
-        }
-      });
+    } else if table_name == TableName::Value && matches!(value, Stored::Bool(true)) {
+      // (`<file>_loaded`, `load_ltxml`: a file loaded under the provide-only guard, or by a borrow)
+      let provide_only = crate::definition::origin::provide_only();
+      let borrowed = crate::definition::origin::current_origin()
+        == crate::definition::origin::DefinitionOrigin::Borrowed;
+      if provide_only || borrowed {
+        arena::with(key, |name| {
+          if let Some(file) = name.strip_suffix("_loaded")
+            && !file.ends_with(".ltxml")
+            && !file.ends_with("_raw")
+          {
+            for (on, list) in [
+              (provide_only, &mut self.provide_only_loaded),
+              (borrowed, &mut self.borrowed_loaded),
+            ] {
+              if on && !list.iter().any(|f| f == file) {
+                list.push(file.to_string());
+              }
+            }
+          }
+        });
+      }
     }
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized.
@@ -1393,7 +1410,14 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   {
     assign_value_sym(stub_sym, false, Some(Scope::Global));
   }
-  if is_definition_locked(&token) {
+  // (read against this redefinition's own interface: a lock that holds only against copies, `files_lock_holds`)
+  let cs = token.with_cs_name(|cs| cs.to_string());
+  let locked =
+    !state_is_unlocked() && lock_holds_against(&cs, || takes_optional_first(&definition));
+  if !locked {
+    drop_copies_lock_aside(&cs);
+  }
+  if locked {
     restore_cleared_binding(&token);
     // A LOCKED BINDING OWNS ITS CALLS. The lock keeps the semantic markup of a call (Perl acb3b27e: commands "that
     // lose semantics when redefined"), and a use without an argument cannot produce that markup: the binding would
@@ -1507,6 +1531,16 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
         Stored::Number(Number::new(nargs as i64)),
         Some(Scope::Global),
       );
+      // …and the default of its optional argument, if it takes one first (`[1][\thu@proof@name]`), which the
+      // binding may title its own use with (amsthm's proof, amsthm_sty.rs).
+      if let Some(default) = defn
+        .get_parameters()
+        .and_then(|p| p.get_parameters().into_iter().next())
+        .filter(|param| param.optional)
+        .and_then(|param| param.extra.first().cloned())
+      {
+        record_redefined_default(&token, default);
+      }
     }
     if let Some((defn, binding)) = call_owner {
       // The binding, kept on the first override (a later one, a loop's next iteration, overrides an override).
@@ -1717,19 +1751,19 @@ pub fn install_undefined_error_constructor(token: Token, content: &str) {
   );
 }
 
-/// Does a provide-only load ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)) decline this
-/// definition of `token`? While the guard lives, a binding's definition (`DefinitionOrigin::Binding` or `Fallback`:
-/// OmniBus and every binding it requires, inst_support's `\author[]{}` and epsf's `\epsfbox` among them) is declined when
-/// the name was defined before the guard: defined now in the `\providecommand` sense (latex.ltx `\@ifundefined`: a
-/// meaning other than `\relax`, `binding::def::dialect::is_defined_token`), not a fallback guess (`is_fallback_meaning`),
-/// and not assigned since the guard began (`provide_only_assigned`: the load's own names, which it may define again —
-/// OmniBus's `\keywords{}` before its `\keywords` that also opens `{keywords}`). An environment `\begin{X}`/`\end{X}`
-/// counts as defined when `\X` is (latex.ltx `\begin` runs `\X`), and `\end{X}` also when `\endX` is. The binding
-/// definers (`def_macro`, `def_primitive`, `def_constructor`, `def_register`, `def_conditional`, `def_environment`,
-/// `def_math`) and `Let!` consult it before they assign anything; TeX's own `\def`/`\let` do not, so TeX code run
-/// during the load keeps its usual effect (a hook appended to, a scratch macro), nor does the loader's bookkeeping, made
-/// at its caller's origin. A macro marked `extends` (it wraps and delegates to the name's current meaning) is not
-/// declined.
+/// Does a provide-only load ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)) decline this definition
+/// of `token`? While the guard lives, a binding's definition (`DefinitionOrigin::Binding`, `Fallback` or `Borrowed`:
+/// OmniBus and every binding it requires, inst_support's `\author[]{}` and epsf's `\epsfbox` among them) is declined
+/// when the name was defined before the guard: defined now in the `\providecommand` sense (latex.ltx `\@ifundefined`: a
+/// meaning other than `\relax`, `binding::def::dialect::is_defined_token`), not a fallback guess
+/// (`is_fallback_meaning`), and not assigned since the guard began (`provide_only_assigned`: the load's own names,
+/// which it may define again — OmniBus's `\keywords{}` before its `\keywords` that also opens `{keywords}`). An
+/// environment `\begin{X}`/`\end{X}` counts as defined when `\X` is (latex.ltx `\begin` runs `\X`), and `\end{X}` also
+/// when `\endX` is. The binding definers (`def_macro`, `def_primitive`, `def_constructor`, `def_register`,
+/// `def_conditional`, `def_environment`, `def_math`) and `Let!` consult it before they assign anything; TeX's own
+/// `\def`/`\let` do not, so TeX code run during the load keeps its usual effect (a hook appended to, a scratch macro),
+/// nor does the loader's bookkeeping, made at its caller's origin. A macro marked `extends` (it wraps and delegates to
+/// the name's current meaning) is not declined.
 pub fn provide_only_declines(token: &Token) -> bool {
   use crate::{
     binding::def::dialect::is_defined_token,
@@ -1738,7 +1772,7 @@ pub fn provide_only_declines(token: &Token) -> bool {
   if !provide_only()
     || !matches!(
       current_origin(),
-      DefinitionOrigin::Binding | DefinitionOrigin::Fallback
+      DefinitionOrigin::Binding | DefinitionOrigin::Fallback | DefinitionOrigin::Borrowed
     )
   {
     return false;
@@ -1788,29 +1822,59 @@ pub fn end_provide_only() {
   }
 }
 
-/// Mark `file` (`amsthm.sty`) as not loaded, globally: its `<file>_loaded`, the `.ltxml_loaded` twin and
-/// `_load_attempted` are cleared and the kernel's `\ver@<file>` is undefined, so `\@ifpackageloaded` is false and a
-/// later `\usepackage`/`\RequirePackage` loads it again. The definitions it made stay in force. Used when a load
-/// provided only part of a file ([`end_provide_only`]) and for a binding's borrowed package
+/// Mark `file` (`amsthm.sty`) as not loaded, globally: its `<file>_loaded`, the `.ltxml_loaded` twin, the raw load's
+/// `_raw_loaded` and `_load_attempted` are cleared and the kernel's `\ver@<file>` and `\opt@<file>` are undefined, so
+/// `\@ifpackageloaded` is false, no option clash is checked, and a later `\usepackage`/`\RequirePackage` loads it
+/// again — the binding and the raw file it reads. The definitions it made stay in force. Used when a load provided
+/// only part of a file ([`end_provide_only`]) and for a binding's borrowed package and the files it loaded
 /// (`binding::content::require_package_borrowed`).
 pub fn mark_unloaded(file: &str) {
-  for flag in ["_loaded", ".ltxml_loaded", "_load_attempted"] {
+  for flag in ["_loaded", ".ltxml_loaded", "_raw_loaded", "_load_attempted"] {
     if lookup_bool(&s!("{file}{flag}")) {
       assign_value(&s!("{file}{flag}"), false, Some(Scope::Global));
     }
   }
-  assign_meaning(
-    &T_CS!(s!("\\ver@{file}")),
-    Stored::None,
-    Some(Scope::Global),
-  );
+  for kernel in ["ver", "opt"] {
+    assign_meaning(
+      &T_CS!(s!("\\{kernel}@{file}")),
+      Stored::None,
+      Some(Scope::Global),
+    );
+  }
 }
 
-/// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`) or a kernel stub
-/// (`DefinitionOrigin::Stub`), which a document's own `\newcommand` may replace?
+/// Begin a borrow (`binding::content::require_package_borrowed`): no file loaded by it yet. Returns the list of an
+/// enclosing borrow, which [`end_borrow`] puts back.
+pub fn begin_borrow() -> Vec<String> { std::mem::take(&mut state_mut!().borrowed_loaded) }
+
+/// End a borrow: the files first marked loaded during it (`borrowed_loaded`) are marked unloaded ([`mark_unloaded`]),
+/// and the enclosing borrow's list is put back.
+pub fn end_borrow(outer: Vec<String>) {
+  let files = std::mem::replace(&mut state_mut!().borrowed_loaded, outer);
+  for file in files {
+    mark_unloaded(&file);
+  }
+}
+
+/// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`), a kernel stub
+/// (`DefinitionOrigin::Stub`) or a borrowed package's (`DefinitionOrigin::Borrowed`), which a document's own
+/// `\newcommand` may replace?
 pub fn is_fallback_meaning(token: &Token) -> bool {
   let state = state!();
-  !state.fallback_meanings.is_empty() && state.fallback_meanings.contains(&meaning_key(token))
+  !state.fallback_meanings.is_empty() && state.fallback_meanings.contains_key(&meaning_key(token))
+}
+
+/// The origin of `token`'s current meaning when it is a fallback guess, a kernel stub or a borrowed package's
+/// ([`is_fallback_meaning`]): `Fallback`, `Stub` or `Borrowed`, whatever kind of definition it is (only macros record
+/// their own origin, `Definition::get_origin`; amsthm's proof is a constructor).
+pub fn fallback_meaning_origin(
+  token: &Token,
+) -> Option<crate::definition::origin::DefinitionOrigin> {
+  let state = state!();
+  if state.fallback_meanings.is_empty() {
+    return None;
+  }
+  state.fallback_meanings.get(&meaning_key(token)).copied()
 }
 
 // SAFETY
@@ -3230,7 +3294,12 @@ pub fn is_name_locked(cs: &str) -> bool { !state_is_unlocked() && name_carries_l
 /// unlocked (as Perl runs before/after-digest code, Primitive.pm:44/:52) still leaves the locked environment alone
 /// (wiley2sp's w2sp-pss.clo:444 in `\AtEndOfClass`: 100 of run 336's PushbackLimit papers, 0710.1676, 0809.3379;
 /// ptptex: 0706.0316).
-pub fn name_carries_lock(cs: &str) -> bool {
+pub fn name_carries_lock(cs: &str) -> bool { lock_holds_against(cs, || true) }
+
+/// [`name_carries_lock`] for a known redefinition: `copies_interface` tells whether it takes an optional argument first
+/// with a default ([`takes_optional_first`]), which a lock against the files that holds only against copies of the
+/// binding's interface ([`files_lock_holds`]) reads.
+pub fn lock_holds_against(cs: &str, copies_interface: impl FnOnce() -> bool) -> bool {
   // Probe-only: if "{cs}:locked" was never interned it cannot be bound, so
   // skip both the intern (which permanently grew the arena by one ":locked"
   // twin per defined cs) and the table lookup (2026-08-23 audit R6).
@@ -3238,7 +3307,101 @@ pub fn name_carries_lock(cs: &str) -> bool {
   locked(s!("{cs}:locked"))
     || (crate::definition::origin::current_origin()
       != crate::definition::origin::DefinitionOrigin::Document
-      && locked(s!("{cs}:locked@files")))
+      && locked(s!("{cs}:locked@files"))
+      && files_lock_holds(cs, copies_interface))
+}
+
+/// Whether a lock against the class and package files on `cs` holds against this redefinition. Most such locks hold
+/// against every one. One that holds only against a COPY of the binding's interface (`"{cs}:locked@copies"`: amsthm's
+/// proof, amsthm_sty.rs) holds against a redefinition taking an optional argument with a default first
+/// ([`takes_optional_first`]) — amsthm.sty:431's own
+/// `{proof}[1][\proofname]`, which smfart.cls:1194, ijmart.cls:336 or thuthesis.cls:4052 re-implement over a
+/// `\trivlist` — and lets one with a head of its own through (fascicules.sty:142 `{\textbf{D\'emonstration:} \par}`,
+/// NotesTeX.sty:124, a paper's own `\renewenvironment{proof}{…Beweisskizze:…}{…$\blacksquare$}`), whose head text
+/// and end mark the binding would replace. The environment's end half (`\end<name>` of a qualified `\<name>`)
+/// follows its begin half: locked while that is still the binding's (not cleared, and LaTeXML's own,
+/// `DefinitionOrigin::is_latexml_owned`). OXIDIZED_DESIGN_DIVERGENCES #596.
+pub fn files_lock_holds(cs: &str, copies_interface: impl FnOnce() -> bool) -> bool {
+  // It keeps the binding's own meaning only while that is in force (or kept aside by a file's clearing `\let`,
+  // [`let_i`]): once the document, or a definition the lock let through, has replaced or undefined the name, the
+  // lock has lapsed and later definitions go through as in LaTeX (0705.0545: amsart, the document's
+  // `\let\proof\undefined`, then the author's nccthm.sty:173 `\newcommand*{\proof}[1][]{…}`). The protected
+  // meaning is the one the lock names (`\proof:locked@copies` = `\@proof`), not any binding's: llncs's proof that
+  // apxproof.sty:46 puts back is not amsthm's (2311.01302).
+  if let Some(name) = cs.strip_prefix("\\end")
+    && !name.is_empty()
+  {
+    let begin = s!("\\{name}");
+    if let Some(protected) = copies_lock(&begin) {
+      return copies_lock_in_force(&begin, &protected) || copies_lock_kept_aside(&begin);
+    }
+  }
+  if let Some(protected) = copies_lock(cs) {
+    if !copies_lock_in_force(cs, &protected) && !copies_lock_kept_aside(cs) {
+      return false;
+    }
+    return copies_interface();
+  }
+  true
+}
+
+/// The meaning a lock that holds only against copies protects (`"{cs}:locked@copies"`, [`files_lock_holds`]).
+pub fn copies_lock(cs: &str) -> Option<Token> {
+  arena::get(s!("{cs}:locked@copies"))?;
+  match lookup_value(&s!("{cs}:locked@copies")) {
+    Some(Stored::Token(token)) => Some(token),
+    _ => None,
+  }
+}
+
+/// Whether `cs` still has the meaning its copies lock protects.
+fn copies_lock_in_force(cs: &str, protected: &Token) -> bool { x_equals(&T_CS!(cs), protected) }
+
+/// Whether a file's clearing `\let` has put the protected meaning of `cs` aside (`"{cs}:locked@cleared"`, [`let_i`]).
+fn copies_lock_kept_aside(cs: &str) -> bool {
+  lookup_value(&s!("{cs}:locked@cleared")).is_some_and(|b| !matches!(b, Stored::None))
+}
+
+/// A definition the copies lock on `cs` let through replaces the protected meaning for good: nothing kept aside is
+/// put back, and the end half follows (`\endproof` after a file's own `\proof`).
+fn drop_copies_lock_aside(cs: &str) {
+  if copies_lock(cs).is_some() && copies_lock_kept_aside(cs) {
+    assign_value(
+      &s!("{cs}:locked@cleared"),
+      Stored::None,
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// Record the default of the optional argument a refused redefinition of `token` takes first, as
+/// `"{cs}:redefined@default"` (`[1][\proofname]`), for the locked binding to title its own use with.
+pub fn record_redefined_default(token: &Token, default: Tokens) {
+  let key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined@default")));
+  state_mut!().assign_internal(
+    TableName::Value,
+    key,
+    Stored::Tokens(default),
+    Some(Scope::Global),
+  );
+}
+
+/// Whether a definition takes an optional argument first whose default is not empty — `[1][\proofname]`
+/// (amsthm.sty:431), `[1][\thu@proof@name]` (thuthesis.cls:4052): the shape of a copy of amsthm's proof, whose
+/// optional argument is the head's text and whose default the name, which a lock that holds only against copies reads
+/// ([`files_lock_holds`]). An empty default (`[1][]`) adds to a head of the file's own (thmbox.sty:214
+/// `\proofname\ #1`) or makes a command, not a proof environment (nccthm.sty:173 `\newcommand*{\proof}[1][]`).
+pub fn takes_optional_first(definition: &Stored) -> bool {
+  let params = match definition {
+    Stored::Expandable(defn) => defn.get_parameters(),
+    Stored::Constructor(defn) => defn.get_parameters(),
+    Stored::Primitive(defn) => defn.get_parameters(),
+    Stored::MathPrimitive(defn) => defn.get_parameters(),
+    _ => None,
+  };
+  params
+    .and_then(|params| params.get_parameters().into_iter().next())
+    .is_some_and(|param| param.optional && param.extra.first().is_some_and(|d| !d.is_empty()))
 }
 
 /// Whether the locked `binding` of `cs` owns its calls, so that the document's own definition of `cs` takes its other
@@ -3940,12 +4103,16 @@ fn hoist_top_frame_delta(table: TableName, pre_snapshot: &[SymStr], conditionals
       // LaTeX.pool hoist had made a pool convenience ours and refused the
       // document's `\newcommand`). Guard:
       // `reentrancy_tests::package_load_hoist_keeps_fallback_standing`.
-      let fallback = table == TableName::Meaning && state!().fallback_meanings.contains(&key);
+      let fallback = if table == TableName::Meaning {
+        state!().fallback_meanings.get(&key).copied()
+      } else {
+        None
+      };
       let mut state = state_mut!();
       state.assign_internal(table, key, value, Some(Scope::Global));
       if table == TableName::Meaning {
-        if fallback {
-          state.fallback_meanings.insert(key);
+        if let Some(origin) = fallback {
+          state.fallback_meanings.insert(key, origin);
         } else {
           state.fallback_meanings.remove(&key);
         }
@@ -4549,22 +4716,37 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // `\csname` has made it `\relax` on the way. Read at the origins `install_definition` reads the lock at (every one
   // but the document's, [`name_carries_lock`]). OXIDIZED_DESIGN #569; guards `perfect_kernel_batch66b::file_let_*`,
   // `…::refused_*_restores_the_binding`.
+  // A lock that holds only against copies of the binding's interface ([`files_lock_holds`]) judges the `\let` by the
+  // meaning it copies: one taking an optional argument with a default first is refused as above; any other goes
+  // through, the binding kept aside as for a clearing `\let`, so that a copy defined next and refused puts it back
+  // (GT.cls:1469-1494 `\let\proof\relax` … `\newenvironment{proof}[1][\proofname]`; 2503.05183).
   if crate::definition::origin::current_origin()
     != crate::definition::origin::DefinitionOrigin::Document
     && !state_is_unlocked()
     && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
     && token1.with_cs_name(|cs| arena::get(s!("{cs}:locked@files")).is_some_and(lookup_bool_sym))
   {
-    if !matches!(meaning, Stored::None) {
+    let cs = token1.with_cs_name(|cs| cs.to_string());
+    let holds = files_lock_holds(&cs, || takes_optional_first(&meaning));
+    if holds && !matches!(meaning, Stored::None) {
       restore_cleared_binding(token1);
       after_assignment();
       return;
     }
-    if !is_cleared_meaning(token1)
-      && let Some(binding) = lookup_meaning(token1)
-    {
-      let cleared_key = token1.with_cs_name(|cs| s!("{cs}:locked@cleared"));
-      assign_value(&cleared_key, binding, Some(Scope::Global));
+    let protected = copies_lock(&cs);
+    let clearing = matches!(meaning, Stored::None) || x_equals(token2, &crate::T_CS!("\\relax"));
+    if clearing {
+      if !is_cleared_meaning(token1)
+        && protected
+          .as_ref()
+          .is_none_or(|protected| copies_lock_in_force(&cs, protected))
+        && let Some(binding) = lookup_meaning(token1)
+      {
+        let cleared_key = token1.with_cs_name(|cs| s!("{cs}:locked@cleared"));
+        assign_value(&cleared_key, binding, Some(Scope::Global));
+      }
+    } else {
+      drop_copies_lock_aside(&cs);
     }
   }
   // Deep-copy the robust-wrapper pair.
