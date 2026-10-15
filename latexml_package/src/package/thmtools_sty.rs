@@ -40,6 +40,20 @@ LoadDefinitions!({
 \expandafter\g@prependto@macro\csname thmt@#1@prefoothook\endcsname}
 \newcommand\addtotheorempostfoothook[1][generic]{\thmt@hookenv{#1}%
 \expandafter\g@prependto@macro\csname thmt@#1@postfoothook\endcsname}");
+  // thm-patch.sty:178-217: when amsthm's `proof` exists at this point (`\ifx\proof\endproof\else`), thm-patch wraps
+  // it too, running only the `[proof]` hooks (its generic-hook calls there are commented out): the head hooks around
+  // the head, the pre-foot hook before the end code, the post-foot hook after it. The binding's `proof` (amsthm_sty.rs
+  // `\@proof`, `\end@proof`) runs them under this flag: the head hooks after its title, inside it; the pre-foot hook
+  // before the QED mark; the post-foot hook after the proof closes. A proof defined after thmtools is not wrapped.
+  if has_meaning(&T_CS!("\\proof")) {
+    RawTeX!(r"\def\thmt@proof@preheadhook{}\def\thmt@proof@postheadhook{}
+\def\thmt@proof@prefoothook{}\def\thmt@proof@postfoothook{}");
+    AssignValue!("thmt@proof@hooks" => true, Some(Scope::Global));
+  }
+  // This binding is thm-patch: a later `\usepackage{thm-patch}` (or thm-listof's, thm-autoref's) must not read the raw
+  // file over it, whose `\newcommand\addtotheorem…hook` collide with the ones above and whose parseargs wrappers
+  // replace the native theorems.
+  AssignValue!("thm-patch.sty_loaded" => true, Some(Scope::Global));
 
   // Internal registers and macros needed by thm-restate.sty and thm-kv.sty
   // which load as raw TeX and expect these from thmtools internals.

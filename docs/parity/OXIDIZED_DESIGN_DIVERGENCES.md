@@ -17614,7 +17614,7 @@ package-bindings/amsthm_proof_kept_against_a_class_renewenvironment; guards
 `perfect_kernel_batch67s::{class_renewed_proof_keeps_the_binding, package_redefined_proof_keeps_the_binding,
 document_renewed_proof_is_honoured}`.
 
-### 597. Under sn-jnl, program.sty's programbox `\(`…`\)` stays inline maths (needs a ruling)
+### 597. Under sn-jnl, program.sty's programbox `\(`…`\)` stays inline maths
 
 The older sn-jnl.cls copies load program (sn-jnl.cls:311 of 1812.02207's copy, :621 of 1911.08756's; 106 of 148
 sampled copies), and sn_jnl_cls.rs's scan of the class now loads it, for the `\gt`/`\lt`/`\union` its papers use
@@ -17623,7 +17623,9 @@ a `{program}`, :165-173), which the papers of these copies write as inline maths
 (2112.05038 on 413 lines: "For a domain Y ⊂ Rn, there exists…"), where the raw emulation made each an `ltx_minipage`
 inline-block holding a one-item `ltx_trivlist` list (1331 in 2112.05038). sn_jnl_cls.rs puts the kernel's `\(`/`\)`
 (`\lx@begin@inline@math`, sect07.rs) back after the class's loads when program loaded; program's other definitions,
-the active `;` included, stay. Program loaded under another class keeps the programbox. The faithful alternative is
-to drop the two lines (every `\(…\)` an inline-block). Perl's scan loads no program (no binding), so its `\(` is the
-kernel's and `\gt` is undefined. Repro class-bindings/snjnl_class_copy_loads_program; guard
+the active `;` included, stay. Program loaded under another class, or by the document's own later
+`\usepackage{program}` (the test sits in the class binding, right after its scan), keeps the programbox. The faithful
+alternative was to drop the two lines (every `\(…\)` an inline-block). Approved by the main session 2026-10-15: the
+class, not the author, loads program; the authors write inline maths; content and semantics first. Perl's scan loads
+no program (no binding), so its `\(` is the kernel's and `\gt` is undefined. Repro class-bindings/snjnl_class_copy_loads_program; guard
 `perfect_kernel_batch67u::snjnl_class_copy_loads_program`.

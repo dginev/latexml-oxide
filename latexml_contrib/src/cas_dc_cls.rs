@@ -95,7 +95,9 @@ LoadDefinitions!({
   // `\JEL{<codes>}`, `\PACS{<codes>}`; :415-423 `\orcidauthor{<id>}{<name>}`, an author's ORCID, which the class
   // prints in its ORCID list (`\printorcid`): kept as the contact of the author just given; :774 `\stmAuthorSetup`, the
   // author-type keys; :2067-2068 the `\FullWidth` dimension of its wide floats. 35 cas-sc and 14 cas-dc papers of run
-  // 353 had one of them undefined (1909.01564, 2012.11920, 2108.00185 `\MSC`; 2407.03849 `\orcidauthor`).
+  // 353 had one of them undefined (1909.01564, 2012.11920, 2108.00185, 2407.03849 `\MSC`; 2104.12510, 2304.13458,
+  // 2407.18715 `\orcidauthor`, each after its own `\author`; 2106.08963 swaps the two arguments, `{Andrew S.
+  // Nencka}{0000-…}`, the author's error, so its link is orcid.org/Andrew S. Nencka).
   RawTeX!(
     r"\NewDocumentCommand\MSC{O{}m}{\par\noindent\textit{#1 MSC: }#2}
 \NewDocumentCommand\JEL{m}{\par\noindent\textit{JEL: }#1}

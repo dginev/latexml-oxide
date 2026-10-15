@@ -1336,17 +1336,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   package it loads, requires; bindgaps/g1_deps.tsv): bindings load what the real file loads, in its order and under its
   options. Class bindings (dependency, real file:line, witnesses): sn-jnl → program (sn-jnl.cls:311/621 of the older
   copies, through the class scan; 2010.12415, 2102.03176, 2104.02781; its `\(`…`\)` programbox kept the kernel's inline
-  maths under the class, OXIDIZED_DESIGN #597, for a ruling); bmvc2k → subfigure/subcaption/subfig/caption as the
+  maths under the class, OXIDIZED_DESIGN #597, approved by the main session 2026-10-15; the proof mark is the class's
+  begin-document `\opensquare` □, sn-jnl.cls:1571-1575 of 1907.11468's copy, over program's `\blacksquare` — round 2,
+  1907.11468, 2210.16458); bmvc2k → subfigure/subcaption/subfig/caption as the
   paper's copy names them (bmvc2k.cls:121; 1507.05726, 1605.07146; shipped_class.rs `SUBFIGURE_PACKAGES`,
   `require_shipped_packages`); ieeeaccess → color, spotcolor unless `jtehm` (ieeeaccess.cls:121-131; 1901.05553,
   1712.00216); agujournal2019 → xcolor, url, lineno, indentfirst, ragged2e (:91-112; 1803.00457, 1902.01137);
   WileyMSP-template → graphicx, gensymb (:5-10; 2003.01904); oup-authoring-template → multirow, url, mathrsfs
-  (:2426-2430; 2102.02669); cas-sc/cas-dc → cas-common's `\MSC`/`\JEL`/`\PACS`/`\orcidauthor`/`\stmAuthorSetup`/
-  `\FullWidth` (cas-common.sty:415-423, 774, 1599-1610, 2067; 1909.01564, 2407.03849); ws-rv9x6 → makeidx, rotating, url
+  (TL 2025's copy :2426-2430, 2102.02669's :2391-2395; 2102.02669); cas-sc/cas-dc → cas-common's `\MSC`/`\JEL`/`\PACS`/`\orcidauthor`/`\stmAuthorSetup`/
+  `\FullWidth` (cas-common.sty:415-423, 774, 1599-1610, 2067; `\MSC` 1909.01564, 2407.03849; `\orcidauthor`
+  2104.12510, 2304.13458, 2407.18715, each after its own `\author` — 2106.08963 swaps the two arguments, the author's
+  error, so its link reads orcid.org/Andrew S. Nencka); ws-rv9x6 → makeidx, rotating, url
   from the copy (ws-rv9x6.cls:1524-1528; 0706.1148); revtex4-1/4-2 → lineno under the `linenumbers` option, at the
   document's start (revtex4-1.cls:6186-6193, revtex4-2.cls:6207-6214; 1209.2541, 2003.07846; KNOWN_PERL_ERRORS #697);
   quantumarticle → the `amsfonts`/`amssymb`/`amsmath` options' packages, geometry, caption (quantumarticle.cls:155-168,
-  282-284, 1508-1512; 1802.10344, 1612.06828, 1910.03969; #698); aa → answers (verbatim's `{comment}`) when the copy
+  282-284, 1508-1512 — caption at the class's `\AtEndPreamble`, with the class's etoolbox (:27), round 2;
+  1802.10344, 1612.06828, 1910.03969; #698); aa → answers (verbatim's `{comment}`) when the copy
   loads it (aa.cls:249 of the v8 copies; 1501.03426; #699); atlasdoc → its font option's packages, newtxtext+newtxmath by
   default (atlasdoc.cls:52-54, 516-546; 2207.12246); ceurart → colortbl, dcolumn, stfloats (:88; 2212.08130); ejpecp →
   graphicx, mathtools, microtype, latexsym, dsfont unless `NODS`, geometry (ejpecp.cls:81-106; 1607.07914, 1111.6458);
@@ -1355,7 +1360,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   epsfig, graphics, ifthen, color (sigma.cls:20-28; 0902.2977). Package chains the grep attributed to the class:
   amsart/article/IEEEtran → graphics through lscape.sty:35 and psfrag.sty:35 (129 papers; 0710.2354, 0801.1195; #692),
   → color through showkeys `[color]` (showkeys.sty:51-56; 73; 1010.3777; #692), → thm-patch through thmtools
-  (`\addtotheorem…hook`, run by `define_new_theorem` inside the theorem; 69; 1710.06939; #695), → `\varlim@`
+  (`\addtotheorem…hook`, run by `define_new_theorem` inside the theorem and, as thm-patch.sty:178-217 wraps amsthm's
+  `proof` when it exists, the `[proof]` hooks by the binding's proof; thmtools marks `thm-patch.sty_loaded`, so a later
+  `\usepackage{thm-patch}` reads nothing over it — round 2; 69; 1710.06939; #695), → `\varlim@`
   (amsopn.sty:92-97, mis-attributed to amstex; 23; 1608.08273; #696); article → mhsetup through mathtools
   (mathtools.sty:37, the binding's TODO; 33; 1202.0045; #693); acmart → centernot through newtxmath (newtxmath.sty:36;
   21; 2002.09451; #694, a centernot binding: `\not`). The xcolor exclusion comments in agujournal2019_cls.rs and
@@ -1380,13 +1387,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   showkeys_color_option_loads_color, mathtools_loads_mhsetup, newtxmath_loads_centernot, thmtools_theorem_hooks_run,
   amsopn_varlim_builder} RED → GREEN; guards `perfect_kernel_batch67u`. A/B: final candidate vs the parent (67s1-rel; 67o1-rel where the r1 candidate matched it), 606 papers (up to 12
   witnesses per row, all 138 sn-jnl → program, 100 from pop67o): Errors 1,278 → 432, Fatal 3 → 2, error-free 65 → 496;
-  pop67o 343 → 242. 20 papers lose words, each only error-recovery text or text pdflatex hides: the unloaded commands'
-  names and arguments (`\definecolor cvprbluergb…`, `\cellcolor color1!33`, `\scalebox .4 \includegraphics krebes.eps`,
+  pop67o 343 → 242. Word losses, over the 539 papers both arms converted: 366 lose some words, 82 more than 15, 20 at
+  least 1 % of their words; each is error-recovery text or text pdflatex hides: the unloaded commands' names and
+  arguments (`\definecolor cvprbluergb…`, `\cellcolor color1!33`, `\scalebox .4 \includegraphics krebes.eps`,
   WileyNJD's raw `\APACyear`/`\BBA`, the APA title printed twice; bibitems unchanged, every reference text kept) and
-  aa's `{comment}` bodies. 1709.10492 timed out once under load (170 s) and converts in 112 s alone. Binding nets
+  aa's `{comment}` bodies — three aa papers lose a `<tabular>` that sits inside `\begin{comment}` (1911.00393,
+  1708.03873, 1612.05281) — plus the sn-jnl proof mark (∎ in 257 proofs of the 138 sn-jnl papers; □ since round 2,
+  as pdflatex prints). The review diffed 13 more (WileyNJD 2009.09092, 2106.13685, 2101.02028, 2012.15339; aa
+  1708.03873, 1704.08487, 1505.02291, 1509.09223, 1911.00393, 2605.31060; ieeeaccess 2304.03771, 2205.04113; amsart
+  1406.4669) and scanned every paper losing more than 15: no author text lost. 1709.10492 timed out once under load (170 s) and converts in 112 s alone. Binding nets
   (binding_nets run_net.sh, label 67u) for the 23 bindings touched vs 67s1: Errors fall in 19 (ieeeaccess 40 → 0,
   mathtools 55 → 13, ejpecp 53 → 26, atlasdoc 19 → 3), none worse after the adjustbox/program fixes (the sn-jnl net's
-  2010.12415 2 → 7 at the first candidate, 0 now).
+  2010.12415 2 → 7 at the first candidate, 0 now). Round-2 repros class-bindings/{snjnl_class_open_square_qed,
+  quantumarticle_caption_at_end_preamble}, stub-dependencies/thmtools_then_thm_patch_proof_hooks (RED on 67u r1).
+- **Residual of 67u — our empty `\Gin@driver` sends trimclip to its PGF fall-back** (RUST-ONLY; queued for payload
+  68b): trimclip.sty:24 `\def\tc@driver{tc-\Gin@driver}` names no file here, so :252-258 input tc-pgf.def and pgf at
+  adjustbox's load, where pdflatex reads tc-pdftex.def and no pgf. 67u's adjustbox_sty.rs reads the file with `|` other
+  (program.sty's active `|` broke pgf: 2202.10115, 2507.09618), a workaround; the root is the driver name graphics
+  leaves empty.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

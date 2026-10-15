@@ -84,14 +84,17 @@ LoadDefinitions!({
   }
   // quantumarticle.cls:1508-1512 `\PassOptionsToPackage{font={small,sf}}{caption}` and `\AtEndPreamble{\RequirePackage
   // {caption}}`: `\captionof`, `\captionsetup` (29 of run 353 with them undefined: 1910.03969, 1711.07279,
-  // 1812.02144), loaded at the end of the preamble, before the hyperref below as etoolbox's `\AtEndPreamble` runs before
-  // the `\AtBeginDocument` hooks; the caption font is not rendered.
+  // 1812.02144), loaded at the class's own hook, the end of the preamble: etoolbox's `\AtEndPreamble` is
+  // `\AddToHook{begindocument/before}` (etoolbox.sty:1743, etoolbox_sty.rs), which runs before the `\AtBeginDocument`
+  // code, the hyperref below among it; the caption font is not rendered. etoolbox is the class's own
+  // (quantumarticle.cls:27 `\RequirePackage{etoolbox}`).
+  RequirePackage!("etoolbox");
   DefPrimitive!("\\lx@quantumarticle@caption", {
     if !lookup_bool("caption.sty_loaded") {
       RequirePackage!("caption");
     }
   });
-  RawTeX!(r"\AtBeginDocument{\lx@quantumarticle@caption}");
+  RawTeX!(r"\AtEndPreamble{\lx@quantumarticle@caption}");
   // quantumarticle.cls:1392-1394: hyperref, loaded at `\begin{document}` (after the compatibility's natbib).
   DefPrimitive!("\\lx@quantumarticle@hyperref", {
     if !lookup_bool("hyperref.sty_loaded") {

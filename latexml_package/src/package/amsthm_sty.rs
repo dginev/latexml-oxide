@@ -220,6 +220,8 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       let _ = push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
       digest(mouth::tokenize_internal("\\the\\thm@bodyfont"))?;
+      // thm-patch.sty:191-197 (thmtools): the `[proof]` head hooks, after the head (thmtools_sty.rs).
+      proof_hooks(&["preheadhook", "postheadhook"])
     },
     properties => sub[args] {
       // Perl amsthm.sty.ltxml \@proof (#2814 "Fix 2240 proof title punct"): like
@@ -268,12 +270,16 @@ LoadDefinitions!({
     document.maybe_close_element("ltx:proof")?;
   },
   before_digest => {
+    // thm-patch.sty:205-212 (thmtools): the `[proof]` pre-foot hook before the end code, the post-foot hook after it,
+    // once the proof has closed (thmtools_sty.rs).
+    let mut boxes = proof_hooks(&["prefoothook"])?;
     if let Ok(Some(Stored::Tokens(qed))) = pop_value("QED@stack")
       && !qed.is_empty() {
-        return Ok(vec![digest(qed)?]);
+        boxes.push(digest(qed)?);
       }
-    Ok(vec![])
-  });
+    Ok(boxes)
+  },
+  after_digest => { proof_hooks(&["postfoothook"]) });
 
   Let!("\\proof",    "\\@proof");
   Let!("\\endproof", "\\end@proof");
@@ -306,6 +312,21 @@ LoadDefinitions!({
   DefRegister!("\\theorempreskipamount"  => Glue::new(0));
   DefRegister!("\\theorempostskipamount" => Glue::new(0));
 });
+
+/// The thm-patch `[proof]` hooks `\thmt@proof@<point>` named by `points`, digested in order, when thmtools wrapped
+/// this proof (`thmt@proof@hooks`, thmtools_sty.rs); none otherwise.
+fn proof_hooks(points: &[&str]) -> Result<Vec<Digested>> {
+  if !lookup_bool("thmt@proof@hooks") {
+    return Ok(Vec::new());
+  }
+  let source: String = points
+    .iter()
+    .map(|point| s!("\\thmt@proof@{point}"))
+    .collect();
+  Ok(vec![digest(mouth::tokenize_internal(
+    TeXString::assembled(source),
+  ))?])
+}
 
 /// amsthm.sty:422-426 `\openbox`, the `\qedsymbol`: `\hbox to.77778em{…\vbox to.675em{…}…}` (see
 /// `symbol_box_size`). Shared with the bindings that install amsthm's `\qed` themselves (autart).

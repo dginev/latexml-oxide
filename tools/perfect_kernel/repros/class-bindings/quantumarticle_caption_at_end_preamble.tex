@@ -1,0 +1,21 @@
+% witness: 1910.03969, 1711.07279, 1812.02144 (`\captionof`, `\captionsetup`): quantumarticle.cls:1508-1512
+%          `\AtEndPreamble{\RequirePackage{caption}}` (1910.03969's copy:1504-1506), :27 `\RequirePackage{etoolbox}`
+% oracle:  pdflatex 1 error, the class's own (`\AtBeginDocument{\RequirePackage{hyperref}}`, :1392: TL 2025's nameref
+%          "Sorting rule for 'begindocument' hook applied too late" — harness limit); "At the end of the preamble: caption
+%          loaded." and "Figure 1. Boxed": a document's `\AtEndPreamble` runs after the class's, with caption loaded
+% engines: rust 67u r1 = 3 errors (`\AtEndPreamble` undefined: no etoolbox; caption loaded at `\AtBeginDocument`, so
+%          `\captionsetup` undefined, and with the paper's own etoolbox "no caption"); Perl's quantumarticle.cls.ltxml
+%          loads neither (KNOWN_PERL_ERRORS #698)
+% expect:  0 errors, 0 warnings; "caption loaded" (our caption binding does not render `labelsep`, a separate gap)
+% status:  RED (67u r1) -> GREEN (67u r2)
+% preload: ar5iv.sty
+\documentclass[a4paper,onecolumn,unpublished]{quantumarticle}
+\pdfoutput=1
+\makeatletter
+\AtEndPreamble{\@ifpackageloaded{caption}{\def\captionready{caption loaded}}{\def\captionready{no caption}}%
+\captionsetup{labelsep=period}}
+\makeatother
+\begin{document}
+At the end of the preamble: \captionready.
+\begin{figure}\fbox{x}\caption{Boxed}\end{figure}
+\end{document}

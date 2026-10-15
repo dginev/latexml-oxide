@@ -209,7 +209,8 @@ fn wileymsp_loads_gensymb() {
   );
 }
 
-/// oup-authoring-template.cls:2426 `\RequirePackage{multirow}` (2102.02669, 2104.08961, 2206.08262).
+/// oup-authoring-template.cls `\RequirePackage{multirow}`, TL 2025's copy :2426, 2102.02669's :2391 (2102.02669,
+/// 2104.08961, 2206.08262).
 #[test]
 fn oup_authoring_template_loads_multirow() {
   let xml = clean!("class-bindings/oup_loads_multirow.tex");
@@ -221,7 +222,8 @@ fn oup_authoring_template_loads_multirow() {
   );
 }
 
-/// cas-common.sty:1599-1610 `\MSC`, :415-423 `\orcidauthor` (1909.01564, 2012.11920, 2407.03849).
+/// cas-common.sty:1599-1610 `\MSC` (1909.01564, 2012.11920, 2407.03849), :415-423 `\orcidauthor` (2104.12510,
+/// 2304.13458, 2407.18715).
 #[test]
 fn cas_sc_classification_lines_and_orcid() {
   let xml = clean!("class-bindings/cas_sc_classification_lines.tex");
@@ -371,4 +373,88 @@ fn sigma_loads_amscd() {
     xml.contains(r#"<XMTok meaning="commutative-diagram"/>"#),
     "{xml}"
   );
+}
+
+// Round 2 (review of 67u).
+
+/// sn-jnl.cls:1571-1575 (1907.11468's copy, all 138 copies of the run-353 sn-jnl papers): the class's begin-document
+/// code makes `\opensquare` (msa "03) the `\qedsymbol`, over program.sty:971-973's `\blacksquare`, so the proof mark is □
+/// (1907.11468, 2210.16458); a copy without those lines keeps program's ■.
+#[test]
+fn snjnl_class_open_square_is_the_proof_mark() {
+  let xml = clean!("class-bindings/snjnl_class_open_square_qed.tex");
+  assert!(
+    xml.contains(
+      r#"<p xml:id="p1.1"><text xml:id="p1.1.1">Trivial. <text xml:id="p1.1.1.1"/> <Math mode="inline" tex="\opensquare" text="opensquare" xml:id="p1.m1"> <XMath xml:id="p1.m1.1"> <XMTok name="opensquare" role="ID">□</XMTok> </XMath> </Math></text></p>"#
+    ),
+    "{xml}"
+  );
+  assert!(!xml.contains("blacksquare"), "{xml}");
+  let source = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/snjnl_class_open_square_qed.tex"
+  )
+  .lines()
+  .filter(|line| {
+    !line.starts_with("\\DeclareSymbolFont")
+      && !line.starts_with("\\DeclareMathSymbol")
+      && !line.starts_with("\\def\\qedsymbol")
+  })
+  .collect::<Vec<_>>()
+  .join("\n");
+  let (log, xml) = convert_with(&source, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(
+      r#"<Math mode="inline" tex="\blacksquare" text="blacksquare" xml:id="p1.m1"> <XMath xml:id="p1.m1.1"> <XMTok name="blacksquare" role="UNKNOWN">■</XMTok> </XMath> </Math>"#
+    ),
+    "{xml}"
+  );
+}
+
+/// thmtools.sty:47 loads thm-patch, so the binding marks it loaded and a later `\usepackage{thm-patch}` reads nothing
+/// over it; thm-patch.sty:178-217 wraps amsthm's `proof` to run the `[proof]` hooks — the head hooks after the head, the
+/// pre-foot hook before the QED mark, the post-foot hook after the proof — and not the generic ones (synthetic; the hook
+/// commands of 1710.06939, 1712.09887, 1801.10129).
+#[test]
+fn thmtools_then_thm_patch_runs_the_proof_hooks() {
+  let xml = clean!("stub-dependencies/thmtools_then_thm_patch_proof_hooks.tex");
+  assert!(
+    xml.contains(r#"<p xml:id="Thmthm1.p1.1"><text font="italic" xml:id="Thmthm1.p1.1.1">HEADGENERICBody.</text></p>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(
+      r#"<proof xml:id="id1"> <title class="ltx_runin" font="italic">Proof.</title> <para xml:id="p1"> <p xml:id="p1.1"><text xml:id="p1.1.1">PHEADTrivial.PFOOT∎</text></p> </para> </proof> <para xml:id="p2"> <p xml:id="p2.1">PAFTER After.</p> </para>"#
+    ),
+    "{xml}"
+  );
+  // amsthm loaded after thmtools: there was no proof for thm-patch to wrap (`\ifx\proof\endproof`), so a `[proof]`
+  // hook is gathered and never run (pdflatex: "Proof. Trivial.").
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{thmtools}\n\\usepackage{amsthm}\n\\addtotheorempostheadhook[proof]{PHEAD}\n\
+     \\begin{document}\n\\begin{proof}Trivial.\\end{proof}\n\\end{document}\n",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    squash(&xml).contains(r#"<p xml:id="p1.1"><text xml:id="p1.1.1">Trivial.∎</text></p>"#),
+    "{xml}"
+  );
+}
+
+/// quantumarticle.cls:1508-1512 loads caption `\AtEndPreamble` (etoolbox, :27), so a document's own `\AtEndPreamble`
+/// code, queued after the class's, finds it (1910.03969, 1711.07279, 1812.02144); with the document's own etoolbox too.
+#[test]
+fn quantumarticle_loads_caption_at_the_end_of_the_preamble() {
+  let expected = r#"<p xml:id="p1.1">At the end of the preamble: caption loaded.</p>"#;
+  let xml = clean!("class-bindings/quantumarticle_caption_at_end_preamble.tex");
+  assert!(xml.contains(expected), "{xml}");
+  let source = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/quantumarticle_caption_at_end_preamble.tex"
+  )
+  .replace("\\pdfoutput=1\n", "\\pdfoutput=1\n\\usepackage{etoolbox}\n");
+  let (log, xml) = convert_with(&source, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(squash(&xml).contains(expected), "{xml}");
 }

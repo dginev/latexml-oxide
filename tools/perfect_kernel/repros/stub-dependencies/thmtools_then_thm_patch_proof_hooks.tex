@@ -1,0 +1,25 @@
+% witness: synthetic (review of 67u); the hook commands of 1710.06939, 1712.09887, 1801.10129. thmtools.sty:47 loads
+%          thm-patch, so a later `\usepackage{thm-patch}` is a no-op; thm-patch.sty:178-217 wraps amsthm's `proof`
+%          (`\ifx\proof\endproof\else`) to run the `[proof]` hooks, its generic-hook calls there commented out
+% oracle:  pdflatex 0 errors ("Theorem 1. HEADGENERICBody." / "Proof. PHEADTrivial.PFOOT" / "PAFTER After.")
+% engines: rust 67u r1 = 48 errors (thm-patch read raw over the binding: `\@xa` undefined, its parseargs wrappers);
+%          Perl's thmtools.sty.ltxml lacks the hook commands (KNOWN_PERL_ERRORS #695)
+% expect:  0 errors, 0 warnings; HEAD and GENERIC in the theorem; PHEAD and PFOOT in the proof, PFOOT before the QED
+%          mark; PAFTER after the proof; GENERIC not in the proof
+% status:  RED (67u r1) -> GREEN (67u r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{thmtools}
+\usepackage{thm-patch}
+\newtheorem{thm}{Theorem}
+\addtotheorempostheadhook[thm]{HEAD}
+\addtotheorempostheadhook[proof]{PHEAD}
+\addtotheoremprefoothook[proof]{PFOOT}
+\addtotheorempostfoothook[proof]{PAFTER}
+\addtotheorempostheadhook{GENERIC}
+\begin{document}
+\begin{thm}Body.\end{thm}
+\begin{proof}Trivial.\end{proof}
+After.
+\end{document}

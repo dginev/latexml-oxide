@@ -1,6 +1,8 @@
 //! Stub for sn-jnl.cls (Springer Nature journal class).
 use latexml_package::prelude::*;
 
+use crate::shipped_class::{class_code_contains, shipped_class_text};
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -47,11 +49,26 @@ LoadDefinitions!({
   // inline maths and pdflatex sets in the line (2112.05038, on 413 lines: "For a
   // domain Y ⊂ Rn, there exists…"); its raw emulation here made each an
   // inline-block holding a one-item list (1331 in 2112.05038). They stay the
-  // kernel's inline maths (OXIDIZED_DESIGN_DIVERGENCES #597, for a ruling;
+  // kernel's inline maths (OXIDIZED_DESIGN_DIVERGENCES #597, approved 2026-10-15;
   // program loaded under another class keeps the programbox).
   if lookup_bool("program.sty_loaded") {
     DefMacro!("\\(", "\\lx@begin@inline@math");
     DefMacro!("\\)", "\\lx@end@inline@math");
+  }
+  // The proof mark: the class's begin-document code (sn-jnl.cls:1571-1575 of 1907.11468's copy, in all 138 copies
+  // of the run-353 sn-jnl papers) declares `\opensquare` (msa "03, □) and makes it the `\qedsymbol`, over
+  // program.sty:971-973's `\let\qedsymbol=\blacksquare`, so pdflatex ends a proof with □ ("Proof Trivial. □";
+  // 1907.11468, 2210.16458). This binding does not run the class body, so it runs these three lines of that hook
+  // itself, where the copy has them (or the paper ships none: the class as distributed); the rest of the hook,
+  // `{spiproof}` and `\let\proof\spiproof`, stays out, as amsthm's proof is kept against a class's own (67s).
+  // Without program the mark is amsthm's `\qed`, which does not read `\qedsymbol` (amsthm_sty.rs).
+  if shipped_class_text("sn-jnl")?
+    .as_deref()
+    .is_none_or(|text| class_code_contains(text, "\\def\\qedsymbol{\\opensquare}"))
+  {
+    RawTeX!(
+      r#"\AtBeginDocument{\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}\DeclareMathSymbol{\opensquare}{\mathord}{AMSa}{"03}\def\qedsymbol{\opensquare}}"#
+    );
   }
 
   // Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/
