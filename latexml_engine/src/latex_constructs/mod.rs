@@ -2295,9 +2295,16 @@ pub fn define_new_theorem(
     ln = ln.replace('#', "hash");
     ln
   };
+  // The shared counter is a name read through `\csname`, so a macro naming it expands to that name: latex.ltx
+  // :17190-17195 `\@othm` tests `\@ifundefined{c@#2}` and defines `\the#1` as `\@nameuse{the#2}`. smfthm.sty:52-56
+  // `\gdef\smf@thm{smfthm}` `\newtheorem{theo}[\smf@thm]{\theoname}` (witnesses 1711.11547, 1902.02049, 2108.12000)
+  // and ccthm.sty's `[\cc@thmcnter]` (1507.02955) named a counter `\smf@thm`: "Counter not defined" and an undefined
+  // `\the\smf@thm` for every theorem. Perl takes the literal string (latex_constructs.pool.ltxml:2892
+  // `ToString($otherthmset)`), KNOWN_PERL_ERRORS #691. The trailing `[within]` is digested (`digest_literal`, as Perl
+  // `DigestLiteral`), which expands a macro too. Guards `perfect_kernel_batch67s::newtheorem_*`.
   let otherthmset_str = otherthmset
-    .as_ref()
-    .map(|t| t.to_string())
+    .map(|t| ::latexml_core::gullet::expand_as_csname_text(t).map(|e| e.to_string()))
+    .transpose()?
     .filter(|s| !s.is_empty());
   let has_type = typ.as_ref().is_some_and(|t| !t.is_empty());
   let is_starred = flag.is_some();

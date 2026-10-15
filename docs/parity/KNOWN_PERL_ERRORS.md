@@ -2426,6 +2426,7 @@ now converts with 1 error (`\missing{Cowen2021}`, undefined in both engines) and
 (Perl: 59 errors, 33.7 s). Guard
 `06_cluster_regressions::cluster_biblatex_two_datalists`. Candidate to upstream
 (not filed as of 2026-07-25).
+
 ## 58. A listing's trailing-empty-line trim discards the braces that close it
 
 `listings.sty.ltxml` L1330 trims trailing blank lines by slicing the generated token
@@ -2950,6 +2951,7 @@ Perl output was measured.
 Candidate to upstream: deleting the dead `@…::SUFFIX` interpolation, or a
 style-conditional emission. Not a one-token `$`/`@` swap — that would change
 alpha-styled output for the worse.
+
 ## 68. An arg-taking `\fnum@<type>` swallows the caption's closing brace and absorbs the rest of the document
 
 `LaTeXML/lib/LaTeXML/Engine/Base_Utility.pool.ltxml` L1041-1043 expands the
@@ -3209,6 +3211,7 @@ as latexml-oxide issue #500, where Rust hit it on a plain
 `standalone.sty` L107's `\RequirePackage{xkeyval}`, which
 `standalone.sty.ltxml` omits. Filed upstream as
 <https://github.com/brucemiller/LaTeXML/issues/2864>.
+
 ## 74. `DimensionToSpaces` sizes a faked space by the font the document ENDS in
 
 `TeX_Glue.pool.ltxml` L43-45:
@@ -3379,6 +3382,7 @@ is unaffected (its content is a real `ltx_td`, already nowrapped). Same-host Per
 nowrap rule to `.ltx_eqn_cell` ([OXIDIZED_DESIGN #109]). Issue #527;
 upstream-fileable against `brucemiller/LaTeXML`. Guard:
 `cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css`.
+
 ## 79. fancyvrb `frame=single` draws disconnected rules, not a box (Rust surpasses)
 
 LaTeXML (Perl and Rust) raw-loads `fancyvrb.sty` and lets `frame=single` draw the frame with
@@ -3661,6 +3665,7 @@ arXiv/html_feedback#6675 (witness 2606.25280, the boids/EvoFlock paper — tease
 the real Figure 2 became Figure 1). Same #124 mechanism recovers it (the redefinition
 leaves `\@maketitle` non-empty, so it is deposited); production ar5iv (Perl) still drops
 it. Guard: `06_cluster_frontmatter::frontmatter_titlepic_redefined_maketitle_figure_survives`.
+
 ## 88. Partially-bold author block renders incoherently (Rust surpasses)
 
 `neurips_2023` (and similar classes) bold the *whole* author block with a block-level `\bf` in
@@ -4722,6 +4727,7 @@ Rust: `def_macro_noop` (expandable empty macro, page style still ignored) for
 \pagestyle{plain}
 x\end{document}
 ```
+
 ## 122. xkeyval's `\DeclareOptionX*` handler ignored by non-star `\ProcessOptionsX`
 
 xkeyval.tex L496-502: inside `\ProcessOptionsX` (`\ifXKV@inpox`), an option
@@ -12211,6 +12217,7 @@ Minimal trigger: `\usepackage{epsfig}\begin{document}\epsfxsize=3cm\epsfbox{exam
 
 Fixed in Rust (64zd, OD #505; witness cond-mat9908394): `\epsfbox`/`\epsffile` include the graphic at `\epsfxsize`/`\epsfysize`
 and reset both. Open: the ws classes' psfig/epsfig loading (RED `singletons/ws_procs_psfig.tex`).
+
 ## 575. ar5iv's `\relax` `\today` arrives at begin-document, so the preamble reads the conversion's day
 
 ar5iv.sty.ltxml:23-25 installs its archival `\today` (`\relax`, locked) in an `AtBeginDocument` hook. Everything the
@@ -12341,6 +12348,7 @@ and a `mailto:ann˙able@a.edu` link, where pdflatex prints "ann_able@a.edu" in C
 T1), REVTeX 4.1/4.2, AASTeX, svjour3. Witness 1001.1076.
 
 Fixed in Rust (64zc): OD #501-502.
+
 ## 587. REVTeX 3 sections number as article's
 
 revtex3_support.sty.ltxml (and revtex4_support's `\thesection` alone) leaves REVTeX 3's numbering unset: aps.sty:220-227
@@ -13079,6 +13087,7 @@ counts the same way (`perfect_kernel_batch58::notes_measure_as_their_mark` case 
 float). Undoing only the leaked mode when the open paragraph began before the argument, and keeping the note an item of
 its line, measures both as one line but changes the notes' trailing-space trimming in `50_structure::{enum,fancyhdr}`:
 a design of its own.
+
 ## 664. IEEEtran's `\keywords` refuses the document's
 
 IEEEtran.cls.ltxml:398-403 defines `\keywords` with `locked => 1`; IEEEtran.cls has none, so a document's own
@@ -13138,6 +13147,7 @@ four, but also keeps out the bindings that are the semantic layer for what a raw
 `\EmulatedPackage{tocloft}` then lost three `<TOC>`s (2605.08402), `{adjustwidth}` under memoir+changepage became a list,
 and float's ruled style under floatrow+algorithm lost its frames (2206.13235, 2303.16210). Ruled 2026-10-14: no general
 loader rule; the floatrow binding records float.sty/rotfloat.sty loaded as floatrow.sty:34-37 marks them (66v).
+
 ## 669. An `\hrule` inside a cell's box restarts the row
 
 TeX_Box.pool.ltxml:846-851 adds a border row (`addLine('t')`) for any `\hrule` while an `Alignment` is visible, and
@@ -13228,6 +13238,7 @@ the formula at the inner `$`, and the `^2` that follows is "Script ^ can only ap
 frames unwind with errors. latex.ltx `\@argrsbox` sets the box in an `\hbox` (pdflatex clean). Witness 0902.1321 (101
 errors + Fatal → 0). Fixed in Rust (sect13.rs `\pic@raisebox` reads its box restricted_horizontal, bounded, as `\raisebox`
 does; repro boxes-groups/picture_raisebox_reads_its_box_in_text.tex; `perfect_kernel_batch66y`).
+
 ## 679. A `\par` in an inline formula is digested inside it: a forgotten `$` runs the formula through the paragraphs
 
 Perl's `\lx@normal@par` (TeX_Paragraph.pool.ltxml:97-145) does nothing in math mode but leave a whatsit in the formula,
@@ -13383,6 +13394,7 @@ theorem_user_style_and_headerfont, theorem_then_amsthm_takes_over, theorem_raw_t
 `perfect_kernel_batch67p::{theorem_bodyfont_internals, theorem_user_style_and_headerfont,
 theorem_bodyfont_outlives_theoremstyle, theorem_then_amsthm_takes_over, amsthm_before_theorem_stays_loaded,
 theorem_raw_thm_keeps_heads, ntheorem_borrows_amsthm_unloaded}`.
+
 ## 687. `\unboldmath` and `\mathversion{normal}` do not undo `\boldmath` (open)
 
 latex.ltx's `\boldmath` and `\unboldmath` select the math version (`\mathversion{bold}` / `{normal}`), so after
@@ -13395,3 +13407,34 @@ then sets the series bold with the force-series flag, which also stops any later
 local. Minimal trigger: `\documentclass{article}\begin{document}\boldmath $x$ \unboldmath $y$\end{document}`:
 pdflatex sets y in `\OML/cmm/m/it/10`, both engines make it `font="bold italic"`; the same with `\mathversion{normal}` in
 place of `\unboldmath`. Not fixed. Repro fonts-nfss/boldmath_undone_by_unboldmath_and_group (RED).
+
+## 690. A class's `\renewenvironment{proof}` replaces amsthm's `<proof>`
+
+amsthm.sty.ltxml:146-192 lets `\proof`/`\endproof` to its `\@proof`/`\end@proof` constructors without a lock, and its
+`\begin{proof}` alias points at `\begin{@proof}`, which does not exist, so `\begin{proof}` reaches `\proof`. A class or
+package that redefines the environment after loading amsthm therefore replaces the semantic proof with its own layout:
+smfart.cls:1194 and smfbook.cls:1281 (`\renewenvironment{proof}[1][\proofname]{…\trivlist\itemindent\z@ …\item[…]}`)
+and ijmart.cls:336 (`\trivlist\item[\hskip\labelsep\slshape #1\@addpunct{.}]`) give an `<itemize class="ltx_trivlist">`
+item and no `<proof>`. Minimal trigger: tools/perfect_kernel/repros/package-bindings/
+amsthm_proof_kept_against_a_class_renewenvironment.tex (a `{filecontents*}` class loading article and amsthm, then that
+`\renewenvironment{proof}`; `\begin{proof}Because.\end{proof}`): Perl `--includestyles` gives 0 `<proof>`; pdflatex
+prints "Démonstration. — Because.". Under the raw-class lever 86 papers lost their proofs (smfart 72, ijmart 11,
+smfbook 3; witnesses 1711.11547, 1902.02049, 2108.12000). Fixed in Rust (beyond Perl, OXIDIZED_DESIGN_DIVERGENCES
+#596): amsthm_sty.rs locks `\proof` and `\endproof` against the class and package files (`:locked@files`). Guards
+`perfect_kernel_batch67s::{class_renewed_proof_keeps_the_binding, package_redefined_proof_keeps_the_binding,
+document_renewed_proof_is_honoured}`.
+
+## 691. A theorem's shared counter named by a macro is taken literally
+
+latex.ltx:17190-17195 `\@othm` reads `\newtheorem{name}[counter]{Type}`'s counter through `\csname`
+(`\@ifundefined{c@#2}`, `\@namedef{the#1}{\@nameuse{the#2}}`), so a macro naming the counter expands to that name.
+Perl's `defineNewTheorem` takes `ToString($otherthmset)` (latex_constructs.pool.ltxml:2892), the macro's own name.
+Minimal trigger: `\def\thmcnter{equation}` `\newtheorem{thm}[\thmcnter]{Theorem}` then an equation and a `{thm}`
+(tools/perfect_kernel/repros/package-bindings/newtheorem_shared_counter_named_by_a_macro.tex): Perl gives 3 warnings
+("Counter '\thmcnter' was not defined; assuming 0", "\c@\thmcnter is not a register" ×2) and
+`Error:undefined:\the\thmcnter`; pdflatex prints "Theorem 2". smfthm.sty:52-56 (`\gdef\smf@thm{smfthm}`
+`\newtheorem{theo}[\smf@thm]{\theoname}`) and ccthm.sty (`[\cc@thmcnter]`) do this for every theorem: 21 papers
+(smfart 19, cc 13 with the warning, smfbook 2; witnesses 1711.11547, 1902.02049, 2108.12000, 1507.02955). Fixed in Rust:
+`define_new_theorem` (latexml_engine/src/latex_constructs/mod.rs) expands the shared counter as `\csname` does
+(`gullet::expand_as_csname_text`); the trailing `[within]` was already digested, which expands a macro too. Guards
+`perfect_kernel_batch67s::{newtheorem_shared_counter_named_by_a_macro, newtheorem_counter_and_within_named_by_macros}`.

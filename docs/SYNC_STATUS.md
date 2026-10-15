@@ -1311,6 +1311,27 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   RED side finding, not fixed (kernel, Perl shares): a `\newtheorem`'s shared counter named by a macro
   (ccthm.sty `[\cc@thmcnter]`; latex.ltx `\@othm` expands it, `define_new_theorem` takes `ToString`): 1507.02955's
   38 theorems unnumbered under the lever, repro package-bindings/newtheorem_shared_counter_named_by_a_macro.
+- **67s** (rawclasses regression study R2 and R5, agent_reports/2026-10-15_rc_rawcls_regressions.md): theorem and
+  proof machinery under raw classes. (1) smfart.cls:1194, smfbook.cls:1281 and ijmart.cls:336 `\renewenvironment{proof}`
+  over a `\trivlist` replaced amsthm's `<proof>` (86 papers under the lever: smfart 72, ijmart 11, smfbook 3); amsthm_sty.rs
+  now locks `\proof`/`\endproof` against the class and package files, the document's own `{proof}` stays its own
+  (OXIDIZED_DESIGN #596, KNOWN_PERL_ERRORS #690). (2) `\newtheorem{theo}[\smf@thm]{…}` (smfthm.sty:52-56, ccthm.sty
+  `[\cc@thmcnter]`): `define_new_theorem` took the counter's macro name literally, so every theorem raised
+  `\the\smf@thm` undefined; it now expands the name as latex.ltx's `\@othm` does through `\csname` (KNOWN_PERL_ERRORS
+  #691; 21 papers in both arms). Witnesses 1711.11547, 1902.02049, 2108.12000 (smfart), 1507.02955 (cc). Repros
+  package-bindings/amsthm_proof_kept_against_a_class_renewenvironment, newtheorem_shared_counter_named_by_a_macro (67p
+  RED → GREEN); guards `perfect_kernel_batch67s`. apxproof, which wraps the binding's proof to move a `theoremrep`'s
+  proof to the appendix, has its binding yield the lock while it loads (2502.18805). Witnesses under the lever (67o1 →
+  67s, Errors / `<proof>`): 1711.11547 1/0 → 0/14, 1902.02049 1/0 → 0/30, 2108.12000 0/0 → 0/24, 2412.15231 (smfbook)
+  1/0 → 0/256, 2306.11126 (smfbook) 0/0 → 0/44, ijmart 1001.1175 0 → 19, 1107.1667 0 → 8, 2207.06393 0 → 9 proofs;
+  1507.02955 (cc) keeps its 4 theorem.sty Errors (67p) and loses 76 counter warnings. Word losses are generated text
+  only: the `\the\smf@thm` error strings, the trivlist items' "item" autoref tags, the class's " — " after the proof
+  head. A/B without the lever vs 67o1 (400 papers: 300 amsthm `{proof}`/`\newtheorem[..]` users, many shipping a
+  `.sty`/`.cls` that redefines `proof`, + 100 from pop67o; plus 17 apxproof users): 0 worse; 10 gain proofs (1202.3460,
+  1210.2844, 1609.05867, 2309.14926, 2503.05183, math0003189, math0007097, math0203159, math0302254, math0412216: a
+  shipped class's `\renewenvironment{proof}`), 2309.14926 (shipped smfart) 1 → 0 Errors; the apxproof users are
+  byte-identical. Residual: the proof head's font and punctuation are the binding's, not the class's (isamms.cls's
+  small caps, smfart's " — ").
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

@@ -280,6 +280,19 @@ LoadDefinitions!({
   // Also need to handle \begin{proof} / \end{proof}
   Let!("\\begin{proof}", "\\begin{@proof}");
   Let!("\\end{proof}",   "\\end{@proof}");
+  // Locked against the class and package files (`:locked@files`, state.rs `name_carries_lock`), as the kernel's
+  // `\endabstract` (sect05.rs) and `\minipage` (sect12.rs) are: a class's `\renewenvironment{proof}` over a
+  // `\trivlist` (smfart.cls:1194, smfbook.cls:1281, ijmart.cls:336) replaced the binding's `<ltx:proof>` with an
+  // itemize (86 papers under the raw-class lever: smfart 72 — 1711.11547, 1902.02049, 2108.12000 — ijmart 11,
+  // smfbook 3). The class's own `\proofname` still titles it ("Démonstration", smfart.cls:1288). The document's own
+  // `\newenvironment{proof}`/`\renewenvironment{proof}` stays its own, as in LaTeX and Perl (paper.cls papers).
+  // Perl locks nothing here (amsthm.sty.ltxml:146-192), KNOWN_PERL_ERRORS #690; OXIDIZED_DESIGN_DIVERGENCES #596.
+  // A package whose own binding has already set the lock (apxproof_sty.rs, whose raw file loads amsthm and then wraps
+  // its proof) keeps that setting. Guards `perfect_kernel_batch67s::*proof*`.
+  if lookup_value("\\proof:locked@files").is_none() {
+    AssignValue!("\\proof:locked@files" => true, Some(Scope::Global));
+    AssignValue!("\\endproof:locked@files" => true, Some(Scope::Global));
+  }
 
   // from older versions of amsthm.sty
   DefPrimitive!("\\theorembodyfont{}", sub[(font)] {

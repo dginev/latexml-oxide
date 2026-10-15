@@ -2,9 +2,10 @@
 %          theorems unnumbered under the rawclasses lever)
 % oracle:  pdflatex 0 errors, "Theorem 2 A claim." (latex.ltx `\@othm`: `\@ifundefined{c@#2}` expands the name)
 % engines: rust 67p = 1 error + 2 warnings (`\the\thmcnter` undefined, counter `\thmcnter` "assuming 0"); perl the
-%          same (latex_constructs.pool.ltxml:2892 `ToString($otherthmset)`): SHARED
+%          same (latex_constructs.pool.ltxml:2892 `ToString($otherthmset)`): SHARED, KNOWN_PERL_ERRORS #691
 % expect:  0 errors; the theorem's refnum is 2
-% status:  RED (67p; side finding, kernel `define_new_theorem`, not fixed here)
+% status:  RED (67p; side finding, kernel `define_new_theorem`) -> GREEN (67s); guard
+%          perfect_kernel_batch67s::newtheorem_shared_counter_named_by_a_macro
 \documentclass{article}
 \def\thmcnter{equation}
 \newtheorem{thm}[\thmcnter]{Theorem}
