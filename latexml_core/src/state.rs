@@ -1400,7 +1400,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     // read the next token as its argument (a pgffor `\foreach \i/\text` loop variable: 15 errors; `\@for\text:=`:
     // Fatal; `\def\title{On Widgets}` then `\section*{\title}`). So a VALUE the document defines — a definition
     // without parameters — of a binding that takes a braced argument ([`owns_calls`]; a robust binding by its inner
-    // `\cs␣`, the kernel `\cite`: eplain's btxmac scratch, math0308041) becomes the meaning: what
+    // `\cs␣`, the kernel `\cite`: eplain's btxmac scratch, SYNC_STATUS 67n) becomes the meaning: what
     // `\ifx`, `\meaning` and every use without an argument see, as in pdflatex; the binding stays the handler of
     // its calls, as `\lx@locked@<cs>` ([`crate::definition::expandable::Expandable::yields_calls`]). A definition
     // with parameters defines a command, not a value, so every use of it stays the binding's (`\renewcommand\mathbf
@@ -3248,8 +3248,8 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
   }
   // A robust binding is judged by what it wraps (user ruling 2026-10-15, D1 extends to robust bindings): its own
   // meaning is the parameterless `\protect \cs␣` ([`robust_wrapper_body`]), its signature the inner `\cs␣`'s — the
-  // kernel `\cite` (sect11.rs) reads `[] Semiverbatim` there. Witnesses math0308041, math0612670, 0802.3843
-  // (eplain.tex:346 `\edef\cite{\the\catcode`@}`).
+  // kernel `\cite` (sect11.rs) reads `[] Semiverbatim` there. Witnesses math0308041, math0612670, 0705.2148,
+  // 0802.3843, 1207.1752, 1401.4197 (eplain.tex:346 `\edef\cite{\the\catcode`@}`; SYNC_STATUS 67n).
   if let Stored::Expandable(defn) = binding
     && !defn.yields_calls
     && let Some(inner) = robust_wrapper_body(defn, cs)

@@ -15357,6 +15357,9 @@ expanding the override first peeks one raw token:
 - anything else expands the document's definition, as pdflatex does.
 
 `\ifx`, `\meaning` and `\let` see the document's macro, since `PartialEq` compares `paramlist`/`expansion` only.
+A `\let` copy also carries `yields_calls` and the call owner, so `\let\c=\cite` after a value makes `\c{k}` a
+citation where pdflatex prints the value (accepted residual since 64zb; eplain's `\@oldatcatcode` is such a copy,
+harmless there because the next token is `\let`).
 Reversions and `tex=` still name `<cs>`. The refusal records (`\lx@dropped@<cs>`, `<cs>:redefined`,
 `<cs>:redefined@nargs`, empty internals) are written as before, so calls behave as today. One `Info:lock` per cs per
 document replaces the per-iteration "Ignoring redefinition".
@@ -15368,19 +15371,22 @@ Scope of the rule:
 - **Absolutely locked.**
   - Bindings with no braced interface: sectioning (whose 0-parameter macro reads its argument downstream in
     `\@startsection`), `\footnote`, `\url`, `\maketitle`, `\abstract`, environments, font defaults, `\def`.
-  - A robust binding is judged by what it wraps (user ruling 2026-10-15, "extend D1 to robust"): its own meaning is
-    the parameterless `\protect \cs␣`, so `owns_calls` reads the inner `\cs␣`'s parameter list, and `call_openers`
-    takes the `[`/`*` openers from it. The one robust locked binding is the kernel `\cite` without natbib
-    (sect11.rs, `[] Semiverbatim`): a group-local `\def\cite{CITEV}` used as `[\cite]` prints the value, and
-    `\cite[p.~3]{x}`/`\cite{x}` stay the binding's citations (67n; was RED `macro-state/m5_robust_cite_value_in_group`).
-    eplain's btxmac borrows `\cite` as scratch — `\edef\cite{\the\catcode`@}`, `\let\@oldatcatcode=\cite`
-    (eplain.tex:346-348), read back by `\catcode`@ = \@oldatcatcode` (:666) — and its own `\def\cite{\@getoptionalarg
-    \@cite}` (:445) becomes an override whose calls keep the binding. Refused, the scratch left `@` at catcode 0 and
-    ended in Fatal `ParamSpec` at :721 (math0308041, math0612670, 0705.2148, 0802.3843, 1207.1752, 1401.4197; Perl's
-    `\cite` is not locked). A wrapper whose inner macro the document replaced (`\DeclareRobustCommand\cite{V}` installs
-    `\cite␣` first) is judged by that replacement, so it stays refused, as before.
   - Every name containing `@`, LaTeX's internal namespace (clsguide.tex:187, latex.ltx:1797): `\alloc@`,
     `\@startsection`, `\@caption`, `\@lbibitem`, ….
+- **A robust binding owns its calls by what it wraps** (user ruling 2026-10-15, "extend D1 to robust"): its own meaning is
+  the parameterless `\protect \cs␣`, so `owns_calls` reads the inner `\cs␣`'s parameter list, and `call_openers`
+  takes the `[`/`*` openers from it. The one robust locked binding is the kernel `\cite` without natbib
+  (sect11.rs, `[] Semiverbatim`): a group-local `\def\cite{CITEV}` used as `[\cite]` prints the value, and
+  `\cite[p.~3]{x}`/`\cite{x}` stay the binding's citations (67n; was RED `macro-state/m5_robust_cite_value_in_group`).
+  eplain's btxmac borrows `\cite` as scratch — `\edef\cite{\the\catcode`@}`, `\let\@oldatcatcode=\cite`
+  (eplain.tex:346-348), read back by `\catcode`@ = \@oldatcatcode` (:666) — and its own `\def\cite{\@getoptionalarg
+  \@cite}` (:445) becomes an override whose calls keep the binding. Refused, the scratch left `@` at catcode 0 and
+  ended in Fatal `ParamSpec` at :721 (math0308041, math0612670, 0705.2148, 0802.3843, 1207.1752, 1401.4197; Perl's
+  `\cite` is not locked). A wrapper whose inner macro the document replaced (`\DeclareRobustCommand\cite{V}` installs
+  `\cite␣` first, only file-locked, #568) takes every use of `\cite`, calls included — `B \cite{k}` gives `Vk`, as in
+  pdflatex and Perl — and a parameterless value declared after it is refused, because `owns_calls` then judges the
+  replacement (`\renewcommand\cite{W}` after it gives `[V]`, pdflatex `[W]`; RED
+  `macro-state/m5_robust_cite_declare_robust_then_value`), while the log still says "Ignoring redefinition of \cite".
 - **Unchanged paths.** Class/package code (File origin) stays refused with records and replay; `replay_class_setter`
   and the `\maketitle` deposit run under File origin. So do `\newcommand` (LaTeX refuses a defined name too), `\font`,
   `\newenvironment`, and `\let`, which bypasses the lock as in Perl.

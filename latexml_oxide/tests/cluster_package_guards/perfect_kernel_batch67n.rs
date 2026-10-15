@@ -97,7 +97,8 @@ fn robust_cite_command_redefinition_stays_refused() {
 }
 
 /// The robust kernel `\cite` (no natbib) owns its calls, judged by its inner `\cite␣`; its call openers are the `[` of
-/// that signature. The owners under the bare article class: `\cite` is the only robust one among them.
+/// that signature. The owners under the bare article class follow; `\cite` is the only one whose binding is robust (sect11.rs
+/// declares it `robust => true, locked => true`, the one binding that is both — the 67n review's census).
 #[test]
 fn robust_kernel_cite_owns_its_calls() {
   let (log, _xml, (owns, openers, owners)) = convert_with_then(

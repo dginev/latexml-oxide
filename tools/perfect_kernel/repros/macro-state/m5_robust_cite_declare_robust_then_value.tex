@@ -1,0 +1,15 @@
+% witness: synthetic (67n review); the shape of a document that redeclares `\cite` robust and later sets a value
+% oracle: pdflatex (TL 2025): "A [V] B Vk." then "C [W] D Wk." — the robust redeclaration replaces the inner `\cite␣`, every use prints V; the later `\renewcommand\cite{W}` takes effect
+% engines: rust 67n: "A [V] B Vk." matches (the inner `\cite␣` is only file-locked, OD #568), but the later parameterless value is refused — owns_calls judges the replaced inner, which owns no calls — so "C [V] D Vk." and the log says "Ignoring redefinition of \cite"
+% expect: "C [W] D Wk." (the value after the robust redeclaration is the document's meaning, as pdflatex)
+% status: RED (67n); OXIDIZED_DESIGN_DIVERGENCES #500 "A robust binding owns its calls by what it wraps"
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\DeclareRobustCommand\cite{V}
+A [\cite] B \cite{k}.
+
+\renewcommand\cite{W}
+C [\cite] D \cite{k}.
+\begin{thebibliography}{9}\bibitem{k} K.\end{thebibliography}
+\end{document}
