@@ -581,6 +581,11 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
     }
     Ok(())
   };
+  // A binding-loaded file the document unloaded (`\let\ver@<file>\relax`, `state::unmarked_by_document`) loads
+  // afresh, as LaTeX's `\@ifl@aded` finds it not loaded.
+  if options.handleoptions && unmarked_by_document(&filename) {
+    mark_unloaded(&filename);
+  }
   if !options.reloadable && already_handled(&filename) {
     apply_new_options_on_reload(&filename)?;
     return Ok(());

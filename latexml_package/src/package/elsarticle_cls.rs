@@ -186,4 +186,113 @@ LoadDefinitions!({
     let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
     RawTeX!(r"\def\newpageafter#1{\gdef\@elsarticlenewpageafter{#1}}");
   }
+  // elsarticle.cls (TL 2025, v3.4c) internals and setters papers call (run-347 inventory: 122 papers with one
+  // undefined), as the class defines them:
+  // - :145 `\tnotemark[<keys>]`, the title's note marks, as `\tnoteref` (:146; 10 papers; 2101.08044, 2203.02441).
+  // - :1021-1027 `\myfooter[<align>]{<text>}` and `\myfooterfont`, the first page's footer: page furniture, stored
+  //   (15 papers; 2209.12222, 2208.12518).
+  // - :671-673 `\abstracttitle{<title>}`, the abstract's heading (12 papers; 2204.07076, 2104.02951): the frontmatter abstract takes it as
+  //   its name (`\abstractname`), as the class's `{abstract}` prints it; :737-740 `\keywordtitle`/`\keywordtitlesep`,
+  //   stored.
+  // - :192-193 `\resetTitleCounters` over the title-note counters `tnote`, `fnote`, `cnote` (:150, :157, :182; 8; 2407.02308).
+  // - :670, :736 `\absbox`/`\keybox` and :755-756 `\Columnwidth`, which papers' own title code fills and reads (6; 1311.6418).
+  // - :126-131 `\elsLabel`/`\Newlabel`/`\elsRef`, the class's note labels (5; 2011.11672, 2602.18725), :117 `\comma`, :249 `\@eadauthor`,
+  //   :242 `\pprinttitle`, :197-198 `\hashchar`/`\underscorechar`, :1073-1076 `\elsparagraph`.
+  // Perl's binding defines none of them (KNOWN_PERL_ERRORS #723).
+  DefMacro!("\\tnotemark[]", "\\tnoteref{#1}");
+  RawTeX!(
+    r"\let\@elsarticlemyfooter\@empty
+\let\@elsarticlemyfooteralign\@empty
+\def\myfooter[#1]#2{\gdef\@elsarticlemyfooteralign{#1}\gdef\@elsarticlemyfooter{#2}}
+\def\myfooterfont#1{\gdef\@myfooterfont{#1}}
+\myfooterfont{\footnotesize\itshape}
+\def\abstracttitle#1{\gdef\@elsarticleabstitle{#1}\gdef\abstractname{#1}}
+\gdef\@elsarticleabstitle{Abstract}
+\def\keywordtitle#1{\gdef\@elsarticlekwdtitle{#1}}
+\def\keywordtitlesep#1{\gdef\@elsarticlekeywordtitlesep{#1}}
+\keywordtitle{Keywords}
+\keywordtitlesep{:\ }
+\newcounter{tnote}\newcounter{fnote}\newcounter{cnote}
+\def\resetTitleCounters{\c@cnote=0
+   \c@fnote=0 \c@tnote=0 \c@footnote=0}
+\newbox\absbox
+\newbox\keybox
+\newdimen\Columnwidth
+\Columnwidth=\columnwidth
+\def\elsLabel#1{\@bsphack\protected@write\@auxout{}%
+         {\string\Newlabel{#1}{\@currentlabel}}\@esphack}
+\def\Newlabel#1#2{\expandafter\xdef\csname X@#1\endcsname{#2}}
+\def\elsRef#1{\@ifundefined{X@#1}{0}{\csname X@#1\endcsname}}
+\let\comma\@empty
+\newtoks\@eadauthor
+\def\pprinttitle{}
+\def\hashchar{\expandafter\@gobble\string\~}
+\def\underscorechar{\expandafter\@gobble\string\_}
+\newcommand\elsparagraph{\@startsection{paragraph}{4}{0\z@}%
+           {10\p@ \@plus 6\p@ \@minus 3\p@}%
+           {-6\p@}%
+           {\normalfont\itshape}}"
+  );
+  // The older releases papers ship (run-347 inventory: 225 papers whose own elsarticle.cls defines a command this
+  // binding lacked; 100 of the 225 copies are v1.21, 2010/06/11, 54 v1.20b), as v1.21 defines them (1303.2653's and
+  // 1404.3867's copies; v3.x has none of them, so they are a release's guesses the document's own definition replaces,
+  // `DefinitionOrigin::Fallback`):
+  // - :238-239 `\email{<address>}`, an e-mail line under the authors, where v3 has `\ead` (85 papers; 1305.6441,
+  //   1306.0018, 1404.3867): the last author's e-mail contact, as `\ead`.
+  // - :234-236 `\correspondingauthor[<mark>]{<text>}`, a footnote naming the corresponding author: a note (8).
+  // - :844 `{nomenclature}`, a boxed "Nomenclature" section (12; 1411.2181, 2103.08145), set as that section; :845-863
+  //   `{deflist}` with `\defitem`/`\defterm`, a hanging definition list (13; 1303.2653, 1811.08269).
+  // - 1404.3867's :797-808 `\normalMode`, which takes back `\appendix`'s numbering (23 papers; 2404.00783, 1411.0092): the
+  //   appendices end there (`end_appendices`, as appendix.sty's `{appendices}` ends), and the sections after it are
+  //   sections again.
+  // Not ported: the astronomical journal abbreviations (`\apj`, `\mnras`, `\aap`… 7 to 16 papers each) are
+  // aas_macros.sty pasted into individual copies (1504.02326, 1807.02064, 2401.03908 `\newcommand\mnras{\ref@jnl
+  // {MNRAS}}`), no elsarticle release's.
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\email{}", "\\lx@add@contact[role=email]{#1}");
+    DefMacro!(
+      "\\correspondingauthor[]{}",
+      "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}"
+    );
+    DefConstructor!("\\lx@elsarticle@endappendices", sub[document, _args, _props] {
+      document.maybe_close_element("ltx:appendix")?;
+    },
+      before_digest => {
+        end_appendices();
+      });
+    RawTeX!(
+      r"\newenvironment{nomenclature}{\par\section*{Nomenclature}}{\par}
+\def\deflist{\@ifnextchar[{\@deflist}{\@deflist[]}}
+\newbox\defbox%
+\newdimen\defboxdimen%
+\def\@deflist[#1]{%
+\setbox\defbox\hbox{#1:\quad}%
+\defboxdimen\wd\defbox%
+\def\tempa{#1}%
+\par\addvspace{12pt plus2pt minus2pt}%
+\setlength\parindent{0pt}%
+\def\deftitle##1{{\noindent\itshape##1}\par}%
+\ifx\tempa\@empty%
+\def\defitem##1{\@hangfrom{##1\ }}%
+\else%
+\def\defitem##1{\@hangfrom{\hbox to \defboxdimen{##1\quad}}}%
+\fi%
+\def\defterm##1{##1\par}
+}
+\def\enddeflist{\par\addvspace{8pt plus2pt minus2pt}}
+\newcommand\normalMode{\par\lx@elsarticle@endappendices
+  \setcounter{section}{0}%
+  \setcounter{subsection}{0}%
+  \setcounter{equation}{0}
+  \gdef\thefigure{\@Alph\c@section.\arabic{figure}}%
+  \gdef\thetable{\@Alph\c@section.\arabic{table}}%
+  \gdef\thesection{\@arabic\c@section}%
+  \gdef\thesubsection{\c@section.\arabic{subsection}}%
+  \@addtoreset{equation}{section}%
+  \gdef\theequation{\@Alph\c@section.\arabic{equation}}%
+  \addtocontents{toc}{\string\let\string\numberline\string\tmptocnumberline}{}{}
+}"
+    );
+  }
 });

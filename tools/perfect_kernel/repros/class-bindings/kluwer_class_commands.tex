@@ -1,0 +1,40 @@
+% witness: 1306.4881, 1408.6262, astro-ph0001448, 0802.0687, astro-ph0307528 (`\inlinecite`, `\opencite`); 0910.2393,
+%          0711.4475 (`\theendnotes`); astro-ph0309194, astro-ph0401471 (`\lsim`, `\gsim`); math0212055,
+%          astro-ph0410557 (`\dR`, `\dZ`); 0912.3846 (`{subequation}`); math0308074 (`\qed`); 0802.0687 (`{motto}`);
+%          astro-ph0011264 (`\tabcapfont`)
+% oracle:  pdflatex 0 errors ("Jones and Smith (1990) showed; see Jones and Smith, 1990 and (1990)."; the endnote under
+%          "Notes"; equations (1a), (1b); "Text.  □"; the motto)
+% engines: rust 67u2 = 12 errors (each command undefined); Perl 15 errors (no kluwer binding)
+% expect:  0 errors, 0 warnings; the citations as author (year); ≲ ≳ ℝ ℤ in the formula; the motto a quote
+% status:  RED (67u2) -> GREEN (67y)
+% preload: ar5iv.sty
+\documentclass{kluwer}
+\begin{document}
+\begin{article}
+\begin{opening}
+\title{T}
+\author{A. Author}
+\institute{Univ}
+\begin{motto}
+A short motto.
+\end{motto}
+\end{opening}
+\inlinecite{jones} showed; see \opencite{jones} and \shortcite{jones}.
+A note\endnote{The endnote.} here.
+$a\lsim b\gsim c$, $x\in\dR$, $k\in\dZ$.
+\begin{subequation}
+\begin{equation}
+a=b
+\end{equation}
+\begin{equation}
+c=d
+\end{equation}
+\end{subequation}
+Text. \qed
+{\tabcapfont Small.}
+\theendnotes
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Jones and Smith}{1990}]{jones} Jones, A. and Smith, B.: 1990, A paper.
+\end{thebibliography}
+\end{article}
+\end{document}

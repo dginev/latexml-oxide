@@ -1,6 +1,8 @@
 //! elsart_support.sty — Elsevier article support (non-core additions)
 //! Perl: elsart_support.sty.ltxml — 175 lines
 //! Loads elsart_support_core and adds theorem/proof/section formatting
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -156,8 +158,56 @@ LoadDefinitions!({
     }
   );
 
-  // Perl L104: \pf proof environment
-  RawTeX!("\\@ifundefined{pf}{\\newenvironment{pf}{\\begin{@proof}[\\proofname]}{\\end{@proof}}}{}");
+  // elsart.cls:477-483 (v2.18; 0708.4004's copy, 94 of the 113 shipped copies alike): `{pf}`, a proof headed
+  // `\Elproofname`, and `{pf*}{<heading>}`, one headed by its argument (run-347 inventory 25 papers; 0708.4409
+  // `\begin{pf*}{Proof of Theorem \ref{t3}}`, 0709.3642, 0811.2675, cs0404055, 0802.0646). Perl's `{pf}` is amsthm's
+  // `{@proof}` (elsart_support.sty.ltxml:104), which elsart does not load, so both were undefined; Perl has no `{pf*}`
+  // (KNOWN_PERL_ERRORS #724). Here each opens an `<ltx:proof>` titled as the class titles it, a constructor pair as
+  // amsthm's `\@proof`/`\end@proof` (amsthm_sty.rs), so a `$$…$$` in the body is still display math (an environment
+  // whose begin digests the title broke it: 0708.4409, 17 errors).
+  DefConstructor!("\\lx@elsart@proof{}",
+    "<ltx:proof><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>",
+    properties => sub[args] {
+      let mut heading = vec![T_BEGIN!(), T_CS!("\\bfseries")];
+      if let Some(Some(arg)) = args.first() {
+        heading.extend(arg.revert()?.unlist());
+      }
+      heading.push(T_END!());
+      let title = digest(Tokens::new(heading))?;
+      let titlefont = title.get_font().ok().flatten().map(|f| (*f).clone());
+      let mut map = stored_map!("title" => title);
+      if let Some(f) = titlefont {
+        map.insert("titlefont", Stored::Font(Rc::new(f)));
+      }
+      Ok(map)
+    });
+  DefConstructor!("\\lx@elsart@endproof", sub[document, _args] {
+    document.maybe_close_element("ltx:proof")?;
+  });
+  if lookup_definition(&T_CS!("\\pf"))?.is_none() {
+    RawTeX!(r"\def\pf{\lx@elsart@proof{\Elproofname}}\def\endpf{\lx@elsart@endproof}");
+  }
+  RawTeX!(r"\@namedef{pf*}#1{\lx@elsart@proof{#1}}\@namedef{endpf*}{\lx@elsart@endproof}");
+  // elsart.cls:47 the name parts of an author or address (`\cty` city, `\cny` country, `\jr`), set as they stand
+  // (`\relax`; 1202.0185, 0711.4590); :56 `\@blstr`, the baseline stretch the options set (0907.1629 adnd.sty:30);
+  // :514 `\ext@algorithm`, :754 `\ftype@figure`; :790, :1006-1008 `\t@glob@notes`/`\output@glob@notes`, the title
+  // page's notes, which the frontmatter carries (astro-ph0103363 calls it: nothing to set here).
+  RawTeX!(r"\let\cty\relax \let\cny\relax\let\jr\relax
+\def\@blstr{1}
+\def\ext@algorithm{lof}
+\def\ftype@figure{1}
+\newtoks\t@glob@notes
+\def\output@glob@notes{}");
+  // The MACMILLAN copies of elsart5.cls (45 of the shipped elsart5 copies, `%%%\KEY added by MACMILLAN`) start the
+  // keywords after `\PACS` with `\KEY` (`\def\KEY{\par\vspace*{7pt}\noindent\@keywordheading}`; 34 + 7 papers;
+  // 0801.1765, 0706.1711, 0708.4004): a keyword group, as `\PACS` opens a classification one. Their `\nolinenumbers`
+  // (`\let\nolinenumbers\relax`, 10 copies; 0904.0552) is lineno's off switch. A copy's guesses
+  // (`DefinitionOrigin::Fallback`).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\KEY", "\\@keyword@cut\\@keyword");
+    Let!("\\nolinenumbers", "\\relax");
+  }
 
   // Caption continuations — Perl L108-110
   DefMacro!("\\contcaption", "\\caption{continued}");

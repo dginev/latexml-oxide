@@ -1,0 +1,14 @@
+% witness: 2105.14892, 2307.14222, 2609.15658, 2312.03234 (amsart `\bibliofont` = `\footnotesize` before
+%          `\bibliography`): every earlier formula's `\quad` reads `\hskip 10.00002pt` in its tex attribute
+% oracle:  pdflatex 0 errors ("a b" with a quad space; "x" small)
+% engines: rust 67u2 = 0 errors, `tex="a\hskip 10.00002ptb"`; the XMath is the same as without the size change
+% expect:  0 errors, 0 warnings; `tex="a\quad b"`
+% status:  RED (67y)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+$a\quad b$
+
+\footnotesize
+x
+\end{document}

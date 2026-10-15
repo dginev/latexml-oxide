@@ -13552,6 +13552,65 @@ class-bindings/aa_class_copy_loads_answers.tex (a `{filecontents*}` aa.cls loadi
 Rust: aa_cls.rs loads answers (raw) when the paper's copy does. Guard `perfect_kernel_batch67u::aa_class_copy_loads_answers`.
 
 
+## 720. A document cannot unload a package by relaxing its `\ver@<file>`: amsart's `\let\proof\relax` + amsthm idiom
+
+LaTeX's loaded test is `\ver@<file>` (latex.ltx `\@ifl@aded`: `\expandafter\ifx\csname ver@#2.#1\endcsname\relax`).
+amsart.cls:41-42 marks amsthm.sty loaded, so papers that want amsthm.sty's own `{proof}` unmark it,
+`\expandafter\let\csname ver@amsthm.sty\endcsname\relax`, remove the class's commands (`\let\proof\relax
+\let\endproof\relax`, `\let\theoremstyle\relax`…) and `\usepackage{amsthm}`. Perl's loader reads only
+`<file>_loaded` (Package.pm:2311), and ams_support.sty.ltxml:64 has loaded amsthm, so the request is skipped and
+`{proof}` stays undefined. Minimal trigger: tools/perfect_kernel/repros/loader/amsart_reloads_amsthm_after_unmarking_it.tex:
+Perl 1 error, pdflatex 0. Run 347: 71 amsart papers (1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418,
+2304.10644). Fixed in Rust: `state::unmarked_by_document` — a binding-loaded file whose `\ver@<file>` is `\relax` is
+loaded afresh (content.rs) and `\@ifl@aded` answers false (sect05.rs). Guard
+`perfect_kernel_batch67y::amsart_reloads_amsthm_after_unmarking_it`.
+
+## 721. amsart's switches, abstract box, stores and contents-line code are undefined
+
+amsart.cls (amsproc.cls, amsbook.cls alike): :75-96 `\except`/`\for`/`\forany` over the `\newswitch` switches (Perl's
+ams_support.sty.ltxml:261-264 leaves them a comment), :554/:564 `\@keywords`/`\@subjclass`,
+:687-689 `\copyrightyear`/`\copyrightholder`, :837 and :856-864 `\abstractbox`/`\@setabstracta`, :1213-1241
+`\@tocwrite`/`\@tocwriteb`/`\l@figure`/`\l@table`, :1244 `\@defaultbiblabelstyle`, :1262 `\bibliofont`. Papers write
+`\section{\for{toc}{<short>}\except{toc}{<long>}}`, copy amsart's `{abstract}` code under another name into
+`\abstractbox`, build their own `\chapter` on `\@tocwriteb`; magyar.ldf patches `\l@figure`. Minimal trigger:
+tools/perfect_kernel/repros/class-bindings/amsart_class_internals.tex: Perl 11 errors (8 commands), pdflatex 0. Run
+347: `\for` 89, `\except` 73, `\abstractbox` 55, `\bibliofont` 38, `\@tocwriteb` 16 papers (1304.2934, 1601.05128,
+1512.02361, 2105.14892, 2004.14791). Fixed in Rust: ams_support_sty.rs `amsart_class_internals` (the class lines),
+`\@setabstract` run at `\maketitle`. Guard `perfect_kernel_batch67y::amsart_class_internals_are_defined`.
+
+## 722. REVTeX 4.1/4.2's `\doi`, grid and front-matter internals are undefined
+
+revtex4-2.cls:1986-1991 `\doi`/`\doibase`/`\@@startlink`/`\@@endlink`, ltxutil.sty:97-102 `\let@environment`,
+ltxgrid.sty:1403-1418 `\onecolumngrid@push`/`@pop` and :506-513 `\onecolumn@grid@setup`, :7459-7460
+`\widetext@top`/`@bot`, :7547 `\REV@text`, :7520 `\altaddress`, :6283-6308 `\clo@groupedaddress`…, aps4-2.rtx:212-214
+`\frontmatter@title@above/format/below` (revtex4-1.cls alike; REVTeX 4.0 has most). Perl has no revtex4-2 binding and
+its revtex4-1/revtex4 bindings define none of them. Minimal triggers: tools/perfect_kernel/repros/class-bindings/
+revtex4_2_class_internals.tex (Perl 16 errors), revtex4_1_class_internals.tex (Perl 18), pdflatex 0. Run 347: `\doi`
+101, `\onecolumngrid@push` 16 + 28, `\let@environment` 17, `\doibase` 26 papers (2010.08759, 2301.10789, 2311.06373,
+1101.2683, 1211.1037). Fixed in Rust: revtex4_support_sty.rs (`define_revtex41_internals` for 4.1/4.2). Guards
+`perfect_kernel_batch67y::revtex4_{1,2}_class_internals_are_defined`.
+
+## 723. elsarticle's internals and setters are undefined
+
+elsarticle.cls (TL v3.4c): :145 `\tnotemark`, :1021-1027 `\myfooter`/`\myfooterfont`, :671-673 `\abstracttitle`,
+:192-193 `\resetTitleCounters`, :670/:736 `\absbox`/`\keybox`, :126-131 `\elsRef`/`\Newlabel`, :1301-1302 `\@journal`;
+the older releases papers ship (v1.21: `\email`, `{nomenclature}`, `{deflist}`, `\correspondingauthor`,
+`\normalMode`). Perl's elsarticle.cls.ltxml defines none of them. Minimal triggers: tools/perfect_kernel/repros/
+class-bindings/elsarticle_class_internals.tex (Perl 7 errors), elsarticle_v1_21_commands.tex (Perl 7), pdflatex 0.
+Run 347: `\email` 85, `\@journal` 48 + 32, `\normalMode` 23, `\myfooter` 16 + 15 papers (1305.6441, 1212.6083,
+2404.00783, 2209.12222). Fixed in Rust: elsarticle_cls.rs (the older releases' commands as `Fallback` guesses),
+elsart_support_core_sty.rs (`\@journal`). Guards `perfect_kernel_batch67y::elsarticle_{class_internals,v1_21_commands}_are_defined`.
+
+## 724. elsart's `{pf}` needs amsthm, `{pf*}` and the class internals are undefined
+
+elsart.cls:477-483 (v2.20, 0712.3870's copy) `{pf}` and `{pf*}{<heading>}`; elsart_support.sty.ltxml:104 makes `{pf}`
+amsthm's `{@proof}`, which elsart does not load, and defines no `{pf*}`; :47 `\cty`/`\cny`/`\jr`, :56 `\@blstr`, :36/:625
+`\if@nameyear`/`\if@natbibloaded`, :1006 `\output@glob@notes` are undefined too, and the MACMILLAN elsart5.cls copies'
+`\KEY`. Minimal triggers: tools/perfect_kernel/repros/class-bindings/elsart_class_commands.tex (Perl 7 errors; pdflatex
+0 with v2.20, v2.18's `\author` errs under TL 2025), elsart5_macmillan_key.tex (Perl 1). Run 347: `{pf*}` 25, `\KEY`
+34 + 7 papers (0708.4409, 0709.3642, 0801.1765). Fixed in Rust: elsart_support_sty.rs (`{pf}`/`{pf*}` an
+`<ltx:proof>` constructor pair as amsthm's), elsart_cls.rs. Guards
+`perfect_kernel_batch67y::{elsart_class_commands_are_defined,elsart5_macmillan_key_starts_the_keywords}`.
 ## 770. `\IfFileExists` finds a binding standing in for an author's file the paper does not ship
 
 latex_constructs.pool.ltxml:5692-5697 `\IfFileExists` asks `FindFile`, which takes a `.ltxml` binding for the file

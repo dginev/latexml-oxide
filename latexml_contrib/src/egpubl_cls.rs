@@ -1,4 +1,5 @@
 //! Stub for egpubl.cls (Eurographics conference proceedings).
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -34,9 +35,13 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:classification}[scheme=ccs]{#2}"
   );
   def_macro_noop("\\printccsdesc")?;
+  // egpubl.cls:986-987 (v4.0, 2609.32222's copy; every shipped copy alike): `\ConfYear` also stores the year in `\p@ConfYear` (`200x` until set),
+  // which a conference style reads back (eurovis2014-short.sty:8 `\pdfSubject{\p@ConfName{} (\p@ConfYear)}`; run-347
+  // inventory 90 papers; 1409.5623, 1708.07559, 1709.03450, 1806.09174, 2210.05365).
+  RawTeX!(r"\gdef\p@ConfYear{200x}");
   DefMacro!(
     "\\ConfYear{}",
-    "\\@add@frontmatter{ltx:note}[role=year]{#1}"
+    "\\gdef\\p@ConfYear{#1}\\@add@frontmatter{ltx:note}[role=year]{#1}"
   );
   DefMacro!(
     "\\ConfEditors{}",
@@ -180,6 +185,63 @@ LoadDefinitions!({
     "\\DC",
   ] {
     def_macro_noop(selector)?;
+  }
+
+  // The shipped copies' remaining commands papers call (run-347 inventory: 261 egpubl.cls papers with one undefined),
+  // as the class defines them (line numbers of v4.0, 2609.32222's copy):
+  // - :2063 `\let\shortcite=\cite` (70 papers; 1710.04867, 1311.0119, 1704.04456).
+  // - :816 `\CCScat{<class>}{<number>}{<subject>}{<keywords>}`, a CCS category line set in place (42 papers; 1102.4258):
+  //   "<number> [<class>]: <subject>---<keywords>" (295 of 299 copies; an older `[3]` form gives `#1 [#2]: #3`).
+  // - the editor setters of the later venues, kept as the ones above are (`\EuroVisTutorialEditors`
+  //   27 papers; 2604.14791 eurovis2026.sty:12; `\EuroVisPanelsTutorialsEditors` 20; `\EuroVisGDxDREditors`).
+  // - :1000-1008 `\copyrightTextTitPag`, the title page's copyright line a paper gives (2404.02634 "\copyright\ 2024 The
+  //   Authors. Proceedings published by Eurographics…"): the frontmatter copyright, and stored as the class stores it;
+  //   `\copyrightTextRunPag`, the running pages' copy, and :1107-1109 `\p@journalSubmissionText`, the submission line:
+  //   page furniture, stored. `\pStartPage` (:914) stores the first page number.
+  // - the paper-type and licence selectors of single copies (`\PaperL2P` :1744, `\ArxivPaper` 2509.17755,
+  //   `\AuthorPreprint`, `\Paper`, `\Preprint`, `\SpecialIssuePreprint`, `\PpConferencePaper`, `\EuroVisGDxDR`,
+  //   `\NoStandardLicense`, `\authorCGFStandardLicense`, `\NoLicense`, `\CGFpreprintccby`, `\arxiv`) set the running
+  //   heads and copyright text — page furniture, as the selectors above; a copy's guesses that the document's own
+  //   definition replaces (`DefinitionOrigin::Fallback`).
+  RawTeX!(
+    r"\let\shortcite=\cite
+\newcommand\CCScat[4]{#2 [#1]: #3---#4}
+\newcommand\copyrightTextTitPag[1]{\gdef\p@copyrightTextTitPag{#1}\lx@add@copyright{#1}}\gdef\p@copyrightTextTitPag{}
+\newcommand\copyrightTextRunPag[1]{\gdef\p@copyrightTextRunPag{#1}}\gdef\p@copyrightTextRunPag{}
+\newcommand\p@journalSubmissionText[1]{submitted to COMPUTER GRAPHICS \textit{Forum} #1.}
+\newcommand\pStartPage[1]{\gdef\j@pStartPage{#1}}"
+  );
+  DefMacro!(
+    "\\EuroVisTutorialEditors{}",
+    "\\@add@frontmatter{ltx:note}[role=editors-tutorial]{#1}"
+  );
+  DefMacro!(
+    "\\EuroVisPanelsTutorialsEditors{}",
+    "\\@add@frontmatter{ltx:note}[role=editors-panels-tutorials]{#1}"
+  );
+  DefMacro!(
+    "\\EuroVisGDxDREditors{}",
+    "\\@add@frontmatter{ltx:note}[role=editors-gdxdr]{#1}"
+  );
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\def\PaperL2P{}");
+    for selector in [
+      "\\ArxivPaper",
+      "\\AuthorPreprint",
+      "\\Paper",
+      "\\Preprint",
+      "\\SpecialIssuePreprint",
+      "\\PpConferencePaper",
+      "\\EuroVisGDxDR",
+      "\\NoStandardLicense",
+      "\\authorCGFStandardLicense",
+      "\\NoLicense",
+      "\\CGFpreprintccby",
+      "\\arxiv",
+    ] {
+      def_macro_noop(selector)?;
+    }
   }
 
   // {CCSXML} env — ACM-style XML metadata block, skipped as egpubl.cls:820 does, with the comment package's

@@ -7,7 +7,7 @@ LoadDefinitions!({
   // Generally ignorable options
   for option in [
     "12pt", "11pt", "10pt", "oneside", "twoside",
-    "symbold", "nameyear", "doublespacing", "reviewcopy",
+    "symbold", "doublespacing", "reviewcopy",
   ].iter() {
     DeclareOption!(option, None);
   }
@@ -19,6 +19,13 @@ LoadDefinitions!({
   DeclareOption!("onecolumn", "\\@twocolumnfalse\\@TwoColumnfalse");
   DeclareOption!("twocolumn", "\\@twocolumntrue\\@TwoColumntrue");
   DeclareOption!("ussrhead", "\\@ussrheadtrue");
+  // elsart.cls:36, :66-67, :625-626 (v2.20, 0712.3870's copy; 91 of the shipped copies alike): the reference-style
+  // switches a journal style built on elsart tests in its own `{thebibliography}` (0907.1629, 0905.2086 adnd.sty:273-301
+  // `\if@natbibloaded`; run-347: 4 papers), with the `nameyear` option that sets one.
+  RawTeX!(r"\newif\if@nameyear\@nameyearfalse
+\newif\if@natbibloaded\@natbibloadedfalse
+\AtBeginDocument{\@ifpackageloaded{natbib}{\@natbibloadedtrue}{}}");
+  DeclareOption!("nameyear", "\\@nameyeartrue");
 
   DeclareOption!("seceqn", {
     AssignValue!("@seceqn" => 1i64);

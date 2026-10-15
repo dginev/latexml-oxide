@@ -1849,6 +1849,26 @@ pub fn end_borrow(outer: Vec<String>) {
   }
 }
 
+/// Has the document unloaded the binding-loaded `file` (`amsthm.sty`) by letting its `\ver@<file>` to `\relax`?
+/// LaTeX's loaded test is that macro (latex.ltx `\@ifl@aded`: `\expandafter\ifx\csname ver@#2.#1\endcsname\relax`),
+/// which a binding load defines (content.rs, Perl Package.pm:2326), so a relaxed one is a file the document took back:
+/// the amsart idiom `\expandafter\let\csname ver@amsthm.sty\endcsname\relax` before `\usepackage{amsthm}` (amsart.cls:41
+/// marks amsthm loaded; 1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418, 2304.10644). A file that un-marks
+/// itself (`<file>_unmarks_itself`, fontenc) is the loader's own case. Perl's loader reads only `<file>_loaded`
+/// (Package.pm:2311), KNOWN_PERL_ERRORS #720.
+pub fn unmarked_by_document(file: &str) -> bool {
+  if !lookup_bool(&s!("{file}_loaded")) || lookup_bool(&s!("{file}_unmarks_itself")) {
+    return false;
+  }
+  match (
+    lookup_meaning(&T_CS!(s!("\\ver@{file}"))),
+    lookup_meaning(&T_CS!("\\relax")),
+  ) {
+    (Some(ver), Some(relax)) => ver == relax,
+    _ => false,
+  }
+}
+
 /// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`), a kernel stub
 /// (`DefinitionOrigin::Stub`) or a borrowed package's (`DefinitionOrigin::Borrowed`), which a document's own
 /// `\newcommand` may replace?

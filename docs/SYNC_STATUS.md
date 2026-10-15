@@ -1478,6 +1478,59 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
 - **Fleet packaging (68d study, not a loader bug)**: the fleet image's distro TeX Live (`/usr/share/texlive`) has no
   `asymptote.sty`, which TL 2025 has and the probe reads raw without a warning: 8 + 5 `missing_file:asymptote` tasks in
   2605/2606 (2605.00095, 2605.03389, 2606.02087); a packaging fix for the worker image.
+- **67y** (binding gaps G2: class bindings lacking commands their class defines; bindgaps/g23_macros.tsv rows amsart,
+  revtex4-2, revtex4-1, kluwer, elsarticle, elsart, egpubl). Per binding (commands, real file:line, witnesses):
+  amsart (ams_support_sty.rs `amsart_class_internals`, all three AMS classes) — `\except`/`\for`/`\forany` and the
+  `toc`/`lof`/`lot`/`runhead` switches (amsart.cls:63-96, :305, :1143-1145; `\newswitch`/`\setTrue`/`\setFalse` real,
+  no longer no-ops; 1304.2934, 1601.05128, 1912.08145), `\abstractbox`/`\@setabstract`/`\@setabstracta` with
+  `\@setabstract` run at `\maketitle` (:837, :856-864; a document's amsart-style abstract box was lost: 1512.02361,
+  2303.07306, 2201.00740, 2602.22909), `\@keywords`/`\@subjclass` empty (:554/:564; 2510.22858), `\copyrightyear`/`\copyrightholder` (:687-689), `\@tocwrite`/`\@tocwriteb`/`\@tocline`/`\l@figure`/
+  `\l@table` (:1189-1241; 2004.14791, 1805.00244, 2503.14638), `\@defaultbiblabelstyle`, `\bibliofont` (:1244, :1262;
+  2105.14892); `{proof}` after `\let\proof\relax` + `\usepackage{amsthm}` by the loader below (1510.08833 and 5 more).
+  revtex (revtex4_support_sty.rs; `define_revtex41_internals` for 4.1/4.2) — `\doi`/`\doibase` now for 4.2 too
+  (revtex4-2.cls:1986-1988; 2010.08759, 2301.10789), `\@@startlink`/`\@@endlink` an `<ltx:ref>` pair (:1990-2009;
+  1211.1037), `\onecolumngrid@push`/`@pop`, `\onecolumn@grid@setup`, `\set@vsize` (ltxgrid.sty, layout no-ops;
+  2311.06373, 2609.36113), `\let@environment` (ltxutil.sty:97; 1101.2683), `\widetext@top`/`@bot` (:7459; 2101.04636),
+  `\frontmatter@title@above/format/below`, `\frontmatter@finalspace` (aps4-2.rtx:212-214; 2006.03287), `\REV@text`
+  (:7547; 2202.11665), `\altaddress` (:7520), `\clo@groupedaddress`… (:6283-6308; 2402.07499), `\prep@math@patch`,
+  `\ltx@footnote@pop`, `\setup@hook`, `\setfloatlink`, `\theequation@prefix`. kluwer (kluwer_cls.rs) — named
+  references through natbib (`\cite` = `\citep`, `\inlinecite` = `\citet`, `\opencite` = `\citealp`, `\shortcite` =
+  `\citeyearpar`; all `\cite` under `numreferences`; kluwer.cls:2007-2145; 1306.4881, 1408.6262, 0802.0687), endnotes
+  (borrowed endnotes.sty; :1909-1975; 0910.2393), `\lsim`/`\gsim`/`\nequiv`/`\dC`…`\dQ` as ≲ ≳ ≢ ℂ ℙ ℕ ℝ ℤ ℚ (:162-176;
+  astro-ph0309194, math0212055), `\I`, `{subequation}`, `\qed`, `{kaprotate}`, `\nomenclature`/`\nomen`, `{motto}`
+  (a quote), `\tabcapfont`/`\figcapfont`/`\figtabdot`, `\crline`, `\rcline`… (as `\cline`), `\filedate`.
+  elsarticle (elsarticle_cls.rs) — TL v3.4c `\tnotemark`, `\myfooter`/`\myfooterfont`, `\abstracttitle` (names the
+  frontmatter abstract), `\keywordtitle`, `\resetTitleCounters` + `tnote`/`fnote`/`cnote`, `\absbox`/`\keybox`,
+  `\Columnwidth`, `\elsLabel`/`\Newlabel`/`\elsRef`, `\comma`, `\@eadauthor`, `\pprinttitle`, `\hashchar`,
+  `\elsparagraph` (2203.02441, 2209.12222, 2204.07076, 2401.05905); v1.21's (100 of 225 shipped copies) `\email`,
+  `\correspondingauthor`, `{nomenclature}`, `{deflist}`/`\defitem`/`\defterm`, `\normalMode` (ends the appendices) as
+  `Fallback` guesses (1305.6441, 2103.08145, 1303.2653, 2404.00783); `\@journal` stored by `\journal`
+  (elsart_support_core_sty.rs; 1212.6083, 1007.3192, 0812.4577). elsart (elsart_support_sty.rs, elsart_cls.rs) — `{pf}`/`{pf*}`
+  an `<ltx:proof>` pair (elsart.cls:477-483; 0708.4409), `\cty`/`\cny`/`\jr`, `\@blstr`, `\ext@algorithm`,
+  `\ftype@figure`, `\output@glob@notes`, `\if@nameyear`/`\if@natbibloaded` (0907.1629 adnd.sty), the MACMILLAN elsart5
+  copies' `\KEY` and `\nolinenumbers` (0801.1765, 0904.0552). egpubl (egpubl_cls.rs) — `\p@ConfYear` stored by
+  `\ConfYear` (egpubl.cls:986-987 v4.0; 1409.5623), `\shortcite` (:2063), `\CCScat` (:816; 1102.4258),
+  `\EuroVisTutorialEditors`/`\EuroVisPanelsTutorialsEditors`/`\EuroVisGDxDREditors` (2604.14791),
+  `\copyrightTextTitPag` (the frontmatter copyright; 2404.02634)/`\copyrightTextRunPag`, `\p@journalSubmissionText`,
+  `\pStartPage`, and the single copies' selectors (`\PaperL2P`, `\ArxivPaper`…, `Fallback`). Kernel: the loader
+  reloads a binding-loaded file whose `\ver@<file>` the document let to `\relax`, and `\@ifl@aded` answers false
+  (`state::unmarked_by_document`; KNOWN_PERL_ERRORS #720); the ltcmd declarators replace a `Fallback` guess as
+  `\newcommand` does (`\lx@if@fallbackdefined`, latex_constructs_rust_only.rs; 2509.10728). KNOWN_PERL_ERRORS
+  #720-#724. Not ported: the astronomical journal macros of some elsarticle copies (aas_macros.sty pasted in; 1504.02326,
+  2401.03908), REVTeX's title-block production internals that documents replay for a second title page
+  (`\titleblock@produce`, `\@author@finish`, `\frontmatter@author@produce@*`, `\title@column`, `\print@toc`: need
+  ltxfront's author storage, which the frontmatter API replaces; 2105.06662, 2503.21669, 2604.15540), `\@makecaption`
+  (undefined for every class, article's too), amsart's `\@secnumpunct` (set only inside amsart's `\@sect`; 1611.09402) and `\sectionname`… (:320-322, a running
+  head in 1504.08082: a defined empty `\sectionname` put a space before every section number),
+  elsart's `\@thebibliography` (a journal style's own `{thebibliography}` over it; 0907.1629). Repros
+  class-bindings/{amsart_class_internals, revtex4_2_class_internals, revtex4_1_class_internals, kluwer_class_commands,
+  elsarticle_class_internals, elsarticle_v1_21_commands, elsart_class_commands, elsart5_macmillan_key,
+  egpubl_class_commands}, loader/{amsart_reloads_amsthm_after_unmarking_it, ltcmd_declarators_replace_a_fallback_guess}
+  RED → GREEN; guards `perfect_kernel_batch67y`.
+- **Residual of 67y — a font-size change after a formula rewrites its `tex=`** (RUST-ONLY, pre-existing): `$a\quad b$`
+  then a top-level `\footnotesize` gives `tex="a\hskip 10.00002ptb"` (the XMath is unchanged); amsart's `\bibliofont`
+  before `\bibliography` now triggers it (2105.14892, 2307.14222, 2609.15658, 2312.03234: every `\quad`). RED repro
+  math-parse/quad_tex_after_a_later_size_change.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

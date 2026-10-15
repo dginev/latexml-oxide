@@ -93,7 +93,12 @@ LoadDefinitions!({
   DefMacro!("\\presented{}", "\\lx@add@date[role=presented]{#1}");
   DefMacro!("\\articletype{}", "\\lx@add@pubnote[role=type]{#1}");
   DefMacro!("\\issue{}", "\\lx@add@pubnote[role=issue]{#1}");
-  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // elsarticle.cls:1301-1302 (TL v3.4c; elsart.cls v2.18 alike): `\journal` stores the journal's name in `\@journal`,
+  // empty until set, which the class's first-page footer prints ("Preprint submitted to \@journal") and papers' own
+  // footers and title code read (run-347 inventory: 48 elsarticle papers, 32 with a copy of their own, 13 elsart;
+  // 1212.6083, 1007.3192, 0812.4577): the frontmatter keeps it as a note, the store as the class keeps it.
+  RawTeX!(r"\let\@journal\@empty");
+  DefMacro!("\\journal{}", "\\gdef\\@journal{#1}\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
   DefMacro!("\\pubyear{}", "\\lx@add@date[role=publication]{#1}");
   def_macro_noop("\\FullCopyrightText")?;

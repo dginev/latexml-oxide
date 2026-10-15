@@ -1,0 +1,20 @@
+% witness: 0801.1765, 0706.1711, 0708.4004, 0805.1151, 0902.1671 (`\KEY` in `{keyword}`; run-347 inventory 34 + 7
+%          papers): the MACMILLAN copies of elsart5.cls (`\def\KEY{\par\vspace*{7pt}\noindent\@keywordheading}`)
+% oracle:  pdflatex with 0801.1765's elsart5.cls and elsart.cls: "PACS: 02.70.-c", "Keywords: quantum lattice model;
+%          DMRG"; 2 errors from the copy's title-page logos (`\includegraphics` without graphicx: page furniture)
+% engines: rust 67u2 = 1 error (`\KEY` undefined; the keywords ran into the PACS line); Perl 1 error, the same
+% expect:  0 errors, 0 warnings; the PACS a classification, the rest keywords
+% status:  RED (67u2) -> GREEN (67y)
+% preload: ar5iv.sty
+\documentclass{elsart5}
+\begin{document}
+\begin{frontmatter}
+\title{Keys}
+\author{A. Author}
+\begin{keyword}
+\PACS 02.70.-c
+\KEY quantum lattice model \sep DMRG
+\end{keyword}
+\end{frontmatter}
+Text.
+\end{document}

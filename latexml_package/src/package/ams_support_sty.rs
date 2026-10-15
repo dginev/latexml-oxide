@@ -99,6 +99,10 @@ LoadDefinitions!({
   if lookup_bool("2.09_COMPATIBILITY") {
     RequirePackage!("amstex");
   }
+  // amsart.cls:41-42 (amsproc.cls, amsbook.cls alike) marks amsthm.sty loaded (`\ver@amsthm.sty`), its theorem code
+  // being the class's own; here amsthm's binding stands for it. A document that wants amsthm.sty itself unmarks it
+  // (`\expandafter\let\csname ver@amsthm.sty\endcsname\relax`, then `\let\proof\relax…\usepackage{amsthm}`), which
+  // the loader honours as LaTeX's `\@ifl@aded` does (content.rs `unmarked_by_document`).
   RequirePackage!("amsthm");
   RequirePackage!("amsfonts");
   RequirePackage!("makeidx");
@@ -366,15 +370,22 @@ LoadDefinitions!({
   DefMacro!("\\@True", None, "00");
   DefMacro!("\\@False", None, "01");
 
-  // \newswitch, \setFalse, \setTrue — complex sub closures, stubbed as no-ops
-  def_macro_noop("\\newswitch[]{}")?;
-  def_macro_noop("\\setFalse{}")?;
-  def_macro_noop("\\setTrue{}")?;
-
-  // funny control structures, using above switches
-  // \except
-  // \for
-  // \forany
+  // amsart.cls:63-74 (amsproc.cls, amsbook.cls alike): `\newswitch{<name>}` makes `\?@<name>` the `\@False` (or the
+  // optional `[True]`) its tests read, `\setFalse`/`\setTrue` set it. Perl implements them (ams_support.sty.ltxml:
+  // 254-258); the earlier port stubbed them as no-ops, so a `\setTrue{toc}` set nothing. The class lines verbatim. The
+  // tests over them, `\except`, `\for` and `\forany`, are the classes' own (`amsart_class_internals`).
+  RawTeX!(r"\newcommand\newswitch[2][False]{%
+  \expandafter\@ifdefinable\csname ?@#2\endcsname{%
+    \global\expandafter\let\csname ?@#2\expandafter\endcsname
+      \csname @#1\endcsname
+  }%
+}
+\newcommand{\setFalse}[1]{%
+  \expandafter\let\csname ?@#1\endcsname\@False
+}
+\newcommand{\setTrue}[1]{%
+  \expandafter\let\csname ?@#1\endcsname\@True
+}");
 
   DefMacro!("\\Mc", None, "Mc");
 
@@ -492,5 +503,128 @@ pub fn amsart_uppercase_nonmath() -> Result<()> {
   \@ifnotempty{#2}{\toks@\@xp{\the\toks@\(#2\)}\@xskipmath\@empty}}%
 "
   );
+  Ok(())
+}
+
+/// The amsart class internals that documents and `.ldf` files call directly (amscls/amsart.cls; amsproc.cls and
+/// amsbook.cls carry the same lines), for the three class bindings (ams_core_cls.rs), not the ams_support loads an
+/// autoload makes in other classes. The class lines verbatim, a `\newcommand` as `\def`:
+/// - :75-96 `\except`, `\for`, `\forany` over the `\newswitch` switches, with the switches the class declares,
+///   `runhead` (:305) and `toc`/`lof`/`lot` (:1143-1145): `\section{\for{toc}{<short>}\except{toc}{<long>}}` keeps the
+///   long title in the body (run-347 inventory 89 + 73 papers; 1304.2934, 1601.05128, 1912.08145).
+/// - :554, :564 `\@keywords` and `\@subjclass`, empty: `\keywords` and `\subjclass` give the frontmatter, so a
+///   document's own print of them (2510.22858 `\ifx\@keywords\@empty\else…`) prints nothing twice, as `\@dedicatory`.
+/// - :687-689 `\copyrightinfo{0000}{(copyright holder)}`, the defaults `\copyrightyear`/`\copyrightholder` (2403.17965).
+/// - :837, :856-864 `\abstractbox` and `\@setabstract`/`\@setabstracta`, which set a box an abstract-like environment
+///   of the document's fills (1512.02361 `{abstracts}`, 2303.07306 `{acknowledgements}`, 2201.00740, 2602.22909, all
+///   amsart's own `{abstract}` code under another name): `\maketitle` sets it and makes `\@setabstract` `\relax`, so one
+///   after the title is set where it ends (`\ifx\@setabstract\relax \@setabstracta \fi`). The kernel `{abstract}` gives
+///   the frontmatter and leaves the box void. Before, `\@setabstract` stayed an empty macro and the box was never set:
+///   the text was lost.
+/// - :1189-1218, :1240-1241 the contents-line code, `\@tocwrite`/`\@tocwriteb` (2004.14791's own `\chapter`, 1805.00244)
+///   and `\l@figure`/`\l@table` (magyar.ldf:1696-1697 patches them; 2503.14638).
+/// - :1244 `\@defaultbiblabelstyle`, :1262 `\bibliofont` (2105.14892, 2312.03234).
+///
+/// Not ported: :320-322 the section names, empty until `\appendix` (1504.08082 `\markboth{\sectionname}…`, a running
+/// head): the refnum composition reads a defined `\<counter>name` as the unit's name (base_utilities.rs
+/// `\lx@refnum@compose`), so an empty one put a space before every section number.
+///
+/// Perl's binding defines none of them (ams_core.cls.ltxml, ams_support.sty.ltxml), KNOWN_PERL_ERRORS #721.
+pub fn amsart_class_internals() -> Result<()> {
+  RequirePackage!("amsgen");
+  // Inside a derived class's title-page deposit (`\lx@deposit@maketitle`, sect05.rs) the frontmatter carries the
+  // abstract and the class's abstract box reads given and empty (`\lx@dropped@env@stores`): its `\@setabstract`
+  // (resphilosophica.cls:259) sets nothing there, where the empty box made an empty paragraph.
+  DefConditional!("\\iflx@ams@depositing", {
+    lookup_bool("lx_depositing_frontmatter_fields")
+  });
+  RawTeX!(
+    r"\newswitch{}
+\DeclareRobustCommand{\except}[1]{%
+  \if\csname ?@#1\endcsname \expandafter\@gobble
+  \else \expandafter\@firstofone
+  \fi
+}
+\DeclareRobustCommand{\for}[1]{%
+  \if\csname ?@#1\endcsname \expandafter\@firstofone
+  \else \expandafter\@gobble
+  \fi
+}
+\DeclareRobustCommand{\forany}[1]{%
+  \csname for@any@01\endcsname#1,?,\@nil
+}
+\@namedef{for@any@\@False}#1,{%
+  \csname for@any@%
+    \csname ?@\zap@space#1 \@empty\endcsname
+  \endcsname
+}
+\@namedef{?@?}{x}
+\@namedef{for@any@\@True}#1\@nil#2{#2}
+\def\for@any@x{\@car\@gobble}
+\newswitch{runhead}
+\newswitch{toc}
+\newswitch{lof}
+\newswitch{lot}
+\let\@keywords=\@empty
+\let\@subjclass=\@empty
+\def\copyrightyear{0000}\def\copyrightholder{(copyright holder)}
+\newbox\abstractbox
+\def\@setabstract{\@setabstracta \global\let\@setabstract\relax}
+\def\@setabstracta{%
+  \iflx@ams@depositing\else
+  \ifvoid\abstractbox
+  \else
+    \skip@20\p@ \advance\skip@-\lastskip
+    \advance\skip@-\baselineskip \vskip\skip@
+    \box\abstractbox
+    \prevdepth\z@ % because \abstractbox is a vtop
+  \fi\fi
+}
+\def\@tochangmeasure#1{\sbox\z@{#1}%
+  \ifdim\wd\z@>\csname r@tocindent\@toclevel\endcsname\relax
+    \@xp\xdef\csname r@tocindent\@toclevel\endcsname{\the\wd\z@}%
+  \fi
+}
+\def\@toclevel{0}
+\def\@tocline#1#2#3#4#5#6#7{\relax
+  \ifnum #1>\c@tocdepth % then omit
+  \else
+    \par \addpenalty\@secpenalty\addvspace{#2}%
+    \begingroup \hyphenpenalty\@M
+    \@ifempty{#4}{%
+      \@tempdima\csname r@tocindent\number#1\endcsname\relax
+    }{%
+      \@tempdima#4\relax
+    }%
+    \parindent\z@ \leftskip#3\relax \advance\leftskip\@tempdima\relax
+    \rightskip\@pnumwidth plus4em \parfillskip-\@pnumwidth
+    #5\leavevmode\hskip-\@tempdima #6\nobreak\relax
+    \hfil\hbox to\@pnumwidth{\@tocpagenum{#7}}\par
+    \nobreak
+    \endgroup
+  \fi}
+\def\@tocpagenum#1{\hss{\mdseries #1}}
+\def\@tocwrite#1{\@xp\@tocwriteb\csname toc#1\endcsname{#1}}
+\def\@tocwriteb#1#2#3{%
+  \begingroup
+    \def\@tocline##1##2##3##4##5##6{%
+      \ifnum##1>\c@tocdepth
+      \else \sbox\z@{##5\let\indentlabel\@tochangmeasure##6}\fi}%
+    \csname l@#2\endcsname{#1{\csname#2name\endcsname}{\@secnumber}{}}%
+  \endgroup
+  \addcontentsline{toc}{#2}%
+    {\protect#1{\csname#2name\endcsname}{\@secnumber}{#3}}}
+\def\l@figure{\@tocline{0}{3pt plus2pt}{0pt}{1.5pc}{}}
+\let\l@table=\l@figure
+\def\@defaultbiblabelstyle#1{#1.}
+\def\bibliofont{\footnotesize}"
+  );
+  // :685-689: `\copyrightinfo` sets the two as well as the copyright.
+  DefMacro!(
+    "\\copyrightinfo{}{}",
+    "\\def\\copyrightyear{#1}\\@ifnotempty{#2}{\\def\\copyrightholder{#2}}\\lx@add@copyright{#1, #2}"
+  );
+  // amsart.cls:645: `\@maketitle` runs `\@setabstract` after the title (here `\lx@maketitle@body`, sect05.rs).
+  AddToMacro!("\\lx@maketitle@body", "\\@setabstract");
   Ok(())
 }

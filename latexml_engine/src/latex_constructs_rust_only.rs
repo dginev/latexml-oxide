@@ -990,6 +990,14 @@ LoadDefinitions!({
     let pool = lookup_definition(&cs)?.is_some_and(|prev| prev.get_origin().is_latexml_owned());
     Ok(if pool { if_tks } else { else_tks })
   });
+  // A fallback's guess (`DefinitionOrigin::Fallback`: OmniBus, a class binding's command of an older release) yields to
+  // the document's own `\NewDocumentCommand`/`\NewDocumentEnvironment`, as it yields to its `\newcommand` and
+  // `\newenvironment` (`state::is_fallback_meaning`): 2509.10728's own `\NewDocumentEnvironment{nomenclature}` over
+  // elsarticle v1.21's `{nomenclature}` (elsarticle_cls.rs) kept the guess and lost the paper's entry layout.
+  DefMacro!("\\lx@if@fallbackdefined{}{}{}", sub[(name, if_tks, else_tks)] {
+    let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
+    Ok(if is_fallback_meaning(&cs) { if_tks } else { else_tks })
+  });
   // The size half of `\selectfont`'s font choice (latex.ltx:12576-12578,
   // `\curr@fontshape/\f@size`), run from `\set@fontsize`'s `\size@update`
   // (sect13.rs; OXIDIZED_DESIGN_DIVERGENCES #288): the current font takes
@@ -1081,11 +1089,15 @@ LoadDefinitions!({
           {
             \cs_if_exist:NTF #1
               {
-                \lx@if@pooldefined { \cs_to_str:N #1 } { }
+                \lx@if@fallbackdefined { \cs_to_str:N #1 }
+                  { \__cmd_declare_cmd:Nnn #1 {#2} {#3} }
                   {
-                    \msg_error:nnxx { cmd } { already-defined }
-                      { \use:nnn \token_to_str:N #1 { } }
-                      { \token_to_str:N \NewDocumentCommand }
+                    \lx@if@pooldefined { \cs_to_str:N #1 } { }
+                      {
+                        \msg_error:nnxx { cmd } { already-defined }
+                          { \use:nnn \token_to_str:N #1 { } }
+                          { \token_to_str:N \NewDocumentCommand }
+                      }
                   }
               }
               { \__cmd_declare_cmd:Nnn #1 {#2} {#3} }
@@ -1098,9 +1110,13 @@ LoadDefinitions!({
       {
         \cs_if_exist:cTF {#1}
           {
-            \lx@if@pooldefined {#1} { }
-              { \msg_error:nnx { cmd } { env-already-defined } {#1} }
-            \use_none:nnn
+            \lx@if@fallbackdefined {#1}
+              { \__cmd_declare_env:nnnn {#1} }
+              {
+                \lx@if@pooldefined {#1} { }
+                  { \msg_error:nnx { cmd } { env-already-defined } {#1} }
+                \use_none:nnn
+              }
           }
           {
             \cs_if_exist:cTF { end #1 }

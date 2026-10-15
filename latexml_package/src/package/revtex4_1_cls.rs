@@ -129,20 +129,6 @@ LoadDefinitions!({
     RawTeX!(r"\AtBeginDocument{\lx@revtex@lineno}");
   }
 
-  // revtex4-1.cls L1965: `\providecommand\doi[0]{\begingroup\@sanitize@url\@doi}`
-  // — `\@sanitize@url` makes URL special chars (incl. `%`) catcode-other
-  // BEFORE the argument is read. Used in bibliography entries (e.g.
-  // `\doi{10.1103/PhysRevLett.123.210602}`). For XML we just emit the DOI
-  // as a hyperlink.
-  //
-  // `Semiverbatim` neutralizes SPECIALS (`_ & # ^ ~ $ '`) but NOT `%`, so
-  // a DOI like `10.7567%2Fjjaps...` had its `%` treated as a comment —
-  // eating the closing `}`, leaving `\doi{` unclosed and sending
-  // `readBalanced` runaway-to-EOF then an infinite pushback loop (FATAL).
-  // `HyperVerbatim` does `begin_semiverbatim(['%'])` (the `\@sanitize@url`
-  // analogue) so `%`/`_`/`&`/`#` are all literal. Witnesses: 2006.12945
-  // (`\doi{...%2F...}` → PushbackLimit FATAL; Perl raw-loads the cls and is
-  // clean), 2403.08476, 2112.03925 (`_` in DOIs).
-  DefMacro!("\\doi HyperVerbatim", "doi:\\href{https://doi.org/#1}{#1}");
-  DefMacro!("\\doibase",   "https://doi.org/");
+  // The class internals documents call, `\doi` among them (`define_revtex41_internals`).
+  revtex4_support_sty::define_revtex41_internals()?;
 });

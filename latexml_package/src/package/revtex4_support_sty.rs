@@ -186,6 +186,14 @@ LoadDefinitions!({
   // a page break; layout-only. A paper's own `\balancecolsandclearpage`
   // (`\close@column@grid\clearpage\twocolumngrid`) calls it: arXiv 2605.07942.
   def_macro_noop("\\close@column@grid")?;
+  // ltxgrid.sty:1403-1418 (revtex4.cls, revtex4-1.cls, revtex4-2.cls:4496-4510): `\onecolumngrid@push` switches to one
+  // column for a `figure*`/`table*` and `\onecolumngrid@pop` restores the grid — layout only, as `\onecolumngrid`.
+  // Papers bracket their wide floats with them (`\makeatletter\onecolumngrid@push\makeatother\begin{table*}`; run-347
+  // inventory 16 + 28 papers; 2311.06373, 2104.14555, 2004.00671, 2206.03658).
+  def_macro_noop("\\onecolumngrid@push")?;
+  def_macro_noop("\\onecolumngrid@pop")?;
+  // ltxgrid.sty:1713 `\set@vsize`, the page's text height — layout only.
+  def_macro_noop("\\set@vsize")?;
   def_primitive_noop("\\twocolumn")?;
   // The angle is a decimal (graphics.sty:445-452 → trig.sty:55 `\dimen@=#1\p@`):
   // a `{Number}` put the `.5` of `{22.5}` back in the input (OXIDIZED_DESIGN #317).
@@ -234,6 +242,9 @@ LoadDefinitions!({
   // treatment RevTeX relies on for inline-text-in-math spacing).
   DefConstructor!("\\text{}", "<ltx:text _noautoclose='true'>#1</ltx:text>",
     mode => "restricted_horizontal", locked => true);
+  // revtex4-2.cls:7547-7585 (revtex4.cls:5992, revtex4-1.cls:7526): REVTeX's `\text` is `\REV@text`, which apsrev's
+  // `.bbl` notes write out (`$t'=R(t)\protect \REV@text { mod } 1$`; 2202.11665, 2107.02243, 1407.5317).
+  Let!("\\REV@text", "\\text");
 
   // RevTeX3 bold math (obsolete in RevTeX4) — Perl L165-171. RevTeX 4.x's own `\bm` (revtex4-2.cls:7573-7586,
   // revtex4-1.cls:7552-7565, revtex4.cls:6018-6032) asks for bm.sty ("To use \bm, please load the bm package!"),
@@ -483,6 +494,55 @@ LoadDefinitions!({
 
   // Environment manipulation — Perl L425-430
   DefMacro!("\\replace@command{}{}", "\\global\\let#1#2 #1");
+  // ltxutil.sty:97-102 (revtex4.cls, revtex4-1.cls, revtex4-2.cls:102-107) `\let@environment{<new>}{<old>}`, which a
+  // document or a class built on REVTeX calls before it defines it itself (1101.2683, 1204.0239 `\let@environment
+  // {abstract}{itp@abstract}`; 1510.05418, 1502.05917, 1510.09145; run-347 inventory 17 + 2 papers). Perl lacks it
+  // (KNOWN_PERL_ERRORS #722).
+  RawTeX!(r"\def\let@environment#1#2{%
+ \expandafter\let
+ \csname#1\expandafter\endcsname\csname#2\endcsname
+ \expandafter\let
+ \csname end#1\expandafter\endcsname\csname end#2\endcsname
+}");
+  // revtex4-2.cls:7459-7460 (revtex4.cls, revtex4-1.cls alike): the rule boxes `{widetext}` sets above and below a
+  // wide passage, which a document's own variant fills (2101.04636 `{nobotrulewidetext}`, 2202.08908, 2506.16974).
+  RawTeX!(r"\newbox\widetext@top\newbox\widetext@bot");
+  // aps4-2.rtx:212-214 (aps4-1.rtx:182-184, revtex4's aps.rtx:158-160) and revtex4-2.cls:3079: the APS title's spacing
+  // and font, which a document's second title block reuses (2006.03287 `\frontmatter@title@format Supplementary
+  // Information: \ourtitle`; 2210.03153, 2101.08363, 2605.30425).
+  RawTeX!(r"\def\frontmatter@title@above{\addvspace{6\p@}}%
+\def\frontmatter@title@format{\large\bfseries\centering\parskip\z@skip}%
+\def\frontmatter@title@below{}%
+\def\frontmatter@finalspace{\addvspace{18\p@}}");
+  // revtex4-2.cls:7520 (revtex4.cls:5965, revtex4-1.cls:7499): the obsolete `\altaddress` becomes `\altaffiliation`
+  // (1509.02329, 1503.07039, 2109.03348).
+  RawTeX!(r"\def\altaddress{\replace@command\altaddress\altaffiliation}");
+  // revtex4-2.cls:6676 (revtex4.cls:5269, revtex4-1.cls:6655): the equation number's prefix, empty unless `eqsecnum`.
+  RawTeX!(r"\def\theequation@prefix{}");
+  // revtex4-2.cls:6283-6308 (revtex4-1.cls, revtex4.cls:4087-4105): the address-grouping switches and the option
+  // macros that set them, which a style built on REVTeX calls (2402.07499 ljm.sty:304-305 `\@ifxundefined
+  // \groupauthors@sw{\clo@groupedaddress}{}`; 2012.06334, 2206.05563, 2410.06749). The frontmatter API places the
+  // affiliations; the switches set nothing here.
+  RawTeX!(r"\def\clo@groupedaddress{%
+ \@booleantrue\groupauthors@sw
+ \@booleantrue\@affils@sw
+ \@booleanfalse\runinaddress@sw
+}%
+\def\clo@unsortedaddress{%
+ \@booleantrue\groupauthors@sw
+ \@booleanfalse\@affils@sw
+ \@booleanfalse\runinaddress@sw
+}%
+\def\clo@runinaddress{%
+ \@booleantrue\groupauthors@sw
+ \@booleantrue\@affils@sw
+ \@booleantrue\runinaddress@sw
+}%
+\def\clo@superscriptaddress{%
+ \@booleanfalse\groupauthors@sw
+ \@booleantrue\@affils@sw
+ \@booleanfalse\runinaddress@sw
+}");
   def_macro_noop("\\replace@environment{}{}")?;
   def_macro_noop("\\glet@environment{}{}")?;
 });
@@ -562,4 +622,51 @@ pub(crate) fn record_implicit_bibstyle(post: &str) {
     _ => return,
   };
   assign_value("lx@implicit@bibstyle", pin(style), Some(Scope::Global));
+}
+
+/// The REVTeX 4.1/4.2 internals documents call (revtex4-1.cls, revtex4-2.cls; REVTeX 4.0 has none of them), for the two
+/// class bindings:
+/// - :1965-1967 / :1986-1991 `\doi{<doi>}`, the DOI link the APS `.bbl`s and documents write (2010.08759, 1805.10530,
+///   2109.10305, 2302.01688; run-347 inventory 101 revtex4-2 papers), and `\doibase`, its resolver, which documents and
+///   `.bbl`s put before a DOI in `\href` (2301.10789 `\href {\doibase 10.1007/…}`; 26 papers). `\@sanitize@url` makes
+///   URL characters other before the argument is read: `HyperVerbatim` does so, `%` included (2006.12945
+///   `\doi{…%2F…}`, a PushbackLimit Fatal as `Semiverbatim`; 2403.08476, 2112.03925 `_`). The resolver is
+///   `https://doi.org/` (revtex4-2.cls:1988; 4.1's `http://dx.doi.org/` redirects there). `\@sanitize@url` (:1989)
+///   is the class's; `\@@startlink{<url>}`…`\@@endlink` (:1990-2009) open and close the link, which the class makes
+///   live when hyperref is loaded (:1992-2009 `\hypertext@enable@ltx`, from `\document@inithook`), as this binding
+///   always loads it: an `<ltx:ref>` around the text between them (1211.1037's own `\Doi`, 87 links, whose URLs had
+///   stood as text only by the undefined-command recovery).
+/// - ltxgrid.sty:506-513 `\onecolumn@grid@setup`/`\twocolumn@grid@setup`, the column grid's insert setup (2609.36113,
+///   2606.16884, 2609.15324, 2609.38318) — layout only.
+/// - ltxutil.sty:418-421 `\prep@math@patch` over `\prepdef` (a no-op here), ltxutil.sty:612 `\ltx@footnote@pop`
+///   (`\@empty`), revtex4-2.cls:5845 `\setup@hook` (`\@empty`), :6746 `\setfloatlink`.
+/// - :6283-6285 the address switches' defaults.
+pub(crate) fn define_revtex41_internals() -> Result<()> {
+  DefMacro!("\\doi HyperVerbatim", "doi:\\href{https://doi.org/#1}{#1}");
+  DefMacro!("\\doibase", "https://doi.org/");
+  RawTeX!(
+    r"\providecommand \@sanitize@url[0]{\chardef\cat@space\the\catcode`\ \@sanitize\catcode`\ \cat@space}%
+\def\prep@math@patch{%
+ \prepdef\equation{\prep@math}%
+ \prepdef\eqnarray{\prep@math}%
+}%
+\let\ltx@footnote@pop\@empty
+\let\setup@hook\@empty
+\def\setfloatlink{\def\float@link}%
+\@booleanfalse\runinaddress@sw
+\@booleantrue\@affils@sw
+\@booleanfalse\groupauthors@sw"
+  );
+  def_macro_noop("\\onecolumn@grid@setup")?;
+  def_macro_noop("\\twocolumn@grid@setup")?;
+  DefConstructor!("\\@@startlink HyperVerbatim", "<ltx:ref href='#href'>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let url = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("href" => clean_url(&url)))
+  });
+  DefConstructor!("\\@@endlink", sub[document, _args] {
+    document.maybe_close_element("ltx:ref")?;
+  });
+  Ok(())
 }

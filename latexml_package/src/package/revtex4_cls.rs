@@ -111,8 +111,13 @@ LoadDefinitions!({
   RequirePackage!("revtex4_support");
   revtex4_support_sty::record_implicit_bibstyle(if revtex4_0 { "" } else { "4-2" });
   revtex4_support_sty::retire_option_handlers();
-  if !revtex4_0 {
+  if revtex4_0 {
+    // revtex4.cls:4092-4094: REVTeX 4.0 groups the addresses unless an address option said otherwise.
+    RawTeX!(r"\@ifxundefined\groupauthors@sw{\clo@groupedaddress}{}");
+  } else {
     revtex4_support_sty::define_float_repair()?;
+    // The REVTeX 4.2 internals documents call, `\doi` among them (`define_revtex41_internals`).
+    revtex4_support_sty::define_revtex41_internals()?;
   }
   // REVTeX 4.0 sets an `\email` or `\homepage` address with `\url`, the `\texttt` its `\href` falls back to
   // (revtex4.cls:4476-4493), so its `_` and `~` read as typed (1001.1076 "aiwen_fan@pku.edu.cn"). REVTeX 4.2, which

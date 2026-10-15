@@ -547,9 +547,11 @@ pub(crate) fn load() -> Result<()> {
   // Mirrors Perl `\@ifpackageloaded` checking `<X.sty>_loaded` (which
   // is set by both Perl `loadLTXML` and `loadTeXDefinitions`).
   // A file that un-marks itself (fontenc.sty tail `\let\ver@fontenc.sty\relax`)
-  // answers "not loaded", as real `\@ifl@aded` does on the relaxed `\ver@`.
+  // answers "not loaded", as real `\@ifl@aded` does on the relaxed `\ver@`; so does one
+  // the document un-marked (`latexml_core::state::unmarked_by_document`).
   if (lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_raw_loaded")))
     && !lookup_bool(&s!("{path}_unmarks_itself"))
+    && !unmarked_by_document(&path)
   {
     T_CS!("\\@firstoftwo")
   } else {
