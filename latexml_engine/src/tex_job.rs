@@ -228,8 +228,8 @@ LoadDefinitions!({
 
     // Perl uses `notex => !LookupValue('INCLUDE_CLASSES')`, but its FindFile prefers a `.ltxml` binding whatever
     // `notex` says (Package.pm:2126-2129; only `noltxml` gates it). These probes ask for bindings, which Rust's
-    // `find_file` consults only under `notex` — so they always set it: with `localrawclasses` (INCLUDE_CLASSES set,
-    // the arXiv profile since 62k) they missed `mn.cls`'s binding and fell to OmniBus (`\ifoldfss` undefined,
+    // `find_file` consults only under `notex` — so they always set it: with raw classes on (INCLUDE_CLASSES set, the
+    // arXiv profile since 62k) they missed `mn.cls`'s binding and fell to OmniBus (`\ifoldfss` undefined,
     // `{keywords}` lost; astro-ph0008081, astro-ph0105519). A paper-local raw `.sty` is probed below, only when no
     // binding answers, so a shipped `mn.sty` yields to the `mn` binding (astro-ph0602372).
     let notex = true;
@@ -272,8 +272,8 @@ LoadDefinitions!({
         &class,
         Some(FindFileOptions { ext_type: Some(Cow::Borrowed("sty")), forbid_ltxml: true, ..Default::default() }),
       ).is_some();
-    // With INCLUDE_CLASSES set (`rawclasses`, or the arXiv profile's `localrawclasses`), a raw `<class>.cls` no binding
-    // answers is the class (Perl latex_constructs.pool.ltxml:115-118 `FindFile(type=>'cls', notex=>!INCLUDE_CLASSES)`
+    // With INCLUDE_CLASSES set (`rawclasses`, the arXiv profile's since 67v, or `localrawclasses`), a raw `<class>.cls`
+    // no binding answers is the class (Perl latex_constructs.pool.ltxml:115-118 `FindFile(type=>'cls', notex=>!INCLUDE_CLASSES)`
     // takes the binding first, then the file), searched locally only under `searchpaths`.
     let class_cls_raw = !class_cls_binding_exact
       && !class_cls_via_fallback

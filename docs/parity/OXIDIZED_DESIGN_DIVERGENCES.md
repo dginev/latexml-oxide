@@ -13855,7 +13855,7 @@ Witness: 2305.06365 (revtex4-2 + natbib, `PushbackLimit`).
 
 **Guard**: `perfect_kernel_batch61::a_cite_saved_as_at_at_cite_still_cites`.
 
-### 444. The arXiv profile interprets a shipped class without a binding (Perl: OmniBus)
+### 444. The arXiv profile interprets a class without a binding (Perl: OmniBus)
 
 A paper's own `.cls` — shipped in its source because the journal's class is in no TeX distribution — gets no binding,
 and Perl's `ar5iv` profile, which interprets raw styles (`rawstyles`) but not classes, falls to OmniBus: a class of
@@ -13868,7 +13868,7 @@ alternate (`class_binding_alternate`: Perl's prefix step, plus Rust's case-insen
 `IEEEtranTCOM.cls` keeps the IEEEtran binding), and ahead of them all the binding a path-prefixed class names by its
 basename, which Perl finds as the request's own file (`class_binding_for_path`, Package.pm:2125-2128; since 68d it is
 loaded silently, as in Perl: `misc/ieeetran.cls` keeps IEEEtran, 2105.02087) — and a class in TeX Live without a
-binding still falls to OmniBus. Such a class is named by its basename, as LaTeX names it (latex.ltx:18740-18748
+binding still fell to OmniBus (until 67v, below). Such a class is named by its basename, as LaTeX names it (latex.ltx:18740-18748
 `\@onefilewithoptions` splits the request into `\@currpath` and `\@currname`): `\documentclass{lib-acm/acmart}` gives
 `\@currname` = `acmart` and the loaded flag `acmart.cls_loaded`, so `\@ifclassloaded{acmart}` holds and
 `\@ifclassloaded{lib-acm/acmart}` does not, as in pdflatex (2605.00109); `\@currpath` stays empty where LaTeX sets
@@ -13881,6 +13881,20 @@ does likewise: its probes always ask the binding registry first (as Perl's FindF
 says), so `\documentstyle{mn}` keeps its binding and a shipped 2.09 `mn.sty` yields to it, and only then try a raw
 `.cls`. With it come bindings for extsizes' `extarticle`, `extreport`, `extbook` (the standard classes with more body
 sizes), which shipped classes load and which otherwise fell to OmniBus too.
+
+**Batch 67v**: `ar5iv.sty` passes `rawclasses` (`INCLUDE_CLASSES => 1`) instead, so a class in TeX Live without a
+binding is interpreted raw as well: 3,362 run-353 papers' TeX Live classes fell to OmniBus (paper 806, ptptex 628,
+nature 457, jpsj2 430, apa6 165, jacow 92, smfart 77, artikel1 74, tufte-handout 50, …; a scan of 2,947,223 run logs)
+plus 827 `\documentstyle{ptptex}` papers. Measured on 3,345 of them (same binary, lever off/on): error-free 1,485 →
+3,079, errors 10,172 → 4,316, words +1.4%, contacts 2,418 → 7,951; ptptex 632 papers: error-free 119 → 607. The
+binding-first rule is now tied to raw classes being on at all (`!notex_default`, `load_class`), not to `searchpaths`:
+plain `rawclasses` would otherwise read a shipped `IEEEtran4PSCC.cls` raw before its prefix alternate. An OmniBus
+provide-only backstop loaded right after a raw class (`\documentclass` time) was measured and rejected: +103 Fatals
+(apa6/apa's own definitions collide with OmniBus's), fewer words, no error gain. The regressions the raw classes exposed
+were fixed before the switch — old-font math switches (67r, 511 papers), amsthm's proof against a class's
+`{proof}` (67s, 86), a theorem counter named by a macro (67s, ~350), hyperref's `\HyOrg@maketitle` (67q), paper.cls's
+`{keywords}` (67t); residuals: a kernel `secnumdepth` default (11 papers), caption machinery from class hooks (7). Guard
+`perfect_kernel_batch67v::a_tex_live_class_without_a_binding_is_interpreted`.
 
 Raw classes reach kernel paths OmniBus never did; fixed with 62k: an empty `\@startsection` type (amsart's
 `\@starttoc`) redefined `\the` (1102.4889, KNOWN_PERL_ERRORS #483); a class that re-lets `\@startsection` to a

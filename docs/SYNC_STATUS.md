@@ -2616,6 +2616,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in an svg:foreignObject) where pdftex/dvips give an `ltx:text`; pdflatex with `[dvipdfmx]` reads tc-pgf.def too
   (the content is the clip). Before 68h every driver mode took this path. Probe
   scratch_356a0c47/rev68h/p3/g_dvipdfmx.tex.
+- **67v** (rawclasses lever, user directive 2026-10-15): `ar5iv.sty` passes `rawclasses`, not `localrawclasses`, so a
+  class in TeX Live without a binding is interpreted raw instead of falling to OmniBus (OXIDIZED_DESIGN_DIVERGENCES
+  #444, batch-67v paragraph); every binding route, exact or alternate, still comes first (`load_class`'s
+  `raw_excluded` now holds whenever raw classes are on). Population: 3,362 run-353 papers on a TeX Live class with no
+  binding (paper, ptptex, nature, jpsj2, apa6, jacow, smfart, artikel1, …) + 827 `\documentstyle{ptptex}`; lever
+  off/on over 3,345 of them: error-free 1,485 → 3,079, errors 10,172 → 4,316, words +1.4%. Data:
+  `~/data/pk_agents/main/rawcls3/`; regression study agent_reports/2026-10-15_rc_rawcls_regressions.md (R1 → 67r,
+  R2/R5 → 67s, R3 → 67q, R9 → 67t; open: R8 kernel `secnumdepth` default, 11 papers; R7 caption machinery from class
+  hooks, 7; R4 error stub vs a lock, 6 Fatals; R6 `\|` as a macro, 1). Guard
+  `perfect_kernel_batch67v::a_tex_live_class_without_a_binding_is_interpreted`. Validation plan: sandbox 2605/2606
+  reruns vs runs 354/355, then the full arXiv rerun, prev-OK → fail attributed by lever off/on.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

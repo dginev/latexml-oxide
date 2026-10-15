@@ -3674,8 +3674,8 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // begin-document `\author`/`\abstract` checks fire and `\abstract@cs` is left
   // undefined, where Perl (OmniBus) is clean. Witness 1504.01965; the
   // misc/ieeetran case (2105.02087) now matches Perl via the basename binding.
-  // That holds under `notex` (INCLUDE_CLASSES off). The arXiv profile's `localrawclasses` (62k, DIVERGENCES #444)
-  // interprets a paper-local class with no binding route raw, path-prefixed or not. JINST's begin-document checks,
+  // That holds under `notex` (INCLUDE_CLASSES off). The arXiv profile's raw classes (`localrawclasses` since 62k,
+  // `rawclasses` since 67v; DIVERGENCES #444) interpret a class with no binding route raw, path-prefixed or not. JINST's begin-document checks,
   // which then fired (1504.01965, 1011.5969, 1310.6454), are met by its binding since 64k (OXIDIZED_DESIGN #482).
   // A path-prefixed class whose basename names a binding is that binding, loaded as the request's own file
   // ([`class_binding_for_path`]; Perl Package.pm:2125-2128): ahead of any raw read of the shipped copy, as Perl's
@@ -3706,11 +3706,12 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // Perl Package.pm:2705-2707: LoadClass can be limited to local SEARCHPATHS when
   // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
   let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";
-  // Under `localrawclasses` (the arXiv profile, 62k) a paper-local class stands in for OmniBus only: every binding
-  // route comes first — the basename binding of a path-prefixed class above, the exact and versioned ones inside
-  // `input_definitions`, the prefix/case alternate here — so a shipped `IEEEtranTCOM.cls` or `misc/ieeetran.cls`
-  // keeps the IEEEtran binding (2105.02087) instead of loading raw.
-  let raw_excluded = searchpaths_only && class_binding_alternate(name).is_some();
+  // With raw classes on — `rawclasses` (the arXiv profile since 67v) or `localrawclasses` (62k) — a raw class stands
+  // in for OmniBus only: every binding route comes first — the basename binding of a path-prefixed class above, the
+  // exact and versioned ones inside `input_definitions`, the prefix/case alternate here — so a shipped
+  // `IEEEtranTCOM.cls`, `IEEEtran4PSCC.cls` or `misc/ieeetran.cls` keeps the IEEEtran binding (2105.02087) instead of
+  // loading raw (OXIDIZED_DESIGN_DIVERGENCES #444).
+  let raw_excluded = !notex_default && class_binding_alternate(name).is_some();
   let notex_first = notex_default || raw_excluded;
 
   let result = input_definitions(name, InputDefinitionOptions {
