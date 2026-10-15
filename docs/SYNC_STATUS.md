@@ -1442,6 +1442,42 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   pdflatex prints "Proof." (the class style's `\@begintheorem`, KNOWN_PERL_ERRORS #686); the smfart/ijmart/smfbook
   witnesses are unchanged. Binding nets amsthm, tabls, amsart, amsbook, llncs, svjour3, elsarticle, siamart: 0 worse
   than 67o1 or 67s1.
+- **68d** (loader fixes from the 2605+2606 `missing_file` study, agent_reports/2026-10-15_missing_file_study.md): (1)
+  a path-prefixed class whose basename names a binding (`\documentclass{lib-acm/acmart}`, shipped copy in lib-acm/) is
+  that binding, loaded as the request's own file, as Perl's FindFile finds `<class>.cls.ltxml` in its installation
+  directory without the request's directory (Package.pm:2125-2128, Util/Pathname.pm:340-341): no `missing_file`
+  warning, no "missing file" in the verdict (cortex no longer files it as a warning), no dependency scan of the
+  shipped copy, which had loaded babel (no language: “?” quote glyphs), amsart, xstring, totpages, environ, framed,
+  zref and draftwatermark over the acmart binding (`content.rs::class_binding_for_path`; `fallback_request` keeps the
+  path for the family bindings that read the copy, JINST); 43 tasks (2605.00109, 2605.25901, 2606.20651). (2)
+  `\usepackage`, `\RequirePackage`, `\LoadClass(WithOptions)` and `\documentclass` strip a lone brace group from the
+  list and from each name as latex.ltx's delimited arguments do (a package name up to four groups after its argument's
+  braces: the list at `\@fileswith@pti@ns` latex.ltx:18714 and `\zap@space` :18695, each item at `\reserved@b`
+  :18727-18734 and `\@onefilewithoptions` :18740; a class name two; tex.web §400), and the PI spells the argument as
+  Perl's, without its braces and with its whitespace (2605.12897 `{makecell}`, 2606.09700 `{multirow}`). (3)
+  `\IfFileExists`/`\InputIfFileExists` take a binding for its file except a stand-in for an author's file TeX Live
+  never distributed (`latexml_core::binding::author_files::AUTHOR_FILE_STAND_INS`, 224 names):
+  `\IfFileExists{arxiv.sty}` is false unless the paper ships it (2606.27281; Perl shares it for its own stand-ins,
+  KNOWN_PERL_ERRORS #770). A file TeX Live once distributed answers as one (ruling 2026-10-15: `FORMER_TEX_LIVE`, 21
+  names with the years of TL 2007-2024's file lists — html.sty, psfig, rsfs.sty, luximono.sty, scrpage/scrpage2.sty,
+  slashbox.sty, undertilde.sty, cropmark.sty, aastex.cls/.sty and aastex62/63/631.cls, elsart*.cls, phyzzx), as does
+  LaTeXML's own (`LATEXML_OWN`). Guards: every entry is a registered binding kpathsea does not find, on one list only;
+  on a full TeX Live tree, every registered `.cls`/`.sty`/`.tex` binding kpathsea does not find is on a list (which
+  added jmlr2e, aistats2026, colt2024-2026, uai2025, l4dc2026, neus2025, pasj00-02, asme2ej, bmvc2k, SCIS2024,
+  agutexSI2019, agujournal2019, ws-p8-50x6-00 and colm2025_conference as stand-ins). (4) jfm's `lineno` option
+  (lineno-FLM.sty at the document's start) is declared only when the paper's copy declares it (2605.03843's v1.25 has
+  none). (5) breqn's stub notice says "only minimally stubbed". Recorded, not changed: `\RequirePackage{setup}` after
+  `\usepackage{style/setup}` (KNOWN_PERL_ERRORS #771). Repros loader/{subdir_class_is_its_binding (+
+  lib-acm/acmart.cls), braced_package_name, iffileexists_author_file_stand_in, iffileexists_former_tex_live,
+  jfm_v125/jfm_old_copy_has_no_lineno_option} RED (67int1) → GREEN; guards `perfect_kernel_batch68d`, the batch 61
+  alternate guard now expects no warning for `misc/ieeetran`. A/B vs 67int2-rel, 147 papers (the 43 subdirectory-class
+  tasks, the 4 other witnesses, 100 from pop67o): Errors 506 → 506, Fatals 6 → 6, Warnings 1,509 → 1,460, no paper
+  worse; XML changes (15): the acmart papers lose the scan's babel (proper quotes, `~` a no-break space again) and the
+  PIs of the witnesses; 1710.04900 (harvard.sty's `\IfFileExists{html.sty}`, no html.sty in the source) is unchanged,
+  keeping the html binding and its hyperref, as TeX of its era found html.sty.
+- **Fleet packaging (68d study, not a loader bug)**: the fleet image's distro TeX Live (`/usr/share/texlive`) has no
+  `asymptote.sty`, which TL 2025 has and the probe reads raw without a warning: 8 + 5 `missing_file:asymptote` tasks in
+  2605/2606 (2605.00095, 2605.03389, 2606.02087); a packaging fix for the worker image.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,
@@ -2282,16 +2318,17 @@ but 1601.03744 (3, a shared kernel defect, RED), captions back (≥ 62j4), keywo
 `\caption[<number>]`, captions in minipages in a tabular.
 
 62k: the arXiv profile interprets a shipped class without a binding raw (`localrawclasses` in ar5iv.sty; DIVERGENCES
-#444; a binding route, Perl's prefix alternate or Rust's case/basename steps, still wins): OmniBus-class papers 1,151 →
-220 errors and 2 → 89 error-free (127), random run-329 error papers 4,645 → 2,714 and 45 → 155 error-free (383),
-general sample 752 → 691 errors (873), no body text lost. With it: extsizes bindings (`\@ptsize` in points), `\documentstyle` binding-first probes
-and a raw `.cls` probe, tocbibind conditionals (KPE #482), ragged2e `\LaTeX*` saves under `newcommands` (KPE #481),
-IEEEtran `\ifCLASSINFOpdf` from `\pdfoutput` (KPE #480, 22 papers), and four kernel paths raw classes reach: an empty
-`\@startsection` type (KPE #483), a re-let `\@startsection` recursing through `\@sect` (`\lx@startsection`), the
-`\@maketitle` deposit's diagnostics hold, the locked `\NAT@wrout` (KPE #484). Open, worse than OmniBus (DIVERGENCES
-#444, RED repros): a paper's `\let\ifpdf\relax` that graphicx's driver undoes
-in TeX (JINST, Fatal), JINST's locked-`\author` flag, raa crossed groups, `\alignauthor`/`\newauthor` vs
-`\lx@personname`, `\@ifundefined{figure}` seeing the kernel's environment (sig-alternate).
+#444; a binding route, Perl's prefix alternate, Rust's case step or a path-prefixed class's basename binding, still
+wins): OmniBus-class papers 1,151 → 220 errors and 2 → 89 error-free (127), random run-329 error papers 4,645 → 2,714
+and 45 → 155 error-free (383), general sample 752 → 691 errors (873), no body text lost. With it: extsizes bindings
+(`\@ptsize` in points), `\documentstyle` binding-first probes and a raw `.cls` probe, tocbibind conditionals (KPE
+#482), ragged2e `\LaTeX*` saves under `newcommands` (KPE #481), IEEEtran `\ifCLASSINFOpdf` from `\pdfoutput` (KPE
+#480, 22 papers), and four kernel paths raw classes reach: an empty `\@startsection` type (KPE #483), a re-let
+`\@startsection` recursing through `\@sect` (`\lx@startsection`), the `\@maketitle` deposit's diagnostics hold, the
+locked `\NAT@wrout` (KPE #484). Open, worse than OmniBus (DIVERGENCES #444, RED repros): a paper's `\let\ifpdf\relax`
+that graphicx's driver undoes in TeX (JINST, Fatal), JINST's locked-`\author` flag, raa crossed groups,
+`\alignauthor`/`\newauthor` vs `\lx@personname`, `\@ifundefined{figure}` seeing the kernel's environment
+(sig-alternate).
 
 62j: elsarticle `\jtype` (KPE #478) and txfonts `\varv`/`\varw`/`\vary` (KPE #479) fixed; the run's one panic,
 1111.1991 (Rust-only: an auto-opened `ltx:picture` sized the `{picture}` whatsit being absorbed and stored the size

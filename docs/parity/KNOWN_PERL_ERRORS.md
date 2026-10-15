@@ -13551,3 +13551,34 @@ class-bindings/aa_class_copy_loads_answers.tex (a `{filecontents*}` aa.cls loadi
 \end{comment}`): Perl 1 error, pdflatex 0 ("Shown."). Run 353: 23 papers (1501.03426, 1504.01878, 1507.00595). Fixed in
 Rust: aa_cls.rs loads answers (raw) when the paper's copy does. Guard `perfect_kernel_batch67u::aa_class_copy_loads_answers`.
 
+
+## 770. `\IfFileExists` finds a binding standing in for an author's file the paper does not ship
+
+latex_constructs.pool.ltxml:5692-5697 `\IfFileExists` asks `FindFile`, which takes a `.ltxml` binding for the file
+(Package.pm:2125-2128) or a versioned fallback's (`FindFile_fallback`, :2141-2226). For a binding of a TeX Live or
+LaTeXML file that is the file, and so for a file TeX Live once distributed (aastex.cls 2007-2014, html.sty, psfig.sty:
+TeX in the paper's era found it); for one standing in for a file authors distribute with their papers (neurips.sty,
+icml.sty, aastex7.cls, JHEP.cls, svjour3.cls, aa.cls, … — no TeX Live file, ever) it answers true where TeX answers
+false, and the paper takes its with-the-file branch without the file. Minimal trigger:
+tools/perfect_kernel/repros/loader/iffileexists_author_file_stand_in.tex
+(`\IfFileExists{neurips_2024.sty}{FOUND}{ABSENT}` with no neurips_2024.sty): Perl "FOUND" (neurips.sty.ltxml through
+the fallback), pdflatex "ABSENT". Rust (which had the defect for its own arxiv.sty binding: 2606.27281
+`\IfFileExists{arxiv.sty}{\usepackage{arxiv}}{}`) answers by the file for the registered stand-ins
+(`latexml_core::binding::author_files::AUTHOR_FILE_STAND_INS`, `binding_counts_as_file`), and by the binding for every
+other one, the former TeX Live files (`FORMER_TEX_LIVE`, with the years TeX Live's file lists show) and LaTeXML's own
+(`LATEXML_OWN`) among them. Guards `perfect_kernel_batch68d::{iffileexists_skips_author_file_stand_ins,
+iffileexists_finds_former_tex_live_files, author_file_stand_ins_are_bindings_outside_tex_live,
+every_binding_outside_tex_live_is_listed}`.
+
+## 771. A package loaded by path is not loaded under its name (`\usepackage{style/setup}` then `\RequirePackage{setup}`)
+
+latex.ltx `\@onefilewithoptions` (:18740-18748) splits a request into `\@currpath` (`style/`) and `\@currname`
+(`setup`) and tests `\@ifl@aded` on the name, so after `\usepackage{style/setup}` a `\RequirePackage{setup}` (from
+`style/macros.sty`) is skipped. Perl marks and tests the loaded flags under the full request (Package.pm:2363-2364
+`$request_loaded`), so the second request searches for `setup.sty`, finds none beside the document, and warns
+`missing_file:setup` (`--includestyles`: "Can't find package setup"). Content is unaffected (the file was read).
+Minimal trigger: `style/setup.sty`, `style/macros.sty` with `\RequirePackage{setup}`, and a document
+`\usepackage{style/setup}\usepackage{style/macros}` (2606.18188; study repro
+`~/data/pk_agents/main/scratch_356a0c47/missing_file/repro/reqsub/`): pdflatex clean, Perl and Rust 1 warning. Not
+fixed: keying the flags by LaTeX's basename would also skip our binding for a later `\RequirePackage{natbib}` after a
+paper's `styles/natbib.sty` — LaTeX's outcome, but it drops the binding — so it waits for a ruling.

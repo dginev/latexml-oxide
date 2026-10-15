@@ -3517,9 +3517,10 @@ pub fn load_class_with_options(name: &str, after: Tokens) -> Result<()> {
   load_class(name, options, after)
 }
 /// The binding a class without one of its own is read with: Perl's step (Package.pm:2711-2716), the longest binding
-/// name the class starts with (`mysvjour3` → `svjour3`, `mn2ebis` → `mn2e`, `IEEEtranTCOM` → `IEEEtran`), then two
-/// Rust-only steps — one equal to it but for case (2406.08163), else one equal to the basename of a path-prefixed
-/// class (`misc/ieeetran` → `IEEEtran`, 2105.02087); `None` → OmniBus.
+/// name the class starts with (`mysvjour3` → `svjour3`, `mn2ebis` → `mn2e`, `IEEEtranTCOM` → `IEEEtran`), then a
+/// Rust-only step: one equal to it but for case (2406.08163); `None` → OmniBus. A path-prefixed class whose basename
+/// names a binding (`misc/ieeetran` → `IEEEtran`, 2105.02087) never gets here: [`class_binding_for_path`] loads that
+/// binding first.
 fn class_binding_alternate(name: &str) -> Option<&'static str> {
   let mut sorted: Vec<&'static str> = get_class_binding_names()
     .into_iter()
@@ -3547,26 +3548,32 @@ fn class_binding_alternate(name: &str) -> Option<&'static str> {
         .copied()
         .find(|candidate| name.eq_ignore_ascii_case(candidate))
     })
+}
+
+/// The class binding a path-prefixed class names by its basename (`lib-acm/acmart` → `acmart`, `misc/ieeetran` →
+/// `IEEEtran`, `JINST-Sample-files/JINST` → `JINST`): exact case first, then a case-insensitive full match, as
+/// `pathname_find` matches (Util/Pathname.pm:383-389). Perl finds that binding directly, as the request's own file:
+/// `FindFile_aux` looks `<class>.cls.ltxml` up in the installation's `Package` directory, which `candidate_pathnames`
+/// adds WITHOUT the request's directory (Package.pm:2125-2128, Util/Pathname.pm:340-341) — so it loads it silently, with
+/// no missing status, no warning and no dependency scan of the shipped class (`LoadClass`'s alternate branch,
+/// Package.pm:2715-2733, is never reached). A full match only, never a prefix (`AAAI-Std` is not `aa`). Witnesses
+/// 2605.00109, 2605.25901, 2606.20651 (`lib-acm/acmart`, 43 such tasks in 2605+2606), 1504.01965 (JINST),
+/// 2105.02087 (misc/ieeetran).
+fn class_binding_for_path(name: &str) -> Option<&'static str> {
+  let basename = name.rsplit(['/', '\\']).next().unwrap_or(name);
+  if basename == name || basename.is_empty() {
+    return None;
+  }
+  let names = get_class_binding_names();
+  names
+    .iter()
+    .copied()
+    .find(|candidate| *candidate == basename)
     .or_else(|| {
-      // Path-prefixed class (`misc/ieeetran`, `JINST-Sample-files/JINST`):
-      // strip the directory and match the basename against a binding, so
-      // `misc/ieeetran` → IEEEtran (Perl loads IEEEtran.cls.ltxml for it);
-      // `JINST-Sample-files/JINST` (Perl: no binding → OmniBus) has the contrib
-      // JINST binding since 64k, which reads the class in its directory
-      // (OXIDIZED_DESIGN #482).
-      // Case-insensitive FULL equality only (not prefix) — mirrors the
-      // capitalization-only ci fallback above and avoids a basename like
-      // `AAAI-Std` wrongly prefix-matching the 2-char `aa` binding.
-      // Witnesses 1504.01965 (JINST), 2105.02087 (misc/ieeetran).
-      let basename = name.rsplit(['/', '\\']).next().unwrap_or(name);
-      if basename != name {
-        sorted
-          .iter()
-          .copied()
-          .find(|candidate| basename.eq_ignore_ascii_case(candidate))
-      } else {
-        None
-      }
+      names
+        .iter()
+        .copied()
+        .find(|candidate| basename.eq_ignore_ascii_case(candidate))
     })
 }
 
@@ -3619,14 +3626,39 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // That holds under `notex` (INCLUDE_CLASSES off). The arXiv profile's `localrawclasses` (62k, DIVERGENCES #444)
   // interprets a paper-local class with no binding route raw, path-prefixed or not. JINST's begin-document checks,
   // which then fired (1504.01965, 1011.5969, 1310.6454), are met by its binding since 64k (OXIDIZED_DESIGN #482).
+  // A path-prefixed class whose basename names a binding is that binding, loaded as the request's own file
+  // ([`class_binding_for_path`]; Perl Package.pm:2125-2128): ahead of any raw read of the shipped copy, as Perl's
+  // `FindFile_aux` prefers the `.ltxml`. It is loaded under its own name, as LaTeX names a path-prefixed class by its
+  // basename (`\@currname` = `acmart`; latex.ltx:18740-18748 `\@onefilewithoptions`, whose `\@currpath` =
+  // `lib-acm/` is not set here), so `\@ifclassloaded{acmart}` holds (OXIDIZED_DESIGN #444); `fallback_request` keeps the path for a family binding that reads the shipped
+  // copy (`shipped_class::requested_shipped_class`: JINST, 1504.01965).
+  if let Some(binding) = class_binding_for_path(name) {
+    let outer_request = lookup_string("fallback_request");
+    let outer_target = lookup_string("fallback_target");
+    assign_value("fallback_request", name.to_string(), Some(Scope::Global));
+    assign_value("fallback_target", binding.to_string(), Some(Scope::Global));
+    let loaded = input_definitions(binding, InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("cls")),
+      options,
+      after,
+      notex: true,
+      handleoptions: true,
+      noerror: true,
+      nested_class,
+      ..InputDefinitionOptions::default()
+    });
+    assign_value("fallback_request", outer_request, Some(Scope::Global));
+    assign_value("fallback_target", outer_target, Some(Scope::Global));
+    return loaded;
+  }
   let notex_default = !lookup_bool("INCLUDE_CLASSES");
   // Perl Package.pm:2705-2707: LoadClass can be limited to local SEARCHPATHS when
   // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
   let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";
   // Under `localrawclasses` (the arXiv profile, 62k) a paper-local class stands in for OmniBus only: every binding
-  // route comes first — the exact and versioned ones inside `input_definitions`, the prefix/case/basename alternate
-  // here — so a shipped `IEEEtranTCOM.cls` or `misc/ieeetran.cls` keeps the IEEEtran binding (2105.02087) instead of
-  // loading raw.
+  // route comes first — the basename binding of a path-prefixed class above, the exact and versioned ones inside
+  // `input_definitions`, the prefix/case alternate here — so a shipped `IEEEtranTCOM.cls` or `misc/ieeetran.cls`
+  // keeps the IEEEtran binding (2105.02087) instead of loading raw.
   let raw_excluded = searchpaths_only && class_binding_alternate(name).is_some();
   let notex_first = notex_default || raw_excluded;
 
@@ -3809,6 +3841,25 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>) -> Option<String>
       Some(f) => Some(f),
     }
   }
+}
+
+/// Does a compiled binding answer an existence test (`\IfFileExists`, `\InputIfFileExists`) for `file`, as the file
+/// itself? Perl's `\IfFileExists` asks `FindFile` (latex_constructs.pool.ltxml:5692-5697), which takes a `.ltxml`
+/// binding for the file (Package.pm:2125-2128): pgf's `\IfFileExists{pgfsys-latexml.def}` (LaTeXML's own driver) and
+/// babel's `\InputIfFileExists{italian.ldf}` on a tree without it find their bindings. A binding standing in for an
+/// author's file is not that file ([`crate::binding::author_files`]): TeX finds `arxiv.sty` only where the paper ships
+/// it, and so do we, by the disk search the caller makes first (2606.27281; Perl answers true for its own such
+/// bindings, `neurips.sty`, KNOWN_PERL_ERRORS #770).
+pub fn binding_counts_as_file(file: &str) -> bool {
+  !crate::binding::author_files::stands_in_for_an_author_file(file)
+    && find_file(
+      file,
+      Some(FindFileOptions {
+        notex: true,
+        ..Default::default()
+      }),
+    )
+    .is_some()
 }
 
 /// Perl Package.pm L2141-2210: FindFile_fallback

@@ -1735,10 +1735,10 @@ pub(crate) fn load() -> Result<()> {
       // notex=false disk search returns None for binding-only files,
       // pgf bails with "Driver file ... not found", and the entire
       // tikz/pgf rendering pipeline fails (11 PGF/tikz tests + 10k_sandbox
-      // pgf-using papers).
-      || find_file(&file_string, Some(FindFileOptions {
-          notex: true, ..Default::default()
-        })).is_some();
+      // pgf-using papers). A binding standing in for an author's file does
+      // not count: `\IfFileExists{arxiv.sty}` is false unless the paper
+      // ships it, as in TeX (`binding_counts_as_file`, 2606.27281).
+      || binding_counts_as_file(&file_string);
     // latex.ltx:9670 `\IfFileExists@` re-`\def`s the selected branch
     // (`\expandafter\def\expandafter\reserved@a\expandafter{\reserved@a{#2}{#3}}`),
     // so a `\def\x##1{…}` written inside it is scanned as a replacement text
@@ -1773,11 +1773,10 @@ pub(crate) fn load() -> Result<()> {
     // compile-time binding — and babel errors with "Unknown option
     // 'italian'". Witness: 38 papers across recent stages with
     // missing-on-disk babel-language packages (italian/spanish/
-    // portuges/brazil/...).
+    // portuges/brazil/...). Not a binding standing in for an author's file
+    // (`binding_counts_as_file`, as `\IfFileExists`).
     let found = find_file(&file_string, None).is_some()
-      || find_file(&file_string, Some(FindFileOptions {
-          notex: true, ..Default::default()
-        })).is_some();
+      || binding_counts_as_file(&file_string);
     if found {
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;

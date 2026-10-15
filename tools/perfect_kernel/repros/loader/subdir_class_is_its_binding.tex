@@ -1,0 +1,17 @@
+% witness: 2605.00109, 2605.25901, 2606.20651 (43 tasks in 2605+2606): `\documentclass{lib-acm/acmart}` with the class
+%          shipped in lib-acm/; Perl finds acmart.cls.ltxml for it directly (Package.pm:2125-2128, the installation
+%          directory without the request's directory, Util/Pathname.pm:340-341) and loads it silently
+% oracle:  pdflatex 0 errors: "T", "A", "U", "Hello."
+% engines: perl 0 errors 0 warnings; rust 67int1 = `Warning:missing_file:lib-acm/acmart Can't find binding for class
+%          lib-acm/acmart (using acmart)`, "1 missing file" in the summary, and the dependency scan of the shipped
+%          class loads xstring over the binding
+% expect:  0 errors, 0 warnings, no missing file; the acmart binding's frontmatter (the creator's affiliation)
+% status:  RED (67int1) -> GREEN (68d)
+\documentclass[sigconf]{lib-acm/acmart}
+\begin{document}
+\title{T}
+\author{A}
+\affiliation{\institution{U}}
+\maketitle
+Hello.
+\end{document}

@@ -13820,9 +13820,17 @@ guesses that leaves the journal's macros undefined (`\pagerange`, `\Name`, `\ack
 **Rust** (batch 62k): `ar5iv.sty` also passes latexml.sty's `localrawclasses` (Perl's option, latexml.sty.ltxml:79;
 Package.pm:2705-2707 `INCLUDE_CLASSES => 'searchpaths'`), so a class found in the paper's own directory and covered by
 no binding is interpreted raw, as TeX would. Every binding route still comes first — exact, versioned, and the
-alternate (`class_binding_alternate`: Perl's prefix step, plus Rust's case-insensitive and basename steps; a shipped
-`IEEEtranTCOM.cls` or `misc/ieeetran.cls` keeps the IEEEtran binding, 2105.02087) — and a class in TeX Live without a
-binding still falls to OmniBus. Ranking the alternate above raw is a second divergence: under Perl's own
+alternate (`class_binding_alternate`: Perl's prefix step, plus Rust's case-insensitive step; a shipped
+`IEEEtranTCOM.cls` keeps the IEEEtran binding), and ahead of them all the binding a path-prefixed class names by its
+basename, which Perl finds as the request's own file (`class_binding_for_path`, Package.pm:2125-2128; since 68d it is
+loaded silently, as in Perl: `misc/ieeetran.cls` keeps IEEEtran, 2105.02087) — and a class in TeX Live without a
+binding still falls to OmniBus. Such a class is named by its basename, as LaTeX names it (latex.ltx:18740-18748
+`\@onefilewithoptions` splits the request into `\@currpath` and `\@currname`): `\documentclass{lib-acm/acmart}` gives
+`\@currname` = `acmart` and the loaded flag `acmart.cls_loaded`, so `\@ifclassloaded{acmart}` holds and
+`\@ifclassloaded{lib-acm/acmart}` does not, as in pdflatex (2605.00109); `\@currpath` stays empty where LaTeX sets
+`lib-acm/` (nothing reads it to find files). Perl
+names it by the full request (Package.pm:2618 `DefMacroI('\@currname', undef, Tokens(Explode($name)))`,
+`lib-acm/acmart`) and flags both the request and its binding loaded (:2332-2333), so both tests hold there. Ranking the alternate above raw is a second divergence: under Perl's own
 `localrawclasses` FindFile's local branch finds `IEEEtranTCOM.cls` raw (Package.pm:2139-2141) before LoadClass ever
 tries the alternate (:2711-2725); Rust keeps the binding, since a binding outranks raw code. `\documentstyle`
 does likewise: its probes always ask the binding registry first (as Perl's FindFile prefers a binding whatever `notex`
@@ -14914,7 +14922,8 @@ frontmatter made (the kernel `\maketitle`) where `\auto@maketitle` typesets that
 page used (JINST.cls:488-506, CECS.cls:404-420: `\global\let\email\@gobble`, `\thanks`, `\author`, `\title`, …),
 which the `\author` blocks digested any later still need (empty emails: 0704.3706, gr-qc0303113, 41 of 2,918
 papers). Each family binding reads the class the document asked for (`requested_shipped_class`): a path-prefixed
-request matched by basename (`JINST-Sample-files/JINST`, `\@currname`; 1504.01965, 1410.4420, 1805.09245) or a renamed
+request loaded as its basename's binding (`JINST-Sample-files/JINST`, `fallback_request`; 1504.01965, 1410.4420,
+1805.09245) or a renamed
 copy the fallback answered (`JINST_mod`, `fallback_request`; 1307.5525, 1407.3938), not OmniBus. Open (SYNC):
 the 31 renamed JHEP3 copies (QCEMDA, AKRSX, jhepLike, MCPlane1, …; `\ProvidesClass{JHEP3}` in 29) need a class route by
 content, not name.

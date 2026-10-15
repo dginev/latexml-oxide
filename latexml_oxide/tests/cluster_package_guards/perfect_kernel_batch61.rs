@@ -2918,15 +2918,17 @@ fn ieeetran_eps_source_loads_dvips_graphicx() {
 }
 
 /// 62k: with `localrawclasses` a shipped class still takes a binding reached by Perl's prefix alternate, or by the
-/// case-insensitive or basename steps Rust adds (`class_binding_alternate`; DIVERGENCES #444): `IEEEtranTCOM.cls` and
-/// `misc/ieeetran.cls` keep the IEEEtran binding and are not read (2105.02087). The stub classes error if read raw.
+/// case-insensitive step Rust adds (`class_binding_alternate`; DIVERGENCES #444), or the binding a path-prefixed class
+/// names by its basename (`class_binding_for_path`, 68d): `IEEEtranTCOM.cls` and `misc/ieeetran.cls` keep the IEEEtran
+/// binding and are not read (2105.02087). The stub classes error if read raw. Only the alternate warns; the basename
+/// binding is the request's own file, as in Perl (Package.pm:2125-2128).
 #[test]
 fn a_shipped_class_with_an_alternate_binding_keeps_it() {
   const READ_RAW: &str =
     "\\ProvidesClass{stub}\\errmessage{the shipped class was read raw}\\LoadClass{article}\n";
-  for (class, file) in [
-    ("IEEEtranTCOM", "IEEEtranTCOM.cls"),
-    ("misc/ieeetran", "misc/ieeetran.cls"),
+  for (class, file, warnings) in [
+    ("IEEEtranTCOM", "IEEEtranTCOM.cls", 1),
+    ("misc/ieeetran", "misc/ieeetran.cls", 0),
   ] {
     let (log, xml) = convert_files_with(
       &format!(
@@ -2935,13 +2937,17 @@ fn a_shipped_class_with_an_alternate_binding_keeps_it() {
       &[(file, READ_RAW)],
       Some("ar5iv.sty"),
     );
-    // The one warning is the alternate's notice: "Can't find binding for class … (using IEEEtran)".
+    // The alternate's one warning is its notice: "Can't find binding for class … (using IEEEtran)".
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 1),
+      (0, warnings),
       "{class}: {log}"
     );
-    assert!(log.contains("(using IEEEtran)"), "{class}: {log}");
+    assert_eq!(
+      log.contains("(using IEEEtran)"),
+      warnings == 1,
+      "{class}: {log}"
+    );
     assert_element(
       &xml,
       "keywords",

@@ -22,18 +22,26 @@ LoadDefinitions!({
   // :79; not distributed): the class and the template preamble test it around their font checks
   // (`\ifCUPmtlplainloaded \else \checkfont{eurm10} …`; run 340: 597 papers' first error; witnesses 2103.10260,
   // 2103.05851, 1904.02498). The newer copies' `lineno` option (2604.22963's :172, :186, :2239) loads the
-  // lineno-FLM.sty the papers ship at the start of the document (`\nolinenumbers` in a title: 2401.13479, 2406.10975).
+  // lineno-FLM.sty the papers ship at the start of the document (`\nolinenumbers` in a title: 2401.13479, 2406.10975);
+  // an older copy has no such option (2605.03843's v1.25, whose paper ships no lineno-FLM.sty: `[lineno]` is an unused
+  // option there), so the option is the copy's when the paper has one.
+  // The paper's own copy decides what follows where the versions differ: that option; caption, which 35 of 119 sampled
+  // copies load (`\captionsetup`, run 340: 51; 2406.15733); the msam10 check's `\let\le=\leqslant` (73 copies,
+  // active); the bold-italic sans `\mathsfbi` (below). Without a readable copy, the newer versions' choices. (The copies
+  // without caption print "Figure 1." from their own `\@makecaption`, 0712.2739's :953-958; our captions keep ": ", a
+  // residual.)
+  let shipped = crate::shipped_class::shipped_class_text("jfm")?;
   RawTeX!(r"\newif\ifCUPmtlplainloaded\newif\iflineno");
   DeclareOption!("prodtf", "\\CUPmtlplainloadedtrue");
-  DeclareOption!("lineno", "\\linenotrue");
+  if shipped
+    .as_deref()
+    .is_none_or(|text| crate::shipped_class::class_code_contains(text, "\\DeclareOption{lineno}"))
+  {
+    DeclareOption!("lineno", "\\linenotrue");
+  }
   DeclareOption!(None, {});
   ProcessOptions!();
   RawTeX!(r"\iflineno\AtBeginDocument{\usepackage{lineno-FLM}}\fi");
-  // The paper's own copy decides what follows where the versions differ: caption, which 35 of 119 sampled copies load
-  // (`\captionsetup`, run 340: 51; 2406.15733); the msam10 check's `\let\le=\leqslant` (73 copies, active); the
-  // bold-italic sans `\mathsfbi` (below). Without a readable copy, the newer versions' choices. (The copies without
-  // caption print "Figure 1." from their own `\@makecaption`, 0712.2739's :953-958; our captions keep ": ", a residual.)
-  let shipped = crate::shipped_class::shipped_class_text("jfm")?;
   if shipped
     .as_deref()
     .is_none_or(|text| crate::shipped_class::class_text_loads(text, "caption"))

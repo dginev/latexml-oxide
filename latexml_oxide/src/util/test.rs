@@ -1011,6 +1011,29 @@ pub fn convert_files_with(
   (run.log, run.xml)
 }
 
+/// [`convert_files_with`], also returning the conversion's verdict as [`convert_with_status`] does: (log, XML, status
+/// line, status code).
+pub fn convert_files_with_status(
+  tex: &str,
+  files: &[(&str, &str)],
+  preload: Option<&str>,
+) -> (String, String, String, usize) {
+  let files: Vec<(&str, &[u8])> = files
+    .iter()
+    .map(|(name, content)| (*name, content.as_bytes()))
+    .collect();
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &files,
+    preload,
+    None,
+    GUARD_TIMEOUT_SECS,
+    || {},
+    |_, _| (),
+  );
+  (run.log, run.xml, run.status, run.status_code)
+}
+
 /// [`convert_files_with`] for sources that are not UTF-8 text — a legacy-encoded document or `.bib`, written byte for
 /// byte — also running `inspect` on the XML and the source directory in the conversion's thread, while its state and
 /// that directory live (the post stage's recursive `.bib` session digests in the document's own state, bib_session.rs,

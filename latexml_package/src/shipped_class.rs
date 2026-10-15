@@ -5,10 +5,10 @@ use crate::prelude::*;
 /// The class file in the paper's source that the family binding `binding` interprets: the class the document asked for
 /// when the loader answered it with this binding, else the binding's own name; `None` when the source does not have it.
 /// The request is the fallback's (`fallback_request`, when its `fallback_target` is this binding: a renamed `JINST_mod`
-/// or `myJINST`, 1307.5525, 1407.3938), or the load's own `\@currname` when the dispatch matched the binding by the
-/// basename of a path-prefixed request (`JINST-Sample-files/JINST`, whose class is in a subdirectory: 1504.01965,
-/// 1410.4420, 1805.09245; the raw load of a basename-keyed package binding resolves its directory the same way,
-/// `input_definitions`).
+/// or `myJINST`, 1307.5525, 1407.3938, and a path-prefixed request loaded as its basename's binding,
+/// `JINST-Sample-files/JINST`, whose class is in a subdirectory: 1504.01965, 1410.4420, 1805.09245; `load_class`), or
+/// the load's own `\@currname` when it names the binding with a directory (the raw load of a basename-keyed package
+/// binding resolves its directory the same way, `input_definitions`).
 pub fn requested_shipped_class(binding: &str) -> Result<Option<String>> {
   let is_binding = |name: &str| {
     let name = name.rsplit(['/', '\\']).next().unwrap_or_default();

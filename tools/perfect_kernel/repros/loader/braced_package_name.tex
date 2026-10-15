@@ -1,0 +1,22 @@
+% witness: 2605.12897, 2606.09700 (`\usepackage{{makecell}}`, `{multirow}`): latex.ltx reads the list as the
+%          `[`-delimited #3 of `\@fileswith@pti@ns` (latex.ltx:18714) and as `\zap@space`'s #1 (:18695, :18735), each
+%          item as the `,`-delimited ##1 of `\reserved@b` (:18727-18734) and as `\@onefilewithoptions`'s #1 (:18740),
+%          so a lone brace group goes at each (tex.web §400): up to four after the argument's own braces
+%          (`{{{{{xcolor}}}}}`), two for a class (`\@fileswith@pti@ns`, `\@onefilewithoptions`)
+% oracle:  pdflatex 0 errors, loads article.cls, amssymb.sty, xcolor.sty and makecell.sty: "R", a red "C" and a
+%          two-line cell "a", "b"
+% engines: perl 0 errors (its name is the digested list's string, braces gone; PI `package="amsmath,  amssymb "`);
+%          rust 67int2 = 5 `Warning:missing_file` (`{article}` → OmniBus, `{amsmath}`, `{amssymb}`, `{{makecell}}`,
+%          `{{{{xcolor}}}}`) and `Error:undefined` for `\makecell` and `\textcolor`; 68d round 1 (two groups per
+%          name) `Warning:missing_file:{{xcolor}}`, `Error:undefined:\textcolor`, PI `package="amsmath,amssymb"`
+% expect:  0 errors, 0 warnings; Perl's PIs (`<?latexml package="makecell"?>`, `package="amsmath,  amssymb "`), the
+%          red text and the makecell cell's inner tabular
+% status:  RED (67int2, 68d r1) -> GREEN (68d r2)
+\documentclass{{article}}
+\usepackage{{amsmath}, { amssymb }}
+\RequirePackage{{{makecell}}}
+\usepackage{{{{{xcolor}}}}}
+\begin{document}
+$\mathbb{R}$ \textcolor{red}{C}
+\begin{tabular}{c}\makecell{a\\ b}\end{tabular}
+\end{document}

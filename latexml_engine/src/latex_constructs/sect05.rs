@@ -151,11 +151,11 @@ pub(crate) fn load() -> Result<()> {
       let request: Option<String> = whatsit.get_arg(3).map(|a| a.to_string());
       // Perl latex_constructs.pool.ltxml L795: `$pkg =~ s/\s+//g;` —
       // strip ALL whitespace (including internal) from each package name
-      // so author typos like `\usepackage{graphic x}` resolve to graphicx.
-      let package_list: Vec<String> = match packages {
-        Some(value) => OPTS_REGEX.split(&value.to_string())
-          .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
-          .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
+      // so author typos like `\usepackage{graphic x}` resolve to graphicx;
+      // and a lone brace group goes, as latex.ltx reads the list
+      // (`requested_package_names`; `\usepackage{{makecell}}`).
+      let package_list = match packages {
+        Some(value) => requested_package_names(&value.to_string()),
         None => Vec::new(),
       };
       // `\@pass@ptions` (latex.ltx:18514): the list is `\protected@xdef`ed
@@ -165,6 +165,7 @@ pub(crate) fn load() -> Result<()> {
         Some(opts) => split_trim_options(&protected_xdef_options(opts.revert()?)?.untex()),
         None => Vec::new(),
       };
+      respell_file_argument(whatsit, 2)?;
       for package in package_list {
         // Record that THIS source-level \usepackage actually executed (the
         // dep-scan's executed-set gate, content.rs maybe_require_dependencies,
@@ -188,17 +189,17 @@ pub(crate) fn load() -> Result<()> {
     let packages: Option<&Digested> = whatsit.get_arg(2);
     let request: Option<String> = whatsit.get_arg(3).map(|a| a.to_string());
     // Perl latex_constructs.pool.ltxml: `\RequirePackage` mirrors
-    // `\usepackage`, with the same `$pkg =~ s/\s+//g;` whitespace strip.
-    let package_list: Vec<String> = match packages {
-      Some(value) => OPTS_REGEX.split(&value.to_string())
-        .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
-        .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
+    // `\usepackage`, with the same `$pkg =~ s/\s+//g;` whitespace strip
+    // and latex.ltx's brace-group strip (`requested_package_names`).
+    let package_list = match packages {
+      Some(value) => requested_package_names(&value.to_string()),
       None => Vec::new(),
     };
     let options_list: Vec<String> = match options {
       Some(opts) => split_trim_options(&protected_xdef_options(opts.revert()?)?.untex()),
       None => Vec::new(),
     };
+    respell_file_argument(whatsit, 2)?;
     for package in package_list {
       // See \usepackage above — record the executed source-level require for
       // the dep-scan's executed-set gate.
@@ -215,11 +216,14 @@ pub(crate) fn load() -> Result<()> {
     after_digest => sub[whatsit] {
       let options_arg: Option<&Digested> = whatsit.get_arg(1);
       let class_arg: Option<&Digested> = whatsit.get_arg(2);
-      let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
+      // (whitespace and a lone brace group go as latex.ltx reads the name: `requested_class_name`)
+      let requested = class_arg.map(|c| c.to_string()).unwrap_or_default();
+      let class = requested_class_name(&requested);
       let options: Vec<String> = match options_arg {
         Some(opts) => split_trim_options(&protected_xdef_options(opts.revert()?)?.untex()),
         None => Vec::new(),
       };
+      respell_file_argument(whatsit, 2)?;
       load_class(&class, options, Tokens!())?;
       sect01::retract_kernel_chapter_if_chapterless()?;
     }
@@ -452,7 +456,9 @@ pub(crate) fn load() -> Result<()> {
     before_digest => { only_preamble("\\LoadClassWithOptions") }
     after_digest => sub[whatsit] {
       let class_arg: Option<&Digested> = whatsit.get_arg(1);
-      let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
+      let requested = class_arg.map(|c| c.to_string()).unwrap_or_default();
+      let class = requested_class_name(&requested);
+      respell_file_argument(whatsit, 1)?;
       load_class_with_options(&class, Tokens!())?;
       sect01::retract_kernel_chapter_if_chapterless()?;
     }
@@ -1689,6 +1695,88 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\@evenfoot")?;
   def_macro_noop("\\@evenfoot")?;
 
+  Ok(())
+}
+
+/// `text` without one lone balanced brace group around it — the strip TeX makes of a delimited argument that is a
+/// single group (tex.web §400, tex.web:8159-8167): `{makecell}` → `makecell`, `{a}{b}` and `a{b}` unchanged.
+pub(crate) fn strip_lone_group(text: &str) -> &str {
+  let Some(inner) = text.strip_prefix('{').and_then(|t| t.strip_suffix('}')) else {
+    return text;
+  };
+  let mut depth = 0usize;
+  for c in inner.chars() {
+    match c {
+      '{' => depth += 1,
+      '}' if depth == 0 => return text,
+      '}' => depth -= 1,
+      _ => {},
+    }
+  }
+  if depth == 0 { inner } else { text }
+}
+
+/// Does `text` hold whitespace outside every brace group?
+fn has_outer_whitespace(text: &str) -> bool {
+  let mut depth = 0usize;
+  for c in text.chars() {
+    match c {
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      c if depth == 0 && c.is_whitespace() => return true,
+      _ => {},
+    }
+  }
+  false
+}
+
+/// The file names a `\usepackage`/`\RequirePackage` list requests, as latex.ltx reads them. Four delimited
+/// arguments each lose a lone brace group (§400, [`strip_lone_group`]): the list as `\@fileswith@pti@ns`'s
+/// `[`-delimited #3 (latex.ltx:18714) and as `\zap@space`'s space-delimited #1 (:18695, applied at :18735), then each
+/// item as `\reserved@b`'s `,`-delimited ##1 (:18727-18734) and as `\@onefilewithoptions`'s `[`-delimited #1 (:18740)
+/// — so `\usepackage{{{{{x}}}}}` loads `x`. `\zap@space` drops the spaces, Perl every whitespace
+/// (latex_constructs.pool.ltxml:799 `$pkg =~ s/\s+//g`), and an empty or a `%` item is skipped as Perl skips it
+/// (2605.12897, 2606.09700 `\usepackage{{makecell}}`). Limit: `\zap@space`'s strip is taken for a list without
+/// whitespace outside its groups; with such whitespace (`{{x}} ,y`) TeX's chunk-by-chunk strip is not followed, and
+/// each item loses two groups. No file name has braces, so no name is stripped that TeX keeps.
+fn requested_package_names(list: &str) -> Vec<String> {
+  let list = strip_lone_group(list.trim());
+  let list = if has_outer_whitespace(list) {
+    list
+  } else {
+    strip_lone_group(list)
+  };
+  OPTS_REGEX
+    .split(list)
+    .map(|item| {
+      let item: String = item.chars().filter(|c| !c.is_whitespace()).collect();
+      strip_lone_group(strip_lone_group(&item)).to_string()
+    })
+    .filter(|s| !s.is_empty() && !s.starts_with('%'))
+    .collect()
+}
+
+/// A class name as latex.ltx reads it: the `[`-delimited argument of `\@fileswith@pti@ns` (latex.ltx:18714), then
+/// that of `\@onefilewithoptions` (:18740), each losing a lone brace group (§400); whitespace goes as Perl strips it
+/// (latex_constructs.pool.ltxml:821, LaTeX.pool.ltxml:57).
+pub(crate) fn requested_class_name(text: &str) -> String {
+  let name: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+  strip_lone_group(strip_lone_group(&name)).to_string()
+}
+
+/// Respell a load's file-name argument `n` (what the `<?latexml package=…?>`/`class=…` PI shows) as Perl's PI spells
+/// it, when it holds braces: Perl's `#2` is the digested argument, whose groups leave no braces, so its PI shows the
+/// text without them and with its whitespace (`\usepackage{{amsmath}, { amssymb }}` → `amsmath,  amssymb `,
+/// `{{makecell}}` → `makecell`).
+pub(crate) fn respell_file_argument(whatsit: &mut Whatsit, n: usize) -> Result<()> {
+  let Some(arg) = whatsit.get_arg_mut(n) else {
+    return Ok(());
+  };
+  let text = arg.to_string();
+  if text.contains(['{', '}']) {
+    let spelling: String = text.chars().filter(|c| !matches!(c, '{' | '}')).collect();
+    *arg = digest(Tokens::new(Explode!(&spelling)))?;
+  }
   Ok(())
 }
 

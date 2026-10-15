@@ -157,13 +157,11 @@ pub(crate) fn load() -> Result<()> {
       // registration and falls through to OmniBus — which lacks revtex4's
       // `\email [] Semiverbatim`, so an `\email{a_b@…}` with `_` then errors
       // "Script _ can only appear in math mode". Witness 1601.06734.
-      let class_name: String = whatsit
-        .get_arg(2)
-        .unwrap()
-        .to_string()
-        .chars()
-        .filter(|c| !c.is_ascii_whitespace())
-        .collect();
+      // A lone brace group goes too, as latex.ltx reads the name (`\documentclass{{article}}`;
+      // `sect05::requested_class_name`).
+      let requested = whatsit.get_arg(2).unwrap().to_string();
+      let class_name = sect05::requested_class_name(&requested);
+      sect05::respell_file_argument(whatsit, 2)?;
       load_class(&class_name,
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))?;

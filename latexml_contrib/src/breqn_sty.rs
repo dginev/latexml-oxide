@@ -8,7 +8,7 @@ LoadDefinitions!({
   Warn!(
     "missing_file",
     "breqn.sty",
-    "breqn.sty is not implemented and will not be interpreted raw."
+    "breqn.sty is only minimally stubbed (dmath as equation) and will not be interpreted raw."
   );
   // Forbid loading this package, even locally, until we can implement it natively
   DefMacro!("\\condition", "\\text");

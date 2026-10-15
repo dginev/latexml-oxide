@@ -1,0 +1,16 @@
+% witness: 2606.27281 (`\IfFileExists{arxiv.sty}{\usepackage{arxiv}}{}`, no arxiv.sty in the source): a binding that
+%          stands in for an author's file (arxiv.sty is no TeX Live file) is not that file; one for a TeX Live or
+%          LaTeXML file is (Perl's `\IfFileExists` asks FindFile, latex_constructs.pool.ltxml:5692-5697)
+% oracle:  pdflatex 0 errors: "ABSENT ABSENT FOUND" (amsmath.sty is in TeX Live)
+% engines: perl "ABSENT FOUND FOUND" (no arxiv binding; its versioned fallback finds neurips.sty.ltxml,
+%          KNOWN_PERL_ERRORS #770); rust 67int1 "FOUND FOUND FOUND" (2606.27281 then `\usepackage{arxiv}`:
+%          `Warning:missing_file:arxiv` from the binding's raw load)
+% expect:  0 errors, 0 warnings; "ABSENT ABSENT FOUND"
+% status:  RED (67int1) -> GREEN (68d)
+\documentclass{article}
+\IfFileExists{arxiv.sty}{\def\resa{FOUND}}{\def\resa{ABSENT}}
+\IfFileExists{neurips_2024.sty}{\def\resb{FOUND}}{\def\resb{ABSENT}}
+\IfFileExists{amsmath.sty}{\def\resc{FOUND}}{\def\resc{ABSENT}}
+\begin{document}
+\resa\ \resb\ \resc
+\end{document}

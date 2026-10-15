@@ -1,0 +1,16 @@
+% witness: 1710.04900 (harvard.sty's `\IfFileExists{html.sty}`, no html.sty in the source): a binding for a file TeX
+%          Live once distributed (html.sty, aastex.cls 2007-2014, psfig.sty, scrpage2.sty 2007-2019, cropmark.sty
+%          2007-2019; `latexml_core::binding::author_files::FORMER_TEX_LIVE`) answers as that file, which TeX in the
+%          paper's era found (ruling 2026-10-15); a stand-in for an author's file TeX Live never had (jmlr2e.sty,
+%          colt2025.cls, agujournal2019.cls, colm2025_conference.sty, arxiv.sty) does not
+% oracle:  pdflatex (TL 2025) 0 errors: "AAAAA AAAAA" — TL 2025 has none of them; older trees found the first five
+% engines: perl "FFFAF AAAAA" (no scrpage2 binding); rust 67int2 "FFFFF FFFFF" (every binding a file), 68d round 1
+%          "AAAFA FFFFA" (the former TeX Live files on the stand-in list, the last four missing from it)
+% expect:  0 errors, 0 warnings; "FFFFF AAAAA"
+% status:  RED (67int2, 68d r1) -> GREEN (68d r2)
+\documentclass{article}
+\def\t#1{\IfFileExists{#1}{F}{A}}
+\begin{document}
+\t{html.sty}\t{aastex.cls}\t{psfig.sty}\t{scrpage2.sty}\t{cropmark.sty}
+\t{jmlr2e.sty}\t{colt2025.cls}\t{agujournal2019.cls}\t{colm2025_conference.sty}\t{arxiv.sty}
+\end{document}
