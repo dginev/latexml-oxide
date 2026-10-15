@@ -1,0 +1,22 @@
+% witness: cs0608041 0911.1713 1004.2757 1112.1125 0908.3162 1312.4895 (\IEEEeqnarrayrulerow, \IEEEeqnarraydblrulerow, \IEEEeqnarraydblrulerowcut, \IEEEeqnarrayseprow in an {IEEEeqnarraybox} table)
+% oracle:  pdflatex 0 errors; a ruled 2-row table: Size | Number / 7 | 1 / 8 | 2, a rule above, a double rule below the head, a rule below
+% engines: rust 68d = 3 errors (undefined rule rows); Perl 24 errors (the rows and its IEEEeqnarraybox struts undefined)
+% expect:  0 errors 0 warnings; rule rows are one cell spanning all 5 columns holding a leader rule
+% status:  RED (68d) -> GREEN (67x)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\begin{table}
+\caption{Ruled}
+\centering
+\begin{IEEEeqnarraybox}[\IEEEeqnarraystrutmode\IEEEeqnarraystrutsizeadd{2pt}{1pt}]{v/c/v/c/v}
+\IEEEeqnarrayrulerow\\
+&\mbox{Size}&&\mbox{Number}&\\
+\IEEEeqnarraydblrulerow\\
+& 7 && 1&\\
+\IEEEeqnarrayseprow[3pt]\\
+& 8 && 2&\\
+\IEEEeqnarrayrulerow
+\end{IEEEeqnarraybox}
+\end{table}
+\end{document}

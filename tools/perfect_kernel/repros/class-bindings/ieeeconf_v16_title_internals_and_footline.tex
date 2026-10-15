@@ -1,0 +1,20 @@
+% witness: 1811.05306 1811.01547 1905.11167 1909.12483 (a title page copying ieeeconf.cls's \@specialpapernotice, \@IEEEauthorblockconfadjspace); 1803.09650 1807.07870 1810.07122 (the RBO copy's \ieeefootline, over scrpage2); 1610.00529 2310.12320 (\thesubsubsectiondis); 1807.11264 (\centerfigcaptionsfalse)
+% oracle:  pdflatex with the ieeeconf.cls 1811.05306 ships: 0 errors; "A Title", "Ann Able", "1) Sub: 1) Text.". The RBO copy (1803.09650) needs scrpage2, gone from TL 2025 (the source shows the foot line "Workshop on Inspection, 2018").
+% engines: rust 68d = 5 errors (undefined), 1 warning; Perl 5 errors (the same)
+% expect:  0 errors 0 warnings; <pubnote role="footline">Workshop on Inspection, 2018</pubnote>; "1)" from \thesubsubsectiondis
+% status:  RED (68d) -> GREEN (67x)
+% preload: ar5iv.sty
+\documentclass[conference]{ieeeconf}
+\centerfigcaptionsfalse
+\makeatletter
+\def\mytitle{{\LARGE\@title\par}{\@specialpapernotice\mbox{}\vskip\@IEEEauthorblockconfadjspace Ann Able\par}}
+\makeatother
+\title{A Title}
+\begin{document}
+\mytitle
+\ieeefootline{Workshop on Inspection, 2018}
+\section{Intro}
+\subsection{Sub}
+\subsubsection{Sub}
+\thesubsubsectiondis\ Text.
+\end{document}

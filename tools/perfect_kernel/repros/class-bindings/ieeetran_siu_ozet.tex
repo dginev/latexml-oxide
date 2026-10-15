@@ -1,0 +1,25 @@
+% witness: 1504.02975 1807.04577 1807.04578 1910.03090 (the SIU template's IEEEtran.cls "2011/11/03 V1.8 based on V1.7a" :1659-1662, :3745-3790; 21 papers)
+% oracle:  pdflatex with the IEEEtran.cls 1504.02975 ships: 0 errors; "Özetçe—Türkçe özet.", "Anahtar Kelimeler—anahtar, kelime", then the English Abstract and Index Terms
+% engines: rust 68d = 2 errors (undefined {ozet}, {IEEEanahtar}); Perl 2 errors (the same)
+% expect:  0 errors 0 warnings; both Turkish blocks in the body, the English abstract and keywords in the frontmatter
+% status:  RED (68d) -> GREEN (67x)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{A Title}
+\maketitle
+\begin{ozet}
+T\"urk\c{c}e \"ozet.
+\end{ozet}
+\begin{IEEEanahtar}
+anahtar, kelime
+\end{IEEEanahtar}
+\begin{abstract}
+English abstract.
+\end{abstract}
+\begin{IEEEkeywords}
+key, word
+\end{IEEEkeywords}
+\section{Intro}
+Text.
+\end{document}

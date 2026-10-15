@@ -13552,6 +13552,45 @@ class-bindings/aa_class_copy_loads_answers.tex (a `{filecontents*}` aa.cls loadi
 Rust: aa_cls.rs loads answers (raw) when the paper's copy does. Guard `perfect_kernel_batch67u::aa_class_copy_loads_answers`.
 
 
+## 710. IEEEtran.cls.ltxml lacks the class internals documents call, and IEEEeqnarray's rule rows
+
+IEEEtran.cls.ltxml binds IEEEtran's user commands but none of the internals that documents' own copies of its code
+call: the compsoc executors `\@IEEEcompsoconly`/`\@IEEEcompsocconfonly` (IEEEtran.cls:456-462),
+`\@IEEEnormalsizeunitybaselineskip` (:606), `\sublargesize` (:639-708), `\@IEEEtunefonts` (:1074), `\thesectiondis` and its
+siblings (:2571-2587), the page style `\ps@headings` (:4244), `\IEEEbibitemsep` (:4484), the author-block styles (:4552-4561),
+`\IEEEquantizevspace` (:4983), `\@IEEEaftertitletext` (:5219), `\@ifmtarg` (:5668), `{LaTeXenumerate}` (:2221), and
+the separator and rule rows `\IEEEeqnarrayseprow`, `\IEEEeqnarrayrulerow`, `\IEEEeqnarraydblrulerow(cut)` (:3247-3360)
+inside its IEEEeqnarraybox. Each is undefined (run 340: 138 papers on TL's class, 354 shipping a copy). Minimal
+triggers: tools/perfect_kernel/repros/class-bindings/ieeetran_internals_documents_call.tex (a `\confheader` recipe
+calling `\ps@headings`, a `\newmaketitle` using the compsoc executors; Perl 16 errors, pdflatex 0) and
+ieeetran_eqnarray_rule_rows.tex (`\IEEEeqnarrayrulerow\\` in an `{IEEEeqnarraybox}` table; Perl 24 errors with its
+undefined `\IEEEeqnarraystrutmode`/`\IEEEeqnarraystrutsizeadd`, pdflatex 0). Fixed in Rust (67x): defined as the class
+writes them, the rule rows spanning `\@IEEEeqnnumcols` columns from the column specification, layout-only ones empty.
+Guards `perfect_kernel_batch67x::{ieeetran_internals_documents_call, ieeetran_eqnarray_rule_rows,
+ieeetrantools_eqnarray_rule_rows}`.
+
+## 711. IEEEtran.cls.ltxml lacks the names of IEEEtran's older versions and of the variants papers ship
+
+One binding serves every IEEEtran a paper ships, but Perl's knows only V1.8's names: V1.5-1.6c's
+`\centerfigcaptionstrue`, `\useRomanappendicesfalse`, `\nocalcleftmargintrue`, `\@specialpapernotice` (V1.6b
+:1966, :4075, :1512, :4379), V1.7a's begin-document `\proof` (:4690), IEEEtran4PSCC.cls's `\thanksto` (:4793; 185 papers),
+the SIU template's `{ozet}`/`{IEEEanahtar}` (:3745-3790; 21 papers) are undefined. Minimal triggers:
+tools/perfect_kernel/repros/class-bindings/{ieeetran_v16_names (Perl 4 errors), ieeetran_pscc_thanksto (1),
+ieeetran_siu_ozet (2), ieeetran_v17_proof_at_begin_document (1)}.tex, each clean under pdflatex with the copy its
+witness ships. Fixed in Rust (67x) as fallbacks a document's own definition replaces. Guards
+`perfect_kernel_batch67x::{ieeetran_v16_names, ieeetran_pscc_thanksto, ieeetran_siu_ozet,
+ieeetran_v17_proof_at_begin_document}`.
+
+## 712. ieeeconf.cls.ltxml only loads IEEEtran: ieeeconf's V1.6b names are undefined
+
+ieeeconf.cls is IEEEtran V1.6b with conference settings (67 papers ship it); Perl's binding is `LoadClass('IEEEtran')`,
+so its `\@specialpapernotice`, `\@IEEEauthorblockconfadjspace`, `\thesubsubsectiondis`, `\centerfigcaptionsfalse`
+(ieeeconf.cls :4400, :3414, :1904, :1986) and the RBO copy's `\ieeefootline` (:4602) are undefined. Minimal trigger:
+tools/perfect_kernel/repros/class-bindings/ieeeconf_v16_title_internals_and_footline.tex (Perl 5 errors; pdflatex 0
+with 1811.05306's copy, the `\ieeefootline` copy needs scrpage2, gone from TL 2025). Fixed in Rust (67x): the V1.6
+names in the IEEEtran binding, `\ieeefootline` a publication note. Guard
+`perfect_kernel_batch67x::ieeeconf_v16_title_internals_and_footline`.
+
 ## 720. A document cannot unload a package by relaxing its `\ver@<file>`: amsart's `\let\proof\relax` + amsthm idiom
 
 LaTeX's loaded test is `\ver@<file>` (latex.ltx `\@ifl@aded`: `\expandafter\ifx\csname ver@#2.#1\endcsname\relax`).

@@ -1,0 +1,16 @@
+% witness: 2106.12111 (\let\proof\@undefined); 2208.13860 2310.09933 2310.09935 2509.09277 (\let\proof\relax after amsthm) — IEEEtran V1.7a :4690 \AtBeginDocument{\def\proof{...\IEEEproof}}
+% oracle:  pdflatex with the V1.7a IEEEtran-v17.cls 0705.1922 ships (as IEEEtran.cls): 0 errors; "Proof: It holds. ∎"
+% engines: rust 68d = 1 error (undefined {proof}); Perl 1 error (the same)
+% expect:  0 errors 0 warnings; an IEEEproof
+% status:  RED (68d) -> GREEN (67x)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\makeatletter
+\let\proof\@undefined
+\let\endproof\@undefined
+\makeatother
+\begin{document}
+\begin{proof}
+It holds.
+\end{proof}
+\end{document}

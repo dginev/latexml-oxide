@@ -20,13 +20,47 @@
 use latexml_core::alignment::template::TemplateConfig;
 
 use crate::{
-  engine::latex_constructs::{eqnarray_bindings_with_columns, math_array_bindings},
+  engine::latex_constructs::{
+    FontUnit, eqnarray_bindings_with_columns, math_array_bindings, symbol_box_size,
+  },
   prelude::*,
 };
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // IEEEtrantools.sty:86-106 `[redeflists]`: the standard lists become the IEEE ones; `retainorgcmds` (legacy) keeps
+  // them.
+  RawTeX!(r"\newif\if@IEEETOOLSredeflists");
+  DeclareOption!("redeflists", r"\@IEEETOOLSredefliststrue");
+  DeclareOption!("retainorgcmds", r"\@IEEETOOLSredeflistsfalse");
+  ProcessOptions!();
   define_ieeeeqnarray()?;
+  // 67x: the package's commands outside the IEEEeqnarray family that the IEEEtran class binding has and the
+  // IEEEtrantools net's papers call (run 340: `{IEEEproof}` 36 papers, `\IEEEauthorrefmark` 4, `\IEEEPARstart` 3,
+  // `{IEEEdescription}` 3, `\IEEEsetlabelwidth` 3, `\IEEEusemathlabelsep` 3, `\IEEEQEDhere`; witnesses 1710.09177,
+  // 1802.00899, 2002.01226, 2003.00712, 1304.3949, 1609.02977, 1905.00616): the IEEEproof family and its QED switches
+  // (:2726-2747), the IED lists and their parameters (:1000-1140; the standard lists are the IEEE ones under
+  // `[redeflists]`, :1122-1129), `\IEEEauthorrefmark{<n>}` (:2721-2723, the footnote symbol sequence * † ‡ § ¶ ‖ ** ††
+  // ‡‡, roman numerals from 10), `\IEEEPARstart{<letter>}{<rest>}` (:2616, the drop cap: its text, as the class
+  // binding's).
+  define_ieeeproof()?;
+  DefMacro!("\\IEEEproofname", "Proof");
+  define_ied_lists()?;
+  RawTeX!(r"\if@IEEETOOLSredeflists
+\let\itemize\IEEEitemize \let\enditemize\endIEEEitemize
+\let\enumerate\IEEEenumerate \let\endenumerate\endIEEEenumerate
+\let\description\IEEEdescription \let\enddescription\endIEEEdescription
+\expandafter\let\csname begin{itemize}\endcsname\IEEEitemize
+\expandafter\let\csname end{itemize}\endcsname\endIEEEitemize
+\expandafter\let\csname begin{enumerate}\endcsname\IEEEenumerate
+\expandafter\let\csname end{enumerate}\endcsname\endIEEEenumerate
+\expandafter\let\csname begin{description}\endcsname\IEEEdescription
+\expandafter\let\csname end{description}\endcsname\endIEEEdescription
+\fi
+\DeclareRobustCommand*{\IEEEauthorrefmark}[1]{\raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{\ifcase#1\or *\or \dagger\or \ddagger\or
+    \mathsection\or \mathparagraph\or \|\or **\or \dagger\dagger
+    \or \ddagger\ddagger \else\textsuperscript{\expandafter\romannumeral#1}\fi}}}}");
+  DefMacro!("\\IEEEPARstart{}{}", "#1#2");
   // IEEEtrantools.sty's commands outside the IEEEeqnarray family, as the IEEEtran class binding has
   // them (ieeetran_cls.rs; the class carries the same code): :1387 `\yesnumber`, the opposite of
   // `\nonumber` (`\global\@eqnswtrue` there; `\IEEEyesnumber` on our equation rows); :1904-1920
@@ -94,6 +128,59 @@ pub fn define_ieeeeqnarray() -> Result<()> {
 \IEEEeqnarraydefcol{@IEEEdefault}{\hfil$\IEEEeqnarraymathstyle}{$\hfil}");
   // The inter-column glues (IEEEtrantools.sty:1492) are not modelled.
   def_macro_noop("\\IEEEeqnarraydefcolsep{}{}")?;
+  // IEEEtrantools.sty:1347-1353 (IEEEtran.cls:3028-3034): `\@IEEEeqnnumcols`, the number of columns the
+  // specification defines (set by `\@IEEEeqnarray@bindings`/`\@IEEEeqnarraybox@bindings` below, as :2498/:2535
+  // count them), and the column counter IEEEeqnarray advances (`\if@advanceIEEEeqncolcnt`, not modelled: false).
+  // :1566-1690 (IEEEtran.cls:3247-3360) the separator and rule rows, spanning every column: `\IEEEeqnarrayseprow`
+  // `[<height>][<font>]` (a blank row: the strut that sets its height, in the last column
+  // `\@IEEEeqnarrayhoptolastcolumn` moves to, is not modelled), `\IEEEeqnarrayseprowcut`,
+  // `\IEEEeqnarrayrulerow[<thickness>]` (a leader rule across the row), `\IEEEeqnarraydblrulerow[<thickness>]
+  // [<spacing>]` and `\IEEEeqnarraydblrulerowcut` (two rule rows around a separator row), as written. 67x (run 340:
+  // 46 papers; witnesses cs0608041, 0911.1713, 1004.2757, 1112.1125, 0908.3162, 1312.4895; KNOWN_PERL_ERRORS #710).
+  RawTeX!(r"\newif\if@advanceIEEEeqncolcnt
+\newcount\@IEEEeqnnumcols
+\newcount\@IEEEeqncolcnt
+\def\IEEEeqnarrayseprow{\relax\@ifnextchar[{\@IEEEeqnarrayseprow}{\@IEEEeqnarrayseprow[0.25\normalbaselineskip]}}
+\def\@IEEEeqnarrayseprow[#1]{\relax\@ifnextchar[{\@@IEEEeqnarrayseprow[#1]}{\@@IEEEeqnarrayseprow[#1][\relax]}}
+\def\@@IEEEeqnarrayseprow[#1][#2]{\IEEEeqnarraystrutsize{#1}{0pt}[\relax]\relax}
+\def\IEEEeqnarrayseprowcut{\multispan{\@IEEEeqnnumcols}\relax
+\if@advanceIEEEeqncolcnt\global\advance\@IEEEeqncolcnt by \@IEEEeqnnumcols\relax\fi
+\@ifnextchar[{\@IEEEeqnarrayseprowcut}{\@IEEEeqnarrayseprowcut[0.25\normalbaselineskip]}}
+\def\@IEEEeqnarrayseprowcut[#1]{\relax\@ifnextchar[{\@@IEEEeqnarrayseprowcut[#1]}{\@@IEEEeqnarrayseprowcut[#1][\relax]}}
+\def\@@IEEEeqnarrayseprowcut[#1][#2]{\IEEEeqnarraystrutsize{#1}{0pt}[\relax]\relax}
+\def\IEEEeqnarrayrulerow{\multispan{\@IEEEeqnnumcols}\relax
+\if@advanceIEEEeqncolcnt\global\advance\@IEEEeqncolcnt by \@IEEEeqnnumcols\relax\fi
+\@ifnextchar[{\@IEEEeqnarrayrulerow}{\@IEEEeqnarrayrulerow[\arrayrulewidth]}}
+\def\@IEEEeqnarrayrulerow[#1]{\leaders\hrule height#1\hfil\relax
+\IEEEeqnarraystrutsize{0pt}{0pt}[\relax]\relax}
+\def\IEEEeqnarraydblrulerow{\multispan{\@IEEEeqnnumcols}\relax
+\if@advanceIEEEeqncolcnt\global\advance\@IEEEeqncolcnt by \@IEEEeqnnumcols\relax\fi
+\@ifnextchar[{\@IEEEeqnarraydblrulerow}{\@IEEEeqnarraydblrulerow[\arrayrulewidth]}}
+\def\@IEEEeqnarraydblrulerow[#1]{\relax\@ifnextchar[{\@@IEEEeqnarraydblrulerow[#1]}%
+{\@@IEEEeqnarraydblrulerow[#1][\doublerulesep]}}
+\def\@@IEEEeqnarraydblrulerow[#1][#2]{\def\@IEEEeqnarraydblrulerowARG{#1}%
+\ifx\@IEEEeqnarraydblrulerowARG\@empty\@IEEEeqnarrayrulerow[\arrayrulewidth]\else\@IEEEeqnarrayrulerow[#1]\relax\fi
+\def\@IEEEeqnarraydblrulerowARG{#2}%
+\ifx\@IEEEeqnarraydblrulerowARG\@empty\\\IEEEeqnarrayseprow[\doublerulesep][\relax]%
+\else\\\IEEEeqnarrayseprow[#2][\relax]\fi
+\\\multispan{\@IEEEeqnnumcols}%
+\if@advanceIEEEeqncolcnt\global\advance\@IEEEeqncolcnt by \@IEEEeqnnumcols\relax\fi
+\def\@IEEEeqnarraydblrulerowARG{#1}%
+\ifx\@IEEEeqnarraydblrulerowARG\@empty\@IEEEeqnarrayrulerow[\arrayrulewidth]\else\@IEEEeqnarrayrulerow[#1]\fi}
+\def\IEEEeqnarraydblrulerowcut{\multispan{\@IEEEeqnnumcols}\relax
+\if@advanceIEEEeqncolcnt\global\advance\@IEEEeqncolcnt by \@IEEEeqnnumcols\relax\fi
+\@ifnextchar[{\@IEEEeqnarraydblrulerowcut}{\@IEEEeqnarraydblrulerowcut[\arrayrulewidth]}}
+\def\@IEEEeqnarraydblrulerowcut[#1]{\relax\@ifnextchar[{\@@IEEEeqnarraydblrulerowcut[#1]}%
+{\@@IEEEeqnarraydblrulerowcut[#1][\doublerulesep]}}
+\def\@@IEEEeqnarraydblrulerowcut[#1][#2]{\def\@IEEEeqnarraydblrulerowARG{#1}%
+\ifx\@IEEEeqnarraydblrulerowARG\@empty\@IEEEeqnarrayrulerow[\arrayrulewidth]\else\@IEEEeqnarrayrulerow[#1]\fi
+\def\@IEEEeqnarraydblrulerowARG{#2}%
+\ifx\@IEEEeqnarraydblrulerowARG\@empty\\\IEEEeqnarrayseprowcut[\doublerulesep][\relax]%
+\else\\\IEEEeqnarrayseprowcut[#2][\relax]\fi
+\\\multispan{\@IEEEeqnnumcols}%
+\if@advanceIEEEeqncolcnt\global\advance\@IEEEeqncolcnt by \@IEEEeqnnumcols\relax\fi
+\def\@IEEEeqnarraydblrulerowARG{#1}%
+\ifx\@IEEEeqnarraydblrulerowARG\@empty\@IEEEeqnarrayrulerow[\arrayrulewidth]\else\@IEEEeqnarrayrulerow[#1]\fi}");
 
   // IEEEtrantools.sty:1940-1996: `\IEEEeqnarray[<decl>]{<cols>}` is an eqnarray whose `\halign` preamble is built
   // from the column specification (`\@IEEEbuildpreamble`), every row numbered unless starred. Perl maps it to the
@@ -112,10 +199,11 @@ pub fn define_ieeeeqnarray() -> Result<()> {
      \\lx@begin@alignment");
   Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
   DefPrimitive!("\\@IEEEeqnarray@bindings{}", sub[(cols)] {
-    let columns = ieee_columns(&Expand!(cols))?
+    let columns: Vec<Cell> = ieee_columns(&Expand!(cols))?
       .into_iter()
       .map(|(before, after)| Cell { before: Some(before), after: Some(after), empty: true, ..Cell::default() })
       .collect();
+    set_column_count(columns.len());
     eqnarray_bindings_with_columns(columns)?;
     AssignValue!("IEEEeqnarray@mathcells" => false);
   });
@@ -266,13 +354,14 @@ pub fn define_eqnarraybox() -> Result<()> {
   // The array over the specification's column types, its cells math already: a math column's `$` comes out, a text
   // column's goes around it (`math_cell_column`). `[<pos>]` (`t`, `c`, `b`) attaches the box as an array's.
   DefPrimitive!("\\@IEEEeqnarraybox@bindings [] {}", sub[(pos, cols)] {
-    let columns = ieee_columns(&Expand!(cols))?
+    let columns: Vec<Cell> = ieee_columns(&Expand!(cols))?
       .into_iter()
       .map(|(before, after)| {
         let (before, after) = math_cell_column(before, after);
         Cell { before: Some(before), after: Some(after), ..Cell::default() }
       })
       .collect();
+    set_column_count(columns.len());
     let template = Template::new(TemplateConfig {
       columns: Some(columns),
       ..TemplateConfig::default()
@@ -295,6 +384,12 @@ pub fn define_eqnarraybox() -> Result<()> {
 \expandafter\let\csname endIEEEeqnarrayboxt*\endcsname\endIEEEeqnarrayboxt"
   );
   Ok(())
+}
+
+/// `\@IEEEeqnnumcols`, the number of columns of the specification (IEEEtrantools.sty:2498, :2535), for the rows that
+/// span them all (`\IEEEeqnarrayrulerow` and the rest).
+fn set_column_count(count: usize) {
+  AssignRegister!("\\@IEEEeqnnumcols", Number::new(count as i64).into());
 }
 
 /// The alignment an IEEEeqnarraybox opens over the column specification `cols`; `\@@IEEE@array` keeps `cols` whole
@@ -486,4 +581,238 @@ fn split_hfil(tokens: Tokens, leading: bool) -> (Vec<Token>, Vec<Token>) {
     let hfils = tokens.split_off(tokens.len() - n);
     (tokens, hfils)
   }
+}
+
+/// The QED symbols and `{IEEEproof}` (IEEEtran.cls:5533-5556, IEEEtrantools.sty:2726-2747; Perl IEEEtran.cls.ltxml
+/// L194-222), shared with the IEEEtran class binding (`ieeetran_cls.rs`), whose class carries the same code.
+#[rustfmt::skip]
+pub fn define_ieeeproof() -> Result<()> {
+  // QED symbols (Perl L194-198)
+  // Sized as IEEEtran.cls:5533's `\mbox{\rule[0pt]{1.3ex}{1.3ex}}`: a size-less whatsit alone in an alignment cell
+  // made the cell "empty" (Alignment::normalize, Perl Alignment.pm:458-470) and the QED was dropped — an
+  // `{IEEEeqnarray}` text cell `& \hfill\IEEEQEDhere` (2201.11150, 1903.06134), an eqnarray `\mbox{\IEEEQED}`
+  // (synthetic). The other classes' QEDs alike (`symbol_box_size`; llncs, svjour3/svmult, A&A, mn2e, elsart, amsthm).
+  DefConstructor!("\\IEEEQEDclosed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    enter_horizontal => true,
+    sizer => sub[whatsit] { Ok(symbol_box_size(whatsit, 1.3, 1.3, FontUnit::Ex)) });
+  Let!("\\IEEEQEDopen", "\\IEEEQEDclosed");
+  Let!("\\IEEEQED", "\\IEEEQEDclosed");
+  // IEEEtran.cls:5543 `\newif\if@IEEEQEDshow \@IEEEQEDshowtrue`, the class's own switch (a document may set it), true
+  // at class load: a bare `\endIEEEproof` prints its QED too.
+  RawTeX!(r"\newif\if@IEEEQEDshow \@IEEEQEDshowtrue");
+
+
+  // IEEEproof (Perl IEEEtran.cls.ltxml:199-222), a constructor pair as amsthm's `\@proof`/`\end@proof`
+  // (amsthm.sty.ltxml:147-175): IEEEtran.cls:5547-5549 makes it two macros, `\IEEEproof` (`\par\noindent…{\itshape
+  // #1: }`, #1 defaulting to `\IEEEproofname`) and `\endIEEEproof` (the QED, `\par`), so its body stays in the mode
+  // around it and a `$$` there is display math (tex.web:21715 `init_math`). Perl's DefEnvironment boxes the body in
+  // restricted horizontal mode, where `$$` is two empty inline formulas (TeX_Math.pool.ltxml:65) and the formula ran
+  // as text: "Script _ can only appear in math mode" (1203.1892, 1402.4543, 0802.1555, 1612.01904). A bare
+  // `\endIEEEproof` (author error) closes a `ltx:proof` only when one is open (`maybe_close_element`), never a mode
+  // frame (2009.01572: a mode-bound IEEEproof's `\endIEEEproof` popped the locked document frame, Fatal), and an
+  // `\end{IEEEproof}` after the element closed reports no "ltx:proof isn't open" (1001.3714, 0801.0061).
+  // The title is the optional argument (IEEEtran.cls:5548), which Perl's fixed "Proof:" dropped; the font is Perl's
+  // bold italic. Perl (L205-221) pushes `\qed` on the QED@stack amsthm shares and digests it at the end unless Perl's
+  // `\IEEEQEDhere` took it; here, as IEEEtran.cls:5543-5556, the end typesets `\IEEEQED` while IEEEtran's own switch
+  // `\if@IEEEQEDshow` is true — set locally by `\@IEEEproof`, cleared globally by `\IEEEQEDoff`/`\IEEEQEDhere`/
+  // `\IEEEQEDhereeqn` — so no switch reaches an amsthm proof's QED nor amsthm's `\qedhere` this one's, and a global
+  // false outlives a nested IEEEproof's local true (repros block-model/ieeeproof_dollardollar_is_display,
+  // block-model/ieeeproof_qed_switches).
+  DefConstructor!("\\IEEEproof OptionalUndigested",
+    "<ltx:proof class='#class'><ltx:title font='#titlefont' _force_font='true' class='#titleclass'>#title</ltx:title>",
+    after_digest => sub[whatsit] {
+      // IEEEtran.cls:5548 `\@IEEEQEDshowtrue`, local to the environment's group.
+      digest(Tokens!(T_CS!("\\@IEEEQEDshowtrue")))?;
+    },
+    properties => sub[args] {
+      let mut title_tokens = vec![T_BEGIN!(), T_CS!("\\bfseries"), T_CS!("\\itshape")];
+      match args.first() {
+        Some(Some(arg)) => title_tokens.extend(arg.revert()?.unlist()),
+        _ => title_tokens.push(T_CS!("\\IEEEproofname")),
+      }
+      title_tokens.push(T_OTHER!(":"));
+      title_tokens.push(T_END!());
+      let title = digest(Tokens::new(title_tokens))?;
+      // The template engine binds the `"font"` prop to the element's font attribute (amsthm_sty.rs `\@proof`).
+      let titlefont = title.get_font().ok().flatten().map(|f| (*f).clone());
+      let mut map = SymHashMap::default();
+      map.insert("title", title.into());
+      if let Some(f) = titlefont {
+        map.insert("font", Stored::Font(Rc::new(f)));
+      }
+      map.insert("titleclass", "ltx_runin".into());
+      Ok(map)
+    });
+  DefConstructor!("\\endIEEEproof", sub[document, _args] {
+    document.maybe_close_element("ltx:proof")?;
+  },
+  // IEEEtran.cls:5549 `\if@IEEEQEDshow … \IEEEQED\fi`: the document's `\IEEEQED`, and nothing an amsthm `\qedhere`
+  // could take (2001.04812).
+  before_digest => {
+    if x_equals(&T_CS!("\\if@IEEEQEDshow"), &T_CS!("\\iftrue")) {
+      return Ok(vec![digest(Tokens!(T_CS!("\\IEEEQED")))?]);
+    }
+    Ok(vec![])
+  });
+  // IEEEtran.cls:5556 `\IEEEQEDoff` = `\global\@IEEEQEDshowfalse`: no QED at the end of this IEEEproof (synthetic, no
+  // live witness found). :5554 `\IEEEQEDhere` the same and the QED where it stands (2201.01339, at the end of an
+  // itemize item, `\hfill \IEEEQEDhere`; 2201.11150, IEEEeqnarray cells; 1410.7694); :5551-5552 `\IEEEQEDhereeqn` the
+  // same with the QED as the display's equation number (1903.06134, 2201.03502). Perl's `\IEEEQEDhere`
+  // (IEEEtran.cls.ltxml:193-196) took the top of the QED@stack an amsthm proof shares; Perl has no `\IEEEQEDhereeqn`.
+  RawTeX!(r"\def\IEEEQEDoff{\global\@IEEEQEDshowfalse}");
+  DefMacro!("\\IEEEQEDhere", "\\IEEEQEDoff\\IEEEQED");
+  // The `\eqno` material is the QED and, in a numbered `equation`, LaTeX's own `\eqno\hbox{\@eqnnum}` after it — the
+  // `\let\eqno\relax` makes it ONE tag, "■(1)", and a second `\IEEEQEDhereeqn` adds to it ("■■(1)"). The equation's
+  // number is already its `ltx:tags`, so the QED's material moves into that tags' displayed (role-less) tag, before the
+  // number: one `ltx:tags`, the scan's refnum still the number's (its `refnum` tag comes last), the page "∎(1)"; a
+  // numbered `{IEEEeqnarray}` row's alike. A QED's material is moved as elements only (its element children, or an
+  // `ltx:text` holding them when text nodes are among them — libxml merges, and frees, adjacent text nodes on
+  // insertion), marked `_qed` so a later QED goes after the earlier ones, before the number. A second
+  // `\IEEEQEDhereeqn` inside the first's material is relaxed as `\eqno` is (IEEEtran.cls:5551), adding to its tag.
+  RawTeX!(r"\def\IEEEQEDhereeqn{\IEEEQEDoff\lx@IEEEQED@eqno\let\lx@IEEEQED@eqno\relax\let\eqno\relax\let\leqno\relax\let\veqno\relax\hbox{\IEEEQED}}");
+  // `\eqno` is a display-math command (tex.web §1140): in a `{IEEEeqnarray}` row,
+  // an alignment cell, pdflatex reports "You can't use `\eqno' in math mode" and
+  // typesets the QED beside the number anyway — what we build, so a Warning.
+  DefConstructor!("\\lx@IEEEQED@eqno EqnoTag",
+    "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
+    before_digest => {
+      if lookup_string("MODE") != "display_math" {
+        Warn!(
+          "unexpected",
+          "\\eqno",
+          "You can't use `\\eqno' in math mode: \\IEEEQEDhereeqn outside a display (IEEEtran.cls:5551-5552); \
+           the QED is set with the row's number"
+        );
+      }
+    },
+    reversion => "",
+    after_construct => sub[document, _whatsit] {
+      let node = document.get_node().clone();
+      let Some(equation) = document
+        .findnodes("ancestor-or-self::ltx:equation[1]", Some(&node))
+        .into_iter()
+        .next()
+      else {
+        return Ok(());
+      };
+      let tags = document.findnodes("ltx:tags", Some(&equation));
+      let Some(mut qed_tags) = tags.last().cloned() else {
+        return Ok(());
+      };
+      let Some(mut qed_tag) = document.findnodes("ltx:tag", Some(&qed_tags)).into_iter().next() else {
+        return Ok(());
+      };
+      // The QED's material as marked elements: its element children, or one `ltx:text` holding them when text nodes are
+      // among them.
+      let children = qed_tag.get_child_nodes();
+      let mut material: Vec<Node> = if children.iter().all(|child| child.get_type() == Some(NodeType::ElementNode)) {
+        children
+      } else {
+        let mut wrapper = document.open_element_at(&mut qed_tag, "ltx:text", None, None)?;
+        for mut child in children {
+          child.unlink_node();
+          if child.get_type() == Some(NodeType::TextNode) {
+            wrapper.append_text(&child.get_content()).ok();
+          } else {
+            wrapper.add_child(&mut child).ok();
+          }
+        }
+        document.close_element_at(&mut wrapper)?;
+        let _ = wrapper.remove_attribute("font");
+        vec![wrapper]
+      };
+      for element in material.iter_mut() {
+        element.set_attribute("_qed", "1").ok();
+      }
+      // The equation's own displayed tag, when it has one before ours.
+      let Some(number_tags) = tags.first().filter(|first| **first != qed_tags) else {
+        return Ok(());
+      };
+      let Some(mut number_tag) = document
+        .findnodes("ltx:tag[not(@role)]", Some(number_tags))
+        .into_iter()
+        .next()
+      else {
+        return Ok(());
+      };
+      let before = number_tag
+        .get_child_nodes()
+        .into_iter()
+        .find(|child| child.get_attribute("_qed").is_none());
+      for element in material.iter_mut() {
+        element.unlink_node();
+        match &before {
+          Some(before) => {
+            before.clone().add_prev_sibling(element).ok();
+          },
+          None => {
+            number_tag.add_child(element).ok();
+          },
+        }
+      }
+      qed_tags.unlink_node();
+    });
+  Ok(())
+}
+
+/// The IED lists and their parameters (IEEEtran.cls:2028-2153, IEEEtrantools.sty:1000-1140; Perl IEEEtran.cls.ltxml
+/// L340-366), shared with the IEEEtran class binding (`ieeetran_cls.rs`).
+#[rustfmt::skip]
+pub fn define_ied_lists() -> Result<()> {
+  // IED list stubs (Perl L340-347)
+  DefMacro!("\\IEEEsetlabelwidth{}", "\\settowidth{\\labelwidth}{#1}");
+  def_macro_noop("\\IEEEusemathlabelsep")?;
+  def_macro_noop("\\IEEEtriggercmd{}")?;
+  // IEEEtran.cls:2031-2059: the IED lists' label indents are dimens a document sets (`\IEEEilabelindent
+  // \IEEEilabelindentB`, 2609.36487); Perl's empty `\IEEElabelindent` made `\IEEElabelindent\parindent` an
+  // assignment to `\parindent` (KNOWN_PERL_ERRORS #514).
+  RawTeX!(r"\newdimen\IEEEilabelindentA \IEEEilabelindentA\parindent
+\newdimen\IEEEilabelindentB \IEEEilabelindentB 1.3\parindent
+\newdimen\IEEEilabelindent \IEEEilabelindent\IEEEilabelindentA
+\newdimen\IEEEelabelindent \IEEEelabelindent\parindent
+\newdimen\IEEEdlabelindent \IEEEdlabelindent\parindent
+\newdimen\IEEElabelindent \IEEElabelindent\parindent");
+  def_macro_noop("\\IEEEcalcleftmargin{}")?;
+  def_macro_noop("\\IEEEiedlabeljustifyc")?;
+  def_macro_noop("\\IEEEiedlabeljustifyl")?;
+  def_macro_noop("\\IEEEiedlabeljustifyr")?;
+
+  // IEEEitemize/enumerate/description (Perl IEEEtran.cls.ltxml L351-366).
+  // Each env:
+  //   - runs `beginItemize('<kind>', '<counter>')` via properties
+  //     closure — registers the nested list level, resets counters,
+  //     and wires the itemize/enumerate counter-label machinery.
+  //   - digests `\par` on close so trailing text in the last item
+  //     closes its <ltx:item> cleanly instead of leaking whitespace.
+  //   - locks against further redefinition (matches Perl `locked=>1`).
+  // {IEEEdescription} additionally re-`\let`s `\makelabel` to
+  // `\descriptionlabel` at env start (Perl L363), mirroring LaTeX's
+  // core description-env plumbing.
+  DefEnvironment!("{IEEEitemize}[]",
+    "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+    properties => sub[_args] { BeginItemize!("itemize", "@item") },
+    locked => true,
+    mode => "internal_vertical");
+  DefEnvironment!("{IEEEenumerate}[]",
+    "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
+    properties => sub[_args] { BeginItemize!("enumerate", "enum") },
+    locked => true,
+    mode => "internal_vertical");
+  DefEnvironment!("{IEEEdescription}[]",
+    "<ltx:description xml:id='#id'>#body</ltx:description>",
+    before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
+    properties => sub[_args] { BeginItemize!("description", "@desc") },
+    locked => true,
+    mode => "internal_vertical");
+  // IEEEtran.cls:2085-2153 (IEEEtrantools.sty:1007-1040): the label separations, the list top space, the user hook
+  // `\IEEEiedlistdecl` and the margin switches, which documents set in a list's options or redefine (1705.09999,
+  // 1209.0532, 2009.04715 `\nocalcleftmargintrue`, V1.6's name).
+  RawTeX!(r"\newdimen\IEEEiednormlabelsep \IEEEiednormlabelsep 0.6em
+\newdimen\IEEEiedmathlabelsep \IEEEiedmathlabelsep 1.2em
+\newskip\IEEEiedtopsep \IEEEiedtopsep 2pt plus 1pt minus 1pt
+\def\IEEEiedlistdecl{\relax}
+\newif\ifIEEEnocalcleftmargin \IEEEnocalcleftmarginfalse
+\newif\ifIEEEnolabelindentfactor \IEEEnolabelindentfactorfalse");
+  Ok(())
 }
