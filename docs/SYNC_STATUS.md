@@ -1169,6 +1169,25 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   a_watchdog_timeout_is_reported_as_fatal_timeout, an_allocation_past_rlimit_as_is_reported_as_fatal_oom}` (the
   `alloc_exhausted` test fault spends the address space through the raw allocator first). Residual: a hook whose sweep
   itself fails to allocate exits without finishing it.
+- **Run 351** (E/F rerun of run 349 on 4f131f2b84 with the fleet's added TeX Live collections; COMPLETE 2026-10-15
+  01:41:54Z): E 100,336 → 93,718, F 4,418 → 4,171 (success 96.42 % → 96.65 % of 2,922,325). Transitions vs run 349:
+  E→OK 6,658, F→OK 207, F→E 153, E→F 113 (`oom:alloc_failed` 56, `timeout:wallclock` 15, `ParamSpec:Expected` 14,
+  `TooManyErrors` 18, `Timeout:PushbackLimit` 6, `crash:SIGABRT` 3). The OOM/timeout share is the run's slow tail: the
+  67m deadlock parked OOM children for the harness's 360 s kill and their papers were re-leased. The 14 `ParamSpec`
+  are a host-TL exposure, not a code change: eplain.tex (texlive-formats-extra, installed 2026-10-14) borrows `\cite`
+  as scratch — btxmac `\edef\cite{\the\catcode`@}` then `\let\@oldatcatcode=\cite` (eplain.tex:346-348) — which our
+  locked `\cite` ignores ("Ignoring redefinition of \cite"), so `\catcode`@ = \@oldatcatcode` (:666) misses its
+  number and `\def\@Fornoop#1\@@#2#3` (:721) is read as `\def\@` (math0308041, math0612670, 0705.2148, 0802.3843,
+  1207.1752, 1401.4197; queued as 67n). Per-paper cost (perf-measure 2026-10-15, CPU seconds: `perf_event_paranoid=4`
+  on this host blocks `instructions:u`): no regression since the 2026-10-07 pass — 39 random 2609 papers HEAD/BASE
+  median 1.000, 20 heavy fleet Fatals 0.989; 8 of the 9 fleet OOM papers peak under 3.9 GB and 8 of the 9 fleet
+  timeouts finish in 5-140 s standalone, so the tail deaths are fleet limits and contention. Open from it: 1902.02884
+  times out since 65n (math-group recovery at `partie_geometrique.tex:6430` `\begin{remark}`: "Missing $ inserted",
+  nine "Missing \endgroup inserted", then a stall; stomach.rs `insert_dollar_sign`/`off_save_closer`, tex_math.rs
+  `end_math_or_defer`); math0701165 costs +30 % CPU and +1.13 GB (4.87 GB peak) since 67d, which now converts its
+  diagrams (3,152 → 3,196 formulae). Ops: the fleet's journald drops ~1M lines per 30 s (every child streams its whole
+  log), and `/opt/cortex-scratch` holds 565,483 leaked `cortex_task*` input trees (434 GB, since 2026-07) awaiting a
+  user-approved cleanup.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,
