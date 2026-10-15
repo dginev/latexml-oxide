@@ -139,8 +139,10 @@ and 2.7 GB VSZ; after 20 minutes children held about 1 GB RSS and 4.8-5.6 GB of 
 nothing, logging a hundred `Error:post:xpath` "no libxml2 error detail" and ending in `Fatal:TooManyErrors` on large
 papers that convert cleanly in a fresh process (113 of run 336's first 253 TooManyErrors; math0005012, 1209.0448,
 1310.4783; `VmPeak` 3.6 GB for 1106.3786 on both 62zt and 62zu). So a harness child also **recycles when its `VmSize`
-comes within 1.5 GiB of its `RLIMIT_AS`** (`cortex_worker.rs` `address_space_near_cap`, after the result is returned;
-the log line names which recycle fired). A child whose cap leaves less than that headroom above a fresh worker's 2.7 GB
+comes within 1.5 GiB of its `RLIMIT_AS`, or passes 3 GiB** (`cortex_worker.rs` `address_space_near_cap`,
+`RECYCLE_ADDRESS_SPACE_KB`, after the result is returned; the log line names which recycle fired). The 3 GiB rule (67o,
+user ruling 2026-10-15) keeps heavy papers out of grown children: 53 of run 353's 59 Error→Fatal `oom:alloc_failed`
+papers convert cleanly in a fresh process under the same cap (hep-ph0006359, math0111204, math0305067). A child whose cap leaves less than that headroom above a fresh worker's 2.7 GB
 (a cap below about 4.1 GiB) turns the check off at start and says so, rather than recycling after every paper.
 Standalone and pooled workers, which nothing respawns, never take it.
 
@@ -259,7 +261,9 @@ dispatcher's lease reaper, be re-leased, and after the retry budget end as
   budget instead of recording it, reporting the last such cause (not
   `never_completed_with_retries`) once the budget is spent. A crash by a signal (a stack overflow
   included) and the memory limits (`oom:rss`, `oom:alloc_failed`) are final on their first
-  occurrence. A document's own lines shaped `<severity>:cortex:…` (a `\message`; any severity, as
+  occurrence — except an `oom:alloc_failed` in a child whose address space at the paper's start (the claim's
+  `space <KiB>` line, written by `begin_task`) was already past a fresh worker's 2.7 GB: that is the child's history,
+  so it is retryable (`exit_report::retryable`, user ruling 2026-10-15). A document's own lines shaped `<severity>:cortex:…` (a `\message`; any severity, as
   CorTeX lowercases it and files an unknown one as Info) are indented by a space in every log the
   worker returns, so they cannot pose as the tag.
 * **Deploy order:** deploy the CorTeX dispatcher at `fix/late-results-and-exit-causes` (round 2 or

@@ -1169,6 +1169,23 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   a_watchdog_timeout_is_reported_as_fatal_timeout, an_allocation_past_rlimit_as_is_reported_as_fatal_oom}` (the
   `alloc_exhausted` test fault spends the address space through the raw allocator first). Residual: a hook whose sweep
   itself fails to allocate exits without finishing it.
+- **Run 353** (E/F rerun of run 351 on ba8dff38f3: 67d, 67j, 67l, 67m; COMPLETE 2026-10-15 05:52:14Z in 3 h 27 min,
+  against 5 h 27 min for run 351 with the 67m deadlock): E 93,718 → 89,338, F 4,171 → 4,145 (success 96.65 % → 96.80 %).
+  Transitions vs run 351: E→OK 4,360, F→OK 46, F→E 71, E→F 91 (`oom:alloc_failed` 59, `timeout:wallclock` 11,
+  `TooManyErrors` 14, `crash:SIGABRT` 3, `Timeout:PushbackLimit` 2, Recursion 1, Convert 1).
+- **67o** (fleet, user ruling 2026-10-15 "both"): an allocation failure in a grown harness child is retried, and children
+  recycle earlier. 53 of run 353's 59 E→F `oom:alloc_failed` papers convert cleanly in a fresh process under the same
+  5632 MB `RLIMIT_AS` (hep-ph0006359, math0111204, math0305067: 3.1-3.5 GB peak RSS); the allocator's reservations had
+  grown the long-lived child's address space, and the recycle fired only within 1.5 GiB of the cap. Before 67m these
+  children deadlocked and the harness's kill re-leased the paper; 67m made the failure clean and final. Now
+  `begin_task` writes the child's address space as the paper starts (`space <KiB>`), `exit_report::retryable` tags an
+  `oom:alloc_failed` retryable when that start was past a fresh worker's `FRESH_ADDRESS_SPACE_KB` (2.7 GB; an unknown
+  start stays final), and `recycle_after_task` also recycles past `RECYCLE_ADDRESS_SPACE_KB` (3 GiB). Raising the cap
+  instead is ruled out (worker.env: 8192 once spiked a sweep to 207 GB). Guards
+  `cortex_worker_exit_reports::{an_allocation_failing_in_a_grown_worker_is_retryable,
+  an_allocation_past_rlimit_as_is_reported_as_fatal_oom}` (`CORTEX_WORKER_TEST_GROW_MB` reserves address space in a
+  debug child), `exit_report` unit tests. Open: measure the respawn cost of the 3 GiB recycle on the next rerun (spawn
+  count and wall time vs run 353).
 - **Run 351** (E/F rerun of run 349 on 4f131f2b84 with the fleet's added TeX Live collections; COMPLETE 2026-10-15
   01:41:54Z): E 100,336 → 93,718, F 4,418 → 4,171 (success 96.42 % → 96.65 % of 2,922,325). Transitions vs run 349:
   E→OK 6,658, F→OK 207, F→E 153, E→F 113 (`oom:alloc_failed` 56, `timeout:wallclock` 15, `ParamSpec:Expected` 14,

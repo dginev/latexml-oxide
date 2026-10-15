@@ -436,6 +436,33 @@ fn an_allocation_failing_inside_the_hook_still_ends_in_one_fatal_oom() {
   assert_eq!(lines, 1, "one line for the one failure:\n{output}");
 }
 
+/// An allocation failure in a child that had grown past a fresh one's address space is the child's
+/// history, not the paper's: it is retryable, so the paper gets another child (user ruling
+/// 2026-10-15; 53 of run 353's 59 Error→Fatal `oom:alloc_failed` papers convert in a fresh process).
+#[test]
+fn an_allocation_failing_in_a_grown_worker_is_retryable() {
+  let dispatcher = Dispatcher::start();
+  let harness = Harness::start_with_env(&dispatcher, "alloc", 60, 8192, &[], &[(
+    "CORTEX_WORKER_TEST_GROW_MB",
+    "3072",
+  )]);
+  let report = dispatcher
+    .receive(Duration::from_secs(120))
+    .unwrap_or_else(|| panic!("no result reached the sink:\n{}", harness.output()));
+  let leased_to = dispatcher.leased_to.lock().unwrap().clone().unwrap();
+  let output = harness.output();
+  let fatal = fatal_of(&report, &leased_to, &output);
+  assert!(
+    fatal.starts_with("Fatal:oom:alloc_failed "),
+    "{fatal}\n{output}"
+  );
+  assert!(
+    retry_tagged(&report),
+    "a grown child's allocation failure is retried\n{}",
+    report.log
+  );
+}
+
 #[test]
 fn a_segfault_is_reported_with_its_signal() {
   let (report, leased_to, output, _harness) = report_for("segv", 60, 0, None);

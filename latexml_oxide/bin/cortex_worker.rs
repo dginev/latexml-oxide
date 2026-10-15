@@ -627,6 +627,33 @@ impl LatexmlWorker {
   }
 }
 
+/// The harness tests' way to make a child look reused: with `CORTEX_WORKER_TEST_GROW_MB` set, the
+/// first conversion first reserves that much address space (`PROT_NONE`, never touched), as a
+/// long-lived child's allocator reservations grow it. Debug-assertion builds only.
+#[cfg(debug_assertions)]
+fn grow_address_space_for_test() {
+  static GROWN: std::sync::Once = std::sync::Once::new();
+  GROWN.call_once(|| {
+    let Some(mb) = std::env::var("CORTEX_WORKER_TEST_GROW_MB")
+      .ok()
+      .and_then(|value| value.parse::<usize>().ok())
+    else {
+      return;
+    };
+    // SAFETY: an anonymous `PROT_NONE` mapping, never accessed and never unmapped.
+    unsafe {
+      libc::mmap(
+        std::ptr::null_mut(),
+        mb << 20,
+        libc::PROT_NONE,
+        libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_NORESERVE,
+        -1,
+        0,
+      );
+    }
+  });
+}
+
 /// The harness tests' way to make a child die mid-conversion, as production children do: with
 /// `CORTEX_WORKER_TEST_FAULT` set, a conversion (its watchdog armed) logs one warning (the
 /// partial log the harness returns), then sleeps until the watchdog ends it (`sleep`), allocates
@@ -848,6 +875,8 @@ impl Worker for LatexmlWorker {
     // pericortex names the leased archive `<taskid>.zip`: claim that task, so a death from here on
     // still returns a result for it (a harness child only). The claim ends when `convert` returns,
     // on every path: the task then has its result (or pericortex's empty reply).
+    #[cfg(debug_assertions)]
+    grow_address_space_for_test();
     let _claimed = exit_report::claim_task(self.get_identity(), &arxiv_id);
     // pericortex receives the archive into its own per-task `cortex_task*` directory, a `TempDir` that its loop drops
     // after the reply. An exit that skips destructors (the watchdog's, the allocation-failure hook's) left it behind:
@@ -996,10 +1025,11 @@ impl Worker for LatexmlWorker {
     }
     if self.address_space_recycle
       && let Some((size_kb, limit_kb)) = address_space_kb()
-      && address_space_near_cap(size_kb, limit_kb)
+      && (address_space_near_cap(size_kb, limit_kb) || size_kb > RECYCLE_ADDRESS_SPACE_KB)
     {
       eprintln!(
-        "recycle: address space VmSize {size_kb} kB within the headroom of RLIMIT_AS {limit_kb} kB"
+        "recycle: address space VmSize {size_kb} kB past {RECYCLE_ADDRESS_SPACE_KB} kB or within the \
+         headroom of RLIMIT_AS {limit_kb} kB"
       );
       return true;
     }
@@ -1015,6 +1045,14 @@ const FRESH_ADDRESS_SPACE_KB: u64 = 2_760_000;
 /// peaks at 3,612 MB of address space (`VmPeak`) in a fresh process, about 1 GB above a
 /// fresh worker's 2.7 GB.
 const ADDRESS_SPACE_HEADROOM_KB: u64 = 1536 * 1024;
+
+/// Address space past which a worker recycles whatever its cap (user ruling 2026-10-15, "recycle
+/// earlier"): a child the allocator's reservations had grown to 3-4 GB still took the next paper,
+/// and a paper that fits a fresh worker failed its allocations there — 53 of run 353's 59
+/// Error→Fatal `oom:alloc_failed` papers convert cleanly in a fresh process under the same
+/// `RLIMIT_AS` (hep-ph0006359, math0111204, math0305067). 3 GiB is a fresh worker's
+/// [`FRESH_ADDRESS_SPACE_KB`] plus about 0.5 GB.
+const RECYCLE_ADDRESS_SPACE_KB: u64 = 3 * 1024 * 1024;
 
 /// True when an address space of `size_kb` is within [`ADDRESS_SPACE_HEADROOM_KB`] of the
 /// `RLIMIT_AS` cap `limit_kb`. The harness caps each child's address space
