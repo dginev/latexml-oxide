@@ -37,6 +37,9 @@ fn push_classification_to_frontmatter(
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsthm");
+  // A copy of the class the paper edited to load the algorithm packages (2210.03478's siamltex.cls:299-300
+  // `\usepackage{algorithmicx,algorithm}` `\usepackage{algpseudocode}`; the distributed class loads none) decides them.
+  crate::shipped_class::require_shipped_algorithm_packages("cls")?;
   // siamltex.cls:459-476 (and :756-759): the theorems share one counter, numbered within the section unless the
   // `onethmnum` option (:102); `{example}`, `{remark}` and `{defthm}` among them. Declared here as the class does, the
   // OmniBus theorem set, which declares only free names (OXIDIZED_DESIGN #533), no longer renumbers them all within the

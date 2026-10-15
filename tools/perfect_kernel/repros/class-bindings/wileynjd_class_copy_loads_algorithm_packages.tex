@@ -1,0 +1,25 @@
+% witness: 1810.03033, 1810.12033, 2106.06046, 2106.14215, 2210.02694, 2402.11361 (WileyNJD-v2.cls:3331),
+%          2402.13183, 2506.07013 (WileyNJDv5.cls:6820): `\usepackage{algorithm, algorithmicx, algpseudocode}` in
+%          the class, none in the paper
+% oracle:  pdflatex (clean) with this cut of the class
+% engines: rust 67k1 = 12+ errors ({algorithm}, {algorithmic}, \State, \For undefined: wileynjd_cls.rs loaded no
+%          algorithm package); Perl: no binding, OmniBus scans the class and loads the three
+% expect:  0 errors, 0 warnings; one {algorithm} float, a listing of 4 lines
+% status:  RED (67k1) -> GREEN (67l); guard perfect_kernel_batch67l::wileynjd_class_copy_loads_its_algorithm_packages
+\begin{filecontents*}[overwrite]{WileyNJD-v2.cls}
+\ProvidesClass{WileyNJD-v2}
+\LoadClass{article}
+\usepackage{algorithm, algorithmicx, algpseudocode}
+\end{filecontents*}
+\documentclass{WileyNJD-v2}
+\begin{document}
+\begin{algorithm}
+\caption{Sum}
+\begin{algorithmic}[1]
+\State $x \gets 0$
+\For{$i=1$ to $n$}
+\State $x \gets x+i$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+\end{document}

@@ -1119,6 +1119,29 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\settabs\+` under the LaTeX route (alg-geom9410018, hep-th9306053), amsppt internals papers copy
   (`\textonlyfont@`, `\ifsyntax@`, `\eightrm`: funct-an9706006, math0002200), imsart `{supplement}` without
   imsart.sty (1602.02055).
+- **67l** (frequency-first, run 349 "undefined": `\State` 560, `\For` 470, `{algorithm}` 544, `\newfloat` 365):
+  which algorithm and float definitions a paper gets when a binding stands in for the file that loads them. A stand-in
+  binding takes the algorithm packages from the paper's copy of the file it stands in for
+  (`shipped_class::require_shipped_algorithm_packages`, the dependency scan kept to `ALGORITHM_PACKAGES`:
+  `require_dependencies_only`, content.rs; OD #592): icml2016-2025 and versioned ICML names (papers edit `algorithmic`
+  out of their copy for algpseudocode, which the distributed pair bailed: 1706.03643, 2002.06473, 2106.05074),
+  WileyNJD-v2/v5 (`algorithm, algorithmicx, algpseudocode`, a copy algorithm2e: 1810.03033, 2106.06046, 2402.13183),
+  bmvc2k (algorithmic or algpseudocode by year: 2210.06270, 2210.01640), pnas-new (2402.10236), edited neurips and
+  siamltex copies (2402.18905, 2210.03478); without a copy, ICML keeps the distributed pair, the others none. REVTeX
+  4.1/4.2 and AASTeX 6+ define the class's `\newfloat@ltx`/`\newfloat@float`, which preambles let `\newfloat` to
+  before algorithm.sty (all 25 sampled `\newfloat` papers: 2210.07980, 2210.08566, 2002.07183; KNOWN_PERL_ERRORS #683).
+  autart gets the class's own `{algorithm}` float (autart.cls:568-577; 2106.14831, 2402.17000). The scan also drops a
+  comment ending a file without a newline. Repros package-bindings/icml_style_copy_without_algorithmic,
+  class-bindings/{revtex_float_repair_before_document,wileynjd_class_copy_loads_algorithm_packages,
+  bmvc2k_class_copy_loads_algorithmic,autart_algorithm_float}; guards `perfect_kernel_batch67l`. A/B vs 67k1 (144
+  papers: the run-349 `\State`/`\For`/`{algorithm}` sample, 31 more ICML papers 2017-2026, 7 Wiley, 3 bmvc2k,
+  8 neurips): 3,118 → 279 Errors, Fatal 1 → 0, 83 better, 2 worse, both a decoy main the harness picked (the ICML
+  template's example file, which needs the algorithm packages the paper's copy no longer loads: pdflatex 16 and 15
+  errors; the real mains 14 → 0 and 15 → 0); revtex/aastex (31): 73 → 2. Words lost: 2301.00557's float now comes from
+  its own algorithm2e alone (its copy loads no algorithm package). Residual, the paper's own combination: algorithmic
+  loaded before algpseudocode (1706.04918, 2506.05791, 2506.13672, 2506.01215) bails algorithmicx as in Perl, where
+  pdflatex errs too ("Command \algorithmic already defined", then each `\State`). Not covered: IEEEtran (a Perl
+  binding) ignores an edited copy's algorithm packages (2506.04683).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

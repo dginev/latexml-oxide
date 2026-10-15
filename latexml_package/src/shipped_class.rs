@@ -85,6 +85,43 @@ pub fn class_text_loads(text: &str, package: &str) -> bool {
 /// `\AfterEndPreamble`, which a copy may have commented out.)
 pub fn class_code_contains(text: &str, needle: &str) -> bool { class_code(text).contains(needle) }
 
+/// The algorithm packages, whose choice differs between copies of one class or package: the ICML styles load
+/// `algorithm` and `algorithmic` (icml2016.sty:70-71 … icml2025.sty:95-96) and papers edit `algorithmic` out for
+/// `algpseudocode` (icml2024.sty:94 "removed due to conflict with algpseudocode", 2402.05403); WileyNJD-v2.cls:3331
+/// and WileyNJDv5.cls:6820 load `algorithm, algorithmicx, algpseudocode`, a copy `algorithm2e` (2002.02812); bmvc2k.cls
+/// `algorithm` with `algorithmic` (2002.09958:132-133) or with `algpseudocode` (2210.06270:139-142).
+pub const ALGORITHM_PACKAGES: &[&str] = &[
+  "algorithm",
+  "algorithmic",
+  "algorithmicx",
+  "algpseudocode",
+  "algcompatible",
+  "algpascal",
+  "algc",
+  "algmatlab",
+  "algorithm2e",
+];
+
+/// A binding standing in for the class or package being loaded — as the paper asked for it: the load's
+/// `\@currname`, or the request a versioned fallback answers with this binding (`fallback_request` while its
+/// `fallback_target` is the binding: `icml2026`, `./icml2018` → icml.sty, 1706.04964) — leaves the algorithm packages
+/// to the paper's copy of that file: those of [`ALGORITHM_PACKAGES`] the copy loads are required in its order with its
+/// options (Perl's dependency scan, Package.pm:2776-2813, kept to that family: [`require_dependencies_only`]).
+/// `false` when the source has no copy, so the binding takes its own default. Algorithmicx's `\State` stays
+/// undefined when a stand-in loads `algorithmic`, which bails algorithmicx (algorithmicx.sty.ltxml:9-12), where the
+/// paper's copy loads none (icml 1706.03643, 2002.06473, 2106.05074), and `{algorithm}` when it omits the class's own
+/// (WileyNJD-v2 1810.03033, 2106.06046; bmvc2k 2210.06270).
+pub fn require_shipped_algorithm_packages(ext: &str) -> Result<bool> {
+  let currname = Expand!(Tokens!(T_CS!("\\@currname"))).to_string();
+  let fallback_request = lookup_string("fallback_request");
+  let request = if !fallback_request.is_empty() && lookup_string("fallback_target") == currname {
+    fallback_request
+  } else {
+    currname
+  };
+  Ok(!request.is_empty() && require_dependencies_only(&request, ext, ALGORITHM_PACKAGES))
+}
+
 /// `text` without its comments (`%` to the end of the line).
 fn class_code(text: &str) -> String {
   text

@@ -14,6 +14,8 @@
 //! undefined pnas-new frontmatter macros).
 use latexml_package::prelude::*;
 
+use crate::shipped_class::require_shipped_algorithm_packages;
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   // pnas-new.cls:422 `\newcommand{\doi}[1]{\def\@doi{#1}}` stores the DOI for the page footer
@@ -78,6 +80,9 @@ LoadDefinitions!({
   // Most of those are noop-loaded by OmniBus already; bring in the
   // critical ones explicitly so author content (booktabs rules, etc.) works.
   RequirePackage!("booktabs");
+  // pnas-new.cls:110-111 `\RequirePackage{algorithm}` `\RequirePackage[noend]{algpseudocode}` (2402.10236's copy):
+  // `\State` was undefined in a paper relying on the class for it. The paper's copy decides; without one, none.
+  require_shipped_algorithm_packages("cls")?;
   RequirePackage!("fancyhdr");
   RequirePackage!("etoolbox");
   RequirePackage!("titlesec");

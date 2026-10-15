@@ -6,6 +6,8 @@
 //! downstream content renders cleanly.
 use latexml_package::prelude::*;
 
+use crate::shipped_class::require_shipped_algorithm_packages;
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -20,9 +22,8 @@ LoadDefinitions!({
   // Wiley templates assume booktabs / graphicx are available —
   // eager-load so docs that use \toprule/\midrule/\bottomrule and
   // \includegraphics without explicit \usepackage don't error.
-  // Witness 2504.02281. (Did NOT preload algorithm/algorithmic
-  // here — they conflict with algpseudocode and trigger schema
-  // violations in listing-mode body.)
+  // Witness 2504.02281. (The algorithm packages are the paper's copy's, below: a fixed algorithm/algorithmic
+  // conflicts with algpseudocode.)
   RequirePackage!("booktabs");
   RequirePackage!("graphicx");
   // wrapfig: WileyNJD-v2 authors routinely use \begin{wrapfigure} for
@@ -41,6 +42,11 @@ LoadDefinitions!({
   RequirePackage!("tabularx");
   RequirePackage!("varwidth");
   RequirePackage!("dcolumn");
+  // WileyNJD-v2.cls:3331 and WileyNJDv5.cls:6820 `\usepackage{algorithm, algorithmicx, algpseudocode}`, a copy
+  // `algorithm2e` (2002.02812:3338): `{algorithm}` and `\State` were undefined in papers that rely on the class for them
+  // (1810.03033, 1810.12033, 2106.06046, 2106.14215, 2210.02694, 2402.11361, 2402.13183, 2506.07013). The paper's copy
+  // decides; without one, none (Perl's OmniBus has no copy to scan either).
+  require_shipped_algorithm_packages("cls")?;
 
   // WileyNJD-v2.cls:1217-1221 (WileyNJDv5.cls:3636-3640, WileyASNA-v1 through WileyNJD-v1): the address parts of an
   // affiliation, each printing its argument; OmniBus has the others, but leaves `\state` out (omnibus_cls.rs: a

@@ -1,0 +1,24 @@
+% witness: 2210.01640, 2002.09958 (bmvc2k.cls:162-163 / :132-133 `\usepackage{algorithm}\usepackage{algorithmic}`;
+%          2210.06270's copy:139-142 loads algorithm and algpseudocode instead)
+% oracle:  pdflatex (clean) with this cut of the class
+% engines: rust 67k1 = errors ({algorithm} undefined: bmvc2k_cls.rs loaded no algorithm package)
+% expect:  0 errors, 0 warnings; one {algorithm} float, a listing of 3 lines (STATE, FOR, STATE)
+% status:  RED (67k1) -> GREEN (67l); guard perfect_kernel_batch67l::bmvc2k_class_copy_loads_its_algorithm_packages
+\begin{filecontents*}[overwrite]{bmvc2k.cls}
+\ProvidesClass{bmvc2k}
+\LoadClass{article}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\end{filecontents*}
+\documentclass{bmvc2k}
+\begin{document}
+\begin{algorithm}
+\caption{Sum}
+\begin{algorithmic}[1]
+\STATE $x \gets 0$
+\FOR{$i=1$ to $n$}
+\STATE $x \gets x+i$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+\end{document}

@@ -33,5 +33,7 @@ LoadDefinitions!({
   // macros. icml_support's `DefMacro`/`Let` override the raw `\icmltitle`,
   // `\icmlauthorlist`, `\icmladdress`, … with frontmatter-emitting versions;
   // the raw per-paper markers it does NOT name (e.g. `\icmlNiantic`) survive.
-  RequirePackage!("icml_support");
+  // The copy just read loaded its own algorithm packages, which icml_support's distributed pair would override
+  // (`algorithmic`, bailing a paper's algpseudocode: icml_support_sty.rs `load_icml_style`).
+  icml_support_sty::load_icml_style()?;
 });

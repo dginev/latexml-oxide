@@ -61,6 +61,12 @@ LoadDefinitions!({
   if requested.starts_with("aastex7") {
     RequirePackage!("rotating", options => vec![s!("figuresright")]);
   }
+  // AASTeX 6.x is REVTeX 4.1 underneath (aastex62.cls:278-292 `\LoadClass[…]{revtex4-1}`), and aastex701.cls:3689-3718
+  // carries the same float repair: `\newfloat@ltx`, which a preamble lets `\newfloat` to (2002.07183; KNOWN_PERL_ERRORS
+  // #683). 5.x is REVTeX 4.0, which has none.
+  if aastex6_plus {
+    revtex4_support_sty::define_float_repair()?;
+  }
   RequirePackage!("aas_support");
   // AASTeX 5.x's `{plate}` (aastex.cls 5.x:1685-1704) is gone from 6 on (aastex6.cls … aastex701.cls define no plate):
   // there, the name is the paper's own — tikz's bayesnet library `\newcommand{\plate}[4][]`

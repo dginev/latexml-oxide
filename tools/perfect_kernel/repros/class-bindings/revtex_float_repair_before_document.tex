@@ -1,0 +1,24 @@
+% witness: 2210.07980, 2210.08566, 2210.07097, 2402.00653, 2210.07984 (all 25 papers of the run-349 \newfloat
+%          sample: `\usepackage{float}\let\newfloat\newfloat@ltx` before `\usepackage{algorithm}`)
+% oracle:  pdflatex (clean): revtex4-2.cls:4022-4042 defines \newfloat@ltx, the class's repaired copy of float.sty's
+%          \newfloat (revtex4-1.cls:4001-4021)
+% engines: rust 67k1 = 1 error (`\newfloat` undefined in algorithm.sty, so {algorithm} too); Perl the same (no
+%          \newfloat@ltx in revtex4_support.sty.ltxml)
+% expect:  0 errors, 0 warnings; one {algorithm} float with caption "Algorithm 1: Sum" and 2 listing lines
+% status:  RED (67k1) -> GREEN (67l); guard perfect_kernel_batch67l::revtex_float_repair_defines_newfloat
+\documentclass[reprint,pra]{revtex4-2}
+\usepackage{float}
+\makeatletter
+\let\newfloat\newfloat@ltx
+\makeatother
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\begin{document}
+\begin{algorithm}
+\caption{Sum}
+\begin{algorithmic}[1]
+\State $x \gets 0$
+\State $y \gets 1$
+\end{algorithmic}
+\end{algorithm}
+\end{document}

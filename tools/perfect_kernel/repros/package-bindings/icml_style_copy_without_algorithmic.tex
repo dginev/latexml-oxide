@@ -1,0 +1,27 @@
+% witness: 1706.03643, 1706.04933, 1706.04964, 2002.06473, 2106.05074 (the paper's icml20xx.sty has `algorithmic`
+%          commented out — icml2024.sty:94 "removed due to conflict with algpseudocode", 2402.05403 — and the
+%          paper loads algpseudocode); 52 papers of the run-349 \State/\For sample
+% oracle:  pdflatex (clean): icml2017.sty:72-73 of the copy loads algorithm only; algpseudocode loads algorithmicx
+% engines: rust 67k1 = 10+ errors (icml_support_sty.rs loaded the distributed pair, `algorithmic` bailed
+%          algorithmicx: \State, \For undefined, `#` reached the stomach); Perl has no icml20xx binding and reads the copy
+% expect:  0 errors, 0 warnings; one {algorithm} float, a listing of 4 lines (State, For, State, EndFor)
+% status:  RED (67k1) -> GREEN (67l); guard perfect_kernel_batch67l::icml_style_copy_decides_the_algorithm_packages
+\begin{filecontents*}[overwrite]{icml2017.sty}
+\ProvidesPackage{icml2017}
+\RequirePackage{algorithm}
+%\RequirePackage{algorithmic}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{icml2017}
+\usepackage{algpseudocode}
+\begin{document}
+\begin{algorithm}
+\caption{Sum}
+\begin{algorithmic}[1]
+\State $x \gets 0$
+\For{$i=1$ to $n$}
+\State $x \gets x+i$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+\end{document}

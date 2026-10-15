@@ -1,8 +1,21 @@
 /// Perl: icml_support.sty.ltxml — Support for ICML conference styles
-use crate::prelude::*;
+use crate::{prelude::*, shipped_class::require_shipped_algorithm_packages};
+
+LoadDefinitions!({
+  // Perl icml_support.sty.ltxml:9-10, reached by name (icml.sty.ltxml): `algorithm` and `algorithmic`.
+  icml_support(false)?;
+});
+
+/// icml2016.sty … icml2025.sty, which this binding stands in for (Perl has no binding for them and reads the paper's
+/// copy): every copy as ICML distributes it loads `algorithm` and `algorithmic` (icml2016.sty:70-71, icml2017.sty:72-73,
+/// icml2025.sty:95-96), but a paper using `algpseudocode` edits `algorithmic` out of its copy (icml2024.sty:94
+/// "removed due to conflict with algpseudocode", 2402.05403) — loaded, it bails algorithmicx (algorithmicx.sty.ltxml:9-12)
+/// and leaves `\State`/`\For` undefined (1706.03643, 1706.04918, 1706.04933, 1706.04964, 2002.06473, 2106.05074). The
+/// paper's copy decides the algorithm packages; the distributed pair without one.
+pub fn load_icml_style() -> Result<()> { icml_support(true) }
 
 #[rustfmt::skip]
-LoadDefinitions!({
+fn icml_support(follow_paper_copy: bool) -> Result<()> {
   RequirePackage!("times");
   RequirePackage!("fancyhdr");
   RequirePackage!("color");
@@ -12,8 +25,10 @@ LoadDefinitions!({
   // option-clash and leave colortbl/dvipsnam.def unloaded. Witness
   // 2405.18180 (icml2025).
   RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
-  RequirePackage!("algorithm");
-  RequirePackage!("algorithmic");
+  if !(follow_paper_copy && require_shipped_algorithm_packages("sty")?) {
+    RequirePackage!("algorithm");
+    RequirePackage!("algorithmic");
+  }
   RequirePackage!("natbib");
 
   // Citations
@@ -183,4 +198,5 @@ LoadDefinitions!({
   def_macro_noop("\\aroundspace")?;
   def_macro_noop("\\belowspace")?;
   def_macro_noop("\\icmlruler{}")?;
-});
+  Ok(())
+}

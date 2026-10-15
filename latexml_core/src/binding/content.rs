@@ -2958,6 +2958,21 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
 /// classes and packages in `except`, for a binding that stands in for an
 /// unbound class and chooses or has already loaded those itself.
 pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) {
+  require_dependencies_filtered(file, ext_type, &|name| !except.contains(&name));
+}
+
+/// The same scan kept to the classes and packages in `only`: a binding that stands in for a file it does not
+/// interpret, and loads its own choice of that file's packages, leaves to the paper's copy of the file the ones
+/// whose choice differs between copies (the algorithm packages: icml2017.sty:72-73, which a paper edits to drop
+/// `algorithmic` for `algpseudocode`; bmvc2k.cls, `algorithmic` or `algpseudocode` by year). `false` when the
+/// source has no such file (or it cannot be read), so the binding takes its own default.
+pub fn require_dependencies_only(file: &str, ext_type: &str, only: &[&str]) -> bool {
+  require_dependencies_filtered(file, ext_type, &|name| only.contains(&name))
+}
+
+/// [`require_dependencies_except`] / [`require_dependencies_only`]: scan `file` and load the classes and packages
+/// it names for which `keep` holds; `false` when there is no file to scan.
+fn require_dependencies_filtered(file: &str, ext_type: &str, keep: &dyn Fn(&str) -> bool) -> bool {
   use once_cell::sync::Lazy;
   use regex::Regex;
 
@@ -2965,7 +2980,7 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
   // (the call-site of `maybeRequireDependencies` is the only entry).
   thread_local! { static SCANNING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
   if SCANNING.with(|s| s.get()) {
-    return;
+    return false;
   }
   SCANNING.with(|s| s.set(true));
   struct ResetGuard;
@@ -2993,7 +3008,10 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
 
   // Perl L2776: `s/%[^\n]*\n//gs` — drop comment AND its trailing newline,
   // replacement is the empty string.
-  static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*\n").unwrap());
+  // A comment on a last line without its newline is one too (Perl's pattern keeps it): a `{filecontents}` copy is
+  // stored without that newline, so an edited-out `%\RequirePackage{algorithmic}` ending one was loaded (batch 67l,
+  // repro icml_style_copy_without_algorithmic.tex).
+  static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*(?:\n|$)").unwrap());
   // `comment`-package block: `\begin{comment}…\end{comment}` is a verbatim-SKIP
   // environment, so a `\usepackage`/`\RequirePackage` inside it is NEVER loaded
   // by LaTeX. The dep-scan must not anticipate it. Same "more-robust than Perl"
@@ -3050,7 +3068,7 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
       ..FindFileOptions::default()
     }),
   );
-  let Some(path) = raw_path else { return };
+  let Some(path) = raw_path else { return false };
 
   // Perl L2762-2766: slurp file. Check filecontents-cache first for the
   // inline-cls/sty case (e.g. `\begin{filecontents}{alggeom.cls}`), then
@@ -3084,7 +3102,7 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
           "read",
           s!("Couldn't open {} to scan dependencies, $!", path)
         );
-        return;
+        return false;
       },
     }
   };
@@ -3253,7 +3271,7 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
   let mut dups: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
   let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
     for p in OPT_SPLIT.split(pkg_csv) {
-      if p.is_empty() || except.contains(&p) {
+      if p.is_empty() || !keep(p) {
         continue;
       }
       // Executed-set gate (see top of fn): when this file raw-loaded, drop a
@@ -3293,7 +3311,7 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
         continue;
       }
       let class = cap[2].to_string();
-      if !class.is_empty() && !except.contains(&class.as_str()) {
+      if !class.is_empty() && keep(&class) {
         classes.push((class, cap.get(1).map(|m| m.as_str().to_string())));
       }
     }
@@ -3372,6 +3390,7 @@ pub fn require_dependencies_except(file: &str, ext_type: &str, except: &[&str]) 
       });
     }
   }
+  true
 }
 
 /// Attach a resource (CSS, JavaScript, …) to the document being built.

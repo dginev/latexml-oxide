@@ -4,6 +4,9 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("geometry");
   RequirePackage!("lineno");
+  // A copy of the style the paper edited to load the algorithm packages (2402.18905's neurips_2023.sty:1-2
+  // `\usepackage{algorithm}` `\usepackage{algpseudocode}`; the distributed styles load none) decides them.
+  crate::shipped_class::require_shipped_algorithm_packages("sty")?;
   // neurips_2025.sty L39 defines \newif\if@preprint. Our binding
   // intercepts \DeclareOption{preprint} and never actually creates
   // the conditional. Provide it defensively so user code that does

@@ -522,6 +522,27 @@ pub(crate) fn retire_option_handlers() {
   }
 }
 
+/// REVTeX 4.1/4.2's two copies of float.sty's `\newfloat` (revtex4-1.cls:3980-4021, revtex4-2.cls:4001-4042):
+/// `\newfloat@float`, float.sty's own, for the `\document@inithook` test that float.sty is loaded unpatched, and
+/// `\newfloat@ltx`, the repair the hook lets `\newfloat` to (revtex4-2.cls:4043-4056). A preamble that needs the
+/// repair before `\begin{document}`, where algorithm.sty's `\newfloat{algorithm}` runs, lets it itself
+/// (`\usepackage{float}\let\newfloat\newfloat@ltx\usepackage{algorithm}`: all 25 papers of the run-349 `\newfloat`
+/// sample; 2210.07980, 2210.08566, 2210.07097, 2402.00653, 2002.07183), and found it undefined here, which left
+/// `\newfloat` and `{algorithm}` undefined (KNOWN_PERL_ERRORS #683). Both copies set up a float through float.sty's
+/// machinery (`\floatplacement`, `\restylefloat`), which this port has as float_sty.rs's `\newfloat`; without
+/// float.sty loaded they fail, as in TeX. REVTeX 4.0 has neither (revtex4.cls); AASTeX 6+ has both (aastex_cls.rs).
+pub(crate) fn define_float_repair() -> Result<()> {
+  DefMacro!(
+    "\\newfloat@float{}{}{}",
+    "\\@ifnextchar[{\\lx@float@newfloat{#1}{#2}{#3}}{\\lx@float@newfloat{#1}{#2}{#3}[]}"
+  );
+  DefMacro!(
+    "\\newfloat@ltx{}{}{}",
+    "\\@ifnextchar[{\\lx@float@newfloat{#1}{#2}{#3}}{\\lx@float@newfloat{#1}{#2}{#3}[]}"
+  );
+  Ok(())
+}
+
 /// The bibliography style REVTeX writes when the document names none:
 /// `\bibliographystyle{\@bibstyle}` at the end of the document
 /// (revtex4-1.cls:7113-7120, revtex4-2.cls:7134-7141), `\@bibstyle` set by the

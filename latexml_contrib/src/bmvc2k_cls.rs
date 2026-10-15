@@ -1,6 +1,8 @@
 //! Stub for bmvc2k.cls (BMVC British Machine Vision Conference).
 use latexml_package::prelude::*;
 
+use crate::shipped_class::require_shipped_algorithm_packages;
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -15,6 +17,10 @@ LoadDefinitions!({
   RequirePackage!("graphicx");
   // bmvc2k.cls:222, 245 load geometry (a paper's own `\geometry{…}` was undefined, 2609.00981).
   RequirePackage!("geometry");
+  // bmvc2k.cls's algorithm packages differ by year: `algorithm` with `algorithmic` (2002.09958's copy:132-133,
+  // 2210.01640's:162-163) or with `algpseudocode` (2210.06270's:139-142). The paper's copy decides; `{algorithm}` and
+  // `\State` were undefined in papers that rely on the class for them. Without a copy, none.
+  require_shipped_algorithm_packages("cls")?;
   // bmvc2k.cls:516-521, 556-559: the unmarked footnote (a paper's equal-contribution note, 2609.08090) and the running
   // head's "et al." (2609.00981).
   RawTeX!(

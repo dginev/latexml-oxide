@@ -86,6 +86,17 @@ LoadDefinitions!({
   // `\def\epf{\hfill\mbox{\qed}}` idiom OUTSIDE any proof env, so OmniBus's
   // lazy theorem-env autoload never fires. Witness 1703.03101. Sized by amsthm's own sizer (`openbox_size`), so
   // `\mbox{\qed}` alone in a cell is kept.
+  // autart.cls:568-577 defines the class's own algorithm float: counter `algorithm`, listed in `lof`, its caption
+  // "Algorithm N." (`\fnum@algorithm`, `\@makealgocaption`); `{algorithm}` was undefined, where a paper loads only
+  // algpseudocode for the body (2106.14831, 2402.17000).
+  float_sty::define_float_environment("algorithm", "lof", "")?;
+  DefMacro!("\\lx@name@algorithm", "Algorithm");
+  DefMacro!("\\fname@algorithm", "Algorithm");
+  DefMacro!("\\fnum@font@algorithm", "\\bfseries");
+  DefMacro!(
+    "\\format@title@algorithm{}",
+    "\\lx@tag[][. ]{\\lx@fnum@@{algorithm}}#1"
+  );
   DefMacro!("\\qed", "\\ltx@qed");
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",

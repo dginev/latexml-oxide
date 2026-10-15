@@ -11095,7 +11095,7 @@ Trigger: `{\itshape a {\em b}} {\slshape c {\em d}}`. pdflatex sets b and d upri
 
 ### 333. The dependency scan reads a CR-only file by its lines (Perl: as one line)
 
-`maybe_require_dependencies` / `require_dependencies_except` (content.rs) mirror Perl's `maybeRequireDependencies` (Package.pm:2776-2813). Its comment stripper `%[^\n]*\n` needs a `\n`. A class written with CR-only line ends, such as 2402.17342's sn-jnl.cls (1791 CRs, no LF), is one line to it. Perl's identical regex then strips no comment at all and loads every commented-out `\usepackage` (in that copy, `%%\RequirePackage[T1]{fontenc}` and `hypcap`). A file with a stray LF is stripped from its first `%` to that LF instead.
+`maybe_require_dependencies` / `require_dependencies_except` (content.rs) mirror Perl's `maybeRequireDependencies` (Package.pm:2776-2813). Its comment stripper `%[^\n]*\n` needs a `\n` (ours also takes a comment ending the file, #592). A class written with CR-only line ends, such as 2402.17342's sn-jnl.cls (1791 CRs, no LF), is one line to it. Perl's identical regex then strips no comment at all and loads every commented-out `\usepackage` (in that copy, `%%\RequirePackage[T1]{fontenc}` and `hypcap`). A file with a stray LF is stripped from its first `%` to that LF instead.
 
 **Rust** (batch 56kt): before stripping, the scan turns `\r\n` and a lone `\r` into `\n`; TeX ends a line at either (web2c). A `\r\n` file scans as before, since the `\r` sat inside the stripped comment and counts as `\s` in the other patterns. Raw-loaded `.sty` files are unaffected: the executed-set gate already drops a package that never ran. The miss-handler and the unbound-class paths see the change.
 
@@ -17497,3 +17497,32 @@ tcilatex_tcitag_tags_eqnarray_rows, trailing_row_without_tag_is_still_pruned}`. 
 `eqnarray*` or after `\nonumber` on its row prints a number pdflatex does not (tcilatex 5.0 `\@@eqncr` prints
 `\@taggnum` only under `\if@eqnsw`; repro alignment/tcitag_in_unnumbered_row_prints_nothing); amsmath `\tag{z}\notag`
 on one row loses the tag, as in Perl (repro alignment/ams_tag_then_notag_keeps_tag).
+
+### 592. A binding standing in for a class or package takes the algorithm packages from the paper's copy of that file
+
+The algorithm packages differ between copies of one class or package, by version and by the paper's own edits: every
+ICML style as distributed loads `algorithm` and `algorithmic` (icml2016.sty:70-71 … icml2025.sty:95-96), and papers
+that use algpseudocode comment `algorithmic` out of their copy (icml2024.sty:94 "removed due to conflict with
+algpseudocode", 2402.05403), since loading it first bails algorithmicx (algorithmicx.sty.ltxml:9-12, Perl alike) and
+leaves `\State`/`\For` undefined; WileyNJD-v2.cls:3331 and WileyNJDv5.cls:6820 load `algorithm, algorithmicx,
+algpseudocode` (one copy `algorithm2e`, 2002.02812); bmvc2k.cls `algorithm` with `algorithmic` or with `algpseudocode`
+by year; pnas-new.cls:110-111 `algorithm` and `algpseudocode[noend]`; edited copies of neurips_2023.sty (2402.18905)
+and siamltex.cls (2210.03478) load them where the distributed files load none. Perl has no binding for most of these
+files: it reads the paper's copy (icml20xx.sty) or scans it from OmniBus (the classes, Package.pm:2776-2813). Our bindings
+stand in for them (icml_support_sty.rs `load_icml_style` for icml2016-2025, icml2019_sty.rs after its raw read, icml_sty.rs
+when it answers a versioned fallback such as `icml2026` or `./icml2018`; wileynjd_cls.rs, bmvc2k_cls.rs, pnas_new_cls.rs,
+siamltex_cls.rs, neurips_sty.rs), and loaded either the distributed ICML pair or no algorithm package at all. Now each
+calls `shipped_class::require_shipped_algorithm_packages`: the dependency scan (`require_dependencies_only`,
+content.rs) of the file being loaded (the load's `\@currname`, or the request a versioned fallback answers,
+`fallback_request`), kept to `ALGORITHM_PACKAGES`, so the copy's choice, order and options win; without a copy, the
+ICML binding keeps the distributed pair and the others load none (as OmniBus has nothing to scan).
+Perl's icml_support.sty.ltxml, reached by name from icml.sty.ltxml for `\usepackage{icml}`, still loads the pair; Perl's
+neurips.sty.ltxml loads none, and a shipped neurips.sty copy now adds its algorithm packages (beyond Perl, as
+pdflatex). The scan's comment pattern also drops a comment on a last line without its newline (Perl's `s/%[^\n]*\n//gs` keeps it), which a
+`{filecontents}` copy has. Run 349: `\State` 560, `\For` 470, `{algorithm}` 544 papers. Witnesses 1706.03643,
+1706.04918, 1706.04933, 1706.04964, 2002.06473, 2106.05074 (icml); 1810.03033, 1810.12033, 2106.06046, 2402.13183,
+2506.07013 (Wiley); 2210.06270, 2210.01640 (bmvc2k); 2402.10236 (pnas-new). Guards
+`perfect_kernel_batch67l::{icml_style_copy_decides_the_algorithm_packages, icml_style_without_a_copy_keeps_the_distributed_pair,
+wileynjd_class_copy_loads_its_algorithm_packages, wileynjd_class_copy_with_algorithm2e,
+bmvc2k_class_copy_loads_its_algorithm_packages, icml_versioned_fallback_follows_the_copy,
+neurips_copy_loads_its_algorithm_packages}`.

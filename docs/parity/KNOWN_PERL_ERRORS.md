@@ -13268,3 +13268,19 @@ too, but Perl's drop of that row is kept. Fixed in Rust, OXIDIZED_DESIGN_DIVERGE
 alignment/ams_tag_only_row_keeps_number and package-bindings/tcilatex_tcitag_tags_eqnarray_rows; guards
 `perfect_kernel_batch67j::{ams_tag_only_row_keeps_number, tcilatex_tcitag_tags_eqnarray_rows,
 trailing_row_without_tag_is_still_pruned}`.
+
+## 683. REVTeX 4.1/4.2's `\newfloat@ltx` is undefined, so a preamble's float repair undefines `\newfloat`
+
+revtex4-1.cls:3980-4031 and revtex4-2.cls:4001-4052 carry two copies of float.sty's `\newfloat`: `\newfloat@float`,
+float.sty's own, which `\document@inithook` compares `\newfloat` against, and `\newfloat@ltx`, the repaired copy it then
+lets `\newfloat` to; AASTeX 6.x loads revtex4-1 (aastex62.cls:278-292) and aastex701.cls:3689-3718 carries the
+same code. Papers that need the repair in the preamble, before algorithm.sty's `\newfloat{algorithm}`, let it
+themselves. Perl's revtex4-1.cls.ltxml, revtex4.cls.ltxml (which also serves revtex4-2) and revtex4_support.sty.ltxml
+(and aastex.cls.ltxml, which loads revtex4) define neither copy, so `\newfloat` becomes undefined, algorithm.sty's `\newfloat` call errs and `{algorithm}` is never
+defined. Minimal trigger: `\documentclass{revtex4-2}\usepackage{float}\makeatletter\let\newfloat\newfloat@ltx
+\makeatother\usepackage{algorithm}`, then a `{algorithm}`. pdflatex is clean. All 25 papers of the run-349 `\newfloat`
+sample do this; the paper-side `{algorithm}` errors follow. Witnesses 2210.07980, 2210.08566, 2210.07097, 2402.00653,
+2210.07984; 2002.07183 (aastex62). Fixed in Rust: revtex4_support_sty.rs `define_float_repair` defines both copies as
+float_sty.rs's `\newfloat`, for revtex4-1, revtex4-2 and AASTeX 6+ (revtex4.cls and AASTeX 5.x have neither). Repro class-bindings/revtex_float_repair_before_document;
+guards `perfect_kernel_batch67l::{revtex_float_repair_defines_newfloat, revtex4_0_has_no_float_repair,
+aastex6_float_repair_defines_newfloat}`.
