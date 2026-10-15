@@ -13,6 +13,36 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // atlasdoc.cls:52-54 (2207.12246's copy) the font boolean options (`newtx` by default, `txfonts`, `libertine`,
+  // `palatino`) and :516-546 the packages each loads, the math font with them: papers write `\checkmark`, `\upmu`
+  // (23 of run 353 with newtxmath's commands undefined: 2207.12246, 2210.05415, 2304.03053). `<option>=false` keeps the
+  // default.
+  for option in ["txfonts", "libertine", "palatino"] {
+    DeclareOption!(option, {
+      AssignValue!(&s!("atlasdoc@{option}") => true);
+    });
+    DeclareOption!(&s!("{option}=true"), {
+      AssignValue!(&s!("atlasdoc@{option}") => true);
+    });
+  }
+  ProcessOptions!();
+  if lookup_bool("atlasdoc@txfonts") {
+    RequirePackage!("txfonts", options => vec![s!("varg")]);
+    RequirePackage!("fontenc", options => vec![s!("T1")]);
+  } else if lookup_bool("atlasdoc@libertine") {
+    RequirePackage!("libertine");
+    RequirePackage!("fontenc", options => vec![s!("T1")]);
+    RequirePackage!("newtxmath", options => vec![s!("libertine")]);
+  } else if lookup_bool("atlasdoc@palatino") {
+    RequirePackage!("mathpazo");
+    RequirePackage!("helvet", options => vec![s!("scaled")]);
+    RequirePackage!("courier");
+    RequirePackage!("fontenc", options => vec![s!("T1")]);
+  } else {
+    RequirePackage!("fontenc", options => vec![s!("T1")]);
+    RequirePackage!("newtxtext");
+    RequirePackage!("newtxmath");
+  }
 
   // atlasdoc.cls L296: `\newcommand{\AtlasTitle}[1]{\title{#1}…}`.
   DefMacro!("\\AtlasTitle{}", "\\title{#1}");

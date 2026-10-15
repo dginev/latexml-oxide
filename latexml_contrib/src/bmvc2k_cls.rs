@@ -1,7 +1,9 @@
 //! Stub for bmvc2k.cls (BMVC British Machine Vision Conference).
 use latexml_package::prelude::*;
 
-use crate::shipped_class::require_shipped_algorithm_packages;
+use crate::shipped_class::{
+  SUBFIGURE_PACKAGES, require_shipped_algorithm_packages, require_shipped_packages,
+};
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
@@ -15,6 +17,10 @@ LoadDefinitions!({
   RequirePackage!("xspace");
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
+  // bmvc2k.cls:121 `\RequirePackage{graphicx,subfigure}` in most copies, `subcaption` or `subfig` in edited ones: the
+  // paper's copy decides (shipped_class.rs SUBFIGURE_PACKAGES). `\subfigure` was undefined in 123 papers of run 353
+  // that rely on the class for it (1507.05726, 1510.01553, 1605.07146). Without a copy, none.
+  require_shipped_packages("cls", SUBFIGURE_PACKAGES)?;
   // bmvc2k.cls:222, 245 load geometry (a paper's own `\geometry{…}` was undefined, 2609.00981).
   RequirePackage!("geometry");
   // bmvc2k.cls's algorithm packages differ by year: `algorithm` with `algorithmic` (2002.09958's copy:132-133,

@@ -6,6 +6,10 @@ LoadDefinitions!({
   // See https://github.com/quantum-journal/quantum-journal
 
   load_class("article", Vec::new(), Tokens!())?;
+  // quantumarticle.cls:282-284 `\RequirePackage[margin=…,bottom=3cm]{geometry}` (2cm or 3cm by column count; the page
+  // setup is not rendered), then `\@blacklistpackage{geometry}`: papers adjust it with `\geometry`/`\newgeometry`
+  // (30 of run 353 with them undefined: 1612.06828, 1701.03135, 1712.01826).
+  RequirePackage!("geometry");
   // quantumarticle.cls:197-205: a REVTeX journal option turns on its REVTeX compatibility. That provides the REVTeX
   // front-matter commands, which it does not print (:1462-1471, at `\begin{document}`, so a document's own stays its
   // own), and the journal abbreviations of REVTeX's `.rtx` files (:1429-1460). What `\pacs` and `\preprint` discard is
@@ -14,6 +18,14 @@ LoadDefinitions!({
   // 1709.01098 (`\pacs`), 2006.05524, 2212.01355 (`\preprint`).
   for option in ["aps", "pra", "prb", "pre", "prl", "prx", "aip"] {
     DeclareOption!(option, { AssignValue!("quantumarticle_revtex_compat" => true); });
+  }
+  // quantumarticle.cls:155-168 the `amsfonts`, `amssymb` (alias `amssymbol`) and `amsmath` options, which load those
+  // packages (:1416-1424); papers given them write `\lesssim`, `\geqslant`, `\varnothing` (31 of run 353 with amssymb's
+  // commands undefined: 1802.10344, 1907.05950, 1909.11817). Perl's binding declares none (KNOWN_PERL_ERRORS #698).
+  for (option, package) in [
+    ("amsfonts", "amsfonts"), ("amssymb", "amssymb"), ("amssymbol", "amssymb"), ("amsmath", "amsmath"),
+  ] {
+    DeclareOption!(option, { AssignValue!(&s!("quantumarticle_load_{package}") => true); });
   }
   ProcessOptions!();
   if lookup_bool("quantumarticle_revtex_compat") {
@@ -65,6 +77,21 @@ LoadDefinitions!({
 \providecommand\textcite[1]{\citet{#1}}\providecommand\onlinecite[1]{\cite{#1}}}");
   }
 
+  for package in ["amsfonts", "amssymb", "amsmath"] {
+    if lookup_bool(&s!("quantumarticle_load_{package}")) {
+      RequirePackage!(package);
+    }
+  }
+  // quantumarticle.cls:1508-1512 `\PassOptionsToPackage{font={small,sf}}{caption}` and `\AtEndPreamble{\RequirePackage
+  // {caption}}`: `\captionof`, `\captionsetup` (29 of run 353 with them undefined: 1910.03969, 1711.07279,
+  // 1812.02144), loaded at the end of the preamble, before the hyperref below as etoolbox's `\AtEndPreamble` runs before
+  // the `\AtBeginDocument` hooks; the caption font is not rendered.
+  DefPrimitive!("\\lx@quantumarticle@caption", {
+    if !lookup_bool("caption.sty_loaded") {
+      RequirePackage!("caption");
+    }
+  });
+  RawTeX!(r"\AtBeginDocument{\lx@quantumarticle@caption}");
   // quantumarticle.cls:1392-1394: hyperref, loaded at `\begin{document}` (after the compatibility's natbib).
   DefPrimitive!("\\lx@quantumarticle@hyperref", {
     if !lookup_bool("hyperref.sty_loaded") {

@@ -102,7 +102,11 @@ LoadDefinitions!({
   // the id as its text (the logo picture is out of scope).
   DefMacro!("\\ORCID{}", "\\href{https://orcid.org/#1}{#1}");
 
-  // oup-authoring-template.cls:2425-2435: required packages
+  // oup-authoring-template.cls:2425-2435: required packages; :2426 `\RequirePackage{multirow}` (39 papers of run 353
+  // with `\multirow` undefined: 2102.02669, 2104.08961, 2206.08262), :2428 `{url}`, :2430 `{mathrsfs}`.
+  RequirePackage!("multirow");
+  RequirePackage!("url");
+  RequirePackage!("mathrsfs");
   RequirePackage!("booktabs");
   RequirePackage!("algorithm");
   RequirePackage!("algorithmicx");

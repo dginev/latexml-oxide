@@ -79,6 +79,14 @@ LoadDefinitions!({
   DeclareOption!("author-year", {
     assign_value("revtex_cite_style", pin("authoryear"), Some(Scope::Global));
   });
+  // revtex4-1.cls:6186-6193 `\DeclareOption{linenumbers}{\appdef\class@documenthook{\RequirePackage{lineno}…\linenumbers}}`:
+  // the option loads lineno at the document's start, and papers given it call `\nolinenumbers`, `{linenomath}`
+  // (revtex4-1 and revtex4-2 papers of run 353: 16 + 16 with the option and lineno's commands undefined; 1010.3732,
+  // 1209.2541, 2003.07846, 2010.12920). Without the option the class loads none: a paper calling them then errs in
+  // pdflatex too. Perl's binding lacks the option (KNOWN_PERL_ERRORS #697).
+  DeclareOption!("linenumbers", {
+    assign_value("revtex_linenumbers", true, Some(Scope::Global));
+  });
   assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
   ProcessOptions!();
   LoadClass!("article");
@@ -114,6 +122,12 @@ LoadDefinitions!({
   // Perl revtex4-1.cls.ltxml L60-63: auto-load `<jobname>.rty` if present.
   // Same convention as revtex4 — paper-local macros stashed in .rty file.
   Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
+  if lookup_bool("revtex_linenumbers") {
+    DefPrimitive!("\\lx@revtex@lineno", {
+      RequirePackage!("lineno");
+    });
+    RawTeX!(r"\AtBeginDocument{\lx@revtex@lineno}");
+  }
 
   // revtex4-1.cls L1965: `\providecommand\doi[0]{\begingroup\@sanitize@url\@doi}`
   // — `\@sanitize@url` makes URL special chars (incl. `%`) catcode-other

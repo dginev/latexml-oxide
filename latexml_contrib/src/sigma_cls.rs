@@ -12,6 +12,16 @@ LoadDefinitions!({
   // document loads xcolor itself; color/definecolor stay via hyperref->color.
   // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
   RequirePackage!("hyperref");
+  // sigma.cls:20-28 (0902.2977's copy, every one of the 20 sampled) `\RequirePackage{amsthm}`, `{amsmath}`,
+  // `{latexsym}`, `{amssymb}`, `{amscd}`, `{epsfig}`, `{graphics}`, `{ifthen}`, `\usepackage{color}`: papers draw
+  // commutative diagrams in `{CD}` (20 of run 353 with it undefined: 0902.2977, 0907.2394, 0910.5929) and colour with
+  // `\color` (12) without loading them.
+  RequirePackage!("latexsym");
+  RequirePackage!("amscd");
+  RequirePackage!("epsfig");
+  RequirePackage!("graphics");
+  RequirePackage!("ifthen");
+  RequirePackage!("color");
 
   // SIGMA frontmatter — preserve author content.
   def_macro_noop("\\FirstPageHeading")?;

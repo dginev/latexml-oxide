@@ -10,7 +10,14 @@ LoadDefinitions!({
   // calc get \widthof undefined. Load calc explicitly first (faithful — adjustbox
   // requires it). Witness 2401.06320. RUST-ONLY (Perl loads calc via adjustbox).
   RequirePackage!("calc");
+  // Its trimclip finds no clipping driver for the empty `\Gin@driver` here (trimclip.sty:24, 252-258) and loads its
+  // fall-back, tc-pgf.def, so pgf is read now, where pdflatex reads tc-pdftex.def and no pgf. pgf's code needs `|` other
+  // (pgfmathparser.code.tex:912 `\pgfmathdeclareoperator{||}`), as its own library loader sets it (pgfutil-common.tex:
+  // 372-384); a class that leaves `|` active (sn-jnl's program.sty:521, until the paper's `\normalbaroutside`) broke it,
+  // 6 errors (2202.10115, 2306.09847, 2507.09618). The load reads `|` as other, its catcode put back after.
+  RawTeX!(r"\expandafter\edef\csname lx@adjustbox@barcode\endcsname{\the\catcode`\|}\catcode`\|=12\relax");
   InputDefinitions!("adjustbox", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  RawTeX!(r"\catcode`\|=\csname lx@adjustbox@barcode\endcsname\relax");
 
   // Some strategic redefinitions
   // collectbox's approach to starting a block for environments isn't quite working; Force a \par

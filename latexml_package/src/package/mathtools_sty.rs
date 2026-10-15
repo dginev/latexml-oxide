@@ -23,8 +23,10 @@ LoadDefinitions!({
 
   RequirePackage!("keyval");
   RequirePackage!("calc");
-  // TODO: add support for mhsetup
-  // RequirePackage!("mhsetup");
+  // mathtools.sty:37 `\RequirePackage{mhsetup}`: its `\MHInternalSyntaxOn`/`Off`, which papers call to write
+  // mathtools-style internals themselves (Perl's binding leaves it a TODO, KNOWN_PERL_ERRORS #693; witnesses 1202.0045,
+  // 1611.02845, 1903.08038). The mhsetup binding raw-loads the file and restores the `:`/`_` catcodes after it.
+  RequirePackage!("mhsetup");
   // Perl L43: RequirePackage('amsmath', withoptions => 1)
   require_package_with_options("amsmath")?;
   // Perl L44-45: AtBeginDocument(sub { RequirePackage('graphicx'); }).

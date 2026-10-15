@@ -1,0 +1,24 @@
+% witness: 1909.01564, 2012.11920, 2108.00185 (`\MSC[2010]{…}` in `{keywords}`), 2407.03849 (`\orcidauthor`):
+%          cas-sc.cls:92 `\RequirePackage{cas-common}`, cas-common.sty:415-423, 1599-1610
+% oracle:  pdflatex 0 errors ("Keywords: graphs MSC: 05C75")
+% engines: rust 67o1 = 2 errors (`\MSC`, `\orcidauthor` undefined: cas_dc_cls.rs stands in for cas-common without
+%          them); Perl: no binding
+% expect:  0 errors, 0 warnings; the MSC codes kept in the keywords
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title [mode = title]{A title}
+\author[1]{Jane Doe}
+\orcidauthor{0000-0002-1825-0097}{Jane Doe}
+\begin{abstract}
+An abstract.
+\end{abstract}
+\begin{keywords}
+graphs \sep trees
+\MSC[2010]{05C75}
+\end{keywords}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

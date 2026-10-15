@@ -25,6 +25,11 @@ LoadDefinitions!({
   // kernel stub, which would make `\ifcsname geometry\endcsname` falsely true
   // for every document (broke 2005.03740). See latex_constructs.rs geometry note.
   RequirePackage!("geometry");
+  // WileyMSP-template.cls:5-10 `\RequirePackage{ragged2e}`, `{graphicx}`, `{caption}`, `[margin=0.5in]{geometry}`,
+  // `{fancyhdr}`, `{gensymb}` (every one of the 41 sampled copies): papers write `\degree`, `\ohm`, `\micro`,
+  // `\celsius` (41 of run 353 with them undefined; 2003.01904, 2007.06369, 2103.00309) and `\includegraphics`.
+  RequirePackage!("graphicx");
+  RequirePackage!("gensymb");
 
   DefMacro!(T_CS!("\\begin{affiliations}"), None, "");
   DefMacro!(T_CS!("\\end{affiliations}"), None, "");

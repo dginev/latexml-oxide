@@ -6,6 +6,10 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // psfrag.sty:35 `\RequirePackage{graphics}`, before its options: a paper that loads psfrag has `\includegraphics`
+  // and `\scalebox` without loading graphics itself (Perl's binding lacks the load, KNOWN_PERL_ERRORS #692; witnesses
+  // 0801.1195, 0802.1229, 0704.2560).
+  RequirePackage!("graphics");
   // Perl L25-27 — initial state: psfrag_scan_all defaults to the
   // 2.09_COMPATIBILITY flag (true when the document used \documentstyle),
   // psfrag_scan starts off. No reader consumes these in Rust yet, but

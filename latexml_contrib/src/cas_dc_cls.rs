@@ -91,6 +91,19 @@ LoadDefinitions!({
     def_macro_noop(&s!("{cs}{args}"))?;
   }
 
+  // cas-common.sty:1599-1610 the classification lines a `{keywords}` block ends with, `\MSC[<year>]{<codes>}`,
+  // `\JEL{<codes>}`, `\PACS{<codes>}`; :415-423 `\orcidauthor{<id>}{<name>}`, an author's ORCID, which the class
+  // prints in its ORCID list (`\printorcid`): kept as the contact of the author just given; :774 `\stmAuthorSetup`, the
+  // author-type keys; :2067-2068 the `\FullWidth` dimension of its wide floats. 35 cas-sc and 14 cas-dc papers of run
+  // 353 had one of them undefined (1909.01564, 2012.11920, 2108.00185 `\MSC`; 2407.03849 `\orcidauthor`).
+  RawTeX!(
+    r"\NewDocumentCommand\MSC{O{}m}{\par\noindent\textit{#1 MSC: }#2}
+\NewDocumentCommand\JEL{m}{\par\noindent\textit{JEL: }#1}
+\NewDocumentCommand\PACS{m}{\par\noindent\textit{PACS: }#1}
+\NewDocumentCommand\orcidauthor{mm}{\lx@add@orcid{#1}}
+\DeclareDocumentCommand\stmAuthorSetup{m}{}
+\newdimen\FullWidth \FullWidth=\textwidth"
+  );
   // cas-common.sty dynamically defines `\tblwidth` via
   // `\csgdef{tblwidth}{\dim_use:N \l_tbl_width_dim}` only inside its
   // own table-float wrapper. Authors use `\tblwidth` directly as the

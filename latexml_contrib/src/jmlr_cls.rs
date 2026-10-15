@@ -8,14 +8,17 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
-  // Do NOT eager-load xcolor (Perl ships no jmlr binding → OmniBus, no
-  // preload). A preloaded xcolor makes a later `\usepackage[table]{xcolor}`
-  // a no-op → colortbl/array never load → array `m{}`/`b{}` columns are
-  // "Unrecognized tabular template" → "Extra alignment tab". The document
-  // loads xcolor with its own options; `\color`/`\definecolor` stay
-  // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
+  // jmlr.cls:150-154 `\RequirePackage{graphicx}`, `{url}`, `\PassOptionsToPackage{x11names}{xcolor}`
+  // `\RequirePackage{xcolor}`: papers colour with `\textcolor`/`\definecolor` without loading xcolor (21 of run 353
+  // with them undefined: 1902.03035, 2010.02010, 2107.03212). Perl, with no binding, loads it through OmniBus's scan of
+  // the class (Package.pm:2776-2813). It was once left out because a document's later `\usepackage[table]{xcolor}` was
+  // then a no-op; a repeat load now applies its new options (content.rs `apply_new_options_on_reload`, xcolor_sty.rs
+  // `\ds@table`, witness 2605.00310).
+  RequirePackage!("graphicx");
+  RequirePackage!("url");
+  RequirePackage!("xcolor", options => vec![s!("x11names")]);
   // jmlr.cls:155-156 — the class's algorithm floats; without them
   // `{algorithm2e}` is undefined and its `\caption` cascades to "outside any
   // known float" (pmlr-sample). Guard:

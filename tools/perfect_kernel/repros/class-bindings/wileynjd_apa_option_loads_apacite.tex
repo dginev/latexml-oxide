@@ -1,0 +1,33 @@
+% witness: 1811.00964, 1902.09230, 1904.10792 (`\documentclass[APA,…]{WileyNJD-v2}`; WileyNJD-v2.cls:63, 2722-2723
+%          `\usepackage[natbibapa]{NJDapacite}`, NJDapacite.sty:46 `\ProvidesPackage{apacite}`)
+% oracle:  pdflatex (clean) with this cut of the class ("Doe (2020)" and the reference)
+% engines: rust 67o1 = 10+ errors (`{APACrefauthors}`, `\APACrefYearMonthDay`, `\BBOQ`, … undefined: wileynjd_cls.rs
+%          declared no APA option); Perl: no binding
+% expect:  0 errors, 0 warnings; one bibitem, the citation resolved
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{WileyNJD-v2.cls}
+\ProvidesClass{WileyNJD-v2}
+\newif\if@APArefstyle
+\DeclareOption{APA}{\global\@APArefstyletrue}
+\ProcessOptions
+\LoadClass{article}
+\if@APArefstyle\usepackage[natbibapa]{apacite}\fi
+\end{filecontents*}
+\documentclass[APA]{WileyNJD-v2}
+\begin{document}
+\citet{doe}
+\begin{thebibliography}{}
+\bibitem [\protect \citeauthoryear {Doe}{Doe}{2020}]{doe}
+\APACinsertmetastar {doe}
+\begin{APACrefauthors}
+Doe, J.
+\end{APACrefauthors}
+\unskip\
+\newblock
+\APACrefYearMonthDay{2020}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A title} {A title}.{\BBCQ}
+\PrintBackRefs{\CurrentBib}
+\end{thebibliography}
+\end{document}

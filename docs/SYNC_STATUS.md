@@ -1332,6 +1332,61 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   shipped class's `\renewenvironment{proof}`), 2309.14926 (shipped smfart) 1 → 0 Errors; the apxproof users are
   byte-identical. Residual: the proof head's font and punctuation are the binding's, not the class's (isamms.cls's
   small caps, smfart's " — ").
+- **67u** (binding gaps G1, run 353's undefined-only papers whose missing commands come from a package the class, or a
+  package it loads, requires; bindgaps/g1_deps.tsv): bindings load what the real file loads, in its order and under its
+  options. Class bindings (dependency, real file:line, witnesses): sn-jnl → program (sn-jnl.cls:311/621 of the older
+  copies, through the class scan; 2010.12415, 2102.03176, 2104.02781; its `\(`…`\)` programbox kept the kernel's inline
+  maths under the class, OXIDIZED_DESIGN #597, for a ruling); bmvc2k → subfigure/subcaption/subfig/caption as the
+  paper's copy names them (bmvc2k.cls:121; 1507.05726, 1605.07146; shipped_class.rs `SUBFIGURE_PACKAGES`,
+  `require_shipped_packages`); ieeeaccess → color, spotcolor unless `jtehm` (ieeeaccess.cls:121-131; 1901.05553,
+  1712.00216); agujournal2019 → xcolor, url, lineno, indentfirst, ragged2e (:91-112; 1803.00457, 1902.01137);
+  WileyMSP-template → graphicx, gensymb (:5-10; 2003.01904); oup-authoring-template → multirow, url, mathrsfs
+  (:2426-2430; 2102.02669); cas-sc/cas-dc → cas-common's `\MSC`/`\JEL`/`\PACS`/`\orcidauthor`/`\stmAuthorSetup`/
+  `\FullWidth` (cas-common.sty:415-423, 774, 1599-1610, 2067; 1909.01564, 2407.03849); ws-rv9x6 → makeidx, rotating, url
+  from the copy (ws-rv9x6.cls:1524-1528; 0706.1148); revtex4-1/4-2 → lineno under the `linenumbers` option, at the
+  document's start (revtex4-1.cls:6186-6193, revtex4-2.cls:6207-6214; 1209.2541, 2003.07846; KNOWN_PERL_ERRORS #697);
+  quantumarticle → the `amsfonts`/`amssymb`/`amsmath` options' packages, geometry, caption (quantumarticle.cls:155-168,
+  282-284, 1508-1512; 1802.10344, 1612.06828, 1910.03969; #698); aa → answers (verbatim's `{comment}`) when the copy
+  loads it (aa.cls:249 of the v8 copies; 1501.03426; #699); atlasdoc → its font option's packages, newtxtext+newtxmath by
+  default (atlasdoc.cls:52-54, 516-546; 2207.12246); ceurart → colortbl, dcolumn, stfloats (:88; 2212.08130); ejpecp →
+  graphicx, mathtools, microtype, latexsym, dsfont unless `NODS`, geometry (ejpecp.cls:81-106; 1607.07914, 1111.6458);
+  WileyNJD-v2 `APA` → NJDapacite, which is apacite.sty, as the apacite binding with `natbibapa` (WileyNJD-v2.cls:63,
+  2722-2723; 1811.00964); jmlr → graphicx, url, xcolor[x11names] (jmlr.cls:150-154; 1902.03035); sigma → latexsym, amscd,
+  epsfig, graphics, ifthen, color (sigma.cls:20-28; 0902.2977). Package chains the grep attributed to the class:
+  amsart/article/IEEEtran → graphics through lscape.sty:35 and psfrag.sty:35 (129 papers; 0710.2354, 0801.1195; #692),
+  → color through showkeys `[color]` (showkeys.sty:51-56; 73; 1010.3777; #692), → thm-patch through thmtools
+  (`\addtotheorem…hook`, run by `define_new_theorem` inside the theorem; 69; 1710.06939; #695), → `\varlim@`
+  (amsopn.sty:92-97, mis-attributed to amstex; 23; 1608.08273; #696); article → mhsetup through mathtools
+  (mathtools.sty:37, the binding's TODO; 33; 1202.0045; #693); acmart → centernot through newtxmath (newtxmath.sty:36;
+  21; 2002.09451; #694, a centernot binding: `\not`). The xcolor exclusion comments in agujournal2019_cls.rs and
+  jmlr_cls.rs were stale (a repeat `[table]` load applies its options since 2605.00310) and are replaced. With program
+  loaded two interactions surfaced and are fixed: adjustbox's trimclip, finding no driver for our empty `\Gin@driver`,
+  reads pgf at once (pdflatex: tc-pdftex.def, no pgf), and pgf broke on program's active `|` (2202.10115, 2507.09618 +6
+  Errors) — adjustbox_sty.rs now reads its file with `|` other; program.sty:1009's `\index` (`\@sanitize` with nothing
+  to end the group here) turned the rest of 2306.09847 into text and lost its bibliography — program_sty.rs keeps the
+  kernel's `\index`/`\makeindex`. `shipped_class_text` now also reads a `{filecontents}` copy (the VFS), as the
+  dependency scan does. Skipped, author's missing `\usepackage` (pdflatex errs too): mn2e → natbib (mn2e.cls:1201-1203
+  loads it only under `usenatbib`, which none of the 128 witnesses passes (many have it commented out); `\citeauthoryear`
+  then errs at each `\cite` in pdflatex: 0706.0055), acmart → colortbl (no witness of 47 loads colortbl or passes
+  `table`: 1807.07984), article → forloop/multirow/color with no chain, the 24 revtex papers calling lineno without the
+  option. Discounted (TL-2025 version limit): mnras → atbegshi (63; 1605.02911, 1609.06406: the `\Hy@FixNotFirstPage`
+  hack relies on pre-2020 hyperref loading atbegshi; TL 2025 hyperref does not, pdflatex with the paper's mnras.cls
+  leaves `\AtBeginShipout` undefined). Repros class-bindings/{snjnl_class_copy_loads_program,
+  bmvc2k_class_copy_loads_subfigure, ieeeaccess_loads_color_and_spotcolor, agujournal2019_loads_lineno_ragged2e_xcolor,
+  wileymsp_loads_gensymb, oup_loads_multirow, cas_sc_classification_lines, ws_rv9x6_class_copy_loads_makeidx,
+  revtex_linenumbers_option_loads_lineno, quantumarticle_options_load_ams_geometry_caption, aa_class_copy_loads_answers,
+  atlasdoc_default_fonts_load_newtxmath, ceurart_loads_colortbl, ejpecp_loads_mathtools_dsfont,
+  wileynjd_apa_option_loads_apacite, jmlr_loads_xcolor, sigma_loads_amscd} and stub-dependencies/{lscape_psfrag_load_graphics,
+  showkeys_color_option_loads_color, mathtools_loads_mhsetup, newtxmath_loads_centernot, thmtools_theorem_hooks_run,
+  amsopn_varlim_builder} RED → GREEN; guards `perfect_kernel_batch67u`. A/B: final candidate vs the parent (67s1-rel; 67o1-rel where the r1 candidate matched it), 606 papers (up to 12
+  witnesses per row, all 138 sn-jnl → program, 100 from pop67o): Errors 1,278 → 432, Fatal 3 → 2, error-free 65 → 496;
+  pop67o 343 → 242. 20 papers lose words, each only error-recovery text or text pdflatex hides: the unloaded commands'
+  names and arguments (`\definecolor cvprbluergb…`, `\cellcolor color1!33`, `\scalebox .4 \includegraphics krebes.eps`,
+  WileyNJD's raw `\APACyear`/`\BBA`, the APA title printed twice; bibitems unchanged, every reference text kept) and
+  aa's `{comment}` bodies. 1709.10492 timed out once under load (170 s) and converts in 112 s alone. Binding nets
+  (binding_nets run_net.sh, label 67u) for the 23 bindings touched vs 67s1: Errors fall in 19 (ieeeaccess 40 → 0,
+  mathtools 55 → 13, ejpecp 53 → 26, atlasdoc 19 → 3), none worse after the adjustbox/program fixes (the sn-jnl net's
+  2010.12415 2 → 7 at the first candidate, 0 now).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

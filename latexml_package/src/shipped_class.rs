@@ -40,7 +40,8 @@ pub fn requested_shipped_class(binding: &str) -> Result<Option<String>> {
 /// The text of the class file [`requested_shipped_class`] finds, its bytes read as Latin-1 characters; `None` when
 /// the source does not have it or it cannot be read (so a family binding takes its no-copy choices). A family binding
 /// reads the copy the paper ships to follow its version where the versions conflict (`mn2e_cls`, `mdpi_cls`,
-/// `jfm_cls`).
+/// `jfm_cls`). A copy the document writes with `{filecontents}` is read where the dependency scan reads it, from the
+/// virtual files (`require_dependencies_only`).
 pub fn shipped_class_text(binding: &str) -> Result<Option<String>> {
   Ok(requested_shipped_class(binding)?.and_then(|class| {
     find_file(
@@ -51,8 +52,13 @@ pub fn shipped_class_text(binding: &str) -> Result<Option<String>> {
         ..Default::default()
       }),
     )
-    .and_then(|path| std::fs::read(path).ok())
-    .map(|bytes| bytes.iter().map(|&b| b as char).collect::<String>())
+    .and_then(|path| {
+      vfs_read(&path).or_else(|| {
+        std::fs::read(path)
+          .ok()
+          .map(|bytes| bytes.iter().map(|&b| b as char).collect::<String>())
+      })
+    })
   }))
 }
 
@@ -112,6 +118,20 @@ pub const ALGORITHM_PACKAGES: &[&str] = &[
 /// paper's copy loads none (icml 1706.03643, 2002.06473, 2106.05074), and `{algorithm}` when it omits the class's own
 /// (WileyNJD-v2 1810.03033, 2106.06046; bmvc2k 2210.06270).
 pub fn require_shipped_algorithm_packages(ext: &str) -> Result<bool> {
+  require_shipped_packages(ext, ALGORITHM_PACKAGES)
+}
+
+/// The sub-figure packages, whose choice differs between copies of one class: bmvc2k.cls loads
+/// `\RequirePackage{graphicx,subfigure}` (1507.05726's copy:121, 54 of 60 sampled copies), a copy
+/// `{graphicx,subcaption}` (2110.13859:133, 1311.3715:117), `\usepackage{caption,subcaption}` (1709.02848:135) or
+/// `\usepackage{subfig}` (2107.03463:150) instead; loading one a copy replaced clashes with the paper's own (subfigure
+/// and subcaption both define `{subfigure}`).
+pub const SUBFIGURE_PACKAGES: &[&str] = &["caption", "subfigure", "subfig", "subcaption"];
+
+/// [`require_shipped_algorithm_packages`] for any such `family` of packages whose choice differs between copies of
+/// the file a binding stands in for: those of `family` the paper's copy loads are required in its order with its
+/// options; `false` when the source has no copy.
+pub fn require_shipped_packages(ext: &str, family: &[&str]) -> Result<bool> {
   let currname = Expand!(Tokens!(T_CS!("\\@currname"))).to_string();
   let fallback_request = lookup_string("fallback_request");
   let request = if !fallback_request.is_empty() && lookup_string("fallback_target") == currname {
@@ -119,7 +139,35 @@ pub fn require_shipped_algorithm_packages(ext: &str) -> Result<bool> {
   } else {
     currname
   };
-  Ok(!request.is_empty() && require_dependencies_only(&request, ext, ALGORITHM_PACKAGES))
+  Ok(!request.is_empty() && require_dependencies_only(&request, ext, family))
+}
+
+/// Does the paper's copy of the class `binding` stands in for load `package` ([`class_text_loads`])? `default` when
+/// the source has no (readable) copy — the class as distributed. For a package without a binding, which the
+/// dependency scan ([`require_shipped_packages`]) does not load: the binding requires it itself, raw.
+pub fn shipped_class_loads_or(binding: &str, package: &str, default: bool) -> Result<bool> {
+  Ok(
+    shipped_class_text(binding)?
+      .map(|text| class_text_loads(&text, package))
+      .unwrap_or(default),
+  )
+}
+
+/// Does the document's class option list (`\@classoptionslist`) name `option`? For a class option a binding that
+/// does not process its options reads (ieeeaccess's `jtehm`).
+pub fn class_option_given(option: &str) -> Result<bool> {
+  let Some(defn) = lookup_definition(&T_CS!("\\@classoptionslist"))? else {
+    return Ok(false);
+  };
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return Ok(false);
+  };
+  Ok(
+    body
+      .to_string()
+      .split(',')
+      .any(|given| given.trim() == option),
+  )
 }
 
 /// `text` without its comments (`%` to the end of the line).

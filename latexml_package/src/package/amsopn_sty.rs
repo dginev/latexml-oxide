@@ -126,6 +126,15 @@ LoadDefinitions!({
   DefMath!("\\varprojlim", "\\underleftarrow{\\operatorname{lim}}",
     role => "LIMITOP", meaning => "projective-limit");
 
+  // amsopn.sty:92-97 `\varlim@{<style>}{<fill>\<style>}`, the builder of `\varinjlim`/`\varprojlim` (an
+  // `\operator@font lim` over an arrow fill), which papers call to define their own direct and inverse limits
+  // (`\mathop{\mathpalette\varlim@{\leftarrowfill@\scriptstyle}}\nmlimits@`, 23 amsart papers in run 353 with it
+  // undefined: 1608.08273, 1807.11932, 1909.11399). It renders as those two do, the arrow chosen from the fill macro as
+  // amsmath's `\underarrow@` chooses it (amsmath_sty.rs). Perl's binding lacks it (KNOWN_PERL_ERRORS #696).
+  RawTeX!(
+    r"\def\varlim@#1#2{\lx@varlim@#2\relax}
+\def\lx@varlim@#1#2\relax{\ifx#1\leftarrowfill@\underleftarrow{\operatorname{lim}}\else\underrightarrow{\operatorname{lim}}\fi}"
+  );
   DefMacro!("\\nolimits@", "\\nolimits");
   // amsopn.sty:90 `\def\operatorfont{\operator@font}` — the user-level name
   // (glosmathtools.sty:54 `\sbu` uses it ~54× per manual). Perl's binding

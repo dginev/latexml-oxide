@@ -47,6 +47,19 @@ LoadDefinitions!({
   // (1810.03033, 1810.12033, 2106.06046, 2106.14215, 2210.02694, 2402.11361, 2402.13183, 2506.07013). The paper's copy
   // decides; without one, none (Perl's OmniBus has no copy to scan either).
   require_shipped_algorithm_packages("cls")?;
+  // WileyNJD-v2.cls:63 `\DeclareOption{APA}{\global\@APArefstyletrue}` and :2722-2723 `\if@APArefstyle
+  // \usepackage[natbibapa]{NJDapacite}`: the APA reference style's bibliography is apacite's (`\APACrefYearMonthDay`,
+  // `{APACrefauthors}`, `\BBOQ`; 22 papers of run 353 with them undefined: 1811.00964, 1902.09230, 1904.10792).
+  // NJDapacite.sty, shipped with the class, is apacite.sty of 2013 under another name (its :46 `\ProvidesPackage
+  // {apacite}`), so the apacite binding stands for it, as for sn-jnl's `sn-apa` (sn_jnl_cls.rs). The class's
+  // re-styling of the reference parts (:2725-2760, fonts and punctuation) is not followed.
+  DeclareOption!("APA", {
+    AssignValue!("wileynjd@APA" => true);
+  });
+  ProcessOptions!();
+  if lookup_bool("wileynjd@APA") {
+    RequirePackage!("apacite", options => vec![s!("natbibapa")]);
+  }
 
   // WileyNJD-v2.cls:1217-1221 (WileyNJDv5.cls:3636-3640, WileyASNA-v1 through WileyNJD-v1): the address parts of an
   // affiliation, each printing its argument; OmniBus has the others, but leaves `\state` out (omnibus_cls.rs: a

@@ -1,0 +1,19 @@
+% witness: 2207.12246, 2210.05415, 2304.03053 (atlasdoc.cls:52-54 the `newtx` default, :542-545
+%          `\RequirePackage{newtxtext}` `\RequirePackage{newtxmath}`; the paper's `\checkmark`, `\upmu`)
+% oracle:  pdflatex (clean) with this cut of the class ("✓ and μm")
+% engines: rust 67o1 = 2 errors (`\checkmark`, `\upmu` undefined: atlasdoc_cls.rs loaded no font package); Perl: no
+%          binding, OmniBus scans the class and loads newtxtext and newtxmath (and txfonts, the other branch)
+% expect:  0 errors, 0 warnings
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{atlasdoc.cls}
+\ProvidesClass{atlasdoc}
+\LoadClass{article}
+\RequirePackage[T1]{fontenc}
+\RequirePackage{newtxtext}
+\RequirePackage{newtxmath}
+\end{filecontents*}
+\documentclass{atlasdoc}
+\begin{document}
+$\checkmark$ and $\upmu$m
+\end{document}

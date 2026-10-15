@@ -2,7 +2,7 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::{
   prelude::*,
-  shipped_class::{class_text_loads, shipped_class_text},
+  shipped_class::{class_text_loads, shipped_class_loads_or, shipped_class_text},
 };
 
 #[rustfmt::skip]
@@ -81,6 +81,13 @@ LoadDefinitions!({
   // require it (options irrelevant to the XML stubs). Perl's aa.cls.ltxml
   // lacks this (\nolinenumbers undefined there); candidate to upstream.
   RequirePackage!("lineno");
+  // aa.cls:249 (1501.03426's copy; :254 in 1504.01878's) `\RequirePackage{answers}` in the v8-era copies (11 of 59
+  // sampled; today's v9.x loads none, nor does a paper without a copy): answers loads verbatim (answers.sty:32), whose
+  // `{comment}` those papers use without loading it (23 of run 353 with `{comment}` undefined; 1501.03426, 1504.01878,
+  // 1507.00595). answers has no binding and loads raw; the paper's copy decides.
+  if shipped_class_loads_or("aa", "answers", false)? {
+    RequirePackage!("answers");
+  }
 
   // aa.cls's online-only floats, which the class sets at `\AtEndDocument` under an "Online Material" page (`\Online`,
   // page furniture, empty here as in Perl's aa_support). The versions differ in arity: up to v7 (41 of 98 sampled

@@ -14,6 +14,10 @@ LoadDefinitions!({
   RequirePackage!("ifxetex");
   RequirePackage!("ifluatex");
   RequirePackage!("xkeyval");
+  // newtxmath.sty:36 `\RequirePackage{centernot}`, which Perl's binding skips ("just a minor typesetting adjustment",
+  // newtxmath.sty.ltxml:26-27, KNOWN_PERL_ERRORS #694): papers under a class that loads newtxmath (acmart) write
+  // `\centernot` without loading it (2002.09451, 2103.01489, 2104.13315).
+  RequirePackage!("centernot");
   RequirePackage!("amssymb");
   RequirePackage!("txfonts");
   // newtxmath.sty:695-706: its re-declaration helpers, which a class calls to replace a math symbol (vmsta2.cls:236

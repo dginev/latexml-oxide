@@ -1,0 +1,18 @@
+% witness: 2003.01904, 2007.06369, 2103.00309 (WileyMSP-template.cls:10 `\RequirePackage{gensymb}`, every one of the 41
+%          sampled copies; the paper writes `\degree`, `\celsius`)
+% oracle:  pdflatex (clean) with this cut of the class ("At 25 °C and 90°.")
+% engines: rust 67o1 = 2 errors (`\celsius`, `\degree` undefined: wileymsp_template_cls.rs loaded no gensymb); Perl: no
+%          binding, OmniBus scans the class and loads gensymb
+% expect:  0 errors, 0 warnings; ℃ and ° in the text
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{WileyMSP-template.cls}
+\ProvidesClass{WileyMSP-template}
+\LoadClass{article}
+\RequirePackage{graphicx}
+\RequirePackage{gensymb}
+\end{filecontents*}
+\documentclass{WileyMSP-template}
+\begin{document}
+At 25\,\celsius{} and 90\degree.
+\end{document}

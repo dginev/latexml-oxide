@@ -26,6 +26,12 @@ LoadDefinitions!({
   RequirePackage!("makecell");
   RequirePackage!("multirow");
   RequirePackage!("array");
+  // ceurart.cls:88 `\RequirePackage{booktabs,makecell,multirow,array,colortbl,dcolumn,stfloats}` (every sampled copy):
+  // papers shade cells with `\cellcolor` without loading colortbl (23 of run 353 with it undefined: 2212.08130,
+  // 2212.10039, 2303.14461).
+  RequirePackage!("colortbl");
+  RequirePackage!("dcolumn");
+  RequirePackage!("stfloats");
   RequirePackage!("xspace");
   RequirePackage!("calc");
   RequirePackage!("natbib");

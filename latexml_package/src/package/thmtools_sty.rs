@@ -15,6 +15,31 @@ LoadDefinitions!({
   // so we don't have to (and must NOT) define `restatable` ourselves —
   // see the note below where the native DefEnvironment was removed.
   RequirePackage!("thm-restate");
+  // thm-patch.sty (the first of those three), which this binding stands in for: its hook commands
+  // `\addtotheorem{pre,post}{head,foot}hook[<env>]{<code>}` (thm-patch.sty:164-176) gather code into
+  // `\thmt@<env>@<point>hook`, which its wrapper of each theorem runs around the head and the end
+  // (thm-patch.sty:33-62, 130-142). The raw file re-wraps `\newtheorem` and every theorem with parseargs, over the native
+  // theorems here, so the native theorem runs the hooks gathered here (latex_constructs `theorem_hooks`): the head
+  // hooks after its head, inside it, the foot hooks before its end code. Papers write `\addtotheorempostheadhook[thm]{\crefalias{thmlisti}{thm}}`
+  // so an `enumerate` item in a theorem is referenced as the theorem's (49 amsart and 20 article papers in run 353 with
+  // the command undefined, Perl's binding lacks it too, KNOWN_PERL_ERRORS #695; witnesses 1710.06939, 1712.09887,
+  // 1801.10129). The `generic` hooks (no `[<env>]`) run in every theorem; thm-patch.sty:146-149's generic pre-head hook
+  // steps a dummy counter for its own references, left out here.
+  RawTeX!(r"\providecommand\g@prependto@macro[2]{\begingroup\toks@\expandafter{#1}\toks\tw@{#2}%
+\xdef#1{\the\toks\tw@\the\toks@}\endgroup}
+\def\thmt@generic@preheadhook{}\def\thmt@generic@postheadhook{}
+\def\thmt@generic@prefoothook{}\def\thmt@generic@postfoothook{}
+\def\thmt@hookenv#1{\@ifundefined{thmt@#1@preheadhook}{%
+\global\@namedef{thmt@#1@preheadhook}{}\global\@namedef{thmt@#1@postheadhook}{}%
+\global\@namedef{thmt@#1@prefoothook}{}\global\@namedef{thmt@#1@postfoothook}{}}{}}
+\newcommand\addtotheorempreheadhook[1][generic]{\thmt@hookenv{#1}%
+\expandafter\g@addto@macro\csname thmt@#1@preheadhook\endcsname}
+\newcommand\addtotheorempostheadhook[1][generic]{\thmt@hookenv{#1}%
+\expandafter\g@addto@macro\csname thmt@#1@postheadhook\endcsname}
+\newcommand\addtotheoremprefoothook[1][generic]{\thmt@hookenv{#1}%
+\expandafter\g@prependto@macro\csname thmt@#1@prefoothook\endcsname}
+\newcommand\addtotheorempostfoothook[1][generic]{\thmt@hookenv{#1}%
+\expandafter\g@prependto@macro\csname thmt@#1@postfoothook\endcsname}");
 
   // Internal registers and macros needed by thm-restate.sty and thm-kv.sty
   // which load as raw TeX and expect these from thmtools internals.

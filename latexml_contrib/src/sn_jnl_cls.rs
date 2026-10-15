@@ -33,14 +33,26 @@ LoadDefinitions!({
   // class's `\LoadClass[twoside,fleqn]{article}` re-load would apply a
   // leftover `fleqn` handler and set every display equation flush left, where
   // pdflatex centres them (the option is article's alone, and amsmath's
-  // `\if@fleqn` stays false); natbib and apacite (chosen by reference style,
-  // below); and program —
-  // this port binds it and Perl does not, and loading it turns `\(`…`\)`
-  // into a programbox and makes `;` active in math (program.sty:67-76,
-  // 175-176; old copies L311).
-  require_dependencies_except("sn-jnl", "cls", &[
-    "article", "natbib", "apacite", "program",
-  ]);
+  // `\if@fleqn` stays false); and natbib and apacite (chosen by reference style,
+  // below). program, which the older copies load (L311, 1812.02207's; L621,
+  // 1911.08756's; 106 of 148 sampled copies), comes from the scan as the class
+  // has it: its `\gt`, `\lt`, `\union`, `\normalbaroutside` (program.sty:124,
+  // 713-722) were undefined in 138 papers of run 353 that use them (2010.12415,
+  // 2102.03176, 2104.02781). With it `;` is active in math (program.sty:67-76),
+  // as in pdflatex. This port binds program (a raw load) and Perl does not, so
+  // Perl's scan skips it.
+  require_dependencies_except("sn-jnl", "cls", &["article", "natbib", "apacite"]);
+  // program.sty:175-176 also makes `\(`…`\)` a `{programbox}` (a `\textwidth`
+  // minipage around a `{program}`), which the papers of these copies write as
+  // inline maths and pdflatex sets in the line (2112.05038, on 413 lines: "For a
+  // domain Y ⊂ Rn, there exists…"); its raw emulation here made each an
+  // inline-block holding a one-item list (1331 in 2112.05038). They stay the
+  // kernel's inline maths (OXIDIZED_DESIGN_DIVERGENCES #597, for a ruling;
+  // program loaded under another class keeps the programbox).
+  if lookup_bool("program.sty_loaded") {
+    DefMacro!("\\(", "\\lx@begin@inline@math");
+    DefMacro!("\\)", "\\lx@end@inline@math");
+  }
 
   // Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/
   // 1669/1677: `\usepackage[numbers,sort&compress]{natbib}` for the numeric

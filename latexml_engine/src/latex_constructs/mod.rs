@@ -2272,6 +2272,16 @@ pub fn use_theorem_style(name: &str) {
   }
 }
 
+/// The thm-patch hooks `\thmt@<set>@<point>` among `hooks` that are defined, in order, as source text to digest;
+/// empty when none is (they exist once thmtools is loaded, thmtools_sty.rs).
+fn theorem_hooks(hooks: &[(&str, &str)]) -> String {
+  hooks
+    .iter()
+    .map(|(set, point)| s!("\\thmt@{set}@{point}"))
+    .filter(|cs| has_meaning(&T_CS!(cs.as_str())))
+    .collect()
+}
+
 pub fn define_new_theorem(
   flag: Option<Tokens>,
   thmset: Tokens,
@@ -2617,6 +2627,8 @@ pub fn define_new_theorem(
   // `thmset_for_before` is for the before_digest closure; clone needed
   // because `thmset_str` is moved into `thmset_for_tags` below.
   let thmset_for_before = thmset_str.clone();
+  let thmset_for_head_hooks = thmset_str.clone();
+  let thmset_for_foot_hooks = thmset_str.clone();
   // `thmset_for_tags` and `counter_for_tags` are the last uses of
   // thmset_str and counter — move instead of clone.
   let thmset_for_tags = thmset_str;
@@ -2644,7 +2656,17 @@ pub fn define_new_theorem(
     let name_str = name_opt
       .map(|n| n.revert().map(|t| t.to_string()).unwrap_or_default())
       .unwrap_or_default();
-    let digest_str = s!("\\the\\thm@bodyfont\\the\\thm@styling\\def\\lx@thistheorem{{{name_str}}}");
+    let mut digest_str =
+      s!("\\the\\thm@bodyfont\\the\\thm@styling\\def\\lx@thistheorem{{{name_str}}}");
+    // thm-patch.sty:33-62 runs a theorem's `\thmt@<env>@preheadhook`, `\thmt@generic@preheadhook` before its head
+    // and `\thmt@<env>@postheadhook`, `\thmt@generic@postheadhook` after it, inside the theorem: the hooks thmtools'
+    // `\addtotheorem…hook[<env>]` gathers (thmtools_sty.rs, the only binding that defines them).
+    digest_str.push_str(&theorem_hooks(&[
+      (&thmset_for_head_hooks, "preheadhook"),
+      ("generic", "preheadhook"),
+      (&thmset_for_head_hooks, "postheadhook"),
+      ("generic", "postheadhook"),
+    ]));
     let digested = digest(mouth::tokenize_internal(TeXString::assembled(digest_str)))?;
     Ok(vec![digested])
   });
@@ -2658,9 +2680,16 @@ pub fn define_new_theorem(
     if environment_ended_by_group() {
       return Ok(Vec::new());
     }
-    let digested = digest(mouth::tokenize_internal(
-      "\\thm@doendmark\\the\\thm@postwork",
-    ))?;
+    // thm-patch.sty:130-142: the foot hooks, here before the theorem's end code (ditto).
+    let foot_hooks = theorem_hooks(&[
+      ("generic", "prefoothook"),
+      (&thmset_for_foot_hooks, "prefoothook"),
+      ("generic", "postfoothook"),
+      (&thmset_for_foot_hooks, "postfoothook"),
+    ]);
+    let digested = digest(mouth::tokenize_internal(TeXString::assembled(s!(
+      "{foot_hooks}\\thm@doendmark\\the\\thm@postwork"
+    ))))?;
     Ok(vec![digested])
   });
   options.before_digest_end.push(before_digest_end_closure);

@@ -1,0 +1,30 @@
+% witness: 1710.06939, 1712.09887, 1801.10129 (`\usepackage{thmtools}` then
+%          `\addtotheorempostheadhook[thm]{\crefalias{thmlisti}{thm}}`; thm-patch.sty:164-176, which thmtools.sty:47
+%          loads)
+% oracle:  pdflatex 0 errors ("See Theorem 1.1(ii).")
+% engines: rust 67o1 = 1 error (`\addtotheorempostheadhook` undefined: the thmtools binding stands in for thm-patch);
+%          Perl's thmtools.sty.ltxml the same (KNOWN_PERL_ERRORS #695)
+% expect:  0 errors, 0 warnings; the hook runs at the theorem's begin (a text hook shows inside the theorem); the item
+%          reference still reads "Item 1.1(ii)": our cleveref's `\crefalias` is a no-op (cleveref_sty.rs:132)
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{amsthm}
+\usepackage{thmtools}
+\usepackage{enumitem}
+\usepackage[capitalize]{cleveref}
+\newtheorem{thm}{Theorem}[section]
+\newlist{thmlist}{enumerate}{1}
+\setlist[thmlist]{label=(\roman{thmlisti}),ref=\thethm(\roman{thmlisti})}
+\crefname{thmlisti}{Item}{Items}
+\addtotheorempostheadhook[thm]{\crefalias{thmlisti}{thm}}
+\begin{document}
+\section{A}
+\begin{thm}\label{t}
+\begin{thmlist}
+\item One.
+\item\label{t2} Two.
+\end{thmlist}
+\end{thm}
+See \cref{t2}.
+\end{document}

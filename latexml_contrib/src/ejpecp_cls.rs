@@ -6,6 +6,23 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
+  // ejpecp.cls:81-106 (TL 2025; 1607.07914's copy :68-91 the same set) `\RequirePackage{graphicx}`, `{mathtools}`,
+  // `{microtype}`, `{latexsym}`, `{dsfont}` unless the `NODS` option, the AMS packages unless `NOAMS`, `{geometry}`:
+  // papers write `\coloneqq`, `\DeclarePairedDelimiter`, `\mathds` without loading them (run 353: 22 with mathtools's,
+  // 14 with dsfont's commands undefined; 1607.07914, 1611.05220, 1904.07135, 1111.6458). The class's
+  // `\let\mathbb=\mathds` (:465-469) is not followed: both are double-struck here.
+  RequirePackage!("graphicx");
+  RequirePackage!("mathtools");
+  RequirePackage!("microtype");
+  RequirePackage!("latexsym");
+  DeclareOption!("NODS", {
+    AssignValue!("ejpecp@NODS" => true);
+  });
+  ProcessOptions!();
+  if !lookup_bool("ejpecp@NODS") {
+    RequirePackage!("dsfont");
+  }
+  RequirePackage!("geometry");
   // Eager xcolor preload removed for Perl parity: it makes a later document
   // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
   // columns break (Unrecognized tabular template -> Extra alignment tab). The

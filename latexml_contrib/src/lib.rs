@@ -72,6 +72,7 @@ pub mod caption2_sty;
 pub mod cas_dc_cls;
 pub mod catchfile_sty;
 pub mod ccaption_sty;
+pub mod centernot_sty;
 pub mod ceurart_cls;
 pub mod changepage_sty;
 pub mod changes_sty;
@@ -373,6 +374,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ascmac", "sty", ascmac_sty::load_definitions),
   ("bussproofs", "sty", bussproofs_sty::load_definitions),
   ("capt-of", "sty", capt_of_sty::load_definitions),
+  ("centernot", "sty", centernot_sty::load_definitions),
   ("chngpage", "sty", chngpage_sty::load_definitions),
   ("collcell", "sty", collcell_sty::load_definitions),
   ("commath", "sty", commath_sty::load_definitions),

@@ -13438,3 +13438,89 @@ Minimal trigger: `\def\thmcnter{equation}` `\newtheorem{thm}[\thmcnter]{Theorem}
 `define_new_theorem` (latexml_engine/src/latex_constructs/mod.rs) expands the shared counter as `\csname` does
 (`gullet::expand_as_csname_text`); the trailing `[within]` was already digested, which expands a macro too. Guards
 `perfect_kernel_batch67s::{newtheorem_shared_counter_named_by_a_macro, newtheorem_counter_and_within_named_by_macros}`.
+
+## 692. lscape, psfrag and showkeys load nothing: `\scalebox`, `\includegraphics`, `\definecolor` are undefined
+
+lscape.sty:35 and psfrag.sty:35 `\RequirePackage{graphics}`, and showkeys.sty:51-56 `\DeclareOption{color}
+{\AtEndOfPackage{\RequirePackage{color}…}}`; Perl's lscape.sty.ltxml (one `DefEnvironment`), psfrag.sty.ltxml and the
+empty showkeys.sty.ltxml load neither, so a paper relying on them for graphics or colour (common under amsart and
+article) errs. Minimal trigger: tools/perfect_kernel/repros/stub-dependencies/lscape_psfrag_load_graphics.tex
+(`\usepackage{lscape}\usepackage{psfrag}` then `\scalebox{0.5}{scaled} \resizebox{2cm}{!}{resized}`): Perl 2 errors;
+showkeys_color_option_loads_color.tex (`\usepackage[color]{showkeys}\definecolor{myred}{rgb}{0.9,0,0}`): Perl 2
+errors; pdflatex 0 for both. Run 353: 129 papers with graphics commands and 73 with colour commands undefined
+through these (witnesses 0710.2354, 0802.0639, 1007.2821 lscape; 0801.1195, 0802.1229, 0704.2560 psfrag; 0712.3213,
+1010.3777, 1103.2047 showkeys; 1205.2163 a `Fatal` cascade). Fixed in Rust: the three bindings load what the files load.
+Guards `perfect_kernel_batch67u::{lscape_and_psfrag_load_graphics, showkeys_color_option_loads_color}`.
+
+## 693. mathtools does not load mhsetup: `\MHInternalSyntaxOn` is undefined
+
+mathtools.sty:37 `\RequirePackage{mhsetup}`; mathtools.sty.ltxml:41-42 leaves it a TODO. Papers that write
+mathtools-style internals between `\MHInternalSyntaxOn` and `\MHInternalSyntaxOff` then err on every `\MH_…` name and
+on the stray `_`. Minimal trigger: tools/perfect_kernel/repros/stub-dependencies/mathtools_loads_mhsetup.tex: Perl 5
+errors, pdflatex 0. Run 353: 33 papers (1202.0045, 1611.02845, 1903.08038). Fixed in Rust: mathtools_sty.rs requires
+the mhsetup binding (a raw load that restores the `:`/`_` catcodes). Guard `perfect_kernel_batch67u::mathtools_loads_mhsetup`.
+
+## 694. newtxmath does not load centernot: `\centernot` is undefined
+
+newtxmath.sty:36 `\RequirePackage{centernot}`; newtxmath.sty.ltxml:26-27 comments it out ("just a minor typesetting
+adjustment"). Under a class that loads newtxmath (acmart), papers write `\centernot\implies` without loading it.
+Minimal trigger: tools/perfect_kernel/repros/stub-dependencies/newtxmath_loads_centernot.tex
+(`\usepackage{newtxmath}` `$a \centernot\implies b$`): Perl 1 error, pdflatex 0. Run 353: 21 acmart papers
+(2002.09451, 2103.01489, 2104.13315). Fixed in Rust: newtxmath_sty.rs requires centernot, a new binding whose
+`\centernot` is `\not` (the same negated relation, here `not-implies`; the raw file's `\mathpalette`/`\rlap` boxes
+split the slash from the symbol). Guard `perfect_kernel_batch67u::newtxmath_loads_centernot`.
+
+## 695. thmtools lacks thm-patch's hook commands: `\addtotheorempostheadhook` is undefined
+
+thmtools.sty:47 loads thm-patch, whose `\addtotheorem{pre,post}{head,foot}hook[<env>]{<code>}` (thm-patch.sty:164-176)
+gather code its wrapped theorems run around the head and the end (:33-62, 130-142). thmtools.sty.ltxml stands in for
+the three sub-packages and defines none of them. Papers write `\addtotheorempostheadhook[thm]{\crefalias{thmlisti}
+{thm}}` so a list item in a theorem is referenced as the theorem's. Minimal trigger:
+tools/perfect_kernel/repros/stub-dependencies/thmtools_theorem_hooks_run.tex: Perl 1 error, pdflatex 0 ("See Theorem
+1.1(ii)."). Run 353: 69 papers (49 amsart, 20 article; 1710.06939, 1712.09887, 1801.10129). Fixed in Rust:
+thmtools_sty.rs defines the four commands as thm-patch does, and `define_new_theorem` (latex_constructs/mod.rs
+`theorem_hooks`) runs the gathered `\thmt@<env>@…hook` and `\thmt@generic@…hook` inside the theorem, the head hooks
+after its head, the foot hooks before its end code. Residual (shared): our cleveref's `\crefalias` is a no-op
+(cleveref_sty.rs:132), so the item keeps "Item". Guard `perfect_kernel_batch67u::thmtools_theorem_hooks_run_in_the_theorem`.
+
+## 696. amsopn lacks `\varlim@`, the builder papers call for their own limits
+
+amsopn.sty:92-97 `\varlim@{<style>}{<fill>\<style>}` builds `\varinjlim`/`\varprojlim`; amsopn.sty.ltxml defines those
+two directly and not it (nor `\leftarrowfill@`/`\rightarrowfill@`, which our amsmath binding has). Papers define
+`\newcommand{\invlim}{\mathop{\mathpalette\varlim@{\leftarrowfill@\scriptstyle}}\nmlimits@}`. Minimal trigger:
+tools/perfect_kernel/repros/stub-dependencies/amsopn_varlim_builder.tex: Perl 3 errors, pdflatex 0. Run 353: 23 amsart
+papers (1608.08273, 1807.11932, 1909.11399). Fixed in Rust: amsopn_sty.rs's `\varlim@` renders as the two do, the
+arrow chosen from the fill macro as amsmath's `\underarrow@` chooses it. Guard
+`perfect_kernel_batch67u::amsopn_varlim_builder_renders_the_limit`.
+
+## 697. revtex4-1's `linenumbers` option does not load lineno
+
+revtex4-1.cls:6186-6193 (revtex4-2.cls:6207-6214) `\DeclareOption{linenumbers}{\appdef\class@documenthook{
+\RequirePackage{lineno}…\linenumbers}}`; revtex4-1.cls.ltxml passes the option to article. Papers given the option
+call `\nolinenumbers`, `{linenomath}`. Minimal trigger: tools/perfect_kernel/repros/class-bindings/
+revtex_linenumbers_option_loads_lineno.tex (`\documentclass[aps,prl,linenumbers]{revtex4-2}` … `\nolinenumbers`):
+Perl 1 error, pdflatex 0. Run 353: 16 revtex4-1 and 16 revtex4-2 papers with the option (1010.3732, 1209.2541,
+2003.07846, 2010.12920; 15 + 9 more call them without the option and err in pdflatex too). Fixed in Rust: both revtex
+bindings declare the option and load lineno at the document's start. Guard
+`perfect_kernel_batch67u::revtex_linenumbers_option_loads_lineno`.
+
+## 698. quantumarticle's AMS options, geometry and caption are not loaded
+
+quantumarticle.cls:155-168 the `amsfonts`, `amssymb` (`amssymbol`) and `amsmath` options, which load those packages
+(:1416-1424); :282-284 geometry, then blacklisted for the document; :1508-1512 caption at the end of the preamble.
+quantumarticle.cls.ltxml loads only article, bbm and xcolor. Minimal trigger: tools/perfect_kernel/repros/
+class-bindings/quantumarticle_options_load_ams_geometry_caption.tex (`[a4paper,amsmath,amssymb,…]{quantumarticle}`,
+`\lesssim`, `\newgeometry`, `\captionof`): Perl 4 errors; TL 2025's quantumarticle.cls itself errs in pdflatex on a
+bare document (hooks: "Sorting rule for 'begindocument' hook applied too late"), so the loads are read from the class
+source. Run 353: 31 + 30 + 29 papers (1802.10344, 1907.05950; 1612.06828, 1701.03135; 1910.03969). Fixed in Rust:
+quantumarticle_cls.rs. Guard `perfect_kernel_batch67u::quantumarticle_options_load_ams_geometry_caption`.
+
+## 699. aa.cls of the v8 era loads answers, whose verbatim gives `{comment}`; Perl's aa binding does not
+
+aa.cls:249 (1501.03426's copy; :254 in 1504.01878's) `\RequirePackage{answers}`, which loads verbatim
+(answers.sty:32); today's v9.x copies load neither. aa.cls.ltxml loads article and aa_support only, so a paper of those
+copies using `{comment}` errs and prints the commented text. Minimal trigger: tools/perfect_kernel/repros/
+class-bindings/aa_class_copy_loads_answers.tex (a `{filecontents*}` aa.cls loading answers; `\begin{comment}Hidden.
+\end{comment}`): Perl 1 error, pdflatex 0 ("Shown."). Run 353: 23 papers (1501.03426, 1504.01878, 1507.00595). Fixed in
+Rust: aa_cls.rs loads answers (raw) when the paper's copy does. Guard `perfect_kernel_batch67u::aa_class_copy_loads_answers`.
+

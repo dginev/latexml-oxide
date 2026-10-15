@@ -1,0 +1,15 @@
+% witness: 2102.02669, 2104.08961, 2206.08262 (oup-authoring-template.cls:2426 `\RequirePackage{multirow}`)
+% oracle:  pdflatex 0 errors ("a b c d")
+% engines: rust 67o1 = 1 error (`\multirow` undefined: oup_authoring_template_cls.rs loaded no multirow); Perl: no
+%          binding, OmniBus scans the class and loads multirow
+% expect:  0 errors, 0 warnings; one tabular whose first cell spans two rows
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass{oup-authoring-template}
+\begin{document}
+\begin{tabular}{ll}
+\multirow{2}{*}{a} & b \\
+ & c \\
+d & e \\
+\end{tabular}
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 1507.05726, 1510.01553, 1605.07146 (bmvc2k.cls:121 `\RequirePackage{graphicx,subfigure}`; edited copies
+%          load subcaption or subfig instead: 2110.13859, 2107.03463)
+% oracle:  pdflatex (clean) with this cut of the class ("(a) Left (b) Right Figure 1: Both")
+% engines: rust 67o1 = 2 errors (`\subfigure` undefined twice: bmvc2k_cls.rs loaded no sub-figure package); Perl: no
+%          binding, OmniBus scans the class and loads subfigure
+% expect:  0 errors, 0 warnings; one figure with two sub-figures
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{bmvc2k.cls}
+\ProvidesClass{bmvc2k}
+\LoadClass{article}
+\RequirePackage{graphicx,subfigure}
+\end{filecontents*}
+\documentclass{bmvc2k}
+\begin{document}
+\begin{figure}
+\subfigure[Left]{\rule{1cm}{1cm}}
+\subfigure[Right]{\rule{1cm}{1cm}}
+\caption{Both}
+\end{figure}
+\end{document}

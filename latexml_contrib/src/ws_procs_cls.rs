@@ -2,6 +2,8 @@
 //! binding, and the `\body` these three classes add to it.
 use latexml_package::prelude::*;
 
+use crate::shipped_class::require_shipped_packages;
+
 LoadDefinitions!({
   crate::ws_journal_cls::load_definitions()?;
   // ws-procs9x6.cls:586-591 (ws-procs961x669.cls:596-601, ws-rv9x6.cls:1011 the same; the journal classes define
@@ -17,4 +19,9 @@ LoadDefinitions!({
   // numbering is presentation here), which papers test in their own numbering macros (run 340: 113 papers; witnesses
   // 2103.07802, 2008.12305, 1609.07109).
   RawTeX!(r"\newif\if@addchapnum");
+  // ws-rv9x6.cls:1524-1528 (0706.1148's copy) `\usepackage[figuresright]{rotating}`, `{amsfonts,amssymb,amsmath}`,
+  // `{boxedminipage}`, `{makeidx}`, `{url}`: a review-volume chapter ends with `\printindex` without loading makeidx
+  // (33 ws-rv9x6 papers of run 353; 0706.1148, 0810.2192, 0901.1361). The paper's copy decides, for these three classes
+  // alike; without one, none.
+  require_shipped_packages("cls", &["rotating", "boxedminipage", "makeidx", "url"])?;
 });

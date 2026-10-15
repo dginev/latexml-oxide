@@ -1,0 +1,19 @@
+% witness: 1501.03426, 1504.01878, 1507.00595 (aa.cls:249 `\RequirePackage{answers}` in the v8-era copies, 11 of 59
+%          sampled; answers.sty:32 `\RequirePackage{verbatim}`; the paper's `{comment}`)
+% oracle:  pdflatex (clean) with this cut of the class ("Shown.")
+% engines: rust 67o1 = 1 error (`{comment}` undefined: aa_cls.rs loaded no answers); Perl's aa.cls.ltxml the same
+% expect:  0 errors, 0 warnings; the comment's text dropped
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aa.cls}
+\ProvidesClass{aa}
+\LoadClass{article}
+\RequirePackage{answers}
+\end{filecontents*}
+\documentclass{aa}
+\begin{document}
+Shown.
+\begin{comment}
+Hidden.
+\end{comment}
+\end{document}

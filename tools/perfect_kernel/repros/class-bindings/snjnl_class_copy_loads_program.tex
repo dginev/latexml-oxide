@@ -1,0 +1,23 @@
+% witness: 2010.12415, 2102.03176, 2104.02781 (sn-jnl.cls:311 `\usepackage{program}` in the older copies, 106 of 148
+%          sampled; the paper writes `\gt`, `\lt`, `\union` from it); 2202.10115, 2507.09618 (adjustbox while program's
+%          `|` is active); 2306.09847 (`\index` after program.sty:1009's redefinition)
+% oracle:  pdflatex (clean) with this cut of the class ("x > y and A ∪ B, a; b inline", `\(a;b\)` set in the line
+%          though program.sty:175-176 makes it a programbox)
+% engines: rust 67o1 = 2 errors (`\gt`, `\union` undefined: sn_jnl_cls.rs kept program out of its scan of the
+%          class); 67u r3 (program loaded) = 6 (pgf read by adjustbox with `|` active, the index swallowing the rest); Perl: no binding, OmniBus scans the class but program has no binding there
+% expect:  0 errors, 0 warnings; `>` and `∪` in the formulas; one `<indexmark>`, the formula after it parsed;
+%          `\(a;b\)` an inline formula, not a programbox minipage (OXIDIZED_DESIGN_DIVERGENCES #597)
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sn-jnl.cls}
+\ProvidesClass{sn-jnl}
+\LoadClass{article}
+\usepackage{program}%
+\end{filecontents*}
+\documentclass{sn-jnl}
+\usepackage{adjustbox}
+\normalbaroutside
+\begin{document}
+$x \gt y$ and $A \union B$, \(a;b\) inline.
+A term\index{term} and $z$ after it.
+\end{document}

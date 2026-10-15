@@ -1,0 +1,14 @@
+% witness: 1607.07914, 1611.05220 (`\coloneqq`, `\DeclarePairedDelimiter`), 1904.07135, 1111.6458 (`\mathds`):
+%          ejpecp.cls:88 `\RequirePackage{mathtools}`, :94-96 dsfont unless `NODS`
+% oracle:  pdflatex 0 errors ("x := |y| and 1")
+% engines: rust 67o1 = 3 errors (`\DeclarePairedDelimiter`, `\coloneqq`, `\mathds` undefined); Perl: no binding, OmniBus
+%          scans the class and loads both
+% expect:  0 errors, 0 warnings
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass[EJP]{ejpecp}
+\DOI{10.1214/YY-TN}
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}
+\begin{document}
+$x \coloneqq \abs{y}$ and $\mathds{1}$
+\end{document}

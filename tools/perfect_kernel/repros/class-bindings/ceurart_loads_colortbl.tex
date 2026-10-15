@@ -1,0 +1,19 @@
+% witness: 2212.08130, 2212.10039, 2303.14461 (ceurart.cls:88 `\RequirePackage{booktabs,makecell,multirow,array,
+%          colortbl,dcolumn,stfloats}`, every one of the 23 sampled copies; the paper's `\cellcolor`)
+% oracle:  pdflatex (clean) with this cut of the class ("a b")
+% engines: rust 67o1 = 1 error (`\cellcolor` undefined); Perl: no binding, OmniBus scans the class and loads colortbl
+% expect:  0 errors, 0 warnings; one shaded cell
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ceurart.cls}
+\ProvidesClass{ceurart}
+\LoadClass{article}
+\RequirePackage{booktabs,makecell,multirow,array,colortbl,dcolumn,stfloats}
+\RequirePackage[svgnames,dvipsnames]{xcolor}
+\end{filecontents*}
+\documentclass{ceurart}
+\begin{document}
+\begin{tabular}{ll}
+\cellcolor{yellow} a & b \\
+\end{tabular}
+\end{document}

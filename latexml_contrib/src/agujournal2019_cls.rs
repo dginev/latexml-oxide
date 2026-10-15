@@ -6,13 +6,20 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
-  // Eager xcolor preload removed for Perl parity: it makes a later document
-  // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
-  // columns break (Unrecognized tabular template -> Extra alignment tab). The
-  // document loads xcolor itself; color/definecolor stay via hyperref->color.
-  // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
+  // agujournal2019.cls:91-112 (2101.01063's copy) `\RequirePackage{xcolor}`, `{url}`, `{lineno}`, `{indentfirst}`,
+  // `{ragged2e}`: papers call `\begin{linenomath*}`, `\nolinenumbers`, `\justifying`, `\textcolor` without loading
+  // them (run 353: 49 papers with lineno's, 44 with ragged2e's, 18 with xcolor's commands undefined; 1803.00457,
+  // 1903.07205, 1902.01137, 2101.01063, 1812.02692). Perl, with no binding, loads the bound ones through OmniBus's scan of
+  // the class (Package.pm:2776-2813). The xcolor load was once left out because a document's later
+  // `\usepackage[table]{xcolor}` was then a no-op; a repeat load now applies its new options (content.rs
+  // `apply_new_options_on_reload`, xcolor_sty.rs `\ds@table`, witness 2605.00310).
+  RequirePackage!("xcolor");
+  RequirePackage!("url");
+  RequirePackage!("lineno");
+  RequirePackage!("indentfirst");
+  RequirePackage!("ragged2e");
   RequirePackage!("apacite");
   // agujournal2019.cls L118 — the class provides {sidewaystable}/{sidewaysfigure}
   // through rotating; without it the sideways floats are undefined and their
