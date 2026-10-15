@@ -13567,7 +13567,12 @@ ieeetran_eqnarray_rule_rows.tex (`\IEEEeqnarrayrulerow\\` in an `{IEEEeqnarraybo
 undefined `\IEEEeqnarraystrutmode`/`\IEEEeqnarraystrutsizeadd`, pdflatex 0). Fixed in Rust (67x): defined as the class
 writes them, the rule rows spanning `\@IEEEeqnnumcols` columns from the column specification, layout-only ones empty.
 Guards `perfect_kernel_batch67x::{ieeetran_internals_documents_call, ieeetran_eqnarray_rule_rows,
-ieeetrantools_eqnarray_rule_rows}`.
+ieeetrantools_eqnarray_rule_rows}`. Residual (Rust): the same rows in an `{IEEEeqnarray}` (not the box) are rows of an
+equation group, whose rearranged equations keep only their math, as `{eqnarray*}`'s `\multispan{3}\leaders\hrule…`
+row does — a rule row is an equation with its number and no rule, a separator row (empty) is removed with its number,
+so pdflatex's (1)-(7) read (1), (2), (4), (5), (7) and its 3 rules are gone, without a diagnostic (starred and
+`\IEEEnonumber` rule rows lose their rules too). RED tools/perfect_kernel/repros/alignment/
+ieeeeqnarray_rule_rows_keep_rules_and_numbers.tex; no A/B paper has the shape (the 32 with rule rows use the box).
 
 ## 711. IEEEtran.cls.ltxml lacks the names of IEEEtran's older versions and of the variants papers ship
 

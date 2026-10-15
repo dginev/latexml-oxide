@@ -9,11 +9,12 @@ LoadDefinitions!({
   // documents set (2609.16300), read by its own `\appendices` in place of IEEEtran's `romanappendices` option. Perl
   // only loads IEEEtran (KNOWN_PERL_ERRORS #491). Guard
   // `perfect_kernel_batch61::captions_and_2609_class_commands_keep_their_text`. The heading form `\thesectiondis`
-  // follows (:4103-4117; 67x).
+  // follows (:4103-4117; 67x). It reaches the kernel's `\appendix` as IEEEtran's `\appendices` does: the class's
+  // `\appendix` (:4065-4073) also numbers the subsections `\Alph`, which `\appendices` does not.
   RawTeX!(r"\newif\ifuseRomanappendices\useRomanappendicestrue");
   DefMacro!(
     "\\appendices",
-    "\\appendix\\ifuseRomanappendices\\gdef\\thesection{\\Roman{section}}\\gdef\\thesectiondis{\\Roman{section}}\\else\
+    "\\@IEEEsaveoriginalsectiononce\\lx@IEEE@appendix\\ifuseRomanappendices\\gdef\\thesection{\\Roman{section}}\\gdef\\thesectiondis{\\Roman{section}}\\else\
      \\gdef\\thesectiondis{\\Alph{section}}\\fi"
   );
   // ieeeconf.cls (IEEEtran V1.6b; 67 papers ship it): its other names — `\ifcenterfigcaptions`, `\ifnocalcleftmargin`,

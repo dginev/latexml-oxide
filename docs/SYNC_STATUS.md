@@ -1493,7 +1493,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\@IEEEsetfontdimens` (:1074, interword tuning: empty), the IED parameters `\IEEEiednormlabelsep`, `\IEEEiedmathlabelsep`,
   `\IEEEiedtopsep`, `\IEEEiedlistdecl`, `\ifIEEEnocalcleftmargin`, `\ifIEEEnolabelindentfactor` (:2085-2153), `{LaTeXitemize}`/
   `{LaTeXenumerate}` (:2219-2222), `\thesectiondis` … `\theparagraphdis` (:2571-2587; `\appendices` sets `\thesectiondis` as
-  :5765-5774 does), `\@IEEEsaveoriginalsectiononce` run by `\appendix`/`\appendices` (the kernel's otherwise) with
+  :5765-5774 does; `\appendix` clears it and numbers the subsections `\Alph`, :5734-5736), `\@IEEEsaveoriginalsectiononce` run by `\appendix`/`\appendices` (the kernel's otherwise) with
   `\@IEEEprocessthesectionargument`/`\@IEEEdestroythesectionargument` (:5695-5713; a document's `\suppl` copy, 1907.08915), the page styles `\ps@headings`, `\ps@IEEEtitlepagestyle`, `\ps@IEEEpeerreviewcoverpagestyle` with
   `\@IEEEheaderstyle`/`\@IEEEfooterstyle`, `\@IEEEpubid`, `\if@IEEEusingpubid`, `\@IEEEpubidpullup` (:4228-4347, :6127-6150; page
   furniture, set nowhere), `\IEEEnoauxwrite` (:4448), `\IEEEbibitemsep` (:4484), the author-block styles and
@@ -1504,18 +1504,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\@ifmtarg` (:5668). Older versions and variants, as fallbacks a document's definition replaces: V1.5-1.6c
   `\ifcenterfigcaptions` (V1.6b :1966-1972), `\ifnocalcleftmargin` (:1512), `\@specialpapernotice` (:4379),
   `\ifuseRomanappendices` (:4075, false: V1.8b's `\Alph` default; `\appendices` reads it beside `romanappendices`); V1.7a's
-  begin-document `\proof` (:4690) for a document that left `{proof}` undefined or `\relax` (V1.8b's error case); IEEEtran4PSCC.cls's `\thanksto` (:4793-4804)
+  begin-document `\proof` (:4690) for a document that left `{proof}` undefined or `\relax` (V1.8b's error case), let as
+  a fallback by a primitive the hook calls, so a document's own begin-document `{proof}` replaces it; IEEEtran4PSCC.cls's `\thanksto` (:4793-4804)
   as the frontmatter's thanks note (`\lx@add@pubnote@thanks`); the SIU template's `{ozet}`/`{IEEEanahtar}` (2011/11/03 "V1.8
   based on V1.7a" :1659-1662, :3745-3790), the Turkish abstract and keywords set in the body under "Özetçe"/"Anahtar
-  Kelimeler" (the English ones stay the frontmatter's). IEEEtran/IEEEtrantools shared IEEEeqnarray (ieeetrantools_sty.rs):
+  Kelimeler" (the English ones stay the frontmatter's), the abstract bold and the keywords bold italic as the template's
+  two-column form sets them (:3746, :3765). IEEEtran/IEEEtrantools shared IEEEeqnarray (ieeetrantools_sty.rs):
   `\@IEEEeqnnumcols` set from the column specification (IEEEtrantools.sty:1352, :2498/:2535), `\IEEEeqnarrayseprow`,
   `\IEEEeqnarrayseprowcut`, `\IEEEeqnarrayrulerow`, `\IEEEeqnarraydblrulerow`, `\IEEEeqnarraydblrulerowcut` (:1566-1690;
-  IEEEtran.cls:3247-3360) as spanning leader-rule rows. IEEEtrantools under any class (ieeetrantools_sty.rs): the
+  IEEEtran.cls:3247-3360) as spanning leader-rule rows in an `{IEEEeqnarraybox}` (open, KPE #710 residual: in an
+  `{IEEEeqnarray}` a rule row keeps its number but not its rule and a separator row is removed with its number, as
+  `{eqnarray}` rearranges rows; RED `alignment/ieeeeqnarray_rule_rows_keep_rules_and_numbers`). IEEEtrantools under any
+  class but IEEEtran (ieeetrantools_sty.rs; under IEEEtran the package only raises its error, IEEEtrantools.sty:73-78, and
+  the class binding's IEEEproof, lists and `\IEEEauthorrefmark` stay): the
   IEEEproof family with its QED switches (:2726-2747) and the IED lists with their parameters (:1000-1140), moved from the
   class binding into shared definers both call (`define_ieeeproof`, `define_ied_lists`), `[redeflists]` (:1122-1129),
   `\IEEEauthorrefmark{<n>}` as the package writes it (:2721-2723, the footnote symbols * † ‡ …), `\IEEEPARstart` (its
   text, as the class binding's); RED `block-model/ieeetrantools_ieeeproof_any_class` (64ra) GREEN. ieeeconf (ieeeconf_cls.rs): `\appendices` sets `\thesectiondis`
-  (ieeeconf.cls :4103-4117), the RBO copy's `\ieeefootline` (:4602-4630) a `role=footline` publication note. Witnesses before → after
+  (ieeeconf.cls :4103-4117) without the subsection numbering IEEEtran's `\appendix` sets, the RBO copy's `\ieeefootline` (:4602-4630) a `role=footline` publication note. Witnesses before → after
   (Errors; 68d2-rel vs candidate): `\ps@headings` 1805.00151 1 → 0, 1805.02797 1 → 0, 1811.10132 1 → 0, 1908.05569 1 → 0,
   1910.06140 1 → 0; compsoc executors 2202.10460 5 → 0, 2202.12377 5 → 0, 2203.08603 5 → 0, 2204.11491 5 → 0, 2401.11581 5 → 0;
   rule rows cs0608041 2 → 0, 0911.1713 2 → 0, 1004.2757 3 → 0, 1112.1125 3 → 0, 0908.3162 2 → 0, 1312.4895 3 → 0;
@@ -1537,7 +1543,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1 each). Repros class-bindings/{ieeetran_internals_documents_call, ieeetran_eqnarray_rule_rows, ieeetran_v16_names,
   ieeetran_pscc_thanksto, ieeetran_siu_ozet, ieeetran_v17_proof_at_begin_document,
   ieeeconf_v16_title_internals_and_footline}, block-model/ieeetrantools_lists_marks_any_class RED (68d) → GREEN;
-  guards `perfect_kernel_batch67x` (12). Seen, not changed: the class binding's `\IEEEauthorrefmark{<n>}` prints the
+  guards `perfect_kernel_batch67x` (15; review round: `ieeetran_v17_proof_yields_to_document_begin_document_proof`,
+  `ieeetrantools_under_ieeetran_keeps_class_author_marks`, `ieeetran_appendix_clears_sectiondis`). Seen, not changed: the class binding's `\IEEEauthorrefmark{<n>}` prints the
   numeral `n` as a superscript (beyond-Perl, 2404.07847) where IEEEtran.cls:4539-4546 prints the footnote symbol
   (`{2}` → †) outside the `transmag` option (whose mark is the numeral), as the IEEEtrantools one now does.
 - **Fleet packaging (68d study, not a loader bug)**: the fleet image's distro TeX Live (`/usr/share/texlive`) has no

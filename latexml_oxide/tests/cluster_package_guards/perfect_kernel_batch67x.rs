@@ -145,7 +145,8 @@ fn ieeetran_pscc_thanksto() {
 
 /// The SIU template's IEEEtran.cls (1504.02975, 1807.04577): `{ozet}` and `{IEEEanahtar}`, the Turkish abstract and
 /// keywords, are set where they stand under their headings; the English `{abstract}` and `{IEEEkeywords}` stay the
-/// frontmatter's.
+/// frontmatter's. As the template sets them (:3746, :3765): the abstract bold, the keywords bold italic, each heading a
+/// text of its own.
 #[test]
 fn ieeetran_siu_ozet() {
   let (log, xml) = convert_counted(include_str!(
@@ -158,15 +159,15 @@ fn ieeetran_siu_ozet() {
     "para",
     &[r#"xml:id="p1""#],
     "<para class=\"ltx_noindent\" xml:id=\"p1\"><p xml:id=\"p1.1\"><text font=\"bold italic\" xml:id=\"p1.1.1\">\
-     Özetçe <text font=\"upright\" xml:id=\"p1.1.1.1\">—</text></text>Türkçe özet.</p></para>",
+     Özetçe </text><text font=\"bold\" xml:id=\"p1.1.2\">—Türkçe özet.</text></p></para>",
   );
   assert_element(
     &xml,
     "para",
     &[r#"xml:id="p2""#],
     "<para class=\"ltx_noindent\" xml:id=\"p2\"><p xml:id=\"p2.1\"><text font=\"bold italic\" xml:id=\"p2.1.1\">\
-     Anahtar Kelimeler<text font=\"upright\" xml:id=\"p2.1.1.1\">—</text><text font=\"medium\" xml:id=\"p2.1.1.2\">\
-     anahtar, kelime</text></text></p></para>",
+     Anahtar Kelimeler</text><text font=\"bold\" xml:id=\"p2.1.2\">—</text><text font=\"bold italic\" \
+     xml:id=\"p2.1.3\">anahtar, kelime</text></p></para>",
   );
   assert_element(
     &xml,
@@ -301,5 +302,94 @@ fn ieeetrantools_lists_marks_any_class() {
     &[],
     "<itemize xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st \
      item</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p xml:id=\"S0.I2.i1.p1.1\">alpha</p></para></item></itemize>",
+  );
+}
+
+/// V1.7a's begin-document `{proof}` is a fallback a document's own begin-document `\newenvironment{proof}` replaces
+/// (67x review probe g; the class's hook runs first): pdflatex with V1.8b "My proof. Mine.", no QED.
+#[test]
+fn ieeetran_v17_proof_yields_to_document_begin_document_proof() {
+  let tex = "\\documentclass{IEEEtran}\n\\let\\proof\\relax\n\\let\\endproof\\relax\n\
+             \\AtBeginDocument{\\newenvironment{proof}{\\par\\textit{My proof.} }{\\par}}\n\
+             \\begin{document}\n\\begin{proof}Mine.\\end{proof}\n\\end{document}\n";
+  let (log, xml) = convert_counted(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para xml:id="p1"><p xml:id="p1.1"><text font="italic" xml:id="p1.1.1">My proof.</text> Mine.</p></para>"#,
+  );
+  assert!(!xml.contains('∎'), "{xml}");
+}
+
+/// IEEEtrantools under the IEEEtran class only raises its error (IEEEtrantools.sty:73-78): the class binding's
+/// `\IEEEauthorrefmark` stays, so each author keeps its own affiliation (67x review probe k; pdflatex "Ann Able∗, Bob
+/// Baker†" over "∗ Uni One, City", "† Uni Two, Town") and a mark in `\author` its number (probe d).
+#[test]
+fn ieeetrantools_under_ieeetran_keeps_class_author_marks() {
+  let tex = "\\documentclass[conference]{IEEEtran}\n\\usepackage{IEEEtrantools}\n\\begin{document}\n\\title{T}\n\
+             \\author{\\IEEEauthorblockN{Ann Able\\IEEEauthorrefmark{1}, Bob Baker\\IEEEauthorrefmark{2}}\n\
+             \\IEEEauthorblockA{\\IEEEauthorrefmark{1}Uni One, City}\n\
+             \\IEEEauthorblockA{\\IEEEauthorrefmark{2}Uni Two, Town}}\n\\maketitle\nBody.\n\\end{document}\n";
+  let (log, xml) = convert_counted(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let assert_element = latexml::util::test::assert_element;
+  assert_eq!(xml.matches("<creator").count(), 2, "{xml}");
+  assert_element(
+    &xml,
+    "creator",
+    &[r#"role="author""#],
+    "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname><contact \
+     name=\"Affiliation:\u{a0}\" role=\"affiliation\">Uni One, City</contact></creator>",
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["before=\"\u{2003}\u{2003}\""],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname><contact \
+     name=\"Affiliation:\u{a0}\" role=\"affiliation\">Uni Two, Town</contact></creator>",
+  );
+  let tex = "\\documentclass{IEEEtran}\n\\usepackage{amsthm}\n\\usepackage{IEEEtrantools}\n\\begin{document}\n\
+             \\title{T}\n\\author{A\\IEEEauthorrefmark{2}}\n\\maketitle\nBody.\n\\end{document}\n";
+  let (log, xml) = convert_counted(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "personname",
+    &[],
+    r#"<personname>A<sup xml:id="id1">2</sup></personname>"#,
+  );
+}
+
+/// `\appendix` (IEEEtran.cls:5723-5736) clears `\thesectiondis` and numbers the subsections `\Alph`: pdflatex "A. Sub",
+/// "Dis [] sub [A]". ieeeconf's `\appendices` (ieeeconf.cls:4103-4117) does neither: "Appendix I", subsection "I-A".
+#[test]
+fn ieeetran_appendix_clears_sectiondis() {
+  let body = "\\begin{document}\n\\section{Intro}\nText.\n\\appendix\n\\subsection{Sub}\n\
+              Dis [\\thesectiondis] sub [\\thesubsection].\n\\end{document}\n";
+  let (log, xml) = convert_counted(&format!("\\documentclass{{IEEEtran}}\n{body}"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let assert_element = latexml::util::test::assert_element;
+  assert!(
+    xml.contains(
+      r#"<title><tag close=" ">A</tag><text font="italic" xml:id="A0.SS1.1">Sub</text></title>"#
+    ),
+    "{xml}"
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="A0.SS1.p1.1""#],
+    r#"<p xml:id="A0.SS1.p1.1">Dis [] sub [A].</p>"#,
+  );
+  let body = body.replace("\\appendix\n", "\\appendices\n\\section{First}\n");
+  let (log, xml) = convert_counted(&format!("\\documentclass{{ieeeconf}}\n{body}"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(
+      r#"<p xml:id="A1.SS1.p1.1">Dis [I] sub [<text xml:id="A1.SS1.p1.1.1">I-A</text>].</p>"#
+    ),
+    "{xml}"
   );
 }

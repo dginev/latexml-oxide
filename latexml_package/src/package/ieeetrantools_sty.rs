@@ -43,10 +43,14 @@ LoadDefinitions!({
   // `[redeflists]`, :1122-1129), `\IEEEauthorrefmark{<n>}` (:2721-2723, the footnote symbol sequence * † ‡ § ¶ ‖ ** ††
   // ‡‡, roman numerals from 10), `\IEEEPARstart{<letter>}{<rest>}` (:2616, the drop cap: its text, as the class
   // binding's).
-  define_ieeeproof()?;
-  DefMacro!("\\IEEEproofname", "Proof");
-  define_ied_lists()?;
-  RawTeX!(r"\if@IEEETOOLSredeflists
+  // Under the IEEEtran class (its binding defines the IEEEproof family), IEEEtrantools.sty only raises its `\PackageError`
+  // (:73-78, "not for use with classes that already provide it"): the class binding's IEEEproof, IED lists and
+  // `\IEEEauthorrefmark` stay, which its author-block matching reads (67x review probes d, k).
+  if lookup_definition(&T_CS!("\\IEEEproof"))?.is_none() {
+    define_ieeeproof()?;
+    DefMacro!("\\IEEEproofname", "Proof");
+    define_ied_lists()?;
+    RawTeX!(r"\if@IEEETOOLSredeflists
 \let\itemize\IEEEitemize \let\enditemize\endIEEEitemize
 \let\enumerate\IEEEenumerate \let\endenumerate\endIEEEenumerate
 \let\description\IEEEdescription \let\enddescription\endIEEEdescription
@@ -60,7 +64,8 @@ LoadDefinitions!({
 \DeclareRobustCommand*{\IEEEauthorrefmark}[1]{\raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{\ifcase#1\or *\or \dagger\or \ddagger\or
     \mathsection\or \mathparagraph\or \|\or **\or \dagger\dagger
     \or \ddagger\ddagger \else\textsuperscript{\expandafter\romannumeral#1}\fi}}}}");
-  DefMacro!("\\IEEEPARstart{}{}", "#1#2");
+    DefMacro!("\\IEEEPARstart{}{}", "#1#2");
+  }
   // IEEEtrantools.sty's commands outside the IEEEeqnarray family, as the IEEEtran class binding has
   // them (ieeetran_cls.rs; the class carries the same code): :1387 `\yesnumber`, the opposite of
   // `\nonumber` (`\global\@eqnswtrue` there; `\IEEEyesnumber` on our equation rows); :1904-1920
@@ -136,7 +141,12 @@ pub fn define_ieeeeqnarray() -> Result<()> {
   // `\@IEEEeqnarrayhoptolastcolumn` moves to, is not modelled), `\IEEEeqnarrayseprowcut`,
   // `\IEEEeqnarrayrulerow[<thickness>]` (a leader rule across the row), `\IEEEeqnarraydblrulerow[<thickness>]
   // [<spacing>]` and `\IEEEeqnarraydblrulerowcut` (two rule rows around a separator row), as written. 67x (run 340:
-  // 46 papers; witnesses cs0608041, 0911.1713, 1004.2757, 1112.1125, 0908.3162, 1312.4895; KNOWN_PERL_ERRORS #710).
+  // 46 papers; witnesses cs0608041, 0911.1713, 1004.2757, 1112.1125, 0908.3162, 1312.4895, 2310.13447, 1806.01342;
+  // KNOWN_PERL_ERRORS #710). In an `{IEEEeqnarraybox}` (an array) a rule row is one cell spanning the columns, holding
+  // its leader rule. In an `{IEEEeqnarray}` the rows are rearranged into equations, which keep only their math, as
+  // `{eqnarray}`'s do (`\multispan{3}\leaders\hrule…`): a rule row is an equation with its number and no rule, and a
+  // separator row, empty, is removed with its number (residual, #710; repro
+  // alignment/ieeeeqnarray_rule_rows_keep_rules_and_numbers).
   RawTeX!(r"\newif\if@advanceIEEEeqncolcnt
 \newcount\@IEEEeqnnumcols
 \newcount\@IEEEeqncolcnt

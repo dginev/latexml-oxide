@@ -400,6 +400,7 @@ LoadDefinitions!({
   // quant-ph0703150, 0705.3677): false here, as V1.8b numbers `\Alph` without the option (V1.6's default was true).
   // The heading form `\thesectiondis` follows (:5765-5774; `\renewcommand{\thesubsection}{\thesectiondis-…}` in
   // 1605.01233, 1702.07429).
+  // `\appendix` (:5723-5736) clears the heading form `\thesectiondis` and numbers the subsections `\Alph` ("A. Sub").
   // Both save the kernel's `\section` once as `\@IEEEappendixsavesection` (:5695-5696 `\@IEEEsaveoriginalsectiononce`),
   // which documents' own appendix-like commands copied from the class's `\appendix` call, with its
   // `\@IEEEprocessthesectionargument`/`\@IEEEdestroythesectionargument` (:5701-5713; 1907.08915's `\suppl`).
@@ -411,7 +412,7 @@ LoadDefinitions!({
 \addcontentsline{toc}{section}{\appendixname\nobreakspace\thesection: #1}}}
 \def\@IEEEdestroythesectionargument#1{\typeout{** WARNING: Ignoring useless
 \protect\section\space in Appendix (line \the\inputlineno).}}
-\def\appendix{\@IEEEsaveoriginalsectiononce\lx@IEEE@appendix}
+\def\appendix{\@IEEEsaveoriginalsectiononce\lx@IEEE@appendix\gdef\thesectiondis{}\gdef\thesubsection{\Alph{subsection}}}
 \newif\ifuseRomanappendices
 \def\appendices{\@IEEEsaveoriginalsectiononce\lx@IEEE@appendix
 \ifCLASSOPTIONromanappendices\lx@IEEE@roman@appendices\else\ifuseRomanappendices\lx@IEEE@roman@appendices\else
@@ -844,7 +845,18 @@ LoadDefinitions!({
   // - The Turkish SIU template's IEEEtran.cls (2011/11/03 "V1.8 based on V1.7a" :1659-1662, :3745-3790): `{ozet}`,
   //   the abstract in Turkish under "Özetçe", and `{IEEEanahtar}`, its keywords under "Anahtar Kelimeler" — written
   //   where they stand, as the paper's English `{abstract}`/`{IEEEkeywords}` are the frontmatter's (21 papers;
-  //   1504.02975, 1807.04577, 1807.04578, 1910.03090).
+  //   1504.02975, 1807.04577, 1807.04578, 1910.03090); in the two-column form (:3746, :3765), the whole block bold
+  //   (`\bfseries\leavevmode…\textit{\ozetname}---`), the keywords bold italic; the paragraph begins bold, so the
+  //   heading is a text of its own and what follows it is not set inside it.
+  // The begin-document `\let`s run after this load, outside the guard below, so the hook calls a primitive that makes
+  // them as the fallback guess themselves: a document's own `\AtBeginDocument{\newenvironment{proof}…}`, which runs
+  // after the class's hook, replaces them (pdflatex with V1.8b: its own proof; 67x review probe g).
+  DefPrimitive!(T_CS!("\\lx@IEEE@begindocument@proof"), None, {
+    use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+    let _fallback = OriginGuard::new(DefinitionOrigin::Fallback);
+    Let!("\\proof", "\\IEEEproof");
+    Let!("\\endproof", "\\endIEEEproof");
+  });
   {
     use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
     let _fallback = OriginGuard::new(DefinitionOrigin::Fallback);
@@ -852,12 +864,12 @@ LoadDefinitions!({
 \ifCLASSOPTIONconference\centerfigcaptionstrue\else\centerfigcaptionsfalse\fi
 \newif\ifnocalcleftmargin \nocalcleftmarginfalse
 \def\@specialpapernotice{\relax}
-\AtBeginDocument{\@ifundefined{proof}{\let\proof\IEEEproof\let\endproof\endIEEEproof}{}}
+\AtBeginDocument{\@ifundefined{proof}{\lx@IEEE@begindocument@proof}{}}
 \def\thanksto#1{\lx@add@pubnote@thanks{#1}}
 \def\ozetname{\"Ozet\c{c}e }
 \def\IEEEanahtaradi{Anahtar Kelimeler}
-\newenvironment{ozet}{\par\noindent\textbf{\textit{\ozetname}---}\ignorespaces}{\par}
-\newenvironment{IEEEanahtar}{\par\noindent\textbf{\textit{\IEEEanahtaradi}---}\itshape\ignorespaces}{\par}"#);
+\newenvironment{ozet}{\par\bfseries\noindent\textit{\ozetname}---\ignorespaces}{\par}
+\newenvironment{IEEEanahtar}{\par\bfseries\noindent\textit{\IEEEanahtaradi}---\itshape\ignorespaces}{\par}"#);
   }
 });
 
