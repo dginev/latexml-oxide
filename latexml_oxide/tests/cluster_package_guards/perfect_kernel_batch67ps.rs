@@ -5,13 +5,18 @@
 //!   borrow sets no proof lock and leaves what it loaded (amsgen) unloaded.
 //! - Under a real amsthm the proof lock holds only against a copy of amsthm's interface (an optional argument with a
 //!   default first, `[1][\proofname]`), titles the kept proof from the copy's own default, and lapses once the
-//!   document has replaced or undefined the proof (0705.0545).
+//!   document has replaced or undefined the proof; an empty default (`[1][]`, 0705.0545's nccthm) is not a copy.
 //! - amsthm's reload after the borrow keeps a proof a file put in place and theorem.sty's font commands.
+//!
+//! - A borrowing binding claims the borrowed names its real package defines too (ntheorem's `[amsthm]` proof), and a
+//!   robust copy is judged by its inner `\cs␣` (round 4).
 //!
 //! Repros `tools/perfect_kernel/repros/package-bindings/{theorem_borrowed_proof_yields_to_a_class_def,
 //! theorem_borrowed_proof_yields_to_a_package_newenvironment,amsthm_proof_lock_lets_a_hardcoded_head_through,
 //! amsthm_proof_copy_titled_by_its_default,amsthm_proof_lock_lapses_after_the_document_undefines_it,
-//! theorem_borrow_leaves_amsgen_unloaded,amsthm_reload_keeps_theorem_font_commands}.tex`.
+//! amsthm_proof_lock_passes_an_empty_default,ntheorem_amsthm_option_keeps_its_proof,
+//! amsthm_proof_lock_holds_against_a_robust_copy,theorem_borrow_leaves_amsgen_unloaded,
+//! amsthm_reload_keeps_theorem_font_commands}.tex`.
 use latexml::util::test::assert_element;
 
 use super::perfect_kernel_batch46::{convert_files_with, convert_with, error_count, warning_count};
@@ -72,7 +77,8 @@ fn borrowed_proof_yields_to_a_package_newenvironment() {
 }
 
 /// A package's `\renewenvironment{proof}` after theorem.sty is its own (pdflatex "Beweis. Body four.": the package's
-/// trivlist head).
+/// trivlist head). pdflatex also reports `! LaTeX Error: Environment proof undefined` there, theorem.sty having no
+/// proof; we give no diagnostic, the borrowed proof standing in for the undefined one (KNOWN_PERL_ERRORS #686).
 #[test]
 fn borrowed_proof_yields_to_a_package_renewenvironment() {
   let xml = convert_clean(
@@ -235,20 +241,76 @@ fn proof_copy_titled_by_its_own_default() {
   );
 }
 
-/// The document's `\let\proof\undefined` after amsart lapses the lock, so the author's nccthm-style
-/// `\newcommand*{\proof}[1][]` defines it (0705.0545; pdflatex "NccProof. Body eleven."; a03442572a:
-/// Error:undefined:\proof).
+/// The document's `\let\proof\undefined\let\endproof\undefined` after amsart lapses the lock, so a package's
+/// copy-shaped `\newenvironment{proof}[1][Nachweis]` defines it, as in LaTeX (pdflatex "Nachweis. Body seven.";
+/// a03442572a: Error:undefined:\proof). Only the lapse lets it through: its default is not empty.
 #[test]
 fn proof_lock_lapses_once_the_document_undefines_it() {
   let xml = convert_clean(
     repro!("amsthm_proof_lock_lapses_after_the_document_undefines_it.tex"),
     &[],
   );
+  assert!(!xml.contains("<proof"), "{xml}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    r#"<p xml:id="p1.1"><text font="bold" xml:id="p1.1.1">Nachweis.</text> Body seven.</p>"#,
+  );
+}
+
+/// A redefinition whose optional argument defaults to nothing (nccthm.sty:173 `\newcommand*{\proof}[1][]`) is not a
+/// copy of amsthm's proof, so the lock lets it through (0705.0545, after the document's `\let\proof\undefined`;
+/// pdflatex "NccProof. Body eleven."; a03442572a: Error:undefined:\proof).
+#[test]
+fn proof_lock_passes_an_empty_default() {
+  let xml = convert_clean(repro!("amsthm_proof_lock_passes_an_empty_default.tex"), &[]);
   assert_element(
     &xml,
     "p",
     &["xml:id=\"p1.1\""],
     r#"<p xml:id="p1.1"><text font="bold" xml:id="p1.1.1">NccProof.</text> Body eleven.</p>"#,
+  );
+}
+
+/// ntheorem's `amsthm` option defines `{proof}` (ntheorem.sty:668-711), which the binding takes from the borrowed
+/// amsthm: it is ntheorem's own, so a later package's `\newenvironment{proof}` is refused (pdflatex "! LaTeX Error:
+/// Command \proof already defined." and "Proof. Body nineteen."; we report the refusal as Perl does, `Info:ignore`;
+/// e6b39e586b: "LaterHead. Body nineteen.").
+#[test]
+fn ntheorem_amsthm_option_keeps_its_proof() {
+  let (log, xml) = convert_with(
+    repro!("ntheorem_amsthm_option_keeps_its_proof.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(log.matches("Info:ignore:proof ").count(), 1, "{log}");
+  assert!(!xml.contains("LaterHead"), "{xml}");
+  assert_eq!(xml.matches("<proof ").count(), 1, "{xml}");
+  assert_element(
+    &xml,
+    "proof",
+    &[],
+    r#"<proof xml:id="id1"><title class="ltx_runin" font="italic">Proof.</title><para xml:id="p1"><p xml:id="p1.1"><text xml:id="p1.1.1">Body nineteen.<text class="ltx_align_floatright" xml:id="p1.1.1.1"/></text></p></para></proof>"#,
+  );
+}
+
+/// A robust copy of amsthm's proof (`\DeclareRobustCommand\proof[1][\proofname]`) is judged by its inner `\proof␣`,
+/// as `owns_calls` judges a robust binding: the lock holds, and the binding's proof stays (pdflatex "Proof. Body
+/// fourteen."; e6b39e586b: the copy's itemize, its parameterless wrapper passing the copy rule).
+#[test]
+fn proof_lock_holds_against_a_robust_copy() {
+  let xml = convert_clean(
+    repro!("amsthm_proof_lock_holds_against_a_robust_copy.tex"),
+    &[],
+  );
+  assert!(!xml.contains("trivlist"), "{xml}");
+  assert_eq!(xml.matches("<proof ").count(), 1, "{xml}");
+  assert_element(
+    &xml,
+    "proof",
+    &[],
+    r#"<proof xml:id="id1"><title class="ltx_runin" font="italic">Proof.</title><para xml:id="p1"><p xml:id="p1.1"><text xml:id="p1.1.1">Body fourteen.∎</text></p></para></proof>"#,
   );
 }
 

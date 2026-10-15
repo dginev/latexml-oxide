@@ -1328,9 +1328,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1507.02955 (cc) keeps its 4 theorem.sty Errors (67p) and loses 76 counter warnings. Word losses are generated text
   only: the `\the\smf@thm` error strings, the trivlist items' "item" autoref tags, the class's " — " after the proof
   head. A/B without the lever vs 67o1 (400 papers: 300 amsthm `{proof}`/`\newtheorem[..]` users, many shipping a
-  `.sty`/`.cls` that redefines `proof`, + 100 from pop67o; plus 17 apxproof users): 0 worse; 10 gain proofs (1202.3460,
-  1210.2844, 1609.05867, 2309.14926, 2503.05183, math0003189, math0007097, math0203159, math0302254, math0412216: a
-  shipped class's `\renewenvironment{proof}`), 2309.14926 (shipped smfart) 1 → 0 Errors; the apxproof users are
+  `.sty`/`.cls` that redefines `proof`, + 100 from pop67o; plus 17 apxproof users): 0 worse; 9 gain proofs (1202.3460,
+  1210.2844, 1609.05867, 2309.14926, math0003189, math0007097, math0203159, math0302254, math0412216: a shipped class's
+  `\renewenvironment{proof}`; 2503.05183, first counted here, keeps GT.cls's trivlist: its copy is defined in
+  `\AtBeginDocument`, OXIDIZED_DESIGN #596), 2309.14926 (shipped smfart) 1 → 0 Errors; the apxproof users are
   byte-identical. Residual: the proof head's font and punctuation are the binding's, not the class's (isamms.cls's
   small caps, smfart's " — ").
 - **67u** (binding gaps G1, run 353's undefined-only papers whose missing commands come from a package the class, or a
@@ -1416,13 +1417,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (KNOWN_PERL_ERRORS #686). (2) Under a real amsthm the proof lock holds only against a copy of amsthm's interface (an
   optional argument with a non-empty default first, `state::files_lock_holds`/`takes_optional_first`), titles the kept
   proof from that default (`record_redefined_default`: thuthesis's `\thu@proof@name`), lets a redefinition with its own
-  head through (head text and end mark kept), and lapses once the protected `\@proof` is no longer in force (0705.0545:
-  the document's `\let\proof\undefined`, then nccthm's `\newcommand*{\proof}[1][]`: 1 Error → 0); apxproof needs no lift
-  of the lock any more (OXIDIZED_DESIGN #596). Repros package-bindings/{theorem_borrowed_proof_yields_to_a_class_def,
+  head through (head text and end mark kept), and lapses once the protected `\@proof` is no longer in force (amsart, the
+  document's `\let\proof\undefined`, then a package's copy `[1][Nachweis]`); 0705.0545 (the same `\let`, then nccthm's
+  `\newcommand*{\proof}[1][]`: 1 Error → 0) goes through on the copy rule, its default being empty; apxproof needs no
+  lift of the lock any more (OXIDIZED_DESIGN #596). Round 4 (re-review agent_reports/2026-10-15_67ps_r3_review.md): a
+  robust copy (`\DeclareRobustCommand\proof[1][\proofname]`) is judged by its inner `\proof␣`; a borrowing binding
+  claims the borrowed names its real package defines too (`state::claim_borrowed_meanings`: ntheorem's `[amsthm]`
+  proof, which a later package's `\newenvironment{proof}` had replaced; theorem.sty's skips; KNOWN_PERL_ERRORS #686);
+  `install_definition` probes the copies lock only where a lock against the files is set; and the test harness fails
+  a guard whose fixture a binding shadows through the versioned-name fallback without reading it
+  (`util::test::assert_fixtures_not_shadowed`; `perfect_kernel_batch67s::package_redefined_proof_keeps_the_binding`'s
+  `myproof.sty` had loaded the proof.sty binding, so it is `relaxproofpkg.sty` now). Repros package-bindings/{theorem_borrowed_proof_yields_to_a_class_def,
   theorem_borrowed_proof_yields_to_a_package_newenvironment, amsthm_proof_lock_lets_a_hardcoded_head_through,
   amsthm_proof_copy_titled_by_its_default, amsthm_proof_lock_lapses_after_the_document_undefines_it,
-  theorem_borrow_leaves_amsgen_unloaded, amsthm_reload_keeps_theorem_font_commands} RED → GREEN; guards
-  `perfect_kernel_batch67ps` (13), with 67s/67p guards tightened. A/B vs 67o1 (613 papers: the 67s and 67p sets +
+  amsthm_proof_lock_passes_an_empty_default, ntheorem_amsthm_option_keeps_its_proof,
+  amsthm_proof_lock_holds_against_a_robust_copy, theorem_borrow_leaves_amsgen_unloaded,
+  amsthm_reload_keeps_theorem_font_commands} RED → GREEN; guards `perfect_kernel_batch67ps` (16), with 67s/67p guards tightened. A/B vs 67o1 (613 papers: the 67s and 67p sets +
   0705.0545): Errors 1838 → 1813, Fatals 5 → 5, 0 papers gain an Error or Fatal; vs the parent a03442572a 12 differ: 9
   papers where a theorem.sty/ntheorem document or class defines its own proof now print it as pdflatex does, without
   `<proof>` (2005.04068 22 Errors → 0, 2201.05175, math0505657 "Preuve.", 1911.07591 fundam.cls:169, math-ph0505075,

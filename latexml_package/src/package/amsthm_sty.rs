@@ -306,12 +306,14 @@ LoadDefinitions!({
   }
   // Locked against the class and package files (`:locked@files`, state.rs `name_carries_lock`), as the kernel's
   // `\endabstract` (sect05.rs) and `\minipage` (sect12.rs) are, but only against a COPY of amsthm's interface — a
-  // redefinition taking an optional argument with a default first (`:locked@copies`, naming the protected `\@proof`;
-  // state.rs `files_lock_holds`, `takes_optional_first`), and only while that proof is in force (0705.0545): a class's
+  // redefinition taking an optional argument with a non-empty default first, a robust one by its inner `\proof␣`
+  // (`:locked@copies`, naming the protected `\@proof`; state.rs `files_lock_holds`, `takes_optional_first`; nccthm's
+  // `[1][]` goes through, 0705.0545), and only while that proof is in force: a class's
   // `\renewenvironment{proof}[1][\proofname]` over a `\trivlist` (smfart.cls:1194, smfbook.cls:1281, ijmart.cls:336)
   // replaced the binding's `<ltx:proof>` with an itemize (86 papers under the raw-class lever: smfart 72 — 1711.11547,
   // 1902.02049, 2108.12000 — ijmart 11, smfbook 3; a paper's own class: jloganal.cls 1202.3460, theoretics.cls
-  // 1609.05867, gtart.cls math0203159/math0302254/math0412216, GT.cls 2503.05183). The copy's own default titles the
+  // 1609.05867, gtart.cls math0203159/math0302254/math0412216; not GT.cls 2503.05183, whose copy runs in
+  // `\AtBeginDocument`, GT.cls:1488-1494, at the document's origin). The copy's own default titles the
   // proof (`\proof:redefined@default`: the class's `\proofname`, "Démonstration", smfart.cls:1288). A redefinition with
   // a head of its own (fascicules.sty:142 "Démonstration:", NotesTeX.sty:124, beautybook.cls:1211) goes through, with
   // the head text and end mark it wrote. The document's own `\newenvironment{proof}`/`\renewenvironment{proof}` stays

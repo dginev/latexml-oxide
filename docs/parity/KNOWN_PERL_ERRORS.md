@@ -13383,10 +13383,20 @@ OXIDIZED_DESIGN_DIVERGENCES #596), and the files first loaded during it are unlo
 `state::{begin_borrow, end_borrow}`, `mark_unloaded` also clearing `_raw_loaded` and `\opt@<file>`). The real load after
 a borrow (`"amsthm.sty:borrowed"`) leaves a proof a file or the document has put in place, and amsthm's old-version
 `\theorembodyfont`/`\theoremheaderfont`/`\theorempreskipamount`/`\theorempostskipamount` are only provided (amsthm.sty
-defines none of them), so theorem.sty's stay. Residuals: a conditional still sees a borrowed name defined
+defines none of them), so theorem.sty's stay. A borrowed name the real package defines too is the binding's own
+(`state::claim_borrowed_meanings`: ntheorem.sty:668-711's `amsthm` option `\proofname`, `{proof}`, `\openbox`,
+`\swapnumbers`; ntheorem.sty:572/:580 `\theoremstyle`/`\theorembodyfont`; theorem.sty:122-123's
+`\theorempreskipamount`/`\theorempostskipamount`) and does not yield: after `\usepackage[amsthm]{ntheorem}` a package's
+`\newenvironment{proof}` is refused and ntheorem's proof prints (repro
+package-bindings/ntheorem_amsthm_option_keeps_its_proof). Residuals: a conditional still sees a borrowed name defined
 (`\@ifundefined{proof}{\newenvironment{proof}…}{}` after theorem.sty keeps the binding's proof; pdflatex prints the
 file's), and a local assignment of a borrowed name clears its mark for good (`fallback_meanings`), so after the group
-the restored borrowed meaning no longer yields.
+the restored borrowed meaning no longer yields. Diagnostics differ from pdflatex's where a borrowed or claimed name
+stands in: a package's `\renewenvironment{proof}` after theorem.sty gives pdflatex `! LaTeX Error: Environment proof
+undefined` (theorem.sty has none) and us no diagnostic, the package's proof defined over the borrowed one; a refused
+redefinition — amsthm's reload over a file's proof (amsthm.sty:431), a package's `\newenvironment{proof}` after
+ntheorem's `[amsthm]` — gives pdflatex `! LaTeX Error: Command \proof already defined` and us `Info:ignore`, the
+convention for a refused redefinition we share with Perl (latex_constructs.pool.ltxml:2785-2788 `\newenvironment`).
 
 Limits left (the binding is not theorem.sty's environment code): the style is applied when `\newtheorem` runs, not at
 each use. A binding style's font, head styling and swap are taken then, so a later `\gdef\th@plain` does not reach
@@ -13409,7 +13419,7 @@ theorem_borrowed_proof_yields_to_a_package_newenvironment, theorem_borrow_leaves
 amsthm_reload_keeps_theorem_font_commands}, guards `perfect_kernel_batch67ps::{borrowed_proof_yields_to_a_class_def,
 borrowed_proof_yields_to_a_package_newenvironment, borrowed_proof_yields_to_a_package_renewenvironment,
 document_proof_after_theorem_is_its_own, borrow_leaves_what_it_loaded_unloaded, amsthm_reload_keeps_theorem_font_commands,
-amsthm_reload_keeps_a_files_proof}`.
+amsthm_reload_keeps_a_files_proof, ntheorem_amsthm_option_keeps_its_proof}`.
 
 ## 687. `\unboldmath` and `\mathversion{normal}` do not undo `\boldmath` (open)
 

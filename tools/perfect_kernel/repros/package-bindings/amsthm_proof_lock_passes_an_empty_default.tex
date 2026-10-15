@@ -1,0 +1,21 @@
+% witness: 0705.0545 (amsart, the document's `\let\proof\undefined` `\let\qed\undefined`, then the author's
+%          nccthm.sty:173 `\newcommand*{\proof}[1][]{\NCC@thmhdr…}`: 5 Error:undefined:\proof on a03442572a)
+% oracle:  pdflatex 0 errors, "NccProof. Body eleven."
+% engines: rust 67o1 = as pdflatex; rust a03442572a = Error:undefined:\proof (the document's \let went through, the
+%          package's \newcommand was refused by the proof lock); perl = as pdflatex (no lock)
+% expect:  0 errors, 0 warnings; the package's bold "NccProof." head
+% note:    an empty default (`[1][]`) is not a copy of amsthm's proof (state.rs `takes_optional_first`), so the lock
+%          lets it through whether or not it has lapsed
+% status:  RED (a03442572a) -> GREEN (67ps); guard perfect_kernel_batch67ps::proof_lock_passes_an_empty_default
+\begin{filecontents*}[overwrite]{nccxpkg.sty}
+\ProvidesPackage{nccxpkg}
+\newcommand*{\proof}[1][]{\par\noindent\textbf{NccProof#1.}\ }
+\newcommand*{\qed}{QEDX}
+\end{filecontents*}
+\documentclass{amsart}
+\let\proof\undefined
+\let\qed\undefined
+\usepackage{nccxpkg}
+\begin{document}
+\proof Body eleven.
+\end{document}

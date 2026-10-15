@@ -1103,6 +1103,7 @@ fn convert_in_process<R: Send + 'static>(
   let source = source.to_string_lossy().into_owned();
   let source_dir = workdir.path().to_path_buf();
   let preload = preload.map(String::from);
+  let fixtures: Vec<String> = files.iter().map(|(name, _)| (*name).to_string()).collect();
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
@@ -1140,6 +1141,7 @@ fn convert_in_process<R: Send + 'static>(
       let inspected = inspect(&xml, &source_dir);
       latexml_core::stomach::set_timeout(0);
       latexml_core::reset_thread_engine();
+      assert_fixtures_not_shadowed(&fixtures, &resp.log);
       InProcessRun {
         log: resp.log,
         xml,
@@ -1152,6 +1154,39 @@ fn convert_in_process<R: Send + 'static>(
     .join()
     // the worker's own panic (an `inspect` assertion) as the test's, message intact
     .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+}
+
+/// Fails the guard when the conversion took a binding in place of one of its fixture packages or classes and never
+/// read the fixture: Perl's FindFile_fallback (Package.pm:2186-2189 and the suffix lists after it;
+/// `binding::content::find_file_fallback`) reads `myproof.sty`, `foo_v2.sty` or `bar-arxiv.cls` as a version of
+/// `proof.sty`, `foo.sty`, `bar.cls`, and a binding of that name wins over the file beside the source
+/// (`Info:fallback:<name> Interpreted as versioned package, falling back to …`), so the guard tests something else
+/// (`perfect_kernel_batch67s::package_redefined_proof_keeps_the_binding` once did). A binding that follows the copy
+/// it answers for reads the fixture (its path in the log: `(Processing definitions …/JINST_mod.cls`, `Loading
+/// dependencies for …/icml2026.sty`), which is the fallback under test, not a shadowed fixture.
+fn assert_fixtures_not_shadowed(fixtures: &[String], log: &str) {
+  for fixture in fixtures {
+    let base = fixture.rsplit('/').next().unwrap_or(fixture);
+    let Some(stem) = base
+      .strip_suffix(".sty")
+      .or_else(|| base.strip_suffix(".cls"))
+    else {
+      continue;
+    };
+    let fell_back = log.lines().any(|line| {
+      line
+        .split("Info:fallback:")
+        .nth(1)
+        .and_then(|rest| rest.split_whitespace().next())
+        .is_some_and(|name| name == stem || name == base)
+    });
+    let read = log.contains(&format!("/{base}"));
+    assert!(
+      !fell_back || read,
+      "fixture {fixture} is shadowed by a binding through the versioned-name fallback (Package.pm \
+       FindFile_fallback) and never read: rename it so the conversion reads it\n{log}"
+    );
+  }
 }
 
 /// Count of lines carrying a `Warning:<category>:` diagnostic anywhere in the line (WISDOM 85: a diagnostic can

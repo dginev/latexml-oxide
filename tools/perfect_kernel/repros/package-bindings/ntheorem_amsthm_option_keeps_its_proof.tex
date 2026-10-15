@@ -1,0 +1,18 @@
+% witness: none on arXiv found (the reviewer's p19 shape); ntheorem.sty:668-711's `amsthm` option defines `{proof}`
+% oracle:  pdflatex "! LaTeX Error: Command \proof already defined." (the package's \newenvironment), and prints
+%          "Proof. Body nineteen." (ntheorem's proof)
+% engines: rust a03442572a = <proof> "Proof." (as pdflatex); rust e6b39e586b = "LaterHead. Body nineteen." with 0
+%          diagnostics (the binding's proof carried the borrowed mark and yielded); perl = <proof> "Proof."
+% expect:  0 errors, 0 warnings, Info:ignore:proof; one <proof> titled "Proof."
+% status:  RED (e6b39e586b) -> GREEN (67ps r4); guard perfect_kernel_batch67ps::ntheorem_amsthm_option_keeps_its_proof
+\begin{filecontents*}[overwrite]{laterproofpkg.sty}
+\ProvidesPackage{laterproofpkg}
+\newenvironment{proof}{\par\noindent\textbf{LaterHead.}\ }{\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage[amsthm]{ntheorem}
+\usepackage{laterproofpkg}
+\begin{document}
+\begin{proof}Body nineteen.\end{proof}
+After.
+\end{document}

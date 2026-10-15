@@ -2783,7 +2783,9 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
 /// borrow. What the borrow defines carries `DefinitionOrigin::Borrowed`: in LaTeX those names do not exist, so they
 /// yield to any later definition — the document's, or any raw file's, TeX Live's or the author's (`\newcommand`,
 /// `\newenvironment`, `\providecommand`; latex_constructs `is_definable_latex`) — and the binding sets no lock while
-/// `"{name}.sty:borrowing"` is set (amsthm's proof lock). Not covered: a conditional (`\@ifundefined{proof}`) still
+/// `"{name}.sty:borrowing"` is set (amsthm's proof lock). The names the borrowing package's real file defines too the
+/// binding claims as its own ([`crate::state::claim_borrowed_meanings`]: ntheorem's `[amsthm]` proof, theorem.sty's
+/// skips), and they do not yield. Not covered: a conditional (`\@ifundefined{proof}`) still
 /// sees a borrowed name defined, and a local assignment of a borrowed name clears its mark for good
 /// (`fallback_meanings`). Witnesses 2211.14033, 2512.06733 (ifacconf), 1507.02955 (cc.cls's ccproof.sty:56). Guards
 /// `perfect_kernel_batch67p::{theorem_then_amsthm_takes_over, amsthm_before_theorem_stays_loaded}`,

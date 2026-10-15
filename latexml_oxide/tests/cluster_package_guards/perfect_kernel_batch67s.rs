@@ -30,21 +30,24 @@ fn class_renewed_proof_keeps_the_binding() {
   );
 }
 
-/// A package file's `\let\proof\relax` + `\newenvironment{proof}` is refused as a class's redefinition is, and the
-/// optional title still reaches the binding's proof.
+/// A package file's `\let\proof\relax` + `\newenvironment{proof}` is refused as a class's redefinition is: the
+/// clearing `\let` keeps the binding aside (state.rs `let_i`, `"\proof:locked@cleared"`) and the refused copy puts
+/// it back, and the optional title still reaches the binding's proof. (The fixture is not named `myproof.sty`: Perl's
+/// FindFile_fallback strips a `my` prefix, Package.pm:2186-2189, and loads the proof.sty binding in its place;
+/// `convert_in_process` now fails a guard whose fixture is shadowed that way.)
 #[test]
 fn package_redefined_proof_keeps_the_binding() {
   let (log, xml) = latexml::util::test::convert_files_with(
     r"\documentclass{article}
 \usepackage{amsthm}
-\usepackage{myproof}
+\usepackage{relaxproofpkg}
 \begin{document}
 \begin{proof}[Proof of the claim]Because.\end{proof}
 \end{document}
 ",
     &[(
-      "myproof.sty",
-      r"\ProvidesPackage{myproof}
+      "relaxproofpkg.sty",
+      r"\ProvidesPackage{relaxproofpkg}
 \let\proof\relax\let\endproof\relax
 \newenvironment{proof}[1][\proofname]{\par\trivlist\item[\hskip\labelsep\bfseries #1:]}{\endtrivlist}
 ",

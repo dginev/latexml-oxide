@@ -17596,25 +17596,34 @@ amsthm_sty.rs locks `\proof` and `\endproof` against the class and package files
 COPY of amsthm's interface (`\proof:locked@copies`, state.rs `files_lock_holds`): a redefinition whose first parameter
 is an optional argument with a non-empty default (`takes_optional_first`) — amsthm.sty:431's own
 `{proof}[1][\proofname]`, which smfart.cls:1194, smfbook.cls:1281, ijmart.cls:336 or thuthesis.cls:4052
-(`[1][\thu@proof@name]`) re-implement over a `\trivlist`. Perl locks nothing there (amsthm.sty.ltxml:146-192,
+(`[1][\thu@proof@name]`) re-implement over a `\trivlist`. A robust copy (`\DeclareRobustCommand\proof[1][\proofname]`)
+is judged by its inner `\proof␣`, as `owns_calls` judges a robust binding (its own meaning is the parameterless
+`\protect\proof␣`); an ltcmd copy (`\RenewDocumentEnvironment{proof}{O{\proofname}}`) is not read as one and goes
+through (no TeX Live file defines the proof either way). Perl locks nothing there (amsthm.sty.ltxml:146-192,
 KNOWN_PERL_ERRORS #690). A copy's `\renewenvironment{proof}` is skipped (`\renewenvironment` reads `lock_holds_against`,
 sect08.rs), its `\newenvironment` after a clearing `\let\proof\relax` is refused and the binding put back
-(`install_definition`, `let_i`: GT.cls:1469-1494, 2503.05183), and the proof stays `<ltx:proof>`, titled from the
-optional argument or else the copy's own default (`record_redefined_default`, `\proof:redefined@default`; an empty one
-falls back to `\proofname`), so the class's language and name still title it (smfart.cls:1288 "Démonstration",
-thuthesis's `\thu@proof@name`). A redefinition with a head of its own — no optional argument, or an empty default
+(`install_definition`, `let_i`; guard `perfect_kernel_batch67s::package_redefined_proof_keeps_the_binding`), and the
+proof stays `<ltx:proof>`, titled from the optional argument or else the refused copy's own default
+(`record_redefined_default`, `\proof:redefined@default`, recorded only under this lock; it is never empty, an empty
+default not being a copy), so the class's language and name still title it (smfart.cls:1288 "Démonstration",
+thuthesis's `\thu@proof@name`); with no copy refused, `\proofname`. A redefinition with a head of its own — no optional argument, or an empty default
 (fascicules.sty:142 "Démonstration:", NotesTeX.sty:124, beautybook.cls:1211, thmbox.sty:214 `[1][]` with `\proofname\
 #1`, a raw `\def\proof{…}`) — goes through with the head text and end mark it wrote; the end half `\endproof` follows
 its begin half (locked while `\proof` is still the binding's). The lock keeps the binding only while its proof is in
 force: once the document (or a definition the lock let through) has replaced or undefined `\proof`, it lapses and later
-definitions go through as in LaTeX (0705.0545: amsart, the document's `\let\proof\undefined`, then the author's
-nccthm.sty:173 `\newcommand*{\proof}[1][]`). It is not set by a borrow (`require_package_borrowed`, theorem.sty's and
+definitions go through as in LaTeX (amsart, the document's `\let\proof\undefined\let\endproof\undefined`, then a
+package's `\newenvironment{proof}[1][Nachweis]`: pdflatex "Nachweis."; guard
+`perfect_kernel_batch67ps::proof_lock_lapses_once_the_document_undefines_it`). 0705.0545 (the same `\let`, then the
+author's nccthm.sty:173 `\newcommand*{\proof}[1][]`) goes through on the copy rule alone, its default being empty
+(`perfect_kernel_batch67ps::proof_lock_passes_an_empty_default`). It is not set by a borrow (`require_package_borrowed`, theorem.sty's and
 ntheorem.sty's bindings: LaTeX has no amsthm proof there, so a class's `\def\proof` after `\RequirePackage{theorem}`
 stays its own), nor by the real load that follows a borrow when a file or the document has already put its own proof in
 place (amsthm.sty:431's `\newenvironment{proof}` fails over it in LaTeX; the binding then leaves `\proof`/`\endproof`
 alone, with an `Info:ignore`). The document's own `\newenvironment{proof}`/`\renewenvironment{proof}` is honoured, as in
 LaTeX and Perl (an author `{proof}` in paper.cls papers), and so is a class's redefinition made from an
-`\AtBeginDocument` hook, which runs with the document's origin (rawclasses study R7). apxproof builds on the binding's
+`\AtBeginDocument` hook, which runs with the document's origin (rawclasses study R7): GT.cls:1469-1470 `\let\proof
+\relax` at class level, then its copy `\newenvironment{proof}[1][\proofname]` inside `\AtBeginDocument` (:1488-1494),
+so 2503.05183 keeps the class's trivlist (as on a03442572a), a residual of this rule. apxproof builds on the binding's
 proof: its parameterless wrappers (apxproof.sty:393-417 `\def \proof`, sending a `theoremrep`'s proof to the appendix,
 read back as `\begin{axp@oldproof}`) are not copies and go through, so apxproof_sty.rs needs no lift of the lock
 (witness 2502.18805, whose 53 proofs otherwise stayed in the body). Residuals of a kept copy: its head layout, font,
@@ -17625,9 +17634,10 @@ names `\proof`/`\endproof` only: a file's `\newtheorem{proof}` after amsthm stil
 `\begin` looks up first and makes a `<theorem>`. Under the raw-class lever 86 papers had lost every proof (smfart 72,
 ijmart 11, smfbook 3; witnesses 1711.11547, 1902.02049, 2108.12000); without the lever the copies in papers' own classes
 keep their proofs (jloganal.cls 1202.3460, theoretics.cls 1609.05867, gtart_h.cls math0003189, gtart.cls math0203159,
-math0302254, math0412216, smfart.cls 2309.14926, GT.cls 2503.05183). Repros
+math0302254, math0412216, smfart.cls 2309.14926; not GT.cls 2503.05183, the `\AtBeginDocument` residual above). Repros
 package-bindings/{amsthm_proof_kept_against_a_class_renewenvironment, amsthm_proof_lock_lets_a_hardcoded_head_through,
 amsthm_proof_copy_titled_by_its_default, amsthm_proof_lock_lapses_after_the_document_undefines_it,
+amsthm_proof_lock_passes_an_empty_default, amsthm_proof_lock_holds_against_a_robust_copy,
 theorem_borrowed_proof_yields_to_a_class_def}; guards `perfect_kernel_batch67s::{class_renewed_proof_keeps_the_binding,
 package_redefined_proof_keeps_the_binding, document_renewed_proof_is_honoured, apxproof_wraps_the_locked_proof}`,
 `perfect_kernel_batch67ps::*`.

@@ -53,6 +53,9 @@ LoadDefinitions!({
   DefRegister!("\\theorem@bodyfont" => Tokens!());
   RawTeX!(r"\gdef\theorem@headerfont{\normalfont\bfseries}");
   RawTeX!(r"\global\thm@headfont{\theorem@headerfont}");
+  // (theorem.sty:122-123 `\newskip`s them, the binding takes the registers from the borrowed amsthm:
+  // `claim_borrowed_meanings`)
+  claim_borrowed_meanings(&["\\theorempreskipamount", "\\theorempostskipamount"]);
   RawTeX!(r"\global\setlength\theorempreskipamount{12pt plus 5pt minus 3pt}");
   RawTeX!(r"\global\setlength\theorempostskipamount{8pt plus 3pt minus 1.5pt}");
 

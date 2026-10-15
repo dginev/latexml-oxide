@@ -22,7 +22,15 @@ LoadDefinitions!({
   DeclareOption!("leqno", None);
   DeclareOption!("fleqn", None);
   DeclareOption!("amsmath", None);
-  DeclareOption!("amsthm", None);
+  // ntheorem.sty:668-711: the `amsthm` option defines `\swapnumbers`, `\openbox`, `\proofname` and `{proof}`,
+  // which the binding takes from the borrowed amsthm; they are ntheorem's own then, so a later package's
+  // `\newenvironment{proof}` is refused, as LaTeX refuses it (`claim_borrowed_meanings`).
+  DeclareOption!("amsthm", sub {
+    claim_borrowed_meanings(&[
+      "\\swapnumbers", "\\openbox", "\\proofname",
+      "\\proof", "\\endproof", "\\begin{proof}", "\\end{proof}",
+    ]);
+  });
   DeclareOption!("hyperref", None);
   DeclareOption!("standard", sub {
     AssignValue!("thm@usestd" => true);
@@ -48,6 +56,9 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
+  // ntheorem.sty:572 `\gdef\theoremstyle`, :580 `\newtoks\theorembodyfont`: ntheorem's own names, which the
+  // binding takes from the borrowed amsthm.
+  claim_borrowed_meanings(&["\\theoremstyle", "\\theorembodyfont"]);
 
   // Registers
   DefRegister!("\\theoremindent"                => Dimension::new(0));

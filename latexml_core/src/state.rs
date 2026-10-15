@@ -1410,13 +1410,10 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   {
     assign_value_sym(stub_sym, false, Some(Scope::Global));
   }
-  // (read against this redefinition's own interface: a lock that holds only against copies, `files_lock_holds`)
-  let cs = token.with_cs_name(|cs| cs.to_string());
+  // (read against this redefinition's own interface: a lock that holds only against copies, `files_lock_holds`; an
+  // unlocked state reads no lock and allocates nothing here)
   let locked =
-    !state_is_unlocked() && lock_holds_against(&cs, || takes_optional_first(&definition));
-  if !locked {
-    drop_copies_lock_aside(&cs);
-  }
+    !state_is_unlocked() && token.with_cs_name(|cs| redefinition_locked(cs, &definition));
   if locked {
     restore_cleared_binding(&token);
     // A LOCKED BINDING OWNS ITS CALLS. The lock keeps the semantic markup of a call (Perl acb3b27e: commands "that
@@ -1531,16 +1528,12 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
         Stored::Number(Number::new(nargs as i64)),
         Some(Scope::Global),
       );
-      // …and the default of its optional argument, if it takes one first (`[1][\thu@proof@name]`), which the
-      // binding may title its own use with (amsthm's proof, amsthm_sty.rs).
-      if let Some(default) = defn
-        .get_parameters()
-        .and_then(|p| p.get_parameters().into_iter().next())
-        .filter(|param| param.optional)
-        .and_then(|param| param.extra.first().cloned())
-      {
-        record_redefined_default(&token, default);
-      }
+    }
+    // …and, against a lock that holds only against copies, the default of the optional argument the copy takes first
+    // (`[1][\thu@proof@name]`; a robust copy's by its inner `\cs␣`), which the binding titles its own use with
+    // (amsthm's proof, amsthm_sty.rs).
+    if let Some(default) = copy_default(&definition) {
+      record_redefined_default(&token, default);
     }
     if let Some((defn, binding)) = call_owner {
       // The binding, kept on the first override (a later one, a loop's next iteration, overrides an override).
@@ -1875,6 +1868,30 @@ pub fn fallback_meaning_origin(
     return None;
   }
   state.fallback_meanings.get(&meaning_key(token)).copied()
+}
+
+/// A borrowing binding's claim on the borrowed names its real package defines too: their meanings no longer carry the
+/// borrowed mark (`DefinitionOrigin::Borrowed`, [`fallback_meaning_origin`]), so they are the binding's own, as if it
+/// had defined them again at its own origin, and a later file's `\newcommand`/`\newenvironment` of them is refused
+/// as LaTeX refuses it ("Command … already defined"), not honoured. ntheorem.sty's `[amsthm]` option defines
+/// `\proofname` and `{proof}` (ntheorem.sty:668-711), which its binding takes from the borrowed amsthm; theorem.sty's
+/// `\newskip\theorempreskipamount` (theorem.sty:122-123) likewise. A name whose meaning is not borrowed is left
+/// alone.
+pub fn claim_borrowed_meanings(names: &[&str]) {
+  use crate::definition::origin::DefinitionOrigin;
+  if state!().fallback_meanings.is_empty() {
+    return;
+  }
+  let keys: Vec<SymStr> = names
+    .iter()
+    .map(|name| meaning_key(&crate::T_CS!(*name)))
+    .collect();
+  let mut state = state_mut!();
+  for key in keys {
+    if state.fallback_meanings.get(&key) == Some(&DefinitionOrigin::Borrowed) {
+      state.fallback_meanings.remove(&key);
+    }
+  }
 }
 
 // SAFETY
@@ -3324,8 +3341,10 @@ pub fn lock_holds_against(cs: &str, copies_interface: impl FnOnce() -> bool) -> 
 pub fn files_lock_holds(cs: &str, copies_interface: impl FnOnce() -> bool) -> bool {
   // It keeps the binding's own meaning only while that is in force (or kept aside by a file's clearing `\let`,
   // [`let_i`]): once the document, or a definition the lock let through, has replaced or undefined the name, the
-  // lock has lapsed and later definitions go through as in LaTeX (0705.0545: amsart, the document's
-  // `\let\proof\undefined`, then the author's nccthm.sty:173 `\newcommand*{\proof}[1][]{…}`). The protected
+  // lock has lapsed and later definitions go through as in LaTeX (amsart, the document's `\let\proof\undefined`, then
+  // a package's copy `\newenvironment{proof}[1][Nachweis]`: `perfect_kernel_batch67ps::
+  // proof_lock_lapses_once_the_document_undefines_it`; 0705.0545's nccthm.sty:173 `\newcommand*{\proof}[1][]{…}` after
+  // the same `\let` goes through on the copy rule alone, its default being empty). The protected
   // meaning is the one the lock names (`\proof:locked@copies` = `\@proof`), not any binding's: llncs's proof that
   // apxproof.sty:46 puts back is not amsthm's (2311.01302).
   if let Some(name) = cs.strip_prefix("\\end")
@@ -3362,6 +3381,27 @@ fn copies_lock_kept_aside(cs: &str) -> bool {
   lookup_value(&s!("{cs}:locked@cleared")).is_some_and(|b| !matches!(b, Stored::None))
 }
 
+/// [`install_definition`]'s verdict, in the locked state, on a redefinition of `cs`: [`lock_holds_against`] read
+/// against its own interface, and a redefinition the lock lets through drops what a copies lock kept aside
+/// ([`drop_copies_lock_aside`]) — probed only where a lock against the files is set, as every copies lock is one (so
+/// a name without one costs the two probes the lock test always made).
+fn redefinition_locked(cs: &str, definition: &Stored) -> bool {
+  let probe = |key: String| arena::get(&key).is_some_and(lookup_bool_sym);
+  if probe(s!("{cs}:locked")) {
+    return true;
+  }
+  if !probe(s!("{cs}:locked@files")) {
+    return false;
+  }
+  let holds = crate::definition::origin::current_origin()
+    != crate::definition::origin::DefinitionOrigin::Document
+    && files_lock_holds(cs, || takes_optional_first(definition));
+  if !holds {
+    drop_copies_lock_aside(cs);
+  }
+  holds
+}
+
 /// A definition the copies lock on `cs` let through replaces the protected meaning for good: nothing kept aside is
 /// put back, and the end half follows (`\endproof` after a file's own `\proof`).
 fn drop_copies_lock_aside(cs: &str) {
@@ -3375,8 +3415,12 @@ fn drop_copies_lock_aside(cs: &str) {
 }
 
 /// Record the default of the optional argument a refused redefinition of `token` takes first, as
-/// `"{cs}:redefined@default"` (`[1][\proofname]`), for the locked binding to title its own use with.
+/// `"{cs}:redefined@default"` (`[1][\proofname]`), for the locked binding to title its own use with — only under a
+/// lock that holds only against copies ([`copies_lock`]), whose binding reads it.
 pub fn record_redefined_default(token: &Token, default: Tokens) {
+  if token.with_cs_name(copies_lock).is_none() {
+    return;
+  }
   let key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined@default")));
   state_mut!().assign_internal(
     TableName::Value,
@@ -3391,7 +3435,22 @@ pub fn record_redefined_default(token: &Token, default: Tokens) {
 /// optional argument is the head's text and whose default the name, which a lock that holds only against copies reads
 /// ([`files_lock_holds`]). An empty default (`[1][]`) adds to a head of the file's own (thmbox.sty:214
 /// `\proofname\ #1`) or makes a command, not a proof environment (nccthm.sty:173 `\newcommand*{\proof}[1][]`).
+///
+/// A robust definition is judged by what it wraps, as [`owns_calls`] judges a robust binding: its own meaning is the
+/// parameterless `\protect \cs␣` (`robust_wrapper_body`), defined after the inner `\cs␣` that takes the arguments
+/// (`\DeclareRobustCommand\proof[1][\proofname]{…}`).
 pub fn takes_optional_first(definition: &Stored) -> bool {
+  copy_default(definition).is_some_and(|default| !default.is_empty())
+}
+
+/// The default of the optional argument `definition` takes first, if it takes one first ([`takes_optional_first`];
+/// a robust definition's by its inner `\cs␣`).
+fn copy_default(definition: &Stored) -> Option<Tokens> {
+  if let Stored::Expandable(defn) = definition
+    && let Some(inner) = robust_wrapper_body(defn, &defn.get_cs())
+  {
+    return lookup_meaning(&inner).and_then(|inner| copy_default(&inner));
+  }
   let params = match definition {
     Stored::Expandable(defn) => defn.get_parameters(),
     Stored::Constructor(defn) => defn.get_parameters(),
@@ -3401,7 +3460,8 @@ pub fn takes_optional_first(definition: &Stored) -> bool {
   };
   params
     .and_then(|params| params.get_parameters().into_iter().next())
-    .is_some_and(|param| param.optional && param.extra.first().is_some_and(|d| !d.is_empty()))
+    .filter(|param| param.optional)
+    .and_then(|param| param.extra.first().cloned())
 }
 
 /// Whether the locked `binding` of `cs` owns its calls, so that the document's own definition of `cs` takes its other
@@ -4719,7 +4779,10 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // A lock that holds only against copies of the binding's interface ([`files_lock_holds`]) judges the `\let` by the
   // meaning it copies: one taking an optional argument with a default first is refused as above; any other goes
   // through, the binding kept aside as for a clearing `\let`, so that a copy defined next and refused puts it back
-  // (GT.cls:1469-1494 `\let\proof\relax` … `\newenvironment{proof}[1][\proofname]`; 2503.05183).
+  // (a package's `\let\proof\relax` … `\newenvironment{proof}[1][\proofname]`; guard
+  // `perfect_kernel_batch67s::package_redefined_proof_keeps_the_binding`). Not GT.cls (2503.05183): its `\let\proof
+  // \relax` (:1469-1470) is the class's, but its copy is defined inside `\AtBeginDocument` (:1488-1494), at the
+  // document's origin, and honoured (OXIDIZED_DESIGN_DIVERGENCES #596).
   if crate::definition::origin::current_origin()
     != crate::definition::origin::DefinitionOrigin::Document
     && !state_is_unlocked()
