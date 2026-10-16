@@ -1,0 +1,15 @@
+% A framed cover minipage (`\fbox{\begin{minipage}…}`) holding only a centered copy of the unprinted `\title` (no
+% `\maketitle`): the copy is the redundant title ink (arXiv/html_feedback#6924, OXIDIZED_DESIGN #146, witness
+% 2608.10928), but the frame is ink of its own. The dedup pruned every wrapper it emptied, the frame too (68s review
+% finding 4, probe p7_fbox_cover); a wrapper carrying a frame (`framed`) or `labels` is kept, empty.
+% status:  RED (68s round 1: the framed minipage and its paragraph are gone) → GREEN (68s round 2); 67int13 keeps the
+%          empty framed box too.
+% oracle:  pdflatex 0 errors: a framed box with "Framed Cover"; "1 One x".
+% expect:  0 errors, 0 warnings; one `title_ink_dedup` Info; the framed minipage stays, empty.
+\documentclass{article}
+\title{Framed Cover}
+\begin{document}
+\noindent\fbox{\begin{minipage}{\textwidth}\begin{center}{\Huge Framed Cover}\end{center}\end{minipage}}
+\section{One}
+x
+\end{document}

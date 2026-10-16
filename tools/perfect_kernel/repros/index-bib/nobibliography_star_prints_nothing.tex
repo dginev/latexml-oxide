@@ -1,0 +1,33 @@
+% bibentry's `\nobibliography*` reads the `.bbl` only to record each entry for `\bibentry`: it redefines
+% `{thebibliography}` inside a group so that nothing is typeset (bibentry.sty `\BR@nobib`), and the real
+% `\bibliography` later prints the list where the document puts it. Loaded raw (no binding, in Perl either), our
+% `\bibliography` builds the `<ltx:bibliography>` at the `\nobibliography*` call — in 2010.07703 (texpreamble.tex:820,
+% in the preamble) the whole 806-item bibliography lands at the head of the XML, before the cover minipage, instead
+% of under `\part{Listings and Bibliography}` (thesis.tex:458-480). The title-ink dedup passes over a bibliography
+% ahead of the cover as a workaround for this (base_utilities.rs `leading_centered_paragraphs`, OXIDIZED_DESIGN #146).
+% status:  RED (67int13, 68s round 2): two `<ltx:bibliography>`, the first (`xml:id="bib"`) ahead of "Cover"; and
+%          bibentry's `\AtEndDocument` Warning "You have used \nobibliography* without a following \bibliography"
+%          (its `\AtBeginDocument` `\def\bibliography{\global\BR@starfalse\BR@bib}` does not take). RUST-ONLY shape:
+%          Perl 0.8.8 has no bibentry binding and does not load the package (Error undefined `\nobibliography`, one
+%          bibliography at the end).
+% oracle:  pdflatex 0 errors (two runs): "Cover"; "Chapter 1 One", "See [1]."; then "Bibliography", "[1] A. Writer. A
+%          book. 2001." once, after the chapter.
+% expect:  0 errors, 0 warnings; one `<ltx:bibliography>`, after the chapter; nothing bibliographic before "Cover".
+% witness: 2010.07703 (its 806 bibitems at XML line 106, before the cover).
+\documentclass{book}
+\begin{filecontents*}{\jobname.bbl}
+\begin{thebibliography}{1}
+\bibitem{w01} A.~Writer. \newblock A book. \newblock 2001.
+
+\end{thebibliography}
+\end{filecontents*}
+\usepackage{bibentry}
+\nobibliography*
+\begin{document}
+\begin{center}{\Huge Cover}\end{center}
+\chapter{One}
+See \cite{w01}.
+\backmatter
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}

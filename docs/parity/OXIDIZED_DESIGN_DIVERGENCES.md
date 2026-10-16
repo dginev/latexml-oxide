@@ -5868,15 +5868,38 @@ normalized text **exactly** reproduces the structured title. Structure wins over
 mirror of `maybe_promote_leading_title` (which, when *no* structured title exists, promotes such a
 block *into* the title) and reuses the same detection helpers. The block is the document-level one: a
 centered paragraph reached from `ltx:document`'s children only through title-block wrappers (`ltx:para`,
-`ltx:logical-block`, `ltx:block`, `ltx:titlepage`, a cover minipage's `ltx:inline-block` in its `ltx:p`;
-`is_title_block_wrapper`) before the first sectional unit (a bibliography/index/glossary list ahead of the
-cover is passed over: 2010.07703) — never one inside a float, a list, a theorem, a chapter or a part — and it
-is judged **once per document**, at the first flush that sees the structured title
-(`lx_title_ink_dedup_done`); a wrapper the removal empties is pruned with it. The fallback runs at every
-sectioning command and at `\end{document}`; before 68s each run removed one more copy, down into figures
-and the first chapter, and a second printed cover (1911.09648's `Capa1`/`Capa2`) lost its title line (68p
-review finding 8). Covers it serves: `{titlepage}` (1304.0681, 1503.03277, 1601.07172, 2606.13892), a
-minipage (2010.07703).
+`ltx:logical-block`, `ltx:block`, a cover minipage's `ltx:inline-block`; `is_title_block_wrapper`) before the
+first sectional unit — never one inside a float, a list, a theorem, a titlepage, a chapter or a part. A
+non-centered `ltx:p` is entered only when it holds nothing but boxes and whitespace
+(`is_cover_box_paragraph`: the `\noindent\begin{minipage}` cover paragraph of 2010.07703), never a `\parbox`
+in running prose, whose words are the sentence's (68s review finding 1). A bibliography/index/glossary list
+ahead of the cover is passed over — a workaround for 2010.07703's bibentry `\nobibliography*` building the
+whole bibliography at the head of the XML (RED index-bib/nobibliography_star_prints_nothing). It is judged
+**once per document**, at the first flush that sees the structured title (`lx_title_ink_dedup_done`); a
+wrapper the removal empties is pruned with it, unless it carries `labels` or a frame (`framed`: the
+`\fbox{\begin{minipage}…}` box stays, empty). The fallback runs at every sectioning command and at
+`\end{document}`; before 68s each run removed one more copy, down into figures and the first chapter, and a
+second printed cover (1911.09648's `Capa1`/`Capa2`) lost its title line (68p review finding 8). Covers it
+serves: a minipage (2010.07703), a centered block (2608.10928).
+
+**Never with a titlepage.** In a document with an `<ltx:titlepage>` the dedup does nothing.
+LaTeXML-structure-xhtml.xsl does not display a document `<ltx:title>` with an `<ltx:titlepage>` sibling (the
+`ltx:title` template's `not(parent::*/child::ltx:titlepage)`; Perl's copy :358-359): the cover IS the
+displayed title and the structured title is metadata. Deleting the cover's copy (68s round 1 still counted
+`ltx:titlepage` as a title-block wrapper) left the HTML with no title — 1304.0681 and 1503.03277: 0 `<h1>`,
+no cover title, Perl shows it once; 1601.07172, 2606.13892 the same shape.
+
+**Place among the title rules: the last resort.** The title placement rules, in order (title-print study
+2026-10-16): R1 a print event (`\maketitle` → `\lx@frontmatterhere`, else the fallback's top placement)
+places the structured title; R2 a refused class/document setter that typesets is a print event at its call;
+R3 a `\@title` store typeset in the body is a print event; R4 a store never printed is metadata; R5 text
+matching — this dedup — only for a retyped copy that no print event explains. Today R1 is in place and the
+dedup stands in for R2-R3. Planned stages: (2) inside `{titlepage}` the kernel `\title` also runs the class's
+refused setter at its call (`\lx@sealed@class@run`), so the cover shows the title the class typesets there
+(0904.2708, gr-qc9404034); (3) unexpandable `\lx@title@ink@begin`/`@end` marks around a stored `\@title`
+show what was typeset: inside a titlepage the ink is kept, elsewhere exactly the marked ink is removed — no
+text matching; (4) a copy no mark explains is promoted in place into `<ltx:title>` (the move of
+`maybe_promote_leading_title`) instead of deleted, once the ruling on which text wins is made.
 
 **Why it's safe / precise.** Fires only for `\title`-without-`\maketitle` papers (the `\maketitle`
 path disables the fallback), and only on a full normalized-text match against the structured title
@@ -5884,14 +5907,15 @@ in a leading display-font centered block. A paper that sets `\title` but doesn't
 its title; a leading centered block that *doesn't* match the title is left untouched; author/abstract
 "ink" (no structured counterpart) is preserved. Never removes a title the PDF actually shows —
 `\title{}` without `\maketitle` renders nothing in the PDF, so only the manual block was ever
-visible there.
+visible there — and never where the HTML would then show no title (a document with a titlepage, above).
 
 **Witnesses**: arXiv/html_feedback#6924 (witness arXiv 2608.10928).
 
 **Guards**: `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924` (structured `<title>`
 kept, title text appears exactly once, hand-typeset author block preserved);
 `perfect_kernel_batch68s::{title_ink_dedup_float_keeps_its_line, title_ink_dedup_in_titlepage,
-title_ink_dedup_once_per_document, title_ink_dedup_not_in_chapter}` (repros
+title_ink_dedup_once_per_document, title_ink_dedup_not_in_chapter, title_ink_dedup_beside_titlepage,
+title_ink_dedup_parbox_in_prose, title_ink_dedup_framed_cover_keeps_its_frame}` (repros
 sectioning-frontmatter/title_ink_dedup_*).
 
 ### 147. A leftover control sequence in a hyperref URL stays literal, not digested

@@ -1,11 +1,14 @@
-% A `{titlepage}` cover that hand-typesets an unprinted `\title` (no `\maketitle`): the cover's title line is the
-% redundant title ink and is dropped (arXiv/html_feedback#6924, OXIDIZED_DESIGN #146, witness 2608.10928; the
-% titlepage covers of 1304.0681, 1503.03277, 2606.13892); the rest of the cover stays. A bare plain-wrapper rule
-% (68s round 1) kept it, and twelve covers showed their title twice.
-% status:  GREEN (68s).
+% A `{titlepage}` cover that hand-typesets an unprinted `\title` (no `\maketitle`): the cover IS the displayed title.
+% LaTeXML-structure-xhtml.xsl does not display a document `<ltx:title>` that has an `<ltx:titlepage>` sibling (the
+% `ltx:title` template's `not(parent::*/child::ltx:titlepage)`; Perl's copy :358-359), so the structured title is
+% metadata there and the cover's copy is the only one shown. The title-ink dedup (arXiv/html_feedback#6924,
+% OXIDIZED_DESIGN #146, witness 2608.10928) deleted it (68s round 1) and the HTML had no title at all: the
+% titlepage covers of 1304.0681 and 1503.03277 (0 `<h1>`, Perl shows the title once), 1601.07172, 2606.13892.
+% status:  RED (67int13: the Info `title_ink_dedup` fires and "A Cover Title" is gone from the titlepage) → GREEN
+%          (68s round 2: the dedup never acts in a document with a titlepage).
 % oracle:  pdflatex 0 errors: page 1 "Technical Report 7", "A Cover Title", "Ann Author"; page 2 "1 Intro x".
-% expect:  0 errors, 0 warnings; the cover keeps "Technical Report 7" and "Ann Author", "A Cover Title" only as the
-%          structured title.
+% expect:  0 errors, 0 warnings; no `title_ink_dedup` Info; the titlepage keeps "Technical Report 7", "A Cover
+%          Title" and "Ann Author"; the structured `<ltx:title>` stays beside it.
 \documentclass{article}
 \title{A Cover Title}
 \begin{document}

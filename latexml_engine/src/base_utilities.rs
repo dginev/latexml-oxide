@@ -5530,10 +5530,17 @@ fn normalize_frontmatter_text(s: &str) -> String {
 /// `<ltx:title>` and any author/abstract ink (which has no structured counterpart,
 /// so is the only copy). Fires only on a FULL normalized-text match against the
 /// structured title, and only for a leading, non-sectional, display-font centered
-/// paragraph of the document-level title block (not inside a float or any other
-/// container) — so an unrelated centered display block is never removed — and at
+/// paragraph of the document-level title block (not inside a float, a titlepage or any
+/// other container) — so an unrelated centered display block is never removed — and at
 /// most once per document, at the first flush that sees the structured title (68s;
 /// guard `perfect_kernel_batch68s`). Reuses the same detection helpers as the promote path.
+///
+/// It is the LAST RESORT of the title placement rules (OXIDIZED_DESIGN #146): a text match
+/// where no print event explains the copy. Never in a document with an `<ltx:titlepage>`:
+/// there the XSLT does not display the structured title (LaTeXML-structure-xhtml.xsl, the
+/// `ltx:title` template's `not(parent::*/child::ltx:titlepage)`; Perl's copy :358-359) — the
+/// cover IS the displayed title, and deleting its copy left none (1304.0681, 1503.03277:
+/// no `<h1>`, Perl shows the title once).
 fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
   // Needs a structured document title to prioritize over.
   let Some(title) = document.findnode("/ltx:document/ltx:title", None) else {
@@ -5551,6 +5558,13 @@ fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
     return Ok(());
   }
   assign_value("lx_title_ink_dedup_done", true, Some(Scope::Global));
+  // A titlepage beside the title: the structured title is metadata and the cover the display.
+  if document
+    .findnode("/ltx:document/ltx:titlepage", None)
+    .is_some()
+  {
+    return Ok(());
+  }
   let nominal = {
     let v = lookup_float("NOMINAL_FONT_SIZE").map_or(0.0, |f| f.0);
     if v > 0.0 { v } else { 10.0 }
@@ -5582,9 +5596,11 @@ fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
     )
   );
   // Remove the redundant title ink, pruning any title-block wrapper it leaves empty (para →
-  // logical-block, a minipage that held only the title and the paragraph around it, a
-  // titlepage) — mirroring the promote path's cleanup. Sibling `<p>`s (e.g. the author block)
-  // keep their wrapper non-empty and survive.
+  // logical-block, a minipage that held only the title and the paragraph around it) —
+  // mirroring the promote path's cleanup. Sibling `<p>`s (e.g. the author block) keep their
+  // wrapper non-empty and survive. A wrapper that carries `labels` (a `\label` target) or a
+  // frame (`\fbox{\begin{minipage}…}`, `framed`) is kept, empty: removing it would leave a
+  // dangling reference or drop ink of its own (68s review probes p7_fbox_cover, p8).
   let mut victim = victim;
   loop {
     let parent = victim.get_parent();
@@ -5593,7 +5609,9 @@ fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
       Some(p)
         if is_title_block_wrapper(document::get_node_qname(&p))
           && !has_element_child(&p)
-          && p.get_content().trim().is_empty() =>
+          && p.get_content().trim().is_empty()
+          && !p.has_attribute("labels")
+          && !p.has_attribute("framed") =>
       {
         victim = p;
       },
@@ -5605,31 +5623,55 @@ fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
 
 /// The containers a hand-typeset title block is set in at document level: paragraph wrappers
 /// (`ltx:para`, `ltx:logical-block`), a display block (`ltx:block`, a `{center}` holding a logo),
-/// a `{titlepage}` (`ltx:titlepage`), a cover minipage (`ltx:inline-block`, inside the `ltx:p` of
-/// its paragraph). Not a float, a list, a theorem, a table or a sectional unit: what is set
-/// there is the author's content even when it repeats the title.
+/// a cover minipage (`ltx:inline-block`, inside the `ltx:p` of its paragraph — entered only
+/// through a cover paragraph, [`is_cover_box_paragraph`]). Not a float, a list, a theorem, a
+/// table or a sectional unit: what is set there is the author's content even when it repeats
+/// the title. Not a `{titlepage}` (`ltx:titlepage`) either: the cover is the displayed title
+/// there, and the structured title is metadata ([`maybe_dedup_leading_title_ink`]).
 fn is_title_block_wrapper(q: SymStr) -> bool {
   with(q, |q| {
     matches!(
       q,
-      "ltx:para"
-        | "ltx:logical-block"
-        | "ltx:block"
-        | "ltx:titlepage"
-        | "ltx:inline-block"
-        | "ltx:p"
+      "ltx:para" | "ltx:logical-block" | "ltx:block" | "ltx:inline-block" | "ltx:p"
     )
   })
 }
 
+/// A non-centered `ltx:p` holding only boxes: its element children are all `ltx:inline-block`s
+/// and its text is whitespace — the `\noindent\begin{minipage}…\end{minipage}` cover paragraph
+/// (2010.07703). A paragraph of running prose with a `\parbox` in it is not: the box's words
+/// are the sentence's (68s review probe p2_parbox_only, pdflatex prints them mid-sentence).
+fn is_cover_box_paragraph(p: &Node) -> bool {
+  let mut has_box = false;
+  for c in p.get_child_nodes() {
+    match c.get_type() {
+      Some(NodeType::ElementNode) => {
+        if document::get_node_qname(&c) != pin_static("ltx:inline-block") {
+          return false;
+        }
+        has_box = true;
+      },
+      Some(NodeType::TextNode) if !c.get_content().trim().is_empty() => return false,
+      _ => {},
+    }
+  }
+  has_box
+}
+
 /// The `<ltx:p align="center">` paragraphs of `node` reached only through title-block wrappers
 /// ([`is_title_block_wrapper`]), in document order; a centered paragraph is taken whole (a
-/// minipage inside it is part of its text).
+/// minipage inside it is part of its text), any other `ltx:p` is entered only when it is a
+/// cover paragraph of boxes ([`is_cover_box_paragraph`]).
 fn collect_title_block_paragraphs(node: &Node, out: &mut Vec<Node>) {
   let q = document::get_node_qname(node);
-  if q == pin_static("ltx:p") && node.get_attribute("align").as_deref() == Some("center") {
-    out.push(node.clone());
-    return;
+  if q == pin_static("ltx:p") {
+    if node.get_attribute("align").as_deref() == Some("center") {
+      out.push(node.clone());
+      return;
+    }
+    if !is_cover_box_paragraph(node) {
+      return;
+    }
   }
   if !is_title_block_wrapper(q) {
     return;
@@ -5643,12 +5685,13 @@ fn collect_title_block_paragraphs(node: &Node, out: &mut Vec<Node>) {
 
 /// The `<ltx:p align="center">` paragraphs of the document-level title block: those reached from
 /// `root`'s children only through title-block wrappers ([`collect_title_block_paragraphs`]) and
-/// before its first sectional child (a back-matter list is passed over), in document order. A paragraph inside a float, a list, a
-/// theorem or any other container, or inside a chapter or part, is not the leading title block:
-/// the walk once took every centered paragraph before the first `<ltx:section>`, so a figure's
-/// centered line and a chapter's opening block were removed as the title (68p review probe
-/// `float.tex`; 2608.10928 the witness of the rule; titlepage covers 1304.0681, 2606.13892, a
-/// cover minipage 2010.07703). Only the document's children are visited and the walk stops at the
+/// before its first sectional child (a back-matter list is passed over), in document order. A
+/// paragraph inside a float, a list, a theorem, a titlepage or any other container, or inside a
+/// chapter or part, is not the leading title block: the walk once took every centered paragraph
+/// before the first `<ltx:section>`, so a figure's centered line and a chapter's opening block were
+/// removed as the title (68p review probe `float.tex`; 2608.10928 the witness of the rule; a cover
+/// minipage 2010.07703; the titlepage covers 1304.0681, 1503.03277, 1601.07172, 2606.13892 are kept
+/// whole since 68s round 2). Only the document's children are visited and the walk stops at the
 /// first sectional unit, so it stays linear in the leading block (it runs once per document; the
 /// old XPath scanned `preceding::` for every centered paragraph at every sectioning command —
 /// 2208.14314: 121 of 133 s; 2108.10297: 113 of 146 s; PERFORMANCE.md Principle 6).
@@ -5658,8 +5701,12 @@ fn leading_centered_paragraphs(root: &Node) -> Vec<Node> {
   while let Some(node) = cur {
     if node.get_type() == Some(NodeType::ElementNode) {
       let q = document::get_node_qname(&node);
-      // A bibliography, index or glossary list placed ahead of the cover does not end the title
-      // block (2010.07703 prints its references first in the XML, its cover minipage after them).
+      // WORKAROUND, not a rule of the title block: a bibliography, index or glossary list placed
+      // ahead of the cover does not end it. 2010.07703's bibliography (`\bibliography` at
+      // thesis.tex:480, under `\part{Listings and Bibliography}`) is built at the head of the XML,
+      // before its cover minipage, by bibentry's `\nobibliography*` in the preamble
+      // (texpreamble.tex:820) — a separate defect (RED index-bib/nobibliography_star_prints_nothing,
+      // SYNC_STATUS); once that is fixed this skip has nothing to pass over.
       let back_matter = with(q, |q| {
         matches!(q, "ltx:bibliography" | "ltx:index" | "ltx:glossary")
       });

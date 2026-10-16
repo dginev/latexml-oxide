@@ -364,6 +364,21 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   paragraph keeps `1989--2008`; `$x$` does not do it. WileyNJD-v2's `\uns` (`\ifmmode\,\else$\,$\fi`, 2208.08472) is
   the witness; the binding's `\uns` uses `\thinspace` until the kernel is fixed. RED
   `fonts-nfss/ligature_after_space_only_formula`.
+- **bibentry's `\nobibliography*` builds the bibliography where it is called** (RUST-ONLY shape: Perl 0.8.8 does not
+  load bibentry — Error undefined `\nobibliography`; 68s review finding 3): bibentry.sty `\BR@nobib` reads the `.bbl`
+  inside a group with `{thebibliography}` redefined to record entries only; ours builds a full `<ltx:bibliography>`
+  at the call, and bibentry's `\AtEndDocument` Warning says no `\bibliography` followed. 2010.07703
+  (texpreamble.tex:820, in the preamble) gets its 806 bibitems at the head of the XML, before the cover minipage,
+  instead of under `\part{Listings and Bibliography}` (thesis.tex:458-480); the title-ink dedup passes over a
+  bibliography ahead of the cover as a workaround (`leading_centered_paragraphs`, OXIDIZED_DESIGN_DIVERGENCES #146).
+  RED `index-bib/nobibliography_star_prints_nothing`.
+- **memoir's `{adjustwidth}`/`{adjustwidth*}` are tagless one-item lists** (RUST-ONLY shape: memoir raw-loaded; Perl
+  0.8.8 has no memoir binding, OmniBus; 68s review finding 2): memoir.cls:11267-11297 builds the margin-moving list,
+  so a cover set in it is `<itemize><item>` without a tag, and the title-ink dedup, which never enters a list, keeps
+  0812.2309's cover copy (article.tex:120-143, `\calccentering` + `{adjustwidth*}`): its title shows on both
+  covers plus the structured `<h1>`. Fix in the binding: the transparent body of
+  `latexml_contrib/src/changepage_sty.rs` (`{adjustwidth}`/`{adjustwidth*}`, OXIDIZED_DESIGN_DIVERGENCES #341), today
+  defined only when changepage is loaded. RED `class-bindings/memoir_adjustwidth_star_is_not_a_list`.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
 ### Fidelity audit round 2 (2026-10-08) — findings and their state
@@ -2262,8 +2277,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (67int12-rel → 68s): 263 of 264 byte-identical, 1911.09648 +6 words (its second cover's title line, printed by
   pdflatex), 2 NOMAIN; 2608.10928 and the titlepage/minipage covers (1304.0681, 1503.03277, 2606.13892, 2010.07703)
   unchanged. Repros sectioning-frontmatter/{title_ink_dedup_float_keeps_its_line, title_ink_dedup_once_per_document,
-  title_ink_dedup_not_in_chapter} RED (67int12) → GREEN, title_ink_dedup_in_titlepage GREEN in both; guards
-  `perfect_kernel_batch68s`, `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924`.
+  title_ink_dedup_not_in_chapter} RED (67int12) → GREEN; guards `perfect_kernel_batch68s`,
+  `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924`. Round 2 (title-print study stage 1; review
+  findings 1, 3, 4): never in a document with an `<ltx:titlepage>` — LaTeXML-structure-xhtml.xsl hides a document
+  `<ltx:title>` with a titlepage sibling (Perl :358-359), so the cover's copy is the displayed title; deleting it left
+  no visible title (1304.0681, 1503.03277: 0 `<h1>`, Perl once) — and `ltx:titlepage` is no title-block wrapper; a
+  non-centered `ltx:p` is entered only when it holds nothing but boxes (`is_cover_box_paragraph`), never a `\parbox`
+  in prose; a wrapper with `labels` or a frame is not pruned. The dedup is now the last resort of the title rules
+  (OXIDIZED_DESIGN_DIVERGENCES #146: stages 2-4 planned). A/B 67int13-rel → 68s round 2 over round 1's 266 papers + the
+  review's 80: 327 of 344 byte-identical (2 NOMAIN), 17 changed, all word gains, no Error/Fatal change; 15 titlepage
+  covers keep their title (1304.0681, 1503.03277, 1601.07172, 2606.13892, 1909.04773, 2012.02929, 2110.11938,
+  2201.05480, 2404.13450, 2407.17528, 2408.01596, 2409.11413, 2501.10784, 2512.19775, 2609.10069: HTML title shown
+  0 → 1, or as often as pdflatex prints it — 1909.04773, 2012.02929 and 2512.19775 on two pages each), and 0812.2309
+  and 1911.09648 are round 1's; 2608.10928 and 2010.07703 (a cover minipage, no titlepage) unchanged, one `<h1>`.
+  Repros sectioning-frontmatter/{title_ink_dedup_in_titlepage, title_ink_dedup_beside_titlepage,
+  title_ink_dedup_parbox_in_prose} RED (67int13) → GREEN, title_ink_dedup_framed_cover_keeps_its_frame RED (round 1)
+  → GREEN.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
