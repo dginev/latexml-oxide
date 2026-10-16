@@ -1818,6 +1818,14 @@ fn reading_encoding_file(encoding: &str) -> bool {
 /// `\@title` is) empty. Appended to `\lx@dropped@env@stores`, which the
 /// deposit runs in its group. Guard:
 /// `perfect_kernel_batch56::class_maketitle_reads_a_dropped_environment_store_as_given`.
+///
+/// The target is the name TeX reads after the `\def`-family or `\setbox` token: an `\expandafter` chain between them
+/// (rmmcart.cls:418 `\expandafter\gdef\expandafter\abstracts@ve\expandafter{\@grabstract}`) has run before the
+/// assignment, so it is skipped; a name built by `\csname` is not known until then, so none is recorded. A target that
+/// is not a store — a primitive, an unexpandable or Rust-bodied kernel command, a locked definition — is never nulled
+/// (`nullable_store`): read as the `\gdef`'s target, the `\expandafter` of 2104.09383 became `\let\expandafter\@empty`,
+/// which escaped the deposit's group and looped the paper's tikz-cd. Guard:
+/// `perfect_kernel_batch68f::dropped_store_skips_the_expandafter_chain_to_the_defined_name`.
 fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<()> {
   let mut nulls: Vec<Token> = Vec::new();
   for body in bodies {
@@ -1826,28 +1834,29 @@ fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<(
       if t.get_catcode() != Catcode::CS {
         continue;
       }
-      let target = toks[i + 1..]
-        .iter()
-        .find(|n| n.get_catcode() != Catcode::SPACE);
-      let Some(target) = target.filter(|n| n.get_catcode() == Catcode::CS) else {
+      let is_setbox = t.with_str(|s| s == "\\setbox");
+      if !is_setbox && !t.with_str(|s| matches!(s, "\\def" | "\\gdef" | "\\edef" | "\\xdef")) {
+        continue;
+      }
+      let Some(target) = dropped_store_target(&toks[i + 1..]) else {
         continue;
       };
-      if t.with_str(|s| s == "\\setbox") {
+      if is_setbox {
         // Only a store that exists when the deposit runs: resphilosophica's
         // renewal writes amsart's `\abstractbox`, which our amsart binding
         // never allocates.
         nulls.extend([
           T_CS!("\\ifdefined"),
-          *target,
+          target,
           T_CS!("\\setbox"),
-          *target,
+          target,
           T_CS!("\\hbox"),
           T_BEGIN!(),
           T_END!(),
           T_CS!("\\fi"),
         ]);
-      } else if t.with_str(|s| matches!(s, "\\def" | "\\gdef" | "\\edef" | "\\xdef")) {
-        nulls.extend([T_CS!("\\let"), *target, T_CS!("\\@empty")]);
+      } else if nullable_store(&target) {
+        nulls.extend([T_CS!("\\let"), target, T_CS!("\\@empty")]);
       }
     }
   }
@@ -1876,6 +1885,31 @@ fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<(
       ..ExpandableOptions::default()
     }),
   )
+}
+
+/// The name a `\def`-family or `\setbox` token assigns, read from the tokens after it as TeX reads it: spaces and an
+/// `\expandafter` chain skipped, `None` for a `\csname`-built name or a non-CS (an active character's store is not a
+/// frontmatter field). Used by `record_dropped_environment_stores`.
+fn dropped_store_target(after: &[Token]) -> Option<Token> {
+  let target = after.iter().find(|n| {
+    n.get_catcode() != Catcode::SPACE
+      && !(n.get_catcode() == Catcode::CS && n.with_str(|s| s == "\\expandafter"))
+  })?;
+  (target.get_catcode() == Catcode::CS && !target.with_str(|s| s == "\\csname")).then_some(*target)
+}
+
+/// May the deposit null this `\def`-family target? Only a store: undefined, `\let` to `\relax`, or a macro with a
+/// token body. A primitive, a register, a Rust-bodied (kernel) expandable or a locked definition is a command, not a
+/// field the class fills.
+fn nullable_store(target: &Token) -> bool {
+  if lookup_bool(&s!("{}:locked", target.with_str(|s| s.to_string()))) {
+    return false;
+  }
+  match lookup_meaning(target) {
+    None => true,
+    Some(Stored::Expandable(ref m)) => matches!(m.get_expansion(), Some(ExpansionBody::Tokens(_))),
+    Some(_) => !is_defined_token(target) && !target.with_str(|s| s == "\\relax"),
+  }
 }
 
 /// The glyph at `code` in `encoding`'s fontmap, for the text-command

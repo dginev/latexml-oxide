@@ -13727,3 +13727,39 @@ which reads the shipped aipxfm.sty raw, ran its layout code into those undefined
 `\DeclareParagraphLayout{AIPbodytext}…`, `\SetInternalRegister\hyphenpenalty{2000}`, the `aip-8s.clo` it reads: 117
 papers of the run-347 inventory, 1010.4521, 0705.1061, 0709.0115). Rust's binding records aipxfm.sty loaded, as the
 class does, and defines the designer commands. Guard `perfect_kernel_batch67z::aipproc_paper_loads_aipxfm`.
+
+## 780. The dependency scan loads a package the document marked loaded (`\ver@<name>.sty`) before the class ran
+
+latex.ltx `\@onefilewithoptions` (:18750) skips a `\usepackage`/`\RequirePackage`/`\LoadClass` whose
+`\ver@<name>.<ext>` is defined and not `\relax` (`\@ifl@aded`, :18397-18402), so a document can suppress a package its
+class loads by setting the marker first: sn-jnl-setup.sty of 2201.11056 (:5-9, 25-31) runs
+`\AddToHook{class/sn-jnl/before}{\expandafter\gdef\csname ver@program.sty\endcsname{9999/12/31}}` ("program … sets
+catcodes incompatible with pgf") and sn-jnl.cls:311's `\usepackage{program}` is skipped. Perl's loader consults only its
+own records (Package.pm:2328-2330 `_loaded`), and `maybeRequireDependencies` (Package.pm:2776-2810), which stands in for
+an unbound class's own `\usepackage` lines, loads the package anyway. Latent in Perl, which has no sn-jnl binding and
+does not scan this class; Rust's sn_jnl_cls.rs scans it, loaded program.sty (its active `|` breaks
+pgfmathparser.code.tex:912 `\pgfmathdeclareoperator{||}`) and ran 2201.11056 out of memory. Minimal trigger:
+tools/perfect_kernel/repros/loader/scan_skips_document_marked_loaded_package.tex (a `{filecontents*}` sn-jnl.cls with
+`\usepackage{program}`, the two hooks, `\usepackage{tikz}`): pdflatex 0 errors ("the character |"), Perl 0, Rust 67int4
+30 errors. Fixed in the scan only (OXIDIZED_DESIGN_DIVERGENCES #605): `content.rs::marked_loaded_by_document` skips a
+scanned candidate whose marker is set while our records say it is not loaded, with an Info naming it; `\usepackage` and
+`\RequirePackage` keep Perl's records-only test (ruling 2026-10-14, no general loader `\ver@` rule; the same gap for
+`\@namedef{ver@subfig.sty}` is described in subcaption_sty.rs). Guard
+`perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.
+
+## 781. siunitx's `S`/`s` column types are declared at load, so a later column package's letter wins
+
+siunitx re-declares its column letters at begin-document: siunitx.sty:9348-9373 (v3) maps `table-column-type` (`S`)
+through `\__siunitx_declare_column:Nnn` in `\AtBeginDocument`, undefining an earlier `\newcolumntype` of the letter with
+the warning `Tabular column type "S" overwritten with siunitx definition`; siunitx-v2.sty:5625-5626 re-creates `s` and
+`S` there too. Perl's siunitx.sty.ltxml declares them with `DefColumnType` at load only (L1379-1399), so a package
+loaded after siunitx that defines `S` — cellspace.sty:174-177, its default `column=S` — keeps it. Latent in Perl, which
+does not load cellspace (2410.09116: 1 error); Rust raw-loads it, and 2410.09116's `{llSS}` tables gave 74 errors
+(TooManyErrors once 67u moved program's load). Minimal trigger:
+tools/perfect_kernel/repros/package-bindings/siunitx_column_after_cellspace.tex
+(`\usepackage{siunitx}\usepackage{cellspace}` … `\begin{tabular}{lS}A & \num{62.0}\\`): pdflatex 0 errors and the
+warning, Perl 0 (no cellspace), Rust 67int4 3 errors (`Missing argument of the column type 'S'`). Fixed: siunitx_sty.rs
+keeps its load-time definitions (`\lx@six@column@S`/`@s`) and reinstates them at begin-document, with siunitx's
+warning when another definition replaced one. Guards
+`perfect_kernel_batch68f::{siunitx_column_wins_over_a_later_cellspace_column,
+siunitx_column_alone_raises_no_overwrite_warning}`.

@@ -82,7 +82,8 @@ LoadDefinitions!({
   }
   // subcaption cannot be used with subfig (subcaption.sty:44-47, an error); a document that loads
   // both — or keeps subfig out by `\@namedef{ver@subfig.sty}`, which our loader does not honour (a
-  // class's `\EmulatedPackage` marks packages whose bindings are its semantic layer) — means
+  // class's `\EmulatedPackage` marks packages whose bindings are its semantic layer; only a binding's
+  // dependency scan does, DIVERGENCES #605) — means
   // subcaption's sub-labels: subfig's `labelformat=empty` package option dropped the
   // "(a)" of subcaption's `{subfigure}` captions (2605.20200).
   if lookup_bool("subfig.sty_loaded") {

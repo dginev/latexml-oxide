@@ -1182,6 +1182,37 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   2104.09383 (373 Errors → PushbackLimit, 0 words), 2201.11056 (6 Errors, 22,367 words → `oom:alloc_failed` from
   gullet pushback growth, 0 words), 2410.09116 (74 Errors → TooManyErrors, 16,027 → 3,634 words) — root-causing
   (`~/data/pk_agents/main/ab_66bundle/results_ref359{,b}.tsv`).
+- **68f** (the three run-359 regressions, root-caused in agent_reports/2026-10-16_rc359_regressions.md): (A)
+  `sect08.rs::record_dropped_environment_stores` read the name a dropped frontmatter environment's `\gdef` defines as
+  the first control sequence after it, so rmmcart.cls:418's
+  `\expandafter\gdef\expandafter\abstracts@ve\expandafter{\@grabstract}` recorded `\let\expandafter\@empty`, which the
+  `\maketitle` deposit (sect05.rs `\lx@deposit@maketitle`) ran and its broken groups leaked: every later `\csname`
+  construction failed (67o1's 373 Errors) and 67s's amsthm proof lock looped a tikz-cd into PushbackLimit (RUST-ONLY,
+  since 56gm). The target is now read as TeX reads it (`dropped_store_target`: the `\expandafter` chain skipped, no name
+  for a `\csname`-built one) and only a store is nulled (`nullable_store`: undefined, `\relax`, or a token-bodied macro
+  — never a primitive, register, Rust-bodied kernel command or locked definition). (B) The binding dependency scan
+  (`content.rs::require_dependencies_filtered`) loaded sn-jnl.cls:311's program.sty although 2201.11056's
+  sn-jnl-setup.sty sets `\ver@program.sty` in `\AddToHook{class/sn-jnl/before}` (latex.ltx:18750 `\@ifl@aded` skips
+  it): program's active `|` broke pgf and the gullet ran to `oom`. The scan now skips a candidate whose
+  `\ver@<name>.<ext>` is set while our records say it is not loaded, with an Info naming it
+  (`marked_loaded_by_document`; scan-only by the 2026-10-16 ruling, DIVERGENCES #605, KNOWN_PERL_ERRORS #780 — Perl
+  Package.pm:2328-2330 tests only its records). (C) siunitx_sty.rs declared `S`/`s` at load only (Perl
+  siunitx.sty.ltxml:1379-1399), so cellspace.sty:174-177's later `\newcolumntype{S}` won and 2410.09116's `{llSS}`
+  tables gave 74 Errors (101, TooManyErrors, once 67u moved program's load); siunitx.sty:9348-9373 (and
+  siunitx-v2.sty:5625-5626) re-declare them at begin-document, which the binding now does, with siunitx's warning
+  `Tabular column type "S" overwritten with siunitx definition` (KNOWN_PERL_ERRORS #781). 2410.09116 stays a target
+  although TL 2025 pdflatex aborts it at 100 errors (_main.tex:194: cellspace 2022 replaces `\@startpbox`, array 2025
+  calls `\@startpbox@action`, array.sty:196, 388; clean with cellspace removed). Witnesses (67int4 → 68f, HTML,
+  `--preload=ar5iv.sty`): 2104.09383 269 Errors + Fatal → 0 (0 → 3,932 words, recall 0 → 87.4 %; 67s1 269 + Fatal),
+  2201.11056 Fatal `oom` → 5 Errors (13,817 words; 67s1 6 Errors, the extra lost words its undefined
+  `\figurecaptionfont`), 2410.09116 102 Errors + Fatal → 0 (3,674 → 14,176 words; the 39 lost are the citation keys of
+  missing citations, now resolved); the 67u sn-jnl witnesses 2010.12415, 2102.03176, 2104.02781 and the store-nulling
+  manuals wkmgr1, wkmgr2, mcmthesis-demo, rpsample (resphilosophica) byte-identical. Repros
+  sectioning-frontmatter/dropped_abstract_store_expandafter_gdef, loader/scan_skips_document_marked_loaded_package,
+  package-bindings/siunitx_column_after_cellspace RED (67int4) → GREEN; guards `perfect_kernel_batch68f` (5). A/B vs
+  67int4-rel over 306 papers (100 pop67o, 100 siunitx of which 39 with a later column package, 100 with a shipped class
+  renewing `{abstract}` or a `\ver@` marker, the 6 witnesses): only the three witnesses differ, 303 byte-identical;
+  the sn-jnl net (30) unchanged.
 - **Run 357** (E/F rerun of run 353 on 1a95291ef6: 67n, 67o; COMPLETE 2026-10-15 18:15:14Z in 4 h 05 min under host
   load): E 89,338 → 89,367, F 4,145 → 4,091 (success 96.80 % → 96.80 %). Transitions vs run 353: E→OK 4, E→F 43, F→E 76,
   F→OK 21. E→F: `timeout` 33 (contention: two writers and their builds shared the host), `TooManyErrors` 6, `oom` 2,

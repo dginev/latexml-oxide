@@ -3643,6 +3643,22 @@ LoadDefinitions!({
   DefColumnType!("s Optional", sub[args] {
     add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@si@column@parse");
   });
+  // siunitx owns its column letters at begin-document: siunitx.sty:9348-9373 (v3) maps `table-column-type` (`S`)
+  // through `\__siunitx_declare_column:Nnn` in `\AtBeginDocument`, undefining an earlier `\newcolumntype` of the
+  // letter with the warning "Tabular column type "S" overwritten with siunitx definition"; siunitx-v2.sty:5625-5626
+  // re-creates `s` and `S` there too. A column package loaded after siunitx (cellspace.sty:174-177 `S`, its default
+  // `column=S`) thus loses the letter to siunitx in LaTeX; declared at load only (Perl siunitx.sty.ltxml:1379-1399),
+  // ours lost it to cellspace — 2410.09116's `{llSS}` tables, 74 errors. The load-time definitions are kept and
+  // reinstated, warning when another definition replaced one. KNOWN_PERL_ERRORS #781. Guard:
+  // `perfect_kernel_batch68f::siunitx_column_wins_over_a_later_cellspace_column`.
+  RawTeX!(r##"\let\lx@six@column@S\NC@rewrite@S
+\let\lx@six@column@s\NC@rewrite@s
+\def\lx@six@redeclare@column#1{%
+  \expandafter\ifx\csname NC@rewrite@#1\expandafter\endcsname\csname lx@six@column@#1\endcsname\else
+    \expandafter\let\csname NC@rewrite@#1\expandafter\endcsname\csname lx@six@column@#1\endcsname
+    \PackageWarning{siunitx}{Tabular column type "#1" overwritten with siunitx definition}%
+  \fi}
+\AtBeginDocument{\lx@six@redeclare@column S\lx@six@redeclare@column s}"##);
 
   //======================================================================
   // Default options
