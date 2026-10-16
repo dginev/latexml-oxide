@@ -517,7 +517,8 @@ pub fn amsart_uppercase_nonmath() -> Result<()> {
 ///   `runhead` (:305) and `toc`/`lof`/`lot` (:1143-1145): `\section{\for{toc}{<short>}\except{toc}{<long>}}` keeps the
 ///   long title in the body (run-347 inventory 89 + 73 papers; 1304.2934, 1601.05128, 1912.08145).
 /// - :554, :564 `\@keywords` and `\@subjclass`, empty: `\keywords` and `\subjclass` give the frontmatter, so a
-///   document's own print of them (2510.22858 `\ifx\@keywords\@empty\else…`) prints nothing twice, as `\@dedicatory`.
+///   document's own print of them (2510.22858 `\ifx\@keywords\@empty\else…`) prints nothing twice, as `\@dedicatory`;
+///   :114 `\@dateposted` and :710-711 `\@PII` alike (memo-l.cls:116-171's abstract-page notes read them: 2412.15928).
 /// - :687-689 `\copyrightinfo{0000}{(copyright holder)}`, the defaults `\copyrightyear`/`\copyrightholder` (2403.17965).
 /// - :837, :856-864 `\abstractbox` and `\@setabstract`/`\@setabstracta`, which set a box an abstract-like environment
 ///   of the document's fills (1512.02361 and 2602.22909 `{abstracts}`, 2303.07306 and 2201.00740 `{acknowledgements}`,
@@ -573,6 +574,8 @@ pub fn amsart_class_internals() -> Result<()> {
 \newswitch{lot}
 \let\@keywords=\@empty
 \let\@subjclass=\@empty
+\let\@dateposted\@empty
+\let\@PII\@empty
 \def\copyrightyear{0000}\def\copyrightholder{(copyright holder)}
 \newbox\abstractbox
 \def\@setabstract{\iflx@ams@depositing\else\ifvoid\abstractbox\else

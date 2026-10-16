@@ -2334,7 +2334,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   136 papers, cta-author/IET-Conf-Paper/ECOC-author: 2209.11927, 2609.02892; KPE #847), caption's
   `\caption@AtBeginDocument` (caption3.sty:178-191; 111 papers, oasics/lipics/tgdk: 2608.11802, 2403.18812; KPE #848),
   color's `\color@block` (color.sty:155-156, laid under a coloured textpos block; 77 papers: 2305.15117, 2407.11064;
-  KPE #849); repros package-bindings/{lastpage_class_putlabel, caption_atbegindocument, textpos_block_colour}.
+  KPE #849); repros package-bindings/{lastpage_class_putlabel, caption_atbegindocument, textpos_block_colour}. (4) `\abstractbox` (106 papers, memo-l.cls on amsbook: 2412.15928, 2511.16188, 1512.07128): the amsbook binding now
+  has amsbook.cls's internals (`amsart_class_internals`, amsbook.cls:113-114, :616, :638-649, :1090-1121), with
+  `\@dateposted`/`\@PII` empty as `\@keywords` is (KPE #850; repro class-bindings/memo_l/memo_l_amsbook_internals).
   Guards `perfect_kernel_batch68v`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

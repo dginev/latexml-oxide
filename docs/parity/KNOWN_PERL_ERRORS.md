@@ -14366,3 +14366,13 @@ color.sty.ltxml does not define color.sty:155-156's `\color@block{wd}{ht}{dp}`, 
 coloured text block. Minimal trigger: `\usepackage{xcolor}\usepackage[absolute]{textpos}\textblockcolour{blue!15}` and
 a `{textblock*}` — pdflatex clean, Perl `Error:undefined:\color@block` (2305.15117, 2206.12186, 2407.11064, adsphd.cls;
 77 papers). Fixed in Rust (68v, color_sty.rs); guard `perfect_kernel_batch68v::batch68v_color_block_under_a_textblock`.
+
+## 850. amsbook's binding has none of amsbook.cls's internals (`\abstractbox`, `\@dateposted`)
+
+amsbook.cls.ltxml defines none of the internals amsbook.cls carries line for line with amsart.cls (#721): :113-114
+`\@dateposted`, :616 `\newbox\abstractbox`, :638-649 `\@setabstract`/`\@setabstracta`, :1090-1121 the contents lines.
+Minimal trigger: `\documentclass{amsbook}\makeatletter\ifvoid\abstractbox\fi` — pdflatex clean, Perl
+`Error:undefined:\abstractbox`. memo-l.cls (`\LoadClass{amsbook}`; 106 papers: 2412.15928, 2511.16188, 1512.07128)
+tests it in its `\tableofcontents` and reads `\@dateposted`/`\@PII` in its abstract notes. Fixed in Rust (68v,
+amsbook_cls.rs calls `amsart_class_internals`; `\@dateposted`, `\@PII` empty there); guard
+`perfect_kernel_batch68v::batch68v_amsbook_internals_for_memo_l`.

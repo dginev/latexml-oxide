@@ -107,3 +107,20 @@ fn batch68v_color_block_under_a_textblock() {
     r#"<p xml:id="p1.1">Before.<inline-block vattach="bottom" xml:id="p1.1.1"> <p xml:id="p1.1.1.1">Sidebar text.</p> </inline-block> After.</p>"#,
   ]);
 }
+
+/// class-bindings/memo_l/memo_l_amsbook_internals: amsbook's binding has amsbook.cls's internals (:113-114
+/// `\@dateposted`, :616 `\abstractbox`, :638-649 `\@setabstract`), which memo-l.cls's `\tableofcontents` and abstract
+/// notes read (2412.15928, 2511.16188, 1512.07128).
+#[test]
+fn batch68v_amsbook_internals_for_memo_l() {
+  let (counts, log, xml) = repro_with!(
+    "class-bindings/memo_l/memo_l_amsbook_internals.tex",
+    ("memomini.cls", "class-bindings/memo_l/memomini.cls")
+  );
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<abstract inlist="toc" name="Abstract." xml:id="abstract1"> <p xml:id="abstract1.1">The abstract.</p> </abstract>"#,
+    r#"<title><tag close=" ">Chapter 1</tag>One</title>"#,
+  ]);
+  assert!(!xml.contains("ERROR"), "{xml}");
+}

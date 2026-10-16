@@ -50,6 +50,11 @@ LoadDefinitions!({
   RequirePackage!("ams_support");
   ams_support_sty::amsart_author_storage()?;
   ams_support_sty::amsart_uppercase_nonmath()?;
+  // amsbook.cls carries amsart's internals line for line (:616 `\newbox\abstractbox`, :638-649 `\@setabstract`/
+  // `\@setabstracta`, :1090-1121 the contents lines, `\except`/`\for`, `\@keywords`, `\copyrightinfo`): memo-l.cls
+  // (`\LoadClass{amsbook}`, its `\tableofcontents` tests `\ifvoid\abstractbox`; 2412.15928, 2511.16188, 1512.07128)
+  // and the derived book classes call them. KNOWN_PERL_ERRORS #721.
+  ams_support_sty::amsart_class_internals()?;
 
   // Frontmatter/mainmatter/backmatter — Perl L46-56 (no-ops); amsbook.cls:944-948 switches the
   // page numbering, which `\thepage` shows (roman, then arabic).
