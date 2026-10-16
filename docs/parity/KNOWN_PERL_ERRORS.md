@@ -14113,3 +14113,21 @@ cells: 1705.02863, 1712.09863, 1806.04503, 2012.00279, 2012.07851 — 9 errors e
 2504.10323, 2505.04744, 2608.14263, 1704.06338). Fixed in Rust (listings_sty.rs, each as the binding's model makes it:
 no mode stack, no pending token, the line appended as written). Repro package-bindings/listings_mode_and_hook_internals;
 guard `perfect_kernel_batch68j::listings_mode_and_hook_internals`.
+
+## 825. newtxmath.sty's binding loads txfonts, so `\@ifpackageloaded{txfonts}` is true and `\coloneq` is ":-"
+
+newtxmath.sty.ltxml:29 `RequirePackage('txfonts')` for txfonts' symbol set, but newtxmath.sty never loads txfonts.sty:
+it declares those names itself and re-declares `\coloneq` and `\eqcolon` as its lettersA 58/59 (newtxmath.sty:1973-1974
+`\re@DeclareMathSymbol`, U+2254 and U+2255 under pdftotext; newpxmath.sty:1541-1542 the same) and `\varg` as its
+italic g (:2238). Perl's newtxmath document therefore reports txfonts loaded (cmll.sty:20 and teubner.sty:141 branch on
+it) and sets txfonts.sty.ltxml:177/:193's ":-" and "-:" and :378's ℊ. Minimal trigger:
+`\usepackage{mathtools}\usepackage{newtxmath}\makeatletter` `TX:\@ifpackageloaded{txfonts}{yes}{no} $a\coloneq b$` —
+pdflatex "TX:no a≔b", Perl "TX:yes a:-b" (the order matters: mathtools after newtxmath gives ≔ in both, as mathtools'
+binding defines `\coloneq` itself). Fixed in Rust: txfonts_sty.rs `def_txfonts_symbols` (and
+`def_txfonts_symbols_newpx_lacks`, the names TL 2025 newpxmath.sty does not declare) define the set without loading
+txfonts, the newtxmath and newpxmath bindings call them, and `newtxmath_sty::def_newtx_math_symbols` re-declares
+`\coloneq`, `\eqcolon`, `\varg` unconditionally (2304.05713, ":-" ×93 → ≔; 2303.02628, 2303.11093, 1812.07002
+byte-identical; newpxmath, whose round-1 binding loaded txfonts: 2103.00564, 2108.04582, 2212.01087, 2508.05134,
+2603.09013). Repros
+package-bindings/{newtxmath,newpxmath}_coloneq_over_mathtools; guards
+`perfect_kernel_batch68j::newtxmath_coloneq_over_mathtools`, `::newpxmath_coloneq_over_mathtools`.

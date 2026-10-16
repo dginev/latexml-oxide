@@ -4359,6 +4359,8 @@ LoadDefinitions!({
   // inits) exist: `\lstinline`'s `\lsthk@PreSet\lstset{…}\lsthk@TextStyle` (:1944-1945), which mmacells.sty:634-636
   // calls directly (1705.02863).
   DefMacro!("\\lst@AddToHook{}{}", "\\@ifundefined{lsthk@#1}{\\expandafter\\gdef\\csname lsthk@#1\\endcsname{}}{}");
+  // listings.sty:355-362 `\lst@AddToHookExe` also runs `<code>` at once (`\begingroup\globaldefs\@ne\lst@temp
+  // \endgroup`); here it is not executed, only dropped like the hook's (unchanged from 67int10).
   Let!("\\lst@AddToHookExe", "\\lst@AddToHook");
   Let!("\\lst@AddToHookAtTop", "\\lst@AddToHook");
   for hook in ["InitVars", "Init", "TextStyle", "InitVarsBOL", "SelectCharTable", "PreSet", "SetLanguage", "EndGroup",

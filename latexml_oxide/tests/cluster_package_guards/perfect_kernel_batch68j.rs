@@ -1,7 +1,8 @@
-//! Red/green guards for batch 68j (binding gaps G3 D): TeX Live package bindings, the tail — newpxmath's symbol set,
-//! listings' mode, output and hook internals, eulervm's `\mathbold`, nicematrix's `\iddots`, nameref's internals,
-//! sidecap's ragged2e and `\sidecaptionsep`, tabls' line separations, stmaryrd's `\stmry@if` (old-arrows) and
-//! libertinust1math's amsmath and own names.
+//! Red/green guards for batch 68j (binding gaps G3 D): TeX Live package bindings, the tail — newpxmath's symbol set
+//! and newpxmath's and newtxmath's `\coloneq` without txfonts loaded, listings' mode, output and hook internals,
+//! eulervm's `\mathbold`, nicematrix's `\iddots` and `\Iddots`, nameref's internals, sidecap's ragged2e and
+//! `\sidecaptionsep`, tabls' line separations, stmaryrd's `\stmry@if` (old-arrows) and libertinust1math's amsmath and
+//! own names.
 //!
 //! Every repro (`tools/perfect_kernel/repros/package-bindings/`) is checked against pdflatex.
 use latexml::util::test::assert_element;
@@ -80,6 +81,32 @@ fn newpxmath_carries_its_symbol_set() {
   );
 }
 
+/// newpxmath.sty:1541-1542 `\re@DeclareMathSymbol` `\coloneq` and `\eqcolon` (lettersA 58/59) over what mathtools gave,
+/// :1858 `\varg` its italic g, and newpxmath.sty never loads txfonts (no `\varv` either) — pdflatex "TX:no. a≔b, a≕b,
+/// 𝑔, noV." (pdftotext U+2254, U+2255); 68j round 1 "TX:yes", ":-", "-:", ℊ, V (the txfonts binding loaded).
+/// 2103.00564, 2212.01087, 2508.05134, 2603.09013.
+#[test]
+fn newpxmath_coloneq_over_mathtools() {
+  let xml = convert_checked(repro!("newpxmath_coloneq_over_mathtools.tex"), 0);
+  assert_element(&xml, "p", &[r#"xml:id="p1.1""#], &coloneq_paragraph("noV"));
+}
+
+/// newtxmath.sty:1973-1974 the same `\coloneq`/`\eqcolon` re-declaration and :2238-2240 `\varg`, `\vary`, `\varv`,
+/// without loading txfonts — pdflatex "TX:no. a≔b, a≕b, 𝑔, V."; 67int10 "TX:yes", ":-", "-:", ℊ (Perl's binding loads
+/// txfonts, KNOWN_PERL_ERRORS #825). 2304.05713; 2303.02628, 1812.07002 unchanged.
+#[test]
+fn newtxmath_coloneq_over_mathtools() {
+  let xml = convert_checked(repro!("newtxmath_coloneq_over_mathtools.tex"), 0);
+  assert_element(&xml, "p", &[r#"xml:id="p1.1""#], &coloneq_paragraph("V"));
+}
+
+/// The paragraph both `\coloneq` repros typeset, ending in `tail`.
+fn coloneq_paragraph(tail: &str) -> String {
+  format!(
+    r#"<p xml:id="p1.1">TX:no. <Math mode="inline" tex="a\coloneq b" text="a coloneq b" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMApp xml:id="p1.m1.1.1"><XMTok name="coloneq" role="RELOP">≔</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>, <Math mode="inline" tex="a\eqcolon b" text="a eqcolon b" xml:id="p1.m2"><XMath xml:id="p1.m2.1"><XMApp xml:id="p1.m2.1.1"><XMTok name="eqcolon" role="RELOP">≕</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>, <Math mode="inline" tex="\varg" text="varg" xml:id="p1.m3"><XMath xml:id="p1.m3.1"><XMTok font="italic" name="varg" role="UNKNOWN">g</XMTok></XMath></Math>, {tail}.</p>"#
+  )
+}
+
 /// listings.sty's internals that literate replacements, styles and add-ons call (:356, :431-449, :561-570, :770-772,
 /// :793-794, :1599, :1697-1698, :1735, :1944-1945; lstmisc.sty:1755, :1880-1907), with mmacells' inline-cell recipe
 /// (`\lsthk@PreSet\lstset{…}\lsthk@TextStyle\lst@Init\relax…\lst@FVConvert…\@nil\lst@ReenterModes\lst@arg
@@ -135,6 +162,26 @@ fn nicematrix_provides_iddots() {
   );
 }
 
+/// A paper's own `\iddots` before nicematrix: nicematrix.sty:146's `\ProvideDocumentCommand` keeps it, and the matrix's
+/// `\Iddots` is nicematrix's own (:1632 `\__nicematrix_Iddots:`) — pdflatex "aIDDb", the cell's dots; 68j round 1 "IDD"
+/// in the cell. 2108.05847, 2210.04594.
+#[test]
+fn nicematrix_iddots_keeps_a_paper_definition() {
+  let xml = convert_checked(repro!("nicematrix_iddots_own_definition.tex"), 0);
+  assert_element(
+    &xml,
+    "XMApp",
+    &[r#"xml:id="p1.m1.1.1""#],
+    r#"<XMApp xml:id="p1.m1.1.1"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok role="UNKNOWN">IDD</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp>"#,
+  );
+  assert_element(
+    &xml,
+    "XMCell",
+    &[r#"xml:id="p1.m2.1.1.2""#],
+    r#"<XMCell align="center" xml:id="p1.m2.1.1.2"><XMTok name="iddots" role="ID">⋰</XMTok></XMCell>"#,
+  );
+}
+
 /// nameref.sty:70 `\strip@period`, :88 `\label@hook`, :361-372 `\T@nameref`/`\@namerefstar`, which a document's own
 /// `\nameref` calls (pdflatex "See Intro and Intro."; 67int10 three undefined). 2404.09236, 1310.1737, 2511.17271.
 #[test]
@@ -182,11 +229,12 @@ fn tabls_line_separations_are_dimens() {
 #[test]
 fn stmaryrd_if_defines_its_cs() {
   let xml = convert_checked(repro!("stmaryrd_if_old_arrows.tex"), 0);
+  // The whole paragraph: nothing old-arrows ran at its load is typeset.
   assert_element(
     &xml,
-    "XMWrap",
-    &[r#"xml:id="p1.m1.2.1.3.3.2""#],
-    r#"<XMWrap xml:id="p1.m1.2.1.3.3.2"><XMTok name="llbracket" role="OPEN">⟦</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">x</XMTok><XMTok name="rrbracket" role="CLOSE">⟧</XMTok></XMWrap>"#,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    r#"<p xml:id="p1.1"><Math mode="inline" tex="a\rightarrow b\llbracket x\rrbracket" text="a rightarrow b * delimited-⟦⟧@(x)" xml:id="p1.m1"><XMath xml:id="p1.m1.2"><XMApp xml:id="p1.m1.2.1"><XMTok name="rightarrow" role="RELOP">→</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp xml:id="p1.m1.2.1.3"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok><XMDual xml:id="p1.m1.2.1.3.3"><XMApp xml:id="p1.m1.2.1.3.3.1"><XMTok meaning="delimited-⟦⟧"/><XMRef idref="p1.m1.1" xml:id="p1.m1.2.1.3.3.1.2"/></XMApp><XMWrap xml:id="p1.m1.2.1.3.3.2"><XMTok name="llbracket" role="OPEN">⟦</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">x</XMTok><XMTok name="rrbracket" role="CLOSE">⟧</XMTok></XMWrap></XMDual></XMApp></XMApp></XMath></Math></p>"#,
   );
 }
 

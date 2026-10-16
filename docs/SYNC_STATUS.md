@@ -2095,7 +2095,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
 - **68j** (binding gaps G3 D, TeX Live package bindings, the tail; bindgaps/g23_macros.tsv rows newpxmath, listings,
   eulervm, nicematrix, nameref, mathalpha, sidecap, tabls, cryptocode, old-arrows, libertinust1math; each macro checked
   against the TL 2025 file). newpxmath (newpxmath_sty.rs) — newtxmath.sty's Palatino twin, so the binding carries the
-  newtxmath binding's set (txfonts' symbols and newtxmath's own layer, now `newtxmath_sty::def_newtx_math_symbols`):
+  newtxmath binding's set (txfonts' symbols, `txfonts_sty::def_txfonts_symbols`, without loading txfonts — newpxmath.sty
+  never does, so `\@ifpackageloaded{txfonts}` stays false and `\varv`/`\varw`/`\vary` undefined, as pdflatex — and
+  newtxmath's own layer, now `newtxmath_sty::def_newtx_math_symbols`, which re-declares `\coloneq` ≔, `\eqcolon` ≕ and
+  `\varg` an italic g unconditionally, as :1541-1542/:1858 and newtxmath.sty:1973-1974/:2238 do; the newtxmath binding
+  stops loading txfonts too, keeping its names, KNOWN_PERL_ERRORS #825):
   the upright Greek `\Gammaup`… and `\upGamma`… (:1662-1743; 1709.08558, 1902.06558, 2001.06387, 2305.12589), `\nequiv`
   (:1374), `\fint` (:967), `\mapsfrom` (:1313), `\uppartial` (:1860), `\transp`, `\Angstrom`, `\circleddot`, `\cdotB`,
   `\vv`, and, new in the shared set (newtxmath.sty too), `\laplac` (:745 / newtxmath.sty:1166, U+29E0; 2603.09013) and
@@ -2110,7 +2114,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1111.7285): the kernel's `\DeclareMathAlphabet` makes a switch that runs past its argument (KNOWN_PERL_ERRORS #823,
   open; repro macro-state/declare_math_alphabet_scopes_its_argument RED). nicematrix (nicematrix_sty.rs) — `\iddots`
   when undefined (:146 `\ProvideDocumentCommand`, U+22F0; 26 papers, 2108.05847, 2210.04594), `\Iddots` now ⋰ (was
-  `\ddots`). nameref (nameref_sty.rs) — `\strip@period` (:70; 17 papers, 1310.1737, 1805.08920), `\label@hook` (:88;
+  `\ddots`), nicematrix's own (`\lx@nicematrix@Iddots`, :1632) whatever a paper made `\iddots`. nameref (nameref_sty.rs) — `\strip@period` (:70; 17 papers, 1310.1737, 1805.08920), `\label@hook` (:88;
   2511.17271), `\T@nameref`/`\@namerefstar` (:361-372; 2404.09236, 2503.18999, 2511.11546); the row's `\N`/`\Z`/`\C`
   are the papers' own. sidecap (sidecap_sty.rs) — `\sidecaptionsep` (:39-40; 1302.0875), its options (`origragged`,
   :118) and ragged2e at `\begin{document}` (:156-172; `\RaggedRight` 18 papers, 1112.5588, 1812.02282; 2406.14861 and
@@ -2126,18 +2130,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   silently; needs a kernel mechanism; repro kernel-alignment/cryptocode_halign_redefinition_numbers_lines RED);
   mathalpha `\mathbcal`/`\mathbscr` (25 papers, discounted: the pre-1.14 mathalfa interface — TL 2025 mathalpha.sty:1107
   defines them only under `oldbold`, and TL 2025 pdflatex errs undefined on 1607.07843, 1612.01166, 1612.06674,
-  1703.06879, 1709.03549). KNOWN_PERL_ERRORS #820-#824. Repros package-bindings/{newpxmath_symbol_set,
+  1703.06879, 1709.03549). KNOWN_PERL_ERRORS #820-#825. Repros package-bindings/{newpxmath_symbol_set,
   listings_mode_and_hook_internals, eulervm_mathbold, nicematrix_iddots, nameref_internals, sidecap_ragged2e_and_sep,
-  tabls_line_separations, stmaryrd_if_old_arrows, libertinust1math_amsmath_and_names} RED (67int10) → GREEN; guards
-  `perfect_kernel_batch68j` (9). A/B vs 67int10-rel over 359 papers (the rows' 265 witnesses, 100 of pop67o, 6 without a
+  tabls_line_separations, stmaryrd_if_old_arrows, libertinust1math_amsmath_and_names, newtxmath_coloneq_over_mathtools}
+  RED (67int10) → GREEN, {newpxmath_coloneq_over_mathtools, nicematrix_iddots_own_definition} RED (68j round 1) →
+  GREEN; guards `perfect_kernel_batch68j` (12). A/B vs 67int10-rel over 359 papers (the rows' 265 witnesses, 100 of pop67o, 6 without a
   main file): Errors 1216 → 755, papers with Errors 291 → 88, Fatals 5 → 5, none gains an Error; per row, Errors:
   newpxmath 75 → 4 (not newpxmath's: `\oren`, `\DeclareQuotePunctuation`, `\lst@InstallKeywords`, `\textgreekfont`),
   listings 191 → 2, eulervm 27 → 0, nicematrix 26 → 0, nameref 110 → 74, sidecap 27 → 4, tabls 28 → 0, old-arrows 38 → 0,
   libertinust1math 23 → 0; of the pop67o papers 92 byte-identical, 2 (1803.02290, 1911.12144, sidecap papers) gaining only the
-  `<?latexml package="ragged2e" options="NewParameters"?>` line. Words fall only by `<ERROR>` text (34 papers); warnings rise
+  `<?latexml package="ragged2e" options="NewParameters"?>` line. Words fall by `<ERROR>` text, leaked label keys
+  and `=15pt` text, and merged bold letters (34 papers) — except that round 1's newpxmath binding turned `\coloneq` ≔ into
+  ":-" (2103.00564 ×34, 2508.05134, 2603.09013, 2212.01087; the txfonts binding's value), fixed in round 2; warnings rise
   only as math parse warnings over formulas whose ERROR atoms are now symbols (2305.12589, 2507.05434, 2605.03875). The
   base binary crashed once (exit 139 in tikz.code.tex) on 2505.23260, clean on a rerun. Binding nets (newpxmath,
-  newtxmath, listings, eulervm, nicematrix, nameref, sidecap, tabls) vs 67int10: no document worse.
+  newtxmath, listings, eulervm, nicematrix, nameref, sidecap, tabls) vs 67int10: no document worse. Round 2 re-A/B over
+  60 papers (the newpxmath and nicematrix rows' witnesses, the `\coloneq` papers): Errors 67int10 106 → round 1 9 →
+  round 2 9; the 6 papers that change from round 1 change only `\coloneq`/`\eqcolon` (":-" → ≔ in 2103.00564 ×34,
+  2108.04582 ×33 — undefined under 67int10 —, 2508.05134, 2603.09013, 2212.01087; 2304.05713, newtxmath after
+  mathtools, ×93 and ≕ ×2, pre-existing); the newtxmath papers 2303.02628, 2303.11093, 1812.07002 are byte-identical to
+  67int10.
 - **68b** (binding gaps G3, core package bindings: bindgaps/g23_macros.tsv rows hyperref, breqn, natbib, url,
   blkarray, pict2e, amsthm; each macro verified against the TL 2025 file). hyperref (hyperref_sty.rs) — `\Hy@Info`,
   `\Hy@Warning`, `\Hy@Error`, `\Hy@WarningNoLine`, `\Hy@InfoNoLine` (:130-135; 1310.6851, 1712.03838, 1901.10472),

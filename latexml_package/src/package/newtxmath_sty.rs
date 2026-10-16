@@ -1,6 +1,8 @@
 //! newtxmath.sty — TX math fonts (delegates to other packages)
 //! Perl: newtxmath.sty.ltxml
-use super::txfonts_sty::def_math_upright_greek;
+use super::txfonts_sty::{
+  def_math_upright_greek, def_txfonts_symbols, def_txfonts_symbols_newpx_lacks,
+};
 
 /// A Greek letter in italic whatever the alphabet around it, as `def_math_upright_greek` sets an upright one.
 fn def_math_italic_greek(cs: &str, present: &str) -> Result<()> {
@@ -32,7 +34,15 @@ LoadDefinitions!({
   // `\centernot` without loading it (2002.09451, 2103.01489, 2104.13315).
   RequirePackage!("centernot");
   RequirePackage!("amssymb");
-  RequirePackage!("txfonts");
+  // Perl newtxmath.sty.ltxml:29 `RequirePackage('txfonts')`, but newtxmath.sty never loads txfonts.sty: it declares
+  // txfonts' names itself, so the binding defines txfonts' symbol set without marking txfonts loaded
+  // (`\@ifpackageloaded{txfonts}` false, as in TeX; KNOWN_PERL_ERRORS #825). The set is the one the binding has
+  // always carried, the names TL 2025's newtxmath.sty dropped included.
+  def_txfonts_symbols()?;
+  def_txfonts_symbols_newpx_lacks()?;
+  // newtxmath.sty:2466 `\varmathbb`, a blackboard alphabet of its own (as txfonts.sty:920's; KPE #355).
+  DefConstructor!("\\varmathbb{}", "#1", bounded => true, require_math => true,
+    font => { family => "blackboard", series => "medium", shape => "upright" });
   // newtxmath.sty:2344 `\widebar` (newpxmath.sty has none, so it stays out of the shared set below).
   if !is_defined("\\widebar") {
     DefMath!("\\widebar Digested", "\u{00AF}", operator_role => "OVERACCENT");
@@ -80,6 +90,13 @@ pub fn def_newtx_math_symbols() -> Result<()> {
     r"\protected\def\vv{\@ifstar\vvstar\overrightarrow}
 \def\vvstar#1#2{{\overrightarrow{#1}}_{\mkern-1mu\relax#2}}"
   );
+  // newtxmath.sty:1973-1974 (newpxmath.sty:1541-1542) `\re@DeclareMathSymbol{\coloneq}{\mathrel}{lettersA}{58}` and
+  // `{\eqcolon}…{59}`, whatever was there before — txfonts' ":-" and "-:", or mathtools' when it loaded first (pdftotext
+  // U+2254 and U+2255; 2304.05713, 2103.00564, 2108.04582, 2212.01087, 2508.05134, 2603.09013) — and :2238
+  // (newpxmath.sty:1858) `\varg`, the italic g of lettersA (txfonts' is ℊ).
+  DefMath!("\\coloneq", "\u{2254}", role => "RELOP");
+  DefMath!("\\eqcolon", "\u{2255}", role => "RELOP");
+  DefMath!("\\varg", "g");
   if !is_defined("\\mapsfrom") {
     DefMath!("\\mapsfrom", None, "\u{21A4}", role => "ARROW");
   }
@@ -101,7 +118,7 @@ pub fn def_newtx_math_symbols() -> Result<()> {
   if !is_defined("\\laplac") {
     DefMath!("\\laplac", None, "\u{29E0}");
   }
-  // newtxmath.sty:2466-2467 and :2577: its own `\varmathbb` (txfonts' above), `\vmathbb` the
+  // newtxmath.sty:2466-2467 and :2577: its own `\varmathbb` (each binding's, above), `\vmathbb` the
   // same, and a third blackboard variant `\vvmathbb` (the same font here). Constructors of their
   // own, so the reversion keeps the author's name.
   DefConstructor!("\\vmathbb{}", "#1", bounded => true, require_math => true,

@@ -1,0 +1,12 @@
+% witness: 2304.05713 (93 \coloneq, 2 \eqcolon: mathtools before newtxmath); 2303.02628, 2303.11093, 1812.07002 (newtxmath and \coloneq, unchanged)
+% oracle:  pdflatex 0 errors; "TX:no. a≔b, a≕b, 𝑔, V." (newtxmath.sty:1973-1974 \re@DeclareMathSymbol\coloneq/\eqcolon lettersA 58/59 over mathtools', :2238-2240 \varg, \vary, \varv; newtxmath.sty never loads txfonts)
+% engines: rust 67int10 = "TX:yes", a:-b, a-:b, ℊ (the txfonts binding's, loaded by newtxmath's); perl = the same (newtxmath.sty.ltxml:29 RequirePackage('txfonts'), txfonts.sty.ltxml:177, :193, :378; KNOWN_PERL_ERRORS #825)
+% expect:  0 errors, 0 warnings; TX:no, ≔ (U+2254), ≕ (U+2255), italic g, V
+% status:  RED (67int10) -> GREEN (68j r2); guard perfect_kernel_batch68j::newtxmath_coloneq_over_mathtools
+\documentclass{article}
+\usepackage{mathtools}
+\usepackage{newtxmath}
+\makeatletter
+\begin{document}
+TX:\@ifpackageloaded{txfonts}{yes}{no}. $a\coloneq b$, $a\eqcolon b$, $\varg$, \ifdefined\varv V\else noV\fi.
+\end{document}

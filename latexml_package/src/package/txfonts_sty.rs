@@ -48,6 +48,18 @@ LoadDefinitions!({
   DefConstructor!("\\varmathbb{}", "#1", bounded => true, require_math => true,
     font => { family => "blackboard", series => "medium", shape => "upright" });
 
+  def_txfonts_symbols()?;
+  def_txfonts_symbols_newpx_lacks()?;
+});
+
+/// txfonts' symbol set (Perl txfonts.sty.ltxml), less the names `def_txfonts_symbols_newpx_lacks` holds.
+/// newtxmath.sty and newpxmath.sty `\re@DeclareMathSymbol` the same names over the same symbol-font layout
+/// (newpxmath.sty:527, :644, :967, :1313, :1345, :1374, :1395; newtxmath.sty:1973) without loading txfonts.sty, so
+/// their bindings call this rather than load the txfonts binding: `\@ifpackageloaded{txfonts}` stays false there, as
+/// in TeX (cmll.sty:20 and teubner.sty:141 branch on it; KNOWN_PERL_ERRORS #825). Their own re-declarations of
+/// `\coloneq`, `\eqcolon` and `\varg` follow in `newtxmath_sty::def_newtx_math_symbols`.
+#[rustfmt::skip]
+pub fn def_txfonts_symbols() -> Result<()> {
   //======================================================================
   // Table 27 — Binary operators
   def_math_sym("\\circledbar", "\u{29B6}", None, None)?;
@@ -73,8 +85,6 @@ LoadDefinitions!({
     scriptpos => "mid", variablesize_op => true);
   DefMath!("\\idotsint", "\u{222B}\u{22EF}\u{222B}", meaning => "multiple-integral",
     role => "INTOP", variablesize_op => true);
-  DefMath!("\\idotsintop", "\u{222B}\u{22EF}\u{222B}", meaning => "multiple-integral",
-    role => "INTOP", scriptpos => "mid", variablesize_op => true);
   DefMath!("\\iint", "\u{222C}", meaning => "double-integral", role => "INTOP",
     variablesize_op => true);
   DefMath!("\\iintop", "\u{222C}", meaning => "double-integral", role => "INTOP",
@@ -89,59 +99,11 @@ LoadDefinitions!({
     scriptpos => "mid", variablesize_op => true);
 
   // Clockwise/counter-clockwise contour integrals with combining overlays
-  DefMath!("\\oiiintclockwise", "\u{222D}\u{20D9}",
-    meaning => "triple-clockwise-contour-integral", role => "INTOP",
-    variablesize_op => true);
-  DefMath!("\\oiiintclockwiseop", "\u{222D}\u{20D9}",
-    meaning => "triple-clockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", variablesize_op => true);
-  DefMath!("\\varoiiintclockwise", "\u{222D}\u{20D9}",
-    meaning => "triple-clockwise-contour-integral", role => "INTOP",
-    variablesize_op => true);
-  DefMath!("\\varoiiintclockwiseop", "\u{222D}\u{20D9}",
-    meaning => "triple-clockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", variablesize_op => true);
-  DefMath!("\\oiiintctrclockwise", "\u{222D}\u{20DA}",
-    meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
-    variablesize_op => true);
-  DefMath!("\\oiiintctrclockwiseop", "\u{222D}\u{20DA}",
-    meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", variablesize_op => true);
-  DefMath!("\\varoiiintctrclockwise", "\u{222D}\u{20DA}",
-    meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
-    variablesize_op => true);
-  DefMath!("\\varoiiintctrclockwiseop", "\u{222D}\u{20DA}",
-    meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\oiiint", "\u{2230}",
     meaning => "triple-contour-integral", role => "INTOP",
     variablesize_op => true);
   DefMath!("\\oiiintop", "\u{2230}",
     meaning => "triple-contour-integral", role => "INTOP",
-    scriptpos => "mid", variablesize_op => true);
-  DefMath!("\\oiintclockwise", "\u{222C}\u{20D9}",
-    meaning => "double-clockwise-contour-integral", role => "INTOP",
-    variablesize_op => true);
-  DefMath!("\\oiintclockwiseop", "\u{222C}\u{20D9}",
-    meaning => "double-clockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", variablesize_op => true);
-  DefMath!("\\varoiintclockwise", "\u{222C}\u{20D9}",
-    meaning => "double-clockwise-contour-integral", role => "INTOP",
-    variablesize_op => true);
-  DefMath!("\\varoiintclockwiseop", "\u{222C}\u{20D9}",
-    meaning => "double-clockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", variablesize_op => true);
-  DefMath!("\\oiintctrclockwise", "\u{222C}\u{20DA}",
-    meaning => "double-counterclockwise-contour-integral", role => "INTOP",
-    variablesize_op => true);
-  DefMath!("\\oiintctrclockwiseop", "\u{222C}\u{20DA}",
-    meaning => "double-counterclockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", variablesize_op => true);
-  DefMath!("\\varoiintctrclockwise", "\u{222C}\u{20DA}",
-    meaning => "double-counterclockwise-contour-integral", role => "INTOP",
-    variablesize_op => true);
-  DefMath!("\\varoiintctrclockwiseop", "\u{222C}\u{20DA}",
-    meaning => "double-counterclockwise-contour-integral", role => "INTOP",
     scriptpos => "mid", variablesize_op => true);
   DefMath!("\\oiint", "\u{222F}", meaning => "double-contour-integral", role => "INTOP",
     variablesize_op => true);
@@ -149,8 +111,6 @@ LoadDefinitions!({
     scriptpos => "mid", variablesize_op => true);
   DefMath!("\\ointclockwise", "\u{2232}", meaning => "clockwise-contour-integral",
     role => "INTOP", variablesize_op => true);
-  DefMath!("\\ointclockwiseop", "\u{2232}", meaning => "clockwise-contour-integral",
-    role => "INTOP", scriptpos => "mid", variablesize_op => true);
   DefMath!("\\ointctrclockwise", "\u{2233}", meaning => "counter-clockwise-contour-integral",
     role => "INTOP", variablesize_op => true);
   DefMath!("\\ointctrclockwiseop", "\u{2233}", meaning => "counter-clockwise-contour-integral",
@@ -158,10 +118,6 @@ LoadDefinitions!({
   DefMath!("\\varointclockwise", "\u{2232}", meaning => "clockwise-contour-integral",
     role => "INTOP", variablesize_op => true);
   DefMath!("\\varointclockwiseop", "\u{2232}", meaning => "clockwise-contour-integral",
-    role => "INTOP", scriptpos => "mid", variablesize_op => true);
-  DefMath!("\\varointctrclockwise", "\u{2233}", meaning => "counter-clockwise-contour-integral",
-    role => "INTOP", variablesize_op => true);
-  DefMath!("\\varointctrclockwiseop", "\u{2233}", meaning => "counter-clockwise-contour-integral",
     role => "INTOP", scriptpos => "mid", variablesize_op => true);
   DefMath!("\\sqint", "\u{2A16}", role => "INTOP", meaning => "square-contour-integral",
     variablesize_op => true);
@@ -343,13 +299,8 @@ LoadDefinitions!({
 
   //======================================================================
   // Table 44 — Variant letterforms
+  // (newtxmath.sty:2238 and newpxmath.sty:1858 re-declare `\varg` as their italic g; `def_newtx_math_symbols`.)
   def_math_sym("\\varg", "\u{210A}", None, None)?;
-  // txfonts.sty's other variant letters — no codepoint of their own (Perl leaves them out, txfonts.sty.ltxml:379-381,
-  // and they were undefined): set as the letters they are (153 run-329 papers, txfonts and newtxmath through it;
-  // astro-ph0410697, 0709.1145).
-  def_math_sym("\\varv", "v", None, None)?;
-  def_math_sym("\\varw", "w", None, None)?;
-  def_math_sym("\\vary", "y", None, None)?;
 
   //======================================================================
   // Table 61 — Miscellaneous symbols
@@ -366,4 +317,76 @@ LoadDefinitions!({
   // Bracket symbols
   def_math_sym("\\llbracket", "\u{27E6}", Some("OPEN"), None)?;
   def_math_sym("\\rrbracket", "\u{27E7}", Some("CLOSE"), None)?;
-});
+  Ok(())
+}
+
+/// The txfonts names TeX Live 2025's newpxmath.sty does not declare (pdflatex `\ifdefined` over the binding's names):
+/// the clockwise double and triple contour integrals, `\ointclockwiseop`, `\varointctrclockwise`, `\idotsintop`, and
+/// the variant letters `\varv`, `\varw`, `\vary`. The newtxmath binding keeps them (Perl's loaded txfonts whole;
+/// newtxmath.sty:2239-2240 has `\varv` and `\vary`).
+#[rustfmt::skip]
+pub fn def_txfonts_symbols_newpx_lacks() -> Result<()> {
+  DefMath!("\\idotsintop", "\u{222B}\u{22EF}\u{222B}", meaning => "multiple-integral",
+    role => "INTOP", scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\oiiintclockwise", "\u{222D}\u{20D9}",
+    meaning => "triple-clockwise-contour-integral", role => "INTOP",
+    variablesize_op => true);
+  DefMath!("\\oiiintclockwiseop", "\u{222D}\u{20D9}",
+    meaning => "triple-clockwise-contour-integral", role => "INTOP",
+    scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\varoiiintclockwise", "\u{222D}\u{20D9}",
+    meaning => "triple-clockwise-contour-integral", role => "INTOP",
+    variablesize_op => true);
+  DefMath!("\\varoiiintclockwiseop", "\u{222D}\u{20D9}",
+    meaning => "triple-clockwise-contour-integral", role => "INTOP",
+    scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\oiiintctrclockwise", "\u{222D}\u{20DA}",
+    meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
+    variablesize_op => true);
+  DefMath!("\\oiiintctrclockwiseop", "\u{222D}\u{20DA}",
+    meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
+    scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\varoiiintctrclockwise", "\u{222D}\u{20DA}",
+    meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
+    variablesize_op => true);
+  DefMath!("\\varoiiintctrclockwiseop", "\u{222D}\u{20DA}",
+    meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
+    scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\oiintclockwise", "\u{222C}\u{20D9}",
+    meaning => "double-clockwise-contour-integral", role => "INTOP",
+    variablesize_op => true);
+  DefMath!("\\oiintclockwiseop", "\u{222C}\u{20D9}",
+    meaning => "double-clockwise-contour-integral", role => "INTOP",
+    scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\varoiintclockwise", "\u{222C}\u{20D9}",
+    meaning => "double-clockwise-contour-integral", role => "INTOP",
+    variablesize_op => true);
+  DefMath!("\\varoiintclockwiseop", "\u{222C}\u{20D9}",
+    meaning => "double-clockwise-contour-integral", role => "INTOP",
+    scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\oiintctrclockwise", "\u{222C}\u{20DA}",
+    meaning => "double-counterclockwise-contour-integral", role => "INTOP",
+    variablesize_op => true);
+  DefMath!("\\oiintctrclockwiseop", "\u{222C}\u{20DA}",
+    meaning => "double-counterclockwise-contour-integral", role => "INTOP",
+    scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\varoiintctrclockwise", "\u{222C}\u{20DA}",
+    meaning => "double-counterclockwise-contour-integral", role => "INTOP",
+    variablesize_op => true);
+  DefMath!("\\varoiintctrclockwiseop", "\u{222C}\u{20DA}",
+    meaning => "double-counterclockwise-contour-integral", role => "INTOP",
+    scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\ointclockwiseop", "\u{2232}", meaning => "clockwise-contour-integral",
+    role => "INTOP", scriptpos => "mid", variablesize_op => true);
+  DefMath!("\\varointctrclockwise", "\u{2233}", meaning => "counter-clockwise-contour-integral",
+    role => "INTOP", variablesize_op => true);
+  DefMath!("\\varointctrclockwiseop", "\u{2233}", meaning => "counter-clockwise-contour-integral",
+    role => "INTOP", scriptpos => "mid", variablesize_op => true);
+  // txfonts.sty's variant letters — no codepoint of their own (Perl leaves them out, txfonts.sty.ltxml:379-381, and they
+  // were undefined): set as the letters they are (153 run-329 papers, txfonts and newtxmath through it;
+  // astro-ph0410697, 0709.1145).
+  def_math_sym("\\varv", "v", None, None)?;
+  def_math_sym("\\varw", "w", None, None)?;
+  def_math_sym("\\vary", "y", None, None)?;
+  Ok(())
+}
