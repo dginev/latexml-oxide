@@ -14342,3 +14342,27 @@ empheq.sty.ltxml reads `\begin{empheq}[<options>]` with `\empheqset{#1}` = nothi
 binding leaves `[left=…]` to the first cell, read as math, and `\empheqlbrace` undefined; `\begin{empheq}[left={F(x)=\empheqlbrace}]
 {align}` loses "F(x) =". Fixed in Rust (68v, OXIDIZED_DESIGN_DIVERGENCES #646; 1410.0933, 1906.02657, 2210.09120); guard
 `perfect_kernel_batch68v::batch68v_empheq_overload_left_and_right`.
+
+## 847. lastpage's binding has no `\lastpage@putlabel`
+
+lastpage.sty.ltxml only labels the document's end. lastpagemodern.sty:84-89 (lastpageclassic.sty:92) makes
+`\lastpage@putlabel` `\relax` at `\begin{document}`; classes call it at the end. Minimal trigger:
+`\usepackage{lastpage}\makeatletter\AtEndDocument{\clearpage\lastpage@putlabel}` — pdflatex clean, Perl
+`Error:undefined:\lastpage@putlabel` (cta-author.cls:729-731 2209.11927, 1710.08633; IET-Conf-Paper.cls:510-512
+2609.02892; ECOC-author; 136 papers). Fixed in Rust (68v, lastpage_sty.rs); guard
+`perfect_kernel_batch68v::batch68v_lastpage_putlabel_is_relax`.
+
+## 848. caption's binding has no `\caption@AtBeginDocument`
+
+caption.sty.ltxml does not define caption3.sty:178-191's `\caption@AtBeginDocument[*]{code}`. Minimal trigger:
+`\usepackage{caption}\makeatletter\caption@AtBeginDocument{\@ifpackageloaded{subfig}{}{}}` — pdflatex clean, Perl
+`Error:undefined:\caption@AtBeginDocument` (oasics-v2021.cls:725 2608.11802, 2607.26704; no-lipics-v2022.cls:988
+2403.18812; tgdk-v2021; 111 papers). Fixed in Rust (68v, caption_sty.rs); guard
+`perfect_kernel_batch68v::batch68v_caption_at_begin_document_hooks`.
+
+## 849. color's binding has no `\color@block`
+
+color.sty.ltxml does not define color.sty:155-156's `\color@block{wd}{ht}{dp}`, which textpos.sty:328-331 lays under a
+coloured text block. Minimal trigger: `\usepackage{xcolor}\usepackage[absolute]{textpos}\textblockcolour{blue!15}` and
+a `{textblock*}` — pdflatex clean, Perl `Error:undefined:\color@block` (2305.15117, 2206.12186, 2407.11064, adsphd.cls;
+77 papers). Fixed in Rust (68v, color_sty.rs); guard `perfect_kernel_batch68v::batch68v_color_block_under_a_textblock`.

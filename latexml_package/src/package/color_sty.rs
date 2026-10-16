@@ -535,6 +535,13 @@ LoadDefinitions!({
   DefMacro!("\\color@hbox", "\\hbox\\bgroup\\color@begingroup");
   DefMacro!("\\color@vbox", "\\vbox\\bgroup\\color@begingroup");
   DefMacro!("\\color@endbox", "\\color@endgroup\\egroup");
+  // color.sty:155-156 (xcolor.sty:886-887 the same): a block of the current colour the size of a box, set before
+  // it — what `\colorbox` lays under its text, and what textpos.sty:328-331 lays under a coloured `{textblock}`
+  // (`\textblockcolour`; 2305.15117, 2206.12186, 2407.11064, adsphd.cls). Perl's color.sty.ltxml lacks it
+  // (KNOWN_PERL_ERRORS #849).
+  RawTeX!(
+    r"\def\color@block#1#2#3{{\set@color\rlap{\ifcolors@\vrule\@width#1\@height#2\@depth#3\fi}}}"
+  );
 
   //========================
   // Default defined colors — Perl L136-145 runs these through RawTeX as

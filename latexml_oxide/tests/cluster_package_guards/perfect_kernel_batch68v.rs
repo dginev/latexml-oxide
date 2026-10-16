@@ -72,3 +72,38 @@ fn batch68v_empheq_overload_left_and_right() {
     r#"<tags> <tag>(4)</tag> <tag role="refnum">4</tag> </tags>"#,
   ]);
 }
+
+/// package-bindings/lastpage_class_putlabel: lastpage's `\lastpage@putlabel` is `\relax` in the document
+/// (lastpagemodern.sty:84-89), as the classes' `\AtEndDocument{\clearpage\lastpage@putlabel}` expect (cta-author.cls
+/// 2209.11927, 1710.08633; IET-Conf-Paper.cls 2609.02892).
+#[test]
+fn batch68v_lastpage_putlabel_is_relax() {
+  let (counts, log, xml) = repro!("package-bindings/lastpage_class_putlabel.tex");
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<p xml:id="p1.1">Page 1 of <ref labelref="LABEL:LastPage"/>.</p>"#,
+  ]);
+}
+
+/// package-bindings/caption_atbegindocument: caption3.sty:178-191 `\caption@AtBeginDocument[*]` queues code for
+/// `\begin{document}` (the starred after the rest) and runs it at once inside the document (oasics-v2021.cls 2608.11802,
+/// 2607.26704; no-lipics-v2022.cls 2403.18812).
+#[test]
+fn batch68v_caption_at_begin_document_hooks() {
+  let (counts, log, xml) = repro!("package-bindings/caption_atbegindocument.tex");
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<p xml:id="p1.1">Hooks: checked first, starred after; inside the document: <text font="bold" xml:id="p1.1.1">at once</text>.</p>"#,
+  ]);
+}
+
+/// package-bindings/textpos_block_colour: color.sty:155-156 `\color@block`, the colour block textpos lays under a
+/// coloured `{textblock}` (textpos.sty:328-331; 2305.15117, 2206.12186, 2407.11064).
+#[test]
+fn batch68v_color_block_under_a_textblock() {
+  let (counts, log, xml) = repro!("package-bindings/textpos_block_colour.tex");
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<p xml:id="p1.1">Before.<inline-block vattach="bottom" xml:id="p1.1.1"> <p xml:id="p1.1.1.1">Sidebar text.</p> </inline-block> After.</p>"#,
+  ]);
+}

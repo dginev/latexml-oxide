@@ -2330,7 +2330,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `U` keeps its name (OXIDIZED_DESIGN_DIVERGENCES #645, KNOWN_PERL_ERRORS #845; repro
   fonts-nfss/amsfonts_try_load_fontshape). (2) `\empheqlbrace` (229 papers; 1410.0933, 1906.02657, 2210.09120):
   empheq's `overload` and its `left`/`right` keys and delimiter commands (empheq.sty:785-1066; #646, KPE #846; repro
-  package-bindings/empheq_overload_left; residual: the math parser loses the null `\right.` of an empty fence).
+  package-bindings/empheq_overload_left; residual: the math parser loses the null `\right.` of an empty fence). (3) Package internals the bindings lacked: lastpage's `\lastpage@putlabel` (`\relax`, lastpagemodern.sty:84-89;
+  136 papers, cta-author/IET-Conf-Paper/ECOC-author: 2209.11927, 2609.02892; KPE #847), caption's
+  `\caption@AtBeginDocument` (caption3.sty:178-191; 111 papers, oasics/lipics/tgdk: 2608.11802, 2403.18812; KPE #848),
+  color's `\color@block` (color.sty:155-156, laid under a coloured textpos block; 77 papers: 2305.15117, 2407.11064;
+  KPE #849); repros package-bindings/{lastpage_class_putlabel, caption_atbegindocument, textpos_block_colour}.
   Guards `perfect_kernel_batch68v`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

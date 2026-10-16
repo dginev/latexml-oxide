@@ -1,0 +1,15 @@
+% witness: 2609.02892 (IET-Conf-Paper.cls:510-512), 2209.11927, 1710.08633 (cta-author.cls:729-731), ECOC-author
+% oracle:  pdflatex "Page 1 of 1."; 0 errors
+% engines: rust 67int15 = 1 error (undefined `\lastpage@putlabel`)
+% expect:  0 errors, 0 warnings; the LastPage reference kept
+% status:  RED (67int15) -> GREEN (68v)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{lastpage}
+% cta-author.cls:729-731, IET-Conf-Paper.cls:510-512
+\makeatletter
+\AtEndDocument{\message{Setting LastPage}\clearpage\lastpage@putlabel}
+\makeatother
+\begin{document}
+Page 1 of \pageref{LastPage}.
+\end{document}

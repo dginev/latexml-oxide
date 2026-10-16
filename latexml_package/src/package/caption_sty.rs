@@ -205,6 +205,16 @@ LoadDefinitions!({
       }
     }
   );
+  // caption3.sty:178-191 `\caption@AtBeginDocument[*]{code}`: code for `\begin{document}`, the starred after the rest;
+  // inside the document it runs at once. Classes queue their package checks with it (oasics-v2021.cls:725 2608.11802,
+  // 2607.26704; no-lipics-v2022.cls:988 2403.18812; tgdk-v2021). Perl's caption.sty.ltxml lacks it (KNOWN_PERL_ERRORS
+  // #848).
+  RawTeX!(r"\let\caption@begindocumenthook\@empty\let\caption@@begindocumenthook\@empty
+  \def\caption@AtBeginDocument{\@ifstar{\g@addto@macro\caption@@begindocumenthook}{\g@addto@macro\caption@begindocumenthook}}
+  \AtBeginDocument{\def\caption@AtBeginDocument{\@ifstar{\g@addto@macro\caption@@begindocumenthook}\@firstofone}%
+    \caption@begindocumenthook\let\caption@begindocumenthook\relax
+    \def\caption@AtBeginDocument{\@ifstar\@firstofone\@firstofone}%
+    \caption@@begindocumenthook\let\caption@@begindocumenthook\relax}");
   // caption3.sty:1349-1350 `\caption@setname{type}{name}` = `\@namedef{<type>name}{name}`.
   RawTeX!(r"\def\lx@caption@setname#1#2{\@namedef{#1name}{#2}}");
   // caption3.sty:1344-1345 `\caption@SetName` is newfloat.sty:179-188 `\newfloat@setname`: the name is set, and added

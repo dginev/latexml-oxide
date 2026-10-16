@@ -1,0 +1,18 @@
+% witness: 2305.15117, 2206.12186, 2407.11064 (`\usepackage[absolute]{textpos}` with `\textblockcolour`), adsphd.cls
+% oracle:  pdflatex "Sidebar text." (absolutely placed, on a blue!15 block) "Before. After."; 0 errors
+% engines: rust 67int15 = 1 error (undefined `\color@block`, textpos.sty:328-331)
+% expect:  0 errors, 0 warnings; the block's text kept
+% status:  RED (67int15) -> GREEN (68v)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage[absolute]{textpos}
+% 2407.11064: textpos.sty:328-331 lays `\color@block` (color.sty:155-156) under a coloured block
+\textblockcolour{blue!15}
+\begin{document}
+Before.
+\begin{textblock*}{5cm}(1cm,1cm)
+Sidebar text.
+\end{textblock*}
+After.
+\end{document}
