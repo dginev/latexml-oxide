@@ -1,12 +1,12 @@
 % witness: math0406143 (41 `\transl\nofrills` references: "English transl.,, Soviet Math. Dokl."), about 4% of AMS-TeX sources use `\transl\nofrills`/`\moreref\nofrills`
-% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; [1] B. Author, Russian paper, Dokl. 286 (1986), 821–824; English transl., Soviet Math. Dokl. 33 (1986), 204–206. [2] C. Author, Book Title, Pub, Moscow, 1990; Second Paper, Jour. Two 3 (1999). [3] D. Author, A paper, J. Three 7 (2001).
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; [1] B. Author, Russian paper, Dokl. 286 (1986), 821–824; English transl., Soviet Math. Dokl. 33 (1986), 204–206. [2] C. Author, Book Title, Pub, Moscow, 1990; Second Paper, Jour. Two 3 (1999). [3] D. Author, A paper, J. Three 7 (2001). [4] J. Editor, ed., Book Four, Pub Four, 1999.
 % engines: rust 68r round 1 = "English transl.,, Soviet Math. Dokl." (the frill comma `\nofrills` drops printed); the `\ref{3}` text glued before the authors ("3D. Author"); rust 67int12 undefined \transl
 % expect:  0 errors; `\nofrills` drops the frill punctuation after the field it marks; a `\ref`'s text before its first field after the fields, with a comma
 % status:  GREEN (68r round 2)
 \input amstex
 \documentstyle{amsppt}
 \document
-Text \cite{1}, \cite{2}, \cite{3}.
+Text \cite{1}, \cite{2}, \cite{3}, \cite{4}.
 \Refs
 \ref\no1
 \by B. Author
@@ -22,6 +22,9 @@ Text \cite{1}, \cite{2}, \cite{3}.
 \ref{3}
 \by D. Author
 \paper A paper\jour J. Three\vol 7\yr 2001
+\endref
+\ref\no4
+\ed\nofrills J. Editor, ed. \book Book Four \publ Pub Four \yr 1999
 \endref
 \endRefs
 \enddocument

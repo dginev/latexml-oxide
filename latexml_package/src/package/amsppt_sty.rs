@@ -717,6 +717,12 @@ LoadDefinitions!({
         }
         assign_value("amsbibitem@authors",
           Stored::Tokens(Tokens::new(combined)), None);
+        // amsppt.sty:1006-1010 sets the editors in the authors' place with `\unhbox\edbox@`, which empties their box:
+        // they print once. Left set, the book branch printed them again, its `\nofrills` eating the comma after them
+        // ("J. Editor, ed., Book10 J. Editor, ed. Pub10"; Perl L381-382 the same duplicate). Guard
+        // `perfect_kernel_batch68r::amsppt_transl_nofrills_drops_the_frills` (its editors-only book).
+        remove_value("amsbibitem@editors");
+        remove_value("amsbibitem@editors@nofrills");
       }
     // The text before a part's first field (`\@bibfield{random}`): a `\moreref`'s or `\transl`'s (amsppt.sty:1076-1088)
     // is boxed in `\morerefbox@`, which `\endref@` prints first (amsppt.doc:2401-2410; math0002213's "English

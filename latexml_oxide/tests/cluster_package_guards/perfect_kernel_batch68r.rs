@@ -191,7 +191,8 @@ fn amsppt_transl_nofrills_drops_the_frills() {
      English transl., Soviet Math. Dokl. 33 (1986), 204–206.\n\
      C. Author, Book Title, Pub, Moscow, 1990.\n\
      Second Paper, Jour. Two 3 (1999).\n\
-     D. Author, A paper, J. Three 7 (2001), 3.",
+     D. Author, A paper, J. Three 7 (2001), 3.\n\
+     J. Editor, ed., Book Four, Pub Four, 1999.",
     "{xml}"
   );
 }
