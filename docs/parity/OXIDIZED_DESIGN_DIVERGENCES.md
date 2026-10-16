@@ -18382,3 +18382,26 @@ the call stands (in the call's group) and the call retried. Only a command that 
 defined this way. Perl leaves them undefined (KNOWN_PERL_ERRORS #851). Repro
 class-bindings/bmcart/bmcart_environment_body_commands; guard
 `perfect_kernel_batch68v::batch68v_bmcart_environment_body_commands`.
+
+### 648. A refused class setter's replay keeps what it defines locally, as the setter would where it is called
+
+The replay of a raw class's frontmatter setter that the kernel's lock refused (`replay_class_setter`, sect05.rs;
+OXIDIZED_DESIGN #482) ran the class's body inside the replay's group, so its local definitions ended with it — in TeX
+the class's `\author` runs at the call, in no group of its own. MastersDoctoralThesis.cls:218
+`\DeclareDocumentCommand{\author}{m}{\newcommand{\authorname}{#1}\renewcommand{\@author}{#1}}` left `\authorname`
+undefined where the document prints it ("I, \authorname, declare…"; 86 papers: 2603.21941, 2312.06150, 2011.02318,
+DoctoralThesis and HKUThesis copies), and revtex4.cls's `\@author@def` `\@booleanfalse\collaboration@sw` (a `\let`)
+left the switch undefined for its `\affiliation`'s `\move@AU` (79 papers: qm2008_abs.cls 0805.2253, snp.cls 0806.0481,
+jasatex.cls 0805.4759). Now the body runs in a group of its own inside the replay's (the scaffolding — the inert
+frontmatter, the gobbled notes — stays outside it), `\lx@replay@capture` takes at its end the meanings first made in
+that group, bound nowhere outside it (state.rs `top_frame_new_meanings`), and a clean, balanced replay assigns them
+again, locally, where the call stands, before the kernel's stores and the stores the body defines are put back (so
+those stay as before). Only what the setter creates — a getter, a switch: its changes to what was defined already
+stay in the replay (pos.sty's `\seq_put_right:Nn` on the class's author seq, which the deposited title page would
+print a second time; `perfect_kernel_batch56::class_maketitle_replay_that_errors_is_dropped`). Meanings only; none of
+an erring or unbalanced replay. Perl never runs a refused definition (State.pm:502-517;
+KNOWN_PERL_ERRORS #852). Under the revtex4 copies the class's own email/affiliation code now runs past the switch and
+prints its author lines as paragraphs after the abstract (0805.2253: the e-mail addresses, the names' first letters
+lost) — the residual of reading a revtex4 copy raw (see SYNC_STATUS 68v). Repros
+class-bindings/{mastersdoctoralthesis/mdt_authorname, revtex4_copy/rtcopy_collaboration_switch}; guards
+`perfect_kernel_batch68v::{batch68v_replayed_author_keeps_authorname, batch68v_replayed_author_keeps_collaboration_switch}`.

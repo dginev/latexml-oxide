@@ -14385,3 +14385,13 @@ class loading): a class `c.cls` with `\LoadClass{article}\def\figure{\def\csente
 and `\begin{figure}\caption{\csentence{Lead.} Rest.}\end{figure}` — pdflatex "Figure 1: Lead. Rest.", Perl
 `Error:undefined:\csentence` (bmcart.cls:716 `\csentence`, :1508 `\parttitle`; 178 papers: 2305.08284, 2007.07886).
 Fixed in Rust (68v, OXIDIZED_DESIGN_DIVERGENCES #647); guard `perfect_kernel_batch68v::batch68v_bmcart_environment_body_commands`.
+
+## 852. A raw class's refused `\author` never defines what the class reads after it (`\authorname`, `\collaboration@sw`)
+
+State.pm:502-517 drops a redefinition of the locked `\author` and never runs it, so whatever the class's `\author`
+defines besides the author — a getter, a switch — stays undefined. Minimal trigger (raw class loading): a class with
+`\LoadClass{book}\RequirePackage{xparse}\DeclareDocumentCommand{\author}{m}{\newcommand{\authorname}{#1}}` and a
+document `\author{A. Author}…I, \authorname, declare` — pdflatex "I, A. Author, declare", Perl
+`Error:undefined:\authorname` (MastersDoctoralThesis.cls:218, 2603.21941; revtex4.cls copies' `\collaboration@sw`,
+0805.2253). Fixed in Rust (68v, OXIDIZED_DESIGN_DIVERGENCES #648); guards
+`perfect_kernel_batch68v::{batch68v_replayed_author_keeps_authorname, batch68v_replayed_author_keeps_collaboration_switch}`.

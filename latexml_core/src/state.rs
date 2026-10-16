@@ -4147,6 +4147,30 @@ pub fn snapshot_top_frame_meaning_keys() -> Vec<SymStr> {
     .unwrap_or_default()
 }
 
+/// The meanings first made in the innermost group: the control sequences bound at the topmost frame and nowhere
+/// outside it (every binding they have is the frame's), with their current binding (a key bound there to nothing is
+/// left out).
+pub fn top_frame_new_meanings() -> Vec<(SymStr, Stored)> {
+  let state = state!();
+  let Some(frame) = state.undo.front() else {
+    return Vec::new();
+  };
+  frame
+    .meaning
+    .iter()
+    .filter_map(|(key, count)| {
+      let values = state.meaning.get(key)?;
+      if values.len() > *count {
+        return None;
+      }
+      values
+        .front()
+        .filter(|value| !matches!(value, Stored::None))
+        .map(|value| (*key, value.clone()))
+    })
+    .collect()
+}
+
 /// The keys bound at the topmost frame for the Meaning and Value tables, taken
 /// before an autoloaded package loads; see [`hoist_top_frame_package_load`].
 pub struct TopFrameKeys {

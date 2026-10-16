@@ -1,0 +1,17 @@
+% witness: 2603.21941, 2312.06150, 2011.02318 (MastersDoctoralThesis.cls:218
+%          `\DeclareDocumentCommand{\author}{m}{\newcommand{\authorname}{#1}\renewcommand{\@author}{#1}}`; DoctoralThesis,
+%          HKUThesis copies alike)
+% oracle:  pdflatex with mdtmini.cls (beside): "A Thesis Ludovic Varrin … I, Ludovic Varrin, declare that this thesis is
+%          my own."; 0 errors
+% engines: rust 67int15 = 1 error (undefined `\authorname`: the refused `\author`'s replay ran in a group, which undid
+%          its `\newcommand`)
+% expect:  0 errors, 0 warnings; the author the frontmatter's creator, and "I, Ludovic Varrin, declare"
+% status:  RED (67int15) -> GREEN (68v)
+% preload: ar5iv.sty
+\documentclass{mdtmini}
+\author{Ludovic \textsc{Varrin}}
+\title{A Thesis}
+\begin{document}
+\maketitle
+I, \authorname, declare that this thesis is my own.
+\end{document}

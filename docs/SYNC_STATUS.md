@@ -2340,7 +2340,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   a command a class's own `\figure`/`\abstract` defines for its body is made where it is called, when the kernel's
   environment runs instead (`kernel_autoload::try_refused_environment_definition`, frontmatter_stores.rs
   `refused_environment_definition`; OXIDIZED_DESIGN_DIVERGENCES #647, KPE #851; repro
-  class-bindings/bmcart/bmcart_environment_body_commands).
+  class-bindings/bmcart/bmcart_environment_body_commands). (6) `\authorname` (86 papers, MastersDoctoralThesis.cls:218: 2603.21941, 2312.06150, 2011.02318) and
+  `\collaboration@sw` (79 papers, revtex4 copies qm2008_abs/snp/jasatex: 0805.2253, 0806.0481, 0805.4759): a refused
+  class setter's replay keeps its local definitions at the call (`\lx@replay@capture`; OXIDIZED_DESIGN_DIVERGENCES #648,
+  KPE #852; repros class-bindings/{mastersdoctoralthesis/mdt_authorname, revtex4_copy/rtcopy_collaboration_switch}).
+  Residual: a revtex4 copy read raw now runs its own author/e-mail code, which sets the e-mail lines as paragraphs after
+  the abstract, the names' first letters lost (0805.2253 "keshi OsadaElectronic address: …"); the qm2008_abs/snp copies
+  `\ProvidesClass{revtex4}` — open question: their shipped copy could take the revtex4 binding.
   Guards `perfect_kernel_batch68v`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

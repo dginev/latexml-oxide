@@ -1106,6 +1106,11 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\lx@replay@class@setter{}{}{}", sub[(name, opt, arg)] {
     replay_class_setter(&name.to_string(), opt, arg)?;
   });
+  // the end of a replayed setter's body, in its own group: what it first defined there (`replay_class_setter`)
+  DefPrimitive!("\\lx@replay@capture", {
+    let meanings = top_frame_new_meanings();
+    REPLAY_CAPTURED.with(|c| *c.borrow_mut() = meanings);
+  });
   // the replay group's inert frontmatter: each entry point a local no-op taking the same arguments
   DefPrimitive!("\\lx@replay@inert", {
     for cs in FRONTMATTER_ENTRY_POINTS {
@@ -2205,6 +2210,12 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
   i + 1
 }
 
+thread_local! {
+  /// The local definitions a replayed class setter made (`\lx@replay@capture`), for [`replay_class_setter`].
+  static REPLAY_CAPTURED: std::cell::RefCell<Vec<(SymStr, Stored)>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+}
+
 /// Run a raw class's own frontmatter setter that the lock refused (`\lx@dropped@<name>`, state.rs) for its side
 /// effects, its output discarded: the kernel's `\<name>` keeps the frontmatter, and the class keeps the flags and stores
 /// its other code tests (OXIDIZED_DESIGN #482). JINST.cls:755-762 `\renewcommand\author[1]{\global\@authortrue…}` and :819-823
@@ -2250,6 +2261,9 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
     r"{\lx@replay@inert\let\lx@frontmatter@fallback\relax\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\relax\let\label\@gobble\xdef\lx@replay@counts{\global\c@footnote=\the\c@footnote\relax\global\c@equation=\the\c@equation\relax}",
   )
   .unlist();
+  // The body in a group of its own inside the replay's: what it defines locally there (`\lx@replay@capture`) is what
+  // it would define where the call stands, as in TeX, where the class's setter runs in no group of its own.
+  replay.push(T_BEGIN!());
   replay.push(dropped);
   if takes_opt && !opt.is_empty() {
     replay.push(T_OTHER!("["));
@@ -2258,6 +2272,8 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   }
   replay.push(T_BEGIN!());
   replay.extend(arg.unlist());
+  replay.push(T_END!());
+  replay.push(T_CS!("\\lx@replay@capture"));
   replay.push(T_END!());
   replay.push(T_END!());
   replay.push(T_CS!("\\lx@replay@counts"));
@@ -2311,6 +2327,20 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   // groups left open, or groups of the document the body closed (a stray `\egroup` closing the replay's group
   // early, whose own `}` then closed the document's `{frontmatter}`)
   let unbalanced = get_frame_depth() as isize - depth as isize;
+  // What a clean replay first defined locally (a command or switch it creates; not its changes to what was defined
+  // already — pos.sty's `\seq_put_right:Nn` on the class's author seq, which the deposited title page would print a
+  // second time: perfect_kernel_batch56::class_maketitle_replay_that_errors_is_dropped) is made again where the call
+  // stands, before the stores are put back below:
+  // MastersDoctoralThesis.cls:218 `\DeclareDocumentCommand{\author}{m}{\newcommand{\authorname}{#1}…}`, which the
+  // document prints (2603.21941, 2312.06150, 2011.02318: "I, \authorname, declare…"), revtex4.cls's `\@author@def`
+  // `\@booleanfalse\collaboration@sw` (`\let`), which its `\affiliation` tests (qm2008_abs.cls, snp.cls, jasatex.cls:
+  // 0805.2253, 0806.0481, 0805.4759). Meanings only; none of an erring or unbalanced replay.
+  let captured = REPLAY_CAPTURED.with(|c| std::mem::take(&mut *c.borrow_mut()));
+  if result.is_ok() && hold.errors_raised() == 0 && unbalanced == 0 {
+    for (key, meaning) in captured {
+      assign_internal(TableName::Meaning, key, meaning, Some(Scope::Local));
+    }
+  }
   AssignValue!("lx_replaying_class_setter" => false, Some(Scope::Global));
   for (key, value) in lock_keys.iter().zip(lock_values) {
     if let Some(value) = value {

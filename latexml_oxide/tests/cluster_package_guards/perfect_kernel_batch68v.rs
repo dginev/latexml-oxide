@@ -141,3 +141,37 @@ fn batch68v_bmcart_environment_body_commands() {
     r#"<caption><tag close=": ">Figure 1</tag><text font="bold" xml:id="S0.F1.2">Lead sentence.</text> The rest of the caption.</caption>"#,
   ]);
 }
+
+/// class-bindings/mastersdoctoralthesis/mdt_authorname: a refused class setter's replay keeps what it defines locally,
+/// as the setter would at the call (sect05.rs `replay_class_setter`, `\lx@replay@capture`): MastersDoctoralThesis.cls:218
+/// `\newcommand{\authorname}{#1}` (2603.21941, 2312.06150, 2011.02318).
+#[test]
+fn batch68v_replayed_author_keeps_authorname() {
+  let (counts, log, xml) = repro_with!(
+    "class-bindings/mastersdoctoralthesis/mdt_authorname.tex",
+    (
+      "mdtmini.cls",
+      "class-bindings/mastersdoctoralthesis/mdtmini.cls"
+    )
+  );
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<creator role="author"> <personname>Ludovic <text font="smallcaps" xml:id="id1">Varrin</text></personname> </creator>"#,
+    r#"<p xml:id="p1.1">I, Ludovic <text font="smallcaps" xml:id="p1.1.1">Varrin</text>, declare that this thesis is my own.</p>"#,
+  ]);
+}
+
+/// class-bindings/revtex4_copy/rtcopy_collaboration_switch: the replayed revtex4 `\author`'s `\@booleanfalse
+/// \collaboration@sw` (`\let`) stays for the class's `\affiliation` (qm2008_abs.cls 0805.2253, snp.cls 0806.0481,
+/// jasatex.cls 0805.4759).
+#[test]
+fn batch68v_replayed_author_keeps_collaboration_switch() {
+  let (counts, log, xml) = repro_with!(
+    "class-bindings/revtex4_copy/rtcopy_collaboration_switch.tex",
+    ("rtcopy.cls", "class-bindings/revtex4_copy/rtcopy.cls")
+  );
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<creator role="author"> <personname>Takeshi Osada</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#,
+  ]);
+}
