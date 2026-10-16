@@ -13834,6 +13834,8 @@ Minimal trigger: tools/perfect_kernel/repros/class-bindings/aa_class_commands_v7
 `\arxiv{2101.00001}` `\begin{theorem}…\end{theorem}`): pdflatex clean with 2008.09582's aa.cls, Rust 67int6 12 errors
 (Perl the same two gaps). Witnesses 1601.05309, 1805.03673, 2509.20613 (`{theorem}`); 1604.01307, 1809.05581,
 2103.09505 (`\arxiv`). Fixed in aa_support_sty.rs / aa_cls.rs; guard `perfect_kernel_batch68a::aa_class_commands_v7_v91`.
+`\arxiv` is defined as a fallback guess (v8.2 and later only; 1201.4282's v7.0 has none), so a paper's own
+`\newcommand\arxiv` wins: guard `perfect_kernel_batch68a::aa_class_newer_commands_yield`.
 
 ## 741. acmart's binding does not load environ, which acmart.cls loads
 
@@ -13871,6 +13873,7 @@ clean, Rust 67int6 11 errors. Witnesses 0906.4121, 1003.2851 (`\spn@wtheorem`); 
 guard `perfect_kernel_batch68a::llncs_class_internals`. Not fixed (both engines): the default theorem set ignores
 `envcountsame`/`envcountsect` (`{theorem}` numbered within the section, each other environment on its own counter),
 where llncs.cls:1142-1176 shares one counter under `envcountsame` and numbers by section only under `envcountsect`.
+Ruled (main session 2026-10-16) to its own payload, 68g; the guard's "Fact 0.2"/"Assumption 0.3" pin this residual.
 
 ## 760. article.cls's binding lacks the `headings`/`myheadings` page styles and `\@makecaption`
 

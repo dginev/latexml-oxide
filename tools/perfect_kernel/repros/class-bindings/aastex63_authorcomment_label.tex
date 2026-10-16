@@ -1,0 +1,14 @@
+% witness: 2205.09859 (its aastex63.cls :5727-5734 "(Author~note: …)", 98 of the 102 aastex63 copies sampled; the
+%          aastex62 copies alike), 2004.09658; aastex631.cls's numbered "(Author~note 1: …)" (2107.07519 :5843-5850,
+%          119 of 125 copies)
+% oracle:  pdflatex with 2205.09859's aastex63.cls: "Note (Author note: check) here."; 0 errors
+% engines: rust 68a r1 = 0 errors, "(Author note 1: check)" (aastex631's label for every version)
+% expect:  0 errors, 0 warnings; the aastex63 label
+% status:  RED (68a r1) -> GREEN (68a r2)
+% preload: ar5iv.sty
+\documentclass{aastex63}
+\begin{document}
+\title{T}\author{A}\affiliation{I}
+\section{S}
+Note \authorcomment{1}{check} here.
+\end{document}

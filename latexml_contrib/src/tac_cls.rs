@@ -164,8 +164,5 @@ LoadDefinitions!({
 \def\thirdleveltheorems{\def\state##1{\subsubsection{\sc##1}\begingroup\em\@ifnextchar[{\@credit}{}}%
 \def\staterm##1{\subsubsection{\sc##1}\begingroup\@ifnextchar[{\@credit}{}}}"
   );
-  DefMacro!(
-    "\\dedication{}",
-    "\\@add@frontmatter{ltx:note}[role=dedication]{#1}"
-  );
+  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
 });

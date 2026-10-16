@@ -1,0 +1,19 @@
+% witness: 2312.04630, 2409.02158, 2504.08889, 2512.11572 (aastex63.cls copies with aastex631's numbered
+%          "(Author~note 1: …)": the paper's copy decides, not the class name)
+% oracle:  pdflatex with 2312.04630's aastex63.cls and with this cut: "Note (Author note 1: check) here."; 0 errors
+% engines: rust 68a r1 = "(Author note 1: check)"
+% expect:  0 errors, 0 warnings; the copy's numbered label
+% status:  GREEN (68a r1) -> GREEN (68a r2) (guards the copy dispatch)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aastex63.cls}
+\ProvidesClass{aastex63}[cut]
+\LoadClass{article}
+\def\affiliation#1{}
+\def\authorcomment#1#2{(Author~note #1: #2)}
+\end{filecontents*}
+\documentclass{aastex63}
+\begin{document}
+\title{T}\author{A}\affiliation{I}
+\section{S}
+Note \authorcomment{1}{check} here.
+\end{document}

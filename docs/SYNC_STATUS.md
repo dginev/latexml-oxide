@@ -1855,7 +1855,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\endproofbox`, `\proofof`, `\state`/`\staterm`/`\thirdleveltheorems` (:148-163; 1106.1983), `{remarks}`/`{examples}`
   at begin-document where the paper has none (:466-470; 0907.2460; a paper's own `\newtheoremrm{examples}…[section]`
   replaces them, as tac.cls's `\def`-based `\newtheorem` lets it: 2407.21129). aamas (aamas_cls.rs; 2602.10598's copy) —
-  `\doi{SUFFIX}`: `\@doi` = 10.65109/SUFFIX, a DOI pubnote from the preamble (:1435; 65 papers: 2602.03799). Repros
+  `\doi{SUFFIX}`: `\@doi` = 10.65109/SUFFIX, a DOI pubnote from the preamble (:1435; 65 papers: 2602.03799), defined
+  only where the paper's copy defines it or none is shipped (r2: the 2021 v1.78 copies of 2510.21200, 2602.05888 and
+  2608.28553's commented-out lines have none, and a reference list's own `\providecommand{\doi}` prints). Repros
   class-bindings/{aa_class_commands_v7_v91, acmart_conference_parts_and_title_fonts, aastex63x_table_and_edit_commands,
   mnras_reference_links, llncs_class_internals, jfm_legend_symbols_and_subequations, tac_class_commands, aamas_doi} RED
   (67int6) → GREEN; guards `perfect_kernel_batch68a` (8). A/B vs 67int6-rel over the 1,035 witnesses + 100 pop67o:
@@ -1873,15 +1875,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\etal`/`\ie`/`\eg`; jfm's `\Nu`, `\Ma`, `\Ri`, `\Da`; fairmeta's whole row (per-variant `\code`/`\project` with
   conflicting labels, `\authoremails`, `\github`; its `\addtolist` internals). Not this payload's: `\@makecaption` (aa
   12, mnras 5 papers: xtab's `\topcaption`, papers' own caption code; no class defines it in LaTeXML — an article/
-  kernel gap). Not ported: acmart's title-block procedures `\@mktitle`, `\@mkauthors`, `\@printendtopmatter`,
+  kernel gap). Not ported (main-session ruling 2026-10-16): acmart's title-block procedures `\@mktitle`, `\@mkauthors`, `\@printendtopmatter`,
   `\@mkauthorsaddresses`, `\@@authornotemark` (2-4 papers each, supplementary title pages: 2609.39019, 2605.14703), the
   one-paper storage macros `\@acmDOI`, `\@acmVolume`…; the old aamas20xx/aa-family classes the binding rows also list
   (aamas2017.cls `\numberofauthors`, aadebug.cls `\corr`…). Residuals: AASTeX's `\edit<n>` prints its text whatever
-  `\turnoffedit<n>` says (the class drops it); llncs's default theorems ignore `envcountsame`/`envcountsect` (numbered
-  within the section on their own counters; KNOWN_PERL_ERRORS #743, both engines); tac's theorems stay theorem
-  environments (the class's are `\subsection` headings). Side finding (pre-existing, RUST-ONLY, no repro yet): a paper's
-  `\newtheorem{proposition}{Proposition}[section]` over a binding's `\newtheorem{proposition}[theorem]…` keeps the
-  shared counter (tac's 2407.21129: "Proposition 2.0").
+  `\turnoffedit<n>` says (the class drops it; kept by ruling 2026-10-16); llncs's default theorems ignore
+  `envcountsame`/`envcountsect` (numbered within the section on their own counters; KNOWN_PERL_ERRORS #743, both
+  engines; ruled to its own payload 68g, which flips the llncs guard's "Fact 0.2"/"Assumption 0.3"); the llncs language
+  switch's divergence OXIDIZED_DESIGN_DIVERGENCES #613 accepted (ruling 2026-10-16); tac's theorems stay theorem
+  environments (the class's are `\subsection` headings). Side finding (pre-existing; RED row, ruling 2026-10-16): a paper's
+  `\newtheorem{proposition}{Proposition}[section]` over a `\newtheorem{proposition}[theorem]…` (a binding's, or the
+  paper's own after `\let\proposition\relax`) numbers from a counter that reads 0 (tac's 2407.21129: "Proposition
+  2.0"; pdflatex "Proposition 1.1" on the article repro macro-state/newtheorem_over_shared_counter_theorem, RED, not
+  root-caused). Round 2 (review of 68a): aa's `\arxiv`, `\arxivprefixe`, `\arxivprefixesep` and `\etalname` (v8.2+
+  only: 14 and 13 of 139 copies lack them, 1201.4282's v7.0) and aas_support's AASTeX 6.2+ commands (`\mdash`,
+  `\tabcaption`, `\BeforeBegin`, `\authorcomment`, `\apjsecfont`, `\onecolfootnote`, `\resetapptablenumbers`,
+  `\savetablenum`, `\tablereferences`, `\deluxetablecaption`; none in AASTeX 5.2's aastex.cls, 1001.0026) are
+  fallback guesses (`DefinitionOrigin::Fallback`), so a paper's own `\newcommand` of them wins (it was ignored, an
+  Info); `\authorcomment`'s label follows the paper's copy, else the class name ("(Author~note: …)" in aastex62/63,
+  2205.09859 :5731; numbered in aastex631 and the aastex63 copies of 2312.04630, 2409.02158, 2504.08889, 2512.11572);
+  tac's `\dedication` is a pubnote (`\lx@add@pubnote[role=dedication]`, as aa's and svjour's). Repros class-bindings/
+  {aamas_doi_older_copy, aamas_doi_2026_copy, aa_class_newer_commands_yield, aastex5_newer_commands_yield,
+  aastex63_authorcomment_label, aastex63_copy_numbered_authorcomment}; guards `perfect_kernel_batch68a` (13). Not
+  guarded the same way: the registers aa v9.1 adds (`\VSpaceAfterTabCaption`, `\yearCop`) and AASTeX's `\ackbox`,
+  `\ifnumlines` (an allocation does not yield to a paper's own; no witness).
 - **67w** (binding gaps G2: the Wiley class family; bindgaps/g23_macros.tsv rows WileyNJD-v2, WileyMSP-template,
   WileyASNA-v1, WileyNJDv5, and WileyNJD-v1 through the same binding). One family binding
   (`wileynjd_cls::wiley_njd_family`, serving WileyNJD-v1/-v2, WileyNJDv5, wileyNJDv5 and, no longer through a

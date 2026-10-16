@@ -100,6 +100,9 @@ fn llncs_class_internals() {
   let xml = clean!("llncs_class_internals.tex");
   assert!(xml.contains(r#"<p xml:id="p1.1">SUB:S</p>"#), "{xml}");
   assert!(xml.contains(r#"<p xml:id="p2.1">RH SAME</p>"#), "{xml}");
+  // "Fact 0.2" and "Assumption 0.3" pin the open residual KNOWN_PERL_ERRORS #743 (the default theorem set ignores
+  // `envcountsame`/`envcountsect`; pdflatex prints "Fact 2", "Assumption 3"): the llncs numbering payload (68g) flips
+  // them.
   assert!(
     xml.contains(r#"<theorem class="ltx_theorem_fact" inlist="thm theorem:fact" xml:id="S0.Thmtheorem2"> <tags> <tag>Fact 0.2</tag>"#),
     "{xml}"
@@ -132,13 +135,13 @@ fn jfm_legend_symbols_and_subequations() {
   assert!(xml.contains(r#"<tag>(1b)</tag>"#), "{xml}");
 }
 
-/// tac.cls (2401.05974's 2023 copy): `\mathrmdef` and its kin, `\dedication`, `\endproofbox`, `{references}` and
+/// tac.cls (2401.05974's 2023 copy): `\mathrmdef` and its kin, `\dedication` (a pubnote, as aa's and svjour's), `\endproofbox`, `{references}` and
 /// `\refs`…`\endrefs` as bibliographies.
 #[test]
 fn tac_class_commands() {
   let xml = clean!("tac_class_commands.tex");
   assert!(
-    xml.contains(r#"<note role="dedication" xml:id="id1">To C</note>"#),
+    xml.contains(r#"<pubnote name="Dedication: " role="dedication">To C</pubnote>"#),
     "{xml}"
   );
   for tex in [
@@ -170,4 +173,67 @@ fn aamas_doi() {
     "{xml}"
   );
   assert_eq!(xml.matches(r#"role="doi""#).count(), 1, "{xml}");
+}
+
+/// aamas.cls 2021 v1.78 (2510.21200's, 2602.05888's copy) defines no `\doi`: a reference list's own
+/// `\providecommand{\doi}[1]{doi: #1}` prints the DOI (pdflatex: "Title. doi: 10.1145/12345."), where the 2026 copy's
+/// `\doi` took it silently.
+#[test]
+fn aamas_doi_older_copy() {
+  let xml = clean!("aamas_doi_older_copy.tex");
+  assert!(
+    xml.contains(r#"<bibblock> A. Author. Title. doi: 10.1145/12345. </bibblock>"#),
+    "{xml}"
+  );
+  assert_eq!(xml.matches(r#"role="doi""#).count(), 0, "{xml}");
+}
+
+/// aamas.cls 2026 (2602.10598's copy :1435-1436, shipped): the paper's copy defines `\doi`, so the preamble's
+/// `\doi{SUFFIX}` stays the DOI note.
+#[test]
+fn aamas_doi_2026_copy() {
+  let xml = clean!("aamas_doi_2026_copy.tex");
+  assert!(
+    xml.contains(r#"<pubnote name="DOI: " role="doi">10.65109/SEHD8631</pubnote>"#),
+    "{xml}"
+  );
+  assert_eq!(xml.matches(r#"role="doi""#).count(), 1, "{xml}");
+}
+
+/// aa.cls before v8.2 (1201.4282's v7.0) has no `\arxiv` and no `\etalname`: a paper's own definitions win over the
+/// binding's (pdflatex: "Text MyJPB, ARX(1234.5678), EA.").
+#[test]
+fn aa_class_newer_commands_yield() {
+  let xml = clean!("aa_class_newer_commands_yield.tex");
+  assert!(
+    xml.contains(r#"<p xml:id="p1.1">Text MyJPB, ARX(1234.5678), EA.</p>"#),
+    "{xml}"
+  );
+}
+
+/// AASTeX 5.2 (1001.0026's aastex.cls) has none of the 6.2+ commands aas_support adds: a paper's own definitions win
+/// (pdflatex: "A–B, CAP(c), BB(x,y), AC(1,n), SF, FN(f), TR(t), RA.").
+#[test]
+fn aastex5_newer_commands_yield() {
+  let xml = clean!("aastex5_newer_commands_yield.tex");
+  assert!(
+    xml.contains(r#"<p xml:id="p1.1">A–B, CAP(c), BB(x,y), AC(1,n), SF, FN(f), TR(t), RA.</p>"#),
+    "{xml}"
+  );
+}
+
+/// `\authorcomment`'s label follows the version: aastex63 without a copy prints "(Author note: …)" (2205.09859's
+/// aastex63.cls :5731), a shipped aastex63.cls with aastex631's numbered label "(Author note 1: …)" (2312.04630).
+#[test]
+fn aastex63_authorcomment_label() {
+  let xml = clean!("aastex63_authorcomment_label.tex");
+  assert!(
+    xml.contains(r##"<p xml:id="S1.p1.1">Note <text color="#000000" font="bold" xml:id="S1.p1.1.1">(Author note: check) </text> here.</p>"##),
+    "{xml}"
+  );
+  let xml = clean!("aastex63_copy_numbered_authorcomment.tex");
+  assert!(
+    xml.contains(r##"<p xml:id="S1.p1.1">Note <text color="#000000" font="bold" xml:id="S1.p1.1.1">(Author note 1: check) </text> here.</p>"##),
+    "{xml}"
+  );
 }

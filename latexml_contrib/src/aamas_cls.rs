@@ -6,21 +6,29 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // (the copy read before acmart's load, while `\@currname` is this class)
+  let defines_doi = crate::shipped_class::shipped_class_text("aamas")?
+    .is_none_or(|text| crate::shipped_class::class_code_contains(&text, "\\def\\doi#1"));
   LoadClass!("acmart");
   // aamas.cls 2026 (2602.10598's copy :1435-1436, 65 of the 69 copies papers ship): `\doi{SUFFIX}` sets the paper's
   // DOI under the IFAAMAS prefix, `10.65109/SUFFIX`, which the ACM reference line prints (:1903, :2492; `\acmDOI` stays
   // unchanged, the template says). A preamble `\doi` with a suffix is the paper's DOI note (65 papers: 2602.03799,
-  // 2602.05679, 2602.06599); elsewhere, or empty, it only sets `\@doi`, as the class does.
-  RawTeX!(r"\def\@doi{10.65109/}");
-  DefMacro!("\\doi{}", sub[(suffix)] {
-    let mut out = TokenizeInternal!("\\def\\@doi{10.65109/").unlist();
-    out.extend(suffix.unlist_ref().iter().copied());
-    out.push(T_END!());
-    if lookup_bool("inPreamble") && !suffix.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
-      out.extend(TokenizeInternal!("\\lx@add@pubnote[role=doi]{10.65109/").unlist());
-      out.extend(suffix.unlist());
+  // 2602.05679, 2602.06599); elsewhere, or empty, it only sets `\@doi`, as the class does. Only that version defines
+  // it: the paper's own copy decides (the 2021 v1.78 copies of 2510.21200 and 2602.05888 have none, 2608.28553's has
+  // the lines commented out), the newest version without one, so a reference list's own
+  // `\providecommand{\doi}[1]{doi: #1}` stands where the class has no `\doi` (its DOIs printed nothing).
+  if defines_doi {
+    RawTeX!(r"\def\@doi{10.65109/}");
+    DefMacro!("\\doi{}", sub[(suffix)] {
+      let mut out = TokenizeInternal!("\\def\\@doi{10.65109/").unlist();
+      out.extend(suffix.unlist_ref().iter().copied());
       out.push(T_END!());
-    }
-    Ok(Tokens::new(out))
-  });
+      if lookup_bool("inPreamble") && !suffix.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
+        out.extend(TokenizeInternal!("\\lx@add@pubnote[role=doi]{10.65109/").unlist());
+        out.extend(suffix.unlist());
+        out.push(T_END!());
+      }
+      Ok(Tokens::new(out))
+    });
+  }
 });

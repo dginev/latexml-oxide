@@ -1,0 +1,19 @@
+% witness: 2407.21129 (tac: the paper's `\newtheorem{proposition}{Proposition}[section]` over the tac binding's
+%          `\newtheorem{proposition}[theorem]{Proposition}` prints "Proposition 2.0"); found in batch 68a
+% oracle:  pdflatex 0 errors: "Theorem 1.1 T." "Proposition 1.1 P." (the new `{proposition}` has its own counter
+%          `proposition`, within `section`: latex.ltx `\@nthm` → `\@xnthm`, `\newcounter{proposition}[section]`)
+% engines: rust 68a = 0 errors, 0 warnings, "Theorem 1.1", "Proposition 1.0" (the new counter is not stepped, or not
+%          read; not root-caused)
+% expect:  0 errors, 0 warnings; <tag>Proposition 1.1</tag>
+% status:  RED (open; side finding of 68a, Perl not run; SYNC_STATUS 68a)
+% preload: ar5iv.sty
+\documentclass{article}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\let\proposition\relax\let\endproposition\relax
+\newtheorem{proposition}{Proposition}[section]
+\begin{document}
+\section{A}
+\begin{theorem}T.\end{theorem}
+\begin{proposition}P.\end{proposition}
+\end{document}

@@ -1,4 +1,7 @@
-use crate::prelude::*;
+use crate::{
+  prelude::*,
+  shipped_class::{class_code_contains, shipped_class_text},
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -73,6 +76,21 @@ LoadDefinitions!({
     revtex4_support_sty::define_float_repair()?;
   }
   RequirePackage!("aas_support");
+  // `\authorcomment`'s label differs between versions (aas_support_sty.rs `define_authorcomment`): the paper's copy of
+  // the class decides — "(Author~note: …)" in most aastex63.cls copies (2205.09859 :5731) and in aastex62.cls, the
+  // numbered "(Author~note 1: …)" of aastex631.cls (2107.07519 :5843-5850) in the others (2312.04630, 2409.02158,
+  // 2504.08889, 2512.11572 ship such an aastex63.cls) — and without one its name, aastex62 and aastex63 unnumbered.
+  if aastex6_plus {
+    let numbered = match shipped_class_text(&requested)? {
+      Some(text) => !class_code_contains(&text, "(Author~note:"),
+      None => !matches!(requested.as_str(), "aastex62" | "aastex63"),
+    };
+    if !numbered {
+      use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+      let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+      aas_support_sty::define_authorcomment(false)?;
+    }
+  }
   // AASTeX 5.x's `{plate}` (aastex.cls 5.x:1685-1704) is gone from 6 on (aastex6.cls … aastex701.cls define no plate):
   // there, the name is the paper's own — tikz's bayesnet library `\newcommand{\plate}[4][]`
   // (tikzlibrarybayesnet.code.tex:85), which the binding's environment refused, and `\plate` in a tikzpicture opened a

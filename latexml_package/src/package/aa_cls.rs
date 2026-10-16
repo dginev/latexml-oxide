@@ -136,14 +136,21 @@ LoadDefinitions!({
   // aa.cls v8.2-v9.4 (2509.20613's v9.1 :2058-2062): `\arxiv{id}`, the arXiv identifier of a reference, in typewriter
   // type after the prefix "arXiv:" (1604.01307, 1809.05581, 2103.09505, 2307.13476, 2503.05262, 2503.23114). Perl's
   // aa_support.sty.ltxml has `\eprint` but no `\arxiv` (KNOWN_PERL_ERRORS #740).
-  RawTeX!(r"\def\arxivprefixe{arXiv}\def\arxivprefixesep{:}\def\arxiv#1{{\tt \arxivprefixe\arxivprefixesep\ignorespaces#1}}");
   // v9.1 (2509.20613's copy): the language editor's inline note `\LEt{…}`, a red bold "[Note N: …]" numbered by the
   // `lenote` counter (:165, :170-173), defined at the document's start, so a paper's own `\LEt` (1608.08833's) stands
   // (1607.03898); the first-page "Special feature" line `\topics{…}` (:837-838, kept as a note of the frontmatter;
   // 1810.01624); the running head's `\etalname` (:438); the gap below a table caption (:364-365; 2504.01061); the
   // copyright year `\yearCop` (:537, a token register; 2609.03060).
+  // `\arxiv` (with its prefixes) and `\etalname` are the newer releases' only (14 and 13 of 139 sampled copies lack
+  // them: 1201.4282's v7.0), so, as the five journals below, a paper's own definition wins (`\newcommand\arxiv[1]`:
+  // the review's rev68a a1; 1201.4282).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\def\arxivprefixe{arXiv}\def\arxivprefixesep{:}\def\arxiv#1{{\tt \arxivprefixe\arxivprefixesep\ignorespaces#1}}
+\newcommand*\etalname{et al.}");
+  }
   RawTeX!(r"\newcounter{lenote}\AtBeginDocument{\providecommand{\LEt}[1]{\stepcounter{lenote}\normalfont\textbf{\color{red}[Note \arabic{lenote}: #1] }}}
-\newcommand*\etalname{et al.}\newlength{\VSpaceAfterTabCaption}\setlength{\VSpaceAfterTabCaption}{10pt}\newtoks\yearCop");
+\newlength{\VSpaceAfterTabCaption}\setlength{\VSpaceAfterTabCaption}{10pt}\newtoks\yearCop");
   DefMacro!("\\topics{}", "\\lx@add@frontmatter{ltx:note}[role=topics]{#1}");
   // The A&A language editor's v9.1 copy (7 identical copies, 2008.09582, 2105.01661, 2109.04752, 2209.13449,
   // 2405.13486, 2408.13105, 2509.05225; 2008.09582's :1902-1961) adds five journals to the class's list (aa_support's):

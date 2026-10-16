@@ -1,3 +1,5 @@
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::{
   engine::latex_constructs::{after_float, before_float_ex},
   package::subcaption_sty::subcaption_width_props,
@@ -430,18 +432,21 @@ LoadDefinitions!({
   //   such hook); `\mdash` (:7141); `\apjsecfont` (:219), the section heading's font (2306.12805); the
   //   acknowledgments box `\ackbox` (:1205; 2605.04423 fills its own); `\ifnumlines` (:253, the `linenumbers`
   //   option's flag; 2608.12156).
-  RawTeX!(r"\def\resetapptablenumbers{\global\c@table=0 \global\c@figure=0 \global\c@equation=0
+  // These are AASTeX 6.2 and later's only (aastex62.cls … aastex701.cls; AASTeX 5.2's aastex.cls, 1001.0026's, has none
+  // of them, nor `\authorcomment` aastex701.cls), and this binding serves AASTeX 5 and emulateapj too: as a fallback's
+  // guess, so a paper's own `\newcommand\mdash{--}`, `\tabcaption`, `\BeforeBegin` … wins (the review of 68a; repro
+  // class-bindings/aastex5_newer_commands_yield).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\def\resetapptablenumbers{\global\c@table=0 \global\c@figure=0 \global\c@equation=0
 \def\thetable{\thesection\the\c@table}\def\fnum@table{{\bf\tablename~\thetable}}\def\thefigure{\thesection\the\c@figure}}
 \expandafter\def\csname editcolor1\endcsname{black}\expandafter\def\csname editcolor2\endcsname{black}%
 \expandafter\def\csname editcolor3\endcsname{black}\newcount\colorcount
-\def\authorcomment#1#2{{\colorcount=#1 \ifturnoffedit\let\go\ignorespaces\else\let\go\relax
-\color{\csname editcolor\the\colorcount\endcsname}%
-\ifnum\colorcount=1{\ifturnoffone\else\bf (Author~note 1: #2)\ \fi}\else
-\ifnum\colorcount=2{\ifturnofftwo\else\it (Author~note 2: #2)\ \fi}\else
-\ifnum\colorcount=3{\ifturnoffthree\else (Author~note 3: #2)\ \fi}\fi\fi\fi\fi\go}}
 \let\onecolfootnote\footnote
 \long\def\BeforeBegin#1#2{\expandafter\gdef\csname BeforeBeg#1\endcsname{#2}}
 \def\mdash{---}\def\apjsecfont{\normalsize}\newbox\ackbox\newif\ifnumlines");
+    define_authorcomment(true)?;
+  }
   // aastex701.cls:6737 `\lambdabar`, the barred lambda (as revsymb_sty.rs has it).
   DefMath!("\\lambdabar", "\u{03BB}\u{0304}");
 
@@ -604,10 +609,14 @@ LoadDefinitions!({
   RequirePackage!("deluxetable");
   // (after deluxetable, whose `\tablenum`, `\tablerefs`, `\tablecaption` and `\tabletypesize` these follow; the
   // AASTeX 6.x table commands listed above)
-  RawTeX!(r"\def\tabletypesize#1{\gdef\currtabletypesize{#1}}\tabletypesize{\small}
-\let\savetablenum\tablenum\let\tablereferences\tablerefs\let\deluxetablecaption\tablecaption
+  RawTeX!(r"\def\tabletypesize#1{\gdef\currtabletypesize{#1}}\tabletypesize{\small}");
+  {
+    // (6.2 and later's only, as above)
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\let\savetablenum\tablenum\let\tablereferences\tablerefs\let\deluxetablecaption\tablecaption
 \def\tabcaption{\@ifnextchar[{\@xtabcaption}{\@tabcaption}}\def\@tabcaption#1{{\def\@captype{table}\caption{#1}}}
 \def\@xtabcaption[#1]#2{{\def\@captype{table}\caption{#2}}}");
+  }
   Let!("\\planotable", "\\deluxetable");
   // AASTeX 3's `{planotable}` ends its data itself, without `\enddata` (aaspptwo.sty:252-256 `\endplanotable`:
   // `\crcr\noalign{\vskip .7ex}\hline\endtabular…`; astro-ph9502038); AASTeX 4's (aas2pp4.sty:322) is
@@ -1002,6 +1011,25 @@ LoadDefinitions!({
 });
 
 /// An AASTeX panel's properties: its width, as a sub-figure's, and the gridline row it stands in, if any.
+/// `\authorcomment<n>{text}` (aastex631.cls:5843-5850 in 2107.07519's copy), "(Author~note n: text)" unless the edit
+/// switches turn it off; `numbered` false for the versions that print "(Author~note: text)" — aastex63.cls (98 of the
+/// 102 copies sampled: 2205.09859 :5727-5734, 2004.09658) and aastex62.cls (`aastex_cls`: the paper's copy decides,
+/// else the class name). The definer runs at the caller's origin.
+pub(crate) fn define_authorcomment(numbered: bool) -> Result<()> {
+  let n = |k: u8| if numbered { s!(" {k}") } else { String::new() };
+  RawTeX!(&s!(
+    r"\def\authorcomment#1#2{{{{\colorcount=#1 \ifturnoffedit\let\go\ignorespaces\else\let\go\relax
+\color{{\csname editcolor\the\colorcount\endcsname}}%
+\ifnum\colorcount=1{{\ifturnoffone\else\bf (Author~note{}: #2)\ \fi}}\else
+\ifnum\colorcount=2{{\ifturnofftwo\else\it (Author~note{}: #2)\ \fi}}\else
+\ifnum\colorcount=3{{\ifturnoffthree\else (Author~note{}: #2)\ \fi}}\fi\fi\fi\fi\go}}}}",
+    n(1),
+    n(2),
+    n(3)
+  ));
+  Ok(())
+}
+
 fn aas_panel_props(args: &[Option<Digested>]) -> Result<SymHashMap<Stored>> {
   let mut props = subcaption_width_props(args)?;
   let row = lookup_int("lx_aas_gridrow");
