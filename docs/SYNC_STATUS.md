@@ -1169,8 +1169,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   a_watchdog_timeout_is_reported_as_fatal_timeout, an_allocation_past_rlimit_as_is_reported_as_fatal_oom}` (the
   `alloc_exhausted` test fault spends the address space through the raw allocator first). Residual: a hook whose sweep
   itself fails to allocate exits without finishing it.
-- **Runs 358/359** (E/F rerun of run 357 on 595ce52d9e: 67q, 67r, 67p, 67s, 67u, 67ps; marked 2026-10-15 20:16Z):
-  in progress; compare with run 357 when complete.
+- **Runs 358/359** (E/F rerun of run 357 on 595ce52d9e: 67q, 67r, 67p, 67s, 67u, 67ps; COMPLETE 2026-10-16
+  00:15:50Z): E 89,367 → 86,301, F 4,091 → 4,011 (success 96.80 % → 96.91 % of 2,922,325). Transitions vs run 357:
+  E→OK 480, E→warning 2,602, E→F 26, F→OK 1, F→warning 63, F→E 42. E→F: `timeout` 14 + `Timeout:Convert` 1, `oom` 6,
+  `TooManyErrors` 4, `PushbackLimit` 1. Reconverted locally (595ce52d9e and 4a7853352a agree on every one): 9 of the
+  12 non-timeout ones convert with no Fatal (fleet contention), 3 are regressions of this bundle against 1a95291ef6:
+  2104.09383 (373 Errors → PushbackLimit, 0 words), 2201.11056 (6 Errors, 22,367 words → `oom:alloc_failed` from
+  gullet pushback growth, 0 words), 2410.09116 (74 Errors → TooManyErrors, 16,027 → 3,634 words) — root-causing
+  (`~/data/pk_agents/main/ab_66bundle/results_ref359{,b}.tsv`).
 - **Run 357** (E/F rerun of run 353 on 1a95291ef6: 67n, 67o; COMPLETE 2026-10-15 18:15:14Z in 4 h 05 min under host
   load): E 89,338 → 89,367, F 4,145 → 4,091 (success 96.80 % → 96.80 %). Transitions vs run 353: E→OK 4, E→F 43, F→E 76,
   F→OK 21. E→F: `timeout` 33 (contention: two writers and their builds shared the host), `TooManyErrors` 6, `oom` 2,
@@ -1514,7 +1520,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\IEEEeqnarrayseprowcut`, `\IEEEeqnarrayrulerow`, `\IEEEeqnarraydblrulerow`, `\IEEEeqnarraydblrulerowcut` (:1566-1690;
   IEEEtran.cls:3247-3360) as spanning leader-rule rows in an `{IEEEeqnarraybox}` (open, KPE #710 residual: in an
   `{IEEEeqnarray}` a rule row keeps its number but not its rule and a separator row is removed with its number, as
-  `{eqnarray}` rearranges rows; RED `alignment/ieeeeqnarray_rule_rows_keep_rules_and_numbers`). IEEEtrantools under any
+  `{eqnarray}` rearranges rows; RED `alignment/ieeeeqnarray_rule_rows_keep_rules_and_numbers`; ruled 2026-10-15: such
+  rows stay numbered rows with their rules, as pdflatex numbers them — kernel-wide for the eqnarray family, batch 68e
+  with its own A/B, low paper impact: the 32 sampled papers with rule rows use an `{IEEEeqnarraybox}`; IEEEtrantools'
+  `\PackageError` under IEEEtran stays silent). Open: an IEEEtran appendix subsection heading shows its refnum "A-A"
+  where pdflatex prints `\thesubsectiondis` "A." (IEEEtran.cls:2586; pre-existing). IEEEtrantools under any
   class but IEEEtran (ieeetrantools_sty.rs; under IEEEtran the package only raises its error, IEEEtrantools.sty:73-78, and
   the class binding's IEEEproof, lists and `\IEEEauthorrefmark` stay): the
   IEEEproof family with its QED switches (:2726-2747) and the IED lists with their parameters (:1000-1140), moved from the
@@ -1699,7 +1709,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   long tail across all ten classes) is a pending user decision; class-bindings/elsart_support_theorem_tag_zero stays RED;
   sn-jnl with no shipped copy loads none of the class's packages (rotating…); the same visible-`@name` flaw in bindings
   outside this batch: sn_jnl_cls.rs `{declarations}` (`name='declarations'`, an environment sn-jnl.cls does not define)
-  and jmlr_cls.rs/jmlr2e_sty.rs `\acks` (`name='acknowledgments-disclosure-of-funding'`).
+  and jmlr_cls.rs/jmlr2e_sty.rs `\acks` (`name='acknowledgments-disclosure-of-funding'`). Ruled 2026-10-15: arximspdf's
+  borrowed amsthm also gives it `{proof}`, which the class lacks (pdflatex errs); kept, as it keeps the author's proof.
+  Open row: arximspdf/arxstspdf gaps outside this batch from a 24-paper sample — `\ccline` (7 arxstspdf papers),
+  `\freefootnotetext`, `\write@toc@…contentsline`, `\maxcsec`, `{aligned}`, and arxbj's `\setvaluelist` moved into
+  ims_support_sty.rs for arximspdf (1203.0565).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,
