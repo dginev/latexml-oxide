@@ -527,8 +527,8 @@ fn balanced_group(text: &str) -> Option<&str> {
 /// The theorem styles of a version, for a paper that ships no copy of the class: the bodies of WileyNJD-v2.cls:2902-2963
 /// (1712.08341, 294 of the 312 v2 copies; the WileyNJD-v1.cls of 2020, 2010.09463, alike), WileyASNA-v1.cls:2401-2463
 /// (1804.11014, and 18 v2 copies: the bodies indented, WBstyleone's italic), WileyNJDv5.cls:6274-6335 (2302.02310: `plain`
-/// and WBstyleone italic) and WileyNJD-v1.cls:4481-4543 (1511.08547: the class's styles italic, their upright math left
-/// out, [`UPRIGHT_MATH`], every head bold).
+/// and WBstyleone italic) and WileyNJD-v1.cls:4481-4543 (1511.08547: the WB styles italic with bold heads, `plain`
+/// upright with an italic head; their upright math left out, [`UPRIGHT_MATH`]).
 fn theorem_styles(version: WileyVersion, asna: bool) -> &'static str {
   match version {
     WileyVersion::V2 if asna => {

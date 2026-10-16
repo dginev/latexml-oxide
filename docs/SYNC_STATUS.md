@@ -1731,7 +1731,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   the abstract, the kernel's `\abstract` read "[Summary]" as text in 219 of 490 sampled papers; 1701.02349); the 47
   theorems in the class's three amsthm styles and its redefined `plain` (v2:2902-3030, v5, ASNA; v1:4481-4568 its 20,
   with `{example}`), the styles as the paper's copy defines them (`copy_theorem_styles`; without a copy the version's:
-  v2 bodies upright, v5's `plain` and WBstyleone italic, ASNA's WBstyleone italic, v1's styles italic), WBstylethree
+  v2 bodies upright, v5's `plain` and WBstyleone italic, ASNA's WBstyleone italic, v1's WB styles italic with
+  bold heads and its `plain` upright with an italic head; 2302.02310's v5 theorems and lemmas italic, 1902.09230's own
+  `{Algorithm}` upright, as pdflatex sets them), WBstylethree
   left current (v2:3005: a paper's own `\newtheorem{thm}` upright as pdflatex sets it, 1712.08341's copy; the binding
   had ended with an invented `\theoremstyle{plain}`):
   `{assumption}` 44+23 papers (1803.11411, 1808.10367), `{eexample}` (1806.09518), `{property}`, `{result}`, `{LWrule}`,
@@ -1752,7 +1754,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   papers; their APA style is amsrefs', apacite only for v2 and later). WileyMSP-template (wileymsp_template_cls.rs):
   `\dedication` (:34, a dedication pubnote; 158 papers, nearly all the template's empty `\dedication{}`: 2003.09099),
   `\threesubsection` (:49, "Head: " run in italic; 87 papers: 2009.06328). OXIDIZED_DESIGN_DIVERGENCES #601 (table
-  notes' leading item), #602 (`\doiheadtext`), #603 (a `\section` in `{boxtext}` is the box head). Not done: `\xleftrightarrow` (v2/v5 via amsmath's
+  notes' leading item), #602 (`\doiheadtext`), #603 (a `\section` in `{boxtext}` is the box head). Not done: v1's `\everymath{\rm}\let\text\mathrm` in theorem bodies (ruled 2026-10-15:
+  left out, `UPRIGHT_MATH` — ported, it reads `A_{ij}` as one `\rm` identifier with the subscript "ij"; math in a v1
+  theorem is italic where the PDF sets it upright: 1511.08547, 1707.00398, 1709.02675), v5's
+  `[apaciteclassic]{NJDapacite}` (the binding loads apacite with `natbibapa`; no witness harmed), `\xleftrightarrow` (v2/v5 via amsmath's
   `\ext@arrow`, which the binding renders as →; 2211.16474, 2309.00837), one-copy names (`{Corollary}`… 2002.01818,
   `\cd`/`\ci` 2408.07575, `\E` 2407.00139, `\maketitlesup` 2510.16163: not in the class as shipped elsewhere), and
   wiley-article.cls (#212: Overleaf's own Wiley template, raw, no binding; its `\keywords` is defined inside the
