@@ -36,7 +36,7 @@ use std::collections::VecDeque;
 
 use latexml_core::{
   binding::store_setters::{STORE_SETTERS, defined_by_a_binding},
-  definition::origin::DefinitionOrigin,
+  definition::origin::{DefinitionOrigin, with_origin},
 };
 use rustc_hash::FxHashSet;
 
@@ -789,6 +789,110 @@ fn handed_to(body: &[Token], out: &mut Vec<Token>) {
       out.push(T_CS!("\\@maketitle"));
     }
   }
+}
+
+/// The definition of `target` a body makes with `\def`, `\gdef`, `\edef` or `\xdef` (a `\long`/`\global`/
+/// `\protected` prefix kept): the tokens from the prefix through the definition's closing brace, its parameters as
+/// stored (a doubled `##1` is a parameter token and `1`), so digesting them defines `target` as the body would. `None`
+/// when the body makes none, or only one that reads the body's own arguments (it depends on the call).
+fn nested_definition_of(body: &[Token], target: Token) -> Option<Vec<Token>> {
+  for (i, t) in body.iter().enumerate() {
+    if t.get_catcode() != Catcode::CS
+      || !t.with_str(|s| matches!(s, "\\def" | "\\gdef" | "\\edef" | "\\xdef"))
+    {
+      continue;
+    }
+    let j = skip_spaces(body, i + 1);
+    if body.get(j) != Some(&target) {
+      continue;
+    }
+    let mut k = j + 1;
+    while body
+      .get(k)
+      .is_some_and(|p| p.get_catcode() != Catcode::BEGIN)
+    {
+      k += 1;
+    }
+    let Some(past) = group_end(body, k) else {
+      continue;
+    };
+    if body[j..past]
+      .iter()
+      .any(|p| p.get_catcode() == Catcode::ARG)
+    {
+      continue;
+    }
+    let mut from = i;
+    while from > 0
+      && body[from - 1].with_str(|s| matches!(s, "\\long" | "\\global" | "\\protected"))
+    {
+      from -= 1;
+    }
+    return Some(body[from..past].to_vec());
+  }
+  None
+}
+
+/// An undefined `token` that an open environment defines for its body in the class's own definition, which the
+/// kernel's environment shadows: a `\<env>` the class (or the document) made, which `\begin{<env>}` never runs when the
+/// kernel's `\begin{<env>}` constructor is defined (sect01.rs), or one the kernel's lock refused (`\lx@dropped@<env>`,
+/// state.rs) — bmcart.cls:712-717 `\def\@figure[#1]{…\def\csentence##1{…}`
+/// (its captions' lead sentence, 2305.08284, 1611.01327, 1909.07026) and :1505-1510 `\def\abstract@fmt[#1]{…
+/// \def\parttitle##1{…}` (its structured abstract's headings, 2007.07886, 1907.07303, 2106.01700): the definition
+/// is made where the call stands, as the class's environment would have made it, and the call retried
+/// ([`latexml_core::binding::kernel_autoload::try_refused_environment_definition`]). Searched: the open environments
+/// innermost first (the kernel's abstract, no environment frame, first inside its body), each refused definition and the commands it hands control to ([`handed_to`]), only definitions a
+/// raw file or the document made, at most 64 per environment. OXIDIZED_DESIGN_DIVERGENCES #647.
+pub fn refused_environment_definition(token: &Token) -> bool {
+  if token.get_catcode() != Catcode::CS || lookup_bool("lx_refused_environment_search") {
+    return false;
+  }
+  let mut envs: Vec<String> = with_stacked_values_sym(pin("current_environment"), |vals| {
+    vals.iter().rev().map(|v| v.to_string()).collect()
+  });
+  if lookup_bool("lx_in_kernel_abstract") {
+    envs.insert(0, "abstract".to_string());
+  }
+  let mut definition: Option<Vec<Token>> = None;
+  'envs: for env in envs.iter().filter(|e| !e.is_empty()) {
+    let mut queue: VecDeque<Token> =
+      VecDeque::from([T_CS!(&s!("\\lx@dropped@{env}")), T_CS!(&s!("\\{env}"))]);
+    let mut seen: Vec<Token> = Vec::new();
+    let mut next: Vec<Token> = Vec::new();
+    while let Some(cs) = queue.pop_front() {
+      if seen.contains(&cs) || seen.len() >= 64 {
+        continue;
+      }
+      seen.push(cs);
+      let Some(Stored::Expandable(defn)) = lookup_meaning(&cs) else {
+        continue;
+      };
+      if !matches!(
+        defn.get_origin(),
+        DefinitionOrigin::File | DefinitionOrigin::Document
+      ) {
+        continue;
+      }
+      let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+        continue;
+      };
+      let body = body.unlist_ref();
+      if let Some(found) = nested_definition_of(body, *token) {
+        definition = Some(found);
+        break 'envs;
+      }
+      next.clear();
+      handed_to(body, &mut next);
+      queue.extend(next.iter().copied());
+    }
+  }
+  let Some(definition) = definition else {
+    return false;
+  };
+  assign_value("lx_refused_environment_search", true, Some(Scope::Global));
+  let made = with_origin(DefinitionOrigin::File, || digest(Tokens::new(definition)));
+  assign_value("lx_refused_environment_search", false, Some(Scope::Global));
+  made.is_ok() && lookup_meaning(token).is_some()
 }
 
 /// The table's keywords setters that the class's (or the document's) abstract defines for its body and the kernel's
@@ -1699,6 +1803,9 @@ LoadDefinitions!({
   // keywords have no label in place: never the English default name where pdflatex prints "Ключовi слова:". A
   // setter that does not typeset its argument (it warns, or drops it) is the class's own definition, as in pdflatex.
   DefPrimitive!("\\lx@abstract@class@setters", {
+    // The body is the abstract's, for [`refused_environment_definition`]: the kernel's abstract is no environment
+    // frame (`\@currenvir` stays the enclosing one).
+    assign_value("lx_in_kernel_abstract", true, Some(Scope::Local));
     let in_place = lookup_bool("lx_frontmatter_kept_in_place");
     for (name, api, definer, own) in abstract_setter_definitions() {
       let cs = T_CS!(&s!("\\{name}"));

@@ -18363,3 +18363,22 @@ display (`\left\lbrace\right.`, the phantom and kerns presentational). A constru
 keeps its own end, so takes no `right`. KNOWN_PERL_ERRORS #846. Repro package-bindings/empheq_overload_left; guard
 `perfect_kernel_batch68v::batch68v_empheq_overload_left_and_right` (its 7 warnings are the math parser's on the empty
 fence `\left\{\right.`, whose null right delimiter the parse loses — math parsing is a separate stream).
+
+### 647. A command a class's environment defines for its body is made where it is called, when the kernel's environment runs instead
+
+`\begin{X}` runs the kernel's `\begin{X}` constructor when one is defined (sect01.rs; Perl's `\begin` the same), and
+the kernel's abstract collects its body for the frontmatter; a raw class's own `\X` — or the one the lock refused,
+`\lx@dropped@X` — never runs, nor anything it defines for the environment's body. bmcart.cls:712-717
+`\def\@figure[#1]{…\def\csentence##1{{\mathversion{bold}\bfseries ##1}}…}` (a caption's bold lead sentence; 100
+papers: 2305.08284, 1611.01327, 1909.07026) and :1505-1510 `\def\abstract@fmt[#1]{…\def\parttitle##1{\vskip3\p@
+\noindent{\bfseries ##1:}}…}` (a structured abstract's run-in headings; 78 papers: 2007.07886, 1907.07303, 2106.01700)
+were undefined. Ours: when an undefined control sequence is about to become `<ltx:ERROR/>` (the two call sites of the
+kernel autoload, `kernel_autoload::try_refused_environment_definition`), the open environments are searched innermost
+first — the kernel's abstract, which is no environment frame, first inside its body (`lx_in_kernel_abstract`, set by
+`\lx@abstract@class@setters`) — through each one's `\lx@dropped@X` and `\X` and the commands they hand control to
+(frontmatter_stores.rs `handed_to`), only definitions a raw file or the document made, at most 64 per environment, for a
+`\def`/`\gdef`/`\edef`/`\xdef` of exactly that name whose text reads none of the outer call's arguments; it is made where
+the call stands (in the call's group) and the call retried. Only a command that would otherwise be an Error is ever
+defined this way. Perl leaves them undefined (KNOWN_PERL_ERRORS #851). Repro
+class-bindings/bmcart/bmcart_environment_body_commands; guard
+`perfect_kernel_batch68v::batch68v_bmcart_environment_body_commands`.

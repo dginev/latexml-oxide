@@ -14376,3 +14376,12 @@ Minimal trigger: `\documentclass{amsbook}\makeatletter\ifvoid\abstractbox\fi` â€
 tests it in its `\tableofcontents` and reads `\@dateposted`/`\@PII` in its abstract notes. Fixed in Rust (68v,
 amsbook_cls.rs calls `amsart_class_internals`; `\@dateposted`, `\@PII` empty there); guard
 `perfect_kernel_batch68v::batch68v_amsbook_internals_for_memo_l`.
+
+## 851. A command a raw class's `\figure` or `\abstract` defines for the body is undefined
+
+`\begin{figure}` runs the kernel's constructor (`\begin{figure}` is defined, so `\begin` never calls `\figure`), and
+`\begin{abstract}` the kernel's `\lx@begin@abstract`; a raw class's environment code never runs. Minimal trigger (raw
+class loading): a class `c.cls` with `\LoadClass{article}\def\figure{\def\csentence##1{\textbf{##1}}\@float{figure}}`
+and `\begin{figure}\caption{\csentence{Lead.} Rest.}\end{figure}` â€” pdflatex "Figure 1: Lead. Rest.", Perl
+`Error:undefined:\csentence` (bmcart.cls:716 `\csentence`, :1508 `\parttitle`; 178 papers: 2305.08284, 2007.07886).
+Fixed in Rust (68v, OXIDIZED_DESIGN_DIVERGENCES #647); guard `perfect_kernel_batch68v::batch68v_bmcart_environment_body_commands`.

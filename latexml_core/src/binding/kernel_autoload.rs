@@ -88,3 +88,23 @@ pub fn try_autoload(token: &Token) -> bool {
     None => false,
   }
 }
+
+/// Engine-supplied procedure for "does an open environment whose class definition the kernel's lock refused define
+/// `token` for its body, and if so define it as the class would have and report it defined" — a class's `\figure`
+/// that makes `\csentence` for its captions (bmcart.cls:716), its `\abstract` that makes `\parttitle` (:1508). The
+/// same contract as [`KernelAutoloadHook`]: `true` ⇒ retry `token`.
+pub type RefusedEnvironmentHook = fn(&Token) -> bool;
+
+static ENV_HOOK: OnceLock<RefusedEnvironmentHook> = OnceLock::new();
+
+/// Register the engine's [`RefusedEnvironmentHook`] (first registration wins).
+pub fn set_refused_environment_hook(hook: RefusedEnvironmentHook) { let _ = ENV_HOOK.set(hook); }
+
+/// Ask the registered [`RefusedEnvironmentHook`] about an undefined `token`, at the same two call sites as
+/// [`try_autoload`] (after it): `true` ⇒ `token` now has a meaning, retry it.
+pub fn try_refused_environment_definition(token: &Token) -> bool {
+  match ENV_HOOK.get() {
+    Some(hook) => hook(token),
+    None => false,
+  }
+}

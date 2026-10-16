@@ -2336,7 +2336,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   color's `\color@block` (color.sty:155-156, laid under a coloured textpos block; 77 papers: 2305.15117, 2407.11064;
   KPE #849); repros package-bindings/{lastpage_class_putlabel, caption_atbegindocument, textpos_block_colour}. (4) `\abstractbox` (106 papers, memo-l.cls on amsbook: 2412.15928, 2511.16188, 1512.07128): the amsbook binding now
   has amsbook.cls's internals (`amsart_class_internals`, amsbook.cls:113-114, :616, :638-649, :1090-1121), with
-  `\@dateposted`/`\@PII` empty as `\@keywords` is (KPE #850; repro class-bindings/memo_l/memo_l_amsbook_internals).
+  `\@dateposted`/`\@PII` empty as `\@keywords` is (KPE #850; repro class-bindings/memo_l/memo_l_amsbook_internals). (5) `\csentence` + `\parttitle` (178 papers, bmcart.cls:716, :1508: 2305.08284, 1611.01327, 2007.07886, 2106.01700):
+  a command a class's own `\figure`/`\abstract` defines for its body is made where it is called, when the kernel's
+  environment runs instead (`kernel_autoload::try_refused_environment_definition`, frontmatter_stores.rs
+  `refused_environment_definition`; OXIDIZED_DESIGN_DIVERGENCES #647, KPE #851; repro
+  class-bindings/bmcart/bmcart_environment_body_commands).
   Guards `perfect_kernel_batch68v`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

@@ -2124,6 +2124,11 @@ pub fn read_x_token(
               unread_one(token); // Retry, now that the kernel is in state.
               continue;
             }
+            // a command a refused class environment defines for its body (`kernel_autoload`)
+            if crate::binding::kernel_autoload::try_refused_environment_definition(&token) {
+              unread_one(token);
+              continue;
+            }
             return Ok(Some(generate_error_stub(&token)?));
           } else {
             return Ok(Some(token));

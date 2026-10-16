@@ -3764,6 +3764,12 @@ fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
     gullet::unread_one(*token); // Retry, now that the kernel is in state.
     return Ok(Vec::new());
   }
+  // An environment the class redefined, whose begin defines this command for its body, but whose definition the
+  // kernel's lock refused (`kernel_autoload::try_refused_environment_definition`).
+  if crate::binding::kernel_autoload::try_refused_environment_definition(token) {
+    gullet::unread_one(*token);
+    return Ok(Vec::new());
+  }
   let cs = token.with_cs_name(|cs| String::from(cs));
   // Gate the undefined-CS summary tally and the Error! emission by
   // SUPPRESS_UNDEFINED_ERRORS. During expl3-code.tex raw load we install

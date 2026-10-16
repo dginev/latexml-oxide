@@ -124,3 +124,20 @@ fn batch68v_amsbook_internals_for_memo_l() {
   ]);
   assert!(!xml.contains("ERROR"), "{xml}");
 }
+
+/// class-bindings/bmcart/bmcart_environment_body_commands: the commands a class's own `\figure` and `\abstract`
+/// define for their bodies (bmcart.cls:712-717 `\csentence`, :1505-1510 `\parttitle`), which the kernel's
+/// environments never run, are made where they are called (frontmatter_stores.rs `refused_environment_definition`;
+/// 2305.08284, 1611.01327, 1909.07026, 2007.07886, 1907.07303, 2106.01700).
+#[test]
+fn batch68v_bmcart_environment_body_commands() {
+  let (counts, log, xml) = repro_with!(
+    "class-bindings/bmcart/bmcart_environment_body_commands.tex",
+    ("bmcmini.cls", "class-bindings/bmcart/bmcmini.cls")
+  );
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1"><text font="bold" xml:id="abstract1.1.1">Background:</text> Some background.</p> <p xml:id="abstract1.2"><text font="bold" xml:id="abstract1.2.1">Methods:</text> Some methods.</p> </abstract>"#,
+    r#"<caption><tag close=": ">Figure 1</tag><text font="bold" xml:id="S0.F1.2">Lead sentence.</text> The rest of the caption.</caption>"#,
+  ]);
+}

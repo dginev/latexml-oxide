@@ -253,6 +253,9 @@ LoadDefinitions!({
   // defines loads the format and retries, instead of becoming `<ltx:ERROR/>`.
   // See `latex_kernel` for the oracle's rationale and the no-dump branch.
   binding::kernel_autoload::set_hook(crate::latex_kernel::autoload_latex_kernel);
+  binding::kernel_autoload::set_refused_environment_hook(
+    crate::frontmatter_stores::refused_environment_definition,
+  );
 
   // Perl TeX.pool.ltxml L42-48: expl3 triggers
   for ltx3trigger in [
