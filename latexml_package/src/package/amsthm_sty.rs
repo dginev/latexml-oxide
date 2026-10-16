@@ -210,6 +210,13 @@ LoadDefinitions!({
   DefRegister!("\\thm@headsep" => Glue!("5pt plus 1pt minus 1pt"));
   DefRegister!("\\dth@everypar", Tokens!());
   Let!("\\displaymath@qed", "\\qed");
+  // 68b (binding gaps G3): amsthm.sty:294-295 `\newif\ifmeasuring@` and `\newif\iffirstchoice@ \firstchoice@true`
+  // (amstext.sty:43-44 the same), which a document's copy of amstext's `\text@` sets in each `\mathchoice` branch
+  // (setstack.sty:13-18 `{\textdef@\textstyle\tf@size{\firstchoice@false #1}}`, 0803.1550, 0806.2059, 0812.2552,
+  // 1001.4940, 1105.1277), made only where amsmath has not made them already.
+  RawTeX!(
+    r"\@ifundefined{ifmeasuring@}{\newif\ifmeasuring@}{}\@ifundefined{iffirstchoice@}{\newif\iffirstchoice@\firstchoice@true}{}"
+  );
 
   DefMacro!("\\proofname", "Proof");
   DefPrimitive!("\\th@proof", {

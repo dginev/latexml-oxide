@@ -17761,3 +17761,38 @@ ruling 2026-10-14, no general loader `\ver@` rule — floatrow_sty.rs records fl
 their markers, ams_support_sty.rs reads amsart.cls's own `\ver@amsthm.sty`, subcaption_sty.rs describes a document's
 `\@namedef{ver@subfig.sty}`). Repro loader/scan_skips_document_marked_loaded_package; guard
 `perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.
+
+### 607. breqn's displays are equations and equation groups; breqn.sty is not read raw (Perl: no breqn binding)
+
+breqn.sty (TL 2025 v0.98l) typesets each display by measuring and re-breaking boxes (:441-1700) and loads flexisym.sty,
+which replaces the math characters' mathcodes by macros (flexisym.sty:178-400): read raw, the formulas would lose their
+symbols' meaning, and the breaks are the renderer's to make. The binding (latexml_contrib/src/breqn_sty.rs) keeps the
+structure: `{dmath}`/`{dmath*}` are `{equation}`/`{equation*}` with their keys (:383-436; `label` a `\label`,
+`number` a `\tag`, the layout keys ignored), `{dgroup}` the subequation group amsmath's `{subequations}` makes ((3a),
+(3b) under the group's (3), as breqn numbers it, :1771-1777, breqn.pdf §8.1), `{dgroup*}` an unnumbered
+`ltx:equationgroup` of its equations (:1778-1783), `{dsuspend}` text of the group (:2027-2041), `{dseries}`/
+`{dseries*}` one `ltx:equation`, numbered or not, holding the series' in-line formulas and the text between them
+(:1724-1748), and the display parameters registers (:179-198). breqn.sty:47-48's amsmath and graphicx are loaded as it
+loads them. Divergences: no automatic line breaking; the punctuation breqn's `\end{dmath}` moves into the display
+(`\check@punct@or@qed`, :654-659) stays after it; blank `{dsuspend}` lines join the group's text paragraph. The stub's `missing_file` notice stays, saying so. Witnesses
+0903.2087, 1008.1366, 1107.4667, 1111.2451, 1201.6197, 1606.07330, 1706.02708, 1811.11912, 2008.13194, 1805.03313.
+Repro package-bindings/breqn_display_environments; guard `perfect_kernel_batch68b::breqn_display_environments`.
+
+### 608. hyperref's index page numbers and url's `\Url@FormatString` are text (no PDF page anchors, no url math)
+
+hyperref.sty:8019-8068 `\hyperpage{95}` (makeindex's encap under `hyperindex`) parses ranges and lists as hyperref does
+but sets each page number as text: `\HyInd@pagelink` (:8062) links it to the PDF page anchor `page.95`, which an XML
+document has none of, so the link would dangle. url.sty:127-133 `\Url@FormatString` sets `\Url@String` in math with the
+url font so that it may break at the `\Url…Breaks` characters; here, as the binding's `\url`, it is the url font's text
+(the JOSS/pandoc template's `\href@Urllike`, 1902.08702). Witnesses 0712.1142, 1011.1558, 1902.08702. Perl defines
+neither (KNOWN_PERL_ERRORS #750, #752). Guards `perfect_kernel_batch68b::{hyperref_internals_called_by_papers,
+url_format_string_and_tilde}`.
+
+### 609. natbib's `\NAT@force@numbers` warns where natbib errs
+
+natbib.sty:974-981: a numeric `.bbl` (`\NAT@force@numbers`, which natbib writes for a standard `.bst`) under author-year
+citations is natbib's `\PackageError` "Bibliography not compatible with author-year citations", after which it sets
+`\NAT@numberstrue` and continues numerically. The recovery is semantic (the citation style), the conversion makes it as
+it goes, so it is a `\PackageWarning` with the same text (Warning for a TeX-only error whose recovery is semantic).
+Witness 2508.10404. Perl has no `\NAT@force@numbers` (KNOWN_PERL_ERRORS #751). Guard
+`perfect_kernel_batch68b::natbib_label_and_list_internals`.

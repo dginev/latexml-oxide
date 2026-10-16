@@ -1,0 +1,61 @@
+% witness: breqn's display environments (68b, binding gaps G3): `{dgroup*}` 0903.2087, 1008.1366, 1107.4667;
+%          `{dgroup}` 1111.2451, 1305.0701; `{dsuspend}` 1606.07330; `{dseries}` 1201.6197, 1607.06055, 1811.11912;
+%          `{dseries*}` 1706.02708; `\eqinterlinepenalty`/`\setkeys{breqn}` 2008.13194; `\eqlinespacing`,
+%          `\eqlineskip`, `\intereqskip` 1805.03313; `\breqnsetup`
+% oracle:  pdflatex 0 errors: (1) for `a=b+c`, (2a)/(2b) for the group, the unnumbered group "H1 = x1 + x2 , and
+%          H2 = x1 x2 .", the series "u = eix and v = e−ix" (3), "w=0", "See (1)."
+% engines: perl 0.8.8 = no binding (`missing_file`), 18 errors (12 environments and parameters undefined);
+%          rust 67int4 = 10 `Error:undefined` ({dgroup}, {dgroup*}, {dsuspend}, {dseries}, {dseries*} and the
+%          five parameters), the stub's warning
+% expect:  0 errors, 1 warning (the stub's own notice); equation S0.E1 labelled eq:one, an equation group (2) of
+%          (2a)/(2b), an unnumbered group of two equations and the text between, the series an equation (3)
+% status:  GREEN
+\documentclass{article}
+\usepackage{breqn}
+\setkeys{breqn}{breakdepth={0}}
+\eqinterlinepenalty=0
+\eqlinespacing=0pt plus2pt
+\eqlineskip=2pt plus2pt
+\intereqskip=4pt plus2pt
+\breqnsetup{compact}
+\begin{document}
+Before.
+\begin{dmath}[label={eq:one}]
+a = b + c
+\end{dmath}
+Group:
+\begin{dgroup}
+\begin{dmath}
+x = 1
+\end{dmath}
+\begin{dmath}
+y = 2
+\end{dmath}
+\end{dgroup}
+Unnumbered group:
+\begin{dgroup*}[noalign]
+\begin{dmath*}
+H_1 = x_1 + x_2
+\end{dmath*},
+\begin{dsuspend}
+and
+\end{dsuspend}
+\begin{dmath*}
+H_2 = x_1 x_2
+\end{dmath*}.
+\end{dgroup*}
+A series
+\begin{dseries}
+\begin{math}
+u = e^{ix}
+\end{math}
+and
+\begin{math}
+v = e^{-ix}
+\end{math}
+\end{dseries}
+\begin{dseries*}
+$w = 0$
+\end{dseries*}
+See (\ref{eq:one}).
+\end{document}

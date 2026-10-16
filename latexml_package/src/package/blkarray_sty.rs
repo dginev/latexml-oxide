@@ -51,6 +51,24 @@ LoadDefinitions!({
   });
   // blkarray.sty:749-750; papers set it (`\setlength\BA@colsep{4pt}`, 2301.06399).
   RawTeX!(r"\newdimen\BA@colsep \BA@colsep=\tabcolsep");
+  // 68b (binding gaps G3): the public blkarray commands papers use inside a `{blockarray}`.
+  // blkarray.sty:934-947 `\BAmulticolumn{n}{spec}{text}`, blkarray's `\multicolumn` (1202.0500, 1204.2176,
+  // 1301.3189, 1311.0327, 1401.4921, 1407.4836).
+  Let!("\\BAmulticolumn", "\\multicolumn");
+  // :1677-1683 `\BAnewcolumntype[n]{c}{spec}`, a column type for blkarray's preambles (1302.2340, 1402.5950,
+  // 1408.0807, 1702.06723, 2005.02853: `\BAnewcolumntype{s}{>{$\small$}c}`): the rewrite the alignment template
+  // reads a column letter through, as array's `\newcolumntype` makes it (`\NC@rewrite@<c>`, alignment.rs).
+  RawTeX!(
+    r"\def\BAnewcolumntype{\@ifnextchar[{\lx@BA@nct}{\lx@BA@nct[0]}}
+\def\lx@BA@nct[#1]#2#3{\expandafter\@reargdef\csname NC@rewrite@\string#2\endcsname[#1]{#3}}"
+  );
+  // :1063 `\BAextrarowheight` (1312.6738, 1503.04543, 1503.08375 set it), the height blkarray adds to each row.
+  RawTeX!(r"\newdimen\BAextrarowheight");
+  // :1005-1012 `\BAnoalign{material}`/`\BAnoalign*{material}`: material between rows, which the star also lets
+  // the current block's delimiters span (1912.05110 `\BAnoalign{\vskip -7ex}`).
+  RawTeX!(
+    r"\def\BAnoalign{\@ifstar\lx@BA@noalign\lx@BA@noalign}\long\def\lx@BA@noalign#1{\noalign{#1}}"
+  );
   // blkarray.sty:2057-2068: `\BAhline` rules every column (`\BAhhline{*{\BA@col@max}{-}}`), as `\hline` does.
   Let!("\\BAhline", "\\hline");
   DefMacro!("\\BAhhline Semiverbatim", sub[(spec)] {

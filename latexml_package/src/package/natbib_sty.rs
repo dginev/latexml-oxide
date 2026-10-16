@@ -10,14 +10,17 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
       // Perl L384: AssignValue(CITE_STYLE => 'authoryear');
       "authoryear" => {
         assign_value("CITE_STYLE", pin("authoryear"), None);
+        sync_nat_conditionals("authoryear");
       },
       // Perl L385:
       "numbers" => {
         assign_value("CITE_STYLE", pin("numbers"), None);
+        sync_nat_conditionals("numbers");
       },
       // Perl L386:
       "super" => {
         assign_value("CITE_STYLE", pin("super"), None);
+        sync_nat_conditionals("super");
       },
       // Perl L387-388: AssignValue(CITE_OPEN=>T_OTHER('(')); AssignValue(CITE_CLOSE=>T_OTHER(')'));
       "round" => {
@@ -92,6 +95,19 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
       },
     }
   }
+}
+
+/// natbib.sty:234-245: the `numbers`/`super`/`authoryear` options and `\bibpunct`'s style argument (:290-296) set
+/// `\ifNAT@numbers` and `\ifNAT@super` beside the style, which a bibliography tests (`.bbl` labels written
+/// `\ifNAT@numbers\else\NAT@biblabelnum{#1}\fi`, 1409.8404, 1508.04752, 1604.03470; `\NAT@force@numbers`).
+fn sync_nat_conditionals(style: &str) {
+  let (numbers, sup) = match style {
+    "numbers" => ("\\iftrue", "\\iffalse"),
+    "super" => ("\\iftrue", "\\iftrue"),
+    _ => ("\\iffalse", "\\iffalse"),
+  };
+  Let!(T_CS!("\\ifNAT@numbers"), T_CS!(numbers));
+  Let!(T_CS!("\\ifNAT@super"), T_CS!(sup));
 }
 
 fn is_some_and_nonempty(opt: &Option<Tokens>) -> bool {
@@ -197,6 +213,8 @@ fn cite_by_flags(
 }
 
 LoadDefinitions!({
+  // natbib.sty:235-236, before the options that set them (`sync_nat_conditionals`).
+  RawTeX!(r"\newif\ifNAT@numbers \NAT@numbersfalse \newif\ifNAT@super \NAT@superfalse");
   //======================================================================
   // 5. Package Options
   DeclareOption!("numbers", {
@@ -835,6 +853,7 @@ LoadDefinitions!({
         else if style_str == "s" { "super" }
         else { "authoryear" };
       assign_value("CITE_STYLE", pin(cite_style), None);
+      sync_nat_conditionals(cite_style);
     }
     if let Some(ay) = aysep_arg {
       assign_value("CITE_AY_SEPARATOR", Stored::Tokens(ay), None);
@@ -920,6 +939,43 @@ LoadDefinitions!({
   DefMacro!("\\bibnumfmt{}", "#1");
   DefRegister!("\\bibhang", Dimension::new(0));
   DefRegister!("\\bibsep", Glue::new(0));
+  // 68b (binding gaps G3): natbib's bibliography-label and list-setup internals, which `.bbl` files and documents
+  // call (natbib.sty:622-645). `\NAT@biblabelnum` (1409.8404, 1508.04752, 1604.03470, 1605.02776, 1607.05855,
+  // 1610.04415: `\ifNAT@numbers\else\NAT@biblabelnum{#1}\fi` in the label), the list setups a document's own
+  // bibliography list runs through `\@bibsetup` (1102.3365, 1103.0594, 1312.5975, 1804.04445, 1911.00031:
+  // `\list{…}{\@bibsetup{#1}…}` in `{theDTbibliography}`), chosen by the style as `\NAT@set@cites` (:658-668)
+  // lets it. `\NAT@force@numbers` (:974-981), which a numeric `.bbl` runs (2508.10404): for an author-year
+  // document natbib's error reports that the citations switch to numbers on the next run, a recovery the
+  // conversion makes as it goes, so it is a warning here.
+  RawTeX!(
+    r"\newcommand\NAT@biblabel[1]{\hfill}
+\newcommand\NAT@biblabelnum[1]{\bibnumfmt{#1}}
+\newcommand\NAT@bibsetnum[1]{\settowidth\labelwidth{\@biblabel{#1}}%
+  \setlength{\leftmargin}{\labelwidth}\addtolength{\leftmargin}{\labelsep}%
+  \setlength{\itemsep}{\bibsep}\setlength{\parsep}{\z@}%
+  \ifNAT@openbib\addtolength{\leftmargin}{\bibindent}\setlength{\itemindent}{-\bibindent}%
+  \setlength{\listparindent}{\itemindent}\setlength{\parsep}{0pt}\fi}
+\newcommand\NAT@bibsetup[1]{\setlength{\leftmargin}{\bibhang}\setlength{\itemindent}{-\leftmargin}%
+  \setlength{\itemsep}{\bibsep}\setlength{\parsep}{\z@}}
+\def\@bibsetup{\ifNAT@numbers\expandafter\NAT@bibsetnum\else\expandafter\NAT@bibsetup\fi}
+\newcommand\NAT@force@numbers{\ifNAT@numbers\else
+  \PackageWarning{natbib}{Bibliography not compatible with author-year citations.\MessageBreak
+  Continuing in numerical citation style}\global\NAT@numberstrue\fi}
+\providecommand{\@extra@b@citeb}{}\gdef\@extra@binfo{}"
+  );
+  // The citation punctuation natbib keeps in `\NAT@open`/`\NAT@close`/`\NAT@sep` (:239-260), `\NAT@cmt`,
+  // `\NAT@aysep`, `\NAT@yrsep` (:297-300), which this binding keeps as values; a document's own citation command
+  // typesets them (1906.11206 `\multicitep`: `\NAT@open … \NAT@close`).
+  DefMacro!("\\NAT@open", { cite_open() });
+  DefMacro!("\\NAT@close", { cite_close() });
+  DefMacro!("\\NAT@sep", {
+    lookup_tokens("CITE_SEPARATOR").unwrap_or(NO_TOKENS)
+  });
+  DefMacro!("\\NAT@cmt", { cite_ns() });
+  DefMacro!("\\NAT@aysep", { cite_ay() });
+  DefMacro!("\\NAT@yrsep", {
+    lookup_tokens("CITE_YY_SEPARATOR").unwrap_or(NO_TOKENS)
+  });
 
   //======================================================================
   // 2.13 Automatic Indexing of Citations
@@ -933,8 +989,7 @@ LoadDefinitions!({
   // via `\newif` (creates `\NAT@superfalse`/`\NAT@supertrue` too).
   // Witness cluster: arXiv:2506.21088 / .21438 (papers calling
   // `\bibpunct` or similar that consult `\ifNAT@super`).
-  RawTeX!("\\newif\\ifNAT@super");
-  RawTeX!("\\newif\\ifNAT@numbers");
+  // (`\ifNAT@super`/`\ifNAT@numbers` are made before the options, which set them.)
   RawTeX!("\\newif\\ifNAT@longnamesfirst");
   RawTeX!("\\newif\\ifNAT@swa");
   // The rest of natbib.sty's `\newif` surface: @longnames (:284),

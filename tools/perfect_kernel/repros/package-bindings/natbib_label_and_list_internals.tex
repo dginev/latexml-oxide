@@ -1,0 +1,27 @@
+% witness: natbib internals (68b, binding gaps G3): `\NAT@biblabelnum` 1409.8404, 1508.04752, 1605.02776 (a `.bbl`
+%          label `\ifNAT@numbers\else\NAT@biblabelnum{#1}\fi`); `\@bibsetup` 1102.3365, 1103.0594 (a document's
+%          bibliography list); `\NAT@open`/`\NAT@close` 1906.11206 (`\multicitep`); `\NAT@force@numbers` 2508.10404
+% oracle:  pdflatex 0 errors: "See [1] and [Demidovich, p. 66].", "[1] First entry.", "[1] F. Abbors. A paper."
+%          (numbers: no author-year label); author-year (`{natbib}` alone) natbib's error "Bibliography not
+%          compatible with author-year citations"
+% engines: perl 0.8.8 = 6 `Error:undefined` (`\NAT@open`, `\NAT@close`, `\@bibsetup`, `\NAT@force@numbers`,
+%          `\ifNAT@numbers`, `\NAT@biblabelnum`); rust 67int4 = 5 `Error:undefined`
+% expect:  0 errors, 0 warnings; "[Demidovich, p. 66]"; the bibliography entry without the author-year label
+% status:  GREEN
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\makeatletter
+\providecommand\dinatlabel[1]{\ifNAT@numbers\else\NAT@biblabelnum{#1}\fi}
+\newcommand\mycitep[1]{\NAT@open #1\NAT@close}
+\newenvironment{mybib}[1]{\list{\@biblabel{\arabic{enumiv}}}{\@bibsetup{#1}\usecounter{enumiv}}}{\endlist}
+\makeatother
+\begin{document}
+See \citep{a} and \mycitep{Demidovich, p.~66}.
+\begin{mybib}{9}
+\item First entry.
+\end{mybib}
+\begin{thebibliography}{1}
+\makeatletter\NAT@force@numbers\makeatother
+\bibitem[Abbors et~al.(2013)]{a}\dinatlabel{Abbors et~al. 2013} F.~Abbors. A paper.
+\end{thebibliography}
+\end{document}

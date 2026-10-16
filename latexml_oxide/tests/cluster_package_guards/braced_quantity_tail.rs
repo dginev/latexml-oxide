@@ -760,7 +760,7 @@ fn bindings_load_calc_where_their_packages_do() {
     ("\\documentclass{article}\\usepackage{diagbox}", 0),
     ("\\documentclass{article}\\usepackage{animate}", 0),
     ("\\documentclass{article}\\usepackage{savetrees}", 0),
-    // The stub's own "breqn.sty is only minimally stubbed" warning.
+    // The stub's own "breqn.sty is minimally stubbed" warning.
     ("\\documentclass{article}\\usepackage{breqn}", 1),
     ("\\documentclass{jmlr}", 0),
   ] {

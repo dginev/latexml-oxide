@@ -183,6 +183,17 @@ LoadDefinitions!({
   // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd
   // Along with the annoying \endgroup that must balance the one always preceding \Url!
   DefRegister!("\\Urlmuskip", MuGlue::default());
+  // 68b (binding gaps G3): url.sty internals documents call. `\UrlTildeSpecial` (:63; 0907.0729 writes it for a
+  // `~` in a bibliography URL, pdflatex prints "∼"). `\Url@FormatString` (:127-133) typesets the url string a
+  // `\Url` has read into `\Url@String`; a document that sets `\Url@String` and calls it formats its own text as a
+  // url (the JOSS/pandoc template's `\href@Urllike`, 1902.08702, 1905.04294, 1905.04768, 1908.01711, 1908.10377,
+  // 1910.08562). url.sty sets the string in math with the url font so that it may break at its `\Url…Breaks`
+  // characters; here, as this binding's `\url` does, it is the url font's text.
+  RawTeX!(
+    r"\def\UrlTildeSpecial{\do\~{\raise.45ex\hbox{\m@th$\scriptstyle\sim$}}}\let\Url@force@Tilde\relax
+\let\Url@String\@empty
+\def\Url@FormatString{\UrlFont\expandafter\UrlLeft\Url@String\UrlRight}"
+  );
 
   // Perl L91-99: \urldef{newcmd}{arg} — takes TWO brace args. The second
   // `{}` lets TeX parse a balanced brace group without expansion, then

@@ -3418,7 +3418,7 @@ fn jfm_subeqnarray() {
 }
 
 /// 63t: breqn's math-active `_` and `^` (mathstyle.sty:233-236, :250-261) still script in math, siunitx's units
-/// among them (siunitx.sty:6810-6813), and `_` in text prints (2402.04396, 2403.03720). The one warning is the binding's own "breqn.sty is only minimally stubbed". Repro
+/// among them (siunitx.sty:6810-6813), and `_` in text prints (2402.04396, 2403.03720). The one warning is the binding's own "breqn.sty is minimally stubbed". Repro
 /// loader/breqn_text_underscore.
 #[test]
 fn breqn_text_underscore() {

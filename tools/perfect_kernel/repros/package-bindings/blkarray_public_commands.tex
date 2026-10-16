@@ -1,0 +1,23 @@
+% witness: blkarray's public commands (68b, binding gaps G3): `\BAmulticolumn` 1202.0500, 1401.4921;
+%          `\BAnewcolumntype` 1302.2340, 1402.5950; `\BAextrarowheight` 1312.6738; `\BAnoalign` 1912.05110
+% oracle:  pdflatex 0 errors: the matrix with the label row a b c d and column x y, `0` across two columns
+% engines: perl 0.8.8 = no binding (`missing_file`), 18 errors (6 undefined, stray `&`s); rust 67int4 = 4
+%          `Error:undefined` and `Error:expected:<variable>`
+% expect:  0 errors, 0 warnings; a 3-row array, the `\BAmulticolumn` cell spanning two columns
+% status:  GREEN
+\documentclass{article}
+\usepackage{blkarray}
+\BAnewcolumntype{s}{>{$\small$}c}
+\setlength{\BAextrarowheight}{2pt}
+\begin{document}
+\[
+\begin{blockarray}{ccccc}
+ & a & b & c & d\\
+\begin{block}{c(cccc)}
+ x & 1 & 0 & \BAmulticolumn{2}{c}{0}\\
+ y & 0 & 1 & 2 & 3\\
+\end{block}
+\BAnoalign{\vskip 1ex}
+\end{blockarray}
+\]
+\end{document}

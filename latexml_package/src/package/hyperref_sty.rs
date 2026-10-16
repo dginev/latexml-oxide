@@ -9,6 +9,14 @@ use crate::{package::url_sty::LEADING_BACKSLASH_RE, prelude::*};
 LoadDefinitions!({
   // hyperref.sty:4066 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
+  // hyperref.sty:2472-2475 `psdextra` loads psdextra.def (:767-776), whose `\psdmapshortnames` (psdextra.def:75) and
+  // `\psdaliasnames` hyperref runs in every PDF string (:488-491). Their `\let`s map names to PU-encoded text
+  // commands for bookmarks, which an XML document has none of; a document adds its own maps to them (1801.02767,
+  // 1710.02246, 1809.07440, 1908.10510, 1908.03268: `\addtomacro\psdmapshortnames{\let#1#2}`), so they start empty.
+  // Run for the option and for the `\hypersetup` key.
+  RawTeX!(
+    r"\def\lx@hyperref@psdextra{\providecommand*\psdmapshortnames{}\providecommand*\psdaliasnames{}}"
+  );
   // hyperref.sty:2234-2248: an option that can no longer take effect is
   // redefined to warn (novel-pdfx.sty:487-488 `\Hy@DisableOption{pdfauthor}`;
   // TeX Live class census 2026-09-24).
@@ -364,6 +372,9 @@ LoadDefinitions!({
       if key == "colorlinks" && (value_str == "true" || value_str.is_empty()) {
         RequirePackage!("color");
       }
+      if key == "psdextra" && value_str != "false" {
+        TeX!(r"\lx@hyperref@psdextra");
+      }
       // Perl (PR #2767): don't digest \hypersetup keyvals, since they are
       // restricted to plain text(?) — `hyperref_setoption($key, ToString($value))`.
       // (This actually needs some sort of "safe" digestion, recognizing
@@ -565,6 +576,65 @@ LoadDefinitions!({
 \def\hyper@natlinkend{\hyper@linkend}
 \def\hyper@natlinkbreak#1#2{\hyper@linkend#1\hyper@linkstart{cite}{cite.#2}}
 \def\hyper@natanchorstart#1{}\def\hyper@natanchorend{}"
+  );
+  // 68b: hyperref internals papers call directly (binding gaps G3), each as hyperref.sty (TL 2025) defines it.
+  // - :130-135 the message shorthands (derksen.sty:628 `\Hy@Info{…}`, 1310.6851, 1712.03838, 1901.10472);
+  // - :357-361 the conditional-return helpers the index parser below uses;
+  // - :2078-2090 the raised-link hooks and the space-factor pair a document's copy of `\Hy@raisedlink` uses
+  //   (2403.10429, 2501.18381, 2501.18773, 2507.16055, 2510.01943, 2602.21138: `\Hy@raisedlink@left`);
+  // - :6655-6658 `\if@hyper@item`/`\if@skiphyperref` (1806.02596 `\@skiphyperreftrue` around an algorithm float);
+  // - :6312-6314 `\thispdfpagelabel` (pdfpagelabels, on by default; 1810.05756, 2002.05778);
+  // - :6735-6742 `\hyper@refstepcounter` (2102.05485 witharrows' `{DispWithArrows}`, 2303.09820, 2405.07080,
+  //   2505.07323): the anchor it makes is the kernel's (`\hyper@anchorstart` is gobbled here), so it sets
+  //   `\@currentHref` through `\hyper@makecurrent` and typesets nothing;
+  // - hpdftex.def:396 `\hyper@link{category}{name}{text}`, the driver link `\hyperlink` (:4793-4796) reaches through
+  //   `\hyper@@link` (1403.6472, 1502.05411, 1509.00838, 1612.08986, 1907.10062: `\hyperlinkcite`); the
+  //   category picks only the border colour;
+  // - :7443 `\@extra@b@citeb`, which hyperref provides when natbib is absent (natbib.sty:1104 otherwise;
+  //   hep-ph0412159, hep-ph0703293, 2202.05188);
+  // - :7886-7901 and :8019-8068 the index page-number links of a makeindex `.ind` (`hyperindex`, on by default):
+  //   `\hyperpage{95}`, `\hyperpage{3--5}`, `\hyperpage{3, 5}`, `\hyperindexformat{\textbf}{42}`
+  //   (0712.1142, 0804.2154, 0907.3749, 1011.1558, 1310.3213, 1707.07140). The page number stays text:
+  //   `\HyInd@pagelink` links it to the PDF page anchor `page.<n>` (:8062), which an XML document has none of.
+  // - :8126-8134 the starred references (2204.02601 `\let\ref\@refstar`), the kernel's unlinked `\ref*` forms
+  //   as they stand when hyperref loads, so a document that lets `\ref` to one of them does not call itself.
+  RawTeX!(
+    r"\def\Hy@Error{\PackageError{hyperref}}\def\Hy@Warning{\PackageWarning{hyperref}}
+\def\Hy@WarningNoLine{\PackageWarningNoLine{hyperref}}\def\Hy@Info{\PackageInfo{hyperref}}
+\def\Hy@InfoNoLine#1{\PackageInfo{hyperref}{#1\@gobble}}
+\let\Hy@ReturnEnd\@empty
+\long\def\Hy@ReturnAfterFi#1\fi{\fi#1}
+\long\def\Hy@ReturnAfterElseFi#1\else#2\fi{\fi#1}
+\long\def\Hy@ReturnAfterFiFiEnd#1\fi#2\Hy@ReturnEnd{\fi\fi#1}
+\long\def\Hy@ReturnAfterElseFiFiEnd#1\else#2\Hy@ReturnEnd{\fi\fi#1}
+\let\HyperRaiseLinkHook\@empty
+\def\HyperRaiseLinkDefault{\baselineskip}
+\newcount\Hy@SavedSpaceFactor
+\def\Hy@SaveSpaceFactor{\global\Hy@SavedSpaceFactor=\ifhmode\spacefactor\else\z@\fi}
+\def\Hy@RestoreSpaceFactor{\relax\ifhmode\ifnum\Hy@SavedSpaceFactor>\z@\spacefactor=\Hy@SavedSpaceFactor\fi\fi}
+\newif\if@hyper@item \newif\if@skiphyperref \@hyper@itemfalse \@skiphyperreffalse
+\def\thispdfpagelabel#1{\gdef\HyPL@thisLabel{#1}}\global\let\HyPL@thisLabel\relax
+\def\hyper@refstepcounter#1{\hyper@makecurrent{#1}\Hy@raisedlink{\hyper@anchorstart{\@currentHref}\hyper@anchorend}}
+\def\hyper@link#1#2#3{\begingroup\edef\x{\endgroup\noexpand\hyperlink{#2}}\x{#3}}
+\providecommand*\@extra@b@citeb{}
+\def\HyInd@ParenLeft{(}\def\HyInd@ParenRight{)}
+\def\hyperxindexformat#1#2{\let\HyOrg@hyperpage\hyperpage\let\hyperpage\@firstofone
+  #1{\HyOrg@hyperpage{#2}}\let\hyperpage\HyOrg@hyperpage}
+\let\hyperindexformat\hyperxindexformat
+\def\nohyperpage#1{#1}
+\def\hyperpage#1{\HyInd@hyperpage#1\nohyperpage{}\@nil}
+\def\HyInd@hyperpage#1\nohyperpage#2#3\@nil{\HyInd@@hyperpage{#1}#2\def\Hy@temp{#3}%
+  \ifx\Hy@temp\@empty\else\Hy@ReturnAfterFi{\HyInd@hyperpage#3\@nil}\fi}
+\def\HyInd@@hyperpage#1{\@hyperpage#1----\\}
+\def\@hyperpage#1--#2--#3\\{\ifx\\#2\\\@commahyperpage{#1}\else\HyInd@pagelink{#1}--\HyInd@pagelink{#2}\fi}
+\def\@commahyperpage#1{\@@commahyperpage#1, ,\\}
+\def\@@commahyperpage#1, #2,#3\\{\ifx\\#2\\\HyInd@pagelink{#1}\else\HyInd@pagelink{#1}, \HyInd@pagelink{#2}\fi}
+\def\HyInd@pagelink#1{\begingroup\toks@={}\HyInd@removespaces#1 \@nil\endgroup}
+\def\HyInd@removespaces#1 #2\@nil{\toks@=\expandafter{\the\toks@#1}%
+  \ifx\\#2\\\edef\x{\the\toks@}\ifx\x\@empty\else\the\toks@\fi
+  \else\Hy@ReturnAfterFi{\HyInd@removespaces#2\@nil}\fi}
+\let\lx@HyRef@ref\ref\let\lx@HyRef@nameref\nameref
+\def\@refstar#1{\lx@HyRef@ref*{#1}}\def\@pagerefstar#1{\lx@HyRef@ref*{#1}}\def\@namerefstar#1{\lx@HyRef@nameref*{#1}}"
   );
   // \hyperbaseurl{url}
   DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[(url)] {
@@ -1336,6 +1406,8 @@ LoadDefinitions!({
         }
         if option == "colorlinks" {
           RequirePackage!("color");
+        } else if option == "psdextra" || option == "psdextra=true" {
+          TeX!(r"\lx@hyperref@psdextra");
         } else if let Some(eq_pos) = option.find('=') {
           let key = option[..eq_pos].trim();
           let mut value = option[eq_pos + 1..].trim();

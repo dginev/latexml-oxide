@@ -1800,6 +1800,60 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   wileymsp_dedication_threesubsection, wileynjd_v1_loads_amsrefs} RED (67int3) → GREEN, {wileynjd_theorem_styles,
   wileynjdv5_theorem_styles, wileynjd_uns_keeps_en_dashes, wileynjd_v1_reference_styles, wileynjd_v1_apa_is_amsrefs}
   RED (67w) → GREEN (67w r2); guards `perfect_kernel_batch67w`.
+
+- **68b** (binding gaps G3, core package bindings: bindgaps/g23_macros.tsv rows hyperref, breqn, natbib, url,
+  blkarray, pict2e, amsthm; each macro verified against the TL 2025 file). hyperref (hyperref_sty.rs) — `\Hy@Info`,
+  `\Hy@Warning`, `\Hy@Error`, `\Hy@WarningNoLine`, `\Hy@InfoNoLine` (:130-135; 1310.6851, 1712.03838, 1901.10472),
+  `\Hy@ReturnAfterFi`… (:357-361), `\HyperRaiseLinkHook`/`\HyperRaiseLinkDefault`, `\Hy@SaveSpaceFactor`/
+  `\Hy@RestoreSpaceFactor` (:2078-2090; 2403.10429, 2501.18381, 2510.01943, 2602.21138), `\thispdfpagelabel`
+  (:6312-6314; 1810.05756, 2002.05778), `\if@hyper@item`/`\if@skiphyperref` (:6655-6658; 1806.02596),
+  `\hyper@refstepcounter` (:6735-6742, the anchor the kernel's; 2102.05485, 2303.09820, 2405.07080, 2505.07323),
+  `\hyper@link` (hpdftex.def:396; 1403.6472, 1502.05411, 1509.00838, 1612.08986, 1907.10062), `\@extra@b@citeb`
+  (:7443; hep-ph0412159, hep-ph0703293, 2202.05188), `\hyperpage`/`\hyperindexformat`/`\hyperxindexformat`/
+  `\nohyperpage` (:7886-7901, :8019-8068, the page numbers as text, OXIDIZED_DESIGN_DIVERGENCES #608; 0712.1142,
+  0804.2154, 0907.3749, 1011.1558, 1310.3213, 1707.07140, 2312.17745, quant-ph0409125), `\@refstar`/`\@pagerefstar`/
+  `\@namerefstar` (:8126-8134; 2204.02601), `\psdmapshortnames`/`\psdaliasnames` under `psdextra` (psdextra.def:75;
+  1801.02767, 1710.02246, 1809.07440, 1908.10510, 1908.03268). natbib (natbib_sty.rs) — `\NAT@biblabel`,
+  `\NAT@biblabelnum` (:622-623; 1409.8404, 1508.04752, 1604.03470, 1605.02776, 1607.05855, 1610.04415),
+  `\NAT@bibsetnum`/`\NAT@bibsetup` and `\@bibsetup` by the style (:627-645, :658-668; 1102.3365, 1103.0594, 1312.5975,
+  1804.04445, 1911.00031), `\NAT@force@numbers` (:974-981, a warning, OXIDIZED_DESIGN_DIVERGENCES #609; 2508.10404),
+  `\@extra@b@citeb`/`\@extra@binfo` (:1104-1105), `\NAT@open`/`\NAT@close`/`\NAT@sep`/`\NAT@cmt`/`\NAT@aysep`/
+  `\NAT@yrsep` from the style's values (:239-300; 1906.11206), `\ifNAT@numbers`/`\ifNAT@super` set by the options and
+  `\bibpunct` (:235-245). breqn (latexml_contrib breqn_sty.rs; completed, not raw-loaded, OXIDIZED_DESIGN_DIVERGENCES
+  #607: flexisym's mathcode macros would strip the formulas' meaning) — `{dgroup}` as a subequation group, `{dgroup*}`
+  (:1771-1784; 0903.2087, 1008.1366, 1107.4667, 1111.2451, 1201.6197, 1302.6047, 1303.0187, 1305.0701, 1306.0788),
+  `{dsuspend}` (:2027-2041; 1606.07330), `{dseries}`/`{dseries*}` (:1724-1748; 1201.6197, 1607.06055, 1706.02708,
+  1811.11912), the `breqn` keys with `label`/`number` and `\breqnsetup` (:57, :383-436; 2008.13194), the display
+  parameters (:179-198; 2008.13194, 1805.03313), amsmath and graphicx loaded as breqn.sty:47-48 does; `\Biggg`
+  (1907.10288) is not breqn's with amsmath loaded (:1523-1528). url (url_sty.rs) — `\Url@FormatString` (:127-133, text
+  in the url font, OXIDIZED_DESIGN_DIVERGENCES #608; 1902.08702, 1905.04294, 1905.04768, 1908.01711, 1908.10377,
+  1910.08562), `\UrlTildeSpecial` (:63; 0907.0729). blkarray (blkarray_sty.rs) — `\BAmulticolumn` (:934-947; 1202.0500,
+  1204.2176, 1301.3189, 1311.0327, 1401.4921, 1407.4836), `\BAnewcolumntype` (:1677-1683, the template's
+  `\NC@rewrite@<c>`; 1302.2340, 1402.5950, 1408.0807, 1702.06723, 2005.02853), `\BAextrarowheight` (:1063; 1312.6738,
+  1503.04543, 1503.08375), `\BAnoalign` (:1005-1012; 1912.05110). pict2e (pict2e_sty.rs) — `\arc`/`\arc*` (:667-684;
+  1201.4907, 1503.03277, 1503.03676, 1507.03747, 1611.00631, 2001.00020, 0811.3832), and `\pIIe@arc`'s mode now
+  pict2e's (0 a line to the arc's start, 1 a new subpath, :643-646; the filled sector starts at its centre). amsthm
+  (amsthm_sty.rs) — `\ifmeasuring@`, `\iffirstchoice@` (:294-295, where amsmath has not made them; setstack.sty's
+  copy of `\text@`: 0803.1550, 0806.2059, 0812.2552, 1001.4940, 1105.1277). KNOWN_PERL_ERRORS #750-#753. Repros
+  package-bindings/{hyperref_internals_called_by_papers, breqn_display_environments, natbib_label_and_list_internals,
+  url_format_string_and_tilde, blkarray_public_commands, pict2e_arc, amsthm_firstchoice_conditional}; guards
+  `perfect_kernel_batch68b` (7). Not this payload's (verified): hyperref row's `\chapter`, `\xspace`, `\textcolor`,
+  `\ding`, `\citeauthoryear`, `\hypersetup`/`\texorpdfstring`/`\hyperlink`/`\nameref`/`\autoref` (called before or
+  without `\usepackage{hyperref}`), `\x`/`\y`/`\z`/`\F`/`\For` (the papers' own), `\PrerenderUnicode`/`\unichar`
+  (ucs.sty:591, `utf8x`; 50 papers, the inputenc/ucs binding's), `\CJKkern` (CJK), `\flqq`/`\frqq`/`\glqq`/`\grqq`/
+  `\cyr` (hyperref sets them only in PDF strings), `\bbl@info` (babel), `\harvarditem` (harvard), `\tocsection`
+  (amsart); natbib row's `\bibsep` (2003.02474, 2008.04185: cas-common.sty raw before natbib is loaded),
+  `\citeauthoryear`/`\citep`/`\Citet` without natbib, `\N`/`\NA`/`\Doi`/`\bibAnnoteFile` (the papers' or their
+  `.bst`'s). Residuals: `\hyper@link{cite}{cite.<key>}` links to hyperref's anchor name, which our bibliography items
+  do not carry (`ltx:ref idref="cite.<key>"` dangles); blkarray's own `>{…}`/`<{…}` preamble tokens are read only where
+  array is loaded; amsthm's `\QED@stack`/`\math@qedhere` (a document's own `\qedhere` over amsthm's token stack,
+  1801.02767, 1710.02246, 1809.07440, 1908.10510, 1908.03268) need the QED stack as amsthm's macro, not this binding's
+  native one (the proof lock's area, left); under breqn's amsmath an old-form `\cases{…\cr}` (1008.1366) is amsmath's
+  "Old form" error in pdflatex too, and our `\cases`, as Perl's, then leaves its alignment open (1 → 13 errors there).
+  Not started (brief rows after the top six): amsthm `{proof}`/`\QED@stack`, color/xcolor/graphicx (`\color@block`,
+  `\color@box`, `\definecolor`, `\@testcolor`, `\Grot@box@std`, `\Gread@parse@vp`), caption `\DeclareCaptionSubType`
+  and `\captionsetup` keys, the `\Gin@driver` root behind trimclip's PGF fallback, cleveref `\crefalias`, the ORCID-URL
+  normalisation of `\lx@add@orcid`.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

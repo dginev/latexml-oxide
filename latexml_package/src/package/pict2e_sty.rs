@@ -76,9 +76,10 @@ fn path_curveto(c1: (f64, f64), c2: (f64, f64), end: (f64, f64)) {
   }
 }
 
-/// `\pIIe@arc[mode]{cx}{cy}{r}{start}{end}` (pict2e.sty:765): mode 0 = a new
-/// subpath at the arc's start, 1 = `\lineto` the start, 2 = the arc continues
-/// the current subpath. Angles in degrees, sampled every ≤10°.
+/// `\pIIe@arc[mode]{cx}{cy}{r}{start}{end}` (pict2e.sty:615-660): mode 0 = `\lineto` the arc's start from the
+/// current point, 1 = `\moveto` it (a new subpath), 2 = the arc continues the current subpath (`\ifcase #1
+/// \pIIe@lineto \or \pIIe@moveto \or \fi`, :643-646; the pict2e manual's `\circlearc[N]`). `\arc*`'s sector is the
+/// mode 0 arc after a `\moveto` to the centre (:670-676). Angles in degrees, sampled every ≤10°.
 fn path_arc(mode: i64, (cx, cy, r): (f64, f64, f64), start: f64, end: f64) {
   let sweep = end - start;
   let steps = ((sweep.abs() / 10.0).ceil() as usize).max(1);
@@ -88,7 +89,7 @@ fn path_arc(mode: i64, (cx, cy, r): (f64, f64, f64), start: f64, end: f64) {
     if i == 0 && mode == 2 && path_current().is_some() {
       continue;
     }
-    path_push(point, i == 0 && mode == 0);
+    path_push(point, i == 0 && mode == 1);
   }
 }
 
@@ -249,6 +250,17 @@ LoadDefinitions!({
 \def\strokepath{\pIIe@strokeGraph}
 \def\fillpath{\pIIe@fillGraph}
 \let\lx@pictii@moveto\moveto \let\lx@pictii@lineto\lineto \let\lx@pictii@curveto\curveto"
+  );
+  // pict2e.sty:667-684 `\arc[start,end]{radius}` (a stroked circular arc about the current `\put` point, by default
+  // the whole circle) and `\arc*` (the filled sector), verbatim (68b, binding gaps G3; 1201.4907, 1503.03277,
+  // 1503.03676, 1507.03747, 1611.00631, 2001.00020, 0811.3832).
+  RawTeX!(
+    r"\newcommand*\pIIearc{\@ifstar{\@tempswatrue\pIIe@arc@}{\@tempswafalse\pIIe@arc@}}
+\newcommand*\pIIe@arc@[2][0,360]{\pIIe@arc@@(#1){#2}}
+\def\pIIe@arc@@(#1,#2)#3{\@defaultunitsset\pIIe@tempdima{#3}\unitlength
+  \if@tempswa\pIIe@moveto\z@\z@\pIIe@arc{\z@}{\z@}{\pIIe@tempdima}{#1}{#2}\pIIe@closepath\pIIe@fillGraph
+  \else\pIIe@arc[1]{\z@}{\z@}{\pIIe@tempdima}{#1}{#2}\pIIe@strokeGraph\fi}
+\let\arc\pIIearc"
   );
   // pict2e.sty:78-80 arrow-head parameters, :603 `\pIIe@bezier@QtoC`,
   // :779-791 the line cap/join declarations (pdfTeX driver operators).

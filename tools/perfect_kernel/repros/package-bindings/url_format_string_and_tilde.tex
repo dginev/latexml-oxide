@@ -1,0 +1,17 @@
+% witness: url.sty internals (68b, binding gaps G3): `\Url@FormatString` 1902.08702, 1905.04294, 1905.04768,
+%          1908.01711 (the JOSS/pandoc template's `\href@Urllike`); `\UrlTildeSpecial` 0907.0729
+% oracle:  pdflatex 0 errors: "See https://doi.org/10.1/abc now. http://www.math.princeton.edu/∼hossein/…"
+% engines: perl 0.8.8 = 2 `Error:undefined` (`\Url@FormatString`, `\UrlTildeSpecial`); rust 67int4 the same
+% expect:  0 errors, 0 warnings; the link's text the url in the url font; the raised "∼" before "hossein"
+% status:  GREEN
+\documentclass{article}
+\usepackage{url}
+\usepackage{hyperref}
+\makeatletter
+\let\href@Orig=\href
+\def\href@Urllike#1#2{\href@Orig{#1}{\begingroup\def\Url@String{#2}\Url@FormatString\endgroup}}
+\makeatother
+\begin{document}
+See \csname href@Urllike\endcsname{https://doi.org/10.1/abc}{https://doi.org/10.1/abc} now.
+http://www.math.princeton.edu/\UrlTildeSpecial hossein/contents/pseudo8.pdf
+\end{document}

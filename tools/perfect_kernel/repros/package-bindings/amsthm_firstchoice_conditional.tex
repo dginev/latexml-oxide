@@ -1,0 +1,19 @@
+% witness: amsthm's `\iffirstchoice@` (amsthm.sty:295; 68b, binding gaps G3): setstack.sty's copy of amstext's
+%          `\text@` sets `\firstchoice@false` (0803.1550, 0806.2059, 0812.2552, 1001.4940, 1105.1277)
+% oracle:  pdflatex 0 errors: "a = for all b"
+% engines: perl 0.8.8 = `Error:undefined:\firstchoice@false`; rust 67int4 the same
+% expect:  0 errors, 0 warnings; the formula with the text "for all "
+% status:  GREEN
+\documentclass{article}
+\usepackage{amsthm}
+\makeatletter
+\DeclareRobustCommand{\text}{\ifmmode\expandafter\text@\else\expandafter\mbox\fi}
+\def\text@#1{\mathchoice
+  {\textdef@\displaystyle\f@size{#1}}{\textdef@\textstyle\tf@size{\firstchoice@false #1}}%
+  {\textdef@\textstyle\sf@size{\firstchoice@false #1}}{\textdef@\textstyle \ssf@size{\firstchoice@false #1}}%
+  \check@mathfonts}
+\def\textdef@#1#2#3{\hbox{{\everymath{#1}\let\f@size#2\selectfont #3}}}
+\makeatother
+\begin{document}
+$a = \text{for all } b$
+\end{document}

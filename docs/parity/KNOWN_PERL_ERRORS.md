@@ -13728,6 +13728,51 @@ which reads the shipped aipxfm.sty raw, ran its layout code into those undefined
 papers of the run-347 inventory, 1010.4521, 0705.1061, 0709.0115). Rust's binding records aipxfm.sty loaded, as the
 class does, and defines the designer commands. Guard `perfect_kernel_batch67z::aipproc_paper_loads_aipxfm`.
 
+## 750. hyperref.sty.ltxml lacks the hyperref internals papers call (index page links, raised-link hooks, `\hyper@link`)
+
+Perl's hyperref binding defines the user commands but none of these hyperref.sty (TL 2025) internals that papers and
+their copied macros call: `\Hy@Info`/`\Hy@Warning`/`\Hy@Error` (:130-135), `\HyperRaiseLinkHook`/`\HyperRaiseLinkDefault`
+and `\Hy@SaveSpaceFactor`/`\Hy@RestoreSpaceFactor` (:2078-2090), `\thispdfpagelabel` (:6312-6314),
+`\if@skiphyperref` (:6655), `\hyper@refstepcounter` (:6735-6742), `\@extra@b@citeb` (:7443), `\hyperpage`,
+`\hyperindexformat`, `\nohyperpage` (:7886-7901, :8019-8068, the makeindex `.ind` encap), `\@refstar` (:8126),
+hpdftex.def:396 `\hyper@link`, and psdextra.def:75 `\psdmapshortnames` under the `psdextra` key; each is
+`Error:undefined`. Minimal trigger: tools/perfect_kernel/repros/package-bindings/hyperref_internals_called_by_papers.tex
+(`\usepackage{hyperref}` … `\hyperlinkcite{knuth}{…}` over `\hyper@link`, `\hyperpage{3--5}` in `{theindex}`): pdflatex
+clean, Perl 15 errors. Witnesses 0712.1142, 1011.1558, 1310.6851, 1403.6472, 1801.02767, 1806.02596, 1810.05756,
+2102.05485, 2204.02601, 2403.10429. Rust defines them as hyperref does (the page numbers as text, OXIDIZED_DESIGN #608).
+Guard `perfect_kernel_batch68b::hyperref_internals_called_by_papers`.
+
+## 751. natbib.sty.ltxml lacks natbib's label, list and punctuation internals; `\ifNAT@numbers` is undefined
+
+natbib.sty:622-645 `\NAT@biblabelnum`, `\NAT@bibsetnum`, `\NAT@bibsetup` and the `\@bibsetup` the style lets
+(:658-668), :974-981 `\NAT@force@numbers`, :235-236 `\ifNAT@numbers`/`\ifNAT@super` (set by the options) and the
+punctuation macros `\NAT@open`/`\NAT@close`/`\NAT@sep` (:239-260) are undefined in Perl's natbib binding, which keeps
+the style as values. `.bbl` files written by `.bst` styles call them (`\ifNAT@numbers\else\NAT@biblabelnum{#1}\fi` as
+a label, 1409.8404, 1508.04752, 1605.02776; `\NAT@force@numbers`, 2508.10404), as do documents' own bibliography lists
+(`\@bibsetup`, 1102.3365) and citation commands (`\NAT@open`, 1906.11206). Minimal trigger:
+tools/perfect_kernel/repros/package-bindings/natbib_label_and_list_internals.tex: pdflatex clean, Perl 6 errors. Rust
+defines them from natbib.sty and keeps the two conditionals in step with the style (`sync_nat_conditionals`); the
+author-year `\NAT@force@numbers` error is a warning (OXIDIZED_DESIGN #609). Guard
+`perfect_kernel_batch68b::natbib_label_and_list_internals`.
+
+## 752. url.sty.ltxml lacks `\Url@FormatString` and `\UrlTildeSpecial`
+
+url.sty:127-133 `\Url@FormatString` (the url formatter over `\Url@String`) and :63 `\UrlTildeSpecial` are undefined in
+Perl's url binding; the JOSS/pandoc template's `\href@Urllike` sets `\Url@String` and calls the formatter (1902.08702,
+1905.04294, 1905.04768, 1908.01711, 1908.10377, 1910.08562), and 0907.0729 writes `\UrlTildeSpecial` for a `~`.
+Minimal trigger: tools/perfect_kernel/repros/package-bindings/url_format_string_and_tilde.tex: pdflatex clean, Perl 2
+errors. Rust defines both (the formatter sets the url font's text, OXIDIZED_DESIGN #608). Guard
+`perfect_kernel_batch68b::url_format_string_and_tilde`.
+
+## 753. amsthm.sty.ltxml lacks `\iffirstchoice@` and `\ifmeasuring@`
+
+amsthm.sty:294-295 `\newif\ifmeasuring@ \newif\iffirstchoice@ \firstchoice@true` (amstext.sty:43-44 the same) are
+undefined under Perl's amsthm binding without amsmath; setstack.sty, a copy of amstext's `\text` that papers ship with
+amsthm, sets `\firstchoice@false` in each `\mathchoice` branch (0803.1550, 0806.2059, 0812.2552, 1001.4940, 1105.1277;
+45 papers). Minimal trigger: tools/perfect_kernel/repros/package-bindings/amsthm_firstchoice_conditional.tex
+(`\usepackage{amsthm}`, setstack's `\text@`, `$a = \text{for all } b$`): pdflatex clean, Perl 1 error. Rust makes both
+where amsmath has not. Guard `perfect_kernel_batch68b::amsthm_firstchoice_conditional`.
+
 ## 780. The dependency scan loads a package the document marked loaded (`\ver@<name>.sty`) before the class ran
 
 latex.ltx `\@onefilewithoptions` (:18750) skips a `\usepackage`/`\RequirePackage`/`\LoadClass` whose
