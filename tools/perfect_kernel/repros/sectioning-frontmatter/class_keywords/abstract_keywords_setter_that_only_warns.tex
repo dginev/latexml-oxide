@@ -1,0 +1,18 @@
+% A one-argument `\keywords` the class's abstract defines but that does not typeset its argument (kwwarn.cls: it only
+% warns) is not the frontmatter's keywords: inside the abstract it is the class's own definition, as in pdflatex.
+% witness: none (synthetic; beilstein.cls:854 and fbithesis.cls:272 have the shape, not reached from an abstract)
+% oracle:  pdflatex (kwwarn.cls beside it) 0 errors, 1 class warning "Keywords are not part of this document type":
+%          "Abstract text. Body." (the class's abstract prints no heading)
+% expect:  0 errors, 1 warning (the class's); no <keywords>; the abstract "Abstract text."
+% status:  RED (68n round 1: <keywords> "dropped words") -> GREEN (68n round 2)
+% preload: ar5iv.sty
+\documentclass{kwwarn}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+Abstract text.
+\keywords{dropped words}
+\end{abstract}
+Body.
+\end{document}

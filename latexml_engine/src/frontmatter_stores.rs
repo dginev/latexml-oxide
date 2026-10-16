@@ -273,11 +273,34 @@ enum Definer {
   Keeps,
 }
 
-/// The definer of a one-argument command `\<name>` that `body` defines — `\def\name#1{`, `\newcommand{\name}[1]{`
-/// (with any `##` doubling and `\long`/`\global` prefix), and nothing that reads a delimited or optional argument —
-/// or `None` when it defines none.
-fn nested_one_arg_definition(body: &[Token], name: &str) -> Option<Definer> {
+/// Where a definition's body first uses its argument `#1` — as stored in it (`#1`), or doubled in an enclosing
+/// definition's body (`##1`, kept as a parameter token and `1`).
+fn argument_at(body: &[Token]) -> Option<usize> {
+  (0..body.len()).find(|&k| argument_length(body, k).is_some())
+}
+
+/// The number of tokens of a use of `#1` at `body[k]` ([`argument_at`]), if there is one there.
+fn argument_length(body: &[Token], k: usize) -> Option<usize> {
+  let t = body.get(k)?;
+  if t.get_catcode() == Catcode::ARG && t.with_str(|s| s == "1") {
+    return Some(1);
+  }
+  (t.get_catcode() == Catcode::PARAM
+    && body
+      .get(k + 1)
+      .is_some_and(|d| d.get_catcode() != Catcode::PARAM && d.with_str(|s| s == "1")))
+  .then_some(2)
+}
+
+/// A one-argument command `\<name>` that `body` defines — `\def\name#1{`, `\newcommand{\name}[1]{` (with any `##`
+/// doubling and `\long`/`\global` prefix), and nothing that reads a delimited or optional argument: its definer and
+/// its body, as stored (a doubled `##1` kept as a parameter token and `1`) — the first whose body uses its argument
+/// ([`argument_at`]), else the first. A definition that drops or only warns about its argument is not a setter of it
+/// (beilstein.cls:854 `\newcommand{\keywords}[1]{\ClassWarning{beilstein}{Keywords should not be part of …}}` beside
+/// :853's typesetting one, fbithesis.cls:272 `{\fbi@warning{\keywords}}`). `None` when it defines none.
+fn nested_one_arg_definition(body: &[Token], name: &str) -> Option<(Definer, Vec<Token>)> {
   let target = T_CS!(&s!("\\{name}"));
+  let mut first: Option<(Definer, Vec<Token>)> = None;
   for (i, t) in body.iter().enumerate() {
     if t.get_catcode() != Catcode::CS {
       continue;
@@ -313,11 +336,13 @@ fn nested_one_arg_definition(body: &[Token], name: &str) -> Option<Definer> {
         j += 1;
       }
       if digits == ["1"]
-        && body
-          .get(j)
-          .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+        && let Some(past) = group_end(body, j)
       {
-        return Some(definer);
+        let own = &body[j + 1..past - 1];
+        if argument_at(own).is_some() {
+          return Some((definer, own.to_vec()));
+        }
+        first.get_or_insert_with(|| (definer, own.to_vec()));
       }
       continue;
     }
@@ -343,15 +368,16 @@ fn nested_one_arg_definition(body: &[Token], name: &str) -> Option<Definer> {
     let one_arg = [T_OTHER!("["), T_OTHER!("1"), T_OTHER!("]")];
     if body.get(j..j + 3) == Some(&one_arg[..]) {
       let k = skip_spaces(body, j + 3);
-      if body
-        .get(k)
-        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
-      {
-        return Some(definer);
+      if let Some(past) = group_end(body, k) {
+        let own = &body[k + 1..past - 1];
+        if argument_at(own).is_some() {
+          return Some((definer, own.to_vec()));
+        }
+        first.get_or_insert_with(|| (definer, own.to_vec()));
       }
     }
   }
-  None
+  first
 }
 
 /// The commands a body hands control to: each control sequence; `\begin{X}`/`\end{X}` as `\X`/`\endX`; a
@@ -414,9 +440,9 @@ fn handed_to(body: &[Token], out: &mut Vec<Token>) {
 /// locked `{abstract}` therefore never runs, with their API and definer: a one-argument definition
 /// ([`nested_one_arg_definition`]) in the refused `\abstract` or `\endabstract` (`\lx@dropped@…`, state.rs) or in a
 /// command they hand control to ([`handed_to`]), read only in definitions a raw file or the document made — at most
-/// 512 of them, nearest first.
-fn abstract_setter_definitions() -> Vec<(&'static str, &'static str, Definer)> {
-  let mut found: Vec<(&'static str, &'static str, Definer)> = Vec::new();
+/// 512 of them, nearest first — each with its API, definer and the class's own body for it.
+fn abstract_setter_definitions() -> Vec<(&'static str, &'static str, Definer, Vec<Token>)> {
+  let mut found: Vec<(&'static str, &'static str, Definer, Vec<Token>)> = Vec::new();
   let mut queue: VecDeque<Token> = VecDeque::from([
     T_CS!("\\lx@dropped@abstract"),
     T_CS!("\\lx@dropped@endabstract"),
@@ -445,10 +471,17 @@ fn abstract_setter_definitions() -> Vec<(&'static str, &'static str, Definer)> {
     };
     let body = body.unlist_ref();
     for (name, api) in keywords_setters() {
-      if found.iter().all(|(n, ..)| *n != name)
-        && let Some(definer) = nested_one_arg_definition(body, name)
-      {
-        found.push((name, api, definer));
+      // (a setter that typesets its argument wins over one found before that does not)
+      let at = found.iter().position(|(n, ..)| *n == name);
+      if at.is_some_and(|k| argument_at(&found[k].3).is_some()) {
+        continue;
+      }
+      if let Some((definer, own)) = nested_one_arg_definition(body, name) {
+        match at {
+          None => found.push((name, api, definer, own)),
+          Some(k) if argument_at(&own).is_some() => found[k] = (name, api, definer, own),
+          Some(_) => {},
+        }
       }
     }
     next.clear();
@@ -615,38 +648,87 @@ fn glue_end(body: &[Token], i: usize) -> Option<usize> {
   Some(k)
 }
 
-/// What a begin code's item from `body[i]` is, and the index past it: layout that typesets nothing (`None` range),
-/// label material (the range of its label text: a heading's argument, else the item itself), or `None` for anything
-/// else — an assignment, a definition, a list, a box, a conditional, math. `depth` bounds the class macros followed.
-fn label_item(body: &[Token], i: usize, depth: usize) -> Option<(Option<(usize, usize)>, usize)> {
-  let t = &body[i];
+/// A label's text as it is collected from the class's code: its characters and text macros, the layout around them
+/// dropped — a source space or a horizontal skip between two pieces read as one space, an explicit space (`\ `, `~`)
+/// kept as one — so that neither a font nor a layout command reaches the `name` it becomes, nor the keywords after it:
+/// emsprocart's `{\noindent\bfseries{\keywordname.}\vspace{\z@}}` is "Keywords." (1202.4161, 1006.0632, 1610.08545),
+/// ieice.cls's `{\bfseries key words:\ \ignorespaces}` "key words:" (2002.00666, 1604.03276, 2509.21881), lni.cls's
+/// `\noindent{\bfseries Keywords:}` "Keywords:" (1604.03313). A class macro that is text stays itself, read when the
+/// label is (a language's `\keywordname`).
+#[derive(Default)]
+struct LabelText {
+  text:          Vec<Token>,
+  pending_space: bool,
+}
+
+impl LabelText {
+  /// A space between pieces of the label, if one follows.
+  fn space(&mut self) { self.pending_space |= !self.text.is_empty(); }
+
+  /// A piece of the label's text (a space token: an explicit one).
+  fn push(&mut self, t: Token) {
+    let is_space = t.get_catcode() == Catcode::SPACE;
+    let after_space = self
+      .text
+      .last()
+      .is_some_and(|l| l.get_catcode() == Catcode::SPACE);
+    if self.pending_space && !is_space && !after_space {
+      self.text.push(T_SPACE!());
+    }
+    self.pending_space = false;
+    if is_space && (after_space || self.text.is_empty()) {
+      return;
+    }
+    self.text.push(t);
+  }
+
+  /// Is there text in it: a letter, or a class macro that is text?
+  fn has_text(&self) -> bool {
+    self
+      .text
+      .iter()
+      .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::CS))
+  }
+}
+
+/// Read one item of a label's code from `body[i]` into `out`, returning the index past it: layout that typesets nothing,
+/// or label material, of which its text is kept ([`LabelText`]) — `None` for anything else: an assignment, a definition,
+/// a list, a box, a conditional, math. `depth` bounds the class macros followed.
+fn label_item(body: &[Token], i: usize, depth: usize, out: &mut LabelText) -> Option<usize> {
+  let t = body[i];
   match t.get_catcode() {
-    Catcode::SPACE => return Some((None, i + 1)),
-    Catcode::LETTER | Catcode::OTHER => return Some((Some((i, i + 1)), i + 1)),
-    Catcode::ACTIVE if *t == T_ACTIVE!('~') => return Some((Some((i, i + 1)), i + 1)),
+    Catcode::SPACE => {
+      out.space();
+      return Some(i + 1);
+    },
+    Catcode::LETTER | Catcode::OTHER => {
+      out.push(t);
+      return Some(i + 1);
+    },
+    Catcode::ACTIVE if t == T_ACTIVE!('~') => {
+      out.push(T_SPACE!());
+      return Some(i + 1);
+    },
     Catcode::BEGIN => {
       // a group of label material: `{\bfseries Keywords:}`, `{\itshape Some key words}` (biometrika.cls:526)
       let past = group_end(body, i)?;
-      let inner = &body[i + 1..past - 1];
-      let mut k = 0;
-      let mut text = false;
-      while k < inner.len() {
-        let (range, next) = label_item(inner, k, depth)?;
-        text |= range.is_some();
-        k = next;
-      }
-      return Some((text.then_some((i, past)), past));
+      label_items(&body[i + 1..past - 1], depth, out)?;
+      return Some(past);
     },
     Catcode::CS => {},
     _ => return None,
   }
-  if cs_in(t, LAYOUT) {
-    return Some((None, i + 1));
+  if cs_in(&t, LAYOUT) {
+    return Some(i + 1);
   }
-  if *t == T_CS!("\\ ") || *t == T_CS!("\\/") {
-    return Some((Some((i, i + 1)), i + 1));
+  if t == T_CS!("\\ ") {
+    out.push(T_SPACE!());
+    return Some(i + 1);
   }
-  if let Some((_, nargs)) = LAYOUT_ARGS.iter().find(|(cs, _)| cs_in(t, &[cs])) {
+  if t == T_CS!("\\/") {
+    return Some(i + 1);
+  }
+  if let Some((cs, nargs)) = LAYOUT_ARGS.iter().find(|(cs, _)| cs_in(&t, &[cs])) {
     let mut k = skip_spaces(body, i + 1);
     if body.get(k) == Some(&T_OTHER!("*")) {
       k += 1;
@@ -654,27 +736,30 @@ fn label_item(body: &[Token], i: usize, depth: usize) -> Option<(Option<(usize, 
     for _ in 0..*nargs {
       k = group_end(body, skip_spaces(body, k))?;
     }
-    return Some((None, k));
+    if *cs == "\\hspace" {
+      out.space();
+    }
+    return Some(k);
   }
-  if cs_in(t, GLUE_SETTERS) {
-    return Some((None, glue_end(body, i + 1)?));
+  if cs_in(&t, GLUE_SETTERS) {
+    if t == T_CS!("\\hskip") {
+      out.space();
+    }
+    return glue_end(body, i + 1);
   }
-  if cs_in(t, HEADINGS) {
-    // the heading's argument is the label; the heading itself is the class's presentation of it
+  if cs_in(&t, HEADINGS) || cs_in(&t, STYLED) {
+    // a heading's argument is the label, the heading the class's presentation of it; a font command's is label text
     let mut k = skip_spaces(body, i + 1);
-    if body.get(k) == Some(&T_OTHER!("*")) {
+    if cs_in(&t, HEADINGS) && body.get(k) == Some(&T_OTHER!("*")) {
       k = skip_spaces(body, k + 1);
     }
     let past = group_end(body, k)?;
-    return Some((Some((k + 1, past - 1)), past));
-  }
-  if cs_in(t, STYLED) {
-    let past = group_end(body, skip_spaces(body, i + 1))?;
-    return Some((Some((i, past)), past));
+    label_items(&body[k + 1..past - 1], depth, out)?;
+    return Some(past);
   }
   // a macro of the class's own: its label text (`\keywordname`, letters only) or its layout (pasa.cls:56
   // `\def\keywordfont{\small\rightskip5.5pc}`)
-  let expansion = parameterless_body(t)?;
+  let expansion = parameterless_body(&t)?;
   let expansion = expansion.unlist_ref();
   if !expansion.is_empty()
     && expansion.iter().all(|e| {
@@ -684,56 +769,113 @@ fn label_item(body: &[Token], i: usize, depth: usize) -> Option<(Option<(usize, 
       )
     })
   {
-    return Some((Some((i, i + 1)), i + 1));
+    out.push(t);
+    return Some(i + 1);
   }
   if depth == 0 {
     return None;
   }
+  let mut layout = LabelText::default();
+  label_items(expansion, depth - 1, &mut layout)?;
+  layout.text.is_empty().then_some(i + 1)
+}
+
+/// Read every item of a label's code ([`label_item`]), or `None` when one is not label material or layout.
+fn label_items(body: &[Token], depth: usize, out: &mut LabelText) -> Option<()> {
   let mut k = 0;
-  while k < expansion.len() {
-    let (range, next) = label_item(expansion, k, depth - 1)?;
-    if range.is_some() {
-      return None;
-    }
-    k = next;
+  while k < body.len() {
+    k = label_item(body, k, depth, out)?;
   }
-  Some((None, i + 1))
+  Some(())
 }
 
 /// The class's label in the begin code of a `{keywords}` environment that typesets only a label: the code is layout
-/// that typesets nothing ([`LAYOUT`], [`LAYOUT_ARGS`], [`GLUE_SETTERS`], a class macro made of them) around one run of
-/// label material — text, a heading's or font command's argument, a group of them, a class macro that is text —
-/// returned as written, from its first piece to its last: paper.cls:621 `\small\paragraph*{\keywordname:}`,
-/// pasa.cls:101-103 `\noindent\keywordfont\textbf{Keywords: }`, biometrika.cls:525-527, irmaems.cls:1131
-/// `\noindent\small Keywords:`, ieice.cls:952-954.
+/// that typesets nothing ([`LAYOUT`], [`LAYOUT_ARGS`], [`GLUE_SETTERS`], a class macro made of them) around label
+/// material — text, a heading's or font command's argument, a group of them, a class macro that is text — returned as
+/// its text ([`LabelText`]): paper.cls:621 `\small\paragraph*{\keywordname:}`, pasa.cls:101-103
+/// `\noindent\keywordfont\textbf{Keywords: }`, biometrika.cls:525-527, irmaems.cls:1131 `\noindent\small Keywords:`,
+/// ieice.cls:952-954, emsprocart.cls (1202.4161), lni.cls (1604.03313's copy).
 /// Code doing anything else — a flag its title page reads (`\global\keywordstrue`, tADR2e.cls:450), a box it fills
-/// (ar-1col's `\global\setbox\@kwdbox\vbox\bgroup`), a list, a definition (lni.cls:561-565 `\def\and`), a
-/// conditional (emsprocart's `\if@twocolumn`) — is not this shape, and the environment stays the class's.
+/// (ar-1col's `\global\setbox\@kwdbox\vbox\bgroup`), a list, a definition (TeX Live's lni.cls:561-565 `\def\and`), a
+/// conditional (TeX Live's emsprocart.cls `\if@twocolumn`) — is not this shape, and the environment stays the class's.
 fn label_only_begin_code(body: &[Token]) -> Option<Tokens> {
-  let mut span: Option<(usize, usize)> = None;
-  let mut has_text = false;
-  let mut i = 0;
-  while i < body.len() {
-    let (range, next) = label_item(body, i, 2)?;
-    if let Some((from, to)) = range {
-      // (layout between two pieces of the label is kept in it, and typesets nothing there)
-      has_text |= body[from..to]
-        .iter()
-        .any(|t| t.get_catcode() == Catcode::LETTER || t.get_catcode() == Catcode::CS);
-      span = Some((span.map_or(from, |(start, _)| start), to));
-    }
-    i = next;
+  let mut out = LabelText::default();
+  label_items(body, 2, &mut out)?;
+  // (an explicit space the label ends with is the class's spacing before the keywords, not the label's)
+  while out
+    .text
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    out.text.pop();
   }
-  let (start, end) = span?;
-  has_text.then(|| Tokens::new(body[start..end].to_vec()))
+  out.has_text().then(|| Tokens::new(out.text))
+}
+
+/// The class's label in a keywords setter's body, ahead of its argument: the code before its first `#1`, without the
+/// group or font command the argument is in (`\emph{##1}`, `{\raggedright ##1\par}`), read as
+/// [`label_only_begin_code`] reads a begin code — astlb.cls:200 `\medskip Key words:~~\emph{##1}` "Key words:"
+/// (1202.2889), pazhastl.cls:191 `\medskip\emph{Keywords:}~~##1` "Keywords:" (astro-ph0306137) — or `None` when it
+/// is not that shape: wiley-article.cls:449's `\allcaps[…]{keywords}` (1706.00599), mtt.cls:181's `\item` and
+/// language-chosen `\mtt@keywords` (1310.0585) keep the default name.
+fn label_before_argument(body: &[Token]) -> Option<Tokens> {
+  let prefix = &body[..argument_at(body)?];
+  let mut open: Vec<usize> = Vec::new();
+  for (k, t) in prefix.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => open.push(k),
+      Catcode::END => {
+        open.pop();
+      },
+      _ => {},
+    }
+  }
+  let mut dropped = vec![false; prefix.len()];
+  for &k in &open {
+    dropped[k] = true;
+    let mut p = k;
+    while p > 0 && prefix[p - 1].get_catcode() == Catcode::SPACE {
+      p -= 1;
+    }
+    if p > 0 && (cs_in(&prefix[p - 1], STYLED) || cs_in(&prefix[p - 1], HEADINGS)) {
+      dropped[p - 1] = true;
+    }
+  }
+  let kept: Vec<Token> = prefix
+    .iter()
+    .zip(&dropped)
+    .filter(|(_, d)| !**d)
+    .map(|(t, _)| *t)
+    .collect();
+  label_only_begin_code(&kept)
+}
+
+/// Does a keywords setter's body only typeset its label and its argument (layout, label material and `#1`, read as
+/// [`label_only_begin_code`] reads a begin code)? Then it typesets nothing the kernel's abstract lacks, and an abstract
+/// kept in place may run it: kwmtt.cls's `\par\noindent{\bfseries Keywords:} \itshape##1`, not mtt.cls:181's `\item`
+/// of the class's own abstract list (1310.0585).
+fn typesets_label_and_argument(body: &[Token]) -> bool {
+  let mut text: Vec<Token> = Vec::with_capacity(body.len());
+  let mut k = 0;
+  while k < body.len() {
+    if let Some(length) = argument_length(body, k) {
+      text.push(T_LETTER!("x"));
+      k += length;
+    } else {
+      text.push(body[k]);
+      k += 1;
+    }
+  }
+  label_only_begin_code(&text).is_some()
 }
 
 /// Reroute each table keywords setter the raw class `cls` defined as a `{keywords}`-like environment whose begin
 /// code only typesets a label ([`label_only_begin_code`]) — `\<name>` taking no argument with its `\end<name>` — to the
 /// frontmatter's keywords, named by the class's label (`\lx@class@keywords`): the environment as
 /// `\lx@begin@keywords[name={label}]` … `\lx@end@keywords`, as mn2e's binding's (mn2e_support_sty.rs), the command
-/// with a braced argument as `\lx@add@keywords[name={label}]{…}`. A document's own environment, defined after the
-/// class, replaces it.
+/// with a braced argument that ends the keywords as `\lx@add@keywords[name={label}]{…}`; the class's own begin and end
+/// code stay for any other use (`\keywords {alpha}, beta`, a bare `\keywords alpha \endkeywords`). A document's own
+/// environment, defined after the class, replaces it.
 fn reroute_keywords_environments(cls: &str) -> Result<()> {
   let mut rerouted: Vec<&str> = Vec::new();
   for (name, _) in keywords_setters() {
@@ -759,23 +901,32 @@ fn reroute_keywords_environments(cls: &str) -> Result<()> {
     let Some(label) = label_only_begin_code(body.unlist_ref()) else {
       continue;
     };
-    // The class's own begin code stays, for a bare `\keywords text` outside the environment (`\lx@class@keywords`).
-    let original = lookup_meaning(&begin);
-    assign_meaning(
-      &T_CS!(&s!("\\lx@class@keywords@{name}")),
-      original.unwrap_or(Stored::None),
-      Some(Scope::Global),
-    );
+    // The class's own begin and end code stay, for a bare `\keywords text` (`\lx@class@keywords`) and its
+    // `\endkeywords` (`\lx@class@keywords@end`) outside the environment.
+    for (own, cs) in [
+      ("\\lx@class@keywords@", &begin),
+      ("\\lx@class@keywords@end@", &end),
+    ] {
+      assign_meaning(
+        &T_CS!(&s!("{own}{name}")),
+        lookup_meaning(cs).unwrap_or(Stored::None),
+        Some(Scope::Global),
+      );
+    }
     assign_value(
       &s!("lx_class_keywords_label_{name}"),
       Stored::Tokens(label),
       Some(Scope::Global),
     );
-    let mut call = mouth::tokenize_internal("\\lx@class@keywords{").unlist();
-    call.extend(ExplodeText!(name));
-    call.push(T_END!());
-    DefMacro!(begin, None, Tokens::new(call));
-    DefMacro!(end, None, "\\lx@end@keywords");
+    for (cs, reader) in [
+      (begin, "\\lx@class@keywords{"),
+      (end, "\\lx@class@keywords@end{"),
+    ] {
+      let mut call = mouth::tokenize_internal(reader).unlist();
+      call.extend(ExplodeText!(name));
+      call.push(T_END!());
+      DefMacro!(cs, None, Tokens::new(call));
+    }
     rerouted.push(name);
   }
   if !rerouted.is_empty() {
@@ -789,6 +940,56 @@ fn reroute_keywords_environments(cls: &str) -> Result<()> {
     );
   }
   Ok(())
+}
+
+/// The call `api` (`\lx@add@keywords{#1}`, the table's) named by the class's `label`, when there is one:
+/// `\lx@add@keywords[name={label}]{#1}`.
+fn named_keywords_call(api: &str, label: Option<Tokens>) -> Vec<Token> {
+  let Some(label) = label else {
+    return mouth::tokenize_internal(TeXString::assembled(api.to_string())).unlist();
+  };
+  let (command, rest) = api.split_at(api.find(['[', '{']).unwrap_or(api.len()));
+  let mut call = mouth::tokenize_internal(TeXString::assembled(s!("{command}[name={{"))).unlist();
+  call.extend(label.unlist());
+  call.push(T_END!());
+  call.push(T_OTHER!("]"));
+  call.extend(mouth::tokenize_internal(TeXString::assembled(rest.to_string())).unlist());
+  call
+}
+
+/// Does the input go on with a braced group that ends the keywords — `\par`, a blank line, an `\end…` or the end of
+/// the input after it, spaces skipped? Every token read is put back. `\keywords {alpha}, beta, gamma` is not that:
+/// its first group is part of the keywords.
+fn braced_group_ends_the_keywords() -> Result<bool> {
+  let Some(open) = read_token()? else {
+    return Ok(false);
+  };
+  let mut read = vec![open];
+  let mut ends = false;
+  if open.get_catcode() == Catcode::BEGIN {
+    let (group, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
+    read.extend(group.unlist());
+    if let Some(close) = close {
+      read.push(close);
+      loop {
+        let next = read_token()?;
+        if let Some(t) = next
+          && matches!(t.get_catcode(), Catcode::SPACE | Catcode::COMMENT)
+        {
+          read.push(t);
+          continue;
+        }
+        ends = next.is_none_or(|t| {
+          t == T_CS!("\\par")
+            || (t.get_catcode() == Catcode::CS && t.with_str(|s| s.starts_with("\\end")))
+        });
+        read.extend(next);
+        break;
+      }
+    }
+  }
+  unread(Tokens::new(read));
+  Ok(ends)
 }
 
 /// The calls handing the last `\author` call's tail (`\lx@author@handed`) to the creators it made.
@@ -1062,25 +1263,40 @@ LoadDefinitions!({
   });
   // The first token of the kernel abstract's body (`\lx@begin@abstract`, base_utilities.rs), in the frame it is
   // digested in: the table's keywords setters the refused class abstract defines for its body
-  // ([`abstract_setter_definitions`]) are defined there, for the body only, as the frontmatter's keywords — made as
-  // the class makes them: a `\def` replaces the document's own `\keywords` there, as in pdflatex, a `\newcommand`
-  // leaves it (1706.00599, 1202.2889, 1310.0585).
+  // ([`abstract_setter_definitions`]) are defined there, for the body only, as the frontmatter's keywords named by
+  // the class's label where its code shows one ([`label_before_argument`]: astlb.cls:200 "Key words:", 1202.2889) —
+  // made as the class makes them: a `\def` replaces the document's own `\keywords` there, as in pdflatex, a
+  // `\newcommand` leaves it (1706.00599, 1202.2889, 1310.0585).
   // An abstract kept in place as a supplement's (after the document body began, `\lx@add@frontmatter@until`) keeps
-  // its keywords in place with it, a paragraph of their text, and the paper's keywords stay the frontmatter's
-  // (mtt.cls papers' English and Ukrainian abstracts at the end: 1310.0585, 1310.0589, 1212.3890).
+  // its keywords in place with it, and the paper's keywords stay the frontmatter's (mtt.cls papers' English and
+  // Ukrainian abstracts at the end: 1310.0585, 1310.0589, 1212.3890): there the setter is the class's own definition
+  // when it only typesets its label and argument ([`typesets_label_and_argument`]), else a paragraph of the label
+  // (the default name when the class's is not shown) and the keywords — mtt.cls:181's `\item` belongs to the
+  // class's own abstract list, which the kernel's abstract is not. A setter that does not typeset its argument (it
+  // warns, or drops it) is the class's own definition, as in pdflatex.
   DefPrimitive!("\\lx@abstract@class@setters", {
     let in_place = lookup_bool("lx_frontmatter_kept_in_place");
-    for (name, api, definer) in abstract_setter_definitions() {
+    for (name, api, definer, own) in abstract_setter_definitions() {
       let cs = T_CS!(&s!("\\{name}"));
       if definer == Definer::Keeps && lookup_definition(&cs)?.is_some() {
         continue;
       }
-      let body = if in_place { "\\par #1" } else { api };
-      DefMacro!(
-        cs,
-        convert_latex_args(1, None)?,
-        mouth::tokenize_internal(body)
-      );
+      let label = label_before_argument(&own);
+      let body = if argument_at(&own).is_none() || (in_place && typesets_label_and_argument(&own)) {
+        own
+      } else if in_place {
+        let mut body = mouth::tokenize_internal("\\par{").unlist();
+        body.extend(
+          label
+            .unwrap_or_else(|| Tokens!(T_CS!("\\lx@keywords@name")))
+            .unlist(),
+        );
+        body.extend(mouth::tokenize_internal("} #1").unlist());
+        body
+      } else {
+        named_keywords_call(api, label)
+      };
+      DefMacro!(cs, convert_latex_args(1, None)?, Tokens::new(body));
       Info!(
         "frontmatter",
         s!("\\{name}"),
@@ -1090,32 +1306,35 @@ LoadDefinitions!({
   });
   // A raw class's label-only `{keywords}` (`reroute_keywords_environments`): `\begin{keywords}` … `\end{keywords}`
   // is the frontmatter's keywords, read up to the end; called as a command, `\keywords{…}` (paper.cls's papers write
-  // both) is the keywords of its argument; a bare `\keywords text`, whose extent only the class's layout knows, runs
-  // the class's own begin code (`\lx@class@keywords@<name>`), as before.
+  // both) is the keywords of its argument when that group ends them — `\par`, a blank line or an `\end…` follows it
+  // ([`braced_group_ends_the_keywords`]); any other `\keywords`, whose extent only the class's layout knows
+  // (`\keywords {alpha}, beta, gamma`), runs the class's own begin code (`\lx@class@keywords@<name>`), as before.
   DefMacro!("\\lx@class@keywords{}", sub[(name)] {
     let name = name.to_string();
     let label = match lookup_value(&s!("lx_class_keywords_label_{name}")) {
-      Some(Stored::Tokens(label)) => label,
-      _ => Tokens::default(),
+      Some(Stored::Tokens(label)) => Some(label),
+      _ => None,
     };
     let current = Expand!(Tokens!(T_CS!("\\@currenvir"))).to_string();
     let api = if current == name {
       "\\lx@begin@keywords"
-    } else {
-      let next = read_token()?;
-      let braced = next.as_ref().is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
-      if let Some(t) = next {
-        unread(Tokens!(t));
-      }
-      if !braced {
-        return Ok(Tokens!(T_CS!(&s!("\\lx@class@keywords@{name}"))));
-      }
+    } else if braced_group_ends_the_keywords()? {
       "\\lx@add@keywords"
+    } else {
+      return Ok(Tokens!(T_CS!(&s!("\\lx@class@keywords@{name}"))));
     };
-    let mut call = mouth::tokenize_internal(TeXString::assembled(s!("{api}[name={{"))).unlist();
-    call.extend(label.unlist());
-    call.extend(mouth::tokenize_internal("}]").unlist());
-    Ok(Tokens::new(call))
+    Ok(Tokens::new(named_keywords_call(api, label)))
+  });
+  // Its `\end<name>`: in the environment the end of the frontmatter's keywords, else (a bare `\keywords alpha
+  // \endkeywords`) the class's own end code, kept as `\lx@class@keywords@end@<name>` (paper.cls:622 `\par\bigskip`).
+  DefMacro!("\\lx@class@keywords@end{}", sub[(name)] {
+    let name = name.to_string();
+    let current = Expand!(Tokens!(T_CS!("\\@currenvir"))).to_string();
+    Ok(if current == name {
+      Tokens!(T_CS!("\\lx@end@keywords"))
+    } else {
+      Tokens!(T_CS!(&s!("\\lx@class@keywords@end@{name}")))
+    })
   });
   // Fired by `input_definitions` after a `.cls` is loaded raw
   // (latexml_core/src/binding/content.rs).

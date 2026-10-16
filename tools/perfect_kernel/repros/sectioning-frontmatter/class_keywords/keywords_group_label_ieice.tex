@@ -1,0 +1,17 @@
+% A label-only `{keywords}` whose label is a brace group (kwgroups.cls option ieice): the group's font and layout commands
+% stay in the label, which names the frontmatter's keywords by its text only; the keywords text is not in its font.
+% witness: 2002.00666, 1604.03276, 2509.21881 (ieice.cls:952-954)
+% oracle:  pdflatex (kwgroups.cls beside it) 0 errors: "key words: alpha, beta Body." (pdffonts: the label in CMBXTI10, the
+%          keywords in CMTI8 — italic from the class's ungrouped `\itshape`, which the frontmatter keywords do not carry)
+% expect:  0 errors, 0 warnings; <keywords name="key words:">alpha, beta </keywords>, no font= on the keywords text
+% status:  RED (68n round 1: the name carried the group's commands, the keywords text bold) -> GREEN (68n round 2)
+% preload: ar5iv.sty
+\documentclass[ieice]{kwgroups}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{keywords}
+alpha, beta
+\end{keywords}
+Body.
+\end{document}

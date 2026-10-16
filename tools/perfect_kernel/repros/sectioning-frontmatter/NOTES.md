@@ -165,7 +165,7 @@ the internal of a refused definition, so the replay's vocabulary gate dropped th
 in 66d r2 (sect08.rs `define_optional_internal`, OD #567). Guard
 `perfect_kernel_batch66b::refused_dblarg_setter_reaches_its_internal`.
 
-## class_keywords/* (GREEN, 68n)
+## class_keywords/* (GREEN, 68n rounds 1-2)
 
 A raw class's keywords, in two shapes the K11 store reroute (frontmatter_stores.rs) did not serve. (1) A one-argument
 `\keywords` the class defines only for its abstract's body: wiley-article.cls:446-489 (`\NewEnviron{wiley@abstract}
@@ -183,3 +183,11 @@ one the class's code (RUST-ONLY under the rawclasses lever and localrawclasses; 
 CONTROLs: a flag in the begin code (kwflag.cls) keeps the class's; the document's own `{keywords}` and an undefined
 `\keywords` stay. OXIDIZED_DESIGN_DIVERGENCES #634; guards `perfect_kernel_batch68n`. Dead end: one `\lx@add@keywords`
 per abstract without the in-place rule let a supplement abstract's keywords clear the paper's (1310.0585).
+Round 2 (review): `keywords_group_label_{va,vb,ve,emsprocart,ieice,lni}` (kwgroups.cls, one class option per shape) —
+a label that is a brace group named the keywords with its `\noindent`/`\vskip` and set the keywords text bold
+(emsprocart 1202.4161, 1006.0632, 1610.08545; ieice 2002.00666, 1604.03276, 2509.21881; lni 1604.03313); the label is
+now its text only (`LabelText`). `keywords_environment_braced_first_group` (`\keywords {alpha}, beta, gamma`: the class's
+code, not keywords "alpha" + a stray ", beta, gamma"), `keywords_environment_bare_endkeywords` (`\endkeywords` outside
+the environment is the class's `\par\bigskip`), `abstract_keywords_setter_that_only_warns` (kwwarn.cls: a setter that
+does not use its argument is the class's own, its warning the one diagnostic); the supplement repro's in-place keywords
+now keep the class's label (its own definition), as its oracle prints.

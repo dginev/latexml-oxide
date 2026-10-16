@@ -1,0 +1,21 @@
+% A label-only `{keywords}` (kwpaper.cls, paper.cls:621) called as a command whose first braced group is only part of
+% the keywords (`\keywords {alpha}, beta, gamma`): the group does not end them (no `\par`, blank line or `\end…` after
+% it), so the class's own code runs and the keywords stay together, as in pdflatex.
+% witness: none (the review's probe t3)
+% oracle:  pdflatex (kwpaper.cls beside it) 0 errors: "Abstract Abstract text. Keywords: alpha, beta, gamma 1 Intro
+%          Body."
+% expect:  0 errors, 0 warnings; no <keywords>; "alpha, beta, gamma" one run-in paragraph under "Keywords:"
+% status:  RED (68n round 1: <keywords> "alpha" and a stray paragraph ", beta, gamma") -> GREEN (68n round 2)
+% preload: ar5iv.sty
+\documentclass{kwpaper}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\keywords {alpha}, beta, gamma
+
+\section{Intro}
+Body.
+\end{document}

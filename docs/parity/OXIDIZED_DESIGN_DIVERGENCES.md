@@ -17959,26 +17959,46 @@ name pattern. (1) The kernel abstract's body begins with `\lx@abstract@class@set
 hands control to (`\begin{X}` as `\X`, environ's `\csname env@X@process\endcsname`, a refused command as its
 `\lx@dropped@` record, the kernel `\maketitle` as the class's `\@maketitle`, which it deposits), at most 512 definitions
 a raw file or the document made, for a one-argument definition of a table setter (`\def\keywords#1{`,
-`\newcommand{\keywords}[1]{`); each found is defined there, for the abstract's body only, as its frontmatter API
-(`\lx@add@keywords{#1}`), made as the class makes it: a `\def` replaces the document's own `\keywords` inside the
-abstract (pdflatex prints the class's there), a `\newcommand` leaves it. In an abstract kept in place as a supplement's
-(after the body began, OXIDIZED_DESIGN #154) the keywords stay in place with it, a paragraph of their text (mtt papers'
-English and Ukrainian abstracts at the end, whose keywords otherwise replaced the paper's Russian ones and were then
-dropped as a supplement's: 1310.0585, 1310.0589, 1212.3890). Outside the abstract `\keywords` stays undefined, as in
-pdflatex. (2) After a raw class loads (`reroute_keywords_environments`), a table setter it defined as an environment —
+`\newcommand{\keywords}[1]{`) whose body uses its argument — one that only warns or drops it (beilstein.cls:854,
+fbithesis.cls:272) is not a setter of it, and is defined there as the class's own (its warning, as in pdflatex). Each
+found is defined there, for the abstract's body only, as its frontmatter API (`\lx@add@keywords{#1}`), named by the
+class's label ahead of the argument where its code shows one (`label_before_argument`, the label rule below:
+astlb.cls:200 `\medskip Key words:~~\emph{##1}` "Key words:", pazhastl.cls:191 "Keywords:"; wiley-article.cls:449's
+`\allcaps[…]{keywords}` and mtt.cls:181's `\item…\mtt@keywords` are not that shape and keep the default name), made
+as the class makes it: a `\def` replaces the document's own `\keywords` inside the abstract (pdflatex prints the
+class's there), a `\newcommand` leaves it. In an abstract kept in place as a supplement's (after the body began,
+OXIDIZED_DESIGN #154) the keywords stay in place with it (mtt papers' English and Ukrainian abstracts at the end, whose
+keywords otherwise replaced the paper's Russian ones and were then dropped as a supplement's: 1310.0585, 1310.0589,
+1212.3890), typeset by the class's own definition when it only typesets its label and argument
+(`typesets_label_and_argument`), else as a paragraph of the label (or the default name) and the keywords — mtt.cls:181's
+`\item` belongs to the class's own abstract list, which the kernel's abstract is not. Outside the abstract `\keywords`
+stays undefined, as in pdflatex. (2) After a raw class loads (`reroute_keywords_environments`), a table setter it defined as an environment —
 no parameters, an `\end<name>` beside it, not a binding's — whose begin code typesets only a label
 (`label_only_begin_code`: layout that typesets nothing — font, size and paragraph declarations, `\fontsize`, `\vspace`,
 `\addvspace`, glue settings as `\rightskip5.5pc`, a class macro made of them as pasa.cls:56 `\keywordfont` — around one
 run of label material: text, a sectioning heading's argument, a `\textbf`-like command, a group of them, a class macro
 that is text such as `\keywordname`) becomes `\lx@class@keywords{<name>}`: inside `\begin{<name>}` the frontmatter's
-keywords read up to `\end{<name>}` (`\lx@begin@keywords[name={<label>}]`, `\end<name>` → `\lx@end@keywords`), as
-mn2e_support_sty.rs does; called as a command, `\keywords{…}` is `\lx@add@keywords[name={<label>}]{…}`; a bare
-`\keywords text`, whose extent only the class's layout knows, runs the class's own begin code (`\lx@class@keywords@<name>`).
-The label is the keywords' name ("Keywords:", biometrika.cls:526 "Some key words: "). A begin code doing anything else
-— a flag its title page reads (tADR2e.cls:450 `\global\keywordstrue`), a box it fills (ar-1col's `\global\setbox
-\@kwdbox\vbox\bgroup`, iau, biom), a list (fundam, basi, cpc-hepnp), a definition (lni.cls:561-565 `\def\and`), a
-conditional (emsprocart, icmart `\if@twocolumn`), an optional argument (vmsta) — stays the class's. A document's own
-`{keywords}`, defined after the class, replaces the rerouted one.
+keywords read up to `\end{<name>}` (`\lx@begin@keywords[name={<label>}]`), as mn2e_support_sty.rs does; called as a
+command, `\keywords{…}` is `\lx@add@keywords[name={<label>}]{…}` when that group ends the keywords — `\par`, a blank
+line or an `\end…` follows it (`braced_group_ends_the_keywords`); any other `\keywords` (`\keywords {alpha}, beta,
+gamma`, a bare `\keywords text`), whose extent only the class's layout knows, runs the class's own begin code
+(`\lx@class@keywords@<name>`). `\end<name>` is chosen by `\@currenvir` the same way: the end of the frontmatter's
+keywords in the environment, else the class's own end code (`\lx@class@keywords@end@<name>`; paper.cls:622
+`\par\bigskip` after a bare `\keywords alpha \endkeywords`). The label is the keywords' name, made of its TEXT only
+(`LabelText`): its characters and text macros, a source space or horizontal skip between two pieces one space, an
+explicit `\ `/`~` one space, a trailing space dropped — never a font or layout command, which would print as a command
+name in the name and, out of the label's group, set the keywords text in the label's font (emsprocart.cls:668-670
+`\vspace{2pt}\small{\noindent\bfseries{\keywordname.}\vspace{\z@}}` "Keywords.", 1202.4161, 1006.0632, 1610.08545;
+ieice.cls:952-954 "key words:", 2002.00666, 1604.03276, 2509.21881; 1604.03313's lni.cls:157-158 "Keywords:";
+paper.cls "Keywords:", biometrika.cls:526 "Some key words:"). The keywords text is the document's, in no class font
+(pdflatex sets ieice's in the class's ungrouped `\itshape`). Converted, in the versions read (TeX Live 2025 where it ships
+the class, else the papers' copies): paper.cls:621-627 (TL), pasa, biometrika, irmaems, ieice, the emsprocart copies of
+1202.4161/1006.0632/1610.08545/0803.2841/1203.6509, the lni copies of 1604.03313/1810.05361/2108.00996/2110.01641. A begin
+code doing anything else stays the class's: a flag its title page reads (tADR2e.cls:450 `\global\keywordstrue`; TeX
+Live 2025's lni.cls:561-565 `\global\keywordstrue…\def\and`, and the lni copies of 2403.01613, 2402.18227), a box it
+fills (ar-1col's `\global\setbox\@kwdbox\vbox\bgroup`, iau, biom), a list (fundam, basi, cpc-hepnp), a conditional
+(the emsprocart copies of 0803.2060 and math0612455, icmart's, `\if@twocolumn\section*{\keywordname}`), an optional
+argument (vmsta). A document's own `{keywords}`, defined after the class, replaces the rerouted one.
 **Why**: the keywords are the author's content and the frontmatter carries them as such (user ruling 2026-09-18 on raw
 classes' title-page stores, `feedback_frontmatter_api_for_raw_classes`); the undefined `\keywords` was the only error of
 373 papers of run 353, of which 330 now convert error-free (wiley-article 214, nbdt-article 40, astlb 26, the pazh
@@ -17990,7 +18010,9 @@ Witnesses 1706.00599, 1712.05593, 1712.05708, 1801.08881, 1809.03406, 1202.2889,
 abstract (hsrbericht.cls:348; a document's own `\renewenvironment{abstract}{…\providecommand\keywords{\par…}}`, the
 "article" row: 1403.4689, 2405.19523), a locked `\abstract` patched twice (cup-pan.cls:134-147 `\preto` then `\appto`:
 the refused-definition record keeps the last patch; 2008.06930, 2004.14479), pazh's `\englishkeywords`. Repros sectioning-frontmatter/class_keywords/*;
-guards `perfect_kernel_batch68n`.
+guards `perfect_kernel_batch68n` (20: round 2 added `group_label_*` (6),
+`braced_first_group_that_does_not_end_the_keywords_runs_the_classs_code`, `bare_endkeywords_is_the_classs_end_code`,
+`abstract_setter_that_only_warns_is_the_classs_own`).
 
 ### 637. `\unvbox` splices a vbox's list only into a vertical box's own list, between two boundary marks
 

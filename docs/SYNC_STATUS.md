@@ -1946,12 +1946,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   text` the class's own code. Witnesses before → after (base 67int11-rel): 1706.00599, 1801.08881, 1202.2889,
   astro-ph0306137, 1507.06302, 2103.05801 each 1 Error → 0 with `<keywords>` (pdflatex prints them in the abstract);
   rawclasses lever, paper.cls: 9 of 10 papers (0707.1307, 0712.4042, 0808.0240, 0809.0271, 0812.2713, 0901.1497,
-  1004.5246, 1007.3042, 1008.0145) run-in `<paragraph>` → `<keywords name="Keywords: ">`, 0711.1008 has its
+  1004.5246, 1007.3042, 1008.0145) run-in `<paragraph>` → `<keywords name="Keywords:">`, 0711.1008 has its
   `{keywords}` commented out. A/B vs 67int11-rel over the 373 cluster papers + 100 of pop67o + 150 papers on shipped
   raw classes defining a `{keywords}`: cluster Errors 374 → 43 (330 papers to 0, 331 gain `<keywords>`, none worse),
   pop67o identical (1902.02884 times out in both), shipped 18 gain `<keywords>`, errors identical, the only word
   drops the label moved into the keywords' name. Repros sectioning-frontmatter/class_keywords/* RED (67int11) → GREEN
-  (three CONTROL); guards `perfect_kernel_batch68n` (11). Not served (listed): the "article" row (36 papers: 25 with the
+  (three CONTROL); guards `perfect_kernel_batch68n` (20 with round 2). Not served (listed): the "article" row (36 papers: 25 with the
   document's own `\renewenvironment{abstract}{…\providecommand\keywords{\par\medskip\noindent\textit{Keywords:}…}}`,
   a parameterless run-in keywords inside an abstract the kernel's lock refuses — 1205.4818, 1403.4689, 2405.19523 —
   as hsrbericht.cls:348 in TeX Live; 5 shipping an arXiv template named `natbib.sty`/`neurips_202x.sty` whose
@@ -1959,11 +1959,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   nowhere, 2403.06358); cup-pan.cls:134-147 and its copy mytemplate (6 papers: 2008.06930, 2102.01732, 2004.14479)
   patch the locked `\abstract` with `\preto` then `\appto`, and the refused-definition record keeps only the last
   patch, which lacks the `\keywords`; pazh's `\englishkeywords`; 2305.04260's `\DeclareObjectType` error (another
-  cluster). Label-only shapes not taken (each stays the class's): a flag (tADR2e/rQUF2e/gGAF2e/tCPH2e
-  `\global\keywordstrue`), a box (ar-1col, iau, ar2e, biom, IOS-Book-Article, iosart2x, ifacconf, autart `\keyword`),
-  a list (fundam, basi, ragtime, cpc-hepnp, fac), a definition (lni, cidarticle `\def\and`; elsarticle-like `\sep`), a
-  conditional (emsprocart, icmart, mnras-like `\if@twocolumn`), an optional argument (vmsta), centering environments
-  (sf2a-conf), jmlr.cls:235 `\bgroup\leftskip 20pt…{\bfseries Keywords:}` would match but jmlr has a binding.
+  cluster). Label-only shapes, in the versions read (TeX Live 2025 where it ships the class, else the papers' copies):
+  converted — paper.cls (TL), pasa, biometrika, irmaems, ieice, emsprocart's label-only copies (1202.4161, 1006.0632,
+  1610.08545, 0803.2841, 1203.6509), lni's older copies `\fontsize{9}{10}\selectfont\noindent{\bfseries Keywords:}`
+  (1604.03313, 1810.05361, 2108.00996, 2110.01641); not taken (each stays the class's): a flag (tADR2e/rQUF2e/gGAF2e/
+  tCPH2e `\global\keywordstrue`; TL 2025's lni.cls:561-565 and its copies 2403.01613, 2402.18227, which also `\def\and`),
+  a box (ar-1col, iau, ar2e, biom, IOS-Book-Article, iosart2x, ifacconf, autart `\keyword`), a list (fundam, basi,
+  ragtime, cpc-hepnp, fac), a definition (cidarticle `\def\and`; elsarticle-like `\sep`), a conditional (emsprocart's
+  `\if@twocolumn\section*{\keywordname}` copies 0803.2060, math0612455; icmart; mnras-like), an optional argument
+  (vmsta), centering environments (sf2a-conf), jmlr.cls:235 `\bgroup\leftskip 20pt…{\bfseries Keywords:}` would match
+  but jmlr has a binding. Round 2 (review findings): the label becomes the keywords' `name` as its text only
+  (`LabelText`; round 1 put a group label's `\noindent`/`\vskip` into the name and its `\bfseries` onto the keywords
+  text of 10 of 18 converted shipped papers — emsprocart 1202.4161/1006.0632/1610.08545, ieice 2002.00666/1604.03276/
+  2509.21881, lni 1604.03313); Part A names the keywords by the class's label too (`label_before_argument`: astlb "Key
+  words:", pazh "Keywords:"; wiley's `\allcaps` and mtt's `\item` keep the default); `\keywords{…}` is the keywords of
+  its group only when `\par`, a blank line or `\end…` follows it, else the class's code runs (`\keywords {alpha}, beta`
+  kept together); `\end<name>` outside the environment is the class's own end code; a supplement's in-place abstract
+  typesets its keywords with the class's own definition when that only typesets label and argument (else label +
+  keywords; the class's label kept, as pdflatex's "Keywords: english words"); a found setter that does not use its
+  argument (beilstein.cls:854, fbithesis.cls:272) is the class's own definition, not the keywords. Guards
+  `perfect_kernel_batch68n` 11 → 20.
 - **68g** (llncs theorem numbering, the 68a residual KNOWN_PERL_ERRORS #743): llncs_cls.rs installs the class's
   theorem set with llncs.cls's own code (:1142-1174, TL 2025 v2.26; the same in every shipped copy v2.2-v2.26, checked
   over 18 versions from 1,250 arXiv llncs papers): `{theorem}` by section only under `envcountsect` (reset by section

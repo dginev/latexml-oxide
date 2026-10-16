@@ -526,7 +526,8 @@ LoadDefinitions!({
     {
       Info!("frontmatter", "sealed", s!("{tag} after the document body began is a supplement's; kept in place"));
       // (read by what the body defines for itself: a class's in-abstract `\keywords` stays in place with it,
-      // frontmatter_stores.rs `\lx@abstract@class@setters`)
+      // frontmatter_stores.rs `\lx@abstract@class@setters` — mtt.cls papers' English and Ukrainian abstracts at
+      // their end: 1310.0585, 1310.0589, 1212.3890)
       assign_value("lx_frontmatter_kept_in_place", true, Some(Scope::Local));
       return digest_next_body(Some(end));
     }
@@ -1010,7 +1011,8 @@ LoadDefinitions!({
   );
   // To handle the above as environments
   // (the body's first token, `\lx@abstract@class@setters`, defines there the keywords setters a raw class's refused
-  // abstract defines for its body: frontmatter_stores.rs, 68n)
+  // abstract defines for its body: frontmatter_stores.rs, 68n — wiley-article 1706.00599, astlb 1202.2889, mtt
+  // 1310.0585)
   DefMacro!(
     "\\lx@begin@abstract[]",
     "\\lx@frontmatter@mark{ltx:abstract}\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter@until{ltx:abstract}[#1]{\\lx@end@abstract}\\lx@abstract@class@setters"
