@@ -274,9 +274,10 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
 
 ### 2026-10-16 — pre-rerun tactical pass + memory-fuse audit (batch 68p)
 
-The memory-fuse change the audit proposed (address space against `RLIMIT_AS`) is not in this entry:
-its review found the retry tag placed where CorTeX does not read it, and a paper that completes
-(0804.1983) stopped in streaming pass 1; it lands with its second round.
+The memory-fuse change the audit proposed (address space against `RLIMIT_AS`) is PARKED, a settled
+dead-end: it turns a crash into a named Fatal (both final, retried alike) and cost 0804.1983's
+completion (9/9 → 4/9 runs) — `STABILITY_WITNESSES.md` Cluster K. The audit's dominant OOM loop
+(`semantic`'s `\lastbox` peel) is fixed in the kernel instead (68q, `\unvbox` splices, §1110).
 
 Basis: the read-only study `~/data/pk_agents/main/agent_reports/2026-10-16_perf_ram_study.md`
 (`perf` is blocked on this host, `perf_event_paranoid=4`: gdb stack samples, `telemetry.json`

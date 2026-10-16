@@ -521,6 +521,32 @@ ms, no longer overlapped with option parsing. Library callers (`latexml::api`)
 run construction on the single worker thread they spawn; a multi-threaded host
 should call `init_kpathsea()` once at start-up before converting concurrently.
 
+## Cluster K — fleet runaways reach `RLIMIT_AS` before any memory fuse (`oom:alloc_failed`) — dominant loop FIXED 2026-10-16 (68q); address-space fuse PARKED
+
+**Symptom.** 448 fleet `Fatal:oom:alloc_failed` in the 2026-10-16 study (agent_reports/2026-10-16_perf_ram_study.md),
+with only the harness's exit report returned. Standalone (no `RLIMIT_AS`) the same papers end in a located
+`Fatal:Timeout:MemoryBudget`.
+
+**Cause.** The harness caps a child at 5632 MiB of address space and sets the cooperative fuse (`LATEXML_RSS_CAP_BYTES`)
+and the watchdog's guard to 5376 MiB of **RSS**; the allocators reserve address space 0.5–2.7 GB above what is resident,
+so children hit the cap at 4.2–5.1 GB RSS, before either fires. 324 of the 448 load `semantic`: its `\inference`
+`\lastbox` peel loop never ended because `\unvbox` returned the box itself (tex.web §1110; KNOWN_PERL_ERRORS #840) —
+FIXED by 68q: 1603.01635, 2506.05832, 1401.6227, 1709.02440, 2311.14452, 2205.02590, 1010.5572, 1011.6429, 1104.1738
+complete at Status 1 in 1–10 s at fleet caps.
+
+**Settled dead-end: an address-space fuse** (68p item 5, rounds 1-2, branch pk/68p2 e78ea52da6, not landed): firing
+256 MiB under `RLIMIT_AS` turns a crash into a named Fatal (1107.2000, 1111.6657, 0804.3328: rc 137 → Status 3) — a
+Fatal either way, retried alike by CorTeX — while it cost a paper that completes: 0804.1983 completes 9/9 runs on
+e839db2fc3, 4/9 with the fuse (dies in Finalizing on one 195 MiB `Vec<u8>` doubling at the cap; round 1, fusing in
+streaming pass 1 too, stopped it 3/3). At the moment the fuse would fire, RSS and VmSize of runaways and of 0804.1983
+look alike (RSS 4.1–4.2 GB, VmSize 5.4–5.6 GB), so no threshold separates them. Measured at fleet caps (`ulimit -v
+5767168`, `--max-rss-mb 5376`, standalone `cortex_worker`), agent_reports/2026-10-16_68p_review.md and
+2026-10-16_68p_r2_report.md.
+
+**Open.** physics0504062: one formula's math-parse spike (RSS 2.5 → 5.2 GB in 0.2 s, ASF traversal) where no
+cooperative check polls (math-parse stream, parked). 0804.2004, 0804.2001, 0804.2002 reach the cap after
+`streaming:transition`; 1009.2640 `Fatal:Document` "failed to create element" (libxml2 `malloc` at the cap).
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.
