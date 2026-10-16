@@ -156,6 +156,11 @@ AUDITED = {
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
     ),
+    "nix": ("0.31.3",
+        "test/test_kmod/hello_mod/hello.c -- a Linux kernel-module test fixture, not built; "
+        "zip 9 depends on nix only on macOS and the BSDs (zip-9.0.3 Cargo.toml:263, feature "
+        "\"fs\"), so no Linux build compiles nix at all; license MIT.",
+    ),
     # Both versions audited: the same uncompiled reference/*.cpp shape.
     # (A tuple lists every audited version — needed because the lockfile is
     # gitignored, so different machines/CI can resolve different compatible
