@@ -14333,3 +14333,12 @@ Minimal trigger: `\documentclass{article}\makeatletter\begingroup\fontencoding{U
 loads amsfonts; Perl `Error:undefined:\symAMSb`. amsart.cls:338-350 has this test; copies of it (nyjm.cls 2401.06615,
 cedram.cls 2105.03188, myart.cls 1506.02470, fcaa-var.cls) loaded raw skip amsfonts. Fixed in Rust (68v,
 OXIDIZED_DESIGN_DIVERGENCES #645); guard `perfect_kernel_batch68v::batch68v_try_load_fontshape_finds_amsfonts`.
+
+## 846. empheq's binding has no `overload` and no `\empheqlbrace`; its options are dropped
+
+empheq.sty.ltxml reads `\begin{empheq}[<options>]` with `\empheqset{#1}` = nothing and defines no
+`\DeclareLeftDelimiter` commands. Minimal trigger: `\usepackage[overload]{empheq}` and
+`\begin{align}[left={F(x)=\empheqlbrace}] x&=1\\ y&=2\end{align}` — pdflatex "F(x) = {" before both rows; Perl's
+binding leaves `[left=…]` to the first cell, read as math, and `\empheqlbrace` undefined; `\begin{empheq}[left={F(x)=\empheqlbrace}]
+{align}` loses "F(x) =". Fixed in Rust (68v, OXIDIZED_DESIGN_DIVERGENCES #646; 1410.0933, 1906.02657, 2210.09120); guard
+`perfect_kernel_batch68v::batch68v_empheq_overload_left_and_right`.

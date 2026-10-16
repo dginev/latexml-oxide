@@ -2328,7 +2328,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (amsart.cls:338-350) copied into raw classes failed — `\try@load@fontshape` was empty, `\DeclareFontShape` a no-op
   and `\fontencoding{U}` fell back to OT1 — so amsfonts never loaded; now latex.ltx's (:10605-10620, :10279-10305) and
   `U` keeps its name (OXIDIZED_DESIGN_DIVERGENCES #645, KNOWN_PERL_ERRORS #845; repro
-  fonts-nfss/amsfonts_try_load_fontshape).
+  fonts-nfss/amsfonts_try_load_fontshape). (2) `\empheqlbrace` (229 papers; 1410.0933, 1906.02657, 2210.09120):
+  empheq's `overload` and its `left`/`right` keys and delimiter commands (empheq.sty:785-1066; #646, KPE #846; repro
+  package-bindings/empheq_overload_left; residual: the math parser loses the null `\right.` of an empty fence).
   Guards `perfect_kernel_batch68v`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

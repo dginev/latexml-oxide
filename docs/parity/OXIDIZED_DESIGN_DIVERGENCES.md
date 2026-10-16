@@ -18348,3 +18348,18 @@ own map, OT1's — the glyphs it decoded through before — beside the per-famil
 `\f@encoding` names `U` as latex.ltx's `\fontencoding` does. Left out: the unknown-family error and the series-`m` note
 of `\DeclareFontShape`, `\@font@info` and the "No file" typeout (none is in the dumpless base). KNOWN_PERL_ERRORS #845.
 Repro fonts-nfss/amsfonts_try_load_fontshape; guard `perfect_kernel_batch68v::batch68v_try_load_fontshape_finds_amsfonts`.
+
+### 646. empheq's `left`/`right` material is kept, and `overload` gives the AMS environments the option
+
+Perl's empheq binding (empheq.sty.ltxml) reads `\begin{empheq}[<options>]{<env>}`'s options and drops them, defines
+none of `\DeclareLeftDelimiter`'s commands, and has no `overload`: `\usepackage[overload]{empheq}`
+`\begin{align}[left={F(x)=\empheqlbrace}]` typeset the option list as math in the first cell and `\empheqlbrace` was
+undefined (229 papers; 1410.0933, 1906.02657, 2210.09120, 2201.03303, 2207.01386). Ours (empheq_sty.rs): the options
+are empheq's keys (empheq.sty:785-838) — `left` opens the environment's first cell, `right` closes its last, the boxes
+are styling and dropped; `overload`/`overload2` redefine equation, gather, align, flalign, multline, alignat and their
+starred forms as empheq.sty:961-1066 does, an optional `[…]` (after alignat's count), each keeping its lock; and
+`\empheq<delim>`/`\empheqbig<delim>` for the sixteen delimiters of empheq.sty:868-883 are the delimiter grown to the
+display (`\left\lbrace\right.`, the phantom and kerns presentational). A constructor environment (`\begin{equation}`)
+keeps its own end, so takes no `right`. KNOWN_PERL_ERRORS #846. Repro package-bindings/empheq_overload_left; guard
+`perfect_kernel_batch68v::batch68v_empheq_overload_left_and_right` (its 7 warnings are the math parser's on the empty
+fence `\left\{\right.`, whose null right delimiter the parse loses — math parsing is a separate stream).

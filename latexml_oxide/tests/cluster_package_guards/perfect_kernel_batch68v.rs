@@ -52,3 +52,23 @@ fn batch68v_try_load_fontshape_finds_amsfonts() {
     r#"<Math mode="inline" tex="\mathbb{R}" text="R" xml:id="p1.m2">"#,
   ]);
 }
+
+/// package-bindings/empheq_overload_left: `\usepackage[overload]{empheq}` gives the AMS environments empheq's options
+/// (empheq.sty:961-1066); `left` opens the first cell, `right` closes the last, `\empheqlbrace` is the brace grown to
+/// the display (1410.0933, 1906.02657, 2210.09120, 2201.03303, 2207.01386). The option list is no longer typeset.
+/// The 7 warnings are the math parser's on the empty fence `\left\{\right.` (math parsing is a separate stream).
+#[test]
+fn batch68v_empheq_overload_left_and_right() {
+  let (counts, log, xml) = repro!("package-bindings/empheq_overload_left.tex");
+  assert_eq!(counts, (0, 7), "{log}");
+  assert!(!xml.contains("left="), "{xml}");
+  assert_all(&xml, &[
+    r#"tex="\displaystyle F(x)=\left\{\right.x""#,
+    r#"tex="\displaystyle y=2""#,
+    r#"tex="\displaystyle=3\left.\right\}""#,
+    r#"tex="\displaystyle G=\left\{\right.a""#,
+    r#"tex="\displaystyle b=2""#,
+    r#"tex="\left\{\right.c=d""#,
+    r#"<tags> <tag>(4)</tag> <tag role="refnum">4</tag> </tags>"#,
+  ]);
+}

@@ -1,0 +1,25 @@
+% witness: 1410.0933, 1906.02657, 2210.09120, 2201.03303, 2207.01386 (`\usepackage[overload]{empheq}`,
+%          `\begin{align}[left={F(x)=\empheqlbrace}]`)
+% oracle:  pdflatex: "F(x) = {" before the rows x=1 (1), y=2 (2); "{u = 3}"; "G = {a = 1 b = 2 (3)"; "{c = d (4)"; 0 errors
+% engines: rust 67int15 = 1 error (undefined `\empheqlbrace`; the option list `[left=…]` typeset as math in the first
+%          cell)
+% expect:  0 errors; the left material opens the first cell, the right closes the last; the warnings are the math
+%          parser's on the empty fence `\left\{\right.` (math parsing is a separate stream)
+% status:  RED (67int15) -> GREEN (68v)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[overload]{empheq}
+\begin{document}
+\begin{align}[left={F(x)=\empheqlbrace}]
+x &= 1 \\ y &= 2
+\end{align}
+\begin{align*}[left=\empheqlbrace, right=\empheqrbrace]
+u &= 3
+\end{align*}
+\begin{empheq}[left={G=\empheqlbrace}]{alignat=2}
+a &= 1 & b &= 2
+\end{empheq}
+\begin{equation}[left=\empheqlbrace]
+c=d
+\end{equation}
+\end{document}
