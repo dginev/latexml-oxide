@@ -311,3 +311,22 @@ fn processoptions_reads_as_protected_edef() {
   let shown = r#"<p xml:id="p1.1"><text font="typewriter" xml:id="p1.1.1">macro:-&gt;&lt;ALPHA&gt;[gamma][delta=D][beta=\textbf {x}][w=345.0pt][\po ][o=\oa ][r=\protect \rb ][p=\protect \foo ]</text></p>"#;
   assert!(xml.contains(shown), "{shown}\n{xml}");
 }
+
+/// ieeeaccess.cls:121-133 and :75-79: the class's `accessblue` (here the PANTONE 3015 C spot colour's CMYK alternate,
+/// 1 0.3 0 0.2) and caption fonts, which papers name in their caption setup (2405.14505, 2205.15416); since caption's
+/// keys take effect (68h) a missing colour or `\figcapfont` is an Error per caption (pdflatex 0 on the witness).
+#[test]
+fn ieeeaccess_caption_class_colour() {
+  let xml = clean!("class-bindings/ieeeaccess_caption_class_colour.tex");
+  let caption = r##"<caption><tag close=": "><text color="#0080CC" font="sansserif bold" fontsize="70%" xml:id="S0.F1.1">Fig.1</text></tag>One</caption>"##;
+  assert!(xml.contains(caption), "{caption}\n{xml}");
+}
+
+/// IEEEojcsys.cls:3346-3348 `\AtBeginDocument{\definecolor{ojcolor}{rgb}{0,0.40,0.80}}` (after loading color), named by
+/// a paper's `\captionsetup{labelfont={color=ojcolor}}` (2206.03535; pdflatex 0 on the witness).
+#[test]
+fn ieeeojcsys_caption_class_colour() {
+  let xml = clean!("class-bindings/ieeeojcsys_caption_class_colour.tex");
+  let caption = r##"<caption><tag close=": "><text color="#0066CC" xml:id="S0.F1.2">Fig. 1</text></tag>One</caption>"##;
+  assert!(xml.contains(caption), "{caption}\n{xml}");
+}

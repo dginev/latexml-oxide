@@ -1,0 +1,14 @@
+% witness: 2206.03535 (IEEEojcsys, `\captionsetup{labelfont={color=ojcolor}}`)
+% oracle:  pdflatex on the witness 2206.03535 (its own IEEEojcsys.cls, :3346-3348 `\AtBeginDocument{\definecolor{ojcolor}
+%          {rgb}{0,0.40,0.80}}`): no colour error, labels in ojcolor
+% engines: rust 67int10 (caption keys applied since 68h) = "Can't find color named 'ojcolor'" per caption; 67int9 ignored
+%          the key
+% expect:  0 errors; the caption's label carries ojcolor (#0066CC)
+% status:  RED (67int10) -> GREEN (int10 integration fix)
+% preload: ar5iv.sty
+\documentclass{IEEEojcsys}
+\usepackage{caption}
+\captionsetup{labelfont={color=ojcolor}}
+\begin{document}
+\begin{figure}\caption{One}\end{figure}
+\end{document}

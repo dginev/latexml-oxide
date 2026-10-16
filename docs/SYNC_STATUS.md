@@ -2201,7 +2201,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   captions-floats/{caption_option_key_is_read_unexpanded, protected_robust_name_is_a_name_noun},
   loader/processoptions_reads_as_protected_edef (+ poq68h.sty; the direct `\ProcessOptions` guard: pdflatex's list
   except `[beta=\textbf {x}]` and `[o=\oa ]`, which pdflatex prints with a `\protect`, the kernel's `\textbf` and an
-  optional-argument `\newcommand` not being `\protect`-wrapped macros here); guards `perfect_kernel_batch68h` (+3).
+  optional-argument `\newcommand` not being `\protect`-wrapped macros here); guards `perfect_kernel_batch68h` (+3). Integration (int10 nets): with caption's keys in effect, papers' caption setups name their class's colours and fonts, which two class bindings lacked — ieeeaccess `accessblue` (ieeeaccess.cls:121-133, the PANTONE 3015 C spot colour's CMYK alternate 1 0.3 0 0.2, color having no `spotcolor` model) and `\figcapfont` & co. (:75-79; 2405.14505 0 → 9 Errors, 2205.15416 0 → 20), IEEEojcsys `ojcolor` (IEEEojcsys.cls:3346-3348, `\AtBeginDocument`, after loading color) and its caption fonts (:4669-4672; 2206.03535 7 → 14): now defined as the classes do; nets ieeeaccess 0/28 and IEEEojcsys 0/20 worse than 67int9; repros class-bindings/{ieeeaccess,ieeeojcsys}_caption_class_colour, guards `perfect_kernel_batch68h::{ieeeaccess,ieeeojcsys}_caption_class_colour`.
 - **subfig passes a key's value unexpanded** (open, latent; 68h r3 re-review finding 4, probe
   scratch_356a0c47/rev68h3/p/s1.tex): subfig.sty:217 and :220 `\edef` the option list before its keys see it, so a
   value macro is expanded at load; since 68h r2 subfig_sty.rs hands the value on as written (OD #617). No visible

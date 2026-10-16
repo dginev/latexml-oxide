@@ -1,0 +1,18 @@
+% witness: 2405.14505, 2205.15416 (ieeeaccess); 2206.03535 (IEEEojcsys, `labelfont={color=ojcolor}`)
+% oracle:  pdflatex on the witness 2405.14505 (its own ieeeaccess.cls, the same caption setup): 0 errors, labels in the
+%          class's accessblue; this cut-down document needs the class's title-page scaffolding under pdflatex
+%          (\Gin@iii errors), so the witness is the oracle
+% engines: rust 67int10 (caption keys applied since 68h) = "Can't find color named 'accessblue'" + undefined
+%          \figcapfont; 67int9 ignored the keys (no colour, no error)
+% expect:  0 errors; the figure caption's tag carries the accessblue colour
+% status:  RED (67int10) -> GREEN (int10 integration fix)
+% preload: ar5iv.sty
+\documentclass{ieeeaccess}
+\usepackage{caption}
+\DeclareCaptionFont{ieeeblue}{\color{accessblue}}
+\DeclareCaptionLabelFormat{myformat}{\figcapfont{\textbf{#1}\textbf{#2}}}
+\captionsetup{labelfont={bf,ieeeblue},labelformat=myformat}
+\begin{document}
+\begin{figure}\caption{One}\end{figure}
+Text.\EOD
+\end{document}
