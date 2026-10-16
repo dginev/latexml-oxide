@@ -13893,8 +13893,15 @@ provide-only backstop loaded right after a raw class (`\documentclass` time) was
 (apa6/apa's own definitions collide with OmniBus's), fewer words, no error gain. The regressions the raw classes exposed
 were fixed before the switch — old-font math switches (67r, 511 papers), amsthm's proof against a class's
 `{proof}` (67s, 86), a theorem counter named by a macro (67s, ~350), hyperref's `\HyOrg@maketitle` (67q), paper.cls's
-`{keywords}` (67t); residuals: a kernel `secnumdepth` default (11 papers), caption machinery from class hooks (7). Guard
-`perfect_kernel_batch67v::a_tex_live_class_without_a_binding_is_interpreted`.
+`{keywords}` (67t), the kernel `secnumdepth` default (68u: 0 as latex.ltx:17332 and Perl leave it, 11 letter
+papers); residual: caption machinery from class hooks (7). A class declaring another format
+(`\NeedsTeXFormat{pLaTeX2e}`: TeX Live's 19 pLaTeX/upLaTeX classes) is not read raw (68u r3, `load_class`
+`declared_other_format`): LaTeX reads the declaration and processes the file no further (latex.ltx:18663-18674), and
+its raw read met pLaTeX's primitives and registers (jarticle.cls:26-28; 1203.0762 Fatal; a jsarticle document 17
+Errors). The declaration alone is read — under pLaTeX2e/upLaTeX2e K12's pTeX profile (kanji in control-word names, the
+format's registers) — and the class falls to OmniBus as before. Guards
+`perfect_kernel_batch67v::a_tex_live_class_without_a_binding_is_interpreted`,
+`perfect_kernel_batch68u::a_class_for_another_format_is_not_read_raw`.
 
 Raw classes reach kernel paths OmniBus never did; fixed with 62k: an empty `\@startsection` type (amsart's
 `\@starttoc`) redefined `\the` (1102.4889, KNOWN_PERL_ERRORS #483); a class that re-lets `\@startsection` to a
@@ -18222,15 +18229,21 @@ undefined and the retry raises the same Error until TooManyErrors (KNOWN_PERL_ER
 **Rust** (68u): the stub is the engine's recovery, not a source redefinition, so `generate_error_stub` (and the
 undefined-environment stub, `install_undefined_error_constructor`) install it with the state unlocked
 (state.rs `past_the_lock`): one Error per name and its `<ltx:ERROR/>`, as pdflatex gives one "Undefined control
-sequence" per use, and the text after it is typeset. The binding stays cleared, as the `\let` left it; the lock
-itself is unchanged, so a later redefinition is still judged by it. Witnesses (the rawclasses lever, study
+sequence" per use, and the text after it is typeset. The lock itself is unchanged, so a later redefinition is still
+judged by it. The stub of a name that carries a lock is installed at LOCAL scope (state.rs `stub_scope`; round 3), every
+other name's globally as Perl's (State.pm:553): such a name is undefined only because a `\let` cleared its binding, and
+the stub ends where that clearing ends — `{\let\cite\undefined X\cite{a}} Y\cite{b}` typesets the second citation,
+as pdflatex does, and `\begingroup\let\section\nonexist\section{A}\endgroup\section{B}` keeps the section B; a
+top-level clearing keeps the stub for the rest of the document (one Error per name). A discarded diagnostics hold
+undoes such a stub only while it still stands (`remove_error_stub`). Witnesses (the rawclasses lever, study
 agent_reports/2026-10-15_rc_rawcls_regressions.md R4): 2006.07968 (apa6, the document's `\let\cite\parencite` with
 `\parencite` undefined: 507 Errors and Fatal → 1, as pdflatex), 1509.06375 (pittetd.cls:313
 `\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` before 67q's `\HyOrg@maketitle`), 2311.14793, 2501.10505, 2510.26876
 (eulerpx.sty:130-132 `\let\mathscr=\undefined` then a `\DeclareMathAlphabet\mathscr` the kernel's lock refuses: 511
 Errors and Fatal → 1; 2203.12624 the same, then a separate `multlined` root). Repro
 macro-state/locked_name_let_to_undefined_stub_loop; guards
-`perfect_kernel_batch68u::{a_locked_name_let_to_an_undefined_one_errs_once, a_locked_maketitle_let_to_an_undefined_one_errs_once}`.
+`perfect_kernel_batch68u::{a_locked_name_let_to_an_undefined_one_errs_once, a_locked_maketitle_let_to_an_undefined_one_errs_once,
+a_locked_name_cleared_in_a_group_is_back_after_it}`.
 
 ### 642. `\|` is a protected macro over the double-bar atom, as LaTeX's `\|` is (Perl: the atom itself)
 
@@ -18283,7 +18296,7 @@ a_raw_class_date_with_side_definitions_sets_the_date,
 a_raw_class_keywords_environment_collecting_its_body_sets_the_keywords}`,
 `perfect_kernel_batch61::uiucthesis_title_page_is_replayed`.
 
-### 644. beilstein.cls and lni.cls author blocks are bindings over the raw class (Perl: no binding)
+### 644. beilstein.cls, lni.cls, apa6.cls and apa.cls author blocks are bindings over the raw class (Perl: no binding)
 
 Both classes build their author block in accumulators only their `\maketitle` reads, through an `\author` the
 kernel's (or authblk's) lock refuses: beilstein.cls:586-737 (`\author[marks]{name}`, `\author*[marks]{name}{e-mail}`,
@@ -18300,3 +18313,22 @@ restored after the class's copy, the e-mail and ORCID the author's contacts. Wit
 class-bindings/{beilstein_author_affiliation_numbers, lni_author_email_orcid_affil}; guards
 `perfect_kernel_batch68u::{beilstein_authors_carry_their_numbered_affiliations,
 lni_authors_carry_email_orcid_and_affiliation}`.
+
+Round 3 (latexml_contrib `apa6_cls.rs`, `apa_cls.rs`): apa6.cls:745-777 (apa.cls:427-459 the same lines) store the
+numbered forms' names in `\@authorOne` … `\@authorSix` and affiliations in `\@affilOne` … `\@affilSix`, read only by
+the refused `\maketitle`, whose every layout (man :1143-1214; jou/doc `\put@two@authaffil` :1344-1365 at :1378-1414)
+sets name n over affiliation n. At `\maketitle` (`\lx@maketitle@begin`) the binding makes, slot by slot, the slot's
+names (split as the kernel's `\author`, appended: `\lx@add@authors@list`) carrying affiliation n
+(`annotate=new`); once `\@authorTwo` is defined the numbered names supersede what `\author`/`\affiliation` said, as
+on the class's title page (the kernel's creators cleared, the one-author `\@affil` emptied so K11 does not give it to
+every author). Without numbered names K11's own harvest of `\@affil` (a numbered affiliation form's first one) stands.
+The `mask` option (apa6.cls:126) hides the numbered names as the class does. A class only named like the family (the
+prefix fallback's apa6e.cls, a paper's renamed copy) is read as itself (`requested_shipped_class`). Each of these four
+bindings fires K11 for the class it reads (`\lx@class@loaded@raw`), which `input_definitions` fires only for a
+class read raw as the document's class: without it, a binding's raw class lost K11's reroutes (lni.cls `\subtitle` a
+bold paragraph instead of `<subtitle>`; apa6's `\shorttitle`, `\affiliation`, `\authornote`, `\keywords`).
+Witnesses 2102.04789, 1710.04173, 1811.01821, 2011.06172, 1401.2054, 1402.6720, 1605.09288, 1609.04156 (71 papers use
+the numbered forms). Repro class-bindings/apa6_numbered_author_affiliation_forms; guards
+`perfect_kernel_batch68u::{apa6_numbered_authors_carry_the_affiliation_of_their_number,
+apa_numbered_authors_supersede_the_one_author_forms, apa6_one_author_line_with_numbered_affiliations_carries_the_first,
+beilstein_author_with_marks_and_email_options}` (beilstein.cls:627 `\author[marks][e-mail]{name}`).

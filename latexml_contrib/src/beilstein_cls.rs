@@ -1,5 +1,6 @@
 //! beilstein.cls (Beilstein Journal of Nanotechnology / Organic Chemistry): the class is loaded raw, and its author
-//! block — `\author` (beilstein.cls:586-697: `\author{name}`, `\author[marks]{name}`, the corresponding author's
+//! block — `\author` (beilstein.cls:586-697: `\author{name}`, `\author[marks]{name}`, `\author[marks][e-mail]{name}`
+//! (:627 `\@@@author`, the e-mail listed with the others, :649-651), the corresponding author's
 //! `\author*[marks]{name}{e-mail}`) and `\affiliation{…}` (:704-737), which number the affiliations in order and give
 //! each to the author just named, building accumulators (`\authors`, `\affiliations`, `\emails`) that only its
 //! `\maketitle` reads (:739-823) — becomes the frontmatter: each author a creator carrying its marks and the numbers of
@@ -35,6 +36,9 @@ fn braced(tokens: Vec<Token>) -> Vec<Token> {
 
 LoadDefinitions!({
   InputDefinitions!("beilstein", noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  // (the class read raw by this binding is a raw class to K11, its title-page stores rerouted as under the
+  // rawclasses lever; `apa6_cls::apa_family_class`)
+  RawTeX!(r"\lx@class@loaded@raw{beilstein}");
   // The author just named: its marks, name and e-mail, and the affiliations that followed it.
   DefPrimitive!("\\lx@beilstein@set{}{}{}", sub[(marks, name, email)] {
     set_tokens("marks", marks.unlist());
@@ -87,7 +91,8 @@ LoadDefinitions!({
   RawTeX!(
     r"\def\author{\lx@beilstein@flush\@ifstar\lx@beilstein@star\lx@beilstein@plain}
 \def\lx@beilstein@plain{\@ifnextchar[\lx@beilstein@plain@{\lx@beilstein@plain@[]}}
-\def\lx@beilstein@plain@[#1]#2{\lx@beilstein@set{#1}{#2}{}}
+\def\lx@beilstein@plain@[#1]{\@ifnextchar[{\lx@beilstein@plain@@[#1]}{\lx@beilstein@plain@@[#1][]}}
+\def\lx@beilstein@plain@@[#1][#2]#3{\lx@beilstein@set{#1}{#3}{#2}}
 \def\lx@beilstein@star{\@ifnextchar[\lx@beilstein@star@{\lx@beilstein@star@[]}}
 \def\lx@beilstein@star@[#1]#2#3{\lx@beilstein@set{#1}{#2}{#3}}
 \renewcommand\affiliation[2][]{\lx@beilstein@affiliation{#2}}"

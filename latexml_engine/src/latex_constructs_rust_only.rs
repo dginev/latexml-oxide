@@ -651,8 +651,8 @@ LoadDefinitions!({
   DefRegister!("\\footnotesep" => Dimension::new(0));
 
   // C.4.4 / C.5.1 NewCounters (Perl latex_base L300, L312) — dump-path
-  // coverage. \@startsection's SetCounter to 3 (in latex_constructs.rs)
-  // requires the counter to exist beforehand.
+  // coverage: the counters exist before any class sets them, at 0 as
+  // Perl's and latex.ltx:17332 leave `secnumdepth` until a class does (68u).
   NewCounter!("tocdepth");
   NewCounter!("secnumdepth");
 

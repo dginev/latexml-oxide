@@ -6,10 +6,12 @@
 %          "0 errors" was stale)
 % engines: perl: OmniBus's `\doi{}` — the same error; rust 57m first cut: Error:unexpected:_
 % expect:  0 errors, 1 `Warning:unexpected:\doi` (64zf, ruling 2026-10-11: TeX and Perl error on the `_`, and the
-%          link OmniBus's url-shaped `\doi` makes is a good semantic recovery, so a Warning); the DOI linked to https://doi.org/10.1000/j_x~y.2002 (the missing-binding warning for apa6 stays)
+%          link OmniBus's url-shaped `\doi` makes is a good semantic recovery, so a Warning); the DOI linked to https://doi.org/10.1000/j_x~y.2002 (the missing-binding warning for the class stays)
 % status:  RED (57m first cut) -> GREEN (57m); apa6 since 62zl, as apa7 has its own binding now (apa7_cls.rs reads
-%          apa7.cls and keeps the DOI a link, where apacite's `\doi` would set url-styled text, apacite.sty:1812-1815)
-\documentclass{apa6}
+%          apa7.cls and keeps the DOI a link, where apacite's `\doi` would set url-styled text, apacite.sty:1812-1815);
+%          paper.cls since 68u r3 (apa6 has a binding over its raw class now; paper.cls defines no `\doi` either and
+%          falls to OmniBus outside the arXiv profile)
+\documentclass{paper}
 \usepackage[natbibapa]{apacite}
 \title{T}\shorttitle{T}
 \begin{document}

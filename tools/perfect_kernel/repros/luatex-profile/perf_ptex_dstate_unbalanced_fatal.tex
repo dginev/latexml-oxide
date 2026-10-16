@@ -12,6 +12,10 @@
 % mechanism: Expandable::new stores unbalanced expansion + Error! instead of Fatal!.
 %   Perl Core/Definition/Expandable.pm:35 uses Fatal; Rust
 %   latexml_core/src/definition/expandable.rs:318 uses Error! (comment even says "Perl: Fatal").
+% note (68u r3): with raw classes on (the arXiv profile's rawclasses, the manuals' [rawclasses]), jarticle as the
+%   document class is no longer read raw — it declares \NeedsTeXFormat{pLaTeX2e} (jarticle.cls:16), which LaTeX does
+%   not process further (latex.ltx:18663-18674); the declaration is read and the class falls to OmniBus (0 errors).
+%   The Fatal shape is guarded with the file `\input` as code (unbalanced_expansion_is_fatal).
 \documentclass[12pt,a4j,dvipdfmx]{jarticle}
 \begin{document}
 Hello

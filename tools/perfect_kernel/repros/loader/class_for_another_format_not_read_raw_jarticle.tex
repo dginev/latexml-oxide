@@ -1,0 +1,16 @@
+% witness: 1203.0762 (jarticle: 0 errors and the text under OmniBus; read raw, 5 errors + Fatal:Misdefined \ds@tate,
+%   0 words)
+% oracle: pdflatex 3 errors ("This file needs format `pLaTeX2e' but this is `LaTeX2e'", latex.ltx:18663-18674 stops
+%   reading the class; then \normalsize undefined twice); "Hello world from a pLaTeX class." typeset
+% engines: rust 68u r2: the class read raw under the rawclasses lever, pLaTeX registers (jarticle.cls:26-28 \hour,
+%   \minute) undefined, Fatal; perl: OmniBus (no raw classes), the text
+% expect: 0 errors (OmniBus); the text present
+% status: RED (68u r2) -> GREEN (68u r3)
+% preload: ar5iv.sty
+% mechanism: load_class's raw_excluded (content.rs declared_other_format): a class whose first braced
+%   \NeedsTeXFormat names a format other than LaTeX2e (TeX Live's 19 pLaTeX/upLaTeX classes) is not interpreted raw;
+%   its declaration is read (K12's pTeX profile) and it falls to OmniBus as before the lever.
+\documentclass{jarticle}
+\begin{document}
+Hello world from a pLaTeX class.
+\end{document}

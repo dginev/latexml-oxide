@@ -2256,7 +2256,10 @@ fn raw_double_declaration_still_errors() {
 
 /// Perl Expandable.pm:35: an unbalanced expansion is FATAL. jarticle.cls's
 /// `\ds@tate` (ISO-2022-JP bytes whose `%` eats a brace) aborts in seconds
-/// instead of proceeding into a 250 s loop (platexcheat; RUST-ONLY).
+/// instead of proceeding into a 250 s loop (platexcheat; RUST-ONLY). The file is
+/// `\input` as code: since 68u r3 a class declaring another format
+/// (`\NeedsTeXFormat{pLaTeX2e}`, jarticle.cls:16) is not read raw as the
+/// document class (`load_class`, `perfect_kernel_batch68u::a_class_for_another_format_is_not_read_raw`).
 #[test]
 fn unbalanced_expansion_is_fatal() {
   // Host-portability: skip when the exercised package is absent from this
@@ -2267,7 +2270,9 @@ fn unbalanced_expansion_is_fatal() {
   // `\hour`/`\minute` are pLaTeX-format registers jarticle.cls:26-28 uses (the parked pTeX
   // format, §D9); declaring them leaves only the unbalanced expansion's error and its Fatal.
   let tex = r"\newcount\hour\newcount\minute
-\documentclass[12pt,a4j,dvipdfmx]{jarticle}
+\documentclass{article}
+\makeatletter
+\input{jarticle.cls}
 \begin{document}
 Hello
 \end{document}
@@ -12131,7 +12136,8 @@ C, D. </bibblock><bibblock>(2002).
 }
 
 /// 57m: OmniBus's `\doi` reads its DOI as a url (`HyperVerbatim`), so the `.bbl` of an apa6 paper — a class with
-/// no `\doi` of its own, falling to OmniBus — keeps `\doi{10.1000/j_x~y.2002}` whole (Perl OmniBus.cls.ltxml:154's
+/// no `\doi` of its own, falling to OmniBus (since 68u r3 apa6 has a binding over the raw class, so the repro's class
+/// is paper.cls, which also defines no `\doi` and has no binding) — keeps `\doi{10.1000/j_x~y.2002}` whole (Perl OmniBus.cls.ltxml:154's
 /// `\doi{}` gives Error:unexpected:_; pdflatex errors too, under apacite's `\doi`, and 64zf warns). apa7, bound since 62zl, keeps the DOI a link (apa7_cls.rs), where apacite's
 /// own `\doi` would set url-styled text only (apacite.sty:1812-1815): semantic markup before PDF fidelity.
 #[test]
@@ -12153,7 +12159,7 @@ fn omnibus_doi_reads_as_a_url() {
     })
     .count();
   assert_eq!(foreign, 0, "{stderr}");
-  assert!(stderr.contains("Warning:missing_file:apa6"), "{stderr}");
+  assert!(stderr.contains("Warning:missing_file:paper"), "{stderr}");
   // 64zf: apacite's `\doi` reads the DOI as TeX, so pdflatex errors on its `_`; the link is a semantic recovery,
   // reported as one Warning.
   assert_eq!(
@@ -12174,7 +12180,7 @@ C, D. </bibblock><bibblock>(2002).
   );
   let (stderr, xml) = convert_with(
     &include_str!("../../../tools/perfect_kernel/repros/index-bib/omnibus_doi_reads_as_a_url.tex")
-      .replace("{apa6}", "{apa7}"),
+      .replace("{paper}", "{apa7}"),
     None,
   );
   let foreign = stderr

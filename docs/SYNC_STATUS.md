@@ -2659,10 +2659,28 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   maketitle_replay_gate_ifundefined_branch_apa6 GREEN through rule (a) (the replay gate unchanged). Sample A/B (249
   papers: round 1's 161 + apa/apa6/beilstein/lni/tufte; 67int15 / r1 / r2): error-free 91 / 227 / 227, errors 2,702 /
   162 / 162, words 4,177,195 / 4,291,150 / 4,293,590, contacts 224 / 327 / 483, dates 36 / 28 / 45, keywords 15 / 43 /
-  44; no paper worse than round 1. Open (the lever's residual): apa/apa6 numbered author and affiliation forms
-  (`\twoauthors` … `\sixauthors`, `\twoaffiliations` … `\sixaffiliations`, apa6.cls:745-775, apa.cls:428-458: 64 of 188
-  papers, no creator at all, as under OmniBus; pairing author i with affiliation i is apa6's own layout,
-  `\put@two@authaffil`; 1710.04173 loses the text OmniBus dumped after its undefined-command errors) and apa's
+  44; no paper worse than round 1. Round 3 (the review's should-fixes): apa6/apa numbered author and affiliation
+  forms (`\twoauthors` … `\sixauthors`, `\twoaffiliations` … `\sixaffiliations`, apa6.cls:745-777, apa.cls:427-459:
+  71 of the population's papers — 64 apa6, 7 apa — had no creator, as under OmniBus, which kept the names only as
+  text beside an ERROR) are bindings over the raw class (`apa6_cls.rs`, `apa_cls.rs`; OD #644): at `\maketitle` slot n's
+  names carry affiliation n, as every layout of the class's title page sets them (`\put@two@authaffil`, :1344-1365);
+  each binding over a raw class (apa6, apa, beilstein, lni) fires K11 for it; beilstein.cls:627
+  `\author[marks][e-mail]{name}`. A locked name's error stub is local (state.rs `stub_scope`, OD #641): a group's `\let`
+  clearing a binding no longer outlives the group (`{\let\cite\undefined…}`, `\begingroup\let\section\nonexist…`).
+  A class declaring another format (`\NeedsTeXFormat{pLaTeX2e}`: TeX Live's 19 pLaTeX/upLaTeX classes — jarticle,
+  jbook, jreport, tarticle, tbook, treport, jltxdoc, plnews, jsarticle, jsbook, jsreport, jspf, kiyou, ujarticle,
+  ujbook, ujreport, utarticle, utbook, utreport; ctexart declares LaTeX2e and stays raw) is not read raw (content.rs
+  `declared_other_format`, OD #444; latex.ltx:18663-18674 reads the declaration and stops): the declaration is read
+  (K12's pTeX profile for pLaTeX2e), the class falls to OmniBus — 1203.0762 5 E + Fatal → 0 E, as before the lever;
+  a minimal jsarticle document 17 E → 0. `ClassReaders::survey` builds a caller index (no quadratic scan). A/B 266 papers (every apa/apa6
+  paper of list3362, the 71 numbered-form users, 1203.0762, the review's 80; 67int15 / r2 / r3): error-free 94 / 234 /
+  235, errors 1,142 / 498 / 493, Fatal papers 3 / 2 / 1, words 4,149,827 / 4,475,515 / 4,478,132, creators 524 / 504 /
+  717, contacts 286 / 659 / 873; no paper worse than r2. Rows (round 3): cjs-rcs-article.cls:381-386
+  `\NewEnviron{englishabstract}{\global\let\CJS@englishabstract\BODY}` (also `{frenchabstract}`, `{keywords}`;
+  2608.13762: the abstracts and keywords reach no output; not the `\Collect@Body\X` shape
+  `collects_body_for_the_title_page` reads, and not a table environment); smfart.cls:568-583 `{altabstract}` boxed for
+  the title page (2506.20120); colorart's `\address` through projlib-author.sty:98-125, an expl3
+  `cmd/@author/after` hook (2609.02711, the address lost). Still open: apa's
   `\acknowledgements`/`\note` (not table names); asmejour.cls:1483's expl3 `\date` (`\tl_gset:Nn
   \g__asmejour_date_tl`, 2510.10694, the date lost); thcc.sty:81-91 `\th@ccproof` (theorem.sty's binding does not run
   a raw style's `\@begintheorem`: cc's proofs are numbered theorems "Proof 1", pdflatex "Proof.", 14 papers; repro

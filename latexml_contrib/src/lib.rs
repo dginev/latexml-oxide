@@ -48,7 +48,9 @@ pub mod amsdtx_cls;
 pub mod amsldoc_cls;
 pub mod animate_sty;
 pub mod aomart_cls;
+pub mod apa6_cls;
 pub mod apa7_cls;
+pub mod apa_cls;
 pub mod apacite_sty;
 pub mod apxproof_sty;
 pub mod ar5iv_sty;
@@ -623,6 +625,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
   ("pdfcomment", "sty", pdfcomment_sty::load_definitions),
   ("aamas", "cls", aamas_cls::load_definitions),
+  ("apa", "cls", apa_cls::load_definitions),
+  ("apa6", "cls", apa6_cls::load_definitions),
   ("apa7", "cls", apa7_cls::load_definitions),
   ("amsdtx", "cls", amsdtx_cls::load_definitions),
   ("amsldoc", "cls", amsldoc_cls::load_definitions),

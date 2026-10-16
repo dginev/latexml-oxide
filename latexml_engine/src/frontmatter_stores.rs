@@ -38,6 +38,7 @@ use latexml_core::{
   binding::store_setters::{STORE_SETTERS, defined_by_a_binding},
   definition::origin::DefinitionOrigin,
 };
+use rustc_hash::FxHashSet;
 
 use crate::prelude::*;
 
@@ -242,9 +243,10 @@ fn setter_stores(cs: &Token) -> Result<Option<(Tokens, usize, Vec<Token>)>> {
 /// the class ends; the scan is bounded to them), the control sequences it reads ([`reads_of`]). A macro two
 /// title-page macros call is title-page code; one any other macro calls too is not.
 struct ClassReaders {
-  title_page: Vec<Token>,
-  /// (macro, the control sequences it reads)
-  reads:      Vec<(Token, Vec<Token>)>,
+  /// The title-page code, by name.
+  title_page: FxHashSet<SymStr>,
+  /// For each control sequence, the macros a raw file defined that read it (itself, when it reads itself).
+  readers:    HashMap<SymStr, Vec<SymStr>>,
 }
 
 /// The definers whose next control sequence is written, not read.
@@ -324,63 +326,76 @@ fn reads_of(body: &[Token]) -> Vec<Token> {
 }
 
 impl ClassReaders {
+  /// One pass over the raw files' macros builds the caller index; the title page then grows from its roots along the
+  /// callees of each macro it takes in, a macro joining once every other caller of it has (a worklist: each macro's
+  /// callees are visited once, when it joins).
   fn survey() -> Self {
-    let mut reads: Vec<(Token, Vec<Token>)> = current_meanings_where(|stored| {
-      matches!(stored, Stored::Expandable(defn) if defn.get_origin() == DefinitionOrigin::File)
-    })
-    .into_iter()
-    .filter_map(|(key, stored)| {
+    let mut readers: HashMap<SymStr, Vec<SymStr>> = HashMap::default();
+    let mut callees: HashMap<SymStr, Vec<SymStr>> = HashMap::default();
+    let from_a_file = |stored: &Stored| match stored {
+      Stored::Expandable(defn) => defn.get_origin() == DefinitionOrigin::File,
+      _ => false,
+    };
+    for (key, stored) in current_meanings_where(from_a_file) {
       let Stored::Expandable(defn) = stored else {
-        return None;
+        continue;
       };
       let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
-        return None;
+        continue;
       };
-      let cs = with(key, |k| k.starts_with('\\').then(|| T_CS!(k)))?;
-      Some((cs, reads_of(body.unlist_ref())))
-    })
-    .collect();
-    reads.sort_by_key(|(cs, _)| cs.with_str(str::to_string));
-    let roots = [
-      T_CS!("\\lx@dropped@maketitle"),
-      T_CS!("\\@maketitle"),
-      T_CS!("\\lx@dropped@@maketitle"),
-    ];
-    let mut title_page: Vec<Token> = roots
-      .into_iter()
-      .filter(|root| reads.iter().any(|(cs, _)| cs == root))
-      .collect();
-    loop {
-      let added: Vec<Token> = reads
-        .iter()
-        .map(|(cs, _)| *cs)
-        .filter(|cs| !title_page.contains(cs))
-        .filter(|cs| {
-          let mut callers = reads
-            .iter()
-            .filter(|(caller, r)| caller != cs && r.contains(cs))
-            .map(|(caller, _)| caller)
-            .peekable();
-          callers.peek().is_some() && callers.all(|caller| title_page.contains(caller))
-        })
-        .collect();
-      if added.is_empty() {
-        break;
+      // (the meaning table's key is the name: a control sequence's when it starts with a backslash)
+      if !with(key, |k| k.starts_with('\\')) {
+        continue;
       }
-      title_page.extend(added);
+      let caller = key;
+      let mut seen = FxHashSet::default();
+      let called = callees.entry(caller).or_default();
+      for read in reads_of(body.unlist_ref()) {
+        let callee = read.get_cs_name();
+        if seen.insert(callee) {
+          readers.entry(callee).or_default().push(caller);
+          called.push(callee);
+        }
+      }
     }
-    ClassReaders { title_page, reads }
+    let mut title_page: FxHashSet<SymStr> = FxHashSet::default();
+    let mut joined: Vec<SymStr> = [
+      "\\lx@dropped@maketitle",
+      "\\@maketitle",
+      "\\lx@dropped@@maketitle",
+    ]
+    .into_iter()
+    .map(|root| T_CS!(root).get_cs_name())
+    .filter(|root| callees.contains_key(root) && title_page.insert(*root))
+    .collect();
+    while let Some(cs) = joined.pop() {
+      for callee in callees.get(&cs).into_iter().flatten().copied() {
+        if title_page.contains(&callee) || !callees.contains_key(&callee) {
+          continue;
+        }
+        let mut callers = readers
+          .get(&callee)
+          .into_iter()
+          .flatten()
+          .filter(|caller| **caller != callee)
+          .peekable();
+        if callers.peek().is_some() && callers.all(|caller| title_page.contains(caller)) {
+          title_page.insert(callee);
+          joined.push(callee);
+        }
+      }
+    }
+    ClassReaders { title_page, readers }
   }
 
   /// Is `store` read by the title-page code and by nothing else a raw file defined?
   fn read_only_by_the_title_page(&self, store: &Token) -> bool {
-    let mut readers = self
-      .reads
-      .iter()
-      .filter(|(_, r)| r.contains(store))
-      .map(|(cs, _)| cs)
-      .peekable();
-    readers.peek().is_some() && readers.all(|cs| self.title_page.contains(cs))
+    self
+      .readers
+      .get(&store.get_cs_name())
+      .is_some_and(|readers| {
+        !readers.is_empty() && readers.iter().all(|cs| self.title_page.contains(cs))
+      })
   }
 }
 

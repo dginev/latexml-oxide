@@ -3567,6 +3567,54 @@ pub fn load_class_with_options(name: &str, after: Tokens) -> Result<()> {
   }
   load_class(name, options, after)
 }
+/// The format the class file `name` (the one a raw read would take: [`find_file`], no binding) declares, when it is
+/// not LaTeX2e: its first `\NeedsTeXFormat{…}` outside a comment names another (`pLaTeX2e`: jarticle.cls:16 and the
+/// other 18 pLaTeX/upLaTeX classes of TeX Live 2025). Read as text, the class is not run: each line up to its first
+/// `%` not escaped by a backslash, the braced argument of the first `\NeedsTeXFormat` given one, its spaces trimmed. LaTeX
+/// compares it with `\fmtname` and, when they differ, raises an error and stops reading the file
+/// (latex.ltx:18663-18674 `\NeedsTeXFormat`: "The current input file will not be processed further, because it was
+/// written for some other flavor of TeX"). A file without the declaration, or without a readable one, is LaTeX's (`None`).
+fn declared_other_format(name: &str) -> Option<String> {
+  let path = find_file(
+    name,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Borrowed("cls")),
+      forbid_ltxml: true,
+      ..FindFileOptions::default()
+    }),
+  )?;
+  let text = match crate::binding::virtual_files::vfs_read(&path) {
+    Some(cached) => cached,
+    None => match std::fs::read(&path) {
+      Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
+      Err(_) => return None,
+    },
+  };
+  for line in text.split(['\n', '\r']) {
+    let mut code_end = line.len();
+    let mut escaped = false;
+    for (at, c) in line.char_indices() {
+      match c {
+        '\\' => escaped = !escaped,
+        '%' if !escaped => {
+          code_end = at;
+          break;
+        },
+        _ => escaped = false,
+      }
+    }
+    // (a use without an argument is not the declaration: `\ifx\NeedsTeXFormat\undefined`, a LaTeX 2.09 test)
+    for (at, _) in line[..code_end].match_indices("\\NeedsTeXFormat") {
+      let rest = line[at + "\\NeedsTeXFormat".len()..code_end].trim_start();
+      if let Some((arg, _)) = rest.strip_prefix('{').and_then(|r| r.split_once('}')) {
+        let format = arg.trim();
+        return (format != "LaTeX2e").then(|| format.to_string());
+      }
+    }
+  }
+  None
+}
+
 /// The binding a class without one of its own is read with: Perl's step (Package.pm:2711-2716), the longest binding
 /// name the class starts with (`mysvjour3` → `svjour3`, `mn2ebis` → `mn2e`, `IEEEtranTCOM` → `IEEEtran`), then a
 /// Rust-only step: one equal to it but for case (2406.08163); `None` → OmniBus. A path-prefixed class whose basename
@@ -3711,7 +3759,22 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // exact and versioned ones inside `input_definitions`, the prefix/case alternate here — so a shipped
   // `IEEEtranTCOM.cls`, `IEEEtran4PSCC.cls` or `misc/ieeetran.cls` keeps the IEEEtran binding (2105.02087) instead of
   // loading raw (OXIDIZED_DESIGN_DIVERGENCES #444).
-  let raw_excluded = !notex_default && class_binding_alternate(name).is_some();
+  // Nor is a class written for another format read raw (`\NeedsTeXFormat{pLaTeX2e}`, jarticle.cls:16; TeX Live's 19
+  // pLaTeX and upLaTeX classes, [`declared_other_format`]): LaTeX reads the declaration and processes the file no
+  // further (latex.ltx:18663-18674), and a raw read of the rest met the other format's primitives (jarticle.cls:26-28
+  // `\hour`, `\minute` registers; a Fatal, 1203.0762) where OmniBus kept the paper's text. The declaration itself is
+  // read, so the format's input profile is the document's (K12: `\NeedsTeXFormat{pLaTeX2e}` letters kanji in
+  // control-word names, sect05.rs), and the class falls to OmniBus.
+  let alternate = class_binding_alternate(name);
+  let other_format = (!notex_default && alternate.is_none())
+    .then(|| declared_other_format(name))
+    .flatten();
+  if let Some(format) = &other_format {
+    digest(crate::mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\NeedsTeXFormat{{{format}}}"
+    ))))?;
+  }
+  let raw_excluded = !notex_default && (alternate.is_some() || other_format.is_some());
   let notex_first = notex_default || raw_excluded;
 
   let result = input_definitions(name, InputDefinitionOptions {

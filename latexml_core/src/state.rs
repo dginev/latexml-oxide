@@ -1653,11 +1653,12 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
         None,
       )?,
     ];
+    let scope = stub_scope(&cs);
     past_the_lock(|| {
       for setter in setters {
         install_definition(setter, Some(Scope::Global));
       }
-      let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
+      let_i(token, &T_CS!("\\iffalse"), Some(scope));
     });
     crate::util::logger::note_held_stub(*token);
   } else {
@@ -1671,6 +1672,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
         "Defining it now as <ltx:ERROR/>"
       );
     }
+    let scope = stub_scope(&cs);
     let stub = Constructor {
       cs: *token,
       replacement: Some(Rc::new(move |document, _args, _props| {
@@ -1679,20 +1681,36 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       ..Constructor::default()
     };
     //TODO: sizer => "X"),
-    past_the_lock(|| install_definition(stub, Some(Scope::Global)));
+    past_the_lock(|| install_definition(stub, Some(scope)));
     // The stub's provenance travels with the NAME (tex.web §370 discards an
     // undefined cs inside `\csname…\endcsname`; a defined non-expandable one
     // takes the §373 `back_error` path): `<cs>:error@stub`, read by
     // `gullet::read_cs_name_inner` — not a global "last stubbed token", which
     // went stale across interleaved stubs.
+    // (at the stub's own scope: a locked name's stub that ends with its group leaves the binding, which is no stub)
     assign_value_sym(
       arena::pin(token.with_cs_name(|c| s!("{c}:error@stub"))),
       true,
-      Some(Scope::Global),
+      Some(scope),
     );
     crate::util::logger::note_held_stub(*token);
   }
   Ok(*token)
+}
+
+/// The scope [`generate_error_stub`] installs a stub at: global, as Perl's `generateErrorStub` (State.pm:553
+/// `installDefinition(…, 'global')`), except for a name that carries a lock ([`name_carries_lock`]). Such a name is
+/// undefined only because a `\let` cleared its binding, and that `\let` may be local: the stub is the recovery for
+/// this clearing, so it is local too and ends where the clearing ends — `{\let\cite\undefined X\cite{a}} Y\cite{b}`
+/// typesets the second citation, as pdflatex does, and `\begingroup\let\section\nonexist\section{A}\endgroup
+/// \section{B}` keeps the section B. A clearing at the top level leaves the stub for the rest of the document, one
+/// Error per name as before. Guards `perfect_kernel_batch68u::a_locked_name_cleared_in_a_group_is_back_after_it`.
+fn stub_scope(cs: &str) -> Scope {
+  if name_carries_lock(cs) {
+    Scope::Local
+  } else {
+    Scope::Global
+  }
 }
 
 /// Run [`generate_error_stub`]'s installs with the state unlocked. The stub is the engine's recovery from an undefined
@@ -1706,9 +1724,8 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
 /// macro-state/locked_name_let_to_undefined_stub_loop; guard
 /// `perfect_kernel_batch68u::a_locked_name_let_to_an_undefined_one_errs_once`.
 fn past_the_lock(install: impl FnOnce()) {
-  local_state_unlocked(true);
+  let _unlocked = local_state_unlocked_guard(true);
   install();
-  expire_state_unlocked();
 }
 
 /// Undo [`generate_error_stub`]: `token` (and a stubbed `\ifX`'s `\Xtrue`/`\Xfalse`) is undefined
@@ -1716,18 +1733,24 @@ fn past_the_lock(install: impl FnOnce()) {
 /// stubs standing in for them, so the document's own later use of the command reports it.
 pub fn remove_error_stub(token: &Token) {
   let cs = token.with_cs_name(ToString::to_string);
+  // A locked name's stub was local ([`stub_scope`]): undone only while it still stands — not after the group it was
+  // made in has ended, which gave the binding back — and undone there, so the binding of the enclosing groups stands.
+  let scope = stub_scope(&cs);
+  let local = matches!(scope, Scope::Local);
   if let Some(name) = cs.strip_prefix("\\if") {
     for setter in [T_CS!(s!("\\{name}true")), T_CS!(s!("\\{name}false"))] {
       assign_meaning(&setter, Stored::None, Some(Scope::Global));
     }
+    if local && !x_equals(token, &T_CS!("\\iffalse")) {
+      return;
+    }
   } else {
-    assign_value_sym(
-      arena::pin(s!("{cs}:error@stub")),
-      false,
-      Some(Scope::Global),
-    );
+    if local && !is_error_stub(token) {
+      return;
+    }
+    assign_value_sym(arena::pin(s!("{cs}:error@stub")), false, Some(scope));
   }
-  assign_meaning(token, Stored::None, Some(Scope::Global));
+  assign_meaning(token, Stored::None, Some(scope));
 }
 
 /// Was `token` stubbed as `<ltx:ERROR/>` by [`generate_error_stub`]? Probe
@@ -1745,7 +1768,7 @@ pub fn is_error_stub(token: &Token) -> bool {
 /// `generate_error_stub` installs for undefined *commands*, so undefined
 /// *environments* (`\begin{undefinedenv}`) leave the same visible
 /// `<ltx:ERROR>` marker as Perl instead of silently vanishing from the output.
-/// Like that stub, it installs past a lock ([`past_the_lock`]).
+/// Like that stub, it installs past a lock (`past_the_lock`, below).
 pub fn install_undefined_error_constructor(token: Token, content: &str) {
   let content = content.to_string();
   let stub = Constructor {
@@ -1755,7 +1778,8 @@ pub fn install_undefined_error_constructor(token: Token, content: &str) {
     })),
     ..Constructor::default()
   };
-  past_the_lock(|| install_definition(stub, Some(Scope::Global)));
+  let scope = token.with_cs_name(stub_scope);
+  past_the_lock(|| install_definition(stub, Some(scope)));
 }
 
 /// Does a provide-only load ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)) decline this definition
