@@ -1,0 +1,22 @@
+% witness: 2003.09099, 2006.03434, 2007.06369 (the template's empty `\dedication{}`, WileyMSP-template.cls:34);
+%          2009.06328, 2102.13559, 2111.07484 (`\threesubsection{…}\\`, :49)
+% oracle:  pdflatex with 2003.09099's WileyMSP-template.cls: 0 errors, "An MSP paper To all of us. The abstract. Experimental Section
+%          Sample preparation: Samples were prepared."
+% engines: rust 67int3 = 2 errors (undefined \dedication, \threesubsection)
+% expect:  0 errors, 0 warnings; no note for the empty dedication, a dedication pubnote for the other; the run-in
+%          italic head "Sample preparation:"
+% status:  RED (67int3) -> GREEN (67w)
+% preload: ar5iv.sty
+\documentclass{WileyMSP-template}
+\begin{document}
+\title{An MSP paper}
+\maketitle
+\dedication{}
+\dedication{To all of us.}
+\begin{abstract}
+The abstract.
+\end{abstract}
+\section{Experimental Section}
+\threesubsection{Sample preparation}\\
+Samples were prepared.
+\end{document}

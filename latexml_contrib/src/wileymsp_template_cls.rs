@@ -42,4 +42,13 @@ LoadDefinitions!({
     "\\corres{}",
     "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
   );
+  // WileyMSP-template.cls:34-37 `\newcommand{\dedication}[1]{\medskip\textit{#1}}` (2003.09099's copy, as 206 of
+  // the 256 shipped): the dedication under the authors, the Perl bindings' pubnote (aa_support.sty.ltxml:117,
+  // sv_support.sty.ltxml:76). Undefined in 158 papers of run 353, nearly all with the template's empty
+  // `\dedication{}` (2003.09099, 2006.03434, 2007.06369, 2005.10895; text: "To all front line health workers.").
+  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  // WileyMSP-template.cls:49-52 `\newcommand{\threesubsection}[1]{\medskip\textit{#1}: }`: the run-in italic heads
+  // of the Experimental Section (`\threesubsection{Sample preparation}\\ …`, 2009.06328, 2102.13559, 2111.07484; 87
+  // papers of run 353).
+  DefMacro!("\\threesubsection{}", "\\medskip\\textit{#1}: ");
 });

@@ -219,6 +219,7 @@ mod perfect_kernel_batch67q;
 mod perfect_kernel_batch67r;
 mod perfect_kernel_batch67s;
 mod perfect_kernel_batch67u;
+mod perfect_kernel_batch67w;
 mod perfect_kernel_batch67x;
 mod perfect_kernel_batch67y;
 mod perfect_kernel_batch67z;

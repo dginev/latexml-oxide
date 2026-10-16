@@ -358,6 +358,10 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `\insert@pcolumn` puts `\relax` before `\ignorespaces` for `p`/`m`/`b`, `Template::add_column` appends only the
   `\insert@column` `\ignorespaces` (array.sty:97-101); and a `\multicolumn{2}{>{\two}l}{gh}` reads `[|g]h`, pdflatex
   `[|gh]` (array.sty:267-278 reads the body as one `\@sharp`). RED `kernel-alignment/pcol_prefix_argument_takes_relax`.
+- **A formula holding only a space ends the paragraph's `--`/`---` ligatures** (RUST-ONLY; 67w side finding, Perl
+  0.8.8 and pdflatex ligature every line): after `500$\,$hPa` (the formula written as a space) the rest of the
+  paragraph keeps `1989--2008`; `$x$` does not do it. WileyNJD-v2's `\uns` (`\ifmmode\,\else$\,$\fi`, 2208.08472) is
+  the witness. RED `fonts-nfss/ligature_after_space_only_formula`.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
 ### Fidelity audit round 2 (2026-10-08) — findings and their state
@@ -1714,6 +1718,40 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Open row: arximspdf/arxstspdf gaps outside this batch from a 24-paper sample — `\ccline` (7 arxstspdf papers),
   `\freefootnotetext`, `\write@toc@…contentsline`, `\maxcsec`, `{aligned}`, and arxbj's `\setvaluelist` moved into
   ims_support_sty.rs for arximspdf (1203.0565).
+- **67w** (binding gaps G2: the Wiley class family; bindgaps/g23_macros.tsv rows WileyNJD-v2, WileyMSP-template,
+  WileyASNA-v1, WileyNJDv5, and WileyNJD-v1 through the same binding). One family binding
+  (`wileynjd_cls::wiley_njd_family`, serving WileyNJD-v1/-v2, WileyNJDv5, wileyNJDv5 and, no longer through a
+  `LoadClass{WileyNJD-v1}`, WileyASNA-v1), the copy the paper ships deciding where versions conflict (box
+  environments, theorem set, subfig, amsrefs), else the class name. Line numbers are those of 1712.08341's
+  WileyNJD-v2.cls (312 shipped copies, same bodies), 2302.02310's WileyNJDv5.cls, 1804.11014's WileyASNA-v1.cls,
+  1511.08547's WileyNJD-v1.cls. `\presentaddress` (v2:1781, v5:5066, ASNA:1195; a present-address note; 156+68+38 papers
+  of run 353: 1701.02349, 1705.09846, 1712.08341); `\abstract[2][]` (v2:1857, every copy; `\abstract[Summary]{…}` names
+  the abstract, the kernel's `\abstract` read "[Summary]" as text in 219 of 490 sampled papers; 1701.02349); the 47
+  theorems in the class's three amsthm styles (v2:2923-3030, v5, ASNA; v1:4502-4568 its 20, with `{example}`):
+  `{assumption}` 44+23 papers (1803.11411, 1808.10367), `{eexample}` (1806.09518), `{property}`, `{result}`, `{LWrule}`,
+  each its own counter as in pdflatex (1807.03475's "Lemma 1, Theorem 1", formerly OmniBus's "Theorem 2.2");
+  `{tablenotes}`/`\tnote` (v2:2816-2828; 1808.05540, 1808.09739, 1910.13464); `{biography}{photo}{text}` (v2:3445,
+  IEEEtran's float shape; 1705.00674, 1812.10266); `{ack}[title]` (v2:3393, named acknowledgements; 2205.06045,
+  2412.02681); `{boxtext}` (v2:466, ASNA:269; v5:592 `[1]`) and `{boxwithhead}` (v5:601) as framed.sty `{framed}` blocks
+  (1811.09505, 2309.00837, 2604.17508); `\bmsection`/`\bmsubsection`/`\bmsubsubsection` (v5:5762-5764, `\section` as it
+  is when called: star, optional title and appendix numbering; the former `\bmsection{}` read `*` as the title,
+  2405.03603, 2511.08532); `\doiheadtext` (v2:1820, a DOI note; 1803.06134); the page-furniture stores
+  `\historydates`, `\fundinginfohead(text)`, `\artid`, `\journalname`/`\journallogo`/`\jurl` (v1 of 2020), `\uns`
+  (v2:1180), `\subtitlefont`; `\fundingAgency`/`\fundingNumber` ("Agency, Number." in `\fundingInfo`, v2:1877; ASNA:1300
+  bold and italic in running text, 70 papers: 1806.06754, 1810.06326); `\openaccess` (v1 2010.09463, a licence
+  pubnote); ASNA's journal abbreviations (ASNA:2722-2788, `\aaa`: 1909.01905); the class's loads of listings and
+  alltt (all versions; `\lstset`: 1802.08557), `[labelformat=empty]{subfig}` (ASNA:250, v1:256; 1511.08547) and v1's
+  amsrefs (1511.08547's reference styles; `\bib`/`{bibdiv}`: 9 papers). WileyMSP-template (wileymsp_template_cls.rs):
+  `\dedication` (:34, a dedication pubnote; 158 papers, nearly all the template's empty `\dedication{}`: 2003.09099),
+  `\threesubsection` (:49, "Head: " run in italic; 87 papers: 2009.06328). OXIDIZED_DESIGN_DIVERGENCES #601 (table
+  notes' leading item, the box head), #602 (`\doiheadtext`). Not done: `\xleftrightarrow` (v2/v5 via amsmath's
+  `\ext@arrow`, which the binding renders as →; 2211.16474, 2309.00837), one-copy names (`{Corollary}`… 2002.01818,
+  `\cd`/`\ci` 2408.07575, `\E` 2407.00139, `\maketitlesup` 2510.16163: not in the class as shipped elsewhere), and
+  wiley-article.cls (#212: Overleaf's own Wiley template, raw, no binding; its `\keywords` is defined inside the
+  class's abstract body, which the kernel's locked `{abstract}` bypasses: 2009.12523, 2007.02789). Repros
+  class-bindings/{wileynjd_v2_class_commands, wileynjdv5_box_environments, wileyasna_funding_in_text,
+  wileymsp_dedication_threesubsection, wileynjd_v1_loads_amsrefs} RED (67int3) → GREEN; guards
+  `perfect_kernel_batch67w`.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

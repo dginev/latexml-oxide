@@ -1,0 +1,41 @@
+% witness: 2309.00837, 2405.03603, 2604.17508 (`{boxwithhead}{head}{text}`, WileyNJDv5.cls:601-608);
+%          2309.00837, 2311.07331, 2602.03894 (`\bmsubsubsection`, :5764); 2302.02310's copy (:6188-6200 `{tablenotes}`
+%          with text before any `\item`, as 1808.09739; :6869 `{ack}`; :6924 `{biography}`)
+% oracle:  pdflatex with 2302.02310's WileyNJDv5.cls (and its LETTERSP.STY, NJDnatbib.sty): 4 errors before
+%          \begin{document} (\reserveinserts, a TL 2025 harness limit), "1.0.1 Deep Text. … BOX 1 The head The boxed
+%          text. After box. Thanks. Ann Author is a professor. … Ba a) First note, b) second."
+% engines: rust 67int3 = 8 errors (undefined \presentaddress, \bmsubsubsection, \tnote, {assumption}, {boxwithhead},
+%          {tablenotes}, {ack}, {biography})
+% expect:  0 errors, 0 warnings; the box a framed block (bold head, then the text) with "After box." after it; one
+%          table-note item; unnamed acknowledgements; a biography float with the photo cell
+% status:  RED (67int3) -> GREEN (67w)
+% preload: ar5iv.sty
+\documentclass[AMS,Times1COL]{WileyNJDv5}
+\begin{document}
+\title{A v5 paper}
+\author[1]{Ann Author}
+\address[1]{\orgdiv{Dept}, \orgname{Univ}}
+\presentaddress{Somewhere 1}
+\abstract{No heading here.}
+\maketitle
+\bmsection{Intro}
+\bmsubsubsection{Deep}
+Text.
+\begin{assumption}Data are iid.\end{assumption}
+\begin{boxwithhead}{BOX 1\quad The head}{The boxed text.}
+\end{boxwithhead}
+After box.
+\begin{table}
+\begin{tabular}{ll}
+A & B\tnote{a} \\
+\end{tabular}
+\begin{tablenotes}
+a) First note, b) second.
+\end{tablenotes}
+\end{table}
+\begin{ack}
+Thanks.
+\end{ack}
+\begin{biography}{\includegraphics[width=60pt]{photo}}{\textbf{Ann Author} is a professor.}
+\end{biography}
+\end{document}

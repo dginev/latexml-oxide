@@ -1,0 +1,17 @@
+% witness: 2208.08472 (WileyNJD-v2's `\uns`, `\ifmmode\,\else$\,$\fi`: "{500{\uns}hPa … The period is
+%          1989--2008.}" kept its `--` once 67w defined `\uns`)
+% oracle:  pdflatex 0 errors, "B 500 hPa 1989–2008." (an en dash in every line)
+% engines: Perl 0.8.8: an en dash in every line; rust 67int3 and 67w: "1989--2008." in B and C, after a formula
+%          holding only a space (`$\,$`, written as a space), the rest of the paragraph's `--` left unligatured
+% expect:  0 errors, 0 warnings; "1989–2008." in all four paragraphs
+% status:  RED (67w, RUST-ONLY)
+\documentclass{article}
+\begin{document}
+A 1989--2008.
+
+B {500{$\,$}hPa 1989--2008.}
+
+C 500$\,$hPa 1989--2008.
+
+D {500$x$hPa 1989--2008.}
+\end{document}
