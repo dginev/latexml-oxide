@@ -55,7 +55,13 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("caption");
   RequirePackage!("float");
-  // RequirePackage('environ');
+  // acmart.cls:288 (TL 2025 v2.16; 121 of the 128 copies papers ship, v1.25 on) `\RequirePackage{environ}`, whose
+  // `\NewEnviron` papers use without loading it (17 papers; 67u). environ has no binding: it is read raw, so only where
+  // styles are (`INCLUDE_STYLES`, the ar5iv profile; amsrefs_sty.rs's idiom). Perl's acmart.cls.ltxml:32 leaves it
+  // commented out (KNOWN_PERL_ERRORS #741).
+  if lookup_bool("INCLUDE_STYLES") {
+    RequirePackage!("environ");
+  }
   // RequirePackage('zi4');
   RequirePackage!("setspace");
   RequirePackage!("newtxmath");
@@ -83,7 +89,22 @@ LoadDefinitions!({
   // acmart tests `#1` for emptiness). Each is its own date, the later ones `accumulate` — Perl's
   // `\lx@add@date[role=received]` for every call (acmart.cls.ltxml:58) clears the earlier ones, so only the last
   // survived, as "Received" (KNOWN_PERL_ERRORS #522, 2307.05988).
+  // The class's history text `\@received` (:1859-1872), which papers print themselves (2210.01206, 2307.15641,
+  // 2607.11435 `{\small\normalfont\@received\par}`), is kept beside the dates (the class prints it at the document's
+  // end, :1873-1876; here the dates are the frontmatter's).
+  RawTeX!(r"\def\@received{}\newcommand\lx@acm@received@history[2][]{\def\@tempa{#1}\ifx\@tempa\@empty
+  \ifx\@received\@empty\gdef\@received{Received #2}\else\g@addto@macro{\@received}{; revised #2}\fi
+\else\ifx\@received\@empty\gdef\@received{#1 #2}\else\g@addto@macro{\@received}{; #1 #2}\fi\fi}");
   DefMacro!("\\received[]{}", sub[(label, date)] {
+    let mut history = vec![T_CS!("\\lx@acm@received@history")];
+    if let Some(label) = &label {
+      history.push(T_OTHER!("["));
+      history.extend(label.unlist_ref().iter().copied());
+      history.push(T_OTHER!("]"));
+    }
+    history.push(T_BEGIN!());
+    history.extend(date.unlist_ref().iter().copied());
+    history.push(T_END!());
     let first = lookup_value("lx_acm_received_given").is_none();
     assign_value("lx_acm_received_given", Stored::Bool(true), Some(Scope::Global));
     let label = label.filter(|label| !label.is_empty());
@@ -124,7 +145,8 @@ LoadDefinitions!({
     };
     out.extend(date.unlist());
     out.push(T_END!());
-    Ok(Tokens::new(out))
+    history.extend(out);
+    Ok(Tokens::new(history))
   });
   DefMacro!("\\acmJournal{}", "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\acmSubmissionID{}", "\\lx@add@pubnote[role=submissionid]{#1}");
@@ -133,7 +155,11 @@ LoadDefinitions!({
   // (display-toggle ruling 2026-10-06); an unescaped `&` in such a conference name is then legal (2403.18105). The DOI
   // stays: `printacmref=true` prints it under `nonacm` too (acmart.cls:2961), and it is read verbatim. Read when the
   // command is: a later `\@ACM@nonacmtrue` does not withdraw a note already added.
-  DefMacro!("\\acmConference[]{}{}{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=conference]{#2; #3; #4}\\fi");
+  // acmart.cls:1582-1596 also keeps the four parts, `\acmConference@shortname` (the name when no short one is given),
+  // `@name`, `@date`, `@venue`, which papers print in their own lines (`\newcommand{\confdate}{\acmConference@date}`,
+  // 23 papers that ship acmart.cls and 7 on TeX Live's: 2604.15990, 2604.21043, 2604.27997); outside the journal formats
+  // the class starts from a placeholder conference (:1597-1600), set without its note.
+  DefMacro!("\\acmConference[]{}{}{}", "\\gdef\\acmConference@shortname{#1}\\gdef\\acmConference@name{#2}\\gdef\\acmConference@date{#3}\\gdef\\acmConference@venue{#4}\\ifx\\acmConference@shortname\\@empty\\gdef\\acmConference@shortname{#2}\\fi\\if@ACM@nonacm\\else\\lx@add@pubnote[role=conference]{#2; #3; #4}\\fi");
   DefMacro!("\\acmBooktitle{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=booktitle]{#1}\\fi");
   DefMacro!("\\acmArticle{}", "\\lx@add@pubnote[role=article]{#1}");
   DefMacro!("\\acmArticleSeq{}", "\\lx@add@pubnote[role=articleseq]{#1}");
@@ -147,7 +173,10 @@ LoadDefinitions!({
   // acmart.cls:1749-1750: `\@acmYear` (default `\the\year`) is the copyright year's default.
   RawTeX!(r"\def\@acmYear{\the\year}");
   DefMacro!("\\acmYear{}", "\\def\\@acmYear{#1}\\lx@add@date[role=published]{#1}");
-  DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
+  // acmart.cls:1611-1612 `\def\subtitle#1{\def\@subtitle{#1}}\subtitle{}`: the subtitle a paper's own reference line
+  // tests (2608.16886 `\ifx\@subtitle\@empty`).
+  DefMacro!("\\subtitle{}", "\\def\\@subtitle{#1}\\lx@add@subtitle{#1}");
+  Let!("\\@subtitle", "\\@empty");
   DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
   DefMacro!("\\terms{}", "\\lx@add@keywords{#1}");
 
@@ -269,6 +298,9 @@ LoadDefinitions!({
   //======================================================================
   // Acknowledgements
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
+  // acmart.cls:3570 the heading the class's `{acks}` prints, which papers reuse (`\section*{\acksname}`: 2208.13741,
+  // 2609.08098, 2609.26305); babel's languages rename it (:410-437).
+  RawTeX!(r"\newcommand\acksname{Acknowledgments}");
   // Perl L167-168 ships properties => sub { (name => Digest(T_CS('\acknowledgmentsname'))) }
   // so a user `\renewcommand{\acknowledgmentsname}{Danksagung}` localizes the
   // attribute. Rust previously hard-coded "Acknowledgements", ignoring any
@@ -813,7 +845,43 @@ LoadDefinitions!({
     if format == "acmcp" {
       Digest!("\\@ACM@acmcptrue")?;
     }
+    // acmart.cls:51-56 `\define@choicekey*+{…}{format}[\ACM@format\ACM@format@nr]`: the format's name and its number
+    // in the choice list, which the class's font and proof settings below dispatch on.
+    let number = ["manuscript", "acmsmall", "acmlarge", "acmtog", "sigconf", "siggraph", "sigplan", "sigchi",
+      "sigchi-a", "acmengage", "acmcp"].iter().position(|f| *f == format).unwrap_or(0);
+    RawTeX!(&s!("\\def\\ACM@format{{{format}}}\\def\\ACM@format@nr{{{number}}}"));
   }
+  // The class's title-block fonts by format, which papers set their own title lines in (`\@titlefont`: 12 papers that
+  // ship acmart.cls, 2 on TeX Live's: 2006.07812, 2201.00614, 2201.05893; `\@authorfont`/`\@affiliationfont`:
+  // 1810.00952, 2604.02778): acmart.cls:2515-2539, :2659-2687; the proof heading's font and indent (:3490-3508;
+  // 2608.06906).
+  RawTeX!(r"\def\@titlefont{\ifcase\ACM@format@nr\relax\LARGE\sffamily\bfseries\or\LARGE\sffamily\bfseries
+\or\LARGE\sffamily\bfseries\or\Huge\sffamily\or\Huge\sffamily\bfseries\or\Huge\sffamily\bfseries\or\Huge\bfseries
+\or\Huge\sffamily\bfseries\or\Huge\bfseries\or\Huge\sffamily\bfseries\or\LARGE\sffamily\bfseries\fi}
+\def\@authorfont{\Large\sffamily}\def\@affiliationfont{\normalsize\normalfont}
+\ifcase\ACM@format@nr\relax
+\or\def\@authorfont{\large\sffamily}\def\@affiliationfont{\small\normalfont}
+\or
+\or\def\@authorfont{\LARGE\sffamily}\def\@affiliationfont{\large}
+\or\def\@authorfont{\LARGE}\def\@affiliationfont{\large}
+\or\def\@authorfont{\normalsize\normalfont}\def\@affiliationfont{\normalsize\normalfont}
+\or\def\@authorfont{\Large\normalfont}\def\@affiliationfont{\normalsize\normalfont}
+\or\def\@authorfont{\bfseries}\def\@affiliationfont{\mdseries}
+\or\def\@authorfont{\bfseries}\def\@affiliationfont{\mdseries}
+\or\def\@authorfont{\LARGE}\def\@affiliationfont{\large}
+\or\def\@authorfont{\large\sffamily}\def\@affiliationfont{\small\normalfont}
+\fi
+\def\@proofnamefont{\scshape}\def\@proofindent{\indent}
+\ifnum\ACM@format@nr=6 \def\@proofnamefont{\itshape}\def\@proofindent{\noindent}\fi");
+  // The title block's registers, which papers set before their own title code (`\author@bx@sep=0.5pc`: 2606.30549,
+  // 2607.17095, 2608.10413, 2608.17671, 2609.14255, …; `\num@authorgroups`: 2608.24300; `\@ACM@title@width`:
+  // 2608.20335, 2609.23169): acmart.cls:1613-1614, :1767, :2225, :2758-2761. The procedures that fill them
+  // (`\@mktitle`, `\@mkauthors`, `\@printendtopmatter`) are not ported: the title block is the frontmatter here.
+  RawTeX!(r"\newcount\num@authorgroups\num@authorgroups=0\relax\newlength\@ACM@title@width\newbox\mktitle@bx
+\newbox\author@bx\newdimen\author@bx@wd\newskip\author@bx@sep\author@bx@sep=1pc\relax");
+  // The placeholder conference outside the journal formats (acmart.cls:1597-1600), without its note.
+  RawTeX!(r"\if@ACM@journal\else\gdef\acmConference@shortname{Conference'17}\gdef\acmConference@name{ACM Conference}
+\gdef\acmConference@date{July 2017}\gdef\acmConference@venue{Washington, DC, USA}\fi");
   AddToMacro!("\\lx@maketitle@body", "\\lx@acm@copyright");
 
   // What the acmart 2.x versions add (TL 2025's acmart.cls, as the newer shipped copies; older copies lack them, so a

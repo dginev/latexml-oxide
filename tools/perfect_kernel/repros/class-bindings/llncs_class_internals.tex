@@ -1,0 +1,33 @@
+% witness: 0905.3107, 0908.0239, 1006.0809 (pscproc2.sty's `\switcht@albion`, `\if@runhead`); 1812.03939, 1812.03953
+%          (the Springer template's `\edef\switcht@deutsch`); 0906.4121, 1003.2851 (`\spn@wtheorem`); 2202.10090,
+%          2601.04573 (`\@spothm`); 2303.08726 (`\if@envcntsame`); 2112.05140, 2208.01633 (`\@subtitle`,
+%          `\institutename`); 1709.06172 (`\phantomsection`)
+% oracle:  pdflatex with TL 2025 llncs.cls v2.26: "RH SAME", Theorem 1, Fact 2, Assumption 3 (one counter under
+%          envcountsame); 0 errors. Here the theorems number within the section (the binding's own `{theorem}`,
+%          a residual) and `\switcht@albion` restores the binding's English names ("Figure", not "Fig.")
+% engines: rust 67int6 = 11 errors, 0 warnings (undefined `\if@runhead`, undefined `\if@envcntsame`, undefined
+%          `\spn@wtheorem`, undefined `\@spothm`, undefined `\switcht@deutsch`, undefined `\@subtitle`, undefined
+%          `\institutename`, undefined `\phantomsection`, undefined `{fact}`, undefined `{assumption}`, undefined
+%          `\switcht@albion`)
+% expect:  0 errors, 0 warnings; the Fact and the Assumption share the theorem counter
+% status:  RED (67int6) -> GREEN (68a)
+% preload: ar5iv.sty
+\documentclass[runningheads,envcountsame]{llncs}
+\makeatletter
+\if@runhead\newcommand{\rh}{RH}\else\newcommand{\rh}{NORH}\fi
+\if@envcntsame\newcommand{\ecs}{SAME}\else\newcommand{\ecs}{OWN}\fi
+\spn@wtheorem{fact}{Fact}{\bfseries}{\itshape}
+\@spothm{assumption}[theorem]{Assumption}{\bfseries}{\itshape}
+\edef\switcht@deutsch{\relax\unexpanded\expandafter{\switcht@deutsch}}
+\makeatother
+\begin{document}
+\title{T}\subtitle{S}\author{A}\institute{I}
+\makeatletter\if!\@subtitle!NOSUB\else SUB:\@subtitle\fi\makeatother
+\maketitle
+\makeatletter{\small\institutename}\makeatother
+\rh\ \ecs\ \phantomsection
+\begin{theorem}T1.\end{theorem}
+\begin{fact}F.\end{fact}
+\begin{assumption}A.\end{assumption}
+\makeatletter\switcht@albion\makeatother \abstractname/\proofname
+\end{document}

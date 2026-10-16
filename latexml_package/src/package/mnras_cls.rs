@@ -1,3 +1,5 @@
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -30,6 +32,24 @@ LoadDefinitions!({
     RawTeX!(r"\newcolumntype{d}[1]{D{.}{.}{#1}}\newcolumntype{.}{D{.}{.}{-1}}\newcolumntype{,}{D{,}{,}{2}}");
   }
 
+  // mnras.cls (TL 2025 v3.2, :1399-1479; every copy papers ship, v3.0 to v3.3, alike): the reference-list links mnras.bst
+  // writes, `\doi[text]{10.foo}` (a link to the DOI, "doi:10.foo" or the text, its argument read with `\$&#^_%~`
+  // other), `\eprint{prefix}{id}` (an arXiv or dblp link, else "prefix:id") and `\mniiiauthor{key}{first}{again}`
+  // (the bibliography style's first-time-three-authors switch). Perl's mnras.cls.ltxml defines none of them, so every
+  // `\doi` of an MNRAS reference list was undefined (37 papers: 1609.03154, 2008.09832, 2104.08053; `\eprint` 17:
+  // 1709.09375, 1809.04269; `\mniiiauthor` 4: 1507.08002, 1703.04544, 1806.09815; KNOWN_PERL_ERRORS #742).
+  RawTeX!(r"\def\@urlcharsother{\let\do\@makeother\do\\\do\$\do\&\do\#\do\^\do\_\do\%\do\~}
+\def\doi{\begingroup\@urlcharsother\@ifnextchar[{\@doi}{\@doi[]}}
+\def\@doi[#1]#2{\def\@tempa{#1}\ifx\@tempa\@empty\href{http://dx.doi.org/#2}{doi:#2}\else\href{http://dx.doi.org/#2}{#1}\fi
+  \endgroup}
+\def\eprint#1#2{\@eprint#1:#2::\@nil}
+\def\@eprint@arXiv#1{\href{http://arxiv.org/abs/#1}{{\tt arXiv:#1}}}
+\def\@eprint@dblp#1{\href{http://dblp.uni-trier.de/rec/bibtex/#1.xml}{dblp:#1}}
+\def\@eprint#1:#2:#3:#4\@nil{\def\@tempa{#1}\def\@tempb{#2}\def\@tempc{#3}%
+  \ifx\@tempc\@empty\let\@tempc\@tempb\let\@tempb\@tempa\fi
+  \ifx\@tempb\@empty\def\@tempb{arXiv}\fi
+  \@ifundefined{@eprint@\@tempb}{\@tempb:\@tempc}{\expandafter\expandafter\csname @eprint@\@tempb\endcsname\expandafter{\@tempc}}}
+\def\mniiiauthor#1#2#3{\@ifundefined{mniiiauth@#1}{\global\expandafter\let\csname mniiiauth@#1\endcsname\null #2}{#3}}");
   RawTeX!(r"\newcommand\aap{A\&A}");                // Astronomy and Astrophysics
   RawTeX!(r"\let\astap=\aap");                       // alternative shortcut
   RawTeX!(r"\newcommand\aapr{A\&ARv}");              // Astronomy and Astrophysics Review
@@ -95,4 +115,10 @@ LoadDefinitions!({
   RawTeX!(r"\newcommand\sovast{Soviet~Ast.}");
   RawTeX!(r"\newcommand\ssr{Space Sci. Rev.}");
   RawTeX!(r"\newcommand\zap{Z.~Astrophys.}");
+  // v3.0 (2015/05/22, 85 of the 99 copies papers ship) lists `\apspr`, which v3.2 (TeX Live's, :510) disables as a
+  // journal that "does not appear to exist": provide-only, a paper's own definition wins.
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\providecommand\apspr{Astrophys.~Space~Phys.~Res.}");
+  }
 });

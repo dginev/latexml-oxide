@@ -8,9 +8,16 @@ use crate::{
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: aa.cls.ltxml — Astronomy & Astrophysics
+  // aa.cls v5-v7 (1201.4282's v7.0 :85-88): `\if@referee` and `\if@onecolumn`, which the `referee` and
+  // `onecolumn` options set and papers test in their preambles (1201.4282, 1208.0304, 1501.05323, 1605.00944;
+  // 1608.08833). v8 and later name them `\ifaa@referee`/`\ifaa@twocolumn`; the old names stay for every version
+  // (one binding, the union).
+  RawTeX!(r"\let\if@referee\iffalse\let\if@onecolumn\iffalse");
+  DeclareOption!("referee", "\\let\\if@referee\\iftrue");
+  DeclareOption!("onecolumn", "\\let\\if@onecolumn\\iftrue");
   // Ignorable options
-  for option in ["10pt", "11pt", "12pt", "twoside", "onecolumn", "twocolumn",
-    "draft", "final", "referee", "longauth", "rnote", "oldversion",
+  for option in ["10pt", "11pt", "12pt", "twoside", "twocolumn",
+    "draft", "final", "longauth", "rnote", "oldversion",
     "runningheads", "envcountreset", "envcountsect",
     "structabstract", "traditabstract", "letter"].iter()
   {
@@ -125,6 +132,26 @@ LoadDefinitions!({
   {
     let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
     RawTeX!(r"\providecommand*\psj{PSJ}");
+  }
+  // aa.cls v8.2-v9.4 (2509.20613's v9.1 :2058-2062): `\arxiv{id}`, the arXiv identifier of a reference, in typewriter
+  // type after the prefix "arXiv:" (1604.01307, 1809.05581, 2103.09505, 2307.13476, 2503.05262, 2503.23114). Perl's
+  // aa_support.sty.ltxml has `\eprint` but no `\arxiv` (KNOWN_PERL_ERRORS #740).
+  RawTeX!(r"\def\arxivprefixe{arXiv}\def\arxivprefixesep{:}\def\arxiv#1{{\tt \arxivprefixe\arxivprefixesep\ignorespaces#1}}");
+  // v9.1 (2509.20613's copy): the language editor's inline note `\LEt{…}`, a red bold "[Note N: …]" numbered by the
+  // `lenote` counter (:165, :170-173), defined at the document's start, so a paper's own `\LEt` (1608.08833's) stands
+  // (1607.03898); the first-page "Special feature" line `\topics{…}` (:837-838, kept as a note of the frontmatter;
+  // 1810.01624); the running head's `\etalname` (:438); the gap below a table caption (:364-365; 2504.01061); the
+  // copyright year `\yearCop` (:537, a token register; 2609.03060).
+  RawTeX!(r"\newcounter{lenote}\AtBeginDocument{\providecommand{\LEt}[1]{\stepcounter{lenote}\normalfont\textbf{\color{red}[Note \arabic{lenote}: #1] }}}
+\newcommand*\etalname{et al.}\newlength{\VSpaceAfterTabCaption}\setlength{\VSpaceAfterTabCaption}{10pt}\newtoks\yearCop");
+  DefMacro!("\\topics{}", "\\lx@add@frontmatter{ltx:note}[role=topics]{#1}");
+  // The A&A language editor's v9.1 copy (7 identical copies, 2008.09582, 2105.01661, 2109.04752, 2209.13449,
+  // 2405.13486, 2408.13105, 2509.05225; 2008.09582's :1902-1961) adds five journals to the class's list (aa_support's):
+  // provide-only, a paper's own definition wins (2003.12561, 2403.04850, 2406.18661).
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\providecommand*\adndt{At. Data Nucl. Data Tables}\providecommand*\jpb{J.~Phys.~B}
+\providecommand*\jpcrd{J. Phys. Chem. Ref. Data}\providecommand*\raa{Res. Astron. Astrophys.}\providecommand*\zphys{Z.~Phys.}");
   }
   // The v9.x copies load hyperref at the document's start unless the paper has (2409.03418's :2035-2037,
   // `\AtBeginDocument{\@ifpackageloaded{hyperref}{}{\RequirePackage[colorlinks=true,…]{hyperref}}}`, 17 of 98 sampled),

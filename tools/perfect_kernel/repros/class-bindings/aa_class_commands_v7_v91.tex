@@ -1,0 +1,28 @@
+% witness: 1201.4282, 1208.0304, 1501.05323, 1605.00944 (`\if@referee`); 1608.08833 (`\if@onecolumn`); 1604.01307,
+%          1809.05581, 2103.09505 (`\arxiv`); 1601.05309, 1805.03673, 2509.20613 (`{theorem}`); 1810.01624 (`\topics`);
+%          2003.12561, 2008.09582 (`\raa`, `\jpb`: the A&A language editor's copy)
+% oracle:  pdflatex with 1201.4282's aa.cls (v7.0) for the referee/onecolumn switches ("Mode REF cols 2"), and with
+%          2008.09582's aa.cls (v9.1, editor's copy) for the rest: "arXiv:2101.00001", "Res. Astron. Astrophys., J.
+%          Phys. B.", "[Note 1: check this]", Theorem 1, Lemma 2; 0 errors with the copy each switch is in
+% engines: rust 67int6 = 12 errors, 2 warnings (undefined `\if@referee`, undefined `\if@onecolumn`, undefined
+%          `\topics`, undefined `\arxiv`, undefined `\raa`, undefined `\jpb`, undefined `\LEt`, undefined `{theorem}`,
+%          undefined `\thetheorem`, undefined `\yearCop`, unexpected `\the\yearCop`, undefined `\etalname`)
+% expect:  0 errors, 0 warnings; the topics note, the arXiv identifier in typewriter type, Theorem 1
+% status:  RED (67int6) -> GREEN (68a)
+% preload: ar5iv.sty
+\documentclass[referee]{aa}
+\makeatletter
+\if@referee\newcommand{\com}{REF}\else\newcommand{\com}{NOREF}\fi
+\if@onecolumn\newcommand{\cols}{1}\else\newcommand{\cols}{2}\fi
+\makeatother
+\begin{document}
+\title{T}\author{A}\institute{I}
+\abstract{Ab.}
+\maketitle
+\topics{The XXL Survey: second series}
+Mode \com\ cols \cols. See \arxiv{2101.00001} and \raa, \jpb.
+\LEt{check this}
+\begin{theorem}Every x.\end{theorem}
+\begin{lemma}Every y.\end{lemma}
+\the\yearCop\ \etalname
+\end{document}

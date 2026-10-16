@@ -17793,3 +17793,16 @@ url font so that it may break at the `\Url…Breaks` characters; here, as the bi
 neither (KNOWN_PERL_ERRORS #750, #752). Guards `perfect_kernel_batch68b::{hyperref_internals_called_by_papers,
 url_format_string_and_tilde}`.
 
+### 613. llncs's `\switcht@albion` restores this binding's English names, not the class's
+
+llncs.cls:79-117 `\switcht@albion` sets the class's English names, which the class also sets at load (:117): "Abstract.",
+"Fig.", "{\bf Keywords:}", "Acknowledgments.", "Table of Contents". This binding keeps its own names (article's
+"Abstract", "Figure", "Contents"; its `\keywordname` `\textbf{Keywords}`, to which `\keywords` adds the colon, and
+`\ackname` "Acknowledgements"), and llncs_cls.rs's `\switcht@albion` restores those, captured at the end of the class's
+load (`\edef` of the current meanings), so a paper or package that calls it (pscproc2.sty:5: 0905.3107, 0908.0239,
+1006.0809) or patches it (the Springer template's `\edef\switcht@albion{\relax\unexpanded\expandafter{…}}`:
+1812.03939, 1812.03953) changes nothing it had not, and no name gets a second colon or period from the binding's own
+punctuation. `\switcht@deutsch`/`\switcht@francais` give the class's German and French names (:121-197) in the same
+forms (`\keywordname` without the colon, `\abstractname`/`\ackname` without the run-in period). Taking the class's
+names at load would be a separate change to every llncs paper's headings (not made). Repro
+class-bindings/llncs_class_internals; guard `perfect_kernel_batch68a::llncs_class_internals`.

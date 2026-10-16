@@ -3,9 +3,16 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: llncs.cls.ltxml — Lecture Notes in Computer Science (Springer)
+  // llncs.cls:25-36 (TL 2025 v2.26): the switches the numbering and running-head options set, which papers and their
+  // packages test (`\if@runhead`: pscproc2.sty:19, 0905.3107, 0908.0239, 1006.0809; `\if@envcntsame`: 2303.08726,
+  // 2306.07698) and `\spn@wtheorem` (below) is chosen by.
+  RawTeX!(r"\let\if@envcntreset\iffalse\let\if@envcntsame\iffalse\let\if@envcntsect\iffalse\let\if@runhead\iffalse");
+  DeclareOption!("envcountreset", "\\let\\if@envcntreset\\iftrue");
+  DeclareOption!("envcountsame", "\\let\\if@envcntsame\\iftrue");
+  DeclareOption!("envcountsect", "\\let\\if@envcntsect\\iftrue");
+  DeclareOption!("runningheads", "\\let\\if@runhead\\iftrue");
   for option in [
-    "envcountreset", "citeauthoryear", "oribibl", "orivec",
-    "envcountsame", "envcountsect", "runningheads",
+    "citeauthoryear", "oribibl", "orivec",
   ].iter() {
     DeclareOption!(*option, None);
   }
@@ -35,7 +42,17 @@ LoadDefinitions!({
   // llncs.cls:250-253: the matter commands switch the page numbering (Roman, then arabic).
   DefMacro!("\\frontmatter", "\\pagenumbering{Roman}");
 
-  DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
+  // llncs.cls:862, :915 `\def\subtitle#1{\gdef\@subtitle{#1}}`: the subtitle a paper's own title code tests
+  // (2112.05140, 2208.01633 `\if!\@subtitle!`).
+  DefMacro!("\\subtitle{}", "\\gdef\\@subtitle{#1}\\lx@add@subtitle{#1}");
+  Let!("\\@subtitle", "\\@empty");
+  // llncs.cls:870-885 `\institutename` sets the `\institute` list under the title, which papers' own title code calls
+  // (2112.05140, 2208.01633 `{\small\institutename}`): the institutes are the frontmatter's affiliations here, so it
+  // sets nothing (Perl's llncs.cls.ltxml:70 has it commented out).
+  DefMacro!("\\institutename", "");
+  // llncs.cls:561 `\let\phantomsection=\relax`, hyperref's anchor command a paper calls whether or not it loads
+  // hyperref (1709.06172, 1803.04282, 1810.01542); hyperref's own replaces it.
+  Let!("\\phantomsection", "\\relax");
 
   DefMacro!("\\emailname", "E-mail");
   DefMacro!("\\mailname",  "\\textit{Correspondence to}:");
@@ -212,6 +229,15 @@ LoadDefinitions!({
     )?;
   });
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
+  // llncs.cls:1086-1097 `\@spothm{env}[numberedlike]{caption}{capfont}{bodyfont}` (a theorem sharing another's counter)
+  // and :1155-1167 `\spn@wtheorem{env}{caption}{capfont}{bodyfont}`, the definer of the class's own theorem
+  // environments by the numbering option, which papers call for theirs (2202.10090, 2601.04573 `\@spothm`; 0906.4121,
+  // 1003.2851 `\spn@wtheorem{fact}{Fact}…`; 22 papers). Perl's llncs.cls.ltxml defines neither (KNOWN_PERL_ERRORS #743).
+  RawTeX!(r"\def\@spothm#1[#2]#3#4#5{\spnewtheorem{#1}[#2]{#3}{#4}{#5}}
+\if@envcntsame\def\spn@wtheorem#1#2#3#4{\@spothm{#1}[theorem]{#2}{#3}{#4}}
+\else\if@envcntsect\def\spn@wtheorem#1#2#3#4{\spnewtheorem{#1}{#2}[section]{#3}{#4}}
+\else\if@envcntreset\def\spn@wtheorem#1#2#3#4{\spnewtheorem{#1}{#2}{#3}{#4}\@addtoreset{#1}{section}}
+\else\def\spn@wtheorem#1#2#3#4{\spnewtheorem{#1}{#2}{#3}{#4}\@addtoreset{#1}{chapter}}\fi\fi\fi");
 
   // Install the theorem environments — faithful mirror of Perl
   // llncs.cls.ltxml L170-202 (which itself tracks real llncs.cls L1142-1174).
@@ -311,4 +337,45 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\end{credits}"), None, "");
   // \discintname is the localised "Disclosure of Interests." header.
   DefMacro!("\\discintname", "Disclosure of Interests.");
+
+  // llncs.cls:79-117, :121-157, :161-197: the language switches, which babel's `\extrasenglish` and the
+  // `deutsch`/`francais` options call and papers and their packages call or patch (pscproc2.sty:5 `\switcht@albion`:
+  // 0905.3107, 0908.0239, 1006.0809; the Springer template's `\edef\switcht@deutsch{\relax\unexpanded\expandafter
+  // {\switcht@deutsch}}`: 1812.03939, 1812.03953, 1904.02547). English is this binding's own names (those of the class
+  // where the binding has none), German and French the class's, in the binding's forms where it defines the name
+  // (`\keywordname` without the colon `\keywords` adds; `\abstractname`/`\ackname` without the run-in period;
+  // OXIDIZED_DESIGN_DIVERGENCES #613).
+  RawTeX!(r#"\edef\switcht@albion{\def\noexpand\abstractname{\unexpanded\expandafter{\abstractname}}%
+\def\noexpand\ackname{\unexpanded\expandafter{\ackname}}\def\noexpand\andname{\unexpanded\expandafter{\andname}}%
+\def\noexpand\lastandname{\unexpanded\expandafter{\lastandname}}\def\noexpand\appendixname{\unexpanded\expandafter{\appendixname}}%
+\def\noexpand\chaptername{\unexpanded\expandafter{\chaptername}}\def\noexpand\contentsname{\unexpanded\expandafter{\contentsname}}%
+\def\noexpand\discintname{\unexpanded\expandafter{\discintname}}\def\noexpand\figurename{\unexpanded\expandafter{\figurename}}%
+\def\noexpand\keywordname{\unexpanded\expandafter{\keywordname}}\def\noexpand\indexname{\unexpanded\expandafter{\indexname}}%
+\def\noexpand\contriblistname{\unexpanded\expandafter{\contriblistname}}\def\noexpand\listfigurename{\unexpanded\expandafter{\listfigurename}}%
+\def\noexpand\listtablename{\unexpanded\expandafter{\listtablename}}\def\noexpand\mailname{\unexpanded\expandafter{\mailname}}%
+\def\noexpand\noteaddname{\unexpanded\expandafter{\noteaddname}}\def\noexpand\partname{\unexpanded\expandafter{\partname}}%
+\def\noexpand\seename{\unexpanded\expandafter{\seename}}\def\noexpand\subclassname{\unexpanded\expandafter{\subclassname}}%
+\def\noexpand\tablename{\unexpanded\expandafter{\tablename}}%
+\def\noexpand\claimname{Claim}\def\noexpand\conjecturename{Conjecture}\def\noexpand\corollaryname{Corollary}%
+\def\noexpand\definitionname{Definition}\def\noexpand\examplename{Example}\def\noexpand\exercisename{Exercise}%
+\def\noexpand\lemmaname{Lemma}\def\noexpand\notename{Note}\def\noexpand\problemname{Problem}\def\noexpand\proofname{Proof}%
+\def\noexpand\propertyname{Property}\def\noexpand\propositionname{Proposition}\def\noexpand\questionname{Question}%
+\def\noexpand\remarkname{Remark}\def\noexpand\solutionname{Solution}\def\noexpand\theoremname{Theorem}}
+\def\switcht@francais{\def\abstractname{R\'esum\'e}\def\ackname{Remerciements}\def\andname{et}\def\lastandname{ et}%
+\def\appendixname{Appendice}\def\chaptername{Chapitre}\def\claimname{Pr\'etention}\def\conjecturename{Hypoth\`ese}%
+\def\contentsname{Table des mati\`eres}\def\corollaryname{Corollaire}\def\definitionname{D\'efinition}%
+\def\discintname{Mention des Int\'{e}r\^{e}ts.}\def\examplename{Exemple}\def\exercisename{Exercice}\def\figurename{Fig.}%
+\def\keywordname{\textbf{Mots-cl\'e}}\def\indexname{Index}\def\lemmaname{Lemme}\def\contriblistname{Liste des contributeurs}%
+\def\listfigurename{Liste des figures}\def\listtablename{Liste des tables}\def\noteaddname{Note ajout\'ee \`a l'\'epreuve}%
+\def\notename{Remarque}\def\partname{Partie}\def\problemname{Probl\`eme}\def\proofname{Preuve}%
+\def\propertyname{Caract\'eristique}\def\questionname{Question}\def\remarkname{Remarque}\def\seename{voir}%
+\def\solutionname{Solution}\def\tablename{Tableau}\def\theoremname{Th\'eor\`eme}}
+\def\switcht@deutsch{\def\abstractname{Zusammenfassung}\def\ackname{Danksagung}\def\andname{und}\def\lastandname{ und}%
+\def\appendixname{Anhang}\def\chaptername{Kapitel}\def\claimname{Behauptung}\def\conjecturename{Hypothese}%
+\def\contentsname{Inhaltsverzeichnis}\def\corollaryname{Korollar}\def\discintname{Offenlegung von Interessen.}%
+\def\examplename{Beispiel}\def\exercisename{\"Ubung}\def\figurename{Abb.}\def\keywordname{\textbf{Schl\"usselw\"orter}}%
+\def\indexname{Index}\def\contriblistname{Mitarbeiter}\def\listfigurename{Abbildungsverzeichnis}%
+\def\listtablename{Tabellenverzeichnis}\def\noteaddname{Nachtrag}\def\notename{Anmerkung}\def\partname{Teil}%
+\def\proofname{Beweis}\def\propertyname{Eigenschaft}\def\questionname{Frage}\def\remarkname{Anmerkung}\def\seename{siehe}%
+\def\solutionname{L\"osung}\def\tablename{Tabelle}}"#);
 });

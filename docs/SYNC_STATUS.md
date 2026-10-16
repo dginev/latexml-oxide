@@ -1812,6 +1812,76 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Open row: arximspdf/arxstspdf gaps outside this batch from a 24-paper sample — `\ccline` (7 arxstspdf papers),
   `\freefootnotetext`, `\write@toc@…contentsline`, `\maxcsec`, `{aligned}`, and arxbj's `\setvaluelist` moved into
   ims_support_sty.rs for arximspdf (1203.0565).
+- **68a** (binding gaps G2, journal classes B: bindgaps/g23_macros.tsv rows aa, acmart, aastex631/aastex63, mnras,
+  llncs, jfm, tac, aamas; each macro checked against TeX Live's class or the witnesses' shipped copies, 1,035 witness
+  papers unpacked: a name defined by at least a version of the class went in, a one-line definition only some authors
+  added to their copy did not). Per binding (commands, real file:line, witnesses): aa (aa_cls.rs, aa_support_sty.rs) —
+  `{theorem}` (2509.20613's v9.1 :1556; 1601.05309, 1805.03673; Perl lacks it too, KNOWN_PERL_ERRORS #740), `\arxiv`
+  with `\arxivprefixe`/`\arxivprefixesep` (:2058-2062; 1604.01307, 1809.05581, 2103.09505; #740), v7's `\if@referee`/
+  `\if@onecolumn` set by the `referee`/`onecolumn` options (1201.4282 :85-88; 1208.0304, 1501.05323, 1608.08833), the
+  language editor's `\LEt` on the `lenote` counter (:165-173, provided at begin-document; 1607.03898), `\topics` as a
+  frontmatter note (:837; 1810.01624), `\etalname`, `\VSpaceAfterTabCaption` (2504.01061), `\yearCop` (2609.03060), and
+  the A&A language editor's v9.1 copy's five journals `\adndt`, `\jpb`, `\jpcrd`, `\raa`, `\zphys` (7 identical copies,
+  2008.09582 :1902-1961), provide-only. acmart (acmart_cls.rs, TL 2025 v2.16) — environ loaded where styles are read raw
+  (:288; 121 of 128 copies; #741), `\acmConference@shortname`/`@name`/`@date`/`@venue` kept by `\acmConference` with the
+  class's placeholder conference (:1582-1600; 30 papers: 2604.15990, 2604.21043), the `\@received` history (:1859-1872;
+  2210.01206), `\@subtitle` (:1611-1612; 2608.16886), `\ACM@format`/`\ACM@format@nr` and by them `\@titlefont`,
+  `\@authorfont`, `\@affiliationfont`, `\@proofnamefont`, `\@proofindent` (:51-56, :2515-2539, :2659-2687, :3490-3508;
+  2006.07812, 2201.00614, 1810.00952, 2608.06906), `\acksname` (:3570; 2208.13741), the title-block registers
+  `\author@bx@sep`, `\author@bx@wd`, `\num@authorgroups`, `\@ACM@title@width`, `\mktitle@bx` (:1613-1614, :1767, :2225,
+  :2758-2761; 2606.30549, 2607.17095, 2608.24300, 2608.20335). aastex63/aastex631 (aas_support_sty.rs, aastex_cls.rs;
+  2107.07519's aastex631.cls, 1907.08642's aastex63.cls) — `\ifsuppressAffiliations` (:7324-7325; 39 papers, 2108.09109,
+  2001.00952), the edit switches' flags `\ifturnoffedit`/`one`/`two`/`three` (:5790-5809; 2109.04933, 2609.30834),
+  `\authorcomment` (:5843-5850, honouring them; 2004.09658, 2205.09859, 2303.08830: `\turnoffedit` drops the notes, as
+  the PDF does), `\resetapptablenumbers` (:7210-7216; 2308.05494), `\currtabletypesize` kept by `\tabletypesize`
+  (:1928-1932; 2202.09386), `\savetablenum`, `\tablereferences`, `\deluxetablecaption`, `\tabcaption` (:1926, :5391,
+  :4780, :1609-1611; 1910.11401, 2403.12118, 2408.17407), `\onecolfootnote` (:7316), `\BeforeBegin` (:581; 2111.03992),
+  `\mdash` (:7141), `\apjsecfont` (:219), `\ackbox` (:1205), `\ifnumlines`, `\ifpreprint`/ `\ifpreprinttwo` set by their
+  options (:167-171, :253; 2301.00027, 2608.12156), `\aspconf` provide-only in the class binding (:6164; 2307.09521;
+  aas_macros_sty.rs untouched). mnras (mnras_cls.rs, TL 2025 v3.2) — `\doi`, `\eprint` with `\@eprint@arXiv`/`@dblp`,
+  `\mniiiauthor` (:1399-1479; 1609.03154, 2008.09832, 1709.09375, 1507.08002; #742), v3.0's `\apspr` provide-only
+  (2404.04493). llncs (llncs_cls.rs, TL 2025 v2.26) — `\if@envcntreset`/`@envcntsame`/ `@envcntsect`/`\if@runhead` set
+  by their options (:25-36; pscproc2.sty:19, 0905.3107, 2303.08726), `\@spothm` and `\spn@wtheorem` by the numbering
+  option (:1086-1097, :1155-1167; 0906.4121, 1003.2851, 2202.10090; #743), the language switches (:79-197; 0908.0239,
+  1812.03939; `\switcht@albion` restores the binding's own names, OXIDIZED_DESIGN_DIVERGENCES #613), `\@subtitle`,
+  `\institutename` (empty: the institutes are the frontmatter's; 2112.05140), `\phantomsection` (:561; 1709.06172). jfm
+  (jfm_cls.rs; 1702.03412's copy) — the caption-legend symbols `\fullcirc`…`\full` and `\rmGamma`…`\rmOmega`
+  provide-only (:1380-1405, :1419-1429; 1806.08341, 2004.10578), `\thesubequation` and `\returnthesubequation`
+  (:641-649; cond-mat0107563), `\useAMSsubequations`, `\norule`, `\followon`, `\fulloutfootnote`, `\indexsize`,
+  `\boldit`, `\halflineskip` (2304.12657). tac (tac_cls.rs; 2401.05974's 2023 copy, 0708.1921's 2015 copy) —
+  `\mathrmdef`, `\mathbfdef`, `\mathopdef`, `\mathsfdef`, `\mathcaldef`, … with `\xspace` where the copy loads xspace
+  (:651-678; 45 papers: 0709.0837, 0711.0674), `\refs`/`{refs}`, `{references}`/`{references*}` as bibliographies
+  (:545-578; 0812.1674, 0902.2554, 1202.6034), `\dedication` a frontmatter note (:311; 0812.1674), `\cauthor`,
+  `\endproofbox`, `\proofof`, `\state`/`\staterm`/`\thirdleveltheorems` (:148-163; 1106.1983), `{remarks}`/`{examples}`
+  at begin-document where the paper has none (:466-470; 0907.2460; a paper's own `\newtheoremrm{examples}…[section]`
+  replaces them, as tac.cls's `\def`-based `\newtheorem` lets it: 2407.21129). aamas (aamas_cls.rs; 2602.10598's copy) —
+  `\doi{SUFFIX}`: `\@doi` = 10.65109/SUFFIX, a DOI pubnote from the preamble (:1435; 65 papers: 2602.03799). Repros
+  class-bindings/{aa_class_commands_v7_v91, acmart_conference_parts_and_title_fonts, aastex63x_table_and_edit_commands,
+  mnras_reference_links, llncs_class_internals, jfm_legend_symbols_and_subequations, tac_class_commands, aamas_doi} RED
+  (67int6) → GREEN; guards `perfect_kernel_batch68a` (8). A/B vs 67int6-rel over the 1,035 witnesses + 100 pop67o:
+  witnesses' Errors 1,993 → 964, error-free 56 → 536, 504 papers with fewer Errors, none with more, Fatals 0 → 0; the
+  310 with fewer words lose error-recovery text (`\Hom` → Hom, the `\mathrmdef` arguments), `\mniiiauthor`'s second
+  branch (1507.08002, 1806.09815), the notes `\turnoffedit` drops (2205.09859, 2303.08830, as their PDFs), a DOI read as
+  one word, appendix tables renumbered by `\resetapptablenumbers` (2601.08948 B5 → B1), 1608.08833's one-column equation
+  forms (its `[onecolumn]`); pop67o 100: Errors 402 → 401, Fatals 5 → 5. Binding nets vs 67int6 (aa, aamas, aastex,
+  aastex62, aastex63, aastex631, acmart, jfm, llncs, mnras, tac, emulateapj, aas_macros): 0 worse in all; Errors 177 →
+  78. Not taken (pending the loader-rule decision: one-line definitions only some authors added to their copy): aa's
+  journals `\jaavso` 14, `\rnaas` 8, `\maps` 7, `\lrsp` 6, `\pnas`, `\aspc` (108 names in 187 uses); aastex's
+  `\acceptjournal` 30 (one author's copies, "Added by Bin Ren"), `\plotthree`, the heliophysics journals `\frass`,
+  `\jgra`, `\angeo`…; mnras's `\psj` 13, `\mnrasl` 6, `\kms`; acmart's `{remark}` 11, a variant's `\acmshortauthors`/
+  `\acmshorttitle` 6 (2603.20062, 2609.01519; a copy without environ), `\authorwithoutinstuition` 5; llncs's
+  `\etal`/`\ie`/`\eg`; jfm's `\Nu`, `\Ma`, `\Ri`, `\Da`; fairmeta's whole row (per-variant `\code`/`\project` with
+  conflicting labels, `\authoremails`, `\github`; its `\addtolist` internals). Not this payload's: `\@makecaption` (aa
+  12, mnras 5 papers: xtab's `\topcaption`, papers' own caption code; no class defines it in LaTeXML — an article/
+  kernel gap). Not ported: acmart's title-block procedures `\@mktitle`, `\@mkauthors`, `\@printendtopmatter`,
+  `\@mkauthorsaddresses`, `\@@authornotemark` (2-4 papers each, supplementary title pages: 2609.39019, 2605.14703), the
+  one-paper storage macros `\@acmDOI`, `\@acmVolume`…; the old aamas20xx/aa-family classes the binding rows also list
+  (aamas2017.cls `\numberofauthors`, aadebug.cls `\corr`…). Residuals: AASTeX's `\edit<n>` prints its text whatever
+  `\turnoffedit<n>` says (the class drops it); llncs's default theorems ignore `envcountsame`/`envcountsect` (numbered
+  within the section on their own counters; KNOWN_PERL_ERRORS #743, both engines); tac's theorems stay theorem
+  environments (the class's are `\subsection` headings). Side finding (pre-existing, RUST-ONLY, no repro yet): a paper's
+  `\newtheorem{proposition}{Proposition}[section]` over a binding's `\newtheorem{proposition}[theorem]…` keeps the
+  shared counter (tac's 2407.21129: "Proposition 2.0").
 - **67w** (binding gaps G2: the Wiley class family; bindgaps/g23_macros.tsv rows WileyNJD-v2, WileyMSP-template,
   WileyASNA-v1, WileyNJDv5, and WileyNJD-v1 through the same binding). One family binding
   (`wileynjd_cls::wiley_njd_family`, serving WileyNJD-v1/-v2, WileyNJDv5, wileyNJDv5 and, no longer through a

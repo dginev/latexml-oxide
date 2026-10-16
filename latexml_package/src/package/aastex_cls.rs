@@ -12,7 +12,7 @@ LoadDefinitions!({
   // fallback below and getting spuriously flagged.
   for option in [
     "10pt", "11pt", "12pt",
-    "manuscript", "preprint", "preprint2", "longabstract",
+    "manuscript", "longabstract",
     "tighten", "landscape",
     "aasms4", "aaspp4", "aas2pp4", "aj_pt4", "apjpt4", "astro",
     "flushrt", "anonymous",
@@ -21,6 +21,11 @@ LoadDefinitions!({
     DeclareOption!(*option, None);
   }
 
+  // aastex631.cls:167-171 (2107.07519's copy): the `preprint`/`preprint2` options' flags, which papers set and test
+  // (`\preprinttrue`: 2301.00027).
+  RawTeX!(r"\newif\ifpreprint\newif\ifpreprinttwo");
+  DeclareOption!("preprint", "\\preprinttrue");
+  DeclareOption!("preprint2", "\\preprinttwotrue");
   // Number equations within sections
   DeclareOption!("eqsecnum", "\\AtEndOfClass{\\eqsecnum}");
 
@@ -127,6 +132,13 @@ LoadDefinitions!({
     Let!("\\boxedfig", "\\@undefined");
     Let!("\\rotatefig", "\\@undefined");
     Let!("\\gridline", "\\@undefined");
+  }
+  // aastex631.cls:6164 (the copies papers ship: 2307.09521, 2312.03148; aastex63.cls alike, 1907.08642) `\aspconf`,
+  // the ASP conference series, which aas_macros lacks: provide-only, a paper's own definition wins.
+  {
+    use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(r"\providecommand\aspconf{Ast. Soc. of the Pac. Conference Series}");
   }
   // aastex701.cls:13637-13638 — `\digitalasset` flags a digital-asset paper
   // (aastex701-sample; the Perl reimplementation lacks it too).

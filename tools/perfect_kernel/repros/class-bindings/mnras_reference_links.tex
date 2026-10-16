@@ -1,0 +1,21 @@
+% witness: 1609.03154, 2008.09832, 2104.08053 (`\doi`); 1709.09375, 1809.04269 (`\eprint`); 1507.08002, 1703.04544
+%          (`\mniiiauthor`); 2404.04493 (`\apspr`, v3.0)
+% oracle:  pdflatex with TL 2025 mnras.cls v3.2: "Author A., Bee B., Cee C. 2020, MNRAS, 1, 2, doi:10.1093/mnras/staa˙1",
+%          "Author A., et al. 2021, preprint (arXiv:2101.00001), dblp:abc"; 0 errors (`\apspr` is v3.0's: undefined
+%          in v3.2, kept for the older copies)
+% engines: rust 67int6 = 5 errors, 0 warnings (undefined `\mniiiauthor`, undefined `\doi`, unexpected `_`, undefined
+%          `\eprint`, undefined `\apspr`)
+% expect:  0 errors, 0 warnings; the DOI, arXiv and dblp links
+% status:  RED (67int6) -> GREEN (68a)
+% preload: ar5iv.sty
+\documentclass[usenatbib]{mnras}
+\begin{document}
+\title{T}\author{A}
+\maketitle
+\section{S}
+Text \citep{a}.
+\begin{thebibliography}{}
+\bibitem[Author(2020)]{a} \mniiiauthor{x1}{Author A., Bee B., Cee C.}{Author A., et~al.} 2020, \mnras, 1, 2, \doi{10.1093/mnras/staa_1}
+\bibitem[Bee(2021)]{b} \mniiiauthor{x1}{Author A., Bee B., Cee C.}{Author A., et~al.} 2021, preprint (\eprint{}{arXiv:2101.00001}), \eprint{dblp}{abc}, \apspr
+\end{thebibliography}
+\end{document}

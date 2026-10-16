@@ -153,6 +153,25 @@ LoadDefinitions!({
     RawTeX!(
       r"\newif\ifappendix\newif\ifoneappendix\newcommand\oneappendix{\global\oneappendixtrue\appendix}"
     );
+    // The figure-caption legend symbols (1702.03412's :1380-1405: `\fullcirc`, `\opencirc`, `\fullsquare`, the line
+    // styles `\full`, `\dashed`, `\dotted`, `\chain`, …; 73 of 85 copies, 29 papers: 1702.03412, 1806.08341,
+    // 1909.12979) and the upright capital Greek (:1419-1429 `\let\rmDelta\Delta`, …; 2004.10578, 2207.01368).
+    RawTeX!(
+      r"\newcommand{\opensquare}{\mbox{$\square$}}\newcommand{\opentriangle}{\mbox{$\vartriangle$}}
+\newcommand{\opentriangledown}{\mbox{$\triangledown$}}\newcommand{\opendiamond}{\mbox{$\lozenge$}}
+\newcommand{\fullsquare}{\mbox{$\blacksquare$}}\newcommand{\fulldiamond}{\mbox{$\blacklozenge$}}
+\newcommand{\fullstar}{\mbox{$\bigstar$}}\newcommand{\fulltriangle}{\mbox{$\blacktriangle$}}\let\fulltri=\fulltriangle
+\newcommand{\fulltriangledown}{\mbox{$\blacktriangledown$}}\let\fulltridown=\fulltriangledown
+\newcommand{\opencirc}{\mbox{\Large$\circ$}}\newcommand{\opensqr}{\mbox{$\square$}}\newcommand{\opentri}{\mbox{$\triangle$}}
+\newcommand{\opentridown}{\mbox{$\bigtriangledown$}}\newcommand{\fullcirc}{\mbox{{\Large$\bullet$}}}
+\newcommand{\fullsqr}{\,\vrule height5pt depth0pt width5pt}
+\newcommand{\dotted}{\protect\mbox{${\mathinner{\cdotp\cdotp\cdotp\cdotp\cdotp\cdotp}}$}}
+\newcommand{\dashed}{\protect\mbox{-\ -\ -\ -}}\newcommand{\broken}{\protect\mbox{-- -- --}}
+\newcommand{\longbroken}{\protect\mbox{--- --- ---}}\newcommand{\chain}{\protect\mbox{--- $\cdot$ ---}}
+\newcommand{\dashddot}{\protect\mbox{--- $\cdot$ $\cdot$ ---}}\newcommand{\full}{\protect\mbox{------}}
+\let\rmGamma\Gamma\let\rmDelta\Delta\let\rmTheta\Theta\let\rmLambda\Lambda\let\rmXi\Xi\let\rmPi\Pi
+\let\rmSigma\Sigma\let\rmUpsilon\Upsilon\let\rmPhi\Phi\let\rmPsi\Psi\let\rmOmega\Omega"
+    );
     DefMacro!("\\aunote{}", "\\thanks{#1}");
     DefMacro!(
       "\\corresau{}",
@@ -160,6 +179,22 @@ LoadDefinitions!({
     );
   }
 
+  // Every version's (85 of 85 copies; 1702.03412's lines): the subequation number "(2.1\textit{a})" (:649) and
+  // `\returnthesubequation`, which re-establishes it after a paper's own `{subeqnarray}` numbering (:641-642;
+  // cond-mat0107563, cond-mat0306566; 14 papers), `\useAMSsubequations` (:624-625; 2304.12657, 2601.23025,
+  // 2608.01542), the title page's `\norule` and `\followon` and the footnote's `\fulloutfootnote` (:1066-1070,
+  // :733-734), the class's `\indexsize` (:136) and `\boldit` (:166-167) and the theorem spacing `\halflineskip`
+  // (:217-218).
+  RawTeX!(
+    r"\renewcommand\thesubequation{\theequation{\itshape\@alph\c@subequation}}
+\newcommand\returnthesubequation{\gdef\thesubequation{\theequation{\itshape\@alph\c@subequation}}}
+\newif\ifuseAMSsubequ\newcommand\useAMSsubequations{\global\useAMSsubequtrue}
+\newif\iffollowon\newif\ifrmrule\newcommand\followon{\global\followontrue}\newcommand\norule{\global\rmruletrue}
+\newif\iffofootnote\newcommand\fulloutfootnote{\global\fofootnotetrue}
+\newcommand\indexsize{\@setfontsize\indexsize\@viiipt\@ixpt}
+\newcommand\boldit{\usefont{OT1}{cmr}{bx}{it}\fontsize{10}{\f@baselineskip}\selectfont}
+\newlength\halflineskip\setlength\halflineskip{6\p@ \@plus .5\p@ \@minus .5\p@}"
+  );
   // jfm.cls L1498: \newcommand{\backsection}[2][\backsectionname]{...\textbf{#1.} #2...}
   // — a backmatter paragraph (Acknowledgements / Declaration of interests / Data
   // availability) with a bold title. Was undefined (Perl defines it). Render as the

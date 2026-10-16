@@ -1,0 +1,23 @@
+% witness: 1702.03412, 1806.08341, 1909.12979 (`\fullcirc`, `\dashed`, `\full`, …); 2004.10578, 2207.01368 (`\rmDelta`);
+%          cond-mat0107563, cond-mat0306566 (`\returnthesubequation`); 2304.12657 (`\useAMSsubequations`)
+% oracle:  pdflatex with 1702.03412's jfm.cls: "Legend: •, ◦, ■, □, - - - -, ——, · · · · · ·, — · —, — — —, ▲; ∆x.",
+%          the subequations (a), (b); 0 errors
+% engines: rust 67int6 = 16 errors, 0 warnings (undefined `\fullcirc`, undefined `\opencirc`, undefined `\fullsquare`,
+%          undefined `\opensquare`, undefined `\dashed`, undefined `\full`, undefined `\dotted`, undefined `\chain`,
+%          undefined `\longbroken`, undefined `\fulltriangle`, undefined `\rmDelta`, undefined
+%          `\returnthesubequation`, undefined `\useAMSsubequations`, undefined `\norule`, undefined `\followon`,
+%          undefined `\indexsize`)
+% expect:  0 errors, 0 warnings; the legend symbols and the upright Delta
+% status:  RED (67int6) -> GREEN (68a)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\begin{document}
+\title{T}\author{A}
+\maketitle
+Legend: \fullcirc, \opencirc, \fullsquare, \opensquare, \dashed, \full, \dotted, \chain, \longbroken, \fulltriangle; $\rmDelta x$.
+\begin{subeqnarray}
+a&=&b\\ c&=&d
+\end{subeqnarray}
+\returnthesubequation
+\useAMSsubequations\norule\followon{\indexsize small}
+\end{document}

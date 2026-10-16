@@ -95,6 +95,77 @@ LoadDefinitions!({
   RawTeX!(r"\newtheorem{assumption}[theorem]{Assumption}");
   RawTeX!(r"\newtheorem{remark}[theorem]{Remark}");
   RawTeX!(r"\newtheorem{example}[theorem]{Example}");
+  // tac.cls (every copy: 0708.1921's :466-470, 2401.05974's) `\newtheoremrm{remarks}{Remarks}`,
+  // `\newtheoremrm{examples}{Examples}` (8 witnesses: 0907.2460, 1003.5552, 1202.1004, 1203.4318, 1309.4821),
+  // defined at the document's start where the paper has not: tac.cls's own `\newtheorem` is a `\def` (0708.1921's
+  // :409-418), so a paper's `\newtheoremrm{examples}{Examples}[section]` replaces the class's (2407.21129), which a
+  // theorem declared here first would not cleanly (its counter stays the shared one: "Examples 2.0").
+  RawTeX!(
+    r"\AtBeginDocument{\@ifundefined{remarks}{\newtheorem{remarks}[theorem]{Remarks}}{}%
+\@ifundefined{examples}{\newtheorem{examples}[theorem]{Examples}}{}}"
+  );
   RawTeX!(r"\newtheorem{notation}[theorem]{Notation}");
   Let!("\\newtheoremrm", "\\newtheorem");
+
+  // What every tac.cls copy papers ship defines (83 of 83: 2015/03/16 and 2023/03/06 versions; line numbers from
+  // 2401.05974's 2023 copy, then 0708.1921's 2015 copy) and Perl has no binding for:
+  // - `\mathrmdef[cs]{Word}`, `\mathbfdef`, `\mathopdef`, `\mathsfdef`, `\mathcaldef`, … (:651-678; 0708.1921 :690-713),
+  //   which define `\cs` (named `\Word` without the option) as the word in that face: 45 papers (0709.0837,
+  //   0711.0674, 0907.2460, 1003.5552), `\mathbfdef` 36. The 2023 version follows each with `\xspace` (it loads
+  //   xspace, :31); the paper's own copy decides, the newer version without one.
+  // - `\refs`…`\endrefs` / `{refs}` (:572-578; 0709.0837 :703-709) and `{references}`, `{references*}` (:545-564),
+  //   the class's reference lists of `\bibitem`s under "References": the bibliography (23 papers: 0812.1674,
+  //   0902.2554, math0610772; 1202.6034, 2012.03797).
+  // - `\dedication{…}` (:311-312), printed under the title (12 papers: 0812.1674, 1002.1372); `\cauthor{…}` (:485), the
+  //   copyright line's author; `\endproofbox` (:236-238), the end-of-proof square; `\proofof[…]` (0708.1921 :428).
+  // - The class's own statement headings `\state`/`\staterm` (:148-157) and `\thirdleveltheorems` (:159-163), which
+  //   moves them down a sectioning level (13 papers: 1106.1983, 1112.0560). The class's theorems are such headings; this
+  //   binding's are theorem environments, which the switch leaves as they are.
+  let xspace = crate::shipped_class::shipped_class_text("tac")?
+    .is_none_or(|text| crate::shipped_class::class_text_loads(&text, "xspace"));
+  if xspace {
+    RequirePackage!("xspace");
+    RawTeX!(
+      r"\def\@mathopdef[#1]#2{\expandafter\def\csname#1\endcsname{\mathop{\rm{}#2}\nolimits\xspace}}
+\def\@mathoplsdef[#1]#2{\expandafter\def\csname#1\endcsname{\mathop{{}#2}\xspace}}
+\def\@mathbfdef[#1]#2{\expandafter\def\csname#1\endcsname{{\rm\bf#2}\xspace}}
+\def\@mathrmdef[#1]#2{\expandafter\def\csname#1\endcsname{{\ensuremath{\rm#2}}\xspace}}
+\def\@mathsfdef[#1]#2{\expandafter\def\csname#1\endcsname{{\ensuremath{\sf#2}}\xspace}}
+\def\@mathfkdef[#1]#2{\expandafter\def\csname#1\endcsname{\ensuremath{\mathfrak{#2}}\xspace}}
+\def\@mathcaldef[#1]#2{\expandafter\def\csname#1\endcsname{{\ensuremath{\mathcal{#2}}}\xspace}}"
+    );
+  } else {
+    RawTeX!(
+      r"\def\@mathopdef[#1]#2{\expandafter\def\csname#1\endcsname{\mathop{\rm#2}\nolimits}}
+\def\@mathoplsdef[#1]#2{\expandafter\def\csname#1\endcsname{\mathop{\rm#2}}}
+\def\@mathbfdef[#1]#2{\expandafter\def\csname#1\endcsname{{\rm\bf#2}}}
+\def\@mathrmdef[#1]#2{\expandafter\def\csname#1\endcsname{{\rm#2}}}
+\def\@mathsfdef[#1]#2{\expandafter\def\csname#1\endcsname{{\ensuremath{\sf#2}}}}
+\def\@mathfkdef[#1]#2{\expandafter\def\csname#1\endcsname{\mathfrak{#2}}}
+\def\@mathcaldef[#1]#2{\expandafter\def\csname#1\endcsname{{\ensuremath{\mathcal{#2}}}}}"
+    );
+  }
+  RawTeX!(
+    r"\def\mathopdef{\@dblarg\@mathopdef}\def\mathoplsdef{\@dblarg\@mathoplsdef}\def\mathbfdef{\@dblarg\@mathbfdef}
+\def\mathrmdef{\@dblarg\@mathrmdef}\def\mathsfdef{\@dblarg\@mathsfdef}\def\mathfkdef{\@dblarg\@mathfkdef}
+\def\mathcaldef{\@dblarg\@mathcaldef}
+\def\refs{\begin{thebibliography}{}}\def\endrefs{\end{thebibliography}}
+\let\references\refs\let\endreferences\endrefs
+\expandafter\let\csname references*\endcsname\refs\expandafter\let\csname endreferences*\endcsname\endrefs
+\def\cauthor#1{\def\@cauthor{#1}}
+\newbox\@endproofbox\setbox\@endproofbox\hbox{\vrule width5pt height 5pt depth 0pt}\def\endproofbox{\copy\@endproofbox}
+\def\proofof[#1]{\subsubsection*{{\textsc{Proof of #1}}}}
+\def\@credit[#1]{\expandafter\@@credit\@firstofone#1\@@nil}
+\def\@@credit{\@ifnextchar\cite{\@@@credit}{\@@@@credit}}
+\def\@@@credit#1\@@nil{{\rm#1}}\def\@@@@credit#1\@@nil{{\rm[#1]}}
+\def\state#1{\subsection{\sc#1}\begingroup\em\@ifnextchar[{\@credit}{}}
+\def\staterm#1{\subsection{\sc#1}\begingroup\@ifnextchar[{\@credit}{}}
+\def\endstate{\endgroup\par\addvspace{\medskipamount}}
+\def\thirdleveltheorems{\def\state##1{\subsubsection{\sc##1}\begingroup\em\@ifnextchar[{\@credit}{}}%
+\def\staterm##1{\subsubsection{\sc##1}\begingroup\@ifnextchar[{\@credit}{}}}"
+  );
+  DefMacro!(
+    "\\dedication{}",
+    "\\@add@frontmatter{ltx:note}[role=dedication]{#1}"
+  );
 });

@@ -1,0 +1,28 @@
+% witness: 0709.0837, 0711.0674, 0907.2460, 1003.5552 (`\mathrmdef`, `\mathbfdef`); 0812.1674, 0902.2554,
+%          math0610772 (`\refs`…`\endrefs`); 1202.6034, 2012.03797 (`{references}`); 0812.1674 (`\dedication`);
+%          1106.1983 (`\thirdleveltheorems`)
+% oracle:  pdflatex with 2401.05974's tac.cls (2023/03/06): "To C" under the title, "We have Hom(A, B) and C, colim F,
+%          A, S", "References" with the one entry; 0 errors
+% engines: rust 67int6 = 17 errors, 0 warnings (undefined `\mathrmdef`, undefined `\mathbfdef`, undefined
+%          `\mathopdef`, undefined `\mathcaldef`, undefined `\mathsfdef`, undefined `\thirdleveltheorems`, undefined
+%          `\cauthor`, undefined `\dedication`, undefined `\Hom`, undefined `\bC`, undefined `\colim`, undefined
+%          `\cA`, undefined `\sS`, undefined `\endproofbox`, undefined `{references}`, undefined `\refs`, undefined
+%          `\endrefs`)
+% expect:  0 errors, 0 warnings; the dedication note, the defined words in their faces, the bibliography
+% status:  RED (67int6) -> GREEN (68a)
+% preload: ar5iv.sty
+\documentclass{tac}
+\mathrmdef{Hom}\mathbfdef[bC]{C}\mathopdef{colim}\mathcaldef[cA]{A}\mathsfdef[sS]{S}
+\thirdleveltheorems
+\begin{document}
+\title{T}\author{A}\cauthor{A. B.}\dedication{To C}
+\maketitle
+\section{S}
+We have $\Hom(A,B)$ and $\bC$, $\colim F$, $\cA$, $\sS$ \endproofbox
+\begin{references}
+\bibitem[B]{b} B. Bee, Another.
+\end{references}
+\refs
+\bibitem[Behrens 2005]{joint} M. Behrens, A paper.
+\endrefs
+\end{document}

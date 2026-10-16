@@ -1,0 +1,36 @@
+% witness: 2604.15990, 2604.21043, 2604.27997 (`\acmConference@date`/`@shortname`/`@venue`); 2006.07812, 2201.00614
+%          (`\@titlefont`); 2210.01206, 2307.15641 (`\@received`); 2606.30549, 2607.17095 (`\author@bx@sep`); 2208.13741
+%          (`\acksname`); 2608.16886 (`\@subtitle`); 67u (`\NewEnviron` without environ)
+% oracle:  pdflatex with TL 2025 acmart.cls v2.16: "Date August 2026; short KDD ’26; venue Toronto, Canada. History:
+%          Received 20 February 2007; revised 12 March 2009. Sub: Sub.", the sigconf title font, "[inside]",
+%          "Acknowledgments"; 0 errors
+% engines: rust 67int6 = 15 errors, 1 warnings (undefined `\acmConference@date`, undefined `\acmConference@shortname`,
+%          undefined `\acmConference@venue`, undefined `\@received`, undefined `\@subtitle`, undefined `\@titlefont`,
+%          undefined `\@authorfont`, undefined `\@affiliationfont`, undefined `\author@bx@sep`, undefined
+%          `\num@authorgroups`, undefined `\@ACM@title@width`, undefined `\NewEnviron`, undefined `\BODY`, undefined
+%          `{boxit}`, undefined `\acksname`)
+% expect:  0 errors, 0 warnings; the conference parts and the received history printed, the title font sized
+% status:  RED (67int6) -> GREEN (68a)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\makeatletter
+\newcommand{\confdate}{\acmConference@date}
+\makeatother
+\acmConference[KDD '26]{The Conference}{August 2026}{Toronto, Canada}
+\received{20 February 2007}
+\received[revised]{12 March 2009}
+\begin{document}
+\title{T}\subtitle{Sub}
+\author{A}\affiliation{\institution{I}\country{C}}
+\maketitle
+\makeatletter
+Date \confdate; short \acmConference@shortname; venue \acmConference@venue.
+History: \@received. Sub: \@subtitle.
+{\@titlefont Big title} {\@authorfont Au} {\@affiliationfont Af}
+\author@bx@sep=0.5pc\relax \num@authorgroups=1\relax \@ACM@title@width=\hsize
+\makeatother
+\NewEnviron{boxit}{[\BODY]}
+\begin{boxit}inside\end{boxit}
+\section*{\acksname}
+Thanks.
+\end{document}

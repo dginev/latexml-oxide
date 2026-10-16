@@ -13823,6 +13823,55 @@ name, :19113 `\pkgcls@name`); `[=v3]`, `[= v2]` and a date before siunitx's firs
 is unknown` / `Suspicious rollback date` Error (latex.ltx:19276, :19194; the binding runs no `\DeclareCurrentRelease`),
 and `pkgcls_set_request` trims the label, so `[= v2]` selects v2 where LaTeX errs and loads v3.
 
+## 740. aa's binding has no `{theorem}` and no `\arxiv`, which every aa.cls defines
+
+aa.cls declares `\newtheorem{theorem}{Theorem}{\bfseries}{\itshape}` before the theorems that share its counter (v9.1
+:1556 in 2509.20613's copy; every one of the 133 copies papers ship) and, from v8.2, `\arxiv{id}` ("arXiv:id" in
+typewriter type, :2058-2062, 120 copies). Perl's aa_support.sty.ltxml declares `{corollary}`…`{solution}` with
+`[theorem]` (L141-153) but not `{theorem}` itself, and has `\eprint` (L353) but no `\arxiv`, so `\begin{theorem}` is
+undefined (with a `Counter 'theorem' was not defined` warning) and every `\arxiv` of an A&A reference list errs.
+Minimal trigger: tools/perfect_kernel/repros/class-bindings/aa_class_commands_v7_v91.tex (`\documentclass{aa}` …
+`\arxiv{2101.00001}` `\begin{theorem}…\end{theorem}`): pdflatex clean with 2008.09582's aa.cls, Rust 67int6 12 errors
+(Perl the same two gaps). Witnesses 1601.05309, 1805.03673, 2509.20613 (`{theorem}`); 1604.01307, 1809.05581,
+2103.09505 (`\arxiv`). Fixed in aa_support_sty.rs / aa_cls.rs; guard `perfect_kernel_batch68a::aa_class_commands_v7_v91`.
+
+## 741. acmart's binding does not load environ, which acmart.cls loads
+
+acmart.cls:288 (TL 2025 v2.16; 121 of the 128 copies papers ship, from v1.25) `\RequirePackage{environ}`; papers use its
+`\NewEnviron`/`\BODY` without loading it. Perl's acmart.cls.ltxml:32 has the line commented out (`#RequirePackage('environ')`),
+so `\NewEnviron` is undefined. Minimal trigger: tools/perfect_kernel/repros/class-bindings/acmart_conference_parts_and_title_fonts.tex
+(`\documentclass[sigconf]{acmart}` … `\NewEnviron{boxit}{[\BODY]}`): pdflatex clean, Rust 67int6 `\NewEnviron`,
+`\BODY`, `{boxit}` undefined (17 papers of the 67u study). The same repro covers the class's other undefined names
+(`\acmConference@date`, `\@received`, `\@titlefont`…; Perl's `\acmConference`/`\received`, L58-61, keep no parts).
+Fixed in acmart_cls.rs where styles are read raw (`INCLUDE_STYLES`, the ar5iv profile: environ has no binding;
+without it the load would only warn `missing_file:environ`); guard
+`perfect_kernel_batch68a::acmart_conference_parts_and_title_fonts`.
+
+## 742. mnras's binding lacks the class's `\doi`, `\eprint` and `\mniiiauthor`
+
+mnras.cls (TL 2025 v3.2, :1399-1479; every v3.0-v3.3 copy alike) defines the reference-list commands mnras.bst writes:
+`\doi[text]{10.foo}` (a dx.doi.org link, "doi:10.foo"), `\eprint{prefix}{id}` (arXiv or dblp link, else "prefix:id")
+and `\mniiiauthor{key}{first}{again}` (the three-author switch: the first form at a key's first citation). Perl's
+mnras.cls.ltxml (89 lines) has only the journal abbreviations, so each `\doi` errs and `\mniiiauthor`'s arguments both
+print. Minimal trigger: tools/perfect_kernel/repros/class-bindings/mnras_reference_links.tex: pdflatex clean, Rust
+67int6 5 errors. Witnesses 1609.03154, 2008.09832, 2104.08053 (`\doi`, 37 papers); 1709.09375, 1809.04269 (`\eprint`);
+1507.08002, 1703.04544, 1806.09815 (`\mniiiauthor`). Fixed in mnras_cls.rs; guard
+`perfect_kernel_batch68a::mnras_reference_links`.
+
+## 743. llncs's binding lacks the class's option switches, `\spn@wtheorem` and `\@spothm`
+
+llncs.cls (TL 2025 v2.26) :25-36 sets `\if@envcntreset`, `\if@envcntsame`, `\if@envcntsect`, `\if@runhead` from its
+options; :1086-1097 `\@spothm` (a theorem on another's counter) and :1155-1167 `\spn@wtheorem` (the definer of its theorem
+set, by the numbering option) are what papers call for their own theorems; :79-197 the language switches
+`\switcht@albion`/`@francais`/`@deutsch`; :561 `\let\phantomsection\relax`. Perl's llncs.cls.ltxml ignores the four
+options (L18-20) and defines none of these, so a paper's `\spn@wtheorem{fact}{Fact}…` or a package's `\if@runhead`
+(pscproc2.sty:19) errs. Minimal trigger: tools/perfect_kernel/repros/class-bindings/llncs_class_internals.tex: pdflatex
+clean, Rust 67int6 11 errors. Witnesses 0906.4121, 1003.2851 (`\spn@wtheorem`); 2202.10090, 2601.04573 (`\@spothm`);
+0905.3107, 0908.0239, 1006.0809 (pscproc2.sty); 1812.03939, 1812.03953 (`\switcht@deutsch`). Fixed in llncs_cls.rs;
+guard `perfect_kernel_batch68a::llncs_class_internals`. Not fixed (both engines): the default theorem set ignores
+`envcountsame`/`envcountsect` (`{theorem}` numbered within the section, each other environment on its own counter),
+where llncs.cls:1142-1176 shares one counter under `envcountsame` and numbers by section only under `envcountsect`.
+
 ## 760. article.cls's binding lacks the `headings`/`myheadings` page styles and `\@makecaption`
 
 article.cls:131-168 defines `\ps@headings` (two-sided and one-sided forms) and `\ps@myheadings`, and :480-489

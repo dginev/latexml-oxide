@@ -389,10 +389,12 @@ LoadDefinitions!({
   // The edit-tracking switches and the list of changes (aastex631.cls:5789-5798, :6108): the `\added`/`\deleted`
   // marks above print as plain text here, so the switches change nothing, and the list, a print summary of those
   // marks, is not typeset.
-  def_macro_noop("\\turnoffedit")?;
-  def_macro_noop("\\turnoffedits")?;
-  def_macro_noop("\\turnoffediting")?;
-  def_macro_noop("\\turnoffeditone")?;
+  // The switches keep their flags (aastex631.cls:5790-5809, the copy 2107.07519 ships), which papers set directly
+  // (`\turnoffonetrue`: 2609.30834) and the class's `\authorcomment` (below) reads; `\edit` here prints its text
+  // whatever they say (the class drops a turned-off `\edit<n>`'s text, :5823-5833: a residual).
+  RawTeX!(r"\newif\ifturnoffedit\def\turnoffedit{\global\turnoffedittrue}\def\turnoffedits{\global\turnoffedittrue}
+\let\turnoffediting\turnoffedits\newif\ifturnoffone\newif\ifturnofftwo\newif\ifturnoffthree
+\def\turnoffeditone{\turnoffonetrue}\def\turnoffedittwo{\turnofftwotrue}\def\turnoffeditthree{\turnoffthreetrue}");
   def_macro_noop("\\listofchanges")?;
   // aastex631.cls:651 `\reportnum{…}`: a report number set at the top right of the first page.
   DefMacro!("\\reportnum{}", "\\lx@add@pubnote[role=preprint]{#1}");
@@ -405,7 +407,10 @@ LoadDefinitions!({
   DefMacro!("\\fullcollaborationName{}", "\\def\\thefullcollaborationname{#1}");
   // Layout switches (aastex631.cls:7323, :6816, :5856): affiliations hidden from the author block, a page break
   // after the keywords, the watermark's font size.
-  def_macro_noop("\\suppressAffiliations")?;
+  // `\suppressAffiliations` sets the class's flag (aastex631.cls:7324-7325), which papers reset
+  // (`\suppressAffiliationsfalse`: 39 papers, 2108.09109, 2210.08658, 2001.00952): the author block here keeps
+  // every affiliation either way.
+  RawTeX!(r"\newif\ifsuppressAffiliations\def\suppressAffiliations{\global\suppressAffiliationstrue}");
   def_macro_noop("\\NewPageAfterKeywords")?;
   def_macro_noop("\\setwatermarkfontsize{}")?;
   // aastex631.cls:6427-6430 the number of authors the author block shows before "et al." (`\AuthorCallLimit` its
@@ -414,6 +419,29 @@ LoadDefinitions!({
   // aastex631.cls:1930 the old name of `\tabletypesize`; :2096 the skip above a deluxetable.
   DefMacro!("\\tablefontsize", "\\tabletypesize");
   RawTeX!(r"\newlength{\abovedeluxetableskip}");
+  // More of AASTeX 6.x (aastex631.cls in 2107.07519's copy; aastex63.cls alike, 1907.08642's), which papers call:
+  // - the table size `\currtabletypesize` that `\tabletypesize` keeps (:1928-1932; 2202.09386, 2405.09667 print
+  //   their notes in it), `\savetablenum` (:1926), `\tablereferences` (:5391), `\deluxetablecaption` (:4780,
+  //   :4798), `\tabcaption[…]{…}`, a table caption outside a float (:1609-1611; 2408.17407, 2502.00504);
+  // - `\resetapptablenumbers` (:7210-7216), the appendix numbering of tables, figures and equations (7 papers:
+  //   2308.05494, 2409.14445); `\authorcomment<n>{…}`, "(Author note n: …)" unless turned off (:5843-5850; 5 papers:
+  //   2004.09658, 2205.09859); `\onecolfootnote` (:7316-7317), a footnote; `\BeforeBegin{env}{code}` (:581), the hook the
+  //   class's own `\begin` runs (papers patch nicematrix through it: 2111.03992, 2203.13406; this `\begin` runs no
+  //   such hook); `\mdash` (:7141); `\apjsecfont` (:219), the section heading's font (2306.12805); the
+  //   acknowledgments box `\ackbox` (:1205; 2605.04423 fills its own); `\ifnumlines` (:253, the `linenumbers`
+  //   option's flag; 2608.12156).
+  RawTeX!(r"\def\resetapptablenumbers{\global\c@table=0 \global\c@figure=0 \global\c@equation=0
+\def\thetable{\thesection\the\c@table}\def\fnum@table{{\bf\tablename~\thetable}}\def\thefigure{\thesection\the\c@figure}}
+\expandafter\def\csname editcolor1\endcsname{black}\expandafter\def\csname editcolor2\endcsname{black}%
+\expandafter\def\csname editcolor3\endcsname{black}\newcount\colorcount
+\def\authorcomment#1#2{{\colorcount=#1 \ifturnoffedit\let\go\ignorespaces\else\let\go\relax
+\color{\csname editcolor\the\colorcount\endcsname}%
+\ifnum\colorcount=1{\ifturnoffone\else\bf (Author~note 1: #2)\ \fi}\else
+\ifnum\colorcount=2{\ifturnofftwo\else\it (Author~note 2: #2)\ \fi}\else
+\ifnum\colorcount=3{\ifturnoffthree\else (Author~note 3: #2)\ \fi}\fi\fi\fi\fi\go}}
+\let\onecolfootnote\footnote
+\long\def\BeforeBegin#1#2{\expandafter\gdef\csname BeforeBeg#1\endcsname{#2}}
+\def\mdash{---}\def\apjsecfont{\normalsize}\newbox\ackbox\newif\ifnumlines");
   // aastex701.cls:6737 `\lambdabar`, the barred lambda (as revsymb_sty.rs has it).
   DefMath!("\\lambdabar", "\u{03BB}\u{0304}");
 
@@ -574,6 +602,12 @@ LoadDefinitions!({
 
   // 2.15 Tables
   RequirePackage!("deluxetable");
+  // (after deluxetable, whose `\tablenum`, `\tablerefs`, `\tablecaption` and `\tabletypesize` these follow; the
+  // AASTeX 6.x table commands listed above)
+  RawTeX!(r"\def\tabletypesize#1{\gdef\currtabletypesize{#1}}\tabletypesize{\small}
+\let\savetablenum\tablenum\let\tablereferences\tablerefs\let\deluxetablecaption\tablecaption
+\def\tabcaption{\@ifnextchar[{\@xtabcaption}{\@tabcaption}}\def\@tabcaption#1{{\def\@captype{table}\caption{#1}}}
+\def\@xtabcaption[#1]#2{{\def\@captype{table}\caption{#2}}}");
   Let!("\\planotable", "\\deluxetable");
   // AASTeX 3's `{planotable}` ends its data itself, without `\enddata` (aaspptwo.sty:252-256 `\endplanotable`:
   // `\crcr\noalign{\vskip .7ex}\hline\endtabular…`; astro-ph9502038); AASTeX 4's (aas2pp4.sty:322) is

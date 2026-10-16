@@ -163,6 +163,11 @@ LoadDefinitions!({
   // Theorem environments — Perl L142-155
   //======================================================================
 
+  // aa.cls's own `{theorem}` (every version; 2509.20613's v9.1 :1556
+  // `\newtheorem{theorem}{Theorem}{\bfseries}{\itshape}`), the counter the others share: Perl's list
+  // (aa_support.sty.ltxml:141-153) lacks it, so `\begin{theorem}` was undefined (1601.05309, 1805.03673, 2304.08489,
+  // 2509.20613, 2509.25347; KNOWN_PERL_ERRORS #740).
+  RawTeX!("\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}}{}");
   RawTeX!("\\newtheorem*{proof}{Proof}");
   RawTeX!("\\@ifundefined{corollary}{\\newtheorem{corollary}[theorem]{Corollary}}{}");
   RawTeX!("\\@ifundefined{definition}{\\newtheorem{definition}[theorem]{Definition}}{}");
