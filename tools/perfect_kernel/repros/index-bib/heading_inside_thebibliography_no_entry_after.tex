@@ -1,0 +1,23 @@
+% witness: the 68w B1 fix's own edge (a heading inside `{thebibliography}` that no `\bibitem` follows)
+% oracle:  pdflatex 1 error ("Lonely \item" for the `\bibitem` after the bibliography): [1] A | Notes | 1 Next | [1] B
+% engines: rust 68w before this guard = 0 errors: the lonely `\bibitem` unreported and numbered 2, the second
+%          bibliography numbering on from the first
+% expect:  1 Error:malformed:ltx:bibitem ("\bibitem outside any list", LaTeX's Lonely \item); every bibliography after
+%          the first numbers from 1
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \cite{a,b}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, J. 1 (2000).
+\section*{Notes}
+Some closing text.
+\end{thebibliography}
+\section{Next}
+\bibitem{z} Lonely.
+\begin{thebibliography}{9}
+\bibitem{b} B. Author, J. 2 (2001).
+\end{thebibliography}
+\end{document}

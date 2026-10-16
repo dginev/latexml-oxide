@@ -1305,7 +1305,10 @@ LoadDefinitions!({
     let in_bibliography = where_.to_string() == "in";
     let in_list = !lookup_string("itemcounter").is_empty();
     let env = lookup_string("current_environment");
+    // (nor are the entries after a heading inside the author's `{thebibliography}` in the body: they are the list's,
+    // sect11.rs `\lx@bibliography@sectioned`)
     let body = !in_list
+      && !lookup_bool("lx_bibliography_sectioned")
       && !matches!(env.as_str(), "center" | "flushleft" | "flushright" | "quote" | "quotation" | "verse");
     if body && (!in_bibliography || lookup_bool("lx_bibliography_lonely")) {
       Error!("malformed", "ltx:bibitem",

@@ -2391,6 +2391,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   same — a harness limit); hep-th9606114 reaches the 100-error Fatal (words 12,180 → 7,242), hep-th9902200 1 → 18
   errors.
 
+- **68w** (first-error clusters `malformed:ltx:bibitem` and `unexpected:_` of run 336; study
+  agent_reports/2026-10-16_rc_underscore_bibitem.md). B1 — a heading inside the author's `{thebibliography}`
+  (`\section*{References}` right after `\begin{thebibliography}`, mostly revtex4/4-1; topical `\section*`/`\subsection*`
+  groups; a beamer frame): the heading's unit closed the bibliography while `\if@lx@inbibliography` stayed true, so every
+  later `\bibitem` was an Error in the unit (Perl the same, KNOWN_PERL_ERRORS #855). sect11.rs `\lx@bibliography@sectioned`
+  (on `\@startsection@hook`; beamer_cls.rs `{frame}` digests it too) ends the bibliography state; the next `\bibitem`
+  reopens one in the unit (`\lx@mung@bibliography`, `continued`), which takes the heading, numbers on and is closed by
+  the author's `\end{thebibliography}`; the empty first bibliography goes when its heading is the author's
+  (OXIDIZED_DESIGN_DIVERGENCES #653); natbib's lonely check skips these entries. Study sample 27/27 papers → 0 errors
+  (1702.06834 59 → 0, 2402.15720 115 → 0, 2008.08910 96 → 0, 2307.13534 73 → 0, hep-th0109182 72 → 0, 1301.0681 10 → 0),
+  words −1 each (the duplicate heading). Repros index-bib/heading_inside_thebibliography{,_topical,_revtex,_frame};
+  guards `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

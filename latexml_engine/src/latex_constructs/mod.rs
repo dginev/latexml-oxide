@@ -4067,6 +4067,17 @@ pub fn before_digest_bibliography() -> Result<()> {
   Digest!("\\@lx@inbibliographytrue")?;
   // an explicit bibliography: not the lonely one a natbib `\bibitem` opened (sect11.rs `\lx@bibliography@lonely`)
   assign_value("lx_bibliography_lonely", false, Some(Scope::Global));
+  // The list a heading inside the author's `{thebibliography}` interrupted (sect11.rs `\lx@bibliography@sectioned`)
+  // goes on: its entries keep counting, as pdflatex numbers them through the one list.
+  let continued = lookup_bool("lx_bibliography_sectioned");
+  // whether this is the author's `{thebibliography}` (not one a `\bibitem` opened in another environment), for the
+  // environment's group
+  assign_value(
+    "lx_bibliography_author_env",
+    lookup_string("current_environment") == "thebibliography",
+    None,
+  );
+  assign_value("lx_bibliography_sectioned", false, Some(Scope::Global));
   // …nor does natbib's pending entry stop of an earlier one (`\@bibstop`, natbib.sty:880-905) carry into its first entry
   Let!("\\@bibstop", "\\@undefined");
   // …and it has a list end of its own (sect11.rs `\lx@bibliography@nolistend`)
@@ -4075,7 +4086,9 @@ pub fn before_digest_bibliography() -> Result<()> {
   def_macro_noop("\\bibliography {}")?;
   // avoid \let-based redefinitions of the ending.
   Let!("\\endthebibliography", "\\saved@endthebibliography");
-  ResetCounter!("@bibitem");
+  if !continued {
+    ResetCounter!("@bibitem");
+  }
   Ok(())
 }
 

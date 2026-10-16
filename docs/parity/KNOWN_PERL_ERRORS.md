@@ -14395,3 +14395,26 @@ document `\author{A. Author}…I, \authorname, declare` — pdflatex "I, A. Auth
 `Error:undefined:\authorname` (MastersDoctoralThesis.cls:218, 2603.21941; revtex4.cls copies' `\collaboration@sw`,
 0805.2253). Fixed in Rust (68v, OXIDIZED_DESIGN_DIVERGENCES #648); guards
 `perfect_kernel_batch68v::{batch68v_replayed_author_keeps_authorname, batch68v_replayed_author_keeps_collaboration_switch}`.
+
+## 855. A sectioning heading inside `{thebibliography}` leaves every later `\bibitem` outside a bibliography
+
+pdflatex sets `\section*{References}` (or any `\@startsection` heading, a beamer frame) inside the bibliography's
+list, and the entries after it stay the list's. In LaTeXML the heading's unit closes the open `ltx:bibliography`
+(it auto-closes), but `\if@lx@inbibliography` stays true (latex_constructs.pool.ltxml:3837-3844 sets it for the
+environment's group), so the next `\bibitem` is not redirected (`\lx@mung@bibliography`, :4074-4076) and
+`<ltx:bibitem>` lands in the unit: one `Error:malformed:ltx:bibitem <ltx:bibitem> isn't allowed in <ltx:section>` (or
+`<ltx:subsection>`, `<ltx:bibblock>`) per entry, the first bibliography left empty.
+
+Trigger: `\documentclass{article}\begin{document}\cite{a}\begin{thebibliography}{99}\section*{References}\bibitem{a}
+A.\end{thebibliography}\end{document}` — pdflatex 0 errors; Perl 0.8.8 1 Error, Rust before 68w 2.
+
+Rust (68w, sect11.rs `\lx@bibliography@sectioned` on `\@startsection@hook`, beamer_cls.rs `{frame}`): in the author's
+`{thebibliography}` (`lx_bibliography_author_env`) the heading ends the bibliography state (the redirection disarmed,
+natbib's pending entry stop spent in the entry it ends); the next `\bibitem` opens the next bibliography in the unit,
+which takes its heading (`absorb_bibliography_heading`), numbers on (`before_digest_bibliography` keeps the `@bibitem`
+counter) and is closed by the author's `\end{thebibliography}` once; natbib's lonely-`\bibitem` check does not fire
+for it. The empty first bibliography goes when its heading is the author's (OXIDIZED_DESIGN_DIVERGENCES #653). Witnesses
+(run 336 first error `malformed:ltx:bibitem`, ~780 papers, mostly revtex4/4-1): 1702.06834, 2402.15720, 2110.15342,
+2008.08910, 2307.13534 (`\subsection*`), hep-th0109182 (topical headings), 1301.0681 (a beamer frame); 27 of 27 study
+papers to 0 errors. Repros index-bib/heading_inside_thebibliography{,_topical,_revtex,_frame}; guards
+`perfect_kernel_batch68w::heading_inside_thebibliography_*`.

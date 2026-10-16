@@ -18426,3 +18426,17 @@ KNOWN_PERL_ERRORS #852). Under the revtex4 copies the class's `\affiliation` now
 lose only the ERROR, their creators intact (0805.2253 "Takeshi Osada"/"Grzegorz Wilk", 0806.0481, 0805.4759). Repros
 class-bindings/{mastersdoctoralthesis/mdt_authorname, revtex4_copy/rtcopy_collaboration_switch}; guards
 `perfect_kernel_batch68v::{batch68v_replayed_author_keeps_authorname, batch68v_replayed_author_keeps_collaboration_switch}`.
+
+### 653. A heading inside `{thebibliography}` splits it into bibliographies titled by the headings
+
+pdflatex prints a `\section*`/`\subsection*` (or a beamer frame) inside the bibliography's list, the entries after it
+the list's, numbered on. The schema has no heading inside `ltx:biblist`, so each heading after which entries follow
+becomes the title of a bibliography of its own (the unit that held it absorbed, `absorb_bibliography_heading`), the
+entries numbered through the list (`[1]`, `[2]`, `[3]` across them) — Perl errs on every entry (KNOWN_PERL_ERRORS
+#855). The environment's own bibliography, left holding nothing but its heading, is removed when that heading is the
+author's (`\begin{thebibliography}{99}\section*{References}`: pdflatex prints "References" twice, here once) or is
+empty (`prune_interrupted_bibliography`); with another heading (a "References" over topical `\section*`s,
+hep-th0109182) it stays, an empty bibliography over the groups, as the PDF heads them. Its labels move to the next
+one. A heading entered from a list (an `\item`'s, a minipage's) or any other bibliography environment is not split
+(`lx_bibliography_author_env`: the author's `{thebibliography}` only). Guards
+`perfect_kernel_batch68w::heading_inside_thebibliography_*`.

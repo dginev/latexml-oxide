@@ -429,6 +429,9 @@ pub(crate) fn load() -> Result<()> {
         Let!("\\par", "\\save@par");
         Let!("\\\\", "\\save@backbackslash");
       }
+      // a heading inside it that no `\bibitem` followed (`\lx@bibliography@sectioned`) leaves nothing to continue: a
+      // later lonely `\bibitem` is reported and a later bibliography numbers afresh
+      assign_value("lx_bibliography_sectioned", false, Some(Scope::Global));
     },
     locked=>true);
   Let!("\\saved@endthebibliography", "\\endthebibliography");
@@ -460,12 +463,20 @@ pub(crate) fn load() -> Result<()> {
         assign_value("lx_bibliography_opened_implicitly", false, Some(Scope::Global));
         document.set_attribute(node, "_implicit", "true")?;
       }
+      // …or reopened after a heading inside the author's `{thebibliography}` (`\lx@bibliography@sectioned`)
+      if lookup_bool("lx_bibliography_opened_continued") {
+        assign_value("lx_bibliography_opened_continued", false, Some(Scope::Global));
+        document.set_attribute(node, "_continued", "true")?;
+      }
     },
     after_close => sub[document, node] {
       prune_phantom_entries(document, node);
       remove_emptied_lists(document, node);
       if !absorb_bibliography_heading(document, node)? && node.has_attribute("_implicit") {
         head_implicit_bibliography(document, node)?;
+      }
+      if node.has_attribute("_continued") {
+        prune_interrupted_bibliography(document, node)?;
       }
     });
   // …and those a bibliography's close did not reach: after it (2403.05651's nested `{thebibliography}` ends the outer
@@ -645,6 +656,33 @@ pub(crate) fn load() -> Result<()> {
     }
   });
   AddToMacro!("\\@startsection@hook", "\\lx@bibliography@unlonely");
+  // A heading inside the author's `{thebibliography}` (`\section*{References}` under `\begin{thebibliography}`, mostly
+  // revtex4/4-1 papers; a topical `\section*`/`\subsection*` between groups of entries, hep-th0109182): pdflatex prints
+  // it inside the list and the entries after it stay the list's; here the unit closes the bibliography
+  // (`ltx:bibliography` auto-closes), so the bibliography state ends with it — the `\bibitem` after it opens the next
+  // bibliography in that unit (`\lx@mung@bibliography`), which takes its heading (`absorb_bibliography_heading`) and the
+  // author's `\end{thebibliography}` closes once. Perl keeps `\if@lx@inbibliography` and errs on every later entry
+  // (`<ltx:bibitem> isn't allowed in <ltx:section>`, KNOWN_PERL_ERRORS #855). Witnesses 1702.06834, 2402.15720,
+  // 2110.15342 (`\section*`), 2307.13534 (`\subsection*`), hep-th0109182; repro index-bib/heading_inside_thebibliography;
+  // guards `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
+  DefPrimitive!("\\lx@bibliography@sectioned", {
+    if x_equals(&T_CS!("\\if@lx@inbibliography"), &T_CS!("\\iftrue")) && lookup_bool("lx_bibliography_author_env") {
+      Digest!("\\@lx@inbibliographyfalse")?;
+      assign_value("lx_bibliography_sectioned", true, Some(Scope::Global));
+      // the stop the entry before the heading asked for (natbib's `\BibitemShut`, natbib.sty:880-905) ends that entry,
+      // which the next `\bibitem`'s `\bibitem@fin` would put at the head of the next bibliography's first
+      if is_defined_token(&T_CS!("\\bibitem@fin")) {
+        Digest!("\\bibitem@fin")?;
+      }
+      Let!("\\@bibstop", "\\@undefined");
+      if x_equals(&T_CS!("\\bibitem"), &T_CS!("\\restoring@bibitem")) {
+        Let!("\\bibitem", "\\save@bibitem");
+        Let!("\\par", "\\save@par");
+        Let!("\\\\", "\\save@backbackslash");
+      }
+    }
+  });
+  AddToMacro!("\\@startsection@hook", "\\lx@bibliography@sectioned");
   // The bibliography a `\bibitem` opens out of an author's list, in the group standing for that list (below): an
   // `\item` there is that list's, on Perl's path, not one of the bibliography's own (hep-ph9804413's `{enumerate}` of
   // `\bibitem`s; repro index-bib/kernel_bibitem_list_items_stay).
@@ -676,7 +714,10 @@ pub(crate) fn load() -> Result<()> {
       ]);
     }
     // else ? it probably isn't going to work??
-    else if tag == "thebibliography" {
+    // …unless a heading inside it closed the bibliography (`\lx@bibliography@sectioned`): the environment is the kernel's,
+    // its end the author's own `\end{thebibliography}`.
+    else if tag == "thebibliography" && lookup_bool("lx_bibliography_sectioned") {
+    } else if tag == "thebibliography" {
       // (OXIDIZED_DESIGN_DIVERGENCES #484, KNOWN_PERL_ERRORS #569) In `{thebibliography}` with no bibliography open,
       // the class's own list stands in the kernel's:
       // `\let\thebibliography\bibreferences` (ajour, cjour, IEEE-Con-Sys-mag: 0711.2301, astro-ph0005341, 2310.12571;
@@ -710,7 +751,10 @@ pub(crate) fn load() -> Result<()> {
     tokens.push(T_CS!("\\lx@mung@bibliography@pre"));
     tokens.push(T_BEGIN!());
     if tag != "thebibliography" {
-      tokens.extend(Explode!("implicit"));
+      tokens.extend(Explode!("implicit "));
+    }
+    if lookup_bool("lx_bibliography_sectioned") {
+      tokens.extend(Explode!("continued"));
     }
     tokens.push(T_END!());
     tokens.push(T_CS!("\\lx@kernel@thebibliography"));
@@ -742,8 +786,10 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\lx@mung@bibliography@pre{}", sub[document, args, _props] {
     // whether the bibliography opened next is the `\bibitem`'s own (`head_implicit_bibliography`): set
     // afresh here, so one that failed to open is not taken for the next
-    let implicit = args.first().and_then(|a| a.as_ref()).is_some_and(|a| a.to_string() == "implicit");
-    assign_value("lx_bibliography_opened_implicitly", implicit, Some(Scope::Global));
+    let how = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+    let how: Vec<&str> = how.split_whitespace().collect();
+    assign_value("lx_bibliography_opened_implicitly", how.contains(&"implicit"), Some(Scope::Global));
+    assign_value("lx_bibliography_opened_continued", how.contains(&"continued"), Some(Scope::Global));
     let parent     = document.get_node();
     let tag_sym    = model::get_node_qname(parent);
     with(tag_sym, |tag|
@@ -1554,6 +1600,52 @@ fn absorb_bibliography_heading(document: &mut Document, bibliography: &Node) -> 
   }
   document.remove_node(unit);
   Ok(true)
+}
+
+/// The bibliography a heading inside the author's `{thebibliography}` interrupted before any entry
+/// (`\lx@bibliography@sectioned`): `\begin{thebibliography}{99}\section*{References}\bibitem…`, the revtex4/4-1 papers'
+/// shape (1702.06834, 2402.15720, 2110.15342). pdflatex prints the environment's heading and then the author's, the
+/// same twice; the bibliography that took the author's heading (`absorb_bibliography_heading`) is the one, and the
+/// first, holding no entry and nothing but its heading, goes, its labels with the second. Kept when its heading is
+/// another's than the author's (a "References" over the topical `\section*`s of hep-th0109182): the PDF prints both.
+fn prune_interrupted_bibliography(document: &mut Document, bibliography: &Node) -> Result<()> {
+  // the element before it in document order, past the heading of a unit it opens (a frame's, 1301.0681)
+  let mut current = bibliography.clone();
+  let previous = loop {
+    match current.get_prev_element_sibling() {
+      Some(previous) if is_heading_part(&previous) => current = previous,
+      Some(previous) => break previous,
+      None => match current.get_parent() {
+        Some(parent) if is_heading_unit(&parent) => current = parent,
+        _ => return Ok(()),
+      },
+    }
+  };
+  if document::get_node_qname(&previous) != pin!("ltx:bibliography")
+    || !document
+      .findnodes("descendant::ltx:bibitem", Some(&previous))
+      .is_empty()
+    || !previous.get_child_elements().iter().all(|child| {
+      is_heading_part(child)
+        || (with(model::get_node_qname(child), |q| q == "ltx:biblist")
+          && child.get_content().trim().is_empty())
+    })
+  {
+    return Ok(());
+  }
+  let title = heading_text(&previous);
+  if !title.is_empty() && title != heading_text(bibliography) {
+    return Ok(());
+  }
+  let mut labels: Vec<String> = Vec::new();
+  collect_labels(&previous, &mut labels);
+  labels.extend(bibliography.get_attribute("labels"));
+  if !labels.is_empty() {
+    let mut target = bibliography.clone();
+    document.set_attribute(&mut target, "labels", &labels.join(" "))?;
+  }
+  document.remove_node(previous);
+  Ok(())
 }
 
 /// The phantom entries (OXIDIZED_DESIGN #155, the `ltx:bibitem` note above) anywhere inside `root` — wherever the

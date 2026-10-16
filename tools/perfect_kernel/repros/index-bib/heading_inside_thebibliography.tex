@@ -1,0 +1,20 @@
+% witness: 1702.06834, 2402.15720, 2110.15342 (`\section*{References}` right after `\begin{thebibliography}`), 2307.13534
+%          (`\subsection*`); ~780 papers of run 336's first-error malformed:ltx:bibitem cluster (study 2026-10-16 B1)
+% oracle:  pdflatex 0 errors: "References" (the environment's heading), "References" (the author's), [1] A, [2] B
+% engines: rust 67int15 = 2 Error:malformed:ltx:bibitem (in <ltx:section>, <ltx:bibblock>), an empty first
+%          <bibliography>; Perl 0.8.8 the same (KNOWN_PERL_ERRORS #855)
+% expect:  0 errors; one <bibliography> titled References holding both entries, numbered 1 and 2
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \cite{a,b}.
+\begin{thebibliography}{99}
+\section*{References}
+
+\bibitem{a} A. Author, J. 1 (2000).
+
+\bibitem{b} B. Author, J. 2 (2001).
+\end{thebibliography}
+After.
+\end{document}
