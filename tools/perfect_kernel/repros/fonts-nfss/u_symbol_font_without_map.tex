@@ -1,0 +1,15 @@
+% witness: 2306.04672 (shuffle.sty `\shuffle`, a U symbol font of its own family); stmaryrd's `stmry` `\boxslash`
+% oracle:  pdflatex: "a ⧢ b, a ⧄ b and encoding U."; 0 errors
+% engines: rust 67int15 = 0 errors, both symbols undecoded (U+FFFD: no map for the family); rust 68v round 1 = Δ and an
+%          italic ø (the `U` encoding had OT1's map)
+% expect:  0 errors, 0 warnings; both symbols as 67int15 (no OT1 glyph); `\f@encoding` is `U` after `\fontencoding{U}`
+% status:  RED (68v round 1) -> GREEN (68v round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{shuffle}
+\DeclareSymbolFont{stmry}{U}{stmry}{m}{n}
+\DeclareMathSymbol\boxslash{\mathbin}{stmry}{"1C}
+\makeatletter\def\showencoding{\f@encoding}\makeatother
+\begin{document}
+$a\shuffle b$, $a\boxslash b$ and {\fontencoding{U}\selectfont\xdef\x{\showencoding}}encoding \x.
+\end{document}

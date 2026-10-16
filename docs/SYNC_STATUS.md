@@ -2325,12 +2325,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
 
 - **68v** (undefined-CS binding gaps: 12 single-error clusters, run 353-365, rc67v/clusters). (1) `\symAMSb` (197
   papers; nyjm.cls 2401.06615, cedram.cls 2105.03188, myart.cls 1506.02470, fcaa-var): amsart's amsfonts test
-  (amsart.cls:338-350) copied into raw classes failed — `\try@load@fontshape` was empty, `\DeclareFontShape` a no-op and
-  `\fontencoding{U}` fell back to OT1 — so amsfonts never loaded; now latex.ltx's (:10605-10620, :10279-10305) and `U`
-  keeps its name (OXIDIZED_DESIGN_DIVERGENCES #645, KNOWN_PERL_ERRORS #845; repro
-  fonts-nfss/amsfonts_try_load_fontshape). (2) `\empheqlbrace` (229 papers; 1410.0933, 1906.02657, 2210.09120): empheq's
-  `overload` and its `left`/`right` keys and delimiter commands (empheq.sty:785-1066; #646, KPE #846; repro
-  package-bindings/empheq_overload_left; residual: the math parser loses the null `\right.` of an empty fence). (3)
+  (amsart.cls:377-391) copied into raw classes failed — `\try@load@fontshape` was empty, `\DeclareFontShape` a no-op and
+  `\fontencoding{U}` fell back to OT1 — so amsfonts never loaded; now latex.ltx's (:10605-10620, :10279-10305), and
+  `\f@encoding` names the encoding `\fontencoding` was given while an unmapped one still decodes through OT1 — `U` has
+  no map of its own, so a U symbol font of another family stays undecoded as before (2306.04672 `\shuffle`, stmaryrd
+  `\boxslash`) (OXIDIZED_DESIGN_DIVERGENCES #645, KNOWN_PERL_ERRORS #845; repros
+  fonts-nfss/{amsfonts_try_load_fontshape, u_symbol_font_without_map}). (2) `\empheqlbrace` (229 papers; 1410.0933, 1906.02657, 2210.09120): empheq's
+  `overload` and its `left`/`right` keys and delimiter commands (empheq.sty:785-1066; #646, KPE #846; repros
+  package-bindings/{empheq_overload_left, empheq_lbrace_empty_fence}; residual, KNOWN GAP: the math parser does not
+  parse a cell that opens with the empty fence `\left\{\right.` the brace commands give — 7 warnings, pinned by
+  `batch68v_empheq_lbrace_empty_fence_known_gap`; math parsing is a separate stream). (3)
   Package internals the bindings lacked: lastpage's `\lastpage@putlabel` (`\relax`, lastpagemodern.sty:84-89; 136
   papers, cta-author/IET-Conf-Paper/ECOC-author: 2209.11927, 2609.02892; KPE #847), caption's `\caption@AtBeginDocument`
   (caption3.sty:178-191; 111 papers, oasics/lipics/tgdk: 2608.11802, 2403.18812; KPE #848), color's `\color@block`
@@ -2341,18 +2345,21 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   empty as `\@keywords` is (KPE #850; repro class-bindings/memo_l/memo_l_amsbook_internals). (5) `\csentence` +
   `\parttitle` (178 papers, bmcart.cls:716, :1508: 2305.08284, 1611.01327, 2007.07886, 2106.01700): a command a class's
   own `\figure`/`\abstract` defines for its body is made where it is called, when the kernel's environment runs instead
-  (`kernel_autoload::try_refused_environment_definition`, frontmatter_stores.rs `refused_environment_definition`;
-  OXIDIZED_DESIGN_DIVERGENCES #647, KPE #851; repro class-bindings/bmcart/bmcart_environment_body_commands). (6)
+  (`kernel_autoload::try_refused_environment_definition`, frontmatter_stores.rs `refused_environment_definition`) —
+  only code that never ran (a refused `\lx@dropped@X`, an `\X` a `\begin{X}` constructor shadows) and no definition
+  inside an `\if…\fi` (OXIDIZED_DESIGN_DIVERGENCES #647, KPE #851; repros
+  class-bindings/bmcart/{bmcart_environment_body_commands, environment_code_ran_not_searched}). (6)
   `\authorname` (86 papers, MastersDoctoralThesis.cls:218: 2603.21941, 2312.06150, 2011.02318) and `\collaboration@sw`
   (79 papers, revtex4 copies qm2008_abs/snp/jasatex: 0805.2253, 0806.0481, 0805.4759): a refused class setter's replay
   keeps its local definitions at the call (`\lx@replay@capture`; OXIDIZED_DESIGN_DIVERGENCES #648, KPE #852; repros
-  class-bindings/{mastersdoctoralthesis/mdt_authorname, revtex4_copy/rtcopy_collaboration_switch}). Residual: a revtex4
-  copy read raw now runs its own author/e-mail code, which sets the e-mail lines as paragraphs after the abstract, the
-  names' first letters lost (0805.2253 "keshi OsadaElectronic address: …"); the qm2008_abs/snp copies
-  `\ProvidesClass{revtex4}` — open question: their shipped copy could take the revtex4 binding. (7) `\fnm` (69 papers,
+  class-bindings/{mastersdoctoralthesis/mdt_authorname, revtex4_copy/rtcopy_collaboration_switch}; 0805.2253,
+  0806.0481, 0805.4759 lose only the ERROR, their creators intact: "Takeshi Osada"/"Grzegorz Wilk", "Lusaka
+  Bhattacharya"/"Pradip k Roy", "Korinna Zapp"/…). Open question: the qm2008_abs/snp copies `\ProvidesClass{revtex4}`
+  — their shipped copy could take the revtex4 binding. (7) `\fnm` (69 papers,
   vmsta.cls:278-283: 1508.02842, 1411.4499, 1601.01109): while a frontmatter field is digested the class's own setter of
-  it is searched as well (#647; repro class-bindings/vmsta/vmsta_name_parts; residual: "YuliyaMishura" for the title
-  page's "Yuliya Mishura"). (8) `\ETC` (106 papers, cimento.cls:746, shipped, not in TL: astro-ph0502331,
+  it is searched as well (#647; repro class-bindings/vmsta/vmsta_name_parts; residual: the identity `\fnm`/`\snm`
+  glue the name parts and the initials — 1508.02842's creator "Yu.YuliyaMishura" (67int15 "Yu.<ERROR>YuliyaMishura")
+  for the title page's "Yuliya Mishura"). (8) `\ETC` (106 papers, cimento.cls:746, shipped, not in TL: astro-ph0502331,
   astro-ph0506233, 1804.04677): a cimento binding (latexml_contrib cimento_cls.rs) reads the shipped class (or the renamed copy the prefix fallback
   answers with it, cimento_modif.cls 2203.13736) raw (OmniBus
   when there is none) and provides `\ETC` as the title page's `\unskip` (the running head's "etc." cut has no place in
@@ -2362,7 +2369,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (TL classes read raw under ar5iv, checked with `--preload=[rawclasses]latexml.sty`: 0 errors): `\recdate` (127),
   `\notypesetlogo` (33), `\citen` (144) — jpsj2.cls (TL) and ptptex.cls (TL; also `\documentstyle{ptptex}`), whose
   overcite then loads the cite binding; left: `\citen` under nic-series.cls (5) and `\documentstyle[…jltp]{article}`
-  (2). Guards `perfect_kernel_batch68v` (11).
+  (2). Guards `perfect_kernel_batch68v` (14). Round 2 (review 68v): the `U` encoding lost the OT1 map round 1 gave it
+  (it decoded shuffle's `\shuffle` as Δ, 2306.04672 — now as 67int15); the refused-environment search reads only code
+  that never ran, outside conditionals; the empheq fixture split into a 0/0 one and the known-gap fence one. A/B vs
+  67int15 (217 papers: 60 pop67o + 40 ams/amssymb + 17 witnesses + 98 cluster papers + 2306.04672): Errors 2,074 →
+  1,961, Fatals 5 → 5, none worse; 113 cluster papers and witnesses 1 → 0, every word lost an ERROR token or empheq's
+  option text; outside the clusters only 1810.05130 changed (empheq `left=` material); the review's 42 font/probe
+  documents byte-identical to 67int15.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

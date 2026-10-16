@@ -229,8 +229,19 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\lx@fontencoding{}", sub[(encoding)] {
     let encoding = Expand!(encoding).to_string();
+    // latex.ltx:10490 `\fontencoding` sets `\f@encoding` to the name it is given. An encoding without a map
+    // (`U` but for its msa/msb families) decodes through OT1, below, so the font says OT1; the name is kept beside
+    // it, for `\f@encoding` (sect08.rs), while the font is the one merged here. That is what amsart-derived
+    // classes test: `\fontencoding{U}\fontfamily{msa}\try@load@fontshape` must find umsa.fd (amsart.cls:380-382;
+    // nyjm.cls 2401.06615, cedram.cls 2105.03188, myart.cls 1506.02470: `\symAMSb` was undefined). Giving `U`
+    // OT1's map instead decoded every U symbol font without a map of its own through OT1 (shuffle.sty's
+    // `\shuffle` printed Δ, 2306.04672). OXIDIZED_DESIGN_DIVERGENCES #645.
+    let unmapped_key = pin!("lx@fontencoding@unmapped");
     let merged = if load_font_map(&encoding).is_some() {
       MergeFont!(encoding => encoding.clone());
+      if !lookup_string_from_sym(unmapped_key).is_empty() {
+        AssignValue!("lx@fontencoding@unmapped", String::new());
+      }
       encoding
     } else {
       // Report once per encoding, not once per switch. Perl has no Info
@@ -247,6 +258,7 @@ LoadDefinitions!({
       }
       // Default to OT1 encoding if no map found
       MergeFont!(encoding => "OT1");
+      AssignValue!("lx@fontencoding@unmapped", encoding);
       String::from("OT1")
     };
     // latex.ltx:10490-10516: a `\fontencoding` that changes the encoding arms

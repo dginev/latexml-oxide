@@ -493,15 +493,19 @@ pub(crate) fn load() -> Result<()> {
   // `beginSemiverbatim`), not None, so the OT1 fallback never triggers; that
   // loop reproduces in Perl too (see docs/parity/KNOWN_PERL_ERRORS.md, "text-symbol
   // CS in a Semiverbatim option").
+  // After `\fontencoding` of an encoding without a map, which the font decodes as OT1 (`\lx@fontencoding`,
+  // tex_fonts.rs), the encoding named: latex.ltx:10490 `\fontencoding` sets `\f@encoding` to its argument, and
+  // `\try@load@fontshape` reads it (`\fontencoding{U}\fontfamily{msa}`, amsart.cls:380; OXIDIZED_DESIGN_DIVERGENCES
+  // #645). Only while the font is still OT1: a later switch to a mapped encoding says that one.
   DefMacro!("\\f@encoding", {
-    ExplodeText!(
-      LookupFont!()
-        .map(|f| f
-          .get_encoding()
-          .map(|e| e.to_string())
-          .unwrap_or_else(|| "OT1".to_string()))
-        .unwrap_or_default()
-    )
+    let encoding = LookupFont!()
+      .map(|f| f
+        .get_encoding()
+        .map(|e| e.to_string())
+        .unwrap_or_else(|| "OT1".to_string()))
+      .unwrap_or_default();
+    let unmapped = lookup_string_from_sym(pin!("lx@fontencoding@unmapped"));
+    ExplodeText!(if encoding == "OT1" && !unmapped.is_empty() { unmapped } else { encoding })
   });
   DefMacro!("\\cf@encoding", {
     ExplodeText!(
@@ -883,7 +887,8 @@ pub(crate) fn load() -> Result<()> {
   // arguments read under `\nfss@catcodes`, and `\<enc>/<family>/<series>/<shape>` records the shape — the name
   // classes test for font info (`\@ifundefined{U/msa/m/n}` after `\try@load@fontshape`, latex_bootstrap.rs;
   // OXIDIZED_DESIGN_DIVERGENCES #645). Left out, as in `\DeclareFontFamily` below: the unknown-family error (it guards
-  // font loading, which LaTeXML does not do; an undeclared family declares nothing) and the series-`m` note.
+  // font loading, which LaTeXML does not do; an undeclared family declares nothing) and `\series@maybe@drop@one@m`
+  // (:10288) with its note: the shape is recorded under the series as written.
   RawTeX!(
     r"\def\DeclareFontShape{\begingroup\nfss@catcodes\expandafter\endgroup\DeclareFontShape@}%
       \def\DeclareFontShape@#1#2#3#4#5#6{\expandafter\ifx\csname #1+#2\endcsname\relax\else

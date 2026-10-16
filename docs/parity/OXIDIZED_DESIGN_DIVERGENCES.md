@@ -18333,21 +18333,28 @@ the numbered forms). Repro class-bindings/apa6_numbered_author_affiliation_forms
 apa_numbered_authors_supersede_the_one_author_forms, apa6_one_author_line_with_numbered_affiliations_carries_the_first,
 beilstein_author_with_marks_and_email_options}` (beilstein.cls:627 `\author[marks][e-mail]{name}`).
 
-### 645. `\try@load@fontshape` reads the family's .fd, `\DeclareFontShape` records the shape, and `\fontencoding{U}` keeps its name
+### 645. `\try@load@fontshape` reads the family's .fd, `\DeclareFontShape` records the shape, and `\f@encoding` names the encoding `\fontencoding` selected
 
 Perl makes `\try@load@fontshape` empty (latex_bootstrap.pool.ltxml:62) and `\DeclareFontShape` a no-op
 (latex_constructs.pool.ltxml:2690), and `\fontencoding{U}` falls back to OT1 for want of a `U` fontmap. amsart's test
-for amsfonts (amsart.cls:338-350 `\begingroup\fontencoding{U}\fontfamily{msa}\try@load@fontshape\endgroup`
+for amsfonts (amsart.cls:377-391 `\begingroup\fontencoding{U}\fontfamily{msa}\try@load@fontshape\endgroup`
 `\@ifundefined{U/msa/m/n}{\ClassError…}{\RequirePackage{amsfonts}}`) therefore failed in every raw class that copies it,
 the class skipped amsfonts, and its `\edef\@dh{\noexpand\mathhexbox{\hexnumber@\symAMSb}67}` met an undefined
 `\symAMSb` (197 papers, run 353-365: nyjm.cls 2401.06615, cedram.cls 2105.03188, myart.cls 1506.02470, fcaa-var). Ours:
 `\try@load@fontshape` is latex.ltx:10605-10620 (an unknown `\<enc>+<family>` is remembered and `<enc><family>.fd` is
 input, lowercased, else as written; locked as Perl's, latex_bootstrap.rs), `\DeclareFontShape` is latex.ltx:10279-10305
-(arguments under `\nfss@catcodes`, `\<enc>/<family>/<series>/<shape>` defined; sect08.rs), and the `U` encoding has its
-own map, OT1's — the glyphs it decoded through before — beside the per-family `U_msa`/`U_msb` maps (u_fontmap.rs), so
-`\f@encoding` names `U` as latex.ltx's `\fontencoding` does. Left out: the unknown-family error and the series-`m` note
-of `\DeclareFontShape`, `\@font@info` and the "No file" typeout (none is in the dumpless base). KNOWN_PERL_ERRORS #845.
-Repro fonts-nfss/amsfonts_try_load_fontshape; guard `perfect_kernel_batch68v::batch68v_try_load_fontshape_finds_amsfonts`.
+(arguments under `\nfss@catcodes`, `\<enc>/<family>/<series>/<shape>` defined; sect08.rs), and `\f@encoding` names the
+encoding `\fontencoding` was given (latex.ltx:10490): `\lx@fontencoding` of an encoding without a map still merges OT1
+into the font, which decodes through it as before, and keeps the name beside it (`lx@fontencoding@unmapped`,
+tex_fonts.rs), which `\f@encoding` (sect08.rs) reports while the font's encoding is still OT1 — a later switch to a
+mapped encoding clears it. The `U` encoding itself has no map, only the per-family `U_msa`/`U_msb` (u_fontmap.rs), so a
+math symbol of a U symbol font of any other family stays undecoded (U+FFFD), as before: giving `U` OT1's map decoded
+shuffle.sty's `\shuffle` ("001) as Δ (2306.04672) and stmaryrd's `\boxslash` ("1C) as an italic ø. Left out: the
+unknown-family error of `\DeclareFontShape`, its `\series@maybe@drop@one@m` (latex.ltx:10288, the shape is recorded
+under the series as written, not with a redundant `m` dropped — sect08.rs `\DeclareFontShape@`) and the note that goes
+with it, `\@font@info` and the "No file" typeout (none is in the dumpless base). KNOWN_PERL_ERRORS #845. Repros
+fonts-nfss/{amsfonts_try_load_fontshape, u_symbol_font_without_map}; guards
+`perfect_kernel_batch68v::{batch68v_try_load_fontshape_finds_amsfonts, batch68v_u_symbol_font_without_a_map_stays_undecoded}`.
 
 ### 646. empheq's `left`/`right` material is kept, and `overload` gives the AMS environments the option
 
@@ -18360,9 +18367,13 @@ are styling and dropped; `overload`/`overload2` redefine equation, gather, align
 starred forms as empheq.sty:961-1066 does, an optional `[…]` (after alignat's count), each keeping its lock; and
 `\empheq<delim>`/`\empheqbig<delim>` for the sixteen delimiters of empheq.sty:868-883 are the delimiter grown to the
 display (`\left\lbrace\right.`, the phantom and kerns presentational). A constructor environment (`\begin{equation}`)
-keeps its own end, so takes no `right`. KNOWN_PERL_ERRORS #846. Repro package-bindings/empheq_overload_left; guard
-`perfect_kernel_batch68v::batch68v_empheq_overload_left_and_right` (its 7 warnings are the math parser's on the empty
-fence `\left\{\right.`, whose null right delimiter the parse loses — math parsing is a separate stream).
+keeps its own end, so takes no `right`. Timing: empheq.sty:961 makes the `overload` redefinitions `\AtBeginDocument`;
+ours makes them when the package loads (empheq_sty.rs), so an AMS environment a preamble package redefines after
+empheq loads keeps that package's definition, where LaTeX's overload would replace it at `\begin{document}`.
+KNOWN_PERL_ERRORS #846. Repros package-bindings/{empheq_overload_left, empheq_lbrace_empty_fence}; guards
+`perfect_kernel_batch68v::{batch68v_empheq_overload_left_and_right, batch68v_empheq_lbrace_empty_fence_known_gap}` (the
+second pins the math parser's 7 warnings on the empty fence `\left\{\right.` opening a cell, a known gap — math parsing
+is a separate stream, SYNC_STATUS 68v).
 
 ### 647. A command a class's environment defines for its body is made where it is called, when the kernel's environment runs instead
 
@@ -18375,18 +18386,22 @@ papers: 2305.08284, 1611.01327, 1909.07026) and :1505-1510 `\def\abstract@fmt[#1
 were undefined. Ours: when an undefined control sequence is about to become `<ltx:ERROR/>` (the two call sites of the
 kernel autoload, `kernel_autoload::try_refused_environment_definition`), the open environments are searched innermost
 first — the kernel's abstract, which is no environment frame, first inside its body (`lx_in_kernel_abstract`, set by
-`\lx@abstract@class@setters`) — through each one's `\lx@dropped@X` and `\X` and the commands they hand control to
-(frontmatter_stores.rs `handed_to`), only definitions a raw file or the document made, at most 64 per environment, for a
-`\def`/`\gdef`/`\edef`/`\xdef` of exactly that name whose text reads none of the outer call's arguments; it is made where
-the call stands (in the call's group) and the call retried. Only a command that would otherwise be an Error is ever
+`\lx@abstract@class@setters`) — but only code that never ran: an environment's `\lx@dropped@X` (refused by the lock) and
+its `\X` when a `\begin{X}` constructor shadows it, never an environment its own `\X` began
+(`\newenvironment{myenv}{\ifshowfoo\def\foo{…}\fi}{}` leaves `\foo` undefined in its body, as in pdflatex) — through
+each and the commands it hands control to (frontmatter_stores.rs `handed_to`), only definitions a raw file or the
+document made, at most 64 per environment, for a `\def`/`\gdef`/`\edef`/`\xdef` of exactly that name outside any
+`\if…\fi` (whether the body makes it depends on a test not run here) whose text reads none of the outer call's
+arguments; it is made where the call stands (in the call's group) and the call retried. Only a command that would otherwise be an Error is ever
 defined this way. Perl leaves them undefined (KNOWN_PERL_ERRORS #851). Repro
-class-bindings/bmcart/bmcart_environment_body_commands; guard
-`perfect_kernel_batch68v::batch68v_bmcart_environment_body_commands`. A frontmatter field's text is set by the class
+class-bindings/bmcart/{bmcart_environment_body_commands, environment_code_ran_not_searched}; guards
+`perfect_kernel_batch68v::{batch68v_bmcart_environment_body_commands, batch68v_an_environment_whose_code_ran_is_not_searched}`. A frontmatter field's text is set by the class
 where its setter put it, so while one is digested (`digest_frontmatter_item`, base_utilities.rs, marks the field:
 `lx_frontmatter_item`) the class's own setter of that field is searched first (`\lx@dropped@author` for a creator):
 vmsta.cls:278-283 `\csdef{name@m}{…\def\fnm##1{##1}…}`, which its `\@@author` applies to each author (69 papers:
 1508.02842, 1411.4499, 1601.01109; the full title page's `\name@m@front` sets `\@fnm~\@snm`, "Yuliya Mishura", where
-the identity gives "YuliyaMishura"). The kernel's own author markup for a refused `\author` (OmniBus's `\inits`,
+the identity gives "YuliyaMishura", and the initials glue on: 1508.02842's creator reads "Yu.YuliyaMishura", where
+67int15 had "Yu.<ERROR>YuliyaMishura"). The kernel's own author markup for a refused `\author` (OmniBus's `\inits`,
 `\snm`, … : #444) is defined before and stands. Repro class-bindings/vmsta/vmsta_name_parts; guard
 `perfect_kernel_batch68v::batch68v_vmsta_author_name_parts`.
 
@@ -18407,8 +18422,7 @@ those stay as before). Only what the setter creates — a getter, a switch: its 
 stay in the replay (pos.sty's `\seq_put_right:Nn` on the class's author seq, which the deposited title page would
 print a second time; `perfect_kernel_batch56::class_maketitle_replay_that_errors_is_dropped`). Meanings only; none of
 an erring or unbalanced replay. Perl never runs a refused definition (State.pm:502-517;
-KNOWN_PERL_ERRORS #852). Under the revtex4 copies the class's own email/affiliation code now runs past the switch and
-prints its author lines as paragraphs after the abstract (0805.2253: the e-mail addresses, the names' first letters
-lost) — the residual of reading a revtex4 copy raw (see SYNC_STATUS 68v). Repros
+KNOWN_PERL_ERRORS #852). Under the revtex4 copies the class's `\affiliation` now runs past the switch; the witnesses
+lose only the ERROR, their creators intact (0805.2253 "Takeshi Osada"/"Grzegorz Wilk", 0806.0481, 0805.4759). Repros
 class-bindings/{mastersdoctoralthesis/mdt_authorname, revtex4_copy/rtcopy_collaboration_switch}; guards
 `perfect_kernel_batch68v::{batch68v_replayed_author_keeps_authorname, batch68v_replayed_author_keeps_collaboration_switch}`.

@@ -64,7 +64,7 @@ LoadDefinitions!({
   // latex.ltx:10605-10620: when the family is not known (`\<enc>+<family>`), remember it and input
   // `<enc><family>.fd`, lowercased, else as written — the .fd's `\DeclareFontFamily`/`\DeclareFontShape`
   // (sect08.rs) declare `\<enc>/<family>/<series>/<shape>`, which is what amsart-derived classes test to decide
-  // whether to load amsfonts (amsart.cls:338-350 `\fontencoding{U}\fontfamily{msa}\try@load@fontshape`
+  // whether to load amsfonts (amsart.cls:377-391 `\fontencoding{U}\fontfamily{msa}\try@load@fontshape`
   // `\@ifundefined{U/msa/m/n}`; nyjm.cls 2401.06615, cedram.cls 2105.03188, myart.cls 1506.02470: with it empty
   // the class skipped amsfonts and `\symAMSb` was undefined). OXIDIZED_DESIGN_DIVERGENCES #645. The kernel's
   // `\@font@info` note and `\@input@`'s "No file" typeout are left out (neither is in the dumpless base).

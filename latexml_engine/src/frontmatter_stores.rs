@@ -794,10 +794,27 @@ fn handed_to(body: &[Token], out: &mut Vec<Token>) {
 /// The definition of `target` a body makes with `\def`, `\gdef`, `\edef` or `\xdef` (a `\long`/`\global`/
 /// `\protected` prefix kept): the tokens from the prefix through the definition's closing brace, its parameters as
 /// stored (a doubled `##1` is a parameter token and `1`), so digesting them defines `target` as the body would. `None`
-/// when the body makes none, or only one that reads the body's own arguments (it depends on the call).
+/// when the body makes none, or only one that reads the body's own arguments (it depends on the call), or only one
+/// inside a conditional (`\ifshowfoo\def\foo{…}\fi`: whether the body makes it depends on a test that is not run
+/// here — pdflatex leaves `\foo` undefined when the test is false).
 fn nested_definition_of(body: &[Token], target: Token) -> Option<Vec<Token>> {
+  let mut conditional_depth = 0usize;
   for (i, t) in body.iter().enumerate() {
-    if t.get_catcode() != Catcode::CS
+    if t.get_catcode() != Catcode::CS {
+      continue;
+    }
+    match conditional_kind(t) {
+      Some(ConditionalType::If) => {
+        conditional_depth += 1;
+        continue;
+      },
+      Some(ConditionalType::Fi) => {
+        conditional_depth = conditional_depth.saturating_sub(1);
+        continue;
+      },
+      _ => {},
+    }
+    if conditional_depth > 0
       || !t.with_str(|s| matches!(s, "\\def" | "\\gdef" | "\\edef" | "\\xdef"))
     {
       continue;
@@ -833,6 +850,17 @@ fn nested_definition_of(body: &[Token], target: Token) -> Option<Vec<Token>> {
   None
 }
 
+/// Whether `t` opens (`\if…`) or closes (`\fi`) a conditional: by its meaning, or, undefined, by an `\if` name (a
+/// `\newif` switch the class declares later).
+fn conditional_kind(t: &Token) -> Option<ConditionalType> {
+  match lookup_definition(t) {
+    Ok(Some(defn)) => defn.get_conditional_type(),
+    _ => t
+      .with_str(|s| s.starts_with("\\if"))
+      .then_some(ConditionalType::If),
+  }
+}
+
 /// An undefined `token` that an open environment defines for its body in the class's own definition, which the
 /// kernel's environment shadows: a `\<env>` the class (or the document) made, which `\begin{<env>}` never runs when the
 /// kernel's `\begin{<env>}` constructor is defined (sect01.rs), or one the kernel's lock refused (`\lx@dropped@<env>`,
@@ -842,8 +870,11 @@ fn nested_definition_of(body: &[Token], target: Token) -> Option<Vec<Token>> {
 /// is made where the call stands, as the class's environment would have made it, and the call retried
 /// ([`latexml_core::binding::kernel_autoload::try_refused_environment_definition`]). Searched: the open environments
 /// innermost first (the kernel's abstract, no environment frame, first inside its body; a frontmatter field's own
-/// setter before them), each one's definitions and the commands they hand control to (`handed_to`), only definitions
-/// a raw file or the document made, at most 64 per environment. OXIDIZED_DESIGN_DIVERGENCES #647.
+/// setter before them) whose class code never ran (refused, or shadowed by a constructor), each one's definitions and
+/// the commands they hand control to (`handed_to`), only definitions a raw file or the document made, outside any
+/// conditional, at most 64 per environment. An environment whose begin code ran is not searched:
+/// `\newenvironment{myenv}{\ifshowfoo\def\foo{…}\fi}{}` leaves `\foo` undefined in its body, as in pdflatex. Guard:
+/// `perfect_kernel_batch68v::an_environment_whose_code_ran_is_not_searched`. OXIDIZED_DESIGN_DIVERGENCES #647.
 pub fn refused_environment_definition(token: &Token) -> bool {
   if token.get_catcode() != Catcode::CS || lookup_bool("lx_refused_environment_search") {
     return false;
@@ -877,8 +908,17 @@ pub fn refused_environment_definition(token: &Token) -> bool {
 fn class_body_definition(token: &Token, envs: &[String]) -> bool {
   let mut definition: Option<Vec<Token>> = None;
   'envs: for env in envs.iter().filter(|e| !e.is_empty()) {
-    let mut queue: VecDeque<Token> =
-      VecDeque::from([T_CS!(&s!("\\lx@dropped@{env}")), T_CS!(&s!("\\{env}"))]);
+    // Only code that never ran: the class's definition the kernel's lock refused (`\lx@dropped@<name>`), and its
+    // `\<name>` when a constructor `\begin{<name>}` shadows it (`\begin`, sect01.rs). An environment whose own
+    // `\<name>` began it has made what its body defines; a command it did not make stays undefined, as in pdflatex.
+    let mut queue: VecDeque<Token> = VecDeque::new();
+    let dropped = T_CS!(&s!("\\lx@dropped@{env}"));
+    if lookup_meaning(&dropped).is_some() {
+      queue.push_back(dropped);
+    }
+    if lookup_meaning(&T_CS!(&s!("\\begin{{{env}}}"))).is_some() {
+      queue.push_back(T_CS!(&s!("\\{env}")));
+    }
     let mut seen: Vec<Token> = Vec::new();
     let mut next: Vec<Token> = Vec::new();
     while let Some(cs) = queue.pop_front() {

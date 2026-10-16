@@ -39,7 +39,7 @@ fn assert_all(xml: &str, parts: &[&str]) {
   }
 }
 
-/// fonts-nfss/amsfonts_try_load_fontshape: amsart's amsfonts test (amsart.cls:338-350, copied by nyjm.cls 2401.06615,
+/// fonts-nfss/amsfonts_try_load_fontshape: amsart's amsfonts test (amsart.cls:377-391, copied by nyjm.cls 2401.06615,
 /// cedram.cls 2105.03188, myart.cls 1506.02470) finds umsa.fd through `\try@load@fontshape`, whose
 /// `\DeclareFontShape` defines `\U/msa/m/n`; amsfonts loads, so `\symAMSb` is the AMSb symbol font.
 #[test]
@@ -54,12 +54,31 @@ fn batch68v_try_load_fontshape_finds_amsfonts() {
 }
 
 /// package-bindings/empheq_overload_left: `\usepackage[overload]{empheq}` gives the AMS environments empheq's options
-/// (empheq.sty:961-1066); `left` opens the first cell, `right` closes the last, `\empheqlbrace` is the brace grown to
-/// the display (1410.0933, 1906.02657, 2210.09120, 2201.03303, 2207.01386). The option list is no longer typeset.
-/// The 7 warnings are the math parser's on the empty fence `\left\{\right.` (math parsing is a separate stream).
+/// (empheq.sty:961-1066); `left` opens the first cell, `right` closes the last (1410.0933, 1906.02657, 2210.09120,
+/// 2201.03303, 2207.01386). The option list is no longer typeset.
 #[test]
 fn batch68v_empheq_overload_left_and_right() {
   let (counts, log, xml) = repro!("package-bindings/empheq_overload_left.tex");
+  assert_eq!(counts, (0, 0), "{log}");
+  assert!(!xml.contains("left="), "{xml}");
+  assert!(!xml.contains("right="), "{xml}");
+  assert_all(&xml, &[
+    r#"<Math tex="\displaystyle F(x)={}x=1" text="F@(x) = x = 1" xml:id="S0.E1.m3">"#,
+    r#"<Math tex="\displaystyle y=2" text="y = 2" xml:id="S0.E2.m3">"#,
+    r#"<Math tex="\displaystyle u=3," text="u = 3" xml:id="S0.Ex1.m3">"#,
+    r#"<Math tex="\displaystyle G={}a=1" text="G = a = 1" xml:id="S0.E3.m5">"#,
+    r#"<equation xml:id="S0.E4"> <tags> <tag>(4)</tag> <tag role="refnum">4</tag> </tags> <Math mode="display" tex="\text{Hence }c=d""#,
+  ]);
+}
+
+/// package-bindings/empheq_lbrace_empty_fence: `\empheqlbrace`/`\empheqrbrace` (empheq.sty:1016-1066), the brace grown
+/// to the display, as the empty fence `\left\{\right.` that opens the first cell (`\left.\right\}` closing the last;
+/// 1410.0933, 1906.02657, 2210.09120). KNOWN GAP (SYNC_STATUS 68v): the math parser does not parse a cell that opens
+/// with the empty fence — the 7 warnings are its; math parsing is a separate stream. The count is pinned so that a fix
+/// shows here.
+#[test]
+fn batch68v_empheq_lbrace_empty_fence_known_gap() {
+  let (counts, log, xml) = repro!("package-bindings/empheq_lbrace_empty_fence.tex");
   assert_eq!(counts, (0, 7), "{log}");
   assert!(!xml.contains("left="), "{xml}");
   assert_all(&xml, &[
@@ -70,6 +89,39 @@ fn batch68v_empheq_overload_left_and_right() {
     r#"tex="\displaystyle b=2""#,
     r#"tex="\left\{\right.c=d""#,
     r#"<tags> <tag>(4)</tag> <tag role="refnum">4</tag> </tags>"#,
+  ]);
+}
+
+/// fonts-nfss/u_symbol_font_without_map: a math symbol of a U-encoded symbol font without a map of its own stays
+/// undecoded (U+FFFD), as before 68v — shuffle.sty's `\shuffle` (2306.04672) and stmaryrd's `\boxslash` are no OT1
+/// glyph (Δ, an italic ø) — while `\fontencoding{U}` still leaves `\f@encoding` as `U` (`\lx@fontencoding`,
+/// tex_fonts.rs; OXIDIZED_DESIGN_DIVERGENCES #645).
+#[test]
+fn batch68v_u_symbol_font_without_a_map_stays_undecoded() {
+  let (counts, log, xml) = repro!("fonts-nfss/u_symbol_font_without_map.tex");
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    "<XMTok name=\"shuffle\" role=\"BINOP\">\u{FFFD}</XMTok>",
+    "<XMTok name=\"boxslash\" role=\"BINOP\">\u{FFFD}</XMTok>",
+    "and encoding U.</p>",
+  ]);
+  assert!(!xml.contains('Δ') && !xml.contains('ø'), "{xml}");
+}
+
+/// class-bindings/bmcart/environment_code_ran_not_searched: the search for a command a class's environment defines for
+/// its body (frontmatter_stores.rs `refused_environment_definition`) reads only code that never ran — `{myenv}` began
+/// with its own `\myenv`, and the `\figure` whose code the kernel shadows defines `\barx` only inside `\ifshowfoo…\fi`
+/// — so both stay undefined, as in pdflatex (review 68v). OXIDIZED_DESIGN_DIVERGENCES #647.
+#[test]
+fn batch68v_an_environment_whose_code_ran_is_not_searched() {
+  let (counts, log, xml) = repro!("class-bindings/bmcart/environment_code_ran_not_searched.tex");
+  assert_eq!(counts, (2, 0), "{log}");
+  assert!(log.contains("Error:undefined:\\foo"), "{log}");
+  assert!(log.contains("Error:undefined:\\barx"), "{log}");
+  assert!(!xml.contains("INVENTED"), "{xml}");
+  assert_all(&xml, &[
+    r#"<p xml:id="p1.1">Text <ERROR class="undefined" xml:id="p1.1.1">\foo</ERROR> end.</p>"#,
+    r#"<caption><tag close=": ">Figure 1</tag>Lead: <ERROR class="undefined" xml:id="S0.F1.2">\barx</ERROR>.</caption>"#,
   ]);
 }
 
