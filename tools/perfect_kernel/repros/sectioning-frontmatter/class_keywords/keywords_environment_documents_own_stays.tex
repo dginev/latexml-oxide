@@ -1,0 +1,17 @@
+% CONTROL: the document's own `{keywords}` (a `\renewenvironment` after the class's heading-only one, kwpaper.cls)
+% stays the document's.
+% witness: none (synthetic)
+% oracle:  pdflatex (kwpaper.cls beside it) 0 errors: "KW: first"
+% expect:  0 errors, 0 warnings; no <keywords>; "KW: first" in the body
+% status:  CONTROL
+% preload: ar5iv.sty
+\documentclass{kwpaper}
+\renewenvironment{keywords}{\par KW: }{\par}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{keywords}
+first
+\end{keywords}
+Body.
+\end{document}

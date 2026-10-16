@@ -17939,6 +17939,59 @@ svmult_cls.rs maps a single ASCII letter to its Symbol-encoding Greek letter, up
 A Α … Z Ζ, with j ϕ, J ϑ, v ϖ, V ς as the encoding has them); any other argument keeps the faithful `\usefont` form.
 Repro class-bindings/svmult_aas/svmult_class_commands; guard `perfect_kernel_batch68k::svmult_class_commands`.
 
+### 634. A raw class's keywords reach the frontmatter: the `\keywords` its abstract defines for its body, and a `{keywords}` that only typesets a label (Perl: undefined, or the class's run-in heading)
+
+**Perl behavior**: the kernel's `{abstract}` is locked (latex_constructs.pool.ltxml:1130-1142: `\begin{abstract}` is
+`\lx@begin@abstract`, `\abstract` locked), so under raw class loading a class's own abstract code never runs, and a
+`\keywords` the class defines only there is undefined — wiley-article.cls:446-489 (`\NewEnviron{wiley@abstract}
+{\newcommand{\keywords}[1]{…}…}`, `\renewcommand{\abstract}{\wiley@abstract}`; nbdt-article.cls:430-473 the same),
+astlb.cls:91-205 (the abstract's body collected into `\abstract@toks`, `\endabstract` calling `\maketitle`, whose
+`\@maketitle` typesets it inside `{pazhabstract}`, the only place `\def\keywords##1` is made; pazhastl, pazhb, pazhb_eng,
+pazha2, astrobul the same), mtt.cls:176-181 (its own `\renewenvironment{abstract}[1][ru]{…\def\keywords##1…}`). A class
+`{keywords}` whose begin code only typesets a label (paper.cls:621-627 `\def\keywords{\small\paragraph*{\keywordname:}}`)
+is the class's run-in heading; OmniBus (OmniBus.cls.ltxml:126-156), used when the class is not read raw, makes any
+`{keywords}` the keywords.
+**Rust behavior**: K11 (frontmatter_stores.rs) serves the table's keywords setters (`STORE_SETTERS`: `keywords`,
+`keyword`, `kword`, `kwd`, `terms`) in these two shapes too, each found by a check on what the class defined, never a
+name pattern. (1) The kernel abstract's body begins with `\lx@abstract@class@setters` (base_utilities.rs
+`\lx@begin@abstract`), which walks the refused class abstract — `\lx@dropped@abstract`/`\lx@dropped@endabstract`
+(state.rs; a refused `\renewenvironment` now keeps its begin and end code there too, sect08.rs) — and the commands it
+hands control to (`\begin{X}` as `\X`, environ's `\csname env@X@process\endcsname`, a refused command as its
+`\lx@dropped@` record, the kernel `\maketitle` as the class's `\@maketitle`, which it deposits), at most 512 definitions
+a raw file or the document made, for a one-argument definition of a table setter (`\def\keywords#1{`,
+`\newcommand{\keywords}[1]{`); each found is defined there, for the abstract's body only, as its frontmatter API
+(`\lx@add@keywords{#1}`), made as the class makes it: a `\def` replaces the document's own `\keywords` inside the
+abstract (pdflatex prints the class's there), a `\newcommand` leaves it. In an abstract kept in place as a supplement's
+(after the body began, OXIDIZED_DESIGN #154) the keywords stay in place with it, a paragraph of their text (mtt papers'
+English and Ukrainian abstracts at the end, whose keywords otherwise replaced the paper's Russian ones and were then
+dropped as a supplement's: 1310.0585, 1310.0589, 1212.3890). Outside the abstract `\keywords` stays undefined, as in
+pdflatex. (2) After a raw class loads (`reroute_keywords_environments`), a table setter it defined as an environment —
+no parameters, an `\end<name>` beside it, not a binding's — whose begin code typesets only a label
+(`label_only_begin_code`: layout that typesets nothing — font, size and paragraph declarations, `\fontsize`, `\vspace`,
+`\addvspace`, glue settings as `\rightskip5.5pc`, a class macro made of them as pasa.cls:56 `\keywordfont` — around one
+run of label material: text, a sectioning heading's argument, a `\textbf`-like command, a group of them, a class macro
+that is text such as `\keywordname`) becomes `\lx@class@keywords{<name>}`: inside `\begin{<name>}` the frontmatter's
+keywords read up to `\end{<name>}` (`\lx@begin@keywords[name={<label>}]`, `\end<name>` → `\lx@end@keywords`), as
+mn2e_support_sty.rs does; called as a command, `\keywords{…}` is `\lx@add@keywords[name={<label>}]{…}`; a bare
+`\keywords text`, whose extent only the class's layout knows, runs the class's own begin code (`\lx@class@keywords@<name>`).
+The label is the keywords' name ("Keywords:", biometrika.cls:526 "Some key words: "). A begin code doing anything else
+— a flag its title page reads (tADR2e.cls:450 `\global\keywordstrue`), a box it fills (ar-1col's `\global\setbox
+\@kwdbox\vbox\bgroup`, iau, biom), a list (fundam, basi, cpc-hepnp), a definition (lni.cls:561-565 `\def\and`), a
+conditional (emsprocart, icmart `\if@twocolumn`), an optional argument (vmsta) — stays the class's. A document's own
+`{keywords}`, defined after the class, replaces the rerouted one.
+**Why**: the keywords are the author's content and the frontmatter carries them as such (user ruling 2026-09-18 on raw
+classes' title-page stores, `feedback_frontmatter_api_for_raw_classes`); the undefined `\keywords` was the only error of
+373 papers of run 353, of which 330 now convert error-free (wiley-article 214, nbdt-article 40, astlb 26, the pazh
+family and astrobul 38, mtt/mttr 3, renamed wiley-article copies 9); paper.cls's keywords were the R9 classification
+loss of the rawclasses lever (150 of 160 paper-class losses).
+Witnesses 1706.00599, 1712.05593, 1712.05708, 1801.08881, 1809.03406, 1202.2889, astro-ph0306137, 1507.06302,
+2103.05801, 1310.0585; under the lever 0707.1307, 0712.4042, 1004.5246; shipped raw classes 1801.03506 (pasa),
+2412.19242 (biometrika). Not served (listed in SYNC_STATUS): a parameterless `\keywords` run-in heading inside an
+abstract (hsrbericht.cls:348; a document's own `\renewenvironment{abstract}{…\providecommand\keywords{\par…}}`, the
+"article" row: 1403.4689, 2405.19523), a locked `\abstract` patched twice (cup-pan.cls:134-147 `\preto` then `\appto`:
+the refused-definition record keeps the last patch; 2008.06930, 2004.14479), pazh's `\englishkeywords`. Repros sectioning-frontmatter/class_keywords/*;
+guards `perfect_kernel_batch68n`.
+
 ### 637. `\unvbox` splices a vbox's list only into a vertical box's own list, between two boundary marks
 
 tex.web §1110 puts an `\unvbox`ed box's list into whatever vertical list is current. tex_box.rs `vlist_of` does so where

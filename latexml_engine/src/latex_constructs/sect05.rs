@@ -1517,7 +1517,7 @@ pub(crate) fn load() -> Result<()> {
     "\\endabstract",
     "\\lx@end@abstract\\let\\maybe@end@abstract\\relax"
   );
-  // The first token of a brace-less `\abstract`'s body, read in the frame `\lx@add@frontmatter@until` digests it in:
+  // A token at the head of a brace-less `\abstract`'s body, read in the frame `\lx@add@frontmatter@until` digests it in:
   // marks that frame as a bare environment's, ended by `\lx@end@abstract`, so the `\endgroup` of an enclosing group
   // meeting it ends the abstract and then its own group (stomach.rs `close_environment_frame`; an Info, as TeX
   // has no mismatch): `\twocolumn[\begin{@twocolumnfalse}\maketitle\abstract … \end{@twocolumnfalse}]`

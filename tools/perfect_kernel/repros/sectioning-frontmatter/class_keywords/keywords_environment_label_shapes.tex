@@ -1,0 +1,20 @@
+% Label-only `{keywords}`/`{keyword}` begin codes of shipped raw classes (kwlabels.cls: pasa.cls's class font macro and
+% `\textbf` label, biometrika.cls's `{\itshape …}:` label) are the frontmatter's keywords, named by the label.
+% witness: 1801.03506 (pasa.cls:101-103), 2412.19242 (biometrika.cls:525-527)
+% oracle:  pdflatex (kwlabels.cls beside it) 0 errors: "Keywords: alpha, beta Some key words: gamma"
+% expect:  0 errors, 0 warnings; <keywords name="Keywords: "> "alpha, beta" and <keywords name="Some key words: ">
+%          "gamma"
+% status:  RED (67int11) -> GREEN (68n)
+% preload: ar5iv.sty
+\documentclass{kwlabels}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{keywords}
+alpha, beta
+\end{keywords}
+\begin{keyword}
+gamma
+\end{keyword}
+Body.
+\end{document}

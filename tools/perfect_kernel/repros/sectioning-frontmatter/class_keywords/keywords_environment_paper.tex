@@ -1,0 +1,23 @@
+% A raw class's `{keywords}` environment whose begin code only typesets a heading with the class's label
+% (`\def\keywords{\small\paragraph*{\keywordname:}}`) is the keywords of the frontmatter, named by the label; it was
+% a run-in `<paragraph>` titled "Keywords:". OmniBus mapped it to keywords (OmniBus.cls.ltxml:126-156).
+% witness: paper.cls:621-627 (TeX Live; 150 paper-class papers under the rawclasses lever, R9 of
+%          2026-10-15_rc_rawcls_regressions.md)
+% oracle:  pdflatex (kwpaper.cls beside it) 0 errors: "Keywords: first, second"
+% engines: rust 67int11 = <paragraph> "Keywords:" + the content
+% expect:  0 errors, 0 warnings; <keywords name="Keywords:"> "first, second"; no <paragraph>
+% status:  RED (67int11) -> GREEN (68n)
+% preload: ar5iv.sty
+\documentclass{kwpaper}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\begin{keywords}
+first, second
+\end{keywords}
+\section{Intro}
+Body.
+\end{document}

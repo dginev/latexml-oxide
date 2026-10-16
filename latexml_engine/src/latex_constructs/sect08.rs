@@ -1255,6 +1255,15 @@ pub(crate) fn load() -> Result<()> {
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
       DefMacro!(end_name_cs, None, end);
     } else {
+      // The refused begin and end code, kept as `\lx@dropped@<name>` and `\lx@dropped@end<name>` (the record
+      // `install_definition` keeps for a refused `\def`, state.rs; `\newcommand`'s above), for a locked binding to read
+      // what the class wrote: the keywords setter mtt.cls:176-181's `{abstract}` defines for its body
+      // (frontmatter_stores.rs `abstract_setter_definitions`; 1310.0585). Nothing runs them.
+      let dropped = T_CS!(s!("\\lx@dropped@{name}"));
+      let dropped_end = T_CS!(s!("\\lx@dropped@end{name}"));
+      let converted_args = convert_latex_args(nargs.value_of() as usize, opt.clone())?;
+      DefMacro!(dropped, converted_args, begin.clone(), scope => Some(Scope::Global));
+      DefMacro!(dropped_end, None, end.clone(), scope => Some(Scope::Global));
       if let Some(default) = opt {
         record_redefined_default(&T_CS!(s!("\\{name}")), default);
       }

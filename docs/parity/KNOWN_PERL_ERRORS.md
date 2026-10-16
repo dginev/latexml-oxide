@@ -14170,6 +14170,18 @@ byte-identical; newpxmath, whose round-1 binding loaded txfonts: 2103.00564, 210
 package-bindings/{newtxmath,newpxmath}_coloneq_over_mathtools; guards
 `perfect_kernel_batch68j::newtxmath_coloneq_over_mathtools`, `::newpxmath_coloneq_over_mathtools`.
 
+## 835. Under raw class loading, a `\keywords` a class defines only inside its abstract is undefined
+
+latex_constructs.pool.ltxml:1130-1142 makes `\begin{abstract}` the kernel's `\lx@begin@abstract` and locks `\abstract`,
+so a raw class's own abstract code never runs, nor anything it defines for the abstract's body. Minimal trigger (with
+`--preload=[rawclasses]latexml.sty`): a class `kw.cls` with `\LoadClass{article}\renewenvironment{abstract}
+{\def\keywords##1{\par Keywords: ##1}\quotation}{\endquotation}` and a document `\begin{abstract}Text.\keywords{a, b}
+\end{abstract}` — pdflatex "Text. Keywords: a, b", Perl `Error:undefined:\keywords` and "a, b" a paragraph of the
+abstract. Rust: the same until 68n; the refused abstract's one-argument `\keywords` is now the frontmatter's keywords
+inside the abstract (OXIDIZED_DESIGN_DIVERGENCES #634; wiley-article.cls:446-489 1706.00599, astlb.cls:199-205
+1202.2889, mtt.cls:176-181 1310.0585). Guards `perfect_kernel_batch68n::{wiley,pazh}_abstract_keywords_are_the_frontmatter_keywords`,
+`::class_abstract_environment_keywords_are_the_frontmatter_keywords`.
+
 ## 840. `\unvbox` and `\unvcopy` put the box back, not its list, so a `\lastbox` peel loop never ends
 
 tex.web §1110 `unpackage` appends a vbox's list to the current vertical list and discards the box; §1080 `\lastbox`

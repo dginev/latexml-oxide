@@ -525,6 +525,9 @@ LoadDefinitions!({
       && frontmatter_sealed(key)
     {
       Info!("frontmatter", "sealed", s!("{tag} after the document body began is a supplement's; kept in place"));
+      // (read by what the body defines for itself: a class's in-abstract `\keywords` stays in place with it,
+      // frontmatter_stores.rs `\lx@abstract@class@setters`)
+      assign_value("lx_frontmatter_kept_in_place", true, Some(Scope::Local));
       return digest_next_body(Some(end));
     }
     // extract (possibly multiple!) labels
@@ -1006,9 +1009,11 @@ LoadDefinitions!({
     "\\lx@add@frontmatter{ltx:classification}[#1]{#2}"
   );
   // To handle the above as environments
+  // (the body's first token, `\lx@abstract@class@setters`, defines there the keywords setters a raw class's refused
+  // abstract defines for its body: frontmatter_stores.rs, 68n)
   DefMacro!(
     "\\lx@begin@abstract[]",
-    "\\lx@frontmatter@mark{ltx:abstract}\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter@until{ltx:abstract}[#1]{\\lx@end@abstract}"
+    "\\lx@frontmatter@mark{ltx:abstract}\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter@until{ltx:abstract}[#1]{\\lx@end@abstract}\\lx@abstract@class@setters"
   );
 
   // Like \let \relax, but \relax not def yet!

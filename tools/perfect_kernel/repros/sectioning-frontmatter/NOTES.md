@@ -164,3 +164,22 @@ runs `\@dblarg\\author[opt]{arg}`, which sets `\firstshortauthor` for the class'
 the internal of a refused definition, so the replay's vocabulary gate dropped the call and the line was lost; restored
 in 66d r2 (sect08.rs `define_optional_internal`, OD #567). Guard
 `perfect_kernel_batch66b::refused_dblarg_setter_reaches_its_internal`.
+
+## class_keywords/* (GREEN, 68n)
+
+A raw class's keywords, in two shapes the K11 store reroute (frontmatter_stores.rs) did not serve. (1) A one-argument
+`\keywords` the class defines only for its abstract's body: wiley-article.cls:446-489 (`\NewEnviron{wiley@abstract}
+{\newcommand{\keywords}[1]{…}…}` with `\renewcommand{\abstract}{\wiley@abstract}`, kwwiley.cls), astlb.cls:91-205
+(`{pazhabstract}` in `\@maketitle`, reached from `\endabstract` → `\maketitle`, kwpazh.cls), mtt.cls:176-181 (its own
+`\renewenvironment{abstract}`, kwmtt.cls). The kernel's locked `{abstract}` refuses the class's, so `\keywords` was
+undefined (SHARED: KNOWN_PERL_ERRORS #835, latex_constructs.pool.ltxml:1130-1142). Fix: `abstract_setter_definitions`
+walks the refused `\lx@dropped@abstract`/`\lx@dropped@endabstract` and what they hand control to, and
+`\lx@abstract@class@setters` (the head of `\lx@begin@abstract`) defines the setter there as the frontmatter's keywords —
+as the class defines it (`\def` over the document's own, `\newcommand` not), in place in a supplement's abstract. A
+refused `\renewenvironment` now keeps its code (sect08.rs), which mtt's needed. (2) A `{keywords}` whose begin code only
+typesets a label (paper.cls:621-627, kwpaper.cls; pasa/biometrika, kwlabels.cls): `label_only_begin_code` +
+`\lx@class@keywords` — the environment is the frontmatter's keywords named by the label, a braced command too, a bare
+one the class's code (RUST-ONLY under the rawclasses lever and localrawclasses; OmniBus mapped any `{keywords}`).
+CONTROLs: a flag in the begin code (kwflag.cls) keeps the class's; the document's own `{keywords}` and an undefined
+`\keywords` stay. OXIDIZED_DESIGN_DIVERGENCES #634; guards `perfect_kernel_batch68n`. Dead end: one `\lx@add@keywords`
+per abstract without the in-place rule let a supplement abstract's keywords clear the paper's (1310.0585).

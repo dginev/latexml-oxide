@@ -1,0 +1,18 @@
+% A raw class's own `{abstract}` (refused by the kernel's lock) that defines `\keywords` for its body: the keywords of
+% the frontmatter.
+% witness: 1310.0585 (mtt.cls:176-181), 1212.3890 (mttr.cls)
+% oracle:  pdflatex (kwmtt.cls beside it) 0 errors: "Abstract text. Keywords: first, second"
+% engines: rust 67int11 = 1 Error (undefined:\keywords)
+% expect:  0 errors, 0 warnings; <keywords> "first, second"
+% status:  RED (67int11) -> GREEN (68n)
+% preload: ar5iv.sty
+\documentclass{kwmtt}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+Abstract text.
+\keywords{first, second}
+\end{abstract}
+Body.
+\end{document}

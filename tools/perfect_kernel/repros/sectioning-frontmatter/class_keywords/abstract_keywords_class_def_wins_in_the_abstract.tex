@@ -1,0 +1,18 @@
+% Inside the abstract the class's `\def\keywords##1` (kwmtt.cls) replaces the document's own `\keywords`, as in
+% pdflatex, so it is the keywords of the frontmatter there; outside it the document's own stays.
+% witness: none (synthetic; the definer of 1310.0585's mtt.cls:181)
+% oracle:  pdflatex (kwmtt.cls beside it) 0 errors: "Abstract text. Keywords: first Body. KW: outside"
+% expect:  0 errors, 0 warnings; <keywords> "first"; "KW: outside" in the body
+% status:  RED (67int11) -> GREEN (68n)
+% preload: ar5iv.sty
+\documentclass{kwmtt}
+\newcommand{\keywords}[1]{KW: #1}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+Abstract text.
+\keywords{first}
+\end{abstract}
+Body. \keywords{outside}
+\end{document}

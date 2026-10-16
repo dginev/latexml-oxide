@@ -715,7 +715,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   witness 2203.07162 back to 0 warnings). arydshln witnesses 2502.17812, 2306.04970; nag 1303.5654. Guards
   `perfect_kernel_batch65k::*`; repros `stub-dependencies/*`. Not stub gaps (remaining first errors): wiley-article's
   `\keywords` is defined inside the class's `wiley@abstract` body, which the locked `{abstract}` binding bypasses
-  (2009.12523, 2007.02789); lmcs's `\titlecomment` under `\documentclass{LMCS}` (upper-case name, no binding: 1103.0510);
+  (2009.12523, 2007.02789; landed in 68n, OXIDIZED_DESIGN_DIVERGENCES #634); lmcs's `\titlecomment` under `\documentclass{LMCS}` (upper-case name, no binding: 1103.0510);
   ulem's `\ULforem`; tabu's `|[width]` rule spec (1907.07986).
 - **65p** (RUST-ONLY, Perl 0 errors; OD #559, KPE #626): a `\multicolumn` over a paragraph column (`p{}`, `m{}`, `b{}`,
   tabularx `X`) lets `\\` to `\lx@newline` inside its cell box instead of rewriting the body's brace-depth-0 `\\`
@@ -1929,6 +1929,41 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Integrated with 68j as int11 (gates 5,593/5,593; bundle A/B vs 67int10 over 1,038 papers — the 68j and 68k witnesses +
   186 of pop67o: Errors 2,906 → 1,749, 562 papers fewer, none more, Fatals 8 → 8; every word drop, by bag-of-words diff,
   is error text, an error's invisible-times product in a formula, or `\wstoc`'s TOC-only arguments; nets 136/136 0 worse).
+- **68n** (class-defined keywords reach the frontmatter API; the run-353 cluster of papers whose only errors were
+  `undefined:\keywords`, 373 papers, + R9 of the rawclasses lever, absorbing 67t; OXIDIZED_DESIGN_DIVERGENCES #634,
+  KNOWN_PERL_ERRORS #835). K11 (frontmatter_stores.rs) serves the table's keywords setters in two more shapes, each by a
+  check on what the class defined: (1) a one-argument `\keywords` a raw class's refused abstract defines for its body —
+  wiley-article.cls:446-489's `\NewEnviron{wiley@abstract}` (nbdt-article.cls:430-473, and its renamed copies
+  wiley-networks, wiley-article_final, zadpreprints, 1-article, wiley), astlb.cls:199-205's `{pazhabstract}` reached
+  from `\endabstract` → `\maketitle` → `\@maketitle` (pazhastl, pazhb, pazhb_eng, pazha2, pazh_mod, pazhastlm,
+  astrobul), mtt.cls:176-181's own `\renewenvironment{abstract}` (mttr) — found by `abstract_setter_definitions` and
+  defined for the abstract's body only by `\lx@abstract@class@setters` (the head of `\lx@begin@abstract`,
+  base_utilities.rs): the frontmatter's keywords, or, in an abstract kept in place as a supplement's, a paragraph in
+  place with it; a refused `\renewenvironment` now keeps its code as `\lx@dropped@<name>`/`\lx@dropped@end<name>`
+  (sect08.rs); (2) a `{keywords}`/`{keyword}` whose begin code only typesets a label (`label_only_begin_code`:
+  paper.cls:621-627, acmconf.cls:340, pasa, biometrika, irmaems, ieice) becomes `\lx@class@keywords`: the environment
+  is the frontmatter's keywords named by the label, `\keywords{…}` the keywords of its argument, a bare `\keywords
+  text` the class's own code. Witnesses before → after (base 67int11-rel): 1706.00599, 1801.08881, 1202.2889,
+  astro-ph0306137, 1507.06302, 2103.05801 each 1 Error → 0 with `<keywords>` (pdflatex prints them in the abstract);
+  rawclasses lever, paper.cls: 9 of 10 papers (0707.1307, 0712.4042, 0808.0240, 0809.0271, 0812.2713, 0901.1497,
+  1004.5246, 1007.3042, 1008.0145) run-in `<paragraph>` → `<keywords name="Keywords: ">`, 0711.1008 has its
+  `{keywords}` commented out. A/B vs 67int11-rel over the 373 cluster papers + 100 of pop67o + 150 papers on shipped
+  raw classes defining a `{keywords}`: cluster Errors 374 → 43 (330 papers to 0, 331 gain `<keywords>`, none worse),
+  pop67o identical (1902.02884 times out in both), shipped 18 gain `<keywords>`, errors identical, the only word
+  drops the label moved into the keywords' name. Repros sectioning-frontmatter/class_keywords/* RED (67int11) → GREEN
+  (three CONTROL); guards `perfect_kernel_batch68n` (11). Not served (listed): the "article" row (36 papers: 25 with the
+  document's own `\renewenvironment{abstract}{…\providecommand\keywords{\par\medskip\noindent\textit{Keywords:}…}}`,
+  a parameterless run-in keywords inside an abstract the kernel's lock refuses — 1205.4818, 1403.4689, 2405.19523 —
+  as hsrbericht.cls:348 in TeX Live; 5 shipping an arXiv template named `natbib.sty`/`neurips_202x.sty` whose
+  `\keywords` our bindings of those names shadow — 2308.08611, 2403.02576, 2410.06567, 2411.12876; 1 defining it
+  nowhere, 2403.06358); cup-pan.cls:134-147 and its copy mytemplate (6 papers: 2008.06930, 2102.01732, 2004.14479)
+  patch the locked `\abstract` with `\preto` then `\appto`, and the refused-definition record keeps only the last
+  patch, which lacks the `\keywords`; pazh's `\englishkeywords`; 2305.04260's `\DeclareObjectType` error (another
+  cluster). Label-only shapes not taken (each stays the class's): a flag (tADR2e/rQUF2e/gGAF2e/tCPH2e
+  `\global\keywordstrue`), a box (ar-1col, iau, ar2e, biom, IOS-Book-Article, iosart2x, ifacconf, autart `\keyword`),
+  a list (fundam, basi, ragtime, cpc-hepnp, fac), a definition (lni, cidarticle `\def\and`; elsarticle-like `\sep`), a
+  conditional (emsprocart, icmart, mnras-like `\if@twocolumn`), an optional argument (vmsta), centering environments
+  (sf2a-conf), jmlr.cls:235 `\bgroup\leftskip 20pt…{\bfseries Keywords:}` would match but jmlr has a binding.
 - **68g** (llncs theorem numbering, the 68a residual KNOWN_PERL_ERRORS #743): llncs_cls.rs installs the class's
   theorem set with llncs.cls's own code (:1142-1174, TL 2025 v2.26; the same in every shipped copy v2.2-v2.26, checked
   over 18 versions from 1,250 arXiv llncs papers): `{theorem}` by section only under `envcountsect` (reset by section
@@ -2098,7 +2133,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\ext@arrow`, which the binding renders as →; 2211.16474, 2309.00837), one-copy names (`{Corollary}`… 2002.01818,
   `\cd`/`\ci` 2408.07575, `\E` 2407.00139, `\maketitlesup` 2510.16163: not in the class as shipped elsewhere), and
   wiley-article.cls (#212: Overleaf's own Wiley template, raw, no binding; its `\keywords` is defined inside the
-  class's abstract body, which the kernel's locked `{abstract}` bypasses: 2009.12523, 2007.02789). Repros
+  class's abstract body, which the kernel's locked `{abstract}` bypasses: 2009.12523, 2007.02789; landed in 68n without
+  a binding, the K11 rule serving every class of the shape). Repros
   class-bindings/{wileynjd_v2_class_commands, wileynjdv5_box_environments, wileyasna_funding_in_text,
   wileymsp_dedication_threesubsection, wileynjd_v1_loads_amsrefs} RED (67int3) → GREEN, {wileynjd_theorem_styles,
   wileynjdv5_theorem_styles, wileynjd_uns_keeps_en_dashes, wileynjd_v1_reference_styles, wileynjd_v1_apa_is_amsrefs}
