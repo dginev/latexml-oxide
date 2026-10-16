@@ -1926,6 +1926,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (template shortcuts in 3-7 copies), `\fundingl` (2111.11645), siamonline `\disclaimer`, `{subjects}`,
   `\supplementary`, `\correspondings`, `{setup}`; ws-procs9x6adap's `\citelow` copy. Excluded by the brief: svmult/
   svjour3 `\spn@wtheorem` (68g's `\spnewtheorem`).
+  Integrated with 68j as int11 (gates 5,593/5,593; bundle A/B vs 67int10 over 1,038 papers — the 68j and 68k witnesses +
+  186 of pop67o: Errors 2,906 → 1,749, 562 papers fewer, none more, Fatals 8 → 8; every word drop, by bag-of-words diff,
+  is error text, an error's invisible-times product in a formula, or `\wstoc`'s TOC-only arguments; nets 136/136 0 worse).
 - **68g** (llncs theorem numbering, the 68a residual KNOWN_PERL_ERRORS #743): llncs_cls.rs installs the class's
   theorem set with llncs.cls's own code (:1142-1174, TL 2025 v2.26; the same in every shipped copy v2.2-v2.26, checked
   over 18 versions from 1,250 arXiv llncs papers): `{theorem}` by section only under `envcountsect` (reset by section
