@@ -631,6 +631,21 @@ impl BoxOps for Alignment {
     if let Some(d) = self.cached_depth {
       attrs.insert("cdepth".to_string(), format!("{}", d.px_value(None)));
     }
+    // Perl Alignment.pm L321-323: rowheights / rowdepths / columnwidths, as comma-separated px
+    // values (openTikzAlignment reads the last row depth).
+    for (key, dims) in [
+      ("rowheights", &self.row_heights),
+      ("rowdepths", &self.row_depths),
+      ("columnwidths", &self.column_widths),
+    ] {
+      if !dims.is_empty() {
+        let px: Vec<String> = dims
+          .iter()
+          .map(|d| format!("{}", d.px_value(None)))
+          .collect();
+        attrs.insert(key.to_string(), px.join(","));
+      }
+    }
     let open_container_fn = &self.open_container;
     // token-locators: stamp the `tabular` with the table span before it opens.
     #[cfg(feature = "token-locators")]
