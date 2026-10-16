@@ -160,7 +160,7 @@ tar = { version = "0.4", default-features = false }
 # Only deflate is actually used (CompressionMethod::Deflated). Disabling the
 # default features drops aes, bzip2, zstd, lzma-rust2, ppmd-rust, pbkdf2,
 # sha1, sha2, hmac, cipher, password-hash — a big CI compile-time win.
-zip = { version = "8", default-features = false, features = ["deflate-flate2", "time"] }
+zip = { version = "9", default-features = false, features = ["deflate-flate2", "time"] }
 # DEP-06 (2026-05-22): bumped to indexmap 2.14.0 (#234). Earlier we pinned
 # 2.13.1 to keep hashbrown unified at 0.16.x across the workspace, since
 # 2.14.0 had moved to hashbrown 0.17 and duplicated against string-

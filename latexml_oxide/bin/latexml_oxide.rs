@@ -2024,7 +2024,7 @@ fn unpack_archive_files(
     let mut archive = zip::ZipArchive::new(file)?;
     for i in 0..archive.len() {
       let mut entry = archive.by_index(i)?;
-      let outpath = dest.join(entry.mangled_name());
+      let outpath = dest.join(entry.mangled_name()?);
       if entry.is_dir() {
         std::fs::create_dir_all(&outpath)?;
       } else {
