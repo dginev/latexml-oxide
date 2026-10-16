@@ -2678,7 +2678,7 @@ LoadDefinitions!({
   // `perfect_kernel_batch56::counter_name_command_is_not_a_name_noun`.
   DefConditional!("\\iflx@namenoun Token", sub[(t)] {
     match lookup_definition(&t) {
-      Ok(Some(def)) => is_name_noun(&def, &mut vec![t.clone()]),
+      Ok(Some(def)) => is_name_noun(&def, &mut vec![t]),
       _ => false,
     }
   });
@@ -14092,7 +14092,7 @@ pub fn escapechar() -> String {
 /// `\afname`).
 pub fn is_name_noun_cs(cs: &str) -> bool {
   let name = T_CS!(cs);
-  matches!(lookup_definition(&name), Ok(Some(def)) if is_name_noun(&def, &mut vec![name.clone()]))
+  matches!(lookup_definition(&name), Ok(Some(def)) if is_name_noun(&def, &mut vec![name]))
 }
 
 /// Is this definition a NAME NOUN (`\figurename`): an expandable macro whose arguments are
@@ -14136,7 +14136,7 @@ fn is_name_noun(def: &Rc<dyn Definition>, visited: &mut Vec<Token>) -> bool {
     if visited.len() >= MAX_HOPS || visited.contains(next) {
       return false;
     }
-    visited.push(next.clone());
+    visited.push(*next);
     matches!(lookup_definition(next), Ok(Some(next_def)) if is_name_noun(&next_def, visited))
   };
   if head == "\\protect" && toks.len() == 2 {
