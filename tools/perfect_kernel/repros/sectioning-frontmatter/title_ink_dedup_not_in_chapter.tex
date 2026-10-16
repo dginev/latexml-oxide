@@ -1,0 +1,21 @@
+% An unprinted `\title` (no `\maketitle`) in a report whose first `\chapter` opens with centered copies of it:
+% the chapter's text is not the document's title block, so nothing is dropped (the frontmatter is placed at
+% the `\chapter`, before any copy exists). Rust (base 67int12) dropped the chapter's first copy at the next
+% `\section` (68p review probe chap.tex). Dedup witness: arXiv/html_feedback#6924, 2608.10928.
+% status:  GREEN (68s): only the document-level title block, judged at the first flush, is examined.
+% oracle:  pdflatex 0 errors: "Chapter 1 Introduction", "A Study of Things", "Some Author", "Text before the
+%          section.", "1.1 First", "A Study of Things", "Body.", "1.2 Second", "More."
+% expect:  0 errors, 0 warnings; both chapter copies kept.
+\documentclass{report}
+\title{A Study of Things}
+\begin{document}
+\chapter{Introduction}
+\begin{center}{\LARGE A Study of Things}\end{center}
+\begin{center}{\large Some Author}\end{center}
+Text before the section.
+\section{First}
+\begin{center}{\LARGE A Study of Things}\end{center}
+Body.
+\section{Second}
+More.
+\end{document}

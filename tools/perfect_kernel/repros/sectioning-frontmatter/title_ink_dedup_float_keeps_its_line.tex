@@ -1,0 +1,23 @@
+% A `\title` the document never prints (no `\maketitle`) and hand-typeset copies of it: one copy in the
+% document-level title block is dropped as redundant ink (arXiv/html_feedback#6924, OXIDIZED_DESIGN #146,
+% witness 2608.10928), but a figure's centered line with the same text is the author's float content.
+% Rust (base 67int12) removed one copy per sectioning command, the figure's first: the figure kept only its
+% caption, the minipage was left empty and the centered copy went too (68p review finding 8; three
+% `title_ink_dedup` Info lines).
+% status:  GREEN (68s): the dedup looks once, in the document-level title block (para, logical-block, block,
+%          titlepage, a minipage in a paragraph — never a float); the first copy there, the minipage's, is
+%          dropped with the minipage it alone filled; the centered copy and the figure's line stay.
+% oracle:  pdflatex 0 errors: "Floating Title Here" three times (the figure, the minipage, the centered block),
+%          "Figure 1: c", "1 One x", "2 Two y"; no title from \title.
+% expect:  0 errors, 0 warnings; the title, the figure's line and the centered line (three copies in all).
+\documentclass{article}
+\title{Floating Title Here}
+\begin{document}
+\begin{figure}\centering{\LARGE Floating Title Here}\caption{c}\end{figure}
+\noindent\begin{minipage}{\textwidth}\begin{center}{\Huge Floating Title Here}\end{center}\end{minipage}
+\begin{center}{\LARGE Floating Title Here}\end{center}
+\section{One}
+x
+\section{Two}
+y
+\end{document}

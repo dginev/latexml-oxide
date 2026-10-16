@@ -5350,6 +5350,27 @@ fn is_frontmatter_group_element(node: &Node) -> bool {
       || document::can_contain_qsym(pin_static("ltx:bibliography"), q))
 }
 
+/// A sectional unit's element (`ltx:section` … `ltx:glossary`): what ends the document-level
+/// title block for `maybe_promote_leading_title` and `maybe_dedup_leading_title_ink`.
+fn is_sectional_qname(q: SymStr) -> bool {
+  with(q, |q| {
+    matches!(
+      q,
+      "ltx:section"
+        | "ltx:subsection"
+        | "ltx:subsubsection"
+        | "ltx:paragraph"
+        | "ltx:subparagraph"
+        | "ltx:chapter"
+        | "ltx:part"
+        | "ltx:appendix"
+        | "ltx:bibliography"
+        | "ltx:index"
+        | "ltx:glossary"
+    )
+  })
+}
+
 /// Beyond-Perl heuristic: recover a document title from a hand-formatted leading
 /// block when the author never used `\title`/`\maketitle`.
 ///
@@ -5388,23 +5409,7 @@ fn maybe_promote_leading_title(document: &mut Document) -> Result<Option<Node>> 
   // title. A hand-formatted title block is a plain para/quote at document
   // level — reject sectional anchors outright (PR_READINESS must-fix 3).
   let anchor_q = document::get_node_qname(&first_body);
-  let is_sectional = with(anchor_q, |q| {
-    matches!(
-      q,
-      "ltx:section"
-        | "ltx:subsection"
-        | "ltx:subsubsection"
-        | "ltx:paragraph"
-        | "ltx:subparagraph"
-        | "ltx:chapter"
-        | "ltx:part"
-        | "ltx:appendix"
-        | "ltx:bibliography"
-        | "ltx:index"
-        | "ltx:glossary"
-    )
-  });
-  if is_sectional {
+  if is_sectional_qname(anchor_q) {
     return Ok(None);
   }
   // First centered <ltx:p> in document order within the block; it must be set in
@@ -5525,8 +5530,10 @@ fn normalize_frontmatter_text(s: &str) -> String {
 /// `<ltx:title>` and any author/abstract ink (which has no structured counterpart,
 /// so is the only copy). Fires only on a FULL normalized-text match against the
 /// structured title, and only for a leading, non-sectional, display-font centered
-/// paragraph — so an unrelated centered display block is never removed. Reuses the
-/// same detection helpers as the promote path.
+/// paragraph of the document-level title block (not inside a float or any other
+/// container) — so an unrelated centered display block is never removed — and at
+/// most once per document, at the first flush that sees the structured title (68s;
+/// guard `perfect_kernel_batch68s`). Reuses the same detection helpers as the promote path.
 fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
   // Needs a structured document title to prioritize over.
   let Some(title) = document.findnode("/ltx:document/ltx:title", None) else {
@@ -5536,13 +5543,21 @@ fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
   if title_text.is_empty() {
     return Ok(());
   }
+  // Once per document: the hand-typeset title block is judged at the first flush that sees the
+  // structured title — the fallback runs at EVERY sectioning command (`\@startsection@hook`) and
+  // at `\end{document}`, and a second look removed a second copy each time (one per section), down
+  // into the body. A copy still there after that first look is the author's ink, not the title.
+  if lookup_bool("lx_title_ink_dedup_done") {
+    return Ok(());
+  }
+  assign_value("lx_title_ink_dedup_done", true, Some(Scope::Global));
   let nominal = {
     let v = lookup_float("NOMINAL_FONT_SIZE").map_or(0.0, |f| f.0);
     if v > 0.0 { v } else { 10.0 }
   };
-  // Leading centered paragraphs — anywhere in the pre-first-section frontmatter
-  // region, NOT inside a section (a hand-formatted title block sits at document
-  // level, often after a `\vspace`/`\rule` so it isn't the first body element).
+  // Leading centered paragraphs of the document-level title block (before the first sectional
+  // unit, reached only through title-block wrappers — a para, a titlepage, a cover minipage;
+  // never inside a figure or any other container, whose content is the author's).
   // The nodes come from a walk of the live DOM from the absolutely queried root, so
   // they support child traversal (shared-node caveat in `maybe_promote_leading_title`).
   let Some(root) = document.findnode("/ltx:document", None) else {
@@ -5566,65 +5581,94 @@ fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
       "dropped a hand-typeset title block duplicating the structured <ltx:title> (\"{title_text}\")"
     )
   );
-  // Remove the redundant title ink, pruning any wrapper it leaves empty
-  // (para → logical-block) — mirroring the promote path's cleanup. Sibling `<p>`s
-  // (e.g. the author block) keep their wrapper non-empty and survive.
+  // Remove the redundant title ink, pruning any title-block wrapper it leaves empty (para →
+  // logical-block, a minipage that held only the title and the paragraph around it, a
+  // titlepage) — mirroring the promote path's cleanup. Sibling `<p>`s (e.g. the author block)
+  // keep their wrapper non-empty and survive.
   let mut victim = victim;
   loop {
     let parent = victim.get_parent();
     document.remove_node(victim);
     match parent {
-      Some(p) if !has_element_child(&p) => {
-        let is_wrapper = with(document::get_node_qname(&p), |name| {
-          name == "ltx:para" || name == "ltx:logical-block"
-        });
-        if is_wrapper {
-          victim = p;
-          continue;
-        }
+      Some(p)
+        if is_title_block_wrapper(document::get_node_qname(&p))
+          && !has_element_child(&p)
+          && p.get_content().trim().is_empty() =>
+      {
+        victim = p;
       },
-      _ => {},
+      _ => break,
     }
-    break;
   }
   Ok(())
 }
 
-/// The `<ltx:p align="center">` descendants of `root` that precede its first `<ltx:section>`
-/// in document order — the node set of
-/// `/ltx:document//ltx:p[@align='center'][not(preceding::ltx:section) and not(ancestor::ltx:section)]`
-/// (a section before a paragraph in document order is its ancestor or precedes it), in
-/// document order. One preorder walk that stops at the first section: the XPath scanned
-/// `preceding::` for every centered paragraph of the document, and runs at every sectioning
-/// command (`\@startsection@hook`), so a long manual spent nearly all of its build there
-/// (2208.14314: 121 of 133 s; 2108.10297: 113 of 146 s; PERFORMANCE.md Principle 6).
+/// The containers a hand-typeset title block is set in at document level: paragraph wrappers
+/// (`ltx:para`, `ltx:logical-block`), a display block (`ltx:block`, a `{center}` holding a logo),
+/// a `{titlepage}` (`ltx:titlepage`), a cover minipage (`ltx:inline-block`, inside the `ltx:p` of
+/// its paragraph). Not a float, a list, a theorem, a table or a sectional unit: what is set
+/// there is the author's content even when it repeats the title.
+fn is_title_block_wrapper(q: SymStr) -> bool {
+  with(q, |q| {
+    matches!(
+      q,
+      "ltx:para"
+        | "ltx:logical-block"
+        | "ltx:block"
+        | "ltx:titlepage"
+        | "ltx:inline-block"
+        | "ltx:p"
+    )
+  })
+}
+
+/// The `<ltx:p align="center">` paragraphs of `node` reached only through title-block wrappers
+/// ([`is_title_block_wrapper`]), in document order; a centered paragraph is taken whole (a
+/// minipage inside it is part of its text).
+fn collect_title_block_paragraphs(node: &Node, out: &mut Vec<Node>) {
+  let q = document::get_node_qname(node);
+  if q == pin_static("ltx:p") && node.get_attribute("align").as_deref() == Some("center") {
+    out.push(node.clone());
+    return;
+  }
+  if !is_title_block_wrapper(q) {
+    return;
+  }
+  for c in node.get_child_nodes() {
+    if c.get_type() == Some(NodeType::ElementNode) {
+      collect_title_block_paragraphs(&c, out);
+    }
+  }
+}
+
+/// The `<ltx:p align="center">` paragraphs of the document-level title block: those reached from
+/// `root`'s children only through title-block wrappers ([`collect_title_block_paragraphs`]) and
+/// before its first sectional child (a back-matter list is passed over), in document order. A paragraph inside a float, a list, a
+/// theorem or any other container, or inside a chapter or part, is not the leading title block:
+/// the walk once took every centered paragraph before the first `<ltx:section>`, so a figure's
+/// centered line and a chapter's opening block were removed as the title (68p review probe
+/// `float.tex`; 2608.10928 the witness of the rule; titlepage covers 1304.0681, 2606.13892, a
+/// cover minipage 2010.07703). Only the document's children are visited and the walk stops at the
+/// first sectional unit, so it stays linear in the leading block (it runs once per document; the
+/// old XPath scanned `preceding::` for every centered paragraph at every sectioning command —
+/// 2208.14314: 121 of 133 s; 2108.10297: 113 of 146 s; PERFORMANCE.md Principle 6).
 fn leading_centered_paragraphs(root: &Node) -> Vec<Node> {
   let mut out = Vec::new();
   let mut cur = root.get_first_child();
   while let Some(node) = cur {
-    let mut descend = None;
     if node.get_type() == Some(NodeType::ElementNode) {
       let q = document::get_node_qname(&node);
-      if q == pin!("ltx:section") {
+      // A bibliography, index or glossary list placed ahead of the cover does not end the title
+      // block (2010.07703 prints its references first in the XML, its cover minipage after them).
+      let back_matter = with(q, |q| {
+        matches!(q, "ltx:bibliography" | "ltx:index" | "ltx:glossary")
+      });
+      if is_sectional_qname(q) && !back_matter {
         break;
       }
-      if q == pin!("ltx:p") && node.get_attribute("align").as_deref() == Some("center") {
-        out.push(node.clone());
-      }
-      descend = node.get_first_child();
+      collect_title_block_paragraphs(&node, &mut out);
     }
-    cur = descend.or_else(|| {
-      let mut up = node;
-      loop {
-        if let Some(next) = up.get_next_sibling() {
-          return Some(next);
-        }
-        match up.get_parent() {
-          Some(parent) if parent != *root => up = parent,
-          _ => return None,
-        }
-      }
-    });
+    cur = node.get_next_sibling();
   }
   out
 }

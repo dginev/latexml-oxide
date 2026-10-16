@@ -2250,6 +2250,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   amsppt.sty:1006-1010 empties the editors' box once set as authors; amstex: "J. Editor, ed., Book Four, Pub Four,
   1999."). Gates 5,630/5,630; bundle A/B vs 67int13 over 618 papers (the 400 cluster witnesses, 100 class-less Error
   papers, 150 of pop67o): Errors 2,393 → 1,622, 385 papers fewer, none more, words +267 k; nets 136/136 0 worse.
+- **68s** (the title-ink dedup deletes visible content; 68p review finding 8): `maybe_dedup_leading_title_ink`
+  (base_utilities.rs, OXIDIZED_DESIGN_DIVERGENCES #146, arXiv/html_feedback#6924, witness 2608.10928) ran at every
+  `\lx@frontmatter@fallback`, i.e. at every sectioning command and at `\end{document}`, and each run removed one more
+  centered display-font copy of the unprinted `\title` from anywhere before the first `<ltx:section>`: a figure's
+  line, a chapter's opening block, a second printed cover (1911.09648's `Capa1`/`Capa2`). It now looks once per
+  document (`lx_title_ink_dedup_done`, at the first flush that sees the structured title), and only in the
+  document-level title block — paragraphs reached through para, logical-block, block, titlepage and cover-minipage
+  wrappers (`is_title_block_wrapper`) before the first sectional unit, a back-matter list passed over (2010.07703) —
+  pruning a wrapper it empties. A/B over 66 papers with the dedup's Info line in the A/B logs + 200 random pop67o
+  (67int12-rel → 68s): 263 of 264 byte-identical, 1911.09648 +6 words (its second cover's title line, printed by
+  pdflatex), 2 NOMAIN; 2608.10928 and the titlepage/minipage covers (1304.0681, 1503.03277, 2606.13892, 2010.07703)
+  unchanged. Repros sectioning-frontmatter/{title_ink_dedup_float_keeps_its_line, title_ink_dedup_once_per_document,
+  title_ink_dedup_not_in_chapter} RED (67int12) → GREEN, title_ink_dedup_in_titlepage GREEN in both; guards
+  `perfect_kernel_batch68s`, `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

@@ -5866,7 +5866,17 @@ path), once the structured `<ltx:title>` is in the tree, `maybe_dedup_leading_ti
 normalized text **exactly** reproduces the structured title. Structure wins over ink: the semantic
 `<ltx:title>` is kept; the redundant hand-typeset copy is dropped (empty wrappers pruned). It is the
 mirror of `maybe_promote_leading_title` (which, when *no* structured title exists, promotes such a
-block *into* the title) and reuses the same detection helpers.
+block *into* the title) and reuses the same detection helpers. The block is the document-level one: a
+centered paragraph reached from `ltx:document`'s children only through title-block wrappers (`ltx:para`,
+`ltx:logical-block`, `ltx:block`, `ltx:titlepage`, a cover minipage's `ltx:inline-block` in its `ltx:p`;
+`is_title_block_wrapper`) before the first sectional unit (a bibliography/index/glossary list ahead of the
+cover is passed over: 2010.07703) — never one inside a float, a list, a theorem, a chapter or a part — and it
+is judged **once per document**, at the first flush that sees the structured title
+(`lx_title_ink_dedup_done`); a wrapper the removal empties is pruned with it. The fallback runs at every
+sectioning command and at `\end{document}`; before 68s each run removed one more copy, down into figures
+and the first chapter, and a second printed cover (1911.09648's `Capa1`/`Capa2`) lost its title line (68p
+review finding 8). Covers it serves: `{titlepage}` (1304.0681, 1503.03277, 1601.07172, 2606.13892), a
+minipage (2010.07703).
 
 **Why it's safe / precise.** Fires only for `\title`-without-`\maketitle` papers (the `\maketitle`
 path disables the fallback), and only on a full normalized-text match against the structured title
@@ -5879,7 +5889,10 @@ visible there.
 **Witnesses**: arXiv/html_feedback#6924 (witness arXiv 2608.10928).
 
 **Guards**: `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924` (structured `<title>`
-kept, title text appears exactly once, hand-typeset author block preserved).
+kept, title text appears exactly once, hand-typeset author block preserved);
+`perfect_kernel_batch68s::{title_ink_dedup_float_keeps_its_line, title_ink_dedup_in_titlepage,
+title_ink_dedup_once_per_document, title_ink_dedup_not_in_chapter}` (repros
+sectioning-frontmatter/title_ink_dedup_*).
 
 ### 147. A leftover control sequence in a hyperref URL stays literal, not digested
 

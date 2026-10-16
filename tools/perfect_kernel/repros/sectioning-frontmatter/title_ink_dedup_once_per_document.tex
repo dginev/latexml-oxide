@@ -1,0 +1,18 @@
+% Two hand-typeset copies of an unprinted `\title` (no `\maketitle`) ahead of a `\subsection`, a `\paragraph`
+% and a `\section`: the first copy is the redundant title ink (arXiv/html_feedback#6924, witness 2608.10928);
+% the second is printed in the PDF too and stays. Rust (base 67int12) ran the dedup at every sectioning
+% command and removed both (68p review probe nosec.tex).
+% status:  GREEN (68s): at most one copy is dropped per document.
+% oracle:  pdflatex 0 errors: "plain line", "No Section Title" twice, "0.1 Sub only q", "P r", "1 Late".
+% expect:  0 errors, 0 warnings; one "No Section Title" line kept in the body.
+\documentclass{article}
+\title{No Section Title}
+\begin{document}
+\begin{center}{\large plain line}\end{center}
+\begin{center}{\LARGE No Section Title}\end{center}
+\begin{center}{\LARGE No Section Title}\end{center}
+\subsection{Sub only}
+q
+\paragraph{P} r
+\section{Late}
+\end{document}
