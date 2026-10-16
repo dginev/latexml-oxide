@@ -16,6 +16,7 @@ pub extern crate latexml_engine as engine;
 // plus package-specific symbols.
 #[macro_use]
 pub mod prelude;
+pub mod float_description;
 pub mod shipped_class;
 // XMath helper functions for building XMDual token streams
 pub mod xmath_helpers;

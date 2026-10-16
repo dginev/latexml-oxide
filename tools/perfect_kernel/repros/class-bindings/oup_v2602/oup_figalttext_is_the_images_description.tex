@@ -1,0 +1,33 @@
+% witness: 2608.22901 (`\figalttext[short]{long}`, the long one with maths), 2608.14294 (`\figalttext{long}`),
+%          2609.06413; 2602.07066's oup-authoring-template.cls:1935 `\newcommand\figalttext[2][]{\relax}`
+% oracle:  pdflatex with 2602.07066's copy (clean): the alt texts print nothing; HTML keeps them as the image's
+%          description, as acmart's `\Description` (OXIDIZED_DESIGN_DIVERGENCES #604)
+% engines: rust 67z = 0 errors, both alt texts dropped
+% expect:  0 errors, 0 warnings; the short text the image's description and the long one its hidden note; the plain
+%          long text the second image's description
+% status:  RED (67z) -> GREEN (67z r2)
+% files:   oup-authoring-template.cls (the copy's line the binding reads) and none.png here
+% preload: ar5iv.sty
+\documentclass[webpdf,modern,mediumone]{oup-authoring-template}
+\usepackage{graphicx}
+\begin{document}
+\journaltitle{Journal}
+\copyrightyear{2026}
+\pubyear{2026}
+\title[Short]{A Title}
+\author[1]{Ann Author}
+\address[1]{Some University}
+\abstract{The abstract.}
+\maketitle
+\begin{figure}
+\includegraphics{none}
+\caption{A caption.}\label{fig:one}
+\figalttext[A short alt text.]{A long description with $n_1 \times p$ in it.}
+\end{figure}
+\begin{figure}
+\includegraphics{none}
+\caption{Another caption.}
+\figalttext{A plain long alt text.}
+\end{figure}
+See Figure~\ref{fig:one}.
+\end{document}

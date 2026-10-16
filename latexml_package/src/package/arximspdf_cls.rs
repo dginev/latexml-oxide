@@ -15,7 +15,10 @@
 //! `ltx:bib-*` vocabulary is schema-valid only inside `ltx:bibentry` (the BibTeX
 //! path), NOT inside `bibblock` — so the `\b*` field macros are PASSTHROUGH text
 //! (readable + schema-valid), not mapped to `ltx:bib-*`.
-use crate::prelude::*;
+use crate::{
+  prelude::*,
+  shipped_class::{class_code_contains, shipped_class_text},
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -69,8 +72,8 @@ LoadDefinitions!({
   // ---- misc list / sectioning / theorems the class adds --------------------
   DefEnvironment!("{longlist}[]", "<ltx:enumerate>#body</ltx:enumerate>",
     mode => "internal_vertical");
-  DefMacro!("\\newproclaim", "\\newtheorem");
-  // arximspdf predefines a Theorem env (L1405); its proof envs are in ims_support.
+  // arximspdf predefines a Theorem env (L1405), with its starred twin as every `\newtheorem` (vtexthm's, in
+  // ims_support with `\newproclaim`; `{hy*}` 1107.3284); its proof envs are in ims_support.
   RawTeX!(r"\newtheorem{thm}{Theorem}");
   // ---- frontmatter (standard LaTeXML frontmatter API; metadata preserved) --
   // Standardize the IMS scaffolding onto the article frontmatter flow: the
@@ -83,11 +86,24 @@ LoadDefinitions!({
   Let!("\\frontmatter", "\\@empty");
   Let!("\\endfrontmatter", "\\@empty");
   DefEnvironment!("{aug}", "#body");
-  // {keyword} collects MANY \kwd into one keywords list: \lx@add@keywords alone
-  // CLEARS on each call (keeps only the last), so use the collecting
-  // \lx@begin@keywords/\lx@end@keywords form and let each \kwd emit its text.
-  DefMacro!("\\keyword[]", "\\lx@begin@keywords");
-  DefMacro!("\\endkeyword", "\\lx@end@keywords");
+  // `{keyword}[class=…]` and `\kwd` are the VTeX classes' shared markup (ims_support_sty.rs): arximspdf's entries
+  // are joined by ", " (arximspdf.cls:2438 of 1107.3284's copy), under its headings "Key words and phrases." and "AMS
+  // 2000 subject classifications." (:2408-2409; arxstspdf.cls:2356-2357 of 0903.0664's copy end them with ":"). The
+  // collecting `\lx@begin@keywords` started afresh at each block, so a paper's AMS block was lost to the keywords that
+  // follow it (1107.3284, 1309.4864).
+  let shipped = match shipped_class_text("arximspdf")? {
+    Some(text) => Some(text),
+    None => shipped_class_text("arxstspdf")?,
+  };
+  let colon = shipped
+    .as_deref()
+    .is_some_and(|text| class_code_contains(text, "{KWD}{Key words and phrases:}"));
+  RawTeX!(r"\def\sep{\unskip, }");
+  if colon {
+    RawTeX!(r"\setattribute{keyword}{KWD}{Key words and phrases:}\setattribute{keyword}{AMS}{AMS 2000 subject classifications:}");
+  } else {
+    RawTeX!(r"\setattribute{keyword}{KWD}{Key words and phrases.}\setattribute{keyword}{AMS}{AMS 2000 subject classifications.}");
+  }
   // Author-name parts used inside \author{...}: pass their content through.
   for m in ["fnms","snm","inits","degs","roles","suffix"] {
     def_macro_identity(&format!("\\{m}{{}}"))?;
@@ -98,7 +114,6 @@ LoadDefinitions!({
   DefMacro!("\\address[]{}", "\\lx@add@contact[role=address]{#2}");
   DefMacro!("\\email{}", "\\lx@add@contact[role=email,name={e-mail: }]{#1}");
   DefMacro!("\\ead[]{}", "\\lx@add@contact[role=email,name={e-mail: }]{#2}");
-  DefMacro!("\\kwd[]{}", "#2, ");   // emit into the collecting {keyword} block
   DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
   DefMacro!("\\issue{}", "\\lx@add@pubnote[role=number]{#1}");

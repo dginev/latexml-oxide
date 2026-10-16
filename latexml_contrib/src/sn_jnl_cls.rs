@@ -1,7 +1,7 @@
 //! Stub for sn-jnl.cls (Springer Nature journal class).
 use latexml_package::prelude::*;
 
-use crate::shipped_class::{class_code_contains, shipped_class_text};
+use crate::shipped_class::{class_code_argument, class_code_contains, shipped_class_text};
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
@@ -277,13 +277,63 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:acknowledgements}[name=Acknowledgments]{#1}"
   );
   // 2603.28334's copy :575-600 (2307.08214's :591-595, 2501.01157's :579-593): the further author notes beside
-  // `\equalcont`, each marking the authors before it and printed as a footnote of the title page — `\intern` (3 papers),
-  // `\equalsup` (3), `\equaladv` (2), `\equalcontribution` (2206.10381) — the switches they set (`\equalconttrue`, 2
-  // papers) and `\presentaddresstxt{label}`, the heading of `\presentaddress` (2 papers).
-  DefMacro!(
-    "\\intern{}",
-    "\\@add@frontmatter{ltx:note}[role=intern]{#1}"
-  );
+  // `\equalcont`, each marking the authors before it and printed under the title page's addresses —
+  // `\intern` (3 papers; printed by 2606.24824's copy :770 `\ifintern{\par$^{\ddagger}$\@interntext\par}\fi`, where
+  // 2307.08214's comments the print out, :764, as it does `\equalcont`'s, :765), `\equalsup` (3), `\equaladv` (2),
+  // `\equalcontribution` (2206.10381) — the switches they set (`\equalconttrue`, 2 papers) and
+  // `\presentaddresstxt{label}`, the heading of `\presentaddress` (2 papers). The author's text is kept as a note
+  // either way. A copy may take the text as an optional argument whose default is the class's text, which the
+  // paper sets with `\interntxt`/`\equalcontxt` (2606.24824's :598-601 `\newcommand{\intern}[1][\@interntxt]`, its
+  // default "Work done as an intern at Westlake University.", the paper's `\intern{}`; 2504.21788's :615-617
+  // `\equalcont`, "These authors contributed equally to this work.", the paper's bare `\equalcont`): there the
+  // command reads the copy's form, with the copy's default.
+  let optional_form = |command: &str, store: &str| {
+    class_text
+      .as_deref()
+      .filter(|text| class_code_contains(text, &s!("\\newcommand{{\\{command}}}[1][\\{store}]")))
+  };
+  for (command, setter, store, role) in [
+    (
+      "equalcont",
+      "equalcontxt",
+      "@equalconttxt",
+      "equal-contributors",
+    ),
+    ("intern", "interntxt", "@interntxt", "intern"),
+  ] {
+    if let Some(text) = optional_form(command, store) {
+      let default = class_code_argument(text, &s!("\\{setter}")).unwrap_or_default();
+      raw_tex(
+        &[
+          r"\def\",
+          setter,
+          r"#1{\gdef\",
+          store,
+          r"{#1}}\",
+          setter,
+          "{",
+          &default,
+          "}",
+          r"\def\",
+          command,
+          r"{\@ifnextchar[{\lx@sn@note{",
+          role,
+          r"}}{\lx@sn@note{",
+          role,
+          r"}[\",
+          store,
+          "]}}",
+        ]
+        .concat(),
+      )?;
+    } else if command == "intern" {
+      DefMacro!(
+        "\\intern{}",
+        "\\@add@frontmatter{ltx:note}[role=intern]{#1}"
+      );
+    }
+  }
+  RawTeX!(r"\def\lx@sn@note#1[#2]{\@add@frontmatter{ltx:note}[role=#1]{#2}}");
   DefMacro!(
     "\\equalsup{}",
     "\\@add@frontmatter{ltx:note}[role=equal-supervision]{#1}"
@@ -315,8 +365,9 @@ LoadDefinitions!({
   // :1529-1547 `{biography}{photo}{text}`: the author's photo beside the opening text, then the body; `\author{name}`
   // inside sets the name bold (5 papers: 2310.14485). The photo is set inline before the text, not wrapped. The
   // kernel's `\author` is locked against a file's redefinition, so the binding makes it the bold name (unlocked, as
-  // before-digest code runs), in the environment's group.
-  DefConstructor!("\\lx@sn@biography@author", "",
+  // before-digest code runs, Primitive.pm:44), in the environment's group; a primitive, which adds nothing to the
+  // document.
+  DefPrimitive!("\\lx@sn@biography@author", None,
   before_digest => {
     DefMacro!("\\author{}", "{\\bfseries #1}");
   });

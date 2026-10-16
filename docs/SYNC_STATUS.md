@@ -1628,20 +1628,25 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   rules themselves (2006.16202 :1292-1309), `\sidewaystablefn` a no-op (:1361; 1802.08831, 2012.15392 — the kernel's
   `{table}` keeps the footnote), `\artnote`/`\miscnote` (:631-638; 2203.15424, 2605.14802) and
   `\intern`/`\equalsup`/`\equaladv`/`\equalcontribution` (2603.28334 :575-600, 2307.08214, 2501.01157, 2206.10381)
-  frontmatter notes, `\ackno` frontmatter acknowledgements (2404.03266 :639-646), `\presentaddresstxt`, the `\if…`
+  frontmatter notes (a copy's optional-argument form with the copy's default text: 2606.24824's `\intern`, 2504.21788's
+  `\equalcont`, `class_code_argument`), `\ackno` frontmatter acknowledgements (2404.03266 :639-646), `\presentaddresstxt`, the `\if…`
   switches, `\Newlabel`/`\jmkLabel` (2307.08421 :491), `{unenumerate}` (2303.09648 :1084-1116), `{biography}` with its
   bold `\author` (:1529; 2310.14485), `\orcidlogo`, the copies' `\abs`/`\argmin` only where the copy has them
   (2206.00975 :317-318); the begin-document `\let\proof\spiproof` now with or without program.sty (a preamble
   `\let\proof\relax`: 2211.03599, 2501.00469). sigma (sigma_cls.rs; 0705.3628 v3.0, 1404.0720 v1.7, 2609.01661 v1.8) —
   `\EmailDD`/`\EmailMarked`/`\URLaddressDD`/`\URLaddressMarked` notes, empty ones dropped (:77-83; 0706.0314,
-  0711.1671), `\mail` (v1.8 :80), the class's theorem set on their own counters with the starred twins (:161-178;
-  1301.4541, 1404.0720; OmniBus's fallback had numbered them by section on one counter), `\tsep`/`\bsep` (:182-191;
+  0711.1671), `\mail` where the copy has it (v1.8 :80), the class's theorem set on their own counters with the starred
+  twins and `{conjecture}` from v1.2 (:161-178; 1301.4541, 1404.0720; OmniBus's fallback had numbered them by section on
+  one counter; the v1.0/1.1 copies' set without them, nlin0510055), `\tsep`/`\bsep` (:182-191;
   0705.3628). arxbj (arxbj_cls.rs; 1106.2467's copy) — the VTeX URL and attribute helpers moved from arximspdf_cls.rs
   into ims_support_sty.rs, which both load (`\arxivurl`, `\doiurl`, `\surl`, `\setattribute`, `\tsub`; 1206.6586),
-  `\docsubty` (:2259), `{keyword}`/`\kwd` one keywords list joined by `; ` (:2490-2541; elsart's lost every entry),
+  `\docsubty` (:2259), `{keyword}[class=…]`/`\kwd` (:2490-2541; elsart's lost every entry) in ims_support_sty.rs
+  with arximspdf's, whose collecting form a later block replaced (1107.3284's and 1309.4864's AMS codes): each block
+  kept, the AMS one the subject classification, joined by `; ` (arxbj) or `, ` (arximspdf), under the class's headings,
   `\eqntext` (:1273; 1002.0175), `\startlocaldefs`, `\setvaluelist`/`\getitemvalue` (:392-502; 0811.0643), `\legend`,
   `{supplement}` with `\sname`/`\stitle`/`\slink`/`\sdatatype`/`\sdescription` (:2543-2598; 1302.0163), vtexthm's
-  starred twin of every `\newtheorem`/`\newproclaim` on borrowed amsthm (:1302-1345; 1205.2947, 1307.5990). informs
+  starred twin of every `\newtheorem`/`\newproclaim` on borrowed amsthm (:1302-1345; 1205.2947, 1307.5990), in
+  ims_support_sty.rs, so arximspdf has it too (its arximspdf.cls:1287-1337; `{hy*}` 1107.3284). informs
   (informs_cls.rs; 1501.01126's informs3, 2309.11120's informs4) — the 133 `\BF…` bold symbols as
   `\mathbf`/`\boldsymbol` (:98-247; 1501.01126, 2008.02154), `\fs`, `\HD`/`\up`/`\down`/`\updown`, `\halmos`, `\n`
   (:391-913; 1402.4593, 1011.5677), `\SUBJECTCLASS`/`\AREAOFREVIEW`/`\MSCCLASS`/`\ORMSCLASS` classifications
@@ -1658,14 +1663,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   recorded loaded as the class loads it (:405; a paper's `\usepackage{aipxfm}` read the shipped file raw: 1010.4521,
   0705.1061; KNOWN_PERL_ERRORS #730), the designer commands (:212-216, 336-386), a copy's journal abbreviations where it
   has them (0809.4021 :1042-1124). sagej (sagej_cls.rs; 2101.10072's copy) — `{sm}`, `{credit}`, `{conflict}`, `{das}`
-  statements (:464; 2505.13309, 2406.06038, 2204.02460; 1412.4039), `{biog}`/`{biogs}` (:480; 1801.00336), `\sagesf`,
+  statements (:464; 2505.13309, 2406.06038, 2204.02460; 1412.4039), each with `{funding}`/`{dci}` named by the heading
+  the class prints ("Supplemental material", 2503.14633's copy "Supplemental Material", "Author contributions",
+  "Declaration of conflicting interests", "Data Accessibility Statement", "Funding"; the XHTML prints `@name` as the
+  heading, which had shown "sm." and "dci."), `{biog}`/`{biogs}` (:480; 1801.00336), `\sagesf`,
   `{refsize}`, `\titlesize`, `\absbox`, `\journalclass`, `\Highlights`, `\twitter`, and the rest of the class's
   `\RequirePackage` line (ifthen, rotating, calc, textcase, color: 2204.02460). oup-authoring-template (TL 2025) —
   `\vol` (:1054; 2104.15079), `\boxedtext` a frontmatter note led by its heading, the copy's constant ("Key Messages",
   "Significance statement") or the newer copies' first argument (:1117-1119; 2604.25257 :1271-1272; 2306.17210),
-  `\secsize`…, the `\sffamilyfont…` switches (:143-150; 2505.18036), `\@numbibtrue`; a newer copy's `\otherabstract` (a
-  further abstract) and `\figalttext` (dropped, as the class drops it — 2608.22901's alt texts, ~1,000 words, no longer
-  print as recovery text) where it has them (2602.07066 :1232, :1935). ejpecp (TL 2025) — the class's theorem set within
+  `\secsize`… (:1676; 2606.05448's :1660), the `\sffamilyfont…` switches (:143-150; 2505.18036), `\@numbibtrue`; a
+  newer copy's `\otherabstract` (a further abstract) and `\figalttext` (the image's description, as acmart's
+  `\Description`, float_description.rs; the class drops it: OXIDIZED_DESIGN_DIVERGENCES #604; 2608.22901, 2608.14294,
+  2609.06413) where it has them (2602.07066 :1232, :1935). ejpecp (TL 2025) — the class's theorem set within
   sections with its styles (:400-458; it had numbered `{theorem}` through; 1405.0815, 1406.6650), `\ARXIVID`/`\HALID`
   notes (:150-151, :316-328; 1104.1060, 2103.00338), `\ACKNO` (:152; 1103.0392), `\ARXIVPASSWORD`. Repros
   class-bindings/{sigma,snjnl,informs,autart,asme2ej,arxbj,sagej, ejpecp,oup_authoring_template}_class_commands,
@@ -1673,12 +1682,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   witnesses + 100 pop67o (488 converted): Errors 1,291 → 354, error-free 61 → 410, Fatals 8 → 8, no paper gains Errors
   or Fatals; the 92 papers with fewer words lose error-recovery text, numbers the class does not print (sigma's and
   autart's statements on the class's counters, OmniBus's had numbered them by section on one counter), informs's
-  duplicated "Proof." and amsthm's ∎, and the dropped alt texts (2608.22901, 2608.14294, 2609.06413); the 9 aipproc
+  duplicated "Proof." and amsthm's ∎, and the then-dropped alt texts (2608.22901, 2608.14294, 2609.06413); the 9 aipproc
   papers whose main file the harness missed (aipcheck.tex) 21 → 0 Errors. Binding nets vs 67int2: 0 worse in all nine
   (arxbj has none); Errors 127 → 18. Side finding, RED: class-bindings/elsart_support_theorem_tag_zero (under
   elsart_support — arxbj, elsart — a `\newtheorem` statement is tagged "Remark 0", its refnum 1). Not taken: the
   modified copies' one-paper commands (sn-jnl's astronomy block 2108.07431/2507.08592, informs `{observation}` in
-  `\TheoremsNumberedThrough`, oup `{methods}`/`\absection`, sigmasthesis.cls 2510.12158 — another class).
+  `\TheoremsNumberedThrough`, oup `{methods}`/`\absection`, sigmasthesis.cls 2510.12158 — another class). Round 2
+  (review fixes): repros class-bindings/{arximspdf_keyword_blocks_and_starred_theorems, snjnl_author_notes,
+  sagej_v2503/sagej_sm_heading_follows_the_copy, snjnl_v2606/snjnl_notes_take_the_copys_default,
+  oup_v2602/oup_figalttext_is_the_images_description} RED (67z) → GREEN, guards `perfect_kernel_batch67z` (15); the
+  `{biography}` `\author` a primitive's before-digest code. Residuals: informs's `\TheoremHeaderFont`/`\ExampleHeaderFont`
+  do not reach the heads (informs3.cls:1810-1845 sets them per style, TH and EX, `\def\theorem@headerfont{\normalfont
+  \TheoremHeaderFont}`; theorem_sty.rs keeps one global `\theorem@headerfont`, and informs4's two fonts differ, so a
+  global `\gdef` would set examples sans: pdflatex's small caps against our bold, PDF fidelity only); a loader rule
+  running a shipped copy's own simple one-line definitions for names its binding leaves undefined (the modified copies'
+  long tail across all ten classes) is a pending user decision; class-bindings/elsart_support_theorem_tag_zero stays RED;
+  sn-jnl with no shipped copy loads none of the class's packages (rotating…); the same visible-`@name` flaw in bindings
+  outside this batch: sn_jnl_cls.rs `{declarations}` (`name='declarations'`, an environment sn-jnl.cls does not define)
+  and jmlr_cls.rs/jmlr2e_sty.rs `\acks` (`name='acknowledgments-disclosure-of-funding'`).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

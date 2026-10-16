@@ -143,9 +143,10 @@ LoadDefinitions!({
 \def\BFcalX{\boldsymbol{\mathcal{X}}}\def\BFcalY{\boldsymbol{\mathcal{Y}}}\def\BFcalZ{\boldsymbol{\mathcal{Z}}}
 \def\BFcal#1{\boldsymbol{\mathcal{#1}}}"
   );
-  // informs4.cls:391, 638, 867, 883, 913, 1471-1472 (informs3.cls:426, 931, 1506-1507): `\fs.size.skip.` sets the type
-  // size, `\HD{h}{d}` an invisible strut that `\up`/`\down`/`\updown` put in a table row (6, 5, 3 papers: 1402.4593,
-  // 1810.10900), `\halmos` the end-of-proof box (9 papers: 1011.5677), `\n` a `\nobreak` (1510.08335).
+  // informs4.cls:391, 638, 867, 883, 913, 1471-1472 (1501.01126's informs3.cls:426, 685, 931, 961, 1506-1507):
+  // `\fs.size.skip.` sets the type size, `\HD{h}{d}` an invisible strut that `\up`/`\down`/`\updown` put in a table
+  // row (6, 5, 3 papers: 1402.4593, 1810.10900), `\halmos` the end-of-proof box (9 papers: 1011.5677), `\n` a
+  // `\nobreak` (1510.08335).
   RawTeX!(
     r"\def\fs.#1.#2.{\fontsize{#1}{#2}\selectfont}
 \def\HD#1#2{\vrule height #1pt depth #2pt width 0pt\relax}

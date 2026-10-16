@@ -5,7 +5,8 @@
 % engines: rust 68d2 = 14 errors (undefined `\MSCCLASS`, `\ORMSCLASS`, `\SUBJECTCLASS`, `\AREAOFREVIEW`, `\BFx`,
 %          `\BFcalX`, `\BFbeta`, `\BFzero`, `\halmos`, `{repeattheorem}`, `\up`, `\down`, `\updown`, `\NatBibNumeric`);
 %          each proof titled "Proof." with its argument as its first text
-% expect:  0 errors, 0 warnings; the bold symbols, the four classifications, the proofs titled by their argument
+% expect:  0 errors, 0 warnings; the bold symbols, the four classifications, "Theorem 1 (Name)." with the class's period,
+%          the proofs titled by their argument
 % status:  RED (68d2) -> GREEN (67z)
 % preload: ar5iv.sty
 \documentclass[opre]{informs3}
@@ -23,7 +24,7 @@
 \maketitle
 \section{One}
 Let $\BFx\in\BFcalX$ and $\BFbeta$, $\BFzero$.
-\begin{theorem}A theorem.\end{theorem}
+\begin{theorem}[Name]A theorem.\end{theorem}
 \proof{Proof.} Trivial.\halmos\endproof
 \begin{proof}{Proof of Theorem 1.} Also trivial.\end{proof}
 \begin{repeattheorem}[Theorem 1]Again.\end{repeattheorem}

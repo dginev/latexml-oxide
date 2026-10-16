@@ -170,6 +170,26 @@ pub fn class_option_given(option: &str) -> Result<bool> {
   )
 }
 
+/// The braced argument of the first `call` in `text` (a class file's) outside a comment that is followed by one, its
+/// braces balanced: the default a copy gives a setting command (sn-jnl.cls's `\def\interntxt#1{…}\interntxt{Work done
+/// as an intern at Westlake University.}`, 2606.24824's copy :598).
+pub fn class_code_argument(text: &str, call: &str) -> Option<String> {
+  let code = class_code(text);
+  code.match_indices(call).find_map(|(at, _)| {
+    let rest = code[at + call.len()..].strip_prefix('{')?;
+    let mut depth = 0usize;
+    for (i, c) in rest.char_indices() {
+      match c {
+        '{' => depth += 1,
+        '}' if depth == 0 => return Some(rest[..i].to_string()),
+        '}' => depth -= 1,
+        _ => {},
+      }
+    }
+    None
+  })
+}
+
 /// `text` without its comments (`%` to the end of the line).
 fn class_code(text: &str) -> String {
   text

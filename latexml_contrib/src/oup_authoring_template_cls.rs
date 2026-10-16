@@ -5,7 +5,10 @@
 //! metadata so author content reaches the XML output.
 //!
 //! Witness: 2503.21884 (\\journaltitle, \\DOI, \\access, ...).
-use latexml_package::prelude::*;
+use latexml_package::{
+  float_description::{define_float_description, float_description_tokens},
+  prelude::*,
+};
 
 use crate::shipped_class::{class_code_contains, shipped_class_text};
 
@@ -131,13 +134,14 @@ LoadDefinitions!({
 \def\sffamilyfontcn{\sffamily\fontseries{m}\fontshape{n}\selectfont}\def\sffamilyfontcnitalic{\sffamily\fontseries{m}\fontshape{it}\selectfont}
 \def\sffamilyfontcnbold{\sffamily\bfseries\selectfont}\def\sffamilyfontcnbolditalic{\sffamily\fontseries{b}\fontshape{it}\selectfont}"
   );
-  // :1676-1720 `\secsize`, `\subsecsize`, `\subsubsecsize`, the heading fonts, bold in each of the class's styles (2
-  // papers: 2309.05250); their sizes and colours are print layout.
+  // :1676-1720 `\secsize`, `\subsecsize`, `\subsubsecsize` (TL 2025's copy; 2606.05448's :1660-1700), the heading
+  // fonts, bold in each of the class's styles (2 papers: 2309.05250); their sizes and colours are print layout.
   RawTeX!(r"\def\secsize{\bfseries}\def\subsecsize{\bfseries}\def\subsubsecsize{\bfseries}");
   // Commands newer copies add (TL 2025's, of 2022, has neither): defined where the paper's copy has them, so a paper
   // whose copy does not can define its own. 2602.07066's copy :1232 `\otherabstract[heading]{text}`, a further
-  // abstract under its own heading (5 papers), and :1935 `\figalttext[]{text}`, a figure's alternative text, which
-  // the class drops (4 papers).
+  // abstract under its own heading (5 papers), and :1935 `\figalttext[short]{long}`, a figure's alternative text,
+  // which the class drops (`\relax`; 4 papers: 2608.22901, 2608.14294, 2609.06413) and which is kept as the image's
+  // description, as acmart's `\Description` is (float_description.rs; OXIDIZED_DESIGN_DIVERGENCES #604).
   if let Some(text) = shipped.as_deref() {
     if class_code_contains(text, "\\newcommand\\otherabstract[2]") {
       RawTeX!(
@@ -145,7 +149,10 @@ LoadDefinitions!({
       );
     }
     if class_code_contains(text, "\\newcommand\\figalttext[2]") {
-      def_macro_noop("\\figalttext[]{}")?;
+      define_float_description("\\figalttext")?;
+      DefMacro!("\\figalttext[]{}", sub[(short, long)] {
+        Ok(float_description_tokens(short.as_ref(), &long))
+      });
     }
   }
   // SetCrop/SetTrim/SetBleed are layout configs — gobble.

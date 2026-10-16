@@ -1,8 +1,12 @@
-% witness: 1412.4039, 1801.09386 (`{sm}`); 2101.10072 (`\sagesf`, `{refsize}`); 1801.00336, 1912.06398 (`{biogs}`)
-% oracle:  pdflatex with 2101.10072's sagej.cls (clean)
-% engines: rust 68d2 = 4 errors (undefined `\sagesf`, `\refsize`, `{sm}`, `{biogs}`)
-% expect:  0 errors, 0 warnings; the supplemental-material statement, the biographies section
-% status:  RED (68d2) -> GREEN (67z)
+% witness: 1412.4039, 1801.09386 (`{sm}`); 2101.10072 (`\sagesf`, `{refsize}`); 1801.00336, 1912.06398 (`{biogs}`);
+%          2505.13309 (`{credit}`); 2406.06038 (`{conflict}`); 2204.02460 (`{das}`)
+% oracle:  pdflatex with 2505.13309's sagej.cls and 2406.06038's `{conflict}`, 2204.02460's `{das}` (clean): the
+%          headings "Funding", "Declaration of conflicting interests", "Author contributions", "Data Accessibility
+%          Statement", "Supplemental material", "Author Biographies"
+% engines: rust 68d2 = 7 errors (undefined `\sagesf`, `\refsize`, `{credit}`, `{conflict}`, `{das}`, `{sm}`, `{biogs}`);
+%          rust 67z = 0 errors, each statement named by its environment ("sm.", "credit." as the XHTML heading)
+% expect:  0 errors, 0 warnings; each end-matter statement named by the class's heading, the biographies section
+% status:  RED (68d2, 67z) -> GREEN (67z r2)
 % preload: ar5iv.sty
 \documentclass[Afour,sageh,times]{sagej}
 \begin{document}
@@ -18,6 +22,11 @@
 \section{One}
 Text {\sagesf sans} and {\refsize small}.
 \begin{acks}Thanks.\end{acks}
+\begin{funding}Some grant.\end{funding}
+\begin{dci}None declared.\end{dci}
+\begin{credit}Ann wrote it.\end{credit}
+\begin{conflict}No conflicts.\end{conflict}
+\begin{das}The data is online.\end{das}
 \begin{sm}Supplementary material is online.\end{sm}
 \begin{biogs}Ann Author is a researcher.\end{biogs}
 \end{document}

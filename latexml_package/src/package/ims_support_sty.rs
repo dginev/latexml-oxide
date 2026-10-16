@@ -105,6 +105,51 @@ LoadDefinitions!({
 \let\tsub\textsubscript
 \ifx\OrigBibText\undefined \long\def\OrigBibText#1\endOrigBibText{}\fi"
   );
+
+  // ---- keywords (arxbj.cls:2490-2541 of 1106.2467's copy; arximspdf.cls:2404-2450 of 1107.3284's) -----------------
+  // `{keyword}[class=<class>]` with `\kwd[<sep>]{<text>}`: a list of entries joined by `\sep` (none before the first,
+  // an explicit `[<sep>]` in its place: `\kwd[Primary ]{60F05}\kwd[; secondary ]{62G20}`), headed by the class's
+  // `\keyword@<class>` (`\setattribute{keyword}{KWD}{Keywords:}`, `{AMS}{AMS 2000 subject classifications:}`; each
+  // class binding sets its own heading and `\sep`). The blocks add up, as the classes keep each (arxbj's
+  // `\keyword@box`, arximspdf's `\keyword@toks`): a keywords block per `{keyword}`, and the AMS block the paper's
+  // subject classification. Each `\kwd` had started the list afresh (elsart's `{keyword}`: arxbj 1106.2467, 0811.0643
+  // lost every entry) or a second block replaced the first (arximspdf's: the AMS codes of 1107.3284 and 1309.4864).
+  RequirePackage!("keyval");
+  DefMacro!(T_CS!("\\begin{keyword}"), None, "\\begingroup\\keyword");
+  DefMacro!(T_CS!("\\end{keyword}"), None, "\\endkeyword\\endgroup");
+  RawTeX!(r"\def\keyword{\@ifnextchar[\lx@ims@keyword{\lx@ims@keyword[class=KWD]}}
+\define@key{lx@ims@keyword}{class}{\def\keyword@class{#1}}
+\def\lx@ims@AMS{AMS}
+\def\lx@ims@keyword[#1]{\def\keyword@class{KWD}\setkeys{lx@ims@keyword}{#1}\let\kwd@sep\@empty
+\ifx\keyword@class\lx@ims@AMS\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
+{\lx@add@frontmatter@until{ltx:classification}[scheme=AMS,name={\csname keyword@\keyword@class\endcsname~}]{\lx@end@keywords}}
+{\lx@add@frontmatter@until{ltx:keywords}[accumulate=true,name={\csname keyword@\keyword@class\endcsname~}]{\lx@end@keywords}}}
+\def\endkeyword{\lx@end@keywords}
+\def\sep{\unskip, }
+\DeclareRobustCommand*\kwd{\@ifnextchar[\@kwd{\@kwd[\kwd@sep]}}
+\def\@kwd[#1]#2{\unskip#1{#2}\let\kwd@sep\sep}
+\setattribute{keyword}{KWD}{Keywords:}
+\setattribute{keyword}{AMS}{AMS 2000 subject classifications:}");
+
+  // ---- theorems (vtexthm.sty, which the classes carry: arxbj.cls:1302-1345 of 1106.2467's copy, arximspdf.cls:
+  // 1287-1337 of 1107.3284's) ---------------------------------------------------------------------------------------
+  // Every `\newtheorem` also defines an unnumbered `{<name>*}` twin (`\@namedef{#1*}{…\@thmstar{…}}`), and
+  // `\newproclaim` is `\newtheorem` in the class's other style (:1418-1420). Starred statements: arxbj 15 of the 45
+  // sampled papers (`{cnd*}`, `{assumptions*}` 1205.2947, `{Comments*}` 1106.2467, `{rem*}` 1307.5990, `{thm*}`
+  // 1309.7754); arximspdf `{hy*}` 1107.3284. The theorems are amsthm's, borrowed (left unloaded, so a paper's own
+  // `\usepackage{amsthm}` is a real load, as after the class in LaTeX; theorem_sty.rs).
+  require_package_borrowed("amsthm")?;
+  RawTeX!(
+    r"\let\lx@vtex@newtheorem\newtheorem
+\def\lx@vtex@thm{\@ifstar{\lx@vtex@newtheorem*}{\lx@vtex@thm@}}
+\def\lx@vtex@thm@#1{\@ifnextchar[{\lx@vtex@othm{#1}}{\lx@vtex@nthm{#1}}}
+\def\lx@vtex@othm#1[#2]#3{\lx@vtex@newtheorem{#1}[#2]{#3}\lx@vtex@star{#1}{#3}}
+\def\lx@vtex@nthm#1#2{\@ifnextchar[{\lx@vtex@xnthm{#1}{#2}}{\lx@vtex@newtheorem{#1}{#2}\lx@vtex@star{#1}{#2}}}
+\def\lx@vtex@xnthm#1#2[#3]{\lx@vtex@newtheorem{#1}{#2}[#3]\lx@vtex@star{#1}{#2}}
+\def\lx@vtex@star#1#2{\@ifundefined{#1*}{\lx@vtex@newtheorem*{#1*}{#2}}{}}
+\def\newtheorem{\theoremstyle{plain}\lx@vtex@thm}
+\def\newproclaim{\theoremstyle{plain}\lx@vtex@thm}"
+  );
 });
 
 /// `\href{<base><arg>}{<arg>}`, or `\href{<arg>}{<arg>}` when the argument is already a full URL (it contains `full`:

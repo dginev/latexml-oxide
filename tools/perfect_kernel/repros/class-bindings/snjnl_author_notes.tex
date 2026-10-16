@@ -1,0 +1,19 @@
+% witness: 2603.28334, 2607.26008 (`\equalsup`, printed by the copies :769, :772), 2307.08214 (`\intern{text}`,
+%          :591-595, whose print the copy comments out, :764), 1802.08831 (`\equalcont`)
+% oracle:  pdflatex with 2607.26008's sn-jnl.cls and 2307.08214's `\intern` (:591-595) (clean): under the addresses
+%          "†These authors contributed equally." and "‡Equal supervision."
+% engines: rust 68d2 = 3 errors (undefined `\nomail`, `\intern`, `\equalsup`)
+% expect:  0 errors, 0 warnings; the three author notes in the frontmatter
+% status:  RED (68d2) -> GREEN (67z)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Author}}\email{ann@example.org}\equalcont{These authors contributed equally.}
+\author[1]{\fnm{Bob} \sur{Writer}}\nomail\intern{Work done as an intern.}\equalsup{Equal supervision.}
+\affil[1]{\orgname{Some University}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

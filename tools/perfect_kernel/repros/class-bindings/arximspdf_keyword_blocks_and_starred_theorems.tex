@@ -1,0 +1,36 @@
+% witness: 1107.3284 (`{keyword}[class=AMS]` before a keywords block, `\newproclaim{hy}{Hypotheses}` and `{hy*}`),
+%          1309.4864 (the same two blocks)
+% oracle:  latex (DVI: the class's `[dvips]` hyperref) with 1107.3284's arximspdf.cls and an empty texsort.sty (not
+%          in TeX Live): "AMS 2000 subject classifications. Primary 65C05, 91G60." and "Key words and phrases. Monte
+%          Carlo methods, importance sampling." on the title page, the unnumbered "Hypotheses." statement; one error,
+%          "There's no line here to end" at `\end{document}`, the class's own (a document of a title alone has it too)
+% engines: rust 68d2, 67z = 1 error (`{hy*}` undefined); the AMS block lost to the keywords block that follows it, a
+%          trailing ", " after the last keyword
+% expect:  0 errors, 0 warnings; the AMS classification and the keywords both kept, `{hy*}` an unnumbered statement
+% status:  RED (68d2, 67z) -> GREEN (67z r2)
+% preload: ar5iv.sty
+\documentclass[aap]{arximspdf}
+\startlocaldefs
+\newtheorem{Th}{Theorem}[section]
+\newproclaim{hy}{Hypotheses}
+\endlocaldefs
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\begin{aug}
+\author{\fnms{Ann} \snm{Author}}
+\end{aug}
+\begin{abstract}The abstract.\end{abstract}
+\begin{keyword}[class=AMS]
+\kwd[Primary ]{65C05}
+\kwd{91G60}
+\end{keyword}
+\begin{keyword}
+\kwd{Monte Carlo methods}
+\kwd{importance sampling}
+\end{keyword}
+\end{frontmatter}
+\section{One}
+\begin{Th}A theorem.\end{Th}
+\begin{hy*}The hypotheses.\end{hy*}
+\end{document}

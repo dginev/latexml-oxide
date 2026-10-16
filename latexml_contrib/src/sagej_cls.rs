@@ -1,7 +1,7 @@
 //! Stub for sagej.cls (SAGE journals).
 use latexml_package::prelude::*;
 
-use crate::shipped_class::class_option_given;
+use crate::shipped_class::{class_code_contains, class_option_given, shipped_class_text};
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
@@ -70,25 +70,39 @@ LoadDefinitions!({
   // funding-statement prose) is accepted — restricted_horizontal
   // default tripped `Attempt to end mode restricted_horizontal in
   // internal_vertical` on multi-paragraph bodies.
+  // Each end-matter statement is headed by the class's own text (`\subsection*{\normalsize\sagesf\bfseries
+  // <heading>}`), which is the statement's `name`: the XHTML prints `@name` as its visible heading
+  // (LaTeXML-structure-xhtml.xsl:174-182, `ltx:acknowledgements`). 2101.10072's sagej.cls:460-470 `{funding}`
+  // "Funding", `{dci}` "Declaration of conflicting interests" (every one of the 79 sampled copies); 2505.13309's
+  // :460-462 `{credit}` "Author contributions" (3 copies); 2406.06038's :458-461 `{conflict}` "Declaration of
+  // conflicting interests"; 2204.02460's :584-586 `{das}` "Data Accessibility Statement"; 2101.10072's :464-466 `{sm}`
+  // "Supplemental material" (78 copies; 2503.14633's "Supplemental Material"). `{sm}` 43 papers of the inventory,
+  // `{credit}` 3 (1412.4039, 1801.09386); `{acks}` keeps the kernel's acknowledgements heading.
+  let shipped = shipped_class_text("sagej")?;
   DefEnvironment!("{acks}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
-  DefEnvironment!("{funding}", "<ltx:acknowledgements name='funding'>#body</ltx:acknowledgements>",
+  DefEnvironment!("{funding}", "<ltx:acknowledgements name='Funding'>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
-  DefEnvironment!("{dci}", "<ltx:acknowledgements name='dci'>#body</ltx:acknowledgements>",
+  DefEnvironment!("{dci}",
+    "<ltx:acknowledgements name='Declaration of conflicting interests'>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
-  // The further end-matter statements of the class (2505.13309's sagej.cls:460-462 `{credit}`, "Author
-  // contributions"; 2406.06038's :458-461 `{conflict}`, "Declaration of conflicting interests", the `{dci}` of the
-  // older copies; 2204.02460's :584-586 `{das}`, "Data Accessibility Statement"; 2101.10072's :464-466 `{sm}`,
-  // "Supplemental material": `{sm}` 43 papers of the inventory, `{credit}` 3; 1412.4039, 1801.09386), each a
-  // headed statement like `{funding}`.
-  DefEnvironment!("{credit}", "<ltx:acknowledgements name='credit'>#body</ltx:acknowledgements>",
+  DefEnvironment!("{credit}", "<ltx:acknowledgements name='Author contributions'>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
-  DefEnvironment!("{conflict}", "<ltx:acknowledgements name='conflict'>#body</ltx:acknowledgements>",
+  DefEnvironment!("{conflict}",
+    "<ltx:acknowledgements name='Declaration of conflicting interests'>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
-  DefEnvironment!("{das}", "<ltx:acknowledgements name='das'>#body</ltx:acknowledgements>",
+  DefEnvironment!("{das}", "<ltx:acknowledgements name='Data Accessibility Statement'>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
-  DefEnvironment!("{sm}", "<ltx:acknowledgements name='sm'>#body</ltx:acknowledgements>",
-    mode => "internal_vertical");
+  if shipped
+    .as_deref()
+    .is_some_and(|text| class_code_contains(text, "\\bfseries Supplemental Material}"))
+  {
+    DefEnvironment!("{sm}", "<ltx:acknowledgements name='Supplemental Material'>#body</ltx:acknowledgements>",
+      mode => "internal_vertical");
+  } else {
+    DefEnvironment!("{sm}", "<ltx:acknowledgements name='Supplemental material'>#body</ltx:acknowledgements>",
+      mode => "internal_vertical");
+  }
   // 2101.10072's sagej.cls:118-120, 231, 235, 237: `\sagesf` the class's sans-serif switch (`\rm` under the `PCfour`
   // option; 17 papers: 2101.10072), `{refsize}` and `\titlesize` its type sizes, `\absbox` the abstract's box;
   // :38 `\journalclass` the class's name, printed in its page foot.

@@ -17688,3 +17688,20 @@ frontmatter prints its own © (`name="©"`), so a leading `\copyright`/`\textcop
 given to it twice. Its running-page copy (`\copyrightTextRunPag`) stays page furniture. Approved by the main session
 2026-10-15 (round-1 open question). Repro class-bindings/egpubl_class_commands; guard
 `perfect_kernel_batch67y::egpubl_class_commands_are_defined`.
+
+### 604. oup-authoring-template's `\figalttext` alt text is kept as the image's description (the class drops it)
+
+The newer oup-authoring-template.cls copies define `\figalttext[short]{long}`, a figure's alternative text for
+accessibility, as `\newcommand\figalttext[2][]{\relax}` (2602.07066's copy :1935): pdflatex prints nothing, and a
+faithful binding would drop it. The alt text is author content written for accessibility (about 1,000 words in
+2608.22901), which HTML can carry where PDF does not, so the binding gives it acmart's `\Description` treatment (#83):
+the shared float_description.rs mechanism (`define_float_description`, `float_description_tokens`; `\lx@acm@description`)
+makes the short text the lone image's `description` (`@alt`) and the long one a hidden note in the caption that the
+image's `aria-describedby` names, a plain long text alone the `description`, and on a float of several images both on
+the float, with acmart's Warning naming `\figalttext`. Defined only where the paper's copy defines it (TL 2025's copy,
+of 2022, has none), so a paper whose copy does not can define its own. Ruling: main session 2026-10-15 ("author content
+for accessibility — keep it on the figure image's description, as acmart's `\Description` does"). Witnesses 2608.22901,
+2608.14294, 2609.06413 (their words come back: 13,753 → 12,706 → 13,752 for 2608.22901, base → 67z → 67z r2). Perl has
+no oup-authoring-template binding; it raw-loads the class and drops the text. Repro
+class-bindings/oup_v2602/oup_figalttext_is_the_images_description; guard
+`perfect_kernel_batch67z::oup_figalttext_is_the_images_description`.

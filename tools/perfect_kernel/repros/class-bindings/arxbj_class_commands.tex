@@ -1,12 +1,15 @@
-% witness: 1106.2467 (`\docsubty`, `{supplement}`, `\sname`…`\sdescription`, `\doiurl`, `\surl`); 1206.6586
+% witness: 1106.2467 (`\docsubty`, `{keyword}`, `{supplement}`, `\sname`…`\sdescription`, `\doiurl`, `\surl`; its
+%          arxbj.cls:2495 `{keyword}[class=AMS]`, which the arximspdf papers 1107.3284 and 1309.4864 use); 1206.6586
 %          (`\arxivurl`); 1002.0175 (`\eqntext`); 1205.2947 (`{cnd*}`); 0811.0643 (`\setvaluelist`)
 % oracle:  latex (DVI: the class's `[dvips]` hyperref) with 1106.2467's arxbj.cls and an empty texsort.sty (not in TeX
 %          Live; clean)
 % engines: rust 68d2 = 14 errors (undefined `\startlocaldefs`, `\endlocaldefs`, `\docsubty`, `\arxivurl`, `\doiurl`,
 %          `{cnd*}`, `\eqntext`, `{supplement}`, `\sname`, `\stitle`, `\slink`, `\sdatatype`, `\sfilename`,
 %          `\sdescription`)
-% expect:  0 errors, 0 warnings; the links, the unnumbered Condition, the supplement line
-% status:  RED (68d2) -> GREEN (67z)
+%          rust 67z = 0 errors; only the last keyword block kept (`\lx@clear@frontmatter`), the AMS codes lost
+% expect:  0 errors, 0 warnings; the AMS classification and the keywords both kept, the links, the unnumbered
+%          Condition, the supplement line
+% status:  RED (68d2, 67z) -> GREEN (67z r2)
 % preload: ar5iv.sty
 \documentclass[bj]{arxbj}
 \startlocaldefs
@@ -21,6 +24,10 @@
 \author{\fnms{Ann} \snm{Author}}
 \end{aug}
 \begin{abstract}The abstract.\end{abstract}
+\begin{keyword}[class=AMS]
+\kwd[Primary ]{60F05}
+\kwd[; secondary ]{62G20}
+\end{keyword}
 \begin{keyword}
 \kwd{one}
 \kwd{two}
