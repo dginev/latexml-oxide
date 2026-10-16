@@ -1832,8 +1832,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   under `envcountreset`, by chapter otherwise), the rest through `\spn@wtheorem` over `\@spynthm`/`\@spxnthm`/`\@spothm`
   mapped onto `\spnewtheorem` (the theorem counter under `envcountsame`), `{definition}`'s body italic as the class
   sets it. Was "Theorem 0.1", "Fact 0.2" under every option (Perl the same); now pdflatex's numbers under default,
-  envcountsame, envcountsect, both and envcountreset. `\@spothm`'s v2.24+ section reset of its alias counter is left
-  out (OXIDIZED_DESIGN_DIVERGENCES #614). Repros class-bindings/llncs_theorem_numbering_{default,envcountsame,
+  envcountsame, envcountsect, both and envcountreset. Repros class-bindings/llncs_theorem_numbering_{default,envcountsame,
   envcountsect,envcountsame_envcountsect,envcountreset} (RED 026cf18f87 → GREEN); guards `perfect_kernel_batch68g` (5),
   `perfect_kernel_batch68a::llncs_class_internals` flipped ("Fact 2", "Assumption 3"). A/B vs 026cf18f87 over 480
   papers (400 llncs, 41 of them with a numbering option; 6 witnesses; pop67o): Errors 605 → 605, Fatals 4 → 4, words
@@ -1842,8 +1841,27 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Witnesses: 0906.4121 "Fact 3.1" kept, its lemmas/definitions now "Lemma 2.1", "Definition 3.1" as the PDF;
   1003.2851, 2303.08726, 2202.10090 (envcountsame+envcountsect "Definition 2.1", "Problem 2.2"), 1312.1526, 1104.3211,
   1212.0139, 1808.10364, 1412.6065, 2308.02825 checked against pdflatex. llncs net vs 67int8 and vs 026cf18f87: 0
-  worse. Open (ruling): llncs.cls:1047 `\edef\@thmcountersep{}` makes pdflatex print a paper's own
-  `\newtheorem{x}{X}[section]` as "X 11" outside envcountsect; both engines print "X 1.1" (5 of 374 sampled papers with a main file).
+  worse. Round 2 (the 68g review): `\spnewtheorem` is the class's dispatch (llncs.cls:1060-1125) over the
+  `\lx@spnewtheorem` primitive, whose branches refuse an env already defined (`\@ifdefinable`, an Info) and define
+  `\<env>name`; `\@spothm` follows the paper's copy of llncs.cls (v2.26 without one; OXIDIZED_DESIGN_DIVERGENCES #614
+  corrected): v2.16+ make the env an alias counter of the base (`register_counter_alias`, shared with aliascnt_sty.rs),
+  v2.24+ reset it by the section ("Hypothesis 1, Conj 2" in each section, v2.20 "Hypothesis 3, Conj 4"), an undefined
+  base is the class's "No theorem environment" Error. hyperref's `\autoref` names an alias by its own
+  `\<type>autorefname`/`\<type>name` (none if neither, as pdflatex): "Lemma 2", "Definition 3" under envcountsame
+  (round 1 "Theorem 2", "Theorem 3"), a paper's `\spnewtheorem{obs}[theorem]` "Observation 4", an aliascnt lemma
+  without names "2" (was "Theorem 2"). A `\newcounter` of an alias (`\let\c@case\relax\newcounter{case}`, 2303.08726)
+  gives it its own register again (round 1: every case stepped the theorem counter, "Lemma 25" for the PDF's "Lemma
+  23"). Guards `perfect_kernel_batch68g::{llncs_autoref_envcountsame{,_v214_copy}, llncs_spothm_section_reset{,_v220_copy},
+  llncs_spnewtheorem_errors, llncs_alias_newcounter, aliascnt_autoref_names_the_alias}`, refs asserted in the five
+  numbering guards. A/B vs 68g r1 over 568 papers (the round-1 480 and 95 hyperref+`\autoref` or aliascnt papers of
+  pop67o): Errors 1,169 → 1,169, Fatals 6 → 6, words unchanged; 542 identical, 17 differ only in `\autoref` names (all
+  the env's, as pdflatex: 2202.10090, 1312.1526, 1504.06105, 2412.05162, 2601.04573 "Nonexample 9", 2102.01037's
+  aliascnt `{thm}` " 3.4" with amsthm's `\thmname`), 2303.08726 in its case tags and the lemmas after them (now the
+  PDF's). Ruled: a paper's own `\newtheorem{x}{X}[section]` keeps "X 1.1" (the PDF's "X 11", llncs.cls:1047
+  `\edef\@thmcountersep{}`, OXIDIZED_DESIGN_DIVERGENCES #615). Open: latex.ltx `\@definecounter` keeps an existing
+  `\the<ctr>` ("Command `\thecase' already defined -- not changed"); the kernel's `\newcounter` redefines it, as Perl's
+  NewCounter (Package.pm), so 2303.08726's cases print "Case 1, Case 2" where the PDF prints the enclosing lemma's
+  "Case 22, Case 22" (repro class-bindings/llncs_alias_newcounter).
 - **68a** (binding gaps G2, journal classes B: bindgaps/g23_macros.tsv rows aa, acmart, aastex631/aastex63, mnras,
   llncs, jfm, tac, aamas; each macro checked against TeX Live's class or the witnesses' shipped copies, 1,035 witness
   papers unpacked: a name defined by at least a version of the class went in, a one-line definition only some authors

@@ -1,0 +1,27 @@
+% witness: 2303.08726 (envcountsame, v2.22 copy: `\let\c@case\relax \newcounter{case} \@addtoreset{case}{theorem}`)
+% oracle:  pdflatex with TL 2025 llncs.cls v2.26: "Lemma 1, Case 1, Case 1, Lemma 2, Case 2, Lemma 3"; 0 errors — the
+%          `\newcounter` gives `{case}` its own register (the cases no longer step `theorem`), but latex.ltx's
+%          `\@definecounter` keeps the alias's `\thecase` (= `\thetheorem`, "Command `\thecase' already defined -- not
+%          changed")
+% engines: rust 68g r1 = "Lemma 1, Case 2, Case 3, Lemma 4, Case 5, Lemma 6" (the cases step `theorem`); rust 68g r2 =
+%          "Lemma 1, Case 1, Case 2, Lemma 2, Case 1, Lemma 3":
+%          the lemma numbers are pdflatex's, the cases print their own counter, since `\newcounter` (Perl Package.pm
+%          NewCounter) always defines `\thecase` (open: the kernel's "not changed")
+% expect:  0 errors, 0 warnings; the lemma numbers of the oracle, the cases on their own counter
+% status:  RED (68g r1) -> GREEN (68g r2), the case labels a known divergence
+% preload: ar5iv.sty
+\documentclass[envcountsame]{llncs}
+\makeatletter
+\let\c@case\relax
+\newcounter{case}
+\@addtoreset{case}{theorem}
+\makeatother
+\begin{document}
+\begin{lemma}a\end{lemma}
+\begin{case}b\end{case}
+\begin{case}c\end{case}
+\begin{lemma}d\end{lemma}
+\begin{case}e\end{case}
+\begin{lemma}\label{l3}f\end{lemma}
+See \ref{l3}.
+\end{document}

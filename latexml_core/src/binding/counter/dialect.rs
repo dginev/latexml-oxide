@@ -203,6 +203,14 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       }),
     )?;
   }
+  // An alias counter (`register_counter_alias`) given a register of its own (`\let\c@case\relax\newcounter{case}`
+  // after llncs's `\@spothm{case}[theorem]`: 2303.08726) is an alias no more: `\refstepcounter{case}` steps the new
+  // register, as in LaTeX, where the alias was only the `\let` of `\c@case`. A counter whose `\c@` is still the alias's
+  // register keeps it (LaTeX refuses that `\newcounter`, "Command \c@case already defined").
+  if !prev_defn.as_ref().is_some_and(|defn| defn.is_register()) && is_counter_alias(ctr) {
+    assign_mapping::<Stored>("counter_for_type", ctr, None);
+    assign_mapping::<Stored>("counter_alias", ctr, None);
+  }
   after_assignment();
   if !has_value(&clctr) {
     assign_value(&clctr, Tokens!(), Some(Scope::Global));
@@ -647,6 +655,23 @@ pub fn counter_for_type(ctype: &str) -> String {
     Some(Stored::String(ctr)) => arena::to_string(*ctr),
     _ => ctype.to_string(),
   })
+}
+
+/// Records `alias` as an alias counter of `base`, as aliascnt.sty's `\newaliascnt{alias}{base}` makes it
+/// (aliascnt_sty.rs; llncs.cls v2.16+'s `\@spothm`, llncs_cls.rs): `\refstepcounter{alias}` steps `base`'s root
+/// counter (`counter_for_type`, following a chain of aliases), so the alias shares its number and its ids, while the
+/// type stays `alias` — the counter LaTeX's `\refstepcounter` is passed, whose name hyperref gives the target
+/// (`\<alias>autorefname`, `\<alias>name`; [`is_counter_alias`]). Witnesses 2605.20695 (aliascnt lemmas), 2202.10090
+/// (llncs, envcountsame).
+pub fn register_counter_alias(alias: &str, base: &str) {
+  let root = counter_for_type(base);
+  assign_mapping("counter_for_type", alias, Some(root.clone()));
+  assign_mapping("counter_alias", alias, Some(root));
+}
+
+/// Is `ctype` an alias counter ([`register_counter_alias`])?
+pub fn is_counter_alias(ctype: &str) -> bool {
+  with_mapping("counter_alias", ctype, |meaning| meaning.is_some())
 }
 
 /// `<ctype>` without a trailing sentinel control sequence the parameter reader may have pulled in.

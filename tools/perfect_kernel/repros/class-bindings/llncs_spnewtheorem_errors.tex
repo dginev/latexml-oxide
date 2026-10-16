@@ -1,0 +1,22 @@
+% witness: the 68g review (finding 4); 1504.07384, 1904.01526, 2412.05162 (`\let\claim\relax`, `\let\c@case\relax`
+%          before redeclaring a class env, which the class otherwise refuses)
+% oracle:  pdflatex with TL 2025 llncs.cls v2.26: "! LaTeX Error: Command \lemma already defined." and "... \lemma2
+%          already defined." (the first definitions stand), "! LaTeX Error: No theorem environment `nosuch' defined."
+%          (no `{foo}`); the text "Lemma 1. a", "Lemma2 1. b", "Theorem 2. c"
+% engines: rust 67int9 = 0 errors, "MyLemma 1", "Lemma2b 0.1", "Theorem 0.2"; rust 68g r1 = 0 errors, "MyLemma 1",
+%          "Lemma2b 1", "Theorem 2" (each redefinition taken), `{foo}` defined; rust 68g r2 =
+%          the class's: 1 Error (the undefined counter), the redefinitions refused with an Info (as every kernel
+%          "already defined", base_utilities.rs `is_typesetting_only_message`)
+% expect:  1 error (No theorem environment `nosuch' defined), 0 warnings; the oracle's tags
+% status:  RED (68g r1) -> GREEN (68g r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\spnewtheorem{lemma}{MyLemma}{\bfseries}{\itshape}
+\spnewtheorem{lemma2}[theorem]{Lemma2}{\bfseries}{\itshape}
+\spnewtheorem{lemma2}[theorem]{Lemma2b}{\bfseries}{\itshape}
+\spnewtheorem{foo}[nosuch]{Foo}{\bfseries}{\itshape}
+\begin{document}
+\begin{lemma}a\end{lemma}
+\begin{lemma2}b\end{lemma2}
+\begin{theorem}c\end{theorem}
+\end{document}

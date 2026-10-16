@@ -1,0 +1,30 @@
+% witness: 2202.10090, 1612.00484 (envcountsame); a shipped llncs.cls v2.2-v2.14 (cs0504102's v2.13, scratch_68g
+%          cls_reps.txt: 18 versions in 1,250 llncs papers)
+% oracle:  pdflatex with a v2.14 copy (2004/08/17): `\@spothm` is `\@namedef{the#1}{\@nameuse{the#2}}` and
+%          `\@spthm{#2}`, so the env steps `theorem`, hyperref's type: "See 1, 2, 3, 4; Theorem 1, Theorem 2, Theorem 3,
+%          Theorem 4."; 0 errors. This cut keeps the copy's `\@spothm` (the binding reads it; the class is the binding)
+% engines: rust 68g r1 = the same names; rust 68g r2 = the same (the copy decides)
+% expect:  0 errors, 0 warnings; the oracle's tags and autoref names
+% status:  GREEN (68g r1) -> GREEN (68g r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{llncs.cls}
+\ProvidesClass{llncs}[2004/08/17 v2.14 cut]
+\def\@spothm#1[#2]#3#4#5{%
+  \@ifundefined{c@#2}{\@latexerr{No theorem environment `#2' defined}\@eha}%
+  {\expandafter\@ifdefinable\csname #1\endcsname
+  {\global\@namedef{the#1}{\@nameuse{the#2}}%
+  \expandafter\xdef\csname #1name\endcsname{#3}%
+  \global\@namedef{#1}{\@spthm{#2}{\csname #1name\endcsname}{#4}{#5}}%
+  \global\@namedef{end#1}{\@endtheorem}}}}
+\end{filecontents*}
+\documentclass[envcountsame]{llncs}
+\usepackage{hyperref}
+\spnewtheorem{obs}[theorem]{Observation}{\bfseries}{\itshape}
+\begin{document}
+\section{A}
+\begin{theorem}\label{t1}a\end{theorem}
+\begin{lemma}\label{l1}b\end{lemma}
+\begin{definition}\label{d1}c\end{definition}
+\begin{obs}\label{o1}d\end{obs}
+See \ref{t1}, \ref{l1}, \ref{d1}, \ref{o1}; \autoref{t1}, \autoref{l1}, \autoref{d1}, \autoref{o1}.
+\end{document}

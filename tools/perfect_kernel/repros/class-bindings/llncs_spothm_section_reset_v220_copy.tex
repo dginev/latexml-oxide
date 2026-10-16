@@ -1,0 +1,35 @@
+% witness: the 68g review probe sect2; a shipped llncs.cls v2.16-v2.23 (v2.20 2018/03/10, scratch_68g cls_reps.txt)
+% oracle:  pdflatex with the v2.20 copy (its `\@spothm` has `\newaliascnt{#1}{#2}` but no section reset): Lemma 0.1 | 1
+%          Hypothesis 1, Conj 2, Lemma 1.1 | 2 Hypothesis 3, Conj 4, Theorem 2.1; 0 errors. This cut keeps the copy's
+%          `\@spothm` (the binding reads it; the class is the binding)
+% engines: rust 68g r1 = the same numbers (no reset for any version); rust 68g r2 = the same (the copy decides)
+% expect:  0 errors, 0 warnings; the oracle's tags and refs
+% status:  GREEN (68g r1) -> GREEN (68g r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{llncs.cls}
+\ProvidesClass{llncs}[2018/03/10 v2.20 cut]
+\def\@spothm#1[#2]#3#4#5{%
+  \@ifundefined{c@#2}{\@latexerr{No theorem environment `#2' defined}\@eha}%
+  {\expandafter\@ifdefinable\csname #1\endcsname
+  {\newaliascnt{#1}{#2}%
+  \expandafter\xdef\csname #1name\endcsname{#3}%
+  \global\@namedef{#1}{\@spthm{#1}{\csname #1name\endcsname}{#4}{#5}}%
+  \global\@namedef{end#1}{\@endtheorem}}}}
+\end{filecontents*}
+\documentclass[envcountsect,envcountsame]{llncs}
+\makeatletter
+\spnewtheorem{hyp}{Hypothesis}{\bfseries}{\itshape}
+\@spothm{conj2}[hyp]{Conj}{\bfseries}{\itshape}
+\makeatother
+\begin{document}
+\begin{lemma}z\end{lemma}
+\section{A}
+\begin{hyp}a\end{hyp}
+\begin{conj2}b\end{conj2}
+\begin{lemma}\label{l}x\end{lemma}
+\section{B}
+\begin{hyp}c\end{hyp}
+\begin{conj2}\label{c}d\end{conj2}
+\begin{theorem}e\end{theorem}
+See \ref{l}, \ref{c}.
+\end{document}

@@ -179,10 +179,9 @@ LoadDefinitions!({
   DefMacro!("\\thechapter", "\\arabic{chapter}");
   def_macro_noop("\\chaptermark{}")?;
 
-  // Theorem-family \xxxname definitions. The \spnewtheorem primitive itself
-  // is ported further below via define_new_theorem, and the theorem
-  // environments are installed there with their per-theorem bodyfont honored
-  // (capfont/title font is still ignored).
+  // Theorem-family \xxxname definitions. The class's `\spnewtheorem` is ported further below (its branches over the
+  // `\lx@spnewtheorem` primitive, via define_new_theorem), and the theorem environments are installed there with
+  // their per-theorem bodyfont honored (capfont/title font is still ignored).
   RawTeX!(r#"\def\theoremname{Theorem}
 \def\claimname{Claim}
 \def\proofname{Proof}
@@ -203,19 +202,19 @@ LoadDefinitions!({
   // The theorem environments themselves are installed with `\spnewtheorem` and `\spn@wtheorem` (below, after
   // the primitive is defined), numbered by the class's options as llncs.cls numbers them.
 
-  // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
-  // Perl llncs.cls.ltxml L101-157 is `DefMacro('\spnewtheorem ...', sub
-  // { ... DefMacroI + NewCounter + MergeFont ... })` — a macro whose
+  // `\lx@spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}` defines the environment the class's
+  // `\spnewtheorem` branches (below) define. Perl llncs.cls.ltxml L101-157 is this as `\spnewtheorem` itself:
+  // `DefMacro('\spnewtheorem ...', sub { ... DefMacroI + NewCounter + MergeFont ... })` — a macro whose
   // body imperatively installs new CSes/env bindings + counters.
   // Rust uses DefPrimitive (stomach-level) because the installation
   // needs to happen at digest-stable time so subsequent uses of the
   // new `{env}` work. WISDOM #44: kind flip is intentional —
-  // `\spnewtheorem` is a preamble-declaration macro only, never
+  // it is a preamble-declaration only, never
   // captured by `\edef`/`\ifx`. The per-theorem `bodyfont` is honored
   // (Perl L144 `afterDigestBegin => sub { Digest($bodyfont); }`): e.g.
   // `proof`/`case` pass `\rmfamily` = upright body, overriding the amsthm
   // default `\itshape`. `capfont` (the title font) is still ignored.
-  DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, bodyfont)] {
+  DefPrimitive!("\\lx@spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, bodyfont)] {
     engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
@@ -225,21 +224,65 @@ LoadDefinitions!({
       Some(bodyfont).filter(|t| !t.is_empty()),
     )?;
   });
+  // llncs.cls:1060-1097 and :1117-1125 (TL 2025 v2.26): `\spnewtheorem` is the class's, dispatching on its `*` and
+  // `[`s to `\@sthm`/`\@Ynthm` (unnumbered), `\@spothm{env}[numberedlike]{caption}{capfont}{bodyfont}` (another
+  // theorem's counter), `\@spxnthm{env}{caption}[within]{capfont}{bodyfont}` (a counter within `within`) and
+  // `\@spynthm{env}{caption}{capfont}{bodyfont}` (its own counter); :1155-1167 `\spn@wtheorem{env}{caption}{capfont}
+  // {bodyfont}`, the class's definer of its own theorem set, chosen by the numbering option, which papers call for
+  // theirs (2202.10090, 2601.04573 `\@spothm`; 0906.4121, 1003.2851 `\spn@wtheorem{fact}{Fact}…`; 22 papers). Perl's
+  // llncs.cls.ltxml defines none of them (KNOWN_PERL_ERRORS #743). Each branch, as the class's, refuses an env
+  // already defined (`\@ifdefinable`: "Command \lemma already defined", an Info here as every kernel "already
+  // defined", base_utilities.rs `is_typesetting_only_message`; the first definition stands, as in the PDF), and
+  // defines `\<env>name` as the caption (hyperref's `\autoref` names a paper's own `{obs}` "Observation 4" by it).
+  // Every shipped copy from v2.2 to v2.26 chooses alike (v2.2's default `\let\spn@wtheorem=\@spynthm` only skips the
+  // `chapter` reset).
+  RawTeX!(r"\def\spnewtheorem{\@ifstar{\@sthm}{\@Sthm}}
+\def\@spnthm#1#2{\@ifnextchar[{\@spxnthm{#1}{#2}}{\@spynthm{#1}{#2}}}
+\def\@Sthm#1{\@ifnextchar[{\@spothm{#1}}{\@spnthm{#1}}}
+\def\@spynthm#1#2#3#4{\expandafter\@ifdefinable\csname #1\endcsname
+  {\expandafter\xdef\csname #1name\endcsname{#2}\lx@spnewtheorem{#1}{#2}{#3}{#4}}}
+\def\@spxnthm#1#2[#3]#4#5{\expandafter\@ifdefinable\csname #1\endcsname
+  {\expandafter\xdef\csname #1name\endcsname{#2}\lx@spnewtheorem{#1}{#2}[#3]{#4}{#5}}}
+\def\@sthm#1#2{\@Ynthm{#1}{#2}}
+\def\@Ynthm#1#2#3#4{\expandafter\@ifdefinable\csname #1\endcsname
+  {\expandafter\xdef\csname #1name\endcsname{#2}\lx@spnewtheorem*{#1}{#2}{#3}{#4}}}");
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
-  // llncs.cls:1060-1097 (TL 2025 v2.26) `\@spynthm{env}{caption}{capfont}{bodyfont}` (own counter),
-  // `\@spxnthm{env}{caption}[within]{capfont}{bodyfont}` (counter within `within`) and
-  // `\@spothm{env}[numberedlike]{caption}{capfont}{bodyfont}` (another theorem's counter), the three branches of
-  // `\spnewtheorem`; and :1155-1167 `\spn@wtheorem{env}{caption}{capfont}{bodyfont}`, the class's definer of its
-  // own theorem set, chosen by the numbering option, which papers call for theirs (2202.10090, 2601.04573
-  // `\@spothm`; 0906.4121, 1003.2851 `\spn@wtheorem{fact}{Fact}…`; 22 papers). Perl's llncs.cls.ltxml defines none
-  // of them (KNOWN_PERL_ERRORS #743). Every shipped copy from v2.2 to v2.26 chooses alike (v2.2's default
-  // `\let\spn@wtheorem=\@spynthm` only skips the `chapter` reset). The v2.24+ `\@addtoreset{#1}{section}` of
-  // `\@spothm` under envcountsect is left out: the env has no counter of its own here (it numbers with `#2`'s,
-  // OXIDIZED_DESIGN_DIVERGENCES #614).
-  RawTeX!(r"\def\@spynthm#1#2#3#4{\spnewtheorem{#1}{#2}{#3}{#4}}
-\def\@spxnthm#1#2[#3]#4#5{\spnewtheorem{#1}{#2}[#3]{#4}{#5}}
-\def\@spothm#1[#2]#3#4#5{\spnewtheorem{#1}[#2]{#3}{#4}{#5}}
-\if@envcntsame\def\spn@wtheorem#1#2#3#4{\@spothm{#1}[theorem]{#2}{#3}{#4}}
+  // `\@spothm` differs between versions; the paper's copy of the class decides (the TL 2025 v2.26 one without a
+  // copy). Each raises the class's "No theorem environment `#2' defined" (an Error) for an undefined counter `#2`.
+  // - v2.2-v2.14: `\@namedef{the#1}{\@nameuse{the#2}}` and `\@spthm{#2}`: the env steps `#2`, the type hyperref
+  //   names it by ("Theorem 2" for an envcountsame lemma).
+  // - v2.16-v2.23: `\newaliascnt{#1}{#2}` (aliascnt.sty, which these copies load) and `\@spthm{#1}`: the env steps
+  //   its own alias of `#2`'s counter, so it shares `#2`'s number and is its own type ("Lemma 2": 2202.10090).
+  // - v2.24+: also `\if@envcntsect\@addtoreset{#1}{section}\fi` ("fixes incorrect hypertexnames when envcountsect is
+  //   used in combination with envcountsame"): the section resets `#2`'s counter through the alias, which matters
+  //   where `#2` is not `theorem` (already reset by the section): under envcountsect a paper's
+  //   `\spnewtheorem{conj}[hyp]` over its own `\spnewtheorem{hyp}{Hypothesis}` numbers "Hypothesis 1, Conj 2" in
+  //   every section in v2.26 and "Hypothesis 3, Conj 4" in section 2 in v2.20 (OXIDIZED_DESIGN_DIVERGENCES #614).
+  // aliascnt itself is not loaded (`\lx@llncs@newaliascnt` is its `\newaliascnt`, aliascnt.sty v1.5 :40-61, without
+  // the `\@addtoreset` patch, which only maps a `within` alias to its root): `\c@#1`, `\the#1`, `\theH#1` and `\p@#1`
+  // are `#2`'s, and `register_counter_alias` records the alias for the numbering and for hyperref.
+  DefPrimitive!("\\lx@llncs@aliascnt@register{}{}", sub[(alias, base)] {
+    register_counter_alias(&alias.to_string(), &base.to_string());
+  });
+  RawTeX!(r"\def\lx@llncs@newaliascnt#1#2{\expandafter\@ifdefinable\csname c@#1\endcsname
+  {\global\expandafter\let\csname c@#1\expandafter\endcsname\csname c@#2\endcsname
+  \global\expandafter\let\csname the#1\expandafter\endcsname\csname the#2\endcsname
+  \global\expandafter\let\csname theH#1\expandafter\endcsname\csname theH#2\endcsname
+  \global\expandafter\let\csname p@#1\expandafter\endcsname\csname p@#2\endcsname
+  \lx@llncs@aliascnt@register{#1}{#2}}}");
+  let spothm = crate::shipped_class::shipped_class_text("llncs")?
+    .and_then(|text| crate::shipped_class::class_code_argument(&text, "\\def\\@spothm#1[#2]#3#4#5"));
+  let (alias, section_reset) = spothm
+    .as_deref()
+    .map_or((true, true), |body| (body.contains("\\newaliascnt"), body.contains("\\@addtoreset")));
+  let reset = if section_reset { r"\if@envcntsect\@addtoreset{#1}{section}\fi" } else { "" };
+  let define = if alias {
+    s!(r"\lx@llncs@newaliascnt{{#1}}{{#2}}\expandafter\xdef\csname #1name\endcsname{{#3}}{reset}\lx@spnewtheorem{{#1}}[#1]{{#3}}{{#4}}{{#5}}")
+  } else {
+    r"\expandafter\xdef\csname #1name\endcsname{#3}\lx@spnewtheorem{#1}[#2]{#3}{#4}{#5}".to_string()
+  };
+  RawTeX!(&s!(r"\def\@spothm#1[#2]#3#4#5{{\@ifundefined{{c@#2}}{{\@latexerr{{No theorem environment `#2' defined}}\@eha}}{{\expandafter\@ifdefinable\csname #1\endcsname{{{define}}}}}}}"));
+  RawTeX!(r"\if@envcntsame\def\spn@wtheorem#1#2#3#4{\@spothm{#1}[theorem]{#2}{#3}{#4}}
 \else\if@envcntsect\def\spn@wtheorem#1#2#3#4{\@spxnthm{#1}{#2}[section]{#3}{#4}}
 \else\if@envcntreset\def\spn@wtheorem#1#2#3#4{\@spynthm{#1}{#2}{#3}{#4}\@addtoreset{#1}{section}}
 \else\def\spn@wtheorem#1#2#3#4{\@spynthm{#1}{#2}{#3}{#4}\@addtoreset{#1}{chapter}}\fi\fi\fi");

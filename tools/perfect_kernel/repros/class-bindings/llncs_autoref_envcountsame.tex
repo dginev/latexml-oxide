@@ -1,0 +1,22 @@
+% witness: 2202.10090 (envcountsame, `\@spothm`: every Definition/Lemma/Problem target autoref-named "Theorem N" by the
+%          68g round 1), 1612.00484 (envcountsame with its own `\*autorefname`s), 2303.08726, 2306.07698
+% oracle:  pdflatex with TL 2025 llncs.cls v2.26 (v2.16-v2.26 alike: `\@spothm` makes the env an aliascnt alias of
+%          `theorem`, so hyperref's type is the env): "See 1, 2, 3, 4; Theorem 1, Lemma 2, Definition 3, Observation
+%          4."; 0 errors
+% engines: rust 67int9 = tags "Theorem 1.1, Lemma 1, Definition 1, Observation 1.2", autorefs "Theorem 1.1, Lemma 1,
+%          Definition 1, Theorem 1.2" (KNOWN_PERL_ERRORS #743's numbering); rust 68g r1 = the oracle's tags, autorefs
+%          "Theorem 1, Theorem 2, Theorem 3, Theorem 4" (the shared counter's name)
+% expect:  0 errors, 0 warnings; the oracle's tags, refs and autoref names
+% status:  RED (68g r1) -> GREEN (68g r2)
+% preload: ar5iv.sty
+\documentclass[envcountsame]{llncs}
+\usepackage{hyperref}
+\spnewtheorem{obs}[theorem]{Observation}{\bfseries}{\itshape}
+\begin{document}
+\section{A}
+\begin{theorem}\label{t1}a\end{theorem}
+\begin{lemma}\label{l1}b\end{lemma}
+\begin{definition}\label{d1}c\end{definition}
+\begin{obs}\label{o1}d\end{obs}
+See \ref{t1}, \ref{l1}, \ref{d1}, \ref{o1}; \autoref{t1}, \autoref{l1}, \autoref{d1}, \autoref{o1}.
+\end{document}

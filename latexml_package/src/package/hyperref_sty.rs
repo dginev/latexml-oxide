@@ -1,4 +1,5 @@
 use latexml_core::{
+  binding::counter::dialect::is_counter_alias,
   common::error::Result as CoreResult,
   document::{Document, can_contain_qsym, get_node_qname},
 };
@@ -955,12 +956,16 @@ LoadDefinitions!({
   // with `[theorem]` is a "Theorem" (2605.01034, 2605.28533, 2605.30447) and `\newtheorem{lemma}{\lemmaname}` a
   // "Lemma". The environment's own `\<type>autorefname` comes first: the target is named when it is numbered (user
   // ruling 2026-10-02), so an author's `\claimautorefname` names a claim that shares the theorem counter, where
-  // pdflatex says "Theorem".
+  // pdflatex says "Theorem". An alias counter (aliascnt's `\newaliascnt`, llncs.cls v2.16+'s `\@spothm`:
+  // `register_counter_alias`) is the counter `\refstepcounter` is passed, so hyperref's type is the alias and the
+  // names are its own: "Lemma 2" under llncs's envcountsame (2202.10090), and no name for an aliascnt lemma without a
+  // `\lemmaautorefname`/`\lemmaname`, as pdflatex prints it; the root's "Theorem" never.
   DefMacro!("\\lx@autorefnum@@{}", sub[(ttype)] {
     let type_s  = ttype.unwrap().to_string();
     let counter_str = with_mapping("counter_for_type",&type_s, |mapping_opt|
       mapping_opt.map(ToString::to_string)).unwrap_or_else(|| type_s.clone());
-    let unstarred = counter_str.strip_suffix('*').unwrap_or(&counter_str);
+    let name_type = if is_counter_alias(&type_s) { &type_s } else { &counter_str };
+    let unstarred = name_type.strip_suffix('*').unwrap_or(name_type);
     // A `\<ctr>name` that is no name noun — a drawing command sharing the spelling, argumentation.sty:403 `\afname`
     // — is not run, as for the other tags (`\iflx@namenoun`, KNOWN_PERL_ERRORS #194): at every target it drew a
     // `\node` outside a picture (argumentation-doc, sweep #136). The `*autorefname`s are hyperref's own and may
@@ -968,8 +973,8 @@ LoadDefinitions!({
     // are taken as they are.
     let name = [
       s!("\\{type_s}autorefname"),
-      s!("\\{counter_str}autorefname"),
-      s!("\\{counter_str}name"),
+      s!("\\{name_type}autorefname"),
+      s!("\\{name_type}name"),
       s!("\\{unstarred}autorefname"),
       s!("\\{unstarred}name"),
     ]
