@@ -1,0 +1,13 @@
+% witness: 0708.3022 (\threeauthors, 21 papers; 18 define it with six arguments), 2403.02059 (\fourauthors)
+% oracle:  pdflatex (with 0708.3022's spconf.sty) 0 errors, three name/address columns
+% engines: rust 67int6 = undefined \threeauthors
+% expect:  0 errors, 0 warnings; three creators, each with its affiliation
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::spconf_threeauthors_gives_three_creators
+\documentclass{article}
+\usepackage{spconf}
+\title{Title}
+\threeauthors{Ann One}{Inst A}{Bob Two}{Inst B}{Cy Three}{Inst C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

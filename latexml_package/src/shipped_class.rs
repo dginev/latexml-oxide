@@ -43,23 +43,40 @@ pub fn requested_shipped_class(binding: &str) -> Result<Option<String>> {
 /// `jfm_cls`). A copy the document writes with `{filecontents}` is read where the dependency scan reads it, from the
 /// virtual files (`require_dependencies_only`).
 pub fn shipped_class_text(binding: &str) -> Result<Option<String>> {
-  Ok(requested_shipped_class(binding)?.and_then(|class| {
-    find_file(
-      &class,
-      Some(FindFileOptions {
-        ext_type: Some(Cow::Borrowed("cls")),
-        forbid_ltxml: true,
-        ..Default::default()
-      }),
-    )
-    .and_then(|path| {
-      vfs_read(&path).or_else(|| {
-        std::fs::read(path)
-          .ok()
-          .map(|bytes| bytes.iter().map(|&b| b as char).collect::<String>())
-      })
+  Ok(requested_shipped_class(binding)?.and_then(|class| shipped_file_text(&class, "cls")))
+}
+
+/// The text of the paper's copy of the file a stand-in binding answers ([`require_shipped_packages`]'s request: the
+/// load's `\@currname`, or the request a versioned fallback answers with this binding), read as
+/// [`shipped_class_text`] reads a class; `None` when the source has no copy. The ICML styles read the notice strings
+/// a copy edits (`\ICML@appearing`: 2606.28747's "3rd AI for Math Workshop", 2604.14572, 2507.02987, 2506.09099).
+pub fn shipped_copy_text(ext: &str) -> Result<Option<String>> {
+  let request = stand_in_request()?;
+  Ok(if request.is_empty() {
+    None
+  } else {
+    shipped_file_text(&request, ext)
+  })
+}
+
+/// The text of the file `file` of type `ext` in the paper's source (not a binding), its bytes read as Latin-1
+/// characters, or the virtual file a `{filecontents}` wrote.
+fn shipped_file_text(file: &str, ext: &str) -> Option<String> {
+  find_file(
+    file,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Owned(ext.to_string())),
+      forbid_ltxml: true,
+      ..Default::default()
+    }),
+  )
+  .and_then(|path| {
+    vfs_read(&path).or_else(|| {
+      std::fs::read(path)
+        .ok()
+        .map(|bytes| bytes.iter().map(|&b| b as char).collect::<String>())
     })
-  }))
+  })
 }
 
 /// Does `text` (a class file's) load `package` with `\RequirePackage`/`\usepackage` outside a comment, alone or in a
@@ -132,14 +149,22 @@ pub const SUBFIGURE_PACKAGES: &[&str] = &["caption", "subfigure", "subfig", "sub
 /// the file a binding stands in for: those of `family` the paper's copy loads are required in its order with its
 /// options; `false` when the source has no copy.
 pub fn require_shipped_packages(ext: &str, family: &[&str]) -> Result<bool> {
+  let request = stand_in_request()?;
+  Ok(!request.is_empty() && require_dependencies_only(&request, ext, family))
+}
+
+/// The file a stand-in binding answers, as the paper asked for it: the request a versioned fallback answers with
+/// this binding (`fallback_request` while its `fallback_target` is the load's `\@currname`), else `\@currname`.
+fn stand_in_request() -> Result<String> {
   let currname = Expand!(Tokens!(T_CS!("\\@currname"))).to_string();
   let fallback_request = lookup_string("fallback_request");
-  let request = if !fallback_request.is_empty() && lookup_string("fallback_target") == currname {
-    fallback_request
-  } else {
-    currname
-  };
-  Ok(!request.is_empty() && require_dependencies_only(&request, ext, family))
+  Ok(
+    if !fallback_request.is_empty() && lookup_string("fallback_target") == currname {
+      fallback_request
+    } else {
+      currname
+    },
+  )
 }
 
 /// Does the paper's copy of the class `binding` stands in for load `package` ([`class_text_loads`])? `default` when

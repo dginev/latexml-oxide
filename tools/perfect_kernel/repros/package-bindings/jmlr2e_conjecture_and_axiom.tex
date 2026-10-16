@@ -1,0 +1,13 @@
+% witness: 0907.5309, 1108.0065 ({conjecture} 18 papers, {axiom} 4)
+% oracle:  pdflatex (with jmlr2e.sty of 2022-10-17) 0 errors, "Theorem 1 … Conjecture 2 … Axiom 3 … Example 1"
+% engines: rust 67int6 = undefined {conjecture}, {axiom}; example numbered with theorem (Example 4)
+% expect:  0 errors, 0 warnings; conjecture and axiom share theorem's counter, example has its own
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::jmlr2e_conjecture_axiom_and_example
+\documentclass{article}
+\usepackage{jmlr2e}
+\begin{document}
+\begin{theorem}First.\end{theorem}
+\begin{conjecture}Every even number is even.\end{conjecture}
+\begin{axiom}Zero is a number.\end{axiom}
+\begin{example}An example.\end{example}
+\end{document}

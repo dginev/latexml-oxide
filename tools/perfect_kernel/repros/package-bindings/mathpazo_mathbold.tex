@@ -1,0 +1,10 @@
+% witness: 0807.0088, 0905.0925 (\mathbold, 72 papers), \PazoBB (3)
+% oracle:  pdflatex 0 errors, bold italic x + blackboard R
+% engines: rust 67int6 = undefined \mathbold, \PazoBB; perl = the same (KNOWN_PERL_ERRORS #761)
+% expect:  0 errors, 0 warnings; x bold italic, R blackboard
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::mathpazo_mathbold_and_pazobb
+\documentclass{article}
+\usepackage{mathpazo}
+\begin{document}
+$\mathbold{x}+\PazoBB{R}$
+\end{document}

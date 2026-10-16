@@ -1,0 +1,19 @@
+% witness: math0701082 (its own theorem.sty: \newcommand*{\c@thmlemma}{\c@theorem}, the hyperref \autoref sharing
+%          trick, for each theorem kind; the paper reaches it only when its shipped theorem.sty is read raw, the
+%          loader rule held on pk/68c-loader — the shape itself reproduces on its own)
+% oracle:  pdflatex 0 errors, "Theorem 1 A. Lemma 2 B." (\c@thmlemma expands to the theorem counter)
+% engines: rust 67int6, 68c = 3 Warnings (`\c@thmlemma` is not a register; counter thmlemma undefined, assuming 0), "Lemma 1"
+% expect:  0 errors, 0 warnings; the lemma tagged "Lemma 2"
+% status:  RED (67int6, 68c)
+\documentclass{article}
+\newtheorem{theorem}{Theorem}
+\makeatletter
+\newcommand*{\c@thmlemma}{\c@theorem}
+\newcommand*{\p@thmlemma}{\p@theorem}
+\newcommand*{\thethmlemma}{\thetheorem}
+\makeatother
+\newtheorem{lemma}[thmlemma]{Lemma}
+\begin{document}
+\begin{theorem}A.\end{theorem}
+\begin{lemma}B.\end{lemma}
+\end{document}

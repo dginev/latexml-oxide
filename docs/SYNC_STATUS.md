@@ -1222,6 +1222,59 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   67int4-rel over 306 papers (100 pop67o, 100 siunitx of which 39 with a later column package, 100 with a shipped class
   renewing `{abstract}` or a `\ver@` marker, the 6 witnesses): only the three witnesses differ, 303 byte-identical;
   the sn-jnl net (30) unchanged.
+- **68c** (binding gaps G3 B, author-file and symbol package bindings; bindgaps/g23_macros.tsv rows jmlr2e, spconf,
+  dgruyter, icml2025/2026, biblatex, article, mathpazo, mathastext, wasysym, amsmath). The loader rule of round 1 (a
+  shipped `.sty` that is another package than its TeX Live namesake loads raw: physics, proof, `myproof.sty`) is held
+  on pk/68c-loader for a user ruling. Bindings, macros at their real file:line: jmlr2e borrows amsthm (a paper's
+  `\let\proof\relax` + `\usepackage{amsthm}` gets amsthm's proof; 40 of 43 `{proof}` papers) and gains
+  `{conjecture}`/`{axiom}`, `{example}` on its own counter (jmlr2e.sty 2022-10-17:383-396; 0907.5309, 1302.6584);
+  spconf `\secondlinename`/`\thirdlinename`/`\nameplus`/`\nameplusplus`/`\secondname` append authors
+  (`\lx@add@authors@append`), `\threeauthors`/`\fourauthors` (the 2006-07 copies :172-196; 1701.07847, 0708.3022);
+  supertabular `\ST@newpage` (supertabular.sty:62-63, :515-543) and breakurl's character lists under `\ifpdf` false,
+  after its xkeyval and ifpdf (breakurl.sty:35-38, :71-104, :186-187), for dgruyter.sty:1704-1706/:2052-2058
+  (1503.04650, 1711.03341); article `\ps@headings`, `\ps@myheadings`, `\@makecaption` (article.cls:131-168, :480-489;
+  KPE #760; 0711.0180, 1010.5412); mathpazo `\mathbold`, `\PazoBB` (mathpazo.sty:72, :101-103; KPE #761; 0807.0088);
+  mathastext's user commands as no-ops with their arguments and their `\Mathastext…` names (:837-858, :964-968),
+  `\MTDeclareVersion`/`\Mathastext[<name>]` declaring a math version and `\MTversion` selecting it with
+  `\mathversion` (:2411-2420, :2585-2588, :2673-2697), `\Mathsf`/`\Mathtt` (:701-702; 1712.02869); wasysym 2.4
+  `\wasyparagraph`/`\Paragraph` (§), `\wasyeuro`/`\euro` (`noeuro`), `\wasycmd`/`\applecmd`, `\longs`, `\wasyfamily`,
+  `\textwasy` (wasysym.sty:47-55, :90-91, :262-270; KPE #762; 1001.4255, 1103.0853); biblatex `\RN`/`\Rn`
+  (biblatex.sty:3948-3960), `\DeclareNolabel`/`\DeclareNoinit` (:13988), `\DeclareRefcontext` (:10428),
+  `\BiblatexSplitbibDefernumbersWarningOff` (:16652), `.bbl` `\set`/`\inset`/`\annotation` (:8360-8378, :7943; a set
+  entry prints as one more `<bibentry type="set">`, its members beside it; 2011.12274, 1707.02797, 1110.6541,
+  2001.10285); icml `\Notice@String`, `\ICML@appearing`, `\ICML@preprint` — the paper's copy's where it ships one
+  (`shipped_class::shipped_copy_text`; workshop lines 2606.28747, 2604.14572, 2507.02987, 2506.09099), else the
+  version's as ICML distributed it (2015-2019, 2021-2026), empty for a version whose copies disagree (icml2020: PMLR
+  108, 119 or empty) or an unknown one, so `accepted` never leaves the review notice nor invents a proceedings line —
+  `\ificmlshowauthors`, `\ificml@noticeprinted`, the copy's (else the version's) accepted/preprint options;
+  eso-pic/url/caption as the copy loads them, forloop and the affiliation counters as the copy (else 2026, resp.
+  2017+) has them (icml2026.sty:124-177, :434, :504-518; 2601.22575, 2601.23143, 2601.04575); amsmath
+  `\ifinalign@`/`\ifingather@`/`\ifst@rred`, `\intkern@` (amsmath.sty:1280-1290, :653; 1606.07128). Repros
+  package-bindings/{jmlr2e_relaxed_proof_then_amsthm,jmlr2e_conjecture_and_axiom,spconf_second_line_names,
+  spconf_threeauthors,dgruyter_patches_supertabular_and_breakurl,mathpazo_mathbold,mathastext_user_commands,
+  wasysym_new_characters,biblatex_roman_and_config_commands,icml2026_notice_from_own_printaffiliations},
+  class-bindings/article_page_styles_and_makecaption, ams-internals/amsmath_switches_and_intkern RED (67int6) → GREEN;
+  package-bindings/{icml2024_accepted_notice_is_proceedings,icml2020_accepted_notice_unknown_is_empty,
+  icml2025_customised_copy_notice,mathastext_version_selects_math_version} RED (round 1) → GREEN; guards
+  `perfect_kernel_batch68c` (17). A/B vs 67int6 over 472 papers (372 row witnesses with the 43 loader-census papers, 100 of pop67o): Errors 1,332 →
+  1,080, papers with Errors 362 → 188, Fatals 4 → 4, none more; per row, Errors 67int6 → 68c: jmlr2e 29 → 21, spconf
+  28 → 14, dgruyter 47 → 19, article 48 → 27, mathpazo 28 → 2, mathastext 29 → 2, wasysym 27 → 2, biblatex 44 → 5 and
+  19 → 2, icml2026 50 → 11, icml2025 30 → 27 (2505.21317's copy loads forloop), amsmath 89 → 84; physics (211),
+  proof (21) and the census papers at 67int6's, the held rule's. Every word lost is former error text, `ſ`/`§`/`€`
+  in place of the command names, or jmlr2e's examples numbered on their own counter as the copies number them
+  (2311.05501, 2412.10837, 2411.09644); the 100 pop67o identical. Binding nets vs 67int6 (jmlr2e, spconf, dgruyter,
+  mathpazo, mathastext, wasysym, biblatex, amsmath, article, breakurl, icml2023-2025): no document worse. RED: macro-state/counter_alias_macro_to_register
+  (`\newcommand*{\c@thmlemma}{\c@theorem}`, math0701082's own theorem.sty, which the paper reaches only under the
+  held loader rule). Residuals: wasysym `\textwasy`/`\wasyfamily` text is the raw letters, not the wasy glyphs;
+  jmlr2e's claimed `{proof}` is amsthm's italic "Proof." ∎ where jmlr2e prints a bold "Proof" ■ (before 68c too);
+  a math version mathastext declares changes no font (sect13.rs `\mathversion`), and `\MTversion{normal}` keeps a
+  bold (KPE #687). Not this payload's: the jmlr2e `{assumption}` (84; four numbering forms in the copies),
+  `{thm}`/`{cor}`/…, spconf `\names`/`\nametwo`/`\myname` (several arities), aas_macros journal additions (`\cqg`,
+  `\prx`, …), the icml2025 long tail (`\printAffiliationsAndNoticeArxiv`, …) — each a copy's own addition, the pending
+  user decision on a shipped copy's extra definitions (the ICML notice strings read from a copy are definitions the
+  binding makes anyway, the copy's text of them); amsmath's public commands the witnesses lack (`\eqref`, `\dfrac`,
+  `{align*}`: amsmath is not loaded there — ncc's, breqn's or the class's own dependency, not the binding); stix and
+  the amsmath `\collect@body`/`\make@display@tag` internals not started.
 - **Run 357** (E/F rerun of run 353 on 1a95291ef6: 67n, 67o; COMPLETE 2026-10-15 18:15:14Z in 4 h 05 min under host
   load): E 89,338 → 89,367, F 4,145 → 4,091 (success 96.80 % → 96.80 %). Transitions vs run 353: E→OK 4, E→F 43, F→E 76,
   F→OK 21. E→F: `timeout` 33 (contention: two writers and their builds shared the host), `TooManyErrors` 6, `oom` 2,

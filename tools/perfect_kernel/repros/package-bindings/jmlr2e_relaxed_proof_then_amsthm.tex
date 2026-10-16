@@ -1,0 +1,15 @@
+% witness: 1302.6584, 1310.4849, 1404.0099 (40 of the 43 jmlr2e papers with undefined {proof}): jmlr2e, then
+%          \let\proof\relax \let\endproof\relax and the paper's own \usepackage{amsthm}
+% oracle:  pdflatex (with jmlr2e.sty of 2022-10-17) 0 errors, "Proof. Body. □"
+% engines: rust 67int6 = undefined {proof} (the binding had loaded amsthm, so the second request was skipped);
+%          perl = no jmlr2e binding, raw jmlr2e then amsthm: as pdflatex
+% expect:  0 errors, 0 warnings; one <proof> titled "Proof."
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::jmlr2e_relaxed_proof_takes_amsthm
+\documentclass{article}
+\usepackage{jmlr2e}
+\let\proof\relax
+\let\endproof\relax
+\usepackage{amsthm}
+\begin{document}
+\begin{proof}Body.\end{proof}
+\end{document}

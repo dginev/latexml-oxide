@@ -1058,8 +1058,8 @@ fn blx_opt_kv(opt: &str) -> Option<(String, String)> {
 #[rustfmt::skip]
 /// The `.bbl` command set (biblatex.sty:8995-9024 `\\blx@bblstart`): saved
 /// and rebound around the `.bbl` input, restored after it.
-const BBL_START: &str = "\\let\\biblatex@saved@verb\\verb\\let\\verb\\biblatex@bbl@verb\\let\\biblatex@saved@endverb\\endverb\\let\\endverb\\biblatex@bbl@endverb\\let\\biblatex@saved@datalist\\datalist\\let\\datalist\\biblatex@bbl@datalist\\let\\biblatex@saved@enddatalist\\enddatalist\\let\\enddatalist\\biblatex@bbl@enddatalist\\let\\biblatex@saved@entry\\entry\\let\\entry\\biblatex@bbl@entry\\let\\biblatex@saved@endentry\\endentry\\let\\endentry\\biblatex@bbl@endentry\\let\\biblatex@saved@name\\name\\let\\name\\biblatex@bbl@name\\let\\biblatex@saved@list\\list\\let\\list\\biblatex@bbl@list\\let\\biblatex@saved@field\\field\\let\\field\\biblatex@bbl@field\\let\\biblatex@saved@strng\\strng\\let\\strng\\biblatex@bbl@strng\\let\\biblatex@saved@keyw\\keyw\\let\\keyw\\biblatex@bbl@keyw\\let\\biblatex@saved@range\\range\\let\\range\\biblatex@bbl@range\\let\\biblatex@saved@preamble\\preamble\\let\\preamble\\biblatex@bbl@preamble\\let\\biblatex@saved@warn\\warn\\let\\warn\\biblatex@bbl@warn\\let\\biblatex@saved@xref\\xref\\let\\xref\\biblatex@bbl@xref\\let\\biblatex@saved@fakeset\\fakeset\\let\\fakeset\\biblatex@bbl@fakeset\\let\\biblatex@saved@refsection\\refsection\\let\\refsection\\biblatex@bbl@refsection\\let\\biblatex@saved@endrefsection\\endrefsection\\let\\endrefsection\\biblatex@bbl@endrefsection";
-const BBL_END: &str = "\\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@saved@endverb\\let\\datalist\\biblatex@saved@datalist\\let\\enddatalist\\biblatex@saved@enddatalist\\let\\entry\\biblatex@saved@entry\\let\\endentry\\biblatex@saved@endentry\\let\\name\\biblatex@saved@name\\let\\list\\biblatex@saved@list\\let\\field\\biblatex@saved@field\\let\\strng\\biblatex@saved@strng\\let\\keyw\\biblatex@saved@keyw\\let\\range\\biblatex@saved@range\\let\\preamble\\biblatex@saved@preamble\\let\\warn\\biblatex@saved@warn\\let\\xref\\biblatex@saved@xref\\let\\fakeset\\biblatex@saved@fakeset\\let\\refsection\\biblatex@saved@refsection\\let\\endrefsection\\biblatex@saved@endrefsection";
+const BBL_START: &str = "\\let\\biblatex@saved@verb\\verb\\let\\verb\\biblatex@bbl@verb\\let\\biblatex@saved@endverb\\endverb\\let\\endverb\\biblatex@bbl@endverb\\let\\biblatex@saved@datalist\\datalist\\let\\datalist\\biblatex@bbl@datalist\\let\\biblatex@saved@enddatalist\\enddatalist\\let\\enddatalist\\biblatex@bbl@enddatalist\\let\\biblatex@saved@entry\\entry\\let\\entry\\biblatex@bbl@entry\\let\\biblatex@saved@endentry\\endentry\\let\\endentry\\biblatex@bbl@endentry\\let\\biblatex@saved@name\\name\\let\\name\\biblatex@bbl@name\\let\\biblatex@saved@list\\list\\let\\list\\biblatex@bbl@list\\let\\biblatex@saved@field\\field\\let\\field\\biblatex@bbl@field\\let\\biblatex@saved@strng\\strng\\let\\strng\\biblatex@bbl@strng\\let\\biblatex@saved@keyw\\keyw\\let\\keyw\\biblatex@bbl@keyw\\let\\biblatex@saved@range\\range\\let\\range\\biblatex@bbl@range\\let\\biblatex@saved@preamble\\preamble\\let\\preamble\\biblatex@bbl@preamble\\let\\biblatex@saved@warn\\warn\\let\\warn\\biblatex@bbl@warn\\let\\biblatex@saved@xref\\xref\\let\\xref\\biblatex@bbl@xref\\let\\biblatex@saved@fakeset\\fakeset\\let\\fakeset\\biblatex@bbl@fakeset\\let\\biblatex@saved@set\\set\\let\\set\\biblatex@bbl@set\\let\\biblatex@saved@inset\\inset\\let\\inset\\biblatex@bbl@inset\\let\\biblatex@saved@annotation\\annotation\\let\\annotation\\biblatex@bbl@annotation\\let\\biblatex@saved@refsection\\refsection\\let\\refsection\\biblatex@bbl@refsection\\let\\biblatex@saved@endrefsection\\endrefsection\\let\\endrefsection\\biblatex@bbl@endrefsection";
+const BBL_END: &str = "\\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@saved@endverb\\let\\datalist\\biblatex@saved@datalist\\let\\enddatalist\\biblatex@saved@enddatalist\\let\\entry\\biblatex@saved@entry\\let\\endentry\\biblatex@saved@endentry\\let\\name\\biblatex@saved@name\\let\\list\\biblatex@saved@list\\let\\field\\biblatex@saved@field\\let\\strng\\biblatex@saved@strng\\let\\keyw\\biblatex@saved@keyw\\let\\range\\biblatex@saved@range\\let\\preamble\\biblatex@saved@preamble\\let\\warn\\biblatex@saved@warn\\let\\xref\\biblatex@saved@xref\\let\\fakeset\\biblatex@saved@fakeset\\let\\set\\biblatex@saved@set\\let\\inset\\biblatex@saved@inset\\let\\annotation\\biblatex@saved@annotation\\let\\refsection\\biblatex@saved@refsection\\let\\endrefsection\\biblatex@saved@endrefsection";
 
 /// standard.bbx:740-752's `\DeclareBibliographyAlias` list, in its order (an
 /// alias of an alias, `mvreference` → `reference`, resolves at declaration).
@@ -1646,6 +1646,10 @@ LoadDefinitions!({
   // `\DeclareLabelalphaTemplate[types]{spec}` (biblatex-apa.bbx, ext-*.bbx).
   def_macro_noop("\\DeclareLabeltitle []{}")?;
   def_macro_noop("\\DeclareLabelalphaTemplate []{}")?;
+  // biblatex.sty:13988 `\DeclareNolabel{\nolabel{\regexp{…}}}` and the `\DeclareNoinit{\noinit{…}}` sibling: what
+  // biber strips from names before building labels and initials (22 and 2 papers; 1707.02797, 2012.04591).
+  def_macro_noop("\\DeclareNolabel{}")?;
+  def_macro_noop("\\DeclareNoinit{}")?;
   // biblatex.sty:2694-2705 `\uspunctuation`/`\stdpunctuation` toggle the
   // punctuation-inside-quotes tracker; no quote tracker here → no-ops.
   def_macro_noop("\\uspunctuation")?;
@@ -2658,6 +2662,20 @@ LoadDefinitions!({
   def_macro_noop("\\biblatex@bbl@warn{}")?;
   DefMacro!("\\biblatex@bbl@xref{}", "\\ref{#1}");
   def_macro_noop("\\biblatex@bbl@fakeset{}")?;
+  // biblatex.sty:8360-8378 `\set{<members>}` (a set entry's members) and `\inset{<set>}` (a member's set), the entry
+  // sets biber writes (18 and 14 papers; 1110.6541, 1403.7606): grouping members under their set is not modelled,
+  // so each member prints as its own entry, and the set entry too, as one more `<bibentry type="set">` with its own
+  // fields (`\entry{s}{set}{}` … `\field{title}{The set}` prints "The set"), where biblatex prints the members inside
+  // the set's item. :7943 `\annotation`, biber's data annotations (`highlight`,
+  // `corresponding` on a name or field, 36 papers; 2001.10285), which styles may print as marks: dropped. Its
+  // arity follows the biber version, five arguments (`\annotation{item}{author}{1}{}{highlight}`) or seven
+  // (biblatex.sty :7943 `#1…#7`); the trailing two are read when present.
+  def_macro_noop("\\biblatex@bbl@set{}")?;
+  def_macro_noop("\\biblatex@bbl@inset{}")?;
+  RawTeX!(
+    r"\def\biblatex@bbl@annotation#1#2#3#4#5{\@ifnextchar\bgroup\biblatex@bbl@annotation@x{}}
+\def\biblatex@bbl@annotation@x#1{\@ifnextchar\bgroup\@gobble{}}"
+  );
   // biblatex.sty:8634-8641 + 8999-9000: while the `.bbl` is read, `\refsection`
   // is the bbl variant taking a MANDATORY section number (`\refsection{0}` opens
   // every biber .bbl) and `\endrefsection` closes its group; the document-level
@@ -3257,6 +3275,30 @@ LoadDefinitions!({
   );
   Let!("\\refcontext", "\\lx@biblatex@refcontext");
   Let!("\\newrefcontext", "\\lx@biblatex@refcontext");
+  // biblatex.sty:10428 `\DeclareRefcontext{<name>}{<options>}`: a named context's options, which the contexts above
+  // do not apply (2406.05146, 2408.05177, 2411.16770).
+  def_macro_noop("\\DeclareRefcontext{}{}")?;
+  // biblatex.sty:3948-3960: Roman numerals, `\RN` upper case and `\Rn` lower case (`\romannumeral`), a document
+  // command (24 and 6 papers; 2011.12274, 2101.02945).
+  RawTeX!(
+    r"\DeclareRobustCommand*{\RN}[1]{%
+  \begingroup
+  \expandafter\RNfont
+  \expandafter{\romannumeral#1}%
+  \endgroup}
+\DeclareRobustCommand*{\Rn}[1]{%
+  \begingroup
+  \expandafter\Rnfont
+  \expandafter{\romannumeral#1}%
+  \endgroup}
+\newcommand*{\RNfont}{\uppercase}
+\newcommand*{\Rnfont}{}"
+  );
+  // biblatex.sty:16652-16653: silences the `defernumbers` warning of a split bibliography (7 papers; 2207.06399).
+  RawTeX!(
+    r"\def\BiblatexSplitbibDefernumbersWarningOff{%
+  \global\let\blx@printbibchecks@suppresswarn\@empty}"
+  );
 
   // biblatex L3408+ bibliography range separators. Define defensively.
   // NB: do NOT redefine \bibrangedash here — Perl L353 sets it to an en-dash

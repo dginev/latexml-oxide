@@ -1,0 +1,17 @@
+% witness: 0711.0180 (adassconf.sty:534 \let\ps@plain\ps@myheadings), 1004.5433, 1301.4585 (\ps@headings),
+%          1010.5412 (xtab.sty's \@makecaption), 1011.6187, 1206.7007 (captcont.sty)
+% oracle:  pdflatex 0 errors, "Table 1: Gaps of the instances."
+% engines: rust 67int6 = undefined \ps@myheadings / \@makecaption; perl = the same (KNOWN_PERL_ERRORS #760)
+% expect:  0 errors, 0 warnings; the caption text in the paragraph
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::article_page_styles_and_makecaption
+\documentclass{article}
+\makeatletter
+\let\ps@plain\ps@myheadings
+\let\lx@saved@makecaption\@makecaption
+\makeatother
+\pagestyle{headings}
+\begin{document}
+\makeatletter
+\@makecaption{Table 1}{Gaps of the instances.}
+\makeatother
+\end{document}

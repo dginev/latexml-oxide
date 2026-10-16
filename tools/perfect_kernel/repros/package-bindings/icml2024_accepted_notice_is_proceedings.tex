@@ -1,0 +1,17 @@
+% witness: 2406.00116, 2406.00274 (icml2024.sty as ICML distributed it: `accepted` sets \Notice@String to
+%          \ICML@appearing, the 41st-ICML proceedings line); 68c review B1 (an accepted paper printing
+%          \Notice@String got "Under review by the ICML")
+% oracle:  pdflatex (with 2406.00116's icml2024.sty) 0 errors, "Notice: Proceedings of the 41st International
+%          Conference on Machine Learning, Vienna, Austria. PMLR 235, 2024. Copyright 2024 by the author(s).."
+% engines: rust 68c r1 = "Notice: Preliminary work. Under review by the International Conference on Machine
+%          Learning (ICML). Do not distribute.."
+% expect:  0 errors, 0 warnings; the 2024 proceedings line, no review notice
+% status:  RED (68c r1) -> GREEN (68c r2); guard perfect_kernel_batch68c::icml2024_accepted_notice_is_proceedings
+\documentclass{article}
+\usepackage[accepted]{icml2024}
+\makeatletter
+\newcommand{\shownotice}{\Notice@String}
+\makeatother
+\begin{document}
+Notice: \shownotice.
+\end{document}

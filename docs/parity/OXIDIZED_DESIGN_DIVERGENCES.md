@@ -17792,3 +17792,4 @@ url font so that it may break at the `\Url…Breaks` characters; here, as the bi
 (the JOSS/pandoc template's `\href@Urllike`, 1902.08702). Witnesses 0712.1142, 1011.1558, 1902.08702. Perl defines
 neither (KNOWN_PERL_ERRORS #750, #752). Guards `perfect_kernel_batch68b::{hyperref_internals_called_by_papers,
 url_format_string_and_tilde}`.
+

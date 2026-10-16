@@ -1,0 +1,29 @@
+% witness: 2507.02987, 2506.09099 (icml2025.sty copies whose \ICML@appearing is a workshop's line), 2606.28747
+%          ("3rd AI for Math Workshop"), 2604.14572 (icml2026.sty); 68c review B1 (the binding's hard-coded 2025
+%          proceedings line replaced the copy's)
+% oracle:  pdflatex 0 errors, "Notice: Proceedings of the ICML 2025 Workshop on Tiny Things, Vancouver, Canada.
+%          2025.."
+% engines: rust 68c r1 = "Notice: Proceedings of the 42nd International Conference on Machine Learning, Vancouver,
+%          Canada. PMLR 267, 2025. Copyright 2025 by the author(s).."
+% expect:  0 errors, 0 warnings; the copy's workshop line
+% status:  RED (68c r1) -> GREEN (68c r2); guard perfect_kernel_batch68c::icml2025_customised_copy_notice
+\begin{filecontents*}[overwrite]{icml2025.sty}
+\ProvidesPackage{icml2025}
+\DeclareOption{accepted}{%
+  \renewcommand{\Notice@String}{\ICML@appearing}
+  \gdef\isaccepted{1}
+}
+\newcommand{\ICML@appearing}{\textit{Proceedings of the ICML 2025 Workshop on Tiny Things},
+Vancouver, Canada. 2025.}
+\newcommand{\Notice@String}{Preliminary work.  Under review by the
+International Conference on Machine Learning (ICML)\@.  Do not distribute.}
+\ProcessOptions\relax
+\end{filecontents*}
+\documentclass{article}
+\usepackage[accepted]{icml2025}
+\makeatletter
+\newcommand{\shownotice}{\Notice@String}
+\makeatother
+\begin{document}
+Notice: \shownotice.
+\end{document}

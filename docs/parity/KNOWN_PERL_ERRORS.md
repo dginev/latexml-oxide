@@ -13822,3 +13822,32 @@ where latex.ltx `\@onefilewithoptions` resets the target date per file (:19122, 
 name, :19113 `\pkgcls@name`); `[=v3]`, `[= v2]` and a date before siunitx's first release raise no `Requested version …
 is unknown` / `Suspicious rollback date` Error (latex.ltx:19276, :19194; the binding runs no `\DeclareCurrentRelease`),
 and `pkgcls_set_request` trims the label, so `[= v2]` selects v2 where LaTeX errs and loads v3.
+
+## 760. article.cls's binding lacks the `headings`/`myheadings` page styles and `\@makecaption`
+
+article.cls:131-168 defines `\ps@headings` (two-sided and one-sided forms) and `\ps@myheadings`, and :480-489
+`\@makecaption`; Perl's article.cls.ltxml defines none of them, nor does LaTeX.pool, so a raw style or document
+calling them by name stops at an undefined control sequence: `\let\ps@plain\ps@myheadings` (adassconf.sty:534; 0711.0180,
+0901.3729, 0906.2186), `\ps@headings` (1004.5433's Mhdr.sty, 1301.4585), xtab.sty's own captions
+`\@makecaption{\@nameuse{fnum@#1}}{…}` (:84, 1010.5412) and captcont.sty's (1206.7007), `\let\old@makecaption\@makecaption`
+(50 papers with `\@makecaption`, 17 `\ps@headings`, 4 `\ps@myheadings`). Minimal trigger:
+`\documentclass{article}\makeatletter\let\ps@plain\ps@myheadings\@makecaption{Table 1}{Text}\makeatother` — pdflatex
+"Table 1: Text", Perl two undefined. Fixed in Rust (article_cls.rs, the class's definitions as RawTeX). Repro
+class-bindings/article_page_styles_and_makecaption; guard `perfect_kernel_batch68c::article_page_styles_and_makecaption`.
+
+## 761. mathpazo.sty's binding lacks `\mathbold` and `\PazoBB`
+
+mathpazo.sty:72 `\DeclareMathAlphabet{\mathbold}{OML}{zplm}{b}{it}` (bold italic math letters) and :101-103
+`\DeclareMathAlphabet\PazoBB{U}{fplmbb}{m}{n}` (the blackboard alphabet `\mathbb` calls); Perl's mathpazo.sty.ltxml
+defines `\mathbb` only. Minimal trigger: `\usepackage{mathpazo}` `$\mathbold{x}$` — pdflatex a bold italic x, Perl
+undefined `\mathbold` (72 papers; 0807.0088, 0905.0925). Fixed in Rust (mathpazo_sty.rs). Repro
+package-bindings/mathpazo_mathbold; guard `perfect_kernel_batch68c::mathpazo_mathbold_and_pazobb`.
+
+## 762. wasysym.sty's binding lacks the characters of wasysym 2.0-2.4
+
+wasysym.sty:262-270 (wasysym.dtx:40-41, :181-211, :408) defines `\wasyparagraph` (the wasy section sign, `\Paragraph`),
+`\wasyeuro` (`\euro` unless `noeuro`), `\wasycmd` (`\applecmd`), `\longs`, `\roundz`, and :90-91 `\wasyfamily` and
+`\textwasy`; Perl's wasysym.sty.ltxml has none of them and declares none of the package's options. Minimal trigger:
+`\usepackage{wasysym}` `\wasyparagraph~1, 5\,\euro` — pdflatex "§ 1, 5 €", Perl two undefined (`\wasyparagraph` 42
+papers, `\euro` 12; 1001.4255, 1103.0853). Fixed in Rust (wasysym_sty.rs; `\roundz`, without a Unicode character of its
+own, left out). Repro package-bindings/wasysym_new_characters; guard `perfect_kernel_batch68c::wasysym_new_characters`.

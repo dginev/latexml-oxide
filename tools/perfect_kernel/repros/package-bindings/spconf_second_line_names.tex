@@ -1,0 +1,15 @@
+% witness: 1701.07847, 1710.09338 (\secondlinename, 84 papers; 80 copies define it identically)
+% oracle:  pdflatex (with 1710.09338's spconf.sty) 0 errors, names on two lines: "Ann One1, Bob Two2" / "Cy Three1"
+% engines: rust 67int6 = undefined \secondlinename, Cy Three lost
+% expect:  0 errors, 0 warnings; three creators in order
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::spconf_second_line_adds_authors
+\documentclass{article}
+\usepackage{spconf}
+\title{Title}
+\name{Ann One$^{1}$, Bob Two$^{2}$}
+\secondlinename{Cy Three$^{1}$}
+\address{$^{1}$Inst A\\ $^{2}$Inst B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

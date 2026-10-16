@@ -159,4 +159,63 @@ LoadDefinitions!( {
   // the `openbib` option overrides; a copied `thebibliography` body reads it
   // (mciteplus_doc; Perl's class binding lacks the default too).
   RawTeX!(r"\let\@openbib@code\@empty");
+
+  // article.cls:131-168: the `headings` and `myheadings` page styles. Running heads are page furniture, so
+  // `\markboth`/`\markright` keep nothing (sect05.rs), but a document or a raw style calls the styles by name
+  // (`\ps@headings` in 1004.5433's Mhdr.sty and 1301.4585; `\let\ps@plain\ps@myheadings`, adassconf.sty:534 in
+  // 0711.0180, 0901.3729, 0906.2186) and `\pagestyle{headings}` runs them, as in LaTeX. Perl's binding defines
+  // neither (KNOWN_PERL_ERRORS #760).
+  RawTeX!(r"\if@twoside
+  \def\ps@headings{%
+      \let\@oddfoot\@empty\let\@evenfoot\@empty
+      \def\@evenhead{\thepage\hfil\slshape\leftmark}%
+      \def\@oddhead{{\slshape\rightmark}\hfil\thepage}%
+      \let\@mkboth\markboth
+    \def\sectionmark##1{%
+      \markboth {\MakeUppercase{%
+        \ifnum \c@secnumdepth >\z@
+          \thesection\quad
+        \fi
+        ##1}}{}}%
+    \def\subsectionmark##1{%
+      \markright {%
+        \ifnum \c@secnumdepth >\@ne
+          \thesubsection\quad
+        \fi
+        ##1}}}
+\else
+  \def\ps@headings{%
+    \let\@oddfoot\@empty
+    \def\@oddhead{{\slshape\rightmark}\hfil\thepage}%
+    \let\@mkboth\markboth
+    \def\sectionmark##1{%
+      \markright {\MakeUppercase{%
+        \ifnum \c@secnumdepth >\m@ne
+          \thesection\quad
+        \fi
+        ##1}}}}
+\fi
+\def\ps@myheadings{%
+    \let\@oddfoot\@empty\let\@evenfoot\@empty
+    \def\@evenhead{\thepage\hfil\slshape\leftmark}%
+    \def\@oddhead{{\slshape\rightmark}\hfil\thepage}%
+    \let\@mkboth\@gobbletwo
+    \let\sectionmark\@gobble
+    \let\subsectionmark\@gobble
+    }");
+  // article.cls:480-489: the caption box. The binding's `\caption` builds `ltx:caption` itself and never calls it,
+  // but a raw package setting its own captions does — xtab.sty:84/121/132 `\@makecaption{\@nameuse{fnum@#1}}{…}`
+  // (1010.5412), captcont.sty (1206.7007) — and documents save and wrap it (`\let\old@makecaption\@makecaption`;
+  // 50 papers in all, 1011.6187). Its `Table 1: text` then stands in the text, as LaTeX sets it. Perl's binding
+  // lacks it too (KNOWN_PERL_ERRORS #760).
+  RawTeX!(r"\long\def\@makecaption#1#2{%
+  \vskip\abovecaptionskip
+  \sbox\@tempboxa{#1: #2}%
+  \ifdim \wd\@tempboxa >\hsize
+    #1: #2\par
+  \else
+    \global \@minipagefalse
+    \hb@xt@\hsize{\hfil\box\@tempboxa\hfil}%
+  \fi
+  \vskip\belowcaptionskip}");
 });

@@ -2080,6 +2080,16 @@ Extra braces must be added to prevent wrong output}\@ehc}
 
   // Conditionals (always false sentinels — Perl L58-68)
   DefConditional!("\\ifmeasuring@");
+  // amsmath.sty:1280-1281 and :1290: the switches its display environments set, which classes and documents
+  // copying them set too (copernicus.cls:1894 `\st@rredfalse`, 1606.07128; 2212.07787, 2304.07625): `\ifinalign@`,
+  // `\ifingather@`, `\ifst@rred` (`\iftag@` below). Never read here; the binding's environments decide by their
+  // own names.
+  DefConditional!("\\ifinalign@");
+  DefConditional!("\\ifingather@");
+  DefConditional!("\\ifst@rred");
+  // amsmath.sty:653 the kern between the signs of a multiple integral, which papers building their own
+  // (`\MultiIntegral` copies, 2004.13893, 2210.05620) call.
+  RawTeX!(r"\def\intkern@{\mkern-6mu\mathchoice{\mkern-3mu}{}{}{}}");
   // amsmath.sty:1896 `\let\maxcolumn@widths\@empty`: the column-width register
   // the two-pass `\measure@` (:1936-1944) rebuilds. The binding replaces the
   // alignment code but raw packages still read the register — cryptocode.sty:

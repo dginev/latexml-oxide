@@ -8,7 +8,15 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   RequirePackage!("natbib");
-  RequirePackage!("amsthm");
+  // jmlr2e.sty does not load amsthm; it defines `{proof}` itself (jmlr2e.sty of 2022-10-17,
+  // :383-387 `\ifdefined\proof\renewenvironment{proof}…\else\newenvironment{proof}…\fi`). The binding borrows amsthm's
+  // proof and theorem machinery (`require_package_borrowed`): `\@ifpackageloaded{amsthm}` stays false, so a
+  // paper's `\let\proof\relax \let\endproof\relax` followed by its own `\usepackage{amsthm}` loads amsthm,
+  // whose `{proof}` then takes over — loaded outright, the second request was skipped and `{proof}` stayed
+  // `\relax` (40 of the 43 `undefined:{proof}` jmlr2e papers; 1302.6584, 1310.4849, 1404.0099). The proof is
+  // jmlr2e's own (`claim_borrowed_meanings`), as the real file defines it.
+  require_package_borrowed("amsthm")?;
+  claim_borrowed_meanings(&["\\proof", "\\endproof", "\\begin{proof}", "\\end{proof}"]);
   // jmlr2e.sty L57-63 pulls in epsfig, amssymb, graphicx, hyperref.
   // Mirror that so user code that calls \hypersetup / \href / \blacklozenge
   // (from amssymb) at preamble time doesn't error. Witness 2406.03260.
@@ -122,13 +130,17 @@ LoadDefinitions!({
   );
 
   // Theorem-likes JMLR papers commonly use.
+  // jmlr2e.sty of 2022-10-17 :388-396 (unchanged since the 2001 file): `example` has a counter of its own, the rest share
+  // `theorem`'s; `conjecture` and `axiom` were missing (18 and 4 papers; 0907.5309, 1108.0065).
   RawTeX!(
-    r"\newtheorem{theorem}{Theorem}
+    r"\newtheorem{example}{Example}
+\newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{definition}[theorem]{Definition}
-\newtheorem{example}[theorem]{Example}
-\newtheorem{remark}[theorem]{Remark}"
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{axiom}[theorem]{Axiom}"
   );
 });

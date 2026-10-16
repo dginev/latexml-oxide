@@ -201,4 +201,31 @@ LoadDefinitions!({
     "\\lx@kludged{#1\\lx@tweaked{width=0pt,xoffset=-0.66em}{\\text@circ}}"
   );
   DefMacro!("\\APLminus", "\\raise 0.5ex \\hbox{-}");
+
+  // wasysym.sty 2.4 (2020): the font switch (:90-91) and the characters added since 2.0 (:262-270, wasysym.dtx:40-41,
+  // :181-211, :408): `\wasyparagraph` and `\Paragraph`, the wasy section sign ("note the variation between
+  // \Paragraph and \S", 42 papers; 1001.4255, 1103.0853), `\wasyeuro` and `\euro` (12; `\euro` unless the `noeuro`
+  // option keeps another package's), `\wasycmd`/`\applecmd` (the command key, U+2318) and `\longs` (U+017F).
+  // `\roundz`, no Unicode character of its own, is left out. Perl's binding has none of them (KNOWN_PERL_ERRORS #762).
+  RawTeX!(
+    r"\def\wasyfamily{\fontencoding{U}\fontfamily{wasy}\selectfont}
+\DeclareTextFontCommand{\textwasy}{\wasyfamily}"
+  );
+  DefPrimitive!("\\wasyparagraph", "\u{00A7}");
+  DefPrimitive!("\\wasyeuro", "\u{20AC}");
+  DefPrimitive!("\\wasycmd", "\u{2318}");
+  DefPrimitive!("\\longs", "\u{017F}");
+  Let!("\\Paragraph", "\\wasyparagraph");
+  Let!("\\applecmd", "\\wasycmd");
+  // wasysym.sty:47-55 `\newif\ifwasy@euro \wasy@eurotrue` and the options; `integrals`/`nointegrals` and `compat1`
+  // choose glyph shapes.
+  AssignValue!("wasysym:euro" => true);
+  DeclareOption!("noeuro", sub { AssignValue!("wasysym:euro" => false); });
+  DeclareOption!("compat1", None);
+  DeclareOption!("integrals", None);
+  DeclareOption!("nointegrals", None);
+  ProcessOptions!();
+  if lookup_bool("wasysym:euro") {
+    Let!("\\euro", "\\wasyeuro");
+  }
 });
