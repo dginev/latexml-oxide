@@ -13997,3 +13997,17 @@ undefined. Minimal trigger: `\usepackage{ccaption}\captionwidth{.75\textwidth}` 
 papers; 0803.1137, 0806.4323; 0907.2405, 1302.5179). Rust's ccaption_sty.rs defines them over the kernel caption. Repro
 package-bindings/ccaption_continued_and_bilingual; guards `perfect_kernel_batch68i::{ccaption_continued_and_bilingual,
 ccaption_without_subfigure_option}`.
+
+## 808. enumitem's short label numbers a reference without the label's punctuation
+
+enumitem.sty:660-681 `\enit@first` (run under `shortlabels`, :1787-1794) turns an enumerate's short label into
+`label=<template>`, replacing `a`/`A`/`i`/`I`/`1` by `\alph*`/`\Alph*`/`\roman*`/`\Roman*`/`\arabic*` (:633-652), and
+`ref` defaults to the label, so `\ref` prints "(a)". Perl's enumitem.sty.ltxml `beginEnumItemize` sets the short label
+with the enumerate package's `setEnumerationStyle` (latex_constructs.pool.ltxml), which makes `\theenumi` `\alph{enumi}`
+and only the label `(\theenumi)`, so the reference reads "a". Minimal trigger:
+`\usepackage[shortlabels]{enumitem}` `\begin{enumerate}[(a)]\item\label{x} red\end{enumerate}\ref{x}` — pdflatex "(a)",
+Perl and Rust "a" (`label=(\alph*)` gives "(a)" in all three). Rust's enumitem_sty.rs `mark_short_label` ports Perl;
+open (a fix writes the short label as `label=` with enumitem's replacements). Witnesses: every
+`[shortlabels]{enumitem}` paper referring to a short-labelled item, and the newer lmcs.cls (2003.01491, 2604.16477), which
+passes `shortlabels`. Repro package-bindings/enumitem_shortlabel_ref (RED); pinned in
+`perfect_kernel_batch68i::enumitem_shortlabels_under_lmcs`.

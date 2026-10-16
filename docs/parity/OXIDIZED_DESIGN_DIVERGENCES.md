@@ -17861,6 +17861,13 @@ classes pair them: `\bibname` with chapters (book, report: pdflatex "Bibliograph
 (article "References"). The heading `\t@cb@bchapsec`/`\t@cb@bsection` (:133-152) is a conditional, which the
 bibliography constructor cannot read as a heading (`begin_bibliography_clean` reads `\bibsection` as `\<unit>*{<title>}`),
 so at the document's start the binding writes the heading those conditionals select in that form —
-`\chapter*{\tocbibname}`, `\section*{\tocbibname}` (the unit `\tocotherhead` names), unstarred under `numbib` — where
-tocbibind sets `\bibsection` (:154-159, :184-198). Repro package-bindings/tocbibind_names_and_tocfile; guards
+`\chapter*{\tocbibname}`, `\section*{\tocbibname}` (the unit `\tocotherhead` names as of `\begin{document}`; the
+real `\t@cb@bchapsec` reads `\@tocextra` when the bibliography is set, so a later `\tocotherhead` does not reach the
+bibliography's heading), unstarred under `numbib` — where tocbibind sets `\bibsection` (:154-159, :184-198).
+`\tocfile{<title>}{<ext>}` (:263-271) is a TOC of `<ext>` titled `<title>`; after `\tocsection` (:313-315) in a class
+without chapters it follows a numbered `\<unit>{<title>}` instead, untitled (pdflatex "1 List of Algorithms", then "2
+Intro"). Residual: the bibliography's number — under `numbib`, or under `\tocsection` for a class without chapters
+(pdflatex "3 Literature") — is not modelled: the constructor strips the heading's star and numbers no bibliography, so
+it stays "Literature". The chaptered witnesses (1605.05950 book, 2204.09786 scrbook) are unaffected: a class with
+chapters ignores `\tocsection`. Repro package-bindings/tocbibind_names_and_tocfile; guards
 `perfect_kernel_batch68i::{tocbibind_names_and_tocfile, tocbibind_book_bibliography_is_bibname}`.

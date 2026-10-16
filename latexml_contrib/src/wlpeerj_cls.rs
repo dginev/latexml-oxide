@@ -18,7 +18,7 @@ LoadDefinitions!({
   // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
   RequirePackage!("hyperref");
   // wlpeerj.cls:134 `\RequirePackage[inline]{enumitem}` (2402.14602's copy): enumitem's lists and its inline ones
-  // (`{enumerate*}`).
+  // (`{enumerate*}`). v1.2 loads enumitem without it (:133, 1710.01085); `inline` is the union with the newer copy.
   RequirePackage!("enumitem", options => vec![s!("inline")]);
   // wlpeerj.cls L23: `\RequirePackage{lineno}` unconditional.
   RequirePackage!("lineno");

@@ -1,10 +1,11 @@
 //! Red/green guards for batch 68i (binding gaps G3 C): TeX Live package bindings — tocbibind's heading names and
 //! `\tocfile`, amsopn's internals, datetime's day of the week, ordinals and `\pdfdate`, rotating's `\rotdriver`,
 //! paralist's blank lists and deprecated commands, todonotes' `\todostyle`, standalone inside a main document,
-//! ccaption's continued and bilingual captions, and enumitem's inline lists under the classes that load them.
+//! ccaption's continued and bilingual captions, and enumitem's inline lists and short labels under the classes that
+//! load them.
 //!
-//! Every repro (`tools/perfect_kernel/repros/package-bindings/`) is checked against pdflatex (the lmcs one with
-//! 1611.06929's shipped lmcs.cls beside it).
+//! Every repro (`tools/perfect_kernel/repros/package-bindings/`) is checked against pdflatex (the lmcs ones with
+//! 1611.06929's and 2003.01491's shipped lmcs.cls beside them).
 use latexml::util::test::assert_element;
 
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
@@ -33,8 +34,10 @@ fn convert_checked(tex: &str, warnings: usize) -> String {
 }
 
 /// tocbibind.sty:125-132 and :250-316: `\settocname`/`\setlofname` rename the lists, `\tocfile{<title>}{<ext>}` is a
-/// list of `<ext>` headed `<title>`, and `\settocbibname` heads the bibliography (pdflatex "Table of Contents",
-/// "Figures", "List of Algorithms", "Literature"; 67int9: five undefined, "References"). 0710.3210, 1605.05950,
+/// list of `<ext>` headed `<title>` — after `\tocsection` (:313-315), in a class without chapters, under a numbered
+/// section — and `\settocbibname` heads the bibliography (pdflatex "Table of Contents", "Figures", "1 List of
+/// Algorithms", "2 Intro", "3 Literature"; 67int9: five undefined, "References"; 68i: the list titled, unnumbered, and
+/// "1 Intro"). The bibliography's number is not modelled (OXIDIZED_DESIGN_DIVERGENCES #620). 0710.3210, 1605.05950,
 /// 1712.01817.
 #[test]
 fn tocbibind_names_and_tocfile() {
@@ -53,9 +56,9 @@ fn tocbibind_names_and_tocfile() {
   );
   assert_element(
     &xml,
-    "TOC",
-    &[r#"lists="loa""#],
-    r#"<TOC lists="loa" scope="global"><title>List of Algorithms</title></TOC>"#,
+    "section",
+    &[r#"xml:id="S1""#],
+    r#"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>List of Algorithms</title><TOC lists="loa" scope="global"/></section>"#,
   );
   assert_element(
     &xml,
@@ -168,11 +171,18 @@ fn paralist_blank_lists() {
 }
 
 /// todonotes.sty:46-49 and :581-583: `\todostyle` declares a style key and an empty `\phantomsection` stands in for
-/// hyperref's (67int9: both undefined); the note keeps its text. 2407.14906, 1308.6029.
+/// hyperref's (67int9: both undefined); the note keeps its text and its number (pdflatex "Text more." with the margin
+/// note "Fix this."). A note given the style key (`\todo[mine]`) still takes the key as its mark — the open SYNC_STATUS
+/// 68i row, repro package-bindings/todonotes_style_key (RED). 2407.14906, 1308.6029.
 #[test]
 fn todonotes_todostyle() {
   let xml = convert_checked(repro!("todonotes_todostyle.tex"), 0);
-  assert!(xml.contains(">Fix this.</note> more.</p>"), "{xml}");
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    r#"<p xml:id="p1.1">Text<note inlist="todo" mark="1" role="todo" xml:id="todo1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">ToDo 1</tag></tags>Fix this.</note> more.</p>"#,
+  );
 }
 
 /// standalone.sty:26-39, :296-304 and :707-709 in a main document: `\ifstandalone` false, `\onlyifstandalone` gobbles,
@@ -203,9 +213,11 @@ fn ccaption_continued_and_bilingual() {
     &[r#"labels="LABEL:fc""#],
     r#"<figure labels="LABEL:fc" xml:id="S0.F1.sf3"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf3.1">(c)</text></tag><tag role="refnum">1(c)</tag></tags><p xml:id="S0.F1.sf3.2">C</p><toccaption><tag close=" ">(c)</tag>Third</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf3.3">(c)</text></tag><text fontsize="80%" xml:id="S0.F1.sf3.4">Third</text></caption></figure>"#,
   );
-  assert!(
-    xml.contains(r#"<caption><tag close=": ">Figure 1</tag>Continued.</caption>"#),
-    "{xml}"
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1a""#],
+    r#"<figure inlist="lof" xml:id="S0.F1a"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:fc" xml:id="S0.F1.sf3"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf3.1">(c)</text></tag><tag role="refnum">1(c)</tag></tags><p xml:id="S0.F1.sf3.2">C</p><toccaption><tag close=" ">(c)</tag>Third</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf3.3">(c)</text></tag><text fontsize="80%" xml:id="S0.F1.sf3.4">Third</text></caption></figure><toccaption><tag close=" ">1</tag>Continued.</toccaption><caption><tag close=": ">Figure 1</tag>Continued.</caption></figure>"#,
   );
   assert_element(
     &xml,
@@ -230,6 +242,24 @@ fn enumitem_inline_under_lmcs() {
   );
 }
 
+/// The newer lmcs.cls also passes `shortlabels` (2003.01491's lmcs.cls:45-47, 2604.16477's :51-56), the binding the
+/// union of the versions: `\begin{enumerate}[(a)]` numbers "(a)", "(b)" (pdflatex with 2003.01491's class; 68i
+/// "(1)", "(2)" and an unknown-key warning).
+#[test]
+fn enumitem_shortlabels_under_lmcs() {
+  let xml = convert_checked(repro!("enumitem_shortlabels_under_lmcs.tex"), 0);
+  // The reference number is the short label's counter alone ("a"; pdflatex `\ref` "(a)", enumitem making the short
+  // label `label=`, enumitem.sty:660-681): KNOWN_PERL_ERRORS #808, repro package-bindings/enumitem_shortlabel_ref (RED).
+  assert_element(
+    &xml,
+    "enumerate",
+    &[],
+    &format!(
+      r#"<enumerate xml:id="S1.I1"><item xml:id="S1.I1.i1"><tags><tag>(a)</tag><tag role="autoref">item{NBSP}a<text xml:id="S1.I1.i1.1"/></tag><tag role="refnum">a</tag><tag role="typerefnum">item{NBSP}a</tag></tags><para xml:id="S1.I1.i1.p1"><p xml:id="S1.I1.i1.p1.1">red</p></para></item><item xml:id="S1.I1.i2"><tags><tag>(b)</tag><tag role="autoref">item{NBSP}b<text xml:id="S1.I1.i2.1"/></tag><tag role="refnum">b</tag><tag role="typerefnum">item{NBSP}b</tag></tags><para xml:id="S1.I1.i2.p1"><p xml:id="S1.I1.i2.p1.1">green</p></para></item></enumerate>"#
+    ),
+  );
+}
+
 /// ccaption without `[subfigure]`: the caption-shape commands are defined and the option's skipped definitions leave
 /// no conditional open (a draft's `\iftrue` in them left "Missing \fi" at the load: 0803.1137, 1403.7561, 1706.01843).
 /// The one warning is the binding's stub notice.
@@ -245,9 +275,11 @@ fn ccaption_without_subfigure_option() {
 ",
     1,
   );
-  assert!(
-    xml.contains(r#"<caption><tag close=": ">Figure 1</tag>A.</caption>"#),
-    "{xml}"
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">x</p><toccaption><tag close=" ">1</tag>A.</toccaption><caption><tag close=": ">Figure 1</tag>A.</caption></figure>"#,
   );
 }
 

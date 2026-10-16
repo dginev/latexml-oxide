@@ -2057,16 +2057,31 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   2110.09723 is libertinust1math's `\DeclareMathOperator`). KNOWN_PERL_ERRORS #800-#807, OXIDIZED_DESIGN_DIVERGENCES
   #619-#620. Repros package-bindings/{tocbibind_names_and_tocfile, amsopn_internals, datetime_names_and_pdfdate,
   rotating_rotdriver, paralist_blank_lists, todonotes_todostyle, standalone_in_main_document,
-  ccaption_continued_and_bilingual, enumitem_inline_under_lmcs} RED (67int9) → GREEN; guards `perfect_kernel_batch68i`
-  (12). A/B vs 67int9-rel over 502 papers (the rows' 402 witnesses, 100 of pop67o): Errors 705 → 323, papers with
+  ccaption_continued_and_bilingual, enumitem_inline_under_lmcs, enumitem_shortlabels_under_lmcs} RED (67int9) → GREEN;
+  guards `perfect_kernel_batch68i` (13). A/B vs 67int9-rel over 502 papers (the rows' 402 witnesses, 100 of pop67o): Errors 705 → 323, papers with
   Errors 380 → 56, Fatals 4 → 4, none gains an Error; per row, Errors: tocbibind 66 → 6, amsopn 46 → 26 (the
   libertinust1math and no-amsmath papers above), datetime 61 → 11 (papers' own: `\THEDAy`, unloaded `\newdateformat`),
   rotating 54 → 10 (unloaded `{sideways}`), paralist 44 → 1, todonotes 40 → 0, standalone 40 → 2, ccaption 57 → 0,
-  enumitem 39 → 9; the 100 pop67o byte-identical. Words fall only where `<ERROR>` text left (11 `\newmcodes@` papers)
-  and in 2504.05198, whose four `\onlyifstandalone{\bibliography…}` sub-file bibliographies (152 items) are gobbled as
-  in pdflatex (the main one, 38 items, stays). Binding nets (tocbibind, amsopn, datetime, rotating, paralist, todonotes,
-  standalone, ccaption, enumitem, pnas-new) vs 67int9: no document worse, Errors 524 → 471. Open: `\todo[<style>]` takes its style key as the note's mark (`mark="mine"`;
-  19 papers' `\todo[inline]` alike, before 68i too).
+  enumitem 39 → 9; the 100 pop67o byte-identical. Words fall only where `<ERROR>` text left (8 `\newmcodes@` papers:
+  1511.04387, 1712.08220, 1802.09883, 1908.01362, 2307.12224, 2309.05133, 2512.10779, 2609.04177) and in 2504.05198,
+  whose sub-files' `\onlyifstandalone{\bibliography…}` calls are gobbled as in pdflatex: of the base's four
+  bibliographies (152 items) the three sub-file copies of main.bbl go (3 × 38 = 114 duplicate items; the appendix's call
+  rendered none), the main one (38 items, before the appendix as in the PDF) stays. Binding nets (tocbibind, amsopn,
+  datetime, rotating, paralist, todonotes, standalone, ccaption, enumitem, pnas-new) vs 67int9: no document worse,
+  Errors 524 → 471. Rulings (main session, 2026-10-16): `\rotdriver` loading no driver file (OXIDIZED_DESIGN_DIVERGENCES
+  #619), tocbibind's name told by the class's chapters (#620), datetime's `\today` in its format with the source date,
+  and the class bindings loading enumitem with their classes' `inline` accepted. Round 2: lmcs passes `shortlabels` too
+  (the newer lmcs.cls:45-47 in 2003.01491, :51-56 in 2604.16477; the union of the versions), so `[(a)]` numbers "(a)",
+  "(b)" (repro package-bindings/enumitem_shortlabels_under_lmcs, guard `enumitem_shortlabels_under_lmcs`); pnas-new's
+  and wlpeerj's `inline` is the union with their newer copies (pnas-new v1.44/v1.45 and wlpeerj v1.2 load enumitem
+  without it: 1812.09361, 2311.05803, 1710.01085); `\tocsection` numbers `\tocfile`'s heading in a class without
+  chapters (pdflatex "1 List of Algorithms"; the bibliography's number is OXIDIZED_DESIGN_DIVERGENCES #620's residual);
+  ccaption's load warning names only what stays approximated (`\bottomcaption`, `\legend`, the caption styling);
+  subfigure's `\lx@subfloat@done` is empty without ccaption. Open: `\todo[<style>]` takes its style key as the note's
+  mark (`mark="mine"`; 19 papers' `\todo[inline]` alike, before 68i too; todonotes_sty.rs:15 `\todo` is `\lx@note{todo}`,
+  whose `[<mark>]` takes todonotes' option list; repro package-bindings/todonotes_style_key, RED); enumitem's short
+  label numbers a reference without the label's punctuation (`\ref` "a" for pdflatex "(a)"; Perl alike,
+  KNOWN_PERL_ERRORS #808; repro package-bindings/enumitem_shortlabel_ref, RED).
 - **68b** (binding gaps G3, core package bindings: bindgaps/g23_macros.tsv rows hyperref, breqn, natbib, url,
   blkarray, pict2e, amsthm; each macro verified against the TL 2025 file). hyperref (hyperref_sty.rs) — `\Hy@Info`,
   `\Hy@Warning`, `\Hy@Error`, `\Hy@WarningNoLine`, `\Hy@InfoNoLine` (:130-135; 1310.6851, 1712.03838, 1901.10472),

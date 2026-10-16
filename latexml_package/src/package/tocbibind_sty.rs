@@ -73,8 +73,13 @@ LoadDefinitions!({
 \newcommand{\t@cb@bsection}{\if@donumbib\@nameuse{\@tocextra}{\tocbibname}\else\toc@section{\@tocextra}{\tocbibname}\fi}
 \newcommand{\toc@start}{\if@bibchapter\if@twocolumn\@restonecoltrue\onecolumn\else\@restonecolfalse\fi\fi}
 \newcommand{\toc@finish}{\if@bibchapter\if@restonecol\twocolumn\fi\fi}
-\newcommand{\tocfile}[2]{\toc@start\lx@tocbibind@tocfile{#1}{#2}\toc@finish}
-\newcommand{\tocsection}{\renewcommand{\toc@section}[2]{\@nameuse{##1}{##2}}}");
+\newif\iflx@tocbibind@numbered
+\newcommand{\tocfile}[2]{\toc@start
+  \if@bibchapter\lx@tocbibind@tocfile[{#1}]{#2}\else
+    \iflx@tocbibind@numbered\@nameuse{\@tocextra}{#1}\lx@tocbibind@tocfile{#2}\else\lx@tocbibind@tocfile[{#1}]{#2}\fi
+  \fi
+  \toc@finish}
+\newcommand{\tocsection}{\renewcommand{\toc@section}[2]{\@nameuse{##1}{##2}}\lx@tocbibind@numberedtrue}");
   // With the bibliography in the contents (`\if@dotocbib`, the default), tocbibind heads it with `\tocbibname`: its
   // `thebibliography` opens with `\bibsection` = `\t@cb@bchapsec` (:154-159), and at the document's start natbib's
   // `\bibsection` becomes `\t@cb@bchapsec`, or `\t@cb@bsection` under natbib's or chapterbib's `sectionbib`
@@ -97,10 +102,14 @@ LoadDefinitions!({
     \fi
   \fi
 \fi}");
-  // `\tocfile`'s heading and list (`\toc@chapter`/`\toc@section` then `\@starttoc{<ext>}`): a table of contents
-  // titled `<title>` listing `<ext>`, as the kernel's `\tableofcontents`/`\listoffigures` are (sect04.rs).
-  DefConstructor!("\\lx@tocbibind@tocfile{}{}",
-    "<ltx:TOC lists='#lists' scope='global' select='#select'><ltx:title>#1</ltx:title></ltx:TOC>",
+  // `\tocfile`'s heading and list (`\toc@chapter`/`\toc@section` then `\@starttoc{<ext>}`, :263-271): a table of
+  // contents titled `<title>` listing `<ext>`, as the kernel's `\tableofcontents`/`\listoffigures` are (sect04.rs).
+  // After `\tocsection` (:313-315) a class without chapters numbers the heading — `\toc@section` becomes
+  // `\@nameuse{<unit>}{<title>}` — so the list follows a numbered `\<unit>{<title>}` (`\@tocextra`'s), untitled
+  // (pdflatex "1 List of Algorithms" then "2 Intro"); the bibliography's number is not modelled
+  // (OXIDIZED_DESIGN_DIVERGENCES #620). A class with chapters ignores `\tocsection` (1605.05950, 2204.09786).
+  DefConstructor!("\\lx@tocbibind@tocfile[]{}",
+    "<ltx:TOC lists='#lists' scope='global' select='#select'>?#1(<ltx:title>#1</ltx:title>)()</ltx:TOC>",
     properties => sub[args] {
       let lists = args[1].as_ref().map(|ext| ext.to_string()).unwrap_or_default();
       let select = if lists == "toc" { toc_select()? } else { String::new() };

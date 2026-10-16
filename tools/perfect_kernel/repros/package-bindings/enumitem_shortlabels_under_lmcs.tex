@@ -1,0 +1,13 @@
+% witness: 2003.01491 (lmcs.cls:45-47), 2604.16477 (lmcs.cls:51-56): the newer lmcs.cls passes shortlabels and inline to enumitem; 1611.06929's (lmcs.cls:37-38) passes inline only
+% oracle:  pdflatex (with 2003.01491's lmcs.cls beside it) 0 errors; "1. S (a) red (b) green"
+% engines: rust 68i = "(1)", "(2)" and a Warning (unknown KeyVals key '(a)'; the class binding passed inline only); perl = no lmcs binding
+% expect:  0 errors, 0 warnings; an enumerate labeled (a), (b)
+% status:  RED (68i) -> GREEN (68i2); guard perfect_kernel_batch68i::enumitem_shortlabels_under_lmcs
+\documentclass{lmcs}
+\begin{document}
+\section{S}
+\begin{enumerate}[(a)]
+\item red
+\item green
+\end{enumerate}
+\end{document}

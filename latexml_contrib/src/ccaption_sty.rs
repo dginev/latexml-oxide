@@ -18,16 +18,18 @@
 //!
 //! Perl LaTeXML has no ccaption binding either; with default
 //! `INCLUDE_STYLES=false`, raw ccaption.sty is not loaded. Match
-//! Perl: stub the user-facing extension macros as thin wrappers
-//! over `\caption`, leaving the kernel `\caption`/`\label`/
-//! `\@subcaption` untouched.
+//! Perl in not loading the file: the binding defines its user-facing
+//! macros — the continued and bilingual captions as the file defines
+//! them, the rest (`\bottomcaption`, `\legend`, the caption styling)
+//! as approximations its load warning names — leaving the kernel
+//! `\caption`/`\label`/`\@subcaption` untouched.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
   Warn!(
     "missing_file",
     "ccaption.sty",
-    "ccaption.sty is minimally stubbed — extended caption features (\\bicaption, \\contcaption, \\bottomcaption, sidecap-style) fall back to the base \\caption."
+    "ccaption.sty is partially stubbed — \\bottomcaption, \\legend, \\namedlegend and the fixed captions are set as regular captions, the caption styling (\\captionnamefont, \\captiontitlefont, \\captiondelim, \\captionstyle) is ignored, and \\contlabel and \\bicaptionbox are dropped."
   );
   // ccaption.sty:25-44 the options: `subfigure` (and the older `subfigure20`/`subfigure21`) adapts the subfigure
   // package's subfloats to continued figures (below); `caption2` and `titles` change nothing here.

@@ -1,0 +1,11 @@
+% witness: 2407.14906, 2409.03694, 2410.02385 (\todostyle, 27 papers, then \todo[<style>]); \todo[inline] alike (19 papers)
+% oracle:  pdflatex 0 errors; "Text more." with the note "Fix this." in the margin, numbered as any note (no "mine" printed)
+% engines: rust 68i = <note mark="mine" xml:id="todox1"> with the tags "mine", "ToDo mine" (the option list taken as the note's mark: SYNC_STATUS 68i "Open: \todo[<style>]"); perl = no \todostyle (KNOWN_PERL_ERRORS #805)
+% expect:  0 errors, 0 warnings; the note "Fix this." numbered 1 (mark="1", xml:id="todo1"), no "mine" text
+% status:  RED (open: SYNC_STATUS 68i "\todo[<style>]"; todonotes_sty.rs:15 \todo is \lx@note{todo}, whose [<mark>] takes todonotes' option list)
+\documentclass{article}
+\usepackage{todonotes}
+\todostyle{mine}{color=red!40}
+\begin{document}
+Text\todo[mine]{Fix this.} more.
+\end{document}

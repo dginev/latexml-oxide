@@ -87,7 +87,9 @@ LoadDefinitions!({
   RequirePackage!("etoolbox");
   RequirePackage!("titlesec");
   RequirePackage!("caption");
-  // pnas-new.cls:433 `\RequirePackage[inline]{enumitem}` (2508.21277's copy): the inline lists (`{enumerate*}`).
+  // pnas-new.cls:433 `\RequirePackage[inline]{enumitem}` (2508.21277's copy): the inline lists (`{enumerate*}`). The
+  // older copies load enumitem without it (v1.44 :429, 1812.09361; v1.45 :414, 2311.05803); `inline` is the union
+  // with the newer ones.
   RequirePackage!("enumitem", options => vec![s!("inline")]);
   // pnasresearcharticle.sty uses \afterpage and \mdfdefinestyle.
   RequirePackage!("afterpage");
