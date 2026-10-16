@@ -5531,13 +5531,12 @@ fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
   // Leading centered paragraphs — anywhere in the pre-first-section frontmatter
   // region, NOT inside a section (a hand-formatted title block sits at document
   // level, often after a `\vspace`/`\rule` so it isn't the first body element).
-  // Absolute query so the returned nodes support child traversal (shared-node
-  // caveat in `maybe_promote_leading_title`).
-  let candidates = document.findnodes(
-    "/ltx:document//ltx:p[@align='center']\
-     [not(preceding::ltx:section) and not(ancestor::ltx:section)]",
-    None,
-  );
+  // The nodes come from a walk of the live DOM from the absolutely queried root, so
+  // they support child traversal (shared-node caveat in `maybe_promote_leading_title`).
+  let Some(root) = document.findnode("/ltx:document", None) else {
+    return Ok(());
+  };
+  let candidates = leading_centered_paragraphs(&root);
   // Remove the FIRST leading centered display-font block that EXACTLY reproduces
   // the structured title. Only one — a paper may repeat the title text later
   // (e.g. a running head); we drop just the redundant hand-typeset title.
@@ -5577,6 +5576,45 @@ fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
     break;
   }
   Ok(())
+}
+
+/// The `<ltx:p align="center">` descendants of `root` that precede its first `<ltx:section>`
+/// in document order — the node set of
+/// `/ltx:document//ltx:p[@align='center'][not(preceding::ltx:section) and not(ancestor::ltx:section)]`
+/// (a section before a paragraph in document order is its ancestor or precedes it), in
+/// document order. One preorder walk that stops at the first section: the XPath scanned
+/// `preceding::` for every centered paragraph of the document, and runs at every sectioning
+/// command (`\@startsection@hook`), so a long manual spent nearly all of its build there
+/// (2208.14314: 121 of 133 s; 2108.10297: 113 of 146 s; PERFORMANCE.md Principle 6).
+fn leading_centered_paragraphs(root: &Node) -> Vec<Node> {
+  let mut out = Vec::new();
+  let mut cur = root.get_first_child();
+  while let Some(node) = cur {
+    let mut descend = None;
+    if node.get_type() == Some(NodeType::ElementNode) {
+      let q = document::get_node_qname(&node);
+      if q == pin!("ltx:section") {
+        break;
+      }
+      if q == pin!("ltx:p") && node.get_attribute("align").as_deref() == Some("center") {
+        out.push(node.clone());
+      }
+      descend = node.get_first_child();
+    }
+    cur = descend.or_else(|| {
+      let mut up = node;
+      loop {
+        if let Some(next) = up.get_next_sibling() {
+          return Some(next);
+        }
+        match up.get_parent() {
+          Some(parent) if parent != *root => up = parent,
+          _ => return None,
+        }
+      }
+    });
+  }
+  out
 }
 
 /// Insert FrontMatter into document, if not already added
