@@ -32,8 +32,10 @@ LoadDefinitions!({
   DefMacro!("\\eqnobysec", "\\numbysectrue\\@addtoreset{equation}{section}");
 
   // Frontmatter — Perl L33-90
+  // 68t: a call inside the document's `{titlepage}` also runs a refused printing `\title` there (sect05.rs
+  // `titlepage_class_call`, as revtex4_support's: gr-qc9404034).
   DefMacro!("\\title[]{}",
-    "\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}");
+    "\\lx@titlepage@class@call{title}{#1}{#2}{\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}");
   Let!("\\paper", "\\title");
   def_macro_noop("\\@articletype")?;
   DefMacro!("\\article[]{}{}",

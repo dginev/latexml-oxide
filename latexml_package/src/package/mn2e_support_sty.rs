@@ -26,8 +26,10 @@ LoadDefinitions!({
   }
 
   // Frontmatter — Perl mn2e_support.sty.ltxml (PR #2767)
+  // 68t: a call inside the document's `{titlepage}` also runs a refused printing `\title` there (sect05.rs
+  // `titlepage_class_call`, as revtex4_support's: gr-qc9404034).
   DefMacro!("\\title[]{}",
-    r"\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}");
+    r"\lx@titlepage@class@call{title}{#1}{#2}{\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}}");
   DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@mn@authors{#2}", locked => true);
   // mnras.cls:1072-1079: `\newauthor` starts a new row of the one author tabular, the addresses printed after all the
   // rows: within `\author` it separates two names as a comma does, not two author groups (Perl's

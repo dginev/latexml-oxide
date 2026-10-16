@@ -52,8 +52,10 @@ LoadDefinitions!({
 \@boole@def\@ifodd#1{\ifodd#1}%");
 
   // 4.3 Title/Author (Perl PR #2767)
+  // 68t: a call inside the document's `{titlepage}` also runs a refused printing `\title` there (sect05.rs
+  // `titlepage_class_call`; gr-qc9404034 under `\documentstyle{revtex}`).
   DefMacro!("\\title[]{}",
-    "\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}");
+    "\\lx@titlepage@class@call{title}{#1}{#2}{\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}");
 
   // \author[labels]{name}   One \author per author
   // If labels given, the corresponding affiliation from \affil is attached

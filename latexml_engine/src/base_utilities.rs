@@ -5110,6 +5110,31 @@ pub fn demote_stranded_titlepage(document: &mut Document) -> Result<()> {
   if !(demotable && holdable) {
     return Ok(());
   }
+  // The class's own printing `\title` run on this cover (sect05.rs `titlepage_class_run`, its elements tagged
+  // `_lx_cover_title`): a demoted cover no longer stands in for the document's `<ltx:title>`, which the HTML then
+  // displays (LaTeXML-structure-xhtml.xsl:374-375 hides it only beside an `ltx:titlepage`), so the print would be a
+  // second copy of the title. Emptied wrappers go with it.
+  for ink in document.findnodes("descendant::*[@_lx_cover_title]", Some(&titlepage)) {
+    if ink
+      .get_parent()
+      .is_some_and(|p| p.get_attribute("_lx_cover_title").is_some())
+    {
+      continue;
+    }
+    let mut victim = ink;
+    loop {
+      let parent = victim.get_parent();
+      document.remove_node(victim);
+      match parent {
+        Some(p)
+          if p != titlepage && !has_element_child(&p) && p.get_content().trim().is_empty() =>
+        {
+          victim = p;
+        },
+        _ => break,
+      }
+    }
+  }
   normalize_titlepage_layout_children(document, &titlepage)?;
   let mut para = document.rename_node(titlepage, "ltx:para", true)?;
   document.add_class(&mut para, "ltx_titlepage")?;

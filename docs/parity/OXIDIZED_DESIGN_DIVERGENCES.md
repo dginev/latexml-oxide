@@ -5911,6 +5911,9 @@ its title; a leading centered block that *doesn't* match the title is left untou
 `\title{}` without `\maketitle` renders nothing in the PDF, so only the manual block was ever
 visible there — and never where the HTML would then show no title (a document with a titlepage, above).
 
+The class's own printing `\title` run on a cover (#629) is kept by the same rule: a document with a titlepage is
+never searched, its cover being the title pdflatex prints there.
+
 **Witnesses**: arXiv/html_feedback#6924 (witness arXiv 2608.10928).
 
 **Guards**: `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924` (structured `<title>`
@@ -5918,7 +5921,8 @@ kept, title text appears exactly once, hand-typeset author block preserved);
 `perfect_kernel_batch68s::{title_ink_dedup_float_keeps_its_line, title_ink_dedup_in_titlepage,
 title_ink_dedup_once_per_document, title_ink_dedup_not_in_chapter, title_ink_dedup_beside_titlepage,
 title_ink_dedup_parbox_in_prose, title_ink_dedup_framed_cover_keeps_its_frame}` (repros
-sectioning-frontmatter/title_ink_dedup_*).
+sectioning-frontmatter/title_ink_dedup_*);
+`perfect_kernel_batch68t::titlepage_refused_title_prints_on_the_cover` (the cover keeps its title).
 
 ### 147. A leftover control sequence in a hyperref URL stays literal, not digested
 
@@ -18136,3 +18140,32 @@ order is the PDF's (Body / Table 1: Cap / A foot note), accepted by the main ses
 `\paragraph` heading set in the box no longer takes the text after the splice into its section: it closes at the end
 mark. Guards `perfect_kernel_batch68q::{unvbox_lastbox_peel_loop, unvbox_splice_closes_what_its_list_opened}`,
 `box_primitives::{lastbox, unpack}`, `box_test`.
+
+### 629. A refused printing `\title` called inside the document's `{titlepage}` prints there (Perl: no visible title)
+
+When a class, style or the document `\def`s a `\title` that typesets its argument where it stands instead of storing
+it — cernart.cls:217 `\def\title#1{\vskip1em\begin{center}\normalsize\bf#1\end{center}\vskip1.5em}`, asp2006.sty:157,
+pdproc.sty:61, gr-qc9404034.tex:96 `\def\title#1{\begin{center}{\large #1}\end{center}}` — the lock refuses the
+definition (state.rs, `\lx@dropped@title`, `\title:redefined`) and the kernel's `\title` keeps the title for the
+frontmatter. Outside a titlepage that is the PDF's output: the frontmatter's title is placed first, where those
+setters print. Inside `{titlepage}` pdflatex prints the title on the cover, and the HTML shows the cover in place of
+the document's `<ltx:title>` (LaTeXML-structure-xhtml.xsl:374-375, Perl's :358-359), so Perl and the base showed no
+title at all (KNOWN_PERL_ERRORS #828). Now the `{titlepage}` the document lays out (not a `\maketitle` deposit's,
+which builds no `ltx:titlepage`) sets `lx_titlepage_cover`, and a `\title` called in it runs the class's own refused
+`\title` at the call, its output kept on the cover (sect05.rs `titlepage_class_call`, `titlepage_class_run`, Info
+`frontmatter:titlepage`), then the kernel's part (the structured title stays: metadata, hidden by the XSLT rule). Only
+a class `\title` that keeps no value (`class_command_stores`; a frontmatter setter prints nothing at its call), whose
+vocabulary is defined (`dropped_class_setter`); a class `\title` that calls a saved kernel `\title` adds the title
+once (`\lx@titlepage@kernel`). The bindings' own `\title[]{}` (revtex4_support — `\documentstyle{revtex}`,
+gr-qc9404034 —, ams_support, iopart_support, mn2e_support) take the same rule (`\lx@titlepage@class@call`). Only
+`\title`: the XSLT hides no other field beside a titlepage, so a refused printing `\author`/`\address` there
+(gr-qc9404034.tex:97-98, cernart.cls:220) is not run — the frontmatter's `ltx:creator` is its one displayed copy. The
+title-ink dedup never searches a document with a titlepage (#146). A titlepage that stands after body content is demoted to a
+paragraph (#257, `demote_stranded_titlepage`), beside which the document's title IS displayed: the class's print is
+built between two Rust-only marks (`\lx@cover@title@begin`/`@end`, reverting as nothing), which tag its elements
+`_lx_cover_title` (internal, dropped at finalization), and the demotion removes them — the title shows once either way.
+Witnesses 0904.2708 (cernart), gr-qc9404034: 0 → 1 visible
+title, 0 errors either side. Repro sectioning-frontmatter/titlepage_refused_title_prints_on_the_cover; guards
+`perfect_kernel_batch68t::{titlepage_refused_title_prints_on_the_cover,
+refused_title_outside_titlepage_is_the_frontmatter_title, refused_storing_title_in_titlepage_prints_nothing,
+binding_title_in_titlepage_runs_the_refused_printing_title, stranded_titlepage_drops_the_class_title_print}`.

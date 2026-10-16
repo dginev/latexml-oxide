@@ -912,15 +912,64 @@ pub(crate) fn load() -> Result<()> {
     // `\date{\def\$##1: ##2 ##3${##2}\$Revision: 3.1 $}` (ulineno.tex:16, 2
     // errors; Perl pool:1066 shares the raw copy). KNOWN_PERL_ERRORS #145.
     // Guard: `perfect_kernel_batch54::frontmatter_copies_the_halved_macro`.
-    // 65a: a call the document body sealed off goes to the class's own `\title` (`sealed_class_call`).
+    // 65a: a call the document body sealed off goes to the class's own `\title` (`sealed_class_call`); 68t: a call
+    // inside the document's `{titlepage}` also runs the class's own printing `\title` there (`titlepage_class_call`).
     r"\lx@sealed@class@call{title}{#1}{#2}{\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}\expandafter\lx@title@after\expandafter{\@title}}",
     locked => true);
-  // The class's own call (`sealed_class_call`) when the document body sealed this one off, else the kernel's.
+  // The class's own call (`sealed_class_call`) when the document body sealed this one off; inside the document's
+  // `{titlepage}`, the class's own printing call and then the kernel's (`titlepage_class_call`); else the kernel's.
   DefMacro!("\\lx@sealed@class@call{}{}{}{}", sub[(name, opt, arg, kernel)] {
-    Ok(sealed_class_call(&name.to_string(), &opt, &arg).unwrap_or(kernel))
+    let name = name.to_string();
+    Ok(match sealed_class_call(&name, &opt, &arg) {
+      Some(call) => call,
+      None => titlepage_class_call(&name, &opt, &arg, &kernel).unwrap_or(kernel),
+    })
   });
   DefPrimitive!("\\lx@sealed@class@run{}{}{}", sub[(name, opt, arg)] {
     sealed_class_run(&name.to_string(), opt, arg)
+  });
+  // The same `{titlepage}` rule for a binding's own `\title[]{}` (revtex4_support, ams_support, iopart_support,
+  // mn2e_support): its body is the kernel's part.
+  DefMacro!("\\lx@titlepage@class@call{}{}{}{}", sub[(name, opt, arg, kernel)] {
+    Ok(titlepage_class_call(&name.to_string(), &opt, &arg, &kernel).unwrap_or(kernel))
+  });
+  DefPrimitive!("\\lx@titlepage@class@run{}{}{}", sub[(name, opt, arg)] {
+    titlepage_class_run(&name.to_string(), opt, arg)
+  });
+  // The class's own `\title` printed on the cover (`titlepage_class_run`) is built between these two marks: the end
+  // mark tags every element built since the begin mark in the open `ltx:titlepage` (`_lx_cover_title`, internal,
+  // dropped at finalization; new elements follow every earlier descendant in document order), which a stranded
+  // titlepage's demotion removes (base_utilities.rs `demote_stranded_titlepage`). Rust-only, reverting as nothing.
+  DefConstructor!("\\lx@cover@title@begin",
+    sub[document, _args, _props] {
+      if let Some(mut cover) = open_titlepage(document) {
+        let from = document.findnodes("descendant::*", Some(&cover)).len();
+        let _ = cover.set_attribute("_lx_cover_ink_from", &from.to_string());
+      }
+    },
+    reversion => ""
+  );
+  DefConstructor!("\\lx@cover@title@end",
+    sub[document, _args, _props] {
+      if let Some(mut cover) = open_titlepage(document)
+        && let Some(from) = cover.get_attribute("_lx_cover_ink_from").and_then(|v| v.parse::<usize>().ok())
+      {
+        for mut ink in document.findnodes("descendant::*", Some(&cover)).into_iter().skip(from) {
+          let _ = ink.set_attribute("_lx_cover_title", "true");
+        }
+        let _ = cover.remove_attribute("_lx_cover_ink_from");
+      }
+    },
+    reversion => ""
+  );
+  // The kernel's part of a `{titlepage}` call (`titlepage_class_call`), unless the class's own command just ran it
+  // (a class `\title` that calls a saved kernel `\title`): the frontmatter takes the title once.
+  DefMacro!("\\lx@titlepage@kernel{}", sub[(kernel)] {
+    Ok(if lookup_bool("lx_sealed_class_call_reached_kernel") {
+      Tokens::default()
+    } else {
+      kernel
+    })
   });
   // The author of the sectional unit the call stands in (`sealed_class_run`, user ruling 2026-10-11): an
   // `ltx:creator` among the unit's front matter (after its tags, title and earlier creators;
@@ -1604,6 +1653,11 @@ pub(crate) fn load() -> Result<()> {
       // neutralization and the environment defined. Witnesses hep-th9703192,
       // cond-mat9607110, hep-lat0402021 (run 336, ~1,078 papers).
       Let!("\\centering", "\\@empty");
+      // A cover the document lays out (not a `\maketitle` deposit's, which builds no `ltx:titlepage`): the kernel
+      // `\title` called in it also runs the class's own refused printing `\title` there (`titlepage_class_call`).
+      if !lookup_bool("lx_depositing_frontmatter_fields") {
+        assign_value("lx_titlepage_cover", true, Some(Scope::Local));
+      }
       assign_value("frontmatter_deferred", true, Some(Scope::Global));
       AddToMacro!("\\lx@maketitle@body", "\\unwind@titlepage");
       // In titlepage, abstract is simpler: direct body. The
@@ -2407,23 +2461,9 @@ fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens) -> Option<Tokens> {
 /// `SectionalFrontMatter.class`), the call's optional argument, or the class's default for it (RecipeBook's
 /// `O{Author: }`), as its label. OXIDIZED_DESIGN #526, #527.
 fn sealed_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested>> {
-  let Some((takes_opt, _)) = dropped_class_setter(name) else {
+  let Some(digested) = run_dropped_class_command(name, &opt, &arg)? else {
     return Ok(Vec::new());
   };
-  let mut call = vec![T_CS!(s!("\\lx@dropped@{name}"))];
-  if takes_opt && !opt.is_empty() {
-    call.push(T_OTHER!("["));
-    call.extend(opt.unlist_ref().iter().copied());
-    call.push(T_OTHER!("]"));
-  }
-  call.push(T_BEGIN!());
-  call.extend(arg.unlist_ref().iter().copied());
-  call.push(T_END!());
-  AssignValue!("lx_sealed_class_call" => true, Some(Scope::Global));
-  AssignValue!("lx_sealed_class_call_reached_kernel" => false, Some(Scope::Global));
-  let digested = digest(Tokens::new(call));
-  AssignValue!("lx_sealed_class_call" => false, Some(Scope::Global));
-  let digested = digested?;
   let in_flow = typesets_content(&digested);
   // A class command that reached the kernel's (through a helper the one-level look did not follow, `\@author@line`
   // calling a saved `\origauthor`) handed the author to the frontmatter, which the seal dropped: a store, not page
@@ -2472,6 +2512,106 @@ fn sealed_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested
     );
   }
   Ok(out)
+}
+
+/// The class's own refused `\<name>` (`\lx@dropped@<name>[opt]{arg}`), digested where the call stands, its output
+/// kept; `None` without a class definition a call can be handed to ([`dropped_class_setter`]). While it runs, a call of
+/// the kernel's command (a saved `\let\origtitle\title`) reaches the kernel's and is recorded
+/// (`lx_sealed_class_call_reached_kernel`).
+fn run_dropped_class_command(name: &str, opt: &Tokens, arg: &Tokens) -> Result<Option<Digested>> {
+  let Some((takes_opt, _)) = dropped_class_setter(name) else {
+    return Ok(None);
+  };
+  let mut call = vec![T_CS!(s!("\\lx@dropped@{name}"))];
+  if takes_opt && !opt.is_empty() {
+    call.push(T_OTHER!("["));
+    call.extend(opt.unlist_ref().iter().copied());
+    call.push(T_OTHER!("]"));
+  }
+  call.push(T_BEGIN!());
+  call.extend(arg.unlist_ref().iter().copied());
+  call.push(T_END!());
+  AssignValue!("lx_sealed_class_call" => true, Some(Scope::Global));
+  AssignValue!("lx_sealed_class_call_reached_kernel" => false, Some(Scope::Global));
+  let digested = digest(Tokens::new(call));
+  AssignValue!("lx_sealed_class_call" => false, Some(Scope::Global));
+  Ok(Some(digested?))
+}
+
+/// A `\title` called inside the document's `{titlepage}` (68t, title study rule R2): when a class, style or the
+/// document itself `\def`s a `\title` that typesets its argument where it stands instead of keeping it — cernart.cls:217
+/// `\def\title#1{\vskip1em\begin{center}\normalsize\bf#1\end{center}\vskip1.5em}`, asp2006.sty:157, pdproc.sty:61, a
+/// document's `\def\title#1{\begin{center}{\large #1}\end{center}}` (gr-qc9404034.tex:96) — the lock refuses the
+/// definition (state.rs, `\lx@dropped@title`) and the kernel keeps the title for the frontmatter. Outside a titlepage
+/// the frontmatter's title, placed first, is the one the PDF prints there. Inside one, pdflatex prints the title on the
+/// cover, and the HTML shows the cover in place of the document's `<ltx:title>`
+/// (LaTeXML-structure-xhtml.xsl:374-375, Perl's :358-359: a document title with an `ltx:titlepage` sibling is not
+/// displayed), so with only the kernel's call the HTML shows no title at all (0904.2708 cernart, gr-qc9404034; Perl the
+/// same). The call stands for what the document's machinery prints: the class's own `\title` runs at the call, its
+/// output kept on the cover ([`titlepage_class_run`]), and the kernel's still keeps the title (metadata). Only for
+/// a class `\title` that keeps no value ([`class_command_stores`]): a frontmatter setter prints nothing at its call.
+/// Only `\title`: the XSLT hides no other field beside a titlepage, so a refused printing `\author` or `\address`
+/// (gr-qc9404034.tex:97-98) would print a second copy of the author the document's frontmatter shows. Not inside a
+/// `\maketitle` deposit's titlepage (`lx_depositing_frontmatter_fields`, no `ltx:titlepage`) and not while a class
+/// command runs. OXIDIZED_DESIGN #629.
+fn titlepage_class_call(name: &str, opt: &Tokens, arg: &Tokens, kernel: &Tokens) -> Option<Tokens> {
+  if name != "title"
+    || !lookup_bool("lx_titlepage_cover")
+    || !lookup_bool(&s!("\\{name}:redefined"))
+    || lookup_bool("lx_sealed_class_call")
+    || lookup_bool("lx_replaying_class_setter")
+  {
+    return None;
+  }
+  dropped_class_setter(name)?;
+  if class_command_stores(name) {
+    return None;
+  }
+  let mut call = vec![T_CS!("\\lx@titlepage@class@run"), T_BEGIN!()];
+  call.extend(mouth::tokenize(TeXString::assembled(name.to_string())).unlist());
+  call.push(T_END!());
+  call.push(T_BEGIN!());
+  call.extend(opt.unlist_ref().iter().copied());
+  call.push(T_END!());
+  call.push(T_BEGIN!());
+  call.extend(arg.unlist_ref().iter().copied());
+  call.push(T_END!());
+  call.push(T_CS!("\\lx@titlepage@kernel"));
+  call.push(T_BEGIN!());
+  call.extend(kernel.unlist_ref().iter().copied());
+  call.push(T_END!());
+  Some(Tokens::new(call))
+}
+
+/// [`titlepage_class_call`]'s run: the class's own `\title`, printed on the cover where the call stands.
+fn titlepage_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested>> {
+  let Some(digested) = run_dropped_class_command(name, &opt, &arg)? else {
+    return Ok(Vec::new());
+  };
+  Info!(
+    "frontmatter",
+    "titlepage",
+    s!(
+      "\\{name} inside {{titlepage}} runs the class's own \\{name} there, which prints it on the cover; the kernel keeps it as the document's metadata"
+    )
+  );
+  // Between the cover-ink marks: a titlepage demoted for standing after body content (`demote_stranded_titlepage`)
+  // no longer stands in for the document's title, which is then displayed, so the class's print there goes.
+  let begin = digest(Tokens!(T_CS!("\\lx@cover@title@begin")))?;
+  let end = digest(Tokens!(T_CS!("\\lx@cover@title@end")))?;
+  Ok(vec![begin, digested, end])
+}
+
+/// The `ltx:titlepage` the insertion point stands in.
+fn open_titlepage(document: &Document) -> Option<Node> {
+  let mut node = document.get_element();
+  while let Some(n) = node {
+    if document::get_node_qname(&n) == pin!("ltx:titlepage") {
+      return Some(n);
+    }
+    node = n.get_parent();
+  }
+  None
 }
 
 /// The default of the optional argument of the class's own `\<name>` (`\lx@dropped@<name>`): a `\newcommand`'s

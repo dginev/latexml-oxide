@@ -1,0 +1,25 @@
+% witness: 0904.2708 (cernart.cls:217 `\def\title#1{\vskip1em\begin{center}\normalsize\bf#1\end{center}\vskip1.5em}`,
+%          called inside the paper's `{titlepage}`), gr-qc9404034 (the document's own `\def\title`/`\def\author`,
+%          gr-qc9404034.tex:96-97, called inside `{titlepage}`); title study rule R2 (2026-10-16)
+% oracle:  pdflatex 0 errors: the cover reads "TIT/HEP-253", the centered title "Static axisymmetric spacetimes", the
+%          small-caps author "M. Tanimoto", "Abstract", "The conditions are presented."
+% engines: rust 67int13 = 0 errors, the title nowhere on the cover and the document `ltx:title` hidden by the XSLT
+%          beside the `ltx:titlepage` (no visible title); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; the titlepage carries the class's centered title ink once; the document `ltx:title`
+%          stays (metadata); the author once, as the frontmatter's `ltx:creator` (the refused `\author` is not run)
+% status:  RED (67int13) -> GREEN (68t)
+\documentclass{article}
+\def\title#1{\begin{center}{\large #1}\end{center}}
+\def\author#1{\begin{center}{\sc #1}\end{center}}
+\begin{document}
+\begin{titlepage}
+\hfill TIT/HEP-253
+\title{Static axisymmetric spacetimes}
+\author{M. Tanimoto}
+\begin{abstract}
+The conditions are presented.
+\end{abstract}
+\end{titlepage}
+\section{Intro}
+Text.
+\end{document}

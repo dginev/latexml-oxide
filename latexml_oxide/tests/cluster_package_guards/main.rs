@@ -237,6 +237,7 @@ mod perfect_kernel_batch68n;
 mod perfect_kernel_batch68q;
 mod perfect_kernel_batch68r;
 mod perfect_kernel_batch68s;
+mod perfect_kernel_batch68t;
 mod perfect_kernel_gemini;
 mod pgfkeys_native_accessors;
 mod raw_class_stores_reroute_to_frontmatter;

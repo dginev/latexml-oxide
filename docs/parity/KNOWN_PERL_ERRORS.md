@@ -14278,3 +14278,24 @@ boxes-groups/box_primitives_lastbox (cases 5-7), box_primitives_unpack (cases 4,
 semantic_inference_premises}`, `box_primitives::{lastbox, unpack}`. Residual (R7): LaTeXML's vertical lists carry no
 interline glue, so after `\vbox{\hbox{a}\hbox{b}}` the second round takes "a" where TeX finds the `\baselineskip` glue
 and is void.
+
+## 828. A refused printing `\title` inside `{titlepage}` prints nothing, and the XSLT hides the document title: no visible title
+
+Perl's locked `\title` (latex_constructs.pool.ltxml:1059, `{titlepage}` :1167) refuses a class's or document's `\def\title` (State.pm:502-517)
+and only stores the title; inside `{titlepage}` the setter pdflatex runs there would have printed it on the cover, and
+LaTeXML-structure-xhtml.xsl:358-359 does not display a document `ltx:title` that has an `ltx:titlepage` sibling, so the
+HTML shows no title. Minimal trigger (pdflatex: the title on the cover; Perl 0 errors, no visible title):
+
+```latex
+\documentclass{article}
+\def\title#1{\begin{center}{\large #1}\end{center}}
+\begin{document}
+\begin{titlepage}
+\title{Static axisymmetric spacetimes}
+\end{titlepage}
+Text.
+\end{document}
+```
+
+Rust (68t): the class's own `\title` runs at the call inside the titlepage, the kernel keeps the structured title
+(OXIDIZED_DESIGN_DIVERGENCES #629). Witnesses 0904.2708 (cernart.cls:217), gr-qc9404034.

@@ -2298,6 +2298,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (68s witnesses + 150 pop67o): Errors 4,514 → 4,514, Fatals 24 → 24, 0 worse, 15 papers changed — the titlepage
   covers above, each gaining its title words only; nets 136/136 0 worse.
 
+- **68t** (title study stage 2, rule R2; agent_reports/2026-10-16_title_print_study.md): a refused printing `\title`
+  called inside the document's `{titlepage}` prints there. The `{titlepage}` the document lays out sets
+  `lx_titlepage_cover`; the kernel `\title` (and the bindings' own `\title[]{}`: revtex4_support, ams_support,
+  iopart_support, mn2e_support) then runs the class's/document's refused `\title` at the call, output kept
+  (sect05.rs `titlepage_class_call`), and still keeps the structured title (metadata, hidden by
+  LaTeXML-structure-xhtml.xsl:374-375 beside the titlepage). Only a `\title` that keeps no value; not `\author`/`\date`
+  (their frontmatter copy is displayed). A titlepage demoted for standing after body content drops the print again
+  (cover-ink marks, `_lx_cover_title`): the document title is displayed there. The title-ink dedup leaves a document with a
+  titlepage alone (68s round 2's rule), so the cover print stays. Witnesses 0904.2708 (cernart.cls:217), gr-qc9404034 (document `\def\title`, `\documentstyle{revtex}`):
+  0 → 1 visible title; 1304.0681, 1503.03277 (dedup) 0 → 1; 1708.09335, 2506.18627, astro-ph0208566, hep-th9701175
+  byte-identical HTML. OXIDIZED_DESIGN_DIVERGENCES #629 (#146 note), KNOWN_PERL_ERRORS #828. Repro
+  sectioning-frontmatter/titlepage_refused_title_prints_on_the_cover RED (67int13) → GREEN; guards
+  `perfect_kernel_batch68t` (5).
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
