@@ -2246,6 +2246,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   amstex_plain_tabbing_rows, amstex_mode_keeps_plain_tabbing, amsppt_subjclassyear, amsppt_subjclass_nofrills,
   amsppt_transl_reference, amsppt_transl_nofrills, amstex_material_before_document,
   amstex_plain_gather_return_opt_arg}; guards `perfect_kernel_batch68r` (12).
+  Integrated as int14 with one review fix (an editors-only book reference printed its editors twice and lost a comma:
+  amsppt.sty:1006-1010 empties the editors' box once set as authors; amstex: "J. Editor, ed., Book Four, Pub Four,
+  1999."). Gates 5,630/5,630; bundle A/B vs 67int13 over 618 papers (the 400 cluster witnesses, 100 class-less Error
+  papers, 150 of pop67o): Errors 2,393 → 1,622, 385 papers fewer, none more, words +267 k; nets 136/136 0 worse.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
