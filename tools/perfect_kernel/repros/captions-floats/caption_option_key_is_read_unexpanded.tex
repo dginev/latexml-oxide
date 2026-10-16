@@ -1,0 +1,19 @@
+% witness: 68h r3: caption's `\DeclareOption*` handler compares the option with caption v1's keywords
+%          (caption.sty:114-147) and reads `\CurrentOption` as written: the option list was read by `\ProcessOptions`
+%          (latex.ltx:18557 `\protected@edef`) and caption's `\@expandtwoargs` (caption3.sty:374-399, latex.ltx:1381)
+%          is another `\protected@edef`, so a robust command in a value stands
+% oracle:  pdflatex 0 errors: "Fx 1: One", "Gx 2: Two" (`\laterdefined` is defined after caption loads)
+% engines: rust 68h r1/r2: 1 error (undefined `\laterdefined`: the matcher expanded the robust `\rb` at package load),
+%          the tags "1", "2"; rust 67int9: 0 errors, "Figure 1: One" (the option ignored); perl: 1 error (undefined
+%          `\laterdefined`), "Figure 1: One" (KNOWN_PERL_ERRORS #795)
+% expect:  0 errors; the figures named "Fx" and "Gx" (the name `\protect \rb`, a name noun)
+% status:  GREEN (68h r3; red on 75412c45d8)
+\documentclass{article}
+\DeclareRobustCommand\rb{\laterdefined}
+\usepackage[figurename=\rb]{caption}
+\newcommand\laterdefined{Fx}
+\begin{document}
+\begin{figure}\caption{One}\end{figure}
+\renewcommand\laterdefined{Gx}
+\begin{figure}\caption{Two}\end{figure}
+\end{document}

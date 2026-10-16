@@ -14101,8 +14101,13 @@ pub fn is_name_noun_cs(cs: &str) -> bool {
 /// drawing commands like argumentation.sty:403 `\afname` do not); the general
 /// `\__cmd_start:nNNnnn` / `\__cmd_start_expandable:nNNNNn` dispatchers carry the
 /// signature as written, which is read; a `\DeclareRobustCommand` wrapper is followed to
-/// its inner macro.
+/// its inner macro, and a `\protect\<cs>` body to `\<cs>` (`\protect` is `\relax` in a typeset tag,
+/// latex.ltx `\@typeset@protect`): `\renewcommand\figurename{\protect\rb}` with a robust `\rb` is two hops,
+/// the body to the wrapper and the wrapper to its inner macro, and was cut at the first, so the tag lost its name
+/// (pdflatex "Fx 1", ours "1"; `[figurename=\rb]{caption}` stores the same body). Each hop names a new macro; the
+/// bound stops a `\def\x{\protect\x}` loop. Guard `perfect_kernel_batch68h::protected_robust_name_is_a_name_noun`.
 fn is_name_noun(def: &Rc<dyn Definition>, depth: u8) -> bool {
+  const MAX_HOPS: u8 = 4;
   // A name is set before `~<number>\null` (hyperref's autoref) or in a tag's composition: optional arguments find
   // none and take their defaults, a required one would swallow what follows.
   if !def.is_expandable()
@@ -14125,13 +14130,13 @@ fn is_name_noun(def: &Rc<dyn Definition>, depth: u8) -> bool {
   let head = first.to_string();
   // `\DeclareRobustCommand`'s wrapper `\protect \<cs>␣`: the name is the inner macro.
   if head == "\\protect" && toks.len() == 2 {
-    return depth == 0
-      && matches!(lookup_definition(&toks[1]), Ok(Some(inner)) if is_name_noun(&inner, 1));
+    return depth < MAX_HOPS
+      && matches!(lookup_definition(&toks[1]), Ok(Some(inner)) if is_name_noun(&inner, depth + 1));
   }
   if head == "\\__cmd_start_optimized:" {
-    return depth == 0
+    return depth < MAX_HOPS
       && toks.get(1).is_some_and(
-        |code| matches!(lookup_definition(code), Ok(Some(code_def)) if is_name_noun(&code_def, 1)),
+        |code| matches!(lookup_definition(code), Ok(Some(code_def)) if is_name_noun(&code_def, depth + 1)),
       );
   }
   if head == "\\__cmd_start:nNNnnn" || head == "\\__cmd_start_expandable:nNNNNn" {

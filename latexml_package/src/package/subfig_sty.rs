@@ -23,6 +23,10 @@ LoadDefinitions!({
   // subfig.sty:208-225 `\ProcessPackageOptions` (run at :297): the package options, less the
   // `caption` and `config` keys (`\sf@split`, :188-195), are `\captionsetup[subfloat]` settings.
   DeclareOption!(None, {
+    // The key is read expanded, as subfig.sty:125 and :217 `\edef` the whole option list before `\sf@split` (with
+    // `\protect` = `\relax` at package load): a robust command whose body is not yet defined is an undefined-command
+    // Error under pdflatex too (`[labelformat=\rbs]{subfig}`, `\DeclareRobustCommand\rbs{\laterdefined}`: 2 errors)
+    // — unlike caption's handler (caption_sty.rs `current_option_text`), which reads the option as written.
     let option = Expand!(T_CS!("\\CurrentOption")).to_string();
     let key = option.split('=').next().unwrap_or_default().trim();
     if key != "caption" && key != "config" {

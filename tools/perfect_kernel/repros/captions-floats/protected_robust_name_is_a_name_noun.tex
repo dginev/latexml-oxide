@@ -1,0 +1,20 @@
+% witness: 68h r3: a `\<type>name` whose body is `\protect\<robust cs>` names the tag: `\protect` is `\relax` where the
+%          tag is typeset (latex.ltx `\@typeset@protect`), the robust command prints its text (`\iflx@namenoun`,
+%          base_utilities.rs `is_name_noun`, followed one hop only, so the name was dropped)
+% oracle:  pdflatex 0 errors: "Fx 1: One", "Table 1: Gx", "Hx 2: Two", "Ix 3: Three"
+% engines: rust 68h r2: "1: One" and "3: Three" (the name dropped), "Hx 2: Two"; perl: "Fx 1: One", "Hx 2: Two",
+%          "Ix 3: Three" (any defined `\<type>name` is taken, KNOWN_PERL_ERRORS #194)
+% expect:  0 errors; the figure tags "Fx 1", "Hx 2" (`\protect` + a robust command, a `\newcommand`), "Ix 3"
+%          (`\protect` + an xparse command)
+% status:  GREEN (68h r3; red on 75412c45d8)
+\documentclass{article}
+\DeclareRobustCommand\rb{Fx}
+\newcommand\nb{Hx}
+\NewDocumentCommand\xb{}{Ix}
+\renewcommand\figurename{\protect\rb}
+\begin{document}
+\begin{figure}\caption{One}\end{figure}
+\begin{table}\caption{Gx}\end{table}
+\begin{figure}\renewcommand\figurename{\protect\nb}\caption{Two}\end{figure}
+\begin{figure}\renewcommand\figurename{\protect\xb}\caption{Three}\end{figure}
+\end{document}

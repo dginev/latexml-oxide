@@ -5487,12 +5487,17 @@ processing: babel.sty:316-347 strips its `language.modifier` syntax
 invisible and the raw option dispatch errors "Unknown option
 'greek.polutoniko'" (alphabeta-doc, hyperref-with-greek). Trigger:
 `\usepackage[greek.polutoniko,english]{babel}` under raw loading. Rust:
-`process_options` expands `\opt@<name>.<ext>` and splits it at depth-0
+`process_options` reads `\opt@<name>.<ext>` as :18557's `\protected@edef\@curroptions` does (partial expansion with
+`\protect` let to `\@unexpandable@protect`, latex.ltx:1384: a macro option expands, `\the\textwidth` is its value, a
+protected macro, a robust command and an optional-argument `\newcommand` stand; Perl and the former full expansion
+ran them, `\usepackage[o=\oa,r=\rb]{…}` giving "o=zzq", "r=rob") and splits it at depth-0
 commas, falling back to the State list only when the macro is undefined; the
 loader's `\opt@` builder joins BOTH stored shapes (`String` and the `Strings`
 a `--preload='[a,b]pkg'` stores — skipping the latter left the macro EMPTY and
-silently turned `rawstyles` off). Guard:
-`perfect_kernel_batch54::processoptions_reads_the_rewritten_opt_macro`.
+silently turned `rawstyles` off). Guards:
+`perfect_kernel_batch54::processoptions_reads_the_rewritten_opt_macro`,
+`perfect_kernel_batch68h::processoptions_reads_as_protected_edef` (repro
+loader/processoptions_reads_as_protected_edef.tex with poq68h.sty).
 
 ## 162. `\pdfoutline`/`\pdfdest` are undefined (Rust fixes)
 
@@ -5944,7 +5949,9 @@ pdflatex never expands `\afname` there). Trigger: `\newcounter{af}
 `\iflx@namenoun` (base_utilities.rs `is_name_noun`) admits `\<type>name` only when it is an
 expandable macro whose arguments are all optional (an ltcmd `\__cmd_start_optimized:` dispatcher is
 followed to its ` code` macro, a general one's signature read as written, a `\DeclareRobustCommand` wrapper followed
-to its inner macro; 60d); `\lx@@fnum@@` and `\lx@typerefnum@@` fall back to `\the<type>` otherwise, and hyperref's
+to its inner macro, 60d; a `\protect\<cs>` body followed to `\<cs>`, up to four hops, so
+`\renewcommand\figurename{\protect\rb}` with a robust `\rb` names the tag "Fx 1" as pdflatex, 68h r3, guard
+`perfect_kernel_batch68h::protected_robust_name_is_a_name_noun`); `\lx@@fnum@@` and `\lx@typerefnum@@` fall back to `\the<type>` otherwise, and hyperref's
 `\lx@autorefnum@@` (`is_name_noun_cs`, 60d) sets the `~` alone before the number when its first defined name is not a
 noun — what hyperref's `\<type>name~` prints for amsthm's `\let\thmname\@iden`, without running a drawing command. Witness: argumentation-doc. Guards:
 `perfect_kernel_batch56::{counter_name_command_is_not_a_name_noun, autoref_name_is_a_name_noun}`. The gemini

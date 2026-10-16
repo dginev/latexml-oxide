@@ -2190,7 +2190,31 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   empty (the kernel's label hoist strips the group; pdflatex "Figure 1:"); subcaption's/subfig's separators
   (`labelsep=` under `[sub]`) do not reach the sub-captions. Repros captions-floats/{caption_option_values_unexpanded,
   caption_names_survive_babel, caption_empty_text_ignores_label}, sectioning-frontmatter/orcid_inline_link_takes_the_id;
-  guards `perfect_kernel_batch68h` (+5).
+  guards `perfect_kernel_batch68h` (+5). Round 3 (re-review agent_reports/2026-10-16_68h_r2_review.md): caption's
+  v1-keyword match reads `\CurrentOption`'s body (caption_sty.rs `current_option_text`; caption3.sty:374-399 passes
+  the list on by `\@expandtwoargs`, a `\protected@edef`), so `\DeclareRobustCommand\rb{\laterdefined}` +
+  `[figurename=\rb]{caption}` no longer runs `\rb` at package load (1 Error → 0, pdflatex 0); subfig keeps its expanded
+  key read, as subfig.sty:125 and :217 `\edef` the list (pdflatex errors there too). A `\<type>name` of `\protect` and
+  a robust or xparse command is a name noun (base_utilities.rs `is_name_noun` follows `\protect\<cs>` hops; it stopped
+  at the first, so `\renewcommand\figurename{\protect\rb}` gave the tag "1", pdflatex "Fx 1"; KPE #194). Repros
+  captions-floats/{caption_option_key_is_read_unexpanded, protected_robust_name_is_a_name_noun},
+  loader/processoptions_reads_as_protected_edef (+ poq68h.sty; the direct `\ProcessOptions` guard: pdflatex's list
+  except `[beta=\textbf {x}]` and `[o=\oa ]`, which pdflatex prints with a `\protect`, the kernel's `\textbf` and an
+  optional-argument `\newcommand` not being `\protect`-wrapped macros here); guards `perfect_kernel_batch68h` (+3).
+- **`\ProcessKeyOptions` sees an expanded option list** (open, side finding of the 68h r2 re-review, probe
+  scratch_356a0c47/rev68h2/probes/a2.tex): ltkeys' `\ProcessKeyOptions` reads `\@raw@opt@<file>` (latex.ltx:19398,
+  :19457-19470), which `\@pass@ptions` stores as the argument tokens (:18521-18525), so pdflatex's
+  `\usepackage[name=\textsc{Y}\nm]{myl3}` sets the key to `\textsc {Y}\nm`; ours to `\textsc {Y}Bob`: the loader's
+  explicit `[…]` list reaches content.rs `pass_options` already expanded and its raw record is re-tokenized from that
+  text (`option_argument_tokens`; `\PassOptionsToPackage` keeps its tokens through `pass_options_with_raw`). Fix: carry
+  the `\usepackage`/`\RequirePackage` argument tokens to `pass_options_with_raw`.
+- **A local `my<binding>.sty` loads the binding instead** (open, SHARED with Perl, side finding of the 68h r2
+  re-review, probe a2.tex): without raw interpretation content.rs `find_file_fallback` (Perl Package.pm:2186-2221
+  `FindFile_fallback`, the `rw|my|preprint` prefix) maps `\usepackage{mypgf}` to the pgf binding even though the
+  document ships mypgf.sty, and logs "Interpreted as versioned package, falling back to pgf.sty" (content.rs:985-1000,
+  the fallback step before the raw one), so the local file's `\showmypgf` is undefined (pdflatex loads mypgf.sty). A
+  ruling is needed: keep Perl's binding-wins order (witnesses 1206.0536 mysvjour3 → svjour3, astro-ph0005021), or
+  prefer the document's own file over a prefix-stripped fallback (the version-suffix case unchanged).
 - **Residual of 68h — trimclip's PGF fall-back under `[dvipdfmx]`/`[dvipdf]`** (open; review
   agent_reports/2026-10-16_68h_review.md finding 8): adjustbox ships tc-pdftex.def, tc-dvips.def, tc-xetex.def and
   tc-luatex.def only, so with `\Gin@driver` = dvipdfmx.def/dvipdf.def trimclip.sty:252-258 inputs tc-pgf.def and pgf,

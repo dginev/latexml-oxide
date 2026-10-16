@@ -1,6 +1,6 @@
 //! Red/green guards for batch 68h: caption's keys and `\DeclareCaptionSubType`, an ORCID given as its address,
-//! cleveref's `\crefalias`, graphics' driver name.
-use latexml::util::test::convert_with;
+//! cleveref's `\crefalias`, graphics' driver name, `\ProcessOptions`'s `\protected@edef` read, a `\protect`ed name noun.
+use latexml::util::test::{convert_files_with, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -212,8 +212,15 @@ fn orcid_inline_link_takes_the_id() {
     ),
     Some("ar5iv.sty"),
   );
-  // The one Warning is pgf's svg.path library, which apa7 loads for its own logo (`\pgf@lib@svg@relative`).
+  // The one Warning is pgf's svg.path library, which apa7 loads for its own logo (`\pgf@lib@svg@relative`), as
+  // `perfect_kernel_batch61::apa7_author_block_maps_onto_the_frontmatter` pins it.
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains(
+      "The conditional \\pgf@lib@svg@relative is being defined but doesn't start with \\if"
+    ),
+    "{log}"
+  );
   let xml = squash(&xml);
   assert!(
     xml.contains(
@@ -248,4 +255,58 @@ fn caption_v1_size_option_is_the_caption_font() {
     ),
     "{xml}"
   );
+}
+
+/// caption.sty:114-147's v1 keywords are compared with the option as written: `\ProcessOptions` read the list
+/// (latex.ltx:18557 `\protected@edef`) and caption's `\@expandtwoargs` (caption3.sty:374-399) is another, so a robust
+/// command's body is not run at package load (an undefined `\laterdefined` there) and names the figures as it reads
+/// when they are typeset (pdflatex 0 errors, "Fx 1: One", "Gx 2: Two").
+#[test]
+fn caption_option_key_is_read_unexpanded() {
+  let xml = clean!("captions-floats/caption_option_key_is_read_unexpanded.tex");
+  for caption in [
+    r#"<caption><tag close=": ">Fx 1</tag>One</caption>"#,
+    r#"<caption><tag close=": ">Gx 2</tag>Two</caption>"#,
+  ] {
+    assert!(xml.contains(caption), "{caption}\n{xml}");
+  }
+}
+
+/// A `\<type>name` of `\protect` and a robust, `\newcommand` or xparse command is a name noun (`\protect` is `\relax`
+/// where the tag is typeset, latex.ltx `\@typeset@protect`): the tags print it (pdflatex "Fx 1: One", "Table 1: Gx",
+/// "Hx 2: Two", "Ix 3: Three").
+#[test]
+fn protected_robust_name_is_a_name_noun() {
+  let xml = clean!("captions-floats/protected_robust_name_is_a_name_noun.tex");
+  for figure in [
+    r#"<figure inlist="lof" xml:id="S0.F1"> <tags> <tag>Fx 1</tag> <tag role="refnum">1</tag> <tag role="typerefnum">Fx 1</tag> </tags> <toccaption><tag close=" ">1</tag>One</toccaption> <caption><tag close=": ">Fx 1</tag>One</caption> </figure>"#,
+    r#"<figure inlist="lof" xml:id="S0.F2"> <tags> <tag>Hx 2</tag> <tag role="refnum">2</tag> <tag role="typerefnum">Hx 2</tag> </tags> <toccaption><tag close=" ">2</tag>Two</toccaption> <caption><tag close=": ">Hx 2</tag>Two</caption> </figure>"#,
+    r#"<figure inlist="lof" xml:id="S0.F3"> <tags> <tag>Ix 3</tag> <tag role="refnum">3</tag> <tag role="typerefnum">Ix 3</tag> </tags> <toccaption><tag close=" ">3</tag>Three</toccaption> <caption><tag close=": ">Ix 3</tag>Three</caption> </figure>"#,
+    r#"<caption><tag close=": ">Table 1</tag>Gx</caption>"#,
+  ] {
+    assert!(xml.contains(figure), "{figure}\n{xml}");
+  }
+}
+
+/// latex.ltx:18557 `\protected@edef\@curroptions`, a raw package's `\DeclareOption*`: a macro option runs its declared
+/// option, passed and `\edef`-built options arrive expanded, `\the\textwidth` is its value, and a protected macro, a
+/// robust command, `\protect\foo` and an optional-argument `\newcommand` stand (pdflatex 0 errors, "<ALPHA>[gamma]
+/// [delta=D][beta=\protect \textbf {x}][w=345.0pt][\po ][o=\protect \oa ][r=\protect \rb ][p=\protect \foo ]"; the
+/// kernel's `\textbf` and the `\newcommand` have no `\protect` here, not being `\protect`-wrapped macros).
+#[test]
+fn processoptions_reads_as_protected_edef() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/processoptions_reads_as_protected_edef.tex"
+    ),
+    &[(
+      "poq68h.sty",
+      include_str!("../../../tools/perfect_kernel/repros/loader/poq68h.sty"),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  let shown = r#"<p xml:id="p1.1"><text font="typewriter" xml:id="p1.1.1">macro:-&gt;&lt;ALPHA&gt;[gamma][delta=D][beta=\textbf {x}][w=345.0pt][\po ][o=\oa ][r=\protect \rb ][p=\protect \foo ]</text></p>"#;
+  assert!(xml.contains(shown), "{shown}\n{xml}");
 }

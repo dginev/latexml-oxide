@@ -17876,8 +17876,12 @@ add `\caption@font@<name>` to `\fnum@font@<type>` and `\format@title@font@<type>
 are also added to the current language's `\captions<language>`, as newfloat's `\newfloat@setname` does
 (caption3.sty:1344-1345, newfloat.sty:179-188), so babel keeps them. The package options are passed to
 `\captionsetup` as written (caption.sty:171-172; `\ProcessOptions` reads the option list as latex.ltx:18557's
-`\protected@edef`, content.rs), so a robust command in a value (`figurename=\textsc{Fig}`) stands; subcaption's and
-subfig's the same. The separator is the `ltx:tag`'s `close` attribute, text only: a separator caption declares as
+`\protected@edef`, content.rs), so a robust command in a value (`figurename=\textsc{Fig}`) stands, and the caption v1
+keywords are matched against the option as written (caption3.sty:374-399 hands the list on by `\@expandtwoargs`,
+another `\protected@edef`), so the robust command's body does not run at package load; subcaption's the same.
+subfig reads the key expanded, as subfig.sty:125 and :217 `\edef` the list (a robust command whose body is undefined
+then errors, as in pdflatex), and passes the value as written, where subfig.sty's `\edef` would expand it. A name
+of `\protect` and a robust command is the tag's name (KNOWN_PERL_ERRORS #194). The separator is the `ltx:tag`'s `close` attribute, text only: a separator caption declares as
 breaking the line (`\caption@LabelSeparatorWithNewline`, caption3.sty:769, :782, `newline`) is put as the caption
 text's first `\\` (`<ltx:break/>`) and the tag gets none. Not carried: sub-captions keep their packages' formats
 (subcaption_sty.rs, subfig_sty.rs; the general keys do not reach them, nor the `[sub]`/`[subfloat]` separator);
@@ -17889,9 +17893,11 @@ the relative sizes `smaller`/`larger`, the spacing fonts and `hypersetup` are no
 (`format`, `justification`, margins, `singlelinecheck`) stay stored and unread. Perl's binding reads none of the keys
 (KNOWN_PERL_ERRORS #795). Witnesses 1306.0788 (`labelsep=space`), 2002.05188 (`labelsep=period`), 1810.00606
 (`labelformat=empty`), math0609211 (caption v1's `it`). Repros captions-floats/{caption_keys_set_the_label_and_separator,
-caption_option_values_unexpanded, caption_names_survive_babel, caption_empty_text_ignores_label}; guards
+caption_option_values_unexpanded, caption_names_survive_babel, caption_empty_text_ignores_label,
+caption_option_key_is_read_unexpanded, protected_robust_name_is_a_name_noun}; guards
 `perfect_kernel_batch68h::{caption_keys_set_the_label_and_separator, caption_option_values_unexpanded,
-caption_names_survive_babel, caption_empty_text_ignores_label, caption_v1_size_option_is_the_caption_font}`.
+caption_names_survive_babel, caption_empty_text_ignores_label, caption_v1_size_option_is_the_caption_font,
+caption_option_key_is_read_unexpanded, protected_robust_name_is_a_name_noun}`.
 
 ### 619. rotating's `\rotdriver{<driver>}` loads no driver file
 

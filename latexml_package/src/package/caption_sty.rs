@@ -1,4 +1,4 @@
-use latexml_core::mouth::tokenize;
+use latexml_core::{definition::ExpansionBody, mouth::tokenize};
 
 use crate::prelude::*;
 
@@ -914,7 +914,7 @@ LoadDefinitions!({
   // `\usepackage[labelsep=period]{caption}` kept "Figure 1:".
   RawTeX!(r"\def\lx@caption@optionsetup#1{\captionsetup{#1}}");
   DeclareOption!(None, {
-    let option = do_expand_partially(T_CS!("\\CurrentOption"))?.to_string();
+    let option = current_option_text()?;
     let option = option.trim();
     let setup = match option {
       "up" | "it" | "sl" | "sc" | "md" | "bf" | "rm" | "sf" | "tt" => s!("labelfont+={option}"),
@@ -935,6 +935,21 @@ LoadDefinitions!({
   });
   ProcessKeyOptions!();
 });
+
+/// `\CurrentOption`'s text, unexpanded: the option list was read once, by `\ProcessOptions` (latex.ltx:18557
+/// `\protected@edef`), and caption hands it to its keys by `\@expandtwoargs` (caption3.sty:374-399), another
+/// `\protected@edef` (latex.ltx:1381-1382) that leaves it as it is — so the v1-keyword match reads the macro's body. Expanding it ran a robust command's body
+/// at package load (`\DeclareRobustCommand\rb{\laterdefined}` + `[figurename=\rb]{caption}`: an undefined-command
+/// Error pdflatex does not give). Guard: `perfect_kernel_batch68h::caption_option_key_is_read_unexpanded`.
+pub fn current_option_text() -> Result<String> {
+  Ok(match lookup_definition(&T_CS!("\\CurrentOption"))? {
+    Some(defn) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.to_string(),
+      _ => String::new(),
+    },
+    None => String::new(),
+  })
+}
 
 /// A `\captionsetup` value as text: one pair of enclosing braces is keyval's grouping (`font={small,bf}`).
 fn caption_value(value: &str) -> String {
