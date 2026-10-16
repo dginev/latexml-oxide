@@ -534,7 +534,9 @@ fn caption_steps_through_refstepcounter() {
 /// 58h: each floatrow floatbox numbers its float once (witness kaytannollista-latexia). The
 /// caption, captured into floatrow's layout (58i), still sits in a nested `<figure>` panel
 /// (SYNC_STATUS floatrow row). Repro
-/// captions-floats/floatrow_floatbox_steps_its_counter_once.
+/// captions-floats/floatrow_floatbox_steps_its_counter_once. Since 68q the caption's `<figure>` is
+/// `vattach="top"`: floatrow.sty:393 `\FB@vtop…{\hsize\columnwidth\unvbox\@floatcapt…}` splices the
+/// caption box's list into the `\vtop` (tex.web §1110), whose attachment it now takes.
 #[test]
 fn floatrow_floatbox_steps_its_counter_once() {
   let tex = include_str!(
@@ -544,12 +546,12 @@ fn floatrow_floatbox_steps_its_counter_once() {
     (
       "table",
       "S0.T1",
-      r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T1.p1"><p align="center" vattach="bottom">Body one</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="bottom" xml:id="S0.T1.fig1"><toccaption><tag close=" ">1</tag>One</toccaption><caption><tag close=": ">Table 1</tag>One</caption></figure></inline-logical-block></p></table>"##,
+      r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T1.p1"><p align="center" vattach="bottom">Body one</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="top" xml:id="S0.T1.fig1"><toccaption><tag close=" ">1</tag>One</toccaption><caption><tag close=": ">Table 1</tag>One</caption></figure></inline-logical-block></p></table>"##,
     ),
     (
       "table",
       "S0.T2",
-      r##"<table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T2.p1"><p align="center" vattach="bottom">Body two</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="bottom" xml:id="S0.T2.fig1"><toccaption><tag close=" ">2</tag>Two</toccaption><caption><tag close=": ">Table 2</tag>Two</caption></figure></inline-logical-block></p></table>"##,
+      r##"<table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T2.p1"><p align="center" vattach="bottom">Body two</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="top" xml:id="S0.T2.fig1"><toccaption><tag close=" ">2</tag>Two</toccaption><caption><tag close=": ">Table 2</tag>Two</caption></figure></inline-logical-block></p></table>"##,
     ),
   ]);
 }
@@ -686,6 +688,9 @@ fn continued_float_continues_one_step() {
 /// 58i: floatrow places a `\floatfoot` where its caption box `\@floatcapt` is filled; the
 /// kernel's caption goes through `\lx@setfloatcapt`, which the binding points at it (floatrow.sty:85-102,
 /// :363-418). Repro captions-floats/floatrow_floatfoot_keeps_its_text.
+/// 68q: `\unvbox\@floatcapt` splices the caption box into floatrow's `\vtop` (tex.web §1110): the caption panel is
+/// `vattach="top"`, and the foot set after it now sits inside the panel the caption opened (OXIDIZED_DESIGN_DIVERGENCES
+/// #637 residual, open for a ruling).
 #[test]
 fn floatrow_floatfoot_keeps_its_text() {
   let tex = include_str!(
@@ -694,13 +699,16 @@ fn floatrow_floatfoot_keeps_its_text() {
   assert_elements(tex, RAW, (0, 0), &[(
     "table",
     "S0.T1",
-    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T1.p2"><p align="center" vattach="bottom">Body</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><logical-block vattach="top"><figure vattach="bottom" xml:id="S0.T1.fig1"><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Table 1</tag>Cap</caption></figure><para xml:id="S0.T1.p1"><p vattach="bottom"><text fontsize="80%">A foot note.</text></p></para></logical-block></inline-logical-block></p></table>"##,
+    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T1.p1"><p align="center" vattach="bottom">Body</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="top" xml:id="S0.T1.fig1"><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Table 1</tag>Cap</caption><p vattach="top"><text fontsize="80%">A foot note.</text></p></figure></inline-logical-block></p></table>"##,
   )]);
 }
 
 /// 58i: a sub-float's caption stays in its panel while the floatbox captures the main caption
 /// (caption.sty:648, `\caption@subtypehook`); `\caption*` is captured too. Repro
 /// captions-floats/floatrow_subcaption_stays_in_its_panel.
+/// 68q: `\unvbox\@floatcapt` splices the caption box into floatrow's `\vtop` (tex.web §1110): the caption panel is
+/// `vattach="top"`, and the foot set after it now sits inside the panel the caption opened (OXIDIZED_DESIGN_DIVERGENCES
+/// #637 residual, open for a ruling).
 #[test]
 fn floatrow_subcaption_stays_in_its_panel() {
   let tex = include_str!(
@@ -710,23 +718,24 @@ fn floatrow_subcaption_stays_in_its_panel() {
     (
       "figure",
       "S0.F1",
-      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><logical-block vattach="bottom"><figure align="center" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>SubA</p><toccaption><tag close=" ">a</tag>SA</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">SA</text></caption></figure><figure align="center" inlist="lof" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>SubB</p><toccaption><tag close=" ">b</tag>SB</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">SB</text></caption></figure></logical-block><rule depth="0.0pt" height="0.0pt" width="100%"/><logical-block vattach="top"><figure vattach="bottom" xml:id="S0.F1.fig1"><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure><para xml:id="S0.F1.p1"><p vattach="bottom"><text fontsize="80%">Main foot.</text></p></para></logical-block></inline-logical-block></p></figure>"##,
+      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><logical-block vattach="bottom"><figure align="center" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>SubA</p><toccaption><tag close=" ">a</tag>SA</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">SA</text></caption></figure><figure align="center" inlist="lof" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>SubB</p><toccaption><tag close=" ">b</tag>SB</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">SB</text></caption></figure></logical-block><rule depth="0.0pt" height="0.0pt" width="100%"/><figure vattach="top" xml:id="S0.F1.fig1"><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption><p vattach="top"><text fontsize="80%">Main foot.</text></p></figure></inline-logical-block></p></figure>"##,
     ),
     (
       "figure",
       "fig2",
-      r##"<figure xml:id="fig2"><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="p2"><p align="center" vattach="bottom">Body star</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><logical-block vattach="top"><figure vattach="bottom" xml:id="fig1"><caption>Starred</caption></figure><para xml:id="p1"><p vattach="bottom"><text fontsize="80%">Star foot.</text></p></para></logical-block></inline-logical-block></p></figure>"##,
+      r##"<figure xml:id="fig2"><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="p1"><p align="center" vattach="bottom">Body star</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="top" xml:id="fig1"><caption>Starred</caption><p vattach="top"><text fontsize="80%">Star foot.</text></p></figure></inline-logical-block></p></figure>"##,
     ),
     (
       "figure",
       "S0.F2",
-      r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.F2.p2"><p align="center" vattach="bottom">Body short</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><logical-block vattach="top"><figure vattach="bottom" xml:id="S0.F2.fig1"><toccaption><tag close=" ">2</tag>Short</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Long</text></caption></figure><para xml:id="S0.F2.p1"><p vattach="bottom"><text fontsize="80%">Short foot.</text></p></para></logical-block></inline-logical-block></p></figure>"##,
+      r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.F2.p1"><p align="center" vattach="bottom">Body short</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="top" xml:id="S0.F2.fig1"><toccaption><tag close=" ">2</tag>Short</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Long</text></caption><p vattach="top"><text fontsize="80%">Short foot.</text></p></figure></inline-logical-block></p></figure>"##,
     ),
   ]);
 }
 
 /// 58i: a `pspicture` has its declared size (DIVERGENCES #397), so floatrow's empty-object test
 /// (floatrow.sty:366-369) keeps it. Repro captions-floats/floatrow_keeps_an_object_it_measures_empty.
+/// 68q: the caption spliced into floatrow's `\vtop` (floatrow.sty:393) is `vattach="top"` (tex.web §1110).
 #[test]
 fn floatrow_keeps_an_object_it_measures_empty() {
   let tex = include_str!(
@@ -735,12 +744,13 @@ fn floatrow_keeps_an_object_it_measures_empty() {
   assert_elements(tex, RAW, (0, 0), &[(
     "figure",
     "S0.F1",
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.F1.fig1"><block vattach="bottom"><picture class="ltx_centering" fill="none" height="284.53pt" stroke="none" unitlength="28.45pt" width="284.53pt" xml:id="S0.F1.pic1"><line fill="none" points="0,0 196.85,196.85" stroke="black" stroke-width="0.8"/></picture></block><rule depth="0.0pt" height="0.0pt" width="100%"/><toccaption><tag close=" ">1</tag>CapX</toccaption><caption><tag close=": ">Figure 1</tag>CapX</caption></figure></inline-logical-block></p></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="top" xml:id="S0.F1.fig1"><block vattach="bottom"><picture class="ltx_centering" fill="none" height="284.53pt" stroke="none" unitlength="28.45pt" width="284.53pt" xml:id="S0.F1.pic1"><line fill="none" points="0,0 196.85,196.85" stroke="black" stroke-width="0.8"/></picture></block><rule depth="0.0pt" height="0.0pt" width="100%"/><toccaption><tag close=" ">1</tag>CapX</toccaption><caption><tag close=": ">Figure 1</tag>CapX</caption></figure></inline-logical-block></p></figure>"##,
   )]);
 }
 
 /// 58i: floatrow's empty-object test gobbles an empty floatbox object and its frame; a non-empty
 /// object is framed. Repro captions-floats/floatrow_drops_an_empty_object.
+/// 68q: the caption spliced into floatrow's `\vtop` (floatrow.sty:393) is `vattach="top"` (tex.web §1110).
 #[test]
 fn floatrow_drops_an_empty_object() {
   let tex = include_str!(
@@ -750,12 +760,12 @@ fn floatrow_drops_an_empty_object() {
     (
       "figure",
       "S0.F2",
-      r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p align="center" vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.F2.fig1"><rule depth="0.0pt" height="0.0pt" width="100%"/><toccaption><tag close=" ">2</tag>CapB</toccaption><caption><tag close=": ">Figure 2</tag>CapB</caption></figure></inline-logical-block></p></figure>"##,
+      r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p align="center" vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="top" xml:id="S0.F2.fig1"><rule depth="0.0pt" height="0.0pt" width="100%"/><toccaption><tag close=" ">2</tag>CapB</toccaption><caption><tag close=": ">Figure 2</tag>CapB</caption></figure></inline-logical-block></p></figure>"##,
     ),
     (
       "figure",
       "S0.F3",
-      r##"<figure inlist="lof" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="bottom" xml:id="S0.F3.fig1"><rule align="center" framed="rectangle" height="28.5pt" vattach="bottom" width="28.5pt"/><rule depth="0.0pt" height="0.0pt" width="100%"/><toccaption><tag close=" ">3</tag>CapC</toccaption><caption><tag close=": ">Figure 3</tag>CapC</caption></figure></inline-logical-block></p></figure>"##,
+      r##"<figure inlist="lof" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block><figure vattach="top" xml:id="S0.F3.fig1"><rule align="center" framed="rectangle" height="28.5pt" vattach="bottom" width="28.5pt"/><rule depth="0.0pt" height="0.0pt" width="100%"/><toccaption><tag close=" ">3</tag>CapC</toccaption><caption><tag close=": ">Figure 3</tag>CapC</caption></figure></inline-logical-block></p></figure>"##,
     ),
   ]);
 }

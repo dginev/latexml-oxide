@@ -127,6 +127,102 @@ fn hlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
     .collect()
 }
 
+/// tex.web §1110 `unpackage` for `\unvbox`/`\unvcopy` (§1109 `vmode+un_vbox`): the box's list goes into the current
+/// vertical list and the box itself — its dimensions, its `to` height, its being one item — is gone. A register
+/// filled by `\setbox0\vbox{…}` or `\vtop{…}` holds the whatsit, whose list is its contents (argument 2). Perl puts the
+/// whatsit back whole (`Whatsit::unlist` returns itself, TeX_Box.pool.ltxml:725-742), so a `\lastbox` after `\unvbox`
+/// took the whole box and a peel loop never ended: `\setbox\pb=\vbox{\unvbox\pb \global\setbox\lb=\lastbox}` took the
+/// box, left an empty `\vbox{}`, and took that again the next round, for ever (infernce.sty's `\@adjustPremises`, under
+/// every semantic.sty `\inference`: ~315 arXiv `oom:alloc_failed` Fatals, among them 1603.01635 and 2506.05832;
+/// KNOWN_PERL_ERRORS #840; the study's other `\lastbox` users, 1209.2208 and math0301370, fail elsewhere). `\unvcopy`
+/// puts back copies (§1110 `copy_node_list`).
+///
+/// The list is put back where it goes into a vertical box's own list (`\vbox`, `\vtop`, `\parbox` contents:
+/// [`in_vertical_box_list`]), where LaTeXML sets the box's lines as lines. The paragraph the box's end finished (§1086
+/// `vbox_group`: `end_graf`) gets the `\par` mark its line would have had ([`box_end_par_mark`]), so what follows it
+/// in the new list starts a line of its own. Elsewhere — the main vertical list, a float's, footnote's or minipage's
+/// body — and in math the box goes back whole, as Perl's: spliced there, its hboxes ran together into one paragraph
+/// (OXIDIZED_DESIGN_DIVERGENCES #637; the shape needs R6, `\hbox` in vertical mode as a line, and a ruling: repro
+/// boxes-groups/box_primitives_unpack cases 8-9).
+fn vlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
+  let is_vbox = |w: &Whatsit| {
+    matches!(
+      w.get_definition().get_cs_name().as_ref(),
+      "\\vbox" | "\\vtop"
+    )
+  };
+  match stuff.data() {
+    DigestedData::Whatsit(w)
+      if !lookup_bool_sym(pin!("IN_MATH"))
+        && w.try_borrow().is_ok_and(|w| is_vbox(&w))
+        && in_vertical_box_list() =>
+    {
+      let mut items: Vec<Digested> = w
+        .borrow()
+        .get_arg(2)
+        .map(Digested::unlist)
+        .unwrap_or_default();
+      if copy {
+        items = items
+          .into_iter()
+          .map(|item| spliced(item, false, true))
+          .collect();
+      }
+      let open_line = items
+        .iter()
+        .rev()
+        .find(|item| !matches!(item.data(), DigestedData::Comment(_)))
+        .is_some_and(|item| {
+          matches!(item.data(), DigestedData::List(_))
+            && item.get_property_string("mode") == "horizontal"
+        });
+      if open_line && let Some(mark) = box_end_par_mark() {
+        items.push(mark);
+      }
+      items
+    },
+    _ => stuff.unlist(),
+  }
+}
+
+/// Whether the current list is a vertical box's own (`VBoxContents`: `\vbox`, `\vtop`, `\parbox`, a `p` column's
+/// cell): the frame its mode was bound in (`begin_mode`'s `BOUND_MODE`) is the one the box reader marked
+/// (`lx@vbox@list`, base_utilities.rs `predigest_list_in_mode`). A group inside the box is still the box's list; a
+/// minipage, a float, a footnote begun in it are lists of their own.
+fn in_vertical_box_list() -> bool {
+  for frame in 0..undo_depth() {
+    if is_value_bound("BOUND_MODE", Some(frame)) {
+      return is_value_bound("lx@vbox@list", Some(frame));
+    }
+  }
+  false
+}
+
+/// The `\par` mark of a paragraph a vertical box's end finished (tex.web §1086 `vbox_group` calls `end_graf`): the
+/// line LaTeXML's box end repacks (`leave_horizontal_internal`) has no mark after it, which the box's own block does
+/// not need, but spliced by `\unvbox` the next material ran into its `ltx:p` ("Para two.More."). The mark is the
+/// internal one `leave_horizontal` digests (`internal_par`): it closes the `ltx:p`, reverts as nothing, and runs none
+/// of a `\par`'s digestion (the deferred paragraph class, the `\vadjust` queue), which the box's end did not run either.
+fn box_end_par_mark() -> Option<Digested> {
+  let definition = lookup_definition(&T_CS!("\\lx@normal@par"))
+    .ok()
+    .flatten()?;
+  let mut mark = Whatsit {
+    definition,
+    ..Whatsit::default()
+  };
+  // What a constructor's invocation gives every whatsit (constructor.rs): its font, mode and math flag; the sizing
+  // pass reads the font.
+  let font = lookup_font().unwrap_or_else(|| Rc::new(Font::text_default()));
+  mark.set_property("font", Stored::Font(font));
+  mark.set_property("isMath", false);
+  mark.set_property("mode", lookup_string_from_sym(pin!("MODE")));
+  mark.set_property("alignmentSkippable", true);
+  mark.set_property("internal_par", true);
+  mark.set_property("reversion", Tokens!());
+  Some(Digested::from(mark))
+}
+
 /// An item put back by `\unhbox` (`copy` false: itself, unless it must be marked as paragraph material) or `\unhcopy`
 /// (`copy`: a copy, arguments and body included). `in_paragraph` marks the item and the items of a group's body, never
 /// what a constructor's arguments hold, nor an environment's body, which is digested in its own mode (restricted
@@ -1505,7 +1601,7 @@ LoadDefinitions!({
       // Only unlist if box is vertical (mode ends with "vertical")
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("vertical") {
-        Ok(stuff.unlist())
+        Ok(vlist_of(&stuff, false))
       } else {
         Ok(vec![at_natural_size(stuff)])
       }
@@ -1521,7 +1617,7 @@ LoadDefinitions!({
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("vertical") {
-        Ok(stuff.unlist())
+        Ok(vlist_of(&stuff, true))
       } else {
         Ok(vec![at_natural_size(stuff)])
       }

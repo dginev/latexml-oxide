@@ -1,0 +1,19 @@
+% witness: 1603.01635, 2506.05832, 1802.06375 and ~315 arXiv `oom:alloc_failed` Fatals (semantic.sty `\inference`; study
+%          2026-10-16_perf_ram_study.md (b): digestion grew 0.3-2 GB/s until the memory fuse)
+% oracle:  pdflatex 0 errors: a over b | p q / r over s | Rule, t over u (infernce.sty `\@adjustPremises` peels the
+%          premise lines with `\unvbox` + `\lastbox`, tex.web §1110/§1080, and resets each `to` the widest)
+% engines: rust (67int10b) never ends: `\unvbox` put the whole vbox back and `\lastbox` took it, every round (tex_box.rs
+%          `vlist_of`); Perl alike (KNOWN_PERL_ERRORS #840; Perl on this host has no semantic.sty, its lb.tex peel
+%          shape loops)
+% expect:  0 errors; three fractions whose numerators hold the premises (p and q on one line, r on the next) and whose
+%          denominators the conclusions
+% status:  GREEN 68q. Guard perfect_kernel_batch68q::semantic_inference_premises
+\documentclass{article}
+\usepackage{semantic}
+\begin{document}
+$\inference{a}{b}$
+
+$\inference{p & q \\ r}{s}$
+
+$\inference[Rule]{t}{u}$
+\end{document}

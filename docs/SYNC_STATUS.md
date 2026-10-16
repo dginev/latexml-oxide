@@ -2104,6 +2104,31 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   wileynjdv5_theorem_styles, wileynjd_uns_keeps_en_dashes, wileynjd_v1_reference_styles, wileynjd_v1_apa_is_amsrefs}
   RED (67w) → GREEN (67w r2); guards `perfect_kernel_batch67w`.
 
+- **68q** (`\unvbox` puts a vertical box's list back; study agent_reports/2026-10-16_perf_ram_study.md (b)): tex.web
+  §1110 `unpackage` splices the box's list and drops the box, so a `\lastbox` (§1080) peel loop
+  `\loop \setbox\pb=\vbox{\unvbox\pb \global\setbox\lb=\lastbox}\ifvoid\lb … \repeat` takes the lines one by one and
+  ends. `\unvbox`/`\unvcopy` returned the `\vbox`/`\vtop` whatsit itself (Perl `Whatsit::unlist`,
+  TeX_Box.pool.ltxml:725-742), `\lastbox` took it whole and left an empty `\vbox{}` that the next round took again, for
+  ever: infernce.sty's `\@adjustPremises` under every semantic.sty `\inference` (31 of the 44-paper fleet
+  `oom:alloc_failed` sample, ~315 corpus-wide; KNOWN_PERL_ERRORS #840). tex_box.rs `vlist_of` splices into a vertical
+  box's own list (`VBoxContents`, marked `lx@vbox@list` in base_utilities.rs `predigest_list_in_mode`; `\unvcopy` as
+  copies) and closes the paragraph the box's end finished (§1086) with the internal `\par` mark; on the main vertical
+  list, in a float's, note's or minipage's body and in math the box goes back whole (OXIDIZED_DESIGN_DIVERGENCES #637,
+  awaiting R6 and a ruling). OOM sample (44, `ulimit -v 8912896`, default `--max-memory`) 67int10b-rel → 68q: 37
+  killed/Fatal → 6 (31 more complete, 38 of 44, at 0.2-1.2 GB in 1-19 s; 1209.2208 PushbackLimit in a `table*`/
+  `{kaprotate}` and hep-th0209063 IfLimit unchanged; 1410.2418, 2311.11318, 2402.17444 still out of memory, no semantic.sty;
+  math0301370 OOM → Timeout:Convert: Paul Taylor's diagrams, `\input{taylor_diagrams}` raw, loops in both binaries,
+  minimal `$$\begin{diagram} A \end{diagram}$$`). A/B over 200 pop67o papers: 198 byte-identical, 2006.07243 one
+  "Missing number" Warning fewer (its local amsmath copy asmath.sty `\measure@` peels the alignment), 2210.15126
+  nondeterministic `CODE(0x…)` text in both. Repros boxes-groups/unvbox_lastbox_peel_loop (p1 RED R7: no interline
+  glue), package-bindings/semantic_inference_premises, box_primitives_lastbox cases 5-7 and box_primitives_unpack cases
+  4, 7 RED → GREEN; latexml_oxide/tests/digestion/box.xml re-blessed (four lines in one box, not two nested blocks), alignment/arraycr_halign.xml
+  (`tex=` one `\vbox` fewer);
+  guards `perfect_kernel_batch68q::{unvbox_lastbox_peel_loop, semantic_inference_premises}`, `box_primitives::{lastbox,
+  unpack}`, `perfect_kernel_batch58::floatrow_*` (4 re-pinned: the caption spliced into floatrow's `\vtop` is
+  `vattach="top"`; OPEN, awaiting a ruling: a `\floatfoot` after it now sits inside the caption's `<figure>` panel, the
+  panel the spliced caption opened no longer closed by its box's end — OXIDIZED_DESIGN_DIVERGENCES #637 residual).
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

@@ -17938,3 +17938,28 @@ the faithful definition writes the ASCII letter in a `symbol` font — "D" — l
 svmult_cls.rs maps a single ASCII letter to its Symbol-encoding Greek letter, upright (`symbol_font_greek`: a α … z ζ,
 A Α … Z Ζ, with j ϕ, J ϑ, v ϖ, V ς as the encoding has them); any other argument keeps the faithful `\usefont` form.
 Repro class-bindings/svmult_aas/svmult_class_commands; guard `perfect_kernel_batch68k::svmult_class_commands`.
+
+### 637. `\unvbox` splices a vbox's list only into a vertical box's own list
+
+tex.web §1110 puts an `\unvbox`ed box's list into whatever vertical list is current. tex_box.rs `vlist_of` does so where
+the list is a vertical box's own (`VBoxContents`: `\vbox`, `\vtop`, `\parbox`, a `p` column's cell; the frame its
+mode was bound in carries `lx@vbox@list`, base_utilities.rs `predigest_list_in_mode`), where LaTeXML sets a box's
+hboxes as lines (`_CaptureBlock_`) — the peel loops of KNOWN_PERL_ERRORS #840 and the accumulating
+`\setbox\b=\vbox{\unvbox\b …}` idiom. On the main vertical list, in a float's, a footnote's or a minipage's body, and
+in math, the box goes back whole, as Perl's: spliced there its hboxes ran together into one paragraph
+(`\setbox0\vbox{\hbox{C1}\hbox{C2}}\unvbox0 After.` gave `<p>C1C2After.</p>`; pdflatex three lines), since an `\hbox`
+in vertical mode is a line of its own only in a captured block (box family root R6; the shape of case 8-9 of
+boxes-groups/box_primitives_unpack awaits a ruling). The box's end ends its paragraph (§1086): spliced, the line gets the
+internal `\par` mark (`internal_par`, as `leave_horizontal`'s), built directly so that none of a `\par`'s digestion
+(the deferred paragraph class, the `\vadjust` queue) runs again. Perl's t/digestion/box golden nests the two
+`\unvbox`ed boxes of `\vbox{\unvbox\myboxA\unvbox\myboxB}` as blocks; latexml_oxide/tests/digestion/box.xml now has
+the four lines in the one framed box, as pdflatex sets them, and tests/alignment/arraycr_halign.xml's `\vcenter{\vbox{\unvbox0}}`
+reverts with one `\vbox` fewer (`tex=` attribute only). A box's attachment goes with the box: floatrow's caption
+spliced into its `\vtop` (floatrow.sty:393) is `vattach="top"` (guard
+`perfect_kernel_batch58::floatrow_floatbox_steps_its_counter_once`). Residual: the box's end closed what its contents
+opened in the XML (its block), and the spliced list has no such end beyond the paragraph mark — the `<figure>` panel
+floatrow's caption opens stays open, so a `\floatfoot` set after it in the `\vtop` lands inside the panel instead of
+beside it in a `logical-block` (guards `perfect_kernel_batch58::{floatrow_floatfoot_keeps_its_text,
+floatrow_subcaption_stays_in_its_panel}` pin the new shape). Guards
+`perfect_kernel_batch68q::unvbox_lastbox_peel_loop`, `box_primitives::{lastbox, unpack}`, `box_test`.
+

@@ -28,6 +28,10 @@ fn lastbox() {
       ),
       case("p3", r##"<para xml:id="p3"><p>[47.28606pt]</p></para>"##),
       case("p4", r##"<para xml:id="p4"><p>[b/a]</p></para>"##),
+      // c5-c7 (68q): `\unvbox` in a vertical box's list splices the box's lines (tex.web §1110).
+      case("p5", r##"<para xml:id="p5"><p>[B]</p></para>"##),
+      case("p6", r##"<para xml:id="p6"><p>[void]</p></para>"##),
+      case("p7", r##"<para xml:id="p7"><p>[h]</p></para>"##),
       case("p8", r##"<para xml:id="p8"><p>[1]</p></para>"##),
       case("p9", r##"<para xml:id="p9"><p>[0]</p></para>"##),
       case("p10", r##"<para xml:id="p10"><p>[0.0pt]</p></para>"##),
@@ -148,7 +152,13 @@ fn unpack() {
     &[
       case("p2", r##"<para xml:id="p2"><p>[10.55559pt]</p></para>"##),
       case("p3", r##"<para xml:id="p3"><p>[ab]</p></para>"##),
+      // c4 and c7 (68q): `\unvbox`/`\unvcopy` in a vertical box's list splice its lines (tex.web §1110).
+      case("p4", r##"<para xml:id="p4"><p>[3]</p></para>"##),
       case("p5", r##"<para xml:id="p5"><p>[1]</p></para>"##),
+      case(
+        "p7",
+        r##"<para class="ltx_noindent" xml:id="p7"><block vattach="bottom"><p>L1</p><p>L2</p><p>L1</p><p>L2</p></block></para>"##,
+      ),
       case(
         "p6",
         r##"<para xml:id="p6"><p>[50.0pt,6.83331pt,full]</p></para>"##,

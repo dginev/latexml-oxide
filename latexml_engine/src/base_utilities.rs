@@ -7192,6 +7192,10 @@ fn predigest_list_in_mode(
   // `perfect_kernel_batch54::hbox_reader_is_one_frame`.
   if mode.ends_with("vertical") || mode == "restricted_horizontal" {
     begin_mode(mode)?;
+    // A vertical box's own list (`VBoxContents`), where `\unvbox` puts a box's lines back (tex_box.rs `vlist_of`).
+    if mode == "internal_vertical" {
+      assign_frame_value("lx@vbox@list", true);
+    }
     // The box's OWN frame (tex.web §1068 `handle_right_brace` dispatches on
     // `cur_group`, the group itself): Perl keys the terminal on the save-stack
     // DEPTH (`$level >= getFrameDepth`, TeX_Box.pool.ltxml:172), which a
