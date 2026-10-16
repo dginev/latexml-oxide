@@ -200,11 +200,8 @@ LoadDefinitions!({
 \def\solutionname{Solution}
 \def\remarkname{Remark}"#);
 
-  // The theorem environments themselves are installed with `\spnewtheorem`
-  // (below, after the primitive is defined) to faithfully mirror Perl
-  // llncs.cls.ltxml L170-202 — each env its OWN counter and its per-theorem
-  // bodyfont (proof/case/... = `\rmfamily` upright). See the block after
-  // `\spnewtheorem`.
+  // The theorem environments themselves are installed with `\spnewtheorem` and `\spn@wtheorem` (below, after
+  // the primitive is defined), numbered by the class's options as llncs.cls numbers them.
 
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
   // Perl llncs.cls.ltxml L101-157 is `DefMacro('\spnewtheorem ...', sub
@@ -229,41 +226,56 @@ LoadDefinitions!({
     )?;
   });
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
-  // llncs.cls:1086-1097 `\@spothm{env}[numberedlike]{caption}{capfont}{bodyfont}` (a theorem sharing another's counter)
-  // and :1155-1167 `\spn@wtheorem{env}{caption}{capfont}{bodyfont}`, the definer of the class's own theorem
-  // environments by the numbering option, which papers call for theirs (2202.10090, 2601.04573 `\@spothm`; 0906.4121,
-  // 1003.2851 `\spn@wtheorem{fact}{Fact}…`; 22 papers). Perl's llncs.cls.ltxml defines neither (KNOWN_PERL_ERRORS #743).
-  RawTeX!(r"\def\@spothm#1[#2]#3#4#5{\spnewtheorem{#1}[#2]{#3}{#4}{#5}}
+  // llncs.cls:1060-1097 (TL 2025 v2.26) `\@spynthm{env}{caption}{capfont}{bodyfont}` (own counter),
+  // `\@spxnthm{env}{caption}[within]{capfont}{bodyfont}` (counter within `within`) and
+  // `\@spothm{env}[numberedlike]{caption}{capfont}{bodyfont}` (another theorem's counter), the three branches of
+  // `\spnewtheorem`; and :1155-1167 `\spn@wtheorem{env}{caption}{capfont}{bodyfont}`, the class's definer of its
+  // own theorem set, chosen by the numbering option, which papers call for theirs (2202.10090, 2601.04573
+  // `\@spothm`; 0906.4121, 1003.2851 `\spn@wtheorem{fact}{Fact}…`; 22 papers). Perl's llncs.cls.ltxml defines none
+  // of them (KNOWN_PERL_ERRORS #743). Every shipped copy from v2.2 to v2.26 chooses alike (v2.2's default
+  // `\let\spn@wtheorem=\@spynthm` only skips the `chapter` reset). The v2.24+ `\@addtoreset{#1}{section}` of
+  // `\@spothm` under envcountsect is left out: the env has no counter of its own here (it numbers with `#2`'s,
+  // OXIDIZED_DESIGN_DIVERGENCES #614).
+  RawTeX!(r"\def\@spynthm#1#2#3#4{\spnewtheorem{#1}{#2}{#3}{#4}}
+\def\@spxnthm#1#2[#3]#4#5{\spnewtheorem{#1}{#2}[#3]{#4}{#5}}
+\def\@spothm#1[#2]#3#4#5{\spnewtheorem{#1}[#2]{#3}{#4}{#5}}
 \if@envcntsame\def\spn@wtheorem#1#2#3#4{\@spothm{#1}[theorem]{#2}{#3}{#4}}
-\else\if@envcntsect\def\spn@wtheorem#1#2#3#4{\spnewtheorem{#1}{#2}[section]{#3}{#4}}
-\else\if@envcntreset\def\spn@wtheorem#1#2#3#4{\spnewtheorem{#1}{#2}{#3}{#4}\@addtoreset{#1}{section}}
-\else\def\spn@wtheorem#1#2#3#4{\spnewtheorem{#1}{#2}{#3}{#4}\@addtoreset{#1}{chapter}}\fi\fi\fi");
+\else\if@envcntsect\def\spn@wtheorem#1#2#3#4{\@spxnthm{#1}{#2}[section]{#3}{#4}}
+\else\if@envcntreset\def\spn@wtheorem#1#2#3#4{\@spynthm{#1}{#2}{#3}{#4}\@addtoreset{#1}{section}}
+\else\def\spn@wtheorem#1#2#3#4{\@spynthm{#1}{#2}{#3}{#4}\@addtoreset{#1}{chapter}}\fi\fi\fi");
 
-  // Install the theorem environments — faithful mirror of Perl
-  // llncs.cls.ltxml L170-202 (which itself tracks real llncs.cls L1142-1174).
-  // Each environment gets its OWN counter (the class default — the shared
-  // `theorem` counter only applies under the `envcntsame` option) and its
-  // per-theorem capfont/bodyfont. The `\@ifundefined` guards are a Rust-only
-  // defensive keep (skip if a preloaded package already defined the env);
-  // in a plain `\documentclass{llncs}` load nothing pre-defines them, so this
-  // matches Perl's unconditional definitions.
-  RawTeX!(r#"\@ifundefined{theorem}{\spnewtheorem{theorem}{Theorem}[section]{\bfseries}{\itshape}}{}
+  // The class's own theorem set, numbered as llncs.cls:1142-1174 numbers it (KNOWN_PERL_ERRORS #743; Perl's
+  // llncs.cls.ltxml L170-202 gives every env its own counter and `{theorem}` a section-numbered one whatever the
+  // options, "Theorem 0.1"): `{theorem}` by section under envcountsect, else on its own (reset by section under
+  // envcountreset, by chapter otherwise); `{claim}` and `{proof}` unnumbered; the rest through `\spn@wtheorem`
+  // (the theorem counter under envcountsame, by section under envcountsect, on their own otherwise). pdflatex,
+  // TL 2025 v2.26: "Theorem 1, Lemma 1, Theorem 2" by default, "Theorem 1, Lemma 2" under envcountsame, "1.1"
+  // under envcountsect (0906.4121's "Fact 3.1"). The capfont/bodyfont pairs are the class's, the same in every
+  // shipped copy: `{definition}`'s body is italic (Perl's binding, upright). The `\@ifundefined` guards are a
+  // Rust-only defensive keep (skip an env a preloaded package already defined); a plain `\documentclass{llncs}`
+  // load pre-defines none of them.
+  RawTeX!(r#"\@ifundefined{theorem}{\if@envcntsect
+  \spnewtheorem{theorem}{Theorem}[section]{\bfseries}{\itshape}
+\else
+  \spnewtheorem{theorem}{Theorem}{\bfseries}{\itshape}
+  \if@envcntreset\@addtoreset{theorem}{section}\else\@addtoreset{theorem}{chapter}\fi
+\fi}{}
 \@ifundefined{claim}{\spnewtheorem*{claim}{Claim}{\itshape}{\rmfamily}}{}
 \@ifundefined{proof}{\spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}}{}
-\@ifundefined{case}{\spnewtheorem{case}{Case}{\itshape}{\rmfamily}}{}
-\@ifundefined{conjecture}{\spnewtheorem{conjecture}{Conjecture}{\itshape}{\rmfamily}}{}
-\@ifundefined{corollary}{\spnewtheorem{corollary}{Corollary}{\bfseries}{\itshape}}{}
-\@ifundefined{definition}{\spnewtheorem{definition}{Definition}{\bfseries}{\rmfamily}}{}
-\@ifundefined{example}{\spnewtheorem{example}{Example}{\itshape}{\rmfamily}}{}
-\@ifundefined{exercise}{\spnewtheorem{exercise}{Exercise}{\bfseries}{\rmfamily}}{}
-\@ifundefined{lemma}{\spnewtheorem{lemma}{Lemma}{\bfseries}{\itshape}}{}
-\@ifundefined{note}{\spnewtheorem{note}{Note}{\itshape}{\rmfamily}}{}
-\@ifundefined{problem}{\spnewtheorem{problem}{Problem}{\bfseries}{\rmfamily}}{}
-\@ifundefined{property}{\spnewtheorem{property}{Property}{\itshape}{\rmfamily}}{}
-\@ifundefined{proposition}{\spnewtheorem{proposition}{Proposition}{\bfseries}{\itshape}}{}
-\@ifundefined{question}{\spnewtheorem{question}{Question}{\itshape}{\rmfamily}}{}
-\@ifundefined{solution}{\spnewtheorem{solution}{Solution}{\bfseries}{\rmfamily}}{}
-\@ifundefined{remark}{\spnewtheorem{remark}{Remark}{\itshape}{\rmfamily}}{}"#);
+\@ifundefined{case}{\spn@wtheorem{case}{Case}{\itshape}{\rmfamily}}{}
+\@ifundefined{conjecture}{\spn@wtheorem{conjecture}{Conjecture}{\itshape}{\rmfamily}}{}
+\@ifundefined{corollary}{\spn@wtheorem{corollary}{Corollary}{\bfseries}{\itshape}}{}
+\@ifundefined{definition}{\spn@wtheorem{definition}{Definition}{\bfseries}{\itshape}}{}
+\@ifundefined{example}{\spn@wtheorem{example}{Example}{\itshape}{\rmfamily}}{}
+\@ifundefined{exercise}{\spn@wtheorem{exercise}{Exercise}{\itshape}{\rmfamily}}{}
+\@ifundefined{lemma}{\spn@wtheorem{lemma}{Lemma}{\bfseries}{\itshape}}{}
+\@ifundefined{note}{\spn@wtheorem{note}{Note}{\itshape}{\rmfamily}}{}
+\@ifundefined{problem}{\spn@wtheorem{problem}{Problem}{\itshape}{\rmfamily}}{}
+\@ifundefined{property}{\spn@wtheorem{property}{Property}{\itshape}{\rmfamily}}{}
+\@ifundefined{proposition}{\spn@wtheorem{proposition}{Proposition}{\bfseries}{\itshape}}{}
+\@ifundefined{question}{\spn@wtheorem{question}{Question}{\itshape}{\rmfamily}}{}
+\@ifundefined{solution}{\spn@wtheorem{solution}{Solution}{\itshape}{\rmfamily}}{}
+\@ifundefined{remark}{\spn@wtheorem{remark}{Remark}{\itshape}{\rmfamily}}{}"#);
 
   //======================================================================
   // Blackboard bold letters.

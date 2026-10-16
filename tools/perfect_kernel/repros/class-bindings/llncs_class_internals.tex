@@ -3,14 +3,14 @@
 %          2601.04573 (`\@spothm`); 2303.08726 (`\if@envcntsame`); 2112.05140, 2208.01633 (`\@subtitle`,
 %          `\institutename`); 1709.06172 (`\phantomsection`)
 % oracle:  pdflatex with TL 2025 llncs.cls v2.26: "RH SAME", Theorem 1, Fact 2, Assumption 3 (one counter under
-%          envcountsame); 0 errors. Here the theorems number within the section (the binding's own `{theorem}`,
-%          a residual) and `\switcht@albion` restores the binding's English names ("Figure", not "Fig.")
+%          envcountsame); 0 errors. Here `\switcht@albion` restores the binding's English names ("Figure", not
+%          "Fig."); the theorems numbered within the section ("Fact 0.2") until 68g (KNOWN_PERL_ERRORS #743)
 % engines: rust 67int6 = 11 errors, 0 warnings (undefined `\if@runhead`, undefined `\if@envcntsame`, undefined
 %          `\spn@wtheorem`, undefined `\@spothm`, undefined `\switcht@deutsch`, undefined `\@subtitle`, undefined
 %          `\institutename`, undefined `\phantomsection`, undefined `{fact}`, undefined `{assumption}`, undefined
 %          `\switcht@albion`)
 % expect:  0 errors, 0 warnings; the Fact and the Assumption share the theorem counter
-% status:  RED (67int6) -> GREEN (68a)
+% status:  RED (67int6) -> GREEN (68a; the numbers 68g)
 % preload: ar5iv.sty
 \documentclass[runningheads,envcountsame]{llncs}
 \makeatletter

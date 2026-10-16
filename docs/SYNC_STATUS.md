@@ -1826,6 +1826,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Open row: arximspdf/arxstspdf gaps outside this batch from a 24-paper sample — `\ccline` (7 arxstspdf papers),
   `\freefootnotetext`, `\write@toc@…contentsline`, `\maxcsec`, `{aligned}`, and arxbj's `\setvaluelist` moved into
   ims_support_sty.rs for arximspdf (1203.0565).
+- **68g** (llncs theorem numbering, the 68a residual KNOWN_PERL_ERRORS #743): llncs_cls.rs installs the class's
+  theorem set with llncs.cls's own code (:1142-1174, TL 2025 v2.26; the same in every shipped copy v2.2-v2.26, checked
+  over 18 versions from 1,250 arXiv llncs papers): `{theorem}` by section only under `envcountsect` (reset by section
+  under `envcountreset`, by chapter otherwise), the rest through `\spn@wtheorem` over `\@spynthm`/`\@spxnthm`/`\@spothm`
+  mapped onto `\spnewtheorem` (the theorem counter under `envcountsame`), `{definition}`'s body italic as the class
+  sets it. Was "Theorem 0.1", "Fact 0.2" under every option (Perl the same); now pdflatex's numbers under default,
+  envcountsame, envcountsect, both and envcountreset. `\@spothm`'s v2.24+ section reset of its alias counter is left
+  out (OXIDIZED_DESIGN_DIVERGENCES #614). Repros class-bindings/llncs_theorem_numbering_{default,envcountsame,
+  envcountsect,envcountsame_envcountsect,envcountreset} (RED 026cf18f87 → GREEN); guards `perfect_kernel_batch68g` (5),
+  `perfect_kernel_batch68a::llncs_class_internals` flipped ("Fact 2", "Assumption 3"). A/B vs 026cf18f87 over 480
+  papers (400 llncs, 41 of them with a numbering option; 6 witnesses; pop67o): Errors 605 → 605, Fatals 4 → 4, words
+  unchanged; 357 identical, 50 differ only in theorem tags/refnums/ids, 64 also in `{definition}`'s italic body (font
+  attributes, italic box widths), 1 (1610.02500, class fac) a math-parse nondeterminism (a base rerun equals ours).
+  Witnesses: 0906.4121 "Fact 3.1" kept, its lemmas/definitions now "Lemma 2.1", "Definition 3.1" as the PDF;
+  1003.2851, 2303.08726, 2202.10090 (envcountsame+envcountsect "Definition 2.1", "Problem 2.2"), 1312.1526, 1104.3211,
+  1212.0139, 1808.10364, 1412.6065, 2308.02825 checked against pdflatex. llncs net vs 67int8 and vs 026cf18f87: 0
+  worse. Open (ruling): llncs.cls:1047 `\edef\@thmcountersep{}` makes pdflatex print a paper's own
+  `\newtheorem{x}{X}[section]` as "X 11" outside envcountsect; both engines print "X 1.1" (5 of 374 sampled papers with a main file).
 - **68a** (binding gaps G2, journal classes B: bindgaps/g23_macros.tsv rows aa, acmart, aastex631/aastex63, mnras,
   llncs, jfm, tac, aamas; each macro checked against TeX Live's class or the witnesses' shipped copies, 1,035 witness
   papers unpacked: a name defined by at least a version of the class went in, a one-line definition only some authors

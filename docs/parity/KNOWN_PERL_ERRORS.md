@@ -13870,10 +13870,22 @@ options (L18-20) and defines none of these, so a paper's `\spn@wtheorem{fact}{Fa
 (pscproc2.sty:19) errs. Minimal trigger: tools/perfect_kernel/repros/class-bindings/llncs_class_internals.tex: pdflatex
 clean, Rust 67int6 11 errors. Witnesses 0906.4121, 1003.2851 (`\spn@wtheorem`); 2202.10090, 2601.04573 (`\@spothm`);
 0905.3107, 0908.0239, 1006.0809 (pscproc2.sty); 1812.03939, 1812.03953 (`\switcht@deutsch`). Fixed in llncs_cls.rs;
-guard `perfect_kernel_batch68a::llncs_class_internals`. Not fixed (both engines): the default theorem set ignores
-`envcountsame`/`envcountsect` (`{theorem}` numbered within the section, each other environment on its own counter),
-where llncs.cls:1142-1176 shares one counter under `envcountsame` and numbers by section only under `envcountsect`.
-Ruled (main session 2026-10-16) to its own payload, 68g; the guard's "Fact 0.2"/"Assumption 0.3" pin this residual.
+guard `perfect_kernel_batch68a::llncs_class_internals`. The binding's theorem set (Perl llncs.cls.ltxml L170-202)
+also ignored the numbering options: `{theorem}` numbered within the section and every other environment on its own
+counter whatever the options ("Theorem 0.1", "Fact 0.2" where pdflatex prints "Theorem 1", "Fact 2"), and
+`{definition}`'s body upright. llncs.cls:1142-1174, alike in every shipped copy v2.2-v2.26, numbers `{theorem}` by
+section only under `envcountsect` (reset by section under `envcountreset`, by chapter otherwise), defines the rest with
+`\spn@wtheorem` (the theorem counter under `envcountsame`, by section under `envcountsect`, each its own otherwise) and
+sets `{definition}` `{\bfseries}{\itshape}`. Minimal trigger: `\documentclass{llncs}` `\begin{theorem}a\end{theorem}`
+`\begin{lemma}b\end{lemma}` — pdflatex "Theorem 1", "Lemma 1"; Perl and Rust 68a "Theorem 0.1", "Lemma 1"; under
+`envcountsame` pdflatex "Lemma 2". Fixed in Rust (68g): llncs_cls.rs installs the set with the class's own code, over
+`\@spynthm`/`\@spxnthm`/`\@spothm` mapped onto `\spnewtheorem`. Repros
+class-bindings/llncs_theorem_numbering_{default,envcountsame,envcountsect,envcountsame_envcountsect,envcountreset};
+guards `perfect_kernel_batch68g::llncs_numbering_*` (5) and the flipped `perfect_kernel_batch68a::llncs_class_internals`
+("Fact 2", "Assumption 3"). Not changed (awaits a ruling): llncs.cls:1047 `\edef\@thmcountersep{}` (`.` only under
+`envcountsect`), by which pdflatex prints a paper's own `\newtheorem{thm}{Thm}[section]` or
+`\spnewtheorem{x}{X}[section]{…}{…}` as "Thm 11" in section 1 under the other options; both engines keep the kernel's
+`.` ("Thm 1.1").
 
 ## 760. article.cls's binding lacks the `headings`/`myheadings` page styles and `\@makecaption`
 

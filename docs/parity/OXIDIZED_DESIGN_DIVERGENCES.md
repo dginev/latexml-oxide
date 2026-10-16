@@ -17806,3 +17806,14 @@ punctuation. `\switcht@deutsch`/`\switcht@francais` give the class's German and 
 forms (`\keywordname` without the colon, `\abstractname`/`\ackname` without the run-in period). Taking the class's
 names at load would be a separate change to every llncs paper's headings (not made). Repro
 class-bindings/llncs_class_internals; guard `perfect_kernel_batch68a::llncs_class_internals`.
+
+### 614. llncs's `\@spothm` shares the other theorem's counter, without the class's `\newaliascnt` and section reset
+
+llncs.cls:1086-1097 (v2.26) `\@spothm{fact}[theorem]…` makes `fact` an alias counter of `theorem` (`\newaliascnt`,
+aliascnt.sty) and, since v2.24 under `envcountsect`, adds `\@addtoreset{fact}{section}` (for hyperref's anchor names);
+copies before v2.24 instead `\@namedef{thefact}{\@nameuse{thetheorem}}` and step `theorem` directly. Here, as in the old
+copies, `\@spothm` is `\spnewtheorem{fact}[theorem]…`: the environment steps and prints `theorem`'s counter and has no
+counter of its own, so the section reset is left out — under `envcountsect` `theorem` is already reset by the section,
+and the numbers are the same in every copy ("Fact 1.4" after "Theorem 1.1", "Lemma 1.2", "Definition 1.3"). Repro
+class-bindings/llncs_theorem_numbering_envcountsame_envcountsect; guard
+`perfect_kernel_batch68g::llncs_numbering_envcountsame_envcountsect`.

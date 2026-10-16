@@ -100,15 +100,14 @@ fn llncs_class_internals() {
   let xml = clean!("llncs_class_internals.tex");
   assert!(xml.contains(r#"<p xml:id="p1.1">SUB:S</p>"#), "{xml}");
   assert!(xml.contains(r#"<p xml:id="p2.1">RH SAME</p>"#), "{xml}");
-  // "Fact 0.2" and "Assumption 0.3" pin the open residual KNOWN_PERL_ERRORS #743 (the default theorem set ignores
-  // `envcountsame`/`envcountsect`; pdflatex prints "Fact 2", "Assumption 3"): the llncs numbering payload (68g) flips
-  // them.
+  // One theorem counter under envcountsame, as pdflatex numbers them (KNOWN_PERL_ERRORS #743, fixed in 68g; the
+  // binding numbered `{theorem}` within the section and printed "Fact 0.2", "Assumption 0.3").
   assert!(
-    xml.contains(r#"<theorem class="ltx_theorem_fact" inlist="thm theorem:fact" xml:id="S0.Thmtheorem2"> <tags> <tag>Fact 0.2</tag>"#),
+    xml.contains(r#"<theorem class="ltx_theorem_fact" inlist="thm theorem:fact" xml:id="Thmtheorem2"> <tags> <tag>Fact 2</tag>"#),
     "{xml}"
   );
   assert!(
-    xml.contains(r#"<theorem class="ltx_theorem_assumption" inlist="thm theorem:assumption" xml:id="S0.Thmtheorem3"> <tags> <tag>Assumption 0.3</tag>"#),
+    xml.contains(r#"<theorem class="ltx_theorem_assumption" inlist="thm theorem:assumption" xml:id="Thmtheorem3"> <tags> <tag>Assumption 3</tag>"#),
     "{xml}"
   );
   assert!(
