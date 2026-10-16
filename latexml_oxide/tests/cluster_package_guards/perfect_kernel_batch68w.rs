@@ -118,3 +118,23 @@ fn lipics_anonymous_author_hides_the_author() {
   ]);
   assert!(!xml.contains("Ann") && !xml.contains("Grant"), "{xml}");
 }
+
+/// thmtools' keys in a theorem's optional argument (thm-kv.sty:434-437, `label` :485-487, `name` :488-496, `continues`
+/// :511-516; 2002.09876, 2409.14881): the label on the theorem, no key text in a title, a note that is no key list kept,
+/// the continued example numbered by a reference to the one it continues and its counter not stepped.
+#[test]
+fn thmtools_keyval_optional_argument_sets_label_name_continues() {
+  let xml = clean!("package-bindings/thmtools_keyval_optional_argument.tex");
+  assert!(
+    !xml.contains("label=") && !xml.contains("continues=") && !xml.contains("name="),
+    "{xml}"
+  );
+  assert_all(&xml, &[
+    r#"<theorem class="ltx_theorem_example" inlist="thm theorem:example" labels="LABEL:ex:a_1" xml:id="Thmexample1"> <tags> <tag>Example 1</tag> <tag role="refnum">1</tag> <tag role="typerefnum">Example 1</tag> </tags> <title class="ltx_runin"><tag><text font="bold" xml:id="Thmexample1.1">Example 1</text></tag><text font="bold" xml:id="Thmexample1.2">.</text></title>"#,
+    r#"<theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" labels="LABEL:thm:main_1" xml:id="Thmtheorem1"> <tags> <tag>Theorem 1</tag> <tag role="refnum">1</tag> <tag role="typerefnum">Theorem 1</tag> </tags> <title class="ltx_runin"><tag><text font="bold" xml:id="Thmtheorem1.1">Theorem 1</text></tag><text font="bold" xml:id="Thmtheorem1.2"> </text>(Main result)<text font="bold" xml:id="Thmtheorem1.3">.</text></title>"#,
+    r#"<text font="bold" xml:id="Thmtheorem2.2"> </text>(Smith, 2001)<text font="bold" xml:id="Thmtheorem2.3">.</text></title>"#,
+    r#"<theorem class="ltx_theorem_example" inlist="thm theorem:example" xml:id="Thmexamplex1"> <tags> <tag>Example <ref labelref="LABEL:ex:a_1"/></tag> <tag role="refnum"><ref labelref="LABEL:ex:a_1"/></tag> <tag role="typerefnum">Example <ref labelref="LABEL:ex:a_1"/></tag> </tags> <title class="ltx_runin"><tag><text font="bold" xml:id="Thmexamplex1.1">Example </text><ref font="bold" labelref="LABEL:ex:a_1"/></tag><text font="bold" xml:id="Thmexamplex1.2"> </text>(Running example, continuing from p. <ref labelref="LABEL:ex:a_1"/>)<text font="bold" xml:id="Thmexamplex1.3">.</text></title>"#,
+    r#"<text font="bold" xml:id="Thmexamplex2.2"> </text>(continuing from p. <ref labelref="LABEL:ex:a_1"/>)<text font="bold" xml:id="Thmexamplex2.3">.</text></title>"#,
+    r#"<tag role="refnum">3</tag> <tag role="typerefnum">Example 3</tag>"#,
+  ]);
+}

@@ -2411,6 +2411,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   worse; words lost are the ORCID URLs and "and" separators now in links/creators (2202.05360, 2302.05810) and URLs
   shown as their `linktext` (2112.14457). The `_` cluster's lipics share is ~94 papers, not the study's ~300. Repros
   class-bindings/lipics_{author_five_parts,anonymous}; guards `perfect_kernel_batch68w::lipics_*`.
+  A2 — thmtools' key=value theorem option (thm-kv.sty:434-437; `label` :485, `name` :488, `continues` :511-516):
+  latex_constructs `thmtools_use_keys` in the native theorem's properties (thmtools_sty.rs sets
+  `thmtools_thmuse_keys`, provides `\thmcontinues`): no "(label=…)" title, the label set after the head, a continued
+  theorem numbered by `\ref` to the one it continues, its counter not stepped (KNOWN_PERL_ERRORS #857). 130 papers of
+  the cluster writing `[label=`/`[name=`/`[continues=` (many are enumitem's `\begin{enumerate}[label=…]`, not thmtools):
+  27 → 0 errors, none worse; words lost are the key text (2201.10483 −61) and the later numbers a continuation no
+  longer steps (2103.08319). Open: thm-restate's `restate=` key (2108.11527). Repro
+  package-bindings/thmtools_keyval_optional_argument; guard `perfect_kernel_batch68w::thmtools_keyval_*`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

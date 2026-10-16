@@ -61,6 +61,12 @@ LoadDefinitions!({
   DefMacro!("\\thmt@thmuse@families", "thm@track@keys");
   def_macro_noop("\\thmt@mkignoringkeyhandler{}")?;
   def_macro_noop("\\thmt@thmuse@iskvtrue")?;
+  // thm-kv.sty:434-437: a theorem's optional argument may be thmtools' keys — `label=`, `name=`, `continues=` — which
+  // the native theorem reads (latex_constructs `thmtools_use_keys`); `\thmcontinues` (:503-509) is the note
+  // `continues=` gives, as the package provides it.
+  AssignValue!("thmtools_thmuse_keys" => true, Some(Scope::Global));
+  RawTeX!(r"\providecommand\thmcontinues[1]{\ifcsname hyperref\endcsname\hyperref[#1]{continuing}\else
+continuing\fi\ from p.\,\pageref{#1}}");
 
   // Set savable theorem parameters
   set_savable_theorem_parameters(vec![

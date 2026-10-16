@@ -2671,8 +2671,16 @@ pub fn define_new_theorem(
       (&thmset_for_head_hooks, "postheadhook"),
       ("generic", "postheadhook"),
     ]));
-    let digested = digest(mouth::tokenize_internal(TeXString::assembled(digest_str)))?;
-    Ok(vec![digested])
+    let mut digested = vec![digest(mouth::tokenize_internal(TeXString::assembled(
+      digest_str,
+    )))?];
+    // …and thm-kv's local post-head hook, last (thm-patch.sty:60 `\thmt@local@postheadhook`): the `label=` key's
+    // `\label` (thm-kv.sty:485-487, `thmtools_use_keys`)
+    if let Some(Stored::Tokens(label)) = lookup_value("thmt_local_label") {
+      assign_value("thmt_local_label", Stored::None, None);
+      digested.push(digest(Invocation!(T_CS!("\\label"), vec![label]))?);
+    }
+    Ok(digested)
   });
   options.after_digest_begin.push(after_digest_begin_closure);
 
@@ -2711,9 +2719,48 @@ pub fn define_new_theorem(
     #[allow(clippy::ptr_arg)]
     move |args: &Vec<Option<Digested>>| {
       let mut props = SymHashMap::default();
+      // thm-kv's key=value optional argument (`thmtools_use_keys`), when thmtools is loaded
+      let thmuse = match args.first() {
+        Some(Some(arg)) if lookup_bool("thmtools_thmuse_keys") => thmtools_use_keys(&arg.revert()?),
+        _ => None,
+      };
+      if let Some(label) = thmuse.as_ref().and_then(|u| u.label.clone()) {
+        assign_value("thmt_local_label", Stored::Tokens(label), None);
+      }
+      // `continues=<label>` (thm-kv.sty:511-516 `\thmt@suspendcounter`): the theorem is numbered as the one it
+      // continues — its number, in its tags and its title, is a reference to that label — and its counter does not
+      // step
+      let suspended: Vec<Token> = match thmuse.as_ref().and_then(|u| u.continues.as_ref()) {
+        Some(continued) if !is_starred_for_props && !counter_for_tags.is_empty() => {
+          let mut number = vec![T_CS!("\\ref"), T_BEGIN!()];
+          number.extend(continued.unlist_ref().iter().copied());
+          number.push(T_END!());
+          let mut toks = Vec::new();
+          for name in [&counter_for_tags, &thmset_for_tags] {
+            toks.extend([T_CS!("\\def"), T_CS!(s!("\\the{}", name)), T_BEGIN!()]);
+            toks.extend(number.iter().copied());
+            toks.push(T_END!());
+          }
+          toks
+        },
+        _ => Vec::new(),
+      };
 
       if !counter_for_tags.is_empty() {
-        if is_starred_for_props {
+        if !suspended.is_empty() {
+          let ctr_props = ref_step_id(&counter_for_tags)?;
+          for (k, v) in ctr_props.iter() {
+            props.insert_sym(*k, v.clone());
+          }
+          let mut toks = vec![T_BEGIN!()];
+          toks.extend(suspended.iter().copied());
+          toks.extend([T_CS!("\\lx@make@tags"), T_BEGIN!()]);
+          toks.extend(
+            mouth::tokenize_internal(TeXString::assembled(thmset_for_tags.clone())).unlist(),
+          );
+          toks.extend([T_END!(), T_END!()]);
+          props.insert("tags", digest(Tokens::new(toks))?.into());
+        } else if is_starred_for_props {
           let ctr_props = ref_step_id(&counter_for_tags)?;
           for (k, v) in ctr_props.iter() {
             props.insert_sym(*k, v.clone());
@@ -2747,14 +2794,17 @@ pub fn define_new_theorem(
 
       // Compute title
       let format_title_cs = s!("\\format@title@{}", thmset_for_tags);
-      let mut title_tokens = vec![
-        T_BEGIN!(),
+      let mut title_tokens = vec![T_BEGIN!()];
+      title_tokens.extend(suspended);
+      title_tokens.extend([
         T_CS!("\\the"),
         T_CS!("\\thm@headstyling"),
         T_CS!(&format_title_cs),
         T_BEGIN!(),
-      ];
-      if let Some(Some(arg)) = args.first() {
+      ]);
+      if let Some(thmuse) = thmuse {
+        title_tokens.extend(thmuse.note);
+      } else if let Some(Some(arg)) = args.first() {
         title_tokens.extend(arg.revert()?.unlist());
       }
       title_tokens.push(T_END!());
@@ -2778,6 +2828,148 @@ pub fn define_new_theorem(
   def_environment(thmset_for_env, paramlist, compiled_replacement, options);
 
   Ok(())
+}
+
+/// What thm-kv makes of a theorem's optional argument written as keys (thm-kv.sty:434-437 adds `\thmt@garbleoptarg` to
+/// every theorem's pre-head hook, :439-463): its note, the label it sets, the theorem it continues.
+struct ThmUse {
+  /// The note in place of the argument (`\thmt@newoptarg`, expanded): empty when only `label=` is given.
+  note:      Vec<Token>,
+  /// `label=<name>` (:485-487): a `\label` after the head (`\thmt@local@postheadhook`).
+  label:     Option<Tokens>,
+  /// `continues=<label>` (:511-516): the theorem continued, whose number this one takes.
+  continues: Option<Tokens>,
+}
+
+/// thm-kv's `\thmt@garbleoptarg` (thm-kv.sty:439-463) over the keys it defines: `label` (:485-487), `name` (:488-496,
+/// `[short]long`, the long form the note) and `continues` (:511-516, "<name>, \thmcontinues{<label>}" or, alone,
+/// "\thmcontinues{<label>}" — the `\@gobble` the note starts with eats its `{, }`), processed in order as `\kvsetkeys`
+/// does. An argument none of whose keys is one of these is no key list (`\ifthmt@thmuse@iskv`), kept as written: a
+/// note "Smith, 2001" is a note. Written as keys, a `_` in a label was a math error and "(label=ex:a_b)" its title (run
+/// 336 first error `unexpected:_`, ~150 papers: 2002.09876, 2409.14881). The keys are thmtools' only: thm-restate's
+/// `restate=` (thm-restate.sty:198-215) is not one of them.
+fn thmtools_use_keys(arg: &Tokens) -> Option<ThmUse> {
+  let tokens = arg.unlist_ref();
+  // the top-level `key=value` items, spaces trimmed, one brace level off a value (keyval's)
+  let mut items: Vec<(String, Vec<Token>)> = Vec::new();
+  let mut depth = 0i32;
+  let mut start = 0;
+  let mut push_item = |item: &[Token]| {
+    let mut level = 0i32;
+    let equals = item.iter().position(|t| {
+      match t.get_catcode() {
+        Catcode::BEGIN => level += 1,
+        Catcode::END => level -= 1,
+        _ => {},
+      }
+      level == 0 && t.get_catcode() == Catcode::OTHER && t.to_string() == "="
+    });
+    if let Some(equals) = equals {
+      let key: String = item[..equals].iter().map(|t| t.to_string()).collect();
+      let value = trim_spaces(&item[equals + 1..]);
+      let value = match (value.first(), value.last()) {
+        (Some(first), Some(last))
+          if value.len() >= 2
+            && first.get_catcode() == Catcode::BEGIN
+            && last.get_catcode() == Catcode::END
+            && balanced_group(&value) =>
+        {
+          value[1..value.len() - 1].to_vec()
+        },
+        _ => value,
+      };
+      items.push((key.trim().to_string(), value));
+    }
+  };
+  for (i, token) in tokens.iter().enumerate() {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      Catcode::OTHER if depth == 0 && token.to_string() == "," => {
+        push_item(&tokens[start..i]);
+        start = i + 1;
+      },
+      _ => {},
+    }
+  }
+  push_item(&tokens[start..]);
+  let mut iskv = false;
+  // `\thmt@newoptarg`, `\@gobble` until a `name=` replaces it
+  let mut gobbled = true;
+  let mut note: Vec<Token> = Vec::new();
+  let mut label = None;
+  let mut continues = None;
+  for (key, value) in items {
+    match key.as_str() {
+      "label" => {
+        iskv = true;
+        label = Some(Tokens::new(value));
+      },
+      "name" => {
+        iskv = true;
+        // `name=[short]long`: the long form
+        let long = match value.first() {
+          Some(t) if t.get_catcode() == Catcode::OTHER && t.to_string() == "[" => {
+            match value
+              .iter()
+              .position(|t| t.get_catcode() == Catcode::OTHER && t.to_string() == "]")
+            {
+              Some(close) => value[close + 1..].to_vec(),
+              None => value,
+            }
+          },
+          _ => value,
+        };
+        gobbled = false;
+        note = long;
+      },
+      "continues" => {
+        iskv = true;
+        if !gobbled {
+          note.extend([T_OTHER!(","), T_SPACE!()]);
+        }
+        gobbled = false;
+        note.push(T_CS!("\\thmcontinues"));
+        note.push(T_BEGIN!());
+        note.extend(value.iter().copied());
+        note.push(T_END!());
+        continues = Some(Tokens::new(value));
+      },
+      _ => {},
+    }
+  }
+  iskv.then_some(ThmUse { note, label, continues })
+}
+
+/// `tokens` without its leading and trailing spaces.
+fn trim_spaces(tokens: &[Token]) -> Vec<Token> {
+  let start = tokens
+    .iter()
+    .position(|t| t.get_catcode() != Catcode::SPACE)
+    .unwrap_or(tokens.len());
+  let end = tokens
+    .iter()
+    .rposition(|t| t.get_catcode() != Catcode::SPACE)
+    .map_or(start, |i| i + 1);
+  tokens[start..end].to_vec()
+}
+
+/// Whether `tokens`, which open with `{` and end with `}`, are one group (`{a}{b}` is two).
+fn balanced_group(tokens: &[Token]) -> bool {
+  let mut depth = 0i32;
+  for (i, t) in tokens.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth -= 1;
+        if depth == 0 && i + 1 < tokens.len() {
+          return false;
+        }
+      },
+      _ => {},
+    }
+  }
+  true
 }
 
 /// A float's counter steps — at `\caption` (`\@@add@caption@counters`) or at a sub-float's

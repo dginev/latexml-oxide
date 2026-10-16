@@ -14437,3 +14437,22 @@ affiliation"; `\relatedversiondetails`/`\supplementdetails` with their keys (`li
 the 93 lipics papers of run 336's first-error `unexpected:_` cluster to 0 errors, none worse. Repros
 class-bindings/lipics_author_five_parts, class-bindings/lipics_anonymous; guards
 `perfect_kernel_batch68w::{lipics_author_five_parts_reach_the_frontmatter, lipics_anonymous_author_hides_the_author}`.
+
+## 857. thmtools' key=value theorem option (`[label=…]`, `[name=…]`, `[continues=…]`) is typeset as the theorem's note
+
+thm-kv.sty:434-437 adds `\thmt@garbleoptarg` to every theorem's pre-head hook: an optional argument written as
+thmtools' keys — `label` (:485-487, a `\label` after the head), `name` (:488-496, the note, `[short]long`),
+`continues` (:511-516, the note "continuing from p. N" and the continued theorem's number, its counter suspended) —
+is read as keys; any other argument is the note as written. Perl's thmtools binding has none of it: the theorem's
+title is "(label=ex:a_b)", its `_` a math error, and the label is never set, so `\ref{ex:a_b}` is dangling.
+
+Trigger: `\usepackage{amsthm,thmtools}\newtheorem{example}{Example}` … `\begin{example}[label=ex:a_b] A.
+\end{example}` — pdflatex "Example 1. A."; Perl 0.8.8 2 Errors, title "(label=ex:a_b)".
+
+Rust (68w, latex_constructs `thmtools_use_keys`, the native theorem's properties under thmtools'
+`thmtools_thmuse_keys`): the three keys in order as `\kvsetkeys` reads them; the label digested after the head hooks
+(thm-patch.sty:60's local post-head hook); `continues=` numbers the theorem by `\ref` to the label it continues, in its
+tags and title, without stepping the counter, and `\thmcontinues` is the package's. thm-restate's `restate=` key is not
+handled (3 papers in the cluster). Witnesses 2002.09876, 2409.14881, 2103.08319, 2201.10483, 2212.00936; repro
+package-bindings/thmtools_keyval_optional_argument; guard
+`perfect_kernel_batch68w::thmtools_keyval_optional_argument_sets_label_name_continues`.
