@@ -1,0 +1,19 @@
+% witness: 0907.2394 (sigma class, `\usepackage[thinlines,thicklines]{easybmat}`, `\begin{BMAT}(e){cc:cc}{cc:cc}`;
+%          sigma binding net, int12 2026-10-16: errors 0 → 8)
+% oracle:  pdflatex 0 errors; the 4×4 block matrix printed with its dashed rules (easy.sty:339-365 measures the rows,
+%          :448-466 `\@easy@buildbox` rebuilds them: `\unvbox\@easy@mainbox` then a `\lastbox` loop peeling the
+%          `\halign`'s rows, each row's cells peeled by `\@easy@buildboxa`'s `\unhbox` + `\lastbox`)
+% engines: rust (67int11) 0 errors but the matrix LOST (`\unvbox` returned the box whole, `\lastbox` took the vbox,
+%          `\ifhbox` false: the rebuilt box is only a kern; `text="[]"`); rust (68q, 67int12) the entries kept (a
+%          tabular in the XMText), 2 Errors `malformed:ltx:text` "open descendents do not auto-close …
+%          _CaptureBlock_" + `malformed:ltx:_CaptureBlock_` "isn't open": our `\halign` is ONE alignment whatsit,
+%          where TeX's vertical list holds one hbox per row (§799 `fin_align` appends the rows), so `\lastbox` takes
+%          the whole alignment as the "row" and `\@easy@buildboxa` unhboxes it
+% expect:  0 errors; the matrix entries kept
+% status:  RED (int12; SYNC 68q bullet). Next: `\lastbox` on an alignment in a vertical list — rows as boxes, or the
+%          alignment taken as a box that `\unhbox` puts back whole
+\documentclass{article}
+\usepackage[thinlines,thicklines]{easybmat}
+\begin{document}
+\[ \left( \begin{BMAT}(e){cc:cc}{cc:cc} 0 & a & 0 & 0 \\ 1 & 0 & 0 & 0 \\ 0 & 0 & 0 & b \\ 0 & 0 & 1 & 0 \end{BMAT} \right) \]
+\end{document}

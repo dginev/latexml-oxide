@@ -2137,7 +2137,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   binaries): our `end_graf` keeps a line where TeX's paragraph is null (§1096), so the package's `\reformatmatrix`
   `\lastbox` loop keeps finding an hbox — not 68q's. Open RED (68q review side finding 5, not 68q's): floatrow's
   `\floatfoot` in a plain `figure` (not a `\floatbox` object) is dropped by 67int11 and 68q alike, pdflatex prints it
-  (captions-floats/floatrow_floatfoot_in_plain_figure; review probes fr2 "Plain foot.", fr3 "TwoFoot").
+  (captions-floats/floatrow_floatfoot_in_plain_figure; review probes fr2 "Plain foot.", fr3 "TwoFoot"). Open RED (int12
+  nets, sigma 0907.2394 errors 0 → 8): easybmat's `\@easy@buildbox` peels the `\halign`'s rows with `\lastbox` after
+  `\unvbox`; our alignment is one whatsit, not TeX's row hboxes (§799), so the whole alignment is taken as a row and
+  unhboxed → 2 `malformed` per BMAT; the matrix itself was LOST before 68q (the box went back whole, the loop ended at
+  once) and is kept now (boxes-groups/easybmat_lastbox_alignment_rows).
+  Integrated as int12 with 68p's perf items 1-4 and 6 (gates 5,596/5,596; bundle A/B vs 67int11: 298 random pop67o
+  papers tallies identical; 161 fleet `oom:alloc_failed` + OOM-sample papers Fatals 46 → 15, words 6.52 M → 9.00 M, the
+  9 with more Errors all Fatal → completed; nets 135/136 0 worse, sigma 0907.2394 the RED above).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
