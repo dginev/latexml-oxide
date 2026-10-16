@@ -4179,6 +4179,9 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
 /// Perl: digestFrontmatterItem($stomach, $tag, $item).
 fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
   bgroup();
+  // the field being made, for the commands a class's own setter of it defines for its argument
+  // (frontmatter_stores.rs `refused_environment_definition`: vmsta.cls's `\author` and its `\fnm`)
+  assign_value("lx_frontmatter_item", tag.to_string(), Some(Scope::Local));
   let_i(
     &T_CS!("\\label"),
     &T_CS!("\\lx@set@frontmatter@label"),

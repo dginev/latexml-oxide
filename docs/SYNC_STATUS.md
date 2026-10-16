@@ -2346,7 +2346,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   KPE #852; repros class-bindings/{mastersdoctoralthesis/mdt_authorname, revtex4_copy/rtcopy_collaboration_switch}).
   Residual: a revtex4 copy read raw now runs its own author/e-mail code, which sets the e-mail lines as paragraphs after
   the abstract, the names' first letters lost (0805.2253 "keshi OsadaElectronic address: …"); the qm2008_abs/snp copies
-  `\ProvidesClass{revtex4}` — open question: their shipped copy could take the revtex4 binding.
+  `\ProvidesClass{revtex4}` — open question: their shipped copy could take the revtex4 binding. (7) `\fnm` (69 papers, vmsta.cls:278-283: 1508.02842,
+  1411.4499, 1601.01109): while a frontmatter field is digested the class's own setter of it is searched as well
+  (#647; repro class-bindings/vmsta/vmsta_name_parts; residual: "YuliyaMishura" for the title page's "Yuliya Mishura").
   Guards `perfect_kernel_batch68v`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

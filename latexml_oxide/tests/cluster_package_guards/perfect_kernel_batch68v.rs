@@ -175,3 +175,18 @@ fn batch68v_replayed_author_keeps_collaboration_switch() {
     r#"<creator role="author"> <personname>Takeshi Osada</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#,
   ]);
 }
+
+/// class-bindings/vmsta/vmsta_name_parts: a command the class's own (refused) `\author` defines for the author's text
+/// is made while a frontmatter field is digested (`lx_frontmatter_item`, frontmatter_stores.rs
+/// `refused_environment_definition`): vmsta.cls:278-283 `\fnm` (1508.02842, 1411.4499, 1601.01109).
+#[test]
+fn batch68v_vmsta_author_name_parts() {
+  let (counts, log, xml) = repro_with!(
+    "class-bindings/vmsta/vmsta_name_parts.tex",
+    ("vmstamini.cls", "class-bindings/vmsta/vmstamini.cls")
+  );
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<creator role="author"> <personname>Yu.YuliyaMishura</personname> </creator> <creator before=" " role="author"> <personname>I.Ivan Voronov</personname> </creator>"#,
+  ]);
+}

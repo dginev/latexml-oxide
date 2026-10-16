@@ -18381,7 +18381,14 @@ first — the kernel's abstract, which is no environment frame, first inside its
 the call stands (in the call's group) and the call retried. Only a command that would otherwise be an Error is ever
 defined this way. Perl leaves them undefined (KNOWN_PERL_ERRORS #851). Repro
 class-bindings/bmcart/bmcart_environment_body_commands; guard
-`perfect_kernel_batch68v::batch68v_bmcart_environment_body_commands`.
+`perfect_kernel_batch68v::batch68v_bmcart_environment_body_commands`. A frontmatter field's text is set by the class
+where its setter put it, so while one is digested (`digest_frontmatter_item`, base_utilities.rs, marks the field:
+`lx_frontmatter_item`) the class's own setter of that field is searched first (`\lx@dropped@author` for a creator):
+vmsta.cls:278-283 `\csdef{name@m}{…\def\fnm##1{##1}…}`, which its `\@@author` applies to each author (69 papers:
+1508.02842, 1411.4499, 1601.01109; the full title page's `\name@m@front` sets `\@fnm~\@snm`, "Yuliya Mishura", where
+the identity gives "YuliyaMishura"). The kernel's own author markup for a refused `\author` (OmniBus's `\inits`,
+`\snm`, … : #444) is defined before and stands. Repro class-bindings/vmsta/vmsta_name_parts; guard
+`perfect_kernel_batch68v::batch68v_vmsta_author_name_parts`.
 
 ### 648. A refused class setter's replay keeps what it defines locally, as the setter would where it is called
 

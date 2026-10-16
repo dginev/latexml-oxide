@@ -853,6 +853,27 @@ pub fn refused_environment_definition(token: &Token) -> bool {
   if lookup_bool("lx_in_kernel_abstract") {
     envs.insert(0, "abstract".to_string());
   }
+  // A frontmatter field's content is typeset by the class where its setter put it: the commands the class's own
+  // setter (refused: `\lx@dropped@author`) and what it hands control to define for the field's text — vmsta.cls:278-283
+  // `\csdef{name@m}{\def\fnm##1{##1}\def\snm##1{##1}…}`, which its `\@@author` applies to each author
+  // (`\author{\inits{Yu.}\fnm{Yuliya}\snm{Mishura}}`: 1508.02842, 1411.4499, 1601.01109).
+  let item = lookup_string("lx_frontmatter_item");
+  if let Some(field) = item.strip_prefix("ltx:") {
+    envs.insert(
+      0,
+      if field == "creator" {
+        "author".to_string()
+      } else {
+        field.to_string()
+      },
+    );
+  }
+  class_body_definition(token, &envs)
+}
+
+/// Define `token` as the first of `envs` (environment or command names) defines it for its body in the class's own
+/// code (`\lx@dropped@<name>` or `\<name>`, and what they hand control to): [`refused_environment_definition`].
+fn class_body_definition(token: &Token, envs: &[String]) -> bool {
   let mut definition: Option<Vec<Token>> = None;
   'envs: for env in envs.iter().filter(|e| !e.is_empty()) {
     let mut queue: VecDeque<Token> =
