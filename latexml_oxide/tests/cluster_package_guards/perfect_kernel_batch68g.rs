@@ -3,7 +3,8 @@
 //! shipped copy v2.2-v2.26). The expected numbers are pdflatex's on each repro (KNOWN_PERL_ERRORS #743). Round 2: an
 //! env `\@spothm` shares a counter with is an alias counter (v2.16+), which `\autoref` names by the env ("Lemma 2");
 //! v2.24+'s section reset of the alias; the class's errors for an undefined counter and a redefinition; an aliascnt
-//! alias is hyperref's type too.
+//! alias is hyperref's type too. Round 3: the env's title is `\<env>name` (a renamed `\lemmaname`), and the alias is
+//! aliascnt's for `\aliascntresetthe`.
 use latexml::util::test::convert_with;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -308,6 +309,73 @@ fn llncs_alias_newcounter() {
   assert_eq!(
     labelled_tags(&xml, "l3"),
     r#"<tag>Lemma 3</tag> <tag role="refnum">3</tag> <tag role="typerefnum">Lemma 3</tag>"#,
+    "{xml}"
+  );
+}
+
+/// The head of the theorem whose opening tag contains `marker`: from `<theorem ` through its `</title>`, squashed.
+fn theorem_head(xml: &str, marker: &str) -> String {
+  xml
+    .split("<theorem ")
+    .skip(1)
+    .find(|chunk| {
+      chunk
+        .split_once('>')
+        .is_some_and(|(open, _)| open.contains(marker))
+    })
+    .and_then(|chunk| chunk.split_once("</title>"))
+    .map(|(head, _)| format!("<theorem {head}</title>"))
+    .unwrap_or_default()
+}
+
+/// Round 3: a paper loading aliascnt itself calls `\aliascntresetthe{lemma}` on the class's alias (llncs.cls:53
+/// loads aliascnt; aliascnt.sty v1.5 :54-57 records the alias as `\AC@cnt@lemma` and `\cl@lemma`): pdflatex "See
+/// Theorem 1, Lemma 2, ClaimX 3." and no error (68g r2: "`lemma' is not an alias counter").
+#[test]
+fn llncs_aliascntresetthe() {
+  let xml = clean!("llncs_aliascntresetthe.tex");
+  for (label, env, autoref) in [
+    ("t1", "theorem", "Theorem 1"),
+    ("l1", "lemma", "Lemma 2"),
+    ("c1", "claimx", "ClaimX 3"),
+  ] {
+    let number = autoref.split_once(' ').unwrap().1;
+    let id = format!("Thmtheorem{number}");
+    assert_eq!(
+      theorem_head(&xml, &format!(r#"labels="LABEL:{label}""#)),
+      format!(
+        r#"<theorem class="ltx_theorem_{env}" inlist="thm theorem:{env}" labels="LABEL:{label}" xml:id="{id}"> <tags> <tag>{autoref}</tag> <tag role="autoref">{autoref}<text xml:id="{id}.1"/></tag> <tag role="refnum">{number}</tag> <tag role="typerefnum">{autoref}</tag> </tags> <title class="ltx_runin"><tag><text font="bold" xml:id="{id}.2">{autoref}</text></tag></title>"#
+      ),
+      "{label}: {xml}"
+    );
+  }
+}
+
+/// Round 3: the class titles an env by `\csname <env>name\endcsname` (llncs.cls:1073/1082/1096/1122), so a paper's
+/// `\renewcommand\lemmaname{Lemme}` renames its title, tag and autoref alike: pdflatex "Lemme 2", "Remarque 3",
+/// "Preuve" (68g r2: titles "Lemma 2", "Remark 3", "Proof" under autorefs "Lemme 2", "Remarque 3").
+#[test]
+fn llncs_renamed_theorem_title() {
+  let xml = clean!("llncs_renamed_theorem_title.tex");
+  for (label, env, autoref) in [
+    ("t1", "theorem", "Theorem 1"),
+    ("l1", "lemma", "Lemme 2"),
+    ("r1", "remark", "Remarque 3"),
+  ] {
+    let number = autoref.split_once(' ').unwrap().1;
+    let id = format!("Thmtheorem{number}");
+    assert_eq!(
+      theorem_head(&xml, &format!(r#"labels="LABEL:{label}""#)),
+      format!(
+        r#"<theorem class="ltx_theorem_{env}" inlist="thm theorem:{env}" labels="LABEL:{label}" xml:id="{id}"> <tags> <tag>{autoref}</tag> <tag role="autoref">{autoref}<text xml:id="{id}.1"/></tag> <tag role="refnum">{number}</tag> <tag role="typerefnum">{autoref}</tag> </tags> <title class="ltx_runin"><tag><text font="bold" xml:id="{id}.2">{autoref}</text></tag></title>"#
+      ),
+      "{label}: {xml}"
+    );
+  }
+  assert!(
+    theorem_head(&xml, r#"class="ltx_theorem_proof""#).ends_with(
+      r#"<title class="ltx_runin"><tag><text font="bold" xml:id="Thmproofx1.2">Preuve</text></tag></title>"#
+    ),
     "{xml}"
   );
 }

@@ -1841,7 +1841,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Witnesses: 0906.4121 "Fact 3.1" kept, its lemmas/definitions now "Lemma 2.1", "Definition 3.1" as the PDF;
   1003.2851, 2303.08726, 2202.10090 (envcountsame+envcountsect "Definition 2.1", "Problem 2.2"), 1312.1526, 1104.3211,
   1212.0139, 1808.10364, 1412.6065, 2308.02825 checked against pdflatex. llncs net vs 67int8 and vs 026cf18f87: 0
-  worse. Round 2 (the 68g review): `\spnewtheorem` is the class's dispatch (llncs.cls:1060-1125) over the
+  worse. Round 2 (the 68g review): `\spnewtheorem` is the class's dispatch (llncs.cls:1061, block :1060-1125) over the
   `\lx@spnewtheorem` primitive, whose branches refuse an env already defined (`\@ifdefinable`, an Info) and define
   `\<env>name`; `\@spothm` follows the paper's copy of llncs.cls (v2.26 without one; OXIDIZED_DESIGN_DIVERGENCES #614
   corrected): v2.16+ make the env an alias counter of the base (`register_counter_alias`, shared with aliascnt_sty.rs),
@@ -1857,11 +1857,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   pop67o): Errors 1,169 → 1,169, Fatals 6 → 6, words unchanged; 542 identical, 17 differ only in `\autoref` names (all
   the env's, as pdflatex: 2202.10090, 1312.1526, 1504.06105, 2412.05162, 2601.04573 "Nonexample 9", 2102.01037's
   aliascnt `{thm}` " 3.4" with amsthm's `\thmname`), 2303.08726 in its case tags and the lemmas after them (now the
-  PDF's). Ruled: a paper's own `\newtheorem{x}{X}[section]` keeps "X 1.1" (the PDF's "X 11", llncs.cls:1047
+  PDF's). Ruled: a paper's own `\newtheorem{x}{X}[section]` keeps "X 1.1" (the PDF's "X 11", llncs.cls:1058
   `\edef\@thmcountersep{}`, OXIDIZED_DESIGN_DIVERGENCES #615). Open: latex.ltx `\@definecounter` keeps an existing
   `\the<ctr>` ("Command `\thecase' already defined -- not changed"); the kernel's `\newcounter` redefines it, as Perl's
   NewCounter (Package.pm), so 2303.08726's cases print "Case 1, Case 2" where the PDF prints the enclosing lemma's
-  "Case 22, Case 22" (repro class-bindings/llncs_alias_newcounter).
+  "Case 22, Case 22" (repro class-bindings/llncs_alias_newcounter). Round 3 (the 68g re-review): the branches title the
+  env through `\csname <env>name\endcsname` (llncs.cls:1073/1082/1096/1122; `\renewcommand\lemmaname{Lemme}` "Lemme 2"
+  in title and `\autoref`, r2 title "Lemma 2"), and the alias defines aliascnt.sty :54-57's `\AC@cnt@<env>`/`\cl@<env>`
+  (a paper's own `\aliascntresetthe{lemma}`: no Error); guards `perfect_kernel_batch68g::{llncs_renamed_theorem_title,
+  llncs_aliascntresetthe}`.
 - **68a** (binding gaps G2, journal classes B: bindgaps/g23_macros.tsv rows aa, acmart, aastex631/aastex63, mnras,
   llncs, jfm, tac, aamas; each macro checked against TeX Live's class or the witnesses' shipped copies, 1,035 witness
   papers unpacked: a name defined by at least a version of the class went in, a one-line definition only some authors

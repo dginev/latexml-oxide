@@ -17810,8 +17810,8 @@ class-bindings/llncs_class_internals; guard `perfect_kernel_batch68a::llncs_clas
 ### 614. llncs's `\@spothm` alias counter is emulated, not aliascnt's; the paper's copy picks the version
 
 `\@spothm{env}[base]{caption}{capfont}{bodyfont}` (the class's shared-counter branch of `\spnewtheorem`, and its
-`\spn@wtheorem` under `envcountsame`) differs between the shipped copies (18 versions in 1,250 arXiv llncs papers,
-scratch_68g cls_reps.txt): v2.2-v2.14 `\@namedef{the#1}{\@nameuse{the#2}}` and `\@spthm{#2}` (the env steps `base`,
+`\spn@wtheorem` under `envcountsame`) differs between the shipped copies (18 versions, v2.2 to v2.26, in 1,250 arXiv
+llncs papers): v2.2-v2.14 `\@namedef{the#1}{\@nameuse{the#2}}` and `\@spthm{#2}` (the env steps `base`,
 hyperref's type: an envcountsame lemma autorefs as "Theorem 2"); v2.16-v2.23 `\newaliascnt{#1}{#2}` and `\@spthm{#1}`
 (the env steps its own alias of `base`'s counter: the same number, its own type, "Lemma 2"); v2.24-v2.26 (TL 2025) also
 `\if@envcntsect\@addtoreset{#1}{section}\fi`, which resets `base` by the section through the alias. That reset matters
@@ -17821,7 +17821,8 @@ in v2.20 (pdflatex with each copy). llncs_cls.rs reads the paper's copy of llncs
 `\@spothm` body: `\newaliascnt`, `\@addtoreset`) and defines that version's `\@spothm`; without a copy, v2.26's.
 Divergence: the v2.16+ copies load aliascnt.sty, this binding does not (`\@ifpackageloaded{aliascnt}` is false; main
 session ruling 2026-10-16). Its `\lx@llncs@newaliascnt` is aliascnt's `\newaliascnt` (aliascnt.sty v1.5): `\c@`, `\the`,
-`\theH`, `\p@` let to `base`'s, the alias recorded for the numbering and hyperref (`register_counter_alias`, shared with
+`\theH`, `\p@` let to `base`'s, `\AC@cnt@` and `\cl@` defined as aliascnt.sty :54-57 defines them (so a paper
+loading aliascnt itself can `\aliascntresetthe` the class's alias), the alias recorded for the numbering and hyperref (`register_counter_alias`, shared with
 aliascnt_sty.rs) — without aliascnt's `\@addtoreset`/`\@removefromreset` patch, which maps a `within` alias to its root.
 A `\newcounter` of the alias after `\let\c@<env>\relax` (2303.08726) drops the alias, as LaTeX's fresh `\c@<env>` does
 (`new_counter`). All 27 shared-counter declarations of 19 sampled envcountsect papers use `[theorem]`. Repros
@@ -17834,7 +17835,7 @@ llncs_alias_newcounter}`. Witnesses 2202.10090, 2601.04573 (`\@spothm`), 2412.05
 
 ### 615. llncs: a paper's `\newtheorem{x}{X}[section]` prints "X 1.1", not the PDF's "X 11"
 
-llncs.cls:1047 `\edef\@thmcountersep{}` (`.` only under `envcountsect`, :1142) is the separator kernel `\newtheorem`'s
+llncs.cls:1058 `\edef\@thmcountersep{}` (`.` only under `envcountsect`, :1140) is the separator kernel `\newtheorem`'s
 `\@xnthm` puts between the section and the theorem number (latex.ltx `\@thmcountersep`), so outside `envcountsect`
 pdflatex prints a paper's own `\newtheorem{x}{X}[section]` (or `\spnewtheorem{x}{X}[section]{…}{…}`) as "X 11" for
 section 1's first. This binding keeps the kernel's `.`: "X 1.1", as Perl prints it. Main session ruling 2026-10-16:

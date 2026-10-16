@@ -13882,16 +13882,20 @@ sets `{definition}` `{\bfseries}{\itshape}`. Minimal trigger: `\documentclass{ll
 `\@spynthm`/`\@spxnthm`/`\@spothm` mapped onto `\spnewtheorem`. Repros
 class-bindings/llncs_theorem_numbering_{default,envcountsame,envcountsect,envcountsame_envcountsect,envcountreset};
 guards `perfect_kernel_batch68g::llncs_numbering_*` (5) and the flipped `perfect_kernel_batch68a::llncs_class_internals`
-("Fact 2", "Assumption 3"). Round 2: `\spnewtheorem` dispatches as the class's (llncs.cls:1062-1125) to its
+("Fact 2", "Assumption 3"). Round 2: `\spnewtheorem` dispatches as the class's (llncs.cls:1061, block :1060-1125) to its
 branches, which refuse an env already defined (`\@ifdefinable`, an Info here) and define `\<env>name`; `\@spothm`
 follows the paper's copy (OXIDIZED_DESIGN_DIVERGENCES #614): v2.16+'s alias counter makes the env hyperref's type
 (`\autoref` "Lemma 2" under envcountsame, where round 1 printed "Theorem 2"; Perl, every env its own counter, "Lemma
 1"), v2.24+'s section reset, and the class's "No theorem environment `#2' defined" Error. Guards
 `perfect_kernel_batch68g::{llncs_autoref_envcountsame{,_v214_copy}, llncs_spothm_section_reset{,_v220_copy},
-llncs_spnewtheorem_errors}`. Kept by ruling (main session 2026-10-16, OXIDIZED_DESIGN_DIVERGENCES #615): llncs.cls:1047
+llncs_spnewtheorem_errors}`. Kept by ruling (main session 2026-10-16, OXIDIZED_DESIGN_DIVERGENCES #615): llncs.cls:1058
 `\edef\@thmcountersep{}` (`.` only under `envcountsect`), by which pdflatex prints a paper's own
 `\newtheorem{thm}{Thm}[section]` or `\spnewtheorem{x}{X}[section]{…}{…}` as "Thm 11" in section 1 under the other
-options; both engines keep the kernel's `.` ("Thm 1.1").
+options; both engines keep the kernel's `.` ("Thm 1.1"). Round 3: each branch titles the env through `\csname
+<env>name\endcsname` as the class does (llncs.cls:1073/1082/1096/1122), so `\renewcommand\lemmaname{Lemme}` prints
+"Lemme 2" in title and `\autoref` alike (68g r2: title "Lemma 2"); the alias records `\AC@cnt@<env>`/`\cl@<env>` as
+aliascnt.sty :54-57 (a paper's `\aliascntresetthe{lemma}` raised "`lemma' is not an alias counter"). Guards
+`perfect_kernel_batch68g::{llncs_renamed_theorem_title, llncs_aliascntresetthe}`.
 
 ## 760. article.cls's binding lacks the `headings`/`myheadings` page styles and `\@makecaption`
 

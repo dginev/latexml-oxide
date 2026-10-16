@@ -224,7 +224,7 @@ LoadDefinitions!({
       Some(bodyfont).filter(|t| !t.is_empty()),
     )?;
   });
-  // llncs.cls:1060-1097 and :1117-1125 (TL 2025 v2.26): `\spnewtheorem` is the class's, dispatching on its `*` and
+  // llncs.cls:1061 (the block :1060-1125, TL 2025 v2.26): `\spnewtheorem` is the class's, dispatching on its `*` and
   // `[`s to `\@sthm`/`\@Ynthm` (unnumbered), `\@spothm{env}[numberedlike]{caption}{capfont}{bodyfont}` (another
   // theorem's counter), `\@spxnthm{env}{caption}[within]{capfont}{bodyfont}` (a counter within `within`) and
   // `\@spynthm{env}{caption}{capfont}{bodyfont}` (its own counter); :1155-1167 `\spn@wtheorem{env}{caption}{capfont}
@@ -233,19 +233,21 @@ LoadDefinitions!({
   // llncs.cls.ltxml defines none of them (KNOWN_PERL_ERRORS #743). Each branch, as the class's, refuses an env
   // already defined (`\@ifdefinable`: "Command \lemma already defined", an Info here as every kernel "already
   // defined", base_utilities.rs `is_typesetting_only_message`; the first definition stands, as in the PDF), and
-  // defines `\<env>name` as the caption (hyperref's `\autoref` names a paper's own `{obs}` "Observation 4" by it).
+  // defines `\<env>name` as the caption (hyperref's `\autoref` names a paper's own `{obs}` "Observation 4" by it)
+  // and titles the env through `\csname <env>name\endcsname` (llncs.cls:1073/1082/1096/1122), so a paper's
+  // `\renewcommand\lemmaname{Lemme}` renames title and autoref alike ("Lemme 2").
   // Every shipped copy from v2.2 to v2.26 chooses alike (v2.2's default `\let\spn@wtheorem=\@spynthm` only skips the
   // `chapter` reset).
   RawTeX!(r"\def\spnewtheorem{\@ifstar{\@sthm}{\@Sthm}}
 \def\@spnthm#1#2{\@ifnextchar[{\@spxnthm{#1}{#2}}{\@spynthm{#1}{#2}}}
 \def\@Sthm#1{\@ifnextchar[{\@spothm{#1}}{\@spnthm{#1}}}
 \def\@spynthm#1#2#3#4{\expandafter\@ifdefinable\csname #1\endcsname
-  {\expandafter\xdef\csname #1name\endcsname{#2}\lx@spnewtheorem{#1}{#2}{#3}{#4}}}
+  {\expandafter\xdef\csname #1name\endcsname{#2}\lx@spnewtheorem{#1}{\csname #1name\endcsname}{#3}{#4}}}
 \def\@spxnthm#1#2[#3]#4#5{\expandafter\@ifdefinable\csname #1\endcsname
-  {\expandafter\xdef\csname #1name\endcsname{#2}\lx@spnewtheorem{#1}{#2}[#3]{#4}{#5}}}
+  {\expandafter\xdef\csname #1name\endcsname{#2}\lx@spnewtheorem{#1}{\csname #1name\endcsname}[#3]{#4}{#5}}}
 \def\@sthm#1#2{\@Ynthm{#1}{#2}}
 \def\@Ynthm#1#2#3#4{\expandafter\@ifdefinable\csname #1\endcsname
-  {\expandafter\xdef\csname #1name\endcsname{#2}\lx@spnewtheorem*{#1}{#2}{#3}{#4}}}");
+  {\expandafter\xdef\csname #1name\endcsname{#2}\lx@spnewtheorem*{#1}{\csname #1name\endcsname}{#3}{#4}}}");
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
   // `\@spothm` differs between versions; the paper's copy of the class decides (the TL 2025 v2.26 one without a
   // copy). Each raises the class's "No theorem environment `#2' defined" (an Error) for an undefined counter `#2`.
@@ -260,7 +262,9 @@ LoadDefinitions!({
   //   every section in v2.26 and "Hypothesis 3, Conj 4" in section 2 in v2.20 (OXIDIZED_DESIGN_DIVERGENCES #614).
   // aliascnt itself is not loaded (`\lx@llncs@newaliascnt` is its `\newaliascnt`, aliascnt.sty v1.5 :40-61, without
   // the `\@addtoreset` patch, which only maps a `within` alias to its root): `\c@#1`, `\the#1`, `\theH#1` and `\p@#1`
-  // are `#2`'s, and `register_counter_alias` records the alias for the numbering and for hyperref.
+  // are `#2`'s, `\AC@cnt@#1` and `\cl@#1` record the alias as aliascnt.sty :54-57 does (a paper loading aliascnt
+  // itself calls `\aliascntresetthe{lemma}` on it), and `register_counter_alias` records it for the numbering and for
+  // hyperref.
   DefPrimitive!("\\lx@llncs@aliascnt@register{}{}", sub[(alias, base)] {
     register_counter_alias(&alias.to_string(), &base.to_string());
   });
@@ -269,6 +273,8 @@ LoadDefinitions!({
   \global\expandafter\let\csname the#1\expandafter\endcsname\csname the#2\endcsname
   \global\expandafter\let\csname theH#1\expandafter\endcsname\csname theH#2\endcsname
   \global\expandafter\let\csname p@#1\expandafter\endcsname\csname p@#2\endcsname
+  \expandafter\gdef\csname AC@cnt@#1\endcsname{#2}%
+  \expandafter\gdef\csname cl@#1\expandafter\endcsname\expandafter{\csname cl@#2\endcsname}%
   \lx@llncs@aliascnt@register{#1}{#2}}}");
   let spothm = crate::shipped_class::shipped_class_text("llncs")?
     .and_then(|text| crate::shipped_class::class_code_argument(&text, "\\def\\@spothm#1[#2]#3#4#5"));
@@ -277,9 +283,9 @@ LoadDefinitions!({
     .map_or((true, true), |body| (body.contains("\\newaliascnt"), body.contains("\\@addtoreset")));
   let reset = if section_reset { r"\if@envcntsect\@addtoreset{#1}{section}\fi" } else { "" };
   let define = if alias {
-    s!(r"\lx@llncs@newaliascnt{{#1}}{{#2}}\expandafter\xdef\csname #1name\endcsname{{#3}}{reset}\lx@spnewtheorem{{#1}}[#1]{{#3}}{{#4}}{{#5}}")
+    s!(r"\lx@llncs@newaliascnt{{#1}}{{#2}}\expandafter\xdef\csname #1name\endcsname{{#3}}{reset}\lx@spnewtheorem{{#1}}[#1]{{\csname #1name\endcsname}}{{#4}}{{#5}}")
   } else {
-    r"\expandafter\xdef\csname #1name\endcsname{#3}\lx@spnewtheorem{#1}[#2]{#3}{#4}{#5}".to_string()
+    r"\expandafter\xdef\csname #1name\endcsname{#3}\lx@spnewtheorem{#1}[#2]{\csname #1name\endcsname}{#4}{#5}".to_string()
   };
   RawTeX!(&s!(r"\def\@spothm#1[#2]#3#4#5{{\@ifundefined{{c@#2}}{{\@latexerr{{No theorem environment `#2' defined}}\@eha}}{{\expandafter\@ifdefinable\csname #1\endcsname{{{define}}}}}}}"));
   RawTeX!(r"\if@envcntsame\def\spn@wtheorem#1#2#3#4{\@spothm{#1}[theorem]{#2}{#3}{#4}}
