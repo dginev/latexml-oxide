@@ -1,0 +1,25 @@
+% witness: 0912.1441, 1011.0095 (`\setbox\@firstaubox`); 1606.07130, 1606.09248 (`\PoSspecialurl` in the body);
+%          1812.08139 (`\PoSpaper@url`); 0810.0108, 1708.06808 (the copy's `\apj`, `\mnras`, `\aap`)
+% oracle:  pdflatex with 0810.0108's PoS.cls: "Our tool is available at: http://tool.example.org/", "As shown in ApJ,
+%          MNRAS and A&A."; 0 errors but the harness's missing PoSlogo
+% engines: rust 67int10 = 6 errors, 2 warnings (undefined `\@firstaubox`, `\PoSpaper@url`, `\PoSspecialurl`, `\apj`, `\mnras`, `\aap`)
+% expect:  0 errors, 0 warnings; the URL printed where it stands, the abbreviations ApJ, MNRAS, A&A
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass{PoS}
+\title{A Proceedings Paper}
+\ShortTitle{Short}
+\author{\speaker{Ann Author}\\ Somewhere University\\ E-mail: \email{ann@x.org}}
+\abstract{An abstract.}
+\FullConference{Conference 2010, Somewhere}
+\makeatletter
+\setbox\@firstaubox\hbox{\small A. Author}
+\global\setbox\PoSpaper@url\hbox{}
+\makeatother
+\begin{document}
+Our tool is available at:
+\begin{center}
+\PoSspecialurl{http://tool.example.org/}
+\end{center}
+As shown in \apj, \mnras\ and \aap.
+\end{document}

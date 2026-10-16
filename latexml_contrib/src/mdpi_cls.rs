@@ -310,12 +310,15 @@ LoadDefinitions!({
     "\\hreflink{}",
     "\\@add@frontmatter{ltx:note}[role=hreflink]{#1}"
   );
-  def_macro_noop("\\orcidA")?;
-  def_macro_noop("\\orcidB")?;
-  def_macro_noop("\\orcidC")?;
-  def_macro_noop("\\orcidD")?;
-  def_macro_noop("\\orcidE")?;
-  def_macro_noop("\\orcidF")?;
+  // mdpi.cls (2311.18672's 2023 copy :633-635, as since 2018) `\foreach \x in {A, ..., Z}` defines `\orcidA`…`\orcidZ`,
+  // the linked ORCID icon after an author's name, of the iD the paper gives `\orcidauthorA`…
+  // (`\newcommand{\orcidauthorA}{0000-…}`): the author's ORCID (2311.18672 calls `\orcidG` and `\orcidH`); without
+  // its iD, nothing.
+  for letter in 'A'..='Z' {
+    RawTeX!(&s!(
+      "\\def\\orcid{letter}{{\\@ifundefined{{orcidauthor{letter}}}{{}}{{\\expandafter\\lx@add@orcid\\expandafter{{\\orcidauthor{letter}}}}}}}"
+    ));
+  }
   // \extralength is a length register — define as 0pt.
   DefRegister!("\\extralength" => Dimension::new(0));
   // \authorcontributions, \funding, \conflictsofinterest,
@@ -412,9 +415,11 @@ LoadDefinitions!({
     DefMacro!("\\isAPAandChicago{}{}", "#2");
     // `\doinum` (:424): the article's DOI, which the journal line prints once the paper is accepted (:446, :646,
     // :667), as `\history` is printed.
+    // (and :424 `\gdef\@doinum{#1}`, which `\linksupplementary` reads)
+    RawTeX!(r"\def\@doinum{}");
     DefMacro!(
       "\\doinum{}",
-      "\\ifx\\@status\\lx@mdpi@submit\\else\\@add@frontmatter{ltx:note}[role=doi]{#1}\\fi"
+      "\\gdef\\@doinum{#1}\\ifx\\@status\\lx@mdpi@submit\\else\\@add@frontmatter{ltx:note}[role=doi]{#1}\\fi"
     );
     // `\secondnote`, `\thirdnote` (:560-563): the author notes after `\firstnote` (:970-980); `\conference` (:521):
     // the note "This paper is an extended version of our paper published in …" (:964-965).
@@ -492,7 +497,59 @@ LoadDefinitions!({
       RawTeX!(&s!("\\newlength{{\\cellWidth{letter}}}"));
     }
     RawTeX!(r"\newcommand{\PreserveBackslash}[1]{\let\temp=\\#1\let\\=\temp}");
+    // More of the versions' commands papers call (run 347: 45 mdpi and 31 Definitions/mdpi papers; line numbers from
+    // 2404.14200's 2023 copy unless named):
+    // - `\conferencetitle{name}` (1708.02914's 2017 copy :781; 23 copies, 18 papers: 1709.06513, 1609.04583), the
+    //   conference a proceedings paper was given at, printed in the footer: the conference note;
+    // - `\contributed{text}` (2015, 1506.06852's copy :627-628; 7 papers: 1507.03569, 1510.06668), the "These authors
+    //   contributed equally" note; `\fourthnote`, `\fifthnote` (:611-614; 1902.06114, 2005.05017), the author notes
+    //   after `\thirdnote`; `\emails{…}` (2008, 0912.1688's copy :127, :334 "E-mail: …"), the authors' e-mail;
+    // - `\orcidauthorONE{id}`…`\orcidauthorSIX` and `\orcidONE`…`\orcidSIX` (2017, 1708.02914's copy :798-817; 1707.09764,
+    //   1709.06453, 1710.03078), an author's ORCID set in the preamble and its linked icon after the name: the author's
+    //   ORCID;
+    // - `\conflictofinterest{text}` (1911.06360's copy :862, the singular "for book production"; 1710.04728, 1811.06122),
+    //   `\useofartificialintelligence{text}` (:1248; 2609.34305), the back matter's labelled statements;
+    // - `\linksupplementary{file}` (:1498; 214 copies, 19 papers: 2208.12066, 2311.18672), the link to the article's
+    //   supplementary file by its `\doinum`; `\bio{photo}{text}` (:1262; 2107.14152, 2111.02495), an author's
+    //   biography beside the photo; `\justifyorcenter{text}` (:1461), a table footnote centred when short (2208.12066);
+    // - `\highlight{text}` (2017, 1708.02914's :51; 2111.05917), yellow-boxed as `\highlighting`; `\CorrStatement{yes}`
+    //   (:641-642), the switch of the correspondence statement (2409.02954); `\dist` (:828), the notes' hanging indent.
+    DefMacro!(
+      "\\conferencetitle{}",
+      "\\@add@frontmatter{ltx:note}[role=conference]{#1}"
+    );
+    DefMacro!(
+      "\\contributed{}",
+      "\\@add@frontmatter{ltx:note}[role=contributed]{#1}"
+    );
+    DefMacro!(
+      "\\fourthnote{}",
+      "\\@add@frontmatter{ltx:note}[role=fourthnote]{#1}"
+    );
+    DefMacro!(
+      "\\fifthnote{}",
+      "\\@add@frontmatter{ltx:note}[role=fifthnote]{#1}"
+    );
+    DefMacro!("\\emails{}", "\\lx@add@email{#1}");
+    for n in ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"] {
+      RawTeX!(&s!(
+        "\\def\\@orcidauthor{n}{{}}\\newcommand{{\\orcidauthor{n}}}[1]{{\\gdef\\@orcidauthor{n}{{#1}}}}\\newcommand{{\\orcid{n}}}{{\\expandafter\\lx@add@orcid\\expandafter{{\\@orcidauthor{n}}}}}"
+      ));
+    }
+    RawTeX!(
+      r"\newcommand{\conflictofinterest}[1]{\par\noindent\textbf{Conflicts of Interest:} #1\par}
+\newcommand{\useofartificialintelligence}[1]{\par\noindent\textbf{Use of Artificial Intelligence:} #1\par}
+\newcommand{\linksupplementary}[1]{\edef\lx@mdpi@link{\noexpand\url{https://www.mdpi.com/article/\@doinum/\unexpanded{#1}}}\lx@mdpi@link}
+\newcommand{\bio}[2]{\par\noindent{#1}\ {#2}\par}
+\newcommand{\justifyorcenter}[1]{#1}
+\newcommand{\highlight}[1]{\colorbox{yellow}{#1}}
+\def\@CorrStatement{}\newcommand{\CorrStatement}[1]{\gdef\@CorrStatement{#1}}
+\newcommand{\dist}{1.7em}"
+    );
   }
+  // The astronomical journal abbreviations some copies paste in (2211.06541, 2212.11355, 2406.01458; 2510.22959's
+  // mdpi_mod.cls).
+  crate::shipped_class::provide_shipped_aas_macros("mdpi")?;
   // \acknowledgments — newer-mdpi spelling (vs \acknowledgements).
   // Render as structural ltx:acknowledgements so post-processors map it
   // to the canonical role/styling (vs flattening to a generic section).

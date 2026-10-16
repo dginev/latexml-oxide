@@ -17928,3 +17928,13 @@ Intro"). Residual: the bibliography's number — under `numbib`, or under `\tocs
 it stays "Literature". The chaptered witnesses (1605.05950 book, 2204.09786 scrbook) are unaffected: a class with
 chapters ignores `\tocsection`. Repro package-bindings/tocbibind_names_and_tocfile; guards
 `perfect_kernel_batch68i::{tocbibind_names_and_tocfile, tocbibind_book_bibliography_is_bibname}`.
+
+### 623. svmult's `\greeksym{<letter>}` is the Greek letter the Symbol font has at that letter
+
+svmult.cls :987 `\newcommand{\greeksym}[1]{\usefont{U}{psy}{m}{n}#1}` sets its argument in the Symbol font, whose
+encoding (Adobe Symbol) puts the Greek alphabet on the ASCII letters: `\greeksym{D}` prints Δ, `\greeksym{m}` μ
+(1111.1183's `\newcommand{\uDelta}{\mbox{\greeksym{D}}}`, 0903.0562). LaTeXML's fonts carry no Symbol-encoding map, so
+the faithful definition writes the ASCII letter in a `symbol` font — "D" — losing the letter the PDF shows.
+svmult_cls.rs maps a single ASCII letter to its Symbol-encoding Greek letter, upright (`symbol_font_greek`: a α … z ζ,
+A Α … Z Ζ, with j ϕ, J ϑ, v ϖ, V ς as the encoding has them); any other argument keeps the faithful `\usefont` form.
+Repro class-bindings/svmult_aas/svmult_class_commands; guard `perfect_kernel_batch68k::svmult_class_commands`.

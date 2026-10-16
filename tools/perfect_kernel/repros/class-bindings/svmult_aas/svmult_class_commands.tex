@@ -1,0 +1,32 @@
+% witness: 1001.0767, 1405.1421 (`\ts`); 0803.2826 (`\if@runhead`); 1607.02736 (`\svparindent`); 1310.5064,
+%          1411.2805 (`\subfigures`); 0810.2505 (`{abbrsymblist}`); 0903.0562, 1111.1183 (`\greeksym`); 1711.01112
+%          (the copy's `\apj`)
+% oracle:  pdflatex with 1711.01112's svmult.cls (v5.4): "Running heads on.", "an indent of 12.0pt, an upright ∆ and µ, and ApJ,
+%          MNRAS and A&A.", "Fig. 1a First.", "Fig. 1b Second.", "Fig. 2 Third.", "Figures 1a, 1b and 2", "List of
+%          Abbreviations and Symbols"; 0 errors
+% engines: rust 67int10 = 10 errors (undefined `\ts`, `\if@runhead`, `\svparindent`, `\greeksym`, `\subfigures`, `{abbrsymblist}`, `\apj`,
+%          `\mnras`, `\aap`; `\the\svparindent`)
+% expect:  0 errors, 0 warnings; Δ and μ upright, figures 1a, 1b and 2, the list of abbreviations a section
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\title*{A Chapter}
+\author{Ann Author}
+\institute{Ann Author \at Somewhere University}
+\maketitle
+\makeatletter\if@runhead Running heads on.\fi\makeatother
+\section{Section}
+A thin\ts space, an indent of \the\svparindent, an upright $\mbox{\greeksym{D}}$ and \mbox{\greeksym{m}}, and
+\apj, \mnras\ and \aap.
+\begin{figure}
+\subfigures
+\fbox{A}\caption{First.}\label{fa}
+\fbox{B}\caption{Second.}\label{fb}
+\end{figure}
+\begin{figure}\fbox{C}\caption{Third.}\label{fc}\end{figure}
+Figures \ref{fa}, \ref{fb} and \ref{fc}.
+\begin{abbrsymblist}[ABC]
+\item[ABC] A B C.
+\end{abbrsymblist}
+\end{document}

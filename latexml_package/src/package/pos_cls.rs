@@ -37,4 +37,21 @@ LoadDefinitions!({
   // pubnote. Run 340: 79 of 120 sampled PoS papers call it, ~360
   // first errors (0711.1871, 0806.0754, 1012.3355).
   RawTeX!(r"\newcommand\PoS[1]{\lx@add@pubnote[role=pubid]{#1}\let\PoS\gobble}");
+  // PoS.cls (every sampled release, v0.1.0 to v1.2.7; v1.2.6 as 1812.08139 ships it): :656 `\newbox\@firstaubox`, the
+  // speaker's name for the running head, which papers set themselves (`\setbox\@firstaubox\hbox{\small Andreas
+  // Nyffeler}`, 0912.1441; 26 papers: 1011.0095, astro-ph0502215, 1412.6006); :704-709 `\PoSspecialurl{url}`, the
+  // title page's footer URL in place of :707-709 `\PoSpaper@url`'s (`https://pos.sissa.it/`), which papers empty
+  // (`\global\setbox\PoSpaper@url\hbox{}`, 1812.08139, 1812.08191) — page furniture, kept out of the document — and
+  // which the title page, made at `\begin{document}` (:1416-1428 `\AtBeginDocument{…\auto@maketitle…}`, `\maketitle`
+  // itself ignored, :418), lets to `\relax` (:452), so a call in the body prints its URL where it stands (1606.07130,
+  // 1606.09248 display their tools' URLs so). Perl's binding lacks the three (KNOWN_PERL_ERRORS #811).
+  RawTeX!(r"\newbox\@firstaubox
+\newif\if@PoSspecialurl\@PoSspecialurlfalse
+\gdef\PoSspecial@url{\relax}
+\newcommand\PoSspecialurl[1]{\@PoSspecialurltrue\gdef\PoSspecial@url{\hbox{\tiny\tt #1}}}
+\newbox\PoSpaper@url
+\global\setbox\PoSpaper@url\hbox{\tiny\ttfamily https://pos.sissa.it/}
+\AtBeginDocument{\global\let\PoSspecialurl\relax}");
+  // The astronomical journal abbreviations 16 of 92 copies paste in (0810.0108, 1212.1356, 1708.06808, 1802.02766).
+  crate::shipped_class::provide_shipped_aas_macros("PoS")?;
 });

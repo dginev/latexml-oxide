@@ -1,0 +1,13 @@
+% witness: 1402.2599, 2110.08612, 2401.08594 (`\JEL`)
+% oracle:  pdflatex with 1402.2599's svjour3.cls (v3.3): "JEL Classification C21 · C58"; 0 errors
+% engines: rust 67int10 = 1 error (undefined `\JEL`)
+% expect:  0 errors, 0 warnings; a JEL classification "C21 · C58"
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}\author{A}\institute{U}
+\maketitle
+\begin{abstract}An abstract.\keywords{one \and two}\JEL{C21 \and C58}\end{abstract}
+Text.
+\end{document}

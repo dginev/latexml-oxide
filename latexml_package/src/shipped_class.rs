@@ -1,5 +1,7 @@
 //! Shared helper: the shipped class file a class-family binding reads or inspects (`compositio_cls`, `jinst_cls`,
 //! `mn2e_cls`).
+use latexml_core::definition::origin::ProvideOnlyGuard;
+
 use crate::prelude::*;
 
 /// The class file in the paper's source that the family binding `binding` interprets: the class the document asked for
@@ -107,6 +109,25 @@ pub fn class_text_loads(text: &str, package: &str) -> bool {
 /// Does `text` (a class file's) contain `needle` outside a comment? (mdpi.cls's `\begin{paracol}` in its
 /// `\AfterEndPreamble`, which a copy may have commented out.)
 pub fn class_code_contains(text: &str, needle: &str) -> bool { class_code(text).contains(needle) }
+
+/// The astronomical journal abbreviations (`\apj`, `\mnras`, `\aap`…), aas_macros.sty pasted into individual copies of
+/// a class whose releases have none: aas_macros' binding provides them where the paper's copy of `binding` defines
+/// them, and only the names still undefined (`ProvideOnlyGuard`), so a paper's own definition stays its own.
+/// elsarticle (0812.4232 `\def\apj{ApJ}`, 1504.02326, 1807.02064 `\newcommand*\apj{ApJ}`, 2003.05953, 2401.03908
+/// `\newcommand\mnras{\ref@jnl{MNRAS}}`), PoS (16 of 92 copies: 0810.0108, 1212.1356, 1708.06808, 1802.02766), svmult
+/// (0803.2826, 1801.09940's svmult_aa.cls), svjour3 (0811.4367, 1111.3868) and mdpi (Definitions/mdpi.cls: 2005.05017,
+/// 2111.02495; 2510.22959's mdpi_mod.cls).
+pub fn provide_shipped_aas_macros(binding: &str) -> Result<()> {
+  if shipped_class_text(binding)?.is_some_and(|text| {
+    ["\\apj", "\\mnras", "\\aap"]
+      .iter()
+      .any(|name| class_code_contains(&text, name))
+  }) {
+    let _provide_only = ProvideOnlyGuard::new();
+    RequirePackage!("aas_macros");
+  }
+  Ok(())
+}
 
 /// The algorithm packages, whose choice differs between copies of one class or package: the ICML styles load
 /// `algorithm` and `algorithmic` (icml2016.sty:70-71 … icml2025.sty:95-96) and papers edit `algorithmic` out for

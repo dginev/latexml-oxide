@@ -256,4 +256,87 @@ see SVMono documentation -}\begin{quotation}}{\end{quotation}}"#);
 \def\samenumber{\addtocounter{\@captype}{-1}}"
     );
   }
+  // What every release from v1.0 (1999) to v5.15 defines (0912.1479's v5.4 copy; 80-99 of the 102 copies papers ship;
+  // run 347: 48 svmult papers call one), a copy without one leaving it to the paper (`DefinitionOrigin::Fallback`;
+  // Perl's binding defines none of it, KNOWN_PERL_ERRORS #812):
+  // - :1285 `\let\ts\,`, a thin space (17 papers: 1001.0767, 1405.1421, cond-mat0605750);
+  // - :115 `\if@runhead`, true unless the `norunningheads` option (v1.0 :37-38: false unless `runningheads`), which
+  //   papers test (0803.2826, 0808.2157, 0810.2505);
+  // - :240-242 `\svparindent` (12pt), :949 `\verbatimindent`, :1756-1758 `\twocaptionwidth{w1}{w2}` (1607.02736,
+  //   1804.07860, 1605.01046): layout;
+  // - :376 `\mtaddtocont{entry}` and :734 `\hyperhrefextend`, a mini table of contents' line, written to the aux file
+  //   (1310.7882, 2311.01874);
+  // - :1903-1923 `\subfigures`, after which the figure's captions are numbered as one figure lettered (3a, 3b), the
+  //   counter restored at the figure's end (:1905 `\def\endfigure{\resetsubfig\end@float}`; 1310.5064, 1411.2805,
+  //   1710.10378; `{subfigures}` around several figures, 2008.12552);
+  // - :2307-2310 `{abbrsymblist}[label width]`, the "List of Abbreviations and Symbols" section, a description list
+  //   (0810.2505, cond-mat0501076);
+  // - :987 `\greeksym{a}`, the letter set in the Symbol font: the Greek letter the font has there, upright (Adobe
+  //   Symbol encoding, OXIDIZED_DESIGN #623; 0903.0562, 1111.1183's `\uDelta` `\mbox{\greeksym{D}}`), any other argument in that font;
+  // - v1.0 :74 `\micro`, an upright mu (astro-ph0108509, hep-ph0301145);
+  // - v5.5 :2392-2402 `\circledmark[colour]{mark}` and `\formtmp{colour}{title}`, the titled boxes' mark and title bar
+  //   (their colours dropped, as the boxes' above);
+  // - v5.15 :2589-2591 `\Description{text}`, the description of a figure's image, written to a file of them: the
+  //   float's description, as acmart's (2602.21993).
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    let runhead_default = crate::shipped_class::shipped_class_text("svmult")?
+      .is_none_or(|text| !crate::shipped_class::class_code_contains(&text, "\\DeclareOption{runningheads}"));
+    RawTeX!(if runhead_default { r"\let\if@runhead\iftrue" } else { r"\let\if@runhead\iffalse" });
+    RawTeX!(
+      r"\let\ts\,
+\newdimen\svparindent
+\setlength{\svparindent}{12\p@}
+\newdimen\verbatimindent \verbatimindent\parindent
+\def\twocaptionwidth#1#2{\def\first@capwidth{#1}\def\second@capwidth{#2}}
+\twocaptionwidth{.46\textwidth}{.46\textwidth}
+\newcommand{\mtaddtocont}[1]{\protected@write\@auxout{\let\label\@gobble\let\index\@gobble\let\glossary\@gobble}{\string\@mtwritefile{#1}}}
+\def\hyperhrefextend{\ifx\hyper@anchor\@undefined\else{\@currentHref}\fi}
+\newcounter{merk}
+\def\resetsubfig{\global\let\last@subfig=\undefined}
+\def\r@setsubfig{\xdef\last@subfig{\number\value{figure}}\setcounter{figure}{\value{merk}}\setcounter{merk}{0}}
+\def\subfigures{\refstepcounter{figure}\@tempcnta=\value{merk}\setcounter{merk}{\value{figure}}\setcounter{figure}{\the\@tempcnta}\def\thefigure{\ifnum\c@chapter>\z@\thechapter.\fi\@arabic\c@merk\alph{figure}}\let\resetsubfig=\r@setsubfig}
+\AddToHook{env/figure/end}{\resetsubfig}
+\AddToHook{env/figure*/end}{\resetsubfig}
+\def\abbrsymbname{List of Abbreviations and Symbols}
+\newenvironment{abbrsymblist}[1][\qquad]{\section*{\abbrsymbname}\begin{description}}{\end{description}}
+\newcommand{\micro}{\mbox{µ}}
+\newcommand\circledmark[2][white]{#2}
+\def\formtmp#1#2{\lx@sv@box{#2}}"
+    );
+    DefMacro!("\\greeksym{}", sub[(letter)] {
+      let letter: Tokens = letter;
+      let text = letter.to_string();
+      Ok(match symbol_font_greek(text.trim()) {
+        Some(greek) => mouth::tokenize_internal(TeXString::assembled(format!("\\mbox{{\\upshape {greek}}}"))),
+        None => {
+          let mut tokens = TokenizeInternal!(r"\usefont{U}{psy}{m}{n}").unlist();
+          tokens.extend(letter.unlist());
+          Tokens::new(tokens)
+        },
+      })
+    });
+    crate::float_description::define_float_description("\\Description")?;
+    DefMacro!("\\Description{}", sub[(long)] {
+      Ok(crate::float_description::float_description_tokens(None, &long))
+    });
+  }
+  // The astronomical journal abbreviations 7 copies paste in (1711.01112, 2002.10370, 1801.09940's svmult_aa.cls).
+  crate::shipped_class::provide_shipped_aas_macros("svmult")?;
 });
+
+/// The Greek letter the Symbol font (Adobe Symbol encoding, `\usefont{U}{psy}{m}{n}`) has at the ASCII letter
+/// `letter`, if it is one.
+fn symbol_font_greek(letter: &str) -> Option<char> {
+  let mut chars = letter.chars();
+  let (Some(c), None) = (chars.next(), chars.next()) else {
+    return None;
+  };
+  const LOWER: &str = "αβχδεφγηιϕκλμνοπθρστυϖωξψζ";
+  const UPPER: &str = "ΑΒΧΔΕΦΓΗΙϑΚΛΜΝΟΠΘΡΣΤΥςΩΞΨΖ";
+  match c {
+    'a'..='z' => LOWER.chars().nth(c as usize - 'a' as usize),
+    'A'..='Z' => UPPER.chars().nth(c as usize - 'A' as usize),
+    _ => None,
+  }
+}

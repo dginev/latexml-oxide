@@ -1,0 +1,33 @@
+% witness: 1210.0385, 1410.0163, 1301.7161 (`\relateddois`); 1011.1160, 1009.1507 (`\freefootnotetext`); 1010.0304,
+%          1010.5040 (`\ccline`); 1008.4373 (`\shref`, `\bhline`)
+% oracle:  pdflatex with 1210.0385's arxstspdf.cls (texsort.sty stubbed): "Discussed in 10.1214/12-STS381A.", "This
+%          conversation was conducted in spring 2008.", the link text "http://www.example.org/a/b"; 2 errors, the
+%          harness's (hyperref `dvips` driver, a `\\` the stub leaves)
+% engines: rust 67int10 = 5 errors (undefined `\relateddois`, `\freefootnotetext`, `\shref`, `\ccline`, `\bhline`)
+% expect:  0 errors, 0 warnings; the related-DOI note with its link, the free footnote, the split link whole
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass[sts]{arxstspdf}
+\begin{document}
+\begin{frontmatter}
+\title{A Statistical Science Paper}
+\relateddois{T1}{Discussed in \relateddoi{d}{10.1214/12-STS381A}.}
+\runtitle{Short}
+\begin{aug}
+\author{\fnms{Ann} \snm{Author}\ead[label=e1]{ann@x.org}}
+\runauthor{A. Author}
+\affiliation{Somewhere University}
+\end{aug}
+\begin{abstract}An abstract.\end{abstract}
+\end{frontmatter}
+\freefootnotetext[]{This conversation was conducted in spring 2008.}
+\section{Introduction}
+See \shref{http://www.example.org/a/b}{http://www.\\example.org/a/b}.
+\begin{tabular}{ccc}
+\hline
+a & b & c\\
+\ccline{1-1,2-3}
+1 & 2 & 3\\
+\bhline
+\end{tabular}
+\end{document}

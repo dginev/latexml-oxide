@@ -14061,6 +14061,43 @@ open (a fix writes the short label as `label=` with enumitem's replacements). Wi
 passes `shortlabels`. Repro package-bindings/enumitem_shortlabel_ref (RED); pinned in
 `perfect_kernel_batch68i::enumitem_shortlabels_under_lmcs`.
 
+## 810. JHEP3's binding lacks `\arXivid` and `\@firstaubox`
+
+JHEP3.cls v3.1.4 (2005/09/26; 60 of the 64 copies papers ship) :1708 `\newcommand{\arXivid}[1]{\href{http://arxiv.org/abs/#1}{\tt arXiv:#1}}`,
+the arXiv link beside the class's `\hepth` family, and every release from v3.0.2 :748 `\newbox\@firstaubox` (the speaker's
+name for the running head, which papers set). Perl's JHEP3.cls.ltxml loads JHEP.cls.ltxml, which defines neither.
+Minimal trigger: `\documentclass{JHEP3}\begin{document}\arXivid{0704.3719}\end{document}` — pdflatex "arXiv:0704.3719",
+Perl undefined (53 papers; 0704.3719, 0709.3309, 0801.2642; hep-ph0112089 `\setbox\@firstaubox`). Rust's jhep3_cls.rs
+defines both. Repro class-bindings/jhep3_arxivid; guard `perfect_kernel_batch68k::jhep3_arxivid_links_the_identifier`.
+
+## 811. PoS's binding lacks `\@firstaubox`, `\PoSspecialurl` and `\PoSpaper@url`
+
+PoS.cls (every release papers ship, v0.1.0 to v1.2.7; v1.2.6 :656, :704-709) defines the speaker box `\@firstaubox`,
+the footer URL `\PoSspecialurl{url}` and its default `\PoSpaper@url`, which papers set or empty; the title page, made at
+`\begin{document}` (:1416-1428), lets `\PoSspecialurl` to `\relax` (:452), so a call in the body prints its URL. Perl's
+PoS.cls.ltxml (over JHEP.cls.ltxml) defines none. Minimal trigger: `\documentclass{PoS}` … `\begin{document}
+\PoSspecialurl{http://x.org/}\end{document}` — pdflatex "http://x.org/", Perl undefined (26 papers `\@firstaubox`:
+0912.1441, 1011.0095; 1606.07130, 1606.09248; 1812.08139, 1812.08191). Rust's pos_cls.rs defines them. Repro
+class-bindings/pos_aas/pos_class_commands; guard `perfect_kernel_batch68k::pos_class_commands`.
+
+## 812. svmult's binding lacks the class's own small commands
+
+svmult.cls (every release from v1.0 to v5.15; 0912.1479's v5.4) defines `\ts` (:1285 `\let\ts\,`), `\if@runhead`
+(:115), `\svparindent` (:240-242), `\verbatimindent` (:949), `\twocaptionwidth` (:1756), `\mtaddtocont` and
+`\hyperhrefextend` (:376, :734), `\subfigures` (:1903-1923), `{abbrsymblist}` (:2307) and `\greeksym` (:987). Perl's
+svmult.cls.ltxml defines none (its :134 notes "needs support for subfigures"). Minimal trigger:
+`\documentclass{svmult}\begin{document}A\ts B\end{document}` — pdflatex "A B", Perl undefined (48 papers; 1001.0767,
+0803.2826, 1310.5064, 0810.2505, 1111.1183). Rust's svmult_cls.rs defines them (`\greeksym` per OXIDIZED_DESIGN #623).
+Repro class-bindings/svmult_aas/svmult_class_commands; guard `perfect_kernel_batch68k::svmult_class_commands`.
+
+## 813. svjour3's binding lacks `\lastand`
+
+svjour3.cls :474-478 (every copy; 0712.0031's) `\lastand`, the separator before the last author (", and"), which papers
+write in `\author`. Perl's sv_support.sty.ltxml defines `\lastandname` (:272) but not the command. Minimal trigger:
+`\documentclass{svjour3}\begin{document}\title{T}\author{A \lastand B}\institute{U}\maketitle\end{document}` —
+pdflatex "A and B", Perl undefined (1907.12906). Rust's svjour3_cls.rs lets it to `\and`. Repro
+class-bindings/svjour3_statements; guard `perfect_kernel_batch68k::svjour3_editions_commands`.
+
 ## 820. eulervm.sty's binding lacks `\mathbold`
 
 eulervm.sty:58 `\DeclareMathAlphabet{\mathbold}{U}{zeur}{b}{n}`, the package's bold upright Euler alphabet; Perl's

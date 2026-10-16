@@ -1,0 +1,26 @@
+% witness: 1805.01916 (`\proofbox`); 1901.02925 (`{DOI}`); 1801.00197 (`{AM}`); 2101.02911 (`{MSCcode}`); 1902.07263
+%          (`{romannum}`); 1601.00044 (`{remunerate}`); 1703.08345 (`\appendixnotitle`)
+% oracle:  pdflatex with 2006.12120's siamart220329.cls: "MSC code. 65N30", "AMS subject classification. 65N12", "DOI.
+%          10.1137/xxxx", "(i) First.", "1. One.", "Appendix A. Untitled appendix text."; 0 errors
+% engines: rust 67int10 = 7 errors (undefined `\proofbox`, `{DOI}`, `{AM}`, `{MSCcode}`, `{romannum}`, `{remunerate}`, `\appendixnotitle`)
+% expect:  0 errors, 0 warnings; the MSC and AMS classifications, the DOI block, (i)/(ii) and 1./2. lists, Appendix A
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass{siamart220329}
+\title{A SIAM Paper}
+\author{Ann Author\thanks{Somewhere University (\email{ann@x.org}).}}
+\begin{document}
+\maketitle
+\begin{abstract}An abstract.\end{abstract}
+\begin{keywords}one, two\end{keywords}
+\begin{MSCcode}65N30\end{MSCcode}
+\begin{AM}65N12\end{AM}
+\begin{DOI}10.1137/xxxx\end{DOI}
+\section{Introduction}
+The proof ends with \proofbox.
+\begin{romannum}\item First.\item Second.\end{romannum}
+\begin{remunerate}\item One.\item Two.\end{remunerate}
+\appendix
+\appendixnotitle
+Untitled appendix text.
+\end{document}

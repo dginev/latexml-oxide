@@ -53,13 +53,11 @@ LoadDefinitions!({
   def_macro_noop("\\docsubty{}")?;
   // :1273 `\eqntext{text}`, text set in an `{eqnarray}` row's number place (18 papers: 1002.0175), kept in the row.
   DefMacro!("\\eqntext{}", "#1");
-  // :392-395 `\startlocaldefs`/`\endlocaldefs` around a paper's own definitions; :495-502 `\setvaluelist{list}{a,b,…}`
-  // and `\getitemvalue{list}{n}`, the class's value lists (3 papers: 0811.0643); 0902.2924's copy: `\vtexed` and
-  // `\CRC`, production flags; :1795 `\legend{text}`, a table note without a mark (1506.00847).
+  // :392-395 `\startlocaldefs`/`\endlocaldefs` around a paper's own definitions (:495-502 `\setvaluelist{list}{a,b,…}`
+  // and `\getitemvalue{list}{n}`, the class's value lists, 3 papers: 0811.0643, are ims_support's); 0902.2924's copy:
+  // `\vtexed` and `\CRC`, production flags; :1795 `\legend{text}`, a table note without a mark (1506.00847).
   RawTeX!(
     r"\def\startlocaldefs{\makeatletter}\def\endlocaldefs{\makeatother}
-\def\setvaluelist#1#2{\@tempcnta=0\relax\@for\@curr@val:=#2\do{\advance\@tempcnta by1\relax\expandafter\protected@xdef\csname #1@item@\the\@tempcnta\endcsname{\@curr@val}}\expandafter\protected@xdef\csname #1@item@0\endcsname{\the\@tempcnta}}
-\def\getitemvalue#1#2{\csname #1@item@#2\endcsname}
 \def\legend#1{\tabnotetext[]{}{#1}}"
   );
   def_macro_noop("\\vtexed{}")?;

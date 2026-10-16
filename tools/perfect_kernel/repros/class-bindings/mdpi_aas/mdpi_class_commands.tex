@@ -1,0 +1,45 @@
+% witness: 1709.06513 (`\conferencetitle`); 1902.06114, 2005.05017 (`\fourthnote`); 2208.12066 (`\linksupplementary`);
+%          1710.04728 (`\conflictofinterest`); 2609.34305 (`\useofartificialintelligence`); 2311.18672 (`\orcidA`…);
+%          2212.11355, 2211.06541 (the copy's `\apj`)
+% oracle:  pdflatex with 2404.14200's Definitions/mdpi.cls (2023) for the notes, the supplementary link and the AI statement,
+%          1911.06360's (2019) for "Conflicts of Interest: None declared.", 2212.11355's for "As shown in ApJ and MNRAS."
+% engines: rust 67int10 = 6 errors (undefined `\apj`, `\mnras`, `\fourthnote`, `\linksupplementary`, `\conflictofinterest`,
+%          `\useofartificialintelligence`); `\orcidA` dropped
+% expect:  0 errors, 0 warnings; the author's ORCID, the fourth note, the labelled statements
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass[journal,article,submit,pdftex,moreauthors]{Definitions/mdpi}
+\firstpage{1}
+\makeatletter
+\setcounter{page}{\@firstpage}
+\makeatother
+\pubvolume{1}
+\issuenum{1}
+\articlenumber{0}
+\pubyear{2024}
+\copyrightyear{2024}
+\datereceived{ }
+\daterevised{ }
+\dateaccepted{ }
+\datepublished{ }
+\hreflink{https://doi.org/}
+\Title{An MDPI Paper}
+\newcommand{\orcidauthorA}{0000-0002-1825-0097}
+\Author{Ann Author $^{1}$\orcidA{} and Bob Builder $^{2}$}
+\AuthorNames{Ann Author and Bob Builder}
+\address{%
+$^{1}$ \quad Somewhere University\\
+$^{2}$ \quad Elsewhere Institute}
+\corres{Correspondence: ann@x.org}
+\conference{The First Conference}
+\fourthnote{A fourth note.}
+\abstract{An abstract.}
+\keyword{one; two}
+\begin{document}
+\section{Introduction}
+As shown in \apj\ and \mnras.
+\supplementary{The following are available at \linksupplementary{s1}.}
+\conflictsofinterest{The authors declare no conflict of interest.}
+\conflictofinterest{None declared.}
+\useofartificialintelligence{No AI was used.}
+\end{document}

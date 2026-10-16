@@ -15,6 +15,8 @@
 //! `ltx:bib-*` vocabulary is schema-valid only inside `ltx:bibentry` (the BibTeX
 //! path), NOT inside `bibblock` — so the `\b*` field macros are PASSTHROUGH text
 //! (readable + schema-valid), not mapped to `ltx:bib-*`.
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::{
   prelude::*,
   shipped_class::{class_code_contains, shipped_class_text},
@@ -153,6 +155,45 @@ LoadDefinitions!({
 
   // The URL, attribute and script helpers of the arximspdf.cls versions (`\doiurl`, `\arxivurl`, `\surl`,
   // `\setattribute`, `\tsup`, …) are the VTeX classes' shared markup (ims_support_sty.rs).
+  // What both classes define and papers call (run 347: 42 arxstspdf and 13 arximspdf papers; line numbers from
+  // 0808.2902's arxstspdf.cls and 0704.1778's arximspdf.cls), a copy without one leaving it to the paper
+  // (`DefinitionOrigin::Fallback`):
+  // - `\ccline{2-3,4-5}` (arxstspdf :1167-1169, arximspdf :1202-1204), a `\cline` for each range (33 papers: 1010.0304,
+  //   1010.5040, 1011.1079);
+  // - `\bhline` and its siblings `\thline`, `\fhline`, `\lhline` (arxstspdf :1828-1832), a table's rules spaced
+  //   around, `\bhline`'s thicker: `\hline`s;
+  // - `\freefootnotetext[mark]{text}` (arxstspdf :1917, arximspdf :1908), a footnote under the given mark, an empty one
+  //   for an unmarked note (1011.1160 "This conversation was conducted in spring 2008.", 1009.1507's disclaimer);
+  // - `\relateddois[label]{key}{text}` (1008.4373's arxstspdf.cls :2106-2115; 43 of the 68 copies, 99 of 371), a
+  //   title note naming the articles related to this one, its `\relateddoi{label}{doi}` each a link to the DOI
+  //   (1410.0163, 1301.7161, 1210.0385 "Discussed in …");
+  // - `\shref{url}{text}` (arxstspdf :3021-3024), a link whose text breaks at its `\\`s;
+  // - arximspdf's :2530-2531 `\write@toc@ignorecontentsline`/`\write@toc@restorecontentsline` (1205.5627) and
+  //   :2585-2601 `\maxcsec{…}`, `\maxcsubsec`, `\maxcsubsubsec`, the contents' number widths (1103.4825, 1309.3728); its
+  //   :533-540 `\setvaluelist`/`\getitemvalue` (1203.0565) are ims_support's, shared with arxbj.
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\ccline{}", sub[(ranges)] {
+      let ranges: Tokens = ranges;
+      let mut out: Vec<Token> = Vec::new();
+      for range in ranges.to_string().split(',') {
+        let range = range.trim();
+        if !range.is_empty() {
+          out.extend(mouth::tokenize_internal(TeXString::assembled(s!("\\cline{{{range}}}"))).unlist());
+        }
+      }
+      Ok(Tokens::new(out))
+    });
+    RawTeX!(r"\def\thline{\hline}\def\fhline{\hline}\def\bhline{\hline}\def\lhline{\hline}
+\def\freefootnotetext[#1]{\footnotetext[#1]}
+\@ifundefined{doi@base}{\def\doi@base{http://dx.doi.org/}}{}
+\def\relateddois{\@ifnextchar[{\lx@ims@relateddois}{\lx@ims@relateddois[]}}
+\def\lx@ims@relateddois[#1]#2#3{\lx@add@frontmatter{ltx:note}[role=relateddois]{\def\relateddoi##1##2{\href{\doi@base##2}{##2}}#3}}
+\DeclareRobustCommand\shref[2]{\href{#1}{\let\\\relax#2}}
+\def\write@toc@ignorecontentsline{\addtocontents{toc}{\protect\ignorecontentsline}}
+\def\write@toc@restorecontentsline{\addtocontents{toc}{\protect\restorecontentsline}}
+\def\maxcsec#1{}\def\maxcsubsec#1{}\def\maxcsubsubsec#1{}");
+  }
 });
 
 /// arxstspdf.cls is arximspdf.cls (its `\doiurl`/`\arxivurl`, arxstspdf.cls:2902-2975, are the arximspdf copies' too;

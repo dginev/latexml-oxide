@@ -1,0 +1,31 @@
+% witness: 2208.11618 (`\bibsplit`); 2602.17158, 2603.21852 (`\Firstpage`, `\Parasplit`, `\Endparasplit`,
+%          `\dataavail`); 2607.15832
+% oracle:  pdflatex with 2602.17158's pnas-new.cls (v1.47): "First paragraph, continued across the column.", "Data,
+%          Materials, and Software Availability. The data are on GitHub."; 1 error (`\@articletype`, the template
+%          setting this repro leaves out)
+% engines: rust 67int10 = 5 errors, 1 warning (undefined `\Firstpage`, `\Parasplit`, `\Endparasplit`, `\dataavail`, `\bibsplit`)
+% expect:  0 errors, 1 warning (the binding's mdframed stub); one paragraph, the availability statement a titled paragraph
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass[9pt,twocolumn,twoside]{pnas-new}
+\title{A PNAS Paper}
+\author[a]{Ann Author}
+\affil[a]{Somewhere University}
+\leadauthor{Author}
+\significancestatement{Significance.}
+\authorcontributions{A.A. wrote it.}
+\authordeclaration{None.}
+\correspondingauthor{\textsuperscript{1}E-mail: ann@x.org}
+\keywords{one $|$ two}
+\begin{abstract}An abstract.\end{abstract}
+\dates{This manuscript was compiled on \today}
+\begin{document}
+\maketitle
+\thispagestyle{firststyle}
+\ifthenelse{\boolean{shortarticle}}{\ifthenelse{\boolean{singlecolumn}}{\abscontentformatted}{\abscontent}}{}
+\Firstpage
+First paragraph, \Parasplit continued across the column.
+\Endparasplit
+\dataavail{The data are on GitHub.}
+\bibsplit[2]
+\end{document}

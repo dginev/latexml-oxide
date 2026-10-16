@@ -1,0 +1,31 @@
+% witness: 0704.0369, 1605.04791, 1110.2544 (`\eref`, `\fref`…); 1302.0454 (`\citelow`); 0704.0369, 1605.04791
+%          (`{tabnote}`, `\tablefont`); 1605.04791, 2110.00344 (`\wstoc`); 1109.0078 (`{algorithm}`); 1402.0787
+%          (`{unnumlist}`); nucl-th0412108 (`\figurebox`)
+% oracle:  pdflatex with 0704.0369's ws-procs9x6.cls (run twice): "As Eq. (1) in Sec. 1, Fig. 1 and Table 1 show (Equation
+%          (1), Section 1, Figure 1, Table 1); see also [1].", "Note: Values in units.", "Algorithm 1.1. A step."; 0 errors
+% engines: rust 67int10 = 15 errors (undefined `\eref`…`\Tref`, `\citelow`, `\tablefont`, `{tabnote}`, `\wstoc`, `{algorithm}`, `{unnumlist}`,
+%          `\figurebox`)
+% expect:  0 errors, 0 warnings; the cross-references with their names, "Note: Values in units." under the table, an Algorithm
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass{ws-procs9x6}
+\begin{document}
+\title{A Proceedings Paper}
+\author{A. Author}
+\address{Somewhere University}
+\begin{abstract}An abstract.\end{abstract}
+\bodymatter
+\section{Introduction}\label{sec:i}
+\wstoc{A Proceedings Paper}{A. Author}
+As \eref{e} in \sref{sec:i}, \fref{f} and \tref{t} show (\Eref{e}, \Sref{sec:i}, \Fref{f}, \Tref{t}); see also
+\citelow{k}.
+\begin{equation}x=1\label{e}\end{equation}
+\begin{figure}[h]\centering\figurebox{1pc}{2pc}{}\caption{A figure.}\label{f}\end{figure}
+\begin{table}[h]\tbl{A table.}{\tablefont\begin{tabular}{cc}\toprule a & b\\ \colrule 1 & 2\\ \botrule\end{tabular}}
+\begin{tabnote}Values in units.\end{tabnote}\label{t}\end{table}
+\begin{algorithm}A step.\end{algorithm}
+\begin{unnumlist}\item First.\item Second.\end{unnumlist}
+\begin{thebibliography}{1}
+\bibitem{k} B. Author, \textit{Journal} \textbf{1}, 1 (2000).
+\end{thebibliography}
+\end{document}

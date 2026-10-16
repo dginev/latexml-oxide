@@ -1833,9 +1833,78 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   outside this batch: sn_jnl_cls.rs `{declarations}` (`name='declarations'`, an environment sn-jnl.cls does not define)
   and jmlr_cls.rs/jmlr2e_sty.rs `\acks` (`name='acknowledgments-disclosure-of-funding'`). Ruled 2026-10-15: arximspdf's
   borrowed amsthm also gives it `{proof}`, which the class lacks (pdflatex errs); kept, as it keeps the author's proof.
-  Open row: arximspdf/arxstspdf gaps outside this batch from a 24-paper sample — `\ccline` (7 arxstspdf papers),
-  `\freefootnotetext`, `\write@toc@…contentsline`, `\maxcsec`, `{aligned}`, and arxbj's `\setvaluelist` moved into
-  ims_support_sty.rs for arximspdf (1203.0565).
+  The arximspdf/arxstspdf row from a 24-paper sample — `\ccline` (7 arxstspdf papers), `\freefootnotetext`,
+  `\write@toc@…contentsline`, `\maxcsec`, `\setvaluelist` (1203.0565) — landed in 68k; open: arximspdf's own
+  `{aligned}`.
+- **68k** (binding gaps G2 C, class bindings whose papers ship their own copy; bindgaps/g23_macros.tsv rows gretsi,
+  PoS, JHEP3, ws-procs9x6/ws-procs961x669/ws-ijmpe, svmult, pnas-new, interact, mdpi + Definitions/mdpi, svjour3,
+  arxstspdf/arximspdf, siamart/siamonline; each command checked against the witnesses' copies, `copies.py` tallies in
+  the batch report). Per binding (commands, real file:line, witnesses): gretsi (gretsi_cls.rs) follows the paper's copy
+  where the releases conflict — v1.2 (2008, 45 of 62 papers, 1001.1912's copy) `\titre`, `\auteur` = `\author` of
+  `\coord{first}{last}{mark}` names (:154-157), `\adresse`/`\address` of `\affil{mark}{lines}` (:158-166),
+  `\resumefrancais`/`\frenchabstract`, `\resumeanglais`/`\englishabstract` (:106-122, the English one in
+  `{texteenanglais}`, English under babel), `\legende` (:22-58); v1.3 (2023, 2304.10248's; the default) `\auteurs` of
+  `\auteur{first}{last}{email}{mark}` (:96-97, an author each with e-mail), `\affils`, `\resume`/`\abstract` (:78-87),
+  its packages (babel `[french,english]` with the `english` option's language, algorithm2e, booktabs; :35-75); the
+  stub's `\auteur{}{}{}{}` (name + address/email notes holding the e-mail and the mark) is gone; names' marks request
+  the affiliations so labelled (1001.1912, 0706.1914, 1311.3768, 1512.06999, 2206.05928, 2304.10248, 2310.15635). PoS
+  (pos_cls.rs) `\@firstaubox`, `\PoSspecialurl` (`\relax` from `\begin{document}`, PoS.cls :452, :1416-1428),
+  `\PoSpaper@url` (v1.2.6 :656, :704-709; 0912.1441, 1606.09248, 1812.08139; KPE #811). JHEP3 (jhep3_cls.rs)
+  `\arXivid` (v3.1.4 :1708; 0704.3719, 0709.3309) and `\@firstaubox` (:748; KPE #810). The AAS journal abbreviations
+  a copy pastes in (`\apj`, `\mnras`, `\aap`…) for PoS (16 of 92 copies: 0810.0108, 1708.06808), svmult (7:
+  1711.01112, 1801.09940's svmult_aa.cls), svjour3 (9: 0812.0839, 1111.3868) and mdpi (2212.11355, 2211.06541,
+  2510.22959's mdpi_mod.cls) through one helper, `shipped_class::provide_shipped_aas_macros` (elsarticle's 67y code
+  moved there). World Scientific: ws_journal_cls.rs (every WS class) `\titlefont`, `\authorfont`, `\tablefont`,
+  `{tabnote}[heading]`, `{tabfootnote}`, `\tabmark`, `{otherinfo}`, `\citelow`, `\figurebox` (ws-ijmpe v1.0 :58-71,
+  :334-340, :740-763, :951, :667; 0711.3504, 0712.0330, 0811.0496, 1302.0454); ws_procs_cls.rs `\eref`…`\Tref`
+  (ws-procs9x6 :984-993; 0704.0369, 1605.04791), `\figurecaptionfont`, `\wstoc` (a contents line, kept out),
+  `\mastertoc` (`\tableofcontents`), `{unnumlist}`, `{algorithm}`/`{assumption}` (:918-921), `\aindx` as the copy writes
+  it (`\index{author}{…}`, ws-rv9x6 `\index[aindx]{…}`). svmult (svmult_cls.rs; v5.4 0912.1479's, KPE #812) `\ts`,
+  `\if@runhead`, `\svparindent`, `\verbatimindent`, `\twocaptionwidth`, `\mtaddtocont`, `\hyperhrefextend`, `\subfigures`
+  (the counter restored at the figure's end through `\AddToHook{env/figure/end}`), `{abbrsymblist}`, `\greeksym` (the
+  Symbol font's Greek letter, OD #623), v1.0's `\micro`, v5.5's `\circledmark`/`\formtmp`, v5.15's `\Description`
+  (the float's description, as acmart's; 2602.21993). pnas-new (pnas_new_cls.rs) `\bibsplit`, `\Firstpage`,
+  `\Parasplit`/`\Endparasplit` (layout: nothing), `\dataavail` (a titled paragraph; v1.47 :468-492, :688; 2208.11618,
+  2602.17158). interact (interact_cls.rs; v1.05 1711.05866's) `{abbreviations}`, `{jelcode}`/`{pacscode}` (and v4.0's
+  `{classcode}`) as classifications, the upright Greek `\ualpha`…`\upartial` and bold `\ubalpha`… (:167-226), `{tabnote}`,
+  `\jvol`/`\jnum`/`\jmonth`/`\jyear`/`\jname` stores, `\history`, `\figwidth`, `\x`, v4.0's `\colrule`/`\botrule`
+  (1901.07015, 2306.12924, 1709.03559, 1709.02637). mdpi (mdpi_cls.rs) `\conferencetitle`, `\contributed`,
+  `\fourthnote`/`\fifthnote`, `\emails`, `\orcidauthorONE`…/`\orcidONE`… (2017) and `\orcidA`…`\orcidZ` (since 2018,
+  were no-ops for A-F) as the author's ORCID, `\conflictofinterest`, `\useofartificialintelligence`,
+  `\linksupplementary` (`\doinum` now stores `\@doinum`), `\bio`, `\justifyorcenter`, `\highlight`, `\CorrStatement`,
+  `\dist` (1709.06513, 1506.06852, 1707.09764, 2311.18672, 2208.12066). svjour3 (svjour3_cls.rs) `\lastand` (an `\and`,
+  KPE #813; 1907.12906), the economics edition's `\JEL` (1402.2599 :314-317, 6 copies) and the 2023 edition's
+  `{funding}`/`{dataavailability}`/`{conflict}` (2411.13175 :1133-1159). arxstspdf/arximspdf (arximspdf_cls.rs)
+  `\ccline` (a `\cline` per range), `\bhline`/`\thline`/`\fhline`/`\lhline`, `\freefootnotetext`, `\relateddois` (a note,
+  its `\relateddoi` DOI links), `\shref`, `\write@toc@…contentsline`, `\maxcsec`…, and `\setvaluelist`/`\getitemvalue` moved
+  from arxbj_cls.rs into ims_support_sty.rs for both
+  (1210.0385, 1011.1160, 1010.0304, 1203.0565, 1205.5627). siamart/siamonline (siamart_cls.rs) `\proofbox`, `\slugger`
+  (page furniture), `\siamprelabel`, `{DOI}`, `{AM}`, `{MSCcode}`, `{ACM}`, `{romannum}`, `{remunerate}`,
+  `\appendixnotitle`, siamonline's `{Code}` and `\dedication` (2006.12120's siamart220329 :491-930, :1426; 1805.01916,
+  1901.02925, 2306.16314). Class-interface commands only; a copy without one leaves it to the paper
+  (`DefinitionOrigin::Fallback`). Repros class-bindings/{gretsi_v12/,gretsi_v13_frontmatter,pos_aas/,jhep3_arxivid,
+  ws_procs_class_commands,ws_ijmpe_table_notes,svmult_aas/,pnas_layout_and_dataavail,interact_class_commands,mdpi_aas/,
+  svjour3_statements,svjour3_jel_classification,arxstspdf_class_commands,siamart_class_commands} (RED 67int10 →
+  GREEN); guards `perfect_kernel_batch68k` (12). A/B vs 67int10 over 400 row witnesses + 100 pop67o papers: errors
+  1,374 → 691, 342 papers fewer, none more; every word drop an undefined command's name or its arguments no longer
+  typeset (`\wstoc`'s title and authors, `\apj` → "ApJ"). Open: mdpi's computed default DOI (`\doinum{10.3390/\@doiabbr…}`,
+  :543-545) is not reproduced, so `\linksupplementary` without the paper's `\doinum` links `article//<file>`; pnas-new
+  `\theabstract` (the class's stored abstract; 2602.21299 reprints it); arximspdf's own `{aligned}` (:1209); the gretsi
+  v1.2 abstracts follow the call order where the class prints Résumé first; `\@makecaption` from a paper's hangcaption.sty
+  (interact 2208.03568, svjour3 1702.06262: G1). Not this payload's (a copy's private one-line edits, pending user
+  decision (a)): JHEP3 `\mathph` (0901.2133), `\jcap` (0901.3074), JHEP3MaxThesisMod's thesis commands (1210.6500); PoS
+  `\ReportNo` (1310.3045, 1012.2709's PoSmod), `\Preprint`/`\PREPRINT` (1601.04101, 1406.7652, 1712.05633), PoS_mod's
+  `\speakershort`; svmult `\emailbrack` (1707.04674), svmult12 `\Scriptsize`, svmultivs_gm's `\ContactAuthor…`/
+  `\Institution…`/`\authoremails` (7 papers), svmult6 `\chapterauthors`/`\acknowledgments`/`\shortauthname`, v5.5
+  `{articlededication}` (2 copies) and `{contribution}` (1); mdpi 2009 `\arttype`/`\journal`/`\keywords`/`\pagerange`/
+  `\sysname`/`\issn`/`\logo`/`\logosize` (0912.5334), `\academiceditor`, mdpimod's `\lastrevision`/`\titlenote`,
+  `{Axiom}`, `{Conjecture}`, mdpi_pre's `\nameofjournal`, my-mdpi's `\bio`; svjour3 `\preprintnumbers` (2501.18289),
+  `\makesecondtitle`, `\authormark`/`\issue`, svjour3mod's `{code}`/`\arxivnumber`/`\journalref`, svjour3VISbi's
+  `\doi`, `\citetop`/`\doinum`/`\papernum`, `\MCS`, `\journalinfo`, `\rmGamma`…, `{das}`, `{datavail}`; interact
+  `{published}`, `\subjclassname`, `{github_repo}`, 2404.11552's `\Ac`…, `{graphicabstract}`; siamart `\R`/`\F`/`\N`/`\eps`
+  (template shortcuts in 3-7 copies), `\fundingl` (2111.11645), siamonline `\disclaimer`, `{subjects}`,
+  `\supplementary`, `\correspondings`, `{setup}`; ws-procs9x6adap's `\citelow` copy. Excluded by the brief: svmult/
+  svjour3 `\spn@wtheorem` (68g's `\spnewtheorem`).
 - **68g** (llncs theorem numbering, the 68a residual KNOWN_PERL_ERRORS #743): llncs_cls.rs installs the class's
   theorem set with llncs.cls's own code (:1142-1174, TL 2025 v2.26; the same in every shipped copy v2.2-v2.26, checked
   over 18 versions from 1,250 arXiv llncs papers): `{theorem}` by section only under `envcountsect` (reset by section

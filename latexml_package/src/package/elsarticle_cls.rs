@@ -1,9 +1,6 @@
-use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard, ProvideOnlyGuard};
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
-use crate::{
-  prelude::*,
-  shipped_class::{class_code_contains, shipped_class_text},
-};
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -255,15 +252,9 @@ LoadDefinitions!({
   // The astronomical journal abbreviations (`\apj`, `\mnras`, `\aap`… 7 to 16 papers each) are aas_macros.sty pasted
   // into individual copies (0812.4232 `\def\apj{ApJ}`, 1504.02326, 1807.02064 `\newcommand*\apj{ApJ}`, 2003.05953,
   // 2401.03908 `\newcommand\mnras{\ref@jnl{MNRAS}}`), no elsarticle release's: aas_macros' binding provides them
-  // where the paper's copy defines them, and only the names still undefined (`ProvideOnlyGuard`).
-  if shipped_class_text("elsarticle")?.is_some_and(|text| {
-    ["\\apj", "\\mnras", "\\aap"]
-      .iter()
-      .any(|name| class_code_contains(&text, name))
-  }) {
-    let _provide_only = ProvideOnlyGuard::new();
-    RequirePackage!("aas_macros");
-  }
+  // where the paper's copy defines them, and only the names still undefined
+  // (`shipped_class::provide_shipped_aas_macros`, shared with PoS, svmult, svjour3 and mdpi).
+  crate::shipped_class::provide_shipped_aas_macros("elsarticle")?;
   {
     let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
     DefMacro!("\\email{}", "\\lx@add@contact[role=email]{#1}");

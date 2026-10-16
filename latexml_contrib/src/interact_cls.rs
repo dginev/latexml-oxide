@@ -1,4 +1,5 @@
 //! Stub for interact.cls (Taylor & Francis interact class).
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -129,5 +130,115 @@ LoadDefinitions!({
   DefMacro!(
     "\\journalname{}",
     "\\@add@frontmatter{ltx:note}[role=journal]{#1}"
-  );
+  ); // interact.cls v1.05 (2017/07/31; 90 of the 124 copies papers ship, 1711.05866's; v1.01-v1.03 the same), what
+  // papers call (run 347: 46 interact papers), a copy without one leaving it to the paper (`DefinitionOrigin::Fallback`):
+  // - :493-527 the keyword-like blocks under the abstract: `{abbreviations}` "Abbreviations: …" (10 papers: 1901.07015,
+  //   2102.04929), and the classifications `{jelcode}` "JEL CLASSIFICATION" and `{pacscode}` "PACS CLASSIFICATION",
+  //   as `{amscode}` (2306.12924, 2307.12161; 1610.08232, 1611.05230), and v4.0's (2015/06/03, 1709.02637's copy :342)
+  //   `{classcode}` "AMS Subject Classification";
+  // - :167-226 the upright Greek letters `\ualpha`…`\uvarphi`, `\upartial` and their bold forms `\ubalpha`…
+  //   (`\mathup`, the upright math version, and `\mathbup` its bold, here `\boldsymbol` of the upright letter;
+  //   `\umu` 5 papers: 1709.03559, 2207.06123; `\upartial` 4, `\upi` 3,
+  //   `\uomega`, `\udelta`);
+  // - :635-640 `{tabnote}[heading]`, a note under a table, its heading italic (1711.08876, 1712.07848, 2304.00568);
+  // - :237-243 `\jvol`, `\jnum`, `\jmonth`, `\jyear`, `\jname`, the running head's journal issue (2208.03936,
+  //   2211.01356): stored, as the class stores them; :268 `\history`, the article history `\received` sets
+  //   (2609.06135); :591 `\figwidth`/`\figheight`; :642 `\x`, the column spacing of a full-width table;
+  // - v4.0 :572-573 `\colrule`, `\botrule`, the tables' inner and closing rules (1709.02637).
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(
+      r"\newcommand\abbreviationsname{Abbreviations}
+\newenvironment{abbreviations}{\par\noindent{\bfseries \abbreviationsname: }\ignorespaces}{\par}
+\newcommand\jelcodename{JEL CLASSIFICATION}
+\newcommand\pacscodename{PACS CLASSIFICATION}
+\def\tabnotefont{\footnotesize}
+\newenvironment{tabnote}{\par\tabnotefont\@ifnextchar[{\@tabnote}{\@tabnote[]}}{\par}
+\def\@tabnote[#1]{\def\@Tempa{#1}\ifx\@Tempa\@empty\else{\itshape #1:}\ \fi\ignorespaces}
+\def\jname#1{\gdef\@jname{#1}}\gdef\@jname{}
+\def\jvol#1{\gdef\@jvol{#1}}\gdef\@jvol{00}
+\def\jnum#1{\gdef\@jnum{#1}}\gdef\@jnum{00}
+\def\jmonth#1{\gdef\@jmonth{#1}}\gdef\@jmonth{Month}
+\def\jyear#1{\gdef\@jyear{#1}}\gdef\@jyear{20XX}
+\def\history#1{\received{#1}}
+\newdimen\figheight
+\newdimen\figwidth
+\def\x{@{\extracolsep{\fill}}}
+\def\Hline{\noalign{\ifnum0=`}\fi\hrule \@height 2\arrayrulewidth \futurelet\@tempa\@xhline}
+\def\colrule{\\[-7.5pt]\hline\\[-5pt]}
+\def\botrule{\\[-7.7pt]\Hline}"
+    );
+    DefEnvironment!(
+      "{jelcode}",
+      "<ltx:classification scheme='JEL'>#body</ltx:classification>"
+    );
+    DefEnvironment!(
+      "{pacscode}",
+      "<ltx:classification scheme='PACS'>#body</ltx:classification>"
+    );
+    DefEnvironment!(
+      "{classcode}",
+      "<ltx:classification scheme='AMS'>#body</ltx:classification>"
+    );
+    DefMath!("\\ualpha", "α", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ubeta", "β", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ugamma", "γ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\udelta", "δ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uepsilon", "ϵ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uzeta", "ζ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ueta", "η", font => { shape => "upright", forceshape => true });
+    DefMath!("\\utheta", "θ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uiota", "ι", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ukappa", "κ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ulambda", "λ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\umu", "μ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\unu", "ν", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uxi", "ξ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\upi", "π", font => { shape => "upright", forceshape => true });
+    DefMath!("\\urho", "ρ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\usigma", "σ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\utau", "τ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uupsilon", "υ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uphi", "ϕ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uchi", "χ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\upsi", "ψ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uomega", "ω", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uvarepsilon", "ε", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uvartheta", "ϑ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uvarpi", "ϖ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uvarphi", "φ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\upartial", "∂", font => { shape => "upright", forceshape => true });
+    DefMacro!("\\ubalpha", "\\boldsymbol{\\ualpha}");
+    DefMacro!("\\ubbeta", "\\boldsymbol{\\ubeta}");
+    DefMacro!("\\ubgamma", "\\boldsymbol{\\ugamma}");
+    DefMacro!("\\ubdelta", "\\boldsymbol{\\udelta}");
+    DefMacro!("\\ubepsilon", "\\boldsymbol{\\uepsilon}");
+    DefMacro!("\\ubzeta", "\\boldsymbol{\\uzeta}");
+    DefMacro!("\\ubtheta", "\\boldsymbol{\\utheta}");
+    DefMacro!("\\ubiota", "\\boldsymbol{\\uiota}");
+    DefMacro!("\\ubkappa", "\\boldsymbol{\\ukappa}");
+    DefMacro!("\\ublambda", "\\boldsymbol{\\ulambda}");
+    DefMacro!("\\ubmu", "\\boldsymbol{\\umu}");
+    DefMacro!("\\ubnu", "\\boldsymbol{\\unu}");
+    DefMacro!("\\ubxi", "\\boldsymbol{\\uxi}");
+    DefMacro!("\\ubpi", "\\boldsymbol{\\upi}");
+    DefMacro!("\\ubrho", "\\boldsymbol{\\urho}");
+    DefMacro!("\\ubsigma", "\\boldsymbol{\\usigma}");
+    DefMacro!("\\ubtau", "\\boldsymbol{\\utau}");
+    DefMacro!("\\ubupsilon", "\\boldsymbol{\\uupsilon}");
+    DefMacro!("\\ubphi", "\\boldsymbol{\\uphi}");
+    DefMacro!("\\ubchi", "\\boldsymbol{\\uchi}");
+    DefMacro!("\\ubpsi", "\\boldsymbol{\\upsi}");
+    DefMacro!("\\ubomega", "\\boldsymbol{\\uomega}");
+    DefMacro!("\\ubvarepsilon", "\\boldsymbol{\\uvarepsilon}");
+    DefMacro!("\\ubvartheta", "\\boldsymbol{\\uvartheta}");
+    DefMacro!("\\ubvarpi", "\\boldsymbol{\\uvarpi}");
+    DefMacro!("\\ubvarphi", "\\boldsymbol{\\uvarphi}");
+    DefMacro!("\\ubpartial", "\\boldsymbol{\\upartial}");
+    // (:203 `\uboldeta`, not `\ubeta`, which is the upright beta; :193-194 `\let\uvarrho\varrho`, `\let\uvarsigma
+    // \varsigma`)
+    DefMacro!("\\uboldeta", "\\boldsymbol{\\ueta}");
+    Let!("\\uvarrho", "\\varrho");
+    Let!("\\uvarsigma", "\\varsigma");
+  }
 });

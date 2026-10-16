@@ -150,6 +150,12 @@ LoadDefinitions!({
 \def\newtheorem{\theoremstyle{plain}\lx@vtex@thm}
 \def\newproclaim{\theoremstyle{plain}\lx@vtex@thm}"
   );
+  // The value lists both classes define, `\setvaluelist{list}{a,b,…}` and `\getitemvalue{list}{n}` (arxbj.cls
+  // :495-502, 0811.0643; arximspdf.cls :533-540, 1203.0565, which numbers its equations by one).
+  RawTeX!(
+    r"\def\setvaluelist#1#2{\@tempcnta=0\relax\@for\@curr@val:=#2\do{\advance\@tempcnta by1\relax\expandafter\protected@xdef\csname #1@item@\the\@tempcnta\endcsname{\@curr@val}}\expandafter\protected@xdef\csname #1@item@0\endcsname{\the\@tempcnta}}
+\def\getitemvalue#1#2{\csname #1@item@#2\endcsname}"
+  );
 });
 
 /// `\href{<base><arg>}{<arg>}`, or `\href{<arg>}{<arg>}` when the argument is already a full URL (it contains `full`:

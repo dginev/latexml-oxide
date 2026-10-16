@@ -7,6 +7,7 @@
 //! content as frontmatter notes.
 //!
 //! Witness: 2306.12455 (ws-ijgmmp.cls), 2306.15982 (ws-ijmpd.cls).
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -125,4 +126,34 @@ LoadDefinitions!({
 \def\botrule{\\[-7pt]\Hline}
 \def\crule#1{\\[-7pt]#1\\[-6pt]}"
   );
+  // The table and title-block commands every WS class defines (ws-ijmpe.cls v1.0 as 0711.3504 ships it, ws-procs9x6.cls
+  // v1.2u as 0704.0369 does, ws-procs961x669.cls v1.5r 1605.04791's, ws-rv9x6.cls 0706.1148's), papers ship-
+  // relying on them (run 347: 46 ws-procs9x6 / ws-procs961x669 / ws-ijmpe papers): ws-ijmpe :58-59, :69-71 the fonts
+  // `\titlefont`, `\authorfont`, `\tablefont`, `\tabnotefont` (`\title{\titlefont{…}}`, 1111.6854); :740-751 the
+  // table note `{tabnote}` (`[heading]`, "Note" by default: "Note: …" under the table; 0711.3504, 0704.0369, 1605.04791;
+  // the procs classes :714-719 the same text), :754-763 `{tabfootnote}` with its `\tabmark{a}` marks (0712.0330,
+  // 1404.6651, 1403.1664), the table's box layout their own; :334-340 `{otherinfo}`, a centred line under the authors
+  // (0811.0496's "Published in: …"); :951 (ws-procs9x6 :389) `\citelow`, `\cite` set on the line instead of raised
+  // (1302.0454, hep-ph0301130); :667 (ws-procs9x6 :651) `\figurebox{height}{width}{file}`, the figure's EPS from
+  // `\ArtDir`, or an empty frame for a figure to come (nucl-th0412108, astro-ph0210021). A class of the family that
+  // lacks one leaves it to the document (`DefinitionOrigin::Fallback`).
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(
+      r"\def\titlefont{\fontsize{10}{13}\bfseries\boldmath\selectfont\centering{}}
+\def\authorfont{\footnotesize}
+\def\tablefont{\footnotesize}
+\def\tabnotefont{\footnotesize}
+\def\tabnotehead{Note}
+\def\tabsourcehead{Source}
+\newenvironment{tabnote}{\par\tabnotefont\@ifnextchar[{\@tabnote}{\@tabnote[\tabnotehead]}}{\par}
+\def\@tabnote[#1]{\noindent\def\@Tempa{#1}\ifx\@Tempa\@empty\else{\it#1}:\ \ignorespaces\fi}
+\newenvironment{tabfootnote}{\par\tabnotefont}{\par}
+\def\tabmark#1{\noindent\hbox{\normalsize$\m@th^{#1}$}\ignorespaces}
+\newenvironment{otherinfo}{\authorfont\begin{center}}{\end{center}}
+\def\citelow{\cite}
+\def\ArtDir{\jobname/}
+\def\figurebox#1#2#3{\def\arg{#3}\ifx\arg\empty{\hfill\vbox{\hsize#2\hrule\hbox to #2{\vrule\hfill\vbox to #1{\hsize#2\vfill}\vrule}\hrule}\hfill}\else\hbox to \hsize{\hfill\epsfbox{\ArtDir#3.eps}\hfill}\fi}"
+    );
+  }
 });
