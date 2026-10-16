@@ -26,7 +26,8 @@ LoadDefinitions!({
     let option = Expand!(T_CS!("\\CurrentOption")).to_string();
     let key = option.split('=').next().unwrap_or_default().trim();
     if key != "caption" && key != "config" {
-      Digest!("\\edef\\lx@subfig@option{\\noexpand\\captionsetup[subfloat]{\\CurrentOption}}\\lx@subfig@option")?;
+      // The option's tokens unexpanded (`\sf@split` hands them to `\captionsetup`), as caption_sty.rs passes its own.
+      Digest!(r"\def\lx@subfig@optionsetup#1{\captionsetup[subfloat]{#1}}\expandafter\lx@subfig@optionsetup\expandafter{\CurrentOption}")?;
     }
   });
   ProcessOptions!();

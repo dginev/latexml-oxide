@@ -161,10 +161,12 @@ LoadDefinitions!({
               call.push(T_END!());
               Digest!(Tokens::new(call))?;
             },
-            // caption3.sty:1330-1344: `figurename=`/`tablename=`/`listfigurename=`/`listtablename=` set the names.
+            // caption3.sty:1336-1345: `figurename=`/`tablename=`/`listfigurename=`/`listtablename=` set the names
+            // as newfloat's `\newfloat@setname` does (`\caption@SetName`), so babel's `\captions<language>` at
+            // `\begin{document}` keeps them.
             "figurename" | "tablename" | "listfigurename" | "listtablename" => {
               let name = key.strip_suffix("name").unwrap_or(key);
-              let mut call = vec![T_CS!("\\lx@caption@setname"), T_BEGIN!()];
+              let mut call = vec![T_CS!("\\lx@caption@SetName"), T_BEGIN!()];
               call.extend(ExplodeText!(name));
               call.push(T_END!());
               call.push(T_BEGIN!());
@@ -205,6 +207,13 @@ LoadDefinitions!({
   );
   // caption3.sty:1349-1350 `\caption@setname{type}{name}` = `\@namedef{<type>name}{name}`.
   RawTeX!(r"\def\lx@caption@setname#1#2{\@namedef{#1name}{#2}}");
+  // caption3.sty:1344-1345 `\caption@SetName` is newfloat.sty:179-188 `\newfloat@setname`: the name is set, and added
+  // to the current language's `\captions<language>` (babel, polyglossia), which `\begin{document}` runs and which
+  // would otherwise reset it ("Figure" again under `[english]{babel}`).
+  RawTeX!(r"\def\lx@caption@SetName#1#2{\lx@caption@setname{#1}{#2}\begingroup
+  \ifcsname languagename\endcsname\ifcsname captions\languagename\endcsname
+  \expandafter\g@addto@macro\csname captions\languagename\endcsname{\lx@caption@setname{#1}{#2}}\fi\fi
+  \endgroup}");
   def_macro_noop("\\DeclareCaptionStyle{}[]{}")?;
   // caption3.sty:1753-1756: the public float-type API lazy-loads newfloat and
   // delegates (`\DeclareCaptionType[opts]{type}[singular][listname]`);
@@ -903,18 +912,25 @@ LoadDefinitions!({
   // caption v1 options (:114-147, valid only here): a font shape or series for the label (`bf` is
   // `labelfont+=bf`), a size for the caption (`small`), the rest layout. Ignored before, so
   // `\usepackage[labelsep=period]{caption}` kept "Figure 1:".
+  RawTeX!(r"\def\lx@caption@optionsetup#1{\captionsetup{#1}}");
   DeclareOption!(None, {
-    let option = do_expand(T_CS!("\\CurrentOption"))?.to_string();
+    let option = do_expand_partially(T_CS!("\\CurrentOption"))?.to_string();
     let option = option.trim();
     let setup = match option {
       "up" | "it" | "sl" | "sc" | "md" | "bf" | "rm" | "sf" | "tt" => s!("labelfont+={option}"),
-      "scriptsize" | "footnotesize" | "small" | "normalsize" | "large" | "Large" => s!("font+={option}"),
+      // caption.sty:124-129: a size option is the whole caption font (`\def\captionfont{\small}`), replacing `font=`.
+      "scriptsize" | "footnotesize" | "small" | "normalsize" | "large" | "Large" => s!("font={option}"),
       "normal" | "isu" | "hang" | "center" | "centerlast" | "nooneline" | "ruled" | "flushleft"
       | "flushright" | "oneline" | "ignoreLTcapwidth" => String::new(),
-      _ => String::from("\\CurrentOption"),
+      // The option's own tokens, unexpanded, as `\caption@ProcessOptions*` passes them on (caption.sty:171-172):
+      // `figurename=\textsc{Fig}` is the name, not `\textsc`'s expansion.
+      _ => {
+        Digest!(r"\expandafter\lx@caption@optionsetup\expandafter{\CurrentOption}")?;
+        String::new()
+      },
     };
     if !setup.is_empty() {
-      Digest!(tokenize(TeXString::assembled(s!(r"\edef\lx@caption@option{{\noexpand\captionsetup{{{setup}}}}}\lx@caption@option"))))?;
+      Digest!(tokenize(TeXString::assembled(s!(r"\captionsetup{{{setup}}}"))))?;
     }
   });
   ProcessKeyOptions!();
@@ -1018,23 +1034,74 @@ fn caption_labels_only(text: Tokens) -> Tokens {
   Tokens::new(kept)
 }
 
+/// caption3.sty:1713-1748 `\caption@ifempty`: a caption text is empty when nothing is left once its spaces, a leading
+/// `\ignorespaces` and its `\label{…}`, `\index{…}` and `\glossary{…}` are taken away (`\caption{\label{f3}}`,
+/// pdflatex "Figure 3" with no separator); a group, even an empty one, is text.
+fn caption_text_is_empty(text: &Tokens) -> bool {
+  let tokens = text.unlist_ref();
+  let mut i = 0;
+  let skip_spaces = |i: &mut usize| {
+    while tokens
+      .get(*i)
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      *i += 1;
+    }
+  };
+  loop {
+    skip_spaces(&mut i);
+    let Some(token) = tokens.get(i) else {
+      return true;
+    };
+    i += 1;
+    if *token == T_CS!("\\ignorespaces") {
+      continue;
+    }
+    if *token == T_CS!("\\label") || *token == T_CS!("\\index") || *token == T_CS!("\\glossary") {
+      // `\@gobbletwo`: the command and its argument, a group or one token.
+      skip_spaces(&mut i);
+      if tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      {
+        let mut depth = 0;
+        while let Some(t) = tokens.get(i) {
+          i += 1;
+          match t.get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => {
+              depth -= 1;
+              if depth == 0 {
+                break;
+              }
+            },
+            _ => {},
+          }
+        }
+      } else {
+        i += 1;
+      }
+      continue;
+    }
+    return false;
+  }
+}
+
 /// A float's caption as caption formats it (caption3.sty:1661-1715), from its settings for the type: the type's name
 /// (`name=`), its label format (`labelformat=`, the type's `\fnum@<type>` for `original`/`default`), its label
-/// separator (`labelsep=`, none for an empty caption, :1679-1683), its fonts (`font=` for the whole caption,
+/// separator (`labelsep=`, none for an empty caption, :1680-1683), its fonts (`font=` for the whole caption,
 /// `labelfont=` for the label, `textfont=` for the text) and its text format (`textformat=`). With none set the
 /// caption is the class's (`\lx@format@title@@`). Sub-captions keep their packages' formats (subcaption_sty.rs,
 /// subfig_sty.rs).
 fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   let ty_name = ty.to_string().trim().to_string();
-  let text_empty = text
-    .unlist_ref()
-    .iter()
-    .all(|t| t.get_catcode() == Catcode::SPACE);
+  let text_empty = caption_text_is_empty(&text);
   let get = |key: &str| caption_setting(&ty_name, key);
   let format = get("labelformat").filter(|f| f != "default" && f != "original");
   let separator = get("labelsep").filter(|s| s != "default");
   let (font, label_font, text_font) = (get("font"), get("labelfont"), get("textfont"));
-  let text_format = get("textformat").filter(|f| f != "simple" && f != "default");
+  // caption3.sty:1680-1683: an empty text also takes the `simple` text format (`textformat=period` adds no ".").
+  let text_format = get("textformat").filter(|f| f != "simple" && f != "default" && !text_empty);
   let name = lookup_tokens(&s!("CAPTION_{ty_name}_name@tokens"));
   let mut tokens = Vec::new();
   let mut line_break: Vec<Token> = Vec::new();
@@ -1106,9 +1173,9 @@ fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
         );
       }
     }
-    // caption3.sty:1679-1683: an empty caption text has no separator. A separator that breaks the line
-    // (`\caption@LabelSeparatorWithNewline`, caption3.sty:776-779: `newline`) is the text's first line break, the
-    // tag's `close` being text.
+    // caption3.sty:1680-1683: an empty caption text (`caption_text_is_empty`) has no separator. A separator that
+    // breaks the line (`\caption@LabelSeparatorWithNewline`, caption3.sty:769, :782: `newline`) is the text's first
+    // line break, the tag's `close` being text.
     let separator_cs = if text_empty {
       Some(Vec::new())
     } else if let Some(separator) = separator {

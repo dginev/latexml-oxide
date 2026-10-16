@@ -1,0 +1,15 @@
+% witness: 68h r2: caption's, subcaption's and subfig's package options are `\captionsetup` keys whose values are passed
+%          as written (caption.sty:171-172 `\caption@ProcessOptions*`; latex.ltx:18557 `\protected@edef\@curroptions`);
+%          `\ProcessOptions` fully expanded the option list, so a robust command in a value became its expansion
+% oracle:  pdflatex 0 errors: "Fig 1 Small caps name." (the name in small caps), "a. Sub.", "Fig 2 Parent."
+% engines: rust 68h r1: 2 errors (`\edefn`, `\selectfontFig` undefined), the tag "\edefn sc\selectfontFig 1"; rust
+%          67int9: 0 errors, "Figure 1: Small caps name."; perl: "Figure 1: Small caps name." (KNOWN_PERL_ERRORS #795)
+% expect:  0 errors; the name "Fig" in small caps, the label sans-serif bold, the space separator
+% status:  GREEN (68h r2)
+\documentclass{article}
+\usepackage[font={small,it},labelfont={bf,sf},labelsep=quad,figurename=\textsc{Fig}]{caption}
+\usepackage[labelformat=simple,labelsep=period]{subcaption}
+\begin{document}
+\begin{figure}\caption{Small caps name.}\end{figure}
+\begin{figure}\begin{subfigure}{.4\textwidth}\caption{Sub.}\end{subfigure}\caption{Parent.}\end{figure}
+\end{document}

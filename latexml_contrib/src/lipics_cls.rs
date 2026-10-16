@@ -39,8 +39,8 @@ LoadDefinitions!({
   RequirePackage!("listings");
   RequirePackage!("lineno", options => vec![s!("left"), s!("mathlines")]);
   RequirePackage!("hyperref");
-  // :707-709, the caption setup the class gives its figures (passed for fidelity: the caption binding stores these keys
-  // and reads none of them).
+  // :707-709, the caption setup the class gives its figures: caption's binding formats the captions from them
+  // ("Figure 1" and a space, the label sans-serif bold, the caption small; caption_sty.rs `caption_format_tokens`).
   RequirePackage!("caption", options => vec![
     s!("labelsep=space"),
     s!("singlelinecheck=false"),

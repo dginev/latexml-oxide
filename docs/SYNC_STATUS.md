@@ -2147,8 +2147,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\captionsetup` keys and the package options (caption.sty:171-172, the v1 options `bf`, `small`… :114-147) format
   the float captions as caption3.sty:1661-1715 does, through the kernel's new caption hook `\lx@format@caption@@`
   (sect09.rs, longtable_sty.rs): `labelsep` (:774), `labelformat` (:733), `name` (:1347-1350), `figurename`/`tablename`
-  (:1330-1344), `textformat` (:791), `font`/`labelfont`/`textfont` and their `+` forms (:842-858), an empty text with
-  no separator (:1679-1683); typed `\captionsetup[type]` settings stay the type's (they also set the general keys
+  (:1336-1345), `textformat` (:791), `font`/`labelfont`/`textfont` and their `+` forms (:842-858), an empty text with
+  no separator (:1680-1683); typed `\captionsetup[type]` settings stay the type's (they also set the general keys
   before); `\DeclareCaptionFont` (:830, the predefined fonts :860-950), `\DeclareCaptionTextFormat` (:787) and the
   `endash`/`newline`/`gobble` separators (:776-785) as caption3 defines them; `\DeclareCaptionSubType` (caption3.sty:
   1774-1806; run 336: 39 first errors; 1202.5818, 1604.05412, 2002.03129, 2106.01798, 1706.00437, 2405.16148, 1907.05468,
@@ -2171,13 +2171,33 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   adjustbox_clipping_driver_is_pdftex}; guards `perfect_kernel_batch68h` (8). Faithful error counts that rise:
   `\DeclareCaptionSubType` after subfigure.sty is caption's "counter already defined" error, once per type as in
   pdflatex (1706.00437, 1907.05468: 2 errors, as pdflatex; 1705.07909, 1807.06322). Residuals: sub-captions keep
-  their packages' formats (the general keys do not reach them); `\caption*` takes no text format; a sub-type
+  their packages' formats (the general keys do not reach them); `\caption*` takes no font and no text format; a sub-type
   `\DeclareCaptionSubType` makes after subcaption has no `{sub<type>}` environment (subcaption.sty:109-111
   `\ForEachCaptionSubType`); `\captionof{subfigure}` in a minipage still reads the caption as the sub-figure's width
   (pre-existing, 2002.04564). Not started: amsthm `\QED@stack`/`\math@qedhere` (the binding's proof begin and end,
   amsthm_sty.rs:236, :297, use its native QED stack: the proof-lock area; 1801.02767, 1710.02246, 1809.07440,
   1908.10510, 1908.03268), color/xcolor/graphicx internals (`\color@block`, `\color@box`, `\@testcolor`,
-  `\Grot@box@std`, `\Gread@parse@vp`).
+  `\Grot@box@std`, `\Gread@parse@vp`). Round 2 (review agent_reports/2026-10-16_68h_review.md): the package options of
+  caption, subcaption and subfig reach `\captionsetup` as written, and `\ProcessOptions` reads a package's option list
+  as latex.ltx:18557's `\protected@edef\@curroptions` (content.rs; it fully expanded it, so `[figurename=\textsc{Fig}]
+  {caption}` gave 2 undefined-command errors and a "\edefn sc\selectfontFig 1" label; pdflatex 0, "Fig 1");
+  `figurename=`/`tablename=` are added to babel's `\captions<language>` as newfloat.sty:179-188 `\newfloat@setname`
+  does (under `[english]{babel}` they were reset to "Figure"); the empty-caption test is caption3.sty:1713-1748
+  `\caption@ifempty` (a `\label`, `\index`, `\glossary` or a leading `\ignorespaces` is no text: `\caption{}\label{f}`
+  after the hoist, `\caption{\label{f}}`); caption v1's size options replace `font=` (caption.sty:124-129); mrm's
+  `\orcid` and apa7's `\addORCIDlink` take an orcid.org address's iD (OXIDIZED_DESIGN #616). More residuals:
+  `\captionsetup[longtable]` is not read (longtable's captions take the `table` settings); `\caption{{}}` counts as
+  empty (the kernel's label hoist strips the group; pdflatex "Figure 1:"); subcaption's/subfig's separators
+  (`labelsep=` under `[sub]`) do not reach the sub-captions. Repros captions-floats/{caption_option_values_unexpanded,
+  caption_names_survive_babel, caption_empty_text_ignores_label}, sectioning-frontmatter/orcid_inline_link_takes_the_id;
+  guards `perfect_kernel_batch68h` (+5).
+- **Residual of 68h — trimclip's PGF fall-back under `[dvipdfmx]`/`[dvipdf]`** (open; review
+  agent_reports/2026-10-16_68h_review.md finding 8): adjustbox ships tc-pdftex.def, tc-dvips.def, tc-xetex.def and
+  tc-luatex.def only, so with `\Gin@driver` = dvipdfmx.def/dvipdf.def trimclip.sty:252-258 inputs tc-pgf.def and pgf,
+  and `\clipbox{1pt 2pt 3pt 4pt}{Clipped text}` becomes an `ltx:picture` (an svg:clipPath over the box, the text only
+  in an svg:foreignObject) where pdftex/dvips give an `ltx:text`; pdflatex with `[dvipdfmx]` reads tc-pgf.def too
+  (the content is the clip). Before 68h every driver mode took this path. Probe
+  scratch_356a0c47/rev68h/p3/g_dvipdfmx.tex.
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

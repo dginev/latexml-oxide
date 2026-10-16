@@ -198,9 +198,10 @@ LoadDefinitions!({
   );
   DefMacro!("\\lx@apa@doi@token{}", "\\href{https://doi.org/#1}{#1}");
   // apa7.cls:322-326: the name followed by the ORCID iD logo linking to the record (2609.00670, 02899); the
-  // kernel's ORCID link (`\lx@orcidlink`, as orcidlink.sty's).
+  // kernel's ORCID link (`\lx@orcidlink`, as orcidlink.sty's); an iD given as its orcid.org address is the iD
+  // (`\lx@orcid@id`, OXIDIZED_DESIGN_DIVERGENCES #616).
   DefMacro!(
     "\\addORCIDlink{}{}",
-    "#1\\ \\lx@orcidlink{#2}{\\lx@orcidlogo}"
+    "#1\\ \\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@id{#2}}{\\lx@orcidlogo}"
   );
 });

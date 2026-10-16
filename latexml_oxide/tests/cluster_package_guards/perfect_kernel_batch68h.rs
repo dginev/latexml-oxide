@@ -152,3 +152,100 @@ fn longtable_caption_takes_the_caption_separator() {
     "{xml}"
   );
 }
+
+/// caption.sty:171-172, latex.ltx:18557 `\protected@edef\@curroptions`: an option value is passed as written, so
+/// `figurename=\textsc{Fig}` names the figures "Fig" in small caps (pdflatex "Fig 1 Small caps name."), and
+/// subcaption's options still reach its sub-captions ("a").
+#[test]
+fn caption_option_values_unexpanded() {
+  let xml = clean!("captions-floats/caption_option_values_unexpanded.tex");
+  for caption in [
+    r#"<caption><tag close=" "><text font="sansserif bold smallcaps" fontsize="90%" xml:id="S0.F1.3">Fig<text font="italic" xml:id="S0.F1.3.1"> 1</text></text></tag><text font="italic" fontsize="90%" xml:id="S0.F1.4">Small caps name.</text></caption>"#,
+    r#"<caption><tag close=" "><text font="sansserif bold smallcaps" fontsize="90%" xml:id="S0.F2.3">Fig<text font="italic" xml:id="S0.F2.3.1"> 2</text></text></tag><text font="italic" fontsize="90%" xml:id="S0.F2.4">Parent.</text></caption>"#,
+    r#"<text fontsize="90%" xml:id="S0.F2.sf1.2">a</text>"#,
+  ] {
+    assert!(xml.contains(caption), "{caption}\n{xml}");
+  }
+}
+
+/// caption3.sty:1336-1345, newfloat.sty:179-188: `figurename=`/`tablename=` are added to babel's `\captionsenglish`,
+/// so `\begin{document}` keeps them (pdflatex "Fig. 1: Fig text.", "Tab. 1: Tab text.").
+#[test]
+fn caption_names_survive_babel() {
+  let xml = clean!("captions-floats/caption_names_survive_babel.tex");
+  for caption in [
+    r#"<caption><tag close=": "><text font="bold" xml:id="S0.F1.1">Fig. 1</text></tag>Fig text.</caption>"#,
+    r#"<caption><tag close=": "><text font="bold" xml:id="S0.T1.1">Tab. 1</text></tag>Tab text.</caption>"#,
+  ] {
+    assert!(xml.contains(caption), "{caption}\n{xml}");
+  }
+}
+
+/// caption3.sty:1680-1683, :1713-1748 `\caption@ifempty`: a caption of only a `\label`, an `\index` or spaces has no
+/// separator and no text format (pdflatex "Figure 1" … "Figure 5", "Figure 6: Six."), and its label still names the
+/// figure.
+#[test]
+fn caption_empty_text_ignores_label() {
+  let xml = clean!("captions-floats/caption_empty_text_ignores_label.tex");
+  for caption in [
+    r#"<caption><tag>Figure 1</tag></caption>"#,
+    r#"<caption class="ltx_centering"><tag>Figure 2</tag></caption>"#,
+    r#"<caption><tag>Figure 3</tag></caption>"#,
+    r#"<caption><tag>Figure 4</tag> <indexmark> <indexphrase key="x">x</indexphrase> </indexmark></caption>"#,
+    r#"<caption><tag>Figure 5</tag></caption>"#,
+    r#"<caption><tag close=": ">Figure 6</tag>Six.</caption>"#,
+    r#"<p xml:id="p1.1">See <ref labelref="LABEL:f2"/> and <ref labelref="LABEL:f3"/>.</p>"#,
+  ] {
+    assert!(xml.contains(caption), "{caption}\n{xml}");
+  }
+  assert_eq!(xml.matches(r#"close=": ""#).count(), 1, "{xml}");
+}
+
+/// The inline ORCID links take an orcid.org address's iD as the frontmatter setter does (OXIDIZED_DESIGN_DIVERGENCES
+/// #616): apa7's `\addORCIDlink` (apa7.cls:322-326 builds `https://orcid.org/#2`, doubled in pdflatex as in
+/// orcidlink.sty) and mrm's `\orcid` and three-argument `\author`.
+#[test]
+fn orcid_inline_link_takes_the_id() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/orcid_inline_link_takes_the_id.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  // The one Warning is pgf's svg.path library, which apa7 loads for its own logo (`\pgf@lib@svg@relative`).
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(
+      r#"<personname>Ann One <ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097">"#
+    ),
+    "{xml}"
+  );
+  let xml = clean_doc(
+    "\\documentclass{mrm}\n\\begin{document}\n\\title{T}\n\\author[1]{Ann One}{https://orcid.org/0000-0002-1825-0097}\n\
+     \\maketitle\nText by Bob\\orcid{http://orcid.org/0000-0001-5109-3700}.\n\\end{document}\n",
+  );
+  for link in [
+    r#"<contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097">"#,
+    r#"<p xml:id="p1.1">Text by Bob<ref class="ltx_orcid" href="https://orcid.org/0000-0001-5109-3700" title="ORCID 0000-0001-5109-3700">"#,
+  ] {
+    assert!(xml.contains(link), "{link}\n{xml}");
+  }
+  assert!(!xml.contains("orcid.org/http"), "{xml}");
+}
+
+/// caption.sty:124-129: caption v1's size options are the whole caption font (`\def\captionfont{\small}`), so
+/// `[font=it,small,bf]` sets the caption small and upright with a bold label (pdflatex: CMBX9 label, CMR9 text).
+#[test]
+fn caption_v1_size_option_is_the_caption_font() {
+  let xml = clean_doc(
+    "\\documentclass{article}\n\\usepackage[font=it,small,bf]{caption}\n\\begin{document}\n\
+     \\begin{figure}\\caption{Text}\\end{figure}\n\\end{document}\n",
+  );
+  assert!(
+    xml.contains(
+      r#"<caption><tag close=": "><text font="bold" fontsize="90%" xml:id="S0.F1.1">Figure 1</text></tag><text fontsize="90%" xml:id="S0.F1.2">Text</text></caption>"#
+    ),
+    "{xml}"
+  );
+}

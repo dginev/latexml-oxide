@@ -48,7 +48,8 @@ LoadDefinitions!({
   // subcaption.sty:214-222: the package options are `\captionsetup[sub]` settings, over subcaption's
   // own defaults for sub-captions (`labelformat=parens`, …).
   DeclareOption!(None, {
-    Digest!("\\edef\\lx@subcaption@option{\\noexpand\\captionsetup[sub]{\\CurrentOption}}\\lx@subcaption@option")?;
+    // The option's tokens unexpanded (`\caption@ProcessOptions`), as caption_sty.rs passes its own.
+    Digest!(r"\def\lx@subcaption@optionsetup#1{\captionsetup[sub]{#1}}\expandafter\lx@subcaption@optionsetup\expandafter{\CurrentOption}")?;
   });
   // subcaption.sty:223 reads its options with `\caption@ProcessOptions`: `\@curroptions` stays as it was.
   ProcessKeyOptions!();

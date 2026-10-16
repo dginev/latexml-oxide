@@ -2318,6 +2318,9 @@ fn process_options_by(inorder: bool, keysets: &[&str], sets_curroptions: bool) -
   // truth when it exists (the loader defines it from the same list, so they
   // agree unless a package rewrote it); the list is the fallback. Guard:
   // `perfect_kernel_batch54::processoptions_reads_the_rewritten_opt_macro`.
+  // The read is :18557's `\protected@edef\@curroptions{…}`: a robust or protected command in an option value stands
+  // (`\usepackage[figurename=\textsc{Fig}]{caption}` names the figures "Fig", not `\textsc`'s expansion; a full
+  // expansion gave two undefined-command errors). Guard: `perfect_kernel_batch68h::caption_option_values_unexpanded`.
   let opt_cs = T_CS!(s!("\\{opt_key}"));
   let current_options: VecDeque<Stored> = if lookup_definition(&opt_cs)?.is_some() {
     let mut items: VecDeque<Stored> = VecDeque::new();
@@ -2330,7 +2333,14 @@ fn process_options_by(inorder: bool, keysets: &[&str], sets_curroptions: bool) -
         items.push_back(Stored::String(arena::pin(text)));
       }
     };
-    for t in do_expand(opt_cs)?.unlist() {
+    let protect_regime = T_CS!("\\@unexpandable@protect");
+    let read = || gullet::do_expand_partially(opt_cs);
+    let expanded = if lookup_meaning(&protect_regime).is_some() {
+      with_let(&T_CS!("\\protect"), &protect_regime, read)?
+    } else {
+      read()?
+    };
+    for t in expanded.unlist() {
       match t.get_catcode() {
         Catcode::BEGIN => depth += 1,
         Catcode::END => depth -= 1,

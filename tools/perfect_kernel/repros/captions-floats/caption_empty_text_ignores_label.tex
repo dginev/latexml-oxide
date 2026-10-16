@@ -1,0 +1,22 @@
+% witness: 68h r2: caption's empty-text test (caption3.sty:1713-1748 `\caption@ifempty`, used at :1680-1683) skips
+%          spaces, a leading `\ignorespaces` and `\label{…}`/`\index{…}`/`\glossary{…}`: such a caption has no separator
+%          and the `simple` text format
+%          (a group, even an empty one, is text for caption: `\caption{{}}` is "Figure 5:" in pdflatex; here the
+%          kernel's label hoist, sect09.rs `\@hack@caption@`'s delimited read, strips the group first — not in this repro)
+% oracle:  pdflatex 0 errors: "Figure 1" / "Figure 2" / "Figure 3" / "Figure 4" / "Figure 5" (no separator, no
+%          period) / "Figure 6: Six."; "See 2 and 3."
+% engines: rust 68h r1: "Figure 2: ", "Figure 3: ", "Figure 4: " (the label, the index entry counted as text); rust
+%          67int9 and perl: ": " on every figure
+% expect:  0 errors; no separator on figures 1-5; "Six." on figure 6; the references 2 and 3
+% status:  GREEN (68h r2)
+\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\begin{figure}\caption{}\end{figure}
+\begin{figure}\centering X\caption{}\label{f2}\end{figure}
+\begin{figure}\caption{\label{f3}}\end{figure}
+\begin{figure}\caption{ \ignorespaces\index{x}}\end{figure}
+\begin{figure}\captionsetup{textformat=period}\caption{\label{f5}}\end{figure}
+\begin{figure}\captionsetup{textformat=period}\caption{Six}\end{figure}
+See \ref{f2} and \ref{f3}.
+\end{document}

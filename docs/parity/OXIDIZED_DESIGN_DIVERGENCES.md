@@ -17850,10 +17850,15 @@ The kernel's `\lx@add@orcid` (base_utilities.rs) makes the iD a link, `https://o
 An author who writes the address instead of the iD (`\orcidauthor{https://orcid.org/0000-0001-6534-6641}{…}`,
 2104.12510; `http://`, `www.`, a bare `orcid.org/…`, a trailing `/`) got `https://orcid.org/https://orcid.org/…`. The
 address's iD is taken (`\lx@orcid@id`, `orcid_id`), for every class whose `\orcid`-like setter routes there (acmart,
-svmult, ceurart, cas, revtex, egpubl, pasj00, mrm); an argument holding a macro, or text that is no orcid.org address
-(2106.08963's swapped `{Andrew S. Nencka}`), is kept as written. Perl's `\lx@add@orcid` (Base_Utility.pool.ltxml:
-659-660) puts the text in the contact with no link, so it has no doubled address to fix. Repro
-sectioning-frontmatter/orcid_given_as_url_is_the_id; guard `perfect_kernel_batch68h::orcid_given_as_url_is_the_id`.
+svmult, ceurart, cas, revtex, egpubl, pasj00, mrm's three-argument `\author`), and for the two inline links that build
+the address themselves: mrm's `\orcid` (mrm_cls.rs) and apa7's `\addORCIDlink` (apa7_cls.rs; apa7.cls:322-326 builds
+`https://orcid.org/#2`, so pdflatex shows and links the doubled address). An argument holding a macro, or text that
+is no orcid.org address (2106.08963's swapped `{Andrew S. Nencka}`), is kept as written. orcidlink.sty's
+`\orcidlink{https://…}` stays doubled, as orcidlink.sty builds `https://orcid.org/#1` (the kernel `\lx@orcidlink` is
+its link, without the normaliser). Perl's `\lx@add@orcid` (Base_Utility.pool.ltxml:659-660) puts the text in the
+contact with no link, so it has no doubled address to fix. Repros sectioning-frontmatter/{orcid_given_as_url_is_the_id,
+orcid_inline_link_takes_the_id}; guards `perfect_kernel_batch68h::{orcid_given_as_url_is_the_id,
+orcid_inline_link_takes_the_id}`.
 
 ### 617. caption formats the kernel's float captions through `\lx@format@caption@@`; a line-breaking separator is the text's first break
 
@@ -17864,17 +17869,29 @@ format through `\lx@format@caption@@{type}{text}`, which is `\lx@format@title@@`
 (`caption_format_tokens`): with no caption setting for the type and a non-empty text, the class's title format is
 used unchanged (`\format@title@<type>`); otherwise, in a group, `name=` defines `\<type>name`, `labelformat=` the
 type's `\fnum@<type>` (`original`/`default` keep the class's), `labelsep=` the title format's separator (an empty
-text has none, caption3.sty:1679-1683), `font=`/`labelfont=`/`textfont=` add `\caption@font@<name>` to
-`\fnum@font@<type>` and `\format@title@font@<type>`, `textformat=` wraps the text (`empty` keeps its `\label`s). The
-separator is the `ltx:tag`'s `close` attribute, text only: a separator caption declares as breaking the line
-(`\caption@LabelSeparatorWithNewline`, caption3.sty:776-779, `newline`) is put as the caption text's first `\\`
-(`<ltx:break/>`) and the tag gets none. Not carried: sub-captions keep their packages' formats (subcaption_sty.rs,
-subfig_sty.rs; the general keys do not reach them), `\caption*` takes no text format, the relative sizes
-`smaller`/`larger`, the spacing fonts and `hypersetup` are no fonts here, and the layout keys (`format`,
-`justification`, margins, `singlelinecheck`) stay stored and unread. Perl's binding reads none of the keys
+text has none, caption3.sty:1680-1683, empty as `\caption@ifempty` tests it, :1713-1748: nothing left once spaces, a
+leading `\ignorespaces` and `\label{…}`/`\index{…}`/`\glossary{…}` are taken away), `font=`/`labelfont=`/`textfont=`
+add `\caption@font@<name>` to `\fnum@font@<type>` and `\format@title@font@<type>` (caption v1's size options replace
+`font=`, caption.sty:124-129), `textformat=` wraps the text (`empty` keeps its `\label`s). `figurename=`/`tablename=`
+are also added to the current language's `\captions<language>`, as newfloat's `\newfloat@setname` does
+(caption3.sty:1344-1345, newfloat.sty:179-188), so babel keeps them. The package options are passed to
+`\captionsetup` as written (caption.sty:171-172; `\ProcessOptions` reads the option list as latex.ltx:18557's
+`\protected@edef`, content.rs), so a robust command in a value (`figurename=\textsc{Fig}`) stands; subcaption's and
+subfig's the same. The separator is the `ltx:tag`'s `close` attribute, text only: a separator caption declares as
+breaking the line (`\caption@LabelSeparatorWithNewline`, caption3.sty:769, :782, `newline`) is put as the caption
+text's first `\\` (`<ltx:break/>`) and the tag gets none. Not carried: sub-captions keep their packages' formats
+(subcaption_sty.rs, subfig_sty.rs; the general keys do not reach them, nor the `[sub]`/`[subfloat]` separator);
+`\captionsetup[longtable]{…}` (caption's `longtable` type, caption.sty:1167) is not read for longtable's captions,
+which take the `table` settings ("Table 1." where pdflatex prints "Table 1 LT one." for `labelsep=space`);
+`\caption*` takes no font and no text format (`font=`, `textfont=`, `textformat=`); `\caption{{}}` counts as empty
+(the kernel's label hoist, sect09.rs `\@hack@caption@`'s delimited read, strips the group; pdflatex "Figure 1:");
+the relative sizes `smaller`/`larger`, the spacing fonts and `hypersetup` are no fonts here, and the layout keys
+(`format`, `justification`, margins, `singlelinecheck`) stay stored and unread. Perl's binding reads none of the keys
 (KNOWN_PERL_ERRORS #795). Witnesses 1306.0788 (`labelsep=space`), 2002.05188 (`labelsep=period`), 1810.00606
-(`labelformat=empty`), math0609211 (caption v1's `it`). Repro captions-floats/caption_keys_set_the_label_and_separator;
-guard `perfect_kernel_batch68h::caption_keys_set_the_label_and_separator`.
+(`labelformat=empty`), math0609211 (caption v1's `it`). Repros captions-floats/{caption_keys_set_the_label_and_separator,
+caption_option_values_unexpanded, caption_names_survive_babel, caption_empty_text_ignores_label}; guards
+`perfect_kernel_batch68h::{caption_keys_set_the_label_and_separator, caption_option_values_unexpanded,
+caption_names_survive_babel, caption_empty_text_ignores_label, caption_v1_size_option_is_the_caption_font}`.
 
 ### 619. rotating's `\rotdriver{<driver>}` loads no driver file
 
