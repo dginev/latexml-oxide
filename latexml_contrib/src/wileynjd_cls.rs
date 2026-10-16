@@ -8,7 +8,8 @@
 use latexml_package::prelude::*;
 
 use crate::shipped_class::{
-  class_code_contains, class_text_loads, require_shipped_algorithm_packages, shipped_class_text,
+  class_code, class_code_contains, class_option_given, class_text_loads,
+  require_shipped_algorithm_packages, shipped_class_text,
 };
 
 LoadDefinitions!({
@@ -53,24 +54,22 @@ pub(crate) fn wiley_njd_family(class: &str) -> Result<()> {
   RequirePackage!("tabularx");
   RequirePackage!("varwidth");
   RequirePackage!("dcolumn");
-  // WileyNJD-v2.cls:3331 and WileyNJDv5.cls:6820 `\usepackage{algorithm, algorithmicx, algpseudocode}`, a copy
-  // `algorithm2e` (2002.02812:3338): `{algorithm}` and `\State` were undefined in papers that rely on the class for them
-  // (1810.03033, 1810.12033, 2106.06046, 2106.14215, 2210.02694, 2402.11361, 2402.13183, 2506.07013). The paper's copy
-  // decides; without one, none (Perl's OmniBus has no copy to scan either).
+  // WileyNJD-v2.cls:3331, WileyNJDv5.cls:6820 and WileyASNA-v1.cls:2555 `\usepackage{algorithm, algorithmicx,
+  // algpseudocode}`, a copy `algorithm2e` (2002.02812:3338): `{algorithm}` and `\State` were undefined in papers that
+  // rely on the class for them (1810.03033, 1810.12033, 2106.06046, 2106.14215, 2210.02694, 2402.11361, 2402.13183,
+  // 2506.07013). The paper's copy decides; without one, none (Perl's OmniBus has no copy to scan either).
   require_shipped_algorithm_packages("cls")?;
   // WileyNJD-v2.cls:63 `\DeclareOption{APA}{\global\@APArefstyletrue}` and :2722-2723 `\if@APArefstyle
   // \usepackage[natbibapa]{NJDapacite}`: the APA reference style's bibliography is apacite's (`\APACrefYearMonthDay`,
   // `{APACrefauthors}`, `\BBOQ`; 22 papers of run 353 with them undefined: 1811.00964, 1902.09230, 1904.10792).
   // NJDapacite.sty, shipped with the class, is apacite.sty of 2013 under another name (its :46 `\ProvidesPackage
   // {apacite}`), so the apacite binding stands for it, as for sn-jnl's `sn-apa` (sn_jnl_cls.rs). The class's
-  // re-styling of the reference parts (:2725-2760, fonts and punctuation) is not followed.
+  // re-styling of the reference parts (:2725-2760, fonts and punctuation) is not followed. The load follows the
+  // version (`wiley_njd_class_body`).
   DeclareOption!("APA", {
     AssignValue!("wileynjd@APA" => true);
   });
   ProcessOptions!();
-  if lookup_bool("wileynjd@APA") {
-    RequirePackage!("apacite", options => vec![s!("natbibapa")]);
-  }
 
   // WileyNJD-v2.cls:1217-1221 (WileyNJDv5.cls:3636-3640, WileyASNA-v1 through WileyNJD-v1): the address parts of an
   // affiliation, each printing its argument; OmniBus has the others, but leaves `\state` out (omnibus_cls.rs: a
@@ -166,13 +165,11 @@ pub(crate) fn wiley_njd_family(class: &str) -> Result<()> {
     "\\startpage{}",
     "\\@add@frontmatter{ltx:note}[role=startpage]{#1}"
   );
-  // 'corres' (without trailing 's' from real wileynjd) — alternative
-  // \corres macro signature in v5 templates.
   wiley_njd_class_body(class)
 }
 
 /// The version-sensitive definitions are chosen by the copy the paper ships, else by the class name.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum WileyVersion {
   /// WileyNJD-v1.cls (2015-2017): its 20 theorems, `{boxtext}` an mdframed box.
   V1,
@@ -204,13 +201,27 @@ fn wiley_version(class: &str) -> Result<(WileyVersion, Option<String>)> {
     class
   };
   let text = shipped_class_text(binding)?;
-  let version = match text.as_deref() {
-    Some(text) if class_code_contains(text, "\\newenvironment{boxtext}[1]") => WileyVersion::V5,
-    Some(text) if class_code_contains(text, "\\newtheorem{eexample}") => WileyVersion::V2,
-    Some(text) if class_code_contains(text, "\\newtheorem{example}{Example}") => WileyVersion::V1,
-    _ => by_name,
-  };
+  let version = text
+    .as_deref()
+    .and_then(version_from_text)
+    .unwrap_or(by_name);
   Ok((version, text))
+}
+
+/// The version a copy of the class is, by the definitions where the versions differ: WileyNJDv5.cls:592 `{boxtext}[1]`
+/// (2302.02310), the v2 theorem set's `{eexample}` (WileyNJD-v2.cls:3012, 1712.08341; WileyASNA-v1.cls and the
+/// WileyNJD-v1.cls of 2020, 2010.09463, have it too), the v1 set's `{example}` (WileyNJD-v1.cls:4564, 1511.08547).
+/// `None` for a copy with none of them.
+fn version_from_text(text: &str) -> Option<WileyVersion> {
+  if class_code_contains(text, "\\newenvironment{boxtext}[1]") {
+    Some(WileyVersion::V5)
+  } else if class_code_contains(text, "\\newtheorem{eexample}") {
+    Some(WileyVersion::V2)
+  } else if class_code_contains(text, "\\newtheorem{example}{Example}") {
+    Some(WileyVersion::V1)
+  } else {
+    None
+  }
 }
 
 /// The commands, environments and theorems the Wiley NJD classes define that papers use and OmniBus does not have
@@ -235,7 +246,10 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
   // 2608.01016). The running head's DOI text (WileyNJD-v2.cls:1820, WileyNJDv5.cls:5107, WileyASNA-v1.cls:1234), a
   // paper's DOI where it is given (`\doiheadtext{DOI: 10.1002/fld.4504}`, 1803.06134; 2306.05470, 2505.23984,
   // 2512.05601), is a DOI note, as `\DOI`.
-  // `\uns` (WileyNJD-v2.cls:1180) is a thin space in or out of math (2208.08472, 2211.16474); `\subtitlefont`
+  // `\uns` (WileyNJD-v2.cls:1180 `\def\uns{\ifmmode\,\else$\,$\fi}`) is a thin space in or out of math (2208.08472,
+  // 2211.16474), here `\thinspace` out of math, the same 1/6 em: the class's formula holding only `\,` ends the
+  // paragraph's `--` ligatures in the kernel (RED fonts-nfss/ligature_after_space_only_formula; 2208.08472's
+  // "1989--2008"), the en dashes pdflatex prints would be lost. `\subtitlefont`
   // (WileyNJD-v2.cls:1436, 1506, WileyNJDv5.cls:3990, the size options' title fonts) the font of a subtitle in
   // `\title{…\\\subtitlefont …}` (1902.01961, 2108.10040), its margins left out.
   RawTeX!(
@@ -244,7 +258,7 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
 \def\fundinginfohead#1{\gdef\@fundinginfo@head{#1}}%
 \def\fundinginfoheadtext#1{\gdef\@fundinginfo@head@text{#1}}%
 \def\artid#1{\gdef\@artid{#1}}%
-\def\uns{\ifmmode\,\else$\,$\fi}%"
+\def\uns{\ifmmode\,\else\thinspace\fi}%"
   );
   DefMacro!(
     "\\doiheadtext{}",
@@ -252,16 +266,31 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
   );
   // WileyNJD-v1.cls's reference styles (1511.08547's copy: APA :1104-1106, AMS :1850-1851, AMA :2498-2499, Vancouver
   // :3080-3081, Chemistry :3684-3685) each load amsrefs, whose `{bibdiv}`, `{biblist}`, `\bib` and `\ndash` the papers'
-  // reference lists use (1511.08547, 1707.00398, 1709.02675, 1709.08526, 1806.01802: 9 papers of run 353); the copies
-  // of 2020 on load none (2010.09463, 2208.12482). Their title-page stores (2010.09463's copy :1825-1842): the journal's
-  // name, logo and URL in the running head; `\openaccess` (:1871) sets its licence text as an unmarked footnote of the
-  // title page, a licence pubnote here (as dmtcs_episciences_cls.rs, acmart_cls.rs).
-  if version == WileyVersion::V1
-    && class_text
+  // reference lists use (1511.08547, 1707.00398, 1709.02675, 1709.08526, 1806.01802: 9 papers of run 353), each load
+  // inside its `\if@…refstyle`, which only the option sets (:33-43, no `\ExecuteOptions`): no amsrefs without one of
+  // APA, AMS, ACS, AMA, VANCOUVER. Those copies load no apacite, so their APA style is amsrefs' author-year, not the
+  // later versions' NJDapacite (WileyNJD-v2.cls:2722-2723, WileyNJDv5.cls, WileyASNA-v1.cls and the WileyNJD-v1.cls of
+  // 2020, 2010.09463, 2208.12482, which load no amsrefs and are the v2 version here). The 2020 copies' title-page
+  // stores (2010.09463's copy :1825-1842): the journal's name, logo and URL in the running head; `\openaccess` (:1871)
+  // sets its licence text as an unmarked footnote of the title page, a licence pubnote here (as
+  // dmtcs_episciences_cls.rs, acmart_cls.rs).
+  let copy_loads = |package: &str, without_copy: bool| {
+    class_text
       .as_deref()
-      .is_none_or(|text| class_text_loads(text, "amsrefs"))
-  {
+      .map_or(without_copy, |text| class_text_loads(text, package))
+  };
+  let refstyle = ["APA", "AMS", "ACS", "AMA", "VANCOUVER"]
+    .into_iter()
+    .map(class_option_given)
+    .collect::<Result<Vec<_>>>()?
+    .contains(&true);
+  if refstyle && copy_loads("amsrefs", version == WileyVersion::V1) {
     RequirePackage!("amsrefs");
+  }
+  if lookup_bool("wileynjd@APA")
+    && (copy_loads("NJDapacite", version != WileyVersion::V1) || copy_loads("apacite", false))
+  {
+    RequirePackage!("apacite", options => vec![s!("natbibapa")]);
   }
   // Every version loads listings and alltt (WileyNJD-v2.cls:3346-3347, WileyNJDv5.cls:6822, WileyASNA-v1.cls:2557,
   // WileyNJD-v1.cls:4712; `\lstset` undefined: 1802.08557, 2206.13356). WileyASNA-v1.cls:250 and the older
@@ -312,7 +341,7 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
   // 1808.09739; `\item[$\dagger$] …`, 1808.05540, 1901.00057, 1903.09736), and `\tnote`, which prints its mark as it
   // is (1910.13464, 1911.09684). threeparttable, loaded after the class, replaces both. The class's leading
   // `\item\relax` opens an item only where text precedes the first `\item` (OXIDIZED_DESIGN_DIVERGENCES #601: the
-  // empty first item the class sets before `\item[$\dagger$]` is invisible in the PDF, and would be an empty
+  // empty first item the class sets before `\item[$\dagger$]` is a blank, no glyph, in the PDF, and would be an empty
   // `<ltx:item>` here).
   RawTeX!(
     r"\newenvironment{tablenotes}{\list{}{\setlength{\labelsep}{0pt}%
@@ -363,7 +392,11 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
   // framed.sty's `{framed}`, for each. Witnesses 1811.09505, 2012.13740, 2101.02028, 2107.01251 (`{boxtext}`),
   // 2309.00837, 2405.03603, 2604.17508 (`{boxwithhead}`).
   // A `\section*` opening the box (its title: 1811.09505, 2012.13740) is the box's head, a bold line in the frame,
-  // which a section, ending only at the next one, cannot be (OXIDIZED_DESIGN_DIVERGENCES #601).
+  // which a section, ending only at the next one, cannot be (OXIDIZED_DESIGN_DIVERGENCES #603). Only `\section` is
+  // rebound: the 390 witness papers put no other level in a box.
+  // framed.sty is the implementation vehicle of the frame (its `{framed}` the binding's framed logical block), not a
+  // load of any version: the classes frame with `\BX`/`\fbox`, mdframed (WileyNJD-v1.cls:281, WileyASNA-v1.cls:267)
+  // and boites (WileyNJDv5.cls).
   RequirePackage!("framed");
   RawTeX!(
     r"\def\lx@wiley@boxhead{\@ifstar\lx@wiley@boxhead@\lx@wiley@boxhead@}%
@@ -382,13 +415,19 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
   // its first 20 in other styles): three amsthm styles and 47 theorems, each with its own counter. Undefined before
   // in the papers that use them without declaring them (`{assumption}`, 44 WileyNJD-v2 and 23 WileyNJDv5 papers of
   // run 353: 1803.11411, 1808.10367, 1901.09809; `{eexample}` 1806.09518, `{property}` 1904.09923, `{result}` 2106.06046,
-  // `{LWrule}` 1911.03315). The class's
-  // redefinition of the `plain` style (:2902, a head set off by `\newline`) is left out.
-  RawTeX!(
-    r"\newtheoremstyle{WBstyleone}{6\p@}{6\p@}{\normalfont}{\z@}{\bfseries}{.}{5\p@}{}%
-\newtheoremstyle{WBstyletwo}{6\p@}{6\p@}{\normalfont}{\z@}{\itshape}{.}{5\p@}{\thmname{#1}\thmnumber{ #2}\thmnote{. #3}}%
-\newtheoremstyle{WBstylethree}{6\p@}{6\p@}{\normalfont}{\z@}{\bfseries}{.}{5\p@}{}"
-  );
+  // `{LWrule}` 1911.03315). The class first redefines amsthm's `plain` (WileyNJD-v2.cls:2902-2910, every copy: an
+  // italic head without punctuation, set off by `\newline`), then defines its three styles (:2923-2963), and leaves
+  // the last, WBstylethree, current (v2:3005, WileyNJDv5.cls:6377, WileyASNA-v1.cls:2504, WileyNJD-v1.cls:4567): a
+  // paper's own `\newtheorem{thm}` is in it, as a `\theoremstyle{plain}` one is in the class's `plain`. The versions'
+  // body fonts differ (`theorem_styles`): pdflatex with 1712.08341's WileyNJD-v2.cls sets the paper's theorem, a
+  // `plain` one and `{lemma}` upright (t1-stixgeneral), with 2302.02310's WileyNJDv5.cls the paper's upright, the
+  // `plain` one and `{lemma}` italic (ptmr8t, ptmri8t, ptmri8t).
+  RawTeX!(r"\newif\ifOldenunciation\newif\ifEnunciation");
+  let styles = class_text
+    .as_deref()
+    .and_then(copy_theorem_styles)
+    .unwrap_or_else(|| theorem_styles(version, asna).to_owned());
+  RawTeX!(&styles);
   if version == WileyVersion::V1 {
     RawTeX!(
       r"\theoremstyle{WBstyleone}%
@@ -400,8 +439,7 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
 \theoremstyle{WBstyletwo}%
 \newtheorem{remark}{Remark}\newtheorem{example}{Example}\newtheorem{assumption}{Assumption}%
 \theoremstyle{WBstylethree}%
-\newtheorem{definition}{Definition}%
-\theoremstyle{plain}"
+\newtheorem{definition}{Definition}"
     );
   } else {
     RawTeX!(
@@ -423,9 +461,165 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
 \newtheorem{eexample}{Example}\newtheorem{model}{Model}%
 \newtheorem{affirmation}{Affirmation}\newtheorem{application}{Application}\newtheorem{convention}{Convention}%
 \newtheorem{discussion}{Discussion}\newtheorem{exercise}{Exercise}\newtheorem{question}{Question}%
-\newtheorem{scholium}{Scholium}\newtheorem{terminology}{Terminology}%
-\theoremstyle{plain}"
+\newtheorem{scholium}{Scholium}\newtheorem{terminology}{Terminology}"
     );
   }
   Ok(())
+}
+
+/// The class's four theorem styles.
+const THEOREM_STYLES: [&str; 4] = ["plain", "WBstyleone", "WBstyletwo", "WBstylethree"];
+
+/// The settings of WileyNJD-v1.cls's (2015-2018) theorem bodies that set their math upright (1511.08547's copy
+/// :4505, :4527, :4537 `{\itshape\everymath{\rm}\let\text\mathrm}`), left out: the formulas of a theorem would be
+/// `\rm` formulas, whose letters the math parser reads as one word (`A_{ij}`'s subscript the identifier "ij", 1511.08547)
+/// and whose `tex` starts with `\rm`; the body stays italic.
+const UPRIGHT_MATH: [&str; 2] = ["\\everymath{\\rm}", "\\let\\text\\mathrm"];
+
+/// The theorem styles as the paper's copy of the class defines them: each `\newtheoremstyle{<name>}` of
+/// [`THEOREM_STYLES`] with its eight arguments, the last definition outside a comment; `None` where the copy lacks
+/// one. (The 578 copies of the family's classes shipped by the 817 papers of the 67w inventory define them four ways,
+/// [`theorem_styles`].)
+fn copy_theorem_styles(text: &str) -> Option<String> {
+  let code = class_code(text);
+  let mut styles = String::new();
+  for name in THEOREM_STYLES {
+    let head = format!("\\newtheoremstyle{{{name}}}");
+    let at = code.rfind(&head)?;
+    let mut rest = &code[at + head.len()..];
+    styles.push_str(&head);
+    for _ in 0..8 {
+      rest = rest.trim_start();
+      let group = balanced_group(rest)?;
+      styles.push_str(group);
+      rest = &rest[group.len()..];
+    }
+    styles.push_str("%\n");
+  }
+  Some(
+    UPRIGHT_MATH
+      .iter()
+      .fold(styles, |styles, setting| styles.replace(setting, "")),
+  )
+}
+
+/// The brace group `text` starts with, its braces included.
+fn balanced_group(text: &str) -> Option<&str> {
+  if !text.starts_with('{') {
+    return None;
+  }
+  let mut depth = 0usize;
+  for (at, ch) in text.char_indices() {
+    match ch {
+      '{' => depth += 1,
+      '}' => {
+        depth -= 1;
+        if depth == 0 {
+          return Some(&text[..=at]);
+        }
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
+/// The theorem styles of a version, for a paper that ships no copy of the class: the bodies of WileyNJD-v2.cls:2902-2963
+/// (1712.08341, 294 of the 312 v2 copies; the WileyNJD-v1.cls of 2020, 2010.09463, alike), WileyASNA-v1.cls:2401-2463
+/// (1804.11014, and 18 v2 copies: the bodies indented, WBstyleone's italic), WileyNJDv5.cls:6274-6335 (2302.02310: `plain`
+/// and WBstyleone italic) and WileyNJD-v1.cls:4481-4543 (1511.08547: the class's styles italic, their upright math left
+/// out, [`UPRIGHT_MATH`], every head bold).
+fn theorem_styles(version: WileyVersion, asna: bool) -> &'static str {
+  match version {
+    WileyVersion::V2 if asna => {
+      r"\newtheoremstyle{plain}{8pt}{8pt}{\Enunciationtrue\ifOldenunciation\else\leftskip8pt\rightskip8pt\fi\normalfont}{}{\itshape}{}{\newline}{}%
+\newtheoremstyle{WBstyleone}{6\p@}{6\p@}{\Enunciationtrue\leftskip8pt\rightskip8pt\normalfont\itshape}{\z@}{\bfseries}{.}{5\p@}{}%
+\newtheoremstyle{WBstyletwo}{6\p@}{6\p@}{\Enunciationtrue\leftskip8pt\rightskip8pt\normalfont}{\z@}{\itshape}{.}{5\p@}{\thmname{#1}\thmnumber{ #2}\thmnote{. #3}}%
+\newtheoremstyle{WBstylethree}{6\p@}{6\p@}{\Enunciationtrue\normalfont\leftskip8pt\rightskip8pt}{\z@}{\bfseries}{.}{5\p@}{}"
+    },
+    WileyVersion::V2 => {
+      r"\newtheoremstyle{plain}{8pt}{8pt}{\normalfont}{}{\itshape}{}{\newline}{}%
+\newtheoremstyle{WBstyleone}{6\p@}{6\p@}{\normalfont}{\z@}{\bfseries}{.}{5\p@}{}%
+\newtheoremstyle{WBstyletwo}{6\p@}{6\p@}{\normalfont}{\z@}{\itshape}{.}{5\p@}{\thmname{#1}\thmnumber{ #2}\thmnote{. #3}}%
+\newtheoremstyle{WBstylethree}{6\p@}{6\p@}{\normalfont}{\z@}{\bfseries}{.}{5\p@}{}"
+    },
+    WileyVersion::V5 => {
+      r"\newtheoremstyle{plain}{8pt}{8pt}{\normalsize\it}{}{\itshape}{}{\newline}{}%
+\newtheoremstyle{WBstyleone}{6\p@}{6\p@}{\normalfont\it}{\z@}{\bfseries}{.}{5\p@}{}%
+\newtheoremstyle{WBstyletwo}{6\p@}{6\p@}{\normalfont}{\z@}{\itshape}{.}{5\p@}{\thmname{#1}\thmnumber{ #2}\thmnote{. #3}}%
+\newtheoremstyle{WBstylethree}{6\p@}{6\p@}{\normalfont}{\z@}{\bfseries}{.}{5\p@}{}"
+    },
+    WileyVersion::V1 => {
+      r"\newtheoremstyle{plain}{8pt}{8pt}{\normalfont}{}{\itshape}{}{\newline}{}%
+\newtheoremstyle{WBstyleone}{6\p@}{6\p@}{\itshape}{\z@}{\bfseries}{.}{5\p@}{}%
+\newtheoremstyle{WBstyletwo}{6\p@}{6\p@}{\normalfont\itshape}{\z@}{\bfseries}{.}{5\p@}{\thmname{#1}\thmnumber{ #2}\thmnote{. #3}}%
+\newtheoremstyle{WBstylethree}{6\p@}{6\p@}{\normalfont\itshape}{\z@}{\bfseries}{.}{5\p@}{}"
+    },
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{WileyVersion, copy_theorem_styles, version_from_text};
+
+  /// The definitions `version_from_text` tells the copies apart by, as the copies have them, commented-out
+  /// alternatives included (1511.08547's WileyNJD-v1.cls:4471 `%\newtheorem{eexample}{Example}`, 2302.02310's
+  /// WileyNJDv5.cls:578 `%%\newenvironment{boxtext}{…`).
+  #[test]
+  fn wiley_version_from_text_batch67w() {
+    let v5 = "%%\\newenvironment{boxtext}{\\begingroup\\parskip=0pt\\parindent=0pt%\n\
+              \\newenvironment{boxtext}[1]{%\n\\begin{breakbox}#1\\end{breakbox}}{}\n\
+              %\\newtheorem{eexample}{Example}\n\\theoremstyle{WBstylethree}\n\\newtheorem{eexample}{Example}\n";
+    let v2 = "%\\newenvironment{boxtext}{\\begingroup\\begin{fcolorbox}{black}{white}%\n\
+              \\newenvironment{boxtext}{\\begingroup\\parskip=0pt\\parindent=0pt%\n\
+              %\\newtheorem{eexample}{Example}\n\\newtheorem{definition}{Definition}\n\\newtheorem{eexample}{Example}\n";
+    let v1 = "\\newenvironment{boxtext}{\\begingroup%\n%\\newtheorem{eexample}{Example}\n\
+              \\theoremstyle{WBstyletwo}\n\\newtheorem{remark}{Remark}\n\\newtheorem{example}{Example}\n";
+    assert_eq!(version_from_text(v5), Some(WileyVersion::V5));
+    assert_eq!(version_from_text(v2), Some(WileyVersion::V2));
+    assert_eq!(version_from_text(v1), Some(WileyVersion::V1));
+    assert_eq!(
+      version_from_text("\\ProvidesClass{WileyNJD-v2}\n%\\newtheorem{eexample}{Example}\n"),
+      None
+    );
+  }
+
+  /// The copy's own theorem styles, read as the class text writes them (2302.02310's WileyNJDv5.cls:6274-6335, a
+  /// comment after every argument, an earlier commented-out definition).
+  #[test]
+  fn wiley_copy_theorem_styles_batch67w() {
+    let copy = "%\\newtheoremstyle{plain}{1pt}{1pt}{\\bfseries}{}{}{}{}{}\n\
+                \\newtheoremstyle{plain}% Numbered\n{8pt}% Space above\n{8pt}% Space below\n{\\normalsize\\it}% Body font\n\
+                {}% Indent amount\n{\\itshape}% Theorem head font\n{}% Punctuation\n{\\newline}% Space after\n{}% spec\n\n\
+                \\newtheoremstyle{WBstyleone}\n  {6\\p@} % Space above\n  {6\\p@}\n  {\\normalfont\\it} % Body font\n  {\\z@}\n\
+                  {\\bfseries}\n  {.}\n  {5\\p@}\n  {}\n\
+                \\newtheoremstyle{WBstyletwo}{6\\p@}{6\\p@}{\\normalfont}{\\z@}{\\itshape}{.}{5\\p@}\n\
+                  {\\thmname{#1}\\thmnumber{ #2}\\thmnote{. #3}} % Theorem head spec\n\
+                \\newtheoremstyle{WBstylethree}{6\\p@}{6\\p@}{\\normalfont}{\\z@}{\\bfseries}{.}{5\\p@}{}\n";
+    assert_eq!(
+      copy_theorem_styles(copy).as_deref(),
+      Some(
+        "\\newtheoremstyle{plain}{8pt}{8pt}{\\normalsize\\it}{}{\\itshape}{}{\\newline}{}%\n\
+         \\newtheoremstyle{WBstyleone}{6\\p@}{6\\p@}{\\normalfont\\it}{\\z@}{\\bfseries}{.}{5\\p@}{}%\n\
+         \\newtheoremstyle{WBstyletwo}{6\\p@}{6\\p@}{\\normalfont}{\\z@}{\\itshape}{.}{5\\p@}{\\thmname{#1}\\thmnumber{ #2}\\thmnote{. #3}}%\n\
+         \\newtheoremstyle{WBstylethree}{6\\p@}{6\\p@}{\\normalfont}{\\z@}{\\bfseries}{.}{5\\p@}{}%\n"
+      )
+    );
+    // WileyNJD-v1.cls's (1511.08547) italic bodies, their upright math left out
+    let v1 = copy.replace(
+      "{\\normalfont\\it}",
+      "{\\itshape\\everymath{\\rm}\\let\\text\\mathrm}",
+    );
+    assert!(
+      copy_theorem_styles(&v1)
+        .unwrap()
+        .contains("\\newtheoremstyle{WBstyleone}{6\\p@}{6\\p@}{\\itshape}{\\z@}"),
+      "{v1}"
+    );
+    // a copy without WBstylethree: the version's styles instead
+    assert_eq!(
+      copy_theorem_styles(&copy.replace("WBstylethree", "WBother")),
+      None
+    );
+  }
 }

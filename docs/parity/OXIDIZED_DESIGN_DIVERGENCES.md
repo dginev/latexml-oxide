@@ -17689,22 +17689,17 @@ given to it twice. Its running-page copy (`\copyrightTextRunPag`) stays page fur
 2026-10-15 (round-1 open question). Repro class-bindings/egpubl_class_commands; guard
 `perfect_kernel_batch67y::egpubl_class_commands_are_defined`.
 
-### 601. Wiley NJD's table notes open no empty first item, and a `\section*` opening a `{boxtext}` is the box's head (Perl: no Wiley binding)
+### 601. Wiley NJD's table notes open no empty first item (Perl: no Wiley binding)
 
 WileyNJD-v2.cls:2816-2826 (WileyNJDv5.cls:6188, WileyASNA-v1.cls:2315, WileyNJD-v1.cls:4321, every copy) defines
 `{tablenotes}` as a `\list` that starts with `\item\relax`, so the text before the first `\item` is an item
 (`\begin{tablenotes} a) Eq. 1, b) …`, 1808.09739); where the notes start with `\item[$\dagger$]` (1808.05540,
-1901.00057, 1903.09736) that first item is empty and invisible in the PDF. wileynjd_cls.rs opens it only where text
-precedes the first `\item` (`\@ifnextchar\item{}{\item\relax}`): the faithful port gave an empty `<ltx:item>` before
-every such list. WileyNJD-v2.cls:466-475 (`\BX`, an `\fbox` round a `\vbox`), WileyASNA-v1.cls:267-271 and
-WileyNJD-v1.cls:281-285 (an `{mdframed}`) frame the body of `{boxtext}`; the binding frames it as framed.sty's
-`{framed}` (a `<ltx:logical-block framed="rectangle">`), and a `\section` or `\section*` in it is the box's head, a bold
-line inside the frame (`\lx@wiley@boxhead`), as the PDF shows it ("BOX TITLE" in the box; 1811.09505, 2012.13740). A
-section in the frame cannot end at the box's end: it took the framing attributes and every later paragraph,
-acknowledgement and biography of the document. The class itself has `\let\section=\boxhead` commented out at :467.
-WileyNJDv5.cls:592-608 frames the arguments of `{boxtext}[1]` and `{boxwithhead}[2]` (boites' `{breakbox}`, :6244), the
-body following the box; the binding frames them the same way. Repros class-bindings/wileynjd_v2_class_commands,
-wileynjdv5_box_environments, wileyasna_funding_in_text; guards `perfect_kernel_batch67w::*`.
+1901.00057, 1903.09736) that first item is empty: a blank, no glyph, in the PDF (pdflatex: 17.94pt above the notes
+with it, 12.89pt without). wileynjd_cls.rs opens it only where text precedes the first `\item`
+(`\@ifnextchar\item{}{\item\relax}`): the faithful port gave an empty `<ltx:item>` before every such list. Repros
+class-bindings/wileynjd_v2_class_commands, wileynjdv5_box_environments; guards
+`perfect_kernel_batch67w::wileynjd_v2_class_commands`, `::wileynjdv5_box_environments`. Approved by the main session
+2026-10-15 (round-1 open question).
 
 ### 602. Wiley NJD's `\doiheadtext` is a DOI note (Perl: no Wiley binding)
 
@@ -17714,7 +17709,23 @@ running head's DOI line (the class's own default "DOI: xxx/xxxx"); papers set it
 the frontmatter as a `<ltx:note role="doi">`, as the binding's `\DOI` and `\doiline` (the class's other DOI setters),
 rather than storing it as page furniture: a DOI is the article's identifier, and the faithful store dropped it from
 the document. Repro class-bindings/wileynjd_v2_class_commands; guard
-`perfect_kernel_batch67w::wileynjd_v2_class_commands`.
+`perfect_kernel_batch67w::wileynjd_v2_class_commands`. Approved by the main session 2026-10-15 (round-1 open question).
+
+### 603. A `\section` opening Wiley NJD's `{boxtext}` is the box's head (Perl: no Wiley binding)
+
+WileyNJD-v2.cls:466-475 (`\BX`, an `\fbox` round a `\vbox`), WileyASNA-v1.cls:267-271 and WileyNJD-v1.cls:281-285 (an
+`{mdframed}`) frame the body of `{boxtext}`; wileynjd_cls.rs frames it as framed.sty's `{framed}` (a
+`<ltx:logical-block framed="rectangle">`; framed.sty is the binding's vehicle for the frame, no version loads it), and
+rebinds `\section` inside it: a `\section` or `\section*` in the box is the box's head, a bold line inside the frame
+(`\lx@wiley@boxhead`), as the PDF shows it ("BOX TITLE" in the box; 1811.09505, 2012.13740). A section in the frame
+cannot end at the box's end: it took the framing attributes and every later paragraph, acknowledgement and biography
+of the document. The class itself has `\let\section=\boxhead` commented out at :467. Only `\section` is rebound: the
+390 witness papers put 10 `\section`s in a `{boxtext}` and no other level (a `\subsection` there is still a framed
+subsection that runs past the box). WileyNJDv5.cls:592-608 frames the arguments of `{boxtext}[1]` and
+`{boxwithhead}[2]` (boites' `{breakbox}`, :6244), the body following the box; the binding frames them the same way.
+Repros class-bindings/wileynjd_v2_class_commands, wileynjdv5_box_environments, wileyasna_funding_in_text; guards
+`perfect_kernel_batch67w::wileynjd_v2_class_commands`, `::wileynjdv5_box_environments`, `::wileyasna_funding_in_text`.
+Approved by the main session 2026-10-15 (round-1 open question).
 
 ### 604. oup-authoring-template's `\figalttext` alt text is kept as the image's description (the class drops it)
 

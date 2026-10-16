@@ -191,7 +191,7 @@ pub fn class_code_argument(text: &str, call: &str) -> Option<String> {
 }
 
 /// `text` without its comments (`%` to the end of the line).
-fn class_code(text: &str) -> String {
+pub fn class_code(text: &str) -> String {
   text
     .lines()
     .map(|line| line.split('%').next().unwrap_or_default())

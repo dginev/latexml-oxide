@@ -1,0 +1,17 @@
+% witness: 2208.08472 (WileyNJD-v2.cls:1180 `\def\uns{\ifmmode\,\else$\,$\fi}`: "500{\uns}hPa … 1989--2008"),
+%          2211.16474
+% oracle:  pdflatex with 1712.08341's WileyNJD-v2.cls: 5 errors before and in \maketitle (etex's \reserveinserts,
+%          the class's \zz option parser: TL 2025 harness limits); "The 500 hPa level over 1989–2008, and 𝑥 𝑦 in math."
+% engines: rust 67w = "1989--2008" (the class's `$\,$`, a formula holding only a space, ends the paragraph's
+%          ligatures: RED fonts-nfss/ligature_after_space_only_formula)
+% expect:  0 errors, 0 warnings; a thin space before "hPa", the en dash, a thin space in the formula
+% status:  RED (67w) -> GREEN (67w r2)
+% preload: ar5iv.sty
+\documentclass[AMA,STIX1COL]{WileyNJD-v2}
+\begin{document}
+\title{Units}
+\author{Ann Author}
+\maketitle
+\section{Intro}
+The {500{\uns}hPa} level over 1989--2008, and $x{\uns}y$ in math.
+\end{document}

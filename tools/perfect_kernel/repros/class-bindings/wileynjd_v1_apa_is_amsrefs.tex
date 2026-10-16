@@ -1,0 +1,18 @@
+% witness: 1511.08547 (its WileyNJD-v1.cls:39 `\DeclareOption{APA}{\global\@APArefstyletrue}`, :1104-1106
+%          `\if@APArefstyle … \RequirePackage[nobysame,author-year]{amsrefs}`; no apacite in the 10 v1 copies of
+%          2015-2018, NJDapacite only from WileyNJD-v2.cls:2722-2723 and the WileyNJD-v1.cls of 2020, 2010.09463)
+% oracle:  pdflatex with 1511.08547's WileyNJD-v1.cls: 3 errors (its \zz option parser, a TL 2025 harness limit);
+%          "amsrefs loaded; apacite not loaded."
+% engines: rust 67w = "amsrefs loaded; apacite loaded" (the binding's APA option loaded apacite for every version)
+% expect:  0 errors, 0 warnings; amsrefs alone
+% status:  RED (67w) -> GREEN (67w r2)
+% preload: ar5iv.sty
+\documentclass[APA]{WileyNJD-v1}
+\makeatletter
+\begin{document}
+\title{The APA reference style}
+\author{Ann Author}
+\maketitle
+\section{Intro}
+amsrefs \@ifpackageloaded{amsrefs}{loaded}{not loaded}; apacite \@ifpackageloaded{apacite}{loaded}{not loaded}.
+\end{document}
