@@ -93,15 +93,54 @@ LoadDefinitions!({
   // OmniBus's dependency scan of the shipped class) gets cleveref. Must load AFTER hyperref. Witness 2606.01187.
   RequirePackage!("cleveref", options => vec!["capitalise".to_string(), "noabbrev".to_string()]);
 
+  // lipics-v2019.cls:660, lipics-v2021.cls:766-800 (and the 2018 copy, 1905.06668's: :636), the five-part author:
+  // `\author{name}{affiliations}{email}{orcid}{funding}`. Its affiliations are separated by `\and` (`\def\and{\newline}`,
+  // :758), the last one may be `\and \url{homepage}` (`\StrBehind{#2}{\and \url}`); the email the class links
+  // (`\href{mailto:#3}`) and the ORCID (`\href{#4}{\orcidsymbol}`), both read as written (Semiverbatim: an `_` in them was
+  // a math error); the funding goes to the class's Funding paragraph as "name: funding" (:798-803). Under the
+  // `anonymous` option (:192) the class prints "Anonymous author" and "Anonymous affiliation" and nothing else of it.
+  // The 2016 `lipics.cls` keeps LaTeX's `\author` (17 of the 92 shipped copies). Before, the name alone was the author
+  // and the other four arguments were typeset in the body (2607.26691, 2603.11908, 2307.12098, 2608.03845).
+  let five_part_author = [
+    "\\opt@lipics-v2019.cls",
+    "\\opt@lipics-v2021.cls",
+    "\\opt@lipics-v2024.cls",
+  ]
+  .iter()
+  .any(|list| has_meaning(&T_CS!(list)));
+  if five_part_author {
+    AssignValue!("lx_lipics_anonymous" => class_option("anonymous"), Some(Scope::Global));
+    DefMacro!(
+      "\\author{}{} Semiverbatim Semiverbatim {}",
+      sub[(name, affiliations, email, orcid, funding)] {
+        lipics_author(name, affiliations, email, orcid, funding)
+      }
+    );
+  }
+
   // LIPIcs frontmatter — preserve author content as ltx:note
   // frontmatter entries with role markers.
   // lipics-v2021.cls L919: \newcommand{\relatedversiondetails}[3][]{...\textit{#2}:
   // \href{#3}{...}...} — a "Related Version" line (type + URL, with optional
   // linktext=/cite= keyval). Was undefined (Perl defines it). Preserve the core
   // (type + linked URL); the optional keyval is dropped. Witness 2311.17226.
+  // …with its keys (`linktext=`, `cite=`, :910-911, :919-935) and its URL read as one (Semiverbatim): an `_` in it was a
+  // math error (2603.11908).
+  RawTeX!(
+    r"\define@key{relatedversiondetails}{linktext}{\def\relatedversiondetails@linktext{#1}}
+\define@key{relatedversiondetails}{cite}{\def\relatedversiondetails@cite{#1}}
+\def\lx@lipics@relatedversiondetails#1#2#3{\begingroup\let\relatedversiondetails@linktext\@empty
+\let\relatedversiondetails@cite\@empty\setkeys{relatedversiondetails}{#1}%
+\ifx\relatedversiondetails@linktext\@empty\protected@edef\tmp{\noexpand\textit{#2}:\space{\noexpand\url{#3}}}\else
+\protected@edef\tmp{\noexpand\textit{#2}:\space{\noexpand\href{#3}{\noexpand\texttt{\relatedversiondetails@linktext}}}}\fi
+\ifx\relatedversiondetails@cite\@empty\else
+\protected@edef\tmp{\tmp\noexpand\nobreakspace\noexpand\cite{\relatedversiondetails@cite}}\fi
+\expandafter\lx@lipics@note\expandafter{\tmp}{related-version}\endgroup}
+\def\lx@lipics@note#1#2{\lx@add@frontmatter{ltx:note}[role=#2]{#1}}"
+  );
   DefMacro!(
-    "\\relatedversiondetails[]{}{}",
-    "\\@add@frontmatter{ltx:note}[role=related-version]{\\textit{#2}: \\href{#3}{#3}}"
+    "\\relatedversiondetails[]{} Semiverbatim",
+    "\\lx@lipics@relatedversiondetails{#1}{#2}{#3}"
   );
   DefMacro!(
     "\\Copyright{}",
@@ -145,9 +184,36 @@ LoadDefinitions!({
     "\\supplement{}",
     "\\@add@frontmatter{ltx:note}[role=supplement]{#1}"
   );
+  // :941-985 `\supplementdetails[keys]{type}{url}`: "type (subcategory): url" (or the `linktext=` linked to it), the
+  // `cite=` citation, the Software Heritage archive link (`swhid=`, `swhlinktext=` defaulting to the id before its `;`),
+  // its URL read as one (Semiverbatim): typeset as text, an `_` in it was a math error (2607.26691, 2307.12098).
+  RawTeX!(
+    r"\define@key{supplementdetails}{linktext}{\def\supplementdetails@linktext{#1}}
+\define@key{supplementdetails}{cite}{\def\supplementdetails@cite{#1}}
+\define@key{supplementdetails}{subcategory}{\def\supplementdetails@subcategory{#1}}
+\define@key{supplementdetails}{swhlinktext}{\def\supplementdetails@swhlinktext{#1}}
+\define@key{supplementdetails}{swhid}{\def\supplementdetails@swhid{#1}}
+\define@key{supplementdetails}{swhdelimiter}{\def\supplementdetails@swhdelimiter{#1}}
+\def\supplementdetails@swhdelimiter{\\ \hspace*{1.2em}}\let\supplementdetails@swhlinktext\@empty
+\def\lx@lipics@swhname#1;#2\@nil{#1}
+\def\lx@lipics@supplementdetails#1#2#3{\begingroup\let\supplementdetails@linktext\@empty
+\let\supplementdetails@cite\@empty\let\supplementdetails@subcategory\@empty\let\supplementdetails@swhid\@empty
+\setkeys{supplementdetails}{#1}%
+\ifx\supplementdetails@subcategory\@empty\protected@edef\tmp{\noexpand\textit{#2}}\else
+\protected@edef\tmp{\noexpand\textit{#2\noexpand\,\noexpand\,(\supplementdetails@subcategory)}}\fi
+\ifx\supplementdetails@linktext\@empty\protected@edef\tmp{\tmp:\space{\noexpand\url{#3}}}\else
+\protected@edef\tmp{\tmp:\space{\noexpand\href{#3}{\noexpand\texttt{\supplementdetails@linktext}}}}\fi
+\ifx\supplementdetails@cite\@empty\else
+\protected@edef\tmp{\tmp\noexpand\nobreakspace\noexpand\cite{\supplementdetails@cite}}\fi
+\ifx\supplementdetails@swhid\@empty\else\ifx\supplementdetails@swhlinktext\@empty
+\edef\supplementdetails@swhlinktext{\expandafter\lx@lipics@swhname\supplementdetails@swhid;\@nil}\fi
+\protected@edef\tmp{\tmp\noexpand\supplementdetails@swhdelimiter{} archived at
+\noexpand\href{https://archive.softwareheritage.org/\supplementdetails@swhid}{\noexpand\nolinkurl{\supplementdetails@swhlinktext}}}\fi
+\expandafter\lx@lipics@note\expandafter{\tmp}{supplement}\endgroup}"
+  );
   DefMacro!(
-    "\\supplementdetails[]{}{}",
-    "\\@add@frontmatter{ltx:note}[role=supplement]{#2: #3}"
+    "\\supplementdetails[]{} Semiverbatim",
+    "\\lx@lipics@supplementdetails{#1}{#2}{#3}"
   );
   // \acknowledgements{text} — render as structural ltx:acknowledgements
   // (post-processors map to canonical role/styling).
@@ -315,3 +381,135 @@ LoadDefinitions!({
   );
   AddToMacro!("\\lx@maketitle@body", "\\lx@lipics@doi");
 });
+
+/// Whether `tokens` holds nothing but spaces (the class's `\if!#n!` test).
+fn is_blank(tokens: &Tokens) -> bool {
+  tokens
+    .unlist_ref()
+    .iter()
+    .all(|t| t.get_catcode() == Catcode::SPACE)
+}
+
+/// `tokens` without its leading and trailing spaces.
+fn trimmed(tokens: &[Token]) -> Vec<Token> {
+  let start = tokens
+    .iter()
+    .position(|t| t.get_catcode() != Catcode::SPACE)
+    .unwrap_or(tokens.len());
+  let end = tokens
+    .iter()
+    .rposition(|t| t.get_catcode() != Catcode::SPACE)
+    .map_or(start, |i| i + 1);
+  tokens[start..end].to_vec()
+}
+
+/// The parts of `tokens` between its top-level `\and`s.
+fn split_on_and(tokens: &Tokens) -> Vec<Vec<Token>> {
+  let and = T_CS!("\\and");
+  let mut parts = vec![Vec::new()];
+  let mut depth = 0i32;
+  for token in tokens.unlist_ref() {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth == 0 && *token == and {
+      parts.push(Vec::new());
+    } else if let Some(part) = parts.last_mut() {
+      part.push(*token);
+    }
+  }
+  parts
+}
+
+/// `\cs{content}` as tokens.
+fn invoke(cs: &str, content: Vec<Token>) -> Vec<Token> {
+  let mut tokens = vec![T_CS!(cs), T_BEGIN!()];
+  tokens.extend(content);
+  tokens.push(T_END!());
+  tokens
+}
+
+/// The five-part `\author` of lipics-v2019/v2021 (`\author` in `load_definitions`): the creator, its affiliations and
+/// homepage, email, ORCID and funding note, through the frontmatter API.
+fn lipics_author(
+  name: Tokens,
+  affiliations: Tokens,
+  email: Tokens,
+  orcid: Tokens,
+  funding: Tokens,
+) -> Result<Tokens> {
+  let anonymous = lookup_bool("lx_lipics_anonymous");
+  let mut out = Vec::new();
+  if anonymous {
+    out.extend(invoke("\\lx@add@creator", Explode!("Anonymous author")));
+    if !is_blank(&affiliations) {
+      out.extend(invoke(
+        "\\lx@add@affiliation",
+        Explode!("Anonymous affiliation"),
+      ));
+    }
+    return Ok(Tokens::new(out));
+  }
+  out.extend(invoke("\\lx@add@creator", name.unlist_ref().to_vec()));
+  for part in split_on_and(&affiliations) {
+    let part = trimmed(&part);
+    if part.is_empty() {
+      continue;
+    }
+    // `\and \url{homepage}`: the class's homepage, linked from the author's name (:796)
+    if part[0] == T_CS!("\\url") {
+      let rest = trimmed(&part[1..]);
+      let url = match (rest.first(), rest.last()) {
+        (Some(first), Some(last))
+          if first.get_catcode() == Catcode::BEGIN
+            && last.get_catcode() == Catcode::END
+            && rest.len() >= 2 =>
+        {
+          rest[1..rest.len() - 1].to_vec()
+        },
+        _ => rest,
+      };
+      out.extend(invoke("\\lx@add@url", url));
+    } else {
+      out.extend(invoke("\\lx@add@affiliation", part));
+    }
+  }
+  if !is_blank(&email) {
+    out.extend(invoke("\\lx@add@email", trimmed(email.unlist_ref())));
+  }
+  if !is_blank(&orcid) {
+    out.extend(invoke("\\lx@add@orcid", trimmed(orcid.unlist_ref())));
+  }
+  if !is_blank(&funding) {
+    let mut note = vec![
+      T_CS!("\\textit"),
+      T_BEGIN!(),
+      T_BEGIN!(),
+      T_CS!("\\let"),
+      T_CS!("\\footnote"),
+      T_CS!("\\@gobble"),
+    ];
+    note.extend(name.unlist_ref().iter().copied());
+    note.extend([T_END!(), T_END!(), T_OTHER!(":"), T_CS!("\\space")]);
+    note.extend(funding.unlist_ref().iter().copied());
+    let mut tokens = vec![T_CS!("\\lx@add@frontmatter"), T_BEGIN!()];
+    tokens.extend(Explode!("ltx:note"));
+    tokens.push(T_END!());
+    tokens.push(T_OTHER!("["));
+    tokens.extend(Explode!("role=funding"));
+    tokens.push(T_OTHER!("]"));
+    tokens.extend(invoke_group(note));
+    out.extend(tokens);
+  }
+  Ok(Tokens::new(out))
+}
+
+/// `{content}` as tokens.
+fn invoke_group(content: Vec<Token>) -> Vec<Token> {
+  let mut tokens = vec![T_BEGIN!()];
+  tokens.extend(content);
+  tokens.push(T_END!());
+  tokens
+}

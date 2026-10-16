@@ -2403,6 +2403,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (1702.06834 59 → 0, 2402.15720 115 → 0, 2008.08910 96 → 0, 2307.13534 73 → 0, hep-th0109182 72 → 0, 1301.0681 10 → 0),
   words −1 each (the duplicate heading). Repros index-bib/heading_inside_thebibliography{,_topical,_revtex,_frame};
   guards `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
+  A1 — lipics (latexml_contrib lipics_cls.rs): the five-part `\author{name}{affiliations}{email}{orcid}{funding}`
+  (lipics-v2019.cls:660, lipics-v2021.cls:766-800, the 2018 copy :636; the 2016 `lipics.cls` keeps LaTeX's) through the
+  frontmatter API — affiliations split on `\and`, `\and \url{…}` the homepage, email and ORCID Semiverbatim, funding a
+  "name: funding" note, the `anonymous` option — and `\relatedversiondetails`/`\supplementdetails` (:910-935, :941-985)
+  with their keys and their URL a link (KNOWN_PERL_ERRORS #856). 93 lipics papers of the cluster: 64 → 0 errors, none
+  worse; words lost are the ORCID URLs and "and" separators now in links/creators (2202.05360, 2302.05810) and URLs
+  shown as their `linktext` (2112.14457). The `_` cluster's lipics share is ~94 papers, not the study's ~300. Repros
+  class-bindings/lipics_{author_five_parts,anonymous}; guards `perfect_kernel_batch68w::lipics_*`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

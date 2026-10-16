@@ -1,0 +1,22 @@
+% witness: 2607.26691, 2603.11908, 2307.12098, 2608.03845 (lipics-v2021 `\author{name}{affiliations}{email}{orcid}{funding}`);
+%          2112.14457, 2404.12534 (`\supplementdetails[linktext=…,cite=…]`); 64 of the 93 lipics papers of run 336's
+%          first-error unexpected:_ cluster to 0 errors
+% oracle:  pdflatex (with the shipped lipics-v2021.cls) 0 errors: "Ann Author" with mail/home/ORCID icons, "Uni X, Austria",
+%          "Inst Y, Germany"; "Bob Builder", "Uni Z"
+% engines: rust 67int15 = 1 Error:unexpected:_ (the email in the body: "Uni X, Austria…ann_author@x.at…"); Perl 0.8.8 has
+%          no lipics binding (OmniBus, the shipped class raw)
+% expect:  0 errors; two creators, Ann's with two affiliations, her homepage, email, ORCID; a funding note "Ann Author: ERC";
+%          the related version and the supplements as notes with their links; no author text in the body
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass[a4paper,UKenglish]{lipics-v2021}
+\title{T}
+\author{Ann Author}{Uni X, Austria \and Inst Y, Germany \and \url{https://ann.example.org/~ann_a}}{ann_author@x.at}{https://orcid.org/0000-0001-0000-0000}{ERC grant 1}
+\author{Bob Builder}{Uni Z}{}{}{}
+\relatedversiondetails[linktext={arXiv}]{Full Version}{https://arxiv.org/abs/2101.00001_v2}
+\supplementdetails[linktext={Scripts}]{Software}{https://github.com/a/sui_analysis_code}
+\supplementdetails[subcategory={Source Code}, swhid={swh:1:dir:abc;origin=https://x.org}]{Software}{https://github.com/b/c_d}
+\begin{document}
+\maketitle
+Body.
+\end{document}

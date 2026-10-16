@@ -89,3 +89,32 @@ fn heading_inside_thebibliography_no_entry_after_leaves_nothing_pending() {
     r#"<bibitem key="b" xml:id="bibb.bib1"> <tags> <tag role="number">1</tag> <tag role="refnum">[1]</tag>"#,
   ]);
 }
+
+/// lipics-v2021's five-part `\author{name}{affiliations}{email}{orcid}{funding}` (lipics-v2021.cls:766-800; 2607.26691,
+/// 2603.11908, 2307.12098, 2608.03845) through the frontmatter API, and `\relatedversiondetails`/`\supplementdetails`
+/// with their keys and their URL a URL (:919-935, :962-985; 2112.14457): no author text left in the body.
+#[test]
+fn lipics_author_five_parts_reach_the_frontmatter() {
+  let xml = clean!("class-bindings/lipics_author_five_parts.tex");
+  assert_all(&xml, &[
+    r#"<creator role="author"> <personname>Ann Author</personname> <contact name="Affiliation: " role="affiliation">Uni X, Austria</contact> <contact name="Affiliation: " role="affiliation">Inst Y, Germany</contact> <contact name="URL: " role="url">https://ann.example.org/~ann_a</contact> <contact name="Email: " role="email">ann_author@x.at</contact> <contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0001-0000-0000" title="ORCID 0000-0001-0000-0000">"#,
+    r#"<creator before=" " role="author"> <personname>Bob Builder</personname> <contact name="Affiliation: " role="affiliation">Uni Z</contact> </creator>"#,
+    r#"<note role="funding" xml:id="id1"><text font="italic" xml:id="id1.1">Ann Author</text>: ERC grant 1</note>"#,
+    r#"<note role="related-version" xml:id="id2"><text font="italic" xml:id="id2.1">Full Version</text>: <ref class="ltx_href" font="typewriter" href="https://arxiv.org/abs/2101.00001_v2">arXiv</ref></note>"#,
+    r#"<note role="supplement" xml:id="id3"><text font="italic" xml:id="id3.1">Software</text>: <ref class="ltx_href" font="typewriter" href="https://github.com/a/sui_analysis_code">Scripts</ref></note>"#,
+    r#"<ref class="ltx_url" font="typewriter" href="https://github.com/b/c_d">https://github.com/b/c_d</ref><break/> archived at <ref class="ltx_href" href="https://archive.softwareheritage.org/swh:1:dir:abc;origin=https://x.org">"#,
+    r#"<para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para> </document>"#,
+  ]);
+  assert_eq!(count(&xml, r#"role="email""#), 1, "{xml}");
+}
+
+/// Under lipics' `anonymous` option (lipics-v2021.cls:192, :791-794, :809) the author is "Anonymous author" with the
+/// affiliation "Anonymous affiliation", and nothing else of it.
+#[test]
+fn lipics_anonymous_author_hides_the_author() {
+  let xml = clean!("class-bindings/lipics_anonymous.tex");
+  assert_all(&xml, &[
+    r#"<creator role="author"> <personname>Anonymous author</personname> <contact name="Affiliation: " role="affiliation">Anonymous affiliation</contact> </creator> <para xml:id="p1">"#,
+  ]);
+  assert!(!xml.contains("Ann") && !xml.contains("Grant"), "{xml}");
+}

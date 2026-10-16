@@ -14418,3 +14418,22 @@ for it. The empty first bibliography goes when its heading is the author's (OXID
 2008.08910, 2307.13534 (`\subsection*`), hep-th0109182 (topical headings), 1301.0681 (a beamer frame); 27 of 27 study
 papers to 0 errors. Repros index-bib/heading_inside_thebibliography{,_topical,_revtex,_frame}; guards
 `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
+
+## 856. lipics' five-part `\author` is read as LaTeX's one-argument `\author`
+
+lipics-v2019.cls:660 and lipics-v2021.cls:766-800 define `\author{name}{affiliations}{email}{orcid}{funding}`. Perl
+has no lipics binding (OmniBus, `Can't find binding for class lipics-v2021`): the name is the author, and the other
+four arguments are typeset at the start of the body (`Uni X, Austriaann_author@x.at https://orcid.org/…`), an `_` in
+the email a math error. `\supplementdetails[keys]{type}{url}` (:962-985) likewise typesets its URL as text.
+
+Trigger: `\documentclass{lipics-v2021}\title{T}\author{Ann}{Uni X}{a_b@x.at}{}{}\begin{document}\maketitle
+x\end{document}` — pdflatex (with the shipped class) 0 errors; Perl 0.8.8 1 Error, Rust before 68w 1.
+
+Rust (68w, latexml_contrib lipics_cls.rs `lipics_author`, for lipics-v2019/v2021/v2024; the 2016 `lipics.cls` keeps
+LaTeX's `\author`): the creator, one affiliation per `\and`-separated part, `\and \url{…}` the homepage, the email and
+ORCID read as written, the funding a note "name: funding", the `anonymous` option's "Anonymous author"/"Anonymous
+affiliation"; `\relatedversiondetails`/`\supplementdetails` with their keys (`linktext`, `cite`, `subcategory`,
+`swhid`, `swhlinktext`) and the URL a link. Witnesses 2607.26691, 2603.11908, 2307.12098, 2608.03845, 2112.14457; 64 of
+the 93 lipics papers of run 336's first-error `unexpected:_` cluster to 0 errors, none worse. Repros
+class-bindings/lipics_author_five_parts, class-bindings/lipics_anonymous; guards
+`perfect_kernel_batch68w::{lipics_author_five_parts_reach_the_frontmatter, lipics_anonymous_author_hides_the_author}`.
