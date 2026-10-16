@@ -6,6 +6,9 @@
 //!   `\frenchabstract` and `\resumeanglais`/`\englishabstract`, and `\legende` for captions.
 //! - v1.3 (2023/01/25; 2304.10248's copy): `\titre`, `\auteurs` (= `\author`) of `\auteur{first}{last}{email}{mark}`
 //!   names, `\affils` of `\affil{mark}{lines}`, and the abstracts `\resume` (French) and `\abstract` (English).
+//!
+//! Both store the abstracts and print them under the title, the French one first, whatever order the paper gives
+//! them in.
 use latexml_package::prelude::*;
 
 use crate::shipped_class::{class_code_contains, class_option_given, shipped_class_text};
@@ -138,6 +141,130 @@ fn affiliation_calls(block: &[Token]) -> Vec<Token> {
   out
 }
 
+/// The authors of a v1.3 `\auteurs` block (:96-97, `\auteurs` = `\author` of `\auteur{first}{last}{email}{mark}` names,
+/// `\auteur{Mohamed El Amine}{Seddik}{mohamed.seddik@tii.ae}{1}`, 2304.10248): an author each, the mark requesting the
+/// affiliation, the address the author's e-mail. What the class prints between the calls is kept with the name before
+/// it (before the first, with the first), past the spaces, punctuation and spacing that separate the names
+/// (2508.03934's `\auteur{…}{1,2},`), which are the list's.
+fn auteurs_calls(names: &[Token]) -> Vec<Token> {
+  let marker = T_CS!("\\lx@gretsi@auteur");
+  let rewritten = rewrite_calls(names, &T_CS!("\\auteur"), 4, &|args| {
+    let mut call = vec![marker];
+    for arg in args {
+      call.push(T_BEGIN!());
+      call.extend_from_slice(arg);
+      call.push(T_END!());
+    }
+    call
+  });
+  // each author's arguments, and the text after its call (`lead`: before the first)
+  let mut authors: Vec<(Vec<Vec<Token>>, Vec<Token>)> = Vec::new();
+  let mut lead: Vec<Token> = Vec::new();
+  let mut i = 0;
+  while i < rewritten.len() {
+    if rewritten[i] == marker {
+      i += 1;
+      let mut args = Vec::new();
+      for _ in 0..4 {
+        let end = group_end(&rewritten, i);
+        args.push(rewritten[i + 1..end].to_vec());
+        i = end + 1;
+      }
+      authors.push((args, Vec::new()));
+      continue;
+    }
+    match authors.last_mut() {
+      Some((_, after)) => after.push(rewritten[i]),
+      None => lead.push(rewritten[i]),
+    }
+    i += 1;
+  }
+  let lead = without_separators(&lead);
+  let mut calls = vec![T_CS!("\\lx@clear@creators")];
+  for (n, (args, after)) in authors.iter().enumerate() {
+    calls.extend([T_CS!("\\lx@add@authors@append"), T_BEGIN!()]);
+    if n == 0 && !lead.is_empty() {
+      calls.extend_from_slice(&lead);
+      calls.push(T_SPACE!());
+    }
+    calls.extend(marked_name(&args[0], &args[1], &args[3]));
+    let after = without_separators(after);
+    if !after.is_empty() {
+      calls.push(T_SPACE!());
+      calls.extend(after);
+    }
+    calls.push(T_END!());
+    if !is_blank(&args[2]) {
+      calls.extend([T_CS!("\\lx@add@email"), T_BEGIN!()]);
+      calls.extend_from_slice(&args[2]);
+      calls.push(T_END!());
+    }
+  }
+  calls
+}
+
+/// The index of the `}` closing the group `tokens[open]` opens (the end of `tokens` if unclosed).
+fn group_end(tokens: &[Token], open: usize) -> usize {
+  let mut depth = 0usize;
+  for (i, t) in tokens.iter().enumerate().skip(open) {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth = depth.saturating_sub(1);
+        if depth == 0 {
+          return i;
+        }
+      },
+      _ => {},
+    }
+  }
+  tokens.len()
+}
+
+/// `tokens` past the separators of a name list at either end (spaces and comments, `,`, `;`, `~`, `\and`, `\\`, `\quad`,
+/// `\qquad`, `\hfill`, `\hspace{…}`): none when it is only those.
+fn without_separators(tokens: &[Token]) -> Vec<Token> {
+  // each unit of `tokens` (a token, or `\hspace` with its argument), and whether it separates
+  let mut units: Vec<(usize, usize, bool)> = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = tokens[i];
+    let end = if t == T_CS!("\\hspace") {
+      let mut j = i + 1;
+      if tokens.get(j) == Some(&T_OTHER!("*")) {
+        j += 1;
+      }
+      match tokens.get(j) {
+        Some(next) if next.get_catcode() == Catcode::BEGIN => group_end(tokens, j) + 1,
+        _ => j,
+      }
+    } else {
+      i + 1
+    };
+    let separates = matches!(t.get_catcode(), Catcode::SPACE | Catcode::COMMENT)
+      || [
+        T_OTHER!(","),
+        T_OTHER!(";"),
+        T_ACTIVE!('~'),
+        T_CS!("\\and"),
+        T_CS!("\\\\"),
+        T_CS!("\\quad"),
+        T_CS!("\\qquad"),
+        T_CS!("\\hfill"),
+        T_CS!("\\hspace"),
+      ]
+      .contains(&t);
+    units.push((i, end.min(tokens.len()), separates));
+    i = end;
+  }
+  let first = units.iter().position(|unit| !unit.2);
+  let last = units.iter().rposition(|unit| !unit.2);
+  match (first, last) {
+    (Some(first), Some(last)) => tokens[units[first].0..units[last].1].to_vec(),
+    _ => Vec::new(),
+  }
+}
+
 LoadDefinitions!({
   let copy = shipped_class_text("gretsi")?;
   let v12 = copy
@@ -155,12 +282,21 @@ LoadDefinitions!({
 
   // Both releases: `\newcommand{\titre}{\title}` (v1.2 :156, v1.3 :94), 42 papers (1001.1912, 2304.10248).
   Let!("\\titre", "\\title");
-  // The French abstract, then the English one, each as the class heads it ("Résumé –", "Abstract –"), the English
-  // one in English.
-  DefMacro!(
-    "\\lx@gretsi@resume{}",
-    "\\lx@add@frontmatter{ltx:abstract}[name={R\\'esum\\'e}]{#1}"
+  // Both releases store the abstracts (the last call of each wins) and print them under the title, the French one
+  // first (v1.2 :219-224 `\@maketitlegretsi`, v1.3 `\maketitle`), each as the class heads it ("Résumé –", "Abstract
+  // –"), the English one in English, the French one only when given (`\if@resfra`): the two abstracts in that order
+  // when the title is made, whatever order the paper gives them in (2205.13867, 2206.05928, 2304.07234, 2411.07577).
+  RawTeX!(
+    r"\newif\if@resfra\@resfrafalse
+\long\def\lx@gretsi@resume@text{}\long\def\lx@gretsi@abstract@text{}\long\def\lx@gretsi@empty{}
+\long\def\lx@gretsi@setresume#1{\@resfratrue\long\gdef\lx@gretsi@resume@text{#1}}
+\long\def\lx@gretsi@setabstract#1{\long\gdef\lx@gretsi@abstract@text{#1}}
+\def\lx@gretsi@abstracts{%
+\if@resfra\expandafter\lx@gretsi@resume\expandafter{\lx@gretsi@resume@text}\fi
+\ifx\lx@gretsi@abstract@text\lx@gretsi@empty\else
+\expandafter\lx@gretsi@abstract\expandafter{\lx@gretsi@abstract@text}\fi}"
   );
+  AddToMacro!("\\lx@maketitle@begin", "\\lx@gretsi@abstracts");
   if v12 {
     // v1.2 :154 `\newcommand{\auteur}{\author}`, and :157 `\newcommand{\coord}[3]{#1 \textsc{#2}\aff{#3}}` the names
     // in it (`\auteur{\coord{Ziad}{Naja}{1}, \coord{Florence}{Alberge}{1}, …}`, 1001.1912; 39 papers call `\coord`,
@@ -187,11 +323,16 @@ LoadDefinitions!({
     Let!("\\address", "\\adresse");
     // v1.2 :106-122 `\resumefrancais`, `\resumeanglais` (the latter in `{texteenanglais}`), and their aliases
     // `\frenchabstract`, `\englishabstract` (20/19 papers: 0706.1914, 1311.3768; 1512.06999, 2206.05928).
-    Let!("\\resumefrancais", "\\lx@gretsi@resume");
     DefMacro!(
-      "\\resumeanglais{}",
+      "\\lx@gretsi@resume{}",
+      "\\lx@add@frontmatter{ltx:abstract}[name={R\\'esum\\'e}]{#1}"
+    );
+    DefMacro!(
+      "\\lx@gretsi@abstract{}",
       "\\lx@add@frontmatter{ltx:abstract}[name={Abstract}]{\\begin{texteenanglais}#1\\end{texteenanglais}}"
     );
+    Let!("\\resumefrancais", "\\lx@gretsi@setresume");
+    Let!("\\resumeanglais", "\\lx@gretsi@setabstract");
     Let!("\\frenchabstract", "\\resumefrancais");
     Let!("\\englishabstract", "\\resumeanglais");
     // v1.2 :22-58: at `\begin{document}`, with french.sty `{texteenanglais}` is `\english` and `\legende` an emphasized
@@ -232,41 +373,7 @@ LoadDefinitions!({
     // each, the mark requesting the affiliation, the address the author's e-mail.
     DefMacro!("\\auteurs{}", sub[(names)] {
       let names: Tokens = names;
-      let mut calls = vec![T_CS!("\\lx@clear@creators")];
-      let rewritten = rewrite_calls(names.unlist_ref(), &T_CS!("\\auteur"), 4, &|args| {
-        let mut call = vec![T_CS!("\\lx@add@authors@append"), T_BEGIN!()];
-        call.extend(marked_name(&args[0], &args[1], &args[3]));
-        call.push(T_END!());
-        if !is_blank(&args[2]) {
-          call.push(T_CS!("\\lx@add@email"));
-          call.push(T_BEGIN!());
-          call.extend_from_slice(&args[2]);
-          call.push(T_END!());
-        }
-        call
-      });
-      // (only the calls: the spaces and comments between them are the layout's)
-      let mut depth = 0usize;
-      let mut in_call = false;
-      for t in rewritten {
-        if t == T_CS!("\\lx@add@authors@append") || t == T_CS!("\\lx@add@email") {
-          in_call = true;
-        }
-        if in_call {
-          calls.push(t);
-          match t.get_catcode() {
-            Catcode::BEGIN => depth += 1,
-            Catcode::END => {
-              depth -= 1;
-              if depth == 0 {
-                in_call = false;
-              }
-            },
-            _ => {},
-          }
-        }
-      }
-      Ok(Tokens::new(calls))
+      Ok(Tokens::new(auteurs_calls(names.unlist_ref())))
     });
     DefMacro!(
       "\\auteur{}{}{}{}",
@@ -279,12 +386,14 @@ LoadDefinitions!({
     });
     // v1.3 :78-87 `\resume{…}` (French) and `\abstract{…}` (English), each set in its language at `\maketitle`.
     DefMacro!(
-      "\\resume{}",
-      "\\lx@gretsi@resume{\\selectlanguage{french}#1}"
+      "\\lx@gretsi@resume{}",
+      "\\lx@add@frontmatter{ltx:abstract}[name={R\\'esum\\'e}]{\\selectlanguage{french}#1}"
     );
     DefMacro!(
-      "\\abstract{}",
+      "\\lx@gretsi@abstract{}",
       "\\lx@add@frontmatter{ltx:abstract}[name={Abstract}]{\\selectlanguage{english}#1}"
     );
+    Let!("\\resume", "\\lx@gretsi@setresume");
+    Let!("\\abstract", "\\lx@gretsi@setabstract");
   }
 });

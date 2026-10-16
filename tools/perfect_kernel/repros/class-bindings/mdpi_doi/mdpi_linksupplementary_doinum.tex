@@ -1,0 +1,34 @@
+% witness: 2208.12066 (`\linksupplementary`), with the `\doinum` an accepted paper gives (2311.18672's template)
+% oracle:  pdflatex with 2208.12066's Definitions/mdpi.cls (22 December 2022) and journalnames.tex: "can be downloaded
+%          at: https://www.mdpi.com/article/10.3390/s99999999/s1."; 0 errors
+% engines: rust 68k = the same link; 67int10 = 1 error (undefined `\linksupplementary`)
+% expect:  0 errors, 0 warnings; the supplementary file's link under the paper's DOI
+% status:  GREEN (68k): the paper's DOI keeps winning over the class's default (68k round 2)
+% preload: ar5iv.sty
+\documentclass[sensors,article,accept,pdftex,moreauthors]{Definitions/mdpi}
+\firstpage{1}
+\makeatletter
+\setcounter{page}{\@firstpage}
+\makeatother
+\doinum{10.3390/s99999999}
+\pubvolume{23}
+\issuenum{0}
+\articlenumber{1234}
+\pubyear{2022}
+\copyrightyear{2022}
+\datereceived{ }
+\daterevised{ }
+\dateaccepted{ }
+\datepublished{ }
+\hreflink{https://doi.org/}
+\Title{An MDPI Paper}
+\Author{Ann Author}
+\AuthorNames{Ann Author}
+\address{Somewhere University}
+\corres{Correspondence: ann@x.org}
+\abstract{An abstract.}
+\keyword{one; two}
+\begin{document}
+\section{Introduction}
+The supporting information can be downloaded at: \linksupplementary{s1}.
+\end{document}

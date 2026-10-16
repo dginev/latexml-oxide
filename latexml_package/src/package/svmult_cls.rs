@@ -6,12 +6,13 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: svmult.cls.ltxml
 
+  RawTeX!(r"\newif\if@numart\@numarttrue");
   // Generally ignorable options
   for option in [
     "nospthms", "vecphys", "vecarrow", "norunningheads", "referee", "oribibl",
     "chaprefs", "footinfo", "openany", "sechang", "deutsch", "francais",
     // These could affect numbering...
-    "numart", "book", "envcountresetchap", "envcountresetsect", "envcountsame",
+    "envcountresetchap", "envcountresetsect", "envcountsame",
     "envcountchap",
     "natbib",
   ].iter() {
@@ -20,6 +21,9 @@ LoadDefinitions!({
   // svmult.cls:182-208 (svmono.cls:183-210): `graybox` loads color and framed and sets `{svgraybox}` and
   // `{svtintedbox}` shaded; without it they are a quotation-like list (svmult.cls:822-850).
   DeclareOption!("graybox", { AssignValue!("svmult_graybox" => true); });
+  // :1034, :1044 the numbering options, which an unstarred or starred `\title` sets again
+  DeclareOption!("numart", "\\@numarttrue");
+  DeclareOption!("book", "\\@numartfalse");
 
   // Other options could load sv<option>.clo
   // Anything else gets passed to book.
@@ -39,9 +43,11 @@ LoadDefinitions!({
   DefRegister!("\\tocauthor" => Tokens!());
   DefRegister!("\\toctitle" => Tokens!());
 
-  // \title with optional * to affect numbering (* => numart, none => book)
+  // \title with optional * to affect numbering (* => numart, none => book): svmult.cls v5.x :2068-2070 `\title*`
+  // `\ds@numart`, `\title` `\ds@book`, which set `\if@numart` (:1033-1044, true by default and by the `numart`
+  // option), read by `\subfigures` (below).
   DefMacro!("\\title OptionalMatch:* {}",
-    "\\if.#1.\\else\\def\\thesection{\\arabic{section}}\\fi\
+    "\\if.#1.\\@numartfalse\\else\\@numarttrue\\def\\thesection{\\arabic{section}}\\fi\
      \\lx@add@title{#2}");
 
   //======================================================================
@@ -260,29 +266,38 @@ see SVMono documentation -}\begin{quotation}}{\end{quotation}}"#);
   // run 347: 48 svmult papers call one), a copy without one leaving it to the paper (`DefinitionOrigin::Fallback`;
   // Perl's binding defines none of it, KNOWN_PERL_ERRORS #812):
   // - :1285 `\let\ts\,`, a thin space (17 papers: 1001.0767, 1405.1421, cond-mat0605750);
-  // - :115 `\if@runhead`, true unless the `norunningheads` option (v1.0 :37-38: false unless `runningheads`), which
+  // - :115-116 `\if@runhead`, true unless the `norunningheads` option (v1.x :37-38: false unless `runningheads`), which
   //   papers test (0803.2826, 0808.2157, 0810.2505);
   // - :240-242 `\svparindent` (12pt), :949 `\verbatimindent`, :1756-1758 `\twocaptionwidth{w1}{w2}` (1607.02736,
   //   1804.07860, 1605.01046): layout;
   // - :376 `\mtaddtocont{entry}` and :734 `\hyperhrefextend`, a mini table of contents' line, written to the aux file
   //   (1310.7882, 2311.01874);
-  // - :1903-1923 `\subfigures`, after which the figure's captions are numbered as one figure lettered (3a, 3b), the
-  //   counter restored at the figure's end (:1905 `\def\endfigure{\resetsubfig\end@float}`; 1310.5064, 1411.2805,
-  //   1710.10378; `{subfigures}` around several figures, 2008.12552);
+  // - :1903-1923 `\subfigures`, after which the figure's captions are numbered as one figure lettered (3a, 3b; :1918-1920
+  //   under the chapter's number only in a book-numbered contribution, `\if@numart\else\thechapter.\fi`: an unstarred
+  //   `\title`'s, 1.3a — under a chapter numbered, as the book binding's `\thefigure` prefixes one), the counter
+  //   restored at the figure's end (:1905 `\def\endfigure{\resetsubfig\end@float}`; 1310.5064, 1411.2805, 1710.10378;
+  //   `{subfigures}` around several figures, 2008.12552);
   // - :2307-2310 `{abbrsymblist}[label width]`, the "List of Abbreviations and Symbols" section, a description list
   //   (0810.2505, cond-mat0501076);
   // - :987 `\greeksym{a}`, the letter set in the Symbol font: the Greek letter the font has there, upright (Adobe
   //   Symbol encoding, OXIDIZED_DESIGN #623; 0903.0562, 1111.1183's `\uDelta` `\mbox{\greeksym{D}}`), any other argument in that font;
-  // - v1.0 :74 `\micro`, an upright mu (astro-ph0108509, hep-ph0301145);
+  // - v1.1 :74 `\micro`, `\mbox{\usefont{U}{eur}{m}{n}\char22}`: Euler's upright Greek mu, U+03BC (astro-ph0108509,
+  //   hep-ph0301145);
   // - v5.5 :2392-2402 `\circledmark[colour]{mark}` and `\formtmp{colour}{title}`, the titled boxes' mark and title bar
   //   (their colours dropped, as the boxes' above);
   // - v5.15 :2589-2591 `\Description{text}`, the description of a figure's image, written to a file of them: the
   //   float's description, as acmart's (2602.21993).
   {
     let _class = OriginGuard::new(DefinitionOrigin::Fallback);
-    let runhead_default = crate::shipped_class::shipped_class_text("svmult")?
-      .is_none_or(|text| !crate::shipped_class::class_code_contains(&text, "\\DeclareOption{runningheads}"));
-    RawTeX!(if runhead_default { r"\let\if@runhead\iftrue" } else { r"\let\if@runhead\iffalse" });
+    // (v1.x asks for running heads with its option, v5.x asks to drop them with its own)
+    let asks_for_runheads = crate::shipped_class::shipped_class_text("svmult")?
+      .is_some_and(|text| crate::shipped_class::class_code_contains(&text, "\\DeclareOption{runningheads}"));
+    let runhead = if asks_for_runheads {
+      crate::shipped_class::class_option_given("runningheads")?
+    } else {
+      !crate::shipped_class::class_option_given("norunningheads")?
+    };
+    RawTeX!(if runhead { r"\let\if@runhead\iftrue" } else { r"\let\if@runhead\iffalse" });
     RawTeX!(
       r"\let\ts\,
 \newdimen\svparindent
@@ -295,12 +310,12 @@ see SVMono documentation -}\begin{quotation}}{\end{quotation}}"#);
 \newcounter{merk}
 \def\resetsubfig{\global\let\last@subfig=\undefined}
 \def\r@setsubfig{\xdef\last@subfig{\number\value{figure}}\setcounter{figure}{\value{merk}}\setcounter{merk}{0}}
-\def\subfigures{\refstepcounter{figure}\@tempcnta=\value{merk}\setcounter{merk}{\value{figure}}\setcounter{figure}{\the\@tempcnta}\def\thefigure{\ifnum\c@chapter>\z@\thechapter.\fi\@arabic\c@merk\alph{figure}}\let\resetsubfig=\r@setsubfig}
+\def\subfigures{\refstepcounter{figure}\@tempcnta=\value{merk}\setcounter{merk}{\value{figure}}\setcounter{figure}{\the\@tempcnta}\def\thefigure{\if@numart\else\ifnum\c@chapter>\z@\thechapter.\fi\fi\@arabic\c@merk\alph{figure}}\let\resetsubfig=\r@setsubfig}
 \AddToHook{env/figure/end}{\resetsubfig}
 \AddToHook{env/figure*/end}{\resetsubfig}
 \def\abbrsymbname{List of Abbreviations and Symbols}
 \newenvironment{abbrsymblist}[1][\qquad]{\section*{\abbrsymbname}\begin{description}}{\end{description}}
-\newcommand{\micro}{\mbox{µ}}
+\newcommand{\micro}{\mbox{\upshape μ}}
 \newcommand\circledmark[2][white]{#2}
 \def\formtmp#1#2{\lx@sv@box{#2}}"
     );

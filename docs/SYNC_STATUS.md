@@ -1862,8 +1862,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   it (`\index{author}{…}`, ws-rv9x6 `\index[aindx]{…}`). svmult (svmult_cls.rs; v5.4 0912.1479's, KPE #812) `\ts`,
   `\if@runhead`, `\svparindent`, `\verbatimindent`, `\twocaptionwidth`, `\mtaddtocont`, `\hyperhrefextend`, `\subfigures`
   (the counter restored at the figure's end through `\AddToHook{env/figure/end}`), `{abbrsymblist}`, `\greeksym` (the
-  Symbol font's Greek letter, OD #623), v1.0's `\micro`, v5.5's `\circledmark`/`\formtmp`, v5.15's `\Description`
-  (the float's description, as acmart's; 2602.21993). pnas-new (pnas_new_cls.rs) `\bibsplit`, `\Firstpage`,
+  Symbol font's Greek letter, OD #623), v1.1's `\micro` (Euler's upright Greek μ, U+03BC), v5.5's
+  `\circledmark`/`\formtmp`, v5.15's `\Description` (the float's description, as acmart's; 2602.21993). pnas-new (pnas_new_cls.rs) `\bibsplit`, `\Firstpage`,
   `\Parasplit`/`\Endparasplit` (layout: nothing), `\dataavail` (a titled paragraph; v1.47 :468-492, :688; 2208.11618,
   2602.17158). interact (interact_cls.rs; v1.05 1711.05866's) `{abbreviations}`, `{jelcode}`/`{pacscode}` (and v4.0's
   `{classcode}`) as classifications, the upright Greek `\ualpha`…`\upartial` and bold `\ubalpha`… (:167-226), `{tabnote}`,
@@ -1871,7 +1871,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (1901.07015, 2306.12924, 1709.03559, 1709.02637). mdpi (mdpi_cls.rs) `\conferencetitle`, `\contributed`,
   `\fourthnote`/`\fifthnote`, `\emails`, `\orcidauthorONE`…/`\orcidONE`… (2017) and `\orcidA`…`\orcidZ` (since 2018,
   were no-ops for A-F) as the author's ORCID, `\conflictofinterest`, `\useofartificialintelligence`,
-  `\linksupplementary` (`\doinum` now stores `\@doinum`), `\bio`, `\justifyorcenter`, `\highlight`, `\CorrStatement`,
+  `\linksupplementary` (`\doinum` now stores `\@doinum`; round 2: else the copy's default DOI), `\bio`, `\justifyorcenter`, `\highlight`, `\CorrStatement`,
   `\dist` (1709.06513, 1506.06852, 1707.09764, 2311.18672, 2208.12066). svjour3 (svjour3_cls.rs) `\lastand` (an `\and`,
   KPE #813; 1907.12906), the economics edition's `\JEL` (1402.2599 :314-317, 6 copies) and the 2023 edition's
   `{funding}`/`{dataavailability}`/`{conflict}` (2411.13175 :1133-1159). arxstspdf/arximspdf (arximspdf_cls.rs)
@@ -1887,10 +1887,31 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   svjour3_statements,svjour3_jel_classification,arxstspdf_class_commands,siamart_class_commands} (RED 67int10 →
   GREEN); guards `perfect_kernel_batch68k` (12). A/B vs 67int10 over 400 row witnesses + 100 pop67o papers: errors
   1,374 → 691, 342 papers fewer, none more; every word drop an undefined command's name or its arguments no longer
-  typeset (`\wstoc`'s title and authors, `\apj` → "ApJ"). Open: mdpi's computed default DOI (`\doinum{10.3390/\@doiabbr…}`,
-  :543-545) is not reproduced, so `\linksupplementary` without the paper's `\doinum` links `article//<file>`; pnas-new
-  `\theabstract` (the class's stored abstract; 2602.21299 reprints it); arximspdf's own `{aligned}` (:1209); the gretsi
-  v1.2 abstracts follow the call order where the class prints Résumé first; `\@makecaption` from a paper's hangcaption.sty
+  typeset (`\wstoc`'s title and authors, `\apj` → "ApJ"). Round 2 (review 2026-10-16): mdpi `\linksupplementary`
+  without the paper's `\doinum` links under the default the copy computes (2208.12066's :523-530
+  `\doinum{10.3390/\@doiabbr\@pubvolume\twodigits\@issuenum\fivedigits\@articlenumber}`): the binding inputs the journal
+  table the copy inputs (`Definitions/journalnames.tex`, its `\@doiabbr`), executes the copy's `\ExecuteOptions`, keeps
+  `\@pubvolume`/`\@issuenum`/`\@articlenumber` as the class does and ports `\cutdigits`/`\twodigits`/`\fourdigits`/
+  `\fivedigits`; without the table, a journal it names or numeric values, the file's name and a Warning (19 papers:
+  2208.12066 → 10.3390/s23001234, 1901.06933, 2607.17752, `preprints` 2111.09774 → 10.3390/11020074); gretsi abstracts
+  in the class's order, Résumé first, the last call of each kept, added when the title is made (`\lx@maketitle@begin`;
+  2205.13867, 2206.05928, 2304.07234, 2411.07577); v1.3 `\auteurs` keeps the text between its `\auteur` calls with the
+  name before it, past separators (2508.03934); svmult `\if@runhead` from the version's option (`runningheads` v1.x,
+  `norunningheads` v5.x), `\subfigures` prefixed only outside `\if@numart` (:1918-1920; `\title*` 1a), `numart`/`book`
+  options; interact `\ubvarrho`/`\ubvarsigma` (:223-224); sv_support: an `\institute` piece opened by `\\` after `\and`
+  still leads with its mark (1810.10167: Yaohua Hu's institute 2 was shared). Repros class-bindings/{mdpi_doi/,
+  gretsi_v12/gretsi_v12_abstract_order,gretsi_v13_abstract_order,svmult_v11/,svmult_aas/svmult_norunningheads_subfigures,
+  svjour3_marked_pieces_after_a_break}; guards `perfect_kernel_batch68k` (18). Open: the fuzzy name label of a creator
+  (`Tag ltx:creator`, base_utilities.rs; Perl Base_Utility.pool.ltxml:870-876 the same) keeps the commas of the marks
+  its name shows (`Simon Lepage1,2` → `fuzzy:Simon_Lepage1` and a stray `2`), and the stray piece is an accidental mark
+  request: it takes a shared mark's affiliation from the author showing it alone (2508.03934: David Picard loses LIGM to
+  Simon Lepage) and supplies the requests marked labels lack elsewhere (jheppub `\affiliation[1]` with `$^{1,2}$`
+  names, 1912.00557; svjour3 1810.10167); dropping the commas alone, sampled over 60 comma-mark papers, fixed 7, broke
+  1912.00557 and moved 1507.03278 — needs one rule (shown marks as the requests for labelled affiliations), pending a
+  ruling; PoS/mdpi merged authors split at `\ ` separators (1808.07470, 1909.00451, 2502.15737) and svjour3's empty
+  creator for an unmarked `\institute` with several authors (sv_support) — frontmatter rows of their own; pnas-new
+  `\theabstract` (the class's stored abstract; 2602.21299 reprints it); arximspdf's own `{aligned}` (:1209);
+  `\@makecaption` from a paper's hangcaption.sty
   (interact 2208.03568, svjour3 1702.06262: G1). Not this payload's (a copy's private one-line edits, pending user
   decision (a)): JHEP3 `\mathph` (0901.2133), `\jcap` (0901.3074), JHEP3MaxThesisMod's thesis commands (1210.6500); PoS
   `\ReportNo` (1310.3045, 1012.2709's PoSmod), `\Preprint`/`\PREPRINT` (1601.04101, 1406.7652, 1712.05633), PoS_mod's

@@ -1,0 +1,17 @@
+% witness: 2206.05928 (`\englishabstract` twice, then `\frenchabstract`), 2205.13867, 2411.07577 (`\englishabstract` only)
+% oracle:  pdflatex with 1001.1912's gretsi.cls (v1.2, :219-224 `\@maketitlegretsi`): "Résumé – Le résumé." then
+%          "Abstract – The English abstract." (the last `\englishabstract`); 0 errors
+% engines: rust 68k = the abstracts in call order (Abstract, then Résumé)
+% expect:  0 errors, 0 warnings; the French abstract, then the last English one
+% status:  RED (68k) -> GREEN (68k round 2)
+% preload: ar5iv.sty
+\documentclass{gretsi}
+\titre{Un titre}
+\auteur{\coord{Ann}{Able}{}}
+\englishabstract{A first English draft.}
+\englishabstract{The English abstract.}
+\frenchabstract{Le r\'esum\'e.}
+\begin{document}
+\maketitle
+Texte du corps.
+\end{document}

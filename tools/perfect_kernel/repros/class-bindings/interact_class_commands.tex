@@ -1,12 +1,12 @@
 % witness: 1901.07015, 2102.04929 (`{abbreviations}`); 2306.12924 (`{jelcode}`); 1610.08232 (`{pacscode}`);
 %          1709.03559, 2207.06123 (`\umu`); 1711.08876 (`{tabnote}`)
 % oracle:  pdflatex with 1711.05866's interact.cls (v1.05): "Abbreviations: GDP: gross domestic product", "JEL
-%          CLASSIFICATION C21; C58", "PACS CLASSIFICATION 02.50.Ey", "With µ, ∂, π, ω and δ.", "Note: Values in
-%          units."; 0 errors
+%          CLASSIFICATION C21; C58", "PACS CLASSIFICATION 02.50.Ey", "With µ, ∂, π, ω, δ, ϱ and ς.", "Note:
+%          Values in units."; 0 errors
 % engines: rust 67int10 = 9 errors (undefined `{abbreviations}`, `{jelcode}`, `{pacscode}`, `{tabnote}`, `\umu`, `\upartial`, `\upi`, `\uomega`,
-%          `\ubdelta`)
+%          `\ubdelta`); rust 68k = 2 errors (undefined `\ubvarrho`, `\ubvarsigma`, :223-224)
 % expect:  0 errors, 0 warnings; the JEL and PACS classifications, the Greek letters upright
-% status:  RED (67int10) -> GREEN (68k)
+% status:  RED (67int10) -> GREEN (68k); `\ubvarrho`, `\ubvarsigma` RED (68k) -> GREEN (68k round 2)
 % preload: ar5iv.sty
 \documentclass{interact}
 \begin{document}
@@ -21,7 +21,7 @@
 \begin{jelcode}C21; C58\end{jelcode}
 \begin{pacscode}02.50.Ey\end{pacscode}
 \section{Introduction}
-With $\umu$, $\upartial$, $\upi$, $\uomega$ and $\ubdelta$.
+With $\umu$, $\upartial$, $\upi$, $\uomega$, $\ubdelta$, $\ubvarrho$ and $\ubvarsigma$.
 \begin{table}\tbl{A table.}{\begin{tabular}{cc}\toprule a & b\\ \midrule 1 & 2\\ \bottomrule\end{tabular}}
 \begin{tabnote}[Note]Values in units.\end{tabnote}\end{table}
 \end{document}

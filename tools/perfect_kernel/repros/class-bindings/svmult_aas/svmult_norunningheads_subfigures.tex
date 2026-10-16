@@ -1,0 +1,24 @@
+% witness: 0803.2826, 0810.2505 (`\if@runhead`, v5.x :115-116 true unless `norunningheads`); 1310.5064, 1411.2805
+%          (`\subfigures`, :1918-1920 `\thefigure` `\if@numart\else\thechapter.\fi`: a `\title*` contribution's figures
+%          are not numbered by the chapter, whatever its counter)
+% oracle:  pdflatex with 1711.01112's svmult.cls (v5.4): "Running heads off.", "Fig. 1a First.", "Fig. 1b Second.",
+%          "Figures 1a and 1b."; 0 errors
+% engines: rust 68k = "Running heads on." (the option ignored); figures 3.1a and 3.1b (`\c@chapter>0`)
+% expect:  0 errors, 0 warnings; no running heads; the subfigures 1a and 1b
+% status:  RED (68k) -> GREEN (68k round 2)
+% preload: ar5iv.sty
+\documentclass[norunningheads]{svmult}
+\begin{document}
+\title*{A Chapter}
+\author{Ann Author}
+\maketitle
+\setcounter{chapter}{3}
+\makeatletter\if@runhead Running heads on.\else Running heads off.\fi\makeatother
+\section{Section}
+\begin{figure}
+\subfigures
+\fbox{A}\caption{First.}\label{fa}
+\fbox{B}\caption{Second.}\label{fb}
+\end{figure}
+Figures \ref{fa} and \ref{fb}.
+\end{document}

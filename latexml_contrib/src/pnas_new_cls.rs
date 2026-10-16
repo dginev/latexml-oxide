@@ -183,7 +183,7 @@ LoadDefinitions!({
   );
   // pnas-new.cls:441-450 `{widetext}`, a double-column float in print: its content in place.
   DefEnvironment!("{widetext}", "#body");
-  // pnas-new.cls v1.46 (2023/05/03; 2208.11618's copy :584) `\bibsplit[n]`, the reference list's split between the
+  // pnas-new.cls v1.46 (2023/05/03; 2208.11618's copy :559) `\bibsplit[n]`, the reference list's split between the
   // columns of the last page (41 papers: 2208.11618, 2308.08421); v1.47 (2025/11/01; 2602.17158's copy) :487-492
   // `\Firstpage`, :468-469 `\Parasplit`/`\Endparasplit`, the first page's narrower column and a paragraph continued
   // across the column break (14, 4 and 8 papers: 2602.17158, 2603.21852, 2606.02411): page layout, so nothing here (a

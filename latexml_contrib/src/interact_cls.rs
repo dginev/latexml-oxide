@@ -130,7 +130,8 @@ LoadDefinitions!({
   DefMacro!(
     "\\journalname{}",
     "\\@add@frontmatter{ltx:note}[role=journal]{#1}"
-  ); // interact.cls v1.05 (2017/07/31; 90 of the 124 copies papers ship, 1711.05866's; v1.01-v1.03 the same), what
+  );
+  // interact.cls v1.05 (2017/07/31; 90 of the 124 copies papers ship, 1711.05866's; v1.01-v1.03 the same), what
   // papers call (run 347: 46 interact papers), a copy without one leaving it to the paper (`DefinitionOrigin::Fallback`):
   // - :493-527 the keyword-like blocks under the abstract: `{abbreviations}` "Abbreviations: …" (10 papers: 1901.07015,
   //   2102.04929), and the classifications `{jelcode}` "JEL CLASSIFICATION" and `{pacscode}` "PACS CLASSIFICATION",
@@ -235,10 +236,12 @@ LoadDefinitions!({
     DefMacro!("\\ubvarpi", "\\boldsymbol{\\uvarpi}");
     DefMacro!("\\ubvarphi", "\\boldsymbol{\\uvarphi}");
     DefMacro!("\\ubpartial", "\\boldsymbol{\\upartial}");
-    // (:203 `\uboldeta`, not `\ubeta`, which is the upright beta; :193-194 `\let\uvarrho\varrho`, `\let\uvarsigma
-    // \varsigma`)
+    // (:203 `\uboldeta`, not `\ubeta`, which is the upright beta; :194-195 `\let\uvarrho\varrho`, `\let\uvarsigma
+    // \varsigma`, and :223-224 their bold forms, `\boldsymbol{\varrho}`, `\boldsymbol{\varsigma}`)
     DefMacro!("\\uboldeta", "\\boldsymbol{\\ueta}");
     Let!("\\uvarrho", "\\varrho");
     Let!("\\uvarsigma", "\\varsigma");
+    DefMacro!("\\ubvarrho", "\\boldsymbol{\\varrho}");
+    DefMacro!("\\ubvarsigma", "\\boldsymbol{\\varsigma}");
   }
 });

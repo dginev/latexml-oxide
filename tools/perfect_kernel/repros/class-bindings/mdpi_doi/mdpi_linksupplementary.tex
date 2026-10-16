@@ -1,0 +1,35 @@
+% witness: 2208.12066, 2602.00080, 1901.06933, 2311.18672, 2607.17752 (`\linksupplementary` without `\doinum`: the
+%          class's default DOI from the journal's DOI abbreviation, the volume, the issue and the article number)
+% oracle:  pdflatex with 2208.12066's Definitions/mdpi.cls (22 December 2022) and journalnames.tex: "can be downloaded
+%          at: https://www.mdpi.com/article/10.3390/s23001234/s1."; under `preprints` (an empty abbreviation:
+%          2111.09774, 2211.05018, 2411.01130) "https://www.mdpi.com/article/10.3390/23001234/s1."; 0 errors
+% engines: rust 68k = https://www.mdpi.com/article//s1 (an empty DOI); 67int10 = 1 error (undefined `\linksupplementary`)
+% expect:  0 errors, 0 warnings; the supplementary file's link under the class's default DOI
+% status:  RED (68k) -> GREEN (68k round 2)
+% preload: ar5iv.sty
+\documentclass[sensors,article,accept,pdftex,moreauthors]{Definitions/mdpi}
+\firstpage{1}
+\makeatletter
+\setcounter{page}{\@firstpage}
+\makeatother
+\pubvolume{23}
+\issuenum{0}
+\articlenumber{1234}
+\pubyear{2022}
+\copyrightyear{2022}
+\datereceived{ }
+\daterevised{ }
+\dateaccepted{ }
+\datepublished{ }
+\hreflink{https://doi.org/}
+\Title{An MDPI Paper}
+\Author{Ann Author}
+\AuthorNames{Ann Author}
+\address{Somewhere University}
+\corres{Correspondence: ann@x.org}
+\abstract{An abstract.}
+\keyword{one; two}
+\begin{document}
+\section{Introduction}
+The supporting information can be downloaded at: \linksupplementary{s1}.
+\end{document}

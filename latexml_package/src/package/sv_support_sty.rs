@@ -57,9 +57,20 @@ LoadDefinitions!({
   // A piece that starts with a mark (`$^{1}$Univ A`, or one piece of lines `$^1$… \\ $^2$…`: 1406.6147, 2405.03406)
   // is a marked list, its lines labelled by their marks, which the authors showing them get (OXIDIZED_DESIGN #159;
   // repro svjour3_marked_institutes_link_by_mark); any other piece is numbered.
+  // (a `\\` opening a piece, `\and\\ \textsuperscript{2} College …`, is the layout's: svjour3 sets each piece on a line
+  // of its own, so the mark still leads it; 1810.10167)
   DefMacro!("\\lx@sv@institute@unlabelled{}", sub[(piece)] {
     let labelseq = Some(mouth::tokenize_internal("labelseq=affiliation"));
-    if leads_with_mark(&piece) {
+    let unbroken = Tokens::new(
+      piece
+        .unlist_ref()
+        .iter()
+        .copied()
+        .skip_while(|t| *t == T_SPACE!() || *t == T_CS!("\\\\"))
+        .collect(),
+    );
+    if leads_with_mark(&unbroken) {
+      let piece = unbroken;
       // its own `\thanksref`, which would add its key to the line's label, a no-op as in any piece (63i review)
       let piece = Tokens::new(
         piece

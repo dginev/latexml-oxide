@@ -1,0 +1,28 @@
+% witness: 2304.07234 (`\abstract` before `\maketitle`, no `\resume`); 2508.03934 (`\auteurs{\auteur{…}{1,2}, \auteur…}`,
+%          the comma the class prints between the names); 2304.10248, 2310.15635 (`\auteurs`)
+% oracle:  pdflatex with 2304.10248's gretsi.cls (v1.3, `\maketitle`): "Simon LEPAGE1,2 , Jeremie MARY1 David PICARD2
+%          (chair)", "Résumé – Le résumé." then "Abstract – The English abstract."; 0 errors
+% engines: rust 68k = the abstracts in call order (Abstract, then Résumé); the text "(chair)" between the `\auteur` calls
+%          dropped
+% expect:  0 errors, 0 warnings; three authors (the comma their separator), the last "(chair)"; the French abstract,
+%          then the English one. Known residual (68k round 2, reported): David Picard's "Lab B, Marne" goes to Simon
+%          Lepage alone, as the comma of the shown marks "1,2" splits a stray label `2` off Simon's fuzzy name label
+% status:  RED (68k) -> GREEN (68k round 2)
+% preload: ar5iv.sty
+\documentclass{gretsi}
+\titre{Un titre}
+\auteurs{
+  \auteur{Simon}{Lepage}{s.lepage@x.com}{1,2},
+  \auteur{Jeremie}{Mary}{j.mary@x.com}{1}
+  \auteur{David}{Picard}{d.picard@x.fr}{2} (chair)
+}
+\affils{
+  \affil{1}{Lab A, Paris}
+  \affil{2}{Lab B, Marne}
+}
+\abstract{The English abstract.}
+\resume{Le r\'esum\'e.}
+\begin{document}
+\maketitle
+Texte du corps.
+\end{document}

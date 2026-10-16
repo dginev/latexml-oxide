@@ -1,0 +1,16 @@
+% witness: astro-ph0108509, hep-ph0301145 (`\micro`, v1.1 :74 `\mbox{\usefont{U}{eur}{m}{n}\char22}`: Euler's upright
+%          Greek mu); 0803.2826, 0808.2157 (`\if@runhead`, v1.1 false unless the `runningheads` option)
+% oracle:  pdflatex with astro-ph0108509's svmult.cls (v1.1): "Running heads on." ("off" without the option), "A 5 µm grain."
+%          (the glyph Euler's Greek mu, eur char 22, which pdftotext names µ by its glyph name "mu"); 0 errors
+% engines: rust 68k = "Running heads on." only by default, never by the option; µ (U+00B5, the micro sign)
+% expect:  0 errors, 0 warnings; the running heads the option asks for, an upright Greek mu (U+03BC)
+% status:  RED (68k) -> GREEN (68k round 2)
+% preload: ar5iv.sty
+\documentclass[runningheads]{svmult}
+\begin{document}
+\title*{A Chapter}
+\author{Ann Author}
+\maketitle
+\makeatletter\if@runhead Running heads on.\else Running heads off.\fi\makeatother
+A 5 \micro m grain.
+\end{document}

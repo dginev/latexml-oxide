@@ -1,9 +1,9 @@
-% witness: 1709.06513 (`\conferencetitle`); 1902.06114, 2005.05017 (`\fourthnote`); 2208.12066 (`\linksupplementary`);
-%          1710.04728 (`\conflictofinterest`); 2609.34305 (`\useofartificialintelligence`); 2311.18672 (`\orcidA`…);
+% witness: 1709.06513 (`\conferencetitle`); 1902.06114, 2005.05017 (`\fourthnote`); 2208.12066 (`\linksupplementary`, in
+%          mdpi_doi/); 1710.04728 (`\conflictofinterest`); 2609.34305 (`\useofartificialintelligence`); 2311.18672 (`\orcidA`…);
 %          2212.11355, 2211.06541 (the copy's `\apj`)
-% oracle:  pdflatex with 2404.14200's Definitions/mdpi.cls (2023) for the notes, the supplementary link and the AI statement,
+% oracle:  pdflatex with 2404.14200's Definitions/mdpi.cls (2023) for the notes and the AI statement,
 %          1911.06360's (2019) for "Conflicts of Interest: None declared.", 2212.11355's for "As shown in ApJ and MNRAS."
-% engines: rust 67int10 = 6 errors (undefined `\apj`, `\mnras`, `\fourthnote`, `\linksupplementary`, `\conflictofinterest`,
+% engines: rust 67int10 = 5 errors (undefined `\apj`, `\mnras`, `\fourthnote`, `\conflictofinterest`,
 %          `\useofartificialintelligence`); `\orcidA` dropped
 % expect:  0 errors, 0 warnings; the author's ORCID, the fourth note, the labelled statements
 % status:  RED (67int10) -> GREEN (68k)
@@ -38,7 +38,7 @@ $^{2}$ \quad Elsewhere Institute}
 \begin{document}
 \section{Introduction}
 As shown in \apj\ and \mnras.
-\supplementary{The following are available at \linksupplementary{s1}.}
+\supplementary{The following are available online.}
 \conflictsofinterest{The authors declare no conflict of interest.}
 \conflictofinterest{None declared.}
 \useofartificialintelligence{No AI was used.}

@@ -183,9 +183,9 @@ fn interact_class_commands() {
   ]);
 }
 
-/// mdpi.cls `\orcidA` (the iD the paper gives `\orcidauthorA`), `\conference`, `\fourthnote`, `\linksupplementary`,
-/// `\conflictofinterest`, `\useofartificialintelligence` and the AAS abbreviations a copy pastes in (2311.18672,
-/// 1709.06513, 1902.06114, 2208.12066, 1710.04728, 2609.34305, 2212.11355).
+/// mdpi.cls `\orcidA` (the iD the paper gives `\orcidauthorA`), `\conference`, `\fourthnote`, `\conflictofinterest`,
+/// `\useofartificialintelligence` and the AAS abbreviations a copy pastes in (2311.18672, 1709.06513, 1902.06114,
+/// 1710.04728, 2609.34305, 2212.11355); `\linksupplementary` (2208.12066) is `mdpi_supplementary_link_under_the_doi`'s.
 #[test]
 fn mdpi_class_commands() {
   let xml = clean_with_copy!(
@@ -197,7 +197,6 @@ fn mdpi_class_commands() {
     r#"<personname>Ann Author<sup xml:id="id1">1</sup></personname> <contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097">"#,
     r#"<note role="fourthnote" xml:id="id14">A fourth note.</note>"#,
     r#"<p xml:id="S1.p1.1">As shown in ApJ and MNRAS.</p>"#,
-    r#"<ref class="ltx_url" font="typewriter" href="https://www.mdpi.com/article//s1">https://www.mdpi.com/article//s1</ref>"#,
     r#"<para class="ltx_noindent" xml:id="Sx2.p2"> <p xml:id="Sx2.p2.1"><text font="bold" xml:id="Sx2.p2.1.1">Conflicts of Interest:</text> None declared.</p> </para> <para class="ltx_noindent" xml:id="Sx2.p3"> <p xml:id="Sx2.p3.1"><text font="bold" xml:id="Sx2.p3.1.1">Use of Artificial Intelligence:</text> No AI was used.</p> </para>"#,
   ]);
 }
@@ -246,4 +245,169 @@ fn siamart_class_commands() {
     r#"<p xml:id="S1.I2.i2.p1.1">Two.</p>"#,
     r#"<title><tag close=" ">Appendix A</tag></title>"#,
   ]);
+}
+
+/// Round 2 (review findings 1-3, 5-8). A conversion of a class-bindings repro beside the files of its source
+/// (`files`: name in the source, repro path), with its log and squashed XML.
+fn convert_beside(tex: &str, files: &[(&str, &str)]) -> (String, String) {
+  let (log, xml) = convert_files_with(tex, files, Some("ar5iv.sty"));
+  (log, squash(&xml))
+}
+
+/// mdpi.cls `\linksupplementary{file}` links the article's supplementary file under its DOI: the paper's `\doinum`,
+/// else the default the copy computes from its journal table, the volume, the issue and the article number
+/// (2208.12066's :523-530, 10.3390/s23001234; `preprints`, 10.3390/23001234); with neither the copy nor a journal it
+/// names, the file's name and one Warning (2208.12066, 2602.00080, 1901.06933, 2311.18672, 2311.15904, 2111.09774).
+#[test]
+fn mdpi_supplementary_link_under_the_doi() {
+  let copies = [
+    (
+      "Definitions/mdpi.cls",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/class-bindings/mdpi_doi/Definitions/mdpi.cls"
+      ),
+    ),
+    (
+      "Definitions/journalnames.tex",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/class-bindings/mdpi_doi/Definitions/journalnames.tex"
+      ),
+    ),
+  ];
+  let (log, xml) = convert_beside(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/mdpi_doi/mdpi_linksupplementary.tex"
+    ),
+    &copies,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<p xml:id="S1.p1.1">The supporting information can be downloaded at: <ref class="ltx_url" font="typewriter" href="https://www.mdpi.com/article/10.3390/s23001234/s1">https://www.mdpi.com/article/10.3390/s23001234/s1</ref>.</p>"#,
+  ]);
+  // (`preprints`, whose row's abbreviation is empty: 2111.09774, 2211.05018, 2411.01130)
+  let (log, xml) = convert_beside(
+    &include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/mdpi_doi/mdpi_linksupplementary.tex"
+    )
+    .replace("[sensors,", "[preprints,"),
+    &copies,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<p xml:id="S1.p1.1">The supporting information can be downloaded at: <ref class="ltx_url" font="typewriter" href="https://www.mdpi.com/article/10.3390/23001234/s1">https://www.mdpi.com/article/10.3390/23001234/s1</ref>.</p>"#,
+  ]);
+  let (log, xml) = convert_beside(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/mdpi_doi/mdpi_linksupplementary_doinum.tex"
+    ),
+    &copies,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<p xml:id="S1.p1.1">The supporting information can be downloaded at: <ref class="ltx_url" font="typewriter" href="https://www.mdpi.com/article/10.3390/s99999999/s1">https://www.mdpi.com/article/10.3390/s99999999/s1</ref>.</p>"#,
+  ]);
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/mdpi_doi/mdpi_linksupplementary_nodoi.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(log.contains("Warning:missing:\\linksupplementary"), "{log}");
+  assert_all(&squash(&xml), &[
+    r#"<p xml:id="S1.p1.1">The supporting information can be downloaded at: s1.</p>"#,
+  ]);
+}
+
+/// gretsi.cls prints the abstracts the paper stores, the French one first, the last call of each winning: v1.2 (1001.1912's
+/// copy, :219-224) after `\englishabstract` twice and `\frenchabstract` (2206.05928, 2205.13867, 2411.07577); v1.3
+/// (2304.10248's `\maketitle`) after `\abstract` and `\resume` (2304.07234). The text between v1.3's `\auteur` calls
+/// is kept with the name before it, past the separators (2508.03934).
+#[test]
+fn gretsi_abstracts_in_class_order() {
+  let (log, xml) = convert_beside(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/gretsi_v12/gretsi_v12_abstract_order.tex"
+    ),
+    &[(
+      "gretsi.cls",
+      include_str!("../../../tools/perfect_kernel/repros/class-bindings/gretsi_v12/gretsi.cls"),
+    )],
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<abstract inlist="toc" name="Résumé" xml:id="abstract1"> <p xml:id="abstract1.1">Le résumé.</p> </abstract> <abstract inlist="toc" name="Abstract" xml:id="abstract2"> <p xml:id="abstract2.1">The English abstract.</p> </abstract>"#,
+  ]);
+  assert!(!xml.contains("A first English draft"), "{xml}");
+  let xml = clean!("gretsi_v13_abstract_order.tex");
+  assert_all(&xml, &[
+    r#"<abstract inlist="toc" name="Résumé" xml:id="abstract1"> <p xml:id="abstract1.1"><text xml:lang="fr" xml:id="abstract1.1.1">Le résumé.</text></p> </abstract> <abstract inlist="toc" name="Abstract" xml:id="abstract2"> <p xml:id="abstract2.1">The English abstract.</p> </abstract>"#,
+  ]);
+}
+
+/// svmult.cls `\if@runhead` follows the version's option (v1.1 `runningheads`, astro-ph0108509's copy :37-38; v5.x
+/// `norunningheads`, :115-116: 0803.2826, 0808.2157), v1.1's `\micro` is Euler's upright Greek mu (U+03BC, :74;
+/// astro-ph0108509, hep-ph0301145), and `\subfigures` numbers a `\title*` contribution's figures without the chapter,
+/// whatever its counter (:1918-1920 `\if@numart\else\thechapter.\fi`; 1310.5064, 1411.2805).
+#[test]
+fn svmult_options_micro_and_chapter_subfigures() {
+  let (log, xml) = convert_beside(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/svmult_v11/svmult_v11_runningheads_micro.tex"
+    ),
+    &[(
+      "svmult.cls",
+      include_str!("../../../tools/perfect_kernel/repros/class-bindings/svmult_v11/svmult.cls"),
+    )],
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_all(&xml, &[
+    "<p xml:id=\"p1.1\">Running heads on.A 5 <text xml:id=\"p1.1.1\">\u{3bc}</text>m grain.</p>",
+  ]);
+  let xml = clean_with_copy!(
+    "svmult_aas/svmult_norunningheads_subfigures.tex",
+    "svmult.cls",
+    "svmult_aas/svmult.cls"
+  );
+  assert_all(&xml, &[
+    "Running heads off.",
+    r#"<caption><tag close=": ">Figure 1a</tag>First.</caption>"#,
+    r#"<caption><tag close=": ">Figure 1b</tag>Second.</caption>"#,
+  ]);
+}
+
+/// gretsi v1.3 `\auteurs`: the text between the `\auteur` calls past the separators is the name before it ("(chair)"),
+/// the comma between two calls the list's (2508.03934). (Known residual, reported in round 2: David Picard's "Lab B"
+/// goes to Simon Lepage alone — the comma of Simon's shown marks "1,2" splits a stray label `2` off his fuzzy name label,
+/// the pattern of `svjour3_marked_pieces_after_a_break`'s witness.)
+#[test]
+fn gretsi_v13_auteurs_keep_the_text_between_calls() {
+  let xml = clean!("gretsi_v13_abstract_order.tex");
+  assert_all(&xml, &[
+    r#"<creator role="author"> <personname>Simon <text font="smallcaps" xml:id="id1">Lepage<sup xml:id="id1.1"><text font="upright" xml:id="id1.1.1">1,2</text></sup></text></personname> <contact name="Email: " role="email">s.lepage@x.com</contact> <contact name="Affiliation: " role="affiliation">Lab A, Paris</contact> <contact name="Affiliation: " role="affiliation">Lab B, Marne</contact> </creator>"#,
+    r#"<personname>Jeremie <text font="smallcaps" xml:id="id2">Mary<sup xml:id="id2.1"><text font="upright" xml:id="id2.1.1">1</text></sup></text></personname> <contact name="Email: " role="email">j.mary@x.com</contact> <contact name="Affiliation: " role="affiliation">Lab A, Paris</contact> </creator>"#,
+    r#"<personname>David <text font="smallcaps" xml:id="id3">Picard<sup xml:id="id3.1"><text font="upright" xml:id="id3.1.1">2</text></sup></text> (chair)</personname> <contact name="Email: " role="email">d.picard@x.fr</contact>"#,
+  ]);
+}
+
+/// interact.cls :223-224 `\ubvarrho`, `\ubvarsigma`: `\boldsymbol{\varrho}`, `\boldsymbol{\varsigma}` (1711.05866's copy).
+#[test]
+fn interact_bold_var_greek() {
+  let xml = clean!("interact_class_commands.tex");
+  assert_all(&xml, &[
+    r#"<XMTok font="bold italic" name="varrho" role="UNKNOWN">ϱ</XMTok>"#,
+    r#"<XMTok font="bold italic" name="varsigma" role="UNKNOWN">ς</XMTok>"#,
+  ]);
+}
+
+/// svjour3 `\institute` pieces each opened by a `\\` after `\and` (`\and\\ \textsuperscript{2} Univ B`) still lead with
+/// their marks: each author gets the institutes its shown marks name (1810.10167).
+#[test]
+fn svjour3_marked_pieces_after_a_break() {
+  let xml = clean!("svjour3_marked_pieces_after_a_break.tex");
+  assert_all(&xml, &[
+    r#"<personname>Fan Zhang<sup xml:id="id2">1,3</sup></personname> <contact name="Affiliation: " role="affiliation"> Univ A, Shanghai</contact> <contact name="Affiliation: " role="affiliation"> Univ C, Beijing</contact> </creator>"#,
+    r#"<personname>Yaohua Hu<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"> Univ B, Shenzhen</contact> </creator>"#,
+  ]);
+  assert!(!xml.contains("<creator role=\"author\"> <contact"), "{xml}");
 }

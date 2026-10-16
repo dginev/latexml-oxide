@@ -13,9 +13,26 @@ LoadDefinitions!({
   // type options are the printed page's, and the rest, which mdpi.cls:117 passes to article (size, paper), set only
   // its layout, so none is passed on.
   RawTeX!(r"\def\@status{submit}\def\lx@mdpi@submit{submit}");
+  // The journal options: the copies since 2015 read them from the journal table the paper ships beside the class
+  // (2208.12066's mdpi.cls :74 `\input{Definitions/journalnames}`, 41 copies `\input{journalnames}`), a row per
+  // journal (`\DeclareOption{sensors}{\gdef\@journal{sensors}…\gdef\@doiabbr{s}…}`), and :139 executes the class's
+  // default (`notspecified`, `entropy` in older copies) before the paper's: the journal's DOI abbreviation, which the
+  // class's default DOI is made of (`default_doi`, read by `\linksupplementary`).
+  let shipped = crate::shipped_class::shipped_class_text("mdpi")?;
+  let journal_table = shipped.as_deref().and_then(journal_table_input);
+  if let Some(table) = &journal_table {
+    RawTeX!(&s!("\\InputIfFileExists{{{table}}}{{}}{{}}"));
+  }
   DeclareOption!("submit", "\\gdef\\@status{submit}");
   DeclareOption!("accept", "\\gdef\\@status{accept}");
   DeclareOption!(None, {});
+  if journal_table.is_some()
+    && let Some(defaults) = shipped
+      .as_deref()
+      .and_then(|text| crate::shipped_class::class_code_argument(text, "\\ExecuteOptions"))
+  {
+    RawTeX!(&s!("\\ExecuteOptions{{{defaults}}}"));
+  }
   ProcessOptions!();
   LoadClass!("article");
   RequirePackage!("amsmath");
@@ -65,7 +82,6 @@ LoadDefinitions!({
   // 7), upgreek (49; `\upmu` 97) and subfig (14; `\subfloat` 30). Witnesses 1904.12911, 2110.08429, 1904.02732,
   // 2004.08650, 2508.02963, 2508.18441. The paper's own copy decides which it loads (a 2013 copy loads no enumitem, so a
   // paper's `\usepackage[shortlabels]{enumitem}` is the first load); without one, all of them.
-  let shipped = crate::shipped_class::shipped_class_text("mdpi")?;
   for package in [
     "caption", "lastpage", "float", "enumitem", "mathpazo", "setspace", "epstopdf", "upgreek",
     "subfig", "paracol",
@@ -195,14 +211,18 @@ LoadDefinitions!({
     "\\TitleCitation{}",
     "\\@add@frontmatter{ltx:note}[role=titlecitation]{#1}"
   );
+  // The volume, issue and article number are also kept as the class keeps them (2208.12066's copy :545, :588, :606-612:
+  // `\cutdigits` drops leading zeros; a Molbank article number, `M1234`, as given), for its default DOI
+  // (`\linksupplementary`).
+  RawTeX!(r"\def\lx@mdpi@molbank{molbank}");
   DefMacro!(
     "\\pubvolume{}",
-    "\\@add@frontmatter{ltx:note}[role=volume]{#1}"
+    "\\gdef\\@pubvolume{\\cutdigits{#1}}\\@add@frontmatter{ltx:note}[role=volume]{#1}"
   );
   DefMacro!("\\pubyear{}", "\\@add@frontmatter{ltx:note}[role=year]{#1}");
   DefMacro!(
     "\\issuenum{}",
-    "\\@add@frontmatter{ltx:note}[role=issue]{#1}"
+    "\\gdef\\@issuenum{\\cutdigits{#1}}\\@add@frontmatter{ltx:note}[role=issue]{#1}"
   );
   DefMacro!(
     "\\reftitle{}",
@@ -211,7 +231,7 @@ LoadDefinitions!({
   def_macro_noop("\\PublishersNote")?;
   DefMacro!(
     "\\articlenumber{}",
-    "\\@add@frontmatter{ltx:note}[role=articlenumber]{#1}"
+    "\\ifx\\@journal\\lx@mdpi@molbank\\gdef\\@articlenumber{#1}\\else\\gdef\\@articlenumber{\\cutdigits{#1}}\\fi\\@add@frontmatter{ltx:note}[role=articlenumber]{#1}"
   );
   DefMacro!(
     "\\copyrightyear{}",
@@ -417,6 +437,16 @@ LoadDefinitions!({
     // :667), as `\history` is printed.
     // (and :424 `\gdef\@doinum{#1}`, which `\linksupplementary` reads)
     RawTeX!(r"\def\@doinum{}");
+    // :482-505 (and :533-541 `\cutdigits`) the padding the default DOI's issue and article number take, `\fourdigits`
+    // in the 2016-2018 copies (54 of 319 sampled: 1607.02330, 1810.09793).
+    RawTeX!(
+      r"\def\cutdigits#1{\ifnum#1>0 \number#1 \else\ifnum#1<10000 \number#1 \else error\fi\fi}
+\def\twodigits#1{\ifnum#1<10 0\number#1 \else\number#1 \fi}
+\def\fourdigits#1{\ifnum#1<10 000\number#1 \else\ifnum#1<100 00\number#1 \else\ifnum#1<1000 0\number#1 \else
+\ifnum#1<10000 \number#1 \else error\fi\fi\fi\fi}
+\def\fivedigits#1{\ifnum#1<10 000\number#1 \else\ifnum#1<100 00\number#1 \else\ifnum#1<1000 0\number#1 \else
+\ifnum#1<100000 \number#1 \else error\fi\fi\fi\fi}"
+    );
     DefMacro!(
       "\\doinum{}",
       "\\gdef\\@doinum{#1}\\ifx\\@status\\lx@mdpi@submit\\else\\@add@frontmatter{ltx:note}[role=doi]{#1}\\fi"
@@ -539,13 +569,54 @@ LoadDefinitions!({
     RawTeX!(
       r"\newcommand{\conflictofinterest}[1]{\par\noindent\textbf{Conflicts of Interest:} #1\par}
 \newcommand{\useofartificialintelligence}[1]{\par\noindent\textbf{Use of Artificial Intelligence:} #1\par}
-\newcommand{\linksupplementary}[1]{\edef\lx@mdpi@link{\noexpand\url{https://www.mdpi.com/article/\@doinum/\unexpanded{#1}}}\lx@mdpi@link}
 \newcommand{\bio}[2]{\par\noindent{#1}\ {#2}\par}
 \newcommand{\justifyorcenter}[1]{#1}
 \newcommand{\highlight}[1]{\colorbox{yellow}{#1}}
 \def\@CorrStatement{}\newcommand{\CorrStatement}[1]{\gdef\@CorrStatement{#1}}
 \newcommand{\dist}{1.7em}"
     );
+    // `\linksupplementary{file}` (2404.14200's copy :1498, 2208.12066's :1479: `\url{https://www.mdpi.com/article/
+    // \@doinum/#1}`; 19 papers, none setting `\doinum`: 2208.12066, 2602.00080, 1901.06933, 2311.18672, 2607.17752): the
+    // link under the paper's DOI, else under the default the copy computes at load (`default_doi`, 2208.12066's :523-530
+    // `\doinum{10.3390/\@doiabbr\@pubvolume\twodigits\@issuenum\fivedigits\@articlenumber}`, `10.3390/s23001234`), which
+    // needs the copy's journal table and the paper's volume, issue and article number. Without them the DOI is unknown:
+    // the file's name, and a Warning (pdflatex has the copy, so its DOI is always known).
+    if let Some((article_only, formula)) = shipped.as_deref().and_then(default_doi) {
+      RawTeX!(&s!(
+        "\\def\\lx@mdpi@doi@default{{{formula}}}\\def\\lx@mdpi@doi@articleonly{{,{},}}",
+        article_only.join(",")
+      ));
+    }
+    DefMacro!("\\linksupplementary{}", sub[(file)] {
+      let file: Tokens = file;
+      let doi = if macro_text("\\@doinum").is_some_and(|doi| !doi.trim().is_empty()) {
+        Some(Tokens!(T_CS!("\\@doinum")))
+      } else {
+        default_doi_tokens()
+      };
+      Ok(match doi {
+        Some(doi) => {
+          let mut out = TokenizeInternal!(r"\edef\lx@mdpi@link{\noexpand\url{https://www.mdpi.com/article/").unlist();
+          out.extend(doi.unlist());
+          out.extend(TokenizeInternal!(r"/\unexpanded{").unlist());
+          out.extend(file.unlist());
+          out.extend([T_END!(), T_END!(), T_END!(), T_CS!("\\lx@mdpi@link")]);
+          Tokens::new(out)
+        },
+        None => {
+          Warn!(
+            "missing",
+            "\\linksupplementary",
+            s!(
+              "The article's DOI is unknown (no \\doinum, nor the class copy's journal table and the paper's volume, issue \
+               and article number to compute it), so the supplementary file '{}' is not linked",
+              file.to_string()
+            )
+          );
+          file
+        },
+      })
+    });
   }
   // The astronomical journal abbreviations some copies paste in (2211.06541, 2212.11355, 2406.01458; 2510.22959's
   // mdpi_mod.cls).
@@ -562,6 +633,114 @@ LoadDefinitions!({
   def_macro_noop("\\appendixtitles{}")?;
   def_macro_noop("\\appendixstart")?;
 });
+
+/// The journal table the copy `class` (of mdpi.cls) inputs (2208.12066's :74 `\input{Definitions/journalnames}`), if any.
+fn journal_table_input(class: &str) -> Option<String> {
+  let code = crate::shipped_class::class_code(class);
+  code.match_indices("\\input{").find_map(|(at, call)| {
+    let rest = &code[at + call.len()..];
+    let name = &rest[..rest.find('}')?];
+    name
+      .contains("journalnames")
+      .then(|| name.trim().to_string())
+  })
+}
+
+/// The DOI the copy `class` (of mdpi.cls) gives an article by default: the journals whose DOI is the article number
+/// alone (2208.12066's :515-528 `\ifthenelse{\equal{\@journal}{molbank} \OR …}{\doinum{10.3390/\@articlenumber}}`), and
+/// every other journal's, the last default `\doinum` (:529), when it is made of the journal's DOI abbreviation, the
+/// volume, issue and article number and the class's padding only (6 copies pad with siunitx's `\num`, which no `\edef`
+/// expands: none).
+fn default_doi(class: &str) -> Option<(Vec<String>, String)> {
+  const ARTICLE_ONLY: &str = "10.3390/\\@articlenumber";
+  const PARTS: [&str; 7] = [
+    "@doiabbr",
+    "@pubvolume",
+    "@issuenum",
+    "@articlenumber",
+    "twodigits",
+    "fourdigits",
+    "fivedigits",
+  ];
+  let code = crate::shipped_class::class_code(class);
+  let defaults: Vec<(usize, String)> = code
+    .match_indices("\\doinum{10.3390/")
+    .filter_map(|(at, _)| {
+      crate::shipped_class::class_code_argument(&code[at..], "\\doinum")
+        .map(|arg| (at, arg.trim().to_string()))
+    })
+    .collect();
+  let (_, formula) = defaults.last()?.clone();
+  if formula.contains(['#', '%']) {
+    return None;
+  }
+  let mut rest = formula.as_str();
+  while let Some(at) = rest.find(['\\', '[']) {
+    let after = rest[at..].strip_prefix('\\')?;
+    let len = after
+      .find(|c: char| !c.is_ascii_alphabetic() && c != '@')
+      .unwrap_or(after.len());
+    if !PARTS.contains(&&after[..len]) {
+      return None;
+    }
+    rest = &after[len..];
+  }
+  let article_only = match defaults.as_slice() {
+    [(at, first), .., _] if first == ARTICLE_ONLY => {
+      let condition = &code[code[..*at].rfind("\\ifthenelse")?..*at];
+      condition
+        .match_indices("\\equal{\\@journal}{")
+        .filter_map(|(i, call)| {
+          let name = &condition[i + call.len()..];
+          Some(name[..name.find('}')?].trim().to_string())
+        })
+        .collect()
+    },
+    _ => Vec::new(),
+  };
+  Some((article_only, formula))
+}
+
+/// The text of the macro `cs`'s expansion (empty for an empty one, `\gdef\@doiabbr{}`: the `preprints` row), if `cs`
+/// is defined.
+fn macro_text(cs: &str) -> Option<String> {
+  let defn = lookup_definition(&T_CS!(cs)).ok()??;
+  Some(match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => body.to_string(),
+    _ => String::new(),
+  })
+}
+
+/// The class's default DOI (`default_doi`) for the paper's journal, volume, issue and article number, when the journal
+/// table named the journal and each number is one (`\cutdigits` of digits; a Molbank article number as it is): what
+/// the class's `\@doinum` expands to.
+fn default_doi_tokens() -> Option<Tokens> {
+  let formula = macro_text("\\lx@mdpi@doi@default")?;
+  let article_only = macro_text("\\@journal").is_some_and(|journal| {
+    macro_text("\\lx@mdpi@doi@articleonly")
+      .is_some_and(|list| list.contains(&s!(",{},", journal.trim())))
+  });
+  let number = |cs: &str| {
+    macro_text(cs).is_some_and(|text| {
+      let digits: String = text
+        .replace("\\cutdigits", "")
+        .chars()
+        .filter(|c| !matches!(c, '{' | '}') && !c.is_whitespace())
+        .collect();
+      !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())
+    })
+  };
+  if article_only {
+    return macro_text("\\@articlenumber")
+      .is_some_and(|text| !text.trim().is_empty())
+      .then(|| TokenizeInternal!("10.3390/\\@articlenumber"));
+  }
+  let complete = (!formula.contains("\\@doiabbr") || macro_text("\\@doiabbr").is_some())
+    && ["\\@pubvolume", "\\@issuenum", "\\@articlenumber"]
+      .iter()
+      .all(|cs| !formula.contains(cs) || number(cs));
+  complete.then(|| Tokens!(T_CS!("\\lx@mdpi@doi@default")))
+}
 
 /// How the paper's copy of mdpi.cls sets `\conflictofinterests`'s argument.
 enum ConflictForm {

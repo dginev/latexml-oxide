@@ -1,0 +1,21 @@
+% witness: 2311.15904 (`\documentclass[journal,…]`, the template's placeholder for the journal), 2208.12066
+%          (`\linksupplementary`)
+% oracle:  none: pdflatex needs the paper's copy of the class, which computes the DOI from its journal table
+%          (2208.12066's :523-530); without a copy, or a journal the table names, the DOI is unknown
+% engines: rust 68k = https://www.mdpi.com/article//s1 (an empty DOI)
+% expect:  0 errors, 1 warning (the DOI `\linksupplementary` needs is unknown); the file's name "s1" without a link
+% status:  RED (68k) -> GREEN (68k round 2)
+% preload: ar5iv.sty
+\documentclass[journal,article,accept,pdftex,moreauthors]{mdpi}
+\pubvolume{1}
+\issuenum{1}
+\articlenumber{0}
+\Title{An MDPI Paper}
+\Author{Ann Author}
+\AuthorNames{Ann Author}
+\address{Somewhere University}
+\abstract{An abstract.}
+\begin{document}
+\section{Introduction}
+The supporting information can be downloaded at: \linksupplementary{s1}.
+\end{document}
