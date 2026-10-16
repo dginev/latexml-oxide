@@ -5415,7 +5415,6 @@ impl Document {
       .into_iter()
       .rev()
     {
-      self.document.node_to_string(&dual);
       let mut dual_children = xml::element_nodes(&dual);
       // Defensive: an XMDual should always have presentation +
       // content children, but a malformed math parse (post-ambiguity
