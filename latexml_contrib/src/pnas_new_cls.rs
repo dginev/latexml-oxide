@@ -87,7 +87,8 @@ LoadDefinitions!({
   RequirePackage!("etoolbox");
   RequirePackage!("titlesec");
   RequirePackage!("caption");
-  RequirePackage!("enumitem");
+  // pnas-new.cls:433 `\RequirePackage[inline]{enumitem}` (2508.21277's copy): the inline lists (`{enumerate*}`).
+  RequirePackage!("enumitem", options => vec![s!("inline")]);
   // pnasresearcharticle.sty uses \afterpage and \mdfdefinestyle.
   RequirePackage!("afterpage");
   // pnas-new.cls:53-55 loads xcolor, tikz and `[framemethod=tikz]{mdframed}`; the option loads tikz (and xcolor)

@@ -1,0 +1,14 @@
+% witness: 0704.0929, 0704.1238, 0802.2495 (\rotdriver{dvips}, 42 papers), 2306.14600, 2403.02437 (\@rot@twoside...)
+% oracle:  pdflatex 0 errors (under pdflatex \rotdriver{dvips} inputs dvips.def over pdftex.def: OXIDIZED_DESIGN_DIVERGENCES #619); "Before [Side rotated] after."
+% engines: rust 67int9 = undefined \rotdriver, \@rot@twosidefalse; perl = the same (KNOWN_PERL_ERRORS #803)
+% expect:  0 errors, 0 warnings; the sideways inline-block
+% status:  RED (67int9) -> GREEN (68i); guard perfect_kernel_batch68i::rotating_rotdriver
+\documentclass[twoside]{article}
+\usepackage{rotating}
+\rotdriver{dvips}
+\makeatletter
+\@rot@twosidefalse
+\makeatother
+\begin{document}
+Before \begin{sideways}Side\end{sideways} after.
+\end{document}

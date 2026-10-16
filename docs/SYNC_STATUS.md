@@ -2001,6 +2001,72 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   wileynjdv5_theorem_styles, wileynjd_uns_keeps_en_dashes, wileynjd_v1_reference_styles, wileynjd_v1_apa_is_amsrefs}
   RED (67w) → GREEN (67w r2); guards `perfect_kernel_batch67w`.
 
+- **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
+  rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
+  witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
+  46 papers: 0710.3210, 1106.3946, 1401.4404, 1412.4869, 1505.05782) heading the bibliography where tocbibind sets
+  `\bibsection` (:154-198, written as `\<unit>*{\tocbibname}`; the class's name by its chapters, OXIDIZED_DESIGN_DIVERGENCES
+  #620), `\settocname`/`\setlofname`/`\setlotname`/`\setindexname` (:124-131; 0710.3210, 2010.07703, 2012.02570),
+  `\tocfile{<title>}{<ext>}` (:263-271, a TOC of `<ext>`; 1605.05950, 1712.01817, 2204.09786, 2408.05806, 2409.09967),
+  `\tocsection`, `\toc@section`/`\toc@chapter`/`\toc@headstar`, `\toc@start`/`\toc@finish` (:107-114, :250-262,
+  :314-316; etoc's tocbibind style, 2412.08175), `\tocotherhead` (:102, formerly empty); `\simplechapter`/`\tocchapter`
+  not ported (no witness). amsopn (amsopn_sty.rs) — `\newmcodes@` (:28-42, the pdfTeX branch; 1511.04387, 1712.08220,
+  1802.09883, 1809.00159, 1908.01362), `\@declmathop` (:51-53; 2101.09853), `\varliminf@`/`\varlimsup@` (:105-108;
+  2005.13511); `\varlim@` was 67's (KNOWN_PERL_ERRORS #696). The row's `\DeclareMathOperator` (21) and `\operatorname`
+  (3) are not amsopn's: 1502.03077 (`a msmath` option typo, pdflatex errs too), 2110.09723, 2201.10869, 2208.02596
+  (libertinust1math.sty:75 loads amsmath, the libertinust1math binding does not: next payloads' row), 2405.12464 and
+  2410.06995 (no amsmath at all, pdflatex errs too); the rest convert clean at 67int9. datetime (latexml_contrib
+  datetime_sty.rs; English, monolingual) — the date counts and `\dateformat`/`\THEDAY`/`\THEMONTH`/`\THEYEAR`
+  (:564-565, :175-180; 2608.06092), the format selectors verbatim with `\dateseparator`, `\twodigit` and the day of the
+  week while `\ifshowdow` (`\showdowtrue`/`\showdowfalse`, `dayofweek`/`nodayofweek`; :75-148; 2209.06700),
+  `\ordinaldate` (:64-74, fmtcount's English `\ordinalnum` with `\fmtord`, raised by default, `level`/`raise`;
+  1601.00929, 1706.09444, 1804.06840), `\monthname`/`\shortmonthname` via datetime-defaults.sty's English names,
+  `\testifleapyear`/`\computedayofyear`/`\computedayofweek`/`\dayofweekname`/`\shortdayofweekname`/
+  `\thisdayofweekname` (:613-731; 26 papers: 1308.5288, 1409.5169, 1409.7716, 2112.11386, 2203.14410), `\today` in the
+  current format (:733-736) unless ar5iv keeps it `\relax` for an undated source (ruling 64s), `\pdfdate` (:789-829; 17
+  papers: 1005.0302, 1203.1927, 1209.4035, 1211.7272, 1212.4375), `iso`'s separators; `\textdate` keeps its
+  approximation (fmtcount's spelled numbers), `oclock` and the language modules not ported. rotating (rotating_sty.rs) —
+  `\if@rot@twoside`/`\rot@LR` with `figuresleft`/`figuresright` (:31-58; 2306.14600, 2403.02437), `\rotdriver` reading
+  its driver and loading none (:64; 42 papers: 0704.0929, 0704.1238, 0704.2885, 0802.2495, 0908.2043;
+  OXIDIZED_DESIGN_DIVERGENCES #619). paralist (paralist_sty.rs) — `{inparablank}`/`{asparablank}` under `defblank`
+  (:380-399; 15 papers: 1205.4564, 1306.3906, 1801.06340, 1804.00914, 2005.05886; 1707.03997), `\if@empty`,
+  `\setdefaultleftmargin` setting the indents, `\defaultleftmargin`, `\defaultitem`, `\defaultenum` (which calls
+  `\setdefaultitem`, as the file does) with their deprecation warnings (:75-77, :400-448; 24 papers: 1209.4819,
+  1301.6228, 1308.4189, 1403.1528, 1406.4053; 0907.0929, math0106001). todonotes (todonotes_sty.rs) — `\todostyle`
+  (:581-583; 27 papers: 2407.14906, 2409.03694, 2410.02385, 2411.05495, 2501.02553), the begin-document `\phantomsection`
+  when hyperref has none (:46-49; 12 papers: 1308.6029, 2103.09181, 2208.10521, 2305.03446, 2402.03164),
+  `\if@todonotes@disabled` set by `disable` (:159-160; 2606.13443). standalone (standalone_sty.rs) — `\ifstandalone`,
+  `\ifstandalonebeamer`, `\onlyifstandalone`, `\IfStandalone` (:26-39; 1310.0809, 2010.10238, 2011.05064, 2208.05046,
+  2403.07821), `{standalone}` (:707-709; 2310.18279), `\standaloneconfig` setting `mode`/`subpreambles` (:296-304; 17
+  papers: 1905.04614, 1910.10882, 2210.09924; its other keys unexpanded, so 1703.03769's `\buildjobname` is never run),
+  and an `\input` sub-file's `\standaloneenv` marking nothing (:802; 2505.21582). ccaption (latexml_contrib
+  ccaption_sty.rs) — the options, `\captionwidth`/`\changecaptionwidth`/`\normalcaptionwidth` (:76-82; 24 and 20
+  papers: 0803.1137, 0806.4323, 0811.1937, 0905.4349, 1207.5269), `\centerlastline`/`\flushleftright` (:66-72;
+  1706.01843), `\precaption`/`\postcaption`/`\midbicaption` (:91-96; 0711.3402, 1001.1088, 1408.3003),
+  `\hangcaption`/`\indentcaption`/`\normalcaption` setting their switches, `\bitwonumcaption` (:204-217; 1302.5179),
+  `\bionenumcaption`, `\bicaption` in the file's five-argument form (formerly four, keeping one caption) and
+  `\bicontcaption` (:219-259), `\contcaption` under the continued float's number (:138-141, formerly the next number),
+  and under `[subfigure]` `\subbottom`/`\subtop`, `\contsubbottom`/`\contsubtop`/`\contsubfigure`/`\contsubtable`
+  numbering on from the previous float's subfloats and `\subconcluded` (:309-312, :382-430; 0706.2285, 0907.2099,
+  0907.2405), the count kept after every subfloat through subfigure_sty.rs's new `\lx@subfloat@done`. enumitem — the
+  `{enumerate*}` row (28 papers) is the class bindings loading enumitem without the `inline` their classes give it:
+  lmcs (lmcs.cls:37-38; 1611.06929, 1711.09946, 1808.05051, 1904.11378, 2007.10842), Interspeech (Interspeech2024.cls:62,
+  Interspeech.cls:69; 2406.16145, 2408.04363, 2505.19937, 2609.16274), INTERSPEECH2021.sty:54 (2104.05980), pnas-new
+  (pnas-new.cls:433; 2508.21277) and wlpeerj (wlpeerj.cls:134, which the binding did not load; 2402.14602) now pass it;
+  2408.11792's `[in line]` errs in pdflatex too; the row's `\e` (5) is not enumitem's (no definition in the file;
+  2110.09723 is libertinust1math's `\DeclareMathOperator`). KNOWN_PERL_ERRORS #800-#807, OXIDIZED_DESIGN_DIVERGENCES
+  #619-#620. Repros package-bindings/{tocbibind_names_and_tocfile, amsopn_internals, datetime_names_and_pdfdate,
+  rotating_rotdriver, paralist_blank_lists, todonotes_todostyle, standalone_in_main_document,
+  ccaption_continued_and_bilingual, enumitem_inline_under_lmcs} RED (67int9) → GREEN; guards `perfect_kernel_batch68i`
+  (12). A/B vs 67int9-rel over 502 papers (the rows' 402 witnesses, 100 of pop67o): Errors 705 → 323, papers with
+  Errors 380 → 56, Fatals 4 → 4, none gains an Error; per row, Errors: tocbibind 66 → 6, amsopn 46 → 26 (the
+  libertinust1math and no-amsmath papers above), datetime 61 → 11 (papers' own: `\THEDAy`, unloaded `\newdateformat`),
+  rotating 54 → 10 (unloaded `{sideways}`), paralist 44 → 1, todonotes 40 → 0, standalone 40 → 2, ccaption 57 → 0,
+  enumitem 39 → 9; the 100 pop67o byte-identical. Words fall only where `<ERROR>` text left (11 `\newmcodes@` papers)
+  and in 2504.05198, whose four `\onlyifstandalone{\bibliography…}` sub-file bibliographies (152 items) are gobbled as
+  in pdflatex (the main one, 38 items, stays). Binding nets (tocbibind, amsopn, datetime, rotating, paralist, todonotes,
+  standalone, ccaption, enumitem, pnas-new) vs 67int9: no document worse, Errors 524 → 471. Open: `\todo[<style>]` takes its style key as the note's mark (`mark="mine"`;
+  19 papers' `\todo[inline]` alike, before 68i too).
 - **68b** (binding gaps G3, core package bindings: bindgaps/g23_macros.tsv rows hyperref, breqn, natbib, url,
   blkarray, pict2e, amsthm; each macro verified against the TL 2025 file). hyperref (hyperref_sty.rs) — `\Hy@Info`,
   `\Hy@Warning`, `\Hy@Error`, `\Hy@WarningNoLine`, `\Hy@InfoNoLine` (:130-135; 1310.6851, 1712.03838, 1901.10472),

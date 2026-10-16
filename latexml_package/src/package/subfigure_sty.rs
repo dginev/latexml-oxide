@@ -118,9 +118,12 @@ LoadDefinitions!({
   DefMacro!("\\lx@subfloat@caption{}{}",
     r"\if\relax\detokenize{#2}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\if\relax\detokenize{#1}\relax\else\caption{#1}\fi}{\caption[#1]{#2}}");
 
+  // After each subfloat: nothing, unless a package counts the subfloats on (ccaption's `[subfigure]` continued
+  // figures, ccaption_sty.rs, which may load first).
+  RawTeX!(r"\@ifundefined{lx@subfloat@done}{\let\lx@subfloat@done\relax}{}");
   // \subfigure — Perl: subfigure.sty.ltxml L138-149
   DefMacro!("\\subfigure[][]{}",
-    r"\begin{@subfigure}\iffiguretopcap\else\addtocounter{figure}{1}\fi\ifsubfiguretopcap\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@subfloat@caption{#1}{#2}#3}{#3\lx@subfloat@caption{#1}{#2}}\iffiguretopcap\else\addtocounter{figure}{-1}\fi\end{@subfigure}");
+    r"\begin{@subfigure}\iffiguretopcap\else\addtocounter{figure}{1}\fi\ifsubfiguretopcap\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@subfloat@caption{#1}{#2}#3}{#3\lx@subfloat@caption{#1}{#2}}\iffiguretopcap\else\addtocounter{figure}{-1}\fi\end{@subfigure}\lx@subfloat@done");
 
   // {@subfigure} environment — Perl: subfigure.sty.ltxml L151-158
   DefEnvironment!("{@subfigure}",
@@ -133,7 +136,7 @@ LoadDefinitions!({
 
   // \subtable — Perl: subfigure.sty.ltxml L160-171
   DefMacro!("\\subtable[][]{}",
-    r"\begin{@subtable}\iftabletopcap\else\addtocounter{table}{1}\fi\ifsubtabletopcap\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@subfloat@caption{#1}{#2}#3}{#3\lx@subfloat@caption{#1}{#2}}\iftabletopcap\else\addtocounter{table}{-1}\fi\end{@subtable}");
+    r"\begin{@subtable}\iftabletopcap\else\addtocounter{table}{1}\fi\ifsubtabletopcap\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@subfloat@caption{#1}{#2}#3}{#3\lx@subfloat@caption{#1}{#2}}\iftabletopcap\else\addtocounter{table}{-1}\fi\end{@subtable}\lx@subfloat@done");
 
   // {@subtable} environment — Perl: subfigure.sty.ltxml L172-179
   DefEnvironment!("{@subtable}",

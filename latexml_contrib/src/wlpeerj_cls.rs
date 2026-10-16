@@ -17,6 +17,9 @@ LoadDefinitions!({
   // document loads xcolor itself; color/definecolor stay via hyperref->color.
   // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
   RequirePackage!("hyperref");
+  // wlpeerj.cls:134 `\RequirePackage[inline]{enumitem}` (2402.14602's copy): enumitem's lists and its inline ones
+  // (`{enumerate*}`).
+  RequirePackage!("enumitem", options => vec![s!("inline")]);
   // wlpeerj.cls L23: `\RequirePackage{lineno}` unconditional.
   RequirePackage!("lineno");
   // wlpeerj.cls L55: `\RequirePackage{fancyhdr}` (custom headers/footers).

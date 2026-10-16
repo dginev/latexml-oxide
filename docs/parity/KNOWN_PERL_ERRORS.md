@@ -13925,3 +13925,75 @@ wasysym.sty:262-270 (wasysym.dtx:40-41, :181-211, :408) defines `\wasyparagraph`
 `\usepackage{wasysym}` `\wasyparagraph~1, 5\,\euro` — pdflatex "§ 1, 5 €", Perl two undefined (`\wasyparagraph` 42
 papers, `\euro` 12; 1001.4255, 1103.0853). Fixed in Rust (wasysym_sty.rs; `\roundz`, without a Unicode character of its
 own, left out). Repro package-bindings/wasysym_new_characters; guard `perfect_kernel_batch68c::wasysym_new_characters`.
+
+## 800. tocbibind.sty's binding defines none of the package's commands
+
+tocbibind.sty:101-132 and :250-316 define `\tocotherhead`, the heading internals `\toc@section`/`\toc@chapter`/
+`\toc@start`/`\toc@finish`, `\tocbibname` with `\settocbibname`, `\settocname`, `\setlofname`, `\setlotname`,
+`\setindexname`, `\tocfile{<title>}{<ext>}` and `\tocsection`, and heads the bibliography with `\tocbibname` (:154-198);
+Perl's tocbibind.sty.ltxml declares the options only. Minimal trigger: `\usepackage{tocbibind}\settocbibname{Literature}`
+then a `{thebibliography}` — pdflatex heads it "Literature", Perl an undefined `\settocbibname` and "References" (46
+papers; 0710.3210, 1106.3946, 1401.4404; `\tocfile` 1605.05950, 1712.01817; etoc's `\toc@start` 2412.08175). Fixed in
+Rust (tocbibind_sty.rs). Repro package-bindings/tocbibind_names_and_tocfile; guards
+`perfect_kernel_batch68i::{tocbibind_names_and_tocfile, tocbibind_book_bibliography_is_bibname}`.
+
+## 801. amsopn.sty's binding lacks `\newmcodes@`, `\varliminf@`/`\varlimsup@` and `\@declmathop`
+
+amsopn.sty:28-42 `\newmcodes@`, :51-53 `\@declmathop` (`\DeclareMathOperator`'s worker) and :105-108 the `\varliminf`/
+`\varlimsup` builders; Perl's amsopn.sty.ltxml defines `\DeclareMathOperator` and `\operatorname` natively and none of
+these. Minimal trigger: `\usepackage{amsmath}\makeatletter\newcommand\Limsup{\mathop{\mathpalette\varlimsup@{}}\nmlimits@}
+\makeatother` `$\Limsup_n a_n$` — pdflatex an overlined lim, Perl undefined `\varlimsup@` (`\newmcodes@` 11 papers:
+1511.04387, 1712.08220; 2005.13511; 2101.09853). Fixed in Rust (amsopn_sty.rs). Repro package-bindings/amsopn_internals;
+guard `perfect_kernel_batch68i::amsopn_internals`.
+
+## 802. datetime.sty has no binding
+
+Perl ships no datetime binding and does not read datetime.sty, so every command of the package is undefined: the
+date formats, `\dayofweekname{d}{m}{y}` (datetime.sty:704-707), `\ordinaldate`, `\pdfdate` (:789-829), `\newdate`,
+`\THEDAY`. Minimal trigger: `\usepackage{datetime}` `\dayofweekname{\day}{\month}{\year}` — pdflatex "Friday", Perl
+undefined (26 papers; 1308.5288, 1409.5169; `\pdfdate` 17: 1005.0302, 1203.1927). Rust's datetime_sty.rs ports the
+English monolingual date part. Repro package-bindings/datetime_names_and_pdfdate; guard
+`perfect_kernel_batch68i::datetime_names_and_pdfdate`.
+
+## 803. rotating.sty's binding lacks `\rotdriver` and the two-sided switch
+
+rotating.sty:52-58 `\if@rot@twoside` (from `\if@twoside`) and `\rot@LR`, set by `figuresleft`/`figuresright`, and :64
+`\rotdriver{<driver>}`; Perl's rotating.sty.ltxml defines neither. Minimal trigger: `\usepackage{rotating}\rotdriver{dvips}`
+— pdflatex clean, Perl undefined `\rotdriver` (42 papers; 0704.0929, 0704.1238, 0802.2495; `\@rot@twosidefalse`
+2306.14600). Fixed in Rust (rotating_sty.rs; the driver file is not loaded, OXIDIZED_DESIGN_DIVERGENCES #619). Repro
+package-bindings/rotating_rotdriver; guard `perfect_kernel_batch68i::rotating_rotdriver`.
+
+## 804. paralist.sty's binding lacks the blank lists and the deprecated commands
+
+paralist.sty:380-399 `{asparablank}` and `{inparablank}` (option `defblank`), :400-448 `\if@empty`, `\defaultitem`,
+`\defaultenum`, `\defaultleftmargin`, and `\setdefaultleftmargin` setting the indents; Perl's paralist.sty.ltxml has
+none of them (its `\setdefaultleftmargin` is empty). Minimal trigger: `\usepackage[defblank]{paralist}`
+`\begin{inparablank}\item a \item b\end{inparablank}` — pdflatex "a b", Perl undefined `{inparablank}` (15 papers;
+1205.4564, 1306.3906; `\defaultleftmargin` 24: 1209.4819, 1301.6228). Fixed in Rust (paralist_sty.rs). Repro
+package-bindings/paralist_blank_lists; guard `perfect_kernel_batch68i::paralist_blank_lists`.
+
+## 805. todonotes.sty's binding lacks `\todostyle`, `\phantomsection` and `\if@todonotes@disabled`
+
+todonotes.sty:46-49 (an empty `\phantomsection` at the document's start when hyperref has none), :159-160
+`\if@todonotes@disabled`, :581-583 `\todostyle{<name>}{<keys>}`; Perl's todonotes.sty.ltxml has none. Minimal trigger:
+`\usepackage{todonotes}\todostyle{mine}{color=red}` — pdflatex clean, Perl undefined (27 papers; 2407.14906, 2409.03694;
+`\phantomsection` 12: 1308.6029, 2103.09181; 2606.13443). Fixed in Rust (todonotes_sty.rs). Repro
+package-bindings/todonotes_todostyle; guards `perfect_kernel_batch68i::{todonotes_todostyle, todonotes_disabled_switch}`.
+
+## 806. standalone.sty's binding lacks the main document's standalone commands
+
+standalone.sty:26-39 `\ifstandalone` (false), `\ifstandalonebeamer`, `\onlyifstandalone` (`\@gobble`), `\IfStandalone`
+(`\@secondoftwo`), :296-304 `\standaloneconfig`, :707-709 `{standalone}`; Perl's standalone.sty.ltxml defines only the
+sub-file interception. Minimal trigger: `\usepackage{standalone}` `\ifstandalone A\else B\fi` — pdflatex "B", Perl
+undefined `\ifstandalone` and an extra `\fi` (11 papers; 1310.0809, 2010.10238; `\standaloneconfig` 17: 1905.04614).
+Fixed in Rust (standalone_sty.rs). Repro package-bindings/standalone_in_main_document; guard
+`perfect_kernel_batch68i::standalone_in_main_document`.
+
+## 807. ccaption.sty has no binding
+
+Perl ships no ccaption binding and does not read ccaption.sty: `\captionwidth`, `\changecaptionwidth`, `\precaption`,
+`\bitwonumcaption`, `\contcaption`, the `[subfigure]` continued subfloats (`\contsubbottom`, `\subconcluded`) are
+undefined. Minimal trigger: `\usepackage{ccaption}\captionwidth{.75\textwidth}` — pdflatex clean, Perl undefined (24
+papers; 0803.1137, 0806.4323; 0907.2405, 1302.5179). Rust's ccaption_sty.rs defines them over the kernel caption. Repro
+package-bindings/ccaption_continued_and_bilingual; guards `perfect_kernel_batch68i::{ccaption_continued_and_bilingual,
+ccaption_without_subfigure_option}`.

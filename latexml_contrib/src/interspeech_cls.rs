@@ -25,7 +25,9 @@ LoadDefinitions!({
   RequirePackage!("url");
   RequirePackage!("lipsum");
   RequirePackage!("tipa");
-  RequirePackage!("enumitem");
+  // Interspeech2024.cls:62 (Interspeech.cls:69 of 2025) `\RequirePackage[inline]{enumitem}`: the inline lists
+  // (`{enumerate*}`: 2406.16145, 2408.04363, 2505.19937, 2609.16274).
+  RequirePackage!("enumitem", options => vec![s!("inline")]);
   RequirePackage!("xkeyval");
   RequirePackage!("calc");
   RequirePackage!("xcolor");

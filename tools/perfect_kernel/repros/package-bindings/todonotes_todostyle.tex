@@ -1,0 +1,12 @@
+% witness: 2407.14906, 2409.03694, 2410.02385 (\todostyle, 27 papers), 1308.6029, 2103.09181 (\phantomsection without hyperref, 12)
+% oracle:  pdflatex 0 errors; "Text more." with the note "Fix this." in the margin
+% engines: rust 67int9 = undefined \todostyle, \phantomsection; perl = the same (KNOWN_PERL_ERRORS #805)
+% expect:  0 errors, 0 warnings; the todo note "Fix this."
+% status:  RED (67int9) -> GREEN (68i); guard perfect_kernel_batch68i::todonotes_todostyle
+\documentclass{article}
+\usepackage{todonotes}
+\todostyle{mine}{color=red!40}
+\begin{document}
+\phantomsection
+Text\todo[mine]{Fix this.} more.
+\end{document}

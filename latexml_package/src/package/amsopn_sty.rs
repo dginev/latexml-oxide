@@ -135,6 +135,32 @@ LoadDefinitions!({
     r"\def\varlim@#1#2{\lx@varlim@#2\relax}
 \def\lx@varlim@#1#2\relax{\ifx#1\leftarrowfill@\underleftarrow{\operatorname{lim}}\else\underrightarrow{\operatorname{lim}}\fi}"
   );
+  // amsopn.sty:105-108, `\varliminf@`/`\varlimsup@{<style>}` (an `\operator@font lim` under or over a
+  // rule), the builders of `\varliminf`/`\varlimsup` that papers call to define their own (`\renewcommand{\limsup}{
+  // \mathop{\mathpalette\varlimsup@{\vphantom{p}}}\nmlimits@}`, 2005.13511). They render as those two do, as `\varlim@`
+  // does above. Perl's binding lacks them (KNOWN_PERL_ERRORS #801).
+  RawTeX!(
+    r"\def\varliminf@#1{\underline{\operatorname{lim}}}
+\def\varlimsup@#1{\overline{\operatorname{lim}}}"
+  );
+  // amsopn.sty:28-42 `\newmcodes@`, the math codes an operator name is set with (`'`, `*`, `.`, `-`, `/`, `:` as
+  // ordinary characters, the minus kept in `\std@minus`); the pdfTeX branch, as LaTeXML is pdfTeX (`\Umathcode`
+  // undefined), its hexadecimal `"613A`/`"603A` written in decimal (the file reads them under `\catcode`\"=12`, :27).
+  // Papers set variable names with it, `\begingroup\newmcodes@\mathit{#1}\endgroup` (11 papers: 1511.04387,
+  // 1712.08220, 1802.09883). amsopn.sty:51-53 `\@declmathop{<m|o>}{<cs>}{<text>}`, `\DeclareMathOperator`'s worker
+  // after its star test, which papers call to declare operators in bulk (`\expandafter\@declmathop\expandafter
+  // #1\csname #2\endcsname{#2}`, 2101.09853): `\@ifdefinable` as there, then the declaration `\DeclareMathOperator`
+  // (`m`: starred, limits) makes. Perl's binding lacks both (KNOWN_PERL_ERRORS #801).
+  RawTeX!(
+    r#"\gdef\newmcodes@{\mathcode`\'39\mathcode`\*42\mathcode`\.24890 %
+  \ifnum\mathcode`\-=45 \else
+    \mathchardef\std@minus\mathcode`\-\relax
+  \fi
+  \mathcode`\-45\mathcode`\/47\mathcode`\:24634\relax}
+\long\def\@declmathop#1#2#3{\@ifdefinable{#2}{\csname lx@amsopn@declmathop@#1\endcsname#2{#3}}}
+\def\lx@amsopn@declmathop@m{\DeclareMathOperator*}
+\def\lx@amsopn@declmathop@o{\DeclareMathOperator}"#
+  );
   DefMacro!("\\nolimits@", "\\nolimits");
   // amsopn.sty:90 `\def\operatorfont{\operator@font}` — the user-level name
   // (glosmathtools.sty:54 `\sbu` uses it ~54× per manual). Perl's binding

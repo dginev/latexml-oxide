@@ -43,7 +43,9 @@ LoadDefinitions!({
   // xcolor comes with tikz (pgfcore.sty:13); a paper's later `\usepackage[table]{xcolor}` still takes its options (a
   // repeat load applies the options the first lacked, content.rs `apply_new_options_on_reload`), so colortbl and
   // array `m{}`/`b{}` columns work. See ifacconf_cls.rs.
-  RequirePackage!("enumitem");
+  // lmcs.cls:37-38 `\PassOptionsToPackage{inline}{enumitem}\RequirePackage{enumitem}`: the inline lists (`{enumerate*}`:
+  // 1611.06929, 1711.09946, 2007.10842, 2203.09501).
+  RequirePackage!("enumitem", options => vec![s!("inline")]);
   RequirePackage!("etoolbox");
   // lmcs.cls:62-66, 399, 428: tikz (papers draw with it unloaded, 2609.11893), color, thmtools, xparse, mathtools
   // (`\coloneqq`, `\DeclarePairedDelimiter`).

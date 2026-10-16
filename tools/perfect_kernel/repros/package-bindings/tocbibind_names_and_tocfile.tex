@@ -1,0 +1,21 @@
+% witness: 0710.3210, 1106.3946, 1401.4404 (\settocbibname, 46 papers), 2010.07703 (\settocname), 1605.05950, 2204.09786 (\tocsection\tocfile), 1712.01817 (\tocfile{..}{loa}), 2412.08175 (etoc: \toc@start/\toc@section/\toc@finish)
+% oracle:  pdflatex 0 errors; headings "Table of Contents", "Figures", "1 List of Algorithms", "3 Literature"
+% engines: rust 67int9 = 5 undefined (\settocbibname, \settocname, \setlofname, \tocsection, \tocfile), bibliography "References"; perl = the same (KNOWN_PERL_ERRORS #800)
+% expect:  0 errors, 0 warnings; TOC "Table of Contents", lof "Figures", loa "List of Algorithms", bibliography "Literature"
+% status:  RED (67int9) -> GREEN (68i); guard perfect_kernel_batch68i::tocbibind_names_and_tocfile
+\documentclass{article}
+\usepackage{tocbibind}
+\settocbibname{Literature}
+\settocname{Table of Contents}
+\setlofname{Figures}
+\begin{document}
+\tableofcontents
+\listoffigures
+\tocsection
+\tocfile{List of Algorithms}{loa}
+\section{Intro}
+Text \cite{a}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Title.
+\end{thebibliography}
+\end{document}

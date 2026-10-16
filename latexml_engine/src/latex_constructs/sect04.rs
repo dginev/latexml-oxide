@@ -458,25 +458,7 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\lx@kernel@tableofcontents",
     "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => {
-      let s  = ["ltx:part", "ltx:chapter", "ltx:section", "ltx:subsection", "ltx:subsubsection",
-          "ltx:paragraph", "ltx:subparagraph"];
-      // Perl latex_constructs.pool.ltxml L727-733: `$td = tocdepth+1`, clamp to
-      // the last section-type index, then take `s[0 .. $td]`. Perl's `0 .. $td`
-      // is an EMPTY range when `$td < 0`, so `\setcounter{tocdepth}{-1}` (parts
-      // only) yields `[part]` and `{-2}` or lower yields `select=''` (an empty
-      // ToC). Compute in SIGNED space: `tocdepth` is a signed counter, so the
-      // old `value_of() as usize` wrapped on negatives — a debug overflow panic,
-      // and in release a silently over-full ToC (`{-2}` listed everything).
-      let td = (CounterValue!("tocdepth").value_of() + 1).min((s.len() - 1) as i64);
-      let take = usize::try_from(td + 1).unwrap_or(0);
-      let mut s_depth : Vec<&'static str> = s.into_iter().take(take).collect();
-      if !s_depth.is_empty() {
-        s_depth.push("ltx:appendix");
-        s_depth.push("ltx:index");
-        s_depth.push("ltx:bibliography");
-      }
-
-      Ok(stored_map!("select" => s_depth.join(" | "),
+      Ok(stored_map!("select" => toc_select()?,
         "name" => digest_in_group(T_CS!("\\contentsname"))?))
     }
   );
@@ -637,4 +619,31 @@ fn after_heading_hook(whatsit: &mut Whatsit) -> Result<()> {
     unread(Tokens::new(tokens));
   }
   Ok(())
+}
+
+/// The `select` of a table of contents: the sectional units down to `tocdepth`, then the appendix, index and
+/// bibliography. Perl latex_constructs.pool.ltxml L727-733: `$td = tocdepth+1`, clamp to the last section-type index,
+/// then take `s[0 .. $td]`. Perl's `0 .. $td` is an EMPTY range when `$td < 0`, so `\setcounter{tocdepth}{-1}` (parts
+/// only) yields `[part]` and `{-2}` or lower yields `select=''` (an empty ToC). Computed in SIGNED space: `tocdepth` is a
+/// signed counter, so the old `value_of() as usize` wrapped on negatives — a debug overflow panic, and in release a
+/// silently over-full ToC (`{-2}` listed everything). Shared with tocbibind's `\tocfile{…}{toc}` (tocbibind_sty.rs).
+pub fn toc_select() -> Result<String> {
+  let s = [
+    "ltx:part",
+    "ltx:chapter",
+    "ltx:section",
+    "ltx:subsection",
+    "ltx:subsubsection",
+    "ltx:paragraph",
+    "ltx:subparagraph",
+  ];
+  let td = (CounterValue!("tocdepth").value_of() + 1).min((s.len() - 1) as i64);
+  let take = usize::try_from(td + 1).unwrap_or(0);
+  let mut s_depth: Vec<&'static str> = s.into_iter().take(take).collect();
+  if !s_depth.is_empty() {
+    s_depth.push("ltx:appendix");
+    s_depth.push("ltx:index");
+    s_depth.push("ltx:bibliography");
+  }
+  Ok(s_depth.join(" | "))
 }

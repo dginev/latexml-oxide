@@ -28,6 +28,32 @@ LoadDefinitions!({
       }
     }
   }
+  // standalone.sty:26-39: in a main document `\ifstandalone` (and `\ifstandalonebeamer`) is false, `\onlyifstandalone`
+  // gobbles its argument and `\IfStandalone{<standalone>}{<main>}` takes the second (11 papers `\ifstandalone`:
+  // 1310.0809, 2010.10238, 2011.05064; `\onlyifstandalone` 2208.05046, 2403.07821; `\IfStandalone` 2208.05046); :707-709
+  // an environment `{standalone}[<opt>]` that keeps its body (2310.18279). Perl's binding defines none
+  // (KNOWN_PERL_ERRORS #806).
+  RawTeX!(r"\@ifundefined{ifstandalone}{\expandafter\newif\csname ifstandalone\endcsname\standalonefalse}{}
+\@ifundefined{ifstandalonebeamer}{\expandafter\newif\csname ifstandalonebeamer\endcsname\standalonebeamerfalse}{}
+\@ifundefined{onlyifstandalone}{\let\onlyifstandalone\@gobble}{}
+\@ifundefined{IfStandalone}{\let\IfStandalone\@secondoftwo}{}
+\@ifundefined{standalone}{\newenvironment{standalone}[1][]{}{}}{}");
+  // standalone.sty:296-304 `\standaloneconfig{<keys>}` sets the package's keys as its options do (`\setkeys
+  // {standalone.sty}`): `mode=` (`tex`, `image`, `build`, `buildmissing`, `buildnew`; 17 papers: 1905.04614,
+  // 1910.10882, 2210.09924) is the mode `\includestandalone` follows, and `subpreambles` keeps the sub-files'
+  // preambles; the other keys shape a build or the class and are read without effect, their values unexpanded as
+  // `\setkeys` stores them (`build={latexoptions={… -jobname \quote\buildjobname\quote}}`, 1703.03769's copy).
+  DefPrimitive!("\\standaloneconfig Undigested", sub[(keys)] {
+    for item in top_level_items(&keys.to_string()) {
+      let (key, value) = item.split_once('=').map_or((item.trim(), "true"), |(k, v)| (k.trim(), v.trim()));
+      if key == "mode" {
+        assign_value("standalone_mode", Stored::String(pin(unbraced(value))), None);
+      }
+      if key.ends_with("subpreambles") && value != "false" {
+        assign_value("standalone_subpreambles", Stored::Bool(true), None);
+      }
+    }
+  });
   // standalone.sty:255 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
   // BEYOND PERL (the Perl standalone.sty.ltxml omits these): the real
@@ -117,6 +143,12 @@ LoadDefinitions!({
           RequirePackage!(key.trim());
         }
       }
+    }
+    // A sub-file of the standalone class names its cropped environments in its preamble (`\standaloneenv
+    // {circuitikz}`, 2505.21582), which standalone.sty never runs (see below); run here, it marks nothing
+    // (standalone.sty:802 `\let\standaloneenv\@gobble`).
+    if class_tks.to_string().trim() == "standalone" && !IsDefined!(&T_CS!("\\standaloneenv")) {
+      Let!(T_CS!("\\standaloneenv"), T_CS!("\\@gobble"));
     }
     Let!(T_CS!("\\begin{document}"), T_CS!("\\@standalone@start@input"));
     Let!(T_CS!("\\end{document}"),   T_CS!("\\@standalone@end@input"));

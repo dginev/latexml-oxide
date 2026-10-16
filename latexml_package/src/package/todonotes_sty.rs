@@ -21,8 +21,19 @@ LoadDefinitions!({
   DefMacro!("\\listoftodos[]",     None);
   DefMacro!("\\@todo[]{}",         None);
   DefMacro!("\\setuptodonotes{}",  None);
+  // todonotes.sty:581-583 `\todostyle{<name>}{<keys>}` defines the `\todo` key `<name>` as those keys (27 papers:
+  // 2407.14906, 2409.03694, 2410.02385); `\todo` reads its keys as a note's options here, so the style key is
+  // declared and unused. :46-49: at the document's start todonotes provides an empty `\phantomsection` when hyperref
+  // has not defined one (12 papers: 1308.6029, 2103.09181, 2208.10521). Perl's binding defines neither
+  // (KNOWN_PERL_ERRORS #805).
+  RawTeX!(r"\newcommand*{\todostyle}[2]{\define@key{todonotes}{#1}[]{\setkeys{todonotes}{#2}}}
+\AtBeginDocument{\ifx\undefined\phantomsection\newcommand{\phantomsection}{}\fi}");
 
+  // todonotes.sty:159-160 `\if@todonotes@disabled`, set by `disable`, which papers test to define their own note
+  // commands (2606.13443); the `obeyDraft`/`obeyFinal` modes that also set it (:206-218) are not modeled.
+  RawTeX!(r"\newif\if@todonotes@disabled");
   DeclareOption!("disable", {
+    Digest!(r"\@todonotes@disabledtrue")?;
     // Perl todonotes.sty.ltxml L22-23: `disable` replaces \todo with
     // an empty macro and locks it so that subsequent \renewcommand
     // \todo from user code or further loads can't re-enable the todo

@@ -1,0 +1,29 @@
+% witness: 0706.2285, 0907.2405 (\contsubbottom, \contsubfigure, \subconcluded under [subfigure]), 1302.5179 (\bitwonumcaption), 0803.1137, 0905.4349 (\captionwidth, \changecaptionwidth), 0711.3402 (\precaption)
+% oracle:  pdflatex 0 errors; "(a) First (b) Second Figure 1: Main. (c) Third Figure 1: Continued. Table 1: English caption. Tableau 1: French caption. See 1(a), 1(c)."
+% engines: rust 67int9 = undefined \captionwidth, \changecaptionwidth, \precaption, \contsubbottom, \subconcluded, \bitwonumcaption; "Figure 2: Continued."; perl = no ccaption binding (KNOWN_PERL_ERRORS #807)
+% expect:  0 errors, 1 warning (the binding's stub notice); subfloat (c) numbered 1(c), "Figure 1: Continued.", both table captions
+% status:  RED (67int9) -> GREEN (68i); guard perfect_kernel_batch68i::ccaption_continued_and_bilingual
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage[subfigure]{ccaption}
+\captionwidth{0.75\linewidth}
+\changecaptionwidth
+\precaption{\relax}
+\begin{document}
+\begin{figure}
+\subfigure[First]{\label{fa}A}
+\subfigure[Second]{\label{fb}B}
+\caption{Main.}
+\end{figure}
+\begin{figure}
+\contsubbottom[Third]{\label{fc}C}
+\contcaption{Continued.}
+\subconcluded
+\end{figure}
+\begin{table}
+\bitwonumcaption{Short}{English caption.}{Tableau}{Court}{French caption.}
+x
+\end{table}
+See \ref{fa}, \ref{fc}.
+\end{document}

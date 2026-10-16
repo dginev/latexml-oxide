@@ -17842,3 +17842,25 @@ section 1's first. This binding keeps the kernel's `.`: "X 1.1", as Perl prints 
 semantics over the PDF — "11" cannot be told from the eleventh, and a `\ref` to it reads as one. 5 of 374 sampled llncs
 papers with a main file are affected (68g round 1). Minimal trigger: `\documentclass{llncs}`
 `\newtheorem{x}{X}[section]` `\section{A}\begin{x}a\end{x}` — pdflatex "X 11 a", both engines "X 1.1".
+### 619. rotating's `\rotdriver{<driver>}` loads no driver file
+
+rotating.sty:64 `\def\rotdriver#1{\makeatletter\input{#1.def}\makeatother}` inputs a graphics driver; 42 arXiv papers
+call `\rotdriver{dvips}` (0704.0929, 0704.1238, 0802.2495; `{dvitops}`, `{textures}`). Under the latex + dvips the
+papers were written for, dvips.def is already the driver and the call changes nothing; under pdflatex it replaces
+pdftex.def's image rules with dvips's, and the paper's PDF and PNG images are lost (TL 2025 probe: `example-image` then
+needs an `.eps`). LaTeXML's graphics have no driver files (graphics.sty's driver options select none, graphics_sty.rs),
+so rotating_sty.rs reads the driver name and loads nothing: the images stay. Perl's binding lacks the command
+(KNOWN_PERL_ERRORS #803). Repro package-bindings/rotating_rotdriver; guard `perfect_kernel_batch68i::rotating_rotdriver`.
+
+### 620. tocbibind names the bibliography after the class's sectioning and writes its heading as `\<unit>*{\tocbibname}`
+
+tocbibind.sty:115-123 sets `\tocbibname` to `\bibname` when the class defines it, else `\refname`. LaTeXML defines a
+`\bibname` for every class (sect11.rs) and natbib's binding a `\refname` (natbib_sty.rs), so the test would pick
+"Bibliography" in an article; tocbibind_sty.rs tells the class's name by its sectioning instead, as the standard
+classes pair them: `\bibname` with chapters (book, report: pdflatex "Bibliography", also under natbib), else `\refname`
+(article "References"). The heading `\t@cb@bchapsec`/`\t@cb@bsection` (:133-152) is a conditional, which the
+bibliography constructor cannot read as a heading (`begin_bibliography_clean` reads `\bibsection` as `\<unit>*{<title>}`),
+so at the document's start the binding writes the heading those conditionals select in that form —
+`\chapter*{\tocbibname}`, `\section*{\tocbibname}` (the unit `\tocotherhead` names), unstarred under `numbib` — where
+tocbibind sets `\bibsection` (:154-159, :184-198). Repro package-bindings/tocbibind_names_and_tocfile; guards
+`perfect_kernel_batch68i::{tocbibind_names_and_tocfile, tocbibind_book_bibliography_is_bibname}`.
