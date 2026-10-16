@@ -1174,6 +1174,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   a_watchdog_timeout_is_reported_as_fatal_timeout, an_allocation_past_rlimit_as_is_reported_as_fatal_oom}` (the
   `alloc_exhausted` test fault spends the address space through the raw allocator first). Residual: a hook whose sweep
   itself fails to allocate exits without finishing it.
+- **Runs 360/361** (E/F rerun of run 359 on 1ca233a402: 67y, 68d, 67x, 67z; COMPLETE 2026-10-16 04:30:35Z):
+  E 86,301 → 81,301, F 4,011 → 3,994 (success 96.91 % → 97.08 % of 2,922,325). Transitions vs run 359: E→OK 894,
+  E→warning 4,100, E→F 36, F→OK 4, F→warning 19, F→E 30. E→F: `timeout` 30 (two writers and the gates shared the
+  host), `TooManyErrors` 3, SIGABRT 1 (math0407433, again as in run 357), SIGSEGV 1 (2112.13654), `Timeout:Convert` 1;
+  every reconvertible one converts locally with no Fatal and the same output on 595ce52d9e and 1ca233a402 (fleet
+  contention, not a regression; `~/data/pk_agents/main/ab_66bundle/results_ref361.tsv`).
 - **Runs 358/359** (E/F rerun of run 357 on 595ce52d9e: 67q, 67r, 67p, 67s, 67u, 67ps; COMPLETE 2026-10-16
   00:15:50Z): E 89,367 → 86,301, F 4,091 → 4,011 (success 96.80 % → 96.91 % of 2,922,325). Transitions vs run 357:
   E→OK 480, E→warning 2,602, E→F 26, F→OK 1, F→warning 63, F→E 42. E→F: `timeout` 14 + `Timeout:Convert` 1, `oom` 6,
