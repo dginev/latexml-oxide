@@ -1175,6 +1175,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   a_watchdog_timeout_is_reported_as_fatal_timeout, an_allocation_past_rlimit_as_is_reported_as_fatal_oom}` (the
   `alloc_exhausted` test fault spends the address space through the raw allocator first). Residual: a hook whose sweep
   itself fails to allocate exits without finishing it.
+- **Runs 364/365** (E/F rerun of run 363 on 026cf18f87: 68c Part B, 68a; COMPLETE 2026-10-16 12:20:31Z):
+  E 79,627 → 77,932, F 3,971 → 3,971 (success 97.14 % → 97.20 % of 2,922,325). Transitions vs run 363: E→OK 362,
+  E→warning 1,330, E→F 33, F→warning 3, F→E 30. E→F: `timeout` 22 + `Timeout:Convert` 2 and `oom` 4 (fleet contention,
+  retried per the 2026-10-12 ruling), `TooManyErrors` 5 — all five row **XP** (98-501 detail-less `post:xpath` Errors each:
+  1809.02905, 2007.00624, 2104.14033, 2602.10769, hep-ph9803283); no conversion regression. Cluster rescan of the run-353
+  Error/Fatal set (latest zip per paper, `~/data/pk_agents/main/scratch_356a0c47/attr_now/`): `undefined` 53,902 → 43,535
+  papers, the structural categories flat (`unexpected` 23,505 → 23,064, `malformed` 8,564 → 8,551), the greedy
+  clean-paper ranking unchanged at its top (`_` 2,035, `ltx:bibitem` 1,109, `&` 1,096, `\errmessage` 1,081, `\noalign`
+  1,005); 24 papers now stop at mathtools internals (`\MT_start_cases:nnnn`, `\MH_else:`) after 67u's
+  `\MHInternalSyntaxOn` (all Error before).
 - **Runs 362/363** (E/F rerun of run 361 on 58956d026a: 67w, 68f, 68b; COMPLETE 2026-10-16 08:34:36Z):
   E 81,301 → 79,627, F 3,994 → 3,971 (success 97.08 % → 97.14 % of 2,922,325). Transitions vs run 361: E→OK 293,
   E→warning 1,386, E→F 35, F→OK 1, F→warning 17, F→E 40. E→F: `timeout` 22 + `Timeout:Convert` 2, `oom` 2,
