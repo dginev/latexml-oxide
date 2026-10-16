@@ -107,19 +107,21 @@ fn title_ink_dedup_parbox_in_prose() {
   )]);
 }
 
-/// sectioning-frontmatter/title_ink_dedup_framed_cover_keeps_its_frame: the framed cover minipage's title copy is
-/// dropped, the frame stays (empty) — a wrapper carrying a frame or `labels` is not pruned (68s review finding 4).
+/// sectioning-frontmatter/title_ink_dedup_framed_cover_keeps_its_frame: a framed cover minipage is the author's own ink
+/// around the title, never searched by the dedup — removing the copy left an empty frame the PDF does not have (68s
+/// review finding 4; main-session ruling 2026-10-16).
 #[test]
 fn title_ink_dedup_framed_cover_keeps_its_frame() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/title_ink_dedup_framed_cover_keeps_its_frame.tex"
   );
-  let xml = assert_dedup(tex, 1, &[(
+  let xml = assert_dedup(tex, 0, &[(
     "para",
     "p1",
-    r##"<para class="ltx_noindent" xml:id="p1"><p><inline-block class="ltx_minipage" framed="rectangle" vattach="middle" width="345.0pt"/></p></para>"##,
+    r##"<para class="ltx_noindent" xml:id="p1"><p><inline-block class="ltx_minipage" framed="rectangle" vattach="middle" width="345.0pt"><p align="center"><text fontsize="298%">Framed Cover</text></p></inline-block></p></para>"##,
   )]);
-  assert_eq!(xml.matches("Framed Cover").count(), 1, "{xml}");
+  // The structured title and the author's framed cover, both kept.
+  assert_eq!(xml.matches("Framed Cover").count(), 2, "{xml}");
 }
 
 /// sectioning-frontmatter/title_ink_dedup_once_per_document: of two document-level copies, only the first is the

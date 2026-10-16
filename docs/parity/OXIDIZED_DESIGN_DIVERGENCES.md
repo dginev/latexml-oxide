@@ -5876,8 +5876,10 @@ in running prose, whose words are the sentence's (68s review finding 1). A bibli
 ahead of the cover is passed over — a workaround for 2010.07703's bibentry `\nobibliography*` building the
 whole bibliography at the head of the XML (RED index-bib/nobibliography_star_prints_nothing). It is judged
 **once per document**, at the first flush that sees the structured title (`lx_title_ink_dedup_done`); a
-wrapper the removal empties is pruned with it, unless it carries `labels` or a frame (`framed`: the
-`\fbox{\begin{minipage}…}` box stays, empty). The fallback runs at every sectioning command and at
+wrapper the removal empties is pruned with it, unless it carries `labels`. A framed wrapper
+(`\fbox{\begin{minipage}…}`, `framed`) is the author's own ink around the title and is never searched: removing the
+copy inside left an empty frame the PDF does not have (main-session ruling 2026-10-16; a duplicate is kept there
+until the last-resort step promotes the author's block in place). The fallback runs at every sectioning command and at
 `\end{document}`; before 68s each run removed one more copy, down into figures and the first chapter, and a
 second printed cover (1911.09648's `Capa1`/`Capa2`) lost its title line (68p review finding 8). Covers it
 serves: a minipage (2010.07703), a centered block (2608.10928).

@@ -5663,6 +5663,12 @@ fn is_cover_box_paragraph(p: &Node) -> bool {
 /// minipage inside it is part of its text), any other `ltx:p` is entered only when it is a
 /// cover paragraph of boxes ([`is_cover_box_paragraph`]).
 fn collect_title_block_paragraphs(node: &Node, out: &mut Vec<Node>) {
+  // A framed wrapper (`\fbox{\begin{minipage}…}`, `framed`) is the author's own ink around the title: removing the copy
+  // inside left an empty frame the PDF does not have, so it is never searched (main-session ruling 2026-10-16, until
+  // the last-resort step promotes the author's block in place; OXIDIZED_DESIGN #146).
+  if node.has_attribute("framed") {
+    return;
+  }
   let q = document::get_node_qname(node);
   if q == pin_static("ltx:p") {
     if node.get_attribute("align").as_deref() == Some("center") {
