@@ -3925,6 +3925,11 @@ fn show_frontmatter(entry: &TagData) -> String {
   s!("{}  [{}] {}", entry.tag, attrs.join(","), content)
 }
 
+/// The authors the frontmatter has digested so far (`num_ltx:creator{author}`): the last one digests with the label
+/// `author:N` for this N, by which a contact digested after it can name it or the ones before it (amsppt's per-block
+/// addresses, amsppt_sty.rs `\lx@amsppt@paired`).
+pub fn digested_author_count() -> i64 { lookup_mapping_int("num_ltx:creator", "author") }
+
 /// Perl: LookupMapping returning a number (0 when absent).
 fn lookup_mapping_int(map: &str, key: &str) -> i64 {
   match lookup_mapping(map, key) {

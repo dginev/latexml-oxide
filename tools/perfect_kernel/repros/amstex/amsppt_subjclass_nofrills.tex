@@ -1,0 +1,15 @@
+% witness: 0804.1078, 1107.2266 (`\subjclass\nofrills`, about 2% of AMS-TeX sources)
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; the footnote "2000 Mathematics Subject Classification. 14D06, 14J32" — the author's own prefix only, no "1991"
+% engines: rust 68r round 1 = scheme and name "1991 Mathematics Subject Classification" above the author's "2000 …"; rust 67int12 name "Classification: "; perl 0.8.8 no scheme
+% expect:  0 errors; a classification with no scheme or name, holding the author's prefix and the codes
+% status:  GREEN (68r round 2)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author A. Author\endauthor
+\subjclass\nofrills{{\rm 2000}{\it Mathematics Subject Classification}.\usualspace} 14D06, 14J32\endsubjclass
+\endtopmatter
+\document
+Body text.
+\enddocument

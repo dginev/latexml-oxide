@@ -186,11 +186,13 @@ LoadDefinitions!({
   // complete" seam (covers both the dump and raw-base branches; skipped in
   // INI_MODE by the early return above, so dump generation is unaffected).
   // Guarded on the body still being plain's bare `\tabalign`, so a user's
-  // own pre-\documentclass `\def\+` survives the lazy pool load. An AMS-TeX
-  // document read on this format (`\documentstyle{amsppt}`) gets plain's `\+`
-  // back where its format is established (amstex.rs
-  // `establish_plain_tabbing_shorthand`; math0103164).
-  if let Ok(Some(defn)) = lookup_definition(&T_CS!("\\+"))
+  // own pre-\documentclass `\def\+` survives the lazy pool load. Not for an
+  // AMS-TeX document read on this format (`\input amstex`, amsppt's own
+  // `\documentstyle`), whose `\+` is plain's: skipped once it is one, and
+  // undone when it becomes one after this ran (amstex.rs
+  // `enter_amstex_format`; math0103164).
+  if !lookup_bool("lx@amstex@format")
+    && let Ok(Some(defn)) = lookup_definition(&T_CS!("\\+"))
     && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
     && body.len() == 1
     && body
@@ -199,6 +201,7 @@ LoadDefinitions!({
       .is_some_and(|t| t.text == pin!("\\tabalign"))
   {
     remove_meaning_global(&T_CS!("\\+"));
+    assign_value("lx@plain@tabalign@retracted", true, Some(Scope::Global));
   }
 
   InnerPool!(latex_constructs);

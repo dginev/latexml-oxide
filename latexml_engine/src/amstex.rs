@@ -182,6 +182,8 @@ LoadDefinitions!({
 
   //======================================================================
   // Document structure (Perl L144-158)
+  // (`\nofrills` after a command: the binding that reads it decides — amsppt's `\subjclass`, and in a reference a marker
+  // amsppt_sty.rs `\@bibfield` takes out; anywhere else it prints nothing)
   def_macro_noop("\\nofrills")?;
 
   // \comment ... \endcomment — Perl L148-154. Reads raw lines (no
@@ -632,19 +634,25 @@ LoadDefinitions!({
   def_macro_noop("\\syntax")?;
 });
 
-/// The AMS-TeX format is plain.tex + amstex.tex (TL amstex.ini: `\input plain \input amstex`), so plain's tabbing
-/// shorthand `\+` (plain.tex:608 `\outer\def\+{\tabalign}`; Perl plain_dump.pool.ltxml:104) is the document's. An AMS-TeX
-/// document naming its style (`\documentstyle{amsppt}`) is read on the LaTeX format (converter.rs `compile_route`), whose
-/// kernel seam retracts `\+` for LaTeX documents (latex.rs, after cond-mat0001412's `\!+\+` typo): an `\input amstex`
-/// or amsppt document's `\settabs` rows were an undefined `\+` and a stray `&` each (math0103164, math0105110,
-/// math0106202, math0109193). Called where the format is established — `\input amstex` (amstex_tex.rs) and amsppt.sty
-/// (amsppt_sty.rs) — not by this pool, which a LaTeX document's AMS-TeX command also autoloads (tex.rs triggers), so a
-/// LaTeX document's stray `\+` stays one undefined-macro error. A document's own `\+` is kept. Guard
-/// `perfect_kernel_batch68r::amstex_plain_tabbing_rows`.
-pub fn establish_plain_tabbing_shorthand() -> Result<()> {
-  if !IsDefined!(&T_CS!("\\+")) {
+/// The document is an AMS-TeX one: its format is plain.tex + amstex.tex (TL amstex.ini: `\input plain \input amstex`),
+/// so plain's tabbing shorthand `\+` (plain.tex:608 `\outer\def\+{\tabalign}`; Perl plain_dump.pool.ltxml:104) is the
+/// document's, whatever LaTeX format it is read on. One rule: the LaTeX kernel seam's retraction of `\+` (latex.rs, after
+/// cond-mat0001412's `\!+\+` typo) does not apply to an AMS-TeX document — the seam skips it once this has run (`\input
+/// amstex \input amsppt.sty` and a later `\newcommand` autoloading the LaTeX pool), and a retraction the seam made before
+/// (the arXiv preload's LaTeX pool, then `\input amstex`; a `\documentstyle{amsppt}` read on the LaTeX format) is undone
+/// here. Called where the AMS-TeX format is established: `\input amstex` (amstex_tex.rs) and amsppt.sty unless a LaTeX
+/// document loads it as a package (amsppt_sty.rs; `\documentclass{article}\usepackage{amsppt}`,
+/// `\documentstyle[amsppt]{article}` keep the retraction: a stray `\+` there is one undefined-macro error). Not by this
+/// pool, which a LaTeX document's AMS-TeX command also autoloads (tex.rs triggers). Witnesses math0103164, math0105110,
+/// math0106202, math0109193 (an `\input amstex` or amsppt document's `\settabs` rows were an undefined `\+` and a stray
+/// `&` each). Guards `perfect_kernel_batch68r::amstex_plain_tabbing_rows`, `…::latex_stray_plus_stays_undefined`,
+/// `…::amstex_mode_keeps_plain_tabbing`.
+pub fn enter_amstex_format() -> Result<()> {
+  AssignValue!("lx@amstex@format" => true, Some(Scope::Global));
+  if lookup_bool("lx@plain@tabalign@retracted") && !IsDefined!(&T_CS!("\\+")) {
     RawTeX!(r"\outer\def\+{\tabalign}");
   }
+  AssignValue!("lx@plain@tabalign@retracted" => false, Some(Scope::Global));
   Ok(())
 }
 

@@ -17939,35 +17939,43 @@ svmult_cls.rs maps a single ASCII letter to its Symbol-encoding Greek letter, up
 A Α … Z Ζ, with j ϕ, J ϑ, v ϖ, V ς as the encoding has them); any other argument keeps the faithful `\usefont` form.
 Repro class-bindings/svmult_aas/svmult_class_commands; guard `perfect_kernel_batch68k::svmult_class_commands`.
 
-### 624. amsppt's author list is one creator a name; after a list naming several, amsppt's numbered addresses pair with the names in order or are shared
+### 624. amsppt's author list is one creator a name; the addresses after a block naming several pair with its names in order or are shared
 
-**Background.** amsppt.sty:322-326 `\author … \endauthor` sets one centred box, so a paper names all its authors in one
-list (`Nobuo Hara and Kei-ichi Watanabe`, math0002054; `S.Yu.Orevkov, V.M.Kharlamov`, math0002213). Its addresses are
-apart from the names: `\address` numbers each in `\addresscount@` (:330-335), `\curraddr` joins the current one,
-`\email`/`\urladdr` pair with it under the same number (:336-370, amsppt.doc:852), and `\enddocument@text` prints them,
-in order, after the paper (:1106-1116); an `\email` before any `\address` (`email0`) is never printed. `\affil` is one
-box under the names (:327-329).
+**Background.** amsppt.sty:322-326 `\author … \endauthor` sets one centred box, so a paper names its authors in one
+list (`Nobuo Hara and Kei-ichi Watanabe`, math0002054; `S.Yu.Orevkov, V.M.Kharlamov`, math0002213); a second
+`\author` replaces the box, while amsguide.tex:547 has each author tagged separately, followed by the address(es)
+associated with that author. The addresses are apart from the names: `\address` numbers each in `\addresscount@`
+(:330-335), `\curraddr` joins the current one, `\email`/`\urladdr` pair with it under the same number (:336-370,
+amsppt.doc:852), and `\enddocument@text` prints them, in order, after the paper (:1106-1116); an `\email` before any
+`\address` (`email0`) is never printed. `\affil` is one box under the names (:327-329).
 
 **Perl behavior.** amsppt.sty.ltxml:57 `\lx@add@author{#1}`: one creator holding the list, every address and email on
 it (KNOWN_PERL_ERRORS #819); ours flagged it `frontmatter:merged_creators` (247 class-less run-353 papers with no other
 error).
 
-**Rust behavior.** amsppt_sty.rs parses the block as a per-author class's `\author` is (amsart's, ams_support_sty.rs):
-`\lx@add@authors@append`, one creator a name, split only where the line reads as names, a list-wide brace group
-unwrapped, the names joined by amsart's `,\ ` / `\ and\ `. A block naming one person is followed by that person's
-contacts, attached to the last creator as before. After a block naming several, each address and what pairs with it
-(`\curraddr`, `\email`, `\urladdr`) carries amsppt's own number as an `affiliation:N` label: the frontmatter's
-numbered-institute rule (`relocate_annotations`, #159) gives the N-th to the N-th author when there are as many as the
-authors and none has its own, and otherwise they stay together, in order, on the shared creator below the authors, as
-the PDF prints them (math0002213's three addresses for two names); the `\affil` box is the block's
-(`label=addresses:block`).
+**Rust behavior.** amsppt_sty.rs parses each block as a per-author class's `\author` is (amsart's,
+ams_support_sty.rs): `\lx@add@authors@append`, one creator a name, split only where the line reads as names, a
+list-wide brace group unwrapped; every block's names are kept (the PDF shows the last block's only). A block naming one
+person is followed by that person's contacts, attached to the last creator as before. The contacts after a block
+naming several are that block's (main-session ruling 2026-10-16): when the block is followed by as many addresses as
+it names people, the i-th address and what pairs with it (`\curraddr`, `\email`, `\urladdr`) are the block's i-th
+person's (`label=author:N`); otherwise they stay together, in order, on the shared creator below the authors (#159), as
+the PDF prints them (math0002213's three addresses for two names). The count is the block's own, known once its
+contacts are read, so each label is `\lx@amsppt@paired{<block>}{<n>}`, read when the frontmatter is digested
+(`digested_author_count`); the `\affil` box and an `\email` before any `\address` are the block's shared contacts
+(`label=addresses:block`). The separators between the creators are synthesized from their order, amsart's `,\ ` and
+`\ and\ ` (the flush's `before`), not the ones written: the kernel's splitter drops each name's separator
+(`split_author_line`) and its flush sets every later creator's `before`, so `Roger Temam$^{1, 2}$ \& Shouhong
+Wang$^1$` (chao-dyn9304004) reads "… and …" and `A and B and C` "A, B and C". A byline's "by" before the names
+(`\author by Arkadiusz P\l{}oski \endauthor`, alg-geom9305006), which TeX prints and the kernel's splitter drops, is
+the first creator's `before` ("by "; a later block's first creator's is the flush's separator).
 
 **Why.** Content and semantic markup: one creator per person as every class binding gives, and no address given to a
 person amsppt does not tie it to. Residuals (the kernel's cautious name split, shared with amsart): a names line with
 `\footnotemark` in it (`Huai-Dong Cao \footnotemark and Lei Ni\footnotemark`, math0211283, math0301047, math0304096,
 math0405036), `,\␣\&\␣` separators (math0408166, math0410384) and a `\footnotetext` inside the list (0711.1928 and six
 more by the same authors) stay one creator, flagged. Guards `perfect_kernel_batch68r::{amsppt_author_list_is_one_creator_a_name,
-amsppt_extra_address_is_shared}`.
+amsppt_extra_address_is_shared, amsppt_author_blocks_pair_their_addresses, amsppt_author_byline_is_kept}`.
 
 ### 634. A raw class's keywords reach the frontmatter: the `\keywords` its abstract defines for its body, and a `{keywords}` that only typesets a label (Perl: undefined, or the class's run-in heading)
 

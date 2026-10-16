@@ -4,6 +4,6 @@ LoadDefinitions!({
   // LaTeX). Loaded by `\input amstex` from TeX mode, before LaTeX.pool
   // would be anticipated. Puts LaTeXML into "amstex mode".
   LoadPool!("AmSTeX");
-  // the AMS-TeX format is plain's: its `\+` (amstex.rs `establish_plain_tabbing_shorthand`)
-  latexml_engine::amstex::establish_plain_tabbing_shorthand()?;
+  // the document is an AMS-TeX one (amstex.rs `enter_amstex_format`: plain's `\+`)
+  latexml_engine::amstex::enter_amstex_format()?;
 });

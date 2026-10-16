@@ -20,9 +20,16 @@ LoadDefinitions!({
       ..InputDefinitionOptions::default()
     });
   }
-  // amsppt.sty runs on the AMS-TeX format, plain's: its `\+` (amstex.rs `establish_plain_tabbing_shorthand`; an
-  // `\input amsppt.sty` or `\documentstyle{amsppt}` document without `\input amstex`)
-  latexml_engine::amstex::establish_plain_tabbing_shorthand()?;
+  // amsppt.sty is an AMS-TeX style (it uses amstex.tex's macros throughout): an `\input amsppt.sty` or
+  // `\documentstyle{amsppt}` document is an AMS-TeX one (amstex.rs `enter_amstex_format`: plain's `\+`), also without
+  // `\input amstex`; a LaTeX document loading it as a package (`\usepackage{amsppt}`, `\documentstyle[amsppt]{article}`,
+  // which name it in `\@currname`/`\@currext` while it loads, latex.ltx `\@onefilewithoptions`) stays a LaTeX one.
+  let package_load = |cs: &str| -> Result<String> {
+    Ok(if IsDefined!(&T_CS!(cs)) { do_expand(T_CS!(cs))?.to_string() } else { String::new() })
+  };
+  if !(package_load("\\@currname")? == "amsppt" && package_load("\\@currext")? == "sty") {
+    latexml_engine::amstex::enter_amstex_format()?;
+  }
   // AmSTeX pool is partially ported (~30%); residual undefined-CS
   // errors on amsppt papers (\text, \proof, \theorem env, \endmatrix,
   // \foldedtext, \eightbf, \AmSTeX, \DN@, \frills@, etc — see
@@ -102,51 +109,80 @@ LoadDefinitions!({
     } else {
       names
     };
-    let mut out = vec![T_CS!("\\lx@amsppt@author@begin"), T_CS!("\\lx@add@authors@append"), T_BEGIN!()];
+    // A byline's "by" before the names (`\author by Arkadiusz P\l{}oski \endauthor`, alg-geom9305006) is the list's text,
+    // which TeX prints, and no name: the first creator's `before`, as the separators after it are the others'.
+    let lead = names.iter().position(|t| t.get_catcode() != Catcode::SPACE).unwrap_or(names.len());
+    let byline = (names.get(lead) == Some(&T_LETTER!("b")) || names.get(lead) == Some(&T_LETTER!("B")))
+      && names.get(lead + 1) == Some(&T_LETTER!("y"))
+      && names.get(lead + 2) == Some(&T_SPACE!())
+      && names[lead + 2..].iter().any(|t| t.get_catcode() == Catcode::LETTER);
+    let mut out = vec![T_CS!("\\lx@amsppt@author@begin"), T_CS!("\\lx@add@authors@append")];
+    let names: Vec<Token> = if byline {
+      out.extend(mouth::tokenize_internal("[before={").unlist());
+      out.extend([names[lead], names[lead + 1], T_CS!("\\ ")]);
+      out.extend(mouth::tokenize_internal("}]").unlist());
+      names[lead + 2..].iter().copied().skip_while(|t| *t == T_SPACE!()).collect()
+    } else {
+      names
+    };
+    out.push(T_BEGIN!());
     out.extend(names);
     out.extend([T_END!(), T_CS!("\\lx@amsppt@author@end")]);
     Ok(Tokens::new(out))
   });
   DefPrimitive!("\\lx@amsppt@author@begin", {
     AssignValue!("lx_amsppt_creators_before" => queued_creator_count() as i64, Some(Scope::Global));
+    AssignValue!("lx_amsppt_block" => lookup_int("lx_amsppt_block") + 1, Some(Scope::Global));
   });
   DefPrimitive!("\\lx@amsppt@author@end", {
     let before = lookup_int("lx_amsppt_creators_before");
     let names = (queued_creator_count() as i64 - before).max(0);
+    let block = lookup_int("lx_amsppt_block");
     AssignValue!("lx_amsppt_block_names" => names, Some(Scope::Global));
+    AssignValue!(&s!("lx_amsppt_block_names:{block}") => names, Some(Scope::Global));
+    AssignValue!(&s!("lx_amsppt_block_addresses:{block}") => 0i64, Some(Scope::Global));
   });
   Let!("\\endauthor", "\\relax");
-  // the separators the names were written with in the one list (`A, B and C`), shown between the creators as amsart's
-  // (ams_support_sty.rs), where the kernel's default joins them with `\qquad` (sect05.rs `\lx@author@conj`)
+  // The kernel's separators between the creators, as amsart's (ams_support_sty.rs `\@@and`), where its default joins
+  // them with `\qquad` (sect05.rs `\lx@author@conj`): ", " between names and " and " before the last, synthesized from
+  // the creators' order, not the ones the list was written with: the kernel's splitter drops each name's separator
+  // (`split_author_line`, past `rejoin_name_qualifiers`) and its flush sets every later creator's `before` from these
+  // two (base_utilities.rs), so `Roger Temam$^{1, 2}$ \& Shouhong Wang$^1$` (chao-dyn9304004) reads "… and …" and
+  // `A and B and C` "A, B and C" (OXIDIZED_DESIGN #624).
   DefMacro!("\\lx@author@sep", ",\\ ");
   DefMacro!("\\lx@author@conj", "\\ and\\ ");
   // amsppt keeps the addresses apart from the names: `\address` numbers each in `\addresscount@` (:330-335),
   // `\curraddr` joins the current one, `\email` and `\urladdr` pair with it under the same number (:336-370,
   // amsppt.doc:852 "since they should pair up"), and `\enddocument@text` prints them all, in that order, after the
-  // paper (:1106-1116); `\affil` is one box under the names (:327-329). An `\author` block naming one person is
-  // followed by that person's contacts, as Perl attaches them (to the last creator). After a block naming several,
-  // nothing in amsppt says whose an address is: each address and what pairs with it carries amsppt's number as an
-  // `affiliation:N` label, which the frontmatter's numbered-institute rule gives to the N-th author when there are as
-  // many as authors and no author has one of their own, and otherwise places on the shared creator below the authors
-  // (#159), as the PDF prints them; the `\affil` box is the block's (shared). Before, all of them went to the last
-  // name (math0002213's three addresses to V.M.Kharlamov). OXIDIZED_DESIGN #624; guards
-  // `perfect_kernel_batch68r::amsppt_addresses_pair_with_the_names`, `…::amsppt_extra_address_is_shared`.
+  // paper (:1106-1116); `\affil` is one box under the names (:327-329). amsguide.tex:547 has each author tagged
+  // separately, followed by the address(es) associated with that author: the contacts after an `\author` block are
+  // that block's. A block naming one person is followed by that person's contacts, as Perl attaches them (to the last
+  // creator). After a block naming several, nothing in amsppt says whose an address is: when the block is followed by
+  // as many addresses as it names people, the i-th address (and the `\curraddr`, `\email`, `\urladdr` paired with it)
+  // is the block's i-th person's (`label=author:N`), otherwise they are the block's shared contacts, on the shared
+  // creator below the authors (#159, `label=addresses:block`), as the PDF prints them; the `\affil` box is the block's
+  // (shared). The count is the block's own, known once its contacts are read: each contact's label is
+  // `\lx@amsppt@paired`, read when the frontmatter is digested. Before, all of them went to the last name
+  // (math0002213's three addresses to V.M.Kharlamov). OXIDIZED_DESIGN #624; guards
+  // `perfect_kernel_batch68r::amsppt_author_list_is_one_creator_a_name`, `…::amsppt_extra_address_is_shared`,
+  // `…::amsppt_author_blocks_pair_their_addresses`.
   DefMacro!("\\lx@amsppt@contact{}{}", sub[(command, content)] {
     let several = lookup_int("lx_amsppt_block_names") >= 2;
-    let number = match lookup_register("\\addresscount@", vec![]) {
-      Ok(Some(RegisterValue::Number(n))) => n.value_of(),
-      _ => 0,
-    };
-    let affiliation = command.unlist_ref().first() == Some(&T_CS!("\\lx@add@affiliation"));
+    let block = lookup_int("lx_amsppt_block");
+    let first = command.unlist_ref().first().copied();
     let mut out: Vec<Token> = command.unlist();
     if several {
-      let label = if affiliation {
+      let addresses_key = s!("lx_amsppt_block_addresses:{block}");
+      let mut number = lookup_int(&addresses_key);
+      if first == Some(T_CS!("\\lx@add@address")) {
+        number += 1;
+        AssignValue!(&addresses_key => number, Some(Scope::Global));
+      }
+      let label = if first == Some(T_CS!("\\lx@add@affiliation")) || number == 0 {
+        // (the `\affil` box; an `\email` before any `\address`, amsppt's `\email0`, which it never prints: kept, shared)
         s!("label=addresses:block")
-      } else if number > 0 {
-        s!("label=affiliation:{number}")
       } else {
-        // (an `\email` before any `\address`: amsppt's `\email0`, which it never prints; kept, shared)
-        s!("label=addresses:block")
+        s!("label=\\lx@amsppt@paired{{{block}}}{{{number}}}")
       };
       out.push(T_OTHER!("["));
       out.extend(mouth::tokenize_internal(TeXString::assembled(label)).unlist());
@@ -156,6 +192,21 @@ LoadDefinitions!({
     out.extend(content.unlist());
     out.push(T_END!());
     Ok(Tokens::new(out))
+  });
+  // The label of the `#2`-th address of block `#1` (and what pairs with it), read as the frontmatter is digested, the
+  // block's names before its contacts: its person's (`author:N`, the block's last name being the author digested last)
+  // when the block has as many addresses as names, otherwise the shared creator's.
+  DefMacro!("\\lx@amsppt@paired{}{}", sub[(block, number)] {
+    let block = block.to_string();
+    let number: i64 = number.to_string().trim().parse().unwrap_or(0);
+    let names = lookup_int(&s!("lx_amsppt_block_names:{block}"));
+    let addresses = lookup_int(&s!("lx_amsppt_block_addresses:{block}"));
+    let label = if names == addresses && number >= 1 && number <= names {
+      s!("author:{}", digested_author_count() - names + number)
+    } else {
+      s!("addresses:block")
+    };
+    Ok(mouth::tokenize_internal(TeXString::assembled(label)))
   });
   DefMacro!("\\affil Until:\\endaffil", "\\lx@amsppt@contact{\\lx@add@affiliation}{#1}");
   Let!("\\endaffil", "\\relax");
@@ -197,9 +248,25 @@ LoadDefinitions!({
      \def\subjyear@{1991}%
    \fi\fi}
 \subjclassyear{1991}");
-  DefMacro!("\\subjclass Until:\\endsubjclass",
-    "\\lx@add@classification[scheme={\\subjyear@\\space Mathematics Subject Classification},\
-     name={\\subjyear@\\space Mathematics Subject Classification.\\space}]{#1}");
+  // `\subjclass\nofrills …` (:411 `\nofrillscheck`, :80-83): the prefix is `\frills@`'s, which `\nofrills` eats, and the
+  // author writes their own (0804.1078's `{{\rm 2000}{\it Mathematics Subject Classification}.\usualspace}`, 1107.2266's
+  // `{\it Mathematics Subject Classification \rm(2000).}`): no scheme or name, which said "1991" above the author's
+  // "2000". Guard `perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`.
+  DefMacro!("\\subjclass Until:\\endsubjclass", sub[(codes)] {
+    let nofrills = codes.unlist_ref().iter().find(|t| t.get_catcode() != Catcode::SPACE)
+      == Some(&T_CS!("\\nofrills"));
+    let call = if nofrills {
+      "\\lx@add@classification"
+    } else {
+      "\\lx@add@classification[scheme={\\subjyear@\\space Mathematics Subject Classification},\
+       name={\\subjyear@\\space Mathematics Subject Classification.\\space}]"
+    };
+    let mut out = mouth::tokenize_internal(call).unlist();
+    out.push(T_BEGIN!());
+    out.extend(codes.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
   Let!("\\endsubjclass", "\\relax");
   DefMacro!("\\abstract", "\\lx@begin@abstract");
   DefMacro!("\\endabstract", "\\lx@end@abstract\\let\\maybe@end@abstract\\relax");
@@ -520,6 +587,13 @@ LoadDefinitions!({
     let field = args[0].clone().into_tokens_result()?.to_string();
     let tokens = args[1].clone().into_tokens_result()?;
     let mut tk_vec: Vec<Token> = tokens.unlist();
+    // A `\nofrills` in the field (amsppt.sty:877-882: the box being filled joins `\nofrills@list`), the reference's own
+    // `\lx@amsppt@nofrills` there, which the expanding read keeps: the field is printed without its frills (below).
+    let before = tk_vec.len();
+    tk_vec.retain(|t| *t != T_CS!("\\nofrills"));
+    if tk_vec.len() < before {
+      assign_value(&format!("amsbibitem@{field}@nofrills"), Stored::Bool(true), None);
+    }
     while tk_vec.first().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(false) {
       tk_vec.remove(0);
     }
@@ -533,6 +607,9 @@ LoadDefinitions!({
     Ok(Tokens!())
   });
   Let!("\\@end@bibfield", "\\relax");
+  // amsppt.sty:877 `\nofrills` in a reference marks the field being filled; elsewhere it is the AmSTeX pool's no-op
+  // (amstex.rs). In a reference it is this unexpandable marker, which `\@bibfield`'s expanding read keeps and takes out.
+  DefPrimitive!("\\lx@amsppt@nofrills", None);
 
   // Perl L442-445: \@bibitem@field / \@bibitem@tag constructors.
   DefConstructor!("\\@bibitem@field{}{}",
@@ -553,8 +630,6 @@ LoadDefinitions!({
   // Invocation tokens for `\@bibitem@tag` and `\@bibitem@field` per the
   // case dispatch (book / paper-in-book / paper-in-journal / random).
   DefMacro!("\\@fill@bibitem", sub[_args] {
-    let mut body: Vec<Token> = Vec::new();
-
     fn lookup_field(field: &str) -> Option<Tokens> {
       match lookup_value(&format!("amsbibitem@{}", field)) {
         Some(Stored::Tokens(t)) => Some(t),
@@ -562,40 +637,61 @@ LoadDefinitions!({
       }
     }
 
-    // Append `\@bibitem@field{<field>}{<value>}` invocation.
-    fn push_field(body: &mut Vec<Token>, field: &str, value: Tokens) {
-      body.push(T_CS!("\\@bibitem@field"));
-      body.push(T_BEGIN!());
-      for ch in field.chars() { body.push(T_OTHER!(ch.to_string())); }
-      body.push(T_END!());
-      body.push(T_BEGIN!());
-      body.extend(value.unlist());
-      body.push(T_END!());
+    // The entry as amsppt.sty's `\endref@` (:1001-1052) sets it, field by field (`\ppunbox@`, :1053-1066). `bare` is
+    // TeX's `\lastkern` of -1sp: the next field's punctuation is dropped. `\endref@` opens with it (`\kern-\tw@
+    // sp\kern\m@ne sp`), so the first field printed has none (a reference without `\by` opened ", Title"; a
+    // `\moreref` part ", Second Paper"), and a `\nofrills` field (`\frills@{#4\eat@}{\kern\m@ne sp}`) leaves it after
+    // itself, its own frills dropped: `\transl\nofrills English transl., \jour …` is "English transl., Soviet Math.
+    // Dokl.", not "English transl.,, Soviet Math. Dokl." (math0406143, 41 references).
+    // `start` is TeX's further -2sp kern there (`\prespace@` = `\ignorespaces`): the first field printed has no space
+    // before it either (a `\moreref` part's bibblock opened with one).
+    struct Fill {
+      body: Vec<Token>,
+      bare: bool,
+      start: bool,
     }
-
-    // Perl `ppunbox` — emit `[punct][pre]<field>[post]` if non-empty.
-    fn pp(body: &mut Vec<Token>,
-          punct: Option<&str>, pre: Option<Tokens>,
-          field: &str, post: Option<Tokens>) {
-      if let Some(value) = lookup_field(field) {
-        if let Some(p) = punct {
-          for ch in p.chars() { body.push(T_OTHER!(ch.to_string())); }
+    impl Fill {
+      // Append `\@bibitem@field{<field>}{<value>}` invocation.
+      fn push_field(&mut self, field: &str, value: Tokens) {
+        self.body.push(T_CS!("\\@bibitem@field"));
+        self.body.push(T_BEGIN!());
+        for ch in field.chars() { self.body.push(T_OTHER!(ch.to_string())); }
+        self.body.push(T_END!());
+        self.body.push(T_BEGIN!());
+        self.body.extend(value.unlist());
+        self.body.push(T_END!());
+      }
+      // Perl `ppunbox` — emit `[punct][pre]<field>[post]` if non-empty; for a `\nofrills` field, a space for
+      // `[pre]` and no `[post]` (`\frills@{#2\eat@}\space`, `\frills@{#4\eat@}`).
+      fn pp(&mut self, punct: Option<&str>, pre: Option<Tokens>, field: &str, post: Option<Tokens>) {
+        let Some(value) = lookup_field(field) else { return };
+        let nofrills = lookup_bool(&format!("amsbibitem@{field}@nofrills"));
+        if let Some(p) = punct.filter(|_| !self.bare) {
+          for ch in p.chars() { self.body.push(T_OTHER!(ch.to_string())); }
         }
-        if let Some(pre_tk) = pre {
-          body.extend(pre_tk.unlist());
+        let pre: Vec<Token> = match pre {
+          Some(pre_tk) if !nofrills || pre_tk.is_empty() => pre_tk.unlist(),
+          _ => vec![T_SPACE!()],
+        };
+        let skip = if self.start {
+          pre.iter().take_while(|t| **t == T_SPACE!() || **t == T_CS!("\\space")).count()
         } else {
-          body.push(T_SPACE!());
+          0
+        };
+        self.body.extend(pre.into_iter().skip(skip));
+        self.push_field(field, value);
+        if let Some(post_tk) = post.filter(|_| !nofrills) {
+          self.body.extend(post_tk.unlist());
         }
-        push_field(body, field, value);
-        if let Some(post_tk) = post {
-          body.extend(post_tk.unlist());
-        }
+        self.bare = nofrills;
+        self.start = false;
+      }
+      // Perl `commaunbox`: `ppunbox(',', '\space', <field>, undef)`.
+      fn comma(&mut self, field: &str) {
+        self.pp(Some(","), Some(Tokens!(T_CS!("\\space"))), field, None);
       }
     }
-    // Perl `commaunbox`: `ppunbox(',', '\space', <field>, undef)`.
-    fn comma(body: &mut Vec<Token>, field: &str) {
-      pp(body, Some(","), Some(Tokens!(T_CS!("\\space"))), field, None);
-    }
+    let mut fill = Fill { body: Vec::new(), bare: true, start: true };
 
     // Tag at start (skip if this is a `\moreref` continuation).
     let is_moreref = lookup_field("moreref").is_some();
@@ -603,32 +699,38 @@ LoadDefinitions!({
       let tag_value = lookup_field("key")
         .or_else(|| lookup_field("refnum"))
         .unwrap_or_else(|| Tokens!(T_CS!("\\the@bibitem")));
-      body.push(T_CS!("\\@bibitem@tag"));
-      body.push(T_BEGIN!());
-      body.extend(tag_value.unlist());
-      body.push(T_END!());
+      fill.body.push(T_CS!("\\@bibitem@tag"));
+      fill.body.push(T_BEGIN!());
+      fill.body.extend(tag_value.unlist());
+      fill.body.push(T_END!());
     }
-    // Authors / editors fallback (Perl L387-389).
+    // Authors / editors fallback (Perl L387-389; amsppt.sty:1006-1010, whose `(\edtext)` is the editors' frill).
     if lookup_field("authors").is_none()
       && let Some(eds) = lookup_field("editors") {
         let mut combined: Vec<Token> = eds.unlist();
-        // `\space(\edtext)` suffix.
-        combined.push(T_CS!("\\space"));
-        combined.push(T_OTHER!("("));
-        combined.push(T_CS!("\\edtext"));
-        combined.push(T_OTHER!(")"));
+        if !lookup_bool("amsbibitem@editors@nofrills") {
+          // `\space(\edtext)` suffix.
+          combined.push(T_CS!("\\space"));
+          combined.push(T_OTHER!("("));
+          combined.push(T_CS!("\\edtext"));
+          combined.push(T_OTHER!(")"));
+        }
         assign_value("amsbibitem@authors",
           Stored::Tokens(Tokens::new(combined)), None);
       }
-    // The text before a reference's first field (`\@bibfield{random}`) comes first, and the fields after it are printed
-    // as for any reference: a `\moreref`'s or `\transl`'s (amsppt.sty:1076-1088), which amsppt boxes in `\morerefbox@`
-    // and `\endref@` prints before the authors (amsppt.doc:2401-2410; math0002213's "English translation:" before the
-    // translation's journal); a `\ref`'s, which amsppt sets in box 0 and never prints (:886-898 `\setbox\z@\vbox`), kept
-    // as Perl keeps it. Perl's binding (L398-429) printed that text in place of the journal fields and dropped them: the
-    // translation's journal, volume, year and pages in every `\transl` reference (math0002213, math-ph0003008,
-    // math0003031; KNOWN_PERL_ERRORS #817). Guard `perfect_kernel_batch68r::amsppt_transl_continues_the_reference`.
-    pp(&mut body, None, Some(Tokens!()), "random", None);
-    pp(&mut body, None, None, "authors", None);
+    // The text before a part's first field (`\@bibfield{random}`): a `\moreref`'s or `\transl`'s (amsppt.sty:1076-1088)
+    // is boxed in `\morerefbox@`, which `\endref@` prints first (amsppt.doc:2401-2410; math0002213's "English
+    // translation:" before the translation's journal), and the fields after it are printed as for any reference. A
+    // `\ref`'s goes to box 0 (:886-898 `\setbox\z@\vbox`), which amsppt never prints; it is author text, kept as Perl
+    // keeps it, after the fields with a comma (below; math0703285's `\ref{CH}` was glued to the authors, "CHA. Casson").
+    // Perl's binding (L398-429) printed that text in place of the journal fields and dropped them: the translation's
+    // journal, volume, year and pages in every `\transl` reference (math0002213, math-ph0003008, math0003031;
+    // KNOWN_PERL_ERRORS #817). Guards `perfect_kernel_batch68r::amsppt_transl_continues_the_reference`,
+    // `…::amsppt_transl_nofrills_drops_the_frills`.
+    if is_moreref {
+      fill.comma("random");
+    }
+    fill.pp(None, None, "authors", None);
 
     // The kind of reference is amsppt.sty's `\ifbook@`/`\ifprocpaper@`, which `\jour`, `\book` and `\inbook` set
     // (:919-936) and only `\ref` resets (:897): a `\moreref`/`\transl` part that names none is printed as the part
@@ -648,83 +750,91 @@ LoadDefinitions!({
     // `~` was printed as a tilde, "pp.˜414–452", in every amsppt reference with pages — math0002213)
     if is_book {
       // Case 1: Book.
-      comma(&mut body, "book");
-      comma(&mut body, "bookinfo");
-      pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+      fill.comma("book");
+      fill.comma("bookinfo");
+      fill.pp(None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
          "proceedingsinfo", Some(Tokens!(T_OTHER!(")"))));
-      pp(&mut body, Some(","), Some(Tokens!(T_CS!("\\space"),
+      fill.pp(Some(","), Some(Tokens!(T_CS!("\\space"),
         T_OTHER!("v"), T_OTHER!("o"), T_OTHER!("l"), T_OTHER!("."), T_ACTIVE!('~'))),
          "volume", None);
-      pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+      fill.pp(None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
          "editors",
          Some(Tokens!(T_OTHER!(","), T_CS!("\\space"), T_CS!("\\edtext"), T_OTHER!(")"))));
-      comma(&mut body, "publisher");
-      comma(&mut body, "publisheraddr");
-      comma(&mut body, "year");
-      pp(&mut body, Some(","),
+      fill.comma("publisher");
+      fill.comma("publisheraddr");
+      fill.comma("year");
+      fill.pp(Some(","),
          Some(Tokens!(T_CS!("\\space"), T_CS!("\\pagestext"), T_ACTIVE!('~'))),
          "pages", None);
     } else {
       // Case 2: Paper.
-      comma(&mut body, "paper");
-      comma(&mut body, "paperinfo");
+      fill.comma("paper");
+      fill.comma("paperinfo");
       if is_inbook {
         // Case 2a: Paper in book.
-        comma(&mut body, "inbook");
-        pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+        fill.comma("inbook");
+        fill.pp(None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
            "proceedingsinfo", Some(Tokens!(T_OTHER!(")"))));
-        pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+        fill.pp(None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
            "editors",
            Some(Tokens!(T_OTHER!(","), T_CS!("\\space"), T_CS!("\\edtext"), T_OTHER!(")"))));
-        comma(&mut body, "bookinfo");
-        pp(&mut body, Some(","),
+        fill.comma("bookinfo");
+        fill.pp(Some(","),
            Some(Tokens!(T_CS!("\\space"), T_CS!("\\voltext"), T_ACTIVE!('~'))),
            "volume", None);
-        comma(&mut body, "publisher");
-        comma(&mut body, "publisheraddr");
-        comma(&mut body, "year");
-        pp(&mut body, Some(","),
+        fill.comma("publisher");
+        fill.comma("publisheraddr");
+        fill.comma("year");
+        fill.pp(Some(","),
            Some(Tokens!(T_CS!("\\space"), T_CS!("\\pagestext"), T_ACTIVE!('~'))),
            "pages", None);
       } else {
         // Case 2b: Paper in journal.
-        comma(&mut body, "journal");
-        pp(&mut body, None, Some(Tokens!(T_CS!("\\space"))), "volume", None);
-        pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+        fill.comma("journal");
+        fill.pp(None, Some(Tokens!(T_CS!("\\space"))), "volume", None);
+        fill.pp(None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
            "year", Some(Tokens!(T_OTHER!(")"))));
-        pp(&mut body, Some(","),
+        fill.pp(Some(","),
            Some(Tokens!(T_CS!("\\space"), T_CS!("\\issuetext"), T_ACTIVE!('~'))),
            "issue", None);
-        comma(&mut body, "publisher");
-        comma(&mut body, "publisheraddr");
-        comma(&mut body, "pages");
+        fill.comma("publisher");
+        fill.comma("publisheraddr");
+        fill.comma("pages");
       }
     }
-    comma(&mut body, "finalinfo");
-    pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+    // (a `\ref`'s text before its first field, after the fields: above)
+    if !is_moreref {
+      fill.comma("random");
+    }
+    fill.comma("finalinfo");
+    fill.pp(None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
        "note", Some(Tokens!(T_OTHER!(")"))));
-    body.push(T_OTHER!("."));
-    pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+    // (`\finalpunct`, :1047-1048: no period after a `\nofrills` field)
+    if !fill.bare {
+      fill.body.push(T_OTHER!("."));
+    }
+    fill.bare = false;
+    fill.pp(None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
        "language", Some(Tokens!(T_OTHER!(")"))));
-    comma(&mut body, "mathreview");
+    fill.comma("mathreview");
 
     // Clear all amsbibitem@* fields for next entry. Perl relies on
     // `\begingroup`/`\endgroup` to local-scope them; Rust's `assign_value`
     // with `None` scope follows the active group, so the same scoping
     // applies. Explicit clear isn't strictly needed but keeps state
     // tidy across `\moreref` chains.
-    Ok(Tokens::new(body))
+    Ok(Tokens::new(fill.body))
   });
 
   // Perl L367-373: `\ref` / `\endref` / `\moreref` orchestrate
   // capturing-then-emitting a bibitem.
   DefMacro!("\\ref",
-    "\\@auto@Refs\\begingroup\\@bibitem\\@bibfield{random}");
+    "\\@auto@Refs\\begingroup\\let\\nofrills\\lx@amsppt@nofrills\\@bibitem\\@bibfield{random}");
   DefMacro!("\\endref",
     "\\@end@bibfield\\@fill@bibitem\\@end@bibitem\\endgroup");
   DefMacro!("\\moreref",
     "\\@end@bibfield\\@fill@bibitem\\@end@bibblock\\endgroup\
-     \\begingroup\\@bibblock\\@bibfield{moreref}nonempty\\@end@bibfield\
+     \\begingroup\\let\\nofrills\\lx@amsppt@nofrills\\@bibblock\\@bibfield{moreref}nonempty\\@end@bibfield\
      \\@bibfield{random}");
   // amsppt.sty:1088 `\def\transl{\moreref}` (amsppt.doc:2578-2585: "for setting translation information", a
   // reference's translation as a further part of it, `\transl English translation: \jour …`). Perl's binding leaves it

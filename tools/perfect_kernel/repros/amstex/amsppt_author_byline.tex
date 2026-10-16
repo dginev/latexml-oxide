@@ -1,0 +1,14 @@
+% witness: alg-geom9305006 (`\author by Arkadiusz P\l{}oski \endauthor`)
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; "BY ARKADIUSZ PŁOSKI" (small caps) under the title
+% engines: rust 68r round 1 = one creator "Arkadiusz Płoski", the "by" dropped (the kernel splitter's byline rule); rust 67int12 personname "by Arkadiusz Płoski"; perl 0.8.8 the same
+% expect:  0 errors; one creator, personname "Arkadiusz Płoski", its before "by "
+% status:  GREEN (68r round 2)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author by Arkadiusz P\l{}oski \endauthor
+\endtopmatter
+\document
+Body text.
+\enddocument

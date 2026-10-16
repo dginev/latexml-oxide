@@ -2209,15 +2209,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
 
 - **68r** (AMS-TeX completeness: amstex.tex + amsppt.sty; run-353 class-less Error papers, attr_now/papers_now.tsv).
   (1) amsppt's `\author … \endauthor` list (amsppt.sty:322-326) is one creator a name (`\lx@add@authors@append`, as
-  amsart's), and after a list naming several, amsppt's numbered addresses (:330-370) pair with the names in order or
-  stay shared (OXIDIZED_DESIGN #624, KNOWN_PERL_ERRORS #819; math0002054, math0002116, math0002213). (2) plain's `\+`
-  (plain.tex:608) is restored where the AMS-TeX format is established (`\input amstex`, amsppt.sty; amstex.rs
-  `establish_plain_tabbing_shorthand`), since a `\documentstyle` document runs on the LaTeX format whose seam retracts
-  it (latex.rs; a LaTeX document's stray `\+`, cond-mat0001412, stays one undefined error; math0103164, math0105110).
-  (3) `\subjclassyear` (amsppt.sty:391-401, verbatim; the edition is the classification's scheme and name;
-  KNOWN_PERL_ERRORS #814; cs0201007, math0205233, math0209036) and `\transl` = `\moreref` (:1088; #815; math-ph0003008,
-  math0003031); a `\moreref` part prints its text first and then its fields by the reference's kind, carried from the
-  part before (#817, math0111124), `\publaddr` is printed (#818), and the bib ties are active `~` (were "pp.˜").
+  amsart's), and the addresses after a block naming several (:330-370) pair with that block's names in order when
+  there are as many, else are its shared contacts (counted per block, amsguide.tex:547; OXIDIZED_DESIGN #624,
+  KNOWN_PERL_ERRORS #819; math0002054, math0002116, math0002213); the separators between the creators are synthesized
+  (chao-dyn9304004's `\&` reads "and"), a byline's "by" is the first creator's `before` (alg-geom9305006). (2) An
+  AMS-TeX document keeps plain's `\+` (plain.tex:608): the LaTeX kernel seam's retraction (latex.rs) does not apply
+  once `\input amstex` or amsppt.sty (not loaded as a LaTeX package) has established the format, and is undone when
+  that comes after it (amstex.rs `enter_amstex_format`; math0103164, math0105110); a LaTeX document's stray `\+`
+  (cond-mat0001412, also with `\usepackage{amsppt}` or `\documentstyle[amsppt]{article}`) stays one undefined error.
+  (3) `\subjclassyear` (amsppt.sty:391-401, verbatim; the edition is the classification's scheme and name, none after
+  `\subjclass\nofrills`, whose prefix is the author's: 0804.1078, 1107.2266; KNOWN_PERL_ERRORS #814; cs0201007,
+  math0205233, math0209036) and `\transl` = `\moreref` (:1088; #815; math-ph0003008, math0003031); a `\moreref` part
+  prints its text first and then its fields by the reference's kind, carried from the part before (#817, math0111124),
+  a `\ref`'s text before its first field after the fields with a comma (math0703285's `\ref{CH}` was glued to the
+  authors); the fields' punctuation is `\ppunbox@`'s, the first field without, a `\nofrills` field without its frills
+  and the next one's punctuation (#817; math0406143's 41 "English transl.,, Soviet Math. Dokl."); `\publaddr` is printed
+  (#818), and the bib ties are active `~` (were "pp.˜").
   (4) `$$\gather` without LaTeX: amsmath's `\lx@ams@start@box` lets to the kernel's `\lx@empty`, not `\@empty`
   (math9412232, math0005042, math0006111, math0009215; repro amstex_plain_gather_return_opt_arg RED → GREEN).
   (5) AMS-TeX's `\document` reuses a document element the material before it opened (KNOWN_PERL_ERRORS #816): an
@@ -2230,9 +2237,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   math0410384) and a `\footnotetext` in the list (0711.1928 + 6) as one creator; `undefined:@` (88 papers: AMS-TeX's
   active `@` arrows outside `\CD`, amstex.tex:97-107 `\at@` and :1660-1702 `\atdef@`: math0004017, math0005042,
   math0009033) not chased; discounted (not in TL 2025, not shipped): bull-ppt.sty (98 papers, math9201251), plain
-  `\input mn` (63 papers, astro-ph0002467). Repros amstex/{amsppt_author_list_pairs_addresses,
-  amsppt_author_list_extra_address_shared, amstex_plain_tabbing_rows, amsppt_subjclassyear, amsppt_transl_reference,
-  amstex_material_before_document, amstex_plain_gather_return_opt_arg}; guards `perfect_kernel_batch68r` (8).
+  `\input mn` (63 papers, astro-ph0002467). Open, before 68r (67int12 the same): `\thanks…\endthanks` inside `\author`
+  is garbled ("Ann Oneartially supported." and a note "P"; TeX "Ann One and Bob Two"); AMS-TeX's `\footnote""{…}` is a
+  "”" note and a paragraph (math0207223); an `\hbox`/`\vtop` author layout gives `<p>`s inside the personname
+  (cond-mat9911046); bib parts end with "." where TeX prints ";" (a `\moreref` part's), and "Sci.." doubles the period
+  (68r review's comparison with TeX, not root-caused). Repros amstex/{amsppt_author_list_pairs_addresses,
+  amsppt_author_list_extra_address_shared, amsppt_author_blocks_pair_addresses, amsppt_author_byline,
+  amstex_plain_tabbing_rows, amstex_mode_keeps_plain_tabbing, amsppt_subjclassyear, amsppt_subjclass_nofrills,
+  amsppt_transl_reference, amsppt_transl_nofrills, amstex_material_before_document,
+  amstex_plain_gather_return_opt_arg}; guards `perfect_kernel_batch68r` (12).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

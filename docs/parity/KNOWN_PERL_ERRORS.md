@@ -14142,6 +14142,14 @@ math0111124). Fixed in Rust
 (amsppt_sty.rs): the text first, the fields after it, the kind carried into a part that names none. Repro
 amstex/amsppt_transl_reference; guard `perfect_kernel_batch68r::amsppt_transl_continues_the_reference`.
 
+The fields' punctuation is TeX's `\ppunbox@` (:1053-1066): the first field printed has none (`\endref@`'s `\kern-\tw@
+sp\kern\m@ne sp`), and a field marked `\nofrills` (:877-882, `\nofrills@list`) drops its own frills and the next
+field's punctuation. Perl's `\nofrills` is empty (AmSTeX.pool.ltxml:143), so the frill comma after the author's own is
+printed: minimal trigger `\ref\no1 \by A \paper\nofrills Title, \jour J\vol 3\yr 1999\endref` — amstex "A, Title,
+J 3 (1999)."; Perl 0.8.8 "A, Title,, J 3 (1999)." (math0406143's 41 `\transl\nofrills English transl., \jour …`). Fixed
+in Rust (amsppt_sty.rs: in a reference `\nofrills` is a marker `\@bibfield` takes out; `Fill` in `\@fill@bibitem`).
+Repro amstex/amsppt_transl_nofrills; guard `perfect_kernel_batch68r::amsppt_transl_nofrills_drops_the_frills`.
+
 ## 818. amsppt's `\publaddr` is never printed
 
 amsppt.sty.ltxml's `\publaddr` stores the field `publisheraddress`, and `\@fill@bibitem` prints `publisheraddr`:
