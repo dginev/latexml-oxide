@@ -582,7 +582,7 @@ fn aastex7_email_hidden_without_show() {
 
 /// The core `xml` through the embedded `stylesheet` (`LaTeXML-html5.xsl`, `LaTeXML-epub3.xsl`), in-process, with no POST
 /// error.
-fn post_with(xml: &str, stylesheet: &str) -> String { post_in(xml, stylesheet, None) }
+pub(super) fn post_with(xml: &str, stylesheet: &str) -> String { post_in(xml, stylesheet, None) }
 
 /// [`post_with`] for a document whose post stage reads files beside its source (a `.bib`) in `source_directory`, its
 /// page written beside it as the CLI's `--dest` (so a link renders as the reader sees it).

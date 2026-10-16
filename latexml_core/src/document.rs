@@ -6684,7 +6684,17 @@ impl Document {
   }
 
   fn trim_node_left_whitespace(&self, node: &Node) -> Result<()> {
-    if let Some(mut first_child) = node.get_first_child() {
+    // An empty construction-time marker (`*_Capture_`: the frontmatter position mark, the cover-title marks) is no
+    // content: the trim reaches past it, as it would were the marker not there.
+    let mut candidate = node.get_first_child();
+    while let Some(ref child) = candidate {
+      if is_empty_capture_mark(child) {
+        candidate = child.get_next_sibling();
+      } else {
+        break;
+      }
+    }
+    if let Some(mut first_child) = candidate {
       match first_child.get_type() {
         Some(NodeType::TextNode) => {
           let content = first_child.get_content();
@@ -6708,10 +6718,12 @@ impl Document {
     // These are artifacts of font change tracking during alignment absorption.
     let mut candidate = node.get_last_child();
     while let Some(ref child) = candidate {
-      if child.get_type() == Some(NodeType::ElementNode)
+      if (child.get_type() == Some(NodeType::ElementNode)
         && child.get_name() == "text"
         && child.get_first_child().is_none()
-        && child.has_attribute("_noautoclose")
+        && child.has_attribute("_noautoclose"))
+        // …and an empty construction-time marker (`trim_node_left_whitespace`)
+        || is_empty_capture_mark(child)
       {
         candidate = child.get_prev_sibling();
       } else {
@@ -7752,6 +7764,14 @@ fn namespace_prefixes_in_use<'p>(root: &Node, prefixes: &[&'p str]) -> HashSet<&
     });
   }
   found
+}
+
+/// An empty construction-time marker element (`*_Capture_`: `ltx:_Frontmatter_Capture_`, the cover-title marks), which
+/// never reaches the output.
+fn is_empty_capture_mark(node: &Node) -> bool {
+  node.get_type() == Some(NodeType::ElementNode)
+    && node.get_first_child().is_none()
+    && node.get_name().ends_with("_Capture_")
 }
 
 #[cfg(test)]

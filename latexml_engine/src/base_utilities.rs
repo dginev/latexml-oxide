@@ -9,7 +9,7 @@ use latexml_core::{
   common::{
     arena::SymHashMap,
     cleaners::clean_label,
-    xml::{content_nodes, element_nodes},
+    xml::{content_nodes, element_nodes, is_descendant_or_self},
   },
   document::tag::{RawFrontmatter, TagAttrs, TagContent, TagData},
 };
@@ -5110,35 +5110,171 @@ pub fn demote_stranded_titlepage(document: &mut Document) -> Result<()> {
   if !(demotable && holdable) {
     return Ok(());
   }
-  // The class's own printing `\title` run on this cover (sect05.rs `titlepage_class_run`, its elements tagged
-  // `_lx_cover_title`): a demoted cover no longer stands in for the document's `<ltx:title>`, which the HTML then
-  // displays (LaTeXML-structure-xhtml.xsl:374-375 hides it only beside an `ltx:titlepage`), so the print would be a
-  // second copy of the title. Emptied wrappers go with it.
-  for ink in document.findnodes("descendant::*[@_lx_cover_title]", Some(&titlepage)) {
-    if ink
-      .get_parent()
-      .is_some_and(|p| p.get_attribute("_lx_cover_title").is_some())
-    {
-      continue;
-    }
-    let mut victim = ink;
-    loop {
-      let parent = victim.get_parent();
-      document.remove_node(victim);
-      match parent {
-        Some(p)
-          if p != titlepage && !has_element_child(&p) && p.get_content().trim().is_empty() =>
-        {
-          victim = p;
-        },
-        _ => break,
-      }
-    }
-  }
+  // A demoted cover no longer stands in for the document's `<ltx:title>`, which the HTML then displays: the class's
+  // own printing `\title` run on it would be a second copy (OXIDIZED_DESIGN #629).
+  drop_cover_title_ink(document, &titlepage);
   normalize_titlepage_layout_children(document, &titlepage)?;
   let mut para = document.rename_node(titlepage, "ltx:para", true)?;
   document.add_class(&mut para, "ltx_titlepage")?;
   Ok(())
+}
+
+/// The marks around the class's own printing `\title` run on a cover (sect05.rs `\lx@cover@title@begin`/`@end`,
+/// `titlepage_class_run`): empty internal elements, admitted anywhere by the model (`_Capture_`-suffixed), never in the
+/// output (removed here; a stray one the core finalize drops).
+pub const COVER_TITLE_BEGIN: &str = "ltx:_CoverTitleBegin_Capture_";
+/// See [`COVER_TITLE_BEGIN`].
+pub const COVER_TITLE_END: &str = "ltx:_CoverTitleEnd_Capture_";
+
+/// The class's own printing `\title` run on a cover inside `scope` (sect05.rs `titlepage_class_run`): everything that
+/// lies between each pair of cover-title marks in document order — elements and bare text (`\def\title#1{#1}` in the
+/// cover's open paragraph) — removed with the marks, and the wrappers it leaves empty (a `center`'s paragraph). Called
+/// where a `{titlepage}` stops standing in for the document's `<ltx:title>`, so the HTML displays that title
+/// (LaTeXML-structure-xhtml.xsl:374-375 hides it only beside an `ltx:titlepage`): `\unwind@titlepage` (a `\maketitle`
+/// inside the cover), [`demote_stranded_titlepage`], and [`settle_cover_title_ink`]. An unmatched mark is removed
+/// alone. OXIDIZED_DESIGN #629.
+pub fn drop_cover_title_ink(document: &mut Document, scope: &Node) {
+  let begin_q = pin(COVER_TITLE_BEGIN);
+  let marks = cover_title_marks(document, scope);
+  if marks.is_empty() {
+    return;
+  }
+  // Everything is decided before anything is removed: `remove_node` frees the subtree it takes out
+  // (`discard_subtree`), so no handle into it may be used afterwards.
+  let mut doomed: Vec<Node> = Vec::new();
+  let mut chains: Vec<Vec<Node>> = Vec::new();
+  let mut open: Option<Node> = None;
+  for mark in marks {
+    chains.push(ancestors_below(&mark, scope));
+    if document::get_node_qname(&mark) == begin_q {
+      if let Some(stray) = open.replace(mark) {
+        doomed.push(stray);
+      }
+    } else if let Some(begin) = open.take() {
+      doomed.extend(marked_range(scope, &begin, &mark));
+      doomed.push(begin);
+      doomed.push(mark);
+    } else {
+      doomed.push(mark);
+    }
+  }
+  doomed.extend(open);
+  // an ancestor of a mark inside another range goes with that range
+  for chain in &mut chains {
+    chain.retain(|node| !doomed.iter().any(|d| is_descendant_or_self(node, d)));
+  }
+  // the marks' ancestors left with no content once the doomed nodes are out (a `center`'s paragraph holding only the
+  // print), innermost first, until none more empties
+  let mut gone: Vec<Node> = doomed;
+  let wrappers: Vec<Node> = chains.into_iter().flatten().collect();
+  loop {
+    let emptied: Vec<Node> = wrappers
+      .iter()
+      .filter(|w| !gone.contains(w))
+      .filter(|w| {
+        w.get_child_nodes().iter().all(|c| {
+          gone.contains(c)
+            || (c.get_type() != Some(NodeType::ElementNode) && c.get_content().trim().is_empty())
+        })
+      })
+      .cloned()
+      .collect();
+    if emptied.is_empty() {
+      break;
+    }
+    gone.extend(emptied);
+  }
+  // each removed whole, once: the outermost of the nodes that go
+  let victims: Vec<Node> = gone
+    .iter()
+    .filter(|n| !gone.iter().any(|d| d != *n && is_descendant_or_self(n, d)))
+    .cloned()
+    .collect();
+  for victim in victims {
+    document.remove_node(victim);
+  }
+}
+
+/// The cover-title marks inside `scope`, in document order.
+fn cover_title_marks(document: &mut Document, scope: &Node) -> Vec<Node> {
+  document.findnodes(
+    "descendant::ltx:_CoverTitleBegin_Capture_ | descendant::ltx:_CoverTitleEnd_Capture_",
+    Some(scope),
+  )
+}
+
+/// `node`'s ancestors strictly below `scope`, innermost first.
+fn ancestors_below(node: &Node, scope: &Node) -> Vec<Node> {
+  let mut out = Vec::new();
+  let mut p = node.get_parent();
+  while let Some(n) = p {
+    if &n == scope {
+      break;
+    }
+    p = n.get_parent();
+    out.push(n);
+  }
+  out
+}
+
+/// The nodes after `begin` and before `end` in document order, each taken whole: the following siblings of `begin`
+/// and of each of its ancestors up to the one on the path to `end`, then the children before that path down to `end`.
+fn marked_range(scope: &Node, begin: &Node, end: &Node) -> Vec<Node> {
+  let mut end_path = ancestors_below(end, scope);
+  end_path.push(end.clone());
+  let mut range: Vec<Node> = Vec::new();
+  let mut cur = begin.clone();
+  let mut fork: Option<Node> = None;
+  'up: loop {
+    let mut sib = cur.get_next_sibling();
+    while let Some(s) = sib {
+      if end_path.contains(&s) {
+        fork = Some(s);
+        break 'up;
+      }
+      sib = s.get_next_sibling();
+      range.push(s);
+    }
+    match cur.get_parent() {
+      Some(p) if &p != scope => cur = p,
+      _ => break,
+    }
+  }
+  while let Some(node) = fork.take() {
+    if &node == end {
+      break;
+    }
+    for child in node.get_child_nodes() {
+      if end_path.contains(&child) {
+        fork = Some(child);
+        break;
+      }
+      range.push(child);
+    }
+  }
+  range
+}
+
+/// At `\end{document}`, the cover-title marks still in the tree (OXIDIZED_DESIGN #629), by the XSLT's own test
+/// (LaTeXML-structure-xhtml.xsl:374-375): while the document has a top-level `ltx:titlepage`, its `<ltx:title>` is not
+/// displayed and the class's print is the title the page shows — kept, its marks removed, wherever the cover's
+/// typesetting put it (a `\vbox` print the absorber set beside an emptied cover: hep-th0010274); without one (a
+/// titlepage nested in a section or a box, every cover unwound or demoted) the title is displayed and the print goes
+/// ([`drop_cover_title_ink`]).
+pub fn settle_cover_title_ink(document: &mut Document) {
+  let Some(root) = document.get_document().get_root_element() else {
+    return;
+  };
+  if document
+    .findnode("/ltx:document/ltx:titlepage", None)
+    .is_some()
+  {
+    for mark in cover_title_marks(document, &root) {
+      document.remove_node(mark);
+    }
+  } else {
+    drop_cover_title_ink(document, &root);
+  }
 }
 
 /// Would `insert_frontmatter` place anything right now? Mirrors its three early

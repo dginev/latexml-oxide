@@ -14297,5 +14297,7 @@ Text.
 \end{document}
 ```
 
-Rust (68t): the class's own `\title` runs at the call inside the titlepage, the kernel keeps the structured title
-(OXIDIZED_DESIGN_DIVERGENCES #629). Witnesses 0904.2708 (cernart.cls:217), gr-qc9404034.
+The same for a `\title` that both stores and prints (`\def\title#1{\gdef\@title{#1}\centerline{#1}}`): Perl never runs a
+refused definition, so nothing prints. Rust (68t): the class's own `\title` runs at the call inside the titlepage (a
+run that prints nothing is undone), the kernel keeps the structured title (OXIDIZED_DESIGN_DIVERGENCES #629).
+Witnesses 0904.2708 (cernart.cls:217), gr-qc9404034.

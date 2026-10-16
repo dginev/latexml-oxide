@@ -2303,14 +2303,25 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `lx_titlepage_cover`; the kernel `\title` (and the bindings' own `\title[]{}`: revtex4_support, ams_support,
   iopart_support, mn2e_support) then runs the class's/document's refused `\title` at the call, output kept
   (sect05.rs `titlepage_class_call`), and still keeps the structured title (metadata, hidden by
-  LaTeXML-structure-xhtml.xsl:374-375 beside the titlepage). Only a `\title` that keeps no value; not `\author`/`\date`
-  (their frontmatter copy is displayed). A titlepage demoted for standing after body content drops the print again
-  (cover-ink marks, `_lx_cover_title`): the document title is displayed there. The title-ink dedup leaves a document with a
-  titlepage alone (68s round 2's rule), so the cover print stays. Witnesses 0904.2708 (cernart.cls:217), gr-qc9404034 (document `\def\title`, `\documentstyle{revtex}`):
+  LaTeXML-structure-xhtml.xsl:374-375 beside the titlepage). A run that prints nothing (a store-only setter) is undone
+  (assignment journal); one that stores and prints prints (round 2, probe p2; cernphprep.cls:285, ALICE/COMPASS
+  preprints 1205.3963, 1205.5121, 1503.00681, 2112.00610: the CERN header and title on the cover, 0 → 1 visible); the argument's `\thanks`, `\footnote`,
+  `\footnotemark`, `\label`, `\index` are gobbled in the print (the kernel's copy owns them, probe p5). Not
+  `\author`/`\date` (their frontmatter copy is displayed). The print lies between two empty `_Capture_` marker
+  elements; `drop_cover_title_ink` (base_utilities.rs) removes what lies between them, text included, wherever the cover
+  stops standing in for the document title: `\unwind@titlepage` (probe p13), `demote_stranded_titlepage` (probe p9),
+  and `settle_cover_title_ink` at `\end{document}` when no top-level `ltx:titlepage` hides the title (XSLT test). The paragraph trims
+  reach past an empty `_Capture_` mark (document.rs `is_empty_capture_mark`). The title-ink dedup leaves a document
+  with a titlepage alone (68s round 2's rule), so the cover print stays. Witnesses 0904.2708 (cernart.cls:217), gr-qc9404034 (document `\def\title`, `\documentstyle{revtex}`):
   0 → 1 visible title; 1304.0681, 1503.03277 (dedup) 0 → 1; 1708.09335, 2506.18627, astro-ph0208566, hep-th9701175
   byte-identical HTML. OXIDIZED_DESIGN_DIVERGENCES #629 (#146 note), KNOWN_PERL_ERRORS #828. Repro
-  sectioning-frontmatter/titlepage_refused_title_prints_on_the_cover RED (67int13) → GREEN; guards
-  `perfect_kernel_batch68t` (5).
+  sectioning-frontmatter/titlepage_refused_title_prints_on_the_cover RED (67int13) → GREEN; round 2 repros
+  sectioning-frontmatter/{titlepage_unwound_cover_drops_the_class_title_print,
+  titlepage_demoted_cover_drops_the_class_title_text, titlepage_class_title_print_gobbles_label_and_thanks,
+  titlepage_storing_class_title_prints_on_the_cover} RED (68t r1) → GREEN; guards `perfect_kernel_batch68t` (10, five
+  with an HTML one-visible-title assertion). Round 2 A/B (105 review papers + 4 witnesses, 67int15 vs 68t r2): 51
+  identical, 58 changed, all words gained, 0 rc/E/F/W deltas; visible titles 0 → 1 in 53 (hep-th0010274's print beside
+  its emptied cover, hep-th0501109, 1802.04445 among them), none lost.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

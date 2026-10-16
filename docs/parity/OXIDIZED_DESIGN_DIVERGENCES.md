@@ -18153,19 +18153,47 @@ the document's `<ltx:title>` (LaTeXML-structure-xhtml.xsl:374-375, Perl's :358-3
 title at all (KNOWN_PERL_ERRORS #828). Now the `{titlepage}` the document lays out (not a `\maketitle` deposit's,
 which builds no `ltx:titlepage`) sets `lx_titlepage_cover`, and a `\title` called in it runs the class's own refused
 `\title` at the call, its output kept on the cover (sect05.rs `titlepage_class_call`, `titlepage_class_run`, Info
-`frontmatter:titlepage`), then the kernel's part (the structured title stays: metadata, hidden by the XSLT rule). Only
-a class `\title` that keeps no value (`class_command_stores`; a frontmatter setter prints nothing at its call), whose
-vocabulary is defined (`dropped_class_setter`); a class `\title` that calls a saved kernel `\title` adds the title
-once (`\lx@titlepage@kernel`). The bindings' own `\title[]{}` (revtex4_support — `\documentstyle{revtex}`,
+`frontmatter:titlepage`), then the kernel's part (the structured title stays: metadata, hidden by the XSLT rule),
+whose vocabulary is defined (`dropped_class_setter`). Whatever else the class's `\title` does: a run that typesets
+nothing (a frontmatter setter, dp_delphi.cls `\def\title#1{\xdef\@title{\@title \par #1}}`, hep-ex0404013) shows
+nothing at its call and is undone — its assignments rolled back (`AssignmentJournalGuard::rollback`), its diagnostics
+held and discarded — so it keeps its value only through the kernel's `\title`, as outside a titlepage; one that stores
+and prints (`\def\title#1{\gdef\@title{#1}\centerline{#1}}`, review probe p2; cernphprep.cls:285, the CERN preprint
+header and title of the ALICE/COMPASS papers 1205.3963, 1205.5121, 1503.00681, 2112.00610) keeps what it printed and
+stored, as in pdflatex (round 1 ran only a `\title` that stores nothing, `class_command_stores`, and showed 0 titles there). A class
+`\title` that calls a saved kernel `\title` hands the title to the frontmatter once (`\lx@titlepage@kernel` skips the
+kernel's part); when no assignment journal can open, a `\title` that may store is not run. The print is the class's
+typesetting of an argument the kernel's copy also digests, so the kernel's copy owns the argument's side effects:
+`\thanks`, `\footnote`, `\label` and `\index` are `\@gobble`d and `\footnotemark` is `\relax` during the print
+(`COVER_PRINT_GOBBLED`, the list of the `\maketitle` deposits and of `replay_class_setter`) — before, a `\label` in the
+title argument labelled `<ltx:document>` (a `\ref` rendered the title text, pdflatex "See .") and a `\thanks` made a
+second `ltx:pubnote` (probe p5). The bindings' own `\title[]{}` (revtex4_support — `\documentstyle{revtex}`,
 gr-qc9404034 —, ams_support, iopart_support, mn2e_support) take the same rule (`\lx@titlepage@class@call`). Only
 `\title`: the XSLT hides no other field beside a titlepage, so a refused printing `\author`/`\address` there
 (gr-qc9404034.tex:97-98, cernart.cls:220) is not run — the frontmatter's `ltx:creator` is its one displayed copy. The
-title-ink dedup never searches a document with a titlepage (#146). A titlepage that stands after body content is demoted to a
-paragraph (#257, `demote_stranded_titlepage`), beside which the document's title IS displayed: the class's print is
-built between two Rust-only marks (`\lx@cover@title@begin`/`@end`, reverting as nothing), which tag its elements
-`_lx_cover_title` (internal, dropped at finalization), and the demotion removes them — the title shows once either way.
-Witnesses 0904.2708 (cernart), gr-qc9404034: 0 → 1 visible
-title, 0 errors either side. Repro sectioning-frontmatter/titlepage_refused_title_prints_on_the_cover; guards
-`perfect_kernel_batch68t::{titlepage_refused_title_prints_on_the_cover,
+title-ink dedup never searches a document with a titlepage (#146).
+
+The print stays only on a cover that stays one. It is built between two empty Rust-only marker elements
+(`\lx@cover@title@begin`/`@end`, reverting as nothing; `ltx:_CoverTitleBegin_Capture_`/`ltx:_CoverTitleEnd_Capture_`,
+`base_utilities.rs` `COVER_TITLE_BEGIN`/`COVER_TITLE_END`): `_Capture_`-suffixed, so the model admits them anywhere
+and no paragraph opens or closes for them, and the paragraph trims reach past them (document.rs
+`is_empty_capture_mark`; the frontmatter position mark too) as if they were not there. One helper,
+`drop_cover_title_ink(scope)`, removes everything between each pair in document order — elements and bare text alike
+(`\def\title#1{#1}` in the cover's open paragraph, probe p9) — with the marks and the wrappers left empty; an unmatched
+mark goes alone. It is called wherever a `{titlepage}` stops standing in for the document's `<ltx:title>`, which the
+HTML then displays: `\unwind@titlepage` (`\begin{titlepage}\title{X}\maketitle\end{titlepage}`, probe p13: 2 visible
+titles in round 1), `demote_stranded_titlepage` (a titlepage after body content, #257), and at `\end{document}`
+`settle_cover_title_ink` (`\lx@finalize@document`), by the XSLT's own test: while the document has a top-level
+`ltx:titlepage` (its title hidden) the marks are removed and the print kept, wherever the cover's typesetting put it
+(hep-th0010274's `\vbox{\center\LARGE{#1}}` print set beside an emptied cover); without one (a titlepage nested in a
+section or box, every cover unwound or demoted) the print goes.
+A stray mark never reaches the output (the core finalize drops an empty `_Capture_` element). Witnesses 0904.2708
+(cernart), gr-qc9404034: 0 → 1 visible title, 0 errors either side. Repros sectioning-frontmatter/
+{titlepage_refused_title_prints_on_the_cover, titlepage_unwound_cover_drops_the_class_title_print,
+titlepage_demoted_cover_drops_the_class_title_text, titlepage_class_title_print_gobbles_label_and_thanks,
+titlepage_storing_class_title_prints_on_the_cover}; guards `perfect_kernel_batch68t::{titlepage_refused_title_prints_on_the_cover,
 refused_title_outside_titlepage_is_the_frontmatter_title, refused_storing_title_in_titlepage_prints_nothing,
-binding_title_in_titlepage_runs_the_refused_printing_title, stranded_titlepage_drops_the_class_title_print}`.
+binding_title_in_titlepage_runs_the_refused_printing_title, stranded_titlepage_drops_the_class_title_print,
+titlepage_unwound_cover_drops_the_class_title_print, titlepage_demoted_cover_drops_the_class_title_text,
+titlepage_class_title_print_gobbles_label_and_thanks, titlepage_storing_class_title_prints_on_the_cover,
+titlepage_class_title_calling_the_kernel_title_adds_it_once}` (HTML: one visible title).

@@ -936,28 +936,25 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\lx@titlepage@class@run{}{}{}", sub[(name, opt, arg)] {
     titlepage_class_run(&name.to_string(), opt, arg)
   });
-  // The class's own `\title` printed on the cover (`titlepage_class_run`) is built between these two marks: the end
-  // mark tags every element built since the begin mark in the open `ltx:titlepage` (`_lx_cover_title`, internal,
-  // dropped at finalization; new elements follow every earlier descendant in document order), which a stranded
-  // titlepage's demotion removes (base_utilities.rs `demote_stranded_titlepage`). Rust-only, reverting as nothing.
+  // The class's own `\title` printed on the cover (`titlepage_class_run`) is built between these two marks: empty
+  // internal elements (`_Capture_`-suffixed, admitted anywhere by the model, model.rs `can_contain_sym`, so no paragraph
+  // opens or closes for them; a stray one the core finalize drops), between which the print lies in document order —
+  // elements and bare text alike. The print stays only on a cover that stays one: base_utilities.rs
+  // `drop_cover_title_ink` removes it when the titlepage stops standing in for the document's `<ltx:title>`
+  // (`\unwind@titlepage`, `demote_stranded_titlepage`, and at `\end{document}` `settle_cover_title_ink` in a document
+  // left without a top-level `ltx:titlepage`). Rust-only, reverting as nothing.
   DefConstructor!("\\lx@cover@title@begin",
     sub[document, _args, _props] {
-      if let Some(mut cover) = open_titlepage(document) {
-        let from = document.findnodes("descendant::*", Some(&cover)).len();
-        let _ = cover.set_attribute("_lx_cover_ink_from", &from.to_string());
+      if document.get_element().is_some() {
+        document.insert_element(COVER_TITLE_BEGIN, Vec::new(), None)?;
       }
     },
     reversion => ""
   );
   DefConstructor!("\\lx@cover@title@end",
     sub[document, _args, _props] {
-      if let Some(mut cover) = open_titlepage(document)
-        && let Some(from) = cover.get_attribute("_lx_cover_ink_from").and_then(|v| v.parse::<usize>().ok())
-      {
-        for mut ink in document.findnodes("descendant::*", Some(&cover)).into_iter().skip(from) {
-          let _ = ink.set_attribute("_lx_cover_title", "true");
-        }
-        let _ = cover.remove_attribute("_lx_cover_ink_from");
+      if document.get_element().is_some() {
+        document.insert_element(COVER_TITLE_END, Vec::new(), None)?;
       }
     },
     reversion => ""
@@ -1720,6 +1717,9 @@ pub(crate) fn load() -> Result<()> {
   // Guard `perfect_kernel_batch56::unwound_titlepage_rehomes_its_paragraphs`.
   DefConstructor!("\\unwind@titlepage", sub[document,_args,_props] {
     if let Some(titlepage) = document.maybe_close_element("ltx:titlepage")? {
+      // The unwound cover no longer stands in for the document's `<ltx:title>`, which the HTML then displays: the
+      // class's own printing `\title` run on it goes (OXIDIZED_DESIGN #629; review probe p13).
+      drop_cover_title_ink(document, &titlepage);
       let parent = titlepage.get_parent();
       let children: Vec<Node> = titlepage
         .get_child_nodes()
@@ -2548,9 +2548,9 @@ fn run_dropped_class_command(name: &str, opt: &Tokens, arg: &Tokens) -> Result<O
 /// (LaTeXML-structure-xhtml.xsl:374-375, Perl's :358-359: a document title with an `ltx:titlepage` sibling is not
 /// displayed), so with only the kernel's call the HTML shows no title at all (0904.2708 cernart, gr-qc9404034; Perl the
 /// same). The call stands for what the document's machinery prints: the class's own `\title` runs at the call, its
-/// output kept on the cover ([`titlepage_class_run`]), and the kernel's still keeps the title (metadata). Only for
-/// a class `\title` that keeps no value ([`class_command_stores`]): a frontmatter setter prints nothing at its call.
-/// Only `\title`: the XSLT hides no other field beside a titlepage, so a refused printing `\author` or `\address`
+/// output kept on the cover ([`titlepage_class_run`]), and the kernel's still keeps the title (metadata). Whatever
+/// else the class's `\title` does: one that only stores prints nothing at its call and is undone, one that stores and
+/// prints (`\gdef\@title{#1}\centerline{#1}`) prints. Only `\title`: the XSLT hides no other field beside a titlepage, so a refused printing `\author` or `\address`
 /// (gr-qc9404034.tex:97-98) would print a second copy of the author the document's frontmatter shows. Not inside a
 /// `\maketitle` deposit's titlepage (`lx_depositing_frontmatter_fields`, no `ltx:titlepage`) and not while a class
 /// command runs. OXIDIZED_DESIGN #629.
@@ -2564,9 +2564,6 @@ fn titlepage_class_call(name: &str, opt: &Tokens, arg: &Tokens, kernel: &Tokens)
     return None;
   }
   dropped_class_setter(name)?;
-  if class_command_stores(name) {
-    return None;
-  }
   let mut call = vec![T_CS!("\\lx@titlepage@class@run"), T_BEGIN!()];
   call.extend(mouth::tokenize(TeXString::assembled(name.to_string())).unlist());
   call.push(T_END!());
@@ -2583,11 +2580,77 @@ fn titlepage_class_call(name: &str, opt: &Tokens, arg: &Tokens, kernel: &Tokens)
   Some(Tokens::new(call))
 }
 
-/// [`titlepage_class_call`]'s run: the class's own `\title`, printed on the cover where the call stands.
+/// What the kernel's copy of a `\title` argument owns, gobbled while the class's own `\title` prints it on the cover
+/// ([`titlepage_class_run`]): its notes, marks, labels and index entries — the argument is digested twice, and the
+/// second digestion's `\label` put the title's label on `<ltx:document>` (a `\ref` to it then rendered the title, where
+/// pdflatex prints nothing) and its `\thanks` a second `ltx:pubnote` (review probe p5). The same list the `\maketitle`
+/// deposits (`\let\thanks\@gobble`) and the setter replay (`replay_class_setter`) gobble, with `\index`.
+const COVER_PRINT_GOBBLED: [(&str, &str); 5] = [
+  ("\\thanks", "\\@gobble"),
+  ("\\footnote", "\\@gobble"),
+  ("\\footnotemark", "\\relax"),
+  ("\\label", "\\@gobble"),
+  ("\\index", "\\@gobble"),
+];
+
+/// [`titlepage_class_call`]'s run: the class's own `\title`, printed on the cover where the call stands, between the
+/// cover-title marks (`\lx@cover@title@begin`/`@end`, which `drop_cover_title_ink` reads when the cover stops being
+/// one), with the argument's side effects gobbled ([`COVER_PRINT_GOBBLED`]). A `\title` that typesets nothing (a
+/// frontmatter setter: dp_delphi.cls `\def\title#1{\xdef\@title{\@title \par #1}}`, hep-ex0404013) shows nothing at
+/// its call, so the run is undone, its assignments with it (`AssignmentJournalGuard::rollback`) and its diagnostics
+/// held and discarded: such a setter keeps its value only through the kernel's `\title`, as it does outside a
+/// titlepage. One that both stores and prints (`\def\title#1{\gdef\@title{#1}\centerline{#1}}`, review probe p2;
+/// cernphprep.cls:285's CERN header and title, `\gdef\Title{#1}`: 1205.3963, 2112.00610) keeps
+/// what it printed and stored, as in pdflatex; the kernel's part then sets the same `\@title`. A run that called the
+/// kernel's own `\title` (a saved `\let\oldtitle\title`) handed the title to the frontmatter: kept, and the kernel's
+/// part is not run again (`\lx@titlepage@kernel`). When no journal can open (one is already open), a `\title` that may
+/// store ([`class_command_stores`]) is not run, since it could not be undone.
 fn titlepage_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested>> {
-  let Some(digested) = run_dropped_class_command(name, &opt, &arg)? else {
+  let journal = begin_assignment_journal();
+  if journal.is_none() && class_command_stores(name) {
     return Ok(Vec::new());
+  }
+  let hold = util::logger::DiagnosticsHold::begin();
+  let gobbled: Vec<(Token, Option<Stored>)> = COVER_PRINT_GOBBLED
+    .iter()
+    .map(|(cs, _)| (T_CS!(*cs), lookup_meaning(&T_CS!(*cs))))
+    .collect();
+  for (cs, to) in COVER_PRINT_GOBBLED {
+    let_definition(&T_CS!(cs), &T_CS!(to), None);
+  }
+  let run = run_dropped_class_command(name, &opt, &arg);
+  for (cs, meaning) in gobbled {
+    assign_meaning(&cs, meaning.unwrap_or(Stored::None), None);
+  }
+  let digested = match run {
+    Ok(Some(digested)) => digested,
+    other => {
+      hold.commit();
+      if let Some(journal) = journal {
+        journal.keep();
+      }
+      return other.map(|_| Vec::new());
+    },
   };
+  let reached_kernel = lookup_bool("lx_sealed_class_call_reached_kernel");
+  if !typesets_content(&digested) && !reached_kernel {
+    let undone = journal.is_some_and(|journal| journal.rollback());
+    // the run reached no kernel `\title`, whatever an earlier call left in the flag the rollback restored
+    AssignValue!("lx_sealed_class_call_reached_kernel" => false, Some(Scope::Global));
+    if undone {
+      hold.discard();
+    } else {
+      hold.commit();
+    }
+    return Ok(Vec::new());
+  }
+  if let Some(journal) = journal {
+    journal.keep();
+  }
+  hold.commit();
+  if !typesets_content(&digested) {
+    return Ok(Vec::new());
+  }
   Info!(
     "frontmatter",
     "titlepage",
@@ -2595,23 +2658,9 @@ fn titlepage_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Diges
       "\\{name} inside {{titlepage}} runs the class's own \\{name} there, which prints it on the cover; the kernel keeps it as the document's metadata"
     )
   );
-  // Between the cover-ink marks: a titlepage demoted for standing after body content (`demote_stranded_titlepage`)
-  // no longer stands in for the document's title, which is then displayed, so the class's print there goes.
   let begin = digest(Tokens!(T_CS!("\\lx@cover@title@begin")))?;
   let end = digest(Tokens!(T_CS!("\\lx@cover@title@end")))?;
   Ok(vec![begin, digested, end])
-}
-
-/// The `ltx:titlepage` the insertion point stands in.
-fn open_titlepage(document: &Document) -> Option<Node> {
-  let mut node = document.get_element();
-  while let Some(n) = node {
-    if document::get_node_qname(&n) == pin!("ltx:titlepage") {
-      return Some(n);
-    }
-    node = n.get_parent();
-  }
-  None
 }
 
 /// The default of the optional argument of the class's own `\<name>` (`\lx@dropped@<name>`): a `\newcommand`'s

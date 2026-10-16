@@ -1,0 +1,20 @@
+% witness: review 68t probe p13 (2026-10-16); the shape of gr-qc9404034 / 0904.2708 (a refused printing `\title`
+%          called inside `{titlepage}`) with `\maketitle` in the same titlepage
+% oracle:  pdflatex 1 error ("No \title given": this `\title` stores nothing, so `\maketitle` has no `\@title`); the
+%          PDF shows the title once, the bold centered print on the cover
+% engines: rust 68t r1 = 0 errors, 2 visible titles: `\unwind@titlepage` (the `\maketitle` inside the titlepage)
+%          unwraps the cover, so the document `ltx:title` is displayed beside the class's print kept on it; Perl 0.8.8
+%          shows the `ltx:title` only (it never runs the refused `\title`)
+% expect:  0 errors, 0 warnings; no `ltx:titlepage`; the document `ltx:title` "Static axisymmetric spacetimes" is the
+%          one visible title (the print between the cover-title marks is dropped with the cover)
+% status:  RED (68t r1) -> GREEN (68t r2)
+\documentclass{article}
+\def\title#1{\begin{center}\normalsize\bf #1\end{center}}
+\begin{document}
+\begin{titlepage}
+\title{Static axisymmetric spacetimes}
+\maketitle
+\end{titlepage}
+\section{Intro}
+Text.
+\end{document}
