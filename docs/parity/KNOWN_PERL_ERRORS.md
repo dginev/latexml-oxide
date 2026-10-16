@@ -9319,8 +9319,8 @@ is set apart as a block (case 30); a horizontal penalty leaves no item (case 31)
 color under `\color` (case 32); `\copy` shares the box, so a `\wd` set on an item of the `\unhbox`ed original
 reaches the copy (case 35); a `\rotatebox` spliced at a paragraph's start puts the rest on a line of its own, as typed
 (case 36, boxes-groups/rotatebox_starts_the_paragraph — the `\hbox` wrapper hid it before 59y); `\unvbox` of a vbox
-on the main vertical list, in a float or a note still puts the box back (R1 vertical: spliced only into a vertical
-box's list since 68q, #840; elsewhere it needs R6); minipages typed into a paragraph stack (case 39; Perl's repack too,
+on the main vertical list, in a float, a note or a minipage still puts the box back (R1 vertical: spliced only into a
+vertical box's list since 68q, #840; elsewhere it needs R6); minipages typed into a paragraph stack (case 39; Perl's repack too,
 Stomach.pm:458-461); a cell's leading control spaces become column padding (tikz_align_line_padding case 4; Perl's
 per-column padding, Alignment.pm:567-568, 659).
 
@@ -14184,14 +14184,16 @@ b, then a, then is void (3 rounds); Perl and Rust before 68q take a vbox every r
 `$\inference{a}{b}$` under `\usepackage{semantic}` never ends (Perl on this host has no semantic.sty).
 
 Rust (68q, tex_box.rs `vlist_of`): in a vertical box's own list (`\vbox`, `\vtop`, `\parbox` contents) `\unvbox` and
-`\unvcopy` (as copies, `copy_node_list`) put the `\vbox`/`\vtop` whatsit's list back, and the paragraph the box's end
-finished (§1086 `end_graf`) gets the internal `\par` mark its line lacked, so material after it starts a line of its
-own. On the main vertical list, in a float's or a note's body and in math the box still goes back whole (OXIDIZED_DESIGN_DIVERGENCES
-#637). Witnesses: ~315 of the fleet's 448 `oom:alloc_failed` Fatals (31 of a 44-paper sample, study
-agent_reports/2026-10-16_perf_ram_study.md (b)), among them 1603.01635, 2506.05832, 1802.06375 (the study's other
-`\lastbox` users 1209.2208 and math0301370 fail elsewhere). Repros boxes-groups/unvbox_lastbox_peel_loop,
-package-bindings/semantic_inference_premises, boxes-groups/box_primitives_lastbox (cases 5-7),
-box_primitives_unpack (cases 4, 7); guards `perfect_kernel_batch68q::{unvbox_lastbox_peel_loop,
+`\unvcopy` (as copies, `copy_node_list`) put the `\vbox`/`\vtop` whatsit's list back between two boundary marks, the
+end one closing what the list opened and left open (the paragraph the box's end finished, §1086 `end_graf`; a
+minipage's or `\parbox`'s `ltx:p`), so material after it starts a line of its own. On the main vertical list, in a
+float's, a note's or a minipage's body and in math the box still goes back whole (OXIDIZED_DESIGN_DIVERGENCES #637).
+Witnesses: an estimated ~315 of the fleet's 448 `oom:alloc_failed` Fatals (an extrapolation, 31/44 × 448, from 31 of a
+44-paper sample, study agent_reports/2026-10-16_perf_ram_study.md (b)), among them 1603.01635, 2506.05832, 1802.06375
+(the study's other `\lastbox` users 1209.2208 and math0301370 fail elsewhere). Repros
+boxes-groups/unvbox_lastbox_peel_loop, boxes-groups/unvbox_splice_boundary, package-bindings/semantic_inference_premises,
+boxes-groups/box_primitives_lastbox (cases 5-7), box_primitives_unpack (cases 4, 7); guards
+`perfect_kernel_batch68q::{unvbox_lastbox_peel_loop, unvbox_splice_closes_what_its_list_opened,
 semantic_inference_premises}`, `box_primitives::{lastbox, unpack}`. Residual (R7): LaTeXML's vertical lists carry no
 interline glue, so after `\vbox{\hbox{a}\hbox{b}}` the second round takes "a" where TeX finds the `\baselineskip` glue
 and is void.

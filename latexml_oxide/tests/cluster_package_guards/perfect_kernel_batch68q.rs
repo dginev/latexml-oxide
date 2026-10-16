@@ -11,7 +11,8 @@ fn para(id: &'static str, markup: &'static str) -> (&'static str, &'static str, 
 
 /// boxes-groups/unvbox_lastbox_peel_loop: each round `\setbox\pb=\vbox{\unvbox\pb \global\setbox\lb=\lastbox}` takes
 /// the last line and leaves the rest; the box's end finishes its last paragraph (§1086), so what follows the spliced
-/// lines starts a line of its own. p1 waits for interline glue (R7: pdflatex `[1:h,2]`).
+/// lines starts a line of its own. p1 waits for interline glue (R7: pdflatex `[1:h,2]`): its current value is pinned
+/// so that drift shows.
 #[test]
 fn unvbox_lastbox_peel_loop() {
   assert_elements(
@@ -19,6 +20,8 @@ fn unvbox_lastbox_peel_loop() {
     RAW,
     (0, 0),
     &[
+      // RED R7 (pdflatex `[1:h,2]`): LaTeXML's vertical lists carry no interline glue, so the second round takes "a".
+      para("p1", r##"<para xml:id="p1"><p>[1:h,2:h,3]</p></para>"##),
       para("p2", r##"<para xml:id="p2"><p>[1:h,2:h,3]</p></para>"##),
       para("p3", r##"<para xml:id="p3"><p>[1:h,2:h,3]</p></para>"##),
       para("p4", r##"<para xml:id="p4"><p>[1]</p></para>"##),
@@ -63,5 +66,37 @@ fn semantic_inference_premises() {
         "<para xml:id=\"p2\"><p><text class=\"ltx_markedasmath\"><Math mode=\"inline\" tex=\"\\frac{\\vtop{\\hbox to39.85417pt{\\hskip 7.5pt$p$\\hskip 15.00002pt$q$\\hskip 7.5pt}\\hbox to39.85417pt{\\hskip 7.5pt$r$\\hskip 7.5pt}\\vskip 1.59998pt}}{\\vbox{\\vskip 1.59998pt\\hbox{\\hskip 7.5pt$s$\\hskip 7.5pt}}}\" text=\"[\u{2002}\u{2005}p\u{2003}\u{2002}q\u{2002}\u{2005}r] / [\u{2002}\u{2005}s]\" xml:id=\"p2.m1.m1\"><XMath><XMApp><XMTok mathstyle=\"text\" meaning=\"divide\" role=\"FRACOP\"/><XMText><inline-block vattach=\"top\"><p width=\"39.9pt\">\u{2002}\u{2005}<Math mode=\"inline\" tex=\"p\" text=\"p\" xml:id=\"p2.m1.m1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">p</XMTok></XMath></Math>\u{2003}\u{2002}<Math mode=\"inline\" tex=\"q\" text=\"q\" xml:id=\"p2.m1.m1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">q</XMTok></XMath></Math></p><p width=\"39.9pt\">\u{2002}\u{2005}<Math mode=\"inline\" tex=\"r\" text=\"r\" xml:id=\"p2.m1.m1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">r</XMTok></XMath></Math></p></inline-block></XMText><XMText vattach=\"bottom\">\u{2002}\u{2005}<Math mode=\"inline\" tex=\"s\" text=\"s\" xml:id=\"p2.m1.m1.m4\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">s</XMTok></XMath></Math></XMText></XMApp></XMath></Math></text></p></para>",
       ),
     ],
+  );
+}
+
+/// boxes-groups/unvbox_splice_boundary: the list `\unvbox` splices into a vertical box's own list is bracketed by a
+/// pair of boundary marks (tex_box.rs `vlist_of`), and the end mark closes what the list opened and left open — a
+/// minipage's or `\parbox`'s `ltx:p`, a `\noindent` paragraph's `ltx:para` — so what follows the splice starts a line of
+/// its own, as TeX sets it (pdflatex: MiniA above AfterA, …). Round 1's line-only `\par` mark saw none of these; every
+/// row was one `ltx:p` there. J: `\unvcopy` twice (the copies' marks share a serial); K: a splice inside a splice.
+#[test]
+fn unvbox_splice_closes_what_its_list_opened() {
+  let mini = |text: &str| {
+    format!(
+      r##"<p><inline-block class="ltx_minipage" vattach="middle" width="85.4pt"><p>{text}</p></inline-block></p>"##
+    )
+  };
+  let rows = [
+    ("p1", format!(r##"<para xml:id="p1"><p>LeadA <inline-block vattach="bottom">{}<p>AfterA</p></inline-block></p></para>"##, mini("MiniA"))),
+    ("p2", r##"<para xml:id="p2"><p>LeadF <inline-block vattach="bottom"><p><inline-block class="ltx_parbox" vattach="middle" width="85.4pt"><p>ParboxF</p></inline-block></p><p>AfterF</p></inline-block></p></para>"##.to_string()),
+    ("p3", format!(r##"<para xml:id="p3"><p>LeadG <inline-block vattach="bottom">{}<p>HboxG</p></inline-block></p></para>"##, mini("MiniG"))),
+    ("p4", format!(r##"<para xml:id="p4"><p>LeadI <inline-logical-block vattach="bottom"><para class="ltx_noindent" xml:id="p4.p1">{}</para><para xml:id="p4.p2"><p>AfterI</p></para></inline-logical-block></p></para>"##, mini("MiniI"))),
+    ("p5", format!(r##"<para xml:id="p5"><p>LeadJ <inline-block vattach="bottom">{}{}<p>AfterJ</p></inline-block></p></para>"##, mini("J1"), mini("J1"))),
+    ("p6", format!(r##"<para xml:id="p6"><p>LeadK <inline-block vattach="bottom">{}<p>InnerK</p><p>AfterK</p></inline-block></p></para>"##, mini("MiniK"))),
+  ];
+  let expected: Vec<(&str, &str, &str)> = rows
+    .iter()
+    .map(|(id, markup)| ("para", *id, markup.as_str()))
+    .collect();
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/unvbox_splice_boundary.tex"),
+    RAW,
+    (0, 0),
+    &expected,
   );
 }

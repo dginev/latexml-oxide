@@ -2278,15 +2278,16 @@ pub fn pop_box_list() -> Option<Digested> { stomach_mut!().box_list.pop() }
 
 /// Items the list-tail primitives see through, being no node in TeX: a comment, a paragraph's closing `\par`
 /// marker (`\lx@normal@par`) — `\lastbox` after a paragraph takes its line ([`end_graf`]), and `\unskip`,
-/// `\lastskip` and the rest act on what came before the marker — and `\noindent`, which only starts a paragraph
-/// (tex.web §1091).
+/// `\lastskip` and the rest act on what came before the marker —, `\noindent`, which only starts a paragraph
+/// (tex.web §1091), and the boundary marks of a list `\unvbox` spliced (`\lx@splice@begin`, `\lx@splice@end`;
+/// tex_box.rs `vlist_of`): `\lastbox` after `\unvbox` takes the list's last box (§1080, §1110).
 pub fn is_list_tail_transparent(item: &Digested) -> bool {
   match item.data() {
     DigestedData::Comment(_) => true,
     DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
       matches!(
         w.get_definition().get_cs_name().as_ref(),
-        "\\lx@normal@par" | "\\noindent"
+        "\\lx@normal@par" | "\\noindent" | "\\lx@splice@begin" | "\\lx@splice@end"
       )
     }),
     _ => false,

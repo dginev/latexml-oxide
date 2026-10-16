@@ -689,8 +689,9 @@ fn continued_float_continues_one_step() {
 /// kernel's caption goes through `\lx@setfloatcapt`, which the binding points at it (floatrow.sty:85-102,
 /// :363-418). Repro captions-floats/floatrow_floatfoot_keeps_its_text.
 /// 68q: `\unvbox\@floatcapt` splices the caption box into floatrow's `\vtop` (tex.web §1110): the caption panel is
-/// `vattach="top"`, and the foot set after it now sits inside the panel the caption opened (OXIDIZED_DESIGN_DIVERGENCES
-/// #637 residual, open for a ruling).
+/// `vattach="top"`, and the foot set after it is a child of the caption's panel, which opens when the `\vtop`'s captured
+/// block is placed (after the splice's boundary marks, 68q round 2); the text order is the PDF's, the form accepted by
+/// the main session (OXIDIZED_DESIGN_DIVERGENCES #637).
 #[test]
 fn floatrow_floatfoot_keeps_its_text() {
   let tex = include_str!(
@@ -707,8 +708,9 @@ fn floatrow_floatfoot_keeps_its_text() {
 /// (caption.sty:648, `\caption@subtypehook`); `\caption*` is captured too. Repro
 /// captions-floats/floatrow_subcaption_stays_in_its_panel.
 /// 68q: `\unvbox\@floatcapt` splices the caption box into floatrow's `\vtop` (tex.web §1110): the caption panel is
-/// `vattach="top"`, and the foot set after it now sits inside the panel the caption opened (OXIDIZED_DESIGN_DIVERGENCES
-/// #637 residual, open for a ruling).
+/// `vattach="top"`, and the foot set after it is a child of the caption's panel, which opens when the `\vtop`'s captured
+/// block is placed (after the splice's boundary marks, 68q round 2); the text order is the PDF's, the form accepted by
+/// the main session (OXIDIZED_DESIGN_DIVERGENCES #637).
 #[test]
 fn floatrow_subcaption_stays_in_its_panel() {
   let tex = include_str!(

@@ -1,0 +1,37 @@
+% witness: review of 68q round 1 (probe rev68q/probe/q3.tex): a list `\unvbox` spliced into a vertical box's own list
+%          that ends in a minipage or a `\parbox` left the `ltx:p` that item opened open, so the material after the
+%          splice ran into it (MiniA and AfterA side by side); the semantic.sty `\inference` peel loop (1603.01635,
+%          2506.05832) is the splice's reason (KNOWN_PERL_ERRORS #840)
+% oracle:  pdflatex 0 errors; `\showbox` and pdftotext: every row two lines, the spliced box's item above what follows
+%          it — LeadA / MiniA / AfterA; LeadF / ParboxF / AfterF; LeadG / MiniG / HboxG; LeadI / MiniI / AfterI;
+%          LeadJ / J1 / J1 / AfterJ (\unvcopy twice); LeadK / MiniK / InnerK / AfterK (a splice inside a splice)
+%          (tex.web §1110 `unpackage`: the box's list goes back as it is; §1086 `vbox_group`: the box's end finished
+%          the paragraph its last item was set in)
+% engines: rust (67int11) as pdflatex, the box put back whole; rust (68q round 1) A, F, G, I one `ltx:p` for the
+%          spliced item and what follows it (the line-only `\par` mark saw no line)
+% expect:  0 errors; in each row's inner `ltx:inline-block` the spliced item's `ltx:p` (or `ltx:para`) and the
+%          following material's are separate
+% status:  GREEN 68q round 2 (the splice's begin/end boundary marks). Guard
+%          perfect_kernel_batch68q::unvbox_splice_closes_what_its_list_opened
+\documentclass{article}
+\newbox\B \newbox\C
+\begin{document}
+\setbox\B\vbox{\begin{minipage}{3cm}MiniA\end{minipage}}
+LeadA \vbox{\unvbox\B AfterA}
+
+\setbox\B\vbox{\parbox{3cm}{ParboxF}}
+LeadF \vbox{\unvbox\B AfterF}
+
+\setbox\B\vbox{\begin{minipage}{3cm}MiniG\end{minipage}}
+LeadG \vbox{\unvbox\B\hbox{HboxG}}
+
+\setbox\B\vbox{\noindent\begin{minipage}{3cm}MiniI\end{minipage}}
+LeadI \vbox{\unvbox\B AfterI}
+
+\setbox\B\vbox{\begin{minipage}{3cm}J1\end{minipage}}
+LeadJ \vbox{\unvcopy\B\unvcopy\B AfterJ}
+
+\setbox\B\vbox{\begin{minipage}{3cm}MiniK\end{minipage}}
+\setbox\C\vbox{\unvbox\B InnerK}
+LeadK \vbox{\unvbox\C AfterK}
+\end{document}

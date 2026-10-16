@@ -2,6 +2,8 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
+use std::cell::{Cell, RefCell};
+
 use latexml_core::common::{error::emit_warn, numeric_ops::round_to};
 
 use crate::prelude::*;
@@ -138,10 +140,12 @@ fn hlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
 /// puts back copies (§1110 `copy_node_list`).
 ///
 /// The list is put back where it goes into a vertical box's own list (`\vbox`, `\vtop`, `\parbox` contents:
-/// [`in_vertical_box_list`]), where LaTeXML sets the box's lines as lines. The paragraph the box's end finished (§1086
-/// `vbox_group`: `end_graf`) gets the `\par` mark its line would have had ([`box_end_par_mark`]), so what follows it
-/// in the new list starts a line of its own. Elsewhere — the main vertical list, a float's, footnote's or minipage's
-/// body — and in math the box goes back whole, as Perl's: spliced there, its hboxes ran together into one paragraph
+/// [`in_vertical_box_list`]), where LaTeXML sets the box's lines as lines, bracketed by a pair of boundary marks
+/// ([`splice_mark`]): the box's end closed whatever its contents had opened (§1086 `vbox_group`: `end_graf`; a
+/// minipage's or `\parbox`'s `ltx:p`; a `\noindent` paragraph's `ltx:para`), and the end mark closes it in the new
+/// list, so what follows the spliced material starts a line of its own (without it: "Para two.More.", "MiniA" and
+/// "AfterA" side by side). Elsewhere — the main vertical list, a float's, footnote's or minipage's body — and in math
+/// the box goes back whole, as Perl's: spliced there, its hboxes ran together into one paragraph
 /// (OXIDIZED_DESIGN_DIVERGENCES #637; the shape needs R6, `\hbox` in vertical mode as a line, and a ruling: repro
 /// boxes-groups/box_primitives_unpack cases 8-9).
 fn vlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
@@ -168,16 +172,18 @@ fn vlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
           .map(|item| spliced(item, false, true))
           .collect();
       }
-      let open_line = items
-        .iter()
-        .rev()
-        .find(|item| !matches!(item.data(), DigestedData::Comment(_)))
-        .is_some_and(|item| {
-          matches!(item.data(), DigestedData::List(_))
-            && item.get_property_string("mode") == "horizontal"
-        });
-      if open_line && let Some(mark) = box_end_par_mark() {
-        items.push(mark);
+      // A list of nothing but the marks of earlier splices brackets nothing: put back empty, as the box was.
+      if items.iter().all(is_splice_mark) {
+        return Vec::new();
+      }
+      let serial = SPLICE_SERIAL.get() + 1;
+      SPLICE_SERIAL.set(serial);
+      if let (Some(begin), Some(end)) = (
+        splice_mark(&T_CS!("\\lx@splice@begin"), serial),
+        splice_mark(&T_CS!("\\lx@splice@end"), serial),
+      ) {
+        items.insert(0, begin);
+        items.push(end);
       }
       items
     },
@@ -198,15 +204,26 @@ fn in_vertical_box_list() -> bool {
   false
 }
 
-/// The `\par` mark of a paragraph a vertical box's end finished (tex.web §1086 `vbox_group` calls `end_graf`): the
-/// line LaTeXML's box end repacks (`leave_horizontal_internal`) has no mark after it, which the box's own block does
-/// not need, but spliced by `\unvbox` the next material ran into its `ltx:p` ("Para two.More."). The mark is the
-/// internal one `leave_horizontal` digests (`internal_par`): it closes the `ltx:p`, reverts as nothing, and runs none
-/// of a `\par`'s digestion (the deferred paragraph class, the `\vadjust` queue), which the box's end did not run either.
-fn box_end_par_mark() -> Option<Digested> {
-  let definition = lookup_definition(&T_CS!("\\lx@normal@par"))
-    .ok()
-    .flatten()?;
+thread_local! {
+  /// The serial of the last spliced list ([`vlist_of`]); a pair of boundary marks shares one.
+  static SPLICE_SERIAL: Cell<i64> = const { Cell::new(0) };
+  /// The begin marks absorbed whose end mark is not yet: serial → the [`SPLICE_ATTRIBUTE`] value of the element it
+  /// recorded, and that element's name then.
+  static SPLICE_STARTS: RefCell<HashMap<i64, (String, SymStr)>> = RefCell::default();
+}
+
+/// The internal attribute by which a begin mark records the element it was absorbed in — a value, not a node handle,
+/// which `rename_node` or a removal would leave dangling —, removed again by the end mark of the splice that set it
+/// (and stripped from the output with every `_` attribute should that end mark not come).
+const SPLICE_ATTRIBUTE: &str = "_lx_splice";
+
+/// A boundary mark of a list `\unvbox` spliced ([`vlist_of`]), `cs` `\lx@splice@begin` or `\lx@splice@end`: no node in
+/// TeX, so the list-tail primitives see through it (stomach.rs `is_list_tail_transparent`) and it reverts as nothing.
+/// Absorbed, the begin mark records the element the list starts in; the end mark closes back to it whatever the list
+/// opened and left open — only to that element, only while it is open under the same name, only if what lies between
+/// may auto-close, and nothing at all for an end mark whose begin mark was not absorbed (a `\vsplit` took it).
+fn splice_mark(cs: &Token, serial: i64) -> Option<Digested> {
+  let definition = lookup_definition(cs).ok().flatten()?;
   let mut mark = Whatsit {
     definition,
     ..Whatsit::default()
@@ -218,9 +235,71 @@ fn box_end_par_mark() -> Option<Digested> {
   mark.set_property("isMath", false);
   mark.set_property("mode", lookup_string_from_sym(pin!("MODE")));
   mark.set_property("alignmentSkippable", true);
-  mark.set_property("internal_par", true);
+  mark.set_property("lx@splice", Stored::Int(serial));
   mark.set_property("reversion", Tokens!());
   Some(Digested::from(mark))
+}
+
+/// Whether `item` is a boundary mark of a spliced list ([`splice_mark`]).
+fn is_splice_mark(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::Whatsit(w) => w.try_borrow().is_ok_and(|w| {
+      matches!(
+        w.get_definition().get_cs_name().as_ref(),
+        "\\lx@splice@begin" | "\\lx@splice@end"
+      )
+    }),
+    _ => false,
+  }
+}
+
+/// The begin mark's absorption ([`splice_mark`]): record the current element, by the [`SPLICE_ATTRIBUTE`] it already
+/// carries (an enclosing splice began there) or one it now gets.
+fn absorb_splice_begin(document: &mut Document, serial: i64) -> Result<()> {
+  let Some(mut node) = document.get_element() else {
+    return Ok(());
+  };
+  let value = match node.get_attribute(SPLICE_ATTRIBUTE) {
+    Some(value) => value,
+    None => {
+      let value = serial.to_string();
+      node.set_attribute(SPLICE_ATTRIBUTE, &value)?;
+      value
+    },
+  };
+  let qname = document::get_node_qname(&node);
+  SPLICE_STARTS.with_borrow_mut(|starts| starts.insert(serial, (value, qname)));
+  Ok(())
+}
+
+/// The end mark's absorption ([`splice_mark`]): close back to the element its begin mark recorded.
+fn absorb_splice_end(document: &mut Document, serial: i64) -> Result<()> {
+  let Some((value, qname)) = SPLICE_STARTS.with_borrow_mut(|starts| starts.remove(&serial)) else {
+    return Ok(());
+  };
+  let Some(current) = document.get_element() else {
+    return Ok(());
+  };
+  let mut node = current.clone();
+  let mut closeable = true;
+  loop {
+    if node.get_attribute(SPLICE_ATTRIBUTE).as_deref() == Some(value.as_str()) {
+      break;
+    }
+    closeable &= document::can_auto_close(&node);
+    match node.get_parent() {
+      Some(parent) if parent.get_type() == Some(NodeType::ElementNode) => node = parent,
+      _ => return Ok(()),
+    }
+  }
+  if closeable && node != current && document::get_node_qname(&node) == qname {
+    document.close_to_node(&node, true)?;
+  }
+  // The begin mark that gave the element its value ends last of those sharing it (the splices nest): the record goes.
+  if value == serial.to_string() {
+    node.remove_attribute(SPLICE_ATTRIBUTE)?;
+  }
+  Ok(())
 }
 
 /// An item put back by `\unhbox` (`copy` false: itself, unless it must be marked as paragraph material) or `\unhcopy`
@@ -738,6 +817,25 @@ LoadDefinitions!({
       stored_map!("isEmpty"=>true),
     )
   });
+
+  // The boundary marks of a list `\unvbox` spliced into a vertical box's own list (`vlist_of`, `splice_mark`):
+  // Rust-only, no node in TeX, reverting as nothing (OXIDIZED_DESIGN_DIVERGENCES #637).
+  DefConstructor!("\\lx@splice@begin",
+    sub[document, _args, props] {
+      if let Some(&Stored::Int(serial)) = props.get("lx@splice") {
+        absorb_splice_begin(document, serial)?;
+      }
+    },
+    reversion => ""
+  );
+  DefConstructor!("\\lx@splice@end",
+    sub[document, _args, props] {
+      if let Some(&Stored::Int(serial)) = props.get("lx@splice") {
+        absorb_splice_end(document, serial)?;
+      }
+    },
+    reversion => ""
+  );
 
   // Perl TeX_Box.pool.ltxml L50-55: \lx@hidden@bgroup / \lx@hidden@egroup
   // — scoping without visible { } in reversion.
