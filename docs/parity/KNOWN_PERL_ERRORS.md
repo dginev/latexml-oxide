@@ -5489,8 +5489,9 @@ invisible and the raw option dispatch errors "Unknown option
 `\usepackage[greek.polutoniko,english]{babel}` under raw loading. Rust:
 `process_options` reads `\opt@<name>.<ext>` as :18557's `\protected@edef\@curroptions` does (partial expansion with
 `\protect` let to `\@unexpandable@protect`, latex.ltx:1384: a macro option expands, `\the\textwidth` is its value, a
-protected macro, a robust command and an optional-argument `\newcommand` stand; Perl and the former full expansion
-ran them, `\usepackage[o=\oa,r=\rb]{…}` giving "o=zzq", "r=rob") and splits it at depth-0
+protected macro, a robust command and an optional-argument `\newcommand` stand; both earlier readings ran them on
+`\usepackage[o=\oa,r=\rb]{…}`: Perl gives "o=zzq", "r=rob", the former full expansion (67int9) "o=zzq" and
+`r=\protect \protectrob␣`) and splits it at depth-0
 commas, falling back to the State list only when the macro is undefined; the
 loader's `\opt@` builder joins BOTH stored shapes (`String` and the `Strings`
 a `--preload='[a,b]pkg'` stores — skipping the latter left the macro EMPTY and
@@ -5949,7 +5950,7 @@ pdflatex never expands `\afname` there). Trigger: `\newcounter{af}
 `\iflx@namenoun` (base_utilities.rs `is_name_noun`) admits `\<type>name` only when it is an
 expandable macro whose arguments are all optional (an ltcmd `\__cmd_start_optimized:` dispatcher is
 followed to its ` code` macro, a general one's signature read as written, a `\DeclareRobustCommand` wrapper followed
-to its inner macro, 60d; a `\protect\<cs>` body followed to `\<cs>`, up to four hops, so
+to its inner macro, 60d; a `\protect\<cs>` body followed to `\<cs>` through any chain of distinct macros (a hop back to one is a loop, not a name; fuse 32), so
 `\renewcommand\figurename{\protect\rb}` with a robust `\rb` names the tag "Fx 1" as pdflatex, 68h r3, guard
 `perfect_kernel_batch68h::protected_robust_name_is_a_name_noun`); `\lx@@fnum@@` and `\lx@typerefnum@@` fall back to `\the<type>` otherwise, and hyperref's
 `\lx@autorefnum@@` (`is_name_noun_cs`, 60d) sets the `~` alone before the number when its first defined name is not a

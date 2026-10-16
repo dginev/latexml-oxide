@@ -936,9 +936,11 @@ LoadDefinitions!({
   ProcessKeyOptions!();
 });
 
-/// `\CurrentOption`'s text, unexpanded: the option list was read once, by `\ProcessOptions` (latex.ltx:18557
-/// `\protected@edef`), and caption hands it to its keys by `\@expandtwoargs` (caption3.sty:374-399), another
-/// `\protected@edef` (latex.ltx:1381-1382) that leaves it as it is — so the v1-keyword match reads the macro's body. Expanding it ran a robust command's body
+/// `\CurrentOption`'s text, unexpanded: the option list was read once — `\@pass@ptions` builds `\opt@caption.sty` by a
+/// `\protected@xdef` (latex.ltx:18514), which caption.sty:172 `\caption@ProcessOptions*` reads through caption3.sty:398
+/// `\@ptionlist` (our engine's path is `\ProcessOptions`' `\protected@edef`, latex.ltx:18557) — and caption hands it to
+/// its keys by `\@expandtwoargs` (caption3.sty:374-399), another `\protected@edef` (latex.ltx:1381-1382) that leaves it
+/// as it is — so the v1-keyword match reads the macro's body. Expanding it ran a robust command's body
 /// at package load (`\DeclareRobustCommand\rb{\laterdefined}` + `[figurename=\rb]{caption}`: an undefined-command
 /// Error pdflatex does not give). Guard: `perfect_kernel_batch68h::caption_option_key_is_read_unexpanded`.
 pub fn current_option_text() -> Result<String> {

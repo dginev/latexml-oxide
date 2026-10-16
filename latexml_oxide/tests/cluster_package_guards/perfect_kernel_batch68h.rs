@@ -282,6 +282,7 @@ fn protected_robust_name_is_a_name_noun() {
     r#"<figure inlist="lof" xml:id="S0.F1"> <tags> <tag>Fx 1</tag> <tag role="refnum">1</tag> <tag role="typerefnum">Fx 1</tag> </tags> <toccaption><tag close=" ">1</tag>One</toccaption> <caption><tag close=": ">Fx 1</tag>One</caption> </figure>"#,
     r#"<figure inlist="lof" xml:id="S0.F2"> <tags> <tag>Hx 2</tag> <tag role="refnum">2</tag> <tag role="typerefnum">Hx 2</tag> </tags> <toccaption><tag close=" ">2</tag>Two</toccaption> <caption><tag close=": ">Hx 2</tag>Two</caption> </figure>"#,
     r#"<figure inlist="lof" xml:id="S0.F3"> <tags> <tag>Ix 3</tag> <tag role="refnum">3</tag> <tag role="typerefnum">Ix 3</tag> </tags> <toccaption><tag close=" ">3</tag>Three</toccaption> <caption><tag close=": ">Ix 3</tag>Three</caption> </figure>"#,
+    r#"<figure inlist="lof" xml:id="S0.F4"> <tags> <tag>Ex 4</tag> <tag role="refnum">4</tag> <tag role="typerefnum">Ex 4</tag> </tags> <toccaption><tag close=" ">4</tag>Four</toccaption> <caption><tag close=": ">Ex 4</tag>Four</caption> </figure>"#,
     r#"<caption><tag close=": ">Table 1</tag>Gx</caption>"#,
   ] {
     assert!(xml.contains(figure), "{figure}\n{xml}");

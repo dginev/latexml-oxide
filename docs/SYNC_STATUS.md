@@ -2195,12 +2195,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   the list on by `\@expandtwoargs`, a `\protected@edef`), so `\DeclareRobustCommand\rb{\laterdefined}` +
   `[figurename=\rb]{caption}` no longer runs `\rb` at package load (1 Error → 0, pdflatex 0); subfig keeps its expanded
   key read, as subfig.sty:125 and :217 `\edef` the list (pdflatex errors there too). A `\<type>name` of `\protect` and
-  a robust or xparse command is a name noun (base_utilities.rs `is_name_noun` follows `\protect\<cs>` hops; it stopped
+  a robust or xparse command is a name noun (base_utilities.rs `is_name_noun` follows `\protect\<cs>` hops through
+  distinct macros — a hop back to one is a loop, fuse 32 (int10, re-review finding 1: five hops, pdflatex "Ex 1"); it stopped
   at the first, so `\renewcommand\figurename{\protect\rb}` gave the tag "1", pdflatex "Fx 1"; KPE #194). Repros
   captions-floats/{caption_option_key_is_read_unexpanded, protected_robust_name_is_a_name_noun},
   loader/processoptions_reads_as_protected_edef (+ poq68h.sty; the direct `\ProcessOptions` guard: pdflatex's list
   except `[beta=\textbf {x}]` and `[o=\oa ]`, which pdflatex prints with a `\protect`, the kernel's `\textbf` and an
   optional-argument `\newcommand` not being `\protect`-wrapped macros here); guards `perfect_kernel_batch68h` (+3).
+- **subfig passes a key's value unexpanded** (open, latent; 68h r3 re-review finding 4, probe
+  scratch_356a0c47/rev68h3/p/s1.tex): subfig.sty:217 and :220 `\edef` the option list before its keys see it, so a
+  value macro is expanded at load; since 68h r2 subfig_sty.rs hands the value on as written (OD #617). No visible
+  effect today — `labelformat=\lf` with `\lf` redefined after loading prints "(a)" in both, as the sub-caption format
+  is fixed — but it is an unruled divergence. Fix: expand the value as subfig's `\edef` does, keeping the key read.
+- **A stored `\ProcessOptions` list drops `\protect` before a robust or optional-argument command** (open, low impact;
+  68h r3 re-review finding 4): pdflatex's `\protected@edef` (latex.ltx:18557) writes `[beta=\protect \textbf {x}]` and
+  `[o=\protect \oa ]`; ours writes `\textbf {x}` and `\oa` — the kernel's `\textbf` and a `\newcommand` with an optional
+  argument are not `\protect`-wrapped macros here. Pinned as-is in
+  `perfect_kernel_batch68h::processoptions_reads_as_protected_edef` (repro loader/processoptions_reads_as_protected_edef).
+- **caption v1 keywords given by a protected or robust macro** (open, small; 68h r3 re-review finding 5, probes
+  rev68h3/p/c5.tex, c8.tex): `\protected\def\kw{bf}` with `[\kw]{caption}` makes pdflatex's label bold (keyval's
+  `\csname` expands a protected macro), ours stays plain; `\DeclareRobustCommand\kw{bf}` gives pdflatex 2 errors, ours 0.
 - **`\ProcessKeyOptions` sees an expanded option list** (open, side finding of the 68h r2 re-review, probe
   scratch_356a0c47/rev68h2/probes/a2.tex): ltkeys' `\ProcessKeyOptions` reads `\@raw@opt@<file>` (latex.ltx:19398,
   :19457-19470), which `\@pass@ptions` stores as the argument tokens (:18521-18525), so pdflatex's

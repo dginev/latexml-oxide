@@ -2678,7 +2678,7 @@ LoadDefinitions!({
   // `perfect_kernel_batch56::counter_name_command_is_not_a_name_noun`.
   DefConditional!("\\iflx@namenoun Token", sub[(t)] {
     match lookup_definition(&t) {
-      Ok(Some(def)) => is_name_noun(&def, 0),
+      Ok(Some(def)) => is_name_noun(&def, &mut vec![t.clone()]),
       _ => false,
     }
   });
@@ -14091,7 +14091,8 @@ pub fn escapechar() -> String {
 /// `\figurename`, not a drawing command that only shares the `\<counter>name` spelling (argumentation.sty:403
 /// `\afname`).
 pub fn is_name_noun_cs(cs: &str) -> bool {
-  matches!(lookup_definition(&T_CS!(cs)), Ok(Some(def)) if is_name_noun(&def, 0))
+  let name = T_CS!(cs);
+  matches!(lookup_definition(&name), Ok(Some(def)) if is_name_noun(&def, &mut vec![name.clone()]))
 }
 
 /// Is this definition a NAME NOUN (`\figurename`): an expandable macro whose arguments are
@@ -14104,10 +14105,12 @@ pub fn is_name_noun_cs(cs: &str) -> bool {
 /// its inner macro, and a `\protect\<cs>` body to `\<cs>` (`\protect` is `\relax` in a typeset tag,
 /// latex.ltx `\@typeset@protect`): `\renewcommand\figurename{\protect\rb}` with a robust `\rb` is two hops,
 /// the body to the wrapper and the wrapper to its inner macro, and was cut at the first, so the tag lost its name
-/// (pdflatex "Fx 1", ours "1"; `[figurename=\rb]{caption}` stores the same body). Each hop names a new macro; the
-/// bound stops a `\def\x{\protect\x}` loop. Guard `perfect_kernel_batch68h::protected_robust_name_is_a_name_noun`.
-fn is_name_noun(def: &Rc<dyn Definition>, depth: u8) -> bool {
-  const MAX_HOPS: u8 = 4;
+/// (pdflatex "Fx 1", ours "1"; `[figurename=\rb]{caption}` stores the same body). `visited` holds the macros
+/// followed so far: a hop back to one of them is a loop (`\def\x{\protect\x}`, on which pdflatex never ends) and
+/// is not a name; a chain of any length otherwise is followed (pdflatex "Ex 1" through five `\protect` hops), with a
+/// fuse of `MAX_HOPS` distinct macros. Guard `perfect_kernel_batch68h::protected_robust_name_is_a_name_noun`.
+fn is_name_noun(def: &Rc<dyn Definition>, visited: &mut Vec<Token>) -> bool {
+  const MAX_HOPS: usize = 32;
   // A name is set before `~<number>\null` (hyperref's autoref) or in a tag's composition: optional arguments find
   // none and take their defaults, a required one would swallow what follows.
   if !def.is_expandable()
@@ -14129,15 +14132,18 @@ fn is_name_noun(def: &Rc<dyn Definition>, depth: u8) -> bool {
   }
   let head = first.to_string();
   // `\DeclareRobustCommand`'s wrapper `\protect \<cs>␣`: the name is the inner macro.
+  let mut follow = |next: &Token| {
+    if visited.len() >= MAX_HOPS || visited.contains(next) {
+      return false;
+    }
+    visited.push(next.clone());
+    matches!(lookup_definition(next), Ok(Some(next_def)) if is_name_noun(&next_def, visited))
+  };
   if head == "\\protect" && toks.len() == 2 {
-    return depth < MAX_HOPS
-      && matches!(lookup_definition(&toks[1]), Ok(Some(inner)) if is_name_noun(&inner, depth + 1));
+    return follow(&toks[1]);
   }
   if head == "\\__cmd_start_optimized:" {
-    return depth < MAX_HOPS
-      && toks.get(1).is_some_and(
-        |code| matches!(lookup_definition(code), Ok(Some(code_def)) if is_name_noun(&code_def, depth + 1)),
-      );
+    return toks.get(1).is_some_and(follow);
   }
   if head == "\\__cmd_start:nNNnnn" || head == "\\__cmd_start_expandable:nNNNNn" {
     // ltcmd's general dispatcher carries the signature first: a name takes only optional arguments (`o`, `O{…}`,
