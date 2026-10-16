@@ -614,60 +614,33 @@ impl Document {
     // Collect which prefixes are actually used in the document
     let nsnodes = root.get_namespace_declarations();
     let existing_prefixes: Vec<String> = nsnodes.iter().map(|ns| ns.get_prefix()).collect();
-    for (prefix, ns_uri) in prefixes {
-      // Skip internal/default namespaces
-      if prefix.is_empty() || prefix == "ltx" || prefix == "xml" {
+    // Skip internal/default namespaces, namespaces containing "DEFAULT#" (internal model
+    // entries), and prefixes already declared on root.
+    let wanted = |prefix: &str, ns_uri: &str| {
+      !(prefix.is_empty() || prefix == "ltx" || prefix == "xml")
+        && !ns_uri.contains("DEFAULT#")
+        && !existing_prefixes.iter().any(|p| p == prefix)
+    };
+    // Whether a descendant uses the prefix — on the resident DOM, or inside a subtree that
+    // streaming pass 1 spilled to disk before this pass ran (`spilled_ns_prefixes`). One walk
+    // answers for every prefix the spill does not.
+    let to_find: Vec<&str> = prefixes
+      .iter()
+      .filter(|(prefix, ns_uri)| {
+        wanted(prefix, ns_uri) && !self.spilled_ns_prefixes.contains(prefix)
+      })
+      .map(|(prefix, _)| prefix.as_str())
+      .collect();
+    let in_use = namespace_prefixes_in_use(root, &to_find);
+    for (prefix, ns_uri) in &prefixes {
+      if !wanted(prefix, ns_uri) {
         continue;
       }
-      // Skip namespaces containing "DEFAULT#" (internal model entries)
-      if ns_uri.contains("DEFAULT#") {
-        continue;
-      }
-      // Only add if this prefix appears as a namespace declaration on some child node
-      // (meaning it's actually used in the document)
-      if existing_prefixes.contains(&prefix) {
-        continue; // already declared on root
-      }
-      // Check if any descendant element uses this namespace prefix
-      // by looking for namespace declarations on descendant elements
-      // …on the resident DOM, or inside a subtree that streaming pass 1
-      // spilled to disk before this pass ran (`spilled_ns_prefixes`).
-      let has_usage =
-        self.spilled_ns_prefixes.contains(&prefix) || self.has_namespace_usage(root, &prefix);
-      if has_usage {
+      if self.spilled_ns_prefixes.contains(prefix) || in_use.contains(prefix.as_str()) {
         let attr_name = format!("xmlns:{prefix}");
-        root.set_attribute(&attr_name, &ns_uri).ok();
+        root.set_attribute(&attr_name, ns_uri).ok();
       }
     }
-  }
-
-  /// Check if any descendant of node uses the given namespace prefix.
-  fn has_namespace_usage(&self, node: &Node, prefix: &str) -> bool {
-    // Check attributes of this node for prefix: usage. The
-    // allocation-free check `starts_with(prefix) + byte-at-prefix.len()`
-    // replaces `format!("{prefix}:")` which would heap-allocate per node
-    // visited during the recursive descent.
-    let plen = prefix.len();
-    for (key, _) in node.get_attributes() {
-      if key.len() > plen && key.starts_with(prefix) && key.as_bytes()[plen] == b':' {
-        return true;
-      }
-    }
-    // Check children recursively
-    for child in node.get_child_nodes() {
-      if child.get_type() == Some(NodeType::ElementNode) {
-        // Check if element itself is in this namespace
-        for ns in child.get_namespace_declarations() {
-          if ns.get_prefix() == prefix {
-            return true;
-          }
-        }
-        if self.has_namespace_usage(&child, prefix) {
-          return true;
-        }
-      }
-    }
-    false
   }
 
   /// Remove xml:ids from XMTok elements that aren't referenced by any idref.
@@ -7727,6 +7700,59 @@ fn node_box_list(boxes: Vec<Digested>, mode: Option<SymStr>) -> Digested {
     }
   }
   list.into()
+}
+
+/// The `prefixes` that some node of `root`'s subtree uses: an attribute of `root` or of a
+/// descendant element whose name is `prefix:…`, or a namespace declaration of `prefix` on a
+/// descendant element. One preorder walk that stops once every prefix is found — it was a
+/// recursion per prefix, each building a child `Vec` at every node (about 4–5 % of an ordinary
+/// paper's core time, the 2026-10-16 study's 80-paper gdb sample).
+fn namespace_prefixes_in_use<'p>(root: &Node, prefixes: &[&'p str]) -> HashSet<&'p str> {
+  let mut found = HashSet::default();
+  if prefixes.is_empty() {
+    return found;
+  }
+  let note_attributes = |node: &Node, found: &mut HashSet<&'p str>| {
+    for key in node.get_attributes().into_keys() {
+      for &prefix in prefixes {
+        let plen = prefix.len();
+        if key.len() > plen && key.starts_with(prefix) && key.as_bytes()[plen] == b':' {
+          found.insert(prefix);
+        }
+      }
+    }
+  };
+  note_attributes(root, &mut found);
+  let mut cur = root.get_first_child();
+  while let Some(node) = cur {
+    if found.len() == prefixes.len() {
+      break;
+    }
+    let mut descend = None;
+    if node.get_type() == Some(NodeType::ElementNode) {
+      for ns in node.get_namespace_declarations() {
+        let ns_prefix = ns.get_prefix();
+        if let Some(&prefix) = prefixes.iter().find(|&&p| p == ns_prefix) {
+          found.insert(prefix);
+        }
+      }
+      note_attributes(&node, &mut found);
+      descend = node.get_first_child();
+    }
+    cur = descend.or_else(|| {
+      let mut up = node;
+      loop {
+        if let Some(next) = up.get_next_sibling() {
+          return Some(next);
+        }
+        match up.get_parent() {
+          Some(parent) if parent != *root => up = parent,
+          _ => return None,
+        }
+      }
+    });
+  }
+  found
 }
 
 #[cfg(test)]
