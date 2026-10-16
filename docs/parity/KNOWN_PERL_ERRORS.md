@@ -13762,11 +13762,18 @@ load). Minimal trigger: tools/perfect_kernel/repros/package-bindings/siunitx_col
 warning, Perl 0 (no cellspace), Rust 67int4 3 errors (`Missing argument of the column type 'S'`). Fixed: siunitx_sty.rs
 keeps its load-time definitions (`\lx@six@column@S`/`@s`) and at begin-document reinstates what the loaded release
 declares: under v3 `S` only, warning when another `S` replaced it or one was declared before siunitx loaded (a
-document's own `\newcolumntype{s}`, tabularx's `>{\hsize=.5\hsize}X` idiom, stays the document's); under `[=v2]` `s`
+document's own `\newcolumntype{s}`, tabularx's `>{\hsize=.5\hsize}X` idiom, declared after siunitx or before it,
+stays the document's: the load-time `s` is declared only where none exists or under `[=v2]`); under `[=v2]` `s`
 and `S`, silently (array.sty:345's "Column s is already defined" for v2's own `\newcolumntype` is not raised: our
-`\newcolumntype` never raises it). Our load-time `s` stays defined under v3 (Perl parity), where pdflatex has none
+`\newcolumntype` never raises it). Our load-time `s` stays defined under v3 where the document declares none (Perl parity), where pdflatex has none
 (`Illegal pream-token (s)`). Not ported: v2's cellspace special case (siunitx-v2.sty:5559-5588), which moves cellspace's
 column to `C` with "Column type for cellspace package moved to 'C'."; `table-column-type` is not a key. Guards
 `perfect_kernel_batch68f::{siunitx_column_wins_over_a_later_cellspace_column,
 siunitx_column_alone_raises_no_overwrite_warning, siunitx_v3_leaves_a_document_s_column_alone,
-siunitx_v3_warns_over_a_column_declared_before_it, siunitx_v2_rollback_reinstates_both_columns_silently}`.
+siunitx_v3_warns_over_a_column_declared_before_it, siunitx_v2_rollback_reinstates_both_columns_silently,
+siunitx_v3_keeps_an_s_column_declared_before_it}`. Open (synthetic, no arXiv witness): a rollback request given to a
+binding that loads siunitx through a Rust `RequirePackage!` (hepunits_sty.rs, siunits_sty.rs) reaches siunitx's v2 test,
+where latex.ltx `\@onefilewithoptions` resets the target date per file (:19122, :19133-19137; record the request's file
+name, :19113 `\pkgcls@name`); `[=v3]`, `[= v2]` and a date before siunitx's first release raise no `Requested version …
+is unknown` / `Suspicious rollback date` Error (latex.ltx:19276, :19194; the binding runs no `\DeclareCurrentRelease`),
+and `pkgcls_set_request` trims the label, so `[= v2]` selects v2 where LaTeX errs and loads v3.

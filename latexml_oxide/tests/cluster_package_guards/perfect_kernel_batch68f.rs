@@ -172,6 +172,33 @@ fn siunitx_v3_leaves_a_document_s_column_alone() {
   );
 }
 
+/// v3 has no `s` column, so an `s` the document declared BEFORE siunitx loaded stays the document's: pdflatex sets
+/// `\newcolumntype{s}{l}` + `\usepackage{siunitx}` + `{sS} kg & 1.5` as the text "kg" and the number 1.5, no warning;
+/// the binding's Perl-era load-time `s` replaced it with a unit parse (`\mathrm{k}\mathrm{g}`; 68f r2 re-review).
+#[test]
+fn siunitx_v3_keeps_an_s_column_declared_before_it() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{array}
+\newcolumntype{s}{l}
+\usepackage{siunitx}
+\begin{document}
+\begin{tabular}{sS}
+kg & 1.5 \\
+\end{tabular}
+\end{document}
+",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "td",
+    &[r#"xml:id="p1.1.1.1""#],
+    r#"<td align="left" xml:id="p1.1.1.1">kg</td>"#,
+  );
+}
+
 /// v3's `\__siunitx_declare_column:Nnn` (siunitx.sty:9322-9330) warns whenever another `S` exists at begin-document,
 /// so one declared BEFORE siunitx loaded is overwritten with the warning too (pdflatex: `Package siunitx Warning:
 /// Tabular column type "S" overwritten with siunitx definition.`); our load-time `DefColumnType` replaced it silently.

@@ -3656,13 +3656,19 @@ LoadDefinitions!({
   // document declared BEFORE siunitx loaded is overwritten with the warning too; our load-time `DefColumnType`
   // replaces it silently, so whether one was there is noted here.
   let column_s_predeclared = is_defined("\\NC@rewrite@S");
+  // v3 has no `s` column, so an `s` declared before siunitx loaded stays the document's too (`\newcolumntype{s}{l}`
+  // before `\usepackage{siunitx}`: pdflatex sets the cell as text); the Perl-era load-time `s` is declared only where
+  // none exists, or under the `[=v2]` rollback, which re-creates it.
+  let keep_document_s = !v2_release && is_defined("\\NC@rewrite@s");
   // Perl L1379-1399: `S` → number parse, lowercase `s` → unit parse.
   DefColumnType!("S Optional", sub[args] {
     add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@SI@column@parse");
   });
-  DefColumnType!("s Optional", sub[args] {
-    add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@si@column@parse");
-  });
+  if !keep_document_s {
+    DefColumnType!("s Optional", sub[args] {
+      add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@si@column@parse");
+    });
+  }
   // siunitx owns its column letters at begin-document, declared at load only here (Perl siunitx.sty.ltxml
   // :1379-1399), so a column package loaded after siunitx (cellspace.sty:174-177 `S`, its default `column=S`) kept
   // the letter, which in LaTeX it loses to siunitx — 2410.09116's `{llSS}` tables, 74 errors. The load-time
@@ -3670,7 +3676,8 @@ LoadDefinitions!({
   // * v3 (siunitx.sty:9364-9373) maps only `\l__siunitx_column_type_tl` (`table-column-type`, default `S`, :9101)
   //   through `\__siunitx_declare_column:Nnn` (:9322-9330), which warns "Tabular column type "S" overwritten with
   //   siunitx definition." when another `S` exists — declared after siunitx or before it. v3 has no `s` column, so
-  //   a document's own `\newcolumntype{s}` (tabularx's `>{\hsize=.5\hsize}X` idiom) stays the document's.
+  //   a document's own `\newcolumntype{s}` (tabularx's `>{\hsize=.5\hsize}X` idiom), declared after siunitx or
+  //   before it, stays the document's.
   // * the `[=v2]` rollback (siunitx.sty:37-39, siunitx-v2.sty:5624-5625 `\__siunitx_table_rewrite_create:N`)
   //   re-creates `s` and `S`, without a warning of its own (array.sty:345 warns "Column s is already defined" for
   //   its `\newcolumntype`, which our `\newcolumntype` never does). Not ported: v2's cellspace special case
@@ -3679,7 +3686,7 @@ LoadDefinitions!({
   // `table-column-type` is not a key here. KNOWN_PERL_ERRORS #781. Guards:
   // `perfect_kernel_batch68f::siunitx_column_wins_over_a_later_cellspace_column`,
   // `…::siunitx_v3_leaves_a_document_s_column_alone`, `…::siunitx_v3_warns_over_a_column_declared_before_it`,
-  // `…::siunitx_v2_rollback_reinstates_both_columns_silently`.
+  // `…::siunitx_v2_rollback_reinstates_both_columns_silently`, `…::siunitx_v3_keeps_an_s_column_declared_before_it`.
   RawTeX!(r##"\let\lx@six@column@S\NC@rewrite@S
 \let\lx@six@column@s\NC@rewrite@s
 \def\lx@six@restore@column#1{%
