@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **`--init` no longer segfaults intermittently on Linux.** `LATEXML_INI_MODE`
+    was set after the kpathsea prewarm thread started, so glibc's `setenv`
+    reallocated `environ` under that thread's `getenv` (7 of 200
+    `--init=latex.ltx` runs on Linux aarch64), failing `tools/make_formats.sh`.
+    It is now set before the thread exists (STABILITY_WITNESSES Cluster J).
+
   - **The XSLT recursion cap now applies in the statically linked release
     binaries.** `xsltMaxDepth = 1000` (Perl `XML::LibXSLT->max_depth(1000)`) was
     written through `dlsym`, which cannot see a global of a statically linked
