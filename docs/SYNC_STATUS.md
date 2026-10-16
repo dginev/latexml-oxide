@@ -1986,6 +1986,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   label pieces is one space of the name (round 2: `\textbf{Key}\quad\textbf{words}:` "Keywords:", base "Key words:").
   Guards 20 → 22 (`group_label_pieces_parted_by_quad_and_kern`,
   `supplement_abstract_keywords_without_a_readable_label_have_none`).
+  Integrated as int13 (gates 5,618/5,618; bundle A/B vs 67int12 over 672 papers — the 373 cluster papers, 150 shipped
+  classes with `{keywords}`, 150 of pop67o: Errors 2,165 → 1,834, 331 papers fewer, none more, no paper losing over 1 %
+  of its words; nets 136/136 0 worse).
 - **68g** (llncs theorem numbering, the 68a residual KNOWN_PERL_ERRORS #743): llncs_cls.rs installs the class's
   theorem set with llncs.cls's own code (:1142-1174, TL 2025 v2.26; the same in every shipped copy v2.2-v2.26, checked
   over 18 versions from 1,250 arXiv llncs papers): `{theorem}` by section only under `envcountsect` (reset by section
