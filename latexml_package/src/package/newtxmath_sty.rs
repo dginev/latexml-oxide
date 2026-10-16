@@ -1,6 +1,19 @@
 //! newtxmath.sty — TX math fonts (delegates to other packages)
 //! Perl: newtxmath.sty.ltxml
 use super::txfonts_sty::def_math_upright_greek;
+
+/// A Greek letter in italic whatever the alphabet around it, as `def_math_upright_greek` sets an upright one.
+fn def_math_italic_greek(cs: &str, present: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(cs, true)?;
+  let opts = MathPrimitiveOptions {
+    font: Some(FontDirective::from(
+      fontmap!(shape => "italic", forceshape => true),
+    )),
+    ..MathPrimitiveOptions::default()
+  };
+  def_math(cs_tok, params, present.to_string(), opts)?;
+  Ok(())
+}
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -20,6 +33,18 @@ LoadDefinitions!({
   RequirePackage!("centernot");
   RequirePackage!("amssymb");
   RequirePackage!("txfonts");
+  // newtxmath.sty:2344 `\widebar` (newpxmath.sty has none, so it stays out of the shared set below).
+  if !is_defined("\\widebar") {
+    DefMath!("\\widebar Digested", "\u{00AF}", operator_role => "OVERACCENT");
+  }
+  def_newtx_math_symbols()?;
+});
+
+/// newtxmath's own symbol layer over txfonts (newtxmath.sty:695-706, :928-988, 1165-1167, 1216, 1399-1497, 1744,
+/// 2072-2183, 2344, 2466-2577, 2866, 3191). newpxmath.sty is newtxmath's Palatino twin: the same helpers and the same
+/// symbol names over the same symbol-font layout (newpxmath.sty:354-357, 527-570, 745, 833, 1646, 1655-1743, 1860), so
+/// its binding defines them through this function too (`newpxmath_sty`).
+pub fn def_newtx_math_symbols() -> Result<()> {
   // newtxmath.sty:695-706: its re-declaration helpers, which a class calls to replace a math symbol (vmsta2.cls:236
   // `\re@DeclareMathAccent`; 2609.02595). Perl's binding lacks them too (KNOWN_PERL_ERRORS #510).
   RawTeX!(
@@ -32,9 +57,6 @@ LoadDefinitions!({
   // `\Angstrom` and `\bigtimes` led the first errors of 400 run-340 papers, witnesses 2008.07007, 2604.11906,
   // 2407.15192), as their glyphs. A name a paper or another package defined first keeps that definition, as
   // `\DeclareMathSymbol` refuses one (the reason for `\re@DeclareMathSymbol` above).
-  if !is_defined("\\widebar") {
-    DefMath!("\\widebar Digested", "\u{00AF}", operator_role => "OVERACCENT");
-  }
   if !is_defined("\\Angstrom") {
     DefMath!("\\Angstrom", None, "\u{212B}", font => { shape => "upright", forceshape => true });
   }
@@ -73,6 +95,11 @@ LoadDefinitions!({
   }
   if !is_defined("\\cdotB") {
     DefMath!("\\cdotB", None, "\u{22C5}");
+  }
+  // :1166 (newpxmath.sty:745) `\DeclareMathSymbol{\laplac}{\mathord}{symbols}{218}`, "the unicode-math name for the
+  // official d'Alembertian operator, U+29E0" (newtxdoc.tex:118, newpxdoc.tex:147; pdftotext reads U+29E0); 2603.09013.
+  if !is_defined("\\laplac") {
+    DefMath!("\\laplac", None, "\u{29E0}");
   }
   // newtxmath.sty:2466-2467 and :2577: its own `\varmathbb` (txfonts' above), `\vmathbb` the
   // same, and a third blackboard variant `\vvmathbb` (the same font here). Constructors of their
@@ -146,4 +173,52 @@ LoadDefinitions!({
   ] {
     def_math_upright_greek(&format!("\\up{letter}"), ch)?;
   }
-});
+  // newtxmath.sty:2262-2301 (newpxmath.sty:1817-1856) the italic Greek `\<letter>it` of the letters font, and
+  // :2085-2088 `\varkappait` (2508.05134 `\deltait`).
+  for (letter, ch) in [
+    ("Gamma", "\u{0393}"),
+    ("Delta", "\u{0394}"),
+    ("Theta", "\u{0398}"),
+    ("Lambda", "\u{039B}"),
+    ("Xi", "\u{039E}"),
+    ("Pi", "\u{03A0}"),
+    ("Sigma", "\u{03A3}"),
+    ("Upsilon", "\u{03A5}"),
+    ("Phi", "\u{03A6}"),
+    ("Psi", "\u{03A8}"),
+    ("Omega", "\u{03A9}"),
+    ("alpha", "\u{03B1}"),
+    ("beta", "\u{03B2}"),
+    ("gamma", "\u{03B3}"),
+    ("delta", "\u{03B4}"),
+    ("epsilon", "\u{03F5}"),
+    ("zeta", "\u{03B6}"),
+    ("eta", "\u{03B7}"),
+    ("theta", "\u{03B8}"),
+    ("iota", "\u{03B9}"),
+    ("kappa", "\u{03BA}"),
+    ("lambda", "\u{03BB}"),
+    ("mu", "\u{03BC}"),
+    ("nu", "\u{03BD}"),
+    ("xi", "\u{03BE}"),
+    ("pi", "\u{03C0}"),
+    ("rho", "\u{03C1}"),
+    ("sigma", "\u{03C3}"),
+    ("tau", "\u{03C4}"),
+    ("upsilon", "\u{03C5}"),
+    ("phi", "\u{03D5}"),
+    ("chi", "\u{03C7}"),
+    ("psi", "\u{03C8}"),
+    ("omega", "\u{03C9}"),
+    ("varepsilon", "\u{03B5}"),
+    ("vartheta", "\u{03D1}"),
+    ("varpi", "\u{03D6}"),
+    ("varrho", "\u{03F1}"),
+    ("varsigma", "\u{03C2}"),
+    ("varphi", "\u{03C6}"),
+    ("varkappa", "\u{03F0}"),
+  ] {
+    def_math_italic_greek(&format!("\\{letter}it"), ch)?;
+  }
+  Ok(())
+}

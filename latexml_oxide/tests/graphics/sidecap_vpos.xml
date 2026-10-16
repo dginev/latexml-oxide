@@ -2,6 +2,7 @@
 <?latexml class="article"?>
 <?latexml package="sidecap"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
+<?latexml package="ragged2e" options="NewParameters"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>

@@ -1,0 +1,10 @@
+% witness: 0710.3183, 1111.7285, 1203.0791, 1203.1733, 1405.0292 (\mathbold, 27 papers)
+% oracle:  pdflatex 0 errors; bold upright x (eulervm.sty:58 \DeclareMathAlphabet{\mathbold}{U}{zeur}{b}{n}), y medium
+% engines: rust 67int10 = undefined:\mathbold; perl = the same (KNOWN_PERL_ERRORS #820)
+% expect:  0 errors, 0 warnings; x bold, y not
+% status:  RED (67int10) -> GREEN (68j); guard perfect_kernel_batch68j::eulervm_mathbold_is_bold_upright
+\documentclass{article}
+\usepackage{eulervm}
+\begin{document}
+$\mathbold{x}+y$
+\end{document}

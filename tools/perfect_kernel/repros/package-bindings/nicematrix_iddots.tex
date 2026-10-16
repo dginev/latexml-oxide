@@ -1,0 +1,10 @@
+% witness: 2108.05847, 2210.04594, 2303.11962, 2309.01644, 2402.13113 (\iddots, 26 papers)
+% oracle:  pdflatex 0 errors; ⋰ inline and in the matrix (nicematrix.sty:146 \ProvideDocumentCommand\iddots)
+% engines: rust 67int10 = undefined:\iddots, \Iddots set as ⋱; perl = no binding (nicematrix.sty not loaded)
+% expect:  0 errors, 0 warnings; ⋰ (U+22F0) for both
+% status:  RED (67int10) -> GREEN (68j); guard perfect_kernel_batch68j::nicematrix_provides_iddots
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+$a\iddots b$ and $\begin{pNiceMatrix} a & b\\ c & \Iddots \end{pNiceMatrix}$
+\end{document}

@@ -291,6 +291,12 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("array");
   RequirePackage!("colortbl");
+  // nicematrix.sty:146-159 `\ProvideDocumentCommand \iddots { }`, the inverse diagonal dots (mathdots' `\iddots`,
+  // U+22F0), defined only when no package defined it first (26 papers; 2108.05847, 2210.04594, 2303.11962,
+  // 2309.01644, 2402.13113). Guard: `perfect_kernel_batch68j::nicematrix_provides_iddots`.
+  if !is_defined("\\iddots") {
+    DefMath!("\\iddots", None, "\u{22F0}", role => "ID");
+  }
   // nicematrix's own preamble parser accepts `V{width}` (nicematrix.sty:2541:
   // a varwidth[t] cell when varwidth is loaded — varwidth.sty:308-313 only
   // registers its `\newcolumntype{V}` when array preceded it, which is the
@@ -1036,7 +1042,8 @@ LoadDefinitions!({
   DefMacro!("\\Ldots []", "\\ldots", locked => true);
   DefMacro!("\\Vdots []", "\\vdots", locked => true);
   DefMacro!("\\Ddots []", "\\ddots", locked => true);
-  DefMacro!("\\Iddots []", "\\ddots", locked => true);
+  // `\Iddots` is the inverse diagonal, `\iddots` (nicematrix.sty:1552 lets `\iddots` to `\__nicematrix_Iddots:`).
+  DefMacro!("\\Iddots []", "\\iddots", locked => true);
   DefMacro!("\\Hdotsfor{}", "\\hdotsfor{#1}", locked => true);
   DefMacro!("\\Vdotsfor OptionalBalanced {}", "\\vdots", locked => true);
   DefMacro!("\\Hspace OptionalMatch:* {}", "\\hspace#1{#2}", locked => true);

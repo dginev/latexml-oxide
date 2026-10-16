@@ -3012,6 +3012,31 @@ LoadDefinitions!({
 \newcount\lst@mode \chardef\lst@nomode=0 \chardef\lst@Pmode=1 \chardef\lst@GPmode=2 \lst@mode=\lst@nomode
 \newtoks\lst@token \newcount\lst@length
 \def\lst@SaveOutputDef#1#2{\begingroup\lccode`\~=#1\relax\lowercase{\endgroup\edef#2{\string~}}}");
+  // More of listings' internals that literate replacements, styles and add-on packages call (G3 binding gaps, run 340
+  // inventory), each as the binding's model makes it — no mode stack, no output boxes, every token output by the
+  // binding itself:
+  // - :431-449 `\lst@InterruptModes`/`\lst@ReenterModes`, which leave and re-enter the current modes around an escape:
+  //   no mode is ever entered here (`\lst@mode` stays `\lst@nomode`, above), so there is nothing to leave or re-enter;
+  // - :770-772 `\lst@PrintToken` and :561-570 `\lst@CalcLostSpaceAndOutput`, which output the pending token or box:
+  //   nothing is pending (`\lst@token` is empty, above);
+  // - :793-794 `\lst@whitespacetrue`/`false` (a literate `{->}{{$\to$\lst@whitespacefalse}}1`, 2012.14984,
+  //   2206.00658) and :1697-1698 `\lst@boxtrue`/`false` (2504.10323), their switches;
+  // - :1599 `\lst@label` (`\@empty` outside a listing, as the PreSet hook leaves it: the binding keeps the `label`
+  //   key itself; 2505.04744's fancyvrb `formatcom` tests it), :1735 `\lst@aboveskip` (the key's default
+  //   `\medskipamount`; 2608.14263), lstmisc.sty:1755 `\lst@frametextsep` (3pt) and :532 `\lst@width` (a dimen, zero
+  //   outside a listing; 1704.06338's dbk_verbatim.sty reads both);
+  // - lstmisc.sty:1880-1907 `\lst@FVConvert<text>\@nil`, which appends a fancyvrb line to `\lst@arg` as listings
+  //   input, and :1743/:1802 `\lst@Init`/`\lst@DeInit`, which open and close a listing's group: here the line is
+  //   appended as it is and the listing is that group. mmacells.sty:619-636 builds its inline cells from them and the
+  //   hooks below (`\lsthk@PreSet\lstset{…}\lsthk@TextStyle\lst@Init\relax…\lst@DeInit`, as `\lstinline`,
+  //   :1944-1945; 1705.02863, 1712.09863, 1806.04503, 2012.00279, 2012.07851 — 9 errors per paper).
+  RawTeX!(r"\def\lst@InterruptModes{}\def\lst@ReenterModes{}\def\lst@PrintToken{}\def\lst@CalcLostSpaceAndOutput{}
+\def\lst@whitespacetrue{\global\let\lst@ifwhitespace\iftrue}\def\lst@whitespacefalse{\global\let\lst@ifwhitespace\iffalse}
+\lst@whitespacetrue
+\def\lst@boxtrue{\let\lst@ifbox\iftrue}\def\lst@boxfalse{\let\lst@ifbox\iffalse}\lst@boxfalse
+\let\lst@label\@empty \def\lst@aboveskip{\medskipamount}\def\lst@frametextsep{3pt}\newdimen\lst@width
+\def\lst@FVConvert#1\@nil{\expandafter\def\expandafter\lst@arg\expandafter{\lst@arg#1}}\let\lst@arg\@empty
+\def\lst@Init#1{\begingroup}\def\lst@DeInit{\endgroup}");
 
   // \lstnewenvironment — define new listing environments
   // Perl: DefPrimitive('\lstnewenvironment {}[Number][] DefPlain DefPlain', sub { ... })
@@ -4328,8 +4353,20 @@ LoadDefinitions!({
   // loop so the raw .sty files don't error on undefined `\lst@AddToHook`.
   // Driver: 2001.11875 (lstlang3.sty raw-load `\lst@AddToHook` undefined).
   DefMacro!("\\lst@UseHook{}", "\\csname\\@lst hk@#1\\endcsname");
-  def_macro_noop("\\lst@AddToHook{}{}")?;
-  def_macro_noop("\\lst@AddToHookExe{}{}")?;
+  // listings.sty:354-363 `\lst@AddToHook{<name>}{<code>}` (and `…Exe`, `…AtTop`, :356 — 1904.01009) adds `<code>` to the
+  // hook macro `\lsthk@<name>`, creating it first. The binding runs none of listings' hooks, so the code is dropped,
+  // but the hook is created as listings creates it, and the hooks listings.sty itself creates (its `\lst@AddToHook{…}`
+  // inits) exist: `\lstinline`'s `\lsthk@PreSet\lstset{…}\lsthk@TextStyle` (:1944-1945), which mmacells.sty:634-636
+  // calls directly (1705.02863).
+  DefMacro!("\\lst@AddToHook{}{}", "\\@ifundefined{lsthk@#1}{\\expandafter\\gdef\\csname lsthk@#1\\endcsname{}}{}");
+  Let!("\\lst@AddToHookExe", "\\lst@AddToHook");
+  Let!("\\lst@AddToHookAtTop", "\\lst@AddToHook");
+  for hook in ["InitVars", "Init", "TextStyle", "InitVarsBOL", "SelectCharTable", "PreSet", "SetLanguage", "EndGroup",
+    "PreInit", "PostOutput", "OutputBox", "EveryLine", "EmptyStyle", "EOL", "DeInit", "OutputOther", "Output",
+    "OnNewLine", "OnEmptyLine", "ModeTrue", "InitVarsEOL", "InitBOL", "FontAdjust", "ExitVars", "EveryPar",
+    "DisplayStyle"] {
+    def_macro_noop(&format!("\\lsthk@{hook}"))?;
+  }
   DefMacro!("\\lst@AddTo {}{}", "\\expandafter\\gdef\\expandafter#1\\expandafter{#1#2}");
   DefMacro!("\\@lst", "lst");
 

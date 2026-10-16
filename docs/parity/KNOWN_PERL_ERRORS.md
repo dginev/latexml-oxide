@@ -14060,3 +14060,56 @@ open (a fix writes the short label as `label=` with enumitem's replacements). Wi
 `[shortlabels]{enumitem}` paper referring to a short-labelled item, and the newer lmcs.cls (2003.01491, 2604.16477), which
 passes `shortlabels`. Repro package-bindings/enumitem_shortlabel_ref (RED); pinned in
 `perfect_kernel_batch68i::enumitem_shortlabels_under_lmcs`.
+
+## 820. eulervm.sty's binding lacks `\mathbold`
+
+eulervm.sty:58 `\DeclareMathAlphabet{\mathbold}{U}{zeur}{b}{n}`, the package's bold upright Euler alphabet; Perl's
+eulervm.sty.ltxml defines only `\upDelta`/`\upOmega`. Minimal trigger: `\usepackage{eulervm}` `$\mathbold{x}+y$` —
+pdflatex a bold x, Perl undefined `\mathbold` (27 papers; 0710.3183, 1111.7285, 1203.0791, 1203.1733, 1405.0292).
+Fixed in Rust (eulervm_sty.rs, an alphabet of its argument: see #823). Repro package-bindings/eulervm_mathbold; guard
+`perfect_kernel_batch68j::eulervm_mathbold_is_bold_upright`.
+
+## 821. nameref.sty's binding lacks `\T@nameref`, `\@namerefstar`, `\strip@period` and `\label@hook`
+
+nameref.sty:70 `\def\strip@period#1.\relax#2\@@@{#1}`, :88 `\providecommand*{\label@hook}{}` (the hook `\label` runs),
+:361-372 `\T@nameref`/`\@namerefstar` (the branches `\nameref` dispatches to on its star, :376-384); Perl's
+nameref.sty.ltxml reimplements `\nameref` as one constructor and defines none of them. Minimal trigger:
+`\usepackage{nameref}` `\makeatletter\DeclareRobustCommand*{\nameref}{\@ifstar\T@nameref\T@nameref}` and a
+`\nameref{x}` — pdflatex the title, Perl undefined `\T@nameref` (`\strip@period` 17 papers: 1310.1737, 1805.08920,
+1910.09092; `\T@nameref` 2404.09236, 2503.18999, 2511.11546; `\label@hook` 2511.17271). Fixed in Rust (nameref_sty.rs).
+Repro package-bindings/nameref_internals; guard `perfect_kernel_batch68j::nameref_internals_defined`.
+
+## 822. sidecap.sty's binding lacks `\sidecaptionsep` and does not load ragged2e
+
+sidecap.sty:39-40 `\sidecaptionsep` (`\the\marginparsep`), :156-172 at `\begin{document}` loads ragged2e
+(`[NewParameters]`, unless option `origragged`) and otherwise lets `\RaggedRight`/`\RaggedLeft`/`\Centering` be
+LaTeX's; Perl's sidecap.sty.ltxml does neither. Minimal trigger: `\usepackage{sidecap}` `\begin{SCfigure}\RaggedRight
+x\caption{c}\end{SCfigure}` — pdflatex clean, Perl undefined `\RaggedRight` (21 papers; 1112.5588, 1507.07568,
+1610.00850, 1812.02282; `\sidecaptionsep` 1302.0875). Fixed in Rust (sidecap_sty.rs). Repro
+package-bindings/sidecap_ragged2e_and_sep; guard `perfect_kernel_batch68j::sidecap_loads_ragged2e_and_its_sep`.
+
+## 823. A `\DeclareMathAlphabet`'d alphabet is a font switch that runs past its argument
+
+latex_constructs.pool.ltxml:2677-2687 defines the alphabet as `DefPrimitiveI(T_CS($csname), undef, undef, font =>
+{...})`, a parameterless switch: `\mathX{x}+y` sets x AND everything after it to the end of the formula's group in the
+alphabet's font. In LaTeX the alphabet closes a group after one argument (latex.ltx:12903-12925 `\select@group`, :12641-12646 `\use@mathgroup`, whose `\math@egroup` reads it), so only x is in it.
+Minimal trigger: `\DeclareMathAlphabet{\mathpzc}{OT1}{pzc}{m}{it}` `$\mathpzc{x}+y$` — pdflatex a script x and an
+italic y, Perl and Rust (latex_constructs/sect08.rs, a faithful port) both script. Open in Rust: every document- or
+package-declared alphabet (mathpazo's `\mathbold`, eucal's, a paper's `\mathpzc`); bindings that need one define a
+bounded constructor instead (eulervm_sty.rs `\mathbold`, #820). A fix must keep `math_alphabet_font`
+(latex_constructs/sect13.rs, `{\bbx RZ}` through `\DeclareOldFontCommand`) seeing the alphabet's font. Repro
+macro-state/declare_math_alphabet_scopes_its_argument (RED).
+
+## 824. listings.sty's binding lacks the mode, output and hook internals add-on code calls
+
+listings.sty:354-363 `\lst@AddToHook`/`…Exe`/`…AtTop` creating the `\lsthk@<name>` hooks (`\lsthk@PreSet`,
+`\lsthk@TextStyle`, :1944-1945), :431-449 `\lst@InterruptModes`/`\lst@ReenterModes`, :561-570
+`\lst@CalcLostSpaceAndOutput`, :770-772 `\lst@PrintToken`, :793-794 `\lst@whitespacetrue`/`false`, :1599 `\lst@label`,
+:1697-1698 `\lst@boxtrue`/`false`, :1735 `\lst@aboveskip`, :1743/:1802 `\lst@Init`/`\lst@DeInit`, :532 `\lst@width`;
+lstmisc.sty:1755 `\lst@frametextsep`, :1880-1907 `\lst@FVConvert`. Perl's listings.sty.ltxml reimplements listings and
+defines none of them. Minimal trigger: `\usepackage{listings}\makeatletter\lstset{literate={->}{{$\to$\lst@whitespacefalse}}1}`
+and a listing with `->` — pdflatex an arrow, Perl undefined `\lst@whitespacefalse` (28 papers; mmacells.sty's inline
+cells: 1705.02863, 1712.09863, 1806.04503, 2012.00279, 2012.07851 — 9 errors each; 2012.14984, 1904.01009, 2210.07578,
+2504.10323, 2505.04744, 2608.14263, 1704.06338). Fixed in Rust (listings_sty.rs, each as the binding's model makes it:
+no mode stack, no pending token, the line appended as written). Repro package-bindings/listings_mode_and_hook_internals;
+guard `perfect_kernel_batch68j::listings_mode_and_hook_internals`.

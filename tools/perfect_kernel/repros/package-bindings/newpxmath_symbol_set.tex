@@ -1,0 +1,11 @@
+% witness: 1709.08558 (\upnu), 1902.06558 (\upalpha), 2001.06387, 2003.04827 (\mapsfrom), 2003.05278 (\nequiv), 2305.12589 (\fint), 2508.05134 (\piup, \deltait), 2603.09013 (\laplac) — 28 papers
+% oracle:  pdflatex 0 errors; α + Ω + ν, ∂f, a ≢ b, x ↤ y, ⨏, Å, ⊙, Aᵀ (ours ⊺ U+22BA, meaning transpose, as newtxmath), ⃗x, ⧠u, ⟦a⟧, πΓ, italic δΓ (pdftotext)
+% engines: rust 67int10 = every name below undefined (newpxmath's binding carried amssymb only); perl = no binding, newpxmath.sty not loaded (INCLUDE_STYLES off)
+% expect:  0 errors, 0 warnings; each name its glyph (upright Greek unmarked, \laplac U+29E0)
+% status:  RED (67int10) -> GREEN (68j); guard perfect_kernel_batch68j::newpxmath_carries_its_symbol_set
+\documentclass{article}
+\usepackage{newpxmath}
+\begin{document}
+$\upalpha+\upOmega+\upnu$, $\uppartial f$, $a\nequiv b$, $x\mapsfrom y$, $\fint f$, $\Angstrom$, $a\circleddot b$,
+$A^\transp$, $\vv{x}$, $\laplac u$, $\cdotB$, $\llbracket a\rrbracket$, $\piup\Gammaup$, $\deltait\Gammait$, $\text{t}$.
+\end{document}

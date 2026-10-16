@@ -1,0 +1,13 @@
+% witness: 1112.5588, 1812.02282, 1906.06766 (\RaggedRight, 18 papers), 1507.07568, 1812.03320 (\Centering), 1610.00850 (\RaggedLeft), 1302.0875 (\sidecaptionsep)
+% oracle:  pdflatex 0 errors; "Body x", "Figure 1: A caption" (sidecap.sty:156-172 loads ragged2e at \begin{document})
+% engines: rust 67int10 = undefined \RaggedRight, \Centering, \RaggedLeft, \sidecaptionsep; perl = the same (KNOWN_PERL_ERRORS #822)
+% expect:  0 errors, 0 warnings; the figure with its body and caption
+% status:  RED (67int10) -> GREEN (68j); guard perfect_kernel_batch68j::sidecap_loads_ragged2e_and_its_sep
+\documentclass{article}
+\usepackage[rightcaption]{sidecap}
+\begin{document}
+\begin{SCfigure}[][h]
+\RaggedRight\Centering\RaggedLeft Body \hspace{\sidecaptionsep} x
+\caption{A caption}
+\end{SCfigure}
+\end{document}

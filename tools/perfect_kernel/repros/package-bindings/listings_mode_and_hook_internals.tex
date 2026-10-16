@@ -1,0 +1,23 @@
+% witness: 1705.02863, 1712.09863, 1806.04503, 2012.00279, 2012.07851 (mmacells.sty inline cells: \lsthk@PreSet, \lst@Init, \lst@FVConvert, \lst@ReenterModes, \lst@PrintToken, \lst@InterruptModes), 2012.14984, 2206.00658 (\lst@whitespacefalse), 1904.01009 (\lst@AddToHookAtTop), 2210.07578 (\lst@CalcLostSpaceAndOutput), 2504.10323 (\lst@boxtrue), 2505.04744 (\lst@label), 2608.14263 (\lst@aboveskip), 1704.06338 (\lst@width, \lst@frametextsep)
+% oracle:  pdflatex 0 errors; "Inline foobar cell. empty", the listing "a → b"
+% engines: rust 67int10 = 11 undefined (the internals above); perl = the same (KNOWN_PERL_ERRORS #824)
+% expect:  0 errors, 0 warnings; the inline text "foo bar" (the binding's model: no listings tokenizer), "empty", the literate arrow in the listing
+% status:  RED (67int10) -> GREEN (68j); guard perfect_kernel_batch68j::listings_mode_and_hook_internals
+\documentclass{article}
+\usepackage{fancyvrb}\usepackage{listings}\lstloadaspects{fancyvrb}
+\makeatletter
+\lstset{literate={->}{{$\to$\lst@whitespacefalse}}1}
+\lst@AddToHookAtTop{Init}{\relax}
+\newlength{\abovelst}\setlength{\abovelst}{\lst@aboveskip}
+\newlength{\lstcw}\setlength{\lstcw}{\lst@width}
+\newlength{\lstfs}\setlength{\lstfs}{\lst@frametextsep}
+\newcommand\myinline[1]{\begingroup\lsthk@PreSet\lstset{basicstyle=\ttfamily}\lsthk@TextStyle\lst@Init\relax
+\let\lst@arg\@empty\lst@FVConvert#1\@nil\lst@ReenterModes\lst@arg\lst@PrintToken\lst@InterruptModes\lst@DeInit\endgroup}
+\def\amp{\lst@CalcLostSpaceAndOutput\&}
+\makeatother
+\begin{document}
+Inline \myinline{foo bar} cell. \makeatletter\lst@boxtrue\ifx\lst@label\@empty empty\fi\makeatother
+\begin{lstlisting}
+a -> b
+\end{lstlisting}
+\end{document}

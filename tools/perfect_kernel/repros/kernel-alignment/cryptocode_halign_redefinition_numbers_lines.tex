@@ -1,0 +1,19 @@
+% witness: 1804.05141, 2106.03626, 2107.06049, 2108.04600, 2202.07253 (Error:undefined:\@pc@lb, 20 papers; mode=text pseudocode), every cryptocode pseudocode with linenumbering (lines after the first unnumbered, silently)
+% oracle:  pdflatex 0 errors; "Title 1: a←1 2: b←2 3: c←3" and the text-mode block "1: first line 2: second line 3: third line"
+% engines: rust 2eb177d124 = math mode numbers line 1 only; text mode Error:undefined:\@pc@lb and the rows run together (cryptocode.sty:950-957 redefines \halign to set \@pc@lb and its numbering \\ before the primitive; the amsmath binding's alignments never reach \halign); perl = cryptocode.sty not loaded
+% expect:  0 errors, 0 warnings; three numbered rows in each block
+% status:  RED (68j, open: needs a kernel mechanism — a document's parameterless \halign redefinition run where amsmath's alignment reaches \halign)
+\documentclass{article}
+\usepackage{cryptocode}
+\begin{document}
+\procedure[linenumbering]{Title}{
+a \gets 1 \\
+b \gets 2 \\
+c \gets 3
+}
+\procedure[mode=text, linenumbering]{Title}{
+first line \\
+second line \\[1mm]
+third line
+}
+\end{document}

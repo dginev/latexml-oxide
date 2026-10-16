@@ -2092,6 +2092,52 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   whose `[<mark>]` takes todonotes' option list; repro package-bindings/todonotes_style_key, RED); enumitem's short
   label numbers a reference without the label's punctuation (`\ref` "a" for pdflatex "(a)"; Perl alike,
   KNOWN_PERL_ERRORS #808; repro package-bindings/enumitem_shortlabel_ref, RED).
+- **68j** (binding gaps G3 D, TeX Live package bindings, the tail; bindgaps/g23_macros.tsv rows newpxmath, listings,
+  eulervm, nicematrix, nameref, mathalpha, sidecap, tabls, cryptocode, old-arrows, libertinust1math; each macro checked
+  against the TL 2025 file). newpxmath (newpxmath_sty.rs) — newtxmath.sty's Palatino twin, so the binding carries the
+  newtxmath binding's set (txfonts' symbols and newtxmath's own layer, now `newtxmath_sty::def_newtx_math_symbols`):
+  the upright Greek `\Gammaup`… and `\upGamma`… (:1662-1743; 1709.08558, 1902.06558, 2001.06387, 2305.12589), `\nequiv`
+  (:1374), `\fint` (:967), `\mapsfrom` (:1313), `\uppartial` (:1860), `\transp`, `\Angstrom`, `\circleddot`, `\cdotB`,
+  `\vv`, and, new in the shared set (newtxmath.sty too), `\laplac` (:745 / newtxmath.sty:1166, U+29E0; 2603.09013) and
+  the italic Greek `\deltait`… (:1817-1856 / :2262-2301; 2508.05134); `\widebar` stays newtxmath's only (newpxmath has
+  none); amsmath, etoolbox, xkeyval, centernot loaded as newpxmath.sty:23-33 does. listings (listings_sty.rs) —
+  `\lst@InterruptModes`/`\lst@ReenterModes`/`\lst@PrintToken`/`\lst@CalcLostSpaceAndOutput` (no mode stack, nothing
+  pending), `\lst@whitespacetrue/false`, `\lst@boxtrue/false`, `\lst@label`, `\lst@aboveskip`, `\lst@frametextsep`,
+  `\lst@width`, `\lst@FVConvert`, `\lst@Init`/`\lst@DeInit`, `\lst@AddToHook`/`…Exe`/`…AtTop` creating the hooks and
+  listings.sty's own `\lsthk@<name>` hooks (mmacells.sty's inline cells, 9 errors each: 1705.02863, 1712.09863,
+  1806.04503, 2012.00279, 2012.07851; 2012.14984, 1904.01009, 2210.07578, 2504.10323, 2505.04744, 2608.14263,
+  1704.06338). eulervm (eulervm_sty.rs) — `\mathbold` (:58), a bounded bold upright alphabet (27 papers; 0710.3183,
+  1111.7285): the kernel's `\DeclareMathAlphabet` makes a switch that runs past its argument (KNOWN_PERL_ERRORS #823,
+  open; repro macro-state/declare_math_alphabet_scopes_its_argument RED). nicematrix (nicematrix_sty.rs) — `\iddots`
+  when undefined (:146 `\ProvideDocumentCommand`, U+22F0; 26 papers, 2108.05847, 2210.04594), `\Iddots` now ⋰ (was
+  `\ddots`). nameref (nameref_sty.rs) — `\strip@period` (:70; 17 papers, 1310.1737, 1805.08920), `\label@hook` (:88;
+  2511.17271), `\T@nameref`/`\@namerefstar` (:361-372; 2404.09236, 2503.18999, 2511.11546); the row's `\N`/`\Z`/`\C`
+  are the papers' own. sidecap (sidecap_sty.rs) — `\sidecaptionsep` (:39-40; 1302.0875), its options (`origragged`,
+  :118) and ragged2e at `\begin{document}` (:156-172; `\RaggedRight` 18 papers, 1112.5588, 1812.02282; 2406.14861 and
+  2009.09454 never load sidecap; golden graphics/sidecap_vpos.xml gains the ragged2e processing instruction). tabls (tabls_sty.rs) — `\tablinesep`, `\arraylinesep`, `\extrarulesep` (:16-18; 22
+  papers, 1011.3468, hep-th0309263). old-arrows (raw) — stmaryrd_sty.rs `\stmry@if` is stmaryrd.sty:40's
+  (`\let#2=\@undefined\iftrue#1#2`): the stub gobbled `\def\varmapsfrom` so old-arrows.sty:489-492 ran
+  `{\varleftarrow\mapsfromchar}` at its load (19 papers, 2006.11831, 2102.02198; 2406.00395, 2406.02375 unchanged).
+  libertinust1math (libertinust1math_sty.rs) — loads xkeyval, etoolbox, amsmath (:7, :75; the 68i residual 2110.09723,
+  2201.10869, 2208.02596) and defines its own `\mathbcal`, `\mathbfit`, `\widebar`, `\widecheck`, `\lesssim`,
+  `\gtrsim`, `\blacksquare`, `\varkappa`, `\eqdef`, `\cupdot`, `\bigcupdot`, `\oiint` when undefined. Not done:
+  cryptocode `\@pc@lb` (20 papers; cryptocode.sty:950-957 redefines `\halign` to set it and its line-numbering `\\`, and
+  the amsmath binding's alignments never reach `\halign` — also every pseudocode line after the first loses its number,
+  silently; needs a kernel mechanism; repro kernel-alignment/cryptocode_halign_redefinition_numbers_lines RED);
+  mathalpha `\mathbcal`/`\mathbscr` (25 papers, discounted: the pre-1.14 mathalfa interface — TL 2025 mathalpha.sty:1107
+  defines them only under `oldbold`, and TL 2025 pdflatex errs undefined on 1607.07843, 1612.01166, 1612.06674,
+  1703.06879, 1709.03549). KNOWN_PERL_ERRORS #820-#824. Repros package-bindings/{newpxmath_symbol_set,
+  listings_mode_and_hook_internals, eulervm_mathbold, nicematrix_iddots, nameref_internals, sidecap_ragged2e_and_sep,
+  tabls_line_separations, stmaryrd_if_old_arrows, libertinust1math_amsmath_and_names} RED (67int10) → GREEN; guards
+  `perfect_kernel_batch68j` (9). A/B vs 67int10-rel over 359 papers (the rows' 265 witnesses, 100 of pop67o, 6 without a
+  main file): Errors 1216 → 755, papers with Errors 291 → 88, Fatals 5 → 5, none gains an Error; per row, Errors:
+  newpxmath 75 → 4 (not newpxmath's: `\oren`, `\DeclareQuotePunctuation`, `\lst@InstallKeywords`, `\textgreekfont`),
+  listings 191 → 2, eulervm 27 → 0, nicematrix 26 → 0, nameref 110 → 74, sidecap 27 → 4, tabls 28 → 0, old-arrows 38 → 0,
+  libertinust1math 23 → 0; of the pop67o papers 92 byte-identical, 2 (1803.02290, 1911.12144, sidecap papers) gaining only the
+  `<?latexml package="ragged2e" options="NewParameters"?>` line. Words fall only by `<ERROR>` text (34 papers); warnings rise
+  only as math parse warnings over formulas whose ERROR atoms are now symbols (2305.12589, 2507.05434, 2605.03875). The
+  base binary crashed once (exit 139 in tikz.code.tex) on 2505.23260, clean on a rerun. Binding nets (newpxmath,
+  newtxmath, listings, eulervm, nicematrix, nameref, sidecap, tabls) vs 67int10: no document worse.
 - **68b** (binding gaps G3, core package bindings: bindgaps/g23_macros.tsv rows hyperref, breqn, natbib, url,
   blkarray, pict2e, amsthm; each macro verified against the TL 2025 file). hyperref (hyperref_sty.rs) — `\Hy@Info`,
   `\Hy@Warning`, `\Hy@Error`, `\Hy@WarningNoLine`, `\Hy@InfoNoLine` (:130-135; 1310.6851, 1712.03838, 1901.10472),

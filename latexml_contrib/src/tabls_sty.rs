@@ -27,6 +27,15 @@ LoadDefinitions!({
   // Pre-define \@unrecurse before raw-load (defensive: in case
   // our array path never instantiates the inner \edef).
   Let!("\\@unrecurse", "\\relax");
+  // tabls.sty:16-18 its parameters, the minimum gaps between table lines, array lines and a rule and the text: a
+  // document sets them (`\tablinesep=2pt`; 22 papers, 1011.3468, 1101.2746, 1205.3429, 1305.1117, hep-th0309263).
+  // The rows' spacing is print layout, so nothing reads them here. Guard:
+  // `perfect_kernel_batch68j::tabls_line_separations_are_dimens`.
+  RawTeX!(
+    r"\newdimen\tablinesep \tablinesep=1pt \let\tablineskip=\tablinesep
+\newdimen\arraylinesep \arraylinesep=1pt \let\arraylineskip=\arraylinesep
+\newdimen\extrarulesep \extrarulesep=3pt"
+  );
   // tabls's tabular customizations don't translate to HTML layout;
   // leave the kernel tabular machinery intact. Don't raw-load.
 });

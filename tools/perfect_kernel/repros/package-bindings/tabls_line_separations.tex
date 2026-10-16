@@ -1,0 +1,11 @@
+% witness: 1011.3468, 1101.2746, 1205.3429, 1305.1117 (\tablinesep, 22 papers), hep-ph0611159, hep-th0309263, hep-th0310290 (\arraylinesep, \extrarulesep)
+% oracle:  pdflatex 0 errors; the 2x2 table
+% engines: rust 67int10 = undefined \tablinesep, \arraylinesep, \extrarulesep (the assignments' dimensions then typeset as text); perl = no binding, tabls.sty not loaded
+% expect:  0 errors, 1 warning (the binding's own tabls stub notice); the table with no stray text
+% status:  RED (67int10) -> GREEN (68j); guard perfect_kernel_batch68j::tabls_line_separations_are_dimens
+\documentclass{article}
+\usepackage{tabls}
+\tablinesep=2pt \arraylinesep=1pt \extrarulesep=2pt
+\begin{document}
+\begin{tabular}{cc} a & b\\ \hline c & d \end{tabular}
+\end{document}

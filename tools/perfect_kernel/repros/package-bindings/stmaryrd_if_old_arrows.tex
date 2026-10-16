@@ -1,0 +1,12 @@
+% witness: 2006.11831, 2102.02198, 2208.02506, 2208.06769, 2209.10735 (old-arrows after stmaryrd: \varleftarrow, \varlongleftarrow, 19 papers), 2406.00395, 2406.02375
+% oracle:  pdflatex 0 errors; "a → b⟦x⟧" (old-arrows.sty:489-492 \stmry@if\def\varmapsfrom{…}\fi defines, never runs)
+% engines: rust 67int10 = undefined \varleftarrow, \varlongleftarrow at old-arrows' load (the stub \stmry@if gobbled \def\varmapsfrom); perl = stmaryrd binding has no \stmry@if, old-arrows not loaded
+% expect:  0 errors, 0 warnings (raw old-arrows under ar5iv)
+% status:  RED (67int10) -> GREEN (68j); guard perfect_kernel_batch68j::stmaryrd_if_defines_its_cs
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{stmaryrd}
+\usepackage{old-arrows}
+\begin{document}
+$a\to b \llbracket x \rrbracket$
+\end{document}
