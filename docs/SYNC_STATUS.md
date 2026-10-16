@@ -2293,6 +2293,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Repros sectioning-frontmatter/{title_ink_dedup_in_titlepage, title_ink_dedup_beside_titlepage,
   title_ink_dedup_parbox_in_prose} RED (67int13) → GREEN, title_ink_dedup_framed_cover_keeps_its_frame RED (round 1)
   → GREEN.
+  Integrated as int15 with the main session's framed-wrapper rule (a framed wrapper is never searched: no empty frame
+  the PDF lacks; ff5ccc41f6). Gates 5,637/5,637, inits 0/0, dumps identical; bundle A/B vs 67int14 over 494 papers
+  (68s witnesses + 150 pop67o): Errors 4,514 → 4,514, Fatals 24 → 24, 0 worse, 15 papers changed — the titlepage
+  covers above, each gaining its title words only; nets 136/136 0 worse.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
