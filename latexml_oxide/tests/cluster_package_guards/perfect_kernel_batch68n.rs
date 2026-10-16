@@ -103,6 +103,29 @@ fn supplement_abstract_keywords_stay_in_place() {
   assert_eq!(xml.matches("<keywords").count(), 1, "{xml}");
 }
 
+/// A supplement's abstract kept in place whose class's keywords label cannot be read without running the class's code
+/// (kwmttlang.cls, mtt.cls:181's `\item…{\bfseries\mtt@keywords:}`, the label its abstract's language selects): its
+/// keywords stay in place with no label — not an English one the PDF does not have (1310.0585: pdflatex "Ключовi
+/// слова: гiростат, …"; 1310.0589, 1212.3890). The main abstract's keywords are the frontmatter's under the default
+/// name (a known limitation: pdflatex "Mots-clés:").
+#[test]
+fn supplement_abstract_keywords_without_a_readable_label_have_none() {
+  let (log, xml) = convert_beside!(
+    "abstract_keywords_supplement_unreadable_label.tex",
+    "kwmttlang.cls"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"<keywords name="Keywords: ">mots principaux</keywords>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<para xml:id="S1.p2"> <p xml:id="S1.p2.1">Résumé.</p> </para> <para xml:id="S1.p3"> <p xml:id="S1.p3.1">mots supplémentaires</p> </para> </section>"#),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<keywords").count(), 1, "{xml}");
+}
+
 /// Made as the class makes it: inside the abstract the class's `\def\keywords##1` replaces the document's own
 /// `\keywords` (pdflatex prints the class's "Keywords: first"), outside it the document's stays ("KW: outside").
 #[test]
@@ -274,6 +297,13 @@ group_label_guard!(
 );
 // 1604.03313's lni.cls:157-158 `\fontsize{9}{10}\selectfont\noindent{\bfseries Keywords:}`.
 group_label_guard!(group_label_lni, "keywords_group_label_lni.tex", "Keywords:");
+// A class macro's skip (`\quad`, `\hskip1em\relax`) and a `\kern` between two pieces are each one space of the name
+// (synthetic, the re-review's lab/t_quad and lab/t_kern shapes; pdflatex "Key words and phrases:").
+group_label_guard!(
+  group_label_pieces_parted_by_quad_and_kern,
+  "keywords_group_label_spaced.tex",
+  "Key words and phrases:"
+);
 
 /// `\keywords {alpha}, beta, gamma`: the first group does not end the keywords (no `\par`, blank line or `\end…` after
 /// it), so the class's own code runs and they stay together, a run-in paragraph as in pdflatex.

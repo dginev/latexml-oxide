@@ -649,12 +649,12 @@ fn glue_end(body: &[Token], i: usize) -> Option<usize> {
 }
 
 /// A label's text as it is collected from the class's code: its characters and text macros, the layout around them
-/// dropped — a source space or a horizontal skip between two pieces read as one space, an explicit space (`\ `, `~`)
-/// kept as one — so that neither a font nor a layout command reaches the `name` it becomes, nor the keywords after it:
-/// emsprocart's `{\noindent\bfseries{\keywordname.}\vspace{\z@}}` is "Keywords." (1202.4161, 1006.0632, 1610.08545),
-/// ieice.cls's `{\bfseries key words:\ \ignorespaces}` "key words:" (2002.00666, 1604.03276, 2509.21881), lni.cls's
-/// `\noindent{\bfseries Keywords:}` "Keywords:" (1604.03313). A class macro that is text stays itself, read when the
-/// label is (a language's `\keywordname`).
+/// dropped — a source space, a horizontal skip or a kern between two pieces (a class macro's too: `\quad`) read as one
+/// space, an explicit space (`\ `, `~`) kept as one — so that neither a font nor a layout command reaches the `name` it
+/// becomes, nor the keywords after it: emsprocart's `{\noindent\bfseries{\keywordname.}\vspace{\z@}}` is "Keywords."
+/// (1202.4161, 1006.0632, 1610.08545), ieice.cls's `{\bfseries key words:\ \ignorespaces}` "key words:" (2002.00666,
+/// 1604.03276, 2509.21881), lni.cls's `\noindent{\bfseries Keywords:}` "Keywords:" (1604.03313). A class macro that is
+/// text stays itself, read when the label is (a language's `\keywordname`).
 #[derive(Default)]
 struct LabelText {
   text:          Vec<Token>,
@@ -742,7 +742,8 @@ fn label_item(body: &[Token], i: usize, depth: usize, out: &mut LabelText) -> Op
     return Some(k);
   }
   if cs_in(&t, GLUE_SETTERS) {
-    if t == T_CS!("\\hskip") {
+    // (a horizontal skip or a kern between two pieces: one space, `\textbf{Key}\kern3pt\textbf{words}`)
+    if t == T_CS!("\\hskip") || t == T_CS!("\\kern") {
       out.space();
     }
     return glue_end(body, i + 1);
@@ -775,9 +776,11 @@ fn label_item(body: &[Token], i: usize, depth: usize, out: &mut LabelText) -> Op
   if depth == 0 {
     return None;
   }
-  let mut layout = LabelText::default();
-  label_items(expansion, depth - 1, &mut layout)?;
-  layout.text.is_empty().then_some(i + 1)
+  // (read into the label itself, so that a space it makes stays — `\textbf{Key}\quad\textbf{words}` — and refused
+  // when it typeset text)
+  let typeset = out.text.len();
+  label_items(expansion, depth - 1, out)?;
+  (out.text.len() == typeset).then_some(i + 1)
 }
 
 /// Read every item of a label's code ([`label_item`]), or `None` when one is not label material or layout.
@@ -943,7 +946,8 @@ fn reroute_keywords_environments(cls: &str) -> Result<()> {
 }
 
 /// The call `api` (`\lx@add@keywords{#1}`, the table's) named by the class's `label`, when there is one:
-/// `\lx@add@keywords[name={label}]{#1}`.
+/// `\lx@add@keywords[name={label}]{#1}` (astlb.cls:200's "Key words:", 1202.2889; paper.cls:621's `\keywordname:`,
+/// synthetic: kwpaper.cls's command forms).
 fn named_keywords_call(api: &str, label: Option<Tokens>) -> Vec<Token> {
   let Some(label) = label else {
     return mouth::tokenize_internal(TeXString::assembled(api.to_string())).unlist();
@@ -959,7 +963,8 @@ fn named_keywords_call(api: &str, label: Option<Tokens>) -> Vec<Token> {
 
 /// Does the input go on with a braced group that ends the keywords — `\par`, a blank line, an `\end…` or the end of
 /// the input after it, spaces skipped? Every token read is put back. `\keywords {alpha}, beta, gamma` is not that:
-/// its first group is part of the keywords.
+/// its first group is part of the keywords (synthetic, the review's t3 shape). Nor is a group a `\section`,
+/// `\maketitle` or `\begin{…}` follows: there the class's own code runs, as before 68n.
 fn braced_group_ends_the_keywords() -> Result<bool> {
   let Some(open) = read_token()? else {
     return Ok(false);
@@ -1270,10 +1275,11 @@ LoadDefinitions!({
   // An abstract kept in place as a supplement's (after the document body began, `\lx@add@frontmatter@until`) keeps
   // its keywords in place with it, and the paper's keywords stay the frontmatter's (mtt.cls papers' English and
   // Ukrainian abstracts at the end: 1310.0585, 1310.0589, 1212.3890): there the setter is the class's own definition
-  // when it only typesets its label and argument ([`typesets_label_and_argument`]), else a paragraph of the label
-  // (the default name when the class's is not shown) and the keywords — mtt.cls:181's `\item` belongs to the
-  // class's own abstract list, which the kernel's abstract is not. A setter that does not typeset its argument (it
-  // warns, or drops it) is the class's own definition, as in pdflatex.
+  // when it only typesets its label and argument ([`typesets_label_and_argument`]), else a paragraph of the class's
+  // label where its code shows one and the keywords — mtt.cls:181's `\item` belongs to the class's own abstract
+  // list, which the kernel's abstract is not, and its language-chosen `\mtt@keywords` cannot be read, so its
+  // keywords have no label in place: never the English default name where pdflatex prints "Ключовi слова:". A
+  // setter that does not typeset its argument (it warns, or drops it) is the class's own definition, as in pdflatex.
   DefPrimitive!("\\lx@abstract@class@setters", {
     let in_place = lookup_bool("lx_frontmatter_kept_in_place");
     for (name, api, definer, own) in abstract_setter_definitions() {
@@ -1285,13 +1291,15 @@ LoadDefinitions!({
       let body = if argument_at(&own).is_none() || (in_place && typesets_label_and_argument(&own)) {
         own
       } else if in_place {
-        let mut body = mouth::tokenize_internal("\\par{").unlist();
-        body.extend(
-          label
-            .unwrap_or_else(|| Tokens!(T_CS!("\\lx@keywords@name")))
-            .unlist(),
-        );
-        body.extend(mouth::tokenize_internal("} #1").unlist());
+        // (no label when the class's cannot be read: the default name is English where the PDF's need not be)
+        let mut body = mouth::tokenize_internal("\\par").unlist();
+        if let Some(label) = label {
+          body.push(T_BEGIN!());
+          body.extend(label.unlist());
+          body.push(T_END!());
+          body.push(T_SPACE!());
+        }
+        body.extend(mouth::tokenize_internal("#1").unlist());
         body
       } else {
         named_keywords_call(api, label)

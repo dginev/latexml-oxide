@@ -17970,8 +17970,12 @@ class's there), a `\newcommand` leaves it. In an abstract kept in place as a sup
 OXIDIZED_DESIGN #154) the keywords stay in place with it (mtt papers' English and Ukrainian abstracts at the end, whose
 keywords otherwise replaced the paper's Russian ones and were then dropped as a supplement's: 1310.0585, 1310.0589,
 1212.3890), typeset by the class's own definition when it only typesets its label and argument
-(`typesets_label_and_argument`), else as a paragraph of the label (or the default name) and the keywords — mtt.cls:181's
-`\item` belongs to the class's own abstract list, which the kernel's abstract is not. Outside the abstract `\keywords`
+(`typesets_label_and_argument`), else as a paragraph of the class's label where its code shows one and the keywords —
+mtt.cls:181's `\item` belongs to the class's own abstract list, which the kernel's abstract is not, and its label
+`\mtt@keywords` is chosen by the abstract's language, so those keywords have no label in place: never the English
+default name where pdflatex prints "Ключовi слова:" (1310.0585, 1310.0589, 1212.3890). Known limitation: the main
+frontmatter `<keywords>` of such a class carries the default name, as its language-selected label cannot be read
+without running class code (pdflatex "Ключевые слова:" on 1310.0585's Russian abstract). Outside the abstract `\keywords`
 stays undefined, as in pdflatex. (2) After a raw class loads (`reroute_keywords_environments`), a table setter it defined as an environment —
 no parameters, an `\end<name>` beside it, not a binding's — whose begin code typesets only a label
 (`label_only_begin_code`: layout that typesets nothing — font, size and paragraph declarations, `\fontsize`, `\vspace`,
@@ -17985,12 +17989,12 @@ gamma`, a bare `\keywords text`), whose extent only the class's layout knows, ru
 (`\lx@class@keywords@<name>`). `\end<name>` is chosen by `\@currenvir` the same way: the end of the frontmatter's
 keywords in the environment, else the class's own end code (`\lx@class@keywords@end@<name>`; paper.cls:622
 `\par\bigskip` after a bare `\keywords alpha \endkeywords`). The label is the keywords' name, made of its TEXT only
-(`LabelText`): its characters and text macros, a source space or horizontal skip between two pieces one space, an
-explicit `\ `/`~` one space, a trailing space dropped — never a font or layout command, which would print as a command
-name in the name and, out of the label's group, set the keywords text in the label's font (emsprocart.cls:668-670
-`\vspace{2pt}\small{\noindent\bfseries{\keywordname.}\vspace{\z@}}` "Keywords.", 1202.4161, 1006.0632, 1610.08545;
-ieice.cls:952-954 "key words:", 2002.00666, 1604.03276, 2509.21881; 1604.03313's lni.cls:157-158 "Keywords:";
-paper.cls "Keywords:", biometrika.cls:526 "Some key words:"). The keywords text is the document's, in no class font
+(`LabelText`): its characters and text macros, a source space, a horizontal skip or a kern between two pieces (a class
+macro's too: `\quad`) one space, an explicit `\ `/`~` one space, a trailing space dropped — never a font or layout
+command, which would print as a command name in the name and, out of the label's group, set the keywords text in the
+label's font (emsprocart.cls:668-670 `\vspace{2pt}\small{\noindent\bfseries{\keywordname.}\vspace{\z@}}` "Keywords.",
+1202.4161, 1006.0632, 1610.08545; ieice.cls:952-954 "key words:", 2002.00666, 1604.03276, 2509.21881; 1604.03313's
+lni.cls:157-158 "Keywords:"; paper.cls "Keywords:", biometrika.cls:526 "Some key words:"). The keywords text is the document's, in no class font
 (pdflatex sets ieice's in the class's ungrouped `\itshape`). Converted, in the versions read (TeX Live 2025 where it ships
 the class, else the papers' copies): paper.cls:621-627 (TL), pasa, biometrika, irmaems, ieice, the emsprocart copies of
 1202.4161/1006.0632/1610.08545/0803.2841/1203.6509, the lni copies of 1604.03313/1810.05361/2108.00996/2110.01641. A begin
@@ -17999,6 +18003,11 @@ Live 2025's lni.cls:561-565 `\global\keywordstrue…\def\and`, and the lni copie
 fills (ar-1col's `\global\setbox\@kwdbox\vbox\bgroup`, iau, biom), a list (fundam, basi, cpc-hepnp), a conditional
 (the emsprocart copies of 0803.2060 and math0612455, icmart's, `\if@twocolumn\section*{\keywordname}`), an optional
 argument (vmsta). A document's own `{keywords}`, defined after the class, replaces the rerouted one.
+Limitations: the braced command form is taken only before `\par`, a blank line or `\end…`; a `\keywords{a}` followed by
+`\section`, `\maketitle` or `\begin{…}` runs the class's run-in code, as before (a lost conversion, not a fidelity loss).
+The setter walk ignores conditionals: a class abstract written as beilstein.cls:850-855
+(`\ifthenelse{…}{\newcommand{\keywords}[1]{…#1}}{\newcommand{\keywords}[1]{\ClassWarning…}}`) would have its keywords
+typeset where pdflatex warns and drops them (the setter that uses `#1` is preferred); no abstract reaches that today.
 **Why**: the keywords are the author's content and the frontmatter carries them as such (user ruling 2026-09-18 on raw
 classes' title-page stores, `feedback_frontmatter_api_for_raw_classes`); the undefined `\keywords` was the only error of
 373 papers of run 353, of which 330 now convert error-free (wiley-article 214, nbdt-article 40, astlb 26, the pazh
@@ -18010,9 +18019,10 @@ Witnesses 1706.00599, 1712.05593, 1712.05708, 1801.08881, 1809.03406, 1202.2889,
 abstract (hsrbericht.cls:348; a document's own `\renewenvironment{abstract}{…\providecommand\keywords{\par…}}`, the
 "article" row: 1403.4689, 2405.19523), a locked `\abstract` patched twice (cup-pan.cls:134-147 `\preto` then `\appto`:
 the refused-definition record keeps the last patch; 2008.06930, 2004.14479), pazh's `\englishkeywords`. Repros sectioning-frontmatter/class_keywords/*;
-guards `perfect_kernel_batch68n` (20: round 2 added `group_label_*` (6),
+guards `perfect_kernel_batch68n` (22: round 2 added `group_label_*` (6),
 `braced_first_group_that_does_not_end_the_keywords_runs_the_classs_code`, `bare_endkeywords_is_the_classs_end_code`,
-`abstract_setter_that_only_warns_is_the_classs_own`).
+`abstract_setter_that_only_warns_is_the_classs_own`; round 3 `group_label_pieces_parted_by_quad_and_kern`,
+`supplement_abstract_keywords_without_a_readable_label_have_none`).
 
 ### 637. `\unvbox` splices a vbox's list only into a vertical box's own list, between two boundary marks
 

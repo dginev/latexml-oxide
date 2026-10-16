@@ -1951,7 +1951,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   raw classes defining a `{keywords}`: cluster Errors 374 → 43 (330 papers to 0, 331 gain `<keywords>`, none worse),
   pop67o identical (1902.02884 times out in both), shipped 18 gain `<keywords>`, errors identical, the only word
   drops the label moved into the keywords' name. Repros sectioning-frontmatter/class_keywords/* RED (67int11) → GREEN
-  (three CONTROL); guards `perfect_kernel_batch68n` (20 with round 2). Not served (listed): the "article" row (36 papers: 25 with the
+  (three CONTROL); guards `perfect_kernel_batch68n` (22 with round 3). Not served (listed): the "article" row (36 papers: 25 with the
   document's own `\renewenvironment{abstract}{…\providecommand\keywords{\par\medskip\noindent\textit{Keywords:}…}}`,
   a parameterless run-in keywords inside an abstract the kernel's lock refuses — 1205.4818, 1403.4689, 2405.19523 —
   as hsrbericht.cls:348 in TeX Live; 5 shipping an arXiv template named `natbib.sty`/`neurips_202x.sty` whose
@@ -1975,10 +1975,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   words:", pazh "Keywords:"; wiley's `\allcaps` and mtt's `\item` keep the default); `\keywords{…}` is the keywords of
   its group only when `\par`, a blank line or `\end…` follows it, else the class's code runs (`\keywords {alpha}, beta`
   kept together); `\end<name>` outside the environment is the class's own end code; a supplement's in-place abstract
-  typesets its keywords with the class's own definition when that only typesets label and argument (else label +
-  keywords; the class's label kept, as pdflatex's "Keywords: english words"); a found setter that does not use its
-  argument (beilstein.cls:854, fbithesis.cls:272) is the class's own definition, not the keywords. Guards
-  `perfect_kernel_batch68n` 11 → 20.
+  typesets its keywords with the class's own definition when that only typesets label and argument (kwmtt.cls:
+  pdflatex's "Keywords: english words"), else as a paragraph of the class's label where its code shows one and the
+  keywords; a found setter that does not use its argument (beilstein.cls:854, fbithesis.cls:272) is the class's own
+  definition, not the keywords. Guards `perfect_kernel_batch68n` 11 → 20. Round 3 (re-review): where the class's label
+  cannot be read (mtt.cls:181's language-chosen `\mtt@keywords`) the in-place keywords have no label — round 2 printed
+  the English default "Keywords:" (with a double gap) where pdflatex prints "Ключовi слова:" (1310.0585, 1310.0589,
+  1212.3890); the main frontmatter `<keywords>` of such a class carries the default name (its language-selected label
+  cannot be read without running class code), a known limitation. A class macro's skip (`\quad`) or a `\kern` between two
+  label pieces is one space of the name (round 2: `\textbf{Key}\quad\textbf{words}:` "Keywords:", base "Key words:").
+  Guards 20 → 22 (`group_label_pieces_parted_by_quad_and_kern`,
+  `supplement_abstract_keywords_without_a_readable_label_have_none`).
 - **68g** (llncs theorem numbering, the 68a residual KNOWN_PERL_ERRORS #743): llncs_cls.rs installs the class's
   theorem set with llncs.cls's own code (:1142-1174, TL 2025 v2.26; the same in every shipped copy v2.2-v2.26, checked
   over 18 versions from 1,250 arXiv llncs papers): `{theorem}` by section only under `envcountsect` (reset by section

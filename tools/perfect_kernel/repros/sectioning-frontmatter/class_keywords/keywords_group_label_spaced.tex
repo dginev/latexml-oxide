@@ -1,0 +1,16 @@
+% A label-only `{keywords}` whose pieces are parted by a class macro's skip and by a kern (kwgroups.cls option spaced:
+% `\textbf{Key}\quad\textbf{words}\kern3pt\textbf{and phrases}:`): each is one space of the name.
+% witness: none (synthetic, the re-review's lab/t_quad and lab/t_kern shapes; 67int12 printed "Key words:")
+% oracle:  pdflatex (kwgroups.cls beside it) 0 errors: "Key words and phrases: alpha, beta Body."
+% expect:  0 errors, 0 warnings; <keywords name="Key words and phrases:">alpha, beta </keywords>
+% status:  RED (68n round 2: name "Keywordsand phrases:") -> GREEN (68n round 3)
+% preload: ar5iv.sty
+\documentclass[spaced]{kwgroups}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{keywords}
+alpha, beta
+\end{keywords}
+Body.
+\end{document}
