@@ -1887,9 +1887,13 @@ fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<(
   )
 }
 
-/// The name a `\def`-family or `\setbox` token assigns, read from the tokens after it as TeX reads it: spaces and an
-/// `\expandafter` chain skipped, `None` for a `\csname`-built name or a non-CS (an active character's store is not a
-/// frontmatter field). Used by `record_dropped_environment_stores`.
+/// The name a `\def`-family or `\setbox` token assigns, read from the tokens after it: spaces and `\expandafter`s
+/// skipped, `None` for a `\csname`-built name or a non-CS (an active character's store is not a frontmatter field).
+/// TeX does not expand after `\def`, so an `\expandafter` behind a `\gdef` is used up only when another one precedes
+/// the `\gdef` (rmmcart.cls:418 `\expandafter\gdef\expandafter\abstracts@ve\expandafter{…}`, 2104.09383). Behind a
+/// bare `\gdef` TeX's target is that `\expandafter` itself, which the deposit could not null anyway (`nullable_store`
+/// refuses a primitive); the name after it is recorded instead, at most a store the class never fills. Used by
+/// `record_dropped_environment_stores`.
 fn dropped_store_target(after: &[Token]) -> Option<Token> {
   let target = after.iter().find(|n| {
     n.get_catcode() != Catcode::SPACE
@@ -1902,7 +1906,7 @@ fn dropped_store_target(after: &[Token]) -> Option<Token> {
 /// token body. A primitive, a register, a Rust-bodied (kernel) expandable or a locked definition is a command, not a
 /// field the class fills.
 fn nullable_store(target: &Token) -> bool {
-  if lookup_bool(&s!("{}:locked", target.with_str(|s| s.to_string()))) {
+  if target.with_str(name_carries_lock) {
     return false;
   }
   match lookup_meaning(target) {

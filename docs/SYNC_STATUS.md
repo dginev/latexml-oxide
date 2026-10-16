@@ -1195,12 +1195,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   sn-jnl-setup.sty sets `\ver@program.sty` in `\AddToHook{class/sn-jnl/before}` (latex.ltx:18750 `\@ifl@aded` skips
   it): program's active `|` broke pgf and the gullet ran to `oom`. The scan now skips a candidate whose
   `\ver@<name>.<ext>` is set while our records say it is not loaded, with an Info naming it
-  (`marked_loaded_by_document`; scan-only by the 2026-10-16 ruling, DIVERGENCES #605, KNOWN_PERL_ERRORS #780 — Perl
+  (`marked_loaded_unrecorded`; scan-only by the 2026-10-16 ruling, DIVERGENCES #605, KNOWN_PERL_ERRORS #780 — Perl
   Package.pm:2328-2330 tests only its records). (C) siunitx_sty.rs declared `S`/`s` at load only (Perl
   siunitx.sty.ltxml:1379-1399), so cellspace.sty:174-177's later `\newcolumntype{S}` won and 2410.09116's `{llSS}`
   tables gave 74 Errors (101, TooManyErrors, once 67u moved program's load); siunitx.sty:9348-9373 (and
-  siunitx-v2.sty:5625-5626) re-declare them at begin-document, which the binding now does, with siunitx's warning
-  `Tabular column type "S" overwritten with siunitx definition` (KNOWN_PERL_ERRORS #781). 2410.09116 stays a target
+  siunitx-v2.sty:5624-5625) re-declare them at begin-document, which the binding now does as the loaded release
+  does: v3 `S` only (`table-column-type`, :9101), with its warning `Tabular column type "S" overwritten with siunitx
+  definition.` also for an `S` declared before siunitx, a document's own `s` left alone; the `[=v2]` rollback `s` and
+  `S`, silently (KNOWN_PERL_ERRORS #781; v2's cellspace-to-`C` move not ported). 2410.09116 stays a target
   although TL 2025 pdflatex aborts it at 100 errors (_main.tex:194: cellspace 2022 replaces `\@startpbox`, array 2025
   calls `\@startpbox@action`, array.sty:196, 388; clean with cellspace removed). Witnesses (67int4 → 68f, HTML,
   `--preload=ar5iv.sty`): 2104.09383 269 Errors + Fatal → 0 (0 → 3,932 words, recall 0 → 87.4 %; 67s1 269 + Fatal),
@@ -1209,7 +1211,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   missing citations, now resolved); the 67u sn-jnl witnesses 2010.12415, 2102.03176, 2104.02781 and the store-nulling
   manuals wkmgr1, wkmgr2, mcmthesis-demo, rpsample (resphilosophica) byte-identical. Repros
   sectioning-frontmatter/dropped_abstract_store_expandafter_gdef, loader/scan_skips_document_marked_loaded_package,
-  package-bindings/siunitx_column_after_cellspace RED (67int4) → GREEN; guards `perfect_kernel_batch68f` (5). A/B vs
+  package-bindings/siunitx_column_after_cellspace RED (67int4) → GREEN, package-bindings/siunitx_v3_document_s_column
+  and siunitx_v2_rollback_columns RED (round 1) → GREEN; guards `perfect_kernel_batch68f` (8). A/B vs
   67int4-rel over 306 papers (100 pop67o, 100 siunitx of which 39 with a later column package, 100 with a shipped class
   renewing `{abstract}` or a `\ver@` marker, the 6 witnesses): only the three witnesses differ, 303 byte-identical;
   the sn-jnl net (30) unchanged.

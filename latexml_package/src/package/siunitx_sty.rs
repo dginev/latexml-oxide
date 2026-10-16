@@ -149,6 +149,20 @@ macro_rules! six_pin {
 /// that the `&str` variant pays.
 fn six_get_sym(key: SymStr) -> Option<Stored> { with_value_sym(key, |v| v.cloned()) }
 
+/// Is siunitx being loaded as its v2 release? siunitx.sty:37-39 `\DeclareRelease{2}{2010-05-23}{siunitx-v2.sty}`,
+/// `\DeclareRelease{v2}{…}` and `\DeclareCurrentRelease{}{2021-05-17}`: the request `\usepackage{siunitx}[=v2]` (or
+/// `[=2]`, or a rollback date before 2021-05-17) picks siunitx-v2.sty (latex.ltx:19172-19280). The request is the
+/// one `\@onefilewithoptions` recorded for the file being loaded (`pkgcls@targetdate` = 1 for a label, `YYYYMMDD`
+/// for a date; latex_constructs/sect05.rs `pkgcls_set_request`).
+fn six_v2_release_requested() -> bool {
+  match lookup_int("pkgcls@targetdate") {
+    1 => with_value("pkgcls@targetlabel", |v| {
+      v.is_some_and(|label| matches!(label.to_string().as_str(), "2" | "v2"))
+    }),
+    date => date > 1 && date < 20210517,
+  }
+}
+
 fn six_get_tokens_sym(key: SymStr) -> Tokens {
   match six_get_sym(key) {
     Some(Stored::Tokens(t)) => t,
@@ -2746,6 +2760,8 @@ fn make_collapsible_expansion(name: &str, presentation: &Tokens) -> Tokens {
 LoadDefinitions!({
   // siunitx.sty:9115 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
+  // Read before the loads below: a `\RequirePackage` in them records its own (empty) release request.
+  let v2_release = six_v2_release_requested();
   RequirePackage!("expl3");
   RequirePackage!("xcolor");
   RequirePackage!("amstext");
@@ -3636,6 +3652,10 @@ LoadDefinitions!({
     out.extend(post);
     Ok(Tokens::new(out))
   });
+  // siunitx.sty:9322-9330 (v3) warns at begin-document whenever `\NC@find@S` exists, so an `S` some package or the
+  // document declared BEFORE siunitx loaded is overwritten with the warning too; our load-time `DefColumnType`
+  // replaces it silently, so whether one was there is noted here.
+  let column_s_predeclared = is_defined("\\NC@rewrite@S");
   // Perl L1379-1399: `S` → number parse, lowercase `s` → unit parse.
   DefColumnType!("S Optional", sub[args] {
     add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@SI@column@parse");
@@ -3643,22 +3663,40 @@ LoadDefinitions!({
   DefColumnType!("s Optional", sub[args] {
     add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@si@column@parse");
   });
-  // siunitx owns its column letters at begin-document: siunitx.sty:9348-9373 (v3) maps `table-column-type` (`S`)
-  // through `\__siunitx_declare_column:Nnn` in `\AtBeginDocument`, undefining an earlier `\newcolumntype` of the
-  // letter with the warning "Tabular column type "S" overwritten with siunitx definition"; siunitx-v2.sty:5625-5626
-  // re-creates `s` and `S` there too. A column package loaded after siunitx (cellspace.sty:174-177 `S`, its default
-  // `column=S`) thus loses the letter to siunitx in LaTeX; declared at load only (Perl siunitx.sty.ltxml:1379-1399),
-  // ours lost it to cellspace — 2410.09116's `{llSS}` tables, 74 errors. The load-time definitions are kept and
-  // reinstated, warning when another definition replaced one. KNOWN_PERL_ERRORS #781. Guard:
-  // `perfect_kernel_batch68f::siunitx_column_wins_over_a_later_cellspace_column`.
+  // siunitx owns its column letters at begin-document, declared at load only here (Perl siunitx.sty.ltxml
+  // :1379-1399), so a column package loaded after siunitx (cellspace.sty:174-177 `S`, its default `column=S`) kept
+  // the letter, which in LaTeX it loses to siunitx — 2410.09116's `{llSS}` tables, 74 errors. The load-time
+  // definitions are kept and the release's own begin-document declarations reinstate them:
+  // * v3 (siunitx.sty:9364-9373) maps only `\l__siunitx_column_type_tl` (`table-column-type`, default `S`, :9101)
+  //   through `\__siunitx_declare_column:Nnn` (:9322-9330), which warns "Tabular column type "S" overwritten with
+  //   siunitx definition." when another `S` exists — declared after siunitx or before it. v3 has no `s` column, so
+  //   a document's own `\newcolumntype{s}` (tabularx's `>{\hsize=.5\hsize}X` idiom) stays the document's.
+  // * the `[=v2]` rollback (siunitx.sty:37-39, siunitx-v2.sty:5624-5625 `\__siunitx_table_rewrite_create:N`)
+  //   re-creates `s` and `S`, without a warning of its own (array.sty:345 warns "Column s is already defined" for
+  //   its `\newcolumntype`, which our `\newcolumntype` never does). Not ported: v2's cellspace special case
+  //   (siunitx-v2.sty:5559-5588), which moves cellspace's column to `C` with the warning "Column type for cellspace
+  //   package moved to 'C'."
+  // `table-column-type` is not a key here. KNOWN_PERL_ERRORS #781. Guards:
+  // `perfect_kernel_batch68f::siunitx_column_wins_over_a_later_cellspace_column`,
+  // `…::siunitx_v3_leaves_a_document_s_column_alone`, `…::siunitx_v3_warns_over_a_column_declared_before_it`,
+  // `…::siunitx_v2_rollback_reinstates_both_columns_silently`.
   RawTeX!(r##"\let\lx@six@column@S\NC@rewrite@S
 \let\lx@six@column@s\NC@rewrite@s
+\def\lx@six@restore@column#1{%
+  \expandafter\let\csname NC@rewrite@#1\expandafter\endcsname\csname lx@six@column@#1\endcsname}
+\def\lx@six@column@overwritten#1{%
+  \PackageWarningNoLine{siunitx}{Tabular column type "#1" overwritten with siunitx definition.}}
 \def\lx@six@redeclare@column#1{%
   \expandafter\ifx\csname NC@rewrite@#1\expandafter\endcsname\csname lx@six@column@#1\endcsname\else
-    \expandafter\let\csname NC@rewrite@#1\expandafter\endcsname\csname lx@six@column@#1\endcsname
-    \PackageWarning{siunitx}{Tabular column type "#1" overwritten with siunitx definition}%
-  \fi}
-\AtBeginDocument{\lx@six@redeclare@column S\lx@six@redeclare@column s}"##);
+    \lx@six@restore@column#1\lx@six@column@overwritten#1%
+  \fi}"##);
+  if v2_release {
+    RawTeX!(r"\AtBeginDocument{\lx@six@restore@column s\lx@six@restore@column S}");
+  } else if column_s_predeclared {
+    RawTeX!(r"\AtBeginDocument{\lx@six@restore@column S\lx@six@column@overwritten S}");
+  } else {
+    RawTeX!(r"\AtBeginDocument{\lx@six@redeclare@column S}");
+  }
 
   //======================================================================
   // Default options

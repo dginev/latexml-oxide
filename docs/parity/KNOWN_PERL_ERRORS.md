@@ -13747,19 +13747,26 @@ scanned candidate whose marker is set while our records say it is not loaded, wi
 `\@namedef{ver@subfig.sty}` is described in subcaption_sty.rs). Guard
 `perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.
 
-## 781. siunitx's `S`/`s` column types are declared at load, so a later column package's letter wins
+## 781. siunitx's `S` column type is declared at load, so a later column package's letter wins
 
-siunitx re-declares its column letters at begin-document: siunitx.sty:9348-9373 (v3) maps `table-column-type` (`S`)
-through `\__siunitx_declare_column:Nnn` in `\AtBeginDocument`, undefining an earlier `\newcolumntype` of the letter with
-the warning `Tabular column type "S" overwritten with siunitx definition`; siunitx-v2.sty:5625-5626 re-creates `s` and
-`S` there too. Perl's siunitx.sty.ltxml declares them with `DefColumnType` at load only (L1379-1399), so a package
-loaded after siunitx that defines `S` — cellspace.sty:174-177, its default `column=S` — keeps it. Latent in Perl, which
-does not load cellspace (2410.09116: 1 error); Rust raw-loads it, and 2410.09116's `{llSS}` tables gave 74 errors
-(TooManyErrors once 67u moved program's load). Minimal trigger:
-tools/perfect_kernel/repros/package-bindings/siunitx_column_after_cellspace.tex
+siunitx declares its column at begin-document: siunitx.sty:9364-9373 (v3) maps `\l__siunitx_column_type_tl`
+(`table-column-type`, default `S`, :9101) through `\__siunitx_declare_column:Nnn` (:9322-9330), which undefines any
+other `S` — declared before siunitx loaded or after — with the warning `Tabular column type "S" overwritten with siunitx
+definition.`; v3 has no `s` column. The `[=v2]` rollback (siunitx.sty:37-39) re-creates `s` and `S` there instead
+(siunitx-v2.sty:5624-5625 `\__siunitx_table_rewrite_create:N`), with no warning of its own. Perl's siunitx.sty.ltxml
+declares both letters with `DefColumnType` at load only (L1379-1399), so a package loaded after siunitx that defines `S`
+— cellspace.sty:174-177, its default `column=S` — keeps it. Latent in Perl, which does not load cellspace (2410.09116:
+1 error); Rust raw-loads it, and 2410.09116's `{llSS}` tables gave 74 errors (TooManyErrors once 67u moved program's
+load). Minimal trigger: tools/perfect_kernel/repros/package-bindings/siunitx_column_after_cellspace.tex
 (`\usepackage{siunitx}\usepackage{cellspace}` … `\begin{tabular}{lS}A & \num{62.0}\\`): pdflatex 0 errors and the
 warning, Perl 0 (no cellspace), Rust 67int4 3 errors (`Missing argument of the column type 'S'`). Fixed: siunitx_sty.rs
-keeps its load-time definitions (`\lx@six@column@S`/`@s`) and reinstates them at begin-document, with siunitx's
-warning when another definition replaced one. Guards
+keeps its load-time definitions (`\lx@six@column@S`/`@s`) and at begin-document reinstates what the loaded release
+declares: under v3 `S` only, warning when another `S` replaced it or one was declared before siunitx loaded (a
+document's own `\newcolumntype{s}`, tabularx's `>{\hsize=.5\hsize}X` idiom, stays the document's); under `[=v2]` `s`
+and `S`, silently (array.sty:345's "Column s is already defined" for v2's own `\newcolumntype` is not raised: our
+`\newcolumntype` never raises it). Our load-time `s` stays defined under v3 (Perl parity), where pdflatex has none
+(`Illegal pream-token (s)`). Not ported: v2's cellspace special case (siunitx-v2.sty:5559-5588), which moves cellspace's
+column to `C` with "Column type for cellspace package moved to 'C'."; `table-column-type` is not a key. Guards
 `perfect_kernel_batch68f::{siunitx_column_wins_over_a_later_cellspace_column,
-siunitx_column_alone_raises_no_overwrite_warning}`.
+siunitx_column_alone_raises_no_overwrite_warning, siunitx_v3_leaves_a_document_s_column_alone,
+siunitx_v3_warns_over_a_column_declared_before_it, siunitx_v2_rollback_reinstates_both_columns_silently}`.

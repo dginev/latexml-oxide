@@ -3417,7 +3417,7 @@ fn require_dependencies_filtered(file: &str, ext_type: &str, keep: &dyn Fn(&str)
   // Perl L2786-2789: foreach class — gate by `FindFile($class, type=>'cls',
   // notex=>1)`, then `LoadClass(..., options=>[split ...])`.
   for (class, raw_opts) in classes {
-    if marked_loaded_by_document(&class, "cls") {
+    if marked_loaded_unrecorded(&class, "cls") {
       continue;
     }
     if find_file(
@@ -3437,7 +3437,7 @@ fn require_dependencies_filtered(file: &str, ext_type: &str, keep: &dyn Fn(&str)
   // Perl L2790-2793: foreach package — gate by `FindFile($pkg, type=>'sty',
   // notex=>1)`, then `RequirePackage(..., options=>[split ...])`.
   for (pkg, raw_opts) in packages {
-    if marked_loaded_by_document(&pkg, "sty") {
+    if marked_loaded_unrecorded(&pkg, "sty") {
       continue;
     }
     if find_file(
@@ -3459,17 +3459,19 @@ fn require_dependencies_filtered(file: &str, ext_type: &str, keep: &dyn Fn(&str)
   true
 }
 
-/// Is a dependency-scan candidate one the document marked loaded itself? The scan stands in for the scanned file's
-/// own `\usepackage`/`\RequirePackage`/`\LoadClass` lines, and LaTeX skips such a line when `\ver@<name>.<ext>` is
-/// defined and not `\relax` (latex.ltx:18750 `\@onefilewithoptions` → `\@ifl@aded`, latex.ltx:18397-18402): a
+/// Is a dependency-scan candidate marked loaded while our records say it is not? The scan stands in for the scanned
+/// file's own `\usepackage`/`\RequirePackage`/`\LoadClass` lines, and LaTeX skips such a line when `\ver@<name>.<ext>`
+/// is defined and not `\relax` (latex.ltx:18750 `\@onefilewithoptions` → `\@ifl@aded`, latex.ltx:18397-18402): a
 /// document that sets the marker before the class runs (`\AddToHook{class/sn-jnl/before}{…\gdef\csname
 /// ver@program.sty\endcsname{9999/12/31}}`, sn-jnl-setup.sty of 2201.11056 — program.sty's active `|` breaks pgf)
-/// suppresses the class's load. Our own records (`_loaded`/`_raw_loaded`) say it is not loaded, so without this the
-/// scan loads it (Perl Package.pm:2328-2330 consults only those records; KNOWN_PERL_ERRORS #780, DIVERGENCES #605).
-/// Scan-only, by ruling (2026-10-16): `\usepackage`/`\RequirePackage` themselves keep the records-only test (ruling
-/// 2026-10-14, no general loader `\ver@` rule). Guard:
+/// suppresses the class's load. The marker can also come from a class or package read raw (memoir's
+/// `\EmulatedPackage`, imakeidx.sty:61 `ver@makeidx.sty`, xcolor.sty:315 `ver@color.sty`) or from a binding
+/// (biblatex's); LaTeX skips the line for each of them alike. Our own records (`_loaded`/`_raw_loaded`) say it is not
+/// loaded, so without this the scan loads it (Perl Package.pm:2328-2330 consults only those records; KNOWN_PERL_ERRORS
+/// #780, DIVERGENCES #605). Scan-only, by ruling (2026-10-16): `\usepackage`/`\RequirePackage` themselves keep the
+/// records-only test (ruling 2026-10-14, no general loader `\ver@` rule). Guard:
 /// `perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.
-fn marked_loaded_by_document(name: &str, ext: &str) -> bool {
+fn marked_loaded_unrecorded(name: &str, ext: &str) -> bool {
   let file = s!("{name}.{ext}");
   if lookup_bool(&s!("{file}_loaded")) || lookup_bool(&s!("{file}_raw_loaded")) {
     return false;
@@ -3480,7 +3482,7 @@ fn marked_loaded_by_document(name: &str, ext: &str) -> bool {
   Info!(
     "dependencies",
     file.as_str(),
-    s!("Skipping dependency {file}: the document marked it loaded (\\ver@{file} is defined)")
+    s!("Skipping dependency {file}: it is marked loaded (\\ver@{file} is defined)")
   );
   true
 }

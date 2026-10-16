@@ -17750,11 +17750,14 @@ A binding's dependency scan (`content.rs::require_dependencies_filtered`, Perl `
 Package.pm:2776-2810) stands in for the scanned file's own `\usepackage`/`\RequirePackage`/`\LoadClass` lines, and LaTeX
 skips such a line when `\ver@<name>.<ext>` is defined and not `\relax` (latex.ltx:18750 `\@onefilewithoptions` →
 `\@ifl@aded`, :18397-18402). The scan now does the same for a candidate our own records (`_loaded`/`_raw_loaded`) say
-is not loaded, with `Info:dependencies:<file> Skipping dependency <file>: the document marked it loaded`
-(`marked_loaded_by_document`). Perl tests only its records (Package.pm:2328-2330), so it would load the package — the
+is not loaded, with `Info:dependencies:<file> Skipping dependency <file>: it is marked loaded`
+(`marked_loaded_unrecorded`). The marker may come from the document, from a class or package read raw (memoir's
+`\EmulatedPackage`, imakeidx.sty:61 `ver@makeidx.sty`, xcolor.sty:315 `ver@color.sty`) or from a binding (biblatex's);
+LaTeX skips the line for each alike. Perl tests only its records (Package.pm:2328-2330), so it would load the package — the
 KNOWN_PERL_ERRORS #780 gap, latent there. Witness 2201.11056: sn-jnl-setup.sty suppresses sn-jnl.cls:311's
 `\usepackage{program}` through `\AddToHook{class/sn-jnl/before}`, which our scan loaded (active `|`, pgf broken,
 `oom`). Scan-only by ruling (main session 2026-10-16): `\usepackage`/`\RequirePackage` keep the records-only test (user
-ruling 2026-10-14, no general loader `\ver@` rule — the fake markers bindings set, floatrow_sty.rs, ams_support_sty.rs,
-subcaption_sty.rs). Repro loader/scan_skips_document_marked_loaded_package; guard
+ruling 2026-10-14, no general loader `\ver@` rule — floatrow_sty.rs records float/rotfloat loaded rather than setting
+their markers, ams_support_sty.rs reads amsart.cls's own `\ver@amsthm.sty`, subcaption_sty.rs describes a document's
+`\@namedef{ver@subfig.sty}`). Repro loader/scan_skips_document_marked_loaded_package; guard
 `perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.

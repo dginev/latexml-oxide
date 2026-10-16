@@ -1,0 +1,20 @@
+% witness: review of 68f (probe m2; the tabularx manual's \newcolumntype{s}{>{\hsize=.5\hsize}X} idiom; no arXiv
+%          case found in 3,500 zips of 2301 and 2405)
+% oracle:  pdflatex 0 errors, 0 warnings: v3 declares only S at begin-document (siunitx.sty:9364-9373,
+%          table-column-type = S, :9101), so the document's own s stays; renders "alpha beta / gamma / 1.5"
+% engines: rust 68f r1 = 0 errors, 1 warning ('Tabular column type "s" overwritten'), the s cell a math token
+%          "alphabeta"; Perl 0 errors, 0 warnings, the s cell the paragraph "alpha beta"
+% expect:  0 errors, 0 warnings; the s cell is the paragraph "alpha beta", the S cell the number 1.5
+% status:  RED (68f r1) -> GREEN (68f r2)
+\documentclass{article}
+\usepackage{siunitx}
+\usepackage{tabularx}
+\newcolumntype{s}{>{\hsize=.5\hsize}X}
+\begin{document}
+\begin{tabularx}{\linewidth}{sX}
+alpha beta & gamma \\
+\end{tabularx}
+\begin{tabular}{S}
+1.5 \\
+\end{tabular}
+\end{document}

@@ -1,6 +1,7 @@
 //! Red/green guards for batch 68f: three run-359 regressions — a dropped frontmatter environment's store read past an
 //! `\expandafter` chain (2104.09383), the dependency scan honours a document's `\ver@<file>` marker (2201.11056), and
-//! siunitx re-declares its column letters at begin-document (2410.09116). Each repro is checked against pdflatex.
+//! siunitx re-declares its column letter at begin-document (2410.09116): `S` under v3, `s` and `S` under the `[=v2]`
+//! rollback. Each repro and inline fixture is checked against pdflatex.
 use latexml::util::test::{assert_element, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -73,13 +74,9 @@ fn scan_skips_a_package_the_document_marked_loaded() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
     log.contains(
-      r"Skipping dependency program.sty: the document marked it loaded (\ver@program.sty is defined)"
+      r"Skipping dependency program.sty: it is marked loaded (\ver@program.sty is defined)"
     ),
     "{log}"
-  );
-  assert!(
-    !log.contains("program.sty..."),
-    "program.sty was loaded: {log}"
   );
   assert_element(
     &xml,
@@ -121,23 +118,116 @@ fn siunitx_column_wins_over_a_later_cellspace_column() {
   );
 }
 
-/// No column package after siunitx: no overwrite warning (the begin-document re-declaration finds its own `S`/`s`).
+/// No column package after siunitx: no overwrite warning (the begin-document re-declaration finds its own `S`). `{lS}`:
+/// v3 has no `s` column (pdflatex `Illegal pream-token (s)`).
 #[test]
 fn siunitx_column_alone_raises_no_overwrite_warning() {
   let (log, xml) = convert_with(
     r"\documentclass{article}
 \usepackage{siunitx}
 \begin{document}
-\begin{tabular}{lSs}
-A & 62.0 & m \\
+\begin{tabular}{lS}
+A & 62.0 \\
 \end{tabular}
 \end{document}
 ",
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "td",
+    &[r#"xml:id="p1.1.1.2""#],
+    r#"<td align="left" xml:id="p1.1.1.2"><Math mode="inline" tex="62.0" text="62.0" xml:id="p1.m1">
+         <XMath xml:id="p1.m1.1"><XMTok meaning="62.0" role="NUMBER">62.0</XMTok></XMath></Math></td>"#,
+  );
+}
+
+/// v3 declares only `S` at begin-document (siunitx.sty:9364-9373, `table-column-type = S`, :9101), so a document's own
+/// `\newcolumntype{s}` after siunitx (tabularx's `>{\hsize=.5\hsize}X` idiom) stays the document's, silently: the `s`
+/// cell is the paragraph "alpha beta", as pdflatex sets it (68f r1 re-declared `s` too, warned, and set the cell as
+/// the math token "alphabeta"). Repro package-bindings/siunitx_v3_document_s_column.
+#[test]
+fn siunitx_v3_leaves_a_document_s_column_alone() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/siunitx_v3_document_s_column.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "td",
+    &[r#"xml:id="p1.1.1.1""#],
+    r#"<td align="left" xml:id="p1.1.1.1"><inline-block vattach="top" xml:id="p1.1.1.1.1">
+         <p xml:id="p1.1.1.1.1.1">alpha beta</p></inline-block></td>"#,
+  );
+  assert_element(
+    &xml,
+    "td",
+    &[r#"xml:id="p1.2.1.1""#],
+    r#"<td align="left" xml:id="p1.2.1.1"><Math mode="inline" tex="1.5" text="1.5" xml:id="p1.m1">
+         <XMath xml:id="p1.m1.1"><XMTok meaning="1.5" role="NUMBER">1.5</XMTok></XMath></Math></td>"#,
+  );
+}
+
+/// v3's `\__siunitx_declare_column:Nnn` (siunitx.sty:9322-9330) warns whenever another `S` exists at begin-document,
+/// so one declared BEFORE siunitx loaded is overwritten with the warning too (pdflatex: `Package siunitx Warning:
+/// Tabular column type "S" overwritten with siunitx definition.`); our load-time `DefColumnType` replaced it silently.
+#[test]
+fn siunitx_v3_warns_over_a_column_declared_before_it() {
+  let (log, xml) = convert_with(
+    r"\documentclass{article}
+\usepackage{array}
+\newcolumntype{S}{c}
+\usepackage{siunitx}
+\begin{document}
+\begin{tabular}{lS}
+A & 62.0 \\
+\end{tabular}
+\end{document}
+",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
-    xml.contains(r#"<XMTok meaning="62.0" role="NUMBER">62.0</XMTok>"#),
-    "{xml}"
+    log.contains(r#"Tabular column type "S" overwritten with siunitx definition."#),
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "td",
+    &[r#"xml:id="p1.1.1.2""#],
+    r#"<td align="left" xml:id="p1.1.1.2"><Math mode="inline" tex="62.0" text="62.0" xml:id="p1.m1">
+         <XMath xml:id="p1.m1.1"><XMTok meaning="62.0" role="NUMBER">62.0</XMTok></XMath></Math></td>"#,
+  );
+}
+
+/// The `[=v2]` rollback (siunitx.sty:37-39) re-creates `s` and `S` at begin-document (siunitx-v2.sty:5624-5625
+/// `\__siunitx_table_rewrite_create:N`), over the document's own `s`, with no siunitx warning: the `s` cell is the
+/// siunitx unit, as pdflatex sets it (68f r1 warned for `s`). Repro package-bindings/siunitx_v2_rollback_columns.
+#[test]
+fn siunitx_v2_rollback_reinstates_both_columns_silently() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/siunitx_v2_rollback_columns.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "td",
+    &[r#"xml:id="p1.1.1.2""#],
+    r#"<td align="left" xml:id="p1.1.1.2"><Math mode="inline" tex="62.0" text="62.0" xml:id="p1.m1">
+         <XMath xml:id="p1.m1.1"><XMTok meaning="62.0" role="NUMBER">62.0</XMTok></XMath></Math></td>"#,
+  );
+  assert_element(
+    &xml,
+    "td",
+    &[r#"xml:id="p1.1.1.3""#],
+    r#"<td align="left" xml:id="p1.1.1.3"><Math mode="inline" tex="\mathrm{m}" text="m" xml:id="p1.m2">
+         <XMath xml:id="p1.m2.1"><XMTok role="UNKNOWN">m</XMTok></XMath></Math></td>"#,
   );
 }
