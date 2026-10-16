@@ -17842,6 +17842,7 @@ section 1's first. This binding keeps the kernel's `.`: "X 1.1", as Perl prints 
 semantics over the PDF — "11" cannot be told from the eleventh, and a `\ref` to it reads as one. 5 of 374 sampled llncs
 papers with a main file are affected (68g round 1). Minimal trigger: `\documentclass{llncs}`
 `\newtheorem{x}{X}[section]` `\section{A}\begin{x}a\end{x}` — pdflatex "X 11 a", both engines "X 1.1".
+
 ### 619. rotating's `\rotdriver{<driver>}` loads no driver file
 
 rotating.sty:64 `\def\rotdriver#1{\makeatletter\input{#1.def}\makeatother}` inputs a graphics driver; 42 arXiv papers
