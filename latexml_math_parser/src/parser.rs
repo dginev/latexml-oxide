@@ -31,6 +31,53 @@ use crate::{
   util::{filter_hints, node_to_grammar_lexemes_from},
 };
 
+/// A formula's distinct parse trees in arrival order — what `Vec::contains` then `push` keeps,
+/// with each tree's hash (`XM: Hash`, consistent with its `Eq`) indexing the trees that may equal
+/// it, so a new tree is compared deeply only against those. The scans compared every new tree with
+/// every kept one: 1509.06364's 29,183 parses spent most of its 149 s in `XM`'s `eq`.
+#[derive(Default)]
+struct UniqueTrees {
+  trees:   Vec<XM>,
+  by_hash: HashMap<u64, Vec<usize>>,
+}
+
+impl UniqueTrees {
+  fn hash_of(tree: &XM) -> u64 {
+    let mut hasher = rustc_hash::FxHasher::default();
+    tree.hash(&mut hasher);
+    hasher.finish()
+  }
+
+  /// Keeps `tree` unless an equal one is kept; true when it was kept.
+  fn insert(&mut self, tree: XM) -> bool {
+    let bucket = self.by_hash.entry(Self::hash_of(&tree)).or_default();
+    if bucket.iter().any(|&i| self.trees[i] == tree) {
+      return false;
+    }
+    bucket.push(self.trees.len());
+    self.trees.push(tree);
+    true
+  }
+
+  /// Keeps `tree` whether or not an equal one is kept (`Vec::push`).
+  fn push(&mut self, tree: XM) {
+    self
+      .by_hash
+      .entry(Self::hash_of(&tree))
+      .or_default()
+      .push(self.trees.len());
+    self.trees.push(tree);
+  }
+
+  fn into_vec(self) -> Vec<XM> { self.trees }
+}
+
+impl std::ops::Deref for UniqueTrees {
+  type Target = [XM];
+
+  fn deref(&self) -> &[XM] { &self.trees }
+}
+
 thread_local! {
   /// Conversion-wide ordinal behind the `[N]` math-progress markers.
   /// Deliberately NOT a `MathParser` field: streaming pass 2 builds a fresh
@@ -2282,7 +2329,7 @@ impl MathParser {
     if *PARSE_LEXEMES_DBG {
       eprintln!("PARSE_LEXEMES_BEGIN: {}", input.trim());
     }
-    let mut parses: Vec<XM> = Vec::new();
+    let mut parses = UniqueTrees::default();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
     let mut deduped = 0usize;
@@ -2407,11 +2454,10 @@ impl MathParser {
           }
           let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
-            if parses.contains(&tree) {
-              deduped += 1;
-            } else {
+            if parses.insert(tree) {
               ok_trees += 1;
-              parses.push(tree);
+            } else {
+              deduped += 1;
             }
           }
         },
@@ -2469,12 +2515,11 @@ impl MathParser {
             ) {
               Ok(Some(tree)) => {
                 ok_trees += 1;
-                if parses.contains(&tree) {
+                if parses.insert(tree) {
+                  since_unique = 0;
+                } else {
                   deduped += 1;
                   since_unique += 1;
-                } else {
-                  parses.push(tree);
-                  since_unique = 0;
                 }
               },
               Ok(None) => {},
@@ -2606,27 +2651,23 @@ impl MathParser {
               ok_trees = 0;
               deduped = 0;
               pruned_trees = second_pruned;
-              let mut readings: Vec<XM> = Vec::new();
+              let mut readings = UniqueTrees::default();
               for tree in alts_vec.into_iter().flatten() {
-                if readings.contains(&tree) {
-                  deduped += 1;
-                } else {
+                if readings.insert(tree) {
                   ok_trees += 1;
-                  readings.push(tree);
+                } else {
+                  deduped += 1;
                 }
               }
-              for tree in readings {
-                if !parses.contains(&tree) {
-                  parses.push(tree);
-                }
+              for tree in readings.into_vec() {
+                parses.insert(tree);
               }
             } else {
               for tree in alts_vec.into_iter().flatten() {
-                if parses.contains(&tree) {
-                  deduped += 1;
-                } else {
+                if parses.insert(tree) {
                   ok_trees += 1;
-                  parses.push(tree);
+                } else {
+                  deduped += 1;
                 }
               }
             }
@@ -2713,11 +2754,10 @@ impl MathParser {
           // deep clone on the cold path.
           let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
-            if parses.contains(&tree) {
-              deduped += 1;
-            } else {
+            if parses.insert(tree) {
               ok_trees += 1;
-              parses.push(tree);
+            } else {
+              deduped += 1;
             }
           }
         },
@@ -2836,12 +2876,11 @@ impl MathParser {
             if let Some(tree) = tree_opt {
               ok_trees += 1;
               // Online deduplication: check if this tree is already in our unique set
-              if parses.contains(&tree) {
+              if parses.insert(tree) {
+                since_unique = 0;
+              } else {
                 deduped += 1;
                 since_unique += 1;
-              } else {
-                parses.push(tree);
-                since_unique = 0;
               }
             }
           },
@@ -2945,14 +2984,14 @@ impl MathParser {
 
     match parses.len() {
       0 => Err("Failed to find any parse".into()),
-      1 => Ok(parses.into_iter().next().unwrap()),
+      1 => Ok(parses.into_vec().into_iter().next().unwrap()),
       _more => {
         // An expectation reads as a letter only where no reading takes it as an operator (M3,
         // `ExpectationLettersAreFallbacks`), before any other ranking — which makes the letter retry above
         // exact: moved after another pragma, or softened, a letter reading could beat a typed one that a typed
         // stream would have given alone. Then Perl's rule (divergence #350): the fewest evaluation bars
         // inside single-bar pairs.
-        let mut reduced_forest = XM::Choices(parses)
+        let mut reduced_forest = XM::Choices(parses.into_vec())
           .soft_prune_choices(ValidationPragmatics::ExpectationLettersAreFallbacks)
           .prefer_fewest_evaluation_bars_inside();
         // A specific Dirac reading beats a fence around the same bars before the student pragmas

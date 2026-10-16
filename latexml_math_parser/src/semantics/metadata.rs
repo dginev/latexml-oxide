@@ -71,6 +71,10 @@ impl PartialEq for Meta {
   }
 }
 impl Eq for Meta {}
+/// Every `Meta` equals every other (above), so none adds to a hash.
+impl std::hash::Hash for Meta {
+  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {}
+}
 impl Display for Meta {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     // Keep output terse — callers that need full detail should Debug-print.
