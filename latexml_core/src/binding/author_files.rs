@@ -134,6 +134,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "bytedance_seed.cls",
   "ceurart.cls",
   "cimart.cls",
+  "cimento.cls",
   "citesort.sty",
   "clear2025.cls",
   "cmcal.sty",

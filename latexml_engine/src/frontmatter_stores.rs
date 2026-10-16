@@ -842,7 +842,7 @@ fn nested_definition_of(body: &[Token], target: Token) -> Option<Vec<Token>> {
 /// is made where the call stands, as the class's environment would have made it, and the call retried
 /// ([`latexml_core::binding::kernel_autoload::try_refused_environment_definition`]). Searched: the open environments
 /// innermost first (the kernel's abstract, no environment frame, first inside its body; a frontmatter field's own
-/// setter before them), each one's definitions and the commands they hand control to ([`handed_to`]), only definitions
+/// setter before them), each one's definitions and the commands they hand control to (`handed_to`), only definitions
 /// a raw file or the document made, at most 64 per environment. OXIDIZED_DESIGN_DIVERGENCES #647.
 pub fn refused_environment_definition(token: &Token) -> bool {
   if token.get_catcode() != Catcode::CS || lookup_bool("lx_refused_environment_search") {
