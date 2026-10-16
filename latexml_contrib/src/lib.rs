@@ -83,6 +83,7 @@ pub mod chemformula_sty;
 pub mod chemnum_sty;
 pub mod chngpage_sty;
 pub mod cimart_cls;
+pub mod cimento_cls;
 pub mod cjk_sty;
 pub mod cjkutf8_sty;
 pub mod clefval_sty;
@@ -653,6 +654,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("chemformula", "sty", chemformula_sty::load_definitions),
   ("doclicense", "sty", doclicense_sty::load_definitions),
   ("cimart", "cls", cimart_cls::load_definitions),
+  ("cimento", "cls", cimento_cls::load_definitions),
   (
     "colm2025_conference",
     "sty",

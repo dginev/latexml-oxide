@@ -190,3 +190,18 @@ fn batch68v_vmsta_author_name_parts() {
     r#"<creator role="author"> <personname>Yu.YuliyaMishura</personname> </creator> <creator before=" " role="author"> <personname>I.Ivan Voronov</personname> </creator>"#,
   ]);
 }
+
+/// class-bindings/cimento/cimento_etc: the cimento binding (latexml_contrib cimento_cls.rs) reads the shipped class raw
+/// and gives the title page's `\ETC` (cimento.cls:746) to the kernel's author list (astro-ph0502331, astro-ph0506233,
+/// 1804.04677).
+#[test]
+fn batch68v_cimento_etc_in_the_author_list() {
+  let (counts, log, xml) = repro_with!(
+    "class-bindings/cimento/cimento_etc.tex",
+    ("cimento.cls", "class-bindings/cimento/cimento.cls")
+  );
+  assert_eq!(counts, (0, 0), "{log}");
+  assert_all(&xml, &[
+    r#"<creator role="author"> <personname>K.-I. Nishikawa</personname> </creator> <creator before=" " role="author"> <personname>P. Hardee</personname> </creator> <creator before=" " role="author"> <personname>C. B. Hededal</personname> </creator>"#,
+  ]);
+}
