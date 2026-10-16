@@ -55,7 +55,9 @@ bindings of the same justified kind: `floatrow_sty.rs` (58i: LaTeXML's locked `\
 `\@floatcapt`, so the kernel's caption material is pointed at it) and `enotez_sty.rs` (58l: the package fills its list
 only from the previous run's `.aux`). Phase 59 added `g_brief_cls.rs`/`g_brief2_cls.rs` (59o: the letter's sender and
 addressee live only in a first-page style LaTeXML never typesets; they become frontmatter at `\begin{g-brief}`, user
-ruling 2026-10-01). A raw-first attempt is still the default for every new cluster; a new binding
+ruling 2026-10-01). Batch 68u added `beilstein_cls.rs`/`lni_cls.rs` (their author blocks live in accumulators only
+the refused `\maketitle` reads, built through an `\author` the kernel's or authblk's lock refuses; OXIDIZED_DESIGN #644).
+A raw-first attempt is still the default for every new cluster; a new binding
 requires a justification of this kind in the file header.
 
 > **Stages.** The error-free stage (S0∧S1) closed 2026-09-17; the program now measures content preservation and markup

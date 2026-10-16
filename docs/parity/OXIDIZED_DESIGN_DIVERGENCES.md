@@ -18248,3 +18248,55 @@ prints `\protected macro:->\delimiter "026B30D `. Witness 2604.06890 (beilstein,
 under the raw class, now 0 errors and its text). Repro
 expansion-primitives/robust_double_bar_over_its_expansion_beilstein; guards
 `perfect_kernel_batch68u::{a_robust_double_bar_over_its_expansion_typesets_it, double_bar_is_a_protected_macro_over_the_atom}`.
+
+### 643. A raw class's frontmatter setter is the frontmatter's by its name: a store only its title page reads, a setter with side definitions, a redefined `\date`, a keywords environment collecting its body (Perl: lost)
+
+Under the rawclasses lever a TeX Live class without a binding is read raw; the kernel's locked `\maketitle` refuses
+the class's, so a store only its title page reads reaches no output. K11 (#634 and the entries it cites) rerouted a
+table setter (`STORE_SETTERS`) only when its body was a pure store into its OWN `\@name`. Perl reaches none of these
+(an unknown class is OmniBus there, whose table maps the names; read raw, the stores are lost).
+
+**Rust** (68u r2, `frontmatter_stores.rs`): (a) a table setter whose body is a pure store of its argument into one
+`\@X` of another name is rerouted when the **reader scan** (`ClassReaders`) finds `\@X` read by the class's
+title-page code and nothing else: the scan covers every macro a raw file defined (`DefinitionOrigin::File`: the class
+and what it loaded, surveyed once as the class ends), reads each body's control sequences (a `\def`-family, `\let`,
+`\g@addto@macro` or `\renewcommand`-family target is a write; `\@ifundefined{X}`, `\@nameuse{X}`, `\csname X\endcsname`
+read `\X`), and takes as title-page code the refused `\maketitle` (`\lx@dropped@maketitle`) and `\@maketitle` and,
+to a fixpoint, every macro only they call. apa6.cls:760 `\affiliation` → `\@affil` and :779 `\authornote` → `\@acks`
+(read by its `\maketitle` and the `\check@author` it calls, :786-795; `authornote` joins the table as apa7's binding
+maps it, a note of role `authornote`); uiucthesis.cls:97 `\department` → `\@dept` (its replayed title page now reads
+the department as empty, as it reads every captured store). A store another macro reads stays raw — letter.cls:155
+`\address` → `\fromaddress` (`\opening`), afthesis.cls:535 `\addr@ss` (its vita) — as does a kernel-owned one
+(`\@date`). (b) A setter's body may make side definitions beside its store (`\def`-family, `\let`,
+`\renewcommand`-family, in `\begingroup`; a store inside a group counts only when global); anything else — a
+`\RequirePackage` (apa6.cls:780 `\journal`), a flag (tADR2e.cls:450), typesetting — keeps it the class's. (c) The kernel
+`\date` is not locked; a raw file's redefinition storing `\@date` among side definitions keeps them and hands the
+date to the frontmatter as the kernel's `\date` does (tufte-common.def:608-614, `\thedate`). (d) A `{keywords}` whose
+begin code is environ.sty's `\Collect@Body\X`, `\X` storing the collected body in one macro only the title page
+reads, is the frontmatter's keywords (cclayout.sty:71-73, read at :889-898), beside #634's label-only shape. Witnesses
+1710.08171, 1705.02935 (apa6), 2003.11668 (apa.cls:443), 2603.01440 (tufte-handout), 1905.07821 (cc). Repros
+sectioning-frontmatter/{raw_class_setter_store_read_only_by_title_page_apa6, maketitle_replay_gate_ifundefined_branch_apa6,
+raw_class_date_with_side_definitions_tufte, raw_class_collected_keywords_env_cc}; guards
+`perfect_kernel_batch68u::{a_raw_class_store_only_its_title_page_reads_is_the_frontmatter,
+an_apa6_journal_mode_affiliation_is_the_authors, a_raw_class_store_another_macro_reads_stays_the_classs,
+a_raw_class_date_with_side_definitions_sets_the_date,
+a_raw_class_keywords_environment_collecting_its_body_sets_the_keywords}`,
+`perfect_kernel_batch61::uiucthesis_title_page_is_replayed`.
+
+### 644. beilstein.cls and lni.cls author blocks are bindings over the raw class (Perl: no binding)
+
+Both classes build their author block in accumulators only their `\maketitle` reads, through an `\author` the
+kernel's (or authblk's) lock refuses: beilstein.cls:586-737 (`\author[marks]{name}`, `\author*[marks]{name}{e-mail}`,
+`\affiliation{…}` numbered in order and given to the author just named), lni.cls:384-464 (authblk's code copied:
+`\author[marks]{name}{e-mail}{ORCID}`, `\affil[mark]{…}`). Read raw, a starred beilstein author was a creator named `*`
+and every affiliation, e-mail and ORCID was lost; OmniBus (and Perl) guess `\affiliation`/`\affil` only.
+
+**Rust** (68u r2, latexml_contrib `beilstein_cls.rs`, `lni_cls.rs`): each binding loads its class raw and defines the
+author interface over the frontmatter API — beilstein: each author a creator carrying its marks and the numbers of
+the affiliations after it (handed on at the next `\author` or `\maketitle`), the e-mail a contact, each affiliation a
+contact labelled by its number; lni: authblk's binding's `\author`/`\affil` (`authblk_sty::define_author_and_affil`)
+restored after the class's copy, the e-mail and ORCID the author's contacts. Witnesses 2203.09951, 2604.06890,
+2011.08032, 2506.23338, 2108.11247 (beilstein), 2608.21389 (lni). Repros
+class-bindings/{beilstein_author_affiliation_numbers, lni_author_email_orcid_affil}; guards
+`perfect_kernel_batch68u::{beilstein_authors_carry_their_numbered_affiliations,
+lni_authors_carry_email_orcid_and_affiliation}`.

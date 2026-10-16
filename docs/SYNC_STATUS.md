@@ -2646,16 +2646,31 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   class_setter_replay_runs_no_frontmatter_fallback_jheppub}. A/B over all 3,349 list3362 papers (67int15 vs 68u
   without the replay fix): error-free 1,491 → 3,157, errors 9,146 → 1,282, Fatals 12 → 8, words +1.4 %, contacts
   2,420 → 7,973, keywords 425 → 677, classification 392 → 2 (into `<keywords>`), creators 12,394 → 11,052 (A
-  over-split), proofs 7,838 → 7,701, captions 26,877 → 27,087. Open (the lever's residual): apa6/apa affiliations and
-  author notes (76 papers lose the text: apa6.cls:760/779 store into `\@affil`/`\@acks`, which only its refused
-  `\maketitle` prints, and the replay gate rejects that body for its `\@ifundefined{@journal}`-guarded `\@journal`;
-  pruning the dead branch lets apa7's man-mode `\maketitle` replay a `\section*{Abstract}` and a title section that
-  swallow the body — dead end; repro sectioning-frontmatter/maketitle_replay_gate_ifundefined_branch_apa6, RED;
-  beilstein, lni affiliations alike); tufte-common.def:608-615 `\date` (store + `\thedate`, not a pure store; 25
-  tufte papers lose the date; SHARED); thcc.sty:83 `\th@ccproof` (theorem.sty custom style: cc's proofs are numbered
-  theorems "Proof 1", pdflatex "Proof.", 14 papers, −116 proofs); cclayout.sty:73 `{keywords}` collects its body
-  for `\maketitle` (lost); smfart/nrc/letter/saj.sty addresses stay class-typeset body text (semantic only); a
-  plain-locked name a file `\let` clears and then redefines (eulerpx `\mathscr`) keeps 1 Error where pdflatex has 0;
+  over-split), proofs 7,838 → 7,701, captions 26,877 → 27,087. Round 2 (OXIDIZED_DESIGN_DIVERGENCES #643, #644):
+  K11 setters by name — rule (a), a table setter's store of another name is the frontmatter's when the reader scan
+  (`frontmatter_stores.rs` `ClassReaders`: every raw-file macro at the class's end; title-page code = the refused
+  `\maketitle`, `\@maketitle` and what only they call) finds only the title page reading it (apa6.cls:760
+  `\affiliation` → `\@affil`, :779 `\authornote` → `\@acks`, `authornote` added to `STORE_SETTERS`; uiucthesis.cls:97
+  `\department`); a setter may make side definitions beside its store; a raw file's `\date` storing `\@date`
+  (tufte-common.def:608-614) keeps its definitions and sets the date; a `{keywords}` collecting its body for the title
+  page (cclayout.sty:71-73); beilstein.cls:586-737 and lni.cls:384-464 author blocks as bindings (latexml_contrib
+  `beilstein_cls.rs`, `lni_cls.rs`; authblk's `define_author_and_affil`). Witnesses 1710.08171, 1705.02935,
+  2003.11668, 2603.01440, 1905.07821, 2203.09951, 2604.06890, 2608.21389; the round-1 RED repro
+  maketitle_replay_gate_ifundefined_branch_apa6 GREEN through rule (a) (the replay gate unchanged). Sample A/B (249
+  papers: round 1's 161 + apa/apa6/beilstein/lni/tufte; 67int15 / r1 / r2): error-free 91 / 227 / 227, errors 2,702 /
+  162 / 162, words 4,177,195 / 4,291,150 / 4,293,590, contacts 224 / 327 / 483, dates 36 / 28 / 45, keywords 15 / 43 /
+  44; no paper worse than round 1. Open (the lever's residual): apa/apa6 numbered author and affiliation forms
+  (`\twoauthors` … `\sixauthors`, `\twoaffiliations` … `\sixaffiliations`, apa6.cls:745-775, apa.cls:428-458: 64 of 188
+  papers, no creator at all, as under OmniBus; pairing author i with affiliation i is apa6's own layout,
+  `\put@two@authaffil`; 1710.04173 loses the text OmniBus dumped after its undefined-command errors) and apa's
+  `\acknowledgements`/`\note` (not table names); asmejour.cls:1483's expl3 `\date` (`\tl_gset:Nn
+  \g__asmejour_date_tl`, 2510.10694, the date lost); thcc.sty:81-91 `\th@ccproof` (theorem.sty's binding does not run
+  a raw style's `\@begintheorem`: cc's proofs are numbered theorems "Proof 1", pdflatex "Proof.", 14 papers; repro
+  class-bindings/cc_proof_style_unnumbered_thcc, RED); cclayout.sty:76-81 `{subject}` (the classification, lost; not a
+  table name); smfart/nrc/letter/saj.sty addresses stay class-typeset body text (semantic only); a
+  plain-locked name a file `\let` clears and then redefines (eulerpx.sty:130-132 `\mathscr`, 2311.14793, 2501.10505,
+  2510.26876: 1 Error each where pdflatex has 0; restoring the binding when the file's redefinition is refused would
+  extend OD #569 — later);
   ctexart (43 papers) words 592,004 → 592,543, error-free 24 → 13 (fandol, as pdflatex).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one

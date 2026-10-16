@@ -1,0 +1,25 @@
+% mechanism: lni.cls copies authblk's author block (:360 `\RequirePackage{authblk}`, :384-435 `\renewcommand\author
+%   [4][]`, :444-464 `\renewcommand\affil[2][]`) into accumulators only its `\maketitle` reads; under the raw class the
+%   copy replaced the authblk binding's `\affil` and the lock refused its `\author`, so the e-mail and ORCID arguments
+%   were stray preamble text and every affiliation was lost. The binding (latexml_contrib lni_cls.rs) loads the
+%   class raw and restores authblk's frontmatter `\author`/`\affil`, the e-mail and ORCID as the author's contacts.
+% witness: 2608.21389 (10 lni papers)
+% oracle:  pdflatex: 0 errors; "Ann Able1 and Bob Baker2", footnotes "1 First University, Street 1, Town,
+%   ann@example.org, <ORCID>" and "2 Second Institute, Town, bob@example.org"
+% engines: rust 68u r1: no affiliations, e-mails or ORCIDs; perl: no binding (the class raw, the same loss)
+% expect:  0 errors; each author with its e-mail, Ann Able with the ORCID, each with its affiliation
+% status:  RED (68u r1) -> GREEN (68u r2)
+% preload: ar5iv.sty
+\documentclass[english]{lni}
+\begin{document}
+\title{The Title}
+\author[1]{Ann Able}{ann@example.org}{0000-0002-1825-0097}
+\author[2]{Bob Baker}{bob@example.org}{}
+\affil[1]{First University\\Street 1\\Town}
+\affil[2]{Second Institute\\Town}
+\maketitle
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

@@ -7,8 +7,28 @@
 //! sections are unnumbered (0907.4214). A class setter replay runs no frontmatter fallback, so paper.cls's replayed
 //! `\abstract` no longer emits the title and authors in the preamble (2012.12760, 2207.06852).
 //!
+//!
+//! Round 2 — a raw class's frontmatter setters reach the frontmatter by what their names mean (K11; OXIDIZED_DESIGN
+//! #643): rule (a), a table setter storing its argument in a macro only the class's title page reads (apa6
+//! `\affiliation` → `\@affil`, `\authornote` → `\@acks`; 1710.08171, 1705.02935, 2003.11668); a redefined kernel
+//! `\date` with side definitions (tufte-common.def:608-614; 2603.01440); a `{keywords}` collecting its body for the
+//! title page (cclayout.sty:71-73; 1905.07821); and the beilstein and lni author blocks as bindings (2203.09951,
+//! 2604.06890, 2608.21389).
+//!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
+use latexml::util::test::{assert_element, normalize_markup, xml_element};
+
+use super::{
+  perfect_kernel_batch46::{convert_files_with, error_count, warning_count},
+  perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with},
+};
+
+/// The frontmatter block: from the title to the first paragraph, whole.
+fn front_block(xml: &str) -> String {
+  let start = xml.find("<title").expect("a title");
+  let end = start + xml[start..].find("<para").expect("a paragraph");
+  normalize_markup(&xml[start..end])
+}
 
 /// macro-state/locked_name_let_to_undefined_stub_loop: `\let\cite\parencite` with `\parencite` undefined clears the
 /// locked `\cite`; its use is one "not defined" Error and the text after it is typeset, as pdflatex's one "Undefined
@@ -137,11 +157,186 @@ fn a_class_setter_replay_runs_no_frontmatter_fallback() {
     (0, 0),
     &[],
   );
-  latexml::util::test::assert_element(&xml, "title", &[], "<title>The Title</title>");
-  latexml::util::test::assert_element(
+  assert_element(&xml, "title", &[], "<title>The Title</title>");
+  assert_element(
     &xml,
     "creator",
     &[r#"role="author""#],
     r#"<creator role="author"><personname>Ann Author</personname></creator>"#,
   );
+}
+
+/// sectioning-frontmatter/raw_class_setter_store_read_only_by_title_page_apa6, rule (a): apa6.cls:760 `\affiliation`
+/// stores `\@affil` and :779 `\authornote` `\@acks`, which only its `\maketitle` and `\check@author` read, so the
+/// affiliation is the author's and the author note a frontmatter note (pdflatex: "Some University", "Author Note /
+/// Correspondence to …"). Before 68u r2 both were lost under the raw class.
+#[test]
+fn a_raw_class_store_only_its_title_page_reads_is_the_frontmatter() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/raw_class_setter_store_read_only_by_title_page_apa6.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    front_block(&xml),
+    normalize_markup(
+      r#"<title>The Title</title><toctitle>Short</toctitle><creator role="author"><personname>Ann Author</personname><contact name="Affiliation: " role="affiliation">Some University</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract><keywords name="Keywords: ">alpha, beta</keywords><note role="authornote">Correspondence to Ann Author, Some University.</note>"#
+    ),
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/maketitle_replay_gate_ifundefined_branch_apa6 (the round-1 RED repro): the jou-mode
+/// affiliation reaches the author through rule (a), whatever the replay gate does with `\@journal` (pdflatex: "Some
+/// University" under the author).
+#[test]
+fn an_apa6_journal_mode_affiliation_is_the_authors() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/maketitle_replay_gate_ifundefined_branch_apa6.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    front_block(&xml),
+    normalize_markup(
+      r#"<title>The Title</title><creator role="author"><personname>Ann Author</personname><contact name="Affiliation: " role="affiliation">Some University</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract>"#
+    ),
+    "{xml}"
+  );
+}
+
+/// The reader scan's other side (sweep 93's rule): a store another class macro reads stays the class's. `\institute`
+/// stores `\@where`, which `\signature` reads as well as the title page, so it is not rerouted and the body's
+/// `\signature` prints it; `\affiliation`'s `\@affil`, read only by `\maketitle`, is the author's (pdflatex: "The
+/// Title / Ann Author / Some University / Some City", then "Signed at Some City.").
+#[test]
+fn a_raw_class_store_another_macro_reads_stays_the_classs() {
+  let cls = "\\NeedsTeXFormat{LaTeX2e}\n\\ProvidesClass{storeread}\n\\LoadClass{article}\n\
+             \\def\\affiliation#1{\\def\\@affil{#1}}\n\\def\\institute#1{\\gdef\\@where{#1}}\n\
+             \\def\\signature{Signed at \\@where.}\n\
+             \\def\\maketitle{\\begin{center}\\@title\\par\\@author\\par\\@affil\\par\\@where\\end{center}}\n";
+  let tex = "\\documentclass{storeread}\n\\title{The Title}\n\\author{Ann Author}\n\\affiliation{Some University}\n\
+             \\institute{Some City}\n\\begin{document}\n\\maketitle\n\\signature\n\\end{document}\n";
+  let (stderr, xml) = convert_files_with(tex, &[("storeread.cls", cls)], Some(RAW));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    stderr.contains(
+      "Rerouted the raw class's title-page stores to the frontmatter API: \\affiliation\n"
+    ),
+    "{stderr}"
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &[r#"role="author""#],
+    r#"<creator role="author"><personname>Ann Author</personname><contact name="Affiliation: " role="affiliation">Some University</contact></creator>"#,
+  );
+  assert!(xml.contains("Signed at Some City."), "{xml}");
+}
+
+/// sectioning-frontmatter/raw_class_date_with_side_definitions_tufte: tufte-common.def:608-614's `\date` stores
+/// `\@date` and also defines `\thedate`; it keeps both and the date is the frontmatter's (pdflatex: "27 February
+/// 2026"; its one Warning is bibentry's, as pdflatex's). Before 68u r2 the date was lost.
+#[test]
+fn a_raw_class_date_with_side_definitions_sets_the_date() {
+  let xml = assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/raw_class_date_with_side_definitions_tufte.tex"
+    ),
+    RAW,
+    (0, 1),
+    &["Package bibentry Warning: You have used \\nobibliography*"],
+    &[],
+  );
+  assert_eq!(
+    front_block(&xml),
+    normalize_markup(
+      r#"<title class="ltx_align_left">The Title</title><creator class="ltx_align_left" role="author"><personname>Ann Author</personname></creator><date class="ltx_align_left" role="creation">27 February 2026</date>"#
+    ),
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/raw_class_collected_keywords_env_cc: cclayout.sty:71-73's `{keywords}` collects its body
+/// for the title page only, so it is the frontmatter's keywords (pdflatex: "Keywords. alpha, beta"; its three
+/// Warnings are the class's two and ccalgo's, as pdflatex's three). Before 68u r2 the keywords were lost.
+#[test]
+fn a_raw_class_keywords_environment_collecting_its_body_sets_the_keywords() {
+  let xml = assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/raw_class_collected_keywords_env_cc.tex"
+    ),
+    RAW,
+    (0, 3),
+    &[
+      "Who is the contact author?",
+      "Missing submission/received date.",
+    ],
+    &[],
+  );
+  assert_eq!(
+    front_block(&xml),
+    normalize_markup(
+      r#"<title>The Title</title><creator role="author"><personname>Ann Author</personname><contact name="Affiliation: " role="affiliation">Some University</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract><keywords name="Keywords: ">alpha, beta</keywords>"#
+    ),
+    "{xml}"
+  );
+}
+
+/// class-bindings/beilstein_author_affiliation_numbers: each author carries the affiliations numbered after it and
+/// those its marks name, the corresponding author its e-mail (pdflatex: "Ann Able1, 2 , Bob Baker∗1 and Carl Cole3").
+/// Before 68u r2: an author named `*`, and no affiliation.
+#[test]
+fn beilstein_authors_carry_their_numbered_affiliations() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/beilstein_author_affiliation_numbers.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    front_block(&xml),
+    normalize_markup(
+      r#"<title>The Title</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">First University</contact><contact name="Affiliation: " role="affiliation">Second Institute</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Email: " role="email">bob@example.org</contact><contact name="Affiliation: " role="affiliation">First University</contact></creator><creator before="  " role="author"><personname>Carl Cole</personname><contact name="Affiliation: " role="affiliation">Third Lab</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract>"#
+    ),
+    "{xml}"
+  );
+}
+
+/// class-bindings/lni_author_email_orcid_affil: `\author[mark]{name}{e-mail}{ORCID}` is authblk's author with its
+/// e-mail and ORCID, `\affil[mark]` authblk's (pdflatex: the footnotes "1 First University, Street 1, Town,
+/// ann@example.org, …" and "2 Second Institute, Town, bob@example.org"). Before 68u r2 no affiliation, e-mail or ORCID.
+#[test]
+fn lni_authors_carry_email_orcid_and_affiliation() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/lni_author_email_orcid_affil.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_eq!(xml.matches("<creator").count(), 2, "{xml}");
+  assert_element(
+    &xml,
+    "creator",
+    &[r#"before="  ""#],
+    r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Email: " role="email">bob@example.org</contact><contact name="Affiliation: " role="affiliation">Second Institute<break/>Town</contact></creator>"#,
+  );
+  let ann = xml_element(&xml, "creator", &[r#"role="author""#]).expect("Ann Able");
+  for part in [
+    r#"<personname>Ann Able</personname><contact name="Email: " role="email">ann@example.org</contact><contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097">"#,
+    r#"<contact name="Affiliation: " role="affiliation">First University<break/>Street 1<break/>Town</contact></creator>"#,
+  ] {
+    assert!(ann.contains(part), "{ann}");
+  }
 }

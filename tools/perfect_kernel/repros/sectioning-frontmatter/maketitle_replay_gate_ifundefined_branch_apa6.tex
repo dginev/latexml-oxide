@@ -3,8 +3,10 @@
 % oracle: pdflatex 0 errors: "The Title / Ann Author / Some University / Abs. / Text."
 % engines: rust=0 errors, "Some University" missing (Info: the \maketitle body was not replayed: it uses
 %   \@journal) (2026-10-16)
-% expect: 0 errors; "Some University" in the output
-% status: RED (68u: open, reported to the main session)
+% expect: 0 errors; "Some University" the author's affiliation
+% status: RED (68u) -> GREEN (68u r2: rule (a), not the replay gate: apa6.cls:760 `\affiliation` stores `\@affil`, which
+%   only its `\maketitle` and the `\check@author` it calls read, so the store reaches the frontmatter; the replay gate
+%   is unchanged)
 % mechanism: apa6.cls:1438/:1585 test \@ifundefined{@journal}{…}{…\@journal…} in the jou-mode \maketitle; the
 %   \lx@deposit@maketitle replay gate (sect05.rs body_vocabulary_is_defined) checked the branch LaTeX does not
 %   run and rejected the whole body, with the \@affil it prints. Dead end (68u): checking only the branch

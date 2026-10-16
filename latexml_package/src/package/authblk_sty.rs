@@ -34,30 +34,7 @@ LoadDefinitions!({
   // Connected via marks, one \author for each author; one \affil for each affiliation
   //  \author[mark]{name} : REPEATED
   //  \affil[mark]{affil} : REPEATED, attaches to author with same mark
-  // Perl: authblk.sty.ltxml (PR #2767)
-  DefMacro!("\\author[]{}", sub[(label, author)] {
-    // authblk's bookkeeping after the author (`\lx@AB@author@state`, below).
-    let mut state = vec![T_CS!("\\lx@AB@author@state"), T_BEGIN!()];
-    if let Some(label) = label.as_ref() {
-      state.extend(label.unlist_ref().iter().copied());
-    }
-    state.push(T_END!());
-    state.push(T_BEGIN!());
-    state.extend(author.unlist_ref().iter().copied());
-    state.push(T_END!());
-    // What a package appends to `\author` (`\lx@author@after`, sect05.rs; titling's `\theauthor`).
-    state.extend([T_CS!("\\lx@author@after"), T_BEGIN!()]);
-    state.extend(author.unlist_ref().iter().copied());
-    state.push(T_END!());
-    let state = Tokens::new(state);
-    Ok(Tokens::new([author_call(label, author)?.unlist(), state.unlist()].concat()))
-  });
-
-  // Robust, as authblk.sty:148's `\newcommand\affil[2][]` is (`\@protected@testopt`): an `\affil` inside
-  // `\author` survives titling's `\protected@xdef\theauthor{\@author}` (witness 2605.03796, whose body was lost).
-  DefMacro!("\\affil OptionalSemiverbatim {}",
-    "\\lx@add@contact[role=affiliation,annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}\\lx@AB@affil@state{#1}",
-    robust => true);
+  define_author_and_affil()?;
 
   // authblk.sty's internal state, which documents copying its `\affil` code (a `\email` or second
   // `\affil` command built from it, as ACL/NAACL templates do: `\xdef\AB@authors{\the\@temptokena
@@ -138,4 +115,36 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
       Some(author)
     ]))
   }
+}
+
+/// authblk's `\author[mark]{name}` and `\affil[mark]{affiliation}` (authblk.sty:114-167) as frontmatter calls; also
+/// run by a class that copies authblk's code over them (lni.cls:384-464, `lni_cls.rs` in latexml_contrib), so the
+/// copy's accumulators — read only by its refused `\maketitle` — do not take the author block.
+#[rustfmt::skip]
+pub fn define_author_and_affil() -> Result<()> {
+  // Perl: authblk.sty.ltxml (PR #2767)
+  DefMacro!("\\author[]{}", sub[(label, author)] {
+    // authblk's bookkeeping after the author (`\lx@AB@author@state`, below).
+    let mut state = vec![T_CS!("\\lx@AB@author@state"), T_BEGIN!()];
+    if let Some(label) = label.as_ref() {
+      state.extend(label.unlist_ref().iter().copied());
+    }
+    state.push(T_END!());
+    state.push(T_BEGIN!());
+    state.extend(author.unlist_ref().iter().copied());
+    state.push(T_END!());
+    // What a package appends to `\author` (`\lx@author@after`, sect05.rs; titling's `\theauthor`).
+    state.extend([T_CS!("\\lx@author@after"), T_BEGIN!()]);
+    state.extend(author.unlist_ref().iter().copied());
+    state.push(T_END!());
+    let state = Tokens::new(state);
+    Ok(Tokens::new([author_call(label, author)?.unlist(), state.unlist()].concat()))
+  });
+
+  // Robust, as authblk.sty:148's `\newcommand\affil[2][]` is (`\@protected@testopt`): an `\affil` inside
+  // `\author` survives titling's `\protected@xdef\theauthor{\@author}` (witness 2605.03796, whose body was lost).
+  DefMacro!("\\affil OptionalSemiverbatim {}",
+    "\\lx@add@contact[role=affiliation,annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}\\lx@AB@affil@state{#1}",
+    robust => true);
+  Ok(())
 }

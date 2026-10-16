@@ -79,6 +79,12 @@ pub const STORE_SETTERS: &[(&str, &str)] = &[
   ("editor", "\\lx@add@editor{#1}"),
   ("editors", "\\lx@add@editor{#1}"),
   ("speaker", "\\lx@add@creator[role=speaker]{#1}"),
+  // The author note a title page prints under its heading (apa6.cls:779 `\authornote` → `\@acks`, printed by its
+  // `\maketitle` only; 68 of 188 apa/apa6 papers), as apa7's binding makes it (apa7_cls.rs).
+  (
+    "authornote",
+    "\\lx@add@frontmatter{ltx:note}[role=authornote]{#1}",
+  ),
 ];
 
 /// The setter `\name`'s current definition, as stored; none when it is undefined, `\let` to an

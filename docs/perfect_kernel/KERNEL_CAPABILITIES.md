@@ -337,8 +337,18 @@ appends to `\@author` to the creator (DIVERGENCES #405); 59e lets a later `\make
 after the last one (DIVERGENCES #406). Inside author content `\inst{n}` is the affiliation link request
 (`\lx@author@withinst`). The 56dj text and the original steps are in the archive.
 
+68u r2 (DIVERGENCES #643) widens what a setter is, by the NAME's semantics: (rule (a)) a table setter storing its
+argument in a macro of another name is the frontmatter's when the reader scan finds only the class's title-page code
+reading it (apa6.cls:760 `\affiliation` → `\@affil`, :779 `\authornote` → `\@acks`; a store another class macro
+reads stays raw, sweep 93's letter `\fromaddress` / afthesis `\addr@ss`); a setter may define side macros beside its
+store (tufte-common.def:608-614); a raw class's redefinition of the kernel's unlocked `\date` storing `\@date` keeps its
+definitions and sets the frontmatter's date; a `{keywords}` collecting its body (`\Collect@Body`) for the title page
+only is the frontmatter's keywords (cclayout.sty:71-73).
+
 **Open.** List-append stores other than `\@author` (verify a witness first); retire the per-class bindings whose only
-content is store rerouting (ptptex first), keeping those with non-store shapes.
+content is store rerouting (ptptex first), keeping those with non-store shapes; apa/apa6's numbered author and
+affiliation forms (`\twoauthors` … `\sixaffiliations`, 64 of 188 papers, no creator at all); expl3 stores
+(asmejour.cls:1483 `\date` → `\g__asmejour_date_tl`).
 
 ## Ordering
 

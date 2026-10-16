@@ -3874,6 +3874,21 @@ impl Drop for AssignmentJournalGuard {
   }
 }
 
+/// Every control sequence whose current meaning satisfies `keep`, with that meaning: a whole-table scan, for a
+/// one-off survey of what a loaded file defined (K11's reader scan, `frontmatter_stores.rs`), never a hot path.
+pub fn current_meanings_where(keep: impl Fn(&Stored) -> bool) -> Vec<(SymStr, Stored)> {
+  state!()
+    .meaning
+    .iter()
+    .filter_map(|(key, entry)| match entry.front() {
+      Some(stored) if !matches!(stored, Stored::None) && keep(stored) => {
+        Some((*key, stored.clone()))
+      },
+      _ => None,
+    })
+    .collect()
+}
+
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {

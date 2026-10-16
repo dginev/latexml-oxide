@@ -545,9 +545,17 @@ fn uiucthesis_title_page_is_replayed() {
     (0, 0),
     &[],
   );
+  // 68u r2 (rule (a)): uiucthesis.cls:97 `\department` stores `\@dept`, which only the title page reads, so the
+  // department is the author's affiliation and the replayed page reads it as empty (as every captured store).
+  assert_element(
+    &xml,
+    "creator",
+    &[r#"role="author""#],
+    "<creator role=\"author\"><personname>Juan Valdez</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Food Science</contact></creator>",
+  );
   for line in [
     "Submitted in partial fulfillment of the requirements",
-    "for the degree of Doctor of Philosophy in Food Science",
+    "for the degree of Doctor of Philosophy in",
     "University of Illinois at Urbana-Champaign, 1994",
   ] {
     let p = format!(r#"<p><text fontsize="120%">{line}</text></p>"#);

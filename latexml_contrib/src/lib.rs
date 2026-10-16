@@ -62,6 +62,7 @@ pub mod autobreak_sty;
 pub mod autofe_sty;
 pub mod axessibility_sty;
 pub mod backref_sty;
+pub mod beilstein_cls;
 pub mod biblatex_sty;
 pub mod bmvc2k_cls;
 pub mod breqn_sty;
@@ -114,6 +115,7 @@ pub mod imakeidx_sty;
 pub mod jurabib_sty;
 pub mod kluwer_cls;
 pub mod knittingpattern_cls;
+pub mod lni_cls;
 pub mod midl_cls;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
 pub mod bfhlayout_sty;
@@ -668,6 +670,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("fcs", "cls", fcs_cls::load_definitions),
   ("brief", "cls", brief_cls::load_definitions),
   ("g-brief", "cls", g_brief_cls::load_definitions),
+  ("lni", "cls", lni_cls::load_definitions),
+  ("beilstein", "cls", beilstein_cls::load_definitions),
   ("g-brief2", "cls", g_brief2_cls::load_definitions),
   ("getfiledate", "sty", getfiledate_sty::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),

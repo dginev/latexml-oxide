@@ -41,39 +41,145 @@ use latexml_core::{
 
 use crate::prelude::*;
 
-/// Is `body` a pure store of argument `#<arg>` into the setter's OWN `\@<name>` —
-/// `\gdef\@name{#1}`, `\def\@name{#1}`, `\xdef`/`\edef`,
-/// `\g@addto@macro\@name{#1}`, with any `\long`/`\global`/`\protected`
-/// prefixes — and nothing else? The `\@<name>` convention is the title-page
-/// store (`\@title`, ptptex `\@inst`, jpsj2 `\@abst`); a setter storing
-/// elsewhere feeds some other reader — letter.cls's `\address` fills
-/// `\fromaddress` for `\opening`, afthesis's `\addr@ss` its own title code
-/// (sweep 93: rerouting those left the readers undefined) — and stays raw.
-pub fn is_store_body(name: &str, body: &Tokens, arg: usize) -> bool {
-  let toks = body.unlist_ref();
+/// The definers a store is made with: `\gdef\@name{#1}`, `\def`, `\xdef`/`\edef`, LaTeX's `\protected@xdef`, and
+/// `\g@addto@macro\@name{#1}` (an accumulating store).
+const STORE_DEFINERS: &[&str] = &[
+  "\\gdef",
+  "\\def",
+  "\\xdef",
+  "\\edef",
+  "\\protected@xdef",
+  "\\protected@edef",
+  "\\g@addto@macro",
+];
+/// Prefixes and grouping a setter's definitions may carry, which typeset nothing.
+const DEFINITION_FRAME: &[&str] = &[
+  "\\long",
+  "\\global",
+  "\\protected",
+  "\\relax",
+  "\\begingroup",
+  "\\endgroup",
+];
+/// LaTeX's command definers: `\renewcommand{\thanks}[1]{}` (tufte-common.def:612).
+const COMMAND_DEFINERS: &[&str] = &[
+  "\\newcommand",
+  "\\renewcommand",
+  "\\providecommand",
+  "\\DeclareRobustCommand",
+];
+
+/// The control sequences a setter's body stores argument `#<arg>` in, when the body only makes definitions: each a
+/// pure store of the argument (`\gdef\@name{#1}`, any [`STORE_DEFINERS`]) or a side definition — a `\def`-family
+/// definition, a `\let`, a LaTeX `\renewcommand`-family one, in any [`DEFINITION_FRAME`] — that typesets nothing:
+/// tufte-common.def:608-614's `\date` stores `\@date` and also `\protected@xdef`s `\thedate` in a group whose
+/// `\renewcommand{\thanks}[1]{}` swallows a `\thanks`. `None` when the body does anything else (a `\RequirePackage`,
+/// apa6.cls:780 `\journal`; a flag its title page reads, tADR2e.cls:450 `\global\keywordstrue`; any typesetting).
+fn pure_stores(body: &[Token], arg: usize) -> Option<Vec<Token>> {
+  let mut stores = Vec::new();
+  // (a store made inside `\begingroup` … `\endgroup` lasts only when it is global)
+  let (mut depth, mut global) = (0usize, false);
   let mut i = 0;
-  while i < toks.len() && toks[i].with_str(|s| matches!(s, "\\long" | "\\global" | "\\protected")) {
-    i += 1;
-  }
-  let rest = &toks[i..];
-  if rest.len() != 5 {
-    return false;
-  }
-  let is_def = rest[0].get_catcode() == Catcode::CS
-    && rest[0].with_str(|s| {
+  while i < body.len() {
+    let t = body[i];
+    if t == T_CS!("\\begingroup") {
+      depth += 1;
+    } else if t == T_CS!("\\endgroup") {
+      depth = depth.checked_sub(1)?;
+    } else if t == T_CS!("\\global") {
+      global = true;
+    }
+    if t.get_catcode() == Catcode::SPACE || cs_in(&t, DEFINITION_FRAME) {
+      i += 1;
+      continue;
+    }
+    let is_global = std::mem::take(&mut global)
+      || t.with_str(|s| {
+        matches!(
+          s,
+          "\\gdef" | "\\xdef" | "\\protected@xdef" | "\\g@addto@macro"
+        )
+      });
+    if t.get_catcode() != Catcode::CS {
+      return None;
+    }
+    if t == T_CS!("\\let") {
+      // `\let\cs = token`
+      let mut k = skip_spaces(body, i + 1);
+      body.get(k).filter(|c| c.get_catcode() == Catcode::CS)?;
+      k = skip_spaces(body, k + 1);
+      if body.get(k) == Some(&T_OTHER!("=")) {
+        k = skip_spaces(body, k + 1);
+      }
+      body.get(k)?;
+      i = k + 1;
+      continue;
+    }
+    if cs_in(&t, COMMAND_DEFINERS) {
+      // `\renewcommand*{\cs}[n][default]{body}` or `\renewcommand\cs…`
+      let mut k = skip_spaces(body, i + 1);
+      if body.get(k) == Some(&T_OTHER!("*")) {
+        k = skip_spaces(body, k + 1);
+      }
+      if body
+        .get(k)
+        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+      {
+        let past = group_end(body, k)?;
+        (past == k + 3 && body[k + 1].get_catcode() == Catcode::CS).then_some(())?;
+        k = past;
+      } else {
+        body.get(k).filter(|c| c.get_catcode() == Catcode::CS)?;
+        k += 1;
+      }
+      for _ in 0..2 {
+        k = skip_spaces(body, k);
+        if body.get(k) == Some(&T_OTHER!("[")) {
+          k += body[k..].iter().position(|b| *b == T_OTHER!("]"))? + 1;
+        }
+      }
+      i = group_end(body, skip_spaces(body, k))?;
+      continue;
+    }
+    if !cs_in(&t, STORE_DEFINERS) {
+      return None;
+    }
+    // `\def\cs<parameter text>{body}`
+    let k = skip_spaces(body, i + 1);
+    let target = *body.get(k).filter(|c| c.get_catcode() == Catcode::CS)?;
+    let mut open = k + 1;
+    while body.get(open).is_some_and(|b| {
       matches!(
-        s,
-        "\\gdef" | "\\def" | "\\xdef" | "\\edef" | "\\g@addto@macro"
+        b.get_catcode(),
+        Catcode::PARAM | Catcode::ARG | Catcode::OTHER
       )
-    });
-  let own_store = s!("\\@{name}");
-  is_def
-    && rest[1].get_catcode() == Catcode::CS
-    && rest[1].with_str(|s| s == own_store)
-    && rest[2].get_catcode() == Catcode::BEGIN
-    && rest[3].get_catcode() == Catcode::ARG
-    && rest[3].with_str(|s| s == arg.to_string())
-    && rest[4].get_catcode() == Catcode::END
+    }) {
+      open += 1;
+    }
+    let past = group_end(body, open)?;
+    let stored = &body[open + 1..past - 1];
+    if open == k + 1
+      && (depth == 0 || is_global)
+      && stored.len() == 1
+      && stored[0].get_catcode() == Catcode::ARG
+      && stored[0].with_str(|s| s == arg.to_string())
+    {
+      stores.push(target);
+    }
+    i = past;
+  }
+  Some(stores)
+}
+
+/// The store a setter `\name` keeps its argument in, `@affil` for `\@affil`; its own `\@name` unless rule (a) found
+/// another ([`reroute_raw_class_stores`]).
+fn store_of(name: &str) -> String {
+  let store = lookup_string(&s!("lx_store_cs_{name}"));
+  if store.is_empty() {
+    s!("@{name}")
+  } else {
+    store
+  }
 }
 
 /// An argument read whole, not up to a delimiter (`\def\x#1\par{…}` reads `#1` up to `\par`).
@@ -109,11 +215,11 @@ fn creates_a_creator(name: &str) -> bool {
 /// A store read at `\maketitle` rather than as it is set.
 fn read_at_maketitle(name: &str) -> bool { annotates_a_creator(name) || creates_a_creator(name) }
 
-/// The class's setter `\name`, if it is a pure store: a one-argument macro storing `#1`, or an
-/// `[optional]{mandatory}` one storing `#2` (bfhlayout.sty:738 `\providecommand*{\institute}[2][]
-/// {\def\@institute{#2}}`). Returns the body and the stored argument's number.
-fn store_setter_body(name: &str) -> Result<Option<(Tokens, usize)>> {
-  let Some(defn) = lookup_definition(&T_CS!(&s!("\\{name}")))? else {
+/// A setter of one argument: a macro storing `#1`, or an `[optional]{mandatory}` one storing `#2` (bfhlayout.sty:738
+/// `\providecommand*{\institute}[2][]{\def\@institute{#2}}`) — its body, the stored argument's number and the
+/// control sequences its body stores that argument in ([`pure_stores`]).
+fn setter_stores(cs: &Token) -> Result<Option<(Tokens, usize, Vec<Token>)>> {
+  let Some(defn) = lookup_definition(cs)? else {
     return Ok(None);
   };
   let stored_arg = defn.get_parameters().and_then(|p| {
@@ -124,25 +230,258 @@ fn store_setter_body(name: &str) -> Result<Option<(Tokens, usize)>> {
       _ => None,
     }
   });
-  match (defn.get_expansion(), stored_arg) {
-    (Some(ExpansionBody::Tokens(body)), Some(arg)) if is_store_body(name, body, arg) => {
-      Ok(Some((body.clone(), arg)))
-    },
-    _ => Ok(None),
+  let (Some(ExpansionBody::Tokens(body)), Some(arg)) = (defn.get_expansion(), stored_arg) else {
+    return Ok(None);
+  };
+  Ok(pure_stores(body.unlist_ref(), arg).map(|stores| (body.clone(), arg, stores)))
+}
+
+/// The title-page code of the raw class — what its refused `\maketitle` (`\lx@dropped@maketitle`, state.rs) and
+/// its `\@maketitle` run, and every macro a raw file defined that only they call, transitively — and the readers
+/// of each macro: for every macro a raw file defined (`DefinitionOrigin::File`: the class and what it loaded, as
+/// the class ends; the scan is bounded to them), the control sequences it reads ([`reads_of`]). A macro two
+/// title-page macros call is title-page code; one any other macro calls too is not.
+struct ClassReaders {
+  title_page: Vec<Token>,
+  /// (macro, the control sequences it reads)
+  reads:      Vec<(Token, Vec<Token>)>,
+}
+
+/// The definers whose next control sequence is written, not read.
+const WRITERS: &[&str] = &[
+  "\\def",
+  "\\gdef",
+  "\\edef",
+  "\\xdef",
+  "\\protected@xdef",
+  "\\protected@edef",
+  "\\let",
+  "\\g@addto@macro",
+  "\\newcommand",
+  "\\renewcommand",
+  "\\providecommand",
+  "\\DeclareRobustCommand",
+];
+
+/// The control sequences `body` reads: each one not written by a definer before it ([`WRITERS`]), and those named
+/// by characters — `\@ifundefined{@affil}` (apa6.cls:793), `\@nameuse{X}`, `\csname X\endcsname` — as `\X`.
+fn reads_of(body: &[Token]) -> Vec<Token> {
+  let named = |from: usize, stop: &dyn Fn(&Token) -> bool| -> Option<(Token, usize)> {
+    let mut name = String::new();
+    let mut k = from;
+    while let Some(t) = body.get(k) {
+      if stop(t) {
+        return Some((T_CS!(&s!("\\{name}")), k + 1));
+      }
+      if !matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
+        return None;
+      }
+      t.with_str(|s| name.push_str(s));
+      k += 1;
+    }
+    None
+  };
+  let mut out = Vec::new();
+  let mut written = false;
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    i += 1;
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+      // (`\renewcommand{\cs}`: the brace before the written name)
+      written &= t.get_catcode() == Catcode::BEGIN || t.get_catcode() == Catcode::SPACE;
+      continue;
+    }
+    if written {
+      written = false;
+      continue;
+    }
+    if cs_in(&t, WRITERS) {
+      written = true;
+      continue;
+    }
+    if (t == T_CS!("\\@ifundefined") || t == T_CS!("\\@nameuse"))
+      && body
+        .get(i)
+        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+      && let Some((cs, past)) = named(i + 1, &|b| b.get_catcode() == Catcode::END)
+    {
+      out.push(t);
+      out.push(cs);
+      i = past;
+      continue;
+    }
+    if t == T_CS!("\\csname")
+      && let Some((cs, past)) = named(i, &|b| *b == T_CS!("\\endcsname"))
+    {
+      out.push(cs);
+      i = past;
+      continue;
+    }
+    out.push(t);
   }
+  out
+}
+
+impl ClassReaders {
+  fn survey() -> Self {
+    let mut reads: Vec<(Token, Vec<Token>)> = current_meanings_where(|stored| {
+      matches!(stored, Stored::Expandable(defn) if defn.get_origin() == DefinitionOrigin::File)
+    })
+    .into_iter()
+    .filter_map(|(key, stored)| {
+      let Stored::Expandable(defn) = stored else {
+        return None;
+      };
+      let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+        return None;
+      };
+      let cs = with(key, |k| k.starts_with('\\').then(|| T_CS!(k)))?;
+      Some((cs, reads_of(body.unlist_ref())))
+    })
+    .collect();
+    reads.sort_by_key(|(cs, _)| cs.with_str(str::to_string));
+    let roots = [
+      T_CS!("\\lx@dropped@maketitle"),
+      T_CS!("\\@maketitle"),
+      T_CS!("\\lx@dropped@@maketitle"),
+    ];
+    let mut title_page: Vec<Token> = roots
+      .into_iter()
+      .filter(|root| reads.iter().any(|(cs, _)| cs == root))
+      .collect();
+    loop {
+      let added: Vec<Token> = reads
+        .iter()
+        .map(|(cs, _)| *cs)
+        .filter(|cs| !title_page.contains(cs))
+        .filter(|cs| {
+          let mut callers = reads
+            .iter()
+            .filter(|(caller, r)| caller != cs && r.contains(cs))
+            .map(|(caller, _)| caller)
+            .peekable();
+          callers.peek().is_some() && callers.all(|caller| title_page.contains(caller))
+        })
+        .collect();
+      if added.is_empty() {
+        break;
+      }
+      title_page.extend(added);
+    }
+    ClassReaders { title_page, reads }
+  }
+
+  /// Is `store` read by the title-page code and by nothing else a raw file defined?
+  fn read_only_by_the_title_page(&self, store: &Token) -> bool {
+    let mut readers = self
+      .reads
+      .iter()
+      .filter(|(_, r)| r.contains(store))
+      .map(|(cs, _)| cs)
+      .peekable();
+    readers.peek().is_some() && readers.all(|cs| self.title_page.contains(cs))
+  }
+}
+
+/// The class's setter `\name`, if it stores its argument for the title page ([`setter_stores`]): in its own
+/// `\@name` (ptptex.cls:616 `\inst` → `\@inst`), or — rule (a) — in one other `\@X` that only the class's title-page
+/// code reads ([`ClassReaders`]): apa6.cls:760 `\long\def\affiliation#1{\long\def\@affil{#1}}` and :779
+/// `\authornote` → `\@acks`, read only by its `\maketitle` (:1126-1234, :1367-1466, :1571-1707) and the
+/// `\check@author` it calls (:786-795). A store some other class macro reads stays raw: letter.cls:155 `\address`
+/// fills `\fromaddress` for `\opening` (:221-237), afthesis.cls:535 `\addr@ss` its vita (:744-749) (sweep 93:
+/// rerouting those left the readers without their value). A kernel-owned store (`\@date`) is not a class's.
+/// Returns the body, the stored argument's number and the store.
+fn store_setter_body(
+  name: &str,
+  readers: &mut Option<ClassReaders>,
+) -> Result<Option<(Tokens, usize, Token)>> {
+  let Some((body, arg, stores)) = setter_stores(&T_CS!(&s!("\\{name}")))? else {
+    return Ok(None);
+  };
+  let own = T_CS!(&s!("\\@{name}"));
+  if stores.contains(&own) {
+    return Ok(Some((body, arg, own)));
+  }
+  let [store] = stores
+    .iter()
+    .filter(|t| t.with_str(|s| s.starts_with("\\@")))
+    .copied()
+    .collect::<Vec<_>>()[..]
+  else {
+    return Ok(None);
+  };
+  let class_owned = match lookup_meaning(&store) {
+    None => true,
+    Some(Stored::Expandable(defn)) => defn.get_origin() == DefinitionOrigin::File,
+    Some(_) => false,
+  };
+  if !class_owned {
+    return Ok(None);
+  }
+  let readers = readers.get_or_insert_with(ClassReaders::survey);
+  Ok(
+    readers
+      .read_only_by_the_title_page(&store)
+      .then_some((body, arg, store)),
+  )
+}
+
+/// A kernel field setter the raw class redefined — tufte-common.def:608-614 `\renewcommand{\date}[1]{\gdef\@date{#1}…
+/// \protected@xdef\thedate{#1}…}` (2603.01440; 25 tufte papers) — is still that field's setter (K11): when it stores
+/// its argument in the field's store among side definitions only ([`pure_stores`]), the class's body stays and the
+/// store is handed to the frontmatter as the kernel's `\date` hands it (sect05.rs), so the side definitions are kept.
+/// The kernel's `\title` and `\author` are locked; `\date` is not, and is not locked for this.
+fn reroute_kernel_field_setters(cls: &str) -> Result<()> {
+  const FIELDS: &[(&str, &str)] = &[(
+    "date",
+    r"\expandafter\lx@add@date@halved\expandafter{\@date}\expandafter\lx@date@after\expandafter{\@date}",
+  )];
+  for (name, handing) in FIELDS {
+    let cs = T_CS!(&s!("\\{name}"));
+    let Some(defn) = lookup_definition(&cs)? else {
+      continue;
+    };
+    if defn.get_origin() != DefinitionOrigin::File {
+      continue;
+    }
+    let Some((body, 1, stores)) = setter_stores(&cs)? else {
+      continue;
+    };
+    if !stores.contains(&T_CS!(&s!("\\@{name}"))) {
+      continue;
+    }
+    let mut body = body.unlist();
+    body.extend(mouth::tokenize_internal(*handing).unlist());
+    DefMacro!(cs, convert_latex_args(1, None)?, Tokens::new(body));
+    Info!(
+      "frontmatter",
+      cls,
+      s!("The raw class's \\{name} keeps its definitions and sets the frontmatter's {name}")
+    );
+  }
+  Ok(())
 }
 
 /// Reroute every table setter the raw class `cls` defined as a store; a binding's own setter
 /// (acmart.cls's `\copyrightyear`, ported as the class's store) is not the raw class's.
 pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
   let mut rerouted: Vec<&str> = Vec::new();
+  let mut readers: Option<ClassReaders> = None;
   for (name, api) in STORE_SETTERS {
     if defined_by_a_binding(name)? {
       continue;
     }
-    let Some((store, arg)) = store_setter_body(name)? else {
+    let Some((store, arg, store_cs)) = store_setter_body(name, &mut readers)? else {
       continue;
     };
+    assign_value(
+      &s!("lx_store_cs_{name}"),
+      Stored::String(pin(
+        store_cs.with_str(|cs| cs.trim_start_matches('\\').to_string()),
+      )),
+      Some(Scope::Global),
+    );
     // The setter stores as the class does, so the class's other readers of `\@<name>` (gaceta
     // checks `\@editor` for its section editor line) keep seeing the value; only `\@maketitle` is
     // discarded. A store that annotates a creator (an affiliation, address, e-mail, ORCID) or makes
@@ -168,7 +507,8 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
     DefMacro!(T_CS!(&s!("\\{name}")), params, Tokens::new(body));
     rerouted.push(name);
   }
-  reroute_keywords_environments(cls)?;
+  reroute_keywords_environments(cls, &mut readers)?;
+  reroute_kernel_field_setters(cls)?;
   if !rerouted.is_empty() {
     // A raw class that `\LoadClass`es another raw class reroutes twice: the
     // list accumulates, so the base class's stores stay captured too.
@@ -189,7 +529,7 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
       for name in names.split(',').filter(|n| !n.is_empty()) {
         if lookup_bool(&s!("lx_store_handed_{name}")) {
           nulls.extend(
-            mouth::tokenize_internal(TeXString::assembled(s!("\\let\\@{name}\\@empty"))).unlist(),
+            mouth::tokenize_internal(TeXString::assembled(s!("\\let\\{}\\@empty", store_of(name)))).unlist(),
           );
         }
       }
@@ -872,6 +1212,65 @@ fn typesets_label_and_argument(body: &[Token]) -> bool {
   label_only_begin_code(&text).is_some()
 }
 
+/// Is a `{keywords}` environment's begin code environ.sty's `\Collect@Body\X`, whose `\X` stores the collected body
+/// — with the class's own wrapper around it — in one macro that only the title-page code reads ([`ClassReaders`])?
+/// cclayout.sty:71-73 `\long\def\for@cc@keywords#1{\gdef\@keywords@macro{\begin{@abstr}{\cckeywordsname}#1\end
+/// {@abstr}}}` `\newenvironment{keywords}{\Collect@Body\for@cc@keywords}{}`, `\@keywords@macro` read only by its
+/// `\maketitle` (:889-898): the keywords of 1905.07821 and the cc papers reached neither the frontmatter nor the
+/// body. The wrapper is the class's presentation of the keywords, as rule (a)'s title page is.
+fn collects_body_for_the_title_page(begin: &[Token], readers: &mut Option<ClassReaders>) -> bool {
+  let code: Vec<Token> = begin
+    .iter()
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .copied()
+    .collect();
+  let [collect, setter] = code[..] else {
+    return false;
+  };
+  if collect != T_CS!("\\Collect@Body") {
+    return false;
+  }
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&setter) else {
+    return false;
+  };
+  let one_arg = defn.get_parameters().is_some_and(
+    |p| matches!(p.get_parameters().as_slice(), [only] if !only.optional && undelimited(only)),
+  );
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  if !one_arg || defn.get_origin() != DefinitionOrigin::File {
+    return false;
+  }
+  let body = body.unlist_ref();
+  let mut i = 0;
+  while body
+    .get(i)
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE || cs_in(t, DEFINITION_FRAME))
+  {
+    i += 1;
+  }
+  if !body.get(i).is_some_and(|t| cs_in(t, STORE_DEFINERS)) {
+    return false;
+  }
+  let k = skip_spaces(body, i + 1);
+  let Some(store) = body
+    .get(k)
+    .copied()
+    .filter(|c| c.get_catcode() == Catcode::CS)
+  else {
+    return false;
+  };
+  let Some(past) = group_end(body, k + 1) else {
+    return false;
+  };
+  argument_at(&body[k + 2..past - 1]).is_some()
+    && skip_spaces(body, past) == body.len()
+    && readers
+      .get_or_insert_with(ClassReaders::survey)
+      .read_only_by_the_title_page(&store)
+}
+
 /// Reroute each table keywords setter the raw class `cls` defined as a `{keywords}`-like environment whose begin
 /// code only typesets a label ([`label_only_begin_code`]) — `\<name>` taking no argument with its `\end<name>` — to the
 /// frontmatter's keywords, named by the class's label (`\lx@class@keywords`): the environment as
@@ -879,7 +1278,7 @@ fn typesets_label_and_argument(body: &[Token]) -> bool {
 /// with a braced argument that ends the keywords as `\lx@add@keywords[name={label}]{…}`; the class's own begin and end
 /// code stay for any other use (`\keywords {alpha}, beta`, a bare `\keywords alpha \endkeywords`). A document's own
 /// environment, defined after the class, replaces it.
-fn reroute_keywords_environments(cls: &str) -> Result<()> {
+fn reroute_keywords_environments(cls: &str, readers: &mut Option<ClassReaders>) -> Result<()> {
   let mut rerouted: Vec<&str> = Vec::new();
   for (name, _) in keywords_setters() {
     if defined_by_a_binding(name)? {
@@ -901,8 +1300,10 @@ fn reroute_keywords_environments(cls: &str) -> Result<()> {
     let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
       continue;
     };
-    let Some(label) = label_only_begin_code(body.unlist_ref()) else {
-      continue;
+    let label = match label_only_begin_code(body.unlist_ref()) {
+      Some(label) => Some(label),
+      None if collects_body_for_the_title_page(body.unlist_ref(), readers) => None,
+      None => continue,
     };
     // The class's own begin and end code stay, for a bare `\keywords text` (`\lx@class@keywords`) and its
     // `\endkeywords` (`\lx@class@keywords@end`) outside the environment.
@@ -916,11 +1317,13 @@ fn reroute_keywords_environments(cls: &str) -> Result<()> {
         Some(Scope::Global),
       );
     }
-    assign_value(
-      &s!("lx_class_keywords_label_{name}"),
-      Stored::Tokens(label),
-      Some(Scope::Global),
-    );
+    if let Some(label) = label {
+      assign_value(
+        &s!("lx_class_keywords_label_{name}"),
+        Stored::Tokens(label),
+        Some(Scope::Global),
+      );
+    }
     for (cs, reader) in [
       (begin, "\\lx@class@keywords{"),
       (end, "\\lx@class@keywords@end{"),
@@ -1053,10 +1456,10 @@ fn is_blank(value: &Tokens) -> bool {
     .all(|t| t.get_catcode() == Catcode::SPACE)
 }
 
-/// The value of the store `\@<name>`: its expansion, when it is a parameterless macro (a
+/// The value of the setter `\<name>`'s store (`\@<name>`, or the one rule (a) found: [`store_of`]): its expansion, when it is a parameterless macro (a
 /// `\newcommand`-defined value carries an empty parameter list, as in `\lx@deposit@maketitle`).
 fn store_value(name: &str) -> Result<Option<Tokens>> {
-  let Some(defn) = lookup_definition(&T_CS!(&s!("\\@{name}")))? else {
+  let Some(defn) = lookup_definition(&T_CS!(&s!("\\{}", store_of(name))))? else {
     return Ok(None);
   };
   Ok(match defn.get_expansion() {
