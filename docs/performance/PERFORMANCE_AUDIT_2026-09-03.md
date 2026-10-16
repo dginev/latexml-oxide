@@ -1,6 +1,10 @@
 # Read-only performance and memory audit (2026-09-03)
 
 **Status:** diagnostic handoff; no code changed and no fresh benchmark run.
+**Findings' status (2026-10-16):** F1 done (batch 68p: the discarded serialization removed,
+byte-identical); F7 done (batch 56db, `PERFORMANCE.md` P4); F9's per-call regexes done (now `Lazy`,
+`content.rs`; the search-path clones and registry scans remain). Open: F2, F3, F4, F5, F6, F8, F10.
+The 2026-10-16 study (`PERFORMANCE.md` audit log) rated F6 negligible and F3 a one-witness refactor.
 **Source snapshot:** `c6779fdc128f` plus the working tree as it existed on
 2026-09-03. The tree was not clean, so re-check source locations before acting.
 
@@ -58,6 +62,10 @@ serialization fixed in August, this call is unconditional and remains in the
 current source.
 
 **First patch:** delete only this call. Do not combine it with F2.
+
+**Done (2026-10-16, batch 68p):** removed alone; Perl's `pruneXMDuals` (Document.pm:1565) has no
+such call. Byte-identical; within noise on 1702.06564 (1,502 XMDuals) and four more witnesses
+(`PERFORMANCE.md` audit log, 2026-10-16).
 
 **Expected effect:** lower CPU and allocation traffic in finalization, scaling
 with the number and size of XMDual subtrees. The magnitude is unknown. The

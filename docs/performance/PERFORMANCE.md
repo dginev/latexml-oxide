@@ -182,17 +182,15 @@ The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, x
 
 ### P1 — XMDual pruning: discarded serialization, then repeated global lookup
 
-* **Current reality:** `Document::prune_xmduals` unconditionally calls
-  `node_to_string(&dual)` and discards the returned `String`. Separately,
-  `collapse_xmdual` evaluates `//*[@idref='<dualid>']` from the document for
+* **Current reality:** the discarded `node_to_string(&dual)` in
+  `Document::prune_xmduals` is gone (batch 68p, byte-identical, within noise).
+  `collapse_xmdual` still evaluates `//*[@idref='<dualid>']` from the document for
   each collapsed dual.
 * **Cost shape:** definite serialization/allocation waste, followed by a
   worst-case `O(collapsed_duals * document_nodes)` reference-repair loop. The
   delta has not yet been measured.
-* **Order:** first remove only the discarded serialization and run a
-  same-session byte-identical A/B. Then, as a separate change, build one
-  `idref -> nodes` index and update its buckets when ids move. See audit F1/F2
-  for edge cases and witnesses.
+* **Next:** build one `idref -> nodes` index and update its buckets when ids
+  move. See audit F2 for edge cases and witnesses.
 
 ### P2 — Complete streaming across the core-to-post boundary
 
@@ -264,15 +262,45 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
   `preceding::ltx:section`, a potential per-paragraph document scan. Establish
   intended scope, replace with a structural/keyed test, and require
   byte-identical output on scaling fixtures (audit F8).
-* **File fallback:** the two fallback helpers compile the same regexes per
-  invocation; lookup clones search paths and scans freshly materialized binding
-  registries twice. Use `Lazy<Regex>`, a borrowed path view, and prebuilt exact
-  plus lowercase indexes after collecting miss-count telemetry (audit F9).
+* **File fallback:** the fallback regexes are `Lazy` now (`content.rs`); lookup
+  still clones search paths and scans freshly materialized binding registries
+  twice. Use a borrowed path view and prebuilt exact plus lowercase indexes after
+  collecting miss-count telemetry (audit F9).
 
 
 ---
 
 ## Audit log (periodic passes; newest first)
+
+### 2026-10-16 — pre-rerun tactical pass + memory-fuse audit (batch 68p)
+
+The memory-fuse change the audit proposed (address space against `RLIMIT_AS`) is not in this entry:
+its review found the retry tag placed where CorTeX does not read it, and a paper that completes
+(0804.1983) stopped in streaming pass 1; it lands with its second round.
+
+Basis: the read-only study `~/data/pk_agents/main/agent_reports/2026-10-16_perf_ram_study.md`
+(`perf` is blocked on this host, `perf_event_paranoid=4`: gdb stack samples, `telemetry.json`
+phases, wall/CPU/max RSS from `wait4`). Measured 67int10b-rel vs the batch, release, `--preload=ar5iv.sty
+--nocomments`, A and B back to back on one idle core; every output `cmp`-identical (minus the
+generator lines). One mechanism per commit:
+
+| Lever | Witness | before → after |
+|---|---|---|
+| ObjectDB `Entry::push_new`: a set of the list's Display strings beside the Vec (was a scan formatting every item, O(n²)) | 1702.06564 (html) | 176.1 → 59.7 s; post_scan 109.0 → 0.7 s |
+| Title-ink dedup: one preorder walk to the first `ltx:section` (was `//ltx:p[…][not(preceding::ltx:section)…]` at every sectioning command, Principle 6) | 2208.14314, 2108.10297 | 134.2 → 14.0 s (build 123.0 → 2.8), 151.8 → 37.1 s (build 118.7 → 6.9) |
+| Math-parse dedup: `XM: Hash` (consistent with its `Eq`) indexes the kept trees (was `Vec::contains`, deep `eq` against every kept tree) | 1509.06364 (29,183 parses), 1203.5809 | 156.7 → 9.5 s, 37.8 → 25.3 s (math_parse 27.2 → 15.2) |
+| Root namespace declarations: one walk for every prefix (was one recursion per prefix with a child `Vec` per node) | 8 ordinary gen80 papers × 3, xml | CPU 73.9 → 69.3 s (−6.2 %); gen80 80/80 xml + html identical |
+| `prune_xmduals`' discarded `node_to_string` (audit F1) | 2304.10050, 1702.06564, 3 more | within noise |
+
+Max RSS unchanged within 1 % on every witness. Random check: 98 pop67o papers (`shuf
+--random-source=<(yes 68)`), all five levers, 24-way: out.html byte-identical, exit codes equal, CPU
+323.5 → 286.8 s (−11 %, concurrent, indicative only).
+
+**Not attempted** (the study's (d) list, binding): the `Rewrite::apply_clause` retry (fix the
+rust-libxml subtree-namespace cause instead); a C-allocator swap (closed 2026-10-07); Rc-shared `XM`
+subtrees for the math-parse spikes; lowering `ASF_SECOND_CHANCE_ALTERNATIVES` (changes output); F3
+file-backed core→post; F6; the startup `kpsewhich` spawn; digest runaways and tikzscale (correctness);
+Token under 8 bytes (P5).
 
 ### 2026-10-07 — random 2609 sample profile (pre-rerun perf pass)
 
