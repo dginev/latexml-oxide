@@ -2323,6 +2323,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   identical, 58 changed, all words gained, 0 rc/E/F/W deltas; visible titles 0 → 1 in 53 (hep-th0010274's print beside
   its emptied cover, hep-th0501109, 1802.04445 among them), none lost.
 
+- **68v** (undefined-CS binding gaps: 12 single-error clusters, run 353-365, rc67v/clusters). (1) `\symAMSb` (197
+  papers; nyjm.cls 2401.06615, cedram.cls 2105.03188, myart.cls 1506.02470, fcaa-var): amsart's amsfonts test
+  (amsart.cls:338-350) copied into raw classes failed — `\try@load@fontshape` was empty, `\DeclareFontShape` a no-op
+  and `\fontencoding{U}` fell back to OT1 — so amsfonts never loaded; now latex.ltx's (:10605-10620, :10279-10305) and
+  `U` keeps its name (OXIDIZED_DESIGN_DIVERGENCES #645, KNOWN_PERL_ERRORS #845; repro
+  fonts-nfss/amsfonts_try_load_fontshape).
+  Guards `perfect_kernel_batch68v`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

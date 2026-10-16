@@ -18332,3 +18332,19 @@ the numbered forms). Repro class-bindings/apa6_numbered_author_affiliation_forms
 `perfect_kernel_batch68u::{apa6_numbered_authors_carry_the_affiliation_of_their_number,
 apa_numbered_authors_supersede_the_one_author_forms, apa6_one_author_line_with_numbered_affiliations_carries_the_first,
 beilstein_author_with_marks_and_email_options}` (beilstein.cls:627 `\author[marks][e-mail]{name}`).
+
+### 645. `\try@load@fontshape` reads the family's .fd, `\DeclareFontShape` records the shape, and `\fontencoding{U}` keeps its name
+
+Perl makes `\try@load@fontshape` empty (latex_bootstrap.pool.ltxml:62) and `\DeclareFontShape` a no-op
+(latex_constructs.pool.ltxml:2690), and `\fontencoding{U}` falls back to OT1 for want of a `U` fontmap. amsart's test
+for amsfonts (amsart.cls:338-350 `\begingroup\fontencoding{U}\fontfamily{msa}\try@load@fontshape\endgroup`
+`\@ifundefined{U/msa/m/n}{\ClassError…}{\RequirePackage{amsfonts}}`) therefore failed in every raw class that copies it,
+the class skipped amsfonts, and its `\edef\@dh{\noexpand\mathhexbox{\hexnumber@\symAMSb}67}` met an undefined
+`\symAMSb` (197 papers, run 353-365: nyjm.cls 2401.06615, cedram.cls 2105.03188, myart.cls 1506.02470, fcaa-var). Ours:
+`\try@load@fontshape` is latex.ltx:10605-10620 (an unknown `\<enc>+<family>` is remembered and `<enc><family>.fd` is
+input, lowercased, else as written; locked as Perl's, latex_bootstrap.rs), `\DeclareFontShape` is latex.ltx:10279-10305
+(arguments under `\nfss@catcodes`, `\<enc>/<family>/<series>/<shape>` defined; sect08.rs), and the `U` encoding has its
+own map, OT1's — the glyphs it decoded through before — beside the per-family `U_msa`/`U_msb` maps (u_fontmap.rs), so
+`\f@encoding` names `U` as latex.ltx's `\fontencoding` does. Left out: the unknown-family error and the series-`m` note
+of `\DeclareFontShape`, `\@font@info` and the "No file" typeout (none is in the dumpless base). KNOWN_PERL_ERRORS #845.
+Repro fonts-nfss/amsfonts_try_load_fontshape; guard `perfect_kernel_batch68v::batch68v_try_load_fontshape_finds_amsfonts`.

@@ -60,7 +60,18 @@ LoadDefinitions!({
   // groups; Perl gives `equation1`/`equation1.1`. No loop is possible:
   // `\newcounter` is the locked primitive, never latex.ltx's macro.
   DefMacro!("\\@definecounter", "\\newcounter", locked => true);
-  DefMacro!("\\try@load@fontshape", "", locked => true);
+  // Perl defines `\try@load@fontshape` empty (latex_bootstrap.pool.ltxml:62, "different font handling"). Ours is
+  // latex.ltx:10605-10620: when the family is not known (`\<enc>+<family>`), remember it and input
+  // `<enc><family>.fd`, lowercased, else as written — the .fd's `\DeclareFontFamily`/`\DeclareFontShape`
+  // (sect08.rs) declare `\<enc>/<family>/<series>/<shape>`, which is what amsart-derived classes test to decide
+  // whether to load amsfonts (amsart.cls:338-350 `\fontencoding{U}\fontfamily{msa}\try@load@fontshape`
+  // `\@ifundefined{U/msa/m/n}`; nyjm.cls 2401.06615, cedram.cls 2105.03188, myart.cls 1506.02470: with it empty
+  // the class skipped amsfonts and `\symAMSb` was undefined). OXIDIZED_DESIGN_DIVERGENCES #645. The kernel's
+  // `\@font@info` note and `\@input@`'s "No file" typeout are left out (neither is in the dumpless base).
+  // Locked as in Perl, so latex.ltx's raw copy does not replace it in the format build.
+  DefMacro!("\\try@load@fontshape",
+    r"\expandafter\ifx\csname\f@encoding+\f@family\endcsname\relax\global\expandafter\let\csname\f@encoding+\f@family\endcsname\@empty\nfss@catcodes\let\nfss@catcodes\relax\edef\reserved@a{\lowercase{\noexpand\InputIfFileExists{\f@encoding\f@family.fd}}}\reserved@a\relax{\InputIfFileExists{\f@encoding\f@family.fd}{}{}}\fi",
+    locked => true);
   DefMacro!("\\define@newfont", "", locked => true);
 
   //======================================================================

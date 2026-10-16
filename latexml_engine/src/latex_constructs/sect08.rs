@@ -879,8 +879,19 @@ pub(crate) fn load() -> Result<()> {
     def_macro(cs_tok, None, Tokens!(T_CS!("\\relax")), None)?;
   });
   def_primitive_noop("\\DeclareErrorFont{}{}{}{}{}")?;
-  // Font declaration stubs (Perl latex_constructs.pool.ltxml)
-  def_primitive_noop("\\DeclareFontShape{}{}{}{}{}{}")?;
+  // Perl makes `\DeclareFontShape` a no-op (latex_constructs.pool.ltxml:2690). Ours is latex.ltx:10279-10305: the
+  // arguments read under `\nfss@catcodes`, and `\<enc>/<family>/<series>/<shape>` records the shape — the name
+  // classes test for font info (`\@ifundefined{U/msa/m/n}` after `\try@load@fontshape`, latex_bootstrap.rs;
+  // OXIDIZED_DESIGN_DIVERGENCES #645). Left out, as in `\DeclareFontFamily` below: the unknown-family error (it guards
+  // font loading, which LaTeXML does not do; an undeclared family declares nothing) and the series-`m` note.
+  RawTeX!(
+    r"\def\DeclareFontShape{\begingroup\nfss@catcodes\expandafter\endgroup\DeclareFontShape@}%
+      \def\DeclareFontShape@#1#2#3#4#5#6{\expandafter\ifx\csname #1+#2\endcsname\relax\else
+        \expandafter\xdef\csname#1/#2/#3/#4\endcsname{\expandafter\noexpand\csname #5\endcsname}%
+        \def\reserved@a{#6}%
+        \global\expandafter\let\csname#5\expandafter\endcsname
+          \ifx\reserved@a\@empty\@empty\else\reserved@a\fi\fi}"
+  );
   // latex.ltx:10325-10339: `\<enc>+<family>` holds the family's loading code, and its existence is what tells
   // `\selectfont` that LaTeX knows the family (`\try@load@fontshape`, sect13.rs). The kernel's unknown-encoding error
   // is left out: it guards font loading, which LaTeXML does not do.

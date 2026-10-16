@@ -14323,3 +14323,13 @@ math_common.pool.ltxml:84 defines `\|` as a math atom (`DefMathI`); in LaTeX it 
 infinite expansion (`Fatal:Timeout:Recursion` in Rust). beilstein.cls:264 has the line (from bpchem.sty); witness
 2604.06890. Rust (68u): `\|` is a protected macro over the atom `\lx@math@Vert` (OXIDIZED_DESIGN_DIVERGENCES #642).
 Guard `perfect_kernel_batch68u::a_robust_double_bar_over_its_expansion_typesets_it`.
+
+## 845. A raw amsart-derived class never loads amsfonts: `\try@load@fontshape` is empty
+
+latex_bootstrap.pool.ltxml:62 defines `\try@load@fontshape` empty and latex_constructs.pool.ltxml:2690 makes
+`\DeclareFontShape` a no-op, so the font-shape name LaTeX tests for an installed font family is never defined.
+Minimal trigger: `\documentclass{article}\makeatletter\begingroup\fontencoding{U}\fontfamily{msa}\try@load@fontshape
+\endgroup\@ifundefined{U/msa/m/n}{}{\RequirePackage{amsfonts}}\edef\x{\hexnumber@\symAMSb}` — pdflatex reads umsa.fd and
+loads amsfonts; Perl `Error:undefined:\symAMSb`. amsart.cls:338-350 has this test; copies of it (nyjm.cls 2401.06615,
+cedram.cls 2105.03188, myart.cls 1506.02470, fcaa-var.cls) loaded raw skip amsfonts. Fixed in Rust (68v,
+OXIDIZED_DESIGN_DIVERGENCES #645); guard `perfect_kernel_batch68v::batch68v_try_load_fontshape_finds_amsfonts`.
