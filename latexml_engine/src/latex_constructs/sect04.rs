@@ -84,8 +84,11 @@ pub(crate) fn load() -> Result<()> {
 
   def_macro_noop("\\@startsection@hook")?;
 
+  // latex.ltx:17332 `\newcount\c@secnumdepth` leaves it 0, as Perl does (latex_base.pool.ltxml:312): the class sets
+  // it (article.cls 3, report/book 2), and letter.cls sets nothing, so a letter's `\section` is unnumbered and needs no
+  // `\thesubsection` (the rawclasses lever's 11 letter papers, 0907.4214; regression study R8). The kernel's own 3
+  // (Rust-only since #220) numbered them. Guard `perfect_kernel_batch68u::a_letter_section_is_unnumbered`.
   NewCounter!("secnumdepth");
-  SetCounter!("secnumdepth", Number::new(3));
   DefMacro!(
     "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
     sub[(type_tokens, level_arg, _ignore3, _ignore4, _ignore5, _ignore6, flag)] {

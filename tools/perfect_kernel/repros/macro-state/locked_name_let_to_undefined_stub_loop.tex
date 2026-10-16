@@ -1,0 +1,17 @@
+% witness: 2006.07968 (apa6: \let\cite\parencite, \parencite undefined), 1509.06375 (pittetd.cls:313
+%   \AtBeginDocument{\let\maketitle\HyOrg@maketitle})
+% oracle: pdflatex 1 error ("Undefined control sequence" at \cite), "Text x more text." typeset
+% engines: rust=101+Fatal perl=1 (2026-10-16; Perl loops the same way on its own locked names:
+%   \let\section\nonexist gives 101 + Fatal, KNOWN_PERL_ERRORS #841)
+% expect: 1 error; text "Text" and "more text." present
+% status: GREEN (batch 68u)
+% mechanism: a document \let of a locked binding (\cite) to an undefined cs clears it; the Stomach's
+%   undefined-token recovery (generate_error_stub, state.rs) installed its <ltx:ERROR/> stub through
+%   install_definition, whose lock refused it, so the re-read token was undefined again until TooManyErrors
+%   (Perl Stomach.pm:236-237 invokeToken_undefined unreads after State.pm:509's refused install). The stub is
+%   engine recovery, not a source redefinition: it installs past the lock (OXIDIZED_DESIGN #641).
+\documentclass{article}
+\let\cite\parencite
+\begin{document}
+Text \cite{x} more text.
+\end{document}

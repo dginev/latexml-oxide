@@ -1639,25 +1639,26 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       s!("The token {} is not defined.", token.stringify()),
       "Defining it now as with \\newif"
     );
-    install_definition(
+    let setters = [
       Expandable::new(
         T_CS!(s!("\\{}true", name)),
         None,
         Some(s!("\\let{}\\iftrue", cs).into()),
         None,
       )?,
-      Some(Scope::Global),
-    );
-    install_definition(
       Expandable::new(
         T_CS!(s!("\\{}false", name)),
         None,
         Some(s!("\\let{}\\iffalse", cs).into()),
         None,
       )?,
-      Some(Scope::Global),
-    );
-    let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
+    ];
+    past_the_lock(|| {
+      for setter in setters {
+        install_definition(setter, Some(Scope::Global));
+      }
+      let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
+    });
     crate::util::logger::note_held_stub(*token);
   } else {
     // Allow suppression of undefined errors during bulk loading (e.g., expl3-code.tex)
@@ -1670,17 +1671,15 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
         "Defining it now as <ltx:ERROR/>"
       );
     }
-    install_definition(
-      Constructor {
-        cs: *token,
-        replacement: Some(Rc::new(move |document, _args, _props| {
-          document.make_error("undefined", &cs)
-        })),
-        ..Constructor::default()
-      },
-      //TODO: sizer => "X"),
-      Some(Scope::Global),
-    );
+    let stub = Constructor {
+      cs: *token,
+      replacement: Some(Rc::new(move |document, _args, _props| {
+        document.make_error("undefined", &cs)
+      })),
+      ..Constructor::default()
+    };
+    //TODO: sizer => "X"),
+    past_the_lock(|| install_definition(stub, Some(Scope::Global)));
     // The stub's provenance travels with the NAME (tex.web §370 discards an
     // undefined cs inside `\csname…\endcsname`; a defined non-expandable one
     // takes the §373 `back_error` path): `<cs>:error@stub`, read by
@@ -1694,6 +1693,22 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
     crate::util::logger::note_held_stub(*token);
   }
   Ok(*token)
+}
+
+/// Run [`generate_error_stub`]'s installs with the state unlocked. The stub is the engine's recovery from an undefined
+/// control sequence, not a source redefinition, so a lock does not refuse it: a document's `\let` of a locked binding to
+/// an undefined name (`\let\cite\parencite` with `\parencite` undefined, 2006.07968's apa6 paper; pittetd.cls:313
+/// `\let\maketitle\HyOrg@maketitle`, 1509.06375) clears the binding, and a refused stub left the name undefined for the
+/// Stomach's retry (stomach.rs, Perl Stomach.pm:236-237 `invokeToken_undefined`), which raised the same Error until
+/// TooManyErrors. Installed, the name gives one Error and its `<ltx:ERROR/>`, as pdflatex gives one "Undefined control
+/// sequence" per use. Perl refuses its own locked names' stubs the same way (State.pm:509; `\let\section\nonexist`:
+/// 101 Errors and Fatal, KNOWN_PERL_ERRORS #841). OXIDIZED_DESIGN_DIVERGENCES #641; repro
+/// macro-state/locked_name_let_to_undefined_stub_loop; guard
+/// `perfect_kernel_batch68u::a_locked_name_let_to_an_undefined_one_errs_once`.
+fn past_the_lock(install: impl FnOnce()) {
+  local_state_unlocked(true);
+  install();
+  expire_state_unlocked();
 }
 
 /// Undo [`generate_error_stub`]: `token` (and a stubbed `\ifX`'s `\Xtrue`/`\Xfalse`) is undefined
@@ -1730,18 +1745,17 @@ pub fn is_error_stub(token: &Token) -> bool {
 /// `generate_error_stub` installs for undefined *commands*, so undefined
 /// *environments* (`\begin{undefinedenv}`) leave the same visible
 /// `<ltx:ERROR>` marker as Perl instead of silently vanishing from the output.
+/// Like that stub, it installs past a lock ([`past_the_lock`]).
 pub fn install_undefined_error_constructor(token: Token, content: &str) {
   let content = content.to_string();
-  install_definition(
-    Constructor {
-      cs: token,
-      replacement: Some(Rc::new(move |document, _args, _props| {
-        document.make_error("undefined", &content)
-      })),
-      ..Constructor::default()
-    },
-    Some(Scope::Global),
-  );
+  let stub = Constructor {
+    cs: token,
+    replacement: Some(Rc::new(move |document, _args, _props| {
+      document.make_error("undefined", &content)
+    })),
+    ..Constructor::default()
+  };
+  past_the_lock(|| install_definition(stub, Some(Scope::Global)));
 }
 
 /// Does a provide-only load ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)) decline this definition

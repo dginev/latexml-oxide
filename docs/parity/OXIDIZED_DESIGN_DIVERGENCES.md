@@ -18034,6 +18034,63 @@ math0405036), `,\␣\&\␣` separators (math0408166, math0410384) and a `\footno
 more by the same authors) stay one creator, flagged. Guards `perfect_kernel_batch68r::{amsppt_author_list_is_one_creator_a_name,
 amsppt_extra_address_is_shared, amsppt_author_blocks_pair_their_addresses, amsppt_author_byline_is_kept}`.
 
+### 629. A refused printing `\title` called inside the document's `{titlepage}` prints there (Perl: no visible title)
+
+When a class, style or the document `\def`s a `\title` that typesets its argument where it stands instead of storing
+it — cernart.cls:217 `\def\title#1{\vskip1em\begin{center}\normalsize\bf#1\end{center}\vskip1.5em}`, asp2006.sty:157,
+pdproc.sty:61, gr-qc9404034.tex:96 `\def\title#1{\begin{center}{\large #1}\end{center}}` — the lock refuses the
+definition (state.rs, `\lx@dropped@title`, `\title:redefined`) and the kernel's `\title` keeps the title for the
+frontmatter. Outside a titlepage that is the PDF's output: the frontmatter's title is placed first, where those
+setters print. Inside `{titlepage}` pdflatex prints the title on the cover, and the HTML shows the cover in place of
+the document's `<ltx:title>` (LaTeXML-structure-xhtml.xsl:374-375, Perl's :358-359), so Perl and the base showed no
+title at all (KNOWN_PERL_ERRORS #828). Now the `{titlepage}` the document lays out (not a `\maketitle` deposit's,
+which builds no `ltx:titlepage`) sets `lx_titlepage_cover`, and a `\title` called in it runs the class's own refused
+`\title` at the call, its output kept on the cover (sect05.rs `titlepage_class_call`, `titlepage_class_run`, Info
+`frontmatter:titlepage`), then the kernel's part (the structured title stays: metadata, hidden by the XSLT rule),
+whose vocabulary is defined (`dropped_class_setter`). Whatever else the class's `\title` does: a run that typesets
+nothing (a frontmatter setter, dp_delphi.cls `\def\title#1{\xdef\@title{\@title \par #1}}`, hep-ex0404013) shows
+nothing at its call and is undone — its assignments rolled back (`AssignmentJournalGuard::rollback`), its diagnostics
+held and discarded — so it keeps its value only through the kernel's `\title`, as outside a titlepage; one that stores
+and prints (`\def\title#1{\gdef\@title{#1}\centerline{#1}}`, review probe p2; cernphprep.cls:285, the CERN preprint
+header and title of the ALICE/COMPASS papers 1205.3963, 1205.5121, 1503.00681, 2112.00610) keeps what it printed and
+stored, as in pdflatex (round 1 ran only a `\title` that stores nothing, `class_command_stores`, and showed 0 titles there). A class
+`\title` that calls a saved kernel `\title` hands the title to the frontmatter once (`\lx@titlepage@kernel` skips the
+kernel's part); when no assignment journal can open, a `\title` that may store is not run. The print is the class's
+typesetting of an argument the kernel's copy also digests, so the kernel's copy owns the argument's side effects:
+`\thanks`, `\footnote`, `\label` and `\index` are `\@gobble`d and `\footnotemark` is `\relax` during the print
+(`COVER_PRINT_GOBBLED`, the list of the `\maketitle` deposits and of `replay_class_setter`) — before, a `\label` in the
+title argument labelled `<ltx:document>` (a `\ref` rendered the title text, pdflatex "See .") and a `\thanks` made a
+second `ltx:pubnote` (probe p5). The bindings' own `\title[]{}` (revtex4_support — `\documentstyle{revtex}`,
+gr-qc9404034 —, ams_support, iopart_support, mn2e_support) take the same rule (`\lx@titlepage@class@call`). Only
+`\title`: the XSLT hides no other field beside a titlepage, so a refused printing `\author`/`\address` there
+(gr-qc9404034.tex:97-98, cernart.cls:220) is not run — the frontmatter's `ltx:creator` is its one displayed copy. The
+title-ink dedup never searches a document with a titlepage (#146).
+
+The print stays only on a cover that stays one. It is built between two empty Rust-only marker elements
+(`\lx@cover@title@begin`/`@end`, reverting as nothing; `ltx:_CoverTitleBegin_Capture_`/`ltx:_CoverTitleEnd_Capture_`,
+`base_utilities.rs` `COVER_TITLE_BEGIN`/`COVER_TITLE_END`): `_Capture_`-suffixed, so the model admits them anywhere
+and no paragraph opens or closes for them, and the paragraph trims reach past them (document.rs
+`is_empty_capture_mark`; the frontmatter position mark too) as if they were not there. One helper,
+`drop_cover_title_ink(scope)`, removes everything between each pair in document order — elements and bare text alike
+(`\def\title#1{#1}` in the cover's open paragraph, probe p9) — with the marks and the wrappers left empty; an unmatched
+mark goes alone. It is called wherever a `{titlepage}` stops standing in for the document's `<ltx:title>`, which the
+HTML then displays: `\unwind@titlepage` (`\begin{titlepage}\title{X}\maketitle\end{titlepage}`, probe p13: 2 visible
+titles in round 1), `demote_stranded_titlepage` (a titlepage after body content, #257), and at `\end{document}`
+`settle_cover_title_ink` (`\lx@finalize@document`), by the XSLT's own test: while the document has a top-level
+`ltx:titlepage` (its title hidden) the marks are removed and the print kept, wherever the cover's typesetting put it
+(hep-th0010274's `\vbox{\center\LARGE{#1}}` print set beside an emptied cover); without one (a titlepage nested in a
+section or box, every cover unwound or demoted) the print goes.
+A stray mark never reaches the output (the core finalize drops an empty `_Capture_` element). Witnesses 0904.2708
+(cernart), gr-qc9404034: 0 → 1 visible title, 0 errors either side. Repros sectioning-frontmatter/
+{titlepage_refused_title_prints_on_the_cover, titlepage_unwound_cover_drops_the_class_title_print,
+titlepage_demoted_cover_drops_the_class_title_text, titlepage_class_title_print_gobbles_label_and_thanks,
+titlepage_storing_class_title_prints_on_the_cover}; guards `perfect_kernel_batch68t::{titlepage_refused_title_prints_on_the_cover,
+refused_title_outside_titlepage_is_the_frontmatter_title, refused_storing_title_in_titlepage_prints_nothing,
+binding_title_in_titlepage_runs_the_refused_printing_title, stranded_titlepage_drops_the_class_title_print,
+titlepage_unwound_cover_drops_the_class_title_print, titlepage_demoted_cover_drops_the_class_title_text,
+titlepage_class_title_print_gobbles_label_and_thanks, titlepage_storing_class_title_prints_on_the_cover,
+titlepage_class_title_calling_the_kernel_title_adds_it_once}` (HTML: one visible title).
+
 ### 634. A raw class's keywords reach the frontmatter: the `\keywords` its abstract defines for its body, and a `{keywords}` that only typesets a label (Perl: undefined, or the class's run-in heading)
 
 **Perl behavior**: the kernel's `{abstract}` is locked (latex_constructs.pool.ltxml:1130-1142: `\begin{abstract}` is
@@ -18155,59 +18212,39 @@ order is the PDF's (Body / Table 1: Cap / A foot note), accepted by the main ses
 mark. Guards `perfect_kernel_batch68q::{unvbox_lastbox_peel_loop, unvbox_splice_closes_what_its_list_opened}`,
 `box_primitives::{lastbox, unpack}`, `box_test`.
 
-### 629. A refused printing `\title` called inside the document's `{titlepage}` prints there (Perl: no visible title)
+### 641. The undefined-token error stub installs past a lock (Perl: refused, the token loops to TooManyErrors)
 
-When a class, style or the document `\def`s a `\title` that typesets its argument where it stands instead of storing
-it — cernart.cls:217 `\def\title#1{\vskip1em\begin{center}\normalsize\bf#1\end{center}\vskip1.5em}`, asp2006.sty:157,
-pdproc.sty:61, gr-qc9404034.tex:96 `\def\title#1{\begin{center}{\large #1}\end{center}}` — the lock refuses the
-definition (state.rs, `\lx@dropped@title`, `\title:redefined`) and the kernel's `\title` keeps the title for the
-frontmatter. Outside a titlepage that is the PDF's output: the frontmatter's title is placed first, where those
-setters print. Inside `{titlepage}` pdflatex prints the title on the cover, and the HTML shows the cover in place of
-the document's `<ltx:title>` (LaTeXML-structure-xhtml.xsl:374-375, Perl's :358-359), so Perl and the base showed no
-title at all (KNOWN_PERL_ERRORS #828). Now the `{titlepage}` the document lays out (not a `\maketitle` deposit's,
-which builds no `ltx:titlepage`) sets `lx_titlepage_cover`, and a `\title` called in it runs the class's own refused
-`\title` at the call, its output kept on the cover (sect05.rs `titlepage_class_call`, `titlepage_class_run`, Info
-`frontmatter:titlepage`), then the kernel's part (the structured title stays: metadata, hidden by the XSLT rule),
-whose vocabulary is defined (`dropped_class_setter`). Whatever else the class's `\title` does: a run that typesets
-nothing (a frontmatter setter, dp_delphi.cls `\def\title#1{\xdef\@title{\@title \par #1}}`, hep-ex0404013) shows
-nothing at its call and is undone — its assignments rolled back (`AssignmentJournalGuard::rollback`), its diagnostics
-held and discarded — so it keeps its value only through the kernel's `\title`, as outside a titlepage; one that stores
-and prints (`\def\title#1{\gdef\@title{#1}\centerline{#1}}`, review probe p2; cernphprep.cls:285, the CERN preprint
-header and title of the ALICE/COMPASS papers 1205.3963, 1205.5121, 1503.00681, 2112.00610) keeps what it printed and
-stored, as in pdflatex (round 1 ran only a `\title` that stores nothing, `class_command_stores`, and showed 0 titles there). A class
-`\title` that calls a saved kernel `\title` hands the title to the frontmatter once (`\lx@titlepage@kernel` skips the
-kernel's part); when no assignment journal can open, a `\title` that may store is not run. The print is the class's
-typesetting of an argument the kernel's copy also digests, so the kernel's copy owns the argument's side effects:
-`\thanks`, `\footnote`, `\label` and `\index` are `\@gobble`d and `\footnotemark` is `\relax` during the print
-(`COVER_PRINT_GOBBLED`, the list of the `\maketitle` deposits and of `replay_class_setter`) — before, a `\label` in the
-title argument labelled `<ltx:document>` (a `\ref` rendered the title text, pdflatex "See .") and a `\thanks` made a
-second `ltx:pubnote` (probe p5). The bindings' own `\title[]{}` (revtex4_support — `\documentstyle{revtex}`,
-gr-qc9404034 —, ams_support, iopart_support, mn2e_support) take the same rule (`\lx@titlepage@class@call`). Only
-`\title`: the XSLT hides no other field beside a titlepage, so a refused printing `\author`/`\address` there
-(gr-qc9404034.tex:97-98, cernart.cls:220) is not run — the frontmatter's `ltx:creator` is its one displayed copy. The
-title-ink dedup never searches a document with a titlepage (#146).
+The Stomach's recovery from an undefined control sequence defines it as `<ltx:ERROR/>` and re-reads it (Perl
+State.pm:532-554 `generateErrorStub`, Stomach.pm:234-238 `invokeToken_undefined`). Perl installs the stub through
+`installDefinition`, which refuses a locked name (State.pm:502-517), so a locked binding a `\let` has cleared stays
+undefined and the retry raises the same Error until TooManyErrors (KNOWN_PERL_ERRORS #841).
 
-The print stays only on a cover that stays one. It is built between two empty Rust-only marker elements
-(`\lx@cover@title@begin`/`@end`, reverting as nothing; `ltx:_CoverTitleBegin_Capture_`/`ltx:_CoverTitleEnd_Capture_`,
-`base_utilities.rs` `COVER_TITLE_BEGIN`/`COVER_TITLE_END`): `_Capture_`-suffixed, so the model admits them anywhere
-and no paragraph opens or closes for them, and the paragraph trims reach past them (document.rs
-`is_empty_capture_mark`; the frontmatter position mark too) as if they were not there. One helper,
-`drop_cover_title_ink(scope)`, removes everything between each pair in document order — elements and bare text alike
-(`\def\title#1{#1}` in the cover's open paragraph, probe p9) — with the marks and the wrappers left empty; an unmatched
-mark goes alone. It is called wherever a `{titlepage}` stops standing in for the document's `<ltx:title>`, which the
-HTML then displays: `\unwind@titlepage` (`\begin{titlepage}\title{X}\maketitle\end{titlepage}`, probe p13: 2 visible
-titles in round 1), `demote_stranded_titlepage` (a titlepage after body content, #257), and at `\end{document}`
-`settle_cover_title_ink` (`\lx@finalize@document`), by the XSLT's own test: while the document has a top-level
-`ltx:titlepage` (its title hidden) the marks are removed and the print kept, wherever the cover's typesetting put it
-(hep-th0010274's `\vbox{\center\LARGE{#1}}` print set beside an emptied cover); without one (a titlepage nested in a
-section or box, every cover unwound or demoted) the print goes.
-A stray mark never reaches the output (the core finalize drops an empty `_Capture_` element). Witnesses 0904.2708
-(cernart), gr-qc9404034: 0 → 1 visible title, 0 errors either side. Repros sectioning-frontmatter/
-{titlepage_refused_title_prints_on_the_cover, titlepage_unwound_cover_drops_the_class_title_print,
-titlepage_demoted_cover_drops_the_class_title_text, titlepage_class_title_print_gobbles_label_and_thanks,
-titlepage_storing_class_title_prints_on_the_cover}; guards `perfect_kernel_batch68t::{titlepage_refused_title_prints_on_the_cover,
-refused_title_outside_titlepage_is_the_frontmatter_title, refused_storing_title_in_titlepage_prints_nothing,
-binding_title_in_titlepage_runs_the_refused_printing_title, stranded_titlepage_drops_the_class_title_print,
-titlepage_unwound_cover_drops_the_class_title_print, titlepage_demoted_cover_drops_the_class_title_text,
-titlepage_class_title_print_gobbles_label_and_thanks, titlepage_storing_class_title_prints_on_the_cover,
-titlepage_class_title_calling_the_kernel_title_adds_it_once}` (HTML: one visible title).
+**Rust** (68u): the stub is the engine's recovery, not a source redefinition, so `generate_error_stub` (and the
+undefined-environment stub, `install_undefined_error_constructor`) install it with the state unlocked
+(state.rs `past_the_lock`): one Error per name and its `<ltx:ERROR/>`, as pdflatex gives one "Undefined control
+sequence" per use, and the text after it is typeset. The binding stays cleared, as the `\let` left it; the lock
+itself is unchanged, so a later redefinition is still judged by it. Witnesses (the rawclasses lever, study
+agent_reports/2026-10-15_rc_rawcls_regressions.md R4): 2006.07968 (apa6, the document's `\let\cite\parencite` with
+`\parencite` undefined: 507 Errors and Fatal → 1, as pdflatex), 1509.06375 (pittetd.cls:313
+`\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` before 67q's `\HyOrg@maketitle`), 2311.14793, 2501.10505, 2510.26876
+(eulerpx.sty:130-132 `\let\mathscr=\undefined` then a `\DeclareMathAlphabet\mathscr` the kernel's lock refuses: 511
+Errors and Fatal → 1; 2203.12624 the same, then a separate `multlined` root). Repro
+macro-state/locked_name_let_to_undefined_stub_loop; guards
+`perfect_kernel_batch68u::{a_locked_name_let_to_an_undefined_one_errs_once, a_locked_maketitle_let_to_an_undefined_one_errs_once}`.
+
+### 642. `\|` is a protected macro over the double-bar atom, as LaTeX's `\|` is (Perl: the atom itself)
+
+LaTeX defines `\|` with `\DeclareMathDelimiter{\|}` (fontmath.ltx:467), which `\set@mathdelimiter` (latex.ltx:13641-13645)
+makes `\protected\xdef\|{\delimiter"026B30D }`: one expansion step gives the body. beilstein.cls:264 (copied from
+bpchem.sty), in an `\AtBeginDocument` hook, relies on it: `\expandafter\DeclareRobustCommand\expandafter\|\expandafter
+{\|}`. Perl's `\|` is the unexpandable math atom (math_common.pool.ltxml:84 `DefMathI('\|', …)`), so that line defines
+`\|` as itself and its first use loops (`Fatal:Timeout:Recursion`; KNOWN_PERL_ERRORS #842).
+
+**Rust** (68u): the atom (VERTBAR `∥`, name `||`) is the internal `\lx@math@Vert`, whose `alias` keeps the reversion
+`\|`, and `\|` is a protected macro expanding to it — the shape of `\{` over `\lx@math@lbrace` (math_common.rs).
+`\Vert` is still `\let` to `\|`; `\left\|`, `\bigl\|` and an infix `\|` reach the same atom (`tex_math::DELIMITER_MAP`
+names the internal too), so their XML is unchanged; `\meaning\|` is `\protected macro:->\lx@math@Vert ` where pdflatex
+prints `\protected macro:->\delimiter "026B30D `. Witness 2604.06890 (beilstein, the rawclasses lever: 7k words → 0
+under the raw class, now 0 errors and its text). Repro
+expansion-primitives/robust_double_bar_over_its_expansion_beilstein; guards
+`perfect_kernel_batch68u::{a_robust_double_bar_over_its_expansion_typesets_it, double_bar_is_a_protected_macro_over_the_atom}`.

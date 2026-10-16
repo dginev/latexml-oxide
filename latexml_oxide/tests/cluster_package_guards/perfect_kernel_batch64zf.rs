@@ -721,18 +721,15 @@ fn doi_sty_doi_is_no_warning() {
     "\\documentclass{apa6}\n\\usepackage{doi}\n\\title{T}\\shorttitle{T}\\author{A}\\affiliation{B}\n\\begin{document}\n\\maketitle\nSee \\doi{10.1000/j_x.2002}.\n\\end{document}\n",
   );
   assert_eq!(error_count(&log), 0, "{log}");
-  // The one Warning is apa6's missing binding (OmniBus stands in).
-  assert_eq!(warning_count(&log), 1, "{log}");
-  assert_eq!(
-    lines_with(&log, "Warning:missing_file:apa6").len(),
-    1,
-    "{log}"
-  );
+  // apa6 has no binding and is read raw under the arXiv profile (rawclasses, 67v): no Warning; before 67v its one
+  // Warning was the missing binding (OmniBus stood in).
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_element(
     &xml,
     "p",
     &["xml:id=\"p1.1\""],
-    "<p xml:id=\"p1.1\">See <ref href=\"https://doi.org/10.1000/j_x.2002\">10.1000/j_x.2002</ref>.</p>",
+    // doi.sty's own `\doitext` "doi:" (pdflatex: "See doi:10.1000/j_x.2002."), now that apa6 is read raw
+    "<p xml:id=\"p1.1\">See doi:<ref class=\"ltx_href\" href=\"https://doi.org/10.1000/j_x.2002\">10.1000/j_x.2002</ref>.</p>",
   );
 }
 

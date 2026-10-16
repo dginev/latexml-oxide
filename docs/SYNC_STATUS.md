@@ -2623,10 +2623,40 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   binding (paper, ptptex, nature, jpsj2, apa6, jacow, smfart, artikel1, …) + 827 `\documentstyle{ptptex}`; lever
   off/on over 3,345 of them: error-free 1,485 → 3,079, errors 10,172 → 4,316, words +1.4%. Data:
   `~/data/pk_agents/main/rawcls3/`; regression study agent_reports/2026-10-15_rc_rawcls_regressions.md (R1 → 67r,
-  R2/R5 → 67s, R3 → 67q, R9 → 67t; open: R8 kernel `secnumdepth` default, 11 papers; R7 caption machinery from class
-  hooks, 7; R4 error stub vs a lock, 6 Fatals; R6 `\|` as a macro, 1). Guard
+  R2/R5 → 67s, R3 → 67q, R9 → 67t, R4/R6/R8 → 68u; open: R7 caption machinery from class hooks, 7). Guard
   `perfect_kernel_batch67v::a_tex_live_class_without_a_binding_is_interpreted`. Validation plan: sandbox 2605/2606
   reruns vs runs 354/355, then the full arXiv rerun, prev-OK → fail attributed by lever off/on.
+- **68u** (the rawclasses lever's last roots; study agent_reports/2026-10-15_rc_rawcls_regressions.md): (R4) the
+  undefined-token error stub installs past a lock (state.rs `past_the_lock`, also the undefined-environment stub), so a
+  locked binding a `\let` cleared errs once instead of looping to TooManyErrors (OXIDIZED_DESIGN_DIVERGENCES #641,
+  KNOWN_PERL_ERRORS #841; 2006.07968 apa6 `\let\cite\parencite` 507+Fatal → 1 as pdflatex, 1509.06375 pittetd; what
+  cleared `\mathscr` in 2311.14793, 2501.10505, 2510.26876 is eulerpx.sty:130-132 `\let\mathscr=\undefined` then a
+  `\DeclareMathAlphabet\mathscr` the kernel lock refuses: 511+Fatal → 1, pdflatex 0 — residual below; 2203.12624 the
+  same, then a separate `multlined`-in-`equation` root, 101 + Fatal, pdflatex clean). (R6) `\|` is a protected macro
+  over the atom `\lx@math@Vert`, as fontmath.ltx:467 / latex.ltx:13641-13645 make it, so beilstein.cls:264's
+  `\expandafter\DeclareRobustCommand\expandafter\|\expandafter{\|}` no longer recurses (#642, KPE #842; 2604.06890
+  51 Errors under OmniBus, Fatal raw → 0). (R8) the kernel leaves `secnumdepth` 0 as latex.ltx:17332 and Perl
+  latex_base.pool.ltxml:312 do (sect04.rs; its 3 was Rust-only), so letter.cls sections are unnumbered (the 24
+  b_regressions letter papers 0 errors, 0907.4214; the 156 class bindings' numbering unchanged but slides, brief,
+  g-brief, g-brief2, which define no `\section`). (R4 side) a class setter replay runs no frontmatter fallback
+  (sect05.rs `replay_class_setter`): paper.cls:624's `\abstract`, replayed for jheppub's `\abstract{…}`, ran a
+  `\subsubsection*` whose `\@startsection@hook` emitted the title and authors in the preamble (2012.12760,
+  2207.06852). Guards `perfect_kernel_batch68u`; repros macro-state/locked_name_let_to_undefined_stub_loop,
+  expansion-primitives/robust_double_bar_over_its_expansion_beilstein, sectioning-frontmatter/{letter_section_is_unnumbered,
+  class_setter_replay_runs_no_frontmatter_fallback_jheppub}. A/B over all 3,349 list3362 papers (67int15 vs 68u
+  without the replay fix): error-free 1,491 → 3,157, errors 9,146 → 1,282, Fatals 12 → 8, words +1.4 %, contacts
+  2,420 → 7,973, keywords 425 → 677, classification 392 → 2 (into `<keywords>`), creators 12,394 → 11,052 (A
+  over-split), proofs 7,838 → 7,701, captions 26,877 → 27,087. Open (the lever's residual): apa6/apa affiliations and
+  author notes (76 papers lose the text: apa6.cls:760/779 store into `\@affil`/`\@acks`, which only its refused
+  `\maketitle` prints, and the replay gate rejects that body for its `\@ifundefined{@journal}`-guarded `\@journal`;
+  pruning the dead branch lets apa7's man-mode `\maketitle` replay a `\section*{Abstract}` and a title section that
+  swallow the body — dead end; repro sectioning-frontmatter/maketitle_replay_gate_ifundefined_branch_apa6, RED;
+  beilstein, lni affiliations alike); tufte-common.def:608-615 `\date` (store + `\thedate`, not a pure store; 25
+  tufte papers lose the date; SHARED); thcc.sty:83 `\th@ccproof` (theorem.sty custom style: cc's proofs are numbered
+  theorems "Proof 1", pdflatex "Proof.", 14 papers, −116 proofs); cclayout.sty:73 `{keywords}` collects its body
+  for `\maketitle` (lost); smfart/nrc/letter/saj.sty addresses stay class-typeset body text (semantic only); a
+  plain-locked name a file `\let` clears and then redefines (eulerpx `\mathscr`) keeps 1 Error where pdflatex has 0;
+  ctexart (43 papers) words 592,004 → 592,543, error-free 24 → 13 (fandol, as pdflatex).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

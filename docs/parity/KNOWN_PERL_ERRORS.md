@@ -14239,6 +14239,29 @@ byte-identical; newpxmath, whose round-1 binding loaded txfonts: 2103.00564, 210
 package-bindings/{newtxmath,newpxmath}_coloneq_over_mathtools; guards
 `perfect_kernel_batch68j::newtxmath_coloneq_over_mathtools`, `::newpxmath_coloneq_over_mathtools`.
 
+## 828. A refused printing `\title` inside `{titlepage}` prints nothing, and the XSLT hides the document title: no visible title
+
+Perl's locked `\title` (latex_constructs.pool.ltxml:1059, `{titlepage}` :1167) refuses a class's or document's `\def\title` (State.pm:502-517)
+and only stores the title; inside `{titlepage}` the setter pdflatex runs there would have printed it on the cover, and
+LaTeXML-structure-xhtml.xsl:358-359 does not display a document `ltx:title` that has an `ltx:titlepage` sibling, so the
+HTML shows no title. Minimal trigger (pdflatex: the title on the cover; Perl 0 errors, no visible title):
+
+```latex
+\documentclass{article}
+\def\title#1{\begin{center}{\large #1}\end{center}}
+\begin{document}
+\begin{titlepage}
+\title{Static axisymmetric spacetimes}
+\end{titlepage}
+Text.
+\end{document}
+```
+
+The same for a `\title` that both stores and prints (`\def\title#1{\gdef\@title{#1}\centerline{#1}}`): Perl never runs a
+refused definition, so nothing prints. Rust (68t): the class's own `\title` runs at the call inside the titlepage (a
+run that prints nothing is undone), the kernel keeps the structured title (OXIDIZED_DESIGN_DIVERGENCES #629).
+Witnesses 0904.2708 (cernart.cls:217), gr-qc9404034.
+
 ## 835. Under raw class loading, a `\keywords` a class defines only inside its abstract is undefined
 
 latex_constructs.pool.ltxml:1130-1142 makes `\begin{abstract}` the kernel's `\lx@begin@abstract` and locks `\abstract`,
@@ -14279,25 +14302,24 @@ semantic_inference_premises}`, `box_primitives::{lastbox, unpack}`. Residual (R7
 interline glue, so after `\vbox{\hbox{a}\hbox{b}}` the second round takes "a" where TeX finds the `\baselineskip` glue
 and is void.
 
-## 828. A refused printing `\title` inside `{titlepage}` prints nothing, and the XSLT hides the document title: no visible title
+## 841. A locked name a `\let` cleared loops on its own error stub until TooManyErrors
 
-Perl's locked `\title` (latex_constructs.pool.ltxml:1059, `{titlepage}` :1167) refuses a class's or document's `\def\title` (State.pm:502-517)
-and only stores the title; inside `{titlepage}` the setter pdflatex runs there would have printed it on the cover, and
-LaTeXML-structure-xhtml.xsl:358-359 does not display a document `ltx:title` that has an `ltx:titlepage` sibling, so the
-HTML shows no title. Minimal trigger (pdflatex: the title on the cover; Perl 0 errors, no visible title):
+Perl's undefined-token recovery (Stomach.pm:234-238 `invokeToken_undefined`) calls `generateErrorStub` (State.pm:532-554)
+and unreads the token; the stub goes through `installDefinition`, which ignores a redefinition of a `:locked` name
+(State.pm:502-517). A `\let` checks no lock (Package.pm:383-390), so a locked binding let to an undefined name is
+undefined, its stub is refused, and each retry raises the same Error. Minimal trigger:
+`\documentclass{article}\let\section\nonexist\begin{document}\section{Intro} Text.\end{document}` — Perl 101 ×
+`Error:undefined:\section` and `Fatal:too_many_errors`; pdflatex one "Undefined control sequence" and "Intro Text.".
+Rust: the same before 68u (and more often, as more names are locked: `\cite`, `\maketitle`); the stub now installs past
+the lock (OXIDIZED_DESIGN_DIVERGENCES #641; witnesses 2006.07968, 1509.06375, 2311.14793, 2501.10505, 2510.26876).
+Guard `perfect_kernel_batch68u::a_locked_name_let_to_an_undefined_one_errs_once`.
 
-```latex
-\documentclass{article}
-\def\title#1{\begin{center}{\large #1}\end{center}}
-\begin{document}
-\begin{titlepage}
-\title{Static axisymmetric spacetimes}
-\end{titlepage}
-Text.
-\end{document}
-```
+## 842. `\|` is unexpandable, so a robust `\|` defined over its expansion calls itself
 
-The same for a `\title` that both stores and prints (`\def\title#1{\gdef\@title{#1}\centerline{#1}}`): Perl never runs a
-refused definition, so nothing prints. Rust (68t): the class's own `\title` runs at the call inside the titlepage (a
-run that prints nothing is undone), the kernel keeps the structured title (OXIDIZED_DESIGN_DIVERGENCES #629).
-Witnesses 0904.2708 (cernart.cls:217), gr-qc9404034.
+math_common.pool.ltxml:84 defines `\|` as a math atom (`DefMathI`); in LaTeX it is a protected macro whose body is
+`\delimiter"026B30D ` (fontmath.ltx:467, latex.ltx:13641-13645). Minimal trigger:
+`\documentclass{article}\expandafter\DeclareRobustCommand\expandafter\|\expandafter{\|}\begin{document}$\|y\|$\end{document}`
+— pdflatex "‖y‖", 0 errors; Perl and Rust before 68u: `\|` is defined as `\protect\| ` with `\| ` → `\|`, an
+infinite expansion (`Fatal:Timeout:Recursion` in Rust). beilstein.cls:264 has the line (from bpchem.sty); witness
+2604.06890. Rust (68u): `\|` is a protected macro over the atom `\lx@math@Vert` (OXIDIZED_DESIGN_DIVERGENCES #642).
+Guard `perfect_kernel_batch68u::a_robust_double_bar_over_its_expansion_typesets_it`.

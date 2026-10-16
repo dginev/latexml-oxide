@@ -1,0 +1,21 @@
+% witness: 1710.08171, 1808.00212, 2312.17363 (apa6, the rawclasses lever: 76 apa/apa6 papers lost their
+%   affiliation text; 2 after the fix)
+% oracle: pdflatex 0 errors: "The Title / Ann Author / Some University / Abs. / Text."
+% engines: rust=0 errors, "Some University" missing (Info: the \maketitle body was not replayed: it uses
+%   \@journal) (2026-10-16)
+% expect: 0 errors; "Some University" in the output
+% status: RED (68u: open, reported to the main session)
+% mechanism: apa6.cls:1438/:1585 test \@ifundefined{@journal}{…}{…\@journal…} in the jou-mode \maketitle; the
+%   \lx@deposit@maketitle replay gate (sect05.rs body_vocabulary_is_defined) checked the branch LaTeX does not
+%   run and rejected the whole body, with the \@affil it prints. Dead end (68u): checking only the branch
+%   \@ifundefined runs fixes this shape but lets apa7's man-mode \maketitle replay, which typesets a
+%   \section*{Abstract} and a title section that swallow the body (perfect_kernel_batch61::apa7_author_block_*).
+\documentclass[jou]{apa6}
+\title{The Title}
+\author{Ann Author}
+\affiliation{Some University}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -2563,6 +2563,8 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
                   left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
     "\\Vert"  => DelimiterMeta{ char: '\u{2016}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
+    "\\lx@math@Vert" => DelimiterMeta{ char: '\u{2016}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
     "\\vert"  => DelimiterMeta{ char: '|',
                   left_role: "VERTBAR", right_role: "VERTBAR", name: None },
     "\u{2225}" => DelimiterMeta{ char: '\u{2016}',

@@ -9566,7 +9566,9 @@ fn afterassignment_fires_after_arithmetic() {
 /// A braced `\input{…}` keeps its braces through the file-name scan, so `\input`
 /// still strips them and loads LaTeX.pool (TeX_FileIO.pool.ltxml:164-169): a
 /// LaTeX fragment input by a main file with no `\documentclass` keeps its
-/// `\section`. Stopping the scan at the `}` must not drop that.
+/// `\section`. Stopping the scan at the `}` must not drop that. With no class
+/// to set `secnumdepth` the section is unnumbered (latex.ltx:17332 leaves it 0;
+/// the kernel's own 3 was dropped in 68u).
 #[test]
 fn braced_input_of_a_fragment_loads_latex() {
   let (stderr, xml) = convert_files_with(
@@ -9580,7 +9582,7 @@ fn braced_input_of_a_fragment_loads_latex() {
     &xml,
     "section",
     &[],
-    r#"<section inlist="toc" xml:id="section1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>Intro</title><para xml:id="section1.p1"><p>Fragment text.</p></para></section>"#,
+    r#"<section inlist="toc" xml:id="sectionx1"><title>Intro</title><para xml:id="sectionx1.p1"><p>Fragment text.</p></para></section>"#,
   );
 }
 

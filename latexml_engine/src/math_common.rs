@@ -394,7 +394,17 @@ LoadDefinitions!({
   def_math_atom("\\surd", "\u{221A}", Some("OPERATOR"), Some("square-root"))?;
   def_math_atom("\\top", "\u{22A4}", Some("ADDOP"), Some("top"))?;
   def_math_atom("\\bot", "\u{22A5}", Some("ADDOP"), Some("bottom"))?;
-  DefMath!("\\|", None, "\u{2225}", role => "VERTBAR", name => "||");
+  // LaTeX's `\|` is a protected macro (fontmath.ltx:467 `\DeclareMathDelimiter{\|}`, latex.ltx:13641-13645
+  // `\set@mathdelimiter`: `\protected\xdef\|{\delimiter"026B30D }`), so one `\expandafter` step gives its body —
+  // beilstein.cls:264 (from bpchem.sty) `\expandafter\DeclareRobustCommand\expandafter\|\expandafter{\|}` makes `\|`
+  // a robust command over that body. Perl's `\|` is the unexpandable math atom (math_common.pool.ltxml:84), so that
+  // line defines `\|` as itself: `Fatal:Timeout:Recursion` (witness 2604.06890; KNOWN_PERL_ERRORS #842). As with `\{`
+  // below, the atom lives in an internal whose `alias` keeps the reversion (`tex="\|"`) and the user name is a
+  // protected macro expanding to it; `\left\|`, `\big\|` and `\Vert` (`Let`, below) reach the same atom
+  // (`tex_math::DELIMITER_MAP`). OXIDIZED_DESIGN_DIVERGENCES #642; guard
+  // `perfect_kernel_batch68u::a_robust_double_bar_over_its_expansion_typesets_it`.
+  DefMath!("\\lx@math@Vert", None, "\u{2225}", role => "VERTBAR", name => "||", alias => "\\|");
+  DefMacro!("\\|", r"\lx@math@Vert", protected => true);
   // should get meaning => "parallel"to' when used as infix, but NOT when for OPEN|CLOSE
   // OXIDIZED_DESIGN #170 shape (surpass-Perl, user-approved 2026-08-31),
   // extended to the one math symbol it named as residual: real LaTeX's

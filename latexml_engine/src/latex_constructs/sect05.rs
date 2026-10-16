@@ -2242,9 +2242,12 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   };
   // In a group whose kernel frontmatter is inert (`\lx@replay@inert`: a body that calls a saved kernel `\author`,
   // authoraftertitle.sty:11-15 `\let\Originalauthor\author`, would add every author twice), notes, marks and labels
-  // gobbled, and the footnote and equation counters as they were.
+  // gobbled, and the footnote and equation counters as they were. The frontmatter fallback a sectioning command runs
+  // (`\@startsection@hook`) is inert too: paper.cls:624's `\def\abstract{\small\subsubsection*{\abstractname}}`, replayed
+  // for jheppub's one-argument `\abstract{…}` in the preamble, emitted the title and authors there, where they were
+  // lost, and disabled the document's `\maketitle` (2012.12760, 2207.06852: the rawclasses lever).
   let mut replay = mouth::tokenize_internal(
-    r"{\lx@replay@inert\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\relax\let\label\@gobble\xdef\lx@replay@counts{\global\c@footnote=\the\c@footnote\relax\global\c@equation=\the\c@equation\relax}",
+    r"{\lx@replay@inert\let\lx@frontmatter@fallback\relax\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\relax\let\label\@gobble\xdef\lx@replay@counts{\global\c@footnote=\the\c@footnote\relax\global\c@equation=\the\c@equation\relax}",
   )
   .unlist();
   replay.push(dropped);
