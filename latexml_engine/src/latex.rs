@@ -186,7 +186,10 @@ LoadDefinitions!({
   // complete" seam (covers both the dump and raw-base branches; skipped in
   // INI_MODE by the early return above, so dump generation is unaffected).
   // Guarded on the body still being plain's bare `\tabalign`, so a user's
-  // own pre-\documentclass `\def\+` survives the lazy pool load.
+  // own pre-\documentclass `\def\+` survives the lazy pool load. An AMS-TeX
+  // document read on this format (`\documentstyle{amsppt}`) gets plain's `\+`
+  // back where its format is established (amstex.rs
+  // `establish_plain_tabbing_shorthand`; math0103164).
   if let Ok(Some(defn)) = lookup_definition(&T_CS!("\\+"))
     && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
     && body.len() == 1

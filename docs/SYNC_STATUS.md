@@ -1009,9 +1009,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   E 2 → 0. Residual: `$$\gather … \tag 1\\ … \endgather$$` keeps both tags on the one display equation (amsmath's
   `gathered` is not split into rows); AMS-TeX tags sit on the left in the PDF (`\TagsOnLeft`, amstex.tex:590), ours on
   the right; `\intertext` inside `$$\align` errs (RED `amstex/amstex_align_intertext`, before 66e too); `$$\gather` in a
-  plain document errs "`\ams@return@opt@arg` undefined" (amsmath_sty.rs `\lx@ams@start@box` lets it to `\@empty`, which
-  only the LaTeX pool defines; math9412232 and 6 more of the 122, 36 errors, before 66e too; RED
-  `amstex/amstex_plain_gather_return_opt_arg`); an unbraced inner alignment in a row tag (`\tag 1\matrix a\cr
+  plain document erred "`\ams@return@opt@arg` undefined" (amsmath_sty.rs `\lx@ams@start@box` let it to `\@empty`, which
+  only the LaTeX pool defines; math9412232 and 6 more of the 122, 36 errors, before 66e too; fixed in 68r, the kernel's
+  `\lx@empty`: `amstex/amstex_plain_gather_return_opt_arg` GREEN); an unbraced inner alignment in a row tag (`\tag 1\matrix a\cr
   b\endmatrix\\`) stops the tag at the inner `\cr` and errs; an active character let to `\\` (`\let~\\`) does not end a
   row tag (`amstex_tag_row_end`'s `Catcode::CS` gate); a `\par` in `$$\align … \endalign$$` raises no error (TeX's
   `\align` reads its body as an argument: "Paragraph ended before \align was complete"; before 66e too); an amsppt
@@ -2206,6 +2206,33 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Integrated as int12 with 68p's perf items 1-4 and 6 (gates 5,596/5,596; bundle A/B vs 67int11: 298 random pop67o
   papers tallies identical; 161 fleet `oom:alloc_failed` + OOM-sample papers Fatals 46 → 15, words 6.52 M → 9.00 M, the
   9 with more Errors all Fatal → completed; nets 135/136 0 worse, sigma 0907.2394 the RED above).
+
+- **68r** (AMS-TeX completeness: amstex.tex + amsppt.sty; run-353 class-less Error papers, attr_now/papers_now.tsv).
+  (1) amsppt's `\author … \endauthor` list (amsppt.sty:322-326) is one creator a name (`\lx@add@authors@append`, as
+  amsart's), and after a list naming several, amsppt's numbered addresses (:330-370) pair with the names in order or
+  stay shared (OXIDIZED_DESIGN #624, KNOWN_PERL_ERRORS #819; math0002054, math0002116, math0002213). (2) plain's `\+`
+  (plain.tex:608) is restored where the AMS-TeX format is established (`\input amstex`, amsppt.sty; amstex.rs
+  `establish_plain_tabbing_shorthand`), since a `\documentstyle` document runs on the LaTeX format whose seam retracts
+  it (latex.rs; a LaTeX document's stray `\+`, cond-mat0001412, stays one undefined error; math0103164, math0105110).
+  (3) `\subjclassyear` (amsppt.sty:391-401, verbatim; the edition is the classification's scheme and name;
+  KNOWN_PERL_ERRORS #814; cs0201007, math0205233, math0209036) and `\transl` = `\moreref` (:1088; #815; math-ph0003008,
+  math0003031); a `\moreref` part prints its text first and then its fields by the reference's kind, carried from the
+  part before (#817, math0111124), `\publaddr` is printed (#818), and the bib ties are active `~` (were "pp.˜").
+  (4) `$$\gather` without LaTeX: amsmath's `\lx@ams@start@box` lets to the kernel's `\lx@empty`, not `\@empty`
+  (math9412232, math0005042, math0006111, math0009215; repro amstex_plain_gather_return_opt_arg RED → GREEN).
+  (5) AMS-TeX's `\document` reuses a document element the material before it opened (KNOWN_PERL_ERRORS #816): an
+  epigraph or footnote after `\endtopmatter` had replaced the title, authors and abstract (68 of 500 A/B papers got
+  their frontmatter back: math0002213, hep-th9210071, cs0201007). A/B vs 67int12 over 400 cluster witnesses + 100
+  pop67o: Errors 1,740 → 1,005, 314 papers clean, 0 worse; pop100 511 → 510. Per row (≤ 30 witnesses, all 247 for
+  row 1): merged_creators-only 247 → 13 papers, `\+` 30 → 0, `\transl` 30 → 0, `\subjclassyear` 30 → 0,
+  `\ams@return@opt@arg` 30 → 0. amsmath net: 0 of 27 worse. Open: the kernel's cautious name split keeps a names
+  line with `\footnotemark` (math0211283, math0301047, math0304096, math0405036), `,\ \&\ ` separators (math0408166,
+  math0410384) and a `\footnotetext` in the list (0711.1928 + 6) as one creator; `undefined:@` (88 papers: AMS-TeX's
+  active `@` arrows outside `\CD`, amstex.tex:97-107 `\at@` and :1660-1702 `\atdef@`: math0004017, math0005042,
+  math0009033) not chased; discounted (not in TL 2025, not shipped): bull-ppt.sty (98 papers, math9201251), plain
+  `\input mn` (63 papers, astro-ph0002467). Repros amstex/{amsppt_author_list_pairs_addresses,
+  amsppt_author_list_extra_address_shared, amstex_plain_tabbing_rows, amsppt_subjclassyear, amsppt_transl_reference,
+  amstex_material_before_document, amstex_plain_gather_return_opt_arg}; guards `perfect_kernel_batch68r` (8).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

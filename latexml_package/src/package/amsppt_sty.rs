@@ -20,6 +20,9 @@ LoadDefinitions!({
       ..InputDefinitionOptions::default()
     });
   }
+  // amsppt.sty runs on the AMS-TeX format, plain's: its `\+` (amstex.rs `establish_plain_tabbing_shorthand`; an
+  // `\input amsppt.sty` or `\documentstyle{amsppt}` document without `\input amstex`)
+  latexml_engine::amstex::establish_plain_tabbing_shorthand()?;
   // AmSTeX pool is partially ported (~30%); residual undefined-CS
   // errors on amsppt papers (\text, \proof, \theorem env, \endmatrix,
   // \foldedtext, \eightbf, \AmSTeX, \DN@, \frills@, etc — see
@@ -66,17 +69,104 @@ LoadDefinitions!({
   def_macro_noop("\\endtopmatter")?;
   DefMacro!("\\title Until:\\endtitle", "\\lx@add@title{#1}");
   Let!("\\endtitle", "\\relax");
-  DefMacro!("\\author Until:\\endauthor", "\\lx@add@author{#1}");
+  // amsppt.sty:322-326 `\author#1\endauthor` sets ONE centred box: a paper's authors are one name list there
+  // (`\author Nobuo Hara and Kei-ichi Watanabe\endauthor`, math0002054; `S.Yu.Orevkov, V.M.Kharlamov`, math0002213;
+  // `D. Tamarkin and\n B. L. Tsygan`, math0002116), which Perl adds as one creator (amsppt.sty.ltxml:57) and the
+  // `merged_creators` check flagged. The block is parsed as a per-author class's `\author` is (amsart's,
+  // ams_support_sty.rs `\lx@ams@author`): `\lx@add@authors@append`, one creator a name, split only where the line
+  // reads as names. The names a block made are counted for the contacts after it (below). OXIDIZED_DESIGN #624; guard
+  // `perfect_kernel_batch68r::amsppt_author_list_is_one_creator_a_name`.
+  // (a list written in braces, `\author{Huai-Dong Cao \footnotemark and Lei Ni\footnotemark }` before a line end, is the
+  // same list: the group only bounds the box's fonts — math0211283, math0301047, math0408166)
+  DefMacro!("\\author Until:\\endauthor", sub[(names)] {
+    let mut names: Vec<Token> = names.unlist();
+    while names.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
+      names.pop();
+    }
+    let start = names.iter().position(|t| t.get_catcode() != Catcode::SPACE).unwrap_or(names.len());
+    let names: Vec<Token> = if names.get(start).is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      && names.last().is_some_and(|t| t.get_catcode() == Catcode::END)
+      && {
+        // the group that opens the list closes it
+        let mut depth = 0usize;
+        names[start..].iter().position(|t| {
+          match t.get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => depth = depth.saturating_sub(1),
+            _ => {},
+          }
+          depth == 0
+        }) == Some(names.len() - 1 - start)
+      } {
+      names[start + 1..names.len() - 1].to_vec()
+    } else {
+      names
+    };
+    let mut out = vec![T_CS!("\\lx@amsppt@author@begin"), T_CS!("\\lx@add@authors@append"), T_BEGIN!()];
+    out.extend(names);
+    out.extend([T_END!(), T_CS!("\\lx@amsppt@author@end")]);
+    Ok(Tokens::new(out))
+  });
+  DefPrimitive!("\\lx@amsppt@author@begin", {
+    AssignValue!("lx_amsppt_creators_before" => queued_creator_count() as i64, Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@amsppt@author@end", {
+    let before = lookup_int("lx_amsppt_creators_before");
+    let names = (queued_creator_count() as i64 - before).max(0);
+    AssignValue!("lx_amsppt_block_names" => names, Some(Scope::Global));
+  });
   Let!("\\endauthor", "\\relax");
-  DefMacro!("\\affil Until:\\endaffil", "\\lx@add@affiliation{#1}");
+  // the separators the names were written with in the one list (`A, B and C`), shown between the creators as amsart's
+  // (ams_support_sty.rs), where the kernel's default joins them with `\qquad` (sect05.rs `\lx@author@conj`)
+  DefMacro!("\\lx@author@sep", ",\\ ");
+  DefMacro!("\\lx@author@conj", "\\ and\\ ");
+  // amsppt keeps the addresses apart from the names: `\address` numbers each in `\addresscount@` (:330-335),
+  // `\curraddr` joins the current one, `\email` and `\urladdr` pair with it under the same number (:336-370,
+  // amsppt.doc:852 "since they should pair up"), and `\enddocument@text` prints them all, in that order, after the
+  // paper (:1106-1116); `\affil` is one box under the names (:327-329). An `\author` block naming one person is
+  // followed by that person's contacts, as Perl attaches them (to the last creator). After a block naming several,
+  // nothing in amsppt says whose an address is: each address and what pairs with it carries amsppt's number as an
+  // `affiliation:N` label, which the frontmatter's numbered-institute rule gives to the N-th author when there are as
+  // many as authors and no author has one of their own, and otherwise places on the shared creator below the authors
+  // (#159), as the PDF prints them; the `\affil` box is the block's (shared). Before, all of them went to the last
+  // name (math0002213's three addresses to V.M.Kharlamov). OXIDIZED_DESIGN #624; guards
+  // `perfect_kernel_batch68r::amsppt_addresses_pair_with_the_names`, `…::amsppt_extra_address_is_shared`.
+  DefMacro!("\\lx@amsppt@contact{}{}", sub[(command, content)] {
+    let several = lookup_int("lx_amsppt_block_names") >= 2;
+    let number = match lookup_register("\\addresscount@", vec![]) {
+      Ok(Some(RegisterValue::Number(n))) => n.value_of(),
+      _ => 0,
+    };
+    let affiliation = command.unlist_ref().first() == Some(&T_CS!("\\lx@add@affiliation"));
+    let mut out: Vec<Token> = command.unlist();
+    if several {
+      let label = if affiliation {
+        s!("label=addresses:block")
+      } else if number > 0 {
+        s!("label=affiliation:{number}")
+      } else {
+        // (an `\email` before any `\address`: amsppt's `\email0`, which it never prints; kept, shared)
+        s!("label=addresses:block")
+      };
+      out.push(T_OTHER!("["));
+      out.extend(mouth::tokenize_internal(TeXString::assembled(label)).unlist());
+      out.push(T_OTHER!("]"));
+    }
+    out.push(T_BEGIN!());
+    out.extend(content.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
+  DefMacro!("\\affil Until:\\endaffil", "\\lx@amsppt@contact{\\lx@add@affiliation}{#1}");
   Let!("\\endaffil", "\\relax");
-  DefMacro!("\\address Until:\\endaddress", "\\lx@add@address{#1}");
+  DefMacro!("\\address Until:\\endaddress",
+    "\\global\\advance\\addresscount@\\@ne\\lx@amsppt@contact{\\lx@add@address}{#1}");
   Let!("\\endaddress", "\\relax");
-  DefMacro!("\\curraddr Until:\\endcurraddr", "\\lx@add@currentaddress{#1}");
+  DefMacro!("\\curraddr Until:\\endcurraddr", "\\lx@amsppt@contact{\\lx@add@currentaddress}{#1}");
   Let!("\\endcurraddr", "\\relax");
-  DefMacro!("\\email Until:\\endemail", "\\lx@add@email{#1}");
+  DefMacro!("\\email Until:\\endemail", "\\lx@amsppt@contact{\\lx@add@email}{#1}");
   Let!("\\endemail", "\\relax");
-  DefMacro!("\\urladdr Until:\\endurladdr", "\\lx@add@url{#1}");
+  DefMacro!("\\urladdr Until:\\endurladdr", "\\lx@amsppt@contact{\\lx@add@url}{#1}");
   Let!("\\endurladdr", "\\relax");
 
   DefMacro!("\\thanks Until:\\endthanks", "\\lx@add@pubnote[role=thanks]{#1}");
@@ -89,7 +179,27 @@ LoadDefinitions!({
   Let!("\\endtranslator", "\\relax");
   DefMacro!("\\keywords Until:\\endkeywords", "\\lx@add@keywords{#1}");
   Let!("\\endkeywords", "\\relax");
-  DefMacro!("\\subjclass Until:\\endsubjclass", "\\lx@add@classification{#1}");
+  // amsppt.sty:391-401 `\subjclassyear{<year>}`: the edition of the Mathematics Subject Classification `\subjclass`
+  // names (1991, the default, or 2000; any other is reported and taken as 1991), verbatim; :403-411 `\subjclass` prints
+  // `\subjyear@\space{\it Mathematics Subject Classification}.\enspace` before the codes, the year as it stands when
+  // the topmatter is set (`\noexpand\subjyear@`). That edition is the classification's scheme and its label, as for
+  // amsart's `\subjclass[2000]` (ams_support.sty.ltxml:134-137); Perl's amsppt binding has neither (undefined
+  // `\subjclassyear`: cs0201007, math0205233, math0209036; KNOWN_PERL_ERRORS #814). Guard
+  // `perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`.
+  RawTeX!(r"\def\xci@{1991}
+\def\mm@{2000}
+\def\subjclassyear#1{%
+   \def\subjyear@{#1}%
+   \ifx\subjyear@\mm@
+   \else \ifx\subjyear@\xci@
+   \else \message{AmS-TeX warning: Unknown edition (#1) of
+       Mathematics Subject Classification; using 1991 edition}%
+     \def\subjyear@{1991}%
+   \fi\fi}
+\subjclassyear{1991}");
+  DefMacro!("\\subjclass Until:\\endsubjclass",
+    "\\lx@add@classification[scheme={\\subjyear@\\space Mathematics Subject Classification},\
+     name={\\subjyear@\\space Mathematics Subject Classification.\\space}]{#1}");
   Let!("\\endsubjclass", "\\relax");
   DefMacro!("\\abstract", "\\lx@begin@abstract");
   DefMacro!("\\endabstract", "\\lx@end@abstract\\let\\maybe@end@abstract\\relax");
@@ -510,16 +620,40 @@ LoadDefinitions!({
         assign_value("amsbibitem@authors",
           Stored::Tokens(Tokens::new(combined)), None);
       }
+    // The text before a reference's first field (`\@bibfield{random}`) comes first, and the fields after it are printed
+    // as for any reference: a `\moreref`'s or `\transl`'s (amsppt.sty:1076-1088), which amsppt boxes in `\morerefbox@`
+    // and `\endref@` prints before the authors (amsppt.doc:2401-2410; math0002213's "English translation:" before the
+    // translation's journal); a `\ref`'s, which amsppt sets in box 0 and never prints (:886-898 `\setbox\z@\vbox`), kept
+    // as Perl keeps it. Perl's binding (L398-429) printed that text in place of the journal fields and dropped them: the
+    // translation's journal, volume, year and pages in every `\transl` reference (math0002213, math-ph0003008,
+    // math0003031; KNOWN_PERL_ERRORS #817). Guard `perfect_kernel_batch68r::amsppt_transl_continues_the_reference`.
+    pp(&mut body, None, Some(Tokens!()), "random", None);
     pp(&mut body, None, None, "authors", None);
 
-    if lookup_field("book").is_some() {
+    // The kind of reference is amsppt.sty's `\ifbook@`/`\ifprocpaper@`, which `\jour`, `\book` and `\inbook` set
+    // (:919-936) and only `\ref` resets (:897): a `\moreref`/`\transl` part that names none is printed as the part
+    // before it (math0111124's `\book … \transl English transl. \publ … \bookinfo Grundlehren …`), one that names one
+    // as that (hep-th9812173's `\book … \moreref \paper … \jour …`). Perl's `\moreref` closes the reference's group, and
+    // a book's continuation, read as a journal article, lost its `\bookinfo` (KNOWN_PERL_ERRORS #817).
+    let own = |field: &str| lookup_field(field).is_some();
+    let (is_book, is_inbook) = if is_moreref && !(own("book") || own("inbook") || own("journal")) {
+      (lookup_bool("amsbibitem@kind@book"), lookup_bool("amsbibitem@kind@inbook"))
+    } else {
+      (own("book"), own("inbook"))
+    };
+    assign_value("amsbibitem@kind@book", Stored::Bool(is_book), Some(Scope::Global));
+    assign_value("amsbibitem@kind@inbook", Stored::Bool(is_inbook), Some(Scope::Global));
+
+    // (the `~` after "vol.", "pp.", "no." is the active tie of Perl's `Tokenize('\space\pagestext~')`: an other-catcode
+    // `~` was printed as a tilde, "pp.˜414–452", in every amsppt reference with pages — math0002213)
+    if is_book {
       // Case 1: Book.
       comma(&mut body, "book");
       comma(&mut body, "bookinfo");
       pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
          "proceedingsinfo", Some(Tokens!(T_OTHER!(")"))));
       pp(&mut body, Some(","), Some(Tokens!(T_CS!("\\space"),
-        T_OTHER!("v"), T_OTHER!("o"), T_OTHER!("l"), T_OTHER!("."), T_OTHER!("~"))),
+        T_OTHER!("v"), T_OTHER!("o"), T_OTHER!("l"), T_OTHER!("."), T_ACTIVE!('~'))),
          "volume", None);
       pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
          "editors",
@@ -528,13 +662,13 @@ LoadDefinitions!({
       comma(&mut body, "publisheraddr");
       comma(&mut body, "year");
       pp(&mut body, Some(","),
-         Some(Tokens!(T_CS!("\\space"), T_CS!("\\pagestext"), T_OTHER!("~"))),
+         Some(Tokens!(T_CS!("\\space"), T_CS!("\\pagestext"), T_ACTIVE!('~'))),
          "pages", None);
     } else {
       // Case 2: Paper.
       comma(&mut body, "paper");
       comma(&mut body, "paperinfo");
-      if lookup_field("inbook").is_some() {
+      if is_inbook {
         // Case 2a: Paper in book.
         comma(&mut body, "inbook");
         pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
@@ -544,29 +678,26 @@ LoadDefinitions!({
            Some(Tokens!(T_OTHER!(","), T_CS!("\\space"), T_CS!("\\edtext"), T_OTHER!(")"))));
         comma(&mut body, "bookinfo");
         pp(&mut body, Some(","),
-           Some(Tokens!(T_CS!("\\space"), T_CS!("\\voltext"), T_OTHER!("~"))),
+           Some(Tokens!(T_CS!("\\space"), T_CS!("\\voltext"), T_ACTIVE!('~'))),
            "volume", None);
         comma(&mut body, "publisher");
         comma(&mut body, "publisheraddr");
         comma(&mut body, "year");
         pp(&mut body, Some(","),
-           Some(Tokens!(T_CS!("\\space"), T_CS!("\\pagestext"), T_OTHER!("~"))),
+           Some(Tokens!(T_CS!("\\space"), T_CS!("\\pagestext"), T_ACTIVE!('~'))),
            "pages", None);
-      } else if lookup_field("random").is_none() {
+      } else {
         // Case 2b: Paper in journal.
         comma(&mut body, "journal");
         pp(&mut body, None, Some(Tokens!(T_CS!("\\space"))), "volume", None);
         pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
            "year", Some(Tokens!(T_OTHER!(")"))));
         pp(&mut body, Some(","),
-           Some(Tokens!(T_CS!("\\space"), T_CS!("\\issuetext"), T_OTHER!("~"))),
+           Some(Tokens!(T_CS!("\\space"), T_CS!("\\issuetext"), T_ACTIVE!('~'))),
            "issue", None);
         comma(&mut body, "publisher");
         comma(&mut body, "publisheraddr");
         comma(&mut body, "pages");
-      } else {
-        // Case 2c: Random text leftover.
-        comma(&mut body, "random");
       }
     }
     comma(&mut body, "finalinfo");
@@ -595,6 +726,11 @@ LoadDefinitions!({
     "\\@end@bibfield\\@fill@bibitem\\@end@bibblock\\endgroup\
      \\begingroup\\@bibblock\\@bibfield{moreref}nonempty\\@end@bibfield\
      \\@bibfield{random}");
+  // amsppt.sty:1088 `\def\transl{\moreref}` (amsppt.doc:2578-2585: "for setting translation information", a
+  // reference's translation as a further part of it, `\transl English translation: \jour …`). Perl's binding leaves it
+  // out (amsppt.sty.ltxml:489 `# \transl ????`): undefined in math0002213, math-ph0003008, math0003031
+  // (KNOWN_PERL_ERRORS #815). Guard `perfect_kernel_batch68r::amsppt_transl_continues_the_reference`.
+  DefMacro!("\\transl", "\\moreref");
 
   // Perl L460-493: field-marker macros — each terminates the current
   // field and opens the next. The trailing `\it`/`\bf` for paper/book/
@@ -624,7 +760,9 @@ LoadDefinitions!({
   DefMacro!("\\pagestext", "pp.");
   DefMacro!("\\lang",      "\\@end@bibfield\\@bibfield{language}");
   DefMacro!("\\publ",      "\\@end@bibfield\\@bibfield{publisher}");
-  DefMacro!("\\publaddr",  "\\@end@bibfield\\@bibfield{publisheraddress}");
+  // (the field `\@fill@bibitem` prints, `publisheraddr`: Perl's `\publaddr` stored `publisheraddress`, which nothing
+  // reads, and every publisher's address was lost — math0111124's "Moscow", "Berlin etc."; KNOWN_PERL_ERRORS #818)
+  DefMacro!("\\publaddr",  "\\@end@bibfield\\@bibfield{publisheraddr}");
   DefMacro!("\\miscnote",  "\\@end@bibfield\\@bibfield{note}");
   DefMacro!("\\toappear",  "\\miscnote to appear");
   DefMacro!("\\MR",        "\\@end@bibfield\\@bibfield{mathreview}MR ");

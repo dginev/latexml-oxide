@@ -1,0 +1,18 @@
+% witness: math0002213 (two names, three addresses: Kharlamov's two), math0002054 (one address block for two names)
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; the three addresses printed after the body in order, Univ B followed by "Current address: Univ C", tied to no name
+% engines: rust 67int12 = 1 Error frontmatter:merged_creators, all three addresses on the one merged creator; perl 0.8.8 the same, 0 errors
+% expect:  0 errors; creators S.Yu.Orevkov and V.M.Kharlamov without contacts, then the shared creator below them with the addresses and the current address in order
+% status:  GREEN (68r)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author S.Yu.Orevkov, V.M.Kharlamov\endauthor
+\address Steklov Math. Inst.\endaddress
+\address Univ B\endaddress
+\curraddr Univ C\endcurraddr
+\address Univ D\endaddress
+\endtopmatter
+\document
+Body text.
+\enddocument

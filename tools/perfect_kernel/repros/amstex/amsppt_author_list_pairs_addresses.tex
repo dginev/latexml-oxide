@@ -1,0 +1,18 @@
+% witness: math0002054, math0002116, math0002213, 1611.05173 (247 class-less run-353 papers whose only error is frontmatter:merged_creators)
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; "Nobuo Hara and Kei-ichi Watanabe" under the title; after the body: Univ A, E-mail address: a@x.jp, Univ B, E-mail address: b@y.jp
+% engines: rust 67int12 = 1 Error frontmatter:merged_creators (one creator "Nobuo Hara and Kei-ichi Watanabe" holding both addresses); perl 0.8.8 the same single creator, 0 errors
+% expect:  0 errors; two creators, Nobuo Hara (Univ A, a@x.jp) and Kei-ichi Watanabe (Univ B, b@y.jp), amsppt's address numbering pairing them in order
+% status:  GREEN (68r)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author Nobuo Hara and Kei-ichi Watanabe\endauthor
+\address Univ A\endaddress
+\email a\@x.jp\endemail
+\address Univ B\endaddress
+\email b\@y.jp\endemail
+\endtopmatter
+\document
+Body text.
+\enddocument

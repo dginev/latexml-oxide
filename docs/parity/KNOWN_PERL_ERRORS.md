@@ -14099,6 +14099,67 @@ write in `\author`. Perl's sv_support.sty.ltxml defines `\lastandname` (:272) bu
 pdflatex "A and B", Perl undefined (1907.12906). Rust's svjour3_cls.rs lets it to `\and`. Repro
 class-bindings/svjour3_statements; guard `perfect_kernel_batch68k::svjour3_editions_commands`.
 
+## 814. amsppt.sty's binding lacks `\subjclassyear`
+
+amsppt.sty:391-401 `\subjclassyear{<year>}` chooses the Mathematics Subject Classification edition `\subjclass` prints
+(1991 or 2000; another is reported and taken as 1991), :403-411 `\subjclass` printing `<year> Mathematics Subject
+Classification.` before the codes. Perl's amsppt.sty.ltxml defines neither the command nor an edition: minimal trigger
+`\input amstex \documentstyle{amsppt} \topmatter \subjclassyear{2000} \subjclass 05E05\endsubjclass \endtopmatter
+\document x\enddocument` — amstex clean, Perl undefined `\subjclassyear` (171 class-less run-353 papers: cs0201007,
+math0205233, math0209036). Fixed in Rust (amsppt_sty.rs): the file's lines verbatim, the edition the classification's
+`scheme` and label. Repro amstex/amsppt_subjclassyear; guard `perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`.
+
+## 815. amsppt.sty's binding lacks `\transl`
+
+amsppt.sty:1088 `\def\transl{\moreref}`: a reference's translation, a further part of it (amsppt.doc:2578-2585).
+Perl's binding leaves it out (amsppt.sty.ltxml:489 `# \transl ????`): minimal trigger `\ref\no1 \by A \paper P \jour
+J\vol 1\yr 1980 \transl English transl.: \jour K\vol 2\yr 1981\endref` — amstex clean, Perl undefined `\transl`, and the
+translation's fields replaced the original's (236 class-less run-353 papers: math0002213, math-ph0003008, math0003031).
+Fixed in Rust (amsppt_sty.rs `\transl` → `\moreref`, with #817). Repro amstex/amsppt_transl_reference; guard
+`perfect_kernel_batch68r::amsppt_transl_continues_the_reference`.
+
+## 816. AMS-TeX's `\document` opens a second document element: the topmatter and what came before are lost
+
+amstex.tex:1793 `\def\document{\def\alloclist@{}\def\fontlist@{}}` and amsppt.sty:546-550 only set up; what the file
+typesets before `\document` (an epigraph after `\endtopmatter`) is the paper's. That material opens the document
+element, and AmSTeX.pool.ltxml:123 `DefConstructor('\document', "<ltx:document>")` opens another, which replaces it:
+the title, the authors, the abstract and the material are gone. Minimal trigger `\input amstex \documentstyle{amsppt}
+\topmatter \title T\endtitle \endtopmatter Epigraph. \document Body.\enddocument` — amstex prints "T", then "Epigraph.
+Body."; Perl only "Body." (math0002213). Fixed in Rust (amstex.rs): as LaTeX's `\begin{document}`, a document element
+already open is the document. Repro amstex/amstex_material_before_document; guard
+`perfect_kernel_batch68r::amstex_material_before_document_is_kept`.
+
+## 817. amsppt's `\moreref` part loses its fields: the text after it replaces the journal, and the reference's kind resets
+
+amsppt.sty:1076-1087 `\moreref` (and `\transl`) boxes the text after it, which `\endref@` prints first, then prints the
+part's fields by the reference's kind — `\ifbook@`/`\ifprocpaper@`, set by `\jour`, `\book`, `\inbook` (:919-936) and
+reset only by `\ref` (:897). Perl's `\@fill@bibitem` (amsppt.sty.ltxml:398-429) prints that text (`random`) only in
+place of the journal fields, which it then drops, and its `\moreref` closes the reference's group, so a book's
+continuation reads as a journal article and loses its `\bookinfo`. Minimal trigger `\ref\no2 \by N \book B \publ P\yr
+1980 \transl English transl. \publ Q\yr 1986 \bookinfo Series 273\endref` — amstex "…; English transl., Series 273, Q,
+1986."; Perl's `\@fill@bibitem` (once `\transl` is `\moreref`) prints the part as ", English transl." only (math0002213,
+math0111124). Fixed in Rust
+(amsppt_sty.rs): the text first, the fields after it, the kind carried into a part that names none. Repro
+amstex/amsppt_transl_reference; guard `perfect_kernel_batch68r::amsppt_transl_continues_the_reference`.
+
+## 818. amsppt's `\publaddr` is never printed
+
+amsppt.sty.ltxml's `\publaddr` stores the field `publisheraddress`, and `\@fill@bibitem` prints `publisheraddr`:
+every publisher's address is dropped. Minimal trigger `\ref\no1 \by A \book B \publ Nauka \publaddr Moscow \yr
+1980\endref` — amstex "A, B, Nauka, Moscow, 1980."; Perl "A, B, Nauka, 1980." (math0111124). Fixed in Rust
+(amsppt_sty.rs `\publaddr` stores `publisheraddr`). Repro amstex/amsppt_transl_reference; guard
+`perfect_kernel_batch68r::amsppt_transl_continues_the_reference`.
+
+## 819. amsppt's author list is one creator
+
+amsppt.sty:322-326 `\author … \endauthor` sets one centred box: a paper names all its authors there (`\author Nobuo
+Hara and Kei-ichi Watanabe\endauthor`). Perl's amsppt.sty.ltxml:57 `\lx@add@author{#1}` makes one creator of the
+list, every address on it. Minimal trigger `\input amstex \documentstyle{amsppt} \topmatter \author A. One and B.
+Two\endauthor \address U\endaddress \endtopmatter \document x\enddocument` — Perl one creator "A. One and B. Two"
+(ours flagged it `frontmatter:merged_creators`: 247 class-less run-353 papers with no other error, math0002054,
+math0002116, math0002213). Fixed in Rust, OXIDIZED_DESIGN_DIVERGENCES #624. Repros
+amstex/amsppt_author_list_pairs_addresses, amstex/amsppt_author_list_extra_address_shared.
+
 ## 820. eulervm.sty's binding lacks `\mathbold`
 
 eulervm.sty:58 `\DeclareMathAlphabet{\mathbold}{U}{zeur}{b}{n}`, the package's bold upright Euler alphabet; Perl's

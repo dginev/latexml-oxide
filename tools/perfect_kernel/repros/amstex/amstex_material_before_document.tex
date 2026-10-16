@@ -1,0 +1,15 @@
+% witness: math0002213 (an epigraph `\hskip2in {\eightrus ...}` between \endtopmatter and \document)
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; the title, "A. One", then "Epigraph words. Body text." as one paragraph
+% engines: rust 67int12 = 0 errors, but the title, the author and the epigraph are gone (the document element the epigraph opened was replaced at \document); perl 0.8.8 the same loss
+% expect:  0 errors; title and creator kept, the paragraph "Epigraph words. Body text."
+% status:  GREEN (68r)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author A. One\endauthor
+\endtopmatter
+Epigraph words.
+\document
+Body text.
+\enddocument

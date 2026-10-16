@@ -137,7 +137,18 @@ LoadDefinitions!({
 
   //======================================================================
   // The Document (Perl L122-128)
-  DefConstructor!("\\document", "<ltx:document>",
+  // amstex.tex:1793 `\def\document{\def\alloclist@{}\def\fontlist@{}}` and amsppt.sty:546-550 (`\document@true`,
+  // fonts, `\tenpoint`) only set up: whatever the file typesets before `\document` is the paper's — an epigraph
+  // after `\endtopmatter` (math0002213's `\hskip2in {\eightrus …}`), and the topmatter `\endtopmatter` sets
+  // (amsppt.sty:515-543). That material opens the document element; opening a second one replaced it, and the title,
+  // the authors and the abstract went with it (Perl's `<ltx:document>` the same: KNOWN_PERL_ERRORS #816). As LaTeX's
+  // `\begin{document}` (sect02.rs), one already open is the document. Guard
+  // `perfect_kernel_batch68r::amstex_material_before_document_is_kept`.
+  DefConstructor!("\\document", sub[document, _args, _props] {
+    if document.findnode("/ltx:document", None).is_none() {
+      document.open_element("ltx:document", None, None)?;
+    }
+  },
     after_digest => sub[_w] {
       assign_value("inPreamble", false, None);
     });
@@ -620,6 +631,22 @@ LoadDefinitions!({
   def_macro_noop("\\showallocations")?;
   def_macro_noop("\\syntax")?;
 });
+
+/// The AMS-TeX format is plain.tex + amstex.tex (TL amstex.ini: `\input plain \input amstex`), so plain's tabbing
+/// shorthand `\+` (plain.tex:608 `\outer\def\+{\tabalign}`; Perl plain_dump.pool.ltxml:104) is the document's. An AMS-TeX
+/// document naming its style (`\documentstyle{amsppt}`) is read on the LaTeX format (converter.rs `compile_route`), whose
+/// kernel seam retracts `\+` for LaTeX documents (latex.rs, after cond-mat0001412's `\!+\+` typo): an `\input amstex`
+/// or amsppt document's `\settabs` rows were an undefined `\+` and a stray `&` each (math0103164, math0105110,
+/// math0106202, math0109193). Called where the format is established — `\input amstex` (amstex_tex.rs) and amsppt.sty
+/// (amsppt_sty.rs) — not by this pool, which a LaTeX document's AMS-TeX command also autoloads (tex.rs triggers), so a
+/// LaTeX document's stray `\+` stays one undefined-macro error. A document's own `\+` is kept. Guard
+/// `perfect_kernel_batch68r::amstex_plain_tabbing_rows`.
+pub fn establish_plain_tabbing_shorthand() -> Result<()> {
+  if !IsDefined!(&T_CS!("\\+")) {
+    RawTeX!(r"\outer\def\+{\tabalign}");
+  }
+  Ok(())
+}
 
 /// The tokens that end an AMS-TeX `\tag`'s text in an alignment row: the row's end (`\\` is `\cr` there, amstex.tex:486
 /// `\Let@`), the row enders an AMS-TeX alignment defines (`\displaybreak`, `\allowdisplaybreak` and `\intertext` begin

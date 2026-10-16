@@ -1,0 +1,11 @@
+% witness: math0103164, math0105110, math0106202, math0109193 (111 AMS-TeX papers with undefined \+ in run 353)
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; one tabbed row "a b c"
+% engines: rust 67int12 = 2 Errors (undefined:\+, unexpected:& "Stray alignment"): the \documentstyle document runs on the LaTeX format, whose kernel seam retracts plain's \+ (latex.rs); perl 0.8.8 0 errors (TeX.pool keeps plain's \+)
+% expect:  0 errors; a tabular row with the cells a, b, c
+% status:  GREEN (68r)
+\input amstex
+\documentstyle{amsppt}
+\document
+\settabs 3\columns
+\+ a & b & c\cr
+\enddocument

@@ -1,0 +1,27 @@
+% witness: math0002213, math-ph0003008, math0003031 (236 class-less papers with undefined \transl in run 353), math0111124 (a book's translation)
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors; [1] V.I. Arnold, Statistics of integral convex polygons, Funkt. Anal. i Prilozhen. 14 (1980), no. 2, 1-3; English translation: Funct. Anal. and Appl. 14 (1980), 79-81. [2] N. K. Nikolski, Treatise on the shift operator, Nauka, Moscow, 1980; English transl., Grundlehren der mathematischen Wissenschaften 273, Springer-Verlag, Berlin etc., 1986.
+% engines: rust 67int12 = 2 Errors undefined:\transl, the translation's fields overwriting the original's (Funkt. Anal., Grundlehren lost), no publisher address; perl 0.8.8 the same undefined \transl, and \publaddr never printed
+% expect:  0 errors; each reference's translation a second bibblock with its journal (or book info), volume, year and pages; "Moscow" and "Berlin etc." printed
+% status:  GREEN (68r)
+\input amstex
+\documentstyle{amsppt}
+\document
+Text \cite{1}, \cite{2}.
+\Refs
+\ref\no1
+\by V.I.~Arnold
+\paper Statistics of integral convex polygons
+\jour Funkt. Anal. i Prilozhen.\vol 14\issue 2\yr 1980\pages 1--3
+\transl English translation:
+\jour Funct. Anal. and Appl.\vol 14\yr 1980\pages 79--81
+\endref
+\ref\no2
+\by N. K. Nikolski
+\book Treatise on the shift operator
+\publ Nauka\publaddr Moscow\yr 1980
+\transl English transl.
+\publ Springer-Verlag\publaddr Berlin etc.\yr 1986
+\bookinfo Grundlehren der mathematischen Wissenschaften {\bf273}
+\endref
+\endRefs
+\enddocument

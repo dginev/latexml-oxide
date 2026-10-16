@@ -1565,7 +1565,11 @@ LoadDefinitions!({
   // (`\ams@return@opt@arg`, :1490, :1536) with amsmath's warning. Perl's bindings (amsmath.sty.ltxml
   // 573, 622, 625) read it and dropped it — `[\gamma_i,\beta_i] &= …` lost its left side (witnesses
   // 2605.04504, 2605.10596, 2605.11552, 2605.12210, 2605.18213, 2605.22557; KPE #344). `\lx@ams@pos`
-  // holds the position for `gathered`'s `vattach`.
+  // holds the position for `gathered`'s `vattach`. The empty is the kernel's `\lx@empty` (latex_base.rs:22 lets
+  // LaTeX's `\@empty` be it): the binding also serves the AMS-TeX format without LaTeX (AmSTeX pool, amstex.rs
+  // `RequirePackage!("amsmath")`), where `\@empty` is undefined and `\let\ams@return@opt@arg\@empty` left every AMS-TeX
+  // `$$\gather … \endgather$$` (`\gathered`) an undefined `\ams@return@opt@arg` (an `\input amsppt.sty` document:
+  // math0005042, math0006111, math0009215). Guard `perfect_kernel_batch68r::amstex_gather_without_latex`.
   RawTeX!(
     r"\def\ams@pos@t{\vtop}\def\ams@pos@b{\vbox}\def\ams@pos@c{\vcenter}\let\ams@pos@\ams@pos@c
 \def\lx@ams@start@box#1{%
@@ -1577,9 +1581,9 @@ LoadDefinitions!({
        It could be a misspelled positional argument.\MessageBreak
        If it belongs to the formula add a \relax in\MessageBreak
         front to hide it}%
-     \def\ams@return@opt@arg{[#1]}\let\lx@ams@pos\@empty
+     \def\ams@return@opt@arg{[#1]}\let\lx@ams@pos\lx@empty
   \else
-     \let\ams@return@opt@arg\@empty
+     \let\ams@return@opt@arg\lx@empty
      \edef\lx@ams@pos{\expandafter\detokenize\expandafter{\romannumeral-`\0#1}}%
   \fi}
 \def\lx@ams@gathered#1{\lx@hidden@bgroup\@ams@multirow@bindings{name=gathered,vattach=#1}%
