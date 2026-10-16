@@ -1,12 +1,19 @@
 //! Red/green guards for batch 68b (binding gaps G3, core package bindings): the macros and environments that
 //! hyperref, natbib, breqn, url, blkarray, pict2e and amsthm define and papers call, which their bindings lacked.
-use latexml::util::test::{assert_element, convert_files_with};
+use latexml::util::test::{assert_element, convert_files_with, xml_element};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert(tex: &str) -> (String, String) { convert_files_with(tex, &[], Some("ar5iv.sty")) }
 
-/// hyperref internals papers call (hyperref.sty:130-135, :2078-2090, :6312-6314, :6655-6658, :6735-6742, :7443,
+/// The whole `<tag attrs>` element, whitespace-normalized, as `assert_element` compares it: for an element whose
+/// opening part (start tag, tags, first child) is the assertion and whose formulas are pinned elsewhere.
+fn element(xml: &str, tag: &str, attrs: &[&str]) -> String {
+  xml_element(xml, tag, attrs)
+    .unwrap_or_else(|| panic!("no <{tag} {}> element\n{xml}", attrs.join(" ")))
+}
+
+/// hyperref internals papers call (hyperref.sty:130-135, :2078-2090, :6312-6314, :6655-6658, :6727-6733, :7443,
 /// :7886-7901, :8019-8068, :8126-8134; hpdftex.def:396; psdextra.def:75): `\Hy@Info` (1310.6851), the raised-link
 /// hooks and space-factor pair (2403.10429, 2510.01943), `\@skiphyperreftrue` (1806.02596), `\thispdfpagelabel`
 /// (1810.05756), `\hyper@refstepcounter` (2102.05485), `\hyper@link` with `\@extra@b@citeb` (1403.6472),
@@ -66,29 +73,125 @@ fn breqn_display_environments() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(log.contains("breqn.sty is minimally stubbed"), "{log}");
   assert!(
-    xml.contains("<equation labels=\"LABEL:eq:one\" xml:id=\"S0.E1\">"),
+    element(&xml, "equation", &["xml:id=\"S0.E1\""]).starts_with(
+      "<equation labels=\"LABEL:eq:one\" xml:id=\"S0.E1\"><tags><tag>(1)</tag><tag role=\"refnum\">1</tag></tags>\
+       <Math mode=\"display\" tex=\"a=b+c\""
+    ),
     "{xml}"
   );
-  for tags in [
-    "<equationgroup xml:id=\"S0.E2\">\n      <tags>\n        <tag>(2)</tag>",
-    "<equation xml:id=\"S0.E2.1\">\n        <tags>\n          <tag>(2a)</tag>",
-    "<equation xml:id=\"S0.E2.2\">\n        <tags>\n          <tag>(2b)</tag>",
-    "<equation xml:id=\"S0.E3\">\n      <tags>\n        <tag>(3)</tag>",
-  ] {
-    assert!(xml.contains(tags), "{tags}\n{xml}");
+  // `{dgroup}`: the subequation group (2) of (2a)/(2b)
+  assert!(
+    element(&xml, "equationgroup", &["xml:id=\"S0.E2\""]).starts_with(
+      "<equationgroup xml:id=\"S0.E2\"><tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags><equation \
+       xml:id=\"S0.E2.1\">"
+    ),
+    "{xml}"
+  );
+  for (id, num, var, val) in [("S0.E2.1", "2a", "x", "1"), ("S0.E2.2", "2b", "y", "2")] {
+    assert_element(
+      &xml,
+      "equation",
+      &[&format!("xml:id=\"{id}\"")],
+      &format!(
+        "<equation xml:id=\"{id}\"><tags><tag>({num})</tag><tag role=\"refnum\">{num}</tag></tags><Math \
+         mode=\"display\" tex=\"{var}={val}\" text=\"{var} = {val}\" xml:id=\"{id}.m1\"><XMath \
+         xml:id=\"{id}.m1.1\"><XMApp xml:id=\"{id}.m1.1.1\"><XMTok meaning=\"equals\" \
+         role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">{var}</XMTok><XMTok meaning=\"{val}\" \
+         role=\"NUMBER\">{val}</XMTok></XMApp></XMath></Math></equation>"
+      ),
+    );
   }
+  // `{dgroup*}`: an unnumbered group, its equations unnumbered, the `{dsuspend}` text a paragraph of the group
+  assert!(
+    element(&xml, "equationgroup", &["xml:id=\"S0.EGx1\""]).starts_with(
+      "<equationgroup xml:id=\"S0.EGx1\"><equation xml:id=\"S0.Ex1\"><Math mode=\"display\""
+    ),
+    "{xml}"
+  );
   assert_element(
     &xml,
     "p",
     &["xml:id=\"S0.EGx1.1\""],
     "<p xml:id=\"S0.EGx1.1\">,\n\nand</p>",
   );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"S0.EGx1.2\""],
+    "<p xml:id=\"S0.EGx1.2\">.</p>",
+  );
   assert_eq!(xml.matches("<equationgroup ").count(), 2, "{xml}");
-  // the `{dseries}` formulas stay in-line formulas of the one display
-  assert!(xml.contains("<text xml:id=\"S0.E3.1\">and\n"), "{xml}");
+  // `{dseries}`: one numbered display of in-line formulas and the text between; `{dseries*}` unnumbered
   assert!(
-    xml.contains("<p xml:id=\"p1.5\">See (<ref labelref=\"LABEL:eq:one\"/>).</p>"),
+    element(&xml, "equation", &["xml:id=\"S0.E3\""]).starts_with(
+      "<equation xml:id=\"S0.E3\"><tags><tag>(3)</tag><tag role=\"refnum\">3</tag></tags><Math mode=\"inline\" \
+       tex=\"u=e^{ix}\""
+    ),
     "{xml}"
+  );
+  assert!(
+    element(&xml, "text", &["xml:id=\"S0.E3.1\""])
+      .starts_with("<text xml:id=\"S0.E3.1\">and<Math mode=\"inline\" tex=\"v=e^{-ix}\""),
+    "{xml}"
+  );
+  assert_element(
+    &xml,
+    "equation",
+    &["xml:id=\"S0.Ex3\""],
+    "<equation xml:id=\"S0.Ex3\"><Math mode=\"inline\" tex=\"w=0\" text=\"w = 0\" xml:id=\"S0.Ex3.m1\"><XMath \
+     xml:id=\"S0.Ex3.m1.1\"><XMApp xml:id=\"S0.Ex3.m1.1.1\"><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok \
+     font=\"italic\" role=\"UNKNOWN\">w</XMTok><XMTok meaning=\"0\" role=\"NUMBER\">0</XMTok></XMApp></XMath></Math>\
+     </equation>",
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.5\""],
+    "<p xml:id=\"p1.5\">See (<ref labelref=\"LABEL:eq:one\"/>).</p>",
+  );
+}
+
+/// breqn's group options and display parameters (68b r2): `{dgroup}` reads its options as the breqn keys
+/// (breqn.sty:1793 `\setkeys{breqn}{#1}`), so a `label` names the group (:1808; 2607.02409's four
+/// `\begin{dgroup}[label=…]`); a `label` takes a pending `labelprefix` once (:383-388); the parameters have breqn's
+/// types and values (:179-198: `\eqbreakdepth` a count, `\eqindent` the macro `C`, `\eqbinoffset`/`\eqdelimoffset`
+/// muskips, `\eqstyle` a token list). pdflatex: "[2] [C] [10000] [15.0mu minus -3.0mu] [2.0mu] [] [5]", "See 1, 2
+/// and 3.". Repro package-bindings/breqn_group_label_and_parameters.
+#[test]
+fn breqn_group_label_and_parameters() {
+  let (log, xml) = convert(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/breqn_group_label_and_parameters.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(log.contains("breqn.sty is minimally stubbed"), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">[2] [C] [10000] [15.0mu minus -3.0mu] [2.0mu] []\n[5]</p>",
+  );
+  assert!(
+    element(&xml, "equationgroup", &["xml:id=\"S0.E1\""]).starts_with(
+      "<equationgroup labels=\"LABEL:grp\" xml:id=\"S0.E1\"><tags><tag>(1)</tag><tag \
+       role=\"refnum\">1</tag></tags><equation xml:id=\"S0.E1.1\"><tags><tag>(1a)</tag>"
+    ),
+    "{xml}"
+  );
+  for (id, label, num) in [("S0.E2", "eq:one", "2"), ("S0.E3", "two", "3")] {
+    assert!(
+      element(&xml, "equation", &[&format!("xml:id=\"{id}\"")]).starts_with(&format!(
+        "<equation labels=\"LABEL:{label}\" xml:id=\"{id}\"><tags><tag>({num})</tag><tag \
+         role=\"refnum\">{num}</tag></tags>"
+      )),
+      "{xml}"
+    );
+  }
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.2\""],
+    "<p xml:id=\"p1.2\">See <ref labelref=\"LABEL:grp\"/>, <ref labelref=\"LABEL:eq:one\"/> and <ref \
+     labelref=\"LABEL:two\"/>.</p>",
   );
 }
 
@@ -103,9 +206,12 @@ fn natbib_label_and_list_internals() {
   );
   let (log, xml) = convert(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(
-    xml.contains("</cite> and [Demidovich, p.\u{a0}66].</p>"),
-    "{xml}"
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">See <cite class=\"ltx_citemacro_citep\">[<bibref bibrefs=\"a\" separator=\",\" \
+     show=\"Number\" yyseparator=\",\"/>]</cite> and [Demidovich, p.\u{a0}66].</p>",
   );
   // `numbers`: the author-year label `\dinatlabel` would print is not typeset
   assert_element(
@@ -114,15 +220,16 @@ fn natbib_label_and_list_internals() {
     &[],
     "<bibblock> F.\u{a0}Abbors. A paper.</bibblock>",
   );
-  // author-year: the label is typeset, and `\NAT@force@numbers` reports the numeric bibliography
+  // author-year: the label is typeset, and `\NAT@force@numbers` is natbib's error (natbib.sty:974-981), as
+  // pdflatex raises it; the citations made before it stay author-year
   let (log, xml) = convert(&tex.replace("[numbers]{natbib}", "{natbib}"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert!(
-    log.contains("Bibliography not compatible with author-year citations"),
+    log.contains("Package natbib Error: Bibliography not compatible with author-year citations"),
     "{log}"
   );
   assert!(
-    xml.contains("</cite> and (Demidovich, p.\u{a0}66).</p>"),
+    element(&xml, "p", &["xml:id=\"p1.1\""]).ends_with("</cite> and (Demidovich, p.\u{a0}66).</p>"),
     "{xml}"
   );
 }
@@ -142,11 +249,22 @@ fn url_format_string_and_tilde() {
     "<ref class=\"ltx_href\" font=\"typewriter\" \
      href=\"https://doi.org/10.1/abc\">https://doi.org/10.1/abc</ref>",
   );
+  assert_element(
+    &xml,
+    "text",
+    &["xml:id=\"p1.1.1\""],
+    "<text xml:id=\"p1.1.1\" yoffset=\"1.9pt\"><Math mode=\"inline\" tex=\"\\scriptstyle\\sim\" text=\"similar-to\" \
+     xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMTok fontsize=\"70%\" meaning=\"similar-to\" name=\"sim\" \
+     role=\"RELOP\">∼</XMTok></XMath></Math></text>",
+  );
   assert!(
-    xml.contains("</text>hossein/contents/pseudo8.pdf</p>"),
+    element(&xml, "p", &["xml:id=\"p1.1\""])
+      .ends_with("now. http://www.math.princeton.edu/<text xml:id=\"p1.1.1\" yoffset=\"1.9pt\"><Math \
+       mode=\"inline\" tex=\"\\scriptstyle\\sim\" text=\"similar-to\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMTok \
+       fontsize=\"70%\" meaning=\"similar-to\" name=\"sim\" role=\"RELOP\">∼</XMTok></XMath></Math></text>\
+       hossein/contents/pseudo8.pdf</p>"),
     "{xml}"
   );
-  assert!(xml.contains("tex=\"\\scriptstyle\\sim\""), "{xml}");
 }
 
 /// blkarray.sty:934-947 `\BAmulticolumn`, :1677-1683 `\BAnewcolumntype`, :1063 `\BAextrarowheight`, :1005-1012
@@ -184,12 +302,13 @@ fn pict2e_arc_and_sector() {
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(xml.matches("<line ").count(), 3, "{xml}");
-  assert!(
-    xml.contains(
-      "<line fill=\"#000000\" points=\"0,0 19.69,0 19.44,3.08 18.72,6.08 17.54,8.94 15.93,11.57 13.92,13.92 \
-       0,0 0,0\" stroke=\"none\" stroke-width=\"0.4\"/>"
-    ),
-    "{xml}"
+  // the sector closes once at its centre (the filled polyline closes itself; `\pIIe@closepath` adds no second point)
+  assert_element(
+    &xml,
+    "line",
+    &["fill=\"#000000\""],
+    "<line fill=\"#000000\" points=\"0,0 19.69,0 19.44,3.08 18.72,6.08 17.54,8.94 15.93,11.57 13.92,13.92 0,0\" \
+     stroke=\"none\" stroke-width=\"0.4\"/>",
   );
 }
 

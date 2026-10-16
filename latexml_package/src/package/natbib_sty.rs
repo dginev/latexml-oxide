@@ -10,17 +10,17 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
       // Perl L384: AssignValue(CITE_STYLE => 'authoryear');
       "authoryear" => {
         assign_value("CITE_STYLE", pin("authoryear"), None);
-        sync_nat_conditionals("authoryear");
+        sync_nat_conditionals("authoryear", None);
       },
       // Perl L385:
       "numbers" => {
         assign_value("CITE_STYLE", pin("numbers"), None);
-        sync_nat_conditionals("numbers");
+        sync_nat_conditionals("numbers", None);
       },
       // Perl L386:
       "super" => {
         assign_value("CITE_STYLE", pin("super"), None);
-        sync_nat_conditionals("super");
+        sync_nat_conditionals("super", None);
       },
       // Perl L387-388: AssignValue(CITE_OPEN=>T_OTHER('(')); AssignValue(CITE_CLOSE=>T_OTHER(')'));
       "round" => {
@@ -99,15 +99,16 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
 
 /// natbib.sty:234-245: the `numbers`/`super`/`authoryear` options and `\bibpunct`'s style argument (:290-296) set
 /// `\ifNAT@numbers` and `\ifNAT@super` beside the style, which a bibliography tests (`.bbl` labels written
-/// `\ifNAT@numbers\else\NAT@biblabelnum{#1}\fi`, 1409.8404, 1508.04752, 1604.03470; `\NAT@force@numbers`).
-fn sync_nat_conditionals(style: &str) {
+/// `\ifNAT@numbers\else\NAT@biblabelnum{#1}\fi`, 1409.8404, 1508.04752, 1604.03470; `\NAT@force@numbers`). The
+/// options and `\setcitestyle` (:320-324) set them locally, `\bibpunct` (:294-297) `\global`ly: `scope`.
+fn sync_nat_conditionals(style: &str, scope: Option<Scope>) {
   let (numbers, sup) = match style {
     "numbers" => ("\\iftrue", "\\iffalse"),
     "super" => ("\\iftrue", "\\iftrue"),
     _ => ("\\iffalse", "\\iffalse"),
   };
-  Let!(T_CS!("\\ifNAT@numbers"), T_CS!(numbers));
-  Let!(T_CS!("\\ifNAT@super"), T_CS!(sup));
+  let_definition(&T_CS!("\\ifNAT@numbers"), &T_CS!(numbers), scope);
+  let_definition(&T_CS!("\\ifNAT@super"), &T_CS!(sup), scope);
 }
 
 fn is_some_and_nonempty(opt: &Option<Tokens>) -> bool {
@@ -853,7 +854,7 @@ LoadDefinitions!({
         else if style_str == "s" { "super" }
         else { "authoryear" };
       assign_value("CITE_STYLE", pin(cite_style), None);
-      sync_nat_conditionals(cite_style);
+      sync_nat_conditionals(cite_style, Some(Scope::Global));
     }
     if let Some(ay) = aysep_arg {
       assign_value("CITE_AY_SEPARATOR", Stored::Tokens(ay), None);
@@ -945,8 +946,8 @@ LoadDefinitions!({
   // bibliography list runs through `\@bibsetup` (1102.3365, 1103.0594, 1312.5975, 1804.04445, 1911.00031:
   // `\list{…}{\@bibsetup{#1}…}` in `{theDTbibliography}`), chosen by the style as `\NAT@set@cites` (:658-668)
   // lets it. `\NAT@force@numbers` (:974-981), which a numeric `.bbl` runs (2508.10404): for an author-year
-  // document natbib's error reports that the citations switch to numbers on the next run, a recovery the
-  // conversion makes as it goes, so it is a warning here.
+  // document it is natbib's error, as pdflatex raises it, and it flips `\ifNAT@numbers` as natbib does (the
+  // citations already made stay author-year).
   RawTeX!(
     r"\newcommand\NAT@biblabel[1]{\hfill}
 \newcommand\NAT@biblabelnum[1]{\bibnumfmt{#1}}
@@ -959,8 +960,9 @@ LoadDefinitions!({
   \setlength{\itemsep}{\bibsep}\setlength{\parsep}{\z@}}
 \def\@bibsetup{\ifNAT@numbers\expandafter\NAT@bibsetnum\else\expandafter\NAT@bibsetup\fi}
 \newcommand\NAT@force@numbers{\ifNAT@numbers\else
-  \PackageWarning{natbib}{Bibliography not compatible with author-year citations.\MessageBreak
-  Continuing in numerical citation style}\global\NAT@numberstrue\fi}
+  \PackageError{natbib}{Bibliography not compatible with author-year citations.\MessageBreak
+  Press <return> to continue in numerical citation style}{Check the bibliography entries for non-compliant
+  syntax,\MessageBreak or select author-year BibTeX style, e.g. plainnat}\global\NAT@numberstrue\fi}
 \providecommand{\@extra@b@citeb}{}\gdef\@extra@binfo{}"
   );
   // The citation punctuation natbib keeps in `\NAT@open`/`\NAT@close`/`\NAT@sep` (:239-260), `\NAT@cmt`,

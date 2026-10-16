@@ -584,9 +584,12 @@ LoadDefinitions!({
   //   (2403.10429, 2501.18381, 2501.18773, 2507.16055, 2510.01943, 2602.21138: `\Hy@raisedlink@left`);
   // - :6655-6658 `\if@hyper@item`/`\if@skiphyperref` (1806.02596 `\@skiphyperreftrue` around an algorithm float);
   // - :6312-6314 `\thispdfpagelabel` (pdfpagelabels, on by default; 1810.05756, 2002.05778);
-  // - :6735-6742 `\hyper@refstepcounter` (2102.05485 witharrows' `{DispWithArrows}`, 2303.09820, 2405.07080,
+  // - :6727-6733 `\hyper@refstepcounter` (2102.05485 witharrows' `{DispWithArrows}`, 2303.09820, 2405.07080,
   //   2505.07323): the anchor it makes is the kernel's (`\hyper@anchorstart` is gobbled here), so it sets
-  //   `\@currentHref` through `\hyper@makecurrent` and typesets nothing;
+  //   `\@currentHref` through `\hyper@makecurrent` and typesets nothing. Omitted: `\HyCnt@ProvideTheHCounter{#1}`
+  //   (:6735, a `\theH<counter>` for a counter without one; the `\hyper@makecurrent` above falls back to
+  //   `\the<counter>`) and the `\Hy@ifnotmeasuring` test (amsmath's measuring pass, which the conversion does not
+  //   make);
   // - hpdftex.def:396 `\hyper@link{category}{name}{text}`, the driver link `\hyperlink` (:4793-4796) reaches through
   //   `\hyper@@link` (1403.6472, 1502.05411, 1509.00838, 1612.08986, 1907.10062: `\hyperlinkcite`); the
   //   category picks only the border colour;

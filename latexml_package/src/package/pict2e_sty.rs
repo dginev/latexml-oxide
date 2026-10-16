@@ -104,10 +104,18 @@ fn path_close() {
   });
 }
 
-/// Emit one `\lx@pic@polyline{}{closed}(x,y)…` per subpath and clear the path.
+/// Emit one `\lx@pic@polyline{}{closed}(x,y)…` per subpath and clear the path. A closed polyline returns to its
+/// start itself, so a subpath already closed by `\pIIe@closepath` (`\arc*`'s sector) drops its closing point.
 fn path_flush(closed: &str) -> Result<Tokens> {
-  let subpaths = PICT2E_PATH.with(|p| std::mem::take(&mut *p.borrow_mut()));
+  let mut subpaths = PICT2E_PATH.with(|p| std::mem::take(&mut *p.borrow_mut()));
   let mut out = Vec::new();
+  if closed != "0" {
+    for sub in &mut subpaths {
+      if sub.len() > 2 && sub.first() == sub.last() {
+        sub.pop();
+      }
+    }
+  }
   for sub in subpaths.iter().filter(|s| s.len() > 1) {
     let mut pairs = String::new();
     for (x, y) in sub {

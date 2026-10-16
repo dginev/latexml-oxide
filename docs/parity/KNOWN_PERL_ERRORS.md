@@ -13733,7 +13733,7 @@ class does, and defines the designer commands. Guard `perfect_kernel_batch67z::a
 Perl's hyperref binding defines the user commands but none of these hyperref.sty (TL 2025) internals that papers and
 their copied macros call: `\Hy@Info`/`\Hy@Warning`/`\Hy@Error` (:130-135), `\HyperRaiseLinkHook`/`\HyperRaiseLinkDefault`
 and `\Hy@SaveSpaceFactor`/`\Hy@RestoreSpaceFactor` (:2078-2090), `\thispdfpagelabel` (:6312-6314),
-`\if@skiphyperref` (:6655), `\hyper@refstepcounter` (:6735-6742), `\@extra@b@citeb` (:7443), `\hyperpage`,
+`\if@skiphyperref` (:6655), `\hyper@refstepcounter` (:6727-6733), `\@extra@b@citeb` (:7443), `\hyperpage`,
 `\hyperindexformat`, `\nohyperpage` (:7886-7901, :8019-8068, the makeindex `.ind` encap), `\@refstar` (:8126),
 hpdftex.def:396 `\hyper@link`, and psdextra.def:75 `\psdmapshortnames` under the `psdextra` key; each is
 `Error:undefined`. Minimal trigger: tools/perfect_kernel/repros/package-bindings/hyperref_internals_called_by_papers.tex
@@ -13752,7 +13752,7 @@ a label, 1409.8404, 1508.04752, 1605.02776; `\NAT@force@numbers`, 2508.10404), a
 (`\@bibsetup`, 1102.3365) and citation commands (`\NAT@open`, 1906.11206). Minimal trigger:
 tools/perfect_kernel/repros/package-bindings/natbib_label_and_list_internals.tex: pdflatex clean, Perl 6 errors. Rust
 defines them from natbib.sty and keeps the two conditionals in step with the style (`sync_nat_conditionals`); the
-author-year `\NAT@force@numbers` error is a warning (OXIDIZED_DESIGN #609). Guard
+author-year `\NAT@force@numbers` is natbib's error, as pdflatex raises it. Guard
 `perfect_kernel_batch68b::natbib_label_and_list_internals`.
 
 ## 752. url.sty.ltxml lacks `\Url@FormatString` and `\UrlTildeSpecial`

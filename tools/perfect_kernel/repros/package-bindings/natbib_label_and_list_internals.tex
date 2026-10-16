@@ -6,7 +6,8 @@
 %          compatible with author-year citations"
 % engines: perl 0.8.8 = 6 `Error:undefined` (`\NAT@open`, `\NAT@close`, `\@bibsetup`, `\NAT@force@numbers`,
 %          `\ifNAT@numbers`, `\NAT@biblabelnum`); rust 67int4 = 5 `Error:undefined`
-% expect:  0 errors, 0 warnings; "[Demidovich, p. 66]"; the bibliography entry without the author-year label
+% expect:  0 errors, 0 warnings; "[Demidovich, p. 66]"; the bibliography entry without the author-year label;
+%          author-year: 1 error, natbib's own (natbib.sty:974-981, as pdflatex), 0 warnings
 % status:  GREEN
 \documentclass{article}
 \usepackage[numbers]{natbib}

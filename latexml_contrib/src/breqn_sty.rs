@@ -41,12 +41,16 @@ LoadDefinitions!({
     "\\begin{equation*}\\setkeys{breqn}{#1}"
   );
   DefMacro!(T_CS!("\\end{dmath*}"), None, "\\end{equation*}");
-  // breqn.sty:383-436: the option keys of the display environments and of `\breqnsetup` (:57). The layout keys
-  // (breaking, spacing, framing, alignment, style) shape the printed display only.
+  // breqn.sty:383-436: the option keys of the display environments and of `\breqnsetup` (:57). A `label` takes the
+  // pending `labelprefix` and clears it (:383-388); breqn keeps the `\label` in `\next@label` until the display
+  // is set, the binding labels at once. The layout keys (breaking, spacing, framing, alignment, style) shape the
+  // printed display only.
   RawTeX!(
     r"\newcommand{\breqnsetup}[1]{\setkeys{breqn}{#1}}
-\define@key{breqn}{label}{\label{#1}}
+\define@key{breqn}{label}{\edef\lx@breqn@label{\noexpand\label{\next@label@pre#1}}\lx@breqn@label
+  \let\next@label@pre\@empty}
 \define@key{breqn}{labelprefix}{\def\next@label@pre{#1}}
+\global\let\next@label@pre\@empty
 \define@key{breqn}{number}{\tag{#1}}
 \define@key{breqn}{shiftnumber}[]{}\define@key{breqn}{holdnumber}[]{}
 \define@key{breqn}{density}{}\define@key{breqn}{indentstep}{}\define@key{breqn}{compact}[]{}
@@ -62,12 +66,15 @@ LoadDefinitions!({
   RawTeX!(
     r"\newdimen\eqnumsep \eqnumsep=10pt
 \newdimen\eqmargin \eqmargin=8pt
-\newdimen\eqindent \eqindent=1.6em
-\newdimen\eqindentstep \eqindentstep=8pt
+\def\eqindent{C}
 \newlength\eqlinespacing \eqlinespacing=14pt plus2pt
 \newlength\eqlineskip \eqlineskip=3pt plus2pt
 \newdimen\eqlineskiplimit \eqlineskiplimit=2pt
-\newdimen\eqbreakdepth \eqbreakdepth=2
+\newmuskip\eqbinoffset \eqbinoffset=15mu minus-3mu
+\newmuskip\eqdelimoffset \eqdelimoffset=2mu
+\newdimen\eqindentstep \eqindentstep=8pt
+\newtoks\eqstyle
+\newcount\eqbreakdepth \eqbreakdepth=2
 \newcount\eqinterlinepenalty \eqinterlinepenalty=10000
 \newcount\intereqpenalty \intereqpenalty=1000
 \newlength\intereqskip \intereqskip=3pt plus2pt
@@ -76,13 +83,14 @@ LoadDefinitions!({
 \newmuskip\Dmedmuskip \Dmedmuskip=4mu minus 3mu
 \newmuskip\Dthickmuskip \Dthickmuskip=5mu minus 2mu"
   );
-  // breqn.sty:1771-1784 `{dgroup}`: the equations of a group numbered as `(3a)`, `(3b)`, … under the group's
+  // breqn.sty:1771-1784 `{dgroup}`: the equations of a group numbered as `(3a)`, `(3b)`, … from the group's
   // number, as amsmath's `{subequations}` numbers them (the subequation equation group); `{dgroup*}` keeps each
-  // equation's own number and gives the group none.
+  // equation's own number and gives the group none. The options are the breqn keys (:1793 `\setkeys{breqn}{#1}`),
+  // a `label` the group's (:1808; 2607.02409 `\begin{dgroup}[label=…]`).
   DefMacro!(
     T_CS!("\\begin{dgroup}"),
     "OptionalUndigested",
-    "\\begingroup\\lx@equationgroup@subnumbering@begin"
+    "\\begingroup\\lx@equationgroup@subnumbering@begin\\setkeys{breqn}{#1}"
   );
   DefMacro!(
     T_CS!("\\end{dgroup}"),
