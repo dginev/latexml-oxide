@@ -5298,7 +5298,8 @@ workaround is `\AddToHook{env/<thm>/begin}{\crefalias{<counter>}{<thm>}}`. LaTeX
 because it keys `creftype` on each theorem's own type (via `type_tag_formatter`), not on the
 shared counter, so it yields distinct correct names and needs no workaround — standard names
 (`theorem`, `proposition`, …) still come from cleveref's raw defaults; only non-standard names
-(`arch`) use the heading fallback. `\crefalias` remains a harmless no-op here.
+(`arch`) use the heading fallback. `\crefalias` is raw cleveref's since 68h (KNOWN_PERL_ERRORS #796); the arXiv
+workaround's alias, keyed by the shared counter, names the theorem's own type, so it changes nothing here.
 
 **Guards**: `06_cluster_regressions::cleveref_custom_theorem_cref_shows_heading_name`
 (heading fallback) and `::cleveref_explicit_crefname_overrides_heading` (explicit name wins).
@@ -17842,6 +17843,38 @@ section 1's first. This binding keeps the kernel's `.`: "X 1.1", as Perl prints 
 semantics over the PDF — "11" cannot be told from the eleventh, and a `\ref` to it reads as one. 5 of 374 sampled llncs
 papers with a main file are affected (68g round 1). Minimal trigger: `\documentclass{llncs}`
 `\newtheorem{x}{X}[section]` `\section{A}\begin{x}a\end{x}` — pdflatex "X 11 a", both engines "X 1.1".
+
+### 616. An ORCID iD given as its orcid.org address is the iD (Perl: the contact holds the text as written)
+
+The kernel's `\lx@add@orcid` (base_utilities.rs) makes the iD a link, `https://orcid.org/<iD>` (html_feedback #6571).
+An author who writes the address instead of the iD (`\orcidauthor{https://orcid.org/0000-0001-6534-6641}{…}`,
+2104.12510; `http://`, `www.`, a bare `orcid.org/…`, a trailing `/`) got `https://orcid.org/https://orcid.org/…`. The
+address's iD is taken (`\lx@orcid@id`, `orcid_id`), for every class whose `\orcid`-like setter routes there (acmart,
+svmult, ceurart, cas, revtex, egpubl, pasj00, mrm); an argument holding a macro, or text that is no orcid.org address
+(2106.08963's swapped `{Andrew S. Nencka}`), is kept as written. Perl's `\lx@add@orcid` (Base_Utility.pool.ltxml:
+659-660) puts the text in the contact with no link, so it has no doubled address to fix. Repro
+sectioning-frontmatter/orcid_given_as_url_is_the_id; guard `perfect_kernel_batch68h::orcid_given_as_url_is_the_id`.
+
+### 617. caption formats the kernel's float captions through `\lx@format@caption@@`; a line-breaking separator is the text's first break
+
+caption.sty replaces latex.ltx's `\@makecaption` (caption.sty:206; caption3.sty:1661-1715 `\caption@@@make`): the label
+is the label format applied to the type's name and number, then the label separator, the fonts and the text format
+caption's options set. The kernel's float caption (`\@caption@@@`, sect09.rs) and longtable's (longtable_sty.rs) now
+format through `\lx@format@caption@@{type}{text}`, which is `\lx@format@title@@` until caption_sty.rs takes it
+(`caption_format_tokens`): with no caption setting for the type and a non-empty text, the class's title format is
+used unchanged (`\format@title@<type>`); otherwise, in a group, `name=` defines `\<type>name`, `labelformat=` the
+type's `\fnum@<type>` (`original`/`default` keep the class's), `labelsep=` the title format's separator (an empty
+text has none, caption3.sty:1679-1683), `font=`/`labelfont=`/`textfont=` add `\caption@font@<name>` to
+`\fnum@font@<type>` and `\format@title@font@<type>`, `textformat=` wraps the text (`empty` keeps its `\label`s). The
+separator is the `ltx:tag`'s `close` attribute, text only: a separator caption declares as breaking the line
+(`\caption@LabelSeparatorWithNewline`, caption3.sty:776-779, `newline`) is put as the caption text's first `\\`
+(`<ltx:break/>`) and the tag gets none. Not carried: sub-captions keep their packages' formats (subcaption_sty.rs,
+subfig_sty.rs; the general keys do not reach them), `\caption*` takes no text format, the relative sizes
+`smaller`/`larger`, the spacing fonts and `hypersetup` are no fonts here, and the layout keys (`format`,
+`justification`, margins, `singlelinecheck`) stay stored and unread. Perl's binding reads none of the keys
+(KNOWN_PERL_ERRORS #795). Witnesses 1306.0788 (`labelsep=space`), 2002.05188 (`labelsep=period`), 1810.00606
+(`labelformat=empty`), math0609211 (caption v1's `it`). Repro captions-floats/caption_keys_set_the_label_and_separator;
+guard `perfect_kernel_batch68h::caption_keys_set_the_label_and_separator`.
 
 ### 619. rotating's `\rotdriver{<driver>}` loads no driver file
 

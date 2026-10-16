@@ -229,6 +229,7 @@ mod perfect_kernel_batch68c;
 mod perfect_kernel_batch68d;
 mod perfect_kernel_batch68f;
 mod perfect_kernel_batch68g;
+mod perfect_kernel_batch68h;
 mod perfect_kernel_batch68i;
 mod perfect_kernel_gemini;
 mod pgfkeys_native_accessors;

@@ -13926,6 +13926,47 @@ wasysym.sty:262-270 (wasysym.dtx:40-41, :181-211, :408) defines `\wasyparagraph`
 papers, `\euro` 12; 1001.4255, 1103.0853). Fixed in Rust (wasysym_sty.rs; `\roundz`, without a Unicode character of its
 own, left out). Repro package-bindings/wasysym_new_characters; guard `perfect_kernel_batch68c::wasysym_new_characters`.
 
+## 795. caption.sty.ltxml reads none of caption's keys and lacks `\DeclareCaptionSubType`
+
+Perl's `\captionsetup` (caption.sty.ltxml:62-68) stores each key as `CAPTION_<key>` and nothing reads them but `type`;
+the package options are dropped; `\DeclareCaptionFont`, `\DeclareCaptionTextFormat` and `\DeclareCaptionLabelSeparator`
+are no-ops (:70-78); `\DeclareCaptionSubType` (caption3.sty:1774-1806) is undefined. So `labelsep=period`,
+`labelformat=parens`, `name=Fig.`, `figurename=`, `textformat=period` and the label and text fonts make no difference,
+and `\DeclareCaptionSubType*[arabic]{figure}` is an undefined command whose sub-type counter never exists (run 336: 39
+first errors; 1202.5818, 1604.05412, 2002.03129, 2106.01798, 1706.00437, 2405.16148, 1907.05468, 2512.12259).
+Minimal triggers: tools/perfect_kernel/repros/captions-floats/caption_keys_set_the_label_and_separator.tex
+(pdflatex "Figure 1. A figure", "TABLE 1: A table", "Fig. (2). Parens"; Perl "Figure 1: A figure", "Table 1: A
+table", "Figure 2: Parens"), captions-floats/declarecaptionsubtype_numbers_the_subtype.tex (pdflatex 0 errors, "1.1
+First"; Perl 2 errors, `\DeclareCaptionSubType` and `\thesubalgorithm` undefined). Rust formats the caption as caption
+does (OXIDIZED_DESIGN #617) and defines `\DeclareCaptionSubType` as caption3 does, its counter made with the sub-type
+ids subcaption uses (`sf`, `st`; caption's error for a counter another package made, as pdflatex raises it: 1706.00437,
+1907.05468, 1705.07909, 1807.06322 with subfigure.sty). Guards `perfect_kernel_batch68h::{caption_keys_set_the_label_and_separator,
+declarecaptionsubtype_numbers_the_subtype}`.
+
+## 796. cleveref.sty.ltxml's `\crefalias` is a no-op
+
+cleveref.sty:1277-1278 `\crefalias{<counter>}{<type>}` defines `\cref@<counter>@alias`, which names every later label
+the counter steps; Perl redefines it as a no-op (cleveref.sty.ltxml:114-117, "No, this isn't quite the same thing"),
+though its own `crefType` reads the alias. The idioms it breaks: `\appendix\crefalias{section}{appsec}` (1810.01223,
+2002.10118, 2106.14806), enumitem lists in theorems through thmtools' hooks
+(`\addtotheorempostheadhook[theorem]{\crefalias{thmlisti}{theorem}}`, 1706.03576, 2210.04778, 2002.10700), shared
+counters (`\crefalias{lemma}{theorem}`, 2506.14950). Minimal trigger:
+tools/perfect_kernel/repros/package-bindings/cleveref_crefalias_names_the_type.tex: pdflatex "section 1, supplement A,
+step 1, item 1", Perl "section 1, appendix A, item 1, item 1". Rust keeps raw cleveref's `\crefalias` and resolves a
+type's alias, else its counter's (`cref_type`; an appendix section's counter is `section`). Guard
+`perfect_kernel_batch68h::cleveref_crefalias_names_the_type`.
+
+## 797. `\Gin@driver` is empty, so trimclip falls back to its PGF driver
+
+graphics.sty:66-107 and graphics.cfg set `\Gin@driver` to the driver file (pdftex.def for PDF output); Perl defines it
+empty (latex_constructs.pool.ltxml:4976) and its graphics binding leaves it so. trimclip.sty:24 `\def\tc@driver{tc-
+\Gin@driver}` then names no file and :252-258 inputs tc-pgf.def and pgf at adjustbox's load, where pdflatex reads
+tc-pdftex.def and no pgf; epstopdf-base warns that the driver is unsupported. Minimal trigger:
+tools/perfect_kernel/repros/package-bindings/adjustbox_clipping_driver_is_pdftex.tex: pdflatex "no pgf; driver
+pdftex.def.", Perl "PGF loaded; driver .". Rust's graphics binding defines it as graphics.cfg and the driver options
+would (graphics_sty.rs `graphics_driver`); adjustbox_sty.rs's `|`-as-other load for pgf under sn-jnl's active `|`
+(2202.10115, 2306.09847, 2507.09618) is gone with it. Guard `perfect_kernel_batch68h::adjustbox_clipping_driver_is_pdftex`.
+
 ## 800. tocbibind.sty's binding defines none of the package's commands
 
 tocbibind.sty:101-132 and :250-316 define `\tocotherhead`, the heading internals `\toc@section`/`\toc@chapter`/

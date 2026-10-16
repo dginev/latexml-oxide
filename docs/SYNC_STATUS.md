@@ -1500,7 +1500,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   jmlr_cls.rs were stale (a repeat `[table]` load applies its options since 2605.00310) and are replaced. With program
   loaded two interactions surfaced and are fixed: adjustbox's trimclip, finding no driver for our empty `\Gin@driver`,
   reads pgf at once (pdflatex: tc-pdftex.def, no pgf), and pgf broke on program's active `|` (2202.10115, 2507.09618 +6
-  Errors) — adjustbox_sty.rs now reads its file with `|` other; program.sty:1009's `\index` (`\@sanitize` with nothing
+  Errors) — adjustbox_sty.rs read its file with `|` other (removed in 68h, which names the driver); program.sty:1009's `\index` (`\@sanitize` with nothing
   to end the group here) turned the rest of 2306.09847 into text and lost its bibliography — program_sty.rs keeps the
   kernel's `\index`/`\makeindex`. `shipped_class_text` now also reads a `{filecontents}` copy (the VFS), as the
   dependency scan does. Skipped, author's missing `\usepackage` (pdflatex errs too): mn2e → natbib (mn2e.cls:1201-1203
@@ -1531,8 +1531,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   mathtools 55 → 13, ejpecp 53 → 26, atlasdoc 19 → 3), none worse after the adjustbox/program fixes (the sn-jnl net's
   2010.12415 2 → 7 at the first candidate, 0 now). Round-2 repros class-bindings/{snjnl_class_open_square_qed,
   quantumarticle_caption_at_end_preamble}, stub-dependencies/thmtools_then_thm_patch_proof_hooks (RED on 67u r1).
-- **Residual of 67u — our empty `\Gin@driver` sends trimclip to its PGF fall-back** (RUST-ONLY; queued for payload
-  68b): trimclip.sty:24 `\def\tc@driver{tc-\Gin@driver}` names no file here, so :252-258 input tc-pgf.def and pgf at
+- **Residual of 67u — our empty `\Gin@driver` sends trimclip to its PGF fall-back** (SHARED, KNOWN_PERL_ERRORS #797;
+  FIXED in 68h: graphics_sty.rs gives the driver file graphics.cfg would, and the `|` workaround is gone): trimclip.sty:24 `\def\tc@driver{tc-\Gin@driver}` names no file here, so :252-258 input tc-pgf.def and pgf at
   adjustbox's load, where pdflatex reads tc-pdftex.def and no pgf. 67u's adjustbox_sty.rs reads the file with `|` other
   (program.sty's active `|` broke pgf: 2202.10115, 2507.09618), a workaround; the root is the driver name graphics
   leaves empty.
@@ -2143,6 +2143,41 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   amsthm `{proof}`/`\QED@stack`, color/xcolor/graphicx (`\color@block`, `\color@box`, `\definecolor`, `\@testcolor`,
   `\Grot@box@std`, `\Gread@parse@vp`), caption `\DeclareCaptionSubType` and `\captionsetup` keys, the `\Gin@driver`
   root behind trimclip's PGF fallback, cleveref `\crefalias`, the ORCID-URL normalisation of `\lx@add@orcid`.
+- **68h** (the 68b tail: caption keys, ORCID URLs, `\crefalias`, `\Gin@driver`). caption (caption_sty.rs) — the
+  `\captionsetup` keys and the package options (caption.sty:171-172, the v1 options `bf`, `small`… :114-147) format
+  the float captions as caption3.sty:1661-1715 does, through the kernel's new caption hook `\lx@format@caption@@`
+  (sect09.rs, longtable_sty.rs): `labelsep` (:774), `labelformat` (:733), `name` (:1347-1350), `figurename`/`tablename`
+  (:1330-1344), `textformat` (:791), `font`/`labelfont`/`textfont` and their `+` forms (:842-858), an empty text with
+  no separator (:1679-1683); typed `\captionsetup[type]` settings stay the type's (they also set the general keys
+  before); `\DeclareCaptionFont` (:830, the predefined fonts :860-950), `\DeclareCaptionTextFormat` (:787) and the
+  `endash`/`newline`/`gobble` separators (:776-785) as caption3 defines them; `\DeclareCaptionSubType` (caption3.sty:
+  1774-1806; run 336: 39 first errors; 1202.5818, 1604.05412, 2002.03129, 2106.01798, 1706.00437, 2405.16148, 1907.05468,
+  2512.12259), moved from subcaption_sty.rs's no-op, its counter made with subcaption's sub-type ids (subcaption and
+  subfig register theirs: `\caption@subtypelist`, subfig.sty:261-263 `\sf@counterlist`). OXIDIZED_DESIGN #617. Kernel
+  (base_utilities.rs) — `\lx@add@orcid` takes the iD of an orcid.org address (2104.12510; OXIDIZED_DESIGN #616).
+  cleveref (cleveref_sty.rs) — raw cleveref's `\crefalias` (cleveref.sty:1277-1278) replaces the no-op; `cref_type`
+  reads a type's alias, else its counter's (1810.01223, 1706.03576, 2210.04778, 2506.14950). graphics (graphics_sty.rs)
+  — `\Gin@driver` is the driver file the options or graphics.cfg choose (pdftex.def for PDF output): trimclip reads
+  tc-pdftex.def and no pgf (2202.10115, 2306.09847, 2507.09618), and adjustbox_sty.rs's `|`-as-other workaround is
+  removed. Side fixes the A/B found: bmvc2k_cls.rs defines the class's colours (bmvc2k.cls:268-278, :716;
+  2210.10486's `labelfont={color=bmv@captioncolor}`, and its 13 `bmv@sectioncolor` errors), cas_dc_cls.rs loads
+  setspace under `[review]` (cas-sc.cls/cas-dc.cls:49, :67; 2512.10464). KNOWN_PERL_ERRORS #795-#797. A/B vs
+  67int8-rel over 304 papers (the 39 `\DeclareCaptionSubType` papers, 95 caption-key users, 26 `\crefalias` users, 43
+  adjustbox users, 4 ORCID, 100 pop67o): E 2,963 → 2,931, F 5 → 5, error-free 129 → 149; the `\DeclareCaptionSubType`
+  papers E 160 → 141, error-free 1 → 20. Binding nets (caption, graphics, graphicx, acmart, cas-sc, ceurart, svmult,
+  revtex4/4-1/4-2, bmvc2k) vs 67int7: 0 worse. Repros
+  captions-floats/{caption_keys_set_the_label_and_separator, declarecaptionsubtype_numbers_the_subtype},
+  sectioning-frontmatter/orcid_given_as_url_is_the_id, package-bindings/{cleveref_crefalias_names_the_type,
+  adjustbox_clipping_driver_is_pdftex}; guards `perfect_kernel_batch68h` (8). Faithful error counts that rise:
+  `\DeclareCaptionSubType` after subfigure.sty is caption's "counter already defined" error, once per type as in
+  pdflatex (1706.00437, 1907.05468: 2 errors, as pdflatex; 1705.07909, 1807.06322). Residuals: sub-captions keep
+  their packages' formats (the general keys do not reach them); `\caption*` takes no text format; a sub-type
+  `\DeclareCaptionSubType` makes after subcaption has no `{sub<type>}` environment (subcaption.sty:109-111
+  `\ForEachCaptionSubType`); `\captionof{subfigure}` in a minipage still reads the caption as the sub-figure's width
+  (pre-existing, 2002.04564). Not started: amsthm `\QED@stack`/`\math@qedhere` (the binding's proof begin and end,
+  amsthm_sty.rs:236, :297, use its native QED stack: the proof-lock area; 1801.02767, 1710.02246, 1809.07440,
+  1908.10510, 1908.03268), color/xcolor/graphicx internals (`\color@block`, `\color@box`, `\@testcolor`,
+  `\Grot@box@std`, `\Gread@parse@vp`).
 - **67b** (frequency-first): a kluwer.cls binding (`latexml_contrib/src/kluwer_cls.rs`; the class is in TeX Live, so
   these papers fell back to OmniBus): `{article}`, `{opening}` (its end makes the title, kluwer.cls:707-738), one
   author per `\author` with an `\institute` going to the authors since the previous one (:766-769), `\surname`,

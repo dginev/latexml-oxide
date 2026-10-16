@@ -601,8 +601,9 @@ LoadDefinitions!({
   def_macro_noop("\\wlog{}")?;
 
   // `\Gin@driver` — pre-defined empty so graphics.sty doesn't error
-  // when loaded from disk (LaTeXML doesn't run a Backend driver).
-  // Not in Perl source; pure Rust hotfix.
+  // when loaded from disk (LaTeXML doesn't run a Backend driver); Perl
+  // latex_constructs.pool.ltxml:4976 defines it empty too. The graphics
+  // binding gives it the driver file graphics.cfg would (graphics_sty.rs).
   def_macro_noop("\\Gin@driver")?;
 
   // `\@tabacckludge` simplified body — Perl-faithful body lives in

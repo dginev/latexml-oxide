@@ -15,6 +15,14 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   // bmvc2k.cls:118 loads xspace (`\xspace` was undefined, 2606.17384; Perl's scan of the class loads it).
   RequirePackage!("xspace");
+  // bmvc2k.cls:268-278, :716: the class's colours (the non-debug ones), which papers name in their caption options
+  // (`\usepackage[labelfont={color=bmv@captioncolor,bf}]{caption}`, 2210.10486) and their text
+  // (`\textcolor{bmv@sectioncolor}`): "Can't find color" otherwise.
+  RawTeX!(
+    r"\definecolor{bmv@PaleBlue}{rgb}{1,1,1}\definecolor{bmv@PalePink}{rgb}{1,1,1}%
+\definecolor{bmv@sectioncolor}{rgb}{0,.1,.4}\definecolor{bmv@captioncolor}{rgb}{0,0,.4}%
+\definecolor{bmv@CiteBoxColor}{rgb}{1,1,1}"
+  );
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
   // bmvc2k.cls:121 `\RequirePackage{graphicx,subfigure}` in most copies, `subcaption` or `subfig` in edited ones: the

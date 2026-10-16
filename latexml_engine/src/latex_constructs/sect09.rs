@@ -129,9 +129,13 @@ pub(crate) fn load() -> Result<()> {
   // document gave, and `\@dblarg` now always gives one, the caption itself, whose opening conditional `\ifx` took as
   // its second token, leaving the caption's `\fi` to close the `\ifx` ("Extra \else", then the file ended scanning
   // for `\endcaption`: `\caption{\ifdefined\x\color{blue}\fi …}`, 2609.27590, 2609.28438; KNOWN_PERL_ERRORS #468).
+  // A float's caption is its type's title (`\lx@format@title@@`), unless a package formats captions itself: caption's
+  // label formats, separators and fonts (caption_sty.rs, caption3.sty:1661-1715), as latex.ltx's `\@makecaption` is
+  // what caption.sty replaces (caption.sty:206). longtable's caption takes it too (caption.sty:1167).
+  DefMacro!("\\lx@format@caption@@{}{}", r"\lx@format@title@@{#1}{#2}");
   DefMacro!(
     "\\@caption@@@{}{}{}",
-    r"\@@add@caption@counters\lx@setfloatcapt{\@@toccaption{\lx@format@toctitle@@{#1}{\if\relax\detokenize{#2}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#3}{#2}}}\lx@@caption{\lx@format@title@@{#1}{#3}}}"
+    r"\@@add@caption@counters\lx@setfloatcapt{\@@toccaption{\lx@format@toctitle@@{#1}{\if\relax\detokenize{#2}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#3}{#2}}}\lx@@caption{\lx@format@caption@@{#1}{#3}}}"
   );
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.

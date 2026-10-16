@@ -1240,10 +1240,14 @@ LoadDefinitions!({
   // (consistent with \lx@add@email / \lx@add@affiliation &c.) whose value is the iD
   // logo linked to the author's orcid.org page. The id is preserved in the href for
   // the metadata. Every class binding routes its \orcid here (html_feedback #6571).
+  // An iD given as its orcid.org address (`https://orcid.org/0000-…`, with or without the scheme or `www.`) is the iD:
+  // its link was `https://orcid.org/https://orcid.org/0000-…` (2104.12510, 2304.13458, 2407.18715 `\orcidauthor`;
+  // DIVERGENCES #616). Perl's contact holds the text as given (Base_Utility.pool.ltxml:659-660).
   DefMacro!(
     "\\lx@add@orcid [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\lx@orcidlink{#2}{\\lx@orcidlogo}}"
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@id{#2}}{\\lx@orcidlogo}}"
   );
+  DefMacro!("\\lx@orcid@id Semiverbatim", sub[(id)] { Ok(orcid_id(id)) });
   // Beyond-Perl (OXIDIZED_DESIGN #52): the arXiv "\thanks abuse" idiom smuggles
   // affiliations into an author \thanks{...}, linking them to authors by a
   // leading superscript mark ($^{n}$ / \textsuperscript{n}). \thanks is
@@ -14185,6 +14189,48 @@ fn xparse_signature_is_optional(toks: &[Token]) -> bool {
     }
   }
   true
+}
+
+/// An ORCID iD written as its orcid.org address — `https://orcid.org/<iD>`, `http://`, `www.`, or the bare
+/// `orcid.org/<iD>`, a trailing `/` — is the iD; anything else, and an argument holding a macro, is kept as written.
+fn orcid_id(id: Tokens) -> Tokens {
+  if id
+    .unlist_ref()
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::CS)
+  {
+    return id;
+  }
+  let text = id.to_string();
+  let trimmed = text.trim();
+  let lower = trimmed.to_ascii_lowercase();
+  let mut rest = lower.as_str();
+  for scheme in ["https://", "http://"] {
+    if let Some(r) = rest.strip_prefix(scheme) {
+      rest = r;
+      break;
+    }
+  }
+  rest = rest.strip_prefix("www.").unwrap_or(rest);
+  match rest.strip_prefix("orcid.org/") {
+    Some(r) => {
+      let start = trimmed.len() - r.len();
+      let bare = trimmed[start..].trim_end_matches('/');
+      Tokens::new(
+        bare
+          .chars()
+          .map(|c| {
+            if c == ' ' {
+              T_SPACE!()
+            } else {
+              T_OTHER!(c.to_string())
+            }
+          })
+          .collect(),
+      )
+    },
+    None => id,
+  }
 }
 
 #[cfg(test)]

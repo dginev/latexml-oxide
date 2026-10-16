@@ -1,3 +1,5 @@
+use latexml_core::mouth::tokenize;
+
 use crate::prelude::*;
 
 /// Environments whose body is read VERBATIM from the raw input, so `\captionof`
@@ -20,8 +22,6 @@ const VERBATIM_BODY_ENVS: &[&str] = &[
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // caption.sty:172 reads its options with `\caption@ProcessOptions`, which marks them processed: `\@curroptions` stays as it was.
-  key_options_processed()?;
   // caption3.sty:209: `\DeclareCaptionOption` defines its keys with keyval's `\define@key`.
   RequirePackage!("keyval");
   // caption.sty:170 `\let\AtCaptionPackage\@firstofone`: code a class hands it runs
@@ -116,27 +116,71 @@ LoadDefinitions!({
         .filter(|s| !s.is_empty())
         .map(|s| format!("{s}_"))
         .unwrap_or_default();
+      // A typed `\captionsetup[type]`/`[type][sub]` stores its keys for that type only (`\caption@setup@options`,
+      // caption3.sty:252-262): subfig's `\captionsetup[subfloat]{labelformat=empty}` must not empty every
+      // figure's label, now that the main captions read these settings (`caption_format_tokens`).
+      let typed = !type_prefix.is_empty() || !sub_prefix.is_empty();
       for (key, value) in kv.get_pairs() {
-        if !type_prefix.is_empty() || !sub_prefix.is_empty() {
-          let state_key = s!("CAPTION_{type_prefix}{sub_prefix}{key}");
-          assign_value(
-            &state_key,
-            Stored::String(pin(value.to_string())),
-            None,
-          );
+        // The value's tokens, and its text for the keyword values (`labelsep=period`, `font={small,it}`), read back
+        // without welding (`untex`).
+        let value_tokens = value.clone().owned_tokens().unwrap_or_default();
+        let text_value = caption_value(value_tokens.clone().untex_string().as_str());
+        let prefix = s!("CAPTION_{type_prefix}{sub_prefix}");
+        // caption3.sty:842-848: `font+=`/`labelfont+=`/`textfont+=` add to the font a `font=` sets anew.
+        if let Some(base) = key.strip_suffix('+') {
+          let previous = [s!("{prefix}{base}"), s!("CAPTION_{base}")]
+            .iter()
+            .map(|k| lookup_string(k))
+            .find(|v| !v.is_empty())
+            .unwrap_or_default();
+          let joined = if previous.is_empty() { text_value.clone() } else { s!("{previous},{text_value}") };
+          assign_value(&s!("{prefix}{base}"), Stored::String(pin(joined)), None);
+          continue;
         }
-        let state_key = s!("CAPTION_{}", if key == "type*" { "type" } else { key.as_str() });
-        assign_value(
-          &state_key,
-          Stored::String(pin(value.to_string())),
-          None,
-        );
+        let key = match key.as_str() {
+          "type*" if !typed => "type",
+          // caption3.sty:774-775: `labelseparator` is `labelsep`.
+          "labelseparator" => "labelsep",
+          other => other,
+        };
+        assign_value(&s!("{prefix}{key}"), Stored::String(pin(text_value.clone())), None);
+        if key == "name" {
+          assign_value(&s!("{prefix}name@tokens"), Stored::Tokens(value_tokens.clone()), None);
+        }
+        if !typed {
+          match key {
+            // caption3.sty:1347-1350: `name=` names the current float type (`\@namedef{\@captype name}`); outside a
+            // float there is no type to name.
+            "name" if has_meaning(&T_CS!("\\@captype")) => {
+              let captype = do_expand(T_CS!("\\@captype"))?.to_string();
+              let mut call = vec![T_CS!("\\lx@caption@setname"), T_BEGIN!()];
+              call.extend(ExplodeText!(captype.trim()));
+              call.push(T_END!());
+              call.push(T_BEGIN!());
+              call.extend(value_tokens.clone().unlist());
+              call.push(T_END!());
+              Digest!(Tokens::new(call))?;
+            },
+            // caption3.sty:1330-1344: `figurename=`/`tablename=`/`listfigurename=`/`listtablename=` set the names.
+            "figurename" | "tablename" | "listfigurename" | "listtablename" => {
+              let name = key.strip_suffix("name").unwrap_or(key);
+              let mut call = vec![T_CS!("\\lx@caption@setname"), T_BEGIN!()];
+              call.extend(ExplodeText!(name));
+              call.push(T_END!());
+              call.push(T_BEGIN!());
+              call.extend(value_tokens.clone().unlist());
+              call.push(T_END!());
+              Digest!(Tokens::new(call))?;
+            },
+            _ => {},
+          }
+        }
         // `type=`/`type*=` are `\setcaptiontype` → `\caption@settype` (caption.sty:283-284,
         // :288-297, :300-303), which a float's begin also runs, so a `\ContinuedFloat` after
         // `\captionsetup{type=figure}` in a minipage continues, and one before it is dropped.
         // It sets `\@captype` (:313), which a `\subcaptionbox` or `\caption` in that minipage
         // reads: unset, they built `\c@\@captype` (2609.06557, 32742; KNOWN_PERL_ERRORS #504).
-        if (key == "type" || key == "type*") && type_prefix.is_empty() && sub_prefix.is_empty() {
+        if (key == "type" || key == "type*") && !typed {
           let mut call = vec![T_CS!("\\caption@settype"), T_BEGIN!()];
           call.extend(value.clone().owned_tokens().unwrap_or_default().unlist());
           call.push(T_END!());
@@ -159,6 +203,8 @@ LoadDefinitions!({
       }
     }
   );
+  // caption3.sty:1349-1350 `\caption@setname{type}{name}` = `\@namedef{<type>name}{name}`.
+  RawTeX!(r"\def\lx@caption@setname#1#2{\@namedef{#1name}{#2}}");
   def_macro_noop("\\DeclareCaptionStyle{}[]{}")?;
   // caption3.sty:1753-1756: the public float-type API lazy-loads newfloat and
   // delegates (`\DeclareCaptionType[opts]{type}[singular][listname]`);
@@ -200,8 +246,13 @@ LoadDefinitions!({
 \DeclareCaptionLabelSeparator{period}{. }%
 \DeclareCaptionLabelSeparator{space}{ }%
 \DeclareCaptionLabelSeparator{quad}{\quad}%
-\DeclareCaptionLabelSeparator{newline}{\\}%
-\DeclareCaptionLabelSeparator{endash}{ -- }");
+\DeclareCaptionLabelSeparator{newline}{\captionnewline}%
+\DeclareCaptionLabelSeparator{endash}{\space\textendash\space}%
+\DeclareCaptionLabelSeparator{gobble}{ }%
+\DeclareCaptionLabelSeparator{gobbletwo}{}%
+\providecommand*\captionnewline{\\\relax}%
+\def\caption@labelsep@crlist{newline}%
+\newcommand*\caption@LabelSeparatorWithNewline[1]{\edef\caption@labelsep@crlist{\caption@labelsep@crlist,#1}}");
   // caption3.sty (2023, v2.4d) :767 also defines `\caption@lsep@default`; a
   // loaded caption3 is detected by babel-hungarian through it —
   // magyar.ldf:1882-1898 `\ifx\caption@lsep\caption@lsep@default
@@ -211,7 +262,24 @@ LoadDefinitions!({
   // the deprecated call (RUST-ONLY: Perl seeds no separators). Guard:
   // `perfect_kernel_batch56::caption_lsep_default_keeps_magyar_off_the_removed_internal`.
   RawTeX!(r"\newcommand*\caption@lsep@default{\caption@labelseparator@default\caption@labelsep}");
-  def_macro_noop("\\DeclareCaptionFont{}{}")?;
+  // caption3.sty:830-836 `\DeclareCaptionFont[<package>]{name}{code}`: `\caption@font@<name>`, a one-argument macro
+  // (the value of `name=value`, as `color=blue`) a font option (`font=`, `labelfont=`, `textfont=`) runs
+  // (`caption_font_tokens`). The predefined ones, caption3.sty:860-950 and :1365-1375; the spacing ones are layout.
+  // Perl's no-op (caption.sty.ltxml:73) keeps every caption font out (KNOWN_PERL_ERRORS #795).
+  RawTeX!(r"\def\DeclareCaptionFont{\@ifnextchar[\lx@caption@declfont{\lx@caption@declfont[]}}
+\def\lx@caption@declfont[#1]#2#3{\expandafter\long\expandafter\def\csname caption@font@#2\endcsname##1{#3}}
+\DeclareCaptionFont{normalcolor}{\normalcolor}\DeclareCaptionFont{color}{\color{#1}}%
+\DeclareCaptionFont{normalfont}{\normalfont}\DeclareCaptionFont{up}{\upshape}\DeclareCaptionFont{it}{\itshape}%
+\DeclareCaptionFont{sl}{\slshape}\DeclareCaptionFont{sc}{\scshape}\DeclareCaptionFont{md}{\mdseries}%
+\DeclareCaptionFont{bf}{\bfseries}\DeclareCaptionFont{rm}{\rmfamily}\DeclareCaptionFont{sf}{\sffamily}%
+\DeclareCaptionFont{tt}{\ttfamily}\DeclareCaptionFont{tiny}{\tiny}\DeclareCaptionFont{scriptsize}{\scriptsize}%
+\DeclareCaptionFont{footnotesize}{\footnotesize}\DeclareCaptionFont{small}{\small}%
+\DeclareCaptionFont{normalsize}{\normalsize}\DeclareCaptionFont{large}{\large}\DeclareCaptionFont{Large}{\Large}%
+\DeclareCaptionFont{LARGE}{\LARGE}\DeclareCaptionFont{huge}{\huge}\DeclareCaptionFont{Huge}{\Huge}%
+\DeclareCaptionFont{smaller}{}\DeclareCaptionFont{larger}{}\DeclareCaptionFont{none}{}%
+\DeclareCaptionFont{normal}{\normalcolor\normalfont\normalsize}\DeclareCaptionFont{default}{}%
+\DeclareCaptionFont{hypersetup}{}\DeclareCaptionFont{sansmath}{}\DeclareCaptionFont{singlespacing}{}%
+\DeclareCaptionFont{stretch}{}\DeclareCaptionFont{onehalfspacing}{}\DeclareCaptionFont{doublespacing}{}");
   // caption3.sty:701-711 `\DeclareCaptionFormat*?{name}[short]?{code}`: the
   // star and the optional must be consumed too — a 2-arg no-op left the
   // starred form's `{code}` with its `#1#2#3` in the stream (nostarch.cls:856;
@@ -220,7 +288,11 @@ LoadDefinitions!({
   DefMacro!("\\DeclareCaptionFormat OptionalMatch:* {} [] {}", "");
   // caption3.sty L432: `\DeclareCaptionTextFormat{name}{body}` — sibling
   // of `\DeclareCaptionFormat` for text-only caption-format definers.
-  def_macro_noop("\\DeclareCaptionTextFormat{}{}")?;
+  // caption3.sty:787-799 `\DeclareCaptionTextFormat{name}{code}`: `\caption@textformat@<name>`, applied to the caption
+  // text (`textformat=`, `caption_format_tokens`); `simple` and `period` predefined. caption3's `empty` keeps only the
+  // text's `\label` (:792-797), done by `caption_format_tokens`. Perl's no-op dropped the period (KNOWN_PERL_ERRORS #795).
+  RawTeX!(r"\def\DeclareCaptionTextFormat#1#2{\expandafter\long\expandafter\def\csname caption@textformat@#1\endcsname##1{#2}}
+\DeclareCaptionTextFormat{simple}{#1}\DeclareCaptionTextFormat{period}{#1.}");
   // caption3.sty L955-959: `\DeclareCaptionJustification[<pkg>]{<name>}{<body>}`
   // defines `\caption@justification@<name>` (the body) AND lets
   // `\caption@hj@<name>` equal it. The `\caption@hj@<name>` macros are
@@ -775,7 +847,318 @@ LoadDefinitions!({
     tokens.push(T_CS!("\\endgroup"));
     Ok(Tokens::new(tokens))
   });
+
+  // caption3.sty:1468-1483, :1661-1715: caption formats a float's caption itself — the label is the label format
+  // applied to the type's name and number (`\caption@fnum`), the separator the label separator's, the fonts and the
+  // text format caption's options — where the kernel's `\@makecaption` sets "Figure 1: text". The kernel's caption
+  // hook (`\lx@format@caption@@`, sect09.rs) takes the settings `\captionsetup` and the package options store
+  // (`caption_format_tokens`). Perl's binding stores them and reads none (caption.sty.ltxml:62-68; KNOWN_PERL_ERRORS
+  // #795), so `labelsep=period`, `name=Fig.`, `labelformat=parens`, `labelfont=bf` made no difference.
+  DefMacro!("\\lx@format@caption@@{}{}", sub[(ty, text)] { caption_format_tokens(ty, text) });
+  // caption3.sty:1468-1472 `\caption@fnum`: the label format's name argument is `\@nameuse{<type>name}`, empty when
+  // the type has none.
+  RawTeX!(r"\def\lx@caption@fnum#1#2{\expandafter\def\csname fnum@#2\endcsname{\csname caption@labelformat@#1\endcsname{\ifcsname #2name\endcsname\csname #2name\endcsname\fi}{\lx@the@@{#2}}}}
+\def\lx@caption@settitle#1#2{\@namedef{format@title@#1}##1{\lx@tag[][#2]{\lx@fnum@@{#1}}##1}}
+\def\lx@caption@addfont#1#2{\@ifundefined{#1}{\@namedef{#1}{}}{}\expandafter\l@addto@macro\csname #1\endcsname{#2}}");
+
+  // caption3.sty:1774-1806 `\DeclareCaptionSubType*[<numbering>]{<type>}`: the sub-type `sub<type>`, its counter
+  // reset by the type's (`\newcounter{sub<type>}[<type>]`) unless a package made it — caption's error, the
+  // numbering still set — its number `\<numbering>{sub<type>}` referenced after the type's (`\p@sub<type>`) or, starred,
+  // printed after it with a dot (`\thefigure.\alph{subfigure}`). caption3's empty `\sub<type>name` (:1791) is left
+  // out, as subcaption_sty.rs does (a defined name makes the `typerefnum` tag). The TOC entry (`\l@sub<type>`, :1795) is
+  // the list's, built here from the floats. Was a no-op in subcaption_sty.rs and undefined with caption alone (39
+  // papers' first error in run 336: 1202.5818, 1604.05412, 2002.03129, 2106.01798, 1706.00437, 2405.16148, 1907.05468,
+  // 2512.12259); Perl has no binding for it either (KNOWN_PERL_ERRORS #795).
+  RawTeX!(r"\newcommand*\caption@subtypelist{}
+\def\caption@ifdefined@subtype#1{\edef\lx@caption@tempa{\noexpand\in@{,#1,}{,\caption@subtypelist,}}\lx@caption@tempa\ifin@\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\def\lx@caption@addsubtype#1{\caption@ifdefined@subtype{#1}{}{\edef\caption@subtypelist{\ifx\caption@subtypelist\@empty\else\caption@subtypelist,\fi#1}}}
+\newcommand*\DeclareCaptionSubType{\@ifstar{\caption@declaresubtype\@firstoftwo}{\caption@declaresubtype\@secondoftwo}}
+\newcommand*\caption@declaresubtype[1]{\@testopt{\caption@@declaresubtype#1}{alph}}
+\def\caption@@declaresubtype#1[#2]#3{\@ifundefined{c@#3}{\caption@Error{No float type '#3' defined}}{\caption@@@declaresubtype{#1}{#2}{#3}{sub#3}}}
+\newcommand*\caption@@@declaresubtype[4]{%
+  \caption@ifdefined@subtype{#4}{}{%
+    \@ifundefined{c@#4}%
+      {\lx@caption@newsubcounter{#4}{#3}%
+       \@namedef{#4autorefname}{\csname #3autorefname\endcsname}%
+       \@namedef{ext@#4}{\csname ext@#3\endcsname}%
+       \lx@caption@addsubtype{#4}}%
+      {\caption@subtypesource{#4}\caption@Error{The counter `#4' was already defined by\MessageBreak\caption@subtype@source}}}%
+  #1{\@namedef{p@#4}{}\@namedef{the#4}{\csname the#3\endcsname.\@nameuse{#2}{#4}}}%
+    {\@namedef{p@#4}{\csname the#3\endcsname}\@namedef{the#4}{\@nameuse{#2}{#4}}}%
+  \@namedef{theH#4}{\csname theH#3\endcsname.\arabic{#4}}}
+\def\caption@subtypesource#1{\def\caption@subtype@source{an unknown document class or package}%
+  \ifcsname sf@counterlist\endcsname\edef\lx@caption@tempa{\noexpand\in@{,#1,}{,\sf@counterlist,}}\lx@caption@tempa
+    \ifin@\def\caption@subtype@source{\noexpand\newsubfloat (offered by the subfig package)}\fi\fi}
+\@onlypreamble\DeclareCaptionSubType");
+
+  // caption3.sty:1788 `\newcounter{sub<type>}[<type>]`, its ids within the type's as subcaption's (`sf` for a
+  // sub-figure, subcaption_sty.rs): `s` and the type's initial.
+  DefPrimitive!("\\lx@caption@newsubcounter{}{}", sub[(sub_type, parent)] {
+    let (sub_type, parent) = (sub_type.to_string(), parent.to_string());
+    let idprefix = s!("s{}", parent.trim().chars().next().map(|c| c.to_ascii_lowercase()).unwrap_or('s'));
+    NewCounter!(sub_type.trim(), parent.trim(), idprefix => &idprefix, idwithin => parent.trim());
+  });
+
+  // caption.sty:171-172: the package options are `\captionsetup` keys (`\caption@ProcessOptions*{caption}`), with the
+  // caption v1 options (:114-147, valid only here): a font shape or series for the label (`bf` is
+  // `labelfont+=bf`), a size for the caption (`small`), the rest layout. Ignored before, so
+  // `\usepackage[labelsep=period]{caption}` kept "Figure 1:".
+  DeclareOption!(None, {
+    let option = do_expand(T_CS!("\\CurrentOption"))?.to_string();
+    let option = option.trim();
+    let setup = match option {
+      "up" | "it" | "sl" | "sc" | "md" | "bf" | "rm" | "sf" | "tt" => s!("labelfont+={option}"),
+      "scriptsize" | "footnotesize" | "small" | "normalsize" | "large" | "Large" => s!("font+={option}"),
+      "normal" | "isu" | "hang" | "center" | "centerlast" | "nooneline" | "ruled" | "flushleft"
+      | "flushright" | "oneline" | "ignoreLTcapwidth" => String::new(),
+      _ => String::from("\\CurrentOption"),
+    };
+    if !setup.is_empty() {
+      Digest!(tokenize(TeXString::assembled(s!(r"\edef\lx@caption@option{{\noexpand\captionsetup{{{setup}}}}}\lx@caption@option"))))?;
+    }
+  });
+  ProcessKeyOptions!();
 });
+
+/// A `\captionsetup` value as text: one pair of enclosing braces is keyval's grouping (`font={small,bf}`).
+fn caption_value(value: &str) -> String {
+  let value = value.trim();
+  match value.strip_prefix('{').and_then(|v| v.strip_suffix('}')) {
+    Some(inner)
+      if inner.chars().filter(|c| *c == '{').count()
+        == inner.chars().filter(|c| *c == '}').count() =>
+    {
+      inner.trim().to_string()
+    },
+    _ => value.to_string(),
+  }
+}
+
+/// A caption setting for float type `ty`: the type's own (`\captionsetup[figure]{…}`), else the general one.
+fn caption_setting(ty: &str, key: &str) -> Option<String> {
+  [s!("CAPTION_{ty}_{key}"), s!("CAPTION_{key}")]
+    .iter()
+    .map(|k| lookup_string(k))
+    .find(|v| !v.is_empty())
+}
+
+/// caption3.sty:852-858: a font option's value is a list of caption fonts (`font={small,it}`, `labelfont=bf`,
+/// `font={color=blue}`), each `\caption@font@<name>{<value>}`; an undeclared one is caption's error.
+fn caption_font_tokens(spec: &str) -> Result<Vec<Token>> {
+  let mut tokens = Vec::new();
+  let mut depth = 0i32;
+  let mut items = vec![String::new()];
+  for c in spec.chars() {
+    match c {
+      '{' => depth += 1,
+      '}' => depth -= 1,
+      ',' if depth == 0 => {
+        items.push(String::new());
+        continue;
+      },
+      _ => {},
+    }
+    if let Some(last) = items.last_mut() {
+      last.push(c);
+    }
+  }
+  for item in items {
+    // keyval strips one pair of braces around an item (`font={{stretch=1},footnotesize}`, 1706.05280).
+    let item = caption_value(&item);
+    let (name, value) = match item.split_once('=') {
+      Some((name, value)) => (name.trim().to_string(), caption_value(value)),
+      None => (item.trim().to_string(), String::new()),
+    };
+    if name.is_empty() {
+      continue;
+    }
+    let font = T_CS!(&s!("\\caption@font@{name}"));
+    if is_defined_token(&font) {
+      tokens.push(font);
+      tokens.push(T_BEGIN!());
+      tokens.extend(tokenize(TeXString::assembled(value)).unlist());
+      tokens.push(T_END!());
+    } else {
+      Error!("undefined", &name, &s!("Undefined font `{name}'"));
+    }
+  }
+  Ok(tokens)
+}
+
+/// caption3.sty:792-797 `textformat=empty`: the caption text is dropped, its `\label`s kept.
+fn caption_labels_only(text: Tokens) -> Tokens {
+  let tokens = text.unlist();
+  let mut kept = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    if tokens[i] == T_CS!("\\label") {
+      kept.push(tokens[i]);
+      i += 1;
+      let mut depth = 0;
+      while i < tokens.len() {
+        let token = tokens[i];
+        kept.push(token);
+        i += 1;
+        match token.get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => {
+            depth -= 1;
+            if depth <= 0 {
+              break;
+            }
+          },
+          _ if depth == 0 => break,
+          _ => {},
+        }
+      }
+    } else {
+      i += 1;
+    }
+  }
+  Tokens::new(kept)
+}
+
+/// A float's caption as caption formats it (caption3.sty:1661-1715), from its settings for the type: the type's name
+/// (`name=`), its label format (`labelformat=`, the type's `\fnum@<type>` for `original`/`default`), its label
+/// separator (`labelsep=`, none for an empty caption, :1679-1683), its fonts (`font=` for the whole caption,
+/// `labelfont=` for the label, `textfont=` for the text) and its text format (`textformat=`). With none set the
+/// caption is the class's (`\lx@format@title@@`). Sub-captions keep their packages' formats (subcaption_sty.rs,
+/// subfig_sty.rs).
+fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
+  let ty_name = ty.to_string().trim().to_string();
+  let text_empty = text
+    .unlist_ref()
+    .iter()
+    .all(|t| t.get_catcode() == Catcode::SPACE);
+  let get = |key: &str| caption_setting(&ty_name, key);
+  let format = get("labelformat").filter(|f| f != "default" && f != "original");
+  let separator = get("labelsep").filter(|s| s != "default");
+  let (font, label_font, text_font) = (get("font"), get("labelfont"), get("textfont"));
+  let text_format = get("textformat").filter(|f| f != "simple" && f != "default");
+  let name = lookup_tokens(&s!("CAPTION_{ty_name}_name@tokens"));
+  let mut tokens = Vec::new();
+  let mut line_break: Vec<Token> = Vec::new();
+  // No type (a caption whose type an argument scan lost) has nothing to format.
+  let passthrough = ty_name.is_empty()
+    || ty_name.starts_with("sub")
+    || (format.is_none()
+      && separator.is_none()
+      && font.is_none()
+      && label_font.is_none()
+      && text_font.is_none()
+      && text_format.is_none()
+      && name.is_none()
+      && !text_empty);
+  let explode = |s: &str| ExplodeText!(s);
+  let braced = |tokens: &mut Vec<Token>, inner: Vec<Token>| {
+    tokens.push(T_BEGIN!());
+    tokens.extend(inner);
+    tokens.push(T_END!());
+  };
+  if !passthrough {
+    tokens.push(T_CS!("\\begingroup"));
+    if let Some(name) = name {
+      tokens.push(T_CS!("\\lx@caption@setname"));
+      braced(&mut tokens, explode(&ty_name));
+      braced(&mut tokens, name.unlist());
+    }
+    let font_tokens = font
+      .as_deref()
+      .map(caption_font_tokens)
+      .transpose()?
+      .unwrap_or_default();
+    if font.is_some() || label_font.is_some() {
+      let mut fonts = font_tokens.clone();
+      fonts.extend(
+        label_font
+          .as_deref()
+          .map(caption_font_tokens)
+          .transpose()?
+          .unwrap_or_default(),
+      );
+      tokens.push(T_CS!("\\lx@caption@addfont"));
+      braced(&mut tokens, explode(&s!("fnum@font@{ty_name}")));
+      braced(&mut tokens, fonts);
+    }
+    if font.is_some() || text_font.is_some() {
+      let mut fonts = font_tokens;
+      fonts.extend(
+        text_font
+          .as_deref()
+          .map(caption_font_tokens)
+          .transpose()?
+          .unwrap_or_default(),
+      );
+      tokens.push(T_CS!("\\lx@caption@addfont"));
+      braced(&mut tokens, explode(&s!("format@title@font@{ty_name}")));
+      braced(&mut tokens, fonts);
+    }
+    if let Some(format) = format {
+      if is_defined(&s!("\\caption@labelformat@{format}")) {
+        tokens.push(T_CS!("\\lx@caption@fnum"));
+        braced(&mut tokens, explode(&format));
+        braced(&mut tokens, explode(&ty_name));
+      } else {
+        Error!(
+          "undefined",
+          &format,
+          &s!("Undefined label format `{format}'")
+        );
+      }
+    }
+    // caption3.sty:1679-1683: an empty caption text has no separator. A separator that breaks the line
+    // (`\caption@LabelSeparatorWithNewline`, caption3.sty:776-779: `newline`) is the text's first line break, the
+    // tag's `close` being text.
+    let separator_cs = if text_empty {
+      Some(Vec::new())
+    } else if let Some(separator) = separator {
+      if is_defined(&s!("\\caption@lsep@{separator}")) {
+        let crlist = do_expand(T_CS!("\\caption@labelsep@crlist"))?.to_string();
+        if crlist.split(',').any(|item| item.trim() == separator) {
+          line_break = vec![T_CS!(&s!("\\caption@lsep@{separator}"))];
+          Some(Vec::new())
+        } else {
+          Some(vec![T_CS!(&s!("\\caption@lsep@{separator}"))])
+        }
+      } else {
+        Error!(
+          "undefined",
+          &separator,
+          &s!("Undefined label separator `{separator}'")
+        );
+        None
+      }
+    } else {
+      None
+    };
+    if let Some(separator_cs) = separator_cs {
+      tokens.push(T_CS!("\\lx@caption@settitle"));
+      braced(&mut tokens, explode(&ty_name));
+      braced(&mut tokens, separator_cs);
+    }
+  }
+  let text = match text_format.filter(|_| !passthrough) {
+    Some(f) if f == "empty" => caption_labels_only(text),
+    Some(f) if is_defined(&s!("\\caption@textformat@{f}")) => {
+      let mut wrapped = vec![T_CS!(&s!("\\caption@textformat@{f}"))];
+      braced(&mut wrapped, text.unlist());
+      Tokens::new(wrapped)
+    },
+    Some(f) => {
+      Error!("undefined", &f, &s!("Undefined text format `{f}'"));
+      text
+    },
+    None => text,
+  };
+  tokens.push(T_CS!("\\lx@format@title@@"));
+  braced(&mut tokens, ty.unlist());
+  line_break.extend(text.unlist());
+  braced(&mut tokens, line_break);
+  if !passthrough {
+    tokens.push(T_CS!("\\endgroup"));
+  }
+  Ok(Tokens::new(tokens))
+}
 
 /// caption.sty:504-511, :519-533: a float continues only the type stepped last
 /// (`\continuedfloat@captype`, set on every real step), else caption's error; then

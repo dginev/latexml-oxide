@@ -1,0 +1,26 @@
+% witness: 68h: cleveref's `\crefalias{<counter>}{<type>}` (cleveref.sty:1277-1278) makes a label stepped by the
+%          counter a reference to the type; the binding's no-op (cleveref_sty.rs:132; Perl cleveref.sty.ltxml:114-117,
+%          KNOWN_PERL_ERRORS #796) kept the counter's name (1810.01223 `\crefalias{section}{appsec}`, 1706.03576
+%          and 2210.04778 `\addtotheorempostheadhook[theorem]{\crefalias{thmlisti}{theorem}}`)
+% oracle:  pdflatex 0 errors: "See section 1, supplement A, step 1, item 1."
+% engines: rust 68h base (67int8) and perl: "section 1, appendix A, item 1, item 1"
+% expect:  0 errors; the creftype tags are section, step, item, supplement
+% status:  GREEN (68h)
+\documentclass{article}
+\usepackage{cleveref}
+\crefname{appsec}{supplement}{supplements}
+\crefname{step}{step}{steps}
+\begin{document}
+\section{Intro}\label{s1}
+\begin{enumerate}\crefalias{enumi}{step}
+\item First\label{i1}
+\end{enumerate}
+\begin{enumerate}
+\item Plain\label{i2}
+\end{enumerate}
+See \cref{s1}, \cref{s2}, \cref{i1}, \cref{i2}.
+\appendix
+\crefalias{section}{appsec}
+\section{Extra}\label{s2}
+Text.
+\end{document}

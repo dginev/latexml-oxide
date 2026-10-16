@@ -118,6 +118,9 @@ LoadDefinitions!({
   // `\ext@subfigure`.
   Let!("\\ext@subfigure", "\\ext@figure");
   Let!("\\ext@subtable", "\\ext@table");
+  // subfig.sty:261-263: `\newsubfloat` lists the sub-float counters it made in `\sf@counterlist`, which caption's
+  // `\DeclareCaptionSubType` names in its error for a counter subfig made (caption.sty:348, caption3.sty:1848-1856).
+  RawTeX!(r"\def\sf@counterlist{subfigure,subtable}");
 
   // Subfigure display macros
   DefMacro!("\\thesubfigure", "\\alph{subfigure}");

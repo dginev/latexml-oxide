@@ -43,8 +43,12 @@ LoadDefinitions!({
     cref_define_name("Cref", type_arg, sg, pl)?;
     Ok(Vec::new())
   });
-  // \crefalias is defined below as a 2-arg primitive; leave it as-is.
-  def_macro_noop("\\crefalias{}{}")?;
+  // `\crefalias{<counter>}{<type>}` is raw cleveref's (cleveref.sty:1277-1278, `\def\cref@<counter>@alias{<type>}`),
+  // read by `cref_type`: a label stepped by the counter is referenced as the type (`\crefalias{section}{appendix}`
+  // after `\appendix`, enumitem lists in a theorem through thmtools' hooks). The binding's no-op (Perl's
+  // cleveref.sty.ltxml:114-117 alike; KNOWN_PERL_ERRORS #796) kept every such label its counter's name. Witnesses
+  // 1706.03576, 2210.04778, 2002.10700 (`\addtotheorempostheadhook[theorem]{\crefalias{thmlisti}{theorem}}`),
+  // 1810.01223 (`\crefalias{section}{appsec}`), 2506.14950 (`\crefalias{lemma}{theorem}`).
 
   // Helper: produces the literal `~` (U+007E) as text — a CS so an active `~`
   // can't collapse to a space during tokenization, and a direct Tbox string so
@@ -128,8 +132,6 @@ LoadDefinitions!({
     let label_tokens = args.into_iter().next().and_then(|a| a.owned_tokens()).unwrap_or_default();
     Ok(cref_multi(false, label_tokens, false, false)?)
   });
-
-  DefPrimitive!("\\crefalias{}{}", sub[(_counter, _ctype)] { Ok(Vec::new()) });
 
   // Type formatter macros. `theorem_fallback` (the singular creftype/creftypecap
   // variants) supplies the surpass-Perl auto-naming — see cleverref_type_name.
@@ -229,13 +231,21 @@ fn cleverref_type_name(
   Tokens!()
 }
 
-/// Perl: crefType($type) — resolve type alias
+/// Perl: crefType($type) — resolve type alias. cleveref keys an alias by the counter (`\cref@<counter>@alias`,
+/// cleveref.sty:1277-1278, read at `\refstepcounter`, :147-170): a type with no alias of its own takes its
+/// counter's (`counter_for_type`: an appendix section is stepped by `section`, so `\crefalias{section}{appsec}` after
+/// `\appendix` names it, as pdflatex prints).
 fn cref_type(ctype: &str) -> String {
-  let alias_cs = s!("\\cref@{}@alias", ctype);
-  if has_meaning(&T_CS!(&alias_cs))
-    && let Ok(expanded) = do_expand(Tokens!(T_CS!(&alias_cs)))
-  {
-    return expanded.to_string();
+  let counter: Option<String> = lookup_mapping("counter_for_type", ctype)
+    .as_ref()
+    .map(String::from);
+  for key in std::iter::once(ctype.to_string()).chain(counter) {
+    let alias_cs = s!("\\cref@{}@alias", key);
+    if has_meaning(&T_CS!(&alias_cs))
+      && let Ok(expanded) = do_expand(Tokens!(T_CS!(&alias_cs)))
+    {
+      return expanded.to_string();
+    }
   }
   ctype.to_string()
 }

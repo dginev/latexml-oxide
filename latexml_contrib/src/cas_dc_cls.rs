@@ -6,6 +6,8 @@
 //! frontmatter macros.
 use latexml_package::prelude::*;
 
+use crate::shipped_class::class_option_given;
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   // cas-sc.cls:144, cas-dc.cls:142 `\RequirePackage[T1]{fontenc}`: text `_`, `<`, `>`, `|` print as themselves.
@@ -40,6 +42,11 @@ LoadDefinitions!({
   // 2-col docs). Without it, papers using `\balance` near the end
   // trip Error:undefined. Witness 2303.04712.
   RequirePackage!("balance");
+  // cas-sc.cls:49, :67 and cas-dc.cls:49, :67: the `review` option loads setspace (the double spacing itself, :136-138,
+  // is layout); a paper's `\DeclareCaptionFont{mysingle}{\setstretch{1}}` under `[review]` calls it (2512.10464).
+  if class_option_given("review")? {
+    RequirePackage!("setspace");
+  }
   // cas-dc.cls (Elsevier CAS) aliases \newdefinition and \newproof to \newtheorem
   // (elsarticle convention), used to declare definition/proof-like theorem envs.
   // Were undefined (Perl defines them). Witness 2306.04212.

@@ -199,7 +199,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@longtable@caption[]{}",
     r"\lx@longtable@caption@text{#1}{#2}\lx@longtable@caption@row");
   DefMacro!("\\lx@longtable@caption@text{}{}",
-    r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\if\relax\detokenize{#1}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#2}{#1}}}{\lx@format@title@@{table}{#2}}");
+    r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\if\relax\detokenize{#1}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#2}{#1}}}{\lx@format@caption@@{table}{#2}}");
   DefPrimitive!("\\lx@longtable@caption@{}{}", sub[(toccap, cap)] {
     // caption's `\LT@makecaption` (caption.sty:1167, :1171): `\caption@LT@settype` — the table
     // type, a pending continuation cleared — and `\caption@prepare@stepcounter` (the table was

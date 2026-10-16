@@ -1,0 +1,16 @@
+% witness: 68h: graphics' driver (`\Gin@driver`, graphics.sty:66-107 and graphics.cfg) was empty, so trimclip
+%          (trimclip.sty:24, :252-258) fell back to tc-pgf.def and read pgf, where pdflatex reads tc-pdftex.def and no
+%          pgf (2202.10115, 2306.09847, 2507.09618)
+% oracle:  pdflatex 0 errors: "Clipped text Box Wide no pgf; driver pdftex.def."
+% engines: rust 68h base (67int8): pgf loaded, `\clipbox` a pgf picture; perl: no trimclip driver either
+% expect:  0 errors; no pgf; the clipped box keeps its text
+% status:  GREEN (68h)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{adjustbox}
+\begin{document}
+\adjustbox{trim=1pt 1pt 1pt 1pt,clip}{Clipped text}
+\clipbox{1pt 1pt 1pt 1pt}{Box}
+\begin{adjustbox}{max width=\textwidth}Wide\end{adjustbox}
+\makeatletter\ifdefined\pgfversion PGF loaded\else no pgf\fi; driver \Gin@driver.\makeatother
+\end{document}

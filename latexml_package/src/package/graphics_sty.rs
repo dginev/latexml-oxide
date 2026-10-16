@@ -725,6 +725,18 @@ LoadDefinitions!({
     DefMacro!(cs, None, Tokens!(Explode!(format!("{ratio}"))));
   });
 
+  // graphics.sty:66-107: the driver file the options or graphics.cfg chose (`graphics_driver`), which packages read to
+  // choose their own drivers: trimclip's `tc-\Gin@driver` (trimclip.sty:24, :252-258), eso-pic, crop, pgfplots,
+  // epstopdf-base. Left empty (latex_constructs_rust_only.rs), trimclip fell back to tc-pgf.def and read pgf where
+  // pdflatex reads tc-pdftex.def and no pgf (2202.10115, 2507.09618, 2306.09847); epstopdf-base warned "Drivers other
+  // than `pdftex' and `luatex' are not supported". The driver file itself is not read: its drawing is the binding's.
+  // A token body, as `\def\Gin@driver{pdftex.def}`: packages compare it with `\ifx` (epstopdf-base.sty:193-196).
+  def_macro(
+    T_CS!("\\Gin@driver"),
+    None,
+    mouth::tokenize(TeXString::assembled(graphics_driver().to_string())),
+    None,
+  )?;
   // Perl: \set@color defined elsewhere but referenced by graphics
   // Provide a no-op fallback if not already defined
   def_macro_noop("\\set@color")?;
@@ -766,38 +778,38 @@ LoadDefinitions!({
   );
 });
 
-/// graphics.sty's driver options in declaration order (graphics.sty:67-88), with whether that driver file loads
-/// epstopdf-base at `\begin{document}`: only pdftex.def and luatex.def do.
-const GRAPHICS_DRIVER_OPTIONS: [(&str, bool); 22] = [
-  ("dvips", false),
-  ("xdvi", false),
-  ("dvipdf", false),
-  ("dvipdfm", false),
-  ("dvipdfmx", false),
-  ("xetex", false),
-  ("pdftex", true),
-  ("luatex", true),
-  ("dvisvgm", false),
-  ("dvipsone", false),
-  ("dviwindo", false),
-  ("emtex", false),
-  ("dviwin", false),
-  ("oztex", false),
-  ("textures", false),
-  ("pctexps", false),
-  ("pctexwin", false),
-  ("pctexhp", false),
-  ("pctex32", false),
-  ("truetex", false),
-  ("tcidvi", false),
-  ("vtex", false),
+/// graphics.sty's driver options in declaration order (graphics.sty:67-88), with the driver file each names
+/// (`xdvi` and `oztex` are `dvips`, `dviwindo` is `dvipsone`, `dvipdfm` is `dvipdfmx`).
+const GRAPHICS_DRIVER_OPTIONS: [(&str, &str); 22] = [
+  ("dvips", "dvips.def"),
+  ("xdvi", "dvips.def"),
+  ("dvipdf", "dvipdf.def"),
+  ("dvipdfm", "dvipdfmx.def"),
+  ("dvipdfmx", "dvipdfmx.def"),
+  ("xetex", "xetex.def"),
+  ("pdftex", "pdftex.def"),
+  ("luatex", "luatex.def"),
+  ("dvisvgm", "dvisvgm.def"),
+  ("dvipsone", "dvipsone.def"),
+  ("dviwindo", "dvipsone.def"),
+  ("emtex", "emtex.def"),
+  ("dviwin", "dviwin.def"),
+  ("oztex", "dvips.def"),
+  ("textures", "textures.def"),
+  ("pctexps", "pctexps.def"),
+  ("pctexwin", "pctexwin.def"),
+  ("pctexhp", "pctexhp.def"),
+  ("pctex32", "pctex32.def"),
+  ("truetex", "truetex.def"),
+  ("tcidvi", "tcidvi.def"),
+  ("vtex", "vtex.def"),
 ];
 
-/// Does graphics.sty's driver (`\Gin@driver`) load epstopdf-base? `\ProcessOptions` runs the declared driver options
-/// that the package or the class was given in declaration order, so the last one listed wins; graphicx passes its
-/// own options on (graphicx.sty:29). With none, graphics.cfg picks the PDF driver for PDF output (`\pdfoutput` > 0,
-/// as K6 sets it) and xetex.def under XeTeX.
-fn graphics_driver_loads_epstopdf() -> bool {
+/// graphics.sty's driver file (`\Gin@driver`): `\ProcessOptions` runs the declared driver options that the package
+/// or the class was given in declaration order, so the last one listed wins; graphicx passes its own options on
+/// (graphicx.sty:29). With none, graphics.cfg picks xetex.def under XeTeX, pdftex.def for PDF output (`\pdfoutput` >
+/// 0, as K6 sets it), else dvips.def (graphics.cfg:24-68).
+fn graphics_driver() -> &'static str {
   let mut given: Vec<String> = Vec::new();
   for key in ["opt@graphics.sty", "opt@graphicx.sty", "class_options"] {
     for item in lookup_vecdeque(key).unwrap_or_default() {
@@ -813,13 +825,23 @@ fn graphics_driver_loads_epstopdf() -> bool {
     .rev()
     .find(|(name, _)| given.iter().any(|g| g == name))
   {
-    Some((_, loads)) => *loads,
+    Some((_, driver)) => driver,
+    None if lookup_bool("XETEX_PROFILE") => "xetex.def",
     None => {
-      !lookup_bool("XETEX_PROFILE")
-        && lookup_register("\\pdfoutput", Vec::new())
-          .ok()
-          .flatten()
-          .is_some_and(|value| Number::from(&value).value_of() > 0)
+      if lookup_register("\\pdfoutput", Vec::new())
+        .ok()
+        .flatten()
+        .is_some_and(|value| Number::from(&value).value_of() > 0)
+      {
+        "pdftex.def"
+      } else {
+        "dvips.def"
+      }
     },
   }
+}
+
+/// Does graphics.sty's driver load epstopdf-base at `\begin{document}`? Only pdftex.def and luatex.def do.
+fn graphics_driver_loads_epstopdf() -> bool {
+  matches!(graphics_driver(), "pdftex.def" | "luatex.def")
 }

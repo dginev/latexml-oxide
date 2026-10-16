@@ -79,6 +79,9 @@ LoadDefinitions!({
     // subfigure reads "Figure 1a" (hyperref_sty.rs `\lx@autorefnum@@`). caption3's empty
     // `\subfigurename` (:1791) is left out: here a defined name makes the `typerefnum` tag, " 1a".
     DefMacro!("\\subfigureautorefname", "\\figureautorefname");
+    // A sub-type of caption's (`\caption@subtypelist`, caption3.sty:1788-1796): a later `\DeclareCaptionSubType`
+    // modifies its numbering (caption_sty.rs).
+    RawTeX!(r"\lx@caption@addsubtype{subfigure}");
   }
   // subcaption cannot be used with subfig (subcaption.sty:44-47, an error); a document that loads
   // both — or keeps subfig out by `\@namedef{ver@subfig.sty}`, which our loader does not honour (a
@@ -96,6 +99,7 @@ LoadDefinitions!({
     DefMacro!("\\fnum@subtable",  "\\lx@subcaption@fnum{subtable}{\\thesubtable}");
     Let!("\\p@subtable",    "\\thetable");
     DefMacro!("\\subtableautorefname", "\\tableautorefname");
+    RawTeX!(r"\lx@caption@addsubtype{subtable}");
   }
   Let!("\\ext@subfigure", "\\ext@figure");
   Let!("\\ext@subtable",  "\\ext@table");
@@ -367,9 +371,6 @@ LoadDefinitions!({
   // \subref — delegates to \ref
   DefMacro!("\\subref OptionalMatch:* Semiverbatim", "\\ref{#2}");
 
-  //======================================================================
-  // \DeclareCaptionSubType — stub (should be in caption/caption3)
-  def_macro_noop("\\DeclareCaptionSubType OptionalMatch:* [] {}")?;
 });
 
 /// `{list}{caption}{body}` in a `sub<type>` environment. The type is `\@captype` less a leading
