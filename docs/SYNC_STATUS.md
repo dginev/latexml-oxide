@@ -313,6 +313,13 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 The open RED repros of `tools/perfect_kernel/repros/` that no other row names; headers re-checked 2026-10-02 (scope:
 PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
 
+- **etna's `\remark` ends by the class's `\@endtheorem`, which the native `\endtheorem` never runs** (SHARED, Perl 2; 70b
+  E4): etna.cls:288-326 defines `\remark` as `{…\@begintheorem…}` (its `}` closes `\@begintheorem`'s `\bgroup`, its
+  own `{` stays open) and `\endremark` as `\endtheorem`, i.e. latex.ltx's `\@endtheorem` = the class's
+  `\egroup\ignorespacesafterend`; ours is the theorem binding's native end, so the `{` stays open ("\endgroup Attempt
+  to close non-boxing group", pdflatex 0). Not local: the fix is a theorem end that consults a class's `\@endtheorem`
+  (or the class's `\@begintheorem`/`\@endtheorem` pair as a unit), a theorem-machinery change. Witnesses 2409.06465,
+  2603.20879. Repro `boxes-groups/etna_remark_ends_by_class_endtheorem`.
 - **acmart's theorems shadow an author's command of the same name** (SHARED; 69c side finding): acmart.cls defines
   its theorems `\AtEndPreamble{\if@ACM@acmthm … \@ifundefined{example}{\newtheorem{example}…}{} …}` (TL 2025
   :3461-3489), acmart_cls.rs:442-449 (and Perl's acmart.cls.ltxml:236-243) `\newtheorem` them at class load, so
@@ -2838,6 +2845,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\zap@space` stores it (content.rs `zap_space`; `\@raw@opt@` keeps them), so l3keys2e finds keys an expl3 package
   declared with spaces (`share counter` → `sharecounter`); witness 2607.15530 (pomegranate.sty); KNOWN_PERL_ERRORS #928
   (latent in Perl, which reads no raw package). Guard `perfect_kernel_batch70b::opt_macro_drops_spaces_as_zap_space`.
+  (7) E4 (etna `\remark` ended by the class's `\@endtheorem`): not local, RED row in "Perfect-kernel RED repros"
+  (`boxes-groups/etna_remark_ends_by_class_endtheorem`).
 - **69c** (medium-risk shapes from the rc_struct3 study, agent_reports/2026-10-17_rc_struct3.md). (1) P1: a theorem,
   proof or TOC inside a container whose model holds no Para.class (`{quote}`, a `\footnote`, a `{wrapfigure}`, an
   `ltx:text`, a cell) opens an `ltx:inline-logical-block` there — the last auto-open bridge of document.rs
