@@ -1,0 +1,16 @@
+% witness: 1805.05444 (apacite's `\cite<e.g.>[]{Rigden_2017}` reaches natbib's `[e.g.][]`), main-session probe natq (68w r1)
+% oracle:  pdflatex 0 errors: "A (e.g. Rigden, 2017). B (e.g. Rigden, 2017, p. 3). C (Rigden, 2017, p. 3). D Rigden
+%          (see 2017)."
+% engines: rust 67int15 = "(Rigden, 2017, e.g.)" (an empty post-note swapped the pre-note into it); Perl 0.8.8
+%          "(e.g. Rigden, 2017)" (natbib.sty.ltxml:113 swaps only an absent post-note)
+% expect:  0 errors; A and D keep the pre-note before the citation, B both notes, C the post-note
+% status:  FIXED (68w r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+A \citep[e.g.][]{k}. B \citep[e.g.][p.~3]{k}. C \citep[p.~3]{k}. D \citet[see][]{k}.
+\begin{thebibliography}{1}
+\bibitem[Rigden(2017)]{k} J. Rigden, Title, 2017.
+\end{thebibliography}
+\end{document}

@@ -367,7 +367,8 @@ fn par_before_a_catcode_change_ends_the_formula() {
   assert_eq!(math_tex(&xml), vec!["a=b", "x"], "{xml}");
 }
 
-/// natbib's `\citep[e.g.][]{a_b}`: every `[…]` and `{…}` in a row after the command is its argument.
+/// natbib's `\citep[e.g.][]{a_b}`: every `[…]` and `{…}` in a row after the command is its argument ("e.g." the pre-note:
+/// only an absent post-note swaps, natbib.sty.ltxml:113, 68w r2).
 #[test]
 fn par_before_citep_with_two_notes_ends_the_formula() {
   let xml = assert_par_ends_formula(
@@ -375,8 +376,8 @@ fn par_before_citep_with_two_notes_ends_the_formula() {
       "../../../tools/perfect_kernel/repros/paragraph-mode/par_in_inline_math_before_citep_with_two_notes_ends_the_formula.tex"
     ),
     concat!(
-      r#"<p xml:id="p2.1">See <cite class="ltx_citemacro_citep">(<bibref bibrefs="a_b" separator=";" "#,
-      r#"show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>, e.g.)</cite>"#,
+      r#"<p xml:id="p2.1">See <cite class="ltx_citemacro_citep">(e.g. <bibref bibrefs="a_b" separator=";" "#,
+      r#"show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>)</cite>"#,
     ),
   );
   assert!(!some_formula_holds(&xml, "<bibliography"), "{xml}");

@@ -423,6 +423,38 @@ fn split_on_and(tokens: &Tokens) -> Vec<Vec<Token>> {
   parts
 }
 
+/// An ORCID iD (`0000-0002-1825-0097`, the last character a digit or `X`) or its orcid.org address, with or without
+/// the scheme or `www.`; an argument holding a macro is taken as one (`\lx@add@orcid` keeps it as written).
+fn is_orcid(tokens: &[Token]) -> bool {
+  if tokens.iter().any(|t| t.get_catcode() == Catcode::CS) {
+    return true;
+  }
+  let text = Tokens::new(tokens.to_vec())
+    .to_string()
+    .trim()
+    .to_ascii_lowercase();
+  let mut rest = text.as_str();
+  for scheme in ["https://", "http://"] {
+    if let Some(r) = rest.strip_prefix(scheme) {
+      rest = r;
+      break;
+    }
+  }
+  rest = rest.strip_prefix("www.").unwrap_or(rest);
+  if rest.starts_with("orcid.org/") {
+    return true;
+  }
+  let groups: Vec<&str> = rest.split('-').collect();
+  groups.len() == 4
+    && groups.iter().enumerate().all(|(i, group)| {
+      group.len() == 4
+        && group
+          .chars()
+          .enumerate()
+          .all(|(j, c)| c.is_ascii_digit() || (i == 3 && j == 3 && c == 'x'))
+    })
+}
+
 /// `\cs{content}` as tokens.
 fn invoke(cs: &str, content: Vec<Token>) -> Vec<Token> {
   let mut tokens = vec![T_CS!(cs), T_BEGIN!()];
@@ -479,8 +511,25 @@ fn lipics_author(
   if !is_blank(&email) {
     out.extend(invoke("\\lx@add@email", trimmed(email.unlist_ref())));
   }
+  // the class links the slot as written (lipics-v2021.cls:797 `\if!#4!\else{\,\href{#4}{\orcidsymbol}}\fi`): an ORCID iD,
+  // bare or its orcid.org address, is the author's ORCID (`\lx@add@orcid`); anything else (an email, 2607.06446) is
+  // the class's link to it, not an orcid.org address
   if !is_blank(&orcid) {
-    out.extend(invoke("\\lx@add@orcid", trimmed(orcid.unlist_ref())));
+    let orcid = trimmed(orcid.unlist_ref());
+    if is_orcid(&orcid) {
+      out.extend(invoke("\\lx@add@orcid", orcid));
+    } else {
+      let mut link = vec![T_CS!("\\href"), T_BEGIN!()];
+      link.extend(orcid);
+      link.extend([T_END!(), T_BEGIN!(), T_CS!("\\lx@orcidlogo"), T_END!()]);
+      out.extend(
+        mouth::tokenize_internal(TeXString::assembled(
+          r"\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid]".to_string(),
+        ))
+        .unlist(),
+      );
+      out.extend(invoke_group(link));
+    }
   }
   if !is_blank(&funding) {
     let mut note = vec![

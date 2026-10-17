@@ -126,9 +126,12 @@ fn cite_close() -> Tokens { lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS) }
 fn cite_ns() -> Tokens { lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS) }
 fn cite_ay() -> Tokens { lookup_tokens("CITE_AY_SEPARATOR").unwrap_or(NO_TOKENS) }
 
-// Helper: handle the [pre][post] optional arg swap (if !post { pre,post = undef,pre })
+// Helper: handle the [pre][post] optional arg swap (natbib.sty.ltxml:113 `if (!$post) { ($pre, $post) = (undef, $pre) }`,
+// then :114-115 an empty one dropped). Only an ABSENT post-note swaps: a Perl Tokens is a true object even when empty,
+// so `\citep[e.g.][]{k}` keeps "e.g." the pre-note, "(e.g. Rigden, 2017)" as natbib.sty prints it (`\NAT@@citetp`,
+// natbib.sty:688-690). The reader gives `[]` as `Some(empty)` (gullet.rs `read_optional`).
 fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, Option<Tokens>) {
-  if !is_some_and_nonempty(&post) {
+  if post.is_none() {
     (None, pre.filter(|t| !t.is_empty()))
   } else {
     (
@@ -344,6 +347,11 @@ LoadDefinitions!({
     let ns = cite_ns();
     let ay = cite_ay();
 
+    // natbib.sty:694-701: `\cite` with an optional argument, even an empty one, is `\citep`'s parenthetical citation
+    // (`\NAT@cites` keeps `\NAT@swatrue` when `[` follows); only without one is it textual in author-year mode. Perl
+    // (natbib.sty.ltxml:133) tests the notes after dropping empty ones, so `\cite[]{k}` was textual (KNOWN_PERL_ERRORS
+    // #867).
+    let has_optional = pre_raw.is_some() || post_raw.is_some();
     let (pre, post) = swap_pre_post(pre_raw, post_raw);
     let is_star = is_some_and_nonempty(&star);
     let author = if is_star { "FullAuthors" } else { "Authors" };
@@ -377,8 +385,8 @@ LoadDefinitions!({
         vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
     } else {
       // authoryear
-      if pre.is_some() || post.is_some() {
-        // parenthetical with pre/post
+      if has_optional {
+        // parenthetical, with its pre/post notes
         let show = s!("{author}Phrase1Year");
         let mut ay_space = ay.unlist();
         ay_space.push(T_SPACE!());

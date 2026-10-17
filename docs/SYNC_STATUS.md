@@ -386,6 +386,11 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   Needs a ruling: keep it (hyperref's reading, as pdflatex with `[pdflatex]` errs), or a per-call reading of which
   argument is the URL (a text test, against the 2026-10-16 principled-first rule). RED
   `class-bindings/sn_jnl_href_swapped_order`.
+- **thm-restate's `restate=` key in a theorem's optional argument** (RUST-ONLY gap of 68w's thmtools keys; 2108.11527,
+  2602.09462 −243 words of key text): thm-restate.sty's `restate=<name>` (the theorem stored for `\<name>` /
+  `\<name>*` later) is not one of the keys `thmtools_use_keys` reads (`label`, `name`, `continues`), so the argument is
+  the note: "(restate=…)" in the title, the restated copy undefined. Fix: the key stores the theorem as `{restatable}`
+  does (thm-restate.sty). No repro yet.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
 ### Fidelity audit round 2 (2026-10-08) — findings and their state
@@ -2434,8 +2439,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (`lx_elsart_class_theorems_off`; arxbj.cls defines `{thm}` only; 1601.03906 97 → 0, words 1,828 → 22,549); quantumarticle's
   natbib `\doi` (quantumarticle.cls:1396-1400; 1902.03164; #860); sn-jnl without `pdflatex` loads breakurl and lets `\href`
   be `\burlalt` (sn-jnl.cls:1462-1467; 2401.05832), breakurl's `\burlalt` now hyperref's `\hyper@linkurl{\Hurl{#1}}{#2}`
-  (breakurl.sty:50-51), not `\href`, which a class's `\let` made a loop. Open (natbib, not 68w's): `\citep[e.g.][]{k}` shows
-  the pre-note after the citation ("(Rigden, 2017, e.g.)"; natbib's `[pre][]` is a pre-note). Repros
+  (breakurl.sty:50-51), not `\href`, which a class's `\let` made a loop. Repros
   package-bindings/{apacite_shortcite_prenote, declaregraphicsrule_typesets_nothing, dcolumn_box_in_cell_math_shift},
   class-bindings/{arxbj_author_command_over_elsart_theorem, quantumarticle_doi_detokenized, sn_jnl_href_is_burlalt};
   guards `perfect_kernel_batch68w::{apacite_*, declaregraphicsrule_*, dcolumn_*, arxbj_*, quantumarticle_*, sn_jnl_*}`.
@@ -2503,6 +2507,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `lx_bibliography_reuse_number`; the survivor takes the pruned one's freed id; OD #653); repros
   index-bib/heading_inside_thebibliography_{entry_paragraphs,paragraph_aside,then_second_bibliography}, guards
   `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
+  natbib: only an absent post-note swaps (natbib.sty.ltxml:113; `swap_pre_post`), so `\citep[e.g.][]{k}` is "(e.g.
+  Rigden, 2017)"; `\cite` with any optional argument, even an empty one, is parenthetical in author-year mode
+  (natbib.sty:694-701; Perl textual for `\cite[]{k}`, KNOWN_PERL_ERRORS #867). lipics' ORCID slot as
+  lipics-v2021.cls:797 links it (an email there no orcid.org address, 2607.06446). Repros
+  package-bindings/natbib_{empty_postnote_keeps_prenote,cite_optional_is_parenthetical},
+  class-bindings/lipics_orcid_slot_as_written; guards `perfect_kernel_batch68w::{natbib_*, apacite_*, lipics_orcid_*}`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

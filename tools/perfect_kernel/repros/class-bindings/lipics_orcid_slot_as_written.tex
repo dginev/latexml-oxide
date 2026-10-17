@@ -1,0 +1,15 @@
+% witness: 2607.06446 (lipics-v2021 `\author{…}{…}{gerhard@…}{gerhard@uni-bremen.de}{…}`: an email in the ORCID slot)
+% oracle:  pdflatex (with the shipped lipics-v2021.cls) 0 errors: "Gerd Gast" with an ORCID icon linked to
+%          "gerhard_g@uni-bremen.de" (lipics-v2021.cls:797 `\href{#4}{\orcidsymbol}`); "Ida Ito" with one linked to her iD
+% engines: rust 68w r1 = the email's link https://orcid.org/gerhard_g@uni-bremen.de; Perl 0.8.8 has no lipics binding
+% expect:  0 errors; Gerd's ORCID contact the class's link to the slot as written; Ida's bare iD her orcid.org page
+% status:  FIXED (68w r2)
+% preload: ar5iv.sty
+\documentclass[a4paper,UKenglish]{lipics-v2021}
+\title{T}
+\author{Gerd Gast}{Uni Bremen}{gerhard_g@uni-bremen.de}{gerhard_g@uni-bremen.de}{}
+\author{Ida Ito}{Uni K}{}{0000-0002-1825-009X}{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

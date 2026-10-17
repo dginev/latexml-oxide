@@ -157,6 +157,18 @@ fn lipics_anonymous_author_hides_the_author() {
   assert!(!xml.contains("Ann") && !xml.contains("Grant"), "{xml}");
 }
 
+/// The ORCID slot as lipics-v2021.cls:797 links it (`\href{#4}{\orcidsymbol}`): an email there is the link as written
+/// (2607.06446), a bare iD the author's orcid.org page.
+#[test]
+fn lipics_orcid_slot_is_linked_as_written() {
+  let xml = clean!("class-bindings/lipics_orcid_slot_as_written.tex");
+  assert_all(&xml, &[
+    r#"<contact name="Email: " role="email">gerhard_g@uni-bremen.de</contact> <contact role="orcid"><ref class="ltx_href" href="gerhard_g@uni-bremen.de"><svg:svg class="ltx_orcidlogo""#,
+    r#"<contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-009X" title="ORCID 0000-0002-1825-009X">"#,
+  ]);
+  assert!(!xml.contains("orcid.org/gerhard"), "{xml}");
+}
+
 /// thmtools' keys in a theorem's optional argument (thm-kv.sty:434-437, `label` :485-487, `name` :488-496, `continues`
 /// :511-516; 2002.09876, 2409.14881): the label on the theorem, no key text in a title, a note that is no key list kept,
 /// the continued example numbered by a reference to the one it continues and its counter not stepped.
@@ -178,12 +190,13 @@ fn thmtools_keyval_optional_argument_sets_label_name_continues() {
 }
 
 /// apacite's short cite family takes the `<pre-note>` as `\cite` does (apacite.sty:277-283, :304-310): 1805.05444's
-/// `\let\cite\shortcite` then `\cite<e.g.>[]{Rigden_2017}` cites its key.
+/// `\let\cite\shortcite` then `\cite<e.g.>[]{Rigden_2017}` cites its key, the pre-note before it (natbib's
+/// `[e.g.][]`: only an absent post-note swaps, natbib.sty.ltxml:113).
 #[test]
 fn apacite_shortcite_takes_the_angled_prenote() {
   let xml = clean!("package-bindings/apacite_shortcite_prenote.tex");
   assert_all(&xml, &[
-    r#"Stomatal closure <cite class="ltx_citemacro_citep">(<bibref bibrefs="Rigden_2017" separator=";" show="AuthorsPhrase1Year" yyseparator=",">"#,
+    r#"Stomatal closure <cite class="ltx_citemacro_citep">(e.g. <bibref bibrefs="Rigden_2017" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>)</cite>."#,
     r#"Soil <cite class="ltx_citemacro_citep"><bibref bibrefs="Or_2013" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>, p. 3</cite>.</p>"#,
   ]);
   assert!(!xml.contains("&gt;[]"), "{xml}");
@@ -242,3 +255,30 @@ fn sn_jnl_href_keeps_hyperref_order_without_pdflatex() {
   ]);
 }
 
+/// natbib's `\citep[pre][]{k}` keeps the pre-note (natbib.sty:688-690; Perl natbib.sty.ltxml:113 swaps only an absent
+/// post-note): "(e.g. Rigden, 2017)", "(e.g. Rigden, 2017, p. 3)", "(Rigden, 2017, p. 3)", "Rigden (see 2017)".
+#[test]
+fn natbib_empty_postnote_keeps_the_prenote() {
+  let xml = clean!("package-bindings/natbib_empty_postnote_keeps_prenote.tex");
+  assert_all(&xml, &[
+    r#"A <cite class="ltx_citemacro_citep">(e.g. <bibref bibrefs="k" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>)</cite>."#,
+    r#"B <cite class="ltx_citemacro_citep">(e.g. <bibref bibrefs="k" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>, p. 3)</cite>."#,
+    r#"C <cite class="ltx_citemacro_citep">(<bibref bibrefs="k" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>, p. 3)</cite>."#,
+    r#"D <cite class="ltx_citemacro_citet"><bibref bibrefs="k" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","> <bibrefphrase>(see </bibrefphrase> <bibrefphrase>)</bibrefphrase> </bibref></cite>."#,
+  ]);
+}
+
+/// natbib's `\cite` with an optional argument, even an empty one, is parenthetical (natbib.sty:694-701; Perl textual
+/// for an empty one, KNOWN_PERL_ERRORS #867); `\cite{k}` alone is textual in author-year mode.
+#[test]
+fn natbib_cite_with_an_optional_argument_is_parenthetical() {
+  let xml = clean!("package-bindings/natbib_cite_optional_is_parenthetical.tex");
+  let par = r#"<cite class="ltx_citemacro_cite">(<bibref bibrefs="k" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>)</cite>."#;
+  assert_all(&xml, &[
+    r#"A <cite class="ltx_citemacro_cite"><bibref bibrefs="k" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","> <bibrefphrase>(</bibrefphrase> <bibrefphrase>)</bibrefphrase> </bibref></cite>."#,
+    r#"B <cite class="ltx_citemacro_cite">(<bibref bibrefs="k" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>, p. 5)</cite>."#,
+    &format!("C {par}"),
+    &format!("D {par}"),
+    r#"E <cite class="ltx_citemacro_cite">(see <bibref bibrefs="k" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>)</cite>."#,
+  ]);
+}

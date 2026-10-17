@@ -14535,3 +14535,18 @@ Package.pm:383-390 `Let` checks no lock, so a package's `\let\mathscr=\undefined
 pdflatex an Euler Script L, Perl and Rust before 68x `Error:undefined:\mathscr` (2311.14793, 2501.10505, 2510.26876).
 Fixed in Rust (68x, OXIDIZED_DESIGN_DIVERGENCES #569): the binding a file's clearing `\let` took is put back when the
 file's new meaning is refused. Guard `perfect_kernel_batch68x::a_plain_locked_binding_a_file_cleared_comes_back`.
+
+## 867. natbib's `\cite[]{k}` in author-year mode is textual, not parenthetical
+
+natbib.sty:694-701 `\cite` is `\citep` whenever an optional argument follows (`\NAT@cites`: `\@ifnextchar [` keeps
+`\NAT@swatrue`); only `\cite{k}` without one is textual in author-year mode. Perl's binding (natbib.sty.ltxml:109-151)
+drops empty notes (:114-115) and then tests them (:133 `if ($pre || $post)`), so an optional argument that is empty
+gives the textual form.
+
+Trigger: `\usepackage{natbib}` and `\cite[]{k}`, `\cite[][]{k}` with `\bibitem[Rigden(2017)]{k}` — pdflatex "(Rigden,
+2017)" each; Perl 0.8.8 and Rust before 68w r2 "Rigden (2017)". `\cite[p.~5]{k}` (parenthetical) and `\cite{k}` (textual)
+agree already.
+
+Rust (68w r2, natbib_sty.rs `\cite`): parenthetical whenever an optional argument was given; numeric and super modes
+unchanged. Repro package-bindings/natbib_cite_optional_is_parenthetical; guard
+`perfect_kernel_batch68w::natbib_cite_with_an_optional_argument_is_parenthetical`.
