@@ -4,7 +4,7 @@
 //! (latex_constructs.pool.ltxml:1673), so an ACM 1.8 class's spacing-only redefinition keeps `\list` a list.
 //! Item 3 (L2) — `\endlist` with no list open does nothing, as latex.ltx:15915-15930 `\endtrivlist`. Item 4 (E2) —
 //! mdwtab's `array` enters math itself (mdwtab.sty:505-510), so in text it is a formula without "Missing $"; Wooding's
-//! mathenv loads mdwtab (mathenv.sty:53).
+//! mathenv loads mdwtab (mathenv.sty:53). Item 5 (E3) — the `$` closing a display is read expanded (tex.web §1197).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -109,4 +109,25 @@ fn mdwtab_array_in_text_is_a_formula() {
       r#"<p align="center"><Math mode="inline" tex="\begin{array}[]{rl}a&amp;b\\&#10;c&amp;d\end{array}" text="Array[[a, b], [c, d]]" xml:id="m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="right"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMCell><XMCell align="left"><XMTok font="italic" role="UNKNOWN">b</XMTok></XMCell></XMRow><XMRow><XMCell align="right"><XMTok font="italic" role="UNKNOWN">c</XMTok></XMCell><XMCell align="left"><XMTok font="italic" role="UNKNOWN">d</XMTok></XMCell></XMRow></XMArray></XMath></Math></p>"#,
     );
   }
+}
+
+/// expansion-primitives/display_closing_dollar_from_a_macro: `\full{$}$x=1.$\full{$}` with `\full{#1}` = `#1`
+/// (pdflatex 0 errors: the display "x = 1." between "Text" and "more text."). Before 69b: 2 Errors "Missing $ closing
+/// display math." (Perl 6).
+#[test]
+fn display_closing_dollar_from_a_macro() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/display_closing_dollar_from_a_macro.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p>Text</p><equation xml:id="S0.Ex1"><Math mode="display" tex="x=1." text="x = 1" xml:id="S0.Ex1.m1"><XMath><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMApp xml:id="S0.Ex1.m1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp><XMTok role="PERIOD">.</XMTok></XMWrap></XMDual></XMath></Math></equation><p>more text.</p></para>"#,
+  );
 }

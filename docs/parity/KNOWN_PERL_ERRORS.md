@@ -14916,3 +14916,17 @@ Rust (69b, sect06.rs `\endlx@list`): with no `internal_vertical` mode frame anyw
 (`internal_vertical_mode_frame_open`) it does nothing; an open one below an unrelated top frame keeps Perl's
 error-without-pop (memoir's raw `\list`, OXIDIZED_DESIGN #180). Repro
 list-structure/endlist_with_no_list_open_does_nothing; guard `perfect_kernel_batch69b::endlist_with_no_list_open_does_nothing`.
+
+## 899. The `$` closing a display is read unexpanded, so a macro cannot supply it
+
+tex.web §1197 (`after_math`, "Check that another $ follows") reads the display's second closing `$` with
+`get_x_token`: a macro expanding to `$` closes the display. Only the opening `$$` (§1138 `init_math`) is `get_token`.
+Perl's `\lx@dollar@default` (TeX_Math.pool.ltxml:50) tests both with `ifNext(T_MATH)`, unexpanded.
+
+Trigger: `\newcommand{\full}[1]{#1}` and `Text \full{$}$x=1.$\full{$} more text.` — pdflatex 0 errors (a display
+"x = 1."); Perl 6 Errors, Rust before 69b 2 `Error:expected:$ Missing $ closing display math.` (rc_struct3 E3).
+
+Rust (69b, tex_math.rs `\lx@dollar@default`): in `display_math` the next token is read expanded
+(`read_x_token`); a non-shift goes back as read (`back_error`). Repro
+expansion-primitives/display_closing_dollar_from_a_macro; guard
+`perfect_kernel_batch69b::display_closing_dollar_from_a_macro`.

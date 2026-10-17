@@ -1,0 +1,14 @@
+% witness: rc_struct3 E3 (1 of 25 sampled `$` first-error papers; est. 30)
+% oracle:  pdflatex 0 errors: "Text", the display "x = 1.", "more text."
+% engines: rust 67int18b = 2 Error:expected:$ "Missing $ closing display math."; Perl 0.8.8 6
+%          (TeX_Math.pool.ltxml:50 `ifNext(T_MATH)` reads unexpanded)
+% expect:  tex.web §1197 reads the display's second closing `$` by `get_x_token`, so `\full{$}` supplies it
+% status:  RED (67int18b) -> GREEN (69b)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\full}[1]{#1}
+\begin{document}
+Text
+\full{$}$x=1.$\full{$}
+more text.
+\end{document}

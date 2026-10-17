@@ -2791,7 +2791,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\lx@array@text@open` opens the inline formula without the kernel's `[c]` "Missing $ inserted"; Wooding's mathenv
   binding now loads mdwtab as mathenv.sty:53 does (est. 89; Perl, without an mdwtab binding, KNOWN_PERL_ERRORS #677).
   Repro alignment-bindings/mdwtab_array_in_text_is_a_formula; guard
-  `perfect_kernel_batch69b::mdwtab_array_in_text_is_a_formula`.
+  `perfect_kernel_batch69b::mdwtab_array_in_text_is_a_formula`. (5) E3: the `$` closing a display is read expanded,
+  as tex.web §1197 `get_x_token` (tex_math.rs `\lx@dollar@default`; KNOWN_PERL_ERRORS #899; est. 30). Repro
+  expansion-primitives/display_closing_dollar_from_a_macro; guard
+  `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

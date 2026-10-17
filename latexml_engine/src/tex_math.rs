@@ -669,8 +669,16 @@ LoadDefinitions!({
         return Ok(Vec::new());
       }
       if mode == "display_math" {
-        if next_is_math_shift()? {
-          read_token()?;
+        // tex.web §1197 (`after_math`, "Check that another $ follows") reads the second `$` by `get_x_token`, so
+        // a macro may produce it (`$\full{$}$x=1.$\full{$}` with `\full{#1}` = `#1`; rc_struct3 E3); §1138's
+        // opening `$$` is `get_token` (`next_is_math_shift`). The token read, if not a math shift, goes back as
+        // read (`back_error`). Guard: `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`.
+        let next = read_x_token(None, false, None)?;
+        let shift = next.is_some_and(|t| t.defined_as(&T_MATH!()));
+        if let Some(t) = next.filter(|_| !shift) {
+          unread_one(t);
+        }
+        if shift {
           op = "\\lx@end@display@math";
         } else {
           Error!(
