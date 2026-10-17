@@ -2642,6 +2642,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   robust (`protected`) as aa.cls:639 `\DeclareRobustCommand` makes it (aa_support_sty.rs; Perl
   aa_support.sty.ltxml:247 plain): witness 0801.2767, repro class-bindings/aa_ion_before_tab, guard
   `perfect_kernel_batch68z::aa_ion_is_robust_at_a_cell_head`.
+  (4) C3 (RUST-ONLY; Perl raw-loads tabularray): tabularray's `mode` (`math`/`imath`/`dmath`/`text`, `$`, `$$`) and
+  `cmd` cell keys — from a colspec's `Q[…]`/`X[…]` options (a `\NewColumnType`'s too) and the `cells`/`rows`/
+  `columns`/`row{…}`/`column{…}`/`cell{…}{…}` keys in order, with tabularray's child selectors (`n`, `a-b`, `U`-`Z`,
+  `odd`/`even`, `-`) — set each cell's text as `$<style><cmd>{<text>}$` (tabularray.sty:2635-2639, :2874-2877,
+  :3040-3043, :4593-4618): tabularray_sty.rs `tblr_cell_styles` and the cell hook `\lx@tblr@cell@open` (the kernel's
+  `\lx@alignment@column@before` inside a styled table), which puts the mode after the column's own template tokens
+  and its close before the after part (both then the cell's template, which the reversion trims), and gives a `cmd`
+  the cell's text up to its end. The table's styles are taken once (globally) by its first cell, so an alignment inside
+  a later cell keeps its own cells (2407.17127's paper.sty `<*` is an `\ialign`). A cell holding an environment keeps its
+  text as written under a `cmd`. Witnesses 2603.14418 (`cell{3-Z}{2-7}={mode=math}`), 2407.17127 (sbnf
+  `X[l,mode=math,cmd=\checkemptycase]`). Repro alignment-bindings/tabularray_cell_mode_and_cmd; guard
+  `perfect_kernel_batch68z::tabularray_cells_take_their_mode_and_cmd`; `braced_quantity_tail::
+  tabularray_new_column_type_expands` now bold under `cmd={\textbf}`, as pdflatex prints it.
   (5) C4: an `\omit` cell of an amsmath alignment is text, as `\multicolumn`'s since 66l (tex.web §789; the
   template's `$` is dropped): tex_tables.rs marks it (`Cell::omit_text_box`) and alignment.rs boxes its material as
   `\hbox{…}` (KNOWN_PERL_ERRORS #662). Witness 2306.14299 (1811.08044 pdflatex-discounted). Repro

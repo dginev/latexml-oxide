@@ -6,6 +6,8 @@
 //! argument; tex.web §785/§791), diagbox's `\diagbox` among them (2406.11917); aa's robust `\ion` (0801.2767).
 //! Item 5 — an `\omit` cell of an amsmath alignment is text (tex.web §789; 2306.14299). Item 6 — a first-column
 //! `\lefteqn` followed by more of its eqnarray cell is latex.ltx:15800's `\rlap` in the cell's math (2411.17699).
+//! Item 4 — tabularray's `mode`/`cmd` cell keys from the colspec and the `cell`/`row`/`column` keys (2603.14418,
+//! 2407.17127).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{
@@ -215,4 +217,46 @@ fn a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math() {
     ),
     "{xml}"
   );
+}
+
+/// alignment-bindings/tabularray_cell_mode_and_cmd: `cell{2}{2}={mode=math}`, a `\NewColumnType` `X[l,mode=math,
+/// cmd=\chk]`, `row{2}={mode=math}` and `column{3}={$$}` set each cell's text as tabularray does, `$<style><cmd>{…}$`
+/// (pdflatex 0 errors: "[a2]", the `\frac` displayed); an `\ialign` inside a styled cell keeps its own cells (the
+/// table's styles are taken once, globally; 2407.17127's paper.sty `<*`). Before 68z 6 Errors "Script … can only
+/// appear in math mode".
+#[test]
+fn tabularray_cells_take_their_mode_and_cmd() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_cell_mode_and_cmd.tex"
+    ),
+    Some(RAW),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let xml = normalize_markup(&xml);
+  for (tex, text) in [
+    (r"27.47\!\pm\!9.62^{*}", "plus-or-minus 9.62 ^ *"),
+    ("[a^{2}]", "delimited-[]@(a ^ 2)"),
+    ("[b_{1}]", "delimited-[]@(b _ 1)"),
+    ("[d]", "delimited-[]@(d)"),
+    // an alignment inside a styled cell keeps its own cells (its second was `$[z]`)
+    (
+      r"[\vbox{\halign{#&amp;#\cr x&amp;z\cr}}]",
+      "delimited-[]@(Array[[[x], [z]]])",
+    ),
+    (r"\displaystyle\frac{1}{2}", "1 / 2"),
+    ("x^{2}", "x ^ 2"),
+    ("y_{1}", "y _ 1"),
+    (r"\displaystyle\sum_{i}i", "(sum _ i)@(i)"),
+  ] {
+    let math = format!(r#"<Math mode="inline" tex="{tex}" text="{text}""#);
+    assert_eq!(xml.matches(&math).count(), 1, "{math}\n{xml}");
+  }
+  // the unstyled cells stay text
+  assert!(
+    xml.contains(r#"<td align="center" thead="column">B</td>"#),
+    "{xml}"
+  );
+  assert!(xml.contains(r#">Dice</td>"#), "{xml}");
 }

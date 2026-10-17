@@ -1,0 +1,32 @@
+% witness: 2603.14418 (cell{3-Z}{2-7}={mode=math}), 2407.17127 (sbnf.sty \NewColumnType{C}{X[l,mode=math,cmd=\checkemptycase]});
+%          rc_struct2 C3 (tabularray.sty:2635-2639 cell, :2874-2877 column, :3040-3043 row keys; :4593-4618 cell content)
+% oracle:  pdflatex 0 errors: "27.47±9.62*" a formula; "[a2]" "[b1]"; "[d]", an \ialign in a styled cell keeps its
+%          own cells; row 2 and column 3 math, column 3 \displaystyle
+% expect:  0 errors; each styled cell's text set as tabularray sets it, $<style><cmd>{<text>}$
+% status:  GREEN (batch 68z, perfect_kernel_batch68z::tabularray_cells_take_their_mode_and_cmd); before 68z 1 Error
+%          "Script ^ can only appear in math mode" per styled cell holding a script
+\documentclass{article}
+\usepackage{tabularray}
+\newcommand{\chk}[1]{[#1]}
+\NewColumnType{C}{X[l,mode=math,cmd=\chk]}
+\begin{document}
+\begin{tblr}{colspec={lc}, cell{2}{2}={mode=math}}
+Method & Dice \\
+UNet & 27.47\!\pm\!9.62^* \\
+\end{tblr}
+
+\begin{tblr}{colspec={lC}, hlines}
+Method & a^2 \\
+UNet & b_1 \\
+\end{tblr}
+
+\begin{tblr}{colspec={lC}}
+c & d \\
+e & \vbox{\ialign{#&#\cr x&z\cr}} \\
+\end{tblr}
+
+\begin{tblr}{colspec={lcc}, row{2}={mode=math}, column{3}={$$}}
+A & B & \frac12 \\
+x^2 & y_1 & \sum_i i \\
+\end{tblr}
+\end{document}
