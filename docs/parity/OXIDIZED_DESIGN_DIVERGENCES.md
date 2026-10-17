@@ -18296,8 +18296,8 @@ and what it loaded, surveyed once as the class ends), reads each body's control 
 read `\X`), and takes as title-page code the refused `\maketitle` (`\lx@dropped@maketitle`) and `\@maketitle` and,
 to a fixpoint, every macro only they call. apa6.cls:760 `\affiliation` → `\@affil` and :779 `\authornote` → `\@acks`
 (read by its `\maketitle` and the `\check@author` it calls, :786-795; `authornote` joins the table as apa7's binding
-maps it, a note of role `authornote`); uiucthesis.cls:97 `\department` → `\@dept` (its replayed title page now reads
-the department as empty, as it reads every captured store). A store another macro reads stays raw — letter.cls:155
+maps it, a note of role `authornote`); uiucthesis.cls:97 `\department` → `\@dept` (its replayed title page then read
+the department as empty, as it reads every captured store; since 68x r2 the line rule of #662 keeps it in its line). A store another macro reads stays raw — letter.cls:155
 `\address` → `\fromaddress` (`\opening`), afthesis.cls:535 `\addr@ss` (its vita) — as does a kernel-owned one
 (`\@date`). (b) A setter's body may make side definitions beside its store (`\def`-family, `\let`,
 `\renewcommand`-family, in `\begingroup`; a store inside a group counts only when global); anything else — a
@@ -18583,7 +18583,10 @@ parameterless macro a raw file defined, not a rerouted store nor a kernel field,
 store's read (`prints_in_a_line_with_another_value`; a written store, ptptex.cls:110 `\gdef\@abst{}`, is no read) — is
 not rerouted: it is part of the class's line. tlp.cls:627 `{\it submitted \@submitted; revised \@revised; accepted
 \@accepted}` (`\submitted` is no table setter) printed "submitted 30 November 2010; revised ; accepted" with the
-other two in `<date>`s; now the line is whole, as pdflatex prints it, and the dates stay in it. One rule for both
+other two in `<date>`s; now the line is whole, as pdflatex prints it, and the dates stay in it. So too uiucthesis.cls:177
+`for the degree of \@degree\ in \@dept\\` (`\@degree` from `\phdthesis`, :81): `\department` — #643's rule (a)
+affiliation — stays in the line "for the degree of Doctor of Philosophy in Food Science", as pdflatex prints it, and
+the author has no affiliation (guard `perfect_kernel_batch61::uiucthesis_title_page_is_replayed`). One rule for both
 paths: under the lever a raw class's defaults and lines are read the same way. Why not "only stores the document
 set": the lever path's lion-msc default (pinned by `class_census::k11_class_default_store`) and gGAF2e's journal name
 are printed by pdflatex. `printed` does not see a head built through a binding or a token register: a class-level

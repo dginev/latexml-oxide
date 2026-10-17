@@ -2545,7 +2545,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (textual without notes), `natbibemu` sends `\cite` to `\citep`/`\citet` (:883-892); sn-jnl's `sn-apa` loads
   `[natbibapa]{apacite}` as the class does (L1683-1685). Witnesses 2307.11525, 2406.19732. Repros
   package-bindings/{apacite_citation_modes, apacite_natbibemu_cite}; guards
-  `perfect_kernel_batch68w::{apacite_natbibapa_keeps_natbibs_cite, apacite_natbibemu_cite_is_citet_or_citep}`.
+  `perfect_kernel_batch68w::{apacite_natbibapa_keeps_natbibs_cite, apacite_natbibemu_cite_is_citet_or_citep}`. (2) The 68x guard
+  `aguplus_authors_carry_affiliations_and_addresses` pinned `\cite[][]{key1}` textual; the class's natbib 7.0 copy
+  makes it parenthetical (aguplus.cls:979-984), as pdflatex prints it ("see [Able, 1990]"): expectation corrected.
+  (3) uiucthesis (`perfect_kernel_batch61::uiucthesis_title_page_is_replayed`): 68x r2's line rule (#662) keeps
+  `\department` in uiucthesis.cls:177 `for the degree of \@degree\ in \@dept\\`, the line whole as pdflatex prints it,
+  no affiliation (68u r2's rule (a) had made it one); expectation updated. Pre-existing (67int16 the same): the
+  replayed copyright page prints "© 1994 by ." — `\copyrightnotice` reads the captured `\@author`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

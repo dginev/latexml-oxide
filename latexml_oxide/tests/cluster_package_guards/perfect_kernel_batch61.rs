@@ -545,17 +545,21 @@ fn uiucthesis_title_page_is_replayed() {
     (0, 0),
     &[],
   );
-  // 68u r2 (rule (a)): uiucthesis.cls:97 `\department` stores `\@dept`, which only the title page reads, so the
-  // department is the author's affiliation and the replayed page reads it as empty (as every captured store).
+  // 68u r2 (rule (a)) made uiucthesis.cls:97 `\department` (`\@dept`, read only by the title page) the author's
+  // affiliation, and the replayed page read it as empty: "for the degree of Doctor of Philosophy in". 68x r2's line rule
+  // (frontmatter_stores.rs `prints_in_a_line_with_another_value`, OXIDIZED_DESIGN_DIVERGENCES #662) keeps a store the
+  // title page prints in one line with a class value the frontmatter does not carry: uiucthesis.cls:177 `for the degree
+  // of \@degree\ in \@dept\\` (`\@degree` from `\phdthesis`, :81) — the line whole, as pdflatex prints it, and no
+  // affiliation.
   assert_element(
     &xml,
     "creator",
     &[r#"role="author""#],
-    "<creator role=\"author\"><personname>Juan Valdez</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Food Science</contact></creator>",
+    "<creator role=\"author\"><personname>Juan Valdez</personname></creator>",
   );
   for line in [
     "Submitted in partial fulfillment of the requirements",
-    "for the degree of Doctor of Philosophy in",
+    "for the degree of Doctor of Philosophy in Food Science",
     "University of Illinois at Urbana-Champaign, 1994",
   ] {
     let p = format!(r#"<p><text fontsize="120%">{line}</text></p>"#);
