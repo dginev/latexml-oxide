@@ -17,6 +17,11 @@ LoadDefinitions!({
   RequirePackage!("kvoptions");
   RequirePackage!("etoolbox");
   RequirePackage!("fancyvrb");
+  // minted.sty:32 `\RequirePackage{fvextra}` (minted 2.2+ too): `Verbatim`'s `breaklines`/`breakanywhere` keys
+  // are fvextra's; with fancyvrb alone they were undefined keys (2512.12360; Perl's ar5iv-bindings
+  // minted.sty.ltxml:24 has the line commented out, KNOWN_PERL_ERRORS #916). Guard:
+  // `perfect_kernel_batch70a::minted_loads_fvextra`.
+  RequirePackage!("fvextra");
   // Stub as listing for now
   RequirePackage!("listings");
   DeclareOption!("chapter", "");

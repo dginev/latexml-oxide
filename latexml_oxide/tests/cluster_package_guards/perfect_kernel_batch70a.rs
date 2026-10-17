@@ -27,3 +27,36 @@ fn biblatex_loads_url_not_hyperref() {
     )],
   );
 }
+
+/// stub-dependencies/minted_loads_fvextra: minted.sty:32 loads fvextra, so `Verbatim`'s `breaklines` and
+/// `breakanywhere` keys exist and the line is kept (2512.12360; KNOWN_PERL_ERRORS #916).
+#[test]
+fn minted_loads_fvextra() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/stub-dependencies/minted_loads_fvextra.tex"),
+    AR5IV,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p xml:id="p1.1"><text class="ltx_verbatim" font="typewriter" fontsize="80%" width="345.0pt" xml:id="p1.1.1"><inline-logical-block class="ltx_parbox" vattach="top" width="345.0pt" xml:id="p1.1.1.1"><para class="ltx_noindent" xml:id="p1.p1"><p xml:id="p1.p1.1">some long verbatim line</p></para></inline-logical-block></text></p></para>"##,
+    )],
+  );
+}
+
+/// stub-dependencies/physics_loads_xparse: physics.sty:15 loads xparse, whose deprecated `g` argument type a
+/// document's `\DeclareDocumentCommand\DD{ o g }` uses; `\DD{x}` is d x as pdflatex prints it (2603.20157;
+/// KNOWN_PERL_ERRORS #917).
+#[test]
+fn physics_loads_xparse() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/stub-dependencies/physics_loads_xparse.tex"),
+    AR5IV,
+    (0, 0),
+    &[(
+      "XMApp",
+      "p1.m1.1.1",
+      r##"<XMApp xml:id="p1.m1.1.1"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp>"##,
+    )],
+  );
+}

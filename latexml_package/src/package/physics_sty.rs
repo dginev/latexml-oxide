@@ -269,6 +269,11 @@ fn phys_rev_arg(arg_ref: Tokens, open: &Option<Token>, close: &Option<Token>) ->
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // physics.sty:15-16 `\RequirePackage{xparse}` then amsmath: a document's `\DeclareDocumentCommand` with
+  // xparse's deprecated `g` argument type (`{ o g }`) needs xparse, which the kernel's own command parser does
+  // not cover (2603.20157; Perl physics.sty.ltxml:19 loads amsmath alone, KNOWN_PERL_ERRORS #917). Guard:
+  // `perfect_kernel_batch70a::physics_loads_xparse`.
+  RequirePackage!("xparse");
   RequirePackage!("amsmath");
 
   //======================================================================

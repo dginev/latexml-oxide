@@ -1,0 +1,12 @@
+% witness: 2603.20157 (`\DeclareDocumentCommand ... { o g }` beside physics); physics.sty:15 \RequirePackage{xparse}
+% oracle:  pdflatex 0 errors; "dx"
+% engines: Perl (physics.sty.ltxml:19 amsmath only) = 1 error, rust 67int18b = 2 errors (argument type `g` unknown)
+% expect:  0 errors; the formula d x
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{physics}
+\DeclareDocumentCommand\DD{ o g }{\IfNoValueTF{#2}{d}{d#2}}
+\begin{document}
+$\DD{x}$
+\end{document}
