@@ -226,7 +226,6 @@ Perl's *success* modes is. When Rust produces a better parse, that's an improvem
 unparsed tokens, the developer asks the user to confirm whether the Rust XML should be updated.
 
 ---
-
 ### 17. No Daemon Functionality
 
 **Decision:** The Rust port does not include daemonized (latexmls) functionality.
@@ -269,7 +268,6 @@ AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
 ```
 
 **Impact:** Tests with `.latexml` files need corresponding `*_src.rs` files in `tests/helpers/` and `\input{name.latexml}` in their `.tex` source to get the same parsing behavior as Perl.
-
 ### 19. Perl `local` Mechanism — `latexml_core::common::local_assignments`
 
 Perl's `local` keyword provides dynamic scoping: a variable is temporarily overridden
@@ -3887,7 +3885,6 @@ the pretense was protecting.
 **Upstream**: <https://github.com/brucemiller/LaTeXML/issues/2864>.
 
 **Guard**: `06_cluster_standalone_subfiles::keyval_internals_survive_xkeyval_preloading_it`.
-
 ### 96. A faked space is sized by the font it was DIGESTED in, not the ambient one
 
 `tex_glue::dimension_to_spaces` renders a width as a run of Unicode space
@@ -4982,7 +4979,6 @@ just the injected content; KNOWN_PERL_ERRORS #47.)
 **Guard**: `06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`
 (append path); `06_cluster_frontmatter::frontmatter_titlepic_redefined_maketitle_figure_survives`
 (titlepic redefine path).
-
 ### 122. A `font="bold"` wrapping an entire author name is unwrapped for coherence
 
 **Perl** captures semantic creators from `\author`, not the class's visual title
@@ -5147,7 +5143,6 @@ escapeinside=!!]{python}` with `!$\label{line:world}$!`; before, `\ref{line:worl
 vanished (empty `ltx_missing_label`); now it registers on the line and links.
 
 **Guard**: `06_cluster_regressions::minted_escapeinside_label_registers_on_the_code_line`.
-
 ### 128. IEEEtran multi-row author grid emits creators in row-major (reading) order
 
 **Perl**: an IEEEtran conference `\author{}` can lay authors out as a 2-D grid where
@@ -6376,7 +6371,6 @@ with that creator (it lands on Vosoughi, as the contact did). Regression guard
 **Upstream**: to be filed at brucemiller/LaTeXML (author-attached `\thanks` should render as a
 marked footnote, not an inline affiliation-like contact; the content-kind class hooks are a
 theme-facing extension).
-
 ### 157. `minted` renders Pygments syntax colors from a committed `_minted/` frozencache
 
 **Perl behavior**: Perl LaTeXML ships no `minted` binding — the `minted` environment
@@ -7680,7 +7674,6 @@ live-catcode and the deferred cases (settled dead end: undigested capture snapsh
 catcodes, so an inner `\makeatletter` breaks `\patch@level`).
 **Witnesses**: ryethesis/ryesample (1 → 0; Perl 0 on the reduction).
 **Guards**: `perfect_kernel_batch56::class_redefined_abstract_defers_its_argument`.
-
 ### 209. `\multicolumn` is locked like `\tabular`
 
 **Perl behavior**: `\tabular`/`\endtabular` locked (latex_constructs.pool.ltxml:3667/
@@ -9319,12 +9312,10 @@ parts, validity unchanged (27/31), no diagnostic change. Guard
 **Perl** (beamer.cls.ltxml:1110-1179): `beginBeamerItemize` starts the kernel item machinery and routes `\item` through `\beamer@item`, which wraps an overlaid item in `\begin{actionenv}<spec>` → `uncoverenv` → `<ltx:inline-block class="ltx_covered">`. `{enumerate} [BeamerAngled] OptionalUndigested` reads the first `[…]` unconditionally as the overlay (`readOptional` + reparse), so a sole `\begin{enumerate}[(a)]` loses its template and renders `1.` (pdflatex: `(a)`).
 **Rust** (batch 56gu, `beamer_cls.rs`): the same item machinery and `\item` routing (`\beamer@item` consumes `\item<…>`, `\item[x]<…>`, `\item<…>[x]`), but the overlay is not acted on — the static output shows every item, as beamer's handout mode does (Rust's `*env` overlay environments are no-ops; no `ltx_covered` wrapper). Enumerate takes two undigested optionals and applies the first that is not an overlay as the label template, so `[(a)]` and `[<+->][(a)]` both give `(a)`, `[<+->]` alone keeps `1.` — pdflatex's labels. Before 56gu the list environments had no item machinery at all (one tagless item per list, specs leaked as `¡2-¿`).
 **Guard**: `perfect_kernel_batch56::beamer_list_items_open_their_own_item`.
-
 ### 271. `ltx:quote` admits `para`, `logical-block` and `sectional-block` (Perl's schema: `Block.model` only)
 
 **Perl** (`LaTeXML-block.rnc` `quote_model = Block.model`, with the upstream comment "should be Block.model, perhaps even Para.model?"): a quote holds bare `ltx:p` and block-level items but no paragraph or box container. The trees are the same in both engines. A minipage in a quote holding `\tableofcontents` becomes a `logical-block` (webquiz), and one holding `\section*` becomes a `sectional-block` (aguplus); both are schema-invalid. A `\noindent` paragraph in a quote loses its `ltx:para` and `ltx_noindent` class, because `openElement` auto-closes the paragraph container (tagpair/sample).
 **Rust** (batch 56gw, user ruling 2026-09-23): `quote_model = (Block.class | Misc.class | Meta.class | para | logical-block | sectional-block)*`, set in `LaTeXML-block.rnc`/`.rng` and on the flattened `ltx:quote` line of `LaTeXML.model`. It is `Block.model` plus the three `Para.model` containers that caused the invalidity, not `Para.model` itself: taken literally, `Para.model` would drop `p`, `equation` and lists as direct quote children. Floats still escape a quote (they float to the page), and theorem, proof, TOC and bare sectioning units stay out; a `\section*` in a quote arrives inside its minipage's `sectional-block`. This is a pure widening, measured over the 383 quote-bearing s117 manuals: 25 change shape (a `para` is kept inside the quote), 0 lose words (`content_diff.py`), and validity goes from 369 to 371 (webquiz, aguplus) with 0 newly invalid. The precedent is #252. **Guard**: `cluster_schema::quote_holds_paragraph_and_box_blocks`. **Upstream**: worth filing, since it answers the rnc's own open question.
-
 ### 272. Meta content in math text floats out of the Math, and an equation's footnotes render in HTML (Perl: stranded in `XMText`; equation-level notes not rendered)
 
 **Perl**: `\footnote`/`\index`/`\gls`/`\nomenclature` inside `\text{}` in math construct in the `ltx:text` that `\text` opens. That element admits them, so their `^` float (`floatToElement`, Document.pm:1052) stops there. `cleanup_XMText` (TeX_Math.pool.ltxml) then unwraps the `ltx:text` and leaves the marker as a direct `XMText` child. `XMText_model = (text | Inline.class | Misc.class)*` has no `Meta.class`, so the document is schema-invalid. The marker is also read into the formula: the footnote enters `text=` (`[b11footnote 1fn]`), and ryethesis's `\nomenclature` entries parse as a factor, `c² × [glossary]`. In an `align` cell, `addColumnToMathFork` (Base_XMath.pool.ltxml:880) clones any non-math element into the main branch's `XMText`, so the fork holds the footnote twice (a `.mf` copy). Separately, the XSLT renders "all of equation_model EXCEPT Meta" (LaTeXML-block-xhtml.xsl), so a footnote at equation level, a bare `\footnote` in `\[…\]` included, never reaches the HTML.
@@ -9334,11 +9325,9 @@ parts, validity unchanged (27/31), no diagnostic change. Guard
 - The XSLT's two equation-content selects add `ltx:note`, and an aligned row's own notes render in its right padding cell (`eq-right`'s `notes` parameter).
 
 Measured on the 11 affected s117 manuals: schema errors 7 → 0 (ribbonproofs, sidenotesplus, ryethesis), 0 core-XML words lost, HTML 0 words lost and 9 docs gained (the pdfcomment manuals' equation annotations, LaTeX_for_Undergraduates, ryethesis). **Guards**: `cluster_schema::meta_in_math_text_floats_out_of_the_math`, `footnote_in_display_math_text_floats_to_the_equation`, `footnote_in_display_math_renders_in_html`.
-
 ### 273. Delimiter spaces and prefix scanning follow tex.web, not Perl's Gullet/Stomach (KNOWN_PERL_ERRORS #222, #223)
 
 **Perl**: a space in a macro's prefix delimiter swallows every following space (`readMatch`, Gullet.pm:614-617). A `\relax` or a space after `\global`/`\long`/`\outer`/`\protected` clears the prefix (Stomach.pm:212/:234). **Rust**: a delimiter space matches exactly one space token (tex.web §392, batch 56gy). After one of TeX's prefixes, a `\relax` keeps it and a space is skipped (tex.web §1211/§404, batch 56hb), so catoptions' `\protected\relax\def` and `\global\sbox` behave as in pdflatex. The details, triggers and witnesses are in the KPE entries. **Guards**: `perfect_kernel_batch56::prefix_space_delimiter_matches_one_space`, `relax_after_a_prefix_keeps_the_prefix`.
-
 ### 274. `\verbatim@start` heads line 1 with a pending command, except `\relax` (Perl: never looks)
 
 **Perl**: `\verbatim@start` = `\lx@verbatim@\verbatim@` (verbatim.sty.ltxml:76) reads raw lines and never inspects the token after it, so verbatimbox's `\verbatim\verbbox@inner` captures `\begin{verbbox}[\footnotesize]`'s bracket as verbatim text. On the witness this also gives 6 errors and empty boxes. **Rust** (batch 56hc, `verbatim_sty.rs` `\verbatim@start` / `read_verbatim_lines`): as verbatim.sty:107-112 does, a pending control sequence goes at the head of line 1's `\verbatim@addtoline` and runs inside `\verbatim@processline`. Per tex.web §506, `\if\noexpand#1\noexpand~` holds only for the active line end. So the bracket is consumed and the size applied (readarray.tex:440, verbatimbox, stackengine). The divergence from verbatim.sty itself is that a pending `\relax` (the `\verbatim@start\relax` idiom: curve2e `{Esempio}`, memoir, digiconfigs) is dropped rather than prepended, because our default processline stringifies line tokens and would print it; in TeX it is a no-op, so the rendering matches. **Guards**: `perfect_kernel_batch50::verbatim_start_relax_idiom`, `perfect_kernel_batch56::verbatim_start_runs_a_prepended_command`.
@@ -9646,7 +9635,6 @@ warn: pdflatex warns or errors on them too. The uncertainty conversions are Perl
 as `123 ± 45`, as siunitx does, where Perl prints `123 ± 45.`. **Guard**: `class_census::siunitx_v3_keys`.
 
 ---
-
 ### 295. A macro call that does not match its `\def` is reported and ignored (Perl: reported, then expanded)
 
 A `\def` parameter text's leading delimiter (`\def\lp\x{…}`) must be the next thing at a call.
@@ -9669,7 +9657,6 @@ chinesechess (a removed l3draw API) and mercatormap reach the 100-error limit, a
 lualatex do. **Guard**: `perfect_kernel_batch56::macro_delimiter_mismatch_ignores_the_call`.
 
 ---
-
 ### 296. biber's `%` comments inside a `.bib` entry (Perl: the entry is lost)
 
 biber's reader takes `%` to the end of the line as a comment between an entry's tokens
@@ -9683,7 +9670,6 @@ its `backend=` option says. windycity recovers 27 entries; biblatex-iso690 and f
 some too. **Guard**: `perfect_kernel_batch56::biber_bib_percent_comments_keep_the_entry`.
 
 ---
-
 ### 297. An inline pstricks framed box is framed text (Perl: an auto-opened picture swallows the paragraph)
 
 Perl's `\psframebox` family always builds `<ltx:g framed='true'>` (pstricks_support.sty.ltxml:955-980).
@@ -9697,7 +9683,6 @@ in running text. Fill and stroke colours are not modelled, and neither is `fillf
 filter is not ported. **Guard**: `perfect_kernel_batch56::psframebox_keeps_its_body`.
 
 ---
-
 ### 298. `\rule[raise]` sizes its box as latex.ltx does (Perl: the raise is ignored)
 
 Perl stores `\rule`'s Dimensions as its width and height (latex_constructs.pool.ltxml:4797-4799) and
@@ -9710,7 +9695,6 @@ bfhsciposter.cls:171's `\box_gresize_to_ht_plus_dp` then divided by zero (bfh-ci
 errors). **Guard**: `perfect_kernel_batch56::rule_box_has_its_size`.
 
 ---
-
 ### 299. Bibliography given names follow the style; biblatex's second-tier fields are printed (Perl: always initials, fields dropped)
 
 Perl's MakeBibliography always prints given names as initials (MakeBibliography.pm:555-566; its note
@@ -9770,7 +9754,6 @@ manuals, spines, and biblatex-examples.bib `salam`.
 - the 06_cluster_bibliography goldens (15 updated to the style's own name form).
 
 ---
-
 ### 300. catchfile reads the file as catchfile.sty does; newverbs' own code prints in the document encoding (Perl: raw catchfile, ASCII quotes)
 
 Perl has no catchfile binding, so it raw-loads catchfile.sty. Rust (batch 56iv, round-12 P4/P5,
@@ -9803,7 +9786,6 @@ qverb_keeps_a_redefined_verb_pair}`, `perfect_kernel_batch54` catchfile guards,
 `perfect_kernel_batch56::make_special_short_verb_is_defined`.
 
 ---
-
 ### 301. pstricks drawing objects draw into the picture (Perl: pt geometry in a px picture, several parameters lost)
 
 Perl's pstricks_support.sty.ltxml draws `\psline`, `\psframe`, `\pscircle`, `\psarc`, `\pswedge`,
@@ -9848,7 +9830,6 @@ pstricks_objects_read_macro_keys_colour_models_and_cells, pstricks_coordinate_mo
 hexgame_board_converts, pstricks_macro_colour_keys_in_tabularx_cells}`.
 
 ---
-
 ### 302. forest trees are nested inline lists with bounded key processing; chemnum's first use of a compound carries its id (Perl: no forest or chemnum binding)
 
 Perl has no forest binding and no chemnum binding. **Rust** (batch 56iz, round-12 P6-P8,
@@ -10378,7 +10359,6 @@ patchcmd_keeps_the_protected_prefix, patchcmd_prefix_option_and_single_replaceme
 `perfect_kernel_batch56::deferred_math_end_walks_real_groups`.
 
 ---
-
 ### 316. Picture `\line` is a macro front for its constructor; `\bezier` is stroked (Perl: a constructor; no stroke)
 
 Perl defines `\line` as `DefConstructor('\line Pair:Number {Float}', …)`
@@ -10404,7 +10384,6 @@ errs); in a plain TeX or AMS-TeX document it is plain's macro, no Warning. Resid
 Repro graphics-tikz/picture_line_outside_picture.
 
 ---
-
 ### 317. What follows the value in a braced typed argument stays in the input; assignments scan by the register's type; calc evaluates a braced length whole (Perl: dropped silently; `{Dimension}`; the first term)
 
 **Rust** (batch 56jr, worker W18). A binding's braced or bracketed typed argument (`{Dimension}`,
@@ -15096,7 +15075,6 @@ digested in a discarded `\hbox`: each `\affil`/`\email` adds its frontmatter, wh
 mdpi's `\history` keeps the last call (mdpi.cls:384 `\gdef`), gated by the `submit`/`accept` status.
 **Why**: content (run 336: ptephy 204 papers with errors → 27, starred-author emails 28 → 146; quantumarticle 61 → 4).
 Guards `perfect_kernel_batch64qa`.
-
 ### 486. ar5iv's archival `\today` is the paper's source date (Perl: `\relax` at begin-document)
 
 **Perl behavior**: ar5iv.sty.ltxml:23-25 locks `\today` to `\relax` `AtBeginDocument`, so an archival conversion prints
@@ -18874,24 +18852,6 @@ nothing, since everything is loaded. Witnesses 1506.03598, 1612.05374, 2005.1448
 
 amsmath's accents (amsmath.sty:754-797, `\mathaccentV`'s fifth argument, `\mathaccent"…{#5}`), amsfonts' `\widehat#1`/
 `\widetilde#1` (amsfonts.sty:78-87) and breqn/mathstyle's `\sb`/`\sp` (mathstyle.sty:126-127,
-`\mathsub{\protect\subsupstyle#1}`) take their accentee or script as an undelimited macro argument and brace it, so a
-macro after them is the item with its whole expansion (KNOWN_PERL_ERRORS #945; breqn's, SYNC 71a (7)). The bindings
-pass that argument to LaTeXML's own accent or script through one helper, amsmath_sty.rs `\lx@undelimited@argument`:
-braced when it is a group, a character, or a token-list macro with no mandatory parameter (`\muu`,
-`\newcommand{\tasknum}[1][]{…}`), as TeX braces it. A single command that reads a mandatory argument (`\mathbf`,
-`\text`, a primitive or a binding closure that reads on) is left unbraced, for the accent or script to read with what
-follows as before: `\hat\mathbf{x}` is a hat over the bold x and breqn's `x_\text{abc}` a subscript "abc", where
-pdflatex errs ("Argument of \select@group has an extra }", "Argument of \text@ has an extra }": 8 errors for three such
-scripts) and its recovery loses the formula — under the braced form 2210.10207 lost 11,424 words. Why not error as TeX
-does: the shapes are common in arXiv sources and their reading is unambiguous (content before PDF fidelity, priority
-order 2026-10-06); why not brace every command: a binding closure may read past the brace. Guards
-`perfect_kernel_batch71a::{amsmath_accent_macro_argument, breqn_script_macro_argument}` (their `\hat\mathbf{x}` and
-`x_\text{abc}` rows).
-
-macro after them is the item with its whole expansion (KNOWN_PERL_ERRORS #945; breqn's, SYNC 71a (7)). The bindings pass
-that argument to LaTeXML's own accent or script through one helper, amsmath_sty.rs `\lx@undelimited@argument`, which
-reads a single command by its definition (user ruling 2026-10-17; `classify_undelimited_argument`, looking through a
-robust command's `\protect \cs␣` to the inner `\cs␣` and an alias's one-token body, amsmath.sty:892 `\def\Hat{\hat}`):
 `\mathsub{\protect\subsupstyle#1}`, the math-active `_`/`^`) take their accentee or script as an undelimited macro
 argument and brace it, so a macro after them is the item with its whole expansion (KNOWN_PERL_ERRORS #945; breqn's, SYNC
 71a (7)). The bindings pass that argument to LaTeXML's own accent or script through one helper (amsmath_sty.rs
@@ -18930,15 +18890,6 @@ call would take a cell's `&` or a row's `\\` into its group (`\hat\pair{a} & x` 
 - **a binding closure** (an expandable definition without a token body, or a conditional): unbraced as before, since
   a closure may read past the brace; the Warning only where it declares a mandatory parameter, the one case in which
   TeX's macro would err.
-Why not error as TeX does: the shapes are common in arXiv sources and their reading is unambiguous (content before PDF
-fidelity, priority order 2026-10-06), where TeX's recovery loses the formula — under the braced form 2210.10207 lost
-11,424 words; why the Warning: the source is not valid TeX, and the reading is ours (ruling: never an Error, never
-silent). An ltcmd command (`\NewDocumentCommand`) is judged by its signature (`ltcmd_undelimited_argument`): an
-all-`m` one is read through its `\cs code` (`\hat\vv{x}` a hat over the bold x), a general one with a mandatory argument
-(`{om}`) is passed unbraced as its `\protected` wrapper, whose grabbers LaTeXML's accent does not take as its item
-(`\hat{}\mathbf{x}`, as before 71a), with the Warning. Guards `perfect_kernel_batch71a::{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument,
-breqn_script_macro_argument, undelimited_argument_warning_once_per_occurrence}`.
-
 One Warning per source occurrence: a digestion that re-reads a source the document typesets where it stands gives none
 (`tex_math::REREAD_COPY`, set by `\lx@reread@copy`): the toc copy of a heading or caption without a `[short]` (sect04.rs;
 `\lx@toc@copy@text` for the kernel's, longtable's and listings' captions, where a `[short]` the same as the caption — as

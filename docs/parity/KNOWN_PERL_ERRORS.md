@@ -15123,6 +15123,111 @@ stored fields; amstex.rs `\text` (amstex.tex:1217-1226 `\hbox{#1}`) and revtex4_
 kernel-alignment/text_argument_is_braced_in_an_alignment_cell; guard
 `perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.
 
+## 939. amsrefs' `{biblist}` outside `{bibdiv}` is an `ltx:biblist` with no bibliography around it
+
+amsrefs.sty:532-538 makes `{biblist}` a list of its own (`\@biblist`, a `\list` of the entries), with no heading and no
+need of `{bibdiv}`; an author who writes the heading (`\section*{References}\begin{biblist}…\end{biblist}`) gets the
+heading and the list in the PDF. Perl's binding (amsrefs.sty.ltxml:70) makes it a bare `<ltx:biblist>`, which the schema
+allows only in an `ltx:bibliography`.
+
+Trigger: `\documentclass{amsart}\usepackage{amsrefs}` and `\section*{References}\begin{biblist}\bib{A}{article}{…}\end{biblist}`
+— pdflatex 0 errors; Perl and Rust before 71a 1 Error (`<ltx:biblist> isn't allowed in <ltx:section>`; 14 papers of the
+int19 census: 1002.1686, 1112.3058, 2111.14165, 0808.1974, 1411.6913).
+
+Rust (71a, amsrefs_sty.rs `{biblist}`/`{biblist*}`): outside a bibliography (`\if@lx@inbibliography`, which
+`{bibdiv}`/`{bibsection}`/`{bibchapter}` set) the list opens one where the backmatter goes, through the kernel's
+implicit-bibliography marker `\lx@mung@bibliography@pre{implicit}` (sect11.rs), so the author's heading before it heads it
+(`absorb_bibliography_heading`), else its heading line (`{\bf Further references}`, `head_implicit_bibliography`), else it
+stays untitled and out of the TOC. Repro index-bib/amsrefs_biblist_without_bibdiv; guard
+`perfect_kernel_batch71a::amsrefs_biblist_without_bibdiv`.
+
+## 940. mn2e_support defines mnras's `\ion` for every class of the MN family, so an mn2e author's own `\ion` is ignored
+
+mnras.cls:488 (TL 2025 v3.2) `\newcommand\ion[2]{\text{#1\,\textsc{\lowercase{#2}}}}`; mn2e.cls (v2.2, TL's
+doc/latex/mnras/LEGACY/mn2e.cls and every copy papers ship) has none, and mn2e papers define their own. Perl's
+mn2e_support.sty.ltxml:147 defines it for mn, mn2e and mnras alike, so under mn2e the author's `\newcommand{\ion}` is
+refused (latex_constructs.pool.ltxml:2512-2525 isDefinableLaTeX) and the binding's `\text` is undefined without amsmath.
+
+Trigger: `\documentclass{mn2e}\newcommand{\ion}[2]{#1\,{\sc #2}}` and `\ion{He}{I}` — pdflatex 0 errors; Perl and Rust
+before 71a 1 Error (`\text` undefined; 13 papers: 0908.0351, 1112.1796, astro-ph0501147, 0909.3906, 1206.2419).
+
+Rust (71a): mn2e_support_sty.rs defines no `\ion`; mnras_cls.rs defines it as mnras.cls:488 does. Repro
+class-bindings/mn2e_author_ion_wins; guards `perfect_kernel_batch71a::{mn2e_author_ion_wins, mnras_keeps_its_ion}`.
+
+## 941. siunitx's bracketed uncertainty takes digits only, so `4.02(0.52)` errs
+
+siunitx.sty:700-712 (`\__siunitx_number_parse_uncert_auxi:N`) takes a decimal marker in the brackets
+(`\__siunitx_number_parse_uncert_marker:`, :752-848): the uncertainty stands in the number's last places — its digits
+without their leading zeros, the number's fraction padded with zeros to the uncertainty's, so pdflatex prints
+`4.02(52)`, `1.08(3)`, `11.0(17)`, `4.00(52)` for `4.0(0.52)` — and an uncertainty with more integer digits than the
+number is no match (:758-760). Perl's `six_match_uncertainnumber` (siunitx.sty.ltxml:243-246) reads digits only, so
+the marker is left unmatched.
+
+Trigger: `\usepackage{siunitx}` and `\SI{4.02(0.52)}{\m}` — pdflatex 0 errors; Perl and Rust before 71a 1 Error
+(`unexpected:. Not matched in \num: .52)`; 9 papers: 2311.18489, 2504.14399, 2605.13387).
+
+Rust (71a, siunitx_sty.rs `six_match_uncertainnumber`): the bracketed form reads the marker and the fraction as
+siunitx.sty does. Repro package-bindings/siunitx_uncertainty_with_decimal_marker; guard
+`perfect_kernel_batch71a::siunitx_uncertainty_with_decimal_marker`.
+
+## 942. txfonts' `\lambdabar` and `\lambdaslash` are undefined
+
+txfonts.sty:727-728 (pxfonts.sty:727-728 alike) `\re@DeclareMathSymbol{\lambdaslash}{\mathord}{symbolsC}{110}`,
+`{\lambdabar}…{111}`; Perl's txfonts.sty.ltxml:387-388 leaves both commented out (no code point chosen).
+
+Trigger: `\usepackage{txfonts}` and `$\lambdabar_{\rm c}$` — pdflatex 0 errors; Perl and Rust before 71a 1 Error per
+symbol (8 papers: 0801.4523 under pxfonts, 1001.3510, 1202.5232, 2103.10486, 2104.03192).
+
+Rust (71a, txfonts_sty.rs Table 61): both U+019B, the one struck lambda Unicode has (newtxmath's `\lambdabar`). Repro
+package-bindings/txfonts_lambdabar; guard `perfect_kernel_batch71a::txfonts_lambdabar`.
+
+## 943. The todonotes binding does not load TikZ's positioning library
+
+todonotes.sty:31-32 `\RequirePackage{tikz}\usetikzlibrary{positioning}`; Perl's todonotes.sty.ltxml:29 has the line
+commented out, so a document drawing with positioning's keys after loading only todonotes errs.
+
+Trigger: `\usepackage{todonotes}` and `\begin{tikzpicture}[on grid]…` — pdflatex 0 errors; Perl and Rust before 71a 1
+Error (`I do not know the key '/tikz/on grid'`; 1807.00512, 2107.03711).
+
+Rust (71a, todonotes_sty.rs): the library is loaded. Repro stub-dependencies/todonotes_loads_positioning; guard
+`perfect_kernel_batch71a::todonotes_loads_positioning`.
+
+## 944. pgfmath's `Mod` of a multiple of the divisor is the divisor, and `\pgfmathmod@` is floored
+
+pgfmathfunctions.basic.code.tex:263-278 `mod` truncates (TeX's `\divide`); :286-297 `Mod` is that `mod` plus the
+divisor when it is negative, so `Mod(-5,5)` is 0 and `Mod(-4,5)` is 1. Perl's `pgfmath_mod_floor`
+(pgfmath.code.tex.ltxml:196-200) gives `-(|a| % |b|) + |b|` whenever `a/b < 0`, so `Mod(-5,5)` = 5; and its second
+`DefMacro('\pgfmathmod@ …')` (:206) redefines `mod`'s macro as that floored mod.
+
+Trigger: `\usepackage{tikz}` and `\pgfmathtruncatemacro{\r}{Mod(-5,5)}` — pdflatex `\r` = 0; Perl and Rust before 71a 5
+(1811.01404's `style\st`, `\st` = `Mod(\x-\start,5)+1`, reached an undefined style6).
+
+Rust (71a, pgfmath_code_tex.rs `pgfmath_mod`): `mod` truncated, `Mod` as pgf's, for the parser and for
+`\pgfmathmod@`/`\pgfmathMod@`. Repro package-bindings/pgfmath_mod_of_a_multiple_is_zero; guard
+`perfect_kernel_batch71a::pgfmath_mod_of_a_multiple_is_zero`.
+
+## 945. amsmath's and amsfonts' accents take the next math item, not an undelimited argument
+
+amsmath.sty:754-797 redefines each accent as `\mathaccentV{<name>}<family><slot>` reading its accentee `#5` as an
+undelimited macro argument (typeset as `\mathaccent"…{#5}`), and amsfonts.sty:78-87 `\widehat#1`/`\widetilde#1` the same:
+`\tilde\muu_a` with `\newcommand{\muu}{m_{\gamma'}}` accents all of `m_{\gamma'}` and the `_a` is the accented group's.
+Perl keeps the kernel's `Digested` accents (TeX's `\mathaccent`, which takes the next math field: the `m` alone), so the
+expansion's `_{\gamma'}` and the author's `_a` are a double subscript.
+
+Trigger: `\usepackage{amsmath}\newcommand{\muu}{m_{\gamma^\prime}}` and `$\tilde\muu_a^2$` — pdflatex 0 errors (without
+amsmath: "Double subscript"); Perl and Rust before 71a 1 Error per formula (0801.1527; `\widehat\cba_{\rm CF}`,
+2609.01909).
+
+Rust (71a, amsmath_sty.rs `define_ams_macro_accent`, for amsmath's 11 accents and amsfonts' 2): each is a macro of one
+argument, as amsmath's, over LaTeXML's own accent (kept as `\lx@ams@kernel@<name>`), its argument passed through
+`\lx@ams@mathaccentV` (amsfonts': `\lx@undelimited@argument`) — braced, unless it is a command that reads a mandatory
+argument, which is read with its own arguments, the call the author wrote, with a Warning that TeX errs there
+(OXIDIZED_DESIGN_DIVERGENCES #721). Only a name that is an accent is redefined, as amsmath's `\meaning` test leaves any other (amsmath.sty:760-775):
+`\let\vec\undefined` before MnSymbol keeps `\vec` for MnSymbol to declare (2210.15345). One argument, so accents.sty's
+`\underaccent{\dot}{…}` (`\lx@if@isaccent`) still takes it for an accent. Repros
+ams-internals/amsmath_accent_macro_argument, ams-internals/amsfonts_widehat_macro_argument; guards
+`perfect_kernel_batch71a::{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument}`.
+
 ## 915. The biblatex binding loads hyperref, which biblatex.sty never loads
 
 biblatex.sty:38-44 requires pdftexcmds, etoolbox, keyval, kvoptions, logreq, ifthen and url — not hyperref. The
@@ -15332,111 +15437,6 @@ Trigger: a package with `\RequirePackage{l3keys2e}\ExplSyntaxOn\keys_define:nn{p
 Rust (70b): content.rs `zap_space` on the list `\opt@<file>` is built from (a control space and the space ending a
 control word kept). Repro loader/opt_macro_drops_spaces_as_zap_space; guard
 `perfect_kernel_batch70b::opt_macro_drops_spaces_as_zap_space`.
-
-## 939. amsrefs' `{biblist}` outside `{bibdiv}` is an `ltx:biblist` with no bibliography around it
-
-amsrefs.sty:532-538 makes `{biblist}` a list of its own (`\@biblist`, a `\list` of the entries), with no heading and no
-need of `{bibdiv}`; an author who writes the heading (`\section*{References}\begin{biblist}…\end{biblist}`) gets the
-heading and the list in the PDF. Perl's binding (amsrefs.sty.ltxml:70) makes it a bare `<ltx:biblist>`, which the schema
-allows only in an `ltx:bibliography`.
-
-Trigger: `\documentclass{amsart}\usepackage{amsrefs}` and `\section*{References}\begin{biblist}\bib{A}{article}{…}\end{biblist}`
-— pdflatex 0 errors; Perl and Rust before 71a 1 Error (`<ltx:biblist> isn't allowed in <ltx:section>`; 14 papers of the
-int19 census: 1002.1686, 1112.3058, 2111.14165, 0808.1974, 1411.6913).
-
-Rust (71a, amsrefs_sty.rs `{biblist}`/`{biblist*}`): outside a bibliography (`\if@lx@inbibliography`, which
-`{bibdiv}`/`{bibsection}`/`{bibchapter}` set) the list opens one where the backmatter goes, through the kernel's
-implicit-bibliography marker `\lx@mung@bibliography@pre{implicit}` (sect11.rs), so the author's heading before it heads it
-(`absorb_bibliography_heading`), else its heading line (`{\bf Further references}`, `head_implicit_bibliography`), else it
-stays untitled and out of the TOC. Repro index-bib/amsrefs_biblist_without_bibdiv; guard
-`perfect_kernel_batch71a::amsrefs_biblist_without_bibdiv`.
-
-## 940. mn2e_support defines mnras's `\ion` for every class of the MN family, so an mn2e author's own `\ion` is ignored
-
-mnras.cls:488 (TL 2025 v3.2) `\newcommand\ion[2]{\text{#1\,\textsc{\lowercase{#2}}}}`; mn2e.cls (v2.2, TL's
-doc/latex/mnras/LEGACY/mn2e.cls and every copy papers ship) has none, and mn2e papers define their own. Perl's
-mn2e_support.sty.ltxml:147 defines it for mn, mn2e and mnras alike, so under mn2e the author's `\newcommand{\ion}` is
-refused (latex_constructs.pool.ltxml:2512-2525 isDefinableLaTeX) and the binding's `\text` is undefined without amsmath.
-
-Trigger: `\documentclass{mn2e}\newcommand{\ion}[2]{#1\,{\sc #2}}` and `\ion{He}{I}` — pdflatex 0 errors; Perl and Rust
-before 71a 1 Error (`\text` undefined; 13 papers: 0908.0351, 1112.1796, astro-ph0501147, 0909.3906, 1206.2419).
-
-Rust (71a): mn2e_support_sty.rs defines no `\ion`; mnras_cls.rs defines it as mnras.cls:488 does. Repro
-class-bindings/mn2e_author_ion_wins; guards `perfect_kernel_batch71a::{mn2e_author_ion_wins, mnras_keeps_its_ion}`.
-
-## 941. siunitx's bracketed uncertainty takes digits only, so `4.02(0.52)` errs
-
-siunitx.sty:700-712 (`\__siunitx_number_parse_uncert_auxi:N`) takes a decimal marker in the brackets
-(`\__siunitx_number_parse_uncert_marker:`, :752-848): the uncertainty stands in the number's last places — its digits
-without their leading zeros, the number's fraction padded with zeros to the uncertainty's, so pdflatex prints
-`4.02(52)`, `1.08(3)`, `11.0(17)`, `4.00(52)` for `4.0(0.52)` — and an uncertainty with more integer digits than the
-number is no match (:758-760). Perl's `six_match_uncertainnumber` (siunitx.sty.ltxml:243-246) reads digits only, so
-the marker is left unmatched.
-
-Trigger: `\usepackage{siunitx}` and `\SI{4.02(0.52)}{\m}` — pdflatex 0 errors; Perl and Rust before 71a 1 Error
-(`unexpected:. Not matched in \num: .52)`; 9 papers: 2311.18489, 2504.14399, 2605.13387).
-
-Rust (71a, siunitx_sty.rs `six_match_uncertainnumber`): the bracketed form reads the marker and the fraction as
-siunitx.sty does. Repro package-bindings/siunitx_uncertainty_with_decimal_marker; guard
-`perfect_kernel_batch71a::siunitx_uncertainty_with_decimal_marker`.
-
-## 942. txfonts' `\lambdabar` and `\lambdaslash` are undefined
-
-txfonts.sty:727-728 (pxfonts.sty:727-728 alike) `\re@DeclareMathSymbol{\lambdaslash}{\mathord}{symbolsC}{110}`,
-`{\lambdabar}…{111}`; Perl's txfonts.sty.ltxml:387-388 leaves both commented out (no code point chosen).
-
-Trigger: `\usepackage{txfonts}` and `$\lambdabar_{\rm c}$` — pdflatex 0 errors; Perl and Rust before 71a 1 Error per
-symbol (8 papers: 0801.4523 under pxfonts, 1001.3510, 1202.5232, 2103.10486, 2104.03192).
-
-Rust (71a, txfonts_sty.rs Table 61): both U+019B, the one struck lambda Unicode has (newtxmath's `\lambdabar`). Repro
-package-bindings/txfonts_lambdabar; guard `perfect_kernel_batch71a::txfonts_lambdabar`.
-
-## 943. The todonotes binding does not load TikZ's positioning library
-
-todonotes.sty:31-32 `\RequirePackage{tikz}\usetikzlibrary{positioning}`; Perl's todonotes.sty.ltxml:29 has the line
-commented out, so a document drawing with positioning's keys after loading only todonotes errs.
-
-Trigger: `\usepackage{todonotes}` and `\begin{tikzpicture}[on grid]…` — pdflatex 0 errors; Perl and Rust before 71a 1
-Error (`I do not know the key '/tikz/on grid'`; 1807.00512, 2107.03711).
-
-Rust (71a, todonotes_sty.rs): the library is loaded. Repro stub-dependencies/todonotes_loads_positioning; guard
-`perfect_kernel_batch71a::todonotes_loads_positioning`.
-
-## 944. pgfmath's `Mod` of a multiple of the divisor is the divisor, and `\pgfmathmod@` is floored
-
-pgfmathfunctions.basic.code.tex:263-278 `mod` truncates (TeX's `\divide`); :286-297 `Mod` is that `mod` plus the
-divisor when it is negative, so `Mod(-5,5)` is 0 and `Mod(-4,5)` is 1. Perl's `pgfmath_mod_floor`
-(pgfmath.code.tex.ltxml:196-200) gives `-(|a| % |b|) + |b|` whenever `a/b < 0`, so `Mod(-5,5)` = 5; and its second
-`DefMacro('\pgfmathmod@ …')` (:206) redefines `mod`'s macro as that floored mod.
-
-Trigger: `\usepackage{tikz}` and `\pgfmathtruncatemacro{\r}{Mod(-5,5)}` — pdflatex `\r` = 0; Perl and Rust before 71a 5
-(1811.01404's `style\st`, `\st` = `Mod(\x-\start,5)+1`, reached an undefined style6).
-
-Rust (71a, pgfmath_code_tex.rs `pgfmath_mod`): `mod` truncated, `Mod` as pgf's, for the parser and for
-`\pgfmathmod@`/`\pgfmathMod@`. Repro package-bindings/pgfmath_mod_of_a_multiple_is_zero; guard
-`perfect_kernel_batch71a::pgfmath_mod_of_a_multiple_is_zero`.
-
-## 945. amsmath's and amsfonts' accents take the next math item, not an undelimited argument
-
-amsmath.sty:754-797 redefines each accent as `\mathaccentV{<name>}<family><slot>` reading its accentee `#5` as an
-undelimited macro argument (typeset as `\mathaccent"…{#5}`), and amsfonts.sty:78-87 `\widehat#1`/`\widetilde#1` the same:
-`\tilde\muu_a` with `\newcommand{\muu}{m_{\gamma'}}` accents all of `m_{\gamma'}` and the `_a` is the accented group's.
-Perl keeps the kernel's `Digested` accents (TeX's `\mathaccent`, which takes the next math field: the `m` alone), so the
-expansion's `_{\gamma'}` and the author's `_a` are a double subscript.
-
-Trigger: `\usepackage{amsmath}\newcommand{\muu}{m_{\gamma^\prime}}` and `$\tilde\muu_a^2$` — pdflatex 0 errors (without
-amsmath: "Double subscript"); Perl and Rust before 71a 1 Error per formula (0801.1527; `\widehat\cba_{\rm CF}`,
-2609.01909).
-
-Rust (71a, amsmath_sty.rs `define_ams_macro_accent`, for amsmath's 11 accents and amsfonts' 2): each is a macro of one
-argument, as amsmath's, over LaTeXML's own accent (kept as `\lx@ams@kernel@<name>`), its argument passed through
-`\lx@ams@mathaccentV` (amsfonts': `\lx@undelimited@argument`) — braced, unless it is a command that reads a mandatory
-argument, which is read with its own arguments, the call the author wrote, with a Warning that TeX errs there
-(OXIDIZED_DESIGN_DIVERGENCES #721). Only a name that is an accent is redefined, as amsmath's `\meaning` test leaves any other (amsmath.sty:760-775):
-`\let\vec\undefined` before MnSymbol keeps `\vec` for MnSymbol to declare (2210.15345). One argument, so accents.sty's
-`\underaccent{\dot}{…}` (`\lx@if@isaccent`) still takes it for an accent. Repros
-ams-internals/amsmath_accent_macro_argument, ams-internals/amsfonts_widehat_macro_argument; guards
-`perfect_kernel_batch71a::{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument}`.
 
 ## 949. AMS-TeX's `\Let@` is missing, so a document's own AMS-TeX alignment macro errs at its `\\`
 
