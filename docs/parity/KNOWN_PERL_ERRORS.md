@@ -15047,3 +15047,14 @@ open once the mark is closed — so a well-formed cell digests, nests, reverts a
 without the braces, and a cell that leaves another group or a mode open (math9805003's undefined `{Sb}`, a stray `$`'s
 in-math text) meets the cell's end as before. Witnesses 2207.06932, 1912.10594 (the rc_struct3 U1 sample,
 agent_reports/2026-10-17_rc_struct3.md). Guard `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
+
+amsmath_sty.rs's gather, align and aligned templates (aligned's serve `{split}`) end and start their cells the same way.
+`{align}`, `{gather}` and `{split}` collect their bodies as an argument first (amsmath.sty:1412-1434 `\collect@body`),
+where an unbalanced cell is already pdflatex's "Argument of \align* has an extra }", so only `{aligned}` (read
+directly) shows the shape: `\begin{aligned} u &= }v+w^{z. \end{aligned}` — pdflatex 0 errors; Perl and base 0 errors
+with the cell's `}` and the template's `\hfil` in the superscript and the rows' formulas lost. Repro
+kernel-alignment/amsmath_cell_braces_balance_across_the_template, control
+kernel-alignment/dollar_in_a_braced_template_cell_ends_its_formula (`a &=& b $ for all $ x` keeps its shape, no
+message, as Perl and base; pdflatex "Missing } inserted"); guards
+`perfect_kernel_batch69c::{amsmath_aligned_cell_braces_balance_across_the_template,
+dollar_in_a_braced_template_cell_ends_its_formula}`.

@@ -1,0 +1,20 @@
+% witness: the rc_struct3 U1 shape (agent_reports/2026-10-17_rc_struct3.md) in amsmath's `{aligned}`
+% oracle:  pdflatex 0 errors; amsmath's templates brace their cells like eqnarray's (amsmath.sty:1483 `\start@aligned`,
+%   1576 `{gather}`, 2350 `\align@preamble`, 2424 `{split}`: `$\m@th\displaystyle{##}$`), so a cell's `}` closes the
+%   template's `{` and the v-part's `}` a cell's `{` (tex.web §324, §789). `{aligned}` reads its body directly; `{align}`,
+%   `{gather}` and `{split}` collect theirs as an argument first (amsmath.sty:1412-1434 `\collect@body`), where such a
+%   cell is pdflatex's "Argument of \align* has an extra }" — so only well-balanced cells reach their templates
+% engines: rust 67int18b = 0 errors but each cell's `}` and `\hfil` swallowed into the superscript and the rows'
+%   formulas lost; perl = 0 the same way (KNOWN_PERL_ERRORS #908)
+% expect:  0 errors; each row's formula kept, `e^{…}` a superscript to the cell end
+% status:  RED (67int18b) -> GREEN (69c: `\lx@template@bgroup`/`\lx@template@egroup` in amsmath_sty.rs templates)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation*}
+\begin{aligned}
+u &= }v+w^{z.
+\end{aligned}
+\end{equation*}
+\[\begin{aligned} G &= }\det(h)-e^{\frac{a}{2}g_t. \\ b&=c \end{aligned}\]
+\end{document}

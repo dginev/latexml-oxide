@@ -6,7 +6,7 @@
 //! Item 2 (E1) — a `$` inside a math TeX sets as `\hbox{$…$}` (amsmath's display under `fleqn`, proof.sty's label,
 //! conclusion and premises, accents.sty's under-accent) is text in that math (tex.web §1193; the rc_struct3 E1 sample).
 //! Item 3 (U1) — an eqnarray cell's braces balance across its template's own `{##}` (latex.ltx:15760-15763; 2207.06932
-//! 1912.10594).
+//! 1912.10594), and an amsmath `{aligned}` cell's across amsmath's (amsmath.sty:1483).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -163,4 +163,53 @@ fn eqnarray_cell_braces_balance_across_the_template() {
     r#"<Math tex="\displaystyle G_{t}(h)=\det(h)-e^{{\frac{a}{2}g_{t}.}}" text="G _ t * h = determinant@(h) - e ^ (list@((a / 2) * g _ t))" xml:id="S0.Ex1.m4"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">G</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok></XMApp><XMDual><XMRef idref="S0.Ex1.m4.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m4.1">h</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok meaning="determinant" role="LIMITOP" scriptpos="mid">det</XMTok><XMDual><XMRef idref="S0.Ex1.m4.2"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m4.2">h</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">e</XMTok><XMDual><XMApp><XMTok meaning="list"/><XMRef idref="S0.Ex1.m4.3"/></XMApp><XMWrap><XMApp xml:id="S0.Ex1.m4.3"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok mathstyle="script" meaning="divide" role="FRACOP"/><XMTok font="italic" fontsize="50%" role="UNKNOWN">a</XMTok><XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post2"/><XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok><XMTok font="italic" fontsize="50%" role="UNKNOWN">t</XMTok></XMApp></XMApp><XMTok fontsize="70%" role="PERIOD">.</XMTok></XMWrap></XMDual></XMApp></XMApp></XMApp></XMath></Math>"#,
   );
   assert_eq!(xml.matches("<equation ").count(), 3, "{xml}");
+}
+
+/// kernel-alignment/amsmath_cell_braces_balance_across_the_template: `u &= }v+w^{z.` in `{aligned}`, whose template
+/// braces its cells (amsmath.sty:1483; pdflatex 0 errors). Before 69c: 0 errors, but the cell's `}` and the template's
+/// `\hfil` went into the superscript and the rows' formulas were lost.
+#[test]
+fn amsmath_aligned_cell_braces_balance_across_the_template() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/amsmath_cell_braces_balance_across_the_template.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // The `tex` keeps the cell's `}` as written; the superscript runs to the cell end.
+  assert!(xml.contains(r#"tex="\displaystyle u=}v+w^{{z.}""#), "{xml}");
+  assert!(
+    xml.contains(r#"tex="\displaystyle G=}\det(h)-e^{{\frac{a}{2}g_{t}.}""#),
+    "{xml}"
+  );
+  assert_eq!(
+    xml.matches("<XMTok role=\"SUPERSCRIPTOP\"").count(),
+    4,
+    "{xml}"
+  );
+  assert!(!xml.contains(r"\hfil"), "{xml}");
+}
+
+/// kernel-alignment/dollar_in_a_braced_template_cell_ends_its_formula (CONTROL): `a &= b $ for all $ x` in `{align*}`
+/// and `{eqnarray}` keeps the shape it had before the templates' braces — the cell's formula, the text, a formula —
+/// with no message (pdflatex errs, "Missing } inserted"; Perl and base 0).
+#[test]
+fn dollar_in_a_braced_template_cell_ends_its_formula() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/dollar_in_a_braced_template_cell_ends_its_formula.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "td",
+    &["align=\"left\""],
+    r#"<td align="left"><Math mode="inline" tex="\displaystyle=b" text="absent = b" xml:id="S0.Ex1.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math> for all <Math mode="inline" tex="x" text="x" xml:id="S0.Ex1.m3"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></td>"#,
+  );
+  assert_eq!(xml.matches("</Math> for all <Math").count(), 2, "{xml}");
 }

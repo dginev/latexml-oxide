@@ -2838,6 +2838,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   before (KNOWN_PERL_ERRORS #908). Witnesses 2207.06932 1912.10594 (12 → 0, 8 → 0 errors). Repro
   kernel-alignment/eqnarray_cell_braces_balance_across_the_template; guard
   `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
+  Then amsmath's templates (amsmath.sty:1483/1576/2350/2424) in amsmath_sty.rs gather/align/aligned: only `{aligned}`
+  shows the shape (`{align}`/`{gather}`/`{split}` collect their bodies first). Repros
+  kernel-alignment/amsmath_cell_braces_balance_across_the_template, control
+  dollar_in_a_braced_template_cell_ends_its_formula; guards
+  `perfect_kernel_batch69c::{amsmath_aligned_cell_braces_balance_across_the_template,
+  dollar_in_a_braced_template_cell_ends_its_formula}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

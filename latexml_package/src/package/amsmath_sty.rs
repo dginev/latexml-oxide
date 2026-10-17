@@ -186,7 +186,13 @@ fn ams_rearrangeable_bindings(
   Ok(())
 }
 
-/// Perl: \@ams@gather@bindings — single centered column
+/// Perl: \@ams@gather@bindings — single centered column. amsmath's templates brace their cells
+/// (`$\m@th\displaystyle{##}$`: amsmath.sty:1483 `\start@aligned`, 1576 `{gather}`, 2350 `\align@preamble`, 2424
+/// `{split}`), here and in `ams_align_bindings`/`ams_aligned_bindings` as tex_box.rs `\lx@template@bgroup`/
+/// `\lx@template@egroup`: an `{aligned}` cell whose `{`/`}` balance only across them (`u &= }v+w^{z.`) is one formula,
+/// as in pdflatex; `{align}`/`{gather}`/`{split}` collect their bodies as an argument first (amsmath.sty:1412-1434), so
+/// only balanced cells reach theirs. Perl's templates have none (KNOWN_PERL_ERRORS #908). Guard
+/// `perfect_kernel_batch69c::amsmath_aligned_cell_braces_balance_across_the_template`.
 fn ams_gather_bindings() -> Result<()> {
   use latexml_core::alignment::{cell::Cell, template::TemplateConfig};
 
@@ -195,8 +201,13 @@ fn ams_gather_bindings() -> Result<()> {
       T_CS!("\\hfil"),
       T_MATH!(),
       T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
     ])),
-    after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
+    after: Some(Tokens::new(vec![
+      T_CS!("\\lx@template@egroup"),
+      T_MATH!(),
+      T_CS!("\\hfil"),
+    ])),
     empty: true,
     ..Cell::default()
   };
@@ -220,14 +231,23 @@ fn ams_align_bindings() -> Result<()> {
       T_CS!("\\hfil"),
       T_MATH!(),
       T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
     ])),
-    after: Some(Tokens::new(vec![T_MATH!()])),
+    after: Some(Tokens::new(vec![T_CS!("\\lx@template@egroup"), T_MATH!()])),
     empty: true,
     ..Cell::default()
   };
   let col2 = Cell {
-    before: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\displaystyle")])),
-    after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
+    before: Some(Tokens::new(vec![
+      T_MATH!(),
+      T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
+    ])),
+    after: Some(Tokens::new(vec![
+      T_CS!("\\lx@template@egroup"),
+      T_MATH!(),
+      T_CS!("\\hfil"),
+    ])),
     empty: true,
     ..Cell::default()
   };
@@ -252,14 +272,25 @@ fn ams_aligned_bindings() -> Result<()> {
   };
 
   let col1 = Cell {
-    before: Some(Tokens::new(vec![T_CS!("\\hfil"), T_CS!("\\displaystyle")])),
+    before: Some(Tokens::new(vec![
+      T_CS!("\\hfil"),
+      T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
+    ])),
+    after: Some(Tokens::new(vec![T_CS!("\\lx@template@egroup")])),
     align: Some(Align::Right), // \hfil before → right-aligned
     empty: true,
     ..Cell::default()
   };
   let col2 = Cell {
-    before: Some(Tokens::new(vec![T_CS!("\\displaystyle")])),
-    after: Some(Tokens::new(vec![T_CS!("\\hfil")])),
+    before: Some(Tokens::new(vec![
+      T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
+    ])),
+    after: Some(Tokens::new(vec![
+      T_CS!("\\lx@template@egroup"),
+      T_CS!("\\hfil"),
+    ])),
     align: Some(Align::Left), // \hfil after → left-aligned
     empty: true,
     ..Cell::default()
