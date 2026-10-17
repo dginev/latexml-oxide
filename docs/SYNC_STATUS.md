@@ -2457,7 +2457,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   frontmatter `ltx:note`s (roles note/authornote) as apa7's binding makes them, not under `mask` (apa6_cls.rs
   `define_notes`); `\note` is no K11 table name and K11's `\authornote` ignored the mask. 2406.08022 (its author note is
   a `\note`) 0 → 1 note. Repro class-bindings/apa6_note_and_authornote; guard
-  `perfect_kernel_batch68x::apa6_note_and_authornote_are_frontmatter_notes`.
+  `perfect_kernel_batch68x::apa6_note_and_authornote_are_frontmatter_notes`. (4) cjs-rcs-article (OXIDIZED_DESIGN_DIVERGENCES #660): a binding over
+  the raw class (cjs_rcs_article_cls.rs) — the environ-collected `{englishabstract}`/`{frenchabstract}`/`{keywords}`
+  (cls:379-386) handed to the frontmatter: two abstracts with `xml:lang` and babel's heading ("Résumé"), the keywords'
+  items joined by "; " (:387-393); and babel_support's `\iflanguage` expandable for a known language (babel.sty:562-568;
+  KNOWN_PERL_ERRORS #861: Perl's `\edef\@@@@lang` errs inside cls:368's `\edef`). 2608.13762: 4 → 3 errors (the 3 left
+  are body math), abstracts 0 → 2, keywords 0 → 1. Repros class-bindings/cjs_rcs_article_abstracts_keywords,
+  babel-lang/iflanguage_expands_in_edef; guards `perfect_kernel_batch68x::{cjs_rcs_abstracts_and_keywords_are_frontmatter,
+  babel_iflanguage_expands_in_an_edef}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

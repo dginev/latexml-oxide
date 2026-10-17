@@ -14502,3 +14502,14 @@ harness error); Perl 0.8.8 and Rust before 68w 3 Errors.
 Rust (68w, quantumarticle_cls.rs): the class's `\doi`, its shown DOI in the identity encoding
 (`\lx@address@textfont`, an address's `_` not OT1's dot accent; user ruling 2026-10-11). Witness 1902.03164. Repro
 class-bindings/quantumarticle_doi_detokenized; guard `perfect_kernel_batch68w::quantumarticle_doi_is_the_class_link`.
+
+## 861. babel_support's `\iflanguage` is not expandable: inside an `\edef` `\@@@@lang` is undefined
+
+babel_support.sty.ltxml:158-167 defines `\iflanguage{}` ("pretend we've got hyphenation patterns for ANY language")
+with `\expandafter\edef\expandafter\@@@@lang\expandafter{\csname l@#1\endcsname}` (a macro read nowhere) before the
+`\ifnum` test, so the macro is not expandable as babel's own is (babel.sty:562-568). Minimal trigger:
+`\documentclass{article}\usepackage[french,english]{babel}\edef\conj{\iflanguage{french}{ et }{ and }}` — pdflatex
+expands it to " and ", Perl `Error:undefined:\@@@@lang` and "Ann  and Bob." (cjs-rcs-article.cls:368 `\surname`'s
+`\edef\CJS@runningauthor@and{\iflanguage{french}{ et }{ and }}`; 2608.13762). Fixed in Rust (68x): a language the
+format has patterns for is tested by expansion only; an unknown one is still allocated. Repro
+babel-lang/iflanguage_expands_in_edef; guard `perfect_kernel_batch68x::babel_iflanguage_expands_in_an_edef`.

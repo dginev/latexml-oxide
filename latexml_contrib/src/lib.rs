@@ -87,6 +87,7 @@ pub mod cimart_cls;
 pub mod cimento_cls;
 pub mod cjk_sty;
 pub mod cjkutf8_sty;
+pub mod cjs_rcs_article_cls;
 pub mod clefval_sty;
 pub mod cmcal_sty;
 pub mod collcell_sty;
@@ -657,6 +658,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("doclicense", "sty", doclicense_sty::load_definitions),
   ("cimart", "cls", cimart_cls::load_definitions),
   ("cimento", "cls", cimento_cls::load_definitions),
+  (
+    "cjs-rcs-article",
+    "cls",
+    cjs_rcs_article_cls::load_definitions,
+  ),
   (
     "colm2025_conference",
     "sty",

@@ -1,0 +1,33 @@
+% mechanism: cjs-rcs-article.cls:379-386 makes `{englishabstract}`, `{frenchabstract}` and `{keywords}` with environ's
+%   `\NewEnviron`, each `\global\let`-ing its `\BODY` into a store only its `\maketitle` reads (:414-480), which the
+%   kernel's locked `\maketitle` never runs. The binding (latexml_contrib cjs_rcs_article_cls.rs) keeps the environ form
+%   and hands each body to the frontmatter: two `ltx:abstract`s in their languages, named as babel names them under the
+%   class's `\selectlanguage`, and the keywords joined as the class's inline list joins them (:387-393 `itemjoin={{; }}`).
+% witness: 2608.13762
+% oracle:  pdflatex: 0 errors; "Abstract The English abstract." "Résumé Le résumé français." "Keywords Functional data;
+%   Time series."; the body's itemize is unaffected
+% engines: rust 67int16: no abstract, no keywords, 1 Error (\@@@@lang, babel-lang/iflanguage_expands_in_edef);
+%   perl: no binding (OmniBus)
+% expect:  0 errors, 3 warnings (memoir.cls:5454, :7811 on its load); <abstract xml:lang="en" name="Abstract">, <abstract xml:lang="fr" name="Résumé">,
+%   <keywords name="Keywords">Functional data; Time series</keywords>
+% status:  RED (67int16) -> GREEN (68x)
+% preload: ar5iv.sty
+\documentclass[french,english,nocjs]{cjs-rcs-article}
+\title{The Title}
+\author{Ann \surname{Able}}
+\affil{First University}
+\begin{englishabstract}
+The English abstract.
+\end{englishabstract}
+\begin{frenchabstract}
+Le résumé français.
+\end{frenchabstract}
+\begin{keywords}
+\item Functional data \item Time series
+\end{keywords}
+\begin{document}
+\maketitle
+\section{Intro}
+Text.
+\begin{itemize}\item One \item Two\end{itemize}
+\end{document}

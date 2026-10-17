@@ -4,12 +4,13 @@
 //! own (68u round 3 called it from four bindings by hand; 2608.21389, 2102.04789). Item 2 — an aguplus binding over
 //! the raw class: `\affil`, `\authoraddr`, `\altaffilmark`/`\altaffiltext` and the dates as the AAS binding makes them,
 //! and natbib's binding for the class's copy of natbib 7.0 (1107.5305, 1203.5042, physics9702009, 1010.3998). Item 3 —
-//! apa6's `\note` and `\authornote` as apa7's binding makes them, the mask honoured (2406.08022).
+//! apa6's `\note` and `\authornote` as apa7's binding makes them, the mask honoured (2406.08022). Item 4 — cjs-rcs-article's
+//! environ-collected abstracts (in their languages) and keywords, and babel's `\iflanguage` expandable (2608.13762).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, normalize_markup};
 
-use super::perfect_kernel_batch57::{RAW, assert_elements};
+use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
 /// class-bindings/lni_subtitle_through_k11: lni.cls's `\subtitle` (a store only its refused `\maketitle` reads) is the
 /// frontmatter's subtitle though the class is read by the lni binding, not the lever (pdflatex: "The Title" over "A
@@ -144,4 +145,64 @@ fn apa6_note_and_authornote_are_frontmatter_notes() {
     &[],
   );
   assert!(!masked.contains("<note"), "{masked}");
+}
+
+/// babel-lang/iflanguage_expands_in_edef: `\iflanguage` of a language the format knows expands inside an `\edef`
+/// (pdflatex: "Ann and Bob. Ann et Bob."). Before 68x (and in Perl, KNOWN_PERL_ERRORS #861) `\@@@@lang` was undefined
+/// there, an Error (cjs-rcs-article.cls:368, 2608.13762).
+#[test]
+fn babel_iflanguage_expands_in_an_edef() {
+  let xml = assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/babel-lang/iflanguage_expands_in_edef.tex"),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    "<p>Ann and Bob.\n<text xml:lang=\"fr\">Ann et Bob.</text></p>",
+  );
+}
+
+/// class-bindings/cjs_rcs_article_abstracts_keywords: the class's environ-collected `{englishabstract}`,
+/// `{frenchabstract}` and `{keywords}` are the frontmatter's two abstracts, each in its language and named as the class
+/// names it, and its keywords joined by "; " (pdflatex: "Abstract The English abstract." "Résumé Le résumé français."
+/// "Keywords Functional data; Time series."). Before 68x all three were lost (2608.13762).
+#[test]
+fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
+  // (the three Warnings are memoir.cls's, which the class loads: :5454 `\newif \@iffirstamp`, :7811
+  // `\addtodef{\endthebibliography}` — its deprecation warning pdflatex prints too — on a kernel environment end)
+  let xml = assert_elements_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/cjs_rcs_article_abstracts_keywords.tex"
+    ),
+    RAW,
+    (0, 3),
+    &[
+      "Warning:misdefined:\\@iffirstamp",
+      "Class memoir Warning: \\addtodef is marked deprecated",
+      "`\\endthebibliography' is not a macro",
+    ],
+    &[
+      (
+        "abstract",
+        "abstract1",
+        r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1" xml:lang="en"><p>The English abstract.</p></abstract>"#,
+      ),
+      (
+        "abstract",
+        "abstract2",
+        r#"<abstract inlist="toc" name="Résumé" xml:id="abstract2" xml:lang="fr"><p>Le résumé français.</p></abstract>"#,
+      ),
+    ],
+  );
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    r#"<keywords name="Keywords">Functional data; Time series</keywords>"#,
+  );
+  assert_eq!(xml.matches("<item ").count(), 2, "{xml}");
 }

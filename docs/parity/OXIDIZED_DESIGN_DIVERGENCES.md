@@ -18466,3 +18466,18 @@ else at the end — each address placed with the author it spells, else the only
 address on its author), 0811.3118. Repros class-bindings/aguplus/{aguplus_author_block_and_citations,
 aguplus_altaffil_and_spelled_addresses}; guards `perfect_kernel_batch68x::{aguplus_authors_carry_affiliations_and_addresses,
 aguplus_altaffiliations_and_addresses_go_to_their_authors}`.
+
+### 660. cjs-rcs-article.cls is a binding over the raw class: its environ-collected abstracts and keywords are the frontmatter (Perl: no binding)
+
+Perl has no binding (OmniBus). Read raw, cjs-rcs-article.cls:379-386 makes `{englishabstract}`, `{frenchabstract}` and
+`{keywords}` with environ.sty's `\NewEnviron`, each `\global\let`-ing its `\BODY` into a store (`\CJS@englishabstract`,
+…) only its `\maketitle` reads (:414-480: each abstract under `\selectlanguage{<language>}\paragraph{\abstractname}`,
+the keywords as an enumitem inline list joined by "; ", :387-393), so both abstracts and the keywords were lost
+(2608.13762). Ours (latexml_contrib cjs_rcs_article_cls.rs): the environments keep the class's environ form
+(`\RenewEnviron`), the body handed to the frontmatter as its tokens — each abstract an `ltx:abstract` with its
+`xml:lang` and the heading babel gives it in that language (`\captions<language>`'s `\abstractname`: "Résumé"), not
+clearing the other (`\lx@add@frontmatter`, not `\lx@add@abstract`), the keywords `\lx@add@keywords` named as the class
+names them, their `\item`s joined by "; " as the class's list joins them (in a group: the document's lists keep their
+`\item`). Not a K11 (frontmatter_stores.rs) reroute: the abstracts are no table names, and the keywords' items need the
+list the title page wraps them in. `{classification}` (:394-404) has the same shape; no witness uses it. Repro
+class-bindings/cjs_rcs_article_abstracts_keywords; guard `perfect_kernel_batch68x::cjs_rcs_abstracts_and_keywords_are_frontmatter`.
