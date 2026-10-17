@@ -15279,3 +15279,18 @@ latex209.def (the "LaTeX2e command in LaTeX 2.09 document" errors, the byte catc
 `\verb`, tracefnt) are listed at the definition as not applied. Repro
 class-bindings/documentstyle_class_sets_normalsize_through_at_normalsize; guard
 `perfect_kernel_batch70b::documentstyle_class_sets_normalsize_through_at_normalsize`.
+
+## 926. `\vsplit` reads `to` as exact tokens, not as a keyword
+
+tex.web §1082: `vsplit_code: begin scan_register_num; n:=cur_val; if not scan_keyword("to") then … "Missing `to'
+inserted" …; scan_normal_dimen; …`. `scan_keyword` (§407) skips the spaces before the keyword and matches its letters
+in either case. Perl TeX_Inserts.pool.ltxml:36 `DefPrimitive('\vsplit Number Match:to Dimension', …)` takes the two
+tokens exactly: a space before `to` — left by a register that is a chardef (`\newbox`), whose number scan reads no
+space after it — or `TO` is "Missing argument Match:to", and the keyword is typeset as text.
+
+Trigger: `\newbox\mybox \setbox\mybox=\vbox{…}` then `\def\cut#1{\setbox0=\vsplit#1 to\baselineskip}\cut\mybox` —
+pdflatex 0 errors; Perl "Missing argument Match:to". Witness 2505.21389 (cutwin.sty:122).
+
+Rust (70b): tex_inserts.rs `\vsplit Number` reads `to` with `read_keyword` (gullet.rs, §407's space skip and case
+fold), else TeX's "Missing `to' inserted", then the dimension. Repro boxes-groups/vsplit_to_is_a_keyword; guard
+`perfect_kernel_batch70b::vsplit_to_is_a_keyword`.

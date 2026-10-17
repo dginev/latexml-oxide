@@ -51,7 +51,21 @@ LoadDefinitions!({
   // Perl's `\vsplit` returns the whole box and never empties the
   // register (TeX_Inserts.pool.ltxml:36-40, KNOWN_PERL_ERRORS #402). Guards
   // `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`, `box_primitives::vsplit`.
-  DefPrimitive!("\\vsplit Number Match:to Dimension", sub[(number,_to,dimension)] {
+  // `to` is a keyword (tex.web §1082 `scan_keyword("to")`, §407): spaces before it are skipped and its letters match in
+  // either case, so cutwin.sty:122's `\vsplit#1 to\baselineskip` with `#1` a `\newbox` register (a chardef, after which
+  // the number scan leaves the space) splits (witness 2505.21389). Perl's `Match:to` (TeX_Inserts.pool.ltxml:36) takes
+  // the exact tokens: "Missing argument Match:to" (KNOWN_PERL_ERRORS #926). Without the keyword TeX says "Missing `to'
+  // inserted" and reads the dimension. Guard `perfect_kernel_batch70b::vsplit_to_is_a_keyword`.
+  DefPrimitive!("\\vsplit Number", sub[(number)] {
+    if read_keyword(&["to"])?.is_none() {
+      Error!(
+        "expected",
+        "to",
+        "Missing `to' inserted",
+        "I'm working on `\\vsplit<box number> to <dimen>'; will look for the <dimen> next."
+      );
+    }
+    let dimension = read_dimension()?;
     let box_key   = s!("box{}", number.value_of());
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       adjust_box_color(&stuff)?;

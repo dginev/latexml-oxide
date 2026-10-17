@@ -2828,6 +2828,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   KNOWN_PERL_ERRORS #925); witnesses hep-ex0107077 3 → 0, 0802.1120 4 → 0, astro-ph0009372 2 → 0. Guard
   `perfect_kernel_batch70b::documentstyle_class_sets_normalsize_through_at_normalsize`. Open (ruling): latex209.def's
   "LaTeX2e command \usepackage in LaTeX 2.09 document" error (:79-123) is not raised.
+  (4) V1: `\vsplit`'s `to` is a keyword (tex.web §1082/§407; tex_inserts.rs; KNOWN_PERL_ERRORS #926), "Missing `to'
+  inserted" without it; witness 2505.21389 (cutwin). Guard `perfect_kernel_batch70b::vsplit_to_is_a_keyword`.
 - **69c** (medium-risk shapes from the rc_struct3 study, agent_reports/2026-10-17_rc_struct3.md). (1) P1: a theorem,
   proof or TOC inside a container whose model holds no Para.class (`{quote}`, a `\footnote`, a `{wrapfigure}`, an
   `ltx:text`, a cell) opens an `ltx:inline-logical-block` there — the last auto-open bridge of document.rs

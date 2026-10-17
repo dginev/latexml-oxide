@@ -7,6 +7,7 @@
 //! 1504.06523).
 //! Item 3 (S1) — `\documentstyle` applies latex209.def's size switch, `\normalsize` = `\@normalsize` (:138-139), and its
 //! `\@documentclasshook`, so a raw 2.09 class sets the body size (hep-ex0107077 0802.1120 astro-ph0009372).
+//! Item 4 (V1) — `\vsplit`'s `to` is a keyword (tex.web §1082, §407; cutwin.sty, 2505.21389).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -131,5 +132,46 @@ fn documentstyle_class_sets_normalsize_through_at_normalsize() {
     "para",
     &["xml:id=\"p1\""],
     r#"<para xml:id="p1"><p xml:id="p1.1">Text.</p></para>"#,
+  );
+}
+
+/// boxes-groups/vsplit_to_is_a_keyword: `\vsplit\mybox to` after a chardef'd register and `TO` (pdflatex 0 errors).
+/// Before: 2 errors "Missing argument Match:to", `to`/`TO` typeset as text.
+#[test]
+fn vsplit_to_is_a_keyword() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/vsplit_to_is_a_keyword.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p>First line text.</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p2\""],
+    r#"<para xml:id="p2"><p>Second line text.</p></para>"#,
+  );
+  // Without the keyword: TeX's "Missing `to' inserted", the dimension read next and the box split.
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\\newbox\\mybox\\begin{document}\\setbox\\mybox=\\vbox{\\hsize=3cm One.\\par Two.\\par}\n\\setbox0=\\vsplit\\mybox \\baselineskip\\box0\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert_eq!(
+    stderr.matches("Missing `to' inserted").count(),
+    1,
+    "{stderr}"
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p>One.</p></para>"#,
   );
 }
