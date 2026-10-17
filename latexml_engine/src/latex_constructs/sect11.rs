@@ -773,6 +773,19 @@ pub(crate) fn load() -> Result<()> {
     if tag != "thebibliography" {
       tokens.extend(Explode!("implicit "));
     }
+    // …and the list that environment opened is closed first, when the `\bibitem` is in it: Kluwer's
+    // `\normallatexbib` `{chapthebibliography}` is `\section*{References}`, a `\list` and an `\item[]` the entries are
+    // typeset in (cargese.cls:1859-1890; kapproc.cls, edbk.sty alike), so the bibliography opened inside that item —
+    // `<ltx:section>`/`<ltx:bibliography> isn't allowed in <ltx:item>`, Perl's too (KNOWN_PERL_ERRORS #887); its entries
+    // are the bibliography's, as in the PDF. The class's `\endlist` then finds it closed (`\endlx@list` closes only
+    // what is open). Witnesses hep-th0212109 (cargese), cond-mat0112379 cond-mat0110649 (kapproc), cond-mat0002157
+    // (edbk); repro index-bib/kluwer_chapthebibliography; guard
+    // `perfect_kernel_batch69a::kluwer_chapthebibliography_closes_its_list`.
+    if !matches!(tag.as_str(), "" | "thebibliography" | "enumerate" | "itemize" | "description")
+      && lookup_string("lx@list@currenvir") == tag
+    {
+      tokens.extend(Explode!("list "));
+    }
     let continued = lookup_bool("lx_bibliography_sectioned");
     if continued {
       tokens.extend(Explode!("continued"));
@@ -822,11 +835,31 @@ pub(crate) fn load() -> Result<()> {
     assign_value("lx_bibliography_opened_continued", how.contains(&"continued"), Some(Scope::Global));
     let parent     = document.get_node();
     let tag_sym    = model::get_node_qname(parent);
-    with(tag_sym, |tag|
+    let closed = with(tag_sym, |tag|
       if tag == "ltx:itemize" || tag == "ltx:enumerate" || tag == "ltx:description" {
         document.maybe_close_element(tag)
       } else { Ok(None) }
     )?;
+    // the environment's own list, from inside its item (`\lx@mung@bibliography`) — unless that list was the insertion
+    // point, closed above (a list around it is not the environment's)
+    if closed.is_none() && how.contains(&"list") {
+      let mut node = Some(document.get_node().clone());
+      while let Some(current) = node {
+        let qname = model::get_node_qname(&current);
+        if qname == pin!("ltx:itemize") || qname == pin!("ltx:enumerate") || qname == pin!("ltx:description") {
+          document.close_node_internal(&current)?;
+          // holding only the class's `\item[]`, it was the entries' frame alone
+          if is_empty_block(&current) {
+            document.remove_node(current);
+          }
+          break;
+        }
+        if !document::can_auto_close(&current) {
+          break;
+        }
+        node = current.get_parent();
+      }
+    }
     let mut node = Some(document.get_node().clone());
     while let Some(current) = node {
       if is_heading_unit(&current) {
@@ -1538,7 +1571,7 @@ fn is_empty_block(node: &Node) -> bool {
   with(model::get_node_qname(node), |q| {
     matches!(
       q,
-      "ltx:para" | "ltx:p" | "ltx:itemize" | "ltx:enumerate" | "ltx:description"
+      "ltx:para" | "ltx:p" | "ltx:itemize" | "ltx:enumerate" | "ltx:description" | "ltx:item"
     )
   }) && node.get_content().trim().is_empty()
     && node.get_child_elements().iter().all(is_empty_block)

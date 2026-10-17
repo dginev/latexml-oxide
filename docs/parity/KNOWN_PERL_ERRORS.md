@@ -14781,3 +14781,23 @@ Faithfully, a `\newcommand` optional-argument macro that expands to `\multicolum
 works at a cell head: `\newcommand\mc[2][c]{\multicolumn{2}{#1}{#2}}`, `\newcommand\HL[1][]{\hline}` err "Misplaced
 \omit"/"Misplaced \noalign" (68z: 3 Errors, the content kept; 67int17b 0; pdflatex 10 Errors), since TeX's look-ahead
 stops at the `\futurelet` before the `\omit`/`\noalign` is reached.
+
+## 887. A `\bibitem` in a class's bibliography list opens the bibliography inside the list's item
+
+Kluwer's `\normallatexbib` `{chapthebibliography}` (cargese.cls:1859-1906; kapproc.cls and edbk.sty alike) is
+`\section*{References}`, a `\list`, a `\bgroup` and an `\item[]` the entries are set in. The kernel's `\bibitem` there
+is outside `{thebibliography}`, so `\lx@mung@bibliography` opens the kernel bibliography, and
+`\lx@mung@bibliography@pre` (latex_constructs.pool.ltxml:4123-4129) closes a list only when the insertion point is the
+list itself — here it is the list's item, so the bibliography's unit and the bibliography are placed in the item.
+
+Trigger: `\documentclass{cargese}\normallatexbib` (the papers' copy; not in TeX Live) or the class's definition in an
+article preamble, `\begin{chapthebibliography}{99}\bibitem{a} A.\bibitem{b} B.\end{chapthebibliography}` — pdflatex
+0 errors; Perl and Rust before 69a `<ltx:section> isn't allowed in <ltx:item>`, `<ltx:bibliography> isn't allowed in
+<ltx:item>`.
+
+Rust (69a, sect11.rs `\lx@mung@bibliography`): `\lx@list` records the environment it is opened in
+(`lx@list@currenvir`, sect06.rs); a `\bibitem` in that environment closes that list first (`\lx@mung@bibliography@pre`
+`list`), drops it when it holds only the empty `\item[]`, and the bibliography takes the class's heading
+(`absorb_bibliography_heading`). The class's `\endlist` finds the list closed. Witnesses hep-th0212109 hep-th0212193
+(cargese), cond-mat0112379 cond-mat0110649 (kapproc), cond-mat0002157 (edbk). Repro
+index-bib/kluwer_chapthebibliography; guard `perfect_kernel_batch69a::kluwer_chapthebibliography_closes_its_list`.

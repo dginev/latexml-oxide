@@ -3653,6 +3653,18 @@ impl Document {
             attrs:   &[],
             holder:  item_has_label,
           },
+          // …and in a `{quote}`, `{quotation}` or `{verse}` (`\begin{quotation}\section*{}` around a title page's
+          // abstract, 0712.1985): LaTeX typesets the heading inside the quote's `\list` margins (article.cls:389-408,
+          // `quote` = `\list{}{\rightmargin\leftmargin}\item\relax`), and the quote holds the block directly
+          // (LaTeXML-block.rnc `quote_model` takes `Misc.class`); the quote's end closes it. User ruling 2026-10-16
+          // (HF7-A precedent, OXIDIZED_DESIGN_DIVERGENCES #678). Guard
+          // `perfect_kernel_batch69a::section_in_a_quotation_opens_a_block`.
+          AutoOpenBridge {
+            chain:   &["ltx:inline-sectional-block"],
+            applies: |cur, qsym| cur == "ltx:quote" && is_sectioning_unit_name(qsym),
+            attrs:   &[],
+            holder:  |_| true,
+          },
           AutoOpenBridge {
             chain:   &["ltx:item", "ltx:para"],
             applies: |cur, qsym| cur == qsym,

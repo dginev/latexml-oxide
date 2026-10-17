@@ -2716,6 +2716,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   — RED row, next alignment batch. Word losses > 1 %: 1904.00651, 2604.11988 (aa marks now text, the 68y review's
   re-tokenization). Nets 136/136 0 worse.
 
+- **69a** (bibliography containers and small package shapes of the rc_struct2 study, agent_reports/2026-10-16_rc_struct2.md
+  D1 D3 D5). (1) A bibliography begun in `{quote}`/`{quotation}`/`{verse}` (the AAAI template's
+  `\begin{quote}\begin{small}\bibliography`): the quote is closed before it and dropped when empty, the entries keep the
+  quote's `\small` (latex_constructs/mod.rs `close_list_containers_before_backmatter`; ruling 2026-10-16, OD #677;
+  2203.09193 1904.12066 1610.09996 2109.09861 2403.09260 1609.06434 astro-ph0410583 1504.06728). (2) A sectioning unit in
+  a quote opens an `ltx:inline-sectional-block` there (document.rs `AUTO_OPEN_BRIDGES` quote row; OD #678; 0712.1985).
+  (3) Kluwer `\normallatexbib` `{chapthebibliography}` (`\section*` + `\list` + `\item[]`, cargese.cls:1859-1906; kapproc,
+  edbk): a `\bibitem` in the environment that opened the innermost `\list` closes that list first (sect06.rs
+  `lx@list@currenvir`, sect11.rs `\lx@mung@bibliography` `list`), the bibliography taking the class's heading
+  (KNOWN_PERL_ERRORS #887; hep-th0212109 hep-th0212193 cond-mat0112379 cond-mat0110649 cond-mat0002157). Repros
+  index-bib/{bibliography_in_quote, bibliography_in_verse_after_text, kluwer_chapthebibliography},
+  sectioning-frontmatter/section_in_quotation; guards `perfect_kernel_batch69a` (4).
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

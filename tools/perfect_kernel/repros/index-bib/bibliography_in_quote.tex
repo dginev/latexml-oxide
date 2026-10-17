@@ -1,0 +1,22 @@
+% mechanism: thebibliography (article.cls:565-584 `\section*{\refname}` + `\list`) begun inside a `{quote}`: neither the
+%   heading's unit nor `ltx:bibliography` may go in `ltx:quote`, which does not auto-close; the quote is closed before
+%   the bibliography (ruling 2026-10-16, OXIDIZED_DESIGN_DIVERGENCES #677) and its `\small` stays on the entries
+% witness: 2203.09193 1904.12066 1610.09996 2109.09861 2403.09260 1609.06434 (AAAI template
+%   `\begin{quote}\begin{small}\bibliography`), astro-ph0410583 (quote), 1504.06728 (verse)
+% oracle:  pdflatex 0 errors: "Text [1]." then "References" and "[1] A. Author, Journal 1 (2000) 1." indented, small
+% engines: rust 67int17b = Error:malformed:ltx:section + Error:malformed:ltx:bibliography (in <ltx:quote>); Perl 0.8.8
+%   the same
+% expect:  0 errors; <bibliography> a child of <document> after the paragraph, its entry at 90%; no empty <quote>
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \cite{a}.
+\begin{quote}
+\begin{small}
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Journal 1 (2000) 1.
+\end{thebibliography}
+\end{small}
+\end{quote}
+\end{document}

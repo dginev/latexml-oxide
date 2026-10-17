@@ -1,0 +1,31 @@
+% mechanism: a sectioning unit inside `{quotation}`/`{quote}` (article.cls:389-408, `\list` + `\item`): the heading is
+%   typeset inside the quote's margins; the quote opens an `ltx:inline-sectional-block` for it (ruling 2026-10-16,
+%   HF7-A precedent; OXIDIZED_DESIGN_DIVERGENCES #678); the quote's end closes the block
+% witness: 0712.1985 (`\begin{quotation}\section*{}` around the title page's abstract)
+% oracle:  pdflatex 0 errors: an empty unnumbered heading, "Abstract" centered, "We study things." small, all
+%   indented; "1 Introduction", "Text, see 1.1.", the indented "1.1 Inner" / "Quoted text.", "After."
+% engines: rust 67int17b = Error:malformed:ltx:section, Error:malformed:ltx:subsection (in <ltx:quote>); Perl the same
+% expect:  0 errors; each quote holds an <inline-sectional-block> with the unit; the subsection keeps its number and
+%   label; "After." follows the quote in the section's paragraph
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\begin{quotation}
+\section*{}
+\begin{center}
+Abstract
+\end{center}
+\begin{small}
+We study things.
+\end{small}
+\end{quotation}
+\section{Introduction}\label{intro}
+Text, see \ref{q}.
+\begin{quote}
+\subsection{Inner}\label{q}
+Quoted text.
+\end{quote}
+After.
+\end{document}

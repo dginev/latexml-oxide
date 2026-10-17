@@ -657,6 +657,11 @@ pub(crate) fn load() -> Result<()> {
       // `\endlist`: a group's end does not undo `\list`'s global `\@listdepth` step in LaTeX either. Guard:
       // `perfect_kernel_batch66x::list_closed_by_its_environments_group`.
       assign_frame_value("lx@env@bare@end", T_CS!("\\endlx@list"));
+      // The environment the list is opened in (a class's `\chapthebibliography` = `\section*` + `\list` + `\item[]`,
+      // cargese.cls:1859-1890): a `\bibitem` in that environment closes this list before it opens the kernel's
+      // bibliography (sect11.rs `\lx@mung@bibliography`).
+      let currenvir = Expand!(Tokens!(T_CS!("\\@currenvir"))).to_string();
+      assign_frame_value("lx@list@currenvir", currenvir);
     });
   // Close the anonymous list if we're still within one.
   //
