@@ -3089,6 +3089,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   undelimited_argument_reads_the_whole_call, undelimited_argument_call_stops_at_the_list_end,
   undelimited_argument_through_a_robust_wrapper, amsfonts_widehat_macro_argument, breqn_script_macro_argument,
   undelimited_argument_warning_once_per_occurrence}`.
+  **Integration (int21, cd833745d0, binary 67int21):** gates nextest 5836/5836 + cortex 10/10, clippy/rustdoc clean,
+  inits plain=0 latex=0, dumps identical to 67int20b; population A/B vs 67int20b over 899 papers (pop67int21.tsv = 71a's
+  499 + 400 random from pop67int20, results_r67int21): E 5,959 → 5,674, F 16 → 16, 0 newly Fatal, 109 papers E-better,
+  1 E-worse — 1309.5950 (4 → 5, `\ion`, which its own aas_macros.sty:142 defines and mn2e.cls does not; the stand-in
+  copy-extras payload 72a reads it); 4 word losses > 1 % (1905.00691, astro-ph0307049, 0707.4285, 2006.09152) are only
+  the `undefined:\text` error tokens gone with mnras v3.0's `\ion` (1905.00691 gains its "He" ions); nets 136/136 no worse.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
