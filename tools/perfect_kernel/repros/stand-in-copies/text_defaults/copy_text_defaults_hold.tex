@@ -1,0 +1,16 @@
+% witness: 2506.14995 (MRM.cls:3191 `\def\refname{REFERENCES}`, its PDF's heading), 2301.03442 (ws-rv9x6.cls:91
+%          `\newcommand\bibname{References}`): text defaults the binding's base class (article) or LaTeXML's kernel
+%          assigned, which the real class sets itself
+% oracle:  pdflatex 0 errors: "Works", a "Summary" abstract, a "REFERENCES" heading
+% engines: rust 72a r4 = "Bibliography" (\newcommand ignored: LaTeXML predefines \bibname), "Abstract", "References"
+% expect:  0 errors, 0 warnings; "Works"; the abstract's name Summary; the bibliography titled REFERENCES
+% status:  RED (72a r4) -> GREEN (72a r5)
+% preload: ar5iv.sty
+\documentclass{cimart}
+\begin{document}
+\begin{abstract}An abstract.\end{abstract}
+\bibname
+\begin{thebibliography}{1}
+\bibitem{a} X.~An. A title. 2021.
+\end{thebibliography}
+\end{document}

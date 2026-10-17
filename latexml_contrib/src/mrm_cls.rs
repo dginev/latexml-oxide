@@ -11,13 +11,15 @@ LoadDefinitions!({
   LoadClass!("OmniBus");
   // A real `.cls` binding owns its dependency loading (the unbound-class dep
   // scan is short-circuited once we bind MRM). MRM.cls pulls in the usual
-  // AMS math stack, hyperref (for \href/\url — used by \orcid and body links)
-  // and natbib (numeric \citen). Not xcolor (see the sn-jnl.cls option-conflict
-  // note). Witness 2509.13644 (\text in the abstract, \href in \orcid).
+  // AMS math stack and hyperref (for \href/\url — used by \orcid and body links).
+  // Not xcolor (see the sn-jnl.cls option-conflict note). Witness 2509.13644
+  // (\text in the abstract, \href in \orcid). Not natbib: MRM.cls:2441-2442 loads it
+  // under its `AMA` option, `\usepackage[numbers,super]{NJDnatbib}` (or natbib), where
+  // the paper's copy loads it with those options; an optionless one loaded here
+  // first left 2506.14995 author-year where its PDF has superscripts.
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("hyperref");
-  RequirePackage!("natbib");
 
   // \author[aff-idx]{name}{orcid} — Wiley's three-part author. Drop the numeric
   // affiliation index (its meaning is carried by the matching \address[idx]);

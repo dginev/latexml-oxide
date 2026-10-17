@@ -21,6 +21,14 @@ LoadDefinitions!({
       AssignValue!(&s!("spotcolor_alternate:{}", name.to_string().trim()) => values.join(","), Some(Scope::Global));
     }
   });
+  // spotcolor.sty:81-82 `\ifhks\input{spotcolorhks}\fi\ifpantone\input{spotcolorpantone}\fi`: the `[hks]`/`[pantone]`
+  // preloads ran in the package's read, before the wrapper above (1,089 `\AddSpotColor`s in spotcolorpantone.tex);
+  // read again for their CMYK only, the colours and spaces added already (the reviewer's probe spot_pantone:
+  // `PANTONE103PC` is the alternate cmyk 0 0.03 1 0.18, not black).
+  RawTeX!(
+    r"\begingroup\let\NewSpotColorSpace\@gobble\def\AddSpotColor#1#2#3#4{\lx@spot@alternate{#2}{#4}}%
+\ifhks\input{spotcolorhks}\fi\ifpantone\input{spotcolorpantone}\fi\endgroup"
+  );
   // color.sty's driver model `spotcolor` (spotcolor.sty:71 `\color@spotcolor`): `<name>,<tint>` (`\c@lor@@spotcolor`,
   // :72-75) → the CMYK alternate scaled by the tint, or nothing for a spot colour no `\AddSpotColor` gave.
   DefMacro!("\\lx@color@alternate@spotcolor{}", sub[(spec)] {

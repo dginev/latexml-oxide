@@ -607,6 +607,11 @@ LoadDefinitions!({
     let beginenv_clone = beginenv.clone();
     let preload = theorem_preload.to_string();
     let env_cs = T_CS!(s!("\\{env}"));
+    // (a stub, not a definition of the environment: it steps aside for the one a class declares, so a stand-in's copy
+    // declaring it declares it whole — cimart.cls:295-315's `\newtheorem{theorem}[definition]`, whose `\begin{theorem}`
+    // the binding kept and whose `\end{theorem}` stood, left a group open: 2412.00032, 2408.07575's `{example}`;
+    // `state::note_copy_provides_assignment`)
+    let _stub = OriginGuard::new(DefinitionOrigin::Stub);
     def_macro(cs, None,
       ExpansionBody::Closure(Rc::new(move |_args| {
         // The stub fires once: `\begin` looks it up before `\<env>`, so it steps aside for the environment the

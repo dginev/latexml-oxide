@@ -1,0 +1,12 @@
+% witness: 2309.12017 (asme2ej), 2102.01782, 2111.09589 (nature-pre): OmniBus's RequirePackage!("aas_macros")
+%          (omnibus_cls.rs:71) under the class binding; hep-ph9609379 (diagrams.sty's own diagrams.tex joins)
+% oracle:  pdflatex 0 errors: "EXTRA"
+% engines: rust 72a r3 (459841207d) = aas_macros's names joined asme2ej's command set (22 -> 87): this copy, no
+%          declaration, 7 of the binding's names, judged not the file: 1 Error, undefined \asmeextra
+% expect:  0 errors, 0 warnings; "EXTRA"; the copy defines 7 of the binding's own names, a quarter of them
+% status:  RED (72a r3) -> GREEN (72a r4; guard 72a r5)
+% preload: ar5iv.sty
+\documentclass{asme2ej}
+\begin{document}
+\asmeextra
+\end{document}

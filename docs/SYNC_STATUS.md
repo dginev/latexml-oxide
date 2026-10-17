@@ -3003,7 +3003,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
 - **72a** (a stand-in binding's shipped copy adds its extras; OXIDIZED_DESIGN_DIVERGENCES #731; census
-  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-4). After
+  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-5). After
   a binding on `AUTHOR_FILE_STAND_INS` loads, the paper's copy is read raw (content.rs `read_stand_in_copy`) when it is
   the file the binding stands in for (`copy_is_the_stood_in_file`, r3: its `\Provides(Expl)…` names the file, the
   binding or a file the binding loads — 2308.11432's `\ProvidesExplClass{fcs}`, 2011.13564's IEEEtai.cls declaring
@@ -3034,8 +3034,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `bmvc2k_natbib_sty.rs`): the 14 papers whose raw fork headed the references "Bibliography" with `bib.bibxN` ids
   (2412.14509, 2212.00057, 2210.06270, 1501.07873, 2311.17607, 2406.08486; 2101.06297, 2211.16474, 2411.11493,
   2206.08798, 2602.03829, 2408.07575, 2609.08425, 2506.14995) are "References" with `bib.bibN` and natbib's
-  semantic cites (bmvc's numeric `[N]` as its PDF, NJD's superscripts).
-  Census A/B (the 400 `conv_sel.tsv` papers) vs 67int21, Errors kept (r4): E 590 → 203, 61 papers E-better, 0
+  semantic cites (bmvc's numeric `[N]` as its PDF, NJD's superscripts). r5: NJDnatbib's heading by version (v5's
+  "REFERENCES" under WileyNJDv5 or a copy whose `\bibsection` uses `\bmsection`, chapterless = no `chapter` counter, so
+  right under today's `\chapter` and after the `\chapter` batch; v2/MRM `\refname`) and its superscript postnote
+  inside (`NATBIB_SUPER_POSTNOTE_INSIDE`); the MRM binding no longer loads natbib before MRM.cls:2441-2442's
+  `[numbers,super]{NJDnatbib}` (2506.14995 superscripts), and any repeat `\usepackage[…]{natbib}` applies its options
+  as natbib's options (`natbib.sty_keyval_setter`, Info) instead of dropping them (2112.14648, 1012.4730, 2604.20688
+  numbered as their PDFs); ws-rv-har.sty bound as natbib (2301.03442: 28 "(?)" citations → natbib's, "References"); a copy's
+  environment decided as a pair, OmniBus's theorem autoload stubs `Stub` (2412.00032 W 12 → 11, the reviewer's
+  thm_copy W 1 → 0); spotcolor's `[pantone]`/`[hks]` preloads keep their CMYK; text defaults (main-session ruling):
+  a parameterless text macro the binding's base class or the kernel assigned is the copy's to set (MRM.cls:3191
+  `\refname`, ws-rv9x6.cls:91 `\newcommand\bibname`; natbib provides `\refname`/`\bibname`, KNOWN_PERL_ERRORS #960)
+  — of the 415 A/B papers 89 changed vs r4, in float and abstract labels, headings and the fork papers' citations,
+  each label kind matching its PDF on a 10-paper pdflatex sample ("Fig. 1", IEEE Access "FIGURE 1"/"INDEX TERMS",
+  "TABLE 1", "Summary.", "Abstract.", "REFERENCES"); Errors and Fatals per paper as r4.
+  Census A/B (the 400 `conv_sel.tsv` papers) vs 67int21, Errors kept (r4; r5 the same Errors per paper, words −7,847 (70) /
+  +18,646 (62), the 8 more losses author-year labels become numbers as their PDFs): E 590 → 203, 61 papers E-better, 0
   E-worse, 0 newly Fatal; words −7,166 (64 papers) / +18,648 (64), the r4 change being the 10 census fork papers'
   natbib labels (raw `[An et al.(2021)An, Zhu, …]` tags become natbib's number/authors/year tags); instructions
   +3.4 %; the 91 census, review and r4 witnesses 0 worse. Costs (faithful loads): atlasdoc +26-33 % (its
@@ -3048,10 +3062,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `~` shorthand, `\active@prefix~\active@char~`, reaches the kernel's `\lx@NBSP` as `\normal@char~` but sets a space:
   every non-breaking space of 2609.08425, whose WileyNJDv5 copy loads babel); (e) 2609.08425's WileyNJDv5.cls loads
   fontspec, xunicode, mathastext, microtype, geometry… unconditionally under its `LATO2COL` option (:670-680; a
-  XeLaTeX paper: pdflatex stops at fontspec), +37 % instructions, faithful; (f) NJDnatbib's chapterless "REFERENCES"
-  heading (:1050-1053) waits for the kernel to leave `\chapter` undefined in a chapterless class (2609.08425 is
-  "References"; the separate `\chapter` kernel batch); (g) ws-rv-har.sty (World Scientific's natbib derivative,
-  1602.07982, 2301.03442) is another renamed natbib copy read raw, not bound; (h) a second `\author` keeps both under
+  XeLaTeX paper: pdflatex stops at fontspec), +37 % instructions, faithful; (f) resolved in r5 (2609.08425 "REFERENCES");
+  (g) resolved in r5 (ws-rv-har bound); (h) a second `\author` keeps both under
   the inst_support binding (accumulating, as for llncs-style `\author` per author; pdflatex atlasdoc keeps the last).
   Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
 

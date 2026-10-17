@@ -244,8 +244,10 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   {
     note_stand_in_file(raw_file);
   }
+  // (a class it loads is its base class, whose text defaults are not its own: `StandInLoadGuard::suspend_for`)
+  let class = options.extension.as_deref() == Some("cls") || raw_file.ends_with(".cls");
   let _nested = crate::definition::origin::stand_in_loading()
-    .then(crate::definition::origin::StandInLoadGuard::suspend);
+    .then(|| crate::definition::origin::StandInLoadGuard::suspend_for(class));
   input_definitions_impl(raw_file, options)
 }
 
@@ -2174,7 +2176,10 @@ fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
       .map(|line| line.split('%').next().unwrap_or(""))
   };
   // (a declaration naming a macro reads its expansion, as `\ProvidesClass` does: cimart.cls:13-14
-  // `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`, 2412.00032)
+  // `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`, 2412.00032. The file's first parameterless `\def`
+  // or `\newcommand` of the name is taken, wherever it stands, not the one in force at the declaration; a name
+  // defined with parameters or in another file is not found, and the copy is judged by the quarter clause below — it
+  // errs toward not reading)
   let expansion = |name: &str| {
     let def = Regex::new(&s!(
       r"\\[egx]?def\s*{}\s*\{{\s*([^{{}}\s]+)\s*\}}|\\(?:re)?newcommand\*?\s*\{{?\s*{}\s*\}}?\s*\{{\s*([^{{}}\s]+)\s*\}}",

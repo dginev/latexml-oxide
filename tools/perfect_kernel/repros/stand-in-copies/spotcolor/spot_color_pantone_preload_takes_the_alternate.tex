@@ -1,0 +1,17 @@
+% witness: 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467 (ieeeaccess.cls's spotcolor; the
+%          `[pantone]` preload, spotcolor.sty:81-82 `\ifpantone\input{spotcolorpantone}\fi`: the reviewer's probe
+%          spot_pantone)
+% oracle:  pdflatex 0 errors (PANTONE 103 PC; a viewer without the ink shows the CMYK 0 0.03 1 0.18 alternate,
+%          spotcolorpantone.tex:5)
+% engines: rust 72a r4 = black (the preload's \AddSpotColor ran before the binding kept the CMYK)
+% expect:  0 errors, 0 warnings; X in the CMYK alternate (#D1C900)
+% status:  RED (72a r4) -> GREEN (72a r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{color}
+\usepackage[pantone]{spotcolor}
+\SetPageColorSpace{PANTONE}
+\definecolor{c}{spotcolor}{PANTONE103PC,1.0}
+\begin{document}
+\textcolor{c}{X}
+\end{document}

@@ -299,6 +299,7 @@ pub mod underscore_ltx_sty;
 pub mod unicode_math_sty;
 pub mod versonotes_sty;
 pub mod ws_procl_sty;
+pub mod ws_rv_har_sty;
 pub mod xecjk_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
@@ -733,6 +734,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("spotcolor", "sty", spotcolor_sty::load_definitions),
   ("NJDnatbib", "sty", njdnatbib_sty::load_definitions),
   ("bmvc2k_natbib", "sty", bmvc2k_natbib_sty::load_definitions),
+  ("ws-rv-har", "sty", ws_rv_har_sty::load_definitions),
   ("paspconf", "sty", paspconf_sty::load_definitions),
   ("INTERSPEECH2021", "sty", interspeech_sty::load_definitions),
   ("INTERSPEECH2022", "sty", interspeech_sty::load_definitions),

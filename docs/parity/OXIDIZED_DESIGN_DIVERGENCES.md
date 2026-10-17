@@ -19197,8 +19197,23 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    origin of LaTeXML's own, its guesses included (`Fallback`: the OmniBus base a class binding loads, whose `\received`
    WileyNJDv5.cls:5071 replaced, dropping 2609.19994's dated frontmatter — OD #408's yielding is to the document, and
    the copy is not the document), or its meaning is a definition made under that very name at origin `Unknown`, `Pool`
-   or `Binding` (a pool's `\maketitle`, another binding's `\citep`); an environment is owned when `\begin{X}`, `\X` or
-   `\endX` is. The format's names (`Plain`, `LatexDump`, `Format`), the document's world (`File`, `Document`), the
+   or `Binding` (a pool's `\maketitle`, another binding's `\citep`); an environment is owned when `\begin{X}` or
+   `\end{X}` is, or `\X` or `\endX` with them, and its names are decided together (r5): once the copy's code has kept
+   one aside, the others it defines are kept too, though the first now carries the copy's meaning (cimart.cls:295-315's
+   `\newtheorem{theorem}` left the binding's `\begin{theorem}` with the copy's `\end{theorem}`, a group open at the
+   end: 2412.00032, 2408.07575's `{example}`); a plain macro's `\end…` partner alone does not make it owned (plain's
+   `\endgroup`, a copy's `\group`). OmniBus's theorem autoload stubs (`\begin{theorem}` … `\begin{alg}`, which step
+   aside for an environment declared since) are `Stub`, not a definition of the environment, so a copy's `\newtheorem`
+   declares it whole (omnibus_cls.rs; pdflatex "Definition 1.1", "Theorem 1.2" on the reviewer's probe thm_copy).
+   *Text defaults* (main-session ruling 2026-10-17, 72a r5): a public macro without parameters expanding to text
+   (`\refname`, `\bibname`, `\abstractname`, `\contentsname`) that the base class the binding loads assigned last —
+   a class its own code loads, and the classes that class loads, the pool's article/report/book and the OmniBus guess
+   (`StandInLoadGuard::suspend_for`, `State::stand_in_base_defaults`) — or LaTeXML's kernel before the binding, is not
+   owned (`state::unowned_text_default`): the copy's `\def`/`\renewcommand` of it holds, and its `\newcommand` defines
+   it (`copy_provides_text_default_yields`, sect08.rs), as the real class's would over article.cls's — MRM.cls:3191
+   `\def\refname{REFERENCES}` (2506.14995's PDF), ws-rv9x6.cls:91 `\newcommand\bibname{References}` (2301.03442).
+   One the binding's own code assigns, or a binding it requires (natbib's), stays owned; natbib's `\bibname`/`\refname`
+   are provided as natbib.sty:1093-1094 provides them (KNOWN_PERL_ERRORS #960). The format's names (`Plain`, `LatexDump`, `Format`), the document's world (`File`, `Document`), the
    other guesses that yield (`Fallback`, `Stub`, `Borrowed`) and `\let` copies of such meanings are not — except a
    `\let` LaTeXML's own code made while a stand-in binding loads, recorded as it is made (`State::binding_lets`,
    `let_i`, r4: not every pool `\newif` flag; the object a `\let` copies carries its source's name; aas_support_sty.rs's
@@ -19304,7 +19319,9 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    prints only in `\ATLAS@TitleHeader` under `datetop`, :567, which `cernpreprint` skips: 1902.05892, 1904.03536).
    jgcc.cls:397's `\copyrightinfo{}{}` (2309.03819, 2401.15504) prints nothing, as amsart.cls:723-727's
    `\@setcopyright` prints no copyright without a year (ams_support_sty.rs `\lx@ams@add@copyright`, the one test
-   of both `\copyrightinfo`s; Perl's ams_support.sty.ltxml:139 adds ", ", KNOWN_PERL_ERRORS #959).
+   of both `\copyrightinfo`s; Perl's ams_support.sty.ltxml:139 adds ", ", KNOWN_PERL_ERRORS #959). The walk's roots
+   are broad and err toward keeping a default: every raw `\ps@…` page style and `\@oddhead`/`\@evenhead`, so a default
+   a copy prints only in a running head shows in the document, which LaTeXML has no running heads for.
 11. *Renamed natbib copies* (72a r4, main-session scope). A class copy that loads a renamed copy of natbib —
    NJDnatbib.sty (WileyNJD-v2/v5/MRM.cls, `\ProvidesPackage{NJDnatbib}` :29) and bmvc2k_natbib.sty (bmvc2k.cls:710,
    `\ProvidesPackage{bmvc2k_natbib}` :29) — read it raw: its `\bibsection`'s `\@ifundefined{chapter}` took the
@@ -19312,11 +19329,27 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    "Bibliography" heading and `bib.bibxN` ids in 14 papers (2412.14509, 2212.00057, 2210.06270, 1501.07873,
    2311.17607, 2406.08486; 2101.06297, 2211.16474, 2411.11493, 2206.08798, 2602.03829, 2408.07575, 2609.08425,
    2506.14995). Each fork is now a stand-in binding (contrib `njdnatbib_sty.rs`, `bmvc2k_natbib_sty.rs`) that loads
-   the natbib binding with the options the class gave it; the copy, read after, provides only. NJDnatbib's one changed
-   default the PDF shows, a chapterless class's "REFERENCES" heading (:1050-1053), is carried under its own
-   `\@ifundefined{chapter}`, which holds once the kernel leaves `\chapter` undefined in such a class (a separate
-   kernel batch); until then the heading is `\refname`'s "References". ws-rv-har.sty (World Scientific's natbib
-   derivative; 1602.07982, 2301.03442) is another renamed copy, not bound here.
+   the natbib binding with the options the class gave it (`njdnatbib_sty::natbib_fork_options`); the copy, read after,
+   provides only. Options that reach a natbib loaded already — a fork's, a class copy's or the document's
+   `\usepackage[…]{natbib}` after a binding's own load — take effect as natbib's options do (natbib.sty:238-262:
+   `numbers` is also `square,comma`; `natbib.sty_keyval_setter` → `\lx@natbib@repeat@options`, content.rs
+   `apply_new_options_on_reload`, the mechanism hyperref's `\hypersetup` uses), at Info — not dropped (2112.14648's
+   `[numbers,sort&compress]` after the jheppub binding's natbib, 1012.4730, 2604.20688: author-year where the PDFs number; r5: MRM's binding had loaded natbib optionless before MRM.cls:2441-2442's
+   `\usepackage[numbers,super]{NJDnatbib}`, so 2506.14995 was author-year where its PDF has superscripts; the binding
+   no longer loads natbib, the class's copy does, binding-in-original-space). The defaults the PDF shows, by NJDnatbib's
+   version (r5; the class-family rule's dispatch on a conflict): a v5 copy (md5 277c41da: 2602.03829, 2408.07575,
+   2609.08425) heads a chapterless class's bibliography "REFERENCES" (:1052 `\bmsection*{…{{REFERENCES}}…}`), an
+   amsart one `\refname` (:1065); a v2 or MRM copy (2fa96b7a: 2101.06297, 2211.16474; 6838c57e: 2411.11493,
+   2206.08798; 4b333a37: 2506.14995) natbib's `\section*{\refname…}` (probe njd_direct_v2: pdflatex "References"), so
+   MRM's is its class's `\refname`, "REFERENCES". The version is WileyNJDv5's class or the copy's own `\bibsection`
+   set by v5's `\bmsection` (its overlaid meaning, `state::stand_in_copy_meaning`, read by the binding's
+   `\AtEndOfPackage` after the copy); "chapterless" is no `chapter` counter, since LaTeXML's OmniBus base defines
+   `\chapter` under every class binding today — correct also once a chapterless class leaves `\chapter` undefined
+   until `\begin{document}` (the separate `\chapter` batch). Every version's superscript carries its postnote inside,
+   ", p. 5" (:366-368), through natbib's `NATBIB_SUPER_POSTNOTE_INSIDE` switch the fork's binding sets. ws-rv-har.sty
+   (World Scientific's natbib derivative, :16 `\ProvidesPackage{ws-rv-har}`; 2301.03442, whose 28 citations were "(?)",
+   pdflatex "(Mayor et al. 2011)"; 1602.07982 ships it, loads ws-rv-van) is bound the same way (`ws_rv_har_sty.rs`),
+   with its own heading: a class with chapters `\bibname` (:681-685; ws-rv9x6.cls:91 "References"), else `\refname`.
 
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 %, its `\LoadClass{scrartcl}`
 (atlasdoc.cls:319, KOMA's 22 files); 2309.03819 +65 %, jgcc.cls:52's tikz; 2609.08425 +37 %, WileyNJDv5.cls's

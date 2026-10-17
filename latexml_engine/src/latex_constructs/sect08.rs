@@ -62,6 +62,9 @@ pub(crate) fn load() -> Result<()> {
   sub[(star,cs_token,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
     let (definable, plain_origin) = is_definable_latex(&cs_token)?;
+    // (a stand-in's copy declares a text default LaTeXML predefined, which the real class defines itself:
+    // `state::copy_provides_text_default_yields`)
+    let definable = definable || copy_provides_text_default_yields(&cs_token);
     if !definable {
       note_copy_provides_title_page(&cs_token, &body);
       if has_value(&s!("{}:locked", cs_token.to_string())) && copy_provides_refuses_locked(&cs_token) {

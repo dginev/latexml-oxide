@@ -1,0 +1,11 @@
+% witness: 2412.00032 (cimart.cls:13-14 `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`)
+% oracle:  pdflatex 0 errors: "EXTRA"
+% engines: rust 72a r3 (459841207d) = the declaration read as "\classname@cim", the copy judged by the quarter clause
+%          and not read: 1 Error, undefined \cimextra
+% expect:  0 errors, 0 warnings; "EXTRA"; the copy declares itself cimart
+% status:  RED (72a r3) -> GREEN (72a r4; guard 72a r5)
+% preload: ar5iv.sty
+\documentclass{cimart}
+\begin{document}
+\cimextra
+\end{document}

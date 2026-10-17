@@ -306,6 +306,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "ws-p8-50x6-00.cls",
   "ws-procs961x669.cls",
   "ws-procs9x6.cls",
+  "ws-rv-har.sty",
   "ws-rv9x6.cls",
 ];
 

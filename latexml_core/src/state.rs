@@ -402,6 +402,10 @@ pub struct State {
   /// The names assigned while a stand-in binding loaded ([`crate::definition::origin::StandInLoadGuard`]): its own, which
   /// the paper's copy read after it only provides ([`note_copy_provides_assignment`]).
   pub stand_in_meanings:       rustc_hash::FxHashSet<SymStr>,
+  /// The names whose meaning a class the stand-in binding loads assigned last
+  /// ([`crate::definition::origin::stand_in_base_class`]): its base class's, whose text defaults are not the binding's
+  /// (`unowned_text_default`).
+  pub stand_in_base_defaults:  rustc_hash::FxHashSet<SymStr>,
   /// The names each stand-in binding loading now has assigned in its own code, innermost last ([`begin_stand_in_load`]).
   pub stand_in_loads:          Vec<Vec<SymStr>>,
   /// The names the stand-in binding loaded last assigned in its own code ([`end_stand_in_load`]): the public ones are
@@ -522,6 +526,7 @@ impl Default for State {
       copy_provides_copies:    Vec::new(),
       copy_provides_frames:    Vec::new(),
       stand_in_meanings:       rustc_hash::FxHashSet::default(),
+      stand_in_base_defaults:  rustc_hash::FxHashSet::default(),
       stand_in_loads:          Vec::new(),
       stand_in_last_load:      Vec::new(),
       stand_in_load_files:     Vec::new(),
@@ -1085,6 +1090,11 @@ impl State {
       }
       if crate::definition::origin::stand_in_loading() {
         self.stand_in_meanings.insert(key);
+        if crate::definition::origin::stand_in_base_class() {
+          self.stand_in_base_defaults.insert(key);
+        } else if !self.stand_in_base_defaults.is_empty() {
+          self.stand_in_base_defaults.remove(&key);
+        }
         if crate::definition::origin::stand_in_own_code()
           && let Some(load) = self.stand_in_loads.last_mut()
         {
@@ -1949,13 +1959,31 @@ pub fn note_copy_provides_assignment(token: &Token) {
   }
   // (a counter's representation and reset list are owned only when the stand-in binding's own load assigned them:
   // `counter_part`)
+  // (an environment's names are provided or declined together: once the copy's code redefined one the binding owns —
+  // its `\begin{X}`, kept aside — the others it defines next are kept too, though the name it redefined now carries
+  // the copy's meaning; cimart.cls:295-315's `\newtheorem{theorem}[definition]` under OmniBus's `{theorem}` left the
+  // binding's `\begin{theorem}` with the copy's `\end{theorem}`, a group open at the document's end: 2412.00032,
+  // 2408.07575's `{example}`)
+  let pair_kept = token.with_cs_name(|name| {
+    environment_names(name).iter().any(|other| {
+      state!().copy_provides_frames[at]
+        .kept_keys
+        .contains(&meaning_key(&T_CS!(other.as_str())))
+    })
+  });
   let owned = if token.with_cs_name(counter_part).is_some() {
     state!().stand_in_meanings.contains(&key)
+  } else if unowned_text_default(token) {
+    false
   } else {
-    owned_by_the_semantic_layer(token)
+    // (not by its macro partner alone: plain's `\endgroup` does not make a copy's `\group` LaTeXML's)
+    let environment = |name: &str| name.starts_with("\\begin{") || name.starts_with("\\end{");
+    pair_kept
+      || owned_by_the_semantic_layer(token)
       || token.with_cs_name(|name| {
         environment_names(name)
           .iter()
+          .filter(|other| environment(name) || environment(other))
           .any(|other| owned_by_the_semantic_layer(&T_CS!(other.as_str())))
       })
   };
@@ -2249,26 +2277,112 @@ pub fn new_copy_provides_record(file: &str) -> u32 {
 }
 
 /// The other names of the environment a name `\X`, `\endX`, `\begin{X}` or `\end{X}` belongs to (latex.ltx `\begin{X}`
-/// runs `\X`, `\end{X}` runs `\endX`): for `\X` (and `\endX`) the binding's `\begin{X}` and `\end{X}`, for `\begin{X}`
-/// (and `\end{X}`) the macros `\X` and `\endX`.
+/// runs `\X`, `\end{X}` runs `\endX`): for `\X` the binding's `\begin{X}`, `\end{X}` and the macro `\endX`, for `\endX`
+/// `\begin{X}`, `\end{X}` and `\X`; for `\begin{X}` the macros `\X`, `\endX` and `\end{X}`, for `\end{X}` `\X`, `\endX`
+/// and `\begin{X}`.
 fn environment_names(name: &str) -> Vec<String> {
-  let env = name
+  if let Some(env) = name
     .strip_prefix("\\begin{")
-    .or_else(|| name.strip_prefix("\\end{"))
-    .and_then(|rest| rest.strip_suffix('}'));
-  match env {
-    Some(env) => vec![s!("\\{env}"), s!("\\end{env}")],
-    None => match name.strip_prefix('\\') {
-      Some(macro_name) if !macro_name.is_empty() => {
-        let env = macro_name
-          .strip_prefix("end")
-          .filter(|env| !env.is_empty())
-          .unwrap_or(macro_name);
-        vec![s!("\\begin{{{env}}}"), s!("\\end{{{env}}}")]
-      },
-      _ => Vec::new(),
-    },
+    .and_then(|rest| rest.strip_suffix('}'))
+  {
+    return vec![s!("\\{env}"), s!("\\end{env}"), s!("\\end{{{env}}}")];
   }
+  if let Some(env) = name
+    .strip_prefix("\\end{")
+    .and_then(|rest| rest.strip_suffix('}'))
+  {
+    return vec![s!("\\{env}"), s!("\\end{env}"), s!("\\begin{{{env}}}")];
+  }
+  match name.strip_prefix('\\') {
+    Some(macro_name) if !macro_name.is_empty() => {
+      match macro_name.strip_prefix("end").filter(|env| !env.is_empty()) {
+        Some(env) => vec![s!("\\begin{{{env}}}"), s!("\\end{{{env}}}"), s!("\\{env}")],
+        None => vec![
+          s!("\\begin{{{macro_name}}}"),
+          s!("\\end{{{macro_name}}}"),
+          s!("\\end{macro_name}"),
+        ],
+      }
+    },
+    _ => Vec::new(),
+  }
+}
+
+/// Is `token`'s meaning a text default the stand-in binding does not own, for [`note_copy_provides_assignment`]: a
+/// public name (letters only) whose meaning is a macro without parameters expanding to text (characters, at least one
+/// letter: `\refname`'s "References"), assigned last by the base class the binding loaded
+/// (`State::stand_in_base_defaults`: the pool's article, report or book, the OmniBus guess) or by LaTeXML's kernel
+/// before it? Then the copy's
+/// definition of it stands, as the real class's does over article.cls's: MRM.cls:3191 `\def\refname{REFERENCES}`
+/// (2506.14995's PDF), ws-rv9x6.cls:91 `\newcommand\bibname{References}` (2301.03442). One the binding's own code
+/// assigned, or a binding it required (natbib's), stays the binding's.
+fn unowned_text_default(token: &Token) -> bool {
+  use crate::definition::origin::DefinitionOrigin;
+  let public = token.with_cs_name(|name| {
+    name.strip_prefix('\\').is_some_and(|letters| {
+      !letters.is_empty() && letters.chars().all(|c| c.is_ascii_alphabetic())
+    })
+  });
+  if !public {
+    return false;
+  }
+  let Some(Stored::Expandable(defn)) = lookup_meaning(token) else {
+    return false;
+  };
+  if defn
+    .paramlist
+    .as_ref()
+    .is_some_and(|params| !params.get_parameters().is_empty())
+  {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = &defn.expansion else {
+    return false;
+  };
+  let text = body.unlist_ref().iter().all(|t| {
+    matches!(
+      t.get_catcode(),
+      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+    )
+  }) && body
+    .unlist_ref()
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::LETTER);
+  if !text {
+    return false;
+  }
+  let key = meaning_key(token);
+  let state = state!();
+  if state.stand_in_meanings.contains(&key) {
+    state.stand_in_base_defaults.contains(&key)
+  } else {
+    matches!(
+      defn.origin,
+      DefinitionOrigin::Unknown | DefinitionOrigin::Pool
+    )
+  }
+}
+
+/// Does a stand-in's copy, read now, `\newcommand` a text default its binding does not own (`unowned_text_default`)?
+/// Then the declaration defines it, as it does in TeX, where the real class defines the name itself: LaTeXML's kernel
+/// or the binding's base class predefined it (ws-rv9x6.cls:91 `\newcommand\bibname{References}`, 2301.03442).
+pub fn copy_provides_text_default_yields(token: &Token) -> bool {
+  crate::definition::origin::copy_provides() != 0
+    && !state_is_unlocked()
+    && unowned_text_default(token)
+}
+
+/// The meaning the latest stand-in copy of `file` (a file name, `NJDnatbib.sty`) gave `token` in its own code: its
+/// overlaid version of a name its binding owns, if the copy redefined it ([`note_copy_provides_assignment`]). For a
+/// binding's code that runs after its copy (`\AtEndOfPackage`), to tell the copy's version by what it defined.
+pub fn stand_in_copy_meaning(file: &str, token: &Token) -> Option<Stored> {
+  let key = meaning_key(token);
+  state!()
+    .copy_provides_copies
+    .iter()
+    .rev()
+    .find(|copy| copy.file.rsplit(['/', '\\']).next() == Some(file))
+    .and_then(|copy| copy.overlay.get(&key).cloned())
 }
 
 /// Is `token`'s current meaning owned by LaTeXML's semantic layer, for [`note_copy_provides_assignment`]? Either the

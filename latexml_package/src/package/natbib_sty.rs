@@ -254,6 +254,12 @@ fn cite_by_flags(
 /// `[` follows), only without one the textual one. Perl (natbib.sty.ltxml:133) tests the notes after dropping empty
 /// ones, so `\cite[]{k}` was textual (KNOWN_PERL_ERRORS #867). A binding whose `\cite` is always parenthetical
 /// (apacite.sty:259-267) asks for that form by name (`\lx@natbib@cite@parenthetical`).
+/// Does the superscript citation carry its postnote inside the superscript, ", ⟨postnote⟩" after the numbers? A
+/// natbib fork's own default: NJDnatbib.sty:366-368's `\NAT@citesuper` (`\textsuperscript{\NAT@@open#1\if*#3*\else,
+/// \NAT@spacechar#3\fi\NAT@@close}`, where natbib.sty:359-362 sets it after), switched on by that fork's binding
+/// (latexml_contrib njdnatbib_sty.rs; the reviewer's probe njd_direct_v2: pdflatex "2, p. 5" raised).
+fn super_postnote_inside() -> bool { lookup_bool("NATBIB_SUPER_POSTNOTE_INSIDE") }
+
 fn natbib_cite(
   star: Option<Tokens>,
   pre_raw: Option<Tokens>,
@@ -306,14 +312,20 @@ fn natbib_cite(
       Tokens!(),
       Tokens!()
     ]);
-    let sup_arg = Invocation!(T_CS!("\\textsuperscript"), vec![bibref]);
+    let inside = super_postnote_inside();
+    let mut sup = bibref.unlist();
+    if inside && let Some(p) = &post {
+      sup.extend([T_OTHER!(","), T_SPACE!()]);
+      sup.extend(p.clone().unlist());
+    }
+    let sup_arg = Invocation!(T_CS!("\\textsuperscript"), vec![Tokens::new(sup)]);
     let mut body = Vec::new();
     if let Some(p) = pre {
       body.extend(p.unlist());
       body.push(T_SPACE!());
     }
     body.extend(sup_arg.unlist());
-    if let Some(p) = post {
+    if let Some(p) = post.filter(|_| !inside) {
       body.push(T_SPACE!());
       body.extend(p.unlist());
     }
@@ -446,6 +458,31 @@ LoadDefinitions!({
   // natbib.sty:237, no `mcite`/`merge`/`elide` option bound: entries are never merged.
   RawTeX!(r"\let\NAT@merge\z@");
   DeclareOption!("nonamebreak", "");
+  // The options of a later `\usepackage[…]{natbib}` — a class's, a renamed copy's or the document's, after a binding
+  // loaded natbib where the real class does not yet — take effect as natbib's options do (natbib.sty:238-262: `numbers`
+  // is also `square,comma`, `authoryear` `round,semicolon`, `super` empties the brackets), with an Info
+  // (binding/content.rs `apply_new_options_on_reload`), not dropped: MRM.cls:2441-2442's `[numbers,super]{NJDnatbib}`
+  // after a binding's optionless natbib left 2506.14995 author-year; `\usepackage[numbers,sort&compress]{natbib}` after
+  // the jheppub binding's (2112.14648: "[1, 2]" in its PDF). An option natbib does not set a style with is ignored.
+  AssignValue!("natbib.sty_keyval_setter" => "\\lx@natbib@repeat@options", Scope::Global);
+  DefPrimitive!("\\lx@natbib@repeat@options{}", sub[(list)] {
+    for option in list.to_string().split(',').map(str::trim) {
+      match option {
+        "numbers" => set_citation_style(&[("numbers", None), ("square", None), ("comma", None)]),
+        "authoryear" => set_citation_style(&[("authoryear", None), ("round", None), ("semicolon", None)]),
+        "super" => {
+          set_citation_style(&[("super", None)]);
+          assign_value("CITE_OPEN", Stored::Tokens(Tokens!()), None);
+          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!()), None);
+        },
+        "colon" => set_citation_style(&[("semicolon", None)]),
+        "round" | "square" | "curly" | "angle" | "comma" | "semicolon" => {
+          set_citation_style(&[(option, None)])
+        },
+        _ => {},
+      }
+    }
+  });
 
   // Perl: setCitationStyle(round => 1, semicolon => 1);
   set_citation_style(&[("round", None), ("semicolon", None)]);
@@ -601,6 +638,18 @@ LoadDefinitions!({
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
+      Ok(Invocation!(T_CS!("\\lx@@cite"),
+        vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
+    } else if style == "super" && super_postnote_inside() && let Some(p) = post {
+      // (a fork whose superscript carries the postnote: `super_postnote_inside`)
+      let bibref = Invocation!(T_CS!("\\@@bibref"),
+        vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
+      let mut sup = bibref.unlist();
+      sup.extend([T_OTHER!(","), T_SPACE!()]);
+      sup.extend(p.unlist());
+      let mut body = Vec::new();
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      body.extend(Invocation!(T_CS!("\\textsuperscript"), vec![Tokens::new(sup)]).unlist());
       Ok(Invocation!(T_CS!("\\lx@@cite"),
         vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
     } else if style == "super" {
@@ -1003,8 +1052,15 @@ LoadDefinitions!({
   Let!("\\bibstyle@unsrtnat", "\\bibstyle@plainnat");
   //======================================================================
   // 2.12 Other Formatting Options
-  DefMacro!("\\bibname", "Bibliography");
-  DefMacro!("\\refname", "References");
+  // natbib.sty:1093-1094 `\providecommand\bibname{Bibliography}` `\providecommand\refname{References}`: a class's
+  // own, set before natbib loads, stands (MRM.cls:3191 `\def\refname{REFERENCES}` after its NJDnatbib, 2506.14995).
+  // Perl defines both outright (natbib.sty.ltxml:451-452; KNOWN_PERL_ERRORS #960).
+  if !has_meaning(&T_CS!("\\bibname")) {
+    DefMacro!("\\bibname", "Bibliography");
+  }
+  if !has_meaning(&T_CS!("\\refname")) {
+    DefMacro!("\\refname", "References");
+  }
   def_macro_noop("\\bibsection")?;
   // natbib.sty:1089 `\let\bibpreamble\@empty`, typeset by its `thebibliography` after the heading
   // (:1063-1066): the kernel bibliography's `\lx@bibliography@preamble` (sect11.rs) is it. Perl

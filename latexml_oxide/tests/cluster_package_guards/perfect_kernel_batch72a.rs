@@ -766,3 +766,209 @@ fn renamed_natbib_copies_are_natbib() {
     );
   }
 }
+
+/// NJDnatbib's bibliography heading by version (njdnatbib_sty.rs): a v5 copy's chapterless default "REFERENCES"
+/// (NJDnatbib.sty:1052 `\bmsection*{…REFERENCES…}`: 2602.03829, 2408.07575, 2609.08425), a v2 or MRM one natbib's
+/// `\refname` (`\section*{\refname…}`: 2101.06297, 2211.16474, 2411.11493, 2206.08798, 2506.14995) — under article
+/// and under the version's own class binding (WileyNJDv5, WileyNJD-v2), whose OmniBus base defines `\chapter` today,
+/// and again with `\chapter` undefined, as a class without chapters leaves it. Every version's superscript carries the
+/// postnote (:366-368). pdflatex on the real forks (the reviewer's probes njd_direct_v2, njd_direct_v5): "References",
+/// "REFERENCES"; "1 and 2, p. 5" raised.
+#[test]
+fn njdnatbib_heading_by_version() {
+  let chapter_undefined = "\\makeatletter\\let\\chapter\\@undefined\\makeatother\n";
+  for (tex, copy, class, title) in [
+    (
+      repro!("natbib_forks/njdnatbib_is_natbib.tex"),
+      repro!("natbib_forks/NJDnatbib.sty"),
+      "WileyNJDv5",
+      "REFERENCES",
+    ),
+    (
+      repro!("natbib_forks/njdnatbib_v2_is_natbib.tex"),
+      repro!("natbib_forks/v2/NJDnatbib.sty"),
+      "WileyNJD-v2",
+      "References",
+    ),
+  ] {
+    for documentclass in ["article", class] {
+      for chapter in ["", chapter_undefined] {
+        let source = tex.replace(
+          "\\documentclass{article}\n",
+          &format!("\\documentclass{{{documentclass}}}\n{chapter}"),
+        );
+        let (log, xml) = convert_files_with(&source, &[("NJDnatbib.sty", copy)], Some("ar5iv.sty"));
+        let case = format!("{documentclass} {chapter:?} {title}");
+        assert_eq!(
+          (error_count(&log), warning_count(&log)),
+          (0, 0),
+          "{case}: {log}"
+        );
+        let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
+          .unwrap_or_else(|| panic!("{case}: no bibliography: {xml}"));
+        assert_element(
+          &bibliography,
+          "title",
+          &[],
+          &format!("<title>{title}</title>"),
+        );
+        if title == "References" {
+          assert!(
+            xml.contains("yyseparator=\",\"/>, p.\u{a0}5</sup></cite>"),
+            "{case}: the postnote inside the superscript: {xml}"
+          );
+        }
+      }
+    }
+  }
+}
+
+/// MRM.cls:2441-2442 loads NJDnatbib `[numbers,super]` under its AMA option and :3191 sets `\refname` "REFERENCES"; the
+/// binding no longer loads natbib optionless first, so the class's copy sets the mode (2506.14995's PDF: superscripts,
+/// "REFERENCES"); a natbib loaded already takes a copy's options as its own options, with an Info. ws-rv-har.sty is
+/// natbib too (2301.03442: "(Mayor et al. 2011)", "References").
+#[test]
+fn renamed_natbib_copies_take_the_class_options() {
+  let (log, xml) = convert_files_with(
+    repro!("natbib_forks/mrm_loads_natbib_where_the_class_does.tex"),
+    &[
+      ("MRM.cls", repro!("natbib_forks/MRM.cls")),
+      ("NJDnatbib.sty", repro!("natbib_forks/v2/NJDnatbib.sty")),
+    ],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Text <cite class=\"ltx_citemacro_cite\"><sup xml:id=\"p1.1.1\"><bibref bibrefs=\"a\" separator=\",\" show=\"Number\" yyseparator=\",\"/></sup></cite> and <cite class=\"ltx_citemacro_cite\"><sup xml:id=\"p1.1.2\"><bibref bibrefs=\"a\" separator=\",\" show=\"Number\" yyseparator=\",\"/>, p.\u{a0}5</sup></cite>.</p>",
+  );
+  let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
+    .unwrap_or_else(|| panic!("no bibliography: {xml}"));
+  assert_element(&bibliography, "title", &[], "<title>REFERENCES</title>");
+
+  // (a natbib loaded already takes the copy's options as a repeat load does, as natbib's options, with an Info)
+  let (log, xml) = convert_files_with(
+    repro!("natbib_forks/natbib_loaded_takes_the_copy_options.tex"),
+    &[("NJDnatbib.sty", repro!("natbib_forks/v2/NJDnatbib.sty"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    log.contains("Applying options 'numbers,super' from a repeat load of natbib.sty"),
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Text <cite class=\"ltx_citemacro_cite\"><sup xml:id=\"p1.1.1\"><bibref bibrefs=\"a\" separator=\",\" show=\"Number\" yyseparator=\",\"/></sup></cite>.</p>",
+  );
+
+  let (log, xml) = convert_files_with(
+    repro!("natbib_forks/ws_rv_har_is_natbib.tex"),
+    &[("ws-rv-har.sty", repro!("natbib_forks/ws-rv-har.sty"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let paragraph = latexml::util::test::xml_element(&xml, "p", &["xml:id=\"p1.1\""])
+    .unwrap_or_else(|| panic!("no paragraph: {xml}"));
+  assert!(
+    paragraph.starts_with("<p xml:id=\"p1.1\">EXTRA <cite class=\"ltx_citemacro_citep\">"),
+    "{paragraph}"
+  );
+  let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
+    .unwrap_or_else(|| panic!("no bibliography: {xml}"));
+  assert_element(&bibliography, "title", &[], "<title>References</title>");
+}
+
+/// The spotcolor `[pantone]` preload (spotcolor.sty:81-82) keeps each colour's CMYK alternate: PANTONE 103 PC is
+/// cmyk 0 0.03 1 0.18 (spotcolorpantone.tex:5; the reviewer's probe spot_pantone), not black.
+#[test]
+fn spot_color_preload_takes_the_alternate() {
+  let (log, xml) = convert_files_with(
+    repro!("spotcolor/spot_color_pantone_preload_takes_the_alternate.tex"),
+    &[],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\"><text color=\"#D1C900\" xml:id=\"p1.1.1\">X</text></p>",
+  );
+}
+
+/// A stand-in's copy declares an environment whole: cimart.cls's `\newtheorem{theorem}[definition]` over OmniBus's
+/// theorem stubs (2412.00032; 2408.07575's `{example}`; the reviewer's probe thm_copy). pdflatex: "Definition 1.1",
+/// "Theorem 1.2", no group left open.
+#[test]
+fn copy_environments_decided_as_a_pair() {
+  let (log, xml) = convert_files_with(
+    repro!("environments/copy_environments_decided_as_a_pair.tex"),
+    &[("cimart.cls", repro!("environments/cimart.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for tag in ["Definition 1.1", "Theorem 1.2"] {
+    assert!(
+      xml.contains(&format!("\">{tag}</text></tag>")),
+      "{tag}: {xml}"
+    );
+  }
+}
+
+/// The copy's identity: a declaration naming a macro reads it (cimart.cls:13-14, 2412.00032), and a stand-in a file
+/// the binding loads requests is not the binding's command set (OmniBus's aas_macros under asme2ej: 2309.12017;
+/// nature-pre: 2102.01782, 2111.09589). pdflatex: "EXTRA" both.
+#[test]
+fn copy_identity_by_macro_declaration_and_own_command_set() {
+  for (tex, file, copy) in [
+    (
+      repro!("identity/declared_by_macro_is_read.tex"),
+      "cimart.cls",
+      repro!("identity/cimart.cls"),
+    ),
+    (
+      repro!("nested_load/nested_stand_in_joins_only_its_requester.tex"),
+      "asme2ej.cls",
+      repro!("nested_load/asme2ej.cls"),
+    ),
+  ] {
+    let (log, xml) = convert_files_with(tex, &[(file, copy)], Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{file}: {log}"
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      "<p xml:id=\"p1.1\">EXTRA</p>",
+    );
+  }
+}
+
+/// A text default the binding's base class or LaTeXML's kernel assigned is the copy's to set, as the real class sets
+/// it over article.cls's: MRM.cls:3191 `\def\refname` (2506.14995), ws-rv9x6.cls:91 `\newcommand\bibname`
+/// (2301.03442). pdflatex: "Summary", "Works", "REFERENCES".
+#[test]
+fn copy_text_defaults_hold() {
+  let (log, xml) = convert_files_with(
+    repro!("text_defaults/copy_text_defaults_hold.tex"),
+    &[("cimart.cls", repro!("text_defaults/cimart.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("<p xml:id=\"p1.1\">Works</p>"), "{xml}");
+  assert!(
+    xml.contains("<abstract inlist=\"toc\" name=\"Summary\""),
+    "{xml}"
+  );
+  let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
+    .unwrap_or_else(|| panic!("no bibliography: {xml}"));
+  assert_element(&bibliography, "title", &[], "<title>REFERENCES</title>");
+}

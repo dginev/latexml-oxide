@@ -1,0 +1,10 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{MRM}
+\newif\if@AMArefstyle\global\@AMArefstylefalse
+\DeclareOption{AMA}{\global\@AMArefstyletrue}
+\ProcessOptions
+\LoadClass{article}
+\if@AMArefstyle
+   \IfFileExists{NJDnatbib.sty}{\usepackage[numbers,super]{NJDnatbib}}{\usepackage[numbers,super]{natbib}}
+\fi
+\def\refname{REFERENCES}

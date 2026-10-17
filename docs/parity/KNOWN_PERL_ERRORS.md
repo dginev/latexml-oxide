@@ -15558,3 +15558,17 @@ Rust (72a r3, r4): ams_support_sty.rs `\lx@ams@add@copyright`, the one empty-yea
 (ams_support's and the amsart class internals'): no copyright without a year. Witnesses 2309.03819, 2401.15504
 (jgcc.cls). Repro stand-in-copies/copyright/empty_copyrightinfo_adds_no_copyright; guard
 `perfect_kernel_batch72a::empty_copyrightinfo_adds_no_copyright`.
+
+## 960. natbib's binding replaces a class's `\refname` and `\bibname`, which natbib only provides
+
+natbib.sty.ltxml:451-452 `DefMacro('\bibname', 'Bibliography')`, `DefMacro('\refname', 'References')` define both
+outright, where natbib.sty:1093-1094 `\providecommand`s them: a class's or the document's own, set before natbib loads,
+stands in TeX and is replaced in Perl.
+
+Trigger: `\documentclass{article}\renewcommand\refname{Literatur}\usepackage{natbib}\begin{document}
+\begin{thebibliography}{1}\bibitem{a} A. Author. 2001.\end{thebibliography}\end{document}` — pdflatex heads the
+bibliography "Literatur"; Perl (same host) `<title>References</title>`.
+
+Rust (72a r5): natbib_sty.rs defines each only where it is undefined. Witness 2506.14995 (MRM.cls:3191 `\def\refname
+{REFERENCES}` after its `\usepackage[numbers,super]{NJDnatbib}`; its PDF "REFERENCES"). Guards
+`perfect_kernel_batch72a::renamed_natbib_copies_take_the_class_options`, `copy_text_defaults_hold`.

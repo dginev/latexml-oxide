@@ -184,6 +184,7 @@ thread_local! {
   static STAND_IN_LOADING: Cell<u32> = const { Cell::new(0) };
   static STAND_IN_OWN_CODE: Cell<bool> = const { Cell::new(false) };
   static STAND_IN_LOADER_OWN_CODE: Cell<bool> = const { Cell::new(false) };
+  static STAND_IN_BASE_CLASS: Cell<bool> = const { Cell::new(false) };
   static SETTER_WATCH: Cell<bool> = const { Cell::new(false) };
 }
 
@@ -209,6 +210,12 @@ pub fn stand_in_own_code() -> bool { STAND_IN_OWN_CODE.with(|c| c.get()) }
 /// ([`StandInLoadGuard::loaded_by`]).
 pub fn stand_in_loader_own_code() -> bool { STAND_IN_LOADER_OWN_CODE.with(|c| c.get()) }
 
+/// Is the code running now a class a stand-in binding loads ([`StandInLoadGuard::suspend_for`]: its base class, the
+/// pool's article, report or book, or the OmniBus guess built on them), not the binding's own code nor a package?
+/// The text defaults such a class assigns (`\refname`, `\bibname`, `\abstractname`) are not the binding's
+/// (`state::State::stand_in_base_defaults`).
+pub fn stand_in_base_class() -> bool { STAND_IN_BASE_CLASS.with(|c| c.get()) }
+
 /// RAII guard: while a binding that stands in for an author's file loads (`binding::content::input_definitions`),
 /// every name assigned is recorded as that binding's (`state::State::stand_in_meanings`), whatever made it — its
 /// `DefMacro!`s, its `Let!`s and `RawTeX`, the bindings it requires — so the paper's copy read after it only provides
@@ -222,6 +229,8 @@ pub struct StandInLoadGuard {
   /// (a load: its names join the stand-in binding loading it, whose own code requested it; a suspension: the loader
   /// flag it replaced)
   from_own: bool,
+  /// (the base-class flag replaced: [`stand_in_base_class`])
+  base:     bool,
 }
 
 impl StandInLoadGuard {
@@ -241,17 +250,25 @@ impl StandInLoadGuard {
       own_code: STAND_IN_OWN_CODE.with(|c| c.replace(true)),
       load:     true,
       from_own: from_own_code,
+      base:     STAND_IN_BASE_CLASS.with(|c| c.replace(false)),
     }
   }
 
   /// A file a stand-in binding loads (`binding::content::input_definitions`): its names are the binding's to own, but
   /// not the binding's command set, until the guard drops.
-  pub fn suspend() -> Self {
+  pub fn suspend() -> Self { Self::suspend_for(false) }
+
+  /// [`StandInLoadGuard::suspend`] for a file that is a class (`class`, a `.cls`) or not: a class the binding's own
+  /// code loads is its base class ([`stand_in_base_class`]), and so is every class that class loads; a package any of
+  /// them loads is not (the bindings a binding requires stay its own).
+  pub fn suspend_for(class: bool) -> Self {
     let own_code = STAND_IN_OWN_CODE.with(|c| c.replace(false));
+    let base = STAND_IN_BASE_CLASS.with(|c| c.replace(class && (own_code || c.get())));
     StandInLoadGuard {
       own_code,
       load: false,
       from_own: STAND_IN_LOADER_OWN_CODE.with(|c| c.replace(own_code)),
+      base,
     }
   }
 }
@@ -263,6 +280,7 @@ impl Default for StandInLoadGuard {
 impl Drop for StandInLoadGuard {
   fn drop(&mut self) {
     STAND_IN_OWN_CODE.with(|c| c.set(self.own_code));
+    STAND_IN_BASE_CLASS.with(|c| c.set(self.base));
     if self.load {
       STAND_IN_LOADING.with(|c| c.set(c.get().saturating_sub(1)));
       crate::state::end_stand_in_load(self.from_own);
@@ -277,6 +295,7 @@ pub fn reset_copy_provides() {
   STAND_IN_LOADING.with(|c| c.set(0));
   STAND_IN_OWN_CODE.with(|c| c.set(false));
   STAND_IN_LOADER_OWN_CODE.with(|c| c.set(false));
+  STAND_IN_BASE_CLASS.with(|c| c.set(false));
   SETTER_WATCH.with(|c| c.set(false));
   COPY_PROVIDES.with(|c| c.set(0));
   COPY_PROVIDES_STACK.with(|s| s.borrow_mut().clear());

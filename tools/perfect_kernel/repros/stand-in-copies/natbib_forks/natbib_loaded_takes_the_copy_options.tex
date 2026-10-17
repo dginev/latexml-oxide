@@ -1,0 +1,17 @@
+% witness: 2506.14995 (MRM's binding had loaded natbib optionless before MRM.cls:2441-2442's
+%          `\usepackage[numbers,super]{NJDnatbib}`: author-year where its PDF has superscripts)
+% oracle:  natbib's own options on a repeat load are a pdflatex "Option clash" error; here the first natbib is the
+%          shape a binding's early load leaves, and the copy's options take effect as natbib's (natbib.sty:238-262)
+% engines: rust 72a r4 = the options dropped silently: "[1]"-less author-year
+% expect:  0 errors, 0 warnings; the superscript cite; an Info "Applying options 'numbers,super' from a repeat load"
+% status:  RED (72a r4) -> GREEN (72a r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\usepackage[numbers,super]{NJDnatbib}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{1}
+\bibitem{a} X.~An. A title. 2021.
+\end{thebibliography}
+\end{document}
