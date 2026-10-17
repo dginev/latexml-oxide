@@ -367,7 +367,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@bibliography@title", None);
   // Should be an environment, but people seem to want to misuse it.
   DefConstructor!("\\thebibliography",
-  "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#preamble<ltx:biblist>",
+  "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true' _own_title='#owntitle'>#title</ltx:title>#preamble<ltx:biblist>",
     before_digest => {
         before_digest_bibliography() },
     after_digest => sub[whatsit] {
@@ -383,6 +383,11 @@ pub(crate) fn load() -> Result<()> {
       // (`\bibpreamble{\small …}`, apacite's `\bibliographytypesize`) reaches the entries but
       // not the title, whose font `begin_bibliography_clean` reads from its digested box.
       begin_bibliography_clean(whatsit)?;
+      // a continuation's own title (`\refname`, the class's `\bibsection`), which its close drops when no heading
+      // took its place (`drop_own_bibliography_heading`)
+      if lookup_bool("lx_bibliography_is_continued") {
+        whatsit.set_property("owntitle", "true");
+      }
       digest_bibliography_preamble(whatsit)?;
       setup_pseudo_bibitem()?;
     },
@@ -472,10 +477,16 @@ pub(crate) fn load() -> Result<()> {
     after_close => sub[document, node] {
       prune_phantom_entries(document, node);
       remove_emptied_lists(document, node);
-      if !absorb_bibliography_heading(document, node)? && node.has_attribute("_implicit") {
+      let absorbed = absorb_bibliography_heading(document, node)?;
+      if !absorbed && node.has_attribute("_implicit") {
         head_implicit_bibliography(document, node)?;
       }
       if node.has_attribute("_continued") {
+        // a continuation the heading before it did not head (a `\paragraph{Note.}` and its text between the entries)
+        // is the list going on, as pdflatex prints it: no `\refname` title, no entry in the TOC of its own
+        if !absorbed {
+          drop_own_bibliography_heading(document, node)?;
+        }
         prune_interrupted_bibliography(document, node)?;
       }
     });
@@ -669,6 +680,13 @@ pub(crate) fn load() -> Result<()> {
     if x_equals(&T_CS!("\\if@lx@inbibliography"), &T_CS!("\\iftrue")) && lookup_bool("lx_bibliography_author_env") {
       Digest!("\\@lx@inbibliographyfalse")?;
       assign_value("lx_bibliography_sectioned", true, Some(Scope::Global));
+      // A bibliography interrupted before its first entry (no `\bibitem` counted, not itself a continuation) is the
+      // pruned one (`prune_interrupted_bibliography`): the continuation takes its number (`begin_bibliography_clean`),
+      // so its entries are `bib.bibN`, as in the one bibliography pdflatex prints (Perl's ids are fixed at digestion,
+      // latex_constructs.pool.ltxml:3877-3883).
+      let interrupted_empty =
+        CounterValue!("@bibitem").value_of() == 0 && !lookup_bool("lx_bibliography_is_continued");
+      assign_value("lx_bibliography_sectioned_empty", interrupted_empty, Some(Scope::Global));
       // the stop the entry before the heading asked for (natbib's `\BibitemShut`, natbib.sty:880-905) ends that entry,
       // which the next `\bibitem`'s `\bibitem@fin` would put at the head of the next bibliography's first
       if is_defined_token(&T_CS!("\\bibitem@fin")) {
@@ -753,11 +771,21 @@ pub(crate) fn load() -> Result<()> {
     if tag != "thebibliography" {
       tokens.extend(Explode!("implicit "));
     }
-    if lookup_bool("lx_bibliography_sectioned") {
+    let continued = lookup_bool("lx_bibliography_sectioned");
+    if continued {
       tokens.extend(Explode!("continued"));
     }
     tokens.push(T_END!());
     tokens.push(T_CS!("\\lx@kernel@thebibliography"));
+    // The continuation is entered by `\lx@bibitem`, not by the `\bibitem` its setup armed (`setup_pseudo_bibitem`):
+    // what that `\restoring@bibitem` undoes is undone here, or every later blank line or `\\` in an entry would open
+    // an entry of its own (`\section*{References}\bibitem{a} A.,\\ J. 1.` and an erratum paragraph: one entry, as
+    // without the heading; hep-th0109182 [17]).
+    if continued {
+      tokens.extend(mouth::tokenize_internal(TeXString::assembled(
+        r"\let\bibitem\save@bibitem\let\par\save@par\let\\\save@backbackslash".to_string(),
+      )).unlist());
+    }
     // …whose setup (`before_digest_bibliography`, Perl latex_constructs.pool.ltxml:3839-3840) makes `\bibliography` and
     // `\bibliographystyle` do nothing, for the bibliography environment's group. Opened here without one of its own,
     // that would last to the end of the enclosing group — the document's — and drop the author's real bibliography
@@ -1633,6 +1661,8 @@ fn prune_interrupted_bibliography(document: &mut Document, bibliography: &Node) 
   {
     return Ok(());
   }
+  // (titles compared as `absorb_bibliography_heading` compares a unit's with the bibliography's: case, spaces and a
+  // closing `.`/`:` ignored — the ruling of 2026-10-06 that a unit titled as the bibliography heads it)
   let title = heading_text(&previous);
   if !title.is_empty() && title != heading_text(bibliography) {
     return Ok(());
@@ -1640,11 +1670,28 @@ fn prune_interrupted_bibliography(document: &mut Document, bibliography: &Node) 
   let mut labels: Vec<String> = Vec::new();
   collect_labels(&previous, &mut labels);
   labels.extend(bibliography.get_attribute("labels"));
+  let mut target = bibliography.clone();
   if !labels.is_empty() {
-    let mut target = bibliography.clone();
     document.set_attribute(&mut target, "labels", &labels.join(" "))?;
   }
+  let freed = previous.get_attribute_ns("id", XML_NS);
   document.remove_node(previous);
+  // …and its id: the continuation took its number (`begin_bibliography_clean`), its entries `bib.bibN`, but met the
+  // id still taken when it was built (`biba`, Document.pm:1447-1456 recordID's modifyID); freed (:1460 unRecordID),
+  // it is the survivor's, the one bibliography's `bib` (OXIDIZED_DESIGN_DIVERGENCES #653).
+  if let Some(freed) = freed
+    && let Some(own) = target.get_attribute_ns("id", XML_NS)
+    && own != freed
+    && document
+      .findnodes("descendant::ltx:bibitem[@xml:id]", Some(&target))
+      .first()
+      .and_then(|entry| entry.get_attribute_ns("id", XML_NS))
+      .is_some_and(|id| id.starts_with(&s!("{freed}.")))
+  {
+    document.unrecord_id(&own);
+    let _ = target.remove_attribute_ns("id", XML_NS);
+    document.set_attribute(&mut target, "xml:id", &freed)?;
+  }
   Ok(())
 }
 
@@ -1775,35 +1822,57 @@ fn head_implicit_bibliography(document: &mut Document, bibliography: &Node) -> R
     for old in title.get_child_nodes() {
       document.remove_node(old);
     }
+    // the author's heading now, not the bibliography's own (`drop_own_bibliography_heading`)
+    let _ = title.remove_attribute("_own_title");
     document.append_clone(&mut title, run.get_child_nodes())?;
     collect_labels(&paragraph, &mut labels);
     document.remove_node(paragraph);
   } else {
-    for own in bibliography
-      .get_child_elements()
-      .into_iter()
-      .filter(is_heading_part)
-    {
-      document.remove_node(own);
-    }
-    let mut target = bibliography.clone();
-    let lists: Vec<String> = target
-      .get_attribute("inlist")
-      .unwrap_or_default()
-      .split_whitespace()
-      .filter(|l| *l != "toc")
-      .map(str::to_string)
-      .collect();
-    if lists.is_empty() {
-      let _ = target.remove_attribute("inlist");
-    } else {
-      document.set_attribute(&mut target, "inlist", &lists.join(" "))?;
-    }
+    drop_bibliography_heading(document, bibliography)?;
   }
   labels.extend(bibliography.get_attribute("labels"));
   if !labels.is_empty() {
     let mut target = bibliography.clone();
     document.set_attribute(&mut target, "labels", &labels.join(" "))?;
+  }
+  Ok(())
+}
+
+/// A bibliography the PDF prints no heading over: its heading parts (tags, title, toctitle) go, and so does its entry in
+/// the TOC (`inlist="toc"`).
+fn drop_bibliography_heading(document: &mut Document, bibliography: &Node) -> Result<()> {
+  for own in bibliography
+    .get_child_elements()
+    .into_iter()
+    .filter(is_heading_part)
+  {
+    document.remove_node(own);
+  }
+  let mut target = bibliography.clone();
+  let lists: Vec<String> = target
+    .get_attribute("inlist")
+    .unwrap_or_default()
+    .split_whitespace()
+    .filter(|l| *l != "toc")
+    .map(str::to_string)
+    .collect();
+  if lists.is_empty() {
+    let _ = target.remove_attribute("inlist");
+  } else {
+    document.set_attribute(&mut target, "inlist", &lists.join(" "))?;
+  }
+  Ok(())
+}
+
+/// A continuation's own title (`_own_title`, `\thebibliography`), when it is still its title: it goes, with the TOC entry
+/// it made. A title that came from elsewhere (an author's heading) stays.
+fn drop_own_bibliography_heading(document: &mut Document, bibliography: &Node) -> Result<()> {
+  let own = bibliography.get_child_elements().into_iter().any(|child| {
+    with(model::get_node_qname(&child), |q| q == "ltx:title")
+      && child.get_attribute("_own_title").is_some()
+  });
+  if own {
+    drop_bibliography_heading(document, bibliography)?;
   }
   Ok(())
 }

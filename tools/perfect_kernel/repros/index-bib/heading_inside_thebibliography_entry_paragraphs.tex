@@ -1,0 +1,18 @@
+% witness: hep-th0109182 (entry [17] after a topical `\section*`: its `\\` and erratum paragraph made 10 keyless entries)
+% oracle:  pdflatex 0 errors: "References", "References", [1] A. Author, / J. 1 (2000). / Erratum: J. 1, 5 (2001). [2] B
+% engines: rust 68w r1 = 3 <bibitem>s (the `\\` and the blank line each opened an entry, bib.bibx2/bibx3); without the
+%          heading 1 entry per `\bibitem`; Perl 0.8.8 errs on every entry after the heading (KNOWN_PERL_ERRORS #855)
+% expect:  0 errors; one <bibliography> bib, two entries bib.bib1 (with its break and erratum paragraph) and bib.bib2
+% status:  FIXED (68w r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text \cite{a,b}.
+\begin{thebibliography}{9}
+\section*{References}
+\bibitem{a} A. Author,\\ J. 1 (2000).
+
+Erratum: J. 1, 5 (2001).
+\bibitem{b} B. Author, J. 2 (2001).
+\end{thebibliography}
+\end{document}

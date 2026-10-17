@@ -29,24 +29,27 @@ fn assert_all(xml: &str, parts: &[&str]) {
 fn count(xml: &str, part: &str) -> usize { xml.matches(part).count() }
 
 /// `\begin{thebibliography}{99}\section*{References}\bibitem…` (1702.06834, 2402.15720, 2110.15342): one bibliography,
-/// titled as the heading, holding both entries, no empty one before it.
+/// titled as the heading, holding both entries, no empty one before it, with the ids of the one bibliography (`bib`,
+/// `bib.bibN`: the continuation took the pruned one's number and id).
 #[test]
 fn heading_inside_thebibliography_makes_one_bibliography() {
   let xml = clean!("index-bib/heading_inside_thebibliography.tex");
   assert_eq!(count(&xml, "<bibliography "), 1, "{xml}");
   assert_all(&xml, &[
-    r#"<bibliography inlist="toc" xml:id="biba"> <title>References</title> <biblist> <bibitem key="a" xml:id="biba.bib1"> <tags> <tag>[1]</tag> <tag role="refnum">1</tag> </tags> <bibblock> A. Author, J. 1 (2000). </bibblock> </bibitem> <bibitem key="b" xml:id="biba.bib2"> <tags> <tag>[2]</tag> <tag role="refnum">2</tag> </tags> <bibblock> B. Author, J. 2 (2001). </bibblock> </bibitem> </biblist> </bibliography> <para xml:id="p2"> <p xml:id="p2.1">After.</p> </para>"#,
+    r#"<bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist> <bibitem key="a" xml:id="bib.bib1"> <tags> <tag>[1]</tag> <tag role="refnum">1</tag> </tags> <bibblock> A. Author, J. 1 (2000). </bibblock> </bibitem> <bibitem key="b" xml:id="bib.bib2"> <tags> <tag>[2]</tag> <tag role="refnum">2</tag> </tags> <bibblock> B. Author, J. 2 (2001). </bibblock> </bibitem> </biblist> </bibliography> <para xml:id="p2"> <p xml:id="p2.1">After.</p> </para>"#,
   ]);
   assert!(!xml.contains("<section"), "{xml}");
 }
 
 /// Topical headings between groups of entries (hep-th0109182): the environment's own References heading stays over
-/// them, each group is a bibliography of its own, and the entries are numbered on through the one list.
+/// them, each group is a bibliography of its own, and the entries are numbered on through the one list. The first group
+/// took the kept heading's number (`bib.bib1`), its own id the duplicate's `biba` (Document.pm recordID), so the next
+/// group's `biba` is `bibaa` (OXIDIZED_DESIGN_DIVERGENCES #653).
 #[test]
 fn heading_inside_thebibliography_topical_groups_number_on() {
   let xml = clean!("index-bib/heading_inside_thebibliography_topical.tex");
   assert_all(&xml, &[
-    r#"<bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist/> </bibliography> <bibliography inlist="toc" xml:id="biba"> <title>General Background</title> <biblist> <bibitem key="a" xml:id="biba.bib1"> <tags> <tag>[1]</tag> <tag role="refnum">1</tag> </tags> <bibblock> A. Author, J. 1 (2000). </bibblock> </bibitem> </biblist> </bibliography> <bibliography inlist="toc" xml:id="bibb"> <title>Special Topics</title> <biblist> <bibitem key="b" xml:id="bibb.bib2"> <tags> <tag>[2]</tag> <tag role="refnum">2</tag> </tags> <bibblock> B. Author, J. 2 (2001). </bibblock> </bibitem> </biblist> </bibliography> <bibliography inlist="toc" xml:id="bibc"> <title>More</title> <biblist> <bibitem key="c" xml:id="bibc.bib3"> <tags> <tag>[3]</tag> <tag role="refnum">3</tag> </tags> <bibblock> C. Author, J. 3 (2002). </bibblock> </bibitem> </biblist> </bibliography> <para xml:id="p2"> <p xml:id="p2.1">After.</p> </para>"#,
+    r#"<bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist/> </bibliography> <bibliography inlist="toc" xml:id="biba"> <title>General Background</title> <biblist> <bibitem key="a" xml:id="bib.bib1"> <tags> <tag>[1]</tag> <tag role="refnum">1</tag> </tags> <bibblock> A. Author, J. 1 (2000). </bibblock> </bibitem> </biblist> </bibliography> <bibliography inlist="toc" xml:id="bibaa"> <title>Special Topics</title> <biblist> <bibitem key="b" xml:id="biba.bib2"> <tags> <tag>[2]</tag> <tag role="refnum">2</tag> </tags> <bibblock> B. Author, J. 2 (2001). </bibblock> </bibitem> </biblist> </bibliography> <bibliography inlist="toc" xml:id="bibb"> <title>More</title> <biblist> <bibitem key="c" xml:id="bibb.bib3"> <tags> <tag>[3]</tag> <tag role="refnum">3</tag> </tags> <bibblock> C. Author, J. 3 (2002). </bibblock> </bibitem> </biblist> </bibliography> <para xml:id="p2"> <p xml:id="p2.1">After.</p> </para>"#,
   ]);
 }
 
@@ -56,7 +59,7 @@ fn heading_inside_thebibliography_revtex_natbib_entries_stay_in_the_list() {
   let xml = clean!("index-bib/heading_inside_thebibliography_revtex.tex");
   assert_eq!(count(&xml, "<bibliography "), 1, "{xml}");
   assert_all(&xml, &[
-    r#"<bibliography inlist="toc" xml:id="biba"> <title>References</title> <biblist> <bibitem key="a" xml:id="biba.bib1"> <tags> <tag role="number">1</tag> <tag role="refnum">[1]</tag> <tag role="key">a</tag> </tags> <bibblock> A. Author, J. 1 (2000). </bibblock> </bibitem> <bibitem key="b" xml:id="biba.bib2"> <tags> <tag role="number">2</tag> <tag role="refnum">[2]</tag> <tag role="key">b</tag> </tags> <bibblock> B. Author, J. 2 (2001). </bibblock> </bibitem> </biblist> </bibliography> </document>"#,
+    r#"<bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist> <bibitem key="a" xml:id="bib.bib1"> <tags> <tag role="number">1</tag> <tag role="refnum">[1]</tag> <tag role="key">a</tag> </tags> <bibblock> A. Author, J. 1 (2000). </bibblock> </bibitem> <bibitem key="b" xml:id="bib.bib2"> <tags> <tag role="number">2</tag> <tag role="refnum">[2]</tag> <tag role="key">b</tag> </tags> <bibblock> B. Author, J. 2 (2001). </bibblock> </bibitem> </biblist> </bibliography> </document>"#,
   ]);
 }
 
@@ -66,7 +69,7 @@ fn heading_inside_thebibliography_beamer_frame_holds_it() {
   let xml = clean!("index-bib/heading_inside_thebibliography_frame.tex");
   assert_eq!(count(&xml, "<bibliography "), 1, "{xml}");
   assert_all(&xml, &[
-    r#"<subsection xml:id="id2"> <bibliography inlist="toc" xml:id="biba"> <title>References</title> <biblist> <bibitem key="a" xml:id="biba.bib1">"#,
+    r#"<subsection xml:id="id2"> <bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist> <bibitem key="a" xml:id="bib.bib1">"#,
     r#"<bibblock> B. Author, J. 2 (2001). </bibblock> </bibitem> </biblist> </bibliography> </subsection> </document>"#,
   ]);
 }
@@ -88,6 +91,41 @@ fn heading_inside_thebibliography_no_entry_after_leaves_nothing_pending() {
     r#"<bibitem key="z" xml:id="biba.bib1"> <tags> <tag role="number">1</tag> <tag role="refnum">[1]</tag>"#,
     r#"<bibitem key="b" xml:id="bibb.bib1"> <tags> <tag role="number">1</tag> <tag role="refnum">[1]</tag>"#,
   ]);
+}
+
+/// An entry after the heading keeps its `\\` and its paragraphs (hep-th0109182 [17]): the continuation undoes the entry
+/// redirection its setup armed as `\restoring@bibitem` does, so there is one entry, as without the heading.
+#[test]
+fn heading_inside_thebibliography_entry_keeps_its_paragraphs() {
+  let xml = clean!("index-bib/heading_inside_thebibliography_entry_paragraphs.tex");
+  assert_eq!(count(&xml, "<bibitem "), 2, "{xml}");
+  assert_all(&xml, &[
+    r#"<bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist> <bibitem key="a" xml:id="bib.bib1"> <tags> <tag>[1]</tag> <tag role="refnum">1</tag> </tags> <bibblock> A. Author,<break/>J. 1 (2000). Erratum: J. 1, 5 (2001). </bibblock> </bibitem> <bibitem key="b" xml:id="bib.bib2">"#,
+  ]);
+}
+
+/// A `\paragraph` and its text between two entries: the list goes on after it with no title and no TOC entry of its own
+/// (pdflatex prints one heading).
+#[test]
+fn heading_inside_thebibliography_unheaded_continuation_has_no_title() {
+  let xml = clean!("index-bib/heading_inside_thebibliography_paragraph_aside.tex");
+  assert_eq!(count(&xml, "<title>References</title>"), 1, "{xml}");
+  assert_all(&xml, &[
+    r#"<p xml:id="S1.SS0.SSS0.Px1.p1.1">An aside inside the list.</p> </para> </paragraph> <bibliography xml:id="biba"> <biblist> <bibitem key="b" xml:id="biba.bib2"> <tags> <tag>[2]</tag> <tag role="refnum">2</tag> </tags> <bibblock> B. Author, J. 2. </bibblock> </bibitem> </biblist> </bibliography> </document>"#,
+  ]);
+}
+
+/// After the B1 shape, a separate bibliography is the second: `biba` with `biba.bib1` (the continuation used no number
+/// of its own).
+#[test]
+fn heading_inside_thebibliography_then_a_second_bibliography_is_biba() {
+  let xml = clean!("index-bib/heading_inside_thebibliography_then_second_bibliography.tex");
+  assert_all(&xml, &[
+    r#"<bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist> <bibitem key="a" xml:id="bib.bib1">"#,
+    r#"<bibitem key="b" xml:id="bib.bib2">"#,
+    r#"<bibliography inlist="toc" xml:id="biba"> <title>References</title> <biblist> <bibitem key="c" xml:id="biba.bib1">"#,
+  ]);
+  assert_eq!(count(&xml, "<bibliography "), 2, "{xml}");
 }
 
 /// lipics-v2021's five-part `\author{name}{affiliations}{email}{orcid}{funding}` (lipics-v2021.cls:766-800; 2607.26691,

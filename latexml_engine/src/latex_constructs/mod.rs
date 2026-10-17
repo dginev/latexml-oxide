@@ -4270,6 +4270,23 @@ pub fn before_digest_bibliography() -> Result<()> {
     None,
   );
   assign_value("lx_bibliography_sectioned", false, Some(Scope::Global));
+  assign_value(
+    "lx_bibliography_is_continued",
+    continued,
+    Some(Scope::Global),
+  );
+  // …whose number is that of the one it continues when that held no entry and is pruned (`begin_bibliography_clean`)
+  let reuse_number = continued && lookup_bool("lx_bibliography_sectioned_empty");
+  assign_value(
+    "lx_bibliography_sectioned_empty",
+    false,
+    Some(Scope::Global),
+  );
+  assign_value(
+    "lx_bibliography_reuse_number",
+    reuse_number,
+    Some(Scope::Global),
+  );
   // …nor does natbib's pending entry stop of an earlier one (`\@bibstop`, natbib.sty:880-905) carry into its first entry
   Let!("\\@bibstop", "\\@undefined");
   // …and it has a list end of its own (sect11.rs `\lx@bibliography@nolistend`)
@@ -4428,7 +4445,17 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   // Try to compute a reasonable, but unique ID;
   // relative to the document's ID, if any.
   // But also, if there are multiple bibliographies,
-  let bibnumber = 1 + lookup_int("n_bibliographies");
+  // (the continuation of a bibliography a heading interrupted before its first entry takes that one's number, and the
+  // id `prune_interrupted_bibliography` frees with it, sect11.rs `\lx@bibliography@sectioned`; Rust-only, as the
+  // continuation is, OXIDIZED_DESIGN_DIVERGENCES #653)
+  let reuse_number = lookup_bool("lx_bibliography_reuse_number");
+  if reuse_number {
+    assign_value("lx_bibliography_reuse_number", false, Some(Scope::Global));
+  }
+  let bibnumber = match lookup_int("n_bibliographies") {
+    n if reuse_number && n > 0 => n,
+    n => 1 + n,
+  };
   assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
   let mut docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
   if !docid.is_empty() {

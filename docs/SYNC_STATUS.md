@@ -2497,6 +2497,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   OXIDIZED_DESIGN_DIVERGENCES #654; 2405.04967, 2207.12959, 2603.09685; 2401.05832's swapped order RED, row under
   "Perfect-kernel RED repros"); repro class-bindings/sn_jnl_href_keeps_hyperref_order, guard
   `perfect_kernel_batch68w::sn_jnl_href_keeps_hyperref_order_without_pdflatex`.
+  B1 continuations: the entry redirection undone as `\restoring@bibitem` does (`\lx@mung@bibliography`; hep-th0109182
+  [17] one entry), no `\refname` title or TOC entry for one no heading gives (`drop_own_bibliography_heading`), and the
+  one bibliography's ids `bib`/`bib.bibN` (the continuation of an entry-less interrupted bibliography takes its number,
+  `lx_bibliography_reuse_number`; the survivor takes the pruned one's freed id; OD #653); repros
+  index-bib/heading_inside_thebibliography_{entry_paragraphs,paragraph_aside,then_second_bibliography}, guards
+  `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

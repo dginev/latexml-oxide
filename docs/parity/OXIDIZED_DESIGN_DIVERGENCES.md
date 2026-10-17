@@ -18449,9 +18449,19 @@ entries numbered through the list (`[1]`, `[2]`, `[3]` across them) — Perl err
 author's (`\begin{thebibliography}{99}\section*{References}`: pdflatex prints "References" twice, here once) or is
 empty (`prune_interrupted_bibliography`); with another heading (a "References" over topical `\section*`s,
 hep-th0109182) it stays, an empty bibliography over the groups, as the PDF heads them. Its labels move to the next
-one. A heading entered from a list (an `\item`'s, a minipage's) or any other bibliography environment is not split
-(`lx_bibliography_author_env`: the author's `{thebibliography}` only). Guards
-`perfect_kernel_batch68w::heading_inside_thebibliography_*`.
+one. Only the author's `{thebibliography}` is split (`lx_bibliography_author_env`): not a bibliography a `\bibitem`
+opened in another environment (a list's, a minipage's). A heading inside a group in the list (`{\small\subsection*{…}}`)
+is not split either: the group's end restores the bibliography state and the entries after it err as before (Perl's
+error, no regression). A continuation is entered by `\lx@bibitem`, so it undoes the entry redirection its setup armed
+as `\restoring@bibitem` would (an entry's `\\` and paragraphs stay its own, hep-th0109182 [17]); one whose heading the
+unit before it did not give (a `\paragraph` and text between entries) drops its own `\refname` title and TOC entry
+(`drop_own_bibliography_heading`), the list going on as pdflatex prints it. Ids are the one bibliography's: a
+continuation of a bibliography interrupted before its first entry takes that one's number (`begin_bibliography_clean`,
+`lx_bibliography_reuse_number`), so its entries are `bib.bibN`, and the pruned one's freed id `bib` is the survivor's
+(Perl fixes ids at digestion, latex_constructs.pool.ltxml:3877-3883; the duplicate it meets while built is renamed as
+Document.pm:1447-1456 recordID does, `biba`, and freed as :1460 unRecordID); a later separate bibliography is `biba`.
+Where the empty one stays (topical groups), the first group keeps that `biba` with entries `bib.bibN`, and the next
+group's `biba` is renamed `bibaa`. Guards `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
 
 ### 659. aguplus.cls is a binding over the raw class: the AGUTeX title page as the AAS binding's, natbib for its copy (Perl: no binding)
 

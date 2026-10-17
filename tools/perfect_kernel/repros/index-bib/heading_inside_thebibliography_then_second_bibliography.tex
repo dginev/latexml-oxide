@@ -1,0 +1,21 @@
+% witness: review probe of 68w (the B1 shape of 1702.06834 and 2402.15720, then a separate bibliography)
+% oracle:  pdflatex 0 errors: "References", "References", [1] A, [2] B; "Supplement", "References", [1] C
+% engines: rust 68w r1 = ids biba (biba.bib1, biba.bib2) and bibb for the second; Perl 0.8.8 errs on the entries
+% expect:  0 errors; the first bibliography bib with entries bib.bib1, bib.bib2; the second biba with biba.bib1
+% status:  FIXED (68w r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\section{Intro}
+Text \cite{a,b,c}.
+\begin{thebibliography}{9}
+\section*{References}
+\bibitem{a} A. Author, J. 1.
+\bibitem{b} B. Author, J. 2.
+\end{thebibliography}
+\section*{Supplement}
+More \cite{c}.
+\begin{thebibliography}{9}
+\bibitem{c} C. Author, J. 3.
+\end{thebibliography}
+\end{document}
