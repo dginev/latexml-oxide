@@ -150,3 +150,20 @@ fn siunitx_uncertainty_with_decimal_marker() {
   );
   assert_eq!(error_count(&log), 1, "{log}");
 }
+
+/// txfonts.sty:727-728 `\lambdaslash`, `\lambdabar` (0801.4523, 2104.03192).
+#[test]
+fn txfonts_lambdabar() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/txfonts_lambdabar.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"<XMTok font="italic" name="lambdabar" role="UNKNOWN">ƛ</XMTok>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<XMTok font="italic" name="lambdaslash" role="UNKNOWN">ƛ</XMTok>"#),
+    "{xml}"
+  );
+}

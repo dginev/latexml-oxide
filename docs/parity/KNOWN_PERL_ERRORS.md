@@ -15380,6 +15380,17 @@ Rust (71a, siunitx_sty.rs `six_match_uncertainnumber`): the bracketed form reads
 siunitx.sty does. Repro package-bindings/siunitx_uncertainty_with_decimal_marker; guard
 `perfect_kernel_batch71a::siunitx_uncertainty_with_decimal_marker`.
 
+## 942. txfonts' `\lambdabar` and `\lambdaslash` are undefined
+
+txfonts.sty:727-728 (pxfonts.sty:727-728 alike) `\re@DeclareMathSymbol{\lambdaslash}{\mathord}{symbolsC}{110}`,
+`{\lambdabar}…{111}`; Perl's txfonts.sty.ltxml:387-388 leaves both commented out (no code point chosen).
+
+Trigger: `\usepackage{txfonts}` and `$\lambdabar_{\rm c}$` — pdflatex 0 errors; Perl and Rust before 71a 1 Error per
+symbol (8 papers: 0801.4523 under pxfonts, 1001.3510, 1202.5232, 2103.10486, 2104.03192).
+
+Rust (71a, txfonts_sty.rs Table 61): both U+019B, the one struck lambda Unicode has (newtxmath's `\lambdabar`). Repro
+package-bindings/txfonts_lambdabar; guard `perfect_kernel_batch71a::txfonts_lambdabar`.
+
 ## 949. AMS-TeX's `\Let@` is missing, so a document's own AMS-TeX alignment macro errs at its `\\`
 
 amstex.tex:486 `\def\Let@{\relax\iffalse{\fi\let\\=\cr\iffalse}\fi}` is the row end an AMS-TeX alignment sets up before

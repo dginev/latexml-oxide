@@ -306,6 +306,12 @@ pub fn def_txfonts_symbols() -> Result<()> {
   // Table 61 — Miscellaneous symbols
   def_math_sym("\\Diamondblack", "\u{25C6}", None, None)?;
   def_math_sym("\\Diamonddot", "\u{27D0}", None, None)?;
+  // txfonts.sty:727-728 (pxfonts.sty:727-728 alike) `\lambdaslash`, `\lambdabar` (symbolsC 110, 111): the struck lambda,
+  // U+019B, the one Unicode has (newtxmath's `\lambdabar`, newtxmath_sty.rs). Perl leaves both commented out
+  // (txfonts.sty.ltxml:387-388, KNOWN_PERL_ERRORS #942). Witnesses 0801.4523, 1001.3510, 1202.5232, 2103.10486;
+  // guard `perfect_kernel_batch71a::txfonts_lambdabar`.
+  def_math_sym("\\lambdaslash", "\u{019B}", None, None)?;
+  def_math_sym("\\lambdabar", "\u{019B}", None, None)?;
   def_math_sym("\\mathcent", "\u{00A2}", None, None)?;
   def_math_sym("\\mathsterling", "\u{00A3}", None, None)?;
   def_math_sym("\\varclubsuit", "\u{2667}", None, None)?;

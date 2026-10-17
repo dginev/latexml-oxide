@@ -1,0 +1,12 @@
+% witness: 0801.4523 (pxfonts), 1001.3510, 1202.5232, 2103.10486, 2104.03192 (txfonts `\lambdabar`); 8 papers of the int19
+%          census (rc_struct5 L1)
+% oracle:  pdflatex 0 errors: a barred and a slashed lambda
+% engines: rust 67int19b = 2 Error:undefined (\lambdabar, \lambdaslash); Perl 0.8.8 the same (KNOWN_PERL_ERRORS #942)
+% expect:  0 errors; both as U+019B
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{txfonts}
+\begin{document}
+$\lambdabar_{\rm c}=\hbar/m_ec$ and $\lambdaslash$
+\end{document}

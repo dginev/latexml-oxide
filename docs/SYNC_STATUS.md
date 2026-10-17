@@ -3038,6 +3038,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   "expected to find complex number").
   Repro package-bindings/siunitx_uncertainty_with_decimal_marker; guard
   `perfect_kernel_batch71a::siunitx_uncertainty_with_decimal_marker`.
+  (6) L1: txfonts/pxfonts `\lambdabar`, `\lambdaslash` (txfonts.sty:727-728) as U+019B (KNOWN_PERL_ERRORS #942).
+  Witnesses 0801.4523 1001.3510 1202.5232 2103.10486 2104.03192 (9/9 sample papers 1 → 0). Repro
+  package-bindings/txfonts_lambdabar; guard
+  `perfect_kernel_batch71a::txfonts_lambdabar`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
