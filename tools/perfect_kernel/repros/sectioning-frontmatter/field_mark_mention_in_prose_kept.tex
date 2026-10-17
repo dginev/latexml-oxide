@@ -1,0 +1,16 @@
+% The stamped store in running prose is a mention, not the title block: a print is lifted only when it fills its line
+% (`lift_marked_field_ink`), so the sentence keeps its words. `\ifx\@title\@empty` still tells a set title from none
+% (the provenance is out of band, the value's tokens are pdflatex's; an empty value is left unstamped:
+% field_mark_ifx_empty_title).
+% status:  GREEN at 67int19b (nothing matched the text-matching dedup) → GREEN (fms1), guarding the fill rule.
+% oracle:  pdflatex 0 errors: "This report, Mentioned Title, is short. Test: NONEMPTY." "1 Intro Text."
+% expect:  0 errors, 0 warnings; no `field_ink` or `title_ink_dedup` Info; the paragraph whole.
+\documentclass{article}
+\makeatletter
+\title{Mentioned Title}
+\def\mytest{\ifx\@title\@empty EMPTY\else NONEMPTY\fi}
+\begin{document}
+This report, \@title, is short. Test: \mytest.
+\section{Intro}
+Text.
+\end{document}

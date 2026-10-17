@@ -1,0 +1,31 @@
+% The stored `\@title` holds the tokens pdflatex holds: its field provenance is out of band (`Token::prov`, not a
+% token), so every token test, measure and slice the document makes of it answers as pdflatex (fms1 review finding 3;
+% TL users: moderncv `\equal{\@title}{}`, neoschool `\StrLen`/`\StrMid`).
+% status:  RED (fms1 round 1, in-band marks: IFXNE, EQUALNE, XSNE, LEN=6, STRCMPNE, "Same", "", "S" and a `\csname`
+%          Error) → GREEN (fms1 round 2).
+% oracle:  pdflatex 0 errors: "A: IFXEQ. B: EQUALEQ. C: XSEQ. D: LEN=4. E: STRCMPEQ. F: ame—. G: S—. H: Same —. I:
+%          CSRELAX. J: SUBYES. K: Sa—. L: 23.33339pt. M: 23.33339pt.", "1 Intro Text."
+% expect:  0 errors, 0 warnings; the same answers on every line; no `field_ink` Info.
+\documentclass{article}
+\usepackage{xstring,ifthen}
+\makeatletter
+\title{Same}
+\author{Ann Author}
+\begin{document}
+\def\same{Same}
+A: \ifx\@title\same IFXEQ\else IFXNE\fi.
+B: \ifthenelse{\equal{\@title}{Same}}{EQUALEQ}{EQUALNE}.
+C: \IfStrEq{\@title}{Same}{XSEQ}{XSNE}.
+D: \StrLen{\@title}[\len]LEN=\len.
+E: \ifnum\pdfstrcmp{\@title}{Same}=0 STRCMPEQ\else STRCMPNE\fi.
+F: \expandafter\@gobble\@title|.
+G: \expandafter\@car\@title\@nil|.
+H: \expandafter\scantokens\expandafter{\@title}|.
+I: \expandafter\ifx\csname\@title\endcsname\relax CSRELAX\else CSOTHER\fi.
+J: \IfSubStr{\@title}{am}{SUBYES}{SUBNO}.
+K: \StrLeft{\@title}{2}|.
+L: \settowidth{\dimen0}{\@title}\the\dimen0.
+M: \sbox0{\@title}\the\wd0.
+\section{Intro}
+Text.
+\end{document}

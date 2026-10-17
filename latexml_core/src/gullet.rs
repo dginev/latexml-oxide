@@ -1901,13 +1901,14 @@ fn invoke_expansion(token: Token, defn: &std::rc::Rc<dyn Definition>) -> Result<
   // / the math parser; params in `crate::stack_guard`.
   // The expansion goes straight onto the input (`Definition::invoke_onto_input`, tex.web §390) unless it is
   // inspected on the way: token-locators fill its origins, `TRACE_GROUP_END` counts its groups.
-  if cfg!(not(feature = "token-locators")) && !*TRACE_GROUP_END {
+  // A token of a frontmatter field's stored value passes its provenance to its expansion (`Token::prov`).
+  if cfg!(not(feature = "token-locators")) && !*TRACE_GROUP_END && token.prov == 0 {
     crate::stack_guard::maybe_grow(|| defn.invoke_onto_input(false))?;
     expire_current_token();
     return Ok(());
   }
-  #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
   let mut invoked = crate::stack_guard::maybe_grow(|| defn.invoke(false))?;
+  crate::token::inherit_field_prov(token.prov, &mut invoked);
   // token-locators: fill-only origin inheritance. A macro that
   // expands into synthesized tokens with no origin — e.g.
   // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —
@@ -2628,7 +2629,8 @@ pub fn read_balanced_with_close(
                 && (expansion_level == Full || !optional_arg_protected(&defn))
               {
                 local_current_token(token);
-                let expansion = defn.invoke(false)?;
+                let mut expansion = defn.invoke(false)?;
+                crate::token::inherit_field_prov(token.prov, &mut expansion);
                 if expansion.is_empty() {
                   expire_current_token();
                   continue;

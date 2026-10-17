@@ -521,6 +521,8 @@ pub(crate) fn load() -> Result<()> {
       remove_frontmatter_marks(document);
       // A class's `\title` print on a cover stays only beside a top-level `ltx:titlepage` (OXIDIZED_DESIGN #629).
       settle_cover_title_ink(document);
+      // A field print no placement settled keeps its ink (`\lx@field@mark`, OXIDIZED_DESIGN #715).
+      settle_field_marks(document);
       // When groups or environments were abandoned (before_digest below),
       // this whatsit may sit inside the innermost one's body, built before the
       // constructors around it close their elements: the `ltx:document` close

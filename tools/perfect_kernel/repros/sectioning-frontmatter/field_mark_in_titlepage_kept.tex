@@ -1,0 +1,22 @@
+% A `{titlepage}` cover printing the stores (`\@title`, `\@author`): the cover is the displayed title (the XSLT hides a
+% document `<ltx:title>` beside an `<ltx:titlepage>`, LaTeXML-structure-xhtml.xsl:374-375 = Perl :358-359), so its
+% marked prints stay whole (the title-print study's R3 inside a titlepage; its tp_dedup shape with the stores; covers
+% 1304.0681, 1503.03277).
+% status:  GREEN at 67int19b → GREEN (fms1), guarding that the marks never act inside a titlepage.
+% oracle:  pdflatex 0 errors: page 1 "Cover Store Title", "Cover Author"; page 2 "1 Intro Text."
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the titlepage keeps both lines.
+\documentclass{article}
+\makeatletter
+\title{Cover Store Title}
+\author{Cover Author}
+\begin{document}
+\begin{titlepage}
+\begin{center}
+{\huge\bfseries \@title\par}
+\bigskip
+{\Large \@author\par}
+\end{center}
+\end{titlepage}
+\section{Intro}
+Text.
+\end{document}

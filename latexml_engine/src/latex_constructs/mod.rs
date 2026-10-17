@@ -1221,8 +1221,12 @@ fn lx_read_and_change_case(
         }
       });
       let changed = tok.with_str(|s| s != new_str.as_str());
+      // the case changes the character, not the token's out-of-band field provenance (`Token::prov`, as `\uppercase`)
       let new_tok = if changed {
-        Token::new(new_str, cc)
+        Token {
+          prov: tok.prov,
+          ..Token::new(new_str, cc)
+        }
       } else {
         tok
       };
@@ -1231,7 +1235,7 @@ fn lx_read_and_change_case(
         *keep = true;
       }
     } else if cc == Catcode::SPACE {
-      result.push(T_SPACE!());
+      result.push(Token { prov: tok.prov, ..T_SPACE!() });
       if req_case == "title" {
         *keep = false;
       }

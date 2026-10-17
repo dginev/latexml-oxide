@@ -1,0 +1,21 @@
+% The title-print study's repro tp_dedup (2026-10-16, scratch titlestudy/repro), verbatim below this header: a preamble
+% `\title`/`\author` and a `{titlepage}` cover that hand-types them, no `\maketitle`. The cover is the displayed title
+% (LaTeXML-structure-xhtml.xsl:374-375 hides the structured title beside a titlepage), so it stays whole: no dedup (68s
+% round 2), and no field mark, since nothing prints the stores (covers 1304.0681, 1503.03277).
+% status:  RED (67int13: the dedup deleted the cover's title) → GREEN (68s) → GREEN (fms1, unchanged by the marks).
+% oracle:  pdflatex 0 errors: page 1 "Concurrent and Accurate RNA Sequencing", "A. Author"; page 2 "1 Intro Text."
+% expect:  0 errors, 0 warnings; the titlepage keeps both lines; the structured title beside it.
+\documentclass{article}
+\title{Concurrent and Accurate RNA Sequencing}
+\author{A. Author}
+\begin{document}
+\begin{titlepage}
+\begin{center}
+{\huge\textbf{Concurrent and Accurate RNA Sequencing}\par}
+\bigskip
+{\Large A. Author\par}
+\end{center}
+\end{titlepage}
+\section{Intro}
+Text.
+\end{document}

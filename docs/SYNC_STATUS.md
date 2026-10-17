@@ -3278,6 +3278,35 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   copy-extras payload 72a reads it); 4 word losses > 1 % (1905.00691, astro-ph0307049, 0707.4285, 2006.09152) are only
   the `undefined:\text` error tokens gone with mnras v3.0's `\ion` (1905.00691 gains its "He" ions); nets 136/136 no worse.
 
+- **fms1** (frontmatter model M3 stage S1, field provenance only; user rulings 2026-10-17; main-session ruling
+  2026-10-17: out-of-band provenance, not in-band marks; design study agent_reports/2026-10-16_frontmatter_design_study.md
+  §6, the title-print study's stage 3 = rule R3). `Token` gains `prov: u16` in its padding (still 8 bytes,
+  `token_size_invariant`; excluded from `PartialEq`, never written or dumped). The kernel `\title`/`\author`
+  (sect05.rs) stamp their stored tokens once the frontmatter has its copy (`\lx@field@mark`, base_utilities.rs: field +
+  position, and the field's character extent `lx_field_extent_<F>`); expansion inherits it (`inherit_field_prov`, gullet
+  and stomach), case changes keep it (`\uppercase`, `\lx@latex@changecase`), the stomach copies it to what a stamped
+  token digests to (`fieldProv`), and core `Document::absorb` brackets each run of a field's ink with paired processing
+  instructions (`FieldRun`, gated by `note_field_prov_stamped`). `lift_marked_field_ink` — once, at
+  `\lx@frontmatterhere` and the fallback's non-abstract branch — joins a print split by its cells/tables, and removes a
+  run that is the whole field, in the title block, filling its lines (all fields together), when the XSLT displays the
+  field (no document-level titlepage; a document-level title, resp. author creator); a lifted title leaves the
+  text-matching dedup (OXIDIZED_DESIGN_DIVERGENCES #146) unrun. OXIDIZED_DESIGN_DIVERGENCES #715 (open for a ruling:
+  N prints of the title in the title block are all lifted), KNOWN_PERL_ERRORS #935. No lock change, no observer,
+  nothing deleted (S2/S3). Round 2 fixes the review's findings 1 (author beside a titlepage kept), 2 (no cross-print
+  pairing: runs carry ids), 3 (every token test = pdflatex: the round-1 in-band marks are gone, with `is_field_mark` /
+  `strip_field_marks` and their `\write`/`\typeout`/`writable_tokens` hooks), 5 (fields judged together) and 6
+  (`remove_marked_ink` O(gone·depth)). A/B fms1-rel (round 1) → fms1b over the review's 207 and the round-1 writer's
+  336 papers (542 converted; math0309133 has no main file): 542 byte-identical, 0 Error/Warning/Fatal change, no mark in any XML or log, the same 12 `field_ink` lifts (the review's 0706.0979, 1004.2125, 2205.02555 duplicate title/author lifts kept). Round-1 A/B 67int19b-rel → fms1 (336 papers): 332 byte-identical, 0
+  Error/Warning change; 2402.14614, 1603.09631 the title lifted instead of text-matched; 1605.00182 and 1503.06457 lose
+  the printed author block that repeated their creator (pdflatex prints it once). Repros sectioning-frontmatter/
+  field_prov_{token_tests, author_beside_titlepage_kept, fragments_kept, title_author_one_line,
+  author_tabular_lifted} RED (round 1) → GREEN; field_mark_{store_print_lifted, before_maketitle_lifted, uppercase,
+  centerline_hbox_lifted} and the idiom and scope guards (mention_in_prose_kept, ifx_empty_title, edef_copy,
+  write_and_typeout, pdfstring, in_titlepage_kept, beside_titlepage_kept, framed_kept, in_float_kept,
+  after_section_kept) and title_study_tp_{dedup,setter} GREEN; guards `perfect_kernel_batchfms1` (20). Open
+  (pre-existing, Perl the same): `\hypersetup{pdftitle=\@title}` records the RDF `dcterms:title` as the literal
+  `\@title`; our `\pdfstringdef` is a `\gdef`, so a copy made before `\maketitle` empties the store prints nothing.
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

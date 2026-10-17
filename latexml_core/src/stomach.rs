@@ -3779,7 +3779,8 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         // A math-active character will (typically) be a macro,
         // but it isn't expanded in the gullet, but later when digesting, in math mode
         // (? I think)
-        let invoked_meaning = meaning.invoke(false)?;
+        let mut invoked_meaning = meaning.invoke(false)?;
+        crate::token::inherit_field_prov(token.prov, &mut invoked_meaning);
         if !invoked_meaning.is_empty() {
           {
             gullet::unread(invoked_meaning);
@@ -3866,6 +3867,15 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
           s!("Unexpected object in Stomach: {:?}", meaning)
         );
       },
+    }
+    // A token of a frontmatter field's stored value (its out-of-band provenance, `Token::prov`): what it digests to
+    // is that field's ink (`Document::absorb`'s field runs, OXIDIZED_DESIGN #715).
+    if token.prov != 0 {
+      for digested in &result {
+        if !digested.has_property(crate::document::FIELD_PROV_PROPERTY) {
+          digested.try_set_property(crate::document::FIELD_PROV_PROPERTY, i64::from(token.prov));
+        }
+      }
     }
     // _token_guard drops here, auto-expiring current token
     break;

@@ -5895,19 +5895,22 @@ no cover title, Perl shows it once; 1601.07172, 2606.13892 the same shape.
 2026-10-16): R1 a print event (`\maketitle` → `\lx@frontmatterhere`, else the fallback's top placement)
 places the structured title; R2 a refused class/document setter that typesets is a print event at its call;
 R3 a `\@title` store typeset in the body is a print event; R4 a store never printed is metadata; R5 text
-matching — this dedup — only for a retyped copy that no print event explains. Today R1 is in place and the
-dedup stands in for R2-R3. Planned stages: (2) inside `{titlepage}` the kernel `\title` also runs the class's
-refused setter at its call (`\lx@sealed@class@run`), so the cover shows the title the class typesets there
-(0904.2708, gr-qc9404034); (3) unexpandable `\lx@title@ink@begin`/`@end` marks around a stored `\@title`
-show what was typeset: inside a titlepage the ink is kept, elsewhere exactly the marked ink is removed — no
-text matching; (4) a copy no mark explains is promoted in place into `<ltx:title>` (the move of
+matching — this dedup — only for a retyped copy that no print event explains. R1 is in place; R2 landed as
+stage 2 (68t, #629: inside `{titlepage}` the kernel `\title` also runs the class's refused setter at its call, so
+the cover shows the title the class typesets there: 0904.2708, gr-qc9404034); R3 landed as stage 3 (fms1, #715: the
+kernel `\title`/`\author` stamp their stored tokens with an out-of-band field provenance, `\lx@field@mark`, and the
+print digested from them is lifted where the frontmatter is placed; inside a titlepage it is kept) — when a title print
+was lifted the
+dedup does not run (`lx_title_ink_dedup_done`), so it acts only on a copy no mark explains (a retyped title:
+2608.10928). Planned: (4) a copy no mark explains is promoted in place into `<ltx:title>` (the move of
 `maybe_promote_leading_title`) instead of deleted, once the ruling on which text wins is made.
 
 **Why it's safe / precise.** Fires only for `\title`-without-`\maketitle` papers (the `\maketitle`
 path disables the fallback), and only on a full normalized-text match against the structured title
 in a leading display-font centered block. A paper that sets `\title` but doesn't hand-typeset keeps
-its title; a leading centered block that *doesn't* match the title is left untouched; author/abstract
-"ink" (no structured counterpart) is preserved. Never removes a title the PDF actually shows —
+its title; a leading centered block that *doesn't* match the title is left untouched; retyped author/abstract
+"ink" (no structured counterpart) is preserved (a print of the stored `\@author` is the creator's ink by provenance, #715).
+Never removes a title the PDF actually shows —
 `\title{}` without `\maketitle` renders nothing in the PDF, so only the manual block was ever
 visible there — and never where the HTML would then show no title (a document with a titlepage, above).
 
@@ -18816,6 +18819,93 @@ matches each case's pdflatex count in the measured shapes (`{a & b} \\` 2, `a & 
 the message is latex.ltx's, every cell kept; the bare-`\halign` row break of §1132 is not reproduced. Why: the frame
 holds the column's bookkeeping (`alignmentStartColumn`), and popping it lost the first cell to a spanning second
 (`<td colspan="2">b</td>`), the content loss Perl shows. Guard `perfect_kernel_batch70b::tabular_stray_brace_keeps_its_cells`.
+
+### 715. A printed `\@title` or `\@author` is the field's ink by its tokens' provenance, lifted where the frontmatter is placed (Perl: the structured copy and the print both shown)
+
+Frontmatter model M3, stage S1 (field provenance only; user rulings 2026-10-17, design study
+agent_reports/2026-10-16_frontmatter_design_study.md §6; the title-print study's rule R3, its stage 3; main-session
+ruling 2026-10-17: out-of-band provenance, not in-band mark tokens). Perl takes the frontmatter from the setter call
+(`\lx@add@title` at latex_constructs.pool.ltxml:1059-1063, `\lx@add@authors` at :1076-1079) and renders the header from
+that copy; a document that also typesets the stores itself — no `\maketitle`, `{\Large\bf \@title\par}` (lrec's
+`\maketitleabstract`: 2402.14614, 1603.09631), 1605.00182's own `\centerline{\Large\bf{\noindent\@title}}`, puthesis's
+`\LARGE \@title` (1503.06457) — shows the title (and the author line) twice, in Perl as here before (KNOWN_PERL_ERRORS
+#935); the title copy went only by the text-matching dedup (#146), the author's not at all.
+
+**Provenance, out of band.** `Token` (latexml_core token.rs) has a `prov: u16` field (`0` = none) in what was the
+struct's padding: `Token` stays 8 bytes (`token_size_invariant`; 12 under `token-locators`, as before). It is not part
+of TeX's token: `PartialEq` ignores it (so `\ifx`, `\meaning`, xstring, `\pdfstrcmp` compare as pdflatex), it is never
+written or dumped, and whatever builds a token from characters (`\string`, `\detokenize`, `\scantokens`, `\write`,
+`\csname`) builds one without it. The kernel `\title` and `\author` (sect05.rs) stamp their store once the frontmatter
+has its copy: `\lx@field@mark\gdef\@title{title}` / `\lx@field@mark\def\@author{author}` (base_utilities.rs) redefine the
+store with the same tokens, each carrying "token *i* of field *F*" (`field_prov`: 2 bits field, 14 bits position), and
+record the field's character extent (`lx_field_extent_<F>`: the positions of its first and last letter/other token).
+Nothing is added to the store, so every token operation sees exactly what pdflatex sees (the round-1 in-band marks made
+`\ifx\@title\same`, `\equal`, `\IfStrEq`, `\pdfstrcmp` false, `\StrLen` 6 for "Same", `\@gobble`/`\@car`/`\StrLeft`
+take a mark, and `\csname\@title\endcsname` err — fms1 review finding 3; guard `field_prov_token_tests`, every line =
+pdflatex). An empty or blank value is left unstamped.
+
+The provenance travels the way the tokens do: copies keep it (macro bodies, arguments, `\edef`/`\protected@xdef`,
+titling's `\thetitle` set by the after-slot from the stamped store); the expansion of a stamped token inherits it
+(gullet `invoke_expansion` and the partial-expansion loop, `inherit_field_prov`: an `\and` in `\@author` expands to
+author ink); a case change keeps it (`\uppercase`, the kernel `\MakeUppercase`'s `\lx@latex@changecase` change the
+character, not the provenance). What a stamped token digests to carries it (stomach `invoke_token`: the box or whatsit's
+`fieldProv` property). The document builder (core `Document::absorb`) turns the boxes into runs of field ink: a box of
+field *F* opens a run with `<?ltx-field-mark begin F id?>` where its ink goes (the open text node closed first), the
+next boxes of *F* at that absorb level continue it, and the run closes with `<?ltx-field-mark end F id min max?>` before
+the first box without that field, or when the absorb that opened it ends (a table cell's, an environment body's); what a
+field-ink whatsit absorbs is its ink, whatever its parts' provenance; nothing in math. The marks are processing
+instructions (no node of content to the block built around them; an element mark made a `{center}` a logical-block —
+settled dead end), and a run's two marks carry its id, so they pair by construction, never with another print's (the
+round-1 begin/end pairing took `\StrLeft{\@title}{5}`'s begin and `\StrGobbleLeft{\@title}{6}`'s end and removed the
+paragraph between them — finding 2; guard `field_prov_fragments_kept`). One print split by the structure it is set in
+(article's author `tabular`s: one run per cell, `\and`'s `\end{tabular}…\begin{tabular}`) is joined back: a run that
+goes on with the field's later tokens (`min` past the previous run's `max`) with no ink between the two is one run with
+it (`field_ink_runs`; 1605.00182, 0706.0979, 1004.2125; guard `field_prov_author_tabular_lifted`), while a second print
+starts over and stays a run of its own. The work is gated: none in a conversion that
+stamped no field (`note_field_prov_stamped`), none after the placement settled the ink.
+
+**The lift.** Where the frontmatter is placed — `\lx@frontmatterhere` (the `\maketitle` flush) and the fallback's
+non-abstract branch (the first sectional unit or `\end{document}`) — `lift_marked_field_ink` runs once
+(`lx_field_ink_settled`, `Document::settle_field_ink`: the open run closed, no runs after) and removes each run's ink,
+with the wrappers it empties (not a `labels` one), when:
+- the run is the whole field: its ink reaches the stored value's first and last character (`min`/`max` against the
+  extent), so a slice the document takes of it (`\StrLeft`, `\StrMid`, `\@car`, `\@gobble`) is its own text and stays;
+- the frontmatter displays the field, by the XSLT's rule: no `<ltx:titlepage>` at document level (beside one the title
+  template is skipped and a creator renders nothing, LaTeXML-structure-xhtml.xsl:374-375, :687-692 = Perl :358-359)
+  and a document-level `<ltx:title>`, resp. author `<ltx:creator>` (round 1 also lifted an author print beside a
+  titlepage, leaving the HTML without an author — finding 1; guard `field_prov_author_beside_titlepage_kept`); so a
+  print beside or inside a titlepage is the displayed copy and stays (1304.0681, 1503.03277);
+- every ancestor of both marks is a title-block wrapper (`is_field_ink_wrapper`: para, p, logical and inline blocks,
+  text, emph, a cover tabular) and none is framed: never inside a titlepage, a float, a note, a frontmatter element or a
+  frame (`\fbox{\@title}`), as the dedup (68s review finding 4);
+- the prints fill their lines: the paragraph or table cell around each mark holds nothing but the runs being lifted
+  (all fields judged together, until none drops out: a title and its author on one line go together — finding 5;
+  guard `field_prov_title_author_one_line`) and line breaks (`\centerline`'s, which go with it), so a mention in prose
+  (`This report, \@title, …`, `Title: \thetitle`) keeps its words.
+
+**Open for a ruling:** every whole print in the title block is lifted, so a title the document prints N times in its
+title block shows once (field_mark_uppercase: pdflatex "UPPER TITLE" twice, here the `<h1>` only) — finding 4; the
+alternative is to lift one print per displayed field and keep the others.
+
+Every mark goes with the lift; marks still in the tree at `\end{document}` are removed with their ink kept
+(`settle_field_marks`), and the core finalize drops a stray one (document.rs, `FIELD_MARK_TARGET`). A lifted title
+print sets `lx_title_ink_dedup_done`, so the dedup is left for a copy no provenance explains. Each lift logs
+`Info:frontmatter:field_ink`. `\pdfstringdef` is a `\gdef` here (hyperref_sty.rs) and the `pdftitle=` RDF value the
+unexpanded keyval (Perl's `ToString`).
+
+Cost: no `Token` growth (8 bytes; the `token-locators` origin handle `loc` cannot carry it without making that build
+the default, 12 bytes per token); the stamping, the expansion inheritance and the absorb runs touch only stamped tokens
+and the boxes absorbed before the placement settles the ink. Measured release builds against the round-1 binary
+(1704.08542, 1808.04894, 1812.11661, math0507078): identical XML, peak RSS +0.1-0.5 %; user CPU +1.5-1.7 % over the four
+(two interleaved runs each), and on 1808.04894, four interleaved runs on one core, 8.95 s → 9.14 s with the field alone
+and 9.11 s with the whole change (+2 %) — so the field itself, not the runs, is the measurable part. `perf` is locked on
+this host (`perf_event_paranoid` 4): user time only, no instruction counts.
+
+Not in S1 (stages S2-S5 of the study): the lock is unchanged, no call observer, no mechanism deleted; bindings' own
+`\title`/`\author` (revtex4_support, ams_support, iopart_support, mn2e_support, …) do not stamp; the deposit of a
+refused class `\maketitle` still nulls `\@title`/`\@author`, so a class's title page prints nothing stamped; display
+stays "lift" (the in-place display is S5, after a ruling). A/B: see SYNC_STATUS (fms1). Repros
+sectioning-frontmatter/field_mark_*, field_prov_*; guards `perfect_kernel_batchfms1`.
 
 ### 719. appolb.cls (Acta Physica Polonica B), not in TeX Live and mostly not shipped, is bound over OmniBus
 

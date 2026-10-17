@@ -239,6 +239,18 @@ pub struct Document {
   /// Size of `node_boxes` after the last sweep (lowered when a spill purges
   /// below it); the streaming sweep gate measures growth from it.
   pub last_swept_node_boxes_len: usize,
+  /// The open run of field ink ([`FieldRun`]): what is being absorbed was digested from a frontmatter field's stored
+  /// tokens (their out-of-band provenance, [`Token::prov`](crate::token::Token)).
+  field_run:                     Option<FieldRun>,
+  /// The serial of the last field-ink run opened (each run's two marks carry it).
+  field_run_serial:              u32,
+  /// The nesting of [`Document::absorb`] calls while field ink is being marked (a run closes at the level it opened).
+  absorb_level:                  u32,
+  /// How many field-ink whatsits are being absorbed around the current point: what they absorb is their ink.
+  field_inherit:                 u32,
+  /// Set once the frontmatter placement settled the field ink (latexml_engine `lift_marked_field_ink`): no more
+  /// field marks after it.
+  pub field_ink_settled:         bool,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -255,6 +267,39 @@ pub fn spilled_segment_count() -> usize { SPILLED_SEGMENTS.get() }
 /// Reset the spill probe (the streaming driver calls this at conversion
 /// start; eager conversions never touch it).
 pub fn reset_spilled_segment_count() { SPILLED_SEGMENTS.set(0); }
+
+/// The target of the processing instructions marking a run of a frontmatter field's ink ([`FieldRun`]):
+/// construction-time scaffolding, never in the output (the engine's frontmatter placement removes them; the finalize
+/// drops a stray one).
+pub const FIELD_MARK_TARGET: &str = "ltx-field-mark";
+
+/// Has this conversion stamped any token with a field provenance (latexml_engine `\lx@field@mark`)? Only a gate:
+/// while false, [`Document::absorb`] does no field-ink work at all. Cleared by `reset_thread_engine`; a stale `true`
+/// costs time, never output (a box carries its field in its own `fieldProv` property).
+#[thread_local]
+static FIELD_PROV_STAMPED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+/// Note that a field's stored tokens now carry their provenance ([`FIELD_PROV_STAMPED`]).
+pub fn note_field_prov_stamped() { FIELD_PROV_STAMPED.set(true); }
+/// Clear the [`FIELD_PROV_STAMPED`] gate (conversion start).
+pub fn reset_field_prov_stamped() { FIELD_PROV_STAMPED.set(false); }
+
+/// The box property holding the field provenance of the token a box or whatsit was digested from (the stomach sets
+/// it, `invoke_token`; [`Token::prov`](crate::token::Token)).
+pub const FIELD_PROV_PROPERTY: &str = "fieldProv";
+
+/// A run of one frontmatter field's ink being absorbed: boxes digested from that field's stored tokens, one after the
+/// other at one absorb level. It opens with `<?ltx-field-mark begin <field> <id>?>` where its first box goes and closes
+/// with `<?ltx-field-mark end <field> <id> <min> <max>?>` after its last (`min`/`max`: the lowest and highest position
+/// in the stored value its boxes came from, so the engine can tell a whole print from a fragment). The two marks of a
+/// run carry its id: they pair by construction, never with another print's (OXIDIZED_DESIGN #715).
+#[derive(Debug, Clone, Copy)]
+struct FieldRun {
+  field: u16,
+  id:    u32,
+  level: u32,
+  min:   u16,
+  max:   u16,
+}
 
 /// Element names whose closed instances may be spilled from ROOT level.
 /// Leading non-sectional root children (title, creators, abstract, resources)
@@ -426,6 +471,11 @@ impl Document {
       fragment_parent_qname:       None,
       defer_root_after_open:       false,
       last_swept_node_boxes_len:   0,
+      field_run:                   None,
+      field_run_serial:            0,
+      absorb_level:                0,
+      field_inherit:               0,
+      field_ink_settled:           false,
     }
   }
 
@@ -827,15 +877,22 @@ impl Document {
           // abstract above its titlepage. One `ends_with` per child on the common
           // no-scrap path (this is the streaming hot path — see the
           // `get_attributes` note above). `_lxfragment` is not one.
+          // The engine's field marks (processing instructions, [`FIELD_MARK_TARGET`]) are scaffolding too.
           let scraps: Vec<Node> = current
             .get_child_nodes()
             .into_iter()
-            .filter(|c| {
-              c.get_type() == Some(NodeType::ElementNode) && c.get_name().ends_with("_Capture_")
+            .filter(|c| match c.get_type() {
+              Some(NodeType::ElementNode) => c.get_name().ends_with("_Capture_"),
+              Some(NodeType::PiNode) => c.get_name() == FIELD_MARK_TARGET,
+              _ => false,
             })
             .collect();
           for scrap in scraps {
-            if scrap.get_first_element_child().is_some() || !scrap.get_content().trim().is_empty() {
+            if scrap.get_type() == Some(NodeType::PiNode) {
+              self.remove_node(scrap);
+            } else if scrap.get_first_element_child().is_some()
+              || !scrap.get_content().trim().is_empty()
+            {
               self.unwrap_nodes(scrap)?;
             } else {
               self.remove_node(scrap);
@@ -984,6 +1041,150 @@ impl Document {
   /// which will be inserted according to whatever
   /// font, mode, etc, are in %props.
   pub fn absorb(&mut self, object: &Digested, props_opt: Option<SymHashMap<Stored>>) -> Result<()> {
+    if !self.field_marking_live() {
+      return self.absorb_boxes(object, props_opt);
+    }
+    self.absorb_level += 1;
+    let result = self.absorb_boxes(object, props_opt);
+    // a run of field ink ends with the absorb that opened it (a table cell's, an environment body's)
+    if result.is_ok()
+      && self.field_inherit == 0
+      && self.field_run.is_some_and(|r| r.level >= self.absorb_level)
+    {
+      self.close_field_run()?;
+    }
+    self.absorb_level -= 1;
+    result
+  }
+
+  /// Is field ink being marked ([`FieldRun`])? Not once the frontmatter placement settled it, not in a conversion
+  /// that stamped no field.
+  #[inline]
+  fn field_marking_live(&self) -> bool { FIELD_PROV_STAMPED.get() && !self.field_ink_settled }
+
+  /// Before absorbing `object`: open, continue or close the run of field ink ([`FieldRun`]) by the field provenance
+  /// the box was digested with ([`FIELD_PROV_PROPERTY`]). Returns whether `object` is a field-ink whatsit whose own
+  /// absorption is its ink (the caller counts it in `field_inherit` meanwhile). Nothing in math: a formula is one box of
+  /// the text around it.
+  fn field_ink_before(&mut self, object: &Digested) -> Result<bool> {
+    if !self.field_marking_live() {
+      return Ok(false);
+    }
+    // `fieldProv` ([`FIELD_PROV_PROPERTY`]), by its cached symbol and without a copy: this runs for every box
+    let prov = object.with_properties(|props| match props.get_sym(pin!("fieldProv")) {
+      Some(Stored::Int(p)) => *p as u16,
+      _ => 0,
+    });
+    let (field, pos) = (
+      crate::token::field_prov_field(prov),
+      crate::token::field_prov_pos(prov),
+    );
+    if self.field_inherit > 0 {
+      // inside a field-ink whatsit: its ink, whatever provenance its parts have (a formula's characters count for the
+      // run's extent: `Szabo$^3$` ends with the `3`)
+      if prov != 0
+        && let Some(run) = self.field_run.as_mut()
+        && run.field == field
+      {
+        run.min = run.min.min(pos);
+        run.max = run.max.max(pos);
+      }
+      return Ok(false);
+    }
+    // (the common case first: a box of no field, no run open — nothing to do)
+    if prov == 0 {
+      if self.field_run.is_some() && !self.in_math_node() {
+        self.close_field_run()?;
+      }
+      return Ok(false);
+    }
+    if self.in_math_node() {
+      return Ok(false);
+    }
+    match self.field_run.as_mut() {
+      Some(run) if run.field == field => {
+        run.min = run.min.min(pos);
+        run.max = run.max.max(pos);
+      },
+      _ => {
+        if self.field_run.is_some() {
+          self.close_field_run()?;
+        }
+        self.open_field_run(field, pos)?;
+      },
+    }
+    Ok(!matches!(object.data(), DigestedData::TBox(_)))
+  }
+
+  /// Is the insertion point in math (a formula's tokens, an `XMath`)?
+  fn in_math_node(&self) -> bool {
+    let element = if self.node.get_type() == Some(NodeType::TextNode) {
+      self.node.get_parent()
+    } else {
+      Some(self.node.clone())
+    };
+    element.is_some_and(|e| {
+      e.get_type() == Some(NodeType::ElementNode)
+        && arena::with(get_node_qname(&e), |q| {
+          q.starts_with("ltx:XM") || q == "ltx:Math"
+        })
+    })
+  }
+
+  /// Append a field mark (a [`FIELD_MARK_TARGET`] processing instruction) at the insertion point, the open text node
+  /// closed first, so the ink on each side of it is in its own node. Returns false where no element takes it.
+  fn append_field_mark(&mut self, content: &str) -> Result<bool> {
+    let mut element = self.close_text_internal()?;
+    if element.get_type() != Some(NodeType::ElementNode) {
+      return Ok(false);
+    }
+    let Ok(mut mark) = self
+      .document
+      .create_processing_instruction(FIELD_MARK_TARGET, content)
+    else {
+      return Ok(false);
+    };
+    element.add_child(&mut mark)?;
+    Ok(true)
+  }
+
+  fn open_field_run(&mut self, field: u16, pos: u16) -> Result<()> {
+    let id = self.field_run_serial + 1;
+    if self.append_field_mark(&s!("begin {field} {id}"))? {
+      self.field_run_serial = id;
+      self.field_run = Some(FieldRun {
+        field,
+        id,
+        level: self.absorb_level,
+        min: pos,
+        max: pos,
+      });
+    }
+    Ok(())
+  }
+
+  fn close_field_run(&mut self) -> Result<()> {
+    if let Some(run) = self.field_run.take() {
+      let FieldRun { field, id, min, max, .. } = run;
+      self.append_field_mark(&s!("end {field} {id} {min} {max}"))?;
+    }
+    Ok(())
+  }
+
+  /// Close the open run of field ink, if any, and mark no more ([`FieldRun`]): the frontmatter placement settled it.
+  pub fn settle_field_ink(&mut self) -> Result<()> {
+    if self.field_run.is_some() {
+      self.close_field_run()?;
+    }
+    self.field_ink_settled = true;
+    Ok(())
+  }
+
+  fn absorb_boxes(
+    &mut self,
+    object: &Digested,
+    props_opt: Option<SymHashMap<Stored>>,
+  ) -> Result<()> {
     use DigestedData::*;
     let props = props_opt.unwrap_or_default();
     let mut boxes = vec![Cow::Borrowed(object)];
@@ -1012,6 +1213,7 @@ impl Document {
         },
         // A Proper Box or Whatsit? Absorb it.
         TBox(digested) => {
+          self.field_ink_before(&front_box)?;
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           digested.borrow().be_absorbed(self)?;
@@ -1020,9 +1222,13 @@ impl Document {
           self.expire_box_to_absorb();
         },
         Whatsit(digested) => {
+          let field_ink = self.field_ink_before(&front_box)?;
+          self.field_inherit += u32::from(field_ink);
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
-          digested.borrow().be_absorbed(self)?;
+          let absorbed = digested.borrow().be_absorbed(self);
+          self.field_inherit -= u32::from(field_ink);
+          absorbed?;
           self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },

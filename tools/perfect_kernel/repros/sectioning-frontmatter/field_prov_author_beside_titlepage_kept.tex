@@ -1,0 +1,18 @@
+% The document's own print of `\@author` after a `{titlepage}` cover stays: beside a top-level `ltx:titlepage` the
+% XSLT renders no creator (LaTeXML-structure-xhtml.xsl:374-375 skips the title template, :687 renders a creator as
+% nothing), so the print is the only author on the page (fms1 review finding 1).
+% status:  RED (fms1 round 1: lifted, the HTML had no author) → GREEN (fms1 round 2).
+% oracle:  pdflatex 0 errors: page 1 "Technical Report 7"; page 2 "Zelda Writer", "1 Intro Text."
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the centered "Zelda Writer" kept.
+\documentclass{article}
+\makeatletter
+\title{Cover Title}
+\author{Zelda Writer}
+\begin{document}
+\begin{titlepage}
+\centering Technical Report 7\par
+\end{titlepage}
+\begin{center}{\Large \@author\par}\end{center}
+\section{Intro}
+Text.
+\end{document}

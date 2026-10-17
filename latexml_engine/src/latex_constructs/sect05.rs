@@ -923,7 +923,11 @@ pub(crate) fn load() -> Result<()> {
     // Guard: `perfect_kernel_batch54::frontmatter_copies_the_halved_macro`.
     // 65a: a call the document body sealed off goes to the class's own `\title` (`sealed_class_call`); 68t: a call
     // inside the document's `{titlepage}` also runs the class's own printing `\title` there (`titlepage_class_call`).
-    r"\lx@sealed@class@call{title}{#1}{#2}{\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}\expandafter\lx@title@after\expandafter{\@title}}",
+    // S1 (frontmatter model M3): once the frontmatter has its copy, the stored tokens are stamped with an out-of-band
+    // field provenance (`\lx@field@mark`, base_utilities.rs; no token added), so a print of `\@title` (or of titling's
+    // `\thetitle`, set by the after-slot from it) is known for the title's ink (P2 witnesses 1605.00182, 2402.14614, 1603.09631, 1503.06457;
+    // OXIDIZED_DESIGN #715). `\author` below does the same for `\@author`.
+    r"\lx@sealed@class@call{title}{#1}{#2}{\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}\lx@field@mark\gdef\@title{title}\expandafter\lx@title@after\expandafter{\@title}}",
     locked => true);
   // The class's own call (`sealed_class_call`) when the document body sealed this one off; inside the document's
   // `{titlepage}`, the class's own printing call and then the kernel's (`titlepage_class_call`); else the kernel's.
@@ -1131,7 +1135,7 @@ pub(crate) fn load() -> Result<()> {
     }
   });
   DefMacro!("\\author[]{}",
-    r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\expandafter\lx@author@after\expandafter{\@author}\lx@author@handed\lx@author@trailing}",
+    r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@field@mark\def\@author{author}\expandafter\lx@author@after\expandafter{\@author}\lx@author@handed\lx@author@trailing}",
     locked => true);
   // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
   // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically

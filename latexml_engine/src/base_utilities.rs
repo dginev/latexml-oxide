@@ -9,7 +9,7 @@ use latexml_core::{
   common::{
     arena::SymHashMap,
     cleaners::clean_label,
-    xml::{content_nodes, element_nodes, is_descendant_or_self},
+    xml::{content_nodes, element_nodes},
   },
   document::tag::{RawFrontmatter, TagAttrs, TagContent, TagData},
 };
@@ -1004,6 +1004,62 @@ LoadDefinitions!({
     if !lookup_bool("frontmatter_done") && document.get_element().is_some() {
       document.insert_element("ltx:_Frontmatter_Capture_", Vec::new(), None)?;
     }
+  });
+  // Field provenance (frontmatter model M3, stage S1): `\lx@field@mark<prefix><store>{<field>}` — the store, a macro
+  // without parameters, redefined (`<prefix>` `\def` or `\gdef`, the store's own scope at the setter) with the same
+  // tokens, each now carrying out-of-band provenance "token <i> of field <field>" (`Token::prov`). Nothing is added to
+  // the store: every token operation sees exactly the tokens pdflatex sees (`\ifx\@title\same`, `\equal`, xstring's
+  // `\StrLen`/`\StrLeft`, `\pdfstrcmp`, `\@gobble`, `\@car`, `\csname`, `\write`), since token equality and every
+  // character form ignore the provenance. What expands from a stamped token inherits it and what is digested from
+  // one carries it (`fieldProv`), so the document's own print of the store is known for the field's ink by
+  // construction (core `Document::absorb`'s field runs; [`lift_marked_field_ink`]). The kernel `\title` and `\author`
+  // (sect05.rs) call it after the frontmatter took its copy. An empty or blank value is left as it is; anything but
+  // a parameterless macro is left alone. OXIDIZED_DESIGN #715.
+  DefMacro!("\\lx@field@mark Token DefToken {}", sub[(prefix, store, field)] {
+    let field = field.to_string();
+    let Some(field_id) = field_id(field.trim()) else {
+      return Ok(Tokens::default());
+    };
+    let Some(defn) = lookup_definition(&store)? else {
+      return Ok(Tokens::default());
+    };
+    if defn.get_parameters().is_some_and(|p| !p.get_parameters().is_empty()) {
+      return Ok(Tokens::default());
+    }
+    let Some(ExpansionBody::Tokens(value)) = defn.get_expansion() else {
+      return Ok(Tokens::default());
+    };
+    if value.unlist_ref().iter().all(|t| t.get_catcode() == Catcode::SPACE) {
+      return Ok(Tokens::default());
+    }
+    // the field's character extent: the positions of its first and last character token, which a whole print covers
+    let chars: Vec<usize> = value
+      .unlist_ref()
+      .iter()
+      .enumerate()
+      .filter(|(_, t)| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+      .map(|(i, _)| i)
+      .collect();
+    let (Some(first), Some(last)) = (chars.first(), chars.last()) else {
+      return Ok(Tokens::default());
+    };
+    assign_value(
+      &s!("lx_field_extent_{field_id}"),
+      s!("{} {}", field_prov_pos(field_prov(field_id, *first)), field_prov_pos(field_prov(field_id, *last))),
+      Some(Scope::Global),
+    );
+    document::note_field_prov_stamped();
+    let mut out = vec![prefix, store, T_BEGIN!()];
+    for (i, t) in value.unlist_ref().iter().enumerate() {
+      let stamped = Token { prov: field_prov(field_id, i), ..*t };
+      // A `#` in the value is text here, not a parameter of the definition (as `\lx@deposit@field`).
+      if t.get_catcode() == Catcode::PARAM {
+        out.push(stamped);
+      }
+      out.push(stamped);
+    }
+    out.push(T_END!());
+    Ok(Tokens::new(out))
   });
   DefMacro!(
     "\\lx@add@abstract[]{}",
@@ -2349,6 +2405,10 @@ LoadDefinitions!({
     // head-placed frontmatter (#262; Perl's current-point placement stranded the
     // title — amsldoc/tkz-doc/tuda-ci/tzplot and the logo-cover controls).
     place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter)?;
+    // What the document printed of the marked fields before its `\maketitle` is their ink (`\lx@field@mark`).
+    if lift_marked_field_ink(doc)? {
+      assign_value("lx_title_ink_dedup_done", true, Some(Scope::Global));
+    }
   },
   after_digest => {
     // A `\maketitle`'s flush: it may replace what the fallback flushed provisionally ([`frontmatter_sealed`]).
@@ -2411,6 +2471,10 @@ LoadDefinitions!({
       place_frontmatter(document, first_flush, FrontmatterAnchor::LeadingFrontmatter)?;
     } else {
       place_frontmatter(document, false, FrontmatterAnchor::Top)?;
+      // The marked print of a field first (`\lx@field@mark`); the text match only for a copy no mark explains.
+      if lift_marked_field_ink(document)? {
+        assign_value("lx_title_ink_dedup_done", true, Some(Scope::Global));
+      }
       maybe_dedup_leading_title_ink(document)?;
     }
   },
@@ -5169,8 +5233,6 @@ pub fn drop_cover_title_ink(document: &mut Document, scope: &Node) {
   if marks.is_empty() {
     return;
   }
-  // Everything is decided before anything is removed: `remove_node` frees the subtree it takes out
-  // (`discard_subtree`), so no handle into it may be used afterwards.
   let mut doomed: Vec<Node> = Vec::new();
   let mut chains: Vec<Vec<Node>> = Vec::new();
   let mut open: Option<Node> = None;
@@ -5189,21 +5251,46 @@ pub fn drop_cover_title_ink(document: &mut Document, scope: &Node) {
     }
   }
   doomed.extend(open);
+  remove_marked_ink(document, doomed, chains, |_| true);
+}
+
+/// Remove the `doomed` nodes (marks and the ink between them), then the marks' ancestors (`chains`) the removal leaves
+/// with no content (a `center`'s paragraph holding only the print), innermost first, until none more empties — each a
+/// wrapper `prunable` admits. Everything is decided before anything is removed: `remove_node` frees the subtree it
+/// takes out (`discard_subtree`), so no handle into it may be used afterwards.
+fn remove_marked_ink(
+  document: &mut Document,
+  doomed: Vec<Node>,
+  chains: Vec<Vec<Node>>,
+  prunable: impl Fn(&Node) -> bool,
+) {
+  // the nodes that go, by identity (`to_hashable`: a `Node` is no hash key, its handle is mutable)
+  let mut gone: HashSet<usize> = doomed.iter().map(Node::to_hashable).collect();
+  // is `node` or one of its ancestors going?
+  let goes_with = |node: &Node, gone: &HashSet<usize>| {
+    let mut n = Some(node.clone());
+    while let Some(cur) = n {
+      if gone.contains(&cur.to_hashable()) {
+        return true;
+      }
+      n = cur.get_parent();
+    }
+    false
+  };
   // an ancestor of a mark inside another range goes with that range
-  for chain in &mut chains {
-    chain.retain(|node| !doomed.iter().any(|d| is_descendant_or_self(node, d)));
+  let mut wrappers: Vec<Node> = Vec::new();
+  for node in chains.into_iter().flatten() {
+    if !goes_with(&node, &gone) && prunable(&node) && !wrappers.contains(&node) {
+      wrappers.push(node);
+    }
   }
-  // the marks' ancestors left with no content once the doomed nodes are out (a `center`'s paragraph holding only the
-  // print), innermost first, until none more empties
-  let mut gone: Vec<Node> = doomed;
-  let wrappers: Vec<Node> = chains.into_iter().flatten().collect();
   loop {
     let emptied: Vec<Node> = wrappers
       .iter()
-      .filter(|w| !gone.contains(w))
+      .filter(|w| !gone.contains(&w.to_hashable()))
       .filter(|w| {
         w.get_child_nodes().iter().all(|c| {
-          gone.contains(c)
+          gone.contains(&c.to_hashable())
             || (c.get_type() != Some(NodeType::ElementNode) && c.get_content().trim().is_empty())
         })
       })
@@ -5212,14 +5299,18 @@ pub fn drop_cover_title_ink(document: &mut Document, scope: &Node) {
     if emptied.is_empty() {
       break;
     }
-    gone.extend(emptied);
+    gone.extend(emptied.iter().map(Node::to_hashable));
   }
-  // each removed whole, once: the outermost of the nodes that go
-  let victims: Vec<Node> = gone
-    .iter()
-    .filter(|n| !gone.iter().any(|d| d != *n && is_descendant_or_self(n, d)))
-    .cloned()
-    .collect();
+  // each removed whole, once: the outermost of the nodes that go (no ancestor of it goes), in a stable order
+  let mut victims: Vec<Node> = Vec::new();
+  for n in doomed.iter().chain(wrappers.iter()) {
+    if gone.contains(&n.to_hashable())
+      && !n.get_parent().is_some_and(|p| goes_with(&p, &gone))
+      && !victims.contains(n)
+    {
+      victims.push(n.clone());
+    }
+  }
   for victim in victims {
     document.remove_node(victim);
   }
@@ -5304,6 +5395,318 @@ pub fn settle_cover_title_ink(document: &mut Document) {
     }
   } else {
     drop_cover_title_ink(document, &root);
+  }
+}
+
+/// The field runs' marks (core `Document::absorb`, [`document::FIELD_MARK_TARGET`]): processing instructions
+/// `<?ltx-field-mark begin <field> <id>?>` … `<?ltx-field-mark end <field> <id> <min> <max>?>` around a run of ink
+/// digested from a frontmatter field's stored tokens (their out-of-band provenance, `\lx@field@mark`). Not elements: a
+/// processing instruction is no node of content (`content_nodes`, text content), so no block is built around it.
+/// Never in the output: removed by [`lift_marked_field_ink`] and [`settle_field_marks`], and by the core finalize.
+pub const FIELD_MARK_TARGET: &str = document::FIELD_MARK_TARGET;
+/// The fields the kernel setters stamp, by their provenance id (`Token::prov`'s field).
+const FIELD_MARK_FIELDS: &[(&str, u16)] = &[("title", 1), ("author", 2)];
+
+/// The provenance id of a stamped field (`title`, `author`).
+fn field_id(field: &str) -> Option<u16> {
+  FIELD_MARK_FIELDS
+    .iter()
+    .find(|(name, _)| *name == field)
+    .map(|(_, id)| *id)
+}
+
+/// One run of a field's ink, from its two marks ([`FIELD_MARK_TARGET`]).
+struct FieldInkRun {
+  field: u16,
+  begin: Node,
+  end:   Node,
+  /// the lowest and highest position in the field's stored value the run's ink came from
+  min:   u16,
+  max:   u16,
+}
+
+/// The field runs inside `scope`, each with its own two marks (paired by the run's id, so never with another print's),
+/// in document order of their begin marks; and every mark node.
+fn field_ink_runs(document: &mut Document, scope: &Node) -> (Vec<FieldInkRun>, Vec<Node>) {
+  let marks = field_marks(document, scope);
+  let mut begins: Vec<(u32, u16, usize)> = Vec::new();
+  let mut runs: Vec<(usize, FieldInkRun)> = Vec::new();
+  for (at, mark) in marks.iter().enumerate() {
+    let content = mark.get_content();
+    let parts: Vec<&str> = content.split_whitespace().collect();
+    match parts.as_slice() {
+      ["begin", field, id] => {
+        if let (Ok(field), Ok(id)) = (field.parse(), id.parse()) {
+          begins.push((id, field, at));
+        }
+      },
+      ["end", field, id, min, max] => {
+        let (Ok(field), Ok(id), Ok(min), Ok(max)) = (
+          field.parse::<u16>(),
+          id.parse::<u32>(),
+          min.parse(),
+          max.parse(),
+        ) else {
+          continue;
+        };
+        if let Some(i) = begins
+          .iter()
+          .position(|(bid, bfield, _)| *bid == id && *bfield == field)
+        {
+          let (_, _, begin_at) = begins.swap_remove(i);
+          runs.push((begin_at, FieldInkRun {
+            field,
+            begin: marks[begin_at].clone(),
+            end: mark.clone(),
+            min,
+            max,
+          }));
+        }
+      },
+      _ => {},
+    }
+  }
+  runs.sort_by_key(|(at, _)| *at);
+  // One print split by the structure it is set in (a cover `tabular`'s cells, `\and`'s `\end{tabular}…
+  // \begin{tabular}`): a run of a field that goes on with the field's later tokens, with no ink between, is one run
+  // with the one before (a second print starts over: two runs).
+  let mut merged: Vec<FieldInkRun> = Vec::new();
+  for (_, run) in runs {
+    if let Some(last) = merged.last_mut()
+      && last.field == run.field
+      && run.min > last.max
+      && marked_range(scope, &last.end, &run.begin)
+        .iter()
+        .all(is_inkless)
+    {
+      last.end = run.end;
+      last.min = last.min.min(run.min);
+      last.max = last.max.max(run.max);
+      continue;
+    }
+    merged.push(run);
+  }
+  (merged, marks)
+}
+
+/// Does `node` hold no ink: whitespace, a mark, a line break, or elements holding only those?
+fn is_inkless(node: &Node) -> bool {
+  match node.get_type() {
+    Some(NodeType::ElementNode) => {
+      document::get_node_qname(node) == pin_static("ltx:break")
+        || (node.get_first_child().is_some() && node.get_child_nodes().iter().all(is_inkless))
+    },
+    Some(NodeType::TextNode) => node.get_content().trim().is_empty(),
+    _ => true,
+  }
+}
+
+/// The field marks inside `scope`, in document order.
+fn field_marks(document: &mut Document, scope: &Node) -> Vec<Node> {
+  document.findnodes(
+    &s!("descendant::processing-instruction('{FIELD_MARK_TARGET}')"),
+    Some(scope),
+  )
+}
+
+/// The elements a printed field's ink may sit in to be the document's title block: paragraphs and their wrappers
+/// (`\begin{center}`, a cover minipage, a font group, `\emph`), and a cover's `tabular` (`\begin{tabular}[t]{c}\@author
+/// \end{tabular}`). Not a float, a note, a list, a theorem, a sectional unit, a `{titlepage}` or a frontmatter element:
+/// what is set there is the author's content (or the frontmatter itself) even when it prints the field.
+fn is_field_ink_wrapper(q: SymStr) -> bool {
+  with(q, |q| {
+    matches!(
+      q,
+      "ltx:para"
+        | "ltx:p"
+        | "ltx:logical-block"
+        | "ltx:inline-logical-block"
+        | "ltx:block"
+        | "ltx:inline-block"
+        | "ltx:inline-para"
+        | "ltx:text"
+        | "ltx:emph"
+        | "ltx:tabular"
+        | "ltx:thead"
+        | "ltx:tbody"
+        | "ltx:tfoot"
+        | "ltx:tr"
+        | "ltx:td"
+    )
+  })
+}
+
+/// Does `node` hold content besides the nodes in `gone`, empty internal marks (`_Capture_`) and line breaks? A
+/// processing instruction (a field mark) is none.
+fn holds_content_besides(node: &Node, gone: &[Node]) -> bool {
+  node.get_child_nodes().iter().any(|c| {
+    if gone.contains(c) {
+      return false;
+    }
+    match c.get_type() {
+      Some(NodeType::ElementNode) => {
+        if c.get_name().ends_with("_Capture_") && c.get_first_element_child().is_none() {
+          return false;
+        }
+        // a line's break (`\centerline`'s, a `\\` after the print) ends the line, it holds nothing
+        if document::get_node_qname(c) == pin_static("ltx:break") {
+          return false;
+        }
+        // an element with no children is content of its own (a `<break/>`, a graphic, a rule)
+        c.get_first_child().is_none() || holds_content_besides(c, gone)
+      },
+      Some(NodeType::TextNode) => !c.get_content().trim().is_empty(),
+      _ => false,
+    }
+  })
+}
+
+/// The printed ink of each field the frontmatter displays, removed — the field's print by construction: the ink
+/// digested from the field's stored tokens (their out-of-band provenance, `\lx@field@mark`; the title-print study's
+/// rule R3, frontmatter model M3 stage S1, OXIDIZED_DESIGN #715), one run of it ([`field_ink_runs`]) at a time, with the
+/// title-block wrappers it leaves empty (not a `\label` target, which is the author's own). Called once, where the
+/// frontmatter is placed (the `\maketitle` flush `\lx@frontmatterhere`, the fallback at the first sectional unit or
+/// `\end{document}`), so only what was printed before it is the field's ink; every mark goes, and later prints are not
+/// marked (`lx_field_ink_settled`, `Document::settle_field_ink`). A run is lifted only:
+/// - when it is the whole field: its ink reaches the first and the last character of the stored value
+///   (`lx_field_extent_<id>`), so a fragment the document takes of it (`\StrLeft{\@title}{5}`, `\@car`, `\@gobble`)
+///   stays;
+/// - where the frontmatter displays the field: a document-level `<ltx:title>`, or a document-level author
+///   `<ltx:creator>`, with no `<ltx:titlepage>` beside it (beside one the XSLT shows neither, LaTeXML-structure-xhtml.xsl
+///   :374-375 = Perl :358-359 and :687-692, and the print is the displayed copy: 1304.0681, 1503.03277);
+/// - in the document's title block ([`is_field_ink_wrapper`] for every ancestor of both marks): never inside a
+///   `{titlepage}`, a float, a note, a frontmatter element or a frame;
+/// - when the fields' prints fill their lines: the paragraph or table cell around each mark holds nothing but lifted
+///   ink, so a mention in prose (`Title: \thetitle`) keeps its words and a title and author set on one line go
+///   together.
+///
+/// Every whole print in the title block is lifted, a title the document prints twice too (each is the field shown;
+/// whether to lift one print per displayed field is open, OXIDIZED_DESIGN #715).
+///
+/// Returns whether a title print was lifted: the text-matching dedup ([`maybe_dedup_leading_title_ink`]) then has
+/// nothing left to explain. P2 witnesses: 1605.00182, 2402.14614, 1603.09631 (lrec `\maketitleabstract`), 1503.06457.
+pub fn lift_marked_field_ink(document: &mut Document) -> Result<bool> {
+  if lookup_bool("lx_field_ink_settled") {
+    return Ok(false);
+  }
+  assign_value("lx_field_ink_settled", true, Some(Scope::Global));
+  document.settle_field_ink()?;
+  let Some(root) = document.get_document().get_root_element() else {
+    return Ok(false);
+  };
+  let (runs, marks) = field_ink_runs(document, &root);
+  if marks.is_empty() {
+    return Ok(false);
+  }
+  let no_titlepage = document
+    .findnode("/ltx:document/ltx:titlepage", None)
+    .is_none();
+  let title_shown = no_titlepage && document.findnode("/ltx:document/ltx:title", None).is_some();
+  let creators_shown = no_titlepage
+    && document
+      .findnode("/ltx:document/ltx:creator[@role='author']", None)
+      .is_some();
+  // a framed wrapper (`\fbox{\@title}`, a framed cover minipage) is the author's own ink around the print: emptied, it
+  // would leave a frame the PDF does not have (as the dedup, 68s review finding 4)
+  let in_title_block = |mark: &Node| {
+    ancestors_below(mark, &root)
+      .iter()
+      .all(|a| is_field_ink_wrapper(document::get_node_qname(a)) && !a.has_attribute("framed"))
+  };
+  // the line a mark sits in: its nearest paragraph or table cell
+  let line_of = |mark: &Node| {
+    ancestors_below(mark, &root).into_iter().find(|a| {
+      let q = document::get_node_qname(a);
+      q == pin_static("ltx:p") || q == pin_static("ltx:td")
+    })
+  };
+  // the whole prints of a displayed field in the title block, with their ink and their lines
+  let mut candidates: Vec<(&FieldInkRun, Vec<Node>, Vec<Node>)> = Vec::new();
+  for run in &runs {
+    let Some((name, _)) = FIELD_MARK_FIELDS.iter().find(|(_, id)| *id == run.field) else {
+      continue;
+    };
+    let shown = if *name == "title" {
+      title_shown
+    } else {
+      creators_shown
+    };
+    let whole = lookup_string(&s!("lx_field_extent_{}", run.field))
+      .split_once(' ')
+      .and_then(|(first, last)| Some((first.parse::<u16>().ok()?, last.parse::<u16>().ok()?)))
+      .is_some_and(|(first, last)| run.min <= first && run.max >= last);
+    if !shown || !whole || !in_title_block(&run.begin) || !in_title_block(&run.end) {
+      continue;
+    }
+    let range = marked_range(&root, &run.begin, &run.end);
+    if range.is_empty() {
+      continue;
+    }
+    let lines: Vec<Node> = [&run.begin, &run.end]
+      .into_iter()
+      .filter_map(line_of)
+      .collect();
+    candidates.push((run, range, lines));
+  }
+  // the prints that fill their lines with lifted ink alone, all fields together (finding 5: a title and its author on
+  // one line), until no more drop out
+  loop {
+    let gone: Vec<Node> = candidates
+      .iter()
+      .flat_map(|(_, range, _)| range.iter())
+      .chain(marks.iter())
+      .cloned()
+      .collect();
+    let before = candidates.len();
+    candidates.retain(|(_, _, lines)| !lines.iter().any(|line| holds_content_besides(line, &gone)));
+    if candidates.len() == before {
+      break;
+    }
+  }
+  let mut doomed: Vec<Node> = marks.clone();
+  let mut chains: Vec<Vec<Node>> = Vec::new();
+  let mut lifted_title = false;
+  for (run, mut range, lines) in candidates {
+    let name = FIELD_MARK_FIELDS
+      .iter()
+      .find(|(_, id)| *id == run.field)
+      .map_or("", |(name, _)| *name);
+    // the lines' breaks go with the print they end
+    for line in &lines {
+      range.extend(document.findnodes("descendant::ltx:break", Some(line)));
+    }
+    let text = normalize_frontmatter_text(
+      &range
+        .iter()
+        .filter(|n| n.get_type() != Some(NodeType::PiNode))
+        .map(|n| n.get_content())
+        .collect::<Vec<_>>()
+        .join(" "),
+    );
+    Info!(
+      "frontmatter",
+      "field_ink",
+      s!("lifted the printed \\@{name} (\"{text}\"): the frontmatter displays it")
+    );
+    lifted_title |= name == "title";
+    chains.push(ancestors_below(&run.begin, &root));
+    chains.push(ancestors_below(&run.end, &root));
+    doomed.extend(range);
+  }
+  remove_marked_ink(document, doomed, chains, |w| {
+    is_field_ink_wrapper(document::get_node_qname(w)) && !w.has_attribute("labels")
+  });
+  Ok(lifted_title)
+}
+
+/// At `\end{document}`, the field marks still in the tree (made with no placement to settle them, `\lx@field@mark`)
+/// removed; their ink stays.
+pub fn settle_field_marks(document: &mut Document) {
+  let Some(root) = document.get_document().get_root_element() else {
+    return;
+  };
+  for mark in field_marks(document, &root) {
+    document.remove_node(mark);
   }
 }
 
@@ -5727,11 +6130,12 @@ fn normalize_frontmatter_text(s: &str) -> String {
 /// guard `perfect_kernel_batch68s`). Reuses the same detection helpers as the promote path.
 ///
 /// It is the LAST RESORT of the title placement rules (OXIDIZED_DESIGN #146): a text match
-/// where no print event explains the copy. Never in a document with an `<ltx:titlepage>`:
-/// there the XSLT does not display the structured title (LaTeXML-structure-xhtml.xsl, the
-/// `ltx:title` template's `not(parent::*/child::ltx:titlepage)`; Perl's copy :358-359) — the
-/// cover IS the displayed title, and deleting its copy left none (1304.0681, 1503.03277:
-/// no `<h1>`, Perl shows the title once).
+/// where no print event explains the copy — a print of the marked `\@title` is lifted by its marks first
+/// ([`lift_marked_field_ink`], OXIDIZED_DESIGN #715), and then this does not run (`lx_title_ink_dedup_done`).
+/// Never in a document with an `<ltx:titlepage>`: there the XSLT does not display the structured
+/// title (LaTeXML-structure-xhtml.xsl, the `ltx:title` template's
+/// `not(parent::*/child::ltx:titlepage)`; Perl's copy :358-359) — the cover IS the displayed title,
+/// and deleting its copy left none (1304.0681, 1503.03277: no `<h1>`, Perl shows the title once).
 fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
   // Needs a structured document title to prioritize over.
   let Some(title) = document.findnode("/ltx:document/ltx:title", None) else {
@@ -14125,7 +14529,11 @@ fn either_case_token(token: Token, is_upper: bool) -> Token {
     result.push(thischar.unwrap());
   }
   if token.with_str(|initial_str| initial_str != result) {
-    Token::new(result, token.get_catcode())
+    // the case changes the character, not the token's out-of-band field provenance (`Token::prov`)
+    Token {
+      prov: token.prov,
+      ..Token::new(result, token.get_catcode())
+    }
   } else {
     token
   }

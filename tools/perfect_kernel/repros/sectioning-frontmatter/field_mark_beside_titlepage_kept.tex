@@ -1,0 +1,19 @@
+% A marked title print after a titlepage that does not show the title: the structured title is hidden beside the
+% titlepage (LaTeXML-structure-xhtml.xsl:374-375), so the print is the displayed copy and stays (as the dedup's rule,
+% perfect_kernel_batch68s::title_ink_dedup_beside_titlepage). Its `{center}` keeps the shape it has without marks: a
+% mark is a processing instruction, no node of content to the block built around it (an empty-element mark made it an
+% `ltx:logical-block`).
+% status:  GREEN at 67int19b → GREEN (fms1), guarding the rule and the shape.
+% oracle:  pdflatex 0 errors: page 1 "Technical Report 7"; page 2 "Beside Store Title", "1 Intro Text."
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the centered line as a `para` of its own.
+\documentclass{article}
+\makeatletter
+\title{Beside Store Title}
+\begin{document}
+\begin{titlepage}
+\centering Technical Report 7\par
+\end{titlepage}
+\begin{center}{\huge \@title\par}\end{center}
+\section{Intro}
+Text.
+\end{document}

@@ -566,7 +566,7 @@ pub(crate) const EB_BUDGET: u32 = 256;
 impl Digested {
   /// Set a property unless the box is borrowed — being absorbed (`Document::absorb` holds it while its constructor
   /// runs); false then. Perl's store always lands (Box.pm:168-171).
-  fn try_set_property<T: Into<Stored>>(&self, key: &str, value: T) -> bool {
+  pub(crate) fn try_set_property<T: Into<Stored>>(&self, key: &str, value: T) -> bool {
     use DigestedData::*;
     match *self.0 {
       // TODO: This is only possible if we have interior mutability for *ALL* Digested variants

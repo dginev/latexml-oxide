@@ -290,6 +290,12 @@ pub struct Token {
   pub text: SymStr,
   /// a TeX catcode
   pub code: Catcode,
+  /// Out-of-band field provenance ([`FieldProv`], `0` = none): the frontmatter field whose stored value this token
+  /// is a token of (the kernel `\title`/`\author` stamp their store, latexml_engine `\lx@field@mark`), so the
+  /// ink digested from it is known for that field's print. Not part of TeX's token: **excluded from `PartialEq`**
+  /// (`\ifx`, `\meaning`, `\pdfstrcmp`, xstring compare as pdflatex does), never written, never dumped. It sits in
+  /// what was the struct's padding: `Token` stays 8 bytes (`token_size_invariant`). OXIDIZED_DESIGN #715.
+  pub prov: u16,
   /// Origin handle into the per-conversion token-origin side arena (1-based;
   /// `0` = no recorded origin). Present only under the `token-locators` feature
   /// (the opt-in source-map precision build); `Token` stays 8 bytes otherwise.
@@ -375,6 +381,7 @@ pub fn noexpand_family(shadowed: &Token) -> Token {
   Token {
     text: arena::pin(text),
     code: Catcode::CS,
+    prov: 0,
     #[cfg(feature = "token-locators")]
     loc: 0,
   }
@@ -390,6 +397,7 @@ pub fn noexpand_family(shadowed: &Token) -> Token {
 pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("{"),
   code: Catcode::BEGIN,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -398,6 +406,7 @@ pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("}"),
   code: Catcode::END,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -406,6 +415,7 @@ pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("$"),
   code: Catcode::MATH,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -414,6 +424,7 @@ pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("&"),
   code: Catcode::ALIGN,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -422,6 +433,7 @@ pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("#"),
   code: Catcode::PARAM,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -430,6 +442,7 @@ pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("^"),
   code: Catcode::SUPER,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -438,6 +451,7 @@ pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("_"),
   code: Catcode::SUB,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -446,6 +460,7 @@ pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static(" "),
   code: Catcode::SPACE,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -454,6 +469,7 @@ pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\n"),
   code: Catcode::SPACE,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -462,6 +478,7 @@ pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\relax"),
   code: Catcode::CS,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -470,6 +487,7 @@ pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\expandafter"),
   code: Catcode::CS,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -478,6 +496,7 @@ pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\endcsname"),
   code: Catcode::CS,
+  prov: 0,
   #[cfg(feature = "token-locators")]
   loc: 0,
 });
@@ -531,7 +550,7 @@ macro_rules! T_SUB(() => { *$crate::token::TOKEN_SUB });
 macro_rules! T_SPACE(() => { *$crate::token::TOKEN_SPACE };
 ($text:literal) => {
   Token { text: $crate::pin!($text), code: Catcode::SPACE,
-      #[cfg(feature = "token-locators")] loc: 0
+      prov: 0, #[cfg(feature = "token-locators")] loc: 0
     }
 });
 /// macro for a CR "\n" token
@@ -544,6 +563,7 @@ macro_rules! T_LETTER {
     Token {
       text: $crate::pin!($text),
       code: Catcode::LETTER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -552,6 +572,7 @@ macro_rules! T_LETTER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::LETTER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -564,6 +585,7 @@ macro_rules! T_OTHER {
     Token {
       text: $crate::pin!($text),
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -572,6 +594,7 @@ macro_rules! T_OTHER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -584,6 +607,7 @@ macro_rules! T_OTHER_CHAR {
     Token {
       text: $crate::common::arena::pin_char($text),
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -598,6 +622,7 @@ macro_rules! T_ACTIVE {
     Token {
       text: $crate::common::arena::pin(s),
       code: Catcode::ACTIVE,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -610,6 +635,7 @@ macro_rules! T_COMMENT {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::COMMENT,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -622,6 +648,7 @@ macro_rules! T_CS {
     $crate::token::Token {
       text: $crate::pin!($text),
       code: $crate::token::Catcode::CS,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -630,6 +657,7 @@ macro_rules! T_CS {
     $crate::token::Token {
       text: $crate::common::arena::pin($text),
       code: $crate::token::Catcode::CS,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -647,6 +675,7 @@ macro_rules! T_MARKER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::MARKER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -660,6 +689,7 @@ macro_rules! T_ARG {
     Token {
       text: $crate::common::arena::pin($text.to_string()),
       code: Catcode::ARG,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -674,6 +704,7 @@ macro_rules! Token {
     Token {
       text: $sym,
       code: $cc,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -685,6 +716,7 @@ macro_rules! Token {
     Token {
       text: $crate::pin!($text),
       code: $cc,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -693,6 +725,7 @@ macro_rules! Token {
     Token {
       text: $crate::common::arena::pin($text),
       code: $cc,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -709,6 +742,7 @@ macro_rules! CharToken {
     $crate::token::Token {
       text: $crate::common::arena::pin_char($c),
       code: $cc,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -780,6 +814,7 @@ impl Default for Token {
     Token {
       text: arena::pin_static("EXPECTED_TOKEN"),
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -788,12 +823,41 @@ impl Default for Token {
 
 ///======================================================================
 /// Accessors.
+/// The bits of a [`Token::prov`] below the field: the token's position in the field's stored value (saturating).
+pub const FIELD_PROV_POS_BITS: u16 = 14;
+const FIELD_PROV_POS_MASK: u16 = (1 << FIELD_PROV_POS_BITS) - 1;
+/// The field provenance of the token at `pos` of field `field`'s stored value (`field` 1..=3; `0` is no field).
+pub fn field_prov(field: u16, pos: usize) -> u16 {
+  (field << FIELD_PROV_POS_BITS) | (pos.min(FIELD_PROV_POS_MASK as usize) as u16)
+}
+/// The field of a [`Token::prov`] (`0` = none).
+#[inline]
+pub fn field_prov_field(prov: u16) -> u16 { prov >> FIELD_PROV_POS_BITS }
+/// The position in its field's stored value of a [`Token::prov`].
+#[inline]
+pub fn field_prov_pos(prov: u16) -> u16 { prov & FIELD_PROV_POS_MASK }
+
+/// The expansion of a token with a field provenance (`prov`, [`Token::prov`]) is that field's too: each of its tokens
+/// without a provenance of its own takes `prov` (an `\and` in `\@author` expands to ink of the author field). A no-op
+/// for `prov` 0, the case of every token outside a frontmatter field's store.
+#[inline]
+pub fn inherit_field_prov(prov: u16, expansion: &mut Tokens) {
+  if prov != 0 {
+    for t in expansion.unlist_mut() {
+      if t.prov == 0 {
+        t.prov = prov;
+      }
+    }
+  }
+}
+
 impl Token {
   /// simple Token constructor, wrapping over text and catcode
   pub fn new<T: AsRef<str>>(text: T, code: Catcode) -> Self {
     Token {
       text: arena::pin(text),
       code,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -957,6 +1021,7 @@ impl Token {
     Some(Token {
       text: arena::pin(name),
       code,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     })
@@ -1038,6 +1103,7 @@ impl Token {
     Token {
       text: self.text,
       code: Catcode::OTHER,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }
@@ -1046,6 +1112,7 @@ impl Token {
     Token {
       text: self.text,
       code: Catcode::CS,
+      prov: 0,
       #[cfg(feature = "token-locators")]
       loc: 0,
     }

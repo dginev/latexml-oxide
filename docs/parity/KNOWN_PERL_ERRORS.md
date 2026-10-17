@@ -15123,6 +15123,23 @@ stored fields; amstex.rs `\text` (amstex.tex:1217-1226 `\hbox{#1}`) and revtex4_
 kernel-alignment/text_argument_is_braced_in_an_alignment_cell; guard
 `perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.
 
+## 935. A document that prints the kernel's `\@title`/`\@author` itself shows the title and the author twice
+
+Perl's `\title` and `\author` (latex_constructs.pool.ltxml:1059-1063, :1076-1079) record the frontmatter at the call
+and the stylesheet renders the header from that copy, with or without `\maketitle`; the stores `\@title`/`\@author` are
+plain macros, so a document (or a style) that typesets them in its own title block — no `\maketitle` — prints a second
+copy of each beside the structured one, which pdflatex prints once.
+
+Trigger: `\makeatletter\title{A Printed Store Title}\author{Ann Author}` and, in the body, `\begin{center}{\Large\bf
+\@title\par}{\large \@author\par}\end{center}\section{Intro}` — pdflatex prints each once; Perl 0 errors, `<title>` and
+`<creator>` plus a `logical-block` repeating both lines. arXiv: lrec's `\maketitleabstract` (2402.14614, 1603.09631),
+1605.00182 (its own `\@makepapertitle`), puthesis 1503.06457.
+
+Rust (fms1, OXIDIZED_DESIGN_DIVERGENCES #715): the kernel setters stamp the stored tokens with an out-of-band field
+provenance (`\lx@field@mark`, `Token::prov`; no token added), and a whole print digested from them is lifted where the
+frontmatter is placed (not in or beside a titlepage, not in prose, a float or a frame). Repro sectioning-frontmatter/field_mark_store_print_lifted; guard
+`perfect_kernel_batchfms1::field_mark_store_print_lifted`.
+
 ## 939. amsrefs' `{biblist}` outside `{bibdiv}` is an `ltx:biblist` with no bibliography around it
 
 amsrefs.sty:532-538 makes `{biblist}` a list of its own (`\@biblist`, a `\list` of the entries), with no heading and no

@@ -1,0 +1,19 @@
+% PDF-string contexts (27 TL files: acmart-tagged, uestcthesis): `\pdfstringdef` (ours a `\gdef`, hyperref_sty.rs),
+% `\pdfbookmark` and `pdftitle=\@title` leave no mark in the output; the `\pdfstringdef` copy printed in prose is a
+% mention and keeps its words. (The RDF `dcterms:title` is the unexpanded `\@title`, as in Perl's `ToString` of the
+% keyval: a separate, pre-existing gap.)
+% status:  GREEN at 67int19b → GREEN (fms1), guarding the marks' invisibility there.
+% oracle:  pdflatex 0 errors: "Text: Hyper Title." (as a PDF string), "1 Intro Text."; PDF title "Hyper Title".
+% expect:  0 errors, 0 warnings; "Text: Hyper Title."; no mark in the XML.
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\title{Hyper Title}
+\hypersetup{pdftitle=\@title}
+\begin{document}
+\pdfstringdef\mypdf{\@title}
+\pdfbookmark[0]{\@title}{top}
+Text: \mypdf.
+\section{Intro}
+Text.
+\end{document}

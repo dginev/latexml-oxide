@@ -906,7 +906,7 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
     writeln!(
       out,
       "{s}for &(key, cc, text) in SINGLE_TOKEN_VALUES {{\n\
-       {s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc) }};\n\
+       {s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc), prov: 0 }};\n\
        {s}{s}state::assign_value(key, Stored::Token(tok), Some(Scope::Global));\n\
        {s}}}"
     )
@@ -920,7 +920,7 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
       "{s}for &(key, tok_start, tok_count) in TOKEN_LIST_VALUES {{\n\
        {s}{s}let toks: Vec<Token> = VALUE_TOKENS[tok_start as usize..][..tok_count as usize]\n\
        {s}{s}{s}.iter()\n\
-       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc) }})\n\
+       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc), prov: 0 }})\n\
        {s}{s}{s}.collect();\n\
        {s}{s}state::assign_value(key, Stored::Tokens(Tokens::from(toks)), Some(Scope::Global));\n\
        {s}}}"
@@ -997,9 +997,9 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
     writeln!(
       out,
       "{s}for &(cs_name, cc, text) in LET_DEFINITIONS {{\n\
-       {s}{s}let cs = Token {{ text: arena::pin(cs_name), code: Catcode::CS }};\n\
+       {s}{s}let cs = Token {{ text: arena::pin(cs_name), code: Catcode::CS, prov: 0 }};\n\
        {s}{s}if !state::has_meaning(&cs) {{\n\
-       {s}{s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc) }};\n\
+       {s}{s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc), prov: 0 }};\n\
        {s}{s}{s}state::assign_meaning(&cs, tok, Some(Scope::Global));\n\
        {s}{s}}}\n\
        {s}}}"
@@ -1014,11 +1014,11 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
     writeln!(
       out,
       "{s}for def in EXPANDABLE_DEFS {{\n\
-       {s}{s}let cs = Token {{ text: arena::pin(def.cs), code: Catcode::CS }};\n\
+       {s}{s}let cs = Token {{ text: arena::pin(def.cs), code: Catcode::CS, prov: 0 }};\n\
        {s}{s}if state::has_meaning(&cs) {{ continue; }}\n\
        {s}{s}let toks: Vec<Token> = EXPAND_TOKENS[def.tok_start as usize..][..def.tok_count as usize]\n\
        {s}{s}{s}.iter()\n\
-       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc) }})\n\
+       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc), prov: 0 }})\n\
        {s}{s}{s}.collect();\n\
        {s}{s}let params = if def.nargs > 0 {{\n\
        {s}{s}{s}let proto = \"{{}}\".repeat(def.nargs as usize);\n\
@@ -1052,9 +1052,9 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
       out,
       "{s}for &(key_s, target_s) in LET_ALIAS_DEFS {{\n\
        {s}{s}if key_s == target_s {{ continue; }}\n\
-       {s}{s}let key_tok = Token {{ text: arena::pin(key_s), code: Catcode::CS }};\n\
+       {s}{s}let key_tok = Token {{ text: arena::pin(key_s), code: Catcode::CS, prov: 0 }};\n\
        {s}{s}if state::has_meaning(&key_tok) {{ continue; }}\n\
-       {s}{s}let target_tok = Token {{ text: arena::pin(target_s), code: Catcode::CS }};\n\
+       {s}{s}let target_tok = Token {{ text: arena::pin(target_s), code: Catcode::CS, prov: 0 }};\n\
        {s}{s}if !state::has_meaning(&target_tok) {{ continue; }}\n\
        {s}{s}state::let_i(&key_tok, &target_tok, Some(Scope::Global));\n\
        {s}}}"

@@ -932,6 +932,7 @@ impl ToTokens for Token {
         Token {
           text: latexml_core::common::arena::pin_static(#text),
           code: #code,
+          prov: 0,
           // Emitted into the consumer crate; the cfg resolves there (the feature
           // propagates from latexml_oxide). See docs/performance/SOURCE_PROVENANCE.md §3.1.1.
           #[cfg(feature = "token-locators")]

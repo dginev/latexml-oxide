@@ -1,0 +1,13 @@
+% A marked title print after the first section: the field ink is settled where the frontmatter is placed (the fallback
+% at the first sectional unit), so what is printed later is the author's content and stays, unmarked.
+% status:  GREEN at 67int19b → GREEN (fms1), guarding the one placement.
+% oracle:  pdflatex 0 errors: "1 Intro Text.", "Late Store Title".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the section keeps the centered line.
+\documentclass{article}
+\makeatletter
+\title{Late Store Title}
+\begin{document}
+\section{Intro}
+Text.
+\begin{center}{\Large \@title\par}\end{center}
+\end{document}

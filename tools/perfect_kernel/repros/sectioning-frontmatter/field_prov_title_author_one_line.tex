@@ -1,0 +1,14 @@
+% A title and its author printed on one line: each run is the other's line-mate, so the two are judged together, and
+% the line holds nothing else, so both go (fms1 review finding 5).
+% status:  RED (fms1 round 1: each field's line held the other's ink, nothing lifted) → GREEN (fms1 round 2).
+% oracle:  pdflatex 0 errors: "One Line Title Una Author", "1 Intro Text."
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; the line gone, the frontmatter title and creator kept.
+\documentclass{article}
+\makeatletter
+\title{One Line Title}
+\author{Una Author}
+\begin{document}
+\begin{center}\@title\ \@author\end{center}
+\section{Intro}
+Text.
+\end{document}
