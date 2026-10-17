@@ -18897,8 +18897,9 @@ argument and brace it, so a macro after them is the item with its whole expansio
 71a (7)). The bindings pass that argument to LaTeXML's own accent or script through one helper (amsmath_sty.rs
 `undelimited_argument`: `\lx@ams@mathaccentV` for amsmath, `\lx@undelimited@argument` for the others), which reads a
 single command by its definition, never its name (user ruling 2026-10-17; `classify_undelimited_argument`, looking
-through a robust command's `\protect \cs␣` to the inner `\cs␣` and an alias's one-token body, amsmath.sty:892
-`\def\Hat{\hat}`):
+through a robust wrapper's parameterless `\protect <cs>` to `<cs>` — a robust command's `\protect \cs␣`, the binding's
+`\ensuremath` = `\protect\@ensuremath` (`\hat\ensuremath{x}`: pdflatex 5 errors) — and an alias's one-token body,
+amsmath.sty:892 `\def\Hat{\hat}`):
 - **no mandatory argument** (`\alpha`, `\nabla`, `\infty`, `\relax`, `\bf`, `\muu`, `\newcommand{\tasknum}[1][]{…}`, an
   undefined command): braced, as TeX braces it, with no diagnostic — `\hat\relax x` is the hat over an empty nucleus
   and x after it, as TeX's `\showlists`. Under amsmath's `\mathaccentV` an amsmath accent (`\hat\vec x`) is the nested
@@ -18913,7 +18914,12 @@ through a robust command's `\protect \cs␣` to the inner `\cs␣` and an alias'
   (`\def\foo#1{}`) is the hat over `\foo x`'s empty expansion and `+y` after it, `\hat\pair{a}{b}` over `(a,b)`,
   `\hat\nv x` (`\nv[1]{#1_1}`) over `x_1`, `\hat\vq[a]{x}` (`{om}`) over `\vq[a]{x}`. A primitive or constructor
   (`\mathbf`, `\sqrt`, `\text`) is left unbraced: the item it makes is the call, its arguments read at digestion
-  (`\hat\mathbf{x}` a hat over the bold x, breqn's `x_\text{abc}` a subscript "abc"). A `\def` with a leading delimiter
+  (`\hat\mathbf{x}` a hat over the bold x, breqn's `x_\text{abc}` a subscript "abc"). A call missing an undelimited
+argument where the next token ends or structures the current list (`read_call_arguments`, `ends_the_list`: by meaning a
+column end — `&` or a `\let` copy, `\cr`, `\crcr`, `\span` — and a catcode-6 token; by name `\par`, `\\`, `\end`, `\]`,
+`\)`; the end of the input) is left unbraced, its arguments read so far put back, as TeX leaves the tokens: the braced
+call would take a cell's `&` or a row's `\\` into its group (`\hat\pair{a} & x` in `cases` keeps both cells, `\hat\nv
+& = 1` and `a &= \hat\nv \\ y &= 2` in `align` their cells and rows). A `\def` with a leading delimiter
   (`\def\lp(#1)`), an ltcmd signature with a delimited or embellishment argument and a binding closure without a
   parameter list are left unbraced for the item to read with what follows. Each occurrence gets one
   `Warning:malformed:<reader>` naming the reading made, e.g. "amsmath's \hat takes \pair alone as its argument, where
@@ -18937,7 +18943,8 @@ One Warning per source occurrence: a digestion that re-reads a source the docume
 (`tex_math::REREAD_COPY`, set by `\lx@reread@copy`): the toc copy of a heading or caption without a `[short]` (sect04.rs;
 `\lx@toc@copy@text` for the kernel's, longtable's and listings' captions, where a `[short]` the same as the caption — as
 `\@dblarg` gives it — counts as the caption), the reference forms of a tag (`\lx@make@tags`: an `\item[…]` label's
-typerefnum, a `\tag{…}`'s refnum), natbib's label copies (written to the .aux, read only at a citation of a later run). A
+typerefnum, a `\tag{…}`'s refnum), natbib's label copies (written to the .aux; a full compile errs nowhere — pdflatex run three times on
+`\bibitem[{$\hat\mathbf{x}$}(2000)]` gives 0 errors — so no Warning is TeX's own count). A
 `[short]` title or caption is its own source, digested once, into the toc: TeX errs on it only when the list is typeset
 (`\tableofcontents`, `\listoffigures`), and it warns once regardless, because we digest and keep it.
 Why not error as TeX does: content before PDF fidelity (priority order 2026-10-06), where TeX's recovery loses the
@@ -18945,7 +18952,8 @@ formula — under the braced form 2210.10207 lost 11,424 words — and the shape
 1505/1905/2305 papers, most of them in unused macros: 1905.01764 7, 1505.00442 1); why the Warning: the source is not
 valid TeX, and the reading is ours (ruling: never an Error, never silent). Guards
 `perfect_kernel_batch71a::{amsmath_accent_macro_argument, amsmath_accent_ltcmd_argument,
-undelimited_argument_reads_the_whole_call, amsfonts_widehat_macro_argument, breqn_script_macro_argument,
+undelimited_argument_reads_the_whole_call, undelimited_argument_call_stops_at_the_list_end,
+undelimited_argument_through_a_robust_wrapper, amsfonts_widehat_macro_argument, breqn_script_macro_argument,
 undelimited_argument_warning_once_per_occurrence}`.
 
 ### 725. latex209.def's LaTeX2e-command traps apply to `\usepackage`, `\listfiles`, `\lrbox` and `\@xargdef`; the `\ensuremath` trap is held while bindings call it where their 2.09-era originals do not

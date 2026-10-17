@@ -1200,9 +1200,10 @@ LoadDefinitions!({
       // 1904.06560, 2205.04819, 2109.10085 (`\bibitem [{MS_()}]`). Guard
       // `perfect_kernel_batch65m::natbib_label_is_tag_text`.
       assign_value(latexml_engine::tex_math::WRITTEN_COPY, true, Some(Scope::Local));
-      // TeX reads the label back only at a citation, a later run's (the .aux `\bibcite`): no copy here is where it is
-      // typeset, and the label's two copies (authors, refnum) give no OXIDIZED_DESIGN_DIVERGENCES #721 Warning
-      // (`tex_math::REREAD_COPY`; a single pdflatex run of `\bibitem[{$\hat\mathbf{x}$}(2000)]` errs nowhere).
+      // TeX writes the label to the .aux and reads it back at a citation (`\bibcite`), where a full compile errs nowhere
+      // (pdflatex run three times on `\bibitem[{$\hat\mathbf{x}$}(2000)]`: 0 errors): the label's two
+      // copies (authors, refnum) give no OXIDIZED_DESIGN_DIVERGENCES #721 Warning (`tex_math::REREAD_COPY`), TeX's own
+      // count.
       assign_value(latexml_engine::tex_math::REREAD_COPY, true, Some(Scope::Local));
     },
     after_digest => sub[_whatsit] {

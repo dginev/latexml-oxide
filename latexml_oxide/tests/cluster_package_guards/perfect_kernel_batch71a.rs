@@ -683,3 +683,86 @@ fn breqn_script_macro_argument() {
     r#"<Math mode="inline" tex="z_{\alpha}^{\infty}" text="(z _ alpha) ^ infinity" xml:id="p1.m3"><XMath xml:id="p1.m3.1"><XMApp xml:id="p1.m3.1.1"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMApp xml:id="p1.m3.1.1.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">z</XMTok><XMTok font="italic" fontsize="70%" name="alpha" role="UNKNOWN">α</XMTok></XMApp><XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok></XMApp></XMath></Math>"#,
   );
 }
+
+/// A call missing an undelimited argument where the next token ends or structures the current list stops there (71a
+/// review r3, finding 1): the arguments read so far are put back and the call is left unbraced, as TeX leaves the
+/// tokens, so a cell's `&` or a row's `\\` is no argument of a braced call (r3: `\hat{\pair{a}{&}}` made row 1 of the
+/// cases one cell and lost the hat, `(` and `a`; `\hat{\nv{&}}` a stray `&` Error; `\hat{\nv{\\}}` merged two align
+/// rows). Every row and cell kept, as 67int19b keeps them; one Warning each (pdflatex: 16, 16 and 101 errors).
+#[test]
+fn undelimited_argument_call_stops_at_the_list_end() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/ams-internals/accent_argument_call_stops_at_the_list_end.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
+  assert_eq!(
+    undelimited_warnings(&log),
+    [
+      "Warning:malformed:\\hat amsmath's \\hat takes \\nv alone as its argument, where TeX errs: \\nv reads an \
+       argument of its own; read as \\hat{\\nv…}, \\nv with what follows it",
+      "Warning:malformed:\\hat amsmath's \\hat takes \\nv alone as its argument, where TeX errs: \\nv reads an \
+       argument of its own; read as \\hat{\\nv…}, \\nv with what follows it",
+      "Warning:malformed:\\hat amsmath's \\hat takes \\pair alone as its argument, where TeX errs: \\pair reads an \
+       argument of its own; read as \\hat{\\pair…}, \\pair with what follows it",
+    ],
+    "{log}"
+  );
+  // each align row its own equation, its two cells kept: `\hat{}_{1}` | `=1`, `y` | `=2`, `a` | `=\hat{}`, `{}_{1}y` |
+  // `=2` (the `\\` the missing argument met ends row 1, the `_1` after it in row 2, as 67int19b)
+  for (id, expected) in [
+    (
+      "S0.E1",
+      r#"<equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><MathFork><Math tex="\displaystyle\hat{}_{1}=1" text="(hat@(absent)) _ 1 = 1" xml:id="S0.E1.m3"><XMath xml:id="S0.E1.m3.1"><XMApp xml:id="S0.E1.m3.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp xml:id="S0.E1.m3.1.1.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMApp xml:id="S0.E1.m3.1.1.2.2"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok meaning="absent"/></XMApp><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math><MathBranch><td align="right" xml:id="S0.E1.1"><Math mode="inline" tex="\displaystyle\hat{}_{1}" text="(hat@(absent)) _ 1" xml:id="S0.E1.m1"><XMath xml:id="S0.E1.m1.1"><XMApp xml:id="S0.E1.m1.1.1"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMApp xml:id="S0.E1.m1.1.1.2"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok meaning="absent"/></XMApp><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math></td><td align="left" xml:id="S0.E1.2"><Math mode="inline" tex="\displaystyle=1" text="absent = 1" xml:id="S0.E1.m2"><XMath xml:id="S0.E1.m2.1"><XMApp xml:id="S0.E1.m2.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation>"#,
+    ),
+    (
+      "S0.E2",
+      r#"<equation xml:id="S0.E2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags><MathFork><Math tex="\displaystyle y=2" text="y = 2" xml:id="S0.E2.m3"><XMath xml:id="S0.E2.m3.1"><XMApp xml:id="S0.E2.m3.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math><MathBranch><td align="right" xml:id="S0.E2.1"><Math mode="inline" tex="\displaystyle y" text="y" xml:id="S0.E2.m1"><XMath xml:id="S0.E2.m1.1"><XMTok font="italic" role="UNKNOWN">y</XMTok></XMath></Math></td><td align="left" xml:id="S0.E2.2"><Math mode="inline" tex="\displaystyle=2" text="absent = 2" xml:id="S0.E2.m2"><XMath xml:id="S0.E2.m2.1"><XMApp xml:id="S0.E2.m2.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation>"#,
+    ),
+    (
+      "S0.E3",
+      r#"<equation xml:id="S0.E3"><tags><tag>(3)</tag><tag role="refnum">3</tag></tags><MathFork><Math tex="\displaystyle a=\hat{}" text="a = hat@(absent)" xml:id="S0.E3.m3"><XMath xml:id="S0.E3.m3.1"><XMApp xml:id="S0.E3.m3.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp xml:id="S0.E3.m3.1.1.3"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok meaning="absent"/></XMApp></XMApp></XMath></Math><MathBranch><td align="right" xml:id="S0.E3.1"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E3.m1"><XMath xml:id="S0.E3.m1.1"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="left" xml:id="S0.E3.2"><Math mode="inline" tex="\displaystyle=\hat{}" text="absent = hat@(absent)" xml:id="S0.E3.m2"><XMath xml:id="S0.E3.m2.1"><XMApp xml:id="S0.E3.m2.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMApp xml:id="S0.E3.m2.1.1.3"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok meaning="absent"/></XMApp></XMApp></XMath></Math></td></MathBranch></MathFork></equation>"#,
+    ),
+    (
+      "S0.E4",
+      r#"<equation xml:id="S0.E4"><tags><tag>(4)</tag><tag role="refnum">4</tag></tags><MathFork><Math tex="\displaystyle{}_{1}y=2" text="_ 1 y = 2" xml:id="S0.E4.m3"><XMath xml:id="S0.E4.m3.1"><XMApp xml:id="S0.E4.m3.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp xml:id="S0.E4.m3.1.1.2"><XMTok role="SUBSCRIPTOP" scriptpos="pre1"/><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math><MathBranch><td align="right" xml:id="S0.E4.1"><Math mode="inline" tex="{}_{1}y" text="_ 1 y" xml:id="S0.E4.m1"><XMath xml:id="S0.E4.m1.1"><XMApp xml:id="S0.E4.m1.1.1"><XMTok role="SUBSCRIPTOP" scriptpos="pre1"/><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math></td><td align="left" xml:id="S0.E4.2"><Math mode="inline" tex="\displaystyle=2" text="absent = 2" xml:id="S0.E4.m2"><XMath xml:id="S0.E4.m2.1"><XMApp xml:id="S0.E4.m2.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></td></MathBranch></MathFork></equation>"#,
+    ),
+  ] {
+    assert_element(&xml, "equation", &[&format!(r#"xml:id="{id}""#)], expected);
+  }
+  // the cases keep two rows of two cells: `\hat{(}a,)` | `x`, `0` | `y`
+  assert_element(
+    &xml,
+    "XMArray",
+    &[],
+    r#"<XMArray xml:id="S0.Ex1.m1.5.1.3.2.2"><XMRow xml:id="S0.Ex1.m1.5.1.3.2.2.1"><XMCell align="left" xml:id="S0.Ex1.m1.5.1.3.2.2.1.1"><XMArg rule="Anything," xml:id="S0.Ex1.m1.1"><XMApp xml:id="S0.Ex1.m1.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok role="OPEN" stretchy="false">(</XMTok></XMApp><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMArg></XMCell><XMCell align="left" xml:id="S0.Ex1.m1.5.1.3.2.2.1.2"><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.2">x</XMTok></XMCell></XMRow><XMRow xml:id="S0.Ex1.m1.5.1.3.2.2.2"><XMCell align="left" xml:id="S0.Ex1.m1.5.1.3.2.2.2.1"><XMTok meaning="0" role="NUMBER" xml:id="S0.Ex1.m1.3">0</XMTok></XMCell><XMCell align="left" xml:id="S0.Ex1.m1.5.1.3.2.2.2.2"><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.4">y</XMTok></XMCell></XMRow></XMArray>"#,
+  );
+}
+
+/// A robust wrapper's parameterless `\protect <cs>` is looked through to `<cs>` (71a review r3, finding 2): the
+/// binding's `\ensuremath` (`\protect\@ensuremath`) reads a mandatory argument, so `\hat\ensuremath{x}` is the call
+/// `\hat{\ensuremath{x}}` with one Warning, braced or not (pdflatex: 7 errors), not `\hat{}` and an x after it.
+#[test]
+fn undelimited_argument_through_a_robust_wrapper() {
+  let (log, xml) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\nA $\\hat\\ensuremath{x}$ B $\\hat\\ensuremath x$ C\n\\end{document}\n",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert!(
+    undelimited_warnings(&log)
+      .iter()
+      .all(|w| w.ends_with("read as \\hat{\\ensuremath{x}}")),
+    "{log}"
+  );
+  for (m, expected) in [
+    (
+      1,
+      r#"<Math mode="inline" tex="\hat{x}" text="hat@(x)" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMApp xml:id="p1.m1.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math>"#,
+    ),
+    (
+      2,
+      r#"<Math mode="inline" tex="\hat{x}" text="hat@(x)" xml:id="p1.m2"><XMath xml:id="p1.m2.1"><XMApp xml:id="p1.m2.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math>"#,
+    ),
+  ] {
+    assert_element(&xml, "Math", &[&format!(r#"xml:id="p1.m{m}""#)], expected);
+  }
+}

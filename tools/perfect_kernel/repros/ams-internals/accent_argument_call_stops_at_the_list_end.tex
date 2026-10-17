@@ -1,0 +1,18 @@
+% witness: 71a review r3 finding 1 (probes f/f06_align, f07_align_nl, f15_cases)
+% oracle:  pdflatex errs at each accent (an error path: f06 16, f07 16, f15 101 errors), and keeps the cells: the
+%          `&`/`\\` the missing argument meets is no argument of the braced call
+% engines: rust 71a r3 = `\hat{\pair{a}{&}}` (row 1 of the cases one cell, the hat, `(` and `a` lost),
+%          `\hat{\nv{&}}` (a stray `&` Error), `\hat{\nv{\\}}` (two align rows merged); 67int19b keeps every cell
+% expect:  0 errors; one Warning:malformed per accent, "read as \hat{\nv…}, \nv with what follows it"; every row and
+%          cell kept, as 67int19b (OXIDIZED_DESIGN_DIVERGENCES #721)
+% status:  RED (71a r3) -> GREEN (71a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\newcommand\pair[2]{(#1,#2)}
+\newcommand\nv[1]{#1_1}
+\begin{document}
+\begin{align} \hat\nv & = 1 \\ y &= 2 \end{align}
+\begin{align} a &= \hat\nv \\ y &= 2 \end{align}
+\[ f=\begin{cases} \hat\pair{a} & x \\ 0 & y\end{cases} \]
+\end{document}

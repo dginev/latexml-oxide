@@ -2253,8 +2253,8 @@ enum UndelimitedArgument {
   /// amsmath's `\macc@nested` (:832-844) sets it on the `\@empty` that follows it in `\macc@a` (:870). Only that reader
   /// nests: under amsfonts' `\widehat#1` or breqn's `\sb#1` an amsmath accent is a command reading a mandatory argument.
   NestedAccent,
-  /// A command reading a mandatory argument (`\mathbf`, `\text`, `\newcommand\nv[1]`, through a robust command's
-  /// `\protect \cs␣` to the inner `\cs␣`), or a binding closure: `command`, the resolved command, read as `reading`
+  /// A command reading a mandatory argument (`\mathbf`, `\text`, `\newcommand\nv[1]`, through a robust wrapper's
+  /// parameterless `\protect <cs>` to `<cs>`: `\protect \cs␣`, `\ensuremath`), or a binding closure: `command`, the resolved command, read as `reading`
   /// says. `tex_errs` when TeX's braced form errs, which is when the command takes a mandatory argument; a closure
   /// without one may read on, which TeX's macro would not, but its reading is not known to err.
   Call {
@@ -2289,13 +2289,10 @@ fn classify_undelimited_argument(
 ) -> Result<UndelimitedArgument> {
   let ams_mathaccent = T_CS!(r"\lx@ams@mathaccentV");
   let mut command = *argument;
-  // A robust command's `\protect \cs␣` and an alias's one-token body (amsmath.sty:892 `\def\Hat{\hat}`) are what
+  // A robust wrapper's parameterless `\protect <cs>` (a robust command's `\protect \cs␣`, the binding's `\ensuremath`
+  // = `\protect\@ensuremath`, sect07.rs) and an alias's one-token body (amsmath.sty:892 `\def\Hat{\hat}`) are what
   // TeX's braced form expands to; a bounded chase, as an alias may name itself.
   for _ in 0..8 {
-    if let Some(inner) = robust_inner(&command) {
-      command = inner;
-      continue;
-    }
     let Some(definition) = lookup_definition(&command)? else {
       return Ok(UndelimitedArgument::Braced);
     };
@@ -2331,6 +2328,16 @@ fn classify_undelimited_argument(
         });
       },
     };
+    if let [protect, inner] = body.as_slice()
+      && protect.with_str(|name| name == "\\protect")
+      && matches!(inner.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      && definition
+        .get_parameters()
+        .is_none_or(|parameters| parameters.get_num_args() == 0)
+    {
+      command = *inner;
+      continue;
+    }
     if nests_accents && body.first() == Some(&ams_mathaccent) {
       return Ok(UndelimitedArgument::NestedAccent);
     }
@@ -2424,19 +2431,65 @@ fn ltcmd_undelimited_argument(command: Token, body: &[Token]) -> Result<Undelimi
 
 /// The arguments of `command`'s call, read from what follows by `parameters` and reverted as the author wrote them
 /// (`{x}`, `[a]`, `*`); `None` for a parameter list with a delimiter that is no argument (`\def\cs(#1){…}`), whose
-/// reversion would drop it, or with an argument digested as it is read.
+/// reversion would drop it, or with an argument digested as it is read; `None` too, the arguments read so far put
+/// back, when an undelimited argument would be a token that ends or structures the current list
+/// ([`ends_the_list`]): the author's call is missing an argument there (`\hat\pair{a} & x`), and its braced reading
+/// would take a cell's `&` or a row's `\\` into the group, so the call is left unbraced, as TeX leaves the tokens.
 fn read_call_arguments(parameters: &Parameters) -> Result<Option<Vec<Token>>> {
+  let parameters = parameters.get_parameters();
   if parameters
-    .get_parameters()
     .iter()
     .any(|parameter| parameter.novalue || parameter.predigest.is_some())
   {
     return Ok(None);
   }
-  let arguments = parameters.read_arguments(None)?;
-  Ok(Some(parameters.revert_arguments(
-    arguments.into_iter().map(Into::into).collect(),
-  )?))
+  let mut read = Vec::new();
+  for parameter in parameters {
+    let undelimited =
+      !parameter.optional && with(parameter.name, |name| BRACED_ARGUMENT_TYPES.contains(&name));
+    if undelimited && next_ends_the_list()? {
+      unread_vec(read);
+      return Ok(None);
+    }
+    let argument = parameter.read(None)?;
+    if let Some(reverted) = parameter.revert(argument.into())? {
+      read.extend(reverted.unlist());
+    }
+  }
+  Ok(Some(read))
+}
+
+/// Whether the next non-space token, which an undelimited argument would take, ends or structures the current list
+/// ([`ends_the_list`]), or the input has ended ([`at_end_of_all_input`]); the end of a token list that is not the end
+/// of the input (an argument digested on its own, `\frac{\hat\nv}{2}`) stands for its closing `}`, which a call reads
+/// on, as at a `}`. The spaces before it are read and put back with it, so nothing is consumed.
+fn next_ends_the_list() -> Result<bool> {
+  let mut spaces = Vec::new();
+  let next = loop {
+    match peek_token()? {
+      Some(space) if space.get_catcode() == Catcode::SPACE => {
+        read_token()?;
+        spaces.push(space);
+      },
+      next => break next,
+    }
+  };
+  unread_vec(spaces);
+  Ok(match next {
+    Some(token) => ends_the_list(&token),
+    None => at_end_of_all_input(),
+  })
+}
+
+/// Whether `token` ends or structures the list being built, so no argument is taken from it: by meaning, a column
+/// end (`&` of catcode 4 or a `\let` copy, `\cr`, `\crcr`, `\span`: [`gullet::is_column_end`]) and a parameter token
+/// (catcode 6); by name, the control sequence `\par` (tex.web §392's `par_token`, whatever it means), and the macros
+/// that end a row, an environment or a formula, whose meaning changes with the context: `\\`, `\end`, `\]`, `\)`.
+fn ends_the_list(token: &Token) -> bool {
+  token.get_catcode() == Catcode::PARAM
+    || is_column_end(token).is_some()
+    || (token.get_catcode() == Catcode::CS
+      && token.with_str(|name| matches!(name, "\\par" | "\\\\" | "\\end" | "\\]" | "\\)")))
 }
 
 /// `name`'s possessive, as the Warning names a package: "amsmath's", "amsfonts'".
@@ -2499,8 +2552,11 @@ fn undelimited_argument(
           (None, CallReading::Item(1)) => {
             s!("read as {reader}{{{given}…}}, {given} with its argument")
           },
+          // A constructor of optional arguments too (`\sqrt[]{}`): the call is what it reads from what follows.
           (None, CallReading::Item(_)) => {
-            s!("read as {reader}{{{given}…}}, {given} with its arguments")
+            s!(
+              "read as {reader}{{{given}…}}, {given} with the arguments it reads from what follows it"
+            )
           },
           (None, _) => s!("read as {reader}{{{given}…}}, {given} with what follows it"),
         };

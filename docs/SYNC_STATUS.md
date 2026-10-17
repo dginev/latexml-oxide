@@ -3074,13 +3074,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Warnings for its 7 `\bm{\bar\mathcal{C}}`, 1505.00442 1; r2 A/B (499 papers vs 67int19b): 109 better, 1 worse
   (1309.5950, above: `\ion` from its own aas_macros copy, restored by the 72a author-copy extras payload), errors 4350 →
   4065, no #721 Warning (no typeset occurrence); r3 (the reading by the call, the per-source-occurrence rule) the same 499
-  identical in errors, Warnings, words and `tex=` to r2, 2210.10207 37,122 words and 0 Warnings, 1809.05472 1 → 0. Repros
+  identical in errors, Warnings, words and `tex=` to r2, 2210.10207 37,122 words and 0 Warnings, 1809.05472 1 → 0; r4: a
+  call missing an undelimited argument where the next token ends or structures the list (a column end `&`/`\cr`/`\crcr`/
+  `\span` or a catcode-6 token by meaning; `\par`, `\\`, `\end`, `\]`, `\)` by name; the end of the input) is left
+  unbraced, its arguments read so far put back — r3's `\hat{\pair{a}{&}}` lost a `cases` cell and `\hat{\nv{\\}}`
+  merged two `align` rows, now every cell kept, as 67int19b —, and a robust wrapper's parameterless `\protect <cs>`
+  (`\ensuremath`) is looked through (`\hat\ensuremath{x}` warns, read as `\hat{\ensuremath{x}}`). Repros
   stub-dependencies/{forest_loads_its_tikz_libraries, todonotes_loads_positioning},
   package-bindings/{pgfmath_mod_of_a_multiple_is_zero, breqn_script_macro_argument},
-  ams-internals/{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument, accent_argument_reads_the_whole_call};
+  ams-internals/{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument, accent_argument_reads_the_whole_call,
+  accent_argument_call_stops_at_the_list_end};
   guards `perfect_kernel_batch71a::{forest_loads_its_tikz_libraries, todonotes_loads_positioning,
   pgfmath_mod_of_a_multiple_is_zero, amsmath_accent_macro_argument, amsmath_accent_ltcmd_argument,
-  undelimited_argument_reads_the_whole_call, amsfonts_widehat_macro_argument, breqn_script_macro_argument,
+  undelimited_argument_reads_the_whole_call, undelimited_argument_call_stops_at_the_list_end,
+  undelimited_argument_through_a_robust_wrapper, amsfonts_widehat_macro_argument, breqn_script_macro_argument,
   undelimited_argument_warning_once_per_occurrence}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
