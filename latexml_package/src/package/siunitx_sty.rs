@@ -567,10 +567,66 @@ fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   }
 
   if six_match_keys(tokens, &[six_pin!("input-open-uncertainty")]).is_some() {
-    let int = six_match_keys(tokens, &[
+    let mut number = number;
+    let mut int = six_match_keys(tokens, &[
       six_pin!("input-digits"),
       six_pin!("input-symbols"),
     ]);
+    // A decimal marker in the brackets (`4.02(0.52)`, `11.0(1.7)`): siunitx.sty:700-712 `\__siunitx_number_parse_uncert_auxi:N`
+    // → `\__siunitx_number_parse_uncert_marker:` (:752-848) takes the uncertainty as digits in the last places of the
+    // number: its digits without their leading zeros (:690-698), the number's fraction padded with zeros to the
+    // uncertainty's (:832-837) — pdflatex "4.02(52)", "1.08(3)", "11.0(17)". An uncertainty with more integer digits
+    // than the number is no match (:758-760). Perl's parser takes digits only (siunitx.sty.ltxml:243-246,
+    // KNOWN_PERL_ERRORS #941). Witnesses 2311.18489, 2504.14399, 2605.13387; guard
+    // `perfect_kernel_batch71a::siunitx_uncertainty_with_decimal_marker`.
+    if let Some(marker) = six_match_keys(tokens, &[six_pin!("input-decimal-markers")]) {
+      let digits = |t: &Option<Tokens>| -> Vec<Token> {
+        t.as_ref()
+          .map(|t| {
+            t.unlist_ref()
+              .iter()
+              .copied()
+              .filter(|t| t.get_catcode() != Catcode::SPACE)
+              .collect()
+          })
+          .unwrap_or_default()
+      };
+      let int_digits: Vec<Token> = digits(&int)
+        .into_iter()
+        .skip_while(|t| t.text == pin!("0"))
+        .collect();
+      let number_int_len = match &number {
+        SixNumber::Simple { integer, .. } => digits(integer).len(),
+        _ => 0,
+      };
+      if int_digits.len() > number_int_len {
+        tokens.splice(0..0, marker.unlist());
+      } else {
+        let frac = digits(&six_match_keys(tokens, &[
+          six_pin!("input-digits"),
+          six_pin!("input-symbols"),
+        ]));
+        let mut uncertainty = int_digits;
+        uncertainty.extend(frac.iter().copied());
+        let uncertainty: Vec<Token> = uncertainty
+          .into_iter()
+          .skip_while(|t| t.text == pin!("0"))
+          .collect();
+        int = Some(if uncertainty.is_empty() {
+          Tokens::new(vec![T_OTHER!("0")])
+        } else {
+          Tokens::new(uncertainty)
+        });
+        if let SixNumber::Simple { decimal, fraction, .. } = &mut number {
+          let mut places = digits(fraction);
+          if places.len() < frac.len() {
+            places.resize(frac.len(), T_OTHER!("0"));
+            *decimal = Some(decimal.take().unwrap_or_default());
+            *fraction = Some(Tokens::new(places));
+          }
+        }
+      }
+    }
     six_match_keys(tokens, &[six_pin!("input-close-uncertainty")]);
     let uncertainty = SixNumber::simple(None, int, None, None);
     return Some(SixNumber::Operator {

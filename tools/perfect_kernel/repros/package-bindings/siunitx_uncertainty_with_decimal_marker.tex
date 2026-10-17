@@ -1,0 +1,12 @@
+% witness: 2311.18489, 2504.14399, 2605.13387 (a decimal marker in the bracketed uncertainty); 9 papers of the int19
+%          census (rc_struct5 N1)
+% oracle:  pdflatex 0 errors: "4.02(52) m and 1.08(3) and 11.0(17) V."
+% engines: rust 67int19b = 3 Error:unexpected:. (Not matched in \num); Perl 0.8.8 2 (KNOWN_PERL_ERRORS #941)
+% expect:  0 errors; the numbers 4.02(52), 1.08(3), 11.0(17)
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{siunitx}
+\begin{document}
+\SI{4.02(0.52)}{\m} and \num{1.08(0.03)} and \qty{11.0(1.7)}{V}.
+\end{document}

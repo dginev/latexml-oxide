@@ -15364,6 +15364,22 @@ before 71a 1 Error (`\text` undefined; 13 papers: 0908.0351, 1112.1796, astro-ph
 Rust (71a): mn2e_support_sty.rs defines no `\ion`; mnras_cls.rs defines it as mnras.cls:488 does. Repro
 class-bindings/mn2e_author_ion_wins; guards `perfect_kernel_batch71a::{mn2e_author_ion_wins, mnras_keeps_its_ion}`.
 
+## 941. siunitx's bracketed uncertainty takes digits only, so `4.02(0.52)` errs
+
+siunitx.sty:700-712 (`\__siunitx_number_parse_uncert_auxi:N`) takes a decimal marker in the brackets
+(`\__siunitx_number_parse_uncert_marker:`, :752-848): the uncertainty stands in the number's last places — its digits
+without their leading zeros, the number's fraction padded with zeros to the uncertainty's, so pdflatex prints
+`4.02(52)`, `1.08(3)`, `11.0(17)`, `4.00(52)` for `4.0(0.52)` — and an uncertainty with more integer digits than the
+number is no match (:758-760). Perl's `six_match_uncertainnumber` (siunitx.sty.ltxml:243-246) reads digits only, so
+the marker is left unmatched.
+
+Trigger: `\usepackage{siunitx}` and `\SI{4.02(0.52)}{\m}` — pdflatex 0 errors; Perl and Rust before 71a 1 Error
+(`unexpected:. Not matched in \num: .52)`; 9 papers: 2311.18489, 2504.14399, 2605.13387).
+
+Rust (71a, siunitx_sty.rs `six_match_uncertainnumber`): the bracketed form reads the marker and the fraction as
+siunitx.sty does. Repro package-bindings/siunitx_uncertainty_with_decimal_marker; guard
+`perfect_kernel_batch71a::siunitx_uncertainty_with_decimal_marker`.
+
 ## 949. AMS-TeX's `\Let@` is missing, so a document's own AMS-TeX alignment macro errs at its `\\`
 
 amstex.tex:486 `\def\Let@{\relax\iffalse{\fi\let\\=\cr\iffalse}\fi}` is the row end an AMS-TeX alignment sets up before

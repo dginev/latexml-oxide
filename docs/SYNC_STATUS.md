@@ -3032,6 +3032,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (v3+ loads every object; user ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #720). Witnesses 1506.03598 1612.05374
   2005.14485 1906.04134 1608.04592 (16 sample papers: 12 → 0, 4 one error fewer). Repro
   package-bindings/tkz_euclide_old_usetkzobj; guard `perfect_kernel_batch71a::tkz_euclide_old_usetkzobj`.
+  (5) N1: siunitx's bracketed uncertainty with a decimal marker (`4.02(0.52)` → "4.02(52)", siunitx.sty:700-848):
+  siunitx_sty.rs `six_match_uncertainnumber` (KNOWN_PERL_ERRORS #941). Witnesses 2311.18489 2504.14399 2605.13387 (9 of
+  the 11 sample papers to 0; open: 2607.19972's `:` uncertainty divide, siunitx.sty:780-800, and 2511.08682's 15
+  "expected to find complex number").
+  Repro package-bindings/siunitx_uncertainty_with_decimal_marker; guard
+  `perfect_kernel_batch71a::siunitx_uncertainty_with_decimal_marker`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

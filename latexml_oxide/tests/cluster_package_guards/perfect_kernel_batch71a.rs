@@ -114,3 +114,39 @@ fn tkz_euclide_old_usetkzobj() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(xml.contains("<picture"), "{xml}");
 }
+
+/// siunitx.sty:700-848: a decimal marker in the bracketed uncertainty sets the uncertainty in the number's last places
+/// (2311.18489, 2504.14399).
+#[test]
+fn siunitx_uncertainty_with_decimal_marker() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/siunitx_uncertainty_with_decimal_marker.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for tex in [
+    r#"tex="4.02(52)\text{\,}\mathrm{m}""#,
+    r#"tex="1.08(3)""#,
+    r#"tex="11.0(17)\text{\,}\mathrm{V}""#,
+  ] {
+    assert!(xml.contains(tex), "{tex}: {xml}");
+  }
+  assert_element(
+    &xml,
+    "XMDual",
+    &[r#"xml:id="p1.m1.2.4""#],
+    r#"<XMDual xml:id="p1.m1.2.4"><XMRef idref="p1.m1.3" xml:id="p1.m1.2.4.1"/><XMWrap xml:id="p1.m1.2.4.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="52" role="NUMBER" xml:id="p1.m1.3">52</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual>"#,
+  );
+  // the number's places padded to the uncertainty's; more integer digits than the number's is no match (siunitx.sty:758)
+  let (log, xml) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{siunitx}\n\\begin{document}\n\\num{4.0(0.52)} \\num{4(0.5)}\n\\end{document}\n",
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(
+    xml.contains(r#"tex="4.00(52)""#) && xml.contains(r#"tex="4.0(5)""#),
+    "{xml}"
+  );
+  let (log, _) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{siunitx}\n\\begin{document}\n\\num{1.5(12.3)}\n\\end{document}\n",
+  );
+  assert_eq!(error_count(&log), 1, "{log}");
+}
