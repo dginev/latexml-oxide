@@ -18672,25 +18672,40 @@ schema allows neither the unit the bibliography stands as (`BACKMATTER_ELEMENT`,
 in `ltx:quote` (LaTeXML-block.rnc `quote_model`), and the quote does not auto-close: Perl and Rust before 69a erred
 twice (`<ltx:section>` / `<ltx:bibliography> isn't allowed in <ltx:quote>`) and left the bibliography inside the quote,
 out of the back matter. Here (latex_constructs/mod.rs `close_list_containers_before_backmatter`, called by
-`adjust_backmatter_element`) each quote that blocks it, from the innermost, is closed first and dropped when it holds
-nothing; the environment's own `</ltx:quote>` then finds it closed (`close_element_if_open`), and text after the
-bibliography in the quote follows the bibliography. The font changes inside the quote (`\small`) are digested into the
+`adjust_backmatter_element`, and `Document::close_quotes_blocking`, shared with #678) the quotes that block it, from the
+innermost, are closed first — only when that alone (with the auto-closing elements between) makes the bibliography's
+place reachable: a quote in a list item stays open and errs as before; the walk passes a box's capture (a bibliography
+in a `minipage` is placed outside the box), closing a quote inside the box but none outside it — and each one left
+empty is dropped. The environment's end acts on the quote it opened (sect06.rs `quote_environment`): found closed, it closes no
+other quote (one around it stays open) but only the `ltx:p` the text after the bibliography is in, as `\endlist` ends
+the paragraph, so that text and the text after the environment are two paragraphs' text. The font changes inside the quote (`\small`) are digested into the
 entries and stay. What differs from the PDF: the indentation (the quote's margins) — the bibliography is the
 document's, with its entries and citation links. User ruling 2026-10-16 (CLOSE the container). Witnesses 2203.09193
 1904.12066 1610.09996 2109.09861 2403.09260 1609.06434 (AAAI), astro-ph0410583 (quote), 1504.06728 (verse); repros
-index-bib/bibliography_in_quote, index-bib/bibliography_in_verse_after_text; guards
-`perfect_kernel_batch69a::{bibliography_in_a_quote_closes_the_quote, bibliography_in_a_verse_keeps_the_text_around_it}`.
+index-bib/{bibliography_in_quote, bibliography_in_verse_after_text, bibliography_in_quote_tail_paragraph,
+bibliography_in_quote_in_quotation, bibliography_in_quote_in_minipage}; guards
+`perfect_kernel_batch69a::{bibliography_in_a_quote_closes_the_quote, bibliography_in_a_verse_keeps_the_text_around_it,
+bibliography_in_a_quote_keeps_the_tail_paragraph, bibliography_in_a_nested_quote_keeps_the_outer_quote,
+bibliography_in_a_quote_in_a_minipage_closes_the_quote}`. Not covered: amsrefs `{bibdiv}` in a quote (not placed by
+`adjust_backmatter_element`; errs as before).
 
-### 678. A sectioning unit inside `{quote}`, `{quotation}` or `{verse}` opens an `ltx:inline-sectional-block` in the quote (TeX: the heading set in the quote's margins; Perl: error, the unit nested in the quote)
+### 678. A sectioning unit inside `{quote}`, `{quotation}` or `{verse}` closes the quote and is the document's own unit (TeX: the heading set in the quote's margins; Perl: error, the unit nested in the quote)
 
-LaTeX's quote environments are `\list` + `\item` (article.cls:389-408), so a `\section*{}` in a `{quotation}` (0712.1985's
-title page wraps its abstract in one) is typeset inside the quote's margins. `ltx:quote` cannot hold a sectioning unit
-and does not auto-close, so Perl and Rust before 69a erred (`<ltx:section> isn't allowed in <ltx:quote>`). The
-auto-open bridge of the list-item and float cases (#189; document.rs `AUTO_OPEN_BRIDGES`) now has a quote row: the unit
-opens an `ltx:inline-sectional-block` in the quote (`quote_model` takes `Misc.class`), keeps its number, id and labels,
-and the quote's end closes the block. User ruling 2026-10-16 (HF7-A precedent). Not for a bibliography, whose quote is
-closed (#677). Repro sectioning-frontmatter/section_in_quotation; guard
-`perfect_kernel_batch69a::section_in_a_quotation_opens_a_block`.
+LaTeX's quote environments are its unlabelled list, `\list{}{…}\item\relax` (article.cls:389-408): a margin, no
+structure. A `\section*{}` in a `{quotation}` (0712.1985's title page wraps its abstract in one), a whole paper inside
+one, a `\chapter` in one in a report: TeX typesets the units inside the margins. `ltx:quote` cannot hold a sectioning
+unit and does not auto-close, so Perl and Rust before 69a erred (`<ltx:section> isn't allowed in <ltx:quote>`). Here a
+sectioning unit (`\part` to `\subparagraph`, starred or not) arriving in a quote closes it (`find_insertion_point_qsym`
+→ `Document::close_quotes_blocking`, the same close as a bibliography's, #677): the quotes in the way are closed only
+when that alone makes the unit's place reachable (a quote in a list item stays open and errs as before; one in a
+`minipage` is closed and the unit is placed as in a `minipage` without a quote), each one left empty is dropped, and the unit is a real one — its number, id, labels and table-of-contents
+entry, its back matter after it. The environment's end finds its quote closed and closes only the paragraph text of its
+tail (#677). Only the indentation differs from the PDF. Main-session ruling 2026-10-17 (an unlabelled list follows the
+item bridge's margin-list exemption, #189; it replaces the 2026-10-16 inline-sectional-block ruling, whose block left a
+whole paper's sections and bibliography inside one paragraph). Not for a labelled list item or a float, which open an
+`ltx:inline-sectional-block` (#189). Repros sectioning-frontmatter/{section_in_quotation, whole_paper_in_quotation,
+chapter_in_quotation}; guards `perfect_kernel_batch69a::{section_in_a_quotation_closes_it,
+whole_paper_in_a_quotation_has_its_sections, chapter_in_a_quotation_is_a_chapter}`.
 
 ### 679. An `&` in a glossary entry's stored fields is the character, not an alignment tab (TeX: an error only where the field is typeset; Perl: an error at the definition)
 

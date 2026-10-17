@@ -14855,10 +14855,18 @@ typeset after the declaration.
 Trigger: `\usepackage{amsmath}\newcommand{\N}{X}\DeclareMathOperator{\N^1}{N^1}`, `$\N^1(x)$` — pdflatex 0 errors
 ("N1(x)"); Perl and Rust before 69a a Warning (text after the argument) and `Script ^ can only appear in math mode`.
 
-Rust (69a, amsopn_sty.rs): the operator is defined under the command and, with a parameter text, the command is
-`\def`ined with it to the operator (`\lx@amsopn@<name>`). Residual: the formula's `content-tex` reverts the command
-without its parameter text (`\N(x)`). Witness 2301.04262. Repro package-bindings/declaremathoperator_parameter_text;
-guard `perfect_kernel_batch69a::declaremathoperator_parameter_text`.
+Only for a command already defined (and not `\relax`): `\declare@robustcommand`'s `\ifx\@undefined#1\else\ifx\relax#1
+\else … \fi\fi` (latex.ltx:1386-1389) typesets the parameter text of an undefined one, so
+`\DeclareMathOperator{\M^1}{M^1}` with `\M` undefined (math0312019 `\DeclareMathOperator{\dash_exp}{-exp}`) errs in
+pdflatex (5 errors: Missing $ inserted, Missing \begin{document}, Undefined control sequence `\M`, …) and leaves `\M`
+undefined.
+
+Rust (69a, amsopn_sty.rs): the operator is defined under the command and, with a parameter text, an already defined
+command is `\def`ined with it to the operator (`\lx@amsopn@<name>`); for an undefined one the text is read after the
+declaration as Perl reads it (the Warning, then `Script ^ can only appear in math mode`). Residual: the formula's `content-tex` reverts the command
+without its parameter text (`\N(x)`). Witnesses 2301.04262, 2108.02335 (`\@convhull`, defined), math0312019
+(undefined). Repros package-bindings/{declaremathoperator_parameter_text, declaremathoperator_undefined_parameter_text}; guards
+`perfect_kernel_batch69a::{declaremathoperator_parameter_text, declaremathoperator_undefined_parameter_text}`.
 
 ## 892. A glossary entry's fields are digested as text at the definition: an `&` in a never-used entry errs
 

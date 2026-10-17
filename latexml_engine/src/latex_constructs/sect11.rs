@@ -1522,10 +1522,12 @@ fn tie_held_tags(node: &Node, labels: &str) {
 
 /// The units a bibliography may take the heading of: those whose model takes `BackMatter.class`
 /// (LaTeXML-structure.rnc:69-163), which a bibliography closes as section-level back matter
-/// (`adjust_backmatter_element`).
+/// (`adjust_backmatter_element`) — an `\appendix`'s unit too (`\appendix \section*{References}` then the entries in
+/// a `{quote}`, astro-ph0503283).
 const BIBLIOGRAPHY_HEADED_UNITS: &[&str] = &[
   "ltx:part",
   "ltx:chapter",
+  "ltx:appendix",
   "ltx:section",
   "ltx:subsection",
   "ltx:subsubsection",

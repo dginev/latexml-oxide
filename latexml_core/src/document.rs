@@ -1442,6 +1442,72 @@ impl Document {
     }
   }
 
+  /// Close the `{quote}`, `{quotation}` or `{verse}` (`ltx:quote`, which does not auto-close) standing between the
+  /// current point and a place that can hold one of `qsyms` — a sectioning unit (`find_insertion_point_qsym`) or a
+  /// bibliography and the unit it stands as (latex_constructs `adjust_backmatter_element`). Each of these environments
+  /// is LaTeX's unlabelled list `\list{}{…}\item\relax` (article.cls:389-408), a margin, no structure: the heading and
+  /// what follows it are the document's own unit, typeset within the margin (latex.ltx `\@startsection`;
+  /// `thebibliography` = `\section*` + `\list`, article.cls:565-584). The quotes in the way, from the innermost, are
+  /// closed only when that alone (with the auto-closing elements between) makes the place reachable — a quote in a list
+  /// item, or outside the `minipage` the point is in, stays open (probes b_qiq, b_qmq) and the caller reports as before — and each one left empty
+  /// is dropped. The environment's end then finds its quote closed (`latex_constructs` sect06 `quote_environment`).
+  /// Returns whether it closed any. User rulings 2026-10-16 (D1, bibliography) and 2026-10-17 (D5, sectioning units: as
+  /// the item bridge's margin-list exemption), OXIDIZED_DESIGN_DIVERGENCES #677, #678; witnesses 2203.09193 1904.12066
+  /// 1610.09996 2109.09861 2403.09260 1609.06434 astro-ph0410583 1504.06728 (bibliography), 0712.1985 (a title page in
+  /// `{quotation}`). Guards `perfect_kernel_batch69a::{bibliography_in_a_quote_closes_the_quote,
+  /// section_in_a_quotation_closes_it}`.
+  pub fn close_quotes_blocking(&mut self, qsyms: &[SymStr]) -> Result<bool> {
+    let mut node = if self.node.get_type() == Some(NodeType::TextNode) {
+      self.node.get_parent()
+    } else {
+      Some(self.node.clone())
+    };
+    let mut quotes: Vec<Node> = Vec::new();
+    // Whether the walk has left a box's capture (a `minipage`, a `\parbox`): it takes any content by the model, but a
+    // bibliography in it is placed outside the box (`adjust_backmatter_element`), so the walk looks further up — and a
+    // quote outside the box is not closed from within it (probe b_qmq; b_quote_in_minipage's own quote is closed).
+    let mut left_box = false;
+    loop {
+      let Some(current) = node else {
+        return Ok(false);
+      };
+      if current.get_type() != Some(NodeType::ElementNode) {
+        return Ok(false);
+      }
+      if is_capture_block(&current) {
+        left_box = true;
+        node = current.get_parent();
+        continue;
+      }
+      let current_qname = get_node_qname(&current);
+      if qsyms
+        .iter()
+        .any(|q| sym_can_contain_somehow(current_qname, *q).is_some())
+      {
+        break;
+      }
+      if current_qname == pin!("ltx:quote") && !can_auto_close(&current) && !left_box {
+        quotes.push(current.clone());
+      } else if !can_auto_close(&current) {
+        return Ok(false);
+      }
+      node = current.get_parent();
+    }
+    let Some(outermost) = quotes.last().cloned() else {
+      return Ok(false);
+    };
+    self.close_node_internal(&outermost)?;
+    for quote in quotes {
+      let empty = quote.get_child_nodes().iter().all(|child| {
+        child.get_type() == Some(NodeType::TextNode) && child.get_content().trim().is_empty()
+      });
+      if empty {
+        self.remove_node(quote);
+      }
+    }
+    Ok(true)
+  }
+
   /// Whether a `qname` element is open on the current ancestor chain (a font-switch `ltx:text`
   /// does not count as an open `ltx:text`).
   fn is_open_on_chain(&self, qname: &str) -> bool {
@@ -3479,6 +3545,9 @@ impl Document {
       if let Some(close_to_node) = close_to {
         self.close_node_internal(&close_to_node)?; // Close the auto closeable nodes.
         self.find_insertion_point_qsym(qsym, None) // Then retry, possibly w/auto open's
+      } else if is_quote_closing_unit(qsym) && self.close_quotes_blocking(&[qsym])? {
+        // A sectioning unit in a `{quote}`, `{quotation}` or `{verse}` closed it (`close_quotes_blocking`).
+        self.find_insertion_point_qsym(qsym, None)
       } else {
         // Cascading-rejection suppression (2026-05-01): when a math leaf
         // element (`<ltx:XMTok>`) tries to insert into a text-mode
@@ -3653,18 +3722,8 @@ impl Document {
             attrs:   &[],
             holder:  item_has_label,
           },
-          // …and in a `{quote}`, `{quotation}` or `{verse}` (`\begin{quotation}\section*{}` around a title page's
-          // abstract, 0712.1985): LaTeX typesets the heading inside the quote's `\list` margins (article.cls:389-408,
-          // `quote` = `\list{}{\rightmargin\leftmargin}\item\relax`), and the quote holds the block directly
-          // (LaTeXML-block.rnc `quote_model` takes `Misc.class`); the quote's end closes it. User ruling 2026-10-16
-          // (HF7-A precedent, OXIDIZED_DESIGN_DIVERGENCES #678). Guard
-          // `perfect_kernel_batch69a::section_in_a_quotation_opens_a_block`.
-          AutoOpenBridge {
-            chain:   &["ltx:inline-sectional-block"],
-            applies: |cur, qsym| cur == "ltx:quote" && is_sectioning_unit_name(qsym),
-            attrs:   &[],
-            holder:  |_| true,
-          },
+          // (A sectioning unit in a `{quote}`, `{quotation}` or `{verse}` opens no block: it closes the quote,
+          // `close_quotes_blocking` above; OXIDIZED_DESIGN_DIVERGENCES #678.)
           AutoOpenBridge {
             chain:   &["ltx:item", "ltx:para"],
             applies: |cur, qsym| cur == qsym,
@@ -7500,6 +7559,12 @@ fn is_sectioning_unit_name(qname: &str) -> bool {
     qname,
     "ltx:section" | "ltx:subsection" | "ltx:subsubsection" | "ltx:paragraph" | "ltx:subparagraph"
   )
+}
+
+/// The sectioning units that close a quote they arrive in (`Document::close_quotes_blocking`): `\part` to
+/// `\subparagraph`, starred or not (an `\appendix`'s units are these too).
+fn is_quote_closing_unit(qsym: SymStr) -> bool {
+  qsym == pin!("ltx:part") || qsym == pin!("ltx:chapter") || is_lenient_sectioning_unit(qsym)
 }
 
 /// A `\trivlist`'s list (`_trivlist`, latex_constructs sect06.rs): ended by its `\endtrivlist` or at its group's

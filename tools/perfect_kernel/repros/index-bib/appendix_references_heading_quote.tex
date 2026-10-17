@@ -1,0 +1,17 @@
+% mechanism: `\appendix \section*{References}` then the `\bibitem`s in a `{quote}`: the bare entries open the kernel
+%   bibliography, which takes the heading of the unit it closes — an appendix too (sect11.rs
+%   BIBLIOGRAPHY_HEADED_UNITS), so no empty titled appendix is left behind
+% witness: astro-ph0503283
+% oracle:  pdflatex 4 errors (Undefined control sequence, You can't use `\relax' after \the: each bare `\bibitem`
+%   outside {thebibliography}): "1 One", "Text [0].", "A App", "Ap text.", the unnumbered "References", "Alpha."
+%   "Beta." indented
+% engines: rust 67int17b = an empty <ltx:appendix> titled References (class ltx_pruned_first) and an untitled
+%   bibliography; Perl the same
+% expect:  0 errors, 0 warnings; one appendix (App); the bibliography titled References holds both entries
+% status:  RED (67int17b) -> GREEN (69a r2)
+% preload: ar5iv.sty
+\documentclass{article}\begin{document}\section{One}Text \cite{a}.\appendix\section{App}Ap text.
+\section*{References}\begin{quote}
+\bibitem{a} Alpha.
+\bibitem{b} Beta.
+\end{quote}\end{document}

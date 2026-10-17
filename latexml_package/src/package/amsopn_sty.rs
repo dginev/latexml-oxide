@@ -27,6 +27,26 @@ LoadDefinitions!({
       return Ok(Vec::new());
     }
     let cs = name.remove(0);
+    // …but only for a command already defined (and not `\relax`): `\declare@robustcommand`'s
+    // `\ifx\@undefined#1\else\ifx\relax#1\else … \fi\fi` (latex.ltx:1386-1389) typesets the parameter text of an
+    // undefined one (`\DeclareMathOperator{\dash_exp}{-exp}`, math0312019; pdflatex errs and leaves the command
+    // undefined), so there it is read after the command, as Perl's `{Token}` reads it: the Warning, then the script's
+    // Error (KNOWN_PERL_ERRORS #891). Guard `perfect_kernel_batch69a::declaremathoperator_undefined_parameter_text`.
+    if !name.is_empty()
+      && (lookup_meaning(&cs).is_none() || x_equals(&cs, &T_CS!("\\relax")))
+    {
+      if let Some(first) = name.iter().find(|t| t.get_catcode() != Catcode::SPACE) {
+        Warn!(
+          "unexpected",
+          first.stringify(),
+          s!(
+            "Unexpected text after the value in an argument of \\DeclareMathOperator ('{}'); it is read after \\DeclareMathOperator",
+            Tokens::new(name.clone())
+          )
+        );
+      }
+      unread_vec(std::mem::take(&mut name));
+    }
     let has_star = star.is_some();
     let mut presentation = vec![T_CS!("\\operatorname")];
     if has_star {

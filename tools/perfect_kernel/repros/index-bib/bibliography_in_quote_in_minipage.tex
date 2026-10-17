@@ -1,0 +1,18 @@
+% mechanism: a bibliography in a `{quote}` inside a `minipage`: the walk that closes the quote (document.rs
+%   `close_quotes_blocking`) passes the box's capture, since the bibliography is placed outside the box, and closes
+%   the quote inside it (OXIDIZED_DESIGN_DIVERGENCES #677); a quote outside the box would stay open
+% witness: review probe b_quote_in_minipage (69a round 2 first draft stopped at the capture and erred as the base)
+% oracle:  pdflatex 0 errors: "1 Intro", "Text [1] and [2].", References (small) "[1] Alpha entry one." "[2] Beta
+%   entry two.", "After."
+% engines: rust 67int17b = Error:malformed:ltx:section, Error:malformed:ltx:bibliography (in <ltx:quote>); Perl the
+%   same
+% expect:  0 errors, 0 warnings; no <ltx:quote>; the bibliography in section 1 between its paragraphs, its title and
+%   entries at 90%
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}\begin{document}\section{Intro}Text \cite{a} and \cite{b}.
+\begin{minipage}{\textwidth}\begin{quote}\small
+\begin{thebibliography}{9}\bibitem{a} {\em Alpha} entry one.\bibitem{b} Beta entry two.\end{thebibliography}
+\end{quote}\end{minipage}
+After.
+\end{document}

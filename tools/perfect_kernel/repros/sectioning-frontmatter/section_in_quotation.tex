@@ -1,13 +1,14 @@
-% mechanism: a sectioning unit inside `{quotation}`/`{quote}` (article.cls:389-408, `\list` + `\item`): the heading is
-%   typeset inside the quote's margins; the quote opens an `ltx:inline-sectional-block` for it (ruling 2026-10-16,
-%   HF7-A precedent; OXIDIZED_DESIGN_DIVERGENCES #678); the quote's end closes the block
+% mechanism: a sectioning unit inside `{quotation}`/`{quote}` (article.cls:389-408, `\list{}{…}\item\relax`, LaTeX's
+%   unlabelled list: a margin, no structure): the unit closes the quote and is the document's own unit, as the item
+%   bridge's margin-list exemption does (main-session ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #678); the quote,
+%   left empty, is dropped, and its end closes only the paragraph the tail is in
 % witness: 0712.1985 (`\begin{quotation}\section*{}` around the title page's abstract)
 % oracle:  pdflatex 0 errors: an empty unnumbered heading, "Abstract" centered, "We study things." small, all
 %   indented; "1 Introduction", "Text, see 1.1.", the indented "1.1 Inner" / "Quoted text.", "After."
 % engines: rust 67int17b = Error:malformed:ltx:section, Error:malformed:ltx:subsection (in <ltx:quote>); Perl the same
-% expect:  0 errors; each quote holds an <inline-sectional-block> with the unit; the subsection keeps its number and
-%   label; "After." follows the quote in the section's paragraph
-% status:  RED (67int17b) -> GREEN (69a)
+% expect:  0 errors; no <ltx:quote>; the unnumbered section holds the abstract's text; the subsection is
+%   section 1's, keeps its number and label, and holds "Quoted text." and "After."
+% status:  RED (67int17b) -> GREEN (69a r2; r1 opened an inline sectional block)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

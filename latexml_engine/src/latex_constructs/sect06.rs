@@ -281,15 +281,17 @@ pub(crate) fn load() -> Result<()> {
 
   // Perl: Let('\@block@cr', '\lx@newline');  # Obsolete, but in case still used
   Let!("\\@block@cr", "\\lx@newline");
-  DefEnvironment!("{quote}",
-    "<ltx:quote>#body</ltx:quote>",
-    mode => "internal_vertical");
-  DefEnvironment!("{quotation}",
-    "<ltx:quote>#body</ltx:quote>",
-    mode => "internal_vertical");
-  DefEnvironment!("{verse}",
-    "<ltx:quote role='verse'>#body</ltx:quote>",
-    mode => "internal_vertical");
+  // Perl `<ltx:quote>#body</ltx:quote>` (and `role='verse'`), its end acting on the quote it opened
+  // (`quote_environment`).
+  DefEnvironment!("{quote}", sub[document, _args, props] {
+    quote_environment(document, props, None)
+  }, mode => "internal_vertical");
+  DefEnvironment!("{quotation}", sub[document, _args, props] {
+    quote_environment(document, props, None)
+  }, mode => "internal_vertical");
+  DefEnvironment!("{verse}", sub[document, _args, props] {
+    quote_environment(document, props, Some("verse"))
+  }, mode => "internal_vertical");
 
   //======================================================================
   // C.6.2 List-Making environments
@@ -1119,6 +1121,56 @@ fn close_trivlists_from(document: &mut Document, level: usize) -> Result<()> {
   }
   if let Some(list) = outermost {
     document.maybe_close_node(&list)?;
+  }
+  Ok(())
+}
+
+/// `{quote}`, `{quotation}`, `{verse}`: Perl's `<ltx:quote>#body</ltx:quote>` (`role='verse'` for a verse,
+/// latex_constructs.pool.ltxml), whose end acts on the quote it opened. A bibliography or a sectioning unit in the body
+/// closes the quote (`Document::close_quotes_blocking`, OXIDIZED_DESIGN_DIVERGENCES #677, #678); the end then closes
+/// no other quote (one around it stays open: probe b_qsq, a `{quote}` in a `{quotation}`), only the paragraph
+/// the body's tail is in, as TeX's `\endlist` ends it (latex.ltx `\@endparenv`), so the text after the environment is
+/// a paragraph of its own (probe b_quote_text). Guards `perfect_kernel_batch69a::{
+/// bibliography_in_a_quote_keeps_the_tail_paragraph, bibliography_in_a_nested_quote_keeps_the_outer_quote}`.
+fn quote_environment(
+  document: &mut Document,
+  props: &SymHashMap<Stored>,
+  role: Option<&str>,
+) -> Result<()> {
+  // The template's open: no attributes, no font (`<ltx:quote>`); with one, the whatsit's font.
+  let quote = match role {
+    None => document.open_element("ltx:quote", None, None)?,
+    Some(role) => {
+      let attrs: HashMap<String, String> = string_map!("role" => role);
+      let font = match props.get("font") {
+        Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+        Some(Stored::FontDirective(FontDirective::Asset(fa))) => Some(Cow::Borrowed(&**fa)),
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None)?)),
+        _ => None,
+      };
+      document.open_element("ltx:quote", Some(attrs), font.as_deref())?
+    },
+  };
+  if let Some(Stored::Digested(body)) = props.get("body") {
+    document.absorb(body, None)?;
+  }
+  if document.is_open(&quote) {
+    document.close_element_if_open("ltx:quote")?;
+  } else {
+    // The tail's paragraph text: the innermost `ltx:p` reached through elements that auto-close.
+    let mut node = Some(document.get_node().clone());
+    while let Some(current) = node {
+      if current.get_type() == Some(NodeType::ElementNode) {
+        if document::get_node_qname(&current) == pin!("ltx:p") {
+          document.close_node_internal(&current)?;
+          break;
+        }
+        if !document::can_auto_close(&current) {
+          break;
+        }
+      }
+      node = current.get_parent();
+    }
   }
   Ok(())
 }

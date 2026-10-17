@@ -4225,36 +4225,18 @@ fn backmatter_insertion_target(document: &Document, asif: &str, element: &str) -
 /// itself may go in an `ltx:quote` (LaTeXML-block.rnc `quote_model`), and the quote does not auto-close, so both erred
 /// and the bibliography lost its place in the back matter. LaTeX's `thebibliography` is `\section*{\refname}` and a
 /// `\list` (article.cls:565-584; book.cls, report.cls alike), typeset inside the quote's `\list` margins — the heading
-/// and the list are the document's bibliography, the quote only indents it: the quote is closed here (each one, from
-/// the innermost, while it blocks the element), dropped when it holds nothing, and the environment's own
-/// `</ltx:quote>` finds it closed (`close_element_if_open`). The quote's font changes (`\small`) are digested into the
-/// entries and stay. User ruling 2026-10-16 (OXIDIZED_DESIGN_DIVERGENCES #677); witnesses 2203.09193 1904.12066
-/// 1610.09996 2109.09861 2403.09260 1609.06434 (AAAI), astro-ph0410583 (quote), 1504.06728 (verse). Guard
-/// `perfect_kernel_batch69a::bibliography_in_a_quote_closes_the_quote`.
+/// and the list are the document's bibliography, the quote only indents it: the quotes in the way are closed when that
+/// alone makes the bibliography's place reachable (`Document::close_quotes_blocking`, shared with a sectioning unit in a
+/// quote). The quote's font changes (`\small`) are digested into the entries and stay. User ruling 2026-10-16
+/// (OXIDIZED_DESIGN_DIVERGENCES #677); witnesses 2203.09193 1904.12066 1610.09996 2109.09861 2403.09260 1609.06434
+/// (AAAI), astro-ph0410583 (quote), 1504.06728 (verse). Guard `perfect_kernel_batch69a::bibliography_in_a_quote_closes_the_quote`.
 fn close_list_containers_before_backmatter(
   document: &mut Document,
   asif: &str,
   element: &str,
 ) -> Result<()> {
-  while !document.is_openable(asif) && !document.is_openable(element) {
-    // the innermost element that does not auto-close: the one in the way
-    let mut node = Some(document.get_node().clone());
-    while let Some(current) = node.clone() {
-      if !document::can_auto_close(&current) {
-        break;
-      }
-      node = current.get_parent();
-    }
-    let Some(quote) = node.filter(|n| document::get_node_qname(n) == pin!("ltx:quote")) else {
-      return Ok(());
-    };
-    document.close_node_internal(&quote)?;
-    let empty = quote.get_child_nodes().iter().all(|child| {
-      child.get_type() == Some(NodeType::TextNode) && child.get_content().trim().is_empty()
-    });
-    if empty {
-      document.remove_node(quote);
-    }
+  if !document.is_openable(asif) && !document.is_openable(element) {
+    document.close_quotes_blocking(&[pin(asif), pin(element)])?;
   }
   Ok(())
 }

@@ -48,16 +48,95 @@ fn bibliography_in_a_verse_keeps_the_text_around_it() {
   ]);
 }
 
-/// `\begin{quotation}\section*{}` (0712.1985) and a numbered, labelled `\subsection` in a `{quote}`: each quote holds an
-/// inline sectional block with the unit; the subsection keeps its number and label; the text after the quote stays in
-/// the section's paragraph.
+/// `\begin{quotation}\section*{}` (0712.1985) and a numbered, labelled `\subsection` in a `{quote}`: each unit closes
+/// its quote (dropped, empty) and is the document's own (ruling 2026-10-17, as the margin-list exemption; OD #678); the
+/// subsection keeps its number and label; the text after the quote stays in the subsection.
 #[test]
-fn section_in_a_quotation_opens_a_block() {
+fn section_in_a_quotation_closes_it() {
   let xml = clean!("sectioning-frontmatter/section_in_quotation.tex");
   assert_all(&xml, &[
-    r#"<para xml:id="p1"> <quote xml:id="p1.1"> <inline-sectional-block xml:id="p1.1.1"> <section xml:id="Sx1"> <title/> <para xml:id="Sx1.p1"> <p align="center" xml:id="Sx1.p1.1">Abstract</p> </para> <para xml:id="Sx1.p2"> <p xml:id="Sx1.p2.1"><text fontsize="90%" xml:id="Sx1.p2.1.1">We study things. </text></p> </para> </section> </inline-sectional-block> </quote> </para>"#,
-    r#"<quote xml:id="S1.p1.2"> <inline-sectional-block xml:id="S1.p1.2.1"> <subsection inlist="toc" labels="LABEL:q" xml:id="S1.SS1"> <tags> <tag>1.1</tag> <tag role="refnum">1.1</tag> <tag role="typerefnum">§1.1</tag> </tags> <title><tag close=" ">1.1</tag>Inner</title> <para xml:id="S1.SS1.p1"> <p xml:id="S1.SS1.p1.1">Quoted text.</p> </para> </subsection> </inline-sectional-block> </quote> <p xml:id="S1.p1.3">After.</p> </para> </section>"#,
+    r#"</creator> <section xml:id="Sx1"> <title/> <para xml:id="Sx1.p1"> <p align="center" xml:id="Sx1.p1.1">Abstract</p> </para> <para xml:id="Sx1.p2"> <p xml:id="Sx1.p2.1"><text fontsize="90%" xml:id="Sx1.p2.1.1">We study things. </text></p> </para> </section> <section inlist="toc" labels="LABEL:intro" xml:id="S1">"#,
+    r#"<p xml:id="S1.p1.1">Text, see <ref labelref="LABEL:q"/>.</p> </para> <subsection inlist="toc" labels="LABEL:q" xml:id="S1.SS1"> <tags> <tag>1.1</tag> <tag role="refnum">1.1</tag> <tag role="typerefnum">§1.1</tag> </tags> <title><tag close=" ">1.1</tag>Inner</title> <para xml:id="S1.SS1.p1"> <p xml:id="S1.SS1.p1.1">Quoted text.</p> <p xml:id="S1.SS1.p1.2">After.</p> </para> </subsection> </section> </document>"#,
   ]);
+  assert!(!xml.contains("<quote"), "{xml}");
+  assert!(!xml.contains("inline-sectional-block"), "{xml}");
+}
+
+/// A whole paper inside `{quotation}` (review probe s_whole): real top-level sections, the bibliography in the back
+/// matter.
+#[test]
+fn whole_paper_in_a_quotation_has_its_sections() {
+  let xml = clean!("sectioning-frontmatter/whole_paper_in_quotation.tex");
+  assert_all(&xml, &[
+    r#"<p xml:id="S1.p1.1">Intro text.</p> </para> </section> <section inlist="toc" xml:id="S2">"#,
+    r#"<p xml:id="S2.p1.1">Body text <cite class="ltx_citemacro_cite">[<bibref bibrefs="a" separator="," yyseparator=","/>]</cite>.</p> </para> </section> <bibliography inlist="toc" xml:id="bib"> <title>References</title>"#,
+    r#"<bibblock> Beta entry two.</bibblock> </bibitem> </biblist> </bibliography> </document>"#,
+  ]);
+  assert!(
+    xml.contains(r#"<section inlist="toc" labels="LABEL:s:i" xml:id="S1">"#),
+    "{xml}"
+  );
+  assert!(!xml.contains("<quote"), "{xml}");
+}
+
+/// `\chapter` inside `{quotation}` in a report (review probe s_chapter): the chapter is the document's, its section
+/// and labels its own.
+#[test]
+fn chapter_in_a_quotation_is_a_chapter() {
+  let xml = clean!("sectioning-frontmatter/chapter_in_quotation.tex");
+  assert_all(&xml, &[
+    r#"<p xml:id="Ch1.p1.1">Text.</p> </para> </chapter> <chapter inlist="toc" labels="LABEL:c:q" xml:id="Ch2">"#,
+    r#"<para xml:id="Ch2.p1"> <p xml:id="Ch2.p1.1">Quoted.</p> </para> <section inlist="toc" labels="LABEL:s:q" xml:id="Ch2.S1">"#,
+    r#"<p xml:id="Ch2.S1.p1.1">Sec text.</p> </para> </section> </chapter> <chapter inlist="toc" xml:id="Ch3">"#,
+  ]);
+  assert!(!xml.contains("<quote"), "{xml}");
+}
+
+/// A bibliography in a `{quote}` with text after it (review probe b_quote_text): the quote's end finds its quote closed
+/// and ends only the tail's paragraph text, so the tail and the text after the quote are two `ltx:p`.
+#[test]
+fn bibliography_in_a_quote_keeps_the_tail_paragraph() {
+  let xml = clean!("index-bib/bibliography_in_quote_tail_paragraph.tex");
+  assert_all(&xml, &[
+    r#"<quote xml:id="S1.p1.2"> <p xml:id="S1.p1.2.1">Lead text in quote.</p> </quote> </para> </section> <bibliography inlist="toc" xml:id="bib">"#,
+    r#"</biblist> </bibliography> <para xml:id="p1"> <p xml:id="p1.1">Tail text still in quote.</p> <p xml:id="p1.2">After quote.</p> </para> </document>"#,
+  ]);
+}
+
+/// A bibliography in a `{quote}` inside a `minipage` (review probe b_quote_in_minipage): the quote inside the box is
+/// closed and the bibliography placed in the section, its title and entries at the quote's `\small`.
+#[test]
+fn bibliography_in_a_quote_in_a_minipage_closes_the_quote() {
+  let xml = clean!("index-bib/bibliography_in_quote_in_minipage.tex");
+  assert_all(&xml, &[
+    r#"yyseparator=","/>]</cite>. </p> </para> <bibliography inlist="toc" xml:id="bib"> <title fontsize="90%">References</title> <biblist> <bibitem key="a" xml:id="bib.bib1">"#,
+    r#"<bibblock><text fontsize="90%" xml:id="bib.bib2.1"> Beta entry two.</text></bibblock> </bibitem> </biblist> </bibliography> <para xml:id="S1.p2"> <p xml:id="S1.p2.1">After.</p> </para> </section> </document>"#,
+  ]);
+  assert!(!xml.contains("<quote"), "{xml}");
+}
+
+/// A bibliography's `{quote}` inside a `{quotation}` closed by its `\section*` (review probe b_qsq): neither end closes
+/// the other's quote; the tail keeps its own paragraph text.
+#[test]
+fn bibliography_in_a_nested_quote_keeps_the_outer_quote() {
+  let xml = clean!("index-bib/bibliography_in_quote_in_quotation.tex");
+  assert_all(&xml, &[
+    r#"</section> <section xml:id="Sx1"> <title>Notes</title> <para xml:id="Sx1.p1"> <p xml:id="Sx1.p1.1">Note text.</p> </para> </section> <bibliography inlist="toc" xml:id="bib">"#,
+    r#"<bibblock> Alpha one.</bibblock> </bibitem> </biblist> </bibliography> <para xml:id="p1"> <p xml:id="p1.1">Notes tail.</p> <p xml:id="p1.2">After.</p> </para> </document>"#,
+  ]);
+  assert!(!xml.contains("<quote"), "{xml}");
+}
+
+/// `\appendix \section*{References}` then bare `\bibitem`s in a `{quote}` (astro-ph0503283): the bibliography takes the
+/// appendix unit's heading; no empty appendix is left.
+#[test]
+fn bibliography_takes_an_appendix_heading() {
+  let xml = clean!("index-bib/appendix_references_heading_quote.tex");
+  assert_all(&xml, &[
+    r#"<p xml:id="A1.p1.1">Ap text.</p> </para> </appendix> <bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist> <bibitem key="a" xml:id="bib.bib1">"#,
+    r#"<bibblock> Beta. </bibblock> </bibitem> </biblist> </bibliography> </document>"#,
+  ]);
+  assert_eq!(xml.matches("<appendix ").count(), 1, "{xml}");
 }
 
 /// Kluwer's `{chapthebibliography}` (`\section*{References}` + `\list` + `\item[]`; hep-th0212109, cond-mat0112379,
@@ -174,4 +253,27 @@ fn declaremathoperator_parameter_text() {
     r#"tex="\operatorname{N^{1}}(x)+\operatorname*{Lim}_{n}a_{n}""#,
     r#"<XMApp name="N" role="OPFUNCTION" scriptpos="post" xml:id="p1.m1.1"> <XMTok role="SUPERSCRIPTOP" scriptpos="post3"/> <XMTok role="UNKNOWN">N</XMTok> <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok> </XMApp>"#,
   ]);
+}
+
+/// `\DeclareMathOperator{\M^1}{…}` with `\M` undefined (math0312019 `\dash_exp`; review probe dmo2): TeX typesets the
+/// parameter text and errs (pdflatex 5 errors), so ours reads it after the command — the Warning and the script's
+/// Error — and defines no parameter text (latex.ltx:1386-1389).
+#[test]
+fn declaremathoperator_undefined_parameter_text() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/declaremathoperator_undefined_parameter_text.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 1), "{log}");
+  assert!(
+    log.contains("Script ^ can only appear in math mode"),
+    "{log}"
+  );
+  assert!(
+    log.contains("Unexpected text after the value in an argument of \\DeclareMathOperator ('^1')"),
+    "{log}"
+  );
+  assert!(!xml.contains("lx@amsopn@"), "{xml}");
 }

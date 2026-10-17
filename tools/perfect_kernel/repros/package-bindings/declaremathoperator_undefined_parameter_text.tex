@@ -1,0 +1,16 @@
+% mechanism: `\DeclareMathOperator{\M^1}{…}` with `\M` undefined: `\declare@robustcommand`'s `\ifx\@undefined#1\else
+%   \ifx\relax#1\else … \fi\fi` (latex.ltx:1386-1389) typesets the parameter text, so TeX errs and leaves `\M`
+%   undefined; only an already defined command takes the parameter text (declaremathoperator_parameter_text.tex). Ours
+%   reads the text after the command, as Perl's `{Token}` does: the Warning, then the script's Error
+% witness: math0312019 (`\DeclareMathOperator{\dash_exp}{-exp}`, `\dash` undefined; review probe dmo2)
+% oracle:  pdflatex 5 errors (Missing $ inserted; Missing \begin{document}; \mdseries invalid in math mode;
+%   Undefined control sequence \M; Missing $ inserted)
+% engines: rust 67int17b = Warning:unexpected + Error:unexpected:^; 69a r1 = 0 (defined \M with the parameter text);
+%   Perl the same as 67int17b (KNOWN_PERL_ERRORS #891)
+% expect:  1 error (Error:unexpected:^ Script ^ can only appear in math mode), 1 warning (Warning:unexpected, the
+%   text after the argument)
+% status:  RED (69a r1) -> GREEN (69a r2)
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{amsmath}
+\DeclareMathOperator{\M^1}{M^1}
+\begin{document}$\M^1(x)$\end{document}

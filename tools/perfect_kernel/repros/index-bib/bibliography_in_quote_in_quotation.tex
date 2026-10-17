@@ -1,0 +1,19 @@
+% mechanism: a `{quote}` holding a bibliography inside a `{quotation}` that a `\section*` already closed: the section
+%   closes the quotation (OXIDIZED_DESIGN_DIVERGENCES #678), the bibliography the quote (#677); each environment's end
+%   acts only on the quote it opened, so neither closes the other's, and the text after the inner quote keeps its own
+%   paragraph
+% witness: review probe b_qsq (69a round 1: "Notes tail.After." merged, the outer quotation closed early)
+% oracle:  pdflatex 0 errors: "1 Intro", "Text [1].", the indented unnumbered "Notes", "Note text.", References
+%   "[1] Alpha one.", "Notes tail." indented, "After."
+% engines: rust 67int17b = Error:malformed:ltx:section ×2, Error:malformed:ltx:bibliography (in <ltx:quote>); Perl
+%   errs the same way
+% expect:  0 errors, 0 warnings; no <ltx:quote>; an unnumbered section "Notes" holds "Note text."; the bibliography in
+%   the back matter; "Notes tail." and "After." two <ltx:p>
+% status:  RED (67int17b; 69a r1 merged the texts) -> GREEN (69a r2)
+% preload: ar5iv.sty
+\documentclass{article}\begin{document}\section{Intro}Text \cite{a}.
+\begin{quotation}\section*{Notes}Note text.\begin{quote}
+\begin{thebibliography}{9}\bibitem{a} Alpha one.\end{thebibliography}
+\end{quote}Notes tail.\end{quotation}
+After.
+\end{document}

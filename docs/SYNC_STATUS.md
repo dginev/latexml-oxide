@@ -2729,17 +2729,40 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   index-bib/{bibliography_in_quote, bibliography_in_verse_after_text, kluwer_chapthebibliography},
   sectioning-frontmatter/section_in_quotation; guards `perfect_kernel_batch69a` (4).
   (4) Small package shapes (study A8 A9 A10 B7 B8 C7 C9 C12): multirow's text between struts (multirow.sty:174-177;
+
+- **69a** (bibliography containers and small package shapes of the rc_struct2 study,
+  agent_reports/2026-10-16_rc_struct2.md D1 D3 D5). (1) A bibliography begun in `{quote}`/`{quotation}`/`{verse}` (the
+  AAAI template's `\begin{quote}\begin{small}\bibliography`): the quote is closed before it and dropped when empty, the
+  entries keep the quote's `\small` (latex_constructs/mod.rs `close_list_containers_before_backmatter` → document.rs
+  `close_quotes_blocking`, only when closing quotes alone makes the place reachable; ruling 2026-10-16, OD #677;
+  2203.09193 1904.12066 1610.09996 2109.09861 2403.09260 1609.06434 astro-ph0410583 1504.06728); the environment's end
+  acts on its own quote, found closed it ends only the tail's `ltx:p` (sect06.rs `quote_environment`). (2) A sectioning
+  unit in a quote closes it the same way and is a real unit (main-session ruling 2026-10-17, as the margin-list
+  exemption; OD #678; 0712.1985). An `\appendix` unit's heading is taken by a bibliography (sect11.rs
+  `BIBLIOGRAPHY_HEADED_UNITS`; astro-ph0503283). (3) Kluwer `\normallatexbib` `{chapthebibliography}` (`\section*` +
+  `\list` + `\item[]`, cargese.cls:1859-1906; kapproc, edbk): a `\bibitem` in the environment that opened the innermost
+  `\list` closes that list first (sect06.rs `lx@list@currenvir`, sect11.rs `\lx@mung@bibliography` `list`), the
+  bibliography taking the class's heading (KNOWN_PERL_ERRORS #887; hep-th0212109 hep-th0212193 cond-mat0112379
+  cond-mat0110649 cond-mat0002157). Repros index-bib/{bibliography_in_quote, bibliography_in_verse_after_text,
+  kluwer_chapthebibliography}, sectioning-frontmatter/section_in_quotation; guards `perfect_kernel_batch69a` (4). (4)
+  Small package shapes (study A8 A9 A10 B7 B8 C7 C9 C12): multirow's text between struts (multirow.sty:174-177;
   2507.07731; KPE #888); colortbl's `\arrayrulecolor`/`\doublerulesepcolor` brace-delimited (colortbl.sty:156-164;
   1910.02206; KPE #889); cases.sty's options, `amsstyle` making the explanation column math (:228-233; 2508.08751; KPE
-  #890); `\DeclareMathOperator{\N^1}` defines `\N` with the parameter text (amsopn.sty:50-53; 2301.04262; KPE #891);
-  mathpartir's stub splits premises only at brace depth 0 (mathpartir.sty:133-146; 2604.09165); `{NiceTabular}` ends in
-  nicematrix's guard column, whose template errs (nicematrix.sty:2236-2243, :9660-9670; 2505.05139); a glossary entry's
-  stored fields read `&` as the character (OD #679, KPE #892; 2602.09131). C7 (dcolumn `\text{$…$}`, 1302.5691) was
-  already fixed by 68w and is guarded. Repros package-bindings/{multirow_text_one_argument_macro,
-  colortbl_arrayrulecolor_unbraced, dcolumn_text_box_dollar, cases_amsstyle_explanation_math,
-  mathpartir_premise_braced_rows, nicematrix_guard_column, glossaries_untypeset_ampersand,
-  declaremathoperator_parameter_text}; guards `perfect_kernel_batch69a` (8 more). Residual: `\hhline{~~~---}` rules every
-  column (hhline binding, pre-existing).
+  #890); `\DeclareMathOperator{\N^1}` defines an already defined `\N` with the parameter text, an undefined one errs as
+  pdflatex does (amsopn.sty:50-53, latex.ltx:1386-1389; 2301.04262, math0312019; KPE #891); mathpartir's stub splits
+  premises only at brace depth 0 (mathpartir.sty:133-146; 2604.09165); `{NiceTabular}` ends in nicematrix's guard
+  column, whose template errs (nicematrix.sty:2236-2243, :9660-9670; 2505.05139); a glossary entry's stored fields read
+  `&` as the character (OD #679, KPE #892; 2602.09131). C7 (dcolumn `\text{$…$}`, 1302.5691) was already fixed by 68w
+  and is guarded. Repros package-bindings/{multirow_text_one_argument_macro, colortbl_arrayrulecolor_unbraced,
+  dcolumn_text_box_dollar, cases_amsstyle_explanation_math, mathpartir_premise_braced_rows, nicematrix_guard_column,
+  glossaries_untypeset_ampersand, declaremathoperator_parameter_text, declaremathoperator_undefined_parameter_text},
+  index-bib/{bibliography_in_quote_tail_paragraph, bibliography_in_quote_in_quotation,
+  bibliography_in_quote_in_minipage, appendix_references_heading_quote},
+  sectioning-frontmatter/{whole_paper_in_quotation, chapter_in_quotation}; guards `perfect_kernel_batch69a` (19).
+  Residuals: `\hhline{~~~---}` rules every column (hhline binding, pre-existing); amsrefs `{bibdiv}` in a quote errs
+  (its bibliography is not placed by `adjust_backmatter_element`); a quote holding a bibliography or a heading inside a
+  list item, or outside the `minipage` it is in, errs as before; `\multirow{3}{*}{\textsc{X}}` under a size change nests
+  its fonts differently (2509.09853, rendering unchanged).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
