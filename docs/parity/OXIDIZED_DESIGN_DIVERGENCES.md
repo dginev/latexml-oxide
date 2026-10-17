@@ -17357,7 +17357,7 @@ row's tag cell without an argument (`\def\tag{\global\tag@true…&&}` in `\align
 | `{\it … $$\align a&=b\tag{5\\ c&=d\endalign$$ …}` | 3 errors, as the row above; the alignment is lost | 1 error, as the row above; the `{\it` group and its text after the display kept |
 | `\vbox{… $$\align a&=b\tag{5\\ c&=d\endalign$$ …}` | 4 errors (the same three, then "You can't use `\end' in internal vertical mode"), then Emergency stop; Fatal, no PDF | 1 error, as the row above; the `\vbox` and its text kept |
 | `a&=b\tag{{3\par}5\\ c&=d` | 9 errors, as `\tag{3\par}\\` | 1 error, as `\tag{5\\`; the tag is "(35)" |
-| `a&=b\tag{{5\\ 6}\par c&=d` | 7 errors (as `\tag 4\par\\`, less "Invalid use of \\"); the alignment is lost | 2 errors: "Missing } inserted …" twice; the `}` after the row's end closes the next row's cell-template `{` (`$\displaystyle{##}$`, KNOWN_PERL_ERRORS #908, 69c), so both rows are kept, "(5)" on the first (before 69c: 3, that `}` closing the display, the alignment lost) |
+| `a&=b\tag{{5\\ 6}\par c&=d` | 7 errors (as `\tag 4\par\\`, less "Invalid use of \\"); the alignment is lost | 3 errors: "Missing } inserted …" twice, then "Missing { inserted" at the second row's `&`; the `}` after the row's end closes the next row's cell-template `{` (`$\displaystyle{##}$`, KNOWN_PERL_ERRORS #908, 69c), and the `&` meeting the count −1 gets its `{` (tex.web §1127 `align_error`, 70b), so both rows are kept, "(5)" on the first (before 69c: 3, that `}` closing the display, the alignment lost; 69c: 2, the `&` taken for the cell end with no v-part) |
 | `a&=b\\ c&=d\tag{5 e` and `\enddocument`, no `\endalign` | 3 errors ("Forbidden control sequence found while scanning use of \align" at the `\outer` `\enddocument`, amsppt.sty:1091; "Missing $ inserted", "Display math should end with $$"); the alignment is lost | 1 error ("Missing } inserted …"); the document ends; the open row's last cells are dropped, with or without a tag (RED `amstex/amstex_align_unclosed_at_enddocument`) |
 
 On rows 1-3 and 5-10 TeX's errors are not `\tag`'s: they come from `\align` reading its body as a non-`\long` argument
@@ -18795,3 +18795,21 @@ mode by the pgf driver file and stops with an `\errmessage` for a driver its tab
 for the web: a plot's image file is `\pgfimage` (`\gploadimage`, :88-90), an inline raw image gnuplot's own "not
 implemented" warning (:79-83), never the `pdf`/`ps` modes' PDF/PostScript image operators (:50-77). The table's own
 `\def`s leave the entry alone. Witness 2501.11366. Guard `perfect_kernel_batch70a::gnuplot_lua_tikz_driver_mode`.
+
+### 707. Every alignment cell's frame is a braced template's `{…}`: a cell's stray `}` closes it, whatever the template (TeX: per template — latex.ltx's tabular braces, array.sty's `\begingroup`, a bare `\halign`'s none)
+
+**TeX**: a cell's `}` that closes one group more than the cell opened meets what the template put around the cell.
+latex.ltx's tabular template (`\@tabclassz`, latex.ltx:16666) wraps the cell in `{…}`, so the `}` closes that brace and
+the column end then meets `align_state` −1 (tex.web §1127 `align_error`, "Missing { inserted"); array.sty's
+(`\d@llarbegin` = `\begingroup`) gives "Extra }, or forgotten \endgroup" (§1069), the `}` deleted; a bare `\halign{#…}`
+meets the alignment group itself, "Missing \cr inserted" (§1132), and the row ends there.
+
+**Perl**: the `}` pops the cell's group (KNOWN_PERL_ERRORS #923).
+
+**Rust** (70b): the cell frame carries the template-brace mark of KNOWN_PERL_ERRORS #908 (alignment.rs `start_column`),
+so for every alignment the cell's `}` closes the template's `{` and the frame stays; the column end then gets its `{`
+from `align_error` and `end_column` closes it. One shape, the latex.ltx tabular's, for all templates: the error count
+matches each case's pdflatex count in the measured shapes (`{a & b} \\` 2, `a & b} \\` 1, with and without array.sty),
+the message is latex.ltx's, every cell kept; the bare-`\halign` row break of §1132 is not reproduced. Why: the frame
+holds the column's bookkeeping (`alignmentStartColumn`), and popping it lost the first cell to a spanning second
+(`<td colspan="2">b</td>`), the content loss Perl shows. Guard `perfect_kernel_batch70b::tabular_stray_brace_keeps_its_cells`.

@@ -552,17 +552,24 @@ fn amstex_row_tag_open_group_stops_at_the_row_end() {
     }
     assert!(xml.trim_end().ends_with("</document>"), "{body}\n{xml}");
   }
-  // The `}` after the row's end closes the next row's cell-template `{` (69c): both rows kept, the tag on the first.
+  // The `}` after the row's end closes the next row's cell-template `{` (69c), and the second row's `&`, meeting the
+  // count −1, gets its `{` (tex.web §1127 `align_error`, 70b; TeX: 7 errors, the alignment lost): both rows kept, the
+  // tag on the first.
   let body = "$$\\align a&=b\\tag{{5\\\\ 6}\\par c&=d\\endalign$$";
   let (log, xml) = convert_counted(&format!(
     "\\input amstex\n\\input amsppt.sty\n\\document\n{body}{later}"
   ));
   assert_eq!(
     (error_count(&log), warning_count(&log)),
-    (2, 0),
+    (3, 0),
     "{body}\n{log}"
   );
   assert_eq!(log.matches(MISSING).count(), 2, "{body}\n{log}");
+  assert_eq!(
+    log.matches("Missing { inserted").count(),
+    1,
+    "{body}\n{log}"
+  );
   assert_eq!(log.matches(STRAY).count(), 0, "{body}\n{log}");
   assert_tags_on(&xml, "id1.1.1", &tags("5"));
   assert!(
@@ -570,7 +577,7 @@ fn amstex_row_tag_open_group_stops_at_the_row_end() {
     "{xml}"
   );
   assert!(
-    equation(&xml, "id1.1.2").contains("<Math tex=\"\\displaystyle{\\displaystyle 6}\\par c=d\""),
+    equation(&xml, "id1.1.2").contains("<Math tex=\"\\displaystyle6}\\par c{=d\""),
     "{xml}"
   );
   assert_eq!(xml.matches("<tags>").count(), 1, "{xml}");

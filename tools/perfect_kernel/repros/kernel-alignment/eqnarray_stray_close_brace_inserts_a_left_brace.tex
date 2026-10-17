@@ -1,0 +1,15 @@
+% witness: the 69c round-2 table (agent_reports/2026-10-17_69c_report.md) and the 69c review item 7: a net stray `}` in
+%   a braced-template cell; the 60-paper eqnarray/align sample of first error `unexpected:}` (70b A/B)
+% oracle:  pdflatex 1 error, "Missing { inserted": the cell's `}` closes the template's `{` of `$\displaystyle{##}$`
+%   (latex.ltx:15760), the `&` then meets align_state -1 and reaches main control, where tex.web §1127 `align_error`
+%   inserts the `{` and reads the `&` again at 0, so the v-part's `}` closes it; both rows kept
+% engines: rust 67int18b = 2 (`a =` lost), 69c = 17 ("Attempt to close a group that switched to mode math", row 2 as
+%   text), perl = 24 ("Attempt to close a group that switched to mode math"; no template braces, no `align_error`:
+%   KNOWN_PERL_ERRORS #908, #923)
+% expect:  1 error, "Missing { inserted"; both rows, each cell its formula
+% status:  RED (69c round 2) -> GREEN (70b: stomach.rs `align_error`)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray} a} &=& b \\ y&=&z \end{eqnarray}
+Post $q$.
+\end{document}

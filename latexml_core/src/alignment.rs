@@ -481,6 +481,14 @@ impl Alignment {
     // Mark the cell frame: its `\aftergroup` tokens are run at the cell's
     // end (see `end_column`).
     assign_frame_value_sym(crate::pin!("alignCellGroup"), true);
+    // The cell frame is the template's brace pair (latex.ltx:16666 `\@tabclassz`'s `\@preamble{…\@sharp…}`, see
+    // `end_column`), so it carries the template-brace mark: a cell's stray `}` closes that `{` and leaves the frame
+    // (`stomach::close_template_brace`); the column end then meets the count −1 (tex.web §1127 `align_error`, "Missing {
+    // inserted"), and the inserted `{` is closed at the cell's end as the template's `}` would close it. Before, the `}`
+    // popped the cell frame and the column bookkeeping bound in it, and a `{a & b}` or `a & b}` row lost its first cell
+    // to a spanning second one (`colspan="2"`). Guard
+    // `perfect_kernel_batch70b::tabular_stray_close_brace_keeps_its_cells`.
+    assign_value(TEMPLATE_BRACE_OPEN, true, None);
     set_align_group_count(1000000);
     self.in_column = true;
     Ok(())
@@ -488,6 +496,18 @@ impl Alignment {
 
   pub fn end_column(&mut self) -> Result<()> {
     if self.in_column {
+      // The template's `}` (see `start_column`): when the cell's own `}` closed the template's `{` and a `{` was
+      // inserted after it (tex.web §1127 `align_error`), that `{` is the group open at the cell's end, and this `}`
+      // closes it. Then the cell frame is popped as itself, never taken for a template brace again.
+      if !is_value_bound("alignCellGroup", Some(0))
+        && !lookup_bool(TEMPLATE_BRACE_OPEN)
+        && off_save_closer().is_some_and(|closer| closer == T_END!())
+      {
+        egroup()?;
+      }
+      if is_value_bound("alignCellGroup", Some(0)) {
+        assign_value(TEMPLATE_BRACE_OPEN, false, None);
+      }
       // `\aftergroup` IN A CELL FIRES INSIDE THE CELL. LaTeX's tabular/array
       // entry template wraps every entry in a brace group (latex.ltx
       // `\@classz`: `{\hfil\hskip1sp\ignorespaces\@sharp\unskip\hfil}`), so an

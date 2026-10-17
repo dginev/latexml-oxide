@@ -204,17 +204,22 @@ pub(crate) fn load() -> Result<()> {
   // inline-math OPEN that the row's `\cr` then cannot balance ("`\org@halign`
   // Attempt to close a group that switched to mode math"; tablists-rus 101,
   // Perl 12; KPE #174). The real spacing macros `\@xargarraycr`/`\@yargarraycr`
-  // (:16600/:16602) are `$`-free and stay. Guard:
+  // (:16600/:16602) are `$`-free and stay. The brace half stays too, as the alignment count needs it (tex.web §442: a
+  // character constant's brace does not count, a skipped one does): the array pair in array.sty:256-258's form
+  // `\ifnum0=`{}\fi`, which takes back the `\iffalse{\fi` of the opener (tablists.sty:158) without closing a group;
+  // the tabular pair as latex.ltx:16592-16594 has it, `\ifnum0=`{\fi}`, whose `}` closes the opener's `{` (:16591).
+  // Without it the count stayed +1 to the row's `\cr`, which then reached the stomach ("Missing } inserted", tex.web
+  // §1127 `align_error`). Guard:
   // `perfect_kernel_batch54::array_continuation_macros_carry_no_math_shift`.
-  DefMacro!("\\@xarraycr", "\\@ifnextchar[\\@argarraycr{\\cr}");
+  DefMacro!("\\@xarraycr", "\\@ifnextchar[\\@argarraycr{\\ifnum0=`{}\\fi\\cr}");
   DefMacro!(
     "\\@argarraycr[]",
-    "\\ifdim #1>\\z@ \\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
+    "\\ifnum0=`{}\\fi\\ifdim #1>\\z@ \\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
   );
-  DefMacro!("\\@xtabularcr", "\\@ifnextchar[\\@argtabularcr{\\cr}");
+  DefMacro!("\\@xtabularcr", "\\@ifnextchar[\\@argtabularcr{\\ifnum0=`{\\fi}\\cr}");
   DefMacro!(
     "\\@argtabularcr[]",
-    "\\ifdim #1>\\z@ \\unskip\\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
+    "\\ifnum0=`{\\fi}\\ifdim #1>\\z@ \\unskip\\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
   );
   if !has_value("GUESS_TABULAR_HEADERS") {
     AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes

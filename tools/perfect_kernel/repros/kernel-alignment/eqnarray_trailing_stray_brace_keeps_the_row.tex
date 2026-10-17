@@ -1,0 +1,13 @@
+% witness: the 69c review item 7 (agent_reports/2026-10-17_69c_review.md): `a &=& b}` lost `b` and set row 2 as text
+% oracle:  pdflatex 11 errors: the third cell's `}` closes its template's `{`, the `\\` (eqnarray's `\@eqncr`) adds the
+%   missing `&` columns at align_state -1, and each meets `align_error` ("Missing { inserted"), then eqnarray's own
+%   column count and `\@eqnnum` unravel ("Extra alignment tab", "Too many columns in eqnarray environment", …)
+% engines: rust 67int18b = 2 (`a =` lost), 69c = 13 (`b` lost, row 2 as text), perl = not run (KNOWN_PERL_ERRORS #908)
+% expect:  1 error, "Missing { inserted" (pdflatex's first; its cascade comes from eqnarray's column bookkeeping, which
+%   a binding row end does not run); both rows, each cell its formula, `b` kept
+% status:  RED (69c round 2) -> GREEN (70b: stomach.rs `align_error`)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray} a &=& b} \\ y&=&z \end{eqnarray}
+Post $q$.
+\end{document}

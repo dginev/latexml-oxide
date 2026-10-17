@@ -2813,6 +2813,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   #898). (b) "Missing $ closing display math." keeps Perl's recovery (the display stays open, the following text set
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
+- **70b** (kernel shapes: the 69c follow-up and the rc_struct4 study, agent_reports/2026-10-17_rc_struct4.md). (1) A1:
+  tex.web §1127 `align_error` — a tab/`\cr`/`\span` reaching the stomach at alignment count ±1/±2 inserts the brace
+  TeX supposes omitted and ends the cell after it (stomach.rs `align_error`; KNOWN_PERL_ERRORS #923), the cell frame
+  the template's brace pair for every alignment (OD #707), the row-continuation macros keep their brace half
+  (sect10.rs). The 69c round-2 table: `a} &=& b` 17 → 1 error, `a &=& b}` 13 → 1 with `b` kept, amsmath `\\ 6} c`
+  9 → 1, tabular `{a & b}` / `a & b}` keep their first cell. Guards `perfect_kernel_batch70b::{eqnarray_stray_close_brace_inserts_a_left_brace,
+  eqnarray_trailing_stray_brace_keeps_the_row, align_stray_close_brace_keeps_the_rows, tabular_stray_brace_keeps_its_cells}`.
 - **69c** (medium-risk shapes from the rc_struct3 study, agent_reports/2026-10-17_rc_struct3.md). (1) P1: a theorem,
   proof or TOC inside a container whose model holds no Para.class (`{quote}`, a `\footnote`, a `{wrapfigure}`, an
   `ltx:text`, a cell) opens an `ltx:inline-logical-block` there — the last auto-open bridge of document.rs

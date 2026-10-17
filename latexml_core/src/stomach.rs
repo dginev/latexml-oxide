@@ -3331,7 +3331,7 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     if delete_extra_brace(&token)? {
       continue;
     }
-    if closes_template_brace(&token) {
+    if closes_template_brace(&token) || align_error(&token)? {
       continue;
     }
     // A DefEnvironment's own end (`\end{X}`, the constructor that pops the environment's frame; no TeX-level `\endX`
@@ -3632,6 +3632,68 @@ fn read_x_token_after_expansion() -> Result<Option<Token>> {
   Ok(next)
 }
 
+/// tex.web §1127 `align_error`: a tab, `\cr` or `\span` that reaches the stomach while the alignment count is not 0
+/// — the cell left a brace unbalanced, so the gullet did not take it for the cell's end (§342) — gets the brace TeX
+/// supposes was omitted: count −1 or −2 (the cell's `}` closed one more group than it opened, `a} &=& b`) inserts a
+/// `{` ("Missing { inserted"), count +1 or +2 (`{a & b}`, `\textbf{a & b}`) a `}` ("Missing } inserted"), and the
+/// column end is read again behind it, now at count 0, so the v-part runs and the cell ends as the template says
+/// (§789). The ledger moves as TeX's does: `align_error` steps the count towards 0 and `ins_error`'s `back_input`
+/// (§325) retracts the inserted brace, which counts again when it is read. A larger count (`abs(align_state)>2`,
+/// "Misplaced &") is left to the cell's reader, as is a count past the v-part's 1000000 (the column's own end).
+/// Before, the column end was taken for the cell's end with no v-part: an eqnarray/amsmath cell left its template's
+/// math open (pdflatex 1 error, ours 17: "Attempt to close a group that switched to mode math"), and a tabular cell's
+/// `{a & b}` lost `a` without a word. Perl has no `align_error` (KNOWN_PERL_ERRORS #923). Whether it fired. Guards
+/// `perfect_kernel_batch70b::{eqnarray_stray_close_brace_inserts_a_left_brace,
+/// tabular_open_brace_at_a_cell_end_inserts_a_right_brace}`.
+pub fn align_error(token: &Token) -> Result<bool> {
+  let count = align_group_count();
+  if count == 0
+    || count.abs() > 2
+    || !has_reading_alignment()
+    || gullet::is_column_end(token).is_none()
+    || !is_tab_mark_command(token)
+  {
+    return Ok(false);
+  }
+  if count < 0 {
+    Error!(
+      "expected",
+      "{",
+      "Missing { inserted",
+      "I've put in what seems to be necessary to fix the current column of the current alignment."
+    );
+    set_align_group_count(count + 1);
+    gullet::unread_one(*token);
+    gullet::unread_one(T_BEGIN!());
+  } else {
+    Error!(
+      "expected",
+      "}",
+      "Missing } inserted",
+      "I've put in what seems to be necessary to fix the current column of the current alignment."
+    );
+    set_align_group_count(count - 1);
+    gullet::unread_one(*token);
+    gullet::unread_one(T_END!());
+  }
+  Ok(true)
+}
+
+/// Whether a column-end token reaches the stomach as the tab-mark command (tex.web's `cur_cmd=tab_mark`): an `&`
+/// character means one unless a binding gave the character another meaning (LaTeXML lets non-active characters have
+/// one): `\@index`'s entry, read as `\@wrindex` writes it under `\@sanitize`, lets `&` to `\&` (sect11.rs; TeX's
+/// `&` is catcode 12 there), and a stray `&` deactivates itself to `\relax`. A control sequence is a column end only
+/// by its meaning already (`gullet::is_column_end`).
+fn is_tab_mark_command(token: &Token) -> bool {
+  token.get_catcode() != Catcode::ALIGN
+    || match lookup_digestable_definition(token) {
+      None | Some(Stored::None) => true,
+      Some(Stored::Constructor(defn)) => defn.cs == *token,
+      Some(Stored::Token(meaning)) => meaning.get_catcode() == Catcode::ALIGN,
+      Some(_) => false,
+    }
+}
+
 /// Invoke a token
 ///
 /// If it is a primitive or constructor, the definition will be invoked,
@@ -3652,6 +3714,9 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
   let mut result: Vec<Digested> = Vec::new();
   // INVOKE:
   while let Some(token) = maybe_token.take() {
+    if align_error(&token)? {
+      return Ok(Vec::new());
+    }
     // RAII guard: auto-pops current_token on scope exit (even on early return/panic)
     let _token_guard = local_current_token_guard(token);
     {

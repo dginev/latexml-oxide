@@ -15067,11 +15067,11 @@ in-math text) meets the cell's end as before. An `\egroup` is a `}` here as in T
 `a\egroup &=& b` closes the template's `{`, and the v-part's `}` meets the cell's math shift — TeX's one "Extra }, or
 forgotten $" (§1069), deleted (`\lx@template@egroup`; pdflatex 1 error, before 17; repro
 kernel-alignment/egroup_closing_a_template_brace_errs_once, guard
-`perfect_kernel_batch69c::egroup_closing_a_template_brace_errs_once`). Not so a cell whose braces do not balance
-across the template, a stray `}` token net: `a} &=& b`, `a &=& b}` leave the gullet's alignment count at −1, so the
-`&`/`\\` that follows is no cell end (tex.web §342) and the row unravels — pdflatex 1 and 11 errors (§1127
-`align_error`'s "Missing { inserted" before the `&`, which is not modelled), before 69c 2 and 2 (the cell's text lost),
-here 17 and 13 (the row's later cells lost). No arXiv paper in the A/B shows it. Witnesses 2207.06932, 1912.10594 (the rc_struct3 U1 sample,
+`perfect_kernel_batch69c::egroup_closing_a_template_brace_errs_once`). A cell whose braces do not balance across the
+template, a stray `}` token net (`a} &=& b`, `a &=& b}`), leaves the gullet's alignment count at −1, so the `&`/`\\`
+that follows is no cell end (tex.web §342): it reaches the stomach, where §1127 `align_error` inserts the `{`
+("Missing { inserted") and the v-part closes it (70b, KNOWN_PERL_ERRORS #923) — pdflatex 1 and 11 errors, here 1 and 1
+with the rows kept (69c: 17 and 13, the row's later cells lost; before 69c 2 and 2, the cell's text lost). Witnesses 2207.06932, 1912.10594 (the rc_struct3 U1 sample,
 agent_reports/2026-10-17_rc_struct3.md). Guard `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
 
 amsmath_sty.rs's gather, align and aligned templates (aligned's serve `{split}`) end and start their cells the same way.
@@ -15208,3 +15208,35 @@ does; the epsfig binding leaves `\DeclareGraphicsRule` alone. Witnesses 1604.055
 2305.16841, 2402.04829, 2310.03515. Repros graphics-tikz/{gincltex_tex_graphic, standalone_tikzscale_tex_graphic, includeinkscape_overlay}; guards
 `perfect_kernel_batch70a::{gincltex_tex_graphic_is_read_as_tex, standalone_loads_gincltex,
 includeinkscape_inputs_the_overlay}`.
+
+## 923. A cell end met while the cell's braces are unbalanced is taken for the cell's end, its template's v-part never run
+
+tex.web §342 recognizes a tab, `\cr` or `\span` as the end of an alignment entry only at `align_state` 0; one met at any
+other count goes to main control, where §1127 `align_error` supposes a brace was omitted: at −1/−2 it inserts `{`
+("Missing { inserted"), at +1/+2 `}` ("Missing } inserted"), and reads the cell end again, now at 0, so the v-part runs
+(§789) and closes what it should. Perl's Gullet.pm:309 takes the column end only at `!$LaTeXML::ALIGN_STATE` as TeX
+does, but has no `align_error`: the token reaches the alignment's column reader (TeX_Tables.pool.ltxml
+`digestAlignmentColumn`) or Stomach.pm:111-118 `digestUntil`, which end the cell there with no v-part — an eqnarray
+cell's template math stays open, and a tabular cell's own `}` pops the cell's group (latex.ltx `\@tabclassz`'s
+template braces, latex.ltx:16666, have no counterpart there), and with it the cell's column bookkeeping.
+
+Trigger: `\begin{tabular}{ll} {a & b} \\ c & d \end{tabular}` — pdflatex 2 errors, every cell kept; Perl 1 error
+("\@end@tabular Attempt to close boxing group"), `a` lost (`<td colspan="2">b</td>`). `\begin{eqnarray} a} &=& b \\
+y&=&z \end{eqnarray}` — pdflatex 1 error ("Missing { inserted"); Perl 24 ("Attempt to close a group that switched to
+mode math", the alignment unravelled).
+
+Rust (70b): stomach.rs `align_error` (called by the stomach's digestion loops, `invoke_token` and the column reader,
+tex_tables.rs `digest_alignment_column`) inserts the brace and re-reads the column end with TeX's ledger moves (§325
+`back_input` retracts the inserted brace, which counts again when read); a count beyond ±2 is left to the column
+reader. The cell frame is the template's brace pair (alignment.rs `start_column` binds the template-brace mark of
+KNOWN_PERL_ERRORS #908 in it): a cell's `}` closes it and leaves the frame, and `end_column` closes a `{` inserted after
+it (OXIDIZED_DESIGN_DIVERGENCES #707). The kernel's row-continuation macros keep their brace half
+(latex_constructs/sect10.rs `\@xarraycr`, `\@argarraycr` in array.sty:256-258's `\ifnum0=`{}\fi` form, `\@xtabularcr`,
+`\@argtabularcr` as latex.ltx:16592-16594), or tablists' `\iffalse{\fi` opener (tablists.sty:158) left the count +1 at
+the row's `\cr`. Witnesses: the 69c round-2 table (`a} &=& b` 17 → 1 error, `a &=& b}` 13 → 1 with `b` kept, amsmath
+`{align}` `\\ 6} c` 9 → 1), the 69c review item 7. Repros kernel-alignment/{eqnarray_stray_close_brace_inserts_a_left_brace,
+eqnarray_trailing_stray_brace_keeps_the_row, align_stray_close_brace_keeps_the_rows,
+tabular_stray_brace_keeps_its_cells}; guards `perfect_kernel_batch70b::{eqnarray_stray_close_brace_inserts_a_left_brace,
+eqnarray_trailing_stray_brace_keeps_the_row, align_stray_close_brace_keeps_the_rows,
+tabular_stray_brace_keeps_its_cells}`, `perfect_kernel_batch66e::amstex_row_tag_open_group_stops_at_the_row_end` (now 3
+errors, TeX 7), `perfect_kernel_batch54::array_continuation_macros_carry_no_math_shift`.

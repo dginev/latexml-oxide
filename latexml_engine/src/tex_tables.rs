@@ -1354,6 +1354,9 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
     unread(to_unread);
     while let Some(token) = read_x_token(Some(true), false, Some(false))? {
+      if align_error(&token)? {
+        continue;
+      }
       if let Some((_atoken, vtype, hidden)) = is_column_end(&token) {
         if vtype == "span" {
           // next column, but continue accumulating

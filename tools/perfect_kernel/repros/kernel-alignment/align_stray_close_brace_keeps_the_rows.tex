@@ -1,0 +1,12 @@
+% witness: the 69c round-2 table (agent_reports/2026-10-17_69c_report.md): amsmath `{align}` `\\ 6} c`
+% oracle:  pdflatex 13 errors ("Argument of \align has an extra }", then the measuring pass and the display unravel);
+%   the cell's `}` closes the cell template's `{` (amsmath.sty:1483 `$\displaystyle{##}$`) and the `&` meets
+%   align_state -1: tex.web §1127 `align_error`, "Missing { inserted"
+% engines: rust 67int18b = 2, 69c = 9, perl = not run (KNOWN_PERL_ERRORS #908)
+% expect:  1 error, "Missing { inserted" (ours reads the body without amsmath's argument scan); both rows and the
+%   paragraph after
+% status:  RED (69c round 2) -> GREEN (70b: stomach.rs `align_error`)
+\documentclass{article}\usepackage{amsmath}\begin{document}
+\begin{align} a&=b\\ 6} c&=d \end{align}
+Later paragraph.
+\end{document}

@@ -863,7 +863,9 @@ LoadDefinitions!({
   // no group of its own: the u-part marks the cell's frame (stomach.rs `TEMPLATE_BRACE_OPEN`), and the cell's `}`
   // that would close that frame closes the mark instead (stomach.rs `egroup`), so a well-formed cell digests, nests
   // and reverts exactly as without the braces, and a cell that leaves a group or a mode open meets the cell's end as
-  // before. Rust-only: Perl's templates have no braces (KNOWN_PERL_ERRORS #908). Guard
+  // before; a net stray `}` leaves the alignment count at −1, so the column end reaches the stomach and gets its `{`
+  // (stomach.rs `align_error`, tex.web §1127), which this v-part closes. Rust-only: Perl's templates have no braces
+  // (KNOWN_PERL_ERRORS #908, #923). Guard
   // `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
   DefPrimitive!("\\lx@template@bgroup", {
     assign_value(TEMPLATE_BRACE_OPEN, true, None);
@@ -891,6 +893,7 @@ LoadDefinitions!({
       // The cell's `}` closed the template's `{`, and a `{` of the cell is open: this `}` closes it.
       egroup()?;
     }
+    // That `{` may be the one `align_error` inserted before the column end (`a} &=& b`, KNOWN_PERL_ERRORS #923).
     // Otherwise a group or a mode the cell left open (math9805003's `{Sb}`, a stray `$`'s in-math text): left to the
     // cell's end, as without the braces.
   });
