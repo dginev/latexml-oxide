@@ -22,3 +22,20 @@ fn amstex_let_sets_the_row_end_to_cr() {
 }
 
 const TABULAR_2X2: &str = r##"<tabular class="ltx_markedasmath" vattach="bottom" xml:id="id1.1.1"><tr xml:id="id1.1.1.1"><td align="center" xml:id="id1.1.1.1.1"><Math mode="inline" tex="A" text="A" xml:id="id1.1.1.1.1.1"><XMath xml:id="id1.1.1.1.1.1.1"><XMTok font="italic" role="UNKNOWN">A</XMTok></XMath></Math></td><td align="center" xml:id="id1.1.1.1.2"><Math mode="inline" tex="B" text="B" xml:id="id1.1.1.1.2.1"><XMath xml:id="id1.1.1.1.2.1.1"><XMTok font="italic" role="UNKNOWN">B</XMTok></XMath></Math></td></tr><tr xml:id="id1.1.1.2"><td align="center" xml:id="id1.1.1.2.1"><Math mode="inline" tex="C" text="C" xml:id="id1.1.1.2.1.1"><XMath xml:id="id1.1.1.2.1.1.1"><XMTok font="italic" role="UNKNOWN">C</XMTok></XMath></Math></td><td align="center" xml:id="id1.1.1.2.2"><Math mode="inline" tex="D" text="D" xml:id="id1.1.1.2.2.1"><XMath xml:id="id1.1.1.2.2.1.1"><XMTok font="italic" role="UNKNOWN">D</XMTok></XMath></Math></td></tr></tabular>"##;
+
+/// graphics-tikz/graphic_name_macro_with_underscore: graphicx reads the graphic's name at the document's catcodes and
+/// expands it (graphicx.sty:198-203, `\Gin@setfile`), so `\def\seq_name{fig}`'s parameter text `_name` matches the
+/// subscript `_` of `a-\seq_name-b` (1908.04391, 2609.16620).
+#[test]
+fn graphic_name_macro_with_underscore_expands() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/graphic_name_macro_with_underscore.tex"
+    ),
+    AR5IV,
+    (0, 0),
+    &[("para", "p1", GRAPHICS_PARA)],
+  );
+}
+
+const GRAPHICS_PARA: &str = r##"<para xml:id="p1"><graphics graphic="a-fig-b" options="width=28.45274pt,height=28.45274pt" xml:id="p1.g1"/><graphics graphic="fig_trans" options="width=28.45274pt,height=28.45274pt" xml:id="p1.g2"/></para>"##;

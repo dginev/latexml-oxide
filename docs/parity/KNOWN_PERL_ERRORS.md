@@ -15348,3 +15348,19 @@ math9611223, math9412232, math0005042.
 
 Rust (int20): amstex.rs defines `\Let@` as amstex.tex:486 after the AMS bindings load. Repro
 amstex/amstex_let_row_end_is_cr; guard `perfect_kernel_batchint20::amstex_let_sets_the_row_end_to_cr`.
+
+## 950. `\includegraphics` reads the graphic's name Semiverbatim, so a name macro whose parameter text holds a `_` cannot match
+
+graphicx.sty:198-203 `\Gin@ii[#1]#2` reads the name at the document's catcodes and `\Gin@setfile` expands it
+(`\filename@parse`), so `\def\seq_name{2014-12-10}` (a macro `\seq` delimited by `_name`, `_` a subscript character)
+followed by `\includegraphics{pose-\seq_name-clip}` names `pose-2014-12-10-clip`. Perl's graphicx.sty.ltxml:52
+`\@includegraphicx … Semiverbatim` reads `_` as an other character, which the delimiter `_name` does not match:
+"Missing argument Match:_name for \seq" at every call, and the graphic named `pose-_name-clip`.
+
+Trigger: `\def\seq_name{fig}` and `\includegraphics[width=1cm,height=1cm]{a-\seq_name-b}` — pdflatex names
+`a-fig-b`. Witnesses 1908.04391 (54 errors on 67int19b; 101 and a Fatal on 70a, whose `\lx@Gin@include` read the name
+a second time), 2609.16620 (`\PATHFIG_supp`).
+
+Rust (int20): graphicx_sty.rs `\lx@Gin@include` reads the name as a plain argument and expands it when it holds a
+control sequence; the constructor gets the expanded name. Repro graphics-tikz/graphic_name_macro_with_underscore;
+guard `perfect_kernel_batchint20::graphic_name_macro_with_underscore_expands`.

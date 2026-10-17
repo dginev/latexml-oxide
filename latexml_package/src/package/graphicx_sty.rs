@@ -153,11 +153,18 @@ LoadDefinitions!({
   // other graphic is the `\@includegraphicx` constructor, for the image converter, as before. A `.tex` handed to the
   // converter was lost with "failed to convert" (1604.05572, 2511.17298, 2305.04329, 2408.06999, 2305.16841).
   // Guard: `perfect_kernel_batch70a::gincltex_tex_graphic_is_read_as_tex`.
-  DefMacro!("\\lx@Gin@include OptionalMatch:* [] Semiverbatim", sub[(star, keys, file)] {
-    // the name as the constructor's Semiverbatim digests it, expanded: tikzscale.sty:183 passes
-    // `{\tikzscale@fileName}` (2511.17298, 2408.06999, 2305.16841, 2410.05869)
-    let expanded = Expand!(file.clone());
-    let name = expanded.to_string();
+  // The file is graphicx's `#2` (graphicx.sty:198-203 `\Gin@ii`), read at the document's catcodes and expanded as
+  // `\Gin@setfile`'s `\filename@parse` expands it: tikzscale.sty:183 passes `{\tikzscale@fileName}` (2511.17298,
+  // 2408.06999, 2305.16841, 2410.05869), and a name macro whose parameter text holds a `_` (`\def\seq_name{…}`,
+  // `\seq_name-clip`: 1908.04391, 2609.16620) finds that `_` a subscript character, as in pdflatex; read
+  // Semiverbatim, the `_` was an other character, every call "Missing argument Match:_name" (101 errors, Fatal). A
+  // name with no control sequence goes on unexpanded (its characters are the constructor's to neutralize).
+  // KNOWN_PERL_ERRORS #950. Guard: `perfect_kernel_batchint20::graphic_name_macro_with_underscore_expands`.
+  DefMacro!("\\lx@Gin@include OptionalMatch:* [] {}", sub[(star, keys, file)] {
+    let has_cs = file.unlist_ref().iter().any(|t| t.get_catcode() == Catcode::CS);
+    let expanded = if has_cs { Expand!(file.clone()) } else { file.clone() };
+    let file = expanded.clone();
+    let name = raw_name(&expanded);
     let mut tail: Vec<Token> = Vec::new();
     if let Some(star) = star {
       tail.extend(star.unlist());
@@ -436,6 +443,20 @@ LoadDefinitions!({
     }
   );
 });
+
+/// A file name's characters as written, whatever their catcodes (a subscript `_` is `_`, not its display rendering);
+/// a control sequence left by the expansion keeps its printed name.
+fn raw_name(tokens: &Tokens) -> String {
+  let mut name = String::new();
+  for t in tokens.unlist_ref() {
+    if t.get_catcode() == Catcode::CS {
+      name.push_str(&t.to_string());
+    } else {
+      with(t.get_sym(), |c| name.push_str(c));
+    }
+  }
+  name
+}
 
 /// The graphic types a graphics driver reads itself (pdftex.def, dvips.def, xetex.def, dvipdfmx.def, luatex.def,
 /// dvisvgm.def `\Ginclude@<type>` and `\Gin@rule@<ext>` types): an image, for the image converter, even where a
