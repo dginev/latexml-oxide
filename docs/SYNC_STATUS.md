@@ -2625,6 +2625,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   amsmath_sty.rs `\lx@ams@collect@body` after `\lx@begin@alignment` in align/gather/flalign/alignat/xalignat/
   xxalignat/multline/split (KNOWN_PERL_ERRORS #879). Witnesses 2011.06919 2211.06952 1909.04856 2101.06401. Repro
   kernel-alignment/braced_amsmath_body; guard `perfect_kernel_batch68z::braced_amsmath_body_loses_its_group`.
+  (2) A5 (RUST-ONLY): a column end goes back after the v-part as the token read (gullet.rs `read_token` →
+  `handle_template`, Perl Gullet.pm:310 `$token`), not its canonical `\cr`: with Cowan's tables.tex `\let\crnorm=\cr`
+  and `\cr` redefined to `&\crnorm`, a v-part `\vrule`'s keyword scan read the macro's `&` ("Extra alignment tab").
+  Witnesses hep-ph9612244, hep-ph9711334 (the latter pdflatex-discounted). Repro
+  kernel-alignment/let_cr_ends_the_row_as_itself; guard `perfect_kernel_batch68z::a_let_cr_ends_the_row_as_itself`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

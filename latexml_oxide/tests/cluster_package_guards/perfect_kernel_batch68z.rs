@@ -1,6 +1,8 @@
 //! Red/green guards for batch 68z: alignment and kernel shapes from the rc_struct2 study (tex.web part 37 and the
 //! real macros of each context). Item 1 — amsmath's display environments strip one enclosing group of their body, as
 //! `\collect@@body#1\end#2` does (amsmath.sty:1424, tex.web §400; 2011.06919 2211.06952 1909.04856 2101.06401).
+//! Item 2 — a column end goes back after the v-part as the token read, not its canonical `\cr` (Perl Gullet.pm:310;
+//! hep-ph9612244).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -51,4 +53,26 @@ fn braced_amsmath_body_loses_its_group() {
     r#"<equationgroup class="ltx_eqn_gather" xml:id="S0.EGx2"><equation xml:id="S0.Ex2"><Math mode="display" tex="\displaystyle x" text="x" xml:id="S0.Ex2.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></equation><equation xml:id="S0.Ex3"><Math mode="display" tex="\displaystyle y" text="y" xml:id="S0.Ex3.m1"><XMath><XMTok font="italic" role="UNKNOWN">y</XMTok></XMath></Math></equation></equationgroup>"#,
   );
   assert_eq!(xml.matches("<td").count(), 12, "{xml}");
+}
+
+/// kernel-alignment/let_cr_ends_the_row_as_itself: `\let\crnorm=\cr \def\cr{&\crnorm}` and a template
+/// `#&\vrule #\crnorm`: the `\vrule`'s keyword scan meets `\crnorm`, which ends the row (pdflatex 0 errors). Before 68z
+/// the canonical `\cr` went back after the v-part, the scan expanded the macro and its `&` was 1 Error "Extra alignment
+/// tab".
+#[test]
+fn a_let_cr_ends_the_row_as_itself() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/let_cr_ends_the_row_as_itself.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r#"<tabular><tr><td align="left" border="r" class="ltx_nopad_l ltx_nopad_r">A</td></tr></tabular>"#,
+  );
 }

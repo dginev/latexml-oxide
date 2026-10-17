@@ -1694,11 +1694,16 @@ pub fn read_token() -> Result<Option<Token>> {
     if let Some(ref nextt) = next_token {
       if (align_group_count() == 0)
         && has_reading_alignment()
-        && let Some((atoken, atype, ahidden)) = is_column_end(nextt)
+        && let Some((_atoken, atype, ahidden)) = is_column_end(nextt)
       {
         let reading_alignment = get_reading_alignment().unwrap();
         if let DigestedData::Alignment(data) = reading_alignment.data() {
-          handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
+          // The token as read goes back after the v-part, not its canonical `\cr`/`&` (Perl Gullet.pm:310 passes
+          // `$token`): TeX drops the token and keeps its meaning (tex.web §789), so a `\let\crnorm=\cr` is no name a
+          // v-part's keyword scan can expand — with `\cr` itself redefined (`\def\cr{&\crnorm}`, Cowan's tables.tex)
+          // a `\vrule` before it read the macro's `&` (hep-ph9612244, hep-ph9711334). Guard
+          // `perfect_kernel_batch68z::a_let_cr_ends_the_row_as_itself`.
+          handle_template(data.borrow_mut(), *nextt, atype, ahidden)?;
         } else {
           return Err("reading_alignment should always contain DigestedData::Alignment".into());
         }
