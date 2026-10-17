@@ -104,3 +104,13 @@ fn appolb_running_heads_and_abbreviations() {
     "{xml}"
   );
 }
+
+/// tkz-euclide's pre-v3 `\usetkzobj{all}` loads nothing more: v3+ loads every object (1506.03598, 2005.14485).
+#[test]
+fn tkz_euclide_old_usetkzobj() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/tkz_euclide_old_usetkzobj.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("<picture"), "{xml}");
+}

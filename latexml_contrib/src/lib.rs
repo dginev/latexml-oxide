@@ -325,6 +325,7 @@ pub mod svproc_cls;
 pub mod tabu_sty;
 pub mod tabularray_sty;
 pub mod tipa_sty;
+pub mod tkz_euclide_sty;
 pub mod tlp_cls;
 pub mod uai2025_cls;
 pub mod ucs_sty;
@@ -475,6 +476,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("stix", "sty", stix_sty::load_definitions),
   ("svg-extract", "sty", svg_extract_sty::load_definitions),
   ("tipa", "sty", tipa_sty::load_definitions),
+  ("tkz-euclide", "sty", tkz_euclide_sty::load_definitions),
   ("tlp", "cls", tlp_cls::load_definitions),
   ("axessibility", "sty", axessibility_sty::load_definitions),
   ("biblatex", "sty", biblatex_sty::load_definitions),

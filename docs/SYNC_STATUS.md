@@ -3027,6 +3027,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   physics0501160 (13/13 1 → 0; hep-ph0403117 5 → 0 with the class's `\headtitle`/`\headauthor` running
   heads, its abbreviations `\ie` & co. and `\e`). Repro class-bindings/appolb_pacs; guards
   `perfect_kernel_batch71a::{appolb_pacs, appolb_running_heads_and_abbreviations}`.
+  (4) U1: tkz-euclide's pre-v3 `\usetkzobj`/`\usetkztool` (tkz-tools-eu-modules.tex:18-58): latexml_contrib
+  tkz_euclide_sty.rs reads the real package and defines both, where undefined, as loaders with nothing left to load
+  (v3+ loads every object; user ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #720). Witnesses 1506.03598 1612.05374
+  2005.14485 1906.04134 1608.04592 (16 sample papers: 12 → 0, 4 one error fewer). Repro
+  package-bindings/tkz_euclide_old_usetkzobj; guard `perfect_kernel_batch71a::tkz_euclide_old_usetkzobj`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

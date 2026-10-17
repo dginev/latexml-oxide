@@ -18855,6 +18855,16 @@ a stand-in for the author's file (latexml_core binding/author_files.rs `AUTHOR_F
 finds it only where the paper ships it. Guards
 `perfect_kernel_batch71a::{appolb_pacs, appolb_running_heads_and_abbreviations}`.
 
+### 720. tkz-euclide's pre-v3 `\usetkzobj`/`\usetkztool` are defined over the current package (TL 2025: undefined)
+
+tkz-euclide v1-v2 loaded its object files with `\usetkzobj{all|<objects>}` (tkz-tools-eu-modules.tex:18-58, still in
+TeX Live but no longer read); since v3 the package loads every object itself (tkz-euclide.sty:173-199) and the loaders
+are gone, so a paper written for the old API errs under TL 2025 ("Undefined control sequence"). User ruling 2026-10-17:
+the binding serves both versions. The contrib binding (tkz_euclide_sty.rs) reads the real package and defines the two
+loaders, where neither is defined (a paper's own older copy keeps its own), as macros that take their arguments and load
+nothing, since everything is loaded. Witnesses 1506.03598, 1612.05374, 2005.14485, 1906.04134, 1608.04592; guard
+`perfect_kernel_batch71a::tkz_euclide_old_usetkzobj`.
+
 ### 725. latex209.def's LaTeX2e-command traps apply to `\usepackage`, `\listfiles`, `\lrbox` and `\@xargdef`; the `\ensuremath` trap is held while bindings call it where their 2.09-era originals do not
 
 **TeX**: `\documentstyle` inputs latex209.def, whose :79-91 wrap `\usepackage`, `\listfiles`, `\ensuremath`, `\lrbox`

@@ -1,0 +1,14 @@
+% witness: 1506.03598, 1612.05374, 2005.14485, 1906.04134, 1608.04592 (tkz-euclide's pre-v3 `\usetkzobj{all}`); 12 papers
+%          of the int19 census (rc_struct5 U1)
+% oracle:  pdflatex TL 2025 1 error (Undefined control sequence `\usetkzobj`: the old API, gone since v3); the old
+%          package loaded the objects, which v3+ loads itself (user ruling 2026-10-17: the binding serves both versions)
+% engines: rust 67int19b = 1 Error:undefined:\usetkzobj; Perl 0.8.8 the same
+% expect:  0 errors; the picture
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tkz-euclide}
+\usetkzobj{all}
+\begin{document}
+\begin{tikzpicture}\tkzDefPoint(0,0){A}\tkzDefPoint(2,0){B}\tkzDrawSegment(A,B)\end{tikzpicture}
+\end{document}
