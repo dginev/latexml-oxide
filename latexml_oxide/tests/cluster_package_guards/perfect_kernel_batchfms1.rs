@@ -6,7 +6,10 @@
 //! when the frontmatter displays the field, and the text-matching title dedup (OXIDIZED_DESIGN #146) is left the last
 //! resort for a copy no provenance explains (OXIDIZED_DESIGN #715). The title-print study's P2 witnesses: 1605.00182,
 //! 2402.14614, 1603.09631, 1503.06457; its titlepage covers 1304.0681, 1503.03277 stay whole. Round 2 (review
-//! findings 1-3, 5): field_prov_*.
+//! findings 1-3, 5): field_prov_*. Round 3 (re-review findings 2, 3, 7): a whole print covers every position of the
+//! value (field_prov_slice_before_macro_kept, field_prov_two_slices_kept, field_prov_args_whole_lifted), only the
+//! title block is lifted (field_prov_signature_after_body_kept), positions per `\title` call
+//! (field_prov_earlier_value_copy_kept).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use super::{
@@ -19,10 +22,10 @@ const FIELD_INK_INFO: &str = "Info:frontmatter:field_ink";
 /// The Info the text-matching dedup logs.
 const DEDUP_INFO: &str = "Info:frontmatter:title_ink_dedup";
 
-/// Convert the repro `tex` under the raw preload: 0 errors, 0 warnings, schema-valid, `lifted` marked prints lifted and
+/// Convert the repro `tex` under the raw preload: 0 errors, 0 warnings, schema-valid, `lifted` prints of a field lifted and
 /// `dedups` copies dropped by text (the Info lines), no field mark left in the XML or named in the log, and each `(tag,
 /// attributes, element)` exactly as given (the first such element). Returns the XML and the log.
-fn assert_marks(
+fn assert_lifts(
   tex: &str,
   (lifted, dedups): (usize, usize),
   expected: &[(&str, &[&str], &str)],
@@ -51,12 +54,40 @@ fn assert_marks(
   (xml, log)
 }
 
+/// The document's top-level body before its first section, as the XML has it: every child of `<document>` (two-space
+/// indentation) that is no resource and no frontmatter element, whole. Empty when every print was lifted.
+fn leading_body(xml: &str) -> String {
+  let body = xml.split_once("<document").map_or("", |(_, b)| b);
+  let mut out: Vec<&str> = Vec::new();
+  let mut keep = false;
+  for line in body.lines().skip(1) {
+    let child = line
+      .strip_prefix("  ")
+      .filter(|l| l.starts_with('<') && !l.starts_with("</"));
+    if let Some(child) = child {
+      if child.starts_with("<section") {
+        break;
+      }
+      keep = !["<resource", "<title", "<creator", "<date"]
+        .iter()
+        .any(|f| child.starts_with(f));
+    }
+    if line.starts_with("</document>") {
+      break;
+    }
+    if keep {
+      out.push(line);
+    }
+  }
+  out.join("\n")
+}
+
 /// sectioning-frontmatter/field_mark_store_print_lifted: the title-print study's P2 shape — no `\maketitle`, the
-/// document typesets `\@title` and `\@author` itself; both prints are lifted by their marks (the author's line was a
+/// document typesets `\@title` and `\@author` itself; both prints are lifted by their field provenance (the author's line was a
 /// second, unexplained copy before), and the structured title and creator are the header.
 #[test]
 fn field_mark_store_print_lifted() {
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_store_print_lifted.tex"
     ),
@@ -72,17 +103,14 @@ fn field_mark_store_print_lifted() {
   );
   assert_eq!(xml.matches("A Printed Store Title").count(), 1, "{xml}");
   assert_eq!(xml.matches("Ann Author").count(), 1, "{xml}");
-  assert!(
-    !xml.contains("<logical-block") && !xml.contains("<para xml:id=\"p"),
-    "{xml}"
-  );
+  assert_eq!(leading_body(&xml), "", "{xml}");
 }
 
 /// sectioning-frontmatter/field_mark_before_maketitle_lifted: a marked print before `\maketitle` is lifted where
 /// `\maketitle` places the frontmatter.
 #[test]
 fn field_mark_before_maketitle_lifted() {
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_before_maketitle_lifted.tex"
     ),
@@ -97,7 +125,7 @@ fn field_mark_before_maketitle_lifted() {
 /// words; `\ifx\@title\@empty` tells the set title from none.
 #[test]
 fn field_mark_mention_in_prose_kept() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_mention_in_prose_kept.tex"
     ),
@@ -113,7 +141,7 @@ fn field_mark_mention_in_prose_kept() {
 /// sectioning-frontmatter/field_mark_ifx_empty_title: an empty title is left unmarked, so `\ifx\@title\@empty` holds.
 #[test]
 fn field_mark_ifx_empty_title() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_ifx_empty_title.tex"
     ),
@@ -126,11 +154,11 @@ fn field_mark_ifx_empty_title() {
   );
 }
 
-/// sectioning-frontmatter/field_mark_edef_copy: an `\edef` copy carries the marks; the copy set as a title line is
-/// lifted by them (not by the text match), the `\protected@edef` copy in prose stays.
+/// sectioning-frontmatter/field_mark_edef_copy: an `\edef` copy carries the field provenance; the copy set as a title
+/// line is lifted by it (not by the text match), the `\protected@edef` copy in prose stays.
 #[test]
 fn field_mark_edef_copy() {
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_edef_copy.tex"
     ),
@@ -144,11 +172,11 @@ fn field_mark_edef_copy() {
   assert_eq!(xml.matches("Edef Title").count(), 2, "{xml}");
 }
 
-/// sectioning-frontmatter/field_mark_uppercase: `\MakeUppercase` and `\uppercase\expandafter` pass the marks by; both
-/// uppercased lines are the title's ink and are lifted.
+/// sectioning-frontmatter/field_mark_uppercase: `\MakeUppercase` and `\uppercase\expandafter` keep the field
+/// provenance; both uppercased lines are the title's ink and are lifted (OXIDIZED_DESIGN #715: every whole print).
 #[test]
 fn field_mark_uppercase() {
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_uppercase.tex"
     ),
@@ -156,12 +184,13 @@ fn field_mark_uppercase() {
     &[("title", &[], "<title>Upper Title</title>")],
   );
   assert!(!xml.contains("UPPER TITLE"), "{xml}");
+  assert_eq!(leading_body(&xml), "", "{xml}");
 }
 
 /// sectioning-frontmatter/field_mark_write_and_typeout: `\write`, `\typeout` and `\detokenize` see the field alone.
 #[test]
 fn field_mark_write_and_typeout() {
-  let (_, log) = assert_marks(
+  let (_, log) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_write_and_typeout.tex"
     ),
@@ -179,7 +208,7 @@ fn field_mark_write_and_typeout() {
 /// in the output; the `\pdfstringdef` copy printed in prose stays.
 #[test]
 fn field_mark_pdfstring() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_pdfstring.tex"
     ),
@@ -195,7 +224,7 @@ fn field_mark_pdfstring() {
 /// sectioning-frontmatter/field_mark_in_titlepage_kept: a titlepage's marked prints are the displayed cover, kept whole.
 #[test]
 fn field_mark_in_titlepage_kept() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_in_titlepage_kept.tex"
     ),
@@ -209,10 +238,10 @@ fn field_mark_in_titlepage_kept() {
 }
 
 /// sectioning-frontmatter/field_mark_beside_titlepage_kept: beside a titlepage the structured title is hidden, so the
-/// marked print stays — in the shape it has without marks (a `para`, not a `logical-block`).
+/// print of the field stays — in the shape it has without field provenance (a `para`, not a `logical-block`).
 #[test]
 fn field_mark_beside_titlepage_kept() {
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_beside_titlepage_kept.tex"
     ),
@@ -229,7 +258,7 @@ fn field_mark_beside_titlepage_kept() {
 /// sectioning-frontmatter/field_mark_framed_kept: a framed cover keeps its marked print.
 #[test]
 fn field_mark_framed_kept() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_framed_kept.tex"
     ),
@@ -243,10 +272,10 @@ fn field_mark_framed_kept() {
 }
 
 /// sectioning-frontmatter/field_mark_in_float_kept: a figure's marked print is the author's content, kept, and the
-/// figure keeps the shape it has without marks (no `<break>`).
+/// figure keeps the shape it has without field provenance (no `<break>`).
 #[test]
 fn field_mark_in_float_kept() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_in_float_kept.tex"
     ),
@@ -263,7 +292,7 @@ fn field_mark_in_float_kept() {
 /// settled, is the author's content and stays.
 #[test]
 fn field_mark_after_section_kept() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_after_section_kept.tex"
     ),
@@ -280,7 +309,7 @@ fn field_mark_after_section_kept() {
 /// no mark) and tp_setter (a document's printing `\title` inside its titlepage runs there, 68t). Both stay as before S1.
 #[test]
 fn field_mark_title_study_repros_unchanged() {
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/title_study_tp_dedup.tex"
     ),
@@ -298,7 +327,7 @@ fn field_mark_title_study_repros_unchanged() {
     2,
     "{xml}"
   );
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/title_study_tp_setter.tex"
     ),
@@ -318,10 +347,10 @@ fn field_mark_title_study_repros_unchanged() {
 }
 
 /// sectioning-frontmatter/field_mark_centerline_hbox_lifted: 1605.00182's `\centerline{\Large\bf{\noindent\@title}}`
-/// in an `\hbox`: the line's own break goes with the print, which the marks lift whole.
+/// in an `\hbox`: the line's own break goes with the print, which its field provenance lifts whole.
 #[test]
 fn field_mark_centerline_hbox_lifted() {
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_mark_centerline_hbox_lifted.tex"
     ),
@@ -340,7 +369,7 @@ fn field_mark_centerline_hbox_lifted() {
 /// `\csname` answer as pdflatex on every line (review finding 3).
 #[test]
 fn field_prov_token_tests() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_token_tests.tex"
     ),
@@ -358,7 +387,7 @@ fn field_prov_token_tests() {
 /// creator, so the document's own `\@author` print is the author shown and stays (review finding 1).
 #[test]
 fn field_prov_author_beside_titlepage_kept() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_author_beside_titlepage_kept.tex"
     ),
@@ -375,7 +404,7 @@ fn field_prov_author_beside_titlepage_kept() {
 /// paragraph between two slices is no title ink (review finding 2).
 #[test]
 fn field_prov_fragments_kept() {
-  assert_marks(
+  assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_fragments_kept.tex"
     ),
@@ -399,7 +428,7 @@ fn field_prov_fragments_kept() {
 /// together (review finding 5); the frontmatter's title and creator stay.
 #[test]
 fn field_prov_title_author_one_line() {
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_title_author_one_line.tex"
     ),
@@ -413,25 +442,113 @@ fn field_prov_title_author_one_line() {
       ),
     ],
   );
-  assert!(
-    !xml.contains("<para xml:id=\"p1\"") && !xml.contains("Una Author</text>"),
-    "{xml}"
-  );
+  assert_eq!(xml.matches("One Line Title").count(), 1, "{xml}");
+  assert_eq!(xml.matches("Una Author").count(), 1, "{xml}");
+  assert_eq!(leading_body(&xml), "", "{xml}");
 }
 
 /// sectioning-frontmatter/field_prov_author_tabular_lifted: an `\@author` print set in article's `tabular`s (`\and`,
 /// `\\`, `$^1$` marks) is one print, its per-cell runs joined, and is lifted (1605.00182, 0706.0979, 1004.2125).
 #[test]
 fn field_prov_author_tabular_lifted() {
-  let (xml, _) = assert_marks(
+  let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_author_tabular_lifted.tex"
     ),
     (2, 0),
     &[("title", &[], "<title>Tab Title</title>")],
   );
-  assert!(
-    !xml.contains("<para xml:id=\"p1\"") && !xml.contains("<tabular"),
+  assert_eq!(xml.matches("Tab Title").count(), 1, "{xml}");
+  assert_eq!(xml.matches("First University").count(), 1, "{xml}");
+  assert_eq!(xml.matches("Second University").count(), 1, "{xml}");
+  assert_eq!(leading_body(&xml), "", "{xml}");
+}
+
+/// sectioning-frontmatter/field_prov_slice_before_macro_kept: `\StrLeft{\@title}{5}` of `About \nm` stops before the
+/// value's macro, so it is no whole print and stays (re-review finding 2, probe q2).
+#[test]
+fn field_prov_slice_before_macro_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_slice_before_macro_kept.tex"
+    ),
+    (0, 0),
+    &[("title", &[], "<title>About Foo Bar</title>")],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">About</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_two_slices_kept: two slices of `\@title` with a gap between are not joined into
+/// one whole print; both stay (re-review finding 2, probe q16).
+#[test]
+fn field_prov_two_slices_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_two_slices_kept.tex"
+    ),
+    (0, 0),
+    &[("title", &[], "<title>Split Title</title>")],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <logical-block>\n    <para xml:id=\"p1\">\n      <p align=\"center\">Sp</p>\n      <p \
+     align=\"center\">le</p>\n    </para>\n  </logical-block>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_signature_after_body_kept: a letter's closing `\noindent\@author`, after its body
+/// text, is no title-block print and stays where pdflatex prints it (re-review finding 3, probe q3).
+#[test]
+fn field_prov_signature_after_body_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_signature_after_body_kept.tex"
+    ),
+    (0, 0),
+    &[(
+      "para",
+      &["xml:id=\"p3\""],
+      r#"<para class="ltx_noindent" xml:id="p3"><p>John Smith</p></para>"#,
+    )],
+  );
+  assert_eq!(xml.matches("John Smith").count(), 2, "{xml}");
+}
+
+/// sectioning-frontmatter/field_prov_args_whole_lifted: a print of a title holding a macro, `\\[2pt]`, `\hspace{1em}`,
+/// a font switch and a formula covers every position of the value, so it is whole and lifted.
+#[test]
+fn field_prov_args_whole_lifted() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_args_whole_lifted.tex"
+    ),
+    (1, 0),
+    &[],
+  );
+  assert_eq!(xml.matches("About Foo Bar").count(), 1, "{xml}");
+  assert_eq!(xml.matches("<Math ").count(), 1, "{xml}");
+  assert_eq!(leading_body(&xml), "", "{xml}");
+}
+
+/// sectioning-frontmatter/field_prov_earlier_value_copy_kept: a copy of an earlier `\title` value is no print of the
+/// displayed one, so it stays (re-review finding 7: positions per `\title` call).
+#[test]
+fn field_prov_earlier_value_copy_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_earlier_value_copy_kept.tex"
+    ),
+    (0, 0),
+    &[("title", &[], "<title>Short</title>")],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">Long Original Title</p>\n  </para>",
     "{xml}"
   );
 }

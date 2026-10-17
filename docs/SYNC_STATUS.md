@@ -3290,8 +3290,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\lx@frontmatterhere` and the fallback's non-abstract branch — joins a print split by its cells/tables, and removes a
   run that is the whole field, in the title block, filling its lines (all fields together), when the XSLT displays the
   field (no document-level titlepage; a document-level title, resp. author creator); a lifted title leaves the
-  text-matching dedup (OXIDIZED_DESIGN_DIVERGENCES #146) unrun. OXIDIZED_DESIGN_DIVERGENCES #715 (open for a ruling:
-  N prints of the title in the title block are all lifted), KNOWN_PERL_ERRORS #935. No lock change, no observer,
+  text-matching dedup (OXIDIZED_DESIGN_DIVERGENCES #146) unrun. OXIDIZED_DESIGN_DIVERGENCES #715 (every whole print
+  is lifted, user ruling 2026-10-17), KNOWN_PERL_ERRORS #935. No lock change, no observer,
   nothing deleted (S2/S3). Round 2 fixes the review's findings 1 (author beside a titlepage kept), 2 (no cross-print
   pairing: runs carry ids), 3 (every token test = pdflatex: the round-1 in-band marks are gone, with `is_field_mark` /
   `strip_field_marks` and their `\write`/`\typeout`/`writable_tokens` hooks), 5 (fields judged together) and 6
@@ -3303,7 +3303,21 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   author_tabular_lifted} RED (round 1) → GREEN; field_mark_{store_print_lifted, before_maketitle_lifted, uppercase,
   centerline_hbox_lifted} and the idiom and scope guards (mention_in_prose_kept, ifx_empty_title, edef_copy,
   write_and_typeout, pdfstring, in_titlepage_kept, beside_titlepage_kept, framed_kept, in_float_kept,
-  after_section_kept) and title_study_tp_{dedup,setter} GREEN; guards `perfect_kernel_batchfms1` (20). Open
+  after_section_kept) and title_study_tp_{dedup,setter} GREEN; guards `perfect_kernel_batchfms1` (20). Round 3 (the
+  re-review's findings 1-7 and the profile): `Token` is `#[repr(C)]` `text`, `code`, `prov` with a two-byte `Catcode`,
+  gap-free with `code` at byte 4 (`token_layout_code_at_byte_4`): `perf stat -e instructions:u` against base
+  a034d4e7f5, empty article +1.29 % (round 2) → +0.65 %, 2311.18489 +3.27 % → +1.66 %. A whole print covers every
+  position of the value — a macro's, a primitive's arguments (`gullet::field_cover_of`), a boxless font switch
+  (`token::field_cover_set_pending`), the structure digested between a print's boxes (the field ledger,
+  `token::field_ledger_cover`) — not its first and last character, and cells join only where the ledger covers the
+  stretch between them (finding 2: `\StrLeft{\@title}{5}` of `About \nm` and two slices with a gap stay); only the title
+  block is lifted, no running body text before the run (finding 3: a letter's closing `\noindent\@author` stays; a
+  cover's preprint-number `\parbox` is no body text, 0706.0979, 1605.00182); positions per `\title` call (finding 7);
+  intra-doc links to private items gone (finding 1). Repros sectioning-frontmatter/field_prov_{slice_before_macro_kept,
+  two_slices_kept, signature_after_body_kept, earlier_value_copy_kept} RED → GREEN, field_prov_args_whole_lifted GREEN;
+  guards `perfect_kernel_batchfms1` (25). A/B 67int19b-rel / fms1c / fms1b over the same 543 papers (542 converted):
+  fms1c = fms1b byte-identical on all 542, 0 Error/Warning/Fatal change, 12 `field_ink` lifts each, no mark leaked; the
+  review's probes q1-q16, p1-p7: q2, q3, q16 now as pdflatex, the others byte-identical to round 2. Open
   (pre-existing, Perl the same): `\hypersetup{pdftitle=\@title}` records the RDF `dcterms:title` as the literal
   `\@title`; our `\pdfstringdef` is a `\gdef`, so a copy made before `\maketitle` empties the store prints nothing.
 

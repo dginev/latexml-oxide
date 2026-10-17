@@ -1,7 +1,7 @@
 % `\MakeUppercase{\@title}` and `\uppercase\expandafter{\@title}` (30 TL files: umich-thesis, nddiss2e) keep the
 % tokens' field provenance (a case change changes the character only), so both uppercased lines are the field's ink;
-% each is lifted and the structured title is the header (lift every whole print: open for a ruling, OXIDIZED_DESIGN
-% #715 / fms1 review finding 4 — pdflatex prints the line twice).
+% each is lifted and the structured title is the header (user ruling 2026-10-17, "lift every whole print",
+% OXIDIZED_DESIGN #715 / fms1 review finding 4 — pdflatex prints the line twice).
 % status:  RED (67int19b: the text-matching dedup drops one line, the other "UPPER TITLE" stays) → GREEN (fms1: both
 %          lifted, Info `field_ink` ×2).
 % oracle:  pdflatex 0 errors: "UPPER TITLE", "UPPER TITLE", "1 Intro Text."

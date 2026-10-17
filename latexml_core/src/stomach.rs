@@ -3870,10 +3870,35 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
     }
     // A token of a frontmatter field's stored value (its out-of-band provenance, `Token::prov`): what it digests to
     // is that field's ink (`Document::absorb`'s field runs, OXIDIZED_DESIGN #715).
+    // What it consumed of the value is covered by them (its arguments; a font switch or `\relax` before it that made
+    // no box), recorded in digestion order (`token::field_ledger_push`, the box's `fieldSerial`), so a whole print is
+    // told from a fragment by every position of the value (`gullet::field_cover_of`).
     if token.prov != 0 {
-      for digested in &result {
-        if !digested.has_property(crate::document::FIELD_PROV_PROPERTY) {
-          digested.try_set_property(crate::document::FIELD_PROV_PROPERTY, i64::from(token.prov));
+      let cover = if matches!(
+        token.get_catcode(),
+        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+      ) {
+        let pos = crate::token::field_prov_pos(token.prov);
+        crate::token::FieldCover {
+          field: crate::token::field_prov_field(token.prov),
+          start: pos,
+          end:   pos + 1,
+        }
+      } else {
+        gullet::field_cover_of(token.prov)
+      };
+      if result.is_empty() {
+        crate::token::field_cover_set_pending(cover);
+      } else {
+        let serial =
+          crate::token::field_ledger_push(crate::token::field_cover_pending_merge(cover));
+        for digested in &result {
+          if !digested.has_property(crate::document::FIELD_PROV_PROPERTY) {
+            digested.try_set_property(crate::document::FIELD_PROV_PROPERTY, i64::from(token.prov));
+            if let Some(serial) = serial {
+              digested.try_set_property(crate::document::FIELD_SERIAL_PROPERTY, i64::from(serial));
+            }
+          }
         }
       }
     }

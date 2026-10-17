@@ -1032,26 +1032,47 @@ LoadDefinitions!({
     if value.unlist_ref().iter().all(|t| t.get_catcode() == Catcode::SPACE) {
       return Ok(Tokens::default());
     }
-    // the field's character extent: the positions of its first and last character token, which a whole print covers
-    let chars: Vec<usize> = value
-      .unlist_ref()
-      .iter()
-      .enumerate()
-      .filter(|(_, t)| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
-      .map(|(i, _)| i)
-      .collect();
-    let (Some(first), Some(last)) = (chars.first(), chars.last()) else {
+    // Each call's positions follow the previous call's (`lx_field_base_<id>`), so a copy of an earlier value
+    // (`\let\old\@title`, then `\title{Short}`) is never taken for a print of this one (review finding 7).
+    let base = usize::try_from(lookup_int(&s!("lx_field_base_{field_id}"))).unwrap_or(0);
+    let len = value.unlist_ref().len();
+    if base + len > usize::from(FIELD_PROV_POS_MASK) {
+      // out of positions: this value is not stamped, and no earlier copy can be whole of it
+      assign_value(&s!("lx_field_extent_{field_id}"), String::new(), Some(Scope::Global));
       return Ok(Tokens::default());
-    };
-    assign_value(
-      &s!("lx_field_extent_{field_id}"),
-      s!("{} {}", field_prov_pos(field_prov(field_id, *first)), field_prov_pos(field_prov(field_id, *last))),
-      Some(Scope::Global),
-    );
+    }
+    assign_value(&s!("lx_field_base_{field_id}"), (base + len) as i64, Some(Scope::Global));
+    // The field's extent: the position of every token of the value that bears ink or makes it (a character, a
+    // control sequence, an active character; a macro's expansion and a primitive's arguments are covered from its
+    // position, core `gullet::field_cover_of`), which a whole print covers, all of them: a fragment the document
+    // takes of the value (`\StrLeft{\@title}{5}` of `About \nm`, `\@car`, `\@gobble`) leaves some out (review
+    // finding 2). Not a space, a brace, `$`, `^`, `_`, `&`, `#`: what they make is covered by the tokens around them.
+    // (as `start:end` intervals, end exclusive, joined by `,`: the form of a run's cover, [`field_ink_runs`])
+    let mut extent: Vec<(usize, usize)> = Vec::new();
+    for (i, t) in value.unlist_ref().iter().enumerate() {
+      if matches!(
+        t.get_catcode(),
+        Catcode::LETTER | Catcode::OTHER | Catcode::CS | Catcode::ACTIVE
+      ) {
+        match extent.last_mut() {
+          Some((_, end)) if *end == base + i => *end += 1,
+          _ => extent.push((base + i, base + i + 1)),
+        }
+      }
+    }
+    if extent.is_empty() {
+      return Ok(Tokens::default());
+    }
+    let extent = extent
+      .iter()
+      .map(|(start, end)| s!("{start}:{end}"))
+      .collect::<Vec<_>>()
+      .join(",");
+    assign_value(&s!("lx_field_extent_{field_id}"), extent, Some(Scope::Global));
     document::note_field_prov_stamped();
     let mut out = vec![prefix, store, T_BEGIN!()];
     for (i, t) in value.unlist_ref().iter().enumerate() {
-      let stamped = Token { prov: field_prov(field_id, i), ..*t };
+      let stamped = Token { prov: field_prov(field_id, base + i), ..*t };
       // A `#` in the value is text here, not a parameter of the definition (as `\lx@deposit@field`).
       if t.get_catcode() == Catcode::PARAM {
         out.push(stamped);
@@ -5417,18 +5438,50 @@ fn field_id(field: &str) -> Option<u16> {
 
 /// One run of a field's ink, from its two marks ([`FIELD_MARK_TARGET`]).
 struct FieldInkRun {
-  field: u16,
-  begin: Node,
-  end:   Node,
-  /// the lowest and highest position in the field's stored value the run's ink came from
-  min:   u16,
-  max:   u16,
+  field:       u16,
+  begin:       Node,
+  end:         Node,
+  /// the field-ledger serials of its first and last box (core `token::field_ledger_cover`)
+  first:       u32,
+  last:        u32,
+  /// the positions of the field's stored value the run consumed: sorted disjoint `start..end` intervals
+  cover:       Vec<(u16, u16)>,
+  /// is the run preceded, in the document's content order, by text that is no field's ink and no frontmatter element
+  /// (a letter's body before its `\noindent\@author` signature)? Then it is not in the document's title block.
+  body_before: bool,
+}
+
+/// The `start:end` intervals of a field's extent (`lx_field_extent_<id>`).
+fn parse_field_intervals(text: &str) -> Vec<(u16, u16)> {
+  text
+    .split(',')
+    .filter_map(|iv| {
+      let (start, end) = iv.split_once(':')?;
+      Some((start.trim().parse().ok()?, end.trim().parse().ok()?))
+    })
+    .collect()
+}
+
+/// The positions of field `field`'s stored value a whole print covers (`\lx@field@mark`'s extent).
+fn field_extent(field: u16) -> Vec<(u16, u16)> {
+  parse_field_intervals(&lookup_string(&s!("lx_field_extent_{field}")))
+}
+
+/// Does `cover` cover every position of `extent`, so the run is a whole print of the field (review finding 2: every
+/// position, a macro's too, not the first and the last character)? Both are sorted disjoint intervals, the cover's
+/// merged where they touch, so each extent interval lies in one cover interval.
+fn covers_extent(cover: &[(u16, u16)], extent: &[(u16, u16)]) -> bool {
+  !extent.is_empty()
+    && extent
+      .iter()
+      .all(|&(s, e)| cover.iter().any(|&(cs, ce)| cs <= s && e <= ce))
 }
 
 /// The field runs inside `scope`, each with its own two marks (paired by the run's id, so never with another print's),
 /// in document order of their begin marks; and every mark node.
 fn field_ink_runs(document: &mut Document, scope: &Node) -> (Vec<FieldInkRun>, Vec<Node>) {
   let marks = field_marks(document, scope);
+  let body_before = field_runs_after_body_text(scope);
   let mut begins: Vec<(u32, u16, usize)> = Vec::new();
   let mut runs: Vec<(usize, FieldInkRun)> = Vec::new();
   for (at, mark) in marks.iter().enumerate() {
@@ -5440,12 +5493,12 @@ fn field_ink_runs(document: &mut Document, scope: &Node) -> (Vec<FieldInkRun>, V
           begins.push((id, field, at));
         }
       },
-      ["end", field, id, min, max] => {
-        let (Ok(field), Ok(id), Ok(min), Ok(max)) = (
+      ["end", field, id, first, last] => {
+        let (Ok(field), Ok(id), Ok(first), Ok(last)) = (
           field.parse::<u16>(),
           id.parse::<u32>(),
-          min.parse(),
-          max.parse(),
+          first.parse::<u32>(),
+          last.parse::<u32>(),
         ) else {
           continue;
         };
@@ -5458,8 +5511,10 @@ fn field_ink_runs(document: &mut Document, scope: &Node) -> (Vec<FieldInkRun>, V
             field,
             begin: marks[begin_at].clone(),
             end: mark.clone(),
-            min,
-            max,
+            first,
+            last,
+            cover: field_ledger_cover(field, first, last),
+            body_before: body_before.contains(&id),
           }));
         }
       },
@@ -5468,25 +5523,125 @@ fn field_ink_runs(document: &mut Document, scope: &Node) -> (Vec<FieldInkRun>, V
   }
   runs.sort_by_key(|(at, _)| *at);
   // One print split by the structure it is set in (a cover `tabular`'s cells, `\and`'s `\end{tabular}…
-  // \begin{tabular}`): a run of a field that goes on with the field's later tokens, with no ink between, is one run
-  // with the one before (a second print starts over: two runs).
+  // \begin{tabular}`): a run of a field that goes on with the field's later positions, with no ink between, is one run
+  // with the one before when, together with what was digested between them (the cells' `\\`, which the alignment
+  // takes), they cover one contiguous stretch of the field's extent: the joined run's cover is everything digested
+  // from its first box to its last. A second print starts over, and two slices of the value with a gap between
+  // (`\StrLeft…\par\StrRight…`, nothing of the gap digested) stay two runs, neither whole (review finding 2).
   let mut merged: Vec<FieldInkRun> = Vec::new();
   for (_, run) in runs {
     if let Some(last) = merged.last_mut()
       && last.field == run.field
-      && run.min > last.max
+      && run.first > last.last
+      && let (Some(&(_, last_end)), Some(&(run_start, _))) = (last.cover.last(), run.cover.first())
+      && run_start >= last_end
       && marked_range(scope, &last.end, &run.begin)
         .iter()
         .all(is_inkless)
     {
-      last.end = run.end;
-      last.min = last.min.min(run.min);
-      last.max = last.max.max(run.max);
-      continue;
+      let joined = field_ledger_cover(run.field, last.first, run.last);
+      let extent = field_extent(run.field);
+      // every extent position from where the first stopped to where the second starts is consumed between them
+      let contiguous = extent
+        .iter()
+        .flat_map(|&(s, e)| s.max(last_end)..e.min(run_start))
+        .all(|p| joined.iter().any(|&(cs, ce)| cs <= p && p < ce));
+      if contiguous {
+        last.end = run.end;
+        last.last = run.last;
+        last.cover = joined;
+        continue;
+      }
     }
     merged.push(run);
   }
+  // What the alignment takes right after a run's last box (a value's closing `\\`, its row-end marker absorbed in no
+  // run, 1605.00182) is the run's too: the ledger's next covers of the field, while they continue its cover (no
+  // position of the extent skipped) and no run holds them.
+  let held: Vec<(u32, u32)> = merged.iter().map(|r| (r.first, r.last)).collect();
+  for run in &mut merged {
+    let Some(&(_, mut end)) = run.cover.last() else {
+      continue;
+    };
+    let extent = field_extent(run.field);
+    let mut serial = run.last + 1;
+    while !held.iter().any(|&(f, l)| f <= serial && serial <= l)
+      && let Some(next) = field_ledger_entry(serial)
+      && next.field == run.field
+      && (next.start <= end || !extent.iter().any(|&(s, e)| s < next.start && e > end))
+    {
+      end = end.max(next.end);
+      serial += 1;
+    }
+    if let Some(last) = run.cover.last_mut() {
+      last.1 = end;
+    }
+  }
   (merged, marks)
+}
+
+/// The ids of the field runs inside `scope` that body text precedes in the document's content order: running text —
+/// a paragraph's text set in the text flow, not in a box (`\parbox`, minipage, tabular), not aligned (`{center}`,
+/// `{flushright}`) and in no frontmatter element ([`FRONTMATTER_ELEMENTS`]) — in a block of `scope` (a child: a
+/// paragraph, a logical block) before the run's own, that holds no field's ink. The document's title block is where its
+/// body has not begun: a cover's header (a preprint-number `\parbox`, 0706.0979, 1605.00182) and what a block holding a
+/// field's print sets around it (an affiliation line, a `by`) are no body text, a letter's paragraphs are (review
+/// finding 3: a letter that ends `\noindent\@author` signs it; pdflatex prints the name there and only there).
+fn field_runs_after_body_text(scope: &Node) -> HashSet<u32> {
+  // Is `node` an element whose text is set apart from the paragraph flow (a box, an alignment, a note, a float, the
+  // frontmatter)?
+  fn set_apart(node: &Node) -> bool {
+    node.has_attribute("align")
+      || with(document::get_node_qname(node), |q| {
+        FRONTMATTER_ELEMENTS.contains(&q)
+          || matches!(
+            q,
+            "ltx:inline-block"
+              | "ltx:block"
+              | "ltx:inline-logical-block"
+              | "ltx:inline-para"
+              | "ltx:tabular"
+              | "ltx:note"
+              | "ltx:figure"
+              | "ltx:table"
+              | "ltx:float"
+              | "ltx:titlepage"
+          )
+      })
+  }
+  // the ids of the runs begun inside `node`, and whether it holds running text
+  fn scan(node: &Node, apart: bool, begins: &mut Vec<u32>, running: &mut bool) {
+    for child in node.get_child_nodes() {
+      match child.get_type() {
+        Some(NodeType::ElementNode) => scan(&child, apart || set_apart(&child), begins, running),
+        Some(NodeType::TextNode) => *running |= !apart && !child.get_content().trim().is_empty(),
+        Some(NodeType::PiNode) if child.get_name() == FIELD_MARK_TARGET => {
+          let content = child.get_content();
+          if let ["begin", _, id, ..] = content.split_whitespace().collect::<Vec<_>>().as_slice()
+            && let Ok(id) = id.parse::<u32>()
+          {
+            begins.push(id);
+          }
+        },
+        _ => {},
+      }
+    }
+  }
+  let mut after = HashSet::default();
+  let mut body_seen = false;
+  for block in scope.get_child_nodes() {
+    if block.get_type() != Some(NodeType::ElementNode) {
+      continue;
+    }
+    let (mut begins, mut running) = (Vec::new(), false);
+    scan(&block, set_apart(&block), &mut begins, &mut running);
+    if begins.is_empty() {
+      body_seen |= running;
+    } else if body_seen {
+      after.extend(begins);
+    }
+  }
+  after
 }
 
 /// Does `node` hold no ink: whitespace, a mark, a line break, or elements holding only those?
@@ -5563,27 +5718,28 @@ fn holds_content_besides(node: &Node, gone: &[Node]) -> bool {
 
 /// The printed ink of each field the frontmatter displays, removed — the field's print by construction: the ink
 /// digested from the field's stored tokens (their out-of-band provenance, `\lx@field@mark`; the title-print study's
-/// rule R3, frontmatter model M3 stage S1, OXIDIZED_DESIGN #715), one run of it ([`field_ink_runs`]) at a time, with the
+/// rule R3, frontmatter model M3 stage S1, OXIDIZED_DESIGN #715), one run of it (`field_ink_runs`) at a time, with the
 /// title-block wrappers it leaves empty (not a `\label` target, which is the author's own). Called once, where the
 /// frontmatter is placed (the `\maketitle` flush `\lx@frontmatterhere`, the fallback at the first sectional unit or
 /// `\end{document}`), so only what was printed before it is the field's ink; every mark goes, and later prints are not
 /// marked (`lx_field_ink_settled`, `Document::settle_field_ink`). A run is lifted only:
-/// - when it is the whole field: its ink reaches the first and the last character of the stored value
-///   (`lx_field_extent_<id>`), so a fragment the document takes of it (`\StrLeft{\@title}{5}`, `\@car`, `\@gobble`)
-///   stays;
+/// - when it is the whole field: what it consumed of the stored value covers every position of the field's extent
+///   (`lx_field_extent_<id>`, `covers_extent`), a macro's too, so a fragment the document takes of it
+///   (`\StrLeft{\@title}{5}`, also of `About \nm`; `\@car`, `\@gobble`) stays;
 /// - where the frontmatter displays the field: a document-level `<ltx:title>`, or a document-level author
 ///   `<ltx:creator>`, with no `<ltx:titlepage>` beside it (beside one the XSLT shows neither, LaTeXML-structure-xhtml.xsl
 ///   :374-375 = Perl :358-359 and :687-692, and the print is the displayed copy: 1304.0681, 1503.03277);
-/// - in the document's title block ([`is_field_ink_wrapper`] for every ancestor of both marks): never inside a
+/// - in the document's title block: no body text before it (`field_runs_after_body_text`: a letter's closing
+///   `\noindent\@author` stays), and `is_field_ink_wrapper` for every ancestor of both marks — never inside a
 ///   `{titlepage}`, a float, a note, a frontmatter element or a frame;
 /// - when the fields' prints fill their lines: the paragraph or table cell around each mark holds nothing but lifted
 ///   ink, so a mention in prose (`Title: \thetitle`) keeps its words and a title and author set on one line go
 ///   together.
 ///
-/// Every whole print in the title block is lifted, a title the document prints twice too (each is the field shown;
-/// whether to lift one print per displayed field is open, OXIDIZED_DESIGN #715).
+/// Every whole print in the title block is lifted, a title the document prints twice too: it shows once, in the
+/// frontmatter element (user ruling 2026-10-17, "lift every whole print"; OXIDIZED_DESIGN #715).
 ///
-/// Returns whether a title print was lifted: the text-matching dedup ([`maybe_dedup_leading_title_ink`]) then has
+/// Returns whether a title print was lifted: the text-matching dedup (`maybe_dedup_leading_title_ink`) then has
 /// nothing left to explain. P2 witnesses: 1605.00182, 2402.14614, 1603.09631 (lrec `\maketitleabstract`), 1503.06457.
 pub fn lift_marked_field_ink(document: &mut Document) -> Result<bool> {
   if lookup_bool("lx_field_ink_settled") {
@@ -5631,11 +5787,13 @@ pub fn lift_marked_field_ink(document: &mut Document) -> Result<bool> {
     } else {
       creators_shown
     };
-    let whole = lookup_string(&s!("lx_field_extent_{}", run.field))
-      .split_once(' ')
-      .and_then(|(first, last)| Some((first.parse::<u16>().ok()?, last.parse::<u16>().ok()?)))
-      .is_some_and(|(first, last)| run.min <= first && run.max >= last);
-    if !shown || !whole || !in_title_block(&run.begin) || !in_title_block(&run.end) {
+    let whole = covers_extent(&run.cover, &field_extent(run.field));
+    if !shown
+      || !whole
+      || run.body_before
+      || !in_title_block(&run.begin)
+      || !in_title_block(&run.end)
+    {
       continue;
     }
     let range = marked_range(&root, &run.begin, &run.end);

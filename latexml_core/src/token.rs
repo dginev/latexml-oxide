@@ -28,7 +28,12 @@ static CONTROLNAME: &[&str] = &[
 ];
 
 /// A Token category code, as in TeX
+///
+/// Two bytes (`#[repr(u16)]`), so that [`Token`] (`text` u32, `code`, `prov` u16) has no padding byte: with one, every
+/// move of a token on the gullet's read path (`Option<Token>`, `CheckedRead::Tok`, the `Result` slot) copied the pad
+/// and `prov` as a 3-byte blob, byte by byte (`token_layout_code_at_byte_4`).
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
+#[repr(u16)]
 pub enum Catcode {
   ESCAPE,
   BEGIN,
@@ -284,13 +289,21 @@ impl Catcode {
 ///     Token { text: arena::pin_static(" "), code: Catcode::SPACE}
 ///   });
 /// ```
+///
+/// `#[repr(C)]` pins the field order `text`, `code`, `prov` (`loc`): `code` stays at byte 4, where it sat before
+/// `prov` existed, and with a two-byte [`Catcode`] the struct has no padding (`prov` at 6). Rust's default layout put
+/// `prov` at 4 and `code` at 6, which made every move of a token through `Option<Token>`, `CheckedRead::Tok` and the
+/// read path's `Result` slot a 4-piece field-wise copy (`gullet::read_internal_token_checked`: +1.29 % instructions
+/// on an empty article; +1.14 % with `repr(C)` alone, the pad byte still copied apart; +0.65 % gap-free). The guard
+/// is `token_layout_code_at_byte_4`.
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct Token {
   /// an arena id the character content for this token
   pub text: SymStr,
   /// a TeX catcode
   pub code: Catcode,
-  /// Out-of-band field provenance ([`FieldProv`], `0` = none): the frontmatter field whose stored value this token
+  /// Out-of-band field provenance (`0` = none): the frontmatter field whose stored value this token
   /// is a token of (the kernel `\title`/`\author` stamp their store, latexml_engine `\lx@field@mark`), so the
   /// ink digested from it is known for that field's print. Not part of TeX's token: **excluded from `PartialEq`**
   /// (`\ifx`, `\meaning`, `\pdfstrcmp`, xstring compare as pdflatex does), never written, never dumped. It sits in
@@ -825,7 +838,8 @@ impl Default for Token {
 /// Accessors.
 /// The bits of a [`Token::prov`] below the field: the token's position in the field's stored value (saturating).
 pub const FIELD_PROV_POS_BITS: u16 = 14;
-const FIELD_PROV_POS_MASK: u16 = (1 << FIELD_PROV_POS_BITS) - 1;
+/// The largest position a [`Token::prov`] holds.
+pub const FIELD_PROV_POS_MASK: u16 = (1 << FIELD_PROV_POS_BITS) - 1;
 /// The field provenance of the token at `pos` of field `field`'s stored value (`field` 1..=3; `0` is no field).
 pub fn field_prov(field: u16, pos: usize) -> u16 {
   (field << FIELD_PROV_POS_BITS) | (pos.min(FIELD_PROV_POS_MASK as usize) as u16)
@@ -849,6 +863,110 @@ pub fn inherit_field_prov(prov: u16, expansion: &mut Tokens) {
       }
     }
   }
+}
+
+/// A cover of a field's stored value: the positions `start..end` (end exclusive) of one field (`field`, `0` = none)
+/// that an invocation consumed, its own position and its arguments. See [`field_cover_pending_merge`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct FieldCover {
+  /// the field (`1` title, `2` author; `0` = no cover)
+  pub field: u16,
+  /// the first position covered
+  pub start: u16,
+  /// one past the last position covered
+  pub end:   u16,
+}
+
+/// The cover of a field token's invocation that produced no box (a font switch, `\relax`, a macro's expansion still
+/// to be digested): the next box digested from that field's tokens within it takes it (a field's print covers its
+/// font switches and the arguments a macro or primitive consumed, OXIDIZED_DESIGN #715).
+#[thread_local]
+static FIELD_COVER_PENDING: std::cell::Cell<FieldCover> =
+  std::cell::Cell::new(FieldCover { field: 0, start: 0, end: 0 });
+
+/// Merge `cover` with the pending cover of a boxless invocation when they touch (the same field, `cover` starting
+/// inside or at the end of the pending one), clearing the pending cover either way: what a box digested from a field
+/// token covers of its stored value.
+pub fn field_cover_pending_merge(cover: FieldCover) -> FieldCover {
+  let pending = FIELD_COVER_PENDING.replace(FieldCover::default());
+  if pending.field == cover.field && pending.start <= cover.start && cover.start <= pending.end {
+    FieldCover {
+      field: cover.field,
+      start: pending.start,
+      end:   pending.end.max(cover.end),
+    }
+  } else {
+    cover
+  }
+}
+
+/// Leave `cover` pending for the next box of its field ([`field_cover_pending_merge`]), merged with the pending one
+/// it continues.
+pub fn field_cover_set_pending(cover: FieldCover) {
+  let merged = field_cover_pending_merge(cover);
+  FIELD_COVER_PENDING.set(merged);
+}
+
+thread_local! {
+  /// The covers of the boxes digested from field tokens, in digestion order ([`field_ledger_push`]): what a print
+  /// consumed of its field's value between its first and its last box, a structure's tokens too (a `tabular`'s
+  /// `\\`, whose row-end marker the alignment takes, so no run of ink holds it).
+  static FIELD_LEDGER: std::cell::RefCell<Vec<FieldCover>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+}
+/// The most covers the ledger keeps (a full ledger records no more: a print digested past it is no whole print).
+const FIELD_LEDGER_CAP: usize = 1 << 16;
+
+/// Record the cover of a box digested from a field token (the field ledger); its serial, the box's `fieldSerial`.
+pub fn field_ledger_push(cover: FieldCover) -> Option<u32> {
+  FIELD_LEDGER.with(|ledger| {
+    let mut ledger = ledger.borrow_mut();
+    if ledger.len() >= FIELD_LEDGER_CAP {
+      return None;
+    }
+    ledger.push(cover);
+    u32::try_from(ledger.len() - 1).ok()
+  })
+}
+
+/// The positions of field `field`'s value the boxes digested with serials `first..=last` covered
+/// ([`field_ledger_push`]): sorted disjoint `start..end` intervals, merged where they touch.
+pub fn field_ledger_cover(field: u16, first: u32, last: u32) -> Vec<(u16, u16)> {
+  let mut cover: Vec<(u16, u16)> = FIELD_LEDGER.with(|ledger| {
+    let ledger = ledger.borrow();
+    let (first, last) = (
+      first as usize,
+      (last as usize).min(ledger.len().saturating_sub(1)),
+    );
+    if first > last || ledger.is_empty() {
+      return Vec::new();
+    }
+    ledger[first..=last]
+      .iter()
+      .filter(|c| c.field == field)
+      .map(|c| (c.start, c.end.max(c.start + 1)))
+      .collect()
+  });
+  cover.sort_unstable();
+  let mut merged: Vec<(u16, u16)> = Vec::with_capacity(cover.len());
+  for (start, end) in cover {
+    match merged.last_mut() {
+      Some((_, e)) if start <= *e => *e = (*e).max(end),
+      _ => merged.push((start, end)),
+    }
+  }
+  merged
+}
+
+/// The cover the field ledger recorded with `serial` ([`field_ledger_push`]).
+pub fn field_ledger_entry(serial: u32) -> Option<FieldCover> {
+  FIELD_LEDGER.with(|ledger| ledger.borrow().get(serial as usize).copied())
+}
+
+/// Clear the pending field cover and the ledger (conversion start).
+pub fn reset_field_cover_pending() {
+  FIELD_COVER_PENDING.set(FieldCover::default());
+  FIELD_LEDGER.with(|ledger| ledger.borrow_mut().clear());
 }
 
 impl Token {
@@ -1371,13 +1489,41 @@ mod tests {
     assert_eq!(
       size_of::<Token>(),
       8,
-      "default Token must stay 8 bytes (SymStr + Catcode)"
+      "default Token must stay 8 bytes (SymStr + Catcode + prov)"
     );
     #[cfg(feature = "token-locators")]
     assert_eq!(
       std::mem::size_of::<Token>(),
       12,
       "token-locators Token is 8 + a u32 origin handle"
+    );
+  }
+
+  /// `#[repr(C)]` and a two-byte `Catcode` keep `Token` gap-free with `code` at byte 4 (`text` u32 at 0, `code` u16
+  /// at 4, `prov` u16 at 6, `loc` at 8 under token-locators). Why: under Rust's default layout `prov` took byte 4 and
+  /// `code` moved to byte 6, and a pad byte stayed, so every token move on the gullet's read path became a field-wise
+  /// copy (+1.29 % instructions on an empty article, +3.27 % on 2311.18489; gap-free +0.65 % / +1.66 %, fms1 round 3).
+  /// OXIDIZED_DESIGN #715.
+  #[test]
+  fn token_layout_code_at_byte_4() {
+    assert_eq!(std::mem::offset_of!(Token, text), 0);
+    assert_eq!(
+      std::mem::offset_of!(Token, code),
+      4,
+      "Token.code must sit at byte 4 (read-path codegen)"
+    );
+    assert_eq!(
+      size_of::<Catcode>(),
+      2,
+      "Catcode fills bytes 4-5: no pad byte before prov"
+    );
+    assert_eq!(std::mem::offset_of!(Token, prov), 6);
+    #[cfg(feature = "token-locators")]
+    assert_eq!(std::mem::offset_of!(Token, loc), 8);
+    assert_eq!(
+      size_of::<Option<Token>>(),
+      size_of::<Token>(),
+      "Option<Token> keeps its niche"
     );
   }
 

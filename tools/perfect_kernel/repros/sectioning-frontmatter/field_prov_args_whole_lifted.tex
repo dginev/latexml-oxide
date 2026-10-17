@@ -1,0 +1,17 @@
+% A whole print of a title whose value holds a macro, a `\\[2pt]`, an `\hspace{1em}`, a font switch in a group and a
+% formula: every position is covered — a macro's by its expansion, a primitive's arguments by its invocation, a
+% boxless font switch by the box after it — so the print is lifted (fms1 round 3, the cover rule of finding 2).
+% status:  GREEN (fms1 round 2 lifted it by its endpoints; round 3 by full coverage).
+% oracle:  pdflatex 0 errors: "About Foo Bar / in Space x2" printed, then the title block with the same title.
+% expect:  0 errors, 0 warnings; one `field_ink` Info; the print gone, the structured title kept.
+\documentclass{article}
+\makeatletter
+\newcommand\nm{Foo Bar}
+\title{About \nm\\[2pt] in\hspace{1em}{\large Space} $x^2$}
+\author{Ann Author}
+\begin{document}
+\begin{center}\@title\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

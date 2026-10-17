@@ -239,7 +239,7 @@ pub struct Document {
   /// Size of `node_boxes` after the last sweep (lowered when a spill purges
   /// below it); the streaming sweep gate measures growth from it.
   pub last_swept_node_boxes_len: usize,
-  /// The open run of field ink ([`FieldRun`]): what is being absorbed was digested from a frontmatter field's stored
+  /// The open run of field ink (`FieldRun`): what is being absorbed was digested from a frontmatter field's stored
   /// tokens (their out-of-band provenance, [`Token::prov`](crate::token::Token)).
   field_run:                     Option<FieldRun>,
   /// The serial of the last field-ink run opened (each run's two marks carry it).
@@ -268,7 +268,7 @@ pub fn spilled_segment_count() -> usize { SPILLED_SEGMENTS.get() }
 /// start; eager conversions never touch it).
 pub fn reset_spilled_segment_count() { SPILLED_SEGMENTS.set(0); }
 
-/// The target of the processing instructions marking a run of a frontmatter field's ink ([`FieldRun`]):
+/// The target of the processing instructions marking a run of a frontmatter field's ink (`FieldRun`):
 /// construction-time scaffolding, never in the output (the engine's frontmatter placement removes them; the finalize
 /// drops a stray one).
 pub const FIELD_MARK_TARGET: &str = "ltx-field-mark";
@@ -278,27 +278,32 @@ pub const FIELD_MARK_TARGET: &str = "ltx-field-mark";
 /// costs time, never output (a box carries its field in its own `fieldProv` property).
 #[thread_local]
 static FIELD_PROV_STAMPED: std::cell::Cell<bool> = std::cell::Cell::new(false);
-/// Note that a field's stored tokens now carry their provenance ([`FIELD_PROV_STAMPED`]).
+/// Note that a field's stored tokens now carry their provenance (`FIELD_PROV_STAMPED`).
 pub fn note_field_prov_stamped() { FIELD_PROV_STAMPED.set(true); }
-/// Clear the [`FIELD_PROV_STAMPED`] gate (conversion start).
+/// Clear the `FIELD_PROV_STAMPED` gate (conversion start).
 pub fn reset_field_prov_stamped() { FIELD_PROV_STAMPED.set(false); }
 
 /// The box property holding the field provenance of the token a box or whatsit was digested from (the stomach sets
 /// it, `invoke_token`; [`Token::prov`](crate::token::Token)).
 pub const FIELD_PROV_PROPERTY: &str = "fieldProv";
+/// The box property holding the serial of the box's cover in the field ledger
+/// ([`field_ledger_push`](crate::token::field_ledger_push): its own position, the arguments its invocation consumed, a
+/// boxless font switch before it).
+pub const FIELD_SERIAL_PROPERTY: &str = "fieldSerial";
 
 /// A run of one frontmatter field's ink being absorbed: boxes digested from that field's stored tokens, one after the
 /// other at one absorb level. It opens with `<?ltx-field-mark begin <field> <id>?>` where its first box goes and closes
-/// with `<?ltx-field-mark end <field> <id> <min> <max>?>` after its last (`min`/`max`: the lowest and highest position
-/// in the stored value its boxes came from, so the engine can tell a whole print from a fragment). The two marks of a
-/// run carry its id: they pair by construction, never with another print's (OXIDIZED_DESIGN #715).
+/// with `<?ltx-field-mark end <field> <id> <first> <last>?>` after its last (`<first>`/`<last>`: the lowest and highest
+/// field-ledger serial of its boxes, [`field_ledger_cover`](crate::token::field_ledger_cover), so the engine can tell a
+/// whole print from a fragment by every position of the value it consumed, its structure's tokens too). The two marks
+/// of a run carry its id: they pair by construction, never with another print's (OXIDIZED_DESIGN #715).
 #[derive(Debug, Clone, Copy)]
 struct FieldRun {
   field: u16,
   id:    u32,
   level: u32,
-  min:   u16,
-  max:   u16,
+  first: u32,
+  last:  u32,
 }
 
 /// Element names whose closed instances may be spilled from ROOT level.
@@ -1057,12 +1062,12 @@ impl Document {
     result
   }
 
-  /// Is field ink being marked ([`FieldRun`])? Not once the frontmatter placement settled it, not in a conversion
+  /// Is field ink being marked (`FieldRun`)? Not once the frontmatter placement settled it, not in a conversion
   /// that stamped no field.
   #[inline]
   fn field_marking_live(&self) -> bool { FIELD_PROV_STAMPED.get() && !self.field_ink_settled }
 
-  /// Before absorbing `object`: open, continue or close the run of field ink ([`FieldRun`]) by the field provenance
+  /// Before absorbing `object`: open, continue or close the run of field ink (`FieldRun`) by the field provenance
   /// the box was digested with ([`FIELD_PROV_PROPERTY`]). Returns whether `object` is a field-ink whatsit whose own
   /// absorption is its ink (the caller counts it in `field_inherit` meanwhile). Nothing in math: a formula is one box of
   /// the text around it.
@@ -1071,23 +1076,24 @@ impl Document {
       return Ok(false);
     }
     // `fieldProv` ([`FIELD_PROV_PROPERTY`]), by its cached symbol and without a copy: this runs for every box
-    let prov = object.with_properties(|props| match props.get_sym(pin!("fieldProv")) {
-      Some(Stored::Int(p)) => *p as u16,
-      _ => 0,
+    let (prov, serial) = object.with_properties(|props| match props.get_sym(pin!("fieldProv")) {
+      Some(Stored::Int(p)) => (*p as u16, match props.get_sym(pin!("fieldSerial")) {
+        Some(Stored::Int(s)) => u32::try_from(*s).ok(),
+        _ => None,
+      }),
+      _ => (0, None),
     });
-    let (field, pos) = (
-      crate::token::field_prov_field(prov),
-      crate::token::field_prov_pos(prov),
-    );
+    let field = crate::token::field_prov_field(prov);
     if self.field_inherit > 0 {
       // inside a field-ink whatsit: its ink, whatever provenance its parts have (a formula's characters count for the
       // run's extent: `Szabo$^3$` ends with the `3`)
       if prov != 0
         && let Some(run) = self.field_run.as_mut()
         && run.field == field
+        && let Some(serial) = serial
       {
-        run.min = run.min.min(pos);
-        run.max = run.max.max(pos);
+        run.first = run.first.min(serial);
+        run.last = run.last.max(serial);
       }
       return Ok(false);
     }
@@ -1101,16 +1107,23 @@ impl Document {
     if self.in_math_node() {
       return Ok(false);
     }
+    let Some(serial) = serial else {
+      // a box the full ledger holds no cover of: no whole print
+      if self.field_run.is_some() {
+        self.close_field_run()?;
+      }
+      return Ok(false);
+    };
     match self.field_run.as_mut() {
       Some(run) if run.field == field => {
-        run.min = run.min.min(pos);
-        run.max = run.max.max(pos);
+        run.first = run.first.min(serial);
+        run.last = run.last.max(serial);
       },
       _ => {
         if self.field_run.is_some() {
           self.close_field_run()?;
         }
-        self.open_field_run(field, pos)?;
+        self.open_field_run(field, serial)?;
       },
     }
     Ok(!matches!(object.data(), DigestedData::TBox(_)))
@@ -1148,7 +1161,7 @@ impl Document {
     Ok(true)
   }
 
-  fn open_field_run(&mut self, field: u16, pos: u16) -> Result<()> {
+  fn open_field_run(&mut self, field: u16, serial: u32) -> Result<()> {
     let id = self.field_run_serial + 1;
     if self.append_field_mark(&s!("begin {field} {id}"))? {
       self.field_run_serial = id;
@@ -1156,8 +1169,8 @@ impl Document {
         field,
         id,
         level: self.absorb_level,
-        min: pos,
-        max: pos,
+        first: serial,
+        last: serial,
       });
     }
     Ok(())
@@ -1165,13 +1178,13 @@ impl Document {
 
   fn close_field_run(&mut self) -> Result<()> {
     if let Some(run) = self.field_run.take() {
-      let FieldRun { field, id, min, max, .. } = run;
-      self.append_field_mark(&s!("end {field} {id} {min} {max}"))?;
+      let FieldRun { field, id, first, last, .. } = run;
+      self.append_field_mark(&s!("end {field} {id} {first} {last}"))?;
     }
     Ok(())
   }
 
-  /// Close the open run of field ink, if any, and mark no more ([`FieldRun`]): the frontmatter placement settled it.
+  /// Close the open run of field ink, if any, and mark no more (`FieldRun`): the frontmatter placement settled it.
   pub fn settle_field_ink(&mut self) -> Result<()> {
     if self.field_run.is_some() {
       self.close_field_run()?;

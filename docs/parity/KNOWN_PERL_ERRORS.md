@@ -15136,8 +15136,10 @@ Trigger: `\makeatletter\title{A Printed Store Title}\author{Ann Author}` and, in
 1605.00182 (its own `\@makepapertitle`), puthesis 1503.06457.
 
 Rust (fms1, OXIDIZED_DESIGN_DIVERGENCES #715): the kernel setters stamp the stored tokens with an out-of-band field
-provenance (`\lx@field@mark`, `Token::prov`; no token added), and a whole print digested from them is lifted where the
-frontmatter is placed (not in or beside a titlepage, not in prose, a float or a frame). Repro sectioning-frontmatter/field_mark_store_print_lifted; guard
+provenance (`\lx@field@mark`, `Token::prov`; no token added), and a whole print digested from them — one that covers
+every position of the stored value, so a slice (`\StrLeft{\@title}{5}`) stays — is lifted where the frontmatter is
+placed, from the document's title block only (not in or beside a titlepage, not in prose, a float or a frame, not after
+the body's text: a letter's closing `\noindent\@author` stays); every whole print is lifted (user ruling 2026-10-17). Repro sectioning-frontmatter/field_mark_store_print_lifted; guard
 `perfect_kernel_batchfms1::field_mark_store_print_lifted`.
 
 ## 939. amsrefs' `{biblist}` outside `{bibdiv}` is an `ltx:biblist` with no bibliography around it

@@ -1,0 +1,18 @@
+% A slice of `\@title` that stops before a macro of the value (`About \nm`, `\StrLeft{\@title}{5}`) is the
+% document's own text: a whole print covers every position of the stored value, the macro's too, not just its first
+% and last character (fms1 re-review finding 2, probe q2).
+% status:  RED (fms1 round 2: the extent ended at the last character, so "About" was lifted) → GREEN (fms1 round 3).
+% oracle:  pdflatex 0 errors: "About", then the title block "About Foo Bar / Ann Author / <date>", "1 Intro Text."
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the "About" line kept.
+\documentclass{article}
+\usepackage{xstring}
+\makeatletter
+\newcommand\nm{Foo Bar}
+\title{About \nm}
+\author{Ann Author}
+\begin{document}
+\begin{center}\StrLeft{\@title}{5}\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

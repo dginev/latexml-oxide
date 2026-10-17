@@ -1887,6 +1887,30 @@ fn expands_now(defn: &std::rc::Rc<dyn Definition>, fully_expand: bool) -> bool {
     && !scan_stops_at_futurelet_peek(defn)
 }
 
+/// What the invocation of a token with field provenance `prov` ([`Token::prov`]) consumed of its field's stored
+/// value, now that it read what it reads: its own position up to the next token of that value still to be read, if
+/// the pushback holds one (a primitive's or a macro's arguments: `\hspace{1em}`, `\\[2pt]`, `$x$`), else its own
+/// position alone. The pushback only: a field's stored tokens are read from it (an expansion, a digested argument),
+/// never from a mouth, so nothing is read or tokenized. OXIDIZED_DESIGN #715.
+pub fn field_cover_of(prov: u16) -> crate::token::FieldCover {
+  use crate::token::{field_prov_field, field_prov_pos};
+  let (field, pos) = (field_prov_field(prov), field_prov_pos(prov));
+  let next = {
+    let gullet = gullet!();
+    gullet
+      .runtime
+      .as_ref()
+      .and_then(|rt| rt.pushback.last().map(|t| t.prov))
+      .unwrap_or(0)
+  };
+  let end = if next != 0 && field_prov_field(next) == field && field_prov_pos(next) > pos {
+    field_prov_pos(next)
+  } else {
+    pos + 1
+  };
+  crate::token::FieldCover { field, start: pos, end }
+}
+
 /// Expand `token` (defined as `defn`) ONE level and push the expansion back
 /// onto the input, as `read_x_token` does for each expandable token it meets.
 #[inline]
@@ -1908,7 +1932,12 @@ fn invoke_expansion(token: Token, defn: &std::rc::Rc<dyn Definition>) -> Result<
     return Ok(());
   }
   let mut invoked = crate::stack_guard::maybe_grow(|| defn.invoke(false))?;
-  crate::token::inherit_field_prov(token.prov, &mut invoked);
+  if token.prov != 0 {
+    // the macro's position and its arguments are covered by the boxes its expansion digests to (or by the next ones,
+    // when it expands to nothing): a field's print is whole with them (OXIDIZED_DESIGN #715)
+    crate::token::field_cover_set_pending(field_cover_of(token.prov));
+    crate::token::inherit_field_prov(token.prov, &mut invoked);
+  }
   // token-locators: fill-only origin inheritance. A macro that
   // expands into synthesized tokens with no origin — e.g.
   // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —
