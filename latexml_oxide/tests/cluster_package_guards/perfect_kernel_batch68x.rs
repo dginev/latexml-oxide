@@ -12,7 +12,8 @@
 //! Round 2 (the review): a class default the title page does not print is no frontmatter, and a store the title page
 //! prints in one line with a value the frontmatter does not carry stays the line's (tlp 1209.2617); the document's own
 //! clearing `\let` keeps the binding aside too; whole-element mathtools assertions, `\MH_end_cases:`; cjs-rcs's keywords
-//! "." and `{classification}`.
+//! "." and `{classification}`. Round 3: `\MT_start_cases:nnnn` takes its environment's `\right<d>` as the cases' right
+//! fence; the tlp guard rejects any `<date`.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{
@@ -371,14 +372,39 @@ fn tlp_placeholders_stay_and_its_date_line_is_whole() {
   );
   assert_eq!(error_count(&log), 0, "{log}");
   assert_eq!(warning_count(&log), 0, "{log}");
-  assert!(
-    !xml.contains("<pubnote") && !xml.contains("<date "),
-    "{xml}"
-  );
+  assert!(!xml.contains("<pubnote") && !xml.contains("<date"), "{xml}");
   assert_element(
     &xml,
     "p",
     &[r#"xml:id="p1.1""#],
     r#"<p xml:id="p1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1">submitted 30 November 2010; revised 14 November 2011; accepted 4 July 2012</text></p>"#,
   );
+}
+
+/// package-bindings/mathtools_cases_right_fence: `\MT_start_cases:nnnn` for an environment ending `\MH_end_cases:
+/// \right<d>` (mathtools.sty:1018) fences the cases on the right with `<d>`: a copied `{rcases}` by "}", bracket cases
+/// by "[" and "]" (pdflatex 0 errors). 68x r2: an unfenced CLOSE glyph, both formulas unparsed, 2 Warnings (review 68x
+/// r2 probe mt1).
+#[test]
+fn mathtools_start_cases_takes_the_right_fence_of_its_environment() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/mathtools_cases_right_fence.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "Math",
+        "S0.Ex1.m1",
+        r#"<Math mode="display" tex="\begin{cases}1&amp;x&gt;0\\&#10;2&amp;x\leq 0\end{cases}=g" text="cases@(1, x &gt; 0, 2, x &lt;= 0) = g" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMDual><XMApp><XMTok meaning="cases"/><XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4"/></XMApp><XMWrap><XMArray><XMRow><XMCell align="left"><XMTok meaning="1" role="NUMBER" xml:id="S0.Ex1.m1.1">1</XMTok></XMCell><XMCell align="left"><XMApp xml:id="S0.Ex1.m1.2"><XMTok meaning="greater-than" role="RELOP">&gt;</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="0" role="NUMBER">0</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="left"><XMTok meaning="2" role="NUMBER" xml:id="S0.Ex1.m1.3">2</XMTok></XMCell><XMCell align="left"><XMApp xml:id="S0.Ex1.m1.4"><XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="0" role="NUMBER">0</XMTok></XMApp></XMCell></XMRow></XMArray><XMTok role="CLOSE" stretchy="true">}</XMTok></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">g</XMTok></XMApp></XMath></Math>"#,
+      ),
+      (
+        "Math",
+        "S0.Ex2.m1",
+        r#"<Math mode="display" tex="h=\begin{cases}3&amp;a\\&#10;4&amp;b\end{cases}" text="h = cases@(3, a, 4, b)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">h</XMTok><XMDual><XMApp><XMTok meaning="cases"/><XMRef idref="S0.Ex2.m1.2"/><XMRef idref="S0.Ex2.m1.3"/><XMRef idref="S0.Ex2.m1.4"/><XMRef idref="S0.Ex2.m1.5"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="true">[</XMTok><XMArray xml:id="S0.Ex2.m1.1"><XMRow><XMCell align="left"><XMTok meaning="3" role="NUMBER" xml:id="S0.Ex2.m1.2">3</XMTok></XMCell><XMCell align="left"><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.3">a</XMTok></XMCell></XMRow><XMRow><XMCell align="left"><XMTok meaning="4" role="NUMBER" xml:id="S0.Ex2.m1.4">4</XMTok></XMCell><XMCell align="left"><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.5">b</XMTok></XMCell></XMRow></XMArray><XMTok role="CLOSE" stretchy="true">]</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"#,
+      ),
+    ],
+  );
+  assert!(!xml.contains("ltx_math_unparsed"), "{xml}");
 }

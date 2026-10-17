@@ -1,0 +1,19 @@
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `prints_in_a_line_with_another_value`). zzfmb.cls
+%   typesets its whole title page in one `\vbox{…\@jinfo\par\@author\par\@address\par}`: `\@jinfo` is the class's
+%   own line ("Vol. 1, 2026"), set off by `\par`, but the rule reads the whole group as one line and keeps `\address` the
+%   class's. Expected: the frontmatter's address.
+% witness: review 68x r2 probe kb
+% oracle:  pdflatex: 0 errors; "The Title" / "Vol. 1, 2026" / "An Author" / "Dept of Probes, Somewhere"
+% engines: rust 68x r2, r3: no <contact role="address">; 67int16, 68x r1: the address contact
+% expect:  0 errors, 0 warnings; <contact role="address">Dept of Probes, Somewhere</contact>
+% status:  RED (68x r2, r3) — open, awaiting a ruling on the line rule (68x r3 report); no guard yet
+% preload: ar5iv.sty
+\documentclass{zzfmb}
+\title{The Title}\author{An Author}
+\address{Dept of Probes, Somewhere}
+\begin{document}
+\maketitle
+Body text.
+\newpage
+More body.
+\end{document}

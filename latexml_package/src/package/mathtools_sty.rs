@@ -104,7 +104,8 @@ LoadDefinitions!({
   // The short-intertext separations (:1483-1484; 2109.05369's own `\shortintertext`). The cases end code (:1009-1013
   // `\MH_end_cases:`, which a copied `\newcases` body ends with, `{\MH_end_cases:\right#6}`, :1018): the end of the
   // binding's `\lx@ams@cases` that `\MT_start_cases:nnnn` opens; the `\right` closing its `\left` is the cases' own
-  // fence there, so a null `\right.` goes and any other delimiter stays, unfenced, after the cases.
+  // fence there: a null `\right.` goes, the delimiter of an environment `\MT_start_cases:nnnn` read as its right fence
+  // goes with it (`\lx@mt@cases@fenced@`), and any other stays, unfenced, after the cases.
   RawTeX!(r"\MHInternalSyntaxOn
 \MH_new_boolean:n {show_only_refs}
 \MH_new_boolean:n {show_manual_tags}
@@ -128,7 +129,9 @@ LoadDefinitions!({
 \def\MT_matrix_end:{\endarray \hskip -\arraycolsep}
 \def\MH_end_cases:{\lx@end@ams@cases\lx@mt@cases@right}
 \def\lx@mt@cases@right{\@ifnextchar\right\lx@mt@cases@right@{}}
-\def\lx@mt@cases@right@\right#1{\ifx.#1\else#1\fi}
+\def\lx@mt@cases@glyph@\right#1{\ifx.#1\else#1\fi}
+\def\lx@mt@cases@fenced@\right#1{}
+\let\lx@mt@cases@right@\lx@mt@cases@glyph@
 \newdimen\l_MT_above_shortintertext_sep
 \newdimen\l_MT_below_shortintertext_sep
 \MHInternalSyntaxOff");
@@ -136,12 +139,40 @@ LoadDefinitions!({
   // a cases environment, which documents call to redefine one (`\renewcommand{\dcases}{\MT_start_cases:nnnn{\quad}
   // {$\m@th\displaystyle##$\hfil}{$\m@th\displaystyle##$\hfil}{\lbrace}}`: 1906.10268, 2011.05472, 2310.19169,
   // 2409.19509, 1601.02188): the binding's `\lx@ams@cases` opened as `\newcases` opens it ([`mathtools_newcases`]),
-  // for the environment it begins (`\@currenvir`), its end the environment's own.
+  // for the environment it begins (`\@currenvir`), its end the environment's own. An end that is `\newcases`'s own,
+  // `\MH_end_cases:\right<d>` (:1018; a copied `{rcases}` ends `\right\}`, a bracket one `\right]`), closes the
+  // `\left` with `<d>`: that is the cases' right fence (review 68x r2 mt1: an unfenced CLOSE glyph and an unparsed
+  // formula before).
   DefMacro!(T_CS!("\\MT_start_cases:nnnn"), "{}{}{}{}", sub[(_sep, lpre, rpre, ldelim)] {
+    use latexml_core::definition::ExpansionBody;
     let (lpre, rpre, ldelim) = (Tokens::from(lpre), Tokens::from(rpre), Tokens::from(ldelim));
     let name = Expand!(Tokens!(T_CS!("\\@currenvir"))).to_string();
-    let mut toks = vec![T_CS!("\\lx@ams@cases"), T_BEGIN!()];
-    toks.extend(cases_keys(name.trim(), &lpre, &rpre, ldelim, Tokens::new(vec![T_OTHER!(".")])));
+    let name = name.trim();
+    let rdelim = match lookup_meaning(&T_CS!(&format!("\\end{name}"))) {
+      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => {
+          let mut end = body.unlist_ref().iter().filter(|t| t.get_catcode() != Catcode::SPACE);
+          match (end.next(), end.next(), end.next()) {
+            (Some(e), Some(r), Some(d))
+              if *e == T_CS!("\\MH_end_cases:") && *r == T_CS!("\\right") && *d != T_OTHER!(".") =>
+            {
+              Some(*d)
+            },
+            _ => None,
+          }
+        },
+        _ => None,
+      },
+      _ => None,
+    };
+    let mut toks = vec![
+      T_CS!("\\let"),
+      T_CS!("\\lx@mt@cases@right@"),
+      T_CS!(if rdelim.is_some() { "\\lx@mt@cases@fenced@" } else { "\\lx@mt@cases@glyph@" }),
+      T_CS!("\\lx@ams@cases"),
+      T_BEGIN!(),
+    ];
+    toks.extend(cases_keys(name, &lpre, &rpre, ldelim, Tokens::new(vec![rdelim.unwrap_or(T_OTHER!("."))])));
     toks.push(T_END!());
     Ok(Tokens::new(toks))
   });

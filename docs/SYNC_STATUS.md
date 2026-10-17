@@ -2454,7 +2454,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   KOMA, apa7, jinst, compositio, tlp, …): apa7 gains its `\shorttitle` as `<toctitle>` (2609.00670, 2609.02899,
   2609.12869, 2609.19448), and tlp (1209.2617) had its class placeholders made pubnotes and its date line cut, fixed in
   round 2 (OXIDIZED_DESIGN_DIVERGENCES #662: a class default is handed only when its title page or a page style prints it; a store the
-  title page prints in one line with a value the frontmatter does not carry stays the line's). Repros
+  title page prints in one line with a value the frontmatter does not carry stays the line's; open, awaiting a ruling:
+  the line rule judges a class's typesetting macro a value, RED repros class-bindings/title_page_typesetting/*). Repros
   class-bindings/{lni_subtitle_through_k11, tlp/tlp_placeholders_and_date_line}; guards
   `perfect_kernel_batch68x::{a_class_a_binding_reads_raw_reroutes_its_stores,
   tlp_placeholders_stay_and_its_date_line_is_whole}`. (2) aguplus (OXIDIZED_DESIGN_DIVERGENCES #659): a
@@ -2493,7 +2494,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   tests them — 13 papers: 2012.15617, 2206.15309, 2309.00504, 2507.07065; the switches set the boolean only, the binding
   keeps every tag), `\MT_delim_default_inner_wrappers:n` (:829-841; xfunctions.sty — 14: 1704.08847, 1609.02993,
   2310.09182), `\MT_start_cases:nnnn` (:995-1008, as `\newcases` opens `\lx@ams@cases` — 13: 1906.10268, 2011.05472,
-  2310.19169; its end `\MH_end_cases:`, :1009-1013, since round 2, the `\right` after it the cases' own fence),
+  2310.19169; its end `\MH_end_cases:`, :1009-1013, since round 2, the `\right` after it the cases' own fence; since round 3 an
+  environment ending `\MH_end_cases:\right<d>`, :1018, gives `<d>` as the cases' right fence — a copied `{rcases}`,
+  bracket cases; repro package-bindings/mathtools_cases_right_fence, guard
+  `perfect_kernel_batch68x::mathtools_start_cases_takes_the_right_fence_of_its_environment`),
   `\MT_matrix_begin:N`/`\MT_matrix_end:` (:1039-1043 — 5: 1905.08664, 2307.06921) and the short-intertext dimens
   (:1483-1484; 2109.05369). KNOWN_PERL_ERRORS #862. Repro package-bindings/mathtools_internals_after_internal_syntax;
   guard `perfect_kernel_batch68x::mathtools_internals_after_internal_syntax_are_defined`. (7) eulerpx `\mathscr` (OXIDIZED_DESIGN_DIVERGENCES

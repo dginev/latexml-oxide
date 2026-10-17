@@ -17234,7 +17234,10 @@ redefinition as it refuses a file's, so the document's own clearing `\let` keeps
 `\DeclareMathAlphabet{\mathscr}{U}{rsfs}{m}{n}` lost the script font; a binding a package's group-local clear set aside
 is replaced by the current one. A document value-definition after the restore still reaches the binding's call owner
 (#500). Repro macro-state/plain_locked_binding_cleared_by_the_document_comes_back; guard
-`perfect_kernel_batch68x::a_plain_locked_binding_the_document_cleared_comes_back`.
+`perfect_kernel_batch68x::a_plain_locked_binding_the_document_cleared_comes_back`. The lock still wins
+over the document's own new meaning after its clearing `\let`: `\let\footnote\relax\newcommand\footnote[1]{}` keeps
+the kernel's footnote, which pdflatex drops, as a plain locked `\renewcommand\footnote` is refused (Perl
+State.pm:507-515; review 68x r2 probe p12).
 
 ### 570. The caption-label hoist closes its test before the caption is digested (Perl: inside it)
 
@@ -18562,8 +18565,17 @@ not rerouted: it is part of the class's line. tlp.cls:627 `{\it submitted \@subm
 other two in `<date>`s; now the line is whole, as pdflatex prints it, and the dates stay in it. One rule for both
 paths: under the lever a raw class's defaults and lines are read the same way. Why not "only stores the document
 set": the lever path's lion-msc default (pinned by `class_census::k11_class_default_store`) and gGAF2e's journal name
-are printed by pdflatex. A default read only through a token register is not seen: sig-alternate.cls:1640's DOI
-placeholder "10.1145/1235", printed in its `\copyrightetc` box (:1653-1663), is no longer a pubnote (1710.01977).
+are printed by pdflatex. `printed` does not see a head built through a binding or a token register: a class-level
+`\fancyhead[L]{\@journal}` (fancyhdr's binding builds the head) leaves the class's journal default no pubnote, which pdflatex prints in the head
+(review 68x r2 probe ka; accepted residual), and sig-alternate.cls:1640's DOI placeholder "10.1145/1235", read through a
+token register into its `\copyrightetc` box (:1653-1663), is no longer a pubnote (1710.01977) — correct there only
+because the document disables the box (clickbait17-notebook.tex:57 `\def\@copyrightspace{\relax}`), not by the rule.
 68x's binding-read K11 also gives apa7 its `\shorttitle` as `<toctitle>` (2609.00670, 2609.02899, 2609.12869,
 2609.19448). Repro class-bindings/tlp/tlp_placeholders_and_date_line (a tlp.cls with the class's shapes: the paper
-ships it); guard `perfect_kernel_batch68x::tlp_placeholders_stay_and_its_date_line_is_whole`.
+ships it); guard `perfect_kernel_batch68x::tlp_placeholders_stay_and_its_date_line_is_whole`. Open residual, awaiting a
+ruling: the line rule judges by shape, so a class's typesetting macro reads as a value — `{\@addrfont\@address\par}`
+(`\@addrfont` an `\itshape`) and a title page in one `\vbox{…\@jinfo\par…\@address\par}` keep `\address` the class's
+(no address contact; the shape is in TL classes without a binding: bgteubner, umich-thesis, philosophersimprint); the
+narrowing to "another setter's store, no `\par` between" counts font setters' stores (paper.cls:109-111 `\st@font`,
+`\in@font`, `\sss@font`) and costs 1406.5776, 2105.09416, 2107.05207 their subtitle, affiliations and toctitle; repros
+class-bindings/title_page_typesetting/{address_after_a_font_macro, address_in_a_vbox_with_a_class_line} (RED).
