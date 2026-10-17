@@ -18766,3 +18766,32 @@ Witnesses 2406.11811 2103.03402 0806.0214 2602.15784 2301.10544 1410.7242 (theor
 (an ltx:text). Repros block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards
 `perfect_kernel_batch69c::{para_level_block_in_quote_opens_an_inline_logical_block,
 para_level_block_in_note_and_wrapfigure_opens_an_inline_logical_block}`.
+
+### 701. A graphics rule keeps its converter command unexpanded, and a TeX source given as a graphic is sized by its asked width, height or scale alone (graphics.sty: `\edef`, graphicx's full `\Gin@req@sizes`)
+
+graphics.sty:150-154 `\DeclareGraphicsRule` `\edef`s `\Gin@rule@<ext>`, expanding `<command>`; here it is kept
+`\unexpanded` (graphics_sty.rs): no converter runs, and the expansion would reach macros only a driver defines
+(`\OutputFile`). graphicx's `\includegraphics` follows a rule as `\Gin@setfile` does (graphics.sty:254-301;
+graphicx_sty.rs `\lx@Gin@include`, `\lx@Gin@setfile`) when its type is one a package includes itself — a
+`\Ginclude@<type>` that is not a driver's (pdftex.def, dvips.def, xetex.def, dvipdfmx.def, luatex.def, dvisvgm.def
+types: eps, pdf, png, jpg, …) — and the rule names no command: gincltex.sty:43 `.tex`, figlatex.sty:120 `.pdftex_t`.
+The type's reader (`\Gread@<type>`) sets the bounding box when the rule reads the file's own extension, and the
+requested size is graphicx.sty:140-187's in part: `width`, `height` (`totalheight` as height), else `scale` of the
+bounding box; `keepaspectratio`, `angle`, `trim`, `viewport` and the `*` clip are not applied to it. Only the file's
+own extension is matched, on the name expanded (tikzscale.sty:183 passes `{\tikzscale@fileName}`), with no
+`\Gin@rule@*` and no extension appended from `\Gin@extensions`; a file the graphics search path and `\input` do not
+find goes to the image constructor as before. svg's `\includeinkscape` (svg_sty.rs)
+sizes its overlay by the overlay's own `\svgwidth`/`\svgscale` interface, where svg.sty:1355-1370 patches `\picture`
+to set `\unitlength` (the same width; `scale` scales the picture; a `height` alone is not applied). Why: the author's figure, which went to the
+image converter and was lost (1604.05572, 2511.17298, 2305.04329, 2408.06999, 2305.16841, 2402.04829, 2310.03515;
+KNOWN_PERL_ERRORS #921). Guards `perfect_kernel_batch70a::{gincltex_tex_graphic_is_read_as_tex,
+includeinkscape_inputs_the_overlay, standalone_loads_gincltex}`.
+
+### 702. pgfsys-latexml.def answers gnuplot-lua-tikz's driver table as pgfsys-tex4ht.def (`html`)
+
+gnuplot-lua-tikz-common.tex:17-32 (gnuplot's lua terminal style, which papers ship beside their plots) keys its output
+mode by the pgf driver file and stops with an `\errmessage` for a driver its table lacks. pgfsys_latexml_def.rs defines
+`\gnuplot@select@driver@pgfsys-latexml.def` as `html`, the mode of pgfsys-tex4ht.def, the other driver that writes SVG
+for the web: a plot's image file is `\pgfimage` (`\gploadimage`, :88-90), an inline raw image gnuplot's own "not
+implemented" warning (:79-83), never the `pdf`/`ps` modes' PDF/PostScript image operators (:50-77). The table's own
+`\def`s leave the entry alone. Witness 2501.11366. Guard `perfect_kernel_batch70a::gnuplot_lua_tikz_driver_mode`.

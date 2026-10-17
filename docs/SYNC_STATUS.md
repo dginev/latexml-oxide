@@ -2896,6 +2896,37 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   inside a mode-switching argument leaves its frames open (invalid TeX); nomencl's `$…$` in `\nomenclature` inside an
   equation errs (pdflatex 0; 1205.1310, 1102.2460).
 
+- **70a** (binding shapes from the rc_struct4 study, agent_reports/2026-10-17_rc_struct4.md; one commit per item).
+  (B1) biblatex loads what biblatex.sty:38-44 loads — url, not hyperref (biblatex_sty.rs; KNOWN_PERL_ERRORS #915):
+  a cleveref before biblatex passes its begin-document check (cleveref.sty:2370-2376); the binding's links are the
+  kernel's (`ltx:cite`/`ltx:bibref`, the BibTeX pool's `ltx:bib-url`/`ltx:bib-identifier`), `\ifhyperref` false
+  without an author hyperref (2108.12939 2403.13692 2501.07466 2401.13438 2211.04287 2307.04997 2210.03396
+  2112.07048 2508.02914 2112.15046 2106.15390 1811.07125; guard `perfect_kernel_batch70a::biblatex_loads_url_not_hyperref`).
+  (M1, X1) minted loads fvextra (minted.sty:32; 2512.12360; KPE #916), physics loads xparse (physics.sty:15;
+  2603.20157; KPE #917). (N1, K2, A1) binding-private names: natbib's entry constructor `\lx@NAT@lbibitem` (citeref.sty:96
+  defines `\@@lbibitem`; 2309.05436 58 → 0; KPE #918), amsthm's proof style `\lx@amsthm@proof@style` (keytheorems'
+  `\newkeytheoremstyle{proof}`; 2512.04638; KPE #919), the proof title ending `\@addpunct{.}` as amsthm.sty:435-437
+  (`\nopoint` gobbler; 2503.02416; KPE #920). (I1) a TeX source given as a graphic is read as TeX (OD #701, KPE #921):
+  `\DeclareGraphicsRule` keeps `\Gin@rule@<ext>` (graphics.sty:150-154) and graphicx's `\includegraphics` follows a
+  rule whose type a package includes itself (`\lx@Gin@include`/`\lx@Gin@setfile`, graphics.sty:254-301) — gincltex's
+  `.tex` (gincltex.sty:43), loaded by standalone (standalone.sty:1012), the name expanded (tikzscale.sty:183); the
+  epsfig binding no longer overrides `\DeclareGraphicsRule`; svg's `\includeinkscape{x.pdf_tex}`/`{x.pdf}` inputs the
+  overlay (svg.sty:1018-1060, :1348-1394) (1604.05572 2511.17298 2305.04329 2408.06999 2305.16841 2402.04829
+  2310.03515). (G1) pgfsys-latexml.def's entry in gnuplot-lua-tikz's driver table is `html`, pgfsys-tex4ht.def's
+  (OD #702; 2501.11366). Repros package-bindings/{biblatex_cleveref_before_biblatex, natbib_citeref_bibitem,
+  keytheorems_style_named_proof, amsthm_proof_title_gobbler}, stub-dependencies/{minted_loads_fvextra,
+  physics_loads_xparse}, graphics-tikz/{gincltex_tex_graphic, standalone_tikzscale_tex_graphic,
+  includeinkscape_overlay, gnuplot_lua_tikz_driver_mode}; guards `perfect_kernel_batch70a` (10). A/B vs 67int18b over
+  196 papers (the 25 study witnesses, 40 biblatex+cleveref, 30 standalone/gincltex/svg `\includeinkscape`, 20 minted,
+  20 physics, 20 citeref/amsthm/natbib, 39 pop67o): errors 454 → 221 (124 of them 2205.09799, R1, untouched), 0
+  Fatal either side, papers with errors 71 → 28, none worse, no word lost (2309.05436's raw bibliography keys became
+  its author-year citations; the graphics papers +2,800 words of figure text). Not changed: H1 — html.sty:31-47
+  (LaTeX2HTML 2025) itself loads hyperref under PDF output, which this engine's `\pdfoutput=1` is, and harvard's
+  `\IfFileExists{html.sty}` answering true is the 2026-10-15 former-TeX-Live ruling (author_files.rs
+  `FORMER_TEX_LIVE`); its witness 1410.6878 is TL-2025-discounted (iopart12.clo). R1 (verify only): 69b's
+  `\lx@robustify@ltxprotect` does not cover `\robustify{\ref}` — `\ref `, a constructor, has no `CODE(`/`Stored[`
+  in its `\meaning`, so etoolbox's `\robustify` still runs (2205.09799 2 Errors on 69b2-rel and 67int19-rel).
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

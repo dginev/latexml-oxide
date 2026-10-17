@@ -14487,9 +14487,9 @@ math error at its `_`.
 Trigger: `\usepackage{graphicx}\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}` in the preamble — pdflatex 0
 errors; Perl 0.8.8 and Rust before 68w 1 Error.
 
-Rust (68w, graphics_sty.rs): a macro of four arguments that expands to nothing (the rule is not kept: no
-`\includegraphics` here reads one, and its `\edef` of `<command>` would expand a converter's macros only the driver
-defines). Witness 1605.08743 (figlatex). Repro package-bindings/declaregraphicsrule_typesets_nothing; guard
+Rust (68w, graphics_sty.rs): a macro of four arguments that typesets nothing. Since 70a it records the rule as
+graphics.sty does, `<command>` kept `\unexpanded` (its `\edef` would expand a converter's macros only the driver
+defines), and graphicx's `\includegraphics` reads it (#921). Witness 1605.08743 (figlatex). Repro package-bindings/declaregraphicsrule_typesets_nothing; guard
 `perfect_kernel_batch68w::declaregraphicsrule_typesets_nothing`.
 
 ## 859. dcolumn makes `$` `\relax` for the whole cell, so a box in a `D` cell loses its math shifts
@@ -15122,3 +15122,89 @@ stored fields; amstex.rs `\text` (amstex.tex:1217-1226 `\hbox{#1}`) and revtex4_
 (revtex4-2.cls:7547-7560 `\REV@text`) the same. 1703.08664 58 → 0 errors, 24,260 → 24,774 words. Repro
 kernel-alignment/text_argument_is_braced_in_an_alignment_cell; guard
 `perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.
+
+## 915. The biblatex binding loads hyperref, which biblatex.sty never loads
+
+biblatex.sty:38-44 requires pdftexcmds, etoolbox, keyval, kvoptions, logreq, ifthen and url — not hyperref. The
+ar5iv-bindings biblatex.sty.ltxml:45 `RequirePackage('hyperref'); # for url and href` loads it behind the author's
+back, so a cleveref loaded before biblatex fails its begin-document check (cleveref.sty:2370-2376 "cleveref must be
+loaded after hyperref"), and `\ifhyperref` takes its true branch in a document without hyperref.
+
+Trigger: `\usepackage{cleveref}\usepackage{biblatex}` and `\cref{s}` — pdflatex 0 errors ("See section 1."); Perl
+(ar5iv-bindings) and Rust 67int18b 1 Error.
+
+Rust (70a, biblatex_sty.rs): the real list (logreq left out, as Perl does). The binding's own links need no hyperref:
+citations are `ltx:cite`/`ltx:bibref`, an entry's url/doi the BibTeX pool's `ltx:bib-url`/`ltx:bib-identifier`.
+Witnesses 2108.12939 2403.13692 2501.07466 2401.13438 2211.04287 2307.04997 2210.03396 2112.07048 2508.02914
+2112.15046 2106.15390 1811.07125. Repro package-bindings/biblatex_cleveref_before_biblatex; guard
+`perfect_kernel_batch70a::biblatex_loads_url_not_hyperref`.
+
+## 916. The minted binding does not load fvextra
+
+minted.sty:32 (minted 2.2 and later) `\RequirePackage{fvextra}`; the ar5iv-bindings minted.sty.ltxml:24 has the line
+commented out and loads fancyvrb alone, so fvextra's `Verbatim` keys are undefined.
+
+Trigger: `\usepackage{minted}` and `\begin{Verbatim}[breaklines=true, breakanywhere=true]…` — pdflatex 0 errors;
+Rust 67int18b 2 Errors (undefined keys). Rust (70a, minted_sty.rs): `RequirePackage!("fvextra")`. Witness 2512.12360.
+Repro stub-dependencies/minted_loads_fvextra; guard `perfect_kernel_batch70a::minted_loads_fvextra`.
+
+## 917. The physics binding does not load xparse
+
+physics.sty:15 `\RequirePackage{xparse}`; physics.sty.ltxml:19 loads amsmath alone, so a document's
+`\DeclareDocumentCommand` with xparse's deprecated `g` argument type fails.
+
+Trigger: `\usepackage{physics}\DeclareDocumentCommand\DD{ o g }{\IfNoValueTF{#2}{d}{d#2}}` and `$\DD{x}$` — pdflatex 0
+errors ("dx"); Perl 1 Error, Rust 67int18b 2. Rust (70a, physics_sty.rs): `RequirePackage!("xparse")` before amsmath.
+Witness 2603.20157. Repro stub-dependencies/physics_loads_xparse; guard `perfect_kernel_batch70a::physics_loads_xparse`.
+
+## 918. natbib's entry constructor is named `\@@lbibitem`, a name citeref.sty defines
+
+The real natbib defines no `\@@lbibitem`; natbib.sty.ltxml:640-643 names its bibitem-opening constructor so, and
+citeref.sty:96 `\def\@@lbibitem[#1]#2#3\par{…}` (citeref's own `\bibitem`) replaces it: the binding's `\@lbibitem`
+then reaches citeref's macro, which reads a `[` that is not there.
+
+Trigger: `\usepackage[round]{natbib}\usepackage{citeref}` and a `{thebibliography}` with `\bibitem[Batselier
+et~al., 2017]{a}` — pdflatex 0 errors; Rust 67int18b 1 Error (2309.05436: 58). Rust (70a, natbib_sty.rs):
+`\lx@NAT@lbibitem`. Repro package-bindings/natbib_citeref_bibitem; guard
+`perfect_kernel_batch70a::natbib_entry_constructor_is_binding_private`.
+
+## 919. amsthm's proof head style is named `\th@proof`, a name `\newtheoremstyle{proof}` defines
+
+amsthm.sty:216-229 defines the styles plain, definition and remark; its proof sets `\itshape` in `\proof` itself
+(:430-437) and defines no `\th@proof`. amsthm.sty.ltxml:141 names the binding's proof style `\th@proof`, so a
+document's or package's style named `proof` collides: keytheorems' `\newkeytheoremstyle{proof}` errs "already
+defined".
+
+Trigger: `\usepackage{amsthm}\usepackage{keytheorems}\newkeytheoremstyle{proof}{headfont=\itshape}` — pdflatex 0
+errors; Rust 67int18b 1 Error (2512.04638). Rust (70a, amsthm_sty.rs, ieeetran_cls.rs): `\lx@amsthm@proof@style`. Repro
+package-bindings/keytheorems_style_named_proof; guard `perfect_kernel_batch70a::amsthm_proof_style_is_binding_private`.
+
+## 920. amsthm's proof title ends with a bare `.}`, so a gobbler at the title's end eats the group's `}`
+
+amsthm.sty:435-437 sets the proof's title as `#1\@addpunct{.}`: a macro ending the title that reads arguments takes
+`\@addpunct` and `{.}`. amsthm.sty.ltxml's `\@proof` builds `{\the\thm@headfont #1.}`, so a two-argument gobbler at
+the end takes the `.` and the closing `}`.
+
+Trigger: `\documentclass{amsart}\def\nopoint#1#2{}` and `\begin{proof}[Proof \nopoint] of the lemma.` — pdflatex 0
+errors ("Proof of the lemma."); Perl and Rust 67int18b 1 Error. Rust (70a, amsthm_sty.rs): the period is
+`\@addpunct{.}`; Perl's ends-in-punctuation test still decides whether one is added. Witness 2503.02416. Repro
+package-bindings/amsthm_proof_title_gobbler; guard `perfect_kernel_batch70a::amsthm_proof_title_ends_with_addpunct`.
+
+## 921. A TeX source given as a graphic goes to the image converter
+
+graphics.sty:150-154 `\DeclareGraphicsRule` records `\Gin@rule@<ext>`, and `\Gin@setfile` (:254-301) includes a file
+by its rule's type: gincltex.sty:43 `\DeclareGraphicsRule{.tex}{tex}{.tex}{}` (loaded by standalone.sty:1012) makes
+`\includegraphics{x.tex}` input `x.tex` in a box, scaled (`\Gread@tex`, `\Ginclude@tex`, :45-98); svg.sty:1018-1060
+`\includeinkscape{x.pdf_tex}` inputs the Inkscape export's LaTeX overlay. Perl's `\DeclareGraphicsRule` keeps no rule
+(graphics.sty.ltxml:307, a constructor) and its svg binding has no `\includeinkscape`, so the `.tex`/`.pdf_tex` is a
+graphic for the image converter: "failed to convert", the figure lost. epsfig.sty.ltxml:58 redefines
+`\DeclareGraphicsRule` too (epsfig.sty defines none), so a document loading epsfig loses every later rule.
+
+Trigger: `\usepackage{tikz,gincltex}` and `\includegraphics[width=3cm]{tz.tex}` with `tz.tex` a `{tikzpicture}`, HTML
+output — pdflatex 0 errors; Rust 67int18b 1 Error (`imageprocessing:failed_to_convert`). Rust (70a, graphics_sty.rs,
+graphicx_sty.rs `\lx@Gin@include`/`\lx@Gin@setfile`, svg_sty.rs; OXIDIZED_DESIGN_DIVERGENCES #701): the rule is kept
+and a type a package includes itself is read as TeX; the standalone binding loads gincltex as standalone.sty:1012-1013
+does; the epsfig binding leaves `\DeclareGraphicsRule` alone. Witnesses 1604.05572, 2511.17298, 2305.04329, 2408.06999,
+2305.16841, 2402.04829, 2310.03515. Repros graphics-tikz/{gincltex_tex_graphic, standalone_tikzscale_tex_graphic, includeinkscape_overlay}; guards
+`perfect_kernel_batch70a::{gincltex_tex_graphic_is_read_as_tex, standalone_loads_gincltex,
+includeinkscape_inputs_the_overlay}`.
