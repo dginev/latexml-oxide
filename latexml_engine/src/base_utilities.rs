@@ -5738,12 +5738,15 @@ fn field_ink_runs(document: &mut Document, scope: &Node) -> (Vec<FieldInkRun>, V
 /// - what is set apart from the page's flow: a frontmatter element ([`FRONTMATTER_ELEMENTS`]), a note, a float, an
 ///   error's markup, invisible ink (`\phantom`), the internal `_Capture_` marks;
 /// - the text of a TeX box that does not hold the run: a cover's header box (a preprint-number `\parbox`, 0706.0979,
-///   1605.00182; `\rightline{LA-UR-…}`, `\makebox[\textwidth][r]{…}`, `\mbox{preprint}`) is no body. A box is
-///   decided by the TeX mechanism, not by the element it builds (review r4 finding 3): the material of a box reader
-///   (`\hbox`, `\vbox`, `\vtop`, `\mbox`, `\makebox`, `\framebox`/`\fbox`, `\raisebox`, `\parbox`, so
-///   `\rightline`/`\leftline`/`\centerline`'s `\hbox to\hsize`), the body of an environment whose begin code opens
-///   a box group (a minipage), an alignment — core `Document::note_field_box`'s `_fieldbox` mark on the element
-///   the box's material went in.
+///   1605.00182; `\rightline{LA-UR-…}`, `\makebox[\textwidth][r]{…}`, `\mbox{preprint}`, `\colorbox`,
+///   `\fcolorbox`, `\scalebox`) is no body. A box is decided by the TeX mechanism, not by the element it builds
+///   (review r4 finding 3), and marks only the element its own constructor opened, at the point it opens it (review r5
+///   finding 1; core `Document::mark_field_box`'s `_fieldbox`): a constructor declared `restricted_horizontal`
+///   outside math (`\hbox`, so `\rightline`/`\leftline`/`\centerline` and `\colorbox`; `\mbox`, `\makebox`,
+///   `\raisebox`, `\fcolorbox`, `\scalebox`/`\resizebox`/`\rotatebox`/`\reflectbox`), `\framebox`/`\fbox`, the
+///   capture of a `\vbox`, `\vtop`, `\parbox`, minipage, `p` column or framed box ([`insert_block`]), an
+///   environment whose begin code opens a box group, an alignment's container. Material a `\vbox` absorbs straight
+///   into its context marks nothing.
 ///
 /// A list environment is no box: text in `{flushright}`, `{center}`, `quote` before the print is body text, and the
 /// print stays (the header cases OXIDIZED_DESIGN #715 lists).
@@ -5762,8 +5765,8 @@ fn field_runs_after_body_text(scope: &Node) -> HashSet<u32> {
           )
       })
   }
-  /// Does `node` hold a TeX box's material (core `Document::note_field_box`): its text is no body for a run outside
-  /// it?
+  /// Was `node` opened by a TeX box's constructor (core `Document::mark_field_box`): its text is no body for a run
+  /// outside it?
   fn is_box(node: &Node) -> bool { node.has_attribute(document::FIELD_BOX_ATTRIBUTE) }
   #[derive(Default)]
   struct Walk {
@@ -8913,7 +8916,7 @@ pub fn insert_block(
   contents: &Digested,
   block_attr: HashMap<String, String>,
 ) -> Result<Vec<Node>> {
-  insert_block_as(document, contents, block_attr, false)
+  insert_block_as(document, contents, block_attr, false, true)
 }
 
 /// [`insert_block`] for a box that is paragraph material: its definition's `\leavevmode`
@@ -8930,7 +8933,7 @@ pub fn insert_block_in_paragraph(
 ) -> Result<Vec<Node>> {
   let in_paragraph = matches!(props.get("in_paragraph"), Some(Stored::Bool(true)));
   let Some(id) = props.get("caption_id").map(|id| id.to_string()) else {
-    return insert_block_as(document, contents, block_attr, in_paragraph);
+    return insert_block_as(document, contents, block_attr, in_paragraph, true);
   };
   let captype = props
     .get("caption_type")
@@ -8959,7 +8962,7 @@ pub fn insert_block_in_paragraph(
     _ => None,
   };
   let open = ancestor_labels(document);
-  let mut nodes = insert_block_as(document, contents, block_attr, in_paragraph)?;
+  let mut nodes = insert_block_as(document, contents, block_attr, in_paragraph, true)?;
   adopt_box_caption(document, &mut nodes, props, &id, provisional, open)?;
   Ok(nodes)
 }
@@ -9416,11 +9419,16 @@ fn tail_home(
 /// designed to accept all reasonable block material from several levels,
 /// and then determine which container element is most apprpriate for both the conent & context
 /// from block, logical-block or sectional-block, or the inline- variants.
+///
+/// `boxed`: the block is a TeX box (a `\vbox`, `\vtop`, `\parbox`, a minipage, a `p` column, a framed box), its
+/// capture marked for a frontmatter field's print (core `Document::mark_field_box`, OXIDIZED_DESIGN #715); not an
+/// aligning list environment's (`{center}`, `{flushright}`: [`aligning_environment`]).
 fn insert_block_as(
   document: &mut Document,
   contents: &Digested,
   block_attr: HashMap<String, String>,
   in_paragraph: bool,
+  boxed: bool,
 ) -> Result<Vec<Node>> {
   // Perl #2829 (TeX_Box.pool insertBlock L449-456): callers may (sloppily)
   // pass ALL Whatsit properties, but only SOME are intended as attributes.
@@ -9482,6 +9490,11 @@ fn insert_block_as(
       && !document::can_contain_qsym(context_tag, pin_static("ltx:block")));
   let container_attr = block_attr.clone();
   let mut container = document.open_element("ltx:_CaptureBlock_", Some(container_attr), None)?;
+  // the box's own element: the mark rides the capture's rename, an attribute-taking lone child, a paragraph-move; an
+  // unwrapped capture leaves its material in the context, unmarked
+  if boxed {
+    document.mark_field_box(&mut container);
+  }
   document.absorb(contents, None)?;
 
   let mut nodes = content_nodes(&container);
@@ -9880,6 +9893,10 @@ fn insert_block_as(
         } else {
           document.set_attribute(&mut nodes[0], k, v)?;
         }
+      }
+      // the lone child takes the box's attributes, and so its mark (OXIDIZED_DESIGN #715)
+      if container.has_attribute(document::FIELD_BOX_ATTRIBUTE) {
+        document.mark_field_box(&mut nodes[0]);
       }
       document.unwrap_nodes(container)?;
       return Ok(nodes);
@@ -14912,7 +14929,8 @@ pub fn aligning_environment(
 ) -> Result<()> {
   if let Some(Stored::Digested(body)) = props.get("body") {
     // Add class attribute to new nodes.
-    for mut node in insert_block(document, body, HashMap::default())?.into_iter() {
+    // (a list environment, no TeX box: its text is body text for a field's print, OXIDIZED_DESIGN #715)
+    for mut node in insert_block_as(document, body, HashMap::default(), false, false)?.into_iter() {
       set_align_or_class(document, &mut node, align, class)?;
     }
   }

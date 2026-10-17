@@ -597,6 +597,9 @@ impl Converter {
   /// streaming restart or a supplement is a converter of its own and is told again.
   pub fn note_main_source(&mut self, source: &str) { self.compile_route = compile_route(source); }
   pub fn initialize_session(&mut self) -> Result<()> {
+    // The field provenance is per conversion (OXIDIZED_DESIGN #715): reset here too, for the callers that initialize a
+    // session without `prepare_session` (the test harnesses, the streaming sweeps), before any preamble is digested.
+    latexml_core::document::reset_field_provenance();
     // The main source's kind, for the preloads below and the document's PDF mode
     // (`core_interface::establish_pdf_output_mode`).
     state::set_plain_tex_document(self.compile_route.plain_tex);

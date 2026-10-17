@@ -393,6 +393,11 @@ pub(crate) fn load() -> Result<()> {
       let wasmath = lookup_bool("FRAME_IN_MATH");
       let arg = whatsit.get_arg(3).cloned();
       end_mode("restricted_horizontal")?;
+      // a TeX box (latex.ltx `\@frameb@x`'s `\hbox`), its `ltx:text` marked for a frontmatter field's print
+      // (OXIDIZED_DESIGN #715); the math frame is a formula's
+      if !wasmath {
+        document::field_box_whatsit(whatsit);
+      }
       if wasmath
         && let Some(ref a) = arg {
           // Perl: $arg->isMath checks mode property =~ /math$/
@@ -445,6 +450,10 @@ pub(crate) fn load() -> Result<()> {
             if let Some(v) = node.get_attribute(attr) {
               document.set_attribute(&mut children[0].clone(), attr, &v)?;
             }
+          }
+          // the child is the frame now, and the box (OXIDIZED_DESIGN #715)
+          if node.has_attribute(document::FIELD_BOX_ATTRIBUTE) {
+            document.mark_field_box(&mut children[0].clone());
           }
           document.unwrap_nodes(node)?;
         }

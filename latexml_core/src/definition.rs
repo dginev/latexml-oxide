@@ -273,6 +273,10 @@ pub struct DeclaredMode {
   pub bounded:          bool,
   pub require_math:     bool,
   pub forbid_math:      bool,
+  /// Declared `mode => "restricted_horizontal"` itself (not `text`, not an environment's default): the constructor
+  /// builds a TeX box (`\hbox`, `\mbox`, `\fcolorbox`, `\scalebox`), the first element it opens outside math marked
+  /// for a frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
+  pub restricted_box:   bool,
 }
 
 pub trait Definition: Object {

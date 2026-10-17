@@ -1,0 +1,17 @@
+% A report number in a `\scalebox` before the document's own title block: graphics.sty's `\scalebox` sets its text in
+% an `\hbox` (`\Gscale@box`), a TeX box, declared `restricted_horizontal`; its text is no body text for a print outside
+% it, so the title block is lifted and the header kept (fms1 round-5 review probe h4; main-session call round 6).
+% status:  RED (fms1 round 5: `\scalebox`'s text read as body text, the title block kept) → GREEN (fms1 round 6).
+% oracle:  pdflatex 0 errors: "LA-UR-12-3456" scaled, "Header Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; the header kept.
+\documentclass{article}
+\usepackage{graphicx}
+\makeatletter
+\title{Header Title}\author{Ann Author}
+\begin{document}
+\noindent\scalebox{0.8}{LA-UR-12-3456}
+
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

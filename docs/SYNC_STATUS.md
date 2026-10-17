@@ -3351,8 +3351,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   the TeX mechanism, not by its element (finding 3, main-session call): the material of the box readers
   (`HBoxContents`, `HBoxArgContents`, `VBoxContents`: `\hbox`, `\vbox`, `\vtop`, `\mbox`, `\makebox`, `\framebox`/`\fbox`,
   `\raisebox`, `\parbox`, a `p` column; so `\rightline`/`\leftline`/`\centerline`), the body of an environment whose begin
-  code opens a box group (`TexGroup::Box`: a minipage), and an alignment mark the element they go in (`_fieldbox`,
-  `Document::note_field_box`), and only that text is set apart — r16 (`\rightline`), r17 (`\makebox`) and an `\mbox`
+  code opens a box group (`TexGroup::Box`: a minipage), and an alignment marked the element they went in when it was
+  still empty (`_fieldbox`; round 6: only the element the box's own constructor opened), and only that text is set
+  apart — r16 (`\rightline`), r17 (`\makebox`) and an `\mbox`
   header now lifted as the `\parbox` header, `{flushright}`/`{center}`/`quote` headers kept; `ltx:indexmark` is set
   apart (finding 4, s31 lifted). Repros sectioning-frontmatter/field_prov_{second_conversion_lifted,
   unshown_alignment_kept, unshown_alignment_trailing_kept, header_mbox_lifted, indexmark_lifted} RED → GREEN,
@@ -3363,7 +3364,34 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   0 Error/Warning/Fatal change against 67int19b and fms1d, 12 `field_ink` lifts, no mark or `_fieldbox` leaked; 20 of
   them through one CLI process (main + 19 supplements) lift the same 12 as one process each. `perf stat -e
   instructions:u`, bench, 3 runs: empty article 942.67M → 944.10M (+0.15 %; no new work on its path, every added
-  step is gated on a stamped field), XML identical. Open
+  step is gated on a stamped field), XML identical. (That A/B ran on a pre-commit candidate; the review reran 12 of its
+  papers on the committed fms1e-rel, the 7 lift papers among them: byte-identical.) Round 6 (the round-5 review's
+  finding 1 and nits, main-session calls): a box marks only the element its own constructor opened, at the point it
+  opens it (option B; `Document::mark_field_box`) — round 5 marked the current element when empty, so a `\vbox` nested
+  in a `\vbox`/`\vtop`, absorbed straight into an empty paragraph or quote, marked that paragraph and the body text
+  after it stopped counting (probes b2, b10, b11: 2 lifts → 0, as fms1d and pdflatex). Marked: a constructor declared
+  `mode => "restricted_horizontal"` outside math (`DeclaredMode::restricted_box`, the `fieldBox` whatsit property; the
+  first element its absorption opens, `Document::open_element`): `\hbox` (so `\rightline`, `\colorbox`), `\mbox`,
+  `\makebox`, `\raisebox`, `\fcolorbox`, `\scalebox`/`\resizebox`/`\rotatebox`/`\reflectbox`; `\framebox`/`\fbox` (its
+  text branch); `insert_block`'s capture (`\vbox`, `\vtop`, `\parbox`, minipage, `p` column, framed boxes; not
+  `aligning_environment`'s `{center}`/`{flushright}`), the mark riding its rename and an attribute-taking lone child,
+  and the font collapse's merge-up (`auto_collapse_children`); a `TexGroup::Box` environment; an alignment's container.
+  Not marked: `mode => "text"` (`\textbf`), `\textsuperscript` (its `\mbox` is in math), material a `\vbox` absorbs
+  straight into its context. Of the 54 constructors so declared (audited one by one; the 4 environments declaring it are
+  marked only by a box group), no TeX box in the original: `\@index`, `\lxDeclare`/`\@lxDefMathDeclare`, `\textbb`
+  (these open no element or are set apart), `\lx@acm@addresspart@` (inside the contact) and aastex7's `\tablenotemark`
+  (in a table) — listed in OXIDIZED_DESIGN_DIVERGENCES #715. h3 (`\fcolorbox`) and h4 (`\scalebox`) headers now lifted;
+  r16, r17, s31, the `\mbox` header and h1/h2 (`\colorbox`) stay lifted. `dialect::def_environment`'s box-environment
+  check reads the field-ink gate before the State lookup (nit 3), and `initialize_session` resets the field provenance
+  too (nit 5). Repros sectioning-frontmatter/ field_prov_{nested_vbox_body_kept, nested_vtop_body_kept,
+  nested_vbox_quote_kept, header_fcolorbox_lifted, header_scalebox_lifted} RED → GREEN,
+  field_prov_header_colorbox_lifted GREEN; guards `perfect_kernel_batchfms1` (56). Of the review's probes (new/, sib/,
+  r1-r20, q, p, s01-s31) only b2, b10, b11 (kept) and h3, h4 (lifted) changed, each to pdflatex's content. A/B over the
+  same 543 papers (542 converted): fms1f byte-identical to round 5's outputs on all 542 (the 5 lift papers ≠ 67int19b as
+  before), 0 Error/Warning/Fatal change, 12 `field_ink` lifts, no mark or `_fieldbox` leaked; 20 papers through one CLI
+  process: byte-identical to round 5, the same 12 lifts. `perf stat -e instructions:u`, bench, 3 runs, fms1d → fms1e →
+  fms1f: empty article 942.46M → 944.60M → 944.63M, 1708.01239 11,773.0M → 11,794.3M → 11,794.6M (round 6 ±0.0 %; round
+  5's +0.2 % stands, on the empty article too, where no field is stamped), XML identical. Open
   (pre-existing, Perl the same): `\hypersetup{pdftitle=\@title}` records the RDF `dcterms:title` as the literal
   `\@title`; our `\pdfstringdef` is a `\gdef`, so a copy made before `\maketitle` empties the store prints nothing.
 

@@ -672,9 +672,12 @@ impl BoxOps for Alignment {
     // token-locators: stamp the `tabular` with the table span before it opens.
     #[cfg(feature = "token-locators")]
     document.set_current_box_locator(table_span);
-    open_container_fn(document, attrs)?;
-    // an alignment is a TeX box: its cells' text is no body text for a field's print outside it (OXIDIZED_DESIGN #715)
-    document.note_field_box();
+    // an alignment is a TeX box: the container it opens is marked, its cells' text no body text for a field's print
+    // outside it (OXIDIZED_DESIGN #715)
+    document.arm_field_box();
+    let opened = open_container_fn(document, attrs);
+    document.disarm_field_box();
+    opened?;
 
     for row in rows {
       // token-locators: stamp this `tr` with the row's span before it opens.

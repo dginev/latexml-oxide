@@ -251,6 +251,9 @@ pub struct Document {
   /// Set once the frontmatter placement settled the field ink (latexml_engine `lift_marked_field_ink`): no more
   /// field marks after it.
   pub field_ink_settled:         bool,
+  /// A TeX box's constructor is being absorbed and has opened no element yet ([`FIELD_BOX_PROPERTY`]): the next
+  /// [`Document::open_element`] is its own and is marked; any absorb or text before it disarms the mark.
+  field_box_pending:             bool,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -300,19 +303,28 @@ pub const FIELD_PROV_PROPERTY: &str = "fieldProv";
 /// boxless font switch before it).
 pub const FIELD_SERIAL_PROPERTY: &str = "fieldSerial";
 
-/// The box property marking a TeX box's material, set where the box is digested (latexml_engine
-/// `field_box_digested`: the box readers of `\hbox`, `\vbox`, `\vtop`, `\mbox`, `\makebox`, `\framebox`/`\fbox`,
-/// `\raisebox`, `\parbox`, a `p` column; the body of an environment whose begin code opens a box group, a minipage):
-/// [`Document::absorb`] marks the element it goes in ([`FIELD_BOX_ATTRIBUTE`]). Only while field ink is marked.
+/// The whatsit property of a TeX box's constructor (OXIDIZED_DESIGN #715), set where it is digested while field ink
+/// is recorded ([`field_box_whatsit`]): a constructor whose declared mode is `restricted_horizontal` outside math
+/// (`\hbox`, `\mbox`, `\makebox`, `\raisebox`, `\fcolorbox`, `\scalebox`/`\resizebox`/`\rotatebox`/`\reflectbox`,
+/// core `Constructor::digest_to_whatsit`), `\framebox`/`\fbox` (its text branch), an environment whose begin code
+/// opens a box group (a minipage, `dialect::def_environment`). [`Document::absorb`] marks the first element its
+/// constructor opens ([`FIELD_BOX_ATTRIBUTE`]), before it absorbs anything; one that opens none marks nothing.
 pub const FIELD_BOX_PROPERTY: &str = "fieldBox";
-/// The bookkeeping attribute (stripped at finalize, as every `_` attribute) of an element holding a TeX box's
-/// material ([`Document::note_field_box`]).
+/// The bookkeeping attribute (stripped at finalize, as every `_` attribute) of the element a TeX box's constructor
+/// opened for its material ([`Document::mark_field_box`]).
 pub const FIELD_BOX_ATTRIBUTE: &str = "_fieldbox";
 
-/// Mark `digested` as a TeX box's material ([`FIELD_BOX_PROPERTY`]), while field ink is recorded.
-pub fn field_box_digested(digested: &mut Digested) {
-  if FIELD_PROV_STAMPED.get() && crate::token::field_ledger_live() {
-    digested.set_property(FIELD_BOX_PROPERTY, true);
+/// Is field ink being recorded in this conversion (a field stamped, the ledger not settled)? The gate of every
+/// field-box mark, checked before anything else is looked up.
+#[inline]
+pub fn field_ink_recorded() -> bool {
+  FIELD_PROV_STAMPED.get() && crate::token::field_ledger_live()
+}
+
+/// Mark `whatsit` as a TeX box's constructor ([`FIELD_BOX_PROPERTY`]), while field ink is recorded.
+pub fn field_box_whatsit(whatsit: &mut crate::whatsit::Whatsit) {
+  if field_ink_recorded() {
+    whatsit.set_property(FIELD_BOX_PROPERTY, true);
   }
 }
 
@@ -548,6 +560,7 @@ impl Document {
       absorb_level:                0,
       field_inherit:               0,
       field_ink_settled:           false,
+      field_box_pending:           false,
     }
   }
 
@@ -1113,12 +1126,10 @@ impl Document {
   /// which will be inserted according to whatever
   /// font, mode, etc, are in %props.
   pub fn absorb(&mut self, object: &Digested, props_opt: Option<SymHashMap<Stored>>) -> Result<()> {
+    // a box's constructor absorbing material before it opened an element of its own: none is its own
+    self.field_box_pending = false;
     if !self.field_marking_live() {
       return self.absorb_boxes(object, props_opt);
-    }
-    // a TeX box's material ([`FIELD_BOX_PROPERTY`]): the element it goes in is a box
-    if object.with_properties(|props| props.get_sym(pin!("fieldBox")).is_some()) {
-      self.note_field_box();
     }
     self.absorb_level += 1;
     let result = self.absorb_boxes(object, props_opt);
@@ -1141,30 +1152,23 @@ impl Document {
   #[inline]
   fn field_marking_live(&self) -> bool { FIELD_PROV_STAMPED.get() && !self.field_ink_settled }
 
-  /// Note that the element at the insertion point holds a TeX box's material (the box's own element, opened for it
-  /// and still empty: `\hbox`'s `ltx:text`, `\parbox`'s `ltx:inline-block`, an alignment's container), marking it
-  /// with [`FIELD_BOX_ATTRIBUTE`]: the text a box sets is no body text of the page for a field's print outside it
-  /// (latexml_engine `field_runs_after_body_text`, OXIDIZED_DESIGN #715). An element already holding other material
-  /// (a box absorbed into its context without an element of its own) is not marked: its text stays body text.
-  pub fn note_field_box(&mut self) {
-    if !self.field_marking_live() {
-      return;
-    }
-    let Some(mut element) = self.get_element() else {
-      return;
-    };
-    let fresh = element
-      .get_child_nodes()
-      .iter()
-      .all(|c| match c.get_type() {
-        Some(NodeType::PiNode) => true,
-        Some(NodeType::TextNode) => c.get_content().trim().is_empty(),
-        _ => false,
-      });
-    if fresh && element.get_type() == Some(NodeType::ElementNode) {
+  /// Mark `element`, opened by a TeX box's constructor for its material (an `\hbox`'s `ltx:text`, a
+  /// `\vbox`/`\parbox`/minipage capture, an alignment's container), with [`FIELD_BOX_ATTRIBUTE`]: the text a box
+  /// sets is no body text of the page for a field's print outside it (latexml_engine `field_runs_after_body_text`,
+  /// OXIDIZED_DESIGN #715). Only the element the box's own constructor opened, at the point it opens it: material a
+  /// box absorbs straight into its context (a `\vbox` in a `\vbox`, a capture unwrapped) marks nothing (review r5
+  /// finding 1).
+  pub fn mark_field_box(&mut self, element: &mut Node) {
+    if self.field_marking_live() && element.get_type() == Some(NodeType::ElementNode) {
       let _ = element.set_attribute(FIELD_BOX_ATTRIBUTE, "true");
     }
   }
+
+  /// Arm [`Self::mark_field_box`] for the next element opened ([`Self::open_element`]), when it is the caller's own
+  /// (an alignment's `open_container`); [`Self::disarm_field_box`] after it.
+  pub fn arm_field_box(&mut self) { self.field_box_pending = self.field_marking_live(); }
+  /// Disarm [`Self::arm_field_box`].
+  pub fn disarm_field_box(&mut self) { self.field_box_pending = false; }
 
   /// Before absorbing `object`: open, continue or close the run of field ink (`FieldRun`) by the field provenance
   /// the box was digested with ([`FIELD_PROV_PROPERTY`]). Returns whether `object` is a field-ink whatsit whose own
@@ -1174,9 +1178,10 @@ impl Document {
     if !self.field_marking_live() {
       return Ok(false);
     }
-    // an alignment shown: the row-end markers its body consumed are taken now ([`FIELD_TAKEN_PROPERTY`])
+    // an alignment shown: the row-end markers its body consumed are taken now ([`FIELD_TAKEN_PROPERTY`]); a TeX box's
+    // constructor ([`FIELD_BOX_PROPERTY`]): the first element it opens is marked
     if matches!(object.data(), DigestedData::Whatsit(_)) {
-      object.with_properties(|props| {
+      self.field_box_pending = object.with_properties(|props| {
         if let Some(Stored::VecDequeStored(serials)) = props.get_sym(pin!("fieldTaken")) {
           for serial in serials {
             if let Stored::Int(serial) = serial
@@ -1186,6 +1191,7 @@ impl Document {
             }
           }
         }
+        props.get_sym(pin!("fieldBox")).is_some()
       });
     }
     // `fieldProv` ([`FIELD_PROV_PROPERTY`]), by its cached symbol and without a copy: this runs for every box
@@ -1370,6 +1376,7 @@ impl Document {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           let absorbed = digested.borrow().be_absorbed(self);
+          self.field_box_pending = false;
           self.field_inherit -= u32::from(field_ink);
           absorbed?;
           self.close_constructed_nodes();
@@ -1469,6 +1476,8 @@ impl Document {
     object: &str,
     props: &SymHashMap<Stored>,
   ) -> Result<Option<Node>> {
+    // a box's constructor setting text before it opened an element of its own: none is its own
+    self.field_box_pending = false;
     // Else, plain string in text mode.
     let ismath: bool = match props.get("isMath") {
       Some(v) => v.into(),
@@ -1659,6 +1668,8 @@ impl Document {
     //   qname,
     //   self.with_node_qname(&self.node))
     // );
+    // a TeX box's constructor opening its own element ([`FIELD_BOX_PROPERTY`]); not one auto-opened on the way
+    let field_box = std::mem::take(&mut self.field_box_pending);
     let mut point = self.find_insertion_point(qname, None)?;
     // Perl Document.pm:792 `$attributes{_box} = $LaTeXML::BOX unless
     // $attributes{_box}`: an element opened at the insertion point is recorded
@@ -1690,6 +1701,9 @@ impl Document {
       let _ = newnode.set_attribute("_autoclose", "true");
       // Its closer finds it closed already when the structure after it closed it.
       let _ = newnode.set_attribute(UNENDED_ATTRIBUTE, "true");
+    }
+    if field_box {
+      self.mark_field_box(&mut newnode);
     }
     self.set_node(&newnode);
 
@@ -3248,6 +3262,11 @@ impl Document {
         self.record_node_ids(node)?;
         // Merge the attributes from the child onto $node
         self.merge_attributes(&c_first, node, None)?;
+        // a TeX box's element merged up (an `\mbox` alone in its paragraph): all `node` holds is that box's material
+        // (OXIDIZED_DESIGN #715; merge_attributes skips bookkeeping)
+        if c_first.has_attribute(FIELD_BOX_ATTRIBUTE) {
+          let _ = node.set_attribute(FIELD_BOX_ATTRIBUTE, "true");
+        }
         self.remove_node(c_first);
       }
     }

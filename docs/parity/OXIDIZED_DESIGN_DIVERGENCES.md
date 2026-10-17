@@ -18935,21 +18935,43 @@ with the wrappers it empties (not a `labels` one), when:
   element, a note, a float, an error's markup, an index mark — round-4 review finding 4, probe s31,
   `field_prov_indexmark_lifted` — `ltx_phantom` ink, the `_Capture_` marks), and the text of a TeX box that does not
   hold the run. A box is decided by the TeX mechanism, not by the element it builds (main-session call 2026-10-17 on
-  round-4 review finding 3): material digested inside a TeX box is a box's — the box readers' (`HBoxContents`,
-  `HBoxArgContents`, `VBoxContents`: `\hbox`, `\vbox`, `\vtop`, `\mbox`, `\makebox`, `\framebox`/`\fbox`, `\raisebox`,
-  `\parbox`, a `p` column, so `\rightline`/`\leftline`/`\centerline`, each `\hbox to\hsize`), an environment whose begin
-  code opens a box group (`TexGroup::Box`: a minipage, latex.ltx's `\setbox\@tempboxa\vbox\bgroup`), an alignment. It
-  is marked where the box is digested (`document::field_box_digested`, the `fieldBox` property; the alignment by its
-  own absorption) and `Document::note_field_box` marks the element its material goes in (`_fieldbox`, a bookkeeping
-  attribute stripped at finalize; an element already holding other material is not marked, so its text stays body
-  text). Round 4 took the element names `ltx:inline-block`/`inline-logical-block`/`inline-para`/`tabular` for boxes, so
-  `\makebox`, `\mbox`, `\fbox`, `\raisebox` and `\rightline` (all an `ltx:text`) were body text and `\parbox` not. A
-  cover's header box (the preprint-number `\parbox` of 0706.0979 and 1605.00182, a `\rightline{LA-UR-…}`, a
-  `\makebox[\textwidth][r]{…}`, an `\mbox{preprint …}`) is no body text (`field_prov_header_parbox_lifted`,
-  `field_prov_header_rightline_lifted`, `field_prov_header_makebox_lifted`, `field_prov_header_mbox_lifted`; probes r16,
-  r17). Paragraph material in a list environment (`{flushright}`, `{center}`, `quote`, an aligned display) is body text
-  (`field_prov_header_flushright_kept`). Boxes not built by those mechanisms (`\colorbox`, graphicx's `\scalebox`,
-  `\textsuperscript`'s `\mbox` in math) are body text, the print kept (fail-safe). A letter
+  round-4 review finding 3), and a box marks only the element its own constructor opened, at the point it opens it
+  (main-session call on round-5 review finding 1, option B; `Document::mark_field_box`, the `_fieldbox` bookkeeping
+  attribute stripped at finalize): a constructor declared `mode => "restricted_horizontal"` outside math
+  (`DeclaredMode::restricted_box`; `Constructor::digest_to_whatsit` sets the `fieldBox` whatsit property and the first
+  element its absorption opens, before it absorbs anything, is marked, `Document::open_element`; one that opens none
+  marks nothing): `\hbox` (so `\rightline`/`\leftline`/`\centerline`, each `\hbox to\hsize`, and `\colorbox`,
+  color.sty's `\color@b@x`), `\mbox`, `\makebox`, `\raisebox`, `\fcolorbox`,
+  `\scalebox`/`\resizebox`/`\rotatebox`/`\reflectbox`, amsmath's `\text` and `\eqref` outside math (an `\mbox`, an
+  `\hbox`), `\shortstack`, `\put`, the pstricks frame boxes, `\turnbox`; `\framebox`/`\fbox` (no declared mode: its text
+  branch, `\@frameb@x`'s `\hbox`); the capture of `insert_block` — `\vbox`, `\vtop`, `\parbox`, a minipage, a `p`
+  column, a framed box (framed, mdframed, ascmac, a cuted strip, a tabularray box) — the mark riding its rename, its
+  paragraph move and the lone child that takes its attributes, while a capture unwrapped into the context marks nothing;
+  an environment whose begin code opens a box group (`TexGroup::Box`, latex.ltx's `\setbox\@tempboxa\vbox\bgroup`),
+  checked behind the field-ink gate; an alignment's container (armed around its `open_container`). An element merged up
+  by the font collapse (`auto_collapse_children`: an `\mbox` alone in its paragraph) leaves its mark on the element it
+  merged into, which then holds only that box's material. Material a `\vbox`/`\vtop` absorbs straight into its context
+  (a `\vbox` in a `\vbox`) marks nothing: round 5 marked "the current element if still empty", so
+  `\noindent\vbox{\vbox{\hbox{X}}} Lorem…` marked the empty paragraph and its body text stopped counting (probes b2,
+  b10, b11; guards `field_prov_nested_vbox_body_kept`, `field_prov_nested_vtop_body_kept`,
+  `field_prov_nested_vbox_quote_kept`). Not boxes: `mode => "text"` constructors (`\textbf`), `\textsuperscript`
+  (latex.ltx's `\mbox` is inside math), `{center}`/ `{flushright}` (`aligning_environment`'s capture is unmarked). Of
+  the 54 constructors declared `restricted_horizontal` (each audited against its package), those that are no TeX box in
+  the original: `\@index` (`\index` writes, prints nothing; `ltx:indexmark` is set apart anyway),
+  `\lxDeclare`/`\@lxDefMathDeclare` and `\textbb` (bbold's font command; both open no element, so mark nothing),
+  `\lx@acm@addresspart@` (acmart's `\institution`/`\city`…, plain text of `\affiliation`; marked, inside the
+  frontmatter's contact, which is set apart), and `\tablenotemark` (an `\rlap` box in agupp.sty and the old aastex,
+  `\textsuperscript` in aastex701.cls:8494; marked, in a table, which is set apart). Round 4 took the element names
+  `ltx:inline-block`/`inline-logical-block`/`inline-para`/`tabular` for boxes, so `\makebox`, `\mbox`, `\fbox`,
+  `\raisebox` and `\rightline` (all an `ltx:text`) were body text and `\parbox` not. A cover's header box (the
+  preprint-number `\parbox` of 0706.0979 and 1605.00182, a `\rightline{LA-UR-…}`, a `\makebox[\textwidth][r]{…}`, an
+  `\mbox{preprint …}`, a `\colorbox`, an `\fcolorbox`, a `\scalebox`) is no body text
+  (`field_prov_header_parbox_lifted`, `field_prov_header_rightline_lifted`, `field_prov_header_makebox_lifted`,
+  `field_prov_header_mbox_lifted`, `field_prov_header_colorbox_lifted`, `field_prov_header_fcolorbox_lifted`,
+  `field_prov_header_scalebox_lifted`; probes r16, r17, h1-h4). Paragraph material in a list environment
+  (`{flushright}`, `{center}`, `quote`, an aligned display) is body text (`field_prov_header_flushright_kept`), and so
+  is material no box constructor opened an element for (`\unhbox`/`\unvbox`, a capture unwrapped): the print kept
+  (fail-safe). A letter
   that ends `\noindent\@author` signs it where pdflatex prints the name, and keeps it, its body in the paragraph flow
   (round 2 lifted it at the `\end{document}` fallback — re-review finding 3, probe q3; guard
   `field_prov_signature_after_body_kept`), in `{flushleft}` or in a `{quote}` in the signature's own paragraph (round 3

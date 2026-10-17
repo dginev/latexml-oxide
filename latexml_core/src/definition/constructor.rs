@@ -420,6 +420,14 @@ impl Constructor {
     if in_paragraph {
       properties.insert("in_paragraph", Stored::Bool(true));
     }
+    // A TeX box's constructor outside math (a declared `restricted_horizontal`): the element it opens is marked for a
+    // frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
+    if self.declared_mode.is_some_and(|mode| mode.restricted_box)
+      && !ismath
+      && crate::document::field_ink_recorded()
+    {
+      properties.insert(crate::document::FIELD_BOX_PROPERTY, Stored::Bool(true));
+    }
     // $properties{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.

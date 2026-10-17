@@ -1,0 +1,17 @@
+% A report number in a `\colorbox` before the document's own title block: color.sty's `\colorbox` is `\color@b@x`,
+% `\leavevmode\setbox\z@\hbox{…}`, a TeX box, so its text is no body text for a print outside it; the title block is
+% lifted, the header kept (fms1 round-5 review probes h1/h2; main-session call round 6).
+% status:  GREEN (fms1 rounds 5, 6).
+% oracle:  pdflatex 0 errors: "LA-UR-12-3456" on yellow, "Header Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; the header kept.
+\documentclass{article}
+\usepackage{color}
+\makeatletter
+\title{Header Title}\author{Ann Author}
+\begin{document}
+\noindent\colorbox{yellow}{LA-UR-12-3456}
+
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

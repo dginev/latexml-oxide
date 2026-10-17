@@ -20,7 +20,10 @@
 //! (field_prov_second_conversion_lifted), an alignment's row-end markers are taken only when it is shown
 //! (field_prov_unshown_alignment_kept, _unshown_alignment_trailing_kept, _alignment_box_used_twice_lifted), a box is
 //! decided by the TeX mechanism (field_prov_header_{rightline,makebox,mbox}_lifted, _header_flushright_kept), and an
-//! index mark is set apart (field_prov_indexmark_lifted).
+//! index mark is set apart (field_prov_indexmark_lifted). Round 6 (round-5 review finding 1, main-session call): a box
+//! marks only the element its own constructor opened (field_prov_nested_vbox_body_kept, _nested_vtop_body_kept,
+//! _nested_vbox_quote_kept), and a constructor declared `restricted_horizontal` is a box
+//! (field_prov_header_{colorbox,fcolorbox,scalebox}_lifted).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use super::{
@@ -1037,4 +1040,113 @@ fn field_prov_second_conversion_lifted() {
     assert_eq!(log.matches(FIELD_INK_INFO).count(), 2, "{log}");
     assert_eq!(xml.matches("Twice Title").count(), 1, "{xml}");
   }
+}
+
+/// Convert the repro `tex` under the raw preload with `lifted` prints lifted, and return its
+/// leading body ([`leading_body`]).
+fn box_case(tex: &str, lifted: usize) -> String {
+  let (xml, _) = assert_lifts(tex, (lifted, 0), &[]);
+  leading_body(&xml)
+}
+
+/// The title block a kept case leaves after its body paragraph.
+const KEPT_TITLE_BLOCK: &str = "  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>";
+
+/// sectioning-frontmatter/field_prov_nested_vbox_body_kept: a `\vbox` in a `\vbox` at a paragraph's start, then body
+/// text: the outer box absorbs the inner one straight into the paragraph, which no box's constructor opened, so the text
+/// after it is body text and the title block stays (round-5 review finding 1, probe b2; 2 lifts in round 5).
+#[test]
+fn field_prov_nested_vbox_body_kept() {
+  assert_eq!(
+    box_case(
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_nested_vbox_body_kept.tex"
+      ),
+      0
+    ),
+    format!(
+      "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p vattach=\"bottom\">X</p>\n    <p>Lorem ipsum dolor body text.</p>\n  </para>\n{KEPT_TITLE_BLOCK}"
+    )
+  );
+}
+
+/// sectioning-frontmatter/field_prov_nested_vtop_body_kept: the `\vtop` sibling of the nested-`\vbox` case (round-5
+/// review finding 1, probe b10).
+#[test]
+fn field_prov_nested_vtop_body_kept() {
+  assert_eq!(
+    box_case(
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_nested_vtop_body_kept.tex"
+      ),
+      0
+    ),
+    format!(
+      "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p vattach=\"bottom\">X</p>\n    <p>Lorem ipsum dolor body text.</p>\n  </para>\n{KEPT_TITLE_BLOCK}"
+    )
+  );
+}
+
+/// sectioning-frontmatter/field_prov_nested_vbox_quote_kept: the nested `\vbox` at a `quote`'s start: the quote's
+/// paragraph is no box, its text after the box is body text (round-5 review finding 1, probe b11).
+#[test]
+fn field_prov_nested_vbox_quote_kept() {
+  assert_eq!(
+    box_case(
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_nested_vbox_quote_kept.tex"
+      ),
+      0
+    ),
+    format!(
+      "  <para xml:id=\"p1\">\n    <quote>\n      <p vattach=\"bottom\">X</p>\n      <p>Lorem ipsum dolor body text.</p>\n    </quote>\n  </para>\n{KEPT_TITLE_BLOCK}"
+    )
+  );
+}
+
+/// sectioning-frontmatter/field_prov_header_colorbox_lifted: a `\colorbox` header (`\color@b@x`'s `\hbox`) is a TeX box:
+/// the title block after it is lifted, the header kept (round-5 review probes h1/h2).
+#[test]
+fn field_prov_header_colorbox_lifted() {
+  assert_eq!(
+    box_case(
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_colorbox_lifted.tex"
+      ),
+      2
+    ),
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p><text backgroundcolor=\"#FFFF00\">LA-UR-12-3456</text></p>\n  </para>"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_header_fcolorbox_lifted: an `\fcolorbox` header, a constructor declared
+/// `restricted_horizontal` (xcolor's `\hbox`): the title block after it is lifted, the header kept (round-5 review probe
+/// h3; main-session call round 6; 0 lifts in round 5).
+#[test]
+fn field_prov_header_fcolorbox_lifted() {
+  assert_eq!(
+    box_case(
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_fcolorbox_lifted.tex"
+      ),
+      2
+    ),
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p><text backgroundcolor=\"#FFFF00\" framecolor=\"#FF0000\" framed=\"rectangle\">LA-UR-12-3456</text></p>\n  </para>"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_header_scalebox_lifted: a `\scalebox` header, a constructor declared
+/// `restricted_horizontal` (graphics' `\Gscale@box` `\hbox`): the title block after it is lifted, the header kept
+/// (round-5 review probe h4; main-session call round 6; 0 lifts in round 5).
+#[test]
+fn field_prov_header_scalebox_lifted() {
+  assert_eq!(
+    box_case(
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_scalebox_lifted.tex"
+      ),
+      2
+    ),
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <inline-block depth=\"0.0pt\" height=\"5.5pt\" width=\"54.9pt\" xscale=\"0.8\" xtranslate=\"-6.9pt\" yscale=\"0.8\" ytranslate=\"0.7pt\">\n      <p>LA-UR-12-3456</p>\n    </inline-block>\n  </para>"
+  );
 }

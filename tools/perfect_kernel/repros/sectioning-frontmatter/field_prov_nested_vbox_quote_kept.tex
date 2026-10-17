@@ -1,0 +1,17 @@
+% A `\vbox` nested in a `\vbox` at the start of a `quote`, then body text, before the document's own title block: the
+% outer box absorbs the inner one straight into the quote's paragraph, which is no box; the text after it is body text
+% and the title block stays (fms1 round-5 review finding 1, probe b11).
+% status:  RED (fms1 round 5: the empty quote paragraph marked as a box, the title block lifted) → GREEN (fms1 round 6).
+% oracle:  pdflatex 0 errors: "X", "Lorem ipsum dolor body text." (indented), "Header Title / Ann Author",
+%          "1 Intro Text.".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the title block kept.
+\documentclass{article}
+\makeatletter
+\title{Header Title}\author{Ann Author}
+\begin{document}
+\begin{quote}\vbox{\vbox{\hbox{X}}} Lorem ipsum dolor body text.\end{quote}
+
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

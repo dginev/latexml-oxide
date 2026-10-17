@@ -412,6 +412,7 @@ fn command_declared_mode(
   forbid_math: bool,
 ) -> (Option<String>, DeclaredMode) {
   let text = mode.as_deref() == Some("text");
+  let restricted_box = mode.as_deref() == Some("restricted_horizontal");
   let mode = if text {
     Some("restricted_horizontal".to_string())
   } else {
@@ -424,6 +425,7 @@ fn command_declared_mode(
     bounded: mode.is_none() && bounded,
     require_math,
     forbid_math,
+    restricted_box,
   };
   (mode, declared_mode)
 }
@@ -1493,6 +1495,8 @@ pub fn def_environment(
     bounded:          false,
     require_math:     options.require_math,
     forbid_math:      options.forbid_math,
+    // an environment is a box by its begin code's group (`TexGroup::Box`, below), not by its mode
+    restricted_box:   false,
   };
 
   if declared_mode.require_math {
@@ -1615,18 +1619,19 @@ pub fn def_environment(
   // Clone fields needed for the bare \name constructor (Perl Package.pm lines 1949-1969)
   // before they are moved into the \begin{name} constructor below.
   let bare_after_digest_begin = options.after_digest_begin.clone();
-  // The body of an environment whose begin code opens a box group (`\setbox\@tempboxa\vbox\bgroup`, a minipage) is a
-  // TeX box's material (`document::field_box_digested`, OXIDIZED_DESIGN #715), unless the binding's run-time kind says
-  // otherwise.
+  // An environment whose begin code opens a box group (`\setbox\@tempboxa\vbox\bgroup`, a minipage) is a TeX box: the
+  // first element its constructor opens is marked for a frontmatter field's print (`document::FIELD_BOX_PROPERTY`,
+  // OXIDIZED_DESIGN #715), unless the binding's run-time kind says otherwise. The field-ink gate first: the kind is a
+  // State lookup, for every such body (review r5 finding 3).
   if tex_group == TexGroup::Box {
     let box_key = tex_group_key.clone();
     options.after_digest_body.insert(
       0,
       after_digest_simple!(whatsit, {
-        if environment_tex_group(&box_key, TexGroup::Box) == TexGroup::Box
-          && let Some(Stored::Digested(body)) = whatsit.properties.get_mut("body")
+        if crate::document::field_ink_recorded()
+          && environment_tex_group(&box_key, TexGroup::Box) == TexGroup::Box
         {
-          crate::document::field_box_digested(body);
+          crate::document::field_box_whatsit(whatsit);
         }
       }),
     );
