@@ -2680,6 +2680,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   alignment's, cleared at each cell end, so a misplaced mid-cell `\multicolumn` leaves later `\omit` cells text.
   Repros kernel-alignment/omit_cell_in_array_is_text, kernel-alignment/multicolumn_misplaced_then_omit; guards
   `perfect_kernel_batch68z::{an_omit_cell_of_an_array_is_text, a_misplaced_multicolumn_leaves_later_omit_cells_text}`.
+  Round 3: the text box keeps the cell's `\hfil`/`\hfill` outside it (tex_tables.rs `hoist_omit_text_box_fills`), so
+  the cell is flush right or centered as before the box (2306.14299's eight `\omit{\hfill $…$}` cells right again);
+  repro kernel-alignment/omit_cell_text_box_keeps_the_cell_alignment, guard
+  `perfect_kernel_batch68z::an_omit_cell_text_box_keeps_the_cell_alignment`; `pmatrix`/`cases`/IEEEeqnarraybox `\omit`
+  cells still math (KNOWN_PERL_ERRORS #662 residual).
   (6) C5: a first-column `\lefteqn` followed by more of its eqnarray cell is latex.ltx:15800's `\rlap{$\displaystyle
   #1$}` inside the cell's math, still overprinting (sect07.rs `\lefteqn`; OXIDIZED_DESIGN_DIVERGENCES #556 extended):
   the 65o `\multicolumn{1}{l}` cell is text, so `\lefteqn{\widehat G}\hphantom{G}^{(r)}` erred "Script ^"; a
@@ -2689,6 +2694,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   blocker): the next token is compared by meaning, through the macros it starts (`\def\nn{\nonumber}`, `\def\eeq
   {\end{eqnarray}}`), past spacing (`\lefteqn{X}\quad y^2` keeps the math): the rule in #556. Repro
   alignment/lefteqn_row_end_by_meaning; guard `perfect_kernel_batch68z::a_lefteqn_before_a_row_end_macro_is_the_whole_cell`.
+  Round 3: the look-ahead (`LefteqnLookAhead`) tests the cell end before following a macro (`\def\eq{&=&}`), follows a
+  robust command past its `\protect`, reads macro bodies and then the input after them (`\def\rnn{\relax
+  \nonumber}`), and passes braces (`{\nonumber}`), `\relax`, `\strut`, `\mathstrut`, `\vphantom{…}` and `\hskip`/`\kern`
+  with their glue (`\lefteqn{X}\hskip 1cm y^2` keeps the math); limits in #556. Witness hep-ph0607130. Repro
+  alignment/lefteqn_cell_end_forms; guard `perfect_kernel_batch68z::every_lefteqn_cell_end_form_is_the_whole_cell`.
   (7) C10: `{tabu}` in math is an `array` (tabu.sty:616-618), tabu_sty.rs `\lx@tabu@start`: witness 2010.06598, repro
   alignment-bindings/tabu_in_math_is_an_array, guard `perfect_kernel_batch68z::tabu_in_math_is_an_array`. C11 (amsart
   caption `$$`, 0803.4182) and C6 (`\cite` note in display math, math0402383) are not local: RED rows in "Perfect-kernel

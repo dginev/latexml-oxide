@@ -16957,20 +16957,28 @@ The `\multicolumn` cell of an eqnarray is text (its `$` is the template's): wher
 `\lefteqn` is latex.ltx's `\rlap{$\displaystyle #1$}` inside the cell's math, still overprinting. An `array`'s or
 amsmath's span keeps the rest in math, so they keep the span.
 
-The decision rule (68z, sect07.rs `\lefteqn`, `lefteqn_ends_cell`): the macro looks ahead without expanding, past
-spaces and the spacing commands that print nothing the cell's math would hold (`\quad`, `\qquad`, `\,`, `\;`, `\:`,
-`\!`, `\ `, `\enspace`, `\hfil`, `\hfill`, and `\hspace` with its `*` and argument, 2210.09695's `\hspace{1cm}\\`),
-and the `\lefteqn` is the whole cell when the next token is a tab or `\cr`, or has the meaning of `\\`, `\nonumber`,
-`\notag`, `\label`, `\end` or `\tabularnewline`, directly or as the first body token of the macros it starts (`\def
-\nn{\nonumber}`, `\def\eeq{\end{eqnarray}}`, the hep idioms; up to 8 levels), or is `\hskip`/`\kern` itself (their
-glue is not read). An end command that is undefined or `\relax` (`\notag` without amsmath; latex.ltx's top-level
-`\tabularnewline`) matches only by name, since `\hphantom`'s `\protect` would equal it. Anything else, `\lefteqn{X}\quad
-y^2` included, keeps the cell's math. The rule decides before the cell's content is read, so a macro whose expansion
-ends the cell only further in (`\def\nn{\relax\nonumber}`) still takes the in-cell form: a right-aligned cell that
-holds the zero-width box. Deciding at the cell end would need the digested cell rewritten from the in-cell form to the
-span; not done. Repros alignment/lefteqn_then_script, alignment/lefteqn_row_end_by_meaning; guards
+The decision rule (68z, sect07.rs `\lefteqn`, `LefteqnLookAhead`): the macro looks ahead without expanding the
+input, as TeX would read the rest of the cell, and the `\lefteqn` is the whole cell when, past what prints nothing the
+cell's math would hold, the next token is a tab or `\cr`, or has the meaning of `\\`, `\nonumber`, `\notag`, `\label`,
+`\end` or `\tabularnewline`. Passed over: spaces, braces (`{}`, and into `{\nonumber}`), `\quad`, `\qquad`, `\,`,
+`\;`, `\:`, `\!`, `\ `, `\enspace`, `\hfil`, `\hfill`, `\relax`, `\protect` (so a `\DeclareRobustCommand\nn
+{\nonumber}` is followed to its inner macro), `\strut`, `\mathstrut`, `\hspace` with its `*` and argument
+(2210.09695's `\hspace{1cm}\\`), `\vphantom` with its argument, `\hskip` with its glue and `\kern` with its dimension
+(read by keyword, tex.web §448/§461: signs, a register or a factor and unit, `true`, `plus`/`minus` with `fil`). A
+macro it meets is followed into its body, which is read the same way and then the input after it (`\def\nn
+{\nonumber}`, `\def\eeq{\end{eqnarray}}`, `\def\rnn{\relax\nonumber}`, `\def\eq{&=&}`: the cell end is tested first,
+so a body opening with a tab ends the cell; hep-ph0607130), through 8 expansions and at most 256 tokens. An end
+command that is undefined or `\relax` (`\notag` without amsmath; latex.ltx's top-level `\tabularnewline`) matches only
+by name, since `\protect` would equal it. Anything else, `\lefteqn{X}\quad y^2` and `\lefteqn{X}\hskip 1cm y^2`
+included, keeps the cell's math. Known limits: the look-ahead does not expand conditionals or primitives other than
+these (`\ifx`, `\csname`, `\@ifnextchar`-headed macros, `\@plus` in a glue read as letters: each keeps the in-cell
+form); a macro with parameters is followed into its body without its arguments; any other unexpandable command
+before the row end (`\lefteqn{X}\displaystyle\\`) keeps the in-cell form. That form, where the cell does end,
+is a right-aligned cell that holds the zero-width box (round 1's layout); deciding at the cell end would need the
+digested cell rewritten from the in-cell form to the span: not done. Repros alignment/lefteqn_then_script,
+alignment/lefteqn_row_end_by_meaning, alignment/lefteqn_cell_end_forms; guards
 `perfect_kernel_batch68z::{a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math,
-a_lefteqn_before_a_row_end_macro_is_the_whole_cell}`.
+a_lefteqn_before_a_row_end_macro_is_the_whole_cell, every_lefteqn_cell_end_form_is_the_whole_cell}`.
 
 Residuals (RED repros): `\multicolumn{1}{l}` replaces column 1's template, so its `@{…}` material and `|` rules are
 lost, which TeX's `\rlap`, inside the template, keeps (alignment/lefteqn_overprint_keeps_template_material; Perl's

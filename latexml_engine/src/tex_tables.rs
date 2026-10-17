@@ -1567,6 +1567,15 @@ pub fn extract_alignment_column(
     (true, false) => Some(Align::Right),
     (false, false) => None,
   };
+  // The text box of an `\omit` cell (`Alignment::get_column_before`) holds the cell's material: its leading and
+  // trailing fill glue are the cell's, read below as the cell's alignment.
+  if (n0..=n1.max(n0)).any(|n| {
+    alignment
+      .get_column(n)
+      .is_some_and(|column| column.omit_text_box)
+  }) {
+    hoist_omit_text_box_fills(&mut boxes);
+  }
   // --- Scan phase: peel boxes from both sides ---
   while let Some(front_box) = boxes.pop_front() {
     match front_box.data() {
@@ -2083,6 +2092,125 @@ fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
     result.push_front(t);
   }
   result.into()
+}
+
+/// tex.web §789: an `\omit` cell is restricted horizontal, its material boxed as text (`Alignment::get_column_before`
+/// opens the `\hbox{`, `get_column_after` closes it), but in TeX its fill glue is the cell's, setting the cell flush
+/// right or centered (`\omit\hfill $y$`, `\multispan2\hfil … \hfil`, `\omit{\hfill $x$}`: 2306.14299). The box's
+/// leading fills (and the spaces before them) go before it and its trailing fills after it, where
+/// `extract_alignment_column`'s scan reads the cell's alignment from them, as from an unboxed cell. Only `\hfil` and
+/// `\hfill` are fills there (`\hss` leaves no box). Guard
+/// `perfect_kernel_batch68z::an_omit_cell_text_box_keeps_the_cell_alignment`.
+fn hoist_omit_text_box_fills(boxes: &mut VecDeque<Digested>) {
+  let is_hbox = |item: &Digested| match item.data() {
+    DigestedData::Whatsit(w) => w
+      .try_borrow()
+      .is_ok_and(|w| w.get_definition().get_cs_name().as_ref() == "\\hbox"),
+    _ => false,
+  };
+  let is_space = |item: &Digested| {
+    item.get_property_bool("isSpace") && !item.get_property_bool("isVerticalSpace")
+  };
+  let is_fill = |item: &Digested| item.get_property_bool("isFill");
+  // The cell's contents, as `\hbox`'s list, the fills cut from its front (`leading`) or back.
+  let cut = |item: &Digested, leading: bool| -> Vec<Digested> {
+    let DigestedData::Whatsit(w) = item.data() else {
+      return Vec::new();
+    };
+    let Ok(mut w) = w.try_borrow_mut() else {
+      return Vec::new();
+    };
+    let Some(contents) = w.get_arg_mut(2) else {
+      return Vec::new();
+    };
+    // the box's own list, under the lists a group in it leaves (`\omit{\hfill $x$}`: the group's empty `{`/`}`
+    // markers stay where they are, for its reversion)
+    let mut items: VecDeque<Digested> = contents.unlist().into();
+    let mut passed = Vec::new();
+    let mut last_fill = 0;
+    loop {
+      let Some(item) = (if leading {
+        items.pop_front()
+      } else {
+        items.pop_back()
+      }) else {
+        break;
+      };
+      if matches!(item.data(), DigestedData::List(_)) {
+        let inner = item.unlist();
+        if leading {
+          for inner in inner.into_iter().rev() {
+            items.push_front(inner);
+          }
+        } else {
+          items.extend(inner);
+        }
+        continue;
+      }
+      let fill = is_fill(&item);
+      let passes = fill || is_space(&item) || item.is_empty().unwrap_or(false);
+      passed.push(item);
+      if fill {
+        last_fill = passed.len();
+      } else if !passes {
+        break;
+      }
+    }
+    if last_fill == 0 {
+      return Vec::new();
+    }
+    let rest = passed.split_off(last_fill);
+    let (mut hoisted, kept): (Vec<Digested>, Vec<Digested>) = passed
+      .into_iter()
+      .partition(|item| is_fill(item) || is_space(item));
+    // what is not hoisted goes back, in order
+    for item in kept.into_iter().chain(rest).rev() {
+      if leading {
+        items.push_front(item);
+      } else {
+        items.push_back(item);
+      }
+    }
+    if !leading {
+      hoisted.reverse();
+    }
+    let items: Vec<Digested> = items.into();
+    let mode = match contents.data() {
+      DigestedData::List(list) => list.borrow().mode.clone(),
+      _ => None,
+    };
+    let mut list = List::new(items);
+    list.mode = mode;
+    *contents = list.into();
+    hoisted
+  };
+  // the box, under the lists the cell's material may be wrapped in
+  while let Some(front) = boxes.front()
+    && matches!(front.data(), DigestedData::List(_))
+  {
+    let front = boxes.pop_front().unwrap();
+    for item in front.unlist().into_iter().rev() {
+      boxes.push_front(item);
+    }
+  }
+  if let Some(front) = boxes.front().cloned()
+    && is_hbox(&front)
+  {
+    for item in cut(&front, true).into_iter().rev() {
+      boxes.push_front(item);
+    }
+  }
+  while let Some(back) = boxes.back()
+    && matches!(back.data(), DigestedData::List(_))
+  {
+    let back = boxes.pop_back().unwrap();
+    boxes.extend(back.unlist());
+  }
+  if let Some(back) = boxes.back().cloned()
+    && is_hbox(&back)
+  {
+    boxes.extend(cut(&back, false));
+  }
 }
 
 /// A box flagged as space with a positive width (tex_box.rs `is_space_flagged_box`: `\phantom`, `\hphantom`):

@@ -395,7 +395,8 @@ impl Alignment {
           column.before.clone().unwrap_or_default().unlist()
         )
       } else if column.omit_text_box {
-        // the cell's own group, explicit braces: the before-column marker that follows resets the ledger
+        // the cell's own group, explicit braces: the before-column marker that follows resets the ledger; its leading
+        // and trailing fills are the cell's (tex_tables.rs `hoist_omit_text_box_fills`)
         Tokens!(T_CS!("\\hbox"), T_BEGIN!())
       } else {
         Tokens!()

@@ -155,8 +155,8 @@ fn aa_ion_is_robust_at_a_cell_head() {
 }
 
 /// kernel-alignment/omit_cell_in_amsmath_alignment_is_text: `& \omit \hfill $\qquad (-1)^{n} c$,` in a `split` and
-/// `&\omit $y^2$` in an `aligned` are text cells holding an inline formula (pdflatex 0 errors); a `\multicolumn` cell
-/// is boxed once. Before 68z the `\omit` cell stayed math and its `$` opened text: 1 Error "Script ^".
+/// `&\omit $y^2$` in an `aligned` are text cells holding an inline formula (pdflatex 0 errors), the first flush right;
+/// a `\multicolumn` cell is boxed once. Before 68z the `\omit` cell stayed math and its `$` opened text: 1 Error "Script ^".
 #[test]
 fn an_omit_cell_of_an_amsmath_alignment_is_text() {
   let (stderr, xml) = convert_with(
@@ -168,9 +168,10 @@ fn an_omit_cell_of_an_amsmath_alignment_is_text() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   let xml = normalize_markup(&xml);
-  // the split's second row: an empty cell, then the text cell with its formula
+  // the split's second row: an empty cell, then the text cell with its formula, flush right by its `\hfill` (68z
+  // round 3: the fill is the cell's, outside the box)
   assert!(
-    xml.contains(r#"<XMCell/><XMCell align="left"><XMText xml:id="S0.E1.m1.4"> <Math mode="inline" tex="\qquad(-1)^{n}c" text="(- 1) ^ n * c""#),
+    xml.contains(r#"<XMCell/><XMCell align="right"><XMText xml:id="S0.E1.m1.4"><Math mode="inline" tex="\qquad(-1)^{n}c" text="(- 1) ^ n * c""#),
     "{xml}"
   );
   assert_eq!(
@@ -390,4 +391,103 @@ fn a_misplaced_multicolumn_leaves_later_omit_cells_text() {
       .collect();
     assert_eq!(in_text, [true, true], "{var}: {xml}");
   }
+}
+
+/// The `align` values of every `<{tag}` start tag in `xml`, in document order (`-` for none).
+fn aligns_of(xml: &str, tag: &str) -> Vec<String> {
+  xml
+    .match_indices(&format!("<{tag}"))
+    .filter_map(|(i, m)| {
+      let rest = &xml[i + m.len()..];
+      let end = rest.find('>')?;
+      let head = &rest[..end];
+      if !(head.is_empty() || head.starts_with(' ') || head.starts_with('/')) {
+        return None;
+      }
+      Some(head.find("align=\"").map_or("-".to_string(), |a| {
+        let v = &head[a + 7..];
+        v[..v.find('"').unwrap_or(v.len())].to_string()
+      }))
+    })
+    .collect()
+}
+
+/// kernel-alignment/omit_cell_text_box_keeps_the_cell_alignment (68z round 3, the re-review's probes q2/q3; 2306.14299
+/// `\omit{\hfill $…$}`): an `\omit` cell's text box keeps the cell's fill glue outside it, so `\omit\hfill $y_2$`,
+/// `\omit{\hfill $y_5$}` are flush right and `\omit\hfil $y_3$ C\hfil`, `\multispan2\hfil … \hfil` centered, in an
+/// `array` and in an `aligned` (pdflatex 0 errors, the same placement). Round 2 set every such cell left.
+#[test]
+fn an_omit_cell_text_box_keeps_the_cell_alignment() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/omit_cell_text_box_keeps_the_cell_alignment.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let xml = normalize_markup(&xml);
+  // the array's rows: a1 b1 c1 / a2 y2 c2 / a3 y3 c3 / a4 (y4 C4 over two) / a5 y5 c5
+  assert_eq!(
+    aligns_of(&xml, "XMCell"),
+    [
+      "left", "left", "left", "left", "right", "left", "left", "center", "left", "left", "center",
+      "left", "right", "left"
+    ],
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<XMCell align="center" colspan="2"><XMText>"#),
+    "{xml}"
+  );
+  // the aligned's rows: its second column flush right (y_6) and centered (y_7)
+  assert_eq!(
+    aligns_of(&xml, "td"),
+    ["right", "left", "right", "right", "right", "center"],
+    "{xml}"
+  );
+  // the fills are the cell's, not the box's
+  assert_eq!(xml.matches(r#"<XMText> <Math"#).count(), 0, "{xml}");
+}
+
+/// alignment/lefteqn_cell_end_forms (68z round 3, the re-review's probe e1; hep-ph0607130's
+/// `\newcommand{\nn}{\nonumber}`): a first-column `\lefteqn` is the whole cell before `\label`, a `\let` of
+/// `\nonumber`, a `\DeclareRobustCommand` one (past its `\protect`), `\def\eq{&=&}` (a tab first), `{\nonumber}`,
+/// `\def\rnn{\relax\nonumber}` and `\relax\strut\vphantom{X}\kern 2pt\hskip 1em plus 1fil \\`: 65o's left-aligned span;
+/// `\hskip 1cm y^2 &=&` keeps the cell's math, its glue read (pdflatex 0 errors, the y2 a script). Round 2 set rows
+/// 3-7 in the right-aligned math cell; 67int17b erred "Script ^" on the last.
+#[test]
+fn every_lefteqn_cell_end_form_is_the_whole_cell() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/alignment/lefteqn_cell_end_forms.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let xml = normalize_markup(&xml);
+  for tex in [
+    "AAA+BBB+CCC",
+    "DDD+EEE",
+    "FFF+GGG",
+    "JJJ+KKK",
+    "LLL+MMM",
+    "OOO",
+  ] {
+    assert!(
+      xml.contains(&format!(
+        r#"<td align="left" colspan="3"><Math mode="inline" tex="\displaystyle {tex}""#
+      )),
+      "{tex}: {xml}"
+    );
+  }
+  // `\eq` is the row's `&=&`: the span's cell is the first column's own
+  assert!(
+    xml.contains(r#"<td align="left"><Math mode="inline" tex="\displaystyle HHH+III""#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<td align="right"><Math mode="inline" tex="\displaystyle\hbox to0.0pt{$\displaystyle NNN$\hss}\hskip 28.45274pty^{2}""#),
+    "{xml}"
+  );
+  assert_eq!(xml.matches(r#"align="right" colspan"#).count(), 0, "{xml}");
 }

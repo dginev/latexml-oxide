@@ -302,7 +302,7 @@ pub(crate) fn load() -> Result<()> {
   // is latex.ltx:15800 as written, `\rlap{$\displaystyle #1$}` inside the cell's math, overprinting: the `\multicolumn`
   // cell of a text alignment (`eqnarray`, whose `$` is its template's) is text, so a script after it erred ("Script ^
   // can only appear in math mode"). The look-ahead passes spaces and spacing commands and compares the next token by
-  // meaning (`lefteqn_ends_cell`): a tab, a row end, `\nonumber`/`\notag`/`\label`, the environment's `\end`, or a
+  // meaning (`LefteqnLookAhead`): a tab, a row end, `\nonumber`/`\notag`/`\label`, the environment's `\end`, or a
   // macro that starts with one (`\def\nn{\nonumber}`, the review of 68z) leave the `\lefteqn` the whole cell
   // (OXIDIZED_DESIGN_DIVERGENCES #556). Guards `perfect_kernel_batch68z::{a_first_column_lefteqn_keeps_the_rest_of_its_
   // cell_in_math, a_lefteqn_before_a_row_end_macro_is_the_whole_cell}`.
@@ -323,24 +323,14 @@ pub(crate) fn load() -> Result<()> {
       out.push(T_END!());
       return Ok(Tokens::new(out));
     }
-    // What follows the `\lefteqn` in its cell, as TeX would read it: spaces and spacing commands, which print nothing
-    // the cell's math would hold (`\lefteqn{…}\hspace{1cm}\\`, 2210.09695), are passed over (`\lefteqn{X}\quad y^2`
-    // goes on to the `y`); the token after them is compared by meaning, through the macros it starts (`\def\nn
-    // {\nonumber}`, `\def\eeq{\end{eqnarray}}`: hep idioms, review of 68z).
-    let mut seen = Vec::new();
-    let next = loop {
-      match peek_token()? {
-        Some(t) if t.get_catcode() == Catcode::SPACE => seen.push(read_token()?.unwrap()),
-        Some(t) if lefteqn_spacing(&t) => {
-          seen.push(read_token()?.unwrap());
-          if t == T_CS!("\\hspace") {
-            read_hspace_argument(&mut seen)?;
-          }
-        },
-        other => break other,
-      }
-    };
-    unread_vec(seen);
+    // What follows the `\lefteqn` in its cell, as TeX would read it (`LefteqnLookAhead`): spaces, braces, spacing
+    // commands and invisible struts print nothing the cell's math would hold (`\lefteqn{…}\hspace{1cm}\\`,
+    // 2210.09695; `\lefteqn{X}\quad y^2` goes on to the `y`); the token after them is compared by meaning, through the
+    // macros it starts (`\def\nn{\nonumber}`, `\def\eeq{\end{eqnarray}}`, `\def\eq{&=&}`, a robust
+    // `\DeclareRobustCommand\nn{\nonumber}`: hep idioms, reviews of 68z; hep-ph0607130).
+    let mut look = LefteqnLookAhead::default();
+    let ends_cell = look.ends_cell()?;
+    unread_vec(look.seen);
     // Only where the first column's math is its template's `$` (eqnarray's `\hfil$\displaystyle##$`) does the
     // `\multicolumn` leave the rest of the cell in text: an `array`'s span re-inserts its `$` and an amsmath cell boxes
     // only the span's body (1409.4633's `array{ll}` keeps the span).
@@ -356,7 +346,7 @@ pub(crate) fn load() -> Result<()> {
         })
       })
       .unwrap_or(false);
-    let whole_cell = !template_dollar || next.is_none_or(|t| lefteqn_ends_cell(&t));
+    let whole_cell = !template_dollar || ends_cell;
     if whole_cell {
       out.extend(TokenizeInternal!(r"\multicolumn{1}{l}{\lx@alignment@cell@overprint{ltx_eqn_lefteqn}").unlist());
       math(&mut out);
@@ -675,10 +665,9 @@ fn in_first_column() -> bool {
 }
 
 /// A spacing command a first-column `\lefteqn`'s look-ahead passes over: it prints nothing the cell's math would hold.
-/// `\hskip`/`\kern` are not: their glue is not read here, so they leave the `\lefteqn` the whole cell.
+/// `\hspace` (its argument), `\hskip` (its glue) and `\kern` (its dimension) are read by `LefteqnLookAhead`.
 fn lefteqn_spacing(t: &Token) -> bool {
   [
-    "\\hspace",
     "\\quad",
     "\\qquad",
     "\\,",
@@ -689,46 +678,19 @@ fn lefteqn_spacing(t: &Token) -> bool {
     "\\enspace",
     "\\hfill",
     "\\hfil",
+    "\\relax",
+    "\\protect",
+    "\\strut",
+    "\\mathstrut",
   ]
   .iter()
   .any(|name| *t == T_CS!(*name))
 }
 
-/// `\hspace`'s `*` and braced argument, read into `seen` (to be put back).
-fn read_hspace_argument(seen: &mut Vec<Token>) -> Result<()> {
-  let mut star = false;
-  while let Some(t) = peek_token()? {
-    if t.get_catcode() == Catcode::SPACE || (!star && t == T_OTHER!("*")) {
-      star |= t.get_catcode() != Catcode::SPACE;
-      seen.push(read_token()?.unwrap());
-    } else {
-      break;
-    }
-  }
-  if peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
-    let mut depth = 0usize;
-    while let Some(t) = read_token()? {
-      match t.get_catcode() {
-        Catcode::BEGIN => depth += 1,
-        Catcode::END => depth -= 1,
-        _ => {},
-      }
-      seen.push(t);
-      if depth == 0 {
-        break;
-      }
-    }
-  }
-  Ok(())
-}
-
-/// Whether the token after a first-column `\lefteqn` (and its spacing) leaves the `\lefteqn` the whole cell: a tab, a
-/// row end, `\nonumber`/`\notag`/`\label`, the environment's `\end`, or `\hskip`/`\kern`. By meaning, and through the
-/// macros it starts: a macro whose body begins with one of the first (`\def\nn{\nonumber}`, `\def\eeq{\end{eqnarray}}`)
-/// counts as that one; one whose body begins with `\hskip`/`\kern` does not (`\hphantom` prints its box). A command
-/// that is undefined or `\relax` matches only itself (`\notag` without amsmath; latex.ltx's top-level
-/// `\tabularnewline`, which `\hphantom`'s `\protect` would equal).
-fn lefteqn_ends_cell(token: &Token) -> bool {
+/// Whether `t` ends a first-column `\lefteqn`'s cell: a tab or row end, or by meaning `\\`, `\nonumber`, `\notag`,
+/// `\label`, the environment's `\end`, `\tabularnewline`. A command that is undefined or `\relax` matches only itself
+/// (`\notag` without amsmath; latex.ltx's top-level `\tabularnewline`, which `\protect` would equal).
+fn lefteqn_ends(t: &Token) -> bool {
   const ENDS: [&str; 7] = [
     "\\\\",
     "\\nonumber",
@@ -738,35 +700,224 @@ fn lefteqn_ends_cell(token: &Token) -> bool {
     "\\tabularnewline",
     "\\cr",
   ];
-  let ends = |t: &Token| {
-    is_column_end(t).is_some()
-      || ENDS.iter().any(|name| {
-        let end = T_CS!(*name);
-        *t == end
-          || (lookup_meaning(&end).is_some()
-            && !x_equals(&end, &T_CS!("\\relax"))
-            && x_equals(t, &end))
-      })
-  };
-  if *token == T_CS!("\\hskip") || *token == T_CS!("\\kern") {
-    return true;
-  }
-  let mut t = *token;
-  for _ in 0..8 {
-    if ends(&t) {
-      return true;
+  is_column_end(t).is_some()
+    || ENDS.iter().any(|name| {
+      let end = T_CS!(*name);
+      *t == end
+        || (lookup_meaning(&end).is_some()
+          && !x_equals(&end, &T_CS!("\\relax"))
+          && x_equals(t, &end))
+    })
+}
+
+/// The look-ahead after a first-column `\lefteqn`: whether the rest of its cell holds nothing the cell's math would
+/// (`ends_cell`), read as TeX reads it, through the macros it starts. The input it reads is kept in `seen`, to be put
+/// back; the bodies of the macros it follows are on `bodies`; `back` holds tokens a keyword test read and put back.
+/// Passed over: spaces, braces (`{}`, `{\nonumber}`), the spacing of `lefteqn_spacing` (`\relax`, `\protect`
+/// before a robust command's inner macro, `\strut`, `\mathstrut`), `\hspace`/`\vphantom` with their argument,
+/// `\hskip` with its glue, `\kern` with its dimension. A macro is followed through 8 expansions (OXIDIZED_DESIGN_
+/// DIVERGENCES #556 lists the limits).
+#[derive(Default)]
+struct LefteqnLookAhead {
+  seen:   Vec<Token>,
+  bodies: Vec<(Vec<Token>, usize)>,
+  back:   Vec<Token>,
+}
+
+impl LefteqnLookAhead {
+  fn next(&mut self) -> Result<Option<Token>> {
+    if let Some(t) = self.back.pop() {
+      return Ok(Some(t));
     }
-    let first = match lookup_meaning(&t) {
-      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
-        Some(ExpansionBody::Tokens(body)) => body.unlist_ref().first().copied(),
-        _ => None,
-      },
-      _ => None,
+    while let Some((body, at)) = self.bodies.last_mut() {
+      if let Some(t) = body.get(*at).copied() {
+        *at += 1;
+        return Ok(Some(t));
+      }
+      self.bodies.pop();
+    }
+    let t = read_token()?;
+    if let Some(t) = t {
+      self.seen.push(t);
+    }
+    Ok(t)
+  }
+
+  /// The next token that is not a space (read).
+  fn next_non_space(&mut self) -> Result<Option<Token>> {
+    loop {
+      match self.next()? {
+        Some(t) if t.get_catcode() == Catcode::SPACE => {},
+        other => return Ok(other),
+      }
+    }
+  }
+
+  /// Reads the letters of `keyword` (any case, after spaces), or reads nothing.
+  fn keyword(&mut self, keyword: &str) -> Result<bool> {
+    let mut read = Vec::new();
+    let first = self.next_non_space()?;
+    let mut t = first;
+    for c in keyword.chars() {
+      match t {
+        Some(tok)
+          if tok.get_catcode() == Catcode::LETTER
+            && tok.with_str(|s| s.eq_ignore_ascii_case(&c.to_string())) =>
+        {
+          read.push(tok);
+          t = if read.len() < keyword.len() {
+            self.next()?
+          } else {
+            None
+          };
+        },
+        _ => {
+          if let Some(tok) = t {
+            self.back.push(tok);
+          }
+          self.back.extend(read.into_iter().rev());
+          return Ok(false);
+        },
+      }
+    }
+    Ok(true)
+  }
+
+  /// A macro argument: a balanced group (after spaces and, for `\hspace`, a `*`), or one token.
+  fn argument(&mut self, star: bool) -> Result<()> {
+    let mut t = self.next_non_space()?;
+    if star && t == Some(T_OTHER!("*")) {
+      t = self.next_non_space()?;
+    }
+    if t.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
+      let mut depth = 1usize;
+      while depth > 0 {
+        match self.next()? {
+          Some(t) if t.get_catcode() == Catcode::BEGIN => depth += 1,
+          Some(t) if t.get_catcode() == Catcode::END => depth -= 1,
+          Some(_) => {},
+          None => break,
+        }
+      }
+    }
+    Ok(())
+  }
+
+  /// A dimension (tex.web §448): signs, then a register, or a factor and a unit (`true`, and `fil`/`fill`/`filll` in
+  /// a glue's stretch or shrink).
+  fn dimension(&mut self, fil: bool) -> Result<()> {
+    let mut t = self.next_non_space()?;
+    while t.is_some_and(|t| t == T_OTHER!("+") || t == T_OTHER!("-")) {
+      t = self.next_non_space()?;
+    }
+    let factor = |t: &Token| {
+      t.get_catcode() == Catcode::OTHER
+        && t.with_str(|s| {
+          s.chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c == ',')
+        })
     };
-    match first {
-      Some(f) if matches!(f.get_catcode(), Catcode::CS | Catcode::ACTIVE) => t = f,
-      _ => return false,
+    match t {
+      Some(t) if matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) => return Ok(()),
+      Some(t) if factor(&t) => {},
+      Some(t) => {
+        self.back.push(t);
+        return Ok(());
+      },
+      None => return Ok(()),
     }
+    loop {
+      match self.next()? {
+        Some(t) if factor(&t) => {},
+        Some(t) => {
+          self.back.push(t);
+          break;
+        },
+        None => break,
+      }
+    }
+    // a register after the factor (`2\arraycolsep`)
+    match self.next_non_space()? {
+      Some(t) if matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) => return Ok(()),
+      Some(t) => self.back.push(t),
+      None => return Ok(()),
+    }
+    if fil && self.keyword("fil")? {
+      while self.keyword("l")? {}
+      return Ok(());
+    }
+    self.keyword("true")?;
+    for unit in [
+      "pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "em", "ex", "mu", "px",
+    ] {
+      if self.keyword(unit)? {
+        break;
+      }
+    }
+    Ok(())
   }
-  false
+
+  /// A glue (tex.web §461): a dimension, then `plus` and `minus` ones.
+  fn glue(&mut self) -> Result<()> {
+    self.dimension(false)?;
+    if self.keyword("plus")? {
+      self.dimension(true)?;
+    }
+    if self.keyword("minus")? {
+      self.dimension(true)?;
+    }
+    Ok(())
+  }
+
+  fn ends_cell(&mut self) -> Result<bool> {
+    let mut expansions = 0;
+    for _ in 0..256 {
+      let Some(t) = self.next()? else {
+        return Ok(true);
+      };
+      if matches!(
+        t.get_catcode(),
+        Catcode::SPACE | Catcode::BEGIN | Catcode::END
+      ) {
+        continue;
+      }
+      if lefteqn_ends(&t) {
+        return Ok(true);
+      }
+      if lefteqn_spacing(&t) {
+        continue;
+      }
+      if t == T_CS!("\\hspace") || t == T_CS!("\\vphantom") {
+        self.argument(t == T_CS!("\\hspace"))?;
+        continue;
+      }
+      if t == T_CS!("\\hskip") {
+        self.glue()?;
+        continue;
+      }
+      if t == T_CS!("\\kern") {
+        self.dimension(false)?;
+        continue;
+      }
+      let body = match lookup_meaning(&t) {
+        Some(Stored::Expandable(defn))
+          if matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) =>
+        {
+          match defn.get_expansion() {
+            Some(ExpansionBody::Tokens(body)) => Some(body.unlist_ref().clone()),
+            _ => None,
+          }
+        },
+        _ => None,
+      };
+      match body {
+        Some(body) if expansions < 8 => {
+          expansions += 1;
+          self.bodies.push((body, 0));
+        },
+        _ => return Ok(false),
+      }
+    }
+    Ok(false)
+  }
 }

@@ -13091,7 +13091,17 @@ kernel-alignment/omit_cell_in_amsmath_alignment_is_text; guard
 too (its `$` is the template's, latex.ltx `\@arrayclassz`): `\[\begin{array}{ccc} a & \omit $y^2$ text & c\end{array}\]`
 erred "Script ^" (pdflatex 0); fixed in Rust (68z round 2, the array's `math_cells_template`; a `\multicolumn` keeps its
 math; an `\omit` cell that ends at once, `\omit\span`, is not boxed). Repro kernel-alignment/omit_cell_in_array_is_text;
-guard `perfect_kernel_batch68z::an_omit_cell_of_an_array_is_text`.
+guard `perfect_kernel_batch68z::an_omit_cell_of_an_array_is_text`. The text box keeps the cell's fill glue outside
+it (68z round 3, tex_tables.rs `hoist_omit_text_box_fills`): `\omit\hfill $y$` and 2306.14299's `\omit{\hfill $…$}`
+are flush right, `\omit\hfil $y$\hfil` and `\multispan2\hfil … \hfil` centered, as in pdflatex and as an unboxed cell
+(repro kernel-alignment/omit_cell_text_box_keeps_the_cell_alignment, guard
+`perfect_kernel_batch68z::an_omit_cell_text_box_keeps_the_cell_alignment`). Open in Rust: an `\omit` cell of a
+`pmatrix` or `cases` is still math, though amsmath builds both on `\array` (`\begin{pmatrix} p & \omit $p^2$ t
+\end{pmatrix}` errs "Script ^", pdflatex 0: their bindings do not mark the alignment `math_cells_template`); and of an
+`IEEEeqnarraybox`, whose math columns take their `$` from the template too (IEEEtrantools.sty:1512-1517
+`\IEEEeqnarraydefcol{l}{$\IEEEeqnarraymathstyle}{$\hfil}`), so an `\omit` cell is text in TeX: ieeetrantools_sty.rs
+passes `omit_is_text` false, since boxing kept the `\IEEEeqnarrayrulerow` rule rows' leader cells inside an `<XMText>`
+(the 67x guards). Boxing no `\omit` cell that holds only leaders or rules would let that alignment be marked too.
 
 ## 663. A footnote's argument ends the paragraph around it (as measured)
 

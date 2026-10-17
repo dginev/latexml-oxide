@@ -1,5 +1,6 @@
 % witness: 2306.14299 (an \omit cell of an amsmath alignment holding $...$), 1811.08044 (split; pdflatex-discounted)
-% oracle:  pdflatex 0 errors; the \omit cells are text holding an inline formula; "min f0(x)", "x y2 z"
+% oracle:  pdflatex 0 errors; the \omit cells are text holding an inline formula (the \hfill one flush right);
+%          "min f0(x)", "x y2 z"
 % expect:  0 errors; tex.web §789: \omit drops the u/v template, so an amsmath cell (whose math is its template's $)
 %          is restricted horizontal: its material is boxed as text (`template_math`, tex_tables.rs); a \multicolumn
 %          cell boxes its body once
