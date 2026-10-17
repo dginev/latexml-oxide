@@ -1086,7 +1086,13 @@ pub(crate) fn load() -> Result<()> {
   );
 
   DefMacro!("\\quote@name{}", "\"\\quote@@name#1\\@gobble\"\"");
-  DefMacro!("\\quote@@name{} Match:\"", "#1\\quote@@name");
+  // latex.ltx:9665 `\def\quote@@name#1"{#1\quote@@name}`: the argument is delimited by the `"`, so the loop drops
+  // every `"` of the name (`\quote@name{a"b}` = `"ab"`). Perl's `{} Match:"` (latex_constructs.pool.ltxml:4233) read one
+  // token and then demanded a `"`: "Missing argument Match:\"" for every name longer than one token. latex.ltx:9702
+  // `\@iffileonpath` quotes through it, and VTeX's arXiv configs `\let\IfFileExists\@iffileonpath` (1312.4083 213
+  // errors, 2001.03064 76, 2006.14814 76, 1504.06523 63). KNOWN_PERL_ERRORS #924. Guard
+  // `perfect_kernel_batch70b::quote_name_is_delimited_by_the_quote`.
+  DefMacro!("\\quote@@name Until:\"", "#1\\quote@@name");
   DefMacro!("\\unquote@name{}", "\\quote@@name#1\\@gobble\"");
 
   // Perl L4313-4315: \include — input a file, respecting \includeonly

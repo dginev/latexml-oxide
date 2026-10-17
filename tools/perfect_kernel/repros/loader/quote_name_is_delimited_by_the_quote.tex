@@ -1,0 +1,17 @@
+% witness: 1312.4083 (213 errors), 2001.03064 (76), 2006.14814 (76), 1504.06523 (63) — VTeX's arXiv configs
+%   (arxiv-ba.cfg, arxiv-vmsta.cfg) `\let\IfFileExists\@iffileonpath`, so every file test quotes its name (the
+%   rc_struct4 Q1 shape, agent_reports/2026-10-17_rc_struct4.md)
+% oracle:  pdflatex 0 errors: latex.ltx:9665 `\def\quote@@name#1"{#1\quote@@name}` reads up to each `"`, so
+%   `\quote@name{a"b c}` is `"ab c"` and `\@iffileonpath` (latex.ltx:9702) tests the quoted name
+% engines: rust 67int19 = 18 ("Missing argument Match:\"" for `\quote@@name {}Match:"`; "Different"), perl = 18, the same
+%   (latex_constructs.pool.ltxml:4233, KNOWN_PERL_ERRORS #924)
+% expect:  0 errors; "absent. Same."
+% status:  RED (67int19) -> GREEN (70b: sect11.rs `\quote@@name Until:"`)
+\documentclass{article}
+\makeatletter
+\def\input@path{{./}}
+\edef\x{\quote@name{a"b c}}\def\y{"ab c"}
+\makeatother
+\begin{document}
+\makeatletter\@iffileonpath{nosuchfile.cnf}{found}{absent}\makeatother. \ifx\x\y Same\else Different\fi.
+\end{document}

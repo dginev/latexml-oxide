@@ -15240,3 +15240,19 @@ tabular_stray_brace_keeps_its_cells}; guards `perfect_kernel_batch70b::{eqnarray
 eqnarray_trailing_stray_brace_keeps_the_row, align_stray_close_brace_keeps_the_rows,
 tabular_stray_brace_keeps_its_cells}`, `perfect_kernel_batch66e::amstex_row_tag_open_group_stops_at_the_row_end` (now 3
 errors, TeX 7), `perfect_kernel_batch54::array_continuation_macros_carry_no_math_shift`.
+
+## 924. `\quote@@name` reads one token and then demands a `"`, so `\quote@name` of any longer name errs
+
+latex.ltx:9664-9666: `\def\quote@name#1{"\quote@@name#1\@gobble""}` and `\def\quote@@name#1"{#1\quote@@name}` — the
+argument is delimited by `"`, so the loop takes the name up to each `"` and drops it (`\quote@name{a"b c}` is `"ab c"`).
+Perl latex_constructs.pool.ltxml:4233 `DefMacro('\quote@@name{} Match:"', '#1\quote@@name')` reads an undelimited
+argument (one token) and then requires a `"`. latex.ltx:9702-9704 `\@iffileonpath` quotes the name it tests, and
+VTeX's arXiv configs (arxiv-ba.cfg, arxiv-vmsta.cfg) `\let\IfFileExists\@iffileonpath`, so every file test of such a
+paper errs.
+
+Trigger: `\makeatletter\edef\x{\quote@name{ab}}` — pdflatex 0 errors (`\x` = `"ab"`); Perl "Missing argument
+Match:\"". Witnesses 1312.4083 (213 errors), 2001.03064 (76), 2006.14814 (76), 1504.06523 (63); all four fail under TL
+2025 pdflatex for other reasons (texsort.sty, an undefined color, `\@tempa`) and convert clean with the fix.
+
+Rust (70b): sect11.rs `\quote@@name Until:"`. Repro loader/quote_name_is_delimited_by_the_quote; guard
+`perfect_kernel_batch70b::quote_name_is_delimited_by_the_quote`.

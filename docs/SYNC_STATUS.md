@@ -2820,6 +2820,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (sect10.rs). The 69c round-2 table: `a} &=& b` 17 → 1 error, `a &=& b}` 13 → 1 with `b` kept, amsmath `\\ 6} c`
   9 → 1, tabular `{a & b}` / `a & b}` keep their first cell. Guards `perfect_kernel_batch70b::{eqnarray_stray_close_brace_inserts_a_left_brace,
   eqnarray_trailing_stray_brace_keeps_the_row, align_stray_close_brace_keeps_the_rows, tabular_stray_brace_keeps_its_cells}`.
+  (2) Q1: `\quote@@name` delimited by `"` (latex.ltx:9665; sect11.rs; KNOWN_PERL_ERRORS #924) — VTeX arXiv configs'
+  `\let\IfFileExists\@iffileonpath`; witnesses 1312.4083 2001.03064 2006.14814 1504.06523. Guard
+  `perfect_kernel_batch70b::quote_name_is_delimited_by_the_quote`.
 - **69c** (medium-risk shapes from the rc_struct3 study, agent_reports/2026-10-17_rc_struct3.md). (1) P1: a theorem,
   proof or TOC inside a container whose model holds no Para.class (`{quote}`, a `\footnote`, a `{wrapfigure}`, an
   `ltx:text`, a cell) opens an `ltx:inline-logical-block` there — the last auto-open bridge of document.rs

@@ -3,6 +3,8 @@
 //! Item 1 (A1) — tex.web §1127 `align_error`: a tab or `\cr` that reaches the stomach while a cell's braces are
 //! unbalanced gets the brace TeX supposes was omitted ("Missing { inserted" / "Missing } inserted") and ends the cell
 //! after it, its v-part run; a tabular cell's own `}` closes the template's `{` (latex.ltx `\@tabclassz`), not the cell.
+//! Item 2 (Q1) — `\quote@@name`'s argument is delimited by `"` (latex.ltx:9665; 1312.4083 2001.03064 2006.14814
+//! 1504.06523).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -85,3 +87,23 @@ fn tabular_stray_brace_keeps_its_cells() {
 }
 const TABULAR_OPEN: &str = r#"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr><tr><td align="left">c</td><td align="left">d</td></tr></tbody></tabular></para>"#;
 const TABULAR_CLOSE: &str = r#"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left">e</td><td align="left">f</td></tr><tr><td align="left">g</td><td align="left">h</td></tr></tbody></tabular></para>"#;
+
+/// loader/quote_name_is_delimited_by_the_quote: `\@iffileonpath` and `\quote@name{a"b c}` (pdflatex 0 errors,
+/// "absent. Same."). Before: 18 errors "Missing argument Match:\"", "Different" (Perl the same).
+#[test]
+fn quote_name_is_delimited_by_the_quote() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/quote_name_is_delimited_by_the_quote.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p>absent. Same.</p></para>"#,
+  );
+}
