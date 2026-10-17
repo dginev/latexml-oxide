@@ -2441,7 +2441,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   witnesses 2102.04789, 1710.04173, 1811.01821, 2011.06172, 1401.2054, 1402.6720, 1605.09288, 1609.04156, 1203.0762,
   2608.21389; 20 apa6/apa/lni/beilstein papers from rawcls3/list3362.tsv; 31 papers of the other bindings that read
   their class raw: memoir, KOMA, apa7, jinst, compositio, …). Repro class-bindings/lni_subtitle_through_k11; guard
-  `perfect_kernel_batch68x::a_class_a_binding_reads_raw_reroutes_its_stores`.
+  `perfect_kernel_batch68x::a_class_a_binding_reads_raw_reroutes_its_stores`. (2) aguplus (OXIDIZED_DESIGN_DIVERGENCES #659): a
+  binding over the raw class (latexml_contrib aguplus_cls.rs) — natbib's binding with `square` for the class's natbib
+  7.0 copy (aguplus.cls:861-1173), the AGUTeX title page as the AAS binding's (`\affil`, `\altaffilmark`/`\altaffiltext`,
+  dates, `\slugcomment`), `\authoraddr` (agupp.sty:154-158, printed by the class after the references) placed with the
+  author it spells; the refused `\author` not replayed over the kernel's `\@title`. The 9 list3362 aguplus papers vs
+  67int16: errors 11 → 5 (0811.3118's 5: its agums.sty is not shipped and not in TeX Live, the class's own
+  `\ClassError`, pdflatex the same), warnings 201 → 44, words 79,932 → 81,614 (astro-ph0205369 −13: the duplicated title text the
+  class's box left in the body); 1010.3998 the 75 "?" citations → natbib's, 104 → 1 warnings. Open: a mark after a
+  comma and a space (`\author{S. G. Claudepierre, \altaffilmark{1,2} S. R. Elkington, …}`, 1010.3998) goes to the
+  next name (the kernel's author split). Repros class-bindings/aguplus/*; guards
+  `perfect_kernel_batch68x::{aguplus_authors_carry_affiliations_and_addresses,
+  aguplus_altaffiliations_and_addresses_go_to_their_authors}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

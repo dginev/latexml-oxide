@@ -1,0 +1,27 @@
+% mechanism: AGUTeX's `\altaffilmark`/`\altaffiltext` (agupp.sty:150, aguplus.cls:239-242, a title footnote) mark the
+%   authors with affiliations, and each `\authoraddr` names its author ("C. Cole, Second Laboratory, …"), the class
+%   printing them in a block after the references; the binding places each address with the author it spells.
+% witness: 1010.3998 (agums; TL 2025 ships agupp.sty only, so this probe uses agupp)
+% oracle:  pdflatex: 0 errors; "A. Able,1 B. Baker,1,2 and C. Cole2", footnotes "1 First Institute, Town." and
+%   "2 Second Laboratory, City.", the two addresses after the references
+% engines: rust 67int16: no affiliations, the addresses lost, 3 "Missing number" warnings; perl: no binding (OmniBus)
+% expect:  0 errors, 0 warnings; the marked authors with their affiliations, Able's and Cole's addresses on them
+% status:  RED (67int16) -> GREEN (68x)
+% preload: ar5iv.sty
+\documentclass[agupp]{aguplus}
+\begin{document}
+\title{The Title}
+\author{A. Able,\altaffilmark{1} B. Baker,\altaffilmark{1,2} and C. Cole\altaffilmark{2}}
+\altaffiltext{1}{First Institute, Town.}
+\altaffiltext{2}{Second Laboratory, City.}
+\authoraddr{A. Able, First Institute, Town; email: able@example.org}
+\authoraddr{C. Cole, Second Laboratory, City; email: cole@example.org}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Intro}
+Text \citet{key1}.
+\begin{thebibliography}{1}
+\bibitem[{{\it Able\/}(1990)}]{key1} A. Able, A paper, 1990.
+\end{thebibliography}
+\end{document}

@@ -18443,3 +18443,26 @@ hep-th0109182) it stays, an empty bibliography over the groups, as the PDF heads
 one. A heading entered from a list (an `\item`'s, a minipage's) or any other bibliography environment is not split
 (`lx_bibliography_author_env`: the author's `{thebibliography}` only). Guards
 `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
+
+### 659. aguplus.cls is a binding over the raw class: the AGUTeX title page as the AAS binding's, natbib for its copy (Perl: no binding)
+
+Perl has no aguplus binding (OmniBus: `\authoraddr`, `\lefthead`, `\slugcomment` undefined). Under the rawclasses
+lever the class was read raw and its title page was its own typesetting: `\author`/`\affil` build the `\@title` box
+(aguplus.cls:227-238), which `\xmaketitle` sets at the first `\section` (:192, :225), so the affiliations were body
+paragraphs (and the refused `\author`'s replay set the box over the kernel's `\@title` text, a "Missing number" warning
+per author); `\authoraddr` (agupp.sty:154-158) gathers `\authaddr@list`, printed only by the class's own end of the
+references (agupp.sty:271-306), which the kernel's bibliography replaces, so every address was lost; and the class's
+copy of natbib 7.0 (aguplus.cls:861-1173) printed a bold "?" for every `\citet`/`\citep` (no `\bibcite` under the
+kernel's bibliography; 1010.3998: 75). Ours (latexml_contrib aguplus_cls.rs): the class read raw (it reads the
+AGUTeX package its option names, :47-71), natbib's binding loaded with `square` (:864 `\NAT@open{[}`), the refused
+`\title`/`\author` not replayed, and the AGUTeX title-page commands — which AGUTeX shares with AASTeX, from which it
+derives — given the AAS binding's frontmatter forms (aas_support_sty.rs, Perl aas_support.sty.ltxml:121-134):
+`\affil` the affiliation of the authors before it without one, `\altaffilmark`/`\altaffiltext`, `\received`,
+`\revised`, `\accepted`, `\slugcomment` (and `\date`, :245). `\authoraddr` is gathered as the class gathers it and
+handed on where the authors are queued — at `\maketitle`, else ahead of the frontmatter fallback at the first section,
+else at the end — each address placed with the author it spells, else the only author, else the block
+(`\lx@add@contact@placed`), as the class prints them together. Running heads and journal ids stay the class's
+(page furniture). Witnesses 1107.5305, 1203.5042, physics9702009, 1010.3998 (104 → 1 warnings, the "?" gone, each
+address on its author), 0811.3118. Repros class-bindings/aguplus/{aguplus_author_block_and_citations,
+aguplus_altaffil_and_spelled_addresses}; guards `perfect_kernel_batch68x::{aguplus_authors_carry_affiliations_and_addresses,
+aguplus_altaffiliations_and_addresses_go_to_their_authors}`.

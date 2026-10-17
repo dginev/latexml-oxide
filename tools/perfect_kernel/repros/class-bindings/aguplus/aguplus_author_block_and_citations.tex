@@ -1,0 +1,33 @@
+% mechanism: aguplus.cls's `\author`/`\affil` build its title-page box (aguplus.cls:227-238), which `\xmaketitle` sets at
+%   the first `\section` (:225), and `\authoraddr` (agupp.sty:154-158) gathers addresses only its end of the references
+%   prints (agupp.sty:271-306); the class's copy of natbib 7.0 (aguplus.cls:861-1173) prints "?" for every `\citet`
+%   under the kernel's bibliography. The binding (latexml_contrib aguplus_cls.rs) reads the class raw, loads natbib's
+%   binding with `square`, and gives `\affil`, `\authoraddr` and `\received` the AAS binding's frontmatter forms.
+% witness: 1107.5305, 1203.5042, physics9702009 (9 aguplus papers in rawcls3/list3362.tsv)
+% oracle:  pdflatex: 0 errors; "Ann Able / First Institute, Town / Bob Baker / Second Laboratory, City", "As Able
+%   [1990] show, and others [Baker et al., 1991], see [Able, 1990] and [see Baker et al., 1991, p. 2]."; after the
+%   references "A. Able, First Institute, Main Street 1, Town (able@example.org)" and "Received 1 May 1999"
+% engines: rust 67int16: affiliations as body text, the address lost, `\cite[][]` read as a key, 6 "Missing number"
+%   warnings; perl: no binding (OmniBus: `\authoraddr` undefined)
+% expect:  0 errors, 0 warnings; each author with its affiliation, Ann Able with the address; the citations natbib's
+% status:  RED (67int16) -> GREEN (68x)
+% preload: ar5iv.sty
+\documentclass[agupp]{aguplus}
+\authoraddr{A. Able, First Institute, Main Street 1, Town (able@example.org)}
+\begin{document}
+\title{The Title}
+\author{Ann Able}
+\affil{First Institute, Town}
+\author{Bob Baker}
+\affil{Second Laboratory, City}
+\received{1 May 1999}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Intro}
+As \citet{key1} show, and others \citep{key2}, see \cite[][]{key1} and \cite[see][p.~2]{key2}.
+\begin{thebibliography}{2}
+\bibitem[{{\it Able\/}(1990)}]{key1} A. Able, A paper, 1990.
+\bibitem[{{\it Baker et~al.\/}(1991)}]{key2} B. Baker and C. Cole, Another, 1991.
+\end{thebibliography}
+\end{document}

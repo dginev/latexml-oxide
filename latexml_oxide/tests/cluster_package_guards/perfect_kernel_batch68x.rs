@@ -1,10 +1,12 @@
 //! Red/green guards for batch 68x: raw-class frontmatter rows from the int16 A/B. Item 1 — K11 for every class read
 //! raw: `input_definitions` fires the title-page store reroutes at the end of a class load for the class a binding
 //! read raw (apa6, apa, beilstein, lni, …), as for one the rawclasses lever reads, the binding's own setters staying its
-//! own (68u round 3 called it from four bindings by hand; 2608.21389, 2102.04789).
+//! own (68u round 3 called it from four bindings by hand; 2608.21389, 2102.04789). Item 2 — an aguplus binding over
+//! the raw class: `\affil`, `\authoraddr`, `\altaffilmark`/`\altaffiltext` and the dates as the AAS binding makes them,
+//! and natbib's binding for the class's copy of natbib 7.0 (1107.5305, 1203.5042, physics9702009, 1010.3998).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, normalize_markup};
 
 use super::perfect_kernel_batch57::{RAW, assert_elements};
 
@@ -28,4 +30,87 @@ fn a_class_a_binding_reads_raw_reroutes_its_stores() {
     &[],
     r#"<creator role="author"><personname>Ann Able</personname><contact name="Email: " role="email">ann@example.org</contact><contact name="Affiliation: " role="affiliation">First University</contact></creator>"#,
   );
+}
+
+/// `expected` with its invisible characters spelled out: `{nbsp}` a no-break space (a contact's label ends in one,
+/// `name="Affiliation:{nbsp}"`; `~`), `{em}` an em space (the separator `before` a creator).
+fn spelled(expected: &str) -> String {
+  expected
+    .replace("{nbsp}", "\u{a0}")
+    .replace("{em}", "\u{2003}")
+}
+
+/// class-bindings/aguplus/aguplus_author_block_and_citations: each `\author` carries the `\affil` after it, the
+/// `\authoraddr` given before the authors is the author's it names, and the citations are natbib's in square brackets
+/// (pdflatex: "Ann Able / First Institute, Town / Bob Baker / Second Laboratory, City"; "As Able [1990] show, and
+/// others [Baker et al., 1991]"; the address and "Received 1 May 1999" after the references). Before 68x the
+/// affiliations were body text, the address lost and 6 "Missing number" warnings (1107.5305, 1203.5042).
+#[test]
+fn aguplus_authors_carry_affiliations_and_addresses() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/aguplus/aguplus_author_block_and_citations.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "Sx1.p1",
+      &spelled(
+        r#"<para xml:id="Sx1.p1"><p>As <cite class="ltx_citemacro_citet"><bibref bibrefs="key1" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","><bibrefphrase>[</bibrefphrase><bibrefphrase>]</bibrefphrase></bibref></cite> show, and others <cite class="ltx_citemacro_citep">[<bibref bibrefs="key2" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>]</cite>, see <cite class="ltx_citemacro_cite"><bibref bibrefs="key1" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","><bibrefphrase>[</bibrefphrase><bibrefphrase>]</bibrefphrase></bibref></cite> and <cite class="ltx_citemacro_cite">[see <bibref bibrefs="key2" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>, p.{nbsp}2]</cite>.</p></para>"#,
+      ),
+    )],
+  );
+  assert_eq!(xml.matches("<creator").count(), 2, "{xml}");
+  assert_element(
+    &xml,
+    "creator",
+    &[r#"role="author""#],
+    &spelled(
+      r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation:{nbsp}" role="affiliation">First Institute, Town</contact><contact name="Address:{nbsp}" role="address">A. Able, First Institute, Main Street 1, Town (able@example.org)</contact></creator>"#,
+    ),
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &[spelled(r#"before="{em}{em}""#).as_str()],
+    &spelled(
+      r#"<creator before="{em}{em}" role="author"><personname>Bob Baker</personname><contact name="Affiliation:{nbsp}" role="affiliation">Second Laboratory, City</contact></creator>"#,
+    ),
+  );
+  assert_element(
+    &xml,
+    "date",
+    &[],
+    r#"<date name="Received" role="received">1 May 1999</date>"#,
+  );
+  assert!(!xml.contains("First Institute, Town</p>"), "{xml}");
+}
+
+/// class-bindings/aguplus/aguplus_altaffil_and_spelled_addresses: `\altaffilmark`/`\altaffiltext` give the marked
+/// authors their affiliations, and each `\authoraddr` goes to the author it names (pdflatex: "A. Able,1 B. Baker,1,2
+/// and C. Cole2", the footnotes "1 First Institute, Town." "2 Second Laboratory, City.", the addresses after the
+/// references). Before 68x no affiliation or address (1010.3998).
+#[test]
+fn aguplus_altaffiliations_and_addresses_go_to_their_authors() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/aguplus/aguplus_altaffil_and_spelled_addresses.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_eq!(xml.matches("<creator").count(), 3, "{xml}");
+  for creator in [
+    r#"<creator role="author"><personname>A. Able</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">First Institute, Town.</contact><contact name="Address:{nbsp}" role="address">A. Able, First Institute, Town; email: able@example.org</contact></creator>"#,
+    r#"<creator before="{em}{em}" role="author"><personname>B. Baker</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">First Institute, Town.</contact><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">Second Laboratory, City.</contact></creator>"#,
+    r#"<creator before="{em}{em}" role="author"><personname>C. Cole</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">Second Laboratory, City.</contact><contact name="Address:{nbsp}" role="address">C. Cole, Second Laboratory, City; email: cole@example.org</contact></creator>"#,
+  ] {
+    let creator = spelled(creator);
+    assert!(
+      normalize_markup(&xml).contains(&creator),
+      "{creator}\n{xml}"
+    );
+  }
 }
