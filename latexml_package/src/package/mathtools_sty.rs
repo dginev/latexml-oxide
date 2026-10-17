@@ -222,7 +222,14 @@ LoadDefinitions!({
       whatsit.set_width(Stored::String(pin!("0pt")));
     });
 
-  DefConstructor!("\\clap{}", "#1");
+  // latex.ltx:16409 `\DeclareRobustCommand\clap[1]{\hb@xt@\z@{\hss#1\hss}}` (older mathtools.sty's
+  // `\providecommand*\clap`): a box of its own, as plain_base.rs's `\rlap`/`\llap`, so a `$…$` in it is a formula
+  // there, also when `\clap` is used in math. Perl's mathtools.sty.ltxml:98 `DefConstructor('\clap {}', "#1")`
+  // digested the argument in the current mode, where its `$` ended the enclosing formula (KNOWN_PERL_ERRORS #909):
+  // 2305.03559's `\fillwidthof` = `\mathchoice{…\clap{$\m@th{\displaystyle #3}$}…}` in an `align*` cell, which 68z's
+  // §785 cell-head stop (KPE #880) now expands inside the cell's math, as TeX does. Guard
+  // `perfect_kernel_batch69c::clap_is_a_box_in_math`.
+  DefMacro!("\\clap{}", r"\hbox to 0pt{\hss#1\hss}");
   // mathtools.sty:1576 reads the width with `\setlength\@tempdima{#1}`, i.e. as
   // a <dimen>: `\widthof{$…$}` (calc) is MEASURED, never typeset. Reading it
   // as content digested the inner `$…$` inline in the ambient math, ending

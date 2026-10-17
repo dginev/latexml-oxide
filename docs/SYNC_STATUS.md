@@ -313,6 +313,20 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 The open RED repros of `tools/perfect_kernel/repros/` that no other row names; headers re-checked 2026-10-02 (scope:
 PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
 
+- **acmart's theorems shadow an author's command of the same name** (SHARED; 69c side finding): acmart.cls defines
+  its theorems `\AtEndPreamble{\if@ACM@acmthm … \@ifundefined{example}{\newtheorem{example}…}{} …}` (TL 2025
+  :3461-3489), acmart_cls.rs:442-449 (and Perl's acmart.cls.ltxml:236-243) `\newtheorem` them at class load, so
+  2510.04987's `\newcommand{\example}[1]{\parbox{…}{\lstinputlisting{…}}}` became a theorem in 14 table cells (6
+  Errors in the repro). Fix: the class's `\AtEndPreamble` + `\@ifundefined` per theorem. Repro
+  `class-bindings/acmart_author_theorem_name_wins`.
+- **A `$\phantom{$-$}$` toggle in a `{cases}` cell never ends its in-math text** (SHARED, Perl 9; 69c side finding): the author's
+  `$`s in a math cell toggle through `\lx@dollar@in@mathmode` (tex_math.rs), whose boxing-level bookkeeping
+  (`MATH_ALIGN_$_BEGUN`) loses the text's end across `\phantom`'s argument; 9 Errors and the rest of the display
+  mangled (pdflatex 0). Witness 1912.00050 (sigma.cls). Repro `alignment/cases_cell_dollar_phantom_toggle`.
+- **2305.03559's clevethm.sty `\setlist[enum#1, 1]{enumerate, label=…}`** (69c side finding): 90 Errors
+  "'enum…' is neither a list nor a level" (enumitem_sty.rs:801) for the lists its `\CreateTheoremLists` makes with
+  `\newlist`; a plain `\newlist` + `\setlist[name, 1]` in a macro is clean, so the cause is in clevethm.sty's own
+  wrappers (its :217/:237 keyval warnings). Not shrunk.
 - **amsart's caption takes display math** (SHARED?; 68z C11): amsart.cls `\@makecaption` sets the caption in a `\vbox`
   paragraph, so `$$…$$` there is display math (pdflatex 0 errors); the kernel's `\lx@@caption` digests in text mode
   (latex_constructs/sect09.rs), `$$` is an empty pair and the scripts between err (2 Errors). Needs a display inside
@@ -2844,6 +2858,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   dollar_in_a_braced_template_cell_ends_its_formula; guards
   `perfect_kernel_batch69c::{amsmath_aligned_cell_braces_balance_across_the_template,
   dollar_in_a_braced_template_cell_ends_its_formula}`.
+  (4) 2305.03559 (int18's 144 → 163, `\overrel[\leq]{…}{} &` / `\fillwidthof[c]{…}{…}` at an `align*` cell head): not
+  the §785 stop, which is right (TeX expands `\fillwidthof` inside the cell's math, `\ifmmode` true), but mathtools'
+  `\clap` digesting its argument in math (Perl mathtools.sty.ltxml:98, KNOWN_PERL_ERRORS #909): mathtools_sty.rs
+  `\clap` = `\hbox to 0pt{\hss#1\hss}` (latex.ltx:16409). 2305.03559 163 → 90 errors; `\overrel` alone is clean.
+  Repro package-bindings/mathtools_clap_is_a_box_in_math; guard `perfect_kernel_batch69c::clap_is_a_box_in_math`.
+  Open: its clevethm.sty `\setlist[enum#1, 1]{enumerate, label=…}` (90 "'…' is neither a list nor a level").
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

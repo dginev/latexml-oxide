@@ -1,0 +1,27 @@
+% witness: 2305.03559 (int18 A/B 144 -> 163 errors: myPreamble.sty's `\fillwidthof[c]{…}{…}` =
+%   `\mathchoice{\textfillwidthof[c]{$\m@th{\displaystyle #2}$}{$\m@th{\displaystyle #3}$}}…`, whose `\clap{$…$}` 68z's
+%   §785 cell-head stop now expands inside the `align*` cell's math, as TeX does)
+% oracle:  pdflatex 0 errors; latex.ltx:16409 `\DeclareRobustCommand\clap[1]{\hb@xt@\z@{\hss#1\hss}}` is a box, so a
+%   `$…$` in it is a formula there, also when `\clap` is used in math
+% engines: rust 67int18b = 13 ("Missing $ closing display math" ×2, "Attempt to end mode math" ×4, …; the alignment's
+%   rows mangled), perl = 2 (mathtools.sty.ltxml:98 `DefConstructor('\clap {}', "#1")`, KNOWN_PERL_ERRORS #909)
+% expect:  0 errors; `\clap{$a$}` an `\hbox to 0pt` holding the formula
+% status:  RED (67int18b) -> GREEN (69c: mathtools_sty.rs `\clap` = `\hbox to 0pt{\hss#1\hss}`)
+\documentclass{article}
+\usepackage{amsmath,mathtools}
+\makeatletter
+\newlength\my@len
+\newcommand{\textfillwidthof}[3][l]{\settowidth\my@len{#2}\setlength\my@len{.5\my@len}%
+  \hspace*{\my@len}\clap{#3}\hspace*{\my@len}}
+\newcommand{\fillwidthof}[3][l]{%
+  \ifmmode\mathchoice{\textfillwidthof[#1]{$\m@th{\displaystyle #2}$}{$\m@th{\displaystyle #3}$}}%
+    {\textfillwidthof[#1]{$\m@th{#2}$}{$\m@th{#3}$}}{\textfillwidthof[#1]{$#2$}{$#3$}}{\textfillwidthof[#1]{$#2$}{$#3$}}%
+  \else\textfillwidthof[#1]{#2}{#3}\fi}
+\makeatother
+\begin{document}
+\[ \clap{$a$} x \]
+\begin{align*}
+x \leq{} & \fillwidthof[c]{a+b}{c} + d \\
+& e
+\end{align*}
+\end{document}

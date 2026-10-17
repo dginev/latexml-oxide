@@ -1,0 +1,19 @@
+% witness: 1912.00050 (sigma.cls, `$\phantom{$-$}$3/2-{\rm i}\nu, &\mbox{if}…` in `{cases}` inside `{gather*}`)
+% oracle:  pdflatex 0 errors; a `{cases}` cell is `$##$` (amsmath.sty `\env@cases` array), so the author's first `$`
+%   ends the cell's math, `\phantom{$-$}` is text holding a formula, and the next `$` begins the cell's math again
+% engines: rust 67int18b = 9 errors (the cell's in-math text never ends: "Attempt to close a group that switched to
+%   mode restricted_horizontal", the rest of the display mangled), rust 69c the same, perl = 9
+% expect:  0 errors; the cell "−3/2" with an invisible minus
+% status:  RED (69c side finding: `\lx@dollar@in@mathmode`'s boxing-level bookkeeping across `\phantom`'s argument)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{gather*}
+x=
+\begin{cases}
+$\phantom{$-$}$3/2, &\mbox{if}\quad r,
+\\
+-1/2, &\mbox{if}\quad s.
+\end{cases}
+\end{gather*}
+\end{document}

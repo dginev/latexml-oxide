@@ -15058,3 +15058,21 @@ kernel-alignment/dollar_in_a_braced_template_cell_ends_its_formula (`a &=& b $ f
 message, as Perl and base; pdflatex "Missing } inserted"); guards
 `perfect_kernel_batch69c::{amsmath_aligned_cell_braces_balance_across_the_template,
 dollar_in_a_braced_template_cell_ends_its_formula}`.
+
+## 909. mathtools' `\clap` digests its argument in the current mode, so a `$…$` in it ends the enclosing formula
+
+latex.ltx:16409 `\DeclareRobustCommand\clap[1]{\hb@xt@\z@{\hss#1\hss}}` (older mathtools.sty's `\providecommand*\clap`)
+is a box: its argument is set in restricted horizontal mode, so `\clap{$a$}` holds a formula, also when `\clap` is used
+in math. Perl's mathtools.sty.ltxml:98 `DefConstructor('\clap {}', "#1")` takes no mode, so in math the argument's `$`
+ends the enclosing formula.
+
+Trigger: `\usepackage{mathtools}` and `\[ \clap{$a$} x \]` — pdflatex 0 errors; Perl and base "Missing $ closing display
+math" twice. 2305.03559's `\fillwidthof[c]{…}{…}` (its myPreamble.sty: `\mathchoice{\textfillwidthof[c]{$\m@th
+{\displaystyle #2}$}{$\m@th{\displaystyle #3}$}}…`, whose `\textfillwidthof` sets `#3` in `\clap`) at an `align*` cell
+head: 68z's cell-head stop (KPE #880) expands it inside the cell's math, as TeX does, so `\ifmmode` takes the
+`\mathchoice` branch and its `\clap{$…$}` met the bug (int18 A/B 144 → 163 errors; 67int17b expanded it before the
+cell's `$` and took the text branch).
+
+Rust (69c): mathtools_sty.rs `\clap` is `\hbox to 0pt{\hss#1\hss}`, as plain_base.rs's `\rlap`/`\llap` (Perl's own
+`\hbox to 0pt{#1\hss}`). 2305.03559: 163 → 90 errors (the rest are its clevethm.sty's `\setlist` keys, unrelated).
+Repro package-bindings/mathtools_clap_is_a_box_in_math; guard `perfect_kernel_batch69c::clap_is_a_box_in_math`.

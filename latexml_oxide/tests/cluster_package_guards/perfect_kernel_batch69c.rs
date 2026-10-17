@@ -6,7 +6,8 @@
 //! Item 2 (E1) — a `$` inside a math TeX sets as `\hbox{$…$}` (amsmath's display under `fleqn`, proof.sty's label,
 //! conclusion and premises, accents.sty's under-accent) is text in that math (tex.web §1193; the rc_struct3 E1 sample).
 //! Item 3 (U1) — an eqnarray cell's braces balance across its template's own `{##}` (latex.ltx:15760-15763; 2207.06932
-//! 1912.10594), and an amsmath `{aligned}` cell's across amsmath's (amsmath.sty:1483).
+//! 1912.10594), and an amsmath `{aligned}` cell's across amsmath's (amsmath.sty:1483). Item 4 — mathtools' `\clap` is
+//! the kernel's box (latex.ltx:16409), so `\clap{$…$}` in math holds a formula (2305.03559).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -212,4 +213,26 @@ fn dollar_in_a_braced_template_cell_ends_its_formula() {
     r#"<td align="left"><Math mode="inline" tex="\displaystyle=b" text="absent = b" xml:id="S0.Ex1.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math> for all <Math mode="inline" tex="x" text="x" xml:id="S0.Ex1.m3"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></td>"#,
   );
   assert_eq!(xml.matches("</Math> for all <Math").count(), 2, "{xml}");
+}
+
+/// package-bindings/mathtools_clap_is_a_box_in_math: `\[ \clap{$a$} x \]` and 2305.03559's `\fillwidthof[c]{…}{…}`
+/// (`\mathchoice{…\clap{$…$}…}`) at an `align*` cell head (pdflatex 0 errors). Before 69c: 13 Errors.
+#[test]
+fn clap_is_a_box_in_math() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/mathtools_clap_is_a_box_in_math.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  // The `\mathchoice` row's formula is ambiguous to the math grammar: one "unparsed_math" Warning.
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_element(
+    &xml,
+    "equation",
+    &["xml:id=\"S0.Ex1\""],
+    r#"<equation xml:id="S0.Ex1"><Math mode="display" tex="\hbox to0.0pt{\hss$a$\hss}x" text="a * x" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN" width="0.0pt">a</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math></equation>"#,
+  );
+  assert!(xml.contains("<equationgroup"), "{xml}");
 }
