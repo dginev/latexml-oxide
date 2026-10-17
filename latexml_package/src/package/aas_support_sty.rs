@@ -656,11 +656,13 @@ LoadDefinitions!({
 
   // Every AASTeX sets the `\tablenotetext` mark in math: aastex701.cls TL :11967-11969 (aastex62.cls :5097-5099,
   // aastex631.cls :5382-5384, 2503.18379's copy) `$^{\hbox to 5pt{$#1$}}$`, the older form (aastex631.cls :2001-2002)
-  // `$^{#1}$`, while `\tablenotemark` sets its mark in text (:8494 `\textsuperscript{…\it #1}`). The mark's attribute
-  // is the math's own text, so a `\tablenotetext{a}` still pairs with a `\tablenotemark{a}`. Perl digests it as text
-  // (deluxetable.sty.ltxml:106), so `\tablenotetext{^\dagger}` set its `^` in text (2503.18379, 0803.1504;
-  // KNOWN_PERL_ERRORS #873). emulateapj, which loads this binding, sets it in text (emulateapj_cls.rs).
-  // Guard: `perfect_kernel_batch68y::aastex_tablenotetext_mark_is_math`.
+  // `$^{#1}$`, while `\tablenotemark` sets its mark in text (:8494 `\textsuperscript{…\it #1}`). The mark is set in
+  // the class's box (`\hbox{$#1$}`, so `\tablenotetext{$a$}` is the text "a", 1807.05231) and keyed by what it shows,
+  // as the `\tablenotemark` is (deluxetable_sty.rs `shown_mark`), so `a`, `\rm{b}`, `$\dagger$` pair across the two
+  // (1710.01715). Perl digests it as text (deluxetable.sty.ltxml:106), so `\tablenotetext{^\dagger}` set its `^` in
+  // text (2503.18379, 0803.1504; KNOWN_PERL_ERRORS #873). emulateapj, which loads this binding, sets it in text
+  // (emulateapj_cls.rs). Guards: `perfect_kernel_batch68y::aastex_tablenotetext_mark_is_math`,
+  // `aastex_tablenote_marks_pair_by_what_they_show`.
   DefMacro!("\\tablenotetext{}{}", "\\lx@deluxe@tablenotetext{\\lx@deluxe@tablenote@mark{#1}}{#2}");
 
   // Decimal table conditionals — Perl L338-345

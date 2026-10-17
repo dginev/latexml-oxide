@@ -60,7 +60,8 @@ fn aastex_tablenotetext_mark_is_math() {
 }
 
 /// class-bindings/emulateapj_deluxetable_open_from_head: emulateapj.cls:1430-1460: the deluxetable's rows are rows from
-/// `\tablehead` on — a head's `\\ \cline` (1002.1848; TeX's empty row is kept, as pdflatex sets it), rows without
+/// `\tablehead` on — a head's `\\ \cline` (1002.1848: an empty row and a rule `\startdata` makes the continuation
+/// head, printed on no page, so neither is here), rows without
 /// `\startdata` (1411.3719) and after `\enddata` (1909.11243), a second `\enddata` and a `\label` after it
 /// (1902.00588); notes, comments and labels after the data make no row; in the document's own `{longtable}` the head
 /// is its rows and `\tablecaption` its caption (1810.10130).
@@ -76,7 +77,7 @@ fn emulateapj_deluxetable_is_open_from_its_head() {
       (
         "table",
         "S0.T1",
-        r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="autoref">Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag>Table 1</tag>Cap</caption><tabular><thead><tr><td align="center" border="tt" thead="column">A</td><td align="center" border="tt" thead="column">B</td></tr></thead><tbody><tr><td border="t"/><td border="t"/></tr><tr><td align="left" border="t">a</td><td align="center" border="t">1</td></tr><tr><td align="left" border="b">b</td><td align="center" border="b">2</td></tr></tbody></tabular></table>"##,
+        r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="autoref">Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag>Table 1</tag>Cap</caption><tabular><thead><tr><td align="center" border="tt" thead="column">A</td><td align="center" border="tt" thead="column">B</td></tr></thead><tbody><tr><td align="left" border="t">a</td><td align="center" border="t">1</td></tr><tr><td align="left" border="b">b</td><td align="center" border="b">2</td></tr></tbody></tabular></table>"##,
       ),
       (
         "table",
@@ -177,6 +178,53 @@ fn iopart_row_spacers_are_noalign() {
       "para",
       "p1",
       r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" border="t" thead="row">a</td><td align="center" border="t">b</td></tr><tr><td align="left" border="b t" thead="row">c</td><td align="center" border="b t">d</td></tr></tbody></tabular></para>"##,
+    )],
+  );
+}
+
+/// class-bindings/emulateapj_startdata_ends_head: emulateapj.cls:1324 `\startdata` is `\kill\caption{…}\endhead…`:
+/// it ends the row in progress — the second head line written without a `\\` (1605.03270) stays a row of its own,
+/// not the start of the first data row — and the rows since `\tablehead` are the heading (2002.02307), without the
+/// empty row after the head's `\\` and the `\cline` before `\startdata`, which TeX prints on no page.
+#[test]
+fn emulateapj_startdata_ends_the_head() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/emulateapj_startdata_ends_head.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "table",
+        "S0.T1",
+        r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="autoref">Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Sample</toccaption><caption><tag>Table 1</tag>Sample</caption><tabular><thead><tr><td align="center" border="tt" thead="column">AAA</td><td align="center" border="tt" thead="column">BBB</td><td align="center" border="tt" thead="column">CCC</td></tr><tr><td border="t" thead="column"/><td align="center" border="t" thead="column">Name</td><td align="center" border="t" thead="column">(pc)</td></tr></thead><tbody><tr><td align="left">xx1</td><td align="right">yy1</td><td align="right">zz1</td></tr><tr><td align="left" border="b">xx2</td><td align="right" border="b">yy2</td><td align="right" border="b">zz2</td></tr></tbody></tabular></table>"##,
+      ),
+      (
+        "table",
+        "S0.T2",
+        r##"<table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="autoref">Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Cap two</toccaption><caption><tag>Table 2</tag>Cap two</caption><tabular><thead><tr><td align="center" border="tt" thead="column">AAA</td><td align="center" border="tt" thead="column">BBB</td></tr><tr><td align="left" border="t" thead="column">XROW</td><td align="center" border="t" thead="column">YROW</td></tr></thead><tbody><tr><td align="left" border="b">a1</td><td align="center" border="b">1</td></tr></tbody></tabular></table>"##,
+      ),
+    ],
+  );
+}
+
+/// class-bindings/aastex_tablenote_mark_shown: a note pairs with the mark that shows the same, both sides read by one
+/// function (`shown_mark`): `c, d` with `c, d` (spaces dropped), `*` with `\ast` (TeX's one asterisk),
+/// `\tablenotemark{$\dagger$}` with `\dagger`, its mark "†", `\rm{b}` with `b` (1710.01715), and the note mark `$a$`
+/// set in the class's `\hbox{$#1$}` as the text "a" (1807.05231), with no error and its body kept.
+#[test]
+fn aastex_tablenote_marks_pair_by_what_they_show() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/aastex_tablenote_mark_shown.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "table",
+      "S0.T1",
+      r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="autoref">Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Marks</toccaption><caption><tag close=": ">Table 1</tag>Marks</caption><tabular><thead><tr><td align="center" border="tt" thead="column">X</td><td align="center" border="tt" thead="column">Y</td></tr></thead><tbody><tr><td align="left" border="t">r1</td><td align="center" border="t">1<note mark="c,d" role="footnote">Note CD.</note></td></tr><tr><td align="left">r2</td><td align="center">2<note mark="*" role="footnote">Note AST.</note></td></tr><tr><td align="left">r3</td><td align="center">3<note mark="†" role="footnote">Note DAG.</note></td></tr><tr><td align="left">r4</td><td align="center">4<note mark="b" role="footnote">Note B.</note></td></tr><tr><td align="left" border="b">r5</td><td align="center" border="b">5<note mark="a" role="footnote">Note A.</note></td></tr></tbody></tabular></table>"##,
     )],
   );
 }

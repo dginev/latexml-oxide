@@ -1,0 +1,32 @@
+% witness: 1605.03270 (`\tablehead{…}\\ \colhead{} & \colhead{Name} & …` with no `\\` before `\startdata`),
+%          2002.02307: emulateapj.cls:1324 `\startdata` is `\kill\caption{…}\endhead…` in every table, so it ends the
+%          row in progress and the rows since the head are the (continuation) heading; the empty row after the head's
+%          `\\` prints nowhere
+% oracle:  pdflatex 0 errors; Table 1 "AAA BBB CCC / xx1 yy1 zz1 / xx2 yy2 zz2"; Table 2 "AAA BBB / a1 1" (the rows
+%          between the head and `\startdata` are on no page: a continuation head)
+% engines: rust 68y = 2 errors (Extra alignment tab: the second head line ran into the first data row); Perl: rows
+%          outside the alignment
+% expect:  0 errors, 0 warnings; the second head line and XROW are heading rows, no empty row, the data rows whole
+% status:  RED (68y) -> GREEN (68y2)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\begin{deluxetable}{lrr}
+\tablecaption{Sample}
+\tablehead{\colhead{AAA} & \colhead{BBB} & \colhead{CCC}}
+\\
+\colhead{} & \colhead{Name} & \colhead{(pc)}
+\startdata
+xx1 & yy1 & zz1 \\
+xx2 & yy2 & zz2
+\enddata
+\end{deluxetable}
+\begin{deluxetable}{lc}
+\tablecaption{Cap two}
+\tablehead{\colhead{AAA} & \colhead{BBB}}\\
+XROW & YROW \\ \cline{1-2}
+\startdata
+a1 & 1 \\
+\enddata
+\end{deluxetable}
+\end{document}

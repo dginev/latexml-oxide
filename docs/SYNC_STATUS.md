@@ -2594,9 +2594,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch68y` (8). A/B vs 67int17b over 267 papers (the 17 study witnesses, 60 aa, 60 AASTeX, 30
   emulateapj, 20 iopart, 20 mn2e by `\documentclass`, 60 pop67o): errors 1,733 → 1,262, Fatal 9 → 7, words +48,193;
   the 17 witnesses 290 → 0 errors, 12 emulateapj and one each of aa, AASTeX, mn2e papers → 0 (two Fatals gone:
-  1108.2958, astro-ph0701730); none worse (2512.06138 −39 words: the text marks `a, b` are one word where the math
-  marks were three). Open: 1102.2440 copies emulateapj's longtable `\tablehead` (`\@table@not@headedfalse`, `\kill`,
-  `\endfirsthead`) into its preamble, which a deluxetable here does not run (16 errors, as before).
+  1108.2958, astro-ph0701730). Open: 1102.2440 copies emulateapj's longtable `\tablehead` (`\@table@not@headedfalse`,
+  `\kill`, `\endfirsthead`) into its preamble, which a deluxetable here does not run (16 errors, as before).
+  Round 2 (68y review): after `\tablehead`, `\startdata` ends the row in progress and makes the rows since the head
+  heading rows, empty rows and rules between them dropped (emulateapj.cls:1324 `\kill…\endhead`; 1605.03270,
+  2002.02307: a second head line without `\\` had run into the first data row), and a `\tablecaption` there is kept
+  for the table's end; AASTeX's note mark is set in the class's `\hbox{$#1$}` (1807.05231 `\tablenotetext{$a$}`, the
+  note body had been lost); a table-note mark is keyed by what it shows, one function on both sides
+  (deluxetable_sty.rs `shown_mark`: `c, d`, `*`/`\ast`, `$\dagger$`/`\dagger` "†", `\rm{b}`/`b`; 1710.01715). Repros
+  class-bindings/{emulateapj_startdata_ends_head, aastex_tablenote_mark_shown}; guards
+  `perfect_kernel_batch68y::{emulateapj_startdata_ends_the_head, aastex_tablenote_marks_pair_by_what_they_show}`.
+  Residual: an emulateapj deluxetable with neither `\tablehead` nor `\startdata` (KNOWN_PERL_ERRORS #874).
+  A/B vs 67int17b over 446 papers (round 1's 267 and the review's 179: 100 aa, 100 AASTeX, 50 emulateapj,
+  40 iopart, 40 mn2e, 99 pop67o, 17 study): errors 2,659 → 2,154, Fatal 13 → 10, words +68,683; emulateapj 240 → 157
+  errors (1605.03270 1 → 0, 2002.02307 1 → 0), 1807.05231 back to its 3 (`\omit`) errors with the note kept; fewer
+  words only in 2512.06138 (−39) and 2604.11988 (−712), both aa's text marks (`a, b`, `**`) one word where the math
+  marks were several tokens (aa.cls:1672-1681); no paper gains errors.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

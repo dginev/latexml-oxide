@@ -1,31 +1,38 @@
 use crate::prelude::*;
 
-/// The text of a mark digested in math: its characters as written and its symbols, a script's or other command's
-/// arguments read for theirs (`^\dagger` is "†"; the class sets the whole mark as a superscript), so the mark attribute
-/// is what the mark shows and what a `\tablenotemark` of the same mark gives.
-fn math_mark_text(digested: &Digested) -> String {
-  match digested.data() {
-    DigestedData::List(list) => list.borrow().boxes.iter().map(math_mark_text).collect(),
-    DigestedData::Whatsit(whatsit) => {
-      let whatsit = whatsit.borrow();
-      let args: Vec<&Digested> = whatsit.get_args().iter().flatten().collect();
-      if args.is_empty() {
-        digested.to_attribute()
-      } else {
-        args.into_iter().map(math_mark_text).collect()
-      }
-    },
-    // A character as written (math's `*` is set as U+2217 but marks the note a text `\tablenotemark{*}` marks), a
-    // symbol command (`\dagger`) as set, a group's or a font switch's empty box (`\rm{b}`) as nothing.
-    DigestedData::TBox(_) => {
-      let text = digested.to_attribute();
-      match digested.untex() {
-        Ok(written) if !text.is_empty() && written.chars().count() == 1 => written,
-        _ => text,
-      }
-    },
-    _ => digested.to_attribute(),
+/// What a table-note mark shows, the key that pairs a `\tablenotetext` with its `\tablenotemark`s (latex_constructs
+/// `relocate_footnote` matches their `mark`s) and the mark the note prints: the characters and symbols as set, in text
+/// or math, a command's arguments and a formula's body read for theirs (`$\dagger$`, `^\dagger` and `\dag` are "†",
+/// `\rm{b}` and `\textrm{b}` are "b"), without spaces (`c, d` is "c,d"). The one function serves both commands, so a
+/// mark pairs by what it shows whatever its source. Math's `*` and `\ast` are TeX's one asterisk (plain.tex
+/// `\mathcode`\*="2203`, `\mathchardef\ast="2203`), set here as U+2217: an asterisk, as a text `*` is.
+fn shown_mark(digested: &Digested) -> String {
+  fn shown(digested: &Digested, out: &mut String) {
+    match digested.data() {
+      DigestedData::List(list) => list.borrow().boxes.iter().for_each(|item| shown(item, out)),
+      DigestedData::Whatsit(whatsit) => {
+        let whatsit = whatsit.borrow();
+        let body = whatsit.get_body().ok().flatten();
+        let args: Vec<&Digested> = whatsit.get_args().iter().flatten().collect();
+        if args.is_empty() && body.is_none() {
+          out.push_str(&digested.to_attribute());
+        } else {
+          args.into_iter().for_each(|arg| shown(arg, out));
+          if let Some(body) = body {
+            shown(&body, out);
+          }
+        }
+      },
+      _ => out.push_str(&digested.to_attribute()),
+    }
   }
+  let mut text = String::new();
+  shown(digested, &mut text);
+  text
+    .chars()
+    .filter(|c| !c.is_whitespace())
+    .map(|c| if c == '\u{2217}' { '*' } else { c })
+    .collect()
 }
 
 #[rustfmt::skip]
@@ -151,21 +158,25 @@ LoadDefinitions!({
   DefMacro!("\\tableline", "\\hline");
 
   DefConstructor!("\\tablenotemark{}",
-    "<ltx:note role='footnotemark' mark='#1'></ltx:note>",
-    mode => "restricted_horizontal");
-  // The note's mark is its `mark`, which pairs it with a `\tablenotemark` of the same text (latex_constructs
-  // `relocate_footnote`). Perl digests it as text (deluxetable.sty.ltxml:106); `\lx@deluxe@tablenote@mark` digests it
-  // in math and gives the math's own text (`a`, `†`; `math_mark_text`) as its attribute form, for a class that sets
-  // the mark in math (AASTeX, aas_support_sty.rs).
-  DefConstructor!("\\lx@deluxe@tablenote@mark{}", "",
-    mode => "math", bounded => true,
+    "<ltx:note role='footnotemark' mark='#mark'></ltx:note>",
+    mode => "restricted_horizontal",
     properties => sub[args] {
-      let form = args[0].as_ref().map(math_mark_text).unwrap_or_default();
-      Ok(stored_map!("attributeForm" => Stored::String(pin(&form))))
+      let mark = args[0].as_ref().map(shown_mark).unwrap_or_default();
+      Ok(stored_map!("mark" => Stored::String(pin(&mark))))
     });
+  // The note's mark is its `mark`, what the mark shows (`shown_mark`), which pairs it with a `\tablenotemark` showing
+  // the same. Perl writes both as the argument's text (deluxetable.sty.ltxml:103-108), so `\tablenotemark{$\dagger$}`
+  // showed its TeX source and paired with no note (KNOWN_PERL_ERRORS #873). A class that sets the mark in math sets it
+  // in a box (`\lx@deluxe@tablenote@mark`, AASTeX's `\hbox to5pt{$#1$}`, aas_support_sty.rs): `$a$` there is an empty
+  // formula, the text "a" and another empty formula, as TeX sets it (1807.05231).
+  DefMacro!("\\lx@deluxe@tablenote@mark{}", "\\hbox{$#1$}");
   DefConstructor!("\\lx@deluxe@tablenotetext{}{}",
-    "<ltx:note role='footnotetext' mark='#1'>#2</ltx:note>",
+    "<ltx:note role='footnotetext' mark='#mark'>#2</ltx:note>",
     mode => "internal_vertical", sizer => sub[_whatsit] { Ok(out_of_line_size()) },
+    properties => sub[args] {
+      let mark = args[0].as_ref().map(shown_mark).unwrap_or_default();
+      Ok(stored_map!("mark" => Stored::String(pin(&mark))))
+    },
     reversion => "\\tablenotetext{#1}{#2}");
   DefMacro!("\\tablenotetext{}{}", "\\lx@deluxe@tablenotetext{#1}{#2}");
 

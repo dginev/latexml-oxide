@@ -14611,16 +14611,26 @@ aastex631.cls :5382-5384) `$^{\hbox to 5pt{$#1$}}$`, aastex.cls 5.0 `\llap{$^{#1
 Trigger: `\documentclass{aastex701}`, a deluxetable with `\tablenotetext{^\dagger}{The values …}` — pdflatex 0 errors,
 a dagger; Perl and Rust before 68y `^ Script can only appear in math mode`.
 
-Rust (68y): aas_support_sty.rs digests the mark in math (deluxetable_sty.rs `\lx@deluxe@tablenote@mark`), its attribute
-the mark's text (`math_mark_text`: a character as written, `*` not U+2217; a symbol as set, `†`; a script's or command's
-arguments, `^\dagger` and `\rm{b}` are `†` and `b`), so `a` still pairs with `\tablenotemark{a}`; emulateapj, whose mark is text
-(emulateapj.cls:1424-1427), keeps the text form. Witnesses 2503.18379, 0803.1504. Repro
-class-bindings/aastex_tablenotetext_math_mark; guard `perfect_kernel_batch68y::aastex_tablenotetext_mark_is_math`.
+Perl writes both `\tablenotemark` and `\tablenotetext` marks as the argument's text (deluxetable.sty.ltxml:103-108), so
+a `\tablenotemark{$\dagger$}` shows and keys its TeX source and pairs with no `\tablenotetext{\dagger}`.
+
+Rust (68y): aas_support_sty.rs sets the mark as the class does, in math in a box (deluxetable_sty.rs
+`\lx@deluxe@tablenote@mark`, `\hbox{$#1$}`: a mark already in math, `\tablenotetext{$a$}`, is an empty formula, the
+text "a" and another, as TeX sets it — 1807.05231, whose note body was lost to "Attempt to end mode math"). Both marks
+are keyed by what they show, by one function on both sides (`shown_mark`: characters and symbols as set, in text or
+math, a command's arguments and a formula's body read for theirs, spaces dropped, math's `*`/`\ast` an asterisk), so
+`c, d` pairs `c, d`, `*` pairs `\ast`, `\tablenotemark{$\dagger$}` pairs `\dagger` and shows "†", `\rm{b}` pairs `b`
+(1710.01715); the key is also the `mark` the note prints. emulateapj, whose mark is text (emulateapj.cls:1424-1427),
+uses the same key. Witnesses 2503.18379, 0803.1504, 1807.05231, 1710.01715. Repros
+class-bindings/aastex_tablenotetext_math_mark, aastex_tablenote_mark_shown; guards
+`perfect_kernel_batch68y::aastex_tablenotetext_mark_is_math`, `aastex_tablenote_marks_pair_by_what_they_show`.
 
 ## 874. emulateapj's deluxetable is AASTeX's: rows outside `\startdata … \enddata` are outside the table
 
 emulateapj.cls:1430-1460 opens a longtable at the deluxetable's `\begin`: `\tablehead` (:1329-1345) sets heading rows
-in it, `\startdata` (:1324) only captions a table without a head, and `\enddata` (:1497 `\\[\lastrowheight@]`) only
+in it, `\startdata` (:1324, `\kill\caption{…}\endhead\hline\endfoot` in every table: `\tablehead`'s
+`\@table@not@headedfalse` is undone by its own `\kill`) ends the row in progress and makes the rows since the head the
+continuation head, and `\enddata` (:1497 `\\[\lastrowheight@]`) only
 ends a row. Perl's binding (deluxetable.sty.ltxml:35-43, AASTeX's table) opens the alignment at `\startdata` and closes
 it at `\enddata`, so a head's `\\ \cline`, rows of a table without `\startdata`, rows after `\enddata` and a second
 `\enddata` fall outside it (#665 is the table ended without `\enddata`).
@@ -14630,12 +14640,19 @@ Trigger: `\documentclass{emulateapj}`, `\begin{deluxetable}{lc} \tablecaption{Ca
 under the head; Perl and Rust before 68y `\noalign cannot be used here` and `Stray alignment "&"`.
 
 Rust (68y, emulateapj_cls.rs): the data opens at `\tablehead` or `\startdata` and closes at the environment's end;
-`\enddata` ends a row; notes, comments and a `\label` after the data are kept for the table's end. The three commands
-are the class's, global, so a document's redefinition stands (1102.2440), and in a document's own `{longtable}` the head
-is its rows and `\tablecaption` its caption (1810.10130). Witnesses 1411.3719, 1909.11243, 1002.1848, 1902.00588 (and
-#665's 1506.07185, 1705.08932). Repro
-class-bindings/emulateapj_deluxetable_open_from_head; guard
-`perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`.
+after a head `\startdata` ends the row in progress and makes the rows since the head heading rows, the empty ones and
+the rules between them dropped (TeX prints a continuation head on no first page) — a second head line written without
+`\\` (1605.03270, 2002.02307) is its own heading row, not the start of the first data row; a `\tablecaption` given
+there is kept for the table's end; `\enddata` ends a row; notes, comments and a `\label` after the data are kept
+for the table's end. The three commands are the class's, global, so a document's redefinition stands (1102.2440), and
+in a document's own `{longtable}` the head is its rows and `\tablecaption` its caption (1810.10130). Witnesses
+1411.3719, 1909.11243, 1002.1848, 1902.00588, 1605.03270, 2002.02307 (and #665's 1506.07185, 1705.08932). Repros
+class-bindings/emulateapj_deluxetable_open_from_head, emulateapj_startdata_ends_head; guards
+`perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`, `emulateapj_startdata_ends_the_head`.
+Residual: a deluxetable with neither `\tablehead` nor `\startdata` (rows straight after `\tablecaption`) still has
+its rows outside the alignment (1 error, the rows a paragraph); TeX's rows are longtable rows. Opening the data at
+`\begin` needs every stored `\tablecaption` set after the alignment, which moves the caption below the table in
+every emulateapj table, so it is left (68y review p/e2).
 
 ## 875. AASTeX's `\decimals` is an assignment; the class's is a `\noalign` in a `tabular`
 

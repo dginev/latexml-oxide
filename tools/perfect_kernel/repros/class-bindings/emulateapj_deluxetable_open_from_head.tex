@@ -2,7 +2,8 @@
 %          `\startdata`), 1909.11243 (rows after `\enddata`), 1902.00588 (a second `\enddata`, a `\label` after it),
 %          1810.10130 (`\tablehead`/`\startdata` in the document's own `{longtable}`):
 %          emulateapj.cls:1430-1460 opens the longtable at the environment's `\begin`, `\tablehead` (:1329-1345) sets
-%          heading rows, `\startdata` (:1324) only captions a headless table, `\enddata` (:1497) only ends a row
+%          heading rows, `\startdata` (:1324) ends the row in progress and makes the rows since the head the
+%          continuation head (`\kill…\endhead`), `\enddata` (:1497) only ends a row
 % oracle:  pdflatex 0 errors; Table 1 "A B / a 1 / b 2"; Table 2 "parameter value / a0 -2.55 / a1 -0.26"; Table 3
 %          "A B C / a 1a x / b 2 y", "Note. — A comment.", "a First note."; Table 4 "Galaxies / name z / G1 1.99"
 % engines: rust 67int17b = 14 errors, 3 warnings (`\noalign` cannot be used here, Stray alignment "&"); Perl the same
