@@ -183,6 +183,18 @@ impl Drop for CopyProvidesGuard {
 thread_local! {
   static STAND_IN_LOADING: Cell<u32> = const { Cell::new(0) };
   static STAND_IN_OWN_CODE: Cell<bool> = const { Cell::new(false) };
+  static STAND_IN_LOADER_OWN_CODE: Cell<bool> = const { Cell::new(false) };
+  static SETTER_WATCH: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Are frontmatter setter calls observed ([`watch_setter_calls`])? Read at every macro call, so a flag.
+pub fn setter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) }
+
+/// Observe the calls of the setters `names` from now on (`state::note_setter_call`): a stand-in's copy stored a
+/// default of their field, which the document's own call replaces whatever its value.
+pub fn watch_setter_calls(names: &[&str]) {
+  crate::state::watch_setters(names);
+  SETTER_WATCH.with(|c| c.set(true));
 }
 
 /// Is a binding that stands in for an author's file loading ([`StandInLoadGuard`]), itself or a file it loads?
@@ -191,6 +203,11 @@ pub fn stand_in_loading() -> bool { STAND_IN_LOADING.with(|c| c.get()) != 0 }
 /// Is the code running now a stand-in binding's own ([`StandInLoadGuard::new`]), not a file it loads
 /// ([`StandInLoadGuard::suspend`])?
 pub fn stand_in_own_code() -> bool { STAND_IN_OWN_CODE.with(|c| c.get()) }
+
+/// Did a stand-in binding's own code request the file now loading ([`StandInLoadGuard::suspend`] keeps the flag it
+/// suspended)? A stand-in binding that file is joins the loading binding's command set only then
+/// ([`StandInLoadGuard::loaded_by`]).
+pub fn stand_in_loader_own_code() -> bool { STAND_IN_LOADER_OWN_CODE.with(|c| c.get()) }
 
 /// RAII guard: while a binding that stands in for an author's file loads (`binding::content::input_definitions`),
 /// every name assigned is recorded as that binding's (`state::State::stand_in_meanings`), whatever made it — its
@@ -202,24 +219,39 @@ pub fn stand_in_own_code() -> bool { STAND_IN_OWN_CODE.with(|c| c.get()) }
 pub struct StandInLoadGuard {
   own_code: bool,
   load:     bool,
+  /// (a load: its names join the stand-in binding loading it, whose own code requested it; a suspension: the loader
+  /// flag it replaced)
+  from_own: bool,
 }
 
 impl StandInLoadGuard {
-  pub fn new() -> Self {
+  /// A stand-in binding the code running now requests (`binding::content::input`'s `.tex` route): it joins the command
+  /// set of a stand-in binding loading it when that is the binding's own code.
+  pub fn new() -> Self { Self::loaded_by(stand_in_own_code()) }
+
+  /// A stand-in binding loads, requested by a stand-in binding's own code when `from_own_code`
+  /// (`binding::content::input_definitions`, [`stand_in_loader_own_code`]): its names join that binding's command set
+  /// at its end (`state::end_stand_in_load`) — the diagrams binding's diagrams.tex (hep-ph9609379) —, and not when a
+  /// file the outer binding loads requested it: OmniBus's `RequirePackage!("aas_macros")` (omnibus_cls.rs:71) under
+  /// asme2ej (2309.12017), nature-pre (2102.01782, 2111.09589), cimart (2412.00032).
+  pub fn loaded_by(from_own_code: bool) -> Self {
     STAND_IN_LOADING.with(|c| c.set(c.get() + 1));
     crate::state::begin_stand_in_load();
     StandInLoadGuard {
       own_code: STAND_IN_OWN_CODE.with(|c| c.replace(true)),
       load:     true,
+      from_own: from_own_code,
     }
   }
 
   /// A file a stand-in binding loads (`binding::content::input_definitions`): its names are the binding's to own, but
   /// not the binding's command set, until the guard drops.
   pub fn suspend() -> Self {
+    let own_code = STAND_IN_OWN_CODE.with(|c| c.replace(false));
     StandInLoadGuard {
-      own_code: STAND_IN_OWN_CODE.with(|c| c.replace(false)),
-      load:     false,
+      own_code,
+      load: false,
+      from_own: STAND_IN_LOADER_OWN_CODE.with(|c| c.replace(own_code)),
     }
   }
 }
@@ -233,7 +265,9 @@ impl Drop for StandInLoadGuard {
     STAND_IN_OWN_CODE.with(|c| c.set(self.own_code));
     if self.load {
       STAND_IN_LOADING.with(|c| c.set(c.get().saturating_sub(1)));
-      crate::state::end_stand_in_load();
+      crate::state::end_stand_in_load(self.from_own);
+    } else {
+      STAND_IN_LOADER_OWN_CODE.with(|c| c.set(self.from_own));
     }
   }
 }
@@ -242,6 +276,8 @@ impl Drop for StandInLoadGuard {
 pub fn reset_copy_provides() {
   STAND_IN_LOADING.with(|c| c.set(0));
   STAND_IN_OWN_CODE.with(|c| c.set(false));
+  STAND_IN_LOADER_OWN_CODE.with(|c| c.set(false));
+  SETTER_WATCH.with(|c| c.set(false));
   COPY_PROVIDES.with(|c| c.set(0));
   COPY_PROVIDES_STACK.with(|s| s.borrow_mut().clear());
 }

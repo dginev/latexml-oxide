@@ -1,0 +1,18 @@
+% witness: 2609.08425, 2101.06297, 2211.16474, 2411.11493, 2206.08798, 2602.03829, 2408.07575, 2506.14995
+%          (WileyNJDv5.cls:6021 `\usepackage[numbers,super,sort&compress]{NJDnatbib}`; NJDnatbib.sty:29
+%          `\ProvidesPackage{NJDnatbib}`, :1050-1053 `\@ifundefined{chapter}`)
+% oracle:  pdflatex 0 errors: "EXTRA [1]" (natbib's `super` sets it raised) and a "REFERENCES" heading, the fork's
+%          chapterless-class default (xelatex 2609.08425's PDF: "REFERENCES"; under WileyNJDv5 LaTeXML still has
+%          a \chapter, so that paper's heading is \refname's "References" until the kernel leaves it undefined)
+% engines: rust 72a r3 = the fork read raw: a "Bibliography" heading, bib.bibx1
+% expect:  0 errors, 0 warnings; the natbib binding's superscript cite, "REFERENCES", bib.bib1; the copy's extra
+% status:  RED (72a r3) -> GREEN (72a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers,super]{NJDnatbib}
+\begin{document}
+\njdforkextra{} \cite{a}
+\begin{thebibliography}{1}
+\bibitem{a} X.~An. A title. 2021.
+\end{thebibliography}
+\end{document}

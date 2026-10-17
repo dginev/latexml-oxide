@@ -1,0 +1,22 @@
+\NeedsTeXFormat{LaTeX2e}[1995/06/01]
+\ProvidesPackage{NJDnatbib}
+        [2010/09/13 8.31b (PWD, AO)]
+\newif\ifNAT@numbers \NAT@numbersfalse
+\newif\ifNAT@super \NAT@superfalse
+\DeclareOption{numbers}{\NAT@numberstrue}
+\DeclareOption{super}{\NAT@supertrue\NAT@numberstrue}
+\ProcessOptions
+\providecommand\bmsection{\section}
+\providecommand\bibsection{}
+\@ifundefined{chapter}{%
+  \renewcommand\bibsection{%
+   \bmsection*{\fontsize{10}{13}\selectfont\bfseries{{REFERENCES}}\@mkboth{\MakeUppercase{\refname}}{\MakeUppercase{\refname}}}%
+  }%
+}{%
+  \renewcommand\bibsection{%
+    \chapter*{\bibname\@mkboth{\MakeUppercase{\bibname}}{\MakeUppercase{\bibname}}}%
+  }%
+}%
+\providecommand\refname{REFERENCES}
+\renewenvironment{thebibliography}[1]{\bibsection\list{\@biblabel{\@arabic\c@enumiv}}{\usecounter{enumiv}}}{\endlist}
+\newcommand\njdforkextra{EXTRA}

@@ -417,6 +417,8 @@ pub struct State {
   /// ([`let_i`]): a `\let` copies another name's definition, so the name a binding gave it is no longer on the object
   /// (`owned_by_the_semantic_layer`; aas_support_sty.rs's `\let\subjectheadings\keywords`).
   pub binding_lets:            rustc_hash::FxHashSet<SymStr>,
+  /// The frontmatter setters whose calls are observed ([`crate::definition::origin::watch_setter_calls`]).
+  pub watched_setters:         rustc_hash::FxHashSet<SymStr>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
 }
@@ -430,7 +432,7 @@ pub struct CopyProvidesRecord {
   pub declined:   rustc_hash::FxHashSet<SymStr>,
   pub deferred:   rustc_hash::FxHashSet<SymStr>,
   /// The copy's own `\maketitle`/`\@maketitle` bodies, refused or overlaid as they may be
-  /// ([`copy_title_page_prints`]).
+  /// ([`copy_provides_title_pages`]).
   pub title_page: Vec<Tokens>,
 }
 
@@ -525,6 +527,7 @@ impl Default for State {
       stand_in_load_files:     Vec::new(),
       stand_in_last_files:     Vec::new(),
       binding_lets:            rustc_hash::FxHashSet::default(),
+      watched_setters:         rustc_hash::FxHashSet::default(),
       journal:                 None,
     }
   }
@@ -1999,7 +2002,7 @@ pub fn copy_provides_refuses_locked(token: &Token) -> bool {
 /// loaded, `State::stand_in_meanings`: `\newcounter`, `\numberwithin`, `\@addtoreset`, `\counterwithin`)? Then the
 /// counter keeps the binding's numbering: its reset list is the binding's, as its `\the<ctr>` is. A counter the binding
 /// did not number — the kernel's `equation`, the format's register with the pool's article `\theequation` — is the
-/// copy's to number, as article.cls's defaults yield to the real class's own: jheppub.sty:311-312 `\renewcommand
+/// copy's to number, as article.cls's defaults yield to the real class's own: jheppub.sty:313-314 `\renewcommand
 /// \theequation{\thesection.\arabic{equation}}` and `\numberwithin{equation}{section}` number (2.1) as its PDF does
 /// (2112.14648, 2607.20603). Logged once per copy, at Info.
 pub fn copy_provides_keeps_counter(ctr: &str) -> bool {
@@ -2047,7 +2050,8 @@ fn counter_part(name: &str) -> Option<String> {
 
 /// Keep a stand-in copy's own title page (`\maketitle`, `\@maketitle`), defined while it is read
 /// ([`install_definition`], `\newcommand`'s refusal), whether the binding's lock refuses it or the overlay holds it:
-/// what it prints decides which of the copy's setter defaults the document shows ([`copy_title_page_prints`]).
+/// what it prints decides which of the copy's setter defaults the document shows (`frontmatter_stores::copy_title_page_prints`,
+/// latexml_engine).
 pub fn note_copy_provides_title_page(token: &Token, body: &Tokens) {
   let id = crate::definition::origin::copy_provides();
   if id == 0 || !matches!(token.get_catcode(), Catcode::CS) {
@@ -2061,121 +2065,58 @@ pub fn note_copy_provides_title_page(token: &Token, body: &Tokens) {
   }
 }
 
-/// Does a stand-in's copy print the store `store` (`\@author`, `\@date`, `\@title`) on its own title page — the
-/// `\maketitle`/`\@maketitle` it defined ([`note_copy_provides_title_page`]) and every macro a raw file defined that
-/// they call, the copy's own versions of the names the binding owns included — under the switches it set
-/// (`\newif` flags, kvoptions' boolean options: a branch of a flag that is now false is not printed)? `None` when no
-/// copy defined a title page (the binding's prints the frontmatter). atlasdoc.cls (2019, 1902.05892) prints `\@date`
-/// only in its `\ATLAS@TitleHeader` (:567, under `\ifADOC@datetop`), which its `\maketitle` (:716) calls only without
-/// `cernpreprint`; `\@author` under the title.
-pub fn copy_title_page_prints(store: &Token) -> Option<bool> {
-  let target = store.get_cs_name();
-  let mut roots: Vec<(u32, Tokens)> = Vec::new();
-  for (index, copy) in state!().copy_provides_copies.iter().enumerate() {
-    for body in &copy.title_page {
-      roots.push((index as u32 + 1, body.clone()));
-    }
-  }
-  if roots.is_empty() {
-    return None;
-  }
-  let mut seen: rustc_hash::FxHashSet<SymStr> = rustc_hash::FxHashSet::default();
-  let mut work: Vec<(u32, Tokens)> = roots;
-  while let Some((id, body)) = work.pop() {
-    let mut read = Vec::new();
-    title_page_reads(body.unlist_ref(), &mut read);
-    for cs in read {
-      let key = cs.get_cs_name();
-      if key == target {
-        return Some(true);
-      }
-      if !seen.insert(key) {
-        continue;
-      }
-      // (the copy's own version of a name the binding owns, else a raw file's macro)
-      let overlaid = state!()
-        .copy_provides_copies
-        .get(id as usize - 1)
-        .and_then(|copy| copy.overlay.get(&meaning_key(&cs)).cloned());
-      let meaning = overlaid.or_else(|| {
-        lookup_meaning(&cs).filter(|meaning| {
-          definition_origin(meaning) == Some(crate::definition::origin::DefinitionOrigin::File)
-        })
-      });
-      if let Some(Stored::Expandable(defn)) = meaning
-        && let Some(ExpansionBody::Tokens(callee)) = defn.get_expansion()
-      {
-        work.push((id, callee.clone()));
-      }
-    }
-  }
-  Some(false)
+/// Observe the calls of the setters `names` ([`State::watched_setters`]).
+pub fn watch_setters(names: &[&str]) {
+  let keys: Vec<SymStr> = names.iter().map(|name| meaning_key(&T_CS!(name))).collect();
+  state_mut!().watched_setters.extend(keys);
 }
 
-/// The control sequences `body` reads, a branch of a constant switch (an `\ifX` whose meaning is `\iftrue` or
-/// `\iffalse`, as `\newif` and kvoptions make them) only when the switch takes it ([`copy_title_page_prints`]).
-fn title_page_reads(body: &[Token], out: &mut Vec<Token>) {
-  let name_of = |token: &Token| -> Option<Token> {
-    match lookup_meaning(token) {
-      Some(meaning @ Stored::Conditional(_)) => definition_cs(&meaning),
-      _ => None,
-    }
-  };
-  let mut i = 0;
-  while i < body.len() {
-    let t = body[i];
-    i += 1;
-    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
-      continue;
-    }
-    let switch = name_of(&t).and_then(|cs| {
-      if cs == T_CS!("\\iftrue") {
-        Some(true)
-      } else if cs == T_CS!("\\iffalse") {
-        Some(false)
-      } else {
-        None
-      }
-    });
-    let Some(taken) = switch.filter(|_| t != T_CS!("\\iftrue") && t != T_CS!("\\iffalse")) else {
-      out.push(t);
-      continue;
-    };
-    // the switch's `\else` and `\fi`, at its own depth
-    let (mut depth, mut else_at, mut fi_at) = (0usize, None, None);
-    for (k, token) in body.iter().enumerate().skip(i) {
-      if !matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
-        continue;
-      }
-      let Some(cs) = name_of(token) else {
-        continue;
-      };
-      if cs == T_CS!("\\fi") {
-        if depth == 0 {
-          fi_at = Some(k);
-          break;
-        }
-        depth -= 1;
-      } else if cs == T_CS!("\\else") {
-        if depth == 0 && else_at.is_none() {
-          else_at = Some(k);
-        }
-      } else if cs != T_CS!("\\or") {
-        depth += 1;
-      }
-    }
-    let Some(fi_at) = fi_at else {
-      out.push(t);
-      continue;
-    };
-    let branch = if taken {
-      &body[i..else_at.unwrap_or(fi_at)]
-    } else {
-      else_at.map_or(&body[fi_at..fi_at], |at| &body[at + 1..fi_at])
-    };
-    title_page_reads(branch, out);
-    i = fi_at + 1;
+/// A macro `cs` is called (`Expandable::invoke`, while [`crate::definition::origin::setter_watch`]): a watched setter
+/// called outside a stand-in copy's read is the document's (or its binding's) call, `<cs>:called`, whatever its
+/// arguments — `\author{}` as much as `\author{Jane Doe}`, which a binding's accumulating `\author` (inst_support's)
+/// does not queue nor clear.
+pub fn note_setter_call(cs: &Token) {
+  if crate::definition::origin::copy_provides() != 0 {
+    return;
   }
+  let key = meaning_key(cs);
+  if state!().watched_setters.contains(&key) {
+    assign_value(
+      &cs.with_cs_name(|name| s!("{name}:called")),
+      true,
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// Was the watched setter `cs` called outside a stand-in copy's read ([`note_setter_call`])?
+pub fn setter_called(cs: &Token) -> bool {
+  lookup_bool(&cs.with_cs_name(|name| s!("{name}:called")))
+}
+
+/// The title pages stand-in copies defined ([`note_copy_provides_title_page`]), each with its copy's number, for
+/// `frontmatter_stores::copy_title_page_prints` (latexml_engine).
+pub fn copy_provides_title_pages() -> Vec<(u32, Tokens)> {
+  state!()
+    .copy_provides_copies
+    .iter()
+    .enumerate()
+    .flat_map(|(index, copy)| {
+      copy
+        .title_page
+        .iter()
+        .map(move |body| (index as u32 + 1, body.clone()))
+    })
+    .collect()
+}
+
+/// Copy `id`'s own version of the name `token` the binding owns, kept in its overlay while the binding's meaning is in
+/// force ([`note_copy_provides_assignment`]).
+pub fn copy_provides_overlaid_meaning(id: u32, token: &Token) -> Option<Stored> {
+  state!()
+    .copy_provides_copies
+    .get((id as usize).checked_sub(1)?)
+    .and_then(|copy| copy.overlay.get(&meaning_key(token)).cloned())
 }
 
 /// Begin a frame of copy `id`'s provides-mode ([`crate::definition::origin::enter_copy_provides`]; `0` suspends the mode for
@@ -2490,14 +2431,16 @@ pub fn note_stand_in_file(file: &str) {
 pub fn stand_in_built_on() -> Vec<String> { state!().stand_in_last_files.clone() }
 
 /// End the stand-in binding's load [`begin_stand_in_load`] began: its names are the last load's
-/// ([`State::stand_in_last_load`]).
-pub fn end_stand_in_load() {
+/// ([`State::stand_in_last_load`]), and, when the stand-in binding loading it requested it in its own code
+/// (`into_outer`, `StandInLoadGuard::loaded_by`), that binding's too.
+pub fn end_stand_in_load(into_outer: bool) {
   let mut state = state_mut!();
   let files = state.stand_in_load_files.pop().unwrap_or_default();
   if let Some(load) = state.stand_in_loads.pop() {
-    // (a stand-in it loads is part of its command set: the diagrams binding's `diagrams.tex`, whose names are
-    // Paul Taylor's package's, hep-ph9609379)
-    if let Some(outer) = state.stand_in_loads.last_mut() {
+    // (a stand-in its own code loads is part of its command set: the diagrams binding's `diagrams.tex`, whose names
+    // are Paul Taylor's package's, hep-ph9609379; not one a file it loads requests — OmniBus's aas_macros under
+    // asme2ej, 2309.12017, or nature-pre, 2102.01782, 2111.09589, swelled their sets from 22 and 3 names to 87 and 68)
+    if into_outer && let Some(outer) = state.stand_in_loads.last_mut() {
       outer.extend(load.iter().copied());
     }
     state.stand_in_last_load = load;
@@ -5549,11 +5492,14 @@ pub fn let_definition(token1: &Token, token2: &Token, scope: Option<Scope>) {
 
 pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   {
-    use crate::definition::origin::{DefinitionOrigin, current_origin};
-    if matches!(
-      current_origin(),
-      DefinitionOrigin::Unknown | DefinitionOrigin::Pool | DefinitionOrigin::Binding
-    ) && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    use crate::definition::origin::{DefinitionOrigin, current_origin, stand_in_loading};
+    // (only while a stand-in binding loads, whose `\let`s a copy may meet: not every `\newif` flag of the pool)
+    if stand_in_loading()
+      && matches!(
+        current_origin(),
+        DefinitionOrigin::Unknown | DefinitionOrigin::Pool | DefinitionOrigin::Binding
+      )
+      && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
     {
       let key = meaning_key(token1);
       state_mut!().binding_lets.insert(key);

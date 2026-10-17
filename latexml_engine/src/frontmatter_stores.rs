@@ -271,7 +271,66 @@ const WRITERS: &[&str] = &[
 
 /// The control sequences `body` reads: each one not written by a definer before it ([`WRITERS`]), and those named
 /// by characters — `\@ifundefined{@affil}` (apa6.cls:793), `\@nameuse{X}`, `\csname X\endcsname` — as `\X`.
-fn reads_of(body: &[Token]) -> Vec<Token> {
+fn reads_of(body: &[Token]) -> Vec<Token> { reads_of_branches(body, false) }
+
+/// The constant switch `t` is, with the branch it takes: an `\ifX` whose meaning is `\iftrue` or `\iffalse`, as
+/// `\newif` and kvoptions make them, `\iftrue`/`\iffalse` themselves included.
+fn constant_switch(t: &Token) -> Option<bool> {
+  match lookup_meaning(t) {
+    Some(Stored::Conditional(defn)) if defn.cs == T_CS!("\\iftrue") => Some(true),
+    Some(Stored::Conditional(defn)) if defn.cs == T_CS!("\\iffalse") => Some(false),
+    _ => None,
+  }
+}
+
+/// Is `t` a conditional — one that opens a `\fi` level, not `\else`, `\or`, `\fi` or the prefix `\unless`?
+fn opens_a_conditional(t: &Token) -> bool {
+  match lookup_meaning(t) {
+    Some(Stored::Conditional(defn)) => !["\\fi", "\\else", "\\or", "\\unless"]
+      .into_iter()
+      .any(|cs| defn.cs == T_CS!(cs)),
+    _ => false,
+  }
+}
+
+/// Does `t` write the control sequence after it — a definer of [`WRITERS`], or `\newif` — rather than read it?
+fn writes_next(t: &Token) -> bool { cs_in(t, WRITERS) || *t == T_CS!("\\newif") }
+
+/// The positions of `body` that are data rather than code: the name a definer writes ([`writes_next`]), and the
+/// source of a `\let` (`\let\ifX\iftrue`, `\let\a=\b`). A conditional there opens no level.
+fn data_positions(body: &[Token]) -> Vec<bool> {
+  let mut data = vec![false; body.len()];
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    i += 1;
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) || !writes_next(&t) {
+      continue;
+    }
+    let is_let = t == T_CS!("\\let") || t == T_CS!("\\futurelet");
+    // (`\renewcommand{\cs}`: the brace before the written name)
+    let mut written = 0;
+    while i < body.len() && written < if is_let { 2 } else { 1 } {
+      let next = body[i];
+      let skip = matches!(next.get_catcode(), Catcode::BEGIN | Catcode::SPACE)
+        || (is_let
+          && written == 1
+          && next.get_catcode() == Catcode::OTHER
+          && next.with_str(|s| s == "="));
+      if !skip {
+        data[i] = true;
+        written += 1;
+      }
+      i += 1;
+    }
+  }
+  data
+}
+
+/// [`reads_of`]; with `live`, a branch a constant switch does not take is not read ([`constant_switch`], `\unless`
+/// inverting it), and a conditional written as data opens no level ([`data_positions`]): the title page a copy's
+/// switches leave ([`copy_title_page_prints`]).
+fn reads_of_branches(body: &[Token], live: bool) -> Vec<Token> {
   let named = |from: usize, stop: &dyn Fn(&Token) -> bool| -> Option<(Token, usize)> {
     let mut name = String::new();
     let mut k = from;
@@ -286,6 +345,11 @@ fn reads_of(body: &[Token]) -> Vec<Token> {
       k += 1;
     }
     None
+  };
+  let data = if live {
+    data_positions(body)
+  } else {
+    Vec::new()
   };
   let mut out = Vec::new();
   let mut written = false;
@@ -305,6 +369,53 @@ fn reads_of(body: &[Token]) -> Vec<Token> {
     if cs_in(&t, WRITERS) {
       written = true;
       continue;
+    }
+    if live && !data[i - 1] {
+      // (`\unless\ifX`: the switch after it, inverted)
+      let (switch_at, inverted) = if t == T_CS!("\\unless") {
+        (i, true)
+      } else {
+        (i - 1, false)
+      };
+      if let Some(taken) = body
+        .get(switch_at)
+        .filter(|_| !data[switch_at])
+        .and_then(constant_switch)
+      {
+        // the switch's `\else` and `\fi`, at its own depth
+        let (mut depth, mut else_at, mut fi_at) = (0usize, None, None);
+        for (k, token) in body.iter().enumerate().skip(switch_at + 1) {
+          if data[k] || !matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+            continue;
+          }
+          match lookup_meaning(token) {
+            Some(Stored::Conditional(defn)) if defn.cs == T_CS!("\\fi") => {
+              if depth == 0 {
+                fi_at = Some(k);
+                break;
+              }
+              depth -= 1;
+            },
+            Some(Stored::Conditional(defn)) if defn.cs == T_CS!("\\else") => {
+              if depth == 0 && else_at.is_none() {
+                else_at = Some(k);
+              }
+            },
+            _ if opens_a_conditional(token) => depth += 1,
+            _ => {},
+          }
+        }
+        if let Some(fi_at) = fi_at {
+          let branch = if taken != inverted {
+            &body[switch_at + 1..else_at.unwrap_or(fi_at)]
+          } else {
+            else_at.map_or(&body[fi_at..fi_at], |at| &body[at + 1..fi_at])
+          };
+          out.extend(reads_of_branches(branch, live));
+          i = fi_at + 1;
+          continue;
+        }
+      }
     }
     if (t == T_CS!("\\@ifundefined") || t == T_CS!("\\@nameuse"))
       && body
@@ -327,6 +438,68 @@ fn reads_of(body: &[Token]) -> Vec<Token> {
     out.push(t);
   }
   out
+}
+
+/// Is `name` a page style's or a running head's (`\ps@…`, `\@oddhead`, …), which prints as the title page does?
+fn page_style_name(name: &str) -> bool {
+  name.starts_with("\\ps@")
+    || matches!(
+      name,
+      "\\@oddhead" | "\\@evenhead" | "\\@oddfoot" | "\\@evenfoot"
+    )
+}
+
+/// Does a stand-in's copy print the store `store` (`\@author`, `\@date`, `\@title`) — on its own title page (the
+/// `\maketitle`/`\@maketitle` it defined, `state::copy_provides_title_pages`) or in a page style a raw file defined, and
+/// every macro they reach that the copy (its own version of a name the binding owns, `copy_provides_overlaid_meaning`)
+/// or another raw file defined, read as `ClassReaders` reads a raw class (`reads_of`: `\csname…\endcsname`,
+/// `\@nameuse`), under the switches it set (a branch of a `\newif`/kvoptions flag that is now false is not printed,
+/// `reads_of_branches`)? A title-page name it reaches with neither a copy's nor a raw file's meaning is the
+/// binding's, which prints the frontmatter: the copy's `\renewcommand\maketitle{\begingroup\@maketitle\endgroup}`.
+/// `None` when no copy defined a title page (the binding's prints the frontmatter). atlasdoc.cls (2019, 1902.05892)
+/// prints `\@date` only in its `\ATLAS@TitleHeader` (:567, under `\ifADOC@datetop`), which its `\maketitle` (:716)
+/// calls only without `cernpreprint`; `\@author` under the title.
+pub fn copy_title_page_prints(store: &Token) -> Option<bool> {
+  let roots = copy_provides_title_pages();
+  let id = roots.first()?.0;
+  let target = store.get_cs_name();
+  let from_a_file = |stored: &Stored| match stored {
+    Stored::Expandable(defn) => defn.get_origin() == DefinitionOrigin::File,
+    _ => false,
+  };
+  let mut work: Vec<(u32, Tokens)> = roots;
+  for (key, stored) in current_meanings_where(from_a_file) {
+    if let Stored::Expandable(defn) = stored
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      && with(key, page_style_name)
+    {
+      work.push((id, body.clone()));
+    }
+  }
+  let mut seen: FxHashSet<SymStr> = FxHashSet::default();
+  while let Some((id, body)) = work.pop() {
+    for cs in reads_of_branches(body.unlist_ref(), true) {
+      let key = cs.get_cs_name();
+      if key == target {
+        return Some(true);
+      }
+      if !seen.insert(key) {
+        continue;
+      }
+      let meaning =
+        copy_provides_overlaid_meaning(id, &cs).or_else(|| lookup_meaning(&cs).filter(from_a_file));
+      match meaning {
+        Some(Stored::Expandable(defn)) => {
+          if let Some(ExpansionBody::Tokens(callee)) = defn.get_expansion() {
+            work.push((id, callee.clone()));
+          }
+        },
+        None if cs == T_CS!("\\maketitle") || cs == T_CS!("\\@maketitle") => return Some(true),
+        _ => {},
+      }
+    }
+  }
+  Some(false)
 }
 
 impl ClassReaders {

@@ -166,6 +166,9 @@ pub(crate) fn load() -> Result<()> {
       define_optional_internal(&inner, nargs, &body, star.is_some())?;
     }
     let cs_args = convert_latex_args(nargs, opt)?;
+    // (a stand-in's copy's `\DeclareRobustCommand\maketitle`, as its `\renewcommand`: its title page's body, not the
+    // robust wrapper's `\protect\maketitle␣`, `copy_title_page_prints`)
+    note_copy_provides_title_page(&cs, &body);
     // latex.ltx `\DeclareRobustCommand` → `\@star@or@long`: starred, the inner `\cs␣` is not `\long`.
     DefMacro!(cs, cs_args, body, robust => true, tex_declared => { star.is_some() && nargs > 0 });
   });

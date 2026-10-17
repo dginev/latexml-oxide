@@ -4169,6 +4169,13 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
     return;
   }
   let queue = frontmatter_queue_name();
+  note_document_sets_front_matter(
+    tag,
+    &attr
+      .and_then(|kv| kv.get_value("role"))
+      .map(|role| role.to_string())
+      .unwrap_or_default(),
+  );
   // Convert KeyVals to a hash, but be concerned about multiple values!?!?
   // (Perl: ToString($attr->getValue($_)) — the last value for multi-valued keys)
   let mut attr_hash = TagAttrs::default();
@@ -4214,12 +4221,51 @@ fn frontmatter_queue_name() -> &'static str {
   }
 }
 
+/// A frontmatter entry `tag` of role `role` (`""`: every role) is set — queued or removed — outside a stand-in copy's
+/// read ([`frontmatter_queue_name`]): the document's (or a binding's) setter call, whatever its value, replaces the
+/// class default the copy stored, as `\def\@date{#1}` does in TeX ([`hand_copy_frontmatter_defaults`]): `\date{}`
+/// removes the class's `\date{\today}`, and `\author{}`/`\title{}` theirs, though they queue nothing.
+fn note_document_sets_front_matter(tag: &str, role: &str) {
+  if definition::origin::copy_provides() != 0 {
+    // (the copy stored a default: from now on its kernel field's setter is observed, as a binding's `\author` may
+    // queue nothing for an empty call — inst_support's accumulates)
+    if !definition::origin::setter_watch() {
+      definition::origin::watch_setter_calls(&COPY_DEFAULT_SETTERS.map(|(setter, ..)| setter));
+    }
+  } else {
+    assign_value(
+      &s!("frontmatter_set:{tag}:{role}"),
+      true,
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// The kernel's fields a stand-in copy's setter stores a default of: setter, tag, role, store.
+const COPY_DEFAULT_SETTERS: [(&str, &str, &str, &str); 3] = [
+  ("\\author", "ltx:creator", "author", "\\@author"),
+  ("\\date", "ltx:date", "creation", "\\@date"),
+  ("\\title", "ltx:title", "", "\\@title"),
+];
+
+/// Did the document set a frontmatter entry `tag` of role `role` — call its setter (`state::setter_called`, the
+/// kernel's fields: whatever binding defines `\author`), or queue or remove one ([`note_document_sets_front_matter`];
+/// a role-less removal sets every role)?
+fn document_set_front_matter(tag: &str, role: &str) -> bool {
+  lookup_bool(&s!("frontmatter_set:{tag}:{role}"))
+    || (!role.is_empty() && lookup_bool(&s!("frontmatter_set:{tag}:")))
+    || COPY_DEFAULT_SETTERS
+      .iter()
+      .any(|(setter, t, r, _)| *t == tag && *r == role && setter_called(&T_CS!(setter)))
+}
+
 /// At `\maketitle` (`\lx@store@defaults`): hand a stand-in copy's frontmatter defaults (`frontmatter_queue_name`) to
-/// the document's frontmatter, each only when the document made no entry of its kind (tag and role: its own `\author`
-/// replaces the class's), and, for the kernel's fields, only when the copy's own title page prints the store
-/// (`state::copy_title_page_prints`; the binding's title page prints them when the copy defines none). Five ATLAS
-/// papers had the class's `<creator>` beside the document's (1805.01649, 1806.07355, 1807.02012, 1902.05892,
-/// 1904.03536) and a `<date>` the class does not print (1902.05892, 1904.03536).
+/// the document's frontmatter, each only when the document's setter made no call of its kind (tag and role: its own
+/// `\author` replaces the class's, an empty `\date{}` too, `document_set_front_matter`), and, for the kernel's fields,
+/// only when the copy's own title page prints the store (`frontmatter_stores::copy_title_page_prints`; the binding's
+/// title page prints them when the copy defines none). Five ATLAS papers had the class's `<creator>` beside the
+/// document's (1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536) and a `<date>` the class does not print
+/// (1902.05892, 1904.03536).
 pub fn hand_copy_frontmatter_defaults() {
   let defaults: Vec<RawFrontmatter> = match remove_value("frontmatter_copy_defaults") {
     Some(Stored::FrontmatterRaw(defaults)) => defaults,
@@ -4227,17 +4273,15 @@ pub fn hand_copy_frontmatter_defaults() {
   };
   for (tag, attr, command) in defaults {
     let role = attr.get("role").cloned().unwrap_or_default();
-    if has_front_matter_with_role(&tag, &role) {
+    if document_set_front_matter(&tag, &role) || has_front_matter_with_role(&tag, &role) {
       continue;
     }
-    let store = match (tag.as_str(), role.as_str()) {
-      ("ltx:creator", "author") => Some("\\@author"),
-      ("ltx:date", "creation") => Some("\\@date"),
-      ("ltx:title", _) => Some("\\@title"),
-      _ => None,
-    };
+    let store = COPY_DEFAULT_SETTERS
+      .iter()
+      .find(|(_, t, r, _)| *t == tag && (*r == role || r.is_empty()))
+      .map(|(.., store)| *store);
     if let Some(store) = store
-      && copy_title_page_prints(&T_CS!(store)) == Some(false)
+      && crate::frontmatter_stores::copy_title_page_prints(&T_CS!(store)) == Some(false)
     {
       Info!(
         "frontmatter",
@@ -4366,6 +4410,13 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
   if frontmatter_frozen_for_replay() {
     return;
   }
+  note_document_sets_front_matter(
+    tag,
+    attr
+      .iter()
+      .find(|(key, _)| *key == "role")
+      .map_or("", |(_, role)| role),
+  );
   with_value_mut(frontmatter_queue_name(), |val_opt| {
     if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
       queue.retain(|entry| {

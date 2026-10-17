@@ -175,6 +175,9 @@ impl Definition for Expandable {
 
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
+    if crate::definition::origin::setter_watch() {
+      note_setter_call(&self.cs);
+    }
     // Perl shortcut for "trivial" macros that were tracing- or
     // profiling-aware. Neither tracing nor profiling is implemented
     // in the Rust port (the returned `_tracing` / `_profiled` values
@@ -255,6 +258,9 @@ impl Definition for Expandable {
   /// body is pushed as stored, a body with parameters through its substitution plan
   /// ([`crate::gullet::unread_substituted`]). Closures and argument-only definitions take the general path.
   fn invoke_onto_input(&self, once_only: bool) -> Result<()> {
+    if crate::definition::origin::setter_watch() {
+      note_setter_call(&self.cs);
+    }
     if self.yields_calls
       && let Some(owner) = self.call_owner()?
     {

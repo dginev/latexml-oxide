@@ -373,39 +373,143 @@ fn ieeetran_paper_size_flags() {
 /// the class's title page prints it (atlasdoc.cls:189-190 `\author{The ATLAS Collaboration}`, `\date{\today}`; the 2019
 /// class's `\maketitle` prints `\@date` only in `\ATLAS@TitleHeader` under `datetop`, without `cernpreprint`, :567,
 /// :716; 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536). pdflatex: "DEFAULT DATE / T / Jane Doe";
-/// `[nodatetop]` with no `\author`: "T / The ATLAS Collaboration"; `[cernpreprint]`: "T / Jane Doe".
+/// `[nodatetop]` with no `\author`: "T / The ATLAS Collaboration"; `[cernpreprint]`: "T / Jane Doe". The document's
+/// call replaces the default whatever its value (72a r4; the reviewer's probe fm_dateempty): `\date{}`, `\author{}`
+/// and `\title{}` print none of the class's ("T / Jane Doe"; "DEFAULT DATE / T"; "DEFAULT DATE / Jane Doe"), and
+/// `\date{}` then `\date{X}` prints X. A copy title page that runs the binding's (`\begingroup\@maketitle\endgroup`,
+/// probe fm_kernelmt; or `\DeclareRobustCommand`'d) prints its defaults: "DEFAULT DATE / T / The ATLAS
+/// Collaboration". A switch the copy's title page tests with `\unless` takes its other branch: `\unless\ifADOC@datetop`
+/// prints no date.
 #[test]
 fn copy_setters_store_class_defaults() {
   let tex = repro!("frontmatter/copy_setters_store_class_defaults.tex");
   let cls = repro!("frontmatter/atlasdoc.cls");
+  let kernel_title_page = cls.replace(
+    "\\renewcommand{\\maketitle}{\\ifADOC@cernpreprint\\else\\ATLAS@TitleHeader\\fi\n  {\\centering\\@title\\par}{\\centering\\@author\\par}}",
+    "\\renewcommand{\\maketitle}{\\begingroup\\@maketitle\\endgroup}",
+  );
+  assert_ne!(kernel_title_page, cls);
   let creator =
     |name: &str| format!("<creator role=\"author\"><personname>{name}</personname></creator>");
-  let cases = [
-    (tex.to_string(), "Jane Doe", Some("DEFAULT DATE")),
+  let class = |options: &str| {
+    tex.replace(
+      "\\documentclass{atlasdoc}",
+      &format!("\\documentclass[{options}]{{atlasdoc}}"),
+    )
+  };
+  let date_set =
+    |date: &str| tex.replace("\\author{Jane Doe}", &format!("\\author{{Jane Doe}}{date}"));
+  // (tex, cls, title, author, date)
+  type Case<'a> = (
+    String,
+    String,
+    Option<&'a str>,
+    Option<&'a str>,
+    Option<&'a str>,
+  );
+  let cases: Vec<Case> = vec![
     (
-      tex
-        .replace(
-          "\\documentclass{atlasdoc}",
-          "\\documentclass[nodatetop]{atlasdoc}",
-        )
-        .replace("\\author{Jane Doe}", ""),
-      "The ATLAS Collaboration",
+      tex.to_string(),
+      cls.to_string(),
+      Some("T"),
+      Some("Jane Doe"),
+      Some("DEFAULT DATE"),
+    ),
+    (
+      class("nodatetop").replace("\\author{Jane Doe}", ""),
+      cls.to_string(),
+      Some("T"),
+      Some("The ATLAS Collaboration"),
       None,
     ),
     (
-      tex.replace(
-        "\\documentclass{atlasdoc}",
-        "\\documentclass[cernpreprint]{atlasdoc}",
+      class("cernpreprint"),
+      cls.to_string(),
+      Some("T"),
+      Some("Jane Doe"),
+      None,
+    ),
+    (
+      date_set("\\date{}"),
+      cls.to_string(),
+      Some("T"),
+      Some("Jane Doe"),
+      None,
+    ),
+    (
+      date_set("\\date{}\\date{X}"),
+      cls.to_string(),
+      Some("T"),
+      Some("Jane Doe"),
+      Some("X"),
+    ),
+    (
+      tex.replace("\\author{Jane Doe}", "\\author{}"),
+      cls.to_string(),
+      Some("T"),
+      None,
+      Some("DEFAULT DATE"),
+    ),
+    (
+      tex.replace("\\title{T}", "\\title{}"),
+      cls.replace(
+        "\\date{DEFAULT DATE}",
+        "\\date{DEFAULT DATE}\\title{DEFAULT TITLE}",
       ),
-      "Jane Doe",
+      None,
+      Some("Jane Doe"),
+      Some("DEFAULT DATE"),
+    ),
+    (
+      tex.replace("\\author{Jane Doe}", ""),
+      kernel_title_page.clone(),
+      Some("T"),
+      Some("The ATLAS Collaboration"),
+      Some("DEFAULT DATE"),
+    ),
+    (
+      tex.replace("\\author{Jane Doe}", ""),
+      kernel_title_page.replace(
+        "\\renewcommand{\\maketitle}",
+        "\\DeclareRobustCommand{\\maketitle}",
+      ),
+      Some("T"),
+      Some("The ATLAS Collaboration"),
+      Some("DEFAULT DATE"),
+    ),
+    (
+      tex.to_string(),
+      cls.replace(
+        "{\\ifADOC@datetop\\@date\\par\\fi}",
+        "{\\unless\\ifADOC@datetop\\@date\\par\\fi}",
+      ),
+      Some("T"),
+      Some("Jane Doe"),
       None,
     ),
   ];
-  for (tex, author, date) in cases {
-    let (log, xml) = convert_files_with(&tex, &[("atlasdoc.cls", cls)], Some("ar5iv.sty"));
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert_eq!(xml.matches("<creator ").count(), 1, "one creator: {xml}");
-    assert_element(&xml, "creator", &[], &creator(author));
+  for (tex, cls, title, author, date) in cases {
+    let (log, xml) = convert_files_with(&tex, &[("atlasdoc.cls", &cls)], Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{tex}\n{log}"
+    );
+    match title {
+      Some(title) => assert_element(&xml, "title", &[], &format!("<title>{title}</title>")),
+      None => assert!(!xml.contains("<title"), "no title: {tex}\n{xml}"),
+    }
+    match author {
+      Some(author) => {
+        assert_eq!(
+          xml.matches("<creator ").count(),
+          1,
+          "one creator: {tex}\n{xml}"
+        );
+        assert_element(&xml, "creator", &[], &creator(author));
+      },
+      None => assert!(!xml.contains("<creator"), "no creator: {tex}\n{xml}"),
+    }
     match date {
       Some(date) => assert_element(
         &xml,
@@ -413,7 +517,7 @@ fn copy_setters_store_class_defaults() {
         &[],
         &format!("<date role=\"creation\">{date}</date>"),
       ),
-      None => assert!(!xml.contains("<date"), "no date: {xml}"),
+      None => assert!(!xml.contains("<date"), "no date: {tex}\n{xml}"),
     }
   }
 }
@@ -460,6 +564,39 @@ fn spot_color_model_keeps_the_earlier_color() {
     log.contains(
       "Info:color:spotcolor Color accessblue of the driver's model 'spotcolor' is not rendered"
     ),
+    "{log}"
+  );
+}
+
+/// A spot colour whose name has no earlier definition takes the driver's alternate, the CMYK of its `\AddSpotColor`
+/// (spotcolor.sty:31-41, the spotcolor binding), and a spot colour no `\AddSpotColor` gave black, at Info (the
+/// reviewer's probe spot_new; ieeeaccess.cls:126-131's `PANTONE3015C`). pdflatex: 0 errors.
+#[test]
+fn spot_color_defined_first_takes_the_alternate() {
+  let (log, xml) = convert_files_with(
+    repro!("spotcolor/spot_color_defined_first_takes_the_alternate.tex"),
+    &[],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "text",
+    &["xml:id=\"p1.1.1\""],
+    "<text color=\"#0080CC\" xml:id=\"p1.1.1\">X</text>",
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    "<p xml:id=\"p1.1\"><text color=\"#0080CC\" xml:id=\"p1.1.1\">X</text> Y</p>",
+  );
+  assert!(
+    log.contains("Info:color:spotcolor Color myblue of the driver's model 'spotcolor' is not rendered; defined as its alternate cmyk 1,0.3,0,0.2"),
+    "{log}"
+  );
+  assert!(
+    log.contains("Info:color:spotcolor Color myother of the driver's model 'spotcolor' is not rendered; defined black"),
     "{log}"
   );
 }
@@ -528,6 +665,104 @@ fn copy_identity_by_declaration_and_command_set() {
       "p",
       &["xml:id=\"p1.1\""],
       &format!("<p xml:id=\"p1.1\">{text}</p>"),
+    );
+  }
+}
+
+/// A package option list keeps every special whose catcode is LETTER (`_` under `\ExplSyntaxOn`): fcs.cls:150
+/// `\LoadClass [ twoside, \g__fcs_article_fontsize_tl ] { article }` names its token list (2308.11432; the reviewer's
+/// probe expl_opts). pdflatex: "EXTRA".
+#[test]
+fn package_options_keep_expl_letters() {
+  let (log, xml) = convert_files_with(
+    repro!("options/package_options_keep_expl_letters.tex"),
+    &[("fcs.cls", repro!("options/fcs.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">EXTRA</p>",
+  );
+}
+
+/// amsart's `\copyrightinfo{}{}` adds no copyright: amsart.cls:723-725 `\@setcopyright` prints none without a year
+/// (jgcc.cls:397; 2309.03819, 2401.15504; Perl ams_support.sty.ltxml:139 adds ", ", KNOWN_PERL_ERRORS #959); a year
+/// and holder add "2020, Me". pdflatex: 0 errors.
+#[test]
+fn empty_copyrightinfo_adds_no_copyright() {
+  let tex = repro!("copyright/empty_copyrightinfo_adds_no_copyright.tex");
+  for (tex, copyright) in [
+    (tex.to_string(), None),
+    (
+      tex.replace("\\copyrightinfo{}{}", "\\copyrightinfo{2020}{Me}"),
+      Some("2020, Me"),
+    ),
+  ] {
+    let (log, xml) = convert_files_with(&tex, &[], Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    match copyright {
+      Some(text) => assert_element(
+        &xml,
+        "date",
+        &["role=\"copyright\""],
+        &format!("<date name=\"©\" role=\"copyright\">{text}</date>"),
+      ),
+      None => assert!(!xml.contains("role=\"copyright\""), "{xml}"),
+    }
+  }
+}
+
+/// A renamed copy of natbib is a stand-in for natbib (72a r4): the binding loads natbib's with the options the class
+/// gave the copy, and the copy only provides — its extra stands, natbib's names stay the binding's. bmvc2k_natbib.sty
+/// (bmvc2k.cls:710 `[sort,numbers]`; 2412.14509, 2212.00057, 2210.06270, 1501.07873, 2311.17607, 2406.08486) heads the
+/// bibliography "References"; NJDnatbib.sty (WileyNJDv5.cls:6021 `[numbers,super,…]`; 2609.08425, 2101.06297,
+/// 2211.16474, 2411.11493, 2206.08798, 2602.03829, 2408.07575, 2506.14995) "REFERENCES" in a chapterless class
+/// (NJDnatbib.sty:1050-1053). Read raw, their `\@ifundefined{chapter}` took the `\chapter*{\bibname}` branch:
+/// "Bibliography", `bib.bibx1`. pdflatex: "EXTRA [1]" / "References"; "EXTRA [1]" / "REFERENCES".
+#[test]
+fn renamed_natbib_copies_are_natbib() {
+  for (tex, file, copy, cite, title) in [
+    (
+      repro!("natbib_forks/bmvc2k_natbib_is_natbib.tex"),
+      "bmvc2k_natbib.sty",
+      repro!("natbib_forks/bmvc2k_natbib.sty"),
+      "<cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"a\" separator=\",\" show=\"Number\" yyseparator=\",\"/>]</cite>",
+      "References",
+    ),
+    (
+      repro!("natbib_forks/njdnatbib_is_natbib.tex"),
+      "NJDnatbib.sty",
+      repro!("natbib_forks/NJDnatbib.sty"),
+      "<cite class=\"ltx_citemacro_cite\"><sup xml:id=\"p1.1.1\"><bibref bibrefs=\"a\" separator=\",\" show=\"Number\" yyseparator=\",\"/></sup></cite>",
+      "REFERENCES",
+    ),
+  ] {
+    let (log, xml) = convert_files_with(tex, &[(file, copy)], Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{file}: {log}"
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      &format!("<p xml:id=\"p1.1\">EXTRA {cite}</p>"),
+    );
+    let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
+      .unwrap_or_else(|| panic!("no bibliography: {xml}"));
+    assert_element(
+      &bibliography,
+      "title",
+      &[],
+      &format!("<title>{title}</title>"),
+    );
+    assert!(
+      bibliography.contains("<bibitem key=\"a\" xml:id=\"bib.bib1\">"),
+      "{bibliography}"
     );
   }
 }

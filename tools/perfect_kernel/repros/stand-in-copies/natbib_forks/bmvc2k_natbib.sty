@@ -1,0 +1,21 @@
+\NeedsTeXFormat{LaTeX2e}[1995/06/01]
+\ProvidesPackage{bmvc2k_natbib}
+        [2007/10/30 8.1 (PWD)]
+\newif\ifNAT@numbers \NAT@numbersfalse
+\def\NAT@sort{0}
+\DeclareOption{numbers}{\NAT@numberstrue}
+\DeclareOption{sort}{\def\NAT@sort{1}}
+\ProcessOptions
+\providecommand\bibsection{}
+\@ifundefined{chapter}%
+  {\renewcommand\bibsection{\section*{\refname
+    \@mkboth{\MakeUppercase{\refname}}{\MakeUppercase{\refname}}}}}
+  {\@ifundefined{NAT@sectionbib}%
+    {\renewcommand\bibsection{\chapter*{\bibname
+     \@mkboth{\MakeUppercase{\bibname}}{\MakeUppercase{\bibname}}}}}
+    {\renewcommand\bibsection{\section*{\bibname
+     \ifx\@mkboth\@gobbletwo\else\markright{\MakeUppercase{\bibname}}\fi}}}}
+\providecommand\bibname{Bibliography}
+\providecommand\refname{References}
+\renewenvironment{thebibliography}[1]{\bibsection\list{\@biblabel{\@arabic\c@enumiv}}{\usecounter{enumiv}}}{\endlist}
+\newcommand\bmvcforkextra{EXTRA}

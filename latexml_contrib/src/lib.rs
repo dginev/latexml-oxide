@@ -168,6 +168,7 @@ pub mod alggeom_cls;
 pub mod assoccnt_sty;
 pub mod atlasdoc_cls;
 pub mod bidi_sty;
+pub mod bmvc2k_natbib_sty;
 pub mod cecs_cls;
 pub mod compositio_cls;
 pub mod czipreprint_cls;
@@ -231,6 +232,7 @@ pub mod needspace_sty;
 pub mod newpxmath_sty;
 pub mod nicematrix_sty;
 pub mod nicseries_cls;
+pub mod njdnatbib_sty;
 pub mod nlctuserguide_sty;
 pub mod nmbib_sty;
 pub mod nomentbl_sty;
@@ -280,6 +282,7 @@ pub mod scrpage_sty;
 pub mod scrreprt_cls;
 pub mod sourcecodepro_sty;
 pub mod spconf_sty;
+pub mod spotcolor_sty;
 pub mod tabls_sty;
 pub mod tac_cls;
 pub mod tagpdf_sty;
@@ -727,6 +730,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nic-series", "cls", nicseries_cls::load_definitions),
   ("czipreprint", "cls", czipreprint_cls::load_definitions),
   ("spconf", "sty", spconf_sty::load_definitions),
+  ("spotcolor", "sty", spotcolor_sty::load_definitions),
+  ("NJDnatbib", "sty", njdnatbib_sty::load_definitions),
+  ("bmvc2k_natbib", "sty", bmvc2k_natbib_sty::load_definitions),
   ("paspconf", "sty", paspconf_sty::load_definitions),
   ("INTERSPEECH2021", "sty", interspeech_sty::load_definitions),
   ("INTERSPEECH2022", "sty", interspeech_sty::load_definitions),

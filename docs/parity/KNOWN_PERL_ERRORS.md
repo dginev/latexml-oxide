@@ -15533,8 +15533,28 @@ Trigger: `\documentclass{article}\usepackage{color}\usepackage{spotcolor}\NewSpo
 \AddSpotColor{PANTONE}{PANTONE3015C}{PANTONE\SpotSpace 3015\SpotSpace C}{1 0.3 0 0.2}
 \definecolor{accessblue}{spotcolor}{PANTONE3015C,1.0}\begin{document}x\end{document}` — pdflatex 0 errors.
 
-Rust (72a r3): color_sty.rs `driver_color_model` — a model none of LaTeXML's that a `\color@<model>` stands for (no
-xcolor) leaves the name's earlier definition in force (the driver's colour is not rendered), logged at Info. Witnesses:
-ieeeaccess.cls:126-131 (its CMYK `accessblue` first, then the spot one): 2007.03025, 2009.04554, 2011.07807,
-2209.03883, 2209.12464, 2609.20467. Repro stand-in-copies/spotcolor/spot_color_model_keeps_the_earlier_color; guard
-`perfect_kernel_batch72a::spot_color_model_keeps_the_earlier_color`.
+Rust (72a r3, r4): color_sty.rs `driver_color_model` — a model none of LaTeXML's that a `\color@<model>` stands for (no
+xcolor) leaves the name's earlier definition in force (the driver's colour is not rendered), logged at Info; a name
+it defines first takes the alternate the model's binding gives (`driver_alternate_color`,
+`\lx@color@alternate@<model>`: the spotcolor binding keeps each `\AddSpotColor`'s CMYK, spotcolor.sty:31-41, scaled
+by the tint), else black, at Info. Witnesses: ieeeaccess.cls:126-131's spot `accessblue` (the `\else` branch; :123
+is the `\ifjtehm` CMYK), after which the colour that stands is the ieeeaccess binding's CMYK (ieeeaccess_cls.rs:32,
+the spot colour's alternate): 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467. Repros
+stand-in-copies/spotcolor/; guards `perfect_kernel_batch72a::spot_color_model_keeps_the_earlier_color`,
+`::spot_color_defined_first_takes_the_alternate`.
+
+## 959. amsart's `\copyrightinfo` with an empty year adds a copyright ", "
+
+ams_support.sty.ltxml:139 `DefMacro('\copyrightinfo{}{}', '\lx@add@copyright{#1, #2}')` adds the copyright whatever
+its arguments, so a class's empty default — jgcc.cls:397 `\copyrightinfo{}{}` — becomes `<date role="copyright">,
+</date>`. amsart.cls:723-725 `\@setcopyright` prints none without a year (`\ifx\@empty\copyrightyear`), and none
+without a series logo (`\ifx\@empty\@serieslogo`, :724; amsart.cls:666-668 leaves it empty for a plain article):
+the copyright the frontmatter keeps is metadata, not the page.
+
+Trigger: `\documentclass{amsart}\copyrightinfo{}{}\begin{document}\title{T}\maketitle x\end{document}` — Perl
+`<date name="©" role="copyright">, </date>`; pdflatex prints none.
+
+Rust (72a r3, r4): ams_support_sty.rs `\lx@ams@add@copyright`, the one empty-year test of both `\copyrightinfo`s
+(ams_support's and the amsart class internals'): no copyright without a year. Witnesses 2309.03819, 2401.15504
+(jgcc.cls). Repro stand-in-copies/copyright/empty_copyrightinfo_adds_no_copyright; guard
+`perfect_kernel_batch72a::empty_copyrightinfo_adds_no_copyright`.

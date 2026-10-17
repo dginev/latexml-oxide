@@ -3003,11 +3003,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
 - **72a** (a stand-in binding's shipped copy adds its extras; OXIDIZED_DESIGN_DIVERGENCES #731; census
-  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-3). After
+  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-4). After
   a binding on `AUTHOR_FILE_STAND_INS` loads, the paper's copy is read raw (content.rs `read_stand_in_copy`) when it is
   the file the binding stands in for (`copy_is_the_stood_in_file`, r3: its `\Provides(Expl)…` names the file, the
   binding or a file the binding loads — 2308.11432's `\ProvidesExplClass{fcs}`, 2011.13564's IEEEtai.cls declaring
-  IEEEtran —, else it defines a quarter of the binding's public command set, a nested stand-in's included; a binding
+  IEEEtran —, r4: a declared macro read as its definition, cimart.cls:13-14, 2412.00032 —, else it defines a quarter
+  of the binding's public command set, a stand-in its own code loads included, not one a file it loads requests: r4,
+  OmniBus's aas_macros had swelled asme2ej's and nature-pre's sets, 2309.12017, 2102.01782, 2111.09589; a binding
   with no command set reads no undeclared copy); its definitions of names the binding owns hold only inside its own
   code (state.rs `note_copy_provides_assignment`; the binding's OmniBus base and its own `\let`s included, a `\let`
   alias of an overlaid name restored with it: astro-ph0011001's `\subjectheadings`), its extras stand, its
@@ -3015,17 +3017,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   r1 evidence), its nested loads are real loads, its own Errors stay Errors (user ruling 2026-10-17); its
   `\usepackage` lines take the dependency scan's `\ver@` test; a counter is the binding's only when the binding's own
   load numbered it (r3 main-session call: 2112.14648 numbers (2.1) as its PDF); a frontmatter setter it calls stores
-  a class default that the document's own call replaces and that shows at `\maketitle` only where the copy's title
-  page prints it (r3: atlasdoc.cls:189-190 gave two `<creator>`s and an unprinted `<date>` in 1805.01649, 1806.07355,
-  1807.02012, 1902.05892, 1904.03536). Binding fixes from the copies' Errors: WileyNJDv5 loads lettersp in the class's
+  a class default that the document's own call replaces, whatever its value (r4: decided by the call — `\date{}`,
+  `\author{}`, `\title{}`; the kernel fields' setters observed in `Expandable::invoke` once a copy stored a default),
+  and that shows at `\maketitle` only where the copy's title page prints it (r3: atlasdoc.cls:189-190 gave two
+  `<creator>`s and an unprinted `<date>` in 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536; r4: the walk
+  reads as K11's `ClassReaders` does, `\unless` and data conditionals handled, and a title page that runs the
+  binding's `\@maketitle` prints the defaults). Binding fixes from the copies' Errors: WileyNJDv5 loads lettersp in the class's
   order (:377, before :6820's algorithms), pnas-new passes titlesec's `explicit` (:229), IEEEtran declares its
   paper-size flags (KNOWN_PERL_ERRORS #957), crckapb autoloads natbib's `\citeyear`/`\citeauthor`, a `\definecolor` of
-  a driver's model (spotcolor.sty:71 `\color@spotcolor`) keeps the earlier colour (KNOWN_PERL_ERRORS #958; the six
-  ieeeaccess papers), amsart's `\copyrightinfo{}{}` adds no copyright (amsart.cls:723; jgcc.cls:397), a package
-  option list keeps the letters of `\ExplSyntaxOn` (fcs.cls:150 `\LoadClass[…\g__fcs_article_fontsize_tl]`).
-  Census A/B (the 400 `conv_sel.tsv` papers) vs 67int21, Errors kept: E 590 → 203, 61 papers E-better, 0
-  E-worse, 0 newly Fatal; words −4,485 (56 papers) / +19,039 (66); instructions +3.4 %; 76 census and review witnesses 227 → 8 Errors,
-  0 worse. Open: (a) aipcheck.tex:53-54 reads a pre-2020 `\fmtversion` (0806.2199; no longer read: its binding has
+  a driver's model (spotcolor.sty:71 `\color@spotcolor`) keeps the earlier colour, or, defined first, takes the
+  model's alternate (r4: a spotcolor binding keeps `\AddSpotColor`'s CMYK; KNOWN_PERL_ERRORS #958; the six
+  ieeeaccess papers), amsart's `\copyrightinfo{}{}` adds no copyright (amsart.cls:723-725; jgcc.cls:397;
+  KNOWN_PERL_ERRORS #959), a package option list keeps every special whose catcode is LETTER (fcs.cls:150
+  `\LoadClass[…\g__fcs_article_fontsize_tl]` under `\ExplSyntaxOn`), and (r4) the renamed natbib copies
+  NJDnatbib.sty and bmvc2k_natbib.sty are stand-in bindings loading natbib's (contrib `njdnatbib_sty.rs`,
+  `bmvc2k_natbib_sty.rs`): the 14 papers whose raw fork headed the references "Bibliography" with `bib.bibxN` ids
+  (2412.14509, 2212.00057, 2210.06270, 1501.07873, 2311.17607, 2406.08486; 2101.06297, 2211.16474, 2411.11493,
+  2206.08798, 2602.03829, 2408.07575, 2609.08425, 2506.14995) are "References" with `bib.bibN` and natbib's
+  semantic cites (bmvc's numeric `[N]` as its PDF, NJD's superscripts).
+  Census A/B (the 400 `conv_sel.tsv` papers) vs 67int21, Errors kept (r4): E 590 → 203, 61 papers E-better, 0
+  E-worse, 0 newly Fatal; words −7,166 (64 papers) / +18,648 (64), the r4 change being the 10 census fork papers'
+  natbib labels (raw `[An et al.(2021)An, Zhu, …]` tags become natbib's number/authors/year tags); instructions
+  +3.4 %; the 91 census, review and r4 witnesses 0 worse. Costs (faithful loads): atlasdoc +26-33 % (its
+  `\LoadClass{scrartcl}`, atlasdoc.cls:319), 2309.03819 +65 % (jgcc.cls:52's tikz), 2609.08425 +37 % (WileyNJDv5's
+  unconditional loads; one Warning for its unclosed `\if@large@design`, :4748-4844, which xelatex reports too). Open: (a) aipcheck.tex:53-54 reads a pre-2020 `\fmtversion` (0806.2199; no longer read: its binding has
   no command set); (b) a shipped file of the stood-in name that is another file (hep-ph9609379's diagrams.sty,
   2411.02780's annotate-equations.sty as equations.sty) is not read at all, where TeX reads it raw; (c) extras defined
   inside an owned body stay unreachable (neurips `\TEST` 2406.07381, `\ADDRESS` 1909.08174; spconf's `\thetitle` from
@@ -3033,7 +3048,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `~` shorthand, `\active@prefix~\active@char~`, reaches the kernel's `\lx@NBSP` as `\normal@char~` but sets a space:
   every non-breaking space of 2609.08425, whose WileyNJDv5 copy loads babel); (e) 2609.08425's WileyNJDv5.cls loads
   fontspec, xunicode, mathastext, microtype, geometry… unconditionally under its `LATO2COL` option (:670-680; a
-  XeLaTeX paper: pdflatex stops at fontspec), +37 % instructions, faithful.
+  XeLaTeX paper: pdflatex stops at fontspec), +37 % instructions, faithful; (f) NJDnatbib's chapterless "REFERENCES"
+  heading (:1050-1053) waits for the kernel to leave `\chapter` undefined in a chapterless class (2609.08425 is
+  "References"; the separate `\chapter` kernel batch); (g) ws-rv-har.sty (World Scientific's natbib derivative,
+  1602.07982, 2301.03442) is another renamed natbib copy read raw, not bound; (h) a second `\author` keeps both under
+  the inst_support binding (accumulating, as for llncs-style `\author` per author; pdflatex atlasdoc keeps the last).
   Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
 
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;

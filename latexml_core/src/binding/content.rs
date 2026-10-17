@@ -824,8 +824,12 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
   } else {
     // (what a binding standing in for an author's file defines is its own, which the paper's copy read after it only
     // provides: `read_stand_in_copy`)
-    let _stand_in = crate::binding::author_files::stands_in_for_an_author_file(&filename)
-      .then(crate::definition::origin::StandInLoadGuard::new);
+    let _stand_in =
+      crate::binding::author_files::stands_in_for_an_author_file(&filename).then(|| {
+        crate::definition::origin::StandInLoadGuard::loaded_by(
+          crate::definition::origin::stand_in_loader_own_code(),
+        )
+      });
     match _load_binding(false, &filename, options.reloadable).and_then(|ext| match ext {
       Some(source) => Ok(Some(source)),
       None => _load_binding(true, &filename, options.reloadable),
@@ -2169,7 +2173,32 @@ fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
       .split(['\n', '\r'])
       .map(|line| line.split('%').next().unwrap_or(""))
   };
-  let declared = lines().find_map(|code| PROVIDES.captures(code).map(|cap| stem(&cap[1])));
+  // (a declaration naming a macro reads its expansion, as `\ProvidesClass` does: cimart.cls:13-14
+  // `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`, 2412.00032)
+  let expansion = |name: &str| {
+    let def = Regex::new(&s!(
+      r"\\[egx]?def\s*{}\s*\{{\s*([^{{}}\s]+)\s*\}}|\\(?:re)?newcommand\*?\s*\{{?\s*{}\s*\}}?\s*\{{\s*([^{{}}\s]+)\s*\}}",
+      regex::escape(name),
+      regex::escape(name)
+    ))
+    .ok()?;
+    lines().find_map(|code| {
+      def
+        .captures(code)
+        .and_then(|cap| cap.get(1).or_else(|| cap.get(2)))
+        .map(|value| value.as_str().to_string())
+    })
+  };
+  let declared = lines().find_map(|code| {
+    PROVIDES.captures(code).map(|cap| {
+      let name = &cap[1];
+      if name.starts_with('\\') {
+        stem(&expansion(name).unwrap_or_else(|| name.to_string()))
+      } else {
+        stem(name)
+      }
+    })
+  });
   let built_on = stand_in_built_on();
   if let Some(declared) = &declared
     && (*declared == stem(file)

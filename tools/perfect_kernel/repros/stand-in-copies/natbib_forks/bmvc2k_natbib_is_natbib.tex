@@ -1,0 +1,17 @@
+% witness: 2412.14509, 2212.00057, 2210.06270, 1501.07873, 2311.17607, 2406.08486 (bmvc2k.cls:710
+%          `\usepackage[sort,numbers]{bmvc2k_natbib}`; bmvc2k_natbib.sty:29 `\ProvidesPackage{bmvc2k_natbib}`, :779
+%          `\@ifundefined{chapter}`)
+% oracle:  pdflatex 0 errors: "EXTRA [1]" and a "References" heading (2412.14509's PDF: "[21]", "References")
+% engines: rust 72a r3 = the fork read raw: a "Bibliography" heading (LaTeXML's \chapter is always defined),
+%          bib.bibx1, author-year labels
+% expect:  0 errors, 0 warnings; the natbib binding's numeric cite, "References", bib.bib1; the copy's extra
+% status:  RED (72a r3) -> GREEN (72a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[sort,numbers]{bmvc2k_natbib}
+\begin{document}
+\bmvcforkextra{} \cite{a}
+\begin{thebibliography}{1}
+\bibitem{a} X.~An. A title. 2021.
+\end{thebibliography}
+\end{document}

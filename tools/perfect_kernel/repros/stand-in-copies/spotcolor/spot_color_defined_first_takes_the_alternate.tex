@@ -1,0 +1,18 @@
+% witness: 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467 (ieeeaccess.cls:126-131's spot
+%          colour, here with no earlier definition of the name: the reviewer's probe spot_new)
+% oracle:  pdflatex 0 errors (the PANTONE 3015 C X; a viewer without the ink shows the CMYK 1 0.3 0 0.2 alternate)
+% engines: rust 72a r3 = 1 Error "Can't find color myblue" (no earlier definition to keep)
+% expect:  0 errors, 0 warnings; X in the CMYK alternate; Y (a spot colour no \AddSpotColor gave) black
+% status:  RED (72a r3) -> GREEN (72a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{color}
+\usepackage{spotcolor}
+\NewSpotColorSpace{PANTONE}
+\AddSpotColor{PANTONE} {PANTONE3015C} {PANTONE\SpotSpace 3015\SpotSpace C} {1 0.3 0 0.2}
+\SetPageColorSpace{PANTONE}
+\definecolor{myblue}{spotcolor}{PANTONE3015C,1.0}
+\definecolor{myother}{spotcolor}{PANTONE123C,1.0}
+\begin{document}
+\textcolor{myblue}{X} \textcolor{myother}{Y}
+\end{document}

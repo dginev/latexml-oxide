@@ -248,9 +248,12 @@ LoadDefinitions!({
     "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\
      \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}");
 
-  // amsart.cls:723-727 `\@setcopyright` prints the copyright only with a year (`\ifx\@empty\copyrightyear\else`): a
-  // class's `\copyrightinfo{}{}` default (jgcc.cls:397; 2309.03819, 2401.15504) prints nothing.
-  DefMacro!("\\copyrightinfo{}{}", "\\if\\relax\\detokenize{#1}\\relax\\else\\lx@add@copyright{#1, #2}\\fi");
+  // amsart.cls:723-725 `\@setcopyright` prints the copyright only with a year (`\ifx\@empty\copyrightyear\else`; and
+  // only with a series logo, `\ifx\@empty\@serieslogo`, which the frontmatter keeps as metadata): a class's
+  // `\copyrightinfo{}{}` default (jgcc.cls:397; 2309.03819, 2401.15504) adds none. Perl ams_support.sty.ltxml:139 adds
+  // ", " (KNOWN_PERL_ERRORS #959). The one empty-year test, the amsart variant's too (`amsart_class_internals`).
+  DefMacro!("\\lx@ams@add@copyright{}{}", "\\if\\relax\\detokenize{#1}\\relax\\else\\lx@add@copyright{#1, #2}\\fi");
+  DefMacro!("\\copyrightinfo{}{}", "\\lx@ams@add@copyright{#1}{#2}");
 
   def_macro_noop("\\pagespan{}{}")?; // ?
   DefMacro!("\\PII{}",  "\\lx@add@classification[scheme=PII]{#1}");
@@ -635,7 +638,7 @@ pub fn amsart_class_internals() -> Result<()> {
   // :685-689: `\copyrightinfo` sets the two as well as the copyright.
   DefMacro!(
     "\\copyrightinfo{}{}",
-    "\\def\\copyrightyear{#1}\\@ifnotempty{#2}{\\def\\copyrightholder{#2}}\\@ifnotempty{#1}{\\lx@add@copyright{#1, #2}}"
+    "\\def\\copyrightyear{#1}\\@ifnotempty{#2}{\\def\\copyrightholder{#2}}\\lx@ams@add@copyright{#1}{#2}"
   );
   // amsart.cls:645: `\@maketitle` runs `\@setabstract` after the title (here `\lx@maketitle@body`, sect05.rs).
   AddToMacro!("\\lx@maketitle@body", "\\@setabstract");
