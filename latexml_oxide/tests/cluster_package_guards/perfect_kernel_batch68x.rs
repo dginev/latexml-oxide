@@ -9,9 +9,15 @@
 //! Item 5 — smfart's `{altabstract}` a second abstract (2506.20120); projlib-author's `\address` lines the author's
 //! (2609.02711). Item 6 — mathtools.sty's internals papers and witharrows call after `\MHInternalSyntaxOn`. Item 7 — a
 //! plain-locked binding a file's `\let` clears comes back when the file's new meaning is refused (eulerpx `\mathscr`).
+//! Round 2 (the review): a class default the title page does not print is no frontmatter, and a store the title page
+//! prints in one line with a value the frontmatter does not carry stays the line's (tlp 1209.2617); the document's own
+//! clearing `\let` keeps the binding aside too; whole-element mathtools assertions, `\MH_end_cases:`; cjs-rcs's keywords
+//! "." and `{classification}`.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use latexml::util::test::{assert_element, normalize_markup};
+use latexml::util::test::{
+  assert_element, convert_files_with, error_count, normalize_markup, warning_count,
+};
 
 use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
@@ -171,8 +177,10 @@ fn babel_iflanguage_expands_in_an_edef() {
 
 /// class-bindings/cjs_rcs_article_abstracts_keywords: the class's environ-collected `{englishabstract}`,
 /// `{frenchabstract}` and `{keywords}` are the frontmatter's two abstracts, each in its language and named as the class
-/// names it, and its keywords joined by "; " (pdflatex: "Abstract The English abstract." "Résumé Le résumé français."
-/// "Keywords Functional data; Time series."). Before 68x all three were lost (2608.13762).
+/// names it, its keywords joined by "; " and ended by "." as the class's list (cjs-rcs-article.cls:387-393), and its
+/// `{classification}` (:394-404) the frontmatter's classification named "MSC2020" (pdflatex: "Abstract The English
+/// abstract." "Résumé Le résumé français." "Keywords Functional data; Time series." "MSC2020 62R10; 62M10."). Before
+/// 68x all three were lost (2608.13762); the "." and the classification since 68x r2.
 #[test]
 fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
   // (the three Warnings are memoir.cls's, which the class loads: :5454 `\newif \@iffirstamp`, :7811
@@ -205,7 +213,13 @@ fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
     &xml,
     "keywords",
     &[],
-    r#"<keywords name="Keywords">Functional data; Time series</keywords>"#,
+    r#"<keywords name="Keywords">Functional data; Time series.</keywords>"#,
+  );
+  assert_element(
+    &xml,
+    "classification",
+    &[],
+    r#"<classification name="MSC2020">62R10; 62M10.</classification>"#,
   );
   assert_eq!(xml.matches("<item ").count(), 2, "{xml}");
 }
@@ -261,9 +275,11 @@ fn projlib_author_lines_are_the_authors_contacts() {
   );
 }
 
-/// package-bindings/mathtools_internals_after_internal_syntax: `\MT_start_cases:nnnn`, `\MT_matrix_begin:N`/`\MT_matrix_end:`,
+/// package-bindings/mathtools_internals_after_internal_syntax: `\MT_start_cases:nnnn` (a renewed `{dcases}`, and a
+/// copied cases environment ending in `\MH_end_cases:\right.`), `\MT_matrix_begin:N`/`\MT_matrix_end:`,
 /// `\MT_delim_default_inner_wrappers:n` and witharrows's `show_only_refs` test work as with mathtools.sty (pdflatex 0
-/// errors). Before 68x 18 Errors (1906.10268, 1905.08664, 1704.08847, 2012.15617).
+/// errors): each cases array is fenced by its `{`, the paired delimiters are `\mathopen`/`\mathclose` fences. Before 68x
+/// 18 Errors (1906.10268, 1905.08664, 1704.08847, 2012.15617).
 #[test]
 fn mathtools_internals_after_internal_syntax_are_defined() {
   let xml = assert_elements(
@@ -272,15 +288,25 @@ fn mathtools_internals_after_internal_syntax_are_defined() {
     ),
     RAW,
     (0, 0),
-    &[],
+    &[
+      (
+        "Math",
+        "S0.Ex1.m1",
+        r#"<Math mode="display" tex="f(x)=\begin{cases}1&amp;x&gt;0\\&#10;0&amp;x\leq 0\end{cases}" text="f@(x) = cases@(1, x &gt; 0, 0, x &lt;= 0)" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">f</XMTok><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMDual><XMApp><XMTok meaning="cases"/><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4"/><XMRef idref="S0.Ex1.m1.5"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="true">{</XMTok><XMArray><XMRow><XMCell align="left"><XMTok meaning="1" role="NUMBER" xml:id="S0.Ex1.m1.2">1</XMTok></XMCell><XMCell align="left"><XMApp xml:id="S0.Ex1.m1.3"><XMTok meaning="greater-than" role="RELOP">&gt;</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="0" role="NUMBER">0</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="left"><XMTok meaning="0" role="NUMBER" xml:id="S0.Ex1.m1.4">0</XMTok></XMCell><XMCell align="left"><XMApp xml:id="S0.Ex1.m1.5"><XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="0" role="NUMBER">0</XMTok></XMApp></XMCell></XMRow></XMArray></XMWrap></XMDual></XMApp></XMath></Math>"#,
+      ),
+      (
+        "Math",
+        "S0.Ex2.m1",
+        r#"<Math mode="display" tex="g(x)=\begin{cases}2&amp;x&gt;1\\&#10;3&amp;x\leq 1\end{cases}" text="g@(x) = cases@(2, x &gt; 1, 3, x &lt;= 1)" xml:id="S0.Ex2.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp><XMTok font="italic" role="UNKNOWN">g</XMTok><XMDual><XMRef idref="S0.Ex2.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.1">x</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMDual><XMApp><XMTok meaning="cases"/><XMRef idref="S0.Ex2.m1.2"/><XMRef idref="S0.Ex2.m1.3"/><XMRef idref="S0.Ex2.m1.4"/><XMRef idref="S0.Ex2.m1.5"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="true">{</XMTok><XMArray><XMRow><XMCell align="left"><XMTok meaning="2" role="NUMBER" xml:id="S0.Ex2.m1.2">2</XMTok></XMCell><XMCell align="left"><XMApp xml:id="S0.Ex2.m1.3"><XMTok meaning="greater-than" role="RELOP">&gt;</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align="left"><XMTok meaning="3" role="NUMBER" xml:id="S0.Ex2.m1.4">3</XMTok></XMCell><XMCell align="left"><XMApp xml:id="S0.Ex2.m1.5"><XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMCell></XMRow></XMArray></XMWrap></XMDual></XMApp></XMath></Math>"#,
+      ),
+      (
+        "Math",
+        "S0.Ex4.m1",
+        r#"<Math mode="display" tex="\mathopen{\langle}u,v\mathclose{\rangle}" text="delimited-⟨⟩@(list@(u, v))" xml:id="S0.Ex4.m1"><XMath><XMDual><XMApp><XMTok meaning="delimited-⟨⟩"/><XMRef idref="S0.Ex4.m1.1"/></XMApp><XMWrap><XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok><XMDual xml:id="S0.Ex4.m1.1"><XMApp><XMTok meaning="list"/><XMRef idref="S0.Ex4.m1.2"/><XMRef idref="S0.Ex4.m1.3"/></XMApp><XMWrap><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex4.m1.2">u</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex4.m1.3">v</XMTok></XMWrap></XMDual><XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok></XMWrap></XMDual></XMath></Math>"#,
+      ),
+    ],
   );
-  for tex in [
-    r#"tex="f(x)=\begin{cases}1&amp;x&gt;0\\&#10;0&amp;x\leq 0\end{cases}""#,
-    r#"tex="\mathopen{\langle}u,v\mathclose{\rangle}""#,
-  ] {
-    assert!(xml.contains(tex), "{tex}\n{xml}");
-  }
-  assert!(xml.contains("<XMTok") && !xml.contains("ERROR"), "{xml}");
+  assert!(!xml.contains("ERROR"), "{xml}");
 }
 
 /// macro-state/plain_locked_binding_cleared_by_a_file_comes_back: eulerpx.sty:130-132 clears the kernel's `\mathscr` and
@@ -302,4 +328,57 @@ fn a_plain_locked_binding_a_file_cleared_comes_back() {
   ] {
     assert!(xml.contains(letter), "{letter}\n{xml}");
   }
+}
+
+/// macro-state/plain_locked_binding_cleared_by_the_document_comes_back: the DOCUMENT's own `\let` clearing a plain-locked
+/// kernel binding, whose `\DeclareMathAlphabet` of the name the lock refuses: the binding comes back as for a file's
+/// (pdflatex: a calligraphic L, an rsfs script M). 68x r1 kept it aside for a file's `\let` only: `\mathcal` undefined
+/// (1 Error), `\mathscr` italic (review 68x probe p6).
+#[test]
+fn a_plain_locked_binding_the_document_cleared_comes_back() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/plain_locked_binding_cleared_by_the_document_comes_back.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  for letter in [
+    r#"<XMTok font="caligraphic" role="UNKNOWN">L</XMTok>"#,
+    r#"<XMTok font="script" role="UNKNOWN">M</XMTok>"#,
+  ] {
+    assert!(xml.contains(letter), "{letter}\n{xml}");
+  }
+}
+
+/// class-bindings/tlp/tlp_placeholders_and_date_line: the tlp binding reads tlp.cls raw (here the class's shapes, the
+/// paper ships it): the class's placeholders the document never set (tlp.cls:697-728, read by its running head only)
+/// are no frontmatter, and its date line (:627) prints whole, as pdflatex prints it: "submitted 30 November 2010;
+/// revised 14 November 2011; accepted 4 July 2012". 68x r1: pubnotes "TLP 1 (1): 1–000, January 20XX. …" and
+/// "1 (1)", and "submitted 30 November 2010; revised ; accepted" (1209.2617).
+#[test]
+fn tlp_placeholders_stay_and_its_date_line_is_whole() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/tlp/tlp_placeholders_and_date_line.tex"
+    ),
+    &[(
+      "tlp.cls",
+      include_str!("../../../tools/perfect_kernel/repros/class-bindings/tlp/tlp.cls"),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert!(
+    !xml.contains("<pubnote") && !xml.contains("<date "),
+    "{xml}"
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    r#"<p xml:id="p1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1">submitted 30 November 2010; revised 14 November 2011; accepted 4 July 2012</text></p>"#,
+  );
 }

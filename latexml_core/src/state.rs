@@ -4907,9 +4907,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     } else {
       drop_copies_lock_aside(&cs);
     }
-  } else if crate::definition::origin::current_origin()
-    != crate::definition::origin::DefinitionOrigin::Document
-    && !state_is_unlocked()
+  } else if !state_is_unlocked()
     && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
     && (matches!(meaning, Stored::None) || x_equals(token2, &crate::T_CS!("\\relax")))
     && !is_cleared_meaning(token1)
@@ -4920,7 +4918,12 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     // and back in place when the file's own new meaning is refused ([`restore_cleared_binding`]): eulerpx.sty:130-132
     // `\let\mathscr=\undefined` then `\DeclareMathAlphabet\mathscr{U}{zeus}{m}{n}`, which the lock on the kernel's
     // `\mathscr` (sect07.rs) refuses, left `\mathscr` undefined, an Error at every use (2311.14793, 2501.10505,
-    // 2510.26876; KNOWN_PERL_ERRORS #863). OXIDIZED_DESIGN #569.
+    // 2510.26876; KNOWN_PERL_ERRORS #863). OXIDIZED_DESIGN #569. The document's own `\let` too, at every origin: the
+    // plain lock refuses the document's redefinition as it refuses a file's (`\let\mathcal\undefined
+    // \DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}` left `\mathcal` undefined; `\let\mathscr\relax` before
+    // `\DeclareMathAlphabet{\mathscr}{U}{rsfs}{m}{n}` lost its script font), and a stale binding a package's
+    // group-local clear set aside is replaced by the current one. A document value-definition after the restore still
+    // reaches the binding's call owner (OXIDIZED_DESIGN #500). The `:locked@files` branch above keeps its origin test.
     let cleared_key = token1.with_cs_name(|cs| s!("{cs}:locked@cleared"));
     assign_value(&cleared_key, binding, Some(Scope::Global));
   }

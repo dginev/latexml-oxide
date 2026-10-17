@@ -2448,11 +2448,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (latexml_core/src/binding/content.rs) fires the title-page store reroutes at the end of a class load for the class a
   binding read raw (`UNCLAIMED_RAW_CLASS_READS`, claimed by the nearest enclosing class load), after the binding, whose
   own setters `store_setters::mark_bound` keeps; the explicit `\lx@class@loaded@raw` calls in apa6_cls.rs (apa, apa6),
-  beilstein_cls.rs and lni_cls.rs are gone. Byte-identical output vs 67int16 on 60 papers (the four bindings'
-  witnesses 2102.04789, 1710.04173, 1811.01821, 2011.06172, 1401.2054, 1402.6720, 1605.09288, 1609.04156, 1203.0762,
-  2608.21389; 20 apa6/apa/lni/beilstein papers from rawcls3/list3362.tsv; 31 papers of the other bindings that read
-  their class raw: memoir, KOMA, apa7, jinst, compositio, …). Repro class-bindings/lni_subtitle_through_k11; guard
-  `perfect_kernel_batch68x::a_class_a_binding_reads_raw_reroutes_its_stores`. (2) aguplus (OXIDIZED_DESIGN_DIVERGENCES #659): a
+  beilstein_cls.rs and lni_cls.rs are gone. Output identical to 67int16 on the four bindings' witnesses (2102.04789,
+  1710.04173, 1811.01821, 2011.06172, 1401.2054, 1402.6720, 1605.09288, 1609.04156, 1203.0762, 2608.21389) and 20
+  apa6/apa/lni/beilstein papers from rawcls3/list3362.tsv; not for every binding that reads its class raw (~25: memoir,
+  KOMA, apa7, jinst, compositio, tlp, …): apa7 gains its `\shorttitle` as `<toctitle>` (2609.00670, 2609.02899,
+  2609.12869, 2609.19448), and tlp (1209.2617) had its class placeholders made pubnotes and its date line cut, fixed in
+  round 2 (OXIDIZED_DESIGN_DIVERGENCES #662: a class default is handed only when its title page or a page style prints it; a store the
+  title page prints in one line with a value the frontmatter does not carry stays the line's). Repros
+  class-bindings/{lni_subtitle_through_k11, tlp/tlp_placeholders_and_date_line}; guards
+  `perfect_kernel_batch68x::{a_class_a_binding_reads_raw_reroutes_its_stores,
+  tlp_placeholders_stay_and_its_date_line_is_whole}`. (2) aguplus (OXIDIZED_DESIGN_DIVERGENCES #659): a
   binding over the raw class (latexml_contrib aguplus_cls.rs) — natbib's binding with `square` for the class's natbib
   7.0 copy (aguplus.cls:861-1173), the AGUTeX title page as the AAS binding's (`\affil`, `\altaffilmark`/`\altaffiltext`,
   dates, `\slugcomment`), `\authoraddr` (agupp.sty:154-158, printed by the class after the references) placed with the
@@ -2471,7 +2476,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch68x::apa6_note_and_authornote_are_frontmatter_notes`. (4) cjs-rcs-article (OXIDIZED_DESIGN_DIVERGENCES #660): a binding over
   the raw class (cjs_rcs_article_cls.rs) — the environ-collected `{englishabstract}`/`{frenchabstract}`/`{keywords}`
   (cls:379-386) handed to the frontmatter: two abstracts with `xml:lang` and babel's heading ("Résumé"), the keywords'
-  items joined by "; " (:387-393); and babel_support's `\iflanguage` expandable for a known language (babel.sty:562-568;
+  items joined by "; " and ended by "." (:387-393, `after={.}`), `{classification}` (:394-404) the frontmatter's
+  classification named by `\CJS@classifname` ("MSC2020" by default; round 2); and babel_support's `\iflanguage` expandable for a known language (babel.sty:562-568;
   KNOWN_PERL_ERRORS #861: Perl's `\edef\@@@@lang` errs inside cls:368's `\edef`). 2608.13762: 4 → 3 errors (the 3 left
   are body math), abstracts 0 → 2, keywords 0 → 1. Repros class-bindings/cjs_rcs_article_abstracts_keywords,
   babel-lang/iflanguage_expands_in_edef; guards `perfect_kernel_batch68x::{cjs_rcs_abstracts_and_keywords_are_frontmatter,
@@ -2487,13 +2493,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   tests them — 13 papers: 2012.15617, 2206.15309, 2309.00504, 2507.07065; the switches set the boolean only, the binding
   keeps every tag), `\MT_delim_default_inner_wrappers:n` (:829-841; xfunctions.sty — 14: 1704.08847, 1609.02993,
   2310.09182), `\MT_start_cases:nnnn` (:995-1008, as `\newcases` opens `\lx@ams@cases` — 13: 1906.10268, 2011.05472,
-  2310.19169), `\MT_matrix_begin:N`/`\MT_matrix_end:` (:1039-1043 — 5: 1905.08664, 2307.06921) and the short-intertext
-  dimens (:1483-1484; 2109.05369). KNOWN_PERL_ERRORS #862. Repro package-bindings/mathtools_internals_after_internal_syntax;
+  2310.19169; its end `\MH_end_cases:`, :1009-1013, since round 2, the `\right` after it the cases' own fence),
+  `\MT_matrix_begin:N`/`\MT_matrix_end:` (:1039-1043 — 5: 1905.08664, 2307.06921) and the short-intertext dimens
+  (:1483-1484; 2109.05369). KNOWN_PERL_ERRORS #862. Repro package-bindings/mathtools_internals_after_internal_syntax;
   guard `perfect_kernel_batch68x::mathtools_internals_after_internal_syntax_are_defined`. (7) eulerpx `\mathscr` (OXIDIZED_DESIGN_DIVERGENCES
   #569 extended; KNOWN_PERL_ERRORS #863): a plain-locked binding a file's `\let` clears is kept aside and put back when
   the file's new meaning is refused (state.rs `let_i`); eulerpx.sty:130-132's cleared `\mathscr` is the kernel's again
-  (2311.14793, 2501.10505, 2510.26876: 1 → 0 errors). Repro macro-state/plain_locked_binding_cleared_by_a_file_comes_back;
-  guard `perfect_kernel_batch68x::a_plain_locked_binding_a_file_cleared_comes_back`.
+  (2311.14793, 2501.10505, 2510.26876: 1 → 0 errors); since round 2 the document's own clearing `\let` too (the plain
+  lock refuses its redefinition as well: `\let\mathcal\undefined \DeclareMathAlphabet{\mathcal}…` left `\mathcal`
+  undefined, Perl the same, KNOWN_PERL_ERRORS #863). Repros macro-state/plain_locked_binding_cleared_by_{a_file,
+  the_document}_comes_back; guards `perfect_kernel_batch68x::{a_plain_locked_binding_a_file_cleared_comes_back,
+  a_plain_locked_binding_the_document_cleared_comes_back}`.
 
   class-bindings/{arxbj_author_command_over_elsart_theorem, quantumarticle_doi_detokenized};
   guards `perfect_kernel_batch68w::{apacite_*, declaregraphicsrule_*, dcolumn_*, arxbj_*, quantumarticle_*}`.

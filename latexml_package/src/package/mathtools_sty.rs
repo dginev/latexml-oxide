@@ -101,7 +101,10 @@ LoadDefinitions!({
   // so a switch sets the boolean only. The paired-delimiter wrappers (:829-841 `\MT_delim_default_inner_wrappers:n`)
   // a document's own delimiter machinery builds on (xfunctions.sty `\DeclareNameWithDelimiters`: 1704.08847, 1609.02993,
   // 2310.09182). The matrix begin and end code (:1039-1043; mymatrix.sty's `{bsmallmatrix}`: 1905.08664, 2307.06921).
-  // The short-intertext separations (:1483-1484; 2109.05369's own `\shortintertext`).
+  // The short-intertext separations (:1483-1484; 2109.05369's own `\shortintertext`). The cases end code (:1009-1013
+  // `\MH_end_cases:`, which a copied `\newcases` body ends with, `{\MH_end_cases:\right#6}`, :1018): the end of the
+  // binding's `\lx@ams@cases` that `\MT_start_cases:nnnn` opens; the `\right` closing its `\left` is the cases' own
+  // fence there, so a null `\right.` goes and any other delimiter stays, unfenced, after the cases.
   RawTeX!(r"\MHInternalSyntaxOn
 \MH_new_boolean:n {show_only_refs}
 \MH_new_boolean:n {show_manual_tags}
@@ -123,6 +126,9 @@ LoadDefinitions!({
   \MH_let:NwN \@ifnextchar \MH_nospace_ifnextchar:Nnn
   \array{*\c@MaxMatrixCols #1}}
 \def\MT_matrix_end:{\endarray \hskip -\arraycolsep}
+\def\MH_end_cases:{\lx@end@ams@cases\lx@mt@cases@right}
+\def\lx@mt@cases@right{\@ifnextchar\right\lx@mt@cases@right@{}}
+\def\lx@mt@cases@right@\right#1{\ifx.#1\else#1\fi}
 \newdimen\l_MT_above_shortintertext_sep
 \newdimen\l_MT_below_shortintertext_sep
 \MHInternalSyntaxOff");

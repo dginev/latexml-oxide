@@ -1,12 +1,12 @@
 % mechanism: documents and packages call mathtools.sty's internals after `\MHInternalSyntaxOn` (mhsetup syntax):
-%   `\MT_start_cases:nnnn` (:995-1008) to redefine a cases environment, `\MT_matrix_begin:N`/`\MT_matrix_end:`
+%   `\MT_start_cases:nnnn` (:995-1008) to redefine a cases environment (and `\MH_end_cases:`, :1009-1013, to end their own), `\MT_matrix_begin:N`/`\MT_matrix_end:`
 %   (:1039-1043) for their own matrices, `\MT_delim_default_inner_wrappers:n` (:829-841) for their own delimiters, and
 %   witharrows.sty:1119-1124 tests the `show_only_refs` boolean (:252) and calls `\MT_showonlyrefs_false:` (:280). The
 %   binding is native and defined none of them; now it defines them as mathtools.sty does (the cases begin code as its
 %   `\newcases` does; the showonlyrefs switches set the boolean only).
 % witness: 1906.10268, 2011.05472 (cases); 1905.08664 (matrix); 1704.08847 (delimiters); 2012.15617, 2507.07065
 %   (witharrows); 2109.05369 (`\l_MT_above_shortintertext_sep`) — 43 run-365 papers
-% oracle:  pdflatex: 0 errors; the dcases, the bracketed 2x2 matrix, "⟨u, v⟩", the arrow display
+% oracle:  pdflatex: 0 errors; the dcases, the copied cases, the bracketed 2x2 matrix, "⟨u, v⟩", the arrow display
 % engines: rust 67int16: 18 Errors (undefined internals, then `#`, `$`, `\MH_else:`/`\MH_fi:` outside a conditional);
 %   perl: the mathtools binding defines none of them either (mhsetup's syntax unbound, KNOWN_PERL_ERRORS #693)
 % expect:  0 errors, 0 warnings
@@ -23,6 +23,9 @@
     {$\m@th\displaystyle##$\hfil}
     {\lbrace}
  }
+\newenvironment{mycases}
+ {\MT_start_cases:nnnn{\quad}{$\m@th\displaystyle##$\hfil}{$\m@th\displaystyle##$\hfil}{\lbrace}}
+ {\MH_end_cases:\right.}
 \newenvironment{mysmallmatrix}[1][c]
 {\left[\MT_matrix_begin:N #1}
   {\MT_matrix_end:\right]}
@@ -33,6 +36,7 @@
 \DeclareTwo\pair{\langle}{\rangle}
 \begin{document}
 \[ f(x) = \begin{dcases} 1 & x > 0 \\ 0 & x \le 0 \end{dcases} \]
+\[ g(x) = \begin{mycases} 2 & x > 1 \\ 3 & x \le 1 \end{mycases} \]
 \[ M = \begin{mysmallmatrix} a & b \\ c & d \end{mysmallmatrix} \]
 \[ \pair{u,v} \]
 \begin{DispWithArrows}

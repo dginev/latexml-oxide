@@ -17227,7 +17227,14 @@ on the kernel's `\mathscr` (sect07.rs), left `\mathscr` undefined (2311.14793, 2
 KNOWN_PERL_ERRORS #863). The binding, not the refused redefinition, is what comes back: the lock keeps the kernel's
 semantic markup, and Euler Script is a script alphabet as the binding's is. Repro
 macro-state/plain_locked_binding_cleared_by_a_file_comes_back; guard
-`perfect_kernel_batch68x::a_plain_locked_binding_a_file_cleared_comes_back`.
+`perfect_kernel_batch68x::a_plain_locked_binding_a_file_cleared_comes_back`. The plain lock refuses the document's
+redefinition as it refuses a file's, so the document's own clearing `\let` keeps the binding aside too (68x r2; the
+`:locked@files` branch keeps its origin test, since that lock leaves the document free): `\let\mathcal\undefined
+\DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}` left `\mathcal` undefined, `\let\mathscr\relax` before
+`\DeclareMathAlphabet{\mathscr}{U}{rsfs}{m}{n}` lost the script font; a binding a package's group-local clear set aside
+is replaced by the current one. A document value-definition after the restore still reaches the binding's call owner
+(#500). Repro macro-state/plain_locked_binding_cleared_by_the_document_comes_back; guard
+`perfect_kernel_batch68x::a_plain_locked_binding_the_document_cleared_comes_back`.
 
 ### 570. The caption-label hoist closes its test before the caption is digested (Perl: inside it)
 
@@ -18534,3 +18541,29 @@ projlib_author_sty.rs reads the package raw and, for each of the four it provide
 its kind (`\lx@add@affiliation`, `\lx@add@address`, `\lx@add@currentaddress`, `\lx@add@email`), given to the author
 it follows. Repros class-bindings/{smfart_altabstract, projlib_author_address}; guards
 `perfect_kernel_batch68x::{smfart_altabstract_is_a_second_abstract, projlib_author_lines_are_the_authors_contacts}`.
+
+### 662. K11 hands a class default to the frontmatter only when the class's title page or page styles print it, and leaves a store the title page prints in one line with a value the frontmatter does not carry (Perl: no reroute)
+
+K11 (frontmatter_stores.rs) reroutes a raw class's title-page stores — under the rawclasses lever and, since 68x, for
+the class a binding reads raw. A store the document never set kept the class's default, which the kernel's
+`\maketitle` handed to the frontmatter (`\lx@store@defaults`; lion-msc.cls:200 `\gdef\@affiliation{Huygens-Kamerlingh
+Onnes Laboratory, …}`, which pdflatex prints). A default is now handed only when the class prints the store
+(`ClassReaders::printed`: every macro a raw file defined that the title-page roots — `\@maketitle` of any origin, a
+binding's too: titling_sty.rs's reads lion-msc's `\posttitle` — or its page styles (`\ps@…`, `\@oddhead`, …: gGAF2e's
+`\ps@plain` prints its `\@jname` default, 2304.14584, 2512.18461) reach; `read_by_the_title_page`): tlp.cls:697-728's
+placeholders `\@volume` "1 (1)", `\@journal` "TLP 1 (1): 1–000, January 20XX. © 20XX Cambridge University Press DOI:
+10.1017/S147106840100xxxx", read only by the running head that its `\@j@urnal` switch (:760-764) does not even print
+without `prodtf`, became pubnotes in 1209.2617 once the tlp binding's raw read went through K11 (68x r1). And a store
+the title page prints in one line with a value of the class's that the frontmatter does not carry — another
+parameterless macro a raw file defined, not a rerouted store nor a kernel field, in the innermost group around the
+store's read (`prints_in_a_line_with_another_value`; a written store, ptptex.cls:110 `\gdef\@abst{}`, is no read) — is
+not rerouted: it is part of the class's line. tlp.cls:627 `{\it submitted \@submitted; revised \@revised; accepted
+\@accepted}` (`\submitted` is no table setter) printed "submitted 30 November 2010; revised ; accepted" with the
+other two in `<date>`s; now the line is whole, as pdflatex prints it, and the dates stay in it. One rule for both
+paths: under the lever a raw class's defaults and lines are read the same way. Why not "only stores the document
+set": the lever path's lion-msc default (pinned by `class_census::k11_class_default_store`) and gGAF2e's journal name
+are printed by pdflatex. A default read only through a token register is not seen: sig-alternate.cls:1640's DOI
+placeholder "10.1145/1235", printed in its `\copyrightetc` box (:1653-1663), is no longer a pubnote (1710.01977).
+68x's binding-read K11 also gives apa7 its `\shorttitle` as `<toctitle>` (2609.00670, 2609.02899, 2609.12869,
+2609.19448). Repro class-bindings/tlp/tlp_placeholders_and_date_line (a tlp.cls with the class's shapes: the paper
+ships it); guard `perfect_kernel_batch68x::tlp_placeholders_stay_and_its_date_line_is_whole`.

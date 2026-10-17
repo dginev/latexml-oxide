@@ -14550,3 +14550,9 @@ agree already.
 Rust (68w r2, natbib_sty.rs `\cite`): parenthetical whenever an optional argument was given; numeric and super modes
 unchanged. Repro package-bindings/natbib_cite_optional_is_parenthetical; guard
 `perfect_kernel_batch68w::natbib_cite_with_an_optional_argument_is_parenthetical`.
+
+The document's own clear is the same defect, since the lock refuses the document's redefinition too: `\let\mathcal
+\undefined \DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}` in the preamble, then `$\mathcal{L}$` — pdflatex a
+calligraphic L, Perl `Error:undefined:\mathcal` (and `\let\mathscr\relax` before `\DeclareMathAlphabet{\mathscr}{U}
+{rsfs}{m}{n}` an italic M). Fixed in Rust (68x r2): kept aside at every origin. Guard
+`perfect_kernel_batch68x::a_plain_locked_binding_the_document_cleared_comes_back`.

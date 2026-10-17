@@ -1243,9 +1243,11 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       // binding reads raw (apa6.cls, apa.cls, beilstein.cls, lni.cls, memoir.cls,
       // …), whose stores reach the frontmatter as under the lever (68u: lni
       // lost `\subtitle`; apa6 its `\shorttitle`/`\affiliation`/`\authornote`).
-      // A binding's read is rerouted here, after the binding loaded, so a setter
-      // the binding defined — before or after its read — is the binding's
-      // (`store_setters::mark_bound` above), never a store.
+      // A binding's read is rerouted here, after the binding loaded: a setter
+      // the binding defined after its read, or before it and the class left
+      // alone, is the binding's (`store_setters::mark_bound` above), never a
+      // store; one the raw class redefined after the binding defined it is the
+      // class's, and rerouted as the class's store.
       let binding_read_a_class =
         is_binding && UNCLAIMED_RAW_CLASS_READS.get() > raw_class_reads_before;
       if binding_read_a_class {

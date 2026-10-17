@@ -245,6 +245,10 @@ fn setter_stores(cs: &Token) -> Result<Option<(Tokens, usize, Vec<Token>)>> {
 struct ClassReaders {
   /// The title-page code, by name.
   title_page: FxHashSet<SymStr>,
+  /// What the class prints: every macro a raw file defined that the title-page roots — of any origin, a binding's
+  /// `\@maketitle` too (titling_sty.rs's, which `\lx@deposit@maketitle` runs) — or the class's page styles (`\ps@…`,
+  /// `\@oddhead`, …) reach, and what those roots read themselves.
+  printed:    FxHashSet<SymStr>,
   /// For each control sequence, the macros a raw file defined that read it (itself, when it reads itself).
   readers:    HashMap<SymStr, Vec<SymStr>>,
 }
@@ -358,16 +362,48 @@ impl ClassReaders {
         }
       }
     }
-    let mut title_page: FxHashSet<SymStr> = FxHashSet::default();
-    let mut joined: Vec<SymStr> = [
+    const ROOTS: [&str; 3] = [
       "\\lx@dropped@maketitle",
       "\\@maketitle",
       "\\lx@dropped@@maketitle",
-    ]
-    .into_iter()
-    .map(|root| T_CS!(root).get_cs_name())
-    .filter(|root| callees.contains_key(root) && title_page.insert(*root))
-    .collect();
+    ];
+    let mut printed: FxHashSet<SymStr> = FxHashSet::default();
+    let mut reached: Vec<SymStr> = Vec::new();
+    for root in ROOTS {
+      let root = T_CS!(root);
+      let name = root.get_cs_name();
+      if callees.contains_key(&name) {
+        reached.push(name);
+      } else if let Some(Stored::Expandable(defn)) = lookup_meaning(&root)
+        && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      {
+        for read in reads_of(body.unlist_ref()) {
+          reached.push(read.get_cs_name());
+        }
+      }
+    }
+    // The page styles print too: the running heads and feet a class defines (gGAF2e.cls:1085-1099 `\ps@plain`'s head
+    // prints its `\@jname` default, "Geophysical and Astrophysical Fluid Dynamics": 2304.14584, 2512.18461).
+    reached.extend(callees.keys().copied().filter(|cs| {
+      with(*cs, |name| {
+        name.starts_with("\\ps@")
+          || matches!(
+            name,
+            "\\@oddhead" | "\\@evenhead" | "\\@oddfoot" | "\\@evenfoot"
+          )
+      })
+    }));
+    while let Some(cs) = reached.pop() {
+      if printed.insert(cs) {
+        reached.extend(callees.get(&cs).into_iter().flatten().copied());
+      }
+    }
+    let mut title_page: FxHashSet<SymStr> = FxHashSet::default();
+    let mut joined: Vec<SymStr> = ROOTS
+      .into_iter()
+      .map(|root| T_CS!(root).get_cs_name())
+      .filter(|root| callees.contains_key(root) && title_page.insert(*root))
+      .collect();
     while let Some(cs) = joined.pop() {
       for callee in callees.get(&cs).into_iter().flatten().copied() {
         if title_page.contains(&callee) || !callees.contains_key(&callee) {
@@ -385,7 +421,7 @@ impl ClassReaders {
         }
       }
     }
-    ClassReaders { title_page, readers }
+    ClassReaders { title_page, printed, readers }
   }
 
   /// Is `store` read by the title-page code and by nothing else a raw file defined?
@@ -396,6 +432,99 @@ impl ClassReaders {
       .is_some_and(|readers| {
         !readers.is_empty() && readers.iter().all(|cs| self.title_page.contains(cs))
       })
+  }
+
+  /// The title-page macros that read `store`, with their bodies.
+  fn title_page_readers(&self, store: &Token) -> Vec<Tokens> {
+    let Some(readers) = self.readers.get(&store.get_cs_name()) else {
+      return Vec::new();
+    };
+    readers
+      .iter()
+      .filter(|cs| self.title_page.contains(*cs))
+      .filter_map(
+        |cs| match lookup_meaning(&T_CS!(&with(*cs, |name| name.to_string()))) {
+          Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+            Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+            _ => None,
+          },
+          _ => None,
+        },
+      )
+      .collect()
+  }
+
+  /// Does the class print `store` — its title page or a page style ([`ClassReaders::printed`])? A store left at the
+  /// class's default is printed only there, if at all: tlp.cls:697-728's `\@volume`, `\@doi`, `\@journal`
+  /// placeholders ("TLP 1 (1): 1–000, January 20XX") are read by its `\@journal` running head, which the class's own
+  /// `\@j@urnal` switch (:760-764) does not print without its `prodtf` option (1209.2617); lion-msc.cls:200's
+  /// `\@affiliation` default is printed by its `\posttitle` (:244-275), which titling's `\@maketitle` reads; gGAF2e's
+  /// `\@jname` by its `\ps@plain` head.
+  fn read_by_the_title_page(&self, store: &Token) -> bool {
+    let name = store.get_cs_name();
+    self.printed.contains(&name)
+      || self
+        .readers
+        .get(&name)
+        .is_some_and(|readers| readers.iter().any(|cs| self.printed.contains(cs)))
+  }
+
+  /// Does the title page print `store` in one line with a value of the class's the frontmatter does not carry — in the
+  /// innermost group around the store, another parameterless macro a raw file defined, not one of `carried`? Such a
+  /// store is part of the class's line and stays with it: tlp.cls:627 `{\affilsize\it submitted \@submitted; revised
+  /// \@revised; accepted \@accepted}`, where `\submitted` is no title-page setter of the table — handing on the other
+  /// two left "submitted 30 November 2010; revised ; accepted" in the body (1209.2617).
+  fn prints_in_a_line_with_another_value(
+    &self,
+    store: &Token,
+    carried: &dyn Fn(&Token) -> bool,
+  ) -> bool {
+    let uncarried_value = |t: &Token| {
+      t != store
+        && t.get_catcode() == Catcode::CS
+        && t.with_str(|s| s.starts_with("\\@"))
+        && !carried(t)
+        && match lookup_meaning(t) {
+          Some(Stored::Expandable(defn)) => {
+            defn.get_origin() == DefinitionOrigin::File
+              && defn
+                .get_parameters()
+                .is_none_or(|p| p.get_parameters().is_empty())
+              && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(_)))
+          },
+          _ => false,
+        }
+    };
+    self.title_page_readers(store).iter().any(|body| {
+      let body = body.unlist_ref();
+      let mut open: Vec<usize> = Vec::new();
+      for (k, t) in body.iter().enumerate() {
+        // (a store written, ptptex.cls:110 `\gdef\@abst{}`, is not printed there)
+        let written = || {
+          body[..k]
+            .iter()
+            .rev()
+            .find(|b| b.get_catcode() != Catcode::SPACE)
+            .is_some_and(|b| cs_in(b, WRITERS))
+        };
+        match t.get_catcode() {
+          Catcode::BEGIN => open.push(k),
+          Catcode::END => {
+            open.pop();
+          },
+          _ if t == store && !written() => {
+            if let Some(&start) = open.last()
+              && let Some(end) = group_end(body, start)
+              && body[start..end].iter().any(uncarried_value)
+            {
+              return true;
+            }
+          },
+          _ => {},
+        }
+      }
+      false
+    })
   }
 }
 
@@ -483,13 +612,40 @@ fn reroute_kernel_field_setters(cls: &str) -> Result<()> {
 pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
   let mut rerouted: Vec<&str> = Vec::new();
   let mut readers: Option<ClassReaders> = None;
+  let mut setters = Vec::new();
   for (name, api) in STORE_SETTERS {
     if defined_by_a_binding(name)? {
       continue;
     }
-    let Some((store, arg, store_cs)) = store_setter_body(name, &mut readers)? else {
+    if let Some(setter) = store_setter_body(name, &mut readers)? {
+      setters.push((*name, *api, setter));
+    }
+  }
+  // What the frontmatter carries: these setters' stores and the kernel's fields, which the deposit nulls.
+  let carried_stores: Vec<Token> = setters
+    .iter()
+    .map(|(_, _, (_, _, store_cs))| *store_cs)
+    .chain(["\\@title", "\\@author", "\\@date", "\\@thanks"].map(|cs| T_CS!(cs)))
+    .collect();
+  let carried = |t: &Token| carried_stores.contains(t);
+  for (name, api, (store, arg, store_cs)) in setters {
+    let readers = readers.get_or_insert_with(ClassReaders::survey);
+    if readers.prints_in_a_line_with_another_value(&store_cs, &carried) {
+      Info!(
+        "frontmatter",
+        cls,
+        s!(
+          "The raw class's \\{name} stays the class's: its title page prints it in one line with another value"
+        )
+      );
       continue;
-    };
+    }
+    // A store the document never set is handed on at `\maketitle` only when the title page prints it.
+    assign_value(
+      &s!("lx_store_title_page_reads_{name}"),
+      readers.read_by_the_title_page(&store_cs),
+      Some(Scope::Global),
+    );
     assign_value(
       &s!("lx_store_cs_{name}"),
       Stored::String(pin(
@@ -555,7 +711,8 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
     // which `\@maketitle` typesets; nulled in the deposit, it reached neither
     // the frontmatter nor the body. The kernel `\maketitle` hands it to the
     // frontmatter (`\lx@store@defaults` in `\lx@maketitle@body`, sect05.rs),
-    // as pdflatex prints it only there.
+    // as pdflatex prints it only there — when the title page prints it
+    // (`lx_store_title_page_reads_<name>`, set above; 1209.2617's tlp placeholders are its running head's).
     assign_value(
       "lx_rerouted_stores",
       Stored::String(pin(captured.join(","))),
@@ -1659,8 +1816,9 @@ fn store_value(name: &str) -> Result<Option<Tokens>> {
 /// one (`at_maketitle` false; again at insertion, a no-op once read): hand the captured stores not yet handed on to their
 /// frontmatter API, once — every creator-annotating or creator-making store the document set (in
 /// the order it set them), and, only at `\maketitle` (nothing reads one otherwise), any store left
-/// at its class default (lion-msc.cls:196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes
-/// Laboratory, …}`, which pdflatex prints). A blank store is skipped. The creator-making stores go
+/// at its class default that the title page prints (lion-msc.cls:196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes
+/// Laboratory, …}`, which pdflatex prints; not tlp.cls:697-728's running-head placeholders,
+/// `ClassReaders::read_by_the_title_page`). A blank store is skipped. The creator-making stores go
 /// after the annotating ones when there is an author (their annotations stay the authors'), before
 /// them when there is none (an affiliation then annotates the speaker); a creator-annotating store
 /// with no creator at all is not handed on and stays the class's to print.
@@ -1735,6 +1893,12 @@ pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
       }
     } else if !creates_a_creator(name) && lookup_bool(&s!("lx_store_set_{name}")) {
       // handed on when it was set
+      continue;
+    }
+    // A class default only the title page prints (`ClassReaders::read_by_the_title_page`).
+    if !lookup_bool(&s!("lx_store_set_{name}"))
+      && !lookup_bool(&s!("lx_store_title_page_reads_{name}"))
+    {
       continue;
     }
     assign_value(&s!("lx_store_handed_{name}"), true, Some(Scope::Global));

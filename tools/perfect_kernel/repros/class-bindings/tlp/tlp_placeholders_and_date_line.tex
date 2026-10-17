@@ -1,0 +1,27 @@
+% mechanism: K11 for a class a binding reads raw (latexml_contrib tlp_cls.rs reads tlp.cls over OmniBus). The class's
+%   placeholders for stores the document never set (tlp.cls:697-728 `\gdef\@volume{{\bfseries 1} (1)}`, `\@doi`,
+%   `\@journal` "TLP 1 (1): 1–000, January 20XX") are read by its running head, which pdflatex prints only under
+%   `prodtf` (:760-764), never by its title page: a store left at its class default is handed to the frontmatter
+%   only when the title page prints it (`ClassReaders::read_by_the_title_page`). Its date line (:627 `{\it submitted
+%   \@submitted; revised \@revised; accepted \@accepted}`) prints `\@revised`/`\@accepted` with `\@submitted`, which
+%   no table setter carries: the two stay the line's (`prints_in_a_line_with_another_value`), not "revised ; accepted".
+%   This tlp.cls holds the real class's shapes (the paper ships tlp.cls; it is not in TeX Live).
+% witness: 1209.2617
+% oracle:  pdflatex: 0 errors; head "Under consideration for publication in Theory and Practice of Logic Programming";
+%   "The Title" / "Ann Able" / "submitted 30 November 2010; revised 14 November 2011; accepted 4 July 2012"
+% engines: rust 68x r1: pubnotes "TLP 1 (1): 1–000, January 20XX. … DOI: 10.1017/S147106840100xxxx …" and "1 (1)",
+%   dates revised/accepted, body "submitted 30 November 2010; revised ; accepted"; 67int16 and perl: no pubnotes, the
+%   date line whole
+% expect:  0 errors, 0 warnings; no <pubnote>, no <date role="revised">; the date line whole
+% status:  RED (68x r1) -> GREEN (68x r2)
+% preload: ar5iv.sty
+\documentclass{tlp}
+\title{The Title}
+\author{Ann Able}
+\submitted{30 November 2010}
+\revised{14 November 2011}
+\accepted{4 July 2012}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
