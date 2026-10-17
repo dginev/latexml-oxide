@@ -2556,6 +2556,23 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\label{refs}\section*{References}` keeps `bib`/`bib.bibN` (OD #653). Repro
   index-bib/heading_inside_thebibliography_label_before; guard
   `perfect_kernel_batch68w::heading_inside_thebibliography_label_before_keeps_the_ids`.
+  Integrated as **int17** = 68w (rounds 1-3) + 68x (rounds 1-3) + this fix round on 98dd7cacbf. Gates 5,724/5,724,
+  cortex 10/10, inits 0/0, dumps identical. Bundle A/B vs 67int16 over 5,439 papers (the 3,356 raw-class papers K11
+  now covers, the 1,283 papers the 68w/68x writers and reviewers touched, 250 fresh `unexpected:_` and 250
+  `malformed:ltx:bibitem` first-error papers, 300 pop67o): Errors 40,079 → 22,436, Fatals 76 → 64 (12 better, 0
+  worse), 506 papers with fewer errors and 0 with more, 0 losing > 1 % of words, words 85.96 M → 86.26 M; the
+  `malformed:ltx:bibitem` sample 9,417 → 1,173 Errors. The one raw-class paper with more script errors, 2203.12624,
+  reaches the 100-error Fatal on both sides — base on `\mathscr` (eulerpx, fixed by #569's lock restore), int17 on a
+  later `_` (16,523 → 43,460 words). Nets 136/136 0 worse. Open rows from the bundle: sn-jnl `\href{text}{URL}` written
+  for the class's DVI-mode swap (2401.05832, RED class-bindings/sn_jnl_href_swapped_order); thm-restate `restate=`
+  (2108.11527, 2602.09462); topical bibliography groups over an empty "References" give the second group `bibaa`
+  (hep-th0109182; decide id reuse at heading time by the prune's own criterion); an `\appendix` heading inside the
+  bibliography is not in `BIBLIOGRAPHY_HEADED_UNITS` (1810.04031, 1304.6684); apacite `\citeA<e.g.>{a}` gives
+  "Smith (e.g. 2001)" (pdflatex "e.g. Smith (2001)") and its pre-notes lack apacite's comma; classic apacite
+  `\fullcite` undefined; `\citeA`/`\citeNP` stay defined under `natbibapa`; `\author{A, \altaffilmark{1,2} B}` gives
+  the mark to the next name (1010.3998); a French smfart paper's main abstract is named "Abstract" (captions set at
+  `\begin{document}`); K11's line rule (#662) is a shape test — RED class-bindings/title_page_typesetting/ (ka, kb),
+  left for the frontmatter design study (agent_reports/2026-10-16_frontmatter_design_study.md, stage S3).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
