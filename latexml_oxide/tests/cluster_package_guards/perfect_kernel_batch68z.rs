@@ -286,3 +286,108 @@ fn tabu_in_math_is_an_array() {
     "{xml}"
   );
 }
+
+/// alignment/lefteqn_row_end_by_meaning (68z round 2, the review's probes l1/l2): a first-column `\lefteqn` is the
+/// whole cell when the token after it ends the cell by meaning, through the macros it starts (`\def\nn{\nonumber}`,
+/// `\def\eeq{\end{eqnarray}}`), past spacing (`\hspace*{2em}`): 65o's one left-aligned span, the LHS flush left as in
+/// pdflatex. `\lefteqn{X}\quad y^2` goes on to the `y`: the cell's math, so the script is one (pdflatex 0 errors). Round
+/// 1 put `\lefteqn{F(x)+G(x)} \nn \\` in the right-aligned cell and erred "Script ^" on the `\quad` row.
+#[test]
+fn a_lefteqn_before_a_row_end_macro_is_the_whole_cell() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/alignment/lefteqn_row_end_by_meaning.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let xml = normalize_markup(&xml);
+  for tex in ["F(x)+G(x)", "P(x)", "Z"] {
+    assert!(
+      xml.contains(&format!(
+        r#"<td align="left" colspan="3"><Math mode="inline" tex="\displaystyle {tex}""#
+      )),
+      "{tex}: {xml}"
+    );
+  }
+  assert!(
+    xml.contains(r#"<td align="right"><Math mode="inline" tex="\displaystyle\hbox to0.0pt{$\displaystyle X$\hss}\quad y^{2}""#),
+    "{xml}"
+  );
+  assert_eq!(xml.matches(r#"align="right" colspan"#).count(), 0, "{xml}");
+}
+
+/// kernel-alignment/omit_cell_in_array_is_text (68z round 2, the review's probe q1; main-session ruling): latex.ltx
+/// `\@arrayclassz` sets an array cell as `$\relax\@sharp$`, so an `\omit`ted one is text (tex.web §789) holding the
+/// formula `y^2`; the `\multicolumn` re-inserts its `$` and stays math (pdflatex 0 errors, "a y2 text c", "p q2+r");
+/// an `\omit` cell that ends at once (`\omit\span`, `\multispan`) is not boxed, so a spanned cell is one text box.
+/// Before, 2 Errors "Script ^ can only appear in math mode".
+#[test]
+fn an_omit_cell_of_an_array_is_text() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/omit_cell_in_array_is_text.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let xml = normalize_markup(&xml);
+  assert!(
+    xml.contains(r#"<XMCell align="left"><XMText><Math mode="inline" tex="y^{2}" text="y ^ 2""#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(
+      r#"<XMCell align="left" colspan="2"><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok>"#
+    ),
+    "{xml}"
+  );
+  // `\multispan{3}\hrulefill` and `\omit\span\omit $x^2$`: one text box per spanned cell, no empty box per column
+  assert!(
+    xml.contains(r#"<XMCell align="left" colspan="3"><XMText class="ltx_leader"><rule height="1px" width="100%"/></XMText></XMCell>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(
+      r#"<XMCell align="left" colspan="2"><XMText><Math mode="inline" tex="x^{2}" text="x ^ 2""#
+    ),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<text/>").count(), 0, "{xml}");
+}
+
+/// kernel-alignment/multicolumn_misplaced_then_omit (68z round 2, review nit 4): a `\multicolumn` misplaced mid-cell
+/// in an `aligned` errs on its first `\omit` (pdflatex "Misplaced \omit", then 2 undefined `\@classz`), and the count
+/// of its `\omit`s is the alignment's, cleared at the cell's end: the later `\omit` cells of the same and of the next
+/// alignment are still text holding `y^2` and `w^2`. Round 1's global count stayed 1 and the `y^2` cell erred
+/// "Script ^".
+#[test]
+fn a_misplaced_multicolumn_leaves_later_omit_cells_text() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/multicolumn_misplaced_then_omit.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert_eq!(
+    stderr.matches("\\omit cannot be used here").count(),
+    1,
+    "{stderr}"
+  );
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let xml = normalize_markup(&xml);
+  // each formula (in the cell and in the fork's copy) right inside a text box
+  for var in ["y", "w"] {
+    let formula = format!(r#"<Math mode="inline" tex="{var}^{{2}}" text="{var} ^ 2""#);
+    let in_text: Vec<bool> = xml
+      .match_indices(&formula)
+      .map(|(i, _)| {
+        xml[..i]
+          .rfind('<')
+          .is_some_and(|tag| xml[tag..i].starts_with("<XMText"))
+      })
+      .collect();
+    assert_eq!(in_text, [true, true], "{var}: {xml}");
+  }
+}

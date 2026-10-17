@@ -11,9 +11,31 @@ use latexml_core::alignment::{read_alignment_template, template::TemplateConfig}
 
 use crate::prelude::*;
 
-/// The State key counting the `\omit`s of a `\multicolumn` cell of an amsmath alignment still to be read by the
-/// cell-head peek (`\lx@alignment@multicolumn` boxes that cell's body as text itself).
-const MULTICOLUMN_OMITS: &str = "lx@alignment@multicolumn@omits";
+/// The alignment property counting the `\omit`s of the current `\multicolumn` cell still to be read by the cell-head
+/// peek: they are the `\multicolumn`'s, which boxes its body itself (`\lx@alignment@multicolumn`), so the peek does not
+/// box that cell as text. On the alignment, and cleared at each cell's end: a `\multicolumn` misplaced mid-cell
+/// (its first `\omit` read in the cell, "Misplaced \omit") leaves no count for a later cell or alignment.
+const MULTICOLUMN_OMITS: &str = "multicolumn_omits";
+
+/// Whether an `\omit`ted cell of `alignment` is boxed as text (tex.web §789: `\omit` drops the u/v template, so the
+/// cell is restricted horizontal): where the cells' math is their template's `$`, an amsmath alignment
+/// (`template_math`, amsmath_sty.rs) or an `array` (`math_cells_template`, latex.ltx `\@arrayclassz`
+/// `$\relax\@sharp$`, sect10.rs `math_array_bindings`).
+fn omit_cell_is_text(alignment: &Alignment) -> bool {
+  ["template_math", "math_cells_template"].iter().any(|key| {
+    matches!(
+      alignment.get_property(key).as_deref(),
+      Some(Stored::Bool(true))
+    )
+  })
+}
+
+fn multicolumn_omits(alignment: &Alignment) -> i64 {
+  match alignment.get_property(MULTICOLUMN_OMITS).as_deref() {
+    Some(Stored::Int(n)) => *n,
+    _ => 0,
+  }
+}
 
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -676,12 +698,13 @@ LoadDefinitions!({
     // `\@arrayclassz`), so its cells stay math. Guard: `perfect_kernel_batch66l::multicolumn_in_aligned_is_text`.
     let text_cell = lookup_alignment().is_some_and(|alignment| {
       alignment.alignment_cell().is_some_and(|cell| {
+        // the `\omit`s above are this cell's: the cell-head peek leaves the cell to this body (an array's keeps its
+        // math, an amsmath one is boxed here)
+        cell.borrow_mut().get_properties_mut().insert(MULTICOLUMN_OMITS, Stored::Int(n.max(1)));
         matches!(cell.borrow().get_property("template_math").as_deref(), Some(Stored::Bool(true)))
       })
     });
     if text_cell {
-      // the `\omit`s above are this cell's: the cell-head peek leaves the boxing to this body's `\hbox`
-      assign_value(MULTICOLUMN_OMITS, Stored::Int(n.max(1)), Some(Scope::Global));
       tks.extend([T_CS!("\\hbox"), T_BEGIN!()]);
     }
     tks.extend(body.unlist_ref().iter().copied());
@@ -1152,23 +1175,21 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
           alignment.borrow_mut().start_row(false)?;
           peek_mode = Some(AlignPeekMode::enter());
         }
-        // tex.web §789: `\omit` drops the u/v template, so in an amsmath alignment, whose math is its template's
-        // `$` (`template_math`), the cell is restricted horizontal and its `$…$` a formula: its material is boxed
-        // as text, as `\lx@alignment@multicolumn` boxes its body (which consumes its own `\omit`s,
-        // `MULTICOLUMN_OMITS`). 2306.14299 (`& \omit \hfill $\qquad (-1)^{n} c$` in `aligned`/`split`); guard
-        // `perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`.
-        let multicolumn_omits = lookup_int(MULTICOLUMN_OMITS);
+        // tex.web §789: `\omit` drops the u/v template, so in an amsmath alignment or an `array`, whose math is
+        // their template's `$` (`omit_cell_is_text`), the cell is restricted horizontal and its `$…$` a formula:
+        // its material is boxed as text, as `\lx@alignment@multicolumn` boxes an amsmath body (and keeps an array's
+        // math, re-inserting its `$` as latex.ltx `\multicolumn` splices `\@arrayclassz`'s); a `\multicolumn`'s own
+        // `\omit`s are its (`MULTICOLUMN_OMITS`). 2306.14299 (`& \omit \hfill $\qquad (-1)^{n} c$` in
+        // `aligned`/`split`); guards `perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`,
+        // `perfect_kernel_batch68z::an_omit_cell_of_an_array_is_text`.
+        let multicolumn_omits = multicolumn_omits(&alignment.borrow());
         if multicolumn_omits > 0 {
-          assign_value(
-            MULTICOLUMN_OMITS,
-            Stored::Int(multicolumn_omits - 1),
-            Some(Scope::Global),
-          );
+          alignment
+            .borrow_mut()
+            .get_properties_mut()
+            .insert(MULTICOLUMN_OMITS, Stored::Int(multicolumn_omits - 1));
           alignment.borrow_mut().omit_next_column();
-        } else if matches!(
-          alignment.borrow().get_property("template_math").as_deref(),
-          Some(Stored::Bool(true))
-        ) {
+        } else if omit_cell_is_text(&alignment.borrow()) {
           alignment.borrow_mut().omit_next_column_as_text();
         } else {
           alignment.borrow_mut().omit_next_column();
@@ -1315,6 +1336,15 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     } else {
       alignment.borrow_mut().start_column(false)?;
     }
+    // An `\omit`ted cell that ends at once (`\omit\span`, latex.ltx `\multispan`; an empty `\omit&`) has nothing to
+    // box as text: no empty box for each spanned column.
+    if last_token
+      .as_ref()
+      .is_some_and(|t| is_column_end(t).is_some())
+      && let Some(column) = alignment.borrow_mut().current_column()
+    {
+      column.omit_text_box = false;
+    }
     // Push before template,  Marker and put the token back
     let to_unread = Tokens!(
       alignment.borrow_mut().get_column_before(),
@@ -1333,6 +1363,10 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         } else {
           // Debug("Halign $alignment: COLUMN ended with " . Stringify($token) . "\n"
           //     . "  => " . ToString(List(@LaTeXML::LIST))) if $LaTeXML::DEBUG{halign};
+          alignment
+            .borrow_mut()
+            .get_properties_mut()
+            .remove(MULTICOLUMN_OMITS);
           let current_list = expire_local_box_list();
           let mut out_list = List::new(current_list);
           out_list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });

@@ -486,7 +486,7 @@ pub(crate) fn load() -> Result<()> {
       tabular_bindings(template, SymHashMap::default(), attrs)?;
       return Ok(Vec::new());
     }
-    math_array_bindings(pos.as_ref(), template)?;
+    math_array_bindings(pos.as_ref(), template, true)?;
   });
 
   // latex.ltx:16550 `\array` `\let\@classz\@arrayclassz` (math cells).
@@ -570,7 +570,13 @@ fn array_attachment(pos: Option<&Tokens>) -> String {
 /// The math-cell alignment `\@array@bindings` opens (Perl latex_constructs.pool.ltxml:3792-3809) for a template its
 /// caller built: `\array`'s from its column letters, IEEEtrantools' `\IEEEeqnarraybox` from the IEEEtrantools column
 /// types (`ieeetrantools_sty.rs`).
-pub fn math_array_bindings(pos: Option<&Tokens>, template: Template) -> Result<()> {
+/// `omit_is_text`: the cells' math is their template's `$` (latex.ltx `\@arrayclassz` `$\relax\@sharp$`), so an
+/// `\omit`ted cell is text (tex.web §789; tex_tables.rs `omit_cell_is_text`).
+pub fn math_array_bindings(
+  pos: Option<&Tokens>,
+  template: Template,
+  omit_is_text: bool,
+) -> Result<()> {
   let mut attrs = HashMap::default();
   attrs.insert(String::from("vattach"), array_attachment(pos));
   attrs.insert(String::from("role"), String::from("ARRAY"));
@@ -598,6 +604,12 @@ pub fn math_array_bindings(pos: Option<&Tokens>, template: Template) -> Result<(
   }
   if let Some(strut) = array_strut() {
     properties.insert("strut", strut);
+  }
+  // latex.ltx `\@arrayclassz`: each cell is `$\relax\@sharp$`, its math the template's, so an `\omit`ted cell is
+  // text (tex.web §789; tex_tables.rs `omit_cell_is_text`). Rust-only key: LaTeXML's array cells are math by the
+  // alignment's mode.
+  if omit_is_text {
+    properties.insert("math_cells_template", Stored::Bool(true));
   }
   alignment_bindings(template, String::from("math"), properties, attrs);
   // Perl: if display math, switch to text mathstyle

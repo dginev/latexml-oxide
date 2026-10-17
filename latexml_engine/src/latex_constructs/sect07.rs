@@ -301,9 +301,11 @@ pub(crate) fn load() -> Result<()> {
   // A first-column `\lefteqn` followed by more of its cell (`\lefteqn{\widehat G}\hphantom{G}^{(r)} &=&`, 2411.17699)
   // is latex.ltx:15800 as written, `\rlap{$\displaystyle #1$}` inside the cell's math, overprinting: the `\multicolumn`
   // cell of a text alignment (`eqnarray`, whose `$` is its template's) is text, so a script after it erred ("Script ^
-  // can only appear in math mode"). The look-ahead skips spaces and reads one token: a tab, a row end,
-  // `\nonumber`/`\notag`/`\label`, the environment's `\end` or a spacing command leave the `\lefteqn` the whole
-  // cell. Guard `perfect_kernel_batch68z::a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math`.
+  // can only appear in math mode"). The look-ahead passes spaces and spacing commands and compares the next token by
+  // meaning (`lefteqn_ends_cell`): a tab, a row end, `\nonumber`/`\notag`/`\label`, the environment's `\end`, or a
+  // macro that starts with one (`\def\nn{\nonumber}`, the review of 68z) leave the `\lefteqn` the whole cell
+  // (OXIDIZED_DESIGN_DIVERGENCES #556). Guards `perfect_kernel_batch68z::{a_first_column_lefteqn_keeps_the_rest_of_its_
+  // cell_in_math, a_lefteqn_before_a_row_end_macro_is_the_whole_cell}`.
   DefMacro!("\\lefteqn{}", sub[(arg)] {
     let arg = arg.unlist();
     if arg.is_empty() {
@@ -321,14 +323,24 @@ pub(crate) fn load() -> Result<()> {
       out.push(T_END!());
       return Ok(Tokens::new(out));
     }
-    let mut spaces = Vec::new();
+    // What follows the `\lefteqn` in its cell, as TeX would read it: spaces and spacing commands, which print nothing
+    // the cell's math would hold (`\lefteqn{…}\hspace{1cm}\\`, 2210.09695), are passed over (`\lefteqn{X}\quad y^2`
+    // goes on to the `y`); the token after them is compared by meaning, through the macros it starts (`\def\nn
+    // {\nonumber}`, `\def\eeq{\end{eqnarray}}`: hep idioms, review of 68z).
+    let mut seen = Vec::new();
     let next = loop {
       match peek_token()? {
-        Some(t) if t.get_catcode() == Catcode::SPACE => spaces.push(read_token()?.unwrap()),
+        Some(t) if t.get_catcode() == Catcode::SPACE => seen.push(read_token()?.unwrap()),
+        Some(t) if lefteqn_spacing(&t) => {
+          seen.push(read_token()?.unwrap());
+          if t == T_CS!("\\hspace") {
+            read_hspace_argument(&mut seen)?;
+          }
+        },
         other => break other,
       }
     };
-    unread_vec(spaces);
+    unread_vec(seen);
     // Only where the first column's math is its template's `$` (eqnarray's `\hfil$\displaystyle##$`) does the
     // `\multicolumn` leave the rest of the cell in text: an `array`'s span re-inserts its `$` and an amsmath cell boxes
     // only the span's body (1409.4633's `array{ll}` keeps the span).
@@ -344,17 +356,7 @@ pub(crate) fn load() -> Result<()> {
         })
       })
       .unwrap_or(false);
-    let whole_cell = !template_dollar || next.is_none_or(|t| {
-      is_column_end(&t).is_some()
-        || [
-          "\\\\", "\\nonumber", "\\notag", "\\label", "\\end", "\\tabularnewline",
-          // spacing, which prints nothing the cell's math would hold (`\lefteqn{…}\hspace{1cm}\\`, 2210.09695)
-          "\\hspace", "\\hskip", "\\kern", "\\quad", "\\qquad", "\\,", "\\;", "\\:", "\\!", "\\ ",
-          "\\enspace", "\\hfill", "\\hfil",
-        ]
-        .iter()
-        .any(|name| t == T_CS!(*name))
-    });
+    let whole_cell = !template_dollar || next.is_none_or(|t| lefteqn_ends_cell(&t));
     if whole_cell {
       out.extend(TokenizeInternal!(r"\multicolumn{1}{l}{\lx@alignment@cell@overprint{ltx_eqn_lefteqn}").unlist());
       math(&mut out);
@@ -670,4 +672,101 @@ fn in_first_column() -> bool {
     },
     _ => false,
   }
+}
+
+/// A spacing command a first-column `\lefteqn`'s look-ahead passes over: it prints nothing the cell's math would hold.
+/// `\hskip`/`\kern` are not: their glue is not read here, so they leave the `\lefteqn` the whole cell.
+fn lefteqn_spacing(t: &Token) -> bool {
+  [
+    "\\hspace",
+    "\\quad",
+    "\\qquad",
+    "\\,",
+    r"\;",
+    "\\:",
+    "\\!",
+    "\\ ",
+    "\\enspace",
+    "\\hfill",
+    "\\hfil",
+  ]
+  .iter()
+  .any(|name| *t == T_CS!(*name))
+}
+
+/// `\hspace`'s `*` and braced argument, read into `seen` (to be put back).
+fn read_hspace_argument(seen: &mut Vec<Token>) -> Result<()> {
+  let mut star = false;
+  while let Some(t) = peek_token()? {
+    if t.get_catcode() == Catcode::SPACE || (!star && t == T_OTHER!("*")) {
+      star |= t.get_catcode() != Catcode::SPACE;
+      seen.push(read_token()?.unwrap());
+    } else {
+      break;
+    }
+  }
+  if peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
+    let mut depth = 0usize;
+    while let Some(t) = read_token()? {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
+      seen.push(t);
+      if depth == 0 {
+        break;
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Whether the token after a first-column `\lefteqn` (and its spacing) leaves the `\lefteqn` the whole cell: a tab, a
+/// row end, `\nonumber`/`\notag`/`\label`, the environment's `\end`, or `\hskip`/`\kern`. By meaning, and through the
+/// macros it starts: a macro whose body begins with one of the first (`\def\nn{\nonumber}`, `\def\eeq{\end{eqnarray}}`)
+/// counts as that one; one whose body begins with `\hskip`/`\kern` does not (`\hphantom` prints its box). A command
+/// that is undefined or `\relax` matches only itself (`\notag` without amsmath; latex.ltx's top-level
+/// `\tabularnewline`, which `\hphantom`'s `\protect` would equal).
+fn lefteqn_ends_cell(token: &Token) -> bool {
+  const ENDS: [&str; 7] = [
+    "\\\\",
+    "\\nonumber",
+    "\\notag",
+    "\\label",
+    "\\end",
+    "\\tabularnewline",
+    "\\cr",
+  ];
+  let ends = |t: &Token| {
+    is_column_end(t).is_some()
+      || ENDS.iter().any(|name| {
+        let end = T_CS!(*name);
+        *t == end
+          || (lookup_meaning(&end).is_some()
+            && !x_equals(&end, &T_CS!("\\relax"))
+            && x_equals(t, &end))
+      })
+  };
+  if *token == T_CS!("\\hskip") || *token == T_CS!("\\kern") {
+    return true;
+  }
+  let mut t = *token;
+  for _ in 0..8 {
+    if ends(&t) {
+      return true;
+    }
+    let first = match lookup_meaning(&t) {
+      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.unlist_ref().first().copied(),
+        _ => None,
+      },
+      _ => None,
+    };
+    match first {
+      Some(f) if matches!(f.get_catcode(), Catcode::CS | Catcode::ACTIVE) => t = f,
+      _ => return false,
+    }
+  }
+  false
 }

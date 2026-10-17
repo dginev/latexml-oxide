@@ -317,6 +317,11 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   paragraph, so `$$…$$` there is display math (pdflatex 0 errors); the kernel's `\lx@@caption` digests in text mode
   (latex_constructs/sect09.rs), `$$` is an empty pair and the scripts between err (2 Errors). Needs a display inside
   `ltx:caption` (schema) or an amsart caption mode. Witness 0803.4182. Repro `captions-floats/amsart_caption_display_math`.
+- **An `\@ifnextchar`/`\@ifstar`-headed macro at a cell head reads the `&`** (SHARED; 68z review): the cell-head
+  look-ahead stops at a `\newcommand` optional-argument macro only (gullet.rs `read_x_token_cell_head`), so
+  `\def\nx{\@ifnextchar[{\nxa}{\nxa[d]}}` with `\nx[x] & b1` prints "<x|" / "> b1" (pdflatex "<x|>" / "b1"). Fix:
+  stop at every closure that peeks by `\futurelet`, with an opt-out for the `\noalign`-headed bindings (`\cmidrule`,
+  `\toprule`) — KNOWN_PERL_ERRORS #880 residual. Repro `kernel-alignment/cell_head_ifnextchar_user_macro_reads_the_tab`.
 - **A `\cite` note in display math is set in text** (SHARED, Perl restricted_horizontal; 68z C6): latex.ltx:17798
   `\@cite` keeps the current mode, so `$$ \cite[\text{I}.2.11^\prime]{Mac} $$`'s `^` is a script; `\lx@@cite`
   (latex_constructs/sect11.rs) digests the note in text: 1 Error. Needs a Math in the cite's note. Witness math0402383.
@@ -2667,13 +2672,23 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   template's `$` is dropped): tex_tables.rs marks it (`Cell::omit_text_box`) and alignment.rs boxes its material as
   `\hbox{…}` (KNOWN_PERL_ERRORS #662). Witness 2306.14299 (1811.08044 pdflatex-discounted). Repro
   kernel-alignment/omit_cell_in_amsmath_alignment_is_text; guard
-  `perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`. Open: an `array`'s `\omit` cell (text in TeX).
+  `perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`. Round 2: an `array`'s `\omit` cell too
+  (latex.ltx `\@arrayclassz` `$\relax\@sharp$`; sect10.rs `math_array_bindings` `omit_is_text` →
+  `math_cells_template`, tex_tables.rs `omit_cell_is_text`; IEEEeqnarraybox not, its rule rows keep their leader
+  cells), `\multicolumn` keeping its re-inserted math; an `\omit` cell that ends at once (`\omit\span`, `\multispan`)
+  is not boxed, so a spanned cell is one text box; the `\multicolumn` omit count (`MULTICOLUMN_OMITS`) is the
+  alignment's, cleared at each cell end, so a misplaced mid-cell `\multicolumn` leaves later `\omit` cells text.
+  Repros kernel-alignment/omit_cell_in_array_is_text, kernel-alignment/multicolumn_misplaced_then_omit; guards
+  `perfect_kernel_batch68z::{an_omit_cell_of_an_array_is_text, a_misplaced_multicolumn_leaves_later_omit_cells_text}`.
   (6) C5: a first-column `\lefteqn` followed by more of its eqnarray cell is latex.ltx:15800's `\rlap{$\displaystyle
   #1$}` inside the cell's math, still overprinting (sect07.rs `\lefteqn`; OXIDIZED_DESIGN_DIVERGENCES #556 extended):
   the 65o `\multicolumn{1}{l}` cell is text, so `\lefteqn{\widehat G}\hphantom{G}^{(r)}` erred "Script ^"; a
   `\lefteqn` that is the whole cell (or followed only by spacing, 2210.09695), and any in an `array`/amsmath, keep 65o's
   span (its goldens unchanged). Witness 2411.17699. Repro alignment/lefteqn_then_script; guard
-  `perfect_kernel_batch68z::a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math`.
+  `perfect_kernel_batch68z::a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math`. Round 2 (the review's
+  blocker): the next token is compared by meaning, through the macros it starts (`\def\nn{\nonumber}`, `\def\eeq
+  {\end{eqnarray}}`), past spacing (`\lefteqn{X}\quad y^2` keeps the math): the rule in #556. Repro
+  alignment/lefteqn_row_end_by_meaning; guard `perfect_kernel_batch68z::a_lefteqn_before_a_row_end_macro_is_the_whole_cell`.
   (7) C10: `{tabu}` in math is an `array` (tabu.sty:616-618), tabu_sty.rs `\lx@tabu@start`: witness 2010.06598, repro
   alignment-bindings/tabu_in_math_is_an_array, guard `perfect_kernel_batch68z::tabu_in_math_is_an_array`. C11 (amsart
   caption `$$`, 0803.4182) and C6 (`\cite` note in display math, math0402383) are not local: RED rows in "Perfect-kernel

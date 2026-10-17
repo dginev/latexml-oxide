@@ -376,7 +376,8 @@ pub fn define_eqnarraybox() -> Result<()> {
       columns: Some(columns),
       ..TemplateConfig::default()
     });
-    math_array_bindings(pos.as_ref(), template)?;
+    // Not `omit_is_text`: the rule rows' `\omit` spans (`\IEEEeqnarrayrulerow`) keep their leader cells (67x guards).
+    math_array_bindings(pos.as_ref(), template, false)?;
     AssignValue!("IEEEeqnarray@mathcells" => true);
   });
   // `{<star>}{<options>{<cols>}}`, as written, for the reversion.

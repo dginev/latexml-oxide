@@ -13087,8 +13087,11 @@ Rust (68z) — the cell-head peek marks the omitted cell of a `template_math` al
 material is boxed as text between the before/after parts (`Alignment::get_column_before`/`get_column_after`); a
 `\multicolumn` cell, which boxes its body itself, consumes its own `\omit`s. Repro
 kernel-alignment/omit_cell_in_amsmath_alignment_is_text; guard
-`perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`. Open: an `\omit` cell of an `array` is text in
-TeX too (its `$` is the template's), still math here.
+`perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`. An `\omit` cell of an `array` is text in TeX
+too (its `$` is the template's, latex.ltx `\@arrayclassz`): `\[\begin{array}{ccc} a & \omit $y^2$ text & c\end{array}\]`
+erred "Script ^" (pdflatex 0); fixed in Rust (68z round 2, the array's `math_cells_template`; a `\multicolumn` keeps its
+math; an `\omit` cell that ends at once, `\omit\span`, is not boxed). Repro kernel-alignment/omit_cell_in_array_is_text;
+guard `perfect_kernel_batch68z::an_omit_cell_of_an_array_is_text`.
 
 ## 663. A footnote's argument ends the paragraph around it (as measured)
 
@@ -14756,3 +14759,15 @@ at a macro whose first parameter is a `\newcommand` optional one (`Parameter::te
 plain in Perl's aa_support.sty.ltxml:247) is robust, so the look-ahead stops at it too (0801.2767). Repros
 kernel-alignment/cell_head_peek_stops_at_futurelet, alignment-bindings/diagbox_empty_before_tab; guard
 `perfect_kernel_batch68z::a_cell_head_newcommand_optional_macro_reads_its_arguments_in_the_cell`.
+
+Residual (RED, Perl and Rust alike): a user macro headed by `\@ifnextchar`/`\@ifstar` (`\def\nx{\@ifnextchar[{\nxa}
+{\nxa[d]}}`, `\def\st{\@ifstar\sta\sta}`) and a binding macro with an optional first parameter that is not a
+`\newcommand` one still expand in the look-ahead, so `\nx[x] & b1` reads the `&` as `\nxa`'s argument ("<x|" then
+"> b1"; pdflatex "<x|>" then "b1"). The look-ahead stops only at `Parameter::testopt`: the binding closures that peek
+by `\futurelet` include booktabs' `\cmidrule`, which TeX heads by `\noalign`, so the general fix (stop at every
+peeking closure) needs an opt-out for those. Repro kernel-alignment/cell_head_ifnextchar_user_macro_reads_the_tab.
+
+Faithfully, a `\newcommand` optional-argument macro that expands to `\multicolumn`, `\hline` or `\omit` no longer
+works at a cell head: `\newcommand\mc[2][c]{\multicolumn{2}{#1}{#2}}`, `\newcommand\HL[1][]{\hline}` err "Misplaced
+\omit"/"Misplaced \noalign" (68z: 3 Errors, the content kept; 67int17b 0; pdflatex 10 Errors), since TeX's look-ahead
+stops at the `\futurelet` before the `\omit`/`\noalign` is reached.

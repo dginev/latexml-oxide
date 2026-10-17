@@ -16954,9 +16954,23 @@ hep-lat9711012, math0102211, math0407427, math9806075, 2411.04274, 2609.03020; 2
 
 The `\multicolumn` cell of an eqnarray is text (its `$` is the template's): where more of the cell follows the
 `\lefteqn` (`\lefteqn{\widehat G}\hphantom{G}^{(r)} &=&`, 2411.17699), the rest is math in TeX, so there the
-`\lefteqn` is latex.ltx's `\rlap{$\displaystyle #1$}` inside the cell's math, still overprinting (68z, sect07.rs: the
-look-ahead reads the next token past spaces; a tab, a row end, `\nonumber`/`\notag`/`\label`, `\end` or a spacing
-command such as `\hspace` (2210.09695) leave the `\lefteqn` the whole cell). An `array`'s or amsmath's span keeps the rest in math, so they keep the span.
+`\lefteqn` is latex.ltx's `\rlap{$\displaystyle #1$}` inside the cell's math, still overprinting. An `array`'s or
+amsmath's span keeps the rest in math, so they keep the span.
+
+The decision rule (68z, sect07.rs `\lefteqn`, `lefteqn_ends_cell`): the macro looks ahead without expanding, past
+spaces and the spacing commands that print nothing the cell's math would hold (`\quad`, `\qquad`, `\,`, `\;`, `\:`,
+`\!`, `\ `, `\enspace`, `\hfil`, `\hfill`, and `\hspace` with its `*` and argument, 2210.09695's `\hspace{1cm}\\`),
+and the `\lefteqn` is the whole cell when the next token is a tab or `\cr`, or has the meaning of `\\`, `\nonumber`,
+`\notag`, `\label`, `\end` or `\tabularnewline`, directly or as the first body token of the macros it starts (`\def
+\nn{\nonumber}`, `\def\eeq{\end{eqnarray}}`, the hep idioms; up to 8 levels), or is `\hskip`/`\kern` itself (their
+glue is not read). An end command that is undefined or `\relax` (`\notag` without amsmath; latex.ltx's top-level
+`\tabularnewline`) matches only by name, since `\hphantom`'s `\protect` would equal it. Anything else, `\lefteqn{X}\quad
+y^2` included, keeps the cell's math. The rule decides before the cell's content is read, so a macro whose expansion
+ends the cell only further in (`\def\nn{\relax\nonumber}`) still takes the in-cell form: a right-aligned cell that
+holds the zero-width box. Deciding at the cell end would need the digested cell rewritten from the in-cell form to the
+span; not done. Repros alignment/lefteqn_then_script, alignment/lefteqn_row_end_by_meaning; guards
+`perfect_kernel_batch68z::{a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math,
+a_lefteqn_before_a_row_end_macro_is_the_whole_cell}`.
 
 Residuals (RED repros): `\multicolumn{1}{l}` replaces column 1's template, so its `@{…}` material and `|` rules are
 lost, which TeX's `\rlap`, inside the template, keeps (alignment/lefteqn_overprint_keeps_template_material; Perl's
