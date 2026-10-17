@@ -83,8 +83,8 @@ rule). Like the CJK manuals they stay crash canaries; a shared-machinery defect 
 
 ## Goal bar and ranked path (2026-10-02)
 
-This is the single ranked order to the goal. The handoff register (`~/data/pk_agents/main/HANDOFF.md`, evidence and
-designs on file), PLANS.md and KERNEL_CAPABILITIES.md feed it and do not rank on their own. The superseded phase-57/58
+This is the single ranked order to the goal. The agent reports (`~/data/pk_agents/main/agent_reports/`, evidence and designs on file), the open rows of
+`SYNC_STATUS.md`, PLANS.md and KERNEL_CAPABILITIES.md feed it and do not rank on their own. The superseded phase-57/58
 plan, the 2026-09-25 stream table and the corpus-wide scoreboard history are in
 [`perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`](perfect_kernel/archive/PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md).
 
