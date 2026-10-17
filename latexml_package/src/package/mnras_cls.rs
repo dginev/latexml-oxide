@@ -50,6 +50,10 @@ LoadDefinitions!({
   \ifx\@tempb\@empty\def\@tempb{arXiv}\fi
   \@ifundefined{@eprint@\@tempb}{\@tempb:\@tempc}{\expandafter\expandafter\csname @eprint@\@tempb\endcsname\expandafter{\@tempc}}}
 \def\mniiiauthor#1#2#3{\@ifundefined{mniiiauth@#1}{\global\expandafter\let\csname mniiiauth@#1\endcsname\null #2}{#3}}");
+  // mnras.cls:488 (TL 2025 v3.2): ionization states, `\ion{He}{I}` "He i" (on amsmath's `\text`, which the class does
+  // not load: pdflatex errs without it as here). Once mn2e_support's for every class of the family (Perl
+  // mn2e_support.sty.ltxml:147, KNOWN_PERL_ERRORS #940), which mn2e.cls does not define.
+  RawTeX!(r"\newcommand\ion[2]{\text{#1\,\textsc{\lowercase{#2}}}}");
   RawTeX!(r"\newcommand\aap{A\&A}");                // Astronomy and Astrophysics
   RawTeX!(r"\let\astap=\aap");                       // alternative shortcut
   RawTeX!(r"\newcommand\aapr{A\&ARv}");              // Astronomy and Astrophysics Review

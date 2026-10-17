@@ -15351,6 +15351,19 @@ implicit-bibliography marker `\lx@mung@bibliography@pre{implicit}` (sect11.rs), 
 stays untitled and out of the TOC. Repro index-bib/amsrefs_biblist_without_bibdiv; guard
 `perfect_kernel_batch71a::amsrefs_biblist_without_bibdiv`.
 
+## 940. mn2e_support defines mnras's `\ion` for every class of the MN family, so an mn2e author's own `\ion` is ignored
+
+mnras.cls:488 (TL 2025 v3.2) `\newcommand\ion[2]{\text{#1\,\textsc{\lowercase{#2}}}}`; mn2e.cls (v2.2, TL's
+doc/latex/mnras/LEGACY/mn2e.cls and every copy papers ship) has none, and mn2e papers define their own. Perl's
+mn2e_support.sty.ltxml:147 defines it for mn, mn2e and mnras alike, so under mn2e the author's `\newcommand{\ion}` is
+refused (latex_constructs.pool.ltxml:2512-2525 isDefinableLaTeX) and the binding's `\text` is undefined without amsmath.
+
+Trigger: `\documentclass{mn2e}\newcommand{\ion}[2]{#1\,{\sc #2}}` and `\ion{He}{I}` — pdflatex 0 errors; Perl and Rust
+before 71a 1 Error (`\text` undefined; 13 papers: 0908.0351, 1112.1796, astro-ph0501147, 0909.3906, 1206.2419).
+
+Rust (71a): mn2e_support_sty.rs defines no `\ion`; mnras_cls.rs defines it as mnras.cls:488 does. Repro
+class-bindings/mn2e_author_ion_wins; guards `perfect_kernel_batch71a::{mn2e_author_ion_wins, mnras_keeps_its_ion}`.
+
 ## 949. AMS-TeX's `\Let@` is missing, so a document's own AMS-TeX alignment macro errs at its `\\`
 
 amstex.tex:486 `\def\Let@{\relax\iffalse{\fi\let\\=\cr\iffalse}\fi}` is the row end an AMS-TeX alignment sets up before

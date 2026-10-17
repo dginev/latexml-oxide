@@ -32,3 +32,33 @@ fn amsrefs_biblist_without_bibdiv() {
     r#"<bibliography citestyle="numbers" inlist="toc" xml:id="bib"><title>References</title><biblist><bibentry key="A" type="article" xml:id="bib.bib1"><bib-name role="author"><surname>Doe</surname><givenname>J.</givenname></bib-name><bib-title>T</bib-title><bib-related role="host" type="journal"><bib-title>J</bib-title></bib-related><bib-date role="publication">2000</bib-date><bib-data role="self" type="BibTeX">@article{A, author = {Doe, J.}, title = {T}, journal = {J}, year = {2000}}</bib-data></bibentry></biblist></bibliography>"#,
   );
 }
+
+/// mn2e.cls defines no `\ion`, so the author's `\newcommand{\ion}` is the document's (0908.0351, astro-ph0501147).
+#[test]
+fn mn2e_author_ion_wins() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/mn2e_author_ion_wins.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    "<p xml:id=\"p1.1\">the prominent He\u{2009}<text font=\"smallcaps\" xml:id=\"p1.1.1\">I</text> lines.</p>",
+  );
+}
+
+/// mnras.cls:488 keeps its `\ion`, on amsmath's `\text`.
+#[test]
+fn mnras_keeps_its_ion() {
+  let (log, xml) = convert_counted(
+    "\\documentclass{mnras}\n\\usepackage{amsmath}\n\\begin{document}\nthe \\ion{He}{II} line\n\\end{document}\n",
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    "<p xml:id=\"p1.1\">the <text xml:id=\"p1.1.1\">He\u{2009}<text font=\"smallcaps\" xml:id=\"p1.1.1.1\">ii</text></text> line</p>",
+  );
+}

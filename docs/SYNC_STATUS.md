@@ -3011,6 +3011,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   wrapper opened inside the section — avoided by the backmatter route). Witnesses 1002.1686 1112.3058 2111.14165
   0808.1974 1411.6913 (14/14 sample papers 1 → 0 errors, words unchanged). Repro
   index-bib/amsrefs_biblist_without_bibdiv; guard `perfect_kernel_batch71a::amsrefs_biblist_without_bibdiv`.
+  (2) T1: mn2e.cls (v2.2, TL's doc/latex/mnras/LEGACY/mn2e.cls, every shipped copy) defines no `\ion`, so the
+  author's `\newcommand{\ion}` is the document's: mn2e_support_sty.rs drops it, mnras_cls.rs keeps mnras.cls:488's
+  (KNOWN_PERL_ERRORS #940). Witnesses 0908.0351 1112.1796 astro-ph0501147 0909.3906 1206.2419 (11/11 sample mn2e
+  papers 1 → 0, 1606.03734's author-modified mnras.cls unchanged; words −7 to −370 are the `\text` error tokens gone and "/ He" runs joined, bag-of-words checked).
+  Worse: 1309.5950 4 → 5 (`\ion` undefined: it ships an aas_macros.sty of its own, :142 `\def\ion`, which the
+  aas_macros binding shadows — the H1 class of the study, as its `\lya`/`\kms` errors already were). Repro
+  class-bindings/mn2e_author_ion_wins; guards `perfect_kernel_batch71a::{mn2e_author_ion_wins, mnras_keeps_its_ion}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

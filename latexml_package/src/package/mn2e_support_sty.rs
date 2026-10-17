@@ -103,9 +103,11 @@ LoadDefinitions!({
   DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
   DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
   DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
-  // Perl mn2e_support.sty.ltxml L151: \text wrapper switches mode out of math,
-  // so the second arg can contain inline-math toggles like `$\beta$`.
-  DefMacro!("\\ion{}{}", "\\text{#1\\,\\textsc{\\lowercase{#2}}}");
+  // No `\ion`: mn2e.cls (v2.2, TL's doc/latex/mnras/LEGACY/mn2e.cls, every copy papers ship) defines none, so an
+  // author's `\newcommand{\ion}` is the document's (a binding's definition would make it a no-op,
+  // latex_constructs.pool.ltxml:2512-2525 isDefinableLaTeX). mnras.cls:488 has it (mnras_cls.rs). Perl
+  // mn2e_support.sty.ltxml:147 defines it for every class of the family (KNOWN_PERL_ERRORS #940). Witnesses 0908.0351,
+  // 1112.1796, astro-ph0501147, 0909.3906, 1206.2419; guard `perfect_kernel_batch71a::mn2e_author_ion_wins`.
 
   // Journal abbreviations (\mnras, \nat, \apj, \prd, ...) are NOT defined
   // in Perl mn2e_support.sty.ltxml. They live in aas_macros.sty.ltxml
