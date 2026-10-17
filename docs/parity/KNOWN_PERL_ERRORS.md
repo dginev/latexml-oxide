@@ -14899,3 +14899,20 @@ follows the bounded `\lx@bm@bold{…}` group, as the split path's `bold_run` alr
 alone. The boxed/grouped `\bm`s (amsbsy `\boldsymbol`, the WS/interact/RevTeX class `\bm`) keep TeX's error. Repro
 package-bindings/bm_trailing_script_takes_the_next_argument; guard
 `perfect_kernel_batch69b::bm_trailing_script_takes_the_next_argument`.
+
+## 898. `\endlist` with no list open errs "Attempt to end mode internal_vertical"
+
+latex.ltx:15912-15930 `\endlist` = `\global\advance\@listdepth\m@ne\endtrivlist`, and `\endtrivlist` with no list
+open is only paragraph and skip bookkeeping (`\@noitemerr` only under `\if@newlist`): TeX says nothing. Perl's
+`\endlx@list` (latex_constructs.pool.ltxml:1647-1653) is `endMode('internal_vertical')`, which errs when the top frame
+is not that mode.
+
+Trigger: `\makeatletter{\def\@noitemerr{}\endlist}\makeatother` in the preamble (siuro210301.cls:995-1000 repeats
+`{thebibliography}`'s end code; lt6-proc.cls:988-994 makes `\newenvironment`'s #3 `\par` by blank lines, so the end
+code runs at load), or `\newenvironment{proof}{…}{…\endlist}` (0710.0460: 30 Errors) — pdflatex 0 errors, Perl and
+Rust before 69b `Error:unexpected:\endlx@list Attempt to end mode internal_vertical` per call.
+
+Rust (69b, sect06.rs `\endlx@list`): with no `internal_vertical` mode frame anywhere on the stack
+(`internal_vertical_mode_frame_open`) it does nothing; an open one below an unrelated top frame keeps Perl's
+error-without-pop (memoir's raw `\list`, OXIDIZED_DESIGN #180). Repro
+list-structure/endlist_with_no_list_open_does_nothing; guard `perfect_kernel_batch69b::endlist_with_no_list_open_does_nothing`.

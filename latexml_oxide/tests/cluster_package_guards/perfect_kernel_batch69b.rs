@@ -2,6 +2,7 @@
 //! Item 1 (B1) — bm.sty's `\bm` leaves a script that ends its argument where it stands, so it takes its argument
 //! after `\bm` (bm.sty:162-217 `\bm@general`). Item 2 (L1) — the kernel's `\@trivlist` is locked as in Perl
 //! (latex_constructs.pool.ltxml:1673), so an ACM 1.8 class's spacing-only redefinition keeps `\list` a list.
+//! Item 3 (L2) — `\endlist` with no list open does nothing, as latex.ltx:15915-15930 `\endtrivlist`.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -57,5 +58,32 @@ fn class_redefining_trivlist_keeps_the_list() {
     "itemize",
     &[],
     r#"<itemize><item xml:id="S0.I1.i1"><tags><tag><Math mode="inline" tex="\bullet" text="bullet" xml:id="S0.I1.i1.m1"><XMath><XMTok name="bullet" role="MULOP">∙</XMTok></XMath></Math></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>One.</p></para></item></itemize>"#,
+  );
+}
+
+/// list-structure/endlist_with_no_list_open_does_nothing: a load-time `{…\endlist}` (siuro210301.cls:995-1000) and a
+/// proof whose end code calls `\endlist` (0710.0460), then a real `{itemize}` (pdflatex 0 errors). Before 69b: 2
+/// Errors "Attempt to end mode internal_vertical" (Perl the same).
+#[test]
+fn endlist_with_no_list_open_does_nothing() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/endlist_with_no_list_open_does_nothing.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p2\""],
+    r#"<para xml:id="p2"><p><text font="bold">Proof:</text>It holds.QED</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p3\""],
+    r#"<para xml:id="p3"><p>After.</p><itemize xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>A list still closes.</p></para></item></itemize></para>"#,
   );
 }

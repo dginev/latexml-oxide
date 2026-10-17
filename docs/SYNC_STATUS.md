@@ -2782,7 +2782,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   no longer stops `\list` opening its list ("Attempt to end mode internal_vertical"; est. 252; 1212.6177, 1710.00867,
   whose vldb `\keywords` quotation residual is frontmatter). Repro
   list-structure/class_redefining_trivlist_keeps_the_list; guard
-  `perfect_kernel_batch69b::class_redefining_trivlist_keeps_the_list`.
+  `perfect_kernel_batch69b::class_redefining_trivlist_keeps_the_list`. (3) L2: `\endlist` with no list open — no
+  `internal_vertical` mode frame on the stack — does nothing, as latex.ltx:15915-15930 `\endtrivlist` (sect06.rs
+  `\endlx@list`; KNOWN_PERL_ERRORS #898; siuro210301.cls, lt6-proc.cls, 0710.0460 30 → 0 Errors; est. 94). Repro
+  list-structure/endlist_with_no_list_open_does_nothing; guard
+  `perfect_kernel_batch69b::endlist_with_no_list_open_does_nothing`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

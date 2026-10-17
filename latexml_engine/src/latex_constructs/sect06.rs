@@ -684,9 +684,20 @@ pub(crate) fn load() -> Result<()> {
   // Guards: `perfect_kernel_batch51::endlist_without_lx_list_frame`,
   // `perfect_kernel_batch54::endlist_decrements_listdepth`,
   // `perfect_kernel_batch56::endlist_closes_an_enumerate_opened_by_its_begin_macro`.
+  //
+  // With no list open — no `internal_vertical` mode frame anywhere on the stack — `\endlist` is latex.ltx:15915-15930
+  // `\endtrivlist`'s paragraph and skip bookkeeping only, which TeX does without a diagnostic: a class repeating
+  // `{thebibliography}`'s end code at load (siuro210301.cls:995-1000, lt6-proc.cls:988-994 via the blank lines that
+  // make `\newenvironment`'s #3 `\par`), or a `{proof}` whose end code calls `\endlist` (0710.0460: 30 Errors). An
+  // open mode frame below an unrelated top frame keeps the error-without-pop above. Guard:
+  // `perfect_kernel_batch69b::endlist_with_no_list_open_does_nothing`.
   DefConstructor!("\\endlx@list", sub[document] {
   document.maybe_close_element("ltx:itemize")?; },
-  before_digest => { end_mode("internal_vertical")?; });
+  before_digest => {
+    if internal_vertical_mode_frame_open() {
+      end_mode("internal_vertical")?;
+    }
+  });
 
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
@@ -1184,4 +1195,14 @@ fn quote_environment(
     }
   }
   Ok(())
+}
+
+/// Whether a stack frame binds the `internal_vertical` mode (`begin_mode`), the mode `\lx@list` and the list
+/// environments open: with none, `\endlx@list` has no list to end.
+fn internal_vertical_mode_frame_open() -> bool {
+  (0..get_frame_depth()).any(|n| {
+    is_value_bound("BOUND_MODE", Some(n))
+      && value_in_frame("BOUND_MODE", n)
+        .is_some_and(|mode| String::from(&mode) == "internal_vertical")
+  })
 }
