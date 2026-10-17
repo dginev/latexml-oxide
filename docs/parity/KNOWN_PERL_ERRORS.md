@@ -14711,3 +14711,20 @@ Trigger: `\documentclass{iopart}` (the papers' copy), `\begin{tabular}{lc} \br a
 Rust (68y, iopart_support_sty.rs): the class's `\noalign` spacers. Witness 1502.00309 (discounted: iopart.cls with no
 `iopart12.clo` under TeX Live 2025; fixed anyway). Repro class-bindings/iopart_row_spacers_noalign; guard
 `perfect_kernel_batch68y::iopart_row_spacers_are_noalign`.
+
+
+## 879. amsmath's display environments keep the braces of a body that is one braced group (`\begin{align}{a&=b}\end{align}`)
+
+amsmath reads the body of `align`, `gather`, `flalign`, `alignat`, `multline` and a display `split` with
+`\collect@body` (amsmath.sty:1412-1434), whose `\collect@@body#1\end#2` takes it as an argument delimited by `\end`; a
+delimited argument that is exactly one braced group loses that group (tex.web §400), so the rows typeset as without the
+braces. Perl's binding (amsmath.sty.ltxml:229-234, :356, :431) starts the alignment at once and reads the body in it,
+where every `&` inside the braces is a stray alignment character.
+
+Trigger: `\usepackage{amsmath}`, `\begin{align}{a &= b\\ &= c}\end{align}` (or `\def\bal#1\eal{\begin{align}{#1}
+\end{align}}`) — pdflatex two aligned rows; Perl and Rust before 68z `Error:unexpected:& Stray alignment "&"`.
+
+Rust (68z, amsmath_sty.rs `\lx@ams@collect@body` after `\lx@begin@alignment` in each of those environments): one group
+at the head of the body, followed at once by `\end`, is put back without its braces; a group that is not the whole
+first `\end`-delimited piece keeps them. Witnesses 2011.06919 2211.06952 1909.04856 2101.06401. Repro
+kernel-alignment/braced_amsmath_body; guard `perfect_kernel_batch68z::braced_amsmath_body_loses_its_group`.

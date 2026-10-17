@@ -1071,12 +1071,44 @@ LoadDefinitions!({
     egroup()?;
   });
 
+  // amsmath's display environments read their body with `\collect@body` before typesetting it
+  // (amsmath.sty:1412-1434): `\collect@@body#1\end#2` takes the body as an argument delimited by `\end`, and a
+  // delimited argument that is exactly one braced group loses that group (tex.web §400, :8162-8166). So
+  // `\begin{align}{a&=b\\&=c}\end{align}` (`\def\bal#1\eal{\begin{align}{#1}\end{align}}`) typesets the
+  // rows; our bindings read the body in the alignment directly, where the `&`s inside the braces were stray.
+  // At the head of the body: one group, immediately followed by `\end`, is put back without its braces.
+  // Only the first `\end`-delimited piece is looked at; a stripped group holding an inner `\begin…\end` derails
+  // amsmath's own `\begin` count (`\push@begins`) in TeX, which is not modelled. Witnesses 2011.06919 2211.06952 1909.04856 2101.06401 (`\begin{align*}{%…}\end{align*}`).
+  // Guard: `perfect_kernel_batch68z::braced_amsmath_body_loses_its_group`.
+  DefMacro!("\\lx@ams@collect@body", sub[_args] {
+    if peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
+      let open = read_token()?.unwrap();
+      let (body, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
+      let delimited = peek_token()?.is_some_and(|t| t == T_CS!("\\end"));
+      match close {
+        Some(_) if delimited => unread(body),
+        Some(close) => {
+          let mut group = vec![open];
+          group.extend(body.unlist());
+          group.push(close);
+          unread_vec(group);
+        },
+        None => {
+          let mut group = vec![open];
+          group.extend(body.unlist());
+          unread_vec(group);
+        },
+      }
+    }
+    Ok(Tokens!())
+  });
+
   DefMacro!(
     "\\gather",
     "\\ifmmode\\let\\endgather\\endgathered\\gathered\\else\
      \\lx@hidden@bgroup\\@ams@gather@bindings\\@@amsgather\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endgather",
@@ -1087,7 +1119,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endgather*\\endcsname\\endgathered\\gathered\\else\
      \\lx@hidden@bgroup\\@ams@gather@bindings\\@@amsgather\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\csname endgather*\\endcsname",
@@ -1118,7 +1150,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endalign\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi",
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi",
     locked => true);
   DefMacro!("\\endalign",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup",
@@ -1127,7 +1159,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endalign*\\endcsname\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi",
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi",
     locked => true);
   DefMacro!("\\csname endalign*\\endcsname",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup",
@@ -1139,7 +1171,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endfalign\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endflalign",
@@ -1150,7 +1182,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endfalign*\\endcsname\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\csname endflalign*\\endcsname",
@@ -1174,7 +1206,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endalignat",
@@ -1186,7 +1218,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\csname endalignat*\\endcsname",
@@ -1201,7 +1233,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endxalignat",
@@ -1213,7 +1245,7 @@ LoadDefinitions!({
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\csname endxalignat*\\endcsname",
@@ -1228,7 +1260,7 @@ LoadDefinitions!({
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,post=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi"
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endxxalignat",
@@ -1424,7 +1456,7 @@ LoadDefinitions!({
   DefMacro!(
     "\\multline",
     "\\ifmmode\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@AmS@multline\\lx@begin@alignment\
-     \\else\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multline\\lx@begin@alignment\\fi"
+     \\else\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multline\\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
   );
   DefMacro!(
     "\\endmultline",
@@ -1432,7 +1464,7 @@ LoadDefinitions!({
   );
   DefMacro!(
     "\\csname multline*\\endcsname",
-    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multlinestar\\lx@begin@alignment"
+    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multlinestar\\lx@begin@alignment\\lx@ams@collect@body"
   );
   DefMacro!(
     "\\csname endmultline*\\endcsname",
@@ -1490,7 +1522,7 @@ LoadDefinitions!({
   DefMacro!(
     "\\split",
     "\\if@in@ams@align\\lx@ams@marksplitinalign\\fi\
-     \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment"
+     \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment\\lx@ams@collect@body"
   );
   // Perl: \if@in@ams@align — checks if current environment starts with "align"
   // Perl: grep { /^align/ } $STATE->lookupStackedValues('current_environment')

@@ -2619,6 +2619,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   aastex_tablenote_marks_pair_by_what_they_show}` extended. A/B vs 68y2 over the re-review's 100 + 4 witnesses:
   tallies identical, byte diffs only the head rule in 1605.03270, 2002.02307, 1509.01261.
 
+- **68z** (alignment and kernel shapes from the rc_struct2 study, agent_reports/2026-10-16_rc_struct2.md). (1) A1+B4
+  (M5) a braced amsmath body: `\begin{align}{a&=b\\&=c}\end{align}` typesets its rows, as amsmath's
+  `\collect@@body#1\end#2` strips the one enclosing group of a delimited argument (amsmath.sty:1424, tex.web §400);
+  amsmath_sty.rs `\lx@ams@collect@body` after `\lx@begin@alignment` in align/gather/flalign/alignat/xalignat/
+  xxalignat/multline/split (KNOWN_PERL_ERRORS #879). Witnesses 2011.06919 2211.06952 1909.04856 2101.06401. Repro
+  kernel-alignment/braced_amsmath_body; guard `perfect_kernel_batch68z::braced_amsmath_body_loses_its_group`.
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
