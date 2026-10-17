@@ -167,3 +167,114 @@ fn txfonts_lambdabar() {
     "{xml}"
   );
 }
+
+/// forest.sty:50-53, :129: its TikZ libraries and its key family (2012.09112, 1910.06571, 2003.06880).
+#[test]
+fn forest_loads_its_tikz_libraries() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/stub-dependencies/forest_loads_its_tikz_libraries.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("<picture"), "{xml}");
+}
+
+/// todonotes.sty:32 loads positioning (1807.00512, 2107.03711).
+#[test]
+fn todonotes_loads_positioning() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/stub-dependencies/todonotes_loads_positioning.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("<picture"), "{xml}");
+}
+
+/// pgfmathfunctions.basic.code.tex:263-297: `mod` truncates, `Mod` adds the divisor to a negative `mod` only, so a
+/// multiple of the divisor is 0 (1811.01404).
+#[test]
+fn pgfmath_mod_of_a_multiple_is_zero() {
+  let (log, _) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/pgfmath_mod_of_a_multiple_is_zero.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let values: Vec<&str> = log
+    .split("MOD(")
+    .skip(1)
+    .map(|s| s.split_whitespace().next().unwrap_or(""))
+    .collect();
+  assert_eq!(
+    values,
+    ["-10)=0", "-5)=0", "-4)=1", "-1)=4", "0)=0", "4)=4", "5)=0"],
+    "{log}"
+  );
+  let (log, _) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{tikz}\n\\begin{document}\n\\pgfmathparse{mod(-7,5)}\\typeout{TRUNC=\\pgfmathresult}\\pgfmathmod{-7}{5}\\typeout{MACRO=\\pgfmathresult}\\pgfmathMod{-7}{5}\\typeout{FLOOR=\\pgfmathresult}\n\\end{document}\n",
+  );
+  assert!(
+    log.contains("TRUNC=-2.0") && log.contains("MACRO=-2.0") && log.contains("FLOOR=3.0"),
+    "{log}"
+  );
+}
+
+/// amsmath.sty:754-797: an accent's accentee is an undelimited argument, so a parameterless macro after it is accented
+/// whole (0801.1527); a command taking arguments keeps the item reading.
+#[test]
+fn amsmath_accent_macro_argument() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/ams-internals/amsmath_accent_macro_argument.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"tex="\tilde{m_{\gamma^{\prime}}}_{a}^{2}""#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"tex="\hat{m_{\gamma^{\prime}}}_{b}""#),
+    "{xml}"
+  );
+  let (log, xml) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n$\\hat x$ $\\vec\\nabla$ $\\dot\\gamma_1$ $\\hat\\mathbf{x}$\n\\end{document}\n",
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  for tex in [
+    r#"tex="\hat{x}""#,
+    r#"tex="\vec{\nabla}""#,
+    r#"tex="\dot{\gamma}_{1}""#,
+    r#"tex="\hat{\mathbf{x}}""#,
+  ] {
+    assert!(xml.contains(tex), "{tex}: {xml}");
+  }
+}
+
+/// amsfonts.sty:78-87 `\widehat#1` (2609.01909).
+#[test]
+fn amsfonts_widehat_macro_argument() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/ams-internals/amsfonts_widehat_macro_argument.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"tex="\widehat{C_{\mathrm{BA}}}_{\rm CF}=1""#),
+    "{xml}"
+  );
+}
+
+/// mathstyle.sty:124-127 (breqn): `\sb`/`\sp` read their script as an argument (2509.22335).
+#[test]
+fn breqn_script_macro_argument() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/breqn_script_macro_argument.tex"
+  ));
+  // the breqn stub's Warning
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(xml.contains(r#"tex="\Delta_{\tau}\doteq 1""#), "{xml}");
+  // a script that is a command reading an argument is read as before (pdflatex: "Argument of \text@ has an extra }";
+  // OXIDIZED_DESIGN_DIVERGENCES #721)
+  let (log, xml) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{breqn}\n\\begin{document}\n$x_\\text{abc}$ and $y^\\mathrm{T}$\n\\end{document}\n",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    xml.contains(r#"tex="x_{\text{abc}}""#) && xml.contains(r#"tex="y^{\mathrm{T}}""#),
+    "{xml}"
+  );
+}

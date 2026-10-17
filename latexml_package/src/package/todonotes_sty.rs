@@ -7,6 +7,10 @@ LoadDefinitions!({
   RequirePackage!("xkeyval");
   RequirePackage!("xcolor");
   RequirePackage!("tikz");
+  // todonotes.sty:32 (Perl's binding has it commented out, todonotes.sty.ltxml:29, KNOWN_PERL_ERRORS #943): its
+  // documents draw with positioning's keys (`on grid`: 1807.00512, 2107.03711). Guard
+  // `perfect_kernel_batch71a::todonotes_loads_positioning`.
+  RawTeX!(r"\usetikzlibrary{positioning}");
   RequirePackage!("calc");
 
   DefMacro!("\\ext@todo", "todo");

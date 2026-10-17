@@ -1,0 +1,11 @@
+% witness: 1811.01404 (`style\st` with `\st` = Mod(\x-\start,5)+1: style6 for style1) (rc_struct5 M1)
+% oracle:  pdflatex 0 errors: MOD(-10)=0 MOD(-5)=0 MOD(-4)=1 MOD(-1)=4 MOD(0)=0 MOD(4)=4 MOD(5)=0
+% engines: rust 67int19b = 0 errors, MOD(-10)=5 MOD(-5)=5; Perl 0.8.8 the same (KNOWN_PERL_ERRORS #944)
+% expect:  0 errors; the values pdflatex prints
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\foreach \v in {-10,-5,-4,-1,0,4,5}{\pgfmathtruncatemacro{\r}{Mod(\v,5)}\typeout{MOD(\v)=\r}}
+\end{document}

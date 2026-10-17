@@ -1,0 +1,12 @@
+% witness: 2609.01909 (`\widehat\cba_{\rm CF}` with `\newcommand{\cba}{C_{\mathrm{BA}}}`) (rc_struct5 D1)
+% oracle:  pdflatex 0 errors (amsfonts.sty:78-87 `\widehat#1`)
+% engines: rust 67int19b = 1 Error:unexpected:double-subscript; Perl 0.8.8 the same
+% expect:  0 errors; the wide hat over all of C_{BA}, the CF script outside
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\newcommand{\cba}{C_{\mathrm{BA}}}
+\begin{document}
+\[ \widehat\cba_{\rm CF}=1 \]
+\end{document}

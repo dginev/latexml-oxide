@@ -2069,6 +2069,19 @@ LoadDefinitions!({
   Let!("\\Breve", "\\breve");
   Let!("\\Bar", "\\bar");
   Let!("\\Vec", "\\vec");
+  // amsmath.sty:754-797 makes each accent a macro, `\mathaccentV{<name>}<family><slot>#5`, reading its accentee as an
+  // undelimited argument: `\tilde\muu_a` with `\newcommand{\muu}{m_{\gamma'}}` accents all of `m_{\gamma'}`, and the
+  // `_a` is that group's (0801.1527; without amsmath TeX's `\mathaccent` takes the `m` alone, and pdflatex reports the
+  // double subscript). The accent keeps LaTeXML's own construction, its argument braced as `\mathaccent"…{#5}` braces
+  // it (`define_ams_macro_accent`); a command reading a mandatory argument (`\hat\mathbf{x}`) is no accentee amsmath
+  // can take (pdflatex: "Argument of \select@group has an extra }"), and is read with what follows as before, which keeps
+  // the formula the author meant (OXIDIZED_DESIGN_DIVERGENCES #721; Perl keeps the kernel's accents, KNOWN_PERL_ERRORS
+  // #945). Guard `perfect_kernel_batch71a::amsmath_accent_macro_argument`.
+  for accent in [
+    "hat", "check", "tilde", "acute", "grave", "dot", "ddot", "breve", "bar", "vec", "mathring",
+  ] {
+    define_ams_macro_accent(accent)?;
+  }
   // amsmath.sty:754-758 makes each `\DeclareMathAccent` accent `\mathaccentV{<name>}<family><slot>` (`\hat` is
   // `\mathaccentV{hat}05E`) and :811-831 typesets it. The binding keeps LaTeXML's own accents, so the call arrives
   // only written out: a revtex bibnote's `.bbl` carries pdflatex's `\protect\mathaccentV {hat}05E{D}` (2008.11212,
@@ -2188,6 +2201,67 @@ Extra braces must be added to prevent wrong output}\@ehc}
   // `\if@fleqn` moved up (before the options block, Perl L53 / #2835) so the
   // `fleqn` option can `\Let` it to `\iftrue`.
 });
+
+/// amsmath's (and amsfonts') macro accent `\<name>#1` over LaTeXML's own `\<name>` accent, kept as
+/// `\lx@ams@kernel@<name>`: a macro of one argument, as amsmath's, so accents.sty's `\underaccent{\dot}{…}`
+/// (`\lx@if@isaccent`) takes it for an accent; the argument goes to the accent through `\lx@undelimited@argument`.
+///
+/// Only an accent is redefined, as amsmath's `\@tempa` test of the accent's `\meaning` (amsmath.sty:760-775) leaves
+/// a name that is not a `\mathaccent` alone: one a document undefined for a later package to declare
+/// (`\let\vec\undefined` before MnSymbol, 2210.15345) or made a macro of its own.
+pub fn define_ams_macro_accent(name: &str) -> Result<()> {
+  if lookup_definition(&T_CS!(format!("\\lx@ams@kernel@{name}")))?.is_some()
+    || !lookup_definition(&T_CS!(format!("\\{name}")))?
+      .is_some_and(|definition| !definition.is_expandable())
+  {
+    return Ok(());
+  }
+  define_undelimited_argument()?;
+  RawTeX!(&format!(
+    r"\let\lx@ams@kernel@{name}\{name}\def\{name}#1{{\lx@undelimited@argument\lx@ams@kernel@{name}{{#1}}}}"
+  ));
+  Ok(())
+}
+
+/// `\lx@undelimited@argument{<head>}{<argument>}`: `<head>` (a LaTeXML accent or script, which reads the next math
+/// item) followed by the undelimited macro argument a TeX macro gave it — amsmath's accents (amsmath.sty:754-797,
+/// `\mathaccent"…{#5}`), mathstyle's `\sb`/`\sp` (mathstyle.sty:126-127, `\mathsub{…#1}`) — braced, as those macros
+/// brace it, so a parameterless macro (or one with optional parameters only: `\newcommand{\tasknum}[1][]{\tau_{#1}}`)
+/// is the item with its whole expansion. A single command that reads a mandatory argument (`\mathbf`, `\text`, a
+/// primitive or a binding closure reading on) is left unbraced, for the head to read with what follows as before:
+/// TeX's braced form errs there (`\hat\mathbf{x}`: "Argument of \select@group has an extra }"; breqn's `x_\text{a}`:
+/// "Argument of \text@ has an extra }") and its recovery loses the formula (OXIDIZED_DESIGN_DIVERGENCES #721).
+pub fn define_undelimited_argument() -> Result<()> {
+  if lookup_definition(&T_CS!("\\lx@undelimited@argument"))?.is_some() {
+    return Ok(());
+  }
+  DefMacro!("\\lx@undelimited@argument{}{}", sub[(head, argument)] {
+    let mut tokens = head.unlist();
+    let argument = argument.unlist();
+    let reads_on = match argument.as_slice() {
+      [single] if matches!(single.get_catcode(), Catcode::CS | Catcode::ACTIVE) => {
+        !lookup_definition(single)?.is_some_and(|definition| {
+          // a body of tokens (a binding's closure may read on past the brace)
+          matches!(definition.get_expansion(), Some(ExpansionBody::Tokens(_)))
+            && definition.get_conditional_type().is_none()
+            && definition
+              .get_parameters()
+              .is_none_or(|parameters| parameters.get_parameters().iter().all(|p| p.optional))
+        })
+      },
+      _ => false,
+    };
+    if reads_on {
+      tokens.extend(argument);
+    } else {
+      tokens.push(T_BEGIN!());
+      tokens.extend(argument);
+      tokens.push(T_END!());
+    }
+    Ok(Tokens::new(tokens))
+  });
+  Ok(())
+}
 
 /// The font size of a delimiter `\bBigg@{<factor>}` sizes. amsmath makes the delimiter
 /// `<factor>\big@size` tall (amsmath.sty:726-738), its four sizes being `\big` = `\bBigg@\@ne`,

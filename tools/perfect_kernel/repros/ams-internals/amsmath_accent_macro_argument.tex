@@ -1,0 +1,12 @@
+% witness: 0801.1527 (`\tilde\muu_a^2` with `\newcommand{\muu}{m_{\gamma^\prime}}`) (rc_struct5 D1)
+% oracle:  pdflatex 0 errors with amsmath (its accents read the accentee as an argument); 2 "Double subscript" without
+% engines: rust 67int19b = 2 Error:unexpected:double-subscript; Perl 0.8.8 the same
+% expect:  0 errors; the tilde and the hat over all of m_{\gamma'}, the scripts outside
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\newcommand{\muu}{ m_{\gamma^\prime} }
+\begin{document}
+$\tilde\muu_a^2$ and $\hat\muu_b$
+\end{document}

@@ -1207,7 +1207,12 @@ LoadDefinitions!({
   // forest.sty:178 reads its options with `\ProcessPgfPackageOptions`: `\@curroptions` stays as it was.
   ProcessKeyOptions!();
   RequirePackage!("tikz");
+  // forest.sty:50-53, the TikZ libraries the package loads, which its documents then draw with outside a tree
+  // (`single arrow` of shapes.arrows: 1910.06571; `fit`: 2003.06880); :129 its key family, which a document's
+  // `\pgfkeys{/forest, …}` selects (2012.09112). Guard `perfect_kernel_batch71a::forest_loads_its_tikz_libraries`.
+  RawTeX!(r"\usetikzlibrary{shapes}\usetikzlibrary{fit}\usetikzlibrary{calc}\usepgflibrary{intersections}");
   RequirePackage!("etoolbox");
+  RawTeX!(r"\pgfkeys{/forest/.is family}");
   RawTeX!(r"\ProvidesPackage{forest}[2017/07/14 v2.1.5 Drawing (linguistic) trees]");
   // Semantic tree parser: \begin{forest} reads bracket grammar into a nested
   // inline-enumerate/inline-item tree.

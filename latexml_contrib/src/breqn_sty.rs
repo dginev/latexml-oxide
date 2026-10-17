@@ -144,6 +144,18 @@ LoadDefinitions!({
     r"\def\lx@breqn@catcodes{\catcode`\^=7\relax \catcode`\_=8\relax}"
   );
   ProcessOptions!();
+  // mathstyle.sty:106, :124-127: `\sb`/`\sp` (the active `_`/`^` below) are macros reading their script as an
+  // undelimited argument, `\mathsub{\protect\subsupstyle#1}` on the primitive `_`, so a script that is a macro is the
+  // macro's whole expansion (`\Delta_\tasknum` with `\newcommand{\tasknum}[1][]{\tau_{#1}}`: 2509.22335, 2210.10207,
+  // 1705.04506; pdflatex without breqn errs). `\subsupstyle` (:113-123) only steps the style counter LaTeXML does not keep.
+  // Guard `perfect_kernel_batch71a::breqn_script_macro_argument`.
+  // The argument goes to the script through amsmath's `\lx@undelimited@argument` (amsmath_sty.rs; breqn loads amsmath):
+  // a command reading a mandatory argument (`x_\text{a}`, which pdflatex rejects) is read as before
+  // (OXIDIZED_DESIGN_DIVERGENCES #721).
+  amsmath_sty::define_undelimited_argument()?;
+  RawTeX!(
+    r"\let\mathsup=^\let\mathsub=_\def\sb#1{\lx@undelimited@argument\mathsub{#1}}\def\sp#1{\lx@undelimited@argument\mathsup{#1}}"
+  );
   RawTeX!(
     r#"\mathcode`\_="8000 \mathcode`\^="8000
 \begingroup\catcode`\_=\active\catcode`\^=\active \global\let_=\sb \global\let^=\sp \endgroup

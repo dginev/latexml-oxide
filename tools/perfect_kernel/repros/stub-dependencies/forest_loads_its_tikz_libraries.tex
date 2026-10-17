@@ -1,0 +1,16 @@
+% witness: 2012.09112 (`\pgfkeys{/forest, …}`), 1910.06571 (`single arrow`), 2003.06880 (`fit`) (rc_struct5 F2)
+% oracle:  pdflatex 0 errors (forest.sty:50-53 loads shapes, fit, calc, intersections; :129 `/forest/.is family`)
+% engines: rust 67int19b = 4 Error:latex:(pgfkeys) (`/forest`, `single arrow`, `fit`, the fit's `(A)(B)`)
+% expect:  0 errors
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{forest}
+\pgfkeys{/forest, my style/.style={draw}}
+\begin{document}
+\begin{tikzpicture}
+\node[single arrow, draw] (A) {A};
+\node (B) at ($(A)+(2,0)$) {B};
+\node[fit=(A)(B), draw] {};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,14 @@
+% witness: 1807.00512, 2107.03711 (`on grid` under todonotes) (rc_struct5 T2)
+% oracle:  pdflatex 0 errors (todonotes.sty:32 `\usetikzlibrary{positioning}`)
+% engines: rust 67int19b = 1 Error:latex:(pgfkeys) (`/tikz/on grid`); Perl 0.8.8 the same (KNOWN_PERL_ERRORS #943)
+% expect:  0 errors
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{todonotes}
+\begin{document}
+\begin{tikzpicture}[node distance=1cm, on grid]
+\node (A) {A};
+\node[right=of A] (B) {B};
+\end{tikzpicture}
+\end{document}

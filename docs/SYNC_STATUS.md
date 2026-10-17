@@ -3042,6 +3042,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Witnesses 0801.4523 1001.3510 1202.5232 2103.10486 2104.03192 (9/9 sample papers 1 → 0). Repro
   package-bindings/txfonts_lambdabar; guard
   `perfect_kernel_batch71a::txfonts_lambdabar`.
+  (7) Small: the forest stub loads forest.sty:50-53's TikZ libraries and :129's `/forest` family (2012.09112 1910.06571
+  2003.06880); todonotes loads positioning (todonotes.sty:32; 1807.00512 36 → 0, 2107.03711; KNOWN_PERL_ERRORS #943);
+  pgfmath `mod` truncates and `Mod` adds the divisor to a negative remainder only (pgfmathfunctions.basic.code.tex:263-297;
+  `Mod(-5,5)` = 0, 1811.01404; `\pgfmathmod@` was floored; KNOWN_PERL_ERRORS #944); amsmath's 11 accents and amsfonts'
+  `\widehat`/`\widetilde` are macros of one argument over LaTeXML's own accents (amsmath.sty:754-797, amsfonts.sty:78-87),
+  and breqn's `\sb`/`\sp` macros reading their script (mathstyle.sty:124-127), both through one helper,
+  amsmath_sty.rs `\lx@undelimited@argument`: the argument braced, so `\tilde\muu_a` accents `\muu`'s whole expansion
+  (0801.1527, 2609.01909; KNOWN_PERL_ERRORS #945), `\Delta_\tasknum` is a subscript τ (2509.22335, 1705.04506 26 → 0),
+  `\hat\bbU` with `\newcommand\bbU{\mathbb{U}}` a hat over the U where it was a hat over nothing (1009.2900, 1111.3335);
+  a single command reading a mandatory argument is read as before (`\hat\mathbf{x}`, breqn's `x_\text{abc}`, which
+  pdflatex rejects; braced, 2210.10207 lost 11,424 words; OXIDIZED_DESIGN_DIVERGENCES #721). Repros stub-dependencies/{forest_loads_its_tikz_libraries,
+  todonotes_loads_positioning}, package-bindings/{pgfmath_mod_of_a_multiple_is_zero, breqn_script_macro_argument},
+  ams-internals/{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument}; guards
+  `perfect_kernel_batch71a::{forest_loads_its_tikz_libraries, todonotes_loads_positioning,
+  pgfmath_mod_of_a_multiple_is_zero, amsmath_accent_macro_argument, amsfonts_widehat_macro_argument,
+  breqn_script_macro_argument}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

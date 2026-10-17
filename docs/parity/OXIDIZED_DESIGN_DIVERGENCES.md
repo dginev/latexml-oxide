@@ -18865,6 +18865,23 @@ loaders, where neither is defined (a paper's own older copy keeps its own), as m
 nothing, since everything is loaded. Witnesses 1506.03598, 1612.05374, 2005.14485, 1906.04134, 1608.04592; guard
 `perfect_kernel_batch71a::tkz_euclide_old_usetkzobj`.
 
+### 721. A TeX macro's undelimited argument that is a command reading a mandatory argument is read as LaTeXML's item (amsmath accents, mathstyle scripts; TeX: an error; Perl: the same as Rust)
+
+amsmath's accents (amsmath.sty:754-797, `\mathaccent"…{#5}`) and breqn/mathstyle's `\sb`/`\sp` (mathstyle.sty:126-127,
+`\mathsub{\protect\subsupstyle#1}`) take their accentee or script as an undelimited macro argument and brace it, so a
+macro after them is the item with its whole expansion (KNOWN_PERL_ERRORS #945; breqn's, SYNC 71a (7)). The bindings
+pass that argument to LaTeXML's own accent or script through one helper, amsmath_sty.rs `\lx@undelimited@argument`:
+braced when it is a group, a character, or a token-list macro with no mandatory parameter (`\muu`,
+`\newcommand{\tasknum}[1][]{…}`), as TeX braces it. A single command that reads a mandatory argument (`\mathbf`,
+`\text`, a primitive or a binding closure that reads on) is left unbraced, for the accent or script to read with what
+follows as before: `\hat\mathbf{x}` is a hat over the bold x and breqn's `x_\text{abc}` a subscript "abc", where
+pdflatex errs ("Argument of \select@group has an extra }", "Argument of \text@ has an extra }": 8 errors for three such
+scripts) and its recovery loses the formula — under the braced form 2210.10207 lost 11,424 words. Why not error as TeX
+does: the shapes are common in arXiv sources and their reading is unambiguous (content before PDF fidelity, priority
+order 2026-10-06); why not brace every command: a binding closure may read past the brace. Guards
+`perfect_kernel_batch71a::{amsmath_accent_macro_argument, breqn_script_macro_argument}` (their `\hat\mathbf{x}` and
+`x_\text{abc}` rows).
+
 ### 725. latex209.def's LaTeX2e-command traps apply to `\usepackage`, `\listfiles`, `\lrbox` and `\@xargdef`; the `\ensuremath` trap is held while bindings call it where their 2.09-era originals do not
 
 **TeX**: `\documentstyle` inputs latex209.def, whose :79-91 wrap `\usepackage`, `\listfiles`, `\ensuremath`, `\lrbox`

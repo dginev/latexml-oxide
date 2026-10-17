@@ -31,6 +31,8 @@ load a subset (KNOWN_PERL_ERRORS #618, #619); fixed in batch 65k (OXIDIZED_DESIG
 | `xypic_curved_arrow` | xyv2 frame → curve (xypdf-fr.tex:60), `\crvi` (65r) | `xy_sty.rs` |
 | `revtex_sanitize_url` | revtex4-1.cls:2378, revtex4-2.cls:2399 `\sanitize@url` (65r) | `revtex4_support_sty.rs` |
 | `pos_loads_color` | PoS.cls:162 (v1.2.6) loads color (65r, KPE #629) | `pos_cls.rs` |
+| `forest_loads_its_tikz_libraries` | forest.sty:50-53 shapes/fit/calc/intersections, :129 `/forest/.is family` (71a) | `forest_sty.rs` |
+| `todonotes_loads_positioning` | todonotes.sty:32 `\usetikzlibrary{positioning}` (71a, KPE #943) | `todonotes_sty.rs` |
 
 `\bibselect` (amsrefs.sty:1291-1340) is guarded with post-processing: `index-bib/amsrefs_bibselect_{database,star_database}`
 (the fixtures and `amsrefs_bibselect_db.ltb` in `latexml_oxide/tests/cluster_regressions/`).

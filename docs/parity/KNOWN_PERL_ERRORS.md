@@ -15391,6 +15391,52 @@ symbol (8 papers: 0801.4523 under pxfonts, 1001.3510, 1202.5232, 2103.10486, 210
 Rust (71a, txfonts_sty.rs Table 61): both U+019B, the one struck lambda Unicode has (newtxmath's `\lambdabar`). Repro
 package-bindings/txfonts_lambdabar; guard `perfect_kernel_batch71a::txfonts_lambdabar`.
 
+## 943. The todonotes binding does not load TikZ's positioning library
+
+todonotes.sty:31-32 `\RequirePackage{tikz}\usetikzlibrary{positioning}`; Perl's todonotes.sty.ltxml:29 has the line
+commented out, so a document drawing with positioning's keys after loading only todonotes errs.
+
+Trigger: `\usepackage{todonotes}` and `\begin{tikzpicture}[on grid]…` — pdflatex 0 errors; Perl and Rust before 71a 1
+Error (`I do not know the key '/tikz/on grid'`; 1807.00512, 2107.03711).
+
+Rust (71a, todonotes_sty.rs): the library is loaded. Repro stub-dependencies/todonotes_loads_positioning; guard
+`perfect_kernel_batch71a::todonotes_loads_positioning`.
+
+## 944. pgfmath's `Mod` of a multiple of the divisor is the divisor, and `\pgfmathmod@` is floored
+
+pgfmathfunctions.basic.code.tex:263-278 `mod` truncates (TeX's `\divide`); :286-297 `Mod` is that `mod` plus the
+divisor when it is negative, so `Mod(-5,5)` is 0 and `Mod(-4,5)` is 1. Perl's `pgfmath_mod_floor`
+(pgfmath.code.tex.ltxml:196-200) gives `-(|a| % |b|) + |b|` whenever `a/b < 0`, so `Mod(-5,5)` = 5; and its second
+`DefMacro('\pgfmathmod@ …')` (:206) redefines `mod`'s macro as that floored mod.
+
+Trigger: `\usepackage{tikz}` and `\pgfmathtruncatemacro{\r}{Mod(-5,5)}` — pdflatex `\r` = 0; Perl and Rust before 71a 5
+(1811.01404's `style\st`, `\st` = `Mod(\x-\start,5)+1`, reached an undefined style6).
+
+Rust (71a, pgfmath_code_tex.rs `pgfmath_mod`): `mod` truncated, `Mod` as pgf's, for the parser and for
+`\pgfmathmod@`/`\pgfmathMod@`. Repro package-bindings/pgfmath_mod_of_a_multiple_is_zero; guard
+`perfect_kernel_batch71a::pgfmath_mod_of_a_multiple_is_zero`.
+
+## 945. amsmath's and amsfonts' accents take the next math item, not an undelimited argument
+
+amsmath.sty:754-797 redefines each accent as `\mathaccentV{<name>}<family><slot>` reading its accentee `#5` as an
+undelimited macro argument (typeset as `\mathaccent"…{#5}`), and amsfonts.sty:78-87 `\widehat#1`/`\widetilde#1` the same:
+`\tilde\muu_a` with `\newcommand{\muu}{m_{\gamma'}}` accents all of `m_{\gamma'}` and the `_a` is the accented group's.
+Perl keeps the kernel's `Digested` accents (TeX's `\mathaccent`, which takes the next math field: the `m` alone), so the
+expansion's `_{\gamma'}` and the author's `_a` are a double subscript.
+
+Trigger: `\usepackage{amsmath}\newcommand{\muu}{m_{\gamma^\prime}}` and `$\tilde\muu_a^2$` — pdflatex 0 errors (without
+amsmath: "Double subscript"); Perl and Rust before 71a 1 Error per formula (0801.1527; `\widehat\cba_{\rm CF}`,
+2609.01909).
+
+Rust (71a, amsmath_sty.rs `define_ams_macro_accent`, for amsmath's 11 accents and amsfonts' 2): each is a macro of one
+argument, as amsmath's, over LaTeXML's own accent (kept as `\lx@ams@kernel@<name>`), its argument passed through
+`\lx@undelimited@argument` — braced, unless it is one of LaTeXML's commands that read a mandatory argument, which the
+accent reads with what follows, as before (OXIDIZED_DESIGN_DIVERGENCES #721). Only a name that is an accent is redefined, as amsmath's `\meaning` test leaves any other (amsmath.sty:760-775):
+`\let\vec\undefined` before MnSymbol keeps `\vec` for MnSymbol to declare (2210.15345). One argument, so accents.sty's
+`\underaccent{\dot}{…}` (`\lx@if@isaccent`) still takes it for an accent. Repros
+ams-internals/amsmath_accent_macro_argument, ams-internals/amsfonts_widehat_macro_argument; guards
+`perfect_kernel_batch71a::{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument}`.
+
 ## 949. AMS-TeX's `\Let@` is missing, so a document's own AMS-TeX alignment macro errs at its `\\`
 
 amstex.tex:486 `\def\Let@{\relax\iffalse{\fi\let\\=\cr\iffalse}\fi}` is the row end an AMS-TeX alignment sets up before

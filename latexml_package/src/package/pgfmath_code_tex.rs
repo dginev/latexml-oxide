@@ -151,6 +151,24 @@ fn pgfmath_result_tokens_str(s: &str) -> Vec<Token> {
 /// Safe divisor — avoid division by zero. Perl `pgfmath.code.tex.ltxml:255`
 /// warns on every zero divisor ("pgfmath: divisor should never be zero!"),
 /// as pgf itself raises a Math Error; this port had gone silent.
+/// pgf's `mod` (pgfmathfunctions.basic.code.tex:263-278): truncated, as TeX's `\divide` truncates, and a zero divisor
+/// leaves the dividend (`mod(x, 0)` is `x`, :271). Its `Mod` (:286-297) is that `mod` plus the divisor when it is
+/// negative, so a multiple of the divisor is 0 (`Mod(-5,5)`: 1811.01404's `style\st`, style5 for style0). Perl's
+/// floor mod (pgfmath.code.tex.ltxml:196-200) makes it the divisor, and its second `\pgfmathmod@` (:206) defines
+/// `mod` as that floor mod (KNOWN_PERL_ERRORS #944). Guard `perfect_kernel_batch71a::pgfmath_mod_of_a_multiple_is_zero`.
+fn pgfmath_mod(a: f64, b: f64, never_negative: bool) -> f64 {
+  let truncated = if b == 0.0 {
+    pgfmath_divide(a, b)
+  } else {
+    a % b
+  } + 0.0;
+  if never_negative && truncated < 0.0 {
+    truncated + b
+  } else {
+    truncated
+  }
+}
+
 fn pgfmath_divisor(v: f64) -> f64 {
   if v == 0.0 {
     Warn!(
@@ -531,26 +549,7 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
     "ceil" => a.ceil(),
     "int" => a as i64 as f64,
     "real" => a,
-    "mod" | "Mod" => {
-      // Perl: pgfmath_mod_trunc for mod, pgfmath_mod_floor for Mod
-      if name == "mod" {
-        // truncated mod (like Perl %); pgf's `\divide` by zero leaves the
-        // dividend, so `mod(x, 0)` is `x` (pgfmathfunctions.basic.code.tex:271)
-        if b == 0.0 {
-          pgfmath_divide(a, b)
-        } else {
-          a % b
-        }
-      } else {
-        // floor mod
-        let b_abs = b.abs();
-        if a / pgfmath_divisor(b) < 0.0 {
-          -(a.abs() % b_abs) + b_abs
-        } else {
-          a.abs() % b_abs
-        }
-      }
-    },
+    "mod" | "Mod" => pgfmath_mod(a, b, name == "Mod"),
     "sign" => {
       if a > 0.0 {
         1.0
@@ -1993,15 +1992,10 @@ LoadDefinitions!({
 
   // Modular arithmetic
   DefMacro!("\\pgfmathmod@ {} {}", sub[(a, b)] {
-    let a = parse_pgf_number(&a);
-    let b = parse_pgf_number(&b);
-    // Perl: pgfmath_mod_floor — mod towards -infinity
-    let result = if a / b < 0.0 {
-      -(a.abs() % b.abs()) + b.abs()
-    } else {
-      a.abs() % b.abs()
-    };
-    pgfmath_result_tokens(result)
+    pgfmath_result_tokens(pgfmath_mod(parse_pgf_number(&a), parse_pgf_number(&b), false))
+  });
+  DefMacro!("\\pgfmathMod@ {} {}", sub[(a, b)] {
+    pgfmath_result_tokens(pgfmath_mod(parse_pgf_number(&a), parse_pgf_number(&b), true))
   });
 
   // Degree/radian conversion

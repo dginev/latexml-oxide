@@ -1,0 +1,14 @@
+% witness: 2509.22335 (`$\Delta_\tasknum$`, `\newcommand{\tasknum}[1][]{\tau_{#1}}`), 2210.10207, 1705.04506 (breqn loaded)
+%          (rc_struct5 D2)
+% oracle:  pdflatex 0 errors with breqn (mathstyle.sty:126 `\sb#1`); without breqn "Missing { inserted"
+% engines: rust 67int19b = 1 Error:unexpected:double-subscript; Perl 0.8.8 the same
+% expect:  0 errors (the breqn stub's Warning); Delta with the subscript tau
+% status:  RED (67int19b) -> GREEN (71a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{breqn}
+\newcommand{\tasknum}[1][]{\tau_{#1}}
+\begin{document}
+$\Delta_\tasknum \doteq 1$
+\end{document}
