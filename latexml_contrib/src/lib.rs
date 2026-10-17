@@ -53,6 +53,7 @@ pub mod apa6_cls;
 pub mod apa7_cls;
 pub mod apa_cls;
 pub mod apacite_sty;
+pub mod appolb_cls;
 pub mod apxproof_sty;
 pub mod ar5iv_sty;
 pub mod arxbj_cls;
@@ -650,6 +651,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("aguplus", "cls", aguplus_cls::load_definitions),
   ("aomart", "cls", aomart_cls::load_definitions),
   ("apacite", "sty", apacite_sty::load_definitions),
+  ("appolb", "cls", appolb_cls::load_definitions),
   ("asme2ej", "cls", asme2ej_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
   ("bmvc2k", "cls", bmvc2k_cls::load_definitions),

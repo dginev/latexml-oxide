@@ -3018,6 +3018,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Worse: 1309.5950 4 → 5 (`\ion` undefined: it ships an aas_macros.sty of its own, :142 `\def\ion`, which the
   aas_macros binding shadows — the H1 class of the study, as its `\lya`/`\kms` errors already were). Repro
   class-bindings/mn2e_author_ion_wins; guards `perfect_kernel_batch71a::{mn2e_author_ion_wins, mnras_keeps_its_ion}`.
+  (3) P1: appolb.cls (Acta Phys. Pol. B; not in TL, 15 of 17 papers do not ship it): latexml_contrib appolb_cls.rs on
+  OmniBus with `\PACS` (appolb.cls:322) as the pacs classification, `\received`, `\eqsec`, `\lambdabar`
+  (OXIDIZED_DESIGN_DIVERGENCES #719), `\headtitle`/`\headauthor` as running-head notes, `\ie`/`\eg`/`\cf`/`\etal`/`\ibid`
+  and `\e`. The 2 shipping it (0801.2427, cond-mat0205657; raw-loaded before, 0 errors) now
+  get the address as a contact and the PACS as a classification, where the raw class put the address in the
+  personname and the PACS in a paragraph. Witnesses 0712.3606 1007.2277 1101.3125 1108.2782 1605.06550 nucl-th0308018
+  physics0501160 (13/13 1 → 0; hep-ph0403117 5 → 0 with the class's `\headtitle`/`\headauthor` running
+  heads, its abbreviations `\ie` & co. and `\e`). Repro class-bindings/appolb_pacs; guards
+  `perfect_kernel_batch71a::{appolb_pacs, appolb_running_heads_and_abbreviations}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

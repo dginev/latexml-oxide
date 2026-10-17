@@ -62,3 +62,45 @@ fn mnras_keeps_its_ion() {
     "<p xml:id=\"p1.1\">the <text xml:id=\"p1.1.1\">He\u{2009}<text font=\"smallcaps\" xml:id=\"p1.1.1.1\">ii</text></text> line</p>",
   );
 }
+
+/// appolb.cls:322 `\PACS` is the classification after the abstract (0712.3606, 1007.2277).
+#[test]
+fn appolb_pacs() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/appolb_pacs.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "classification",
+    &[],
+    r#"<classification name="PACS numbers:" scheme="pacs">27.75.-q</classification>"#,
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &[],
+    "<creator role=\"author\"><personname>A</personname><contact name=\"Address:\u{a0}\" role=\"address\">B</contact></creator>",
+  );
+}
+
+/// appolb.cls:299, :304 running heads and :1019-1033 abbreviations (hep-ph0403117).
+#[test]
+fn appolb_running_heads_and_abbreviations() {
+  let (log, xml) = convert_counted(
+    "\\documentclass{appolb}\n\\begin{document}\n\\title{T}\\author{A}\\maketitle\n\\headtitle{Short T}\\headauthor{A. B.}\nSee \\ie, this and \\etal\\ here.\n\\end{document}\n",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"<note role="runningtitle""#) && xml.contains(">Short T</note>"),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<note role="runningauthor""#) && xml.contains(">A. B.</note>"),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"font="italic""#) && xml.contains(">i.e.</text>, this"),
+    "{xml}"
+  );
+}
