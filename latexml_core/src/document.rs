@@ -3662,38 +3662,45 @@ impl Document {
         // the child (both by the model, never by name).
         struct AutoOpenBridge {
           /// The wrapper chain, outermost first.
-          chain:   &'static [&'static str],
+          chain:    &'static [&'static str],
           /// The row's own predicate on (current element, arriving child).
-          applies: fn(cur: &str, qsym: &str) -> bool,
+          applies:  fn(cur: &str, qsym: &str) -> bool,
           /// Extra attributes on the outermost wrapper.
-          attrs:   &'static [(&'static str, &'static str)],
+          attrs:    &'static [(&'static str, &'static str)],
           /// The row's predicate on the current node itself.
-          holder:  fn(node: &Node) -> bool,
+          holder:   fn(node: &Node) -> bool,
+          /// Whether the auto-closable elements around the current point close first, up to the outermost one whose
+          /// parent holds the wrapper (the paragraph a `\trivlist` ends, latex.ltx `\@trivlist`'s `\par`).
+          close_up: bool,
         }
         const AUTO_OPEN_BRIDGES: &[AutoOpenBridge] = &[
           AutoOpenBridge {
-            chain:   &["ltx:Math", "ltx:XMath"],
-            applies: |_cur, qsym| qsym.starts_with("ltx:XM"),
-            attrs:   &[("mode", "inline")],
-            holder:  |_| true,
+            chain:    &["ltx:Math", "ltx:XMath"],
+            applies:  |_cur, qsym| qsym.starts_with("ltx:XM"),
+            attrs:    &[("mode", "inline")],
+            holder:   |_| true,
+            close_up: false,
           },
           AutoOpenBridge {
-            chain:   &["ltx:inline-block"],
-            applies: |_cur, qsym| qsym != "ltx:inline-block",
-            attrs:   &[],
-            holder:  |_| true,
+            chain:    &["ltx:inline-block"],
+            applies:  |_cur, qsym| qsym != "ltx:inline-block",
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
           },
           AutoOpenBridge {
-            chain:   &["svg:foreignObject"],
-            applies: |cur, qsym| cur.starts_with("svg:") && qsym != "svg:foreignObject",
-            attrs:   &[],
-            holder:  |_| true,
+            chain:    &["svg:foreignObject"],
+            applies:  |cur, qsym| cur.starts_with("svg:") && qsym != "svg:foreignObject",
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
           },
           AutoOpenBridge {
-            chain:   &["ltx:itemize"],
-            applies: |_cur, qsym| qsym == "ltx:item",
-            attrs:   &[],
-            holder:  |_| true,
+            chain:    &["ltx:itemize"],
+            applies:  |_cur, qsym| qsym == "ltx:item",
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
           },
           // A sectioning unit in a float body (`\section` in a `figure`, `\subsection` in a `table`; 38 2609 papers,
           // 117 errors) opens an `ltx:inline-sectional-block` there: the heading keeps its number in the sequence,
@@ -3701,13 +3708,14 @@ impl Document {
           // OXIDIZED_DESIGN_DIVERGENCES #189). The float's own id is fixed before the unit steps the counters it is
           // made within (`pin_float_id_before_its_sectioning`).
           AutoOpenBridge {
-            chain:   &["ltx:inline-sectional-block"],
-            applies: |cur, qsym| {
+            chain:    &["ltx:inline-sectional-block"],
+            applies:  |cur, qsym| {
               matches!(cur, "ltx:figure" | "ltx:table" | "ltx:float")
                 && is_sectioning_unit_name(qsym)
             },
-            attrs:   &[],
-            holder:  |_| true,
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
           },
           // …and in a list item (an itemize, enumerate or description item, nested or not; 2304.10050, 2312.11556,
           // 2406.02069, 2411.15124, 2412.04099, 2501.07868, 2501.07938, 2511.00839; the TeX Live manuals ddphonism,
@@ -3722,10 +3730,11 @@ impl Document {
           // `perfect_kernel_batch54::{sectioning_unit_inside_item_or_figure_opens_a_block,
           // next_sectioning_unit_in_an_item_is_a_sibling}`.
           AutoOpenBridge {
-            chain:   &["ltx:para", "ltx:inline-sectional-block"],
-            applies: |cur, qsym| cur == "ltx:item" && is_sectioning_unit_name(qsym),
-            attrs:   &[],
-            holder:  item_has_label,
+            chain:    &["ltx:para", "ltx:inline-sectional-block"],
+            applies:  |cur, qsym| cur == "ltx:item" && is_sectioning_unit_name(qsym),
+            attrs:    &[],
+            holder:   item_has_label,
+            close_up: false,
           },
           // …and a run-in `\paragraph` or `\subparagraph` in a `{quote}`, `{quotation}` or `{verse}`: pdflatex sets
           // the heading and the text after it, up to the environment's end, inside the quote's `\list` margins
@@ -3737,16 +3746,40 @@ impl Document {
           // witnesses 2607.27159 2505.18677 2305.11603 1809.03802 2208.14587. Guards `perfect_kernel_batch69a::{
           // paragraph_in_a_quote_stays_in_it, section_after_a_paragraph_in_a_quote_closes_it}`.
           AutoOpenBridge {
-            chain:   &["ltx:inline-sectional-block"],
-            applies: |cur, qsym| cur == "ltx:quote" && is_run_in_unit_name(qsym),
-            attrs:   &[],
-            holder:  |_| true,
+            chain:    &["ltx:inline-sectional-block"],
+            applies:  |cur, qsym| cur == "ltx:quote" && is_run_in_unit_name(qsym),
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
           },
           AutoOpenBridge {
-            chain:   &["ltx:item", "ltx:para"],
-            applies: |cur, qsym| cur == qsym,
-            attrs:   &[],
-            holder:  |_| true,
+            chain:    &["ltx:item", "ltx:para"],
+            applies:  |cur, qsym| cur == qsym,
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: false,
+          },
+          // A theorem, a proof or a table of contents written inside a container whose model holds no Para.class (a
+          // `{quote}`, a `\footnote`'s `ltx:note`, a `{wrapfigure}`, a font or color group's `ltx:text`, a tabular
+          // cell): pdflatex sets it there, inside the container's own box, so it opens an `ltx:inline-logical-block`
+          // (Misc.class, model Para.model: LaTeXML-para.rnc:77-90), the wrapper `\marginpar` already gives its note
+          // body (sect09.rs `\lx@marginpar`) — the content stays in place and the schema is unchanged (main-session
+          // ruling P1 2026-10-17; OXIDIZED_DESIGN #271 keeps the quote model as it is). The `\trivlist` that starts a
+          // theorem ends the paragraph it meets (latex.ltx `\@trivlist`'s `\par`), so the auto-closable elements around
+          // the point (the `ltx:p`, a font switch's `ltx:text`) close first, up to the outermost whose parent holds
+          // the wrapper; a container that cannot auto-close (the note, a constructor's `ltx:text`) keeps it inside.
+          // Perl shares every one of these errors (same schema, no such autoOpen).
+          // Witnesses 2406.11811, 2103.03402, 0806.0214, 2602.15784, 2301.10544, 1410.7242 (theorem in a quote),
+          // 1412.2039, math0603642 (TOC in a quote), 2507.09788, 2307.10959, 2308.06338, 2410.15097, 0804.3724,
+          // math0612590 (theorem in a footnote), 1310.0491 (an ltx:text). Guards
+          // `perfect_kernel_batch69c::{para_level_block_in_quote_opens_an_inline_logical_block,
+          // para_level_block_in_note_and_wrapfigure_opens_an_inline_logical_block}`; OXIDIZED_DESIGN_DIVERGENCES #689.
+          AutoOpenBridge {
+            chain:    &["ltx:inline-logical-block"],
+            applies:  |_cur, qsym| matches!(qsym, "ltx:theorem" | "ltx:proof" | "ltx:TOC"),
+            attrs:    &[],
+            holder:   |_| true,
+            close_up: true,
           },
         ];
         for bridge in AUTO_OPEN_BRIDGES {
@@ -3754,6 +3787,25 @@ impl Document {
           let last = arena::pin(bridge.chain[bridge.chain.len() - 1]);
           let applies = arena::with2(cur_qname, qsym, |cur, q| (bridge.applies)(cur, q))
             && (bridge.holder)(&self.node);
+          if applies && bridge.close_up && can_contain_qsym(last, qsym) {
+            let mut node = self.node.clone();
+            let mut close_to = None;
+            while node.get_type() == Some(NodeType::ElementNode) && can_auto_close(&node) {
+              let Some(parent) = node.get_parent() else {
+                break;
+              };
+              if parent.get_type() == Some(NodeType::ElementNode)
+                && can_contain_qsym(get_node_qname(&parent), first)
+              {
+                close_to = Some(node);
+              }
+              node = parent;
+            }
+            if let Some(close_to_node) = close_to {
+              self.close_node_internal(&close_to_node)?;
+            }
+          }
+          let cur_qname = get_node_qname(&self.node);
           if applies && can_contain_qsym(cur_qname, first) && can_contain_qsym(last, qsym) {
             let node_font = self.get_node_font(&self.node).clone();
             for (i, wrapper) in bridge.chain.iter().enumerate() {

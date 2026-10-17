@@ -18739,3 +18739,25 @@ sect11.rs `\@index`), in the family of the 2026-10-10 ruling on stored metadata 
 argument reads `&` literally). A use still typesets the field from its macros, so `\gls{cisa}` with a raw `&` errs as
 pdflatex does, and the printed glossary shows the `&` (pdflatex would err there). Repro
 package-bindings/glossaries_untypeset_ampersand; guard `perfect_kernel_batch69a::glossary_entry_ampersand_is_stored_text`.
+
+### 689. A theorem, a proof or a table of contents inside a container that holds no Para.class opens an `ltx:inline-logical-block` there (Perl: "isn't allowed" Error, element inserted anyway)
+
+`{quote}` (`quote_model = Block.model`, widened by #271 with para/logical-block/sectional-block only), a `\footnote`'s
+`ltx:note` (`tags?, Flow.model`), a `{wrapfigure}`'s `ltx:figure`, an `ltx:text` and an `ltx:td` (`Inline.model`)
+have no Para.class, so `ltx:theorem`, `ltx:proof` and `ltx:TOC` cannot go there; pdflatex sets them inside the
+container's box (a theorem in a quote is indented with it, one in a footnote is in the footnote). Perl's Document.pm
+`find_insertion_point` (no autoOpen route, no auto-close to a holder) errors "<ltx:theorem> isn't allowed in
+<ltx:quote>" and inserts it anyway, schema-invalid. Here the last auto-open bridge of `find_insertion_point_qsym`
+(document.rs `AUTO_OPEN_BRIDGES`) opens an `ltx:inline-logical-block` (Misc.class, `Para.model`,
+LaTeXML-para.rnc:77-90) — the wrapper `\marginpar` already gives its note body (sect09.rs `\lx@marginpar`) — after
+closing the auto-closable elements around the point up to the outermost whose parent holds the block (the `ltx:p` a
+`\trivlist` ends, latex.ltx `\@trivlist`'s `\par`); a container that cannot auto-close keeps it inside. The schema is
+unchanged and #271 stays as it is (main-session ruling P1, 2026-10-17). Like the other bridges it applies only after
+every direct, auto-open and auto-close route is exhausted, so a theorem in a section, a list item or a minipage is
+unaffected, and the text that follows in the same container continues inside the block (it auto-closes with the
+container). Why not widen the quote model with Para.class: every container would need it (note, figure, text, td).
+Witnesses 2406.11811 2103.03402 0806.0214 2602.15784 2301.10544 1410.7242 (theorem in a quote), 1412.2039 math0603642
+(TOC in a quote), 2507.09788 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 (theorem in a footnote), 1310.0491
+(an ltx:text). Repros block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards
+`perfect_kernel_batch69c::{para_level_block_in_quote_opens_an_inline_logical_block,
+para_level_block_in_note_and_wrapfigure_opens_an_inline_logical_block}`.

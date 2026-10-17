@@ -1,0 +1,19 @@
+% witness: 2507.09788, 2307.10959, 2308.06338, 2410.15097, 0804.3724, math0612590 (theorem in a \footnote); the TOC in
+%   a {wrapfigure} of the rc_struct3 P1 sample (agent_reports/2026-10-17_rc_struct3.md); 1310.0491 (a lemma in an
+%   ltx:text) and 2510.04987 (acmart's `\example` in a tabular cell) reach the same row through other defects
+% oracle:  pdflatex 0 errors; the theorem is set in the footnote, the contents in the wrapped figure
+% engines: rust 67int18b = 2 ("<ltx:theorem> isn't allowed in <ltx:note>", "<ltx:TOC> isn't allowed in <ltx:figure>"),
+%   perl = 2 (same schema)
+% expect:  0 errors; the theorem inside an `ltx:inline-logical-block` of the note, the TOC inside one of the figure
+% status:  RED (67int18b) -> GREEN (69c: the auto-open bridge row `inline-logical-block`, ruling P1)
+\documentclass{article}
+\usepackage{wrapfig}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+Text.\footnote{\begin{theorem} In a note. \end{theorem}}
+\begin{wrapfigure}{r}{5cm}
+\tableofcontents
+\end{wrapfigure}
+\section{A}
+Text.
+\end{document}

@@ -2814,6 +2814,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   #898). (b) "Missing $ closing display math." keeps Perl's recovery (the display stays open, the following text set
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
+- **69c** (medium-risk shapes from the rc_struct3 study, agent_reports/2026-10-17_rc_struct3.md). (1) P1: a theorem,
+  proof or TOC inside a container whose model holds no Para.class (`{quote}`, a `\footnote`, a `{wrapfigure}`, an
+  `ltx:text`, a cell) opens an `ltx:inline-logical-block` there — the last auto-open bridge of document.rs
+  `find_insertion_point_qsym`, after closing the auto-closable `ltx:p` around the point (OD #689, ruling P1; #271
+  unchanged). Witnesses 2406.11811 2103.03402 0806.0214 2602.15784 2301.10544 1410.7242 1412.2039 math0603642
+  2507.09788 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 1310.0491. Repros
+  block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards
+  `perfect_kernel_batch69c::para_level_block_in_{quote,note_and_wrapfigure}_opens_an_inline_logical_block`.
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
