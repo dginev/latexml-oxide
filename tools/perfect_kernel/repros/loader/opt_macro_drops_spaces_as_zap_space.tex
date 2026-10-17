@@ -1,0 +1,30 @@
+% witness: 2607.15530 (its pomegranate.sty: `\keys_define:nn { pomegranate } { share counter .bool_set:N = …}` under
+%   expl3 syntax, `\ProcessKeysOptions`, and `\usepackage[share counter=true, number in=section]{pomegranate}`) — the
+%   rc_struct4 K1 shape (agent_reports/2026-10-17_rc_struct4.md)
+% oracle:  pdflatex 0 errors: latex.ltx:18517 stores the option list in `\opt@<file>` through `\zap@space` (every space
+%   outside braces dropped), and l3keys2e reads that list, so `share counter=true` sets the key `sharecounter` (its
+%   spaces were ignored under `\ExplSyntaxOn`); braced values keep their spaces: "shared, in section,title A B."
+% engines: rust 67int19 = 2 ("Package keyvalue Error: Unknown option 'share counter'", "… 'number in'"), perl = 0
+%   (no raw package: none of it runs)
+% expect:  0 errors; "shared, in section,title A B."
+% status:  RED (67int19) -> GREEN (70b: content.rs `zap_space` for `\opt@<file>`)
+\begin{filecontents*}[overwrite]{zapkeys.sty}
+\RequirePackage{l3keys2e}
+\ExplSyntaxOn
+\keys_define:nn { zapkeys } {
+  share counter .bool_set:N = \l_zapkeys_share_bool ,
+  number in .tl_set:N = \l_zapkeys_in_tl ,
+  title .tl_set:N = \l_zapkeys_title_tl ,
+}
+\ProcessKeysOptions { zapkeys }
+\newcommand \zapresult {
+  \bool_if:NTF \l_zapkeys_share_bool { shared } { separate } , ~ in ~ \l_zapkeys_in_tl ,
+  ~ title ~ \l_zapkeys_title_tl
+}
+\ExplSyntaxOff
+\end{filecontents*}
+\documentclass{article}
+\usepackage[share counter=true, number in=section, title={A B}]{zapkeys}
+\begin{document}
+\zapresult.
+\end{document}

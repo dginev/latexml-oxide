@@ -1580,7 +1580,7 @@ fn before_input_handle_options(
           _ => {},
         }
       }
-      pieces.join(",")
+      zap_space(&pieces.join(","))
     },
     None => String::new(),
   });
@@ -1609,6 +1609,42 @@ fn before_input_handle_options(
     None,
   )?;
   Ok(pushpop)
+}
+
+/// latex.ltx:18695-18698 `\zap@space`, as latex.ltx:18517/18757 apply it to the option list stored in `\opt@<file>`
+/// (`\zap@space#2 \@empty`): every space outside braces goes — the delimiter `#1 ` does not see a space inside a
+/// group — so `share counter=true` is stored `sharecounter=true`, the name l3keys2e looks up for a key an expl3 package
+/// declared as `share counter` (spaces are ignored under `\ExplSyntaxOn`; witness 2607.15530, its pomegranate.sty).
+/// `\@raw@opt@<file>` keeps the list as given. A control space (`\ `) is a control sequence, not a space, and stays, as
+/// does the space ending a control word (no token: it keeps the word apart when the list is tokenized again).
+/// Guard `perfect_kernel_batch70b::opt_macro_drops_spaces_as_zap_space`.
+fn zap_space(options: &str) -> String {
+  let mut zapped = String::with_capacity(options.len());
+  let mut depth = 0usize;
+  let mut escaped = false;
+  let mut control_word = false;
+  for c in options.chars() {
+    if escaped {
+      escaped = false;
+      control_word = c.is_ascii_alphabetic();
+      zapped.push(c);
+      continue;
+    }
+    if control_word && c.is_ascii_alphabetic() {
+      zapped.push(c);
+      continue;
+    }
+    let ends_word = std::mem::take(&mut control_word);
+    match c {
+      '\\' => escaped = true,
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      ' ' | '\t' | '\n' | '\r' if depth == 0 && !ends_word => continue,
+      _ => {},
+    }
+    zapped.push(c);
+  }
+  zapped
 }
 
 /// configuration for input of a TeX source (content files mostly)

@@ -2834,6 +2834,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   for its version's OT1 letters, which our decoding reads as OML (commas → `;`, parentheses → harpoons in 2404.06813,
   1707.08434, 1807.01228, 1704.03424); needs per-version symbol fonts first (KNOWN_PERL_ERRORS #927; RED
   `fonts-nfss/declared_math_version_defines_its_mv_macro`).
+  (6) K1: `\opt@<file>` holds the option list without its spaces outside braces, as latex.ltx:18517/18757
+  `\zap@space` stores it (content.rs `zap_space`; `\@raw@opt@` keeps them), so l3keys2e finds keys an expl3 package
+  declared with spaces (`share counter` → `sharecounter`); witness 2607.15530 (pomegranate.sty); KNOWN_PERL_ERRORS #928
+  (latent in Perl, which reads no raw package). Guard `perfect_kernel_batch70b::opt_macro_drops_spaces_as_zap_space`.
 - **69c** (medium-risk shapes from the rc_struct3 study, agent_reports/2026-10-17_rc_struct3.md). (1) P1: a theorem,
   proof or TOC inside a container whose model holds no Para.class (`{quote}`, a `\footnote`, a `{wrapfigure}`, an
   `ltx:text`, a cell) opens an `ltx:inline-logical-block` there — the last auto-open bridge of document.rs

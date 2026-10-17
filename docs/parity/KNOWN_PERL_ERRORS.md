@@ -15314,3 +15314,21 @@ our math decoding reads family 1 as OML whatever the version, so in 2404.06813, 
 commas became `;`, parentheses `↼`/`↽` and a minus an empty operator. The fix waits for the symbol fonts of a math
 version (`\SetSymbolFont` per version, switched by `\mathversion`) to reach the decoding. RED repro
 fonts-nfss/declared_math_version_defines_its_mv_macro.
+
+## 928. `\opt@<file>` keeps the spaces of the option list, which latex.ltx's `\zap@space` drops
+
+latex.ltx:18517 (`\@fileswith@pti@ns`) and :18757 (`\@onefilewithoptions`, a package's option handler) store the
+options as `\protected@xdef\csname opt@<file>\endcsname{…\zap@space#2 \@empty}`: every space outside braces is dropped
+(`\zap@space#1 #2`, :18695-18698, cannot see a space inside a group), while `\@raw@opt@<file>` keeps the list as given.
+Perl Package.pm:2626-2627 defines `\opt@<name>.<ext>` from the joined option strings, spaces kept. Packages that read
+`\opt@` see a different key: l3keys2e's `\ProcessKeysOptions` looks `share counter=true` up as `share counter`, while a
+key declared under `\ExplSyntaxOn` as `share counter .bool_set:N` is `sharecounter`. Latent in Perl, which reads no raw
+package.
+
+Trigger: a package with `\RequirePackage{l3keys2e}\ExplSyntaxOn\keys_define:nn{p}{share counter .bool_set:N =
+\l_p_bool}\ProcessKeysOptions{p}` loaded as `\usepackage[share counter=true]{p}` — pdflatex 0 errors; the spaces kept:
+"Package keyvalue Error: Unknown option 'share counter' for package p". Witness 2607.15530 (its pomegranate.sty).
+
+Rust (70b): content.rs `zap_space` on the list `\opt@<file>` is built from (a control space and the space ending a
+control word kept). Repro loader/opt_macro_drops_spaces_as_zap_space; guard
+`perfect_kernel_batch70b::opt_macro_drops_spaces_as_zap_space`.

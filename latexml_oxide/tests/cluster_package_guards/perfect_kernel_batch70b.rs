@@ -10,6 +10,7 @@
 //! Item 4 (V1) — `\vsplit`'s `to` is a keyword (tex.web §1082, §407; cutwin.sty, 2505.21389).
 //! Item 5 (M2) — held back, RED (fonts-nfss/declared_math_version_defines_its_mv_macro): defining `\mv@<name>` lets
 //! chemist's `\mathversion{chem}` set its mathcodes for OT1 letters, which the math decoding reads as OML.
+//! Item 6 (K1) — `\opt@<file>` holds the option list `\zap@space`d (latex.ltx:18517, 18757; l3keys2e, 2607.15530).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -175,5 +176,29 @@ fn vsplit_to_is_a_keyword() {
     "para",
     &["xml:id=\"p1\""],
     r#"<para xml:id="p1"><p>One.</p></para>"#,
+  );
+}
+
+/// loader/opt_macro_drops_spaces_as_zap_space: l3keys2e options `share counter=true, number in=section, title={A B}` for
+/// keys declared under expl3 syntax (pdflatex 0 errors). Before: 2 errors "Package keyvalue Error: Unknown option".
+#[test]
+fn opt_macro_drops_spaces_as_zap_space() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/opt_macro_drops_spaces_as_zap_space.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    stderr.contains("zapkeys.sty"),
+    "the package is read raw\n{stderr}"
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p xml:id="p1.1">shared, in section,title A B.</p></para>"#,
   );
 }
