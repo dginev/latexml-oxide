@@ -1,5 +1,30 @@
 use crate::prelude::*;
 
+/// The text of a mark digested in math: its characters as written and its symbols, a script's or other command's
+/// arguments read for theirs (`^\dagger` is "†"; the class sets the whole mark as a superscript), so the mark attribute
+/// is what the mark shows and what a `\tablenotemark` of the same mark gives.
+fn math_mark_text(digested: &Digested) -> String {
+  match digested.data() {
+    DigestedData::List(list) => list.borrow().boxes.iter().map(math_mark_text).collect(),
+    DigestedData::Whatsit(whatsit) => {
+      let whatsit = whatsit.borrow();
+      let args: Vec<&Digested> = whatsit.get_args().iter().flatten().collect();
+      if args.is_empty() {
+        digested.to_attribute()
+      } else {
+        args.into_iter().map(math_mark_text).collect()
+      }
+    },
+    // A character as written (math's `*` is set as U+2217 but marks the note a text `\tablenotemark{*}` marks), a
+    // symbol command (`\dagger`) as set.
+    DigestedData::TBox(_) => match digested.untex() {
+      Ok(written) if !written.starts_with('\\') => written,
+      _ => digested.to_attribute(),
+    },
+    _ => digested.to_attribute(),
+  }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: deluxetable.sty.ltxml — deluxetable environment for AAS styles
@@ -125,9 +150,21 @@ LoadDefinitions!({
   DefConstructor!("\\tablenotemark{}",
     "<ltx:note role='footnotemark' mark='#1'></ltx:note>",
     mode => "restricted_horizontal");
-  DefConstructor!("\\tablenotetext{}{}",
+  // The note's mark is its `mark`, which pairs it with a `\tablenotemark` of the same text (latex_constructs
+  // `relocate_footnote`). Perl digests it as text (deluxetable.sty.ltxml:106); `\lx@deluxe@tablenote@mark` digests it
+  // in math and gives the math's own text (`a`, `†`, [`math_mark_text`]) as its attribute form, for a class that sets the mark in math
+  // (AASTeX, aas_support_sty.rs).
+  DefConstructor!("\\lx@deluxe@tablenote@mark{}", "",
+    mode => "math", bounded => true,
+    properties => sub[args] {
+      let form = args[0].as_ref().map(math_mark_text).unwrap_or_default();
+      Ok(stored_map!("attributeForm" => Stored::String(pin(&form))))
+    });
+  DefConstructor!("\\lx@deluxe@tablenotetext{}{}",
     "<ltx:note role='footnotetext' mark='#1'>#2</ltx:note>",
-    mode => "internal_vertical", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
+    mode => "internal_vertical", sizer => sub[_whatsit] { Ok(out_of_line_size()) },
+    reversion => "\\tablenotetext{#1}{#2}");
+  DefMacro!("\\tablenotetext{}{}", "\\lx@deluxe@tablenotetext{#1}{#2}");
 
   // Perl uses AddToMacro to accumulate into \tblnote@list
   // We use \g@addto@macro which does the same at the TeX level

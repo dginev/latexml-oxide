@@ -1,0 +1,43 @@
+% witness: 1411.3719 (rows after `\tablehead`, no `\startdata`), 1002.1848 (`\tablehead{…}\\ \cline` before
+%          `\startdata`), 1909.11243 (rows after `\enddata`), 1902.00588 (a second `\enddata`, a `\label` after it):
+%          emulateapj.cls:1430-1460 opens the longtable at the environment's `\begin`, `\tablehead` (:1329-1345) sets
+%          heading rows, `\startdata` (:1324) only captions a headless table, `\enddata` (:1497) only ends a row
+% oracle:  pdflatex 0 errors; Table 1 "A B / a 1a / b 2"; Table 2 "parameter value / a0 -2.55 / a1 -0.26"; Table 3
+%          "A B C / a 1a x / b 2 y", "Note. — A comment.", "a First note."
+% engines: rust 67int17b = 8 errors, 2 warnings (`\noalign` cannot be used here, Stray alignment "&"); Perl the same
+% expect:  0 errors, 0 warnings; every row in its table, the heads `thead`, the note paired with its mark
+% status:  RED (67int17b) -> GREEN (68y)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\begin{deluxetable}{lc}
+\tablecaption{Cap}
+\tablehead{\colhead{A} & \colhead{B}}\\ \cline{1-2}
+\startdata
+a & 1 \\
+\enddata
+b & 2 \\
+\end{deluxetable}
+\begin{deluxetable}{lc}
+\tablecaption{Cap two}
+\tablehead{parameter & value}
+ $a_{0}$ & -2.55 \\
+ $a_{1}$ & -0.26 \\
+\end{deluxetable}
+\begin{deluxetable}{lcc}
+\tabletypesize{\scriptsize}
+\tablewidth{0pt}
+\tablecaption{Cap three\label{tab:x}}
+\tablehead{\colhead{A} & \colhead{B} & \colhead{C}}
+\startdata
+\enddata
+a & 1\tablenotemark{a} & x \\
+b & 2 & $y$
+\enddata
+\tablecomments{A comment.}
+\tablenotetext{a}{First note.}
+\enddata
+\label{tab:y}
+\end{deluxetable}
+See Table~\ref{tab:y}.
+\end{document}

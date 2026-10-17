@@ -14600,3 +14600,36 @@ errors, three cells; Perl and Rust before 68y `Stray alignment "&"`.
 
 Rust (68y, aa_support_sty.rs): `protected => true`. Witness 0801.2767. Repro class-bindings/aa_ion_robust_cell_head;
 guard `perfect_kernel_batch68y::aa_ion_is_robust_at_a_cell_head`.
+
+## 873. deluxetable's `\tablenotetext` digests its mark as text; AASTeX sets it in math
+
+Every AASTeX version sets the mark of `\tablenotetext` in math — aastex701.cls :11967-11969 (aastex62.cls :5097-5099,
+aastex631.cls :5382-5384) `$^{\hbox to 5pt{$#1$}}$`, aastex.cls 5.0 `\llap{$^{#1}$}` — so authors write
+`\tablenotetext{^\dagger}{…}` or `\tablenotetext{\dagger}{…}`. Perl's constructor (deluxetable.sty.ltxml:106,
+`mark='#1'`) digests the mark as text: `^` is a script outside math.
+
+Trigger: `\documentclass{aastex701}`, a deluxetable with `\tablenotetext{^\dagger}{The values …}` — pdflatex 0 errors,
+a dagger; Perl and Rust before 68y `^ Script can only appear in math mode`.
+
+Rust (68y): aas_support_sty.rs digests the mark in math (deluxetable_sty.rs `\lx@deluxe@tablenote@mark`), its attribute
+the mark's text (`†`; `a` still pairs with `\tablenotemark{a}`); emulateapj, whose mark is text
+(emulateapj.cls:1424-1427), keeps the text form. Witnesses 2503.18379, 0803.1504. Repro
+class-bindings/aastex_tablenotetext_math_mark; guard `perfect_kernel_batch68y::aastex_tablenotetext_mark_is_math`.
+
+## 874. emulateapj's deluxetable is AASTeX's: rows outside `\startdata … \enddata` are outside the table
+
+emulateapj.cls:1430-1460 opens a longtable at the deluxetable's `\begin`: `\tablehead` (:1329-1345) sets heading rows
+in it, `\startdata` (:1324) only captions a table without a head, and `\enddata` (:1497 `\\[\lastrowheight@]`) only
+ends a row. Perl's binding (deluxetable.sty.ltxml:35-43, AASTeX's table) opens the alignment at `\startdata` and closes
+it at `\enddata`, so a head's `\\ \cline`, rows of a table without `\startdata`, rows after `\enddata` and a second
+`\enddata` fall outside it (#665 is the table ended without `\enddata`).
+
+Trigger: `\documentclass{emulateapj}`, `\begin{deluxetable}{lc} \tablecaption{Cap} \tablehead{\colhead{A} &
+\colhead{B}}\\ \cline{1-2} \startdata a & 1 \\ \enddata b & 2 \\ \end{deluxetable}` — pdflatex 0 errors, rows a and b
+under the head; Perl and Rust before 68y `\noalign cannot be used here` and `Stray alignment "&"`.
+
+Rust (68y, emulateapj_cls.rs): the data opens at `\tablehead` or `\startdata` and closes at the environment's end;
+`\enddata` ends a row; notes, comments and a `\label` after the data are kept for the table's end. Witnesses 1411.3719,
+1909.11243, 1002.1848, 1902.00588 (and #665's 1506.07185, 1705.08932). Repro
+class-bindings/emulateapj_deluxetable_open_from_head; guard
+`perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`.

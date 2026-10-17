@@ -654,6 +654,15 @@ LoadDefinitions!({
   Let!("\\aas@@deluxetable@bindings", "\\@deluxetable@bindings");
   DefMacro!("\\@deluxetable@bindings", "\\aas@table@dollar\\aas@@deluxetable@bindings");
 
+  // Every AASTeX sets the `\tablenotetext` mark in math: aastex701.cls TL :11967-11969 (aastex62.cls :5097-5099,
+  // aastex631.cls :5382-5384, 2503.18379's copy) `$^{\hbox to 5pt{$#1$}}$`, the older form (aastex631.cls :2001-2002)
+  // `$^{#1}$`, while `\tablenotemark` sets its mark in text (:8494 `\textsuperscript{…\it #1}`). The mark's attribute
+  // is the math's own text, so a `\tablenotetext{a}` still pairs with a `\tablenotemark{a}`. Perl digests it as text
+  // (deluxetable.sty.ltxml:106), so `\tablenotetext{^\dagger}` set its `^` in text (2503.18379, 0803.1504;
+  // KNOWN_PERL_ERRORS #873). emulateapj, which loads this binding, sets it in text (emulateapj_cls.rs).
+  // Guard: `perfect_kernel_batch68y::aastex_tablenotetext_mark_is_math`.
+  DefMacro!("\\tablenotetext{}{}", "\\lx@deluxe@tablenotetext{\\lx@deluxe@tablenote@mark{#1}}{#2}");
+
   // Decimal table conditionals — Perl L338-345
   DefConditional!("\\ifcolnumberson");
   DefConditional!("\\ifdeluxedecimals");

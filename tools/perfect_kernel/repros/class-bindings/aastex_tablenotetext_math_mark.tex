@@ -1,0 +1,21 @@
+% witness: 2503.18379 (`\tablenotetext{^\dagger}`), 0803.1504: aastex701.cls :11967-11969 (aastex631.cls :5382-5384)
+%          `$^{\hbox to 5pt{$#1$}}$`, aastex.cls 5.0 `\llap{$^{#1}$}`; Perl deluxetable.sty.ltxml:106 a text mark
+% oracle:  pdflatex 0 errors; "1a 2b", "a First note. b Second note. † Third note. † Fourth note."
+% engines: rust 67int17b = 1 error (`^` Script can only appear in math mode); Perl the same shape
+% expect:  0 errors, 0 warnings; notes a and b paired with their marks, the dagger notes marked "†"
+% status:  RED (67int17b) -> GREEN (68y)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\begin{deluxetable}{cc}
+\tablecaption{Cap}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1\tablenotemark{a} & 2\tablenotemark{b} \\
+\enddata
+\tablenotetext{a}{First note.}
+\tablenotetext{b}{Second note.}
+\tablenotetext{\dagger}{Third note.}
+\tablenotetext{^\dagger}{Fourth note.}
+\end{deluxetable}
+\end{document}
