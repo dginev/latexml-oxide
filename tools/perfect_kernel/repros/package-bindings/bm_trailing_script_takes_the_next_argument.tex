@@ -1,0 +1,13 @@
+% witness: rc_struct3 B1 (13 of the 25 sampled `{` first-error papers; est. 408 run-365 papers, grep 309)
+% oracle:  pdflatex 0 errors: a bold G subscripted by (10); M_{max}; a bold D with ^t and _p
+% engines: rust 67int18b = 3 Error:expected:{ "Missing sub/superscript argument"; Perl 0.8.8 the same 3
+%          (bm.sty.ltxml:21 bounded `\bm{}`)
+% expect:  bm.sty:162-217 `\bm@general` emits the argument as it stands (`\let_\relax`), so a trailing `_`/`^`
+%          takes its argument after `\bm`'s closing brace
+% status:  RED (67int18b) -> GREEN (69b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{bm}
+\begin{document}
+$\bm{G_}{(10)}$ and $M\bm_{max}$ and $\bm{D^}{t}_p$.
+\end{document}

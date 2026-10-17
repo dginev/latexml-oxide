@@ -14881,3 +14881,21 @@ before 69a `Stray alignment "&"`.
 Rust (69a, glossaries_sty.rs `\lx@glossaries@newentry`): the stored fields read `&` as the character
 (OXIDIZED_DESIGN_DIVERGENCES #679). Witness 2602.09131. Repro package-bindings/glossaries_untypeset_ampersand; guard
 `perfect_kernel_batch69a::glossary_entry_ampersand_is_stored_text`.
+
+## 897. bm's `\bm` with an argument ending in a script reads the argument's `}` as the script's argument
+
+bm.sty's `\bm` (`\bm@general`, bm.sty:162-217) scans its argument token by token and emits the bold result at the
+level `\bm` is used at, `_` as itself (`\let_\relax`), so a `_`/`^` that ends the argument takes its argument from
+after `\bm`'s closing brace. Perl's `\bm` is a bounded constructor (bm.sty.ltxml:21 `DefConstructor('\bm{}', '#1',
+bounded => 1, …)`), so the script inside the group reads the `}`.
+
+Trigger: `\usepackage{bm}` and `$\bm{G_}{(10)}$ and $M\bm_{max}$ and $\bm{D^}{t}_p$` — pdflatex 0 errors (a bold G
+subscripted by (10), `M_{max}`, a bold D with ^t and _p); Perl and Rust before 69b 3 `Error:expected:{ Missing
+sub/superscript argument`. Also `\bm{(A^\top A)^{-1}A^}\top`, and `\renewcommand{\vec}{\bm}` with `\vec_X` (rc_struct3
+B1: 13 of 25 sampled `{` first-error papers, est. 408 in run 365).
+
+Rust (69b, bm_sty.rs `bold_math`): a script ending a `BoldArgument::Scanned` argument (trailing blanks aside)
+follows the bounded `\lx@bm@bold{…}` group, as the split path's `bold_run` already leaves it; `\bm_` is the script
+alone. The boxed/grouped `\bm`s (amsbsy `\boldsymbol`, the WS/interact/RevTeX class `\bm`) keep TeX's error. Repro
+package-bindings/bm_trailing_script_takes_the_next_argument; guard
+`perfect_kernel_batch69b::bm_trailing_script_takes_the_next_argument`.

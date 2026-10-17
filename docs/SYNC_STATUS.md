@@ -2772,6 +2772,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   sectioning-frontmatter/subsection_in_quote_in_proof, review probes d_thm/d_proof3 with `\subsection`); `\multirow{3}{*}{\textsc{X}}` under a size change nests
   its fonts differently (2509.09853, rendering unchanged).
 
+- **69b** (low-risk shapes from the rc_struct3 study, agent_reports/2026-10-17_rc_struct3.md). (1) B1: bm.sty's `\bm`
+  leaves a script that ends its argument where it stands (bm.sty:162-217 `\bm@general`), so `\bm{G_}{(10)}`,
+  `M\bm_{max}`, `\bm{(A^\top A)^{-1}A^}\top` take the script's argument after `\bm` (bm_sty.rs `bold_math`;
+  KNOWN_PERL_ERRORS #897; est. 408 run-365 papers). Repro package-bindings/bm_trailing_script_takes_the_next_argument;
+  guard `perfect_kernel_batch69b::bm_trailing_script_takes_the_next_argument`.
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

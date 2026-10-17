@@ -96,6 +96,13 @@ fn take_number(tokens: &[Token], mut i: usize, out: &mut Vec<Token>) -> usize {
 }
 
 /// The index of the first token at or after `i` that is not a blank.
+/// A `_` or `^`: a script character, or a control sequence let to one (`\sb`, `\sp`).
+fn is_script(token: &Token) -> bool {
+  matches!(token.get_catcode(), Catcode::SUPER | Catcode::SUB)
+    || token.defined_as(&T_SUPER!())
+    || token.defined_as(&T_SUB!())
+}
+
 fn skip_blanks(tokens: &[Token], mut i: usize) -> usize {
   while tokens
     .get(i)
@@ -218,11 +225,6 @@ fn script_argument(run: &[Token], i: usize) -> Option<(Vec<Token>, usize)> {
 /// `\active@math@prime` joins it. A script whose argument cannot be told keeps the rest of the run as its argument,
 /// with a Warning naming `cs`.
 fn bold_run(out: &mut Vec<Token>, cs: &str, bold: Token, run: Vec<Token>) {
-  let is_script = |t: &Token| {
-    matches!(t.get_catcode(), Catcode::SUPER | Catcode::SUB)
-      || t.defined_as(&T_SUPER!())
-      || t.defined_as(&T_SUB!())
-  };
   let is_superscript = |t: &Token| t.get_catcode() == Catcode::SUPER || t.defined_as(&T_SUPER!());
   let is_prime = |t: &Token| t.get_catcode() == Catcode::OTHER && t.to_string() == "'";
   let undetermined = |script: &Token, rest: &[Token]| {
@@ -370,9 +372,30 @@ pub fn bold_math(cs: &str, bold: Token, arg: Tokens, argument: BoldArgument) -> 
   // whole).
   let split = in_math && !commands.is_empty() && !delimiters_pair_up(&commands);
   if !split {
-    let mut out = vec![bold, T_BEGIN!()];
-    out.extend(tokens);
-    out.push(T_END!());
+    let mut tokens = tokens;
+    // bm.sty's `\bm` emits a script ending its argument as it stands (`\let_\relax` in `\bm@general`,
+    // bm.sty:162-217), so it takes its argument from after `\bm`'s closing brace: `\bm{G_}{(10)}` is a bold `G`
+    // subscripted by `(10)`, `M\bm_{max}` is `M_{max}`. Here the script follows the bounded `bold`, as `bold_run`
+    // leaves it on the split path; in the group it would read the `}` ("Missing sub/superscript argument"). A
+    // boxed or grouped command ([`BoldArgument::Grouped`]) keeps TeX's error, its box ending there.
+    let mut script = None;
+    if argument == BoldArgument::Scanned
+      && let Some(last) = tokens
+        .iter()
+        .rposition(|t| t.get_catcode() != Catcode::SPACE)
+      && is_script(&tokens[last])
+    {
+      script = Some(tokens[last]);
+      tokens.truncate(last);
+    }
+    let mut out = Vec::new();
+    // `\bm_`: the script alone, attaching to what precedes `\bm` as in TeX.
+    if script.is_none() || skip_blanks(&tokens, 0) < tokens.len() {
+      out.extend([bold, T_BEGIN!()]);
+      out.extend(tokens);
+      out.push(T_END!());
+    }
+    out.extend(script);
     return Tokens::new(out);
   }
   if argument == BoldArgument::Grouped {
