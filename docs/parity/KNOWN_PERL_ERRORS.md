@@ -14945,3 +14945,21 @@ leading star since the hep-text.sty `\setlist*[inlinelist,1]{…}` fix.
 Rust (69b, enumitem_sty.rs): `\setlist OptionalMatch:* Optional` is a macro that, after names, dispatches by
 `\@ifstar` (which passes spaces: `\setlist[itemize] *{…}`) to the primitive `\lx@enit@setlist`. Repro
 list-structure/setlist_star_after_the_names; guard `perfect_kernel_batch69b::setlist_star_after_the_names`.
+
+## 901. `\twocolumn` and `\onecolumn` leave `\if@twocolumn` as it was
+
+latex.ltx:20430-20465 `\onecolumn` sets `\global\@twocolumnfalse` and `\twocolumn` `\global\@twocolumntrue` (with the
+column geometry). Perl's `DefMacro('\twocolumn[]', '\ifx.#1.\else\par\noindent#1\fi\par')` and
+`DefMacro('\onecolumn', '\par')` (latex_constructs.pool.ltxml:1015-1016) set neither, so a class that calls
+`\twocolumn` itself and then branches on the flag takes the one-column branch.
+
+Trigger: `\makeatletter\twocolumn\def\keywords{\if@twocolumn\section*{Keywords}\else\small\quotation\fi}\makeatother`
+and `\keywords{…}\section{Introduction}` — pdflatex a "Keywords" heading then section 1; Perl and Rust before 69b
+an unclosed `{quotation}` holding the rest of the document. The ACM 1.8 classes (acm_proc_article-sp.cls:1441,
+vldb.cls, sig-alternate.cls) end with `\twocolumn` and define `\keywords` so (vldb.cls:778-782); once their lists
+open (the `\@trivlist` lock, 69b), the unclosed quotation's list held every section: "<ltx:section> isn't allowed
+in <ltx:item>" (1212.6177, 1710.00867, 1609.00969, 1407.2279, 1309.5503).
+
+Rust (69b, sect05.rs): `\twocolumn` and `\onecolumn` set the flag as latex.ltx does; the page geometry
+(`\columnwidth`, `\linewidth`, `\col@number`) is left alone. Repro class-bindings/twocolumn_sets_the_twocolumn_flag;
+guard `perfect_kernel_batch69b::twocolumn_sets_the_twocolumn_flag`.

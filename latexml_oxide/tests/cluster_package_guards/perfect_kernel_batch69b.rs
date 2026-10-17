@@ -6,6 +6,8 @@
 //! mdwtab's `array` enters math itself (mdwtab.sty:505-510), so in text it is a formula without "Missing $"; Wooding's
 //! mathenv loads mdwtab (mathenv.sty:53). Item 5 (E3) — the `$` closing a display is read expanded (tex.web §1197).
 //! Item 6 (X1) — enumitem's `\setlist[…]*{…}` appends, the star read after the names (enumitem.sty:1661-1667).
+//! Item 2b — `\twocolumn`/`\onecolumn` set `\if@twocolumn` (latex.ltx:20430-20465), which the ACM 1.8 classes'
+//! `\keywords` branches on once item 2 lets their lists open.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -158,4 +160,30 @@ fn setlist_star_after_the_names() {
     &[],
     r#"<itemize cssstyle="--ltx-enum-leftmargin:2em" xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>–</tag><tag role="refnum">–</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I2.i1.p1"><p>Two.</p></para></item></itemize>"#,
   );
+}
+
+/// class-bindings/twocolumn_sets_the_twocolumn_flag: a class-level `\twocolumn` then vldb.cls:778-782's `\keywords`
+/// (pdflatex 0 errors: a "Keywords" heading, then section 1). Before 69b: the `\quotation` branch, never closed,
+/// held section 1 (1 Warning; 1212.6177 and 1710.00867 then "<ltx:section> isn't allowed in <ltx:item>").
+#[test]
+fn twocolumn_sets_the_twocolumn_flag() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/twocolumn_sets_the_twocolumn_flag.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"Sx1\""],
+    r#"<section xml:id="Sx1"><title>Keywords</title><para xml:id="Sx1.p1"><p>Web Archiving, Digital Preservation</p></para></section>"#,
+  );
+  assert!(
+    xml.contains("<section inlist=\"toc\" xml:id=\"S1\">"),
+    "{xml}"
+  );
+  assert!(!xml.contains("<quote"), "{xml}");
 }

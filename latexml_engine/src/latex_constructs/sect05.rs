@@ -837,9 +837,18 @@ pub(crate) fn load() -> Result<()> {
   // price.sty's `\ifmulticol\twocolumn[\begin{@twocolumnfalse}\fi …` — had its `\fi` end the test instead
   // (1810.09262, 1812.09662, 1904.00825, 1912.04806; KNOWN_PERL_ERRORS #672). Guard:
   // `perfect_kernel_batch66r::twocolumn_header_spans_a_conditional`.
+  //
+  // `\twocolumn` sets `\global\@twocolumntrue` and `\onecolumn` `\global\@twocolumnfalse`, as latex.ltx:20430-20465
+  // does (Perl sets neither): classes branch on the flag after their own `\twocolumn`. The ACM 1.8 family
+  // (acm_proc_article-sp.cls:1441, vldb.cls, sig-alternate.cls) ends with `\twocolumn`, and its `\keywords` is
+  // `\if@twocolumn\section*{Keywords}\else\small\quotation\fi` (vldb.cls:778-782): with the flag false the quotation's
+  // list was never closed and held the rest of the document (1212.6177, 1710.00867, 1609.00969, 1407.2279: "<ltx:section>
+  // isn't allowed in <ltx:item>"). The page geometry `\twocolumn` also sets (`\columnwidth`, `\linewidth`,
+  // `\col@number`) is left alone. KNOWN_PERL_ERRORS #901; guard
+  // `perfect_kernel_batch69b::twocolumn_sets_the_twocolumn_flag`.
   DefMacro!("\\twocolumn[]", sub[args] {
     let header: Option<Tokens> = args.into_iter().next().unwrap().into();
-    let mut tokens = vec![T_CS!("\\par")];
+    let mut tokens = vec![T_CS!("\\global"), T_CS!("\\@twocolumntrue"), T_CS!("\\par")];
     if let Some(header) = header.filter(|header| !header.is_empty()) {
       tokens.extend([T_BEGIN!(), T_CS!("\\noindent")]);
       tokens.extend(header.unlist());
@@ -847,8 +856,8 @@ pub(crate) fn load() -> Result<()> {
     }
     Ok(Tokens::new(tokens))
   });
-  // Perl: DefMacro('\onecolumn', '\par');
-  DefMacro!("\\onecolumn", "\\par");
+  // Perl: DefMacro('\onecolumn', '\par'); latex.ltx:20430-20437 `\global\@twocolumnfalse` (see `\twocolumn`).
+  DefMacro!("\\onecolumn", "\\global\\@twocolumnfalse\\par");
   DefMacro!("\\@onecolumna", "", locked => true);
   DefMacro!("\\@twocolumna", "", locked => true);
 

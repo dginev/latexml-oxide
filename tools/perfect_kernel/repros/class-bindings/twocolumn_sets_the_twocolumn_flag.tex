@@ -1,0 +1,20 @@
+% witness: 1212.6177, 1710.00867, 1609.00969, 1407.2279, 1309.5503 (ACM 1.8 family, acm_proc_article-sp.cls:1441
+%          and vldb.cls end with `\twocolumn`); exposed by 69b's `\@trivlist` lock (rc_struct3 L1)
+% oracle:  pdflatex 0 errors: a "Keywords" heading, its text, then section 1 "Introduction"
+% engines: rust 69b before this fix = 1 Warning "end document with open groups" (the quotation never closed holds
+%          section 1; with the class's list open, "<ltx:section> isn't allowed in <ltx:item>"); Perl 0.8.8 the same
+%          (latex_constructs.pool.ltxml:1015 `\twocolumn` sets no flag)
+% expect:  latex.ltx:20454-20465 `\twocolumn` sets `\global\@twocolumntrue`, so `\keywords` takes its two-column branch
+% status:  RED (69b r1) -> GREEN (69b)
+% preload: ar5iv.sty
+\documentclass{article}
+% acm_proc_article-sp.cls:1441 / vldb.cls end with \twocolumn; their \keywords branch on the flag (vldb.cls:778-782)
+\makeatletter
+\twocolumn
+\def\keywords{\if@twocolumn\section*{Keywords}\else\small\quotation\fi}
+\makeatother
+\begin{document}
+\keywords{Web Archiving, Digital Preservation}
+\section{Introduction}
+Text.
+\end{document}
