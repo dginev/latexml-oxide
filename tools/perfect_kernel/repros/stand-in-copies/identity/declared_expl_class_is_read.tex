@@ -1,0 +1,10 @@
+% witness: 2308.11432 (fcs.cls `\ProvidesExplClass{fcs}`)
+% oracle:  pdflatex 0 errors ("EXTRA")
+% engines: rust 72a r2 = 1 Error (\fcsextra undefined: the declaration's `Expl` form was not read as one)
+% expect:  0 errors, 0 warnings; "EXTRA"
+% status:  RED (72a r2) -> GREEN (72a r3)
+% preload: ar5iv.sty
+\documentclass{fcs}
+\begin{document}
+\fcsextra
+\end{document}

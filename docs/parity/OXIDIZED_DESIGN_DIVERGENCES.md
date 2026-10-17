@@ -19164,16 +19164,27 @@ extra command the copy defines and the paper uses is undefined (aas_macros.sty:9
 from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.tex` route), before the load's
 `\AtEndOfClass`/`\AtEndOfPackage` code runs. The rules:
 0. *Identity.* The copy is read only when it is the file the binding stands in for (content.rs
-   `copy_is_the_stood_in_file`): its `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` names the file or the binding,
-   whatever the version (1609.03892's fcs.cls of 2016, older than the `\fcssetup` the binding models; apjfonts.sty,
-   1202.3442), or, with no such declaration, it defines the binding's public command set — a quarter of the
-   letters-only names the binding's own code assigned (`state::stand_in_public_names`, `State::stand_in_last_load`;
-   not a file the binding loads: `StandInLoadGuard::suspend`), twenty of them, or names of which a quarter are the
-   binding's (an excerpt). An author's own file that only shares the name is not read (base behaviour): hep-ph9609379's
-   diagrams.sty, fifteen `\special` PostScript macros sharing none of the diagrams binding's command set (r1: its
-   `\Bullet` called the binding's `\diagram`, 1 → 101 Errors and a Fatal); 2411.02780's equations.sty, which is
-   annotate-equations.sty renamed (`\ProvidesPackage{annotate-equations}`; r1: 2 → 99 Errors over xkeyval's
-   `\usevalue`). Logged at Info. Reading such a file raw, as TeX does, is an open row.
+   `copy_is_the_stood_in_file`; 72a r3 rule): (a) its `\Provides(Expl)?(Class|Package|File)` names the file, the
+   binding, or a file the binding is built on — one its own code loads (`state::note_stand_in_file`,
+   `stand_in_built_on`) — whatever the version (1609.03892's fcs.cls of 2016, older than the `\fcssetup` the binding
+   models; 2308.11432's `\ProvidesExplClass{fcs}`; 2011.13564's IEEEtai.cls, IEEE's own, `\ProvidesClass{IEEEtran}`, the
+   class the binding loads; apjfonts.sty, 1202.3442); else (b) it defines at least a quarter of the binding's public
+   command set, the letters-only names its own code assigned with those of a stand-in it loads
+   (`state::stand_in_public_names`, `State::stand_in_last_load`, merged at `end_stand_in_load`: the diagrams binding's
+   diagrams.tex; not a file it loads otherwise, `StandInLoadGuard::suspend`). A binding with no public name of its own
+   reads no undeclared copy (aipcheck.tex, mssymb.tex, citesort.sty, revtex.sty: 45 census copies). The quarter is the
+   gap of a bimodal distribution: over the reviewer's simulation of the census's 4,346 distinct copies
+   (`scratch_356a0c47/rev72a/ident_sim2.json`; approximate: the binding's `.rs` names, no nested stand-ins), the
+   undeclared copies' shares fall 124 under a tenth, 28 between a tenth and four tenths, 1,028 above; the quarter
+   admits the 1,047 the r2 rule read by names, and its absolute (20 names) and copy-side (a quarter of the copy's
+   names) clauses admitted none beyond it, so they are gone. Per clause on the simulation: declaration 2,986 (2,487
+   with a share of a quarter, 499 without), names 1,047, empty set 129 no longer read (87 of them declaring another
+   file), 133 rejected (107 arxiv/PRIMEarxiv/icml2019 copies their binding reads raw itself, rule 4). An author's own
+   file that only shares the name is not read (base behaviour): hep-ph9609379's diagrams.sty, fifteen `\special`
+   PostScript macros sharing one name (`\diagram`) of the diagrams binding's 270 (r1: its `\Bullet` called the
+   binding's `\diagram`, 1 → 101 Errors and a Fatal); 2411.02780's equations.sty, which is annotate-equations.sty
+   renamed (`\ProvidesPackage{annotate-equations}`; r1: 2 → 99 Errors over xkeyval's `\usevalue`). Logged at Info.
+   Reading such a file raw, as TeX does, is an open row.
 1. *Ownership.* A name is the binding's when it was assigned while the stand-in binding loaded (origin.rs
    `StandInLoadGuard`, `State::stand_in_meanings`: its `DefMacro!`s, `Let!`s, `RawTeX`, the bindings it required) at an
    origin of LaTeXML's own, its guesses included (`Fallback`: the OmniBus base a class binding loads, whose `\received`
@@ -19181,7 +19192,9 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    the copy is not the document), or its meaning is a definition made under that very name at origin `Unknown`, `Pool`
    or `Binding` (a pool's `\maketitle`, another binding's `\citep`); an environment is owned when `\begin{X}`, `\X` or
    `\endX` is. The format's names (`Plain`, `LatexDump`, `Format`), the document's world (`File`, `Document`), the
-   other guesses that yield (`Fallback`, `Stub`, `Borrowed`) and `\let` copies of such meanings are not. Measured and
+   other guesses that yield (`Fallback`, `Stub`, `Borrowed`) and `\let` copies of such meanings are not — except a
+   `\let` LaTeXML's own code made, recorded as it is made (`State::binding_lets`, `let_i`: the object a `\let` copies
+   carries its source's name; aas_support_sty.rs's `\let\subjectheadings\keywords`, astro-ph0011001). Measured and
    declined (72a r2): narrowing ownership to the binding's own code, so that a copy's redefinition of a macro a package
    the binding loaded defined stands as in TeX, released the class bindings' frontmatter and layout macros to the copy
    (`\title`, `\author`, `\thanks`, `\keywords`, `\@makecaption` in 146 of 400 census papers, the NFSS size commands,
@@ -19199,12 +19212,16 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    else stands as TeX makes it: the copy's extras, kernel scratch, earlier raw files' names. Not while the state is
    unlocked (a binding's `before`/`after` code run for the copy, an `AddToMacro!` append); the copy's own code runs
    locked, as a raw read does, also its `\AtEndOfClass` code run inside `\documentclass`'s unlocked after-digestion
-   (asme2ej.cls:1230-1244 `\AtEndOfClass{… \def\newtheorem …}`, 2210.14434). A counter the binding owns (`\c@<ctr>`
-   or `\the<ctr>`: the kernel's `equation` is the format's register with the pool's `\theequation`) keeps the
-   binding's numbering against the copy's `\newcounter`, `\numberwithin`, `\@addtoreset`
-   (`copy_provides_keeps_counter`; jheppub.sty:313-314 `\numberwithin{equation}{section}` reset the equations per
-   section under the binding's `\theequation`, every section's first "(1)": 2112.14648, 2607.20603). The read is no
-   raw class read for K11 (`\lx@class@loaded@raw`): the binding owns the title page.
+   (asme2ej.cls:1230-1244 `\AtEndOfClass{… \def\newtheorem …}`, 2210.14434). A name the copy `\let`s to its own
+   version of an owned name takes the binding's meaning back with it (`CopyProvidesFrame::assigned`): emulateapj5.sty:386
+   `\def\keywords`, :394 `\let\subjectheadings=\keywords` (astro-ph0011001, a "Subject headings:" paragraph where the
+   binding makes `<keywords>`). *Counters* (main-session call 2026-10-17, 72a r3): a counter's representation
+   (`\the<ctr>`, `\p@<ctr>`) and reset list (`\cl@<ctr>`; `\@addtoreset`, `\numberwithin`, `\counterwithin`, a
+   re-`\newcounter`) are owned only when the stand-in binding's own load assigned them (`counter_part`,
+   `copy_provides_keeps_counter`): the pool's article defaults yield to the copy, as article.cls's own would to the real
+   class — jheppub.sty:313-314 `\renewcommand{\theequation}{\thesection.\arabic{equation}}` and
+   `\numberwithin{equation}{section}` number (2.1) as its PDF does (2112.14648, 2607.20603; r2: "(1)" … "(60)"). The
+   read is no raw class read for K11 (`\lx@class@loaded@raw`): the binding owns the title page.
 3. *Locks.* A locked name is refused as for any file, but without the records a raw class's takeover leaves
    (`\lx@dropped@<name>`, `<cs>:redefined`, defaults; OD #265, #500): `copy_provides_refuses_locked`, so no replay of the
    copy's `\maketitle` body.
@@ -19224,8 +19241,9 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    `\layoutstyle`) and printed layout checks ("The page layout violates the ICML style", 2407.02750). The 72a brief's
    rule 5 asked for the hooks to run under the rule; main-session decision 2026-10-17 (72a r2, on this evidence: 0
    papers fixed, 3 aastex7 Fatals, junk text): they stay unregistered, the binding owning the document-time machinery.
-   Likewise decided: the copy-local overlay of rule 2 stays, and the nested-load `\ver@` test of rule 6 stays scoped to
-   the copy's own `\usepackage` lines.
+   Likewise decided: the copy-local overlay of rule 2 stays, nested loads are real loads (rule 6) with the `\ver@` test
+   scoped to the copy's own `\usepackage` lines, and (72a r3) counter ownership follows the stand-in binding's own load
+   only (rule 2).
 6. *Nested loads.* A file the copy loads (`\RequirePackage`, `\usepackage`, `\input`, `\LoadClass`) is a real load,
    the mode suspended for it (`input_definitions`): a package the binding did not load loads whole (bmvc2k.cls:139's
    `tabularx`, colm's `multirow`, ws-rv9x6.cls's `ws-crop9x6`), a loaded one is the usual no-op, and `\LoadClass` of
@@ -19243,14 +19261,30 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    round 1's demotion to a Warning is removed). The copies' Errors became binding work: pnas-new.cls:229
    `\RequirePackage[explicit]{titlesec}` (the binding now passes `explicit` where the copy does: 1907.12289,
    2509.24970, 7 Errors each), ieeeaccess.cls:21-23's `\@IEEEusingAfourpapertrue` (IEEEtran.cls:268-270's flags, now
-   in the IEEEtran binding: KNOWN_PERL_ERRORS #957). Open: ieeeaccess.cls:131 `\definecolor{accessblue}{spotcolor}
-   {PANTONE3015C,1.0}` ("Unrecognized color model 'spotcolor'", Color.pm:61; spotcolor.sty:71 defines the driver's
-   `\color@spotcolor`, the test color.sty makes; 6 papers +1 Error: 2007.03025, 2009.04554, 2011.07807, 2209.03883,
-   2209.12464, 2609.20467); aipcheck.tex:53-54 reads `\fmtversion` as `#1/#2/#3` (pre-2020 LaTeX; TL 2025's is
-   `2024-11-01`, pdflatex errs the same: 0806.2199, 3 Errors).
+   in the IEEEtran binding: KNOWN_PERL_ERRORS #957), ieeeaccess.cls:131 `\definecolor{accessblue}{spotcolor}
+   {PANTONE3015C,1.0}` (color.sty:117-122 accepts a model whose `\color@<model>` exists, which spotcolor.sty:71
+   defines: the colour keeps its earlier CMYK definition, at Info; color_sty.rs `driver_color_model`, KNOWN_PERL_ERRORS
+   #958; 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467). Open: aipcheck.tex:53-54 reads
+   `\fmtversion` as `#1/#2/#3` (pre-2020 LaTeX; TL 2025's is `2024-11-01`, pdflatex errs the same: 0806.2199, 3
+   Errors).
 9. *Not covered.* An extra macro's body, run later in the document, is the author's command and keeps TeX's effect,
    calling the binding's meanings of owned names (neurips_2024.sty's `\TEST`, defined inside its `\@maketitle`, stays
    unreachable: 2406.07381).
+10. *Setter defaults* (72a r3). A frontmatter setter the copy calls (`\author`, `\date`, a binding's `\copyrightinfo`)
+   stores the class's default, as in TeX, rather than adding an element: while the copy is read, the frontmatter queue
+   is the copy's defaults (base_utilities.rs `frontmatter_queue_name`, `frontmatter_copy_defaults`; a removal applies to
+   the same queue, so atlasdoc.cls:824's `\date{}` under `cernpreprint` clears its `\date{\today}`). At `\maketitle`
+   (`\lx@store@defaults` → `hand_copy_frontmatter_defaults`) a default is handed to the frontmatter only when the
+   document made no entry of its kind (tag and role: the document's `\author` replaces the class's) and, for the
+   kernel's fields (`\@author`, `\@date`, `\@title`), only when the copy's own title page prints the store
+   (`state::copy_title_page_prints`: the `\maketitle`/`\@maketitle` it defined, refused or overlaid, and the raw
+   macros they call, a branch of a `\newif`/kvoptions switch that is now false skipped); the binding's title page prints
+   them when the copy defines none. Without `\maketitle` none shows, as in pdflatex. atlasdoc.cls:189-190 (r2: two
+   identical `<creator>`s in 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536; a `<date>` the 2019 class
+   prints only in `\ATLAS@TitleHeader` under `datetop`, :567, which `cernpreprint` skips: 1902.05892, 1904.03536).
+   jgcc.cls:397's `\copyrightinfo{}{}` (2309.03819, 2401.15504) prints nothing, as amsart.cls:723-727's
+   `\@setcopyright` prints no copyright without a year (ams_support_sty.rs; Perl's ams_support.sty.ltxml:139 adds
+   ", ").
 
 Witnesses (census `agent_reports/2026-10-17_standin_extras_census.md`): 1309.5950 E 4 → 0, 1406.5372 29 → 0, 2109.13055
 84 → 0, 2008.02921 9 → 0, 1609.03892 7 → 0. Round-1 casualties, fixed in r2: WileyNJDv5.cls:377's

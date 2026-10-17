@@ -1,0 +1,16 @@
+% witness: 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536 (atlasdoc.cls:189 `\author{The ATLAS
+%          Collaboration}`, :190 `\date{\today}`; the 2019 class prints `\@date` only in `\ATLAS@TitleHeader` under
+%          `datetop`, :567, which its `\maketitle` calls only without `cernpreprint`)
+% oracle:  pdflatex 0 errors; this file prints "DEFAULT DATE / T / Jane Doe"; with [nodatetop] and no \author
+%          "T / The ATLAS Collaboration"; with [cernpreprint] no date
+% engines: rust 72a r2 = two <creator>s (the class's and the document's) and a <date> the class does not print
+% expect:  0 errors, 0 warnings; one <creator> Jane Doe; <date> DEFAULT DATE
+% status:  RED (72a r2) -> GREEN (72a r3)
+% preload: ar5iv.sty
+\documentclass{atlasdoc}
+\title{T}
+\author{Jane Doe}
+\begin{document}
+\maketitle
+Text.
+\end{document}

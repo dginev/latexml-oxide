@@ -407,6 +407,16 @@ pub struct State {
   /// The names the stand-in binding loaded last assigned in its own code ([`end_stand_in_load`]): the public ones are
   /// the command set the paper's copy must define to be that binding's file (`binding::content` `read_stand_in_copy`).
   pub stand_in_last_load:      Vec<SymStr>,
+  /// The files each stand-in binding loading now loads from its own code (its `LoadClass!`/`RequirePackage!`),
+  /// innermost last ([`note_stand_in_file`]).
+  pub stand_in_load_files:     Vec<Vec<String>>,
+  /// The files the stand-in binding loaded last loaded from its own code ([`end_stand_in_load`]): the files it is
+  /// built on, which the paper's copy may declare itself (`binding::content` `copy_is_the_stood_in_file`).
+  pub stand_in_last_files:     Vec<String>,
+  /// The names LaTeXML's own code (`Unknown`, `Pool`, `Binding` origins) `\let`, recorded as it makes them
+  /// ([`let_i`]): a `\let` copies another name's definition, so the name a binding gave it is no longer on the object
+  /// (`owned_by_the_semantic_layer`; aas_support_sty.rs's `\let\subjectheadings\keywords`).
+  pub binding_lets:            rustc_hash::FxHashSet<SymStr>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
 }
@@ -415,10 +425,13 @@ pub struct State {
 /// the binding owns (in force only inside its code), and the names and deferring seams logged.
 #[derive(Debug, Default)]
 pub struct CopyProvidesRecord {
-  pub file:     String,
-  pub overlay:  rustc_hash::FxHashMap<SymStr, Stored>,
-  pub declined: rustc_hash::FxHashSet<SymStr>,
-  pub deferred: rustc_hash::FxHashSet<SymStr>,
+  pub file:       String,
+  pub overlay:    rustc_hash::FxHashMap<SymStr, Stored>,
+  pub declined:   rustc_hash::FxHashSet<SymStr>,
+  pub deferred:   rustc_hash::FxHashSet<SymStr>,
+  /// The copy's own `\maketitle`/`\@maketitle` bodies, refused or overlaid as they may be
+  /// ([`copy_title_page_prints`]).
+  pub title_page: Vec<Tokens>,
 }
 
 /// One frame of a stand-in copy's provides-mode ([`enter_copy_provides_frame`]): the copy (`0`: a suspension), whether
@@ -430,6 +443,9 @@ pub struct CopyProvidesFrame {
   pub repeat:    bool,
   pub kept:      Vec<(SymStr, Stored)>,
   pub kept_keys: rustc_hash::FxHashSet<SymStr>,
+  /// The other names the copy's code assigned in this frame, which may be `\let` to its own version of a kept name
+  /// ([`leave_copy_provides_frame`]).
+  pub assigned:  rustc_hash::FxHashSet<SymStr>,
 }
 // SAFETY: `State` holds `Rc`/`RefCell`/`libxml::tree::Node` (!Send). Marked
 // Send so callers can build it on one thread and then transition to another
@@ -506,6 +522,9 @@ impl Default for State {
       stand_in_meanings:       rustc_hash::FxHashSet::default(),
       stand_in_loads:          Vec::new(),
       stand_in_last_load:      Vec::new(),
+      stand_in_load_files:     Vec::new(),
+      stand_in_last_files:     Vec::new(),
+      binding_lets:            rustc_hash::FxHashSet::default(),
       journal:                 None,
     }
   }
@@ -1462,6 +1481,13 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   // unlocked state reads no lock and allocates nothing here)
   let locked =
     !state_is_unlocked() && token.with_cs_name(|cs| redefinition_locked(cs, &definition));
+  // (a stand-in's copy's own title page, whatever becomes of it: what it prints decides its setters' defaults,
+  // `copy_title_page_prints`)
+  if let Stored::Expandable(ref defn) = definition
+    && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+  {
+    note_copy_provides_title_page(&token, body);
+  }
   if locked && copy_provides_refuses_locked(&token) {
     restore_cleared_binding(&token);
   } else if locked {
@@ -1918,13 +1944,20 @@ pub fn note_copy_provides_assignment(token: &Token) {
   if state!().copy_provides_frames[at].kept_keys.contains(&key) {
     return;
   }
-  let owned = owned_by_the_semantic_layer(token)
-    || token.with_cs_name(|name| {
-      environment_names(name)
-        .iter()
-        .any(|other| owned_by_the_semantic_layer(&T_CS!(other.as_str())))
-    });
+  // (a counter's representation and reset list are owned only when the stand-in binding's own load assigned them:
+  // `counter_part`)
+  let owned = if token.with_cs_name(counter_part).is_some() {
+    state!().stand_in_meanings.contains(&key)
+  } else {
+    owned_by_the_semantic_layer(token)
+      || token.with_cs_name(|name| {
+        environment_names(name)
+          .iter()
+          .any(|other| owned_by_the_semantic_layer(&T_CS!(other.as_str())))
+      })
+  };
   if !owned {
+    state_mut!().copy_provides_frames[at].assigned.insert(key);
     return;
   }
   let binding = lookup_meaning(token).unwrap_or(Stored::None);
@@ -1962,26 +1995,21 @@ pub fn copy_provides_refuses_locked(token: &Token) -> bool {
 }
 
 /// Does a stand-in's copy, read now ([`note_copy_provides_assignment`]), (re)declare or renumber the counter `ctr` the
-/// binding owns (its `\c@<ctr>` or `\the<ctr>`, the kernel's `equation` being the format's register with the pool's
-/// `\theequation`: `\newcounter`, `\numberwithin`, `\@addtoreset`, `\counterwithin`)? Then the counter
-/// keeps the binding's numbering: its reset list is the binding's, as its `\the<ctr>` is (jheppub.sty's
-/// `\numberwithin{equation}{section}` reset the equations per section while `\theequation` stayed the binding's, so
-/// every section's first equation was "(1)": 2112.14648, 2607.20603). Logged once per copy, at Info.
+/// stand-in binding's own load declared or numbered (its `\c@<ctr>` or `\the<ctr>` assigned while the binding
+/// loaded, `State::stand_in_meanings`: `\newcounter`, `\numberwithin`, `\@addtoreset`, `\counterwithin`)? Then the
+/// counter keeps the binding's numbering: its reset list is the binding's, as its `\the<ctr>` is. A counter the binding
+/// did not number — the kernel's `equation`, the format's register with the pool's article `\theequation` — is the
+/// copy's to number, as article.cls's defaults yield to the real class's own: jheppub.sty:311-312 `\renewcommand
+/// \theequation{\thesection.\arabic{equation}}` and `\numberwithin{equation}{section}` number (2.1) as its PDF does
+/// (2112.14648, 2607.20603). Logged once per copy, at Info.
 pub fn copy_provides_keeps_counter(ctr: &str) -> bool {
   let id = crate::definition::origin::copy_provides();
   if id == 0 || state_is_unlocked() {
     return false;
   }
   let counter = T_CS!(s!("\\c@{ctr}"));
-  // (owned before the copy redefined it, if it has: the frame keeps the binding's meaning aside)
-  let owned = |token: &Token| {
-    owned_by_the_semantic_layer(token)
-      || state!()
-        .copy_provides_frames
-        .iter()
-        .any(|frame| frame.id == id && frame.kept_keys.contains(&meaning_key(token)))
-  };
-  if !owned(&counter) && !owned(&T_CS!(s!("\\the{ctr}"))) {
+  let numbered = |token: &Token| state!().stand_in_meanings.contains(&meaning_key(token));
+  if !numbered(&counter) && !numbered(&T_CS!(s!("\\the{ctr}"))) {
     return false;
   }
   let key = meaning_key(&counter);
@@ -1998,6 +2026,156 @@ pub fn copy_provides_keeps_counter(ctr: &str) -> bool {
     );
   }
   true
+}
+
+/// The counter whose representation or reset list `name` is — `\the<ctr>`, `\p@<ctr>`, `\cl@<ctr>` of a counter
+/// `\c@<ctr>` — for [`note_copy_provides_assignment`] and [`copy_provides_keeps_counter`].
+fn counter_part(name: &str) -> Option<String> {
+  let ctr = name
+    .strip_prefix("\\the")
+    .or_else(|| name.strip_prefix("\\p@"))
+    .or_else(|| name.strip_prefix("\\cl@"))?;
+  if ctr.is_empty() {
+    return None;
+  }
+  matches!(
+    lookup_meaning(&T_CS!(s!("\\c@{ctr}"))),
+    Some(Stored::Register(_))
+  )
+  .then(|| ctr.to_string())
+}
+
+/// Keep a stand-in copy's own title page (`\maketitle`, `\@maketitle`), defined while it is read
+/// ([`install_definition`], `\newcommand`'s refusal), whether the binding's lock refuses it or the overlay holds it:
+/// what it prints decides which of the copy's setter defaults the document shows ([`copy_title_page_prints`]).
+pub fn note_copy_provides_title_page(token: &Token, body: &Tokens) {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 || !matches!(token.get_catcode(), Catcode::CS) {
+    return;
+  }
+  if !token.with_cs_name(|name| matches!(name, "\\maketitle" | "\\@maketitle")) {
+    return;
+  }
+  if let Some(copy) = state_mut!().copy_provides_copies.get_mut(id as usize - 1) {
+    copy.title_page.push(body.clone());
+  }
+}
+
+/// Does a stand-in's copy print the store `store` (`\@author`, `\@date`, `\@title`) on its own title page — the
+/// `\maketitle`/`\@maketitle` it defined ([`note_copy_provides_title_page`]) and every macro a raw file defined that
+/// they call, the copy's own versions of the names the binding owns included — under the switches it set
+/// (`\newif` flags, kvoptions' boolean options: a branch of a flag that is now false is not printed)? `None` when no
+/// copy defined a title page (the binding's prints the frontmatter). atlasdoc.cls (2019, 1902.05892) prints `\@date`
+/// only in its `\ATLAS@TitleHeader` (:567, under `\ifADOC@datetop`), which its `\maketitle` (:716) calls only without
+/// `cernpreprint`; `\@author` under the title.
+pub fn copy_title_page_prints(store: &Token) -> Option<bool> {
+  let target = store.get_cs_name();
+  let mut roots: Vec<(u32, Tokens)> = Vec::new();
+  for (index, copy) in state!().copy_provides_copies.iter().enumerate() {
+    for body in &copy.title_page {
+      roots.push((index as u32 + 1, body.clone()));
+    }
+  }
+  if roots.is_empty() {
+    return None;
+  }
+  let mut seen: rustc_hash::FxHashSet<SymStr> = rustc_hash::FxHashSet::default();
+  let mut work: Vec<(u32, Tokens)> = roots;
+  while let Some((id, body)) = work.pop() {
+    let mut read = Vec::new();
+    title_page_reads(body.unlist_ref(), &mut read);
+    for cs in read {
+      let key = cs.get_cs_name();
+      if key == target {
+        return Some(true);
+      }
+      if !seen.insert(key) {
+        continue;
+      }
+      // (the copy's own version of a name the binding owns, else a raw file's macro)
+      let overlaid = state!()
+        .copy_provides_copies
+        .get(id as usize - 1)
+        .and_then(|copy| copy.overlay.get(&meaning_key(&cs)).cloned());
+      let meaning = overlaid.or_else(|| {
+        lookup_meaning(&cs).filter(|meaning| {
+          definition_origin(meaning) == Some(crate::definition::origin::DefinitionOrigin::File)
+        })
+      });
+      if let Some(Stored::Expandable(defn)) = meaning
+        && let Some(ExpansionBody::Tokens(callee)) = defn.get_expansion()
+      {
+        work.push((id, callee.clone()));
+      }
+    }
+  }
+  Some(false)
+}
+
+/// The control sequences `body` reads, a branch of a constant switch (an `\ifX` whose meaning is `\iftrue` or
+/// `\iffalse`, as `\newif` and kvoptions make them) only when the switch takes it ([`copy_title_page_prints`]).
+fn title_page_reads(body: &[Token], out: &mut Vec<Token>) {
+  let name_of = |token: &Token| -> Option<Token> {
+    match lookup_meaning(token) {
+      Some(meaning @ Stored::Conditional(_)) => definition_cs(&meaning),
+      _ => None,
+    }
+  };
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    i += 1;
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+      continue;
+    }
+    let switch = name_of(&t).and_then(|cs| {
+      if cs == T_CS!("\\iftrue") {
+        Some(true)
+      } else if cs == T_CS!("\\iffalse") {
+        Some(false)
+      } else {
+        None
+      }
+    });
+    let Some(taken) = switch.filter(|_| t != T_CS!("\\iftrue") && t != T_CS!("\\iffalse")) else {
+      out.push(t);
+      continue;
+    };
+    // the switch's `\else` and `\fi`, at its own depth
+    let (mut depth, mut else_at, mut fi_at) = (0usize, None, None);
+    for (k, token) in body.iter().enumerate().skip(i) {
+      if !matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+        continue;
+      }
+      let Some(cs) = name_of(token) else {
+        continue;
+      };
+      if cs == T_CS!("\\fi") {
+        if depth == 0 {
+          fi_at = Some(k);
+          break;
+        }
+        depth -= 1;
+      } else if cs == T_CS!("\\else") {
+        if depth == 0 && else_at.is_none() {
+          else_at = Some(k);
+        }
+      } else if cs != T_CS!("\\or") {
+        depth += 1;
+      }
+    }
+    let Some(fi_at) = fi_at else {
+      out.push(t);
+      continue;
+    };
+    let branch = if taken {
+      &body[i..else_at.unwrap_or(fi_at)]
+    } else {
+      else_at.map_or(&body[fi_at..fi_at], |at| &body[at + 1..fi_at])
+    };
+    title_page_reads(branch, out);
+    i = fi_at + 1;
+  }
 }
 
 /// Begin a frame of copy `id`'s provides-mode ([`crate::definition::origin::enter_copy_provides`]; `0` suspends the mode for
@@ -2024,6 +2202,7 @@ pub fn enter_copy_provides_frame(id: u32, previous: u32) {
     repeat: id == previous,
     kept,
     kept_keys,
+    assigned: rustc_hash::FxHashSet::default(),
   });
 }
 
@@ -2035,6 +2214,36 @@ pub fn leave_copy_provides_frame() {
   };
   if frame.id == 0 || frame.repeat {
     return;
+  }
+  // A name the copy `\let` to its own version of a name the binding owns takes the binding's back with it:
+  // emulateapj5.sty:386 defines `\keywords`, :394 `\let\subjectheadings=\keywords`, and the document's
+  // `\subjectheadings` made the class's "Subject headings:" paragraph where the binding makes `<keywords>`
+  // (astro-ph0011001). Kept in the copy's overlay with the rest, for its hooks. Only a definition the copy made under
+  // the kept name itself: a kept flag the copy `\let` to `\iftrue` shares that object with every other true flag
+  // (elife.cls:336-337's `\ifstre@msuppinfoopen`, newfile.sty:91: 2303.08822).
+  let replaced: Vec<(Stored, Stored)> = frame
+    .kept
+    .iter()
+    .map(|(key, kept)| (*key, meaning_by_key(*key), kept.clone()))
+    .filter(|(key, copys, kept)| {
+      !same_meaning(copys, kept) && definition_cs(copys).is_some_and(|cs| meaning_key(&cs) == *key)
+    })
+    .map(|(_, copys, kept)| (copys, kept))
+    .collect();
+  if !replaced.is_empty() {
+    for key in &frame.assigned {
+      let current = meaning_by_key(*key);
+      if let Some((_, kept)) = replaced
+        .iter()
+        .find(|(copys, _)| same_meaning(copys, &current))
+      {
+        let mut state = state_mut!();
+        if let Some(copy) = state.copy_provides_copies.get_mut(frame.id as usize - 1) {
+          copy.overlay.insert(*key, current);
+        }
+        state.assign_internal(TableName::Meaning, *key, kept.clone(), Some(Scope::Global));
+      }
+    }
   }
   for (key, kept) in frame.kept.into_iter().rev() {
     let copys = meaning_by_key(key);
@@ -2145,7 +2354,11 @@ fn owned_by_the_semantic_layer(token: &Token) -> bool {
   };
   lookup_meaning(token).is_some_and(|meaning| {
     definition_origin(&meaning).is_some_and(|origin| {
-      if state!().stand_in_meanings.contains(&meaning_key(token)) {
+      let key = meaning_key(token);
+      if state!().binding_lets.contains(&key) && ours(origin) {
+        // (a `\let` LaTeXML's own code made: the object carries the source's name, `State::binding_lets`)
+        true
+      } else if state!().stand_in_meanings.contains(&key) {
         // (the stand-in binding's guesses too: the OmniBus base a class binding loads, `Fallback` so that the
         // document's own definition wins, OXIDIZED_DESIGN_DIVERGENCES #408 — the copy is not the document: WileyNJDv5's
         // `\received` keeps OmniBus's dated frontmatter, 2609.19994)
@@ -2260,14 +2473,35 @@ pub fn swap_copy_provides_hook_seam(on: bool) {
 
 /// Begin a stand-in binding's load ([`crate::definition::origin::StandInLoadGuard`]): no name of its own assigned yet
 /// ([`State::stand_in_loads`]); a stand-in it loads records its own apart.
-pub fn begin_stand_in_load() { state_mut!().stand_in_loads.push(Vec::new()); }
+pub fn begin_stand_in_load() {
+  let mut state = state_mut!();
+  state.stand_in_loads.push(Vec::new());
+  state.stand_in_load_files.push(Vec::new());
+}
+
+/// A stand-in binding's own code loads `file` ([`State::stand_in_load_files`]).
+pub fn note_stand_in_file(file: &str) {
+  if let Some(files) = state_mut!().stand_in_load_files.last_mut() {
+    files.push(file.to_string());
+  }
+}
+
+/// The files the stand-in binding loaded last loaded from its own code ([`State::stand_in_last_files`]).
+pub fn stand_in_built_on() -> Vec<String> { state!().stand_in_last_files.clone() }
 
 /// End the stand-in binding's load [`begin_stand_in_load`] began: its names are the last load's
 /// ([`State::stand_in_last_load`]).
 pub fn end_stand_in_load() {
   let mut state = state_mut!();
+  let files = state.stand_in_load_files.pop().unwrap_or_default();
   if let Some(load) = state.stand_in_loads.pop() {
+    // (a stand-in it loads is part of its command set: the diagrams binding's `diagrams.tex`, whose names are
+    // Paul Taylor's package's, hep-ph9609379)
+    if let Some(outer) = state.stand_in_loads.last_mut() {
+      outer.extend(load.iter().copied());
+    }
     state.stand_in_last_load = load;
+    state.stand_in_last_files = files;
   }
 }
 
@@ -5314,6 +5548,17 @@ pub fn let_definition(token1: &Token, token2: &Token, scope: Option<Scope>) {
 }
 
 pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
+  {
+    use crate::definition::origin::{DefinitionOrigin, current_origin};
+    if matches!(
+      current_origin(),
+      DefinitionOrigin::Unknown | DefinitionOrigin::Pool | DefinitionOrigin::Binding
+    ) && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    {
+      let key = meaning_key(token1);
+      state_mut!().binding_lets.insert(key);
+    }
+  }
   let meaning =// if token2.get_dont_expand().is_some() {
   //   Stored::Token(token2.clone())
   // } else {

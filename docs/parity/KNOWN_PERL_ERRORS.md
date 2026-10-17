@@ -15520,3 +15520,21 @@ Rust (72a r2): ieeetran_cls.rs declares both flags (IEEEtran.cls:268-270) and it
 class does. Witnesses: ieeeaccess papers whose copy the stand-in reads (OXIDIZED_DESIGN_DIVERGENCES #731): 2007.03025,
 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467. Repro stand-in-copies/ieee_a4/ieeetran_paper_size_flags;
 guard `perfect_kernel_batch72a::ieeetran_paper_size_flags`.
+
+## 958. `\definecolor` of a model a package's driver code defines (spotcolor.sty's `spotcolor`) errs
+
+color.sty:117-122 `\definecolor{name}{model}{spec}` accepts any model whose driver macro `\color@<model>` exists
+(`\@ifundefined{color@#2}{\c@lor@error{model `#2'}}{…\csname color@#2\endcsname…}`), so a package can add one:
+spotcolor.sty:71 defines `\color@spotcolor`. Perl's color.sty.ltxml:59-63 parses every model through
+`ParseColor`/`Color::new`, which knows only its core and `DefColorModel` models (Color.pm:51-61) and raises
+`Error:unexpected:<model> Unrecognized color model '<model>'`.
+
+Trigger: `\documentclass{article}\usepackage{color}\usepackage{spotcolor}\NewSpotColorSpace{PANTONE}
+\AddSpotColor{PANTONE}{PANTONE3015C}{PANTONE\SpotSpace 3015\SpotSpace C}{1 0.3 0 0.2}
+\definecolor{accessblue}{spotcolor}{PANTONE3015C,1.0}\begin{document}x\end{document}` — pdflatex 0 errors.
+
+Rust (72a r3): color_sty.rs `driver_color_model` — a model none of LaTeXML's that a `\color@<model>` stands for (no
+xcolor) leaves the name's earlier definition in force (the driver's colour is not rendered), logged at Info. Witnesses:
+ieeeaccess.cls:126-131 (its CMYK `accessblue` first, then the spot one): 2007.03025, 2009.04554, 2011.07807,
+2209.03883, 2209.12464, 2609.20467. Repro stand-in-copies/spotcolor/spot_color_model_keeps_the_earlier_color; guard
+`perfect_kernel_batch72a::spot_color_model_keeps_the_earlier_color`.

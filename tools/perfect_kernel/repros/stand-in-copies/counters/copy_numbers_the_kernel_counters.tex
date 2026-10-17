@@ -1,0 +1,15 @@
+% witness: 2112.14648, 2607.20603 (jheppub.sty:313-314 `\renewcommand{\theequation}{\thesection.\arabic{equation}}`,
+%          `\numberwithin{equation}{section}`)
+% oracle:  pdflatex 0 errors ("(1.1)", "(2.1)")
+% engines: rust 72a r2 = "(1)", "(2)" (the pool's article `\theequation` counted as the binding's)
+% expect:  0 errors, 0 warnings; equations tagged (1.1) and (2.1)
+% status:  RED (72a r2) -> GREEN (72a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{jheppub}
+\begin{document}
+\section{A}
+\begin{equation}x\end{equation}
+\section{B}
+\begin{equation}y\end{equation}
+\end{document}

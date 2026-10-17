@@ -81,8 +81,16 @@ fn copy_loads_a_package_whole() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(xml.contains("rowspan=\"2\""), "{xml}");
-  assert!(log.contains("multirow"), "multirow was not loaded: {log}");
+  assert_element(
+    &xml,
+    "td",
+    &["rowspan=\"2\""],
+    "<td align=\"left\" rowspan=\"2\" xml:id=\"p1.1.1.1\"><text xml:id=\"p1.1.1.1.1\">AB</text></td>",
+  );
+  assert!(
+    log.contains("(Loading multirow_sty.rs... )"),
+    "multirow was not loaded: {log}"
+  );
 }
 
 /// A copy its binding reads raw itself (arxiv_sty.rs `InputDefinitions!`; the 17 such stand-ins, 2010.06291) is not
@@ -260,9 +268,8 @@ fn copy_of_another_file_is_not_read() {
       "<p xml:id=\"p1.1\">NOT READ</p>",
     );
     assert!(
-      log.contains(&format!(
-        "Info:provide:{file} The paper's {file} defines 0 of the"
-      )) && log.contains("not the file its binding stands in for, not read"),
+      log.contains(&format!("Info:provide:{file} The paper's {file} defines "))
+        && log.contains("not the file its binding stands in for, not read"),
       "{file}: {log}"
     );
   }
@@ -336,7 +343,12 @@ fn pnas_loads_titlesec_explicit() {
   );
   let subsection = latexml::util::test::xml_element(&xml, "subsection", &[])
     .unwrap_or_else(|| panic!("no subsection: {xml}"));
-  assert!(subsection.contains("X: Intro</title>"), "{subsection}");
+  assert_element(
+    &subsection,
+    "title",
+    &[],
+    "<title font=\"bold\">X: Intro</title>",
+  );
 }
 
 /// IEEEtran.cls:268-270's paper-size flags, which ieeeaccess.cls:21-23's `a4paper` handler sets (2007.03025,
@@ -349,5 +361,173 @@ fn ieeetran_paper_size_flags() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(xml.contains(">A4 CS</p>"), "{xml}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">A4 CS</p>",
+  );
+}
+
+/// A setter the copy calls stores a class default, which the document's own call replaces and which shows only where
+/// the class's title page prints it (atlasdoc.cls:189-190 `\author{The ATLAS Collaboration}`, `\date{\today}`; the 2019
+/// class's `\maketitle` prints `\@date` only in `\ATLAS@TitleHeader` under `datetop`, without `cernpreprint`, :567,
+/// :716; 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536). pdflatex: "DEFAULT DATE / T / Jane Doe";
+/// `[nodatetop]` with no `\author`: "T / The ATLAS Collaboration"; `[cernpreprint]`: "T / Jane Doe".
+#[test]
+fn copy_setters_store_class_defaults() {
+  let tex = repro!("frontmatter/copy_setters_store_class_defaults.tex");
+  let cls = repro!("frontmatter/atlasdoc.cls");
+  let creator =
+    |name: &str| format!("<creator role=\"author\"><personname>{name}</personname></creator>");
+  let cases = [
+    (tex.to_string(), "Jane Doe", Some("DEFAULT DATE")),
+    (
+      tex
+        .replace(
+          "\\documentclass{atlasdoc}",
+          "\\documentclass[nodatetop]{atlasdoc}",
+        )
+        .replace("\\author{Jane Doe}", ""),
+      "The ATLAS Collaboration",
+      None,
+    ),
+    (
+      tex.replace(
+        "\\documentclass{atlasdoc}",
+        "\\documentclass[cernpreprint]{atlasdoc}",
+      ),
+      "Jane Doe",
+      None,
+    ),
+  ];
+  for (tex, author, date) in cases {
+    let (log, xml) = convert_files_with(&tex, &[("atlasdoc.cls", cls)], Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(xml.matches("<creator ").count(), 1, "one creator: {xml}");
+    assert_element(&xml, "creator", &[], &creator(author));
+    match date {
+      Some(date) => assert_element(
+        &xml,
+        "date",
+        &[],
+        &format!("<date role=\"creation\">{date}</date>"),
+      ),
+      None => assert!(!xml.contains("<date"), "no date: {xml}"),
+    }
+  }
+}
+
+/// A name the copy `\let` to its own version of a name the binding owns takes the binding's back: emulateapj5.sty:386
+/// `\def\keywords`, :394 `\let\subjectheadings=\keywords`, over the aas_support binding's own `\let` (astro-ph0011001).
+/// pdflatex (an article stand-in for aastex.cls, absent from TL 2025): "Subject headings: stars"; the binding makes
+/// the keywords.
+#[test]
+fn copy_let_alias_keeps_the_binding() {
+  let (log, xml) = convert_files_with(
+    repro!("alias/copy_let_alias_keeps_the_binding.tex"),
+    &[("emulateapj5.sty", repro!("alias/emulateapj5.sty"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "keywords",
+    &[],
+    "<keywords name=\"Keywords:\u{a0}\">stars</keywords>",
+  );
+  assert!(!xml.contains("Subject headings"), "{xml}");
+}
+
+/// color.sty:117-122 accepts a model whose `\color@<model>` exists (spotcolor.sty:71): ieeeaccess.cls:131's spot
+/// `accessblue` keeps the earlier CMYK one, at Info (2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464,
+/// 2609.20467; KNOWN_PERL_ERRORS #958). pdflatex: 0 errors.
+#[test]
+fn spot_color_model_keeps_the_earlier_color() {
+  let (log, xml) = convert_files_with(
+    repro!("spotcolor/spot_color_model_keeps_the_earlier_color.tex"),
+    &[],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "text",
+    &["xml:id=\"p1.1.1\""],
+    "<text color=\"#0080CC\" xml:id=\"p1.1.1\">X</text>",
+  );
+  assert!(
+    log.contains(
+      "Info:color:spotcolor Color accessblue of the driver's model 'spotcolor' is not rendered"
+    ),
+    "{log}"
+  );
+}
+
+/// A counter the stand-in binding did not number is the copy's: jheppub.sty:313-314 renumbers the kernel's equations
+/// per section (2112.14648, 2607.20603). pdflatex: "(1.1)", "(2.1)".
+#[test]
+fn copy_numbers_the_kernel_counters() {
+  let (log, xml) = convert_files_with(
+    repro!("counters/copy_numbers_the_kernel_counters.tex"),
+    &[("jheppub.sty", repro!("counters/jheppub.sty"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (id, tag) in [("S1.E1", "1.1"), ("S2.E1", "2.1")] {
+    let equation =
+      latexml::util::test::xml_element(&xml, "equation", &[&format!("xml:id=\"{id}\"")])
+        .unwrap_or_else(|| panic!("no equation {id}: {xml}"));
+    assert_element(
+      &equation,
+      "tags",
+      &[],
+      &format!(
+        "<tags><tag>({tag})</tag><tag role=\"autoref\">Equation\u{a0}{tag}<text xml:id=\"{id}.1\"/></tag><tag \
+         role=\"refnum\">{tag}</tag></tags>"
+      ),
+    );
+  }
+}
+
+/// The copy's identity (OXIDIZED_DESIGN_DIVERGENCES #731 rule 0): its `\ProvidesExplClass` declaration (2308.11432's
+/// fcs.cls), a declaration of the class its binding is built on (2011.13564's IEEEtai.cls, `\ProvidesClass{IEEEtran}`)
+/// read it; a binding with no command set of its own and no declaration read none (citesort.sty; aipcheck.tex,
+/// mssymb.tex, revtex.sty in the census). pdflatex: "EXTRA", "EXTRA", "READ" (the last one the binding's: base
+/// behaviour).
+#[test]
+fn copy_identity_by_declaration_and_command_set() {
+  for (tex, file, copy, text) in [
+    (
+      repro!("identity/declared_expl_class_is_read.tex"),
+      "fcs.cls",
+      repro!("identity/fcs.cls"),
+      "EXTRA",
+    ),
+    (
+      repro!("identity/declared_base_class_is_read.tex"),
+      "IEEEtai.cls",
+      repro!("identity/IEEEtai.cls"),
+      "EXTRA",
+    ),
+    (
+      repro!("identity/empty_command_set_is_not_read.tex"),
+      "citesort.sty",
+      repro!("identity/citesort.sty"),
+      "NOT READ",
+    ),
+  ] {
+    let (log, xml) = convert_files_with(tex, &[(file, copy)], Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{file}: {log}"
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      &format!("<p xml:id=\"p1.1\">{text}</p>"),
+    );
+  }
 }

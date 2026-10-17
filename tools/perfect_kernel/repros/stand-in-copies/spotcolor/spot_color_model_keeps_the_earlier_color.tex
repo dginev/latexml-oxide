@@ -1,0 +1,18 @@
+% witness: 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467 (ieeeaccess.cls:126-131
+%          `\RequirePackage{spotcolor}` … `\definecolor{accessblue}{spotcolor}{PANTONE3015C,1.0}`)
+% oracle:  pdflatex 0 errors (color.sty:117-122 accepts the model: spotcolor.sty:71 defines \color@spotcolor)
+% engines: rust 72a r2 = 1 Error "Unrecognized color model 'spotcolor'"; Perl the same (Color.pm:61; KPE #958)
+% expect:  0 errors, 0 warnings; X in the earlier CMYK accessblue
+% status:  RED (72a r2) -> GREEN (72a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{color}
+\usepackage{spotcolor}
+\definecolor{accessblue}{cmyk}{1,0.3,0,0.2}
+\NewSpotColorSpace{PANTONE}
+\AddSpotColor{PANTONE} {PANTONE3015C} {PANTONE\SpotSpace 3015\SpotSpace C} {1 0.3 0 0.2}
+\SetPageColorSpace{PANTONE}
+\definecolor{accessblue}{spotcolor}{PANTONE3015C,1.0}
+\begin{document}
+\textcolor{accessblue}{X}
+\end{document}

@@ -1,0 +1,13 @@
+% witness: the census's 45 copies of stand-ins with no public command of their own (aipcheck.tex, mssymb.tex,
+%          citesort.sty, revtex.sty; review 2026-10-17)
+% oracle:  pdflatex 0 errors ("READ": TeX reads the author's file)
+% engines: rust 72a r2 = "READ" (a binding without a command set read any file of its name)
+% expect:  0 errors, 0 warnings; "NOT READ" (no declaration, no command set: the copy cannot be told from an
+%          author's own file of that name; the binding stands, base behaviour)
+% status:  RED (72a r2) -> GREEN (72a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{citesort}
+\begin{document}
+\ifx\citesortextra\undefined NOT READ\else READ\fi
+\end{document}

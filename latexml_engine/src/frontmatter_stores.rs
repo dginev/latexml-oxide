@@ -2011,6 +2011,7 @@ LoadDefinitions!({
     Ok(Tokens::new(calls))
   });
   DefPrimitive!("\\lx@store@defaults", sub[_args] {
+    hand_copy_frontmatter_defaults();
     let harvested = harvest_stores(true)?;
     Ok(harvested)
   });

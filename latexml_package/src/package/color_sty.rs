@@ -77,6 +77,17 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
   }
 }
 
+/// Is `model` none of LaTeXML's colour models but one a package's driver code defines, `\color@<model>` (color.sty:118's
+/// test of a model, `\@ifundefined{color@#2}`; spotcolor.sty:71)?
+fn driver_color_model(model: &str) -> bool {
+  let model_lc = model.trim().to_lowercase();
+  !model_lc.is_empty()
+    && model_lc != "named"
+    && !is_core_model(&model_lc)
+    && !(lookup_bool("xcolor.sty_loaded") || lookup_bool("xcolor.sty_raw_loaded"))
+    && has_meaning(&T_CS!(s!("\\color@{}", model.trim())))
+}
+
 /// Perl Color.pm:61 `Error('unexpected', $model, undef, "Unrecognized color
 /// model '$model'")`, raised by `Color::new` for a model that is neither core
 /// nor registered by `DefColorModel`.
@@ -342,6 +353,18 @@ LoadDefinitions!({
     let name_str = name_expanded.to_string();
     let model_str = model_expanded.to_string();
     let spec_str = spec_expanded.to_string();
+    // color.sty:117-122 accepts any model whose driver macro `\color@<model>` exists, as a package defines one for its
+    // own model (spotcolor.sty:71 `\color@spotcolor`): such a colour is the driver's, which LaTeXML does not render, so
+    // the name keeps the colour it had (ieeeaccess.cls:131 `\definecolor{accessblue}{spotcolor}{PANTONE3015C,1.0}` after
+    // the binding's CMYK `accessblue`; 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467). Perl
+    // Color.pm:61 errs (KNOWN_PERL_ERRORS #958).
+    if driver_color_model(&model_str) {
+      Info!("color", model_str, s!("Color {name_str} of the driver's model '{model_str}' is not rendered; its earlier definition stands"));
+      let reversion_tokens = Invocation!("\\definecolor",
+        vec![Some(name_expanded), Some(model_expanded), Some(spec_expanded)]);
+      return Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
+        reversion_tokens, SymHashMap::default()))]);
+    }
     // Use parse_color to handle all models including "named" lookups
     let color = parse_color(Some(&model_str), &spec_str);
     def_color(&name_str, &color, None)?;

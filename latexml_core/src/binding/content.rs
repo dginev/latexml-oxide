@@ -238,6 +238,12 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
     .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
   // A file a stand-in binding loads is not part of the binding's command set (`StandInLoadGuard::suspend`); a
   // stand-in it loads records its own (`input_definitions_impl`).
+  // (the files a stand-in binding's own code loads are the files it is built on, which the paper's copy may declare
+  // itself: `copy_is_the_stood_in_file`)
+  if crate::definition::origin::stand_in_loading() && crate::definition::origin::stand_in_own_code()
+  {
+    note_stand_in_file(raw_file);
+  }
   let _nested = crate::definition::origin::stand_in_loading()
     .then(crate::definition::origin::StandInLoadGuard::suspend);
   input_definitions_impl(raw_file, options)
@@ -2112,17 +2118,25 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
 }
 
 /// Is the paper's file at `path`, of the name a stand-in binding answers (`file`), the file the binding `binding`
-/// stands in for? By its own declaration first: a `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` of the file's
-/// or the binding's name is that file, whatever its version (1609.03892's fcs.cls of 2016, older than the
-/// `\fcssetup` the binding models; apjfonts.sty, 1202.3442, 1009.4702). Without one naming either — none, or
-/// another package's (2411.02780's equations.sty, annotate-equations.sty renamed: `\ProvidesPackage
-/// {annotate-equations}`) — by its command set: the file defines a quarter of the public names (letters only) the
-/// binding's own code assigned (`state::stand_in_public_names`), or twenty of them (aas_macros.sty's journal names, an
-/// icml or neurips style's `\icmltitle`, `\AND`), or a quarter of the names it defines are the binding's (an excerpt:
-/// a few journal names and the author's `\kms`). An author's own file that only shares the name is not that file and
-/// is not read here: hep-ph9609379's diagrams.sty, fifteen `\special` PostScript macros of which only `\diagram` is a
-/// name of Paul Taylor's diagrams package the binding stands in for. A binding with no public name of its own cannot
-/// tell, and reads the copy. Logged at Info either way.
+/// stands in for (OXIDIZED_DESIGN_DIVERGENCES #731 rule 0)? Two tests, in order:
+/// 1. **Its declaration.** A `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` (or the `\ProvidesExpl…` form) naming
+///    the file, the binding, or a file the binding is built on (its own `LoadClass!`/`RequirePackage!`,
+///    `state::stand_in_built_on`) is that file, whatever its version: 1609.03892's fcs.cls of 2016, older than the
+///    `\fcssetup` the binding models; 2308.11432's fcs.cls `\ProvidesExplClass{fcs}`; apjfonts.sty (1202.3442,
+///    1009.4702); 2011.13564's IEEEtai.cls, IEEE's own file, which declares itself `IEEEtran`, the class the binding
+///    loads.
+/// 2. **Its command set**, for a copy that declares another file or none (2.09-era files declare nothing): the copy
+///    defines at least a quarter of the public names (letters only) the binding's own code assigned, a stand-in it loads
+///    included (`state::stand_in_public_names`; the diagrams binding's diagrams.tex). Over the reviewer's simulation of
+///    the census's 4,346 distinct copies (`rev72a/ident_sim2.json`), the undeclared copies' shares are bimodal — 124
+///    under a tenth, 28 between a tenth and four tenths, 1,028 above — and a quarter admits the 1,047 that read as the
+///    file (aas_macros.sty's journal names, an icml or neurips style's `\icmltitle`, `\AND`); the earlier absolute (20
+///    names) and copy-side (a quarter of the copy's names) clauses admitted no copy the quarter did not.
+///
+/// A binding with no public name of its own and a copy with no matching declaration: not read (the copy cannot be told
+/// from an author's own file of that name: aipcheck.tex, mssymb.tex, citesort.sty, revtex.sty). An author's own file
+/// that only shares the name is not read either: hep-ph9609379's diagrams.sty (fifteen `\special` PostScript macros,
+/// one of them `\diagram`), 2411.02780's equations.sty (`\ProvidesPackage{annotate-equations}`). Logged at Info.
 fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
   static DEFINED: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
@@ -2130,8 +2144,9 @@ fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
     )
     .unwrap()
   });
-  static PROVIDES: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\Provides(?:Class|Package|File)\s*\{\s*([^}\s]+)\s*\}").unwrap());
+  static PROVIDES: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\Provides(?:Expl)?(?:Class|Package|File)\s*\{\s*([^}\s]+)\s*\}").unwrap()
+  });
   let text = crate::binding::virtual_files::vfs_read(path).or_else(|| {
     std::fs::read(path)
       .ok()
@@ -2155,8 +2170,11 @@ fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
       .map(|line| line.split('%').next().unwrap_or(""))
   };
   let declared = lines().find_map(|code| PROVIDES.captures(code).map(|cap| stem(&cap[1])));
+  let built_on = stand_in_built_on();
   if let Some(declared) = &declared
-    && (*declared == stem(file) || *declared == stem(binding))
+    && (*declared == stem(file)
+      || *declared == stem(binding)
+      || built_on.iter().any(|base| stem(base) == *declared))
   {
     Info!(
       "provide",
@@ -2168,9 +2186,6 @@ fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
     return true;
   }
   let public = stand_in_public_names();
-  if public.is_empty() {
-    return true;
-  }
   let mut defined: HashSet<String> = HashSet::default();
   for code in lines() {
     for cap in DEFINED.captures_iter(code) {
@@ -2194,8 +2209,7 @@ fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
     }
   }
   let shared = public.iter().filter(|name| defined.contains(*name)).count();
-  let the_file =
-    shared >= 20 || shared * 4 >= public.len() || (shared > 0 && shared * 4 >= defined.len());
+  let the_file = !public.is_empty() && shared * 4 >= public.len();
   Info!(
     "provide",
     file,

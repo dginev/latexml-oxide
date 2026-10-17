@@ -63,6 +63,7 @@ pub(crate) fn load() -> Result<()> {
     let nargs = nargs.value_of() as usize;
     let (definable, plain_origin) = is_definable_latex(&cs_token)?;
     if !definable {
+      note_copy_provides_title_page(&cs_token, &body);
       if has_value(&s!("{}:locked", cs_token.to_string())) && copy_provides_refuses_locked(&cs_token) {
         // (a stand-in's copy takes nothing over: `state::copy_provides_refuses_locked`)
       } else if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.

@@ -904,7 +904,17 @@ LoadDefinitions!({
   // expand-and-neutralize, Perl Parameter.pm:124-132) never runs on the list.
   DefParameterType!(PackageOptions,
     sub[_inner, _extra] {
+      // (a letter stays a letter: latex.ltx reads the list with the catcodes in force, so under `\ExplSyntaxOn` a
+      // class's `\LoadClass [ twoside, \g__fcs_article_fontsize_tl ] { article }` names its token list, fcs.cls:150;
+      // 2308.11432)
+      let letters: Vec<char> = ['_', ':']
+        .into_iter()
+        .filter(|c| lookup_catcode(*c) == Some(Catcode::LETTER))
+        .collect();
       begin_semiverbatim(None);
+      for letter in letters {
+        assign_catcode(letter, Catcode::LETTER, Some(Scope::Local));
+      }
       let opts = read_optional(None);
       end_semiverbatim()?;
       opts

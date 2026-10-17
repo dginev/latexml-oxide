@@ -4168,6 +4168,7 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
   if frontmatter_frozen_for_replay() {
     return;
   }
+  let queue = frontmatter_queue_name();
   // Convert KeyVals to a hash, but be concerned about multiple values!?!?
   // (Perl: ToString($attr->getValue($_)) — the last value for multi-valued keys)
   let mut attr_hash = TagAttrs::default();
@@ -4183,21 +4184,103 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
     "FRONT Queuing {tag} [{:?}] {command}",
     attr_hash
   );
-  let missing = with_value("frontmatter_raw", |v| {
-    !matches!(v, Some(Stored::FrontmatterRaw(_)))
-  });
+  let missing = with_value(queue, |v| !matches!(v, Some(Stored::FrontmatterRaw(_))));
   if missing {
     assign_value(
-      "frontmatter_raw",
+      queue,
       Stored::FrontmatterRaw(Vec::new()),
       Some(Scope::Global),
     );
   }
-  with_value_mut("frontmatter_raw", |val_opt| {
+  with_value_mut(queue, |val_opt| {
     if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
       queue.push((tag.to_string(), attr_hash, command));
     }
   });
+}
+
+/// The queue a frontmatter entry goes to: the document's (`frontmatter_raw`), or, while a stand-in binding's copy of
+/// its author file is read (`binding::content::read_stand_in_copy`, OXIDIZED_DESIGN_DIVERGENCES #731), the copy's
+/// defaults (`frontmatter_copy_defaults`): in TeX a class's own setter call (atlasdoc.cls:189 `\author{The ATLAS
+/// Collaboration}`, :190 `\date{\today}`) only stores the default the document's own call replaces, which its title
+/// page prints if the document makes none ([`hand_copy_frontmatter_defaults`]). A removal (`\lx@clear@frontmatter`,
+/// which `\date` runs first) applies to the same queue: the copy's later `\date{}` (atlasdoc.cls:824 under
+/// `cernpreprint`) clears its `\today`.
+fn frontmatter_queue_name() -> &'static str {
+  if definition::origin::copy_provides() != 0 {
+    "frontmatter_copy_defaults"
+  } else {
+    "frontmatter_raw"
+  }
+}
+
+/// At `\maketitle` (`\lx@store@defaults`): hand a stand-in copy's frontmatter defaults (`frontmatter_queue_name`) to
+/// the document's frontmatter, each only when the document made no entry of its kind (tag and role: its own `\author`
+/// replaces the class's), and, for the kernel's fields, only when the copy's own title page prints the store
+/// (`state::copy_title_page_prints`; the binding's title page prints them when the copy defines none). Five ATLAS
+/// papers had the class's `<creator>` beside the document's (1805.01649, 1806.07355, 1807.02012, 1902.05892,
+/// 1904.03536) and a `<date>` the class does not print (1902.05892, 1904.03536).
+pub fn hand_copy_frontmatter_defaults() {
+  let defaults: Vec<RawFrontmatter> = match remove_value("frontmatter_copy_defaults") {
+    Some(Stored::FrontmatterRaw(defaults)) => defaults,
+    _ => return,
+  };
+  for (tag, attr, command) in defaults {
+    let role = attr.get("role").cloned().unwrap_or_default();
+    if has_front_matter_with_role(&tag, &role) {
+      continue;
+    }
+    let store = match (tag.as_str(), role.as_str()) {
+      ("ltx:creator", "author") => Some("\\@author"),
+      ("ltx:date", "creation") => Some("\\@date"),
+      ("ltx:title", _) => Some("\\@title"),
+      _ => None,
+    };
+    if let Some(store) = store
+      && copy_title_page_prints(&T_CS!(store)) == Some(false)
+    {
+      Info!(
+        "frontmatter",
+        tag,
+        s!("The class's default {tag} is not printed by its title page: not shown")
+      );
+      continue;
+    }
+    let missing = with_value("frontmatter_raw", |v| {
+      !matches!(v, Some(Stored::FrontmatterRaw(_)))
+    });
+    if missing {
+      assign_value(
+        "frontmatter_raw",
+        Stored::FrontmatterRaw(Vec::new()),
+        Some(Scope::Global),
+      );
+    }
+    with_value_mut("frontmatter_raw", |val_opt| {
+      if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
+        queue.push((tag, attr, command));
+      }
+    });
+  }
+}
+
+/// Is a frontmatter entry `tag` of role `role` (`""`: any) queued or digested ([`has_front_matter`])?
+fn has_front_matter_with_role(tag: &str, role: &str) -> bool {
+  let matches =
+    |attr: &TagAttrs| role.is_empty() || attr.get("role").map(String::as_str) == Some(role);
+  let queued = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .any(|entry| entry.0 == tag && matches(&entry.1)),
+    _ => false,
+  });
+  queued
+    || with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frnt)) => frnt
+        .get(tag)
+        .is_some_and(|list| list.iter().any(|e| matches(&e.attr))),
+      _ => false,
+    })
 }
 
 /// Build and queue the deferred `\lx@add@frontmatter@now` invocation for a
@@ -4283,7 +4366,7 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
   if frontmatter_frozen_for_replay() {
     return;
   }
-  with_value_mut("frontmatter_raw", |val_opt| {
+  with_value_mut(frontmatter_queue_name(), |val_opt| {
     if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
       queue.retain(|entry| {
         let keep = entry.0 != tag

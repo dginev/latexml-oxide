@@ -248,7 +248,9 @@ LoadDefinitions!({
     "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\
      \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}");
 
-  DefMacro!("\\copyrightinfo{}{}", "\\lx@add@copyright{#1, #2}");
+  // amsart.cls:723-727 `\@setcopyright` prints the copyright only with a year (`\ifx\@empty\copyrightyear\else`): a
+  // class's `\copyrightinfo{}{}` default (jgcc.cls:397; 2309.03819, 2401.15504) prints nothing.
+  DefMacro!("\\copyrightinfo{}{}", "\\if\\relax\\detokenize{#1}\\relax\\else\\lx@add@copyright{#1, #2}\\fi");
 
   def_macro_noop("\\pagespan{}{}")?; // ?
   DefMacro!("\\PII{}",  "\\lx@add@classification[scheme=PII]{#1}");
@@ -633,7 +635,7 @@ pub fn amsart_class_internals() -> Result<()> {
   // :685-689: `\copyrightinfo` sets the two as well as the copyright.
   DefMacro!(
     "\\copyrightinfo{}{}",
-    "\\def\\copyrightyear{#1}\\@ifnotempty{#2}{\\def\\copyrightholder{#2}}\\lx@add@copyright{#1, #2}"
+    "\\def\\copyrightyear{#1}\\@ifnotempty{#2}{\\def\\copyrightholder{#2}}\\@ifnotempty{#1}{\\lx@add@copyright{#1, #2}}"
   );
   // amsart.cls:645: `\@maketitle` runs `\@setabstract` after the title (here `\lx@maketitle@body`, sect05.rs).
   AddToMacro!("\\lx@maketitle@body", "\\@setabstract");
