@@ -1,0 +1,34 @@
+//! Red/green guards for batch 71a: binding shapes from the rc_struct5 study (agent_reports/2026-10-17_rc_struct5.md).
+//! B1 amsrefs `{biblist}` without `{bibdiv}`; T1 mn2e defines no `\ion`; P1 appolb.cls; U1 tkz-euclide's old
+//! `\usetkzobj`; N1 siunitx decimal uncertainty; L1 txfonts `\lambdabar`; the small ones: forest's and todonotes' TikZ
+//! libraries, pgfmath `Mod`, amsmath/amsfonts macro accents, breqn's `\sb`/`\sp`.
+use latexml::util::test::assert_element;
+
+use super::perfect_kernel_batch46::{error_count, warning_count};
+
+fn convert_counted(tex: &str) -> (String, String) {
+  latexml::util::test::convert_with(tex, Some("ar5iv.sty"))
+}
+
+fn fatal_count(log: &str) -> usize { log.lines().filter(|l| l.starts_with("Fatal:")).count() }
+
+/// amsrefs.sty:532-538: `{biblist}` stands alone, so an author's `\section*{References}\begin{biblist}` is the
+/// document's bibliography, headed as the PDF heads it (1002.1686, 1112.3058, 2111.14165).
+#[test]
+fn amsrefs_biblist_without_bibdiv() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/amsrefs_biblist_without_bibdiv.tex"
+  ));
+  assert_eq!(
+    (error_count(&log), warning_count(&log), fatal_count(&log)),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert!(!xml.contains("<section"), "{xml}");
+  assert_element(
+    &xml,
+    "bibliography",
+    &[],
+    r#"<bibliography citestyle="numbers" inlist="toc" xml:id="bib"><title>References</title><biblist><bibentry key="A" type="article" xml:id="bib.bib1"><bib-name role="author"><surname>Doe</surname><givenname>J.</givenname></bib-name><bib-title>T</bib-title><bib-related role="host" type="journal"><bib-title>J</bib-title></bib-related><bib-date role="publication">2000</bib-date><bib-data role="self" type="BibTeX">@article{A, author = {Doe, J.}, title = {T}, journal = {J}, year = {2000}}</bib-data></bibentry></biblist></bibliography>"#,
+  );
+}

@@ -15333,6 +15333,24 @@ Rust (70b): content.rs `zap_space` on the list `\opt@<file>` is built from (a co
 control word kept). Repro loader/opt_macro_drops_spaces_as_zap_space; guard
 `perfect_kernel_batch70b::opt_macro_drops_spaces_as_zap_space`.
 
+## 939. amsrefs' `{biblist}` outside `{bibdiv}` is an `ltx:biblist` with no bibliography around it
+
+amsrefs.sty:532-538 makes `{biblist}` a list of its own (`\@biblist`, a `\list` of the entries), with no heading and no
+need of `{bibdiv}`; an author who writes the heading (`\section*{References}\begin{biblist}…\end{biblist}`) gets the
+heading and the list in the PDF. Perl's binding (amsrefs.sty.ltxml:70) makes it a bare `<ltx:biblist>`, which the schema
+allows only in an `ltx:bibliography`.
+
+Trigger: `\documentclass{amsart}\usepackage{amsrefs}` and `\section*{References}\begin{biblist}\bib{A}{article}{…}\end{biblist}`
+— pdflatex 0 errors; Perl and Rust before 71a 1 Error (`<ltx:biblist> isn't allowed in <ltx:section>`; 14 papers of the
+int19 census: 1002.1686, 1112.3058, 2111.14165, 0808.1974, 1411.6913).
+
+Rust (71a, amsrefs_sty.rs `{biblist}`/`{biblist*}`): outside a bibliography (`\if@lx@inbibliography`, which
+`{bibdiv}`/`{bibsection}`/`{bibchapter}` set) the list opens one where the backmatter goes, through the kernel's
+implicit-bibliography marker `\lx@mung@bibliography@pre{implicit}` (sect11.rs), so the author's heading before it heads it
+(`absorb_bibliography_heading`), else its heading line (`{\bf Further references}`, `head_implicit_bibliography`), else it
+stays untitled and out of the TOC. Repro index-bib/amsrefs_biblist_without_bibdiv; guard
+`perfect_kernel_batch71a::amsrefs_biblist_without_bibdiv`.
+
 ## 949. AMS-TeX's `\Let@` is missing, so a document's own AMS-TeX alignment macro errs at its `\\`
 
 amstex.tex:486 `\def\Let@{\relax\iffalse{\fi\let\\=\cr\iffalse}\fi}` is the row end an AMS-TeX alignment sets up before

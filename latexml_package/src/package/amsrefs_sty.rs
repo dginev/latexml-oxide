@@ -224,8 +224,47 @@ LoadDefinitions!({
 
   // {biblist} environment. amsrefs.sty:532-569 `\@biblist[#1]` takes the list's settings (`[\resetbiblist{99}]`,
   // `[prefix=A]`), which are presentation; `{biblist*}` (:538) is the list that continues the numbering.
-  DefEnvironment!("{biblist}[]", "<ltx:biblist>#body</ltx:biblist>");
-  DefEnvironment!("{biblist*}[]", "<ltx:biblist>#body</ltx:biblist>");
+  // The list stands alone (:532-538 open no heading and need no `{bibdiv}`): an author's `\section*{References}` and
+  // `\begin{biblist}` is the document's bibliography as pdflatex prints it (the heading, then the list). Outside a
+  // bibliography (`\if@lx@inbibliography`, set by `{bibdiv}`/`{bibsection}`/`{bibchapter}`) it opens one where the
+  // backmatter goes, as a `\bibitem` outside one does (`\lx@mung@bibliography`): untitled, it takes the author's
+  // heading before it (`absorb_bibliography_heading`) or its heading line (`head_implicit_bibliography`). Perl binds
+  // `{biblist}` as a bare `ltx:biblist` (amsrefs.sty.ltxml:70), which is allowed in no section (KNOWN_PERL_ERRORS #939).
+  // Witnesses 1002.1686, 1112.3058, 2111.14165, 0808.1974; guard `perfect_kernel_batch71a::amsrefs_biblist_without_bibdiv`.
+  macro_rules! biblist {
+    ($proto:literal) => {
+    DefEnvironment!($proto,
+      "?#standalone(<ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle'>\
+       <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>\
+       <ltx:biblist>#body</ltx:biblist></ltx:bibliography>)(<ltx:biblist>#body</ltx:biblist>)",
+      before_digest => {
+        let standalone = !x_equals(&T_CS!("\\if@lx@inbibliography"), &T_CS!("\\iftrue"));
+        AssignValue!("amsrefs@biblist@standalone" => standalone);
+        if standalone {
+          engine::latex_constructs::before_digest_bibliography()?;
+          // the bibliography the list opens is its own (`\lx@mung@bibliography@pre`, sect11.rs): headed by the unit it
+          // opens in or the heading line before it, else untitled and out of the TOC (`head_implicit_bibliography`)
+          Digest!("\\lx@mung@bibliography@pre{implicit}")?
+        } else {
+          Digest!(Tokens::default())?
+        }
+      },
+      after_digest_begin => sub[whatsit] {
+        if lookup_bool("amsrefs@biblist@standalone") {
+          engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+          whatsit.set_property("standalone", "true");
+          Let!("\\par", "\\relax");
+        }
+      },
+      before_construct => sub[document, whatsit] {
+        if whatsit.get_property("standalone").is_some() {
+          engine::latex_constructs::adjust_backmatter_element(document, whatsit)?;
+        }
+      });
+    };
+  }
+  biblist!("{biblist}[]");
+  biblist!("{biblist*}[]");
 
   // \MR{...} — MathReviews link. Perl amsrefs.sty.ltxml L75-82:
   // properties closure patches old-style "12345 \# 67" → "12345:67" and

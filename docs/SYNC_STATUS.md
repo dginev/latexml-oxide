@@ -88,8 +88,8 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   - *Action:* Distinguish macro parameter scanning from alignment cell reading in `Parameters::read_arguments` so tab marks inside `{...}` do not split outer cells.
 - **R3b: No-Diagnostic Chase Candidates (~6 left):**
   - Remaining papers with real `\cite` calls but empty bibliography: `2605.14990`, `2606.05629` (math-in-body silent drop), `2606.10056`, `2606.17491`, `2606.00231`, `2605.29754`.
-- **R3g: amsrefs Bare `\begin{biblist}` (4 papers):**
-  - `\begin{biblist}` without `{bibdiv}` wrapper $\to$ `malformed:ltx:biblist`. Requires `BACKMATTER_ELEMENT` route.
+- **R3g: amsrefs bare `\begin{biblist}` — FIXED (71a):** a `{biblist}` outside `{bibdiv}` opens its own bibliography
+  through the backmatter route (amsrefs_sty.rs; KNOWN_PERL_ERRORS #939).
 
 ### R4 — `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`)
 - **Symptom:** `--preload=article.cls` prints `LaTeX hooks Error: Extra \PopDefaultHookLabel` (clean without preload or with `LATEXML_NODUMP=1`).
@@ -3002,6 +3002,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `FORMER_TEX_LIVE`); its witness 1410.6878 is TL-2025-discounted (iopart12.clo). R1 (verify only): 69b's
   `\lx@robustify@ltxprotect` does not cover `\robustify{\ref}` — `\ref `, a constructor, has no `CODE(`/`Stored[`
   in its `\meaning`, so etoolbox's `\robustify` still runs (2205.09799 2 Errors on 69b2-rel and 67int19-rel).
+
+- **71a** (binding shapes from the rc_struct5 study, agent_reports/2026-10-17_rc_struct5.md). (1) B1: amsrefs'
+  `{biblist}` stands alone (amsrefs.sty:532-538): outside `{bibdiv}`/`{bibsection}`/`{bibchapter}`
+  (`\if@lx@inbibliography`) amsrefs_sty.rs opens a bibliography where the backmatter goes, through the kernel's
+  implicit-bibliography marker `\lx@mung@bibliography@pre{implicit}`, headed by the author's `\section*{References}`
+  before it or its heading line, else untitled (KNOWN_PERL_ERRORS #939; the BIB_ABSENCE_AUDIT F12 dead end 2 — the
+  wrapper opened inside the section — avoided by the backmatter route). Witnesses 1002.1686 1112.3058 2111.14165
+  0808.1974 1411.6913 (14/14 sample papers 1 → 0 errors, words unchanged). Repro
+  index-bib/amsrefs_biblist_without_bibdiv; guard `perfect_kernel_batch71a::amsrefs_biblist_without_bibdiv`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

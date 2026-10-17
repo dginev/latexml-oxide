@@ -621,3 +621,8 @@ none), so it warns "Failed to patch" and prints no open-access mark (pinned 0/1 
 symbols themselves are empty boxes — xsavebox's `\xsbox`/`\xusebox` lose the saved content (RED
 boxes-groups/xsavebox_saved_box_prints_its_content). biblatex-ext 10 -> 1 errors (the last, a bibliography inside a
 tcolorbox, is out of scope, user 2026-10-02), 10,430 -> 16,825 words.
+
+`amsrefs_biblist_without_bibdiv` (71a, KNOWN_PERL_ERRORS #939): amsrefs.sty:532-538's `{biblist}` stands alone, so an
+author's `\section*{References}\begin{biblist}` is the document's bibliography; outside `{bibdiv}`/`{bibsection}`/
+`{bibchapter}` (`\if@lx@inbibliography`) amsrefs_sty.rs opens one through the kernel's implicit-bibliography marker
+`\lx@mung@bibliography@pre{implicit}`, so the heading before it (or its heading line) heads it, else it is untitled.
