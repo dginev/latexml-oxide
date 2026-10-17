@@ -2815,10 +2815,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`. (6) X1: enumitem's `\setlist[…]*{…}` appends, the
   star tested by `\@ifstar` after the names (enumitem.sty:1661-1667; enumitem_sty.rs `\setlist` → `\lx@enit@setlist`;
   KNOWN_PERL_ERRORS #900; est. 26). Repro list-structure/setlist_star_after_the_names; guard
-  `perfect_kernel_batch69b::setlist_star_after_the_names`. Round 2 (review 2026-10-17_69b_review.md): (5) reads the
-  token after the closing `$` under the enclosing mode (tex.web §1194 pops the nest first; tex_math.rs
-  `with_enclosing_mode`), so `$$y=2$\ifmmode$\fi G` errs as pdflatex; guard
-  `perfect_kernel_batch69b::display_closing_dollar_read_in_the_enclosing_mode`. (7) etoolbox's `\robustify{\cite}`
+  `perfect_kernel_batch69b::setlist_star_after_the_names`. Round 2 (review 2026-10-17_69b_review.md): (5) read the
+  token after the closing `$` under the enclosing mode (tex.web §1194 pops the nest first) — reverted in int19 (the
+  int19 bullet; guard now `perfect_kernel_batch69b::display_closing_dollar_enclosing_mode_residual`). (7) etoolbox's `\robustify{\cite}`
   (2210.15126, wiley-article.cls:774) set the text "CODE(0x…)" for each citation and lost the next token: the binding's
   native no-op now tests a LaTeX-robust command's inner command too (etoolbox_sty.rs; KNOWN_PERL_ERRORS #902); guard
   `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`. Witness ids in comments: 2110.14271 (E3), 1807.04837
@@ -2871,6 +2870,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\clap` provide-only (mathtools.sty:1539 `\providecommand*`), so the kernel's box serves (latex.ltx:16409). 2305.03559 163 → 90 errors; `\overrel` alone is clean.
   Repro package-bindings/mathtools_clap_is_a_box_in_math; guard `perfect_kernel_batch69c::clap_is_a_box_in_math`.
   Open: its clevethm.sty `\setlist[enum#1, 1]{enumerate, label=…}` (90 "'…' is neither a list nor a level").
+
+- **int19** (fix round for the int19 bundle A/B's 39 worse rows, agent_reports/2026-10-17_payload_int19.md). (1) 69b
+  round 2's enclosing-mode read of the token after a display's closing `$` is reverted (tex_math.rs
+  `\lx@dollar@default` reads it expanded in the display's own mode, as 69b round 1; `with_enclosing_mode` removed):
+  under Perl's "Ignoring" recovery the display stays open, so a follower expanded as text was re-read in display math
+  — 2207.12569 (`$${\boxed{$u$\mbox{-}$S$…}}$$`) 6 → 101 errors + Fatal, 11,975 → 1,333 words; hep-th9504043,
+  0912.2815, math0309133, 1602.01956, 1408.3870, hep-th0002001 the same cascade (KNOWN_PERL_ERRORS #899). Repro
+  expansion-primitives/display_closing_dollar_text_after_the_display_kept; guard
+  `perfect_kernel_batchint19::display_closing_dollar_text_after_the_display_kept`. OPEN ROW (one coupled change, its
+  own A/B): read the token under the enclosing mode AND recover as tex.web §1197 (finish the display, `back_error`)
+  for every "Missing $ closing display math." — RED residual expansion-primitives/display_closing_dollar_read_in_the_enclosing_mode
+  (`$$y=2$\ifmmode$\fi G`: pdflatex 1 error, here none, the content as pdflatex's), guard
+  `perfect_kernel_batch69b::display_closing_dollar_enclosing_mode_residual`; the bundle's alg-geom9411003 64 → 3
+  errors was that read's gain and returns with the row.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

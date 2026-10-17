@@ -14935,13 +14935,18 @@ Trigger: `\newcommand{\full}[1]{#1}` and `Text \full{$}$x=1.$\full{$} more text.
 2110.14271, 59 → 0 Errors).
 
 Rust (69b, tex_math.rs `\lx@dollar@default`): in `display_math` the next token is read expanded
-(`read_x_token`); a non-shift goes back as read (`back_error`). §1194 has popped the display's nest before that read
-(`fin_mlist`, tex.web:22415), so it is made under the enclosing mode (`with_enclosing_mode`: `MODE`, `BOUND_MODE`,
-`IN_MATH`, `INNER_BOX` as the frame below the display's): `$$y=2$\ifmmode$\fi G` errs as pdflatex ("Display math
-should end with $$."). The recovery stays Perl's ("Ignoring"; the display stays open), where TeX finishes the display.
-Repros expansion-primitives/display_closing_dollar_from_a_macro, display_closing_dollar_read_in_the_enclosing_mode;
-guards `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`,
-`perfect_kernel_batch69b::display_closing_dollar_read_in_the_enclosing_mode`.
+(`read_x_token`), in the display's own mode; a non-shift goes back as read (`back_error`). Open: §1194 has popped the
+display's nest before that read (`fin_mlist`, tex.web:22415), so TeX expands it under the enclosing mode —
+`$$y=2$\ifmmode$\fi G` errs in pdflatex ("Display math should end with $$."), silently closes here (the content as
+pdflatex's). 69b r2 made that read alone; under Perl's recovery ("Ignoring"; the display stays open) a follower
+expanded as text was re-read in display math and cascaded (arXiv 2207.12569: `\boxed{$u$\mbox{-}…}` in a `$$…$$`, 6
+→ 101 errors + Fatal, the paragraphs after it lost), so int19 reverted it. The enclosing-mode read and §1197's
+recovery (finish the display, then `back_error`) are one change, with its own A/B (SYNC_STATUS int19 row). Repros
+expansion-primitives/display_closing_dollar_from_a_macro, display_closing_dollar_read_in_the_enclosing_mode (the
+residual), display_closing_dollar_text_after_the_display_kept; guards
+`perfect_kernel_batch69b::display_closing_dollar_from_a_macro`,
+`perfect_kernel_batch69b::display_closing_dollar_enclosing_mode_residual`,
+`perfect_kernel_batchint19::display_closing_dollar_text_after_the_display_kept`.
 
 ## 900. enumitem's `\setlist` has no star: `\setlist*[…]{…}` and `\setlist[…]*{…}` read the `*` as the keys
 

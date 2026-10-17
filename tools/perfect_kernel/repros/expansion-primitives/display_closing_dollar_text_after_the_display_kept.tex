@@ -1,0 +1,19 @@
+% witness: arXiv 2207.12569 line 182 (the int19 bundle A/B: 6 -> 101 errors + Fatal, words 11,975 -> 1,333)
+% oracle:  pdflatex 0 errors: "We have the implications", the display of three boxed phrases, "But neither of
+%          implications can be reversed."
+% engines: rust 67int18b = 6 Error "Missing $ closing display math." (each `$` in `\boxed{…}` meets the display), the
+%          text after the display kept; rust 69b r2 = 8 errors + 1 Warning, "But neither…" lost into the display left
+%          open (the token after each `$` expanded as text, then re-read in display math); int19 = 67int18b
+% expect:  the token after a display-math `$` that is no second `$` is read in the display's own mode (Perl's
+%          "Ignoring" recovery keeps the display open, so the enclosing-mode read of 69b r2 cascaded): the base count,
+%          the closing `$$` closes the display, the paragraph after it kept. The `$`s inside `\boxed` are amsmath's
+%          `\fbox{\m@th$\displaystyle#1$}` text (item 3 of int19 when landed).
+% status:  RED (69b r2) -> GREEN (int19)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+We have the implications
+$${\boxed{\mbox{Artinian rings}}}\Longrightarrow {\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}}\Longrightarrow {\boxed{$S$\mbox{-Artinian rings}}}$$
+But neither of implications can be reversed.
+\end{document}
