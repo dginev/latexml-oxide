@@ -1990,11 +1990,17 @@ fn holds_nothing_yet() -> bool {
   })
 }
 
-/// Digested material that puts nothing in the document: white space, an empty box or a whatsit with no argument and no
-/// body (the frontmatter fallback a heading digests before its `\@startsection@hook`, an entry opened with nothing in it).
+/// Digested material that puts nothing in the document: white space, an empty box, a whatsit with no argument and no
+/// body (the frontmatter fallback a heading digests before its `\@startsection@hook`, an entry opened with nothing in it)
+/// or one that makes no box — the kernel's `alignmentSkippable` whatsits: `\label` (latex_constructs.pool.ltxml:3782-3792,
+/// whose labels the pruned bibliography hands on, `prune_interrupted_bibliography`), a mark, a tabbing marker. A
+/// `\label{refs}` before the heading keeps the one bibliography's `bib`/`bib.bibN` (OXIDIZED_DESIGN_DIVERGENCES #653).
 fn carries_nothing(item: &Digested) -> bool {
   match item.data() {
-    DigestedData::TBox(tbox) => tbox.borrow().to_string().trim().is_empty(),
+    DigestedData::TBox(tbox) => {
+      let tbox = tbox.borrow();
+      tbox.get_property_bool("alignmentSkippable") || tbox.to_string().trim().is_empty()
+    },
     DigestedData::List(list) => list
       .borrow()
       .unlist_ref()
@@ -2002,7 +2008,8 @@ fn carries_nothing(item: &Digested) -> bool {
       .all(|inner| carries_nothing(inner)),
     DigestedData::Whatsit(ws) => {
       let ws = ws.borrow();
-      ws.is_empty().unwrap_or(false)
+      ws.get_property_bool("alignmentSkippable")
+        || ws.is_empty().unwrap_or(false)
         || (ws
           .get_args()
           .iter()

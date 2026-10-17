@@ -41,6 +41,18 @@ fn heading_inside_thebibliography_makes_one_bibliography() {
   assert!(!xml.contains("<section"), "{xml}");
 }
 
+/// A `\label` before the heading makes no box (the kernel's `alignmentSkippable` whatsit): the bibliography the heading
+/// interrupts holds nothing (sect11.rs `carries_nothing`), so the one bibliography keeps `bib`/`bib.bibN` and the label
+/// (review 68w r3 probe h2_label; it was `biba`/`biba.bib1`). pdflatex: "See [1, 2]." and one list holding [1], [2].
+#[test]
+fn heading_inside_thebibliography_label_before_keeps_the_ids() {
+  let xml = clean!("index-bib/heading_inside_thebibliography_label_before.tex");
+  assert_eq!(count(&xml, "<bibliography "), 1, "{xml}");
+  assert_all(&xml, &[
+    r#"<bibliography inlist="toc" labels="LABEL:refs" xml:id="bib"> <title>References</title> <biblist> <bibitem key="a" xml:id="bib.bib1"> <tags> <tag>[1]</tag> <tag role="refnum">1</tag> </tags> <bibblock> A. Author, J. 1. </bibblock> </bibitem> <bibitem key="b" xml:id="bib.bib2"> <tags> <tag>[2]</tag> <tag role="refnum">2</tag> </tags> <bibblock> B. Author, J. 2. </bibblock> </bibitem> </biblist> </bibliography>"#,
+  ]);
+}
+
 /// Topical headings between groups of entries (hep-th0109182): the environment's own References heading stays over
 /// them, each group is a bibliography of its own, and the entries are numbered on through the one list. The first group
 /// took the kept heading's number (`bib.bib1`), its own id the duplicate's `biba` (Document.pm recordID), so the next

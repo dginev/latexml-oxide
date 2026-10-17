@@ -18468,7 +18468,8 @@ unit before it did not give (a `\paragraph` and text between entries) drops its 
 (`drop_own_bibliography_heading`), the list going on as pdflatex prints it. Ids are the one bibliography's: a
 continuation of a bibliography interrupted before its first entry (nothing digested in it — no entry, no text,
 read back through the box lists to its `\thebibliography`, `holds_nothing_yet`; an entry the recovery opened empty for
-a blank line or the heading's own `\par` is none — and `@bibitem` not stepped) takes that one's number (`begin_bibliography_clean`,
+a blank line or the heading's own `\par` is none, nor a whatsit that makes no box, the kernel's `alignmentSkippable`
+ones — a `\label{refs}` before the heading, whose label moves on with the others — and `@bibitem` not stepped) takes that one's number (`begin_bibliography_clean`,
 `lx_bibliography_reuse_number`), so its entries are `bib.bibN`, and the pruned one's freed id `bib` is the survivor's
 (Perl fixes ids at digestion, latex_constructs.pool.ltxml:3877-3883; the duplicate it meets while built is renamed as
 Document.pm:1447-1456 recordID does, `biba`, and freed as :1460 unRecordID); a later separate bibliography is `biba`.

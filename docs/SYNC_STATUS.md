@@ -2551,7 +2551,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (3) uiucthesis (`perfect_kernel_batch61::uiucthesis_title_page_is_replayed`): 68x r2's line rule (#662) keeps
   `\department` in uiucthesis.cls:177 `for the degree of \@degree\ in \@dept\\`, the line whole as pdflatex prints it,
   no affiliation (68u r2's rule (a) had made it one); expectation updated. Pre-existing (67int16 the same): the
-  replayed copyright page prints "© 1994 by ." — `\copyrightnotice` reads the captured `\@author`.
+  replayed copyright page prints "© 1994 by ." — `\copyrightnotice` reads the captured `\@author`. (4) B1: a whatsit that makes no box (the kernel's
+  `alignmentSkippable`: `\label`, a mark) before the heading is nothing (sect11.rs `carries_nothing`), so
+  `\label{refs}\section*{References}` keeps `bib`/`bib.bibN` (OD #653). Repro
+  index-bib/heading_inside_thebibliography_label_before; guard
+  `perfect_kernel_batch68w::heading_inside_thebibliography_label_before_keeps_the_ids`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
