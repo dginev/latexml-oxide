@@ -14513,3 +14513,15 @@ expands it to " and ", Perl `Error:undefined:\@@@@lang` and "Ann  and Bob." (cjs
 `\edef\CJS@runningauthor@and{\iflanguage{french}{ et }{ and }}`; 2608.13762). Fixed in Rust (68x): a language the
 format has patterns for is tested by expansion only; an unknown one is still allocated. Repro
 babel-lang/iflanguage_expands_in_edef; guard `perfect_kernel_batch68x::babel_iflanguage_expands_in_an_edef`.
+
+## 862. mathtools's binding defines none of mathtools.sty's internals (`\MT_start_cases:nnnn`, `\MT_matrix_begin:N`, the `show_only_refs` boolean)
+
+mathtools.sty.ltxml is native and defines no `\MT_…` internal, yet documents call them after `\MHInternalSyntaxOn`
+(beside #693, which leaves that undefined in Perl) and witharrows.sty:1119-1124 tests mathtools's `show_only_refs`
+boolean whenever mathtools is loaded. Minimal trigger: `\usepackage{mathtools}\usepackage{witharrows}` and a
+`\begin{DispWithArrows} a &= b \end{DispWithArrows}` — pdflatex 0 errors; with the boolean undefined its `\MH_else:` and
+`\MH_fi:` stand outside a conditional (2 Errors per display; 2012.15617, 2507.07065), and `\MT_start_cases:nnnn` (a
+`\renewcommand{\dcases}{\MT_start_cases:nnnn…}`, 1906.10268) is undefined. Fixed in Rust (68x): the binding defines
+them as mathtools.sty:252-291, :829-841, :995-1008, :1039-1043, :1483-1484 do. Repro
+package-bindings/mathtools_internals_after_internal_syntax; guard
+`perfect_kernel_batch68x::mathtools_internals_after_internal_syntax_are_defined`.

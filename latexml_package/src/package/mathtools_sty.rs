@@ -93,6 +93,53 @@ LoadDefinitions!({
 \define@key{mathtools}{original-intertext}[true]{}
 \define@key{mathtools}{original-shortintertext}[true]{}");
 
+  // mathtools.sty's internals that documents and packages call themselves after `\MHInternalSyntaxOn` (the mhsetup
+  // syntax, :36), as mathtools.sty defines them. The `show_only_refs`/`show_manual_tags` booleans (:252-253) and the
+  // `\MT_showonlyrefs_true:`/`false:` switches (:261-291), which witharrows.sty:1119-1124, :1266-1267 tests and calls
+  // when mathtools is loaded (an undefined boolean left its `\MH_else:`/`\MH_fi:` outside a conditional, 2 Errors per
+  // `{DispWithArrows}`: 2012.15617, 2206.15309, 2309.00504, 2507.07065); the binding does not suppress unreferenced tags,
+  // so a switch sets the boolean only. The paired-delimiter wrappers (:829-841 `\MT_delim_default_inner_wrappers:n`)
+  // a document's own delimiter machinery builds on (xfunctions.sty `\DeclareNameWithDelimiters`: 1704.08847, 1609.02993,
+  // 2310.09182). The matrix begin and end code (:1039-1043; mymatrix.sty's `{bsmallmatrix}`: 1905.08664, 2307.06921).
+  // The short-intertext separations (:1483-1484; 2109.05369's own `\shortintertext`).
+  RawTeX!(r"\MHInternalSyntaxOn
+\MH_new_boolean:n {show_only_refs}
+\MH_new_boolean:n {show_manual_tags}
+\def\MT_showonlyrefs_true:{\MH_set_boolean_T:n {show_only_refs}}
+\def\MT_showonlyrefs_false:{\MH_set_boolean_F:n {show_only_refs}}
+\newcommand\MT_delim_default_inner_wrappers:n [1]{
+   \@namedef{MT_delim_\MH_cs_to_str:N #1 _star_wrapper:nnn}##1##2##3{
+      \mathopen{}\mathclose\bgroup ##1 ##2 \aftergroup\egroup ##3
+    }
+    \@namedef{MT_delim_\MH_cs_to_str:N #1 _nostarscaled_wrapper:nnn}##1##2##3{
+      \mathopen{##1}##2\mathclose{##3}
+    }
+    \@namedef{MT_delim_\MH_cs_to_str:N #1 _nostarnonscaled_wrapper:nnn}##1##2##3{
+      \ifx.##1\else\mathopen##1\fi##2\ifx.##3\else\mathclose##3\fi
+    }
+  }
+\def\MT_matrix_begin:N #1{%
+  \hskip -\arraycolsep
+  \MH_let:NwN \@ifnextchar \MH_nospace_ifnextchar:Nnn
+  \array{*\c@MaxMatrixCols #1}}
+\def\MT_matrix_end:{\endarray \hskip -\arraycolsep}
+\newdimen\l_MT_above_shortintertext_sep
+\newdimen\l_MT_below_shortintertext_sep
+\MHInternalSyntaxOff");
+  // mathtools.sty:995-1008 `\MT_start_cases:nnnn{sep}{lpreamble}{rpreamble}{delim}`, the begin code `\newcases` gives
+  // a cases environment, which documents call to redefine one (`\renewcommand{\dcases}{\MT_start_cases:nnnn{\quad}
+  // {$\m@th\displaystyle##$\hfil}{$\m@th\displaystyle##$\hfil}{\lbrace}}`: 1906.10268, 2011.05472, 2310.19169,
+  // 2409.19509, 1601.02188): the binding's `\lx@ams@cases` opened as `\newcases` opens it ([`mathtools_newcases`]),
+  // for the environment it begins (`\@currenvir`), its end the environment's own.
+  DefMacro!(T_CS!("\\MT_start_cases:nnnn"), "{}{}{}{}", sub[(_sep, lpre, rpre, ldelim)] {
+    let (lpre, rpre, ldelim) = (Tokens::from(lpre), Tokens::from(rpre), Tokens::from(ldelim));
+    let name = Expand!(Tokens!(T_CS!("\\@currenvir"))).to_string();
+    let mut toks = vec![T_CS!("\\lx@ams@cases"), T_BEGIN!()];
+    toks.extend(cases_keys(name.trim(), &lpre, &rpre, ldelim, Tokens::new(vec![T_OTHER!(".")])));
+    toks.push(T_END!());
+    Ok(Tokens::new(toks))
+  });
+
   // Lookup function for mathtoolsset
   DefMacro!("\\@mt@getmtoption{}",
     "\\ifcsname @mt@mathtoolsset@#1\\endcsname\
@@ -1078,17 +1125,16 @@ LoadDefinitions!({
     "\\displaystyle\\@ams@multirow@bindings{name=splitdfrac}\\@@multlined\\lx@begin@alignment #1 \\\\\\\\ #2 \\lx@end@alignment\\@end@multline");
 });
 
-/// The definitions `\newcases` makes (mathtools.sty:1015-1019): `\<name>` opens `\lx@ams@cases` with the keys its
-/// arguments decide, `\end<name>` closes it. A `.` (or empty) delimiter is no delimiter.
-fn mathtools_newcases(
-  name: Tokens,
+/// The `\lx@ams@cases` keys of a cases environment `name` whose preambles and delimiters are those `\newcases` and
+/// `\MT_start_cases:nnnn` take (mathtools.sty:995-1019): its delimiters (a `.` or empty one is none), `\displaystyle`
+/// when the left preamble sets it, and math conditions when the right preamble is a `$…$` cell.
+fn cases_keys(
+  name: &str,
   lpre: &Tokens,
   rpre: &Tokens,
   ldelim: Tokens,
   rdelim: Tokens,
-) -> Tokens {
-  let name = name.untex();
-  let name = name.trim();
+) -> Vec<Token> {
   let display = lpre
     .unlist_ref()
     .iter()
@@ -1120,6 +1166,21 @@ fn mathtools_newcases(
     ",conditionmode={}",
     if math_conditions { "math" } else { "text" }
   )));
+  keys
+}
+
+/// The definitions `\newcases` makes (mathtools.sty:1015-1019): `\<name>` opens `\lx@ams@cases` with the keys its
+/// arguments decide ([`cases_keys`]), `\end<name>` closes it.
+fn mathtools_newcases(
+  name: Tokens,
+  lpre: &Tokens,
+  rpre: &Tokens,
+  ldelim: Tokens,
+  rdelim: Tokens,
+) -> Tokens {
+  let name = name.untex();
+  let name = name.trim();
+  let keys = cases_keys(name, lpre, rpre, ldelim, rdelim);
   let mut toks = vec![T_CS!("\\expandafter"), T_CS!("\\def"), T_CS!("\\csname")];
   toks.extend(ExplodeText!(name));
   toks.extend([

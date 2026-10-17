@@ -2470,7 +2470,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `frontmatter_clear_same_name`; 2506.20120 0 → 1); projlib-author.sty:98-139's provided `\institute`/`\address`/
   `\curraddr`/`\email` the author's contacts (2609.02711: the Nantes address 0 → 1). Repros
   class-bindings/{smfart_altabstract, projlib_author_address}; guards
-  `perfect_kernel_batch68x::{smfart_altabstract_is_a_second_abstract, projlib_author_lines_are_the_authors_contacts}`.
+  `perfect_kernel_batch68x::{smfart_altabstract_is_a_second_abstract, projlib_author_lines_are_the_authors_contacts}`. (6) mathtools internals (the row "24 papers now
+  stop at mathtools internals"; 43 run-365 papers in four shapes): the binding defines, as mathtools.sty does, the
+  `show_only_refs`/`show_manual_tags` booleans and `\MT_showonlyrefs_true:`/`false:` (:252-291; witharrows.sty:1119-1124
+  tests them — 13 papers: 2012.15617, 2206.15309, 2309.00504, 2507.07065; the switches set the boolean only, the binding
+  keeps every tag), `\MT_delim_default_inner_wrappers:n` (:829-841; xfunctions.sty — 14: 1704.08847, 1609.02993,
+  2310.09182), `\MT_start_cases:nnnn` (:995-1008, as `\newcases` opens `\lx@ams@cases` — 13: 1906.10268, 2011.05472,
+  2310.19169), `\MT_matrix_begin:N`/`\MT_matrix_end:` (:1039-1043 — 5: 1905.08664, 2307.06921) and the short-intertext
+  dimens (:1483-1484; 2109.05369). KNOWN_PERL_ERRORS #862. Repro package-bindings/mathtools_internals_after_internal_syntax;
+  guard `perfect_kernel_batch68x::mathtools_internals_after_internal_syntax_are_defined`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

@@ -7,7 +7,7 @@
 //! apa6's `\note` and `\authornote` as apa7's binding makes them, the mask honoured (2406.08022). Item 4 — cjs-rcs-article's
 //! environ-collected abstracts (in their languages) and keywords, and babel's `\iflanguage` expandable (2608.13762).
 //! Item 5 — smfart's `{altabstract}` a second abstract (2506.20120); projlib-author's `\address` lines the author's
-//! (2609.02711).
+//! (2609.02711). Item 6 — mathtools.sty's internals papers and witharrows call after `\MHInternalSyntaxOn`.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, normalize_markup};
@@ -258,4 +258,26 @@ fn projlib_author_lines_are_the_authors_contacts() {
       r#"<creator before="{em}{em}" role="author"><personname>Bob Baker</personname><contact name="Address:{nbsp}" role="address">Second Institute, City</contact></creator>"#,
     ),
   );
+}
+
+/// package-bindings/mathtools_internals_after_internal_syntax: `\MT_start_cases:nnnn`, `\MT_matrix_begin:N`/`\MT_matrix_end:`,
+/// `\MT_delim_default_inner_wrappers:n` and witharrows's `show_only_refs` test work as with mathtools.sty (pdflatex 0
+/// errors). Before 68x 18 Errors (1906.10268, 1905.08664, 1704.08847, 2012.15617).
+#[test]
+fn mathtools_internals_after_internal_syntax_are_defined() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/mathtools_internals_after_internal_syntax.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  for tex in [
+    r#"tex="f(x)=\begin{cases}1&amp;x&gt;0\\&#10;0&amp;x\leq 0\end{cases}""#,
+    r#"tex="\mathopen{\langle}u,v\mathclose{\rangle}""#,
+  ] {
+    assert!(xml.contains(tex), "{tex}\n{xml}");
+  }
+  assert!(xml.contains("<XMTok") && !xml.contains("ERROR"), "{xml}");
 }
