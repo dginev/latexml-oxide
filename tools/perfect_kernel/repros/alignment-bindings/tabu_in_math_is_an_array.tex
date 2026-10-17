@@ -1,0 +1,17 @@
+% witness: 2010.06598 ($\begin{tabu}{ c|c }...\end{tabu}$); rc_struct2 C10; tabu.sty:616-618 (\ifmmode \def\tabu@{\array}
+%          \def\endtabu{\endarray})
+% oracle:  pdflatex 0 errors (a math array with a rule after the first row)
+% expect:  0 errors, 1 warning (the tabu stub's own); the cells math, as a math array's
+% status:  GREEN (batch 68z, perfect_kernel_batch68z::tabu_in_math_is_an_array); before 68z 1 Error "Script ^ can only
+%          appear in math mode" (the text tabularx's cells)
+\documentclass{article}
+\usepackage{tabu}
+\begin{document}
+\begin{table}\begin{center}
+$\begin{tabu}{ c|c }
+(u,v) & \pi(u,v) \\
+\hline
+(0,1) & (0,-\sqrt3 i,1,-\alpha^2) \\
+\end{tabu}$
+\end{center}\end{table}
+\end{document}

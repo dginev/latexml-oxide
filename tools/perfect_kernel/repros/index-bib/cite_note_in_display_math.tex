@@ -1,0 +1,13 @@
+% witness: math0402383 ($$ a = b, \qquad \cite[\text{I}.2.11^\prime]{Mac} $$); rc_struct2 C6
+% oracle:  pdflatex 0 errors: latex.ltx:17798 \@cite#1#2{[{#1\if@tempswa , #2\fi}]} sets the note in the current
+%          (math) mode
+% expect:  0 errors; the note's ^\prime a script in math
+% status:  RED (batch 68z): \lx@@cite digests its note in text mode (latex_constructs/sect11.rs, Perl
+%          latex_constructs.pool.ltxml restricted_horizontal, SHARED), 1 Error "Script ^"; a math-mode note inside
+%          ltx:cite needs a Math in the cite's note — not local
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+$$ a = b, \qquad \cite[\text{I}.2.11^\prime]{Mac} $$
+\begin{thebibliography}{9}\bibitem{Mac} M. Book.\end{thebibliography}
+\end{document}

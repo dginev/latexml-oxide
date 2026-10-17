@@ -17,6 +17,9 @@ LoadDefinitions!({
   // problemset example.tex:228, 41 errors; Perl raw-loads tabu.sty and dies).
   // `to <w>` is `\tabularx{<w>}`; the plain and `spread` forms target
   // `\linewidth` (spread's natural-width delta is not modeled).
+  // tabu.sty:616-618: in math mode `{tabu}` is an `array` (`\def\tabu@{\array}\def\endtabu{\endarray}`), its cells
+  // math: `$\begin{tabu}{c|c} (u,v) & \pi(u,v)\end{tabu}$` (2010.06598; the text tabular's cells erred "Script ^").
+  // A target is read and not modelled. Guard `perfect_kernel_batch68z::tabu_in_math_is_an_array`.
   DefMacro!("\\tabu", "\\lx@tabu@start");
   DefPrimitive!("\\lx@tabu@start", {
     let target = match read_keyword(&["to", "spread"])? {
@@ -26,10 +29,15 @@ LoadDefinitions!({
       },
       None => Tokens!(T_CS!("\\linewidth")),
     };
-    let mut toks = vec![T_CS!("\\tabularx"), T_BEGIN!()];
-    toks.extend(target.unlist());
-    toks.push(T_END!());
-    unread(Tokens::new(toks));
+    if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
+      let_i(&T_CS!("\\endtabu"), &T_CS!("\\endarray"), None);
+      unread(Tokens!(T_CS!("\\array")));
+    } else {
+      let mut toks = vec![T_CS!("\\tabularx"), T_BEGIN!()];
+      toks.extend(target.unlist());
+      toks.push(T_END!());
+      unread(Tokens::new(toks));
+    }
   });
   DefMacro!("\\endtabu", "\\endtabularx");
   // tabu.sty:1058-1083 `X[<coef>,<align>,<$>,<p|m|b>]`: the bracket carries a

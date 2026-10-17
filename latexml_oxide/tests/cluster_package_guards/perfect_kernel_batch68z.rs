@@ -7,7 +7,7 @@
 //! Item 5 — an `\omit` cell of an amsmath alignment is text (tex.web §789; 2306.14299). Item 6 — a first-column
 //! `\lefteqn` followed by more of its eqnarray cell is latex.ltx:15800's `\rlap` in the cell's math (2411.17699).
 //! Item 4 — tabularray's `mode`/`cmd` cell keys from the colspec and the `cell`/`row`/`column` keys (2603.14418,
-//! 2407.17127).
+//! 2407.17127). Item 7 — `{tabu}` in math is an `array` (tabu.sty:616-618; 2010.06598).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{
@@ -259,4 +259,30 @@ fn tabularray_cells_take_their_mode_and_cmd() {
     "{xml}"
   );
   assert!(xml.contains(r#">Dice</td>"#), "{xml}");
+}
+
+/// alignment-bindings/tabu_in_math_is_an_array: `$\begin{tabu}{ c|c }…\end{tabu}$` is a math array whose cells are
+/// math (tabu.sty:616-618; pdflatex 0 errors). Before 68z the text tabularx's cells erred: 1 Error "Script ^". The one
+/// warning is the stub's own ("only minimally stubbed").
+#[test]
+fn tabu_in_math_is_an_array() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/tabu_in_math_is_an_array.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("tabu.sty is only minimally stubbed"),
+    "{stderr}"
+  );
+  let xml = normalize_markup(&xml);
+  assert_eq!(xml.matches("<XMArray").count(), 1, "{xml}");
+  assert_eq!(xml.matches("<tabular").count(), 0, "{xml}");
+  assert!(
+    xml.contains(r#"<XMCell align="center" border="r">"#),
+    "{xml}"
+  );
 }

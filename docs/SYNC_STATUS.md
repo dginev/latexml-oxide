@@ -313,6 +313,14 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 The open RED repros of `tools/perfect_kernel/repros/` that no other row names; headers re-checked 2026-10-02 (scope:
 PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
 
+- **amsart's caption takes display math** (SHARED?; 68z C11): amsart.cls `\@makecaption` sets the caption in a `\vbox`
+  paragraph, so `$$…$$` there is display math (pdflatex 0 errors); the kernel's `\lx@@caption` digests in text mode
+  (latex_constructs/sect09.rs), `$$` is an empty pair and the scripts between err (2 Errors). Needs a display inside
+  `ltx:caption` (schema) or an amsart caption mode. Witness 0803.4182. Repro `captions-floats/amsart_caption_display_math`.
+- **A `\cite` note in display math is set in text** (SHARED, Perl restricted_horizontal; 68z C6): latex.ltx:17798
+  `\@cite` keeps the current mode, so `$$ \cite[\text{I}.2.11^\prime]{Mac} $$`'s `^` is a script; `\lx@@cite`
+  (latex_constructs/sect11.rs) digests the note in text: 1 Error. Needs a Math in the cite's note. Witness math0402383.
+  Repro `index-bib/cite_note_in_display_math`.
 - **`\multirow` in a `p{}` column spans no rows** (PERL-ORIGIN): the `p{0mm}` cell gets no `rowspan` where the `c`-column copy gets `rowspan="2"`, so the rotated label inflates its row (2605.23257 S5.T4 169.5pt vs pdflatex 116.2; A2.T7). Both bindings put `rowspan` on the alignment lookup's current column (`multirow_sty.rs:18-45`), which misses inside a p cell's box. Repro `alignment-bindings/multirow_in_p_column_spans.tex`.
 - **`\resizebox` of a zero-size box** (PERL-ORIGIN, K18 step 2 residue): a 0-width box gets `xscale="6553600"` where graphics.sty's `\Gscale@div` reports "Division by 0" and uses 1. Repro `boxes-groups/resizebox_zero_size_division.tex`. (The `pspicture` half landed in 58i, DIVERGENCES #397: `graphics-tikz/pspicture_size_is_typed` GREEN.)
 - **`\obeylines` makes the newline an `<ltx:break/>`, not `\par`** (PERL-ORIGIN; OUT OF SCOPE): Perl/Rust let the active `^^M` be `\@break` (`plain_base.rs:467-470`), latex.ltx:575-576 `\obeyedline` (= `\par`), so `\let\par=\cr \obeylines` ends no row. 6 errors, first `Error:unexpected:&`. A faithful fix changes goldens everywhere: ruling needed. Repro `alignment/metre_obeylines_halign.tex`.
@@ -2666,6 +2674,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\lefteqn` that is the whole cell (or followed only by spacing, 2210.09695), and any in an `array`/amsmath, keep 65o's
   span (its goldens unchanged). Witness 2411.17699. Repro alignment/lefteqn_then_script; guard
   `perfect_kernel_batch68z::a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math`.
+  (7) C10: `{tabu}` in math is an `array` (tabu.sty:616-618), tabu_sty.rs `\lx@tabu@start`: witness 2010.06598, repro
+  alignment-bindings/tabu_in_math_is_an_array, guard `perfect_kernel_batch68z::tabu_in_math_is_an_array`. C11 (amsart
+  caption `$$`, 0803.4182) and C6 (`\cite` note in display math, math0402383) are not local: RED rows in "Perfect-kernel
+  RED repros" above.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
