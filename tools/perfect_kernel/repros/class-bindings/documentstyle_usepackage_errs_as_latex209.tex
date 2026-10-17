@@ -1,0 +1,15 @@
+% witness: none in the census sample (0806.0904 redefines `\usepackage` itself) — user ruling 2026-10-17: latex209.def's LaTeX2e-command
+%   traps are applied (the "LaTeX2e command in LaTeX 2.09 document" errors, :79-137)
+% oracle:  pdflatex 3 errors: "LaTeX2e command \usepackage in LaTeX 2.09 document", "\usepackage before
+%   \documentclass" (latex.ltx `\@fileswithoptions`), "LaTeX2e command \ensuremath in LaTeX 2.09 document"; the package
+%   still loads; `\newcommand{\th}` defines \th (latex209.def's `\@ifdefinable` wrapper)
+% engines: rust int20 = 1 (\usepackage; the `\@fileswithoptions` error is a residual, the \ensuremath trap is held:
+%   OXIDIZED_DESIGN_DIVERGENCES #725), perl = 0
+% expect:  1 error naming \usepackage; the text "Text THORN and" kept
+% status:  GREEN (int20: tex_job.rs `\lx@latex@ix@definitions` latex209.def :79-123 + :137)
+\documentstyle{article}
+\usepackage{graphicx}
+\newcommand{\th}{THORN}
+\begin{document}
+Text \th\ and $x$ \ensuremath{y}.
+\end{document}

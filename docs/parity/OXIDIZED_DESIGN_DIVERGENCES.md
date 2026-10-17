@@ -18813,3 +18813,21 @@ matches each case's pdflatex count in the measured shapes (`{a & b} \\` 2, `a & 
 the message is latex.ltx's, every cell kept; the bare-`\halign` row break of §1132 is not reproduced. Why: the frame
 holds the column's bookkeeping (`alignmentStartColumn`), and popping it lost the first cell to a spanning second
 (`<td colspan="2">b</td>`), the content loss Perl shows. Guard `perfect_kernel_batch70b::tabular_stray_brace_keeps_its_cells`.
+
+### 725. latex209.def's LaTeX2e-command traps apply to `\usepackage`, `\listfiles`, `\lrbox` and `\@xargdef`; the `\ensuremath` trap is held while bindings call it where their 2.09-era originals do not
+
+**TeX**: `\documentstyle` inputs latex209.def, whose :79-91 wrap `\usepackage`, `\listfiles`, `\ensuremath`, `\lrbox`
+and `\@xargdef` in `\@latex@e@error`, enabled by `\@documentclasshook` (:137): each use after the class errs "LaTeX2e
+command … in LaTeX 2.09 document" and then runs; :105-123 let the document define the 2e-only names it lists.
+
+**Perl**: none of latex209.def is applied (KNOWN_PERL_ERRORS #925).
+
+**Rust** (int20, user ruling 2026-10-17): tex_job.rs `\lx@latex@ix@definitions` applies :79-123 and :137 except the
+`\ensuremath` wrapper. Our bindings call `\ensuremath` in code their originals write without it — AASTeX 4
+aaspp4.sty (1995, shipped with astro-ph9606031) `\def\fd{\hbox{$.\!\!^{\rm d}$}}` against aas_support_sty.rs
+`\ensuremath{\@fd}` (Perl-origin aas_support.sty.ltxml L499), REVTeX 3, emulateapj — so the trap fired on binding code
+pdflatex never runs: astro-ph9606143 7 → 9, astro-ph9701025 1 → 15, cond-mat9906271 0 → 6, astro-ph9809336 45 → 48,
+astro-ph9806372 2 → 4 (A/B over the 250 `\documentstyle` papers of the census sample, none of them calling
+`\ensuremath` in the source). The trap lands with a kernel-internal ensure-math for binding code (SYNC row). Residual:
+latex.ltx's "`\usepackage` before `\documentclass`" (`\@fileswithoptions`) that pdflatex adds is not reproduced. No census paper uses
+`\usepackage` after `\documentstyle` (0806.0904 redefines it: `\def\usepackage#1{\input{#1.sty}}`, no trap in pdflatex either). Guard `perfect_kernel_batch70b::documentstyle_usepackage_errs_as_latex209`.

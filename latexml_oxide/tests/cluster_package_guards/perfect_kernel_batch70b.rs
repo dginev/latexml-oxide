@@ -138,6 +138,25 @@ fn documentstyle_class_sets_normalsize_through_at_normalsize() {
   );
 }
 
+/// class-bindings/documentstyle_usepackage_errs_as_latex209: latex209.def's LaTeX2e-command traps (:79-137, user ruling
+/// 2026-10-17): `\usepackage` after `\documentstyle` errs as in pdflatex, the package still loads, and a 2.09 document's
+/// `\newcommand{\th}` defines it (the `\@ifdefinable` wrapper). The `\ensuremath` trap is held (OD #725).
+#[test]
+fn documentstyle_usepackage_errs_as_latex209() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/documentstyle_usepackage_errs_as_latex209.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("LaTeX2e command \\usepackage in LaTeX 2.09 document"),
+    "{stderr}"
+  );
+  assert!(xml.contains("Text THORN and"), "{xml}");
+}
+
 /// boxes-groups/vsplit_to_is_a_keyword: `\vsplit\mybox to` after a chardef'd register and `TO` (pdflatex 0 errors).
 /// Before: 2 errors "Missing argument Match:to", `to`/`TO` typeset as text.
 #[test]

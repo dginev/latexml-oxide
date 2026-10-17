@@ -376,20 +376,45 @@ LoadDefinitions!({
   // meaning; latex_constructs/sect13.rs's default stands for that hook), so a class defining neither meets
   // "undefined", not a `\normalsize`/`\@normalsize` loop. Then the 2.09 registers and macros a class reads
   // (:234-236 `\@cla`, `\@clb`, `\mscount`; :213 `\@lquote`; :229-233 `\SLiTeX`; :342 `\load`; :336-338 the old
-  // font scaling words; :356-367 the old size commands `\vpt`…`\xxvpt`) and latexsym (:307). Not applied, the
-  // native engine standing for them: the "LaTeX2e command in LaTeX 2.09 document" errors and `\@ifdefinable` wrapper
-  // (:79-123, a content-first choice: `\usepackage` after `\documentstyle` stays a plain package load), the
-  // missing-file and obsolete-file fallbacks (:140-168, the `.sty`-as-class branches below), the byte catcodes
+  // font scaling words; :356-367 the old size commands `\vpt`…`\xxvpt`) and latexsym (:307). The LaTeX2e-command
+  // traps come first, as in the file (:79-123): `\usepackage`, `\listfiles`, `\lrbox` and `\@xargdef` call
+  // `\@latex@e@error` before their own meaning, a `\@gobble` until the class's end, where `\@documentclasshook`
+  // makes it latex209.def's "LaTeX2e command … in LaTeX 2.09 document" error (:137) — so a `\usepackage` after
+  // `\documentstyle` errs as in pdflatex and still loads the package (user ruling 2026-10-17; no paper of the 250 `\documentstyle` papers in the census sample
+  // uses it — 0806.0904 redefines `\usepackage` itself); and
+  // the `\@ifdefinable` wrapper lets a 2.09 document define the 2e-only names it lists (`\th`, `\SS`, the guillemets).
+  // The `\ensuremath` trap (:88) is held: our bindings call `\ensuremath` where their 2.09-era originals do not (AASTeX 4
+  // aaspp4.sty `\def\fd{\hbox{$.\!\!^{\rm d}$}}` against aas_support_sty.rs `\ensuremath{\@fd}`; REVTeX 3,
+  // emulateapj), so the trap would fire on binding code pdflatex never runs (astro-ph9606143, astro-ph9701025,
+  // cond-mat9906271, astro-ph9809336, astro-ph9806372) — it lands once binding internals use a kernel-internal
+  // ensure-math (SYNC row). OXIDIZED_DESIGN_DIVERGENCES #725.
+  // Not applied, the native engine standing for them: the missing-file and obsolete-file fallbacks (:140-168, the
+  // `.sty`-as-class branches below), the byte catcodes
   // (:214-228), `\verb`, the font-selection redefinitions (`\rm`…`\em`, `\@setfontsize`, the symbol fonts and math
   // alphabets, `\DeclareOldFontCommand`, :273-335), tracefnt (:273), the marks and the output-routine resets. Perl's
   // `\documentstyle` (latex_constructs.pool.ltxml:97-129) applies none of it (KNOWN_PERL_ERRORS #925). Guard
   // `perfect_kernel_batch70b::documentstyle_class_sets_normalsize_through_at_normalsize`.
   DefMacro!(
     "\\lx@latex@ix@definitions",
-    r"\let\original@normalsize\normalsize\def\normalsize{\@normalsize}\let\@normalsize\@undefined
+    r"\def\@tempa#1#2{\expandafter\let\csname @@\string#1\endcsname#1%
+\edef#1{\noexpand\@latex@e@error{\noexpand#2}\expandafter\noexpand\csname @@\string#1\endcsname}}%
+\@tempa\usepackage\usepackage\@tempa\listfiles\listfiles
+\@tempa\lrbox{\begin{lrbox}}\@tempa\@xargdef{\newcommand{cmd}[args][def]}%
+\let\@latex@e@error\@gobble
+\def\@latex@e@error@#1{\@latexerr{LaTeX2e command \string#1\space in LaTeX 2.09 document}{This is a LaTeX 2.09
+document, but it contains \string#1.^^JIf you want to use the new features of LaTeX2e, your document^^Jshould begin
+with \string\documentclass\space rather than \string\documentstyle}}%
+\let\@old@ifdefinable\@ifdefinable
+\long\def\@ifdefinable#1{\def\@tempa####1#1####2#1####3#1####4\@tempa{\def\@latex@e@commands{####1####2}####3\expandafter
+\@firstofone\else\expandafter\@old@ifdefinable\expandafter#1\fi}\expandafter\@tempa\@latex@e@commands
+#1\iftrue#1\iffalse#1\@tempa}%
+\let\@@ifdefinable\@ifdefinable
+\def\@latex@e@commands{\usepackage\listfiles\ensuremath\LaTeXe\lrbox\th\dh\ng\dj\TH\DH\NG\DJ\k\r\SS
+\guillemetleft\guillemetright\guillemotleft\guillemotright\guilsinglleft\guilsinglright\quotedblbase\quotesinglbase}%
+\let\original@normalsize\normalsize\def\normalsize{\@normalsize}\let\@normalsize\@undefined
 \def\@documentclasshook{\def\@tempa{\@normalsize}\ifx\normalsize\@tempa\let\normalsize\@normalsize\fi
 \ifx\@normalsize\@undefined\let\@normalsize\normalsize\fi
-\ifx\normalsize\@undefined\let\normalsize\original@normalsize\fi}
+\ifx\normalsize\@undefined\let\normalsize\original@normalsize\fi\let\@latex@e@error\@latex@e@error@}
 \ifx\@cla\@undefined\newcount\@cla\fi\ifx\@clb\@undefined\newcount\@clb\fi\ifx\mscount\@undefined\newcount\mscount\fi
 \def\@lquote{\leavevmode{\kern\z@}`}
 \DeclareRobustCommand{\SLiTeX}{{\normalfont S\kern -.06em{\scshape l\kern -.035emi}\kern -.06em\TeX}}
