@@ -1,0 +1,17 @@
+% A letter's centred subject line and its body in `{quote}`, then `\noindent\@author` in the same paragraph as the
+% quote: the text before the print in its own block is body text too, so the signature stays (fms1 round-3 review
+% finding 3, probe r18).
+% status:  RED (fms1 round 3: text in the print's own block and quoted text were not body, the signature lifted)
+%          → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "Re: the referee report", the quoted paragraph, then "John Smith"; no title block.
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the signature kept.
+\documentclass{article}
+\makeatletter
+\title{Plain Letter}\author{John Smith}
+\begin{document}
+\begin{center}\textbf{Re: the referee report}\end{center}
+\begin{quote}
+Dear colleague, this is the body of my letter, with several words in it.
+\end{quote}
+\noindent\@author
+\end{document}

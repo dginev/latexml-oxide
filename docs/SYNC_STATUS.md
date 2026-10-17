@@ -3317,7 +3317,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   two_slices_kept, signature_after_body_kept, earlier_value_copy_kept} RED → GREEN, field_prov_args_whole_lifted GREEN;
   guards `perfect_kernel_batchfms1` (25). A/B 67int19b-rel / fms1c / fms1b over the same 543 papers (542 converted):
   fms1c = fms1b byte-identical on all 542, 0 Error/Warning/Fatal change, 12 `field_ink` lifts each, no mark leaked; the
-  review's probes q1-q16, p1-p7: q2, q3, q16 now as pdflatex, the others byte-identical to round 2. Open
+  review's probes q1-q16, p1-p7: q2, q3, q16 now as pdflatex, the others byte-identical to round 2. Round 4 (the
+  round-3 review's findings 1-4, one class: a lift that removed or moved text pdflatex prints; findings 5-6 nits): a
+  run's cover is what its own boxes consumed (`Document::absorb` keeps each run's ledger serials) plus what an alignment
+  took between and right after them (`document::field_ink_taken` at `digest_alignment_body`'s row-end marker), never a
+  ledger entry absorbed elsewhere or never absorbed (finding 1, probes r19, r20; siblings `\sbox`, `\savebox`,
+  `{lrbox}`, a formula's `\mbox` of a box also shown in text, a box used twice, `\phantom`/`\vphantom`); covers are
+  clipped to the current call's positions (`lx_field_range_<F>`) and only runs within them join (finding 2, probes r12,
+  r13; siblings `\author` twice, `\title` after `\maketitle`, `\edef` copies in reverse order); body text is decided
+  by content order, the text earlier in the run's own block too, only boxes exempt (finding 3, probes r9, r18 kept, r16
+  = r17 kept, r11 kept; the header cases kept are listed in OXIDIZED_DESIGN_DIVERGENCES #715); a box whose cover starts
+  before a position the run reached opens a new run, and a run holding one character of the value twice is no whole
+  print (finding 4, probes r4, r5 kept, r3 lifted twice; siblings fragment/whole/fragment,
+  `\StrLeft{\@title}{1}\@title`); the ledger records nothing after the ink is settled (finding 5); r7, r8, r14, r15
+  listed as residual missed lifts (finding 6). Repros sectioning-frontmatter/field_prov_{unused_boxes_kept,
+  math_mbox_kept, box_in_math_and_text, phantom_kept, title_calls_kept, edef_calls, author_calls_kept,
+  letter_flushleft_kept, letter_quote_kept, header_makebox_kept, reprint_order_kept, author_trailing_cr_lifted} RED →
+  GREEN, field_prov_{box_used_twice_lifted, title_after_maketitle_kept, header_rightline_kept, header_text_kept,
+  header_parbox_lifted, whole_twice_lifted} GREEN; guards `perfect_kernel_batchfms1` (43) and
+  `token::tests::field_ledger_take_cover_and_settle`. A/B over the same 543 papers (542 converted): fms1d = fms1c
+  byte-identical on all 542 (the round-3 lifts of 2205.02555, 0706.0979, 1004.2125, 1605.00182, 1503.06457 kept), 0
+  Error/Warning/Fatal change, 12 `field_ink` lifts each, no mark leaked; of the review's probes r4, r5, r9, r17, r18,
+  r19, r20 and q9 changed, each to pdflatex's content, the rest byte-identical to round 3. `perf stat -e
+  instructions:u`, bench, 3 runs: empty article 943.53M → 942.20M (−0.14 %), 2311.18489 4815.06M → 4813.88M
+  (−0.02 %), XML identical. Open
   (pre-existing, Perl the same): `\hypersetup{pdftitle=\@title}` records the RDF `dcterms:title` as the literal
   `\@title`; our `\pdfstringdef` is a `\gdef`, so a copy made before `\maketitle` empties the store prints nothing.
 

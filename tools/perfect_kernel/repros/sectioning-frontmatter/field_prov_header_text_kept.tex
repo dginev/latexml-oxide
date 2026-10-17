@@ -1,0 +1,15 @@
+% A plain-text header line ("Preprint ABC-123\hfill\today") before the document's own title block is body text, so
+% the title block stays (fms1 round-3 review finding 3, probe r11). A header case OXIDIZED_DESIGN #715 lists.
+% status:  GREEN (kept in rounds 3 and 4; round 2 lifted it).
+% oracle:  pdflatex 0 errors: "Preprint ABC-123 … <date>", "Header Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the header and the title block kept.
+\documentclass{article}
+\makeatletter
+\title{Header Title}\author{Ann Author}
+\begin{document}
+\noindent Preprint ABC-123\hfill\today\par
+\vspace{1cm}
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

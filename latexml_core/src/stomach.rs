@@ -3872,8 +3872,9 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
     // is that field's ink (`Document::absorb`'s field runs, OXIDIZED_DESIGN #715).
     // What it consumed of the value is covered by them (its arguments; a font switch or `\relax` before it that made
     // no box), recorded in digestion order (`token::field_ledger_push`, the box's `fieldSerial`), so a whole print is
-    // told from a fragment by every position of the value (`gullet::field_cover_of`).
-    if token.prov != 0 {
+    // told from a fragment by every position of the value (`gullet::field_cover_of`). Not once the frontmatter
+    // placement settled the field ink (`token::field_ledger_live`): nothing is marked after it.
+    if token.prov != 0 && crate::token::field_ledger_live() {
       let cover = if matches!(
         token.get_catcode(),
         Catcode::LETTER | Catcode::OTHER | Catcode::SPACE

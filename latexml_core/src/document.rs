@@ -291,19 +291,55 @@ pub const FIELD_PROV_PROPERTY: &str = "fieldProv";
 /// boxless font switch before it).
 pub const FIELD_SERIAL_PROPERTY: &str = "fieldSerial";
 
+/// The structure a print is set in took `digested` instead of the document absorbing it (an alignment body consumes a
+/// row's end marker, a value's `\\`, latexml_engine `digest_alignment_body`): its boxes' field-ledger entries are
+/// noted taken ([`field_ledger_take`](crate::token::field_ledger_take)), so the run of ink the row ends may cover them
+/// and no other run does (OXIDIZED_DESIGN #715).
+pub fn field_ink_taken(digested: &Digested) {
+  if !FIELD_PROV_STAMPED.get() || !crate::token::field_ledger_live() {
+    return;
+  }
+  for item in digested.unlist() {
+    if matches!(item.data(), DigestedData::List(_)) {
+      field_ink_taken(&item);
+    } else if let Some(serial) =
+      item.with_properties(|props| match props.get_sym(pin!("fieldSerial")) {
+        Some(Stored::Int(serial)) => u32::try_from(*serial).ok(),
+        _ => None,
+      })
+    {
+      crate::token::field_ledger_take(serial);
+    }
+  }
+}
+
 /// A run of one frontmatter field's ink being absorbed: boxes digested from that field's stored tokens, one after the
-/// other at one absorb level. It opens with `<?ltx-field-mark begin <field> <id>?>` where its first box goes and closes
-/// with `<?ltx-field-mark end <field> <id> <first> <last>?>` after its last (`<first>`/`<last>`: the lowest and highest
-/// field-ledger serial of its boxes, [`field_ledger_cover`](crate::token::field_ledger_cover), so the engine can tell a
-/// whole print from a fragment by every position of the value it consumed, its structure's tokens too). The two marks
-/// of a run carry its id: they pair by construction, never with another print's (OXIDIZED_DESIGN #715).
-#[derive(Debug, Clone, Copy)]
+/// other at one absorb level, in the order of the value (a box whose cover ends at or before the start of a box the run
+/// holds reads the value again and begins a new print: `\StrLeft{\@title}{3}\@title` is two runs). It opens with `<?ltx-field-mark begin <field> <id>?>`
+/// where its first box goes and closes with `<?ltx-field-mark end <field> <id> <serials>?>` after its last (`<serials>`:
+/// the field-ledger serials of the boxes it absorbed, `first:last` intervals joined by `,`,
+/// [`field_ledger_cover`](crate::token::field_ledger_cover), so the engine can tell a whole print from a fragment by
+/// every position of the value its own boxes consumed, its structure's tokens too). The two marks of a run carry its
+/// id: they pair by construction, never with another print's (OXIDIZED_DESIGN #715).
+#[derive(Debug, Clone)]
 struct FieldRun {
-  field: u16,
-  id:    u32,
-  level: u32,
-  first: u32,
-  last:  u32,
+  field:     u16,
+  id:        u32,
+  level:     u32,
+  /// the serials of the boxes absorbed, as inclusive intervals in absorption order
+  serials:   Vec<(u32, u32)>,
+  /// the highest position a box of the run starts at
+  max_start: u16,
+}
+
+impl FieldRun {
+  /// Note that the run absorbed the box recorded with `serial` (a box used twice is in each run that absorbs it).
+  fn take(&mut self, serial: u32) {
+    match self.serials.last_mut() {
+      Some((first, last)) if *first <= serial && serial <= *last + 1 => *last = (*last).max(serial),
+      _ => self.serials.push((serial, serial)),
+    }
+  }
 }
 
 /// Element names whose closed instances may be spilled from ROOT level.
@@ -1054,7 +1090,10 @@ impl Document {
     // a run of field ink ends with the absorb that opened it (a table cell's, an environment body's)
     if result.is_ok()
       && self.field_inherit == 0
-      && self.field_run.is_some_and(|r| r.level >= self.absorb_level)
+      && self
+        .field_run
+        .as_ref()
+        .is_some_and(|r| r.level >= self.absorb_level)
     {
       self.close_field_run()?;
     }
@@ -1070,7 +1109,7 @@ impl Document {
   /// Before absorbing `object`: open, continue or close the run of field ink (`FieldRun`) by the field provenance
   /// the box was digested with ([`FIELD_PROV_PROPERTY`]). Returns whether `object` is a field-ink whatsit whose own
   /// absorption is its ink (the caller counts it in `field_inherit` meanwhile). Nothing in math: a formula is one box of
-  /// the text around it.
+  /// the text around it, and what it holds (an `\mbox` of the field) is no print of the field.
   fn field_ink_before(&mut self, object: &Digested) -> Result<bool> {
     if !self.field_marking_live() {
       return Ok(false);
@@ -1092,8 +1131,7 @@ impl Document {
         && run.field == field
         && let Some(serial) = serial
       {
-        run.first = run.first.min(serial);
-        run.last = run.last.max(serial);
+        run.take(serial);
       }
       return Ok(false);
     }
@@ -1114,34 +1152,45 @@ impl Document {
       }
       return Ok(false);
     };
+    let cover = crate::token::field_ledger_entry(serial).map_or_else(Default::default, |e| e.cover);
     match self.field_run.as_mut() {
-      Some(run) if run.field == field => {
-        run.first = run.first.min(serial);
-        run.last = run.last.max(serial);
+      // the value read on in its order (the boxes of one macro's expansion all start at the macro's position; a
+      // construct's own box, absorbed around what its argument made, covers it: `\textsc{One}`'s whatsit after `One`)
+      Some(run) if run.field == field && cover.end > run.max_start => {
+        run.take(serial);
+        run.max_start = run.max_start.max(cover.start);
       },
+      // another field's ink, or the value read again from before a position the run reached (`\StrLeft{\@title}{3}
+      // \@title`: the second print's `T`): a print of its own
       _ => {
         if self.field_run.is_some() {
           self.close_field_run()?;
         }
-        self.open_field_run(field, serial)?;
+        self.open_field_run(field, serial, cover.start)?;
       },
     }
     Ok(!matches!(object.data(), DigestedData::TBox(_)))
   }
 
-  /// Is the insertion point in math (a formula's tokens, an `XMath`)?
+  /// Is the insertion point in math (inside an `ltx:Math`: a formula's tokens, an `\mbox` in it)?
   fn in_math_node(&self) -> bool {
-    let element = if self.node.get_type() == Some(NodeType::TextNode) {
-      self.node.get_parent()
-    } else {
+    let mut node = if self.node.get_type() == Some(NodeType::ElementNode) {
       Some(self.node.clone())
+    } else {
+      self.node.get_parent()
     };
-    element.is_some_and(|e| {
-      e.get_type() == Some(NodeType::ElementNode)
-        && arena::with(get_node_qname(&e), |q| {
-          q.starts_with("ltx:XM") || q == "ltx:Math"
-        })
-    })
+    while let Some(element) = node {
+      if element.get_type() != Some(NodeType::ElementNode) {
+        return false;
+      }
+      if arena::with(get_node_qname(&element), |q| {
+        q.starts_with("ltx:XM") || q == "ltx:Math"
+      }) {
+        return true;
+      }
+      node = element.get_parent();
+    }
+    false
   }
 
   /// Append a field mark (a [`FIELD_MARK_TARGET`] processing instruction) at the insertion point, the open text node
@@ -1161,7 +1210,7 @@ impl Document {
     Ok(true)
   }
 
-  fn open_field_run(&mut self, field: u16, serial: u32) -> Result<()> {
+  fn open_field_run(&mut self, field: u16, serial: u32, start: u16) -> Result<()> {
     let id = self.field_run_serial + 1;
     if self.append_field_mark(&s!("begin {field} {id}"))? {
       self.field_run_serial = id;
@@ -1169,8 +1218,8 @@ impl Document {
         field,
         id,
         level: self.absorb_level,
-        first: serial,
-        last: serial,
+        serials: vec![(serial, serial)],
+        max_start: start,
       });
     }
     Ok(())
@@ -1178,18 +1227,25 @@ impl Document {
 
   fn close_field_run(&mut self) -> Result<()> {
     if let Some(run) = self.field_run.take() {
-      let FieldRun { field, id, first, last, .. } = run;
-      self.append_field_mark(&s!("end {field} {id} {first} {last}"))?;
+      let serials = run
+        .serials
+        .iter()
+        .map(|(first, last)| s!("{first}:{last}"))
+        .collect::<Vec<_>>()
+        .join(",");
+      self.append_field_mark(&s!("end {} {} {serials}", run.field, run.id))?;
     }
     Ok(())
   }
 
   /// Close the open run of field ink, if any, and mark no more (`FieldRun`): the frontmatter placement settled it.
+  /// The field ledger records no more either ([`field_ledger_settle`](crate::token::field_ledger_settle)).
   pub fn settle_field_ink(&mut self) -> Result<()> {
     if self.field_run.is_some() {
       self.close_field_run()?;
     }
     self.field_ink_settled = true;
+    crate::token::field_ledger_settle();
     Ok(())
   }
 

@@ -9,7 +9,13 @@
 //! findings 1-3, 5): field_prov_*. Round 3 (re-review findings 2, 3, 7): a whole print covers every position of the
 //! value (field_prov_slice_before_macro_kept, field_prov_two_slices_kept, field_prov_args_whole_lifted), only the
 //! title block is lifted (field_prov_signature_after_body_kept), positions per `\title` call
-//! (field_prov_earlier_value_copy_kept).
+//! (field_prov_earlier_value_copy_kept). Round 4 (round-3 review findings 1-4, one class: a lift that removed or moved
+//! text pdflatex prints): a run covers what its own boxes consumed (field_prov_unused_boxes_kept, _math_mbox_kept,
+//! _box_in_math_and_text, _box_used_twice_lifted, _phantom_kept), of the current call's value only
+//! (field_prov_title_calls_kept, _edef_calls, _author_calls_kept, _title_after_maketitle_kept), body text by content
+//! order (field_prov_letter_flushleft_kept, _letter_quote_kept, _header_{rightline,makebox,text}_kept,
+//! _header_parbox_lifted), runs in the value's order (field_prov_reprint_order_kept, _whole_twice_lifted), and a
+//! value's closing `\\` covered past the space its cell dropped (field_prov_author_trailing_cr_lifted, 1605.00182).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use super::{
@@ -551,4 +557,310 @@ fn field_prov_earlier_value_copy_kept() {
     "  <para xml:id=\"p1\">\n    <p align=\"center\">Long Original Title</p>\n  </para>",
     "{xml}"
   );
+}
+
+// Round 4 (round-3 review findings 1-4): a run's cover is what its own boxes consumed of the current call's value
+// (field_ink_runs), runs follow the value's order (core `Document::absorb`), and body text is decided by content order
+// (field_runs_after_body_text).
+
+/// sectioning-frontmatter/field_prov_unused_boxes_kept: a fragment of `\@title` beside the rest of the value digested into boxes never shown (`\setbox`, `\sbox`, `\savebox`, `{lrbox}`) stays a fragment: a run covers what its own boxes consumed (round-3 review finding 1, probe r19).
+#[test]
+fn field_prov_unused_boxes_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_unused_boxes_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">About</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_math_mbox_kept: the rest of `\@title` in an `\mbox` in a formula is no print: the fragment before it stays, the formula too (round-3 review finding 1, probe r20).
+#[test]
+fn field_prov_math_mbox_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_math_mbox_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">About</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p><text class=\"ltx_markedasmath\">Foo Bar</text></p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_box_in_math_and_text: a box of `\@title` used in a `{center}` and in a formula's `\mbox`: the `{center}` use is lifted, the formula stays (round-3 review finding 1 sibling).
+#[test]
+fn field_prov_box_in_math_and_text() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_box_in_math_and_text.tex"
+    ),
+    (1, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p2\">\n    <p><text class=\"ltx_markedasmath\">About Foo Bar</text></p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_box_used_twice_lifted: a box of `\@title` used twice in the title block: each use is a whole print and lifted (the "lift every whole print" ruling; round-3 review finding 1 sibling).
+#[test]
+fn field_prov_box_used_twice_lifted() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_box_used_twice_lifted.tex"
+    ),
+    (2, 0),
+    &[],
+  );
+  assert_eq!(leading_body(&xml), "", "{xml}");
+}
+
+/// sectioning-frontmatter/field_prov_phantom_kept: the rest of `\@title` in a `\phantom`/`\vphantom` is no print: the fragments stay, and a `\phantom` of the whole title is kept (round-3 review finding 1 siblings).
+#[test]
+fn field_prov_phantom_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_phantom_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">About<text class=\"ltx_phantom\"> Foo Bar</text></p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\">About<text class=\"ltx_phantom\"> Foo Bar</text></p>\n  </para>\n  <para xml:id=\"p3\">\n    <p align=\"center\"><text class=\"ltx_phantom\">About Foo Bar</text></p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_title_calls_kept: a print of an earlier `\title` call's value is not joined with the current call's print: "A Title" stays, "B Title" is lifted (round-3 review finding 2, probe r12).
+#[test]
+fn field_prov_title_calls_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_title_calls_kept.tex"
+    ),
+    (1, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">A Title</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_edef_calls: `\edef` copies of two `\title` calls printed in both orders: the earlier call's copies stay, the current call's are lifted (round-3 review finding 2, probe r13 and its reverse).
+#[test]
+fn field_prov_edef_calls() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_edef_calls.tex"
+    ),
+    (2, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">A Title</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p align=\"center\">A Title</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_author_calls_kept: a print of an earlier `\author` call's value stays; the current call's print is lifted (round-3 review finding 2 sibling).
+#[test]
+fn field_prov_author_calls_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_author_calls_kept.tex"
+    ),
+    (1, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">Ann Author</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_title_after_maketitle_kept: a `\title` given and printed after `\maketitle` stays: the placement settled the field ink (round-3 review finding 2 sibling).
+#[test]
+fn field_prov_title_after_maketitle_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_title_after_maketitle_kept.tex"
+    ),
+    (1, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p2\">\n    <p>B Title</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_letter_flushleft_kept: a letter's `{flushleft}` body precedes its `\noindent\@author` signature, which stays (round-3 review finding 3, probe r9).
+#[test]
+fn field_prov_letter_flushleft_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_letter_flushleft_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <logical-block>\n    <para xml:id=\"p1\">\n      <p align=\"left\">Dear colleague, this is the body of my letter, with several words in it.</p>\n      <p align=\"left\">Another paragraph of the letter.</p>\n    </para>\n  </logical-block>\n  <para class=\"ltx_noindent\" xml:id=\"p2\">\n    <p>John Smith</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_letter_quote_kept: a letter's subject line and `{quote}` body precede its signature in the same block, which stays (round-3 review finding 3, probe r18).
+#[test]
+fn field_prov_letter_quote_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_letter_quote_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\"><text font=\"bold\">Re: the referee report</text></p>\n  </para>\n  <para class=\"ltx_noindent\" xml:id=\"p2\">\n    <quote>\n      <p>Dear colleague, this is the body of my letter, with several words in it.</p>\n    </quote>\n    <p>John Smith</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_header_rightline_kept: a `\rightline` report number before the title block is body text: the title block stays (round-3 review finding 3, probe r16).
+#[test]
+fn field_prov_header_rightline_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_rightline_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p class=\"ltx_align_right\">LA-UR-12-3456</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_header_makebox_kept: a `\makebox[\textwidth][r]` report number before the title block is body text, as `\rightline`'s: the title block stays (round-3 review finding 3, probe r17).
+#[test]
+fn field_prov_header_makebox_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_makebox_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p><text align=\"right\" width=\"345.0pt\">LA-UR-12-3456</text></p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_header_text_kept: a plain-text header line before the title block is body text: the title block stays (round-3 review finding 3, probe r11).
+#[test]
+fn field_prov_header_text_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_text_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p>Preprint ABC-123 October 17, 2026</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_header_parbox_lifted: a `\parbox` report number is a box, set apart: the title block after it is lifted, the header kept (0706.0979's shape; round-3 review finding 3).
+#[test]
+fn field_prov_header_parbox_lifted() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_parbox_lifted.tex"
+    ),
+    (2, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p><inline-block class=\"ltx_parbox\" vattach=\"top\" width=\"142.3pt\">\n        <p>LA-UR-12-3456</p>\n      </inline-block></p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_reprint_order_kept: prints that read the value again from an earlier position are runs of their own; no line holds a whole print alone, so all stay (round-3 review finding 4, probes r4, r5, fragment/whole/fragment, and the first character before the whole title).
+#[test]
+fn field_prov_reprint_order_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_reprint_order_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">TwiTwice Title</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\">TitleTwice</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p align=\"center\">TwiTwice TitleTitle</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p align=\"center\">TTwice Title</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_whole_twice_lifted: the whole title twice on one line, with and without a space: two whole prints per line, each lifted (round-3 review finding 4, probe r3).
+#[test]
+fn field_prov_whole_twice_lifted() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_whole_twice_lifted.tex"
+    ),
+    (4, 0),
+    &[],
+  );
+  assert_eq!(leading_body(&xml), "", "{xml}");
+}
+
+/// sectioning-frontmatter/field_prov_author_trailing_cr_lifted: an `\@author` print in a `tabular` whose value ends
+/// with a space and `\\` (1605.00182): the run's cover goes on over the alignment's row-end marker past the space the
+/// cell dropped, so the print is whole and lifted.
+#[test]
+fn field_prov_author_trailing_cr_lifted() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_author_trailing_cr_lifted.tex"
+    ),
+    (2, 0),
+    &[("title", &[], "<title>Tab Title</title>")],
+  );
+  assert_eq!(xml.matches("Daniel Krefl").count(), 1, "{xml}");
+  assert_eq!(
+    xml.matches("Theoretical Physics Department").count(),
+    1,
+    "{xml}"
+  );
+  assert_eq!(leading_body(&xml), "", "{xml}");
 }

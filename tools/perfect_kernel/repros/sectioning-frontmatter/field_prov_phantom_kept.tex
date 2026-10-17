@@ -1,0 +1,17 @@
+% The rest of `\@title` in a `\phantom` or `\vphantom` is invisible ink, no print: it does not make the fragment
+% before it whole (fms1 round-3 review finding 1 sibling), and a `\phantom` of the whole title is kept as it is.
+% status:  RED (fms1 round 3: the phantom's run joined the fragment's, "About" lifted) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "About", "About", a blank line, then the title block, "1 Intro Text.".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; both fragments and the phantoms kept.
+\documentclass{article}
+\usepackage{xstring}
+\makeatletter
+\title{About Foo Bar}\author{Ann Author}
+\begin{document}
+\begin{center}\StrLeft{\@title}{5}\phantom{\StrRight{\@title}{8}}\end{center}
+\begin{center}\StrLeft{\@title}{5}\vphantom{\StrRight{\@title}{8}}\end{center}
+\begin{center}\phantom{\@title}\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

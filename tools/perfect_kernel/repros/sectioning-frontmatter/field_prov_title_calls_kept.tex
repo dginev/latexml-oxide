@@ -1,0 +1,18 @@
+% `\title{A Title}` printed, then `\title{B Title}` printed: the first print is of an earlier call's value, so it is
+% not joined with the second (the join uses only the current call's positions, `lx_field_range_<id>`); the second is a
+% whole print of the displayed title and lifted (fms1 round-3 review finding 2, probe r12; sibling: the same after
+% `\maketitle`, where the placement settled the first call's print and the second stays).
+% status:  RED (fms1 round 3: the two runs joined over the calls' boundary, "A Title" lifted too) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "A Title", "B Title", then the title block "B Title / Ann Author / <date>".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×1; "A Title" kept.
+\documentclass{article}
+\makeatletter
+\title{A Title}\author{Ann Author}
+\begin{document}
+\begin{center}\@title\end{center}
+\title{B Title}
+\begin{center}\@title\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

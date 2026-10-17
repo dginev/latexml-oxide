@@ -1,0 +1,23 @@
+% Prints that read the value again from an earlier position are prints of their own: a box whose cover starts before
+% one the run already reached closes the run (core `Document::absorb`'s field runs). A fragment then the whole title
+% (probe r4), two slices in reverse order (probe r5), a fragment, the whole title and a fragment (sibling), and the
+% first character then the whole title (sibling: both `T`s start at one position, as a macro's expansion does, so the
+% run is told by holding a character of the value twice): no line holds a whole print alone, so all stay (fms1
+% round-3 review finding 4).
+% status:  RED (fms1 round 3: each line was one run covering the whole value, all three lifted) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "TwiTwice Title", "TitleTwice", "TwiTwice TitleTitle", "TTwice Title", then the
+%          title block.
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the four lines kept.
+\documentclass{article}
+\usepackage{xstring}
+\makeatletter
+\title{Twice Title}\author{Ann Author}
+\begin{document}
+\begin{center}\StrLeft{\@title}{3}\@title\end{center}
+\begin{center}\StrRight{\@title}{5}\StrLeft{\@title}{6}\end{center}
+\begin{center}\StrLeft{\@title}{3}\@title\StrRight{\@title}{5}\end{center}
+\begin{center}\StrLeft{\@title}{1}\@title\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

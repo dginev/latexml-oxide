@@ -1,0 +1,16 @@
+% `\author{Ann Author}` printed, then `\author{Bob Builder}` printed: the first print is of an earlier call's value and
+% stays; the second is the displayed author's whole print and lifted (fms1 round-3 review finding 2 sibling).
+% status:  RED (fms1 round 3: the two runs joined, "Ann Author" lifted too) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "Ann Author", "Bob Builder", then the title block "The Title / Bob Builder / <date>".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×1; "Ann Author" kept.
+\documentclass{article}
+\makeatletter
+\title{The Title}\author{Ann Author}
+\begin{document}
+\begin{center}\@author\end{center}
+\author{Bob Builder}
+\begin{center}\@author\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

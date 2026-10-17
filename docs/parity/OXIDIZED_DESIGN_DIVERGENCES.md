@@ -18844,8 +18844,12 @@ record the field's extent (`lx_field_extent_<F>`): the position of every token o
 an other character, a control sequence, an active character; not a space, brace, `$`, `^`, `_`, `&`, `#`, whose effect
 the tokens around them cover. Each `\title` (`\author`) call's positions follow the previous call's
 (`lx_field_base_<F>`), so a copy of an earlier value (`\let\oldtitle\@title`, then `\title{Short}`) is no print of the
-current one (fms1 re-review finding 7; guard `field_prov_earlier_value_copy_kept`); a field whose calls pass 16,383
-tokens in all is not stamped (and no earlier copy of it is whole).
+current one (fms1 re-review finding 7; guard `field_prov_earlier_value_copy_kept`), and a print is judged on the
+current call's positions only (`lx_field_range_<F>`: a run's cover is clipped to them, and a run that consumes an
+earlier call's positions is joined with none — round 3 joined `\title{A Title}`'s print with the next call's and lifted
+both: round-3 review finding 2, probes r12, r13; guards `field_prov_title_calls_kept`, `field_prov_edef_calls` (also the
+copies in reverse order), `field_prov_author_calls_kept`, `field_prov_title_after_maketitle_kept`); a field whose calls
+pass 16,383 tokens in all is not stamped (and no earlier copy of it is whole).
 Nothing is added to the store, so every token operation sees exactly what pdflatex sees (the round-1 in-band marks made
 `\ifx\@title\same`, `\equal`, `\IfStrEq`, `\pdfstrcmp` false, `\StrLen` 6 for "Same", `\@gobble`/`\@car`/`\StrLeft`
 take a mark, and `\csname\@title\endcsname` err — fms1 review finding 3; guard `field_prov_token_tests`, every line =
@@ -18863,26 +18867,47 @@ switch, `\relax`, a macro still to be expanded: `token::field_cover_set_pending`
 covered by its expansion's boxes). Each such cover is recorded in digestion order in the field ledger
 (`token::field_ledger_push`, the box's `fieldSerial`). The document builder (core `Document::absorb`) turns the boxes into
 runs of field ink: a box of field *F* opens a run with `<?ltx-field-mark begin F id?>` where its ink goes (the open text
-node closed first), the next boxes of *F* at that absorb level continue it, and the run closes with
-`<?ltx-field-mark end F id first last?>` (the ledger serials of its first and last box) before the first box without
-that field, or when the absorb that opened it ends (a table cell's, an environment body's); what a field-ink whatsit
-absorbs is its ink, whatever its parts' provenance; nothing in math. A run's cover is everything the ledger recorded
-of *F* from its first box to its last (`token::field_ledger_cover`): the structure digested between them too. The marks are processing
+node closed first), the next boxes of *F* at that absorb level continue it while they go on in the value's order, and
+the run closes with `<?ltx-field-mark end F id serials?>` (the ledger serials of the boxes it absorbed) before the
+first box without that field, or when the absorb that opened it ends (a table cell's, an environment body's). A box
+whose cover starts before a position a box of the run started at and ends there or before reads the value again: it
+closes the run and opens one of its own (`\StrLeft{\@title}{3}\@title`, the second print's `T`; a construct's own box
+absorbed around what its argument made, `\textsc{One}`'s whatsit after `One`, covers it and goes on). A re-read from
+the value's first position starts where a macro's expansion does (all its boxes at the macro's position), so a run is
+also no whole print when it holds a box of one character of the value twice (`lx_field_chars_<F>`, the letters and
+other characters: `\StrLeft{\@title}{1}\@title`'s two `T`s; a print digests each character once). Round 3 made such
+a line one run covering the whole value and lifted "TwiTwice Title" (round-3 review finding 4, probes r4, r5; guards
+`field_prov_reprint_order_kept`, also fragment/whole/fragment, and `field_prov_whole_twice_lifted`: the whole title
+twice on one line is two whole prints, each lifted). What a field-ink whatsit absorbs is its ink, whatever its parts'
+provenance. No run opens in math, at any depth of an `ltx:Math` (an `\mbox` in a formula is no print of the field).
+A run's cover is what the ledger recorded for the boxes it absorbed (`token::field_ledger_cover`), and for what an
+alignment took between and right after them: a row's end marker (a value's `\\` set in a `tabular`), digested and
+consumed by `digest_alignment_body` and never absorbed, is flagged there (`document::field_ink_taken`,
+`token::field_ledger_take`). Never an entry absorbed elsewhere or never absorbed: round 3 extended a run over the
+ledger's next entries of the field that no run held, so a fragment beside the rest of the value in an unused
+`\setbox`, or in a formula's `\mbox`, was taken for whole and lifted (round-3 review finding 1, probes r19, r20; guards
+`field_prov_unused_boxes_kept` — also `\sbox`, `\savebox`, `{lrbox}` — `field_prov_math_mbox_kept` and
+`field_prov_box_in_math_and_text`, where the formula use of a box was lifted with its paragraph). A box used twice is in
+each run that absorbs it (`field_prov_box_used_twice_lifted`). A run set in invisible ink (`\phantom`, `\vphantom`:
+`<ltx:text class="ltx_phantom">`) is no print and joins none (`field_prov_phantom_kept`). The marks are processing
 instructions (no node of content to the block built around them; an element mark made a `{center}` a logical-block —
 settled dead end), and a run's two marks carry its id, so they pair by construction, never with another print's (the
 round-1 begin/end pairing took `\StrLeft{\@title}{5}`'s begin and `\StrGobbleLeft{\@title}{6}`'s end and removed the
 paragraph between them — finding 2; guard `field_prov_fragments_kept`). One print split by the structure it is set in
 (article's author `tabular`s: one run per cell, `\and`'s `\end{tabular}…\begin{tabular}`) is joined back: a run that
-goes on with the field's later positions, with no ink between the two, is one run with the one before when the ledger
-from the first's first box to the second's last covers every extent position from where the first stopped to where the
-second starts — the cells' `\\`, whose row-end marker the alignment takes so that no run holds it, is digested between
-them (`field_ink_runs`; 1605.00182, 0706.0979, 1004.2125; guard `field_prov_author_tabular_lifted`). A second print
+goes on with the field's later positions, with no ink between the two, is one run with the one before when both
+consume the current call's positions only and their covers, with what the alignment took between them (the cells'
+`\\`), cover every extent position from where the first stopped to where the second starts (`field_ink_runs`;
+1605.00182, 0706.0979, 1004.2125; guard `field_prov_author_tabular_lifted`). A second print
 starts over and stays a run of its own, and two slices with a gap (`\StrLeft{\@title}{2}\par\StrRight{\@title}{2}`,
 nothing of the gap digested) stay two runs, neither whole (round 2 joined them by their endpoints and removed both —
-re-review finding 2, probe q16; guard `field_prov_two_slices_kept`). What the ledger holds right after a run's last
-box, of its field, continuing its cover and in no run, is the run's too: a value's closing `\\`, whose row-end marker
-the alignment takes (1605.00182's `\author{… \\ }`). The work is gated: none in a conversion that
-stamped no field (`note_field_prov_stamped`), none after the placement settled the ink.
+re-review finding 2, probe q16; guard `field_prov_two_slices_kept`). What an alignment took right after a run's last
+box, of its field and continuing its cover, is the run's too, past an entry that covers no position of the extent (the
+space the cell drops before it): a value's closing `\\` (1605.00182's `\author{… \\ }`; guard
+`field_prov_author_trailing_cr_lifted`).
+The work is gated: none in a conversion that stamped no field (`note_field_prov_stamped`), and none after the
+placement settled the ink — the builder marks no run and the stomach records no ledger entry
+(`token::field_ledger_live`, `field_ledger_settle`; guard `field_ledger_take_cover_and_settle`).
 
 **The lift.** Where the frontmatter is placed — `\lx@frontmatterhere` (the `\maketitle` flush) and the fallback's
 non-abstract branch (the first sectional unit or `\end{document}`) — `lift_marked_field_ink` runs once
@@ -18894,14 +18919,24 @@ with the wrappers it empties (not a `labels` one), when:
   character only and lifted "About" — re-review finding 2, probe q2; guard `field_prov_slice_before_macro_kept`), while
   a print of a value holding a macro, `\\[2pt]`, `\hspace{1em}`, a font switch and a formula is whole
   (`field_prov_args_whole_lifted`);
-- the run is in the document's title block: no body text precedes it in the document's content order — no block of the
-  document (a child of `<ltx:document>`) before the run's own that holds no field's ink and holds running text: text
-  set in the paragraph flow, not in a box (`\parbox`, minipage, tabular), not aligned (`{center}`, `{flushright}`), not
-  in a note, float or frontmatter element (`field_runs_after_body_text`). A cover's header (the preprint-number
-  `\parbox` of 0706.0979 and 1605.00182) is no body text, and what a block holding a field's print sets around it (an
-  affiliation line, a `by`) is that block's. A letter with no `\maketitle` that ends `\noindent\@author` signs it
-  where pdflatex prints the name, and keeps it (round 2 lifted it at the `\end{document}` fallback — re-review finding 3,
-  probe q3; guard `field_prov_signature_after_body_kept`);
+- the run is in the document's title block: no body text precedes it in the document's content order
+  (`field_runs_after_body_text`): no text before its begin mark, the text before it in its own block too, except a
+  field's ink (between a run's marks: a title before its author), what is set apart from the page's flow (a frontmatter
+  element, a note, a float, an error's markup, `ltx_phantom` ink, the `_Capture_` marks), and the text of a box
+  (`ltx:inline-block`, `ltx:inline-logical-block`, `ltx:inline-para`, `ltx:tabular`: a `\parbox`, a minipage, a
+  `tabular`) that does not hold the run. A cover's header box (the preprint-number `\parbox` of 0706.0979 and
+  1605.00182) is no body text (`field_prov_header_parbox_lifted`); an aligned or quoted environment is no box. A letter
+  that ends `\noindent\@author` signs it where pdflatex prints the name, and keeps it, its body in the paragraph flow
+  (round 2 lifted it at the `\end{document}` fallback — re-review finding 3, probe q3; guard
+  `field_prov_signature_after_body_kept`), in `{flushleft}` or in a `{quote}` in the signature's own paragraph (round 3
+  took aligned and quoted text, and the text of the print's own block, for no body, and lifted the signature —
+  round-3 review finding 3, probes r9, r18; guards `field_prov_letter_flushleft_kept`, `field_prov_letter_quote_kept`).
+  Header cases that therefore stay (kept, as before S1): a header line before the title block in the flow or aligned —
+  plain text (`Preprint ABC-123\hfill\today`, probe r11; `field_prov_header_text_kept`), `\rightline{LA-UR-…}` and
+  `\noindent\makebox[\textwidth][r]{LA-UR-…}`, which behave the same (round 3 lifted the `\makebox` one only: probes
+  r16, r17; `field_prov_header_rightline_kept`, `field_prov_header_makebox_kept`), `{flushright}`, a centred subject
+  line; and text the title block sets before a print (a `\textsuperscript{*}` after the title, a `by`, an affiliation
+  line before a second print: review probe q9, whose three prints round 3 lifted), which keeps the prints after it;
 - the frontmatter displays the field, by the XSLT's rule: no `<ltx:titlepage>` at document level (beside one the title
   template is skipped and a creator renders nothing, LaTeXML-structure-xhtml.xsl:374-375, :687-692 = Perl :358-359)
   and a document-level `<ltx:title>`, resp. author `<ltx:creator>` (round 1 also lifted an author print beside a
@@ -18924,8 +18959,15 @@ probe q15) lifts the title from a paragraph that the document's text continues, 
 `\maketitle` begins with `\par`, so the print is a paragraph of its own; a print and `\maketitle` inside one `{center}`
 (probes q13, q14) is not lifted by provenance (the dedup, or kept, as before S1).
 
-Residuals: a value that ends in a primitive's argument (`\title{Foo\vspace{2pt}}`) or in a macro whose arguments its
-expansion drops is no whole print (nothing stamped follows to bound what it consumed), so the print stays, as before S1.
+Residuals (missed lifts; the print stays, as before S1): a value that ends in a primitive's argument
+(`\title{Foo\vspace{2pt}}`) or in a macro whose arguments its expansion drops is no whole print (nothing stamped
+follows to bound what it consumed); a value holding a `\footnote` (`\title{Foot Title\footnote{…}}` printed, round-3
+review probes r7, r8); a value built from an earlier one (`\let\oldtitle\@title`, `\title{\oldtitle\\[1ex]\large Sub
+Title}`: the expansion of `\oldtitle` carries the earlier call's positions, so the current call's `\oldtitle` is never
+covered, probe r14); an `\edef` copy of an earlier call whose value the next call repeats (`\edef\xa{\@title}
+\title{Same Title}`, probe r15: the copy carries the earlier call's positions); the header cases above; a value whose
+print digests one of its characters twice (a document macro that sets its argument twice inside `\title{…}`), taken
+for a re-read (below).
 
 Every mark goes with the lift; marks still in the tree at `\end{document}` are removed with their ink kept
 (`settle_field_marks`), and the core finalize drops a stray one (document.rs, `FIELD_MARK_TARGET`). A lifted title

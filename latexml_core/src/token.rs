@@ -907,45 +907,83 @@ pub fn field_cover_set_pending(cover: FieldCover) {
   FIELD_COVER_PENDING.set(merged);
 }
 
+/// One entry of the field ledger ([`field_ledger_push`]): the cover of a box digested from a field token, and whether
+/// the structure the print is set in took the box instead of the document absorbing it ([`field_ledger_take`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct FieldLedgerEntry {
+  /// what the box covers of its field's value
+  pub cover: FieldCover,
+  /// taken by an alignment: a `tabular` row's end marker (a value's `\\`), digested and consumed by the alignment
+  /// body, never absorbed, so no run of ink holds it
+  pub taken: bool,
+}
+
 thread_local! {
-  /// The covers of the boxes digested from field tokens, in digestion order ([`field_ledger_push`]): what a print
-  /// consumed of its field's value between its first and its last box, a structure's tokens too (a `tabular`'s
-  /// `\\`, whose row-end marker the alignment takes, so no run of ink holds it).
-  static FIELD_LEDGER: std::cell::RefCell<Vec<FieldCover>> =
+  /// The covers of the boxes digested from field tokens, in digestion order ([`field_ledger_push`]). What a run of ink
+  /// covers is the entries of the boxes it absorbed (core `Document::absorb`'s field runs keep their serials), and of
+  /// those an alignment took right after them ([`field_ledger_take`]); never an entry absorbed elsewhere (another run,
+  /// a formula) or never absorbed (an unused `\setbox`, `\sbox`, `{lrbox}`), OXIDIZED_DESIGN #715.
+  static FIELD_LEDGER: std::cell::RefCell<Vec<FieldLedgerEntry>> =
     const { std::cell::RefCell::new(Vec::new()) };
 }
+/// Set once the frontmatter placement settled the field ink (core `Document::settle_field_ink`): the ledger records
+/// nothing more, and nothing digested after it carries a field provenance property.
+#[thread_local]
+static FIELD_LEDGER_SETTLED: std::cell::Cell<bool> = std::cell::Cell::new(false);
 /// The most covers the ledger keeps (a full ledger records no more: a print digested past it is no whole print).
 const FIELD_LEDGER_CAP: usize = 1 << 16;
 
+/// Is the field ledger recording ([`field_ledger_settle`])? The stomach records a field token's box only while it is.
+#[inline]
+pub fn field_ledger_live() -> bool { !FIELD_LEDGER_SETTLED.get() }
+
+/// Stop recording field covers: the frontmatter placement settled the field ink (no run is marked after it).
+pub fn field_ledger_settle() { FIELD_LEDGER_SETTLED.set(true); }
+
 /// Record the cover of a box digested from a field token (the field ledger); its serial, the box's `fieldSerial`.
 pub fn field_ledger_push(cover: FieldCover) -> Option<u32> {
+  if FIELD_LEDGER_SETTLED.get() {
+    return None;
+  }
   FIELD_LEDGER.with(|ledger| {
     let mut ledger = ledger.borrow_mut();
     if ledger.len() >= FIELD_LEDGER_CAP {
       return None;
     }
-    ledger.push(cover);
+    ledger.push(FieldLedgerEntry { cover, taken: false });
     u32::try_from(ledger.len() - 1).ok()
   })
 }
 
-/// The positions of field `field`'s value the boxes digested with serials `first..=last` covered
-/// ([`field_ledger_push`]): sorted disjoint `start..end` intervals, merged where they touch.
-pub fn field_ledger_cover(field: u16, first: u32, last: u32) -> Vec<(u16, u16)> {
+/// Note that the structure a print is set in took the box recorded with `serial` (an alignment's row-end marker, a
+/// value's `\\`): no run absorbs it, and the run its row ends may cover it ([`FieldLedgerEntry::taken`]).
+pub fn field_ledger_take(serial: u32) {
+  FIELD_LEDGER.with(|ledger| {
+    if let Some(entry) = ledger.borrow_mut().get_mut(serial as usize) {
+      entry.taken = true;
+    }
+  });
+}
+
+/// The positions of field `field`'s value covered by the ledger entries with the serials in `serials` (inclusive
+/// `first..=last` intervals): sorted disjoint `start..end` intervals, merged where they touch.
+pub fn field_ledger_cover(field: u16, serials: &[(u32, u32)]) -> Vec<(u16, u16)> {
   let mut cover: Vec<(u16, u16)> = FIELD_LEDGER.with(|ledger| {
     let ledger = ledger.borrow();
-    let (first, last) = (
-      first as usize,
-      (last as usize).min(ledger.len().saturating_sub(1)),
-    );
-    if first > last || ledger.is_empty() {
-      return Vec::new();
+    let mut cover = Vec::new();
+    for &(first, last) in serials {
+      let (first, last) = (first as usize, last as usize);
+      if first > last || first >= ledger.len() {
+        continue;
+      }
+      cover.extend(
+        ledger[first..=last.min(ledger.len() - 1)]
+          .iter()
+          .filter(|e| e.cover.field == field)
+          .map(|e| (e.cover.start, e.cover.end.max(e.cover.start + 1))),
+      );
     }
-    ledger[first..=last]
-      .iter()
-      .filter(|c| c.field == field)
-      .map(|c| (c.start, c.end.max(c.start + 1)))
-      .collect()
+    cover
   });
   cover.sort_unstable();
   let mut merged: Vec<(u16, u16)> = Vec::with_capacity(cover.len());
@@ -958,15 +996,16 @@ pub fn field_ledger_cover(field: u16, first: u32, last: u32) -> Vec<(u16, u16)> 
   merged
 }
 
-/// The cover the field ledger recorded with `serial` ([`field_ledger_push`]).
-pub fn field_ledger_entry(serial: u32) -> Option<FieldCover> {
+/// The entry the field ledger recorded with `serial` ([`field_ledger_push`]).
+pub fn field_ledger_entry(serial: u32) -> Option<FieldLedgerEntry> {
   FIELD_LEDGER.with(|ledger| ledger.borrow().get(serial as usize).copied())
 }
 
-/// Clear the pending field cover and the ledger (conversion start).
+/// Clear the pending field cover and the ledger, and record again (conversion start).
 pub fn reset_field_cover_pending() {
   FIELD_COVER_PENDING.set(FieldCover::default());
   FIELD_LEDGER.with(|ledger| ledger.borrow_mut().clear());
+  FIELD_LEDGER_SETTLED.set(false);
 }
 
 impl Token {
@@ -1497,6 +1536,33 @@ mod tests {
       12,
       "token-locators Token is 8 + a u32 origin handle"
     );
+  }
+
+  /// The field ledger (OXIDIZED_DESIGN #715): an entry an alignment took is marked so, a run's cover is the entries of
+  /// the serials it holds (never an entry between them it does not), and once the frontmatter placement settled the
+  /// field ink nothing more is recorded (fms1 round-3 review finding 5).
+  #[test]
+  fn field_ledger_take_cover_and_settle() {
+    reset_field_cover_pending();
+    let cover = |start, end| FieldCover { field: 1, start, end };
+    let a = field_ledger_push(cover(0, 5)).unwrap();
+    let unused = field_ledger_push(cover(5, 9)).unwrap();
+    let marker = field_ledger_push(cover(9, 10)).unwrap();
+    field_ledger_take(marker);
+    assert!(field_ledger_entry(marker).is_some_and(|e| e.taken));
+    assert!(field_ledger_entry(unused).is_some_and(|e| !e.taken));
+    assert_eq!(field_ledger_cover(1, &[(a, a)]), vec![(0, 5)]);
+    assert_eq!(field_ledger_cover(1, &[(a, a), (marker, marker)]), vec![
+      (0, 5),
+      (9, 10)
+    ]);
+    assert!(field_ledger_live());
+    field_ledger_settle();
+    assert!(!field_ledger_live());
+    assert_eq!(field_ledger_push(cover(10, 11)), None);
+    reset_field_cover_pending();
+    assert!(field_ledger_live());
+    assert_eq!(field_ledger_entry(a), None);
   }
 
   /// `#[repr(C)]` and a two-byte `Catcode` keep `Token` gap-free with `code` at byte 4 (`text` u32 at 0, `code` u16

@@ -1,0 +1,17 @@
+% A box holding `\@title`, shown twice in the title block: each use absorbs the box's ink, so each is a whole print of
+% the field, and every whole print in the title block is lifted (user ruling 2026-10-17, "lift every whole print";
+% fms1 round-3 review finding 1 sibling: a box used twice).
+% status:  GREEN (fms1 round 3 and round 4; guards that a run's cover is per absorption, not per ledger owner).
+% oracle:  pdflatex 0 errors: "About Foo Bar", "About Foo Bar", then the title block, "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; no body copy of the title.
+\documentclass{article}
+\makeatletter
+\title{About Foo Bar}\author{Ann Author}
+\begin{document}
+\sbox0{\@title}
+\begin{center}\usebox0\end{center}
+\begin{center}\usebox0\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

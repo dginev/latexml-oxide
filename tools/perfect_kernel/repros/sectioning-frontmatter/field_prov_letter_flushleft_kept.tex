@@ -1,0 +1,17 @@
+% A letter's body set in `{flushleft}`, then `\noindent\@author`: the body text precedes the print in the document's
+% content order (an aligned environment is no box), so the signature is not in the title block and stays (fms1 round-3
+% review finding 3, probe r9).
+% status:  RED (fms1 round 3: the aligned body was "set apart", the signature lifted) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: the two letter paragraphs, then "John Smith"; no title block.
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the signature kept.
+\documentclass{article}
+\makeatletter
+\title{Plain Letter}\author{John Smith}
+\begin{document}
+\begin{flushleft}
+Dear colleague, this is the body of my letter, with several words in it.
+
+Another paragraph of the letter.
+\end{flushleft}
+\noindent\@author
+\end{document}

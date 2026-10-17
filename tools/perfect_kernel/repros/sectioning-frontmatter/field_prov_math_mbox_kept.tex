@@ -1,0 +1,18 @@
+% The rest of `\@title` set in an `\mbox` inside a formula is no print of the field (a formula is one box of the text
+% around it), so it neither makes the fragment before it whole nor is lifted itself (fms1 round-3 review finding 1,
+% probe r20: the cover was extended over the formula's entries).
+% status:  RED (fms1 round 3: "About" and the formula both removed) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "About", "Foo Bar" (the formula), then the title block "About Foo Bar / Ann Author /
+%          <date>", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; "About" and the formula kept.
+\documentclass{article}
+\usepackage{xstring}
+\makeatletter
+\title{About Foo Bar}\author{Ann Author}
+\begin{document}
+\begin{center}\StrLeft{\@title}{5}\end{center}
+$\mbox{\StrRight{\@title}{8}}$
+\maketitle
+\section{Intro}
+Text.
+\end{document}

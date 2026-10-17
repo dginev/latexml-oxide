@@ -1031,6 +1031,9 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
       } else if vtype.as_deref() == Some("cr") {
         let arg_toks = read_arg(ExpansionLevel::Off)?;
         let arg = digest(arg_toks)?;
+        // the row's end marker is the alignment's, never absorbed: a field value's `\\` (`\author{A \\ B}` set in a
+        // `tabular`) is taken by the print's structure (core `document::field_ink_taken`, OXIDIZED_DESIGN #715)
+        document::field_ink_taken(&arg);
         reversion.extend(p_revert(arg.clone())?.unlist());
         creversion.extend(c_revert(arg)?.unlist());
       } else if vtype.as_deref() == Some("crcr") {
