@@ -1,0 +1,24 @@
+//! Red/green guards for the int20 fix round (the 70a + 70b bundle A/B's worse rows): AMS-TeX's `\Let@` sets the row
+//! end to `\cr` (amstex.tex:486), graphicx reads a graphic's name at the document's catcodes, a sub-file gincltex boxes
+//! has its preamble skipped beside standalone, and `\backslashbox` reads its arguments inside the cell.
+//!
+//! Every repro is checked against pdflatex/pdftex (its header holds the oracle).
+use super::perfect_kernel_batch57::assert_elements;
+
+/// The arXiv configuration's preload.
+const AR5IV: &str = "ar5iv.sty";
+
+/// amstex/amstex_let_row_end_is_cr: a document's AMS-TeX alignment macro calls `\Let@` before its `\halign`
+/// (diag.tex's `\newCD`), so `\\` is `\cr` (amstex.tex:486), not amsmath's `\math@cr`, whose `\@ifstar` plain AMS-TeX
+/// lacks (math9611222, math9611223, math9412232, math0005042).
+#[test]
+fn amstex_let_sets_the_row_end_to_cr() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/amstex/amstex_let_row_end_is_cr.tex"),
+    AR5IV,
+    (0, 0),
+    &[("tabular", "id1.1.1", TABULAR_2X2)],
+  );
+}
+
+const TABULAR_2X2: &str = r##"<tabular class="ltx_markedasmath" vattach="bottom" xml:id="id1.1.1"><tr xml:id="id1.1.1.1"><td align="center" xml:id="id1.1.1.1.1"><Math mode="inline" tex="A" text="A" xml:id="id1.1.1.1.1.1"><XMath xml:id="id1.1.1.1.1.1.1"><XMTok font="italic" role="UNKNOWN">A</XMTok></XMath></Math></td><td align="center" xml:id="id1.1.1.1.2"><Math mode="inline" tex="B" text="B" xml:id="id1.1.1.1.2.1"><XMath xml:id="id1.1.1.1.2.1.1"><XMTok font="italic" role="UNKNOWN">B</XMTok></XMath></Math></td></tr><tr xml:id="id1.1.1.2"><td align="center" xml:id="id1.1.1.2.1"><Math mode="inline" tex="C" text="C" xml:id="id1.1.1.2.1.1"><XMath xml:id="id1.1.1.2.1.1.1"><XMTok font="italic" role="UNKNOWN">C</XMTok></XMath></Math></td><td align="center" xml:id="id1.1.1.2.2"><Math mode="inline" tex="D" text="D" xml:id="id1.1.1.2.2.1"><XMath xml:id="id1.1.1.2.2.1.1"><XMTok font="italic" role="UNKNOWN">D</XMTok></XMath></Math></td></tr></tabular>"##;

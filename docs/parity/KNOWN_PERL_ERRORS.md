@@ -15332,3 +15332,19 @@ Trigger: a package with `\RequirePackage{l3keys2e}\ExplSyntaxOn\keys_define:nn{p
 Rust (70b): content.rs `zap_space` on the list `\opt@<file>` is built from (a control space and the space ending a
 control word kept). Repro loader/opt_macro_drops_spaces_as_zap_space; guard
 `perfect_kernel_batch70b::opt_macro_drops_spaces_as_zap_space`.
+
+## 949. AMS-TeX's `\Let@` is missing, so a document's own AMS-TeX alignment macro errs at its `\\`
+
+amstex.tex:486 `\def\Let@{\relax\iffalse{\fi\let\\=\cr\iffalse}\fi}` is the row end an AMS-TeX alignment sets up before
+its `\halign`; documents' own alignment macros call it (diag.tex's `\newCD`: `\vcenter{… \Let@ … \halign{…}}`). Perl's
+AmSTeX.pool.ltxml defines no `\Let@` (and loads amsmath.sty.ltxml, :217, which has none either), so the call is
+undefined. Rust's AMS-TeX route loads the amsmath binding, whose `\Let@` (65s) is amsmath.sty's `\let\\\math@cr`:
+`\\` then reached amsmath's `\@ifstar`, which plain AMS-TeX lacks, and the row's `\cr` came with the `\math@cr` braces
+open ("Missing } inserted", tex.web §1127) — the diagram's rows lost.
+
+Trigger: `\input amstex \input amsppt.sty`, `\catcode`\@=11 \def\grid#1\endgrid{\vcenter{\Let@\halign{&\hfil$##$\hfil
+\quad\cr#1\crcr}}}`, then `$$\grid A&B\\ C&D\endgrid$$` — pdftex 0 errors, a 2×2 array. Witnesses math9611222,
+math9611223, math9412232, math0005042.
+
+Rust (int20): amstex.rs defines `\Let@` as amstex.tex:486 after the AMS bindings load. Repro
+amstex/amstex_let_row_end_is_cr; guard `perfect_kernel_batchint20::amstex_let_sets_the_row_end_to_cr`.

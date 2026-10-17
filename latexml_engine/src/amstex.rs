@@ -264,6 +264,13 @@ LoadDefinitions!({
   RequirePackage!("amsopn");
   RequirePackage!("amsxtra");
   RequirePackage!("amscd");
+  // amstex.tex:486 `\Let@`, the row end a document's own AMS-TeX alignment sets up before its `\halign` (diag.tex's
+  // `\newCD`, math9611222, math9611223, math9412232, math0005042): `\\` is `\cr`, its brace pair hidden from the
+  // alignment count. The amsmath binding loaded above has amsmath.sty's `\let\\\math@cr` (65s), whose `\@ifstar` plain
+  // AMS-TeX lacks: the `\\` left its braces open at the row's `\cr` ("Missing } inserted", tex.web §1127) and the
+  // diagram's rows lost (KNOWN_PERL_ERRORS #949).
+  // Guard `perfect_kernel_batchint20::amstex_let_sets_the_row_end_to_cr`.
+  RawTeX!(r"\def\Let@{\relax\iffalse{\fi\let\\=\cr\iffalse}\fi}");
   // amstex.tex:1507-1509: `\frak` is the Euler Fraktur switch, `\let\goth\frak` its older name (hep-th9306053,
   // alg-geom9410018 `$\goth m_Z$`); `\frak` is the amsfonts binding's.
   Let!("\\goth", "\\frak");
