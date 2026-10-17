@@ -18463,6 +18463,20 @@ Document.pm:1447-1456 recordID does, `biba`, and freed as :1460 unRecordID); a l
 Where the empty one stays (topical groups), the first group keeps that `biba` with entries `bib.bibN`, and the next
 group's `biba` is renamed `bibaa`. Guards `perfect_kernel_batch68w::heading_inside_thebibliography_*`.
 
+### 654. sn-jnl without its `pdflatex` option keeps hyperref's `\href`
+
+sn-jnl.cls:1462-1467 (`\breakurldefns`, run when the `pdflatex` option is absent) loads breakurl and makes
+`\let\href\burlalt`: `\href{a}{b}` then shows `a` and links `b` (breakurl.sty:50-51 `\hyper@linkurl{\Hurl{#1}}{#2}`),
+the reverse of hyperref's `\href{url}{text}`. The authors write hyperref's order (10 of 12 sampled sn-jnl papers
+without the option: 2405.04967 lost 63 links to `href="mp-66"`-style targets, 2207.12959, 2603.09685), for which the
+class's PDF shows the URL linked to the text. sn_jnl_cls.rs loads breakurl and does not make the `\let` (main-session
+ruling 2026-10-16 by the user's priority order: author content, then semantic links, then PDF fidelity). The template's
+own swapped order (`\href{here.}{https://…/Datasets_-_RMSC/…}`, 2401.05832) is then hyperref's reading of it: the URL is
+the link text, its `_` a script error (2 Errors), as pdflatex errs with the `pdflatex` option. Repros
+class-bindings/sn_jnl_href_keeps_hyperref_order (guard
+`perfect_kernel_batch68w::sn_jnl_href_keeps_hyperref_order_without_pdflatex`), class-bindings/sn_jnl_href_swapped_order
+(RED).
+
 ### 659. aguplus.cls is a binding over the raw class: the AGUTeX title page as the AAS binding's, natbib for its copy (Perl: no binding)
 
 Perl has no aguplus binding (OmniBus: `\authoraddr`, `\lefthead`, `\slugcomment` undefined). Under the rawclasses
@@ -18520,17 +18534,3 @@ projlib_author_sty.rs reads the package raw and, for each of the four it provide
 its kind (`\lx@add@affiliation`, `\lx@add@address`, `\lx@add@currentaddress`, `\lx@add@email`), given to the author
 it follows. Repros class-bindings/{smfart_altabstract, projlib_author_address}; guards
 `perfect_kernel_batch68x::{smfart_altabstract_is_a_second_abstract, projlib_author_lines_are_the_authors_contacts}`.
-
-### 654. sn-jnl without its `pdflatex` option keeps hyperref's `\href`
-
-sn-jnl.cls:1462-1467 (`\breakurldefns`, run when the `pdflatex` option is absent) loads breakurl and makes
-`\let\href\burlalt`: `\href{a}{b}` then shows `a` and links `b` (breakurl.sty:50-51 `\hyper@linkurl{\Hurl{#1}}{#2}`),
-the reverse of hyperref's `\href{url}{text}`. The authors write hyperref's order (10 of 12 sampled sn-jnl papers
-without the option: 2405.04967 lost 63 links to `href="mp-66"`-style targets, 2207.12959, 2603.09685), for which the
-class's PDF shows the URL linked to the text. sn_jnl_cls.rs loads breakurl and does not make the `\let` (main-session
-ruling 2026-10-16 by the user's priority order: author content, then semantic links, then PDF fidelity). The template's
-own swapped order (`\href{here.}{https://…/Datasets_-_RMSC/…}`, 2401.05832) is then hyperref's reading of it: the URL is
-the link text, its `_` a script error (2 Errors), as pdflatex errs with the `pdflatex` option. Repros
-class-bindings/sn_jnl_href_keeps_hyperref_order (guard
-`perfect_kernel_batch68w::sn_jnl_href_keeps_hyperref_order_without_pdflatex`), class-bindings/sn_jnl_href_swapped_order
-(RED).
