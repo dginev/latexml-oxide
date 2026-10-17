@@ -2730,20 +2730,6 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   — RED row, next alignment batch. Word losses > 1 %: 1904.00651, 2604.11988 (aa marks now text, the 68y review's
   re-tokenization). Nets 136/136 0 worse.
 
-- **69a** (bibliography containers and small package shapes of the rc_struct2 study, agent_reports/2026-10-16_rc_struct2.md
-  D1 D3 D5). (1) A bibliography begun in `{quote}`/`{quotation}`/`{verse}` (the AAAI template's
-  `\begin{quote}\begin{small}\bibliography`): the quote is closed before it and dropped when empty, the entries keep the
-  quote's `\small` (latex_constructs/mod.rs `close_list_containers_before_backmatter`; ruling 2026-10-16, OD #677;
-  2203.09193 1904.12066 1610.09996 2109.09861 2403.09260 1609.06434 astro-ph0410583 1504.06728). (2) A sectioning unit in
-  a quote opens an `ltx:inline-sectional-block` there (document.rs `AUTO_OPEN_BRIDGES` quote row; OD #678; 0712.1985).
-  (3) Kluwer `\normallatexbib` `{chapthebibliography}` (`\section*` + `\list` + `\item[]`, cargese.cls:1859-1906; kapproc,
-  edbk): a `\bibitem` in the environment that opened the innermost `\list` closes that list first (sect06.rs
-  `lx@list@currenvir`, sect11.rs `\lx@mung@bibliography` `list`), the bibliography taking the class's heading
-  (KNOWN_PERL_ERRORS #887; hep-th0212109 hep-th0212193 cond-mat0112379 cond-mat0110649 cond-mat0002157). Repros
-  index-bib/{bibliography_in_quote, bibliography_in_verse_after_text, kluwer_chapthebibliography},
-  sectioning-frontmatter/section_in_quotation; guards `perfect_kernel_batch69a` (4).
-  (4) Small package shapes (study A8 A9 A10 B7 B8 C7 C9 C12): multirow's text between struts (multirow.sty:174-177;
-
 - **69a** (bibliography containers and small package shapes of the rc_struct2 study,
   agent_reports/2026-10-16_rc_struct2.md D1 D3 D5). (1) A bibliography begun in `{quote}`/`{quotation}`/`{verse}` (the
   AAAI template's `\begin{quote}\begin{small}\bibliography`): the quote is closed before it and dropped when empty, the
@@ -2896,6 +2882,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in that math, as 69c's E1 (amsmath_sty.rs `\boxed`, `\lx@math@in@hbox` in a `\begingroup` group so a script keeps
   its `scriptpos`; KNOWN_PERL_ERRORS #907). 2207.12569 6 → 0 errors. Repro paragraph-mode/dollar_in_boxed_is_text;
   guard `perfect_kernel_batchint19::dollar_in_boxed_is_text`.
+  Integrated as **int19** = 69a (rounds 1-3) + 69b (rounds 1-2) + 69c (rounds 1-2) + this fix round on 349b6935a1
+  (head a034d4e7f5). Gates 5,793/5,793, cortex 10/10, inits 0/0, dumps identical. Bundle A/B vs 67int18b over 4,031
+  papers (1,617 the 69 rounds touched, 1,064 pop67o, 200 fresh first-error papers each of `malformed:ltx:TOC`,
+  `unexpected:\endlx@list`, `expected:$`, `unexpected:}`, `expected:{`, `malformed:ltx:theorem`, 150 of
+  `malformed:ltx:section`): Errors 35,282 → 28,957, Fatals 119 → 109 (10 better, 0 worse), 1 paper with more errors
+  (2304.09123 +1, its invalid `\ensuremath{$\rew$}`, pdflatex errs too), words 82.60 M → 83.43 M; papers cleared to 0
+  errors: theorem 69.5 %, `\endlx@list` 73.4 %, `{` 56.6 %, `}` 30.8 %, section 28.7 %, `$` 21.4 %, TOC 18.5 %.
+  13 word losses all reach 0 errors (letters set as math in the base now text; base bibliography duplicated). Nets
+  136/136 0 worse. Census of the fixed random sample (3,000 run-365 E/F papers) on this head: 18.9 % now clean,
+  measured projection 97.66 % (E+F 68,463; 98 % needs ≤ 58,446). Rows: the coupled E3 change (follower read in the
+  enclosing mode + tex.web §1197 recovery, together; alg-geom9411003, 2304.12827 come back with it); a cell ending
+  inside a mode-switching argument leaves its frames open (invalid TeX); nomencl's `$…$` in `\nomenclature` inside an
+  equation errs (pdflatex 0; 1205.1310, 1102.2460).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
