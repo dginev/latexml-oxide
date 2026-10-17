@@ -1852,9 +1852,16 @@ LoadDefinitions!({
 
   // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
   // dispatch frozen under \write/\edef (moving formulas in toc etc.).
+  // amsmath.sty:399 `\boxed` is `\fbox{\m@th$\displaystyle#1$}`: its argument is a math TeX sets in a box of its own,
+  // where an author's `$` ends that math and the next begins it again (`\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}`,
+  // u and S set as text; arXiv 2207.12569), so its argument is digested after tex_math.rs `\lx@math@in@hbox`, in math
+  // and in text (`\boxed@text` is math too). The constructor's argument has no group of its own, so a semi-simple one
+  // keeps the `$` meaning local without a boxing level (a script in the box keeps its `scriptpos`, math/sampler
+  // `\boxed{x^2}`). Perl errs "Missing $ closing display math" at each such `$` (KNOWN_PERL_ERRORS #907). Guard
+  // `perfect_kernel_batchint19::dollar_in_boxed_is_text`.
   DefMacro!(
     "\\boxed{}",
-    "\\ifmmode\\boxed@math{#1}\\else\\boxed@text{#1}\\fi",
+    "\\ifmmode\\boxed@math{\\begingroup\\lx@math@in@hbox #1\\endgroup}\\else\\boxed@text{\\begingroup\\lx@math@in@hbox #1\\endgroup}\\fi",
     robust => true
   );
   DefConstructor!("\\boxed@math{}",

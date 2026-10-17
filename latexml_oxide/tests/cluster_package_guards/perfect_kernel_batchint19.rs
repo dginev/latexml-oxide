@@ -2,7 +2,8 @@
 //! Item 1 — the token after a display's closing `$` is read in the display's own mode again (69b r2's enclosing-mode
 //! read reverted: with Perl's "Ignoring" recovery it cascaded, arXiv 2207.12569). Item 2 — amstext's `\text` digests
 //! its argument inside box braces (amstext.sty:28-39), so an alignment's `\cr` in it never ends the cell around it
-//! (arXiv 1703.08664).
+//! (arXiv 1703.08664). Item 3 — amsmath's `\boxed` is `\fbox{\m@th$\displaystyle#1$}` (amsmath.sty:399), so an author's
+//! `$` in its argument is text in that math, as 69c's E1 (arXiv 2207.12569).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -10,8 +11,9 @@ use latexml::util::test::{assert_element, convert_with, error_count, warning_cou
 /// expansion-primitives/display_closing_dollar_text_after_the_display_kept: arXiv 2207.12569's
 /// `$${\boxed{\mbox{…}}}\Longrightarrow{\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}}…$$` (pdflatex 0 errors). 69b r2
 /// read the token after each `$` in `\boxed` under the enclosing mode, as text, then re-read it in the display Perl's
-/// recovery leaves open: 8 errors here, 6 -> 101 + Fatal on the paper, the paragraph after the display lost. Base's
-/// count again (the six `$` in `\boxed`), the display closed by its `$$`, the paragraph after it kept.
+/// recovery leaves open: 8 errors here, 6 -> 101 + Fatal on the paper, the paragraph after the display lost. Item 1
+/// restored base's 6 (the six `$` in `\boxed`); item 3 makes them text (`dollar_in_boxed_is_text`): 0 errors, the
+/// display closed by its `$$`, the paragraph after it kept.
 #[test]
 fn display_closing_dollar_text_after_the_display_kept() {
   let (stderr, xml) = convert_with(
@@ -20,14 +22,7 @@ fn display_closing_dollar_text_after_the_display_kept() {
     ),
     None,
   );
-  assert_eq!(error_count(&stderr), 6, "{stderr}");
-  assert_eq!(
-    stderr
-      .matches("Error:expected:$ Missing $ closing display math.")
-      .count(),
-    6,
-    "{stderr}"
-  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<p>We have the implications</p>"), "{xml}");
   assert!(
@@ -62,4 +57,32 @@ fn text_argument_is_braced_in_an_alignment_cell() {
   );
   assert_eq!(xml.matches("<tabular ").count(), 4, "{xml}");
   assert!(xml.contains("<p>after text.</p>"), "{xml}");
+}
+
+/// paragraph-mode/dollar_in_boxed_is_text: amsmath.sty:399 `\boxed` = `\fbox{\m@th$\displaystyle#1$}`, so
+/// `\boxed{$u$\mbox{-}$S$…}` in a display, `\boxed{$v$ rings}` inline and `\boxed{$w$ ideals}` in text set u, v, w as
+/// text in the box's math and what follows the second `$` as math (pdflatex 0 errors: "u-S-Artinian rings", "vrings",
+/// "wideals"; arXiv 2207.12569). Before int19: 4 errors (each `$` met the enclosing math; KNOWN_PERL_ERRORS #907).
+#[test]
+fn dollar_in_boxed_is_text() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/paragraph-mode/dollar_in_boxed_is_text.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // The display's second box: u and S text, the `\mbox`es between.
+  assert_element(
+    &xml,
+    "XMApp",
+    &["enclose=\"box\""],
+    r#"<XMApp enclose="box"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMText>u</XMText><XMText>-</XMText><XMText>S</XMText><XMText>-Artinian rings</XMText></XMApp>"#,
+  );
+  // In text: w as text, "ideals" math.
+  assert_element(
+    &xml,
+    "Math",
+    &["framed=\"rectangle\""],
+    r#"<Math framed="rectangle" mode="display" text="[w] * i * d * e * a * l * s" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMText>w</XMText><XMTok font="italic" role="UNKNOWN">i</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">l</XMTok><XMTok font="italic" role="UNKNOWN">s</XMTok></XMApp></XMath></Math>"#,
+  );
 }

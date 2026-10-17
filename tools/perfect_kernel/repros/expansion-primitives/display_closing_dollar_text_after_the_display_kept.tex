@@ -3,11 +3,12 @@
 %          implications can be reversed."
 % engines: rust 67int18b = 6 Error "Missing $ closing display math." (each `$` in `\boxed{…}` meets the display), the
 %          text after the display kept; rust 69b r2 = 8 errors + 1 Warning, "But neither…" lost into the display left
-%          open (the token after each `$` expanded as text, then re-read in display math); int19 = 67int18b
+%          open (the token after each `$` expanded as text, then re-read in display math); int19 item 1 = 67int18b; int19
+%          item 3 = 0 errors (`$` in `\boxed` is text, paragraph-mode/dollar_in_boxed_is_text)
 % expect:  the token after a display-math `$` that is no second `$` is read in the display's own mode (Perl's
 %          "Ignoring" recovery keeps the display open, so the enclosing-mode read of 69b r2 cascaded): the base count,
 %          the closing `$$` closes the display, the paragraph after it kept. The `$`s inside `\boxed` are amsmath's
-%          `\fbox{\m@th$\displaystyle#1$}` text (item 3 of int19 when landed).
+%          `\fbox{\m@th$\displaystyle#1$}` text (int19 item 3): 0 errors, one display, the paragraph after it kept.
 % status:  RED (69b r2) -> GREEN (int19)
 % preload: ar5iv.sty
 \documentclass{article}

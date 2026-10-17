@@ -1,0 +1,17 @@
+% witness: arXiv 2207.12569 line 182 (`$${\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}}…$$`, 6 Errors on 67int18b)
+% oracle:  pdflatex 0 errors: "Artinian rings =⇒ u-S-Artinian rings", "x + y ̸= vrings", "wideals" (u, S, v, w upright
+%          text; "rings"/"ideals" after the second `$` italic math)
+% engines: rust 67int18b 4 Error "Missing $ closing display math." / "Missing $" (each `$` in `\boxed` met the
+%          enclosing math); Perl 0.8.8 the same shape (amsmath.sty.ltxml:893-907 digests the argument in that math)
+% expect:  amsmath.sty:399 `\boxed` = `\fbox{\m@th$\displaystyle#1$}`: an author's `$` in the argument ends that math,
+%          the next begins it again, so it is text in the box's math (tex_math.rs `\lx@math@in@hbox@group`, as 69c's
+%          E1): 0 errors, 0 warnings
+% status:  RED (67int18b) -> GREEN (int19)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+Implications
+$${\boxed{\mbox{Artinian rings}}}\Longrightarrow {\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}}$$
+and inline $\boxed{x+y}\ne\boxed{$v$ rings}$ and in text \boxed{$w$ ideals} done.
+\end{document}

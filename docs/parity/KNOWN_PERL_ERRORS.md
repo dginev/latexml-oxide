@@ -15036,6 +15036,13 @@ Quieter than pdflatex where pdflatex errs: a math-only command in a part's in-ma
 before 69c — `\deduce{A}{$\cdots$}` (pdflatex 2 errors, here 0; before 1 and the inference dropped), `D $\wedge$ E` in
 `\infer` (pdflatex 6, here 0, the `∧` an `ltx:XMText`), `\R{$\mathbb R$}` in a `fleqn` display (pdflatex 8, here 1,
 before 4): text-mode math commands are not policed (Perl the same).
+amsmath's `\boxed` (amsmath.sty:399 `\fbox{\m@th$\displaystyle#1$}`) is the same shape: Perl's `\boxed@math{}` /
+`\boxed@text{}` (amsmath.sty.ltxml:893-907) digest the argument in the enclosing math, so
+`$${\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}}$$` errs "Missing $ closing display math." at each `$` (arXiv 2207.12569:
+6 Errors; pdflatex 0, u and S upright text). Rust (int19, amsmath_sty.rs `\boxed`): the argument is digested after
+`\lx@math@in@hbox` in a semi-simple group (`\begingroup … \endgroup`: the constructor's argument has no group of its
+own, and a boxing group would shift a script's `scriptpos`), in math and in text. Repro
+paragraph-mode/dollar_in_boxed_is_text; guard `perfect_kernel_batchint19::dollar_in_boxed_is_text`.
 
 ## 908. eqnarray's and amsmath's alignment templates lose their cell braces, so a cell's `{`/`}` that balance across them break the alignment
 

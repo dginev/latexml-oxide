@@ -2882,8 +2882,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   own A/B): read the token under the enclosing mode AND recover as tex.web §1197 (finish the display, `back_error`)
   for every "Missing $ closing display math." — RED residual expansion-primitives/display_closing_dollar_read_in_the_enclosing_mode
   (`$$y=2$\ifmmode$\fi G`: pdflatex 1 error, here none, the content as pdflatex's), guard
-  `perfect_kernel_batch69b::display_closing_dollar_enclosing_mode_residual`; the bundle's alg-geom9411003 64 → 3
-  errors was that read's gain and returns with the row. (2) amstext's `\text` digests its argument with the alignment
+  `perfect_kernel_batch69b::display_closing_dollar_enclosing_mode_residual`; the bundle's alg-geom9411003 (64 → 3
+  errors) and 2304.12827 (977 → 202, 39,328 → 48,413 words) were that read's gains and return with the row. (2) amstext's `\text` digests its argument with the alignment
   count raised, as amstext.sty:28-39 sets it in `\hbox{{…}}` (tex.web §342): a `\let\\=\crcr` or `&` in it no
   longer ends the `{align}` cell around it (amstext_sty.rs; amstex.rs and revtex4_support_sty.rs `\text` the same;
   KNOWN_PERL_ERRORS #931). 1703.08664 (`\mWord`, an `\halign` matrix in `\text{\ $…$}`) 58 → 0 errors (69c 101 + Fatal).
@@ -2892,6 +2892,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   mode-switching constructor's argument (`\textbf{$\bgroup\let\\=\crcr\egroup$}` in an `{align}` cell: pdflatex 30
   errors) now leaves that constructor's frames open past the alignment, so the document after it errs (69c: the
   template's braced v-part changed what the cell-ending `\let` swallows; base kept the cascade inside the align).
+  (3) amsmath's `\boxed` = `\fbox{\m@th$\displaystyle#1$}` (amsmath.sty:399): an author's `$` in its argument is text
+  in that math, as 69c's E1 (amsmath_sty.rs `\boxed`, `\lx@math@in@hbox` in a `\begingroup` group so a script keeps
+  its `scriptpos`; KNOWN_PERL_ERRORS #907). 2207.12569 6 → 0 errors. Repro paragraph-mode/dollar_in_boxed_is_text;
+  guard `perfect_kernel_batchint19::dollar_in_boxed_is_text`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
