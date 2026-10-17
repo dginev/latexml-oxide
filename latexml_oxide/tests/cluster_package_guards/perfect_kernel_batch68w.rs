@@ -157,16 +157,23 @@ fn lipics_anonymous_author_hides_the_author() {
   assert!(!xml.contains("Ann") && !xml.contains("Grant"), "{xml}");
 }
 
-/// The ORCID slot as lipics-v2021.cls:797 links it (`\href{#4}{\orcidsymbol}`): an email there is the link as written
-/// (2607.06446), a bare iD the author's orcid.org page.
+/// lipics-v2021's ORCID slot by what it holds (lipics-v2021.cls:797 links it as written): an email address is the author's
+/// email, once when the email slot holds it too (2607.06446, all five authors `{}{gerhard@uni-bremen.de}`); a bare iD the
+/// author's orcid.org page; any other address the class's link to it.
 #[test]
 fn lipics_orcid_slot_is_linked_as_written() {
   let xml = clean!("class-bindings/lipics_orcid_slot_as_written.tex");
   assert_all(&xml, &[
-    r#"<contact name="Email: " role="email">gerhard_g@uni-bremen.de</contact> <contact role="orcid"><ref class="ltx_href" href="gerhard_g@uni-bremen.de"><svg:svg class="ltx_orcidlogo""#,
+    r#"<personname>Gerd Gast</personname> <contact name="Affiliation: " role="affiliation">Uni Bremen</contact> <contact name="Email: " role="email">gerhard@uni-bremen.de</contact> </creator>"#,
+    r#"<personname>Hans Hof</personname> <contact name="Affiliation: " role="affiliation">Uni Bremen</contact> <contact name="Email: " role="email">hans_h@uni-bremen.de</contact> </creator>"#,
     r#"<contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-009X" title="ORCID 0000-0002-1825-009X">"#,
+    r#"<personname>Jan Jung</personname> <contact name="Affiliation: " role="affiliation">Uni L</contact> <contact role="orcid"><ref class="ltx_href" href="https://example.org/~jan"><svg:svg class="ltx_orcidlogo""#,
   ]);
-  assert!(!xml.contains("orcid.org/gerhard"), "{xml}");
+  assert_eq!(count(&xml, r#"role="email""#), 2, "{xml}");
+  assert!(
+    !xml.contains(r#"href="gerhard"#) && !xml.contains(r#"href="hans"#),
+    "{xml}"
+  );
 }
 
 /// thmtools' keys in a theorem's optional argument (thm-kv.sty:434-437, `label` :485-487, `name` :488-496, `continues`
@@ -281,4 +288,82 @@ fn natbib_cite_with_an_optional_argument_is_parenthetical() {
     &format!("D {par}"),
     r#"E <cite class="ltx_citemacro_cite">(see <bibref bibrefs="k" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>)</cite>."#,
   ]);
+}
+
+/// apacite's notes go on to natbib as read (apacite.sty:313-327 `\@cite<pre>[post]`): a lone `[note]` is the post-note
+/// (2002.00730's `\cite[p.~5]`, 2005.00039's `\cite[chapter 10]`), a `<pre>` alone the pre-note; `\cite` is parenthetical
+/// with or without notes (apacite.sty:259-267, OXIDIZED_DESIGN_DIVERGENCES #655), `\citeA` textual.
+#[test]
+fn apacite_notes_absent_stay_absent() {
+  let xml = clean!("package-bindings/apacite_notes_as_read.tex");
+  let bibref = r#"<bibref bibrefs="a" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>"#;
+  let textual = r#"<bibref bibrefs="a" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","> <bibrefphrase>(</bibrefphrase>"#;
+  assert_all(&xml, &[
+    &format!(r#"A <cite class="ltx_citemacro_cite">({bibref})</cite>."#),
+    &format!(r#"B <cite class="ltx_citemacro_cite">({bibref}, p. 5)</cite>."#),
+    &format!(r#"C <cite class="ltx_citemacro_cite">(e.g. {bibref})</cite>."#),
+    &format!(r#"D <cite class="ltx_citemacro_cite">(e.g. {bibref}, p. 5)</cite>."#),
+    &format!(
+      r#"E <cite class="ltx_citemacro_citet">{textual} <bibrefphrase>, p. 6)</bibrefphrase> </bibref></cite>."#
+    ),
+    &format!(r#"F <cite class="ltx_citemacro_citep">{bibref}, p. 7</cite>."#),
+    &format!(r#"G <cite class="ltx_citemacro_citep">({bibref}, p. 8)</cite>."#),
+    &format!(
+      r#"H <cite class="ltx_citemacro_citet">{textual} <bibrefphrase>)</bibrefphrase> </bibref></cite>."#
+    ),
+    r#"I <cite class="ltx_citemacro_citeyear"><bibref bibrefs="a" separator=";" show="Year" yyseparator=","/>, p. 9</cite>."#,
+  ]);
+  assert!(
+    !xml.contains("p. 5 <bibref") && !xml.contains("(p. "),
+    "{xml}"
+  );
+}
+
+/// nmbib's `\citeall[p.~5]` keeps its lone note the post-note (`\citet*` over the notes as read).
+#[test]
+fn nmbib_citeall_lone_note_is_the_postnote() {
+  let xml = clean!("package-bindings/nmbib_citeall_postnote.tex");
+  assert_all(&xml, &[
+    r#"A <cite class="ltx_citemacro_citet"><bibref bibrefs="a" separator=";" show="FullAuthors Phrase1YearPhrase2" yyseparator=","> <bibrefphrase>(</bibrefphrase> <bibrefphrase>, p. 5)</bibrefphrase> </bibref></cite>."#,
+  ]);
+}
+
+/// natbib's `\citealt`/`\citealp` pass a present empty post-note on as `[]` (KNOWN_PERL_ERRORS #868): `\citealt[e.g.][]`
+/// keeps "e.g." the pre-note, "Smith and Jones e.g. 2001" as pdflatex prints it.
+#[test]
+fn natbib_citealt_empty_postnote_keeps_the_prenote() {
+  let xml = clean!("package-bindings/natbib_citealt_empty_postnote.tex");
+  assert_all(&xml, &[
+    r#"A <cite class="ltx_citemacro_citet"><bibref bibrefs="a" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","> <bibrefphrase>e.g. </bibrefphrase> <bibrefphrase/> </bibref></cite>."#,
+    r#"B <cite class="ltx_citemacro_citep">e.g. <bibref bibrefs="a" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref></cite>."#,
+    r#"C <cite class="ltx_citemacro_citet"><bibref bibrefs="a" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","> <bibrefphrase/> <bibrefphrase>, p. 5</bibrefphrase> </bibref></cite>."#,
+    r#"D <cite class="ltx_citemacro_citep">e.g. <bibref bibrefs="a" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>, p. 3</cite>."#,
+  ]);
+  assert!(!xml.contains(", e.g."), "{xml}");
+}
+
+/// A labelled entry before a heading inside `{thebibliography}` (`\bibitem[S01]{a}`, which steps no `@bibitem`) keeps the
+/// first bibliography: the continuation has its own number, its entries `biba.bibxN` (OXIDIZED_DESIGN_DIVERGENCES #653).
+#[test]
+fn heading_inside_thebibliography_after_a_labelled_entry_keeps_both() {
+  let xml = clean!("index-bib/heading_inside_thebibliography_labelled_entry.tex");
+  assert_all(&xml, &[
+    r#"<bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist> <bibitem key="a" xml:id="bib.bibx1"> <tags> <tag>[S01]</tag> <tag role="refnum">S01</tag> </tags> <bibblock> A. Author, J. 1. </bibblock> </bibitem> </biblist> </bibliography>"#,
+    r#"<bibliography inlist="toc" xml:id="biba"> <title>More references</title> <biblist> <bibitem key="b" xml:id="biba.bibx2">"#,
+    r#"<bibitem key="c" xml:id="biba.bibx3">"#,
+  ]);
+  assert_eq!(count(&xml, "<bibliography "), 2, "{xml}");
+}
+
+/// A paragraph before the first heading inside `{thebibliography}` is the first bibliography's entry: the topical groups
+/// after it have numbers of their own (`biba`, `bibb`), their entries numbered on (`biba.bib1`, `bibb.bib2`).
+#[test]
+fn heading_inside_thebibliography_after_a_paragraph_keeps_its_ids() {
+  let xml = clean!("index-bib/heading_inside_thebibliography_preamble_paragraph.tex");
+  assert_all(&xml, &[
+    r#"<bibliography inlist="toc" xml:id="bib"> <title>References</title> <biblist> <bibitem xml:id="bib.bibx1"> <bibblock>Sorted by topic. </bibblock> </bibitem> </biblist> </bibliography>"#,
+    r#"<bibliography inlist="toc" xml:id="biba"> <title>Books</title> <biblist> <bibitem key="a" xml:id="biba.bib1">"#,
+    r#"<bibliography inlist="toc" xml:id="bibb"> <title>Articles</title> <biblist> <bibitem key="b" xml:id="bibb.bib2">"#,
+  ]);
+  assert!(!xml.contains("bibaa"), "{xml}");
 }

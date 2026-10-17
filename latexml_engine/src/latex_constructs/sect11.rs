@@ -680,12 +680,14 @@ pub(crate) fn load() -> Result<()> {
     if x_equals(&T_CS!("\\if@lx@inbibliography"), &T_CS!("\\iftrue")) && lookup_bool("lx_bibliography_author_env") {
       Digest!("\\@lx@inbibliographyfalse")?;
       assign_value("lx_bibliography_sectioned", true, Some(Scope::Global));
-      // A bibliography interrupted before its first entry (no `\bibitem` counted, not itself a continuation) is the
-      // pruned one (`prune_interrupted_bibliography`): the continuation takes its number (`begin_bibliography_clean`),
-      // so its entries are `bib.bibN`, as in the one bibliography pdflatex prints (Perl's ids are fixed at digestion,
-      // latex_constructs.pool.ltxml:3877-3883).
-      let interrupted_empty =
-        CounterValue!("@bibitem").value_of() == 0 && !lookup_bool("lx_bibliography_is_continued");
+      // A bibliography interrupted before its first entry (nothing digested in it yet, `holds_nothing_yet`, nor
+      // `@bibitem` stepped; not itself a continuation) is the pruned one (`prune_interrupted_bibliography`): the
+      // continuation takes its number (`begin_bibliography_clean`), so its entries are `bib.bibN`, as in the one
+      // bibliography pdflatex prints (Perl's ids are fixed at digestion, latex_constructs.pool.ltxml:3877-3883).
+      // `@bibitem` alone misses a labelled `\bibitem[S01]{a}` (`RefStepID`) and a paragraph's entry.
+      let interrupted_empty = CounterValue!("@bibitem").value_of() == 0
+        && !lookup_bool("lx_bibliography_is_continued")
+        && holds_nothing_yet();
       assign_value("lx_bibliography_sectioned_empty", interrupted_empty, Some(Scope::Global));
       // the stop the entry before the heading asked for (natbib's `\BibitemShut`, natbib.sty:880-905) ends that entry,
       // which the next `\bibitem`'s `\bibitem@fin` would put at the head of the next bibliography's first
@@ -1965,5 +1967,49 @@ fn collect_labels(node: &Node, labels: &mut Vec<String>) {
   labels.extend(node.get_attribute("labels"));
   for child in node.get_child_elements() {
     collect_labels(&child, labels);
+  }
+}
+
+/// Whether the bibliography being digested holds nothing yet: back from where the heading is to the bibliography's
+/// `\thebibliography`, through the lists enclosing it (`with_box_list_levels`: a beamer frame's own), no entry
+/// (`\lx@bibitem`, natbib's `\@@lbibitem`: their key) and no text — at most the empty entries the recovery opened for a
+/// blank line or the heading's own `\par` (`\par@in@bibliography`), which are pruned. Not found, it holds something.
+fn holds_nothing_yet() -> bool {
+  with_box_list_levels(|levels| {
+    for item in levels.iter().flat_map(|level| level.iter().rev()) {
+      if let DigestedData::Whatsit(ws) = item.data()
+        && ws.borrow().get_definition().get_cs().to_string() == "\\thebibliography"
+      {
+        return true;
+      }
+      if !carries_nothing(item) {
+        return false;
+      }
+    }
+    false
+  })
+}
+
+/// Digested material that puts nothing in the document: white space, an empty box or a whatsit with no argument and no
+/// body (the frontmatter fallback a heading digests before its `\@startsection@hook`, an entry opened with nothing in it).
+fn carries_nothing(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::TBox(tbox) => tbox.borrow().to_string().trim().is_empty(),
+    DigestedData::List(list) => list
+      .borrow()
+      .unlist_ref()
+      .iter()
+      .all(|inner| carries_nothing(inner)),
+    DigestedData::Whatsit(ws) => {
+      let ws = ws.borrow();
+      ws.is_empty().unwrap_or(false)
+        || (ws
+          .get_args()
+          .iter()
+          .all(|arg| arg.as_ref().is_none_or(|a| a.is_empty().unwrap_or(false)))
+          && ws.get_body().ok().flatten().is_none())
+    },
+    DigestedData::Comment(_) => true,
+    _ => false,
   }
 }

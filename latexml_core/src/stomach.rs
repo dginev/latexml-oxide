@@ -2375,6 +2375,23 @@ where FnR: FnOnce(&[Digested]) -> R {
   let list = &stomach.box_list;
   caller(list)
 }
+/// The box lists being built, innermost first: the current `box_list`, then each outer one suspended on
+/// `localized_box_list` (by `new_local_box_list`), outward. A binding asking what an enclosing construct has digested so
+/// far (sect11.rs `holds_nothing_yet`) reads them from where it is, inside an environment's or a box's own list.
+pub fn with_box_list_levels<R, FnR>(caller: FnR) -> R
+where FnR: FnOnce(&[&[Digested]]) -> R {
+  let stomach = stomach!();
+  let mut levels: Vec<&[Digested]> = Vec::with_capacity(stomach.localized_box_list.len() + 1);
+  levels.push(&stomach.box_list);
+  levels.extend(
+    stomach
+      .localized_box_list
+      .iter()
+      .rev()
+      .map(|(list, _)| list.as_slice()),
+  );
+  caller(&levels)
+}
 pub fn with_box_list_mut<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(&mut [Digested]) -> R {
   let mut stomach = stomach_mut!();

@@ -141,6 +141,39 @@ fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, 
   }
 }
 
+/// `cs` re-invoked over a natbib citation's arguments as they were read: a present note is `[…]` even when empty, which
+/// natbib's commands tell from an absent one (`swap_pre_post`), and a post-note given without a pre-note has an empty
+/// one before it. `Invocation!` reverts an empty optional argument to nothing, as Perl's `Optional` reversion does
+/// (Base_ParameterTypes.pool.ltxml:55-62): `\citealt[e.g.][]{k}` became `\citet[e.g.]{k}`, its pre-note the post-note
+/// (KNOWN_PERL_ERRORS #868; natbib.sty:702-730 passes both to `\NAT@citetp`). The bindings that delegate to natbib
+/// (apacite's `\cite<pre>[post]`, nmbib's `\citeall`) re-emit their notes through it too.
+pub fn natbib_invocation(
+  cs: &str,
+  star: Option<Tokens>,
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+  keys: Tokens,
+) -> Tokens {
+  let mut tokens = vec![T_CS!(cs)];
+  if is_some_and_nonempty(&star) {
+    tokens.push(T_OTHER!("*"));
+  }
+  if pre.is_some() || post.is_some() {
+    tokens.push(T_OTHER!("["));
+    tokens.extend(pre.map(|p| p.revert()).unwrap_or_default());
+    tokens.push(T_OTHER!("]"));
+  }
+  if let Some(post) = post {
+    tokens.push(T_OTHER!("["));
+    tokens.extend(post.revert());
+    tokens.push(T_OTHER!("]"));
+  }
+  tokens.push(T_BEGIN!());
+  tokens.extend(keys.revert());
+  tokens.push(T_END!());
+  Tokens::new(tokens)
+}
+
 /// A label piece whose math shifts are balanced within each brace group (see `\NAT@wrout`): a group (or the piece)
 /// left in math is closed before its `}` (or at the piece's end), or, when its last token is that unpaired `$` (a
 /// BibTeX name split as `{Sasaki$}`), the `$` is dropped, so that no `$$` is formed.
@@ -200,20 +233,141 @@ fn cite_by_flags(
     .iter()
     .position(|cs| same("\\NAT@ctype", cs))
     .unwrap_or(0);
-  let (command, args) = match (ctype, par, swa) {
-    (1, ..) => ("\\lx@natbib@citeauthor", vec![star, pre, post, keys]),
-    (2, true, _) => ("\\lx@natbib@citeyearpar", vec![pre, post, keys]),
-    (2, false, _) => ("\\lx@natbib@citeyear", vec![pre, post, keys]),
-    (3, true, _) => ("\\lx@natbib@citepalias", vec![pre, post, keys]),
-    (3, false, _) => ("\\lx@natbib@citetalias", vec![pre, post, keys]),
-    (_, true, true) => ("\\lx@natbib@citep", vec![star, pre, post, keys]),
-    (_, true, false) => ("\\lx@natbib@citet", vec![star, pre, post, keys]),
-    (_, false, true) => ("\\lx@natbib@citealp", vec![star, pre, post, keys]),
-    (_, false, false) => ("\\lx@natbib@citealt", vec![star, pre, post, keys]),
+  let (command, star) = match (ctype, par, swa) {
+    (1, ..) => ("\\lx@natbib@citeauthor", star),
+    (2, true, _) => ("\\lx@natbib@citeyearpar", None),
+    (2, false, _) => ("\\lx@natbib@citeyear", None),
+    (3, true, _) => ("\\lx@natbib@citepalias", None),
+    (3, false, _) => ("\\lx@natbib@citetalias", None),
+    (_, true, true) => ("\\lx@natbib@citep", star),
+    (_, true, false) => ("\\lx@natbib@citet", star),
+    (_, false, true) => ("\\lx@natbib@citealp", star),
+    (_, false, false) => ("\\lx@natbib@citealt", star),
   };
-  let mut result = Invocation!(T_CS!(command), args).unlist();
+  let mut result = natbib_invocation(command, star, pre, post, keys.unwrap_or_default()).unlist();
   result.push(T_CS!("\\endgroup"));
   Ok(Tokens::new(result))
+}
+
+/// natbib's `\cite` (natbib.sty.ltxml:109-150), `parenthetical` its author-year form: natbib.sty:694-701 makes `\cite` with
+/// an optional argument, even an empty one, `\citep`'s parenthetical citation (`\NAT@cites` keeps `\NAT@swatrue` when
+/// `[` follows), only without one the textual one. Perl (natbib.sty.ltxml:133) tests the notes after dropping empty
+/// ones, so `\cite[]{k}` was textual (KNOWN_PERL_ERRORS #867). A binding whose `\cite` is always parenthetical
+/// (apacite.sty:259-267) asks for that form by name (`\lx@natbib@cite@parenthetical`).
+fn natbib_cite(
+  star: Option<Tokens>,
+  pre_raw: Option<Tokens>,
+  post_raw: Option<Tokens>,
+  keys: Tokens,
+  parenthetical: bool,
+) -> Result<Tokens> {
+  let style = cite_style();
+  let open = cite_open();
+  let close = cite_close();
+  let ns = cite_ns();
+  let ay = cite_ay();
+
+  let (pre, post) = swap_pre_post(pre_raw, post_raw);
+  let is_star = is_some_and_nonempty(&star);
+  let author = if is_star { "FullAuthors" } else { "Authors" };
+
+  if style == "numbers" {
+    // Invocation(\@@cite, Tokens(Explode('cite')),
+    //   Tokens(open, (pre? (pre, T_SPACE)),
+    //     Invocation(\@@bibref, Tokens(Explode("Number")), keys, undef, undef),
+    //     (post? (ns, T_SPACE, post)), close))
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!("Number")),
+      keys,
+      Tokens!(),
+      Tokens!()
+    ]);
+    let mut body = open.unlist();
+    if let Some(p) = pre {
+      body.extend(p.unlist());
+      body.push(T_SPACE!());
+    }
+    body.extend(bibref.unlist());
+    if let Some(p) = post {
+      body.extend(ns.unlist());
+      body.push(T_SPACE!());
+      body.extend(p.unlist());
+    }
+    body.extend(close.unlist());
+    Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+      Tokens::new(Explode!("cite")),
+      Tokens::new(body)
+    ]))
+  } else if style == "super" {
+    // superscript style
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!("Number")),
+      keys,
+      Tokens!(),
+      Tokens!()
+    ]);
+    let sup_arg = Invocation!(T_CS!("\\textsuperscript"), vec![bibref]);
+    let mut body = Vec::new();
+    if let Some(p) = pre {
+      body.extend(p.unlist());
+      body.push(T_SPACE!());
+    }
+    body.extend(sup_arg.unlist());
+    if let Some(p) = post {
+      body.push(T_SPACE!());
+      body.extend(p.unlist());
+    }
+    Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+      Tokens::new(Explode!("cite")),
+      Tokens::new(body)
+    ]))
+  } else {
+    // authoryear
+    if parenthetical {
+      // parenthetical, with its pre/post notes
+      let show = s!("{author}Phrase1Year");
+      let mut ay_space = ay.unlist();
+      ay_space.push(T_SPACE!());
+      let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(ay_space)]);
+      let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+        Tokens::new(Explode!(show)),
+        keys,
+        phrase1,
+        Tokens!()
+      ]);
+      let mut body = open.unlist();
+      if let Some(p) = pre {
+        body.extend(p.unlist());
+        body.push(T_SPACE!());
+      }
+      body.extend(bibref.unlist());
+      if let Some(p) = post {
+        body.extend(ns.unlist());
+        body.push(T_SPACE!());
+        body.extend(p.unlist());
+      }
+      body.extend(close.unlist());
+      Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+        Tokens::new(Explode!("cite")),
+        Tokens::new(body)
+      ]))
+    } else {
+      // textual (default authoryear with no pre/post)
+      let show = s!("{author} Phrase1YearPhrase2");
+      let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![open]);
+      let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![close]);
+      let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+        Tokens::new(Explode!(show)),
+        keys,
+        phrase1,
+        phrase2
+      ]);
+      Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+        Tokens::new(Explode!("cite")),
+        bibref
+      ]))
+    }
+  }
 }
 
 LoadDefinitions!({
@@ -340,81 +494,19 @@ LoadDefinitions!({
     let pre_raw: Option<Tokens> = it.next().unwrap().into();
     let post_raw: Option<Tokens> = it.next().unwrap().into();
     let keys: Tokens = it.next().unwrap().into();
-
-    let style = cite_style();
-    let open = cite_open();
-    let close = cite_close();
-    let ns = cite_ns();
-    let ay = cite_ay();
-
-    // natbib.sty:694-701: `\cite` with an optional argument, even an empty one, is `\citep`'s parenthetical citation
-    // (`\NAT@cites` keeps `\NAT@swatrue` when `[` follows); only without one is it textual in author-year mode. Perl
-    // (natbib.sty.ltxml:133) tests the notes after dropping empty ones, so `\cite[]{k}` was textual (KNOWN_PERL_ERRORS
-    // #867).
-    let has_optional = pre_raw.is_some() || post_raw.is_some();
-    let (pre, post) = swap_pre_post(pre_raw, post_raw);
-    let is_star = is_some_and_nonempty(&star);
-    let author = if is_star { "FullAuthors" } else { "Authors" };
-
-    if style == "numbers" {
-      // Invocation(\@@cite, Tokens(Explode('cite')),
-      //   Tokens(open, (pre? (pre, T_SPACE)),
-      //     Invocation(\@@bibref, Tokens(Explode("Number")), keys, undef, undef),
-      //     (post? (ns, T_SPACE, post)), close))
-      let bibref = Invocation!(T_CS!("\\@@bibref"),
-        vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
-      let mut body = open.unlist();
-      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
-      body.extend(bibref.unlist());
-      if let Some(p) = post {
-        body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
-      }
-      body.extend(close.unlist());
-      Ok(Invocation!(T_CS!("\\lx@@cite"),
-        vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
-    } else if style == "super" {
-      // superscript style
-      let bibref = Invocation!(T_CS!("\\@@bibref"),
-        vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
-      let sup_arg = Invocation!(T_CS!("\\textsuperscript"), vec![bibref]);
-      let mut body = Vec::new();
-      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
-      body.extend(sup_arg.unlist());
-      if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
-      Ok(Invocation!(T_CS!("\\lx@@cite"),
-        vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
-    } else {
-      // authoryear
-      if has_optional {
-        // parenthetical, with its pre/post notes
-        let show = s!("{author}Phrase1Year");
-        let mut ay_space = ay.unlist();
-        ay_space.push(T_SPACE!());
-        let phrase1 = Invocation!(T_CS!("\\@@citephrase"),
-          vec![Tokens::new(ay_space)]);
-        let bibref = Invocation!(T_CS!("\\@@bibref"),
-          vec![Tokens::new(Explode!(show)), keys, phrase1, Tokens!()]);
-        let mut body = open.unlist();
-        if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
-        body.extend(bibref.unlist());
-        if let Some(p) = post {
-          body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
-        }
-        body.extend(close.unlist());
-        Ok(Invocation!(T_CS!("\\lx@@cite"),
-          vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
-      } else {
-        // textual (default authoryear with no pre/post)
-        let show = s!("{author} Phrase1YearPhrase2");
-        let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![open]);
-        let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![close]);
-        let bibref = Invocation!(T_CS!("\\@@bibref"),
-          vec![Tokens::new(Explode!(show)), keys, phrase1, phrase2]);
-        Ok(Invocation!(T_CS!("\\lx@@cite"),
-          vec![Tokens::new(Explode!("cite")), bibref]))
-      }
-    }
+    let parenthetical = pre_raw.is_some() || post_raw.is_some();
+    natbib_cite(star, pre_raw, post_raw, keys, parenthetical)
   }, locked => true);
+  // `\cite`'s parenthetical form whatever its arguments, for a package whose `\cite` has no textual form (apacite.sty:259-267
+  // `\def\@BBOP{\BBOP}`); the `cite` class is kept, the macro the author wrote.
+  DefMacro!("\\lx@natbib@cite@parenthetical OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let mut it = args.into_iter();
+    let star: Option<Tokens> = it.next().unwrap().into();
+    let pre_raw: Option<Tokens> = it.next().unwrap().into();
+    let post_raw: Option<Tokens> = it.next().unwrap().into();
+    let keys: Tokens = it.next().unwrap().into();
+    natbib_cite(star, pre_raw, post_raw, keys, true)
+  });
 
   //======================================================================
   // \citet
@@ -566,9 +658,7 @@ LoadDefinitions!({
     let post: Option<Tokens> = it.next().unwrap().into();
     let keys: Option<Tokens> = it.next().unwrap().into();
     let mut result = vec![T_CS!("\\bgroup"), T_CS!("\\@@cite@noparens")];
-    let citet_inv = Invocation!(T_CS!("\\lx@natbib@citet"),
-      vec![star, pre, post, keys]);
-    result.extend(citet_inv.unlist());
+    result.extend(natbib_invocation("\\lx@natbib@citet", star, pre, post, keys.unwrap_or_default()).unlist());
     result.push(T_CS!("\\egroup"));
     Ok(Tokens::new(result))
   });
@@ -581,9 +671,7 @@ LoadDefinitions!({
     let post: Option<Tokens> = it.next().unwrap().into();
     let keys: Option<Tokens> = it.next().unwrap().into();
     let mut result = vec![T_CS!("\\bgroup"), T_CS!("\\@@cite@noparens")];
-    let citep_inv = Invocation!(T_CS!("\\lx@natbib@citep"),
-      vec![star, pre, post, keys]);
-    result.extend(citep_inv.unlist());
+    result.extend(natbib_invocation("\\lx@natbib@citep", star, pre, post, keys.unwrap_or_default()).unlist());
     result.push(T_CS!("\\egroup"));
     Ok(Tokens::new(result))
   });

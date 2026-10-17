@@ -1,14 +1,20 @@
-% witness: 2607.06446 (lipics-v2021 `\author{…}{…}{gerhard@…}{gerhard@uni-bremen.de}{…}`: an email in the ORCID slot)
+% witness: 2607.06446 (lipics-v2021 `\author{…}{…}{}{gerhard@uni-bremen.de}{…}` for all five authors: an email in the
+%          ORCID slot, the email slot empty), 2502.15500 (an orcid.org address in the slot)
 % oracle:  pdflatex (with the shipped lipics-v2021.cls) 0 errors: "Gerd Gast" with an ORCID icon linked to
-%          "gerhard_g@uni-bremen.de" (lipics-v2021.cls:797 `\href{#4}{\orcidsymbol}`); "Ida Ito" with one linked to her iD
-% engines: rust 68w r1 = the email's link https://orcid.org/gerhard_g@uni-bremen.de; Perl 0.8.8 has no lipics binding
-% expect:  0 errors; Gerd's ORCID contact the class's link to the slot as written; Ida's bare iD her orcid.org page
-% status:  FIXED (68w r2)
+%          "gerhard@uni-bremen.de" (lipics-v2021.cls:797 `\href{#4}{\orcidsymbol}`), Hans with his email and one linked
+%          to the same address, "Ida Ito" with one linked to her iD, Jan with one linked to his page
+% engines: rust 68w r1 = the email's link https://orcid.org/gerhard@uni-bremen.de; 68w r2 = a relative link
+%          href="gerhard@uni-bremen.de"; Perl 0.8.8 has no lipics binding
+% expect:  0 errors; an email in the slot is the author's email (once); a bare iD her orcid.org page; another address
+%          the class's link to it
+% status:  FIXED (68w r3)
 % preload: ar5iv.sty
 \documentclass[a4paper,UKenglish]{lipics-v2021}
 \title{T}
-\author{Gerd Gast}{Uni Bremen}{gerhard_g@uni-bremen.de}{gerhard_g@uni-bremen.de}{}
+\author{Gerd Gast}{Uni Bremen}{}{gerhard@uni-bremen.de}{}
+\author{Hans Hof}{Uni Bremen}{hans_h@uni-bremen.de}{hans_h@uni-bremen.de}{}
 \author{Ida Ito}{Uni K}{}{0000-0002-1825-009X}{}
+\author{Jan Jung}{Uni L}{}{https://example.org/~jan}{}
 \begin{document}
 \maketitle
 Body.

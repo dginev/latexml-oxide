@@ -1,0 +1,11 @@
+% witness: review probe n4_nmbib (68w r2 re-review 1)
+% oracle:  pdflatex 0 errors: "A ?, p. 5." (no .bbl; the note after the citation)
+% engines: rust 68w r2 = "(p. 5 " before the year (`\citet*[p.~5][]`); Perl 0.8.8 has no nmbib binding
+% expect:  0 errors; the lone note is the post-note
+% status:  FIXED (68w r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nmbib}
+\begin{document}
+A \citeall[p.~5]{a}.
+\end{document}

@@ -2527,6 +2527,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   lipics-v2021.cls:797 links it (an email there no orcid.org address, 2607.06446). Repros
   package-bindings/natbib_{empty_postnote_keeps_prenote,cite_optional_is_parenthetical},
   class-bindings/lipics_orcid_slot_as_written; guards `perfect_kernel_batch68w::{natbib_*, apacite_*, lipics_orcid_*}`.
+  r3: citations delegated to natbib keep an absent note absent (`natbib_invocation`; apacite's `\cite<pre>[post]` family
+  `apacite_delegate`, nmbib's `\citeall`, natbib's own `\citealt`/`\citealp`/`\NAT@citetp`, KNOWN_PERL_ERRORS #868):
+  apacite's `\cite[p.~5]{a}` is "(Smith, 2001, p. 5)" (2002.00730, 2005.00039); apacite's `\cite` parenthetical by name
+  (apacite.sty:259-267, OD #655). A bibliography interrupted before its first entry is read from what it has digested
+  (`holds_nothing_yet`, through the enclosing box lists, core `with_box_list_levels`), not only `@bibitem`, which
+  labelled and paragraph entries never step (OD #653). lipics' ORCID
+  slot by its value: an email address is `\lx@add@email` (2607.06446). Repros
+  package-bindings/{apacite_notes_as_read,nmbib_citeall_postnote,natbib_citealt_empty_postnote},
+  index-bib/heading_inside_thebibliography_{labelled_entry,preamble_paragraph}; guards
+  `perfect_kernel_batch68w::{apacite_notes_*, nmbib_citeall_*, natbib_citealt_*, heading_inside_thebibliography_after_*,
+  lipics_orcid_*}`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

@@ -455,6 +455,24 @@ fn is_orcid(tokens: &[Token]) -> bool {
     })
 }
 
+/// The address an ORCID slot holds when it is an email address (`name@host`, or a `mailto:` link to one): one `@`
+/// with text before it, a dotted host after it, no white space and no URL scheme.
+fn email_address(tokens: &[Token]) -> Option<String> {
+  if tokens.iter().any(|t| t.get_catcode() == Catcode::CS) {
+    return None;
+  }
+  let text = Tokens::new(tokens.to_vec()).to_string();
+  let text = text.trim();
+  let address = text.strip_prefix("mailto:").unwrap_or(text);
+  let (local, host) = address.split_once('@')?;
+  (!local.is_empty()
+    && host.contains('.')
+    && !host.contains('@')
+    && !address.contains(char::is_whitespace)
+    && !local.contains("://"))
+  .then(|| address.to_string())
+}
+
 /// `\cs{content}` as tokens.
 fn invoke(cs: &str, content: Vec<Token>) -> Vec<Token> {
   let mut tokens = vec![T_CS!(cs), T_BEGIN!()];
@@ -508,16 +526,33 @@ fn lipics_author(
       out.extend(invoke("\\lx@add@affiliation", part));
     }
   }
-  if !is_blank(&email) {
-    out.extend(invoke("\\lx@add@email", trimmed(email.unlist_ref())));
+  let email = (!is_blank(&email)).then(|| trimmed(email.unlist_ref()));
+  if let Some(email) = &email {
+    out.extend(invoke("\\lx@add@email", email.clone()));
   }
-  // the class links the slot as written (lipics-v2021.cls:797 `\if!#4!\else{\,\href{#4}{\orcidsymbol}}\fi`): an ORCID iD,
-  // bare or its orcid.org address, is the author's ORCID (`\lx@add@orcid`); anything else (an email, 2607.06446) is
-  // the class's link to it, not an orcid.org address
+  // the class links the slot as written (lipics-v2021.cls:797 `\if!#4!\else{\,\href{#4}{\orcidsymbol}}\fi`); what the
+  // author put there is read by its type: an ORCID iD, bare or its orcid.org address, is the author's ORCID
+  // (`\lx@add@orcid`); an email address (all five authors of 2607.06446, `{}{gerhard@uni-bremen.de}`) is the author's
+  // email (`\lx@add@email`, once when the email slot holds it too), which as a link would be a relative one to nowhere;
+  // any other address is the class's link to it
   if !is_blank(&orcid) {
     let orcid = trimmed(orcid.unlist_ref());
     if is_orcid(&orcid) {
       out.extend(invoke("\\lx@add@orcid", orcid));
+    } else if let Some(address) = email_address(&orcid) {
+      let same = email
+        .as_ref()
+        .is_some_and(|email| Tokens::new(email.clone()).to_string().trim() == address);
+      if !same {
+        // as written, or the address a `mailto:` link names
+        let written = Tokens::new(orcid.clone()).to_string().trim() == address;
+        let address = if written {
+          orcid
+        } else {
+          mouth::tokenize_internal(TeXString::assembled(address)).unlist()
+        };
+        out.extend(invoke("\\lx@add@email", address));
+      }
     } else {
       let mut link = vec![T_CS!("\\href"), T_BEGIN!()];
       link.extend(orcid);

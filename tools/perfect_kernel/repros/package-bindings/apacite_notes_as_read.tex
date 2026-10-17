@@ -1,0 +1,17 @@
+% witness: 2002.00730 (7 `\cite[p.~N]{…}`), 2005.00039 (`\cite[chapter 10]{…}`): apacite's lone `[note]` is the post-note
+% oracle:  pdflatex 0 errors: "A (Smith, 2001). B (Smith, 2001, p. 5). C (e.g. Smith, 2001). D (e.g. Smith, 2001, p. 5).
+%          E Smith (2001, p. 6). F Smith, 2001, p. 7. G (Smith, 2001, p. 8). H Smith (2001). I 2001, p. 9."
+% engines: rust 68w r2 = "(p. 5 Smith, 2001)" for B, E, F, G, I (an absent post-note re-emitted as an empty one kept the
+%          note the pre-note); Perl 0.8.8 has no apacite binding
+% expect:  0 errors; every lone `[note]` the post-note; `\cite` parenthetical with or without notes, `\citeA` textual
+% status:  FIXED (68w r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{apacite}
+\begin{document}
+A \cite{a}. B \cite[p.~5]{a}. C \cite<e.g.>{a}. D \cite<e.g.>[p.~5]{a}.
+E \citeA[p.~6]{a}. F \citeNP[p.~7]{a}. G \shortcite[p.~8]{a}. H \citeA{a}. I \citeyearNP[p.~9]{a}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Smith}{Smith}{2001}]{a} Smith, J. (2001). Title.
+\end{thebibliography}
+\end{document}

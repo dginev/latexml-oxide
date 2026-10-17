@@ -14556,3 +14556,20 @@ The document's own clear is the same defect, since the lock refuses the document
 calligraphic L, Perl `Error:undefined:\mathcal` (and `\let\mathscr\relax` before `\DeclareMathAlphabet{\mathscr}{U}
 {rsfs}{m}{n}` an italic M). Fixed in Rust (68x r2): kept aside at every origin. Guard
 `perfect_kernel_batch68x::a_plain_locked_binding_the_document_cleared_comes_back`.
+
+## 868. natbib's `\citealt[pre][]{k}` / `\citealp[pre][]{k}` move the pre-note after the citation
+
+natbib.sty:702-730 passes both notes of `\citealt`/`\citealp` to `\NAT@citetp`, where an empty post-note keeps the first
+one the pre-note: `\citealt[e.g.][]{k}` prints "Smith and Jones e.g. 2001". Perl's binding (natbib.sty.ltxml:234-245)
+re-invokes `\citet`/`\citep` through `Invocation`, whose `Optional` reversion (Base_ParameterTypes.pool.ltxml:55-62)
+reverts an empty argument to nothing, so the call arrives as `\citet[e.g.]{k}` and the lone note is swapped into the
+post-note (natbib.sty.ltxml:113).
+
+Trigger: `\usepackage{natbib}`, `\citealt[e.g.][]{a}` with `\bibitem[Smith and Jones(2001)]{a}` — pdflatex "Smith and
+Jones e.g. 2001"; Perl 0.8.8 and Rust before 68w r3 "Smith and Jones 2001, e.g.".
+
+Rust (68w r3, natbib_sty.rs `natbib_invocation`): a re-invoked citation writes each note that was read, empty or not, as
+`[…]` — `\citealt`, `\citealp`, `\NAT@citetp` (`cite_by_flags`) and the bindings delegating to natbib (apacite's
+`\cite<pre>[post]` family, nmbib's `\citeall`). Repro package-bindings/natbib_citealt_empty_postnote; guard
+`perfect_kernel_batch68w::natbib_citealt_empty_postnote_keeps_the_prenote`.
+

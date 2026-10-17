@@ -1,0 +1,16 @@
+% witness: review probe n2_natay (68w r2 re-review NIT 5)
+% oracle:  pdflatex 0 errors: "A Smith and Jones e.g. 2001. B e.g. Smith and Jones, 2001. C Smith and Jones 2001, p. 5.
+%          D e.g. Smith and Jones, 2001, p. 3."
+% engines: rust 68w r2 = A "Smith and Jones 2001, e.g.", B "Smith and Jones, 2001, e.g."; Perl 0.8.8 the same
+%          (Invocation reverts an empty `[]` to nothing, KNOWN_PERL_ERRORS #868)
+% expect:  0 errors; an empty post-note keeps the pre-note before the citation
+% status:  FIXED (68w r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+A \citealt[e.g.][]{a}. B \citealp[e.g.][]{a}. C \citealt[p.~5]{a}. D \citealp[e.g.][p.~3]{a}.
+\begin{thebibliography}{9}
+\bibitem[Smith and Jones(2001)]{a} Smith, J. and Jones, K. (2001). Title.
+\end{thebibliography}
+\end{document}
