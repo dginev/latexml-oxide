@@ -5,6 +5,8 @@
 //! 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 1310.0491).
 //! Item 2 (E1) — a `$` inside a math TeX sets as `\hbox{$…$}` (amsmath's display under `fleqn`, proof.sty's label,
 //! conclusion and premises, accents.sty's under-accent) is text in that math (tex.web §1193; the rc_struct3 E1 sample).
+//! Item 3 (U1) — an eqnarray cell's braces balance across its template's own `{##}` (latex.ltx:15760-15763; 2207.06932
+//! 1912.10594).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -139,4 +141,26 @@ fn proof_infer_parts_keep_the_formulas_dollar() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_eq!(xml.matches("<Math ").count(), 4, "{xml}");
+}
+
+/// kernel-alignment/eqnarray_cell_braces_balance_across_the_template: `G_t(h)=}\det(h)-e^{\frac{a}{2}g_t.` and
+/// `\langle{O}_1}\rangle_{\chi_{b0}` in `{eqnarray*}` cells, whose `{`/`}` pair with the template's `{##}` (pdflatex 0
+/// errors). Before 69c: 14 Errors and an empty document.
+#[test]
+fn eqnarray_cell_braces_balance_across_the_template() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/eqnarray_cell_braces_balance_across_the_template.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "Math",
+    &["tex=\"\\displaystyle G_{t}(h)=\\det(h)-e^{{\\frac{a}{2}g_{t}.}}\""],
+    r#"<Math tex="\displaystyle G_{t}(h)=\det(h)-e^{{\frac{a}{2}g_{t}.}}" text="G _ t * h = determinant@(h) - e ^ (list@((a / 2) * g _ t))" xml:id="S0.Ex1.m4"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">G</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok></XMApp><XMDual><XMRef idref="S0.Ex1.m4.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m4.1">h</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok meaning="determinant" role="LIMITOP" scriptpos="mid">det</XMTok><XMDual><XMRef idref="S0.Ex1.m4.2"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m4.2">h</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">e</XMTok><XMDual><XMApp><XMTok meaning="list"/><XMRef idref="S0.Ex1.m4.3"/></XMApp><XMWrap><XMApp xml:id="S0.Ex1.m4.3"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp><XMTok mathstyle="script" meaning="divide" role="FRACOP"/><XMTok font="italic" fontsize="50%" role="UNKNOWN">a</XMTok><XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post2"/><XMTok font="italic" fontsize="70%" role="UNKNOWN">g</XMTok><XMTok font="italic" fontsize="50%" role="UNKNOWN">t</XMTok></XMApp></XMApp><XMTok fontsize="70%" role="PERIOD">.</XMTok></XMWrap></XMDual></XMApp></XMApp></XMApp></XMath></Math>"#,
+  );
+  assert_eq!(xml.matches("<equation ").count(), 3, "{xml}");
 }

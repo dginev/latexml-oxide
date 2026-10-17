@@ -1781,15 +1781,20 @@ pub fn eqnarray_bindings() -> Result<()> {
 
 /// The eqnarray's columns: Perl's three (latex_constructs.pool.ltxml:2231-2236), right, centre and left, math in
 /// `\displaystyle`, and latex.ltx's fourth (:15764, `\hb@xt@\z@\bgroup\hss##\egroup`), the equation number's, in
-/// text. A row ended by `\cr` may fill it (1804.05059: `&\cr`); `rearrange_eqnarray` drops it where empty.
+/// text. A row ended by `\cr` may fill it (1804.05059: `&\cr`); `rearrange_eqnarray` drops it where empty. The math
+/// columns keep latex.ltx's braces, `$\displaystyle{##}$` (:15760-15763; tex.web §789), as `\lx@template@bgroup`/
+/// `\lx@template@egroup` (tex_box.rs): a cell whose `{`/`}` balance only across them (`G_t(h)=}\det(h)-e^{\frac{a}{2}g_t.`,
+/// 2207.06932, 1912.10594) is one formula, as in pdflatex; Perl's template has none (KNOWN_PERL_ERRORS #908). Guard
+/// `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
 fn eqnarray_columns() -> Vec<Cell> {
   let col1 = Cell {
     before: Some(Tokens::new(vec![
       T_CS!("\\hfil"),
       T_MATH!(),
       T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
     ])),
-    after: Some(Tokens::new(vec![T_MATH!()])),
+    after: Some(Tokens::new(vec![T_CS!("\\lx@template@egroup"), T_MATH!()])),
     empty: true,
     ..Cell::default()
   };
@@ -1798,14 +1803,27 @@ fn eqnarray_columns() -> Vec<Cell> {
       T_CS!("\\hfil"),
       T_MATH!(),
       T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
     ])),
-    after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
+    after: Some(Tokens::new(vec![
+      T_CS!("\\lx@template@egroup"),
+      T_MATH!(),
+      T_CS!("\\hfil"),
+    ])),
     empty: true,
     ..Cell::default()
   };
   let col3 = Cell {
-    before: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\displaystyle")])),
-    after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
+    before: Some(Tokens::new(vec![
+      T_MATH!(),
+      T_CS!("\\displaystyle"),
+      T_CS!("\\lx@template@bgroup"),
+    ])),
+    after: Some(Tokens::new(vec![
+      T_CS!("\\lx@template@egroup"),
+      T_MATH!(),
+      T_CS!("\\hfil"),
+    ])),
     empty: true,
     ..Cell::default()
   };

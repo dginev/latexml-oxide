@@ -4,7 +4,10 @@
 
 use std::cell::{Cell, RefCell};
 
-use latexml_core::common::{error::emit_warn, numeric_ops::round_to};
+use latexml_core::{
+  common::{error::emit_warn, numeric_ops::round_to},
+  stomach::{TEMPLATE_BRACE_OPEN, off_save_closer},
+};
 
 use crate::prelude::*;
 
@@ -852,6 +855,43 @@ LoadDefinitions!({
     after_digest => sub[_whatsit] { egroup()?; },
     reversion => ""
   );
+
+  // The braces of an alignment template's math cell, `$\displaystyle{##}$` (latex.ltx:15760-15763 `{eqnarray}`,
+  // amsmath.sty:1483/1576/2350/2424): the u-part's `{` and the v-part's `}` enclose the cell's text, and TeX resets
+  // the alignment state after the u-part (tex.web §324, §789), so a cell's own `}` closes the template's `{` and the
+  // v-part's `}` closes a cell's `{` (`G_t(h)=}\det(h)-e^{\frac{a}{2}g_t.`, 2207.06932, 1912.10594). The pair opens
+  // no group of its own: the u-part marks the cell's frame (stomach.rs `TEMPLATE_BRACE_OPEN`), and the cell's `}`
+  // that would close that frame closes the mark instead (stomach.rs `egroup`), so a well-formed cell digests, nests
+  // and reverts exactly as without the braces, and a cell that leaves a group or a mode open meets the cell's end as
+  // before. Rust-only: Perl's templates have no braces (KNOWN_PERL_ERRORS #908). Guard
+  // `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
+  DefPrimitive!("\\lx@template@bgroup", {
+    assign_value(TEMPLATE_BRACE_OPEN, true, None);
+  });
+  DefPrimitive!("\\lx@template@egroup", {
+    if is_value_bound(TEMPLATE_BRACE_OPEN, Some(0)) {
+      if lookup_bool(TEMPLATE_BRACE_OPEN) {
+        // A well-formed cell: the pair closes.
+        assign_value(TEMPLATE_BRACE_OPEN, false, None);
+      } else {
+        // The cell's `}` closed the template's `{` and opened nothing after: this `}` meets the cell's formula
+        // (tex.web §1069 `extra_right_brace`), deleted.
+        Error!(
+          "unexpected",
+          "}",
+          "Extra }, or forgotten $",
+          "The alignment template's } has no group left to close in the cell; deleted."
+        );
+      }
+    } else if !lookup_bool(TEMPLATE_BRACE_OPEN)
+      && off_save_closer().is_some_and(|closer| closer == T_END!())
+    {
+      // The cell's `}` closed the template's `{`, and a `{` of the cell is open: this `}` closes it.
+      egroup()?;
+    }
+    // Otherwise a group or a mode the cell left open (math9805003's `{Sb}`, a stray `$`'s in-math text): left to the
+    // cell's end, as without the braces.
+  });
 
   // These are for those screwy cases where you need to create a group like box,
   // more than just bgroup, egroup,

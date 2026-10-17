@@ -1,0 +1,17 @@
+% witness: 2207.06932, 1912.10594 (the rc_struct3 U1 sample, agent_reports/2026-10-17_rc_struct3.md; est. 583 of the
+%   `}` cluster): `G_t(h)=}\det(h)-e^{\frac{a}{2}g_t.`, `{O}_1}\rangle_{\chi_{b0}`
+% oracle:  pdflatex 0 errors; latex.ltx:15760-15763 `{eqnarray}`'s template is `$\displaystyle{##}$`, `${##}$`,
+%   `$\displaystyle{##}$`: the u-part's `{` and the v-part's `}` enclose each cell (tex.web §789, §324 resets the
+%   align state after the u-part), so a cell's `}` closes the template's `{` and the v-part's `}` closes the cell's `{`
+% engines: rust 67int18b = 14 (an empty document: "Extra }", "Attempt to close a group…"), perl = 7
+%   (latex_constructs.pool.ltxml:2231-2236, a template without braces; KNOWN_PERL_ERRORS #908)
+% expect:  0 errors; the rows' formulas kept, `e^{…}` a superscript to the cell end
+% status:  RED (67int18b) -> GREEN (69c: `\lx@template@bgroup`/`\lx@template@egroup` in mod.rs `eqnarray_columns`)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray*}
+G_t(h)=}\det(h)-e^{\frac{a}{2}g_t. \\
+\langle{O}_1}\rangle_{\chi_{b0} &=& {x}_1}+{y \\
+a_1 &=& b_2
+\end{eqnarray*}
+\end{document}

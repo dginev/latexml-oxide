@@ -2832,6 +2832,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   guards `perfect_kernel_batch69c::{dollar_in_an_amsmath_fleqn_display_is_text,
   dollar_in_proof_and_accents_hbox_math_is_text, dollar_in_a_display_still_errs}`. Open: fleqn.clo's `{equation}`
   without amsmath (also `\hbox{$…$}`) is not modelled.
+  (3) U1: an eqnarray cell's `{`/`}` that balance only across the template's own `{##}` (latex.ltx:15760-15763) — mod.rs
+  `eqnarray_columns` ends/starts its math cells with tex_box.rs `\lx@template@bgroup`/`\lx@template@egroup`, a mark on
+  the cell's frame, not a group (stomach.rs `TEMPLATE_BRACE_OPEN`, `close_template_brace`): a well-formed cell is as
+  before (KNOWN_PERL_ERRORS #908). Witnesses 2207.06932 1912.10594 (12 → 0, 8 → 0 errors). Repro
+  kernel-alignment/eqnarray_cell_braces_balance_across_the_template; guard
+  `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

@@ -1139,6 +1139,9 @@ pub fn bgroup() {
 /// undoing whatever bindings appeared there, and also
 /// decrementing the level of boxing.
 pub fn egroup() -> Result<()> {
+  if get_current_token().is_some_and(|t| gullet::is_right_brace(&t)) && close_template_brace() {
+    return Ok(());
+  }
   if is_value_bound("BOUND_MODE", Some(0)) {
     // Diagnostic for cluster investigation (project_explsyntax_midload.md).
     if *TRACE_BOUND_MODE {
@@ -2582,6 +2585,22 @@ pub fn ends_inside_groups() -> u64 { ENDS_INSIDE_GROUPS.with(Cell::get) }
 /// already been used. The debt is a frame value; at every pop it moves to the frame then innermost
 /// ([`pop_stack_frame`]), so it follows the stack to wherever that closer arrives. OXIDIZED_DESIGN #530.
 pub const OWED_BRACES: &str = "lx@owed@braces";
+/// Bound in an alignment cell's frame while its template's `{` (`$\displaystyle{##}$`) is open — latexml_engine
+/// tex_box.rs `\lx@template@bgroup`/`\lx@template@egroup`; a `}` that would close the frame closes it
+/// ([`close_template_brace`]).
+pub const TEMPLATE_BRACE_OPEN: &str = "lx@template@brace@open";
+
+/// A `}` met at the frame of an alignment cell whose template's `{` is open (`$\displaystyle{##}$`, [`TEMPLATE_BRACE_OPEN`]):
+/// it closes that `{` (tex.web §789, the u-part's brace), the frame stays — `G_t(h)=}\det…` in an eqnarray cell
+/// (2207.06932, 1912.10594). Whether it did.
+pub fn close_template_brace() -> bool {
+  if is_value_bound(TEMPLATE_BRACE_OPEN, Some(0)) && lookup_bool(TEMPLATE_BRACE_OPEN) {
+    assign_value(TEMPLATE_BRACE_OPEN, false, None);
+    true
+  } else {
+    false
+  }
+}
 /// The `\endgroup` twin of [`OWED_BRACES`].
 pub const OWED_ENDGROUPS: &str = "lx@owed@endgroups";
 
@@ -3294,6 +3313,9 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     // Check conversion timeout
     check_timeout()?;
     if delete_extra_brace(&token)? {
+      continue;
+    }
+    if token.get_catcode() == Catcode::END && close_template_brace() {
       continue;
     }
     // A DefEnvironment's own end (`\end{X}`, the constructor that pops the environment's frame; no TeX-level `\endX`

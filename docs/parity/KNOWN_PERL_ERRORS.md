@@ -15025,3 +15025,25 @@ control paragraph-mode/dollar_in_display_math_still_errs; guards
 `perfect_kernel_batch69c::{dollar_in_an_amsmath_fleqn_display_is_text, dollar_in_proof_and_accents_hbox_math_is_text,
 dollar_in_a_display_still_errs}`. Not modelled: fleqn.clo's own `{equation}` without amsmath (fleqn.clo:44-53, also
 `\hbox{$…$}`), whose `\[` errs in pdflatex as it opens a group in its math.
+
+## 908. eqnarray's and amsmath's alignment templates lose their cell braces, so a cell's `{`/`}` that balance across them break the alignment
+
+latex.ltx:15760-15763 `\eqnarray`'s preamble is `$\displaystyle{##}$`, `${##}$`, `$\displaystyle{##}$`; amsmath's
+`{gather}`, `\align@preamble` (`{align}` and its family), `{aligned}` and `{split}` brace their cells the same way
+(amsmath.sty:1576, 2350, 1483, 2424 `{##}`). The u-part's `{` and the v-part's `}` enclose the cell's text, and TeX
+resets the alignment state at the end of the u-part (tex.web §324, §789), so a cell's own `}` closes the template's `{`
+and the v-part's `}` closes a cell's `{`: `G_t(h)=}\det(h)-e^{\frac{a}{2}g_t.` is one formula, the superscript running
+to the cell end. Perl's templates (latex_constructs.pool.ltxml:2231-2236 `eqnarrayBindings`, amsmath.sty.ltxml) have no
+braces: the cell's `}` meets the cell's math group and the alignment unravels.
+
+Trigger: `\begin{eqnarray*} G_t(h)=}\det(h)-e^{\frac{a}{2}g_t. \end{eqnarray*}` — pdflatex 0 errors; Perl 7 errors on
+the repro (kernel-alignment/eqnarray_cell_braces_balance_across_the_template), Rust before 69c 14 and an empty document.
+
+Rust (69c): mod.rs `eqnarray_columns` ends its math columns' u-parts with `\lx@template@bgroup` and starts their v-parts
+with `\lx@template@egroup` (tex_box.rs). The pair opens no group: the u-part marks the cell's frame
+(stomach.rs `TEMPLATE_BRACE_OPEN`), a `}` that would close that frame closes the mark instead
+(stomach.rs `close_template_brace`, from `egroup` and the body digestion loop), and the v-part closes a `{` the cell left
+open once the mark is closed — so a well-formed cell digests, nests, reverts and positions its scripts exactly as
+without the braces, and a cell that leaves another group or a mode open (math9805003's undefined `{Sb}`, a stray `$`'s
+in-math text) meets the cell's end as before. Witnesses 2207.06932, 1912.10594 (the rc_struct3 U1 sample,
+agent_reports/2026-10-17_rc_struct3.md). Guard `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
