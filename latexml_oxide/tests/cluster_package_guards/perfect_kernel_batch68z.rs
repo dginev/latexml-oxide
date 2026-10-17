@@ -4,6 +4,7 @@
 //! Item 2 — a column end goes back after the v-part as the token read, not its canonical `\cr` (Perl Gullet.pm:310;
 //! hep-ph9612244). Item 3 — the cell-head peek stops at a macro that peeks by `\futurelet` (a `\newcommand` optional
 //! argument; tex.web §785/§791), diagbox's `\diagbox` among them (2406.11917); aa's robust `\ion` (0801.2767).
+//! Item 5 — an `\omit` cell of an amsmath alignment is text (tex.web §789; 2306.14299).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{
@@ -148,4 +149,37 @@ fn aa_ion_is_robust_at_a_cell_head() {
     &[],
     r#"<tr><td align="left" thead="column">4101</td><td align="left" thead="column">H<Math mode="inline" tex="\delta" text="delta" xml:id="p1.m1"><XMath><XMTok font="italic" name="delta" role="UNKNOWN">δ</XMTok></XMath></Math></td><td align="center" thead="column">24.0</td></tr>"#,
   );
+}
+
+/// kernel-alignment/omit_cell_in_amsmath_alignment_is_text: `& \omit \hfill $\qquad (-1)^{n} c$,` in a `split` and
+/// `&\omit $y^2$` in an `aligned` are text cells holding an inline formula (pdflatex 0 errors); a `\multicolumn` cell
+/// is boxed once. Before 68z the `\omit` cell stayed math and its `$` opened text: 1 Error "Script ^".
+#[test]
+fn an_omit_cell_of_an_amsmath_alignment_is_text() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/omit_cell_in_amsmath_alignment_is_text.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let xml = normalize_markup(&xml);
+  // the split's second row: an empty cell, then the text cell with its formula
+  assert!(
+    xml.contains(r#"<XMCell/><XMCell align="left"><XMText xml:id="S0.E1.m1.4"> <Math mode="inline" tex="\qquad(-1)^{n}c" text="(- 1) ^ n * c""#),
+    "{xml}"
+  );
+  assert_eq!(
+    xml
+      .matches(r#"<Math mode="inline" tex="y^{2}" text="y ^ 2""#)
+      .count(),
+    2,
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"tex="\displaystyle\hbox{$f_{0}(x)$}" text="f _ 0 * x""#),
+    "{xml}"
+  );
+  assert_eq!(xml.matches(r#"\hbox{\hbox"#).count(), 0, "{xml}");
 }

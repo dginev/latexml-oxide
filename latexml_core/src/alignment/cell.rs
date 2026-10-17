@@ -12,6 +12,10 @@ pub struct Cell {
   pub empty:               bool,
   pub skippable:           bool,
   pub omitted:             bool,
+  /// An `\omit`ted cell of an alignment whose math is its template's (amsmath's, `template_math`): TeX sets it in
+  /// restricted horizontal mode (tex.web §789), so its material is boxed as text ([`crate::alignment::Alignment::
+  /// get_column_before`]).
+  pub omit_text_box:       bool,
   pub skipped:             bool,
   pub thead_in_row:        bool,
   pub thead_in_column:     bool,

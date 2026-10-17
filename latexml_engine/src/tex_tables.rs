@@ -11,6 +11,10 @@ use latexml_core::alignment::{read_alignment_template, template::TemplateConfig}
 
 use crate::prelude::*;
 
+/// The State key counting the `\omit`s of a `\multicolumn` cell of an amsmath alignment still to be read by the
+/// cell-head peek (`\lx@alignment@multicolumn` boxes that cell's body as text itself).
+const MULTICOLUMN_OMITS: &str = "lx@alignment@multicolumn@omits";
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Tables Family of primitive control sequences
@@ -676,6 +680,8 @@ LoadDefinitions!({
       })
     });
     if text_cell {
+      // the `\omit`s above are this cell's: the cell-head peek leaves the boxing to this body's `\hbox`
+      assign_value(MULTICOLUMN_OMITS, Stored::Int(n.max(1)), Some(Scope::Global));
       tks.extend([T_CS!("\\hbox"), T_BEGIN!()]);
     }
     tks.extend(body.unlist_ref().iter().copied());
@@ -1146,7 +1152,27 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
           alignment.borrow_mut().start_row(false)?;
           peek_mode = Some(AlignPeekMode::enter());
         }
-        alignment.borrow_mut().omit_next_column();
+        // tex.web §789: `\omit` drops the u/v template, so in an amsmath alignment, whose math is its template's
+        // `$` (`template_math`), the cell is restricted horizontal and its `$…$` a formula: its material is boxed
+        // as text, as `\lx@alignment@multicolumn` boxes its body (which consumes its own `\omit`s,
+        // `MULTICOLUMN_OMITS`). 2306.14299 (`& \omit \hfill $\qquad (-1)^{n} c$` in `aligned`/`split`); guard
+        // `perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`.
+        let multicolumn_omits = lookup_int(MULTICOLUMN_OMITS);
+        if multicolumn_omits > 0 {
+          assign_value(
+            MULTICOLUMN_OMITS,
+            Stored::Int(multicolumn_omits - 1),
+            Some(Scope::Global),
+          );
+          alignment.borrow_mut().omit_next_column();
+        } else if matches!(
+          alignment.borrow().get_property("template_math").as_deref(),
+          Some(Stored::Bool(true))
+        ) {
+          alignment.borrow_mut().omit_next_column_as_text();
+        } else {
+          alignment.borrow_mut().omit_next_column();
+        }
       } else if token.defined_as(&T_CS!("\\noalign")) {
         // \puts something in vertical list. Perl L381 uses `defined_as`, so a
         // `\let`-copy of `\noalign` (e.g. expl3's `\tex_noalign:D`, used by the

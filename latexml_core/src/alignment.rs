@@ -376,6 +376,17 @@ impl Alignment {
     }
   }
 
+  /// [`Self::omit_next_column`], the cell's material boxed as text ([`Cell::omit_text_box`]).
+  pub fn omit_next_column_as_text(&mut self) {
+    if let Some(cw) = self.current_row
+      && let Some(row) = self.rows.get_mut(cw)
+      && let Some(column) = row.get_column_mut(self.current_column + 1)
+    {
+      column.omitted = true;
+      column.omit_text_box = true;
+    }
+  }
+
   pub fn get_column_before(&mut self) -> Tokens {
     if let Some(column) = self.current_column() {
       if !column.omitted {
@@ -383,6 +394,9 @@ impl Alignment {
           T_CS!("\\lx@alignment@column@before"),
           column.before.clone().unwrap_or_default().unlist()
         )
+      } else if column.omit_text_box {
+        // the cell's own group, explicit braces: the before-column marker that follows resets the ledger
+        Tokens!(T_CS!("\\hbox"), T_BEGIN!())
       } else {
         Tokens!()
       }
@@ -399,6 +413,8 @@ impl Alignment {
           column.after.clone().unwrap_or_default().unlist(),
           T_CS!("\\lx@alignment@column@after")
         )
+      } else if column.omit_text_box {
+        Tokens!(T_END!())
       } else {
         Tokens!()
       }

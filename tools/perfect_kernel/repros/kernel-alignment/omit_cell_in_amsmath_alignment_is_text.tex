@@ -1,0 +1,23 @@
+% witness: 2306.14299 (an \omit cell of an amsmath alignment holding $...$), 1811.08044 (split; pdflatex-discounted)
+% oracle:  pdflatex 0 errors; the \omit cells are text holding an inline formula; "min f0(x)", "x y2 z"
+% expect:  0 errors; tex.web §789: \omit drops the u/v template, so an amsmath cell (whose math is its template's $)
+%          is restricted horizontal: its material is boxed as text (`template_math`, tex_tables.rs); a \multicolumn
+%          cell boxes its body once
+% status:  GREEN (batch 68z, perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text); before 68z 1 Error
+%          "Script ^ can only appear in math mode" (the cell stayed math, its $ opened text)
+\documentclass{article}
+\usepackage{amsmath,array}
+\begin{document}
+\begin{equation}
+\begin{split}
+a &= b \\
+& \omit \hfill $\qquad (-1)^{n} c$,
+\end{split}
+\end{equation}
+\begin{equation}
+\begin{aligned}
+&\min &\multicolumn{2}{l}{$f_0(x)$}\\
+&x &\omit $y^2$ & z
+\end{aligned}
+\end{equation}
+\end{document}

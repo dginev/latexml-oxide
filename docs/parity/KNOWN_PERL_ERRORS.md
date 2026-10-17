@@ -13081,7 +13081,14 @@ math. `\multicolumn` is `\multispan` (`\omit`): an amsmath alignment's cells are
 (1808.07192 `&\min &\multicolumn{2}{l}{$f_0(x)$}` in `aligned`). An array's `\multicolumn` re-inserts its `$` (latex.ltx
 `\@arrayclassz`), so its cells stay math. Minimal trigger: `\begin{aligned}&\multicolumn{2}{l}{$f_0$}\end{aligned}` with
 array.sty. Fixed in Rust (tex_tables.rs `\lx@alignment@multicolumn` boxes the body as text in an alignment marked
-`template_math` by amsmath_sty.rs; repro alignment-bindings/multicolumn_in_aligned_is_text).
+`template_math` by amsmath_sty.rs; repro alignment-bindings/multicolumn_in_aligned_is_text). A plain `\omit` cell the
+same (tex.web §789; `& \omit \hfill $\qquad (-1)^{n} c$` in `split`, Perl 3 errors on the repro, 2306.14299): fixed in
+Rust (68z) — the cell-head peek marks the omitted cell of a `template_math` alignment (`Cell::omit_text_box`) and its
+material is boxed as text between the before/after parts (`Alignment::get_column_before`/`get_column_after`); a
+`\multicolumn` cell, which boxes its body itself, consumes its own `\omit`s. Repro
+kernel-alignment/omit_cell_in_amsmath_alignment_is_text; guard
+`perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`. Open: an `\omit` cell of an `array` is text in
+TeX too (its `$` is the template's), still math here.
 
 ## 663. A footnote's argument ends the paragraph around it (as measured)
 

@@ -2642,6 +2642,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   robust (`protected`) as aa.cls:639 `\DeclareRobustCommand` makes it (aa_support_sty.rs; Perl
   aa_support.sty.ltxml:247 plain): witness 0801.2767, repro class-bindings/aa_ion_before_tab, guard
   `perfect_kernel_batch68z::aa_ion_is_robust_at_a_cell_head`.
+  (5) C4: an `\omit` cell of an amsmath alignment is text, as `\multicolumn`'s since 66l (tex.web §789; the
+  template's `$` is dropped): tex_tables.rs marks it (`Cell::omit_text_box`) and alignment.rs boxes its material as
+  `\hbox{…}` (KNOWN_PERL_ERRORS #662). Witness 2306.14299 (1811.08044 pdflatex-discounted). Repro
+  kernel-alignment/omit_cell_in_amsmath_alignment_is_text; guard
+  `perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`. Open: an `array`'s `\omit` cell (text in TeX).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
