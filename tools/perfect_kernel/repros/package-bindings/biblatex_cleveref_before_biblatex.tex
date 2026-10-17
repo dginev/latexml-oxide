@@ -1,0 +1,17 @@
+% witness: 2108.12939, 2403.13692, 2501.07466, 2401.13438, 2211.04287, 2307.04997, 2210.03396, 2112.07048,
+%          2508.02914, 2112.15046, 2106.15390, 1811.07125 (cleveref before biblatex); biblatex.sty:38-44 (url, no
+%          hyperref), cleveref.sty:2370-2376
+% oracle:  pdflatex 0 errors; "See section 1." (cleveref's name), the URL typeset by url.sty
+% engines: Perl (ar5iv-bindings biblatex.sty.ltxml:45 loads hyperref) and rust 67int18b = 1 error
+%          ("cleveref must be loaded after hyperref")
+% expect:  0 errors; hyperref not loaded; \url works
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{cleveref}
+\usepackage{biblatex}
+\begin{document}
+\section{A}\label{s}
+\makeatletter
+See \cref{s}. At \url{https://example.org/a_b}. \@ifpackageloaded{hyperref}{HYPERREF}{NOHYPERREF}
+\end{document}

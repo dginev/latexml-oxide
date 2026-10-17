@@ -3130,7 +3130,8 @@ P_2 & 1 & 1 \\
 /// biblatex.sty defines its `\if<test>` commands as BRANCH-SELECTING
 /// macros (`\iffieldundef{f}{true}{false}`, :6205), not TeX conditionals;
 /// plus the round-3 declarations (`\DeclareLabeltitle`, `\letbibmacro`,
-/// `\uspunctuation`, `\footfullcite`).
+/// `\uspunctuation`, `\footfullcite`). `\ifhyperref` takes its false branch: biblatex loads no hyperref
+/// (biblatex.sty:38-44; batch 70a), and pdflatex prints `[N]` too.
 #[test]
 fn biblatex_tests_are_branch_macros() {
   let tex = r"\documentclass{article}
@@ -3150,7 +3151,7 @@ fn biblatex_tests_are_branch_macros() {
 ";
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("[U]\n[N]\n[N]\n[A]\n[H]"), "{xml}");
+  assert!(xml.contains("[U]\n[N]\n[N]\n[A]\n[N]"), "{xml}");
 }
 
 /// biditools.sty:792 `\bidi@ifscanable` rebuilds a macro from its

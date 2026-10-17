@@ -1299,10 +1299,23 @@ LoadDefinitions!({
     }
   }
 
-  // Perl L24-30: dependencies. (`#RequirePackage('natbib')` etc commented out in Perl.)
-  RequirePackage!("hyperref");
-  RequirePackage!("ifthen");
+  // biblatex.sty:38-44 `\RequirePackage`s pdftexcmds, etoolbox, keyval, kvoptions, logreq, ifthen and url — never
+  // hyperref. The Perl binding's `RequirePackage('hyperref')` "for url and href" (ar5iv-bindings
+  // biblatex.sty.ltxml:45, KNOWN_PERL_ERRORS #915) loaded it behind the author's back: a cleveref loaded before
+  // biblatex then failed its own begin-document check (cleveref.sty:2370-2376 "cleveref must be loaded after
+  // hyperref"; 2108.12939, 2403.13692, 2501.07466, 2401.13438, 2211.04287, 2307.04997, 2210.03396, 2112.07048,
+  // 2508.02914, 2112.15046, 2106.15390, 1811.07125). The binding's own links need no hyperref: citations are the
+  // kernel's `ltx:cite`/`ltx:bibref`, and a bibliography entry's url/doi/eprint the BibTeX pool's `ltx:bib-url`/
+  // `ltx:bib-identifier` constructors (bibtex.rs `\bib@field@default@url`/`@doi`); a raw-loaded style asks
+  // `\ifhyperref`, answered from the loaded package below. logreq is not loaded (its `.run.xml` request file is
+  // for biber; Perl comments it out too). Guard: `perfect_kernel_batch70a::biblatex_loads_url_not_hyperref`.
+  RequirePackage!("pdftexcmds");
   RequirePackage!("etoolbox");
+  RequirePackage!("keyval");
+  RequirePackage!("kvoptions");
+  RequirePackage!("ifthen");
+  RequirePackage!("url");
+  // Perl L24-30 (`#RequirePackage('natbib')` etc commented out in Perl).
   RequirePackage!("babel_support");
   // biblatex.sty:16305-16339: under the default UTF-8 input encoding,
   // `casechanger=auto` selects the expl3 case changer, whose
