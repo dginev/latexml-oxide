@@ -4,7 +4,8 @@
 //! Item 2 — a column end goes back after the v-part as the token read, not its canonical `\cr` (Perl Gullet.pm:310;
 //! hep-ph9612244). Item 3 — the cell-head peek stops at a macro that peeks by `\futurelet` (a `\newcommand` optional
 //! argument; tex.web §785/§791), diagbox's `\diagbox` among them (2406.11917); aa's robust `\ion` (0801.2767).
-//! Item 5 — an `\omit` cell of an amsmath alignment is text (tex.web §789; 2306.14299).
+//! Item 5 — an `\omit` cell of an amsmath alignment is text (tex.web §789; 2306.14299). Item 6 — a first-column
+//! `\lefteqn` followed by more of its eqnarray cell is latex.ltx:15800's `\rlap` in the cell's math (2411.17699).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{
@@ -182,4 +183,36 @@ fn an_omit_cell_of_an_amsmath_alignment_is_text() {
     "{xml}"
   );
   assert_eq!(xml.matches(r#"\hbox{\hbox"#).count(), 0, "{xml}");
+}
+
+/// alignment/lefteqn_then_script: `\lefteqn{\widehat G}\hphantom{G}^{(r)} &=&` keeps the cell's math, the hat
+/// overprinting (pdflatex 0 errors); `\lefteqn{a+b} \nonumber \\` and `\lefteqn{e+f}\hspace{1cm} \\` are still the
+/// one left-aligned span (65o). Before 68z
+/// the first was 1 Error "Script ^ can only appear in math mode".
+#[test]
+fn a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/alignment/lefteqn_then_script.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let xml = normalize_markup(&xml);
+  assert!(
+    xml.contains(r#"<td align="right"><Math mode="inline" tex="\displaystyle\hbox to0.0pt{$\displaystyle\widehat{G}$\hss}\hphantom{G}^{(r)}" text="(widehat@(G)) ^ r""#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(
+      r#"<td align="left" colspan="3"><Math mode="inline" tex="\displaystyle a+b" text="a + b""#
+    ),
+    "{xml}"
+  );
+  // followed by spacing only, still the span (2210.09695's `\lefteqn{…}\hspace{1cm}\\`)
+  assert!(
+    xml.contains(
+      r#"<td align="left" colspan="3"><Math mode="inline" tex="\displaystyle e+f" text="e + f""#
+    ),
+    "{xml}"
+  );
 }

@@ -2647,6 +2647,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\hbox{…}` (KNOWN_PERL_ERRORS #662). Witness 2306.14299 (1811.08044 pdflatex-discounted). Repro
   kernel-alignment/omit_cell_in_amsmath_alignment_is_text; guard
   `perfect_kernel_batch68z::an_omit_cell_of_an_amsmath_alignment_is_text`. Open: an `array`'s `\omit` cell (text in TeX).
+  (6) C5: a first-column `\lefteqn` followed by more of its eqnarray cell is latex.ltx:15800's `\rlap{$\displaystyle
+  #1$}` inside the cell's math, still overprinting (sect07.rs `\lefteqn`; OXIDIZED_DESIGN_DIVERGENCES #556 extended):
+  the 65o `\multicolumn{1}{l}` cell is text, so `\lefteqn{\widehat G}\hphantom{G}^{(r)}` erred "Script ^"; a
+  `\lefteqn` that is the whole cell (or followed only by spacing, 2210.09695), and any in an `array`/amsmath, keep 65o's
+  span (its goldens unchanged). Witness 2411.17699. Repro alignment/lefteqn_then_script; guard
+  `perfect_kernel_batch68z::a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

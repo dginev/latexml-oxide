@@ -288,20 +288,7 @@ pub(crate) fn load() -> Result<()> {
   // cell starts, where the current column is the one before: the first column follows column 0. Perl's `< 2` also
   // took a `&\lefteqn{…}` for the first column, and its `\multicolumn{3}` from the second column overran the eqnarray
   // template (2205.04522, 2411.04274; KNOWN_PERL_ERRORS #547).
-  DefConditional!("\\if@in@firstcolumn", {
-    match lookup_alignment() {
-      Some(alignment_digested) => {
-        if let Some(alignment_cell) = alignment_digested.alignment_cell() {
-          let alignment = alignment_cell.borrow();
-          !alignment.is_in_row()
-            || (!alignment.is_in_column() && alignment.current_column_number() < 1)
-        } else {
-          false
-        }
-      },
-      _ => false,
-    }
-  });
+  DefConditional!("\\if@in@firstcolumn", { in_first_column() });
 
   // Perl: latex_constructs.pool.ltxml lines 2251-2254 (2194-2197 in 0.8.8). latex.ltx:15800 is
   // `\rlap{$\displaystyle #1$}`: in the first column the `\lefteqn` is one cell, and the author's `&` after it
@@ -311,12 +298,74 @@ pub(crate) fn load() -> Result<()> {
   // it, so the HTML keeps Perl's one cell over an empty row, and a cell with content keeps its column
   // (`\lx@alignment@cell@overprint`, OXIDIZED_DESIGN_DIVERGENCES #556). Elsewhere, an `\rlap` in its column (2205.04522,
   // 2411.04274; KNOWN_PERL_ERRORS #547).
-  DefMacro!(
-    "\\lefteqn{}",
-    "\\ifx.#1.\\else\
-      \\if@in@firstcolumn\\multicolumn{1}{l}{\\lx@alignment@cell@overprint{ltx_eqn_lefteqn}\\lx@begin@inline@math \\displaystyle #1\\lx@end@inline@math\\mbox{}}\
-      \\else\\rlap{\\lx@begin@inline@math\\displaystyle #1\\lx@end@inline@math}\\fi\\fi"
-  );
+  // A first-column `\lefteqn` followed by more of its cell (`\lefteqn{\widehat G}\hphantom{G}^{(r)} &=&`, 2411.17699)
+  // is latex.ltx:15800 as written, `\rlap{$\displaystyle #1$}` inside the cell's math, overprinting: the `\multicolumn`
+  // cell of a text alignment (`eqnarray`, whose `$` is its template's) is text, so a script after it erred ("Script ^
+  // can only appear in math mode"). The look-ahead skips spaces and reads one token: a tab, a row end,
+  // `\nonumber`/`\notag`/`\label`, the environment's `\end` or a spacing command leave the `\lefteqn` the whole
+  // cell. Guard `perfect_kernel_batch68z::a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math`.
+  DefMacro!("\\lefteqn{}", sub[(arg)] {
+    let arg = arg.unlist();
+    if arg.is_empty() {
+      return Ok(Tokens!());
+    }
+    let math = |out: &mut Vec<Token>| {
+      out.extend([T_CS!("\\lx@begin@inline@math"), T_CS!("\\displaystyle")]);
+      out.extend(arg.iter().copied());
+      out.push(T_CS!("\\lx@end@inline@math"));
+    };
+    let mut out = Vec::new();
+    if !in_first_column() {
+      out.extend([T_CS!("\\rlap"), T_BEGIN!()]);
+      math(&mut out);
+      out.push(T_END!());
+      return Ok(Tokens::new(out));
+    }
+    let mut spaces = Vec::new();
+    let next = loop {
+      match peek_token()? {
+        Some(t) if t.get_catcode() == Catcode::SPACE => spaces.push(read_token()?.unwrap()),
+        other => break other,
+      }
+    };
+    unread_vec(spaces);
+    // Only where the first column's math is its template's `$` (eqnarray's `\hfil$\displaystyle##$`) does the
+    // `\multicolumn` leave the rest of the cell in text: an `array`'s span re-inserts its `$` and an amsmath cell boxes
+    // only the span's body (1409.4633's `array{ll}` keeps the span).
+    let template_dollar = lookup_alignment()
+      .and_then(|alignment| {
+        alignment.alignment_cell().map(|cell| {
+          cell.borrow().get_template().get_columns().first().is_some_and(|column| {
+            column
+              .before
+              .as_ref()
+              .is_some_and(|before| before.unlist_ref().iter().any(|t| t.get_catcode() == Catcode::MATH))
+          })
+        })
+      })
+      .unwrap_or(false);
+    let whole_cell = !template_dollar || next.is_none_or(|t| {
+      is_column_end(&t).is_some()
+        || [
+          "\\\\", "\\nonumber", "\\notag", "\\label", "\\end", "\\tabularnewline",
+          // spacing, which prints nothing the cell's math would hold (`\lefteqn{…}\hspace{1cm}\\`, 2210.09695)
+          "\\hspace", "\\hskip", "\\kern", "\\quad", "\\qquad", "\\,", "\\;", "\\:", "\\!", "\\ ",
+          "\\enspace", "\\hfill", "\\hfil",
+        ]
+        .iter()
+        .any(|name| t == T_CS!(*name))
+    });
+    if whole_cell {
+      out.extend(TokenizeInternal!(r"\multicolumn{1}{l}{\lx@alignment@cell@overprint{ltx_eqn_lefteqn}").unlist());
+      math(&mut out);
+      out.extend(TokenizeInternal!(r"\mbox{}}").unlist());
+    } else {
+      out.extend(TokenizeInternal!(r"\lx@alignment@cell@overprint{ltx_eqn_lefteqn}\rlap{").unlist());
+      math(&mut out);
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
+  });
 
   // Perl: latex_constructs.pool.ltxml lines 2258-2259
   Let!("\\displ@y", "\\displaystyle");
@@ -605,4 +654,20 @@ pub(crate) fn load() -> Result<()> {
     font => {family => "serif", series => "medium", shape => "upright"});
 
   Ok(())
+}
+
+/// `\if@in@firstcolumn`: read in the look-ahead before a cell starts, where the current column is the one before.
+fn in_first_column() -> bool {
+  match lookup_alignment() {
+    Some(alignment_digested) => {
+      if let Some(alignment_cell) = alignment_digested.alignment_cell() {
+        let alignment = alignment_cell.borrow();
+        !alignment.is_in_row()
+          || (!alignment.is_in_column() && alignment.current_column_number() < 1)
+      } else {
+        false
+      }
+    },
+    _ => false,
+  }
 }

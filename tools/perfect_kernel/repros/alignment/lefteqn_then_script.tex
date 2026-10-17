@@ -1,0 +1,16 @@
+% witness: 2411.17699 (\def\whchgirf#1{\lefteqn{\widehat \chg}\hphantom{\chg}^{(#1)\rm{ref}}} in an eqnarray first cell); rc_struct2 C5
+% oracle:  pdflatex 0 errors (the hat over G, overprinted, then the script on the phantom G)
+% expect:  0 errors; latex.ltx:15800 \rlap{$\displaystyle#1$} inside the cell's math when more of the cell follows;
+%          a \lefteqn that is the whole cell (or followed by spacing, 2210.09695) keeps 65o's one left-aligned span
+% status:  GREEN (batch 68z, perfect_kernel_batch68z::a_first_column_lefteqn_keeps_the_rest_of_its_cell_in_math);
+%          before 68z 1 Error "Script ^ can only appear in math mode" (the \multicolumn cell was text)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+\lefteqn{\widehat G}\hphantom{G}^{(r)} &=& G^{(r)} + c \\
+\lefteqn{a+b} \nonumber \\
+&=& d \\
+\lefteqn{e+f}\hspace{1cm} \\
+&=& g
+\end{eqnarray}
+\end{document}

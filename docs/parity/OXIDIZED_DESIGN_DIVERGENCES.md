@@ -16952,6 +16952,12 @@ erroring witnesses go to 0 errors (0707.3929, 0801.4655, 0806.1442, 1103.1986, 1
 1706.08792, 1806.07473, 1903.02286, 2201.13255, astro-ph0111262, astro-ph0203455, cond-mat0209129, cond-mat9710308,
 hep-lat9711012, math0102211, math0407427, math9806075, 2411.04274, 2609.03020; 2205.04522 stays at 0).
 
+The `\multicolumn` cell of an eqnarray is text (its `$` is the template's): where more of the cell follows the
+`\lefteqn` (`\lefteqn{\widehat G}\hphantom{G}^{(r)} &=&`, 2411.17699), the rest is math in TeX, so there the
+`\lefteqn` is latex.ltx's `\rlap{$\displaystyle #1$}` inside the cell's math, still overprinting (68z, sect07.rs: the
+look-ahead reads the next token past spaces; a tab, a row end, `\nonumber`/`\notag`/`\label`, `\end` or a spacing
+command such as `\hspace` (2210.09695) leave the `\lefteqn` the whole cell). An `array`'s or amsmath's span keeps the rest in math, so they keep the span.
+
 Residuals (RED repros): `\multicolumn{1}{l}` replaces column 1's template, so its `@{…}` material and `|` rules are
 lost, which TeX's `\rlap`, inside the template, keeps (alignment/lefteqn_overprint_keeps_template_material; Perl's
 `\multicolumn{3}` loses them too). An `\index` or anchor alone in the cell after the `\lefteqn` keeps its column but
