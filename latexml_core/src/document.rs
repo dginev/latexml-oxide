@@ -3768,7 +3768,10 @@ impl Document {
           // theorem ends the paragraph it meets (latex.ltx `\@trivlist`'s `\par`), so the auto-closable elements around
           // the point (the `ltx:p`, a font switch's `ltx:text`) close first, up to the outermost whose parent holds
           // the wrapper; a container that cannot auto-close (the note, a constructor's `ltx:text`) keeps it inside.
-          // Perl shares every one of these errors (same schema, no such autoOpen).
+          // Perl shares every one of these errors (same schema, no such autoOpen). Not inside a frontmatter
+          // container (`ltx:abstract`, `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`, `ltx:creator`, or
+          // anything in one): there the "isn't allowed" Error stands, as in Perl, until the frontmatter study is ruled
+          // on (main-session ruling 2026-10-17; guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`).
           // Witnesses 2406.11811, 2103.03402, 0806.0214, 2602.15784, 2301.10544, 1410.7242 (theorem in a quote),
           // 1412.2039, math0603642 (TOC in a quote), 2507.09788, 2307.10959, 2308.06338, 2410.15097, 0804.3724,
           // math0612590 (theorem in a footnote), 1310.0491 (an ltx:text). Guards
@@ -3778,7 +3781,7 @@ impl Document {
             chain:    &["ltx:inline-logical-block"],
             applies:  |_cur, qsym| matches!(qsym, "ltx:theorem" | "ltx:proof" | "ltx:TOC"),
             attrs:    &[],
-            holder:   |_| true,
+            holder:   outside_frontmatter_container,
             close_up: true,
           },
         ];
@@ -7620,6 +7623,31 @@ fn item_has_label(node: &Node) -> bool {
     .get_child_elements()
     .iter()
     .any(|child| get_node_qname(child) == pin!("ltx:tags"))
+}
+
+/// Whether neither `node` nor any of its ancestors is a frontmatter container (`ltx:abstract`, `ltx:acknowledgements`,
+/// `ltx:keywords`, `ltx:classification`, `ltx:creator`), which the theorem/proof/TOC bridge leaves alone
+/// (OXIDIZED_DESIGN_DIVERGENCES #689).
+fn outside_frontmatter_container(node: &Node) -> bool {
+  let mut cur = Some(node.clone());
+  while let Some(n) = cur {
+    if n.get_type() == Some(NodeType::ElementNode)
+      && with_node_qname(&n, |q| {
+        matches!(
+          q,
+          "ltx:abstract"
+            | "ltx:acknowledgements"
+            | "ltx:keywords"
+            | "ltx:classification"
+            | "ltx:creator"
+        )
+      })
+    {
+      return false;
+    }
+    cur = n.get_parent();
+  }
+  true
 }
 
 /// Whether `qname` is one of the sectioning units `\section`…`\subparagraph` open, by name (the auto-open bridges'

@@ -2601,6 +2601,22 @@ pub fn close_template_brace() -> bool {
     false
   }
 }
+/// Whether `token`, read by the digestion loop, is a `}` — or a control sequence `\let` to one, `\egroup` — that
+/// closes the template's `{` ([`close_template_brace`]); TeX makes no difference between them (tex.web §1067
+/// `right_brace` is the command, whatever the token), so `$\displaystyle{a\egroup}$` closes the template's `{` and
+/// meets the v-part's `}` at the math shift: "Extra }, or forgotten $", deleted (latexml_engine tex_box.rs
+/// `\lx@template@egroup`). The common case — no mark live — costs one value lookup per control sequence.
+fn closes_template_brace(token: &Token) -> bool {
+  match token.get_catcode() {
+    Catcode::END => close_template_brace(),
+    cc if cc.is_active_or_cs() => {
+      lookup_bool_sym(crate::pin!("lx@template@brace@open"))
+        && gullet::is_right_brace(token)
+        && close_template_brace()
+    },
+    _ => false,
+  }
+}
 /// The `\endgroup` twin of [`OWED_BRACES`].
 pub const OWED_ENDGROUPS: &str = "lx@owed@endgroups";
 
@@ -3315,7 +3331,7 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     if delete_extra_brace(&token)? {
       continue;
     }
-    if token.get_catcode() == Catcode::END && close_template_brace() {
+    if closes_template_brace(&token) {
       continue;
     }
     // A DefEnvironment's own end (`\end{X}`, the constructor that pops the environment's frame; no TeX-level `\endX`

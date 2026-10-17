@@ -8,6 +8,8 @@
 //! Item 3 (U1) — an eqnarray cell's braces balance across its template's own `{##}` (latex.ltx:15760-15763; 2207.06932
 //! 1912.10594), and an amsmath `{aligned}` cell's across amsmath's (amsmath.sty:1483). Item 4 — mathtools' `\clap` is
 //! the kernel's box (latex.ltx:16409), so `\clap{$…$}` in math holds a formula (2305.03559).
+//! Round 2 (the 69c review) — the P1 bridge stays out of frontmatter containers (a theorem in an abstract keeps its
+//! Error), and an `\egroup` closes a template's `{` as a `}` does (`\lx@template@egroup`'s TeX error).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -179,15 +181,15 @@ fn amsmath_aligned_cell_braces_balance_across_the_template() {
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  // The `tex` keeps the cell's `}` as written; the superscript runs to the cell end.
-  assert!(xml.contains(r#"tex="\displaystyle u=}v+w^{{z.}""#), "{xml}");
+  // The `tex` keeps the cell's `}` as written; the superscript runs to the cell end, the template's `\hfil` outside it.
+  assert_element(
+    &xml,
+    "equation",
+    &["xml:id=\"S0.Ex1X\""],
+    r#"<equation xml:id="S0.Ex1X"><MathFork><Math tex="\displaystyle u=}v+w^{{z.}" text="u = v + w ^ (list@(z))" xml:id="S0.Ex1X.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMTok font="italic" role="UNKNOWN">w</XMTok><XMDual><XMApp><XMTok meaning="list"/><XMRef idref="S0.Ex1X.m1.1"/></XMApp><XMWrap><XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S0.Ex1X.m1.1">z</XMTok><XMTok fontsize="70%" role="PERIOD">.</XMTok></XMWrap></XMDual></XMApp></XMApp></XMApp></XMath></Math><MathBranch><td align="right"><Math tex="\displaystyle u" text="u" xml:id="S0.Ex1X.m2"><XMath><XMTok font="italic" role="UNKNOWN">u</XMTok></XMath></Math></td><td align="left"><Math tex="\displaystyle=}v+w^{{z.}" text="absent = v + w ^ (list@(z))" xml:id="S0.Ex1X.m3"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">v</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post6"/><XMTok font="italic" role="UNKNOWN">w</XMTok><XMDual><XMApp><XMTok meaning="list"/><XMRef idref="S0.Ex1X.m3.1"/></XMApp><XMWrap><XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S0.Ex1X.m3.1">z</XMTok><XMTok fontsize="70%" role="PERIOD">.</XMTok></XMWrap></XMDual></XMApp></XMApp></XMApp></XMath></Math></td></MathBranch></MathFork></equation>"#,
+  );
   assert!(
     xml.contains(r#"tex="\displaystyle G=}\det(h)-e^{{\frac{a}{2}g_{t}.}""#),
-    "{xml}"
-  );
-  assert_eq!(
-    xml.matches("<XMTok role=\"SUPERSCRIPTOP\"").count(),
-    4,
     "{xml}"
   );
   assert!(!xml.contains(r"\hfil"), "{xml}");
@@ -216,7 +218,8 @@ fn dollar_in_a_braced_template_cell_ends_its_formula() {
 }
 
 /// package-bindings/mathtools_clap_is_a_box_in_math: `\[ \clap{$a$} x \]` and 2305.03559's `\fillwidthof[c]{…}{…}`
-/// (`\mathchoice{…\clap{$…$}…}`) at an `align*` cell head (pdflatex 0 errors). Before 69c: 13 Errors.
+/// (`\mathchoice{…\clap{$…$}…}`) at an `align*` cell head (pdflatex 0 errors). Before 69c: 13 Errors. The kernel's
+/// `\clap` (latex.ltx:16409) serves: mathtools.sty:1539 only provides it.
 #[test]
 fn clap_is_a_box_in_math() {
   let (stderr, xml) = convert_with(
@@ -226,13 +229,90 @@ fn clap_is_a_box_in_math() {
     None,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // The `\mathchoice` row's formula is ambiguous to the math grammar: one "unparsed_math" Warning.
-  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_element(
     &xml,
     "equation",
     &["xml:id=\"S0.Ex1\""],
     r#"<equation xml:id="S0.Ex1"><Math mode="display" tex="\hbox to0.0pt{\hss$a$\hss}x" text="a * x" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN" width="0.0pt">a</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math></equation>"#,
   );
-  assert!(xml.contains("<equationgroup"), "{xml}");
+  // The `\mathchoice` row: its `\clap{$…$}` a zero-width box holding the formula (the cell's text also holds the
+  // `\hspace*`s' spaces, which the whole-element comparison would normalize away).
+  assert_element(
+    &xml,
+    "text",
+    &["class=\"ltx_markedasmath\""],
+    r#"<text class="ltx_markedasmath" width="0.0pt"><Math mode="inline" tex="{\displaystyle c}" text="c" xml:id="S0.Ex2.m2.m1"><XMath><XMTok font="italic" role="UNKNOWN">c</XMTok></XMath></Math></text>"#,
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &["xml:id=\"S0.Ex2.m3\""],
+    r#"<Math tex="\displaystyle x\leq{}\mbox{c}" text="x &lt;= c" xml:id="S0.Ex2.m3"><XMath><XMApp><XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok class="ltx_markedasmath" font="italic" role="UNKNOWN" width="0.0pt">c</XMTok></XMApp></XMath></Math>"#,
+  );
+}
+
+/// block-model/theorem_in_abstract_is_not_bridged (CONTROL): a theorem in `{abstract}` and one in a quote in it
+/// (pdflatex 0 errors) keep base's and Perl's 2 Errors "<ltx:theorem> isn't allowed": the P1 bridge stays out of the
+/// frontmatter containers until the frontmatter study is ruled on (main-session ruling 2026-10-17; OXIDIZED_DESIGN #689).
+#[test]
+fn theorem_in_abstract_is_not_bridged() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/theorem_in_abstract_is_not_bridged.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(
+    stderr
+      .matches("<ltx:theorem> isn't allowed in <ltx:abstract>")
+      .count(),
+    1,
+    "{stderr}"
+  );
+  assert_eq!(
+    stderr
+      .matches("<ltx:theorem> isn't allowed in <ltx:quote>")
+      .count(),
+    1,
+    "{stderr}"
+  );
+  assert!(!xml.contains("inline-logical-block"), "{xml}");
+  assert_element(
+    &xml,
+    "abstract",
+    &[],
+    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We show the following.</p><theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag><text font="bold">.</text></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">A statement.</text></p></para></theorem><quote><theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem2"><tags><tag>Theorem 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Theorem 2</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 2</text></tag><text font="bold">.</text></title><para xml:id="Thmtheorem2.p1"><p><text font="italic">Quoted.</text></p></para></theorem></quote></abstract>"#,
+  );
+}
+
+/// kernel-alignment/egroup_closing_a_template_brace_errs_once: `a\egroup &=& b` in `{eqnarray}` — the `\egroup` closes
+/// the template's `{` and the v-part's `}` meets the cell's math shift: TeX's one "Extra }, or forgotten $" (pdflatex 1
+/// error), `\lx@template@egroup`'s error branch (tex_box.rs). Before 69c round 2: 17 Errors, the alignment unravelled.
+#[test]
+fn egroup_closing_a_template_brace_errs_once() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/egroup_closing_a_template_brace_errs_once.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(
+    stderr
+      .matches("The alignment template's } has no group left to close in the cell")
+      .count(),
+    1,
+    "{stderr}"
+  );
+  assert_eq!(xml.matches("<equation ").count(), 2, "{xml}");
+  assert_element(
+    &xml,
+    "equation",
+    &["xml:id=\"S0.E1\""],
+    r#"<equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><MathFork><Math tex="\displaystyle a=b" text="a = b" xml:id="S0.E1.m4"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math><MathBranch><tr><td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E1.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.E1.m2"><XMath><XMTok meaning="equals" role="RELOP">=</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle b" text="b" xml:id="S0.E1.m3"><XMath><XMTok font="italic" role="UNKNOWN">b</XMTok></XMath></Math></td></tr></MathBranch></MathFork></equation>"#,
+  );
 }

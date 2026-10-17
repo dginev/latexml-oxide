@@ -149,7 +149,9 @@ pub(crate) fn load() -> Result<()> {
     mode => "restricted_horizontal"
   );
 
-  DefMacro!("\\[", "\\lx@begin@display@math");
+  // Perl latex_constructs.pool.ltxml:2070, followed by the display hook (latex_constructs_rust_only.rs; amsmath's
+  // `\if@fleqn` form, amsmath_sty.rs). Guard `perfect_kernel_batch69c::dollar_in_an_amsmath_fleqn_display_is_text`.
+  DefMacro!("\\[", "\\lx@begin@display@math\\lx@mathdisplay@hook");
   DefMacro!("\\]", "\\lx@end@display@math");
   DefMacro!("\\(", "\\lx@begin@inline@math");
   DefMacro!("\\)", "\\lx@end@inline@math");

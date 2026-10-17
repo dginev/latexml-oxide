@@ -429,8 +429,9 @@ fn amstex_row_tag_cell_ends_at_par_and_extra_brace() {
 /// are. A `\par` inside a group of the tag that closes before the row's end stays in the text (`\tag{{3\par}5\\`); a
 /// `\par` in a group still open there is TeX's runaway, and the input goes on from that `\par` (`\tag{5\par 6\\`).
 /// The scan stops at the first such end at any depth (`\tag{{5\\ 6}\par`): the `}` after the row's end is the
-/// next row's, where a stray `}` closes the display, as without a tag (`$$\align a&=b\\ 6} c&=d\endalign$$`, one
-/// error). r3 read the rest of the document into the tag or to the file's end; r4 read past the alignment's end when
+/// next row's, where it closes the `{` of amsmath's cell template (`$\displaystyle{##}$`, amstex.tex's `\align@`
+/// preamble the same; 69c KNOWN_PERL_ERRORS #908), so both rows are kept — before 69c it met the display, "Attempt to
+/// close a group that switched to mode display_math", and the rows were lost. r3 read the rest of the document into the tag or to the file's end; r4 read past the alignment's end when
 /// an enclosing group's `}` came first, and kept a `\par` or a row end recorded in a nested group that closed. pdftex
 /// errs on each shape and recovers none ("Paragraph ended before \align was complete" and the display-math errors; the
 /// `\vbox` one stops with "You can't use `\end' in internal vertical mode", no PDF). OXIDIZED_DESIGN_DIVERGENCES
@@ -508,14 +509,6 @@ fn amstex_row_tag_open_group_stops_at_the_row_end() {
       vec![("id2", "Later paragraph."), ("id3", "Last paragraph.")],
       2,
     ),
-    (
-      "$$\\align a&=b\\tag{{5\\\\ 6}\\par c&=d\\endalign$$".to_string(),
-      later,
-      vec![(MISSING, 2), (STRAY, 1)],
-      None,
-      vec![("id2", "Later paragraph."), ("id3", "Last paragraph.")],
-      1,
-    ),
   ];
   for (body, end, errors, tagged, paras, equations) in cases {
     let tex = format!("\\input amstex\n\\input amsppt.sty\n\\document\n{body}{end}");
@@ -558,6 +551,36 @@ fn amstex_row_tag_open_group_stops_at_the_row_end() {
       );
     }
     assert!(xml.trim_end().ends_with("</document>"), "{body}\n{xml}");
+  }
+  // The `}` after the row's end closes the next row's cell-template `{` (69c): both rows kept, the tag on the first.
+  let body = "$$\\align a&=b\\tag{{5\\\\ 6}\\par c&=d\\endalign$$";
+  let (log, xml) = convert_counted(&format!(
+    "\\input amstex\n\\input amsppt.sty\n\\document\n{body}{later}"
+  ));
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (2, 0),
+    "{body}\n{log}"
+  );
+  assert_eq!(log.matches(MISSING).count(), 2, "{body}\n{log}");
+  assert_eq!(log.matches(STRAY).count(), 0, "{body}\n{log}");
+  assert_tags_on(&xml, "id1.1.1", &tags("5"));
+  assert!(
+    equation(&xml, "id1.1.1").contains("<Math tex=\"\\displaystyle a=b\""),
+    "{xml}"
+  );
+  assert!(
+    equation(&xml, "id1.1.2").contains("<Math tex=\"\\displaystyle{\\displaystyle 6}\\par c=d\""),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<tags>").count(), 1, "{xml}");
+  assert_eq!(xml.matches("<equation ").count(), 2, "{xml}");
+  for (id, text) in [("id2", "Later paragraph."), ("id3", "Last paragraph.")] {
+    assert_eq!(
+      element(&xml, &format!("<para xml:id=\"{id}\">"), "</para>"),
+      para(id, text),
+      "{body}\n{xml}"
+    );
   }
   // the enclosing group survives the tag: `inside` is in it, `after.` is not
   let (_, xml) = convert_counted(&format!(

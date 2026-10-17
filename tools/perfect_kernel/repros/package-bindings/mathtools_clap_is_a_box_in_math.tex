@@ -6,7 +6,9 @@
 % engines: rust 67int18b = 13 ("Missing $ closing display math" ×2, "Attempt to end mode math" ×4, …; the alignment's
 %   rows mangled), perl = 2 (mathtools.sty.ltxml:98 `DefConstructor('\clap {}', "#1")`, KNOWN_PERL_ERRORS #909)
 % expect:  0 errors; `\clap{$a$}` an `\hbox to 0pt` holding the formula
-% status:  RED (67int18b) -> GREEN (69c: mathtools_sty.rs `\clap` = `\hbox to 0pt{\hss#1\hss}`)
+% status:  RED (67int18b) -> GREEN (69c: mathtools_sty.rs `\clap` provide-only, as mathtools.sty:1539
+%   `\providecommand*`, so the kernel's box serves; the 2305.03559 row without its `+ d`, whose formula was
+%   ambiguous to the math grammar — an unrelated "unparsed_math" Warning)
 \documentclass{article}
 \usepackage{amsmath,mathtools}
 \makeatletter
@@ -21,7 +23,7 @@
 \begin{document}
 \[ \clap{$a$} x \]
 \begin{align*}
-x \leq{} & \fillwidthof[c]{a+b}{c} + d \\
+x \leq{} & \fillwidthof[c]{a+b}{c} \\
 & e
 \end{align*}
 \end{document}

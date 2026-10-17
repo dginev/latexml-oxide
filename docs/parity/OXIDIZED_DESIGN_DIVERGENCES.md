@@ -17357,7 +17357,7 @@ row's tag cell without an argument (`\def\tag{\global\tag@true…&&}` in `\align
 | `{\it … $$\align a&=b\tag{5\\ c&=d\endalign$$ …}` | 3 errors, as the row above; the alignment is lost | 1 error, as the row above; the `{\it` group and its text after the display kept |
 | `\vbox{… $$\align a&=b\tag{5\\ c&=d\endalign$$ …}` | 4 errors (the same three, then "You can't use `\end' in internal vertical mode"), then Emergency stop; Fatal, no PDF | 1 error, as the row above; the `\vbox` and its text kept |
 | `a&=b\tag{{3\par}5\\ c&=d` | 9 errors, as `\tag{3\par}\\` | 1 error, as `\tag{5\\`; the tag is "(35)" |
-| `a&=b\tag{{5\\ 6}\par c&=d` | 7 errors (as `\tag 4\par\\`, less "Invalid use of \\"); the alignment is lost | 3 errors: "Missing } inserted …" twice, then the `}` after the row's end closes the display, as without a tag (`$$\align a&=b\\ 6} c&=d\endalign$$`, 1 error); the alignment is lost |
+| `a&=b\tag{{5\\ 6}\par c&=d` | 7 errors (as `\tag 4\par\\`, less "Invalid use of \\"); the alignment is lost | 2 errors: "Missing } inserted …" twice; the `}` after the row's end closes the next row's cell-template `{` (`$\displaystyle{##}$`, KNOWN_PERL_ERRORS #908, 69c), so both rows are kept, "(5)" on the first (before 69c: 3, that `}` closing the display, the alignment lost) |
 | `a&=b\\ c&=d\tag{5 e` and `\enddocument`, no `\endalign` | 3 errors ("Forbidden control sequence found while scanning use of \align" at the `\outer` `\enddocument`, amsppt.sty:1091; "Missing $ inserted", "Display math should end with $$"); the alignment is lost | 1 error ("Missing } inserted …"); the document ends; the open row's last cells are dropped, with or without a tag (RED `amstex/amstex_align_unclosed_at_enddocument`) |
 
 On rows 1-3 and 5-10 TeX's errors are not `\tag`'s: they come from `\align` reading its body as a non-`\long` argument
@@ -18756,6 +18756,11 @@ unchanged and #271 stays as it is (main-session ruling P1, 2026-10-17). Like the
 every direct, auto-open and auto-close route is exhausted, so a theorem in a section, a list item or a minipage is
 unaffected, and the text that follows in the same container continues inside the block (it auto-closes with the
 container). Why not widen the quote model with Para.class: every container would need it (note, figure, text, td).
+Excluded: the frontmatter containers `ltx:abstract`, `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification` and
+`ltx:creator`, and anything inside one (document.rs `outside_frontmatter_container`) — a theorem or a TOC in an
+abstract is a frontmatter question (what the abstract's model should hold, whether the block belongs in the
+frontmatter at all) that the pending frontmatter study decides, so there the Perl/base "isn't allowed" Error stands
+(main-session ruling 2026-10-17; guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`).
 Witnesses 2406.11811 2103.03402 0806.0214 2602.15784 2301.10544 1410.7242 (theorem in a quote), 1412.2039 math0603642
 (TOC in a quote), 2507.09788 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 (theorem in a footnote), 1310.0491
 (an ltx:text). Repros block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards

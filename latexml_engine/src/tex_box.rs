@@ -874,8 +874,10 @@ LoadDefinitions!({
         // A well-formed cell: the pair closes.
         assign_value(TEMPLATE_BRACE_OPEN, false, None);
       } else {
-        // The cell's `}` closed the template's `{` and opened nothing after: this `}` meets the cell's formula
-        // (tex.web §1069 `extra_right_brace`), deleted.
+        // The cell's `}` closed the template's `{` and opened nothing after, the cell still ending here — an `\egroup`
+        // (`a\egroup &=& b`; a `}` token would leave the alignment count at −1, so its `&` would be no cell end): this
+        // `}` meets the cell's formula (tex.web §1069 `extra_right_brace`), deleted. Guard
+        // `perfect_kernel_batch69c::egroup_closing_a_template_brace_errs_once`.
         Error!(
           "unexpected",
           "}",

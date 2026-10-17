@@ -15025,6 +15025,12 @@ control paragraph-mode/dollar_in_display_math_still_errs; guards
 `perfect_kernel_batch69c::{dollar_in_an_amsmath_fleqn_display_is_text, dollar_in_proof_and_accents_hbox_math_is_text,
 dollar_in_a_display_still_errs}`. Not modelled: fleqn.clo's own `{equation}` without amsmath (fleqn.clo:44-53, also
 `\hbox{$…$}`), whose `\[` errs in pdflatex as it opens a group in its math.
+The hidden group adds one boxing level, so a script inside a proof.sty part or an under-accent numbers its `scriptpos`
+one higher (`post2` for `post1`; 2002.01960, 2510.11617, 1011.2307 — uniform, position only, no structure change).
+Quieter than pdflatex where pdflatex errs: a math-only command in a part's in-math text is accepted, as in Perl and
+before 69c — `\deduce{A}{$\cdots$}` (pdflatex 2 errors, here 0; before 1 and the inference dropped), `D $\wedge$ E` in
+`\infer` (pdflatex 6, here 0, the `∧` an `ltx:XMText`), `\R{$\mathbb R$}` in a `fleqn` display (pdflatex 8, here 1,
+before 4): text-mode math commands are not policed (Perl the same).
 
 ## 908. eqnarray's and amsmath's alignment templates lose their cell braces, so a cell's `{`/`}` that balance across them break the alignment
 
@@ -15045,7 +15051,15 @@ with `\lx@template@egroup` (tex_box.rs). The pair opens no group: the u-part mar
 (stomach.rs `close_template_brace`, from `egroup` and the body digestion loop), and the v-part closes a `{` the cell left
 open once the mark is closed — so a well-formed cell digests, nests, reverts and positions its scripts exactly as
 without the braces, and a cell that leaves another group or a mode open (math9805003's undefined `{Sb}`, a stray `$`'s
-in-math text) meets the cell's end as before. Witnesses 2207.06932, 1912.10594 (the rc_struct3 U1 sample,
+in-math text) meets the cell's end as before. An `\egroup` is a `}` here as in TeX (stomach.rs `closes_template_brace`):
+`a\egroup &=& b` closes the template's `{`, and the v-part's `}` meets the cell's math shift — TeX's one "Extra }, or
+forgotten $" (§1069), deleted (`\lx@template@egroup`; pdflatex 1 error, before 17; repro
+kernel-alignment/egroup_closing_a_template_brace_errs_once, guard
+`perfect_kernel_batch69c::egroup_closing_a_template_brace_errs_once`). Not so a cell whose braces do not balance
+across the template, a stray `}` token net: `a} &=& b`, `a &=& b}` leave the gullet's alignment count at −1, so the
+`&`/`\\` that follows is no cell end (tex.web §342) and the row unravels — pdflatex 1 and 11 errors (§1127
+`align_error`'s "Missing { inserted" before the `&`, which is not modelled), before 69c 2 and 2 (the cell's text lost),
+here 17 and 13 (the row's later cells lost). No arXiv paper in the A/B shows it. Witnesses 2207.06932, 1912.10594 (the rc_struct3 U1 sample,
 agent_reports/2026-10-17_rc_struct3.md). Guard `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
 
 amsmath_sty.rs's gather, align and aligned templates (aligned's serve `{split}`) end and start their cells the same way.
@@ -15073,6 +15087,7 @@ head: 68z's cell-head stop (KPE #880) expands it inside the cell's math, as TeX 
 `\mathchoice` branch and its `\clap{$…$}` met the bug (int18 A/B 144 → 163 errors; 67int17b expanded it before the
 cell's `$` and took the text branch).
 
-Rust (69c): mathtools_sty.rs `\clap` is `\hbox to 0pt{\hss#1\hss}`, as plain_base.rs's `\rlap`/`\llap` (Perl's own
-`\hbox to 0pt{#1\hss}`). 2305.03559: 163 → 90 errors (the rest are its clevethm.sty's `\setlist` keys, unrelated).
+Rust (69c): mathtools_sty.rs provides `\clap` only, as mathtools.sty:1539 `\providecommand*` does, so the kernel's box
+(latex.ltx:16409, from the format) serves; with none defined it is `\hbox to 0pt{\hss#1\hss}`, as plain_base.rs's
+`\rlap`/`\llap` (Perl's own `\hbox to 0pt{#1\hss}`). 2305.03559: 163 → 90 errors (the rest are its clevethm.sty's `\setlist` keys, unrelated).
 Repro package-bindings/mathtools_clap_is_a_box_in_math; guard `perfect_kernel_batch69c::clap_is_a_box_in_math`.

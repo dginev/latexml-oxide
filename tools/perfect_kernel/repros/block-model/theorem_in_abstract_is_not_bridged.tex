@@ -1,0 +1,24 @@
+% witness: the 69c review (agent_reports/2026-10-17_69c_review.md item 2): the P1 bridge (OXIDIZED_DESIGN_DIVERGENCES
+%   #689) caught `ltx:abstract`; theorem/TOC in an abstract is a frontmatter question (rc_struct3), not in ruling P1
+% oracle:  pdflatex 0 errors; the theorem is set inside the abstract's quotation, the quoted one inside its quote
+% engines: rust 67int18b = 2 ("<ltx:theorem> isn't allowed in <ltx:abstract>", "… in <ltx:quote>"), perl = 2 (same
+%   schema); 69c round 1 = 0 (both wrapped in an `ltx:inline-logical-block`)
+% expect:  2 errors, as base and Perl: no bridge inside a frontmatter container (main-session ruling 2026-10-17, until
+%   the frontmatter study is ruled on)
+% status:  CONTROL (69c round 2: document.rs `outside_frontmatter_container`)
+\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\title{T}\author{A}
+\begin{abstract}
+We show the following.
+\begin{theorem} A statement. \end{theorem}
+\begin{quote}
+\begin{theorem} Quoted. \end{theorem}
+\end{quote}
+\end{abstract}
+\maketitle
+\section{A}
+Text.
+\end{document}

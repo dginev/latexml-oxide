@@ -2835,11 +2835,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   unchanged). Witnesses 2406.11811 2103.03402 0806.0214 2602.15784 2301.10544 1410.7242 1412.2039 math0603642
   2507.09788 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 1310.0491. Repros
   block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards
-  `perfect_kernel_batch69c::para_level_block_in_{quote,note_and_wrapfigure}_opens_an_inline_logical_block`.
+  `perfect_kernel_batch69c::para_level_block_in_{quote,note_and_wrapfigure}_opens_an_inline_logical_block`. Not in
+  a frontmatter container (`ltx:abstract`, `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`,
+  `ltx:creator`: the "isn't allowed" Error stands until the frontmatter study is ruled on; control
+  block-model/theorem_in_abstract_is_not_bridged, guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`).
   (2) E1: a `$` inside a math TeX sets as `\hbox{$…$}` — amsmath's `{equation}`/`{equation*}`/`\[` under
   `\if@fleqn` (amsmath.sty:2794-2812), proof.sty's label/conclusion/premises (proof.sty:160-166), accents.sty's
   under-accent (accents.sty:206-213) — is text in that math: tex_math.rs `\lx@math@in@hbox` (`$` as in a math cell),
-  run by the kernel displays' `\lx@mathdisplay@hook` (latex_constructs_rust_only.rs, sect07.rs; amsmath_sty.rs under
+  run by the kernel displays' `\lx@mathdisplay@hook` (default in latex_constructs_rust_only.rs, run by sect07.rs's
+  `\[` and display environments; amsmath_sty.rs under
   `\if@fleqn`), proof_sty.rs `in_hbox_math` and accents_sty.rs `\underaccent` through `\lx@math@in@hbox@group`
   (scoped to the part; control paragraph-mode/proof_infer_parts_keep_the_formulas_dollar) (KNOWN_PERL_ERRORS #907). Repros
   paragraph-mode/dollar_in_hbox_math_is_text_{fleqn_display,proof_accents} + control dollar_in_display_math_still_errs;
@@ -2849,7 +2853,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (3) U1: an eqnarray cell's `{`/`}` that balance only across the template's own `{##}` (latex.ltx:15760-15763) — mod.rs
   `eqnarray_columns` ends/starts its math cells with tex_box.rs `\lx@template@bgroup`/`\lx@template@egroup`, a mark on
   the cell's frame, not a group (stomach.rs `TEMPLATE_BRACE_OPEN`, `close_template_brace`): a well-formed cell is as
-  before (KNOWN_PERL_ERRORS #908). Witnesses 2207.06932 1912.10594 (12 → 0, 8 → 0 errors). Repro
+  before (KNOWN_PERL_ERRORS #908); an `\egroup` closes the mark as a `}` does (stomach.rs `closes_template_brace`;
+  control kernel-alignment/egroup_closing_a_template_brace_errs_once, TeX's one error). Open: a cell with a net stray
+  `}` (`a} &=& b`) leaves the alignment count at −1 and unravels (pdflatex 1, before 2, now 17; §1127 `align_error`
+  not modelled). Witnesses 2207.06932 1912.10594 (12 → 0, 8 → 0 errors). Repro
   kernel-alignment/eqnarray_cell_braces_balance_across_the_template; guard
   `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
   Then amsmath's templates (amsmath.sty:1483/1576/2350/2424) in amsmath_sty.rs gather/align/aligned: only `{aligned}`
@@ -2861,7 +2868,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (4) 2305.03559 (int18's 144 → 163, `\overrel[\leq]{…}{} &` / `\fillwidthof[c]{…}{…}` at an `align*` cell head): not
   the §785 stop, which is right (TeX expands `\fillwidthof` inside the cell's math, `\ifmmode` true), but mathtools'
   `\clap` digesting its argument in math (Perl mathtools.sty.ltxml:98, KNOWN_PERL_ERRORS #909): mathtools_sty.rs
-  `\clap` = `\hbox to 0pt{\hss#1\hss}` (latex.ltx:16409). 2305.03559 163 → 90 errors; `\overrel` alone is clean.
+  `\clap` provide-only (mathtools.sty:1539 `\providecommand*`), so the kernel's box serves (latex.ltx:16409). 2305.03559 163 → 90 errors; `\overrel` alone is clean.
   Repro package-bindings/mathtools_clap_is_a_box_in_math; guard `perfect_kernel_batch69c::clap_is_a_box_in_math`.
   Open: its clevethm.sty `\setlist[enum#1, 1]{enumerate, label=…}` (90 "'…' is neither a list nor a level").
 
