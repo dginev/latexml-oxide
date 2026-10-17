@@ -16,7 +16,17 @@ LoadDefinitions!({
   // of it. Guards `perfect_kernel_batch56::{declaremathoperator_keeps_protected_macros,
   // declaremathoperator_body_stays_lazy, declaremathoperator_keeps_the_following_letters_italic}`;
   // golden tests/parse/declared_operators.tex.
-  DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
+  // The name is the argument's first token; what follows it is the parameter text TeX gives the command
+  // (amsopn.sty:50-53 `\@declmathop` → `\DeclareRobustCommand{#2}`, whose `\def` reads it: `\DeclareMathOperator{\N^1}{…}`
+  // makes `\N^1` the operator, 2301.04262), not text after the command (Perl `{Token}`: a Warning, and its `^` a script
+  // outside math; KNOWN_PERL_ERRORS #891). Guard `perfect_kernel_batch69a::declaremathoperator_parameter_text`.
+  DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {} {}", sub[(star, name, text)] {
+    let mut name: Vec<Token> =
+      name.unlist().into_iter().skip_while(|t| t.get_catcode() == Catcode::SPACE).collect();
+    if name.is_empty() {
+      return Ok(Vec::new());
+    }
+    let cs = name.remove(0);
     let has_star = star.is_some();
     let mut presentation = vec![T_CS!("\\operatorname")];
     if has_star {
@@ -36,6 +46,14 @@ LoadDefinitions!({
       revert_as: Some(Cow::Borrowed("context")),
       ..Default::default()};
     def_math(cs, None, Tokens::new(presentation), opts)?;
+    if !name.is_empty() {
+      let operator = T_CS!(s!("\\lx@amsopn@{}", cs.to_string().trim_start_matches('\\')));
+      let_i(&operator, &cs, None);
+      let mut definition = vec![T_CS!("\\def"), cs];
+      definition.extend(name);
+      definition.extend([T_BEGIN!(), operator, T_END!()]);
+      digest(Tokens::new(definition))?;
+    }
   });
 
   // \operatorname*{text}

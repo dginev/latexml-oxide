@@ -14,12 +14,16 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
     after: Some(Tokens!(T_CS!("\\lx@hidden@egroup"), T_MATH!())),
     ..Cell::default()
   };
+  // cases.sty:228-233: `amsstyle` sets the right-hand side in `\textstyle` (`\numc@dispstyle`) and the explanation in
+  // math (`\numc@expstyle` = `$`, the column `\numc@expstyle\quad ##\unskip\numc@expstyle`, :81).
+  let amsstyle = lookup_bool("numcases_amsstyle");
+  let rhs_style = if amsstyle {
+    T_CS!("\\textstyle")
+  } else {
+    T_CS!("\\displaystyle")
+  };
   let col2 = Cell {
-    before: Some(Tokens!(
-      T_MATH!(),
-      T_CS!("\\lx@hidden@bgroup"),
-      T_CS!("\\displaystyle")
-    )),
+    before: Some(Tokens!(T_MATH!(), T_CS!("\\lx@hidden@bgroup"), rhs_style)),
     after: Some(Tokens!(
       T_CS!("\\lx@hidden@egroup"),
       T_MATH!(),
@@ -27,10 +31,22 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
     )),
     ..Cell::default()
   };
-  let col3 = Cell {
-    before: Some(Tokens!(T_CS!("\\lx@hidden@bgroup"))),
-    after: Some(Tokens!(T_CS!("\\lx@hidden@egroup"), T_CS!("\\hfil"))),
-    ..Cell::default()
+  let col3 = if amsstyle {
+    Cell {
+      before: Some(Tokens!(T_MATH!(), T_CS!("\\lx@hidden@bgroup"))),
+      after: Some(Tokens!(
+        T_CS!("\\lx@hidden@egroup"),
+        T_MATH!(),
+        T_CS!("\\hfil")
+      )),
+      ..Cell::default()
+    }
+  } else {
+    Cell {
+      before: Some(Tokens!(T_CS!("\\lx@hidden@bgroup"))),
+      after: Some(Tokens!(T_CS!("\\lx@hidden@egroup"), T_CS!("\\hfil"))),
+      ..Cell::default()
+    }
   };
   use latexml_core::alignment::template::TemplateConfig;
   let mut template = Template::new(TemplateConfig::default());
@@ -126,6 +142,14 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // cases.sty:214-261's options (Perl cases.sty.ltxml declares none). `amsstyle` makes the explanation column math
+  // (`numcases_bindings`): `\text{in } [0,T] \times \Omega^\epsilon` there is a formula (2508.08751; KNOWN_PERL_ERRORS #890).
+  // The others are layout (`subnum`'s sub-numbering is `{subnumcases}`'s, `casesstyle`/`cases` restyle `{cases}`).
+  DeclareOption!("amsstyle", { assign_value("numcases_amsstyle", true, Some(Scope::Global)); });
+  for option in ["subnum", "fleqn", "leqno", "casesstyle", "cases"] {
+    DeclareOption!(option, None);
+  }
+  ProcessOptions!();
   DefPrimitive!("\\@numcases@bindings{}", sub[(lhs)] {
     numcases_bindings(lhs)?;
   });

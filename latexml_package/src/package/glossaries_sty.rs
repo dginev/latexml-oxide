@@ -325,7 +325,21 @@ LoadDefinitions!({
           }
         }
       document.close_element("ltx:glossarydefinition")?;
-    }
+    },
+    // The fields are the entry's stored data, which LaTeX typesets only where the entry is used (`\gls`, the glossary
+    // `\printglossary` prints): an `&` in one (`\newacronym{cisa}{CISA}{Cybersecurity & Infrastructure Security
+    // Agency}`, never used, 2602.09131) is no alignment tab here but the character, as in an index entry
+    // (sect11.rs `\@index`; ruling 2026-10-10 on stored metadata, OXIDIZED_DESIGN_DIVERGENCES #679). A use still
+    // typesets the field from its macros: `\gls{cisa}` errs as pdflatex does. Perl digests them as text (KNOWN_PERL_ERRORS
+    // #892). Guard `perfect_kernel_batch69a::glossary_entry_ampersand_is_stored_text`.
+    before_digest => {
+      Let!(T_ALIGN!(), T_CS!("\\&"));
+      increment_align_group_count();
+    },
+    after_digest => {
+      decrement_align_group_count();
+    },
+    bounded => true
   );
 
   //======================================================================

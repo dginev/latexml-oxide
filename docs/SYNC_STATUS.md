@@ -2728,6 +2728,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (KNOWN_PERL_ERRORS #887; hep-th0212109 hep-th0212193 cond-mat0112379 cond-mat0110649 cond-mat0002157). Repros
   index-bib/{bibliography_in_quote, bibliography_in_verse_after_text, kluwer_chapthebibliography},
   sectioning-frontmatter/section_in_quotation; guards `perfect_kernel_batch69a` (4).
+  (4) Small package shapes (study A8 A9 A10 B7 B8 C7 C9 C12): multirow's text between struts (multirow.sty:174-177;
+  2507.07731; KPE #888); colortbl's `\arrayrulecolor`/`\doublerulesepcolor` brace-delimited (colortbl.sty:156-164;
+  1910.02206; KPE #889); cases.sty's options, `amsstyle` making the explanation column math (:228-233; 2508.08751; KPE
+  #890); `\DeclareMathOperator{\N^1}` defines `\N` with the parameter text (amsopn.sty:50-53; 2301.04262; KPE #891);
+  mathpartir's stub splits premises only at brace depth 0 (mathpartir.sty:133-146; 2604.09165); `{NiceTabular}` ends in
+  nicematrix's guard column, whose template errs (nicematrix.sty:2236-2243, :9660-9670; 2505.05139); a glossary entry's
+  stored fields read `&` as the character (OD #679, KPE #892; 2602.09131). C7 (dcolumn `\text{$…$}`, 1302.5691) was
+  already fixed by 68w and is guarded. Repros package-bindings/{multirow_text_one_argument_macro,
+  colortbl_arrayrulecolor_unbraced, dcolumn_text_box_dollar, cases_amsstyle_explanation_math,
+  mathpartir_premise_braced_rows, nicematrix_guard_column, glossaries_untypeset_ampersand,
+  declaremathoperator_parameter_text}; guards `perfect_kernel_batch69a` (8 more). Residual: `\hhline{~~~---}` rules every
+  column (hhline binding, pre-existing).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

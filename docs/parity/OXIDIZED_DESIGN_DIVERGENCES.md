@@ -18691,3 +18691,16 @@ opens an `ltx:inline-sectional-block` in the quote (`quote_model` takes `Misc.cl
 and the quote's end closes the block. User ruling 2026-10-16 (HF7-A precedent). Not for a bibliography, whose quote is
 closed (#677). Repro sectioning-frontmatter/section_in_quotation; guard
 `perfect_kernel_batch69a::section_in_a_quotation_opens_a_block`.
+
+### 679. An `&` in a glossary entry's stored fields is the character, not an alignment tab (TeX: an error only where the field is typeset; Perl: an error at the definition)
+
+glossaries.sty stores an entry's fields (`\newacronym{cisa}{CISA}{Cybersecurity & Infrastructure Security Agency}`,
+2602.09131) and typesets them only where the entry is used — `\gls{cisa}`'s long form, the `\printglossary` list — so
+an entry never used makes no error in pdflatex. The binding digests every field into the entry's
+`<ltx:glossarydefinition>` phrases at `\begin{document}` (the deferred queue, #293), where the `&` was a stray
+alignment tab (`Error:unexpected:&`, Perl the same: KNOWN_PERL_ERRORS #892). Those phrases are stored data, so the
+`&` is read as the character there (glossaries_sty.rs `\lx@glossaries@newentry`, `&` let to `\&` as in an index entry,
+sect11.rs `\@index`), in the family of the 2026-10-10 ruling on stored metadata (a binding's stored, never-typeset
+argument reads `&` literally). A use still typesets the field from its macros, so `\gls{cisa}` with a raw `&` errs as
+pdflatex does, and the printed glossary shows the `&` (pdflatex would err there). Repro
+package-bindings/glossaries_untypeset_ampersand; guard `perfect_kernel_batch69a::glossary_entry_ampersand_is_stored_text`.

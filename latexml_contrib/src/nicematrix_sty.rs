@@ -228,7 +228,12 @@ fn nice_merge_opts(a: Option<Tokens>, b: Option<Tokens>) -> Tokens {
 /// source row then carries — nicematrix.tex:2569/2617; without it each row
 /// overflows the template: "Extra alignment tab"). Same growth as the array
 /// family's `\NiceArrayWithDelims`.
-fn nice_tabular_expansion(opts_toks: Tokens, pream: Vec<Token>, starter: Vec<Token>) -> Tokens {
+fn nice_tabular_expansion(
+  opts_toks: Tokens,
+  pream: Vec<Token>,
+  starter: Vec<Token>,
+  guard_column: bool,
+) -> Tokens {
   let opts_str = opts_toks.to_string();
   let mut out: Vec<Token> = Vec::new();
   out.push(T_CS!("\\lx@nice@setopts"));
@@ -245,6 +250,18 @@ fn nice_tabular_expansion(opts_toks: Tokens, pream: Vec<Token>, starter: Vec<Tok
   out.extend(nice_strip_rule_opts(pream));
   if nice_opts_has(&opts_str, "last-col") {
     out.push(T_LETTER!("c"));
+  }
+  // nicematrix.sty:2236-2243: with no width given, the preamble ends in a guard column `> { \__nicematrix_err_too_much_cols: } l`,
+  // whose template errs only when a cell runs it — a `\multicolumn` spanning into it runs none, silent in TeX (2505.05139:
+  // `A & \multicolumn{3}{|c|}{B}` in a three-column `{NiceTabular}`; was "Extra alignment tab").
+  if guard_column {
+    out.extend([
+      T_OTHER!(">"),
+      T_BEGIN!(),
+      T_CS!("\\lx@nicematrix@err@too@much@cols"),
+      T_END!(),
+      T_LETTER!("l"),
+    ]);
   }
   out.push(T_END!());
   out.push(T_END!());
@@ -359,9 +376,19 @@ LoadDefinitions!({
   // text tabulars (color overlay is styling; the content is what matters).
   DefMacro!("\\NiceTabular OptionalBalanced {} OptionalBalanced", sub[(opts, pream, post)] {
     let opts_toks = nice_merge_opts(opts.map(|o| Tokens!(o.revert())), post.map(|o| Tokens!(o.revert())));
-    nice_tabular_expansion(opts_toks, pream.revert(), vec![T_CS!("\\tabular")])
+    nice_tabular_expansion(opts_toks, pream.revert(), vec![T_CS!("\\tabular")], true)
   }, locked => true);
   DefMacro!("\\endNiceTabular", "\\endtabular\\lx@nicematrix@materializenodes", locked => true);
+  // The guard column's template (nicematrix.sty:9660-9670 `\__nicematrix_err_too_much_cols:`, :9739-9745 the message): a
+  // row with more cells than the preamble declares. nicematrix stops TeX there (`\msg_fatal`); the conversion goes on
+  // with the cell kept, an Error as the kernel's "Extra alignment tab" it replaces.
+  DefPrimitive!("\\lx@nicematrix@err@too@much@cols", {
+    Error!(
+      "unexpected",
+      "&",
+      "Too much columns: in this row you try to use more columns than allowed by your {NiceTabular}"
+    );
+  });
   // NiceTabular* {width}[opts]{colspec}[opts] / NiceTabularX {width}[opts]
   // {colspec}[opts] (nicematrix.sty:3788/3801 `{ m O{} m !O{} }`): the SAME
   // reduction; `NiceTabularX` is a tabularx (its `X` columns need the
@@ -377,7 +404,7 @@ LoadDefinitions!({
       if opts.is_some() { Some(opts.revert()?) } else { None },
       if post.is_some() { Some(post.revert()?) } else { None },
     );
-    nice_tabular_expansion(opts_toks, pream.revert()?.unlist(), starter)
+    nice_tabular_expansion(opts_toks, pream.revert()?.unlist(), starter, false)
   });
   DefMacro!(
     T_CS!("\\endNiceTabular*"),
@@ -392,7 +419,7 @@ LoadDefinitions!({
       opts.map(|o| Tokens!(o.revert())),
       post.map(|o| Tokens!(o.revert())),
     );
-    nice_tabular_expansion(opts_toks, pream.revert(), starter)
+    nice_tabular_expansion(opts_toks, pream.revert(), starter, false)
   }, locked => true);
   DefMacro!("\\endNiceTabularX", "\\endtabularx\\lx@nicematrix@materializenodes", locked => true);
 

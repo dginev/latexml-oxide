@@ -1,0 +1,18 @@
+% mechanism: in a dcolumn `D` cell the cell's own `$` does nothing (the number stays math), but inside a text box in
+%   the cell (`\text{ kg m$^{-3}$}`) TeX is in horizontal mode and `$` is a math shift (dcolumn_sty.rs
+%   `\lx@DC@dollar`, `lx_dc_inner_math`, 68w)
+% witness: 1302.5691
+% oracle:  pdflatex 0 errors: "1000.0 kg m−3" (the −3 a superscript), "−1.5795 × 10−7"
+% engines: rust 67int16 = Error:unexpected:^ (Script ^ can only appear in math mode); rust 67int17b (68w) 0 errors;
+%   Perl 0.8.8 errs (KNOWN_PERL_ERRORS #859)
+% expect:  0 errors; the unit text holds a formula with the superscript
+% status:  GREEN (68w); the study's C7 shape, guarded in 69a
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,dcolumn}
+\begin{document}
+\begin{tabular}{lD{.}{.}{12}}
+$\rho_0$ & 1000.0 \text{ kg m$^{-3}$} \\
+$c_{05}$ & -1.5795\times 10^{-7} \\
+\end{tabular}
+\end{document}

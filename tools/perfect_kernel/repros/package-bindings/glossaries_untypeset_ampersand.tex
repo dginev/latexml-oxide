@@ -1,0 +1,15 @@
+% mechanism: a glossary entry's fields are stored data LaTeX typesets only where the entry is used; the binding
+%   digests them all into `<ltx:glossarydefinition>` at `\begin{document}`, where an `&` was an alignment tab; it is
+%   the character there now (ruling 2026-10-10 on stored metadata; OXIDIZED_DESIGN_DIVERGENCES #679)
+% witness: 2602.09131 (`\newacronym{cisa}{CISA}{Cybersecurity & Infrastructure Security Agency}`, never used)
+% oracle:  pdflatex 0 errors: "Text."
+% engines: rust 67int17b = Error:unexpected:& (Stray alignment "&"); Perl 0.8.8 the same (KNOWN_PERL_ERRORS #892)
+% expect:  0 errors; the definition's long and description phrases read "Cybersecurity & Infrastructure Security Agency"
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{glossaries}
+\newacronym{cisa}{CISA}{Cybersecurity & Infrastructure Security Agency}
+\begin{document}
+Text.
+\end{document}

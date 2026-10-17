@@ -66,10 +66,19 @@ LoadDefinitions!({
     // cascade (witness 1702.02972: llncs + `\begin{gather*}\inferrule{A \\ B}{C}`,
     // Perl 0, raw-mathpartir lays the premises out without leaking `\\`).
     // Skip a `\\[dim]` optional spacing arg so it doesn't render literally.
+    // Only a `\\` at the premises' own brace level separates them: mathpartir splits them with delimited arguments
+    // (mathpartir.sty:133-146 `\mpr@flatten@ \\#1\\#2`, `\mpr@makelist`), which never see a `\\` inside a group — a
+    // braced `{\begin{cases} a & b \\ c & d \end{cases}}` keeps its rows (2604.09165; was "Extra alignment tab").
     let prem_toks = prem.unlist();
     let mut i = 0;
+    let mut depth = 0usize;
     while i < prem_toks.len() {
-      if prem_toks[i] == T_CS!("\\\\") {
+      match prem_toks[i].get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+      if depth == 0 && prem_toks[i] == T_CS!("\\\\") {
         out.push(T_CS!("\\quad"));
         i += 1;
         // Skip an optional `[dim]` spacing argument following `\\`.

@@ -1,0 +1,19 @@
+% mechanism: amsopn.sty:50-53 `\@declmathop#1#2#3` → `\DeclareRobustCommand{#2}{\qopname\newmcodes@#1{#3}}`: the
+%   argument's first token is the command and what follows it the parameter text its `\def` reads, so
+%   `\DeclareMathOperator{\N^1}{N^1}` makes `\N^1` the operator; Perl's `{Token}` read `\N` and left `^1` to be typeset
+%   after (a script outside math)
+% witness: 2301.04262 (`\newcommand{\N}{\mathbb{N}}`, then `\DeclareMathOperator{\N^1}{N^1}`)
+% oracle:  pdflatex 0 errors: "N1(x) + Lim an" (N1 upright, Lim with the n below in display, beside inline)
+% engines: rust 67int17b = Warning:unexpected (text after the argument) + Error:unexpected:^ (Script ^ can only
+%   appear in math mode); Perl 0.8.8 the same (KNOWN_PERL_ERRORS #891)
+% expect:  0 errors, 0 warnings; one formula: the operator N^1 applied to x, plus Lim with its subscript
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\newcommand{\N}{\mathbb{N}}
+\DeclareMathOperator{\N^1}{N^1}
+\DeclareMathOperator*{\Lim}{Lim}
+\begin{document}
+$\N^1(x) + \Lim_{n} a_n$
+\end{document}

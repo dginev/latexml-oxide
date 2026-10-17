@@ -1,0 +1,18 @@
+% mechanism: cases.sty:228-233 `amsstyle`: the explanation column is math (`\numc@expstyle` = `$`, :81) and the
+%   right-hand side `\textstyle`; the binding (Perl's declares no options) set the explanation as text
+% witness: 2508.08751
+% oracle:  pdflatex 0 errors: "η = x  in [0, T] × Ω^ϵ," / "v = 0  on Γ^ϵ" with (1), (2)
+% engines: rust 67int17b = 2 Error:unexpected:^ (Script ^ can only appear in math mode); Perl 0.8.8 the same
+%   (KNOWN_PERL_ERRORS #890)
+% expect:  0 errors; each explanation cell a formula
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[amsstyle]{cases}
+\begin{document}
+\begin{numcases}{}
+\eta = x & \text{in } [0,T] \times \Omega^\epsilon, \\
+v = 0 & \text{on } \Gamma^\epsilon
+\end{numcases}
+\end{document}

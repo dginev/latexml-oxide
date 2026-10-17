@@ -14801,3 +14801,75 @@ Rust (69a, sect11.rs `\lx@mung@bibliography`): `\lx@list` records the environmen
 (`absorb_bibliography_heading`). The class's `\endlist` finds the list closed. Witnesses hep-th0212109 hep-th0212193
 (cargese), cond-mat0112379 cond-mat0110649 (kapproc), cond-mat0002157 (edbk). Repro
 index-bib/kluwer_chapthebibliography; guard `perfect_kernel_batch69a::kluwer_chapthebibliography_closes_its_list`.
+
+## 888. multirow's text is set without its struts: a one-argument macro as the text takes the box's closing brace
+
+multirow.sty:174-177 sets the text between struts, `\hbox{\strut#6\strut}` (or `\strut#6\strut\par` with a width).
+Perl's binding (multirow.sty.ltxml) digests `\hbox{\multirowsetup #6}`, so an author macro of one argument that is
+the whole text (`\newcommand{\ib}[1]{InstructBLIP}`, `\multirow{2}{*}{\ib}`) reads the box's `}` as its argument and
+the rest of the table runs inside the box.
+
+Trigger: `\usepackage{multirow}\newcommand{\ib}[1]{X}`, `\begin{tabular}{ll}\multirow{2}{*}{\ib} & a \\ & b \\
+\hline\end{tabular}` — pdflatex 0 errors ("X" over two rows); Perl's shape and Rust before 69a `\noalign cannot be used
+here` and a cascade of mode errors.
+
+Rust (69a, multirow_sty.rs `\lx@multirow@hbox`): `\multirowsetup #2\lx@multirow@strut`, the closing strut a delimiter that
+typesets nothing (the kernel's `\strut` is a `\vrule` in math, which a formula's `tex=` would spell out: 2501.19081).
+Witness 2507.07731. Repro
+package-bindings/multirow_text_one_argument_macro; guard `perfect_kernel_batch69a::multirow_text_is_strut_delimited`.
+
+## 889. colortbl's `\arrayrulecolor` and `\doublerulesepcolor` read `[]{}`; the package's argument runs to the first brace
+
+colortbl.sty:156-164: `\def\arrayrulecolor#1#{\CT@arc{#1}}`, `\def\CT@arc#1#2{…}` (and `\doublerulesepcolor` the same
+with `\CT@drs`): everything up to the first `{` is the colour model, then that group. Perl's binding
+(colortbl.sty.ltxml:85, :88) reads `[]{}`, so `\arrayrulecolor\hhline{---~~~}` takes `\hhline` alone and leaves
+`{---~~~}` as text between rows.
+
+Trigger: `\usepackage{colortbl,hhline}`, a row, then `\arrayrulecolor\hhline{---~~~}\hhline{~~~---}` and a row —
+pdflatex 0 errors; Perl and Rust before 69a `\noalign cannot be used here`.
+
+Rust (69a, colortbl_sty.rs): both are the package's brace-delimited macros, still ignored (the rule colour is not
+rendered). Witness 1910.02206. Repro package-bindings/colortbl_arrayrulecolor_unbraced; guard
+`perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`.
+
+## 890. cases.sty's options are not declared: `amsstyle` leaves the explanation column text
+
+cases.sty:228-233 `amsstyle` sets `\numc@expstyle` to `$` (the explanation column, :81, is math) and the right-hand
+side in `\textstyle`. Perl's binding (cases.sty.ltxml) declares no options, so an `amsstyle` document's explanations
+(`\text{in } [0,T] \times \Omega^\epsilon`) are set as text and their scripts err.
+
+Trigger: `\usepackage{amsmath}\usepackage[amsstyle]{cases}`, `\begin{numcases}{} \eta = x & \text{in } \Omega^\epsilon
+\end{numcases}` — pdflatex 0 errors; Perl and Rust before 69a `Script ^ can only appear in math mode`.
+
+Rust (69a, cases_sty.rs): the package's options (`amsstyle` read by `numcases_bindings`; `subnum`, `fleqn`, `leqno`,
+`casesstyle`, `cases` layout only). Witness 2508.08751. Repro package-bindings/cases_amsstyle_explanation_math; guard
+`perfect_kernel_batch69a::cases_amsstyle_explanation_is_math`.
+
+## 891. `\DeclareMathOperator` reads its command as one token: a parameter text after it is typeset
+
+amsopn.sty:50-53 `\@declmathop#1#2#3` → `\DeclareRobustCommand{#2}{…}`: the argument's first token is the command
+and what follows it the parameter text the definition reads, so `\DeclareMathOperator{\N^1}{N^1}` (with `\N` defined
+before) makes `\N^1` the operator. Perl's binding (amsopn.sty.ltxml:23 `{Token}`) reads `\N` and leaves `^1` to be
+typeset after the declaration.
+
+Trigger: `\usepackage{amsmath}\newcommand{\N}{X}\DeclareMathOperator{\N^1}{N^1}`, `$\N^1(x)$` — pdflatex 0 errors
+("N1(x)"); Perl and Rust before 69a a Warning (text after the argument) and `Script ^ can only appear in math mode`.
+
+Rust (69a, amsopn_sty.rs): the operator is defined under the command and, with a parameter text, the command is
+`\def`ined with it to the operator (`\lx@amsopn@<name>`). Residual: the formula's `content-tex` reverts the command
+without its parameter text (`\N(x)`). Witness 2301.04262. Repro package-bindings/declaremathoperator_parameter_text;
+guard `perfect_kernel_batch69a::declaremathoperator_parameter_text`.
+
+## 892. A glossary entry's fields are digested as text at the definition: an `&` in a never-used entry errs
+
+glossaries.sty typesets an entry's fields only where the entry is used. Perl's binding (glossaries.sty.ltxml:52-97)
+digests every field into the entry's `<ltx:glossarydefinition>` when it is defined, so an `&` in one
+(`\newacronym{cisa}{CISA}{Cybersecurity & Infrastructure Security Agency}`) is a stray alignment tab even when the
+entry is never used.
+
+Trigger: `\usepackage{glossaries}\newacronym{c}{C}{A & B}`, a body without `\gls` — pdflatex 0 errors; Perl and Rust
+before 69a `Stray alignment "&"`.
+
+Rust (69a, glossaries_sty.rs `\lx@glossaries@newentry`): the stored fields read `&` as the character
+(OXIDIZED_DESIGN_DIVERGENCES #679). Witness 2602.09131. Repro package-bindings/glossaries_untypeset_ampersand; guard
+`perfect_kernel_batch69a::glossary_entry_ampersand_is_stored_text`.

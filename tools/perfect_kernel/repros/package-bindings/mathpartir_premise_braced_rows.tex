@@ -1,0 +1,16 @@
+% mechanism: mathpartir splits a rule's premises at its own `\\` with delimited arguments (mathpartir.sty:133-146
+%   `\mpr@flatten@ \\#1\\#2`), which never see a `\\` inside a group; the stub turned every `\\` into a `\quad`, so
+%   a braced `{\begin{cases}…\\…\end{cases}}` lost its row break and its second `&` was an extra tab
+% witness: 2604.09165
+% oracle:  pdflatex 0 errors: "o = { a if b / c otherwise" beside "d", over "e", labelled Step
+% engines: rust 67int17b = Error:unexpected:& (Extra alignment tab) + the stub's Warning; Perl: no binding
+% expect:  0 errors, 1 warning (the stub's missing_file); the cases keep two rows
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,mathpartir}
+\begin{document}
+\begin{mathpar}
+\inferrule[Step]{ o = { \begin{cases} a & \text{if } b \\ c & \text{otherwise} \end{cases} } \\ d }{ e }
+\end{mathpar}
+\end{document}
