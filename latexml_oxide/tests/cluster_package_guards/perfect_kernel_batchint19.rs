@@ -5,7 +5,7 @@
 //! (arXiv 1703.08664).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use latexml::util::test::{convert_with, error_count, warning_count};
+use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
 
 /// expansion-primitives/display_closing_dollar_text_after_the_display_kept: arXiv 2207.12569's
 /// `$${\boxed{\mbox{…}}}\Longrightarrow{\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}}…$$` (pdflatex 0 errors). 69b r2
@@ -35,4 +35,31 @@ fn display_closing_dollar_text_after_the_display_kept() {
     "{xml}"
   );
   assert_eq!(xml.matches("<Math mode=\"display\"").count(), 1, "{xml}");
+}
+
+/// kernel-alignment/text_argument_is_braced_in_an_alignment_cell: arXiv 1703.08664's `\mWord` — `\text{\ $\bgroup
+/// \let\\=\crcr … \halign{…} \egroup$}` — in `{align}` cells (pdflatex 0 errors). amstext.sty:28-39 sets `\text`'s
+/// argument in `\hbox{{…}}`, so its `\let\\=\crcr` is read at a raised `align_state` (tex.web §342) and ends no cell
+/// of the align; the constructor's argument, read before it is digested, had its braces counted already and the
+/// `\crcr` ended the align's cell (67int18b 12 errors, 69c 9, Perl 16; on the paper 58 -> 101 + Fatal). Now 0 errors,
+/// each matrix a tabular in the text (KNOWN_PERL_ERRORS #931).
+#[test]
+fn text_argument_is_braced_in_an_alignment_cell() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/text_argument_is_braced_in_an_alignment_cell.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // The first matrix, (d-1, d-2 over 0, 0), each entry a formula, the template's `,` column between.
+  assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r#"<tabular class="ltx_markedasmath" vattach="bottom"><tr><td align="center"><Math mode="inline" tex="{d-1}" text="d - 1" xml:id="S0.E1.m1.m1.m1.mf"><XMath><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math></td><td align="left" class="ltx_nopad_l ltx_nopad_r">,</td><td align="center"><Math mode="inline" tex="{d-2}" text="d - 2" xml:id="S0.E1.m1.m1.m2.mf"><XMath><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></td></tr><tr><td align="center"><Math mode="inline" tex="{0}" text="0" xml:id="S0.E1.m1.m1.m3.mf"><XMath><XMTok meaning="0" role="NUMBER">0</XMTok></XMath></Math></td><td align="left" class="ltx_nopad_l ltx_nopad_r">,</td><td align="center"><Math mode="inline" tex="{0}" text="0" xml:id="S0.E1.m1.m1.m4.mf"><XMath><XMTok meaning="0" role="NUMBER">0</XMTok></XMath></Math></td></tr></tabular>"#,
+  );
+  assert_eq!(xml.matches("<tabular ").count(), 4, "{xml}");
+  assert!(xml.contains("<p>after text.</p>"), "{xml}");
 }

@@ -15096,3 +15096,22 @@ Rust (69c): mathtools_sty.rs provides `\clap` only, as mathtools.sty:1539 `\prov
 (latex.ltx:16409, from the format) serves; with none defined it is `\hbox to 0pt{\hss#1\hss}`, as plain_base.rs's
 `\rlap`/`\llap` (Perl's own `\hbox to 0pt{#1\hss}`). 2305.03559: 163 → 90 errors (the rest are its clevethm.sty's `\setlist` keys, unrelated).
 Repro package-bindings/mathtools_clap_is_a_box_in_math; guard `perfect_kernel_batch69c::clap_is_a_box_in_math`.
+
+## 931. amsmath's `\text` digests its argument outside box braces, so a `&` or `\cr` in it ends the alignment cell around it
+
+amstext.sty:28-39 makes `\text` `\mbox` in text and `\text@` in math, whose `\textdef@` sets `#1` in `\hbox{{…}}`; TeX
+counts `align_state` at each brace it reads (tex.web §342), so a tab or `\cr` read inside the box ends no cell of an
+alignment around it. Perl's `\text` (amstext.sty.ltxml:23 `DefConstructor('\text{}', …)`) reads its argument first —
+`readArg`'s braces are counted and balanced away (Gullet.pm:443) — and digests it at the cell's `ALIGN_STATE` 0, so a
+`\let\\=\crcr` (or a `&`) in it is the cell's end.
+
+Trigger: `\usepackage{amsmath}` and `\begin{align}&\text{$\bgroup\let\\=\crcr\egroup$}=g\end{align}` — pdflatex 0
+errors; Perl 16 Errors, Rust before int19 7 (arXiv 1703.08664's `\mWord`, an `\halign` matrix built in `\text{\ $…$}`
+with `\let\\=\crcr`: 58 Errors, under 69c 101 + Fatal and 11,000 words lost to the frames the broken cell left open).
+
+Rust (int19, amstext_sty.rs `\text`): the constructor raises the alignment count while its argument is digested
+(`increment_align_group_count` before, `decrement_align_group_count` after), as glossaries_sty.rs does for an entry's
+stored fields; amstex.rs `\text` (amstex.tex:1217-1226 `\hbox{#1}`) and revtex4_support_sty.rs `\text`
+(revtex4-2.cls:7547-7560 `\REV@text`) the same. 1703.08664 58 → 0 errors, 24,260 → 24,774 words. Repro
+kernel-alignment/text_argument_is_braced_in_an_alignment_cell; guard
+`perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.

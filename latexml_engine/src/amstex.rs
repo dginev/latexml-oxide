@@ -327,10 +327,15 @@ LoadDefinitions!({
   // \format Until:\\\\ — analog to \align's template; we ignore it.
   def_macro_noop("\\format Until:\\\\")?;
 
+  // amstex.tex:1217-1226: `\text` is `\text@@` = `\leavevmode\hbox{#1}` in text and a `\mathchoice` of `\hbox`es in
+  // math, so its argument is digested inside box braces: the count an alignment's `&`/`\cr` is tested at is raised
+  // for it, as amstext_sty.rs `\text` (KNOWN_PERL_ERRORS #931).
   DefConstructor!("\\text {}",
     "<ltx:text _noautoclose='1'>#1</ltx:text>",
     mode => "restricted_horizontal",
-    enter_horizontal => true);
+    enter_horizontal => true,
+    before_digest => { increment_align_group_count(); },
+    after_digest => { decrement_align_group_count(); });
 
   DefConstructor!("\\overset Until:\\to {}",
     "<ltx:XMApp>\

@@ -242,8 +242,13 @@ LoadDefinitions!({
   // Perl L161-162 passes `locked => 1` so RevTeX's \text isn't silently
   // replaced by amsmath's \text (which would miss the restricted_hmode
   // treatment RevTeX relies on for inline-text-in-math spacing).
+  // revtex4-2.cls:7547-7560 `\REV@text` sets `#1` in `\hbox{{…}}` (math) or `\mbox{#1}` (text): its argument is
+  // digested inside box braces, so the alignment count is raised for it, as amstext_sty.rs `\text`
+  // (KNOWN_PERL_ERRORS #931).
   DefConstructor!("\\text{}", "<ltx:text _noautoclose='true'>#1</ltx:text>",
-    mode => "restricted_horizontal", locked => true);
+    mode => "restricted_horizontal", locked => true,
+    before_digest => { increment_align_group_count(); },
+    after_digest => { decrement_align_group_count(); });
   // revtex4-2.cls:7547-7585 (revtex4.cls:5992, revtex4-1.cls:7526): REVTeX's `\text` is `\REV@text`, which apsrev's
   // `.bbl` notes write out (`$t'=R(t)\protect \REV@text { mod } 1$`; 2202.11665, 2107.02243, 1407.5317).
   Let!("\\REV@text", "\\text");

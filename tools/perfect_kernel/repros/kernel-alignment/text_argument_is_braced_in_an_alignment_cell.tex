@@ -1,0 +1,36 @@
+% witness: arXiv 1703.08664 lines 116-136 (`\mWord`, an `\halign` matrix in `\text{\ $…$}`, used in `{align}` cells; int19
+%          bundle A/B 58 -> 101 errors + Fatal, words 24,260 -> 13,097)
+% oracle:  pdflatex 0 errors: "We have", the two-row align with the matrix (d-1, d-2 over 0, 0) before "= g", "after
+%          text."
+% engines: rust 67int18b 12 errors, 69c 9 (and on the paper the frames it left open cascaded through the document);
+%          Perl 0.8.8 16 (`\text{$\bgroup\let\\=\crcr\egroup$}` alone)
+% expect:  amstext.sty:28-39 sets `\text`'s argument in `\hbox{{…}}`, so `\let\\=\crcr` in it is read at a raised
+%          `align_state` (tex.web §342) and ends no cell of the align: 0 errors, 0 warnings, the matrix inside the text
+% status:  RED (67int18b, 69c) -> GREEN (int19)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\def\mWord#1{\text{\ $\mWord@A{#1}$}}
+\def\mWord@A#1{%
+\bgroup
+\let\\=\crcr
+\def\,{& &}
+  \vcenter{\offinterlineskip
+      \halign{
+       &\vrule width 0pt height 8pt depth 3pt {\hfil${##}$\hfil} \!\! & \!\!{##},\! \cr #1 \crcr
+      }
+  }
+\egroup
+}
+\makeatother
+\newcommand{\Array}[1]{\left(\!\mWord{#1}\!\right)}
+\begin{document}
+We have
+\begin{align}
+&D\Array{d-1\,d-2\\0\,0}
+=g,\\
+&D\Array{0\\1}=h.
+\end{align}
+after text.
+\end{document}
