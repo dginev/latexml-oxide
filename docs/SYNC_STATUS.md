@@ -2478,7 +2478,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   2310.09182), `\MT_start_cases:nnnn` (:995-1008, as `\newcases` opens `\lx@ams@cases` — 13: 1906.10268, 2011.05472,
   2310.19169), `\MT_matrix_begin:N`/`\MT_matrix_end:` (:1039-1043 — 5: 1905.08664, 2307.06921) and the short-intertext
   dimens (:1483-1484; 2109.05369). KNOWN_PERL_ERRORS #862. Repro package-bindings/mathtools_internals_after_internal_syntax;
-  guard `perfect_kernel_batch68x::mathtools_internals_after_internal_syntax_are_defined`.
+  guard `perfect_kernel_batch68x::mathtools_internals_after_internal_syntax_are_defined`. (7) eulerpx `\mathscr` (OXIDIZED_DESIGN_DIVERGENCES
+  #569 extended; KNOWN_PERL_ERRORS #863): a plain-locked binding a file's `\let` clears is kept aside and put back when
+  the file's new meaning is refused (state.rs `let_i`); eulerpx.sty:130-132's cleared `\mathscr` is the kernel's again
+  (2311.14793, 2501.10505, 2510.26876: 1 → 0 errors). Repro macro-state/plain_locked_binding_cleared_by_a_file_comes_back;
+  guard `perfect_kernel_batch68x::a_plain_locked_binding_a_file_cleared_comes_back`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

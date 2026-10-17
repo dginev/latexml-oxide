@@ -3336,7 +3336,7 @@ fn is_cleared_meaning(token: &Token) -> bool {
     || x_equals(token, &crate::T_CS!("\\relax"))
 }
 
-/// Puts back the binding of a files-locked name that a file's `\let` cleared ([`let_i`], `"{cs}:locked@cleared"`) when
+/// Puts back the binding of a locked name that a file's `\let` cleared ([`let_i`], `"{cs}:locked@cleared"`) when
 /// the file's new meaning for it is refused, so that the binding's other callers (a raw `\end` running `\csname
 /// end<env>\endcsname`, alatex.sty:105-109) still meet it rather than an undefined name.
 fn restore_cleared_binding(token: &Token) {
@@ -4907,6 +4907,22 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     } else {
       drop_copies_lock_aside(&cs);
     }
+  } else if crate::definition::origin::current_origin()
+    != crate::definition::origin::DefinitionOrigin::Document
+    && !state_is_unlocked()
+    && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    && (matches!(meaning, Stored::None) || x_equals(token2, &crate::T_CS!("\\relax")))
+    && !is_cleared_meaning(token1)
+    && token1.with_cs_name(|cs| arena::get(s!("{cs}:locked")).is_some_and(lookup_bool_sym))
+    && let Some(binding) = lookup_meaning(token1)
+  {
+    // A plain `:locked` binding a file's `\let` clears is kept aside too, the `\let` itself going through as in Perl,
+    // and back in place when the file's own new meaning is refused ([`restore_cleared_binding`]): eulerpx.sty:130-132
+    // `\let\mathscr=\undefined` then `\DeclareMathAlphabet\mathscr{U}{zeus}{m}{n}`, which the lock on the kernel's
+    // `\mathscr` (sect07.rs) refuses, left `\mathscr` undefined, an Error at every use (2311.14793, 2501.10505,
+    // 2510.26876; KNOWN_PERL_ERRORS #863). OXIDIZED_DESIGN #569.
+    let cleared_key = token1.with_cs_name(|cs| s!("{cs}:locked@cleared"));
+    assign_value(&cleared_key, binding, Some(Scope::Global));
   }
   // Deep-copy the robust-wrapper pair.
   //

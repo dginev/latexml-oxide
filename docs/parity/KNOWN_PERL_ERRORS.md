@@ -14525,3 +14525,13 @@ boolean whenever mathtools is loaded. Minimal trigger: `\usepackage{mathtools}\u
 them as mathtools.sty:252-291, :829-841, :995-1008, :1039-1043, :1483-1484 do. Repro
 package-bindings/mathtools_internals_after_internal_syntax; guard
 `perfect_kernel_batch68x::mathtools_internals_after_internal_syntax_are_defined`.
+
+## 863. A locked binding a package `\let` clears and then redefines is left undefined (eulerpx's `\mathscr`)
+
+Package.pm:383-390 `Let` checks no lock, so a package's `\let\mathscr=\undefined` clears the kernel's locked
+`\mathscr` (latex_constructs.pool.ltxml:2490 `locked => 1`); its next definition of the name is refused by the lock
+(State.pm:502-517), and the name stays undefined. Minimal trigger (raw style loading): a package `p.sty` with
+`\let\mathscr=\undefined \DeclareMathAlphabet\mathscr{U}{zeus}{m}{n}` (eulerpx.sty:130-132) and `$\mathscr{L}$` —
+pdflatex an Euler Script L, Perl and Rust before 68x `Error:undefined:\mathscr` (2311.14793, 2501.10505, 2510.26876).
+Fixed in Rust (68x, OXIDIZED_DESIGN_DIVERGENCES #569): the binding a file's clearing `\let` took is put back when the
+file's new meaning is refused. Guard `perfect_kernel_batch68x::a_plain_locked_binding_a_file_cleared_comes_back`.

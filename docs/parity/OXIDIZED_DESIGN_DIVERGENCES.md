@@ -17220,6 +17220,15 @@ lock reads the origin at run time, so a class's `\AtBeginDocument{\let…}` runs
 `perfect_kernel_batch66b::{file_let_*, refused_*_of_a_cleared_name_restores_the_binding, mn2e_*}`; repros
 `macro-state/{file_let_of_locked_end_half, file_let_clearing_locked_name}`.
 
+68x extends the keeping aside to a plain `:locked` binding: a file's `\let` that clears one goes through, as in Perl,
+and the binding comes back when a refused new meaning finds the name still cleared (state.rs `let_i`):
+eulerpx.sty:130-132 `\let\mathscr=\undefined` then `\DeclareMathAlphabet\mathscr{U}{zeus}{m}{n}`, refused by the lock
+on the kernel's `\mathscr` (sect07.rs), left `\mathscr` undefined (2311.14793, 2501.10505, 2510.26876: 1 Error each;
+KNOWN_PERL_ERRORS #863). The binding, not the refused redefinition, is what comes back: the lock keeps the kernel's
+semantic markup, and Euler Script is a script alphabet as the binding's is. Repro
+macro-state/plain_locked_binding_cleared_by_a_file_comes_back; guard
+`perfect_kernel_batch68x::a_plain_locked_binding_a_file_cleared_comes_back`.
+
 ### 570. The caption-label hoist closes its test before the caption is digested (Perl: inside it)
 
 Perl's `\@hack@caption@` (latex_constructs.pool.ltxml:3178-3180) is `\ifx.#5.\@caption@@@{…}{…}{#3#4}\else

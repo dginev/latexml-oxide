@@ -7,7 +7,8 @@
 //! apa6's `\note` and `\authornote` as apa7's binding makes them, the mask honoured (2406.08022). Item 4 — cjs-rcs-article's
 //! environ-collected abstracts (in their languages) and keywords, and babel's `\iflanguage` expandable (2608.13762).
 //! Item 5 — smfart's `{altabstract}` a second abstract (2506.20120); projlib-author's `\address` lines the author's
-//! (2609.02711). Item 6 — mathtools.sty's internals papers and witharrows call after `\MHInternalSyntaxOn`.
+//! (2609.02711). Item 6 — mathtools.sty's internals papers and witharrows call after `\MHInternalSyntaxOn`. Item 7 — a
+//! plain-locked binding a file's `\let` clears comes back when the file's new meaning is refused (eulerpx `\mathscr`).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, normalize_markup};
@@ -280,4 +281,25 @@ fn mathtools_internals_after_internal_syntax_are_defined() {
     assert!(xml.contains(tex), "{tex}\n{xml}");
   }
   assert!(xml.contains("<XMTok") && !xml.contains("ERROR"), "{xml}");
+}
+
+/// macro-state/plain_locked_binding_cleared_by_a_file_comes_back: eulerpx.sty:130-132 clears the kernel's `\mathscr` and
+/// declares its own, which the lock refuses: the kernel's comes back (pdflatex: Euler Script "L"). Before 68x
+/// `\mathscr` was undefined, 1 Error (2311.14793, 2501.10505, 2510.26876).
+#[test]
+fn a_plain_locked_binding_a_file_cleared_comes_back() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/plain_locked_binding_cleared_by_a_file_comes_back.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  for letter in [
+    r#"<XMTok font="script" role="ID">L</XMTok>"#,
+    r#"<XMTok font="script" role="ID">A</XMTok>"#,
+  ] {
+    assert!(xml.contains(letter), "{letter}\n{xml}");
+  }
 }
