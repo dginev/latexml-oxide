@@ -18489,6 +18489,19 @@ class-bindings/sn_jnl_href_keeps_hyperref_order (guard
 `perfect_kernel_batch68w::sn_jnl_href_keeps_hyperref_order_without_pdflatex`), class-bindings/sn_jnl_href_swapped_order
 (RED).
 
+### 655. apacite's `\cite` is parenthetical, with or without notes
+
+apacite.sty:259-267 gives `\cite` its parentheses (`\def\@BBOP{\BBOP}`) whatever follows: `\cite{k}` prints "(Smith,
+2001)". The binding delegates its citations to natbib's emulation, whose `\cite{k}` is textual in author-year mode
+(natbib.sty:694-701); apacite's `\cite` asks for natbib's parenthetical form by name
+(natbib_sty.rs `\lx@natbib@cite@parenthetical`), keeping the `ltx_citemacro_cite` class of the macro the author wrote.
+Its notes go on as read (`apacite_delegate`, `natbib_invocation`): a lone `[note]` is the post-note (apacite's
+`\@cite<>[note]`, :313-327), a `<pre>` alone the pre-note. `\citeA` stays textual, `\citeNP` unparenthesised, as
+apacite defines them. Perl ships no apacite binding (apacite_sty.rs header). Witnesses
+2002.00730, 2005.00039, 2303.06091, 1901.06889. Repro package-bindings/apacite_notes_as_read; guard
+`perfect_kernel_batch68w::apacite_notes_absent_stay_absent`.
+
+
 ### 659. aguplus.cls is a binding over the raw class: the AGUTeX title page as the AAS binding's, natbib for its copy (Perl: no binding)
 
 Perl has no aguplus binding (OmniBus: `\authoraddr`, `\lefthead`, `\slugcomment` undefined). Under the rawclasses
@@ -18581,16 +18594,3 @@ ruling: the line rule judges by shape, so a class's typesetting macro reads as a
 narrowing to "another setter's store, no `\par` between" counts font setters' stores (paper.cls:109-111 `\st@font`,
 `\in@font`, `\sss@font`) and costs 1406.5776, 2105.09416, 2107.05207 their subtitle, affiliations and toctitle; repros
 class-bindings/title_page_typesetting/{address_after_a_font_macro, address_in_a_vbox_with_a_class_line} (RED).
-
-### 655. apacite's `\cite` is parenthetical, with or without notes
-
-apacite.sty:259-267 gives `\cite` its parentheses (`\def\@BBOP{\BBOP}`) whatever follows: `\cite{k}` prints "(Smith,
-2001)". The binding delegates its citations to natbib's emulation, whose `\cite{k}` is textual in author-year mode
-(natbib.sty:694-701); apacite's `\cite` asks for natbib's parenthetical form by name
-(natbib_sty.rs `\lx@natbib@cite@parenthetical`), keeping the `ltx_citemacro_cite` class of the macro the author wrote.
-Its notes go on as read (`apacite_delegate`, `natbib_invocation`): a lone `[note]` is the post-note (apacite's
-`\@cite<>[note]`, :313-327), a `<pre>` alone the pre-note. `\citeA` stays textual, `\citeNP` unparenthesised, as
-apacite defines them. Perl ships no apacite binding (apacite_sty.rs header). Witnesses
-2002.00730, 2005.00039, 2303.06091, 1901.06889. Repro package-bindings/apacite_notes_as_read; guard
-`perfect_kernel_batch68w::apacite_notes_absent_stay_absent`.
-
