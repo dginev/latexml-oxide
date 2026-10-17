@@ -2376,6 +2376,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1,961, Fatals 5 → 5, none worse; 113 cluster papers and witnesses 1 → 0, every word lost an ERROR token or empheq's
   option text; outside the clusters only 1810.05130 changed (empheq `left=` material); the review's 42 font/probe
   documents byte-identical to 67int15.
+  Integrated as **int16** with 68t (rounds 1-2), the rawclasses lever (67v) and 68u (rounds 1-3), plus 5d239c757d
+  (cimento.cls on the author-file stand-in list; a public doc naming a private helper as code). Gates 5,683/5,683, inits
+  0/0, dumps identical. Bundle A/B vs 67int15 over 5,075 papers (the lever's 3,362, the 68v clusters' 1,427, 68t's 106
+  witnesses, 200 pop67o): Errors 12,673 → 3,578, Fatals 27 → 22 (6 better, 1 worse), 3,208 papers with fewer errors,
+  words 85.29 M → 85.87 M; nets 136/136 0 worse. Of 160 papers worse or losing > 1 % of words (bag-of-words classified):
+  22 base inflation (undefined names, OmniBus text, empheq option text), 119 generated tokens (numbers, bib tags,
+  invisible times), 13 known rows (R7 captions; confproc; the mode-frame pair; aguplus agums.sty; ptptex), 6 author
+  content — open rows: **aguplus `\authoraddr`** dropped, affiliations as body text (1107.5305, 1203.5042,
+  physics9702009, and 1010.3998 with its 75 "?" citations); **apa6 `\authornote`** dropped in 2406.08022 (the one apa6
+  paper using it); cjs-rcs `{englishabstract}` (2608.13762, the round-3 row); 1808.01507 (nature) reaches the
+  100-error Fatal one error earlier. **ptptex under the lever**: TL's ptptex.cls loads amsmath, so papers written for
+  the 1996 ptptex.sty with plain `\matrix`/`\pmatrix{…\cr}` get amsmath's old-form errors (pdflatex on TL 2025 the
+  same — a harness limit); hep-th9606114 reaches the 100-error Fatal (words 12,180 → 7,242), hep-th9902200 1 → 18
+  errors.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
