@@ -13,7 +13,7 @@
 //! `{figure}`… in article.cls, our pool pre-defines them for class-less
 //! robustness, so a standalone class redeclaring them is not an error —
 //! while a genuine double declaration between two raw files still is.
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 /// Who made a definition.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -116,6 +116,103 @@ impl Drop for ProvideOnlyGuard {
       crate::state::end_provide_only();
     }
   }
+}
+
+thread_local! {
+  /// The stand-in copy whose provides-mode is in force (`0`: none), and the modes it interrupted.
+  static COPY_PROVIDES: Cell<u32> = const { Cell::new(0) };
+  static COPY_PROVIDES_STACK: RefCell<Vec<u32>> = const { RefCell::new(Vec::new()) };
+}
+
+/// The stand-in copy whose read is in force — "a stand-in's copy provides" (`state::note_copy_provides_assignment`): the
+/// 1-based number of the paper's copy of an author file a stand-in binding answers
+/// (`binding::content::read_stand_in_copy`), while that copy is read, while a hook it registered runs, or `0`.
+pub fn copy_provides() -> u32 { COPY_PROVIDES.with(|c| c.get()) }
+
+/// Enter copy `id`'s provides-mode (`0`: suspend it, for a file the copy loads), until the matching
+/// [`leave_copy_provides`]. A stack, not a guard: the scope markers `\lx@copy@provides@begin{N}` and
+/// `\lx@copy@provides@end` wrapped around a hook the copy registers bracket a token run, not a Rust call. Entering
+/// from no mode (or leaving to none) puts `\AddToHook`'s registration seam in place (or back out,
+/// `state::swap_copy_provides_hook_seam`).
+pub fn enter_copy_provides(id: u32) {
+  let previous = COPY_PROVIDES.with(|c| c.get());
+  COPY_PROVIDES_STACK.with(|s| s.borrow_mut().push(previous));
+  crate::state::enter_copy_provides_frame(id, previous);
+  if (previous == 0) != (id == 0) {
+    crate::state::swap_copy_provides_hook_seam(id != 0);
+  }
+  // (the copy's code is a file's: locked, as a raw read is, `load_tex_definitions` — also when its
+  // `\AtEndOfClass` code runs inside `\documentclass`'s unlocked after-digestion)
+  if id != 0 {
+    crate::common::local_assignments::local_state_unlocked(false);
+  }
+  COPY_PROVIDES.with(|c| c.set(id));
+}
+
+/// Leave the provides-mode [`enter_copy_provides`] entered: the interrupted one is in force again. An unmatched leave
+/// is ignored.
+pub fn leave_copy_provides() {
+  let Some(previous) = COPY_PROVIDES_STACK.with(|s| s.borrow_mut().pop()) else {
+    return;
+  };
+  let current = COPY_PROVIDES.with(|c| c.replace(previous));
+  if current != 0 {
+    crate::common::local_assignments::expire_state_unlocked();
+  }
+  crate::state::leave_copy_provides_frame();
+  if (previous == 0) != (current == 0) {
+    crate::state::swap_copy_provides_hook_seam(previous != 0);
+  }
+}
+
+/// RAII form of [`enter_copy_provides`]/[`leave_copy_provides`], for a Rust-bracketed scope (the copy's read, a
+/// nested load's suspension).
+pub struct CopyProvidesGuard;
+
+impl CopyProvidesGuard {
+  pub fn new(id: u32) -> Self {
+    enter_copy_provides(id);
+    CopyProvidesGuard
+  }
+}
+
+impl Drop for CopyProvidesGuard {
+  fn drop(&mut self) { leave_copy_provides(); }
+}
+
+thread_local! {
+  static STAND_IN_LOADING: Cell<u32> = const { Cell::new(0) };
+}
+
+/// Is a binding that stands in for an author's file loading ([`StandInLoadGuard`])?
+pub fn stand_in_loading() -> bool { STAND_IN_LOADING.with(|c| c.get()) != 0 }
+
+/// RAII guard: while a binding that stands in for an author's file loads (`binding::content::input_definitions`),
+/// every name assigned is recorded as that binding's (`state::State::stand_in_meanings`), whatever made it — its
+/// `DefMacro!`s, its `Let!`s and `RawTeX`, the bindings it requires — so the paper's copy read after it only provides
+/// them (`state::note_copy_provides_assignment`).
+pub struct StandInLoadGuard;
+
+impl StandInLoadGuard {
+  pub fn new() -> Self {
+    STAND_IN_LOADING.with(|c| c.set(c.get() + 1));
+    StandInLoadGuard
+  }
+}
+
+impl Default for StandInLoadGuard {
+  fn default() -> Self { Self::new() }
+}
+
+impl Drop for StandInLoadGuard {
+  fn drop(&mut self) { STAND_IN_LOADING.with(|c| c.set(c.get().saturating_sub(1))); }
+}
+
+/// Forget every provides-mode: a new conversion starts with none (`reset_thread_engine`).
+pub fn reset_copy_provides() {
+  STAND_IN_LOADING.with(|c| c.set(0));
+  COPY_PROVIDES.with(|c| c.set(0));
+  COPY_PROVIDES_STACK.with(|s| s.borrow_mut().clear());
 }
 
 /// Run `f` with `origin` as the current definition origin.

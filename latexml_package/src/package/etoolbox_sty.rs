@@ -2023,8 +2023,11 @@ LoadDefinitions!({
   // etoolbox.sty:1745 `\AfterEndPreamble` is `\AddToHook{begindocument/end}` on a 2020+ format:
   // a one-time hook, so code added once it has run executes at once (Perl etoolbox.sty.ltxml:1718
   // queues it on a list nothing reads again, dropping it).
+  // (a stand-in's copy registers no document-time code: `state::copy_provides_defers`; mdpi.cls:1089)
   DefMacro!("\\AfterEndPreamble[]{}", sub[(_label, arg)] {
-  if lookup_bool("@document@preamble@afterend@done") {
+  if copy_provides_defers("\\AfterEndPreamble") {
+    Tokens!()
+  } else if lookup_bool("@document@preamble@afterend@done") {
     arg
   } else {
     push_value("@document@preamble@afterend", arg.unlist())?;
@@ -2032,7 +2035,9 @@ LoadDefinitions!({
   }},
   protected => true, peeks_by_futurelet => true);
   DefMacro!("\\AfterEndDocument[]{}", sub[(_label, arg)] {
-  push_value("@after@end@document", arg.unlist())?; },
+  if !copy_provides_defers("\\AfterEndDocument") {
+    push_value("@after@end@document", arg.unlist())?;
+  } },
   protected => true, peeks_by_futurelet => true);
 
   // Perl's `\AtEndDocument{\let\AfterEndPreamble\@gobble}` (etoolbox.sty.ltxml:1724) is

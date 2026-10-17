@@ -19148,3 +19148,87 @@ astro-ph9806372 2 → 4 (A/B over the 250 `\documentstyle` papers of the census 
 `\ensuremath` in the source). The trap lands with a kernel-internal ensure-math for binding code (SYNC row). Residual:
 latex.ltx's "`\usepackage` before `\documentclass`" (`\@fileswithoptions`) that pdflatex adds is not reproduced. No census paper uses
 `\usepackage` after `\documentstyle` (0806.0904 redefines it: `\def\usepackage#1{\input{#1.sty}}`, no trap in pdflatex either). Guard `perfect_kernel_batch70b::documentstyle_usepackage_errs_as_latex209`.
+
+### 731. A stand-in binding is followed by the paper's copy of its file, which only provides ("a stand-in's copy provides")
+
+**TeX**: `\documentclass{svjour3}`, `\usepackage{aas_macros}`, `\input tcilatex` read the author's file the paper ships;
+every definition in it, and everything it registers for later, takes effect.
+
+**Perl**: `FindFile` prefers the `.ltxml` (Package.pm:2113-2133): the binding loads and the copy is never read, so an
+extra command the copy defines and the paper uses is undefined (aas_macros.sty:94-97 `\kms`, 1309.5950).
+
+**Rust** (72a, user ruling 2026-10-17, memory `feedback_rulings_2026_10_17_od721_h1`): after a binding on
+`AUTHOR_FILE_STAND_INS` (author_files.rs) has loaded, the copy the paper ships — the request as the paper wrote it
+(`fallback_request` for a versioned fallback: `icml2026` → icml2025.sty), found in the paper's source directory or a
+`{filecontents}` file, never TeX Live's — is read raw at the same point, origin `File` (content.rs `read_stand_in_copy`,
+from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.tex` route), before the load's
+`\AtEndOfClass`/`\AtEndOfPackage` code runs. The rules:
+1. *Ownership.* A name is the binding's when it was assigned while the stand-in binding loaded (origin.rs
+   `StandInLoadGuard`, `State::stand_in_meanings`: its `DefMacro!`s, `Let!`s, `RawTeX`, the bindings it required) or
+   its meaning is a definition made under that very name at origin `Unknown`, `Pool` or `Binding` (a pool's
+   `\maketitle`, another binding's `\citep`); an environment is owned when `\begin{X}`, `\X` or `\endX` is. The format's
+   names (`Plain`, `LatexDump`, `Format`), the document's world (`File`, `Document`), the guesses that yield (`Fallback`,
+   `Stub`, `Borrowed`) and `\let` copies of such meanings are not.
+2. *Assignments.* Every meaning assignment of the read (`install_definition`, `assign_meaning`: the `\def` family,
+   `\let`, `\chardef`…, the LaTeX declarators) to an owned name holds only inside the copy's own code: the binding's
+   meaning is kept aside and put back when the read ends (state.rs `note_copy_provides_assignment`,
+   `leave_copy_provides_frame`), so for the document it acted as `\providecommand`, while the copy's load-time logic
+   sees what it defined, as in TeX — aipproc.cls:559 `\ifnum\pageref>0` after its option's `\chardef\pageref`
+   (astro-ph0105128), epl2.cls:1317-1318's save-and-wrap of `\bibitem`, which the epl binding makes too and which a
+   kept `\let` would turn into a self-call (0906.2627, 1102.2776, 1203.4765: Fatal loops before the rule). This
+   refines the brief's "declined" by mechanism (the census hazard 4: a declined scratch name changed the copy's
+   load-time logic); a name the code leaves as it found it (`\protected@edef`'s `\protect`) is not logged. Everything
+   else stands as TeX makes it: the copy's extras, kernel scratch, earlier raw files' names. Not while the state is
+   unlocked (a binding's `before`/`after` code run for the copy, an `AddToMacro!` append); the copy's own code runs
+   locked, as a raw read does, also its `\AtEndOfClass` code run inside `\documentclass`'s unlocked after-digestion
+   (asme2ej.cls:1230-1244 `\AtEndOfClass{… \def\newtheorem …}`, 2210.14434). A counter the binding owns (`\c@<ctr>`
+   or `\the<ctr>`: the kernel's `equation` is the format's register with the pool's `\theequation`) keeps the
+   binding's numbering against the copy's `\newcounter`, `\numberwithin`, `\@addtoreset`
+   (`copy_provides_keeps_counter`; jheppub.sty:313-314 `\numberwithin{equation}{section}` reset the equations per
+   section under the binding's `\theequation`, every section's first "(1)": 2112.14648, 2607.20603). The read is no
+   raw class read for K11 (`\lx@class@loaded@raw`): the binding owns the title page.
+3. *Locks.* A locked name is refused as for any file, but without the records a raw class's takeover leaves
+   (`\lx@dropped@<name>`, `<cs>:redefined`, defaults; OD #265, #500): `copy_provides_refuses_locked`, so no replay of the
+   copy's `\maketitle` body.
+4. *No second read.* A copy already read raw — by its canonical path (content.rs `RAW_READ_PATHS`, kept out of the
+   dumped state; `load_tex_definitions`) or as `<file>_raw_loaded` — is not read again: the 17 stand-ins whose
+   bindings `InputDefinitions!` their copy (arxiv,
+   cvpr, iccv, PRIMEarxiv, wacv, icml2019, pasj00/01/02, tlp, cimento, JINST, aistats2026, compositio, hha, jhrs,
+   czjphys; iccvw by source).
+5. *Hooks.* `\AtEndOfClass`/`\AtEndOfPackage` code the copy registers runs at the end of its load inside the copy's
+   mode (`\lx@copy@provides@begin{N}` … `\lx@copy@provides@end`, `copy_provides_wrap`; aa.cls:71's `{abstract}`).
+   Code it defers to the document — `\AtBeginDocument`, `\AtEndDocument`, `\AtEndPreamble`, `\AfterEndPreamble`,
+   `\AfterEndDocument`, `\AddToHook` (lthooks' `\AddToHook code` stands in while the copy is read) — is not registered
+   (`copy_provides_defers`, one Info per copy and seam): it is the class's document-time machinery the binding has taken
+   over. On the census sample it fixed no Error and caused 3 Fatals (aastex7.cls:459's `\AddToHook{enddocument}` patch
+   reads the kernel's `\enddocument` up to `\@checkend`: 2504.00922, 2605.15371, 2607.03848), 5 Error rows (PoS.cls,
+   JHEP.cls "\abstract{...} should appear before \begin{document}"; ieeeaccess.cls's `\EOD`; aipproc.cls's
+   `\layoutstyle`) and printed layout checks ("The page layout violates the ICML style", 2407.02750). **Deviation from
+   the 72a brief's rule 5**, which asked for the hooks to run under the rule — open for a ruling.
+6. *Nested loads.* A file the copy loads (`\RequirePackage`, `\usepackage`, `\input`, `\LoadClass`) is a real load,
+   the mode suspended for it (`input_definitions`): a package the binding did not load loads whole (bmvc2k.cls:139's
+   `tabularx`, colm's `multirow`, ws-rv9x6.cls's `ws-crop9x6`), a loaded one is the usual no-op, and `\LoadClass` of
+   the loaded class is quiet. These are the lines the binding's dependency scan stands in for, so the copy's
+   `\usepackage`/`\RequirePackage` takes the scan's `\ver@` test (`require_package` → `marked_loaded_unrecorded`,
+   latex.ltx:18750 `\@ifl@aded`; DIVERGENCES #605): a package the document marked loaded is skipped (sn-jnl.cls:311
+   `\usepackage{program}` under sn-jnl-setup.sty's `\AddToHook{class/sn-jnl/before}`, 2201.11056). Every other
+   `\usepackage` keeps the records-only test (rulings 2026-10-14/16). Unlike `end_provide_only` (OmniBus's provide-only load, OD #408), these files are not
+   marked unloaded after: OmniBus loads part of a file that a later request must load whole; the copy's nested load
+   is that file's whole load.
+7. *Options.* The copy's `\DeclareOption`s and `\ProcessOptions` run its own handlers inside its code (a handler
+   name the binding declared is the binding's, rule 2, and comes back as the binding left it: run and `\relax`ed); its
+   `\NeedsTeXFormat`/`\ProvidesClass` are quiet, `\ProvidesClass` recording its version.
+8. *Diagnostics.* An Error raised in the copy's own code is reported as a Warning (error.rs
+   `copy_code_demotes_errors`): the code sets up machinery the binding stands in for (ieeeaccess.cls:131's `spotcolor`
+   model, 2007.03025; pnas-new.cls:256-419's `\titleformat`s, 1907.12289). A nested load's errors stay Errors; a Fatal
+   stays Fatal.
+9. *Not covered.* An extra macro's body, run later in the document, is the author's command and keeps TeX's effect,
+   calling the binding's meanings of owned names (neurips_2024.sty's `\TEST`, defined inside its `\@maketitle`, stays
+   unreachable: 2406.07381).
+
+Witnesses (census `agent_reports/2026-10-17_standin_extras_census.md`): 1309.5950 E 4 → 0, 1406.5372 29 → 0, 2109.13055
+84 → 0, 2008.02921 9 → 0, 1609.03892 7 → 0. Known casualties: WileyNJDv5.cls's `\usepackage{lettersp}` (LETTERSP.STY
+assumes an existing `\Comment` is its own; the binding loaded algpseudocode's first: 2501.12471, 2602.03829,
+2408.07575), equations.sty's `\usevalue` (xkeyval's kept: 2411.02780), a diagrams.sty unrelated to the binding's
+(hep-ph9609379), crckapb.sty's raw `\@citex` and empty `\citeauthoryear` over the kernel names our `\cite` path reads
+(astro-ph9601169's citations print "?"). Guards `perfect_kernel_batch72a::*`; repros `tools/perfect_kernel/repros/stand-in-copies/`.

@@ -1,0 +1,12 @@
+% witness: the 17 stand-ins that read their copy raw (arxiv_sty.rs `InputDefinitions!`; 2010.06291 arxiv.sty,
+%          2303.17225 cvpr, 1610.05439 pasj00; census 2026-10-17)
+% oracle:  pdflatex 0 errors ("EXTRA")
+% engines: rust 67int20b = 0 errors (the binding reads the copy once)
+% expect:  0 errors, 0 warnings; "EXTRA"; the copy is read once (no "read twice" error)
+% status:  CONTROL (67int20b) -> GREEN (72a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{arxiv}
+\begin{document}
+\arxivextra
+\end{document}

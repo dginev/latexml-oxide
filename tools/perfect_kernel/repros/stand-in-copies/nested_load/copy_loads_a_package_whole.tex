@@ -1,0 +1,15 @@
+% witness: bmvc2k.cls:139 `\RequirePackage{…tabularx…}` (2406.08486, 2210.06270); colm2025_conference.sty
+%          `\usepackage{multirow}`; ws-rv9x6.cls `\RequirePackage{ws-crop9x6}` (census 2026-10-17)
+% oracle:  pdflatex 0 errors (the table's spanning cell "AB", the extra \bmvcreviewcopy)
+% engines: rust 67int20b = 2 errors (\bmvcreviewcopy and \multirow undefined: the copy is not read)
+% expect:  0 errors, 0 warnings; the copy's \RequirePackage{multirow} loads multirow; \bmvcreviewcopy defined
+% status:  RED (67int20b) -> GREEN (72a)
+% preload: ar5iv.sty
+\documentclass{bmvc2k}
+\bmvcreviewcopy{42}
+\begin{document}
+\begin{tabular}{ll}
+\multirow{2}{*}{AB} & x\\
+ & y\\
+\end{tabular}
+\end{document}

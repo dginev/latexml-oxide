@@ -166,6 +166,8 @@ pub fn reset_thread_engine() {
   common::font::tfm::reset_tfm_cache();
   binding::counter::dialect::reset_refstep_state();
   binding::content::reset_subfile_package_load();
+  binding::content::reset_raw_read_paths();
+  definition::origin::reset_copy_provides();
 }
 
 pub use crate::common::error::*;

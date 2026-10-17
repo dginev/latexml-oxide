@@ -1,0 +1,26 @@
+% witness: the census declaration kinds (68c defs.py: `\newif`, `\newcounter`, `\newtheorem`, `\newenvironment`,
+%          `\let`); asme2ej.cls:1230 `\AtEndOfClass` (2210.14434); jheppub.sty:313-314
+%          `\numberwithin{equation}{section}` (2112.14648, 2607.20603); svjour3.cls copies redefining `\maketitle`,
+%          `\section`, `{abstract}` (risk (f), 1,973 copies `\section`, 2,105 `\maketitle`; census 2026-10-17)
+% oracle:  pdflatex 0 errors (the copy's own title page, section and abstract, "(1.1)", "(2.1)";
+%          YES 7 ExtraThm 1 [E] B AEOC)
+% engines: rust 67int20b = 7 errors (the extras undefined: the copy is not read)
+% expect:  0 errors, 0 warnings; the extras work; the binding's title, creator, section, abstract and equation
+%          numbers (1), (2) are kept; \LoadClass{article} and \ProcessOptions in the copy are quiet
+% status:  RED (67int20b) -> GREEN (72a)
+% preload: ar5iv.sty
+\documentclass[copyoption]{svjour3}
+\title{The Title}
+\author{An Author}
+\institute{The Institute}
+\begin{document}
+\maketitle
+\begin{abstract}The abstract.\end{abstract}
+\section{Intro}
+\begin{equation}x=1\label{e}\end{equation}
+See \ref{e}. \ifextraflag YES\fi{} \theextractr{} \copyoptionseen
+\begin{extrathm}A claim.\end{extrathm}
+\begin{extraenv}E\end{extraenv} \extralet{B} \aeocextra
+\section{Next}
+\begin{equation}y=2\end{equation}
+\end{document}

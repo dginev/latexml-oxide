@@ -63,7 +63,9 @@ pub(crate) fn load() -> Result<()> {
     let nargs = nargs.value_of() as usize;
     let (definable, plain_origin) = is_definable_latex(&cs_token)?;
     if !definable {
-      if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
+      if has_value(&s!("{}:locked", cs_token.to_string())) && copy_provides_refuses_locked(&cs_token) {
+        // (a stand-in's copy takes nothing over: `state::copy_provides_refuses_locked`)
+      } else if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
         Info!("ignore", cs_token, message);
       } else {
@@ -1270,6 +1272,8 @@ pub(crate) fn load() -> Result<()> {
 
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
       DefMacro!(end_name_cs, None, end);
+    } else if copy_provides_refuses_locked(&T_CS!(s!("\\{name}"))) {
+      // (a stand-in's copy takes nothing over: `state::copy_provides_refuses_locked`)
     } else {
       // The refused begin and end code, kept as `\lx@dropped@<name>` and `\lx@dropped@end<name>` (the record
       // `install_definition` keeps for a refused `\def`, state.rs; `\newcommand`'s above), for a locked binding to read

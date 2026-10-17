@@ -393,8 +393,38 @@ pub struct State {
   /// `binding::content::require_package_borrowed`): the borrowed package and what it loads (amsthm's amsgen), which the
   /// borrow unmarks again, as LaTeX never loaded them.
   pub borrowed_loaded:         Vec<String>,
+  /// The paper's copies of author files read after their stand-in bindings, by number less one
+  /// ([`crate::definition::origin::copy_provides`]; [`note_copy_provides_assignment`]).
+  pub copy_provides_copies:    Vec<CopyProvidesRecord>,
+  /// The frames of the stand-in copies' provides-mode in force, innermost last
+  /// ([`enter_copy_provides_frame`]).
+  pub copy_provides_frames:    Vec<CopyProvidesFrame>,
+  /// The names assigned while a stand-in binding loaded ([`crate::definition::origin::StandInLoadGuard`]): its own, which
+  /// the paper's copy read after it only provides ([`note_copy_provides_assignment`]).
+  pub stand_in_meanings:       rustc_hash::FxHashSet<SymStr>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
+}
+
+/// What [`note_copy_provides_assignment`] keeps for one stand-in's copy: the copy's file, its own definitions of names
+/// the binding owns (in force only inside its code), and the names and deferring seams logged.
+#[derive(Debug, Default)]
+pub struct CopyProvidesRecord {
+  pub file:     String,
+  pub overlay:  rustc_hash::FxHashMap<SymStr, Stored>,
+  pub declined: rustc_hash::FxHashSet<SymStr>,
+  pub deferred: rustc_hash::FxHashSet<SymStr>,
+}
+
+/// One frame of a stand-in copy's provides-mode ([`enter_copy_provides_frame`]): the copy (`0`: a suspension), whether
+/// it repeats the frame in force (a hook chunk wrapped twice), and the names whose meanings its code replaced, with
+/// the meanings kept aside.
+#[derive(Debug, Default)]
+pub struct CopyProvidesFrame {
+  pub id:        u32,
+  pub repeat:    bool,
+  pub kept:      Vec<(SymStr, Stored)>,
+  pub kept_keys: rustc_hash::FxHashSet<SymStr>,
 }
 // SAFETY: `State` holds `Rc`/`RefCell`/`libxml::tree::Node` (!Send). Marked
 // Send so callers can build it on one thread and then transition to another
@@ -466,6 +496,9 @@ impl Default for State {
       provide_only_assigned:   rustc_hash::FxHashSet::default(),
       provide_only_loaded:     Vec::new(),
       borrowed_loaded:         Vec::new(),
+      copy_provides_copies:    Vec::new(),
+      copy_provides_frames:    Vec::new(),
+      stand_in_meanings:       rustc_hash::FxHashSet::default(),
       journal:                 None,
     }
   }
@@ -1021,6 +1054,9 @@ impl State {
       if crate::definition::origin::provide_only() {
         self.provide_only_assigned.insert(key);
       }
+      if crate::definition::origin::stand_in_loading() {
+        self.stand_in_meanings.insert(key);
+      }
     } else if table_name == TableName::Value && matches!(value, Stored::Bool(true)) {
       // (`<file>_loaded`, `load_ltxml`: a file loaded under the provide-only guard, or by a borrow)
       let provide_only = crate::definition::origin::provide_only();
@@ -1414,7 +1450,9 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   // unlocked state reads no lock and allocates nothing here)
   let locked =
     !state_is_unlocked() && token.with_cs_name(|cs| redefinition_locked(cs, &definition));
-  if locked {
+  if locked && copy_provides_refuses_locked(&token) {
+    restore_cleared_binding(&token);
+  } else if locked {
     restore_cleared_binding(&token);
     // A LOCKED BINDING OWNS ITS CALLS. The lock keeps the semantic markup of a call (Perl acb3b27e: commands "that
     // lose semantics when redefined"), and a use without an argument cannot produce that markup: the binding would
@@ -1584,6 +1622,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
       }
     }
   } else {
+    note_copy_provides_assignment(&token);
     state_mut!().assign_internal(TableName::Meaning, cs_sym, definition, scope);
   }
 }
@@ -1830,6 +1869,367 @@ pub fn provide_only_declines(token: &Token) -> bool {
       false
     }
   })
+}
+
+/// "A stand-in's copy provides" (OXIDIZED_DESIGN_DIVERGENCES #731): note this assignment of `token`'s meaning, made
+/// while the paper's copy of an author file is read after the binding that stands in for it
+/// (`binding::content::read_stand_in_copy`), or while the `\AtEndOfClass`/`\AtEndOfPackage` code it registered runs
+/// at the end of that load ([`copy_provides_wrap`]). Every assignment of a meaning goes through here — TeX's `\def`
+/// family, `\let`, `\futurelet`, `\chardef` and the `\countdef` family, and the LaTeX declarators (`\newcommand`,
+/// `\renewcommand`, `\DeclareRobustCommand`, `\newenvironment`, `\newcounter`, `\newif`, `\newtheorem`, `\newlength`…),
+/// at [`install_definition`] and [`assign_meaning`]. One of a name LaTeXML's semantic layer owns
+/// (`owned_by_the_semantic_layer`; an environment `{X}` is owned when `\begin{X}`, `\X` or `\endX` is) holds only
+/// inside the copy's own code: the binding's meaning is kept aside and put back when the copy's read ends
+/// ([`leave_copy_provides_frame`]), so for the document the definition acted as `\providecommand` does, while the
+/// copy's load-time logic sees what it defined, as in TeX: aipproc.cls:559 `\ifnum\pageref>0` after its option's
+/// `\chardef\pageref` (astro-ph0105128); epl2.cls:1317-1318's `\let\epl@org@bibitem\bibitem` before its `\def\bibitem`,
+/// which the epl binding makes too (a kept `\let` would take the binding's wrapper for the original, and `\bibitem`
+/// would call itself: 0906.2627, 1102.2776, 1203.4765). Every other assignment stands as TeX makes it: an undefined
+/// name (the copy's extras), a raw kernel name, an earlier raw file's or the document's, a stub or borrow. Not while
+/// the state is unlocked (a binding's `before`/`after` code, an `AddToMacro!` append), nor for a locked name, which
+/// `install_definition` refuses first ([`copy_provides_refuses_locked`]). Each name kept for the binding is logged
+/// once per copy, at Info.
+pub fn note_copy_provides_assignment(token: &Token) {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 || state_is_unlocked() || !matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+  {
+    return;
+  }
+  let key = meaning_key(token);
+  let Some(at) = state!()
+    .copy_provides_frames
+    .iter()
+    .rposition(|frame| frame.id == id && !frame.repeat)
+  else {
+    return;
+  };
+  if state!().copy_provides_frames[at].kept_keys.contains(&key) {
+    return;
+  }
+  let owned = owned_by_the_semantic_layer(token)
+    || token.with_cs_name(|name| {
+      environment_names(name)
+        .iter()
+        .any(|other| owned_by_the_semantic_layer(&T_CS!(other.as_str())))
+    });
+  if !owned {
+    return;
+  }
+  let binding = lookup_meaning(token).unwrap_or(Stored::None);
+  let mut state = state_mut!();
+  let frame = &mut state.copy_provides_frames[at];
+  frame.kept.push((key, binding));
+  frame.kept_keys.insert(key);
+}
+
+/// Does a stand-in's copy, read or running its hook now ([`note_copy_provides_assignment`]), redefine the locked
+/// `token`? Then the lock refuses it as for any file, but keeps no record of it — no `\lx@dropped@<name>` body for
+/// the binding to run in a gap, no `<cs>:redefined` for it to yield to, no default or signature (the records of a raw
+/// class taking over a locked command, OXIDIZED_DESIGN #265, #500): the binding stands in for this very file, so the
+/// copy takes nothing over. Logged once per copy, at Info, as a redefinition of an owned name is.
+pub fn copy_provides_refuses_locked(token: &Token) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 {
+    return false;
+  }
+  let key = meaning_key(token);
+  let mut state = state_mut!();
+  if let Some(copy) = state.copy_provides_copies.get_mut(id as usize - 1)
+    && copy.declined.insert(key)
+  {
+    let file = copy.file.clone();
+    drop(state);
+    let name = token.with_cs_name(ToString::to_string);
+    Info!(
+      "provide",
+      name,
+      s!("{name} keeps LaTeXML's locked definition: the paper's {file} redefines it")
+    );
+  }
+  true
+}
+
+/// Does a stand-in's copy, read now ([`note_copy_provides_assignment`]), (re)declare or renumber the counter `ctr` the
+/// binding owns (its `\c@<ctr>` or `\the<ctr>`, the kernel's `equation` being the format's register with the pool's
+/// `\theequation`: `\newcounter`, `\numberwithin`, `\@addtoreset`, `\counterwithin`)? Then the counter
+/// keeps the binding's numbering: its reset list is the binding's, as its `\the<ctr>` is (jheppub.sty's
+/// `\numberwithin{equation}{section}` reset the equations per section while `\theequation` stayed the binding's, so
+/// every section's first equation was "(1)": 2112.14648, 2607.20603). Logged once per copy, at Info.
+pub fn copy_provides_keeps_counter(ctr: &str) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 || state_is_unlocked() {
+    return false;
+  }
+  let counter = T_CS!(s!("\\c@{ctr}"));
+  // (owned before the copy redefined it, if it has: the frame keeps the binding's meaning aside)
+  let owned = |token: &Token| {
+    owned_by_the_semantic_layer(token)
+      || state!()
+        .copy_provides_frames
+        .iter()
+        .any(|frame| frame.id == id && frame.kept_keys.contains(&meaning_key(token)))
+  };
+  if !owned(&counter) && !owned(&T_CS!(s!("\\the{ctr}"))) {
+    return false;
+  }
+  let key = meaning_key(&counter);
+  let mut state = state_mut!();
+  if let Some(copy) = state.copy_provides_copies.get_mut(id as usize - 1)
+    && copy.declined.insert(key)
+  {
+    let file = copy.file.clone();
+    drop(state);
+    Info!(
+      "provide",
+      ctr,
+      s!("Counter {ctr} keeps LaTeXML's numbering: the paper's {file} redeclares or renumbers it")
+    );
+  }
+  true
+}
+
+/// Begin a frame of copy `id`'s provides-mode ([`crate::definition::origin::enter_copy_provides`]; `0` suspends the mode for
+/// a file the copy loads, a repeat of the mode in force adds nothing): the copy's own definitions of names the binding
+/// owns, kept from its earlier read or hooks, are in force again for its code, the meanings they replace kept aside.
+pub fn enter_copy_provides_frame(id: u32, previous: u32) {
+  let mut kept = Vec::new();
+  let mut kept_keys = rustc_hash::FxHashSet::default();
+  if id != 0 && id != previous {
+    let overlay: Vec<(SymStr, Stored)> = state!()
+      .copy_provides_copies
+      .get(id as usize - 1)
+      .map(|copy| copy.overlay.iter().map(|(k, v)| (*k, v.clone())).collect())
+      .unwrap_or_default();
+    for (key, meaning) in overlay {
+      let current = meaning_by_key(key);
+      kept.push((key, current));
+      kept_keys.insert(key);
+      state_mut!().assign_internal(TableName::Meaning, key, meaning, Some(Scope::Global));
+    }
+  }
+  state_mut!().copy_provides_frames.push(CopyProvidesFrame {
+    id,
+    repeat: id == previous,
+    kept,
+    kept_keys,
+  });
+}
+
+/// End the frame [`enter_copy_provides_frame`] began: each name the copy's code redefined, and the binding owns, takes
+/// back the meaning kept aside, and the copy's own is kept for its next frame (a hook it registered).
+pub fn leave_copy_provides_frame() {
+  let Some(frame) = state_mut!().copy_provides_frames.pop() else {
+    return;
+  };
+  if frame.id == 0 || frame.repeat {
+    return;
+  }
+  for (key, kept) in frame.kept.into_iter().rev() {
+    let copys = meaning_by_key(key);
+    // (a name the copy's code left as it found it — the kernel's `\protected@edef` lets `\protect` aside and back —
+    // was not redefined: nothing to log)
+    let redefined = !same_meaning(&copys, &kept);
+    let mut state = state_mut!();
+    let mut logged = None;
+    if let Some(copy) = state.copy_provides_copies.get_mut(frame.id as usize - 1) {
+      if redefined && copy.declined.insert(key) {
+        logged = Some(copy.file.clone());
+      }
+      copy.overlay.insert(key, copys);
+    }
+    state.assign_internal(TableName::Meaning, key, kept, Some(Scope::Global));
+    drop(state);
+    if let Some(file) = logged {
+      let name = arena::to_string(key);
+      Info!(
+        "provide",
+        name,
+        s!(
+          "{name} keeps LaTeXML's definition: the paper's {file} redefines it for its own code only"
+        )
+      );
+    }
+  }
+}
+
+/// Are `a` and `b` the same meaning: the same definition object (a `\let` copies the object), or equal otherwise?
+fn same_meaning(a: &Stored, b: &Stored) -> bool {
+  match (a, b) {
+    (Stored::Expandable(x), Stored::Expandable(y)) => Rc::ptr_eq(x, y),
+    (Stored::Constructor(x), Stored::Constructor(y)) => Rc::ptr_eq(x, y),
+    (Stored::Primitive(x), Stored::Primitive(y)) => Rc::ptr_eq(x, y),
+    (Stored::MathPrimitive(x), Stored::MathPrimitive(y)) => Rc::ptr_eq(x, y),
+    (Stored::Conditional(x), Stored::Conditional(y)) => Rc::ptr_eq(x, y),
+    (Stored::Register(x), Stored::Register(y)) => Rc::ptr_eq(x, y),
+    (Stored::Token(x), Stored::Token(y)) => x == y,
+    (Stored::None, Stored::None) => true,
+    _ => false,
+  }
+}
+
+/// The meaning bound to `key` (a [`meaning_key`]), `Stored::None` when there is none.
+fn meaning_by_key(key: SymStr) -> Stored {
+  state!()
+    .meaning
+    .get(&key)
+    .and_then(|entry| entry.front().cloned())
+    .unwrap_or(Stored::None)
+}
+
+/// Number a new stand-in copy of `file` for [`note_copy_provides_assignment`] (1-based, [`crate::definition::origin::copy_provides`]).
+pub fn new_copy_provides_record(file: &str) -> u32 {
+  let mut state = state_mut!();
+  state.copy_provides_copies.push(CopyProvidesRecord {
+    file: file.to_string(),
+    ..CopyProvidesRecord::default()
+  });
+  state.copy_provides_copies.len() as u32
+}
+
+/// The other names of the environment a name `\X`, `\endX`, `\begin{X}` or `\end{X}` belongs to (latex.ltx `\begin{X}`
+/// runs `\X`, `\end{X}` runs `\endX`): for `\X` (and `\endX`) the binding's `\begin{X}` and `\end{X}`, for `\begin{X}`
+/// (and `\end{X}`) the macros `\X` and `\endX`.
+fn environment_names(name: &str) -> Vec<String> {
+  let env = name
+    .strip_prefix("\\begin{")
+    .or_else(|| name.strip_prefix("\\end{"))
+    .and_then(|rest| rest.strip_suffix('}'));
+  match env {
+    Some(env) => vec![s!("\\{env}"), s!("\\end{env}")],
+    None => match name.strip_prefix('\\') {
+      Some(macro_name) if !macro_name.is_empty() => {
+        let env = macro_name
+          .strip_prefix("end")
+          .filter(|env| !env.is_empty())
+          .unwrap_or(macro_name);
+        vec![s!("\\begin{{{env}}}"), s!("\\end{{{env}}}")]
+      },
+      _ => Vec::new(),
+    },
+  }
+}
+
+/// Is `token`'s current meaning owned by LaTeXML's semantic layer, for [`note_copy_provides_assignment`]? Either the
+/// name was assigned while a stand-in binding loaded ([`crate::definition::origin::StandInLoadGuard`]: its own definitions,
+/// `\let`s and `RawTeX`, and the bindings it required), at an origin of LaTeXML's own, or its meaning is a definition
+/// made under this very name (not a `\let` copy of another's, whose object carries the other name) at such an origin —
+/// `Unknown`, `Pool` or `Binding` (definition/origin.rs): a pool's (`\section`, `\maketitle`) or another binding's
+/// (natbib's `\citep`, xkeyval's `\usevalue`). The format's own definitions (`Plain`, `LatexDump`, `Format`), the
+/// document's world (`File`, `Document`) and the guesses that yield (`Fallback`, `Stub`, `Borrowed`) are not owned.
+fn owned_by_the_semantic_layer(token: &Token) -> bool {
+  use crate::definition::origin::DefinitionOrigin;
+  let ours = |origin: DefinitionOrigin| {
+    matches!(
+      origin,
+      DefinitionOrigin::Unknown | DefinitionOrigin::Pool | DefinitionOrigin::Binding
+    )
+  };
+  lookup_meaning(token).is_some_and(|meaning| {
+    definition_origin(&meaning).is_some_and(ours)
+      && (definition_cs(&meaning) == Some(*token)
+        || state!().stand_in_meanings.contains(&meaning_key(token)))
+  })
+}
+
+/// The name a definition was made under (a `\let` copy keeps its source's).
+fn definition_cs(meaning: &Stored) -> Option<Token> {
+  match meaning {
+    Stored::Expandable(defn) => Some(defn.cs),
+    Stored::Constructor(defn) => Some(defn.cs),
+    Stored::Primitive(defn) => Some(defn.cs),
+    Stored::MathPrimitive(defn) => Some(defn.cs),
+    Stored::Conditional(defn) => Some(defn.cs),
+    Stored::Register(defn) => Some(defn.cs),
+    _ => None,
+  }
+}
+
+/// Who made the definition `meaning` (`None`: not a definition — a `\let` to a character, an undefined name).
+fn definition_origin(meaning: &Stored) -> Option<crate::definition::origin::DefinitionOrigin> {
+  match meaning {
+    Stored::Expandable(defn) => Some(defn.origin),
+    Stored::Constructor(defn) => Some(defn.origin),
+    Stored::Primitive(defn) => Some(defn.origin),
+    Stored::MathPrimitive(defn) => Some(defn.origin),
+    Stored::Conditional(defn) => Some(defn.origin),
+    Stored::Register(defn) => Some(defn.origin),
+    _ => None,
+  }
+}
+
+/// The code a stand-in's copy registers with `\AtEndOfClass`/`\AtEndOfPackage`, which runs at the end of its own
+/// load: wrapped in the copy's scope markers `\lx@copy@provides@begin{N}` … `\lx@copy@provides@end`, so it runs under
+/// the copy's provides-mode, with the copy's own definitions in force ([`enter_copy_provides_frame`]; aa.cls:71's
+/// `\AtEndOfClass` redefinition of `{abstract}` keeps the binding's). `tokens` unchanged when no copy is read or it is
+/// wrapped already.
+pub fn copy_provides_wrap(tokens: Tokens) -> Tokens {
+  let id = crate::definition::origin::copy_provides();
+  let begin = T_CS!("\\lx@copy@provides@begin");
+  if id == 0 || tokens.unlist_ref().first() == Some(&begin) {
+    return tokens;
+  }
+  let mut wrapped = vec![begin, T_BEGIN!()];
+  wrapped.extend(mouth::tokenize_internal(TeXString::assembled(id.to_string())).unlist());
+  wrapped.push(T_END!());
+  wrapped.extend(tokens.unlist());
+  wrapped.push(T_CS!("\\lx@copy@provides@end"));
+  Tokens::new(wrapped)
+}
+
+/// Does a stand-in's copy, read now, defer code to the document through `seam` (`\AtBeginDocument`,
+/// `\AtEndDocument`, etoolbox's `\AtEndPreamble`/`\AfterEndPreamble`/`\AfterEndDocument`, lthooks' `\AddToHook`)? Then
+/// the code is not registered: it is the class's or style's document-time machinery, which the binding has taken over
+/// — layout checks against the class's page dimensions (icml2024.sty's "The page layout violates the ICML style",
+/// 2407.02750), validations of the class's own setters the document called as the binding's (PoS.cls "\abstract{...}
+/// should appear before \begin{document}", 1001.3214; ieeeaccess.cls's `\EOD`, 2007.03025; aipproc.cls's
+/// `\layoutstyle`, astro-ph0105128), patches of the kernel's `\enddocument` (aastex7.cls:459, whose
+/// `\rvtx@enddocument@patch` reads up to `\@checkend` and ran off the file: 2504.00922, 2605.15371, 2607.03848). On the
+/// 2026-10-17 census sample no Error was fixed by such code. Logged once per copy and seam, at Info.
+pub fn copy_provides_defers(seam: &str) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 {
+    return false;
+  }
+  let key = arena::pin(seam);
+  let mut state = state_mut!();
+  if let Some(copy) = state.copy_provides_copies.get_mut(id as usize - 1)
+    && copy.deferred.insert(key)
+  {
+    let file = copy.file.clone();
+    drop(state);
+    Info!(
+      "provide",
+      seam,
+      s!(
+        "The paper's {file} defers code to the document ({seam}); not registered: its binding stands in for that code"
+      )
+    );
+  }
+  true
+}
+
+/// Put lthooks' code registration (`\AddToHook code`, the inner macro latex.ltx's `\AddToHook` hands the hook name,
+/// label and code: `\hook_gput_code:nnn{#1}{#2}{#3}`) under `\lx@copy@provides@AddToHook`, which registers nothing
+/// ([`copy_provides_defers`]), while `on` — a stand-in's copy is read — and back after. The kernel's
+/// own meaning is kept as `\lx@copy@provides@saved@AddToHook`. No-op where the format has no hooks or no seam is
+/// defined.
+pub fn swap_copy_provides_hook_seam(on: bool) {
+  let seam = T_CS!("\\AddToHook code");
+  let saved = T_CS!("\\lx@copy@provides@saved@AddToHook");
+  let wrapper = T_CS!("\\lx@copy@provides@AddToHook");
+  let set = |token: &Token, meaning: Stored| {
+    let key = token.pin_cs_name();
+    state_mut!().assign_internal(TableName::Meaning, key, meaning, Some(Scope::Global));
+  };
+  if on {
+    if let (Some(kernel), Some(wrap)) = (lookup_meaning(&seam), lookup_meaning(&wrapper)) {
+      set(&saved, kernel);
+      set(&seam, wrap);
+    }
+  } else if let Some(kernel) = lookup_meaning(&saved) {
+    set(&seam, kernel);
+    set(&saved, Stored::None);
+  }
 }
 
 /// Begin a provide-only load: no name assigned in it yet.
@@ -3734,6 +4134,7 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
       }
     }
   }
+  note_copy_provides_assignment(token);
   let csname_sym = token.pin_cs_name();
   state_mut!().assign_internal(TableName::Meaning, csname_sym, meaning, scope);
 }

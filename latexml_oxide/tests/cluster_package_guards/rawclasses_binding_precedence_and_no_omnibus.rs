@@ -27,14 +27,28 @@ const RAW_CLS: &str = "\\ProvidesClass{whatever}\n\
     \\LoadClass{article}\n\
     \\newcommand{\\rawmarker}{RAWCLSLOADED}\n";
 
-/// Directive 1: the contrib `daj` binding wins even under rawclasses —
-/// the local raw `.cls`'s marker must NOT appear.
+/// Directive 1: the contrib `daj` binding wins even under rawclasses — it is the class loaded, and the local raw
+/// `.cls`, read after it as the paper's copy of the file `daj` stands in for, only provides
+/// (OXIDIZED_DESIGN_DIVERGENCES #731): its `\section` stays the binding's, its extra `\rawmarker` is defined.
 #[test]
 fn contrib_binding_keeps_precedence_under_rawclasses() {
-  let (xml, _stderr) = convert("daj", RAW_CLS, Some("[rawstyles,rawclasses]latexml.sty"));
+  let raw_cls = format!("{RAW_CLS}\\renewcommand\\section[1]{{RAWSECTION}}\n");
+  let tex =
+    "\\documentclass{daj}\n\\begin{document}\n\\section{Intro}\n\\rawmarker\n\\end{document}\n";
+  let (stderr, xml) = super::convert_files_with(
+    tex,
+    &[("daj.cls", raw_cls.as_str())],
+    Some("[rawstyles,rawclasses]latexml.sty"),
+  );
   assert!(
-    xml.contains("NOMARKER") && !xml.contains("RAWCLSLOADED"),
-    "compiled daj binding must outrank the raw .cls under rawclasses:\n{xml}",
+    xml.contains("<?latexml class=\"daj\"?>")
+      && xml.contains("<section")
+      && !xml.contains("RAWSECTION"),
+    "compiled daj binding must outrank the raw .cls under rawclasses:\n{xml}\n{stderr}",
+  );
+  assert!(
+    xml.contains("RAWCLSLOADED"),
+    "the copy's extra is provided:\n{xml}"
   );
 }
 

@@ -3,7 +3,10 @@
 //! `neurips_2024.sty`, `JHEP.cls`, `svjour3.cls`, `aa.cls`, …). The binding is a stand-in for that copy, not the file:
 //! `\IfFileExists` and `\InputIfFileExists` find the file only when the paper ships it, as TeX does
 //! ([`crate::binding::content::binding_counts_as_file`]); witness 2606.27281 (`\IfFileExists{arxiv.sty}` without
-//! the file). Every other compiled binding is the file it is named for — TeX Live's (found where the host's tree
+//! the file). The copy the paper ships is read after the binding, every definition of a name the binding owns holding
+//! only inside the copy's own code, so that its extra commands are defined ("a stand-in's copy provides",
+//! [`crate::binding::content`] `read_stand_in_copy`, OXIDIZED_DESIGN_DIVERGENCES #731; 1309.5950's aas_macros.sty
+//! `\kms`). Every other compiled binding is the file it is named for — TeX Live's (found where the host's tree
 //! lacks it: babel's `italian.ldf` on a trimmed tree), a file TeX Live once distributed ([`FORMER_TEX_LIVE`]: TeX in
 //! the paper's era found it, so 1710.04900's harvard.sty `\IfFileExists{html.sty}` loads the html binding), or
 //! LaTeXML's own ([`LATEXML_OWN`]; the pools, font maps and drivers such as `pgfsys-latexml.def` need no list).

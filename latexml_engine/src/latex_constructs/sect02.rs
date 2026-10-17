@@ -666,6 +666,14 @@ fn at_document_hook(
   label: Option<Tokens>,
   rules: Tokens,
 ) -> Result<Tokens> {
+  // (a stand-in's copy registers no document-time code: `state::copy_provides_defers`)
+  if copy_provides_defers(if hook == "begindocument" {
+    "\\AtBeginDocument"
+  } else {
+    "\\AtEndDocument"
+  }) {
+    return Ok(Tokens!());
+  }
   // INTERIM (K3 correctness item, KERNEL_CAPABILITIES.md): a parameter-
   // bearing chunk under a package label (pm-isomath.sty's
   // `\AtBeginDocument{…\NewDocumentCommand\vectorsymbol{s m}{…#2…}}`)

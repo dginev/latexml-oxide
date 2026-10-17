@@ -78,3 +78,4 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `paragraph-mode` | mode changes at paragraph boundaries: tex.web §1046-1047 `\par`/`\end{X}` in inline math ("Missing $ inserted"), the formula's end around a stray `}` |
 | `singletons` | one-off package defects whose mechanism has no topic of its own |
 | `stub-dependencies` | a stub binding (a package not interpreted raw) loads what the real package loads, option-driven loads included, and defines its public names; class bindings likewise for their classes |
+| `stand-in-copies` | a stand-in binding followed by the paper's copy of its file, which only provides: extras, owned names kept, scratch logic, nested loads, deferred hooks (OXIDIZED_DESIGN_DIVERGENCES #731) |

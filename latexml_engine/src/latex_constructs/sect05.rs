@@ -527,6 +527,8 @@ pub(crate) fn load() -> Result<()> {
     let name = Expand!(T_CS!("\\@currname")).to_string();
     let ttype = Expand!(T_CS!("\\@currext")).to_string();
     let hookcs = T_CS!(s!("\\{name}.{ttype}-h@@k"));
+    // (what a stand-in's copy registers runs under its provides-mode: `state::copy_provides_wrap`)
+    let code = copy_provides_wrap(code);
     AddToMacro!(hookcs, code);
   });
 

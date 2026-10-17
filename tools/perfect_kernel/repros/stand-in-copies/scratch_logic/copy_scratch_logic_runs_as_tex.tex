@@ -1,0 +1,14 @@
+% witness: the census hazard 4 (a binding's RawTeX `\def\@tempa` would make the scratch name the binding's);
+%          natbib_sty.rs and graphics_sty.rs RawTeX scratch
+% oracle:  pdflatex 0 errors ("Y ON")
+% engines: rust 67int20b = 2 errors (\extra, \extraflag undefined: the copy is not read)
+% expect:  0 errors, 0 warnings; "Y ON" with jmlr2e.sty and with aas_macros.sty as the copy
+% status:  RED (67int20b) -> GREEN (72a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{jmlr2e}
+\begin{document}
+\extra{} \extraflag
+\end{document}

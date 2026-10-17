@@ -1,0 +1,4 @@
+\def\@tempa{x}\def\@tempb{x}
+\ifx\@tempa\@tempb\def\extra{Y}\else\def\extra{N}\fi
+\newif\if@copyflag \@copyflagtrue
+\if@copyflag\def\extraflag{ON}\else\def\extraflag{OFF}\fi

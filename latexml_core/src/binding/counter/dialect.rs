@@ -54,6 +54,9 @@ pub struct NewCounterOptions<'ct> {
 /// registered inside a group outlives it — and re-derive the list's macro.
 /// Repro macro-state/counter_reset_lists_are_global.
 pub fn add_to_counter_reset(ctr: &str, within: &str) -> Result<()> {
+  if copy_provides_keeps_counter(ctr) {
+    return Ok(());
+  }
   let reg = s!("\\cl@{within}");
   let mut toks = vec![T_CS!(ctr), T_CS!(s!("UN{ctr}"))];
   if let Some(prev) = lookup_tokens(&reg) {
@@ -153,6 +156,10 @@ pub fn sync_reset_list_macro(ctr: &str) -> Result<()> {
 /// Defines a new counter named $ctr.
 /// If `within` is defined, `ctr` will be reset whenever `within` is incremented.
 pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>) -> Result<()> {
+  // (a stand-in's copy keeps a counter the binding owns as the binding numbers it: `state::copy_provides_keeps_counter`)
+  if copy_provides_keeps_counter(ctr) {
+    return Ok(());
+  }
   let unctr = s!("UN{ctr}"); // UNctr is counter for generating ID's for UN-numbered items.
   if !within.is_empty()
     && within != "document"

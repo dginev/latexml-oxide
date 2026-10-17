@@ -3002,6 +3002,27 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   #898). (b) "Missing $ closing display math." keeps Perl's recovery (the display stays open, the following text set
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
+- **72a** (a stand-in binding's shipped copy adds its extras; OXIDIZED_DESIGN_DIVERGENCES #731; census
+  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md). After a binding on
+  `AUTHOR_FILE_STAND_INS` loads, the paper's copy is read raw (content.rs `read_stand_in_copy`); its definitions of
+  names the binding owns hold only inside its own code (state.rs `note_copy_provides_assignment`), its extras stand,
+  its `\AtEndOfClass`/`\AtEndOfPackage` code runs in its mode, its document-time hooks are not registered
+  (`copy_provides_defers`), its nested loads are real loads, its own errors are Warnings
+  (error.rs `copy_code_demotes_errors`); its `\usepackage` lines take the dependency scan's `\ver@` test (68f's
+  sn-jnl `program`); owned counters keep the binding's numbering. Updated fixtures: 68k's minimal mdpi.cls loads
+  ifthen as the real copy does (:37); the rawclasses `daj` precedence guard now asserts the binding's `\section` with
+  the copy's extra provided. Census A/B (the 400 `conv_sel.tsv` papers) vs 67int20b: E 590 → 520, 60
+  papers E-better, 7 E-worse, 1 newly Fatal (hep-ph9609379, a diagrams.sty unrelated to the binding's); witnesses
+  1309.5950 4 → 0, 1805.06442 1 → 0, 2001.05519 1 → 0, 1406.5372 29 → 0, 2109.13055 84 → 0, 2008.02921 9 → 0. Open:
+  (a) the brief's rule 5 asked for document-time hooks to run under the rule; measured, they fixed nothing and caused 3
+  Fatals and 5 Error rows — not registered pending a ruling; (b) WileyNJDv5.cls's `lettersp` after the binding's
+  algpseudocode (`\Comment` taken for LETTERSP.STY's own: 2501.12471, 2602.03829, 2408.07575, 2609.08425,
+  2609.19994, 24 Errors each); (c) equations.sty's `\usevalue` against xkeyval's (2411.02780 2 → 99); (d) extras
+  defined inside an owned body stay unreachable (neurips `\TEST` 2406.07381, `\ADDRESS` 1909.08174; spconf's
+  `\thetitle` from its `\title` wrapper, 2311.11306); (e) a copy's raw citation machinery over kernel names our
+  `\cite` path still reads (crckapb.sty's `\@citex` and empty `\citeauthoryear`: astro-ph9601169 cites print "?").
+  Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
+
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;
   agent_reports/2026-10-17_payload_int20.md). (1) The plain-TeX `\halign` rows (math9611222, math9611223, math9412232,
   math0005042) were not 70b A1's template shape: diag.tex's `\newCD` calls `\Let@`, which the amsmath binding (65s)

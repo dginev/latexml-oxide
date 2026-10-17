@@ -232,6 +232,10 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
     DefinitionOrigin::File
   };
   let _origin = OriginGuard::new(origin);
+  // A file a stand-in's copy loads (`\RequirePackage`, `\usepackage`, `\LoadClass`, `\input`) is a real load, read
+  // whole as TeX reads it: the copy's provides-mode is suspended for it (`read_stand_in_copy`).
+  let _suspended = (crate::definition::origin::copy_provides() != 0)
+    .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
   input_definitions_impl(raw_file, options)
 }
 
@@ -808,6 +812,10 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
   let loaded = if options.noltxml {
     None
   } else {
+    // (what a binding standing in for an author's file defines is its own, which the paper's copy read after it only
+    // provides: `read_stand_in_copy`)
+    let _stand_in = crate::binding::author_files::stands_in_for_an_author_file(&filename)
+      .then(crate::definition::origin::StandInLoadGuard::new);
     match _load_binding(false, &filename, options.reloadable).and_then(|ext| match ext {
       Some(source) => Ok(Some(source)),
       None => _load_binding(true, &filename, options.reloadable),
@@ -920,6 +928,12 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       if lookup_bool(&s!("{filename}_unmarks_itself")) {
         let_i(&ver_cs, &T_CS!("\\relax"), Some(Scope::Global));
       }
+    }
+    // A stand-in binding is followed by the paper's copy of the file it stands in for, which only provides
+    // (OXIDIZED_DESIGN_DIVERGENCES #731): inside this load, so the copy's `\AtEndOfClass`/`\AtEndOfPackage` code runs
+    // at its end with the binding's.
+    if crate::binding::author_files::stands_in_for_an_author_file(&filename) {
+      read_stand_in_copy(&stand_in_copy_request(name), &as_type, grandparent_in_expl3)?;
     }
   } else {
     // We're inverting the control flow, because it is near-instant to check whether we have an
@@ -1893,7 +1907,16 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
         } else {
           s!("{}.tex", clean_req)
         };
-        load_binding(&tex_name)?.is_some() || load_external_binding(&tex_name)?.is_some()
+        let stand_in = crate::binding::author_files::stands_in_for_an_author_file(&tex_name);
+        let loaded = {
+          let _stand_in = stand_in.then(crate::definition::origin::StandInLoadGuard::new);
+          load_binding(&tex_name)?.is_some() || load_external_binding(&tex_name)?.is_some()
+        };
+        if loaded && stand_in {
+          let stem = tex_name.strip_suffix(".tex").unwrap_or(&tex_name);
+          read_stand_in_copy(stem, "tex", false)?;
+        }
+        loaded
       } else if is_binding_extension(ext)
         && !(lookup_catcode('%') != Some(Catcode::COMMENT) && find_file(&clean_req, None).is_some())
       {
@@ -1990,6 +2013,92 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   }
 }
 
+thread_local! {
+  /// The files read raw as definitions in this conversion ([`load_tex_definitions`]), by canonical path: kept out of
+  /// the state's tables, which the format dumps record (a host path there would tie a dump to its tree).
+  static RAW_READ_PATHS: std::cell::RefCell<HashSet<String>> =
+    std::cell::RefCell::new(HashSet::default());
+}
+
+/// The canonical form of `pathname` for [`RAW_READ_PATHS`].
+fn canonical_path(pathname: &str) -> String {
+  std::fs::canonicalize(pathname)
+    .map(|path| path.to_string_lossy().into_owned())
+    .unwrap_or_else(|_| pathname.to_string())
+}
+
+/// Has the file at `pathname` been read raw as definitions in this conversion ([`load_tex_definitions`])?
+fn read_raw_already(pathname: &str) -> bool {
+  let path = canonical_path(pathname);
+  RAW_READ_PATHS.with(|paths| paths.borrow().contains(&path))
+}
+
+/// Forget the files read raw: a new conversion starts with none (`reset_thread_engine`).
+pub fn reset_raw_read_paths() { RAW_READ_PATHS.with(|paths| paths.borrow_mut().clear()); }
+
+/// The file a stand-in binding loaded as `name` answers, as the paper asked for it: the request a fallback answers
+/// with this binding (`fallback_request` while `fallback_target` names it: `icml2026` → icml2025.sty, `mysvjour3` →
+/// svjour3.cls, a path-prefixed class), else `name` (with the directory a basename-keyed binding's request had).
+fn stand_in_copy_request(name: &str) -> String {
+  let fallback_request = lookup_string("fallback_request");
+  let fallback_target = lookup_string("fallback_target");
+  let stem = |file: &str| file.rsplit(['/', '\\']).next().unwrap_or(file).to_string();
+  if !fallback_request.is_empty() && stem(&fallback_target).eq_ignore_ascii_case(&stem(name)) {
+    fallback_request
+  } else {
+    name.to_string()
+  }
+}
+
+/// "A stand-in's copy provides" (OXIDIZED_DESIGN_DIVERGENCES #731; user ruling 2026-10-17): after a binding that
+/// stands in for an author's file ([`crate::binding::author_files`]) has loaded, the copy of that file the paper ships
+/// is read too, raw, at the same `\documentclass`/`\usepackage`/`\RequirePackage`/`\input` point, origin `File`. Its
+/// definitions of names the binding owns hold only inside its own code ([`crate::state::note_copy_provides_assignment`]),
+/// so for the document they act as `\providecommand`; the rest stand as TeX makes them — the copy's extras: 1309.5950's
+/// aas_macros.sty `\kms`, `\lya`; 1805.06442 `\prx`; 2001.05519 `\cac`; 1406.5372's `\plotone`. Its
+/// `\AtEndOfClass`/`\AtEndOfPackage` code runs at this load's end under the same rule
+/// ([`crate::state::copy_provides_wrap`]), its document-time hooks are not registered
+/// ([`crate::state::copy_provides_defers`]), a file it loads is a real load, the mode suspended for it
+/// ([`input_definitions`]: bmvc2k.cls:139 `tabularx`, ws-rv9x6.cls's `ws-crop9x6`), and an Error in its own code is a
+/// Warning (`common::error::copy_code_demotes_errors`). The copy is the file `request`.`ext` in the paper's source (the
+/// document's directory, or a `{filecontents}` virtual file), never one of TeX Live's; one read raw already (by its
+/// binding: arxiv.sty, cvpr.sty, pasj00.cls, … `InputDefinitions!`) is not read again. Perl never reads it: `FindFile`
+/// prefers the `.ltxml` (Package.pm:2113-2133).
+fn read_stand_in_copy(request: &str, ext: &str, in_expl3: bool) -> Result<()> {
+  if request.is_empty() || ext.is_empty() {
+    return Ok(());
+  }
+  let file = if request.ends_with(&s!(".{ext}")) {
+    request.to_string()
+  } else {
+    s!("{request}.{ext}")
+  };
+  let Some(path) = find_file(
+    &file,
+    Some(FindFileOptions {
+      forbid_ltxml: true,
+      ..Default::default()
+    }),
+  ) else {
+    return Ok(());
+  };
+  let shipped = crate::binding::virtual_files::vfs_read(&path).is_some() || {
+    let dir = lookup_string("SOURCEDIRECTORY");
+    let canonical =
+      |p: &str| std::fs::canonicalize(p).unwrap_or_else(|_| Path::new(p).to_path_buf());
+    !dir.is_empty() && canonical(&path).starts_with(canonical(&dir))
+  };
+  if !shipped || read_raw_already(&path) || lookup_bool(&s!("{file}_raw_loaded")) {
+    return Ok(());
+  }
+  let id = new_copy_provides_record(file.rsplit(['/', '\\']).next().unwrap_or(&file));
+  use crate::definition::origin::{CopyProvidesGuard, DefinitionOrigin, OriginGuard};
+  // (not a raw class read for K11, `\lx@class@loaded@raw`: the binding owns the title page)
+  let _origin = OriginGuard::new(DefinitionOrigin::File);
+  let _provides = CopyProvidesGuard::new(id);
+  load_tex_definitions(&file, &path, false, ext != "tex", in_expl3, false)
+}
+
 fn load_tex_definitions(
   request: &str,
   pathname: &str,
@@ -2035,6 +2144,10 @@ fn load_tex_definitions(
       return Ok(());
     }
     assign_value(&s!("{request}_raw_loaded"), true, Some(Scope::Global));
+    // (the file itself, by its path: a stand-in binding that reads the paper's copy raw has read it,
+    // `read_stand_in_copy`)
+    let path = canonical_path(pathname);
+    RAW_READ_PATHS.with(|paths| paths.borrow_mut().insert(path));
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
@@ -2755,6 +2868,13 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   let ext = options.extension.as_deref().unwrap_or("sty").to_string();
   let name = source_tree_basename(name, &ext);
   let name = name.as_ref();
+  // A stand-in's copy read after its binding (`read_stand_in_copy`) runs the very `\usepackage`/`\RequirePackage`
+  // lines the binding's dependency scan stands in for, so they take the scan's test (`marked_loaded_unrecorded`,
+  // latex.ltx:18750 `\@ifl@aded`): a package the document marked loaded is skipped (sn-jnl.cls:311
+  // `\usepackage{program}` under sn-jnl-setup.sty's `\AddToHook{class/sn-jnl/before}`, 2201.11056).
+  if crate::definition::origin::copy_provides() != 0 && marked_loaded_unrecorded(name, &ext) {
+    return Ok(());
+  }
   // Perl Package.pm L2671-2672: notex defaults to true unless the user
   // explicitly set it, or INCLUDE_STYLES is true, or noltxml was passed
   // (a raw-only load explicitly requests raw TeX).

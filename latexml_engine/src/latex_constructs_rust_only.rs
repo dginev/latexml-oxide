@@ -192,6 +192,23 @@ LoadDefinitions!({
   // (zugferd.sty:101 `\IfPackageAtLeastTF{pdfmanagement-testphase}{2024/09/13}
   // {}{…too old}`; zugferd DEMOs, sweep 120), so its `\ver@` records the
   // installed file's `\ProvidesExplPackage` date.
+  // "A stand-in's copy provides" (OXIDIZED_DESIGN_DIVERGENCES #731; `state::note_copy_provides_assignment`): the scope
+  // markers around the `\AtEndOfClass`/`\AtEndOfPackage` code a stand-in's copy registers (`state::copy_provides_wrap`),
+  // which runs at the end of its load under the copy's provides-mode (aa.cls:71's `{abstract}` keeps the binding's),
+  // and the stand-in for lthooks' `\AddToHook code` while the copy is read (`state::swap_copy_provides_hook_seam`):
+  // the document-time code it registers is not registered (`state::copy_provides_defers`; aastex7.cls:459's
+  // `\AddToHook{enddocument}`, 2504.00922).
+  DefPrimitive!("\\lx@copy@provides@begin{}", sub[(id)] {
+    let id = id.to_string().trim().parse::<u32>().unwrap_or(0);
+    definition::origin::enter_copy_provides(id);
+  });
+  DefPrimitive!("\\lx@copy@provides@end", {
+    definition::origin::leave_copy_provides();
+  });
+  DefMacro!("\\lx@copy@provides@AddToHook{}{}{}", sub[(_hook, _label, _code)] {
+    copy_provides_defers("\\AddToHook");
+    Tokens!()
+  });
   DefPrimitive!("\\lx@record@provided{}", sub[(file)] {
     let file = file.to_string();
     let ver_cs = T_CS!(s!("\\ver@{file}"));
