@@ -88,6 +88,21 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@written@copy", {
     assign_value(crate::tex_math::WRITTEN_COPY, true, Some(Scope::Local));
   });
+  // The text of a caption's toc copy (`\@caption@@@`, longtable's and listings' captions): the `[short]`, or the caption
+  // where it is empty (`\caption[]{…}`) or the caption itself (`\@dblarg`'s copy, latex.ltx:17391-17400 — a `[short]`
+  // the same as the caption reads alike). The caption is then re-read, typeset where it stands (`\lx@reread@copy`): a
+  // Warning for one source occurrence is given there only (OXIDIZED_DESIGN_DIVERGENCES #721; guard
+  // `perfect_kernel_batch71a::undelimited_argument_warning_once_per_occurrence`). Chosen by the tokens, without
+  // expanding either (a `[short]` opening with a conditional, KNOWN_PERL_ERRORS #468).
+  DefMacro!("\\lx@toc@copy@text{}{}", sub[(short, caption)] {
+    if short.is_empty() || short == caption {
+      let mut tokens = vec![T_CS!("\\lx@reread@copy")];
+      tokens.extend(caption.unlist());
+      Tokens::new(tokens)
+    } else {
+      short
+    }
+  });
   DefMacro!(
     "\\lx@toc@copy@neutralize",
     r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\index\lx@gobble@som\let\glossary\lx@gobble@om"

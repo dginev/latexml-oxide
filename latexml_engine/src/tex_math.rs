@@ -56,6 +56,14 @@ fn merge_limits(pos: &str) {
 /// none (OXIDIZED_DESIGN #550). Witnesses 1904.06560, 2205.04819 (natbib labels), 1303.1693, 1206.2108 (`\caption[short_x]`).
 pub const WRITTEN_COPY: &str = "lx@written@copy";
 
+/// The state value naming a digestion that re-reads a source the document also typesets where it stands, set locally
+/// by `\lx@reread@copy`: the toc copy of a heading or caption that has no `[short]` (sect04.rs, `\lx@toc@copy@text`),
+/// the reference forms of a tag (`\lx@make@tags`: an `\item[…]` label's `typerefnum`, a `\tag{…}`'s `refnum`), and
+/// natbib's label copies (`\NAT@@wrout`, which TeX writes to the .aux and reads only at a citation). A diagnostic that
+/// stands for one source occurrence (OXIDIZED_DESIGN_DIVERGENCES #721's Warning) is given at the typeset reading and not
+/// again here. A `[short]` title or caption is no re-read: it is its own source, digested once, into the list.
+pub const REREAD_COPY: &str = "lx@reread@copy";
+
 static SCRIPT_NAME_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\lx@(floating|post)@(subscript|superscript)$").unwrap());
 

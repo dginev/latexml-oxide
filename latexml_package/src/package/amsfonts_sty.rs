@@ -32,8 +32,9 @@ LoadDefinitions!({
   }
   // amsfonts.sty:78-87 (unless stix is loaded) redefines `\widehat#1`, `\widetilde#1` as macros reading their accentee
   // as an undelimited argument: `\widehat\cba_{\rm CF}` with `\newcommand{\cba}{C_{\mathrm{BA}}}` is the hat over all
-  // of `C_{BA}` (2609.01909), as amsmath's accents; a command reading a mandatory argument (`\widehat\mathbf{x}`) is
-  // read with what follows, with a Warning (OXIDIZED_DESIGN_DIVERGENCES #721; `define_amsfonts_macro_accent`).
+  // of `C_{BA}` (2609.01909), as amsmath's accents; a command reading a mandatory argument (`\widehat\mathbf{x}`, an
+  // amsmath accent: `\widehat\hat z`, which amsfonts does not nest) is read with its own arguments, with a Warning
+  // (OXIDIZED_DESIGN_DIVERGENCES #721; `define_amsfonts_macro_accent`).
   if !lookup_bool("stix.sty_loaded") {
     amsmath_sty::define_amsfonts_macro_accent("widehat")?;
     amsmath_sty::define_amsfonts_macro_accent("widetilde")?;

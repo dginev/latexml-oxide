@@ -2519,12 +2519,21 @@ LoadDefinitions!({
     // these tags (OXIDIZED_DESIGN_DIVERGENCES #98 addendum). The role-less tag is the target's own label, printed where
     // it is built (`\item[Espa~na]`), and keeps the document's `~`. Guard
     // `perfect_kernel_batch63::autoref_tag_tilde_is_the_kernel_space`.
+    // A reference form re-reads the label's source, which the role-less tag typesets (`\lx@reread@copy`): an
+    // `\item[$\hat\mathbf{e}$]`'s typerefnum, a `\tag{$\hat\mathbf{t}$}`'s refnum give no second
+    // OXIDIZED_DESIGN_DIVERGENCES #721 Warning (guard `perfect_kernel_batch71a::undelimited_argument_warning_once_per_occurrence`).
     let mut lx_tags = vec![T_CS!("\\lx@tags"), T_BEGIN!()];
     for (printed_here, invoked_tag) in tags {
       if printed_here {
         lx_tags.extend(invoked_tag.unlist());
       } else {
-        lx_tags.extend([T_CS!("\\begingroup"), T_CS!("\\let"), T_ACTIVE!('~'), T_CS!("\\lx@tag@texttilde")]);
+        lx_tags.extend([
+          T_CS!("\\begingroup"),
+          T_CS!("\\lx@reread@copy"),
+          T_CS!("\\let"),
+          T_ACTIVE!('~'),
+          T_CS!("\\lx@tag@texttilde"),
+        ]);
         lx_tags.extend(invoked_tag.unlist());
         lx_tags.push(T_CS!("\\endgroup"));
       }
@@ -2775,6 +2784,11 @@ LoadDefinitions!({
   // without it), as LaTeX writes it to the .toc untypeset (DIVERGENCES #399; witness 2605.15775,
   // whose heading note took two numbers).
   DefMacro!("\\lx@toc@copy@neutralize", "");
+  // A digestion that re-reads a source typeset where it stands (`tex_math::REREAD_COPY`): a reference form of a tag
+  // (`\lx@make@tags`), the toc copy of a heading or caption without a `[short]`.
+  DefPrimitive!("\\lx@reread@copy", {
+    assign_value(crate::tex_math::REREAD_COPY, true, Some(Scope::Local));
+  });
   DefMacro!(
     "\\lx@format@toctitle@@{}{}",
     r"\lx@@format@toctitle@@{#1}{{\lx@toc@copy@neutralize\lx@format@toctitle@font@@{#1}#2}}"

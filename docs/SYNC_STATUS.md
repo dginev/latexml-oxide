@@ -3027,7 +3027,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   OmniBus with `\PACS` (appolb.cls:322) as the pacs classification, `\received`, `\eqsec`, `\lambdabar`
   (OXIDIZED_DESIGN_DIVERGENCES #719), `\headtitle`/`\headauthor` as running-head notes, `\ie`/`\eg`/`\cf`/`\etal`/`\ibid`
   and `\e`, and the rest of the class's public commands (2210.03396's copy): `\preprint`/`\ifPreprint`/`\prepNo`
-  (:278-282, a preprint note), the `\volume`/`\No` counts and `\pageno` (:283-285), `\ifRedakcja` (:83), `\WERS`
+  (:278-282, a preprint note made at `\maketitle`, which sets `\prepNo`, :399), the `\volume`/`\No` counts and `\pageno` (:283-285), `\ifRedakcja` (:83), `\WERS`
   (:311), `\anymode` (:1019), `\half`/`\Half` (:1053-1057), `\Tr` (:1061), `\Eq` (:1063),
   `\seteqprefix`/`\reseteqprefix` (:1065-1066); its `{eqletters}`/`{eqlettarray}` (:627-648, :1096-1112, lettered
   equations over a redefined `\equation`) are not bound (no witness). The 2 shipping it (0801.2427, cond-mat0205657; raw-loaded before, 0 errors) now
@@ -3062,20 +3062,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\hat\bbU` with `\newcommand\bbU{\mathbb{U}}` a hat over the U where it was a hat over nothing (1009.2900, 1111.3335);
   a single command is read as its definition says (user ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #721): one with
   no mandatory argument braced, as TeX braces it (`\vec\nabla`, `x_\infty`; `\hat\relax x` the hat over an empty
-  nucleus; `\hat\vec x` the hat over the vec over one, amsmath's nested accent), one reading a mandatory argument
-  (`\hat\mathbf{x}`, breqn's `x_\text{abc}`, a robust `\vv` through its `\protect \vv␣`) read with what follows as
-  before (braced, 2210.10207 lost 11,424 words), with one `Warning:malformed:<reader>` that TeX errs there per
-  occurrence typeset (none in a heading's or caption's toc copy, `tex_math::WRITTEN_COPY`). `\Hat`…`\Vec` are bound
-  after the macro accents (amsmath.sty:892 `\def\Hat{\hat}`): `\Hat\muu_a` as `\hat\muu_a`. The shape is rare (7 of
-  7,500 sampled 1505/1905/2305 papers, most in unused macros): 1905.01764 gets 7 Warnings for its 7
-  `\bm{\bar\mathcal{C}}`, 1505.00442 1; r2 A/B (499 papers vs 67int19b): 109 better, 1 worse (1309.5950, above),
-  errors 4350 → 4065, no #721 Warning (no typeset occurrence). Open: a general ltcmd accentee with a mandatory argument
-  (`\NewDocumentCommand\ww{om}`) is warned but still read as `\hat{}\mathbf{x}`, as before 71a. Repros stub-dependencies/{forest_loads_its_tikz_libraries,
-  todonotes_loads_positioning}, package-bindings/{pgfmath_mod_of_a_multiple_is_zero, breqn_script_macro_argument},
-  ams-internals/{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument}; guards
-  `perfect_kernel_batch71a::{forest_loads_its_tikz_libraries, todonotes_loads_positioning,
-  pgfmath_mod_of_a_multiple_is_zero, amsmath_accent_macro_argument, amsfonts_widehat_macro_argument,
-  breqn_script_macro_argument, undelimited_argument_warning_once_per_occurrence}`.
+  nucleus; `\hat\vec x` the hat over the vec over one, amsmath's nested accent, under amsmath's `\mathaccentV` only), one
+  reading a mandatory argument (`\hat\mathbf{x}`, breqn's `x_\text{abc}`, a robust `\vv` through its `\protect \vv␣`,
+  an amsmath accent under amsfonts' `\widehat` or breqn's `^`) read with its own arguments, the call the author wrote
+  (a macro's by its parameters, braced: `\hat\pair{a}{b}` over `(a,b)`, `\hat\vq[a]{x}` for an `{om}` ltcmd command;
+  braced, 2210.10207 lost 11,424 words), with one `Warning:malformed:<reader>` that TeX errs there per source occurrence
+  (none where a source typeset in place is re-read — a toc copy without `[short]`, a tag's reference forms,
+  `tex_math::REREAD_COPY` —; a `[short]` title or caption warns once), naming the reading made and the source line.
+  `\Hat`…`\Vec` are bound after the macro accents (amsmath.sty:892 `\def\Hat{\hat}`): `\Hat\muu_a` as `\hat\muu_a`.
+  The shape is rare (7 occurrences in 7,500 sampled 1505/1905/2305 papers, most in unused macros): 1905.01764 gets 7
+  Warnings for its 7 `\bm{\bar\mathcal{C}}`, 1505.00442 1; r2 A/B (499 papers vs 67int19b): 109 better, 1 worse
+  (1309.5950, above: `\ion` from its own aas_macros copy, restored by the 72a author-copy extras payload), errors 4350 →
+  4065, no #721 Warning (no typeset occurrence); r3 (the reading by the call, the per-source-occurrence rule) the same 499
+  identical in errors, Warnings, words and `tex=` to r2, 2210.10207 37,122 words and 0 Warnings, 1809.05472 1 → 0. Repros
+  stub-dependencies/{forest_loads_its_tikz_libraries, todonotes_loads_positioning},
+  package-bindings/{pgfmath_mod_of_a_multiple_is_zero, breqn_script_macro_argument},
+  ams-internals/{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument, accent_argument_reads_the_whole_call};
+  guards `perfect_kernel_batch71a::{forest_loads_its_tikz_libraries, todonotes_loads_positioning,
+  pgfmath_mod_of_a_multiple_is_zero, amsmath_accent_macro_argument, amsmath_accent_ltcmd_argument,
+  undelimited_argument_reads_the_whole_call, amsfonts_widehat_macro_argument, breqn_script_macro_argument,
+  undelimited_argument_warning_once_per_occurrence}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

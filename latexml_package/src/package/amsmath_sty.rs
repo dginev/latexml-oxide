@@ -2063,10 +2063,11 @@ LoadDefinitions!({
   // `_a` is that group's (0801.1527; without amsmath TeX's `\mathaccent` takes the `m` alone, and pdflatex reports the
   // double subscript). The accent keeps LaTeXML's own construction, its argument braced as `\mathaccent"…{#5}` braces
   // it (`define_ams_macro_accent`); a command reading a mandatory argument (`\hat\mathbf{x}`) is no accentee amsmath
-  // can take (pdflatex: "Argument of \select@group has an extra }"), and is read with what follows as before, which keeps
-  // the formula the author meant, with one Warning that TeX errs there (user ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES
-  // #721; Perl keeps the kernel's accents, KNOWN_PERL_ERRORS #945). Guards
-  // `perfect_kernel_batch71a::{amsmath_accent_macro_argument, undelimited_argument_warning_once_per_occurrence}`.
+  // can take (pdflatex: "Argument of \select@group has an extra }"), and is read with its own arguments, the call the
+  // author wrote, which keeps the formula the author meant, with one Warning that TeX errs there (user ruling 2026-10-17,
+  // OXIDIZED_DESIGN_DIVERGENCES #721; Perl keeps the kernel's accents, KNOWN_PERL_ERRORS #945). Guards
+  // `perfect_kernel_batch71a::{amsmath_accent_macro_argument, undelimited_argument_reads_the_whole_call,
+  // undelimited_argument_warning_once_per_occurrence}`.
   for accent in [
     "hat", "check", "tilde", "acute", "grave", "dot", "ddot", "breve", "bar", "vec", "mathring",
   ] {
@@ -2222,7 +2223,8 @@ pub fn define_ams_macro_accent(name: &str) -> Result<()> {
 
 /// amsfonts' `\widehat#1`, `\widetilde#1` (amsfonts.sty:78-87, unless stix is loaded): macros of one argument over
 /// LaTeXML's own accents, kept as `\lx@ams@kernel@<name>`, their argument passed through `\lx@undelimited@argument`.
-/// Unlike amsmath's accents these take a mandatory argument of their own (`\hat\widehat x` errs in TeX).
+/// Unlike amsmath's accents these take a mandatory argument of their own (`\hat\widehat x` errs in TeX), and an
+/// amsmath accent is no nested accent under them (`\widehat\hat z` errs: `\mathaccent` has no `\macc@nested`).
 pub fn define_amsfonts_macro_accent(name: &str) -> Result<()> {
   define_macro_accent(name, r"\lx@undelimited@argument{amsfonts}")
 }
@@ -2247,17 +2249,44 @@ enum UndelimitedArgument {
   /// No mandatory argument (`\alpha`, `\relax`, `\muu`, `\newcommand{\tasknum}[1][]{…}`, an undefined command):
   /// braced, as TeX braces it.
   Braced,
-  /// An amsmath accent (`\hat\vec x`): braced, itself over an empty nucleus, as amsmath's `\macc@nested` (:832-844)
-  /// sets it on the `\@empty` that follows it in `\macc@a` (:870).
+  /// An amsmath accent under amsmath's `\mathaccentV` (`\hat\vec x`): braced, itself over an empty nucleus, as
+  /// amsmath's `\macc@nested` (:832-844) sets it on the `\@empty` that follows it in `\macc@a` (:870). Only that reader
+  /// nests: under amsfonts' `\widehat#1` or breqn's `\sb#1` an amsmath accent is a command reading a mandatory argument.
   NestedAccent,
   /// A command reading a mandatory argument (`\mathbf`, `\text`, `\newcommand\nv[1]`, through a robust command's
-  /// `\protect \cs␣` to the inner `\cs␣`), or a binding closure: left unbraced, the resolved command, for the item to
-  /// read with what follows. `tex_errs` when TeX's braced form errs, which is when the command takes a mandatory
-  /// argument; a closure without one may read on, which TeX's macro would not, but its reading is not known to err.
-  Unbraced { command: Token, tex_errs: bool },
+  /// `\protect \cs␣` to the inner `\cs␣`), or a binding closure: `command`, the resolved command, read as `reading`
+  /// says. `tex_errs` when TeX's braced form errs, which is when the command takes a mandatory argument; a closure
+  /// without one may read on, which TeX's macro would not, but its reading is not known to err.
+  Call {
+    command:  Token,
+    tex_errs: bool,
+    reading:  CallReading,
+  },
 }
 
-fn classify_undelimited_argument(argument: &Token) -> Result<UndelimitedArgument> {
+/// How [`UndelimitedArgument::Call`] reads the command with its own arguments, the call the author wrote.
+enum CallReading {
+  /// A macro (an ltcmd command by its signature): its arguments read by these parameters, the call braced
+  /// (`\hat{\pair{a}{b}}`, `\hat{\vq[a]{x}}`), so the item is the call's whole expansion.
+  Arguments(Parameters),
+  /// A primitive or constructor (`\mathbf`, `\sqrt`): left unbraced, the item it makes is the call, its arguments
+  /// read by its own parameters at digestion (a `Digested` one cannot be read ahead of it); the number of arguments.
+  Item(usize),
+  /// No known reading (a closure without a parameter list, an ltcmd signature with a delimited or embellishment
+  /// argument): left unbraced, for the item to read with what follows.
+  Unknown,
+}
+
+fn reads_a_mandatory_argument(parameters: Option<&Parameters>) -> bool {
+  parameters.is_some_and(|parameters| parameters.get_parameters().iter().any(|p| !p.optional))
+}
+
+/// The reading [`define_undelimited_argument`] gives the single command `argument`; `nests_accents` for amsmath's
+/// `\mathaccentV`, the one reader with a nested accent.
+fn classify_undelimited_argument(
+  argument: &Token,
+  nests_accents: bool,
+) -> Result<UndelimitedArgument> {
   let ams_mathaccent = T_CS!(r"\lx@ams@mathaccentV");
   let mut command = *argument;
   // A robust command's `\protect \cs␣` and an alias's one-token body (amsmath.sty:892 `\def\Hat{\hat}`) are what
@@ -2270,12 +2299,21 @@ fn classify_undelimited_argument(argument: &Token) -> Result<UndelimitedArgument
     let Some(definition) = lookup_definition(&command)? else {
       return Ok(UndelimitedArgument::Braced);
     };
-    let mandatory = definition
-      .get_parameters()
-      .is_some_and(|parameters| parameters.get_parameters().iter().any(|p| !p.optional));
+    let mandatory = reads_a_mandatory_argument(definition.get_parameters());
+    let call = |command: Token| UndelimitedArgument::Call {
+      command,
+      tex_errs: true,
+      reading: match definition.get_parameters() {
+        Some(parameters) if definition.is_expandable() => {
+          CallReading::Arguments(parameters.clone())
+        },
+        Some(parameters) => CallReading::Item(parameters.get_num_args()),
+        None => CallReading::Unknown,
+      },
+    };
     if !definition.is_expandable() {
       return Ok(if mandatory {
-        UndelimitedArgument::Unbraced { command, tex_errs: true }
+        call(command)
       } else {
         UndelimitedArgument::Braced
       });
@@ -2284,9 +2322,16 @@ fn classify_undelimited_argument(argument: &Token) -> Result<UndelimitedArgument
       Some(ExpansionBody::Tokens(body)) if definition.get_conditional_type().is_none() => {
         body.unlist_ref()
       },
-      _ => return Ok(UndelimitedArgument::Unbraced { command, tex_errs: mandatory }),
+      _ if mandatory => return Ok(call(command)),
+      _ => {
+        return Ok(UndelimitedArgument::Call {
+          command,
+          tex_errs: false,
+          reading: CallReading::Unknown,
+        });
+      },
     };
-    if body.first() == Some(&ams_mathaccent) {
+    if nests_accents && body.first() == Some(&ams_mathaccent) {
       return Ok(UndelimitedArgument::NestedAccent);
     }
     // An ltcmd command (`\NewDocumentCommand`, raw from latex.ltx) is a parameterless wrapper over its signature: the
@@ -2300,7 +2345,7 @@ fn classify_undelimited_argument(argument: &Token) -> Result<UndelimitedArgument
       return ltcmd_undelimited_argument(command, body);
     }
     if mandatory {
-      return Ok(UndelimitedArgument::Unbraced { command, tex_errs: true });
+      return Ok(call(command));
     }
     match body.as_slice() {
       [alias] if matches!(alias.get_catcode(), Catcode::CS | Catcode::ACTIVE) => command = *alias,
@@ -2311,24 +2356,23 @@ fn classify_undelimited_argument(argument: &Token) -> Result<UndelimitedArgument
 }
 
 /// [`classify_undelimited_argument`] for the ltcmd command `command`, whose meaning is `body`: an optimized command
-/// is its `\cs code` (unbraced, that macro, when it takes an argument); a general or expandable one's signature reads a
-/// mandatory argument when it has an `m`, `r`, `R`, `v`, `l` or `u` outside its braced defaults and processors
-/// (usrguide.tex §2: the others are optional).
+/// is its `\cs code` (that macro and its parameters, when it takes an argument); a general or expandable one's signature
+/// reads a mandatory argument when it has an `m`, `r`, `R`, `v`, `l` or `u` outside its braced defaults and processors
+/// (usrguide.tex §2: the others are optional), its call read by the signature's `m`, `o`, `O{…}` and `s` (the
+/// prefixes `+`, `!` and the processors `>{…}`, `={…}` read nothing): `{\cs[a]{x}}` for `{om}`.
 fn ltcmd_undelimited_argument(command: Token, body: &[Token]) -> Result<UndelimitedArgument> {
   let optimized = body[0].with_str(|name| name == "\\__cmd_start_optimized:");
   if optimized {
     let Some(code) = body.get(1) else {
       return Ok(UndelimitedArgument::Braced);
     };
-    let mandatory = lookup_definition(code)?.is_some_and(|definition| {
-      definition
-        .get_parameters()
-        .is_some_and(|parameters| parameters.get_parameters().iter().any(|p| !p.optional))
-    });
-    return Ok(if mandatory {
-      UndelimitedArgument::Unbraced {
+    let parameters =
+      lookup_definition(code)?.and_then(|definition| definition.get_parameters().cloned());
+    return Ok(if reads_a_mandatory_argument(parameters.as_ref()) {
+      UndelimitedArgument::Call {
         command:  *code,
         tex_errs: true,
+        reading:  parameters.map_or(CallReading::Unknown, CallReading::Arguments),
       }
     } else {
       UndelimitedArgument::Braced
@@ -2336,6 +2380,8 @@ fn ltcmd_undelimited_argument(command: Token, body: &[Token]) -> Result<Undelimi
   }
   let mut depth = 0usize;
   let mut mandatory = false;
+  // The signature as LaTeXML parameters, `None` once a letter has no such reading.
+  let mut spec = Some(String::new());
   for token in body.iter().skip(1) {
     match token.get_catcode() {
       Catcode::BEGIN => depth += 1,
@@ -2345,78 +2391,179 @@ fn ltcmd_undelimited_argument(command: Token, body: &[Token]) -> Result<Undelimi
           break;
         }
       },
-      Catcode::LETTER | Catcode::OTHER if depth == 1 => {
-        mandatory |= token.with_str(|letter| matches!(letter, "m" | "r" | "R" | "v" | "l" | "u"));
-      },
+      Catcode::LETTER | Catcode::OTHER if depth == 1 => token.with_str(|letter| {
+        mandatory |= matches!(letter, "m" | "r" | "R" | "v" | "l" | "u");
+        let parameter = match letter {
+          "m" => Some("{}"),
+          "o" | "O" => Some("[]"),
+          "s" => Some("OptionalMatch:* "),
+          "+" | "!" | ">" | "=" => Some(""),
+          _ => None,
+        };
+        spec = spec
+          .take()
+          .zip(parameter)
+          .map(|(spec, parameter)| spec + parameter);
+      }),
       _ => {},
     }
   }
-  Ok(if mandatory {
-    UndelimitedArgument::Unbraced { command, tex_errs: true }
-  } else {
-    UndelimitedArgument::Braced
+  if !mandatory {
+    return Ok(UndelimitedArgument::Braced);
+  }
+  let parameters = match spec {
+    Some(spec) => parse_parameters(spec.trim(), &command, true)?,
+    None => None,
+  };
+  Ok(UndelimitedArgument::Call {
+    command,
+    tex_errs: true,
+    reading: parameters.map_or(CallReading::Unknown, CallReading::Arguments),
   })
+}
+
+/// The arguments of `command`'s call, read from what follows by `parameters` and reverted as the author wrote them
+/// (`{x}`, `[a]`, `*`); `None` for a parameter list with a delimiter that is no argument (`\def\cs(#1){…}`), whose
+/// reversion would drop it, or with an argument digested as it is read.
+fn read_call_arguments(parameters: &Parameters) -> Result<Option<Vec<Token>>> {
+  if parameters
+    .get_parameters()
+    .iter()
+    .any(|parameter| parameter.novalue || parameter.predigest.is_some())
+  {
+    return Ok(None);
+  }
+  let arguments = parameters.read_arguments(None)?;
+  Ok(Some(parameters.revert_arguments(
+    arguments.into_iter().map(Into::into).collect(),
+  )?))
+}
+
+/// `name`'s possessive, as the Warning names a package: "amsmath's", "amsfonts'".
+fn possessive(name: &str) -> String {
+  if name.ends_with('s') {
+    s!("{name}'")
+  } else {
+    s!("{name}'s")
+  }
+}
+
+/// [`define_undelimited_argument`]'s expansion: `head` followed by `argument`, the undelimited argument the TeX macro
+/// `reader` of `package` read, as `classify_undelimited_argument` reads it.
+fn undelimited_argument(
+  package: &str,
+  reader: &str,
+  head: Tokens,
+  argument: Tokens,
+  nests_accents: bool,
+) -> Result<Tokens> {
+  let mut tokens = head.unlist();
+  let argument = argument.unlist();
+  let reading = match argument.as_slice() {
+    [single] if matches!(single.get_catcode(), Catcode::CS | Catcode::ACTIVE) => {
+      classify_undelimited_argument(single, nests_accents)?
+    },
+    _ => UndelimitedArgument::Braced,
+  };
+  match reading {
+    UndelimitedArgument::Braced => {
+      tokens.push(T_BEGIN!());
+      tokens.extend(argument);
+      tokens.push(T_END!());
+    },
+    UndelimitedArgument::NestedAccent => {
+      tokens.push(T_BEGIN!());
+      tokens.extend(argument);
+      tokens.extend([T_BEGIN!(), T_END!()]);
+      tokens.push(T_END!());
+    },
+    UndelimitedArgument::Call { command, tex_errs, reading } => {
+      let call = match &reading {
+        CallReading::Arguments(parameters) if tex_errs => read_call_arguments(parameters)?,
+        _ => None,
+      };
+      // One Warning per source occurrence: not again where that source is re-read (`tex_math::REREAD_COPY`: the toc
+      // copy of a heading without a `[short]`, a tag's reference forms). A `[short]` title or caption, typeset only in
+      // its list (where TeX errs only if the list is typeset), is digested and kept once, and warns there.
+      if tex_errs && !lookup_bool(engine::tex_math::REREAD_COPY) {
+        let given = argument[0].with_str(|name| name.to_string());
+        let reading = match (&call, reading) {
+          (Some(arguments), _) => {
+            let mut written = vec![argument[0]];
+            written.extend(arguments.iter().copied());
+            s!(
+              "read as {reader}{{{}}}",
+              Tokens::new(written).untex().trim_end()
+            )
+          },
+          (None, CallReading::Item(1)) => {
+            s!("read as {reader}{{{given}…}}, {given} with its argument")
+          },
+          (None, CallReading::Item(_)) => {
+            s!("read as {reader}{{{given}…}}, {given} with its arguments")
+          },
+          (None, _) => s!("read as {reader}{{{given}…}}, {given} with what follows it"),
+        };
+        let message = s!(
+          "{} {reader} takes {given} alone as its argument, where TeX errs: {given} reads an argument of its own; \
+           {reading}",
+          possessive(package)
+        );
+        // A heading's, an item's or a theorem's text is digested from a token list: the location is the source's.
+        let at = get_location();
+        let at = if at.contains("Anonymous String") {
+          get_source_location().unwrap_or_default()
+        } else {
+          at
+        };
+        let at = if at.is_empty() { at } else { s!("\n\t{at}") };
+        emit_warn(
+          "malformed",
+          reader,
+          &s!(
+            "{message}{at}\n\tIn {}:{}:{}\n",
+            file!(),
+            line!(),
+            column!()
+          ),
+        );
+      }
+      match call {
+        Some(arguments) => {
+          tokens.push(T_BEGIN!());
+          tokens.push(command);
+          tokens.extend(arguments);
+          tokens.push(T_END!());
+        },
+        None => tokens.push(command),
+      }
+    },
+  }
+  Ok(Tokens::new(tokens))
 }
 
 /// `\lx@undelimited@argument{<package>}{<reader>}{<head>}{<argument>}`: `<head>` (a LaTeXML accent or script, which
 /// reads the next math item) followed by the undelimited macro argument the TeX macro `<reader>` of `<package>` gave
-/// it — amsmath's accents (amsmath.sty:754-797, `\mathaccent"…{#5}`, through `\lx@ams@mathaccentV`), amsfonts'
-/// `\widehat`/`\widetilde` (amsfonts.sty:78-87), mathstyle's `\sb`/`\sp` (mathstyle.sty:126-127, `\mathsub{…#1}`) —
-/// braced, as those macros brace it, so a parameterless macro (or one with optional parameters only:
-/// `\newcommand{\tasknum}[1][]{\tau_{#1}}`) is the item with its whole expansion. A single command is passed as its
-/// definition says (`UndelimitedArgument`): one that reads a mandatory argument is left unbraced, for the head to
-/// read with what follows as the author meant, with one Warning that TeX errs there (`\hat\mathbf{x}`: "Argument of
-/// \select@group has an extra }"; breqn's `x_\text{a}`: "Argument of \text@ has an extra }"), whose recovery loses
-/// the formula (user ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #721).
+/// it — amsfonts' `\widehat`/`\widetilde` (amsfonts.sty:78-87), mathstyle's `\sb`/`\sp` (mathstyle.sty:126-127,
+/// `\mathsub{…#1}`, named by what they stand for, `_`/`^`) — braced, as those macros brace it, so a parameterless macro
+/// (or one with optional parameters only: `\newcommand{\tasknum}[1][]{\tau_{#1}}`) is the item with its whole
+/// expansion. amsmath's accents (amsmath.sty:754-797, `\mathaccent"…{#5}`) go through `\lx@ams@mathaccentV`, the same
+/// with amsmath's nested accent. A single command is passed as its definition says (`UndelimitedArgument`): one that
+/// reads a mandatory argument is read with its own arguments, braced, the call the author wrote (`\hat{\mathbf{x}}`,
+/// `\hat{\pair{a}{b}}`), with one Warning that TeX errs there (`\hat\mathbf{x}`: "Argument of \select@group has an
+/// extra }"; breqn's `x_\text{a}`: "Argument of \text@ has an extra }"), whose recovery loses the formula (user ruling
+/// 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #721).
 pub fn define_undelimited_argument() -> Result<()> {
   if lookup_definition(&T_CS!("\\lx@undelimited@argument"))?.is_some() {
     return Ok(());
   }
-  // amsmath's `\mathaccentV` as the binding's accents call it (`define_ams_macro_accent`): its mark is what makes an
-  // accent the accentee of another a nested accent (`classify_undelimited_argument`).
-  RawTeX!(r"\def\lx@ams@mathaccentV#1#2#3{\lx@undelimited@argument{amsmath}{#1}{#2}{#3}}");
+  // amsmath's `\mathaccentV` as the binding's accents call it (`define_ams_macro_accent`): its name in an accent's
+  // body is what makes that accent, as its argument, a nested accent (`classify_undelimited_argument`).
+  DefMacro!("\\lx@ams@mathaccentV{}{}{}", sub[(reader, head, argument)] {
+    undelimited_argument("amsmath", reader.untex().trim(), head, argument, true)
+  });
   DefMacro!("\\lx@undelimited@argument{}{}{}{}", sub[(package, reader, head, argument)] {
-    let mut tokens = head.unlist();
-    let argument = argument.unlist();
-    let reading = match argument.as_slice() {
-      [single] if matches!(single.get_catcode(), Catcode::CS | Catcode::ACTIVE) => {
-        classify_undelimited_argument(single)?
-      },
-      _ => UndelimitedArgument::Braced,
-    };
-    match reading {
-      UndelimitedArgument::Braced => {
-        tokens.push(T_BEGIN!());
-        tokens.extend(argument);
-        tokens.push(T_END!());
-      },
-      UndelimitedArgument::NestedAccent => {
-        tokens.push(T_BEGIN!());
-        tokens.extend(argument);
-        tokens.extend([T_BEGIN!(), T_END!()]);
-        tokens.push(T_END!());
-      },
-      UndelimitedArgument::Unbraced { command, tex_errs } => {
-        // Not in a toc copy (`tex_math::WRITTEN_COPY`): LaTeX writes a heading's or caption's moving argument to the
-        // .toc/.lof and typesets it once, at the heading, where the Warning is given; one per occurrence.
-        if tex_errs && !lookup_bool(engine::tex_math::WRITTEN_COPY) {
-          let reader = reader.untex();
-          let reader = reader.trim();
-          let package = package.untex();
-          let given = argument[0].with_str(|name| name.to_string());
-          Warn!(
-            "malformed",
-            reader,
-            format!(
-              "{package}'s {reader} takes {given} alone as its argument, where TeX errs: {given} reads an argument \
-               of its own; read as {reader}{{{given}…}}, with {given}'s argument"
-            )
-          );
-        }
-        tokens.push(command);
-      },
-    }
-    Ok(Tokens::new(tokens))
+    undelimited_argument(package.untex().trim(), reader.untex().trim(), head, argument, false)
   });
   Ok(())
 }

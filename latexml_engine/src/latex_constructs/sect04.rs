@@ -274,14 +274,8 @@ pub(crate) fn load() -> Result<()> {
         && let Some(bme) = lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {
           props.insert("backmatterelement", bme);
         }
-      let toctitle = match toctitle_arg {
-        Some(v) => if !v.to_string().is_empty() {
-          args[2].as_ref().unwrap()
-        } else {
-          title
-        },
-        None => title
-      };
+      let short = toctitle_arg.filter(|v| !v.to_string().is_empty());
+      let toctitle = short.unwrap_or(title);
       // Cluster A: rebuild tokens from sanitized stype_str so the trailing
       // \par token doesn't propagate into \lx@format@title@@'s body.
       let stype_clean_tokens = Tokens::new(Explode!(stype_str));
@@ -289,8 +283,18 @@ pub(crate) fn load() -> Result<()> {
       let invoked_title =
         Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_clean_tokens.clone(), title_tokens]);
       let xtitle    = digest(invoked_title)?;
+      // Without a `[short]` the toc copy re-reads the title, which the heading typesets: `\lx@reread@copy` (a Warning for
+      // one source occurrence is given there only: OXIDIZED_DESIGN_DIVERGENCES #721; guard
+      // `perfect_kernel_batch71a::undelimited_argument_warning_once_per_occurrence`). A `[short]` is its own source,
+      // digested here only.
+      let mut toctitle_tokens = toctitle.revert()?;
+      if short.is_none() {
+        toctitle_tokens = Tokens::new(
+          std::iter::once(T_CS!("\\lx@reread@copy")).chain(toctitle_tokens.unlist()).collect(),
+        );
+      }
       let invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
-          vec![stype_clean_tokens, toctitle.revert()?]);
+          vec![stype_clean_tokens, toctitle_tokens]);
       let xtoctitle = digest(invoked_toctitle)?;
 
       if xtoctitle.to_string() != xtitle.to_string() {

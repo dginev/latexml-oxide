@@ -1,0 +1,19 @@
+% witness: 71a review r2 findings 1 and 4 (probes q/e02, e10, e11, e13, e16, e17); 1905.01764 (7 occurrences), 1505.00442
+% oracle:  pdflatex errs at every accent below ("Argument of \select@group has an extra }", "Missing { inserted"): 23
+%          errors in all; amsfonts' `\widehat\hat z` 7 alone (amsmath's `\hat` reads an argument there)
+% engines: rust 71a r2 = `\hat{}+y`… as `\hat{+}y`, `\hat{(}a,b)`, `\hat{x}_{1}`, `\hat{}\mathbf{x}`,
+%          `\widehat{\hat{}}z` with no Warning; 67int19b the same placements
+% expect:  0 errors; one Warning:malformed per accent naming the call as read: \hat{\foo x}+y (the hat over the
+%          empty expansion), \hat{(a,b)}, \hat{x_1}, \hat{\mathbf{x}a} for `\vq[a]{x}`, \widehat{\hat{z}}
+%          (OXIDIZED_DESIGN_DIVERGENCES #721)
+% status:  RED (71a r2) -> GREEN (71a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\def\foo#1{}
+\newcommand\pair[2]{(#1,#2)}
+\newcommand\nv[1]{#1_1}
+\NewDocumentCommand\vq{om}{\mathbf{#2}#1}
+\begin{document}
+$\hat\foo x+y$ $\hat\pair{a}{b}$ $\hat\nv x$ $\hat\vq[a]{x}$ $\widehat\hat z$
+\end{document}

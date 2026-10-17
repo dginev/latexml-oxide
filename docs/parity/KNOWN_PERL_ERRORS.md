@@ -15430,8 +15430,9 @@ amsmath: "Double subscript"); Perl and Rust before 71a 1 Error per formula (0801
 
 Rust (71a, amsmath_sty.rs `define_ams_macro_accent`, for amsmath's 11 accents and amsfonts' 2): each is a macro of one
 argument, as amsmath's, over LaTeXML's own accent (kept as `\lx@ams@kernel@<name>`), its argument passed through
-`\lx@undelimited@argument` — braced, unless it is one of LaTeXML's commands that read a mandatory argument, which the
-accent reads with what follows, as before (OXIDIZED_DESIGN_DIVERGENCES #721). Only a name that is an accent is redefined, as amsmath's `\meaning` test leaves any other (amsmath.sty:760-775):
+`\lx@ams@mathaccentV` (amsfonts': `\lx@undelimited@argument`) — braced, unless it is a command that reads a mandatory
+argument, which is read with its own arguments, the call the author wrote, with a Warning that TeX errs there
+(OXIDIZED_DESIGN_DIVERGENCES #721). Only a name that is an accent is redefined, as amsmath's `\meaning` test leaves any other (amsmath.sty:760-775):
 `\let\vec\undefined` before MnSymbol keeps `\vec` for MnSymbol to declare (2210.15345). One argument, so accents.sty's
 `\underaccent{\dot}{…}` (`\lx@if@isaccent`) still takes it for an accent. Repros
 ams-internals/amsmath_accent_macro_argument, ams-internals/amsfonts_widehat_macro_argument; guards

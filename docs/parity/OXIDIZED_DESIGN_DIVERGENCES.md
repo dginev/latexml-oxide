@@ -18849,7 +18849,8 @@ defines that the papers use or its template invites: `\PACS` as the pacs classif
 as `\date`, `\eqsec` (:578-582, equations numbered within sections), `\headtitle`/`\headauthor` (:299, :304) as
 running-head notes, the text abbreviations `\ie`/`\eg`/`\cf`/`\etal`/`\ibid` (:1019-1033), `\e` (:1059) and
 `\lambdabar` (:1036-1048), and, as the binding replaces a shipped copy, the class's other public commands as it defines
-them: `\preprint` (:278-282, with `\ifPreprint`/`\prepNo`, a preprint note), the `\volume`/`\No` counts and `\pageno`
+them: `\preprint` (:278-282, with `\ifPreprint`/`\prepNo`; a preprint note, made where `\maketitle` sets `\prepNo`, :399,
+so a `\preprint` after `\maketitle` shows none), the `\volume`/`\No` counts and `\pageno`
 (:283-285), `\ifRedakcja` (:83), `\WERS` (:311), `\anymode` (:1019), `\half`/`\Half` (:1053-1057), `\Tr` (:1061), `\Eq`
 (:1063), `\seteqprefix`/`\reseteqprefix` (:1065-1066); its lettered-equation environments `{eqletters}`/`{eqlettarray}`
 (:627-648, :1096-1112) are not bound (no paper uses them). The binding also serves the 2 papers that ship the class (0801.2427, cond-mat0205657),
@@ -18869,7 +18870,7 @@ loaders, where neither is defined (a paper's own older copy keeps its own), as m
 nothing, since everything is loaded. Witnesses 1506.03598, 1612.05374, 2005.14485, 1906.04134, 1608.04592; guard
 `perfect_kernel_batch71a::tkz_euclide_old_usetkzobj`.
 
-### 721. A TeX macro's undelimited argument that is a command reading a mandatory argument is read with what follows, with a Warning that TeX errs there (amsmath/amsfonts accents, mathstyle scripts; TeX: an error; Perl: no diagnostic)
+### 721. A TeX macro's undelimited argument that is a command reading a mandatory argument is read with its own arguments, the call the author wrote, with a Warning that TeX errs there (amsmath/amsfonts accents, mathstyle scripts; TeX: an error; Perl: no diagnostic)
 
 amsmath's accents (amsmath.sty:754-797, `\mathaccentV`'s fifth argument, `\mathaccent"…{#5}`), amsfonts' `\widehat#1`/
 `\widetilde#1` (amsfonts.sty:78-87) and breqn/mathstyle's `\sb`/`\sp` (mathstyle.sty:126-127,
@@ -18891,18 +18892,35 @@ macro after them is the item with its whole expansion (KNOWN_PERL_ERRORS #945; b
 that argument to LaTeXML's own accent or script through one helper, amsmath_sty.rs `\lx@undelimited@argument`, which
 reads a single command by its definition (user ruling 2026-10-17; `classify_undelimited_argument`, looking through a
 robust command's `\protect \cs␣` to the inner `\cs␣` and an alias's one-token body, amsmath.sty:892 `\def\Hat{\hat}`):
+`\mathsub{\protect\subsupstyle#1}`, the math-active `_`/`^`) take their accentee or script as an undelimited macro
+argument and brace it, so a macro after them is the item with its whole expansion (KNOWN_PERL_ERRORS #945; breqn's, SYNC
+71a (7)). The bindings pass that argument to LaTeXML's own accent or script through one helper (amsmath_sty.rs
+`undelimited_argument`: `\lx@ams@mathaccentV` for amsmath, `\lx@undelimited@argument` for the others), which reads a
+single command by its definition, never its name (user ruling 2026-10-17; `classify_undelimited_argument`, looking
+through a robust command's `\protect \cs␣` to the inner `\cs␣` and an alias's one-token body, amsmath.sty:892
+`\def\Hat{\hat}`):
 - **no mandatory argument** (`\alpha`, `\nabla`, `\infty`, `\relax`, `\bf`, `\muu`, `\newcommand{\tasknum}[1][]{…}`, an
   undefined command): braced, as TeX braces it, with no diagnostic — `\hat\relax x` is the hat over an empty nucleus
-  and x after it, as TeX's `\showlists`. An amsmath accent (`\hat\vec x`) is amsmath's nested accent: braced, itself
-  over an empty nucleus (`\macc@nested`, :832-870; `\showlists`: the hat over the vec over an empty box, x outside);
+  and x after it, as TeX's `\showlists`. Under amsmath's `\mathaccentV` an amsmath accent (`\hat\vec x`) is the nested
+  accent: braced, itself over an empty nucleus (`\macc@nested`, :832-870; `\showlists`: the hat over the vec over an
+  empty box, x outside). Only that reader nests: under amsfonts' `\widehat#1` or breqn's `\sb#1` an amsmath accent is a
+  command reading a mandatory argument (`\widehat\hat z`: pdflatex 7 errors; breqn's `y^\hat z`: 6, "Argument of
+  \mathaccentV has an extra }"), read as the next case;
 - **a mandatory argument** (`\mathbf`, `\text`, `\mathrm`, `\newcommand\nv[1]`, `\DeclareRobustCommand\vv[1]`, amsfonts'
-  `\widehat`): left unbraced — the resolved command, for the accent or script to read with what follows as before
-  (`\hat\mathbf{x}` a hat over the bold x, breqn's `x_\text{abc}` a subscript "abc") — with one
-  `Warning:malformed:<reader>` per occurrence, e.g. "amsmath's \hat takes \mathbf alone as its argument, where TeX errs:
-  \mathbf reads an argument of its own; read as \hat{\mathbf…}, with \mathbf's argument" (pdflatex: "Argument of
-  \select@group has an extra }", "Argument of \text@ has an extra }", 6-8 errors for one such accent). Where TeX
-  typesets the occurrence once and writes a copy — a heading's or caption's toc copy, digested again by
-  `\lx@format@toctitle@@` under `\lx@toc@copy@neutralize`'s `tex_math::WRITTEN_COPY` — the copy gives none;
+  `\widehat`): the command read with its own arguments, the call the author wrote. A macro's arguments are read by its
+  parameters (an ltcmd command's by its signature: `m`, `o`/`O{…}`, `s`, through the `\cs code` of an all-`m` one) and
+  reverted, and the call braced, so the accent or script takes the call's whole expansion: `\hat\foo x+y`
+  (`\def\foo#1{}`) is the hat over `\foo x`'s empty expansion and `+y` after it, `\hat\pair{a}{b}` over `(a,b)`,
+  `\hat\nv x` (`\nv[1]{#1_1}`) over `x_1`, `\hat\vq[a]{x}` (`{om}`) over `\vq[a]{x}`. A primitive or constructor
+  (`\mathbf`, `\sqrt`, `\text`) is left unbraced: the item it makes is the call, its arguments read at digestion
+  (`\hat\mathbf{x}` a hat over the bold x, breqn's `x_\text{abc}` a subscript "abc"). A `\def` with a leading delimiter
+  (`\def\lp(#1)`), an ltcmd signature with a delimited or embellishment argument and a binding closure without a
+  parameter list are left unbraced for the item to read with what follows. Each occurrence gets one
+  `Warning:malformed:<reader>` naming the reading made, e.g. "amsmath's \hat takes \pair alone as its argument, where
+  TeX errs: \pair reads an argument of its own; read as \hat{\pair{a}{b}}" ("read as \hat{\mathbf…}, \mathbf with its
+  argument" for a constructor; breqn's names `_`/`^`, what the author types), located at the source line (a heading's,
+  item's or theorem's text is digested from a token list; the innermost source mouth's location is given). pdflatex:
+  "Argument of \select@group has an extra }", "Argument of \text@ has an extra }", 5-9 errors for one such accent;
 - **a binding closure** (an expandable definition without a token body, or a conditional): unbraced as before, since
   a closure may read past the brace; the Warning only where it declares a mandatory parameter, the one case in which
   TeX's macro would err.
@@ -18914,6 +18932,21 @@ all-`m` one is read through its `\cs code` (`\hat\vv{x}` a hat over the bold x),
 (`{om}`) is passed unbraced as its `\protected` wrapper, whose grabbers LaTeXML's accent does not take as its item
 (`\hat{}\mathbf{x}`, as before 71a), with the Warning. Guards `perfect_kernel_batch71a::{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument,
 breqn_script_macro_argument, undelimited_argument_warning_once_per_occurrence}`.
+
+One Warning per source occurrence: a digestion that re-reads a source the document typesets where it stands gives none
+(`tex_math::REREAD_COPY`, set by `\lx@reread@copy`): the toc copy of a heading or caption without a `[short]` (sect04.rs;
+`\lx@toc@copy@text` for the kernel's, longtable's and listings' captions, where a `[short]` the same as the caption — as
+`\@dblarg` gives it — counts as the caption), the reference forms of a tag (`\lx@make@tags`: an `\item[…]` label's
+typerefnum, a `\tag{…}`'s refnum), natbib's label copies (written to the .aux, read only at a citation of a later run). A
+`[short]` title or caption is its own source, digested once, into the toc: TeX errs on it only when the list is typeset
+(`\tableofcontents`, `\listoffigures`), and it warns once regardless, because we digest and keep it.
+Why not error as TeX does: content before PDF fidelity (priority order 2026-10-06), where TeX's recovery loses the
+formula — under the braced form 2210.10207 lost 11,424 words — and the shape is rare (7 occurrences in 7,500 sampled
+1505/1905/2305 papers, most of them in unused macros: 1905.01764 7, 1505.00442 1); why the Warning: the source is not
+valid TeX, and the reading is ours (ruling: never an Error, never silent). Guards
+`perfect_kernel_batch71a::{amsmath_accent_macro_argument, amsmath_accent_ltcmd_argument,
+undelimited_argument_reads_the_whole_call, amsfonts_widehat_macro_argument, breqn_script_macro_argument,
+undelimited_argument_warning_once_per_occurrence}`.
 
 ### 725. latex209.def's LaTeX2e-command traps apply to `\usepackage`, `\listfiles`, `\lrbox` and `\@xargdef`; the `\ensuremath` trap is held while bindings call it where their 2.09-era originals do not
 

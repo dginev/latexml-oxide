@@ -124,18 +124,19 @@ pub(crate) fn load() -> Result<()> {
   // Guard `perfect_kernel_batch58::floatrow_floatfoot_keeps_its_text`.
   DefMacro!("\\lx@kernel@setfloatcapt{}", "#1");
   Let!("\\lx@setfloatcapt", "\\lx@kernel@setfloatcapt");
-  // The list entry is the `[short]`, or the caption when it is empty (`\caption[]{…}`), told by its detokenized
-  // text, and chosen without skipping either: Perl's `\ifx.#2.#3\else#2\fi` (pool:3189) saw a `[short]` only a
-  // document gave, and `\@dblarg` now always gives one, the caption itself, whose opening conditional `\ifx` took as
-  // its second token, leaving the caption's `\fi` to close the `\ifx` ("Extra \else", then the file ended scanning
-  // for `\endcaption`: `\caption{\ifdefined\x\color{blue}\fi …}`, 2609.27590, 2609.28438; KNOWN_PERL_ERRORS #468).
+  // The list entry is the `[short]`, or the caption when it is empty (`\caption[]{…}`) or the caption itself
+  // (`\lx@toc@copy@text`, which marks that copy a re-read), told by its tokens, and chosen without expanding either:
+  // Perl's `\ifx.#2.#3\else#2\fi` (pool:3189) saw a `[short]` only a document gave, and `\@dblarg` now always gives
+  // one, the caption itself, whose opening conditional `\ifx` took as its second token, leaving the caption's `\fi` to
+  // close the `\ifx` ("Extra \else", then the file ended scanning for `\endcaption`: `\caption{\ifdefined\x\color{blue}\fi
+  // …}`, 2609.27590, 2609.28438; KNOWN_PERL_ERRORS #468).
   // A float's caption is its type's title (`\lx@format@title@@`), unless a package formats captions itself: caption's
   // label formats, separators and fonts (caption_sty.rs, caption3.sty:1661-1715), as latex.ltx's `\@makecaption` is
   // what caption.sty replaces (caption.sty:206). longtable's caption takes it too (caption.sty:1167).
   DefMacro!("\\lx@format@caption@@{}{}", r"\lx@format@title@@{#1}{#2}");
   DefMacro!(
     "\\@caption@@@{}{}{}",
-    r"\@@add@caption@counters\lx@setfloatcapt{\@@toccaption{\lx@format@toctitle@@{#1}{\if\relax\detokenize{#2}\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#3}{#2}}}\lx@@caption{\lx@format@caption@@{#1}{#3}}}"
+    r"\@@add@caption@counters\lx@setfloatcapt{\@@toccaption{\lx@format@toctitle@@{#1}{\lx@toc@copy@text{#2}{#3}}}\lx@@caption{\lx@format@caption@@{#1}{#3}}}"
   );
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.

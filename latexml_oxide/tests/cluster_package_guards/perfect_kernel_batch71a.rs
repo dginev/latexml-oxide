@@ -2,7 +2,8 @@
 //! B1 amsrefs `{biblist}` without `{bibdiv}`; T1 mn2e defines no `\ion`; P1 appolb.cls; U1 tkz-euclide's old
 //! `\usetkzobj`; N1 siunitx decimal uncertainty; L1 txfonts `\lambdabar`; the small ones: forest's and todonotes' TikZ
 //! libraries, pgfmath `Mod`, amsmath/amsfonts macro accents, breqn's `\sb`/`\sp` (their undelimited argument read as its
-//! definition says, with OXIDIZED_DESIGN_DIVERGENCES #721's Warning where TeX errs).
+//! definition says, with OXIDIZED_DESIGN_DIVERGENCES #721's Warning where TeX errs: the command with its own arguments,
+//! one Warning per source occurrence).
 use latexml::util::test::assert_element;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -135,7 +136,8 @@ fn appolb_running_heads_and_abbreviations() {
   );
 }
 
-/// The rest of appolb.cls's public commands (2210.03396's copy): :278-282 `\preprint`, :283-285 the `\volume`/`\No`
+/// The rest of appolb.cls's public commands (2210.03396's copy): :278-282 `\preprint` (set at `\maketitle`, :399),
+/// :283-285 the `\volume`/`\No`
 /// counts, :1019 `\anymode`, :1053-1057 `\half`/`\Half`, :1061 `\Tr`, :1063 `\Eq`, :1065 `\seteqprefix`
 /// (pdflatex with that copy: 0 errors, "1/2 + 1/2 + Tr A and x^2, see Eq. (A1.1)").
 #[test]
@@ -168,6 +170,12 @@ fn appolb_class_commands() {
     &[r#"xml:id="S1.p1.2""#],
     r#"<p xml:id="S1.p1.2">Volume 0, No 0.</p>"#,
   );
+  // appolb.cls:399 sets `\prepNo` in `\@maketitle`: a `\preprint` after `\maketitle` shows nothing
+  let (log, xml) = convert_counted(
+    "\\documentclass{appolb}\n\\begin{document}\n\\title{T}\\author{A}\\address{B}\\maketitle\n\\preprint{TPJU-1/2004}\nText.\n\\end{document}\n",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("<pubnote"), "{xml}");
 }
 
 /// tkz-euclide's pre-v3 `\usetkzobj{all}` loads nothing more: v3+ loads every object (1506.03598, 2005.14485).
@@ -327,8 +335,8 @@ fn pgfmath_mod_of_a_multiple_is_zero() {
 /// whole (0801.1527), and `\Hat` is `\hat` (:892). Its argument is read as its definition says (user ruling 2026-10-17,
 /// OXIDIZED_DESIGN_DIVERGENCES #721): no mandatory argument braced, as TeX braces it (`\hat\relax x`, `\hat\vec x`:
 /// TeX's `\showlists` has the hat over an empty nucleus, over the vec over one, with x outside); a mandatory one
-/// (`\mathbf`, a robust `\vv` through its `\protect \vv␣`) unbraced, read with what follows, and one Warning that
-/// TeX errs there (pdflatex: 6 and 8 errors).
+/// (`\mathbf`, a robust `\vv` through its `\protect \vv␣`) read with its own argument, and one Warning that TeX
+/// errs there (pdflatex: 6 and 8 errors).
 #[test]
 fn amsmath_accent_macro_argument() {
   let (log, xml) = convert_counted(include_str!(
@@ -355,9 +363,9 @@ fn amsmath_accent_macro_argument() {
     undelimited_warnings(&log),
     [
       "Warning:malformed:\\hat amsmath's \\hat takes \\mathbf alone as its argument, where TeX errs: \\mathbf reads an \
-       argument of its own; read as \\hat{\\mathbf…}, with \\mathbf's argument",
+       argument of its own; read as \\hat{\\mathbf…}, \\mathbf with its argument",
       "Warning:malformed:\\hat amsmath's \\hat takes \\vv alone as its argument, where TeX errs: \\vv reads an argument \
-       of its own; read as \\hat{\\vv…}, with \\vv's argument",
+       of its own; read as \\hat{\\vv{y}}",
     ],
     "{log}"
   );
@@ -375,12 +383,13 @@ fn amsmath_accent_macro_argument() {
   }
 }
 
-/// An ltcmd accentee is judged by its signature: an all-`m` `\NewDocumentCommand` through its `\cs code`, with the
-/// Warning (pdflatex: 10 errors with the two below); an `{o}` one braced, as TeX braces it.
+/// An ltcmd accentee is judged by its signature: an all-`m` `\NewDocumentCommand` through its `\cs code`, an `{om}`
+/// one read by its signature, each with the Warning (pdflatex: 10 errors with the first two, 8 for an `{om}` alone);
+/// an `{o}` one braced, as TeX braces it.
 #[test]
 fn amsmath_accent_ltcmd_argument() {
   let (log, xml) = convert_counted(
-    "\\documentclass{article}\n\\usepackage{amsmath}\n\\NewDocumentCommand\\vv{m}{\\mathbf{#1}}\n\\NewDocumentCommand\\so{o}{\\mathbf{q}}\n\\begin{document}\n$\\hat\\vv{x}$ $\\hat\\so$\n\\end{document}\n",
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\NewDocumentCommand\\vv{m}{\\mathbf{#1}}\n\\NewDocumentCommand\\so{o}{\\mathbf{q}}\n\\NewDocumentCommand\\vq{om}{\\mathbf{#2}\\IfValueT{#1}{#1}}\n\\begin{document}\n$\\hat\\vv{x}$ $\\hat\\so$ $\\hat\\vq[a]{y}$ $\\hat\\vq{z}$\n\\end{document}\n",
   );
   assert_eq!(
     (
@@ -388,7 +397,11 @@ fn amsmath_accent_ltcmd_argument() {
       warning_count(&log),
       undelimited_warnings(&log).len()
     ),
-    (0, 1, 1),
+    (0, 3, 3),
+    "{log}"
+  );
+  assert!(
+    undelimited_warnings(&log)[1].ends_with("read as \\hat{\\vq[a]{y}}"),
     "{log}"
   );
   assert_element(
@@ -403,15 +416,83 @@ fn amsmath_accent_ltcmd_argument() {
     &[r#"xml:id="p1.m2""#],
     r#"<Math mode="inline" tex="\hat{\mathbf{q}}" text="hat@(q)" xml:id="p1.m2"><XMath xml:id="p1.m2.1"><XMApp xml:id="p1.m2.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="bold" role="UNKNOWN">q</XMTok></XMApp></XMath></Math>"#,
   );
+  for (m, expected) in [
+    (
+      3,
+      r#"<Math mode="inline" tex="\hat{\mathbf{y}a}" text="hat@(y * a)" xml:id="p1.m3"><XMath xml:id="p1.m3.1"><XMApp xml:id="p1.m3.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMApp xml:id="p1.m3.1.1.2"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="bold" role="UNKNOWN">y</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok></XMApp></XMApp></XMath></Math>"#,
+    ),
+    (
+      4,
+      r#"<Math mode="inline" tex="\hat{\mathbf{z}}" text="hat@(z)" xml:id="p1.m4"><XMath xml:id="p1.m4.1"><XMApp xml:id="p1.m4.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="bold" role="UNKNOWN">z</XMTok></XMApp></XMath></Math>"#,
+    ),
+  ] {
+    assert_element(&xml, "Math", &[&format!(r#"xml:id="p1.m{m}""#)], expected);
+  }
 }
 
-/// One OXIDIZED_DESIGN_DIVERGENCES #721 Warning per occurrence TeX typesets: a heading's and a caption's toc copy
-/// (`\lx@toc@copy@neutralize`'s written copy) is what LaTeX writes to the .toc/.lof, not typesets there; an
-/// alignment's cells, a `[short]` toc title, an unnumbered heading each once (pdflatex errs at each typeset one).
+/// The author's reading is the whole call (71a review r2, finding 4): an accentee that reads arguments is read with its
+/// own arguments, by its parameters, and braced — `\hat\foo x+y` (`\def\foo#1{}`) the hat over `\foo x`'s empty
+/// expansion, `\hat\pair{a}{b}` over `(a,b)`, `\hat\nv x` (`\nv[1]{#1_1}`) over `x_1`, an `{om}` command's
+/// `\hat\vq[a]{x}` over `\vq[a]{x}`, and amsfonts' `\widehat\hat z` over `\hat z`, as only amsmath's `\mathaccentV`
+/// nests an accent (finding 1; pdflatex: 7 errors for that one). One Warning each, naming the call read.
+#[test]
+fn undelimited_argument_reads_the_whole_call() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/ams-internals/accent_argument_reads_the_whole_call.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 5), "{log}");
+  assert_eq!(
+    undelimited_warnings(&log),
+    [
+      "Warning:malformed:\\hat amsmath's \\hat takes \\foo alone as its argument, where TeX errs: \\foo reads an \
+       argument of its own; read as \\hat{\\foo{x}}",
+      "Warning:malformed:\\hat amsmath's \\hat takes \\pair alone as its argument, where TeX errs: \\pair reads an \
+       argument of its own; read as \\hat{\\pair{a}{b}}",
+      "Warning:malformed:\\hat amsmath's \\hat takes \\nv alone as its argument, where TeX errs: \\nv reads an \
+       argument of its own; read as \\hat{\\nv{x}}",
+      "Warning:malformed:\\hat amsmath's \\hat takes \\vq alone as its argument, where TeX errs: \\vq reads an \
+       argument of its own; read as \\hat{\\vq[a]{x}}",
+      "Warning:malformed:\\widehat amsfonts' \\widehat takes \\hat alone as its argument, where TeX errs: \\hat reads \
+       an argument of its own; read as \\widehat{\\hat{z}}",
+    ],
+    "{log}"
+  );
+  for (m, expected) in [
+    (
+      1,
+      r#"<Math mode="inline" tex="\hat{}+y" text="hat@(absent) + y" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMApp xml:id="p1.m1.1.1"><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp xml:id="p1.m1.1.1.2"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok meaning="absent"/></XMApp><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math>"#,
+    ),
+    (
+      2,
+      r#"<Math mode="inline" tex="\hat{(a,b)}" text="hat@(vector@(a, b))" xml:id="p1.m2"><XMath xml:id="p1.m2.3"><XMApp xml:id="p1.m2.3.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMDual xml:id="p1.m2.3.1.2"><XMApp xml:id="p1.m2.3.1.2.1"><XMTok meaning="vector"/><XMRef idref="p1.m2.1" xml:id="p1.m2.3.1.2.1.2"/><XMRef idref="p1.m2.2" xml:id="p1.m2.3.1.2.1.3"/></XMApp><XMWrap xml:id="p1.m2.3.1.2.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.1">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m2.2">b</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>"#,
+    ),
+    (
+      3,
+      r#"<Math mode="inline" tex="\hat{x_{1}}" text="hat@(x _ 1)" xml:id="p1.m3"><XMath xml:id="p1.m3.1"><XMApp xml:id="p1.m3.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMApp xml:id="p1.m3.1.1.2"><XMTok role="SUBSCRIPTOP" scriptpos="post3"/><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMApp></XMath></Math>"#,
+    ),
+    (
+      4,
+      r#"<Math mode="inline" tex="\hat{\mathbf{x}a}" text="hat@(x * a)" xml:id="p1.m4"><XMath xml:id="p1.m4.1"><XMApp xml:id="p1.m4.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMApp xml:id="p1.m4.1.1.2"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="bold" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok></XMApp></XMApp></XMath></Math>"#,
+    ),
+    (
+      5,
+      r#"<Math mode="inline" tex="\widehat{\hat{z}}" text="widehat@(hat@(z))" xml:id="p1.m5"><XMath xml:id="p1.m5.1"><XMApp xml:id="p1.m5.1.1"><XMTok name="widehat" role="OVERACCENT">^</XMTok><XMApp xml:id="p1.m5.1.1.2"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp></XMApp></XMath></Math>"#,
+    ),
+  ] {
+    assert_element(&xml, "Math", &[&format!(r#"xml:id="p1.m{m}""#)], expected);
+  }
+}
+
+/// One OXIDIZED_DESIGN_DIVERGENCES #721 Warning per source occurrence. A digestion that re-reads a source typeset
+/// where it stands gives none (`tex_math::REREAD_COPY`): the toc copy of a heading or caption without a `[short]`, an
+/// `\item[…]` label's typerefnum, a `\tag{…}`'s refnum. A `[short]` title or caption, typeset only in its list, is its
+/// own source and warns once (pdflatex errs there when the list is typeset: `\tableofcontents`, `\listoffigures`).
+/// Alignment cells and an unnumbered heading each once. Each Warning is located at its source line, not at the token
+/// list a heading or item is digested from.
 #[test]
 fn undelimited_argument_warning_once_per_occurrence() {
   let (log, xml) = convert_counted(
-    "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n\\tableofcontents\n\\section{On $\\hat\\mathbf{x}$ fields}\n\\section[Short $\\check\\mathbf{s}$]{Long $\\dot\\mathbf{l}$}\n\\subsection*{Star $\\ddot\\mathbf{t}$}\n\\begin{figure}\\caption{A $\\tilde\\mathbf{w}$ map}\\end{figure}\n\\begin{align}\na &= \\bar\\mathbf{b} \\\\\nc &= \\vec\\mathrm{d}\n\\end{align}\n\\end{document}\n",
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n\\tableofcontents\n\\listoffigures\n\\section{On $\\hat\\mathbf{x}$ fields}\n\\section[Short $\\check\\mathbf{s}$]{Long $\\dot\\mathbf{l}$}\n\\subsection*{Star $\\ddot\\mathbf{t}$}\n\\begin{figure}\\caption{A $\\tilde\\mathbf{w}$ map}\\end{figure}\n\\begin{figure}\\caption[Brief $\\breve\\mathbf{f}$]{Full}\\end{figure}\n\\begin{align}\na &= \\bar\\mathbf{b} \\\\\nc &= \\vec\\mathrm{d}\n\\end{align}\n\\begin{itemize}\\item[$\\acute\\mathbf{i}$] I.\\end{itemize}\n\\begin{enumerate}\\item[$\\grave\\mathbf{e}$] E.\\end{enumerate}\n\\begin{description}\\item[$\\mathring\\mathbf{d}$] D.\\end{description}\n\\begin{equation}a\\tag{$\\hat\\mathbf{t}$}\\end{equation}\n\\end{document}\n",
   );
   assert_eq!(error_count(&log), 0, "{log}");
   let readers: Vec<&str> = undelimited_warnings(&log)
@@ -423,19 +504,57 @@ fn undelimited_argument_warning_once_per_occurrence() {
     [
       "Warning:malformed:\\hat",
       "Warning:malformed:\\dot",
+      "Warning:malformed:\\check",
       "Warning:malformed:\\ddot",
       "Warning:malformed:\\tilde",
+      "Warning:malformed:\\breve",
       "Warning:malformed:\\bar",
       "Warning:malformed:\\vec",
+      "Warning:malformed:\\acute",
+      "Warning:malformed:\\grave",
+      "Warning:malformed:\\mathring",
+      "Warning:malformed:\\hat",
     ],
     "{log}"
   );
-  assert_eq!(warning_count(&log), 6, "{log}");
+  assert_eq!(warning_count(&log), 12, "{log}");
+  // each located at its source line (the heading on line 6, the tag on line 18)
+  let located: Vec<&str> = log
+    .lines()
+    .zip(log.lines().skip(1))
+    .filter(|(warning, _)| undelimited_warnings(warning).len() == 1)
+    .map(|(_, at)| at.trim())
+    .collect();
+  assert_eq!(located.len(), 12, "{log}");
+  assert!(
+    located.iter().all(|at| at.starts_with("at t; line ")),
+    "{log}"
+  );
+  assert_eq!(
+    (located[0], located[11]),
+    (
+      "at t; line 6 col 1 - line 6 col 37",
+      "at t; line 18 col 40 - line 18 col 40"
+    ),
+    "{log}"
+  );
   assert_element(
     &xml,
     "toctitle",
     &[],
     r#"<toctitle><tag close=" ">2</tag>Short <Math mode="inline" tex="\check{\mathbf{s}}" text="check@(s)" xml:id="S2.m2"><XMath xml:id="S2.m2.1"><XMApp xml:id="S2.m2.1.1"><XMTok name="check" role="OVERACCENT" stretchy="false">ˇ</XMTok><XMTok font="bold" role="UNKNOWN">s</XMTok></XMApp></XMath></Math></toctitle>"#,
+  );
+  assert_element(
+    &xml,
+    "item",
+    &[r#"xml:id="S2.I2.ix1""#],
+    r#"<item xml:id="S2.I2.ix1"><tags><tag><Math mode="inline" tex="\grave{\mathbf{e}}" text="grave@(e)" xml:id="S2.I2.ix1.m1"><XMath xml:id="S2.I2.ix1.m1.1"><XMApp xml:id="S2.I2.ix1.m1.1.1"><XMTok name="grave" role="OVERACCENT">`</XMTok><XMTok font="bold" role="UNKNOWN">e</XMTok></XMApp></XMath></Math></tag><tag role="typerefnum">item <Math mode="inline" tex="\grave{\mathbf{e}}" text="grave@(e)" xml:id="S2.I2.ix1.m2"><XMath xml:id="S2.I2.ix1.m2.1"><XMApp xml:id="S2.I2.ix1.m2.1.1"><XMTok name="grave" role="OVERACCENT">`</XMTok><XMTok font="bold" role="UNKNOWN">e</XMTok></XMApp></XMath></Math></tag></tags><para xml:id="S2.I2.ix1.p1"><p xml:id="S2.I2.ix1.p1.1">E.</p></para></item>"#,
+  );
+  assert_element(
+    &xml,
+    "equation",
+    &[r#"xml:id="S2.Ex1""#],
+    r#"<equation xml:id="S2.Ex1"><tags><tag>(<Math mode="inline" tex="\hat{\mathbf{t}}" text="hat@(t)" xml:id="S2.Ex1.m1"><XMath xml:id="S2.Ex1.m1.1"><XMApp xml:id="S2.Ex1.m1.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="bold" role="UNKNOWN">t</XMTok></XMApp></XMath></Math>)</tag><tag role="refnum"><Math mode="inline" tex="\hat{\mathbf{t}}" text="hat@(t)" xml:id="S2.Ex1.m2"><XMath xml:id="S2.Ex1.m2.1"><XMApp xml:id="S2.Ex1.m2.1.1"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="bold" role="UNKNOWN">t</XMTok></XMApp></XMath></Math></tag></tags><Math mode="display" tex="a" text="a" xml:id="S2.Ex1.m3"><XMath xml:id="S2.Ex1.m3.1"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></equation>"#,
   );
 }
 
@@ -452,12 +571,20 @@ fn amsfonts_widehat_macro_argument() {
     &[r#"mode="display""#],
     r#"<Math mode="display" tex="\widehat{C_{\mathrm{BA}}}_{\rm CF}=1" text="(widehat@(C _ BA)) _ CF = 1" xml:id="S0.Ex1.m1"><XMath xml:id="S0.Ex1.m1.1"><XMApp xml:id="S0.Ex1.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMApp xml:id="S0.Ex1.m1.1.1.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMApp xml:id="S0.Ex1.m1.1.1.2.2"><XMTok name="widehat" role="OVERACCENT">^</XMTok><XMApp xml:id="S0.Ex1.m1.1.1.2.2.2"><XMTok role="SUBSCRIPTOP" scriptpos="post3"/><XMTok font="italic" role="UNKNOWN">C</XMTok><XMTok fontsize="70%" role="UNKNOWN">BA</XMTok></XMApp></XMApp><XMTok fontsize="70%" role="UNKNOWN">CF</XMTok></XMApp><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math>"#,
   );
-  // amsfonts' `\widehat#1` takes a mandatory argument of its own: `\hat\widehat x` is no nested accent (TeX errs)
+  // amsfonts' `\widehat#1` takes a mandatory argument of its own: `\hat\widehat x` is no nested accent (TeX errs), nor
+  // is an amsmath accent under `\widehat`, which only amsmath's `\mathaccentV` nests (`\widehat\hat z`: pdflatex 7
+  // errors): the hat is read with its own argument
   let (log, xml) = convert_counted(
-    "\\documentclass{article}\n\\usepackage{amsmath,amssymb}\n\\begin{document}\n$\\widehat\\mathbf{x}$ $\\hat\\widehat y$\n\\end{document}\n",
+    "\\documentclass{article}\n\\usepackage{amsmath,amssymb}\n\\begin{document}\n$\\widehat\\mathbf{x}$ $\\hat\\widehat y$ $\\widehat\\hat z$\n\\end{document}\n",
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
-  assert_eq!(undelimited_warnings(&log).len(), 2, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
+  assert_eq!(undelimited_warnings(&log).len(), 3, "{log}");
+  assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m3""#],
+    r#"<Math mode="inline" tex="\widehat{\hat{z}}" text="widehat@(hat@(z))" xml:id="p1.m3"><XMath xml:id="p1.m3.1"><XMApp xml:id="p1.m3.1.1"><XMTok name="widehat" role="OVERACCENT">^</XMTok><XMApp xml:id="p1.m3.1.1.2"><XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp></XMApp></XMath></Math>"#,
+  );
   assert_element(
     &xml,
     "Math",
@@ -505,8 +632,10 @@ fn breqn_script_macro_argument() {
   );
   // a script that is a command reading an argument is read as before, with one Warning each (pdflatex: "Argument of
   // \text@ has an extra }"; OXIDIZED_DESIGN_DIVERGENCES #721); `x_\alpha`, `x_\infty` are braced, as TeX braces them
+  // an amsmath accent as the script is such a command too (`y^\\hat z`: pdflatex 6 errors, "Argument of \\mathaccentV
+  // has an extra }"), not a nested accent; each Warning names the script as the author typed it
   let (log, xml) = convert_counted(
-    "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{breqn}\n\\begin{document}\n$x_\\text{abc}$ and $y^\\mathrm{T}$ and $z_\\alpha^\\infty$\n\\end{document}\n",
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{breqn}\n\\begin{document}\n$x_\\text{abc}$ and $y^\\mathrm{T}$ and $z_\\alpha^\\infty$ and $w^\\hat z$\n\\end{document}\n",
   );
   assert_eq!(
     (
@@ -514,10 +643,27 @@ fn breqn_script_macro_argument() {
       warning_count(&log),
       breqn_stub_warnings(&log)
     ),
-    (0, 3, 1),
+    (0, 4, 1),
     "{log}"
   );
-  assert_eq!(undelimited_warnings(&log).len(), 2, "{log}");
+  assert_eq!(
+    undelimited_warnings(&log),
+    [
+      "Warning:malformed:_ breqn's _ takes \\text alone as its argument, where TeX errs: \\text reads an argument of \
+       its own; read as _{\\text…}, \\text with its argument",
+      "Warning:malformed:^ breqn's ^ takes \\mathrm alone as its argument, where TeX errs: \\mathrm reads an argument \
+       of its own; read as ^{\\mathrm…}, \\mathrm with its argument",
+      "Warning:malformed:^ breqn's ^ takes \\hat alone as its argument, where TeX errs: \\hat reads an argument of its \
+       own; read as ^{\\hat{z}}",
+    ],
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &[r#"xml:id="p1.m4""#],
+    r#"<Math mode="inline" tex="w^{\hat{z}}" text="w ^ (hat@(z))" xml:id="p1.m4"><XMath xml:id="p1.m4.1"><XMApp xml:id="p1.m4.1.1"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">w</XMTok><XMApp xml:id="p1.m4.1.1.3"><XMTok fontsize="70%" name="hat" role="OVERACCENT" stretchy="false">^</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">z</XMTok></XMApp></XMApp></XMath></Math>"#,
+  );
   assert_element(
     &xml,
     "Math",

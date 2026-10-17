@@ -1815,7 +1815,14 @@ LoadDefinitions!({
           before.push(T_CS!("\\lx@tblr@list"));
         }
         before.extend(internal("\\@@toccaption{\\lx@format@toctitle@@{table}"));
-        before.extend(tblr_braced(&lot_text));
+        // the caption's own text, printed below, is re-read for the line (`\lx@reread@copy`, `tex_math::REREAD_COPY`)
+        if caption_shown && lot_text.to_string() == caption.to_string() {
+          let mut reread = vec![T_CS!("\\lx@reread@copy")];
+          reread.extend(lot_text.clone().unlist());
+          before.extend(tblr_braced(&Tokens::new(reread)));
+        } else {
+          before.extend(tblr_braced(&lot_text));
+        }
         before.push(T_END!());
       } else if container && numbered {
         before.push(T_CS!("\\lx@tblr@nolist"));
