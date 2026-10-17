@@ -1,10 +1,11 @@
 % witness: 1411.3719 (rows after `\tablehead`, no `\startdata`), 1002.1848 (`\tablehead{…}\\ \cline` before
-%          `\startdata`), 1909.11243 (rows after `\enddata`), 1902.00588 (a second `\enddata`, a `\label` after it):
+%          `\startdata`), 1909.11243 (rows after `\enddata`), 1902.00588 (a second `\enddata`, a `\label` after it),
+%          1810.10130 (`\tablehead`/`\startdata` in the document's own `{longtable}`):
 %          emulateapj.cls:1430-1460 opens the longtable at the environment's `\begin`, `\tablehead` (:1329-1345) sets
 %          heading rows, `\startdata` (:1324) only captions a headless table, `\enddata` (:1497) only ends a row
-% oracle:  pdflatex 0 errors; Table 1 "A B / a 1a / b 2"; Table 2 "parameter value / a0 -2.55 / a1 -0.26"; Table 3
-%          "A B C / a 1a x / b 2 y", "Note. — A comment.", "a First note."
-% engines: rust 67int17b = 8 errors, 2 warnings (`\noalign` cannot be used here, Stray alignment "&"); Perl the same
+% oracle:  pdflatex 0 errors; Table 1 "A B / a 1 / b 2"; Table 2 "parameter value / a0 -2.55 / a1 -0.26"; Table 3
+%          "A B C / a 1a x / b 2 y", "Note. — A comment.", "a First note."; Table 4 "Galaxies / name z / G1 1.99"
+% engines: rust 67int17b = 14 errors, 3 warnings (`\noalign` cannot be used here, Stray alignment "&"); Perl the same
 % expect:  0 errors, 0 warnings; every row in its table, the heads `thead`, the note paired with its mark
 % status:  RED (67int17b) -> GREEN (68y)
 % preload: ar5iv.sty
@@ -40,4 +41,11 @@ b & 2 & $y$
 \label{tab:y}
 \end{deluxetable}
 See Table~\ref{tab:y}.
+\begin{longtable}{ll}
+\tabletypesize{\scriptsize}
+\tablecaption{Galaxies\label{obs}}
+\tablehead{\colhead{name} & \colhead{z}}
+\startdata
+G1 & 1.99 \\
+\end{longtable}
 \end{document}

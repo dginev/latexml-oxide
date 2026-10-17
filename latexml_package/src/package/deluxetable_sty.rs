@@ -16,10 +16,13 @@ fn math_mark_text(digested: &Digested) -> String {
       }
     },
     // A character as written (math's `*` is set as U+2217 but marks the note a text `\tablenotemark{*}` marks), a
-    // symbol command (`\dagger`) as set.
-    DigestedData::TBox(_) => match digested.untex() {
-      Ok(written) if !written.starts_with('\\') => written,
-      _ => digested.to_attribute(),
+    // symbol command (`\dagger`) as set, a group's or a font switch's empty box (`\rm{b}`) as nothing.
+    DigestedData::TBox(_) => {
+      let text = digested.to_attribute();
+      match digested.untex() {
+        Ok(written) if !text.is_empty() && written.chars().count() == 1 => written,
+        _ => text,
+      }
     },
     _ => digested.to_attribute(),
   }
@@ -152,8 +155,8 @@ LoadDefinitions!({
     mode => "restricted_horizontal");
   // The note's mark is its `mark`, which pairs it with a `\tablenotemark` of the same text (latex_constructs
   // `relocate_footnote`). Perl digests it as text (deluxetable.sty.ltxml:106); `\lx@deluxe@tablenote@mark` digests it
-  // in math and gives the math's own text (`a`, `†`, [`math_mark_text`]) as its attribute form, for a class that sets the mark in math
-  // (AASTeX, aas_support_sty.rs).
+  // in math and gives the math's own text (`a`, `†`; `math_mark_text`) as its attribute form, for a class that sets
+  // the mark in math (AASTeX, aas_support_sty.rs).
   DefConstructor!("\\lx@deluxe@tablenote@mark{}", "",
     mode => "math", bounded => true,
     properties => sub[args] {

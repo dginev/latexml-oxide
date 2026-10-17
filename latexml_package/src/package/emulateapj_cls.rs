@@ -44,15 +44,29 @@ LoadDefinitions!({
   DefMacro!("\\lx@eapj@label{}",
     r"\iflx@deluxetable@data\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
 {\g@addto@macro\lx@eapj@labels{\lx@eapj@saved@label{#1}}}{\lx@eapj@saved@label{#1}}");
+  // The class's `\tablehead`, `\startdata` and `\enddata` are its own, global (:1324, :1329, :1497): a document's
+  // redefinition stands (1102.2440's two-argument copy of `\tablehead`), and in a `{longtable}` of the document's own
+  // they are its rows too (1810.10130: `\tablehead` is longtable code, :1329-1345), the head ending the row the
+  // `\tablecaption` and `\tabletypesize` before it are in (the class's `\kill`).
+  RequirePackage!("longtable"); // emulateapj.cls:192 (REVTeX's support has loaded it already)
+  RawTeX!(r"\newif\iflx@eapj@deluxetable");
   DefMacro!("\\lx@eapj@begin@deluxetable",
-    r"\let\tablenotetext\lx@eapj@tablenotetext\let\lx@eapj@saved@label\label\let\label\lx@eapj@label
-\gdef\lx@eapj@labels{}\let\tablehead\lx@eapj@tablehead\let\startdata\lx@eapj@open@data\let\enddata\lx@eapj@enddata");
+    r"\lx@eapj@deluxetabletrue\global\lx@deluxetable@datafalse
+\let\tablenotetext\lx@eapj@tablenotetext\let\lx@eapj@saved@label\label\let\label\lx@eapj@label\gdef\lx@eapj@labels{}");
   DefMacro!("\\lx@eapj@open@data",
     r"\iflx@deluxetable@data\expandafter\@gobble\else\expandafter\@firstofone\fi
 {\global\lx@deluxetable@datatrue\bgroup\@deluxetable@bindings\@@deluxetabular\lx@begin@alignment\hline\hline}");
-  DefMacro!("\\lx@eapj@tablehead{}",
-    r"\lx@eapj@open@data\lx@alignment@begin@heading#1\\\hline\lx@alignment@end@heading");
-  DefMacro!("\\lx@eapj@enddata", r"\iflx@deluxetable@data\crcr\fi");
+  DefMacro!("\\lx@eapj@head{}", r"\lx@alignment@begin@heading#1\\\hline\lx@alignment@end@heading");
+  DefMacro!("\\tablehead{}",
+    r"\iflx@eapj@deluxetable\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
+{\lx@eapj@open@data\lx@eapj@head{#1}}
+{\ifx\kill\lx@longtable@kill\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
+  {\crcr\lx@eapj@head{#1}}{\def\@deluxetable@header{\lx@eapj@head{#1}}}}");
+  DefMacro!("\\startdata", r"\iflx@eapj@deluxetable\expandafter\lx@eapj@open@data\fi");
+  // `\tablecaption` (:1294) is the caption of the table it is in, a `{longtable}`'s too: the `\caption` in effect there,
+  // not the float's that deluxetable_sty.rs `\let` it be.
+  DefMacro!("\\tablecaption", "\\caption");
+  DefMacro!("\\enddata", r"\iflx@deluxetable@data\crcr\fi");
   DefMacro!("\\lx@eapj@end@deluxetable",
     r"\iflx@deluxetable@data\expandafter\@firstofone\else\expandafter\@gobble\fi
 {\crcr\hline\global\lx@deluxetable@datafalse\lx@end@alignment\@end@deluxetabular\egroup}\lx@eapj@labels

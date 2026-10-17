@@ -161,11 +161,14 @@ LoadDefinitions!({
   // Perl L122: \case (not \cases) — two-arg textstyle fraction
   DefMacro!("\\case{}{}", "{\\textstyle\\frac{#1}{#2}}");
 
-  // Spacing — Perl L223-227
-  Let!("\\ms", "\\,");
-  Let!("\\bs", "\\:");
-  Let!("\\ns", "\\!");
-  Let!("\\es", "\\:");
+  // Spacing — Perl L223-227. iopart.cls :935-938 (1502.00309's copy): `\ms \bs \ns \es` are the extra spaces between
+  // table and display rows, `\noalign{\vspace{…}}` (`\es` then `\displaystyle` for the next row), so `a & b \\\ns`
+  // then `\mr` is two `\noalign`s at a row start. Perl's `\, \: \! \:` started a row there and misplaced the rule
+  // (1502.00309; KNOWN_PERL_ERRORS #878). Guard: `perfect_kernel_batch68y::iopart_row_spacers_are_noalign`.
+  DefMacro!("\\ms", r"\noalign{\vspace{3pt plus2pt minus1pt}}");
+  DefMacro!("\\bs", r"\noalign{\vspace{6pt plus2pt minus2pt}}");
+  DefMacro!("\\ns", r"\noalign{\vspace{-3pt plus-1pt minus-1pt}}");
+  DefMacro!("\\es", r"\noalign{\vspace{6pt plus2pt minus2pt}}\displaystyle");
   Let!("\\psemicolon", "\\;");
 
   // Perl L229

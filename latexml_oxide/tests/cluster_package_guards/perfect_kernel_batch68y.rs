@@ -62,7 +62,8 @@ fn aastex_tablenotetext_mark_is_math() {
 /// class-bindings/emulateapj_deluxetable_open_from_head: emulateapj.cls:1430-1460: the deluxetable's rows are rows from
 /// `\tablehead` on — a head's `\\ \cline` (1002.1848; TeX's empty row is kept, as pdflatex sets it), rows without
 /// `\startdata` (1411.3719) and after `\enddata` (1909.11243), a second `\enddata` and a `\label` after it
-/// (1902.00588); notes, comments and labels after the data make no row.
+/// (1902.00588); notes, comments and labels after the data make no row; in the document's own `{longtable}` the head
+/// is its rows and `\tablecaption` its caption (1810.10130).
 #[test]
 fn emulateapj_deluxetable_is_open_from_its_head() {
   assert_elements(
@@ -91,6 +92,11 @@ fn emulateapj_deluxetable_is_open_from_its_head() {
         "para",
         "p1",
         r##"<para xml:id="p1"><p>See Table <ref labelref="LABEL:tab:y"/>.</p></para>"##,
+      ),
+      (
+        "table",
+        "S0.T4",
+        r##"<table inlist="lot" labels="LABEL:obs" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="autoref">Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><caption><tag>Table 4</tag>Galaxies</caption><toccaption><tag close=" ">4</tag>Galaxies</toccaption><tabular><thead><tr><td align="center" thead="column">name</td><td align="center" thead="column">z</td></tr></thead><tbody><tr><td align="left" border="t">G1</td><td align="left" border="t">1.99</td></tr></tbody></tabular></table>"##,
       ),
     ],
   );
@@ -135,6 +141,42 @@ fn aastex_d_column_with_arguments_is_dcolumns() {
       "table",
       "tab1",
       r##"<table xml:id="tab1"><tabular vattach="middle"><tbody><tr><td align="left"><Math mode="inline" tex="x" text="x" xml:id="m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></td><td/><td align="char:." class="ltx_nopad_r"><Math mode="inline" tex="-0.50^{a}" text="- 0.50 ^ a" xml:id="m2"><XMath><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="0.50" role="NUMBER">0.50</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok></XMApp></XMApp></XMath></Math></td></tr></tbody></tabular></table>"##,
+    )],
+  );
+}
+
+/// class-bindings/mn2e_usedcolumn_column_types: mn2e.cls v2.2 :1210-1216 `usedcolumn`: `d{2.1}` is dcolumn's
+/// `D{.}{.}{2.1}` (astro-ph0701731, astro-ph0312263).
+#[test]
+fn mn2e_usedcolumn_column_types() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/mn2e_usedcolumn_column_types.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="right" thead="row">A</td><td align="char:."><Math mode="inline" tex="1.5" text="1.5" xml:id="p1.m1"><XMath><XMTok meaning="1.5" role="NUMBER">1.5</XMTok></XMath></Math></td></tr><tr><td align="right" thead="row">B</td><td align="char:."><Math mode="inline" tex="22.25" text="22.25" xml:id="p1.m2"><XMath><XMTok meaning="22.25" role="NUMBER">22.25</XMTok></XMath></Math></td></tr></tbody></tabular></para>"##,
+    )],
+  );
+}
+
+/// class-bindings/iopart_row_spacers_noalign: iopart.cls :935-938: `\ns`/`\bs` after a row's `\\` are `\noalign`
+/// spacers, so the `\mr` after `\ns` is the rule between the two rows (1502.00309).
+#[test]
+fn iopart_row_spacers_are_noalign() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/iopart_row_spacers_noalign.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" border="t" thead="row">a</td><td align="center" border="t">b</td></tr><tr><td align="left" border="b t" thead="row">c</td><td align="center" border="b t">d</td></tr></tbody></tabular></para>"##,
     )],
   );
 }

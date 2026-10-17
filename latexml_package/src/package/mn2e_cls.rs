@@ -39,6 +39,13 @@ LoadDefinitions!({
   ProcessOptions!();
   load_class("article", Vec::new(), Tokens!())?;
   RequirePackage!("mn2e_support");
+  // mn2e.cls (2001/02/06 v2.2) :1210-1216, as mnras.cls :1349-1354 (mnras_cls.rs): with `usedcolumn`, the class's
+  // column types on dcolumn's `D` (mn2e_support loads dcolumn). Perl's mn2e_support.sty.ltxml:18-19 only loads
+  // dcolumn, so a `d{2.1}` column was unknown and its cells' `&` stray (astro-ph0701731, astro-ph0312263;
+  // KNOWN_PERL_ERRORS #877). Guard: `perfect_kernel_batch68y::mn2e_usedcolumn_column_types`.
+  if lookup_int("@usedcolumn") != 0 {
+    RawTeX!(r"\newcolumntype{d}[1]{D{.}{.}{#1}}\newcolumntype{.}{D{.}{.}{-1}}\newcolumntype{,}{D{,}{,}{2}}");
+  }
   // mn2e.cls copies with the one "2001/02/06 v2.2" stamp differ in the journal abbreviations `.bbl`s from the
   // astronomy `.bst`s write (`\apj`, `\mnras`): the common 1574-line copy defines none, a 1695-line one
   // `\def\apj{ApJ}%` and the rest of the AAS set (0804.2668; 92 of the run-336 papers whose first error was one ship

@@ -14612,7 +14612,8 @@ Trigger: `\documentclass{aastex701}`, a deluxetable with `\tablenotetext{^\dagge
 a dagger; Perl and Rust before 68y `^ Script can only appear in math mode`.
 
 Rust (68y): aas_support_sty.rs digests the mark in math (deluxetable_sty.rs `\lx@deluxe@tablenote@mark`), its attribute
-the mark's text (`†`; `a` still pairs with `\tablenotemark{a}`); emulateapj, whose mark is text
+the mark's text (`math_mark_text`: a character as written, `*` not U+2217; a symbol as set, `†`; a script's or command's
+arguments, `^\dagger` and `\rm{b}` are `†` and `b`), so `a` still pairs with `\tablenotemark{a}`; emulateapj, whose mark is text
 (emulateapj.cls:1424-1427), keeps the text form. Witnesses 2503.18379, 0803.1504. Repro
 class-bindings/aastex_tablenotetext_math_mark; guard `perfect_kernel_batch68y::aastex_tablenotetext_mark_is_math`.
 
@@ -14629,8 +14630,10 @@ Trigger: `\documentclass{emulateapj}`, `\begin{deluxetable}{lc} \tablecaption{Ca
 under the head; Perl and Rust before 68y `\noalign cannot be used here` and `Stray alignment "&"`.
 
 Rust (68y, emulateapj_cls.rs): the data opens at `\tablehead` or `\startdata` and closes at the environment's end;
-`\enddata` ends a row; notes, comments and a `\label` after the data are kept for the table's end. Witnesses 1411.3719,
-1909.11243, 1002.1848, 1902.00588 (and #665's 1506.07185, 1705.08932). Repro
+`\enddata` ends a row; notes, comments and a `\label` after the data are kept for the table's end. The three commands
+are the class's, global, so a document's redefinition stands (1102.2440), and in a document's own `{longtable}` the head
+is its rows and `\tablecaption` its caption (1810.10130). Witnesses 1411.3719, 1909.11243, 1002.1848, 1902.00588 (and
+#665's 1506.07185, 1705.08932). Repro
 class-bindings/emulateapj_deluxetable_open_from_head; guard
 `perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`.
 
@@ -14662,3 +14665,30 @@ Trigger: `\documentclass{aastex701} \usepackage{dcolumn}`, `\newcolumntype{d}[1]
 Rust (68y, aas_support_sty.rs): a `D` followed by an argument is dcolumn's (the class's takes none). Witness
 1607.06811 (aastex.cls not in TeX Live: the paper is discounted, fixed anyway). Repro
 class-bindings/aastex_dcolumn_D_with_arguments; guard `perfect_kernel_batch68y::aastex_d_column_with_arguments_is_dcolumns`.
+
+## 877. mn2e's `usedcolumn` option loads dcolumn without the class's `d`, `.` and `,` column types
+
+mn2e.cls (v2.2, :1210-1216), as mnras.cls :1349-1354, defines with `usedcolumn` `\newcolumntype{d}[1]{D{.}{.}{#1}}`,
+`\newcolumntype{.}{D{.}{.}{-1}}` and `\newcolumntype{,}{D{,}{,}{2}}`. Perl's binding (mn2e_support.sty.ltxml:18-19)
+only loads dcolumn.
+
+Trigger: `\documentclass[usedcolumn]{mn2e}` (the papers' copy; mn2e.cls is not in TeX Live), `\begin{tabular}{rd{2.1}}
+A & 1.5 \\ \end{tabular}` — pdflatex 0 errors; Perl and Rust before 68y "Unrecognized tabular template" and
+`Stray alignment "&"`.
+
+Rust (68y, mn2e_cls.rs): the three column types, as mnras_cls.rs. Witnesses astro-ph0701731, astro-ph0312263
+(discounted, fixed anyway). Repro class-bindings/mn2e_usedcolumn_column_types; guard
+`perfect_kernel_batch68y::mn2e_usedcolumn_column_types`.
+
+## 878. iopart's `\ms \bs \ns \es` are math spaces; the class's are `\noalign` row spacers
+
+iopart.cls :935-938: `\ms`, `\bs`, `\ns` are `\noalign{\vspace{…}}` between table and display rows (`\es` the same then
+`\displaystyle`), and `\br`/`\mr` (:924-925) are built on `\ms`. Perl's binding (iopart_support.sty.ltxml:223-227)
+lets them be `\,`, `\:`, `\!`, `\:`: after a row's `\\` they open a row, and a rule after them is misplaced.
+
+Trigger: `\documentclass{iopart}` (the papers' copy), `\begin{tabular}{lc} \br a & b \\\ns \mr c & d \\ \br
+\end{tabular}` — pdflatex 0 errors with the class's definitions; Perl and Rust before 68y `\noalign cannot be used here`.
+
+Rust (68y, iopart_support_sty.rs): the class's `\noalign` spacers. Witness 1502.00309 (discounted: iopart.cls with no
+`iopart12.clo` under TeX Live 2025; fixed anyway). Repro class-bindings/iopart_row_spacers_noalign; guard
+`perfect_kernel_batch68y::iopart_row_spacers_are_noalign`.

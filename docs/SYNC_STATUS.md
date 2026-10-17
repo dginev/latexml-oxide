@@ -2574,6 +2574,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\begin{document}`); K11's line rule (#662) is a shape test — RED class-bindings/title_page_typesetting/ (ka, kb),
   left for the frontmatter design study (agent_reports/2026-10-16_frontmatter_design_study.md, stage S3).
 
+- **68y** (AAS/aa/emulateapj/iopart/mn2e binding shapes of the rc_struct2 structural first-error clusters `&`,
+  `\noalign`, `^`; study agent_reports/2026-10-16_rc_struct2.md, shapes A4 A6 A7 B3 B5 B6 C1 C2 C8). Each binding now
+  does what its class does (KNOWN_PERL_ERRORS #871-#878): aa `\tablefootmark`/`\tablefoottext` set the mark in text
+  (aa.cls v9.1 :1672-1681; 2211.06931 2507.11600 2012.11559 2404.06316 2104.06278) and `\ion` is robust (:639/:1729;
+  0801.2767); AASTeX's `\tablenotetext` mark is math (aastex701.cls :11967-11969; deluxetable_sty.rs
+  `\lx@deluxe@tablenote@mark`, its attribute the mark's text so `a` still pairs with `\tablenotemark{a}`; 2503.18379,
+  0803.1504); emulateapj's deluxetable is open from `\tablehead`/`\startdata` to its end, `\enddata` only ending a row
+  (emulateapj.cls:1324-1345, 1430-1460, 1497; emulateapj_cls.rs; 1411.3719 1909.11243 1002.1848 1902.00588), its marks
+  text, notes/comments/`\label` after the data kept for the end, the commands global (a document's own `\tablehead`
+  stands, 1102.2440) and in a document's `{longtable}` its head rows and caption (1810.10130); `\decimals` is a `\noalign` in a `tabular`
+  (aastex701.cls :12014, `\deluxedecimals` in a deluxetable; 1805.06850); a `D` column with arguments is dcolumn's
+  (:12010, :6286-6291; 1607.06811); mn2e `usedcolumn`'s `d`/`.`/`,` (mn2e.cls :1210-1216, mn2e_cls.rs;
+  astro-ph0701731, astro-ph0312263); iopart `\ms \bs \ns \es` are `\noalign` spacers (iopart.cls :935-938;
+  1502.00309). 1607.06811, astro-ph0701731, astro-ph0312263 and 1502.00309 are TL-2025-discounted (class not in TeX
+  Live / no `iopart12.clo`), fixed anyway. Repros class-bindings/{aa_tablefootmark_text_mark, aa_ion_robust_cell_head,
+  aastex_tablenotetext_math_mark, emulateapj_deluxetable_open_from_head, aastex_decimals_noalign,
+  aastex_dcolumn_D_with_arguments, mn2e_usedcolumn_column_types, iopart_row_spacers_noalign}; guards
+  `perfect_kernel_batch68y` (8). A/B vs 67int17b over 267 papers (the 17 study witnesses, 60 aa, 60 AASTeX, 30
+  emulateapj, 20 iopart, 20 mn2e by `\documentclass`, 60 pop67o): errors 1,733 → 1,262, Fatal 9 → 7, words +48,193;
+  the 17 witnesses 290 → 0 errors, 12 emulateapj and one each of aa, AASTeX, mn2e papers → 0 (two Fatals gone:
+  1108.2958, astro-ph0701730); none worse (2512.06138 −39 words: the text marks `a, b` are one word where the math
+  marks were three). Open: 1102.2440 copies emulateapj's longtable `\tablehead` (`\@table@not@headedfalse`, `\kill`,
+  `\endfirsthead`) into its preamble, which a deluxetable here does not run (16 errors, as before).
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
