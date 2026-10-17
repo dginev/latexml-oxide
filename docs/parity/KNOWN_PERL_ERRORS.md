@@ -14930,3 +14930,18 @@ Rust (69b, tex_math.rs `\lx@dollar@default`): in `display_math` the next token i
 (`read_x_token`); a non-shift goes back as read (`back_error`). Repro
 expansion-primitives/display_closing_dollar_from_a_macro; guard
 `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`.
+
+## 900. enumitem's `\setlist` has no star: `\setlist*[…]{…}` and `\setlist[…]*{…}` read the `*` as the keys
+
+enumitem.sty `\setlist` = `\@ifstar{\enit@setlist\@ne}{\enit@setlist\z@}`, and after the names `\enit@setlist@x`
+(enumitem.sty:1664-1667, "Let's accept \setlist[]*{}, too, because an error in <=3.5.1") tests `\@ifstar` again: either
+star makes the keys append to the stored ones (`\enit@saveset`, :1597-1612) instead of replacing them. Perl's binding
+(enumitem.sty.ltxml:206 `DefPrimitive('\setlist Optional RequiredKeyVals:enumitem', …)`) has neither.
+
+Trigger: `\usepackage{enumitem}` and `\setlist[enumerate]*{label=(\arabic*)}` — pdflatex 0 errors ("(1) One.");
+Perl and Rust before 69b `Error:expected:{ Missing keyval arguments` (rc_struct3 X1, est. 26). Rust had accepted the
+leading star since the hep-text.sty `\setlist*[inlinelist,1]{…}` fix.
+
+Rust (69b, enumitem_sty.rs): `\setlist OptionalMatch:* Optional` is a macro that, after names, dispatches by
+`\@ifstar` (which passes spaces: `\setlist[itemize] *{…}`) to the primitive `\lx@enit@setlist`. Repro
+list-structure/setlist_star_after_the_names; guard `perfect_kernel_batch69b::setlist_star_after_the_names`.

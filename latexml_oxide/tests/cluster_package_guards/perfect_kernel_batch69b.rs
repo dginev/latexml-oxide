@@ -5,6 +5,7 @@
 //! Item 3 (L2) — `\endlist` with no list open does nothing, as latex.ltx:15915-15930 `\endtrivlist`. Item 4 (E2) —
 //! mdwtab's `array` enters math itself (mdwtab.sty:505-510), so in text it is a formula without "Missing $"; Wooding's
 //! mathenv loads mdwtab (mathenv.sty:53). Item 5 (E3) — the `$` closing a display is read expanded (tex.web §1197).
+//! Item 6 (X1) — enumitem's `\setlist[…]*{…}` appends, the star read after the names (enumitem.sty:1661-1667).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -129,5 +130,32 @@ fn display_closing_dollar_from_a_macro() {
     "para",
     &["xml:id=\"p1\""],
     r#"<para xml:id="p1"><p>Text</p><equation xml:id="S0.Ex1"><Math mode="display" tex="x=1." text="x = 1" xml:id="S0.Ex1.m1"><XMath><XMDual><XMRef idref="S0.Ex1.m1.1"/><XMWrap><XMApp xml:id="S0.Ex1.m1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp><XMTok role="PERIOD">.</XMTok></XMWrap></XMDual></XMath></Math></equation><p>more text.</p></para>"#,
+  );
+}
+
+/// list-structure/setlist_star_after_the_names: `\setlist[enumerate]*{label=(\arabic*)}` and `\setlist[itemize]
+/// *{leftmargin=2em}` after `\setlist[itemize]{label=--}` (pdflatex 0 errors: "(1) One.", "– Two."). Before 69b: 2
+/// Errors "Missing keyval arguments" (Perl the same).
+#[test]
+fn setlist_star_after_the_names() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/setlist_star_after_the_names.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "enumerate",
+    &[],
+    r#"<enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>(1)</tag><tag role="refnum">(1)</tag><tag role="typerefnum">item (1)</tag></tags><para xml:id="S0.I1.i1.p1"><p>One.</p></para></item></enumerate>"#,
+  );
+  assert_element(
+    &xml,
+    "itemize",
+    &[],
+    r#"<itemize cssstyle="--ltx-enum-leftmargin:2em" xml:id="S0.I2"><item xml:id="S0.I2.i1"><tags><tag>–</tag><tag role="refnum">–</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I2.i1.p1"><p>Two.</p></para></item></itemize>"#,
   );
 }

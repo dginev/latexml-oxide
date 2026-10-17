@@ -784,7 +784,36 @@ LoadDefinitions!({
   // `\setlist*[inlinelist,1]{…}` (hep-text.sty L74) errored and leaked the `*`.
   // The names are expanded before they are sorted (enumitem.sty:1678 `\protected@edef\enit@a{#2}`):
   // `\def\@listenv{enumerate}\setlist[\@listenv,\@listdep]{…}` (2605.31510's clevethm.sty).
-  DefPrimitive!("\\setlist OptionalMatch:* Optional RequiredKeyVals:enumitem", sub[(star, names, kv)] {
+  // The star may also follow the names (enumitem.sty:1661-1667 `\enit@setlist@n`/`\enit@setlist@x`, "Let's accept
+  // \setlist[]*{}, too, because an error in <=3.5.1"): after `[…]` an `\@ifstar` — which passes spaces, as
+  // `\@ifnextchar` does — makes it append. `\setlist[enumerate]*{label=(\arabic*)}` (rc_struct3 X1; Perl's binding read
+  // the `*` as the keys, "Missing keyval arguments"). Guard: `perfect_kernel_batch69b::setlist_star_after_the_names`.
+  DefMacro!("\\setlist OptionalMatch:* Optional", sub[(star, names)] {
+    let Some(names) = names else {
+      return Ok(Tokens::new(match star {
+        Some(_) => vec![T_CS!("\\lx@enit@setlist"), T_OTHER!("*")],
+        None => vec![T_CS!("\\lx@enit@setlist")],
+      }));
+    };
+    let call = |star: bool| {
+      let mut out = vec![T_CS!("\\lx@enit@setlist")];
+      if star {
+        out.push(T_OTHER!("*"));
+      }
+      out.push(T_OTHER!("["));
+      out.extend_from_slice(names.unlist_ref());
+      out.push(T_OTHER!("]"));
+      out
+    };
+    let mut out = vec![T_CS!("\\@ifstar"), T_BEGIN!()];
+    out.extend(call(true));
+    out.push(T_END!());
+    out.push(T_BEGIN!());
+    out.extend(call(star.is_some()));
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
+  DefPrimitive!("\\lx@enit@setlist OptionalMatch:* Optional RequiredKeyVals:enumitem", sub[(star, names, kv)] {
     let names = match names {
       Some(t) => Expand!(t).to_string(),
       None => String::new(),

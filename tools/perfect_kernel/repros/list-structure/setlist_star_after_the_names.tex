@@ -1,0 +1,17 @@
+% witness: rc_struct3 X1 (1 of 25 sampled `{` first-error papers; est. 26, grep 12)
+% oracle:  pdflatex 0 errors: "(1) One." and "– Two." (the itemize label kept, the margin appended)
+% engines: rust 67int18b = 2 Error:expected:{ "Missing keyval arguments" (the `*` read as the keys); Perl 0.8.8 the
+%          same (enumitem.sty.ltxml:206 no star at all)
+% expect:  enumitem.sty:1661-1667 `\enit@setlist@x`: an `\@ifstar` after the names (spaces passed) makes
+%          `\setlist[…]*{…}` append, as `\setlist*[…]{…}`
+% status:  RED (67int18b) -> GREEN (69b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{enumitem}
+\setlist[enumerate]*{label=(\arabic*)}
+\setlist[itemize]{label=--}
+\setlist[itemize] *{leftmargin=2em}
+\begin{document}
+\begin{enumerate}\item One.\end{enumerate}
+\begin{itemize}\item Two.\end{itemize}
+\end{document}

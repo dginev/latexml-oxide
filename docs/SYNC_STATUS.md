@@ -2794,7 +2794,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch69b::mdwtab_array_in_text_is_a_formula`. (5) E3: the `$` closing a display is read expanded,
   as tex.web §1197 `get_x_token` (tex_math.rs `\lx@dollar@default`; KNOWN_PERL_ERRORS #899; est. 30). Repro
   expansion-primitives/display_closing_dollar_from_a_macro; guard
-  `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`.
+  `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`. (6) X1: enumitem's `\setlist[…]*{…}` appends, the
+  star tested by `\@ifstar` after the names (enumitem.sty:1661-1667; enumitem_sty.rs `\setlist` → `\lx@enit@setlist`;
+  KNOWN_PERL_ERRORS #900; est. 26). Repro list-structure/setlist_star_after_the_names; guard
+  `perfect_kernel_batch69b::setlist_star_after_the_names`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
