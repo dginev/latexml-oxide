@@ -1,0 +1,14 @@
+% witness: 2512.06733 (\includegraphics[width=0.2\linewidth]{figures/c4_ex1.tex} beside \usepackage{standalone}; the sub-file loads cleveref)
+% oracle:  pdflatex 0 errors; "SUBBODY" in the figure, no "SUBTITLE": standalone.sty:602-646 \sa@documentclass gobbles the sub-file's preamble to its \begin{document} (gincltex.sty:45-56 \gincltex@boxfile \input's it)
+% engines: rust 67int20 = 8 errors ("\lx@cleverrefnum@@" undefined ×2 each of four: the sub-file's \usepackage{cleveref} ran in the body); 67int19b 0, the figure empty (the .tex an image candidate, 70a I1); perl: no gincltex
+% expect:  0 errors; the figure holds SUBBODY; no SUBTITLE anywhere
+% status:  GREEN (int20)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{standalone}
+\begin{document}
+\section{One}\label{s}
+\begin{figure}\includegraphics[width=0.2\linewidth]{gincltex_sub.tex}\caption{Cap.}\end{figure}
+See \ref{s}.
+\end{document}

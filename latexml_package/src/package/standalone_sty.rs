@@ -78,8 +78,21 @@ LoadDefinitions!({
   // (graphicx_sty.rs `\lx@Gin@include`); handed to the image converter it was lost (2511.17298, 2305.04329,
   // 2408.06999, 2305.16841). gincltex has no binding, so it is read raw: only where raw styles are (amsrefs_sty.rs the
   // same). Guard: `perfect_kernel_batch70a::standalone_loads_gincltex`.
+  // A sub-file gincltex boxes (`\gincltex@boxfile`'s `\input`, gincltex.sty:45-56, from its reader `\Gread@tex` or its
+  // include `\Ginclude@tex`, :57-90) is the sub-file `\includestandalone` reads (standalone.sty:1014-1021 hands it to
+  // `\includegraphics`): standalone's `\sa@documentclass` (:602-646) gobbles its preamble, so its packages never load
+  // in the main document's body — 2512.06733's `\includegraphics{figures/c4_ex1.tex}` ran the sub-file's
+  // `\usepackage{cleveref}` after `\begin{document}`, and the begin-document half of cleveref never came
+  // ("`\lx@cleverrefnum@@` undefined" ×8).
+  // Guard `perfect_kernel_batchint20::gincltex_subfile_preamble_is_skipped`.
   if lookup_bool("INCLUDE_STYLES") {
     RequirePackage!("gincltex");
+    if IsDefined!(&T_CS!("\\gincltex@boxfile")) {
+      RawTeX!(
+        r"\let\lx@standalone@gincltex@boxfile\gincltex@boxfile
+\def\gincltex@boxfile#1{\lx@standalone@skippreamble\lx@standalone@gincltex@boxfile{#1}}"
+      );
+    }
   }
 
   DefMacro!("\\@standalone@end@input", "\\egroup\\endinput");

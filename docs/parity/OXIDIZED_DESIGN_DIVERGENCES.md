@@ -14556,7 +14556,10 @@ figure (2504.17583) and its own packages and inputs (`\usepackage{emoji}`, 2403.
 2508.06316) do not run. With `subpreambles` the preamble runs in place, in the sub-file's bracket. A plain `\input` of a
 standalone sub-file keeps running its preamble, as Perl does (#63, #65, the #311 guards in
 `06_cluster_standalone_subfiles.rs`). pdflatex skips those preambles too, so this is a leniency that renders children
-whose packages only their own preamble loads.
+whose packages only their own preamble loads. A sub-file gincltex boxes for `\includegraphics{x.tex}` beside standalone
+(`\gincltex@boxfile`, gincltex.sty:45-56; what standalone.sty:1014-1021's own `\includestandalone` reaches) is no plain
+`\input`: its preamble is skipped as `\includestandalone`'s (int20; 2512.06733, whose sub-file's `\usepackage{cleveref}`
+ran in the body; guard `perfect_kernel_batchint20::gincltex_subfile_preamble_is_skipped`).
 
 **Measured.** On the 24 report papers that load standalone, compared with 63o: `.tex` graphic candidates go from 82
 to 0, pictures from 15 to 87, with no new errors. 2404.19456 gains six `\Description` warnings because its figures now

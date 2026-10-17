@@ -3,7 +3,10 @@
 //! has its preamble skipped beside standalone, and `\backslashbox` reads its arguments inside the cell.
 //!
 //! Every repro is checked against pdflatex/pdftex (its header holds the oracle).
-use super::perfect_kernel_batch57::assert_elements;
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch57::assert_elements,
+};
 
 /// The arXiv configuration's preload.
 const AR5IV: &str = "ar5iv.sty";
@@ -39,3 +42,25 @@ fn graphic_name_macro_with_underscore_expands() {
 }
 
 const GRAPHICS_PARA: &str = r##"<para xml:id="p1"><graphics graphic="a-fig-b" options="width=28.45274pt,height=28.45274pt" xml:id="p1.g1"/><graphics graphic="fig_trans" options="width=28.45274pt,height=28.45274pt" xml:id="p1.g2"/></para>"##;
+
+/// graphics-tikz/gincltex_subfile_preamble_skipped: beside standalone, a sub-file gincltex boxes for
+/// `\includegraphics{x.tex}` has its preamble gobbled as `\sa@documentclass` does (standalone.sty:602-646), so its
+/// `\usepackage{cleveref}` and `\title` never run in the main document's body (2512.06733).
+#[test]
+fn gincltex_subfile_preamble_is_skipped() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/gincltex_subfile_preamble_skipped.tex"
+    ),
+    &[(
+      "gincltex_sub.tex",
+      include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/gincltex_sub.tex"),
+    )],
+    Some(AR5IV),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("SUBTITLE"), "{xml}");
+  latexml::util::test::assert_element(&xml, "figure", &[r#"xml:id="S1.F1""#], FIGURE);
+}
+
+const FIGURE: &str = r##"<figure inlist="lof" xml:id="S1.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S1.F1.1"><text xml:id="S1.F1.1.1"><inline-block depth="0.0pt" height="7.9pt" width="69.0pt" xml:id="S1.F1.1.1.1" xscale="1.15265144128747" xtranslate="4.6pt" yscale="1.15265144128747" ytranslate="-0.5pt"><p xml:id="S1.F1.1.1.1.1"><text xml:id="S1.F1.1.1.1.1.1"><text width="0.0pt" xml:id="S1.F1.1.1.1.1.1.1"><inline-block vattach="bottom" xml:id="S1.F1.1.1.1.1.1.1.1"><p xml:id="S1.F1.1.1.1.1.1.1.1.1">SUBBODY</p></inline-block></text></text></p></inline-block></text></p><toccaption><tag close=" ">1</tag>Cap.</toccaption><caption><tag close=": ">Figure 1</tag>Cap.</caption></figure>"##;
