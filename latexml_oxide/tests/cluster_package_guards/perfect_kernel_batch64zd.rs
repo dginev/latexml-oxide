@@ -646,11 +646,22 @@ fn aas4_planotable_with_enddata() {
 
 /// A package OmniBus required under provide-only is unmarked when the guard ends, so a later `\usepackage{graphicx}`
 /// loads it whole: graphicx's keyval `\includegraphics` (review 64zd round 2).
+/// The 2.09 document's `\usepackage` meets latex209.def's trap, its one Error (pdflatex the same; user ruling 2026-10-17,
+/// OXIDIZED_DESIGN_DIVERGENCES #725), and graphicx still loads.
 #[test]
 fn omnibus_provide_only_package_loads_whole_later() {
-  let (_, xml) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/omnibus_provide_only_package_loads_whole_later.tex"
-  ));
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/omnibus_provide_only_package_loads_whole_later.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert!(
+    log.contains("LaTeX2e command \\usepackage in LaTeX 2.09 document"),
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_element(
     &xml,
     "p",

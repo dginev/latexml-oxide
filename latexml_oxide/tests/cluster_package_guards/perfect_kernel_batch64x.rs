@@ -397,7 +397,12 @@ Able, A. 1990, ApJ, 1
 "#,
     Some("ar5iv.sty"),
   );
-  assert_diagnostics(&log, 1, &["<ltx:bibitem> isn't allowed in <ltx:figure>"]);
+  // The second diagnostic is latex209.def's trap on the 2.09 document's `\usepackage` (pdflatex the same; user ruling
+  // 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #725); graphicx still loads.
+  assert_diagnostics(&log, 2, &[
+    "<ltx:bibitem> isn't allowed in <ltx:figure>",
+    "LaTeX2e command \\usepackage in LaTeX 2.09 document",
+  ]);
   assert_eq!(xml.matches("<graphics ").count(), 2, "{xml}");
   assert_element(
     &xml,
