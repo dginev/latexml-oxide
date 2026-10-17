@@ -2,7 +2,11 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // elsart_support for the markup arxbj.cls shares with elsart, not elsart.cls's theorems (`{cor}`, `{lem}`, `{prob}`,
+  // …): arxbj.cls:1418-1431 defines `{thm}` only, so an author's `\newcommand{\prob}` is theirs (1601.03906).
+  AssignValue!("lx_elsart_class_theorems_off" => true, Some(Scope::Local));
   RequirePackage!("elsart_support");
+  AssignValue!("lx_elsart_class_theorems_off" => false, Some(Scope::Local));
   RequirePackage!("amssymb");
   RequirePackage!("bm");
   RequirePackage!("keyval");

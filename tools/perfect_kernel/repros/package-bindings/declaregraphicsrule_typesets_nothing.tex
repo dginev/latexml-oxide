@@ -1,0 +1,14 @@
+% witness: 1605.08743 (figlatex.sty:119-122 `\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}`, 1 error)
+% oracle:  pdflatex 0 errors: "Body."
+% engines: rust 67int15 = 1 Error:unexpected:_ (the rule's arguments digested, `.pdftex_t` typeset); Perl 0.8.8 the same
+%          (graphics.sty.ltxml:307 a constructor, KNOWN_PERL_ERRORS #858)
+% expect:  0 errors; nothing typeset by the rules
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}
+\DeclareGraphicsRule{.fig}{figtex}{.pdftex}{}
+\begin{document}
+Body.
+\end{document}

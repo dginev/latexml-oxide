@@ -616,12 +616,24 @@ LoadDefinitions!({
   //   \shortciteNP     — no parentheses         → \citealp
   //   \shortciteauthor — author-only            → \citeauthor
   // Witness 1606.03620 (`\shortciteNP`, via apacdoc's `\DSMshortciteNP`).
-  DefMacro!("\\shortcite[][] Semiverbatim", "\\citep[#1][#2]{#3}");
-  DefMacro!("\\shortciteA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
-  DefMacro!("\\shortciteNP[][] Semiverbatim", "\\citealp[#1][#2]{#3}");
+  // They take the `<pre-note>` as every classic cite form does (apacite.sty:277-283, :304-310, :342-347, :380-401
+  // `\@ifnextchar<`), with `\cite`'s signature above: 1805.05444's `\let\cite\shortcite` then
+  // `\cite<e.g.>[]{Rigden_2017}` took `<` as the key and typeset `e.g.>[]{Rigden_2017}`, a math error.
   DefMacro!(
-    "\\shortciteauthor[][] Semiverbatim",
-    "\\citeauthor[#1][#2]{#3}"
+    "\\shortcite [] OptionalAngled [] Semiverbatim",
+    "\\citep[#1#2][#3]{#4}"
+  );
+  DefMacro!(
+    "\\shortciteA [] OptionalAngled [] Semiverbatim",
+    "\\citet[#1#2][#3]{#4}"
+  );
+  DefMacro!(
+    "\\shortciteNP [] OptionalAngled [] Semiverbatim",
+    "\\citealp[#1#2][#3]{#4}"
+  );
+  DefMacro!(
+    "\\shortciteauthor [] OptionalAngled [] Semiverbatim",
+    "\\citeauthor[#1#2][#3]{#4}"
   );
 
   // Old-format compat macros (pre-2012 apacite.bst): the `\bibitem` label uses

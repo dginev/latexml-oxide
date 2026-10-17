@@ -102,6 +102,14 @@ LoadDefinitions!({
     }
   });
   RawTeX!(r"\AtBeginDocument{\lx@quantumarticle@hyperref}");
+  // :1396-1400, after it: with natbib (and no doi package) the class's `\doi` — a link to doi.org showing "DOI: <doi>",
+  // the DOI `\detokenize`d. Before, the `.bbl`'s fallback `\def\doi#1{\burlalt{doi:#1}…}` (its `\ifx\csname
+  // doi\endcsname\relax`) typeset `10.1007/978-3-540-27821-4_23`, a math error (1902.03164). The shown DOI is in the
+  // identity encoding (`\lx@address@textfont`): an address is the author's, not the accident of the OT1 font, which prints
+  // its `_` as a dot accent (user ruling 2026-10-11).
+  RawTeX!(
+    r"\AtBeginDocument{\@ifpackageloaded{natbib}{\@ifpackageloaded{doi}{}{\providecommand{\doi}[1]{}\renewcommand{\doi}[1]{\href{https://doi.org/\detokenize{#1}}{DOI: \lx@address@textfont{\detokenize{#1}}}}}}{}}"
+  );
   RequirePackage!("bbm");
   // Pre-load with [dvipsnames, table] so user xcolor calls don't
   // silently option-clash. Quantum papers commonly use \cellcolor.

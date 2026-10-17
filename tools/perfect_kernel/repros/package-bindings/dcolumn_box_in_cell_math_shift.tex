@@ -1,0 +1,17 @@
+% witness: 2306.05928 (`\multirow{2}{*}{$E_{\mathrm{B}}^{\mathrm{PBE}}$}` in a `D` column; 24 errors)
+% oracle:  pdflatex 0 errors: Solid | E_B | E_B^PBE / A | 1.5 | 2.5 / B | x_1 | −3.25
+% engines: rust 67int15 = 2 Error:unexpected:_/^, 2 Warning (the multirow box's `$` was `\relax`, its scripts in text); Perl
+%          0.8.8 the same (dcolumn.sty.ltxml:42-44, KNOWN_PERL_ERRORS #859)
+% expect:  0 errors; the multirow cell's formula a formula, the plain `$2.5$` cell one number in math
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{dcolumn,multirow}
+\newcolumntype{d}[1]{D{.}{.}{#1}}
+\begin{document}
+\begin{tabular}{c d{1} d{1}}
+Solid & \multicolumn{1}{c}{$E_\mathrm{B}$} & \multirow{2}{*}{$E_{\mathrm{B}}^{\mathrm{PBE}}$} \\
+A & 1.5 & $2.5$ \\
+B & \mbox{$x_1$} & -3.25
+\end{tabular}
+\end{document}

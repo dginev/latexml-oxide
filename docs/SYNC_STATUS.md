@@ -2419,6 +2419,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   27 → 0 errors, none worse; words lost are the key text (2201.10483 −61) and the later numbers a continuation no
   longer steps (2103.08319). Open: thm-restate's `restate=` key (2108.11527). Repro
   package-bindings/thmtools_keyval_optional_argument; guard `perfect_kernel_batch68w::thmtools_keyval_*`.
+  One-liners (one witness each, all → 0 errors): apacite's short family `\shortcite`/`\shortciteA`/`\shortciteNP`/
+  `\shortciteauthor` take `\cite`'s `<pre-note>` (apacite.sty:277-401; 1805.05444 23 → 0); `\DeclareGraphicsRule` a
+  macro typesetting nothing (graphics.sty:150; 1605.08743; KNOWN_PERL_ERRORS #858); dcolumn's `$` does nothing only at
+  the `D` cell's level and is a math shift again in a box the cell holds, its saved `$` the real meaning
+  (`\lx@DC@dollar`; 2306.05928 24 → 0; #859); arxbj loads elsart_support without elsart.cls's theorems
+  (`lx_elsart_class_theorems_off`; arxbj.cls defines `{thm}` only; 1601.03906 97 → 0, words 1,828 → 22,549); quantumarticle's
+  natbib `\doi` (quantumarticle.cls:1396-1400; 1902.03164; #860); sn-jnl without `pdflatex` loads breakurl and lets `\href`
+  be `\burlalt` (sn-jnl.cls:1462-1467; 2401.05832), breakurl's `\burlalt` now hyperref's `\hyper@linkurl{\Hurl{#1}}{#2}`
+  (breakurl.sty:50-51), not `\href`, which that `\let` made a loop. Open (natbib, not 68w's): `\citep[e.g.][]{k}` shows
+  the pre-note after the citation ("(Rigden, 2017, e.g.)"; natbib's `[pre][]` is a pre-note). Repros
+  package-bindings/{apacite_shortcite_prenote, declaregraphicsrule_typesets_nothing, dcolumn_box_in_cell_math_shift},
+  class-bindings/{arxbj_author_command_over_elsart_theorem, quantumarticle_doi_detokenized, sn_jnl_href_is_burlalt};
+  guards `perfect_kernel_batch68w::{apacite_*, declaregraphicsrule_*, dcolumn_*, arxbj_*, quantumarticle_*, sn_jnl_*}`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

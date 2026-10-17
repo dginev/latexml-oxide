@@ -120,7 +120,17 @@ LoadDefinitions!({
   DeclareOption!("sn-apa", {
     RequirePackage!("apacite");
   });
+  // sn-jnl.cls:67, :102 `\if@pdflatex`, set by the `pdflatex` option
+  RawTeX!(r"\newif\if@pdflatex\global\@pdflatexfalse");
+  DeclareOption!("pdflatex", {
+    RawTeX!(r"\global\@pdflatextrue");
+  });
   ProcessOptions!();
+  // sn-jnl.cls:1462-1467 `\breakurldefns`: without the `pdflatex` option the class loads breakurl and makes `\href`
+  // its `\burlalt` — the first argument shown, the second the link (breakurl.sty:50-51), the order the template's
+  // authors then write: `\href{here.}{https://…/Datasets_-_RMSC/…}` typeset its URL as text, a math error per `_`
+  // (2401.05832; every sampled shipped copy, 2105.01289 to 2412.11652, has it).
+  RawTeX!(r"\if@pdflatex\else\RequirePackage[hyphenbreaks]{breakurl}\let\href\burlalt\fi");
 
   // sn-jnl frontmatter — gobble layout-only / preserve author text.
   DefMacro!("\\bmhead{}", "\\subsubsection*{#1}");

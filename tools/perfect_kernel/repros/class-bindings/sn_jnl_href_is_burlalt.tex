@@ -1,0 +1,10 @@
+% witness: 2401.05832 (sn-jnl without `pdflatex`: `\href{here.}{https://figshare.com/…/Datasets_-_RMSC/24598278}`; 3 errors)
+% oracle:  pdflatex (with the shipped sn-jnl.cls) 0 errors: "Data is available here." (linked to the figshare URL)
+% engines: rust 67int15 = 2 Error:unexpected:_ (the URL typeset as the link's text); Perl 0.8.8 has no sn-jnl binding
+% expect:  0 errors; "here." linked to the URL (sn-jnl.cls:1462-1467 `\let\href\burlalt`, breakurl.sty:50-51)
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass[sn-apa]{sn-jnl}
+\begin{document}
+Data is available \href{here.}{https://figshare.com/articles/dataset/Datasets_-_RMSC/24598278}
+\end{document}

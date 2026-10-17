@@ -657,7 +657,13 @@ LoadDefinitions!({
   DefMacro!("\\Ginclude@graphics{}", "\\@includegraphics{#1}");
 
   DefConstructor!("\\DeclareGraphicsExtensions{}", "");
-  DefConstructor!("\\DeclareGraphicsRule{}{}{} Undigested", "");
+  // graphics.sty:150-155 `\DeclareGraphicsRule{<ext>}{<type>}{<read-file>}{<command>}` records a rule
+  // (`\Gin@rule@<ext>`) and typesets nothing: a macro, so its arguments are not digested — figlatex.sty:120's
+  // `\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}` typeset `.pdftex_t`, a math error (1605.08743; Perl's
+  // constructor the same, graphics.sty.ltxml:307, KNOWN_PERL_ERRORS #858). The rule is not kept: the
+  // `\includegraphics` here reads no rule, and its `\edef` of `<command>` would expand a converter's macros
+  // (`\OutputFile`) that only the driver defines.
+  DefMacro!("\\DeclareGraphicsRule{}{}{}{}", "");
 
   // == Gin internal macros (Perl: RawTeX block, lines 311-324) ==
 

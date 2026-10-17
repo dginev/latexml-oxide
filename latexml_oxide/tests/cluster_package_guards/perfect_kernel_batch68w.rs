@@ -138,3 +138,67 @@ fn thmtools_keyval_optional_argument_sets_label_name_continues() {
     r#"<tag role="refnum">3</tag> <tag role="typerefnum">Example 3</tag>"#,
   ]);
 }
+
+/// apacite's short cite family takes the `<pre-note>` as `\cite` does (apacite.sty:277-283, :304-310): 1805.05444's
+/// `\let\cite\shortcite` then `\cite<e.g.>[]{Rigden_2017}` cites its key.
+#[test]
+fn apacite_shortcite_takes_the_angled_prenote() {
+  let xml = clean!("package-bindings/apacite_shortcite_prenote.tex");
+  assert_all(&xml, &[
+    r#"Stomatal closure <cite class="ltx_citemacro_citep">(<bibref bibrefs="Rigden_2017" separator=";" show="AuthorsPhrase1Year" yyseparator=",">"#,
+    r#"Soil <cite class="ltx_citemacro_citep"><bibref bibrefs="Or_2013" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>, p. 3</cite>.</p>"#,
+  ]);
+  assert!(!xml.contains("&gt;[]"), "{xml}");
+}
+
+/// `\DeclareGraphicsRule` typesets nothing (graphics.sty:150-155; figlatex's `{.pdftex_t}`, 1605.08743).
+#[test]
+fn declaregraphicsrule_typesets_nothing() {
+  let xml = clean!("package-bindings/declaregraphicsrule_typesets_nothing.tex");
+  assert_all(&xml, &[
+    r#"<para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para> </document>"#,
+  ]);
+  assert!(!xml.contains("pdftex"), "{xml}");
+}
+
+/// In a dcolumn `D` cell the `$` of a box it holds is a math shift (`\multirow{2}{*}{$E_{B}^{PBE}$}`, 2306.05928), the
+/// cell's own `$2.5$` keeps its number in the column's math.
+#[test]
+fn dcolumn_box_in_cell_keeps_its_math_shift() {
+  let xml = clean!("package-bindings/dcolumn_box_in_cell_math_shift.tex");
+  assert_all(&xml, &[
+    r#"<td align="char:." thead="column" xml:id="p1.1.1.3"><text class="ltx_markedasmath" xml:id="p1.1.1.3.1"><Math mode="inline" tex="E_{\mathrm{B}}^{\mathrm{PBE}}" text="(E _ B) ^ PBE" xml:id="p1.m2.m1">"#,
+    r#"<td align="char:." xml:id="p1.1.2.3"><Math mode="inline" tex="2.5" text="2.5" xml:id="p1.m4"> <XMath xml:id="p1.m4.1"> <XMTok meaning="2.5" role="NUMBER">2.5</XMTok> </XMath> </Math></td>"#,
+  ]);
+}
+
+/// arxbj's binding loads elsart_support without elsart.cls's theorems (arxbj.cls:1418-1431 defines `{thm}` only): the
+/// author's `\newcommand{\prob}` is theirs (1601.03906).
+#[test]
+fn arxbj_author_command_is_not_shadowed_by_an_elsart_theorem() {
+  let xml = clean!("class-bindings/arxbj_author_command_over_elsart_theorem.tex");
+  assert_all(&xml, &[
+    r#"<theorem class="ltx_theorem_thm" inlist="thm theorem:thm" xml:id="Thmthm1">"#,
+    r#"<XMTok role="SUBSCRIPTOP" scriptpos="post1"/> <XMTok role="UNKNOWN">P</XMTok> <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok> </XMApp>"#,
+  ]);
+  assert!(!xml.contains("ltx_theorem_prob"), "{xml}");
+}
+
+/// quantumarticle's `\doi` under natbib (quantumarticle.cls:1396-1400; 1902.03164): a doi.org link showing the DOI.
+#[test]
+fn quantumarticle_doi_is_the_class_link() {
+  let xml = clean!("class-bindings/quantumarticle_doi_detokenized.tex");
+  assert_all(&xml, &[
+    r#"<bibblock> A. Author. A paper. <ref class="ltx_href" href="https://doi.org/10.1007/978-3-540-27821-4_23">DOI: 10.1007/978-3-540-27821-4_23</ref>. </bibblock>"#,
+  ]);
+}
+
+/// sn-jnl without its `pdflatex` option makes `\href` breakurl's `\burlalt` (sn-jnl.cls:1462-1467): the first argument
+/// shown, the second the link (2401.05832), with no loop through `\href`.
+#[test]
+fn sn_jnl_href_is_burlalt_without_pdflatex() {
+  let xml = clean!("class-bindings/sn_jnl_href_is_burlalt.tex");
+  assert_all(&xml, &[
+    r#"<p xml:id="p1.1">Data is available <ref class="ltx_url" font="typewriter" href="https://figshare.com/articles/dataset/Datasets_-_RMSC/24598278">here.</ref></p>"#,
+  ]);
+}

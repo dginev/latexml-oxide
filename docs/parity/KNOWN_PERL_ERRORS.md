@@ -14456,3 +14456,49 @@ tags and title, without stepping the counter, and `\thmcontinues` is the package
 handled (3 papers in the cluster). Witnesses 2002.09876, 2409.14881, 2103.08319, 2201.10483, 2212.00936; repro
 package-bindings/thmtools_keyval_optional_argument; guard
 `perfect_kernel_batch68w::thmtools_keyval_optional_argument_sets_label_name_continues`.
+
+## 858. `\DeclareGraphicsRule` digests its arguments, so a rule's extension is typeset
+
+graphics.sty:150-155 `\DeclareGraphicsRule{<ext>}{<type>}{<read-file>}{<command>}` records a rule and typesets
+nothing. Perl's binding is a constructor over `{}{}{} Undigested` (graphics.sty.ltxml:307): the first three arguments
+are digested, and figlatex.sty:120's `\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}` typesets `.pdftex_t` — a
+math error at its `_`.
+
+Trigger: `\usepackage{graphicx}\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}` in the preamble — pdflatex 0
+errors; Perl 0.8.8 and Rust before 68w 1 Error.
+
+Rust (68w, graphics_sty.rs): a macro of four arguments that expands to nothing (the rule is not kept: no
+`\includegraphics` here reads one, and its `\edef` of `<command>` would expand a converter's macros only the driver
+defines). Witness 1605.08743 (figlatex). Repro package-bindings/declaregraphicsrule_typesets_nothing; guard
+`perfect_kernel_batch68w::declaregraphicsrule_typesets_nothing`.
+
+## 859. dcolumn makes `$` `\relax` for the whole cell, so a box in a `D` cell loses its math shifts
+
+dcolumn.sty:43-80 leaves `$` alone: the `D` column's cell is set in math (`\DC@`), and a box inside it
+(`\multirow{2}{*}{$E_B$}`, `\mbox{$x_1$}`) is horizontal mode again, where `$` starts a formula. Perl's binding lets `$`
+to `\relax` for the whole cell (dcolumn.sty.ltxml:42-44), so in a box that does not rebind it (multirow's `\hbox`) the
+formula is text and its scripts math errors.
+
+Trigger: `\usepackage{dcolumn,multirow}` … `\begin{tabular}{D{.}{.}{1}}\multirow{2}{*}{$E_{B}$}\\1.5\end{tabular}` —
+pdflatex 0 errors; Perl 0.8.8 and Rust before 68w 1 Error.
+
+Rust (68w, dcolumn_sty.rs `\lx@DC@dollar`): at the cell's level `$` still does nothing (the number stays in the
+column's math, Perl's); in text inside the cell it opens a formula, marked (`lx_dc_inner_math`), whose `$` closes it. The
+saved `$` (`\DC@saved@dollar`) is now the math shift's meaning — a `Let` of the string `"$"` had made it an undefined
+control sequence, which `\DC@end` gave back to `$` for the rest of the cell. Witness 2306.05928 (24 → 0 errors). Repro
+package-bindings/dcolumn_box_in_cell_math_shift; guard `perfect_kernel_batch68w::dcolumn_box_in_cell_keeps_its_math_shift`.
+
+## 860. quantumarticle's `\doi` is missing, so a `.bbl`'s DOI is typeset by its fallback
+
+quantumarticle.cls:1396-1400, with natbib and without the doi package, defines `\doi{<doi>}` at `\begin{document}` as a
+link to `https://doi.org/<doi>` showing "DOI: <doi>", the DOI `\detokenize`d. Perl's quantumarticle binding has no
+`\doi`, so the `.bbl`'s `\expandafter\ifx\csname doi\endcsname\relax\def\doi#1{\burlalt{doi:#1}…}\fi` takes over and
+typesets the DOI as text (`10.1007/978-3-540-27821-4_23`: a math error), `\burlalt` undefined without breakurl.
+
+Trigger: `\documentclass{quantumarticle}\usepackage[numbers]{natbib}` and a bibliography entry
+`\doi{10.1007/978-3-540-27821-4_23}` after that `.bbl` fallback — pdflatex 0 errors (bar TL 2025's hook-sorting
+harness error); Perl 0.8.8 and Rust before 68w 3 Errors.
+
+Rust (68w, quantumarticle_cls.rs): the class's `\doi`, its shown DOI in the identity encoding
+(`\lx@address@textfont`, an address's `_` not OT1's dot accent; user ruling 2026-10-11). Witness 1902.03164. Repro
+class-bindings/quantumarticle_doi_detokenized; guard `perfect_kernel_batch68w::quantumarticle_doi_is_the_class_link`.
