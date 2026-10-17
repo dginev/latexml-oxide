@@ -1,0 +1,24 @@
+% mechanism: apa6.cls:776 `\note` stores `\@note` (printed under the affiliations, :1215-1217) and :779 `\authornote`
+%   stores `\@acks` (printed under "Author Note", :1222-1234), both read only by the refused `\maketitle` and neither
+%   under the `mask` option; `\note` is no name K11's table reroutes. The apa6 binding (latexml_contrib apa6_cls.rs)
+%   gives both to the frontmatter as apa7's binding does (`ltx:note`, roles note/authornote), the mask honoured.
+% witness: 2406.08022 (its "Author Note … Correspondence concerning this article …" is a `\note`)
+% oracle:  pdflatex: 0 errors; page 1 "The Title / Ann Author / First University / Author Note / Correspondence …",
+%   then "Author Note / Supported by a grant."; with `mask` neither
+% engines: rust 67int16: the `\note` lost (the authornote kept by K11); perl: no binding (OmniBus)
+% expect:  0 errors; <note role="note"> and <note role="authornote">
+% status:  RED (67int16) -> GREEN (68x)
+% preload: ar5iv.sty
+\documentclass[man]{apa6}
+\title{The Title}
+\shorttitle{Short}
+\author{Ann Author}
+\affiliation{First University}
+\note{Author Note \newline Correspondence concerning this article: ann@example.org.}
+\authornote{Supported by a grant.}
+\abstract{The abstract.}
+\begin{document}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

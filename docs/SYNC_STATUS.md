@@ -2452,7 +2452,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   comma and a space (`\author{S. G. Claudepierre, \altaffilmark{1,2} S. R. Elkington, …}`, 1010.3998) goes to the
   next name (the kernel's author split). Repros class-bindings/aguplus/*; guards
   `perfect_kernel_batch68x::{aguplus_authors_carry_affiliations_and_addresses,
-  aguplus_altaffiliations_and_addresses_go_to_their_authors}`.
+  aguplus_altaffiliations_and_addresses_go_to_their_authors}`. (3) apa6/apa notes: `\note` (apa6.cls:776, apa.cls:459 →
+  `\@note`, printed under the affiliations) and apa6's `\authornote` (:779 → `\@acks`, under "Author Note") are
+  frontmatter `ltx:note`s (roles note/authornote) as apa7's binding makes them, not under `mask` (apa6_cls.rs
+  `define_notes`); `\note` is no K11 table name and K11's `\authornote` ignored the mask. 2406.08022 (its author note is
+  a `\note`) 0 → 1 note. Repro class-bindings/apa6_note_and_authornote; guard
+  `perfect_kernel_batch68x::apa6_note_and_authornote_are_frontmatter_notes`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

@@ -3,7 +3,8 @@
 //! read raw (apa6, apa, beilstein, lni, …), as for one the rawclasses lever reads, the binding's own setters staying its
 //! own (68u round 3 called it from four bindings by hand; 2608.21389, 2102.04789). Item 2 — an aguplus binding over
 //! the raw class: `\affil`, `\authoraddr`, `\altaffilmark`/`\altaffiltext` and the dates as the AAS binding makes them,
-//! and natbib's binding for the class's copy of natbib 7.0 (1107.5305, 1203.5042, physics9702009, 1010.3998).
+//! and natbib's binding for the class's copy of natbib 7.0 (1107.5305, 1203.5042, physics9702009, 1010.3998). Item 3 —
+//! apa6's `\note` and `\authornote` as apa7's binding makes them, the mask honoured (2406.08022).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, normalize_markup};
@@ -113,4 +114,34 @@ fn aguplus_altaffiliations_and_addresses_go_to_their_authors() {
       "{creator}\n{xml}"
     );
   }
+}
+
+/// class-bindings/apa6_note_and_authornote: apa6.cls:776 `\note` and :779 `\authornote` are the frontmatter's notes
+/// (pdflatex: "First University / Author Note / Correspondence …", then "Author Note / Supported by a grant."); under
+/// `mask` neither (the class prints neither). Before 68x the `\note` was lost (2406.08022).
+#[test]
+fn apa6_note_and_authornote_are_frontmatter_notes() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/apa6_note_and_authornote.tex"
+  );
+  let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  assert_element(
+    &xml,
+    "note",
+    &[r#"role="note""#],
+    r#"<note role="note">Author Note <break/>Correspondence concerning this article: ann@example.org.</note>"#,
+  );
+  assert_element(
+    &xml,
+    "note",
+    &[r#"role="authornote""#],
+    r#"<note role="authornote">Supported by a grant.</note>"#,
+  );
+  let masked = assert_elements(
+    &tex.replace("[man]{apa6}", "[man,mask]{apa6}"),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert!(!masked.contains("<note"), "{masked}");
 }

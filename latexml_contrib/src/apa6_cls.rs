@@ -50,14 +50,38 @@ pub fn apa_family_class(name: &str, mask: Option<&str>) -> Result<()> {
     return Ok(());
   };
   // (the class read raw by a binding is still a raw class to K11, as when the rawclasses lever reads it: its title-page
-  // stores — `\shorttitle`, `\affiliation`, `\authornote`, `\keywords`, `\abstract`, `\note`, … — reach the
-  // frontmatter, `input_definitions` firing the reroutes at the end of this class load)
+  // stores — `\shorttitle`, `\affiliation`, `\keywords`, `\abstract`, … — reach the frontmatter, `input_definitions`
+  // firing the reroutes at the end of this class load)
   InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
   // (a class only named like the family, without the numbered stores, is left as it is)
   if !IsDefined!(&T_CS!("\\twoauthors")) || !IsDefined!(&T_CS!("\\twoaffiliations")) {
     return Ok(());
   }
+  define_notes(mask)?;
   define_numbered_author_forms(mask)
+}
+
+/// The title page's notes as apa7's binding makes them (apa7_cls.rs): `\note{…}` (apa6.cls:776, apa.cls:459 `\long\def
+/// \note#1{\long\def\@note{#1}}`), printed under the authors and affiliations (apa6.cls:1215-1217, :1416-1418,
+/// :1677-1679; apa.cls:987-989, :1236-1238), and apa6's `\authornote{…}` (apa6.cls:779 → `\@acks`), printed under its
+/// "Author Note" heading (:1222-1234, :1460-1466, :1700-1707), neither under `mask` (the class's `\@ifundefined
+/// {apaSix@maskauthoridentity}` around them). `\note` is no store K11's table names (a note means something else in
+/// most classes), and K11's `\authornote` does not know the mask: 2406.08022 writes its author note ("Author Note
+/// \newline Correspondence concerning this article …") as `\note`, lost under the raw class.
+fn define_notes(mask: Option<&str>) -> Result<()> {
+  let (open, close) = match mask {
+    Some(flag) => (s!(r"\@ifundefined{{{flag}}}{{"), "}{}"),
+    None => (String::new(), ""),
+  };
+  RawTeX!(&s!(
+    r"\long\def\note#1{{{open}\lx@add@frontmatter{{ltx:note}}[role=note]{{#1}}{close}}}"
+  ));
+  if IsDefined!(&T_CS!("\\authornote")) {
+    RawTeX!(&s!(
+      r"\long\def\authornote#1{{{open}\lx@add@frontmatter{{ltx:note}}[role=authornote]{{#1}}{close}}}"
+    ));
+  }
+  Ok(())
 }
 
 LoadDefinitions!({
