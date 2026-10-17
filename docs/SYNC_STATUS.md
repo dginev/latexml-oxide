@@ -2854,7 +2854,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   identical in errors and words, 8 changed — the 5 better above, and three that read worse against the bundle only:
   math9611222 (40 errors + 2 Fatal with 0 words → 75 with 12,366), math0005042 and 2512.06733 (words lost = the
   bundle's `<ERROR>` texts `\@eqpen`/`\@ifstar`, `\lx@cleverrefnum@@`); against 67int19b, past the 39 autoref-tag rows, none
-  of the 48 is worse but cond-mat9806166 (open a).
+  of the 48 is worse but cond-mat9806166 (open a). **Integration (39aec5312c, binary 67int20b):**
+  - Gates: nextest 5816/5816 + cortex 10/10, clippy/rustdoc clean, inits plain=0 latex=0, dumps identical to 67int20.
+  - Population A/B vs 67int19b over the 2,729 int20 papers (pop67int20.tsv, results_r67int20b): E 19,358 → 16,863, F 64 → 62, 0 newly Fatal, 203 papers E-better, 2 E-worse; words +28,024; `missing $` 2,251 → 2,152.
+  - The 39 word-loss rows are the autoref-tag rows above.
+  - The 2 E-worse papers are cond-mat9806166 (open a) and 2005.03021 (1 → 3). 2005.03021's base Error was the `l` argument of its own `\RenewDocumentCommand\order{ l m }{\fbraces#1{\lparen}{\rparen}…}`; physics now loads xparse, as physics.sty does, so the `l` type exists. That exposes (d): the physics binding lacks physics.sty's `\fbraces` (:158) and `\lparen`/`\rparen` (:31-32), so 2 Errors where pdflatex has 0.
+  - Nets 135/136 no worse vs 67int19b; the one is revtex4/differ.tex (open b).
+  - Open (d), the physics binding gap: provide `\lparen`/`\rparen` (`\ProvideDocumentCommand{}{(}`) and `\fbraces` (star, `\big`…`\Bigg` sizes, 4 arguments) as physics.sty defines them, witness 2005.03021.
 
 - **70b** (kernel shapes: the 69c follow-up and the rc_struct4 study, agent_reports/2026-10-17_rc_struct4.md). (1) A1:
   tex.web §1127 `align_error` — a tab/`\cr`/`\span` reaching the stomach at alignment count ±1/±2 inserts the brace
