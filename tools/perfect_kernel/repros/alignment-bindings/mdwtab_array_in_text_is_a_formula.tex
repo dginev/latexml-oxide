@@ -1,0 +1,16 @@
+% witness: rc_struct3 E2 (3 of 25 sampled `$` first-error papers; est. 89 run-365 papers; mdwtab or Wooding's
+%          mathenv, which `\RequirePackage{mdwtab}`s)
+% oracle:  pdflatex 0 errors: a centred 2x2 array "a b / c d" (the same with `\usepackage{mathenv}`)
+% engines: rust 67int18b = 1 Error:expected:$ "Missing $ inserted"; Perl 0.8.8 2 (no mdwtab binding: "<ltx:XMArray>
+%          isn't allowed in <ltx:_CaptureBlock_>")
+% expect:  mdwtab.sty:505-510 `\tab@left` = `\leavevmode\hbox\bgroup$\@arrayleft\vcenter\bgroup`: mdwtab's array
+%          enters math itself, so in text it is an inline formula without an error
+% status:  RED (67int18b) -> GREEN (69b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mdwtab}
+\begin{document}
+\begin{center}
+\begin{array}{rl} a & b \\ c & d \end{array}
+\end{center}
+\end{document}

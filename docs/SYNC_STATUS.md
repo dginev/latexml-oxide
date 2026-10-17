@@ -2786,7 +2786,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `internal_vertical` mode frame on the stack — does nothing, as latex.ltx:15915-15930 `\endtrivlist` (sect06.rs
   `\endlx@list`; KNOWN_PERL_ERRORS #898; siuro210301.cls, lt6-proc.cls, 0710.0460 30 → 0 Errors; est. 94). Repro
   list-structure/endlist_with_no_list_open_does_nothing; guard
-  `perfect_kernel_batch69b::endlist_with_no_list_open_does_nothing`.
+  `perfect_kernel_batch69b::endlist_with_no_list_open_does_nothing`. (4) E2: mdwtab's `array` enters math itself
+  (mdwtab.sty:505-510 `\tab@left` = `\leavevmode\hbox\bgroup$…\vcenter\bgroup`), so mdwtab_sty.rs's
+  `\lx@array@text@open` opens the inline formula without the kernel's `[c]` "Missing $ inserted"; Wooding's mathenv
+  binding now loads mdwtab as mathenv.sty:53 does (est. 89; Perl, without an mdwtab binding, KNOWN_PERL_ERRORS #677).
+  Repro alignment-bindings/mdwtab_array_in_text_is_a_formula; guard
+  `perfect_kernel_batch69b::mdwtab_array_in_text_is_a_formula`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

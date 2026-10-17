@@ -33,6 +33,9 @@ LoadDefinitions!({
   if !requires_mdwtab {
     // Bosisio's self-contained mathenv → raw-load it, matching Perl.
     InputDefinitions!("mathenv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  } else {
+    // Wooding's mdwtools mathenv → no raw load (avoid the broken-mdwtab cascade), but its
+    // `\RequirePackage{mdwtab}` (mathenv.sty:53) loads our mdwtab binding, whose `array` the document then uses.
+    RequirePackage!("mdwtab");
   }
-  // else: Wooding's mdwtools mathenv → no-op (avoid the broken-mdwtab cascade).
 });
