@@ -71,7 +71,9 @@ LoadDefinitions!({
     });
   Let!("\\epsfig", "\\psfig");
   DefConstructor!("\\DeclareGraphicsExtensions{}", "");
-  DefConstructor!("\\DeclareGraphicsRule{}{}{} Undigested", "");
+  // Not Perl's `DefConstructor('\DeclareGraphicsRule{}{}{} Undigested', '')` (epsfig.sty.ltxml:58): epsfig.sty
+  // defines no `\DeclareGraphicsRule`, and the redefinition dropped graphics.sty's rule (graphics_sty.rs), so a
+  // `\usepackage{epsfig}` lost gincltex's `.tex` rule (2408.06999; KNOWN_PERL_ERRORS #858, #921).
   def_primitive_noop("\\psdraft")?;
   def_primitive_noop("\\psfull")?;
   def_primitive_noop("\\pssilent")?;

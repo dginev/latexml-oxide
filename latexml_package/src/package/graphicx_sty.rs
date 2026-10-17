@@ -4,7 +4,10 @@ pub use latexml_core::util::image::{
   image_candidates, image_graphicx_sizer, natural_display_size_pt_of_candidates,
 };
 
-use crate::prelude::*;
+use crate::{
+  package::standalone_sty::{top_level_items, unbraced},
+  prelude::*,
+};
 
 LoadDefinitions!({
   // graphicx.sty provides alternative argument syntax for graphics inclusion.
@@ -129,7 +132,7 @@ LoadDefinitions!({
   // survives when `\usepackage{graphicx}` runs inside a group.
   DefMacro!(
     "\\includegraphics OptionalMatch:* []",
-    "\\@ifnextchar[{\\@includegraphics#1[#2]}{\\@includegraphicx#1[#2]}",
+    "\\@ifnextchar[{\\@includegraphics#1[#2]}{\\lx@Gin@include#1[#2]}",
     scope => Some(Scope::Global)
   );
   // graphicx.sty:198-203 `\def\Gin@i{… \@ifnextchar[\Gin@ii{\Gin@ii[]}}`: the body of `\includegraphics`, its
@@ -139,9 +142,112 @@ LoadDefinitions!({
   // #475; 2410.09019).
   DefMacro!(
     "\\Gin@i []",
-    "\\@ifnextchar[{\\@includegraphics[#1]}{\\@includegraphicx[#1]}",
+    "\\@ifnextchar[{\\@includegraphics[#1]}{\\lx@Gin@include[#1]}",
     scope => Some(Scope::Global)
   );
+  // graphics.sty:233-252 `\Gin@setfile` by the graphics rule of the file's extension (`\Gin@rule@<ext>`,
+  // `\DeclareGraphicsRule`): a rule whose type the driver does not read (`\Ginclude@<type>` is a package's own, not
+  // pdftex.def's or dvips.def's) and which runs no converter is a TeX source read as TeX — gincltex.sty:43
+  // `\DeclareGraphicsRule{.tex}{tex}{.tex}{}` (standalone.sty:1012 loads it), figlatex.sty:120 `{.pdftex_t}{rawtex}`.
+  // The file goes to `\lx@Gin@setfile`, which runs the package's reader and include as `\Gin@setfile` does; any
+  // other graphic is the `\@includegraphicx` constructor, for the image converter, as before. A `.tex` handed to the
+  // converter was lost with "failed to convert" (1604.05572, 2511.17298, 2305.04329, 2408.06999, 2305.16841).
+  // Guard: `perfect_kernel_batch70a::gincltex_tex_graphic_is_read_as_tex`.
+  DefMacro!("\\lx@Gin@include OptionalMatch:* [] Semiverbatim", sub[(star, keys, file)] {
+    // the name as the constructor's Semiverbatim digests it, expanded: tikzscale.sty:183 passes
+    // `{\tikzscale@fileName}` (2511.17298, 2408.06999, 2305.16841, 2410.05869)
+    let expanded = Expand!(file.clone());
+    let name = expanded.to_string();
+    let mut tail: Vec<Token> = Vec::new();
+    if let Some(star) = star {
+      tail.extend(star.unlist());
+    }
+    tail.push(T_OTHER!("["));
+    tail.extend(keys.map(|k| k.unlist()).unwrap_or_default());
+    tail.push(T_OTHER!("]"));
+    tail.push(T_BEGIN!());
+    tail.extend(file.clone().unlist());
+    tail.push(T_END!());
+    let rule = graphics_rule_extension(name.trim()).map(|ext| T_CS!(s!("\\Gin@rule@{ext}")));
+    let mut out: Vec<Token> = Vec::new();
+    match rule {
+      // `\expandafter\expandafter\expandafter\lx@Gin@setfile\csname Gin@rule@<ext>\endcsname{<file>}`: the rule's
+      // `{<type>}{<read-file>}{<command>}` before the arguments
+      Some(rule) if is_defined_token(&rule) => {
+        out.extend([T_CS!("\\expandafter"), T_CS!("\\expandafter"), T_CS!("\\expandafter")]);
+        out.extend([T_CS!("\\lx@Gin@setfile"), rule, T_BEGIN!()]);
+        out.extend(expanded.unlist());
+        out.push(T_END!());
+      },
+      _ => out.push(T_CS!("\\@includegraphicx")),
+    }
+    out.extend(tail);
+    Ok(Tokens::new(out))
+  });
+  DefMacro!("\\lx@Gin@setfile{}{}{} OptionalMatch:* [] Semiverbatim", sub[(kind, read, command, star, keys, file)] {
+    let (kind, name) = (kind.to_string(), Expand!(file.clone()).to_string());
+    let name = name.trim();
+    let include = T_CS!(s!("\\Ginclude@{kind}"));
+    // the file as `\input` reads it: where the graphics search path finds it (`\graphicspath`), else as written
+    let found = tex_graphic_file(name);
+    let as_tex = !DRIVER_GRAPHICS_TYPES.contains(&kind.as_str())
+      && is_defined_token(&include)
+      && command.to_string().trim() == name
+      && found.is_some();
+    let mut out: Vec<Token> = Vec::new();
+    let Some(path) = found.filter(|_| as_tex) else {
+      out.push(T_CS!("\\@includegraphicx"));
+      if let Some(star) = star {
+        out.extend(star.unlist());
+      }
+      out.push(T_OTHER!("["));
+      out.extend(keys.map(|k| k.unlist()).unwrap_or_default());
+      out.push(T_OTHER!("]"));
+      out.push(T_BEGIN!());
+      out.extend(file.unlist());
+      out.push(T_END!());
+      return Ok(Tokens::new(out));
+    };
+    let path = ExplodeText!(path);
+    let keys = keys.map(|k| k.to_string()).unwrap_or_default();
+    let value = |key: &str| {
+      top_level_items(&keys)
+        .iter()
+        .filter_map(|item| item.split_once('='))
+        .find(|(k, _)| k.trim() == key)
+        .map(|(_, v)| unbraced(v).to_string())
+        .filter(|v| !v.is_empty())
+    };
+    let tex = |text: String| mouth::tokenize_internal(TeXString::assembled(text)).unlist();
+    // graphics.sty:254-262: the bounding box from the type's reader (`\Gread@<type>` on the read file, here the file
+    // itself when the rule reads its own extension), at 0 0 0 0 without one
+    out.extend(tex(r"\begingroup\def\Gin@llx{0}\let\Gin@lly\Gin@llx\let\Gin@urx\Gin@llx\let\Gin@ury\Gin@llx".to_string()));
+    let reader = T_CS!(s!("\\Gread@{kind}"));
+    let read = read.to_string();
+    let own_extension = graphics_rule_extension(name).is_some_and(|ext| read.trim() == ext);
+    if own_extension && is_defined_token(&reader) {
+      out.extend([reader, T_BEGIN!()]);
+      out.extend(path.iter().cloned());
+      out.push(T_END!());
+    }
+    // graphicx.sty:140-187 `\Gin@req@sizes`, the width and height asked for (`totalheight` as height); `scale` alone
+    // scales the natural size, the bounding box's; a size not given is `!`, the other's aspect
+    let width = value("width").unwrap_or_default();
+    let height = value("height").or_else(|| value("totalheight")).unwrap_or_default();
+    out.extend(tex(s!(r"\def\Gin@req@width{{{width}}}\def\Gin@req@height{{{height}}}")));
+    if let Some(scale) = value("scale").filter(|_| width.is_empty() && height.is_empty()) {
+      out.extend(tex(s!(
+        r"\dimen@\Gin@urx bp\advance\dimen@-\Gin@llx bp\dimen@{scale}\dimen@\ifdim\dimen@>\z@\edef\Gin@req@width{{\the\dimen@}}\fi"
+      )));
+    }
+    // graphics.sty:296-301 the include, in a box
+    out.extend(tex(r"\leavevmode\hbox\bgroup".to_string()));
+    out.extend([include, T_BEGIN!()]);
+    out.extend(path);
+    out.push(T_END!());
+    out.extend(tex(r"\egroup\endgroup".to_string()));
+    Ok(Tokens::new(out))
+  });
 
   // Perl L52-72: graphicx-style \includegraphics with keyval options.
   DefConstructor!(
@@ -330,3 +436,32 @@ LoadDefinitions!({
     }
   );
 });
+
+/// The graphic types a graphics driver reads itself (pdftex.def, dvips.def, xetex.def, dvipdfmx.def, luatex.def,
+/// dvisvgm.def `\Ginclude@<type>` and `\Gin@rule@<ext>` types): an image, for the image converter, even where a
+/// package wraps the driver's include (asymptote.sty:130, psfrag.sty:55 `\def\Ginclude@eps`).
+const DRIVER_GRAPHICS_TYPES: [&str; 14] = [
+  "eps", "ps", "pdf", "png", "jpg", "jbig2", "mps", "bmp", "pict", "pntg", "pdftex", "psorpdf",
+  "bitmap", "dvipdfmx",
+];
+
+/// The extension graphics.sty keys a file's rule by (`\Gin@rule@<ext>`, :213-231 `\Gin@getbase`): from the last `.` of
+/// the file's own name (`fig.v2.tex` → `.tex`, `x.pdf_tex` → `.pdf_tex`); none for a name without one.
+fn graphics_rule_extension(name: &str) -> Option<String> {
+  let base = name.rsplit('/').next().unwrap_or(name);
+  base
+    .rfind('.')
+    .filter(|at| *at > 0)
+    .map(|at| base[at..].to_string())
+}
+
+/// Where the TeX source `name` given as a graphic is: the file of that name on the graphics search path
+/// (`\graphicspath`, the source directory), else where `\input` finds it; `None` when neither does.
+fn tex_graphic_file(name: &str) -> Option<String> {
+  let file_name = name.rsplit('/').next().unwrap_or(name);
+  image_candidates(name)
+    .split(',')
+    .find(|found| !found.is_empty() && found.rsplit('/').next() == Some(file_name))
+    .map(str::to_string)
+    .or_else(|| find_file(name, None).map(|_| name.to_string()))
+}

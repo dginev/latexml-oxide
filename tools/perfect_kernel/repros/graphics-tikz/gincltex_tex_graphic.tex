@@ -1,0 +1,14 @@
+% witness: 1604.05572 (gincltex), 2511.17298, 2305.04329, 2408.06999, 2305.16841 (standalone, which loads gincltex,
+%          standalone.sty:1012); gincltex.sty:43 `\DeclareGraphicsRule{.tex}{tex}{.tex}{}`, :45-60 `\Ginclude@tex`,
+%          :79-98 `\Gread@tex`; graphics.sty:150-154 `\DeclareGraphicsRule`, :254-301 `\Gin@setfile`
+% oracle:  pdflatex 0 errors; the TikZ line with "A", 3cm wide
+% engines: rust 67int18b = 1 error (HTML: gincltex_tz.tex handed to the image converter, "failed to convert")
+% expect:  0 errors; the figure holds the TikZ picture, scaled
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{gincltex}
+\begin{document}
+\begin{figure}\includegraphics[width=3cm]{gincltex_tz.tex}\caption{C}\end{figure}
+\end{document}

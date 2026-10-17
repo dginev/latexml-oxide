@@ -657,13 +657,23 @@ LoadDefinitions!({
   DefMacro!("\\Ginclude@graphics{}", "\\@includegraphics{#1}");
 
   DefConstructor!("\\DeclareGraphicsExtensions{}", "");
-  // graphics.sty:150-155 `\DeclareGraphicsRule{<ext>}{<type>}{<read-file>}{<command>}` records a rule
-  // (`\Gin@rule@<ext>`) and typesets nothing: a macro, so its arguments are not digested — figlatex.sty:120's
-  // `\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}` typeset `.pdftex_t`, a math error (1605.08743; Perl's
-  // constructor the same, graphics.sty.ltxml:307, KNOWN_PERL_ERRORS #858). The rule is not kept: the
-  // `\includegraphics` here reads no rule, and its `\edef` of `<command>` would expand a converter's macros
-  // (`\OutputFile`) that only the driver defines.
-  DefMacro!("\\DeclareGraphicsRule{}{}{}{}", "");
+  // graphics.sty:150-154 `\DeclareGraphicsRule{<ext>}{<type>}{<read-file>}{<command>}` records the rule as
+  // `\Gin@rule@<ext>#1` → `{<type>}{<read-file>}{<command>, or #1 the file when empty}` and typesets nothing: a
+  // macro, so its arguments are not digested — figlatex.sty:120's `\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}`
+  // typeset `.pdftex_t`, a math error (1605.08743; Perl's constructor the same, graphics.sty.ltxml:307,
+  // KNOWN_PERL_ERRORS #858). The rule is kept, as graphicx's `\includegraphics` reads it (`\lx@Gin@include`: a TeX
+  // source given as a graphic, gincltex.sty:43's `.tex`, is read as TeX). One divergence: `<command>` is kept
+  // `\unexpanded`, where graphics.sty's `\edef` would expand a converter's macros (`\OutputFile`) that only the
+  // driver defines — no converter runs here (OXIDIZED_DESIGN_DIVERGENCES #701).
+  RawTeX!(
+    r"\def\DeclareGraphicsRule#1#2#3#4{\edef\@tempa{\string *}\def\@tempb{#3}\expandafter\edef\csname Gin@rule@#1\endcsname##1{{#2}{\ifx\@tempa\@tempb\noexpand\Gin@ext\else#3\fi}{\ifx\indent#4\indent##1\else\unexpanded{#4}\fi}}}"
+  );
+  // graphics.sty:109-112 the bounding box a graphic's reader (`\Gread@<type>`) sets, and :141-148 `\Gin@defaultbp`,
+  // which it sets them with (gincltex.sty:85-86 `\Gin@defaultbp\Gin@urx{\wd\gincltex@box}`).
+  RawTeX!(r"\def\Gin@llx{0}\let\Gin@lly\Gin@llx\let\Gin@urx\Gin@llx\let\Gin@ury\Gin@llx");
+  RawTeX!(
+    r"\def\Gin@defaultbp#1#2{\afterassignment\Gin@def@bp\dimen@#2bp\relax{#1}{#2}}\def\Gin@def@bp#1\relax#2#3{\if!#1!\def#2{#3}\else\dimen@.99626\dimen@\edef#2{\strip@pt\dimen@}\fi}"
+  );
 
   // == Gin internal macros (Perl: RawTeX block, lines 311-324) ==
 

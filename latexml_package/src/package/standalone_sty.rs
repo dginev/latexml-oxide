@@ -73,6 +73,14 @@ LoadDefinitions!({
   // resolve to always-available package bindings.)
   RequirePackage!("xkeyval");
   RequirePackage!("currfile");
+  // standalone.sty:1012-1013 `\IfFileExists{gincltex.sty}{\RequirePackage{gincltex}…}` (TeX Live has it): gincltex.sty:43
+  // `\DeclareGraphicsRule{.tex}{tex}{.tex}{}`, so `\includegraphics{x.tex}` beside standalone reads the file as TeX
+  // (graphicx_sty.rs `\lx@Gin@include`); handed to the image converter it was lost (2511.17298, 2305.04329,
+  // 2408.06999, 2305.16841). gincltex has no binding, so it is read raw: only where raw styles are (amsrefs_sty.rs the
+  // same). Guard: `perfect_kernel_batch70a::standalone_loads_gincltex`.
+  if lookup_bool("INCLUDE_STYLES") {
+    RequirePackage!("gincltex");
+  }
 
   DefMacro!("\\@standalone@end@input", "\\egroup\\endinput");
   // The sub-file `\includestandalone` reads next has its preamble skipped (in the group around it).
@@ -250,7 +258,7 @@ LoadDefinitions!({
 });
 
 /// A keyval value without one balanced outer brace pair, as xkeyval reads it (`{0.5\textwidth}`; not `{a}{b}`).
-fn unbraced(value: &str) -> &str {
+pub(crate) fn unbraced(value: &str) -> &str {
   let value = value.trim();
   if !value.starts_with('{') || !value.ends_with('}') {
     return value;
@@ -272,7 +280,7 @@ fn unbraced(value: &str) -> &str {
 }
 
 /// The items of a keyval list at brace depth 0.
-fn top_level_items(list: &str) -> Vec<String> {
+pub(crate) fn top_level_items(list: &str) -> Vec<String> {
   let (mut items, mut current, mut depth) = (Vec::new(), String::new(), 0usize);
   for c in list.chars() {
     match c {
