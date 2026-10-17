@@ -219,7 +219,11 @@ LoadDefinitions!({
   );
 
   DefMacro!("\\proofname", "Proof");
-  DefPrimitive!("\\th@proof", {
+  // The proof head's style: Perl's `\th@proof` (amsthm.sty.ltxml:141) is a name amsthm.sty leaves free (its proof sets
+  // `\itshape` in `\proof` itself, amsthm.sty:430-437) and `\newtheoremstyle{proof}` defines, so keytheorems'
+  // `\newkeytheoremstyle{proof}` found it "already defined" (2512.04638; KNOWN_PERL_ERRORS #919): a binding-private
+  // `\lx@` name. Guard: `perfect_kernel_batch70a::amsthm_proof_style_is_binding_private`.
+  DefPrimitive!("\\lx@amsthm@proof@style", {
     assign_register("\\thm@headfont",
       RegisterValue::Tokens(Tokens!(T_CS!("\\itshape"))), None, vec![])?;
     assign_register("\\thm@bodyfont",
@@ -230,7 +234,7 @@ LoadDefinitions!({
   DefConstructor!("\\@proof OptionalUndigested",
     "<ltx:proof class='#class'><ltx:title font='#titlefont' _force_font='true' class='#titleclass'>#title</ltx:title>#body",
     before_digest => {
-      digest(Tokens::new(vec![T_CS!("\\th@proof")]))?;
+      digest(Tokens::new(vec![T_CS!("\\lx@amsthm@proof@style")]))?;
     },
     after_digest => sub[whatsit] {
       let _ = push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
@@ -265,10 +269,13 @@ LoadDefinitions!({
           )
         })
         .unwrap_or(true);
+      // amsthm.sty:435-437 `#1\@addpunct{.}`: the period as `\@addpunct{.}`, so a macro ending the title that reads
+      // arguments takes those tokens and never the group's `}` (a document's `\def\nopoint#1#2{}` in
+      // `\begin{proof}[Proof \nopoint]` drops the period, 2503.02416; KNOWN_PERL_ERRORS #920).
       let mut title_tokens = vec![T_BEGIN!(), T_CS!("\\the"), T_CS!("\\thm@headfont")];
       title_tokens.extend(content);
       if needs_period {
-        title_tokens.push(T_OTHER!("."));
+        title_tokens.extend([T_CS!("\\@addpunct"), T_BEGIN!(), T_OTHER!("."), T_END!()]);
       }
       title_tokens.push(T_END!());
       let title = digest(Tokens::new(title_tokens))?;

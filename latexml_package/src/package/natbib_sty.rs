@@ -1468,7 +1468,7 @@ LoadDefinitions!({
   // keys like `DBLP:conf/nips/incontext_AgarwalSZBRCZAA24` are common in
   // arXiv `.bbl` files (witnesses: 2509.20805 / 2510.00068 / 2510.00632).
   // Without semiverbatim, the `_` retains catcode SUB, and after macro
-  // substitution the SUB token leaks into the post-`\@@lbibitem`
+  // substitution the SUB token leaks into the post-`\lx@NAT@lbibitem`
   // `\newblock` text stream — Stomach then errors with
   // `Error:unexpected:_ Script _ can only appear in math mode`.
   // Perl's natbib.sty.ltxml:638 uses `[]{}` and gets away with it because
@@ -1476,9 +1476,9 @@ LoadDefinitions!({
   // default; Rust's `{}` arg type preserves the source catcodes faithfully.
   // 54 occurrences of `Error:unexpected:_` in Stage-16 v5 cluster here.
   DefMacro!("\\@lbibitem[] Semiverbatim",
-    "\\bibitem@fin\\lx@NAT@labelled{#1}\\@@lbibitem{#2}\\NAT@bibitem@init\\lx@NAT@parselabel{#1}{#2}\\newblock",
+    "\\bibitem@fin\\lx@NAT@labelled{#1}\\lx@NAT@lbibitem{#2}\\NAT@bibitem@init\\lx@NAT@parselabel{#1}{#2}\\newblock",
     locked => true);
-  // Whether the entry carries the author's label (`\bibitem[Baker(2001)]{}`), for `\@@lbibitem`'s `_labelled`: a
+  // Whether the entry carries the author's label (`\bibitem[Baker(2001)]{}`), for `\lx@NAT@lbibitem`'s `_labelled`: a
   // printed entry however empty, as under the kernel (sect11.rs `is_phantom_entry`).
   DefMacro!("\\lx@NAT@labelled{}", sub[(label)] {
     let labelled = !label.to_string().trim().is_empty();
@@ -1486,8 +1486,11 @@ LoadDefinitions!({
     Ok(Tokens!())
   });
 
-  // \@@lbibitem — constructor opening the bibitem element
-  DefConstructor!("\\@@lbibitem Semiverbatim",
+  // The constructor opening the bibitem element. Perl's name, `\@@lbibitem` (natbib.sty.ltxml:640-643), is none the
+  // real natbib defines, and citeref.sty:96 `\def\@@lbibitem[#1]#2#3\par` takes it for its own `\bibitem`, so the
+  // binding's entry read a `[` that was not there (2309.05436, 58 errors; KNOWN_PERL_ERRORS #918): a binding-private
+  // `\lx@` name. Guard: `perfect_kernel_batch70a::natbib_entry_constructor_is_binding_private`.
+  DefConstructor!("\\lx@NAT@lbibitem Semiverbatim",
   "<ltx:bibitem key='#key' xml:id='#id' _labelled='#labelled'>",
   after_digest => sub[whatsit] {
     if lookup_bool("lx_NAT_bibitem_labelled") {

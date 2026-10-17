@@ -1,0 +1,17 @@
+% witness: 2512.04638 (keytheorems \newkeytheoremstyle{proof} beside amsthm); amsthm.sty:216-229 defines no
+%          `\th@proof` (Perl amsthm.sty.ltxml:141 does, as its private proof style)
+% oracle:  pdflatex 0 errors; "Text."
+% engines: rust 67int18b = 1 error (style "proof" already defined)
+% expect:  0 errors
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{keytheorems}
+\newkeytheoremstyle{proof}{
+headfont=\itshape,
+headpunct={.}
+}
+\begin{document}
+Text.
+\end{document}

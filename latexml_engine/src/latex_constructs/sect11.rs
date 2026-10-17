@@ -2007,8 +2007,9 @@ fn collect_labels(node: &Node, labels: &mut Vec<String>) {
 
 /// Whether the bibliography being digested holds nothing yet: back from where the heading is to the bibliography's
 /// `\thebibliography`, through the lists enclosing it (`with_box_list_levels`: a beamer frame's own), no entry
-/// (`\lx@bibitem`, natbib's `\@@lbibitem`: their key) and no text — at most the empty entries the recovery opened for a
-/// blank line or the heading's own `\par` (`\par@in@bibliography`), which are pruned. Not found, it holds something.
+/// (`\lx@bibitem`, natbib's `\lx@NAT@lbibitem`: their key) and no text — at most the empty entries the recovery opened
+/// for a blank line or the heading's own `\par` (`\par@in@bibliography`), which are pruned. Not found, it holds
+/// something.
 fn holds_nothing_yet() -> bool {
   with_box_list_levels(|levels| {
     for item in levels.iter().flat_map(|level| level.iter().rev()) {

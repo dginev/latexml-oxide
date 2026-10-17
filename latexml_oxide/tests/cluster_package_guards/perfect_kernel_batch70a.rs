@@ -60,3 +60,50 @@ fn physics_loads_xparse() {
     )],
   );
 }
+
+/// package-bindings/natbib_citeref_bibitem: the natbib binding's entry constructor is `\lx@NAT@lbibitem`, so
+/// citeref.sty:96's own `\@@lbibitem[#1]#2#3\par` no longer takes it over: the entry is one bibitem with its text
+/// (2309.05436; KNOWN_PERL_ERRORS #918).
+#[test]
+fn natbib_entry_constructor_is_binding_private() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/package-bindings/natbib_citeref_bibitem.tex"),
+    AR5IV,
+    (0, 0),
+    &[(
+      "bibitem",
+      "bib.bib1",
+      r##"<bibitem key="a" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2017</tag><tag role="authors">Batselier et al., </tag><tag role="fullauthors">Batselier et al., 2017</tag><tag role="refnum">Batselier et al.,  (2017)</tag><tag role="key">a</tag></tags><bibblock>Batselier, K. (2017).</bibblock></bibitem>"##,
+    )],
+  );
+}
+
+/// package-bindings/keytheorems_style_named_proof: amsthm.sty defines no `\th@proof`, so keytheorems'
+/// `\newkeytheoremstyle{proof}` is a new style; the binding's proof head style is `\lx@amsthm@proof@style`
+/// (2512.04638; KNOWN_PERL_ERRORS #919).
+#[test]
+fn amsthm_proof_style_is_binding_private() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/package-bindings/keytheorems_style_named_proof.tex"),
+    AR5IV,
+    (0, 0),
+    &[("para", "p1", r##"<para xml:id="p1"><p xml:id="p1.1">Text.</p></para>"##)],
+  );
+}
+
+/// package-bindings/amsthm_proof_title_gobbler: the proof title ends `\@addpunct{.}` as amsthm.sty:435-437's does,
+/// so a document's two-argument `\nopoint` at its end takes `\@addpunct` and `{.}` — the title is "Proof" without
+/// its period, as pdflatex prints it — and never the title group's `}` (2503.02416; KNOWN_PERL_ERRORS #920).
+#[test]
+fn amsthm_proof_title_ends_with_addpunct() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/package-bindings/amsthm_proof_title_gobbler.tex"),
+    AR5IV,
+    (0, 0),
+    &[(
+      "proof",
+      "id1",
+      r##"<proof xml:id="id1"><title class="ltx_runin" font="italic">Proof </title><para xml:id="p1"><p xml:id="p1.1"><text xml:id="p1.1.1">of the lemma. Text. ∎</text></p></para></proof>"##,
+    )],
+  );
+}

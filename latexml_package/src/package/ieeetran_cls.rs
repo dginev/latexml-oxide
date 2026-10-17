@@ -549,13 +549,13 @@ LoadDefinitions!({
   }
   // IEEEtran proofs route through amsthm's `\@proof` / `\end@proof`
   // machinery (the magic `\begin{proof}` CS from amsthm_sty.rs:220 —
-  // `\begin{proof}` → `\begin{@proof}`). We re-override `\th@proof`
+  // `\begin{proof}` → `\begin{@proof}`). We re-override its head style (`\lx@amsthm@proof@style`)
   // here so the amsthm header-font is bold-italic (Perl ships
   // `\textbf{\textit{Proof:}}` under IEEEtran, producing
   // font="bold italic"). Keeping amsthm's env path also gives us the
   // QED symbol emission at proof-end for free — it's already wired
   // through amsthm's `\end@proof` before_digest stack-pop.
-  RawTeX!(r"\def\th@proof{\def\thm@headfont{\bfseries\itshape}\def\thm@bodyfont{\normalfont}}");
+  RawTeX!(r"\def\lx@amsthm@proof@style{\def\thm@headfont{\bfseries\itshape}\def\thm@bodyfont{\normalfont}}");
 
   // Biography aliases
   Let!("\\biography", "\\IEEEbiography");
