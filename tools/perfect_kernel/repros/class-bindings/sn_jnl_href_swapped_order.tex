@@ -1,0 +1,14 @@
+% witness: 2401.05832 (`\href{here.}{https://figshare.com/articles/dataset/Datasets_-_RMSC/24598278}`, written for the
+%          class's swap)
+% oracle:  pdflatex (with the shipped sn-jnl.cls) 0 errors: "Data is available here." linked to the figshare URL
+%          (sn-jnl.cls:1462-1467, breakurl.sty:50-51); with hyperref's `\href` (the `pdflatex` option) "Missing $ inserted"
+% engines: rust 68w r2 = 2 Error:unexpected:_ (hyperref's order: the URL is the link text, its `_` a script); Perl 0.8.8
+%          the same (no sn-jnl binding)
+% expect:  0 errors; "here." linked to the URL (needs a ruling: the class's swap inverts the 10 of 12 papers that write hyperref's
+%          order, OXIDIZED_DESIGN_DIVERGENCES #654)
+% status:  RED (68w r2)
+% preload: ar5iv.sty
+\documentclass[sn-apa]{sn-jnl}
+\begin{document}
+Data is available \href{here.}{https://figshare.com/articles/dataset/Datasets_-_RMSC/24598278}
+\end{document}

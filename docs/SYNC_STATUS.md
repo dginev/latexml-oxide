@@ -379,6 +379,13 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   covers plus the structured `<h1>`. Fix in the binding: the transparent body of
   `latexml_contrib/src/changepage_sty.rs` (`{adjustwidth}`/`{adjustwidth*}`, OXIDIZED_DESIGN_DIVERGENCES #341), today
   defined only when changepage is loaded. RED `class-bindings/memoir_adjustwidth_star_is_not_a_list`.
+- **sn-jnl's swapped `\href{text}{url}` without the `pdflatex` option** (RUST-ONLY by OXIDIZED_DESIGN_DIVERGENCES #654,
+  68w r2): sn-jnl.cls:1462-1467 makes `\href` breakurl's `\burlalt` (first argument shown, second linked); the binding
+  keeps hyperref's order, which 10 of 12 sampled papers write (2405.04967, 2207.12959, 2603.09685), so the template's
+  `\href{here.}{https://…/Datasets_-_RMSC/…}` (2401.05832) shows its URL as the link text, 2 `Error:unexpected:_`.
+  Needs a ruling: keep it (hyperref's reading, as pdflatex with `[pdflatex]` errs), or a per-call reading of which
+  argument is the URL (a text test, against the 2026-10-16 principled-first rule). RED
+  `class-bindings/sn_jnl_href_swapped_order`.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
 ### Fidelity audit round 2 (2026-10-08) — findings and their state
@@ -2427,7 +2434,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (`lx_elsart_class_theorems_off`; arxbj.cls defines `{thm}` only; 1601.03906 97 → 0, words 1,828 → 22,549); quantumarticle's
   natbib `\doi` (quantumarticle.cls:1396-1400; 1902.03164; #860); sn-jnl without `pdflatex` loads breakurl and lets `\href`
   be `\burlalt` (sn-jnl.cls:1462-1467; 2401.05832), breakurl's `\burlalt` now hyperref's `\hyper@linkurl{\Hurl{#1}}{#2}`
-  (breakurl.sty:50-51), not `\href`, which that `\let` made a loop. Open (natbib, not 68w's): `\citep[e.g.][]{k}` shows
+  (breakurl.sty:50-51), not `\href`, which a class's `\let` made a loop. Open (natbib, not 68w's): `\citep[e.g.][]{k}` shows
   the pre-note after the citation ("(Rigden, 2017, e.g.)"; natbib's `[pre][]` is a pre-note). Repros
   package-bindings/{apacite_shortcite_prenote, declaregraphicsrule_typesets_nothing, dcolumn_box_in_cell_math_shift},
   class-bindings/{arxbj_author_command_over_elsart_theorem, quantumarticle_doi_detokenized, sn_jnl_href_is_burlalt};
@@ -2484,6 +2491,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (2311.14793, 2501.10505, 2510.26876: 1 → 0 errors). Repro macro-state/plain_locked_binding_cleared_by_a_file_comes_back;
   guard `perfect_kernel_batch68x::a_plain_locked_binding_a_file_cleared_comes_back`.
 
+  class-bindings/{arxbj_author_command_over_elsart_theorem, quantumarticle_doi_detokenized};
+  guards `perfect_kernel_batch68w::{apacite_*, declaregraphicsrule_*, dcolumn_*, arxbj_*, quantumarticle_*}`.
+  Round 2 (review findings). sn-jnl keeps hyperref's `\href` (the class's `\let\href\burlalt` not made,
+  OXIDIZED_DESIGN_DIVERGENCES #654; 2405.04967, 2207.12959, 2603.09685; 2401.05832's swapped order RED, row under
+  "Perfect-kernel RED repros"); repro class-bindings/sn_jnl_href_keeps_hyperref_order, guard
+  `perfect_kernel_batch68w::sn_jnl_href_keeps_hyperref_order_without_pdflatex`.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

@@ -193,12 +193,14 @@ fn quantumarticle_doi_is_the_class_link() {
   ]);
 }
 
-/// sn-jnl without its `pdflatex` option makes `\href` breakurl's `\burlalt` (sn-jnl.cls:1462-1467): the first argument
-/// shown, the second the link (2401.05832), with no loop through `\href`.
+/// sn-jnl without its `pdflatex` option keeps hyperref's `\href{url}{text}` (OXIDIZED_DESIGN_DIVERGENCES #654: the
+/// class's `\let\href\burlalt`, sn-jnl.cls:1462-1467, is not made; 2405.04967, 2207.12959, 2603.09685): the text linked
+/// to the URL. The template's swapped order (2401.05832) stays RED (class-bindings/sn_jnl_href_swapped_order).
 #[test]
-fn sn_jnl_href_is_burlalt_without_pdflatex() {
-  let xml = clean!("class-bindings/sn_jnl_href_is_burlalt.tex");
+fn sn_jnl_href_keeps_hyperref_order_without_pdflatex() {
+  let xml = clean!("class-bindings/sn_jnl_href_keeps_hyperref_order.tex");
   assert_all(&xml, &[
-    r#"<p xml:id="p1.1">Data is available <ref class="ltx_url" font="typewriter" href="https://figshare.com/articles/dataset/Datasets_-_RMSC/24598278">here.</ref></p>"#,
+    r#"<p xml:id="p1.1">Data is available at <ref class="ltx_href" href="https://doi.org/10.5281/zenodo.1">Dataset</ref>.</p>"#,
   ]);
 }
+

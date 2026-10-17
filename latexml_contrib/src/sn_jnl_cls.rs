@@ -127,10 +127,12 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   // sn-jnl.cls:1462-1467 `\breakurldefns`: without the `pdflatex` option the class loads breakurl and makes `\href`
-  // its `\burlalt` — the first argument shown, the second the link (breakurl.sty:50-51), the order the template's
-  // authors then write: `\href{here.}{https://…/Datasets_-_RMSC/…}` typeset its URL as text, a math error per `_`
-  // (2401.05832; every sampled shipped copy, 2105.01289 to 2412.11652, has it).
-  RawTeX!(r"\if@pdflatex\else\RequirePackage[hyphenbreaks]{breakurl}\let\href\burlalt\fi");
+  // its `\burlalt` — the first argument shown, the second the link (breakurl.sty:50-51). That `\let` is not made
+  // (OXIDIZED_DESIGN_DIVERGENCES #654, a surpass): the authors write hyperref's `\href{url}{text}` (10 of 12 sampled
+  // papers: 2405.04967, 2207.12959, 2603.09685), which the swap turns into the URL shown and the text linked; the
+  // template's own swapped order (`\href{here.}{https://…/Datasets_-_RMSC/…}`, 2401.05832) is the exception. breakurl
+  // is still loaded, as the class does.
+  RawTeX!(r"\if@pdflatex\else\RequirePackage[hyphenbreaks]{breakurl}\fi");
 
   // sn-jnl frontmatter — gobble layout-only / preserve author text.
   DefMacro!("\\bmhead{}", "\\subsubsection*{#1}");

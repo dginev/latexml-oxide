@@ -14,8 +14,9 @@ LoadDefinitions!({
   // Note that the arguments seem backwards in the documentation!
   // (at least, the way pdflatex processes it)
   // Under pdfTeX's PDF output (breakurl.sty:50-51) `\burlalt` is `\hyper@linkurl{\Hurl{#1}}{#2}`, hyperref's link, not
-  // `\href`: sn-jnl.cls:1466 `\let\href\burlalt` (sn_jnl_cls.rs) made an `\href` written as the link to `\href` an
-  // endless loop (2401.05832, a Fatal timeout). Without hyperref (no `\hyper@linkurl`), `\href` as before.
+  // `\href`: a class's `\let\href\burlalt` (sn-jnl.cls:1466, not made by sn_jnl_cls.rs, OXIDIZED_DESIGN_DIVERGENCES
+  // #654) made an `\href` written as the link to `\href` an endless loop (2401.05832, a Fatal timeout). Without
+  // hyperref (no `\hyper@linkurl`), `\href` as before.
   DefMacro!(
     "\\burlalt Semiverbatim Semiverbatim",
     "\\ifx\\hyper@linkurl\\@undefined\\href{#2}{#1}\\else\\hyper@linkurl{\\Hurl{#1}}{#2}\\fi"

@@ -1,0 +1,14 @@
+% witness: 2405.04967 (63 links), 2207.12959, 2603.09685 (sn-jnl without `pdflatex`, `\href{url}{text}` as hyperref
+%          reads it: 10 of 12 sampled sn-jnl papers)
+% oracle:  pdflatex (with the shipped sn-jnl.cls) 0 errors: "Data is available at https://doi.org/10.5281/zenodo.1."
+%          linked to "Dataset" (sn-jnl.cls:1462-1467 `\let\href\burlalt`: the URL shown, the text the link)
+% engines: rust 68w r1 = the same inversion; Perl 0.8.8 has no sn-jnl binding (hyperref's `\href`: "Dataset" linked to
+%          the URL)
+% expect:  0 errors; "Dataset" linked to the URL (OXIDIZED_DESIGN_DIVERGENCES #654, a surpass: author content and the
+%          link before the class's DVI-mode swap)
+% status:  FIXED (68w r2)
+% preload: ar5iv.sty
+\documentclass[sn-apa]{sn-jnl}
+\begin{document}
+Data is available at \href{https://doi.org/10.5281/zenodo.1}{Dataset}.
+\end{document}
