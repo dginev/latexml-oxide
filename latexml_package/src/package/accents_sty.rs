@@ -33,10 +33,13 @@ LoadDefinitions!({
     }
   });
 
-  // Perl: \underaccent{acc}{base} — checks if acc is an accent command
+  // Perl: \underaccent{acc}{base} — checks if acc is an accent command. A non-accent is set as accents.sty:206-213
+  // `\cc@uaccentset` does, `\hbox{$…\scriptscriptstyle#1$}`: math in a box of its own, where an author's `$` is text
+  // (`\underaccent{$\text{.}$}{x}`, the rc_struct3 E1 sample; KNOWN_PERL_ERRORS #907) — tex_math.rs
+  // `\lx@math@in@hbox@group`. Guard `perfect_kernel_batch69c::dollar_in_proof_and_accents_hbox_math_is_text`.
   DefMacro!(
     "\\underaccent{}{}",
-    "\\lx@if@isaccent{#1}{\\lx@converttounder{#1}{#2}{#1{#2}}}{\\lx@underaccentset{#1}{#2}}"
+    "\\lx@if@isaccent{#1}{\\lx@converttounder{#1}{#2}{#1{#2}}}{\\lx@underaccentset{\\lx@math@in@hbox@group{#1}}{#2}}"
   );
 
   DefConstructor!("\\lx@underaccentset ScriptStyle {}",

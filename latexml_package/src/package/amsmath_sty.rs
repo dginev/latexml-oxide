@@ -323,6 +323,13 @@ LoadDefinitions!({
   // option below can `\Let` it to `\iftrue`. Drives multline's default row
   // alignment (center normally, left under fleqn).
   DefConditional!("\\if@fleqn");
+  // amsmath.sty:2794-2812 `\mathdisplay`, the begin of `{equation}`, `{equation*}` and `\[` (amsmath.sty:2913-2951):
+  // under `\if@fleqn` the display is `\hbox to\displaywidth\bgroup … $\displaystyle`, so an author's `$` in it
+  // ends that math and starts text in the box (tex.web §1193), the next `$` begins math again — `\lx@math@in@hbox`
+  // (tex_math.rs). Tested where each display begins, as amsmath does. Witnesses: the rc_struct3 E1 sample (7 papers,
+  // agent_reports/2026-10-17_rc_struct3.md); KNOWN_PERL_ERRORS #907. Guard
+  // `perfect_kernel_batch69c::dollar_in_an_amsmath_fleqn_display_is_text`.
+  DefMacro!("\\lx@mathdisplay@hook", "\\if@fleqn\\lx@math@in@hbox\\fi");
   // DIVERGENCE from Perl (#334): amsmath.sty:64 `\newif\if@fleqn` starts
   // false, and amsmath's display environments read only it, so an earlier
   // `fleqn` (article's `fleqn.clo`, fleqn.sty, elsarticle's binding) stops

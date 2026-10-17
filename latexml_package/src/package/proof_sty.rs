@@ -4,6 +4,21 @@ use crate::{
   xmath_helpers::{i_apply, i_arg, i_dual, i_symbol},
 };
 
+/// proof.sty:160-166 `\@infer` sets the label and the conclusion as `\hbox{$#1$}`/`\hbox{$#2$}` and each premise in
+/// an `\halign` cell `$##$`: math in a box of its own, where an author's `$` is text (`\infer[$MP$]{A}{B}`, the
+/// rc_struct3 E1 sample; KNOWN_PERL_ERRORS #907). Each part is digested in `\lx@math@in@hbox@group` (tex_math.rs),
+/// scoped to the part; an empty part stays empty. Guard `perfect_kernel_batch69c::dollar_in_proof_and_accents_hbox_math_is_text`.
+fn in_hbox_math(tokens: Tokens) -> Tokens {
+  if tokens.is_empty() {
+    tokens
+  } else {
+    let mut out = vec![T_CS!("\\lx@math@in@hbox@group"), T_BEGIN!()];
+    out.extend(tokens.unlist());
+    out.push(T_END!());
+    Tokens::new(out)
+  }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: proof.sty.ltxml
@@ -15,7 +30,8 @@ LoadDefinitions!({
   // Single clause → pass through; multiple → wrap with I_apply around
   // \lx@proof@logical@and so the semantic structure is an n-ary AND.
   DefMacro!("\\lx@proof@split@and {}", sub[(tokens)] {
-    let clauses = split_tokens(tokens, vec![T_ALIGN!().into()]);
+    let clauses: Vec<Tokens> =
+      split_tokens(tokens, vec![T_ALIGN!().into()]).into_iter().map(in_hbox_math).collect();
     if clauses.is_empty() {
       Ok(Tokens!())
     } else if clauses.len() == 1 {
@@ -89,9 +105,9 @@ LoadDefinitions!({
       let uppers_split =
         Invocation!(T_CS!("\\lx@proof@split@and"), vec![uppers]);
       let cmd = i_dual(&[], content, presentation, vec![
-        lower,
+        in_hbox_math(lower),
         uppers_split,
-        label.unwrap_or_default(),
+        in_hbox_math(label.unwrap_or_default()),
       ])?;
       let mut out: Vec<Token> = Vec::with_capacity(3 + cmd.len());
       out.push(T_CS!("\\ensuremath"));
@@ -115,14 +131,14 @@ LoadDefinitions!({
     // defaults to empty.
     let presentation = Invocation!(T_CS!("\\lx@proof@stack"), vec![
       Tokens!(i_arg("2")),
-      label.unwrap_or_default(),
+      in_hbox_math(label.unwrap_or_default()),
       Tokens!(i_arg("1")),
       Tokens!(),
     ]);
     let uppers_split =
       Invocation!(T_CS!("\\lx@proof@split@and"), vec![uppers]);
     let cmd = i_dual(&[], content, presentation, vec![
-      lower,
+      in_hbox_math(lower),
       uppers_split,
     ])?;
     let mut out: Vec<Token> = Vec::with_capacity(3 + cmd.len());

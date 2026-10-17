@@ -48,6 +48,15 @@ LoadDefinitions!({
   // `{Enumerate}{\Onumerate}{\endlist}`) has already decremented it.
   DefMacro!("\\lx@listdepth@restore", r"\global\@listdepth");
 
+  // A LaTeX display — `\[`, `{displaymath}` (latex.ltx:15734 `\def\displaymath{\[}`), `{equation}`, `{equation*}`
+  // (sect07.rs) — runs `\lx@mathdisplay@hook` where it begins, inside the display's group: empty for latex.ltx's
+  // displays, which are `$$`; amsmath's when its `\mathdisplay` sets them in an `\hbox{$…$}` under `\if@fleqn`
+  // (amsmath_sty.rs; tex_math.rs `\lx@math@in@hbox`). A primitive `$$` does not run it. `\[` is Perl's
+  // (latex_constructs.pool.ltxml, sect07.rs) followed by the hook. Guard
+  // `perfect_kernel_batch69c::dollar_in_an_amsmath_fleqn_display_is_text`.
+  DefMacro!("\\lx@mathdisplay@hook", "");
+  DefMacro!("\\[", "\\lx@begin@display@math\\lx@mathdisplay@hook");
+
   // The register LaTeX's paragraph hook runs: latex.ltx:9070 `\newtoks\everypar` and :9072-9077
   // put `\the\toks<number>` in `\g__para_standard_everypar_tl`, so the hook names the user list by
   // the register allocated here, whatever `\everypar` means later. A package that redefines

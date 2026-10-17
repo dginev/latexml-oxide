@@ -5,6 +5,12 @@
 
 use super::*;
 
+/// Runs `\lx@mathdisplay@hook` (latex_constructs_rust_only.rs) where a LaTeX display environment begins.
+fn mathdisplay_hook() -> Result<()> {
+  digest(Tokens!(T_CS!("\\lx@mathdisplay@hook")))?;
+  Ok(())
+}
+
 #[rustfmt::skip]
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
@@ -53,9 +59,12 @@ pub(crate) fn load() -> Result<()> {
     retract_equation();
   });
 
+  // `{displaymath}`, `{equation}` and `{equation*}` run `\lx@mathdisplay@hook` where they begin, inside the display's
+  // group (latex_constructs_rust_only.rs, which also has `\[` run it).
   DefEnvironment!("{displaymath}",
   "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
   mode       => "display_math",
+  before_digest => { mathdisplay_hook()?; },
   properties   => { ref_step_id("equation") },
   locked     => true);
   DefEnvironment!("{math}",
@@ -71,6 +80,7 @@ pub(crate) fn load() -> Result<()> {
     before_digest => {
       prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
       before_equation()?;
+      mathdisplay_hook()?;
     },
     after_digest_body => sub[whatsit] {
       after_equation(Some(whatsit))?;
@@ -86,6 +96,7 @@ pub(crate) fn load() -> Result<()> {
     before_digest => {
       prepare_equation_counter(stored_map!("preset" => true));
       before_equation()?;
+      mathdisplay_hook()?;
     },
     after_digest_body => sub[whatsit] {
       after_equation(Some(whatsit))?;

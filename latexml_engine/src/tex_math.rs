@@ -785,6 +785,32 @@ LoadDefinitions!({
       }
     }
   });
+  // A math that TeX sets inside a box of its own, `\hbox{$…$}`, where an author's `$` ends that math and the next
+  // `$` begins it again, the text between them set in the box (tex.web §1193 `after_math` back in restricted
+  // horizontal mode, §1138 `init_math` there): amsmath's display under `\if@fleqn` (amsmath.sty:2794-2812
+  // `\mathdisplay`'s `\hbox to\displaywidth\bgroup … $\displaystyle`, amsmath_sty.rs `\lx@mathdisplay@hook`),
+  // proof.sty's label, conclusion and premises (proof.sty:160-166 `\hbox{$#1$}`, the `$##$` cells; proof_sty.rs),
+  // accents.sty's under-accent (accents.sty:206-213 `\cc@uaccentset`, `\hbox{$…#1$}`; accents_sty.rs). Here the
+  // math is the enclosing formula's, so `$` takes the meaning it has in a math alignment cell, which balances the
+  // cell's hidden `$` the same way: the first opens in-math text, the next ends it (`\lx@dollar@in@mathmode`), and a
+  // `$…$` inside a text box of that math (`\mbox{$x$}`) is still a formula. Local to the group of the math.
+  // Perl has no such frame and errs "Missing $ closing display math" twice (KNOWN_PERL_ERRORS #907). Witnesses: the
+  // rc_struct3 E1 sample (agent_reports/2026-10-17_rc_struct3.md). Guards
+  // `perfect_kernel_batch69c::{dollar_in_an_amsmath_fleqn_display_is_text, dollar_in_proof_and_accents_hbox_math_is_text,
+  // dollar_in_a_display_still_errs}`.
+  DefPrimitive!("\\lx@math@in@hbox", {
+    if lookup_bool_sym(pin!("IN_MATH")) {
+      let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
+      assign_value("MATH_ALIGN_$_BEGUN", 0, None);
+    }
+  });
+  // The same for one argument, in a hidden group of its own (`\lx@hidden@bgroup`, no braces in the `tex`), so the `$`
+  // keeps its meaning after it: a binding's argument may be digested in no group of its own (proof.sty's `\infer`
+  // parts, digested as an `\lx@dual`'s arguments: 1805.04852, 2009.04437, 2504.10800 `$\vcenter{\infer[(R)]{A}{B}}$`).
+  DefMacro!(
+    "\\lx@math@in@hbox@group{}",
+    "\\lx@hidden@bgroup\\lx@math@in@hbox #1\\lx@hidden@egroup"
+  );
   //======================================================================
   // For inserting (non-trivial?) text while in math mode
   DefConstructor!("\\lx@begin@inmath@text",

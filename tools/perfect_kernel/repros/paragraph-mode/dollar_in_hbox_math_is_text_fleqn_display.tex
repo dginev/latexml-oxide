@@ -1,0 +1,20 @@
+% witness: the rc_struct3 E1 sample (agent_reports/2026-10-17_rc_struct3.md; 7 amsmath+fleqn papers, est. 272 of the
+%   `$` cluster); shape `\begin{equation*} f(\dots)\subset(b,\infty)$ for some $\delta\ge0. \end{equation*}`
+% oracle:  pdflatex 0 errors; amsmath.sty:2794-2812 `\mathdisplay` under `\if@fleqn` is `\hbox to\displaywidth
+%   \bgroup … $\displaystyle`, so the author's first `$` ends that math, "for some" is text in the box and the second
+%   `$` begins math again (tex.web §1193 `after_math` in restricted horizontal mode, §1138 `init_math`); `\[` is
+%   `\begin{equation*}` (amsmath.sty:2950)
+% engines: rust 67int18b = 6 ("Missing $ closing display math", two per display), perl = 6 (KNOWN_PERL_ERRORS #907)
+% expect:  0 errors; each display one Math whose XMath holds an XMText "for some" between the two formulas
+% status:  RED (67int18b) -> GREEN (69c: `\lx@math@in@hbox`, amsmath's `\lx@mathdisplay@hook` under `\if@fleqn`)
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation*}
+f(s) \subset (b,\infty)$ for some $\delta\ge0.
+\end{equation*}
+\begin{equation}
+g \mbox{ if $x$} = 1$ and $h.
+\end{equation}
+\[ a $ with $ b \]
+\end{document}

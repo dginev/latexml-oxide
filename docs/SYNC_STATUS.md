@@ -2822,6 +2822,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   2507.09788 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 1310.0491. Repros
   block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards
   `perfect_kernel_batch69c::para_level_block_in_{quote,note_and_wrapfigure}_opens_an_inline_logical_block`.
+  (2) E1: a `$` inside a math TeX sets as `\hbox{$…$}` — amsmath's `{equation}`/`{equation*}`/`\[` under
+  `\if@fleqn` (amsmath.sty:2794-2812), proof.sty's label/conclusion/premises (proof.sty:160-166), accents.sty's
+  under-accent (accents.sty:206-213) — is text in that math: tex_math.rs `\lx@math@in@hbox` (`$` as in a math cell),
+  run by the kernel displays' `\lx@mathdisplay@hook` (latex_constructs_rust_only.rs, sect07.rs; amsmath_sty.rs under
+  `\if@fleqn`), proof_sty.rs `in_hbox_math` and accents_sty.rs `\underaccent` through `\lx@math@in@hbox@group`
+  (scoped to the part; control paragraph-mode/proof_infer_parts_keep_the_formulas_dollar) (KNOWN_PERL_ERRORS #907). Repros
+  paragraph-mode/dollar_in_hbox_math_is_text_{fleqn_display,proof_accents} + control dollar_in_display_math_still_errs;
+  guards `perfect_kernel_batch69c::{dollar_in_an_amsmath_fleqn_display_is_text,
+  dollar_in_proof_and_accents_hbox_math_is_text, dollar_in_a_display_still_errs}`. Open: fleqn.clo's `{equation}`
+  without amsmath (also `\hbox{$…$}`) is not modelled.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

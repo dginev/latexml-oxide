@@ -14994,3 +14994,34 @@ Rust (69b r2, etoolbox_sty.rs `\robustify`): for a LaTeX-robust command the nati
 `\lx@ifnativecmdb`) is made on its inner command too (`\lx@robustify@ltxprotect`); a document's own
 `\DeclareRobustCommand` is still robustified. Repro package-bindings/robustify_ltx_protected_native_cite; guard
 `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`.
+
+## 907. A `$` inside a math TeX sets as `\hbox{$…$}` (amsmath's display under `fleqn`, proof.sty's parts, accents.sty's under-accent) ends the display
+
+Some macros and environments set their math inside a box of their own: amsmath's `\mathdisplay` (amsmath.sty:2794-2812,
+the begin of `{equation}`, `{equation*}` and `\[`) under `\if@fleqn` is `\hbox to\displaywidth\bgroup … $\displaystyle`;
+proof.sty's `\@infer` (proof.sty:160-166) sets the label and the conclusion as `\hbox{$#1$}`/`\hbox{$#2$}` and the
+premises in `$##$` cells; accents.sty's `\cc@uaccentset` (accents.sty:206-213) the under-accent as
+`\hbox{$…\scriptscriptstyle#1$}`. An author's `$` there ends that math and the next `$` begins it again, the text
+between them set in the box (tex.web §1193 `after_math` back in restricted horizontal mode, §1138). Perl digests these
+as display math (TeX_Math.pool.ltxml `\lx@dollar@default`), where a lone `$` is "Missing $ closing display math" —
+twice, and the display's math and text are mixed up from there on.
+
+Trigger: `\documentclass[fleqn]{article}\usepackage{amsmath}` and `\begin{equation*} f(s)\subset(b,\infty)$ for some
+$\delta\ge0. \end{equation*}` — pdflatex 0 errors, the formula, "for some", the formula; Perl 2 errors. Likewise
+`\[\infer[$MP$]{A}{A & A \to B}\]` (proof.sty) and `\underaccent{$\text{.}$}{x}` (accents.sty), 2 errors each.
+Without `fleqn` (amsmath's `$$`) or with a primitive `$$`, pdflatex errs too ("Display math should end with $$").
+
+Rust (69c): tex_math.rs `\lx@math@in@hbox` gives `$` the meaning it has in a math alignment cell
+(`\lx@dollar@in@mathmode`, which balances the cell's hidden `$` the same way) for the rest of the math's group: the
+first `$` opens in-math text (`ltx:XMText`), the next ends it, and a `$…$` in a text box of that math is still a
+formula. The kernel's displays run `\lx@mathdisplay@hook` where they begin (latex_constructs_rust_only.rs, sect07.rs);
+amsmath's is `\if@fleqn\lx@math@in@hbox\fi` (amsmath_sty.rs); proof_sty.rs digests each `\infer`/`\deduce` part and
+accents_sty.rs the under-accent in `\lx@math@in@hbox@group{…}`, a hidden group that scopes the `$` meaning to the part
+(an unscoped draft leaked it to the enclosing formula: 1805.04852, 2009.04437, 2504.10800; control
+paragraph-mode/proof_infer_parts_keep_the_formulas_dollar, guard
+`perfect_kernel_batch69c::proof_infer_parts_keep_the_formulas_dollar`). Witnesses: the rc_struct3 E1 sample (agent_reports/2026-10-17_rc_struct3.md: 7 amsmath+fleqn
+papers, 1 proof.sty, 1 accents.sty). Repros paragraph-mode/dollar_in_hbox_math_is_text_{fleqn_display,proof_accents},
+control paragraph-mode/dollar_in_display_math_still_errs; guards
+`perfect_kernel_batch69c::{dollar_in_an_amsmath_fleqn_display_is_text, dollar_in_proof_and_accents_hbox_math_is_text,
+dollar_in_a_display_still_errs}`. Not modelled: fleqn.clo's own `{equation}` without amsmath (fleqn.clo:44-53, also
+`\hbox{$…$}`), whose `\[` errs in pdflatex as it opens a group in its math.

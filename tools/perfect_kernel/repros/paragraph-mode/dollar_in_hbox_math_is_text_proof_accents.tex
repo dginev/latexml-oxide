@@ -1,0 +1,16 @@
+% witness: the rc_struct3 E1 sample (agent_reports/2026-10-17_rc_struct3.md): proof.sty `\infer[$MP$]` (1 paper),
+%   accents.sty `\underaccent{$\text{.}$}` (1 paper)
+% oracle:  pdflatex 0 errors; proof.sty:160-161 sets the label and the conclusion as `\hbox{$#1$}`/`\hbox{$#2$}` and
+%   accents.sty:206-213 `\cc@uaccentset` the under-accent as `\hbox{$…\scriptscriptstyle#1$}`, so a `$` in them is
+%   text in the box (tex.web §1193)
+% engines: rust 67int18b = 4 ("Missing $ closing display math", two per display), perl = 4 (KNOWN_PERL_ERRORS #907)
+% expect:  0 errors; the label "MP" and the accent "." are XMText in their math
+% status:  RED (67int18b) -> GREEN (69c: `\lx@math@in@hbox` in proof_sty.rs `\infer`/`\deduce` and accents_sty.rs)
+\documentclass{article}
+\usepackage{amsmath,accents,proof}
+\begin{document}
+\[\infer[$MP$]{A}{A & A \to B}\]
+\begin{equation*}
+\sum \underaccent{$\text{.}$}{x} = 1
+\end{equation*}
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 1805.04852, 2009.04437, 2504.10800 (69c A/B: a first draft of the proof.sty `$` frame leaked out of
+%   `\infer`'s parts, so the enclosing formula's closing `$` opened text: 12 -> 80, 10 -> 156, 0 -> 11 errors)
+% oracle:  pdflatex 0 errors
+% engines: rust 67int18b = 0, perl = 0
+% expect:  0 errors; `$a \vcenter{\infer…} b$` one formula, `\infer` in a tabular cell one formula
+% status:  CONTROL (69c: tex_math.rs `\lx@math@in@hbox@group`, the part's `$` meaning scoped to the part)
+\documentclass{article}
+\usepackage{proof}
+\begin{document}
+$a \quad \vcenter{\infer[(R)]{A}{B \quad C}} \quad b$ and $c$.
+
+\begin{tabular}{|cc|}
+\infer[\mbox{NC-}\epsilon]{\epsilon \to w_2}{} & \infer[(L)]{A}{B}\\
+\end{tabular}
+\end{document}
