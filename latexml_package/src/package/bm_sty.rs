@@ -95,7 +95,6 @@ fn take_number(tokens: &[Token], mut i: usize, out: &mut Vec<Token>) -> usize {
   i
 }
 
-/// The index of the first token at or after `i` that is not a blank.
 /// A `_` or `^`: a script character, or a control sequence let to one (`\sb`, `\sp`).
 fn is_script(token: &Token) -> bool {
   matches!(token.get_catcode(), Catcode::SUPER | Catcode::SUB)
@@ -103,6 +102,7 @@ fn is_script(token: &Token) -> bool {
     || token.defined_as(&T_SUB!())
 }
 
+/// The index of the first token at or after `i` that is not a blank.
 fn skip_blanks(tokens: &[Token], mut i: usize) -> usize {
   while tokens
     .get(i)
@@ -375,9 +375,10 @@ pub fn bold_math(cs: &str, bold: Token, arg: Tokens, argument: BoldArgument) -> 
     let mut tokens = tokens;
     // bm.sty's `\bm` emits a script ending its argument as it stands (`\let_\relax` in `\bm@general`,
     // bm.sty:162-217), so it takes its argument from after `\bm`'s closing brace: `\bm{G_}{(10)}` is a bold `G`
-    // subscripted by `(10)`, `M\bm_{max}` is `M_{max}`. Here the script follows the bounded `bold`, as `bold_run`
-    // leaves it on the split path; in the group it would read the `}` ("Missing sub/superscript argument"). A
-    // boxed or grouped command ([`BoldArgument::Grouped`]) keeps TeX's error, its box ending there.
+    // subscripted by `(10)`, `M\bm_{max}` is `M_{max}` (arXiv 2010.13108, 1708.01493). Here the script follows the
+    // bounded `bold`, as `bold_run` leaves it on the split path; in the group it would read the `}` ("Missing
+    // sub/superscript argument"). A boxed or grouped command ([`BoldArgument::Grouped`]) keeps TeX's error, its box
+    // ending there.
     let mut script = None;
     if argument == BoldArgument::Scanned
       && let Some(last) = tokens

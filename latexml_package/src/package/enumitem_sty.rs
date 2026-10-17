@@ -786,8 +786,9 @@ LoadDefinitions!({
   // `\def\@listenv{enumerate}\setlist[\@listenv,\@listdep]{…}` (2605.31510's clevethm.sty).
   // The star may also follow the names (enumitem.sty:1661-1667 `\enit@setlist@n`/`\enit@setlist@x`, "Let's accept
   // \setlist[]*{}, too, because an error in <=3.5.1"): after `[…]` an `\@ifstar` — which passes spaces, as
-  // `\@ifnextchar` does — makes it append. `\setlist[enumerate]*{label=(\arabic*)}` (rc_struct3 X1; Perl's binding read
-  // the `*` as the keys, "Missing keyval arguments"). Guard: `perfect_kernel_batch69b::setlist_star_after_the_names`.
+  // `\@ifnextchar` does — makes it append. `\setlist[enumerate]*{label=(\arabic*)}` (arXiv 2303.05244, rc_struct3
+  // X1; Perl's binding read the `*` as the keys, "Missing keyval arguments"). Guard:
+  // `perfect_kernel_batch69b::setlist_star_after_the_names`.
   DefMacro!("\\setlist OptionalMatch:* Optional", sub[(star, names)] {
     let Some(names) = names else {
       return Ok(Tokens::new(match star {

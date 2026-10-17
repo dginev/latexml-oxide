@@ -531,6 +531,35 @@ fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
   end_mode(mode)
 }
 
+/// The mode keys a mode switch binds (stomach.rs `begin_mode_opt` / `set_mode_from`), which the mode conditionals
+/// (`\ifmmode`, `\ifvmode`, `\ifhmode`, `\ifinner`) and the math-shift handlers read.
+const MODE_KEYS: [&str; 4] = ["MODE", "BOUND_MODE", "IN_MATH", "INNER_BOX"];
+
+/// Run `f` under the mode enclosing the current mode switch: the values the frame below the innermost one binding
+/// `MODE` holds (tex.web §1194 pops the display's nest before §1197 reads the token after its closing `$`; arXiv
+/// 2110.14271). The current values are put back after, whatever `f` returns; an expansion does not push or pop
+/// frames, so the frame they go back into is the one they were read from.
+fn with_enclosing_mode<R>(f: impl FnOnce() -> Result<R>) -> Result<R> {
+  let Some(frame) = (0..get_frame_depth()).find(|&i| is_value_bound("MODE", Some(i))) else {
+    return f();
+  };
+  // A key never bound reads as false (the flags) or empty (a mode string).
+  let assign = |key: &str, value: Option<Stored>| match value {
+    Some(value) => assign_frame_value(key, value),
+    None if key == "IN_MATH" || key == "INNER_BOX" => assign_frame_value(key, false),
+    None => assign_frame_value(key, pin("")),
+  };
+  let saved: Vec<Option<Stored>> = MODE_KEYS.iter().map(|key| lookup_value(key)).collect();
+  for key in MODE_KEYS {
+    assign(key, value_in_frame(key, frame + 1));
+  }
+  let result = f();
+  for (key, value) in MODE_KEYS.iter().zip(saved) {
+    assign(key, value);
+  }
+  result
+}
+
 /// Set by [`end_math_or_defer`] (state value `lx@math@ender@reread`, local to the `\left` group) when a math ender is
 /// read again after an inserted `\right.`; the ender's whatsit, which stays in that group, takes it as `lx@reread`
 /// and reverts as nothing.
@@ -670,10 +699,13 @@ LoadDefinitions!({
       }
       if mode == "display_math" {
         // tex.web §1197 (`after_math`, "Check that another $ follows") reads the second `$` by `get_x_token`, so
-        // a macro may produce it (`$\full{$}$x=1.$\full{$}` with `\full{#1}` = `#1`; rc_struct3 E3); §1138's
-        // opening `$$` is `get_token` (`next_is_math_shift`). The token read, if not a math shift, goes back as
-        // read (`back_error`). Guard: `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`.
-        let next = read_x_token(None, false, None)?;
+        // a macro may produce it (`$\full{$}$x=1.$\full{$}` with `\full{#1}` = `#1`; arXiv 2110.14271, rc_struct3
+        // E3); §1138's opening `$$` is `get_token` (`next_is_math_shift`). §1194 has already popped the display's
+        // nest (`fin_mlist`, tex.web:22415), so the token is expanded under the ENCLOSING mode: `$$y=2$\ifmmode$\fi`
+        // finds `\ifmmode` false and errors (`with_enclosing_mode`). The token read, if not a math shift, goes back
+        // as read (`back_error`). Guards: `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`,
+        // `perfect_kernel_batch69b::display_closing_dollar_read_in_the_enclosing_mode`.
+        let next = with_enclosing_mode(|| read_x_token(None, false, None))?;
         let shift = next.is_some_and(|t| t.defined_as(&T_MATH!()));
         if let Some(t) = next.filter(|_| !shift) {
           unread_one(t);

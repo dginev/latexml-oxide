@@ -1,0 +1,18 @@
+% witness: arXiv 2210.15126 (wiley-article.cls:774 `\robustify{\cite}`, x15 citations); 69b review side finding 6
+% oracle:  pdflatex 0 errors: "Text [1]. More (a)." and the reference list
+% engines: rust 69b = 0 errors, the text "Text CODE(0x…) More." (citation and "." lost); Perl 0.8.8 the same
+%          (KNOWN_PERL_ERRORS #902)
+% expect:  `\cite` is LaTeX-robust (`\protect \cite  `), its inner `\cite ` the kernel's native binding, so
+%          \robustify leaves it as it is (the etoolbox binding's native no-op, made on the inner command): the
+%          citation and the "." stay; a document's own robust `\pair` is still robustified, "(a)"
+% status:  RED (69b) -> GREEN (69b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{etoolbox}
+\robustify{\cite}
+\DeclareRobustCommand{\pair}[1]{(#1)}
+\robustify{\pair}
+\begin{document}
+Text~\cite{k}. More \pair{a}.
+\begin{thebibliography}{1}\bibitem{k} Ref.\end{thebibliography}
+\end{document}

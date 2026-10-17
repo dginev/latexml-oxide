@@ -14892,7 +14892,7 @@ bounded => 1, …)`), so the script inside the group reads the `}`.
 Trigger: `\usepackage{bm}` and `$\bm{G_}{(10)}$ and $M\bm_{max}$ and $\bm{D^}{t}_p$` — pdflatex 0 errors (a bold G
 subscripted by (10), `M_{max}`, a bold D with ^t and _p); Perl and Rust before 69b 3 `Error:expected:{ Missing
 sub/superscript argument`. Also `\bm{(A^\top A)^{-1}A^}\top`, and `\renewcommand{\vec}{\bm}` with `\vec_X` (rc_struct3
-B1: 13 of 25 sampled `{` first-error papers, est. 408 in run 365).
+B1: 13 of 25 sampled `{` first-error papers, est. 408 in run 365; arXiv 2010.13108, 1708.01493).
 
 Rust (69b, bm_sty.rs `bold_math`): a script ending a `BoldArgument::Scanned` argument (trailing blanks aside)
 follows the bounded `\lx@bm@bold{…}` group, as the split path's `bold_run` already leaves it; `\bm_` is the script
@@ -14916,6 +14916,13 @@ Rust (69b, sect06.rs `\endlx@list`): with no `internal_vertical` mode frame anyw
 (`internal_vertical_mode_frame_open`) it does nothing; an open one below an unrelated top frame keeps Perl's
 error-without-pop (memoir's raw `\list`, OXIDIZED_DESIGN #180). Repro
 list-structure/endlist_with_no_list_open_does_nothing; guard `perfect_kernel_batch69b::endlist_with_no_list_open_does_nothing`.
+Residual (Perl the same): the test is "an `internal_vertical` mode frame open", not "a list open", so a stray
+`\endlist` inside a `{minipage}` or a float (their own `internal_vertical` frames) still ends that frame, and its
+`\end{minipage}`/`\end{figure}` then errs where pdflatex says nothing. The list's own frame cannot be told by its
+`groupInitiator` alone: `\lx@list` names its frame, but an `{enumerate}`/`{itemize}` environment's frame — which
+`\endlist` must close too (nih/denselists.sty:10,16, guard
+`perfect_kernel_batch56::endlist_closes_an_enumerate_opened_by_its_begin_macro`) — is named by its `\begin{…}`
+(SYNC_STATUS 69b row).
 
 ## 899. The `$` closing a display is read unexpanded, so a macro cannot supply it
 
@@ -14924,12 +14931,17 @@ tex.web §1197 (`after_math`, "Check that another $ follows") reads the display'
 Perl's `\lx@dollar@default` (TeX_Math.pool.ltxml:50) tests both with `ifNext(T_MATH)`, unexpanded.
 
 Trigger: `\newcommand{\full}[1]{#1}` and `Text \full{$}$x=1.$\full{$} more text.` — pdflatex 0 errors (a display
-"x = 1."); Perl 6 Errors, Rust before 69b 2 `Error:expected:$ Missing $ closing display math.` (rc_struct3 E3).
+"x = 1."); Perl 6 Errors, Rust before 69b 2 `Error:expected:$ Missing $ closing display math.` (rc_struct3 E3; arXiv
+2110.14271, 59 → 0 Errors).
 
 Rust (69b, tex_math.rs `\lx@dollar@default`): in `display_math` the next token is read expanded
-(`read_x_token`); a non-shift goes back as read (`back_error`). Repro
-expansion-primitives/display_closing_dollar_from_a_macro; guard
-`perfect_kernel_batch69b::display_closing_dollar_from_a_macro`.
+(`read_x_token`); a non-shift goes back as read (`back_error`). §1194 has popped the display's nest before that read
+(`fin_mlist`, tex.web:22415), so it is made under the enclosing mode (`with_enclosing_mode`: `MODE`, `BOUND_MODE`,
+`IN_MATH`, `INNER_BOX` as the frame below the display's): `$$y=2$\ifmmode$\fi G` errs as pdflatex ("Display math
+should end with $$."). The recovery stays Perl's ("Ignoring"; the display stays open), where TeX finishes the display.
+Repros expansion-primitives/display_closing_dollar_from_a_macro, display_closing_dollar_read_in_the_enclosing_mode;
+guards `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`,
+`perfect_kernel_batch69b::display_closing_dollar_read_in_the_enclosing_mode`.
 
 ## 900. enumitem's `\setlist` has no star: `\setlist*[…]{…}` and `\setlist[…]*{…}` read the `*` as the keys
 
@@ -14939,7 +14951,7 @@ star makes the keys append to the stored ones (`\enit@saveset`, :1597-1612) inst
 (enumitem.sty.ltxml:206 `DefPrimitive('\setlist Optional RequiredKeyVals:enumitem', …)`) has neither.
 
 Trigger: `\usepackage{enumitem}` and `\setlist[enumerate]*{label=(\arabic*)}` — pdflatex 0 errors ("(1) One.");
-Perl and Rust before 69b `Error:expected:{ Missing keyval arguments` (rc_struct3 X1, est. 26). Rust had accepted the
+Perl and Rust before 69b `Error:expected:{ Missing keyval arguments` (rc_struct3 X1, est. 26; arXiv 2303.05244). Rust had accepted the
 leading star since the hep-text.sty `\setlist*[inlinelist,1]{…}` fix.
 
 Rust (69b, enumitem_sty.rs): `\setlist OptionalMatch:* Optional` is a macro that, after names, dispatches by
@@ -14963,3 +14975,22 @@ in <ltx:item>" (1212.6177, 1710.00867, 1609.00969, 1407.2279, 1309.5503).
 Rust (69b, sect05.rs): `\twocolumn` and `\onecolumn` set the flag as latex.ltx does; the page geometry
 (`\columnwidth`, `\linewidth`, `\col@number`) is left alone. Repro class-bindings/twocolumn_sets_the_twocolumn_flag;
 guard `perfect_kernel_batch69b::twocolumn_sets_the_twocolumn_flag`.
+
+## 902. etoolbox's `\robustify` of a LaTeX-robust command over a native binding sets the text "CODE(0x…)"
+
+etoolbox.sty:1267-1289 `\robustify` takes a LaTeX-robust command (`\ifdefltxprotect`: meaning `\protect \cite  `) by its
+inner `\cite ` (`\letcs\etb@resrvda{cite }`), then rebuilds it from its `\meaning` through `\scantokens`
+(`\etb@robustify`, :1291-1299). The kernel's `\cite` means `\protect \cite  `, and its inner `\cite ` is the binding
+(latex_constructs.pool.ltxml:4200 `DefMacro('\cite[] Semiverbatim', sub {…})`), whose meaning is
+`macro:#1#2->CODE(0x…)`: the rebuilt `\cite` sets that text, takes the key and the next token as its two arguments
+and drops them. Rust's etoolbox binding (etoolbox_sty.rs) already left a native `\robustify` target
+alone, but tested only the outer command.
+
+Trigger: `\usepackage{etoolbox}\robustify{\cite}` and `Text~\cite{k}. More.` with a `{thebibliography}` holding `k` —
+pdflatex 0 errors, "Text [1]. More."; Perl 0.8.8 and Rust before 69b r2 0 errors and "Text CODE(0x…) More." (the
+citation and the "." lost). arXiv 2210.15126 (wiley-article.cls:774 `\robustify{\cite}`, 15 citations).
+
+Rust (69b r2, etoolbox_sty.rs `\robustify`): for a LaTeX-robust command the native test (`\lx@ifnativecmd`,
+`\lx@ifnativecmdb`) is made on its inner command too (`\lx@robustify@ltxprotect`); a document's own
+`\DeclareRobustCommand` is still robustified. Repro package-bindings/robustify_ltx_protected_native_cite; guard
+`perfect_kernel_batch69b::robustify_ltx_protected_native_cite`.

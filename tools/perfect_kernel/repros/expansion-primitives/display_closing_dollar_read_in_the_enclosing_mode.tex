@@ -1,0 +1,18 @@
+% witness: 69b review probe disp1 (rev69b/probes/p/disp1.tex line 11); E3 arXiv 2110.14271
+% oracle:  pdflatex 1 error "! Display math should end with $$." (<to be read again> G): "Text", the display "y = 2",
+%          then "G more text."
+% engines: rust 69b = 0 errors (the token after the closing `$` expanded in display mode, `\ifmmode` true);
+%          Perl 0.8.8 6 (2 "Missing $ closing display math." + 4 malformed: TeX_Math.pool.ltxml:50 `ifNext(T_MATH)`
+%          reads unexpanded, and the display stays open)
+% expect:  tex.web §1194 pops the display's nest before §1197's `get_x_token`, so `\ifmmode` is false there and the
+%          `$` it guards is skipped: 1 Error:expected:$ "Missing $ closing display math." Recovery as Perl
+%          ("Ignoring"): the display stays open, "G more text." set in it, 1 Warning at \end{document} (TeX
+%          finishes the display at the error; SYNC_STATUS 69b row)
+% status:  RED (69b) -> GREEN (69b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text
+$$y=2$\ifmmode$\fi G
+more text.
+\end{document}

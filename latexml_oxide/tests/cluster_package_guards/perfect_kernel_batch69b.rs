@@ -4,10 +4,12 @@
 //! (latex_constructs.pool.ltxml:1673), so an ACM 1.8 class's spacing-only redefinition keeps `\list` a list.
 //! Item 3 (L2) — `\endlist` with no list open does nothing, as latex.ltx:15915-15930 `\endtrivlist`. Item 4 (E2) —
 //! mdwtab's `array` enters math itself (mdwtab.sty:505-510), so in text it is a formula without "Missing $"; Wooding's
-//! mathenv loads mdwtab (mathenv.sty:53). Item 5 (E3) — the `$` closing a display is read expanded (tex.web §1197).
-//! Item 6 (X1) — enumitem's `\setlist[…]*{…}` appends, the star read after the names (enumitem.sty:1661-1667).
+//! mathenv loads mdwtab (mathenv.sty:53). Item 5 (E3) — the `$` closing a display is read expanded (tex.web §1197)
+//! under the enclosing mode (§1194). Item 6 (X1) — enumitem's `\setlist[…]*{…}` appends, the star read after the
+//! names (enumitem.sty:1661-1667).
 //! Item 2b — `\twocolumn`/`\onecolumn` set `\if@twocolumn` (latex.ltx:20430-20465), which the ACM 1.8 classes'
-//! `\keywords` branches on once item 2 lets their lists open.
+//! `\keywords` branches on once item 2 lets their lists open. Round 2 — etoolbox's `\robustify` leaves a LaTeX-robust
+//! command over a native binding (the kernel's `\cite`) as it is.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -135,6 +137,33 @@ fn display_closing_dollar_from_a_macro() {
   );
 }
 
+/// expansion-primitives/display_closing_dollar_read_in_the_enclosing_mode: `$$y=2$\ifmmode$\fi G` (pdflatex 1 error
+/// "Display math should end with $$.", G read again). tex.web §1194 pops the display's nest before §1197 reads the
+/// token after the closing `$`, so `\ifmmode` is false there and the `$` it guards is skipped. Before 69b r2: 0 errors
+/// (the token expanded in display mode; review 69b E3, arXiv 2110.14271). The recovery is Perl's ("Ignoring"): the
+/// display stays open to `\end{document}`, hence the one Warning (TeX finishes the display; SYNC_STATUS 69b row).
+#[test]
+fn display_closing_dollar_read_in_the_enclosing_mode() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/display_closing_dollar_read_in_the_enclosing_mode.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("Error:expected:$ Missing $ closing display math."),
+    "{stderr}"
+  );
+  // "Text" stays the paragraph's text; the rest of it is set in the display left open.
+  assert!(xml.contains("<p>Text</p>"), "{xml}");
+  assert!(
+    xml.contains(r#"<Math mode="display" tex="y=2Gmoretext.\par""#),
+    "{xml}"
+  );
+}
+
 /// list-structure/setlist_star_after_the_names: `\setlist[enumerate]*{label=(\arabic*)}` and `\setlist[itemize]
 /// *{leftmargin=2em}` after `\setlist[itemize]{label=--}` (pdflatex 0 errors: "(1) One.", "– Two."). Before 69b: 2
 /// Errors "Missing keyval arguments" (Perl the same).
@@ -186,4 +215,32 @@ fn twocolumn_sets_the_twocolumn_flag() {
     "{xml}"
   );
   assert!(!xml.contains("<quote"), "{xml}");
+}
+
+/// package-bindings/robustify_ltx_protected_native_cite: etoolbox `\robustify{\cite}` (arXiv 2210.15126,
+/// wiley-article.cls:774) and `\robustify{\pair}` of a document's `\DeclareRobustCommand` (pdflatex 0 errors: "Text
+/// [1]. More (a)."). `\cite` is LaTeX-robust over the kernel's native `\cite `, which the etoolbox binding's native
+/// no-op now tests too. Before 69b r2: the text "Text CODE(0x…) More (a)." (citation and "." lost; Perl the same,
+/// KNOWN_PERL_ERRORS #902).
+#[test]
+fn robustify_ltx_protected_native_cite() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/robustify_ltx_protected_native_cite.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    // `~` is a no-break space.
+    concat!(
+      r#"<para xml:id="p1"><p>Text"#,
+      "\u{a0}",
+      r#"<cite class="ltx_citemacro_cite">[<bibref bibrefs="k" separator="," yyseparator=","/>]</cite>. More (a).</p></para>"#
+    ),
+  );
 }

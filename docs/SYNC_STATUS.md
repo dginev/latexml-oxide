@@ -2801,7 +2801,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`. (6) X1: enumitem's `\setlist[…]*{…}` appends, the
   star tested by `\@ifstar` after the names (enumitem.sty:1661-1667; enumitem_sty.rs `\setlist` → `\lx@enit@setlist`;
   KNOWN_PERL_ERRORS #900; est. 26). Repro list-structure/setlist_star_after_the_names; guard
-  `perfect_kernel_batch69b::setlist_star_after_the_names`.
+  `perfect_kernel_batch69b::setlist_star_after_the_names`. Round 2 (review 2026-10-17_69b_review.md): (5) reads the
+  token after the closing `$` under the enclosing mode (tex.web §1194 pops the nest first; tex_math.rs
+  `with_enclosing_mode`), so `$$y=2$\ifmmode$\fi G` errs as pdflatex; guard
+  `perfect_kernel_batch69b::display_closing_dollar_read_in_the_enclosing_mode`. (7) etoolbox's `\robustify{\cite}`
+  (2210.15126, wiley-article.cls:774) set the text "CODE(0x…)" for each citation and lost the next token: the binding's
+  native no-op now tests a LaTeX-robust command's inner command too (etoolbox_sty.rs; KNOWN_PERL_ERRORS #902); guard
+  `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`. Witness ids in comments: 2110.14271 (E3), 1807.04837
+  (E2), 2303.05244 (X1), 2010.13108 and 1708.01493 (B1). Open rows: (a) L2 tests "an `internal_vertical` frame open",
+  not "a list open": a stray `\endlist` in a minipage/figure still ends that frame (then `\end{minipage}` errs;
+  pdflatex none; base the same) — a list frame needs a name that `{enumerate}`/`{itemize}` frames carry too (KPE
+  #898). (b) "Missing $ closing display math." keeps Perl's recovery (the display stays open, the following text set
+  in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

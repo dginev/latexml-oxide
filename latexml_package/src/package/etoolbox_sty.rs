@@ -2155,7 +2155,15 @@ LoadDefinitions!({
   // sentinel "Stored[" — DefMath/constructor natives render that way (e.g.
   // \bmod = DefMath in math_common.rs, whose real latex.ltx L15556 body IS a
   // robust macro, so real \robustify succeeds; ours must no-op, not error
-  // "not a macro". Witness yquant-doc.tex L244 `\robustify\bmod`).
+  // "not a macro". Witness yquant-doc.tex L244 `\robustify\bmod`). A
+  // LaTeX-robust command (`\DeclareRobustCommand`, meaning `\protect \cite  `)
+  // is a macro whose body is not native: \robustify then works on its inner
+  // `\cite ` (`\ifdefltxprotect`, etoolbox.sty:1271-1273), which is — the
+  // kernel's `\cite` binding — so the test is made on that inner command too;
+  // without it the rebuilt `\cite` set the literal text "CODE(0x…)" in place of
+  // the citation and swallowed its key and the next token (arXiv 2210.15126,
+  // wiley-article.cls:774 `\robustify{\cite}`; Perl the same, KNOWN_PERL_ERRORS
+  // #902). Guard: `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`.
   RawTeX!(
     r"
 \newcommand{\lx@ifnativecmd}{}
@@ -2174,7 +2182,12 @@ LoadDefinitions!({
 \lx@etb@ifnativecmdb{\notblank{#2}}
 \let\lx@saved@robustify\robustify
 \protected\def\robustify#1{%
-  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{\lx@saved@robustify{#1}}}}
+  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{%
+    \ifdefltxprotect{#1}%
+      {\expandafter\lx@robustify@ltxprotect\csname\expandafter\@gobble\string#1 \endcsname#1}%
+      {\lx@saved@robustify{#1}}}}}
+\def\lx@robustify@ltxprotect#1#2{%
+  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{\lx@saved@robustify{#2}}}}
 "
   );
 });
