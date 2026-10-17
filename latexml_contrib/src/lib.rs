@@ -252,6 +252,7 @@ pub mod pinlabel_sty;
 pub mod piton_sty;
 pub mod primearxiv_sty;
 pub mod program_sty;
+pub mod projlib_author_sty;
 pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod ptephy_cls;
@@ -310,6 +311,7 @@ pub mod siamltex_cls;
 pub mod sigma_cls;
 pub mod silence_sty;
 pub mod smc_ieeeconf_cls;
+pub mod smfart_cls;
 pub mod sn_jnl_cls;
 pub mod spie_cls;
 pub mod srdp_tables_sty;
@@ -448,6 +450,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("phyzzx", "tex", phyzzx_tex::load_definitions),
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
   ("program", "sty", program_sty::load_definitions),
+  (
+    "projlib-author",
+    "sty",
+    projlib_author_sty::load_definitions,
+  ),
   ("quotchap", "sty", quotchap_sty::load_definitions),
   (
     "underscore-ltx",
@@ -790,6 +797,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("selfevolagent", "cls", selfevolagent_cls::load_definitions),
   ("smc_ieeeconf", "cls", smc_ieeeconf_cls::load_definitions),
   ("sn-jnl", "cls", sn_jnl_cls::load_definitions),
+  ("smfart", "cls", smfart_cls::load_definitions),
   ("spie", "cls", spie_cls::load_definitions),
   ("svproc", "cls", svproc_cls::load_definitions),
   ("uai2025", "cls", uai2025_cls::load_definitions),

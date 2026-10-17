@@ -2464,7 +2464,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   KNOWN_PERL_ERRORS #861: Perl's `\edef\@@@@lang` errs inside cls:368's `\edef`). 2608.13762: 4 → 3 errors (the 3 left
   are body math), abstracts 0 → 2, keywords 0 → 1. Repros class-bindings/cjs_rcs_article_abstracts_keywords,
   babel-lang/iflanguage_expands_in_edef; guards `perfect_kernel_batch68x::{cjs_rcs_abstracts_and_keywords_are_frontmatter,
-  babel_iflanguage_expands_in_an_edef}`.
+  babel_iflanguage_expands_in_an_edef}`. (5) smfart and projlib-author (OXIDIZED_DESIGN_DIVERGENCES #661):
+  bindings over the raw files — smfart.cls:568-583 `{altabstract}` the second abstract (other language, the class's
+  caption, `\alttitle` leading its text; a same-name abstract in another `xml:lang` no longer replaces the first,
+  `frontmatter_clear_same_name`; 2506.20120 0 → 1); projlib-author.sty:98-139's provided `\institute`/`\address`/
+  `\curraddr`/`\email` the author's contacts (2609.02711: the Nantes address 0 → 1). Repros
+  class-bindings/{smfart_altabstract, projlib_author_address}; guards
+  `perfect_kernel_batch68x::{smfart_altabstract_is_a_second_abstract, projlib_author_lines_are_the_authors_contacts}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

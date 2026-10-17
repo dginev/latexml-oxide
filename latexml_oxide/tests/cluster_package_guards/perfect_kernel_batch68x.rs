@@ -6,6 +6,8 @@
 //! and natbib's binding for the class's copy of natbib 7.0 (1107.5305, 1203.5042, physics9702009, 1010.3998). Item 3 —
 //! apa6's `\note` and `\authornote` as apa7's binding makes them, the mask honoured (2406.08022). Item 4 — cjs-rcs-article's
 //! environ-collected abstracts (in their languages) and keywords, and babel's `\iflanguage` expandable (2608.13762).
+//! Item 5 — smfart's `{altabstract}` a second abstract (2506.20120); projlib-author's `\address` lines the author's
+//! (2609.02711).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, normalize_markup};
@@ -205,4 +207,55 @@ fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
     r#"<keywords name="Keywords">Functional data; Time series</keywords>"#,
   );
   assert_eq!(xml.matches("<item ").count(), 2, "{xml}");
+}
+
+/// class-bindings/smfart_altabstract: smfart.cls:568-583 `{altabstract}` is the frontmatter's second abstract, in the
+/// other language, named by the class's caption, the alternative title leading its text (pdflatex: "Résumé. — Le
+/// résumé." "Abstract (The title). — The other abstract."); the document's abstract of the same name stays. Before
+/// 68x the deposited title page's body text (2506.20120: lost).
+#[test]
+fn smfart_altabstract_is_a_second_abstract() {
+  let xml = assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/class-bindings/smfart_altabstract.tex"),
+    RAW,
+    (0, 0),
+    &[(
+      "abstract",
+      "abstract2",
+      r#"<abstract inlist="toc" name="Abstract" xml:id="abstract2" xml:lang="en"><p>(<emph font="italic">The title</emph>) The other abstract.</p></abstract>"#,
+    )],
+  );
+  assert_eq!(xml.matches("<abstract ").count(), 2, "{xml}");
+  assert_eq!(xml.matches("The other abstract.").count(), 1, "{xml}");
+}
+
+/// class-bindings/projlib_author_address: projlib-author.sty's `\address`/`\email` lines are the author's they follow
+/// (pdflatex: "Ann Able / First University, Main Street 1, Town / ann@example.org / Bob Baker / Second Institute, City").
+/// Before 68x both authors without them (2609.02711).
+#[test]
+fn projlib_author_lines_are_the_authors_contacts() {
+  // (the Warning is colorist-fancy's `\setlist`, as before)
+  let xml = assert_elements_with(
+    include_str!("../../../tools/perfect_kernel/repros/class-bindings/projlib_author_address.tex"),
+    RAW,
+    (0, 1),
+    &["Missing number (Dimension)"],
+    &[],
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &[r#"role="author""#],
+    &spelled(
+      r#"<creator role="author"><personname>Ann Able</personname><contact name="Address:{nbsp}" role="address">First University, Main Street 1, Town</contact><contact name="Email:{nbsp}" role="email">ann@example.org</contact></creator>"#,
+    ),
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &[spelled(r#"before="{em}{em}""#).as_str()],
+    &spelled(
+      r#"<creator before="{em}{em}" role="author"><personname>Bob Baker</personname><contact name="Address:{nbsp}" role="address">Second Institute, City</contact></creator>"#,
+    ),
+  );
 }

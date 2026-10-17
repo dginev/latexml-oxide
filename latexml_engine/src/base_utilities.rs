@@ -478,7 +478,11 @@ LoadDefinitions!({
     DebugFeature!("frontmatter", "FRONT Add {}\n   for: {}",
       show_frontmatter(&entry), content);
     if replaceable {
-      frontmatter_clear_same_name(&tag, entry.attr.get("name").map(String::as_str));
+      frontmatter_clear_same_name(
+        &tag,
+        entry.attr.get("name").map(String::as_str),
+        entry.attr.get("xml:lang").map(String::as_str),
+      );
     }
     let index = frontmatter_push(&tag, entry);
     // REPLACE only 'place_keeper'!!
@@ -553,7 +557,11 @@ LoadDefinitions!({
     // `\begin{abstract}\begin{abstract}…` isn't corrupted by clearing a parent's still-
     // open entry. OXIDIZED_DESIGN #154. Witness 2511.21969 (nested abstract env).
     if replaceable && !frontmatter_has_open_placekeeper(&tag) {
-      frontmatter_clear_same_name(&tag, entry.attr.get("name").map(String::as_str));
+      frontmatter_clear_same_name(
+        &tag,
+        entry.attr.get("name").map(String::as_str),
+        entry.attr.get("xml:lang").map(String::as_str),
+      );
     }
     let index = frontmatter_push(&tag, entry);
     // A terminal reached INSIDE a nested group (`\section`'s
@@ -4584,14 +4592,19 @@ fn frontmatter_entry_in_progress() -> bool {
 /// `$$frontmatter{$tag} = []`), so a later `REPLACEABLE_FRONTMATTER_TAGS` entry
 /// replaces a re-emission of itself (arXiv 2002.09766's second `\icmltitle`). An
 /// entry under another name is another element and stays: a bilingual document's
-/// "Abstract" and "摘要" abstracts (beamertheme-mirage-doc lost its English one).
+/// "Abstract" and "摘要" abstracts (beamertheme-mirage-doc lost its English one). So is one in another language
+/// (`xml:lang`): smfart's `{altabstract}`, named "Abstract" as the kernel names the document's abstract written
+/// before `\begin{document}` sets the class's captions (smfart_cls.rs; 2506.20120, math0201262).
 /// OXIDIZED_DESIGN #154.
-fn frontmatter_clear_same_name(tag: &str, name: Option<&str>) {
+fn frontmatter_clear_same_name(tag: &str, name: Option<&str>, lang: Option<&str>) {
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
       && let Some(list) = frnt.get_mut(tag)
     {
-      list.retain(|e| e.attr.get("name").map(String::as_str) != name);
+      list.retain(|e| {
+        e.attr.get("name").map(String::as_str) != name
+          || e.attr.get("xml:lang").map(String::as_str) != lang
+      });
     }
   });
 }

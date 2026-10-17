@@ -1,0 +1,29 @@
+% mechanism: smfart.cls:568-583 `{altabstract}` scans its body into `\@altabstract` (:506-521 `{@genabstract}`), set
+%   in a box under "\altabstractname (\emph{\@alttitle})" only by `\@setaltabstract`, which its `\maketitle` runs; the
+%   kernel's locked `\maketitle` never did, so the other-language abstract was lost. The smfart binding (latexml_contrib
+%   smfart_cls.rs) reads the class raw and makes it the frontmatter's second abstract, in the other language
+%   (:1321-1327), named by the class's caption (:1232-1299), the alternative title leading its text; the document's
+%   abstract, named "Abstract" too, stays (an abstract in another language is another element).
+% witness: 2506.20120 (smfbourbaki.cls `\LoadClass{smfart}`)
+% oracle:  pdflatex: 0 errors; "Résumé. — Le résumé." then "Abstract (The title). — The other abstract."
+% engines: rust 67int16: the altabstract as body text of the deposited title page (lost in 2506.20120); perl: no
+%   binding (OmniBus)
+% expect:  0 errors; <abstract name="Abstract" xml:lang="en"><p>(The title) The other abstract.</p> after the
+%   document's abstract
+% status:  RED (67int16) -> GREEN (68x)
+% preload: ar5iv.sty
+\documentclass[french]{smfart}
+\title{Le titre}
+\alttitle{The title}
+\author{Anne Auteur}
+\begin{abstract}
+Le résumé.
+\end{abstract}
+\begin{altabstract}
+The other abstract.
+\end{altabstract}
+\begin{document}
+\maketitle
+\section{Introduction}
+Texte.
+\end{document}

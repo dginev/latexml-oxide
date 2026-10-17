@@ -18481,3 +18481,23 @@ names them, their `\item`s joined by "; " as the class's list joins them (in a g
 `\item`). Not a K11 (frontmatter_stores.rs) reroute: the abstracts are no table names, and the keywords' items need the
 list the title page wraps them in. `{classification}` (:394-404) has the same shape; no witness uses it. Repro
 class-bindings/cjs_rcs_article_abstracts_keywords; guard `perfect_kernel_batch68x::cjs_rcs_abstracts_and_keywords_are_frontmatter`.
+
+### 661. smfart.cls and projlib-author.sty are bindings over the raw files: the other-language abstract and the author-block lines are the frontmatter (Perl: no binding)
+
+Perl has neither binding. smfart.cls:568-583 `{altabstract}` scans its body into `\@altabstract` (:506-521
+`{@genabstract}`), set in a box under "\altabstractname (\emph{\@alttitle})" only by `\@setaltabstract`, which the
+class's `\maketitle` runs; projlib-author.sty:98-139 provides `\institute`/`\address`/`\curraddr`/`\email`, each adding
+a line under the author it follows to the `cmd/@author/after` hook, run only where `\@maketitle` prints `\@author`. The
+kernel's locked `\maketitle` runs neither, so the abstract (2506.20120, smfbourbaki.cls `\LoadClass{smfart}`) and the
+address (2609.02711, colorart.cls + ProjLib) were lost. Ours: smfart_cls.rs reads the class raw and makes
+`{altabstract}` the frontmatter's second abstract as the kernel's `{abstract}` is made (read to `\lx@end@abstract`, not
+clearing the first), with the other language's `xml:lang` (:1321-1327) and the class's caption (:1232-1299, captured
+at the call: the class sets it at `\begin{document}`, :1306) as its name, `\alttitle` leading its text as on the page
+(a name is an attribute: its math and ligatures would be raw TeX); an abstract of the same name in another
+`xml:lang` is another element, not a replacement (base_utilities.rs `frontmatter_clear_same_name`, #154: the kernel
+names the document's abstract "Abstract" too, before the class's captions are set);
+projlib_author_sty.rs reads the package raw and, for each of the four it provided (one defined before it stays, as
+`\ProvideDocumentCommand` keeps it; under an AMS class the package ends at :38), makes the line the frontmatter call of
+its kind (`\lx@add@affiliation`, `\lx@add@address`, `\lx@add@currentaddress`, `\lx@add@email`), given to the author
+it follows. Repros class-bindings/{smfart_altabstract, projlib_author_address}; guards
+`perfect_kernel_batch68x::{smfart_altabstract_is_a_second_abstract, projlib_author_lines_are_the_authors_contacts}`.
