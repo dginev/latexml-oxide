@@ -102,6 +102,23 @@ LoadDefinitions!({
               row.set_pseudo();
             }
           }
+          // With heading rows promoted, the head's own rule (`#1\\\hline`, a pseudo-row ending the head) goes under
+          // the last of them, above the first data row, where TeX's first page has it (the promoted rows are not on
+          // it; 1605.03270 Table 1, OD #663): it moves to the last row, this `\noalign`'s, whose rules the
+          // normalization gives the next row.
+          let promoted = rows[..last].iter().any(|row| !row.is_pseudo());
+          if promoted && let Some(current) = rows.last_mut() {
+            let mut rules = Vec::new();
+            while al.rows().back().is_some_and(|row| row.is_pseudo()) && let Some(mut rule) = al.remove_row() {
+              for (col, target) in rule.get_columns_mut().iter_mut().zip(current.get_columns_mut().iter_mut()) {
+                target.border.extend(col.border.chars().filter(|c| matches!(c, 't' | 'T')));
+                col.border.retain(|c| !matches!(c, 't' | 'T'));
+              }
+              rules.push(rule);
+            }
+            rules.reverse();
+            al.append_rows(rules);
+          }
           al.append_rows(rows);
         }
     }

@@ -14641,9 +14641,11 @@ under the head; Perl and Rust before 68y `\noalign cannot be used here` and `Str
 
 Rust (68y, emulateapj_cls.rs): the data opens at `\tablehead` or `\startdata` and closes at the environment's end;
 after a head `\startdata` ends the row in progress and makes the rows since the head heading rows, the empty ones and
-the rules between them dropped (TeX prints a continuation head on no first page) — a second head line written without
+the rules between them dropped (TeX prints a continuation head on no first page, and the line `\startdata` ends,
+`\kill`ed, on no page; the rows kept, OXIDIZED_DESIGN #663),
+and the head's own rule set above the first data row, as TeX's first page has it — a second head line written without
 `\\` (1605.03270, 2002.02307) is its own heading row, not the start of the first data row; a `\tablecaption` given
-there is kept for the table's end; `\enddata` ends a row; notes, comments and a `\label` after the data are kept
+there is kept for the table's end (OXIDIZED_DESIGN #664); `\enddata` ends a row; notes, comments and a `\label` after the data are kept
 for the table's end. The three commands are the class's, global, so a document's redefinition stands (1102.2440), and
 in a document's own `{longtable}` the head is its rows and `\tablecaption` its caption (1810.10130). Witnesses
 1411.3719, 1909.11243, 1002.1848, 1902.00588, 1605.03270, 2002.02307 (and #665's 1506.07185, 1705.08932). Repros

@@ -1,23 +1,87 @@
 use crate::prelude::*;
 
 /// What a table-note mark shows, the key that pairs a `\tablenotetext` with its `\tablenotemark`s (latex_constructs
-/// `relocate_footnote` matches their `mark`s) and the mark the note prints: the characters and symbols as set, in text
-/// or math, a command's arguments and a formula's body read for theirs (`$\dagger$`, `^\dagger` and `\dag` are "†",
-/// `\rm{b}` and `\textrm{b}` are "b"), without spaces (`c, d` is "c,d"). The one function serves both commands, so a
-/// mark pairs by what it shows whatever its source. Math's `*` and `\ast` are TeX's one asterisk (plain.tex
+/// `relocate_footnote` matches their `mark`s, ignoring spaces) and the mark the note prints: the characters and
+/// symbols as set, in text or math, a command's shown arguments and a formula's body read for theirs (`$\dagger$`,
+/// `^\dagger` and `\dag` are "†", `\rm{b}` and `\textrm{b}` are "b", `\hyperlink{tn5}{e}` is "e" and
+/// `\raisebox{1pt}{g}` "g": a value, a key-value list or a semiverbatim name sets no character), its spaces collapsed
+/// (`c, d` prints "c, d", as TeX sets it, and pairs with `c,d`). The one function serves both commands, so a mark
+/// pairs by what it shows whatever its source. Math's `*` and `\ast` are TeX's one asterisk (plain.tex
 /// `\mathcode`\*="2203`, `\mathchardef\ast="2203`), set here as U+2217: an asterisk, as a text `*` is.
 fn shown_mark(digested: &Digested) -> String {
+  /// Parameter types whose argument is a value, a name or a key-value list, which sets no character.
+  const UNSHOWN: &[&str] = &[
+    "Number",
+    "NumExpr",
+    "Dimension",
+    "DimExpr",
+    "Glue",
+    "GlueExpr",
+    "MuDimension",
+    "MuGlue",
+    "MuExpr",
+    "Length",
+    "Float",
+    "TempboxaDimension",
+    "GraphixDimension",
+    "GraphixDimensions",
+    "SetlengthDimension",
+    "SetlengthGlue",
+    "Keyword",
+    "CSName",
+    "CSNameQuiet",
+    "Token",
+    "XToken",
+    "DefToken",
+    "Undigested",
+    "OptionalUndigested",
+    "TeXFileName",
+    "DirectoryList",
+    "PackageOptions",
+  ];
+  fn shows(parameter: &Parameter) -> bool {
+    let unshown = parameter.semiverbatim.is_some()
+      || with(parameter.name, |name| {
+        UNSHOWN.contains(&name) || name.contains("KeyVals")
+      });
+    !unshown
+      && parameter
+        .inner
+        .as_ref()
+        .is_none_or(|inner| inner.get_parameters().into_iter().any(shows))
+  }
   fn shown(digested: &Digested, out: &mut String) {
     match digested.data() {
       DigestedData::List(list) => list.borrow().boxes.iter().for_each(|item| shown(item, out)),
+      DigestedData::RegisterValue(_) | DigestedData::KeyVals(_) => {},
       DigestedData::Whatsit(whatsit) => {
         let whatsit = whatsit.borrow();
         let body = whatsit.get_body().ok().flatten();
-        let args: Vec<&Digested> = whatsit.get_args().iter().flatten().collect();
-        if args.is_empty() && body.is_none() {
+        let args = whatsit.get_args();
+        if args.iter().all(Option::is_none) && body.is_none() {
           out.push_str(&digested.to_attribute());
         } else {
-          args.into_iter().for_each(|arg| shown(arg, out));
+          // One argument per valued parameter (`Parameters::read_arguments_and_digest`); without the parameters
+          // every argument is read.
+          let definition = whatsit.get_definition();
+          let parameters: Vec<&Parameter> = definition
+            .get_parameters()
+            .map(|parameters| {
+              parameters
+                .get_parameters()
+                .into_iter()
+                .filter(|p| !p.novalue)
+                .collect()
+            })
+            .unwrap_or_default();
+          let aligned = parameters.len() == args.len();
+          for (index, arg) in args.iter().enumerate() {
+            if let Some(arg) = arg
+              && (!aligned || shows(parameters[index]))
+            {
+              shown(arg, out);
+            }
+          }
           if let Some(body) = body {
             shown(&body, out);
           }
@@ -29,8 +93,10 @@ fn shown_mark(digested: &Digested) -> String {
   let mut text = String::new();
   shown(digested, &mut text);
   text
+    .split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ")
     .chars()
-    .filter(|c| !c.is_whitespace())
     .map(|c| if c == '\u{2217}' { '*' } else { c })
     .collect()
 }

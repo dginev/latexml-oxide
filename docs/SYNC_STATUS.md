@@ -2610,6 +2610,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   errors (1605.03270 1 → 0, 2002.02307 1 → 0), 1807.05231 back to its 3 (`\omit`) errors with the note kept; fewer
   words only in 2512.06138 (−39) and 2604.11988 (−712), both aa's text marks (`a, b`, `**`) one word where the math
   marks were several tokens (aa.cls:1672-1681); no paper gains errors.
+  Round 3 (68y re-review): `shown_mark` reads only what a mark shows — a value, key-value or semiverbatim argument
+  sets no character (`\hyperlink{tn5}{e}` "e", `\raisebox{1pt}{g}` "g"; were "tn5e", "1.0ptg") — and prints the
+  mark's spaces collapsed (`c, d`), notes pairing ignoring spaces (latex_constructs `relocate_footnote`); with heading
+  rows promoted, the head's rule is above the first data row (1605.03270 Table 1, 2002.02307, 1509.01261). OD #663
+  (rows TeX prints only in the continuation head kept), #664 (a `\tablecaption` after `\tablehead` is the table's,
+  after the tabular). Guards `perfect_kernel_batch68y::{emulateapj_startdata_ends_the_head,
+  aastex_tablenote_marks_pair_by_what_they_show}` extended. A/B vs 68y2 over the re-review's 100 + 4 witnesses:
+  tallies identical, byte diffs only the head rule in 1605.03270, 2002.02307, 1509.01261.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

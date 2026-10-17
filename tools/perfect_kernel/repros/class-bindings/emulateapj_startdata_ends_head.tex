@@ -1,13 +1,17 @@
 % witness: 1605.03270 (`\tablehead{…}\\ \colhead{} & \colhead{Name} & …` with no `\\` before `\startdata`),
 %          2002.02307: emulateapj.cls:1324 `\startdata` is `\kill\caption{…}\endhead…` in every table, so it ends the
 %          row in progress and the rows since the head are the (continuation) heading; the empty row after the head's
-%          `\\` prints nowhere
-% oracle:  pdflatex 0 errors; Table 1 "AAA BBB CCC / xx1 yy1 zz1 / xx2 yy2 zz2"; Table 2 "AAA BBB / a1 1" (the rows
-%          between the head and `\startdata` are on no page: a continuation head)
-% engines: rust 68y = 2 errors (Extra alignment tab: the second head line ran into the first data row); Perl: rows
-%          outside the alignment
-% expect:  0 errors, 0 warnings; the second head line and XROW are heading rows, no empty row, the data rows whole
-% status:  RED (68y) -> GREEN (68y2)
+%          `\\` and XROW are on no first page (the continuation head), the line `\startdata` ends is `\kill`ed (measured,
+%          on no page), and the head's rule is under the last head line, above the first data row
+% oracle:  pdflatex 0 errors; Table 1 "AAA BBB CCC / xx1 yy1 zz1 / xx2 yy2 zz2"; Table 2 "AAA BBB / a1 1" (an
+%          article longtable `FULL \\ PART \kill\caption{…}\endhead` prints FULL on pages 2+, PART on none), the rule
+%          above xx1 / a1;
+%          Table 3 "AAA BBB / c1 3" captioned "Cap two", the caption stored before its head (OD #664)
+% engines: rust 68y = 2 errors (Extra alignment tab: the second head line ran into the first data row); 68y2: the
+%          head's rule between the head lines; Perl: rows outside the alignment
+% expect:  0 errors, 0 warnings; the second head line and XROW are heading rows, no empty row, the data rows whole,
+%          the head's rule on the first data row; Table 3 captioned "Late cap", after its tabular (OD #664)
+% status:  RED (68y) -> GREEN (68y2; the rule 68y3)
 % preload: ar5iv.sty
 \documentclass{emulateapj}
 \begin{document}
@@ -27,6 +31,13 @@ xx2 & yy2 & zz2
 XROW & YROW \\ \cline{1-2}
 \startdata
 a1 & 1 \\
+\enddata
+\end{deluxetable}
+\begin{deluxetable}{lc}
+\tablehead{\colhead{AAA} & \colhead{BBB}}
+\tablecaption{Late cap}
+\startdata
+c1 & 3
 \enddata
 \end{deluxetable}
 \end{document}

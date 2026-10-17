@@ -18604,3 +18604,33 @@ ruling: the line rule judges by shape, so a class's typesetting macro reads as a
 narrowing to "another setter's store, no `\par` between" counts font setters' stores (paper.cls:109-111 `\st@font`,
 `\in@font`, `\sss@font`) and costs 1406.5776, 2105.09416, 2107.05207 their subtitle, affiliations and toctitle; repros
 class-bindings/title_page_typesetting/{address_after_a_font_macro, address_in_a_vbox_with_a_class_line} (RED).
+
+### 663. emulateapj's deluxetable keeps the rows between `\tablehead` and `\startdata` as heading rows, which TeX prints only in the continuation head or not at all (Perl: rows outside the table)
+
+emulateapj.cls:1324 `\startdata` is `\kill\caption{…}\endhead\hline\endfoot`: the rows since `\tablehead` ended with
+`\\` are the longtable's continuation head (`\endhead`), which TeX prints at the top of every page but the first
+(`\endfirsthead` is the `\tablehead`'s own rows, :1329-1345), and the line `\startdata` ends — a second head line
+written without `\\` — is `\kill`ed: measured, printed on no page (an article `{longtable}` `AAA \\ \endfirsthead FULL
+\\ PART \kill\caption{Cap}\endhead` with 120 rows prints FULL on pages 2-3, PART on none). Such rows — 1605.03270
+Table 1 `\tablehead{…}\\ \colhead{} & \colhead{Name} & \colhead{(mag)} & …` (killed), 2002.02307, 1509.01261's
+`\multicolumn` row — are kept here, heading rows under the head (emulateapj_cls.rs `\lx@eapj@head@extend`): the HTML
+has one page and the rows are the author's text (the column units "Name (mag) (mag) (pc)"; ruling KEEP, 68y r2).
+Empty rows (the `\\` after the head) and the rules between them, which carry no content, are dropped, and the head's
+own rule is set under the last kept row, above the first data row, where TeX's first page has it. Perl's binding
+(deluxetable.sty.ltxml:35-43) leaves these rows outside the alignment (KNOWN_PERL_ERRORS #874). Why not TeX's first
+page: the author's column units would be lost. Repro class-bindings/emulateapj_startdata_ends_head; guard
+`perfect_kernel_batch68y::emulateapj_startdata_ends_the_head`.
+
+### 664. emulateapj's `\tablecaption` given after `\tablehead` is the table's caption, after the tabular (TeX: the caption stored before; Perl: before the tabular)
+
+emulateapj.cls:1294 `\tablecaption` stores the caption (`\gdef\@tablecaption`) for the `\caption` of the head
+`\startdata` sets (:1324); one written after `\tablehead`, inside the longtable, stores it after the head has already
+been set up, so TeX's first page prints the caption the store held before — the previous table's, or none (68y review
+probe e3 `\tablehead{…}` `\tablecaption{CaptionInData\label{tcd}}` `\startdata`). Here the caption given there is
+kept for the table's end (emulateapj_cls.rs `\lx@eapj@data@caption`, with the notes and labels), so the table
+carries its own caption, after the tabular, and the row it was written in stays empty. Why not TeX's: a table
+captioned with another table's caption misattributes the author's content. Why after the tabular: the data is open
+from `\tablehead` (KNOWN_PERL_ERRORS #874), so a caption set there would be a row. Perl's binding (AASTeX's table,
+deluxetable.sty.ltxml:35-43, `\tablecaption` the float's `\caption`) opens the data at `\startdata`, so it set the
+caption before the tabular. Guard
+`perfect_kernel_batch68y::emulateapj_startdata_ends_the_head` (Table 3), repro class-bindings/emulateapj_startdata_ends_head.

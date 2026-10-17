@@ -1,10 +1,13 @@
 % witness: 1807.05231 (`\tablenotetext{$a$}`), 1710.01715 (`\tablenotetext{\rm{a}}`), 2503.18379: a table-note mark
 %          pairs by what it shows, on both sides by one function (deluxetable_sty.rs `shown_mark`); aastex701.cls
 %          :11967-11969 sets the note's mark `$^{\hbox to5pt{$#1$}}$`, so `$a$` is an empty formula, "a", another empty one
-% oracle:  pdflatex 0 errors; "1 c,d / 2* / 3† / 4b / 5a", "c,d Note CD. ∗ Note AST. † Note DAG. b Note B. a Note A."
-% engines: rust 68y = 1 error (Attempt to end mode math), `c, d`/`*`/`$\dagger$` unpaired; Perl: text marks, unpaired
-% expect:  0 errors, 0 warnings; every note paired with its mark, the marks "c,d", "*", "†", "b", "a"
-% status:  RED (68y) -> GREEN (68y2)
+% oracle:  pdflatex 0 errors; "1 c, d / 2* / 3† / 4b / 5a / 6e / 7g", "c,d Note CD. ∗ Note AST. † Note DAG. b Note B.
+%          a Note A. e Note E. g Note G." (`\hyperlink`'s name and `\raisebox`'s lift set no character)
+% engines: rust 68y = 1 error (Attempt to end mode math), `c, d`/`*`/`$\dagger$` unpaired; 68y2: marks "c,d", "tn5e",
+%          "1.0ptg" (e, g unpaired); Perl: text marks, unpaired
+% expect:  0 errors, 0 warnings; every note paired with its mark, the marks "c, d" (as set; paired ignoring spaces),
+%          "*", "†", "b", "a", "e", "g"
+% status:  RED (68y) -> GREEN (68y2; e, g and "c, d" 68y3)
 % preload: ar5iv.sty
 \documentclass{aastex701}
 \begin{document}
@@ -16,12 +19,16 @@ r1 & 1\tablenotemark{c, d} \\
 r2 & 2\tablenotemark{*} \\
 r3 & 3\tablenotemark{$\dagger$} \\
 r4 & 4\tablenotemark{b} \\
-r5 & 5\tablenotemark{a}
+r5 & 5\tablenotemark{a} \\
+r6 & 6\tablenotemark{\hyperlink{tn5}{e}} \\
+r7 & 7\tablenotemark{\raisebox{1pt}{g}}
 \enddata
-\tablenotetext{c, d}{Note CD.}
+\tablenotetext{c,d}{Note CD.}
 \tablenotetext{\ast}{Note AST.}
 \tablenotetext{\dagger}{Note DAG.}
 \tablenotetext{\rm{b}}{Note B.}
 \tablenotetext{$a$}{Note A.}
+\tablenotetext{e}{Note E.}
+\tablenotetext{g}{Note G.}
 \end{deluxetable}
 \end{document}

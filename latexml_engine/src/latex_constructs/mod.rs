@@ -501,12 +501,17 @@ pub fn make_note_tags(
   }
 }
 
+/// Pair a note's mark and text: Perl's `relocateFootnote` (latex_constructs.pool.ltxml:498-510)
+/// matches their `mark`s exactly; here spaces are ignored, so a mark printed as set
+/// (`\tablenotemark{c, d}`, deluxetable_sty.rs `shown_mark`) pairs with the text given `c,d`. A
+/// counter's mark has no space, so a `\footnotemark`'s pairing is Perl's.
 pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()> {
   if let Some(caps) = NOTE_TEXT_END.captures(&node.get_attribute("role").unwrap_or_default()) {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
     if let Some(mark) = node.get_attribute("mark") {
+      let key = mark.replace(' ', "");
       for mut marknote in document.findnodes(
-        &format!(".//ltx:note[@role='{notetype}mark'][@mark='{mark}']"),
+        &format!(".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}']"),
         None,
       ) {
         if is_descendant_or_self(&marknote, node) {
@@ -519,8 +524,9 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
   {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
     if let Some(mark) = node.get_attribute("mark") {
+      let key = mark.replace(' ', "");
       for mut textnote in document.findnodes(
-        &format!(".//ltx:note[@role='{notetype}text'][@mark='{mark}']"),
+        &format!(".//ltx:note[@role='{notetype}text'][translate(@mark,' ','')='{key}']"),
         None,
       ) {
         if is_descendant_or_self(node, &textnote) {
