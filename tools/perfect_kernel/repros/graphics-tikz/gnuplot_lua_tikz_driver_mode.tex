@@ -1,0 +1,14 @@
+% witness: 2501.11366 (author-shipped gnuplot-lua-tikz.sty, rev. 114); gnuplot-lua-tikz-common.tex:17-32 maps the pgf
+%          driver file to an output mode, :86 picks `\gp@rawimage@<mode>` (excerpt: gnuplot-lua-tikz-excerpt.sty)
+% oracle:  pdflatex 0 errors; "Mode pdf: PDF" (pgfsys-pdftex.def)
+% engines: rust 67int18b = 2 errors (`\errmessage` "driver pgfsys-latexml.def is not supported",
+%          `\gnuplot@output@mode` undefined)
+% expect:  0 errors; "Mode html: HTML" (pgfsys-latexml.def's entry is pgfsys-tex4ht.def's mode)
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{gnuplot-lua-tikz-excerpt}
+\begin{document}
+\makeatletter
+Mode \gnuplot@output@mode: \gp@rawimage{}{}{}{}{}{}
+\end{document}

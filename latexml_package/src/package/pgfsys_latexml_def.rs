@@ -339,6 +339,15 @@ fn tikz_alignment_bindings(
 LoadDefinitions!({
   // (protocol fix is applied at \pgfsys@invoke below)
 
+  // gnuplot-lua-tikz-common.tex:17-32 (gnuplot's lua terminal, shipped beside papers' plots) keys its output mode by the
+  // pgf driver file (`\gnuplot@select@driver@\pgfsysdriver`) and stops with "The driver pgfsys-latexml.def is not
+  // supported" (`\errmessage`) for one its table lacks. This driver's entry is `html`, the mode of
+  // pgfsys-tex4ht.def, the other driver writing SVG for the web: a plot's image file is `\pgfimage` (`\gploadimage`,
+  // :88-90), an inline raw image gnuplot's own "not implemented" warning (:79-83) — never the PDF/PostScript image
+  // operators of the `pdf`/`ps` modes (:50-77), which no SVG renders. The table's own `\def`s leave the entry alone
+  // (OXIDIZED_DESIGN_DIVERGENCES #702). Witness 2501.11366. Guard: `perfect_kernel_batch70a::gnuplot_lua_tikz_driver_mode`.
+  RawTeX!(r"\expandafter\def\csname gnuplot@select@driver@pgfsys-latexml.def\endcsname{html}");
+
   // Perl L29-31: image suffix list
   DefMacro!("\\pgfsys@imagesuffixlist",
     ".svg:.png:.gif:.jpg:.jpeg:.eps:.ps:.postscript:.ai:.pdf:");

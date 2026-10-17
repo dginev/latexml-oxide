@@ -192,6 +192,34 @@ fn includeinkscape_inputs_the_overlay() {
   );
   assert_eq!(xml.matches("Overlay label").count(), 2, "{xml}");
 }
+
+/// graphics-tikz/gnuplot_lua_tikz_driver_mode: gnuplot-lua-tikz-common.tex:17-32 finds this driver in its table
+/// (`\gnuplot@select@driver@pgfsys-latexml.def`, pgfsys_latexml_def.rs) — `html`, pgfsys-tex4ht.def's mode, the
+/// other driver writing SVG — so the plot style loads without its "driver not supported" `\errmessage` and picks
+/// `\gp@rawimage@html` (:86; 2501.11366; OXIDIZED_DESIGN_DIVERGENCES #702).
+#[test]
+fn gnuplot_lua_tikz_driver_mode() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/gnuplot_lua_tikz_driver_mode.tex"
+    ),
+    &[(
+      "gnuplot-lua-tikz-excerpt.sty",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/graphics-tikz/gnuplot-lua-tikz-excerpt.sty"
+      ),
+    )],
+    Some(AR5IV),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r##"<para xml:id="p1"><p xml:id="p1.1">Mode html: HTML</p></para>"##,
+  );
+}
+
 /// graphics-tikz/standalone_tikzscale_tex_graphic: standalone loads gincltex (standalone.sty:1012-1013), tikzscale's
 /// `\includegraphics` hands a non-TikZ file on as `{\tikzscale@fileName}` (tikzscale.sty:183; the name is expanded
 /// as the constructor's Semiverbatim is) and epsfig leaves graphics.sty's `\DeclareGraphicsRule` alone: the `.tex` is

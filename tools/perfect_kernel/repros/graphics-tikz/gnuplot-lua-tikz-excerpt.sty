@@ -1,0 +1,22 @@
+% gnuplot-lua-tikz.sty + gnuplot-lua-tikz-common.tex:17-32, :79-86 (rev. 114, author-shipped beside 2501.11366's plots)
+\ProvidesPackage{gnuplot-lua-tikz-excerpt}
+\RequirePackage{tikz}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-dvi.def\endcsname     {ps}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-dvipdfm.def\endcsname {pdf}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-dvipdfmx.def\endcsname{pdf}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-dvips.def\endcsname   {ps}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-pdftex.def\endcsname  {pdf}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-luatex.def\endcsname  {pdf}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-tex4ht.def\endcsname  {html}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-textures.def\endcsname{ps}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-vtex.def\endcsname    {ps}
+\expandafter\def\csname gnuplot@select@driver@pgfsys-xetex.def\endcsname   {pdf}
+\ifcsname gnuplot@select@driver@\pgfsysdriver\endcsname
+  \edef\gnuplot@output@mode{\csname gnuplot@select@driver@\pgfsysdriver\endcsname}
+\else
+  \errmessage{The driver \pgfsysdriver\space is not supported by gnuplot-lua-tikz}%
+\fi
+\def\gp@rawimage@pdf#1#2#3#4#5#6{PDF}
+\def\gp@rawimage@ps#1#2#3#4#5#6{PS}
+\def\gp@rawimage@html#1#2#3#4#5#6{HTML}
+\expandafter\let\expandafter\gp@rawimage\csname gp@rawimage@\gnuplot@output@mode\endcsname
