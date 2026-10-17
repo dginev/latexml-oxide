@@ -117,8 +117,10 @@ LoadDefinitions!({
   // Perl ships no sn-jnl / apacite binding at all → Rust surpasses.
   // arXiv/html_feedback#1261, witness 2404.15224
   // (`\documentclass[referee,sn-apa,pdflatex,natbib]{sn-jnl}`).
+  // With the class's `natbibapa` option, as the class loads it: natbib's own `\cite` (textual without notes), not
+  // apacite's classic parenthetical one (apacite_sty.rs, apacite.sty:93-100).
   DeclareOption!("sn-apa", {
-    RequirePackage!("apacite");
+    RequirePackage!("apacite", options => vec![s!("natbibapa")]);
   });
   // sn-jnl.cls:67, :102 `\if@pdflatex`, set by the `pdflatex` option
   RawTeX!(r"\newif\if@pdflatex\global\@pdflatexfalse");

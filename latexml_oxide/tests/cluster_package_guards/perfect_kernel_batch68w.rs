@@ -319,6 +319,32 @@ fn apacite_notes_absent_stay_absent() {
   );
 }
 
+/// apacite's citation mode chooses its `\cite` (apacite.sty:71-110): under `natbibapa` apacite defines none (:995-1037)
+/// and natbib's own stays — `\cite{a}` textual, `\cite[p.~5]{a}` parenthetical (natbib.sty:694-701); the classic
+/// default's parenthetical `\cite` is `apacite_notes_absent_stay_absent`'s A. pdflatex: "A Smith (2001). B (Smith, 2001,
+/// p. 5). C (Smith, 2001). D Smith (2001). E (e.g. Smith, 2001)." Witnesses 2307.11525, 2406.19732 (the review of 68w r3:
+/// every `\cite` was parenthetical).
+#[test]
+fn apacite_natbibapa_keeps_natbibs_cite() {
+  let xml = clean!("package-bindings/apacite_citation_modes.tex");
+  let bibref = r#"<bibref bibrefs="a" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>"#;
+  let textual = r#"<bibref bibrefs="a" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","> <bibrefphrase>(</bibrefphrase> <bibrefphrase>)</bibrefphrase> </bibref>"#;
+  assert_all(&xml, &[&format!(
+    r#"<p xml:id="p1.1">A <cite class="ltx_citemacro_cite">{textual}</cite>. B <cite class="ltx_citemacro_cite">({bibref}, p. 5)</cite>. C <cite class="ltx_citemacro_citep">({bibref})</cite>. D <cite class="ltx_citemacro_citet">{textual}</cite>. E <cite class="ltx_citemacro_citep">(e.g. {bibref})</cite>.</p>"#
+  )]);
+}
+
+/// Under apacite's `natbibemu` `\cite` is `\citep` when a `[` follows and `\citet` otherwise, starred alike
+/// (apacite.sty:883-892). TL 2025's pdflatex errs in the option's own `\citep`/`\citet` (repro header); read from the
+/// source: "A Smith (2001). B (Smith, 2001, p. 5). C Smith (2001)."
+#[test]
+fn apacite_natbibemu_cite_is_citet_or_citep() {
+  let xml = clean!("package-bindings/apacite_natbibemu_cite.tex");
+  assert_all(&xml, &[
+    r#"<p xml:id="p1.1">A <cite class="ltx_citemacro_citet"><bibref bibrefs="a" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","> <bibrefphrase>(</bibrefphrase> <bibrefphrase>)</bibrefphrase> </bibref></cite>. B <cite class="ltx_citemacro_citep">(<bibref bibrefs="a" separator=";" show="AuthorsPhrase1Year" yyseparator=","> <bibrefphrase>, </bibrefphrase> </bibref>, p. 5)</cite>. C <cite class="ltx_citemacro_citet"><bibref bibrefs="a" separator=";" show="FullAuthors Phrase1YearPhrase2" yyseparator=","> <bibrefphrase>(</bibrefphrase> <bibrefphrase>)</bibrefphrase> </bibref></cite>.</p>"#,
+  ]);
+}
+
 /// nmbib's `\citeall[p.~5]` keeps its lone note the post-note (`\citet*` over the notes as read).
 #[test]
 fn nmbib_citeall_lone_note_is_the_postnote() {

@@ -120,9 +120,16 @@ LoadDefinitions!({
   }{}%
 }"
   );
-  // Options (apacite.sty:128-180, defaults :181-182 `\ExecuteOptions{…,doi,…}` above): `nodoi`
-  // (:134-135) drops the DOIs `{APACrefDOI}` holds; the others choose layout, the author index
-  // and cite forms this binding does not build.
+  // Options (apacite.sty:67-180, defaults :181-182 `\ExecuteOptions{apaciteclassic,…,doi,…}` above): `nodoi`
+  // (:134-135) drops the DOIs `{APACrefDOI}` holds; the citation mode — `apaciteclassic` (the default), `natbibemu`,
+  // `natbibapa`, `nocitation` (:71-110, each clearing the others' flags) — chooses which `\cite` the package defines
+  // (below); the others choose layout and the author index, which this binding does not build.
+  AssignValue!("apacite@citation" => "apaciteclassic");
+  for mode in ["apaciteclassic", "natbibemu", "natbibapa", "nocitation"] {
+    DeclareOption!(mode, {
+      AssignValue!("apacite@citation" => mode);
+    });
+  }
   DeclareOption!("doi", r"\@doitrue");
   DeclareOption!("nodoi", r"\@doifalse");
   DeclareOption!(None, {});
@@ -616,13 +623,30 @@ LoadDefinitions!({
     apacite_delegate("\\citeyear", args)
   });
 
-  // apacite's `\cite` is parenthetical (apacite.sty:259-267 `\def\@BBOP{\BBOP}`, its open parenthesis), with or
-  // without notes: natbib's `\cite` in its parenthetical form, which keeps the `cite` class of the macro the author
-  // wrote (natbib_sty.rs `\lx@natbib@cite@parenthetical`; natbib's own `\cite{k}` is textual in author-year mode).
-  // OXIDIZED_DESIGN_DIVERGENCES #655.
-  DefMacro!("\\cite [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\lx@natbib@cite@parenthetical", args)
-  });
+  // apacite's `\cite` by citation mode (apacite.sty:71-110). The classic one (`\if@APAC@classic@cite`, :258-267
+  // `\def\@BBOP{\BBOP}`, its open parenthesis) is parenthetical with or without notes: natbib's `\cite` in its
+  // parenthetical form, which keeps the `cite` class of the macro the author wrote (natbib_sty.rs
+  // `\lx@natbib@cite@parenthetical`; natbib's own `\cite{k}` is textual in author-year mode).
+  // OXIDIZED_DESIGN_DIVERGENCES #655. `natbibemu` (:587, :883-892) sends `\cite` to `\citep` when a `[` follows and to
+  // `\citet` otherwise (starred alike); `natbibapa` (:995-1037) and `nocitation` define no `\cite`, so natbib's own
+  // stays (textual without notes, natbib.sty:694-701) — the `[natbibapa]{apacite}` of WileyASNA-v1.cls:2120, the
+  // Wiley NJD classes and sn-jnl.cls's `sn-apa` (L1683-1685). Witnesses 2307.11525, 2406.19732.
+  let mode = lookup_string("apacite@citation");
+  if mode == "apaciteclassic" {
+    DefMacro!("\\cite [] OptionalAngled [] Semiverbatim", sub[args] {
+      apacite_delegate("\\lx@natbib@cite@parenthetical", args)
+    });
+  } else if mode == "natbibemu" {
+    DefMacro!("\\cite OptionalMatch:* [][] Semiverbatim", sub[args] {
+      let mut it = args.into_iter();
+      let star: Option<Tokens> = it.next().unwrap().into();
+      let pre: Option<Tokens> = it.next().unwrap().into();
+      let post: Option<Tokens> = it.next().unwrap().into();
+      let keys: Tokens = it.next().unwrap().into();
+      let cs = if pre.is_some() { "\\citep" } else { "\\citet" };
+      Ok(natbib_invocation(cs, star, pre, post, keys))
+    });
+  }
   // apacite "short" cite family (apacite.sty L277-401, the CLASSIC block —
   // distinct from the `\citet`/`\citep` defined only under the `natbibemu`
   // option at L587+). These are abbreviated-author variants of

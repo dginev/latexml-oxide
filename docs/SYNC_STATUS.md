@@ -2538,6 +2538,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   index-bib/heading_inside_thebibliography_{labelled_entry,preamble_paragraph}; guards
   `perfect_kernel_batch68w::{apacite_notes_*, nmbib_citeall_*, natbib_citealt_*, heading_inside_thebibliography_after_*,
   lipics_orcid_*}`.
+
+- **int17** (fix round on the integrated 68w r3 + 68x r3 stack). (1) apacite's citation modes (apacite.sty:71-110):
+  `apaciteclassic` (default), `natbibemu`, `natbibapa`, `nocitation` declared; the classic `\cite` alone is parenthetical
+  (`\if@APAC@classic@cite`, :258-267, OXIDIZED_DESIGN_DIVERGENCES #655), `natbibapa`/`nocitation` keep natbib's own
+  (textual without notes), `natbibemu` sends `\cite` to `\citep`/`\citet` (:883-892); sn-jnl's `sn-apa` loads
+  `[natbibapa]{apacite}` as the class does (L1683-1685). Witnesses 2307.11525, 2406.19732. Repros
+  package-bindings/{apacite_citation_modes, apacite_natbibemu_cite}; guards
+  `perfect_kernel_batch68w::{apacite_natbibapa_keeps_natbibs_cite, apacite_natbibemu_cite_is_citet_or_citep}`.
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
