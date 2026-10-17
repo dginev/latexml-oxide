@@ -1,0 +1,17 @@
+% witness: 2211.06931 2507.11600 2012.11559 2404.06316 2104.06278 (aa.cls v9.1 :1672-1681: `\tablefootmark` and
+%          `\tablefoottext` set #1 as a text superscript; Perl aa_support.sty.ltxml:229-230 wraps it in `$#1$`)
+% oracle:  pdflatex with 2211.06931's aa.cls (v9.1): 0 errors; "Shift^a b^dagger … Notes. (a) Modified Julian date.
+%          (dagger) Second."
+% engines: rust 67int17b = 7 errors (`^` Script can only appear in math mode); Perl the same shape
+% expect:  0 errors, 0 warnings; the `a` note paired with its mark, the dagger mark a superscript dagger
+% status:  RED (67int17b) -> GREEN (68y)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\begin{table}
+\begin{tabular}{cc}
+Shift\tablefootmark{a} & b\tablefootmark{$^\dag$} \\
+\end{tabular}
+\tablefoot{\tablefoottext{a}{Modified Julian date.} \tablefoottext{$^{\dagger}$}{Second.}}
+\end{table}
+\end{document}

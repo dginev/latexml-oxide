@@ -14573,3 +14573,30 @@ Rust (68w r3, natbib_sty.rs `natbib_invocation`): a re-invoked citation writes e
 `\cite<pre>[post]` family, nmbib's `\citeall`). Repro package-bindings/natbib_citealt_empty_postnote; guard
 `perfect_kernel_batch68w::natbib_citealt_empty_postnote_keeps_the_prenote`.
 
+## 871. aa's `\tablefootmark`/`\tablefoottext` wrap the mark in math, so a mark with its own `$^\dag$` leaves math
+
+aa.cls (v9.1, :1672-1681) sets the mark of both commands in text, `\hbox{\@textsuperscript{\normalfont\itshape
+\ignorespaces#1}}`, so authors write `\tablefootmark{a}` and `\tablefootmark{$^\dag$}`. Perl's binding
+(aa_support.sty.ltxml:229-230) passes `[$#1$]` to `\footnotemark`/`\footnotetext`: `$$^\dag$$` closes the math at once
+and the `^` is set in text.
+
+Trigger: `\documentclass{aa}` (the papers' copy; aa.cls is not in TeX Live), a table cell `Shift\tablefootmark{$^\dag$}`
+and `\tablefoot{\tablefoottext{$^{\dagger}$}{…}}` — pdflatex 0 errors, a superscript dagger; Perl and Rust before 68y
+one `^ Script can only appear in math mode` error per mark.
+
+Rust (68y, aa_support_sty.rs): the mark is `{\normalfont\itshape\ignorespaces#1}` in text; a `\tablefoottext` still
+pairs with its `\tablefootmark` by `mark`. Witnesses 2211.06931 2507.11600 2012.11559 2404.06316 2104.06278. Repro
+class-bindings/aa_tablefootmark_text_mark; guard `perfect_kernel_batch68y::aa_tablefootmark_sets_the_mark_in_text`.
+
+## 872. aa's `\ion` is a plain macro, so a cell starting with it reads the cell's `&` as its argument
+
+aa.cls makes `\ion` robust (v6.1 :639, v9.1 :1729 `\DeclareRobustCommand{\ion}[2]`): the alignment's look for `\omit`
+at a cell's start stops at it (e-TeX's protected macros, tex.web §785 with `get_x_or_protected`). Perl's
+`DefMacro('\ion{}{}', …)` (aa_support.sty.ltxml:247) is expanded there, and an `\ion` given one argument before the
+cell's `&` takes the `&` as the second.
+
+Trigger: `\documentclass{aa}`, `\begin{tabular}{llc} 4101 & \ion{H$\delta$}& 24.0 \\ \end{tabular}` — pdflatex 0
+errors, three cells; Perl and Rust before 68y `Stray alignment "&"`.
+
+Rust (68y, aa_support_sty.rs): `protected => true`. Witness 0801.2767. Repro class-bindings/aa_ion_robust_cell_head;
+guard `perfect_kernel_batch68y::aa_ion_is_robust_at_a_cell_head`.

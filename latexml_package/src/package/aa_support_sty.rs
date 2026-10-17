@@ -270,8 +270,17 @@ LoadDefinitions!({
   });
   DefMacro!("\\endlongtab", "");
   Let!("\\tablefoot", "\\footnote");
-  DefMacro!("\\tablefootmark{}", "\\footnotemark[$#1$]");
-  DefMacro!("\\tablefoottext{}{}", "\\footnotetext[$#1$]{#2}");
+  // aa.cls (v9.1, 2211.06931's copy) :1672-1681 sets the mark in text, `\hbox{\@textsuperscript{\normalfont
+  // \itshape\ignorespaces#1}}` (`\tablefoottext` adds parentheses around it): the mark is the author's text, so
+  // `\tablefootmark{$^\dag$}` is a dagger. Perl's `[$#1$]` (aa_support.sty.ltxml:229-230) closed the author's math
+  // at once and set the `^` in text (2211.06931 2507.11600 2012.11559 2404.06316 2104.06278; KNOWN_PERL_ERRORS
+  // #871). The note's own superscripted tag carries the mark, as with any `\footnotemark[…]`, and both commands give
+  // it the same text, so a `\tablefoottext` still pairs with its `\tablefootmark`s by `mark` (the parentheses are
+  // presentation of the note text, left out). The doubled braces survive the optional argument's own brace
+  // stripping, so the mark's `\itshape` stays in the mark.
+  // Guard: `perfect_kernel_batch68y::aa_tablefootmark_sets_the_mark_in_text`.
+  DefMacro!("\\tablefootmark{}", "\\footnotemark[{{\\normalfont\\itshape\\ignorespaces#1}}]");
+  DefMacro!("\\tablefoottext{}{}", "\\footnotetext[{{\\normalfont\\itshape\\ignorespaces#1}}]{#2}");
   DefMacro!("\\tablefont", "\\small");
   // NOTE: do NOT define `\tablenote` here. aa.cls does NOT provide it (its
   // table-footnote command is `\tablefoot`, above) — A&A papers that want
@@ -307,8 +316,12 @@ LoadDefinitions!({
   DefMath!("\\@vec{}",  "#1",            role => "ID", font => { forcebold => true });
   DefMath!("\\@tens{}", "\\mathsf{#1}",  role => "ID");
 
-  // \ion{symbol}{ionization} — Perl L247
-  DefMacro!("\\ion{}{}", "{#1 \\textsc{#2}}");
+  // \ion{symbol}{ionization} — Perl L247. aa.cls makes it robust (v6.1 :639, v9.1 :1729 `\DeclareRobustCommand
+  // {\ion}[2]`), so a cell starting with it is not expanded by the alignment's look for `\omit`/`\noalign` (e-TeX
+  // §785 stops at a protected macro): Perl's plain macro was expanded there, read the cell's `&` as its second
+  // argument and stranded it (0801.2767 `& \ion{H$\delta$}& 24.0`; KNOWN_PERL_ERRORS #872).
+  // Guard: `perfect_kernel_batch68y::aa_ion_is_robust_at_a_cell_head`.
+  DefMacro!("\\ion{}{}", "{#1 \\textsc{#2}}", protected => true);
 
   // \element — Perl aa_support.sty.ltxml L250:
   //   DefMacro('\element[][][][]{}', '\ensuremath{\@element[#1][#2][#3][#4]{\mathrm{#5}}}')
