@@ -50,10 +50,16 @@ LoadDefinitions!({
   \ifx\@tempb\@empty\def\@tempb{arXiv}\fi
   \@ifundefined{@eprint@\@tempb}{\@tempb:\@tempc}{\expandafter\expandafter\csname @eprint@\@tempb\endcsname\expandafter{\@tempc}}}
 \def\mniiiauthor#1#2#3{\@ifundefined{mniiiauth@#1}{\global\expandafter\let\csname mniiiauth@#1\endcsname\null #2}{#3}}");
-  // mnras.cls:488 (TL 2025 v3.2): ionization states, `\ion{He}{I}` "He i" (on amsmath's `\text`, which the class does
-  // not load: pdflatex errs without it as here). Once mn2e_support's for every class of the family (Perl
-  // mn2e_support.sty.ltxml:147, KNOWN_PERL_ERRORS #940), which mn2e.cls does not define.
-  RawTeX!(r"\newcommand\ion[2]{\text{#1\,\textsc{\lowercase{#2}}}}");
+  // Ionization states, `\ion{He}{I}` "He i", as the class family's versions define them (one binding for every
+  // version, the union of their features): v3.2 (TL 2025, mnras.cls:488) `\text{#1\,\textsc{\lowercase{#2}}}` on
+  // amsmath's `\text`, which the class does not load (pdflatex errs without amsmath), and v3.0 (1809.05472's copy,
+  // mnras.cls:477, the `\text` form commented out at :476) `\textrm{#1}\,\textsc{\lowercase{#2}}`, which needs no
+  // amsmath. So v3.2's where `\text` is defined, v3.0's where it is not (1809.05472 loads no amsmath). Once
+  // mn2e_support's for every class of the family (Perl mn2e_support.sty.ltxml:147, KNOWN_PERL_ERRORS #940), which
+  // mn2e.cls does not define. Guard `perfect_kernel_batch71a::mnras_ion_by_version`.
+  RawTeX!(
+    r"\newcommand\ion[2]{\ifdefined\text\text{#1\,\textsc{\lowercase{#2}}}\else\textrm{#1}\,\textsc{\lowercase{#2}}\fi}"
+  );
   RawTeX!(r"\newcommand\aap{A\&A}");                // Astronomy and Astrophysics
   RawTeX!(r"\let\astap=\aap");                       // alternative shortcut
   RawTeX!(r"\newcommand\aapr{A\&ARv}");              // Astronomy and Astrophysics Review

@@ -3646,14 +3646,21 @@ pub fn locked_binding_token(cs: &Token) -> Token {
   T_CS!(cs.with_cs_name(|name| s!("\\lx@locked@{}", name.trim_start_matches('\\'))))
 }
 
+/// The inner `\cs␣` that the robust command `cs` wraps (its meaning the parameterless `\protect \cs␣`:
+/// `\DeclareRobustCommand`, a binding's `robust => true`, [`let_i`]'s copy of either), whose definition takes the
+/// arguments; `None` for any other meaning.
+pub fn robust_inner(cs: &Token) -> Option<Token> {
+  match lookup_meaning(cs) {
+    Some(Stored::Expandable(ref wrapper)) => robust_wrapper_body(wrapper, &wrapper.get_cs()),
+    _ => None,
+  }
+}
+
 /// The other tokens that open a call of `binding` (a [`locked_binding_token`]) besides an explicit `{`: the `[` of
 /// each optional argument its signature opens with, and the token of an `OptionalMatch:*`. A robust binding's
 /// signature is its inner `\cs␣`'s, as in [`owns_calls`]: `\cite[p.~3]{x}` opens the kernel `\cite`.
 pub fn call_openers(binding: &Token) -> Vec<Token> {
-  let inner = match lookup_meaning(binding) {
-    Some(Stored::Expandable(ref wrapper)) => robust_wrapper_body(wrapper, &wrapper.get_cs()),
-    _ => None,
-  };
+  let inner = robust_inner(binding);
   let Ok(Some(defn)) = lookup_definition(inner.as_ref().unwrap_or(binding)) else {
     return Vec::new();
   };

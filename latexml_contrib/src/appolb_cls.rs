@@ -39,4 +39,28 @@ LoadDefinitions!({
   DefMath!("\\e", "e", font => { shape => "upright" });
   // appolb.cls:1036-1048 `\lambdabar`, a barred lambda (U+019B, as newtxmath's).
   DefMath!("\\lambdabar", "\u{019B}", role => "ID");
+  // The rest of the class's public commands, as the class defines them, since the binding also stands in for a copy a
+  // paper ships (0801.2427, cond-mat0205657): :83 `\ifRedakcja` (the `reda` option's editorial mode, whose `redakcja`
+  // package is the journal's own), :278-282 `\preprint` with its `\ifPreprint` and `\prepNo` (the preprint number the
+  // title page sets in place of the journal heading; here a preprint note, as revtex's `\preprint`), :283-285 the
+  // `\volume` and `\No` counts and `\pageno` (the journal heading's), :311 `\WERS`, :1019 `\anymode`, :1053-1057
+  // `\half`/`\Half` (LaTeX's `\frac` form), :1061 `\Tr`, :1063 `\Eq`, :1065-1066 `\seteqprefix`/`\reseteqprefix`.
+  // Guard `perfect_kernel_batch71a::appolb_class_commands`.
+  RawTeX!(
+    r"\newif\ifRedakcja \Redakcjafalse
+\newif\ifPreprint \Preprintfalse
+\def\prepNo{}
+\long\def\preprint#1{\Preprinttrue\long\gdef\prepNo{#1}\lx@add@pubnote[role=preprint]{#1}}
+\newcount\volume \volume=0
+\let\pageno=\c@page
+\newcount\No \No=0
+\let\WERS\MakeUppercase
+\def\anymode#1{\ifmmode #1\else $#1$\fi}
+\def\half{{\textstyle\frac12}}
+\def\Half{\frac12}
+\def\Tr{\mathop{\operator@font Tr}\nolimits}
+\def\Eq#1{Eq. (\ref{#1})}
+\def\seteqprefix#1{\renewcommand{\p@equation}{#1}}
+\def\reseteqprefix#1{\setcounter{equation}{0}\renewcommand{\p@equation}{#1}}"
+  );
 });

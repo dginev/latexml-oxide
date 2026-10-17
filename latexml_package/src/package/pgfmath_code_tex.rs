@@ -148,9 +148,6 @@ fn pgfmath_result_tokens_str(s: &str) -> Vec<Token> {
   toks
 }
 
-/// Safe divisor — avoid division by zero. Perl `pgfmath.code.tex.ltxml:255`
-/// warns on every zero divisor ("pgfmath: divisor should never be zero!"),
-/// as pgf itself raises a Math Error; this port had gone silent.
 /// pgf's `mod` (pgfmathfunctions.basic.code.tex:263-278): truncated, as TeX's `\divide` truncates, and a zero divisor
 /// leaves the dividend (`mod(x, 0)` is `x`, :271). Its `Mod` (:286-297) is that `mod` plus the divisor when it is
 /// negative, so a multiple of the divisor is 0 (`Mod(-5,5)`: 1811.01404's `style\st`, style5 for style0). Perl's
@@ -169,6 +166,9 @@ fn pgfmath_mod(a: f64, b: f64, never_negative: bool) -> f64 {
   }
 }
 
+/// Safe divisor — avoid division by zero. Perl `pgfmath.code.tex.ltxml:255`
+/// warns on every zero divisor ("pgfmath: divisor should never be zero!"),
+/// as pgf itself raises a Math Error; this port had gone silent.
 fn pgfmath_divisor(v: f64) -> f64 {
   if v == 0.0 {
     Warn!(

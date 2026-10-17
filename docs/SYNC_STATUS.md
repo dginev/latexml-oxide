@@ -3012,21 +3012,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   0808.1974 1411.6913 (14/14 sample papers 1 → 0 errors, words unchanged). Repro
   index-bib/amsrefs_biblist_without_bibdiv; guard `perfect_kernel_batch71a::amsrefs_biblist_without_bibdiv`.
   (2) T1: mn2e.cls (v2.2, TL's doc/latex/mnras/LEGACY/mn2e.cls, every shipped copy) defines no `\ion`, so the
-  author's `\newcommand{\ion}` is the document's: mn2e_support_sty.rs drops it, mnras_cls.rs keeps mnras.cls:488's
-  (KNOWN_PERL_ERRORS #940). Witnesses 0908.0351 1112.1796 astro-ph0501147 0909.3906 1206.2419 (11/11 sample mn2e
+  author's `\newcommand{\ion}` is the document's: mn2e_support_sty.rs drops it, mnras_cls.rs keeps the class's, as
+  each version defines it — v3.2's (mnras.cls:488) `\text` form where `\text` is defined, v3.0's (1809.05472's copy,
+  :477) `\textrm{#1}\,\textsc{…}` where it is not (KNOWN_PERL_ERRORS #940). Witnesses 0908.0351 1112.1796 astro-ph0501147 0909.3906 1206.2419 (11/11 sample mn2e
   papers 1 → 0, 1606.03734's author-modified mnras.cls unchanged; words −7 to −370 are the `\text` error tokens gone and "/ He" runs joined, bag-of-words checked).
   Worse: 1309.5950 4 → 5 (`\ion` undefined: it ships an aas_macros.sty of its own, :142 `\def\ion`, which the
-  aas_macros binding shadows — the H1 class of the study, as its `\lya`/`\kms` errors already were). Repro
-  class-bindings/mn2e_author_ion_wins; guards `perfect_kernel_batch71a::{mn2e_author_ion_wins, mnras_keeps_its_ion}`.
+  aas_macros binding shadows — the H1 class of the study, as its `\lya`/`\kms` errors already were). Not added to the
+  aas_macros binding: of 301 arXiv copies (6 months, 0905-2405) the ADS releases (v4.0, 88/90 lines, 56 copies; v5.2,
+  107 lines, 123) define no `\ion`, and only 2 copies do (1309.5950's 143-line copy, `\def\ion#1#2{#1~{\small\rm…}}`;
+  1205.4724's, aastex's `\newcommand\ion[2]{#1$\;$…}`); AASTeX 4.0's aaspp4.sty:481 has it, for its own documents
+  (astro-ph9906269's copy) — the author-copy stand-in payload's case. Repro class-bindings/mn2e_author_ion_wins; guards
+  `perfect_kernel_batch71a::{mn2e_author_ion_wins, mnras_ion_by_version}`.
   (3) P1: appolb.cls (Acta Phys. Pol. B; not in TL, 15 of 17 papers do not ship it): latexml_contrib appolb_cls.rs on
   OmniBus with `\PACS` (appolb.cls:322) as the pacs classification, `\received`, `\eqsec`, `\lambdabar`
   (OXIDIZED_DESIGN_DIVERGENCES #719), `\headtitle`/`\headauthor` as running-head notes, `\ie`/`\eg`/`\cf`/`\etal`/`\ibid`
-  and `\e`. The 2 shipping it (0801.2427, cond-mat0205657; raw-loaded before, 0 errors) now
+  and `\e`, and the rest of the class's public commands (2210.03396's copy): `\preprint`/`\ifPreprint`/`\prepNo`
+  (:278-282, a preprint note), the `\volume`/`\No` counts and `\pageno` (:283-285), `\ifRedakcja` (:83), `\WERS`
+  (:311), `\anymode` (:1019), `\half`/`\Half` (:1053-1057), `\Tr` (:1061), `\Eq` (:1063),
+  `\seteqprefix`/`\reseteqprefix` (:1065-1066); its `{eqletters}`/`{eqlettarray}` (:627-648, :1096-1112, lettered
+  equations over a redefined `\equation`) are not bound (no witness). The 2 shipping it (0801.2427, cond-mat0205657; raw-loaded before, 0 errors) now
   get the address as a contact and the PACS as a classification, where the raw class put the address in the
   personname and the PACS in a paragraph. Witnesses 0712.3606 1007.2277 1101.3125 1108.2782 1605.06550 nucl-th0308018
   physics0501160 (13/13 1 → 0; hep-ph0403117 5 → 0 with the class's `\headtitle`/`\headauthor` running
   heads, its abbreviations `\ie` & co. and `\e`). Repro class-bindings/appolb_pacs; guards
-  `perfect_kernel_batch71a::{appolb_pacs, appolb_running_heads_and_abbreviations}`.
+  `perfect_kernel_batch71a::{appolb_pacs, appolb_running_heads_and_abbreviations, appolb_class_commands}`.
   (4) U1: tkz-euclide's pre-v3 `\usetkzobj`/`\usetkztool` (tkz-tools-eu-modules.tex:18-58): latexml_contrib
   tkz_euclide_sty.rs reads the real package and defines both, where undefined, as loaders with nothing left to load
   (v3+ loads every object; user ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #720). Witnesses 1506.03598 1612.05374
@@ -3051,13 +3060,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   amsmath_sty.rs `\lx@undelimited@argument`: the argument braced, so `\tilde\muu_a` accents `\muu`'s whole expansion
   (0801.1527, 2609.01909; KNOWN_PERL_ERRORS #945), `\Delta_\tasknum` is a subscript τ (2509.22335, 1705.04506 26 → 0),
   `\hat\bbU` with `\newcommand\bbU{\mathbb{U}}` a hat over the U where it was a hat over nothing (1009.2900, 1111.3335);
-  a single command reading a mandatory argument is read as before (`\hat\mathbf{x}`, breqn's `x_\text{abc}`, which
-  pdflatex rejects; braced, 2210.10207 lost 11,424 words; OXIDIZED_DESIGN_DIVERGENCES #721). Repros stub-dependencies/{forest_loads_its_tikz_libraries,
+  a single command is read as its definition says (user ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #721): one with
+  no mandatory argument braced, as TeX braces it (`\vec\nabla`, `x_\infty`; `\hat\relax x` the hat over an empty
+  nucleus; `\hat\vec x` the hat over the vec over one, amsmath's nested accent), one reading a mandatory argument
+  (`\hat\mathbf{x}`, breqn's `x_\text{abc}`, a robust `\vv` through its `\protect \vv␣`) read with what follows as
+  before (braced, 2210.10207 lost 11,424 words), with one `Warning:malformed:<reader>` that TeX errs there per
+  occurrence typeset (none in a heading's or caption's toc copy, `tex_math::WRITTEN_COPY`). `\Hat`…`\Vec` are bound
+  after the macro accents (amsmath.sty:892 `\def\Hat{\hat}`): `\Hat\muu_a` as `\hat\muu_a`. The shape is rare (7 of
+  7,500 sampled 1505/1905/2305 papers, most in unused macros): 1905.01764 gets 7 Warnings for its 7
+  `\bm{\bar\mathcal{C}}`, 1505.00442 1; r2 A/B (499 papers vs 67int19b): 109 better, 1 worse (1309.5950, above),
+  errors 4350 → 4065, no #721 Warning (no typeset occurrence). Open: a general ltcmd accentee with a mandatory argument
+  (`\NewDocumentCommand\ww{om}`) is warned but still read as `\hat{}\mathbf{x}`, as before 71a. Repros stub-dependencies/{forest_loads_its_tikz_libraries,
   todonotes_loads_positioning}, package-bindings/{pgfmath_mod_of_a_multiple_is_zero, breqn_script_macro_argument},
   ams-internals/{amsmath_accent_macro_argument, amsfonts_widehat_macro_argument}; guards
   `perfect_kernel_batch71a::{forest_loads_its_tikz_libraries, todonotes_loads_positioning,
   pgfmath_mod_of_a_multiple_is_zero, amsmath_accent_macro_argument, amsfonts_widehat_macro_argument,
-  breqn_script_macro_argument}`.
+  breqn_script_macro_argument, undelimited_argument_warning_once_per_occurrence}`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

@@ -150,11 +150,11 @@ LoadDefinitions!({
   // 1705.04506; pdflatex without breqn errs). `\subsupstyle` (:113-123) only steps the style counter LaTeXML does not keep.
   // Guard `perfect_kernel_batch71a::breqn_script_macro_argument`.
   // The argument goes to the script through amsmath's `\lx@undelimited@argument` (amsmath_sty.rs; breqn loads amsmath):
-  // a command reading a mandatory argument (`x_\text{a}`, which pdflatex rejects) is read as before
-  // (OXIDIZED_DESIGN_DIVERGENCES #721).
+  // a command reading a mandatory argument (`x_\text{a}`, which pdflatex rejects) is read as before, with one Warning
+  // that TeX errs there (OXIDIZED_DESIGN_DIVERGENCES #721); `x_\alpha`, `x_\infty` are braced, as TeX braces them.
   amsmath_sty::define_undelimited_argument()?;
   RawTeX!(
-    r"\let\mathsup=^\let\mathsub=_\def\sb#1{\lx@undelimited@argument\mathsub{#1}}\def\sp#1{\lx@undelimited@argument\mathsup{#1}}"
+    r"\let\mathsup=^\let\mathsub=_\def\sb#1{\lx@undelimited@argument{breqn}{\sb}\mathsub{#1}}\def\sp#1{\lx@undelimited@argument{breqn}{\sp}\mathsup{#1}}"
   );
   RawTeX!(
     r#"\mathcode`\_="8000 \mathcode`\^="8000
