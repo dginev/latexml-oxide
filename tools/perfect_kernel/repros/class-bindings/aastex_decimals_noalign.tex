@@ -1,0 +1,27 @@
+% witness: 1805.06850 (`\begin{tabular}{l D D D c} \decimals \tableline`: aastex62.cls :5144 / aastex701.cls :12014
+%          `\gdef\decimals{\noalign{…}}`; Perl aas_support.sty.ltxml:345-347 an assignment, which opens a cell)
+% oracle:  pdflatex 0 errors; "a 1.5 x / b −22.75 y" twice, the decimals split at the point
+% engines: rust 67int17b = 1 error (`\noalign` cannot be used here); Perl the same shape
+% expect:  0 errors, 0 warnings; the D cells split into integer and fraction columns
+% status:  RED (67int17b) -> GREEN (68y)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\begin{table}
+\begin{tabular}{lDc}
+\decimals
+\tableline
+a & 1.5 & x \\
+b & -22.75 & y \\
+\tableline
+\end{tabular}
+\end{table}
+\begin{deluxetable}{lDc}
+\decimals
+\tablehead{\colhead{A} & \multicolumn2c{B} & \colhead{C}}
+\startdata
+a & 1.5 & x \\
+b & -22.75 & y
+\enddata
+\end{deluxetable}
+\end{document}

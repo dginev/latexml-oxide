@@ -668,11 +668,19 @@ LoadDefinitions!({
   DefConditional!("\\ifdeluxedecimals");
   DefMacro!("\\deluxedecimals", "\\global\\deluxedecimalstrue");
   RawTeX!("\\global\\deluxedecimalsfalse");
-  Let!("\\decimals", "\\deluxedecimals");
+  // aastex701.cls TL :12014-12021 (aastex62.cls :5144, 1805.06850's copy) `\gdef\decimals{\noalign{…}}`: in a
+  // `tabular` the switch is a `\noalign` at a row start, so a `\tableline` after it is still a rule; each
+  // deluxetable lets it be `\deluxedecimals` (:11331, 11425, 11520, 11714; aastex62.cls :4612, 4661), an assignment
+  // before `\startdata`. Perl's assignment everywhere (aas_support.sty.ltxml:345-347) opened a cell at the row start
+  // and misplaced the `\noalign` after it (1805.06850; KNOWN_PERL_ERRORS #875).
+  // Guard: `perfect_kernel_batch68y::aastex_decimals_is_a_noalign_in_a_tabular`.
+  DefMacro!("\\decimals", "\\noalign{\\global\\deluxedecimalstrue}");
   // aastex701.cls TL :11330, 11424, 11519, 11715 `\global\deluxedecimalsfalse`: each deluxetable (and its starred and
-  // split forms, which all set their template here) starts without `\decimals`.
+  // split forms, which all set their template here) starts without `\decimals`. The `\let` stays in the group of
+  // the environment's `\begin`.
   Let!("\\aas@@set@deluxetable@template", "\\set@deluxetable@template");
-  DefMacro!("\\set@deluxetable@template", "\\global\\deluxedecimalsfalse\\aas@@set@deluxetable@template");
+  DefMacro!("\\set@deluxetable@template",
+    "\\global\\deluxedecimalsfalse\\let\\decimals\\deluxedecimals\\aas@@set@deluxetable@template");
   def_macro_noop("\\colnumbers")?;
   DefMacro!("\\deluxedecimalcolnumbers", "\\deluxedecimalstrue\\colnumbersontrue");
   Let!("\\decimalcolnumbers", "\\deluxedecimalcolnumbers");
@@ -705,7 +713,25 @@ LoadDefinitions!({
       });
     });
   }
-  DefColumnType!("D", { build_d_columns(); });
+  // The class's `D` is a column type of its own (aastex701.cls TL :12010, aastex62.cls :5140), which a document's
+  // `\usepackage{dcolumn}` after the class replaces with dcolumn's three-argument `D{.}{.}{n}` (the later
+  // `\newcolumntype` wins; aastex701.cls :6286-6291 then only adds a `d`). The binding has dcolumn already (REVTeX's,
+  // revtex4_support_sty.rs, as Perl's), so the document's load changes nothing: a `D` followed by its arguments is
+  // dcolumn's, the class's never takes one. Perl's `D` replaced dcolumn's (aas_support.sty.ltxml:362-363), its
+  // arguments then unknown columns (1607.06811 `\newcolumntype{d}[1]{D{,}{\pm}{#1}}`; KNOWN_PERL_ERRORS #876).
+  // Guard: `perfect_kernel_batch68y::aastex_d_column_with_arguments_is_dcolumns`.
+  if lookup_meaning(&T_CS!("\\NC@rewrite@D")).is_some() {
+    let_i(&T_CS!("\\lx@aas@dcolumn@D"), &T_CS!("\\NC@rewrite@D"), None);
+  }
+  DefColumnType!("D", {
+    skip_spaces()?;
+    if if_next(T_BEGIN!())? && lookup_meaning(&T_CS!("\\lx@aas@dcolumn@D")).is_some() {
+      Tokens!(T_CS!("\\lx@aas@dcolumn@D"))
+    } else {
+      build_d_columns();
+      Tokens!()
+    }
+  });
   DefColumnType!("d", { build_d_columns(); });
   DefMacro!("\\aas@start@D@column XUntil:\\aas@end@D@column", sub[args] {
     let cell = args[0].clone().into_tokens_result()?.unlist();

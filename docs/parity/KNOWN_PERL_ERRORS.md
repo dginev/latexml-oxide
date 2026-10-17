@@ -14633,3 +14633,32 @@ Rust (68y, emulateapj_cls.rs): the data opens at `\tablehead` or `\startdata` an
 1909.11243, 1002.1848, 1902.00588 (and #665's 1506.07185, 1705.08932). Repro
 class-bindings/emulateapj_deluxetable_open_from_head; guard
 `perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`.
+
+## 875. AASTeX's `\decimals` is an assignment; the class's is a `\noalign` in a `tabular`
+
+aastex701.cls :12014-12021 (aastex62.cls :5144) `\gdef\decimals{\noalign{…}}`: in a `tabular` it goes at a row start,
+before a `\tableline`; each deluxetable lets it be `\deluxedecimals` (:11331, :11425, :11520, :11714), an assignment
+before `\startdata`. Perl's `Let('\decimals', '\deluxedecimals')` (aas_support.sty.ltxml:345-347) is an assignment
+everywhere: in a `tabular` it opens a cell, and the `\noalign` of the `\tableline` after it is misplaced.
+
+Trigger: `\documentclass{aastex701}`, `\begin{tabular}{lDc} \decimals \tableline a & 1.5 & x \\ \end{tabular}` —
+pdflatex 0 errors, 1.5 split at the point; Perl and Rust before 68y `\noalign cannot be used here`.
+
+Rust (68y, aas_support_sty.rs): `\decimals` is `\noalign{\global\deluxedecimalstrue}`, `\deluxedecimals` within a
+deluxetable. Witness 1805.06850. Repro class-bindings/aastex_decimals_noalign; guard
+`perfect_kernel_batch68y::aastex_decimals_is_a_noalign_in_a_tabular`.
+
+## 876. aas_support's parameterless `D` column replaces dcolumn's `D{.}{.}{n}`
+
+aastex701.cls :12010 (aastex62.cls :5140) defines a parameterless `D` column; a document's `\usepackage{dcolumn}` after
+the class replaces it with dcolumn's three-argument `D` (the later `\newcolumntype` wins; :6286-6291 only adds a `d`).
+Perl's binding loads dcolumn with REVTeX's support (revtex4_support.sty.ltxml:29), then defines its own `D`/`d`
+(aas_support.sty.ltxml:362-363), so the document's dcolumn is a no-op and `D{.}{.}{6}` reads `{.}` as columns.
+
+Trigger: `\documentclass{aastex701} \usepackage{dcolumn}`, `\newcolumntype{d}[1]{D{.}{.}{#1}}`,
+`\begin{tabular}{lcd{6}} $x$ && -0.50^{a} \\ \end{tabular}` — pdflatex 0 errors; Perl and Rust before 68y three
+"Unrecognized tabular template" warnings and `^ Script can only appear in math mode`.
+
+Rust (68y, aas_support_sty.rs): a `D` followed by an argument is dcolumn's (the class's takes none). Witness
+1607.06811 (aastex.cls not in TeX Live: the paper is discounted, fixed anyway). Repro
+class-bindings/aastex_dcolumn_D_with_arguments; guard `perfect_kernel_batch68y::aastex_d_column_with_arguments_is_dcolumns`.

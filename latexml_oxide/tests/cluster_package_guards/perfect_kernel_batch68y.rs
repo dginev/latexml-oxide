@@ -95,3 +95,46 @@ fn emulateapj_deluxetable_is_open_from_its_head() {
     ],
   );
 }
+
+/// class-bindings/aastex_decimals_noalign: aastex701.cls :12014 `\decimals` is a `\noalign` in a `tabular` (1805.06850:
+/// `\decimals \tableline` at the row start), an assignment before a deluxetable's data; both split the `D` cells at the
+/// point.
+#[test]
+fn aastex_decimals_is_a_noalign_in_a_tabular() {
+  assert_elements(
+    include_str!("../../../tools/perfect_kernel/repros/class-bindings/aastex_decimals_noalign.tex"),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "table",
+        "tab1",
+        r##"<table xml:id="tab1"><tabular vattach="middle"><tbody><tr><td align="left" border="t">a</td><td align="right" border="t" class="ltx_norightpad"><Math mode="inline" tex="1" text="1" xml:id="m1"><XMath><XMTok meaning="1" role="NUMBER">1</XMTok></XMath></Math></td><td align="left" border="t" class="ltx_noleftpad">.<Math mode="inline" tex="5" text="5" xml:id="m2"><XMath><XMTok meaning="5" role="NUMBER">5</XMTok></XMath></Math></td><td align="center" border="t">x</td></tr><tr><td align="left" border="b">b</td><td align="right" border="b" class="ltx_norightpad"><Math mode="inline" tex="-22" text="- 22" xml:id="m3"><XMath><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMTok meaning="22" role="NUMBER">22</XMTok></XMApp></XMath></Math></td><td align="left" border="b" class="ltx_noleftpad">.<Math mode="inline" tex="75" text="75" xml:id="m4"><XMath><XMTok meaning="75" role="NUMBER">75</XMTok></XMath></Math></td><td align="center" border="b">y</td></tr></tbody></tabular></table>"##,
+      ),
+      (
+        "table",
+        "tab2",
+        r##"<table xml:id="tab2"><tabular><thead><tr><td align="center" border="tt" thead="column">A</td><td align="center" border="tt" colspan="2" thead="column">B</td><td align="center" border="tt" thead="column">C</td></tr></thead><tbody><tr><td align="left" border="t">a</td><td align="right" border="t" class="ltx_norightpad"><Math mode="inline" tex="1" text="1" xml:id="m5"><XMath><XMTok meaning="1" role="NUMBER">1</XMTok></XMath></Math></td><td align="left" border="t" class="ltx_noleftpad">.<Math mode="inline" tex="5" text="5" xml:id="m6"><XMath><XMTok meaning="5" role="NUMBER">5</XMTok></XMath></Math></td><td align="center" border="t">x</td></tr><tr><td align="left" border="b">b</td><td align="right" border="b" class="ltx_norightpad"><Math mode="inline" tex="-22" text="- 22" xml:id="m7"><XMath><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMTok meaning="22" role="NUMBER">22</XMTok></XMApp></XMath></Math></td><td align="left" border="b" class="ltx_noleftpad">.<Math mode="inline" tex="75" text="75" xml:id="m8"><XMath><XMTok meaning="75" role="NUMBER">75</XMTok></XMath></Math></td><td align="center" border="b">y</td></tr></tbody></tabular></table>"##,
+      ),
+    ],
+  );
+}
+
+/// class-bindings/aastex_dcolumn_D_with_arguments: A document's dcolumn after aastex replaces the class's `D`
+/// (aastex701.cls :12010, :6286-6291): `D{.}{.}{6}` (via the document's `d`, 1607.06811) is dcolumn's point-aligned
+/// column.
+#[test]
+fn aastex_d_column_with_arguments_is_dcolumns() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/aastex_dcolumn_D_with_arguments.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "table",
+      "tab1",
+      r##"<table xml:id="tab1"><tabular vattach="middle"><tbody><tr><td align="left"><Math mode="inline" tex="x" text="x" xml:id="m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></td><td/><td align="char:." class="ltx_nopad_r"><Math mode="inline" tex="-0.50^{a}" text="- 0.50 ^ a" xml:id="m2"><XMath><XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="0.50" role="NUMBER">0.50</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok></XMApp></XMApp></XMath></Math></td></tr></tbody></tabular></table>"##,
+    )],
+  );
+}
