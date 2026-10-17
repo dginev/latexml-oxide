@@ -236,6 +236,10 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   // whole as TeX reads it: the copy's provides-mode is suspended for it (`read_stand_in_copy`).
   let _suspended = (crate::definition::origin::copy_provides() != 0)
     .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
+  // A file a stand-in binding loads is not part of the binding's command set (`StandInLoadGuard::suspend`); a
+  // stand-in it loads records its own (`input_definitions_impl`).
+  let _nested = crate::definition::origin::stand_in_loading()
+    .then(crate::definition::origin::StandInLoadGuard::suspend);
   input_definitions_impl(raw_file, options)
 }
 
@@ -933,7 +937,12 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
     // (OXIDIZED_DESIGN_DIVERGENCES #731): inside this load, so the copy's `\AtEndOfClass`/`\AtEndOfPackage` code runs
     // at its end with the binding's.
     if crate::binding::author_files::stands_in_for_an_author_file(&filename) {
-      read_stand_in_copy(&stand_in_copy_request(name), &as_type, grandparent_in_expl3)?;
+      read_stand_in_copy(
+        &stand_in_copy_request(name),
+        name,
+        &as_type,
+        grandparent_in_expl3,
+      )?;
     }
   } else {
     // We're inverting the control flow, because it is near-instant to check whether we have an
@@ -1914,7 +1923,7 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
         };
         if loaded && stand_in {
           let stem = tex_name.strip_suffix(".tex").unwrap_or(&tex_name);
-          read_stand_in_copy(stem, "tex", false)?;
+          read_stand_in_copy(stem, stem, "tex", false)?;
         }
         loaded
       } else if is_binding_extension(ext)
@@ -2059,12 +2068,12 @@ fn stand_in_copy_request(name: &str) -> String {
 /// `\AtEndOfClass`/`\AtEndOfPackage` code runs at this load's end under the same rule
 /// ([`crate::state::copy_provides_wrap`]), its document-time hooks are not registered
 /// ([`crate::state::copy_provides_defers`]), a file it loads is a real load, the mode suspended for it
-/// ([`input_definitions`]: bmvc2k.cls:139 `tabularx`, ws-rv9x6.cls's `ws-crop9x6`), and an Error in its own code is a
-/// Warning (`common::error::copy_code_demotes_errors`). The copy is the file `request`.`ext` in the paper's source (the
+/// ([`input_definitions`]: bmvc2k.cls:139 `tabularx`, ws-rv9x6.cls's `ws-crop9x6`), and an Error in its own code stays
+/// an Error (user ruling 2026-10-17). The copy is the file `request`.`ext` in the paper's source (the
 /// document's directory, or a `{filecontents}` virtual file), never one of TeX Live's; one read raw already (by its
 /// binding: arxiv.sty, cvpr.sty, pasj00.cls, … `InputDefinitions!`) is not read again. Perl never reads it: `FindFile`
 /// prefers the `.ltxml` (Package.pm:2113-2133).
-fn read_stand_in_copy(request: &str, ext: &str, in_expl3: bool) -> Result<()> {
+fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -> Result<()> {
   if request.is_empty() || ext.is_empty() {
     return Ok(());
   }
@@ -2091,12 +2100,118 @@ fn read_stand_in_copy(request: &str, ext: &str, in_expl3: bool) -> Result<()> {
   if !shipped || read_raw_already(&path) || lookup_bool(&s!("{file}_raw_loaded")) {
     return Ok(());
   }
+  if !copy_is_the_stood_in_file(&file, binding, &path) {
+    return Ok(());
+  }
   let id = new_copy_provides_record(file.rsplit(['/', '\\']).next().unwrap_or(&file));
   use crate::definition::origin::{CopyProvidesGuard, DefinitionOrigin, OriginGuard};
   // (not a raw class read for K11, `\lx@class@loaded@raw`: the binding owns the title page)
   let _origin = OriginGuard::new(DefinitionOrigin::File);
   let _provides = CopyProvidesGuard::new(id);
   load_tex_definitions(&file, &path, false, ext != "tex", in_expl3, false)
+}
+
+/// Is the paper's file at `path`, of the name a stand-in binding answers (`file`), the file the binding `binding`
+/// stands in for? By its own declaration first: a `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` of the file's
+/// or the binding's name is that file, whatever its version (1609.03892's fcs.cls of 2016, older than the
+/// `\fcssetup` the binding models; apjfonts.sty, 1202.3442, 1009.4702). Without one naming either — none, or
+/// another package's (2411.02780's equations.sty, annotate-equations.sty renamed: `\ProvidesPackage
+/// {annotate-equations}`) — by its command set: the file defines a quarter of the public names (letters only) the
+/// binding's own code assigned (`state::stand_in_public_names`), or twenty of them (aas_macros.sty's journal names, an
+/// icml or neurips style's `\icmltitle`, `\AND`), or a quarter of the names it defines are the binding's (an excerpt:
+/// a few journal names and the author's `\kms`). An author's own file that only shares the name is not that file and
+/// is not read here: hep-ph9609379's diagrams.sty, fifteen `\special` PostScript macros of which only `\diagram` is a
+/// name of Paul Taylor's diagrams package the binding stands in for. A binding with no public name of its own cannot
+/// tell, and reads the copy. Logged at Info either way.
+fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
+  static DEFINED: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+      r"\\(?:[egx]?def|let|(?:re|provide)?newcommand\*?|DeclareRobustCommand\*?|(?:New|Renew|Provide|Declare)DocumentCommand|newif|chardef|mathchardef|newlength|newcount|newdimen|newskip|newtoks|newbox)\s*\{?\s*(\\[A-Za-z]+)(?:[^A-Za-z@]|$)|\\(?:(?:re)?newenvironment\*?|(?:New|Renew|Provide|Declare)DocumentEnvironment)\s*\{([A-Za-z]+)\}|\\newtheorem\*?\s*\{([A-Za-z]+)\}|\\newcounter\s*\{([A-Za-z]+)\}",
+    )
+    .unwrap()
+  });
+  static PROVIDES: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\Provides(?:Class|Package|File)\s*\{\s*([^}\s]+)\s*\}").unwrap());
+  let text = crate::binding::virtual_files::vfs_read(path).or_else(|| {
+    std::fs::read(path)
+      .ok()
+      .map(|bytes| bytes.iter().map(|&b| b as char).collect::<String>())
+  });
+  let Some(text) = text else {
+    return false;
+  };
+  let stem = |name: &str| {
+    let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
+    base
+      .rsplit_once('.')
+      .filter(|(_, ext)| matches!(*ext, "cls" | "sty" | "tex" | "clo" | "def"))
+      .map_or(base, |(stem, _)| stem)
+      .to_ascii_lowercase()
+  };
+  // (a line ends at CR or LF, as in TeX: 2402.17342's sn-jnl.cls has CR-only ends)
+  let lines = || {
+    text
+      .split(['\n', '\r'])
+      .map(|line| line.split('%').next().unwrap_or(""))
+  };
+  let declared = lines().find_map(|code| PROVIDES.captures(code).map(|cap| stem(&cap[1])));
+  if let Some(declared) = &declared
+    && (*declared == stem(file) || *declared == stem(binding))
+  {
+    Info!(
+      "provide",
+      file,
+      s!(
+        "The paper's {file} declares itself {declared}: read as the file its binding stands in for"
+      )
+    );
+    return true;
+  }
+  let public = stand_in_public_names();
+  if public.is_empty() {
+    return true;
+  }
+  let mut defined: HashSet<String> = HashSet::default();
+  for code in lines() {
+    for cap in DEFINED.captures_iter(code) {
+      // (the names a declaration makes: `\newif\ifX` also `\Xtrue`/`\Xfalse`, an environment `\X` and `\endX`, a
+      // counter `\theX`)
+      if let Some(name) = cap.get(1) {
+        let name = name.as_str();
+        if let Some(flag) = name.strip_prefix("\\if")
+          && code[cap.get(0).map_or(0, |m| m.start())..].starts_with("\\newif")
+        {
+          defined.insert(s!("\\{flag}true"));
+          defined.insert(s!("\\{flag}false"));
+        }
+        defined.insert(name.to_string());
+      } else if let Some(env) = cap.get(2).or_else(|| cap.get(3)) {
+        defined.insert(s!("\\{}", env.as_str()));
+        defined.insert(s!("\\end{}", env.as_str()));
+      } else if let Some(counter) = cap.get(4) {
+        defined.insert(s!("\\the{}", counter.as_str()));
+      }
+    }
+  }
+  let shared = public.iter().filter(|name| defined.contains(*name)).count();
+  let the_file =
+    shared >= 20 || shared * 4 >= public.len() || (shared > 0 && shared * 4 >= defined.len());
+  Info!(
+    "provide",
+    file,
+    s!(
+      "The paper's {file} defines {shared} of the {} public names its binding defines ({} names of its own{}): {}",
+      public.len(),
+      defined.len(),
+      declared.map_or(String::new(), |name| s!(", declared {name}")),
+      if the_file {
+        "read as the file its binding stands in for"
+      } else {
+        "not the file its binding stands in for, not read"
+      }
+    )
+  );
+  the_file
 }
 
 fn load_tex_definitions(

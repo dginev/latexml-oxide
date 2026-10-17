@@ -19163,12 +19163,30 @@ extra command the copy defines and the paper uses is undefined (aas_macros.sty:9
 `{filecontents}` file, never TeX Live's — is read raw at the same point, origin `File` (content.rs `read_stand_in_copy`,
 from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.tex` route), before the load's
 `\AtEndOfClass`/`\AtEndOfPackage` code runs. The rules:
+0. *Identity.* The copy is read only when it is the file the binding stands in for (content.rs
+   `copy_is_the_stood_in_file`): its `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` names the file or the binding,
+   whatever the version (1609.03892's fcs.cls of 2016, older than the `\fcssetup` the binding models; apjfonts.sty,
+   1202.3442), or, with no such declaration, it defines the binding's public command set — a quarter of the
+   letters-only names the binding's own code assigned (`state::stand_in_public_names`, `State::stand_in_last_load`;
+   not a file the binding loads: `StandInLoadGuard::suspend`), twenty of them, or names of which a quarter are the
+   binding's (an excerpt). An author's own file that only shares the name is not read (base behaviour): hep-ph9609379's
+   diagrams.sty, fifteen `\special` PostScript macros sharing none of the diagrams binding's command set (r1: its
+   `\Bullet` called the binding's `\diagram`, 1 → 101 Errors and a Fatal); 2411.02780's equations.sty, which is
+   annotate-equations.sty renamed (`\ProvidesPackage{annotate-equations}`; r1: 2 → 99 Errors over xkeyval's
+   `\usevalue`). Logged at Info. Reading such a file raw, as TeX does, is an open row.
 1. *Ownership.* A name is the binding's when it was assigned while the stand-in binding loaded (origin.rs
-   `StandInLoadGuard`, `State::stand_in_meanings`: its `DefMacro!`s, `Let!`s, `RawTeX`, the bindings it required) or
-   its meaning is a definition made under that very name at origin `Unknown`, `Pool` or `Binding` (a pool's
-   `\maketitle`, another binding's `\citep`); an environment is owned when `\begin{X}`, `\X` or `\endX` is. The format's
-   names (`Plain`, `LatexDump`, `Format`), the document's world (`File`, `Document`), the guesses that yield (`Fallback`,
-   `Stub`, `Borrowed`) and `\let` copies of such meanings are not.
+   `StandInLoadGuard`, `State::stand_in_meanings`: its `DefMacro!`s, `Let!`s, `RawTeX`, the bindings it required) at an
+   origin of LaTeXML's own, its guesses included (`Fallback`: the OmniBus base a class binding loads, whose `\received`
+   WileyNJDv5.cls:5071 replaced, dropping 2609.19994's dated frontmatter — OD #408's yielding is to the document, and
+   the copy is not the document), or its meaning is a definition made under that very name at origin `Unknown`, `Pool`
+   or `Binding` (a pool's `\maketitle`, another binding's `\citep`); an environment is owned when `\begin{X}`, `\X` or
+   `\endX` is. The format's names (`Plain`, `LatexDump`, `Format`), the document's world (`File`, `Document`), the
+   other guesses that yield (`Fallback`, `Stub`, `Borrowed`) and `\let` copies of such meanings are not. Measured and
+   declined (72a r2): narrowing ownership to the binding's own code, so that a copy's redefinition of a macro a package
+   the binding loaded defined stands as in TeX, released the class bindings' frontmatter and layout macros to the copy
+   (`\title`, `\author`, `\thanks`, `\keywords`, `\@makecaption` in 146 of 400 census papers, the NFSS size commands,
+   the `\the<counter>`s) and brought back aastex7's three Fatals; constructors and primitives kept owned did not
+   cover them (they are macros). The case it was for, 2411.02780, is rule 0's.
 2. *Assignments.* Every meaning assignment of the read (`install_definition`, `assign_meaning`: the `\def` family,
    `\let`, `\chardef`…, the LaTeX declarators) to an owned name holds only inside the copy's own code: the binding's
    meaning is kept aside and put back when the read ends (state.rs `note_copy_provides_assignment`,
@@ -19203,8 +19221,11 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    over. On the census sample it fixed no Error and caused 3 Fatals (aastex7.cls:459's `\AddToHook{enddocument}` patch
    reads the kernel's `\enddocument` up to `\@checkend`: 2504.00922, 2605.15371, 2607.03848), 5 Error rows (PoS.cls,
    JHEP.cls "\abstract{...} should appear before \begin{document}"; ieeeaccess.cls's `\EOD`; aipproc.cls's
-   `\layoutstyle`) and printed layout checks ("The page layout violates the ICML style", 2407.02750). **Deviation from
-   the 72a brief's rule 5**, which asked for the hooks to run under the rule — open for a ruling.
+   `\layoutstyle`) and printed layout checks ("The page layout violates the ICML style", 2407.02750). The 72a brief's
+   rule 5 asked for the hooks to run under the rule; main-session decision 2026-10-17 (72a r2, on this evidence: 0
+   papers fixed, 3 aastex7 Fatals, junk text): they stay unregistered, the binding owning the document-time machinery.
+   Likewise decided: the copy-local overlay of rule 2 stays, and the nested-load `\ver@` test of rule 6 stays scoped to
+   the copy's own `\usepackage` lines.
 6. *Nested loads.* A file the copy loads (`\RequirePackage`, `\usepackage`, `\input`, `\LoadClass`) is a real load,
    the mode suspended for it (`input_definitions`): a package the binding did not load loads whole (bmvc2k.cls:139's
    `tabularx`, colm's `multirow`, ws-rv9x6.cls's `ws-crop9x6`), a loaded one is the usual no-op, and `\LoadClass` of
@@ -19218,17 +19239,24 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
 7. *Options.* The copy's `\DeclareOption`s and `\ProcessOptions` run its own handlers inside its code (a handler
    name the binding declared is the binding's, rule 2, and comes back as the binding left it: run and `\relax`ed); its
    `\NeedsTeXFormat`/`\ProvidesClass` are quiet, `\ProvidesClass` recording its version.
-8. *Diagnostics.* An Error raised in the copy's own code is reported as a Warning (error.rs
-   `copy_code_demotes_errors`): the code sets up machinery the binding stands in for (ieeeaccess.cls:131's `spotcolor`
-   model, 2007.03025; pnas-new.cls:256-419's `\titleformat`s, 1907.12289). A nested load's errors stay Errors; a Fatal
-   stays Fatal.
+8. *Diagnostics.* An Error raised in the copy's own code stays an Error (user ruling 2026-10-17, "Keep as Errors";
+   round 1's demotion to a Warning is removed). The copies' Errors became binding work: pnas-new.cls:229
+   `\RequirePackage[explicit]{titlesec}` (the binding now passes `explicit` where the copy does: 1907.12289,
+   2509.24970, 7 Errors each), ieeeaccess.cls:21-23's `\@IEEEusingAfourpapertrue` (IEEEtran.cls:268-270's flags, now
+   in the IEEEtran binding: KNOWN_PERL_ERRORS #957). Open: ieeeaccess.cls:131 `\definecolor{accessblue}{spotcolor}
+   {PANTONE3015C,1.0}` ("Unrecognized color model 'spotcolor'", Color.pm:61; spotcolor.sty:71 defines the driver's
+   `\color@spotcolor`, the test color.sty makes; 6 papers +1 Error: 2007.03025, 2009.04554, 2011.07807, 2209.03883,
+   2209.12464, 2609.20467); aipcheck.tex:53-54 reads `\fmtversion` as `#1/#2/#3` (pre-2020 LaTeX; TL 2025's is
+   `2024-11-01`, pdflatex errs the same: 0806.2199, 3 Errors).
 9. *Not covered.* An extra macro's body, run later in the document, is the author's command and keeps TeX's effect,
    calling the binding's meanings of owned names (neurips_2024.sty's `\TEST`, defined inside its `\@maketitle`, stays
    unreachable: 2406.07381).
 
 Witnesses (census `agent_reports/2026-10-17_standin_extras_census.md`): 1309.5950 E 4 → 0, 1406.5372 29 → 0, 2109.13055
-84 → 0, 2008.02921 9 → 0, 1609.03892 7 → 0. Known casualties: WileyNJDv5.cls's `\usepackage{lettersp}` (LETTERSP.STY
-assumes an existing `\Comment` is its own; the binding loaded algpseudocode's first: 2501.12471, 2602.03829,
-2408.07575), equations.sty's `\usevalue` (xkeyval's kept: 2411.02780), a diagrams.sty unrelated to the binding's
-(hep-ph9609379), crckapb.sty's raw `\@citex` and empty `\citeauthoryear` over the kernel names our `\cite` path reads
-(astro-ph9601169's citations print "?"). Guards `perfect_kernel_batch72a::*`; repros `tools/perfect_kernel/repros/stand-in-copies/`.
+84 → 0, 2008.02921 9 → 0, 1609.03892 7 → 0. Round-1 casualties, fixed in r2: WileyNJDv5.cls:377's
+`\usepackage{lettersp}` before its algorithms (:6820; LETTERSP.STY:3-12 keeps an existing `\Comment` as its own): the
+binding loads lettersp in the class's order where the copy does (2408.07575, 2501.12471, 2602.03829, 2609.08425,
+2609.19994); equations.sty and diagrams.sty (rule 0); crckapb.sty:665-727's `\citeyear`/`\citeauthor` over
+`\@citedata`, printing an aux file's `b@<key>` ("?" in astro-ph9601169, whose `[editedvolume]` the copy's option code
+now takes, so OmniBus no longer loads): the binding autoloads natbib's, as Perl's OmniBus does. Guards
+`perfect_kernel_batch72a::*`; repros `tools/perfect_kernel/repros/stand-in-copies/`.

@@ -1,0 +1,6 @@
+\ProvidesFile{crckapb.sty}
+\def\@citex[#1]#2{RAWCITEX}
+\def\citeyear#1{RAWYEAR}
+\def\citeauthoryear{}
+\let\@internalcite\cite
+\def\shortcite{\@ifstar{\@internalcite}{\@internalcite}}

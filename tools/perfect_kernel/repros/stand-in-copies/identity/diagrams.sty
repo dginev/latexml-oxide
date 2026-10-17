@@ -1,0 +1,6 @@
+\newcommand{\xfeynman}[1]{\input #1}
+\newcommand{\Init}{1 1 Scale Init}
+\newcommand{\diagram}[1]{\special{" ProcDict begin #1 end}}
+\newcommand{\Bullet}[2]{\diagram{\Init [#1 #2] Goto 0 Bullet}}
+\newcommand{\Gluon}[5]{\diagram{\Init [[#1 #2] [#3 #4]] #5 Gluon}}
+\newcommand{\Fermion}[5]{\diagram{\Init [[#1 #2] [#3 #4]] #5 Fermion}}

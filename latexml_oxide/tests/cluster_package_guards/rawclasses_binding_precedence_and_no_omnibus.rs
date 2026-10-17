@@ -32,7 +32,9 @@ const RAW_CLS: &str = "\\ProvidesClass{whatever}\n\
 /// (OXIDIZED_DESIGN_DIVERGENCES #731): its `\section` stays the binding's, its extra `\rawmarker` is defined.
 #[test]
 fn contrib_binding_keeps_precedence_under_rawclasses() {
-  let raw_cls = format!("{RAW_CLS}\\renewcommand\\section[1]{{RAWSECTION}}\n");
+  // (the copy declares itself the class, as a copy of the file the binding stands in for does: `\ProvidesClass{daj}`)
+  let raw_cls =
+    format!("{RAW_CLS}\\renewcommand\\section[1]{{RAWSECTION}}\n").replace("{whatever}", "{daj}");
   let tex =
     "\\documentclass{daj}\n\\begin{document}\n\\section{Intro}\n\\rawmarker\n\\end{document}\n";
   let (stderr, xml) = super::convert_files_with(

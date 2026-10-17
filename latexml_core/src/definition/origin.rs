@@ -182,21 +182,45 @@ impl Drop for CopyProvidesGuard {
 
 thread_local! {
   static STAND_IN_LOADING: Cell<u32> = const { Cell::new(0) };
+  static STAND_IN_OWN_CODE: Cell<bool> = const { Cell::new(false) };
 }
 
-/// Is a binding that stands in for an author's file loading ([`StandInLoadGuard`])?
+/// Is a binding that stands in for an author's file loading ([`StandInLoadGuard`]), itself or a file it loads?
 pub fn stand_in_loading() -> bool { STAND_IN_LOADING.with(|c| c.get()) != 0 }
+
+/// Is the code running now a stand-in binding's own ([`StandInLoadGuard::new`]), not a file it loads
+/// ([`StandInLoadGuard::suspend`])?
+pub fn stand_in_own_code() -> bool { STAND_IN_OWN_CODE.with(|c| c.get()) }
 
 /// RAII guard: while a binding that stands in for an author's file loads (`binding::content::input_definitions`),
 /// every name assigned is recorded as that binding's (`state::State::stand_in_meanings`), whatever made it — its
 /// `DefMacro!`s, its `Let!`s and `RawTeX`, the bindings it requires — so the paper's copy read after it only provides
-/// them (`state::note_copy_provides_assignment`).
-pub struct StandInLoadGuard;
+/// them (`state::note_copy_provides_assignment`). The names its own code assigns, not a file it loads
+/// ([`StandInLoadGuard::suspend`]: OmniBus, natbib, a nested stand-in's own), are also its command set
+/// (`state::State::stand_in_last_load`), which the copy must define to be the file the binding stands in for
+/// (`binding::content` `copy_is_the_stood_in_file`).
+pub struct StandInLoadGuard {
+  own_code: bool,
+  load:     bool,
+}
 
 impl StandInLoadGuard {
   pub fn new() -> Self {
     STAND_IN_LOADING.with(|c| c.set(c.get() + 1));
-    StandInLoadGuard
+    crate::state::begin_stand_in_load();
+    StandInLoadGuard {
+      own_code: STAND_IN_OWN_CODE.with(|c| c.replace(true)),
+      load:     true,
+    }
+  }
+
+  /// A file a stand-in binding loads (`binding::content::input_definitions`): its names are the binding's to own, but
+  /// not the binding's command set, until the guard drops.
+  pub fn suspend() -> Self {
+    StandInLoadGuard {
+      own_code: STAND_IN_OWN_CODE.with(|c| c.replace(false)),
+      load:     false,
+    }
   }
 }
 
@@ -205,12 +229,19 @@ impl Default for StandInLoadGuard {
 }
 
 impl Drop for StandInLoadGuard {
-  fn drop(&mut self) { STAND_IN_LOADING.with(|c| c.set(c.get().saturating_sub(1))); }
+  fn drop(&mut self) {
+    STAND_IN_OWN_CODE.with(|c| c.set(self.own_code));
+    if self.load {
+      STAND_IN_LOADING.with(|c| c.set(c.get().saturating_sub(1)));
+      crate::state::end_stand_in_load();
+    }
+  }
 }
 
 /// Forget every provides-mode: a new conversion starts with none (`reset_thread_engine`).
 pub fn reset_copy_provides() {
   STAND_IN_LOADING.with(|c| c.set(0));
+  STAND_IN_OWN_CODE.with(|c| c.set(false));
   COPY_PROVIDES.with(|c| c.set(0));
   COPY_PROVIDES_STACK.with(|s| s.borrow_mut().clear());
 }

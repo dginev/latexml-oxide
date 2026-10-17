@@ -3003,24 +3003,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
 - **72a** (a stand-in binding's shipped copy adds its extras; OXIDIZED_DESIGN_DIVERGENCES #731; census
-  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md). After a binding on
-  `AUTHOR_FILE_STAND_INS` loads, the paper's copy is read raw (content.rs `read_stand_in_copy`); its definitions of
-  names the binding owns hold only inside its own code (state.rs `note_copy_provides_assignment`), its extras stand,
-  its `\AtEndOfClass`/`\AtEndOfPackage` code runs in its mode, its document-time hooks are not registered
-  (`copy_provides_defers`), its nested loads are real loads, its own errors are Warnings
-  (error.rs `copy_code_demotes_errors`); its `\usepackage` lines take the dependency scan's `\ver@` test (68f's
-  sn-jnl `program`); owned counters keep the binding's numbering. Updated fixtures: 68k's minimal mdpi.cls loads
-  ifthen as the real copy does (:37); the rawclasses `daj` precedence guard now asserts the binding's `\section` with
-  the copy's extra provided. Census A/B (the 400 `conv_sel.tsv` papers) vs 67int20b: E 590 → 520, 60
-  papers E-better, 7 E-worse, 1 newly Fatal (hep-ph9609379, a diagrams.sty unrelated to the binding's); witnesses
-  1309.5950 4 → 0, 1805.06442 1 → 0, 2001.05519 1 → 0, 1406.5372 29 → 0, 2109.13055 84 → 0, 2008.02921 9 → 0. Open:
-  (a) the brief's rule 5 asked for document-time hooks to run under the rule; measured, they fixed nothing and caused 3
-  Fatals and 5 Error rows — not registered pending a ruling; (b) WileyNJDv5.cls's `lettersp` after the binding's
-  algpseudocode (`\Comment` taken for LETTERSP.STY's own: 2501.12471, 2602.03829, 2408.07575, 2609.08425,
-  2609.19994, 24 Errors each); (c) equations.sty's `\usevalue` against xkeyval's (2411.02780 2 → 99); (d) extras
-  defined inside an owned body stay unreachable (neurips `\TEST` 2406.07381, `\ADDRESS` 1909.08174; spconf's
-  `\thetitle` from its `\title` wrapper, 2311.11306); (e) a copy's raw citation machinery over kernel names our
-  `\cite` path still reads (crckapb.sty's `\@citex` and empty `\citeauthoryear`: astro-ph9601169 cites print "?").
+  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-2). After
+  a binding on `AUTHOR_FILE_STAND_INS` loads, the paper's copy is read raw (content.rs `read_stand_in_copy`) when it is
+  the file the binding stands in for (`copy_is_the_stood_in_file`: its `\Provides…` names it, else it defines the
+  binding's own command set); its definitions of names the binding owns hold only inside its own code (state.rs
+  `note_copy_provides_assignment`; the binding's OmniBus base included), its extras stand, its
+  `\AtEndOfClass`/`\AtEndOfPackage` code runs in its mode, its document-time hooks are not registered (decided on the
+  r1 evidence), its nested loads are real loads, its own Errors stay Errors (user ruling 2026-10-17); its
+  `\usepackage` lines take the dependency scan's `\ver@` test; owned counters keep the binding's numbering. Binding
+  fixes from the copies' Errors: WileyNJDv5 loads lettersp in the class's order (:377, before :6820's algorithms),
+  pnas-new passes titlesec's `explicit` (:229), IEEEtran declares its paper-size flags (KNOWN_PERL_ERRORS #957),
+  crckapb autoloads natbib's `\citeyear`/`\citeauthor`. Census A/B (the 400 `conv_sel.tsv` papers) vs 67int20b, Errors
+  kept: E 590 → 212, 61 papers E-better, 7 E-worse, 0 newly Fatal; words −4,484 (55 papers) / +18,879 (73);
+  instructions +3.3%; 50 census witnesses 203 → 5 Errors, 0 worse: 1309.5950 4 → 0, 1805.06442 1 → 0, 2001.05519 1 → 0,
+  1406.5372 29 → 0, 2109.13055 84 → 0, 2008.02921 9 → 0. Open: (a) ieeeaccess.cls:131's `spotcolor` color model
+  ("Unrecognized color model", +1 Error in 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467;
+  spotcolor.sty:71 defines the driver's `\color@spotcolor`, color.sty's own validity test); (b) aipcheck.tex:53-54
+  reads a pre-2020 `\fmtversion` (0806.2199 +3; pdflatex on TL 2025 errs the same); (c) a shipped file of the stood-in
+  name that is another file (hep-ph9609379's diagrams.sty, 2411.02780's annotate-equations.sty as equations.sty) is
+  not read at all, where TeX reads it raw; (d) extras defined inside an owned body stay unreachable (neurips `\TEST`
+  2406.07381, `\ADDRESS` 1909.08174; spconf's `\thetitle` from its `\title` wrapper, 2311.11306).
   Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
 
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;

@@ -51,7 +51,10 @@ fn copy_scratch_logic_runs_as_tex() {
     let tex = tex.replace("\\usepackage{jmlr2e}", &format!("\\usepackage{{{style}}}"));
     let (log, xml) = convert_files_with(
       &tex,
-      &[(&format!("{style}.sty"), repro!("scratch_logic/jmlr2e.sty"))],
+      &[(
+        &format!("{style}.sty"),
+        &repro!("scratch_logic/jmlr2e.sty").replace("jmlr2e", style),
+      )],
       Some("ar5iv.sty"),
     );
     assert_eq!(
@@ -224,4 +227,127 @@ fn copy_document_hooks_keep_the_bindings() {
       .unwrap_or_else(|| panic!("{file}: no <{element}> without the hook: {plain}"));
     assert_element(&xml, element, attrs, &expected);
   }
+}
+
+/// A file of the stood-in name that is another file is not read: hep-ph9609379's diagrams.sty (`\special` PostScript
+/// macros, no declaration, none of the diagrams binding's command set) and 2411.02780's equations.sty
+/// (`\ProvidesPackage{annotate-equations}`). pdflatex reads them ("READ"); the binding stands in for another package,
+/// so the base behaviour stands ("NOT READ"; reading them raw is an open row).
+#[test]
+fn copy_of_another_file_is_not_read() {
+  for (tex, file, copy) in [
+    (
+      repro!("identity/same_name_other_file_is_not_read.tex"),
+      "diagrams.sty",
+      repro!("identity/diagrams.sty"),
+    ),
+    (
+      repro!("identity/renamed_package_is_not_read.tex"),
+      "equations.sty",
+      repro!("identity/equations.sty"),
+    ),
+  ] {
+    let (log, xml) = convert_files_with(tex, &[(file, copy)], Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{file}: {log}"
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      "<p xml:id=\"p1.1\">NOT READ</p>",
+    );
+    assert!(
+      log.contains(&format!(
+        "Info:provide:{file} The paper's {file} defines 0 of the"
+      )) && log.contains("not the file its binding stands in for, not read"),
+      "{file}: {log}"
+    );
+  }
+}
+
+/// WileyNJDv5.cls:377 loads lettersp before the algorithms (:6820), so LETTERSP.STY:3-12 defines its own `\Comment`
+/// block; the binding loads it in the class's order where the paper's copy loads it (2408.07575, 2501.12471,
+/// 2602.03829, 2609.08425, 2609.19994). pdflatex: "FIRST LS". The copy's `\received` (WileyNJDv5.cls:5071) keeps the
+/// binding's OmniBus base's dated frontmatter, a guess (`Fallback`) to the document but the binding's own to the copy
+/// (2609.19994).
+#[test]
+fn wiley_loads_lettersp_before_the_algorithms() {
+  let (log, xml) = convert_files_with(
+    repro!("wiley_order/lettersp_before_the_algorithms.tex"),
+    &[
+      ("WileyNJDv5.cls", repro!("wiley_order/WileyNJDv5.cls")),
+      ("lettersp.sty", repro!("wiley_order/lettersp.sty")),
+    ],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">FIRST LS</p>",
+  );
+  assert_element(
+    &xml,
+    "date",
+    &["role=\"received\""],
+    "<date name=\"Received\u{a0}\" role=\"received\">Date X</date>",
+  );
+}
+
+/// crckapb.sty:665-760's raw citation commands (`\@citex`, `\citeyear` over `\@citedata`, which print an aux file's
+/// `b@<key>`: "?" in astro-ph9601169) leave the citations LaTeXML's: the kernel's `\cite`, natbib's `\citeyear` (the
+/// binding's autoload, as Perl's OmniBus), the copy's `\shortcite` over the binding's `\cite`. pdflatex prints the
+/// copy's "RAWCITEX"/"RAWYEAR".
+#[test]
+fn copy_citations_keep_the_semantic_cite() {
+  let (log, xml) = convert_files_with(
+    repro!("citations/copy_citations_keep_the_semantic_cite.tex"),
+    &[("crckapb.sty", repro!("citations/crckapb.sty"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("RAW"), "the copy's citation code ran: {xml}");
+  assert_eq!(
+    xml.matches("<bibref bibrefs=\"k1\"").count(),
+    3,
+    "every citation is a <cite>: {xml}"
+  );
+}
+
+/// pnas-new.cls:229 `\RequirePackage[explicit]{titlesec}` (1907.12289; :358 in 2509.24970): the binding loads titlesec
+/// with the option the paper's copy gives it, so the copy's and the document's title formats take the title as `#1`
+/// (pdflatex: "X: Intro").
+#[test]
+fn pnas_loads_titlesec_explicit() {
+  let (log, xml) = convert_files_with(
+    repro!("pnas_explicit/pnas_titlesec_explicit.tex"),
+    &[("pnas-new.cls", repro!("pnas_explicit/pnas-new.cls"))],
+    Some("ar5iv.sty"),
+  );
+  // (the binding's mdframed load, pnas-new.cls:53-55, is the stub's Warning)
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("Warning:missing_file:mdframed.sty mdframed.sty is only minimally stubbed"),
+    "{log}"
+  );
+  let subsection = latexml::util::test::xml_element(&xml, "subsection", &[])
+    .unwrap_or_else(|| panic!("no subsection: {xml}"));
+  assert!(subsection.contains("X: Intro</title>"), "{subsection}");
+}
+
+/// IEEEtran.cls:268-270's paper-size flags, which ieeeaccess.cls:21-23's `a4paper` handler sets (2007.03025,
+/// 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467). pdflatex: "A4 CS".
+#[test]
+fn ieeetran_paper_size_flags() {
+  let (log, xml) = convert_files_with(
+    repro!("ieee_a4/ieeetran_paper_size_flags.tex"),
+    &[],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(">A4 CS</p>"), "{xml}");
 }

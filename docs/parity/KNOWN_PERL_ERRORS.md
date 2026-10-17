@@ -15504,3 +15504,19 @@ Rust (int20): diagbox_sty.rs `\slashbox`/`\backslashbox` are `\def`s as diagbox.
 (the `[][]{}{}` reader; its second optional argument now `trim=`, as diagbox.sty:228-232, where it had been `font=`).
 `\diagbox` the same since 68z. Repro alignment-bindings/backslashbox_reads_its_arguments_in_the_cell; guard
 `perfect_kernel_batchint20::backslashbox_reads_its_arguments_in_the_cell`.
+
+## 957. IEEEtran's paper-size flags are missing, so a derived class's own `a4paper` option errs
+
+IEEEtran.cls:268-270 declares `\newif\if@IEEEusingAfourpaper` and `\newif\if@IEEEusingcspaper`, set by its
+`letterpaper`/`a4paper`/`cspaper` options (:296-320). Perl's IEEEtran.cls.ltxml:46-60 keeps the options with those
+setters commented out (`%%\@IEEEusingAfourpaperfalse`) and declares neither flag, so a class built on IEEEtran that sets
+the flag in its own option code — ieeeaccess.cls:21-23 `\DeclareOption{a4paper}{…\@IEEEusingAfourpapertrue}`, executed
+by its `\ExecuteOptions{a4paper,…}` — reports `\@IEEEusingAfourpapertrue` undefined.
+
+Trigger: `\documentclass[a4paper]{IEEEtran}\begin{document}\makeatletter\if@IEEEusingAfourpaper A4\fi\end{document}` —
+pdflatex 0 errors, "A4".
+
+Rust (72a r2): ieeetran_cls.rs declares both flags (IEEEtran.cls:268-270) and its paper-size options set them as the
+class does. Witnesses: ieeeaccess papers whose copy the stand-in reads (OXIDIZED_DESIGN_DIVERGENCES #731): 2007.03025,
+2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467. Repro stand-in-copies/ieee_a4/ieeetran_paper_size_flags;
+guard `perfect_kernel_batch72a::ieeetran_paper_size_flags`.

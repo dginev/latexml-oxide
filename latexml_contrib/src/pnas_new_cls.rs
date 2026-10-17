@@ -15,7 +15,9 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
-use crate::shipped_class::require_shipped_algorithm_packages;
+use crate::shipped_class::{
+  class_code_contains, require_shipped_algorithm_packages, shipped_class_text,
+};
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
@@ -86,7 +88,16 @@ LoadDefinitions!({
   require_shipped_algorithm_packages("cls")?;
   RequirePackage!("fancyhdr");
   RequirePackage!("etoolbox");
-  RequirePackage!("titlesec");
+  // pnas-new.cls:229 (v1.44, 1907.12289; :358 in 2509.24970's) `\RequirePackage[explicit]{titlesec}`: the class's
+  // `\titleformat`s (:244-268, :406) put the title in as `#1`, which titlesec reads only under `explicit` ("Illegal
+  // parameter number in definition of \ttlf@section" otherwise). The option where the paper's copy loads it so.
+  let explicit = shipped_class_text("pnas-new")?
+    .is_some_and(|text| class_code_contains(&text, "\\RequirePackage[explicit]{titlesec}"));
+  if explicit {
+    RequirePackage!("titlesec", options => vec![s!("explicit")]);
+  } else {
+    RequirePackage!("titlesec");
+  }
   RequirePackage!("caption");
   // pnas-new.cls:433 `\RequirePackage[inline]{enumitem}` (2508.21277's copy): the inline lists (`{enumerate*}`). The
   // older copies load enumitem without it (v1.44 :429, 1812.09361; v1.45 :414, 2311.05803); `inline` is the union

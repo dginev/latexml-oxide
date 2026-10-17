@@ -1,0 +1,10 @@
+\ifx\Comment\Undefined
+  \long\def\Comment#1\EndComment{}
+  \def\lsorder{FIRST}
+\else
+  \def\lsorder{AFTER THE ALGORITHMS}
+\fi
+\Comment
+This file's self-documentation.
+\EndComment
+\def\letterspace{LS}

@@ -44,13 +44,38 @@ pub(crate) fn wiley_njd_family(class: &str) -> Result<()> {
   RequirePackage!("wrapfig");
   // WileyNJDv5.cls:357-376, 413, 620-621 (the WileyNJD-v2 and WileyASNA-v1 copies this binding also stands in for load
   // the same: 2203.16535, 2406.06228): the tabular, float and caption packages the class loads, in its order
-  // (`\multirow` and `\captionsetup` were undefined, 2609.06025). Left out: ulem (without `normalem` it underlines
-  // `\emph`), enumerate, soul, lettersp, `babel[english]`, `footmisc[bottom]`, and the page-layout packages.
+  // (`\multirow` and `\captionsetup` were undefined, 2609.06025), lettersp (:377) where the copy loads it, below. Left
+  // out: ulem (without `normalem` it underlines `\emph`), enumerate, soul, `babel[english]`, `footmisc[bottom]`, and the
+  // page-layout packages.
   RequirePackage!("multicol");
   RequirePackage!("multirow");
   RequirePackage!("float");
   RequirePackage!("rotating", options => vec![s!("figuresright")]);
   RequirePackage!("caption");
+  // WileyNJDv5.cls:377 `\usepackage{lettersp}`, after caption and long before the algorithms (:6820): LETTERSP.STY:3-12
+  // defines its `\Comment … \EndComment` block only while `\Comment` is undefined, keeping an existing one as its own;
+  // loaded after algpseudocode it took algorithmicx's `\Comment` for it and ran its self-documentation as text
+  // (2408.07575, 2501.12471, 2602.03829, 2609.08425, 2609.19994). lettersp is no TeX Live package: only the copy the
+  // paper ships, where the paper's copy of the class loads it.
+  let (_, class_text) = wiley_version(class)?;
+  let lettersp = || {
+    find_file(
+      "lettersp",
+      Some(FindFileOptions {
+        ext_type: Some(Cow::Borrowed("sty")),
+        forbid_ltxml: true,
+        ..Default::default()
+      }),
+    )
+    .is_some()
+  };
+  if class_text
+    .as_deref()
+    .is_some_and(|text| class_text_loads(text, "lettersp"))
+    && lettersp()
+  {
+    RequirePackage!("lettersp");
+  }
   RequirePackage!("tabularx");
   RequirePackage!("varwidth");
   RequirePackage!("dcolumn");

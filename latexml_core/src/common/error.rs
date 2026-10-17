@@ -203,28 +203,8 @@ pub fn note_consecutive_error(key: &str) -> usize {
 /// the signal they measure. Suppression mutes Debug/Info/Warning only.
 /// The `MacroDiagGuard` marks the emission so the logger backend does not
 /// count it a second time.
-/// Is an Error raised now one in the paper's copy of an author file, read after the binding that stands in for it
-/// ("a stand-in's copy provides", `state::note_copy_provides_assignment`; OXIDIZED_DESIGN_DIVERGENCES #731)? Such an
-/// error is reported as a Warning, its message kept: it is raised by code the binding has taken over and whose
-/// semantics the binding carries — the copy's set-up of its own layout and machinery (ieeeaccess.cls:131's
-/// `spotcolor` color model, 2007.03025, 2009.04554; pnas-new.cls:256-419's `\titleformat`s, 1907.12289), which Perl,
-/// reading only the binding, never runs. A file the copy loads is a real load, the mode suspended: its errors stay
-/// Errors. A Fatal stays Fatal.
-pub fn copy_code_demotes_errors() -> bool { crate::definition::origin::copy_provides() != 0 }
-
 pub fn emit_record(status: LogStatus, target: &str, message: &str) {
   let _diag_guard = macro_diag_guard();
-  let demoted = matches!(status, LogStatus::Error) && copy_code_demotes_errors();
-  let status = if demoted { LogStatus::Warning } else { status };
-  let demoted_message;
-  let message = if demoted {
-    demoted_message = format!(
-      "{message}\n\t(in the paper's copy of an author file, in code its LaTeXML binding stands in for)"
-    );
-    demoted_message.as_str()
-  } else {
-    message
-  };
   // Perl `IGNORE_ERRORS`: a probing scope drops the record whole (no line, no
   // count) — see `set_ignore_diagnostics`.
   if diagnostics_ignored() {
@@ -303,11 +283,8 @@ pub fn emit_warn(category: &str, object: &str, message: &str) {
 /// instead: the run continues (its caller has no unwind path) but the
 /// conversion's verdict and status code report the fatal honestly.
 pub fn emit_error(category: &str, object: &str, message: &str) {
-  let demoted = copy_code_demotes_errors();
   emit_record(LogStatus::Error, &format!("{category}:{object}"), message);
-  if !demoted {
-    note_error_cap(&format!("{category}:{object}"));
-  }
+  note_error_cap(&format!("{category}:{object}"));
 }
 
 /// The error cap's bookkeeping after one counted Error (`key` = `category:object`): at the crossing of `MAX_ERRORS` or
@@ -910,8 +887,7 @@ macro_rules! Error {
     // all — no count, no cap bookkeeping: 500 identical forward-reference
     // errors inside the degraded expl3 raw-load must not trip the consecutive
     // cap on the first error after the scope.
-    if !$crate::common::error::is_demote_fatals() && !$crate::common::error::diagnostics_ignored()
-      && !$crate::common::error::copy_code_demotes_errors() {
+    if !$crate::common::error::is_demote_fatals() && !$crate::common::error::diagnostics_ignored() {
     // Borrow-safe read: an Error! can be raised from inside a `state_mut()`
     // scope (e.g. push_value's BUG branch, a constructor's after_digest),
     // where a plain `lookup_int` would panic "RefCell already mutably

@@ -402,6 +402,11 @@ pub struct State {
   /// The names assigned while a stand-in binding loaded ([`crate::definition::origin::StandInLoadGuard`]): its own, which
   /// the paper's copy read after it only provides ([`note_copy_provides_assignment`]).
   pub stand_in_meanings:       rustc_hash::FxHashSet<SymStr>,
+  /// The names each stand-in binding loading now has assigned in its own code, innermost last ([`begin_stand_in_load`]).
+  pub stand_in_loads:          Vec<Vec<SymStr>>,
+  /// The names the stand-in binding loaded last assigned in its own code ([`end_stand_in_load`]): the public ones are
+  /// the command set the paper's copy must define to be that binding's file (`binding::content` `read_stand_in_copy`).
+  pub stand_in_last_load:      Vec<SymStr>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
 }
@@ -499,6 +504,8 @@ impl Default for State {
       copy_provides_copies:    Vec::new(),
       copy_provides_frames:    Vec::new(),
       stand_in_meanings:       rustc_hash::FxHashSet::default(),
+      stand_in_loads:          Vec::new(),
+      stand_in_last_load:      Vec::new(),
       journal:                 None,
     }
   }
@@ -1056,6 +1063,11 @@ impl State {
       }
       if crate::definition::origin::stand_in_loading() {
         self.stand_in_meanings.insert(key);
+        if crate::definition::origin::stand_in_own_code()
+          && let Some(load) = self.stand_in_loads.last_mut()
+        {
+          load.push(key);
+        }
       }
     } else if table_name == TableName::Value && matches!(value, Stored::Bool(true)) {
       // (`<file>_loaded`, `load_ltxml`: a file loaded under the provide-only guard, or by a borrow)
@@ -2114,8 +2126,15 @@ fn environment_names(name: &str) -> Vec<String> {
 /// `\let`s and `RawTeX`, and the bindings it required), at an origin of LaTeXML's own, or its meaning is a definition
 /// made under this very name (not a `\let` copy of another's, whose object carries the other name) at such an origin —
 /// `Unknown`, `Pool` or `Binding` (definition/origin.rs): a pool's (`\section`, `\maketitle`) or another binding's
-/// (natbib's `\citep`, xkeyval's `\usevalue`). The format's own definitions (`Plain`, `LatexDump`, `Format`), the
-/// document's world (`File`, `Document`) and the guesses that yield (`Fallback`, `Stub`, `Borrowed`) are not owned.
+/// (natbib's `\citep`, xkeyval's `\usevalue`); a name the stand-in binding's load assigned is owned at `Fallback` too,
+/// the OmniBus base a class binding loads (`\received`, `\corres`). The format's own definitions (`Plain`,
+/// `LatexDump`, `Format`), the document's world (`File`, `Document`) and the other guesses that yield (`Fallback`,
+/// `Stub`, `Borrowed`) are not owned.
+/// A name a package the binding loaded defined stays owned: the narrower rule (only the binding's own code, so that a
+/// copy's redefinition of a package's macro stands as in TeX) gave the copy the class bindings' frontmatter and layout
+/// macros (`\title`, `\author`, `\thanks`, `\@makecaption`, `\the<counter>`, the NFSS size commands; aastex7's three
+/// Fatals again, 2504.00922, 2605.15371, 2607.03848); the case it was for, 2411.02780's equations.sty, is another file
+/// of that name (`binding::content` `copy_is_the_stood_in_file`).
 fn owned_by_the_semantic_layer(token: &Token) -> bool {
   use crate::definition::origin::DefinitionOrigin;
   let ours = |origin: DefinitionOrigin| {
@@ -2125,9 +2144,16 @@ fn owned_by_the_semantic_layer(token: &Token) -> bool {
     )
   };
   lookup_meaning(token).is_some_and(|meaning| {
-    definition_origin(&meaning).is_some_and(ours)
-      && (definition_cs(&meaning) == Some(*token)
-        || state!().stand_in_meanings.contains(&meaning_key(token)))
+    definition_origin(&meaning).is_some_and(|origin| {
+      if state!().stand_in_meanings.contains(&meaning_key(token)) {
+        // (the stand-in binding's guesses too: the OmniBus base a class binding loads, `Fallback` so that the
+        // document's own definition wins, OXIDIZED_DESIGN_DIVERGENCES #408 — the copy is not the document: WileyNJDv5's
+        // `\received` keeps OmniBus's dated frontmatter, 2609.19994)
+        ours(origin) || origin == DefinitionOrigin::Fallback
+      } else {
+        ours(origin) && definition_cs(&meaning) == Some(*token)
+      }
+    })
   })
 }
 
@@ -2230,6 +2256,33 @@ pub fn swap_copy_provides_hook_seam(on: bool) {
     set(&seam, kernel);
     set(&saved, Stored::None);
   }
+}
+
+/// Begin a stand-in binding's load ([`crate::definition::origin::StandInLoadGuard`]): no name of its own assigned yet
+/// ([`State::stand_in_loads`]); a stand-in it loads records its own apart.
+pub fn begin_stand_in_load() { state_mut!().stand_in_loads.push(Vec::new()); }
+
+/// End the stand-in binding's load [`begin_stand_in_load`] began: its names are the last load's
+/// ([`State::stand_in_last_load`]).
+pub fn end_stand_in_load() {
+  let mut state = state_mut!();
+  if let Some(load) = state.stand_in_loads.pop() {
+    state.stand_in_last_load = load;
+  }
+}
+
+/// The public names (letters only: no `@`) the latest stand-in binding's own code assigned ([`State::stand_in_last_load`]).
+pub fn stand_in_public_names() -> rustc_hash::FxHashSet<String> {
+  state!()
+    .stand_in_last_load
+    .iter()
+    .map(|key| arena::to_string(*key))
+    .filter(|name| {
+      name.strip_prefix('\\').is_some_and(|letters| {
+        !letters.is_empty() && letters.chars().all(|c| c.is_ascii_alphabetic())
+      })
+    })
+    .collect()
 }
 
 /// Begin a provide-only load: no name assigned in it yet.

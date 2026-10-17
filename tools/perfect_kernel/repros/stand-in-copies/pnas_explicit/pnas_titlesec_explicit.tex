@@ -1,0 +1,15 @@
+% witness: 1907.12289 (pnas-new.cls:229 `\RequirePackage[explicit]{titlesec}`, :244-268 `\titleformat`s with `#1`),
+%          2509.24970 (:358)
+% oracle:  pdflatex 0 errors (the title formats take the title as #1)
+% engines: rust 72a r1 = 7 "Illegal parameter number in definition of \ttlf@..." (titlesec loaded without `explicit`
+%          by the binding, the copy's load a no-op); Perl: the pnas-new binding without titlesec's option
+% expect:  0 errors, 0 warnings; the document's own explicit title format "X: Intro"
+% status:  RED (72a r1) -> GREEN (72a r2)
+% preload: ar5iv.sty
+\documentclass{pnas-new}
+\titleformat{\subsection}{\bfseries}{}{0em}{X: #1}
+\begin{document}
+\section{Intro}
+\subsection{Intro}
+Text.
+\end{document}

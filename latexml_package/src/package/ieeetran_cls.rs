@@ -27,6 +27,11 @@ LoadDefinitions!({
 \newif\ifCLASSOPTIONonecolumn \newif\ifCLASSOPTIONoneside \newif\ifCLASSOPTIONpeerreview
 \newif\ifCLASSOPTIONpeerreviewca \newif\ifCLASSOPTIONromanappendices \newif\ifCLASSOPTIONtechnote
 \newif\ifCLASSOPTIONtransmag \newif\ifCLASSOPTIONtwocolumn \newif\ifCLASSOPTIONtwoside");
+  // IEEEtran.cls:268-270 (V1.6b) the paper-size flags its `a4paper`/`cspaper`/`letterpaper` options set (:296-320),
+  // which a derived class's own `a4paper` handler sets too (ieeeaccess.cls:21-23 `\@IEEEusingAfourpapertrue`, in the
+  // paper's copy read after the ieeeaccess binding: 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464,
+  // 2609.20467).
+  RawTeX!(r"\newif\if@IEEEusingAfourpaper \newif\if@IEEEusingcspaper");
   // DeclareOption stubs — Perl L18-108
   // IEEEtran.cls:290-293 (`\CLASSOPTIONpt`, read by `\@IEEEabskeysecsize` below; 10pt the default, :374)
   RawTeX!(r"\def\CLASSOPTIONpt{10}");
@@ -34,9 +39,9 @@ LoadDefinitions!({
   DeclareOption!("10pt", r"\def\CLASSOPTIONpt{10}");
   DeclareOption!("11pt", r"\def\CLASSOPTIONpt{11}");
   DeclareOption!("12pt", r"\def\CLASSOPTIONpt{12}");
-  DeclareOption!("letterpaper", {});
-  DeclareOption!("a4paper", {});
-  DeclareOption!("cspaper", {});
+  DeclareOption!("letterpaper", r"\@IEEEusingAfourpaperfalse\@IEEEusingcspaperfalse");
+  DeclareOption!("a4paper", r"\@IEEEusingAfourpapertrue\@IEEEusingcspaperfalse");
+  DeclareOption!("cspaper", r"\@IEEEusingcspapertrue\@IEEEusingAfourpaperfalse");
   DeclareOption!("draft", {});
   DeclareOption!("final", {});
   DeclareOption!("journal", { Let!("\\ifCLASSOPTIONjournal", "\\iftrue"); Let!("\\ifCLASSOPTIONconference", "\\iffalse"); });

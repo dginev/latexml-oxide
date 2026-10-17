@@ -1,0 +1,14 @@
+% witness: 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467 (ieeeaccess.cls:21-23 `a4paper`
+%          sets IEEEtran.cls:268's `\@IEEEusingAfourpapertrue`)
+% oracle:  pdflatex 0 errors ("A4")
+% engines: rust 67int20b = `\@IEEEusingAfourpapertrue` undefined; Perl the same (IEEEtran.cls.ltxml has no such flag)
+% expect:  0 errors, 0 warnings; "A4"
+% status:  RED (67int20b) -> GREEN (72a r2)
+% preload: ar5iv.sty
+\documentclass[a4paper]{IEEEtran}
+\begin{document}
+\makeatletter
+\if@IEEEusingAfourpaper A4\else LETTER\fi
+\@IEEEusingcspapertrue\if@IEEEusingcspaper{} CS\fi
+\makeatother
+\end{document}
