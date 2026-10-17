@@ -49,12 +49,10 @@ pub fn apa_family_class(name: &str, mask: Option<&str>) -> Result<()> {
     LoadClass!("OmniBus");
     return Ok(());
   };
+  // (the class read raw by a binding is still a raw class to K11, as when the rawclasses lever reads it: its title-page
+  // stores — `\shorttitle`, `\affiliation`, `\authornote`, `\keywords`, `\abstract`, `\note`, … — reach the
+  // frontmatter, `input_definitions` firing the reroutes at the end of this class load)
   InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
-  // The class read raw by a binding is still a raw class to K11, as when the rawclasses lever reads it: its title-page
-  // stores (`\shorttitle`, `\affiliation`, `\authornote`, `\keywords`, `\abstract`, `\note`, …) reach the
-  // frontmatter (`reroute_raw_class_stores`, fired for a raw load by `input_definitions`, which a binding's own load of
-  // the file does not do).
-  RawTeX!(&s!(r"\lx@class@loaded@raw{{{class}}}"));
   // (a class only named like the family, without the numbered stores, is left as it is)
   if !IsDefined!(&T_CS!("\\twoauthors")) || !IsDefined!(&T_CS!("\\twoaffiliations")) {
     return Ok(());

@@ -41,6 +41,10 @@ const MAX_INPUT_DEPTH: usize = 500;
 thread_local! {
   /// Current nesting depth of input_definitions calls.
   static INPUT_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  /// Classes a binding read raw itself (`InputDefinitions!(noltxml)` of a `.cls`, without the class-load options
+  /// handling) that no class load has yet given to K11: the enclosing class load claims them at its end
+  /// (`input_definitions_impl`). A Rust local count, so nested loads pair by the call stack.
+  static UNCLAIMED_RAW_CLASS_READS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
   /// Current nesting depth of [`load_class`] calls: above 0, a class is loading,
   /// and a class it loads is nested.
   static CLASS_LOAD_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
@@ -799,6 +803,8 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
   } else {
     Some(crate::binding::store_setters::snapshot()?)
   };
+  // (the classes a binding loaded now reads raw itself, for K11 at this load's end)
+  let raw_class_reads_before = UNCLAIMED_RAW_CLASS_READS.get();
   let loaded = if options.noltxml {
     None
   } else {
@@ -1126,6 +1132,9 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
         options.handleoptions,
       )?;
       crate::binding::store_setters::mark_raw(&setters_before)?;
+      if as_type == "cls" && !options.handleoptions {
+        UNCLAIMED_RAW_CLASS_READS.set(UNCLAIMED_RAW_CLASS_READS.get() + 1);
+      }
     } else if options.reloadable
       && options.notex
       && options.noerror
@@ -1229,8 +1238,20 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       // K11 (`latexml_engine/src/frontmatter_stores.rs`): a class loaded RAW
       // keeps its title page in stores that only its discarded `\@maketitle`
       // reads; the kernel reroutes the ones it knows to the frontmatter API.
-      if is_found_raw
-        && !is_binding
+      // One rule for every class read raw on the class-load path: the class
+      // itself (the rawclasses lever, a raw `\LoadClass`), or the class a
+      // binding reads raw (apa6.cls, apa.cls, beilstein.cls, lni.cls, memoir.cls,
+      // …), whose stores reach the frontmatter as under the lever (68u: lni
+      // lost `\subtitle`; apa6 its `\shorttitle`/`\affiliation`/`\authornote`).
+      // A binding's read is rerouted here, after the binding loaded, so a setter
+      // the binding defined — before or after its read — is the binding's
+      // (`store_setters::mark_bound` above), never a store.
+      let binding_read_a_class =
+        is_binding && UNCLAIMED_RAW_CLASS_READS.get() > raw_class_reads_before;
+      if binding_read_a_class {
+        UNCLAIMED_RAW_CLASS_READS.set(raw_class_reads_before);
+      }
+      if ((is_found_raw && !is_binding) || binding_read_a_class)
         && as_type == "cls"
         && lookup_definition(&T_CS!("\\lx@class@loaded@raw"))?.is_some()
       {

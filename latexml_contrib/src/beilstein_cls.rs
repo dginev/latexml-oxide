@@ -36,9 +36,8 @@ fn braced(tokens: Vec<Token>) -> Vec<Token> {
 
 LoadDefinitions!({
   InputDefinitions!("beilstein", noltxml => true, extension => Some(Cow::Borrowed("cls")));
-  // (the class read raw by this binding is a raw class to K11, its title-page stores rerouted as under the
-  // rawclasses lever; `apa6_cls::apa_family_class`)
-  RawTeX!(r"\lx@class@loaded@raw{beilstein}");
+  // (the class read raw by this binding is a raw class to K11, its title-page stores rerouted at the end of the class
+  // load as under the rawclasses lever; the binding's own setters below stay its own)
   // The author just named: its marks, name and e-mail, and the affiliations that followed it.
   DefPrimitive!("\\lx@beilstein@set{}{}{}", sub[(marks, name, email)] {
     set_tokens("marks", marks.unlist());

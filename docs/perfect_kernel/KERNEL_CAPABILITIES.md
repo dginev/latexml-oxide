@@ -325,7 +325,8 @@ labels linked from the authors' `$^{n,}$` (`\lx@author@withsup` /
 `\lx@affiliation@withsup`).
 
 **Mechanism (as landed: 56dj, extended 58m, 58q, 59d, 59e).** After a raw `.cls` loads (the
-`latexml_core/src/binding/content.rs` after-hook site; a binding's own raw self-load does not fire it),
+`latexml_core/src/binding/content.rs` after-hook site; since 68x also for the class a binding reads raw, at the end
+of that class load, the binding's own setters kept),
 `\lx@class@loaded@raw{name}` runs `frontmatter_stores::reroute_raw_class_stores`: each setter of the NAME → kind
 table that the class defined as a pure store — one argument, or `[optional]{mandatory}` (58m, bfhlayout
 `\institute`) — is rerouted to the frontmatter API, and once any store was captured `\let\@maketitle\@empty`, as

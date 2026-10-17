@@ -2432,6 +2432,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   package-bindings/{apacite_shortcite_prenote, declaregraphicsrule_typesets_nothing, dcolumn_box_in_cell_math_shift},
   class-bindings/{arxbj_author_command_over_elsart_theorem, quantumarticle_doi_detokenized, sn_jnl_href_is_burlalt};
   guards `perfect_kernel_batch68w::{apacite_*, declaregraphicsrule_*, dcolumn_*, arxbj_*, quantumarticle_*, sn_jnl_*}`.
+
+- **68x** (raw-class frontmatter rows from the int16 A/B). (1) K11 for every class read raw: `input_definitions`
+  (latexml_core/src/binding/content.rs) fires the title-page store reroutes at the end of a class load for the class a
+  binding read raw (`UNCLAIMED_RAW_CLASS_READS`, claimed by the nearest enclosing class load), after the binding, whose
+  own setters `store_setters::mark_bound` keeps; the explicit `\lx@class@loaded@raw` calls in apa6_cls.rs (apa, apa6),
+  beilstein_cls.rs and lni_cls.rs are gone. Byte-identical output vs 67int16 on 60 papers (the four bindings'
+  witnesses 2102.04789, 1710.04173, 1811.01821, 2011.06172, 1401.2054, 1402.6720, 1605.09288, 1609.04156, 1203.0762,
+  2608.21389; 20 apa6/apa/lni/beilstein papers from rawcls3/list3362.tsv; 31 papers of the other bindings that read
+  their class raw: memoir, KOMA, apa7, jinst, compositio, …). Repro class-bindings/lni_subtitle_through_k11; guard
+  `perfect_kernel_batch68x::a_class_a_binding_reads_raw_reroutes_its_stores`.
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

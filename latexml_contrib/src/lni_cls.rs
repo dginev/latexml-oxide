@@ -11,9 +11,8 @@ use latexml_package::{package::authblk_sty::define_author_and_affil, prelude::*}
 
 LoadDefinitions!({
   InputDefinitions!("lni", noltxml => true, extension => Some(Cow::Borrowed("cls")));
-  // (the class read raw by this binding is a raw class to K11, its title-page stores rerouted: lni.cls `\subtitle`;
-  // `apa6_cls::apa_family_class`)
-  RawTeX!(r"\lx@class@loaded@raw{lni}");
+  // (the class read raw by this binding is a raw class to K11, its title-page stores rerouted at the end of the class
+  // load: lni.cls `\subtitle`; the binding's `\author`/`\affil` below stay its own)
   define_author_and_affil()?;
   Let!("\\lx@lni@author", "\\author");
   DefMacro!(

@@ -18323,10 +18323,13 @@ names (split as the kernel's `\author`, appended: `\lx@add@authors@list`) carryi
 on the class's title page (the kernel's creators cleared, the one-author `\@affil` emptied so K11 does not give it to
 every author). Without numbered names K11's own harvest of `\@affil` (a numbered affiliation form's first one) stands.
 The `mask` option (apa6.cls:126) hides the numbered names as the class does. A class only named like the family (the
-prefix fallback's apa6e.cls, a paper's renamed copy) is read as itself (`requested_shipped_class`). Each of these four
-bindings fires K11 for the class it reads (`\lx@class@loaded@raw`), which `input_definitions` fires only for a
-class read raw as the document's class: without it, a binding's raw class lost K11's reroutes (lni.cls `\subtitle` a
-bold paragraph instead of `<subtitle>`; apa6's `\shorttitle`, `\affiliation`, `\authornote`, `\keywords`).
+prefix fallback's apa6e.cls, a paper's renamed copy) is read as itself (`requested_shipped_class`). A class a
+binding reads raw is a raw class to K11: `input_definitions` (latexml_core/src/binding/content.rs) fires the reroutes
+(`\lx@class@loaded@raw`) at the end of the class load for the class the binding read, after the binding's own
+definitions, which `store_setters::mark_bound` keeps the binding's (68x: one rule for every binding that reads its
+class raw, replacing 68u r3's explicit calls in these four; without it a binding's raw class lost K11's reroutes —
+lni.cls `\subtitle` a bold paragraph instead of `<subtitle>`; apa6's `\shorttitle`, `\affiliation`, `\authornote`,
+`\keywords`; guard `perfect_kernel_batch68x::a_class_a_binding_reads_raw_reroutes_its_stores`).
 Witnesses 2102.04789, 1710.04173, 1811.01821, 2011.06172, 1401.2054, 1402.6720, 1605.09288, 1609.04156 (71 papers use
 the numbered forms). Repro class-bindings/apa6_numbered_author_affiliation_forms; guards
 `perfect_kernel_batch68u::{apa6_numbered_authors_carry_the_affiliation_of_their_number,
