@@ -6,3 +6,4 @@
 *.stderr
 # a graphic fixture a repro includes (not a pdflatex output)
 !graphics-tikz/ext/fig.pdf
+!graphics-tikz/inkscape/box.pdf
