@@ -1443,8 +1443,9 @@ impl Document {
   }
 
   /// Close the `{quote}`, `{quotation}` or `{verse}` (`ltx:quote`, which does not auto-close) standing between the
-  /// current point and a place that can hold one of `qsyms` — a sectioning unit (`find_insertion_point_qsym`) or a
-  /// bibliography and the unit it stands as (latex_constructs `adjust_backmatter_element`). Each of these environments
+  /// current point and a place that can hold one of `qsyms` — a display sectioning unit `\part`..`\subsubsection`
+  /// (`find_insertion_point_qsym`; a run-in `\paragraph`/`\subparagraph` stays in the quote, `is_quote_closing_unit`)
+  /// or a bibliography and the unit it stands as (latex_constructs `adjust_backmatter_element`). Each of these environments
   /// is LaTeX's unlabelled list `\list{}{…}\item\relax` (article.cls:389-408), a margin, no structure: the heading and
   /// what follows it are the document's own unit, typeset within the margin (latex.ltx `\@startsection`;
   /// `thebibliography` = `\section*` + `\list`, article.cls:565-584). The quotes in the way, from the innermost, are
@@ -1480,10 +1481,9 @@ impl Document {
         continue;
       }
       let current_qname = get_node_qname(&current);
-      if qsyms
-        .iter()
-        .any(|q| sym_can_contain_somehow(current_qname, *q).is_some())
-      {
+      if qsyms.iter().any(|q| {
+        sym_can_contain_somehow(current_qname, *q).is_some() && holds_in_quote_block(&current, *q)
+      }) {
         break;
       }
       if current_qname == pin!("ltx:quote") && !can_auto_close(&current) && !left_box {
@@ -3476,8 +3476,9 @@ impl Document {
   ) -> Result<Node> {
     self.close_text_internal()?; // Close any current text node.
     let cur_qname = get_node_qname(&self.node);
-    // If `qname` is allowed at the current point, we're done.
-    if can_contain_qsym(cur_qname, qsym) {
+    // If `qname` is allowed at the current point, we're done (a display unit at a quote's run-in block goes on to
+    // close the quote, `holds_in_quote_block`).
+    if can_contain_qsym(cur_qname, qsym) && holds_in_quote_block(&self.node, qsym) {
       return Ok(self.node.clone());
     // Else, if we can create an intermediate node that accepts $qname, we'll do
     // that.
@@ -3521,7 +3522,11 @@ impl Document {
           None => pin!(""),
           Some(ref p) => get_node_qname(p),
         };
-        if sym_can_contain_somehow(parent_name, qsym).is_some() {
+        if sym_can_contain_somehow(parent_name, qsym).is_some()
+          && parent_opt
+            .as_ref()
+            .is_none_or(|p| holds_in_quote_block(p, qsym))
+        {
           close_to = Some(node);
           break;
         }
@@ -3546,7 +3551,7 @@ impl Document {
         self.close_node_internal(&close_to_node)?; // Close the auto closeable nodes.
         self.find_insertion_point_qsym(qsym, None) // Then retry, possibly w/auto open's
       } else if is_quote_closing_unit(qsym) && self.close_quotes_blocking(&[qsym])? {
-        // A sectioning unit in a `{quote}`, `{quotation}` or `{verse}` closed it (`close_quotes_blocking`).
+        // A display sectioning unit in a `{quote}`, `{quotation}` or `{verse}` closed it (`close_quotes_blocking`).
         self.find_insertion_point_qsym(qsym, None)
       } else {
         // Cascading-rejection suppression (2026-05-01): when a math leaf
@@ -3722,8 +3727,21 @@ impl Document {
             attrs:   &[],
             holder:  item_has_label,
           },
-          // (A sectioning unit in a `{quote}`, `{quotation}` or `{verse}` opens no block: it closes the quote,
-          // `close_quotes_blocking` above; OXIDIZED_DESIGN_DIVERGENCES #678.)
+          // …and a run-in `\paragraph` or `\subparagraph` in a `{quote}`, `{quotation}` or `{verse}`: pdflatex sets
+          // the heading and the text after it, up to the environment's end, inside the quote's `\list` margins
+          // (article.cls:389-408, `quote` = `\list{}{\rightmargin\leftmargin}\item\relax`), and the quote holds the
+          // block directly (LaTeXML-block.rnc `quote_model` takes `Misc.class`); the quote's end closes it, and a later
+          // display unit in the same quote closes the quote (`close_quotes_blocking` above). The display units
+          // `\part`..`\subsubsection` open no block (`is_quote_closing_unit`; `\begin{quotation}\section*{}` around a
+          // title page's abstract, 0712.1985). Main-session ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #678;
+          // witnesses 2607.27159 2505.18677 2305.11603 1809.03802 2208.14587. Guards `perfect_kernel_batch69a::{
+          // paragraph_in_a_quote_stays_in_it, section_after_a_paragraph_in_a_quote_closes_it}`.
+          AutoOpenBridge {
+            chain:   &["ltx:inline-sectional-block"],
+            applies: |cur, qsym| cur == "ltx:quote" && is_run_in_unit_name(qsym),
+            attrs:   &[],
+            holder:  |_| true,
+          },
           AutoOpenBridge {
             chain:   &["ltx:item", "ltx:para"],
             applies: |cur, qsym| cur == qsym,
@@ -7561,10 +7579,35 @@ fn is_sectioning_unit_name(qname: &str) -> bool {
   )
 }
 
-/// The sectioning units that close a quote they arrive in (`Document::close_quotes_blocking`): `\part` to
-/// `\subparagraph`, starred or not (an `\appendix`'s units are these too).
+/// The sectioning units that close a quote they arrive in (`Document::close_quotes_blocking`): the display units
+/// `\part` to `\subsubsection`, starred or not (an `\appendix`'s units are these too). The run-in `\paragraph` and
+/// `\subparagraph` (latex.ltx `\@startsection` with a negative after-skip, article.cls:314-321) are not: pdflatex sets
+/// the heading and the text after it inside the quote's margins, so they open an `ltx:inline-sectional-block` in the
+/// quote (`AUTO_OPEN_BRIDGES`; main-session ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #678; 2607.27159
+/// 2505.18677 2305.11603 1809.03802 2208.14587).
 fn is_quote_closing_unit(qsym: SymStr) -> bool {
-  qsym == pin!("ltx:part") || qsym == pin!("ltx:chapter") || is_lenient_sectioning_unit(qsym)
+  qsym == pin!("ltx:part")
+    || qsym == pin!("ltx:chapter")
+    || qsym == pin!("ltx:section")
+    || qsym == pin!("ltx:subsection")
+    || qsym == pin!("ltx:subsubsection")
+}
+
+/// Whether `node` may hold a `qsym` it can contain by the model: false only for a display unit
+/// (`is_quote_closing_unit`) at the `ltx:inline-sectional-block` a run-in `\paragraph`/`\subparagraph` opened in a
+/// quote (`AUTO_OPEN_BRIDGES`) — a later `\section` in the same quote closes the quote, as one before the run-in heading does
+/// (2110.03376, 1905.08876; guard `perfect_kernel_batch69a::section_after_a_paragraph_in_a_quote_closes_it`).
+fn holds_in_quote_block(node: &Node, qsym: SymStr) -> bool {
+  !(is_quote_closing_unit(qsym)
+    && get_node_qname(node) == pin!("ltx:inline-sectional-block")
+    && node
+      .get_parent()
+      .is_some_and(|parent| get_node_qname(&parent) == pin!("ltx:quote")))
+}
+
+/// Whether `qname` is a run-in sectioning unit, `\paragraph` or `\subparagraph`, by name.
+fn is_run_in_unit_name(qname: &str) -> bool {
+  matches!(qname, "ltx:paragraph" | "ltx:subparagraph")
 }
 
 /// A `\trivlist`'s list (`_trivlist`, latex_constructs sect06.rs): ended by its `\endtrivlist` or at its group's

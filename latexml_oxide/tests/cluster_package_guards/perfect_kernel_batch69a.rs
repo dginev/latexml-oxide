@@ -277,3 +277,36 @@ fn declaremathoperator_undefined_parameter_text() {
   );
   assert!(!xml.contains("lx@amsopn@"), "{xml}");
 }
+
+/// A run-in `\paragraph` in a `{quote}` (review probe qpara; 2607.27159, 2505.18677, 2305.11603, 1809.03802,
+/// 2208.14587): the quote stays open and holds the headings in an inline sectional block, as pdflatex sets them in the
+/// quote's margins (ruling 2026-10-17, OD #678); the text after the quote is outside it.
+#[test]
+fn paragraph_in_a_quote_stays_in_it() {
+  let xml = clean!("sectioning-frontmatter/paragraph_in_quote.tex");
+  assert_all(&xml, &[
+    r#"<quote xml:id="S1.p1.2"> <p xml:id="S1.p1.2.1">Throughout the subroutine we keep this text indented within the quote margins ok.</p> <inline-sectional-block xml:id="S1.p1.2.2"> <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px1"> <title>Base case 1:</title> <para xml:id="S1.SS0.SSS0.Px1.p1"> <p xml:id="S1.SS0.SSS0.Px1.p1.1">Suppose a thing holds, a long enough line to show where the quote margin is.</p> </para> </paragraph> <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px2"> <title>Main step:</title> <para xml:id="S1.SS0.SSS0.Px2.p1"> <p xml:id="S1.SS0.SSS0.Px2.p1.1">Otherwise pick a vertex, a long enough line to show where the quote margin is.</p> </para> </paragraph> </inline-sectional-block> </quote> <p xml:id="S1.p1.3">If none of the trials accepted, reject: a long enough line to show the full text width here too.</p> </para> </section> </document>"#,
+  ]);
+}
+
+/// A `\section` later in the quote a run-in `\paragraph` stays in (2110.03376, 1905.08876): the section closes the
+/// quote, as one before the run-in heading does, and the text after the quote is the section's.
+#[test]
+fn section_after_a_paragraph_in_a_quote_closes_it() {
+  let xml = clean!("sectioning-frontmatter/section_after_paragraph_in_quote.tex");
+  assert_all(&xml, &[
+    r#"<quote xml:id="S1.p1.2"> <p xml:id="S1.p1.2.1">Lead text in the quote.</p> <inline-sectional-block xml:id="S1.p1.2.2"> <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px1"> <title>Base case:</title> <para xml:id="S1.SS0.SSS0.Px1.p1"> <p xml:id="S1.SS0.SSS0.Px1.p1.1">Run-in text in the quote.</p> </para> </paragraph> </inline-sectional-block> </quote> </para> </section> <section inlist="toc" xml:id="S2">"#,
+    r#"<title><tag close=" ">2</tag>Later</title> <para xml:id="S2.p1"> <p xml:id="S2.p1.1">Section text.</p> <p xml:id="S2.p1.2">After the quote.</p> </para> </section> </document>"#,
+  ]);
+}
+
+/// A run-in `\paragraph` in a `{quote}` inside a theorem (review probe d_thm): the theorem keeps the quote, the heading
+/// and its text; the text after the theorem follows it. (A display unit there closes the theorem too:
+/// `subsection_in_quote_in_proof.tex`, RED, OD #678 residual.)
+#[test]
+fn paragraph_in_a_quote_in_a_theorem_stays_in_it() {
+  let xml = clean!("sectioning-frontmatter/paragraph_in_quote_in_theorem.tex");
+  assert_all(&xml, &[
+    r#"<para xml:id="Thmthm1.p1"> <quote xml:id="Thmthm1.p1.1"> <p xml:id="Thmthm1.p1.1.1"><text font="italic" xml:id="Thmthm1.p1.1.1.1">Q.</text></p> <inline-sectional-block xml:id="Thmthm1.p1.1.2"> <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px1"> <title font="italic">P</title> <para xml:id="S1.SS0.SSS0.Px1.p1"> <p xml:id="S1.SS0.SSS0.Px1.p1.1"><text font="italic" xml:id="S1.SS0.SSS0.Px1.p1.1.1">P text.</text></p> </para> </paragraph> </inline-sectional-block> </quote> </para> </theorem> <para xml:id="S1.p2"> <p xml:id="S1.p2.1">After.</p> </para> </section> </document>"#,
+  ]);
+}

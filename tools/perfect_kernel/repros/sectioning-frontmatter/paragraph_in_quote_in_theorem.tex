@@ -1,0 +1,13 @@
+% mechanism: a run-in `\paragraph` in a `{quote}` inside a theorem: the quote stays open (its inline-sectional-block,
+%   OXIDIZED_DESIGN_DIVERGENCES #678), so the theorem keeps the heading and its text, as pdflatex sets them
+% witness: review probe d_thm (69a r2 re-review)
+% oracle:  pdflatex 0 errors: "1 Intro", "Pre.", "Theorem 1 Q." with "P P text." indented in the theorem, "After."
+% engines: rust 67int17b = Error:malformed:ltx:paragraph (in <ltx:quote>); 69a r2 closed the quote and the theorem at
+%   the heading (0 errors, the heading's text out of the theorem)
+% expect:  0 errors; the theorem holds the quote, which holds "Q." and the paragraph's block; "After." follows the
+%   theorem
+% status:  RED (67int17b, 69a r2) -> GREEN (69a r3)
+% preload: ar5iv.sty
+\documentclass{article}\newtheorem{thm}{Theorem}\begin{document}\section{Intro}Pre.
+\begin{thm}\begin{quote}Q.\paragraph{P}P text.\end{quote}\end{thm}After.
+\end{document}

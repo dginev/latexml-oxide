@@ -1,0 +1,15 @@
+% mechanism: a display unit (`\subsection`) in a `{quote}` inside a proof or a theorem: `close_quotes_blocking` closes
+%   the quote and then the proof (which auto-closes) to reach the section, so the heading's text and the rest of the
+%   proof leave the proof; pdflatex sets them all inside it (OXIDIZED_DESIGN_DIVERGENCES #678 residual, SYNC_STATUS
+%   69a residuals)
+% witness: review probe d_proof3 with `\subsection` (69a r2 re-review; d_thm the same in a theorem)
+% oracle:  pdflatex 0 errors: "1 Intro", "Pre.", "Proof. Q." with the indented "1.1 P", "P text.", then "Proof tail."
+%   and the QED box, then "After."
+% engines: rust 67int17b = Error:malformed:ltx:subsection (in <ltx:quote>), the proof whole; 69a r2/r3 = 0 errors, the
+%   proof holds only "Q.", the subsection after it holds "P text." and "Proof tail.∎After." in one `ltx:p`
+% expect:  0 errors; the proof keeps "Proof tail." and its QED; "After." is its own paragraph after the proof
+% status:  RED (open)
+% preload: ar5iv.sty
+\documentclass{article}\usepackage{amsthm}\begin{document}\section{Intro}Pre.
+\begin{proof}\begin{quote}Q.\subsection{P}P text.\end{quote}Proof tail.\end{proof}After.
+\end{document}

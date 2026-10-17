@@ -1130,8 +1130,11 @@ fn close_trivlists_from(document: &mut Document, level: usize) -> Result<()> {
 /// closes the quote (`Document::close_quotes_blocking`, OXIDIZED_DESIGN_DIVERGENCES #677, #678); the end then closes
 /// no other quote (one around it stays open: probe b_qsq, a `{quote}` in a `{quotation}`), only the paragraph
 /// the body's tail is in, as TeX's `\endlist` ends it (latex.ltx `\@endparenv`), so the text after the environment is
-/// a paragraph of its own (probe b_quote_text). Guards `perfect_kernel_batch69a::{
-/// bibliography_in_a_quote_keeps_the_tail_paragraph, bibliography_in_a_nested_quote_keeps_the_outer_quote}`.
+/// a paragraph of its own (probe b_quote_text). A run-in `\paragraph`/`\subparagraph` leaves the quote open (an
+/// `ltx:inline-sectional-block` in it, closed here). Witnesses 2203.09193 1504.06728 (a bibliography in a quote, a
+/// verse), 0712.1985 (`\section*` in a `{quotation}`), 2607.27159 (`\paragraph` in a quote). Guards
+/// `perfect_kernel_batch69a::{bibliography_in_a_quote_keeps_the_tail_paragraph,
+/// bibliography_in_a_nested_quote_keeps_the_outer_quote, paragraph_in_a_quote_stays_in_it}`.
 fn quote_environment(
   document: &mut Document,
   props: &SymHashMap<Stored>,
@@ -1154,6 +1157,9 @@ fn quote_environment(
   if let Some(Stored::Digested(body)) = props.get("body") {
     document.absorb(body, None)?;
   }
+  // `close_quotes_blocking` may have removed the quote (closed and left empty, then freed): the freed handle is
+  // blanked (libxml's `free_subtree` neutralizes every wrapper into the subtree), so it is neither the current node
+  // nor has children, and `is_open` is false — the quote counts as closed, as it is.
   if document.is_open(&quote) {
     document.close_element_if_open("ltx:quote")?;
   } else {

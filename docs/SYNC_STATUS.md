@@ -2736,9 +2736,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   entries keep the quote's `\small` (latex_constructs/mod.rs `close_list_containers_before_backmatter` → document.rs
   `close_quotes_blocking`, only when closing quotes alone makes the place reachable; ruling 2026-10-16, OD #677;
   2203.09193 1904.12066 1610.09996 2109.09861 2403.09260 1609.06434 astro-ph0410583 1504.06728); the environment's end
-  acts on its own quote, found closed it ends only the tail's `ltx:p` (sect06.rs `quote_environment`). (2) A sectioning
-  unit in a quote closes it the same way and is a real unit (main-session ruling 2026-10-17, as the margin-list
-  exemption; OD #678; 0712.1985). An `\appendix` unit's heading is taken by a bibliography (sect11.rs
+  acts on its own quote, found closed it ends only the tail's `ltx:p` (sect06.rs `quote_environment`). (2) A display
+  sectioning unit (`\part`..`\subsubsection`) in a quote closes it the same way and is a real unit (main-session ruling
+  2026-10-17, as the margin-list exemption; OD #678; 0712.1985); a run-in `\paragraph`/`\subparagraph` stays in the
+  quote, in an `ltx:inline-sectional-block`, as pdflatex sets it in the margins (document.rs `AUTO_OPEN_BRIDGES`, ruling
+  2026-10-17 round 3; 2607.27159 2505.18677 2305.11603 1809.03802 2208.14587), and a later display unit in the same
+  quote still closes it (`holds_in_quote_block`; 2110.03376 1905.08876). An `\appendix` unit's heading is taken by a bibliography (sect11.rs
   `BIBLIOGRAPHY_HEADED_UNITS`; astro-ph0503283). (3) Kluwer `\normallatexbib` `{chapthebibliography}` (`\section*` +
   `\list` + `\item[]`, cargese.cls:1859-1906; kapproc, edbk): a `\bibitem` in the environment that opened the innermost
   `\list` closes that list first (sect06.rs `lx@list@currenvir`, sect11.rs `\lx@mung@bibliography` `list`), the
@@ -2758,10 +2761,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   glossaries_untypeset_ampersand, declaremathoperator_parameter_text, declaremathoperator_undefined_parameter_text},
   index-bib/{bibliography_in_quote_tail_paragraph, bibliography_in_quote_in_quotation,
   bibliography_in_quote_in_minipage, appendix_references_heading_quote},
-  sectioning-frontmatter/{whole_paper_in_quotation, chapter_in_quotation}; guards `perfect_kernel_batch69a` (19).
+  sectioning-frontmatter/{whole_paper_in_quotation, chapter_in_quotation, paragraph_in_quote,
+  section_after_paragraph_in_quote, paragraph_in_quote_in_theorem, subsection_in_quote_in_proof (RED)}; guards
+  `perfect_kernel_batch69a` (22).
   Residuals: `\hhline{~~~---}` rules every column (hhline binding, pre-existing); amsrefs `{bibdiv}` in a quote errs
   (its bibliography is not placed by `adjust_backmatter_element`); a quote holding a bibliography or a heading inside a
-  list item, or outside the `minipage` it is in, errs as before; `\multirow{3}{*}{\textsc{X}}` under a size change nests
+  list item, or outside the `minipage` it is in, errs as before; a display unit in a quote inside a theorem or proof
+  closes the theorem/proof too (0 errors, but the heading, its text and the proof's tail leave it and the text after
+  the environment joins the unit's last paragraph; 67int17b kept the structure with 1 error; OD #678; RED
+  sectioning-frontmatter/subsection_in_quote_in_proof, review probes d_thm/d_proof3 with `\subsection`); `\multirow{3}{*}{\textsc{X}}` under a size change nests
   its fonts differently (2509.09853, rendering unchanged).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,

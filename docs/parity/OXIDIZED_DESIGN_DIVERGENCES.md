@@ -18689,23 +18689,43 @@ bibliography_in_a_quote_keeps_the_tail_paragraph, bibliography_in_a_nested_quote
 bibliography_in_a_quote_in_a_minipage_closes_the_quote}`. Not covered: amsrefs `{bibdiv}` in a quote (not placed by
 `adjust_backmatter_element`; errs as before).
 
-### 678. A sectioning unit inside `{quote}`, `{quotation}` or `{verse}` closes the quote and is the document's own unit (TeX: the heading set in the quote's margins; Perl: error, the unit nested in the quote)
+### 678. A display sectioning unit inside `{quote}`, `{quotation}` or `{verse}` closes the quote and is the document's own unit; a run-in `\paragraph` stays in the quote (TeX: the heading set in the quote's margins; Perl: error, the unit nested in the quote)
 
 LaTeX's quote environments are its unlabelled list, `\list{}{…}\item\relax` (article.cls:389-408): a margin, no
 structure. A `\section*{}` in a `{quotation}` (0712.1985's title page wraps its abstract in one), a whole paper inside
 one, a `\chapter` in one in a report: TeX typesets the units inside the margins. `ltx:quote` cannot hold a sectioning
-unit and does not auto-close, so Perl and Rust before 69a erred (`<ltx:section> isn't allowed in <ltx:quote>`). Here a
-sectioning unit (`\part` to `\subparagraph`, starred or not) arriving in a quote closes it (`find_insertion_point_qsym`
-→ `Document::close_quotes_blocking`, the same close as a bibliography's, #677): the quotes in the way are closed only
-when that alone makes the unit's place reachable (a quote in a list item stays open and errs as before; one in a
-`minipage` is closed and the unit is placed as in a `minipage` without a quote), each one left empty is dropped, and the unit is a real one — its number, id, labels and table-of-contents
-entry, its back matter after it. The environment's end finds its quote closed and closes only the paragraph text of its
-tail (#677). Only the indentation differs from the PDF. Main-session ruling 2026-10-17 (an unlabelled list follows the
-item bridge's margin-list exemption, #189; it replaces the 2026-10-16 inline-sectional-block ruling, whose block left a
-whole paper's sections and bibliography inside one paragraph). Not for a labelled list item or a float, which open an
-`ltx:inline-sectional-block` (#189). Repros sectioning-frontmatter/{section_in_quotation, whole_paper_in_quotation,
-chapter_in_quotation}; guards `perfect_kernel_batch69a::{section_in_a_quotation_closes_it,
-whole_paper_in_a_quotation_has_its_sections, chapter_in_a_quotation_is_a_chapter}`.
+unit and does not auto-close, so Perl and Rust before 69a erred (`<ltx:section> isn't allowed in <ltx:quote>`).
+
+Display units (`\part` to `\subsubsection`, starred or not; `is_quote_closing_unit`) arriving in a quote close it
+(`find_insertion_point_qsym` → `Document::close_quotes_blocking`, the same close as a bibliography's, #677): the quotes
+in the way are closed only when that alone makes the unit's place reachable (a quote in a list item stays open and errs
+as before; one in a `minipage` is closed and the unit is placed as in a `minipage` without a quote), each one left empty
+is dropped, and the unit is a real one — its number, id, labels and table-of-contents entry, its back matter after it.
+The environment's end finds its quote closed and closes only the paragraph text of its tail (#677). Main-session ruling
+2026-10-17 (an unlabelled list follows the item bridge's margin-list exemption, #189; it replaces the 2026-10-16
+inline-sectional-block ruling for display units, whose block left a whole paper's sections and bibliography inside one
+paragraph).
+
+The run-in units `\paragraph` and `\subparagraph` (`\@startsection` with a negative after-skip, article.cls:314-321) do
+not close the quote: pdflatex sets the heading and everything after it up to the environment's end inside the quote's
+margins (algorithm cases, LLM prompts, proof steps: 2607.27159, 2505.18677, 2305.11603, 1809.03802, 2208.14587), so
+they open an `ltx:inline-sectional-block` in the quote (`AUTO_OPEN_BRIDGES`; the quote's model takes `Misc.class`),
+the quote's end closes it, and the text after the environment stays outside. A later display unit in the same quote
+still closes the quote — the inline block, whose model would hold a section, is not its place (`holds_in_quote_block`;
+2110.03376, 1905.08876). Main-session ruling 2026-10-17 (round 3).
+
+Where the PDF differs: the indentation of a display unit and what follows it in the quote; and a quote inside a
+theorem or a proof — the walk closes the quote and then the theorem or proof around it (they auto-close) to reach the
+unit's place, so the heading, its text and the rest of the theorem or proof leave it and the text after the environment
+joins the unit's last paragraph ("Proof tail.∎After.", review probes d_thm, d_proof3 with `\subsection`), where TeX
+keeps them all in the theorem or proof; 67int17b kept the structure with one error (a heading directly in a proof
+already merges so, review probe d_proof2). SYNC_STATUS 69a residual; RED repro
+sectioning-frontmatter/subsection_in_quote_in_proof. Not for a labelled list item or a float, which open an
+`ltx:inline-sectional-block` for every unit (#189). Repros sectioning-frontmatter/{section_in_quotation,
+whole_paper_in_quotation, chapter_in_quotation, paragraph_in_quote, section_after_paragraph_in_quote,
+paragraph_in_quote_in_theorem}; guards `perfect_kernel_batch69a::{section_in_a_quotation_closes_it,
+whole_paper_in_a_quotation_has_its_sections, chapter_in_a_quotation_is_a_chapter, paragraph_in_a_quote_stays_in_it,
+section_after_a_paragraph_in_a_quote_closes_it, paragraph_in_a_quote_in_a_theorem_stays_in_it}`.
 
 ### 679. An `&` in a glossary entry's stored fields is the character, not an alignment tab (TeX: an error only where the field is typeset; Perl: an error at the definition)
 
