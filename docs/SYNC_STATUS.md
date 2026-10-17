@@ -2776,7 +2776,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   leaves a script that ends its argument where it stands (bm.sty:162-217 `\bm@general`), so `\bm{G_}{(10)}`,
   `M\bm_{max}`, `\bm{(A^\top A)^{-1}A^}\top` take the script's argument after `\bm` (bm_sty.rs `bold_math`;
   KNOWN_PERL_ERRORS #897; est. 408 run-365 papers). Repro package-bindings/bm_trailing_script_takes_the_next_argument;
-  guard `perfect_kernel_batch69b::bm_trailing_script_takes_the_next_argument`.
+  guard `perfect_kernel_batch69b::bm_trailing_script_takes_the_next_argument`. (2) L1 (RUST-ONLY): the kernel's
+  `\@trivlist` is locked as Perl's (latex_constructs.pool.ltxml:1673 `locked => 1`; sect06.rs), so the ACM 1.8
+  family's spacing-only `\def\@trivlist` (vldb.cls:1118, sig-alternate*.cls, acm_proc_article-sp.cls, acmtrans2m.cls)
+  no longer stops `\list` opening its list ("Attempt to end mode internal_vertical"; est. 252; 1212.6177, 1710.00867,
+  whose vldb `\keywords` quotation residual is frontmatter). Repro
+  list-structure/class_redefining_trivlist_keeps_the_list; guard
+  `perfect_kernel_batch69b::class_redefining_trivlist_keeps_the_list`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

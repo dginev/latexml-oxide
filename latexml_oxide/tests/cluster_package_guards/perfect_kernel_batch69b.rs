@@ -1,6 +1,7 @@
 //! Red/green guards for batch 69b: low-risk shapes from the rc_struct3 study (agent_reports/2026-10-17_rc_struct3.md).
 //! Item 1 (B1) — bm.sty's `\bm` leaves a script that ends its argument where it stands, so it takes its argument
-//! after `\bm` (bm.sty:162-217 `\bm@general`).
+//! after `\bm` (bm.sty:162-217 `\bm@general`). Item 2 (L1) — the kernel's `\@trivlist` is locked as in Perl
+//! (latex_constructs.pool.ltxml:1673), so an ACM 1.8 class's spacing-only redefinition keeps `\list` a list.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -35,5 +36,26 @@ fn bm_trailing_script_takes_the_next_argument() {
     "Math",
     &["xml:id=\"p1.m3\""],
     r#"<Math mode="inline" tex="\bm{D}^{t}_{p}" text="(D ^ t) _ p" xml:id="p1.m3"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="bold italic" role="UNKNOWN">D</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok></XMApp><XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok></XMApp></XMath></Math>"#,
+  );
+}
+
+/// list-structure/class_redefining_trivlist_keeps_the_list: vldb.cls:1118's `\def\@trivlist{…}` (spacing only) before a
+/// `{list}` (pdflatex 0 errors: one bulleted item). Before 69b: 1 Error "Attempt to end mode internal_vertical" (Perl
+/// 0, its `\@trivlist` locked; 1212.6177, 1710.00867).
+#[test]
+fn class_redefining_trivlist_keeps_the_list() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/class_redefining_trivlist_keeps_the_list.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "itemize",
+    &[],
+    r#"<itemize><item xml:id="S0.I1.i1"><tags><tag><Math mode="inline" tex="\bullet" text="bullet" xml:id="S0.I1.i1.m1"><XMath><XMTok name="bullet" role="MULOP">∙</XMTok></XMath></Math></tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>One.</p></para></item></itemize>"#,
   );
 }

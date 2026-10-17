@@ -872,7 +872,12 @@ pub(crate) fn load() -> Result<()> {
       }
     }
   });
-  DefMacro!("\\@trivlist", "\\lx@trivlist@setup\\lx@list");
+  // Locked, as Perl's `DefMacro('\@trivlist', '\relax', locked => 1)` (latex_constructs.pool.ltxml:1673; D1, "a
+  // locked binding owns its calls"): the ACM 1.8 family (vldb.cls:1118, sig-alternate*.cls, acm_proc_article-sp.cls,
+  // acmtrans2m.cls) re-`\def`s latex.ltx's `\@trivlist` for its spacing, so `\list` never opened `\lx@list` and
+  // `\endlist` erred "Attempt to end mode internal_vertical" (rc_struct3 L1, est. 252 papers; 1212.6177, 1710.00867).
+  // Guard: `perfect_kernel_batch69b::class_redefining_trivlist_keeps_the_list`.
+  DefMacro!("\\@trivlist", "\\lx@trivlist@setup\\lx@list", locked => true);
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",
