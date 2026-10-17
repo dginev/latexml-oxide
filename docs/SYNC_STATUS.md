@@ -2703,6 +2703,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   alignment-bindings/tabu_in_math_is_an_array, guard `perfect_kernel_batch68z::tabu_in_math_is_an_array`. C11 (amsart
   caption `$$`, 0803.4182) and C6 (`\cite` note in display math, math0402383) are not local: RED rows in "Perfect-kernel
   RED repros" above.
+  Integrated as **int18** = 68y (rounds 1-3) + 68z (rounds 1-3) on 871a6a20eb, with 0e8a0f5ec6 (one `\ion` comment
+  after both batches made it robust) and 78bbc8f972 (`65_graphics::xytest` golden keeps the `\halign` row end as
+  written, `\cr&\\&\crcr`, as Perl's own t/graphics/xytest.xml does). Gates 5,747/5,747, cortex 10/10, inits 0/0, dumps
+  identical. Bundle A/B vs 67int17b over 3,417 papers (1,170 the 68y/68z rounds touched, 1,247 pop67o, 250 fresh
+  first-error papers each of `unexpected:&`, `unexpected:\noalign`, `unexpected:^`, `malformed:ltx:section`): Errors
+  26,546 → 22,014, Fatals 89 → 80 (9 better, 0 worse), 252 papers with fewer errors, 2 with more, words 62.71 M →
+  62.88 M; `unexpected:^` 5,925 → 3,992, `unexpected:&` 2,435 → 1,205, `\noalign` 954 → 819, `ltx:section` unchanged.
+  The 2 with more errors: 0908.4271 (12 → 13, a deluxetable inside `thebibliography`, the 68y review's existing
+  bibitem-in-td class) and **2305.03559** (144 → 163, −0.8 % words): author optional-argument macros at an `align*`
+  cell head (`\overrel[\leq]{\eqref{…}}{} &`, `\fillwidthof[c]{…}{…}`), where the §785 look-ahead now stops (KPE #880)
+  — RED row, next alignment batch. Word losses > 1 %: 1904.00651, 2604.11988 (aa marks now text, the 68y review's
+  re-tokenization). Nets 136/136 0 worse.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
