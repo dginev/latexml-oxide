@@ -2820,6 +2820,42 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   #898). (b) "Missing $ closing display math." keeps Perl's recovery (the display stays open, the following text set
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
+- **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;
+  agent_reports/2026-10-17_payload_int20.md). (1) The plain-TeX `\halign` rows (math9611222, math9611223, math9412232,
+  math0005042) were not 70b A1's template shape: diag.tex's `\newCD` calls `\Let@`, which the amsmath binding (65s)
+  made `\let\\\math@cr`, so `\\` reached amsmath's `\@ifstar` (plain AMS-TeX has none) and the row's `\cr` came with
+  its braces open — A1 then gave TeX's "Missing } inserted" cascade. amstex.rs defines amstex.tex:486's `\Let@`
+  (`\let\\=\cr`; KNOWN_PERL_ERRORS #949): 67int19b → bundle → int20 errors 21 → 101+F → 7 (math9412232), 25 → 101+F → 9 (math9611223),
+  54 → 84 → 28 (math0005042), 101+F → 40+2F → 75 (math9611222), every diagram kept (words at or above base). OD #707 stands (a bare `\halign{#…}` cell's stray `}`: pdflatex ends the alignment, §1132, 6 errors
+  and the cells after it lost; 67int19b and 70b keep every cell with 0-2). (2) 70a's regressions: graphicx's
+  `\lx@Gin@include` reads the name at the document's catcodes and expands it (graphicx.sty:198-203; KPE #950), so
+  `\def\seq_name{…}` names match (1908.04391 101+F → 0, 2609.16620 8 → 0; 67int19b had 54 and 4); a sub-file gincltex
+  boxes beside standalone has its preamble skipped (standalone_sty.rs wraps `\gincltex@boxfile`; OD #463 amended):
+  2512.06733's sub-file `\usepackage{cleveref}` no longer runs in the body (8 → 0, its figure drawn: +50 words on 67int19b). (3) `\slashbox`/`\backslashbox` are
+  `\def`s as diagbox.sty:216-221, so an alignment's cell-head peek stops there and their arguments are read in the cell
+  (KPE #951; 1106.0505 10 → 1, its table cells kept; 67int19b 2, the one left its `\citeauthoryear`); their second optional argument is `trim=` (it was `font=`).
+  Classified, no change: the 32 `clev` rows and 7 more (2210.03396 2307.04997 2401.06723 2501.07466 2508.02914
+  1906.06075 2407.02300) lose only hyperref's hidden `<tag role="autoref">` words (70a B1: no hyperref loaded, as in
+  pdflatex; visible bag-of-words identical, 1711.09373 −58 = its 253 autoref-tag words). Open rows: (a)
+  cond-mat9806166 72 → 81: the kernel `{subequations}` with a plain `\pmatrix{d\cr s\cr}` in an `equation` breaks the
+  display (67int19b 3 errors, A1 adds TeX's "Missing } inserted" at the `\cr`; trigger `\documentclass{article}`
+  `\begin{subequations}\begin{equation}\psi=\pmatrix{d\cr s\cr}\end{equation}\end{subequations}`, and under
+  jpsj.sty's own `\subequations` the same; not reproduced with that definition in an article preamble). (b)
+  revtex4/differ.tex 8 → 9 (int20 net): docs.sty `\cmd\documentstyle` writes `\index{documentstyle=\string\cmd`
+  + the `\string`ed name}; the `.idx` re-read (`reread_sanitized_entry`) turns those characters into the live
+  `\documentstyle` before process_index_phrases expands `\string\cmd` (pdflatex: expand, write, and only `\printindex`
+  re-reads `\cmd\documentstyle`, which `\cmd` strings), so the phrase runs `\documentstyle` in the body — the pre-existing
+  Fatal "File not found: .cls"; the +1 is latex209.def's `\RequirePackage` trap on that same run (19f347283b). The fix
+  is the index write/re-read order (expand before the re-read), not attempted here. (c) the amstex papers' remaining
+  `\next@` "Missing argument Match:." errors (4-72 each) are base's. Repros amstex/amstex_let_row_end_is_cr,
+  graphics-tikz/{graphic_name_macro_with_underscore, gincltex_subfile_preamble_skipped},
+  alignment-bindings/backslashbox_reads_its_arguments_in_the_cell; guards `perfect_kernel_batchint20` (4). A/B vs
+  67int20-rel over 131 papers (the 48 rows, 60 random "better" rows of results_r67int20, the 45 70a/70b witnesses): 123
+  identical in errors and words, 8 changed — the 5 better above, and three that read worse against the bundle only:
+  math9611222 (40 errors + 2 Fatal with 0 words → 75 with 12,366), math0005042 and 2512.06733 (words lost = the
+  bundle's `<ERROR>` texts `\@eqpen`/`\@ifstar`, `\lx@cleverrefnum@@`); against 67int19b, past the 39 autoref-tag rows, none
+  of the 48 is worse but cond-mat9806166 (open a).
+
 - **70b** (kernel shapes: the 69c follow-up and the rc_struct4 study, agent_reports/2026-10-17_rc_struct4.md). (1) A1:
   tex.web §1127 `align_error` — a tab/`\cr`/`\span` reaching the stomach at alignment count ±1/±2 inserts the brace
   TeX supposes omitted and ends the cell after it (stomach.rs `align_error`; KNOWN_PERL_ERRORS #923), the cell frame
