@@ -64,3 +64,20 @@ fn gincltex_subfile_preamble_is_skipped() {
 }
 
 const FIGURE: &str = r##"<figure inlist="lof" xml:id="S1.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S1.F1.1"><text xml:id="S1.F1.1.1"><inline-block depth="0.0pt" height="7.9pt" width="69.0pt" xml:id="S1.F1.1.1.1" xscale="1.15265144128747" xtranslate="4.6pt" yscale="1.15265144128747" ytranslate="-0.5pt"><p xml:id="S1.F1.1.1.1.1"><text xml:id="S1.F1.1.1.1.1.1"><text width="0.0pt" xml:id="S1.F1.1.1.1.1.1.1"><inline-block vattach="bottom" xml:id="S1.F1.1.1.1.1.1.1.1"><p xml:id="S1.F1.1.1.1.1.1.1.1.1">SUBBODY</p></inline-block></text></text></p></inline-block></text></p><toccaption><tag close=" ">1</tag>Cap.</toccaption><caption><tag close=": ">Figure 1</tag>Cap.</caption></figure>"##;
+
+/// alignment-bindings/backslashbox_reads_its_arguments_in_the_cell: diagbox.sty:216-221's `\backslashbox` begins with
+/// a `\def`, so an alignment's cell-head peek (tex.web §791) stops there and `\backslashbox{Model} & x`'s second
+/// argument is the cell's v-part, not the `&` (1106.0505).
+#[test]
+fn backslashbox_reads_its_arguments_in_the_cell() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/backslashbox_reads_its_arguments_in_the_cell.tex"
+    ),
+    AR5IV,
+    (0, 0),
+    &[("tabular", "p1.1", BACKSLASHBOX_TABULAR)],
+  );
+}
+
+const BACKSLASHBOX_TABULAR: &str = r##"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" class="ltx_nopad" xml:id="p1.1.1.1"><picture height="9.61" width="75.34" xml:id="p1.pic1"><line points="0,9.61 75.34,0" stroke="#000000" stroke-width="0.4"/><g class="ltx_svg_fog" innerheight="9.61" innerwidth="37.67" transform="translate(0,0)"><inline-block xml:id="p1.pic1.1"><inline-block align="left" xml:id="p1.pic1.1.1"><p xml:id="p1.pic1.1.1.1">Model</p></inline-block></inline-block></g><g class="ltx_svg_fog" innerheight="0" innerwidth="0" transform="translate(75.34,9.61)"><inline-block xml:id="p1.pic1.2"><inline-block align="right" xml:id="p1.pic1.2.1"><p xml:id="p1.pic1.2.1.1"/></inline-block></inline-block></g></picture></td><td align="center" xml:id="p1.1.1.2">x</td></tr><tr xml:id="p1.1.2"><td align="center" xml:id="p1.1.2.1">y</td><td align="center" xml:id="p1.1.2.2">z</td></tr></tbody></tabular>"##;

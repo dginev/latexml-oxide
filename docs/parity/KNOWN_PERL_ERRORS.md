@@ -15364,3 +15364,19 @@ a second time), 2609.16620 (`\PATHFIG_supp`).
 Rust (int20): graphicx_sty.rs `\lx@Gin@include` reads the name as a plain argument and expands it when it holds a
 control sequence; the constructor gets the expanded name. Repro graphics-tikz/graphic_name_macro_with_underscore;
 guard `perfect_kernel_batchint20::graphic_name_macro_with_underscore_expands`.
+
+## 951. `\slashbox`/`\backslashbox` read their arguments at an alignment cell's head, before the cell exists
+
+diagbox.sty:216-221 (and slashbox.sty:26-41) begin `\slashbox`/`\backslashbox` with a `\def`, so the look-ahead TeX
+makes at a cell's start for `\omit`/`\noalign` (tex.web §791, at the alignment count 1000000) stops there, and the
+arguments are read inside the cell: in `\backslashbox{Model} & x` the second argument is the cell's v-part, the cell
+ends after the box. Perl's diagbox.sty.ltxml:152-161 makes them `DefMacro('\backslashbox[][]{}{}', …)`, expanded by
+that look-ahead, so the `&` itself is the second argument: set in the box, "Stray alignment &", the cell's content lost.
+
+Trigger: `\usepackage{diagbox}`, `\begin{tabular}{cc}\backslashbox{Model} & x\\ y & z\\\end{tabular}` — pdflatex 0
+errors, two rows of two cells. Witness 1106.0505 (its shipped slashbox.sty is shadowed by the binding).
+
+Rust (int20): diagbox_sty.rs `\slashbox`/`\backslashbox` are `\def`s as diagbox.sty's, calling `\lx@slashbox@{dir}`
+(the `[][]{}{}` reader; its second optional argument now `trim=`, as diagbox.sty:228-232, where it had been `font=`).
+`\diagbox` the same since 68z. Repro alignment-bindings/backslashbox_reads_its_arguments_in_the_cell; guard
+`perfect_kernel_batchint20::backslashbox_reads_its_arguments_in_the_cell`.

@@ -1,0 +1,13 @@
+% witness: 1106.0505 (torresflores.tex:592 `\backslashbox{Model} & & &$\alpha$ …`, the shipped slashbox.sty, our binding's)
+% oracle:  pdflatex 0 errors; "Model" in the first cell, x, y, z in theirs: diagbox.sty:216-221 \backslashbox begins with a \def, so the cell-head peek (tex.web §791) stops there and its second argument is the cell's v-part
+% engines: rust 67int20 = 5 errors ("Missing } inserted", "Attempt to close a group that switched to mode restricted_horizontal", "Missing { inserted", …; the binding's [][]{}{} macro read its arguments at the peek, the `&` into the box); 67int19b 1 (Stray alignment "&"), the first row's x lost
+% expect:  0 errors; two rows of two cells
+% status:  GREEN (int20)
+\documentclass{article}
+\usepackage{diagbox}
+\begin{document}
+\begin{tabular}{cc}
+\backslashbox{Model} & x\\
+y & z\\
+\end{tabular}
+\end{document}

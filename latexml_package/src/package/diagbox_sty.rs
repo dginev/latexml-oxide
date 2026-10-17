@@ -4,14 +4,16 @@ use crate::prelude::*;
 fn roundto(v: f64) -> f64 { (v * 100.0).round() / 100.0 }
 fn max_f(a: f64, b: f64) -> f64 { if a > b { a } else { b } }
 
-/// Build `\diagbox[dir=<dir>{,width=…}{,font=…}]{#3}{#4}` from slashbox /
-/// backslashbox args. Perl diagbox.sty.ltxml L177-188 uses
+/// Build `\diagbox[dir=<dir>{,width=…}{,trim=…}]{#3}{#4}` from slashbox /
+/// backslashbox args: the first optional argument is the width, the second the trim (diagbox.sty:222-232
+/// `\slashbox@[1][]` → `width=#1`, `\slashbox@@[3][]` → `trim=#1`; Perl diagbox.sty.ltxml:152-161 the same; it was
+/// passed as `font=`, so `\backslashbox[1cm][l]{…}` set the font `l`). Perl diagbox.sty.ltxml L177-188 uses
 /// `\if.\detokenize{#i}.` to emit the comma-prefixed keyval segments;
 /// we do the same check at the token level to avoid LaTeXML's
 /// re-tokenization dropping the segment.
 fn build_diagbox_invocation(dir: &str, args: Vec<ArgWrap>) -> Tokens {
   let width_tokens: Tokens = args[0].clone().into();
-  let font_tokens: Tokens = args[1].clone().into();
+  let trim_tokens: Tokens = args[1].clone().into();
   let a_tokens: Tokens = args[2].clone().into();
   let b_tokens: Tokens = args[3].clone().into();
 
@@ -24,9 +26,9 @@ fn build_diagbox_invocation(dir: &str, args: Vec<ArgWrap>) -> Tokens {
     out.extend(ExplodeText!(",width="));
     out.extend(width_tokens.unlist());
   }
-  if !font_tokens.unlist_ref().is_empty() {
-    out.extend(ExplodeText!(",font="));
-    out.extend(font_tokens.unlist());
+  if !trim_tokens.unlist_ref().is_empty() {
+    out.extend(ExplodeText!(",trim="));
+    out.extend(trim_tokens.unlist());
   }
   out.push(T_OTHER!("]"));
   out.push(T_BEGIN!());
@@ -339,10 +341,20 @@ LoadDefinitions!({
   // direction). Driving the dispatch from a Rust closure that inspects
   // the tokens directly is more robust and equally faithful to the
   // per-call behavior Perl specifies.
-  DefMacro!("\\slashbox [][]{}{}", sub[args] {
-    build_diagbox_invocation("SW", args)
-  });
-  DefMacro!("\\backslashbox [][]{}{}", sub[args] {
-    build_diagbox_invocation("NW", args)
+  //
+  // diagbox.sty:216-221 `\def\slashbox{\def\diagbox@slashbox@options{dir=SW,}\slashbox@}`: the first token is a `\def`,
+  // so an alignment's cell-head peek (tex.web §791, at the alignment count 1000000) stops there and the arguments are
+  // read inside the cell, after its u-part — `\backslashbox{Model} & …`'s second argument is the cell's v-part, as in
+  // TeX (slashbox.sty:26-41 the same, its `\def\@slashboxpicture`), not the `&`; read at the peek, the `&` went into
+  // the box ("Missing } inserted" and the table lost: 1106.0505). `\diagbox` the same (68z).
+  // KNOWN_PERL_ERRORS #951. Guard `perfect_kernel_batchint20::backslashbox_reads_its_arguments_in_the_cell`.
+  RawTeX!(
+    r"\def\slashbox{\def\diagbox@slashbox@options{dir=SW,}\lx@slashbox@{SW}}
+\def\backslashbox{\def\diagbox@slashbox@options{dir=NW,}\lx@slashbox@{NW}}"
+  );
+  DefMacro!("\\lx@slashbox@{} [][]{}{}", sub[args] {
+    let mut args = args.into_iter();
+    let dir: Tokens = args.next().unwrap_or_default().into();
+    build_diagbox_invocation(&dir.to_string(), args.collect())
   });
 });
