@@ -198,6 +198,10 @@ LoadDefinitions!({
       return Ok(Tokens!());
     }
 
+    // latex.ltx:18623 `\documentstyle` inputs latex209.def before the class (`\lx@latex@ix@definitions`), and the
+    // class's end runs latex209.def's `\@documentclasshook` (latex.ltx:18721), ahead of `\compat@loadpackages`.
+    digest(Tokens!(T_CS!("\\lx@latex@ix@definitions")))?;
+
     // Perl L132-135 `compatDefinitions` — pre-bind LaTeX 2.09 dimensions.
     // Perl helper redefines `\@maxsep` and `\@dblmaxsep`; if these come
     // from another file and are already defined, redef is harmless.
@@ -291,7 +295,7 @@ LoadDefinitions!({
     let class_cls_found = !class_sty_found && (class_cls_binding_exact
       || class_cls_via_fallback || class_cls_raw);
 
-    let after = Tokens!(T_CS!("\\compat@loadpackages"));
+    let after = Tokens!(T_CS!("\\@documentclasshook"), T_CS!("\\compat@loadpackages"));
 
     if class_sty_found {
       // Branch 1 — class is actually a `.sty` (e.g. spackap, aipproc,
@@ -361,6 +365,42 @@ LoadDefinitions!({
 
     Ok(Tokens!())
   });
+
+  // What latex209.def (TL 2025 v0.55, read whole) defines that the native `\documentstyle` path lacks and a 2.09
+  // class or document uses. The size switch first: `\normalsize` is the class's `\@normalsize` (:138-139), which a
+  // 2.09 class defines (`\def\@normalsize{\@setsize\normalsize{12pt}\xpt\@xpt}` then `\normalsize`; witnesses
+  // hep-ex0107077 dp_delphi.cls, 0802.1120 klu.cls, astro-ph0009372 cupconf.cls: "The font size command \normalsize is
+  // not defined"), and at the class's end `\@documentclasshook` (:124-137) settles the pair: `\normalsize` the
+  // class's `\@normalsize`, else `\@normalsize` the class's `\normalsize`, else the kernel's placeholder again.
+  // `\@normalsize` is undefined until then, as in latex.ltx (only its own `\@documentclasshook`, :18348, gives it a
+  // meaning; latex_constructs/sect13.rs's default stands for that hook), so a class defining neither meets
+  // "undefined", not a `\normalsize`/`\@normalsize` loop. Then the 2.09 registers and macros a class reads
+  // (:234-236 `\@cla`, `\@clb`, `\mscount`; :213 `\@lquote`; :229-233 `\SLiTeX`; :342 `\load`; :336-338 the old
+  // font scaling words; :356-367 the old size commands `\vpt`…`\xxvpt`) and latexsym (:307). Not applied, the
+  // native engine standing for them: the "LaTeX2e command in LaTeX 2.09 document" errors and `\@ifdefinable` wrapper
+  // (:79-123, a content-first choice: `\usepackage` after `\documentstyle` stays a plain package load), the
+  // missing-file and obsolete-file fallbacks (:140-168, the `.sty`-as-class branches below), the byte catcodes
+  // (:214-228), `\verb`, the font-selection redefinitions (`\rm`…`\em`, `\@setfontsize`, the symbol fonts and math
+  // alphabets, `\DeclareOldFontCommand`, :273-335), tracefnt (:273), the marks and the output-routine resets. Perl's
+  // `\documentstyle` (latex_constructs.pool.ltxml:97-129) applies none of it (KNOWN_PERL_ERRORS #925). Guard
+  // `perfect_kernel_batch70b::documentstyle_class_sets_normalsize_through_at_normalsize`.
+  DefMacro!(
+    "\\lx@latex@ix@definitions",
+    r"\let\original@normalsize\normalsize\def\normalsize{\@normalsize}\let\@normalsize\@undefined
+\def\@documentclasshook{\def\@tempa{\@normalsize}\ifx\normalsize\@tempa\let\normalsize\@normalsize\fi
+\ifx\@normalsize\@undefined\let\@normalsize\normalsize\fi
+\ifx\normalsize\@undefined\let\normalsize\original@normalsize\fi}
+\ifx\@cla\@undefined\newcount\@cla\fi\ifx\@clb\@undefined\newcount\@clb\fi\ifx\mscount\@undefined\newcount\mscount\fi
+\def\@lquote{\leavevmode{\kern\z@}`}
+\DeclareRobustCommand{\SLiTeX}{{\normalfont S\kern -.06em{\scshape l\kern -.035emi}\kern -.06em\TeX}}
+\let\load\@gobbletwo
+\def\@halfmag{ scaled \magstephalf}\def\@magscale#1{ scaled \magstep#1 }\def\@ptscale#1{ scaled #100 }
+\def\vpt{\edef\f@size{\@vpt}\rm}\def\vipt{\edef\f@size{\@vipt}\rm}\def\viipt{\edef\f@size{\@viipt}\rm}
+\def\viiipt{\edef\f@size{\@viiipt}\rm}\def\ixpt{\edef\f@size{\@ixpt}\rm}\def\xpt{\edef\f@size{\@xpt}\rm}
+\def\xipt{\edef\f@size{\@xipt}\rm}\def\xiipt{\edef\f@size{\@xiipt}\rm}\def\xivpt{\edef\f@size{\@xivpt}\rm}
+\def\xviipt{\edef\f@size{\@xviipt}\rm}\def\xxpt{\edef\f@size{\@xxpt}\rm}\def\xxvpt{\edef\f@size{\@xxvpt}\rm}
+\RequirePackage{latexsym}"
+  );
 
   // Initial alias `\documentstyle = \lx@documentstyle@impl`. The latex_dump
   // may overwrite this on autoload; `\@load@latex@pool` (tex.rs) re-applies

@@ -5,6 +5,8 @@
 //! after it, its v-part run; a tabular cell's own `}` closes the template's `{` (latex.ltx `\@tabclassz`), not the cell.
 //! Item 2 (Q1) — `\quote@@name`'s argument is delimited by `"` (latex.ltx:9665; 1312.4083 2001.03064 2006.14814
 //! 1504.06523).
+//! Item 3 (S1) — `\documentstyle` applies latex209.def's size switch, `\normalsize` = `\@normalsize` (:138-139), and its
+//! `\@documentclasshook`, so a raw 2.09 class sets the body size (hep-ex0107077 0802.1120 astro-ph0009372).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -105,5 +107,29 @@ fn quote_name_is_delimited_by_the_quote() {
     "para",
     &["xml:id=\"p1\""],
     r#"<para xml:id="p1"><p>absent. Same.</p></para>"#,
+  );
+}
+
+/// class-bindings/documentstyle_class_sets_normalsize_through_at_normalsize: a raw 2.09 class's `\@normalsize` and
+/// `\normalsize` under `\documentstyle` (pdflatex 0 errors). Before: "The font size command \normalsize is not defined".
+#[test]
+fn documentstyle_class_sets_normalsize_through_at_normalsize() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/documentstyle_class_sets_normalsize_through_at_normalsize.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    stderr.contains("oldsty.cls"),
+    "the class is read raw\n{stderr}"
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p xml:id="p1.1">Text.</p></para>"#,
   );
 }

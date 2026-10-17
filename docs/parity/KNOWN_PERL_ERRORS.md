@@ -15256,3 +15256,26 @@ Match:\"". Witnesses 1312.4083 (213 errors), 2001.03064 (76), 2006.14814 (76), 1
 
 Rust (70b): sect11.rs `\quote@@name Until:"`. Repro loader/quote_name_is_delimited_by_the_quote; guard
 `perfect_kernel_batch70b::quote_name_is_delimited_by_the_quote`.
+
+## 925. `\documentstyle` applies none of latex209.def, so a 2.09 class's `\@normalsize` never becomes `\normalsize`
+
+latex.ltx:18622-18623 `\def\documentstyle{\makeatletter\input{latex209.def}\makeatother…}`: latex209.def (TL 2025
+v0.55) runs before the class, and at the class's end its `\@documentclasshook` (:124-137, called by latex.ltx:18721).
+Its :138-139 `\let\original@normalsize\normalsize \def\normalsize{\@normalsize}` is what lets a 2.09 class set the body
+size through `\@normalsize` (`\def\@normalsize{\@setsize\normalsize{12pt}\xpt\@xpt}` then `\normalsize`), and it
+defines the 2.09 registers and size commands such classes read (`\@cla`, `\@clb`, `\mscount`, `\xpt`…, `\@ptscale`,
+`\load`, `\SLiTeX`, latexsym). Perl's `\documentstyle` (latex_constructs.pool.ltxml:97-129) loads the class or OmniBus
+with none of it; Perl never raw-loads an unbound class, so the gap shows only once the class is read raw.
+
+Trigger: a local `oldsty.cls` holding `\def\@normalsize{\@setsize\normalsize{12pt}\xpt\@xpt}\normalsize\input{article.cls}`,
+then `\documentstyle{oldsty}` — pdflatex 0 errors; read raw without latex209.def: "LaTeX Error: The font size command
+\normalsize is not defined". Witnesses hep-ex0107077 (dp_delphi.cls, 3 → 0 errors), 0802.1120 (klu.cls, 4 → 0),
+astro-ph0009372 (cupconf.cls, 2 → 0), each XML otherwise byte-identical.
+
+Rust (70b): tex_job.rs `\lx@latex@ix@definitions` (digested by `\lx@documentstyle@impl` before the class) applies
+latex209.def's size switch, `\@normalsize` left undefined until the hook as latex.ltx leaves it, the 2.09 registers and
+macros and latexsym; `\@documentclasshook` runs after the class, before `\compat@loadpackages`. The remaining parts of
+latex209.def (the "LaTeX2e command in LaTeX 2.09 document" errors, the byte catcodes, the font-selection redefinitions,
+`\verb`, tracefnt) are listed at the definition as not applied. Repro
+class-bindings/documentstyle_class_sets_normalsize_through_at_normalsize; guard
+`perfect_kernel_batch70b::documentstyle_class_sets_normalsize_through_at_normalsize`.

@@ -2823,6 +2823,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (2) Q1: `\quote@@name` delimited by `"` (latex.ltx:9665; sect11.rs; KNOWN_PERL_ERRORS #924) — VTeX arXiv configs'
   `\let\IfFileExists\@iffileonpath`; witnesses 1312.4083 2001.03064 2006.14814 1504.06523. Guard
   `perfect_kernel_batch70b::quote_name_is_delimited_by_the_quote`.
+  (3) S1: `\documentstyle` applies latex209.def's size switch (:138-139), its `\@documentclasshook` and the 2.09
+  registers/size commands/latexsym (tex_job.rs `\lx@latex@ix@definitions`; the parts not applied listed there;
+  KNOWN_PERL_ERRORS #925); witnesses hep-ex0107077 3 → 0, 0802.1120 4 → 0, astro-ph0009372 2 → 0. Guard
+  `perfect_kernel_batch70b::documentstyle_class_sets_normalsize_through_at_normalsize`. Open (ruling): latex209.def's
+  "LaTeX2e command \usepackage in LaTeX 2.09 document" error (:79-123) is not raised.
 - **69c** (medium-risk shapes from the rc_struct3 study, agent_reports/2026-10-17_rc_struct3.md). (1) P1: a theorem,
   proof or TOC inside a container whose model holds no Para.class (`{quote}`, a `\footnote`, a `{wrapfigure}`, an
   `ltx:text`, a cell) opens an `ltx:inline-logical-block` there — the last auto-open bridge of document.rs
