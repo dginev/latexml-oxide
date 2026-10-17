@@ -8,6 +8,8 @@
 //! Item 3 (S1) — `\documentstyle` applies latex209.def's size switch, `\normalsize` = `\@normalsize` (:138-139), and its
 //! `\@documentclasshook`, so a raw 2.09 class sets the body size (hep-ex0107077 0802.1120 astro-ph0009372).
 //! Item 4 (V1) — `\vsplit`'s `to` is a keyword (tex.web §1082, §407; cutwin.sty, 2505.21389).
+//! Item 5 (M2) — held back, RED (fonts-nfss/declared_math_version_defines_its_mv_macro): defining `\mv@<name>` lets
+//! chemist's `\mathversion{chem}` set its mathcodes for OT1 letters, which the math decoding reads as OML.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};

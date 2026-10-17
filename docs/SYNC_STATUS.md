@@ -2830,6 +2830,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   "LaTeX2e command \usepackage in LaTeX 2.09 document" error (:79-123) is not raised.
   (4) V1: `\vsplit`'s `to` is a keyword (tex.web §1082/§407; tex_inserts.rs; KNOWN_PERL_ERRORS #926), "Missing `to'
   inserted" without it; witness 2505.21389 (cutwin). Guard `perfect_kernel_batch70b::vsplit_to_is_a_keyword`.
+  (5) M2 held back: defining `\mv@<name>` (latex.ltx:13083-13090) lets chemist's `\mathversion{chem}` set mathcodes
+  for its version's OT1 letters, which our decoding reads as OML (commas → `;`, parentheses → harpoons in 2404.06813,
+  1707.08434, 1807.01228, 1704.03424); needs per-version symbol fonts first (KNOWN_PERL_ERRORS #927; RED
+  `fonts-nfss/declared_math_version_defines_its_mv_macro`).
 - **69c** (medium-risk shapes from the rc_struct3 study, agent_reports/2026-10-17_rc_struct3.md). (1) P1: a theorem,
   proof or TOC inside a container whose model holds no Para.class (`{quote}`, a `\footnote`, a `{wrapfigure}`, an
   `ltx:text`, a cell) opens an `ltx:inline-logical-block` there — the last auto-open bridge of document.rs

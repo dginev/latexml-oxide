@@ -15294,3 +15294,23 @@ pdflatex 0 errors; Perl "Missing argument Match:to". Witness 2505.21389 (cutwin.
 Rust (70b): tex_inserts.rs `\vsplit Number` reads `to` with `read_keyword` (gullet.rs, §407's space skip and case
 fold), else TeX's "Missing `to' inserted", then the dimension. Repro boxes-groups/vsplit_to_is_a_keyword; guard
 `perfect_kernel_batch70b::vsplit_to_is_a_keyword`.
+
+## 927. `\DeclareMathVersion` defines no `\mv@<name>`, so a package testing for its version finds none
+
+latex.ltx:13083-13090: `\DeclareMathVersion{name}` runs `\new@mathversion\csname mv@name\endcsname`, which `\xdef`s
+`\mv@name` (the version's font set-up), and for a new name defines `\mv@name@reset`. Packages test the version by that
+macro: chemist.sty:892-895 redefines `\mathversion` with `\expandafter\ifx\csname mv@#1\endcsname\relax \@latex@error{Math
+version `#1' is not defined}`, after its own `\DeclareMathVersion{chem}` (:957). Perl latex_constructs.pool.ltxml:2658
+`DefPrimitive('\DeclareMathVersion{}', undef)` defines nothing.
+
+Trigger: `\DeclareMathVersion{chem}\expandafter\ifx\csname mv@chem\endcsname\relax undefined\else defined\fi` —
+pdflatex "defined"; Perl "undefined". Witness 2404.06813 (`\usepackage{chemist}` + `{chemmath}`: "Math version `chem' is
+not defined").
+
+Rust: not fixed (70b held it back). Defining `\mv@<name>` (empty, the font set-up not modelled) clears the error, but
+chemist's `\mathversion{chem}` then runs its version branch (:899-909), whose mathcodes address the chem version's
+`letters` family as OT1 cmr (`\SetSymbolFont{letters}{chem}{OT1}{cmr}{m}{n}`, :958; `\mathcode`\,="612C`, `(`="4128`);
+our math decoding reads family 1 as OML whatever the version, so in 2404.06813, 1707.08434, 1807.01228 and 1704.03424
+commas became `;`, parentheses `↼`/`↽` and a minus an empty operator. The fix waits for the symbol fonts of a math
+version (`\SetSymbolFont` per version, switched by `\mathversion`) to reach the decoding. RED repro
+fonts-nfss/declared_math_version_defines_its_mv_macro.
