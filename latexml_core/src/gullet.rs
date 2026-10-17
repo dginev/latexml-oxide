@@ -1982,6 +1982,45 @@ pub fn expand_once_partial(token: Token) -> Result<bool> {
   }
 }
 
+/// The alignment's cell-head peek, tex.web §785 `align_peek` and §791 (e-TeX `get_x_or_protected`): expand until
+/// the first token that is not expandable — or protected, as `read_x_token(Some(true), false, Some(false))` stops —
+/// and stop as well at a macro whose optional argument is a `\newcommand` one ([`Parameter::testopt`]): LaTeX's
+/// `\newcommand\dg[3][]` is `\@protected@testopt\dg\\dg{}`, whose expansion reaches the unexpandable `\let` of
+/// `\kernel@ifnextchar` before it reads an argument (latex.ltx:1249-1261), so TeX starts the cell there and the
+/// arguments are read inside it. Our macro reads its arguments as it expands; expanded in the peek it read the
+/// cell's `&` before the cell existed (diagbox.sty:212 `\newcommand\diagbox[3][]`, 2406.11917). The token is
+/// returned unexpanded: the cell's own reader expands it. The binding closures that peek by `\futurelet`
+/// ([`Definition::peeks_by_futurelet`], the kernel's `\@ifnextchar` family) still expand here: several stand for a
+/// TeX macro whose head is not the peek (booktabs' `\cmidrule` is `\noalign{…\@ifnextchar[…}`, booktabs.sty:166).
+///
+/// [`Parameter::testopt`]: crate::parameter::Parameter::testopt
+pub fn read_x_token_cell_head() -> Result<Option<Token>> {
+  loop {
+    let Some(token) = read_token()? else {
+      return read_x_token(Some(true), false, Some(false));
+    };
+    if token.get_catcode().is_active_or_cs()
+      && with_meaning(&token, |defn| {
+        defn.and_then(Stored::to_definition).is_some_and(|defn| {
+          defn.is_expandable()
+            && defn.get_parameters().is_some_and(|params| {
+              params
+                .get_parameters()
+                .first()
+                .is_some_and(|param| param.testopt)
+            })
+        })
+      })
+    {
+      return Ok(Some(token));
+    }
+    if !expand_once_partial(token)? {
+      unread_one(token);
+      return read_x_token(Some(true), false, Some(false));
+    }
+  }
+}
+
 /// Read the next non-expandable token, expanding until one appears. Hot path —
 /// `read_token` is folded in. `toplevel` (default true): on mouth exhaustion,
 /// step to the containing mouth. `fully_expand` (default = toplevel): expand

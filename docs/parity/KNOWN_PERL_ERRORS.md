@@ -14728,3 +14728,24 @@ Rust (68z, amsmath_sty.rs `\lx@ams@collect@body` after `\lx@begin@alignment` in 
 at the head of the body, followed at once by `\end`, is put back without its braces; a group that is not the whole
 first `\end`-delimited piece keeps them. Witnesses 2011.06919 2211.06952 1909.04856 2101.06401. Repro
 kernel-alignment/braced_amsmath_body; guard `perfect_kernel_batch68z::braced_amsmath_body_loses_its_group`.
+
+## 880. A `\newcommand` optional-argument macro at a cell head reads its arguments before the cell exists
+
+TeX's cell-head look-ahead (tex.web §785 `align_peek`, §791; e-TeX `get_x_or_protected`) expands only up to the
+first unexpandable token. `\newcommand\dg[3][]{…}` makes `\dg` `\@protected@testopt\dg\\dg{}`, which reaches the
+`\let` of `\kernel@ifnextchar` (latex.ltx:1249-1261) before reading any argument, so the cell starts there and the
+arguments are read inside it: `\dg[o]{x}  & b` takes the cell's v-part as its third argument and the `&` ends the
+cell. Perl's `\newcommand` makes a macro whose `Optional` parameter is read as it expands, and the look-ahead
+(TeX_Tables.pool.ltxml `digestAlignmentColumn`, `readXToken`) expands it, so it reads the `&` as an argument.
+
+Trigger: `\newcommand\dg[3][]{[#1|#2|#3]}`, a tabular row `a & \dg[o]{x}  & b \\` — pdflatex "[o|x|]" then "b";
+Perl and Rust before 68z "[o|x|" then "] b". diagbox's `\diagbox[dir=SW]{}  &` (diagbox.sty:212) the same, which
+in Rust was `Error:unexpected:& Stray alignment "&"` (2406.11917).
+
+Rust (68z, gullet.rs `read_x_token_cell_head`, used by tex_tables.rs `digest_alignment_column`): the look-ahead stops
+at a macro whose first parameter is a `\newcommand` optional one (`Parameter::testopt`); diagbox's binding defines
+`\diagbox` with `\newcommand` as the package does; tabularray's table commands read their optional argument by
+`\@ifnextchar`, as the row-start scan that models tabularray's extraction needs. aa's `\ion` (aa.cls:639 `\DeclareRobustCommand`,
+plain in Perl's aa_support.sty.ltxml:247) is robust, so the look-ahead stops at it too (0801.2767). Repros
+kernel-alignment/cell_head_peek_stops_at_futurelet, alignment-bindings/diagbox_empty_before_tab; guard
+`perfect_kernel_batch68z::a_cell_head_newcommand_optional_macro_reads_its_arguments_in_the_cell`.

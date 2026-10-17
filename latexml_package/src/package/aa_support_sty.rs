@@ -321,6 +321,10 @@ LoadDefinitions!({
   // §785 stops at a protected macro): Perl's plain macro was expanded there, read the cell's `&` as its second
   // argument and stranded it (0801.2767 `& \ion{H$\delta$}& 24.0`; KNOWN_PERL_ERRORS #872).
   // Guard: `perfect_kernel_batch68y::aa_ion_is_robust_at_a_cell_head`.
+  // \ion{symbol}{ionization} — Perl L247. aa.cls:639 `\DeclareRobustCommand{\ion}[2]`: robust, so an alignment's
+  // cell-head look-ahead stops at it (`\protect` is `\relax` when typesetting) and its arguments are read in the cell
+  // — `\ion{H$\delta$}&` takes the cell's v-part as its second, as in TeX, where it read the `&` before the cell
+  // existed: "Stray alignment" (0801.2767; Perl shares it, KNOWN_PERL_ERRORS #880).
   DefMacro!("\\ion{}{}", "{#1 \\textsc{#2}}", protected => true);
 
   // \element — Perl aa_support.sty.ltxml L250:

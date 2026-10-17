@@ -1755,16 +1755,24 @@ LoadDefinitions!({
   // `\NewTblrTableCommand\myhline{\hline[0.1em,red5]}` (manual). It means its body only inside
   // a table (`\__tblr_enable_table_commands:`, :1646-1650, at the table's start, :3516): kept as
   // `\lx@tblr@tc@<cmd>`, listed in `\lx@tblr@table@commands`, and let to the command there
-  // (`\lx@tblr@env`); undefined, `\myhline` was an error. The meaning is a `\newcommand`,
-  // expandable as the row-start scan needs. tabularray's own `\pagebreak`/`\nopagebreak`
-  // (:3129-3137, `[1][4]`) set a row's page break, which has no place here: the kernel's
-  // started a cell, and the `\hline` after it came mid-row (4 errors in the manual).
+  // (`\lx@tblr@env`); undefined, `\myhline` was an error. The meaning is expandable as the row-start
+  // scan needs: tabularray executes a table command when it extracts it from the body (:1640-1660),
+  // before any cell is typeset, which that scan models. An optional argument is read by the kernel's
+  // `\@ifnextchar` (`\lx@tblr@tc@opt`), not by a `\newcommand` one, at which the scan stops as TeX's
+  // `align_peek` does at `\@protected@testopt` (68z, `gullet::read_x_token_cell_head`).
+  // tabularray's own `\pagebreak`/`\nopagebreak` (:3129-3137, `[1][4]`) set a row's page break, which
+  // has no place here: the kernel's started a cell, and the `\hline` after it came mid-row (4 errors
+  // in the manual).
   RawTeX!(
     r"\def\lx@tblr@table@commands{}
+\def\lx@tblr@tc@opt#1[#2]{#1{#2}}
 \NewDocumentCommand\NewTblrTableCommand{m O{0} o m}{%
 \@ifundefined{lx@tblr@tc@\string#1}{}{\PackageError{tabularray}{Table command \string#1 already defined!}{}}%
 \IfValueTF{#3}%
-{\expandafter\newcommand\csname lx@tblr@tc@\string#1\endcsname[#2][#3]{#4}}%
+{\expandafter\newcommand\csname lx@tblr@tc@@\string#1\endcsname[#2]{#4}%
+\expandafter\edef\csname lx@tblr@tc@\string#1\endcsname{\noexpand\@ifnextchar[%
+{\noexpand\lx@tblr@tc@opt\expandafter\noexpand\csname lx@tblr@tc@@\string#1\endcsname}%
+{\expandafter\noexpand\csname lx@tblr@tc@@\string#1\endcsname{\unexpanded{#3}}}}}%
 {\expandafter\newcommand\csname lx@tblr@tc@\string#1\endcsname[#2]{#4}}%
 \g@addto@macro\lx@tblr@table@commands{\do#1}}
 \let\NewTableCommand\NewTblrTableCommand

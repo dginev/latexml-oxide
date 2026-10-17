@@ -1115,13 +1115,14 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     loop {
       // Between rows a command's argument tail has no place: handed back it
       // would open the next row (`dropping_argument_tails`).
+      // The peek stops at a `\newcommand` optional-argument macro (its `\@protected@testopt` reaches `\futurelet`'s
+      // `\let`): TeX starts the cell there, and its arguments are read inside it (`read_x_token_cell_head`, tex.web
+      // §785/§791).
       let between_rows = !alignment.borrow().is_in_row();
       let next = if between_rows {
-        dropping_argument_tails(BETWEEN_ALIGNMENT_ROWS, || {
-          read_x_token(Some(true), false, Some(false))
-        })?
+        dropping_argument_tails(BETWEEN_ALIGNMENT_ROWS, read_x_token_cell_head)?
       } else {
-        read_x_token(Some(true), false, Some(false))?
+        read_x_token_cell_head()?
       };
       let Some(xtoken) = next else { break };
       last_token = Some(xtoken);

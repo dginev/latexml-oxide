@@ -64,8 +64,29 @@ LoadDefinitions!({
   }
   DefKeyVal!("diagbox", "trim", "");
 
-  // \diagbox sniffs for optional 3rd argument
-  DefMacro!("\\diagbox OptionalKeyVals:diagbox {}{}", sub[args] {
+  // \diagbox sniffs for optional 3rd argument. diagbox.sty:212 `\newcommand\diagbox[3][]`: its optional argument
+  // is read by `\@protected@testopt`'s `\futurelet` peek, so an alignment's cell-head peek stops at `\diagbox` and
+  // the arguments are read inside the cell — `\diagbox[dir=SW]{}  & b`'s third argument is the cell's v-part, as in
+  // TeX, not the `&` read before the cell existed (2406.11917; guard
+  // `perfect_kernel_batch68z::a_cell_head_newcommand_optional_macro_reads_its_arguments_in_the_cell`).
+  // An absent optional argument stays absent (the reversion is `\diagbox{A}{B}`).
+  RawTeX!(r"\newcommand\diagbox[3][]{\lx@diagbox@opt{#1}{#2}{#3}}");
+  DefMacro!("\\lx@diagbox@opt{}{}{}", sub[(opt, a, b)] {
+    let mut out = vec![T_CS!("\\lx@diagbox@macro")];
+    if !opt.unlist_ref().is_empty() {
+      out.push(T_OTHER!("["));
+      out.extend(opt.unlist());
+      out.push(T_OTHER!("]"));
+    }
+    out.push(T_BEGIN!());
+    out.extend(a.unlist());
+    out.push(T_END!());
+    out.push(T_BEGIN!());
+    out.extend(b.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
+  DefMacro!("\\lx@diagbox@macro OptionalKeyVals:diagbox {}{}", sub[args] {
     let mut it = args.into_iter();
     let kv_arg = it.next().unwrap();
     let a_arg: Tokens = it.next().unwrap().into();

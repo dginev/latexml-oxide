@@ -1,0 +1,12 @@
+% witness: 0801.2767 (aa.cls:639 \DeclareRobustCommand{\ion}[2] given one braced argument before the cell's &); rc_struct2 A7
+% oracle:  pdflatex 0 errors with the shipped aa.cls (row 1 "4101 | Hδ | 24.0", the \ion's second argument the cell's v-part)
+% expect:  0 errors; three cells a row
+% status:  GREEN (batch 68z, perfect_kernel_batch68z::aa_ion_is_robust_at_a_cell_head); before 68z 1 Error
+%          "Stray alignment &" (aa_support's \ion expanded in the cell-head look-ahead and read the &)
+\documentclass{aa}
+\begin{document}
+\begin{tabular}{llc}
+4101 & \ion{H$\delta$}& 24.0 \\
+4267 & \ion{C}{ii} & 0.3 \\
+\end{tabular}
+\end{document}

@@ -2,10 +2,15 @@
 //! real macros of each context). Item 1 — amsmath's display environments strip one enclosing group of their body, as
 //! `\collect@@body#1\end#2` does (amsmath.sty:1424, tex.web §400; 2011.06919 2211.06952 1909.04856 2101.06401).
 //! Item 2 — a column end goes back after the v-part as the token read, not its canonical `\cr` (Perl Gullet.pm:310;
-//! hep-ph9612244).
+//! hep-ph9612244). Item 3 — the cell-head peek stops at a macro that peeks by `\futurelet` (a `\newcommand` optional
+//! argument; tex.web §785/§791), diagbox's `\diagbox` among them (2406.11917); aa's robust `\ion` (0801.2767).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
+use latexml::util::test::{
+  assert_element, convert_with, error_count, normalize_markup, warning_count,
+};
+
+use super::perfect_kernel_batch57::RAW;
 
 /// `xml` without its `tex="…"` attributes (the source the braces were part of).
 fn without_tex(xml: &str) -> String {
@@ -74,5 +79,73 @@ fn a_let_cr_ends_the_row_as_itself() {
     "tabular",
     &[],
     r#"<tabular><tr><td align="left" border="r" class="ltx_nopad_l ltx_nopad_r">A</td></tr></tabular>"#,
+  );
+}
+
+/// kernel-alignment/cell_head_peek_stops_at_futurelet: `\newcommand\dg[3][]` at a cell head reads its arguments inside
+/// the cell — `\dg[o]{x}  & b`'s third is the cell's v-part, so "[o|x|]" and "b" (pdflatex 0 errors, the same text) —
+/// while `\multicolumn`, a macro for `\noalign`, one for `\omit` and one for `\span` act as before. Before 68z the
+/// peek expanded `\dg`, which read the `&`: "[o|x|" and "] b". alignment-bindings/diagbox_empty_before_tab: diagbox's
+/// `\newcommand\diagbox[3][]` the same, which was 1 Error "Stray alignment".
+#[test]
+fn a_cell_head_newcommand_optional_macro_reads_its_arguments_in_the_cell() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/cell_head_peek_stops_at_futurelet.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "tabular",
+    &["vattach=\"middle\""],
+    "<tabular vattach=\"middle\"><tbody>\
+     <tr><td align=\"center\">a</td><td align=\"center\">[\u{2014}x\u{2014}y]</td><td align=\"center\">b</td></tr>\
+     <tr><td align=\"center\">a</td><td align=\"center\">[o\u{2014}x\u{2014}]</td><td align=\"center\">b</td></tr>\
+     <tr><td align=\"center\" colspan=\"2\">wide</td><td align=\"center\">c</td></tr>\
+     <tr><td align=\"center\" border=\"t\">a</td><td align=\"center\" border=\"t\">b</td><td align=\"left\" border=\"t\">om</td></tr>\
+     </tbody></tabular>",
+  );
+  assert!(
+    normalize_markup(&xml).contains(
+      r#"<tabular><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">(s1)(s2)</td></tr></tabular>"#
+    ),
+    "{xml}"
+  );
+
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/diagbox_empty_before_tab.tex"
+    ),
+    Some(RAW),
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(xml.matches("<picture").count(), 1, "{xml}");
+  assert_eq!(xml.matches("<td").count(), 3, "{xml}");
+  assert!(
+    normalize_markup(&xml).contains(r#"</picture></td><td align="center">b</td></tr>"#),
+    "{xml}"
+  );
+}
+
+/// class-bindings/aa_ion_before_tab: aa.cls:639 `\DeclareRobustCommand{\ion}[2]` given one argument before the `&`
+/// takes the cell's v-part as its second (pdflatex 0 errors with the shipped class): three cells a row. Before 68z 1
+/// Error "Stray alignment".
+#[test]
+fn aa_ion_is_robust_at_a_cell_head() {
+  let (stderr, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/class-bindings/aa_ion_before_tab.tex"),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(xml.matches("<td").count(), 6, "{xml}");
+  assert_element(
+    &xml,
+    "tr",
+    &[],
+    r#"<tr><td align="left" thead="column">4101</td><td align="left" thead="column">H<Math mode="inline" tex="\delta" text="delta" xml:id="p1.m1"><XMath><XMTok font="italic" name="delta" role="UNKNOWN">δ</XMTok></XMath></Math></td><td align="center" thead="column">24.0</td></tr>"#,
   );
 }

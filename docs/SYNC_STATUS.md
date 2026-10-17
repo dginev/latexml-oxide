@@ -2630,6 +2630,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   and `\cr` redefined to `&\crnorm`, a v-part `\vrule`'s keyword scan read the macro's `&` ("Extra alignment tab").
   Witnesses hep-ph9612244, hep-ph9711334 (the latter pdflatex-discounted). Repro
   kernel-alignment/let_cr_ends_the_row_as_itself; guard `perfect_kernel_batch68z::a_let_cr_ends_the_row_as_itself`.
+  (3) A7 kernel half (ruling: tex.web §785 `align_peek`): the cell-head look-ahead stops at a `\newcommand`
+  optional-argument macro (gullet.rs `read_x_token_cell_head`, `Parameter::testopt`; its `\@protected@testopt`
+  reaches `\kernel@ifnextchar`'s `\let`), so the arguments are read inside the cell (KNOWN_PERL_ERRORS #880);
+  diagbox_sty.rs defines `\diagbox` by `\newcommand` as diagbox.sty:212 does; tabularray's table commands take their
+  optional argument by `\@ifnextchar` so the row-start scan still runs them. The binding closures that peek by
+  `\futurelet` (`\@ifnextchar`, booktabs' `\cmidrule`) still expand in the look-ahead. Witness 2406.11917. Repros
+  kernel-alignment/cell_head_peek_stops_at_futurelet (with `\multicolumn`, `\noalign`, `\omit`, `\span` by
+  expansion), alignment-bindings/diagbox_empty_before_tab; guard
+  `perfect_kernel_batch68z::a_cell_head_newcommand_optional_macro_reads_its_arguments_in_the_cell`. aa's `\ion` is
+  robust (`protected`) as aa.cls:639 `\DeclareRobustCommand` makes it (aa_support_sty.rs; Perl
+  aa_support.sty.ltxml:247 plain): witness 0801.2767, repro class-bindings/aa_ion_before_tab, guard
+  `perfect_kernel_batch68z::aa_ion_is_robust_at_a_cell_head`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
