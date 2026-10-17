@@ -18870,7 +18870,7 @@ runs of field ink: a box of field *F* opens a run with `<?ltx-field-mark begin F
 node closed first), the next boxes of *F* at that absorb level continue it while they go on in the value's order, and
 the run closes with `<?ltx-field-mark end F id serials?>` (the ledger serials of the boxes it absorbed) before the
 first box without that field, or when the absorb that opened it ends (a table cell's, an environment body's). A box
-whose cover starts before a position a box of the run started at and ends there or before reads the value again: it
+whose cover ends at or before a position a box of the run started at reads the value again: it
 closes the run and opens one of its own (`\StrLeft{\@title}{3}\@title`, the second print's `T`; a construct's own box
 absorbed around what its argument made, `\textsc{One}`'s whatsit after `One`, covers it and goes on). A re-read from
 the value's first position starts where a macro's expansion does (all its boxes at the macro's position), so a run is
@@ -18882,8 +18882,13 @@ twice on one line is two whole prints, each lifted). What a field-ink whatsit ab
 provenance. No run opens in math, at any depth of an `ltx:Math` (an `\mbox` in a formula is no print of the field).
 A run's cover is what the ledger recorded for the boxes it absorbed (`token::field_ledger_cover`), and for what an
 alignment took between and right after them: a row's end marker (a value's `\\` set in a `tabular`), digested and
-consumed by `digest_alignment_body` and never absorbed, is flagged there (`document::field_ink_taken`,
-`token::field_ledger_take`). Never an entry absorbed elsewhere or never absorbed: round 3 extended a run over the
+consumed by `digest_alignment_body` and never absorbed, is kept on the alignment's whatsit
+(`document::field_ink_taken_serials`, `FIELD_TAKEN_PROPERTY`) and taken (`token::field_ledger_take`) only when
+`Document::absorb` absorbs that whatsit: an alignment never shown — in an unused `\setbox`, `\sbox`, `{lrbox}` —
+takes nothing (round 4 flagged the marker at digestion, so the `\\` of such a tabular joined title fragments printed
+around it, or completed a print it ends, and they were lifted — round-4 review finding 2, probes s25, s27, s28, controls
+s26, s29; guards `field_prov_unshown_alignment_kept`, `field_prov_unshown_alignment_trailing_kept`; a box holding the
+alignment used twice takes it twice, `field_prov_alignment_box_used_twice_lifted`). Never an entry absorbed elsewhere or never absorbed: round 3 extended a run over the
 ledger's next entries of the field that no run held, so a fragment beside the rest of the value in an unused
 `\setbox`, or in a formula's `\mbox`, was taken for whole and lifted (round-3 review finding 1, probes r19, r20; guards
 `field_prov_unused_boxes_kept` — also `\sbox`, `\savebox`, `{lrbox}` — `field_prov_math_mbox_kept` and
@@ -18907,7 +18912,12 @@ space the cell drops before it): a value's closing `\\` (1605.00182's `\author{�
 `field_prov_author_trailing_cr_lifted`).
 The work is gated: none in a conversion that stamped no field (`note_field_prov_stamped`), and none after the
 placement settled the ink — the builder marks no run and the stomach records no ledger entry
-(`token::field_ledger_live`, `field_ledger_settle`; guard `field_ledger_take_cover_and_settle`).
+(`token::field_ledger_live`, `field_ledger_settle`; guard `field_ledger_take_cover_and_settle`). That thread state is
+per conversion: `document::reset_field_provenance` (the stamped gate, the ledger, its settled flag, the pending
+cover) runs at every conversion's start, in `Converter::prepare_session`, not only in `reset_thread_engine` — a
+persistent `cortex_worker` thread, a streaming restart and the CLI's supplements convert on one thread without an
+engine reset, and round 4's settled ledger made every document after the first lift nothing (round-4 review finding
+1, probe two/; guard `field_prov_second_conversion_lifted`, two conversions on one thread).
 
 **The lift.** Where the frontmatter is placed — `\lx@frontmatterhere` (the `\maketitle` flush) and the fallback's
 non-abstract branch (the first sectional unit or `\end{document}`) — `lift_marked_field_ink` runs once
@@ -18922,20 +18932,33 @@ with the wrappers it empties (not a `labels` one), when:
 - the run is in the document's title block: no body text precedes it in the document's content order
   (`field_runs_after_body_text`): no text before its begin mark, the text before it in its own block too, except a
   field's ink (between a run's marks: a title before its author), what is set apart from the page's flow (a frontmatter
-  element, a note, a float, an error's markup, `ltx_phantom` ink, the `_Capture_` marks), and the text of a box
-  (`ltx:inline-block`, `ltx:inline-logical-block`, `ltx:inline-para`, `ltx:tabular`: a `\parbox`, a minipage, a
-  `tabular`) that does not hold the run. A cover's header box (the preprint-number `\parbox` of 0706.0979 and
-  1605.00182) is no body text (`field_prov_header_parbox_lifted`); an aligned or quoted environment is no box. A letter
+  element, a note, a float, an error's markup, an index mark — round-4 review finding 4, probe s31,
+  `field_prov_indexmark_lifted` — `ltx_phantom` ink, the `_Capture_` marks), and the text of a TeX box that does not
+  hold the run. A box is decided by the TeX mechanism, not by the element it builds (main-session call 2026-10-17 on
+  round-4 review finding 3): material digested inside a TeX box is a box's — the box readers' (`HBoxContents`,
+  `HBoxArgContents`, `VBoxContents`: `\hbox`, `\vbox`, `\vtop`, `\mbox`, `\makebox`, `\framebox`/`\fbox`, `\raisebox`,
+  `\parbox`, a `p` column, so `\rightline`/`\leftline`/`\centerline`, each `\hbox to\hsize`), an environment whose begin
+  code opens a box group (`TexGroup::Box`: a minipage, latex.ltx's `\setbox\@tempboxa\vbox\bgroup`), an alignment. It
+  is marked where the box is digested (`document::field_box_digested`, the `fieldBox` property; the alignment by its
+  own absorption) and `Document::note_field_box` marks the element its material goes in (`_fieldbox`, a bookkeeping
+  attribute stripped at finalize; an element already holding other material is not marked, so its text stays body
+  text). Round 4 took the element names `ltx:inline-block`/`inline-logical-block`/`inline-para`/`tabular` for boxes, so
+  `\makebox`, `\mbox`, `\fbox`, `\raisebox` and `\rightline` (all an `ltx:text`) were body text and `\parbox` not. A
+  cover's header box (the preprint-number `\parbox` of 0706.0979 and 1605.00182, a `\rightline{LA-UR-…}`, a
+  `\makebox[\textwidth][r]{…}`, an `\mbox{preprint …}`) is no body text (`field_prov_header_parbox_lifted`,
+  `field_prov_header_rightline_lifted`, `field_prov_header_makebox_lifted`, `field_prov_header_mbox_lifted`; probes r16,
+  r17). Paragraph material in a list environment (`{flushright}`, `{center}`, `quote`, an aligned display) is body text
+  (`field_prov_header_flushright_kept`). Boxes not built by those mechanisms (`\colorbox`, graphicx's `\scalebox`,
+  `\textsuperscript`'s `\mbox` in math) are body text, the print kept (fail-safe). A letter
   that ends `\noindent\@author` signs it where pdflatex prints the name, and keeps it, its body in the paragraph flow
   (round 2 lifted it at the `\end{document}` fallback — re-review finding 3, probe q3; guard
   `field_prov_signature_after_body_kept`), in `{flushleft}` or in a `{quote}` in the signature's own paragraph (round 3
   took aligned and quoted text, and the text of the print's own block, for no body, and lifted the signature —
   round-3 review finding 3, probes r9, r18; guards `field_prov_letter_flushleft_kept`, `field_prov_letter_quote_kept`).
-  Header cases that therefore stay (kept, as before S1): a header line before the title block in the flow or aligned —
-  plain text (`Preprint ABC-123\hfill\today`, probe r11; `field_prov_header_text_kept`), `\rightline{LA-UR-…}` and
-  `\noindent\makebox[\textwidth][r]{LA-UR-…}`, which behave the same (round 3 lifted the `\makebox` one only: probes
-  r16, r17; `field_prov_header_rightline_kept`, `field_prov_header_makebox_kept`), `{flushright}`, a centred subject
-  line; and text the title block sets before a print (a `\textsuperscript{*}` after the title, a `by`, an affiliation
+  Header cases that therefore stay (kept, as before S1): a header line before the title block in the flow or in a
+  list environment — plain text (`Preprint ABC-123\hfill\today`, probe r11; `field_prov_header_text_kept`),
+  `{flushright}` (`field_prov_header_flushright_kept`), a centred subject line; and text the title block sets before a
+  print (a `\textsuperscript{*}` after the title, a `by`, an affiliation
   line before a second print: review probe q9, whose three prints round 3 lifted), which keeps the prints after it;
 - the frontmatter displays the field, by the XSLT's rule: no `<ltx:titlepage>` at document level (beside one the title
   template is skipped and a creator renders nothing, LaTeXML-structure-xhtml.xsl:374-375, :687-692 = Perl :358-359)
@@ -18967,7 +18990,7 @@ Title}`: the expansion of `\oldtitle` carries the earlier call's positions, so t
 covered, probe r14); an `\edef` copy of an earlier call whose value the next call repeats (`\edef\xa{\@title}
 \title{Same Title}`, probe r15: the copy carries the earlier call's positions); the header cases above; a value whose
 print digests one of its characters twice (a document macro that sets its argument twice inside `\title{…}`), taken
-for a re-read (below).
+for a re-read (above).
 
 Every mark goes with the lift; marks still in the tree at `\end{document}` are removed with their ink kept
 (`settle_field_marks`), and the core finalize drops a stray one (document.rs, `FIELD_MARK_TARGET`). A lifted title

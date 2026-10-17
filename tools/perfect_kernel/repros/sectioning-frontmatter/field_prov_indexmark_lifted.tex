@@ -1,0 +1,15 @@
+
+% An `\index` entry before the document's own title block: an index mark prints nothing, its `ltx:indexmark` text is
+% set apart from the page's flow, no body text, so the title block after it is lifted (fms1 round-4 review finding 4,
+% probe s31).
+% status:  RED (fms1 round 4: the index phrase read as body text, the title block kept) → GREEN (fms1 round 5).
+% oracle:  pdflatex 0 errors: "Some Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; no body copy of the title or the author.
+\documentclass{article}
+\title{Some Title}\author{Ann Author}
+\makeatletter
+\begin{document}
+\index{foo}\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

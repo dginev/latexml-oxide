@@ -1,0 +1,20 @@
+
+% A box holding a `tabular` that prints the two-line title, shown twice before `\maketitle`: each use absorbs the
+% alignment, which takes the row-end marker of the value's `\\` again, so each use is a whole print, and both are
+% lifted (fms1 round-4 review finding 2 sibling: an alignment in a box used twice; user ruling 2026-10-17, "lift every
+% whole print", as field_prov_box_used_twice_lifted).
+% status:  GREEN (fms1 rounds 4, 5).
+% oracle:  pdflatex 0 errors: "Alpha / Beta" twice, then the title block "Alpha / Beta / Ann", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; no body copy of the title.
+\documentclass{article}
+\title{Alpha\\Beta}\author{Ann}
+\makeatletter
+\newsavebox\lxbox
+\sbox\lxbox{\begin{tabular}{c}\@title\end{tabular}}
+\begin{document}
+\begin{center}\usebox\lxbox\end{center}
+\begin{center}\usebox\lxbox\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

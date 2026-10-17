@@ -5650,7 +5650,7 @@ fn field_ink_runs(document: &mut Document, scope: &Node) -> (Vec<FieldInkRun>, V
   // One print split by the structure it is set in (a cover `tabular`'s cells, `\and`'s `\end{tabular}…
   // \begin{tabular}`): a run of a field that goes on with the field's later positions, with no ink between, is one run
   // with the one before when, together with what the alignment took between them (the cells' `\\`, its row-end
-  // marker never absorbed, core `document::field_ink_taken`), they cover one contiguous stretch of the field's extent.
+  // marker never absorbed, taken once the alignment is shown, core `document::field_ink_taken_serials`), they cover one contiguous stretch of the field's extent.
   // Both must be prints of the current call's value. A second print starts over, and two slices of the value with a
   // gap between (`\StrLeft…\par\StrRight…`, nothing of the gap consumed) stay two runs, neither whole (review finding
   // 2).
@@ -5737,12 +5737,16 @@ fn field_ink_runs(document: &mut Document, scope: &Node) -> (Vec<FieldInkRun>, V
 /// - a field's ink (between a run's two marks: a title before its author);
 /// - what is set apart from the page's flow: a frontmatter element ([`FRONTMATTER_ELEMENTS`]), a note, a float, an
 ///   error's markup, invisible ink (`\phantom`), the internal `_Capture_` marks;
-/// - the text of a box (`ltx:inline-block`, `ltx:inline-logical-block`, `ltx:inline-para`, `ltx:tabular`: a
-///   `\parbox`, a minipage, a `tabular`) that does not hold the run: a cover's header box (a preprint-number
-///   `\parbox`, 0706.0979, 1605.00182) is no body.
+/// - the text of a TeX box that does not hold the run: a cover's header box (a preprint-number `\parbox`, 0706.0979,
+///   1605.00182; `\rightline{LA-UR-…}`, `\makebox[\textwidth][r]{…}`, `\mbox{preprint}`) is no body. A box is
+///   decided by the TeX mechanism, not by the element it builds (review r4 finding 3): the material of a box reader
+///   (`\hbox`, `\vbox`, `\vtop`, `\mbox`, `\makebox`, `\framebox`/`\fbox`, `\raisebox`, `\parbox`, so
+///   `\rightline`/`\leftline`/`\centerline`'s `\hbox to\hsize`), the body of an environment whose begin code opens
+///   a box group (a minipage), an alignment — core `Document::note_field_box`'s `_fieldbox` mark on the element
+///   the box's material went in.
 ///
-/// An aligned or quoted environment is no box: `{flushright}`, `{center}`, `\rightline`, `\makebox[\textwidth][r]`
-/// before the print are body text, and the print stays (the header cases OXIDIZED_DESIGN #715 lists).
+/// A list environment is no box: text in `{flushright}`, `{center}`, `quote` before the print is body text, and the
+/// print stays (the header cases OXIDIZED_DESIGN #715 lists).
 fn field_runs_after_body_text(scope: &Node) -> HashSet<u32> {
   /// Is `node` set apart from the page's flow, its text no body of the document?
   fn set_apart(node: &Node) -> bool {
@@ -5754,19 +5758,13 @@ fn field_runs_after_body_text(scope: &Node) -> HashSet<u32> {
         FRONTMATTER_ELEMENTS.contains(&q)
           || matches!(
             q,
-            "ltx:note" | "ltx:figure" | "ltx:table" | "ltx:float" | "ltx:ERROR"
+            "ltx:note" | "ltx:figure" | "ltx:table" | "ltx:float" | "ltx:ERROR" | "ltx:indexmark"
           )
       })
   }
-  /// Is `node` a box: its text is no body for a run outside it?
-  fn is_box(node: &Node) -> bool {
-    with(document::get_node_qname(node), |q| {
-      matches!(
-        q,
-        "ltx:inline-block" | "ltx:inline-logical-block" | "ltx:inline-para" | "ltx:tabular"
-      )
-    })
-  }
+  /// Does `node` hold a TeX box's material (core `Document::note_field_box`): its text is no body for a run outside
+  /// it?
+  fn is_box(node: &Node) -> bool { node.has_attribute(document::FIELD_BOX_ATTRIBUTE) }
   #[derive(Default)]
   struct Walk {
     /// the ids of the runs open at this point of the walk (their marks seen, the end not yet)

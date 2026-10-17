@@ -1148,6 +1148,9 @@ impl Converter {
     latexml_core::util::pathname::clear_kpsewhich_memo();
     latexml_core::util::image::clear_image_size_memo();
     latexml_core::common::font::tfm::reset_tfm_cache();
+    // The field provenance of the frontmatter's `\title`/`\author` is per conversion: a previous document's settled
+    // ledger would lift nothing here (OXIDIZED_DESIGN #715).
+    latexml_core::document::reset_field_provenance();
     if !self.ready {
       self.initialize_session()?
     }

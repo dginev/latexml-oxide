@@ -913,8 +913,9 @@ pub fn field_cover_set_pending(cover: FieldCover) {
 pub struct FieldLedgerEntry {
   /// what the box covers of its field's value
   pub cover: FieldCover,
-  /// taken by an alignment: a `tabular` row's end marker (a value's `\\`), digested and consumed by the alignment
-  /// body, never absorbed, so no run of ink holds it
+  /// taken by an alignment the document shows: a `tabular` row's end marker (a value's `\\`), digested and consumed by
+  /// the alignment body, never absorbed, so no run of ink holds it (taken when the alignment's whatsit is absorbed,
+  /// core `document::FIELD_TAKEN_PROPERTY`)
   pub taken: bool,
 }
 

@@ -1,0 +1,19 @@
+
+% A report number set with `\rightline` before the document's own title block: `\rightline` is plain's `\hbox
+% to\hsize`, a TeX box, and a box's text is no body text for a print outside it (the box decided by the TeX mechanism,
+% fms1 round-4 review finding 3 ruling), so the title block after it is the title block and lifted, the header kept,
+% as with `\makebox[\textwidth][r]` (field_prov_header_makebox_lifted) and `\parbox` (field_prov_header_parbox_lifted)
+% (fms1 round-3 review finding 3, probes r16, r17).
+% status:  GREEN kept (fms1 rounds 3, 4) → GREEN lifted (fms1 round 5, by the ruling).
+% oracle:  pdflatex 0 errors: "LA-UR-12-3456" at the right, "Header Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; the header kept.
+\documentclass{article}
+\makeatletter
+\title{Header Title}\author{Ann Author}
+\begin{document}
+\rightline{LA-UR-12-3456}
+\vspace{1cm}
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

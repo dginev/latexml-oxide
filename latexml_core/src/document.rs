@@ -274,14 +274,23 @@ pub fn reset_spilled_segment_count() { SPILLED_SEGMENTS.set(0); }
 pub const FIELD_MARK_TARGET: &str = "ltx-field-mark";
 
 /// Has this conversion stamped any token with a field provenance (latexml_engine `\lx@field@mark`)? Only a gate:
-/// while false, [`Document::absorb`] does no field-ink work at all. Cleared by `reset_thread_engine`; a stale `true`
-/// costs time, never output (a box carries its field in its own `fieldProv` property).
+/// while false, [`Document::absorb`] does no field-ink work at all. Cleared at every conversion's start
+/// ([`reset_field_provenance`]).
 #[thread_local]
 static FIELD_PROV_STAMPED: std::cell::Cell<bool> = std::cell::Cell::new(false);
 /// Note that a field's stored tokens now carry their provenance (`FIELD_PROV_STAMPED`).
 pub fn note_field_prov_stamped() { FIELD_PROV_STAMPED.set(true); }
 /// Clear the `FIELD_PROV_STAMPED` gate (conversion start).
 pub fn reset_field_prov_stamped() { FIELD_PROV_STAMPED.set(false); }
+/// Reset every piece of a conversion's field-provenance thread state (OXIDIZED_DESIGN #715): the stamped gate, the
+/// field ledger and its settled flag, the pending cover. Run at the start of every conversion (the converter's
+/// `prepare_session`), whatever the thread converted before: a persistent `cortex_worker` thread, a streaming restart
+/// and the CLI's supplements convert on one thread without an engine reset, and a ledger settled by the previous
+/// document recorded nothing for the next one, which then lifted no print at all (review r4 finding 1).
+pub fn reset_field_provenance() {
+  reset_field_prov_stamped();
+  crate::token::reset_field_cover_pending();
+}
 
 /// The box property holding the field provenance of the token a box or whatsit was digested from (the stomach sets
 /// it, `invoke_token`; [`Token::prov`](crate::token::Token)).
@@ -291,24 +300,46 @@ pub const FIELD_PROV_PROPERTY: &str = "fieldProv";
 /// boxless font switch before it).
 pub const FIELD_SERIAL_PROPERTY: &str = "fieldSerial";
 
-/// The structure a print is set in took `digested` instead of the document absorbing it (an alignment body consumes a
-/// row's end marker, a value's `\\`, latexml_engine `digest_alignment_body`): its boxes' field-ledger entries are
-/// noted taken ([`field_ledger_take`](crate::token::field_ledger_take)), so the run of ink the row ends may cover them
-/// and no other run does (OXIDIZED_DESIGN #715).
-pub fn field_ink_taken(digested: &Digested) {
+/// The box property marking a TeX box's material, set where the box is digested (latexml_engine
+/// `field_box_digested`: the box readers of `\hbox`, `\vbox`, `\vtop`, `\mbox`, `\makebox`, `\framebox`/`\fbox`,
+/// `\raisebox`, `\parbox`, a `p` column; the body of an environment whose begin code opens a box group, a minipage):
+/// [`Document::absorb`] marks the element it goes in ([`FIELD_BOX_ATTRIBUTE`]). Only while field ink is marked.
+pub const FIELD_BOX_PROPERTY: &str = "fieldBox";
+/// The bookkeeping attribute (stripped at finalize, as every `_` attribute) of an element holding a TeX box's
+/// material ([`Document::note_field_box`]).
+pub const FIELD_BOX_ATTRIBUTE: &str = "_fieldbox";
+
+/// Mark `digested` as a TeX box's material ([`FIELD_BOX_PROPERTY`]), while field ink is recorded.
+pub fn field_box_digested(digested: &mut Digested) {
+  if FIELD_PROV_STAMPED.get() && crate::token::field_ledger_live() {
+    digested.set_property(FIELD_BOX_PROPERTY, true);
+  }
+}
+
+/// The box property of an alignment's whatsit holding the field-ledger serials of the row-end markers its body
+/// consumed (a field value's `\\`, [`field_ink_taken_serials`]): taken when the document absorbs the whatsit.
+pub const FIELD_TAKEN_PROPERTY: &str = "fieldTaken";
+
+/// The field-ledger serials of the boxes in `digested` (an alignment's row-end marker, a value's `\\`, latexml_engine
+/// `digest_alignment_body`), pushed onto `serials`: the structure the print is set in consumes them, never absorbed.
+/// The alignment keeps them on its whatsit ([`FIELD_TAKEN_PROPERTY`]), and they are noted taken
+/// ([`field_ledger_take`](crate::token::field_ledger_take)) only when [`Document::absorb`] absorbs that whatsit, so
+/// the run of ink the row ends may cover them and no other run does; an alignment never shown (in an unused
+/// `\setbox`, `\sbox`, `{lrbox}`) takes nothing (OXIDIZED_DESIGN #715; review r4 finding 2, probes s25, s27, s28).
+pub fn field_ink_taken_serials(digested: &Digested, serials: &mut Vec<u32>) {
   if !FIELD_PROV_STAMPED.get() || !crate::token::field_ledger_live() {
     return;
   }
   for item in digested.unlist() {
     if matches!(item.data(), DigestedData::List(_)) {
-      field_ink_taken(&item);
+      field_ink_taken_serials(&item, serials);
     } else if let Some(serial) =
       item.with_properties(|props| match props.get_sym(pin!("fieldSerial")) {
         Some(Stored::Int(serial)) => u32::try_from(*serial).ok(),
         _ => None,
       })
     {
-      crate::token::field_ledger_take(serial);
+      serials.push(serial);
     }
   }
 }
@@ -1085,6 +1116,10 @@ impl Document {
     if !self.field_marking_live() {
       return self.absorb_boxes(object, props_opt);
     }
+    // a TeX box's material ([`FIELD_BOX_PROPERTY`]): the element it goes in is a box
+    if object.with_properties(|props| props.get_sym(pin!("fieldBox")).is_some()) {
+      self.note_field_box();
+    }
     self.absorb_level += 1;
     let result = self.absorb_boxes(object, props_opt);
     // a run of field ink ends with the absorb that opened it (a table cell's, an environment body's)
@@ -1106,6 +1141,31 @@ impl Document {
   #[inline]
   fn field_marking_live(&self) -> bool { FIELD_PROV_STAMPED.get() && !self.field_ink_settled }
 
+  /// Note that the element at the insertion point holds a TeX box's material (the box's own element, opened for it
+  /// and still empty: `\hbox`'s `ltx:text`, `\parbox`'s `ltx:inline-block`, an alignment's container), marking it
+  /// with [`FIELD_BOX_ATTRIBUTE`]: the text a box sets is no body text of the page for a field's print outside it
+  /// (latexml_engine `field_runs_after_body_text`, OXIDIZED_DESIGN #715). An element already holding other material
+  /// (a box absorbed into its context without an element of its own) is not marked: its text stays body text.
+  pub fn note_field_box(&mut self) {
+    if !self.field_marking_live() {
+      return;
+    }
+    let Some(mut element) = self.get_element() else {
+      return;
+    };
+    let fresh = element
+      .get_child_nodes()
+      .iter()
+      .all(|c| match c.get_type() {
+        Some(NodeType::PiNode) => true,
+        Some(NodeType::TextNode) => c.get_content().trim().is_empty(),
+        _ => false,
+      });
+    if fresh && element.get_type() == Some(NodeType::ElementNode) {
+      let _ = element.set_attribute(FIELD_BOX_ATTRIBUTE, "true");
+    }
+  }
+
   /// Before absorbing `object`: open, continue or close the run of field ink (`FieldRun`) by the field provenance
   /// the box was digested with ([`FIELD_PROV_PROPERTY`]). Returns whether `object` is a field-ink whatsit whose own
   /// absorption is its ink (the caller counts it in `field_inherit` meanwhile). Nothing in math: a formula is one box of
@@ -1113,6 +1173,20 @@ impl Document {
   fn field_ink_before(&mut self, object: &Digested) -> Result<bool> {
     if !self.field_marking_live() {
       return Ok(false);
+    }
+    // an alignment shown: the row-end markers its body consumed are taken now ([`FIELD_TAKEN_PROPERTY`])
+    if matches!(object.data(), DigestedData::Whatsit(_)) {
+      object.with_properties(|props| {
+        if let Some(Stored::VecDequeStored(serials)) = props.get_sym(pin!("fieldTaken")) {
+          for serial in serials {
+            if let Stored::Int(serial) = serial
+              && let Ok(serial) = u32::try_from(*serial)
+            {
+              crate::token::field_ledger_take(serial);
+            }
+          }
+        }
+      });
     }
     // `fieldProv` ([`FIELD_PROV_PROPERTY`]), by its cached symbol and without a copy: this runs for every box
     let (prov, serial) = object.with_properties(|props| match props.get_sym(pin!("fieldProv")) {

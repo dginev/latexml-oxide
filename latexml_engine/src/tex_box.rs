@@ -1059,10 +1059,12 @@ LoadDefinitions!({
   // readBoxContents($gullet, $everybox, $mode) with the mode argument
   // hardcoded to 'restricted_horizontal' / 'internal_vertical'
   // respectively — independent of the current mode at invocation time.
+  // The three box readers' material is a TeX box's (core `document::field_box_digested`): a frontmatter field's
+  // print outside it does not read its text as the page's body text (OXIDIZED_DESIGN #715).
   DefParameterType!(HBoxContents, sub[_inner, _extra] {
     read_box_contents(lookup_tokens("\\everyhbox")) },
   predigest => sub[arg] {
-    with_own_adjust_queue(|| predigest_box_contents_in_mode(arg, "restricted_horizontal")) },
+    box_material(with_own_adjust_queue(|| predigest_box_contents_in_mode(arg, "restricted_horizontal"))) },
   // Same brace re-wrap as VBoxContents below: the one-frame loop returns a
   // bare `List::new(boxes)` (batch 54n), so `\\hbox{a}` reverts as `\\hbox{a}`.
   reversion => sub[arg, _inner, _extra] {
@@ -1079,7 +1081,7 @@ LoadDefinitions!({
   DefParameterType!(HBoxArgContents, sub[_inner, _extra] {
     read_box_arg_contents(lookup_tokens("\\everyhbox")) },
   predigest => sub[arg] {
-    with_own_adjust_queue(|| match arg {
+    box_material(with_own_adjust_queue(|| match arg {
       // The unbraced single token: Perl `readArg`'s `Tokens($token)`,
       // digested from its own mouth (the loop ends at its EOF).
       ArgWrap::Tokens(body) if !body.is_empty() => reading_from_mouth(Mouth::default(), move || {
@@ -1087,7 +1089,7 @@ LoadDefinitions!({
         predigest_box_contents_in_mode(ArgWrap::None, "restricted_horizontal")
       }),
       _ => predigest_box_contents_in_mode(arg, "restricted_horizontal"),
-    }) },
+    })) },
   reversion => sub[arg, _inner, _extra] {
     let mut t: Vec<Token> = vec![T_BEGIN!()];
     t.extend(arg);
@@ -1097,7 +1099,7 @@ LoadDefinitions!({
   DefParameterType!(VBoxContents, sub[_inner, _extra] {
     read_box_contents(lookup_tokens("\\everyvbox")) },
   predigest => sub[arg] {
-    predigest_box_contents_in_mode(arg, "internal_vertical") },
+    box_material(predigest_box_contents_in_mode(arg, "internal_vertical")) },
   // The faithful vertical-box loop (`predigest_box_contents_in_mode`) rebuilds the
   // body as a fresh `List::new(boxes)`, whose `revert()` concatenates the boxes
   // WITHOUT the delimiting group braces (the old `invoke_token(T_BEGIN)` group
@@ -2069,6 +2071,16 @@ LoadDefinitions!({
   // Perl-mirrored position (TeX_Box.pool.ltxml L69) right after
   // \lx@hflipped to satisfy the file-order parity audit.
 });
+
+/// A box reader's digested material, marked as a TeX box's (core `document::field_box_digested`).
+fn box_material(material: Result<Option<Digested>>) -> Result<Option<Digested>> {
+  material.map(|material| {
+    material.map(|mut material| {
+      document::field_box_digested(&mut material);
+      material
+    })
+  })
+}
 
 /// Reader for `HBoxContents`/`VBoxContents` (`\hbox`, `\vbox`, `\vtop`, `\vcenter`): after the box
 /// specification, the `{` as tex.web §645 `scan_spec` ends with §403 `scan_left_brace` — expanded, past spaces and

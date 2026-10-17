@@ -3320,27 +3320,50 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   review's probes q1-q16, p1-p7: q2, q3, q16 now as pdflatex, the others byte-identical to round 2. Round 4 (the
   round-3 review's findings 1-4, one class: a lift that removed or moved text pdflatex prints; findings 5-6 nits): a
   run's cover is what its own boxes consumed (`Document::absorb` keeps each run's ledger serials) plus what an alignment
-  took between and right after them (`document::field_ink_taken` at `digest_alignment_body`'s row-end marker), never a
+  took between and right after them (`digest_alignment_body`'s row-end markers; round 5: taken only when the alignment is shown), never a
   ledger entry absorbed elsewhere or never absorbed (finding 1, probes r19, r20; siblings `\sbox`, `\savebox`,
   `{lrbox}`, a formula's `\mbox` of a box also shown in text, a box used twice, `\phantom`/`\vphantom`); covers are
   clipped to the current call's positions (`lx_field_range_<F>`) and only runs within them join (finding 2, probes r12,
   r13; siblings `\author` twice, `\title` after `\maketitle`, `\edef` copies in reverse order); body text is decided
   by content order, the text earlier in the run's own block too, only boxes exempt (finding 3, probes r9, r18 kept, r16
-  = r17 kept, r11 kept; the header cases kept are listed in OXIDIZED_DESIGN_DIVERGENCES #715); a box whose cover starts
-  before a position the run reached opens a new run, and a run holding one character of the value twice is no whole
+  = r17 kept, r11 kept; the header cases kept are listed in OXIDIZED_DESIGN_DIVERGENCES #715); a box whose cover ends
+  at or before a start the run holds opens a new run, and a run holding one character of the value twice is no whole
   print (finding 4, probes r4, r5 kept, r3 lifted twice; siblings fragment/whole/fragment,
   `\StrLeft{\@title}{1}\@title`); the ledger records nothing after the ink is settled (finding 5); r7, r8, r14, r15
   listed as residual missed lifts (finding 6). Repros sectioning-frontmatter/field_prov_{unused_boxes_kept,
   math_mbox_kept, box_in_math_and_text, phantom_kept, title_calls_kept, edef_calls, author_calls_kept,
-  letter_flushleft_kept, letter_quote_kept, header_makebox_kept, reprint_order_kept, author_trailing_cr_lifted} RED →
-  GREEN, field_prov_{box_used_twice_lifted, title_after_maketitle_kept, header_rightline_kept, header_text_kept,
-  header_parbox_lifted, whole_twice_lifted} GREEN; guards `perfect_kernel_batchfms1` (43) and
+  letter_flushleft_kept, letter_quote_kept, header_makebox_kept (round 5: _lifted), reprint_order_kept,
+  author_trailing_cr_lifted, whole_twice_lifted (fms1c lifted 3 of its 4 prints)} RED → GREEN,
+  field_prov_{box_used_twice_lifted, title_after_maketitle_kept, header_rightline_kept (round 5: _lifted),
+  header_text_kept, header_parbox_lifted} GREEN; guards `perfect_kernel_batchfms1` (43) and
   `token::tests::field_ledger_take_cover_and_settle`. A/B over the same 543 papers (542 converted): fms1d = fms1c
   byte-identical on all 542 (the round-3 lifts of 2205.02555, 0706.0979, 1004.2125, 1605.00182, 1503.06457 kept), 0
   Error/Warning/Fatal change, 12 `field_ink` lifts each, no mark leaked; of the review's probes r4, r5, r9, r17, r18,
   r19, r20 and q9 changed, each to pdflatex's content, the rest byte-identical to round 3. `perf stat -e
   instructions:u`, bench, 3 runs: empty article 943.53M → 942.20M (−0.14 %), 2311.18489 4815.06M → 4813.88M
-  (−0.02 %), XML identical. Open
+  (−0.02 %), XML identical. Round 5 (the round-4 review's findings 1-4 and nits): the field provenance's thread state
+  (the stamped gate, the field ledger and its settled flag, the pending cover) is reset at every conversion's start
+  (`document::reset_field_provenance` in `Converter::prepare_session`, not only `reset_thread_engine`): a persistent
+  `cortex_worker` thread, a streaming restart and the CLI's supplements lifted nothing after their first document
+  (finding 1, probe two/: 2 + 0 → 2 + 2); an alignment's row-end markers are kept on its whatsit
+  (`document::FIELD_TAKEN_PROPERTY`) and taken when `Document::absorb` absorbs it, so an alignment in an unused
+  `\setbox`/`\sbox`/`{lrbox}` covers no print (finding 2, probes s25, s27, s28 kept as s26, s29); a box is decided by
+  the TeX mechanism, not by its element (finding 3, main-session call): the material of the box readers
+  (`HBoxContents`, `HBoxArgContents`, `VBoxContents`: `\hbox`, `\vbox`, `\vtop`, `\mbox`, `\makebox`, `\framebox`/`\fbox`,
+  `\raisebox`, `\parbox`, a `p` column; so `\rightline`/`\leftline`/`\centerline`), the body of an environment whose begin
+  code opens a box group (`TexGroup::Box`: a minipage), and an alignment mark the element they go in (`_fieldbox`,
+  `Document::note_field_box`), and only that text is set apart — r16 (`\rightline`), r17 (`\makebox`) and an `\mbox`
+  header now lifted as the `\parbox` header, `{flushright}`/`{center}`/`quote` headers kept; `ltx:indexmark` is set
+  apart (finding 4, s31 lifted). Repros sectioning-frontmatter/field_prov_{second_conversion_lifted,
+  unshown_alignment_kept, unshown_alignment_trailing_kept, header_mbox_lifted, indexmark_lifted} RED → GREEN,
+  field_prov_header_{rightline,makebox}_kept → _lifted (by the call), field_prov_{header_flushright_kept,
+  alignment_box_used_twice_lifted} GREEN; guards `perfect_kernel_batchfms1` (50). Of the review's probes r1-r20, q, p
+  and s01-s31 only r16, r17, s31 (lifted) and s25, s27, s28 (kept) changed, each to pdflatex's content. A/B over the
+  same 543 papers (542 converted): fms1e = fms1d byte-identical on all 542 (no paper's lift changed by the box call),
+  0 Error/Warning/Fatal change against 67int19b and fms1d, 12 `field_ink` lifts, no mark or `_fieldbox` leaked; 20 of
+  them through one CLI process (main + 19 supplements) lift the same 12 as one process each. `perf stat -e
+  instructions:u`, bench, 3 runs: empty article 942.67M → 944.10M (+0.15 %; no new work on its path, every added
+  step is gated on a stamped field), XML identical. Open
   (pre-existing, Perl the same): `\hypersetup{pdftitle=\@title}` records the RDF `dcterms:title` as the literal
   `\@title`; our `\pdfstringdef` is a `\gdef`, so a copy made before `\maketitle` empties the store prints nothing.
 

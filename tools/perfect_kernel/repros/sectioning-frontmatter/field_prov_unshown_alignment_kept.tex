@@ -1,0 +1,25 @@
+
+% Fragments of a two-line title printed around an alignment never shown (in an unused `\setbox`, `\sbox` or `{lrbox}`)
+% that prints the whole title: the row-end marker that alignment consumed (the value's `\\`) is taken only when the
+% alignment is absorbed, so it covers nothing between the fragments, which stay two runs, neither whole, and are kept
+% (fms1 round-4 review finding 2, probes s25, s27; the `\sbox` and `{lrbox}` siblings).
+% status:  RED (fms1 round 4: each pair joined into a whole print over the unused box's `\\` and lifted) → GREEN
+%          (fms1 round 5).
+% oracle:  pdflatex 0 errors: "Alpha Beta" (tabulars side by side), then "Alpha", "Beta" three times, then the title
+%          block "Alpha / Beta / Ann", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; every fragment kept.
+\documentclass{article}
+\title{Alpha\\Beta}\author{Ann}
+\makeatletter
+\def\lxfirst#1\\#2\relax{#1}\def\lxsecond#1\\#2\relax{#2}
+\newsavebox\lxbox
+\begin{document}
+\begin{tabular}{c}\expandafter\lxfirst\@title\relax\end{tabular}\setbox0\hbox{\begin{tabular}{c}\@title\end{tabular}}\begin{tabular}{c}\expandafter\lxsecond\@title\relax\end{tabular}
+
+\begin{center}\expandafter\lxfirst\@title\relax\end{center}\setbox0\hbox{\begin{tabular}{c}\@title\end{tabular}}\begin{center}\expandafter\lxsecond\@title\relax\end{center}
+\begin{center}\expandafter\lxfirst\@title\relax\end{center}\sbox\lxbox{\begin{tabular}{c}\@title\end{tabular}}\begin{center}\expandafter\lxsecond\@title\relax\end{center}
+\begin{center}\expandafter\lxfirst\@title\relax\end{center}\begin{lrbox}{\lxbox}\begin{tabular}{c}\@title\end{tabular}\end{lrbox}\begin{center}\expandafter\lxsecond\@title\relax\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

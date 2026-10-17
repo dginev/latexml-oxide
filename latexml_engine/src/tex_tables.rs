@@ -969,6 +969,8 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
   let mut lastwascr = false;
   let mut reversion: Vec<Token> = Vec::new();
   let mut creversion: Vec<Token> = Vec::new();
+  // the field-ledger serials of the row-end markers the body consumes (core `document::FIELD_TAKEN_PROPERTY`)
+  let mut field_taken: Vec<u32> = Vec::new();
   let alignment_cell = alignment_stored.alignment_cell().unwrap();
   loop {
     let (cell_opt, next, vtype, hidden) = digest_alignment_column(alignment_cell, lastwascr)?;
@@ -1032,8 +1034,9 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
         let arg_toks = read_arg(ExpansionLevel::Off)?;
         let arg = digest(arg_toks)?;
         // the row's end marker is the alignment's, never absorbed: a field value's `\\` (`\author{A \\ B}` set in a
-        // `tabular`) is taken by the print's structure (core `document::field_ink_taken`, OXIDIZED_DESIGN #715)
-        document::field_ink_taken(&arg);
+        // `tabular`) is taken by the print's structure once the alignment is shown (core
+        // `document::field_ink_taken_serials`, OXIDIZED_DESIGN #715)
+        document::field_ink_taken_serials(&arg, &mut field_taken);
         reversion.extend(p_revert(arg.clone())?.unlist());
         creversion.extend(c_revert(arg)?.unlist());
       } else if vtype.as_deref() == Some("crcr") {
@@ -1073,6 +1076,17 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
     .set_content_reversion(Tokens!(creversion));
   //   Debug("Halign $alignment: BODY DONE!\n"
   //       . "=> " . join(',', map { Stringify($_); } @reversion)) if $LaTeXML::DEBUG{halign};
+  if !field_taken.is_empty() {
+    whatsit.set_property(
+      document::FIELD_TAKEN_PROPERTY,
+      Stored::VecDequeStored(
+        field_taken
+          .into_iter()
+          .map(|s| Stored::Int(i64::from(s)))
+          .collect(),
+      ),
+    );
+  }
   expire_align_group_count();
   expire_reading_alignment();
   Ok(())

@@ -1468,7 +1468,7 @@ pub fn def_environment(
   name: String,
   paramlist: Option<Parameters>,
   compiled_replacement: Option<ReplacementClosure>,
-  options: ConstructorOptions,
+  mut options: ConstructorOptions,
 ) {
   // One environment, all or none of its names (`\begin{X}`, `\end{X}`, `\X`, `\endX`).
   if provide_only_declines(&T_CS!(s!("\\begin{{{name}}}"))) {
@@ -1615,6 +1615,22 @@ pub fn def_environment(
   // Clone fields needed for the bare \name constructor (Perl Package.pm lines 1949-1969)
   // before they are moved into the \begin{name} constructor below.
   let bare_after_digest_begin = options.after_digest_begin.clone();
+  // The body of an environment whose begin code opens a box group (`\setbox\@tempboxa\vbox\bgroup`, a minipage) is a
+  // TeX box's material (`document::field_box_digested`, OXIDIZED_DESIGN #715), unless the binding's run-time kind says
+  // otherwise.
+  if tex_group == TexGroup::Box {
+    let box_key = tex_group_key.clone();
+    options.after_digest_body.insert(
+      0,
+      after_digest_simple!(whatsit, {
+        if environment_tex_group(&box_key, TexGroup::Box) == TexGroup::Box
+          && let Some(Stored::Digested(body)) = whatsit.properties.get_mut("body")
+        {
+          crate::document::field_box_digested(body);
+        }
+      }),
+    );
+  }
   let bare_after_digest_body = options.after_digest_body.clone();
   let bare_before_construct = options.before_construct.clone();
   let bare_after_construct = options.after_construct.clone();

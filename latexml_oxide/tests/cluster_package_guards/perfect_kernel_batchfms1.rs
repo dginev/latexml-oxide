@@ -16,6 +16,11 @@
 //! order (field_prov_letter_flushleft_kept, _letter_quote_kept, _header_{rightline,makebox,text}_kept,
 //! _header_parbox_lifted), runs in the value's order (field_prov_reprint_order_kept, _whole_twice_lifted), and a
 //! value's closing `\\` covered past the space its cell dropped (field_prov_author_trailing_cr_lifted, 1605.00182).
+//! Round 5 (round-4 review findings 1-4): the field provenance's thread state is per conversion
+//! (field_prov_second_conversion_lifted), an alignment's row-end markers are taken only when it is shown
+//! (field_prov_unshown_alignment_kept, _unshown_alignment_trailing_kept, _alignment_box_used_twice_lifted), a box is
+//! decided by the TeX mechanism (field_prov_header_{rightline,makebox,mbox}_lifted, _header_flushright_kept), and an
+//! index mark is set apart (field_prov_indexmark_lifted).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use super::{
@@ -746,36 +751,76 @@ fn field_prov_letter_quote_kept() {
   );
 }
 
-/// sectioning-frontmatter/field_prov_header_rightline_kept: a `\rightline` report number before the title block is body text: the title block stays (round-3 review finding 3, probe r16).
+/// sectioning-frontmatter/field_prov_header_rightline_lifted: a `\rightline` report number before the title block is
+/// a TeX box (plain's `\hbox to\hsize`), its text no body text: the title block is lifted, the header kept (round-3
+/// review finding 3, probe r16; round-4 review finding 3 ruling: a box by the TeX mechanism).
 #[test]
-fn field_prov_header_rightline_kept() {
+fn field_prov_header_rightline_lifted() {
   let (xml, _) = assert_lifts(
     include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_rightline_kept.tex"
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_rightline_lifted.tex"
     ),
-    (0, 0),
+    (2, 0),
     &[],
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p class=\"ltx_align_right\">LA-UR-12-3456</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>",
+    "  <para xml:id=\"p1\">\n    <p class=\"ltx_align_right\">LA-UR-12-3456</p>\n  </para>",
     "{xml}"
   );
 }
 
-/// sectioning-frontmatter/field_prov_header_makebox_kept: a `\makebox[\textwidth][r]` report number before the title block is body text, as `\rightline`'s: the title block stays (round-3 review finding 3, probe r17).
+/// sectioning-frontmatter/field_prov_header_makebox_lifted: a `\makebox[\textwidth][r]` report number before the
+/// title block is a TeX box, as `\rightline`'s: the title block is lifted, the header kept (round-3 review finding 3,
+/// probe r17; round-4 review finding 3 ruling).
 #[test]
-fn field_prov_header_makebox_kept() {
+fn field_prov_header_makebox_lifted() {
   let (xml, _) = assert_lifts(
     include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_makebox_kept.tex"
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_makebox_lifted.tex"
+    ),
+    (2, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p><text align=\"right\" width=\"345.0pt\">LA-UR-12-3456</text></p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_header_mbox_lifted: an `\mbox` preprint line before the title block is a TeX box
+/// (`\leavevmode\hbox{#1}`): the title block is lifted, the header kept (round-4 review finding 3 ruling).
+#[test]
+fn field_prov_header_mbox_lifted() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_mbox_lifted.tex"
+    ),
+    (2, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p>preprint ABC-123</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_header_flushright_kept: a `{flushright}` report number before the title block is a
+/// list environment's paragraph, body text: the title block stays (round-4 review finding 3 ruling).
+#[test]
+fn field_prov_header_flushright_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_flushright_kept.tex"
     ),
     (0, 0),
     &[],
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p><text align=\"right\" width=\"345.0pt\">LA-UR-12-3456</text></p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>",
+    "  <para xml:id=\"p1\">\n    <p align=\"right\">LA-UR-12-3456</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>",
     "{xml}"
   );
 }
@@ -854,7 +899,16 @@ fn field_prov_author_trailing_cr_lifted() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_author_trailing_cr_lifted.tex"
     ),
     (2, 0),
-    &[("title", &[], "<title>Tab Title</title>")],
+    &[
+      ("title", &[], "<title>Tab Title</title>"),
+      (
+        "creator",
+        &[],
+        // (the contact's name ends with a no-break space)
+        "<creator role=\"author\"><personname>Daniel Krefl</personname><contact name=\"Affiliation:\u{a0}\" \
+         role=\"affiliation\"><text font=\"italic\">Theoretical Physics Department, CERN</text></contact></creator>",
+      ),
+    ],
   );
   assert_eq!(xml.matches("Daniel Krefl").count(), 1, "{xml}");
   assert_eq!(
@@ -863,4 +917,124 @@ fn field_prov_author_trailing_cr_lifted() {
     "{xml}"
   );
   assert_eq!(leading_body(&xml), "", "{xml}");
+}
+
+/// sectioning-frontmatter/field_prov_unshown_alignment_kept: title fragments printed around an alignment never shown
+/// (an unused `\setbox`, `\sbox`, `{lrbox}`) that prints the whole title: its row-end marker is taken only when the
+/// alignment is absorbed, so the fragments are no whole print and stay (round-4 review finding 2, probes s25, s27).
+#[test]
+fn field_prov_unshown_alignment_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_unshown_alignment_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <tabular vattach=\"middle\">\n      <tbody>\n        <tr>\n          <td align=\"center\">Alpha</td>\n        </tr>\n      </tbody>\n    </tabular>\n    <tabular vattach=\"middle\">\n      <tbody>\n        <tr>\n          <td align=\"center\">Beta</td>\n        </tr>\n      </tbody>\n    </tabular>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\">Alpha</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p align=\"center\">Beta</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p align=\"center\">Alpha</p>\n  </para>\n  <para xml:id=\"p5\">\n    <p align=\"center\">Beta</p>\n  </para>\n  <para xml:id=\"p6\">\n    <p align=\"center\">Alpha</p>\n  </para>\n  <para xml:id=\"p7\">\n    <p align=\"center\">Beta</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_unshown_alignment_trailing_kept: the `\\` closing a printed title, consumed by an
+/// unused `\setbox`'s `tabular`, does not complete the print: kept (round-4 review finding 2, probe s28).
+#[test]
+fn field_prov_unshown_alignment_trailing_kept() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_unshown_alignment_trailing_kept.tex"
+    ),
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para xml:id=\"p1\">\n    <p align=\"center\">Alpha</p>\n  </para>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_alignment_box_used_twice_lifted: a box holding the title's `tabular`, used twice:
+/// each use absorbs the alignment, takes the value's `\\` again, and is a whole print, lifted (round-4 review finding 2
+/// sibling).
+#[test]
+fn field_prov_alignment_box_used_twice_lifted() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_alignment_box_used_twice_lifted.tex"
+    ),
+    (2, 0),
+    &[("title", &[], "<title>Alpha<break/>Beta</title>")],
+  );
+  assert_eq!(leading_body(&xml), "", "{xml}");
+}
+
+/// sectioning-frontmatter/field_prov_indexmark_lifted: an `\index` entry before the title block prints nothing, its
+/// `ltx:indexmark` is set apart: the title block is lifted (round-4 review finding 4, probe s31).
+#[test]
+fn field_prov_indexmark_lifted() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_indexmark_lifted.tex"
+    ),
+    (2, 0),
+    &[(
+      "creator",
+      &[],
+      r#"<creator role="author"><personname>Ann Author</personname></creator>"#,
+    )],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <indexmark>\n    <indexphrase key=\"foo\">foo</indexphrase>\n  </indexmark>",
+    "{xml}"
+  );
+}
+
+/// sectioning-frontmatter/field_prov_second_conversion_lifted: one document converted twice on one thread, with no
+/// engine reset between (a persistent `cortex_worker` thread, a streaming restart, the CLI's supplements): the field
+/// provenance's thread state is reset at each conversion's start (`Converter::prepare_session`), so the second
+/// conversion lifts the two prints as the first does (round-4 review finding 1, probe two/: 2 + 0 before).
+#[test]
+fn field_prov_second_conversion_lifted() {
+  use std::rc::Rc;
+
+  use latexml::converter::Converter;
+  use latexml_core::common::{Config, OutputFormat};
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_second_conversion_lifted.tex"
+  );
+  let runs = std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(move || {
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+      let opts = Config {
+        format: OutputFormat::XML,
+        include_comments: Some(false),
+        preload: Some(vec![RAW.to_string()]),
+        bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
+        extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
+        ..Config::default()
+      };
+      let runs: Vec<(String, String)> = (0..2)
+        .map(|_| {
+          let mut converter = Converter::from_config(opts.clone());
+          converter.prepare_session(&opts).expect("a session");
+          let response = converter.convert_content_with_provenance("t.tex", tex.to_string());
+          (response.log, response.result.unwrap_or_default())
+        })
+        .collect();
+      latexml_core::reset_thread_engine();
+      runs
+    })
+    .expect("a conversion thread")
+    .join()
+    .expect("the conversions");
+  for (log, xml) in &runs {
+    assert_eq!((error_count(log), warning_count(log)), (0, 0), "{log}");
+    assert_eq!(log.matches(FIELD_INK_INFO).count(), 2, "{log}");
+    assert_eq!(xml.matches("Twice Title").count(), 1, "{xml}");
+  }
 }
