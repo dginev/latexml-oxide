@@ -55,8 +55,10 @@ fn spelled(expected: &str) -> String {
 /// class-bindings/aguplus/aguplus_author_block_and_citations: each `\author` carries the `\affil` after it, the
 /// `\authoraddr` given before the authors is the author's it names, and the citations are natbib's in square brackets
 /// (pdflatex: "Ann Able / First Institute, Town / Bob Baker / Second Laboratory, City"; "As Able [1990] show, and
-/// others [Baker et al., 1991]"; the address and "Received 1 May 1999" after the references). Before 68x the
-/// affiliations were body text, the address lost and 6 "Missing number" warnings (1107.5305, 1203.5042).
+/// others [Baker et al., 1991], see [Able, 1990] and [see Baker et al., 1991, p. 2]"; the address and "Received 1 May
+/// 1999" after the references). `\cite[][]{key1}` is parenthetical as in the class's own natbib 7.0 copy
+/// (aguplus.cls:979-984: `\cite` sets `\NAT@swatrue` and `\NAT@cites` keeps it when a `[` follows) and natbib.sty:694-701.
+/// Before 68x the affiliations were body text, the address lost and 6 "Missing number" warnings (1107.5305, 1203.5042).
 #[test]
 fn aguplus_authors_carry_affiliations_and_addresses() {
   let xml = assert_elements(
@@ -69,7 +71,7 @@ fn aguplus_authors_carry_affiliations_and_addresses() {
       "para",
       "Sx1.p1",
       &spelled(
-        r#"<para xml:id="Sx1.p1"><p>As <cite class="ltx_citemacro_citet"><bibref bibrefs="key1" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","><bibrefphrase>[</bibrefphrase><bibrefphrase>]</bibrefphrase></bibref></cite> show, and others <cite class="ltx_citemacro_citep">[<bibref bibrefs="key2" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>]</cite>, see <cite class="ltx_citemacro_cite"><bibref bibrefs="key1" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","><bibrefphrase>[</bibrefphrase><bibrefphrase>]</bibrefphrase></bibref></cite> and <cite class="ltx_citemacro_cite">[see <bibref bibrefs="key2" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>, p.{nbsp}2]</cite>.</p></para>"#,
+        r#"<para xml:id="Sx1.p1"><p>As <cite class="ltx_citemacro_citet"><bibref bibrefs="key1" separator=";" show="Authors Phrase1YearPhrase2" yyseparator=","><bibrefphrase>[</bibrefphrase><bibrefphrase>]</bibrefphrase></bibref></cite> show, and others <cite class="ltx_citemacro_citep">[<bibref bibrefs="key2" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>]</cite>, see <cite class="ltx_citemacro_cite">[<bibref bibrefs="key1" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>]</cite> and <cite class="ltx_citemacro_cite">[see <bibref bibrefs="key2" separator=";" show="AuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>, p.{nbsp}2]</cite>.</p></para>"#,
       ),
     )],
   );
