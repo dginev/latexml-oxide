@@ -9,10 +9,48 @@
 //! the pre-`\maketitle` frontmatter, so those names render as the collaboration
 //! block in the body rather than as title-page creators; bind `\AtlasOrcid` so
 //! the names show cleanly instead of leaking the macro.
-use latexml_package::prelude::*;
+//!
+//! The base class is the KOMA class atlasdoc.cls loads (OXIDIZED_DESIGN_DIVERGENCES #736), chosen by its options as
+//! the class chooses it (`main_class`); OmniBus, the base this binding had before, is provided over it
+//! ([`provide_over_base_class`]). The paper's copy, read after the binding, finds its `\LoadClass{\ADOC@mainclass}`
+//! loaded and its KOMA calls (`\KOMAoptions`, `\setkomafont`, `\addtokomafont`, `\titlehead`, …) meet KOMA
+//! (2509.01219; census 1605.06035, 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536).
+use latexml_package::{
+  package::omnibus_cls::provide_over_base_class,
+  prelude::*,
+  shipped_class::{class_code_contains, shipped_class_text},
+};
+
+/// The class atlasdoc.cls loads, by the version the paper ships (or the latest, with no copy) and the options the
+/// document gave (`setting`: the last `key` or `key=true`/`key=false` wins; `None` when the option is not given). v13
+/// (2111.06712's copy, 2022/05/24, :73-185): `cernpreprint` (or `preprint`), `PAPER`, `CONF` and `PUB` turn `BOOK` and
+/// `REPORT` off; `BOOK` loads scrbook (:176), `REPORT` (`\DeclareBoolOption[true]{REPORT}`, :39) scrreprt (:180),
+/// otherwise scrartcl (:183), `\LoadClass[titlepage, 11pt]{\ADOC@mainclass}` (:382). v3 (1609.03920's, 2017/03/02,
+/// :84-127, :249-254) has no `REPORT`: scrbook for `BOOK`, else scrartcl. v1 (1503.03243's, 2015/02/23, :42, :58-61,
+/// :231-237) scrartcl when `koma` or `atlasstyle` (true by default), else article.
+fn main_class(copy: Option<&str>, setting: &dyn Fn(&str) -> Option<bool>) -> &'static str {
+  let on = |key: &str| setting(key).unwrap_or(false);
+  let declares = |option: &str| copy.is_none_or(|text| class_code_contains(text, option));
+  if copy.is_some_and(|text| class_code_contains(text, "{koma}")) {
+    return if on("koma") || setting("atlasstyle").unwrap_or(true) {
+      "scrartcl"
+    } else {
+      "article"
+    };
+  }
+  let other_kind = ["cernpreprint", "preprint", "PAPER", "CONF", "PUB"]
+    .iter()
+    .any(|kind| on(kind));
+  if on("BOOK") && !other_kind {
+    "scrbook"
+  } else if declares("{REPORT}") && !other_kind && setting("REPORT").unwrap_or(true) {
+    "scrreprt"
+  } else {
+    "scrartcl"
+  }
+}
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
   // atlasdoc.cls:52-54 (2207.12246's copy) the font boolean options (`newtx` by default, `txfonts`, `libertine`,
   // `palatino`) and :516-546 the packages each loads, the math font with them: papers write `\checkmark`, `\upmu`
   // (23 of run 353 with newtxmath's commands undefined: 2207.12246, 2210.05415, 2304.03053). `<option>=false` keeps the
@@ -26,6 +64,39 @@ LoadDefinitions!({
     });
   }
   ProcessOptions!();
+  // The class's kvoptions (`preprint`, `preprint=true`, `preprint = false`, …; the last setting wins).
+  let options = ["\\opt@atlasdoc.cls", "\\@classoptionslist"]
+    .iter()
+    .find_map(|list| {
+      lookup_definition(&T_CS!(list))
+        .ok()
+        .flatten()
+        .and_then(|defn| match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => Some(body.to_string()),
+          _ => None,
+        })
+    });
+  let setting = |key: &str| -> Option<bool> {
+    options
+      .as_deref()
+      .unwrap_or("")
+      .split(',')
+      .fold(None, |set, option| {
+        let option: String = option.chars().filter(|c| !c.is_whitespace()).collect();
+        match option.split_once('=') {
+          None if option == key => Some(true),
+          Some((name, value)) if name == key => Some(value == "true"),
+          _ => set,
+        }
+      })
+  };
+  let copy = shipped_class_text("atlasdoc")?;
+  LoadClass!(
+    main_class(copy.as_deref(), &setting),
+    vec![s!("titlepage"), s!("11pt")],
+    Tokens!()
+  );
+  provide_over_base_class()?;
   if lookup_bool("atlasdoc@txfonts") {
     RequirePackage!("txfonts", options => vec![s!("varg")]);
     RequirePackage!("fontenc", options => vec![s!("T1")]);
@@ -97,33 +168,9 @@ LoadDefinitions!({
 \newcommand*{\HEPDataRecord}[1]{\renewcommand*{\AtlasHEPDataRecord}{https://www.hepdata.net/record/ins#1}}
 \newcommand*{\ADOC@subprepend}{Journal:}\newcommand*{\subprepend}[1]{\renewcommand*{\ADOC@subprepend}{#1}}"
   );
-  // The class's kvoptions (`preprint`, `preprint=true`, `preprint = false`, …; the last setting wins) choose the header:
-  // `preprint` or `cernpreprint` the CERN preprint one, which also turns `HEPDATA` off (:82-91).
-  let options = ["\\opt@atlasdoc.cls", "\\@classoptionslist"]
-    .iter()
-    .find_map(|list| {
-      lookup_definition(&T_CS!(list))
-        .ok()
-        .flatten()
-        .and_then(|defn| match defn.get_expansion() {
-          Some(ExpansionBody::Tokens(body)) => Some(body.to_string()),
-          _ => None,
-        })
-    });
-  let setting = |key: &str| {
-    options
-      .as_deref()
-      .unwrap_or("")
-      .split(',')
-      .fold(false, |set, option| {
-        let option: String = option.chars().filter(|c| !c.is_whitespace()).collect();
-        match option.split_once('=') {
-          None if option == key => true,
-          Some((name, value)) if name == key => value == "true",
-          _ => set,
-        }
-      })
-  };
+  // The options choose the header: `preprint` or `cernpreprint` the CERN preprint one, which also turns `HEPDATA` off
+  // (:82-91).
+  let setting = |key: &str| setting(key).unwrap_or(false);
   let cern_preprint = setting("preprint") || setting("cernpreprint");
   if cern_preprint {
     RawTeX!(r"\lx@atlas@cernpreprinttrue");

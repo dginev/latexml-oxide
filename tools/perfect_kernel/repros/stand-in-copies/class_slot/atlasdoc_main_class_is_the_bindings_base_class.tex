@@ -1,10 +1,11 @@
 % witness: 2509.01219 (atlasdoc.cls `\LoadClass[titlepage, 11pt]{\ADOC@mainclass}`, scrartcl; 10 atlasdoc papers in
-%          2509)
+%          2509); census 1605.06035, 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536
 % oracle:  pdflatex 0 errors: "1 Intro", "Text ATLAS."
 % engines: rust 72a r7 = scrartcl raw-read over the binding's article: "\@startsection has been changed",
-%          "Unexpected definition of \@sect", 3x "Bad type area settings" Warnings
-% expect:  0 errors, 0 warnings; the section whole
-% status:  RED (72a r7) -> GREEN (72a r8)
+%          "Unexpected definition of \@sect", 3x "Bad type area settings" Warnings; 72a r8 = the binding's
+%          OmniBus/article stood for scrartcl: `\KOMAoptions`, `\setkomafont` undefined (2 Errors)
+% expect:  0 errors; the 2 KOMA Warnings `\documentclass{scrartcl}` gives; the section whole
+% status:  RED (72a r8) -> GREEN (72a r9)
 % preload: ar5iv.sty
 \documentclass{atlasdoc}
 \title{T}

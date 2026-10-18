@@ -324,7 +324,13 @@ fn ceurart_contacts_attach_to_creators() {
   );
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // (the binding's base class is scrartcl, as ceurart.cls loads it, whose raw load warns of LaTeXML's
+  // `\@startsection` and `\@sect`: OXIDIZED_DESIGN_DIVERGENCES #736)
+  assert_eq!(warning_count(&stderr), 2, "{stderr}");
+  assert!(
+    stderr.contains("Class scrartcl Warning: Unexpected definition of \\@sect!"),
+    "{stderr}"
+  );
   assert_element(
     &xml,
     "creator",

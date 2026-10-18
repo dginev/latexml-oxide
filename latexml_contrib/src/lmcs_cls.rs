@@ -3,8 +3,9 @@
 //! lmcs.cls is NOT distributed in TeX Live (papers bundle it, but the corpus
 //! copies don't reach our search path), so Perl LaTeXML — which ships no lmcs
 //! binding — emits `Can't find binding for class lmcs (using OmniBus)` and
-//! falls back to **OmniBus**. We load OmniBus as the base (NOT amsart, which the
-//! prior version used), and the class's own theorem set (lmcs.cls:696-761, below)
+//! falls back to **OmniBus**. The base class is the one lmcs.cls:33 loads,
+//! `\LoadClass[11pt,reqno]{amsart}` (OXIDIZED_DESIGN_DIVERGENCES #736: the paper's copy, read after the binding, finds
+//! it loaded), with OmniBus, the base this binding had before, provided over it; and the class's own theorem set (lmcs.cls:696-761, below)
 //! eagerly: a paper whose preamble does `\newtheorem{remark}[thm]{…}` and whose
 //! body uses `\begin{thm}`/`\begin{lem}` shares the class's `thm` counter,
 //! numbered within the section as pdflatex numbers it (OmniBus's lazy autoloads
@@ -12,10 +13,11 @@
 //! ORCID-logo rendering (fails mid-load), so `\lmcsdoi`/`\lmcsheading`/
 //! `\lmcsorcid` get content-preserving stubs below. Witness 2305.14448,
 //! 2305.19985, 1607.04128 (graphicx).
-use latexml_package::prelude::*;
+use latexml_package::{package::omnibus_cls::provide_over_base_class, prelude::*};
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
+  LoadClass!("amsart", vec![s!("11pt"), s!("reqno")], Tokens!());
+  provide_over_base_class()?;
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");

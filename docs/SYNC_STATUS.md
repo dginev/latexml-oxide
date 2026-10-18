@@ -3003,7 +3003,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
 - **72a** (a stand-in binding's shipped copy adds its extras; OXIDIZED_DESIGN_DIVERGENCES #731; census
-  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-8). After
+  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-9). After
   a binding on `AUTHOR_FILE_STAND_INS` loads, the paper's copy is read raw (content.rs `read_stand_in_copy`) when it is
   the file the binding stands in for (`copy_is_the_stood_in_file`, r3: its `\Provides(Expl)…` names the file, the
   binding or a file the binding loads — 2308.11432's `\ProvidesExplClass{fcs}`, 2011.13564's IEEEtai.cls declaring
@@ -3096,7 +3096,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   interface are undefined, Errors as the copy's own (r8, OXIDIZED_DESIGN_DIVERGENCES #736): ceurart.cls:63
   `\KOMAoptions{DIV=10}` 1 Error in each of 107 ceurart papers of 2506+2509 (0 on 67int21, which read no copy),
   atlasdoc.cls 11 (`\KOMAoptions`, `\KOMAClassName`, `\setkomafont`, `\setcapindent`, `\deffootnote`, …) in each of 14
-  atlasdoc papers — for a ruling (options in agent_reports/2026-10-17_payload_72a.md, round 8).
+  atlasdoc papers — resolved in r9 by option B (the binding loads the real base); open where the slot still fires:
+  Perl's svmult binding loads book where svmult.cls/svmono.cls `\LoadClass{article}` (book covers article's interface;
+  its numbering "0.1" against the copy's "1"), daj's binding emulates tocbase (not in TeX Live) over article; (p) a raw
+  KOMA base lacks the article binding's semantic layer (r9): `\appendix` is KOMA's (sections, not `ltx:appendix`: 26 of
+  27 ceurart/atlasdoc papers with appendices in 2506+2509), its raw `\newcounter`s carry no id prefixes (`section1`,
+  not `S1`; 124 of 126), and it warns of LaTeXML's `\@startsection`/`\@sect` (2 Warnings, as `\documentclass{scrartcl}`
+  on 67int21) — koma_script.rs work for every KOMA document (pre-set `@ID@prefix@<ctr>`, an `\appendix` that starts
+  the appendices), for a ruling.
   r7: a raw file's own repeat of natbib after a binding's early load — a stand-in copy that loads natbib itself,
   neurips_2024.sty:71, icml2024.sty:95 — applies its options, joins them to the first load's and ends the early-load
   state, so the document's `\usepackage[numbers]{natbib}` after it is LaTeX's "Option clash" (the reviewer's
@@ -3122,6 +3129,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   both copies read); natbib's repeat options in natbib's declaration order with `nobibstyle`/`bibstyle`
   (`[square,authoryear]` gobbles `\bibstyle`, natbib.sty:238-263; OXIDIZED_DESIGN_DIVERGENCES #733). Rows (n), (o)
   above.
+  r9: a stand-in class binding loads the base class its real file loads (OXIDIZED_DESIGN_DIVERGENCES #736), so the
+  copy's own `\LoadClass` is a repeat: ceurart → scrartcl, atlasdoc → its KOMA class by its options and version, lmcs,
+  jgcc, czipreprint → amsart, pnas-new → extarticle, clear2025 → jmlr; OmniBus provided over a real base where it was the
+  base before (`omnibus_cls::provide_over_base_class`: ceurart's `{keywords}`). The slot stays as the net (svmult, daj).
+  2509.11496, 2608.23214, 2310.02658, 2505.16276 0 E; ceurart 38 → 21 E (vs 67int21) and atlasdoc 1 → 0 over 2506+2509,
+  0 worse; rows (o), (p) above.
   Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
 
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;

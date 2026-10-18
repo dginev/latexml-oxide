@@ -10,6 +10,20 @@ fn convert(tex: &str) -> String {
   xml
 }
 
+/// atlasdoc's binding loads the KOMA class atlasdoc.cls loads (OXIDIZED_DESIGN_DIVERGENCES #736), whose raw load warns
+/// of LaTeXML's `\@startsection` and `\@sect`, as `\documentclass{scrartcl}` does.
+fn convert_atlasdoc(tex: &str) -> String {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert!(
+    ["scrartcl", "scrreprt", "scrbook"]
+      .iter()
+      .any(|class| super::perfect_kernel_batch72a::koma_raw_warnings(&log, class)),
+    "{log}"
+  );
+  xml
+}
+
 /// spieman has no binding of its own: the loader's one warning that it takes spie's, and nothing else.
 fn convert_spieman(tex: &str) -> String {
   let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
@@ -146,7 +160,7 @@ See \DOI{10.1/x}.
 /// `\AtlasPaperWebpage` reads the reference code. Witnesses 2508.20929, 2103.01029, 1904.03536, 2407.10879.
 #[test]
 fn atlasdoc_setters_are_defined() {
-  let xml = convert(include_str!(
+  let xml = convert_atlasdoc(include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/atlasdoc_class_commands.tex"
   ));
   assert_contains(&xml, &[
@@ -169,7 +183,7 @@ fn atlasdoc_setters_are_defined() {
 #[test]
 fn atlasdoc_title_header_follows_the_options() {
   let doc = |options: &str| {
-    convert(&format!(
+    convert_atlasdoc(&format!(
       r"\documentclass{options}{{atlasdoc}}
 \AtlasTitle{{T}}
 \AtlasJournal{{Phys. Lett. B}}

@@ -2249,8 +2249,10 @@ fn shipped_with_paper(path: &str) -> bool {
 /// One class slot (OXIDIZED_DESIGN_DIVERGENCES #736): does the base class a stand-in class binding loaded stand for the
 /// class `name` its copy's own `\LoadClass` names? A document has one class: latex.ltx:18800 lets a class file
 /// `\LoadClass` once (a second is `\@twoloadclasserror`, :18938-18942), and the binding has already loaded the base
-/// class it models the copy on (ceurart_cls.rs → OmniBus → article). Loading the copy's class too put a second class on
-/// top of the first: ceurart.cls:62 `\LoadClass{scrartcl}` raw-read scrartcl, scrkbase and typearea over article,
+/// class it models the copy on. A binding loads the class its real file loads (r9: ceurart_cls.rs scrartcl,
+/// atlasdoc_cls.rs its KOMA class, jgcc_cls.rs amsart), so the copy's `\LoadClass` is a repeat; this is the net for a
+/// binding still out of step (svmult's book where svmult.cls loads article; daj's tocbase emulation). When the bindings
+/// loaded OmniBus → article, loading the copy's class too put a second class on top of the first: ceurart.cls:62 `\LoadClass{scrartcl}` raw-read scrartcl, scrkbase and typearea over article,
 /// whose `\@ptsize` of 0 sends typearea.sty:1400-1413 off its path ("DIV for 0.0pt", then "Conditional limit of
 /// 48000000 exceeded": 2509.11496, 2608.23214, 2310.02658, 2505.16276); atlasdoc.cls `\LoadClass{\ADOC@mainclass}`
 /// (scrartcl) redefined `\@startsection` and `\@sect` under the binding (2509.01219, "Bad type area settings"). So

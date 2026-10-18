@@ -5,10 +5,14 @@
 //! pattern as LMCS — raw cls preamble (font/page-layout machinery)
 //! fails mid-load, leaving these undefined. Witness 2308.10812,
 //! 2308.02610, 2309.06144.
+//!
+//! The base class is the one jgcc.cls:34 loads, `\LoadClass[11pt,reqno]{amsart}` (OXIDIZED_DESIGN_DIVERGENCES #736):
+//! the paper's copy, read after the binding, finds it loaded and its amsart calls (`\address`, `\email`,
+//! `\copyrightinfo`) meet amsart (2309.03819, 2401.15504).
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  LoadClass!("article");
+  LoadClass!("amsart", vec![s!("11pt"), s!("reqno")], Tokens!());
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");

@@ -490,9 +490,16 @@ fn copy_setters_store_class_defaults() {
   ];
   for (tex, cls, title, author, date) in cases {
     let (log, xml) = convert_files_with(&tex, &[("atlasdoc.cls", &cls)], Some("ar5iv.sty"));
+    // (the binding's base is the KOMA class atlasdoc.cls loads, which warns as `\documentclass{scrartcl}` does)
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 0),
+      (0, 2),
+      "{tex}\n{log}"
+    );
+    assert!(
+      ["scrartcl", "scrreprt", "scrbook"]
+        .iter()
+        .any(|class| koma_raw_warnings(&log, class)),
       "{tex}\n{log}"
     );
     match title {
@@ -1281,13 +1288,25 @@ fn class_load_record_does_not_reach_the_next_document() {
   drop(papers);
 }
 
-/// One class slot (OXIDIZED_DESIGN_DIVERGENCES #736; latex.ltx:18800, :18938-18942 `\@twoloadclasserror`): a stand-in
-/// class's copy whose own `\LoadClass` names a class the paper does not ship, after the binding loaded its base class,
-/// does not load a second class over the first — ceurart.cls:62 `\LoadClass{scrartcl}` raw-read typearea over article
-/// (Fatal "Conditional limit of 48000000 exceeded": 2509.11496, 2608.23214, 2310.02658, 2505.16276), atlasdoc.cls's
-/// `\LoadClass{\ADOC@mainclass}` redefined `\@startsection` and `\@sect` (2509.01219). pdflatex: "A Title", "1 Intro",
-/// "Text CEUR."; "1 Intro", "Text ATLAS."; 0 errors. A class the author ships is still read (the nc_chain case of
-/// `copy_newcommand_through_a_chained_base_class`).
+/// The KOMA class a raw scrartcl load warns of, as `\documentclass{scrartcl}` does (scrartcl.cls:3397 `\@startsection`,
+/// :3555 `\@sect`: LaTeXML's sectioning is not latex.ltx's text) — the open KOMA row of OXIDIZED_DESIGN_DIVERGENCES #736.
+pub(crate) fn koma_raw_warnings(log: &str, class: &str) -> bool {
+  log.contains(&format!(
+    "Warning:latex:(\\KOMAClassName)  Class {class} Warning: `\\@startsection' has been changed."
+  )) && log.contains(&format!(
+    "Warning:latex:(\\KOMAClassName)  Class {class} Warning: Unexpected definition of \\@sect!"
+  ))
+}
+
+/// A stand-in binding loads the base class its real file loads (OXIDIZED_DESIGN_DIVERGENCES #736; "a binding defines in
+/// the original package's conceptual space", "stub bindings load their real dependencies"), so the copy's own
+/// `\LoadClass` is a repeat, as in TeX (latex.ltx `\@onefilewithoptions`: `\ver@<class>.cls` defined), and the copy's
+/// calls to its class's interface meet it: ceurart.cls:62-63 `\LoadClass{scrartcl}` `\KOMAoptions{DIV=10}` (2509.11496,
+/// 2608.23214, 2310.02658, 2505.16276; r7 raw-read typearea over article, Fatal "Conditional limit of 48000000
+/// exceeded"; r8's class slot left `\KOMAoptions` undefined), atlasdoc.cls `\LoadClass[titlepage, 11pt]{\ADOC@mainclass}`
+/// (2509.01219), jgcc.cls:34 `\LoadClass[11pt,reqno]{amsart}` (2309.03819, 2401.15504). OmniBus's `{keywords}` stays the
+/// binding's over scrartcl (`provide_over_base_class`). pdflatex: "A Title", "Keywords a,b", "1 Intro", "Text CEUR.";
+/// "1 Intro", "Text ATLAS."; "A TITLE", "1. Intro", "Text JGCC.", "Somewhere", "Email address: a@b.c"; 0 errors.
 #[test]
 fn copy_load_class_is_the_bindings_base_class() {
   let (log, xml) = convert_files_with(
@@ -1301,24 +1320,26 @@ fn copy_load_class_is_the_bindings_base_class() {
       warning_count(&log),
       log.matches("Fatal:").count()
     ),
-    (0, 0, 0),
+    (0, 2, 0),
     "{log}"
   );
-  assert!(
-    log.contains(
-      "Info:provide:scrartcl.cls the binding's base class (OmniBus.cls, article.cls) stands for the copy's \
-       \\LoadClass{scrartcl}: not loaded"
-    ),
-    "{log}"
-  );
+  assert!(koma_raw_warnings(&log, "scrartcl"), "{log}");
+  assert!(!log.contains("stands for the copy's"), "{log}");
   assert_element(&xml, "title", &[], "<title>A Title</title>");
   assert_element(
     &xml,
+    "classification",
+    &["scheme=\"keywords\""],
+    "<classification scheme=\"keywords\">\na ,b\n</classification>",
+  );
+  assert_element(
+    &xml,
     "section",
-    &["xml:id=\"S1\""],
-    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text \
-     xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag \
-     close=\" \">1</tag>Intro</title><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">Text CEUR.</p></para></section>",
+    &["xml:id=\"section1\""],
+    "<section inlist=\"toc\" xml:id=\"section1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text \
+     xml:id=\"section1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag \
+     close=\" \">1</tag>Intro</title><para xml:id=\"section1.p1\"><p xml:id=\"section1.p1.1\">Text \
+     CEUR.</p></para></section>",
   );
 
   let (log, xml) = convert_files_with(
@@ -1332,17 +1353,92 @@ fn copy_load_class_is_the_bindings_base_class() {
       warning_count(&log),
       log.matches("Fatal:").count()
     ),
+    (0, 2, 0),
+    "{log}"
+  );
+  assert!(koma_raw_warnings(&log, "scrartcl"), "{log}");
+  assert!(!log.contains("stands for the copy's"), "{log}");
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"section1\""],
+    "<section inlist=\"toc\" xml:id=\"section1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag \
+     role=\"typerefnum\">§1</tag></tags><title><tag close=\" \">1</tag>Intro</title><para \
+     xml:id=\"section1.p1\"><p xml:id=\"section1.p1.1\">Text ATLAS.</p></para></section>",
+  );
+
+  let (log, xml) = convert_files_with(
+    repro!("class_slot/jgcc_main_class_is_the_bindings_base_class.tex"),
+    &[("jgcc.cls", repro!("class_slot/jgcc.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (
+      error_count(&log),
+      warning_count(&log),
+      log.matches("Fatal:").count()
+    ),
     (0, 0, 0),
     "{log}"
   );
-  assert!(!log.contains("KOMA"), "{log}");
+  assert!(!log.contains("stands for the copy's"), "{log}");
+  assert_element(&xml, "title", &[], "<title>A Title</title>");
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>An Author</personname><contact name=\"Address:\u{a0}\" \
+     role=\"address\">Somewhere</contact><contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" \
+     xml:id=\"id1\">a@b.c</text></contact></creator>",
+  );
   assert_element(
     &xml,
     "section",
     &["xml:id=\"S1\""],
-    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag \
-     role=\"typerefnum\">§1</tag></tags><title><tag close=\" \">1</tag>Intro</title><para xml:id=\"S1.p1\"><p \
-     xml:id=\"S1.p1.1\">Text ATLAS.</p></para></section>",
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text \
+     xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag \
+     close=\". \">1</tag>Intro</title><toctitle><tag close=\" \">1</tag>Intro</toctitle><para xml:id=\"S1.p1\"><p \
+     xml:id=\"S1.p1.1\">Text JGCC.</p></para></section>",
+  );
+}
+
+/// One class slot, the net (OXIDIZED_DESIGN_DIVERGENCES #736; latex.ltx:18800, :18938-18942 `\@twoloadclasserror`): a
+/// stand-in class's copy whose own `\LoadClass` names a class its binding's base is not, and the paper does not ship,
+/// does not load a second class over the first. Perl's svmult binding loads book (svmult.cls.ltxml:34) where svmult.cls
+/// `\LoadClass[twoside]{article}` (astro-ph0005332, physics0102085, astro-ph0110202; svmono 1609.02100). pdflatex: "1
+/// Intro", "Text SV."; 0 errors. A class the author ships is still read (the nc_chain case of
+/// `copy_newcommand_through_a_chained_base_class`).
+#[test]
+fn copy_load_class_meets_the_class_slot() {
+  let (log, xml) = convert_files_with(
+    repro!("class_slot/svmult_load_class_meets_the_slot.tex"),
+    &[("svmult.cls", repro!("class_slot/svmult.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (
+      error_count(&log),
+      warning_count(&log),
+      log.matches("Fatal:").count()
+    ),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert!(
+    log.contains(
+      "Info:provide:article.cls the binding's base class (book.cls) stands for the copy's \\LoadClass{article}: not \
+       loaded"
+    ),
+    "{log}"
+  );
+  // (book's numbering, "0.1", where the copy's article prints "1": the base is Perl's binding's, the open svmult row)
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"Ch0.S1\""],
+    "<section inlist=\"toc\" xml:id=\"Ch0.S1\"><tags><tag>0.1</tag><tag role=\"refnum\">0.1</tag><tag \
+     role=\"typerefnum\">§0.1</tag></tags><title><tag close=\" \">0.1</tag>Intro</title><para xml:id=\"Ch0.S1.p1\"><p \
+     xml:id=\"Ch0.S1.p1.1\">Text SV.</p></para></section>",
   );
 }
 

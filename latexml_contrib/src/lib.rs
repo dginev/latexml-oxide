@@ -170,6 +170,7 @@ pub mod atlasdoc_cls;
 pub mod bidi_sty;
 pub mod bmvc2k_natbib_sty;
 pub mod cecs_cls;
+pub mod clear2025_cls;
 pub mod compositio_cls;
 pub mod czipreprint_cls;
 pub mod epl_cls;
@@ -739,7 +740,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("INTERSPEECH2021", "sty", interspeech_sty::load_definitions),
   ("INTERSPEECH2022", "sty", interspeech_sty::load_definitions),
   ("INTERSPEECH2023", "sty", interspeech_sty::load_definitions),
-  ("clear2025", "cls", jmlr_cls::load_definitions),
+  ("clear2025", "cls", clear2025_cls::load_definitions),
   ("jabbrv", "sty", jabbrv_sty::load_definitions),
   ("jair", "sty", jair_sty::load_definitions),
   ("jgcc", "cls", jgcc_cls::load_definitions),

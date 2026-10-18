@@ -3,7 +3,9 @@
 //!
 //! Defines common frontmatter commands, theorem environments, natbib autoloads,
 //! and various compatibility macros encountered in real-world arxiv submissions.
-use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard, provide_only, with_origin};
+use latexml_core::definition::origin::{
+  DefinitionOrigin, OriginGuard, ProvideOnlyGuard, provide_only, with_origin,
+};
 
 use crate::prelude::*;
 
@@ -42,6 +44,16 @@ fn is_all_ascii_digits(arg: &Tokens) -> bool {
   let s = arg.to_string();
   let s = s.trim();
   !s.is_empty() && s.chars().all(|c| c.is_ascii_digit())
+}
+
+/// OmniBus over the base class a stand-in binding loaded as its real file does (OXIDIZED_DESIGN_DIVERGENCES #736):
+/// provide-only ([`ProvideOnlyGuard`], as `\documentstyle` loads it over a class, sect01.rs), so it adds the frontmatter
+/// commands and environments the base class leaves undefined (`{keywords}`, `\email`, `\affiliation`, …) and replaces
+/// none of the base class's. A binding that once loaded OmniBus as its base (ceurart, atlasdoc, lmcs, pnas-new,
+/// czipreprint) keeps what OmniBus gave it where the real base class (scrartcl, amsart, extarticle) has nothing.
+pub fn provide_over_base_class() -> Result<()> {
+  let _provide_only = ProvideOnlyGuard::new();
+  load_class("OmniBus", Vec::new(), Tokens!())
 }
 
 #[rustfmt::skip]

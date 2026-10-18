@@ -12,10 +12,35 @@
 //!
 //! Witness: 2501.13802, 2501.14238, 2501.16855, 2501.17381, 2502.01404,
 //! 2502.02753, 2502.06743 — all `Error:undefined:\sep`.
-use latexml_package::prelude::*;
+//!
+//! The base class is the one ceurart.cls loads, scrartcl (OXIDIZED_DESIGN_DIVERGENCES #736): the paper's copy, read
+//! after the binding, finds it loaded, so its own `\LoadClass{scrartcl}` is a repeat and its KOMA calls
+//! (`\KOMAoptions{DIV=10}`, :63-68) meet KOMA (2509.11496, 2608.23214, 2310.02658, 2505.16276). OmniBus, the base
+//! this binding had before, is provided over it ([`provide_over_base_class`]): its `{keywords}` environment and the
+//! frontmatter setters scrartcl leaves undefined.
+use latexml_package::{package::omnibus_cls::provide_over_base_class, prelude::*};
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
+  // ceurart.cls:50-62: its own options (the layout and review switches) and every other option passed to scrartcl,
+  // with `a4paper,twoside=false`, then `\LoadClass{scrartcl}`.
+  for option in [
+    "twocolumn",
+    "hf",
+    "singleblind",
+    "doubleblind",
+    "longmktitle",
+    "final",
+    "review",
+  ] {
+    DeclareOption!(option, None);
+  }
+  DeclareOption!(None, {
+    Digest!("\\PassOptionsToClass{\\CurrentOption}{scrartcl}")?;
+  });
+  Digest!("\\PassOptionsToClass{a4paper,twoside=false}{scrartcl}")?;
+  ProcessOptions!();
+  LoadClass!("scrartcl");
+  provide_over_base_class()?;
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("hyperref");

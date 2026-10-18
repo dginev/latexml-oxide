@@ -19390,7 +19390,9 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    `\def`/`\renewcommand` redefine as before.
 
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 % in r3-r7, its `\LoadClass{scrartcl}`
-(atlasdoc.cls:319, KOMA's 22 files), +0.8-3.8 % since r8, where the binding's base class stands for it (#736);
+(atlasdoc.cls:319, KOMA's 22 files), +0.8-3.8 % in r8, where the binding's base class stood for it, and back with r9,
+where the binding loads it (#736); ceurart papers +159 % over 67int21 in r9 (scrartcl raw, then the copy's own loads:
+scrlayer-scrpage, doclicense, fontawesome5, …);
 2309.03819 +65 %, jgcc.cls:52's tikz; 2609.08425 +37 %, WileyNJDv5.cls's
 unconditional loads under its options (fontspec, xunicode, tuenc, mathastext, microtype…), with one Warning for its
 unclosed `\if@large@design` (:4748-4844), which xelatex reports too.
@@ -19463,7 +19465,7 @@ options (Info) and has no early binding loads of natbib to tell from the class's
 revtex4_support, achemso, apacite and mnras load natbib other than their real files do and are not marked as the file's
 own load; a document repeat after them still applies its options.
 
-### 736. A stand-in class's copy has one class slot: its own `\LoadClass` of a class the paper does not ship is the binding's base class
+### 736. A stand-in class binding loads the base class its real file loads; the copy's one class slot is the net
 
 latex.ltx lets a class file `\LoadClass` once (:18800 lets `\LoadClass` to `\@twoloadclasserror`, :18938-18942, "Two
 \LoadClass commands"): a document has one class. A stand-in class binding (#731) has loaded the base class it models the
@@ -19487,12 +19489,36 @@ read (the reviewer's nc_chain `\LoadClass{mybase}`, nc_namedef, nc_cond, nc_letr
 names. Perl never reads the copy (Package.pm:2113-2133 prefers the `.ltxml`), so it has neither the Fatal nor the copy's
 extras.
 
-The copy's code after its `\LoadClass` is written for Y: a command of Y's interface it calls before anything else
-defines it is undefined, an Error as the copy's own Errors are (user ruling 2026-10-17) — ceurart.cls:63
-`\KOMAoptions{DIV=10}` (1 Error in each ceurart paper; its later `\setkomafont` is defined by the scrlayer-scrpage it
-loads, :2172), atlasdoc.cls's `\KOMAoptions`, `\KOMAClassName`, `\KOMAScriptVersion`, `\addtokomafont`, `\setkomafont`,
-`\KOMAoption`, `\setcapindent`, `\deffootnote`, `\thefootnotemark`, `\usetocstyle`, `\hypersetup` (11 Errors in each
-atlasdoc paper, where 67int21, which read no copy, had none): SYNC 72a row (o), for a ruling. latex.ltx's
-two-`\LoadClass` Error itself is not emulated in general (a document's own second `\LoadClass` still loads it: the
-reviewer's probe scr2, `\documentclass{article}` then `\LoadClass{scrartcl}`, is Fatal on 67int21 too; SYNC 72a row
-(n)). Guard `perfect_kernel_batch72a::copy_load_class_is_the_bindings_base_class`; repros `stand-in-copies/class_slot/`.
+The base class (r9; "a binding defines in the original package's conceptual space", "stub bindings load their real
+dependencies"): a stand-in class binding loads the class its real file `\LoadClass`es, under the file's own option
+logic, so the copy's own `\LoadClass` is a repeat (`\ver@Y.cls` defined), as in TeX, and the copy's code after it meets
+Y's interface. Enumerated over every stand-in `.cls` (the copies of every 25th arXiv paper, and every 3rd for the
+classes that sample misses; `\LoadClass` target against the class each binding loads):
+ceurart → scrartcl (ceurart.cls:59-62: its options, the rest passed to scrartcl with `a4paper,twoside=false`; 64
+copies in the 1/25 sample, 112 papers in 2506+2509), atlasdoc → its KOMA class (`atlasdoc_cls::main_class`: v13
+`\ADOC@mainclass`, scrbook for `BOOK`, scrreprt for `REPORT` (true by default), scrartcl for `cernpreprint`/`preprint`/
+`PAPER`/`CONF`/`PUB`; v3 scrbook or scrartcl; v1 scrartcl, article without `koma`/`atlasstyle`; 47 copies), lmcs →
+amsart `[11pt,reqno]` (55), pnas-new → extarticle (its options passed, 44), jgcc → amsart `[11pt,reqno]` (2),
+czipreprint → amsart `[reqno]` (3 in the 1/3 sample), clear2025 → jmlr `[pmlr]` (2; it had jmlr's binding under its own
+name, so `\ver@jmlr.cls` was undefined). A binding that had OmniBus as its base keeps what OmniBus gave it where the real
+base class has nothing: `omnibus_cls::provide_over_base_class` loads OmniBus provide-only over it (`ProvideOnlyGuard`,
+as `\documentstyle` loads it over a class, sect01.rs) — ceurart's `{keywords}` (OmniBus's `ltx:classification`, which
+the r8 trial without it lost: -10 to -15 words a paper), `\email`, `\affiliation`. The binding's own definitions follow
+as before. Witnesses: 2509.11496, 2608.23214, 2310.02658, 2505.16276 (ceurart: 1 E → 0, the copy's `\KOMAoptions{DIV=10}`
+now defined), 2509.01219 and census 1605.06035, 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536 (atlasdoc:
+6-11 E → 0), 2309.03819, 2401.15504 (jgcc: `\address`, `\email`, `\copyrightinfo`).
+
+The slot stays as the net for a binding still out of step with its file: Perl's svmult binding loads book
+(svmult.cls.ltxml:34) where svmult.cls and svmono.cls `\LoadClass{article}` (238 + 6 copies; SNmult 22 in the 1/3
+sample, served by svmult's binding), and daj's binding emulates tocbase (not in TeX Live) over article. There the copy's
+code is written for Y and a command of Y's interface it calls before anything else defines it is undefined, an Error
+as the copy's own Errors are (user ruling 2026-10-17; book's interface covers article's, so svmult copies meet none).
+latex.ltx's two-`\LoadClass` Error itself is not emulated in general (a document's own second `\LoadClass` still loads
+it: the reviewer's probe scr2, `\documentclass{article}` then `\LoadClass{scrartcl}`, is Fatal on 67int21 too; SYNC 72a
+row (n)). A raw KOMA base warns as `\documentclass{scrartcl}` does — "`\@startsection` has been changed", "Unexpected
+definition of \@sect" (scrartcl.cls:3397, :3552-3559: LaTeXML's sectioning is not latex.ltx's text) — and lacks the
+article binding's semantic layer: `\appendix` is KOMA's (sections, not `ltx:appendix`: 26 of the 27 ceurart/atlasdoc
+papers with appendices in 2506+2509) and its raw `\newcounter`s carry no id prefixes (`section1`, not `S1`: 124 of 126);
+SYNC 72a row (p). Guards `perfect_kernel_batch72a::copy_load_class_is_the_bindings_base_class` (ceurart, atlasdoc, jgcc:
+0 E / 0 F, the KOMA pair of Warnings, title, keywords, author and section whole) and
+`::copy_load_class_meets_the_class_slot` (svmult); repros `stand-in-copies/class_slot/`.

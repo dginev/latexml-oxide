@@ -1,16 +1,20 @@
 % witness: 2509.11496, 2608.23214, 2310.02658, 2505.16276 (ceurart.cls:62 `\LoadClass{scrartcl}`; 74 ceurart papers in
 %          2509, 39 in 2506); 2509.01219 (atlasdoc.cls `\LoadClass[titlepage, 11pt]{\ADOC@mainclass}`, scrartcl)
-% oracle:  pdflatex 0 errors: "A Title", "1 Intro", "Text CEUR."
+% oracle:  pdflatex 0 errors: "A Title", "Keywords", "a, b", "1 Intro", "Text CEUR."
 % engines: rust 72a r7 = scrartcl, scrkbase and typearea raw-read over the binding's article: "DIV for 0.0pt", then
-%          Fatal "Conditional limit of 48000000 exceeded" (2509.11496 9 E / 1 F, 0 words)
-% expect:  0 errors, 0 warnings; the title and the section whole; Info "the binding's base class ... stands for the
-%          copy's \LoadClass{scrartcl}"
-% status:  RED (72a r7) -> GREEN (72a r8)
+%          Fatal "Conditional limit of 48000000 exceeded" (2509.11496 9 E / 1 F, 0 words); 72a r8 = the binding's
+%          OmniBus/article stood for scrartcl: `\KOMAoptions` undefined (1 Error)
+% expect:  0 errors; the 2 KOMA Warnings `\documentclass{scrartcl}` gives (`\@startsection`, `\@sect`); the title, the
+%          keywords and the section whole; the copy's `\LoadClass{scrartcl}` a repeat (no class-slot Info)
+% status:  RED (72a r8) -> GREEN (72a r9)
 % preload: ar5iv.sty
 \documentclass{ceurart}
 \title{A Title}
 \begin{document}
 \maketitle
+\begin{keywords}
+a \sep b
+\end{keywords}
 \section{Intro}
 Text \ceurextra.
 \end{document}

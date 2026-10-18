@@ -3,7 +3,7 @@
 % oracle:  pdflatex (clean) with this cut of the class ("✓ and μm")
 % engines: rust 67o1 = 2 errors (`\checkmark`, `\upmu` undefined: atlasdoc_cls.rs loaded no font package); Perl: no
 %          binding, OmniBus scans the class and loads newtxtext and newtxmath (and txfonts, the other branch)
-% expect:  0 errors, 0 warnings
+% expect:  0 errors; 2 warnings, the KOMA pair of the binding's KOMA base (OXIDIZED_DESIGN_DIVERGENCES #736)
 % status:  RED (67o1) -> GREEN (67u)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{atlasdoc.cls}

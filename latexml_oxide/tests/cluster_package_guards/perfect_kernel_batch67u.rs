@@ -25,6 +25,22 @@ macro_rules! clean {
   }};
 }
 
+/// A binding whose base is scrartcl, as its class loads it (ceurart, atlasdoc: OXIDIZED_DESIGN_DIVERGENCES #736): the
+/// raw KOMA load warns of LaTeXML's `\@startsection` and `\@sect`, as `\documentclass{scrartcl}` does.
+macro_rules! clean_koma {
+  ($path:literal) => {{
+    let (log, xml) = repro!($path);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+    assert!(
+      ["scrartcl", "scrreprt"]
+        .iter()
+        .any(|class| super::perfect_kernel_batch72a::koma_raw_warnings(&log, class)),
+      "{log}"
+    );
+    squash(&xml)
+  }};
+}
+
 /// lscape.sty:35 and psfrag.sty:35 `\RequirePackage{graphics}` (0710.2354, 0802.0639, 1007.2821; 0801.1195,
 /// 0802.1229, 0704.2560).
 #[test]
@@ -306,7 +322,7 @@ fn aa_class_copy_loads_answers() {
 /// atlasdoc.cls:52-54, 542-545: the default `newtx` fonts load newtxmath (2207.12246, 2210.05415, 2304.03053).
 #[test]
 fn atlasdoc_default_fonts_load_newtxmath() {
-  let xml = clean!("class-bindings/atlasdoc_default_fonts_load_newtxmath.tex");
+  let xml = clean_koma!("class-bindings/atlasdoc_default_fonts_load_newtxmath.tex");
   assert!(
     xml.contains(r#"<XMTok name="upmu" role="UNKNOWN">μ</XMTok>"#),
     "{xml}"
@@ -317,7 +333,7 @@ fn atlasdoc_default_fonts_load_newtxmath() {
 /// ceurart.cls:88 colortbl (2212.08130, 2212.10039, 2303.14461).
 #[test]
 fn ceurart_loads_colortbl() {
-  let xml = clean!("class-bindings/ceurart_loads_colortbl.tex");
+  let xml = clean_koma!("class-bindings/ceurart_loads_colortbl.tex");
   assert!(
     xml.contains(
       r##"<td align="left" backgroundcolor="#FFFF00" xml:id="p1.1.1.1"><text backgroundcolor="#FFFF00" xml:id="p1.1.1.1.1">a</text></td>"##

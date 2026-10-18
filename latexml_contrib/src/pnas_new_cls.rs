@@ -13,14 +13,23 @@
 //! Witness: 2305.01604 (significant 7-error gap on canvas, all from
 //! undefined pnas-new frontmatter macros).
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
-use latexml_package::prelude::*;
+use latexml_package::{package::omnibus_cls::provide_over_base_class, prelude::*};
 
 use crate::shipped_class::{
   class_code_contains, require_shipped_algorithm_packages, shipped_class_text,
 };
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
+  // pnas-new.cls (1703.05830's copy, v1.41): `lineno` its own, every other option passed to extarticle, then
+  // `\LoadClass{extarticle}` — the base class, so the paper's copy, read after the binding, finds it loaded
+  // (OXIDIZED_DESIGN_DIVERGENCES #736); OmniBus, the base this binding had before, provided over it.
+  DeclareOption!("lineno", None);
+  DeclareOption!(None, {
+    Digest!("\\PassOptionsToClass{\\CurrentOption}{extarticle}")?;
+  });
+  ProcessOptions!();
+  LoadClass!("extarticle");
+  provide_over_base_class()?;
   // pnas-new.cls:422 `\newcommand{\doi}[1]{\def\@doi{#1}}` stores the DOI for the page footer
   // (:268, :369-370): a setter taking a normal argument, often `\url{…}`, not OmniBus's `\doi`
   // that reads a DOI verbatim as a url (KNOWN_PERL_ERRORS #326), which printed "\urlwww.pnas…".

@@ -4,7 +4,7 @@
 % oracle:  pdflatex 0 errors; this file prints "DEFAULT DATE / T / Jane Doe"; with [nodatetop] and no \author
 %          "T / The ATLAS Collaboration"; with [cernpreprint] no date
 % engines: rust 72a r2 = two <creator>s (the class's and the document's) and a <date> the class does not print
-% expect:  0 errors, 0 warnings; one <creator> Jane Doe; <date> DEFAULT DATE
+% expect:  0 errors; the KOMA pair of Warnings (the binding's KOMA base, OXIDIZED_DESIGN_DIVERGENCES #736); one <creator> Jane Doe; <date> DEFAULT DATE
 % status:  RED (72a r2) -> GREEN (72a r3)
 % preload: ar5iv.sty
 \documentclass{atlasdoc}

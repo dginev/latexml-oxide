@@ -2,7 +2,7 @@
 %          colortbl,dcolumn,stfloats}`, every one of the 23 sampled copies; the paper's `\cellcolor`)
 % oracle:  pdflatex (clean) with this cut of the class ("a b")
 % engines: rust 67o1 = 1 error (`\cellcolor` undefined); Perl: no binding, OmniBus scans the class and loads colortbl
-% expect:  0 errors, 0 warnings; one shaded cell
+% expect:  0 errors; 2 warnings, the KOMA pair of the binding's scrartcl base (OXIDIZED_DESIGN_DIVERGENCES #736); one shaded cell
 % status:  RED (67o1) -> GREEN (67u)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{ceurart.cls}

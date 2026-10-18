@@ -1,0 +1,17 @@
+% witness: 2309.03819, 2401.15504 (jgcc.cls:34 `\LoadClass[11pt,reqno]{amsart}`)
+% oracle:  pdflatex 0 errors: "A TITLE", "1. Intro", "Text JGCC.", "Somewhere", "E-mail address: a@b.c"
+% engines: rust 72a r8 = the binding's article stood for amsart: the copy's amsart calls undefined (2309.03819
+%          `\address`, `\email`, `\copyrightinfo`)
+% expect:  0 errors, 0 warnings; the title, the author's address and email and the section whole
+% status:  RED (72a r8) -> GREEN (72a r9)
+% preload: ar5iv.sty
+\documentclass{jgcc}
+\title{A Title}
+\author{An Author}
+\address{Somewhere}
+\email{a@b.c}
+\begin{document}
+\maketitle
+\section{Intro}
+Text \jgccextra.
+\end{document}
