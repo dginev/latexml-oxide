@@ -1,0 +1,15 @@
+% witness: 77a r5 review probe bibroute/b_numeric (biblatex with a .bib and no .bbl: the BibTeX reader's route)
+% oracle:  pdflatex + biber 0 errors: "X [4, 1, Balbes & Dwinger, 2, 3]."; References [Balbes & Dwinger] balbes
+%          [1] boet [2] goossens [3] goossens2 [4] knuth (a shorthand entry takes no number)
+% engines: rust 77a r5 numbered the shorthand entry's place: [Balbes & Dwinger] [2] [3] [4] [5], cited
+%          "[5, 2, Balbes & Dwinger, 3, 4]"; before 77a [1]-[5], cited "[5, 2, 1, 3, 4]"
+% expect:  clean (0 errors, 0 warnings); the oracle's labels
+% status:  GREEN (77a r6: make_bibliography.rs number_entry)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber,style=numeric]{biblatex}
+\addbibresource{biblatex_bib_route_shorthand_unnumbered.bib}
+\begin{document}
+X \cite{knuth,boet,balbes,goossens,goossens2}.
+\printbibliography
+\end{document}

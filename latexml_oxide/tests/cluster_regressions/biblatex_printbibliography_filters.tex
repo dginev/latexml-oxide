@@ -1,0 +1,25 @@
+% witness: silent-loss inventory #21; arXiv 2406.00136 ([keyword=alph,heading=references] then
+%          [heading=none,notkeyword=alph]: pdflatex 4 + 17 entries); TL doc/latex/biblatex/examples/13-19,94
+% oracle:  pdflatex + biber 0 errors: Books {goossens, knuth}, Articles {lamport, mittelbach},
+%          Primary {knuth, mittelbach}, no Online list (biblatex Warning "Type 'online' not found", LaTeX
+%          Warning "Empty bibliography"),
+%          Selected {knuth, lamport}
+% engines: rust before 77a printed all 4 entries in every list (5 lists, 0 errors); Perl ar5iv binding
+%          ignores the optional argument (biblatex.sty.ltxml:857-868, KNOWN_PERL_ERRORS #983)
+% expect:  clean but for two Warnings (Type 'online' not found; Empty bibliography); four bibliographies with the
+%          oracle's keys
+% status:  GREEN (77a: \printbibliography applies type/subtype/keyword/category and their not* filters)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{selected}
+\addtocategory{selected}{lamport,knuth}
+\begin{document}
+Text \cite{knuth,lamport,goossens,mittelbach}.
+\printbibliography[type=book,title={Books}]
+\printbibliography[nottype=book,title={Articles}]
+\printbibliography[keyword=primary,title={Primary}]
+\printbibliography[type=online,title={Online}]
+\printbibliography[category=selected,notkeyword=nosuch,title={Selected}]
+\end{document}

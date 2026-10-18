@@ -1,0 +1,15 @@
+% witness: arXiv 2406.00136 (its keyword=alph list is four shorthand entries: [HTT] [HA] [SAG] [Ker], then [1]-[17])
+% oracle:  pdflatex + biber 0 errors: "Text [TB, 2, 1, 3]."; Books [1] goossens [TB] knuth, Articles [2] lamport
+%          [3] mittelbach (a shorthand entry is labelled by it and takes no number)
+% engines: rust 77a r2 numbered every list from [1]; before 77a [1]-[4] in one list printed twice
+% expect:  clean (0 errors, 0 warnings); the oracle's labels
+% status:  GREEN (77a r3, OXIDIZED_DESIGN_DIVERGENCES #762)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Text \cite{knuth,lamport,goossens,mittelbach}.
+\printbibliography[type=book,title={Books}]
+\printbibliography[nottype=book,title={Articles}]
+\end{document}

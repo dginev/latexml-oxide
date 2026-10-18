@@ -1,0 +1,16 @@
+% witness: arXiv 2406.15218 (\printbibliography[keyword=book,resetnumbers=true])
+% oracle:  pdflatex + biber 0 errors: "Text [2, 1, 1, 2]."; Articles [1] lamport [2] mittelbach, Books [1] goossens
+%          [2] knuth, Primary [2] knuth [2] mittelbach (resetnumbers=7 renumbers no entry already numbered)
+% engines: rust 77a r2 ignored resetnumbers (and numbered every list from 1); Perl ar5iv binding ignores the options
+% expect:  clean (0 errors, 0 warnings); the oracle's labels
+% status:  GREEN (77a r3, OXIDIZED_DESIGN_DIVERGENCES #762)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber,defernumbers=true]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Text \cite{knuth,lamport,goossens,mittelbach}.
+\printbibliography[nottype=book,title={Articles}]
+\printbibliography[type=book,title={Books},resetnumbers=true]
+\printbibliography[keyword=primary,title={Primary},resetnumbers=7]
+\end{document}

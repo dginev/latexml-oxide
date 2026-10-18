@@ -1,0 +1,19 @@
+% witness: 77a r5 review probe n7 (predates 77a: base 67int35 prints the same)
+% oracle:  pdflatex + bibtex (plainnat) 0 errors: "X [Able, 2001]."; References: Ann Able. Paper. J Real, 3:1–2, 2001.
+%          — the biblatex-only fields (journaltitle, location, addendum, urldate, maintitle, titleaddon) are data
+%          plainnat never prints
+% engines: rust prints "Main Work Title . Paper . Addon Words . J Real, \undefinedmacro Jt 3, pp. 1–2. Note: An
+%          addendum text Accessed: 2020-01-01" and raises Error:undefined:\undefinedmacro — the 47 biblatex-only
+%          field handlers of latexml_engine/src/bibtex.rs (:1962-2172, :2337) digest them on every BibTeX route;
+%          Perl keeps them raw (BibTeX.pool \bib@field@default@default)
+% expect:  clean (0 errors, 0 warnings); the fields stay raw bib-data, the entry prints as the oracle
+% status:  RED (SYNC "Perfect-kernel RED repros": move the handlers into the biblatex binding, after its
+%          LoadPool!("BibTeX"), as 77a r5 did for shorthand/labelalpha; needs its own population A/B)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+X \citep{a}.
+\bibliographystyle{plainnat}
+\bibliography{natbib_biblatex_only_fields_are_raw_data}
+\end{document}

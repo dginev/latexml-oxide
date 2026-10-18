@@ -117,6 +117,15 @@ const EXCLUDED_FIXTURES: &[&str] = &[
   // \pubinfo undefined)
   "jpsj2_stores_frontmatter.tex",
   "ptptex_inst_store_frontmatter.tex",
+  // tests/cluster_regressions: biblatex's own errors on purpose, pinned by 06_cluster_bibliography's
+  // biblatex_category_declaration_errors and biblatex_repeated_filter_keys_and
+  "biblatex_category_errors.tex",
+  "biblatex_filter_repeated_keys.tex",
+  // tests/cluster_regressions: `\PackageError`s in `.bbl` titles on purpose, counted by 06_cluster_bibliography's
+  // biblatex_hidden_list_holds_only_unprinted_entries and biblatex_category_list_builds_only_selected_entries
+  "biblatex_filtered_entries_digested_once.tex",
+  "biblatex_filtered_out_entries_errors.tex",
+  "biblatex_category_list_digests_selected.tex",
 ];
 
 /// Fixtures whose streamed output differs from the eager one by a documented divergence — the one exception besides
@@ -126,11 +135,25 @@ const EXCLUDED_FIXTURES: &[&str] = &[
 /// entry of an index never printed is typeset in a streamed conversion only, whose fragment yield digests the pending
 /// entries as Perl does (OXIDIZED_DESIGN_DIVERGENCES #738; asserted by
 /// `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries`): its outputs are compared
-/// without their `<indexmark>`s.
-pub const STREAMING_DIVERGENT_FIXTURES: &[(&str, &str)] =
-  &[("cluster_regressions/verb_in_index.tex", "indexmark")];
+/// without their `<indexmark>`s. `biblatex_category_filter_timing.tex`: a list filtered by a category is decided once
+/// the document is digested, which a streamed conversion does at a fragment's yield — before a later `\addtocategory` (OXIDIZED_DESIGN
+/// _DIVERGENCES #762; asserted by `114_streaming_cluster_regressions::streaming_builds_a_category_list_when_absorbed`):
+/// its outputs are compared without their `<bibliography>`s. `biblatex_category_lists_in_newrefsection.tex` is the same
+/// divergence: its `\addtocategory` follows the first refsection's category lists.
+pub const STREAMING_DIVERGENT_FIXTURES: &[(&str, &str)] = &[
+  ("cluster_regressions/verb_in_index.tex", "indexmark"),
+  (
+    "cluster_regressions/biblatex_category_filter_timing.tex",
+    "bibliography",
+  ),
+  (
+    "cluster_regressions/biblatex_category_lists_in_newrefsection.tex",
+    "bibliography",
+  ),
+];
 
-/// `xml` without its `<element …>…</element>` (and `<element …/>`) occurrences.
+/// `xml` without its `<element …>…</element>` (and `<element …/>`) occurrences, and without the blank lines the
+/// pretty-printed ones leave.
 fn strip_element(xml: &str, element: &str) -> String {
   let open = format!("<{element}");
   let close = format!("</{element}>");
@@ -149,6 +172,10 @@ fn strip_element(xml: &str, element: &str) -> String {
   }
   out.push_str(rest);
   out
+    .lines()
+    .filter(|line| !line.trim().is_empty())
+    .collect::<Vec<_>>()
+    .join("\n")
 }
 
 pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: DispatchFn) {

@@ -1,0 +1,19 @@
+% witness: 77a r2 review probe 6; TL historian.bbx, publist.bbx (\DeclareBibliographyDriver), musuos.cbx
+%          (\DeclareCiteCommand)
+% oracle:  pdflatex + biber 0 errors: "X [2, 3, 1, 4]." and "Empty bibliography" (the driver files the keys while the
+%          list prints)
+% engines: rust 77a r2 no bibliography and every citation "Missing Entry"; before 77a one list of all four
+% expect:  clean (0 errors, 0 warnings); 'sel' is filled by declarations the binding never runs, so its filter is
+%          not applied: one list {goossens, knuth, lamport, mittelbach} and an Info
+% status:  GREEN (77a r3: fail-safe, not the oracle's empty list)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{sel}
+\DeclareBibliographyDriver{book}{\addtocategory{sel}{\thefield{entrykey}}\usedriver{}{misc}}
+\DeclareCiteCommand{\qcite}{}{\addtocategory{sel}{\thefield{entrykey}}\printnames{labelname}}{}{}
+\begin{document}
+X \cite{knuth,lamport,goossens,mittelbach}.
+\printbibliography[category=sel,title={Sel}]
+\end{document}

@@ -1,0 +1,18 @@
+% witness: arXiv 2406.15218 (resetnumbers=true)
+% oracle:  pdflatex + biber 0 errors, biblatex Warning "Option 'resetnumbers' requires 'defernumbers=true'. Ignoring
+%          'resetnumbers=true'" for each list giving it, `false` too (biblatex.sty:9759-9768); "Text [2, 3, 1, 4].";
+%          Articles [3] lamport [4] mittelbach, Books [1] goossens [2] knuth, All [1]-[4]
+% engines: rust 77a r2 silent, every list from [1]; r3 silent for `resetnumbers=false`; Perl ar5iv binding ignores
+%          the options
+% expect:  0 errors, the two Warnings; the oracle's labels
+% status:  GREEN (77a r3; r4 `false` warns too, OXIDIZED_DESIGN_DIVERGENCES #762)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Text \cite{knuth,lamport,goossens,mittelbach}.
+\printbibliography[nottype=book,title={Articles}]
+\printbibliography[type=book,title={Books},resetnumbers=true]
+\printbibliography[title={All},resetnumbers=false]
+\end{document}

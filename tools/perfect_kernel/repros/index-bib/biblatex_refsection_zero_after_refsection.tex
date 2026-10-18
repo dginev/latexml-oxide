@@ -1,0 +1,23 @@
+% witness: 77a r4 review probe q5
+% oracle:  pdflatex + biber 0 errors: "One [2, 3]. Seg [1]." S1 [1] goossens [2] knuth [3] lamport; "Zero [1]." S0 [1]
+%          lamport — a citation after \end{refsection} is refsection 0's and links to the default list; the
+%          refsegment environment opens a segment and prints nothing
+% engines: rust 77a r4 the oracle's lists and links, and Error:undefined:{refsegment} (no \refsegment); Perl ar5iv
+%          binding ignores refsections (KNOWN_PERL_ERRORS #983)
+% expect:  clean (0 errors, 0 warnings); the oracle's labels and links
+% status:  GREEN (77a r5: \refsegment defined, a no-op as \newrefsegment)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+\begin{refsection}
+One \cite{knuth,lamport}.
+\begin{refsegment}
+Seg \cite{goossens}.
+\end{refsegment}
+\printbibliography[title={S1}]
+\end{refsection}
+Zero \cite{lamport}.
+\printbibliography[title={S0}]
+\end{document}

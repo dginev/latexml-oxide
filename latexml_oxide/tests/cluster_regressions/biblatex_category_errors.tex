@@ -1,0 +1,16 @@
+% witness: 77a r2 review probe p8
+% oracle:  pdflatex + biber: 2 errors (Category 'a' already declared; Category 'b' not declared), References {knuth}
+% engines: rust 77a r1 the same two errors, raised by expansion-time macros
+% expect:  exactly 2 errors, 0 warnings; one bibliography {knuth}
+% status:  GREEN (77a r2: \DeclareBibliographyCategory/\addtocategory are primitives)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{a}
+\DeclareBibliographyCategory{a}
+\addtocategory{b}{knuth}
+\begin{document}
+X \cite{knuth}.
+\printbibliography
+\end{document}

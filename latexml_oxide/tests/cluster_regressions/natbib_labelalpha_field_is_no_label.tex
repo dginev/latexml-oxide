@@ -1,0 +1,15 @@
+% witness: 77a r4 review probe n6
+% oracle:  pdflatex + bibtex (plainnat, numbers) 0 errors: "X [2, 1]."; References [1] Goossens [2] Knuth — a .bib
+%          field `labelalpha` is data plainnat never prints
+% engines: rust 77a r4 "X [, 1]."; References [1] Goossens [Knu84] Knuth (biber's alphabetic label read from the
+%          .bib field in a natbib bibliography); Perl numbers in list order
+% expect:  clean (0 errors, 0 warnings); the oracle's labels
+% status:  GREEN (77a r5: MakeBibliography reads labelalpha/extraalpha/shorthand only in a biblatex bibliography)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+X \citep{knuth,goossens}.
+\bibliographystyle{plainnat}
+\bibliography{natbib_labelalpha_field_is_no_label}
+\end{document}

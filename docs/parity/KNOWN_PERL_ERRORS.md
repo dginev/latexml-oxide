@@ -15786,6 +15786,19 @@ and "]" in cond-mat0011490, cond-mat0101276, quant-ph9911038): latex.ltx sets th
 is a paragraph of its own in a group, as the Rust `\twocolumn[…]` sets it, and a `\Large\centering` in it does not
 reach the body. Guard `perfect_kernel_batch75a::twocolumn_class_header_is_its_own_paragraph`.
 
+## 983. biblatex `\printbibliography` ignores its filter options
+
+The ar5iv binding (ar5iv-bindings/bindings/biblatex.sty.ltxml:857-862) defines `DefMacro('\printbibliography[]', …)`,
+which reads the optional argument and drops it: `type=`, `keyword=`, `category=` and the other entry filters
+(biblatex.sty:9526-9615) are never applied, so every call inputs the `.bbl` and prints all of its entries.
+
+Trigger: `\usepackage[backend=biber]{biblatex}` with a `.bbl` of two `@book` and two `@article` entries, all cited;
+`\printbibliography[type=book,title={Books}]\printbibliography[nottype=book,title={Articles}]` — pdflatex prints the
+two books, then the two articles; Perl prints all four entries twice.
+
+Rust: OXIDIZED_DESIGN_DIVERGENCES #762 (biblatex_sty.rs `bbl_filter`; witnesses 2406.00136, 2406.11014). Guards
+`06_cluster_bibliography::biblatex_printbibliography_filters_select_entries` and the other 77a guards OD #762 names.
+
 ## 984. A macro whose string body is a single space is `\par`
 
 Perl `DefMacro('\usualspace', ' ')` (amsppt.sty.ltxml:322) tokenizes its body with a string Mouth, which appends the

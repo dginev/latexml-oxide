@@ -266,14 +266,15 @@ See \cite{a}.
     &xml,
     "bibentry",
     &[r#"key="a""#],
-    r#"<bibentry key="a" type="article" xml:id="bib.bib1"><bib-name role="author"><surname>Able</surname></bib-name><bib-title>First title</bib-title><bib-date role="publication">2001</bib-date><bib-data role="self" type="BibTeX">@article{a, author = {Able}, title = {First title}, date = {2001}}</bib-data></bibentry>"#,
+    r#"<bibentry key="a" type="article" xml:id="bib.bib1"><bib-name role="author"><surname>Able</surname></bib-name><bib-title>First title</bib-title><bib-date role="publication">2001</bib-date><bib-data role="self" type="BibTeX">@article{a, author = {Able}, title = {First title}, date = {2001}}</bib-data><bib-data role="labelnumber">1</bib-data></bibentry>"#,
   );
-  // The set entry prints as one more entry, its member not inside it (biblatex_sty.rs `\biblatex@bbl@set`).
+  // The set entry prints as one more entry, its member not inside it (biblatex_sty.rs `\biblatex@bbl@set`). Each
+  // carries its label number, its place in the datalist (77a: biblatex.sty:8891-8923 `\blx@bbl@labelnumber`).
   assert_element(
     &xml,
     "bibentry",
     &[r#"key="s""#],
-    r#"<bibentry key="s" type="set" xml:id="bib.bib2"><bib-title>The set</bib-title><bib-data role="self" type="BibTeX">@set{s, title = {The set}}</bib-data></bibentry>"#,
+    r#"<bibentry key="s" type="set" xml:id="bib.bib2"><bib-title>The set</bib-title><bib-data role="self" type="BibTeX">@set{s, title = {The set}}</bib-data><bib-data role="labelnumber">2</bib-data></bibentry>"#,
   );
 }
 

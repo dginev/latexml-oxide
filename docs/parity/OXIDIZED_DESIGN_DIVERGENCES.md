@@ -20275,6 +20275,131 @@ titlepage with ink: text, or a graphic, picture, formula or SVG. A cover that pr
 duplicate, as before. Repro `sectioning-frontmatter/empty_titlepage_keeps_the_title`; guard
 `perfect_kernel_batch74b::empty_titlepage_keeps_the_title`.
 
+### 762. biblatex `\printbibliography` applies its entry filters (Perl: ignores the optional argument)
+
+`\printbibliography[type=…]`, `nottype=`, `subtype=`, `notsubtype=`, `keyword=`, `notkeyword=`, `category=` and
+`notcategory=` narrow the `.bbl`'s datalist as biblatex does (biblatex.sty:9526-9615 `\blx@key@type` …
+`\blx@key@notcategory`): the entries of an `entry` datalist are filed by type, `entrysubtype` and comma-split keyword
+while the `.bbl` is read (:8707-8711, :8385-8390); the filters apply in the order given and AND together, keeping
+datalist order. **Repeated keys**: a key given twice is two filters (`keyword=author,keyword=latent` keeps the entries
+with both; witness arXiv 2406.11014), except that `type` and `subtype` share one toggle (`blx@tempb`, :9532-9566): the
+second of them is biblatex's error "'type' used multiple times" (or 'subtype') and an empty list. A positive filter
+whose value no entry has is biblatex's Warning ("Type 'online' not found") and an empty list; an unknown `not*` value
+is a no-op; an empty list is LaTeX's Warning "Empty bibliography" (`\blx@warn@bibempty`, :1511) and prints nothing, not
+even its heading (:9866-9868). **Categories**: `\DeclareBibliographyCategory` (:11207) and `\addtocategory`
+(:11218-11244) keep global lists (primitives, with biblatex's two errors). biblatex files a category's keys through the
+`.aux`, so pdflatex prints every list with the categories the whole previous run filed; the binding decides category
+membership once the whole document is digested, and digests no entry a list does not keep: each entry of a list
+filtered by categories is deferred where it stands (`\biblatex@defer@entry`, the deferred-print mechanism of #738,
+list `biblatex@category`) and built at the end of the document, before the hidden list, if it passes
+(`\biblatex@select`), from the data its refsection's `.bbl` gave it, with its bibliography's `xml:id` prefix and its
+font; the list's heading is built in place, wrapped in `\biblatex@if@selected[list]`, and a list that keeps no key is
+"Empty bibliography" (an `\addtocategory` after the list counts). Under `--streaming` a fragment's yield builds the
+pending entries with the keys filed up to then (guard
+`114_streaming_cluster_regressions::streaming_builds_a_category_list_when_absorbed`). **Hooks**: an `\addtocategory` in code the binding never runs — a hook
+or bibmacro (`\AtEveryCitekey`, `\AtEveryBibitem`, `\AtDataInput`, `\(re)newbibmacro`, …), a declaration
+(`\DeclareBibliographyDriver`, historian.bbx/publist.bbx; `\DeclareFieldFormat`, `\DeclareIndex{Name,List,Field}Format`;
+`\defbibcheck`; `\DeclareCiteCommand`'s code, musuos.cbx) — what they were given is kept and scanned, with the macros
+it calls, as hgbbib.sty:113's `\@AssignToBibCategory`; a category name that is a macro parameter
+(`\addtocategory{#1}{…}`) may be any. Such a category is unknown: a filter on it is not applied (one Info per category
+and document), and a `\bibbycategory` with such a category prints the one unfiltered list — fail-safe: the list may
+hold entries pdflatex leaves out (probe 6 of the 77a r2 review: pdflatex prints that list empty, its driver filing the
+keys as the list prints), never an empty one pdflatex would fill. **Numbers**: an entry's label number is biblatex's:
+with `defernumbers=false` its place among the numbered entries of its refsection's datalist (biblatex.sty:8891-8923
+`\blx@bbl@labelnumber`: every entry but a `skiplab`/`dataonly` one or one with a `shorthand`), so it has one number in
+every list of its refsection (`\printbibliography[type=book]` then `[nottype=book]`: Books [1][2], Articles [3][4],
+citations "[2, 3, 1, 4]", as pdflatex) and its own in another refsection's; with `defernumbers=true` (package option or `\ExecuteBibliographyOptions`) the next
+number of the refsection when the entry is first built, kept by every later list (:9216-9283 `\blx@addlabelnumber`),
+`resetnumbers=true`/`<n>` restarting the count for entries not yet numbered (:9759-9765; without `defernumbers` it is
+biblatex's Warning and ignored). Each built `ltx:bibentry` carries it as `ltx:bib-data` `labelnumber`
+(`\biblatex@bbl@number`), which MakeBibliography prints and cites by in a biblatex bibliography (make_bibliography.rs
+`given_number`, read from the list's own copy of the entry — a key several refsections print is numbered in each; a
+`.bib` field `labelnumber` under natbib is no label; the list keeps its order); its own count restarted at 1 in each `ltx:bibliography`, so the filtered lists of one `.bbl` gave
+two entries one label (witness arXiv 2406.00136: "[5,…] [7,…] [1,…] [1,…]" where pdflatex prints "[9,…] [11,…] [5,…]
+[1,…]"). An author-year style numbers nothing. An entry with a `shorthand` takes no number: in a biblatex bibliography the
+shorthand is its label (:8920 `\let\abx@field@labelnumber\abx@field@shorthand`; make_bibliography.rs `given_label`),
+cited by it (2406.00136's keyword list is [HTT] [HA] [SAG] [Ker]; the other list [1]-[17]), on both routes: on the
+`.bib` route (no `.bbl`, no `labelnumber`) the list numbers only the entries that print a number, each keeping its own
+id (make_bibliography.rs `number_entry`; it printed `[Balbes & Dwinger] [2]`-`[5]`, pdflatex [1]-[4]). Only biblatex's: the
+handlers that digest the label fields `shorthand` and `labelalpha` are the biblatex binding's (defined with its
+loading of the BibTeX pool), and `given_label`/`given_number` read a label only in a biblatex bibliography — under
+natbib/BibTeX those `.bib` fields are raw `ltx:bib-data` as in Perl and no label (`shorthand={\undefinedmacro TB}`
+raised `Error:undefined`, a `labelalpha={Knu84}` printed [Knu84] and was cited "[, 1]"; pdflatex + bibtex 0 errors,
+[2, 1]). **`\bibliographystyle`** is ignored, as biblatex does (blx-compat.def:13-17, loaded by biblatex.sty:16416), its error
+"'\bibliographystyle' invalid for 'biblatex'" reported as a Warning (ignoring it keeps the labels; 64zf's honesty rule): the kernel's, left after `\printbibliography` by a natbib
+template, rewrote the list's `bibstyle` to the `.bst`'s name, so the list was no longer a biblatex one and printed
+[1]-[5] for `[Knu84; Böt01; Balbes & Dwinger; Goo94a; Goo94b]` (77a r5 review probe bs/a_alphabetic; pdflatex 1
+error). **Entries no list prints**: once a list leaves out an entry of its
+datalist, the entries no list of a refsection printed are built at the end of the document in a hidden
+(`ltx_nodisplay`) bibliography — only those: each list records the entries it prints as it is digested
+(`\biblatex@printed`, `\biblatex@select`), so none is built again in the hidden list (an entry two lists keep is
+typeset twice, as in pdflatex) — numbered as above (0
+with `defernumbers=true`, the label biblatex gives an entry it never numbered, :8898-8909): biblatex reads the whole
+`.bbl` at `\begin{document}`, so pdflatex labels their citations and prints their `\fullcite` (cs-techrep's
+`notcategory=selfref` with "Please cite as: \fullcite{selfref}", arXiv 2405.19762). **`\bibbycategory`** (:9955-9998) prints `\printbibliography[<options>,
+category=<name>,heading=<name>]` per declared category: a category with no keys is skipped silently, none with keys is
+"Empty bibliography", none declared "No categories found"; a non-void category whose keys the refsection never cites
+prints nothing (biblatex prints its heading). **Headings**: `heading=<name>` titles the list with the argument of the
+sectioning command of the author's `\defbibheading{<name>}[<title>]{<code>}`, `#1` the `title=` or the heading's
+default; biblatex.def's own headings, and code with no sectioning command, keep the default title; an undefined
+heading is no error here (biblatex's "Heading '…' not found"). **Refsections**: a `\printbibliography` prints its own
+refsection's list (`section=`, else the current one, :9827 `\blx@tempe`), refsections numbered as biblatex numbers
+them (`\refsection`/`\newrefsection` from 1, back to 0 at `\endrefsection`, :10776-10778, :10874; a citation after
+`\end{refsection}` links to refsection 0's list; the `refsegment` environment and `\newrefsegment` open a segment
+only `segment=` reads, no-ops here); a `.bbl` with none
+of its own number, and refsections opened at headings (`refsection=section`, not counted), print every refsection's
+list as before. A citation refers to its own refsection's entry (biblatex: a `\cite` in refsection <n> is to that
+refsection's entry, with its number): refsection <n>'s lists are `lists="refsection<n>"` and its citations
+`inlist="refsection<n>"` (`CITE_UNIT`, the chapterbib/bibunits mechanism), falling back to the default list as every
+unit list does (#59); refsection 0 and refsections opened at headings keep the default list (probe r1 of the 77a r3
+review: "A [1, 2]" linking to its own list, where the citation linked to refsection 2's [3]; witnesses arXiv
+2308.00515, 2507.16315). Before, every call printed every entry at 0 errors (silent-loss inventory #21); the ar5iv Perl binding
+(biblatex.sty.ltxml:857-862) declares `\printbibliography[]` and ignores the argument (KNOWN_PERL_ERRORS #983). Witness
+arXiv 2406.00136 (`[keyword=alph]` then `[notkeyword=alph]`): 21 + 21 entries → 4 + 17, as pdflatex. **Not modelled**:
+refsections opened at headings (`refsection=chapter|section`, biblatex's `\blx@refpatch@sect` heading patch, a no-op
+here) are not counted, so each `\printbibliography` prints every refsection's list and their citations go to the
+default list (arXiv 2406.01695: 8 calls → 96 lists, 566/566 citations outside their chapter's list; SYNC row 21);
+`check=`/`\defbibcheck`, `filter=`/`\defbibfilter`, `segment=`, a `\printbibliography[sorting=…]` (its own
+refcontext's datalist; the default one prints), `omitnumbers`, `prefixnumbers`/`labelprefix` (and the `resetnumbers`
+they imply), biblatex's
+Warning "Split bibliography detected", the package-level `sorting=` on the `.bib` route (no `.bbl`; `sorting=none` still lists alphabetically), any filter on
+that route, where a filtered list never repeats
+the previous one, so `\bibbycategory` prints one unfiltered list (titled by its first heading); the hidden list also
+holds `\nocite`d entries no list printed, not `skipbib` ones, and building them raises the errors their data raises,
+which pdflatex never typesets (pinned: `biblatex_filtered_out_entries_errors`, 2 errors, pdflatex 0); a citation of an
+entry several lists of one refsection print links to the last of them; the `.bib` route numbers a `style=alphabetic`
+list where biber gives alphabetic labels (predates 77a); a key two refsections file with different data
+is built in a category list from its own refsection's (a snapshot), but a crossref'd parent from the last one read. Code `biblatex_sty.rs` `bbl_filter`, `bbl_print`, `blx_selected`, `blx_unmodelled_categories`,
+`blx_unprinted_bibliography`, `blx_heading_title`, `blx_target_refsection`, `blx_refsection_list`;
+make_bibliography.rs `given_number`, `given_label`, `number_entry`, `get_bib_entries`; repros
+`index-bib/biblatex_printbibliography_filters`,
+`biblatex_category_filter_timing`, `biblatex_bibbycategory_headings`, `biblatex_category_hook_filled`,
+`biblatex_category_errors`, `biblatex_filter_repeated_keys`, `biblatex_bibbycategory_empty`,
+`biblatex_bibbycategory_no_bbl`, `biblatex_filter_refsections`, `biblatex_filtered_out_fullcite`,
+`biblatex_filtered_out_type_fullcite`, `biblatex_defernumbers`, `biblatex_defernumbers_resetnumbers`,
+`biblatex_defernumbers_unprinted`, `biblatex_resetnumbers_needs_defernumbers`, `biblatex_category_unrun_declarations`,
+`biblatex_category_hook_parameter`, `biblatex_shorthand_label`, `biblatex_ifentrycategory`, `biblatex_refsection_own_numbers`,
+`biblatex_filtered_entries_digested_once`, `biblatex_filtered_out_entries_errors`,
+`biblatex_category_list_digests_selected`, `natbib_labelnumber_field_is_no_label`, `natbib_shorthand_field_is_raw_data`,
+`natbib_labelalpha_field_is_no_label`, `biblatex_refsection_zero_after_refsection`,
+`biblatex_category_lists_in_newrefsection`, `biblatex_bibliographystyle_ignored`,
+`biblatex_bib_route_shorthand_unnumbered`; guards `06_cluster_bibliography::{
+biblatex_printbibliography_filters_select_entries, biblatex_category_filled_after_the_list_counts,
+biblatex_bibbycategory_prints_each_category_under_its_heading, biblatex_category_filled_by_a_hook_prints_unfiltered,
+biblatex_category_declaration_errors, biblatex_repeated_filter_keys_and, biblatex_bibbycategory_without_keys_is_empty,
+biblatex_bibbycategory_without_a_bbl_prints_the_bib, biblatex_filters_print_their_own_refsection,
+biblatex_entry_left_out_of_every_list_is_built_hidden, biblatex_defernumbers_numbers_in_print_order,
+biblatex_resetnumbers_needs_defernumbers, biblatex_category_filled_by_unrun_code_prints_unfiltered,
+biblatex_shorthand_is_the_label, biblatex_ifentrycategory_takes_one_branch, biblatex_refsection_lists_number_and_cite_their_own,
+biblatex_hidden_list_holds_only_unprinted_entries, biblatex_category_list_builds_only_selected_entries,
+natbib_labelnumber_field_is_no_label, natbib_shorthand_field_is_raw_data, natbib_labelalpha_field_is_no_label,
+biblatex_refsection_zero_after_refsection, biblatex_category_lists_in_newrefsection,
+biblatex_bibliographystyle_is_ignored_with_a_warning, biblatex_bib_route_shorthand_takes_no_number}`.
+`\ifentrycategory{<key>}{<category>}`
+answers from the categories filed so far (it took three arguments and printed both branches); `\ifcategory`, a
+question about the entry being typeset, is always false. **Why**: the
+author's split bibliography — which entries pdflatex lists under each heading, and the one label each entry has.
+
 ### 763. an.cls, apa.cls and cclayout.sty title-page stores are the frontmatter (Perl: OmniBus for the classes, an Error on `{subject}`)
 
 Under the raw classes (OD #444) three class stores that only a class's own title page prints were lost with 0 errors

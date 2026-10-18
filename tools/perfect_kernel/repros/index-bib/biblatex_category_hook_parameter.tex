@@ -1,0 +1,18 @@
+% witness: 77a r2 review (an \addtocategory whose category is a macro parameter); hgbbib.sty:94-113
+% oracle:  pdflatex + biber 0 errors: "X [2, 3]."; Cited [2] knuth [3] lamport
+% engines: rust 77a r2 read the category as the literal "#1", applied the filter and printed no list
+% expect:  clean (0 errors, 0 warnings); the category may be any, so the filter is not applied: one list
+%          {goossens, knuth, lamport} and an Info
+% status:  GREEN (77a r3: fail-safe, not the oracle's split)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{cited}
+\newcommand\filein[1]{\addtocategory{#1}{\thefield{entrykey}}}
+\AtEveryCitekey{\filein{cited}}
+\begin{document}
+X \cite{knuth,lamport}.
+\nocite{goossens}
+\printbibliography[category=cited,title={Cited}]
+\end{document}

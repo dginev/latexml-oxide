@@ -1,0 +1,15 @@
+% witness: 77a r2 review probe 2; arXiv 2405.19762
+% oracle:  pdflatex + biber 0 errors: "See Michel Goossens. The LaTeX Companion. AW, 1994. Also [3, 2, 1, 4].";
+%          References [3] lamport, [4] mittelbach
+% engines: rust 77a r2 "See goossens." and unlabelled book citations; Perl ar5iv binding ignores the filter
+%          (KNOWN_PERL_ERRORS #983)
+% expect:  clean (0 errors, 0 warnings); the oracle's text and labels; goossens and knuth in a hidden list
+% status:  GREEN (77a r3, OXIDIZED_DESIGN_DIVERGENCES #762)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+See \fullcite{goossens}. Also \cite{lamport,knuth,goossens,mittelbach}.
+\printbibliography[nottype=book]
+\end{document}

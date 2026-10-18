@@ -7,8 +7,8 @@
 mod cluster;
 use cluster::{
   convert_and_post, convert_and_post_clean, convert_and_post_contrib_clean,
-  convert_and_post_contrib_logging, convert_and_post_logging, convert_to_xml, convert_to_xml_ar5iv,
-  convert_to_xml_contrib, convert_to_xml_contrib_clean,
+  convert_and_post_contrib_expecting, convert_and_post_contrib_logging, convert_and_post_logging,
+  convert_to_xml, convert_to_xml_ar5iv, convert_to_xml_contrib, convert_to_xml_contrib_clean,
 };
 
 /// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
@@ -4128,4 +4128,1123 @@ fn bib_doi_with_escaped_brace() {
   }
   assert_eq!(x.matches("<bibitem").count(), 4, "{x}");
   assert!(x.contains("The entry after the identifiers"), "{x}");
+}
+
+/// The bibliographies a document shows, each as its title and the keys of its items, in order — not a hidden
+/// (`ltx_nodisplay`) one ([`hidden_bib_items`]).
+fn bib_lists(x: &str) -> Vec<(String, Vec<String>)> {
+  x.split("<bibliography ")
+    .skip(1)
+    .filter(|list| {
+      !list
+        .split('>')
+        .next()
+        .unwrap_or_default()
+        .contains("ltx_nodisplay")
+    })
+    .map(|list| {
+      let list = list.split("</bibliography>").next().unwrap_or_default();
+      let title = list
+        .split("<title")
+        .nth(1)
+        .and_then(|t| t.split('>').nth(1))
+        .and_then(|t| t.split("</title").next())
+        .unwrap_or_default()
+        .to_string();
+      let keys = list
+        .split("<bibitem ")
+        .skip(1)
+        .filter_map(|item| item.split("key=\"").nth(1)?.split('"').next())
+        .map(str::to_string)
+        .collect();
+      (title, keys)
+    })
+    .collect()
+}
+
+/// `expected` as [`bib_lists`] returns it.
+fn lists_of(expected: &[(&str, &[&str])]) -> Vec<(String, Vec<String>)> {
+  expected
+    .iter()
+    .map(|(title, keys)| {
+      (
+        title.to_string(),
+        keys.iter().map(|key| key.to_string()).collect(),
+      )
+    })
+    .collect()
+}
+
+/// The log lines starting with `prefix` that contain `text`.
+fn lines_with(log: &str, prefix: &str, text: &str) -> usize {
+  log
+    .lines()
+    .filter(|line| line.starts_with(prefix) && line.contains(text))
+    .count()
+}
+
+/// 77a (silent-loss #21): `\printbibliography`'s entry filters select from the `.bbl`'s datalist as biblatex does
+/// (biblatex.sty:9526-9615 `\blx@key@type` … `\blx@key@notcategory`, ANDed, datalist order): `type=book` keeps the
+/// books, `nottype=book` the rest, `keyword=primary` the `\keyw{primary}` entries, `category=selected` the keys
+/// `\addtocategory` filed (an unknown `notkeyword=` value is a no-op), and `type=online`, which no entry has, prints
+/// no bibliography and biblatex's two Warnings ("Type 'online' not found", "Empty bibliography"). Before, every list
+/// printed all four entries. pdflatex + biber: Books {goossens, knuth}, Articles {lamport, mittelbach}, Primary
+/// {knuth, mittelbach}, Selected {knuth, lamport}. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_printbibliography_filters.tex`; witness arXiv 2406.00136.
+#[test]
+fn biblatex_printbibliography_filters_select_entries() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_printbibliography_filters.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert!(!log.contains("Fatal:"), "{log}");
+  assert_eq!(warnings(&log), 2, "{log}");
+  assert_eq!(
+    lines_with(&log, "Warning:", "Type 'online' not found"),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    lines_with(&log, "Warning:", "Empty bibliography"),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("Books", &["goossens", "knuth"]),
+      ("Articles", &["lamport", "mittelbach"]),
+      ("Primary", &["knuth", "mittelbach"]),
+      ("Selected", &["knuth", "lamport"]),
+    ]),
+    "{x}"
+  );
+  assert!(!x.contains("<title>Online</title>"), "{x}");
+  // 77a r3: one entry has one label in every list — its place in the refsection's datalist, as biblatex numbers with
+  // `defernumbers=false` (biblatex.sty:8891-8923) — so the citations are pdflatex's "[2, 3, 1, 4]"; r2 restarted at
+  // [1] in every list ("[1, 2, 1, 2]"). No entry is left out of every list, so nothing is hidden.
+  assert_eq!(cites(&x), vec!["2,3,1,4"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Books", &[("1", "goossens"), ("2", "knuth")]),
+      ("Articles", &[("3", "lamport"), ("4", "mittelbach")]),
+      ("Primary", &[("2", "knuth"), ("4", "mittelbach")]),
+      ("Selected", &[("2", "knuth"), ("3", "lamport")]),
+    ]),
+    "{x}"
+  );
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+  // Each key is listed once per list that selects it, and nowhere else.
+  for (key, n) in [
+    ("goossens", 1),
+    ("knuth", 3),
+    ("lamport", 2),
+    ("mittelbach", 2),
+  ] {
+    assert_eq!(
+      x.matches(&format!("key=\"{key}\"")).count(),
+      n,
+      "{key}\n{x}"
+    );
+  }
+}
+
+/// 77a r2: a category's keys are the whole document's — biblatex files them through the `.aux`, so pdflatex prints
+/// `category=selected` with the keys an `\addtocategory` after the list filed (biblatex.sty:11226-11242); the binding
+/// decides category membership once the document is digested (r4: each entry deferred to the end, `\biblatex@select`;
+/// r2-r3 when the bibliography was built). `subtype=`/`notsubtype=`
+/// select on `entrysubtype`. pdflatex + biber: Selected {web, goossens}, All, OldBooks {knuth}, Mag {mittelbach},
+/// NotMag {goossens, knuth, lamport}, All2. Round 1 printed no Selected list. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_category_filter_timing.tex`; witness arXiv 2406.00136.
+#[test]
+fn biblatex_category_filled_after_the_list_counts() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_category_filter_timing.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  let all: &[&str] = &["web", "goossens", "knuth", "lamport", "mittelbach"];
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("Selected", &["web", "goossens"]),
+      ("All", all),
+      ("OldBooks", &["knuth"]),
+      ("Mag", &["mittelbach"]),
+      ("NotMag", &["goossens", "knuth", "lamport"]),
+      ("All2", all),
+    ]),
+    "{x}"
+  );
+}
+
+/// 77a r2: `\bibbycategory` prints one list per declared category under the heading named after it — the title of
+/// the author's `\defbibheading` (biblatex.sty:9983 `\blx@key@heading{…}{#1}`) — and skips a category with no keys
+/// silently (:9984); a repeated `notcategory=` ANDs (:9608-9615). pdflatex + biber: My Books {goossens, knuth}, My
+/// Papers {lamport, mittelbach}, Other {web}. Round 1 titled both lists References and applied only the last
+/// `notcategory`. Repro `tools/perfect_kernel/repros/index-bib/biblatex_bibbycategory_headings.tex`.
+#[test]
+fn biblatex_bibbycategory_prints_each_category_under_its_heading() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_bibbycategory_headings.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("My Books", &["goossens", "knuth"]),
+      ("My Papers", &["lamport", "mittelbach"]),
+      ("Other", &["web"]),
+    ]),
+    "{x}"
+  );
+}
+
+/// 77a r2: categories an `\addtocategory` in a hook the binding never runs fills (`\AtEveryCitekey`, as
+/// hagenberg-thesis hgbbib.sty:113 does for its default `\MakeBibliography`) cannot be known: `\bibbycategory` prints
+/// the one unfiltered list it printed before categories were modelled, with an Info naming them — never an empty
+/// result pdflatex would fill (Literature {knuth, lamport}, Online {web}). Round 1 printed no bibliography. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_category_hook_filled.tex`.
+#[test]
+fn biblatex_category_filled_by_a_hook_prints_unfiltered() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_category_hook_filled.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Info:",
+      "categories 'literature', 'online' are filled by a hook"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[("References", &["web", "knuth", "lamport"])]),
+    "{x}"
+  );
+}
+
+/// 77a r2: declaring a category twice and filing in an undeclared one are biblatex's two errors
+/// (biblatex.sty:11207-11222), raised by the primitives; the bibliography is unaffected. pdflatex + biber: the same two
+/// errors, References {knuth}. Repro `tools/perfect_kernel/repros/index-bib/biblatex_category_errors.tex`.
+#[test]
+fn biblatex_category_declaration_errors() {
+  let (x, log) =
+    convert_and_post_contrib_expecting("tests/cluster_regressions/biblatex_category_errors.tex", 2);
+  assert_eq!(latexml::util::test::error_count(&log), 2, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Error:",
+      "Package biblatex Error: Category 'a' already declared"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    lines_with(
+      &log,
+      "Error:",
+      "Package biblatex Error: Category 'b' not declared"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[("References", &["knuth"])]),
+    "{x}"
+  );
+}
+
+/// 77a r2: a repeated filter key filters again (biblatex.sty:9580-9615: `keyword=old,keyword=primary` ANDs,
+/// `notkeyword` twice drops both), but `type` and `subtype` share one toggle (:9532-9566 `blx@tempb`): the second of
+/// them is biblatex's error "'…' used multiple times" and an empty list ("Empty bibliography"). pdflatex + biber:
+/// OldPrimary {knuth}, Neither {web, goossens}, PlainArticles {lamport}, the two errors and two warnings. Round 1
+/// applied only a key's last value. Repro `tools/perfect_kernel/repros/index-bib/biblatex_filter_repeated_keys.tex`;
+/// witness arXiv 2406.11014.
+#[test]
+fn biblatex_repeated_filter_keys_and() {
+  let (x, log) = convert_and_post_contrib_expecting(
+    "tests/cluster_regressions/biblatex_filter_repeated_keys.tex",
+    2,
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 2, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Error:",
+      "Package biblatex Error: 'type' used multiple times"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    lines_with(
+      &log,
+      "Error:",
+      "Package biblatex Error: 'subtype' used multiple times"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(warnings(&log), 2, "{log}");
+  assert_eq!(
+    lines_with(&log, "Warning:", "Empty bibliography"),
+    2,
+    "{log}"
+  );
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("OldPrimary", &["knuth"]),
+      ("Neither", &["web", "goossens"]),
+      ("PlainArticles", &["lamport"]),
+    ]),
+    "{x}"
+  );
+}
+
+/// 77a r2: `\bibbycategory` whose one category has no keys prints no bibliography and biblatex's "Empty bibliography"
+/// (biblatex.sty:9997-9998), as pdflatex + biber do. Round 1 printed nothing, silently. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_bibbycategory_empty.tex`.
+#[test]
+fn biblatex_bibbycategory_without_keys_is_empty() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_bibbycategory_empty.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 1, "{log}");
+  assert_eq!(
+    lines_with(&log, "Warning:", "Empty bibliography"),
+    1,
+    "{log}"
+  );
+  assert!(bib_lists(&x).is_empty(), "{x}");
+}
+
+/// 77a r2: with no `.bbl` the binding reads the `.bib` and applies no filter: `\bibbycategory` prints the one list it
+/// printed before 77a (the later category lists are filtered, so none repeats it). Round 1 printed nothing, as no
+/// category had keys. Repro `tools/perfect_kernel/repros/index-bib/biblatex_bibbycategory_no_bbl.tex`.
+#[test]
+fn biblatex_bibbycategory_without_a_bbl_prints_the_bib() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_bibbycategory_no_bbl.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[("References", &["knuth", "lamport"])]),
+    "{x}"
+  );
+}
+
+/// 77a r2: each `\printbibliography` prints its own refsection's list (biblatex.sty:9827 `\blx@tempe`, the refsection
+/// numbered as biblatex numbers them, :10776-10778), so a filter never runs, nor warns, on another refsection's
+/// entries. pdflatex + biber: S1Books {knuth}, S1Rest {lamport}, S2All {web, mittelbach}, S2Magazine {mittelbach}.
+/// Round 1 printed both refsections under every list and warned "Type 'book' not found" / "Subtype 'magazine' not
+/// found". Repro `tools/perfect_kernel/repros/index-bib/biblatex_filter_refsections.tex`.
+#[test]
+fn biblatex_filters_print_their_own_refsection() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_filter_refsections.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_lists(&x),
+    lists_of(&[
+      ("S1Books", &["knuth"]),
+      ("S1Rest", &["lamport"]),
+      ("S2All", &["web", "mittelbach"]),
+      ("S2Magazine", &["mittelbach"]),
+    ]),
+    "{x}"
+  );
+}
+
+/// The citations of the body (before the first bibliography), each as its reference labels joined by "," — or, for a
+/// citation with no reference (a `\fullcite`), its text.
+fn cites(x: &str) -> Vec<String> {
+  let body = x.split("<bibliography ").next().unwrap_or_default();
+  body
+    .split("<cite ")
+    .skip(1)
+    .map(|cite| {
+      let cite = cite.split("</cite>").next().unwrap_or_default();
+      let cite = cite.split_once('>').map_or("", |(_, rest)| rest);
+      let refs: Vec<String> = cite
+        .split("<ref ")
+        .skip(1)
+        .filter_map(|r| Some(r.split_once('>')?.1.split("</ref>").next()?.to_string()))
+        .collect();
+      if refs.is_empty() {
+        strip_tags(cite)
+      } else {
+        refs.join(",")
+      }
+    })
+    .collect()
+}
+
+/// `text` without its markup.
+fn strip_tags(text: &str) -> String {
+  let mut out = String::new();
+  let mut in_tag = false;
+  for c in text.chars() {
+    match c {
+      '<' => in_tag = true,
+      '>' => in_tag = false,
+      c if !in_tag => out.push(c),
+      _ => {},
+    }
+  }
+  out
+}
+
+/// One bibliography's items, each as its refnum label and key.
+fn items(list: &str) -> Vec<(String, String)> {
+  list
+    .split("<bibitem ")
+    .skip(1)
+    .filter_map(|item| {
+      let key = item.split("key=\"").nth(1)?.split('"').next()?;
+      let refnum = item
+        .split("role=\"refnum\">")
+        .nth(1)?
+        .split("</tag>")
+        .next()?;
+      Some((refnum.to_string(), key.to_string()))
+    })
+    .collect()
+}
+
+/// [`bib_lists`] with each item's refnum label.
+fn bib_items(x: &str) -> Vec<(String, Vec<(String, String)>)> {
+  x.split("<bibliography ")
+    .skip(1)
+    .filter(|list| {
+      !list
+        .split('>')
+        .next()
+        .unwrap_or_default()
+        .contains("ltx_nodisplay")
+    })
+    .map(|list| {
+      let list = list.split("</bibliography>").next().unwrap_or_default();
+      let title = list
+        .split("<title")
+        .nth(1)
+        .and_then(|t| t.split('>').nth(1))
+        .and_then(|t| t.split("</title").next())
+        .unwrap_or_default()
+        .to_string();
+      (title, items(list))
+    })
+    .collect()
+}
+
+/// The items of the hidden (`ltx_nodisplay`) bibliographies, each as its refnum label and key.
+fn hidden_bib_items(x: &str) -> Vec<(String, String)> {
+  x.split("<bibliography ")
+    .skip(1)
+    .filter(|list| {
+      list
+        .split('>')
+        .next()
+        .unwrap_or_default()
+        .contains("ltx_nodisplay")
+    })
+    .flat_map(|list| items(list.split("</bibliography>").next().unwrap_or_default()))
+    .collect()
+}
+
+/// The expected [`bib_items`].
+fn items_of(expected: &[(&str, &[(&str, &str)])]) -> Vec<(String, Vec<(String, String)>)> {
+  expected
+    .iter()
+    .map(|(title, items)| {
+      (
+        title.to_string(),
+        items
+          .iter()
+          .map(|(label, key)| (label.to_string(), key.to_string()))
+          .collect(),
+      )
+    })
+    .collect()
+}
+
+/// 77a r3: an entry every list leaves out keeps its label and its `\fullcite`: biblatex reads the whole `.bbl` at
+/// `\begin{document}` and numbers each refsection's datalist once, so pdflatex prints "See Donald Knuth. The TeXbook.
+/// AW, 1984. Also [3, 2, 1, 4]." under `\printbibliography[notcategory=self]` — cs-techrep's design (arXiv 2405.19762,
+/// `notcategory=selfref` and "Please cite as: \fullcite{selfref}"). The binding builds the entries no list printed in
+/// a hidden (`ltx_nodisplay`) list at the end. r2 gave "See knuth." and "[2, knuth, 1, 3]". Repros
+/// `tools/perfect_kernel/repros/index-bib/biblatex_filtered_out_{fullcite,type_fullcite}.tex` (review probes 1, 2).
+#[test]
+fn biblatex_entry_left_out_of_every_list_is_built_hidden() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_filtered_out_fullcite.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert!(
+    x.contains(r##"<p>See <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Donald Knuth</text><text class="ltx_bib_year"> (1984)</text> <text class="ltx_bib_title">The TeXbook</text>.  <text class="ltx_bib_publisher">AW</text></cite>. Also <cite class="ltx_citemacro_cite">[<ref href="#bib.bib2" idref="bib.bib2" title="LaTeX paper">3</ref>, <ref href="#biba.bib1" idref="biba.bib1" title="The TeXbook">2</ref>, <ref href="#bib.bib1" idref="bib.bib1" title="The LaTeX Companion">1</ref>, <ref href="#bib.bib3" idref="bib.bib3" title="Mittelbach paper">4</ref>]</cite>.</p>"##),
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("1", "goossens"),
+      ("3", "lamport"),
+      ("4", "mittelbach")
+    ])]),
+    "{x}"
+  );
+  assert_eq!(
+    hidden_bib_items(&x),
+    vec![("2".to_string(), "knuth".to_string())],
+    "{x}"
+  );
+
+  // `nottype=book` leaves out both books: the full citation and the labels are pdflatex's ("See Michel Goossens. The
+  // LaTeX Companion. AW, 1994. Also [3, 2, 1, 4].").
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_filtered_out_type_fullcite.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cites(&x),
+    vec!["Michel Goossens (1994) The LaTeX Companion.  AW", "3,2,1,4"],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[("3", "lamport"), ("4", "mittelbach")])]),
+    "{x}"
+  );
+  assert_eq!(
+    hidden_bib_items(&x),
+    vec![
+      ("1".to_string(), "goossens".to_string()),
+      ("2".to_string(), "knuth".to_string())
+    ],
+    "{x}"
+  );
+}
+
+/// 77a r3: with `defernumbers=true` biblatex numbers the entries as the lists print them, continuing across the lists of
+/// a refsection, and an entry keeps the number it got first (biblatex.sty:9216-9283 `\blx@addlabelnumber`);
+/// `resetnumbers=true` restarts at 1 and `resetnumbers=<n>` at n, for entries not yet numbered (:9759-9765); an entry no
+/// list printed is labelled 0 (:8898-8909). pdflatex + biber: "[4, 1, 3, 2]" with Articles [1][2], Books [3][4],
+/// Primary [4][2]; with `resetnumbers` "[2, 1, 1, 2]"; `notcategory=self` "[2, 0, 1, 3]". Witnesses arXiv 2405.09412,
+/// 2405.11316, 2406.11014 (style=ieee, defernumbers=true), 2406.15218 (resetnumbers=true). Repros
+/// `tools/perfect_kernel/repros/index-bib/biblatex_defernumbers{,_resetnumbers,_unprinted}.tex`.
+#[test]
+fn biblatex_defernumbers_numbers_in_print_order() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_defernumbers.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["4,1,3,2"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Articles", &[("1", "lamport"), ("2", "mittelbach")]),
+      ("Books", &[("3", "goossens"), ("4", "knuth")]),
+      ("Primary", &[("4", "knuth"), ("2", "mittelbach")]),
+    ]),
+    "{x}"
+  );
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_defernumbers_resetnumbers.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["2,1,1,2"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Articles", &[("1", "lamport"), ("2", "mittelbach")]),
+      ("Books", &[("1", "goossens"), ("2", "knuth")]),
+      ("Primary", &[("2", "knuth"), ("2", "mittelbach")]),
+    ]),
+    "{x}"
+  );
+
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_defernumbers_unprinted.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cites(&x),
+    vec!["Donald Knuth (1984) The TeXbook.  AW", "2,0,1,3"],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("1", "goossens"),
+      ("2", "lamport"),
+      ("3", "mittelbach")
+    ])]),
+    "{x}"
+  );
+  assert_eq!(
+    hidden_bib_items(&x),
+    vec![("0".to_string(), "knuth".to_string())],
+    "{x}"
+  );
+}
+
+/// 77a r3: `resetnumbers` without `defernumbers=true` is biblatex's Warning, and ignored (biblatex.sty:9766-9768), for
+/// any value — `resetnumbers=false` too (r4; r3 returned before the check); pdflatex + biber: two Warnings, "[2, 3, 1,
+/// 4]", Articles [3][4], Books [1][2], All [1]-[4]. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_resetnumbers_needs_defernumbers.tex`.
+#[test]
+fn biblatex_resetnumbers_needs_defernumbers() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_resetnumbers_needs_defernumbers.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 2, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Warning:",
+      "Option 'resetnumbers' requires 'defernumbers=true'. Ignoring 'resetnumbers=true'"
+    ),
+    2,
+    "{log}"
+  );
+  assert_eq!(cites(&x), vec!["2,3,1,4"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Articles", &[("3", "lamport"), ("4", "mittelbach")]),
+      ("Books", &[("1", "goossens"), ("2", "knuth")]),
+      ("All", &[
+        ("1", "goossens"),
+        ("2", "knuth"),
+        ("3", "lamport"),
+        ("4", "mittelbach")
+      ]),
+    ]),
+    "{x}"
+  );
+}
+
+/// 77a r3: an `\addtocategory` in a declaration whose code the binding never runs — `\DeclareBibliographyDriver`
+/// (historian.bbx, publist.bbx), `\DeclareCiteCommand`'s loop code (musuos.cbx), `\DeclareFieldFormat`,
+/// `\DeclareIndexNameFormat`, `\defbibcheck` — or one whose category is a macro parameter (`\addtocategory{#1}{…}`)
+/// leaves that category's filter unapplied, with an Info: the list prints unfiltered (fail-safe), where r2 applied the
+/// filter to the empty category and printed nothing — every citation "Missing Entry" (review probe 6). pdflatex
+/// prints probe 6's list empty (the driver files the keys while the list prints) and the parameter case's {knuth,
+/// lamport}. Repros `tools/perfect_kernel/repros/index-bib/biblatex_category_{unrun_declarations,hook_parameter}.tex`.
+#[test]
+fn biblatex_category_filled_by_unrun_code_prints_unfiltered() {
+  for (fixture, title, keys) in [
+    (
+      "biblatex_category_unrun_declarations",
+      "Sel",
+      &["goossens", "knuth", "lamport", "mittelbach"][..],
+    ),
+    (
+      "biblatex_category_hook_parameter",
+      "Cited",
+      &["goossens", "knuth", "lamport"][..],
+    ),
+  ] {
+    let (x, log) =
+      convert_and_post_contrib_logging(&format!("tests/cluster_regressions/{fixture}.tex"));
+    assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+    assert_eq!(warnings(&log), 0, "{fixture}\n{log}");
+    assert_eq!(
+      lines_with(
+        &log,
+        "Info:",
+        "is filled by a hook the binding does not run"
+      ),
+      1,
+      "{fixture}\n{log}"
+    );
+    assert_eq!(bib_lists(&x), lists_of(&[(title, keys)]), "{fixture}\n{x}");
+    assert!(!x.contains("Missing Entry"), "{fixture}\n{x}");
+  }
+}
+
+/// 77a r3: `\ifentrycategory{<entrykey>}{<category>}{<true>}{<false>}` (biblatex.sty:2895-2902) takes four arguments
+/// and asks the categories filed so far; read as three it printed both branches. pdflatex + biber: "A IN B OUT C [1,
+/// 2].". Repro `tools/perfect_kernel/repros/index-bib/biblatex_ifentrycategory.tex`.
+#[test]
+fn biblatex_ifentrycategory_takes_one_branch() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_ifentrycategory.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert!(x.contains("<p>A IN B OUT C <cite"), "{x}");
+  assert_eq!(cites(&x), vec!["1,2"], "{x}");
+}
+
+/// 77a r3: a biblatex entry with a `shorthand` is labelled by it and takes no label number (biblatex.sty:8897-8923;
+/// make_bibliography.rs `given_label`), the others numbered in datalist order without it. pdflatex + biber: "[TB, 2,
+/// 1, 3]", Books [1] goossens [TB] knuth, Articles [2] lamport [3] mittelbach. Witness arXiv 2406.00136 ([HTT] [HA]
+/// [SAG] [Ker], then [1]-[17]). Repro `tools/perfect_kernel/repros/index-bib/biblatex_shorthand_label.tex`.
+#[test]
+fn biblatex_shorthand_is_the_label() {
+  let (x, log) =
+    convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_shorthand_label.tex");
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["TB,2,1,3"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Books", &[("1", "goossens"), ("TB", "knuth")]),
+      ("Articles", &[("2", "lamport"), ("3", "mittelbach")]),
+    ]),
+    "{x}"
+  );
+}
+
+/// Every citation of the document outside its bibliographies, as its refnums and the bibitems they link to.
+fn cite_links(x: &str) -> Vec<(String, Vec<String>)> {
+  let mut body = String::new();
+  for (n, part) in x.split("<bibliography ").enumerate() {
+    let part = if n == 0 {
+      part
+    } else {
+      part
+        .split_once("</bibliography>")
+        .map_or("", |(_, rest)| rest)
+    };
+    body.push_str(part);
+  }
+  body
+    .split("<cite ")
+    .skip(1)
+    .map(|cite| {
+      let cite = cite.split("</cite>").next().unwrap_or_default();
+      let refs: Vec<(String, String)> = cite
+        .split("<ref ")
+        .skip(1)
+        .filter_map(|r| {
+          let idref = r.split("idref=\"").nth(1)?.split('"').next()?.to_string();
+          let text = r.split_once('>')?.1.split("</ref>").next()?.to_string();
+          Some((text, idref))
+        })
+        .collect();
+      (
+        refs
+          .iter()
+          .map(|(text, _)| text.as_str())
+          .collect::<Vec<_>>()
+          .join(","),
+        refs.into_iter().map(|(_, idref)| idref).collect(),
+      )
+    })
+    .collect()
+}
+
+/// 77a r4: each refsection numbers its own list (biblatex.sty:8891-8923, per `\c@refsection`), and a `\cite` refers
+/// to its own refsection's entry. MakeBibliography formats a key two lists print from the list's own `ltx:bibentry`
+/// (r3 took the document's last copy: refsection 1 read [3] Knuth with refsection 2's number), and a refsection's
+/// citations name its list (`inlist`/`lists` `refsection<n>`; before 77a the citation of a key both refsections print
+/// linked to refsection 2's). pdflatex + biber: "A [1, 2]." S1 [1] knuth [2] lamport; "B [2, 1, 3]." S2 [1] web [2]
+/// mittelbach [3] knuth. Witnesses arXiv 2308.00515 (12 chapter refsections: 10 lists out of sequence in r3),
+/// 2507.16315. Repro `tools/perfect_kernel/repros/index-bib/biblatex_refsection_own_numbers.tex`.
+#[test]
+fn biblatex_refsection_lists_number_and_cite_their_own() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_refsection_own_numbers.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("S1", &[("1", "knuth"), ("2", "lamport")]),
+      ("S2", &[("1", "web"), ("2", "mittelbach"), ("3", "knuth")]),
+    ]),
+    "{x}"
+  );
+  let link = |text: &str, ids: &[&str]| {
+    (
+      text.to_string(),
+      ids.iter().map(|id| id.to_string()).collect(),
+    )
+  };
+  assert_eq!(
+    cite_links(&x),
+    vec![
+      link("1,2", &["bib.bib1", "bib.bib2"]),
+      link("2,1,3", &["biba.bib2", "biba.bib1", "biba.bib3"]),
+    ],
+    "{x}"
+  );
+  assert_eq!(x.matches("lists=\"refsection1\"").count(), 1, "{x}");
+  assert_eq!(x.matches("lists=\"refsection2\"").count(), 1, "{x}");
+}
+
+/// 77a r4: an entry is digested once per list that prints it. The hidden (`ltx_nodisplay`) list holds only the entries
+/// no list printed (r3 rebuilt every entry and dropped the printed ones when the bibliography was built, raising their
+/// errors twice). The `.bbl` titles of the two books carry a `\PackageError` on purpose. pdflatex + biber: `type=book`
+/// 2 errors, References [1] goossens [2] knuth; `nottype=book` 0 errors, References [3] lamport [4] mittelbach.
+/// Pinned residual: under `nottype=book` the hidden list builds the two books, so their citations resolve, and raises
+/// their 2 errors (pdflatex never typesets them). Review probes e1 (r3: 4 errors), e3. Repros
+/// `tools/perfect_kernel/repros/index-bib/biblatex_filtered_{entries_digested_once,out_entries_errors}.tex`.
+#[test]
+fn biblatex_hidden_list_holds_only_unprinted_entries() {
+  for (fixture, printed, hidden) in [
+    (
+      "biblatex_filtered_entries_digested_once",
+      [("1", "goossens"), ("2", "knuth")],
+      [("3", "lamport"), ("4", "mittelbach")],
+    ),
+    (
+      "biblatex_filtered_out_entries_errors",
+      [("3", "lamport"), ("4", "mittelbach")],
+      [("1", "goossens"), ("2", "knuth")],
+    ),
+  ] {
+    let (x, log) =
+      convert_and_post_contrib_expecting(&format!("tests/cluster_regressions/{fixture}.tex"), 2);
+    assert_eq!(
+      latexml::util::test::error_count(&log),
+      2,
+      "{fixture}\n{log}"
+    );
+    assert_eq!(
+      lines_with(&log, "Error:", "Package xx Error: boomA"),
+      1,
+      "{fixture}\n{log}"
+    );
+    assert_eq!(
+      lines_with(&log, "Error:", "Package xx Error: boomB"),
+      1,
+      "{fixture}\n{log}"
+    );
+    assert_eq!(warnings(&log), 0, "{fixture}\n{log}");
+    assert_eq!(cites(&x), vec!["3,2,1,4"], "{fixture}\n{x}");
+    assert_eq!(
+      bib_items(&x),
+      items_of(&[("References", &printed[..])]),
+      "{fixture}\n{x}"
+    );
+    let hidden: Vec<(String, String)> = hidden
+      .iter()
+      .map(|(n, key)| (n.to_string(), key.to_string()))
+      .collect();
+    assert_eq!(hidden_bib_items(&x), hidden, "{fixture}\n{x}");
+  }
+}
+
+/// 77a r4: a list filtered by categories digests only the entries it keeps. Its entries wait for the end of the document,
+/// when every `\addtocategory` is filed (biblatex files them through the `.aux`), and are built in place if they pass
+/// (latexml_core `defer_print`, list `biblatex@category`); r3 digested every entry and decided when the bibliography
+/// was built (6 errors: four in `Sel`, none kept, two more in the hidden list). pdflatex + biber: 3 errors (boomB in
+/// Sel, boomA and boomB in All), Sel [2] knuth, All [1]-[4]. Witnesses arXiv 2405.19762, 2406.00136. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_category_list_digests_selected.tex`.
+#[test]
+fn biblatex_category_list_builds_only_selected_entries() {
+  let (x, log) = convert_and_post_contrib_expecting(
+    "tests/cluster_regressions/biblatex_category_list_digests_selected.tex",
+    3,
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 3, "{log}");
+  assert_eq!(
+    lines_with(&log, "Error:", "Package xx Error: boomA"),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    lines_with(&log, "Error:", "Package xx Error: boomB"),
+    2,
+    "{log}"
+  );
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["3,2,1,4"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Sel", &[("2", "knuth")]),
+      ("All", &[
+        ("1", "goossens"),
+        ("2", "knuth"),
+        ("3", "lamport"),
+        ("4", "mittelbach")
+      ]),
+    ]),
+    "{x}"
+  );
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+}
+
+/// 77a r4: a `.bib` field `labelnumber` is no label outside biblatex (make_bibliography.rs `given_number` reads it only
+/// in a biblatex bibliography); r3 printed lamport's `labelnumber={9}` as [9] under natbib/plainnat. pdflatex + bibtex:
+/// "Text [2, 3, 1]." [1] goossens [2] knuth [3] lamport. Review probe nonblx/n1. Repro
+/// `tools/perfect_kernel/repros/index-bib/natbib_labelnumber_field_is_no_label.tex`.
+#[test]
+fn natbib_labelnumber_field_is_no_label() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/natbib_labelnumber_field_is_no_label.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(cites(&x), vec!["2,3,1"], "{x}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("1", "goossens"),
+      ("2", "knuth"),
+      ("3", "lamport")
+    ])]),
+    "{x}"
+  );
+}
+
+/// 77a r5: a `.bib` field `shorthand` is data outside biblatex. biblatex's label fields (`shorthand`, `labelalpha`)
+/// are digested by handlers the biblatex binding defines (biblatex_sty.rs, with the BibTeX pool's loading); r4 defined
+/// `\bib@field@default@shorthand` in the pool for every route, so natbib + plainnat digested
+/// `shorthand={\undefinedmacro TB}` and raised `Error:undefined:\undefinedmacro`. As in Perl (BibTeX.pool
+/// `\bib@field@default@default`) the field is raw `bib-data`. pdflatex + bibtex 0 errors: "X [Knuth, 1984]." Review
+/// probe n5. Repro `tools/perfect_kernel/repros/index-bib/natbib_shorthand_field_is_raw_data.tex`.
+#[test]
+fn natbib_shorthand_field_is_raw_data() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/natbib_shorthand_field_is_raw_data.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cite_links(&x),
+    vec![("1984".to_string(), vec!["bib.bib1".to_string()])],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[("Knuth (1984)", "knuth")])]),
+    "{x}"
+  );
+  // The BibTeX reader without biblatex (the `.bib` converted on its own): the field is the bare `bib-data` of its
+  // source text, at 0 errors.
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::copy(
+    "tests/cluster_regressions/natbib_shorthand_field_is_raw_data.bib",
+    workdir.path().join("t.bib"),
+  )
+  .expect("copy the .bib");
+  let output = std::process::Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+    .args(["t.bib", "--dest", "t.xml", "--nocomments", "--timeout=110"])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  assert_eq!(latexml::util::test::error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warnings(&stderr), 0, "{stderr}");
+  let bib = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+  assert_eq!(
+    bib
+      .matches(r#"<bib-data role="shorthand">\undefinedmacro TB</bib-data>"#)
+      .count(),
+    1,
+    "{bib}"
+  );
+}
+
+/// 77a r5: a `.bib` field `labelalpha` is no label outside biblatex (make_bibliography.rs `given_label` reads
+/// `labelalpha`/`extraalpha`/`shorthand` only in a biblatex bibliography, as `given_number` reads `labelnumber`). r4
+/// printed natbib's [1] Goossens [Knu84] Knuth and cited "[, 1]". pdflatex + bibtex: "X [2, 1]." [1] goossens
+/// [2] knuth. Review probe n6. Repro `tools/perfect_kernel/repros/index-bib/natbib_labelalpha_field_is_no_label.tex`.
+#[test]
+fn natbib_labelalpha_field_is_no_label() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/natbib_labelalpha_field_is_no_label.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cite_links(&x),
+    vec![("2,1".to_string(), vec![
+      "bib.bib1".to_string(),
+      "bib.bib2".to_string()
+    ])],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[("1", "goossens"), ("2", "knuth")])]),
+    "{x}"
+  );
+}
+
+/// 77a r5: a citation after `\end{refsection}` is refsection 0's and links to the default list, and the `refsegment`
+/// environment opens a segment and prints nothing (biblatex.sty:10902-10918; `\refsegment` is a no-op as
+/// `\newrefsegment` is — r4 had no `\refsegment`: `Error:undefined:{refsegment}`). pdflatex + biber 0 errors:
+/// "One [2, 3]. Seg [1]." S1 [1] goossens [2] knuth [3] lamport; "Zero [1]." S0 [1] lamport. Review probe q5. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_refsection_zero_after_refsection.tex`.
+#[test]
+fn biblatex_refsection_zero_after_refsection() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_refsection_zero_after_refsection.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("S1", &[("1", "goossens"), ("2", "knuth"), ("3", "lamport")]),
+      ("S0", &[("1", "lamport")]),
+    ]),
+    "{x}"
+  );
+  let link = |text: &str, ids: &[&str]| {
+    (
+      text.to_string(),
+      ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+    )
+  };
+  assert_eq!(
+    cite_links(&x),
+    vec![
+      link("2,3", &["bib.bib2", "bib.bib3"]),
+      link("1", &["bib.bib1"]),
+      link("1", &["biba.bib1"]),
+    ],
+    "{x}"
+  );
+}
+
+/// 77a r5: category lists inside `\newrefsection`. Each refsection numbers its datalist once, and each list prints the
+/// entries of its own refsection the (whole-document) category selects: knuth, filed in refsection 2, is Cat1's too.
+/// pdflatex + biber 0 errors: "One [1, 2]." Cat1 [1] knuth, Rest1 [2] lamport; "Two [1, 3, 2]." Cat2 [3] knuth,
+/// Rest2 [1] web [2] goossens. Review probe q4. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_category_lists_in_newrefsection.tex`.
+#[test]
+fn biblatex_category_lists_in_newrefsection() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_category_lists_in_newrefsection.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[
+      ("Cat1", &[("1", "knuth")]),
+      ("Rest1", &[("2", "lamport")]),
+      ("Cat2", &[("3", "knuth")]),
+      ("Rest2", &[("1", "web"), ("2", "goossens")]),
+    ]),
+    "{x}"
+  );
+  let link = |text: &str, ids: &[&str]| {
+    (
+      text.to_string(),
+      ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+    )
+  };
+  assert_eq!(
+    cite_links(&x),
+    vec![
+      link("1,2", &["bib.bib1", "biba.bib1"]),
+      link("1,3,2", &["bibc.bib1", "bibb.bib1", "bibc.bib2"]),
+    ],
+    "{x}"
+  );
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+}
+
+/// 77a r6: biblatex's `\bibliographystyle` is ignored, its error reported as a Warning (blx-compat.def:13-17; 64zf;
+/// biblatex_sty.rs). The
+/// kernel's, left after `\printbibliography` by a natbib template, rewrote the bibliography's `bibstyle` to `plain`,
+/// so the list was no longer a biblatex one and lost its alphabetic labels and shorthand (r5: [1]-[5], cited
+/// "[5, 2, 1, 3, 4]", 0 errors). pdflatex + biber 1 error: "X [Knu84; Böt01; Balbes & Dwinger; Goo94a; Goo94b]."
+/// (`,` here where biblatex prints `;`, an existing gap). Review probe bs/a_alphabetic. Repro
+/// `tools/perfect_kernel/repros/index-bib/biblatex_bibliographystyle_ignored.tex`.
+#[test]
+fn biblatex_bibliographystyle_is_ignored_with_a_warning() {
+  let (x, log) = convert_and_post_contrib_expecting(
+    "tests/cluster_regressions/biblatex_bibliographystyle_ignored.tex",
+    0,
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(
+    lines_with(
+      &log,
+      "Warning:",
+      "Package biblatex Warning: '\\bibliographystyle' invalid for 'biblatex'"
+    ),
+    1,
+    "{log}"
+  );
+  assert_eq!(warnings(&log), 1, "{log}");
+  assert_eq!(
+    cite_links(&x),
+    vec![(
+      "Knu84,Böt01,Balbes &amp; Dwinger,Goo94a,Goo94b".to_string(),
+      ["bib.bib5", "bib.bib2", "bib.bib1", "bib.bib3", "bib.bib4"]
+        .iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<_>>()
+    )],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("Balbes &amp; Dwinger", "balbes"),
+      ("Böt01", "boet"),
+      ("Goo94a", "goossens"),
+      ("Goo94b", "goossens2"),
+      ("Knu84", "knuth"),
+    ])]),
+    "{x}"
+  );
+  assert!(x.contains(r#"bibstyle="biblatex"#), "{x}");
+  assert!(hidden_bib_items(&x).is_empty(), "{x}");
+}
+
+/// 77a r6: on the `.bib` route (biblatex without a `.bbl`, the BibTeX reader's entries) an entry with a `shorthand`
+/// takes no number, as on the `.bbl` route: the list numbers only the entries that print one
+/// (make_bibliography.rs `number_entry`); the ids are the entries' own (`bib.bib<n>`, in citation order). r5 printed
+/// `[Balbes & Dwinger] [2] [3] [4] [5]`, cited "[5, 2, Balbes & Dwinger, 3, 4]". pdflatex + biber 0 errors:
+/// "X [4, 1, Balbes & Dwinger, 2, 3]."; [Balbes & Dwinger] balbes [1] boet [2] goossens [3] goossens2 [4] knuth.
+/// Review probe bibroute/b_numeric. Repro `tools/perfect_kernel/repros/index-bib/biblatex_bib_route_shorthand_unnumbered.tex`.
+#[test]
+fn biblatex_bib_route_shorthand_takes_no_number() {
+  let (x, log) = convert_and_post_contrib_logging(
+    "tests/cluster_regressions/biblatex_bib_route_shorthand_unnumbered.tex",
+  );
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(warnings(&log), 0, "{log}");
+  assert_eq!(
+    cite_links(&x),
+    vec![(
+      "4,1,Balbes &amp; Dwinger,2,3".to_string(),
+      ["bib.bib1", "bib.bib2", "bib.bib3", "bib.bib4", "bib.bib5"]
+        .iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<_>>()
+    )],
+    "{x}"
+  );
+  assert_eq!(
+    bib_items(&x),
+    items_of(&[("References", &[
+      ("Balbes &amp; Dwinger", "balbes"),
+      ("1", "boet"),
+      ("2", "goossens"),
+      ("3", "goossens2"),
+      ("4", "knuth"),
+    ])]),
+    "{x}"
+  );
 }

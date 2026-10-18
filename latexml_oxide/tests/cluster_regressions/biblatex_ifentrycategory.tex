@@ -1,0 +1,15 @@
+% witness: 77a r3 (biblatex.sty:2895-2902 \ifentrycategory takes four arguments)
+% oracle:  pdflatex + biber 0 errors: "A IN B OUT C [1, 2]."
+% engines: rust before 77a r3 read three arguments and printed both branches ("A IN OUT B IN OUT")
+% expect:  clean (0 errors, 0 warnings); the oracle's text
+% status:  GREEN (77a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{selected}
+\addtocategory{selected}{knuth}
+\begin{document}
+A \ifentrycategory{knuth}{selected}{IN}{OUT} B \ifentrycategory{lamport}{selected}{IN}{OUT} C \cite{knuth,lamport}.
+\printbibliography
+\end{document}

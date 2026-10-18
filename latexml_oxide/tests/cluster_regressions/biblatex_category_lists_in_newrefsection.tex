@@ -1,0 +1,23 @@
+% witness: 77a r4 review probe q4
+% oracle:  pdflatex + biber 0 errors: "One [1, 2]." Cat1 [1] knuth, Rest1 [2] lamport; "Two [1, 3, 2]." Cat2 [3] knuth,
+%          Rest2 [1] web [2] goossens — category lists inside \newrefsection: each refsection numbers its datalist
+%          once, a list prints the entries of its own refsection the category selects (the category is the whole
+%          document's: knuth is filed in refsection 2, after refsection 1's lists)
+% engines: rust 77a r4 the oracle's lists and links; Perl ar5iv binding ignores the filters (KNOWN_PERL_ERRORS #983)
+% expect:  clean (0 errors, 0 warnings); the oracle's labels and links
+% status:  GREEN (77a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{c}
+\begin{document}
+\newrefsection
+One \cite{knuth,lamport}.
+{\small\printbibliography[category=c,title={Cat1}]}
+\printbibliography[notcategory=c,title={Rest1}]
+\newrefsection
+Two \cite{web,knuth,goossens}\addtocategory{c}{knuth}.
+\printbibliography[category=c,title={Cat2}]
+\printbibliography[notcategory=c,title={Rest2}]
+\end{document}

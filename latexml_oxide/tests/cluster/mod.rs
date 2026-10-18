@@ -138,7 +138,13 @@ pub fn convert_and_post_contrib_clean(source: &str) -> String {
 /// [`convert_and_post_contrib_clean`] that also returns the conversion and post logs, one after the other, for a
 /// guard that pins its warnings.
 pub fn convert_and_post_contrib_logging(source: &str) -> (String, String) {
-  let (xml, core_log) = convert_to_xml_contrib_clean_logging(source);
+  convert_and_post_contrib_expecting(source, 0)
+}
+
+/// [`convert_and_post_contrib_logging`] for an input that errs on purpose: the conversion logs exactly `errors`
+/// `Error:<class>:` markers, the post stage none.
+pub fn convert_and_post_contrib_expecting(source: &str, errors: usize) -> (String, String) {
+  let (xml, core_log) = convert_to_xml_contrib_logging_expecting(source, errors);
   latexml_core::util::logger::bind_log();
   let out = post_with(&xml, None);
   let log = latexml_core::util::logger::flush_log();
@@ -381,6 +387,11 @@ pub fn convert_to_xml_contrib_clean(source: &str) -> String {
 
 /// [`convert_to_xml_contrib_clean`] that also returns the conversion log, for a guard that pins its diagnostics.
 pub fn convert_to_xml_contrib_clean_logging(source: &str) -> (String, String) {
+  convert_to_xml_contrib_logging_expecting(source, 0)
+}
+
+/// [`convert_to_xml_contrib_clean_logging`] that pins the `Error:<class>:` count to `errors`.
+pub fn convert_to_xml_contrib_logging_expecting(source: &str, errors: usize) -> (String, String) {
   latexml::util::test::init_test_rss_cap();
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = Config {
@@ -393,13 +404,14 @@ pub fn convert_to_xml_contrib_clean_logging(source: &str) -> (String, String) {
   let r = c.convert(source.to_string());
   let n_errors = latexml::util::test::error_count(&r.log);
   assert_eq!(
-    n_errors, 0,
-    "{source}: expected 0 errors but log contained {n_errors} Error:<class>: markers (status_code={})",
-    r.status_code
+    n_errors, errors,
+    "{source}: expected {errors} errors but log contained {n_errors} Error:<class>: markers (status_code={})\n{}",
+    r.status_code, r.log
   );
+  let max_status = if errors == 0 { 1 } else { 2 };
   assert!(
-    r.status_code <= 1,
-    "{source}: status_code {} (expected 0/1), status={:?}",
+    r.status_code <= max_status,
+    "{source}: status_code {} (expected at most {max_status}), status={:?}",
     r.status_code,
     r.status
   );
