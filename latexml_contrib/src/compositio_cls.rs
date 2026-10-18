@@ -21,11 +21,11 @@ use latexml_package::prelude::*;
 ///   (OXIDIZED_DESIGN #265): with `\@authors` filled by its replayed `\author` (#482) it typeset the names again in
 ///   the body, its `\address\relax` an empty contact, and its emptied stores' warnings ("No MSC classification").
 ///
-/// A paper whose source lacks the class falls to OmniBus, as before the binding (OXIDIZED_DESIGN #444).
+/// A paper whose source lacks the class falls to OmniBus, with the loader's missing-file Warning, as before the binding
+/// (OXIDIZED_DESIGN #444).
 pub(crate) fn compositio_family_class(name: &str) -> Result<()> {
   let Some(class) = crate::shipped_class::requested_shipped_class(name)? else {
-    LoadClass!("OmniBus");
-    return Ok(());
+    return crate::shipped_class::omnibus_without_copy(name);
   };
   Let!("\\lx@compositio@kernel@thanks", "\\thanks");
   InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));

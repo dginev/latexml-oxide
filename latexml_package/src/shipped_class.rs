@@ -39,6 +39,40 @@ pub fn requested_shipped_class(binding: &str) -> Result<Option<String>> {
   )
 }
 
+/// A stand-in binding's answer when the source lacks the class it reads raw ([`requested_shipped_class`] is `None`):
+/// OmniBus, with the loader's missing-file status and `missing_file` Warning for a class it has no binding for
+/// (`load_class`; Perl Package.pm:2717-2728), which the binding's presence kept the loader from raising — pdflatex
+/// stops on the missing file. Not again for a request the prefix fallback answered with this binding: the loader
+/// warned for it. an.cls (astro-ph0611016), cimento, compositio, jinst, the apa family.
+pub fn omnibus_without_copy(binding: &str) -> Result<()> {
+  let fallback_target = lookup_string("fallback_target");
+  let answered = !lookup_string("fallback_request").is_empty()
+    && strip_cls(
+      fallback_target
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or_default(),
+    )
+    .eq_ignore_ascii_case(binding);
+  if !answered {
+    let name = Expand!(Tokens!(T_CS!("\\@currname"))).to_string();
+    let name = if name.is_empty() {
+      binding.to_string()
+    } else {
+      name
+    };
+    note_status(LogStatus::Missing, Some(&s!("{name}.cls")));
+    Warn!(
+      "missing_file",
+      &name,
+      s!("Can't find binding for class {name} (using OmniBus)"),
+      "Anticipate undefined macros or environments"
+    );
+  }
+  LoadClass!("OmniBus");
+  Ok(())
+}
+
 /// The text of the class file [`requested_shipped_class`] finds, its bytes read as Latin-1 characters; `None` when
 /// the source does not have it or it cannot be read (so a family binding takes its no-copy choices). A family binding
 /// reads the copy the paper ships to follow its version where the versions conflict (`mn2e_cls`, `mdpi_cls`,

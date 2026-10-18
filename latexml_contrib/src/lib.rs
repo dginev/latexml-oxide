@@ -47,6 +47,7 @@ pub mod aliascnt_sty;
 pub mod aligned_overset_sty;
 pub mod amsdtx_cls;
 pub mod amsldoc_cls;
+pub mod an_cls;
 pub mod animate_sty;
 pub mod aomart_cls;
 pub mod apa6_cls;
@@ -77,6 +78,7 @@ pub mod caption2_sty;
 pub mod cas_dc_cls;
 pub mod catchfile_sty;
 pub mod ccaption_sty;
+pub mod cclayout_sty;
 pub mod centernot_sty;
 pub mod ceurart_cls;
 pub mod changepage_sty;
@@ -629,6 +631,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
   ("backref", "sty", backref_sty::load_definitions),
   ("ccaption", "sty", ccaption_sty::load_definitions),
+  ("cclayout", "sty", cclayout_sty::load_definitions),
   ("caption2", "sty", caption2_sty::load_definitions),
   ("curve2e", "sty", curve2e_sty::load_definitions),
   ("dhucs", "sty", dhucs_sty::load_definitions),
@@ -650,6 +653,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("apa7", "cls", apa7_cls::load_definitions),
   ("amsdtx", "cls", amsdtx_cls::load_definitions),
   ("amsldoc", "cls", amsldoc_cls::load_definitions),
+  ("an", "cls", an_cls::load_definitions),
   ("achemso", "cls", achemso_cls::load_definitions),
   (
     "agujournal2019",

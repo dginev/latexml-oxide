@@ -43,11 +43,11 @@ pub fn define_numbered_author_forms(mask: Option<&str>) -> Result<()> {
 /// Interpret the class `name` raw (as the document asked for it: [`crate::shipped_class::requested_shipped_class`], so
 /// a class only named like the family — TeX Live's apa6e.cls, a paper's `apa6mod.cls`, which the prefix fallback
 /// answers with this binding — is read as itself), then give its numbered author forms to the frontmatter
-/// ([`define_numbered_author_forms`]) when it has them. A paper whose source lacks the class falls to OmniBus.
+/// ([`define_numbered_author_forms`]) when it has them. A paper whose source lacks the class falls to OmniBus, with the
+/// loader's missing-file Warning.
 pub fn apa_family_class(name: &str, mask: Option<&str>) -> Result<()> {
   let Some(class) = crate::shipped_class::requested_shipped_class(name)? else {
-    LoadClass!("OmniBus");
-    return Ok(());
+    return crate::shipped_class::omnibus_without_copy(name);
   };
   // (the class read raw by a binding is still a raw class to K11, as when the rawclasses lever reads it: its title-page
   // stores — `\shorttitle`, `\affiliation`, `\keywords`, `\abstract`, … — reach the frontmatter, `input_definitions`
@@ -68,6 +68,10 @@ pub fn apa_family_class(name: &str, mask: Option<&str>) -> Result<()> {
 /// {apaSix@maskauthoridentity}` around them). `\note` is no store K11's table names (a note means something else in
 /// most classes), and K11's `\authornote` does not know the mask: 2406.08022 writes its author note ("Author Note
 /// \newline Correspondence concerning this article …") as `\note`, lost under the raw class.
+/// apa.cls's `\acknowledgements{…}` (:461 `\long\def\acknowledgements#1{\long\def\@acks{#1}}`; apa6.cls has none) is
+/// the paper's acknowledgements under the class's "Author Note" heading (`\acksname`, :194): the doc and jou title
+/// pages print the store (:1262-1267, :1549-1557), where the refused `\maketitle` lost it with 0 errors, and man mode
+/// as a closing section (:760-764 `\AtEndDocument`, `\section{\acksname}\@acks`), which an unset store skips.
 fn define_notes(mask: Option<&str>) -> Result<()> {
   let (open, close) = match mask {
     Some(flag) => (s!(r"\@ifundefined{{{flag}}}{{"), "}{}"),
@@ -79,6 +83,11 @@ fn define_notes(mask: Option<&str>) -> Result<()> {
   if IsDefined!(&T_CS!("\\authornote")) {
     RawTeX!(&s!(
       r"\long\def\authornote#1{{{open}\lx@add@frontmatter{{ltx:note}}[role=authornote]{{#1}}{close}}}"
+    ));
+  }
+  if IsDefined!(&T_CS!("\\acknowledgements")) {
+    RawTeX!(&s!(
+      r"\long\def\acknowledgements#1{{{open}\lx@add@frontmatter{{ltx:acknowledgements}}[name={{\acksname}}]{{#1}}{close}}}"
     ));
   }
   Ok(())

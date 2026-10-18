@@ -124,6 +124,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "aj_pt4.sty",
   "alggeom.cls",
   "amsppt.cls",
+  "an.cls",
   "apjfonts.sty",
   "apjpt4.sty",
   "appolb.cls",

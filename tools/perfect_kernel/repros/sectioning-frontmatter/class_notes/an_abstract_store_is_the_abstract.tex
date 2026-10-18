@@ -1,0 +1,19 @@
+% an.cls's `\abstract` is its `\aaabstract` (an.cls:98 `\AtEndOfClass{\let\abstract=\aaabstract}`), which stores the
+% text for the class's title page (:414 `\def\aaabstract#1{\gdef\@abstract{#1}}`, read at :718): the text was one plain
+% paragraph of the deposited title block, no abstract. The setter adds the abstract (an_cls.rs).
+% witness: astro-ph0611016 (`\abstract{We consider the contribution of microlensing …}`)
+% oracle:  pdflatex 0 errors (beside the trimmed an.cls): the title page "Key words lensing – quasars" then "We consider the contribution of microlensing."
+% engines: rust 67int29 = 0 errors, the text a plain <p> in the title block, no abstract; perl (OmniBus, no an binding) = 0 errors, <abstract name="Abstract">
+% expect:  0 errors, 0 warnings; <ltx:abstract><ltx:p>We consider the contribution of microlensing.</ltx:p></ltx:abstract>, the text once
+% status:  RED (67int29) -> GREEN (77b)
+% preload: ar5iv.sty
+\documentclass{an}
+\begin{document}
+\title{A Title}
+\author{A. Author}
+\keywords{lensing -- quasars}
+\abstract{We consider the contribution of microlensing.}
+\maketitle
+\section{Introduction}
+Body text.
+\end{document}

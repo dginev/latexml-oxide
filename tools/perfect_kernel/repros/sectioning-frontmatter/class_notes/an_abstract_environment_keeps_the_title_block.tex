@@ -1,0 +1,22 @@
+% an.cls's `{abstract}` environment is its `\aaabstract` store too (an.cls:98 `\AtEndOfClass{\let\abstract=\aaabstract}`,
+% :414; `\begin{abstract}` calls it): with the store the frontmatter's abstract and `\@abstract` given empty, the
+% deposited title block (`\@maketitle` :715-718) keeps the class's keywords line, which the deposit dropped when
+% `\@abstract` was undefined there ("dropped: … raised 1 error(s)"; an_cls.rs).
+% witness: astro-ph0611016 (the class; the environment form is reviewer probe anenv)
+% oracle:  pdflatex 0 errors (beside the trimmed an.cls): the title page "Key words lensing – quasars", then the abstract text
+% engines: rust 67int29 = 0 errors, the abstract kept, no "Key words" line (the deposit dropped); perl (OmniBus, no an binding) = 0 errors, <abstract>, no keywords
+% expect:  0 errors, 0 warnings; <ltx:abstract><ltx:p>We consider the contribution of microlensing.</ltx:p></ltx:abstract> once, "Key words lensing – quasars" in the title block
+% status:  RED (67int29) -> GREEN (77b r2)
+% preload: ar5iv.sty
+\documentclass{an}
+\begin{document}
+\title{A Title}
+\author{A. Author}
+\keywords{lensing -- quasars}
+\begin{abstract}
+We consider the contribution of microlensing.
+\end{abstract}
+\maketitle
+\section{Introduction}
+Body text.
+\end{document}

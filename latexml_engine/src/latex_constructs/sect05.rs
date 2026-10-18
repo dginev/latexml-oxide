@@ -2929,6 +2929,26 @@ fn is_font_state(key: SymStr) -> bool {
   FONT_STATE.iter().any(|cs| meaning_key(&T_CS!(cs)) == key)
 }
 
+/// A binding's record of `part`, the text the parameterless macro `name` prints for a store the frontmatter carries:
+/// it joins `lx_replay_records`, which `\lx@replay@records` takes out of the macro in the title-page deposit and
+/// replay (`\lx@deposit@maketitle`) as it does a refused setter's record (`note_replay_records`). an.cls v1.03's
+/// label before its abstract store (`\noindent{\bfseries\abstractname}\ \@abstract`, an_cls.rs; astro-ph0306340).
+pub fn note_title_page_part(name: &str, part: Tokens) {
+  let mut records = match lookup_value("lx_replay_records") {
+    Some(Stored::VecDequeStored(records)) => records,
+    _ => VecDeque::new(),
+  };
+  records.push_back(Stored::VecDequeStored(VecDeque::from([
+    Stored::String(pin(name)),
+    Stored::Tokens(part),
+  ])));
+  assign_value(
+    "lx_replay_records",
+    Stored::VecDequeStored(records),
+    Some(Scope::Global),
+  );
+}
+
 /// After a kept replay of a refused class setter: what the replay added to each macro it changed (`assigned`, its
 /// journal's meanings with their values before) that is now a parameterless token list — the tail it appended to the
 /// value before (`\g@addto@macro`, `\appto`), the head it prepended, the text it inserted between the two (before a

@@ -1,0 +1,24 @@
+% cclayout.sty's `\Abstract{…}` (:66 `\newcommand{\Abstract}{\for@cc@abstract}`) and `{subject}` (:81, `\Collect@Body
+% \for@cc@subject`) store their text for cc.cls's `\maketitle` (:885-905), whose title page is not set: the abstract and
+% the subject classification were lost with 0 errors. They are the frontmatter's abstract and classification, named by
+% the package's labels (cclayout_sty.rs); `{keywords}` stays K11's collected-body reroute.
+% witness: none in the sampled corpus (0 of ~38,000); silent-loss inventory #11 (agent_reports/2026-10-18_silent_loss_inventory.md)
+% oracle:  pdflatex 0 errors: "Abstract. The abstract text here." "Keywords. lower bounds, circuits" "Subject classification.
+%          68Q15, 68Q17"; cc's warnings "Who is the contact author?" and "Missing submission/received date.",
+%          and a "Command ... has changed" (pdflatex's \refstepcounter, ours ccalgo's \@item)
+% engines: rust 67int29 = 0 errors, 3 warnings, no abstract and no classification; perl (OmniBus) = 1 error ({subject} undefined), "68Q15, 68Q17" a plain <p>
+% expect:  0 errors, the 3 warnings; <ltx:abstract name="Abstract">, <ltx:keywords name="Keywords: ">lower bounds, circuits</ltx:keywords>,
+%          <ltx:classification name="Subject classification">68Q15, 68Q17</ltx:classification>, each text once
+% status:  RED (67int29) -> GREEN (77b)
+% preload: ar5iv.sty
+\documentclass{cc}
+\title{A Title}
+\author{Ann Author\\ Some University\\ \email{ann@example.org}}
+\Abstract{The abstract text here.}
+\begin{keywords}lower bounds, circuits\end{keywords}
+\begin{subject}68Q15, 68Q17\end{subject}
+\begin{document}
+\maketitle
+\section{Intro}
+Body text.
+\end{document}

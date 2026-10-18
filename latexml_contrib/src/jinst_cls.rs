@@ -24,11 +24,11 @@ use latexml_package::prelude::*;
 ///   deposited.
 ///
 /// The `\author` and `\abstract` checks of `\AtBeginDocument` read flags the kernel's locked `\author`/`\abstract` set
-/// by replaying the class's own (OXIDIZED_DESIGN #482). A paper whose source lacks the class falls to OmniBus.
+/// by replaying the class's own (OXIDIZED_DESIGN #482). A paper whose source lacks the class falls to OmniBus, with
+/// the loader's missing-file Warning.
 pub(crate) fn jhep_family_class(name: &str) -> Result<()> {
   let Some(class) = crate::shipped_class::requested_shipped_class(name)? else {
-    LoadClass!("OmniBus");
-    return Ok(());
+    return crate::shipped_class::omnibus_without_copy(name);
   };
   InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
   // a class only named like the family (the prefix fallback's `JINSTfoo`) is left as it is: without the JHEP title

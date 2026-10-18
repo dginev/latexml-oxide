@@ -1,12 +1,12 @@
 //! cimento.cls (Il Nuovo Cimento, Società Italiana di Fisica): the papers ship the class (it is not in TeX Live) —
 //! or a renamed copy (`cimento_modif.cls`, 2203.13736), which the prefix fallback answers with this binding — and it is
-//! read raw, with what the kernel's frontmatter needs of it. A paper whose source lacks the class falls to OmniBus.
+//! read raw, with what the kernel's frontmatter needs of it. A paper whose source lacks the class falls to OmniBus, with
+//! the loader's missing-file Warning.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
   let Some(class) = crate::shipped_class::requested_shipped_class("cimento")? else {
-    LoadClass!("OmniBus");
-    return Ok(());
+    return crate::shipped_class::omnibus_without_copy("cimento");
   };
   InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
   // cimento.cls:746 `\def\ETC{\unskip\unscrunch|}`, inside its `\maketitle`: in an author list (or a title) `\ETC` marks

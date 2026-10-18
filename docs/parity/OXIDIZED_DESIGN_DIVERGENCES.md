@@ -20275,6 +20275,49 @@ titlepage with ink: text, or a graphic, picture, formula or SVG. A cover that pr
 duplicate, as before. Repro `sectioning-frontmatter/empty_titlepage_keeps_the_title`; guard
 `perfect_kernel_batch74b::empty_titlepage_keeps_the_title`.
 
+### 763. an.cls, apa.cls and cclayout.sty title-page stores are the frontmatter (Perl: OmniBus for the classes, an Error on `{subject}`)
+
+Under the raw classes (OD #444) three class stores that only a class's own title page prints were lost with 0 errors
+(silent-loss inventory #11, #23). Each is now the frontmatter element where the class or package defines its setter:
+- **an.cls** (Astronomische Nachrichten; not in TeX Live, the papers ship it): `\abstract` is the class's `\aaabstract`
+  (an.cls:98 `\AtEndOfClass{\let\abstract=\aaabstract}`, :414 `\gdef\@abstract{#1}`, read by `\@maketitle` :718), so
+  the text was a plain paragraph of the deposited title block. A new stand-in binding (latexml_contrib `an_cls.rs`,
+  listed in `AUTHOR_FILE_STAND_INS`) reads the shipped copy raw and redefines `\aaabstract` as `\lx@add@abstract`
+  before the end-of-class hook copies it; without a copy it is OmniBus, with the loader's missing-file status and
+  "Can't find binding for class an (using OmniBus)" Warning (latexml_package `shipped_class::omnibus_without_copy`,
+  which the cimento, compositio, jinst and apa-family stand-ins share; the binding's presence had kept the loader from
+  raising it). Witness astro-ph0611016 (0 errors before and after; the abstract now `ltx:abstract`, its text once).
+  v1.03 (2002/07/04, astro-ph0306340) prints the class's label before the store (`\@maketitle` :662
+  `\noindent{\bfseries\abstractname}\ \@abstract`; v1.09a and later comment it out): there the setter passes
+  `name={\abstractname}` and the title-page deposit takes that line out of `\@maketitle` (sect05.rs
+  `note_title_page_part`, a `\lx@replay@records` record), so no lone bold "Abstract" paragraph stays in the title
+  block; `\abstractname` is not changed. With the store given empty, a paper using the class's `{abstract}`
+  environment keeps the deposited title block (keywords line, © line), which the deposit dropped while `\@abstract`
+  was undefined there. The binding's name makes it the prefix fallback (Perl Package.pm:2717-2728: `my ($alternate)
+  = grep` :2723, the Warning :2728) for classes whose name starts with `an` and that have no binding: andp2012.cls
+  (1504.05091, 1810.06303) is read raw by it as before, with no `\aaabstract` to redefine — XML byte-identical — plus
+  the "Can't find binding for class andp2012 (using an)" Warning; so is the 2014 v1.12 an.cls, which defines
+  `\abstract` itself (:422; 1810.02388, 2103.06625).
+- **apa.cls** `\acknowledgements` (:461 `\long\def\@acks{#1}`, printed by the doc/jou title pages :1262-1267,
+  :1549-1557, and in man mode as a closing section :760-764) is `ltx:acknowledgements` named by `\acksname` ("Author
+  Note"), in every mode (apa6_cls.rs `define_notes`, beside `\note`). In man mode this moves the text from the class's
+  closing `\AtEndDocument` "Author Note" section (:760-764 `\section{\acksname}\@acks`, which the raw class
+  produced) into the frontmatter: semantic markup over PDF placement. `ltx:acknowledgements` is `Inline.model` (the
+  schema, as Perl's), so a multi-paragraph argument runs on as one text, as every acknowledgements binding's does
+  (revtex's in-place `{acknowledgments}` too); the man-mode section had kept its paragraphs.
+- **cclayout.sty** (cc.cls:229-230): `\Abstract{…}` (:66) and `{subject}` (:76-81) are `ltx:abstract` named
+  `\ccabstractname` and `ltx:classification` named `\ccsubjectclassificationname` (latexml_contrib `cclayout_sty.rs`,
+  which reads the package raw first); `{keywords}` stays K11's collected-body reroute.
+
+Perl has no binding for any of the three: an.cls and apa.cls fall to OmniBus (an abstract, and `<acknowledgements
+name="Acknowledgements">` with `\note` undefined, 1 Error), cc.cls to OmniBus with `{subject}` undefined (1 Error,
+"68Q15, 68Q17" a plain paragraph). Repros `sectioning-frontmatter/class_notes/{an_abstract_store_is_the_abstract,
+an_v103/an_v103_abstract_label_is_its_name, an_abstract_environment_keeps_the_title_block, apa_acknowledgements_kept,
+cclayout_abstract_and_subject_kept}`; guards `perfect_kernel_batch74b::{an_abstract_store_is_the_abstract,
+an_v103_abstract_label_is_its_name, an_abstract_environment_keeps_the_title_block, an_without_its_class_warns,
+apa_acknowledgements_are_kept_in_every_mode, cclayout_abstract_and_subject_are_kept}`. **Why**: the authored text in its
+semantic element, error-free, by the class's own setter rather than its unset title page.
+
 ### 764. A shipped class's pre-2020 `\@pushfilename` is read with the pop of its era (TL 2025 pdflatex: errors; Perl: OmniBus)
 
 pasa.cls (2013/04/01 v1.0, Publications of the Astronomical Society of Australia; shipped, not in TeX Live) redefines

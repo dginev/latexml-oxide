@@ -436,3 +436,219 @@ fn asmejour_keywords_are_kept() {
     "{xml}"
   );
 }
+
+/// an.cls's `\abstract` is its `\aaabstract` (an.cls:98, :414), a store only its title page reads: the abstract, its
+/// text once, where it was a plain paragraph of the deposited title block (an_cls.rs; astro-ph0611016). Clean, as
+/// pdflatex beside the trimmed class.
+#[test]
+fn an_abstract_store_is_the_abstract() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/an_abstract_store_is_the_abstract.tex"
+    ),
+    &[(
+      "an.cls",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/an.cls"
+      ),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">We consider the contribution of microlensing.</p> </abstract>"#),
+    "{xml}"
+  );
+  assert_eq!(
+    xml.matches("We consider the contribution").count(),
+    1,
+    "{xml}"
+  );
+  assert!(xml.contains("lensing – quasars"), "{xml}");
+  assert!(
+    xml.contains(r#"<p xml:id="S1.p1.1">Body text.</p>"#),
+    "{xml}"
+  );
+}
+
+/// an.cls v1.03's title page prints the class's label before its abstract store (an.cls:662 `\noindent{\bfseries
+/// \abstractname}\ \@abstract`): the label is the abstract's name and the deposited title block keeps no lone bold
+/// "Abstract" paragraph (an_cls.rs, sect05.rs `note_title_page_part`; astro-ph0306340). Clean, as pdflatex beside the
+/// trimmed class.
+#[test]
+fn an_v103_abstract_label_is_its_name() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/an_v103/an_v103_abstract_label_is_its_name.tex"
+    ),
+    &[(
+      "an.cls",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/an_v103/an.cls"
+      ),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">We discuss a new member candidate.</p> </abstract>"#),
+    "{xml}"
+  );
+  assert_eq!(
+    xml.matches("We discuss a new member candidate.").count(),
+    1,
+    "{xml}"
+  );
+  assert!(!xml.contains(">Abstract</text>"), "{xml}");
+  assert!(
+    xml.contains(r#"<p xml:id="S1.p1.1">Body text.</p>"#),
+    "{xml}"
+  );
+}
+
+/// an.cls's `{abstract}` environment calls the same store (`\begin{abstract}` → `\abstract` = `\aaabstract`): the
+/// abstract once, and the deposited title block keeps the class's keywords line, which the deposit dropped while
+/// `\@abstract` was undefined there (an_cls.rs; reviewer probe anenv, which keeps the © line too). Clean, as pdflatex
+/// beside the trimmed class.
+#[test]
+fn an_abstract_environment_keeps_the_title_block() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/an_abstract_environment_keeps_the_title_block.tex"
+    ),
+    &[(
+      "an.cls",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/an.cls"
+      ),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">We consider the contribution of microlensing.</p> </abstract>"#),
+    "{xml}"
+  );
+  assert_eq!(
+    xml.matches("We consider the contribution").count(),
+    1,
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<text font="bold" xml:id="p1.1.1">Key words</text> lensing – quasars"#),
+    "{xml}"
+  );
+}
+
+/// A paper asking for an.cls without shipping it: OmniBus, with the loader's missing-binding Warning, which the
+/// stand-in binding's presence had kept back (`omnibus_without_copy`; pdflatex stops on the missing file).
+#[test]
+fn an_without_its_class_warns() {
+  let (log, xml) = convert_with(
+    "\\documentclass{an}\n\\begin{document}\n\\title{A Title}\n\\author{A. Author}\n\\maketitle\nBody text.\n\\end{document}\n",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log
+      .lines()
+      .any(|l| l == "Warning:missing_file:an Can't find binding for class an (using OmniBus)"),
+    "{log}"
+  );
+  assert!(squash(&xml).contains("<title>A Title</title>"), "{xml}");
+}
+
+/// apa.cls's `\acknowledgements` stores for the doc and jou title pages, which the refused `\maketitle` never set (man
+/// mode: a closing section): in every mode the paper's acknowledgements under "Author Note", its text once, beside the
+/// title page's `\note` (apa6_cls.rs `define_notes`). The one warning is the class's, as pdflatex's.
+#[test]
+fn apa_acknowledgements_are_kept_in_every_mode() {
+  if !latexml::util::test::kpse_has("apa.cls") {
+    eprintln!("skipped: apa.cls is not installed");
+    return;
+  }
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/apa_acknowledgements_kept.tex"
+  );
+  assert!(
+    tex.contains("[doc]{apa}"),
+    "the mode replacements read the repro's class line"
+  );
+  for mode in ["doc", "jou", "man"] {
+    let (log, xml) = convert_with(
+      &tex.replace("[doc]{apa}", &format!("[{mode}]{{apa}}")),
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 1),
+      "{mode}: {log}"
+    );
+    assert!(
+      log.lines().any(|l| l.starts_with(
+        "Warning:latex:(apa)  Class apa Warning: Using BibTeX with apacite for citations and references"
+      )),
+      "{mode}: {log}"
+    );
+    let xml = squash(&xml);
+    assert!(
+      xml.contains(r#"<acknowledgements inlist="toc" name="Author Note" xml:id="acknowledgements1">We thank the funding agency.</acknowledgements> <note role="note" xml:id="id1">Draft note for reviewers.</note>"#),
+      "{mode}: {xml}"
+    );
+    assert_eq!(
+      xml.matches("We thank the funding agency.").count(),
+      1,
+      "{mode}: {xml}"
+    );
+    assert!(!xml.contains("<title>Author Note</title>"), "{mode}: {xml}");
+  }
+}
+
+/// cclayout.sty's `\Abstract` and `{subject}` store for cc.cls's title page, which is not set: the abstract and the
+/// subject classification under the package's labels, each text once, beside K11's `{keywords}` (cclayout_sty.rs). The
+/// three warnings are cc's two and a "has changed" one, as pdflatex's three.
+#[test]
+fn cclayout_abstract_and_subject_are_kept() {
+  if !latexml::util::test::kpse_has("cc.cls") {
+    eprintln!("skipped: cc.cls is not installed");
+    return;
+  }
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/cclayout_abstract_and_subject_kept.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
+  for (prefix, warning) in [
+    ("Warning:latex:(cc)", "Who is the contact author?"),
+    ("Warning:latex:(cc)", "Missing submission/received date."),
+    ("Warning:latex:(ccalgo)", "Command \\@item has changed."),
+  ] {
+    assert!(
+      log
+        .lines()
+        .any(|l| l.starts_with(prefix) && l.contains(warning)),
+      "{warning}: {log}"
+    );
+  }
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">The abstract text here.</p> </abstract> <keywords name="Keywords: ">lower bounds, circuits</keywords> <classification name="Subject classification">68Q15, 68Q17</classification>"#),
+    "{xml}"
+  );
+  for text in [
+    "The abstract text here.",
+    "lower bounds, circuits",
+    "68Q15, 68Q17",
+  ] {
+    assert_eq!(xml.matches(text).count(), 1, "{text}: {xml}");
+  }
+  assert!(
+    xml.contains(r#"<p xml:id="S1.p1.1">Body text.</p>"#),
+    "{xml}"
+  );
+}

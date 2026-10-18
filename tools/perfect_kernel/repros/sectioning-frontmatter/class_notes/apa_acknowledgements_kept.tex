@@ -1,0 +1,26 @@
+% apa.cls's `\acknowledgements{…}` stores its text (apa.cls:461 `\long\def\acknowledgements#1{\long\def\@acks{#1}}`) for
+% the doc and jou title pages (:1262-1267, :1549-1557), which the refused `\maketitle` never sets: the text was lost
+% with 0 errors (man mode prints it as a closing "Author Note" section, :760-764). It is the paper's acknowledgements
+% under the class's `\acksname` (apa6_cls.rs `define_notes`); `\note` stays the title page's note. The guard runs the
+% doc, jou and man modes.
+% witness: none in the sampled corpus (0 of ~38,000); silent-loss inventory #11 (agent_reports/2026-10-18_silent_loss_inventory.md)
+% oracle:  pdflatex 0 errors in doc, jou and man modes, each printing "We thank the funding agency." once (doc/jou on the
+%          title page, man under "Author Note"); the class warning "Using BibTeX with apacite for citations and references"
+%          (man: two more, on the short title and running head)
+% engines: rust 67int29 = 0 errors, the text absent in doc and jou (man: a closing section); perl doc (OmniBus) = 1 error (\note undefined), <acknowledgements name="Acknowledgements">
+% expect:  0 errors, 1 warning (the class's); <ltx:acknowledgements name="Author Note">We thank the funding agency.</ltx:acknowledgements>,
+%          the text once; <ltx:note role="note">Draft note for reviewers.</ltx:note>
+% status:  RED (67int29) -> GREEN (77b)
+% preload: ar5iv.sty
+\documentclass[doc]{apa}
+\title{A Title}
+\author{Ann Author}
+\affiliation{Some University}
+\abstract{The abstract text here.}
+\note{Draft note for reviewers.}
+\acknowledgements{We thank the funding agency.}
+\begin{document}
+\maketitle
+\section{Intro}
+Body text.
+\end{document}
