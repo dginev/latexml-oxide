@@ -160,6 +160,10 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   if copy_provides_keeps_counter(ctr) {
     return Ok(());
   }
+  // (any other counter a stand-in's copy declares is declared for real — its `\c@`, `\cl@`, `\the`, `\p@` names outlive
+  // the copy's overlay, as the real class's do: `state::copy_provides_keeps_counter`)
+  let _declared = (crate::definition::origin::copy_provides() != 0)
+    .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
   let unctr = s!("UN{ctr}"); // UNctr is counter for generating ID's for UN-numbered items.
   if !within.is_empty()
     && within != "document"

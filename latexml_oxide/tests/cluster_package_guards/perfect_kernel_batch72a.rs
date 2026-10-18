@@ -771,12 +771,16 @@ fn renamed_natbib_copies_are_natbib() {
 /// (NJDnatbib.sty:1052 `\bmsection*{…REFERENCES…}`: 2602.03829, 2408.07575, 2609.08425), a v2 or MRM one natbib's
 /// `\refname` (`\section*{\refname…}`: 2101.06297, 2211.16474, 2411.11493, 2206.08798, 2506.14995) — under article
 /// and under the version's own class binding (WileyNJDv5, WileyNJD-v2), whose OmniBus base defines `\chapter` today,
-/// and again with `\chapter` undefined, as a class without chapters leaves it. Every version's superscript carries the
+/// and again with `\chapter` undefined, as a class without chapters leaves it, with a `chapter` counter (the reviewer's
+/// probe njd_v5_ctr: pdflatex "REFERENCES") and with both, as the real Wiley classes have them (WileyNJDv5.cls:5728,
+/// MRM.cls:2160 `\newcounter{chapter}[part]`, no `\chapter`; `state::class_defines_chapter`). Every version's superscript carries the
 /// postnote (:366-368). pdflatex on the real forks (the reviewer's probes njd_direct_v2, njd_direct_v5): "References",
 /// "REFERENCES"; "1 and 2, p. 5" raised.
 #[test]
 fn njdnatbib_heading_by_version() {
   let chapter_undefined = "\\makeatletter\\let\\chapter\\@undefined\\makeatother\n";
+  // (the real Wiley classes: a `chapter` counter and no `\chapter`, WileyNJDv5.cls:5728, MRM.cls:2160)
+  let wiley = "\\newcounter{chapter}\\makeatletter\\let\\chapter\\@undefined\\makeatother\n";
   for (tex, copy, class, title) in [
     (
       repro!("natbib_forks/njdnatbib_is_natbib.tex"),
@@ -792,7 +796,7 @@ fn njdnatbib_heading_by_version() {
     ),
   ] {
     for documentclass in ["article", class] {
-      for chapter in ["", chapter_undefined] {
+      for chapter in ["", chapter_undefined, "\\newcounter{chapter}\n", wiley] {
         let source = tex.replace(
           "\\documentclass{article}\n",
           &format!("\\documentclass{{{documentclass}}}\n{chapter}"),
@@ -872,15 +876,26 @@ fn renamed_natbib_copies_take_the_class_options() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let paragraph = latexml::util::test::xml_element(&xml, "p", &["xml:id=\"p1.1\""])
-    .unwrap_or_else(|| panic!("no paragraph: {xml}"));
-  assert!(
-    paragraph.starts_with("<p xml:id=\"p1.1\">EXTRA <cite class=\"ltx_citemacro_citep\">"),
-    "{paragraph}"
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">EXTRA <cite class=\"ltx_citemacro_citep\">(<bibref bibrefs=\"a\" separator=\";\" show=\"AuthorsPhrase1Year\" yyseparator=\",\"><bibrefphrase>, </bibrefphrase></bibref>)</cite></p>",
   );
   let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
     .unwrap_or_else(|| panic!("no bibliography: {xml}"));
   assert_element(&bibliography, "title", &[], "<title>References</title>");
+  // (a class with `\chapter` heads it `\bibname`, ws-rv-har.sty:676-685: book's "Bibliography"; ws-rv9x6.cls:499, :91
+  // "References" in 2301.03442)
+  let (log, xml) = convert_files_with(
+    &repro!("natbib_forks/ws_rv_har_is_natbib.tex").replace("{article}", "{book}"),
+    &[("ws-rv-har.sty", repro!("natbib_forks/ws-rv-har.sty"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
+    .unwrap_or_else(|| panic!("no bibliography: {xml}"));
+  assert_element(&bibliography, "title", &[], "<title>Bibliography</title>");
 }
 
 /// The spotcolor `[pantone]` preload (spotcolor.sty:81-82) keeps each colour's CMYK alternate: PANTONE 103 PC is
@@ -912,10 +927,25 @@ fn copy_environments_decided_as_a_pair() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  for tag in ["Definition 1.1", "Theorem 1.2"] {
-    assert!(
-      xml.contains(&format!("\">{tag}</text></tag>")),
-      "{tag}: {xml}"
+  // (the two share the `definition` counter, cimart.cls:295-315: `S1.Thmdefinition2` is the theorem)
+  for (n, class, tag, autoref, body) in [
+    (1, "definition", "Definition 1.1", "1.1", "A def."),
+    (
+      2,
+      "theorem",
+      "Theorem 1.2",
+      "Theorem\u{a0}1.2",
+      "<text font=\"italic\" xml:id=\"S1.Thmdefinition2.p1.1.1\">A thm.</text>",
+    ),
+  ] {
+    let id = format!("S1.Thmdefinition{n}");
+    assert_element(
+      &xml,
+      "theorem",
+      &[&format!("xml:id=\"{id}\"")],
+      &format!(
+        "<theorem class=\"ltx_theorem_{class}\" inlist=\"thm theorem:{class}\" xml:id=\"{id}\">\n          <tags>\n            <tag>{tag}</tag>\n            <tag role=\"autoref\">{autoref}<text xml:id=\"{id}.1\"/></tag>\n            <tag role=\"refnum\">1.{n}</tag>\n            <tag role=\"typerefnum\">{tag}</tag>\n          </tags>\n          <title class=\"ltx_runin\"><tag><text font=\"sansserif bold\" xml:id=\"{id}.2\">{tag}</text></tag><text font=\"sansserif bold\" xml:id=\"{id}.3\">.</text></title>\n          <para xml:id=\"{id}.p1\">\n            <p xml:id=\"{id}.p1.1\">{body}</p>\n          </para>\n        </theorem>"
+      ),
     );
   }
 }
@@ -971,4 +1001,86 @@ fn copy_text_defaults_hold() {
   let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
     .unwrap_or_else(|| panic!("no bibliography: {xml}"));
   assert_element(&bibliography, "title", &[], "<title>REFERENCES</title>");
+}
+
+/// A repeat `\usepackage[…]{natbib}` after the document's world loaded natbib keeps the first options and is LaTeX's
+/// "Option clash" Error (binding/content.rs `apply_new_options_on_reload`, `natbib.sty_repeat_clash`): the reviewer's
+/// probes nat_twice and jmlr_numbers (jmlr.cls:150's own load), pdflatex 1 error and author-year. After a compiled
+/// binding's own early load the later options apply (svjour3: sv_support's natbib, svjour3.cls:67-68 loads it only under
+/// its `natbib` option; 2604.22515's `[numbers,sort&compress]`, as its PDF) — the 8 census papers 2112.14648,
+/// 2607.20603, 2405.09762, 1012.4730, 2604.20688, 2107.02450, 2409.07188, 2604.22515.
+#[test]
+fn natbib_repeat_load_clashes_after_the_documents_load() {
+  let tex = repro!("natbib_forks/natbib_repeat_after_the_documents_load_clashes.tex");
+  let author_year = "<p xml:id=\"p1.1\">Text <cite class=\"ltx_citemacro_citep\">(<bibref bibrefs=\"a\" separator=\";\" show=\"AuthorsPhrase1Year\" yyseparator=\",\"><bibrefphrase>, </bibrefphrase></bibref>)</cite>.</p>";
+  let numbers = "<p xml:id=\"p1.1\">Text <cite class=\"ltx_citemacro_citep\">[<bibref bibrefs=\"a\" separator=\",\" show=\"Number\" yyseparator=\",\"/>]</cite>.</p>";
+  for (class, errors, paragraph) in [
+    ("article", 1, author_year),
+    ("jmlr", 1, author_year),
+    ("svjour3", 0, numbers),
+  ] {
+    let source = tex.replace("{article}", &format!("{{{class}}}"));
+    let (log, xml) = convert_files_with(&source, &[], Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (errors, 0),
+      "{class}: {log}"
+    );
+    assert_eq!(
+      log.matches("Option clash for package natbib").count(),
+      errors,
+      "{class}: {log}"
+    );
+    assert_element(&xml, "p", &["xml:id=\"p1.1\""], paragraph);
+  }
+}
+
+/// A stand-in's copy that `\LoadClass`es its base class has that class's names: its `\newcommand` of one is LaTeX's
+/// "Command … already defined" Error and the first definition stays (`state::copy_provides_text_default_clashes`;
+/// article.cls:616 `\refname`, its `\figurename`). The reviewer's probe newcmd_base: pdflatex 2 errors, "Figure 1",
+/// "References". A name the base class lacks is the copy's (`copy_text_defaults_hold`: `\bibname` "Works").
+#[test]
+fn copy_newcommand_of_a_base_class_name_errs() {
+  let (log, xml) = convert_files_with(
+    repro!("text_defaults/loadclass/copy_newcommand_of_a_base_class_name_errs.tex"),
+    &[("cimart.cls", repro!("text_defaults/loadclass/cimart.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
+  for name in ["\\refname", "\\figurename"] {
+    assert!(
+      log.contains(&format!("Command {name} already defined")),
+      "{name}: {log}"
+    );
+  }
+  assert_element(
+    &xml,
+    "figure",
+    &[],
+    "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><p xml:id=\"S0.F1.2\">x</p><toccaption><tag close=\" \">1</tag>C</toccaption><caption><tag close=\": \">Figure 1</tag>C</caption></figure>",
+  );
+  let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
+    .unwrap_or_else(|| panic!("no bibliography: {xml}"));
+  assert_element(&bibliography, "title", &[], "<title>References</title>");
+}
+
+/// A `chapter` counter with no `\chapter` numbers no appendix within chapters (latex_constructs `begin_appendices`,
+/// `state::class_defines_chapter`): WileyNJD-v2.cls:2410's bookmark counter, declared for real now that a stand-in copy's
+/// counter is (2211.16474: "Appendix A", not "Appendix 0.A"). pdflatex: "A".
+#[test]
+fn chapter_counter_without_chapter_numbers_appendix_alone() {
+  let (log, xml) = convert_files_with(
+    repro!("counters/chapter_counter_without_chapter_appendix.tex"),
+    &[],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let appendix = latexml::util::test::xml_element(&xml, "appendix", &[])
+    .unwrap_or_else(|| panic!("no appendix: {xml}"));
+  assert_element(
+    &appendix,
+    "title",
+    &[],
+    "<title><tag close=\" \">Appendix A</tag>Extra</title>",
+  );
 }

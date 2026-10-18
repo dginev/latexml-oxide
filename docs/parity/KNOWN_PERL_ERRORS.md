@@ -15569,6 +15569,7 @@ Trigger: `\documentclass{article}\renewcommand\refname{Literatur}\usepackage{nat
 \begin{thebibliography}{1}\bibitem{a} A. Author. 2001.\end{thebibliography}\end{document}` — pdflatex heads the
 bibliography "Literatur"; Perl (same host) `<title>References</title>`.
 
-Rust (72a r5): natbib_sty.rs defines each only where it is undefined. Witness 2506.14995 (MRM.cls:3191 `\def\refname
-{REFERENCES}` after its `\usepackage[numbers,super]{NJDnatbib}`; its PDF "REFERENCES"). Guards
+Rust (72a r5): natbib_sty.rs defines each only where it is undefined. No arXiv witness: 2506.14995 does not trigger
+it (MRM.cls:3191's `\def\refname{REFERENCES}` follows its NJDnatbib load at :2441-2442, so either order of definition
+heads it "REFERENCES"); the minimal trigger above is the case. Guards
 `perfect_kernel_batch72a::renamed_natbib_copies_take_the_class_options`, `copy_text_defaults_hold`.

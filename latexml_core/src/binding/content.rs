@@ -211,6 +211,9 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   let requested_by_fallback = current_origin() == DefinitionOrigin::Fallback;
   // (and a file a borrowed binding requires is borrowed with it: amsthm's amsgen, `require_package_borrowed`)
   let requested_by_borrow = current_origin() == DefinitionOrigin::Borrowed;
+  // (a compiled binding's own code requests it — its `RequirePackage!`: `<file>:requested_by_binding`, which a repeat
+  // load's options read, `apply_new_options_on_reload`)
+  let requested_by_binding = current_origin() == DefinitionOrigin::Binding;
   let base = raw_file
     .trim()
     .rsplit(['/', '\\'])
@@ -232,6 +235,11 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
     DefinitionOrigin::File
   };
   let _origin = OriginGuard::new(origin);
+  // (a stand-in's copy loading a class: its base class, whose names the real class has, `state::note_copy_loads_class`)
+  let class = options.extension.as_deref() == Some("cls") || raw_file.ends_with(".cls");
+  if class && options.handleoptions && crate::definition::origin::copy_provides() != 0 {
+    note_copy_loads_class(raw_file);
+  }
   // A file a stand-in's copy loads (`\RequirePackage`, `\usepackage`, `\LoadClass`, `\input`) is a real load, read
   // whole as TeX reads it: the copy's provides-mode is suspended for it (`read_stand_in_copy`).
   let _suspended = (crate::definition::origin::copy_provides() != 0)
@@ -245,10 +253,9 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
     note_stand_in_file(raw_file);
   }
   // (a class it loads is its base class, whose text defaults are not its own: `StandInLoadGuard::suspend_for`)
-  let class = options.extension.as_deref() == Some("cls") || raw_file.ends_with(".cls");
   let _nested = crate::definition::origin::stand_in_loading()
     .then(|| crate::definition::origin::StandInLoadGuard::suspend_for(class));
-  input_definitions_impl(raw_file, options)
+  input_definitions_impl(raw_file, options, requested_by_binding)
 }
 
 /// Is the file now being read one the author shipped: under the document's own source directory
@@ -268,7 +275,11 @@ pub fn reading_author_file() -> bool {
   canonical(&source).starts_with(canonical(&dir))
 }
 
-fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -> Result<()> {
+fn input_definitions_impl(
+  raw_file: &str,
+  mut options: InputDefinitionOptions,
+  requested_by_binding: bool,
+) -> Result<()> {
   let trimmed = raw_file.trim();
   // A compiled binding keyed by BASENAME raw-loads its own name (`noltxml`), but
   // the dispatch dropped any directory the user wrote — so `\usepackage{DIR/pkg}`
@@ -566,6 +577,32 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
         .map(|opt| opt.trim())
         .filter(|opt| !opt.is_empty() && !prev.contains(*opt))
         .collect();
+      // A package with classic options whose binding opts in (`<file>_repeat_clash`, natbib) takes a repeat load's
+      // new options only where TeX would see them: the first load was a compiled binding's own (`<file>:requested_by_
+      // binding`; a class binding loading natbib where the real class loads it later with options, jheppub.sty:37's
+      // `[numbers,sort&compress]`: 2112.14648, 2607.20603), or the request carries a renamed copy's own options
+      // (`<file>:options_of_a_renamed_copy`: NJDnatbib, whose own `\ProcessOptions` runs in TeX; 2506.14995). Otherwise
+      // the first load was the document's world's, and LaTeX keeps its options and stops with "Option clash"
+      // (latex.ltx `\@onefilewithoptions` → `\@if@ptions`), an Error here as there; the new options are dropped.
+      // A class binding that loads the package where the real class does too (jmlr.cls:150, acmart.cls:300) records
+      // its load as the class's own (`<file>:requested_by_binding` false).
+      if !new_options.is_empty()
+        && lookup_bool(&s!("{fkey}_repeat_clash"))
+        && !lookup_bool(&s!("{fkey}:requested_by_binding"))
+        && !lookup_bool(&s!("{fkey}:options_of_a_renamed_copy"))
+      {
+        let package = fkey.rsplit_once('.').map_or(fkey, |(stem, _)| stem);
+        Error!(
+          "latex",
+          "options",
+          s!(
+            "Option clash for package {package}: options '{}' of a repeat load dropped, as LaTeX keeps the first \
+             load's",
+            new_options.join(",")
+          )
+        );
+        return Ok(());
+      }
       if !new_options.is_empty() {
         let keyvals = new_options.join(",");
         Info!(
@@ -752,6 +789,16 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
     assign_value(
       &s!("{}_loaded_with_options", filename),
       current_options,
+      Some(Scope::Global),
+    );
+  }
+  if options.handleoptions {
+    // Who asked for the first load: a compiled binding's own code (its `RequirePackage!`, where the real class may load
+    // the package later, or with options, or not at all) or the document's world (a raw file, the document). A repeat
+    // load's options read it (`apply_new_options_on_reload`).
+    assign_value(
+      &s!("{filename}:requested_by_binding"),
+      requested_by_binding,
       Some(Scope::Global),
     );
   }

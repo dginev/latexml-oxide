@@ -19330,11 +19330,23 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    2311.17607, 2406.08486; 2101.06297, 2211.16474, 2411.11493, 2206.08798, 2602.03829, 2408.07575, 2609.08425,
    2506.14995). Each fork is now a stand-in binding (contrib `njdnatbib_sty.rs`, `bmvc2k_natbib_sty.rs`) that loads
    the natbib binding with the options the class gave it (`njdnatbib_sty::natbib_fork_options`); the copy, read after,
-   provides only. Options that reach a natbib loaded already — a fork's, a class copy's or the document's
-   `\usepackage[…]{natbib}` after a binding's own load — take effect as natbib's options do (natbib.sty:238-262:
+   provides only. Options that reach a natbib loaded already take effect as natbib's options do (natbib.sty:238-262:
    `numbers` is also `square,comma`; `natbib.sty_keyval_setter` → `\lx@natbib@repeat@options`, content.rs
-   `apply_new_options_on_reload`, the mechanism hyperref's `\hypersetup` uses), at Info — not dropped (2112.14648's
-   `[numbers,sort&compress]` after the jheppub binding's natbib, 1012.4730, 2604.20688: author-year where the PDFs number; r5: MRM's binding had loaded natbib optionless before MRM.cls:2441-2442's
+   `apply_new_options_on_reload`, the mechanism hyperref's `\hypersetup` uses), at Info, only where TeX would see them
+   (r6, `natbib.sty_repeat_clash`): the first load was a compiled binding's own early one (`<file>:requested_by_binding`,
+   the requester's `Binding` origin, recorded at the first load: sv_support's natbib, which svjour3.cls:67-68 loads only
+   under its `natbib` option, 2604.22515; sn-jnl's, which sn-jnl.cls:1654-1665 loads with the style's options, 1012.4730,
+   2604.20688, 2107.02450, 2409.07188), or the request carries a renamed copy's own options (`natbib.sty:options_of_a_
+   renamed_copy`, set by `natbib_fork_options`: in TeX the fork's own `\ProcessOptions` runs). Otherwise the first load
+   was the document's world's — the document's, a raw class's, or a class binding's that records its load as the class's
+   own (jmlr.cls:150, acmart.cls:299-300: `natbib.sty:requested_by_binding` false) — and LaTeX keeps the first options and
+   stops with "Option clash for package natbib", an Error here as there (the reviewer's probes nat_twice, jmlr_numbers,
+   pdflatex author-year). jheppub's binding loads natbib with jheppub.sty:37's `[numbers,sort&compress]` (2112.14648,
+   2607.20603); jcappub's natbib is jcappub.sty:32's, read from the copy (2405.09762). Residual: the repeat rule sets
+   only natbib's style options (`numbers`, `authoryear`, `super`, brackets, separators); `sort`, `compress`,
+   `sort&compress`, `sectionbib` of a repeat load do nothing (natbib's binding does not sort or compress; `sectionbib`
+   takes effect only on the first load); hyperref's repeat setter applies after any first load (unchanged; hyperref's
+   kvoptions clash in TeX). r5: MRM's binding had loaded natbib optionless before MRM.cls:2441-2442's
    `\usepackage[numbers,super]{NJDnatbib}`, so 2506.14995 was author-year where its PDF has superscripts; the binding
    no longer loads natbib, the class's copy does, binding-in-original-space). The defaults the PDF shows, by NJDnatbib's
    version (r5; the class-family rule's dispatch on a conflict): a v5 copy (md5 277c41da: 2602.03829, 2408.07575,
@@ -19343,13 +19355,32 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    2206.08798; 4b333a37: 2506.14995) natbib's `\section*{\refname…}` (probe njd_direct_v2: pdflatex "References"), so
    MRM's is its class's `\refname`, "REFERENCES". The version is WileyNJDv5's class or the copy's own `\bibsection`
    set by v5's `\bmsection` (its overlaid meaning, `state::stand_in_copy_meaning`, read by the binding's
-   `\AtEndOfPackage` after the copy); "chapterless" is no `chapter` counter, since LaTeXML's OmniBus base defines
-   `\chapter` under every class binding today — correct also once a chapterless class leaves `\chapter` undefined
-   until `\begin{document}` (the separate `\chapter` batch). Every version's superscript carries its postnote inside,
+   `\AtEndOfPackage` after the copy); "chapterless" is decided by `\chapter`, as the fork's `\@ifundefined{chapter}`
+   does (r6, `state::class_defines_chapter`): a stand-in copy that (re)declared `\chapter` (its overlay, or declined by
+   the lock: ws-rv9x6.cls:499), a `\chapter` of the document's world or a binding's own, or the kernel's under book or
+   report — not LaTeXML's kernel `\chapter`, which the OmniBus base keeps defined under every class binding today, and
+   not a `chapter` counter, which WileyNJDv5.cls:5728 and MRM.cls:2160 declare (`\newcounter{chapter}[part]`) with no
+   `\chapter` (the reviewer's probe njd_v5_ctr, pdflatex "REFERENCES"). Where a chapterless class leaves `\chapter`
+   undefined (the separate `\chapter` batch 72b), the answer is `\@ifundefined{chapter}`'s. A copy's counter is declared
+   for real (r6, `state::copy_provides_keeps_counter`, `new_counter`): the binding keeps its numbering only for a counter
+   its load declared (`\c@<ctr>`) or numbered (the `\the<ctr>` of an existing counter); OmniBus's `\thechapter` autoload
+   stub with no `\c@chapter` does not count, so the Wiley classes' and ws-rv9x6.cls:399's `\newcounter{chapter}` declare
+   it (2301.03442's two Warnings, "Counter 'chapter' was not defined", "'\c@chapter' is not a register", gone; its and
+   1602.07982's ws-rv9x6 chapter "1" and sections "1.1" as their PDFs, r5 "Chapter 0"). The kernel's `\appendix`
+   (latex_constructs `begin_appendices`) numbers within chapters only where the class has `\chapter` by the same rule,
+   not by a `chapter` counter alone (WileyNJD-v2.cls:2410's bookmark counter: 2211.16474 "Appendix A", not "0.A");
+   appendix.sty's and titlesec's chapter tests still read the counter (`has_chapter_counter`). Every version's superscript carries its postnote inside,
    ", p. 5" (:366-368), through natbib's `NATBIB_SUPER_POSTNOTE_INSIDE` switch the fork's binding sets. ws-rv-har.sty
    (World Scientific's natbib derivative, :16 `\ProvidesPackage{ws-rv-har}`; 2301.03442, whose 28 citations were "(?)",
    pdflatex "(Mayor et al. 2011)"; 1602.07982 ships it, loads ws-rv-van) is bound the same way (`ws_rv_har_sty.rs`),
-   with its own heading: a class with chapters `\bibname` (:681-685; ws-rv9x6.cls:91 "References"), else `\refname`.
+   with its own heading: a class with `\chapter` (:676, the same `state::class_defines_chapter`) `\bibname` (:681-685;
+   ws-rv9x6.cls:91 "References"), else `\refname`; amsart `\refname` (:686-687). A copy's `\newcommand` of a text
+   default (rule 1) defines it only where the real class lacks the name: the copy loads no base class (ws-rv9x6.cls:91
+   `\newcommand\bibname`), or the base class it `\LoadClass`es does not define it (article.cls has no `\bibname`;
+   `state::copy_base_class_defines` reads the base class file's definers). A name the base class defines is the real
+   class's already: LaTeX's "Command … already defined" Error, the first definition kept (r6,
+   `state::copy_provides_text_default_clashes`, sect08.rs; the reviewer's probe newcmd_base: pdflatex 2 errors,
+   "References", "Figure 1"). `\def`/`\renewcommand` redefine as before.
 
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 %, its `\LoadClass{scrartcl}`
 (atlasdoc.cls:319, KOMA's 22 files); 2309.03819 +65 %, jgcc.cls:52's tikz; 2609.08425 +37 %, WileyNJDv5.cls's

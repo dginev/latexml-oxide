@@ -431,13 +431,16 @@ pub struct State {
 /// the binding owns (in force only inside its code), and the names and deferring seams logged.
 #[derive(Debug, Default)]
 pub struct CopyProvidesRecord {
-  pub file:       String,
-  pub overlay:    rustc_hash::FxHashMap<SymStr, Stored>,
-  pub declined:   rustc_hash::FxHashSet<SymStr>,
-  pub deferred:   rustc_hash::FxHashSet<SymStr>,
+  pub file:          String,
+  pub overlay:       rustc_hash::FxHashMap<SymStr, Stored>,
+  pub declined:      rustc_hash::FxHashSet<SymStr>,
+  pub deferred:      rustc_hash::FxHashSet<SymStr>,
   /// The copy's own `\maketitle`/`\@maketitle` bodies, refused or overlaid as they may be
   /// ([`copy_provides_title_pages`]).
-  pub title_page: Vec<Tokens>,
+  pub title_page:    Vec<Tokens>,
+  /// The classes the copy's own code loaded (`\LoadClass`, [`note_copy_loads_class`]): the real class has the names
+  /// they define ([`copy_provides_text_default_clashes`]).
+  pub loads_classes: Vec<String>,
 }
 
 /// One frame of a stand-in copy's provides-mode ([`enter_copy_provides_frame`]): the copy (`0`: a suspension), whether
@@ -2026,13 +2029,16 @@ pub fn copy_provides_refuses_locked(token: &Token) -> bool {
 }
 
 /// Does a stand-in's copy, read now ([`note_copy_provides_assignment`]), (re)declare or renumber the counter `ctr` the
-/// stand-in binding's own load declared or numbered (its `\c@<ctr>` or `\the<ctr>` assigned while the binding
-/// loaded, `State::stand_in_meanings`: `\newcounter`, `\numberwithin`, `\@addtoreset`, `\counterwithin`)? Then the
-/// counter keeps the binding's numbering: its reset list is the binding's, as its `\the<ctr>` is. A counter the binding
-/// did not number — the kernel's `equation`, the format's register with the pool's article `\theequation` — is the
-/// copy's to number, as article.cls's defaults yield to the real class's own: jheppub.sty:313-314 `\renewcommand
-/// \theequation{\thesection.\arabic{equation}}` and `\numberwithin{equation}{section}` number (2.1) as its PDF does
-/// (2112.14648, 2607.20603). Logged once per copy, at Info.
+/// stand-in binding's own load declared or numbered (its `\c@<ctr>` assigned while the binding loaded,
+/// `State::stand_in_meanings`, or the `\the<ctr>` of a counter that exists: `\newcounter`, `\numberwithin`,
+/// `\@addtoreset`, `\counterwithin`)? Then the counter keeps the binding's numbering: its reset list is the binding's, as
+/// its `\the<ctr>` is. Any other counter is the copy's, declared for real (`new_counter` suspends the copy's
+/// provides-mode for it): the kernel's `equation` with the pool's article `\theequation` — as article.cls's defaults
+/// yield to the real class's own: jheppub.sty:313-314
+/// `\renewcommand\theequation{\thesection.\arabic{equation}}` and `\numberwithin{equation}{section}` number (2.1) as its
+/// PDF does (2112.14648, 2607.20603) — and a counter the binding only has a `\the<ctr>` for, OmniBus's `\thechapter`
+/// autoload stub: WileyNJDv5.cls:5728 and MRM.cls:2160 `\newcounter{chapter}[part]`, ws-rv9x6.cls:399
+/// `\newcounter{chapter}` (2301.03442: declined, `\c@chapter` was "not a register"). Logged once per copy, at Info.
 pub fn copy_provides_keeps_counter(ctr: &str) -> bool {
   let id = crate::definition::origin::copy_provides();
   if id == 0 || state_is_unlocked() {
@@ -2040,7 +2046,10 @@ pub fn copy_provides_keeps_counter(ctr: &str) -> bool {
   }
   let counter = T_CS!(s!("\\c@{ctr}"));
   let numbered = |token: &Token| state!().stand_in_meanings.contains(&meaning_key(token));
-  if !numbered(&counter) && !numbered(&T_CS!(s!("\\the{ctr}"))) {
+  // (a `\the<ctr>` numbers a counter that exists — the kernel's `equation` — not one it only stands for: OmniBus's
+  // `\thechapter` autoload stub with no `\c@chapter`)
+  let exists = lookup_meaning(&counter).is_some_and(|meaning| !matches!(meaning, Stored::None));
+  if !numbered(&counter) && !(exists && numbered(&T_CS!(s!("\\the{ctr}")))) {
     return false;
   }
   let key = meaning_key(&counter);
@@ -2363,13 +2372,132 @@ fn unowned_text_default(token: &Token) -> bool {
   }
 }
 
-/// Does a stand-in's copy, read now, `\newcommand` a text default its binding does not own (`unowned_text_default`)?
-/// Then the declaration defines it, as it does in TeX, where the real class defines the name itself: LaTeXML's kernel
-/// or the binding's base class predefined it (ws-rv9x6.cls:91 `\newcommand\bibname{References}`, 2301.03442).
+/// Does a stand-in's copy, read now, `\newcommand` a text default its binding does not own (`unowned_text_default`),
+/// in a real class that lacks the name? Then the declaration defines it, as it does in TeX: LaTeXML's kernel or the
+/// binding's base class predefined it, and no base class the copy loads defines it — a standalone class (ws-rv9x6.cls:91
+/// `\newcommand\bibname{References}`, 2301.03442), or a name its base class lacks (article.cls has no `\bibname`). A
+/// name the base class the copy `\LoadClass`es defines is the real class's already, so its `\newcommand` is TeX's
+/// "already defined" ([`copy_provides_text_default_clashes`]).
 pub fn copy_provides_text_default_yields(token: &Token) -> bool {
   crate::definition::origin::copy_provides() != 0
     && !state_is_unlocked()
     && unowned_text_default(token)
+    && !copy_base_class_defines(token)
+}
+
+/// Does a stand-in's copy, read now, `\newcommand` a text default its binding does not own (`unowned_text_default`)
+/// that the base class it `\LoadClass`ed defines (article.cls:616 `\newcommand\refname`, `\figurename`; LaTeXML's
+/// kernel or the base class's binding predefines them)? The real class has the name, so LaTeX stops with "Command …
+/// already defined" and keeps the first definition: an Error here as there (sect08.rs `\newcommand`; the probe
+/// newcmd_base, pdflatex 2 errors, "References"/"Figure 1"). `\def`/`\renewcommand` redefine as before.
+pub fn copy_provides_text_default_clashes(token: &Token) -> bool {
+  crate::definition::origin::copy_provides() != 0
+    && !state_is_unlocked()
+    && unowned_text_default(token)
+    && copy_base_class_defines(token)
+}
+
+/// The stand-in copy read now loads the class `file` from its own code (`\LoadClass`; binding::content
+/// `input_definitions`).
+pub fn note_copy_loads_class(file: &str) {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 {
+    return;
+  }
+  let name = file.trim();
+  let name = if name.ends_with(".cls") {
+    name.to_string()
+  } else {
+    s!("{name}.cls")
+  };
+  if let Some(copy) = state_mut!().copy_provides_copies.get_mut(id as usize - 1) {
+    copy.loads_classes.push(name);
+  }
+}
+
+thread_local! {
+  /// The text of each base class file a stand-in's copy loaded, read once ([`copy_base_class_defines`]).
+  static BASE_CLASS_TEXT: RefCell<rustc_hash::FxHashMap<String, String>> = RefCell::default();
+}
+
+/// Does a class the stand-in copy read now `\LoadClass`ed ([`note_copy_loads_class`]) define `token` — a definer
+/// (`\newcommand`, `\renewcommand`, `\providecommand`, `\DeclareRobustCommand`, `\def`, `\gdef`, `\edef`, `\xdef`, `\let`)
+/// of the name in its file's uncommented text (article.cls:616 `\newcommand\refname{References}`)? The base class's
+/// binding and LaTeXML's kernel predefine its text names together with names it lacks (`\bibname`, book's), so the
+/// file itself tells them apart. A class file not found defines nothing here.
+fn copy_base_class_defines(token: &Token) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 {
+    return false;
+  }
+  let classes = state!()
+    .copy_provides_copies
+    .get(id as usize - 1)
+    .map(|copy| copy.loads_classes.clone())
+    .unwrap_or_default();
+  if classes.is_empty() {
+    return false;
+  }
+  let name = token.with_cs_name(|name| name.trim_start_matches('\\').to_string());
+  let definer = Regex::new(&s!(
+    r"\\(?:newcommand|renewcommand|providecommand|DeclareRobustCommand|def|gdef|edef|xdef|let)\*?\s*\{{?\s*\\{}(?:[^A-Za-z@]|$)",
+    regex::escape(&name)
+  ));
+  let Ok(definer) = definer else {
+    return false;
+  };
+  classes.iter().any(|class| {
+    BASE_CLASS_TEXT.with(|cache| {
+      let mut cache = cache.borrow_mut();
+      let text = cache.entry(class.clone()).or_insert_with(|| {
+        crate::binding::content::find_file(class, None)
+          .and_then(|path| std::fs::read(path).ok())
+          .map(|bytes| {
+            String::from_utf8_lossy(&bytes)
+              .lines()
+              .map(|line| line.split('%').next().unwrap_or(""))
+              .collect::<Vec<_>>()
+              .join("\n")
+          })
+          .unwrap_or_default()
+      });
+      definer.is_match(text)
+    })
+  })
+}
+
+/// Does the document's class define `\chapter`, as the real class's `\@ifundefined{chapter}` sees it (natbib's forks
+/// head the bibliography by it: NJDnatbib.sty:1050, ws-rv-har.sty:676)? A stand-in's copy that (re)declared `\chapter`
+/// (its overlay, or declined by the lock: ws-rv9x6.cls:499 `\newcommand\chapter`, 2301.03442); a definition of the
+/// document's world or a binding's own (`File`, `Document`, `Binding`), or one a raw class gave that the lock refused
+/// (`\chapter:redefined`, sect08.rs); or LaTeXML's kernel `\chapter` under a base class
+/// with chapters (book, report). Not the kernel's, OmniBus's or a counter: WileyNJDv5.cls:5728 and MRM.cls:2160
+/// `\newcounter{chapter}[part]` with no `\chapter` (2609.08425, 2506.14995: "REFERENCES"). Today the kernel's
+/// `\chapter` stays defined under OmniBus (`retract_kernel_chapter_if_chapterless`); where it is retracted, the answer is
+/// `\@ifundefined{chapter}`'s.
+pub fn class_defines_chapter() -> bool {
+  use crate::definition::origin::DefinitionOrigin;
+  let chapter = T_CS!("\\chapter");
+  let key = meaning_key(&chapter);
+  if state!()
+    .copy_provides_copies
+    .iter()
+    .any(|copy| copy.overlay.contains_key(&key) || copy.declined.contains(&key))
+    || lookup_bool("\\chapter:redefined")
+  {
+    return true;
+  }
+  match lookup_meaning(&chapter)
+    .as_ref()
+    .and_then(definition_origin)
+  {
+    None => false,
+    Some(DefinitionOrigin::File | DefinitionOrigin::Document | DefinitionOrigin::Binding) => true,
+    Some(_) => {
+      lookup_meaning(&T_CS!("\\ver@book.cls")).is_some()
+        || lookup_meaning(&T_CS!("\\ver@report.cls")).is_some()
+    },
+  }
 }
 
 /// The meaning the latest stand-in copy of `file` (a file name, `NJDnatbib.sty`) gave `token` in its own code: its

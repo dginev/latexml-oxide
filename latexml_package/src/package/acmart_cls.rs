@@ -32,6 +32,10 @@ LoadDefinitions!({
   RequirePackage!("geometry");
   RequirePackage!("comment");
   RequirePackage!("natbib");
+  // (acmart.cls:299-300 `\if@ACM@natbib\RequirePackage{natbib}`: the class's own load, so a document's
+  // `\usepackage[authoryear]{natbib}` is LaTeX's "Option clash", its options dropped — binding/content.rs
+  // `apply_new_options_on_reload`)
+  AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
   RequirePackage!("textcomp");
   RequirePackage!("graphicx");
   // Real acmart.cls passes [prologue,table]{xcolor} but doesn't pass

@@ -18,8 +18,10 @@
 //!   `NATBIB_SUPER_POSTNOTE_INSIDE`).
 //!
 //! The version is v5's class (`\@ifclassloaded{WileyNJDv5}`) or the copy's own `\bibsection` set by `\bmsection`, v5's
-//! marker; a class without chapters has no `chapter` counter — `\chapter` itself is no test while LaTeXML's OmniBus
-//! base defines it for every class (`\@ifundefined{chapter}` was false under the WileyNJDv5 binding: 2609.08425).
+//! marker; a class without chapters is decided by `\chapter`, as the copy's `\@ifundefined{chapter}` does
+//! (`state::class_defines_chapter`): not by a `chapter` counter, which the Wiley classes declare without a `\chapter`
+//! (WileyNJDv5.cls:5728, MRM.cls:2160 `\newcounter{chapter}[part]`), and not by LaTeXML's kernel `\chapter`, which
+//! stays defined under the OmniBus base (`\@ifundefined{chapter}` was false under the WileyNJDv5 binding: 2609.08425).
 use latexml_package::prelude::*;
 
 /// A renamed natbib copy's options are natbib's (natbib.sty:234-285): the natbib binding loads next with each one
@@ -39,8 +41,12 @@ pub fn natbib_fork_options() -> Result<()> {
     .map(|option| option.trim().to_string())
     .filter(|option| !option.is_empty())
     .collect();
-  RequirePackage!("natbib", options => options);
-  Ok(())
+  // (the copy's own options, which its `\ProcessOptions` takes in TeX, even after a natbib loaded already:
+  // `natbib.sty:options_of_a_renamed_copy`, binding/content.rs `apply_new_options_on_reload`)
+  AssignValue!("natbib.sty:options_of_a_renamed_copy" => true, Some(Scope::Global));
+  let loaded = require_package("natbib", NewDefault!(RequireOptions, options => options));
+  AssignValue!("natbib.sty:options_of_a_renamed_copy" => false, Some(Scope::Global));
+  loaded
 }
 
 LoadDefinitions!({
@@ -56,7 +62,7 @@ LoadDefinitions!({
         Some(ExpansionBody::Tokens(body)) if body.unlist_ref().contains(&T_CS!("\\bmsection")))
     );
     let v5 = class("WileyNJDv5") || class("wileyNJDv5") || marked;
-    if v5 && !has_meaning(&T_CS!("\\c@chapter")) && !class("amsart") {
+    if v5 && !class_defines_chapter() && !class("amsart") {
       DefMacro!(T_CS!("\\lx@bibliography@title"), None, Tokenize!("REFERENCES"), scope => Some(Scope::Global));
     }
   });

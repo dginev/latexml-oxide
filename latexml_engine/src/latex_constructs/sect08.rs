@@ -69,6 +69,11 @@ pub(crate) fn load() -> Result<()> {
       note_copy_provides_title_page(&cs_token, &body);
       if has_value(&s!("{}:locked", cs_token.to_string())) && copy_provides_refuses_locked(&cs_token) {
         // (a stand-in's copy takes nothing over: `state::copy_provides_refuses_locked`)
+      } else if copy_provides_text_default_clashes(&cs_token) {
+        // (a stand-in's copy declares a name its base class has: LaTeX's error, the definition kept —
+        // `state::copy_provides_text_default_clashes`)
+        let message = s!("Command {} already defined", cs_token.to_string());
+        Error!("latex", "already_defined", message);
       } else if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
         Info!("ignore", cs_token, message);

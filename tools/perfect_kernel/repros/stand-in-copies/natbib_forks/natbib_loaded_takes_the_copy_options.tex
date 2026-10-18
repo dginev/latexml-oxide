@@ -1,7 +1,10 @@
 % witness: 2506.14995 (MRM's binding had loaded natbib optionless before MRM.cls:2441-2442's
 %          `\usepackage[numbers,super]{NJDnatbib}`: author-year where its PDF has superscripts)
-% oracle:  natbib's own options on a repeat load are a pdflatex "Option clash" error; here the first natbib is the
-%          shape a binding's early load leaves, and the copy's options take effect as natbib's (natbib.sty:238-262)
+% oracle:  pdflatex with the real v2 fork after natbib: ~80 "Command ... already defined" errors (the fork redeclares
+%          natbib's commands), then the fork's own `\ProcessOptions` sets `numbers,super`: superscript citations. Here
+%          the copy is natbib (no clash: a renamed copy's request, `natbib.sty:options_of_a_renamed_copy`), and its
+%          options take effect as natbib's (natbib.sty:238-262); natbib's own options on a repeat load after the
+%          document's natbib are "Option clash" (natbib_repeat_after_the_documents_load_clashes.tex)
 % engines: rust 72a r4 = the options dropped silently: "[1]"-less author-year
 % expect:  0 errors, 0 warnings; the superscript cite; an Info "Applying options 'numbers,super' from a repeat load"
 % status:  RED (72a r4) -> GREEN (72a r5)

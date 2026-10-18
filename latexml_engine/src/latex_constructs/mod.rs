@@ -307,7 +307,10 @@ pub fn begin_appendices(counter: &str) {
     "ltx:appendix",
     Some(s!("ltx:{counter}")),
   );
-  if has_chapter_counter() && counter != "chapter" {
+  // (numbered within chapters where the class has chapters, by `\chapter` — not a `chapter` counter alone, which
+  // WileyNJD-v2.cls:2410 and WileyNJDv5.cls:5728 declare for bookmarks with no `\chapter`: "Appendix A", not "0.A",
+  // 2211.16474; `state::class_defines_chapter`)
+  if has_chapter_counter() && class_defines_chapter() && counter != "chapter" {
     let _ = new_counter(
       counter,
       "chapter",

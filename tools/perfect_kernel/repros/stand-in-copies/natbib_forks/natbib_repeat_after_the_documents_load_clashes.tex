@@ -1,0 +1,19 @@
+% witness: the reviewer's probes nat_twice (article, natbib twice), jmlr_numbers (jmlr.cls:150 `\RequirePackage{natbib}`),
+%          acm_ay (acmart.cls:300); the early binding loads whose later options do apply: 2112.14648, 2607.20603
+%          (jheppub.sty:37), 2405.09762 (jcappub.sty:32), 1012.4730, 2604.20688, 2107.02450, 2409.07188 (sn-jnl.cls:1665),
+%          2604.22515 (svjour3.cls:67-68)
+% oracle:  pdflatex: "LaTeX Error: Option clash for package natbib." and author-year "(Smith, 2001)": the first load's
+%          options stay
+% engines: rust 72a r5 = the repeat load's `numbers` applied after any earlier load: "[1]", 0 errors
+% expect:  1 error (Option clash for package natbib), 0 warnings; the author-year citation
+% status:  RED (72a r5) -> GREEN (72a r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \citep{a}.
+\begin{thebibliography}{1}
+\bibitem[Smith(2001)]{a} J. Smith. A paper. 2001.
+\end{thebibliography}
+\end{document}

@@ -3003,7 +3003,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
 - **72a** (a stand-in binding's shipped copy adds its extras; OXIDIZED_DESIGN_DIVERGENCES #731; census
-  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-5). After
+  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-6). After
   a binding on `AUTHOR_FILE_STAND_INS` loads, the paper's copy is read raw (content.rs `read_stand_in_copy`) when it is
   the file the binding stands in for (`copy_is_the_stood_in_file`, r3: its `\Provides(Expl)…` names the file, the
   binding or a file the binding loads — 2308.11432's `\ProvidesExplClass{fcs}`, 2011.13564's IEEEtai.cls declaring
@@ -3035,12 +3035,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (2412.14509, 2212.00057, 2210.06270, 1501.07873, 2311.17607, 2406.08486; 2101.06297, 2211.16474, 2411.11493,
   2206.08798, 2602.03829, 2408.07575, 2609.08425, 2506.14995) are "References" with `bib.bibN` and natbib's
   semantic cites (bmvc's numeric `[N]` as its PDF, NJD's superscripts). r5: NJDnatbib's heading by version (v5's
-  "REFERENCES" under WileyNJDv5 or a copy whose `\bibsection` uses `\bmsection`, chapterless = no `chapter` counter, so
-  right under today's `\chapter` and after the `\chapter` batch; v2/MRM `\refname`) and its superscript postnote
-  inside (`NATBIB_SUPER_POSTNOTE_INSIDE`); the MRM binding no longer loads natbib before MRM.cls:2441-2442's
-  `[numbers,super]{NJDnatbib}` (2506.14995 superscripts), and any repeat `\usepackage[…]{natbib}` applies its options
-  as natbib's options (`natbib.sty_keyval_setter`, Info) instead of dropping them (2112.14648, 1012.4730, 2604.20688
-  numbered as their PDFs); ws-rv-har.sty bound as natbib (2301.03442: 28 "(?)" citations → natbib's, "References"); a copy's
+  "REFERENCES" under WileyNJDv5 or a copy whose `\bibsection` uses `\bmsection`; v2/MRM `\refname`) and its
+  superscript postnote inside (`NATBIB_SUPER_POSTNOTE_INSIDE`); the MRM binding no longer loads natbib before
+  MRM.cls:2441-2442's `[numbers,super]{NJDnatbib}` (2506.14995 superscripts). r6: a repeat `\usepackage[…]{natbib}`
+  applies its options as natbib's options (`natbib.sty_keyval_setter`, Info) only after a compiled binding's own
+  early load (`<file>:requested_by_binding`) or for a renamed copy's request (`natbib.sty:options_of_a_renamed_copy`):
+  2112.14648, 2607.20603 (jheppub's binding now loads jheppub.sty:37's `[numbers,sort&compress]`), 2405.09762,
+  1012.4730, 2604.20688, 2107.02450, 2409.07188, 2604.22515 numbered as their PDFs; after the document's world's load
+  (the document, a raw class, jmlr's and acmart's class loads) it is LaTeX's "Option clash for package natbib" Error
+  and the first options stay (the reviewer's nat_twice, jmlr_numbers); "chapterless" is decided by `\chapter` as the
+  forks' `\@ifundefined{chapter}` (`state::class_defines_chapter`: a copy's own `\chapter`, a non-kernel one, or book/
+  report — right now and after the `\chapter` batch 72b), and a copy's counter is declared for real unless the
+  binding's load declared it (`\c@<ctr>`, or the `\the<ctr>` of an existing counter; OmniBus's `\thechapter` stub
+  does not count): WileyNJDv5.cls:5728's `\newcounter{chapter}[part]` with no `\chapter` still heads "REFERENCES",
+  2301.03442's two counter Warnings gone (ws-rv9x6.cls:399; it and 1602.07982 number chapter 1 and sections 1.1 as
+  their PDFs), and the kernel's `\appendix` numbers within chapters only where the class has `\chapter` (2211.16474
+  "Appendix A"); a copy's `\newcommand` of a name the base class it
+  `\LoadClass`es defines is LaTeX's "Command … already defined" Error (`state::copy_provides_text_default_clashes`;
+  the reviewer's newcmd_base), a name it lacks the copy's (`\bibname` over article); ws-rv-har.sty bound as natbib (2301.03442: 28 "(?)" citations → natbib's, "References"); a copy's
   environment decided as a pair, OmniBus's theorem autoload stubs `Stub` (2412.00032 W 12 → 11, the reviewer's
   thm_copy W 1 → 0); spotcolor's `[pantone]`/`[hks]` preloads keep their CMYK; text defaults (main-session ruling):
   a parameterless text macro the binding's base class or the kernel assigned is the copy's to set (MRM.cls:3191
@@ -3064,7 +3076,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   fontspec, xunicode, mathastext, microtype, geometry… unconditionally under its `LATO2COL` option (:670-680; a
   XeLaTeX paper: pdflatex stops at fontspec), +37 % instructions, faithful; (f) resolved in r5 (2609.08425 "REFERENCES");
   (g) resolved in r5 (ws-rv-har bound); (h) a second `\author` keeps both under
-  the inst_support binding (accumulating, as for llncs-style `\author` per author; pdflatex atlasdoc keeps the last).
+  the inst_support binding (accumulating, as for llncs-style `\author` per author; pdflatex atlasdoc keeps the last);
+  (i) 2301.03442 prints "(Mayor et al., 2011)" where its PDF has "(Mayor et al. 2011)": its `\bibliographystyle{aa}`
+  (brojasayala.tex:255) comes after the citations, and the natbib binding applies `\bibstyle@aa`'s punctuation only from
+  there on (in TeX the style reaches the citations through the aux file's `\bibstyle`, at `\begin{document}` of the next
+  run); (j) asme2ej (2309.12017, 2404.14053) heads its appendices "APPENDIX A" where the PDF prints no appendix word
+  (asme2ej.cls:689's `\appendixname` is not used by its `\appendix`); (k) acmart's citations are author-year where
+  acmart.cls's default `\setcitestyle` numbers them (the reviewer's acm_ay; base the same); (l) sv_support loads natbib
+  for every svjour/svmult paper where svjour3.cls:67-68 loads it only under its `natbib` option (Perl the same), and
+  sn-jnl's binding loads natbib optionless where sn-jnl.cls:1641-1720 loads it with the reference style's options (its
+  copy's repeat load sets them).
   Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
 
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;

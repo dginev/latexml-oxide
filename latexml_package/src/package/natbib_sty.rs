@@ -465,6 +465,9 @@ LoadDefinitions!({
   // after a binding's optionless natbib left 2506.14995 author-year; `\usepackage[numbers,sort&compress]{natbib}` after
   // the jheppub binding's (2112.14648: "[1, 2]" in its PDF). An option natbib does not set a style with is ignored.
   AssignValue!("natbib.sty_keyval_setter" => "\\lx@natbib@repeat@options", Scope::Global);
+  // (only after a compiled binding's own early load or for a renamed copy's request; else LaTeX's "Option clash" Error,
+  // the first options kept: binding/content.rs `apply_new_options_on_reload`)
+  AssignValue!("natbib.sty_repeat_clash" => true, Scope::Global);
   DefPrimitive!("\\lx@natbib@repeat@options{}", sub[(list)] {
     for option in list.to_string().split(',').map(str::trim) {
       match option {

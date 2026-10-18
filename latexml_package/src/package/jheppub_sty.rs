@@ -5,7 +5,9 @@ LoadDefinitions!({
   // Perl: jheppub.sty.ltxml — 112 lines
   RequirePackage!("hyperref");
   RequirePackage!("color");
-  RequirePackage!("natbib");
+  // jheppub.sty:37 `\RequirePackage[numbers,sort&compress]{natbib}` (`no-natbib-sort`: `[numbers,compress]`, the same
+  // citations here): numbered citations as 2112.14648's and 2607.20603's PDFs.
+  RequirePackage!("natbib", options => vec![s!("numbers"), s!("sort&compress")]);
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("epsfig");

@@ -8,13 +8,20 @@
 //! `\bibstyle@aa`).
 //!
 //! The default it changes that the PDF shows: a class with chapters heads the bibliography `\section*{\bibname}`
-//! (:681-685; natbib `\chapter*{\bibname}`), one without `\refname` (:677) — a class with chapters has a `chapter`
-//! counter, as ws-rv9x6.cls:399 declares (its `\bibname` "References", :91, 2301.03442's PDF). Its punctuation
+//! (:681-685; natbib `\chapter*{\bibname}`), one without `\refname` (:677) — by its `\@ifundefined{chapter}` (:676,
+//! `state::class_defines_chapter`): ws-rv9x6.cls:499 `\newcommand\chapter` (its `\bibname` "References", :91,
+//! 2301.03442's PDF); amsart (:686-687) `\refname`. Its punctuation
 //! defaults (:244-249: `(`, `)`, `;`, `,`) are natbib's; its superscript postnote in parentheses (:256-259) shows only
 //! under `super`.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
   crate::njdnatbib_sty::natbib_fork_options()?;
-  RawTeX!(r"\@ifundefined{c@chapter}{}{\def\lx@bibliography@title{\bibname}}");
+  RawTeX!(r"\AtEndOfPackage{\lx@wsrvhar@bibsection@title}");
+  DefPrimitive!("\\lx@wsrvhar@bibsection@title", {
+    let class = |name: &str| has_meaning(&T_CS!(s!("\\ver@{name}.cls")));
+    if class_defines_chapter() && !class("amsart") {
+      DefMacro!(T_CS!("\\lx@bibliography@title"), None, T_CS!("\\bibname"), scope => Some(Scope::Global));
+    }
+  });
 });
