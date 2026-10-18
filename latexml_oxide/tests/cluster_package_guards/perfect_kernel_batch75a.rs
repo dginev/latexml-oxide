@@ -5,11 +5,13 @@
 //! append to the `\maketitle` the lock refused extends the class's own definition (state.rs
 //! `extended_refused_definition`; wiley-article 1911.06213); and wiley-article's correspondence, e-mail, funding,
 //! paper-type and journal-section stores and CSML's ACM CCS terms are K11 table setters (store_setters.rs; 1808.01384,
-//! 1911.06213, 1608.04592); and the class's own record of a value its refused `\author` replay was given reads as empty in
-//! the title-page replay (sect05.rs `note_replay_records`; vmsta 1506.02940). OXIDIZED_DESIGN_DIVERGENCES #756-#759. Each repro's pdflatex reference text is in its
+//! 1911.06213, 1608.04592); and what a refused `\author` replay added to the class's own record is taken out of it in
+//! the title-page replay, while what other setters added stays (sect05.rs `note_replay_records`; vmsta 1506.02940).
+//! Round 2: the gate reads without diagnostics (`gate_parameters`, `expandafter_definee`), and `\@topnewpage` sets its
+//! header as a paragraph of its own. OXIDIZED_DESIGN_DIVERGENCES #756-#759, KNOWN_PERL_ERRORS #982. Each repro's pdflatex reference text is in its
 //! header. Every guard asserts the three measures together: no Error/Warning, the authored text present once, and the
 //! element carrying it.
-use latexml::util::test::convert_files_with;
+use latexml::util::test::{convert_files_with, convert_files_with_status};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -175,4 +177,106 @@ fn maketitle_replay_reads_class_author_list_as_empty() {
     ),
     "{xml}"
   );
+}
+
+/// The replay gate reads a refused class setter's body without a diagnostic: a `\def` whose name `\csname` makes from
+/// the setter's argument, with that argument and a `##1` of its own in its parameter text, is read in place, never
+/// handed to the definition parser, whose ParamSpec Fatal is sticky (75a review finding 1: a clean paper marked Fatal).
+#[test]
+fn maketitle_replay_gate_reads_csname_def_silently() {
+  let (log, xml) = convert_beside!(
+    "maketitle_replay_gate_reads_csname_def_silently.tex",
+    "tpcsname.cls"
+  );
+  assert!(!log.contains("ParamSpec"), "{log}");
+  let (_, _, status, code) = convert_files_with_status(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_title_page/maketitle_replay_gate_reads_csname_def_silently.tex"
+    ),
+    &[(
+      "tpcsname.cls",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_title_page/tpcsname.cls"
+      ),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert!(code < 2, "{status}");
+  assert!(
+    xml.contains(
+      r#"<title>On Widgets</title> <creator role="author"> <personname>A</personname> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1">Authors:</p> </para> <para xml:id="p2"> <p xml:id="p2.1">Body text.</p> </para>"#
+    ),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("On Widgets").count(), 1, "{xml}");
+}
+
+/// A list the refused `\author` replay appends to and a second class setter (`\workplace`) appends to as well: the
+/// title-page replay takes out only the tail the `\author` replay appended, in either call order, so the author is the
+/// creator once and the workplace an italic paragraph once (75a review finding 2; vmsta.cls:296-315, 1506.02940).
+#[test]
+fn maketitle_replay_keeps_other_setters_in_shared_list() {
+  for (log, xml) in [
+    convert_beside!(
+      "maketitle_replay_keeps_other_setters_in_shared_list_author_first.tex",
+      "tpshared.cls"
+    ),
+    convert_beside!(
+      "maketitle_replay_keeps_other_setters_in_shared_list_workplace_first.tex",
+      "tpshared.cls"
+    ),
+  ] {
+    assert!(!log.contains("not replayed"), "{log}");
+    title_and_author_once(&xml);
+    assert!(
+      xml.contains(
+        r#"</creator> <para xml:id="p1"> <p xml:id="p1.1"><text font="italic" xml:id="p1.1.1">Widget University</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Body text.</p> </para>"#
+      ),
+      "{xml}"
+    );
+    assert_eq!(xml.matches("Widget University").count(), 1, "{xml}");
+  }
+}
+
+/// `\expandafter\def\expandafter\tp@x\expandafter{\@venue}` in a class's `\maketitle`: `\tp@x` is what it defines and
+/// the replacement text is checked in place, so the title page replays and its venue line is kept (75a review nit 7).
+#[test]
+fn maketitle_replay_expandafter_def_reads_in_place() {
+  let (log, xml) = convert_beside!(
+    "maketitle_replay_expandafter_def_reads_in_place.tex",
+    "tpexpand.cls"
+  );
+  assert!(!log.contains("not replayed"), "{log}");
+  title_and_author_once(&xml);
+  assert!(
+    xml.contains(
+      r#"</creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1">Venue: Widget Conf</p> </para> <para xml:id="p2"> <p xml:id="p2.1">Body text.</p> </para>"#
+    ),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("Widget Conf").count(), 1, "{xml}");
+}
+
+/// A class's own `\twocolumn` hands its bracketed header to `\@topnewpage` (latex.ltx:20466, a box of its own): the
+/// header is a paragraph of its own and its `\Large\centering` stays in it (75a review finding 4; jpsj.sty:170-173,
+/// cond-mat0011490; KNOWN_PERL_ERRORS #982).
+#[test]
+fn twocolumn_class_header_is_its_own_paragraph() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_title_page/twocolumn_class_header_is_its_own_paragraph.tex"
+    ),
+    &[],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!log.lines().any(|l| l.starts_with("Fatal:")), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(
+      r#"<para class="ltx_noindent" xml:id="p1"> <p align="center" xml:id="p1.1"><text fontsize="144%" xml:id="p1.1.1">Spanning header.</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Body text.</p> </para>"#
+    ),
+    "{xml}"
+  );
+  assert!(!xml.contains('['), "{xml}");
 }

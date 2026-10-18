@@ -1,0 +1,16 @@
+% A refused class `\author` replay appends the name to a list another class setter (`\workplace`) appends to as well;
+% the title-page replay takes out only what the `\author` replay appended (the tail its journal saw added), so the
+% workplace stays, once (sect05.rs `note_replay_records`, `\lx@replay@records`; vmsta.cls:296-315, 1506.02940).
+% oracle:  pdflatex (tpshared.cls beside it) 0 errors: "On Widgets / Widget University / A. Author / Body text."
+% engines: rust 67int28 = 0 errors, "A. Author" twice (the creator and a bold body paragraph);
+%          rust 75a (0161205af8) = 0 errors, "Widget University" lost (the whole list emptied);
+%          perl (OmniBus, the class is not read) = 1 error (\workplace undefined)
+% expect:  0 errors, 0 warnings; "A. Author" once (the creator), "Widget University" once (an italic paragraph)
+% status:  RED (75a r1) -> GREEN (75a r2)
+% preload: ar5iv.sty
+\documentclass{tpshared}
+\begin{document}
+\title{On Widgets}\workplace{Widget University}\author{A. Author}
+\maketitle
+Body text.
+\end{document}

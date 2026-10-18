@@ -1,0 +1,17 @@
+% The replay gate reads `\expandafter\def\expandafter\tp@x\expandafter{\@venue}` as TeX runs it: `\tp@x` is the
+% definee the `\expandafter` chain leads to, and the replacement text, expanded as the definition runs, is checked in
+% place (sect05.rs `expandafter_definee`; 75a review nit 7).
+% oracle:  pdflatex (tpexpand.cls beside it) 0 errors: "Venue: Widget Conf / Body text." (the class's `\maketitle`
+%          prints no title)
+% engines: rust 67int28 and 75a (0161205af8) = 0 errors, the venue lost (Info "not replayed: it uses \tp@x");
+%          perl (OmniBus, the class is not read) = 1 error (\venue undefined)
+% expect:  0 errors, 0 warnings; "Venue: Widget Conf" once, a paragraph after the title
+% status:  RED (67int28, 75a r1) -> GREEN (75a r2)
+% preload: ar5iv.sty
+\documentclass{tpexpand}
+\venue{Widget Conf}
+\begin{document}
+\title{On Widgets}\author{A. Author}
+\maketitle
+Body text.
+\end{document}

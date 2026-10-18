@@ -15781,5 +15781,7 @@ Trigger: `\documentclass{article}\makeatletter\renewcommand\twocolumn{\global\@t
 \@ifnextchar[{\@topnewpage}{}}\makeatother\begin{document}\twocolumn[Spanning header.]Text.\end{document}` — pdflatex
 "Spanning header. / Text."; Perl "[Spanning header.]".
 
-Rust: sect05.rs `\long\def\@topnewpage[#1]{#1}` (75a; the jpsj `\maketitle` replay #756 printed "[" and "]" in
-cond-mat0011490, cond-mat0101276, quant-ph9911038).
+Rust: sect05.rs `\long\def\@topnewpage[#1]{\par{\noindent#1\par}}` (75a; the jpsj `\maketitle` replay #756 printed "["
+and "]" in cond-mat0011490, cond-mat0101276, quant-ph9911038): latex.ltx sets the header in a `\vbox` of its own, so it
+is a paragraph of its own in a group, as the Rust `\twocolumn[…]` sets it, and a `\Large\centering` in it does not
+reach the body. Guard `perfect_kernel_batch75a::twocolumn_class_header_is_its_own_paragraph`.

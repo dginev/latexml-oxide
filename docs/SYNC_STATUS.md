@@ -4008,10 +4008,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1911.06213, vmsta 1506.02940/1801.00977 whose dates, affiliation and keywords are now kept). (W) K11 table setters
   `corraddress`, `corremail`, `fundinginfo` (notes), `papertype`, `paperfield` (pubnotes), `ACMCCS` (classification)
   (store_setters.rs, #758; 1808.01384, 1911.06213, 2012.13110, 2203.03068, CSML 1608.04592/1602.00476). (D) The class's
-  own list a refused `\author` replay appended the name to reads as empty in the title-page deposit and replay
-  (`note_replay_records`, `\lx@replay@records`, #759; vmsta printed its author twice once F2 let its `\maketitle` run).
-  (K) `\@topnewpage` takes latex.ltx's bracketed argument (KNOWN_PERL_ERRORS #982; jpsj's replayed `\twocolumn[…]`
-  printed "[" "]": cond-mat0011490). Guards `perfect_kernel_batch75a::*`; repros
+  part a refused `\author` replay added to a list (the tail it appended, from the journal's value before) is taken out
+  of that list in the title-page deposit and replay (`note_replay_records`, `\lx@replay@records`, #759; vmsta printed
+  its author twice once F2 let its `\maketitle` run), and what another class setter appended to the same list stays.
+  (K) `\@topnewpage` takes latex.ltx's bracketed argument and sets the header as a paragraph of its own in a group
+  (KNOWN_PERL_ERRORS #982; jpsj's replayed `\twocolumn[…]` printed "[" "]": cond-mat0011490). Round 2 (review
+  agent_reports/2026-10-18_75a_review.md): the gate never reports — its own `gate_parameters` reads a parameter text,
+  never the sticky-Fatal `parse_def_parameters`, and a `\csname`/`\expandafter` definee is read in place
+  (`expandafter_definee`); a called macro's definitions count only for an undefined control sequence
+  (`callee_definees`); a body nested past 8 definitions is refused with an Info. Guards `perfect_kernel_batch75a::*`; repros
   `sectioning-frontmatter/class_title_page/*`. A/B vs 67int27 over 244 papers (the 204 + 31 two-refusal `\maketitle`
   papers + the wiley/nbdt/CSML papers of the sample): E 1,933 → 1,924, F 2 → 2, 84 changed, 0 with more E/F, 0 losing
   >1 % of words, 0 doubled creators. Open rows:
@@ -4033,7 +4038,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     line whose values are all carried (drop the line), then the entry.
   - (d) The replay's output is body paragraphs after the title, not frontmatter elements (#265): sig-alternate's
     `\toappear` is a copyrightbox float; an unset `\toappear` leaves an empty copyrightbox float (1202.3179,
-    1308.1440, 1402.4624; `typesets_content` counts the float's placement and the picture's coordinates).
+    1308.1440, 1402.4624; `typesets_content` counts the float's placement and the picture's coordinates). vmsta's
+    replayed title page prints its journal header with the values the document did not set left empty: "Modern
+    Stochastics: Theory and Applications () 51–65 / DOI:" and an empty `<ref href="http://dx.doi.org/">` (1506.02940;
+    the shape the `\submitted` entry of row (c) was withheld for; page furniture by ruling; OD #757).
+  - (e) NEEDS A RULING (the hole class of (D)/#759, second shape): vmsta 2018+ (vmsta.cls `\author@optarg`:
+    `\csxdef{author\the\c@author}{…}`, `\xappto\author@list{,author<n>}`) records each author under a `\csname`-made name
+    holding the processed name, and its list holds names, not the argument, so #759's "holds the argument" test misses
+    it: once #757 lets its `\maketitle` replay, the title page prints the author line (bold "Vitalii Miroshnichenko,
+    Rostyslav Maiboroda 0") and the e-mail line a second time, beside what it recovers (affiliation, the received/
+    revised/accepted/published dates, keywords, MSC) — 1806.03850, 1810.09667, 2012.03249 (3 of the 3,000 sample;
+    67int28 kept the authors once and lost the rest). Proposed single rule: the title-page deposit and replay undo
+    every assignment a kept refused-setter replay made (from the journal's values before: an appended tail taken out,
+    a newly defined macro emptied), keeping what other code added, replacing #759's argument test; risk: a title page
+    that prints only from a setter's records (an affiliation a setter stores) loses it, so it needs its own A/B.
+    nowfnt (2108.12618, 2308.02698): with its `\author` replay running (#756) pdflatex's author block "Marina Haikin¹,
+    Matan Gavish², …" is now typeset beside the creators split "Haikin", "Marina" (row (b)).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

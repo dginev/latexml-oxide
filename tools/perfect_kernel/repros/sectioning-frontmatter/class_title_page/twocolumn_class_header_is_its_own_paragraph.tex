@@ -1,0 +1,17 @@
+% A class's own `\twocolumn` hands its bracketed header to `\@topnewpage` (latex.ltx:20466), which sets it in a box of
+% its own: the header is a paragraph of its own, and its `\Large\centering` does not reach the body (sect05.rs
+% `\@topnewpage`; KNOWN_PERL_ERRORS #982; jpsj.sty:170-173, cond-mat0011490).
+% oracle:  pdflatex 0 errors: "Spanning header." large and centred on its own line; "Body text." normal size
+% engines: rust 67int28 = 0 errors, "[" and "]" printed around the header; rust 75a (0161205af8) = 0 errors, one
+%          centred 144% paragraph holding the header and the body; perl = 0 errors, "[" and "]" printed
+% expect:  0 errors, 0 warnings; the header a centred 144% paragraph, then "Body text." a plain paragraph
+% status:  RED (75a r1) -> GREEN (75a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\twocolumn{\global\@twocolumntrue\global\@firstcolumntrue\@ifnextchar[{\@topnewpage}{}}
+\makeatother
+\begin{document}
+\twocolumn[\Large\centering Spanning header.]
+Body text.
+\end{document}
