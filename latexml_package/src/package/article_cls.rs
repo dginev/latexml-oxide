@@ -124,7 +124,21 @@ LoadDefinitions!( {
   DefMacro!("\\theenumiii", "\\roman{enumiii}");
   DefMacro!("\\theenumiv", "\\Alph{enumiv}");
 
+  // The class's names (article.cls:613-622), in its own load as the real class has them, with the values LaTeXML's
+  // kernel predefines (Perl assigns only article.cls.ltxml:98 `\refname` here, the rest in
+  // latex_constructs.pool.ltxml:719-722, "these actually should be in article/report/book"): a stand-in's copy that
+  // `\LoadClass`es article finds them defined, so its `\newcommand` of one is LaTeX's "already defined"
+  // (`state::ClassLoadFrame`, OXIDIZED_DESIGN_DIVERGENCES #732).
+  DefMacro!("\\contentsname", "Contents");
+  DefMacro!("\\listfigurename", "List of Figures");
+  DefMacro!("\\listtablename", "List of Tables");
   DefMacro!("\\refname", "References");
+  DefMacro!("\\indexname", "Index");
+  DefMacro!("\\figurename", "Figure");
+  DefMacro!("\\tablename", "Table");
+  DefMacro!("\\partname", "Part");
+  DefMacro!("\\appendixname", "Appendix");
+  DefMacro!("\\abstractname", "Abstract");
 
   // Perl L100: article uses section-level bibliography in backmatter.
   // Rust was missing this mapping, so the chapterbib/bibunits/sectionbib

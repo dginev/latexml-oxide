@@ -3048,8 +3048,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   report — right now and after the `\chapter` batch 72b), and a copy's counter is declared for real unless the
   binding's load declared it (`\c@<ctr>`, or the `\the<ctr>` of an existing counter; OmniBus's `\thechapter` stub
   does not count): WileyNJDv5.cls:5728's `\newcounter{chapter}[part]` with no `\chapter` still heads "REFERENCES",
-  2301.03442's two counter Warnings gone (ws-rv9x6.cls:399; it and 1602.07982 number chapter 1 and sections 1.1 as
-  their PDFs), and the kernel's `\appendix` numbers within chapters only where the class has `\chapter` (2211.16474
+  2301.03442's two counter Warnings gone (ws-rv9x6.cls:399; it numbers chapter 1, sections 1 and 2 and subsection
+  2.1, 1602.07982 chapter 1 and section 1.1, as their PDFs), and the kernel's `\appendix` numbers within chapters only
+  where the class has `\chapter` (2211.16474
   "Appendix A"); a copy's `\newcommand` of a name the base class it
   `\LoadClass`es defines is LaTeX's "Command … already defined" Error (`state::copy_provides_text_default_clashes`;
   the reviewer's newcmd_base), a name it lacks the copy's (`\bibname` over article); ws-rv-har.sty bound as natbib (2301.03442: 28 "(?)" citations → natbib's, "References"); a copy's
@@ -3085,7 +3086,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   acmart.cls's default `\setcitestyle` numbers them (the reviewer's acm_ay; base the same); (l) sv_support loads natbib
   for every svjour/svmult paper where svjour3.cls:67-68 loads it only under its `natbib` option (Perl the same), and
   sn-jnl's binding loads natbib optionless where sn-jnl.cls:1641-1720 loads it with the reference style's options (its
-  copy's repeat load sets them).
+  copy's repeat load sets them); (m) the bindings revtex4_support (revtex4_support:9), achemso, apacite and mnras load
+  natbib other than their real files do and do not mark the load as the file's own, so a document's repeat after them
+  applies its options (the r6 reviewer's sizing over 2506: 38 subset repeats, which clash with no file; 2506.08397's
+  `sort` the only non-subset) — per-binding calls, left open.
+  r7: a raw file's own repeat of natbib after a binding's early load — a stand-in copy that loads natbib itself,
+  neurips_2024.sty:71, icml2024.sty:95 — applies its options, joins them to the first load's and ends the early-load
+  state, so the document's `\usepackage[numbers]{natbib}` after it is LaTeX's "Option clash" (the reviewer's
+  neurips_rep, icml_rep; OXIDIZED_DESIGN_DIVERGENCES #733), while copies that comment the load out keep the document's
+  options (2506.00573, 2506.01987, 2506.08967, 2506.17103, 2506.18071, 2506.22567 numbered); the clash test reads the
+  passed options (`\opt@natbib.sty`: 2110.14346's `\PassOptionsToPackage{numbers, compress}{natbib}`, no clash);
+  elsarticle (elsarticle.cls:1243), jheppub (jheppub.sty:37) and acmart under its `natbib` boolkey record their natbib
+  load as the file's own. What a base class defines is told by its load frame, not its text (#732,
+  `state::ClassLoadFrame`): article/report/book assign their classes.dtx names in their own load (the kernel keeps
+  its predefinitions), a class loaded while a copy's `\LoadClass` is open is the copy's base class too (the reviewer's
+  nc_chain 2 Errors, nc_namedef 1, nc_cond 0, as pdflatex), the r6 class-text scan and its per-thread cache are gone;
+  a name made `\relax` stays definable for the copy's `\newcommand`. A text default still the macro a class load
+  assigned is the class layer's, so a copy's redefinition stands: 1202.3442 "ABSTRACT" (emulateapj.cls:470),
+  astro-ph0105230, astro-ph9912326, hep-ph0102191 "REFERENCES" (aipproc.sty:49), each as its PDF.
   Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
 
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;

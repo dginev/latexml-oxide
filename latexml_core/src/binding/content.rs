@@ -214,6 +214,9 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   // (a compiled binding's own code requests it — its `RequirePackage!`: `<file>:requested_by_binding`, which a repeat
   // load's options read, `apply_new_options_on_reload`)
   let requested_by_binding = current_origin() == DefinitionOrigin::Binding;
+  // (a raw file's own request — a copy's `\RequirePackage{natbib}`, neurips_2024.sty:71: the load TeX sees, which a
+  // binding's early load of the package only anticipated; `apply_new_options_on_reload`)
+  let requested_by_file = current_origin() == DefinitionOrigin::File;
   let base = raw_file
     .trim()
     .rsplit(['/', '\\'])
@@ -235,11 +238,21 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
     DefinitionOrigin::File
   };
   let _origin = OriginGuard::new(origin);
-  // (a stand-in's copy loading a class: its base class, whose names the real class has, `state::note_copy_loads_class`)
+  // A class load is a frame whose definitions are the class's (`state::ClassLoadFrame`); one a stand-in's copy requests
+  // — its `\LoadClass`, or a class loaded while that is open — is a base class of the copy, whose names the real class
+  // has (the reviewer's probes newcmd_base, nc_chain).
   let class = options.extension.as_deref() == Some("cls") || raw_file.ends_with(".cls");
-  if class && options.handleoptions && crate::definition::origin::copy_provides() != 0 {
-    note_copy_loads_class(raw_file);
-  }
+  let _class_frame = (class && options.handleoptions).then(|| {
+    let copy = crate::definition::origin::copy_provides();
+    ClassLoadFrame::enter(
+      raw_file,
+      if copy != 0 {
+        Some(copy)
+      } else {
+        open_copy_class_load()
+      },
+    )
+  });
   // A file a stand-in's copy loads (`\RequirePackage`, `\usepackage`, `\LoadClass`, `\input`) is a real load, read
   // whole as TeX reads it: the copy's provides-mode is suspended for it (`read_stand_in_copy`).
   let _suspended = (crate::definition::origin::copy_provides() != 0)
@@ -255,7 +268,7 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   // (a class it loads is its base class, whose text defaults are not its own: `StandInLoadGuard::suspend_for`)
   let _nested = crate::definition::origin::stand_in_loading()
     .then(|| crate::definition::origin::StandInLoadGuard::suspend_for(class));
-  input_definitions_impl(raw_file, options, requested_by_binding)
+  input_definitions_impl(raw_file, options, requested_by_binding, requested_by_file)
 }
 
 /// Is the file now being read one the author shipped: under the document's own source directory
@@ -279,6 +292,7 @@ fn input_definitions_impl(
   raw_file: &str,
   mut options: InputDefinitionOptions,
   requested_by_binding: bool,
+  requested_by_file: bool,
 ) -> Result<()> {
   let trimmed = raw_file.trim();
   // A compiled binding keyed by BASENAME raw-loads its own name (`noltxml`), but
@@ -558,11 +572,11 @@ fn input_definitions_impl(
   // revtex4_support, elsarticle, PoS, jmlr and sagej load hyperref, so the author's
   // `\usepackage[colorlinks]{hyperref}` is the first hyperref load real LaTeX sees, and colorlinks loads
   // color (hyperref.sty:4532-4537). Witnesses 2609.24844, 2609.13110, 1711.02465 (`\textcolor`).
-  let apply_new_options_on_reload = |fkey: &str| -> Result<()> {
+  let apply_repeat_options = |fkey: &str| -> Result<()> {
     if options.options.is_empty() || !options.handleoptions {
       return Ok(());
     }
-    let prev: HashSet<String> =
+    let mut prev: HashSet<String> =
       if let Some(Stored::String(prevoptions)) = lookup_value(&s!("{fkey}_loaded_with_options")) {
         arena::with(prevoptions, |p| {
           p.split(',').map(|o| o.trim().to_string()).collect()
@@ -570,6 +584,20 @@ fn input_definitions_impl(
       } else {
         HashSet::default()
       };
+    // (and the options passed to it, `\opt@<file>`, which LaTeX's clash test reads, latex.ltx `\@if@ptions`:
+    // 2110.14346's `\PassOptionsToPackage{numbers, compress}{natbib}` before neurips_2020.sty's load, then
+    // `\usepackage[numbers]{natbib}` — no clash in pdflatex)
+    if let Ok(Some(defn)) = lookup_definition(&T_CS!(s!("\\opt@{fkey}")))
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      prev.extend(
+        body
+          .to_string()
+          .split(',')
+          .map(|o| o.trim().to_string())
+          .filter(|o| !o.is_empty()),
+      );
+    }
     if let Some(Stored::String(setter)) = lookup_value(&s!("{fkey}_keyval_setter")) {
       let new_options: Vec<&str> = options
         .options
@@ -584,8 +612,9 @@ fn input_definitions_impl(
       // (`<file>:options_of_a_renamed_copy`: NJDnatbib, whose own `\ProcessOptions` runs in TeX; 2506.14995). Otherwise
       // the first load was the document's world's, and LaTeX keeps its options and stops with "Option clash"
       // (latex.ltx `\@onefilewithoptions` → `\@if@ptions`), an Error here as there; the new options are dropped.
-      // A class binding that loads the package where the real class does too (jmlr.cls:150, acmart.cls:300) records
-      // its load as the class's own (`<file>:requested_by_binding` false).
+      // A class binding that loads the package where the real class does too (jmlr.cls:150, acmart.cls:300,
+      // elsarticle.cls:1243, jheppub.sty:37) records its load as the class's own (`<file>:requested_by_binding` false);
+      // a raw file's own repeat ends the early-load state (`apply_new_options_on_reload` below).
       if !new_options.is_empty()
         && lookup_bool(&s!("{fkey}_repeat_clash"))
         && !lookup_bool(&s!("{fkey}:requested_by_binding"))
@@ -635,6 +664,47 @@ fn input_definitions_impl(
         );
         digest(Tokens!(handler))?;
       }
+    }
+    Ok(())
+  };
+  // A raw file's own repeat of a package whose binding opts in (`<file>_repeat_clash`, natbib) after a compiled
+  // binding's early load is the load TeX sees: a stand-in's copy that loads natbib itself (neurips_2024.sty:71
+  // `\RequirePackage{natbib}`, icml2024.sty:95; the reviewer's probes neurips_rep, icml_rep). Its options apply as
+  // above and join the first load's, and the early-load state ends (`<file>:requested_by_binding` false): a later
+  // `\usepackage[numbers]{natbib}` of the document is LaTeX's "Option clash", as pdflatex reports it, while a copy that
+  // comments its load out leaves the binding's early load in place (2506.00573, 2506.01987, 2506.08967, 2506.17103,
+  // 2506.18071, 2506.22567: the document's options apply).
+  let apply_new_options_on_reload = |fkey: &str| -> Result<()> {
+    let file_repeat = options.handleoptions
+      && requested_by_file
+      && lookup_bool(&s!("{fkey}_repeat_clash"))
+      && lookup_bool(&s!("{fkey}:requested_by_binding"));
+    apply_repeat_options(fkey)?;
+    if file_repeat {
+      let key = s!("{fkey}_loaded_with_options");
+      let mut loaded: Vec<String> = match lookup_value(&key) {
+        Some(Stored::String(prev)) => arena::with(prev, |p| {
+          p.split(',')
+            .map(|o| o.trim().to_string())
+            .filter(|o| !o.is_empty())
+            .collect()
+        }),
+        _ => Vec::new(),
+      };
+      for opt in &options.options {
+        let opt = opt.trim();
+        if !opt.is_empty() && !loaded.iter().any(|o| o == opt) {
+          loaded.push(opt.to_string());
+        }
+      }
+      if !loaded.is_empty() {
+        assign_value(&key, loaded.join(","), Some(Scope::Global));
+      }
+      assign_value(
+        &s!("{fkey}:requested_by_binding"),
+        false,
+        Some(Scope::Global),
+      );
     }
     Ok(())
   };

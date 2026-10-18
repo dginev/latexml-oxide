@@ -1084,3 +1084,229 @@ fn chapter_counter_without_chapter_numbers_appendix_alone() {
     "<title><tag close=\" \">Appendix A</tag>Extra</title>",
   );
 }
+
+/// A stand-in's copy that loads natbib itself makes the load TeX sees, which the binding's early load only anticipated
+/// (binding/content.rs `apply_new_options_on_reload`): its options apply and join the first load's, and the document's
+/// later `\usepackage[numbers]{natbib}` is LaTeX's "Option clash", the author-year citations kept (the reviewer's
+/// probes neurips_rep, icml_rep: neurips_2024.sty:71, icml2024.sty:95; pdflatex 1 error). A copy that comments its load
+/// out leaves the binding's early load, so the document's options apply (2506.00573, 2506.01987, 2506.08967,
+/// 2506.17103, 2506.18071, 2506.22567: numbered, 0 errors); a copy's `[square,numbers]` covers the document's `numbers`
+/// (pdflatex 0 errors, "[1, 2]"). Each numbered one also after a `\bibliographystyle{plainnat}`, which an explicit
+/// style option makes inert (natbib.sty:238-262 `nobibstyle`; 2506.08967, pdflatex "[1, 2]").
+#[test]
+fn natbib_copy_repeat_ends_the_bindings_early_load() {
+  let tex = repro!("natbib_forks/natbib_copy_repeat_ends_the_early_load.tex");
+  let copy = repro!("natbib_forks/copy_load/neurips_2024.sty");
+  let author_year = "<p xml:id=\"p1.1\">Text <cite class=\"ltx_citemacro_citep\">(<bibref bibrefs=\"a,b\" separator=\";\" show=\"AuthorsPhrase1Year\" yyseparator=\",\"><bibrefphrase>, </bibrefphrase></bibref>)</cite>.</p>";
+  let numbers = "<p xml:id=\"p1.1\">Text <cite class=\"ltx_citemacro_citep\">[<bibref bibrefs=\"a,b\" separator=\",\" show=\"Number\" yyseparator=\",\"/>]</cite>.</p>";
+  for (case, load, errors, paragraph) in [
+    (
+      "copy loads natbib",
+      "\\RequirePackage{natbib}",
+      1,
+      author_year,
+    ),
+    (
+      "load commented out",
+      "%\\RequirePackage{natbib}",
+      0,
+      numbers,
+    ),
+    (
+      "copy's own options",
+      "\\RequirePackage[square,numbers]{natbib}",
+      0,
+      numbers,
+    ),
+  ] {
+    let copy = copy.replace("\\RequirePackage{natbib}", load);
+    // (the numbered cases; under author-year a `\bibliographystyle` still sets the punctuation)
+    let styles: &[&str] = if errors == 0 {
+      &["", "\\bibliographystyle{plainnat}\n"]
+    } else {
+      &[""]
+    };
+    for style in styles {
+      let tex = tex.replace("\\begin{document}", &format!("{style}\\begin{{document}}"));
+      let (log, xml) = convert_files_with(&tex, &[("neurips_2024.sty", &copy)], Some("ar5iv.sty"));
+      assert_eq!(
+        (error_count(&log), warning_count(&log)),
+        (errors, 0),
+        "{case} {style}: {log}"
+      );
+      assert_eq!(
+        log.matches("Option clash for package natbib").count(),
+        errors,
+        "{case} {style}: {log}"
+      );
+      assert_element(&xml, "p", &["xml:id=\"p1.1\""], paragraph);
+    }
+  }
+}
+
+/// "The base class defines this name" by the class load, not the class text (`state::ClassLoadFrame`,
+/// OXIDIZED_DESIGN_DIVERGENCES #732): the article binding assigns article.cls:613-622's names in its own load, a raw
+/// base class defines its own for real, and a class loaded while the copy's `\LoadClass` is open is the copy's base
+/// class too. The reviewer's probes, each as pdflatex: nc_chain (`\LoadClass{mybase}` over article: 2 errors, "Figure
+/// 1", "References"), nc_namedef (mybase's `\expandafter\def\csname bibname\endcsname`: 1 error), nc_cond (its
+/// `\AtBeginDocument{\def\bibname…}` has not run: 0 errors), nc_letrelax (mybase's `\let\refname\relax`, definable as
+/// for LaTeX's `\newcommand`: 0 errors, "Fig 1", "Works Cited"); and the copy's own `\let…\relax` before its
+/// `\newcommand`.
+#[test]
+fn copy_newcommand_through_a_chained_base_class() {
+  let tex = repro!("text_defaults/chain/copy_newcommand_through_a_chained_base_class_errs.tex");
+  let cimart = repro!("text_defaults/chain/cimart.cls");
+  let mybase = repro!("text_defaults/chain/mybase.cls");
+  let tag = |tag: &str| format!("<caption><tag close=\": \">{tag}</tag>C</caption>");
+  for (case, cimart, mybase, errors, figure, heading) in [
+    (
+      "nc_chain",
+      cimart.to_string(),
+      mybase.to_string(),
+      vec!["\\refname", "\\figurename"],
+      "Figure 1",
+      "References",
+    ),
+    (
+      "nc_namedef",
+      cimart.replace(
+        "\\newcommand\\refname{Works Cited}\n\\newcommand\\figurename{Fig}\n",
+        "\\newcommand\\bibname{Works}\n",
+      ),
+      s_add(
+        mybase,
+        "\\expandafter\\def\\csname bibname\\endcsname{Literature}\n",
+      ),
+      vec!["\\bibname"],
+      "Figure 1",
+      "References",
+    ),
+    (
+      "nc_cond",
+      cimart.replace(
+        "\\newcommand\\refname{Works Cited}\n\\newcommand\\figurename{Fig}\n",
+        "\\newcommand\\bibname{Works}\n",
+      ),
+      s_add(mybase, "\\AtBeginDocument{\\def\\bibname{Literature}}\n"),
+      vec![],
+      "Figure 1",
+      "References",
+    ),
+    (
+      "nc_letrelax",
+      cimart.to_string(),
+      s_add(mybase, "\\let\\refname\\relax\n\\let\\figurename\\relax\n"),
+      vec![],
+      "Fig 1",
+      "Works Cited",
+    ),
+    (
+      "the copy's own \\let\\relax",
+      cimart.replace(
+        "\\LoadClass{mybase}\n",
+        "\\LoadClass{article}\n\\let\\refname\\relax\n\\let\\figurename\\relax\n",
+      ),
+      mybase.to_string(),
+      vec![],
+      "Fig 1",
+      "Works Cited",
+    ),
+  ] {
+    let (log, xml) = convert_files_with(
+      tex,
+      &[("cimart.cls", &cimart), ("mybase.cls", &mybase)],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (errors.len(), 0),
+      "{case}: {log}"
+    );
+    for name in &errors {
+      assert!(
+        log.contains(&format!("Command {name} already defined")),
+        "{case} {name}: {log}"
+      );
+    }
+    assert!(xml.contains(&tag(figure)), "{case}: {xml}");
+    let bibliography = latexml::util::test::xml_element(&xml, "bibliography", &[])
+      .unwrap_or_else(|| panic!("{case}: no bibliography: {xml}"));
+    assert_element(
+      &bibliography,
+      "title",
+      &[],
+      &format!("<title>{heading}</title>"),
+    );
+  }
+}
+
+fn s_add(base: &str, extra: &str) -> String { format!("{base}{extra}") }
+
+/// The class loads' record is the conversion's own: a long-lived worker converting two papers on one thread
+/// (cortex_worker: a `Converter` per paper, no engine reset between them) does not carry the first paper's base class
+/// into the second, whose `mybase.cls` of the same name defines no `\bibname` (the r6 class-text cache, keyed by class
+/// name, did): 1 error, then 0.
+#[test]
+fn class_load_record_does_not_reach_the_next_document() {
+  use std::rc::Rc;
+
+  use latexml::converter::Converter;
+  use latexml_core::common::{Config, OutputFormat};
+  let tex = repro!("text_defaults/chain/copy_newcommand_through_a_chained_base_class_errs.tex");
+  let cimart = repro!("text_defaults/chain/cimart.cls").replace(
+    "\\newcommand\\refname{Works Cited}\n\\newcommand\\figurename{Fig}\n",
+    "\\newcommand\\bibname{Works}\n",
+  );
+  let mybase = repro!("text_defaults/chain/mybase.cls");
+  let papers: Vec<tempfile::TempDir> = ["\\def\\bibname{Literature}\n", ""]
+    .iter()
+    .map(|extra| {
+      let dir = tempfile::tempdir().expect("a paper directory");
+      std::fs::write(dir.path().join("paper.tex"), tex).expect("the paper");
+      std::fs::write(dir.path().join("cimart.cls"), &cimart).expect("the copy");
+      std::fs::write(dir.path().join("mybase.cls"), format!("{mybase}{extra}"))
+        .expect("the base class");
+      dir
+    })
+    .collect();
+  let sources: Vec<String> = papers
+    .iter()
+    .map(|dir| dir.path().join("paper.tex").to_string_lossy().into_owned())
+    .collect();
+  let logs = std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(move || {
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+      let opts = Config {
+        format: OutputFormat::XML,
+        include_comments: Some(false),
+        preload: Some(vec![String::from("ar5iv.sty")]),
+        bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
+        extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
+        ..Config::default()
+      };
+      let logs: Vec<String> = sources
+        .into_iter()
+        .map(|source| {
+          let mut converter = Converter::from_config(opts.clone());
+          converter.note_main_source(&source);
+          converter.prepare_session(&opts).expect("a session");
+          converter.convert(source).log
+        })
+        .collect();
+      latexml_core::reset_thread_engine();
+      logs
+    })
+    .expect("a conversion thread")
+    .join()
+    .expect("the conversions");
+  for (log, errors) in logs.iter().zip([1, 0]) {
+    assert_eq!((error_count(log), warning_count(log)), (errors, 0), "{log}");
+    assert_eq!(
+      log.matches("Command \\bibname already defined").count(),
+      errors,
+      "{log}"
+    );
+  }
+  drop(papers);
+}

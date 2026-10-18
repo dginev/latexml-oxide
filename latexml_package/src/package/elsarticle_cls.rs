@@ -130,6 +130,9 @@ LoadDefinitions!({
     };
     let natbib_opt_vec: Vec<String> = natbib_opts.split(',').map(|s| s.trim().to_string()).collect();
     RequirePackage!("natbib", options => natbib_opt_vec);
+    // (elsarticle.cls:1243 `\RequirePackage[\@biboptions]{natbib}`: the class's own load, so a document's repeat with
+    // other options is LaTeX's "Option clash" — binding/content.rs `apply_new_options_on_reload`)
+    AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
   }
   RequirePackage!("hyperref");
   // elsarticle.cls:1247-1249 writes `\biboptions` to the .spl for natbib's options on the next run; without natbib

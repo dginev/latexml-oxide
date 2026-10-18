@@ -423,6 +423,15 @@ pub struct State {
   pub binding_lets:            rustc_hash::FxHashSet<SymStr>,
   /// The frontmatter setters whose calls are observed ([`crate::definition::origin::watch_setter_calls`]).
   pub watched_setters:         rustc_hash::FxHashSet<SymStr>,
+  /// Each class loaded (its file name, `article.cls`) with the names its load frame assigned a macro (with the macro's
+  /// address, to tell it is still the meaning) or had a definition refused by a lock (address 0): what that class
+  /// defines, as its real file does ([`ClassLoadFrame`], `copy_base_class_defines`, `class_layer_definition`).
+  pub class_loads:             Vec<(String, rustc_hash::FxHashMap<SymStr, usize>)>,
+  /// The class loads open now, as indices into [`State::class_loads`], innermost last ([`ClassLoadFrame`]).
+  pub class_load_frames:       Vec<usize>,
+  /// The stand-in copies whose own `\LoadClass` is open now, innermost last: a class loaded inside it is a base class
+  /// of that copy too ([`ClassLoadFrame`]; the reviewer's probe nc_chain, `\LoadClass{mybase}` over article).
+  pub copy_class_loads:        Vec<u32>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
 }
@@ -438,8 +447,8 @@ pub struct CopyProvidesRecord {
   /// The copy's own `\maketitle`/`\@maketitle` bodies, refused or overlaid as they may be
   /// ([`copy_provides_title_pages`]).
   pub title_page:    Vec<Tokens>,
-  /// The classes the copy's own code loaded (`\LoadClass`, [`note_copy_loads_class`]): the real class has the names
-  /// they define ([`copy_provides_text_default_clashes`]).
+  /// The classes the copy's own code loaded (`\LoadClass`, and the classes loaded inside it: [`ClassLoadFrame`]): the
+  /// real class has the names they define ([`copy_provides_text_default_clashes`]).
   pub loads_classes: Vec<String>,
 }
 
@@ -536,6 +545,9 @@ impl Default for State {
       stand_in_last_files:     Vec::new(),
       binding_lets:            rustc_hash::FxHashSet::default(),
       watched_setters:         rustc_hash::FxHashSet::default(),
+      class_loads:             Vec::new(),
+      class_load_frames:       Vec::new(),
+      copy_class_loads:        Vec::new(),
       journal:                 None,
     }
   }
@@ -1091,6 +1103,24 @@ impl State {
       if crate::definition::origin::provide_only() {
         self.provide_only_assigned.insert(key);
       }
+      // (a macro a class's load frame defines — its binding's, its raw file's, a package's it loads — not LaTeXML's
+      // kernel layers: `ClassLoadFrame`)
+      if let Some(&class) = self.class_load_frames.last()
+        && matches!(value, Stored::Expandable(_))
+        && !matches!(
+          origin,
+          crate::definition::origin::DefinitionOrigin::Unknown
+            | crate::definition::origin::DefinitionOrigin::Plain
+            | crate::definition::origin::DefinitionOrigin::LatexDump
+            | crate::definition::origin::DefinitionOrigin::Pool
+            | crate::definition::origin::DefinitionOrigin::Format
+            | crate::definition::origin::DefinitionOrigin::Document
+        )
+        && let Stored::Expandable(defn) = &value
+        && let Some((_, names)) = self.class_loads.get_mut(class)
+      {
+        names.insert(key, Rc::as_ptr(defn) as usize);
+      }
       if crate::definition::origin::stand_in_loading() {
         self.stand_in_meanings.insert(key);
         if crate::definition::origin::stand_in_base_class() {
@@ -1597,6 +1627,9 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     // Record that a redefinition was dropped: a locked binding may consult
     // `<cs>:redefined` to yield the parts of its behaviour the class took
     // over (see `\lx@maketitle@cleanup`).
+    // (a class whose load defines the name the lock kept defines it all the same, as its real file does:
+    // `ClassLoadFrame`, `copy_base_class_defines`)
+    note_class_load_name(meaning_key(&token));
     let redefined_key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined")));
     state_mut!().assign_internal(
       TableName::Value,
@@ -1960,6 +1993,11 @@ pub fn note_copy_provides_assignment(token: &Token) {
   if state!().copy_provides_frames[at].kept_keys.contains(&key) {
     return;
   }
+  // (a name whose earlier assignment in the copy's code stood is the copy's: `\let\refname\relax` then
+  // `\newcommand\refname{…}`, as LaTeX's `\newcommand` finds a `\relax` name definable)
+  if state!().copy_provides_frames[at].assigned.contains(&key) {
+    return;
+  }
   // (a counter's representation and reset list are owned only when the stand-in binding's own load assigned them:
   // `counter_part`)
   // (an environment's names are provided or declined together: once the copy's code redefined one the binding owns —
@@ -1976,7 +2014,7 @@ pub fn note_copy_provides_assignment(token: &Token) {
   });
   let owned = if token.with_cs_name(counter_part).is_some() {
     state!().stand_in_meanings.contains(&key)
-  } else if unowned_text_default(token) {
+  } else if unowned_text_default(token) || base_class_name_made_relax(token) {
     false
   } else {
     // (not by its macro partner alone: plain's `\endgroup` does not make a copy's `\group` LaTeXML's)
@@ -1999,6 +2037,18 @@ pub fn note_copy_provides_assignment(token: &Token) {
   let frame = &mut state.copy_provides_frames[at];
   frame.kept.push((key, binding));
   frame.kept_keys.insert(key);
+}
+
+/// Is `token` a name the stand-in binding's base class assigned (`State::stand_in_base_defaults`) that a file since
+/// made `\relax` — a raw base class the copy loads: `\let\figurename\relax` before the copy's
+/// `\newcommand\figurename{Fig}`? LaTeX finds a `\relax` name undefined (`\newcommand`, `\@ifundefined`), so the copy's
+/// definition stands, as in TeX.
+fn base_class_name_made_relax(token: &Token) -> bool {
+  state!()
+    .stand_in_base_defaults
+    .contains(&meaning_key(token))
+    && lookup_meaning(token)
+      .is_some_and(|meaning| Some(meaning) == lookup_meaning(&crate::token::TOKEN_RELAX))
 }
 
 /// Does a stand-in's copy, read or running its hook now ([`note_copy_provides_assignment`]), redefine the locked
@@ -2317,16 +2367,9 @@ fn environment_names(name: &str) -> Vec<String> {
   }
 }
 
-/// Is `token`'s meaning a text default the stand-in binding does not own, for [`note_copy_provides_assignment`]: a
-/// public name (letters only) whose meaning is a macro without parameters expanding to text (characters, at least one
-/// letter: `\refname`'s "References"), assigned last by the base class the binding loaded
-/// (`State::stand_in_base_defaults`: the pool's article, report or book, the OmniBus guess) or by LaTeXML's kernel
-/// before it? Then the copy's
-/// definition of it stands, as the real class's does over article.cls's: MRM.cls:3191 `\def\refname{REFERENCES}`
-/// (2506.14995's PDF), ws-rv9x6.cls:91 `\newcommand\bibname{References}` (2301.03442). One the binding's own code
-/// assigned, or a binding it required (natbib's), stays the binding's.
-fn unowned_text_default(token: &Token) -> bool {
-  use crate::definition::origin::DefinitionOrigin;
+/// Is `token`'s meaning a text default: a public name (letters only) whose meaning is a macro without parameters
+/// expanding to text (characters, at least one letter: `\refname`'s "References")?
+fn text_default(token: &Token) -> bool {
   let public = token.with_cs_name(|name| {
     name.strip_prefix('\\').is_some_and(|letters| {
       !letters.is_empty() && letters.chars().all(|c| c.is_ascii_alphabetic())
@@ -2348,7 +2391,7 @@ fn unowned_text_default(token: &Token) -> bool {
   let Some(ExpansionBody::Tokens(body)) = &defn.expansion else {
     return false;
   };
-  let text = body.unlist_ref().iter().all(|t| {
+  body.unlist_ref().iter().all(|t| {
     matches!(
       t.get_catcode(),
       Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
@@ -2356,20 +2399,32 @@ fn unowned_text_default(token: &Token) -> bool {
   }) && body
     .unlist_ref()
     .iter()
-    .any(|t| t.get_catcode() == Catcode::LETTER);
-  if !text {
+    .any(|t| t.get_catcode() == Catcode::LETTER)
+}
+
+/// Is `token`'s meaning a text default ([`text_default`]) the stand-in binding does not own, for
+/// [`note_copy_provides_assignment`]: assigned last by the base class the binding loaded
+/// (`State::stand_in_base_defaults`: article, report or book, whose bindings assign their classes' names in their own
+/// load, the OmniBus guess) or by LaTeXML's kernel before it? Then the copy's definition of it stands, as the real
+/// class's does over article.cls's: MRM.cls:3191 `\def\refname{REFERENCES}` (2506.14995's PDF), ws-rv9x6.cls:91
+/// `\newcommand\bibname{References}` (2301.03442). One the binding's own code assigned, or a binding it required
+/// (natbib's), stays the binding's.
+fn unowned_text_default(token: &Token) -> bool {
+  use crate::definition::origin::DefinitionOrigin;
+  if !text_default(token) {
     return false;
   }
   let key = meaning_key(token);
-  let state = state!();
-  if state.stand_in_meanings.contains(&key) {
-    state.stand_in_base_defaults.contains(&key)
-  } else {
-    matches!(
-      defn.origin,
-      DefinitionOrigin::Unknown | DefinitionOrigin::Pool
-    )
+  if state!().stand_in_meanings.contains(&key) {
+    return state!().stand_in_base_defaults.contains(&key);
   }
+  let Some(Stored::Expandable(defn)) = lookup_meaning(token) else {
+    return false;
+  };
+  matches!(
+    defn.origin,
+    DefinitionOrigin::Unknown | DefinitionOrigin::Pool
+  ) || class_layer_definition(token)
 }
 
 /// Does a stand-in's copy, read now, `\newcommand` a text default its binding does not own (`unowned_text_default`),
@@ -2385,85 +2440,143 @@ pub fn copy_provides_text_default_yields(token: &Token) -> bool {
     && !copy_base_class_defines(token)
 }
 
-/// Does a stand-in's copy, read now, `\newcommand` a text default its binding does not own (`unowned_text_default`)
-/// that the base class it `\LoadClass`ed defines (article.cls:616 `\newcommand\refname`, `\figurename`; LaTeXML's
-/// kernel or the base class's binding predefines them)? The real class has the name, so LaTeX stops with "Command …
-/// already defined" and keeps the first definition: an Error here as there (sect08.rs `\newcommand`; the probe
-/// newcmd_base, pdflatex 2 errors, "References"/"Figure 1"). `\def`/`\renewcommand` redefine as before.
+/// Does a stand-in's copy, read now, `\newcommand` a text default its binding does not own that a base class it
+/// `\LoadClass`ed defines (`copy_base_class_defines`: article.cls:616 `\newcommand\refname`, :618 `\figurename`, which
+/// the article binding assigns in its own load; a raw base class's own definition)? The real class has the name, so
+/// LaTeX stops with "Command … already defined" and keeps the first definition: an Error here as there (sect08.rs
+/// `\newcommand`; the reviewer's probes newcmd_base and nc_chain, pdflatex 2 errors, "References"/"Figure 1";
+/// nc_namedef 1). A name the base class made `\relax` is definable, as LaTeX's `\newcommand` finds it.
+/// `\def`/`\renewcommand` redefine as before.
 pub fn copy_provides_text_default_clashes(token: &Token) -> bool {
   crate::definition::origin::copy_provides() != 0
     && !state_is_unlocked()
-    && unowned_text_default(token)
+    && text_default(token)
+    && !binding_owns(token)
     && copy_base_class_defines(token)
 }
 
-/// The stand-in copy read now loads the class `file` from its own code (`\LoadClass`; binding::content
-/// `input_definitions`).
-pub fn note_copy_loads_class(file: &str) {
-  let id = crate::definition::origin::copy_provides();
-  if id == 0 {
-    return;
-  }
+/// Did the stand-in binding's own load assign `token` last (`State::stand_in_meanings`, not its base class's
+/// `State::stand_in_base_defaults`)? Then the copy's definition only provides it ([`note_copy_provides_assignment`]).
+fn binding_owns(token: &Token) -> bool {
+  let key = meaning_key(token);
+  let state = state!();
+  state.stand_in_meanings.contains(&key) && !state.stand_in_base_defaults.contains(&key)
+}
+
+/// The class file name a load request names (`article`, `dir/mybase.cls` → `article.cls`, `mybase.cls`).
+fn class_file_name(file: &str) -> String {
   let name = file.trim();
-  let name = if name.ends_with(".cls") {
+  let name = name.rsplit(['/', '\\']).next().unwrap_or(name);
+  if name.ends_with(".cls") {
     name.to_string()
   } else {
     s!("{name}.cls")
-  };
-  if let Some(copy) = state_mut!().copy_provides_copies.get_mut(id as usize - 1) {
-    copy.loads_classes.push(name);
   }
 }
 
-thread_local! {
-  /// The text of each base class file a stand-in's copy loaded, read once ([`copy_base_class_defines`]).
-  static BASE_CLASS_TEXT: RefCell<rustc_hash::FxHashMap<String, String>> = RefCell::default();
+/// RAII frame of one class load (`binding::content::input_definitions`, a `.cls` with its options handled: the
+/// `\documentclass`, a `\LoadClass`, a binding's `LoadClass!`). While it is open, the macros assigned outside LaTeXML's
+/// kernel layers — the class binding's own (article.cls's names, article_cls.rs), the raw file's, a package's it
+/// loads — and the names a lock kept from a definition it made are recorded as the class's (`State::class_loads`),
+/// as its real file defines them; a repeat load records nothing new. A load a stand-in's copy requests (`copy`: its own
+/// `\LoadClass`, or a class loaded while that one is open) also names the class among the copy's base classes
+/// (`CopyProvidesRecord::loads_classes`), whose names its `\newcommand` finds defined
+/// ([`copy_provides_text_default_clashes`]): chained `\LoadClass{mybase}` over article (the reviewer's probe nc_chain).
+pub struct ClassLoadFrame {
+  copy: bool,
 }
 
-/// Does a class the stand-in copy read now `\LoadClass`ed ([`note_copy_loads_class`]) define `token` — a definer
-/// (`\newcommand`, `\renewcommand`, `\providecommand`, `\DeclareRobustCommand`, `\def`, `\gdef`, `\edef`, `\xdef`, `\let`)
-/// of the name in its file's uncommented text (article.cls:616 `\newcommand\refname{References}`)? The base class's
-/// binding and LaTeXML's kernel predefine its text names together with names it lacks (`\bibname`, book's), so the
-/// file itself tells them apart. A class file not found defines nothing here.
+impl ClassLoadFrame {
+  /// Open the frame of loading the class `file`, requested by the stand-in copy `copy` if any.
+  pub fn enter(file: &str, copy: Option<u32>) -> Self {
+    let name = class_file_name(file);
+    let mut state = state_mut!();
+    if let Some(id) = copy
+      && let Some(record) = state.copy_provides_copies.get_mut(id as usize - 1)
+      && !record.loads_classes.contains(&name)
+    {
+      record.loads_classes.push(name.clone());
+    }
+    let index = match state
+      .class_loads
+      .iter()
+      .position(|(class, _)| *class == name)
+    {
+      Some(index) => index,
+      None => {
+        state
+          .class_loads
+          .push((name, rustc_hash::FxHashMap::default()));
+        state.class_loads.len() - 1
+      },
+    };
+    state.class_load_frames.push(index);
+    if let Some(id) = copy {
+      state.copy_class_loads.push(id);
+    }
+    ClassLoadFrame { copy: copy.is_some() }
+  }
+}
+
+impl Drop for ClassLoadFrame {
+  fn drop(&mut self) {
+    let mut state = state_mut!();
+    state.class_load_frames.pop();
+    if self.copy {
+      state.copy_class_loads.pop();
+    }
+  }
+}
+
+/// The stand-in copy whose own `\LoadClass` is open now, if any ([`ClassLoadFrame`]).
+pub fn open_copy_class_load() -> Option<u32> { state!().copy_class_loads.last().copied() }
+
+/// Record `key` as a name the class load open now defines ([`ClassLoadFrame`]).
+fn note_class_load_name(key: SymStr) {
+  let mut state = state_mut!();
+  if let Some(&class) = state.class_load_frames.last()
+    && let Some((_, names)) = state.class_loads.get_mut(class)
+  {
+    names.entry(key).or_insert(0);
+  }
+}
+
+/// Does a base class of the stand-in copy read now — a class its own `\LoadClass` requested, or one loaded while that
+/// was open ([`ClassLoadFrame`]) — define `token`: did that class's load frame assign it (article.cls:613-622's names,
+/// which article_cls.rs assigns in its own load; a raw base class's `\expandafter\def\csname bibname\endcsname`, the
+/// reviewer's probe nc_namedef) or a lock keep its definition? Its document-time code
+/// (`\AtBeginDocument{\def\bibname…}`, nc_cond) has not run, so defines nothing yet, as in TeX.
 fn copy_base_class_defines(token: &Token) -> bool {
   let id = crate::definition::origin::copy_provides();
   if id == 0 {
     return false;
   }
-  let classes = state!()
-    .copy_provides_copies
-    .get(id as usize - 1)
-    .map(|copy| copy.loads_classes.clone())
-    .unwrap_or_default();
-  if classes.is_empty() {
-    return false;
-  }
-  let name = token.with_cs_name(|name| name.trim_start_matches('\\').to_string());
-  let definer = Regex::new(&s!(
-    r"\\(?:newcommand|renewcommand|providecommand|DeclareRobustCommand|def|gdef|edef|xdef|let)\*?\s*\{{?\s*\\{}(?:[^A-Za-z@]|$)",
-    regex::escape(&name)
-  ));
-  let Ok(definer) = definer else {
+  let key = meaning_key(token);
+  let state = state!();
+  let Some(copy) = state.copy_provides_copies.get(id as usize - 1) else {
     return false;
   };
-  classes.iter().any(|class| {
-    BASE_CLASS_TEXT.with(|cache| {
-      let mut cache = cache.borrow_mut();
-      let text = cache.entry(class.clone()).or_insert_with(|| {
-        crate::binding::content::find_file(class, None)
-          .and_then(|path| std::fs::read(path).ok())
-          .map(|bytes| {
-            String::from_utf8_lossy(&bytes)
-              .lines()
-              .map(|line| line.split('%').next().unwrap_or(""))
-              .collect::<Vec<_>>()
-              .join("\n")
-          })
-          .unwrap_or_default()
-      });
-      definer.is_match(text)
-    })
+  copy.loads_classes.iter().any(|class| {
+    state
+      .class_loads
+      .iter()
+      .any(|(name, names)| name == class && names.contains_key(&key))
   })
+}
+
+/// Is `token`'s meaning the macro a class's load frame assigned it ([`ClassLoadFrame`]): the class layer's —
+/// article.cls's names, which its binding assigns, a raw class's own —, not LaTeXML's semantic layer? A text default of
+/// the class layer is the class's, as LaTeXML's kernel predefinitions of the same names are ([`unowned_text_default`]).
+fn class_layer_definition(token: &Token) -> bool {
+  let Some(Stored::Expandable(defn)) = lookup_meaning(token) else {
+    return false;
+  };
+  let key = meaning_key(token);
+  let address = Rc::as_ptr(&defn) as usize;
+  state!()
+    .class_loads
+    .iter()
+    .any(|(_, names)| names.get(&key) == Some(&address))
 }
 
 /// Does the document's class define `\chapter`, as the real class's `\@ifundefined{chapter}` sees it (natbib's forks

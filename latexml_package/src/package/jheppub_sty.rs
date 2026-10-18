@@ -8,6 +8,9 @@ LoadDefinitions!({
   // jheppub.sty:37 `\RequirePackage[numbers,sort&compress]{natbib}` (`no-natbib-sort`: `[numbers,compress]`, the same
   // citations here): numbered citations as 2112.14648's and 2607.20603's PDFs.
   RequirePackage!("natbib", options => vec![s!("numbers"), s!("sort&compress")]);
+  // (the package's own load, so a document's repeat with other options is LaTeX's "Option clash" — binding/content.rs
+  // `apply_new_options_on_reload`)
+  AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("epsfig");

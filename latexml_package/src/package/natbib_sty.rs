@@ -484,6 +484,19 @@ LoadDefinitions!({
         },
         _ => {},
       }
+      // (and each of them sets whether a `\bibliographystyle`'s `\bibstyle@<style>` may still change the punctuation,
+      // natbib.sty:238-262: an explicit style option `nobibstyle`, `authoryear` `bibstyle` — 2506.08967's
+      // `\usepackage[square,numbers]{natbib}` after the neurips binding's early load, then
+      // `\bibliographystyle{plainnat}`, numbered as its first load would be)
+      match option {
+        "numbers" | "super" | "colon" | "round" | "square" | "curly" | "angle" | "comma" | "semicolon" => {
+          Let!("\\bibstyle", "\\@gobble");
+        },
+        "authoryear" => {
+          Let!("\\bibstyle", "\\@citestyle");
+        },
+        _ => {},
+      }
     }
   });
 

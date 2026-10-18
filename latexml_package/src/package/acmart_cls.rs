@@ -34,8 +34,11 @@ LoadDefinitions!({
   RequirePackage!("natbib");
   // (acmart.cls:299-300 `\if@ACM@natbib\RequirePackage{natbib}`: the class's own load, so a document's
   // `\usepackage[authoryear]{natbib}` is LaTeX's "Option clash", its options dropped — binding/content.rs
-  // `apply_new_options_on_reload`)
-  AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
+  // `apply_new_options_on_reload`. Under `natbib=false` (acmart.cls:131-138) the class loads no natbib: the binding's
+  // load stays an early one, which the document's own load replaces.)
+  if acmart_natbib_option()? {
+    AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
+  }
   RequirePackage!("textcomp");
   RequirePackage!("graphicx");
   // Real acmart.cls passes [prologue,table]{xcolor} but doesn't pass
@@ -970,4 +973,34 @@ fn separates_names(tokens: &[Token]) -> bool {
     }
     depth == level && !math && *t == T_OTHER!(",")
   })
+}
+
+/// acmart.cls:131-138's `natbib` boolkey (`\ExecuteOptionsX{natbib=true}`), as xkeyval's `\ProcessOptionsX` sees the
+/// class's options: `\opt@acmart.cls` (or `\@classoptionslist`), the last setting winning, a bare `natbib` true.
+fn acmart_natbib_option() -> Result<bool> {
+  let mut options = String::new();
+  for list in ["\\opt@acmart.cls", "\\@classoptionslist"] {
+    if let Some(defn) = lookup_definition(&T_CS!(list))?
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      options = body.to_string();
+      break;
+    }
+  }
+  let mut natbib = true;
+  for option in options.split(',') {
+    let option: String = option.chars().filter(|c| !c.is_whitespace()).collect();
+    match option.split_once('=') {
+      Some(("natbib", value)) => {
+        let value = value
+          .strip_prefix('{')
+          .and_then(|v| v.strip_suffix('}'))
+          .unwrap_or(value);
+        natbib = value.eq_ignore_ascii_case("true");
+      },
+      None if option == "natbib" => natbib = true,
+      _ => {},
+    }
+  }
+  Ok(natbib)
 }
