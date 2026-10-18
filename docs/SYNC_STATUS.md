@@ -3871,6 +3871,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (aastex701.cls:8608-8610, :8849; AASTeX 5.x and emulateapj have none, so an author's `$`-delimited macro in a table
   ran away, 62x). 0903.2259 0 Errors, 13 tables (was 3). Repros captions-floats/{deluxetable_inside_deluxetable,
   aastex5_table_dollar_delimited_macro} (pdflatex 0, Perl 0).
+  **Integration (int25, a7092cd8e5, binary 67int26):** 74a (7d17c7f365, cherry-picked from pk/74a) + the AASTeX fixes
+  (a3a3dc2712) + the 74a review fixes (a7092cd8e5; review agent_reports/2026-10-18_74a_review.md). Gates nextest
+  6023/6023 + cortex 10/10, clippy/rustdoc clean, inits plain=0 latex=0. Population A/B over 1,428 papers
+  (pop67int23.tsv): 67int25 vs the pushed 67int24b E 5,663 → 5,660, F 15 → 15, 12 changed, 0 worse, no paper losing >1 %
+  of its words; the review fixes alone (67int26 vs 67int25) 1 changed (+30 words), 0 worse. Binding nets 136/136, 0
+  documents worse than 67int23. Witnesses: 0806.4576 title + 3 creators back; 2210.02246, 1508.06756, 0901.4589,
+  1805.07007, 1209.2208, 0908.1913, 1603.02077, 2007.03709, 1011.3976 byte-identical to 67int25.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
