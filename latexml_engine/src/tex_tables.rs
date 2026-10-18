@@ -662,6 +662,12 @@ LoadDefinitions!({
       tks.push(frozen_span());
       tks.push(T_CS!("\\omit"));
     }
+    // latex.ltx:16603-16607 sets the cell in a group of its own (`\multispan{#1}\begingroup … \@preamble\hbox{}
+    // \endgroup`), so what it lets locally ends before the row's `\\`: a `\centering` in the cell
+    // (`\multicolumn{12}{c}{\centering …} \\[-22pt]`, 1511.05496; pdflatex 0 errors) lets `\\` to `\@centercr` only
+    // inside it. The row end is what that group protects here, so `\\` is saved and put back after the cell; a whole
+    // group would also end the alignment state the cell reads at its close (`\centering`'s, the cell's `align`).
+    tks.extend([T_CS!("\\let"), T_CS!("\\lx@multicolumn@cr"), T_CS!("\\\\")]);
     // A paragraph column (`p{}`, array.sty `m{}`/`b{}`, tabularx `X`, tabulary `J`: `align=Justify`) boxes the cell, and
     // an embedded `\\` of a `\multicolumn` cell is a line break in that box, not the row end: `\let\\\lx@newline` (and
     // `\tabularnewline`, so an `\arraybackslash` in the prefix keeps that recovery: pdflatex reads that `\\` as
@@ -716,6 +722,7 @@ LoadDefinitions!({
       && let Some(after) = &col.after {
         tks.extend(after_cell_unlist(after.unlist_ref().clone()));
       }
+    tks.extend([T_CS!("\\let"), T_CS!("\\\\"), T_CS!("\\lx@multicolumn@cr")]);
     Ok(Tokens::new(tks))
   });
 

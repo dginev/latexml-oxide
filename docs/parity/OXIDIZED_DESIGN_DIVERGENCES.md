@@ -19976,7 +19976,12 @@ typesets every pending form at the spill, as Perl does. Under mn2e/mnras without
 the class's `\def\@biblabel#1{}` (mn2e.cls:1370, mnras.cls:1636), a `\bibitem[\protect\citeauthoryear{…}{…}]{key}`
 label no longer errs for an uncited key (pdflatex 0 errors) and keeps its one Error when a `\cite` prints it (pdflatex 1
 per citation). An entry nothing cites (or a keyless one) has no refnum tag; the bibliography XSLT shows the role-less tag,
-else the refnum. natbib's entries (`\lx@NAT@lbibitem`) and unlabelled `\bibitem{key}` are unchanged. Divergence from
+else the refnum. natbib's entries (`\lx@NAT@lbibitem`) and unlabelled `\bibitem{key}` are unchanged, and so is any
+`\bibitem[label]` while natbib (its own or a renamed copy: `\NAT@ifcmd`, natbib.sty:809) is loaded: natbib parses the
+label at the `\bibitem` and writes the parsed author and year, so no `\cite` expands it; the label is digested there
+once, as the optional argument it was, and the tags made from what it digested to (a copy's delimited `\citeauthoryear`,
+natbib.sty:1014, read raw out of that context ran past the label's end: 1003.3017's natbib_vw.sty; repro
+`index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited`, pdflatex and Perl 0 errors). Divergence from
 Perl, which digests the label and every form at `\bibitem` (latex_constructs.pool.ltxml:4096-4102). Witnesses
 0812.1037, 1105.2318, 1306.6339, 1805.00040. Guards `perfect_kernel_batch70c::*`; repros
 `index-bib/mnras_bibitem_label_{uncited,nocite_only,cited_before,cited_after}`, controls

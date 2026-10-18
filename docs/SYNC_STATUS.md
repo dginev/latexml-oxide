@@ -3797,7 +3797,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   runs: 1710.09074, 1508.03599 keep 1 Error each where the faithful result is 0 (pdflatex's errors there come from its
   broken TL 2025 preamble); (f) html.sty's `\htmlcite` (html_sty.rs:47) builds its `ltx:bibref` without
   `cite_prints_keys`. A cite resolves its key's list only while it has pending entries (stomach.rs
-  `lx@deferred@print@pending@<list>`; 40k unprinted `\index` entries and 5k cites took 19.5 s before).
+  `lx@deferred@print@pending@<list>`; 40k unprinted `\index` entries and 5k cites took 19.5 s before). Integration
+  fixes from the int24 population A/B (its 2 worse rows; minimal repros checked against pdflatex and Perl): (i) under
+  natbib, own or a renamed copy (`\NAT@ifcmd`), a `\bibitem[label]` is digested once at the `\bibitem` as before 70c
+  (OD #750), and mn2e's binding allocates `\bibhang` (mn2e.cls:1372-1378) — 1003.3017 2 → 0 (repro
+  `index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited`); (ii) `\lx@alignment@multicolumn` saves `\\`
+  after its `\omit`s and puts it back after the cell, the row end latex.ltx:16603-16607's cell group protects, so 73b's
+  `\centering` `\\` (`\@centercr`) stays in the cell — 1511.05496 12 → 0 (repro
+  `alignment/multicolumn_centering_then_row_end`; a whole `\begingroup` also ends the alignment state the cell reads at
+  its close, setting a centered cell right).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

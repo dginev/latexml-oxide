@@ -44,6 +44,12 @@ LoadDefinitions!({
   // `\bibitem[\protect\citeauthoryear{…}{…}]` label is then typeset only by a `\cite` (sect11.rs `\lx@bibitem`;
   // 0812.1037, 1105.2318, 1306.6339). Perl's mn2e.cls.ltxml leaves the kernel's `[#1]`.
   RawTeX!(r"\def\@biblabel#1{}");
+  // mn2e.cls:1372-1378: without `usenatbib` (natbib makes its own) the class allocates `\bibhang` = 2em, which a
+  // shipped natbib copy may only set (1003.3017's natbib_vw.sty:440-441 comments out its `\newlength{\bibhang}`;
+  // repro index-bib/mn2e_natbib_copy_sets_bibhang, pdflatex and Perl 0 errors).
+  if lookup_int("@usenatbib") == 0 {
+    RawTeX!(r"\newlength{\bibhang}\setlength{\bibhang}{2em}");
+  }
   // mn2e.cls (2001/02/06 v2.2) :1210-1216, as mnras.cls :1349-1354 (mnras_cls.rs): with `usedcolumn`, the class's
   // column types on dcolumn's `D` (mn2e_support loads dcolumn). Perl's mn2e_support.sty.ltxml:18-19 only loads
   // dcolumn, so a `d{2.1}` column was unknown and its cells' `&` stray (astro-ph0701731, astro-ph0312263;

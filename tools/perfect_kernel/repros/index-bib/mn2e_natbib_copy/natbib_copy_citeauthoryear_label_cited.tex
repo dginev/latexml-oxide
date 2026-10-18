@@ -1,0 +1,18 @@
+% witness: 1003.3017 (int24 population A/B: 2 -> 6 Errors under 70c; mn2e + a renamed natbib copy, natbib_vw.sty)
+% oracle:  pdflatex (2 passes, the paper's mn2e.cls beside it) 0 errors, "Schneider et al. (2010)"; Perl 0
+%          natbib parses the label at the \bibitem (natbib.sty:809 `\NAT@ifcmd`, :1014 `\citeauthoryear` is its
+%          delimited parser) and writes the parsed author and year: no \cite expands the raw label
+% engines: rust 67int24 (70c): 6 Errors (\lx@tag@intags restricted_horizontal, \endgroup, plus the \bibhang pair);
+%          67int23b: 2 (the \bibhang pair); mn2e.cls:1376-1377 allocates \bibhang, which the copy only sets (:440-441)
+% expect:  0 errors; the entry keeps its tags
+% status:  RED (67int24) -> GREEN (int24 fix: label digested once under natbib, sect11.rs; mn2e \bibhang, mn2e_cls.rs)
+% preload: ar5iv.sty
+\documentclass{mn2e}
+\usepackage{natbib_vw}
+\begin{document}
+\cite{s10}
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Schneider et 
+al.}{2010}]{s10} Schneider D.~P., et al., 2010, AJ, in press
+\end{thebibliography}
+\end{document}

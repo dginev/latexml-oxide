@@ -622,6 +622,23 @@ pub(crate) fn load() -> Result<()> {
         // (`\def\@biblabel#1{}`, mn2e.cls:1370, mnras.cls:1636) a `\bibitem[\protect\citeauthoryear{…}{…}]{key}`
         // label errs only where a `\cite` prints it, as in pdflatex (0812.1037, 1105.2318, 1306.6339, 1508.03599). Perl
         // (latex_constructs.pool.ltxml:4096-4102) digests every form here. Repros index-bib/bibitem_label_*.
+        // Under natbib (its own or any copy: `\NAT@ifcmd`, natbib.sty:809) the label is natbib's to parse at the
+        // `\bibitem` (`\@lbibitem` writes the parsed author and year; `\citeauthoryear` is its delimited parser,
+        // natbib.sty:1014 `#1#2#3(@)(@)\@nil#4`): no `\cite` expands the raw label. It is digested here once, as the
+        // optional argument it was before 70c, and the tags are made from what it digested to, all forms at once;
+        // read raw, out of that context, a copy's parser reads past the label's end (1003.3017's natbib_vw.sty:622;
+        // repro index-bib/natbib_copy_citeauthoryear_label_cited, pdflatex and Perl 0 errors).
+        if lookup_meaning(&T_CS!("\\NAT@ifcmd")).is_some() {
+          let label = digest(Revert!(tag))?;
+          let mut tag_tokens = vec![T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
+          tag_tokens.extend(Revert!(label));
+          tag_tokens.push(T_END!());
+          tag_tokens.extend(Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")]).unlist());
+          tag_tokens.push(T_END!());
+          properties.insert("tags", digest(tag_tokens)?.into());
+          whatsit.set_properties(properties);
+          return Ok(Vec::new());
+        }
         let mut define_label = vec![T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
         define_label.extend(Revert!(tag));
         define_label.push(T_END!());
