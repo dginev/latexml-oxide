@@ -17118,7 +17118,7 @@ paragraph (`\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`: A and B stack in the m
 `\lx@alignment@multicolumn` is the second of its two definitions (TeX_Tables.pool.ltxml:704-713):
 `\lx@alignment@altcolumn{<template>}\relax <body>`, whose `replaceColumn` makes the multicolumn's column the cell's
 template, so the column's before and after tokens wrap the body; its `\\` ends the outer row: B becomes a new row
-(KNOWN_PERL_ERRORS #626).
+(KNOWN_PERL_ERRORS #626). The cell's local changes end with it in TeX (latex.ltx:16603-16607 sets it in `\begingroup…\endgroup`): here `\\` is saved after the `\omit`s (`\let\lx@multicolumn@cr\\`) and put back after the cell, so a `\centering` in it does not reach the row's `\\` (1511.05496; repro `alignment/multicolumn_centering_then_row_end`); a whole group is not used, as it would also end the alignment state the cell reads at its close.
 
 **Rust** (`tex_tables.rs` `\lx@alignment@multicolumn`) ports the first, overridden definition (:693-702), the column's
 before tokens (through `beforeCellUnlist`), the body and the after tokens (through `afterCellUnlist`) spliced after the

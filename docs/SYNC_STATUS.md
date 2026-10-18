@@ -3805,7 +3805,21 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   after its `\omit`s and puts it back after the cell, the row end latex.ltx:16603-16607's cell group protects, so 73b's
   `\centering` `\\` (`\@centercr`) stays in the cell — 1511.05496 12 → 0 (repro
   `alignment/multicolumn_centering_then_row_end`; a whole `\begingroup` also ends the alignment state the cell reads at
-  its close, setting a centered cell right).
+  its close, setting a centered cell right). Open: (g) under a raw natbib copy a labelled `\bibitem` keeps no refnum, so
+  its `\cite` shows no label text (pdflatex "Schneider et al. (2010)"; as 67int23b): the copy's delimited
+  `\citeauthoryear` (natbib_vw.sty:622) runs to the end of the label's private mouth; route a copy's labelled `\bibitem`
+  through the natbib binding's `\lx@NAT@parselabel` (natbib_sty.rs:1333).
+  **Integration (int24, 71b2a9b485, binary 67int24b):** 73a r1-r4 (+ review fixes c64e948812) and 73b r1-r2
+  (6253aecd5d) cherry-picked onto int23 8fad3f852f, then 70c (conflicts: SYNC/OD entry-wise, sigma_cls.rs keeps both
+  fleqn hooks); a joint review of 73b r2 + 70c (agent_reports/2026-10-18_73b_r2_70c_review.md: SHIP both); main-session
+  fixes d5711e807a (deferred-print pending counter: a `\cite` resolves its key's list only while it has entries, 40k
+  `\index` + 5k cites 20.9 s → 0.99 s, output identical) and 71b2a9b485 (the A/B's two worse rows: natbib-parsed labels,
+  mn2e `\bibhang`, `\multicolumn`'s `\\`; reviewed SHIP). Gates nextest 6012/6012 + cortex 10/10, clippy/rustdoc clean,
+  inits plain=0 latex=0, dumps identical to 67int24; population A/B vs 67int23b over 1,428 papers (pop67int23.tsv,
+  results_r67int24b): E 6,015 → 5,663, F 17 → 15, 0 worse, 0 newly Fatal, 91 better; of the 80 papers losing >1 % of
+  their words, 78 lose them in the bibliography (70c: an uncited label is not typeset) or in index/nomenclature entries
+  of a list never printed (73a; 1204.6199's `\makenomenclature` without `\printnomenclature`), 2106.12527 its garbled
+  math (E 25 → 0). Binding nets 136/136, 0 documents worse than 67int23.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

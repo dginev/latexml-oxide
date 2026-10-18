@@ -627,7 +627,7 @@ pub(crate) fn load() -> Result<()> {
         // natbib.sty:1014 `#1#2#3(@)(@)\@nil#4`): no `\cite` expands the raw label. It is digested here once, as the
         // optional argument it was before 70c, and the tags are made from what it digested to, all forms at once;
         // read raw, out of that context, a copy's parser reads past the label's end (1003.3017's natbib_vw.sty:622;
-        // repro index-bib/natbib_copy_citeauthoryear_label_cited, pdflatex and Perl 0 errors).
+        // repro index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited, pdflatex and Perl 0 errors).
         if lookup_meaning(&T_CS!("\\NAT@ifcmd")).is_some() {
           let label = digest(Revert!(tag))?;
           let mut tag_tokens = vec![T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];

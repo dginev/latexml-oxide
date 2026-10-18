@@ -4,7 +4,7 @@
 %          delimited parser) and writes the parsed author and year: no \cite expands the raw label
 % engines: rust 67int24 (70c): 6 Errors (\lx@tag@intags restricted_horizontal, \endgroup, plus the \bibhang pair);
 %          67int23b: 2 (the \bibhang pair); mn2e.cls:1376-1377 allocates \bibhang, which the copy only sets (:440-441)
-% expect:  0 errors; the entry keeps its tags
+% expect:  0 errors; the entry keeps its (empty) display tag; the citation has no label text, as 67int23b (SYNC 70c row g)
 % status:  RED (67int24) -> GREEN (int24 fix: label digested once under natbib, sect11.rs; mn2e \bibhang, mn2e_cls.rs)
 % preload: ar5iv.sty
 \documentclass{mn2e}

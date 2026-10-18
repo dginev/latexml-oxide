@@ -2482,7 +2482,7 @@ pub fn resolve_deferred_prints(list: Option<&str>) -> Result<()> {
   }
   // A list with nothing pending has nothing to scan for: a `\cite` of a key whose `\bibitem` comes later (70c's
   // `b@<key>` lists), with a document's unprinted `\index` entries pending, would otherwise rescan them all, once per
-  // cite (40k entries and 5k cites: 19.5 s).
+  // cite (40k entries and 5k cites, release build: 20.9 s → 0.99 s).
   if let Some(list) = list
     && lookup_int(&s!("lx@deferred@print@pending@{list}")) <= 0
   {

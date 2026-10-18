@@ -46,7 +46,7 @@ LoadDefinitions!({
   RawTeX!(r"\def\@biblabel#1{}");
   // mn2e.cls:1372-1378: without `usenatbib` (natbib makes its own) the class allocates `\bibhang` = 2em, which a
   // shipped natbib copy may only set (1003.3017's natbib_vw.sty:440-441 comments out its `\newlength{\bibhang}`;
-  // repro index-bib/mn2e_natbib_copy_sets_bibhang, pdflatex and Perl 0 errors).
+  // repro index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited, pdflatex and Perl 0 errors).
   if lookup_int("@usenatbib") == 0 {
     RawTeX!(r"\newlength{\bibhang}\setlength{\bibhang}{2em}");
   }
