@@ -250,6 +250,7 @@ mod perfect_kernel_batch69b;
 mod perfect_kernel_batch69c;
 mod perfect_kernel_batch70a;
 mod perfect_kernel_batch70b;
+mod perfect_kernel_batch70c;
 mod perfect_kernel_batch71a;
 mod perfect_kernel_batch72a;
 mod perfect_kernel_batch72b;

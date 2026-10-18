@@ -645,8 +645,7 @@ says otherwise.
   reruns are clean.
 
 **Queued studies (main-session queue, 2026-10-17)**
-- **70c:** mn2e/mnras `\citeauthoryear` labels digested only where printed (TeX timing), about 497 papers. The older
-  analysis is at this file's mn2e bibitem row.
+- **70c:** done on pk/70c (OXIDIZED_DESIGN_DIVERGENCES #750; the 70c bullet below).
 - **rc_harness:** re-open every "discount" or "harness limit" row: mnras→atbegshi 63, bull-ppt 98, mathalfa 25, the
   rc_struct2/3/4 harness papers, and row G's clusters.
   - User ruling 2026-10-17: TL 2025 build failure means skip the PDF checks only; there is no discount.
@@ -3769,6 +3768,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   - (f) bm: the split sees only top-level `$`; a `$` inside a braced subgroup of a `\bm` argument (bm.sty:252-256,
     `\mathchoice\hbox`) gets no in-hbox treatment. The `Grouped` rule also covers RevTeX 4.x's own unboxed `\bm` (TeX
     errs there anyway).
+- **70c** (a `\bibitem` label is typeset only where TeX prints it; rc_struct4 row C1; user ruling 2026-10-18 on text
+  written to an auxiliary file). `\lx@bibitem` reads its `[label]` undigested and splits the entry's tags
+  (base_utilities.rs `tag_forms`): the role-less tag (`\fnum@@bibitem`, the class's `\@biblabel`) at the `\bibitem`, the
+  reference forms (refnum, autoref, …; TeX's `\b@key`) under the deferred-print list `b@key` of 73a's `defer_print`,
+  resolved when a `\@@bibref` names the key (sect11.rs `cite_prints_keys`; `\nocite` does not count; the streaming
+  yield's fallback typesets them at the spill). mn2e/mnras bindings define the class's `\def\@biblabel#1{}`
+  (mn2e.cls:1370, mnras.cls:1636). OXIDIZED_DESIGN_DIVERGENCES #750. An uncited `\citeauthoryear` label without natbib
+  no longer errs (0812.1037 3 → 0, 1105.2318, 1306.6339, 1805.00040, 1712.05964 1 → 0); a cited one keeps pdflatex's
+  Error. Guards `perfect_kernel_batch70c::*` (6), repros `index-bib/mnras_bibitem_label_*`,
+  `index-bib/bibitem_numeric_label_cited_and_uncited`, `index-bib/mnras_usenatbib_bibitem_label_cited`;
+  `perfect_kernel_batch64x::keyless_entries_with_content_are_kept` (a keyless entry has no refnum) and
+  `114_streaming_structure::streaming_bibliography_takes_its_heading_unit` (the uncited entry's autoref typeset at the
+  spill) updated. A/B vs 67int23b over 118 papers (19 projection witnesses, 19 rc_struct4 C1, 20 citing mn2e/mnras,
+  20 natbib author-year, 40 random bibliography papers of pop67int23): Errors 1,181 → 1,118, error-free 41 → 85, 0
+  worse, 0 new Fatal; 58 changed, every one only in bibitem `<tags>` (bibblocks, citations and the rest of the XML
+  identical); all 3,593 cited keys keep an identical refnum. Open: (a) pasj01's own `\@lbibitem` (pasj01.cls:1600-1628,
+  the author/year parse) is not emulated, so its display tag still typesets a `\citeauthoryear` label (1801.05986,
+  1610.05396; Error kept); (b) old mn.sty prints `[label]` (mn.sty:1605), so 0903.4835 and astro-ph0010188 keep theirs,
+  as pdflatex; (c) the bibliography XSLT shows a bibitem's refnum when it has no role-less tag, so under mn2e/mnras a
+  cited entry shows its label in HTML and an uncited one none, where the PDF prints none for either (main-session call).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

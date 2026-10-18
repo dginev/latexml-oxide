@@ -27,6 +27,11 @@ LoadDefinitions!({
   if lookup_int("@usenatbib") != 0 {
     RawTeX!(r"\bibpunct{(}{)}{;}{a}{}{,}\renewcommand\bibname{BIBLIOGRAPHY}");
   }
+  // mnras.cls:1636, after its natbib load (:1333): the reference list prints no label, `\def\@biblabel#1{}` (with
+  // natbib or without), as mn2e.cls:1370 (mn2e_cls.rs). Without natbib a `\bibitem[\protect\citeauthoryear{…}{…}]`
+  // label is then typeset only by a `\cite` (sect11.rs `\lx@bibitem`; 1805.00040). Perl's mnras.cls.ltxml leaves the
+  // kernel's `[#1]`.
+  RawTeX!(r"\def\@biblabel#1{}");
   // mnras.cls:1349-1354: with `usedcolumn`, the class's column types on dcolumn's `D` (mn2e_support loads dcolumn).
   if lookup_int("@usedcolumn") != 0 {
     RawTeX!(r"\newcolumntype{d}[1]{D{.}{.}{#1}}\newcolumntype{.}{D{.}{.}{-1}}\newcolumntype{,}{D{,}{,}{2}}");

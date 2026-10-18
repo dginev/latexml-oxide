@@ -446,12 +446,13 @@ Text \cite{a}.
 \end{document}
 "#,
   );
+  // A keyless entry has no reference forms: no `\cite` prints its `\b@` (OXIDIZED_DESIGN_DIVERGENCES #750).
   assert_element(
     &xml,
     "bibliography",
     &[],
-    r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem xml:id="bib.bibx1"><tags><tag>[Able(2000)]</tag><tag role="refnum">Able(2000)</tag></tags><bibblock> Able, A.
-</bibblock></bibitem><bibitem xml:id="bib.bibx2"><tags><tag>[Baker(2001)]</tag><tag role="refnum">Baker(2001)</tag></tags><bibblock></bibblock></bibitem><bibitem key="a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> Cole.
+    r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem xml:id="bib.bibx1"><tags><tag>[Able(2000)]</tag></tags><bibblock> Able, A.
+</bibblock></bibitem><bibitem xml:id="bib.bibx2"><tags><tag>[Baker(2001)]</tag></tags><bibblock></bibblock></bibitem><bibitem key="a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> Cole.
 </bibblock></bibitem></biblist></bibliography>"#,
   );
   // natbib: the author's label keeps an empty entry too (`\@lbibitem`'s `#1`).

@@ -2568,79 +2568,9 @@ LoadDefinitions!({
 
   // This collects up the various declared ltx:tag's into an ltx:tags
   DefMacro!("\\lx@make@tags {}", sub[(ttype)] {
-    // Pull the (role -> formatter) pairs out of HashStored via with_value
-    // so we don't clone the whole hashmap envelope; the per-role tokens
-    // are Copy and the per-role String arm just dereferences a SymStr.
-    let role_formatters: Vec<(String, Option<Token>)> = with_value(
-      "type_tag_formatter",
-      |v| match v {
-        Some(Stored::HashStored(formatters)) => {
-          let keys_sym: Vec<_> = formatters.keys().copied().collect();
-          let mut sorted_keys: Vec<String> = with_many(&keys_sym, |keys| {
-            keys.into_iter().map(str::to_owned).collect()
-          });
-          sorted_keys.sort();
-          sorted_keys
-            .into_iter()
-            .map(|role| {
-              let ft = match formatters.get(&role) {
-                Some(Stored::Token(t)) => Some(*t),
-                Some(Stored::String(sym)) => {
-                  Some(Token!(sym *sym, Catcode::CS))
-                },
-                _ => None,
-              };
-              (role, ft)
-            })
-            .collect()
-        }
-        _ => Vec::new(),
-      },
-    );
-    let mut tags = Vec::new();
-    for (role, formatter_opt) in role_formatters {
-      if let Some(formatter_token) = formatter_opt {
-        // A tag only a reference prints (`type_tag_deferred`) holds its diagnostics (`\lx@tag@intags@held`).
-        let constructor = if with_mapping("type_tag_deferred", &role, |held| held.is_some()) {
-          "\\lx@tag@intags@held"
-        } else {
-          "\\lx@tag@intags"
-        };
-        tags.push((role.is_empty(), Invocation!(T_CS!(constructor),
-          vec![
-            Tokens!(T_OTHER!(role.as_str())),
-            build_invocation(formatter_token, vec![Some(ttype.clone())])?
-          ])
-        ));
-      }
-    }
-
-    // A tag a reference prints (refnum, typerefnum, autoref, the cleveref forms) is built where its target is (an
-    // eqnarray row's in its math group, where a document may rebind `~`: vdm.sty:135-138, 202-205
-    // `\everymath{\let~\hook}`, a `\vbox{\ialign…}` that re-stepped the equation, an endless recursion on 1601.02132)
-    // and printed in text. Its `~` is the kernel's no-break space, LaTeX's `\nobreakspace`, which babel's `~` also is
-    // except in a language that makes it a shorthand; such a shorthand, or a document's own text `~`, no longer reaches
-    // these tags (OXIDIZED_DESIGN_DIVERGENCES #98 addendum). The role-less tag is the target's own label, printed where
-    // it is built (`\item[Espa~na]`), and keeps the document's `~`. Guard
-    // `perfect_kernel_batch63::autoref_tag_tilde_is_the_kernel_space`.
-    // A reference form re-reads the label's source, which the role-less tag typesets (`\lx@reread@copy`): an
-    // `\item[$\hat\mathbf{e}$]`'s typerefnum, a `\tag{$\hat\mathbf{t}$}`'s refnum give no second
-    // OXIDIZED_DESIGN_DIVERGENCES #721 Warning (guard `perfect_kernel_batch71a::undelimited_argument_warning_once_per_occurrence`).
     let mut lx_tags = vec![T_CS!("\\lx@tags"), T_BEGIN!()];
-    for (printed_here, invoked_tag) in tags {
-      if printed_here {
-        lx_tags.extend(invoked_tag.unlist());
-      } else {
-        lx_tags.extend([
-          T_CS!("\\begingroup"),
-          T_CS!("\\lx@reread@copy"),
-          T_CS!("\\let"),
-          T_ACTIVE!('~'),
-          T_CS!("\\lx@tag@texttilde"),
-        ]);
-        lx_tags.extend(invoked_tag.unlist());
-        lx_tags.push(T_CS!("\\endgroup"));
-      }
+    for (_printed_here, form) in tag_forms(&ttype)? {
+      lx_tags.extend(form.unlist());
     }
     lx_tags.push(T_END!());
     Ok(Tokens::new(lx_tags))
@@ -4050,6 +3980,81 @@ fn show_frontmatter(entry: &TagData) -> String {
     })
     .collect();
   s!("{}  [{}] {}", entry.tag, attrs.join(","), content)
+}
+
+/// The tags `\lx@make@tags{type}` collects into an `ltx:tags` (Perl Base_Utility.pool.ltxml:975-983), one per declared
+/// role (`type_tag_formatter`), in role order, each with whether it is printed where it is built: the role-less tag is
+/// the target's own label (`\item[Espa~na]`, a bibliography entry's `\@biblabel`), the others are the forms only a
+/// reference prints (refnum, typerefnum, autoref, the cleveref forms). A caller that typesets those only where a
+/// reference prints them (sect11.rs `\lx@bibitem`, the `\b@key` a `\cite` prints) takes them apart here.
+pub fn tag_forms(ttype: &Tokens) -> Result<Vec<(bool, Tokens)>> {
+  // Pull the (role -> formatter) pairs out of HashStored via with_value
+  // so we don't clone the whole hashmap envelope; the per-role tokens
+  // are Copy and the per-role String arm just dereferences a SymStr.
+  let role_formatters: Vec<(String, Option<Token>)> =
+    with_value("type_tag_formatter", |v| match v {
+      Some(Stored::HashStored(formatters)) => {
+        let keys_sym: Vec<_> = formatters.keys().copied().collect();
+        let mut sorted_keys: Vec<String> = with_many(&keys_sym, |keys| {
+          keys.into_iter().map(str::to_owned).collect()
+        });
+        sorted_keys.sort();
+        sorted_keys
+          .into_iter()
+          .map(|role| {
+            let ft = match formatters.get(&role) {
+              Some(Stored::Token(t)) => Some(*t),
+              Some(Stored::String(sym)) => Some(Token!(sym * sym, Catcode::CS)),
+              _ => None,
+            };
+            (role, ft)
+          })
+          .collect()
+      },
+      _ => Vec::new(),
+    });
+  let mut forms = Vec::new();
+  for (role, formatter_opt) in role_formatters {
+    let Some(formatter_token) = formatter_opt else {
+      continue;
+    };
+    // A tag only a reference prints (`type_tag_deferred`) holds its diagnostics (`\lx@tag@intags@held`).
+    let constructor = if with_mapping("type_tag_deferred", &role, |held| held.is_some()) {
+      "\\lx@tag@intags@held"
+    } else {
+      "\\lx@tag@intags"
+    };
+    let invoked_tag = Invocation!(T_CS!(constructor), vec![
+      Tokens!(T_OTHER!(role.as_str())),
+      build_invocation(formatter_token, vec![Some(ttype.clone())])?
+    ]);
+    // A tag a reference prints (refnum, typerefnum, autoref, the cleveref forms) is built where its target is (an
+    // eqnarray row's in its math group, where a document may rebind `~`: vdm.sty:135-138, 202-205
+    // `\everymath{\let~\hook}`, a `\vbox{\ialign…}` that re-stepped the equation, an endless recursion on 1601.02132)
+    // and printed in text. Its `~` is the kernel's no-break space, LaTeX's `\nobreakspace`, which babel's `~` also is
+    // except in a language that makes it a shorthand; such a shorthand, or a document's own text `~`, no longer reaches
+    // these tags (OXIDIZED_DESIGN_DIVERGENCES #98 addendum). The role-less tag is the target's own label, printed where
+    // it is built (`\item[Espa~na]`), and keeps the document's `~`. Guard
+    // `perfect_kernel_batch63::autoref_tag_tilde_is_the_kernel_space`.
+    // A reference form re-reads the label's source, which the role-less tag typesets (`\lx@reread@copy`): an
+    // `\item[$\hat\mathbf{e}$]`'s typerefnum, a `\tag{$\hat\mathbf{t}$}`'s refnum give no second
+    // OXIDIZED_DESIGN_DIVERGENCES #721 Warning (guard `perfect_kernel_batch71a::undelimited_argument_warning_once_per_occurrence`).
+    if role.is_empty() {
+      forms.push((true, invoked_tag));
+    } else {
+      let mut wrapped = vec![
+        T_CS!("\\begingroup"),
+        T_CS!("\\lx@reread@copy"),
+        T_CS!("\\let"),
+        T_ACTIVE!('~'),
+        T_CS!("\\lx@tag@texttilde"),
+      ];
+      wrapped.extend(invoked_tag.unlist());
+      wrapped.push(T_CS!("\\endgroup"));
+      forms.push((false, Tokens::new(wrapped)));
+    }
+  }
+  Ok(forms)
 }
 
 /// The authors the frontmatter has digested so far (`num_ltx:creator{author}`): the last one digests with the label

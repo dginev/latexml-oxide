@@ -565,8 +565,10 @@ pub(crate) fn load() -> Result<()> {
     "\\bibitem",
     r#"\if@lx@inbibliography\else\expandafter\lx@mung@bibliography\expandafter{\@currenvir}\fi\lx@bibitem"#,
     locked=>true);
-  // Perl latex_constructs.pool.ltxml L4134-4162: enterHorizontal => 1 + afterDigest.
-  DefConstructor!("\\lx@bibitem[] Semiverbatim",
+  // Perl latex_constructs.pool.ltxml L4134-4162: enterHorizontal => 1 + afterDigest. The `[label]` is read
+  // undigested (Perl `[]` digests it): it is typeset only in the entry's tags, each form where TeX prints it
+  // (OXIDIZED_DESIGN_DIVERGENCES #750).
+  DefConstructor!("\\lx@bibitem OptionalUndigested Semiverbatim",
     "<ltx:bibitem key='#key' xml:id='#id' _labelled='#labelled'>#tags<ltx:bibblock>",
     enter_horizontal => true,
     after_digest => sub[whatsit] {
@@ -608,16 +610,42 @@ pub(crate) fn load() -> Result<()> {
         } else {
           RefStepID!("@bibitem")?
         };
-        properties.insert("key", key.into());
+        properties.insert("key", key.clone().into());
         // the author's own label (`\bibitem[Baker(2001)]{}`): a printed entry however empty (`is_phantom_entry`)
         properties.insert("labelled", "true".into());
-        let mut tag_tokens = vec![
-            T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
-        tag_tokens.extend(Revert!(tag));
-        tag_tokens.push(T_END!());
-        tag_tokens.extend(
-          Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")]).unlist());
-        tag_tokens.push(T_END!());
+        // The label is typeset where TeX prints it, form by form. The entry's own label, `\fnum@@bibitem` =
+        // `{\@biblabel{\the@bibitem}}`, is printed here, as `\@lbibitem`'s `\item[\@biblabel{#1}\hfill]`
+        // (latex.ltx:6233-6237). The forms a reference prints (refnum, …) are TeX's `\b@key`, which `\@lbibitem`
+        // writes to the .aux (`\bibcite{key}{label}`) and only a `\cite` of the key expands: typeset only once some
+        // `\cite` prints the key (`cite_prints_keys`), at once when one already has, through the deferred-print list
+        // `b@key` (latexml_core `defer_print`; OXIDIZED_DESIGN_DIVERGENCES #750). Under mn2e/mnras without natbib
+        // (`\def\@biblabel#1{}`, mn2e.cls:1370, mnras.cls:1636) a `\bibitem[\protect\citeauthoryear{…}{…}]{key}`
+        // label errs only where a `\cite` prints it, as in pdflatex (0812.1037, 1105.2318, 1306.6339, 1508.03599). Perl
+        // (latex_constructs.pool.ltxml:4096-4102) digests every form here. Repros index-bib/bibitem_label_*.
+        let mut define_label = vec![T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
+        define_label.extend(Revert!(tag));
+        define_label.push(T_END!());
+        let mut printed_here = Vec::new();
+        let mut printed_by_cite = vec![T_CS!("\\begingroup")];
+        printed_by_cite.extend(define_label.iter().copied());
+        let mut cite_forms = false;
+        for (here, form) in tag_forms(&Tokens!(T_OTHER!("@bibitem")))? {
+          if here {
+            printed_here.extend(form.unlist());
+          } else {
+            cite_forms = true;
+            printed_by_cite.extend(form.unlist());
+          }
+        }
+        printed_by_cite.push(T_CS!("\\endgroup"));
+        let mut tag_tokens = vec![T_BEGIN!()];
+        tag_tokens.extend(define_label);
+        tag_tokens.extend([T_CS!("\\lx@tags"), T_BEGIN!()]);
+        tag_tokens.extend(printed_here);
+        if cite_forms {
+          tag_tokens.extend(deferred_print_tokens(&cite_list(&key), Tokens::new(printed_by_cite)).unlist());
+        }
+        tag_tokens.extend([T_END!(), T_END!()]);
         properties.insert("tags",
           digest(tag_tokens)?.into());
         whatsit.set_properties(properties);
@@ -962,7 +990,9 @@ pub(crate) fn load() -> Result<()> {
     enter_horizontal => true,
     properties => sub[args] {
       unref!(args => _show, keys, _phrase1, _phrase2);
-      Ok(stored_map!("bibrefs" => clean_bib_key(&keys.to_string()),
+      let bibrefs = clean_bib_key(&keys.to_string());
+      cite_prints_keys(&bibrefs)?;
+      Ok(stored_map!("bibrefs" => bibrefs,
         "separator" => match lookup_tokens("CITE_SEPARATOR") {
           Some(sep) => digest(sep)?.to_string(),
           None => String::new() },
@@ -2093,4 +2123,20 @@ fn carries_nothing(item: &Digested) -> bool {
     DigestedData::Comment(_) => true,
     _ => false,
   }
+}
+
+/// The deferred-print list of the entry `key` (latexml_core `defer_print`): TeX's `\b@key`, the label `\@lbibitem`
+/// writes to the .aux (latex.ltx:6233-6237 `\bibcite`) for a `\cite` to print.
+fn cite_list(key: &str) -> String { s!("b@{key}") }
+
+/// A citation prints its keys' labels (latex.ltx:6197-6206 `\@citex` reads each `\b@key`): the forms of each entry's
+/// tags a reference prints, deferred by `\lx@bibitem` until then, are typeset (`resolve_deferred_prints`), and an entry
+/// that comes later typesets them at once. Every citation reaches this through `\@@bibref` (the kernel's `\cite`,
+/// natbib's, biblatex's, the `.bbl` styles'); `\nocite` prints nothing and does not (`\lx@mark@nocite`).
+/// OXIDIZED_DESIGN_DIVERGENCES #750.
+fn cite_prints_keys(bibrefs: &str) -> Result<()> {
+  for key in bibrefs.split(',').filter(|key| !key.is_empty()) {
+    resolve_deferred_prints(Some(&cite_list(key)))?;
+  }
+  Ok(())
 }

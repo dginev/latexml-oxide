@@ -1,0 +1,16 @@
+% control for OXIDIZED_DESIGN_DIVERGENCES #750 (witnesses 1003.3475, 1302.5520 pass usenatbib): with natbib the label is
+% natbib's to parse (natbib.sty `\@lbibitem`, `\citeauthoryear` its label form)
+% oracle:  pdflatex (2 passes) 0 errors: "Abbott et al. (2017)"
+% engines: rust 67int23b: 0 errors; Perl alike
+% expect:  0 errors; the citation reads the authors and year
+% status:  GREEN (70c)
+% preload: ar5iv.sty
+\documentclass[usenatbib]{mnras}
+\begin{document}
+\title{T}\author{A}\maketitle
+Text \citet{a}.
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Abbott et al.}{2017}]{a} Abbott B., 2017, ApJ
+\bibitem[\protect\citeauthoryear{Baker}{2001}]{b} Baker C., 2001, MNRAS
+\end{thebibliography}
+\end{document}

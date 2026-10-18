@@ -24,7 +24,13 @@ fn streaming_bibliography_takes_its_heading_unit() {
   let (streamed, streamed_errors) = streaming_sweep::convert(&source, Some(3));
   assert_eq!((eager_errors, streamed_errors), (0, 0));
   assert!(!eager.contains("<section"), "{eager}");
-  assert_eq!(streamed, eager);
+  // The uncited ref-b's reference form (its autoref tag) is typeset only where a `\cite` prints it, and the streamed
+  // run typesets it at the spill, as Perl does (the deferred-print fallback, OXIDIZED_DESIGN_DIVERGENCES #738, #750).
+  let uncited_streamed =
+    "<tag>[]</tag>\n          <tag role=\"autoref\"/>\n        </tags>\n        <bibblock>\nBaker";
+  let uncited_eager = "<tag>[]</tag>\n        </tags>\n        <bibblock>\nBaker";
+  assert!(eager.contains(uncited_eager), "{eager}");
+  assert_eq!(streamed.replacen(uncited_streamed, uncited_eager, 1), eager);
 }
 
 /// 62zm: a unit's heading (and the bibliography's own title) stays resident while the unit is open — a blank line

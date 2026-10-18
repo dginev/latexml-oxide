@@ -19958,3 +19958,24 @@ Not the 70c timing redesign (labels digested only where printed): a mechanism-lo
 and errs ("Missing $ inserted"). KNOWN_PERL_ERRORS #973.
 Guard `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`; repro
 `macro-state/refstepcounter_in_math_sets_a_math_label`.
+
+### 750. A `\bibitem` label's reference forms are typeset only where a `\cite` prints them
+
+**Decision** (70c; rc_struct4 row C1; user ruling 2026-10-18: text TeX writes to an auxiliary file and typesets only
+when printed is digested only where it is printed): `\@lbibitem` (latex.ltx:6233-6237) typesets the label in the list
+as `\item[\@biblabel{#1}\hfill]` and writes it to the .aux as `\bibcite{key}{label}`; only a `\cite` of the key expands
+`\b@key` (latex.ltx:6197-6206). So `\lx@bibitem` (sect11.rs) reads its `[label]` undigested and splits the entry's tags
+(base_utilities.rs `tag_forms`): the role-less tag, `\fnum@@bibitem` = `{\@biblabel{\the@bibitem}}`, is digested at the
+`\bibitem` through the class's own `\@biblabel`; the forms a reference prints (refnum, typerefnum, autoref, the
+cleveref forms) are deferred under the deferred-print list `b@key` (73a's latexml_core `defer_print`, #738), resolved
+when a `\@@bibref` names the key (sect11.rs `cite_prints_keys`: the kernel's `\cite`, natbib's, biblatex's, the `.bbl`
+styles'), at once when one already has. `\nocite` prints nothing and does not count. The streaming yield's fallback
+typesets every pending form at the spill, as Perl does. Under mn2e/mnras without `usenatbib`, whose bindings now define
+the class's `\def\@biblabel#1{}` (mn2e.cls:1370, mnras.cls:1636), a `\bibitem[\protect\citeauthoryear{…}{…}]{key}`
+label no longer errs for an uncited key (pdflatex 0 errors) and keeps its one Error when a `\cite` prints it (pdflatex 1
+per citation). An entry nothing cites (or a keyless one) has no refnum tag; the bibliography XSLT shows the role-less tag,
+else the refnum. natbib's entries (`\lx@NAT@lbibitem`) and unlabelled `\bibitem{key}` are unchanged. Divergence from
+Perl, which digests the label and every form at `\bibitem` (latex_constructs.pool.ltxml:4096-4102). Witnesses
+0812.1037, 1105.2318, 1306.6339, 1805.00040. Guards `perfect_kernel_batch70c::*`; repros
+`index-bib/mnras_bibitem_label_{uncited,nocite_only,cited_before,cited_after}`, controls
+`index-bib/bibitem_numeric_label_cited_and_uncited`, `index-bib/mnras_usenatbib_bibitem_label_cited`.

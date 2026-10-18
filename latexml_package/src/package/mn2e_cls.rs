@@ -39,6 +39,11 @@ LoadDefinitions!({
   ProcessOptions!();
   LoadClass!("article");
   RequirePackage!("mn2e_support");
+  // mn2e.cls:1370, after its natbib load (:1201-1203): the reference list prints no label, `\def\@biblabel#1{}`
+  // (with natbib or without), as mnras.cls:1636 (mnras_cls.rs). Without natbib a
+  // `\bibitem[\protect\citeauthoryear{…}{…}]` label is then typeset only by a `\cite` (sect11.rs `\lx@bibitem`;
+  // 0812.1037, 1105.2318, 1306.6339). Perl's mn2e.cls.ltxml leaves the kernel's `[#1]`.
+  RawTeX!(r"\def\@biblabel#1{}");
   // mn2e.cls (2001/02/06 v2.2) :1210-1216, as mnras.cls :1349-1354 (mnras_cls.rs): with `usedcolumn`, the class's
   // column types on dcolumn's `D` (mn2e_support loads dcolumn). Perl's mn2e_support.sty.ltxml:18-19 only loads
   // dcolumn, so a `d{2.1}` column was unknown and its cells' `&` stray (astro-ph0701731, astro-ph0312263;

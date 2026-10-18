@@ -20,7 +20,7 @@ use latexml_core::{
 ///**********************************************************************
 use crate::base_utilities::{
   FrontmatterAnchor, already_reported, mark_preamble_residue, place_frontmatter,
-  remove_frontmatter_marks,
+  remove_frontmatter_marks, tag_forms,
 };
 use crate::{
   base_parameter_types::reread_sanitized_entry,
