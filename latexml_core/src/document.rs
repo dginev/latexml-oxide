@@ -7352,7 +7352,6 @@ impl Document {
     false
   }
 
-  /// Find a node in the document that can contain an element `qname`
   /// [`Self::float_to_element`] (closing form) for an element a frontmatter container (`ltx:abstract`…) refuses,
   /// when the insertion point is inside one: the element goes to the nearest open ancestor that admits it, as Perl's
   /// `floatToElement` places one (Document.pm:1052-1077), and the insertion point comes back (the saved node is
@@ -7366,6 +7365,7 @@ impl Document {
     self.float_to_element(qname, true)
   }
 
+  /// Find a node in the document that can contain an element `qname`
   pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool) -> Result<Option<Node>> {
     let mut candidates: VecDeque<Node> = VecDeque::from(self.get_insertion_candidates(&self.node));
     let mut closeable = true;

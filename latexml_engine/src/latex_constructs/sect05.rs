@@ -1142,6 +1142,14 @@ pub(crate) fn load() -> Result<()> {
         def_macro(token, params, ExpansionBody::Tokens(Tokens::default()), None)?;
       }
     }
+    // …and the kernel's `\maketitle`, which a class's begin code may call (cmmse2008.cls:146
+    // `\newenvironment{abstract}{\maketitle\makeauthors…`, 0806.4576): run in the replay, it placed the title and
+    // authors in the discarded output and kept its cleanup. An empty macro, not `\relax`, which the AMS classes'
+    // `\ifx\maketitle\relax` reads as a `\maketitle` already run ("Abstract should precede \maketitle", cmfne.cls,
+    // 2210.02246); assigned, as the lock refuses the class's own `\def\maketitle` (state.rs `install_definition`).
+    let maketitle = T_CS!("\\maketitle");
+    let inert = Expandable::new(maketitle, None, Some(ExpansionBody::Tokens(Tokens::default())), None)?;
+    assign_meaning(&maketitle, Stored::Expandable(Rc::new(inert)), Some(Scope::Local));
   });
   DefMacro!("\\author[]{}",
     r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@field@mark\def\@author{author}\expandafter\lx@author@after\expandafter{\@author}\lx@author@handed\lx@author@trailing}",
@@ -1581,7 +1589,7 @@ pub(crate) fn load() -> Result<()> {
       Tokens!(
         T_CS!("\\par"),
         T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
-        T_CS!("\\lx@begin@abstract"), T_CS!("\\lx@abstract@bare@frame"))
+        T_CS!("\\lx@abstract@braceless"), T_CS!("\\lx@begin@abstract"), T_CS!("\\lx@abstract@bare@frame"))
     }
   },
   locked => true);
@@ -1595,6 +1603,13 @@ pub(crate) fn load() -> Result<()> {
   // meeting it ends the abstract and then its own group (stomach.rs `close_environment_frame`; an Info, as TeX
   // has no mismatch): `\twocolumn[\begin{@twocolumnfalse}\maketitle\abstract … \end{@twocolumnfalse}]`
   // (witness 2305.17823).
+  // Before a brace-less `\abstract`'s body: a class's refused begin code is not replayed for it
+  // (`\lx@abstract@class@setters`, frontmatter_stores.rs). Without its end code it has no extent in TeX, and its
+  // bindings would hold for the rest of the abstract: `\let\section\absection` (frontiersFPHY.cls:520) would disable
+  // the `\@startsection@hook` that ends the abstract, and the whole document went into it.
+  DefPrimitive!("\\lx@abstract@braceless", {
+    assign_value("lx_abstract_braceless", true, Some(Scope::Global));
+  });
   DefPrimitive!("\\lx@abstract@bare@frame", {
     assign_frame_value("lx@env@bare@end", T_CS!("\\lx@end@abstract"));
     // The frame is `\lx@add@frontmatter@until`'s; diagnostics about it name the environment.
@@ -2448,12 +2463,14 @@ fn replay_dropped_class_code(
   // `\@booleanfalse\collaboration@sw` (`\let`), which its `\affiliation` tests (qm2008_abs.cls, snp.cls, jasatex.cls:
   // 0805.2253, 0806.0481, 0805.4759). Meanings only; none of an erring or unbalanced replay.
   let captured = REPLAY_CAPTURED.with(|c| std::mem::take(&mut *c.borrow_mut()));
+  let mut held: Vec<SymStr> = Vec::new();
   if result.is_ok() && hold.errors_raised() == 0 && unbalanced == 0 {
     for (key, meaning) in captured {
       if keep_out.contains(&key) || (begin_code && is_font_state(key)) {
         continue;
       }
       assign_internal(TableName::Meaning, key, meaning, Some(Scope::Local));
+      held.push(key);
     }
   }
   AssignValue!("lx_replaying_class_setter" => false, Some(Scope::Global));
@@ -2472,8 +2489,13 @@ fn replay_dropped_class_code(
   }
   for (cs, meaning) in kernel_stores.iter().zip(saved) {
     // only what the body changed past its group (a global `\gdef`/`\xdef`): a store a group of the document holds
-    // locally stays local (iosart2x's `\author`s inside `{frontmatter}`)
-    if same_meaning(lookup_meaning(cs).as_ref(), meaning.as_ref()) {
+    // locally stays local (iosart2x's `\author`s inside `{frontmatter}`), and so does what a begin code bound in its
+    // own groups, held in the environment's above — its extent is the body's, as in TeX (`\def\abstracthead{X}`,
+    // which the body prints). A begin code's `\gdef` is still put back: SolarPhysics.cls:909's `\gdef\@abstract{…}`,
+    // which its title layout prints (1209.2208).
+    if same_meaning(lookup_meaning(cs).as_ref(), meaning.as_ref())
+      || (begin_code && held.contains(&meaning_key(cs)))
+    {
       continue;
     }
     let meaning = meaning.or_else(|| {
@@ -3410,8 +3432,6 @@ const SECTIONAL_UNITS: [&str; 9] = [
   "ltx:slide",
 ];
 
-/// The control sequences a body defines with `\def`, `\gdef`, `\edef` or `\xdef` (the targets the lock's drop gives an
-/// empty definition, state.rs).
 /// Whether code ending in `tokens` may read what follows it: its final command — the last token, or the one before its
 /// trailing braced groups and `\csname…\endcsname` operands, `\expandafter`s passed over — is a macro (what it reads
 /// cannot be told from here: environ's `\NewEnviron` begin code `\expandafter\Collect@Body\csname env@…@parse
@@ -3474,6 +3494,14 @@ fn tail_reads_ahead(tokens: &[Token]) -> bool {
   if !last.get_catcode().is_active_or_cs() {
     return false;
   }
+  // a definition's target is no command the code runs: `\def\msccodes{…}` (cmmse2008.cls:146, 0806.4576) ends in
+  // `\def`, which reads its operands in the code
+  if next(&mut i).is_some_and(|before| {
+    before.get_catcode() == Catcode::CS
+      && before.with_cs_name(|n| matches!(n, "\\def" | "\\gdef" | "\\edef" | "\\xdef"))
+  }) {
+    return false;
+  }
   match lookup_meaning(&last) {
     Some(Stored::Expandable(_)) => true,
     _ => lookup_definition(&last).ok().flatten().is_some_and(|d| {
@@ -3511,6 +3539,8 @@ fn filled_boxes(body: &[Token]) -> Vec<String> {
   boxes
 }
 
+/// The control sequences a body defines with `\def`, `\gdef`, `\edef` or `\xdef` (the targets the lock's drop gives an
+/// empty definition, state.rs).
 fn defined_stores(body: &[Token]) -> Vec<Token> {
   let definers = ["\\def", "\\gdef", "\\edef", "\\xdef"];
   let mut stores: Vec<Token> = Vec::new();

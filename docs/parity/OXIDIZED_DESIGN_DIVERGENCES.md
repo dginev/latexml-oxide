@@ -15109,6 +15109,18 @@ label as in the PDF (were sections nested in the abstract, `malformed:ltx:sectio
 `perfect_kernel_batch74a::{class_abstract_begin_code_makes_section_a_run_in_label,
 class_newenvironment_abstract_begin_code_runs}`, `perfect_kernel_batch68n::*` (environ not replayed); repros
 `sectioning-frontmatter/class_abstract/abstract_class_begin_code_runs_{frontiers,bioinfo}`.
+The replay runs the class's own code, and what that code does beyond its output is kept, as in TeX: its global
+assignments, and its plain-group bindings held in the abstract's group. So the review of 74a set three bounds. (a) The
+kernel's `\maketitle` is inert in every replay (`\lx@replay@inert`, an empty macro, not `\relax`, which AMS classes'
+`\ifx\maketitle\relax` reads as already run): cmmse2008.cls:146 `\newenvironment{abstract}{\maketitle\makeauthors…`
+placed the title and authors in the discarded output (0806.4576, title and 3 creators lost). (b) A brace-less
+`\abstract` is not replayed (`\lx@abstract@braceless`): without its end code it has no extent, and frontiersFPHY's
+`\let\section\absection` disabled the `\@startsection@hook` that ends it, so the whole document went into it (an
+empty `<document/>`, 0 errors). (c) What a begin code binds in its own groups is not put back with the stores (a
+`\def\abstracthead{X}` its body prints); its `\gdef`s are (SolarPhysics.cls:909's `\gdef\@abstract`, 1209.2208).
+`tail_reads_ahead` steps over a `\def`-family definer: its target is no command the code runs. Guards
+`perfect_kernel_batch74a::{class_abstract_begin_code_calling_maketitle_keeps_the_frontmatter,
+class_abstract_begin_code_local_definition_reaches_the_body, braceless_abstract_does_not_replay_the_class_begin_code}`.
 **Why**: since 62k reads shipped classes raw (#444), the refused setters left the classes' checks failing: JINST.cls's
 `\AtBeginDocument` "Some \author{...} should appear" / "\abstract{...} should appear" (:1592-1607; the JHEP family,
 JHEP copies and CECS: 340 of run 336's papers; 2601.17161, 1310.6454, gr-qc0406095, hep-th0201170), and compositio's

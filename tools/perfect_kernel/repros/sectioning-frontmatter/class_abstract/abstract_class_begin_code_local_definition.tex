@@ -1,0 +1,15 @@
+% What a raw class's `{abstract}` begin code defines in its own group holds for the body, as in TeX (OXIDIZED_DESIGN
+% #482): it is not put back with the stores the replay restores.
+% witness: none in the corpus (74a review finding 3)
+% oracle:  pdflatex (absdef.cls beside it) 0 errors: "Abstract text X. / Body."
+% engines: rust 67int25 = 0 errors, "Abstract text ." (the store put back to an empty definition)
+% expect:  0 errors, 0 warnings; the abstract "Abstract text X."
+% status:  RED (67int25) -> GREEN (int25 review fixes)
+% preload: ar5iv.sty
+\documentclass{absdef}
+\begin{document}
+\begin{abstract}
+Abstract text \abstracthead.
+\end{abstract}
+Body.
+\end{document}

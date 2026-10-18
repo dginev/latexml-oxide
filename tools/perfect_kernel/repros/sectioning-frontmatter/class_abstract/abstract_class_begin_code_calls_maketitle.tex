@@ -1,0 +1,18 @@
+% A raw class's `{abstract}` begin code that calls `\maketitle`, replayed for its effects (OXIDIZED_DESIGN #482): the
+% kernel's `\maketitle` is inert in the replay, so the title and author are kept.
+% witness: 0806.4576 (cmmse2008.cls:146 `\newenvironment{abstract}{\maketitle\makeauthors…`)
+% oracle:  pdflatex (absmkt.cls beside it) 0 errors: "The Real Title / Ann Author / date / Abstract / Abstract text. /
+%          1 Intro / Body."
+% engines: rust 67int25 = 0 errors, no ltx:title and no ltx:creator (placed in the replay's discarded output)
+% expect:  0 errors, 0 warnings; <title>The Real Title</title>, one creator "Ann Author", the abstract "Abstract text."
+% status:  RED (67int25) -> GREEN (int25 review fixes)
+% preload: ar5iv.sty
+\documentclass{absmkt}
+\title{The Real Title}\author{Ann Author}
+\begin{document}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

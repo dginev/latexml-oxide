@@ -184,3 +184,56 @@ fn toc_outside_the_frontmatter_is_unchanged() {
     "{xml}"
   );
 }
+
+/// cmmse2008.cls:146 `\newenvironment{abstract}{\maketitle\makeauthors…`: the replayed begin code's `\maketitle` is
+/// inert (`\lx@replay@inert`), so the title and the author are kept (were placed in the replay's discarded output,
+/// 0806.4576).
+#[test]
+fn class_abstract_begin_code_calling_maketitle_keeps_the_frontmatter() {
+  let (log, xml) = convert_beside!(
+    "abstract_class_begin_code_calls_maketitle.tex",
+    "absmkt.cls"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(r#"<title>The Real Title</title>"#), "{xml}");
+  assert!(
+    xml.contains(r#"<creator role="author"> <personname>Ann Author</personname> </creator>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<p xml:id="abstract1.1">Abstract text.</p>"#),
+    "{xml}"
+  );
+}
+
+/// What a begin code defines in its own group holds for the body, as in TeX: `\def\abstracthead{X}`, which the body
+/// prints (was put back to an empty definition, "Abstract text .").
+#[test]
+fn class_abstract_begin_code_local_definition_reaches_the_body() {
+  let (log, xml) = convert_beside!(
+    "abstract_class_begin_code_local_definition.tex",
+    "absdef.cls"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"<p xml:id="abstract1.1">Abstract text X.</p>"#),
+    "{xml}"
+  );
+}
+
+/// A brace-less `\abstract` under a class whose begin code rebinds `\section` (frontiersFPHY.cls:520): no replay, so
+/// the next `\section` still ends the abstract (the document was empty, 0 errors).
+#[test]
+fn braceless_abstract_does_not_replay_the_class_begin_code() {
+  let (log, xml) = convert_beside!(
+    "braceless_abstract_class_begin_code_not_replayed.tex",
+    "absfront.cls"
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains("Plain abstract text."), "{xml}");
+  assert!(
+    xml.contains(r#"<title><tag close=" ">1</tag>Introduction</title>"#),
+    "{xml}"
+  );
+  assert!(xml.contains("Body."), "{xml}");
+}

@@ -2220,7 +2220,13 @@ LoadDefinitions!({
       .iter()
       .map(|(name, ..)| meaning_key(&T_CS!(&s!("\\{name}"))))
       .collect();
-    crate::latex_constructs::replay_class_begin_code("abstract", &keep_out)?;
+    // (not for a brace-less `\abstract`: `\lx@abstract@braceless`, sect05.rs)
+    let braceless = lookup_bool("lx_abstract_braceless");
+    if braceless {
+      assign_value("lx_abstract_braceless", false, Some(Scope::Global));
+    } else {
+      crate::latex_constructs::replay_class_begin_code("abstract", &keep_out)?;
+    }
     for ((name, api, definer, own), defined) in setters.into_iter().zip(defined) {
       let cs = T_CS!(&s!("\\{name}"));
       if definer == Definer::Keeps && defined {

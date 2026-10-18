@@ -3847,6 +3847,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   - (b) A `\section*` inside a balanced abstract is still kept in place silently by document.rs's sectioning leniency
     (`is_lenient_container`; Perl errs `<ltx:section> isn't allowed in <ltx:abstract>`), schema-invalid; a TOC there
     now goes after the abstract. Whether a heading inside an abstract should end it, go after it or stay is a ruling.
+  - (c) Review fixes (int25; agent_reports/2026-10-18_74a_review.md NO-SHIP → fixed in the main session): the
+    kernel's `\maketitle` is inert in every replay (cmmse2008.cls:146 called it from the begin code: 0806.4576 lost its
+    title and 3 creators); a brace-less `\abstract` is not replayed (frontiersFPHY's `\let\section\absection` disabled
+    the hook that ends it: an empty `<document/>`, 0 errors); a begin code's own-group `\def`s reach the body (not put
+    back with the stores; its `\gdef`s still are, SolarPhysics.cls:909); `tail_reads_ahead` steps over a `\def`-family
+    definer. OXIDIZED_DESIGN_DIVERGENCES #482; guards
+    `perfect_kernel_batch74a::{class_abstract_begin_code_calling_maketitle_keeps_the_frontmatter,
+    class_abstract_begin_code_local_definition_reaches_the_body, braceless_abstract_does_not_replay_the_class_begin_code}`.
+  - (d) 2210.02246 (cmfne.cls:777-791, AMS-style): an empty `<para class="ltx_align_left"><p><text xoffset="36.0pt"/>`
+    before the TOC since 74a: the class's `\@maketitle` finds `\abstractbox` non-void after the begin-code replay and
+    prints `\moveright 3pc\box\abstractbox`, although `filled_boxes` restores the box; blanking cmfne.cls's
+    `\global\setbox\abstractbox=\vtop\bgroup` line removes it, synthetic copies do not reproduce it. No content lost;
+    root cause open (low priority, one paper).
+  - (e) Pre-existing, HIGH priority (status-code honesty): an unclosed brace-less `\abstract` drops the whole document
+    silently — `\documentclass{article}\begin{document}\abstract Text.` + blank line + `More.\end{document}` gives
+    `<document/>` with 0 errors and 2 warnings (`\end{document}` with open groups; `\lx@end@abstract` body unended), 74a
+    review finding 2. Content loss must at least be an Error.
+
+- **int25** (a3a3dc2712, from the 67int24b projection's one Error → Fatal, 0903.2259: 5 Errors → Fatal infinite
+  expansion): deluxetable_sty.rs wraps `\caption` once per table nesting (`\lx@deluxe@caption@mark`; a deluxetable begun
+  inside another's group wrapped the wrapper, 73a); `\aas@table@dollar` (a table's active `$`) only under AASTeX 6+
+  (aastex701.cls:8608-8610, :8849; AASTeX 5.x and emulateapj have none, so an author's `$`-delimited macro in a table
+  ran away, 62x). 0903.2259 0 Errors, 13 tables (was 3). Repros captions-floats/{deluxetable_inside_deluxetable,
+  aastex5_table_dollar_delimited_macro} (pdflatex 0, Perl 0).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
