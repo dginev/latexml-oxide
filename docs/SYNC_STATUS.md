@@ -87,7 +87,7 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | 5 | raw-class off-table title-page stores never typeset (41/3,000 sample papers raw + 22 with a binding) | batch 75a (replay gate reads bodies as TeX runs them, appends to a refused `\maketitle`, wiley/ACM CCS table entries) in review; generic off-table rule open |
 | 19 | cryptocode: pseudocode lines after the first lose their numbers; text mode `\@pc@lb` (20 papers) | batch 76a running (`\halign` redefinition run where alignments start) |
 | 13 | floatrow `\floatfoot` / `\DeclareNewFloatType` float lost | open (RED `captions-floats/floatrow_floatfoot_in_plain_figure`) |
-| 17 | longtable caption row with no later `&` dropped | open (RED from 65h r2) |
+| 17 | longtable caption row: the cell before `x & \caption` lost | FIXED int27 (kept, LaTeX's "Misplaced \noalign"); other shapes lose nothing |
 | 18 | amsrefs `\bib` keys differing in case merge, one entry lost | honest Error int27 (`scan_bibentries`); keeping both open |
 | 6, 7, 8, 12 | frontmatter store timing / replayed setters / late class `\author` / `\AFF` before `\AUTHOR` | open (synthetic REDs; no paper count) |
 | 9 | revtex supplement title replaces the paper's | open (design; ruling: keep the MAIN frontmatter) |
@@ -613,8 +613,13 @@ says otherwise.
   `Warning:missing_file`, so there is no generic change.
 
 **Alignments and floats (REDs to file)**
-- **A longtable caption row without a later `&` is still dropped** (`\multicolumn` c15, a one-column `{l}`,
-  `x & \caption`). The pasj fallback `\caption[N]` writes N as the toccaption (65h r2).
+- **Longtable caption rows (65h r2) — re-probed int27:** the `\multicolumn{3}{c}{\caption{…}}\\` and one-column `{l}`
+  shapes keep every word (the caption's row holds nothing else; pdflatex errs "Misplaced \noalign" on the
+  `\multicolumn` one, ours stays silent — parity residual). FIXED int27: `x & \caption{…}\\` lost the cell before the
+  caption with 0 errors; the row now keeps it, with LaTeX's "Misplaced \noalign" (longtable_sty.rs
+  `\lx@longtable@caption@row`; guard `perfect_kernel_batch65h::longtable_caption_after_a_cell_keeps_the_cell`, repro
+  captions-floats/longtable_caption_after_a_cell_keeps_the_cell). Open: the pasj fallback `\caption[N]` writes N as
+  the toccaption.
 - **1310.1926:** the emulateapj head line lands in tbody (68y r2).
 
 **Frontmatter (re-probe each on head first; check against FM S2/S5)**

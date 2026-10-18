@@ -181,3 +181,31 @@ fn misplaced_alignment_cascade_ends_with_its_group() {
     assert_element(&xml, "p", &[id], p);
   }
 }
+
+/// A longtable `\caption` after a cell's text (`Kept cell & \caption{…}\\`) does not make the row the caption's alone:
+/// LaTeX's "Misplaced \noalign" (pinned on purpose; pdflatex reports it and typesets the cell), the row keeps the cell,
+/// and the caption is the table's (was the row dropped with the caption, "Kept cell" lost with 0 errors). Repro
+/// captions-floats/longtable_caption_after_a_cell_keeps_the_cell.
+#[test]
+fn longtable_caption_after_a_cell_keeps_the_cell() {
+  let (log, xml) = convert_counted(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/longtable_caption_after_a_cell_keeps_the_cell.tex"
+    ),
+    1,
+    0,
+  );
+  assert!(
+    log.contains(
+      "Misplaced \\noalign: a longtable \\caption begins its row; the cells before it are kept"
+    ),
+    "{log}"
+  );
+  let squashed = xml.split_whitespace().collect::<Vec<_>>().join(" ");
+  assert!(
+    squashed.contains("<caption><tag close=\": \">Table 1</tag>Amp caption</caption>"),
+    "{squashed}"
+  );
+  assert!(squashed.contains(">Kept cell</td>"), "{squashed}");
+  assert!(squashed.contains(">b1</td>"), "{squashed}");
+}

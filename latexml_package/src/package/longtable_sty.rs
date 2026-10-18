@@ -214,8 +214,34 @@ LoadDefinitions!({
     assign_value("LONGTABLE_CAPTIONS", captions, Some(Scope::Global));
     Ok(())
   });
+  // A caption whose row already holds a cell's text (`x & \caption{…}\\`) is no row of its own: longtable's `\caption`
+  // is a `\noalign` (longtable.sty:455-457 `\LT@caption`), which pdflatex reports as "Misplaced \noalign" and
+  // typesets the cells around it, so the row keeps them (it was dropped whole with the caption, "x" lost with 0
+  // errors). A caption opening its row alone — directly or in a spanning `\multicolumn` — still leaves the row empty,
+  // dropped as above.
   DefPrimitive!("\\lx@longtable@caption@row", sub[_args] {
-    assign_value("LONGTABLE_CAPTION_ROW", true, Some(Scope::Global));
+    let text_before = lookup_alignment().is_some_and(|stored| {
+      stored.alignment_cell().is_some_and(|cell| {
+        let alignment = cell.borrow();
+        let current = alignment.current_column_number();
+        alignment.is_in_column()
+          && current > 1
+          && alignment.current_row().is_some_and(|row| {
+            row.get_columns().iter().take(current - 1).any(|column| {
+              column.boxes.as_ref().is_some_and(engine::base_utilities::typesets_content)
+            })
+          })
+      })
+    });
+    if text_before {
+      Error!(
+        "unexpected",
+        "\\caption",
+        "Misplaced \\noalign: a longtable \\caption begins its row; the cells before it are kept"
+      );
+    } else {
+      assign_value("LONGTABLE_CAPTION_ROW", true, Some(Scope::Global));
+    }
     Ok(())
   });
   DefPrimitive!("\\lx@longtable@label Semiverbatim", sub[(label)] {

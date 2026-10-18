@@ -1,0 +1,19 @@
+% A longtable `\caption` after a cell's text (`x & \caption{…}\\`) does not make the row the caption's: longtable's
+% `\caption` is a `\noalign` (longtable.sty:455-457 `\LT@caption`), which pdflatex reports as "Misplaced \noalign" and
+% typesets the cell before it. The row keeps that cell (longtable_sty.rs `\lx@longtable@caption@row`), with LaTeX's
+% error; a caption opening its row alone still leaves no empty row (OXIDIZED_DESIGN_DIVERGENCES #103).
+% witness: 65h r2 review (synthetic: the `x & \caption` shape of the longtable caption-row family, 107 longtable papers)
+% oracle:  pdflatex 3 errors ("Misplaced \noalign", "Misplaced \omit", "Extra alignment tab"), prints "Kept cell", "Table 1:
+%          Amp caption" and "b1 b2"
+% engines: rust 67int28 = 0 errors, "Kept cell" lost (the row dropped with the caption)
+% expect:  1 error (pinned on purpose); "Kept cell" in a row of the table; the caption in <ltx:caption>
+% status:  RED (67int28) -> GREEN (int27)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\begin{longtable}{ll}
+Kept cell & \caption{Amp caption}\\
+b1 & b2\\
+\end{longtable}
+\end{document}
