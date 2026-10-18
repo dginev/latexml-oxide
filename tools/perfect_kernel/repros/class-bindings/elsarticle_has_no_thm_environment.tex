@@ -1,0 +1,12 @@
+% witness: 2212.01438 (`\newcommand{\thm}[1]{Theorem~\ref{theorem:#1}}` under elsarticle)
+% oracle:  pdflatex (clean): elsarticle.cls defines no `{thm}` (only elsart.cls's binding does)
+% engines: rust 67int22 = 1 error + 1 warning (the binding's `{thm}` refused the author's `\newcommand`); Perl = 1
+%          (elsart_support_core.sty.ltxml:202-204, KNOWN_PERL_ERRORS #965)
+% expect:  0 errors, 0 warnings; "See Theorem <ref>."
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\newcommand{\thm}[1]{Theorem~\ref{theorem:#1}}
+\begin{document}
+See \thm{town_th}.
+\end{document}

@@ -1,0 +1,14 @@
+% witness: 2508.20177, 2510.05388 (aastex7/aastex701, `\bibinfo{title}{…3 &lt; z &lt; 7…}` in the .bbl)
+% oracle:  pdflatex (clean): the reference prints without its title (aastex701.cls:6726-6732: `\bibinfo` is
+%          `\unskip\unskip\unskip` unless the `longbib` option)
+% engines: rust 67int22 = 1 error (REVTeX's `\bibinfo`=#2 set the title, its raw `&` stray); Perl = 2
+% expect:  0 errors, 0 warnings; the bibblock is "Labbe, I. 2024, ApJ, 978, 92"
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+See \citet{L24}.
+\begin{thebibliography}{}
+\bibitem[{Labbe}(2024)]{L24} Labbe, I. 2024, \bibinfo{title}{UNCOVER: Red AGN at 3 &lt; z &lt; 7,} ApJ, 978, 92
+\end{thebibliography}
+\end{document}

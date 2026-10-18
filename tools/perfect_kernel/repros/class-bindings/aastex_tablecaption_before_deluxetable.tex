@@ -1,0 +1,18 @@
+% witness: 1010.4329 (emulateapj), 1903.10014, 2204.03327 (aastex631, a `{longrotatetable}` around a plain `tabular`)
+% oracle:  pdflatex (clean) prints the table WITHOUT the caption: aastex701.cls:8417-8418 stores it, :11303-11304 resets
+%          it at the deluxetable's start
+% engines: rust 67int22 = 1 error ("Use of \caption outside any known float"); Perl = 1 (deluxetable.sty.ltxml:77
+%          `\let\tablecaption\caption`, KNOWN_PERL_ERRORS #964)
+% expect:  0 errors, 0 warnings; the caption kept on the table (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #739)
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\tablecaption{Frequencies for KIC~11026764.\label{tab1}}
+\begin{deluxetable*}{cc}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1 & 2 \\
+\enddata
+\end{deluxetable*}
+\end{document}

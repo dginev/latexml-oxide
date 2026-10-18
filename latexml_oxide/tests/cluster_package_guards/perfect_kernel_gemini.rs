@@ -1972,7 +1972,7 @@ World
 /// per entry, a leaked `<XMath>` swallowing the paragraph; pdflatex clean).
 #[test]
 fn index_separator_inside_math_is_phrase_material() {
-  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{arroba@$@$} Y\n\\end{document}\n";
+  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{arroba@$@$} Y\n\\printindex\\end{document}\n";
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(
@@ -1997,7 +1997,8 @@ fn index_string_of_undefined_command_stringifies_its_name() {
 \begin{document}
 \indexcommand\insertframetitle
 \indexcommand\ifbeamercolorempty
-X\end{document}
+X\printindex
+\end{document}
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");

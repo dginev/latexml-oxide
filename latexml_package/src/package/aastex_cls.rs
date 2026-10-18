@@ -32,6 +32,10 @@ LoadDefinitions!({
   // Number equations within sections
   DeclareOption!("eqsecnum", "\\AtEndOfClass{\\eqsecnum}");
 
+  // aastex701.cls:105/:109 `\newif\iflongbib`, `\DeclareOption{longbib}{\global\longbibtrue}` (AASTeX 7's only; the
+  // `\bibinfo` it chooses is set below).
+  RawTeX!(r"\newif\iflongbib");
+  DeclareOption!("longbib", "\\global\\longbibtrue");
   // Anything else is for article
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
@@ -76,6 +80,34 @@ LoadDefinitions!({
     revtex4_support_sty::define_float_repair()?;
   }
   RequirePackage!("aas_support");
+  // `\dataset[text]{url}` links the text to the data set, from AASTeX 6 on — aastex6.cls:5488-5490 and aastex61.cls:5872-5874
+  // `\href{#2}{[#1]}` (`[DATASET]` without the text), aastex62.cls:6036-6042 through aastex701.cls:12656-12661
+  // `\href{#2}{#1}` (`[DATASET]` when the text is empty), with `\doi{…}` the bare address while it reads (the class's
+  // `\let\savedoi\doi`, aastex701.cls:13490). AASTeX 5.x keeps `#2` as text (aastex6.cls:1116-1117 "Commands from
+  // aastex.cls" `\def\@dataset[#1]#2{#2}`), as aas_support_sty.rs's `\dataset` does. Read as the text, a URL's `_` and
+  // `&` erred (2502.04486, 2608.18221, 1601.05101; Perl aas_support.sty.ltxml:420 the same, KNOWN_PERL_ERRORS #964).
+  // Guard: `perfect_kernel_batch73a::aastex_dataset_links_its_url`.
+  if aastex6_plus {
+    let bracketed = match shipped_class_text(&requested)? {
+      Some(text) => class_code_contains(&text, "\\def\\ydataset[#1]#2{\\href{#2}{[#1]}}"),
+      None => matches!(requested.as_str(), "aastex6" | "aastex61"),
+    };
+    if bracketed {
+      RawTeX!(r"\def\dataset{\@ifnextchar[{\ydataset}{\xdataset}}\def\ydataset[#1]#2{\href{#2}{[#1]}}
+\def\xdataset#1{\href{#1}{[DATASET]}}");
+    } else {
+      RawTeX!(r"\def\dataset{\def\doi##1{https://doi.org/##1}\@ifnextchar[{\ydataset}{\xdataset}}
+\def\xdataset#1{\ydataset[]{#1}\let\doi\savedoi}
+\def\ydataset[#1]#2{\def\one{#1}\ifx\one\empty\href{#2}{[DATASET]}\else\href{#2}{#1}\fi\let\doi\savedoi}
+\let\savedoi\doi");
+    }
+  }
+  // AASTeX 7 drops a reference's `\bibinfo{title}{…}` unless `longbib` (aastex701.cls:6726-6732, in `\setup@hook`, run
+  // at `\begin{document}`): REVTeX's `\bibinfo` (revtex4_support_sty.rs) printed the title, whose raw `&` erred
+  // (2508.20177, 2510.05388). Guard: `perfect_kernel_batch73a::aastex7_bibinfo_needs_longbib`.
+  if requested.starts_with("aastex7") {
+    RawTeX!(r"\AtBeginDocument{\iflongbib\renewcommand\bibinfo[2]{#2}\else\renewcommand\bibinfo[2]{\unskip\unskip\unskip}\fi}");
+  }
   // `\authorcomment`'s label differs between versions (aas_support_sty.rs `define_authorcomment`): the paper's copy of
   // the class decides — "(Author~note: …)" in most aastex63.cls copies (2205.09859 :5731) and in aastex62.cls, the
   // numbered "(Author~note 1: …)" of aastex631.cls (2107.07519 :5843-5850) in the others (2312.04630, 2409.02158,

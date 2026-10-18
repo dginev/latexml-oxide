@@ -333,8 +333,14 @@ LoadDefinitions!({
   // #323; fixture svg_subfloat_2563). Without an optional subcaption sets a `\phantomcaption`
   // (:293-300), as here (`\lx@subcaption@subfloat@phantom`; Perl printed an empty caption).
   // `\columnwidth` stands in for the box's natural width (Perl L102-103).
-  DefMacro!("\\subfloat",
+  // subcaption provides `\subfloat` only at `\begin{document}` (subcaption.sty:262-276
+  // `\caption@AtBeginDocument{…\providecommand*\subfloat{\subcaption@subfloat}}`), so a preamble's own
+  // `\newcommand{\subfloat}` (2511.09162) or subfig's stays; defined at load, the binding's took the author's away
+  // (Perl subcaption.sty.ltxml:104 the same, KNOWN_PERL_ERRORS #965). Guard:
+  // `perfect_kernel_batch73a::subcaption_subfloat_is_provided_at_begin_document`.
+  DefMacro!("\\lx@subcaption@subfloat",
     "\\kernel@ifnextchar[\\lx@subcaption@subfloat@list\\lx@subcaption@subfloat@phantom");
+  RawTeX!(r"\AtBeginDocument{\providecommand*\subfloat{\lx@subcaption@subfloat}}");
   DefMacro!("\\lx@subcaption@subfloat@list[]",
     "\\kernel@ifnextchar[{\\lx@subcaption@subfloat@caption{#1}}{\\lx@subcaption@subfloat@@{}{#1}}");
   DefMacro!("\\lx@subcaption@subfloat@caption{}[]", "\\lx@subcaption@subfloat@@{#1}{#2}");

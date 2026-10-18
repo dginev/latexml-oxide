@@ -1,0 +1,17 @@
+% witness: 0707.3045 (elsart.cls:600 `\newenvironment{subbibitems}[1]`, the group's citation key)
+% oracle:  pdflatex with the paper's elsart.cls (clean)
+% engines: rust 67int22 = 1 error (the key `pah_astro` typeset: `_`); Perl = 1 (elsart_support.sty.ltxml:117,
+%          KNOWN_PERL_ERRORS #967)
+% expect:  0 errors, 0 warnings; two bibitems, no key text
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{elsart}
+\begin{document}
+See \cite{a,b}.
+\begin{thebibliography}{9}
+\begin{subbibitems}{pah_astro}
+\bibitem{a} A. Author, J. 1 (2000).
+\bibitem{b} B. Author, J. 2 (2001).
+\end{subbibitems}
+\end{thebibliography}
+\end{document}

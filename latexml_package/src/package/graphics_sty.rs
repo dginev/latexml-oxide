@@ -656,7 +656,14 @@ LoadDefinitions!({
   // Guard: `perfect_kernel_batch56::ginclude_graphics_internal_routes_to_the_constructor`.
   DefMacro!("\\Ginclude@graphics{}", "\\@includegraphics{#1}");
 
-  DefConstructor!("\\DeclareGraphicsExtensions{}", "");
+  // graphics.sty:116-117 `\DeclareGraphicsExtensions#1{\edef\Gin@extensions{\zap@space#1 \@empty}}`: a macro that records
+  // the list and typesets nothing. As a constructor its argument was digested, so `.pdf_tex` erred (1810.02483; Perl's
+  // constructor the same, graphics.sty.ltxml:306, KNOWN_PERL_ERRORS #966). Guard:
+  // `perfect_kernel_batch73a::declare_graphics_extensions_is_not_typeset`.
+  DefMacro!(
+    "\\DeclareGraphicsExtensions{}",
+    r"\edef\Gin@extensions{\zap@space#1 \@empty}"
+  );
   // graphics.sty:150-154 `\DeclareGraphicsRule{<ext>}{<type>}{<read-file>}{<command>}` records the rule as
   // `\Gin@rule@<ext>#1` → `{<type>}{<read-file>}{<command>, or #1 the file when empty}` and typesets nothing: a
   // macro, so its arguments are not digested — figlatex.sty:120's `\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}`

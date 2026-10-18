@@ -247,7 +247,11 @@ LoadDefinitions!({
   DefRegister!("\\tabcapgap", Dimension!("5.5pt"));
   DefRegister!("\\figgap", Dimension!("12.84pt")); // 1cc
 
-  DefMacro!("\\tableheadseprule", "\\hrule");
+  // svjour2.cls:1032 (svjour3.cls, svmult.cls alike) `\newcommand{\tableheadseprule}{\noalign{\hrule height.375mm}}`: the
+  // rule under a table's head row, between rows. Perl's bare `\hrule` (sv_support.sty.ltxml:143) in a `tabular` row
+  // was misplaced ("\noalign cannot be used here" for the `\noalign{\smallskip}` after it: astro-ph0609697;
+  // KNOWN_PERL_ERRORS #967). Guard: `perfect_kernel_batch73a::sv_tableheadseprule_is_a_noalign_rule`.
+  DefMacro!("\\tableheadseprule", r"\noalign{\hrule height.375mm}");
   DefMacro!("\\floatlegendstyle", "\\bfseries");
   def_macro_noop("\\leftlegendglue")?;
 

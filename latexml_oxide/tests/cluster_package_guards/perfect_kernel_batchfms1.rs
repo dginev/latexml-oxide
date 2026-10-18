@@ -857,9 +857,23 @@ fn field_prov_header_text_kept() {
     (0, 0),
     &[],
   );
+  // (the header's `\today` is the conversion's date)
+  let today = convert_with(
+    "\\documentclass{article}\\begin{document}\\today\\end{document}",
+    None,
+  )
+  .1;
+  let today = today
+    .split("<p>")
+    .nth(1)
+    .and_then(|p| p.split("</p>").next())
+    .unwrap_or_default()
+    .to_string();
   assert_eq!(
     leading_body(&xml),
-    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p>Preprint ABC-123 October 17, 2026</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>",
+    format!(
+      "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p>Preprint ABC-123 {today}</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>"
+    ),
     "{xml}"
   );
 }

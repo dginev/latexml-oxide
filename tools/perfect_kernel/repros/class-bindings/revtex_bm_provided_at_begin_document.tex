@@ -1,0 +1,15 @@
+% witness: nucl-th0307033 (`\newcommand{\bm}{\bibitem}` under revtex4)
+% oracle:  pdflatex (clean): revtex4.cls:6030-6032 lets `\bm` be `\REV@bm` at `\begin{document}` only if undefined
+% engines: rust 67int22 = 1 error + 1 warning (the binding's bold `\bm` took the author's away); Perl = 1
+%          (revtex4_support.sty.ltxml:167, KNOWN_PERL_ERRORS #965)
+% expect:  0 errors, 0 warnings; the bibliography entry kelly_5
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass[aps]{revtex4}
+\newcommand{\bm}{\bibitem}
+\begin{document}
+Text \cite{kelly_5}.
+\begin{thebibliography}{9}
+\bm{kelly_5} J. Kelly, Phys. Rev. (1995).
+\end{thebibliography}
+\end{document}

@@ -378,6 +378,7 @@ fn index_entry_keeps_expl3_names_whole() {
 \cs_new:Nn \my_add:n { \index { #1 \bool_if:nT { \c_true_bool } { ! W } } }
 Text\my_add:n { Z }
 \ExplSyntaxOff
+\begin{theindex}\end{theindex}
 \end{document}",
     RAW,
     (0, 0),
@@ -403,6 +404,7 @@ fn index_entry_protect_is_consumed_at_shipout() {
 \newcommand*{\indexCommandO}[1]{\index{\protect\texttt{\protect\string\protect#1}}}
 \begin{document}
 Text\indexCommandO{\fbox} more.
+\begin{theindex}\end{theindex}
 \end{document}",
     RAW,
     (0, 0),
@@ -429,6 +431,7 @@ fn index_entry_typed_in_source_is_written_verbatim() {
 \newcommand\idx[1]{\index{#1}}
 \begin{document}
 Typed\index{a\early} and built\idx{b\early}.
+\begin{theindex}\end{theindex}
 \end{document}",
     RAW,
     (0, 0),

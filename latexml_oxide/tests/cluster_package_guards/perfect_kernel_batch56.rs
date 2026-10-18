@@ -5013,7 +5013,7 @@ fn halign_template_accepts_active_char_separators() {
 /// the abstract swallowed the document). KNOWN_PERL_ERRORS #216, batch 56ba.
 #[test]
 fn bare_index_takes_one_token() {
-  let tex = "\\documentclass{article}\n\\makeindex\n\\begin{document}\n\\begin{abstract}\nthe \\index command, twice \\index here.\n\\end{abstract}\n\\section{S}\nBody \\index{real entry} text TAILMARK.\n\\end{document}\n";
+  let tex = "\\documentclass{article}\n\\makeindex\n\\begin{document}\n\\begin{abstract}\nthe \\index command, twice \\index here.\n\\end{abstract}\n\\section{S}\nBody \\index{real entry} text TAILMARK.\n\\begin{theindex}\\end{theindex}\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   let abs = xml.find("<abstract").unwrap_or_else(|| panic!("{xml}"));
@@ -5370,7 +5370,7 @@ fn byte_mouth_latin1_before_cjk_decodes_sequence_wise() {
 /// of the bare name being force-expanded into `<ltx:ERROR/>`.
 #[test]
 fn index_entry_passes_undefined_words_inert() {
-  let tex = "\\documentclass{book}\n\\usepackage{manyind}\n\\makeindex\n\\begin{document}\n\\setindex{main}\na\\index{\\\"N@\\protect\\nxtletre \\protect\\def \\nwletre {\\\"O}\\gobblepageref}\n\\end{document}\n";
+  let tex = "\\documentclass{book}\n\\usepackage{manyind}\n\\makeindex\n\\begin{document}\n\\setindex{main}\na\\index{\\\"N@\\protect\\nxtletre \\protect\\def \\nwletre {\\\"O}\\gobblepageref}\n\\begin{theindex}\\end{theindex}\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<indexmark"), "{xml}");
@@ -5384,7 +5384,7 @@ fn index_entry_passes_undefined_words_inert() {
 /// name (Perl's style-catcode re-tokenize; KPE #83).
 #[test]
 fn index_sort_key_undefined_word_is_text() {
-  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nA\\index{\\AB@\\relax x}\n\\end{document}\n";
+  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nA\\index{\\AB@\\relax x}\n\\printindex\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("key=\"\\AB\""), "{xml}");

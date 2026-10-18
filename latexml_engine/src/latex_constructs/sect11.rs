@@ -296,7 +296,10 @@ pub(crate) fn load() -> Result<()> {
     }
   );
 
-  DefConstructor!("\\bibstyle{}", sub[document, _whatsit, props] {
+  // The style is a name, read Semiverbatim as `\bibliographystyle`'s is: digested, `SciPost_bibstyle` erred (2412.10240;
+  // latex.ltx:17773 `\let\bibstyle\@gobble` typesets nothing; Perl pool:3972 `{}` the same, KNOWN_PERL_ERRORS #966). Guard:
+  // `perfect_kernel_batch73a::bibstyle_name_is_not_typeset`.
+  DefConstructor!("\\bibstyle Semiverbatim", sub[document, _whatsit, props] {
     let style = prop_string!(props, "style");
     set_bibstyle(&style);
     if let Some(mut bib) = document.findnode("//ltx:bibliography", None) {
@@ -1265,10 +1268,34 @@ pub(crate) fn load() -> Result<()> {
   // Perl: latex_constructs.pool.ltxml L4454 uses the SanitizedVerbatim
   // parameter type so that `\index{a_b}`, `\index{with spaces}`, etc. don't
   // fail tokenization on chars that normally have non-OTHER catcodes.
+  // The entry is typeset only where the index is printed (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #738):
+  // TeX writes it raw to the `.idx` (latex.ltx:17713-17726) and typesets nothing without makeindex's `.ind`, so an
+  // entry's `_` (`\index{API!SELF_HEALING}`) is no TeX error until `\printindex` prints it (1112.3972). The entry is kept
+  // at its place (`\lx@deferred@print`) and digested when `\printindex`/`{theindex}` prints the list, its mark then
+  // where `\index` stood. Guards: `perfect_kernel_batch73a::{index_entry_is_typeset_only_when_printed,
+  // printed_index_keeps_its_entries}`.
   DefMacro!("\\index SanitizedVerbatim", sub[(phrases)] {
     let (entry, formed) = reread_sanitized_entry(&Tokens::new(phrases.revert()));
     let chars = IndexChars::for_index_entry(&entry);
-    process_index_phrases(entry, &chars, None, &formed)
+    Ok(deferred_print_tokens("idx", process_index_phrases(entry, &chars, None, &formed)?))
+  });
+  // The anchor of a deferred entry (`deferred_print_tokens`): what the entry digested to when its list was printed, at
+  // the place the entry was made; nothing when it never was.
+  DefConstructor!("\\lx@deferred@print Semiverbatim", sub[document, args, _props] {
+    let id = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+    if let Some(content) = deferred_print_content(id.trim()) {
+      document.absorb(&content, None)?;
+    }
+  },
+    reversion => "",
+    sizer => 0);
+  // `\lx@defer@print{list}{entry}`: the TeX-level `deferred_print_tokens`, for a binding's entry (nomencl_sty.rs).
+  DefMacro!("\\lx@defer@print{}{}", sub[(list, entry)] {
+    Ok(deferred_print_tokens(list.to_string().trim(), entry))
+  });
+  // `\lx@deferred@print@list{list}`: print the list — digest its deferred entries (`resolve_deferred_prints`).
+  DefPrimitive!("\\lx@deferred@print@list{}", sub[(list)] {
+    resolve_deferred_prints(Some(list.to_string().trim()))?;
   });
 
   // `\lx@index@inlist{list}{phrases}` — `\index` into the named list `list` (imakeidx's `\index[name]{…}`,
@@ -1277,7 +1304,7 @@ pub(crate) fn load() -> Result<()> {
     let list = list.to_string();
     let (entry, formed) = reread_sanitized_entry(&Tokens::new(phrases.revert()));
     let chars = IndexChars::for_index_entry(&entry);
-    process_index_phrases(entry, &chars, Some(list.trim()), &formed)
+    Ok(deferred_print_tokens(list.trim(), process_index_phrases(entry, &chars, Some(list.trim()), &formed)?))
   });
   DefMacro!("\\indexname", "Index");
   // Perl latex_constructs.pool.ltxml L4567-4585: theindex generates the
@@ -1290,6 +1317,8 @@ pub(crate) fn load() -> Result<()> {
   DefEnvironment!("{theindex}",
   "<ltx:index xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#body</ltx:index>",
   before_digest => {
+    // The index is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
+    resolve_deferred_prints(Some("idx"))?;
     Let!("\\item", "\\index@item");
     Let!("\\subitem", "\\index@subitem");
     Let!("\\subsubitem", "\\index@subsubitem");

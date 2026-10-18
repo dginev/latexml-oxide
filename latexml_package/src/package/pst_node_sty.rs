@@ -114,16 +114,39 @@ LoadDefinitions!({
   def_macro_noop("\\Bput OptionalMatch:* []")?;
 
   // Box macros — Perl L460-520
-  def_macro_noop("\\psmatrix")?;
-  def_macro_noop("\\endpsmatrix")?;
+  // `{psmatrix}` is an alignment (pst-node.tex:1163-1192): `\psmatrix[par]` opens `\leavevmode\vbox{\halign{&…}}` whose
+  // every cell is a node, its entry boxed (`\psm@beginnode`, :1206-1220: an optional `[par]` first, then
+  // `\hbox{$\displaystyle …$}` when the matrix is in math, `\textstyle` in inline math, plain text outside), `\\` ending
+  // a row (`\psm@cr`, :1196-1204; its `[dim]` only when the bracket follows at once, so a next row's `[name=…]` stays
+  // that node's) — the node geometry dropped as for the other nodes here. A no-op left its `&` stray (0705.2689,
+  // 1712.01407; Perl defines no `{psmatrix}`, so its `\begin{psmatrix}` is undefined).
+  // Guard: `perfect_kernel_batch73a::psmatrix_is_an_alignment`.
+  RawTeX!(r"\def\psmatrix{\@ifnextchar[\lx@psm@opt\lx@psm@begin}
+\def\lx@psm@opt[#1]{\lx@psm@begin}
+\def\lx@psm@begin{\edef\lx@psm@bm{\ifmmode$\noexpand\m@th\ifinner\noexpand\textstyle\else\noexpand\displaystyle\fi\fi}%
+\edef\lx@psm@em{\ifmmode$\fi}\let\\\lx@psm@cr\leavevmode\vbox\bgroup\halign\bgroup&\lx@psm@cell##\lx@psm@endcell\cr}
+\def\endpsmatrix{\crcr\egroup\egroup}
+\def\lx@psm@cr{\futurelet\lx@psm@next\lx@psm@cr@}
+\def\lx@psm@cr@{\ifx\lx@psm@next[\expandafter\lx@psm@cr@opt\else\expandafter\cr\fi}
+\def\lx@psm@cr@opt[#1]{\cr}
+\def\lx@psm@cell{\@ifnextchar[\lx@psm@cellopt\lx@psm@cell@}
+\def\lx@psm@cellopt[#1]{\lx@psm@cell@}
+\def\lx@psm@cell@{\hbox\bgroup\lx@psm@bm\ignorespaces}
+\def\lx@psm@endcell{\unskip\lx@psm@em\egroup\hfil}");
   def_macro_noop("\\psrowalign{}")?;
   def_macro_noop("\\pscolalign{}")?;
   def_macro_noop("\\ncdot")?;
 
   // Perl L224-232: \cnodeput OptionalMatch:* [] OptionalBracketed ZeroPSCoord {} {}
-  // builds a \rput{\circlenode{#5}{#6}} expansion. For LaTeXML DVI-only
-  // binding, reduce to placing the body.
-  DefMacro!("\\cnodeput OptionalMatch:* [] [] {}{}{}", "#6");
+  // builds a \rput{\circlenode{#5}{#6}} expansion: here the body placed at the coordinate, in the node's box
+  // (pst-node.tex:206-220 `\cnodeput*[par]{angle}(x,y){name}{stuff}`, the angle optional; Perl's ZeroPSCoord leniency
+  // places a node without coordinate at the origin). Read as `[] [] {}{}{}`, the coordinate's characters were three
+  // arguments and the rest spilled into the picture (cs0702114). Guard:
+  // `perfect_kernel_batch73a::cnodeput_reads_its_coordinate`.
+  DefMacro!("\\cnodeput OptionalMatch:* []", r"\lx@pst@cnodeput@i");
+  RawTeX!(r"\def\lx@pst@cnodeput@i{\@ifnextchar(\lx@pst@cnodeput@iii\lx@pst@cnodeput@ii}
+\def\lx@pst@cnodeput@ii#1{\@ifnextchar(\lx@pst@cnodeput@iii{\lx@pst@cnodeput@iii(0,0)}}
+\def\lx@pst@cnodeput@iii(#1)#2#3{\rput(#1){\hbox{#3}}}");
   // Perl L334-339: \ncdiagg {} {} — node diagonal connection; DVI-only no-op.
   def_macro_noop("\\ncdiagg OptionalMatch:* []{}{}")?;
   // Perl L341-346: \pcdiagg — same shape.

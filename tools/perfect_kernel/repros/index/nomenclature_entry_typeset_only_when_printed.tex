@@ -1,0 +1,15 @@
+% witness: 2506.02168 (`\printnomenclature` ahead of the entries; `\nomenclature{\|\cdot\|_p}{$L^p$ norm}`)
+% oracle:  pdflatex + makeindex -s nomencl.ist + pdflatex (clean): makeindex rejects the `\|` entry ("Extra `|'"), the
+%          list prints the other entry; without `\printnomenclature` nothing is typeset
+% engines: rust 67int22 = 1 error (the `\|…_p` symbol set as text); Perl: no list (raw nomencl, 0 errors)
+% expect:  0 errors, 1 warning (the rejected entry, as makeindex's `.ilg` reports it); one glossarydefinition, `$a$`
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nomencl}
+\makenomenclature
+\begin{document}
+\printnomenclature
+Norm $\|x\|_p$. \nomenclature{\|\cdot\|_p}{$L^p$ norm}
+Area $a$. \nomenclature{$a$}{The area}
+\end{document}

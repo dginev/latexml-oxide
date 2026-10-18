@@ -258,7 +258,13 @@ LoadDefinitions!({
   // drops its first argument and leaves later ones in a `\relax{…}` group; Perl keeps a bold `\bm`, its argument in a
   // group: a `\left` without its `\right` there is set at the outer level with a Warning (bm_sty.rs
   // `define_grouped_bm`, OXIDIZED_DESIGN #544).
+  // The class provides it at `\begin{document}`, only while `\bm` is still undefined (revtex4.cls:6030-6032
+  // `\appdef\class@inithook{…\@ifxundefined\bm{\let\bm\REV@bm}{}…}`, run from `\class@documenthook`), so a preamble's
+  // own `\newcommand{\bm}{\bibitem}` (nucl-th0307033) stands; defined at load, the binding's took it away (Perl
+  // revtex4_support.sty.ltxml:167 the same, KNOWN_PERL_ERRORS #965). Guard:
+  // `perfect_kernel_batch73a::revtex_bm_is_provided_at_begin_document`.
   bm_sty::define_grouped_bm()?;
+  RawTeX!(r"\let\lx@revtex@bm\bm\let\bm\@undefined\AtBeginDocument{\@ifundefined{bm}{\let\bm\lx@revtex@bm}{}}");
   // Perl L166-168: `locked => 1` keeps \bbox bold-wrapped even when a
   // user or co-loaded package redefines it.
   DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true,

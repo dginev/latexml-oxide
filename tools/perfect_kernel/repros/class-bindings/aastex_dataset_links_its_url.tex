@@ -1,0 +1,12 @@
+% witness: 2502.04486, 2608.18221 (aastex631.cls:6267-6272), 1601.05101 (aastex6.cls:5488-5490 `\href{#2}{[#1]}`)
+% oracle:  pdflatex (clean): "GitHub" and "SHA" link to their URLs (aastex701.cls:12656-12661 `\href{#2}{#1}`)
+% engines: rust 67int22 = 2 errors (the URL read as `\dataset`'s text: `_`, `&`); Perl = 2 (aas_support.sty.ltxml:420,
+%          KNOWN_PERL_ERRORS #964)
+% expect:  0 errors, 0 warnings; two `<ref class="ltx_href">` with the URLs as href
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+The code is on \dataset[GitHub]{https://github.com/zfried/astro_amase} and
+\dataset[SHA]{http://sha.ipac.caltech.edu/x?id=1&RequestClass=ServerRequest}.
+\end{document}

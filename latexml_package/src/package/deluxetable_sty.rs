@@ -111,14 +111,14 @@ LoadDefinitions!({
 
   // Perl: DefMacroI('\deluxetable', '{}', '\set@deluxetable@template{#1}\def\@deluxetable@header{}\begin{table}');
   DefMacro!("\\deluxetable{}",
-    "\\set@deluxetable@template{#1}\\def\\@deluxetable@header{}\\begin{table}");
+    "\\set@deluxetable@template{#1}\\def\\@deluxetable@header{}\\begin{table}\\lx@deluxe@stored@caption");
   DefMacro!("\\enddeluxetable", "\\spew@tblnotes\\end{table}");
 
   // star variant — use runtime def_macro for star-containing names
   {
     let params = parse_parameters("{}", &T_CS!("\\deluxetable*"), true)?;
     let expansion = TokenizeInternal!(
-      "\\set@deluxetable@template{#1}\\def\\@deluxetable@header{}\\begin{table}");
+      "\\set@deluxetable@template{#1}\\def\\@deluxetable@header{}\\begin{table}\\lx@deluxe@stored@caption");
     def_macro(T_CS!("\\deluxetable*"), params, ExpansionBody::Tokens(expansion), None)?;
   }
   {
@@ -194,7 +194,21 @@ LoadDefinitions!({
 
   def_macro_noop("\\tablecolumns{Number}")?;
 
-  Let!("\\tablecaption", "\\caption");
+  // `\tablecaption` outside a float is stored, not set (aastex701.cls:8417-8418 `\gdef\@tablecaption{#1}`, aastex631.cls
+  // alike; AASTeX 5.x `\gdef\pt@caption`): an author's `\tablecaption{…}` ahead of `\begin{deluxetable}` was a
+  // `\caption` outside any float, an Error (1010.4329, 1903.10014, 2204.03327). The next deluxetable sets it as its caption
+  // (`\lx@deluxe@stored@caption`), where aastex701.cls:11303-11304 resets it at the table's start and the PDF loses it:
+  // the author's caption is kept (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #739). In a float, or a
+  // `{longtable}` (emulateapj's in the document's own, 1810.10130), it is that table's `\caption`, as Perl lets it
+  // everywhere (deluxetable.sty.ltxml:77, KNOWN_PERL_ERRORS #964). A caption no deluxetable takes is lost, as in the
+  // PDF (2204.03327's `{longrotatetable}` around a plain `tabular`).
+  // Guard: `perfect_kernel_batch73a::aastex_tablecaption_before_deluxetable`.
+  RawTeX!(r"\gdef\lx@deluxe@caption{}");
+  DefMacro!("\\lx@deluxe@tablecaption{}",
+    r"\@ifundefined{@captype}{\ifx\caption\lx@longtable@caption\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}{\@firstoftwo}{\caption{#1}}{\gdef\lx@deluxe@caption{#1}}");
+  Let!("\\tablecaption", "\\lx@deluxe@tablecaption");
+  DefMacro!("\\lx@deluxe@stored@caption",
+    r"\ifx\lx@deluxe@caption\@empty\else\expandafter\caption\expandafter{\lx@deluxe@caption}\global\let\lx@deluxe@caption\@empty\fi");
 
   DefMacro!("\\tablehead{}",
     "\\def\\@deluxetable@header{\\lx@alignment@begin@heading#1\\\\\\hline\\lx@alignment@end@heading}");

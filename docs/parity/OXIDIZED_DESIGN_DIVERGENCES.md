@@ -8233,6 +8233,8 @@ the PDF is the oracle (all five samples print the full list).
 **Witnesses**: nomencl/sample01…sample05 (TeX Live doc corpus).
 **Guard**: `cluster_package_guards::nomencl_inline::{nomenclature_entries_become_glossary_definitions,
 printnomenclature_lists_every_entry}`. Batch 56cl.
+Since 73a the definitions are typeset only when `\printnomenclature` prints the list, and an entry makeindex rejects
+is left out with a Warning (#738).
 
 
 ### 235. biblatex resources resolve by basename and with an implied `.bib` (Perl: no binding)
@@ -19734,6 +19736,47 @@ koma_ids_and_appendix_follow_the_standard_classes, ceurart_title_mode_sub_is_the
 `sectioning-frontmatter/scrbook_front_matter_chapters_are_unnumbered`,
 `sectioning-frontmatter/koma_ids_and_appendix_{scrartcl,scrreprt,scrbook}`, `koma_sectioning_check_warns`,
 `stand-in-copies/class_slot/ceurart_title_mode_sub`.
+
+### 738. An `\index`/`\nomenclature` entry is typeset only where its list is printed (user ruling 2026-10-18)
+
+**TeX**: `\index` writes its entry `\@sanitize`d and `\protected@write`-expanded to the `.idx` (latex.ltx:17710-17726),
+`\nomenclature` to the `.nlo` (nomencl.sty:208-245); the entry is typeset only when `\printindex`/`\printnomenclature`
+reads makeindex's `.ind`/`.nls` — with all the document's entries, the ones after the command too. Without a print
+command nothing is typeset, so an entry's `_` or `\|` is no TeX error; makeindex itself rejects a nomencl line holding a
+second `|` or `@` ("Extra `|'", the `.ilg`), braced or not.
+
+**Perl**: every phrase is digested at the `\index`/`\nomenclature` (pool `\index`; Perl's nomencl is raw and prints no
+list).
+
+**Rust** (73a): the entry's tokens (expanded as the write expands them; nomencl's with `\theequation` fixed) are kept
+under an id (latexml_core stomach.rs `defer_print`) and the anchor `\lx@deferred@print{id}` stands where the entry was
+made; when the list is printed (`{theindex}`, makeidx/imakeidx `\printindex`, the `.ind` stand-in `\lx@makeindex@output`,
+nomencl's `\printnomenclature`) `resolve_deferred_prints` digests them in document order and the anchors absorb the
+marks, so an index keeps its marks where the `\index`es stood; once printed, a later entry is digested at once. A list
+never printed typesets nothing: no `<ltx:indexmark>`/`<ltx:glossarydefinition>`, and no HTML head keywords from index
+phrases (the webpage stylesheet's source) — the document has no index. A nomencl entry makeindex would reject is left out
+of the printed list with a Warning. `\glossary` (`glo`) is unchanged. Under streaming (and the adaptive eager phase's
+soft yield) a fragment is built before a later print could fill its anchors, so a yield digests every pending entry at
+once, as Perl does (the output then holds marks of an unprinted list; the streaming sweeps' fixtures print theirs).
+Witnesses 1112.3972 (20 → 0 Errors), 2506.02168 (1 → 0, `\printnomenclature` ahead of the entries). Repros
+index/{index_entry_typeset_only_when_printed, printed_index_keeps_its_entries,
+nomenclature_entry_typeset_only_when_printed}; guards `perfect_kernel_batch73a::{index_entry_is_typeset_only_when_printed,
+printed_index_keeps_its_entries, nomenclature_entry_is_typeset_only_when_printed}`.
+
+### 739. aastex's `\tablecaption` before `\begin{deluxetable}` is the table's caption (user ruling 2026-10-18)
+
+**TeX**: aastex701.cls:8417-8418 (aastex631.cls alike) `\def\tablecaption#1{\gdef\@tablecaption{#1}}` stores the caption,
+and `\deluxetable` resets it at the table's start (:11303-11304 `\let\tablecaption\deluxetablecaption
+\deluxetablecaption{}`): a caption given before the table is lost in the PDF.
+
+**Perl**: `\let\tablecaption\caption` (deluxetable.sty.ltxml:77) — outside a float an Error ("outside any known float").
+
+**Rust** (73a): outside a float or a `{longtable}`, `\tablecaption` stores (deluxetable_sty.rs `\lx@deluxe@tablecaption`,
+emulateapj_cls.rs's outer branch too), and the next deluxetable sets the stored caption as its `\caption` — the author's
+caption kept, content before PDF fidelity. In a float or longtable it is that table's `\caption`, as before. A stored
+caption no deluxetable takes is lost, as in the PDF (2204.03327: `{longrotatetable}` around a plain `tabular`). Witnesses
+1010.4329 (4 → 0), 1903.10014, 2204.03327 (2 → 0). Repro class-bindings/aastex_tablecaption_before_deluxetable; guard
+`perfect_kernel_batch73a::aastex_tablecaption_before_deluxetable`.
 
 ### 744. A stand-in copy's `\input` files are part of the copy; its syntax ends with its load; its declaration names the binding that answered
 

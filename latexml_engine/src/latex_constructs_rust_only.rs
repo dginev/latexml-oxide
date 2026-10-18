@@ -1414,6 +1414,8 @@ LoadDefinitions!({
       no_file.push(T_END!());
       return Ok(Tokens::new(no_file));
     };
+    // The list is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
+    resolve_deferred_prints(Some(list))?;
     let env_cs = T_CS!(s!("\\{env}"));
     let replaced = lookup_definition(&env_cs)
       .ok()

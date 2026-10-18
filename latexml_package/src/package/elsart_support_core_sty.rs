@@ -152,21 +152,9 @@ LoadDefinitions!({
     DefMacro!("\\theequation", "\\thesection.\\arabic{equation}");
   }
 
-  // Theorems — Perl elsart_support_core.sty.ltxml L168-175.
-  // Perl conditional on `@seceqn` flag (set by elsart.cls's `seceqn`
-  // class option):
-  //   if @seceqn:  `\newtheorem{thm}{Theorem}[section] \@addtoreset{thm}{section}`
-  //   else      :  `\newtheorem{thm}{Theorem}`
-  // Then aliases `\newdefinition` and `\newproof` to `\newtheorem`
-  // (elsdoc §7).
-  // The base `\newtheorem{thm}` declaration was missing in the prior
-  // Rust port — every `\begin{thm}` in elsart papers reported
-  // `{thm} undefined`. Driver paper: math0611842 (3 errors → 0).
-  if lookup_bool("@seceqn") {
-    RawTeX!(r"\newtheorem{thm}{Theorem}[section]\@addtoreset{thm}{section}");
-  } else {
-    RawTeX!(r"\newtheorem{thm}{Theorem}");
-  }
+  // Theorems — Perl elsart_support_core.sty.ltxml L168-175: `{thm}` is elsart.cls's, declared by elsart_support_sty.rs;
+  // elsarticle.cls has none (its own `\newdefinition` :1154, `\newproof` :1200), so an elsarticle preamble's
+  // `\newcommand{\thm}` stands (2212.01438; Perl gives elsarticle the `{thm}` too, KNOWN_PERL_ERRORS #965).
   Let!("\\newdefinition", "\\newtheorem");
   Let!("\\newproof", "\\newtheorem");
 

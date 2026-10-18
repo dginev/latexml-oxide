@@ -2409,6 +2409,100 @@ where FnR: FnOnce(&mut Vec<Digested>) -> R {
 }
 
 // **********************************************************************
+// Deferred printing (OXIDIZED_DESIGN_DIVERGENCES #738)
+// **********************************************************************
+
+/// Material TeX writes out raw for a later run to print — an `\index` phrase (latex.ltx:17713-17726 `\@sanitize` and
+/// `\protected@write` to the `.idx`), a `\nomenclature` entry (nomencl.sty:208-219, the `.nlo`) — is typeset only when
+/// the document prints that list (`\printindex`, `\printnomenclature`); without one it is never typeset, and its
+/// errors are never TeX's. `defer_print` keeps the entry's tokens (already expanded as the write expands them) under a
+/// fresh id and returns that id for the anchor (`\lx@deferred@print{id}`, which marks the entry's place);
+/// [`resolve_deferred_prints`] digests them when the list is printed, and the anchor absorbs what was digested.
+/// Witnesses 1112.3972, 2506.02168 (user ruling 2026-10-18).
+pub fn defer_print(list: &str, tokens: Tokens) -> i64 {
+  let id = lookup_int("lx@deferred@print@count") + 1;
+  assign_value(
+    "lx@deferred@print@count",
+    Stored::Int(id),
+    Some(Scope::Global),
+  );
+  let unresolved = lookup_int("lx@deferred@print@unresolved") + 1;
+  assign_value(
+    "lx@deferred@print@unresolved",
+    Stored::Int(unresolved),
+    Some(Scope::Global),
+  );
+  assign_value(
+    &s!("lx@deferred@print@tokens@{id}"),
+    Stored::Tokens(tokens),
+    Some(Scope::Global),
+  );
+  assign_value(
+    &s!("lx@deferred@print@list@{id}"),
+    Stored::String(arena::pin(list)),
+    Some(Scope::Global),
+  );
+  id
+}
+
+/// Whether the list `list` has been printed: an entry made after that is typeset at once (TeX's `.ind` of the earlier
+/// run holds every entry of the document, the later ones too).
+pub fn deferred_list_is_printed(list: &str) -> bool {
+  lookup_bool(&s!("lx@deferred@print@printed@{list}"))
+}
+
+/// What the deferred entry `id` digested to, once its list was printed (`None` while it is not).
+pub fn deferred_print_content(id: &str) -> Option<Digested> {
+  match lookup_value(&s!("lx@deferred@print@content@{id}")) {
+    Some(Stored::Digested(content)) => Some(content),
+    _ => None,
+  }
+}
+
+/// Print the list `list`: digest every entry deferred for it, in document order, and mark it printed. With `None`, digest
+/// every deferred entry of every list without marking any printed — the streaming yield's fallback (an anchor is built
+/// and spilled with the fragment it is in, before a later `\printindex` could fill it), where the entries are typeset
+/// as Perl typesets them, at once.
+pub fn resolve_deferred_prints(list: Option<&str>) -> Result<()> {
+  if let Some(list) = list {
+    assign_value(
+      &s!("lx@deferred@print@printed@{list}"),
+      Stored::Bool(true),
+      Some(Scope::Global),
+    );
+  }
+  if lookup_int("lx@deferred@print@unresolved") <= 0 {
+    return Ok(());
+  }
+  let count = lookup_int("lx@deferred@print@count");
+  for id in 1..=count {
+    let key = s!("lx@deferred@print@tokens@{id}");
+    let Some(Stored::Tokens(tokens)) = lookup_value(&key) else {
+      continue;
+    };
+    if let Some(list) = list
+      && lookup_string(&s!("lx@deferred@print@list@{id}")) != list
+    {
+      continue;
+    }
+    assign_value(&key, Stored::None, Some(Scope::Global));
+    let unresolved = lookup_int("lx@deferred@print@unresolved") - 1;
+    assign_value(
+      "lx@deferred@print@unresolved",
+      Stored::Int(unresolved),
+      Some(Scope::Global),
+    );
+    let content = digest(tokens)?;
+    assign_value(
+      &s!("lx@deferred@print@content@{id}"),
+      Stored::Digested(content),
+      Some(Scope::Global),
+    );
+  }
+  Ok(())
+}
+
+// **********************************************************************
 // Digestion
 // **********************************************************************
 
@@ -3540,6 +3634,9 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       FRAGMENT_YIELD_REQUESTED.set(false);
       FRAGMENT_YIELD_COUNT.set(FRAGMENT_YIELD_COUNT.get() + 1);
       note_yield_rss_baseline(LAST_SAMPLED_RSS_KB.get());
+      // A deferred `\index`/`\nomenclature` entry is built with this fragment: typeset now, as Perl does
+      // (`resolve_deferred_prints`; OXIDIZED_DESIGN_DIVERGENCES #738).
+      resolve_deferred_prints(None)?;
       // No EOF trailer (`ran_out` stays true only through the loop's own
       // exhaustion path — we return before reaching it), and no
       // `gullet::flush()`: both are end-of-input actions, and input remains.

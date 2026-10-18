@@ -5151,6 +5151,21 @@ fn absorb_index_verb_runs(toks: &[Token], chars: &IndexChars) -> Result<Vec<Toke
   Ok(out)
 }
 
+/// The tokens that typeset `tokens`, an entry TeX writes for the list `list` (`idx`, a named index, `glo`,
+/// `nomenclature`) and prints only from `\printindex` or its like: the entry itself once the list is printed, else the
+/// anchor `\lx@deferred@print{id}` of an entry kept raw until it is (latexml_core `defer_print`;
+/// OXIDIZED_DESIGN_DIVERGENCES #738).
+pub fn deferred_print_tokens(list: &str, tokens: Tokens) -> Tokens {
+  if tokens.is_empty() || deferred_list_is_printed(list) {
+    return tokens;
+  }
+  let id = defer_print(list, tokens);
+  let mut out = vec![T_CS!("\\lx@deferred@print"), T_BEGIN!()];
+  out.extend(Explode!(id.to_string()));
+  out.push(T_END!());
+  Tokens::new(out)
+}
+
 /// `chars` are the makeindex characters the entry is split with
 /// ([`IndexChars::in_force`]); `inlist` names the list the mark belongs to
 /// (Perl's third argument: `\@index[style][inlist]`) — `\glossary` marks

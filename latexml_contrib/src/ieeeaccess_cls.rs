@@ -53,10 +53,17 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
   );
   def_macro_noop("\\EOD")?;
-  // \Figure[pos](opts)[scale]{file}{caption} — image inclusion.
-  // Stub as a simple includegraphics-style construct rendering nothing
-  // when called outside expected float context.
-  DefMacro!("\\Figure", "\\@gobble");
+  // `\Figure[pos](keys)[gopts]{file}{caption}` (ieeeaccess.cls:270-300): a `{figure}` (`{figure*}` when the image is wider
+  // than the column — page layout, not kept here) holding `\includegraphics[gopts]{file}` and `\caption{caption}`; the
+  // `figkeys` (`topskip`/`midskip`/`botskip`, :262-267) are vertical spacing. As `\@gobble` it dropped the figure and
+  // spilled the file name, whose `_` erred (1803.04935, 1910.07402). Guard:
+  // `perfect_kernel_batch73a::ieeeaccess_figure_is_a_figure`.
+  RawTeX!(
+    r"\def\Figure{\@ifnextchar[{\@Figure}{\@Figure[t!]}}
+\def\@Figure[#1]{\@ifnextchar({\@@Figure[#1]}{\@@Figure[#1](topskip=0pt)}}
+\def\@@Figure[#1](#2){\@ifnextchar[{\@@@Figure[#1](#2)}{\@@@Figure[#1](#2)[scale=1]}}
+\def\@@@Figure[#1](#2)[#3]#4#5{\begin{figure}[#1]\centering\includegraphics[#3]{#4}\caption{#5}\end{figure}}"
+  );
   DefRegister!("\\titlepgskip" => Dimension!("0pt"));
   // Metadata — preserve author values.
   DefMacro!("\\doi{}", "\\@add@frontmatter{ltx:note}[role=doi]{#1}");

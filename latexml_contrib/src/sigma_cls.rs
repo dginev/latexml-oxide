@@ -4,8 +4,12 @@ use latexml_package::prelude::*;
 use crate::shipped_class::{class_code_contains, shipped_class_text};
 
 LoadDefinitions!({
+  // sigma.cls:20-21 `\LoadClass[fleqn,11pt,twoside]{article}` and `\PassOptionsToPackage{fleqn}{amsmath}`: displays flush
+  // left, and amsmath's `\[…\]` set as its `\if@fleqn` display (`\hbox{$\displaystyle …$}`, 69c), where a `$` in it is
+  // text (2111.06645). The binding dropped both options. Guard: `perfect_kernel_batch73a::sigma_passes_fleqn`.
+  Digest!("\\PassOptionsToClass{fleqn,11pt,twoside}{article}")?;
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  RequirePackage!("amsmath", options => vec!["fleqn".to_string()]);
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
   // Eager xcolor preload removed for Perl parity: it makes a later document

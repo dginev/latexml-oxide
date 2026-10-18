@@ -141,6 +141,8 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     note_backmatter_element(whatsit, "ltx:index");
     let list = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+    // The named index is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
+    resolve_deferred_prints(Some(list.trim()))?;
     let docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
     let name = clean_id(&list);
     let id = if docid.is_empty() { s!("idx.{name}") } else { s!("{docid}.idx.{name}") };

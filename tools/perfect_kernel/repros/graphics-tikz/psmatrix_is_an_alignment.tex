@@ -1,0 +1,16 @@
+% witness: 0705.2689 (`{psmatrix}[colsep=…]` of `\square`s in text), 1712.01407 (in a pspicture, `[mnode=…]` nodes)
+% oracle:  latex+dvips (clean; pdflatex cannot draw PSTricks): pst-node.tex:1163-1192 `\psmatrix` is a
+%          `\vbox{\halign{&…}}`, each cell a boxed node
+% engines: rust 67int22 = 1 error ("Stray alignment &": the binding's no-op `\psmatrix`); Perl = 8 (no `{psmatrix}`)
+% expect:  0 errors, 0 warnings; a 2x3 alignment whose cells hold the entries, the `[name=…]` dropped
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{pstricks}
+\usepackage{pst-node}
+\begin{document}
+$$\begin{psmatrix}[colsep=0.6,rowsep=0.25]
+ && b && \\
+ & [name=x]x && [name=z]z \\
+\end{psmatrix}$$
+\end{document}

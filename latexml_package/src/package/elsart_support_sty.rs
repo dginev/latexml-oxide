@@ -8,6 +8,20 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("elsart_support_core");
+  // Theorems — Perl elsart_support_core.sty.ltxml L168-175, elsart's only (an elsarticle paper's own `\thm` stands:
+  // 2212.01438; guard `perfect_kernel_batch73a::elsarticle_has_no_thm_environment`).
+  // Perl conditional on `@seceqn` flag (set by elsart.cls's `seceqn`
+  // class option):
+  //   if @seceqn:  `\newtheorem{thm}{Theorem}[section] \@addtoreset{thm}{section}`
+  //   else      :  `\newtheorem{thm}{Theorem}`
+  // The base `\newtheorem{thm}` declaration was missing in the prior
+  // Rust port — every `\begin{thm}` in elsart papers reported
+  // `{thm} undefined`. Driver paper: math0611842 (3 errors → 0).
+  if lookup_bool("@seceqn") {
+    RawTeX!(r"\newtheorem{thm}{Theorem}[section]\@addtoreset{thm}{section}");
+  } else {
+    RawTeX!(r"\newtheorem{thm}{Theorem}");
+  }
 
   // Perl elsart_support.sty.ltxml L23-24:
   //   if (LookupValue('@amsthm')) { RequirePackage('amsthm'); }
@@ -233,7 +247,11 @@ LoadDefinitions!({
   DefMacro!("\\conttablecaption", "\\caption{continued}");
 
   // Bibliography — Perl L117-175
-  DefEnvironment!("{subbibitems}", "#body");
+  // elsart.cls:600 `\newenvironment{subbibitems}[1]`: the argument is the group's citation key (written to the `.aux` as
+  // `\bibcite{<key>}` at the end, :617-631), not text. Perl's `{subbibitems}` takes none (elsart_support.sty.ltxml:117),
+  // so the key was typeset, a `_` in it erring (0707.3045; KNOWN_PERL_ERRORS #967). Guard:
+  // `perfect_kernel_batch73a::elsart_subbibitems_reads_its_key`.
+  DefEnvironment!("{subbibitems} Semiverbatim", "#body");
 
   // Perl elsart_support.sty.ltxml L120: `{cv*}` env wraps its body in a
   // <ltx:section class='ltx_cv'> with auto-title "Curriculum Vitae".

@@ -2099,6 +2099,7 @@ fn index_control_word_before_at_is_not_glued() {
 \newcommand{\docpkg}[1]{\texttt{#1}\index{#1 package@\texttt{#1} package}\index{packages!#1@\texttt{#1}}}
 \begin{document}
 Uses \docpkg{\TIKZ} here.
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
@@ -2384,6 +2385,7 @@ fn index_control_word_before_letter_at_is_not_glued() {
 \makeatother
 \begin{document}
 \extractinternalcommand Text.
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
@@ -2532,6 +2534,7 @@ fn makeidx_keeps_the_allocating_makeindex() {
 \ifdefined\@indexfile STREAMDEFINED\fi
 \makeatother
 \index{alpha}
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
@@ -2774,6 +2777,7 @@ fn index_verb_followed_by_cs_is_text() {
 \makeindex
 \begin{document}
 Text\index{foo@\string\verb\string"bar}. More text here.
+\printindex
 \end{document}
 "#;
   let (stderr, xml) = convert(tex, false);
@@ -3692,6 +3696,7 @@ fn index_entry_defers_protected_macros() {
 \newcommand\nxt{\def\item{\ltest}}
 \begin{document}
 A\index{key@\protect\nxt}
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, true);
@@ -3727,6 +3732,7 @@ fn robustindex_page_reference_hooks_are_inert() {
 \begin{document}
 A\index{alpha!see also gamma\gobblepageref}
 B\index{beta\wrappageref\textbf}
+\printindex
 \end{document}
 ";
   let (stderr, xml) = convert(tex, true);
@@ -3831,6 +3837,7 @@ fn index_sanitized_backslash_symbol_stays_literal() {
 \usepackage{makeidx}\makeindex
 \begin{document}
 Il comando \cn{\\*} qui.
+\printindex
 \end{document}
 "#;
   let (stderr, xml) = convert(tex, true);
@@ -3982,7 +3989,7 @@ fn underline_is_robust_in_an_edef_write() {
 /// doubled key `→abc→abc`; latex-via-exemplos' accent table).
 #[test]
 fn overrightarrow_is_robust_in_an_index_phrase() {
-  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{$\\overrightarrow{abc}$} Y\n\\end{document}\n";
+  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{$\\overrightarrow{abc}$} Y\n\\printindex\\end{document}\n";
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(

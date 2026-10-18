@@ -1,0 +1,16 @@
+% witness: none (the ruling's own guard: a printed index keeps its entries, OXIDIZED_DESIGN_DIVERGENCES #738; the
+%          class-copy case is class-bindings/ws_rv9x6_class_copy_loads_makeidx.tex)
+% oracle:  pdflatex + makeindex + pdflatex (clean): the index lists alpha, beta (with its sub-entry) and gamma, the
+%          last made after `\printindex`
+% engines: rust 67int22 = 0 errors (entries digested at `\index`); Perl = 0
+% expect:  0 errors, 0 warnings; three `<indexmark>`s where the `\index`es stand, and the `<ltx:index>`
+% status:  GREEN (67int22, 73a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+Alpha\index{alpha} and beta\index{beta!sub}.
+\printindex
+Gamma\index{gamma}.
+\end{document}

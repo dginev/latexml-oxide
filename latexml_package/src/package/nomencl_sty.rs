@@ -57,6 +57,13 @@ LoadDefinitions!({
   // the test is ltcmd's `\IfBlankF` (blank = empty or spaces), not
   // `\ifx\relax#1`, which is true of `\meter`.
   // Guard: `package_leads_56::nomentbl_unit_column_is_a_siunitx_unit`.
+  // The entry is typeset only where `\printnomenclature` prints the list (user ruling 2026-10-18,
+  // OXIDIZED_DESIGN_DIVERGENCES #738): TeX writes it to the `.nlo` (nomencl.sty:208-245) and typesets it only from the
+  // `.nls`, so it is kept raw (`\lx@defer@print`, sect11.rs) with the equation number it was written with
+  // (`\theequation`, expanded by the write), and digested when the list is printed — before the entries too, as in
+  // 2506.02168, whose `\printnomenclature` stands ahead of them (a printed entry's errors are TeX's: its
+  // `\nomenclature{\|\cdot\|_p}` symbol sets `\|` and `_` outside math). Guard:
+  // `perfect_kernel_batch73a::nomenclature_entry_is_typeset_only_when_printed`.
   // nomencl.sty:216-221 reads the `[prefix]` — a makeindex sort key — under `\@sanitize`: `\nomenclature[R_alpha]{…}`'s
   // `_` is a character, where a live one erred in the sort phrase (12 of run 336's papers). Only the prefix: the symbol
   // and description, digested here rather than written out, keep their catcodes.
@@ -65,15 +72,41 @@ LoadDefinitions!({
   RawTeX!(r"\makeatletter
 \def\lx@nomencl@prefixed[#1]{\endgroup\lx@nomencl@entry[#1]}
 \def\lx@nomencl@entry[#1]#2#3{\if@nomentbl\expandafter\lx@nomencl@entrytbl\else\expandafter\lx@nomencl@entryplain\fi{#1}{#2}{#3}}
-\def\lx@nomencl@entrytbl#1#2#3#4#5{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{\lx@nomencl@unit{#4}}{\IfBlankF{#5}{#5}}{\lx@nomencl@group{#1}}}
+\def\lx@nomencl@entrytbl#1#2#3#4#5{\protected@edef\lx@nomencl@eq{\theequation}\expandafter\lx@nomencl@entrytbl@\expandafter{\lx@nomencl@eq}{#1}{#2}{#3}{#4}{#5}}
+\def\lx@nomencl@entrytbl@#1#2#3#4#5#6{\lx@defer@print{nomenclature}{\lx@nomencl@ifaccepted{#2}{#3}{#4}{\lx@nomencl@definition{#2}{#3}{{#4\nomeqref{#1}}}{\lx@nomencl@unit{#5}}{\IfBlankF{#6}{#6}}{\lx@nomencl@group{#2}}}{}}}
 \def\lx@nomencl@unit#1{\IfBlankF{#1}{\unit{#1}}}
-\def\lx@nomencl@entryplain#1#2#3{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{}{}{\lx@nomencl@group{#1}}}
+\def\lx@nomencl@entryplain#1#2#3{\protected@edef\lx@nomencl@eq{\theequation}\expandafter\lx@nomencl@entryplain@\expandafter{\lx@nomencl@eq}{#1}{#2}{#3}}
+\def\lx@nomencl@entryplain@#1#2#3#4{\lx@defer@print{nomenclature}{\lx@nomencl@ifaccepted{#2}{#3}{#4}{\lx@nomencl@definition{#2}{#3}{{#4\nomeqref{#1}}}{}{}{\lx@nomencl@group{#2}}}{}}}
 \def\lx@nomencl@group#1{\begingroup\edef\lx@nomencl@pfx{#1}\ifx\lx@nomencl@pfx\@empty\else
   \ifx\nomgroup\lx@nomencl@ownnomgroup\expandafter\lx@nomencl@group@\lx@nomencl@pfx\@nil\fi\fi\endgroup}
 \let\lx@nomencl@ownnomgroup\nomgroup
 \def\lx@nomencl@group@#1#2\@nil{\if@nomentbl\def\item&\multicolumn##1##2##3{##3}\else\def\item[##1]{##1}\fi
   \uppercase{\nomgroup{#1}}}
 \makeatother");
+  // makeindex rejects a written line with a second `|` (encap) or `@` (actual), braced or not, and nomencl writes one of
+  // each itself (nomencl.sty:227-245: `<prefix><symbol>@[{<symbol>}]\begingroup <description>…|nompageref`; nomencl.ist
+  // keeps makeindex's `|` and `@`, quote `%`): an entry whose prefix, symbol or description holds one is never in the
+  // `.nls`, never printed ("Extra `|'", the `.ilg`). 2506.02168's `\nomenclature{\|\cdot\|_p}{…}`: pdflatex and makeindex
+  // print a list without it, where the binding's list set `\|` and `_` as text (an Error). Such an entry is left out with
+  // a Warning when the list is printed, as makeindex leaves it out. Guard: `perfect_kernel_batch73a::nomenclature_entry_is_typeset_only_when_printed`.
+  DefMacro!("\\lx@nomencl@ifaccepted{}{}{}", sub[(prefix, symbol, description)] {
+    let mut extra = None;
+    for part in [&prefix, &symbol, &description] {
+      for token in part.unlist_ref() {
+        if let Some(special) = token.with_str(|text| text.chars().find(|c| matches!(c, '|' | '@'))) {
+          extra.get_or_insert(special);
+        }
+      }
+    }
+    Ok(match extra {
+      None => Tokens!(T_CS!("\\@firstoftwo")),
+      Some(special) => {
+        Warn!("malformed", "nomenclature",
+          s!("makeindex rejects the nomenclature entry {} (Extra `{special}'), so the list prints without it", symbol.untex()));
+        Tokens!(T_CS!("\\@secondoftwo"))
+      },
+    })
+  });
   DefConstructor!("\\lx@nomencl@definition{}{}{}{}{}{}",
     "<ltx:glossarydefinition key='#key' inlist='nomenclature'>\
      <ltx:glossaryphrase key='#key' role='sort'>#1#2</ltx:glossaryphrase>\
@@ -95,6 +128,8 @@ LoadDefinitions!({
     "<ltx:glossary xml:id='#id' lists='nomenclature' role='nomenclature'>\
      <ltx:title>#title</ltx:title></ltx:glossary>",
     properties => sub[_args] {
+      // The list is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
+      resolve_deferred_prints(Some("nomenclature"))?;
       let title = digest_in_group(T_CS!("\\nomname")).map(|d| d.to_string()).unwrap_or_default();
       let docid = lookup_value("thedocument@ID")
         .and_then(|v| match v { Stored::String(s) => Some(to_string(s)), _ => None })

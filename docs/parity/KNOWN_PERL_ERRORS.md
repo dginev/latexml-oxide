@@ -15592,6 +15592,67 @@ raw class's own `\@ifundefined{chapter}` also says undefined; one "has chapters"
 numbered chapter, with its own counter and one Warning). Guards `perfect_kernel_batch72b::{chapter_exists_where_the_class_has_chapters,
 chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning, a_raw_class_meets_chapter_undefined_while_it_loads}`.
 
+## 964. aas_support/deluxetable: `\dataset` reads its URL as text, `\tablecaption` is `\caption` everywhere, `\bibinfo` prints the title
+
+aas_support.sty.ltxml:420 `\dataset[catalog]{text}` sets `#2 (catalog #1)`: from AASTeX 6 on (aastex6.cls:5488-5490,
+aastex62.cls:6036-6042 … aastex701.cls:12656-12661) `\dataset[text]{url}` is `\href{url}{text}`, so a URL's `_`/`&` erred.
+deluxetable.sty.ltxml:77 `\let\tablecaption\caption`: aastex stores a `\tablecaption` (aastex701.cls:8417-8418), so one
+before `\begin{deluxetable}` erred "outside any known float". REVTeX's `\bibinfo`=`#2` printed a reference title AASTeX 7
+drops unless `longbib` (aastex701.cls:6726-6732), whose raw `&` erred.
+
+Trigger: `\documentclass{aastex701}` … `\dataset[GitHub]{https://github.com/a/b_c}`; `\tablecaption{T}` before
+`\begin{deluxetable*}{cc}`; `\bibinfo{title}{3 &lt; z}` in a `\bibitem` — pdflatex 0 errors each.
+
+Rust (73a): aastex_cls.rs defines `\dataset` per version from 6 on (`\href{#2}{[#1]}` for 6.0/6.1, else
+`\href{#2}{#1}`/`[DATASET]`), deluxetable_sty.rs stores the caption (OXIDIZED_DESIGN_DIVERGENCES #739), aastex 7 sets
+`\bibinfo` by `\iflongbib` at `\begin{document}`. Witnesses 2502.04486 2608.18221 1601.05101; 1010.4329 1903.10014
+2204.03327; 2508.20177 2510.05388. Guards `perfect_kernel_batch73a::{aastex_dataset_links_its_url,
+aastex_tablecaption_before_deluxetable, aastex7_bibinfo_needs_longbib}`.
+
+## 965. Bindings define at load what the class or package provides only later: subcaption `\subfloat`, REVTeX `\bm`, elsart's `{thm}` for elsarticle
+
+subcaption.sty:262-276 provides `\subfloat` at `\begin{document}` (`\providecommand*`), revtex4.cls:6030-6032 lets `\bm`
+be `\REV@bm` there only while undefined, and elsarticle.cls has no `{thm}`; Perl's bindings define them at load
+(subcaption.sty.ltxml:104, revtex4_support.sty.ltxml:167, elsart_support_core.sty.ltxml:202-204, the last loaded by
+elsarticle too), so a preamble's own `\newcommand{\subfloat}`/`{\bm}`/`{\thm}` was refused and the binding's ran on the
+author's arguments.
+
+Trigger: `\usepackage{subcaption}\newcommand{\subfloat}[2]{\fbox{#2}}` and `\subfloat{a_b.pdf}{A}` in a figure;
+`\documentclass{revtex4}\newcommand{\bm}{\bibitem}` and `\bm{k_5}` in the bibliography;
+`\documentclass{elsarticle}\newcommand{\thm}[1]{Theorem~\ref{t:#1}}` and `\thm{a_b}` — pdflatex 0 errors each.
+
+Rust (73a): subcaption_sty.rs and revtex4_support_sty.rs provide them at `\begin{document}`; `{thm}` is declared by
+elsart_support_sty.rs (elsart only). Witnesses 2511.09162 (117 → 0 Errors), nucl-th0307033, 2212.01438 (14 → 0). Guards
+`perfect_kernel_batch73a::{subcaption_subfloat_is_provided_at_begin_document, revtex_bm_is_provided_at_begin_document,
+elsarticle_has_no_thm_environment}`.
+
+## 966. `\DeclareGraphicsExtensions` and `\bibstyle` digest the names they are given
+
+graphics.sty:116-117 `\DeclareGraphicsExtensions` records its list (`\edef\Gin@extensions`), latex.ltx:17773 `\let\bibstyle
+\@gobble`: neither typesets. Perl's are constructors with a digested `{}` argument (graphics.sty.ltxml:306, pool:3972), so
+`.pdf_tex` and `SciPost_bibstyle` erred.
+
+Trigger: `\usepackage{graphicx}\DeclareGraphicsExtensions{.pdf,.pdf_tex}`; `\bibstyle{SciPost_bibstyle}` — pdflatex 0
+errors.
+
+Rust (73a): graphics_sty.rs's `\DeclareGraphicsExtensions` is the package's macro; sect11.rs reads `\bibstyle`'s name
+Semiverbatim. Witnesses 1810.02483, 2412.10240. Guards `perfect_kernel_batch73a::{declare_graphics_extensions_is_not_typeset,
+bibstyle_name_is_not_typeset}`.
+
+## 967. elsart's `{subbibitems}` takes no key; svjour's `\tableheadseprule` is a bare `\hrule`
+
+elsart.cls:600 `\newenvironment{subbibitems}[1]` reads the group's citation key; elsart_support.sty.ltxml:117 takes none,
+so the key was typeset (a `_` in it erred). svjour2.cls:1032 (svjour3, svmult alike) `\tableheadseprule` is
+`\noalign{\hrule height.375mm}`; sv_support.sty.ltxml:143's bare `\hrule` in a `tabular` row was misplaced and the
+`\noalign{\smallskip}` after it erred ("\noalign cannot be used here").
+
+Trigger: `\documentclass{elsart}`, `\begin{subbibitems}{pah_astro}\bibitem{a}…\end{subbibitems}` in thebibliography;
+`\documentclass{svjour2}`, `A & B\\ \tableheadseprule\noalign{\smallskip} 1 & 2\\` in a tabular — pdflatex 0 errors.
+
+Rust (73a): elsart_support_sty.rs `{subbibitems} Semiverbatim`; sv_support_sty.rs the class's `\noalign` rule.
+Witnesses 0707.3045, astro-ph0609697. Guards `perfect_kernel_batch73a::{elsart_subbibitems_reads_its_key,
+sv_tableheadseprule_is_a_noalign_rule}`.
+
 ## 970. The class prefix fallback answers a renamed class with a binding of another family
 
 Package.pm:2700-2716 (`LoadClass`): a class with no binding takes the longest binding name that prefixes it

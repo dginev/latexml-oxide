@@ -160,8 +160,10 @@ LoadDefinitions!({
   // RUST-ONLY). The capture-and-rename isolates that state.
   // Guards: `perfect_kernel_batch56::mdframed_inside_low_level_list_keeps_items`,
   // `perfect_kernel_gemini::{mdframed_block_bibliography_juradiss, mdframed_in_float_and_nested}`.
+  // The options are keys (mdframed.sty:583-588 `\mdfsetup{#1}` at the start), read undigested: digested, a colour named
+  // `chinese_red` erred (2408.09945). Guard: `perfect_kernel_batch73a::mdframed_options_are_not_typeset`.
   DefEnvironment!(
-    "{mdframed}[]",
+    "{mdframed} OptionalUndigested",
     sub[document, _args, props] {
       document.maybe_close_element("ltx:p")?;
       if let Some(Stored::Digested(body)) = props.get("body") {

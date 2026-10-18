@@ -3605,6 +3605,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   new whole-print lifts of title + author (1112.0959 −9 words, 2409.06655 −18: the in-place duplicate of the title the
   frontmatter shows, e.g. 1112.0959's title 2 → 1 occurrence), and 2005.02474 (timeout on both sides, W 6 → 5); nets
   136/136 no worse. Reviews: agent_reports/2026-10-17_fms1_review_r{3,4,5,6}.md.
+- **73a** (binding shapes from the rc_struct6 study, agent_reports/2026-10-17_rc_struct6.md, and the user rulings of
+  2026-10-18). (1) aastex: `\dataset[text]{url}` links the text (aastex_cls.rs, per version from 6 on), `\tablecaption`
+  outside a float is stored for the next deluxetable (deluxetable_sty.rs, emulateapj_cls.rs; OD #739), AASTeX 7's
+  `\bibinfo` drops the title unless `longbib` (KPE #964; 2502.04486 2608.18221 1601.05101 1010.4329 1903.10014 2204.03327
+  2508.20177 2510.05388 → 0 Errors). (2) Provided later, not at load: subcaption `\subfloat`, REVTeX `\bm` at
+  `\begin{document}`, elsart's `{thm}` not given to elsarticle (KPE #965; 2511.09162 117 → 0, nucl-th0307033, 2212.01438
+  14 → 0). (3) pst-node `{psmatrix}` an alignment of boxed nodes (pst-node.tex:1163-1220; 0705.2689 19 → 0, 1712.01407),
+  `\cnodeput` reads `(x,y)` and boxes its stuff (cs0702114). (4) ieeeaccess `\Figure` a figure (ieeeaccess.cls:270-300;
+  1803.04935 23 → 0, 1910.07402). (5) sigma passes `fleqn` to article and amsmath (sigma.cls:20-21; 2111.06645's `$`
+  errors gone, its `\substack}` typo cascade remains). (6) `\DeclareGraphicsExtensions`, `\bibstyle` (KPE #966),
+  elsart `{subbibitems}` key, svjour `\tableheadseprule` (KPE #967), mdframed options undigested (1810.02483 2412.10240
+  0707.3045 astro-ph0609697 2408.09945 → 0). (7) User ruling 1: `\index`/`\nomenclature` entries are kept raw and typeset
+  only when the list is printed (latexml_core stomach.rs `defer_print`/`resolve_deferred_prints`, OD #738); a nomencl
+  entry makeindex rejects is left out with a Warning (1112.3972 20 → 0, 2506.02168 1 → 0). Index guards whose fixtures
+  had no print command now print their list. Open: cimento.cls `\PACSes`/`\instlist` for papers that do not ship the
+  class (1012.2907 1208.1260 0907.0634: the binding falls to OmniBus; a stand-in port of cimento's frontmatter is
+  needed). Repros under class-bindings/, package-bindings/, graphics-tikz/, index/, index-bib/; guards
+  `perfect_kernel_batch73a::*` (18).
 
 - **72b** (`\chapter` exists only where the class has chapters; user rulings 2026-10-17: TeX's answer to every
   `\@ifundefined{chapter}` while the class and packages load, documents that call it still convert, the fallback is
