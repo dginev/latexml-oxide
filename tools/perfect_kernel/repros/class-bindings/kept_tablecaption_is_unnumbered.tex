@@ -1,0 +1,37 @@
+% witness: review 73a r2 finding 5 (2204.03327: pdflatex's aux has `tab:wasp43_res` = 3, the two `{longrotatetable}`
+%          tabulars unnumbered; probes tc_twice, tc_aas7pos)
+% oracle:  pdflatex (TL 2025 aastex701.cls, clean): the deluxetable has no caption and no number (aastex701.cls
+%          :11303-11304 empties the store, :11391 prints only a non-empty one); the table float is "Table 1. Real.",
+%          "See 1."; the last deluxetable has no caption either
+% engines: rust 73a r2 = the kept caption "Table 1", the float "Table 2" and `\ref` 2; Perl = 1 error (the `\caption`
+%          outside any float)
+% expect:  0 errors, 0 warnings; "Second stray." kept on the deluxetable, unnumbered (user ruling 2026-10-18, main-session
+%          call: a caption only the surpass keeps takes no number); the float Table 1, `\ref` 1 (OXIDIZED_DESIGN_DIVERGENCES
+%          #739); the last deluxetable without a caption (the kept one is taken once)
+%          The `[h]` is the deluxetable's placement (aastex701.cls `\xdeluxetable#1[#2]`; 73a r1/r2 printed it as text,
+%          1511.09213)
+% status:  RED (73a r2) -> GREEN (73a r3)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\tablecaption{First stray.}
+\tablecaption{Second stray.}
+Text.
+\begin{deluxetable}{cc}[h]
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1 & 2 \\
+\enddata
+\end{deluxetable}
+\begin{table}
+\caption{Real.}\label{r}
+\begin{tabular}{cc}3&4\end{tabular}
+\end{table}
+See \ref{r}.
+\begin{deluxetable}{cc}
+\tablehead{\colhead{C} & \colhead{D}}
+\startdata
+5 & 6 \\
+\enddata
+\end{deluxetable}
+\end{document}

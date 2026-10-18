@@ -10,8 +10,9 @@
 % engines: rust 68y = 2 errors (Extra alignment tab: the second head line ran into the first data row); 68y2: the
 %          head's rule between the head lines; Perl: rows outside the alignment
 % expect:  0 errors, 0 warnings; the second head line and XROW are heading rows, no empty row, the data rows whole,
-%          the head's rule on the first data row; Table 3 captioned "Late cap", after its tabular (OD #664)
-% status:  RED (68y) -> GREEN (68y2; the rule 68y3)
+%          the head's rule on the first data row; Table 3 captioned "Cap two" at its head, as TeX (OD #740), and
+%          "Late cap" kept after its tabular, unnumbered (OD #664)
+% status:  RED (68y) -> GREEN (68y2; the rule 68y3; Table 3's head caption 73a r3)
 % preload: ar5iv.sty
 \documentclass{emulateapj}
 \begin{document}

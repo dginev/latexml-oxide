@@ -15597,15 +15597,17 @@ chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning, a_raw_class
 aas_support.sty.ltxml:420 `\dataset[catalog]{text}` sets `#2 (catalog #1)`: from AASTeX 6 on (aastex6.cls:5488-5490,
 aastex62.cls:6036-6042 … aastex701.cls:12656-12661) `\dataset[text]{url}` is `\href{url}{text}`, so a URL's `_`/`&` erred.
 deluxetable.sty.ltxml:77 `\let\tablecaption\caption`: aastex stores a `\tablecaption` (aastex701.cls:8417-8418), so one
-before `\begin{deluxetable}` erred "outside any known float". REVTeX's `\bibinfo`=`#2` printed a reference title AASTeX 7
+before `\begin{deluxetable}` erred "outside any known float", and one in a longtable that has its `\caption` replaced or
+doubled it (1903.10014); the classes print the store at the table's head, above the tabular, where Perl sets it where it
+stands. REVTeX's `\bibinfo`=`#2` printed a reference title AASTeX 7
 drops unless `longbib` (aastex701.cls:6726-6732), whose raw `&` erred.
 
 Trigger: `\documentclass{aastex701}` … `\dataset[GitHub]{https://github.com/a/b_c}`; `\tablecaption{T}` before
 `\begin{deluxetable*}{cc}`; `\bibinfo{title}{3 &lt; z}` in a `\bibitem` — pdflatex 0 errors each.
 
 Rust (73a): aastex_cls.rs defines `\dataset` per version from 6 on (`\href{#2}{[#1]}` for 6.0/6.1, else
-`\href{#2}{#1}`/`[DATASET]`), deluxetable_sty.rs stores the caption for the next deluxetable (OXIDIZED_DESIGN_DIVERGENCES
-#739, #740), aastex 7 sets `\bibinfo` by `\iflongbib` at the class's load, where aastex701.cls:6894 runs its
+`\href{#2}{#1}`/`[DATASET]`), deluxetable_sty.rs stores the caption and sets it at each class's print point
+(OXIDIZED_DESIGN_DIVERGENCES #739, #740), aastex 7 sets `\bibinfo` by `\iflongbib` at the class's load, where aastex701.cls:6894 runs its
 `\setup@hook` (so a preamble's own `\renewcommand\bibinfo` stands). Witnesses 2502.04486 2608.18221 1601.05101; 1010.4329 1903.10014
 2204.03327; 2508.20177 2510.05388. Guards `perfect_kernel_batch73a::{aastex_dataset_links_its_url,
 aastex_tablecaption_before_deluxetable, aastex7_bibinfo_needs_longbib}`.

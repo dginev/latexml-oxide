@@ -3,8 +3,9 @@
 %          it at the deluxetable's start
 % engines: rust 67int22 = 1 error ("Use of \caption outside any known float"); Perl = 1 (deluxetable.sty.ltxml:77
 %          `\let\tablecaption\caption`, KNOWN_PERL_ERRORS #964)
-% expect:  0 errors, 0 warnings; the caption kept on the table (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #739)
-% status:  RED (67int22) -> GREEN (73a)
+% expect:  0 errors, 0 warnings; the caption kept on the table (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #739),
+%          unnumbered (the PDF prints none, so the table takes no number; main-session call 2026-10-18)
+% status:  RED (67int22) -> GREEN (73a; unnumbered 73a r3)
 % preload: ar5iv.sty
 \documentclass{aastex701}
 \begin{document}

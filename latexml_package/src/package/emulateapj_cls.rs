@@ -56,7 +56,8 @@ LoadDefinitions!({
 \let\tablenotetext\lx@eapj@tablenotetext\let\lx@eapj@saved@label\label\let\label\lx@eapj@label\gdef\lx@eapj@labels{}");
   DefMacro!("\\lx@eapj@open@data",
     r"\iflx@deluxetable@data\expandafter\@gobble\else\expandafter\@firstofone\fi
-{\global\lx@deluxetable@datatrue\bgroup\@deluxetable@bindings\@@deluxetabular\lx@begin@alignment\hline\hline}");
+{\lx@deluxe@print@caption\global\lx@deluxetable@datatrue\bgroup\@deluxetable@bindings\@@deluxetabular\lx@begin@alignment
+\hline\hline}");
   DefMacro!("\\lx@eapj@head{}", r"\lx@alignment@begin@heading#1\\\hline\lx@alignment@end@heading");
   // The rows the head ends with (`\noalign`, between rows), and the rows after them that a `\startdata` makes the
   // heading: the `\kill…\endhead` of :1324 (see `\startdata` below).
@@ -139,26 +140,24 @@ LoadDefinitions!({
   DefMacro!("\\lx@eapj@startdata",
     r"\iflx@deluxetable@data\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
 {\crcr\noalign{\lx@eapj@head@extend}}{\lx@eapj@open@data}");
-  // `\tablecaption` (:1294) is the caption of the table it is in, a `{longtable}`'s too (outside any float stored, as
-  // the class stores it for the next deluxetable to print at its head — :1293-1294/:1325/:1333, 1010.4329's copy
-  // :1217-1218/:1249/:1257 — deluxetable_sty.rs `\lx@deluxe@tablecaption`, set at the table's end when the table set
-  // none; OXIDIZED_DESIGN_DIVERGENCES #740): the `\caption` in effect there,
-  // not the float's that deluxetable_sty.rs `\let` it be. The class stores it (`\gdef\@tablecaption`) for the head's
-  // `\caption` to set; one given in the data (after `\tablehead`, before `\startdata`) is kept for the table's end, as
-  // the notes and labels are, so the row it is in stays empty (e2: `\tablehead{…}` `\tablecaption{…\label{t1}}`).
-  DefMacro!("\\tablecaption",
-    r"\iflx@eapj@deluxetable\iflx@deluxetable@data\expandafter\expandafter\expandafter\lx@eapj@data@caption
-\else\expandafter\expandafter\expandafter\caption\fi\else\expandafter\lx@deluxe@tablecaption\fi");
-  DefMacro!("\\lx@eapj@data@caption{}", r"\g@addto@macro\lx@eapj@labels{\caption{#1}}");
+  // `\tablecaption` (:1294) stores the caption (`\gdef\@tablecaption`, never emptied) and the head prints the store,
+  // numbered, empty or not: `\tablehead`'s and `\startdata`'s `\caption{\\ \@tablecaption}` (:1325, :1333; 1010.4329's
+  // copy :1217-1218/:1249/:1257), here where the data opens (`\lx@eapj@open@data`, deluxetable_sty.rs
+  // `\lx@deluxe@print@caption`), before the tabular, so a table without a caption of its own prints the last one again,
+  // as pdflatex (OXIDIZED_DESIGN_DIVERGENCES #740). One given in the data, after the head, is stored for the next table
+  // and kept for this table's end, unnumbered — the table's numbered caption when the head printed an empty store
+  // (OXIDIZED_DESIGN_DIVERGENCES #664; e2: `\tablehead{…}` `\tablecaption{…\label{t1}}`; 1104.2619). In a `{longtable}` of the document's own the `\tablehead` prints it too, numbered
+  // (1810.10130), while the longtable has no caption.
+  DefMacro!("\\lx@deluxe@longtable@caption{}", r"\gdef\lx@deluxe@caption{#1}\caption{#1}");
   DefMacro!("\\enddata", r"\iflx@deluxetable@data\crcr\fi");
   DefMacro!("\\lx@eapj@end@deluxetable",
     r"\iflx@deluxetable@data\expandafter\@firstofone\else\expandafter\@gobble\fi
 {\crcr\hline\global\lx@deluxetable@datafalse\lx@end@alignment\@end@deluxetabular\egroup}\lx@eapj@labels
 \lx@deluxe@pending@caption\spew@tblnotes");
   DefMacro!("\\deluxetable{}",
-    r"\set@deluxetable@template{#1}\def\@deluxetable@header{}\lx@eapj@begin@deluxetable\begin{table}\lx@deluxe@stored@caption");
+    r"\set@deluxetable@template{#1}\def\@deluxetable@header{}\lx@eapj@begin@deluxetable\lx@deluxe@begin{table}");
   DefMacro!(T_CS!("\\deluxetable*"), "{}",
-    r"\set@deluxetable@template{#1}\def\@deluxetable@header{}\lx@eapj@begin@deluxetable\begin{table*}\lx@deluxe@stored@caption");
+    r"\set@deluxetable@template{#1}\def\@deluxetable@header{}\lx@eapj@begin@deluxetable\lx@deluxe@begin{table*}");
   DefMacro!("\\enddeluxetable", r"\lx@eapj@end@deluxetable\end{table}");
   DefMacro!(T_CS!("\\enddeluxetable*"), None, r"\lx@eapj@end@deluxetable\end{table*}");
   // emulateapj loads REVTeX 4.1 when it is installed (emulateapj.cls:76-78, :151-167; copies since 11/10/2009, 1601.00007's

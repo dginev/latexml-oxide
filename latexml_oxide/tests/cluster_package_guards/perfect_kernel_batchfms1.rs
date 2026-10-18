@@ -850,10 +850,6 @@ fn field_prov_header_flushright_kept() {
 /// sectioning-frontmatter/field_prov_header_text_kept: a plain-text header line before the title block is body text: the title block stays (round-3 review finding 3, probe r11).
 #[test]
 fn field_prov_header_text_kept() {
-  // The job's clock pinned (tex_job.rs reads `SOURCE_DATE_EPOCH` once per process, before its first conversion — each
-  // nextest test is its own process), so the two conversions below cannot straddle midnight: 2025-10-18 12:00 UTC.
-  // SAFETY: set before this test starts any conversion thread.
-  unsafe { std::env::set_var("SOURCE_DATE_EPOCH", "1760788800") };
   let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_text_kept.tex"
@@ -861,23 +857,46 @@ fn field_prov_header_text_kept() {
     (0, 0),
     &[],
   );
-  // (the header's `\today` is the job's date, "October 18, 2025" under the pinned clock)
-  let today = convert_with(
-    "\\documentclass{article}\\begin{document}\\today\\end{document}",
-    None,
-  )
-  .1;
-  let today = today
-    .split("<p>")
-    .nth(1)
-    .and_then(|p| p.split("</p>").next())
-    .unwrap_or_default()
-    .to_string();
+  // The header's `\today` is the job's date, whatever the day: matched as a date, so the test needs no pinned clock
+  // (a process-wide `SOURCE_DATE_EPOCH` would race the other tests' threads under `cargo test`; review 73a r2 NIT).
+  let body = leading_body(&xml);
+  let (head, tail) = body
+    .split_once("<p>Preprint ABC-123 ")
+    .unwrap_or_else(|| panic!("{xml}"));
+  let (date, rest) = tail.split_once("</p>").unwrap_or_else(|| panic!("{xml}"));
+  const MONTHS: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  let is_date = match date.split(' ').collect::<Vec<_>>()[..] {
+    [month, day, year] => {
+      MONTHS.contains(&month)
+        && day
+          .strip_suffix(',')
+          .is_some_and(|d| (1..=31).contains(&d.parse::<u32>().unwrap_or(0)))
+        && year.len() == 4
+        && year.bytes().all(|b| b.is_ascii_digit())
+    },
+    _ => false,
+  };
+  assert!(is_date, "not a date: {date:?}\n{xml}");
   assert_eq!(
-    leading_body(&xml),
-    format!(
-      "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p>Preprint ABC-123 {today}</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>"
-    ),
+    head, "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    ",
+    "{xml}"
+  );
+  assert_eq!(
+    rest,
+    "\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\"><text fontsize=\"144%\">Header Title<break cssstyle=\"--ltx-break-space:10.0pt\"/></text>Ann Author</p>\n  </para>",
     "{xml}"
   );
 }

@@ -120,12 +120,36 @@ const EXCLUDED_FIXTURES: &[&str] = &[
 ];
 
 /// Fixtures whose streamed output differs from the eager one by a documented divergence — the one exception besides
-/// OXIDIZED_DESIGN_DIVERGENCES #456 (`114_streaming_structure`) to the `--streaming` byte-identity: each is still
-/// converted both ways, both conversions error-free, but the outputs are not compared; a test of its own asserts the
-/// divergence. `verb_in_index.tex`: an `\index` entry of an index never printed is typeset in a streamed conversion
-/// only, whose fragment yield digests the pending entries as Perl does (OXIDIZED_DESIGN_DIVERGENCES #738; asserted by
-/// `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries`).
-pub const STREAMING_DIVERGENT_FIXTURES: &[&str] = &["verb_in_index.tex"];
+/// OXIDIZED_DESIGN_DIVERGENCES #456 (`114_streaming_structure`) to the `--streaming` byte-identity, keyed by the
+/// fixture's directory and name: each is converted both ways, both conversions error-free, and the outputs are compared
+/// with the divergent elements stripped; a test of its own asserts the divergence. `verb_in_index.tex`: an `\index`
+/// entry of an index never printed is typeset in a streamed conversion only, whose fragment yield digests the pending
+/// entries as Perl does (OXIDIZED_DESIGN_DIVERGENCES #738; asserted by
+/// `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries`): its outputs are compared
+/// without their `<indexmark>`s.
+pub const STREAMING_DIVERGENT_FIXTURES: &[(&str, &str)] =
+  &[("cluster_regressions/verb_in_index.tex", "indexmark")];
+
+/// `xml` without its `<element …>…</element>` (and `<element …/>`) occurrences.
+fn strip_element(xml: &str, element: &str) -> String {
+  let open = format!("<{element}");
+  let close = format!("</{element}>");
+  let mut out = String::with_capacity(xml.len());
+  let mut rest = xml;
+  while let Some(start) = rest.find(&open) {
+    out.push_str(&rest[..start]);
+    let tail = &rest[start..];
+    let head_end = tail.find('>').map_or(tail.len(), |i| i + 1);
+    let end = if tail[..head_end].ends_with("/>") {
+      head_end
+    } else {
+      tail.find(&close).map_or(tail.len(), |i| i + close.len())
+    };
+    rest = &tail[end..];
+  }
+  out.push_str(rest);
+  out
+}
 
 pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: DispatchFn) {
   let mut fixtures: Vec<_> = std::fs::read_dir(dir)
@@ -167,11 +191,27 @@ pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: D
       ));
       continue;
     }
-    let documented_divergence = path
-      .file_name()
-      .and_then(|n| n.to_str())
-      .is_some_and(|name| STREAMING_DIVERGENT_FIXTURES.contains(&name));
-    if eager_xml != streamed_xml && !documented_divergence {
+    let key = path
+      .iter()
+      .rev()
+      .take(2)
+      .collect::<Vec<_>>()
+      .into_iter()
+      .rev()
+      .map(|part| part.to_string_lossy())
+      .collect::<Vec<_>>()
+      .join("/");
+    let (eager_xml, streamed_xml) = match STREAMING_DIVERGENT_FIXTURES
+      .iter()
+      .find(|(fixture, _)| *fixture == key)
+    {
+      Some((_, element)) => (
+        strip_element(&eager_xml, element),
+        strip_element(&streamed_xml, element),
+      ),
+      None => (eager_xml, streamed_xml),
+    };
+    if eager_xml != streamed_xml {
       let byte = eager_xml
         .bytes()
         .zip(streamed_xml.bytes())

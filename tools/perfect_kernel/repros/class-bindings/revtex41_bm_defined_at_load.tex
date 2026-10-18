@@ -1,10 +1,12 @@
 % witness: review 73a finding 2 (bm41); revtex4-1.cls:7565 / revtex4-2.cls:7586 `\let\bm\REV@bm` at the class's load
-% oracle:  pdflatex: 1 error "LaTeX Error: Command \bm already defined."; the text prints "Text x." with REVTeX's `\bm`
+% oracle:  pdflatex: errors "LaTeX Error: Command \bm already defined." and "To use \bm, please load the bm package!";
+%          the text prints "Text ." — REVTeX 4.1's `\REV@bm` gobbles its argument (revtex4-1.cls:7552-7555)
 % engines: rust 73a1 = 0 errors, "Text AUTHORx." (the 4.0 deferral applied to 4.1 as well); Perl = 0 errors, the class's
 %          `\bm` (`\newcommand` of a defined command is ignored, latex_constructs.pool.ltxml:2519-2526, silently for the
 %          locked `\bm`)
-% expect:  0 errors, 0 warnings; the class's bold `\bm` (the author's `\newcommand` ignored as every redefinition by
-%          `\newcommand` is; pdflatex's error is not raised — open question in the 73a r2 report)
+% expect:  0 errors, 0 warnings; Perl's bold `\bm` (revtex4_support.sty.ltxml:167; the author's `\newcommand` ignored as
+%          every redefinition by `\newcommand` is, LaTeXML's Info — pdflatex's errors are not raised, main-session call
+%          2026-10-18: the general `\newcommand` question is not this batch's)
 % status:  RED (73a1) -> GREEN (73a r2)
 % preload: ar5iv.sty
 \documentclass{revtex4-1}

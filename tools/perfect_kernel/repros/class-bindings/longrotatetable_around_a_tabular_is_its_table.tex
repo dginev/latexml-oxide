@@ -2,10 +2,14 @@
 % oracle:  pdflatex (clean) sets the tabular turned on its own page; aastex631.cls stores the caption and never prints it
 % engines: rust 73a1 = 0 errors, the caption stored and lost (or set on a later caption-less deluxetable, tc_stale);
 %          Perl = 1 error (deluxetable.sty.ltxml:77, the `\caption` outside any float)
-% expect:  0 errors, 0 warnings; the longrotatetable is the tabular's table float, captioned "Table 1", its label
-%          attached; the deluxetable after it uncaptioned, Table 2 (main-session call 2026-10-18 under user ruling 2,
-%          OXIDIZED_DESIGN_DIVERGENCES #739)
-% status:  RED (73a1) -> GREEN (73a r2)
+%          (2204.03327's aux: the labels are the subsubsection's, `tab:allesFitted` = 4.1.5); aastex701/631's
+%          `{longrotatetable}` sets `\global\startlongtabletrue`, reset only by a long table's end, so the next
+%          deluxetable is a long one and prints "Table 1." empty (TL 2025 aastex701.cls, probe tc_stale7)
+% expect:  0 errors, 0 warnings; the longrotatetable is the tabular's table float, its kept caption set at the
+%          `\begin{tabular}` unnumbered (the PDF prints none; main-session call 2026-10-18), its label the last numbered
+%          unit's, as TeX; the deluxetable after it "Table 1" empty, the long deluxetable "Table 2" (main-session call
+%          2026-10-18 under user ruling 2, OXIDIZED_DESIGN_DIVERGENCES #739)
+% status:  RED (73a1) -> GREEN (73a r2; unnumbered, the long flag 73a r3)
 % preload: ar5iv.sty
 \documentclass{aastex631}
 \begin{document}

@@ -1,0 +1,35 @@
+% witness: review 73a r2 finding 4 (probe tc_eapj); 1010.4329 (emulateapj, `\tablecaption` before each deluxetable)
+% oracle:  pdflatex (TL 2025 emulateapj.cls, clean): TABLE 1 "Stored One.", TABLE 2 "Stored One." (emulateapj.cls
+%          :1293-1294 stores globally and never empties; `\tablehead`/`\startdata` print the store, :1325/:1333),
+%          TABLE 3 "Inner Three." (the later `\gdef` inside the table wins); each caption above its tabular
+% engines: rust 73a r2 = Table 2 uncaptioned, the third table "Table 2"; captions after the tabular; Perl = 1 error
+%          (deluxetable.sty.ltxml:77, the `\caption` outside any float)
+% expect:  0 errors, 0 warnings; Tables 1-3 as pdflatex, each caption before its tabular (OXIDIZED_DESIGN_DIVERGENCES #740)
+%          The `[ht]` is the second table's placement (73a r1/r2 printed it as text, 1511.09213)
+% status:  RED (73a r2) -> GREEN (73a r3)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\tablecaption{Stored One.}
+\begin{deluxetable}{cc}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1 & 2 \\
+\enddata
+\end{deluxetable}
+Between.
+\begin{deluxetable}{cc}[ht]
+\tablehead{\colhead{C} & \colhead{D}}
+\startdata
+3 & 4 \\
+\enddata
+\end{deluxetable}
+\tablecaption{Stored Outer.}
+\begin{deluxetable}{cc}
+\tablecaption{Inner Three.}
+\tablehead{\colhead{E} & \colhead{F}}
+\startdata
+5 & 6 \\
+\enddata
+\end{deluxetable}
+\end{document}

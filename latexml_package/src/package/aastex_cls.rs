@@ -110,12 +110,14 @@ LoadDefinitions!({
   if requested.starts_with("aastex7") {
     RawTeX!(r"\iflongbib\renewcommand\bibinfo[2]{#2}\else\renewcommand\bibinfo[2]{\unskip\unskip\unskip}\fi");
   }
-  // AASTeX 6+ scope a stored `\tablecaption` to its group (deluxetable_sty.rs `\lx@deluxe@tablecaption`;
-  // OXIDIZED_DESIGN_DIVERGENCES #739): the class's `\gdef` store (aastex701.cls:8417-8418) is emptied by every
-  // deluxetable (:11303-11304), so a caption kept for the next one must not outlive the group it was given in
-  // (2204.03327's `{longrotatetable}`). Guard: `perfect_kernel_batch73a::stored_tablecaption_scoped_to_its_group`.
+  // AASTeX 6+ empty the stored `\tablecaption` at every deluxetable's start (aastex701.cls:11303-11304) and print it
+  // only when it is not empty (:11391-11399), where emulateapj and AASTeX 5 keep and print theirs for every table
+  // (deluxetable_sty.rs `\lx@deluxe@tablecaption`; OXIDIZED_DESIGN_DIVERGENCES #739, #740). The caption kept for the
+  // next deluxetable is scoped to its group (the class's store is `\gdef`), so a caption a group closes on is not left
+  // for an unrelated table (2204.03327's `{longrotatetable}`). Guard:
+  // `perfect_kernel_batch73a::stored_tablecaption_scoped_to_its_group`.
   if aastex6_plus {
-    RawTeX!(r"\let\lx@deluxe@caption@store\def");
+    RawTeX!(r"\lx@deluxe@persistentfalse");
   }
   // `\authorcomment`'s label differs between versions (aas_support_sty.rs `define_authorcomment`): the paper's copy of
   // the class decides — "(Author~note: …)" in most aastex63.cls copies (2205.09859 :5731) and in aastex62.cls, the

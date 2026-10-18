@@ -18732,19 +18732,23 @@ own rule is set under the last kept row, above the first data row, where TeX's f
 page: the author's column units would be lost. Repro class-bindings/emulateapj_startdata_ends_head; guard
 `perfect_kernel_batch68y::emulateapj_startdata_ends_the_head`.
 
-### 664. emulateapj's `\tablecaption` given after `\tablehead` is the table's caption, after the tabular (TeX: the caption stored before; Perl: before the tabular)
+### 664. emulateapj's `\tablecaption` given after `\tablehead` is kept, after the tabular, unnumbered (TeX: stored for the next table; Perl: before the tabular)
 
-emulateapj.cls:1294 `\tablecaption` stores the caption (`\gdef\@tablecaption`) for the `\caption` of the head
-`\startdata` sets (:1324); one written after `\tablehead`, inside the longtable, stores it after the head has already
-been set up, so TeX's first page prints the caption the store held before — the previous table's, or none (68y review
-probe e3 `\tablehead{…}` `\tablecaption{CaptionInData\label{tcd}}` `\startdata`). Here the caption given there is
-kept for the table's end (emulateapj_cls.rs `\lx@eapj@data@caption`, with the notes and labels), so the table
-carries its own caption, after the tabular, and the row it was written in stays empty. Why not TeX's: a table
-captioned with another table's caption misattributes the author's content. Why after the tabular: the data is open
-from `\tablehead` (KNOWN_PERL_ERRORS #874), so a caption set there would be a row. Perl's binding (AASTeX's table,
-deluxetable.sty.ltxml:35-43, `\tablecaption` the float's `\caption`) opens the data at `\startdata`, so it set the
-caption before the tabular. Guard
-`perfect_kernel_batch68y::emulateapj_startdata_ends_the_head` (Table 3), repro class-bindings/emulateapj_startdata_ends_head.
+emulateapj.cls:1294 `\tablecaption` stores the caption (`\gdef\@tablecaption`) for the `\caption` the head sets (:1325,
+:1333); one written after `\tablehead`, inside the longtable, stores it after the head has been set up, so TeX's first
+page prints the caption the store held before — the previous table's, or none — and the new one goes to the next table
+(68y review probe e3 `\tablehead{…}` `\tablecaption{CaptionInData\label{tcd}}` `\startdata`). Here the head prints the
+store as TeX does (#740), and the caption given in the data is stored and also kept for this table's end (emulateapj_cls.rs
+`\lx@eapj@labels`, deluxetable_sty.rs `\lx@deluxe@late`, with the notes and labels), unnumbered — the table has its
+number — after the tabular, so the row it was written in stays empty. When the store was empty the head printed the
+number alone ("TABLE 1", no text), so the first caption given in the data is the table's numbered caption there, as
+before (1104.2619: `\tablehead{…}\tablecaption{GOODS AGN sample…}`). Why kept: the author's caption is content, and
+a table may be the last. Why after the tabular: the data is open from `\tablehead` (KNOWN_PERL_ERRORS #874), so a
+caption set there would be a row. Perl's binding (AASTeX's table, deluxetable.sty.ltxml:35-43, `\tablecaption` the
+float's `\caption`) opens the data at `\startdata`, so it set the caption before the tabular. Guard
+`perfect_kernel_batch68y::emulateapj_startdata_ends_the_head` (Table 3: "Cap two" at its head, "Late cap" after its
+tabular) and `perfect_kernel_batch73a::emulateapj_stored_caption_repeats` (the empty store), repro
+class-bindings/emulateapj_startdata_ends_head.
 
 ### 677. A bibliography begun inside `{quote}`, `{quotation}` or `{verse}` closes the quote and is the document's bibliography (TeX: the heading and list set in the quote's margins; Perl: errors, the bibliography left in the quote)
 
@@ -19761,9 +19765,12 @@ undigested marks were declined). `\glossary` follows the same rule (main-session
 A nomencl entry makeindex would reject (a `|`/`@` in its prefix, symbol, description, or table-mode unit and note,
 nomencl.sty:228-232) is left out of the printed list with a Warning. Under streaming (and the adaptive eager phase's
 soft yield) a fragment is built before a later print could fill its anchors, so a yield digests every pending entry at
-once, as Perl does: a streamed conversion then holds marks of an unprinted list where the eager one has none — the
-second documented exception to the `--streaming` byte-identity besides #456 (the `--streaming` help text; the sweep's
-`streaming_sweep::STREAMING_DIVERGENT_FIXTURES` lets `cluster_regressions/verb_in_index.tex` differ and
+once, as Perl does: a streamed conversion then holds marks of an unprinted list where the eager one has none, and a
+printed list's marks can differ too — the streamed entry is digested at the yield, under the definitions then in force,
+the eager one at the print, under the later ones (an entry `\index{\x}` with `\x` "FOO" at the yield, redefined "BAR"
+before `\printindex`: streamed "FOO", eager "BAR") — the second documented exception to the `--streaming` byte-identity besides #456 (the `--streaming` help text; the sweep's
+`streaming_sweep::STREAMING_DIVERGENT_FIXTURES` compares `cluster_regressions/verb_in_index.tex` without its
+`<indexmark>`s and
 `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries` asserts the divergence). Witnesses
 1112.3972 (20 → 0 Errors), 2506.02168 (1 → 0, `\printnomenclature` ahead of the entries). Repros
 index/{index_entry_typeset_only_when_printed, printed_index_keeps_its_entries,
@@ -19773,46 +19780,61 @@ index-bib/index_entry_ampersand_is_literal_list_printed_first; guards
 nomenclature_entry_is_typeset_only_when_printed, glossary_entry_is_typeset_only_when_printed,
 index_entry_ampersand_is_literal_list_printed_first, nomentbl_unit_with_a_bar_is_rejected}`.
 
-### 739. AASTeX 6+'s `\tablecaption` before `\begin{deluxetable}`, or in a `{longrotatetable}` around a plain `tabular`, is the table's caption (user ruling 2026-10-18)
+### 739. AASTeX 6+'s `\tablecaption` before `\begin{deluxetable}`, or in a `{longrotatetable}` around a plain `tabular`, is kept on the table, unnumbered (user ruling 2026-10-18)
 
 **TeX**: aastex701.cls:8417-8418 (aastex631.cls alike) `\def\tablecaption#1{\gdef\@tablecaption{#1}}` stores the caption,
-and `\deluxetable` empties the store at the table's start (:11303-11304 `\let\tablecaption\deluxetablecaption
-\deluxetablecaption{}`): a caption given before the table is lost in the PDF, a caption inside it set. In
-`{longrotatetable}` (:12245-12286) around a plain `tabular` the stored caption is never printed.
+`\deluxetable` empties the store at the table's start (:11303-11304 `\let\tablecaption\deluxetablecaption
+\deluxetablecaption{}`) and `\startdata` prints it above the tabular only when it is not empty (:11391-11399); a long
+table (`\startlongtable`, or a deluxetable in `{longrotatetable}`, whose `\global\startlongtabletrue` holds until a long
+table ends, :11609) prints its numbered caption always, empty or not (:11568/:11575). A caption given before the table
+is lost in the PDF and the table takes no number; in a `{longrotatetable}` (:12245-12286) around a plain `tabular` the
+store is never printed, and its `\label` names the last numbered unit (2204.03327's aux: `tab:allesFitted` = 4.1.5).
 
 **Perl**: `\let\tablecaption\caption` (deluxetable.sty.ltxml:77) — outside a float an Error ("outside any known float").
 
-**Rust** (73a): outside a float or a `{longtable}`, `\tablecaption` stores (deluxetable_sty.rs `\lx@deluxe@tablecaption`);
-the next deluxetable takes the stored caption at its start (the store emptied, the caption pending for this table) and
-sets it at its end only when the table set no `\tablecaption`/`\caption` of its own — the inner one wins, as in the PDF;
-the author's outer caption is kept where the PDF loses it, content before PDF fidelity. AASTeX 6+ scope the store to its
-group (aastex_cls.rs `\let\lx@deluxe@caption@store\def`; the class's is `\gdef`), so a caption no deluxetable took in
-its group is not set on a later, unrelated table. An aastex `{longrotatetable}` around a plain `tabular` is that table's
-float (aas_support_sty.rs, main-session call 2026-10-18 under the ruling): `\@captype` is `table`, its `\tablecaption`
-the table's `\caption`, its `\label` the table's; around a deluxetable (aastex's `\floatfalse`) it is the page's setting,
-the deluxetable its own table. In a float or longtable `\tablecaption` is that table's `\caption`, as before. The
-emulateapj and AASTeX 5 stores are TeX's (#740). Witnesses 2204.03327 (2 → 0, its two `{longrotatetable}` captions
-kept). Repros class-bindings/{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
-stored_tablecaption_scoped_to_its_group, longrotatetable_around_a_tabular_is_its_table}; guards
-`perfect_kernel_batch73a::{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
-stored_tablecaption_scoped_to_its_group, longrotatetable_around_a_tabular_is_its_table}`.
+**Rust** (73a): `\tablecaption` is stored outside a float (deluxetable_sty.rs `\lx@deluxe@tablecaption`; scoped to its
+group, the class's store is `\gdef`, so a caption a group closes on is not left for an unrelated table) and directly in
+an aastex `{longrotatetable}` (aas_support_sty.rs, `in_longrotatetable_body`). The next deluxetable takes the store at
+its start; at its print point (`\lx@deluxe@print@caption`, `\startdata`, above the tabular) it sets its own caption,
+numbered, else the kept one — **unnumbered** (`\lx@deluxe@unnumbered`, the kernel's starred caption: no counter step,
+no list entry), so every later "Table N" and `\ref` is the PDF's (main-session call 2026-10-18; 2204.03327's
+`tab:wasp43_res` is 3) — or, in a long table, numbered, kept or empty, as the PDF numbers it. The first `\begin{tabular}`
+directly in a `{longrotatetable}` sets a caption still stored, unnumbered; the longrotatetable is then that table's
+float, its `\label` the last numbered unit's as in TeX; around a deluxetable it is the page's setting, the deluxetable
+its own table. In a `{longtable}` the `\tablecaption` is the caption only while the longtable has none, unnumbered (no
+class prints it there; the longtable steps its own number); after a `\caption` it is stored, never printed there
+(1903.10014, #740). In another float it is the float's `\caption`, as Perl. The author's caption is kept where the PDF
+loses it, content before PDF fidelity; the numbering stays the PDF's. The emulateapj and AASTeX 5 stores are TeX's
+(#740). Witnesses 2204.03327 (2 → 0, its two `{longrotatetable}` captions kept), 1511.09213 (the deluxetable's `[h]`
+placement read again). Repros class-bindings/{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
+stored_tablecaption_scoped_to_its_group, longrotatetable_around_a_tabular_is_its_table,
+longrotatetable_tablecaption_goes_to_its_table, kept_tablecaption_is_unnumbered, longtable_keeps_its_printed_caption};
+guards `perfect_kernel_batch73a::{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
+stored_tablecaption_scoped_to_its_group, longrotatetable_around_a_tabular_is_its_table,
+longrotatetable_tablecaption_goes_to_its_table, kept_tablecaption_is_unnumbered, longtable_keeps_its_printed_caption}`.
 
-### 740. emulateapj's and AASTeX 5's stored `\tablecaption` is printed by the next table (Perl: an Error outside a float)
+### 740. emulateapj's and AASTeX 5's stored `\tablecaption` is printed by every table's head (Perl: an Error outside a float)
 
-**TeX**: emulateapj.cls:1217-1218 (1010.4329's copy; TL 2025's :1293-1294) `\gdef\@tablecaption{#1}` stores the
-caption globally and the next `{deluxetable}` prints it at its head (:1249, :1257; TL :1325, :1333; `{deluxetable}`
-:1354-1383 does not empty the store first), so a `\tablecaption`
-before the table is that table's caption; AASTeX 5's aastex.cls:1280 `\gdef\pt@caption` stores it the same way (:1507
-prints it).
+**TeX**: emulateapj.cls:1293-1294 (1010.4329's copy :1217-1218) `\gdef\@tablecaption{#1}` stores the caption globally and
+never empties it; every `{deluxetable}` prints the store, numbered, at its `\tablehead` or `\startdata` (:1325, :1333;
+the copy's :1249, :1257), so a `\tablecaption` before or in the table (before its head) is its caption and a table
+without one repeats the last (pdflatex: "TABLE 2 / Stored One."). AASTeX 5's aastex.cls:1280 `\gdef\pt@caption` is
+emptied only `\AtBeginDocument` (:1305) and printed by every deluxetable's `\startdata` (:1507), empty or not.
 
 **Perl**: `\let\tablecaption\caption` (deluxetable.sty.ltxml:77) — outside a float an Error ("outside any known float").
 
-**Rust** (73a): the store of #739, global (`\lx@deluxe@caption@store` = `\gdef`, the classes' own), is taken by the next
-deluxetable (emulateapj_cls.rs's `\tablecaption` outer branch, its `\deluxetable` and `\lx@eapj@end@deluxetable`), so
-the caption is the table's, as in the PDF; a caption inside the table wins, as the class's later `\gdef` does. In a
-`{longtable}` the `\tablecaption` is the longtable's `\caption` (1903.10014's AASTeX 5 longtable: the store is never
-printed there, no deluxetable following — the author's caption kept, as #739). Witnesses 1010.4329 (4 → 0), 1903.10014
-(1 → 0). Guard `perfect_kernel_batch73a::stored_tablecaption_scoped_to_its_group` (its emulateapj half).
+**Rust** (73a): the store (`\lx@deluxe@caption`, `\iflx@deluxe@persistent`, the default) is the classes' own: every
+`\tablecaption` stores it globally — outside a float, in a table, in a float (which also sets it as its `\caption`, as
+Perl) — and every deluxetable prints it at its print point (deluxetable_sty.rs `\lx@deluxe@print@caption` at
+`\startdata`; emulateapj_cls.rs where the data opens, at `\tablehead` or `\startdata`), numbered, above the tabular;
+an empty store is the number alone, set at the table's end (#664). A caption given in the data, after the print point, is stored for the next table and kept for this one's
+end, unnumbered (#664). In a `{longtable}` a `\tablecaption` is the caption only while the longtable has none, else
+stored (1903.10014's AASTeX 5 longtable keeps its printed `\caption{Observing Log…}`, and "Summary of targets", never
+printed, is not set); emulateapj's is numbered there, its `\tablehead` printing it (1810.10130). Witnesses 1010.4329
+(4 → 0, each caption above its tabular), 1903.10014 (1 → 0). Repros class-bindings/{emulateapj_stored_caption_repeats,
+longtable_keeps_its_printed_caption, emulateapj_startdata_ends_head}; guards
+`perfect_kernel_batch73a::{emulateapj_stored_caption_repeats, longtable_keeps_its_printed_caption,
+stored_tablecaption_scoped_to_its_group}` (its emulateapj half), `perfect_kernel_batch68y::emulateapj_startdata_ends_the_head`.
 
 ### 744. A stand-in copy's `\input` files are part of the copy; its syntax ends with its load; its declaration names the binding that answered
 

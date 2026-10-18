@@ -188,8 +188,8 @@ fn iopart_row_spacers_are_noalign() {
 /// empty row after the head's `\\` and the `\cline` before `\startdata`, which TeX prints on no first page (only in
 /// the continuation head, KNOWN_PERL_ERRORS #874); the head's own rule is under the last head line, above the first
 /// data row, as TeX's first page prints it (1605.03270 Table 1). Rows TeX prints only in the continuation head are
-/// kept (OD #663); a `\tablecaption` after `\tablehead` is the table's, after the tabular (OD #664; TeX prints the
-/// caption stored before, "Cap two").
+/// kept (OD #663); the head prints the stored caption, "Cap two" again on Table 3, as TeX (emulateapj.cls:1333, OD #740),
+/// and a `\tablecaption` after `\tablehead` is kept too, after the tabular, unnumbered (OD #664).
 #[test]
 fn emulateapj_startdata_ends_the_head() {
   assert_elements(
@@ -212,7 +212,7 @@ fn emulateapj_startdata_ends_the_head() {
       (
         "table",
         "S0.T3",
-        r##"<table inlist="lot" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="autoref">Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><tabular><thead><tr><td align="center" border="tt" thead="column">AAA</td><td align="center" border="tt" thead="column">BBB</td></tr></thead><tbody><tr><td align="left" border="b t">c1</td><td align="center" border="b t">3</td></tr></tbody></tabular><toccaption><tag close=" ">3</tag>Late cap</toccaption><caption><tag>Table 3</tag>Late cap</caption></table>"##,
+        r##"<table inlist="lot" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="autoref">Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Cap two</toccaption><caption><tag>Table 3</tag>Cap two</caption><tabular><thead><tr><td align="center" border="tt" thead="column">AAA</td><td align="center" border="tt" thead="column">BBB</td></tr></thead><tbody><tr><td align="left" border="b t">c1</td><td align="center" border="b t">3</td></tr></tbody></tabular><caption>Late cap</caption></table>"##,
       ),
     ],
   );

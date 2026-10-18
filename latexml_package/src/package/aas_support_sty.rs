@@ -2,7 +2,7 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::{
   engine::latex_constructs::{after_float, before_float_ex},
-  package::subcaption_sty::subcaption_width_props,
+  package::{deluxetable_sty, subcaption_sty::subcaption_width_props},
   prelude::*,
 };
 
@@ -652,10 +652,10 @@ LoadDefinitions!({
   // aastex631.cls L4780-4781:
   //   \newif\ifstartlongtable
   //   \def\startlongtable{\vskip1sp\global\startlongtabletrue}
-  // We treat as a no-op marker — our deluxetable / longtable handling
-  // doesn't need the conditional flag. Driver: 2209.01632 (aastex631)
-  // emitted "\startlongtable not defined" + alignment-tab cascade.
-  def_macro_noop("\\startlongtable")?;
+  // Driver: 2209.01632 (aastex631) emitted "\startlongtable not defined" + alignment-tab cascade. The flag is the next
+  // deluxetable's: a long table, whose caption the class always prints (deluxetable_sty.rs `\lx@deluxe@print@caption`,
+  // aastex701.cls:11568/:11575), until it ends (:11609).
+  DefMacro!("\\startlongtable", r"\global\lx@deluxe@longtrue");
 
   // Perl L373: Let('\savedollar' => T_MATH). The hidden 'h' column type
   // used by aas deluxetable tokenizes literal `$` from the template, so
@@ -860,10 +860,14 @@ LoadDefinitions!({
   // aastex701.cls:12245-12286 (aastex631.cls alike) `{longrotatetable}` turns the page for the long table it holds, a
   // deluxetable it sets non-floating (`\global\floatfalse`, `\startlongtabletrue`). Around a plain `tabular` it is that
   // table's float here (main-session call 2026-10-18, under user ruling 2 "keep the author's caption"; OXIDIZED_DESIGN
-  // _DIVERGENCES #739): `\@captype` is `table`, so its `\tablecaption` is the table's `\caption` and its `\label` the
-  // table's, where the PDF set the tabular without the caption the class stored and never printed (2204.03327). Around
-  // a deluxetable — whose own `{table}` the body then holds — it stays the page's setting, the body alone.
-  // Guard: `perfect_kernel_batch73a::longrotatetable_around_a_tabular_is_its_table`.
+  // _DIVERGENCES #739), its `\label` the table's. Its `\tablecaption` is stored, as the class stores it
+  // (deluxetable_sty.rs `\lx@deluxe@tablecaption`, `in_longrotatetable_body`): a deluxetable in it takes the store, and
+  // the first `\begin{tabular}` directly in it sets a caption still stored, unnumbered — the PDF never prints it, so
+  // the later numbers stay the PDF's (2204.03327). Its `\global\startlongtabletrue` makes the next deluxetable a long
+  // one (`\lx@deluxe@longtrue`), whose caption the PDF always prints, numbered (tc_lrtdlx7). Around a deluxetable —
+  // whose own `{table}` the body then holds — it stays the page's setting, the body alone.
+  // Guards: `perfect_kernel_batch73a::{longrotatetable_around_a_tabular_is_its_table,
+  // longrotatetable_tablecaption_goes_to_its_table}`.
   DefEnvironment!("{longrotatetable}", sub[document, _args, props] {
     let body = match props.get("body") {
       Some(Stored::Digested(body)) => Some(body.clone()),
@@ -897,13 +901,30 @@ LoadDefinitions!({
   },
     properties => { stored_map!("layout" => "vertical") },
     mode => "internal_vertical",
-    before_digest => { before_float_ex("table", None, true)?; engine::latex_constructs::reset_float_box()?; },
+    before_digest => {
+      before_float_ex("table", None, true)?;
+      engine::latex_constructs::reset_float_box()?;
+      assign_value("lx@lrt@frame", lookup_value("lx@float@frame"), Some(Scope::Local));
+      // Before `\begin{tabular}`'s group (its `beforebegin` hook, kept after ours): `\tabular` is locked.
+      let hook = "@environment@tabular@beforebegin";
+      if matches!(lookup_value(hook), None | Some(Stored::None) | Some(Stored::Tokens(_))) {
+        let mut tokens = vec![T_CS!("\\lx@lrt@tabular@caption")];
+        tokens.extend(lookup_tokens(hook).map(Tokens::unlist).unwrap_or_default());
+        assign_value(hook, Stored::Tokens(Tokens::new(tokens)), Some(Scope::Local));
+      }
+      Digest!(r"\global\lx@deluxe@longtrue")?;
+    },
     after_digest => sub[whatsit] { after_float(whatsit); },
     after_digest_body => sub[whatsit] {
       if let Ok(Some(body)) = whatsit.get_body() {
         whatsit.set_property("holds_table", Stored::Bool(holds_table_float(&body)));
       }
     });
+  DefMacro!("\\lx@lrt@tabular@caption", sub[_args] {
+    Ok(if deluxetable_sty::in_longrotatetable_body() { Tokens!(T_CS!("\\lx@lrt@stored@caption")) } else { Tokens!() })
+  });
+  DefMacro!("\\lx@lrt@stored@caption",
+    r"\ifx\lx@deluxe@caption\@empty\else\expandafter\lx@deluxe@unnumbered\expandafter{\lx@deluxe@caption}\global\let\lx@deluxe@caption\@empty\fi");
   // aastex701.cls TL :12212-12231 — `rotatetable(*)` sets its table turned 90° on its own page, page layout as for
   // `longrotatetable` (2609.01052).
   DefEnvironment!("{rotatetable}", "#body");

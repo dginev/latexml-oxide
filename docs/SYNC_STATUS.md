@@ -3607,10 +3607,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   136/136 no worse. Reviews: agent_reports/2026-10-17_fms1_review_r{3,4,5,6}.md.
 - **73a** (binding shapes from the rc_struct6 study, agent_reports/2026-10-17_rc_struct6.md, and the user rulings of
   2026-10-18). (1) aastex: `\dataset[text]{url}` links the text (aastex_cls.rs, per version from 6 on), `\tablecaption`
-  outside a float is stored for the next deluxetable, which sets it at its end only when it set no caption of its own
-  (an inner one wins; AASTeX 6+ scope the store to its group, emulateapj and AASTeX 5 keep their global one;
-  deluxetable_sty.rs, emulateapj_cls.rs; OD #739 surpass, #740 faithful), an aastex `{longrotatetable}` around a plain
-  `tabular` is its table float (aas_support_sty.rs; 2204.03327 keeps its caption), AASTeX 7's `\bibinfo` drops the
+  is set where each class prints it (deluxetable_sty.rs `\lx@deluxe@tablecaption`, `\lx@deluxe@print@caption` at
+  `\startdata`, emulateapj_cls.rs at its head): emulateapj and AASTeX 5 print their global, never-emptied store at
+  every table's head, numbered, so a caption-less table repeats it (OD #740, faithful); AASTeX 6+ print the table's
+  own and keep one given before the table (OD #739 surpass) unnumbered, a long table's (`\startlongtable`,
+  `{longrotatetable}`) always numbered, empty or not; in a longtable it is the caption only while the longtable has
+  none (1903.10014 keeps its printed `\caption`); an aastex `{longrotatetable}` around a plain `tabular` is its
+  table float, the stored caption set at its `\begin{tabular}` (aas_support_sty.rs; 2204.03327, its labels the
+  subsubsection's as pdflatex's aux); a deluxetable's `[h]` placement is read again (1511.09213), AASTeX 7's `\bibinfo` drops the
   title unless `longbib`, chosen at the class's load (KPE #964; 2502.04486 2608.18221 1601.05101 1010.4329 1903.10014 2204.03327
   2508.20177 2510.05388 → 0 Errors). (2) Provided later, not at load: subcaption `\subfloat`, REVTeX 4.0's `\bm` at
   `\begin{document}` (4.1/4.2 define it at load), elsart's `{thm}` not given to elsarticle (KPE #965; 2511.09162 117 → 0, nucl-th0307033, 2212.01438
@@ -3625,13 +3629,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   printed (latexml_core stomach.rs `defer_print`/`resolve_deferred_prints`, OD #738); a nomencl entry makeindex rejects
   (a `|`/`@` in its prefix, symbol, description, or table-mode unit/note) is left out with a Warning (1112.3972 20 → 0,
   2506.02168 1 → 0). Index guards whose fixtures had no print command now print their list; the streaming sweep pins
-  its one documented exception, `cluster_regressions/verb_in_index.tex` (`STREAMING_DIVERGENT_FIXTURES`, asserted by
+  its one documented exception, `cluster_regressions/verb_in_index.tex`, compared without its `<indexmark>`s
+  (`STREAMING_DIVERGENT_FIXTURES`, asserted by
   `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries`). Accepted (main session): a
   document with an unprinted index has no HTML `<meta keywords>`. Open: mdframed's `frametitle=` (mdframed.sty:637-697)
   is lost — the `{mdframed}` binding reads its options but never runs `\mdfsetup{#1}` (mdframed_sty.rs). Open: cimento.cls `\PACSes`/`\instlist` for papers that do not ship the
   class (1012.2907 1208.1260 0907.0634: the binding falls to OmniBus; a stand-in port of cimento's frontmatter is
   needed). Repros under class-bindings/, package-bindings/, graphics-tikz/, index/, index-bib/; guards
-  `perfect_kernel_batch73a::*` (26).
+  `perfect_kernel_batch73a::*` (30).
 
 - **72b** (`\chapter` exists only where the class has chapters; user rulings 2026-10-17: TeX's answer to every
   `\@ifundefined{chapter}` while the class and packages load, documents that call it still convert, the fallback is
