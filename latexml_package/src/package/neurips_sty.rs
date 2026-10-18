@@ -1,3 +1,5 @@
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -190,6 +192,14 @@ LoadDefinitions!({
   DefMacro!("\\answerNo[]",   "\\textcolor{orange}{[No] #1}");
   DefMacro!("\\answerNA[]",   "\\textcolor{gray}{[N/A] #1}");
   DefMacro!("\\answerTODO[]", "\\textcolor{red}{\\bf [TODO]}");
+  // A neurips_2026.sty copy's own setters (2605.09681's :410-411 `\projectpage`, `\emailaddress`; the distributed style
+  // has neither), which the end of its `{abstract}` prints (:445-458) where the binding's abstract does not: the
+  // paper's contacts, "Project Page:" and "Email Address:". A guess a paper's own definition replaces.
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\projectpage{}", "\\lx@add@contact[role=url,name={Project Page: }]{#1}");
+    DefMacro!("\\emailaddress{}", "\\lx@add@contact[role=email,name={Email Address: }]{#1}");
+  }
 
   // {ack} environment — Perl L51-52 unreads `\acksection` before the body
   // digests so the "Acknowledgments and Disclosure of Funding" title

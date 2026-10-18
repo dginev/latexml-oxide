@@ -2975,9 +2975,13 @@ impl Document {
         // under `\ttfamily` each one opened a whitespace-only
         // `svg:foreignObject` — 185 in 2605.01517, 2605.07323, 2605.27124;
         // Perl none. A node text's leading `\ ` is dropped there too, as Perl
-        // drops it; the rendered node is the same.
+        // drops it; the rendered node is the same. Nor where no auto-opened element reaches text (Perl's rule there
+        // too): an `{algorithmic}` set in `\ttfamily` (WileyNJDv5.cls:6953 `\algrenewcommand\ALG@beginalgorithmic
+        // {\ttfamily}`) put the space before its first `\item` straight into the `ltx:listing`, whose model is
+        // `listingline*` (2608.15322, 2602.03247, 2607.19926: schema-invalid).
         let explicit_space = node_type == Some(NodeType::ElementNode)
           && !text.is_empty()
+          && can_contain_node_somehow(&self.node, "#PCDATA").is_some()
           && (font.family.as_deref() == Some("typewriter")
             || self.box_to_absorb.as_ref().is_some_and(|b| {
               b.get_property("name")

@@ -10,7 +10,7 @@
 //! `unexpected:eLifeMediumGrey` errors.
 //!
 //! Pre-define the 4 eLife color names so they're guaranteed available.
-//! Witness 2307.12956.
+//! Witness 2307.12956. `\figsupp` prints its supplements at the document's end, as elife.cls does (2311.00616).
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -51,5 +51,36 @@ LoadDefinitions!({
   DefMacro!(
     "\\contrib[]{}",
     "\\@add@frontmatter{ltx:note}[role=contribution]{#1: #2}"
+  );
+  // elife.cls:392-416 `\figsupp[short]{caption}{graphic}`: in the figure, the heading "Figure N—figure supplement M."
+  // with the short title (the caption when there is none; nothing for `none`); the graphic and the caption go to the
+  // `suppinfo` stream (newfile.sty), which elife.cls:456-461's `\AtEndDocument` inputs after the body. The paper's
+  // copy of elife.cls defers that hook (`state::copy_provides_defers`), so the binding owns `\figsupp` and prints the
+  // supplements at the document's end itself, each under the figure and supplement numbers the stream's
+  // `\refstepcounter`s give it (:368-377, :393-398): 2311.00616's ~1,000 words of supplement captions.
+  NewCounter!("figsupp");
+  NewCounter!("fsdata");
+  NewCounter!("fssrccode");
+  RawTeX!(
+    r"\def\lx@elife@none{none}
+\def\lx@elife@supphead#1#2{\def\lx@elife@arg{#1}%
+  \ifx\lx@elife@arg\lx@elife@none\else
+    \small\textbf{\figurename~\thefigure---figure supplement \arabic{figsupp}.} %
+    \def\figsuppdata##1{}\def\figsuppsrccode##1{}%
+    \ifx\lx@elife@arg\@empty\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#2}{#1}%
+  \fi}
+\def\lx@elife@suppinfo{}
+\def\lx@elife@addsupp#1#2#3#4{\g@addto@macro\lx@elife@suppinfo{\lx@elife@supp{#1}{#2}{#3}{#4}}}
+\def\lx@elife@supp#1#2#3#4{\setcounter{figure}{#1}\setcounter{figsupp}{#2}%
+  \setcounter{fsdata}{0}\setcounter{fssrccode}{0}%
+  \par\noindent\begin{minipage}{\linewidth}#4\par
+  \textbf{\figurename~\thefigure---figure supplement \arabic{figsupp}.} #3\par
+  \end{minipage}\par}
+\AtEndDocument{\lx@elife@suppinfo}"
+  );
+  DefMacro!(
+    "\\figsupp[]{}{}",
+    r"\refstepcounter{figsupp}{\lx@elife@supphead{#1}{#2}}\par
+\edef\lx@elife@nums{{\the\c@figure}{\the\c@figsupp}}\expandafter\lx@elife@addsupp\lx@elife@nums{#2}{#3}"
   );
 });

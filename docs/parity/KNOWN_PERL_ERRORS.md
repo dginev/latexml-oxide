@@ -15591,3 +15591,18 @@ Rust: OXIDIZED_DESIGN #179 (`\chapter` exists only where the class has chapters:
 raw class's own `\@ifundefined{chapter}` also says undefined; one "has chapters" test) and #734 (a call reads LaTeXML's
 numbered chapter, with its own counter and one Warning). Guards `perfect_kernel_batch72b::{chapter_exists_where_the_class_has_chapters,
 chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning, a_raw_class_meets_chapter_undefined_while_it_loads}`.
+
+## 970. The class prefix fallback answers a renamed class with a binding of another family
+
+Package.pm:2700-2716 (`LoadClass`): a class with no binding takes the longest binding name that prefixes it
+(`grep { $class =~ /^\Q$_\E/ } @classes`), so `aaart.cls` — amsart renamed by its authors, shipped with the paper — is
+answered by `aa.cls.ltxml` (Astronomy & Astrophysics), not read: amsart's `\address`, `\subjclass` are undefined.
+
+Trigger: `aaart.cls` = amsart.cls with `\ProvidesClass{aaart}`;
+`\documentclass{aaart}\address{X}\subjclass{Y}\begin{document}x\end{document}` — pdflatex 0 errors; Perl (same host) "Can't find
+binding for class aaart (using aa)" and 2 errors (`undefined:\address`, `undefined:\subjclass`).
+
+Rust: the same fallback (content.rs `class_binding_alternate`) and the same 2 Errors (1705.03989); the paper's copy is
+not read over the `aa` binding either (OXIDIZED_DESIGN_DIVERGENCES #744 item 3). Left as Perl: telling a renamed copy of
+another class from a family member (mysvjour3, mn2ebis, IEEEtranTCOM) needs the class text. Guard
+`perfect_kernel_batchint23::a_renamed_class_under_a_fallback_is_not_read`.

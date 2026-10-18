@@ -1,10 +1,12 @@
-% witness: 2308.11432 (fcs.cls `\ProvidesExplClass{fcs}`)
-% oracle:  pdflatex 0 errors ("EXTRA")
-% engines: rust 72a r2 = 1 Error (\fcsextra undefined: the declaration's `Expl` form was not read as one)
-% expect:  0 errors, 0 warnings; "EXTRA"
-% status:  RED (72a r2) -> GREEN (72a r3)
+% witness: 2308.11432 (fcs.cls `\ProvidesExplClass{fcs}`), 2606.16349 (its expl3 syntax left on after the copy's read:
+%          the document's spaces lost, `\theta_` undefined)
+% oracle:  pdflatex 0 errors ("EXTRA and spaced text a1.")
+% engines: rust 72a r2 = 1 Error (\fcsextra undefined: the declaration's `Expl` form was not read as one); int23
+%          (288e861078) = "EXTRAandspacedtext", `a\_ 1` (the copy's `\ProvidesExplClass` syntax not ended at its load's end)
+% expect:  0 errors, 0 warnings; "EXTRA and spaced text a_1."
+% status:  RED (72a r2) -> GREEN (72a r3); RED (int23 288e861078) -> GREEN (int23 fix2)
 % preload: ar5iv.sty
 \documentclass{fcs}
 \begin{document}
-\fcsextra
+\fcsextra{} and spaced text $a_1$.
 \end{document}

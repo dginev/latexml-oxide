@@ -316,6 +316,17 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
     && (copy_loads("NJDapacite", version != WileyVersion::V1) || copy_loads("apacite", false))
   {
     RequirePackage!("apacite", options => vec![s!("natbibapa")]);
+    // The copy's own `\usepackage[apaciteclassic]{NJDapacite}` (WileyNJDv5.cls:6067; v2's `[natbibapa]`) is a repeat
+    // of this load, NJDapacite.sty being the apacite.sty the binding stands for: marked loaded on the class's behalf,
+    // as amsart marks amsthm (ams_support_sty.rs). Read raw after the binding, its `apaciteclassic` skip of the
+    // `\if@APAC@natbib@emu` branch (NJDapacite.sty:587-987) met the natbib binding's `\ifciteindex` at :931's
+    // `\newif\ifciteindex` — a conditional to the skip, where TeX, with no natbib loaded, sees an undefined name — and
+    // ran on to :1878-1882's `\let\ifBR@verbose\iffalse\let\fi\fi`: three "Attempt to close a group" Errors
+    // (2606.10545, 2602.12288; pdflatex 0).
+    AssignValue!("NJDapacite.sty_loaded" => true, Some(Scope::Global));
+    RawTeX!(
+      r"\expandafter\let\csname ver@NJDapacite.sty\expandafter\endcsname\csname ver@apacite.sty\endcsname"
+    );
   }
   // Every version loads listings and alltt (WileyNJD-v2.cls:3346-3347, WileyNJDv5.cls:6822, WileyASNA-v1.cls:2557,
   // WileyNJD-v1.cls:4712; `\lstset` undefined: 1802.08557, 2206.13356). WileyASNA-v1.cls:250 and the older

@@ -1,0 +1,20 @@
+% witness: 2605.09681 (its neurips_2026.sty:410-411 `\projectpage`, `\emailaddress`, printed by its `{abstract}`'s end
+%          :445-458; the distributed style has neither)
+% oracle:  pdflatex 0 errors ("Project Page: https://example.org/p", "Email Address: me@example.org" after the abstract)
+% engines: rust int23 (288e861078) = both lost: the copy's setters store, the binding's abstract prints neither
+% expect:  0 errors, 0 warnings; two contacts of the author
+% status:  RED (int23 288e861078) -> GREEN (int23 fix2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{neurips_2026}
+\title{T}
+\author{A. Author}
+\begin{document}
+\maketitle
+\projectpage{https://example.org/p}
+\emailaddress{me@example.org}
+\begin{abstract}
+Abs.
+\end{abstract}
+Body.
+\end{document}

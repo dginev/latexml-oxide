@@ -1,0 +1,21 @@
+% witness: 2201.05363 (15 Errors), 2111.02495 (40 Errors): their 2021 mdpi.cls loads paracol (:56; `\globalcounter{figure}`
+%          :1053; the first page's `\begin{paracol}{2}`), newfloat and caption (:1184-1192) and no cleveref; the paper
+%          loads subcaption. The 2023+ copies load cleveref (2410.21443's :445, 2401.15064, 2408.03136)
+% oracle:  pdflatex 0 errors ("(a) Accuracy graph", "Figure 1. Main"); with cleveref added, pdflatex errs as we did
+%          ("Missing \endcsname inserted" at the `\caption` in the subfigure)
+% engines: rust int23 (288e861078) = 101 Errors ("Missing \endcsname" at the subfigure's `\caption`: the binding's
+%          unconditional cleveref)
+% expect:  0 errors, 0 warnings; the subfigure's caption
+% status:  RED (int23 288e861078) -> GREEN (int23 fix2)
+% preload: ar5iv.sty
+\documentclass{mdpi}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\begin{subfigure}{.5\textwidth}
+\caption{Accuracy graph}
+\end{subfigure}
+\caption{Main}
+\end{figure}
+\end{paracol}
+\end{document}

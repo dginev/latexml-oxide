@@ -1,0 +1,14 @@
+% witness: 1705.03989 (its aaart.cls, amsart renamed and declaring itself `aaart`, which the `aa` binding answers by
+%          the version-name fallback: read as aa.cls, its amsart code over the binding raised 3 more Errors)
+% oracle:  pdflatex 0 errors ("READ": TeX reads the paper's file)
+% engines: rust int23 (288e861078) = "READ" (the declaration was checked against the requested name, not the binding
+%          that answered)
+% expect:  0 errors, 1 warning (the fallback's "Can't find binding for class aaart (using aa)", Perl's too);
+%          "NOT READ": the copy declares neither the binding nor a file it is built on, and shares too few of the
+%          binding's names
+% status:  RED (int23 288e861078) -> GREEN (int23 fix2)
+% preload: ar5iv.sty
+\documentclass{aaart}
+\begin{document}
+\ifdefined\aaartread READ\else NOT READ\fi
+\end{document}

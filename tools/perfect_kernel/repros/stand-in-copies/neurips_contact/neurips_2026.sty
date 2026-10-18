@@ -1,0 +1,15 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{neurips_2026}[2026/03/31 NeurIPS 2026 submission/camera-ready style file]
+\DeclareOption{preprint}{}
+\ProcessOptions\relax
+\newcommand{\projectpage}[1]{\gdef\@projectpage{#1}}
+\newcommand{\emailaddress}[1]{\gdef\@emailaddress{#1}}
+\gdef\@projectpage{}
+\gdef\@emailaddress{}
+\renewenvironment{abstract}{%
+  \begin{center}{\bfseries Abstract}\end{center}\small
+}{%
+  \ifx\@projectpage\@empty\else\par\noindent{\sffamily\bfseries Project Page:}~\texttt{\@projectpage}\fi
+  \ifx\@emailaddress\@empty\else\par\noindent{\sffamily\bfseries Email Address:}~\@emailaddress\fi
+  \par
+}

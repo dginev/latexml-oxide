@@ -1,0 +1,20 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{apacite}[2013/07/21 v6.03 APA citation]
+\newif\if@APAC@natbib@emu
+\DeclareOption{apaciteclassic}{\@APAC@natbib@emufalse}
+\DeclareOption{natbibapa}{\@APAC@natbib@emufalse}
+\ProcessOptions
+\if@APAC@natbib@emu
+\newif\ifciteindex \citeindexfalse
+\fi
+\def\PrintBackRefs{}%
+\AtBeginDocument{%
+  \@ifpackageloaded{backref}{%
+    \@ifundefined{ifBR@verbose}{%
+      \let\ifBR@verbose\iffalse
+      \let\fi\fi}{}%
+    \def\PrintBackRefs#1{\BR@backref{#1}}%
+  }{%
+    \let\PrintBackRefs\@gobble
+  }%
+}

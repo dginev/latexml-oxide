@@ -3189,8 +3189,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   sections, referenced by number; open: its appendix chapter "Appendix A", PDF "Appendix"); the
   class slot reads the classes the binding loaded from the copy's first class load, so a class a shipped intermediate
   class `\LoadClass`es (copy → mybase.cls → article under svmult's book) meets the slot too (#736,
-  `state::open_class_load_classes`). Guards `perfect_kernel_batch72a::*`, `perfect_kernel_batchint23::*`; repros
-  `stand-in-copies/`.
+  `state::open_class_load_classes`). int23 fix round 2 (agent_reports/2026-10-18_int23_fix2.md): a file a copy
+  `\input`s (its `.clo`/`.cfg`) is part of the copy, only `\usepackage`/`\RequirePackage`/`\LoadClass` are real loads
+  (#744; svjour affiliations back: 0901.1015, 1012.5412, 1111.3868, 1512.01957, 2411.18962, 2107.02119); a `.cls`/`.sty`
+  copy's expl3 syntax ends with its load (fcs 2606.16349, 2308.11432); the declaration test reads the binding that
+  answered (1705.03989, KNOWN_PERL_ERRORS #970); elife's `\figsupp` prints its supplements at the end (2311.00616);
+  neurips copy setters `\projectpage`/`\emailaddress` are contacts (2605.09681); mdpi loads cleveref only where its
+  copy does (2111.02495, 2201.05363); WileyNJD marks NJDapacite loaded with its apacite (2606.10545, 2602.12288);
+  typewriter whitespace stays out of a listing (#745; 2608.15322, 2602.03247, 2607.19926). Open: (s) siamart 1703.08345
+  `hypdvips: Wrong hyperref driver` (siamart.cls:1269-1272 `\ifpdf` false under `\pdfoutput=0`, K6 ruling, while the
+  hyperref driver is pdftex's); (t) elife 1907.05060 E 1 → 3 (`\format@title@figure` in a paragraph); (u) aamas
+  1702.08222 E 4 → 6 (`\alignauthor` tabular in `\author`); `\cal` from a copy (svjour3.cls:1145, aamas2017.cls:646)
+  is `font="caligraphic"` L in the XML and ℒ in the post's MathML, as the binding's. Guards `perfect_kernel_batch72a::*`,
+  `perfect_kernel_batchint23::*`; repros `stand-in-copies/`.
 
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;
   agent_reports/2026-10-17_payload_int20.md). (1) The plain-TeX `\halign` rows (math9611222, math9611223, math9412232,

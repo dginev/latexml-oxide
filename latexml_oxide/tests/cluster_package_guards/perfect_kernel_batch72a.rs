@@ -635,10 +635,11 @@ fn copy_numbers_the_kernel_counters() {
 }
 
 /// The copy's identity (OXIDIZED_DESIGN_DIVERGENCES #731 rule 0): its `\ProvidesExplClass` declaration (2308.11432's
-/// fcs.cls), a declaration of the class its binding is built on (2011.13564's IEEEtai.cls, `\ProvidesClass{IEEEtran}`)
+/// fcs.cls, whose expl3 syntax ends with its load as a real class load's does: spaces and `$a_1$` after it, 2606.16349),
+/// a declaration of the class its binding is built on (2011.13564's IEEEtai.cls, `\ProvidesClass{IEEEtran}`)
 /// read it; a binding with no command set of its own and no declaration read none (citesort.sty; aipcheck.tex,
-/// mssymb.tex, revtex.sty in the census). pdflatex: "EXTRA", "EXTRA", "READ" (the last one the binding's: base
-/// behaviour).
+/// mssymb.tex, revtex.sty in the census). pdflatex: "EXTRA and spaced text a1.", "EXTRA", "READ" (the last one the
+/// binding's: base behaviour).
 #[test]
 fn copy_identity_by_declaration_and_command_set() {
   for (tex, file, copy, text) in [
@@ -646,7 +647,10 @@ fn copy_identity_by_declaration_and_command_set() {
       repro!("identity/declared_expl_class_is_read.tex"),
       "fcs.cls",
       repro!("identity/fcs.cls"),
-      "EXTRA",
+      "EXTRA and spaced text <Math mode=\"inline\" tex=\"a_{1}\" text=\"a _ 1\" xml:id=\"p1.m1\"><XMath \
+       xml:id=\"p1.m1.1\"><XMApp xml:id=\"p1.m1.1.1\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok \
+       font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok fontsize=\"70%\" meaning=\"1\" \
+       role=\"NUMBER\">1</XMTok></XMApp></XMath></Math>.",
     ),
     (
       repro!("identity/declared_base_class_is_read.tex"),

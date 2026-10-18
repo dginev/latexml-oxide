@@ -1,7 +1,7 @@
 //! Stub for MDPI journal class (Definitions/mdpi.cls, bundled by users).
 //!
 //! Real mdpi.cls L20-50 loads article + many packages including hyperref,
-//! url, booktabs, ragged2e (for \justify), cleveref. Mirror those so
+//! url, booktabs, ragged2e (for \justify), cleveref (the copies since 2023). Mirror those so
 //! papers using \href, \hypersetup, \url, \justify, \crefrangelabelformat
 //! don't error out. Witness 2410.21443.
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
@@ -43,7 +43,16 @@ LoadDefinitions!({
   RequirePackage!("url");
   RequirePackage!("booktabs");
   RequirePackage!("ragged2e");
-  RequirePackage!("cleveref");
+  // cleveref only where the class loads it (2410.21443's 2025 copy :445 `\RequirePackage[capitalise,noabbrev]{cleveref}`,
+  // 2401.15064's, 2408.03136's), or with no copy shipped: the 2021-2022 copies load none (2111.02495, 2201.05363,
+  // 2212.11355), and cleveref's caption hooks under their newfloat and caption loads (mdpi.cls:1184-1192) and the
+  // paper's subcaption made every `\caption` in a `{subfigure}` err (15 and 40 Errors; pdflatex 0).
+  if shipped
+    .as_deref()
+    .is_none_or(|text| crate::shipped_class::class_text_loads(text, "cleveref"))
+  {
+    RequirePackage!("cleveref");
+  }
   RequirePackage!("etoolbox");
   RequirePackage!("lineno");
   // MDPI papers use {adjustwidth} from changepage. Witness 2503.13839 +5.

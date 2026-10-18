@@ -19239,8 +19239,8 @@ extra command the copy defines and the paper uses is undefined (aas_macros.sty:9
 from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.tex` route), before the load's
 `\AtEndOfClass`/`\AtEndOfPackage` code runs. The rules:
 0. *Identity.* The copy is read only when it is the file the binding stands in for (content.rs
-   `copy_is_the_stood_in_file`; 72a r3 rule): (a) its `\Provides(Expl)?(Class|Package|File)` names the file, the
-   binding, or a file the binding is built on — one its own code loads (`state::note_stand_in_file`,
+   `copy_is_the_stood_in_file`; 72a r3 rule): (a) its `\Provides(Expl)?(Class|Package|File)` names the binding that
+   answered (the file itself when the binding is of its name; #744), or a file the binding is built on — one its own code loads (`state::note_stand_in_file`,
    `stand_in_built_on`) —, a declared macro read as its definition in the copy says, as `\ProvidesClass` expands its
    argument (r4: cimart.cls:13-14 `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`, 2412.00032), whatever
    the version (1609.03892's fcs.cls of 2016, older than the `\fcssetup` the binding
@@ -19342,8 +19342,8 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    Likewise decided: the copy-local overlay of rule 2 stays, nested loads are real loads (rule 6) with the `\ver@` test
    scoped to the copy's own `\usepackage` lines, and (72a r3) counter ownership follows the stand-in binding's own load
    only (rule 2).
-6. *Nested loads.* A file the copy loads (`\RequirePackage`, `\usepackage`, `\input`, `\LoadClass`) is a real load,
-   the mode suspended for it (`input_definitions`): a package the binding did not load loads whole (bmvc2k.cls:139's
+6. *Nested loads.* A package or class the copy loads (`\RequirePackage`, `\usepackage`, `\LoadClass`) is a real load,
+   the mode suspended for it (`input_definitions`; a file it pulls in by `\input` is part of the copy, #744): a package the binding did not load loads whole (bmvc2k.cls:139's
    `tabularx`, colm's `multirow`, ws-rv9x6.cls's `ws-crop9x6`), a loaded one is the usual no-op, and `\LoadClass` of
    the loaded class is quiet. These are the lines the binding's dependency scan stands in for, so the copy's
    `\usepackage`/`\RequirePackage` takes the scan's `\ver@` test (`require_package` → `marked_loaded_unrecorded`,
@@ -19734,3 +19734,45 @@ koma_ids_and_appendix_follow_the_standard_classes, ceurart_title_mode_sub_is_the
 `sectioning-frontmatter/scrbook_front_matter_chapters_are_unnumbered`,
 `sectioning-frontmatter/koma_ids_and_appendix_{scrartcl,scrreprt,scrbook}`, `koma_sectioning_check_warns`,
 `stand-in-copies/class_slot/ceurart_title_mode_sub`.
+
+### 744. A stand-in copy's `\input` files are part of the copy; its syntax ends with its load; its declaration names the binding that answered
+
+**Decision** (int23 fix round 2; refines #731; main-session ruling 2026-10-18 "`\usepackage`/`\RequirePackage` from a
+copy are real loads; files a copy pulls in by `\input`/`\@input`/`\InputIfFileExists` are part of the copy"):
+1. *Input files.* `input_definitions` suspends the copy's provides-mode only for a package or class load
+   (`handleoptions`: `\RequirePackage`, `\usepackage`, `\LoadClass`); a file the copy reads by `\input` (`\@input`,
+   `\InputIfFileExists`: the `.clo`/`.cfg` it ships) is read in the copy's mode, so its definitions of names the binding
+   owns hold only inside the copy's code, its `\AtEndOfClass` code is wrapped as the copy's own (`copy_provides_wrap`)
+   and its document-time hooks are not registered. A binding such an `\input` reaches is a load of its own (the mode
+   suspended around `_load_binding`). Before: svjour.cls:86's `\InputIfFileExists{sv\CurrentOption.clo}` read
+   svepj.clo, whose :280-284 `\AtEndOfClass{\let\maketitle=\epj@maketitle}`, and svepjc3.clo, whose :57/:71
+   `\def\maketitle` (re-read by its own `\AtEndOfClass{\@input{svepjc3.clo}}`), replaced the binding's title page:
+   "Address(es) of author(s) should be given", "Noname", "??", `Error:\@institute` in place of the affiliations
+   (0901.1015 -1,500 words, 1012.5412, 1111.3868, 1512.01957, 2411.18962, 2107.02119).
+2. *Syntax at the end.* A class or package copy ends as a real class or package load does (`load_tex_definitions`'
+   expl3 cleanup, `handleoptions` for a `.cls`/`.sty` copy): latex.ltx's `\@popfilename` turns off the expl3 syntax a
+   `\ProvidesExplClass` turned on. Before: fcs.cls:70's expl3 catcodes stayed on for the whole document — spaces
+   ignored, `\theta_` undefined (2606.16349 recall 95.9 → 14.6; 2308.11432). An `\input` copy (`.tex`) restores
+   nothing, as TeX's `\input`.
+3. *Identity.* Rule 0's declaration test reads the binding that answered: a declaration naming the requested file
+   counts only when the binding is of that name. The class prefix fallback (Package.pm:2700-2716) answers a renamed
+   file too: 1705.03989's aaart.cls, amsart declaring itself `aaart`, under `aa`; read as aa.cls, its amsart code over
+   the binding raised 3 more Errors (2 → 5). It now goes to the command-set test (1 of aa's 30 names: not read). The 2
+   remaining Errors (`\address`, `\subjclass` undefined; pdflatex 0) are the fallback's, Perl's too (KNOWN_PERL_ERRORS
+   #970).
+Divergence from Perl: Perl reads no copy (#731). Guards `perfect_kernel_batchint23::{a_copy_option_file_keeps_the_bindings_title,
+a_renamed_class_under_a_fallback_is_not_read}`, `perfect_kernel_batch72a::copy_identity_by_declaration_and_command_set`
+(the fcs case now with spaced text and `$a_1$`); repros `stand-in-copies/option_files/`,
+`stand-in-copies/identity/{declared_expl_class_is_read,renamed_class_under_a_fallback_is_not_read}`.
+
+### 745. Typewriter whitespace is kept only where an auto-opened element reaches text
+
+**Decision** (int23 fix round 2; narrows #47): `open_text`'s exception for whitespace-only typewriter text (and an
+explicit `\ `) applies only where the current element can reach `#PCDATA` directly or through auto-opened elements
+(`can_contain_node_somehow`); elsewhere Perl's rule stands and the space is dropped (Document.pm `openText`: initial
+whitespace where `#PCDATA` cannot go). An `{algorithmic}` set in `\ttfamily` (WileyNJDv5.cls:6953
+`\algrenewcommand\ALG@beginalgorithmic{\ttfamily}`) put the space before its first `\item` straight into the
+`ltx:listing`, whose model is `listingline*`: `Error:malformed` in a minimal document, schema-invalid output in
+2608.15322, 2602.03247, 2607.19926. fancyvrb's indentation (#47's case, 2605.00468) lands in a paragraph the builder
+auto-opens and is unchanged. Guard `perfect_kernel_batchint23::a_typewriter_algorithmic_drops_the_leading_space`; repro
+`listings-algorithms/typewriter_algorithmic_drops_the_leading_space`.

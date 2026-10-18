@@ -253,9 +253,15 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
       },
     )
   });
-  // A file a stand-in's copy loads (`\RequirePackage`, `\usepackage`, `\LoadClass`, `\input`) is a real load, read
-  // whole as TeX reads it: the copy's provides-mode is suspended for it (`read_stand_in_copy`).
-  let _suspended = (crate::definition::origin::copy_provides() != 0)
+  // A package or class a stand-in's copy loads (`\RequirePackage`, `\usepackage`, `\LoadClass`) is a real load, read
+  // whole as TeX reads it: the copy's provides-mode is suspended for it (`read_stand_in_copy`). A file the copy pulls
+  // in by `\input` (`\@input`, `\InputIfFileExists`: the `.clo`/`.cfg` it ships) is part of the copy and follows its
+  // rule (main-session ruling 2026-10-18): svepj.clo:280-284's `\AtEndOfClass{\let\maketitle=\epj@maketitle}` and
+  // svepjc3.clo:57/:71's `\def\maketitle`, read through svjour.cls:86's `\InputIfFileExists{sv\CurrentOption.clo}`,
+  // replaced the binding's `\maketitle`, the affiliations lost to "Address(es) of author(s) should be given" (0901.1015,
+  // 1012.5412, 1111.3868, 1512.01957, 2411.18962, 2107.02119). (a binding the `\input` reaches is a load of its own:
+  // the binding branch of `input_definitions_impl`)
+  let _suspended = (crate::definition::origin::copy_provides() != 0 && options.handleoptions)
     .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
   // A file a stand-in binding loads is not part of the binding's command set (`StandInLoadGuard::suspend`); a
   // stand-in it loads records its own (`input_definitions_impl`).
@@ -949,6 +955,9 @@ fn input_definitions_impl(
           crate::definition::origin::stand_in_loader_own_code(),
         )
       });
+    // (a binding a stand-in's copy reaches by `\input` is a load of its own, not the copy's code: `input_definitions`)
+    let _copy_suspended = (crate::definition::origin::copy_provides() != 0)
+      .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
     match _load_binding(false, &filename, options.reloadable).and_then(|ext| match ext {
       Some(source) => Ok(Some(source)),
       None => _load_binding(true, &filename, options.reloadable),
@@ -2196,8 +2205,9 @@ fn stand_in_copy_request(name: &str) -> String {
 /// aas_macros.sty `\kms`, `\lya`; 1805.06442 `\prx`; 2001.05519 `\cac`; 1406.5372's `\plotone`. Its
 /// `\AtEndOfClass`/`\AtEndOfPackage` code runs at this load's end under the same rule
 /// ([`crate::state::copy_provides_wrap`]), its document-time hooks are not registered
-/// ([`crate::state::copy_provides_defers`]), a file it loads is a real load, the mode suspended for it
-/// ([`input_definitions`]: bmvc2k.cls:139 `tabularx`, ws-rv9x6.cls's `ws-crop9x6`), and an Error in its own code stays
+/// ([`crate::state::copy_provides_defers`]), a package or class it loads is a real load, the mode suspended for it
+/// ([`input_definitions`]: bmvc2k.cls:139 `tabularx`, ws-rv9x6.cls's `ws-crop9x6`), a file it `\input`s is part of it
+/// (svjour.cls's `.clo`, OXIDIZED_DESIGN_DIVERGENCES #744), its expl3 syntax ends with its load, and an Error in its own code stays
 /// an Error (user ruling 2026-10-17). The copy is the file `request`.`ext` in the paper's source (the
 /// document's directory, or a `{filecontents}` virtual file), never one of TeX Live's; one read raw already (by its
 /// binding: arxiv.sty, cvpr.sty, pasj00.cls, … `InputDefinitions!`) is not read again. Perl never reads it: `FindFile`
@@ -2232,7 +2242,10 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
   // (not a raw class read for K11, `\lx@class@loaded@raw`: the binding owns the title page)
   let _origin = OriginGuard::new(DefinitionOrigin::File);
   let _provides = CopyProvidesGuard::new(id);
-  load_tex_definitions(&file, &path, false, ext != "tex", in_expl3, false)
+  // (a class or package copy ends as a real class or package load ends: latex.ltx's `\@popfilename` restores the
+  // syntax a `\ProvidesExplClass` turned on — fcs.cls:70, whose expl3 catcodes stayed on for the document and ate its
+  // spaces, `\theta_` undefined: 2606.16349, 2308.11432; an `\input` copy restores nothing, as TeX's `\input`)
+  load_tex_definitions(&file, &path, false, ext != "tex", in_expl3, ext != "tex")
 }
 
 /// Is the file at `path` one the paper ships: a `{filecontents}` virtual file, or one under the document's own source
@@ -2308,7 +2321,8 @@ fn binding_base_class_stands_for(name: &str) -> Result<bool> {
 /// Is the paper's file at `path`, of the name a stand-in binding answers (`file`), the file the binding `binding`
 /// stands in for (OXIDIZED_DESIGN_DIVERGENCES #731 rule 0)? Two tests, in order:
 /// 1. **Its declaration.** A `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` (or the `\ProvidesExpl…` form) naming
-///    the file, the binding, or a file the binding is built on (its own `LoadClass!`/`RequirePackage!`,
+///    the binding that answered (the file's own name only when the binding is of that name: a fallback answers a renamed
+///    file too, 1705.03989's aaart.cls under `aa`), or a file the binding is built on (its own `LoadClass!`/`RequirePackage!`,
 ///    `state::stand_in_built_on`) is that file, whatever its version: 1609.03892's fcs.cls of 2016, older than the
 ///    `\fcssetup` the binding models; 2308.11432's fcs.cls `\ProvidesExplClass{fcs}`; apjfonts.sty (1202.3442,
 ///    1009.4702); 2011.13564's IEEEtai.cls, IEEE's own file, which declares itself `IEEEtran`, the class the binding
@@ -2387,10 +2401,11 @@ fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
     })
   });
   let built_on = stand_in_built_on();
+  // (the binding that answered, not the name asked for: a fallback answers a renamed file too — 1705.03989's aaart.cls,
+  // amsart renamed and declaring itself `aaart`, which the `aa` binding answers — so a copy declaring the requested
+  // name is that binding's file only when the binding is of that name; else the command set below decides)
   if let Some(declared) = &declared
-    && (*declared == stem(file)
-      || *declared == stem(binding)
-      || built_on.iter().any(|base| stem(base) == *declared))
+    && (*declared == stem(binding) || built_on.iter().any(|base| stem(base) == *declared))
   {
     Info!(
       "provide",
