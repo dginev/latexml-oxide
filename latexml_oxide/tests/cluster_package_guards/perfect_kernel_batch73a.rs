@@ -200,6 +200,16 @@ fn declare_graphics_extensions_is_not_typeset() {
     &[r#"xml:id="p1.1""#],
     r#"<p xml:id="p1.1">Text.</p>"#,
   );
+  // epsfig.sty defines none: graphics.sty's macro stands under it too (review 73a finding 4, epsfig_sty.rs).
+  let xml = clean(
+    "\\documentclass{article}\n\\usepackage{epsfig}\n\\DeclareGraphicsExtensions{.pdf,.pdf_tex}\n     \\begin{document}\nText.\n\\end{document}\n",
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    r#"<p xml:id="p1.1">Text.</p>"#,
+  );
 }
 
 /// `\bibstyle`'s name is not typeset (2412.10240).
@@ -317,4 +327,195 @@ fn nomenclature_entry_is_typeset_only_when_printed() {
      Norm. \\nomenclature{\\|\\cdot\\|_p}{$L^p$ norm}\n\\end{document}\n",
   );
   assert!(!xml.contains("<glossarydefinition"), "{xml}");
+}
+
+/// Review 73a finding 1 (tc_double): a caption inside the deluxetable wins over a stored one (aastex701.cls:11303-11304
+/// empties the store at the table's start), and the table float after it is Table 2.
+#[test]
+fn tablecaption_inside_the_table_wins() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/tablecaption_inside_the_table_wins.tex"
+  ));
+  assert_eq!(xml.matches("<caption>").count(), 2, "{xml}");
+  assert!(!xml.contains("Outer stray caption"), "{xml}");
+  assert_element(
+    &xml,
+    "caption",
+    &[],
+    r#"<caption><tag close=": ">Table 1</tag>Inner real caption.</caption>"#,
+  );
+  assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T2""#],
+    "<table inlist=\"lot\" xml:id=\"S0.T2\"><tags><tag>Table 2</tag><tag role=\"autoref\">Table\u{a0}2<text xml:id=\"S0.T2.1\"/></tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Table 2</tag></tags><toccaption><tag close=\" \">2</tag>In a table float.</toccaption><caption><tag close=\": \">Table 2</tag>In a table float.</caption><tabular vattach=\"middle\" xml:id=\"S0.T2.2\"><tbody><tr xml:id=\"S0.T2.2.1\"><td align=\"center\" xml:id=\"S0.T2.2.1.1\">3</td><td align=\"center\" xml:id=\"S0.T2.2.1.2\">4</td></tr></tbody></tabular></table>",
+  );
+}
+
+/// Review 73a finding 1 (tc_stale): AASTeX 6+ scope a stored `\tablecaption` to its group, so a caption a group closed on
+/// is not set on the next, unrelated, deluxetable (OD #739).
+#[test]
+fn stored_tablecaption_scoped_to_its_group() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/stored_tablecaption_scoped_to_its_group.tex"
+  ));
+  assert!(!xml.contains("<caption"), "{xml}");
+  assert!(!xml.contains("Stray caption"), "{xml}");
+  assert_eq!(xml.matches("<table ").count(), 1, "{xml}");
+  // emulateapj's store is global, as the class's (emulateapj.cls:1217-1218): the next deluxetable prints it (1010.4329).
+  let xml = clean(
+    "\\documentclass{emulateapj}\n\\begin{document}\n\\begin{center}\\tablecaption{Kept.}\\end{center}\n\
+     \\begin{deluxetable}{cc}\n\\tablehead{\\colhead{A} & \\colhead{B}}\n\\startdata\n1 & 2 \\\\\n\\enddata\n\
+     \\end{deluxetable}\n\\end{document}\n",
+  );
+  assert_element(
+    &xml,
+    "caption",
+    &[],
+    r#"<caption><tag>Table 1</tag>Kept.</caption>"#,
+  );
+}
+
+/// 2204.03327: an aastex `{longrotatetable}` around a plain `tabular` is that table's float — its `\tablecaption` the
+/// caption, its `\label` the table's; around a deluxetable it is the page's setting (main-session call 2026-10-18).
+#[test]
+fn longrotatetable_around_a_tabular_is_its_table() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/longrotatetable_around_a_tabular_is_its_table.tex"
+  ));
+  assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T1""#],
+    "<table inlist=\"lot\" labels=\"LABEL:tab:plain\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Caption of the plain tabular.</toccaption><caption><tag close=\": \">Table 1</tag>Caption of the plain tabular.</caption><tabular vattach=\"middle\" xml:id=\"S0.T1.2\"><tbody><tr xml:id=\"S0.T1.2.1\"><td align=\"center\" xml:id=\"S0.T1.2.1.1\">1</td><td align=\"center\" xml:id=\"S0.T1.2.1.2\">2</td></tr></tbody></tabular></table>",
+  );
+  assert_eq!(xml.matches("<table ").count(), 3, "{xml}");
+  assert_eq!(xml.matches("<caption>").count(), 2, "{xml}");
+  // the deluxetable inside a longrotatetable keeps its own table and caption
+  assert!(
+    xml.contains(r#"<caption><tag close=": ">Table 2</tag>A long deluxetable.</caption>"#),
+    "{xml}"
+  );
+}
+
+/// revtex4-1.cls:7565 (revtex4-2.cls:7586) defines `\bm` at load: the class's bold `\bm` (review 73a finding 2, bm41).
+#[test]
+fn revtex41_bm_is_defined_at_load() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/revtex41_bm_defined_at_load.tex"
+  ));
+  assert!(!xml.contains("AUTHOR"), "{xml}");
+  assert_element(
+    &xml,
+    "XMTok",
+    &[],
+    r#"<XMTok font="bold italic" role="UNKNOWN">x</XMTok>"#,
+  );
+}
+
+/// pst-node.tex:1163/:1191-1192: `\psmatrix … \endpsmatrix` is a group, its `\\` does not outlive it (review 73a
+/// finding 3).
+#[test]
+fn psmatrix_is_a_group() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/psmatrix_is_a_group.tex"
+  ));
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p3.1""#],
+    r#"<p xml:id="p3.1">Line one<break/>line two.</p>"#,
+  );
+}
+
+/// latex.ltx:17737-17741: a `\glossary` entry is typeset only where the glossary is printed (main-session call
+/// 2026-10-18 under user ruling 1, OD #738).
+#[test]
+fn glossary_entry_is_typeset_only_when_printed() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/index/glossary_entry_typeset_only_when_printed.tex"
+  ));
+  assert!(!xml.contains("<indexmark"), "{xml}");
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    r#"<p xml:id="p1.1">Text one. Text two.</p>"#,
+  );
+  // Printed (the `.gls` stand-in), the entry is a `glo` mark where it was made.
+  let xml = clean(
+    "\\documentclass{article}\n\\makeglossary\n\\newenvironment{theglossary}{}{}\n\\begin{document}\n\
+     Text one\\glossary{alpha}. Text two.\n\\makeatletter\\@input@{\\jobname.gls}\\makeatother\n\\end{document}\n",
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    r#"<p xml:id="p1.1">Text one<indexmark inlist="glo"><indexphrase key="alpha">alpha</indexphrase></indexmark>. Text two.</p>"#,
+  );
+}
+
+/// Review 73a finding 8: the "list already printed" path — the index and glossary printed before their entries, each
+/// entry typeset where it is made, the marks those of `index_entry_ampersand_is_literal` (batch59).
+#[test]
+fn index_entry_ampersand_is_literal_list_printed_first() {
+  fn marks(xml: &str) -> Vec<String> {
+    let flat: String = xml.lines().map(str::trim).collect();
+    let mut out = Vec::new();
+    let mut rest = flat.as_str();
+    while let Some(start) = rest.find("<indexmark") {
+      let tail = &rest[start..];
+      let end = tail.find("</indexmark>").expect("closed indexmark") + "</indexmark>".len();
+      let mark = &tail[..end];
+      // ids aside
+      let mut plain = String::new();
+      let mut segment = mark;
+      while let Some(at) = segment.find(" xml:id=\"") {
+        plain.push_str(&segment[..at]);
+        let after = &segment[at + " xml:id=\"".len()..];
+        segment = &after[after.find('"').expect("closed id") + 1..];
+      }
+      plain.push_str(segment);
+      out.push(plain);
+      rest = &tail[end..];
+    }
+    out
+  }
+  let first = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/index_entry_ampersand_is_literal_list_printed_first.tex"
+  ));
+  let last = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/index_entry_ampersand_is_literal.tex"
+  ));
+  assert_eq!(marks(&first).len(), 7, "{first}");
+  assert_eq!(marks(&first), marks(&last));
+  assert_element(
+    &first,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    r##"<p xml:id="p1.1">G: Text.<indexmark inlist="glo"><indexphrase key="B&amp;Borel subgroup"><Math mode="inline" tex="B" text="B" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMTok font="italic" role="UNKNOWN">B</XMTok></XMath></Math>&amp;Borel subgroup</indexphrase></indexmark></p>"##,
+  );
+  assert_element(
+    &first,
+    "tabular",
+    &[r#"xml:id="p5.1""#],
+    r##"<tabular vattach="middle" xml:id="p5.1"><tbody><tr xml:id="p5.1.1"><td align="center" xml:id="p5.1.1.1"><text font="bold" xml:id="p5.1.1.1.1">e<indexmark><indexphrase key="y&amp;z">y&amp;z</indexphrase></indexmark>X</text></td><td align="center" xml:id="p5.1.1.2">f</td></tr></tbody></tabular>"##,
+  );
+}
+
+/// nomencl.sty:228-232: in table mode the unit and the note are written too, so a `|` there makes makeindex reject the
+/// entry, left out with a Warning (review 73a finding 9).
+#[test]
+fn nomentbl_unit_with_a_bar_is_rejected() {
+  let (log, xml) = convert_counted(
+    "\\documentclass{article}\n\\usepackage{nomentbl}\n\\makenomenclature\n\\begin{document}\n\
+     Area\\nomenclature{$A$}{The area}{m$^2$}{}. Speed\\nomenclature{$v$}{The speed}{m|s}{}.\n\
+     \\printnomenclature\n\\end{document}\n",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("makeindex rejects the nomenclature entry $v$ (Extra `|')"),
+    "{log}"
+  );
+  assert_eq!(xml.matches("<glossarydefinition").count(), 1, "{xml}");
 }

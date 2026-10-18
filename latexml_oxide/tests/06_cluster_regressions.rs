@@ -993,8 +993,15 @@ fn cluster_theindex_nested_autoclose() {
 #[test]
 fn cluster_verb_in_index_renders_typewriter() {
   // convert_to_xml gates on 0 errors — the `|` form used to emit
-  // `Error:expected:delimiter Verbatim argument lost`.
-  let xml = convert_to_xml("tests/cluster_regressions/verb_in_index.tex");
+  // `Error:expected:delimiter Verbatim argument lost`. The entries are typeset
+  // only where the index is printed (OXIDIZED_DESIGN_DIVERGENCES #738): the
+  // fixture, which the streaming sweep keeps as is (its documented exception),
+  // is converted here with a `\printindex`.
+  let fixture = std::fs::read_to_string("tests/cluster_regressions/verb_in_index.tex")
+    .expect("read verb_in_index.tex");
+  let printed = fixture.replace("\\end{document}", "\\printindex\n\\end{document}");
+  assert_ne!(printed, fixture);
+  let xml = convert_to_xml(&format!("literal:{printed}"));
   // Four `\verb` bodies (`\verb+..+`, `\verb|..|`, `\verb*|..|`, and the
   // `\verb|sub|` subentry), each a typewriter verbatim; `\index{plain}` and the
   // `grp` head are plain phrases.

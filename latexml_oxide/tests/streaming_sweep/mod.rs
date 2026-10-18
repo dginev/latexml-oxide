@@ -119,6 +119,14 @@ const EXCLUDED_FIXTURES: &[&str] = &[
   "ptptex_inst_store_frontmatter.tex",
 ];
 
+/// Fixtures whose streamed output differs from the eager one by a documented divergence — the one exception besides
+/// OXIDIZED_DESIGN_DIVERGENCES #456 (`114_streaming_structure`) to the `--streaming` byte-identity: each is still
+/// converted both ways, both conversions error-free, but the outputs are not compared; a test of its own asserts the
+/// divergence. `verb_in_index.tex`: an `\index` entry of an index never printed is typeset in a streamed conversion
+/// only, whose fragment yield digests the pending entries as Perl does (OXIDIZED_DESIGN_DIVERGENCES #738; asserted by
+/// `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries`).
+pub const STREAMING_DIVERGENT_FIXTURES: &[&str] = &["verb_in_index.tex"];
+
 pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: DispatchFn) {
   let mut fixtures: Vec<_> = std::fs::read_dir(dir)
     .unwrap_or_else(|e| panic!("cannot read {dir}: {e}"))
@@ -159,7 +167,11 @@ pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: D
       ));
       continue;
     }
-    if eager_xml != streamed_xml {
+    let documented_divergence = path
+      .file_name()
+      .and_then(|n| n.to_str())
+      .is_some_and(|name| STREAMING_DIVERGENT_FIXTURES.contains(&name));
+    if eager_xml != streamed_xml && !documented_divergence {
       let byte = eager_xml
         .bytes()
         .zip(streamed_xml.bytes())

@@ -114,6 +114,8 @@ LoadDefinitions!({
   if revtex4_0 {
     // revtex4.cls:4092-4094: REVTeX 4.0 groups the addresses unless an address option said otherwise.
     RawTeX!(r"\@ifxundefined\groupauthors@sw{\clo@groupedaddress}{}");
+    // `\bm` waits for `\begin{document}` (revtex4.cls:6030-6032; 4.2 defines it at load, revtex4-2.cls:7586).
+    revtex4_support_sty::defer_bm_to_begin_document()?;
   } else {
     revtex4_support_sty::define_float_repair()?;
     // The REVTeX 4.2 internals documents call, `\doi` among them (`define_revtex41_internals`).

@@ -1,0 +1,24 @@
+% witness: review 73a finding 1 (tc_double); aastex701.cls:11303-11304 `\let\tablecaption\deluxetablecaption`
+%          `\deluxetablecaption{}` empties the store at the deluxetable's start
+% oracle:  pdflatex (clean): one caption, "Table 1. Inner real caption."; the float after it is Table 2
+% engines: rust 73a1 = 0 errors but two captions ("Table 1: Outer", "Table 2: Inner") and the float after it Table 3;
+%          Perl = 1 error (deluxetable.sty.ltxml:77 `\let\tablecaption\caption`, the outer one outside any float)
+% expect:  0 errors, 0 warnings; the deluxetable's one caption "Inner real caption.", the table float after it Table 2
+% status:  RED (73a1) -> GREEN (73a r2)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\tablecaption{Outer stray caption.}
+Some text.
+\begin{deluxetable}{cc}
+\tablecaption{Inner real caption.\label{t1}}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1 & 2 \\
+\enddata
+\end{deluxetable}
+\begin{table}
+\tablecaption{In a table float.}
+\begin{tabular}{cc}3&4\end{tabular}
+\end{table}
+\end{document}

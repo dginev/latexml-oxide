@@ -73,7 +73,7 @@ LoadDefinitions!({
 \def\lx@nomencl@prefixed[#1]{\endgroup\lx@nomencl@entry[#1]}
 \def\lx@nomencl@entry[#1]#2#3{\if@nomentbl\expandafter\lx@nomencl@entrytbl\else\expandafter\lx@nomencl@entryplain\fi{#1}{#2}{#3}}
 \def\lx@nomencl@entrytbl#1#2#3#4#5{\protected@edef\lx@nomencl@eq{\theequation}\expandafter\lx@nomencl@entrytbl@\expandafter{\lx@nomencl@eq}{#1}{#2}{#3}{#4}{#5}}
-\def\lx@nomencl@entrytbl@#1#2#3#4#5#6{\lx@defer@print{nomenclature}{\lx@nomencl@ifaccepted{#2}{#3}{#4}{\lx@nomencl@definition{#2}{#3}{{#4\nomeqref{#1}}}{\lx@nomencl@unit{#5}}{\IfBlankF{#6}{#6}}{\lx@nomencl@group{#2}}}{}}}
+\def\lx@nomencl@entrytbl@#1#2#3#4#5#6{\lx@defer@print{nomenclature}{\lx@nomencl@ifaccepted{#2}{#3}{#4#5#6}{\lx@nomencl@definition{#2}{#3}{{#4\nomeqref{#1}}}{\lx@nomencl@unit{#5}}{\IfBlankF{#6}{#6}}{\lx@nomencl@group{#2}}}{}}}
 \def\lx@nomencl@unit#1{\IfBlankF{#1}{\unit{#1}}}
 \def\lx@nomencl@entryplain#1#2#3{\protected@edef\lx@nomencl@eq{\theequation}\expandafter\lx@nomencl@entryplain@\expandafter{\lx@nomencl@eq}{#1}{#2}{#3}}
 \def\lx@nomencl@entryplain@#1#2#3#4{\lx@defer@print{nomenclature}{\lx@nomencl@ifaccepted{#2}{#3}{#4}{\lx@nomencl@definition{#2}{#3}{{#4\nomeqref{#1}}}{}{}{\lx@nomencl@group{#2}}}{}}}
@@ -84,11 +84,13 @@ LoadDefinitions!({
   \uppercase{\nomgroup{#1}}}
 \makeatother");
   // makeindex rejects a written line with a second `|` (encap) or `@` (actual), braced or not, and nomencl writes one of
-  // each itself (nomencl.sty:227-245: `<prefix><symbol>@[{<symbol>}]\begingroup <description>…|nompageref`; nomencl.ist
+  // each itself (nomencl.sty:227-245: `<prefix><symbol>@[{<symbol>}]\begingroup <description>…|nompageref`, in table mode
+  // the unit and the note too, :228-232 `&\unit{#4}&\begingroup#5\endgroup&`; nomencl.ist
   // keeps makeindex's `|` and `@`, quote `%`): an entry whose prefix, symbol or description holds one is never in the
   // `.nls`, never printed ("Extra `|'", the `.ilg`). 2506.02168's `\nomenclature{\|\cdot\|_p}{…}`: pdflatex and makeindex
   // print a list without it, where the binding's list set `\|` and `_` as text (an Error). Such an entry is left out with
-  // a Warning when the list is printed, as makeindex leaves it out. Guard: `perfect_kernel_batch73a::nomenclature_entry_is_typeset_only_when_printed`.
+  // a Warning when the list is printed, as makeindex leaves it out. Guards: `perfect_kernel_batch73a::{
+  // nomenclature_entry_is_typeset_only_when_printed, nomentbl_unit_with_a_bar_is_rejected}`.
   DefMacro!("\\lx@nomencl@ifaccepted{}{}{}", sub[(prefix, symbol, description)] {
     let mut extra = None;
     for part in [&prefix, &symbol, &description] {

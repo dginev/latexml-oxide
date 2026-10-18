@@ -139,8 +139,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@eapj@startdata",
     r"\iflx@deluxetable@data\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
 {\crcr\noalign{\lx@eapj@head@extend}}{\lx@eapj@open@data}");
-  // `\tablecaption` (:1294) is the caption of the table it is in, a `{longtable}`'s too (outside any float stored for the
-  // next deluxetable, deluxetable_sty.rs `\lx@deluxe@tablecaption`; 1010.4329): the `\caption` in effect there,
+  // `\tablecaption` (:1294) is the caption of the table it is in, a `{longtable}`'s too (outside any float stored, as
+  // the class stores it for the next deluxetable to print at its head — :1293-1294/:1325/:1333, 1010.4329's copy
+  // :1217-1218/:1249/:1257 — deluxetable_sty.rs `\lx@deluxe@tablecaption`, set at the table's end when the table set
+  // none; OXIDIZED_DESIGN_DIVERGENCES #740): the `\caption` in effect there,
   // not the float's that deluxetable_sty.rs `\let` it be. The class stores it (`\gdef\@tablecaption`) for the head's
   // `\caption` to set; one given in the data (after `\tablehead`, before `\startdata`) is kept for the table's end, as
   // the notes and labels are, so the row it is in stays empty (e2: `\tablehead{…}` `\tablecaption{…\label{t1}}`).
@@ -152,7 +154,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@eapj@end@deluxetable",
     r"\iflx@deluxetable@data\expandafter\@firstofone\else\expandafter\@gobble\fi
 {\crcr\hline\global\lx@deluxetable@datafalse\lx@end@alignment\@end@deluxetabular\egroup}\lx@eapj@labels
-\spew@tblnotes");
+\lx@deluxe@pending@caption\spew@tblnotes");
   DefMacro!("\\deluxetable{}",
     r"\set@deluxetable@template{#1}\def\@deluxetable@header{}\lx@eapj@begin@deluxetable\begin{table}\lx@deluxe@stored@caption");
   DefMacro!(T_CS!("\\deluxetable*"), "{}",

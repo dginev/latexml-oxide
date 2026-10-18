@@ -850,6 +850,10 @@ fn field_prov_header_flushright_kept() {
 /// sectioning-frontmatter/field_prov_header_text_kept: a plain-text header line before the title block is body text: the title block stays (round-3 review finding 3, probe r11).
 #[test]
 fn field_prov_header_text_kept() {
+  // The job's clock pinned (tex_job.rs reads `SOURCE_DATE_EPOCH` once per process, before its first conversion — each
+  // nextest test is its own process), so the two conversions below cannot straddle midnight: 2025-10-18 12:00 UTC.
+  // SAFETY: set before this test starts any conversion thread.
+  unsafe { std::env::set_var("SOURCE_DATE_EPOCH", "1760788800") };
   let (xml, _) = assert_lifts(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_text_kept.tex"
@@ -857,7 +861,7 @@ fn field_prov_header_text_kept() {
     (0, 0),
     &[],
   );
-  // (the header's `\today` is the conversion's date)
+  // (the header's `\today` is the job's date, "October 18, 2025" under the pinned clock)
   let today = convert_with(
     "\\documentclass{article}\\begin{document}\\today\\end{document}",
     None,

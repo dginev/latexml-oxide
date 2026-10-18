@@ -258,13 +258,10 @@ LoadDefinitions!({
   // drops its first argument and leaves later ones in a `\relax{…}` group; Perl keeps a bold `\bm`, its argument in a
   // group: a `\left` without its `\right` there is set at the outer level with a Warning (bm_sty.rs
   // `define_grouped_bm`, OXIDIZED_DESIGN #544).
-  // The class provides it at `\begin{document}`, only while `\bm` is still undefined (revtex4.cls:6030-6032
-  // `\appdef\class@inithook{…\@ifxundefined\bm{\let\bm\REV@bm}{}…}`, run from `\class@documenthook`), so a preamble's
-  // own `\newcommand{\bm}{\bibitem}` (nucl-th0307033) stands; defined at load, the binding's took it away (Perl
-  // revtex4_support.sty.ltxml:167 the same, KNOWN_PERL_ERRORS #965). Guard:
-  // `perfect_kernel_batch73a::revtex_bm_is_provided_at_begin_document`.
+  // REVTeX 4.1/4.2 define it at load (revtex4-1.cls:7565, revtex4-2.cls:7586 `\let\bm\REV@bm`), so a preamble's
+  // `\newcommand{\bm}` errs "Command \bm already defined", as here; REVTeX 4.0 provides it at `\begin{document}`
+  // (revtex4_cls.rs `defer_bm_to_begin_document`; KNOWN_PERL_ERRORS #965).
   bm_sty::define_grouped_bm()?;
-  RawTeX!(r"\let\lx@revtex@bm\bm\let\bm\@undefined\AtBeginDocument{\@ifundefined{bm}{\let\bm\lx@revtex@bm}{}}");
   // Perl L166-168: `locked => 1` keeps \bbox bold-wrapped even when a
   // user or co-loaded package redefines it.
   DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true,
@@ -681,5 +678,18 @@ pub(crate) fn define_revtex41_internals() -> Result<()> {
   DefConstructor!("\\@@endlink", sub[document, _args] {
     document.maybe_close_element("ltx:ref")?;
   });
+  Ok(())
+}
+
+/// REVTeX 4.0 provides `\bm` at `\begin{document}`, only while it is still undefined (revtex4.cls:6030-6032
+/// `\appdef\class@inithook{…\@ifxundefined\bm{\let\bm\REV@bm}{}…}`, run from `\class@documenthook` at
+/// `\AtBeginDocument`, :213-215; `\@ifxundefined` counts a `\relax` as defined), so a preamble's own
+/// `\newcommand{\bm}{\bibitem}` (nucl-th0307033) stands; defined at load, the binding's took it away (Perl
+/// revtex4_support.sty.ltxml:167 the same, KNOWN_PERL_ERRORS #965). REVTeX 4.1/4.2 define it at load. Guards:
+/// `perfect_kernel_batch73a::{revtex_bm_is_provided_at_begin_document, revtex41_bm_is_defined_at_load}`.
+pub fn defer_bm_to_begin_document() -> Result<()> {
+  RawTeX!(
+    r"\let\lx@revtex@bm\bm\let\bm\@undefined\AtBeginDocument{\@ifxundefined\bm{\let\bm\lx@revtex@bm}{}}"
+  );
   Ok(())
 }

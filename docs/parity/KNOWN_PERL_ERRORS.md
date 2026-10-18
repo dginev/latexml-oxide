@@ -15604,16 +15604,18 @@ Trigger: `\documentclass{aastex701}` … `\dataset[GitHub]{https://github.com/a/
 `\begin{deluxetable*}{cc}`; `\bibinfo{title}{3 &lt; z}` in a `\bibitem` — pdflatex 0 errors each.
 
 Rust (73a): aastex_cls.rs defines `\dataset` per version from 6 on (`\href{#2}{[#1]}` for 6.0/6.1, else
-`\href{#2}{#1}`/`[DATASET]`), deluxetable_sty.rs stores the caption (OXIDIZED_DESIGN_DIVERGENCES #739), aastex 7 sets
-`\bibinfo` by `\iflongbib` at `\begin{document}`. Witnesses 2502.04486 2608.18221 1601.05101; 1010.4329 1903.10014
+`\href{#2}{#1}`/`[DATASET]`), deluxetable_sty.rs stores the caption for the next deluxetable (OXIDIZED_DESIGN_DIVERGENCES
+#739, #740), aastex 7 sets `\bibinfo` by `\iflongbib` at the class's load, where aastex701.cls:6894 runs its
+`\setup@hook` (so a preamble's own `\renewcommand\bibinfo` stands). Witnesses 2502.04486 2608.18221 1601.05101; 1010.4329 1903.10014
 2204.03327; 2508.20177 2510.05388. Guards `perfect_kernel_batch73a::{aastex_dataset_links_its_url,
 aastex_tablecaption_before_deluxetable, aastex7_bibinfo_needs_longbib}`.
 
 ## 965. Bindings define at load what the class or package provides only later: subcaption `\subfloat`, REVTeX `\bm`, elsart's `{thm}` for elsarticle
 
-subcaption.sty:262-276 provides `\subfloat` at `\begin{document}` (`\providecommand*`), revtex4.cls:6030-6032 lets `\bm`
-be `\REV@bm` there only while undefined, and elsarticle.cls has no `{thm}`; Perl's bindings define them at load
-(subcaption.sty.ltxml:104, revtex4_support.sty.ltxml:167, elsart_support_core.sty.ltxml:202-204, the last loaded by
+subcaption.sty:262-276 provides `\subfloat` at `\begin{document}` (`\providecommand*`), revtex4.cls:6030-6032 (REVTeX
+4.0; 4.1/4.2 define it at load, revtex4-1.cls:7565, revtex4-2.cls:7586) lets `\bm` be `\REV@bm` there only while
+undefined (`\@ifxundefined`: a `\relax` counts as defined), and elsarticle.cls has no `{thm}`; Perl's bindings define
+them at load (subcaption.sty.ltxml:104, revtex4_support.sty.ltxml:167, elsart_support_core.sty.ltxml:202-204, the last loaded by
 elsarticle too), so a preamble's own `\newcommand{\subfloat}`/`{\bm}`/`{\thm}` was refused and the binding's ran on the
 author's arguments.
 
@@ -15621,28 +15623,31 @@ Trigger: `\usepackage{subcaption}\newcommand{\subfloat}[2]{\fbox{#2}}` and `\sub
 `\documentclass{revtex4}\newcommand{\bm}{\bibitem}` and `\bm{k_5}` in the bibliography;
 `\documentclass{elsarticle}\newcommand{\thm}[1]{Theorem~\ref{t:#1}}` and `\thm{a_b}` — pdflatex 0 errors each.
 
-Rust (73a): subcaption_sty.rs and revtex4_support_sty.rs provide them at `\begin{document}`; `{thm}` is declared by
-elsart_support_sty.rs (elsart only). Witnesses 2511.09162 (117 → 0 Errors), nucl-th0307033, 2212.01438 (14 → 0). Guards
+Rust (73a): subcaption_sty.rs provides `\subfloat` at `\begin{document}`, revtex4_cls.rs REVTeX 4.0's `\bm`
+(`revtex4_support_sty::defer_bm_to_begin_document`; 4.1/4.2 keep it from load, so their preamble `\newcommand{\bm}` is
+ignored, as every `\newcommand` of a defined command is); `{thm}` is declared by elsart_support_sty.rs (elsart only). Witnesses 2511.09162 (117 → 0 Errors), nucl-th0307033, 2212.01438 (14 → 0). Guards
 `perfect_kernel_batch73a::{subcaption_subfloat_is_provided_at_begin_document, revtex_bm_is_provided_at_begin_document,
-elsarticle_has_no_thm_environment}`.
+elsarticle_has_no_thm_environment, revtex41_bm_is_defined_at_load}`.
 
 ## 966. `\DeclareGraphicsExtensions` and `\bibstyle` digest the names they are given
 
 graphics.sty:116-117 `\DeclareGraphicsExtensions` records its list (`\edef\Gin@extensions`), latex.ltx:17773 `\let\bibstyle
-\@gobble`: neither typesets. Perl's are constructors with a digested `{}` argument (graphics.sty.ltxml:306, pool:3972), so
-`.pdf_tex` and `SciPost_bibstyle` erred.
+\@gobble`: neither typesets. Perl's are constructors with a digested `{}` argument (graphics.sty.ltxml:306, pool:3972;
+epsfig.sty.ltxml:57 redefines `\DeclareGraphicsExtensions` so, though epsfig.sty defines none), so `.pdf_tex` and
+`SciPost_bibstyle` erred.
 
-Trigger: `\usepackage{graphicx}\DeclareGraphicsExtensions{.pdf,.pdf_tex}`; `\bibstyle{SciPost_bibstyle}` — pdflatex 0
-errors.
+Trigger: `\usepackage{graphicx}` (or `{epsfig}`) `\DeclareGraphicsExtensions{.pdf,.pdf_tex}`;
+`\bibstyle{SciPost_bibstyle}` — pdflatex 0 errors.
 
-Rust (73a): graphics_sty.rs's `\DeclareGraphicsExtensions` is the package's macro; sect11.rs reads `\bibstyle`'s name
+Rust (73a): graphics_sty.rs's `\DeclareGraphicsExtensions` is the package's macro, which epsfig_sty.rs no longer replaces; sect11.rs reads `\bibstyle`'s name
 Semiverbatim. Witnesses 1810.02483, 2412.10240. Guards `perfect_kernel_batch73a::{declare_graphics_extensions_is_not_typeset,
 bibstyle_name_is_not_typeset}`.
 
 ## 967. elsart's `{subbibitems}` takes no key; svjour's `\tableheadseprule` is a bare `\hrule`
 
 elsart.cls:600 `\newenvironment{subbibitems}[1]` reads the group's citation key; elsart_support.sty.ltxml:117 takes none,
-so the key was typeset (a `_` in it erred). svjour2.cls:1032 (svjour3, svmult alike) `\tableheadseprule` is
+so the key was typeset (a `_` in it erred). svjour2.cls:1032 (svjour3.cls and svmult.cls are not in TeX Live 2025)
+`\tableheadseprule` is
 `\noalign{\hrule height.375mm}`; sv_support.sty.ltxml:143's bare `\hrule` in a `tabular` row was misplaced and the
 `\noalign{\smallskip}` after it erred ("\noalign cannot be used here").
 

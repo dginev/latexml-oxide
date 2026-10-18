@@ -2474,8 +2474,12 @@ pub fn resolve_deferred_prints(list: Option<&str>) -> Result<()> {
   if lookup_int("lx@deferred@print@unresolved") <= 0 {
     return Ok(());
   }
+  // The entries below the low-water mark are all resolved: a scan starts at the first one still pending, so the
+  // streaming yields, which resolve every list, scan each entry once.
   let count = lookup_int("lx@deferred@print@count");
-  for id in 1..=count {
+  let low = lookup_int("lx@deferred@print@low").max(1);
+  let mut first_pending: Option<i64> = None;
+  for id in low..=count {
     let key = s!("lx@deferred@print@tokens@{id}");
     let Some(Stored::Tokens(tokens)) = lookup_value(&key) else {
       continue;
@@ -2483,6 +2487,7 @@ pub fn resolve_deferred_prints(list: Option<&str>) -> Result<()> {
     if let Some(list) = list
       && lookup_string(&s!("lx@deferred@print@list@{id}")) != list
     {
+      first_pending.get_or_insert(id);
       continue;
     }
     assign_value(&key, Stored::None, Some(Scope::Global));
@@ -2499,6 +2504,11 @@ pub fn resolve_deferred_prints(list: Option<&str>) -> Result<()> {
       Some(Scope::Global),
     );
   }
+  assign_value(
+    "lx@deferred@print@low",
+    Stored::Int(first_pending.unwrap_or(count + 1)),
+    Some(Scope::Global),
+  );
   Ok(())
 }
 

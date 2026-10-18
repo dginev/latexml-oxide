@@ -32,7 +32,7 @@ LoadDefinitions!({
   // Number equations within sections
   DeclareOption!("eqsecnum", "\\AtEndOfClass{\\eqsecnum}");
 
-  // aastex701.cls:105/:109 `\newif\iflongbib`, `\DeclareOption{longbib}{\global\longbibtrue}` (AASTeX 7's only; the
+  // aastex701.cls:100/:109 `\newif\iflongbib`, `\DeclareOption{longbib}{\global\longbibtrue}` (AASTeX 7's only; the
   // `\bibinfo` it chooses is set below).
   RawTeX!(r"\newif\iflongbib");
   DeclareOption!("longbib", "\\global\\longbibtrue");
@@ -102,11 +102,20 @@ LoadDefinitions!({
 \let\savedoi\doi");
     }
   }
-  // AASTeX 7 drops a reference's `\bibinfo{title}{…}` unless `longbib` (aastex701.cls:6726-6732, in `\setup@hook`, run
-  // at `\begin{document}`): REVTeX's `\bibinfo` (revtex4_support_sty.rs) printed the title, whose raw `&` erred
-  // (2508.20177, 2510.05388). Guard: `perfect_kernel_batch73a::aastex7_bibinfo_needs_longbib`.
+  // AASTeX 7 drops a reference's `\bibinfo{title}{…}` unless `longbib` (aastex701.cls:6726-6732, appended to
+  // `\setup@hook`, which the class runs at its load, :6894, after its options and packages): REVTeX's `\bibinfo`
+  // (revtex4_support_sty.rs) printed the title, whose raw `&` erred (2508.20177, 2510.05388). Chosen here, at the class's
+  // load as there, so an author's preamble `\renewcommand\bibinfo` stands. Guard:
+  // `perfect_kernel_batch73a::aastex7_bibinfo_needs_longbib`.
   if requested.starts_with("aastex7") {
-    RawTeX!(r"\AtBeginDocument{\iflongbib\renewcommand\bibinfo[2]{#2}\else\renewcommand\bibinfo[2]{\unskip\unskip\unskip}\fi}");
+    RawTeX!(r"\iflongbib\renewcommand\bibinfo[2]{#2}\else\renewcommand\bibinfo[2]{\unskip\unskip\unskip}\fi");
+  }
+  // AASTeX 6+ scope a stored `\tablecaption` to its group (deluxetable_sty.rs `\lx@deluxe@tablecaption`;
+  // OXIDIZED_DESIGN_DIVERGENCES #739): the class's `\gdef` store (aastex701.cls:8417-8418) is emptied by every
+  // deluxetable (:11303-11304), so a caption kept for the next one must not outlive the group it was given in
+  // (2204.03327's `{longrotatetable}`). Guard: `perfect_kernel_batch73a::stored_tablecaption_scoped_to_its_group`.
+  if aastex6_plus {
+    RawTeX!(r"\let\lx@deluxe@caption@store\def");
   }
   // `\authorcomment`'s label differs between versions (aas_support_sty.rs `define_authorcomment`): the paper's copy of
   // the class decides — "(Author~note: …)" in most aastex63.cls copies (2205.09859 :5731) and in aastex62.cls, the

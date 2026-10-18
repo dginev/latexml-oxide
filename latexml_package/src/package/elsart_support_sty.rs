@@ -8,7 +8,7 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("elsart_support_core");
-  // Theorems — Perl elsart_support_core.sty.ltxml L168-175, elsart's only (an elsarticle paper's own `\thm` stands:
+  // Theorems — Perl elsart_support_core.sty.ltxml L200-204, elsart's only (an elsarticle paper's own `\thm` stands:
   // 2212.01438; guard `perfect_kernel_batch73a::elsarticle_has_no_thm_environment`).
   // Perl conditional on `@seceqn` flag (set by elsart.cls's `seceqn`
   // class option):

@@ -112,7 +112,7 @@ LoadDefinitions!({
   // Perl: DefMacroI('\deluxetable', '{}', '\set@deluxetable@template{#1}\def\@deluxetable@header{}\begin{table}');
   DefMacro!("\\deluxetable{}",
     "\\set@deluxetable@template{#1}\\def\\@deluxetable@header{}\\begin{table}\\lx@deluxe@stored@caption");
-  DefMacro!("\\enddeluxetable", "\\spew@tblnotes\\end{table}");
+  DefMacro!("\\enddeluxetable", "\\lx@deluxe@pending@caption\\spew@tblnotes\\end{table}");
 
   // star variant — use runtime def_macro for star-containing names
   {
@@ -122,7 +122,7 @@ LoadDefinitions!({
     def_macro(T_CS!("\\deluxetable*"), params, ExpansionBody::Tokens(expansion), None)?;
   }
   {
-    let expansion = TokenizeInternal!("\\spew@tblnotes\\end{table}");
+    let expansion = TokenizeInternal!("\\lx@deluxe@pending@caption\\spew@tblnotes\\end{table}");
     def_macro(T_CS!("\\enddeluxetable*"), None, ExpansionBody::Tokens(expansion), None)?;
   }
 
@@ -195,20 +195,32 @@ LoadDefinitions!({
   def_macro_noop("\\tablecolumns{Number}")?;
 
   // `\tablecaption` outside a float is stored, not set (aastex701.cls:8417-8418 `\gdef\@tablecaption{#1}`, aastex631.cls
-  // alike; AASTeX 5.x `\gdef\pt@caption`): an author's `\tablecaption{…}` ahead of `\begin{deluxetable}` was a
-  // `\caption` outside any float, an Error (1010.4329, 1903.10014, 2204.03327). The next deluxetable sets it as its caption
-  // (`\lx@deluxe@stored@caption`), where aastex701.cls:11303-11304 resets it at the table's start and the PDF loses it:
-  // the author's caption is kept (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #739). In a float, or a
-  // `{longtable}` (emulateapj's in the document's own, 1810.10130), it is that table's `\caption`, as Perl lets it
-  // everywhere (deluxetable.sty.ltxml:77, KNOWN_PERL_ERRORS #964). A caption no deluxetable takes is lost, as in the
-  // PDF (2204.03327's `{longrotatetable}` around a plain `tabular`).
-  // Guard: `perfect_kernel_batch73a::aastex_tablecaption_before_deluxetable`.
-  RawTeX!(r"\gdef\lx@deluxe@caption{}");
+  // alike; AASTeX 5.x aastex.cls:1280 `\gdef\pt@caption`; emulateapj.cls:1217-1218 in 1010.4329's copy): an author's `\tablecaption{…}` ahead
+  // of `\begin{deluxetable}` was a `\caption` outside any float, an Error (1010.4329, 1903.10014, 2204.03327). The next
+  // deluxetable takes the stored caption (`\lx@deluxe@stored@caption`, at its start: the store is emptied and the caption
+  // held for this table) and sets it at its end (`\lx@deluxe@pending@caption`) only when the table set none of its
+  // own — a `\tablecaption` or `\caption` inside the table wins, as aastex701.cls:11303-11304 resets the store at the
+  // table's start (`\deluxetablecaption{}`) and sets the inner one; emulateapj.cls:1249/:1257 prints the store, set
+  // before or in the table, at the table's head. The store is global (`\lx@deluxe@caption@store` is `\gdef`, the
+  // classes' own); AASTeX 6+ scope it to its group (aastex_cls.rs `\let\lx@deluxe@caption@store\def`), so a caption a
+  // group closes on is not left for an unrelated table. Keeping a caption ahead of an AASTeX 6+ deluxetable, which the
+  // PDF loses, is user ruling 2026-10-18 (OXIDIZED_DESIGN_DIVERGENCES #739); emulateapj's and AASTeX 5's are TeX's (#740). In
+  // a float, or a `{longtable}` (emulateapj's in the document's own, 1810.10130; 1903.10014's AASTeX 5 longtable), it
+  // is that table's `\caption`, as Perl lets it everywhere (deluxetable.sty.ltxml:77, KNOWN_PERL_ERRORS #964); an AASTeX
+  // `{longrotatetable}` around a plain `tabular` is a table float (aas_support_sty.rs; 2204.03327).
+  // Guards: `perfect_kernel_batch73a::{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
+  // stored_tablecaption_scoped_to_its_group}`.
+  RawTeX!(r"\gdef\lx@deluxe@caption{}\global\let\lx@deluxe@pending\@empty\global\let\lx@deluxe@caption@store\gdef");
   DefMacro!("\\lx@deluxe@tablecaption{}",
-    r"\@ifundefined{@captype}{\ifx\caption\lx@longtable@caption\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}{\@firstoftwo}{\caption{#1}}{\gdef\lx@deluxe@caption{#1}}");
+    r"\@ifundefined{@captype}{\ifx\caption\lx@longtable@caption\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}{\@firstoftwo}{\caption{#1}}{\lx@deluxe@caption@store\lx@deluxe@caption{#1}}");
   Let!("\\tablecaption", "\\lx@deluxe@tablecaption");
+  // At the table's start, inside its group: the stored caption becomes this table's pending one and the store is
+  // emptied; a caption the table sets (its `\caption`, which `\tablecaption` calls there) cancels the pending one.
   DefMacro!("\\lx@deluxe@stored@caption",
-    r"\ifx\lx@deluxe@caption\@empty\else\expandafter\caption\expandafter{\lx@deluxe@caption}\global\let\lx@deluxe@caption\@empty\fi");
+    r"\let\lx@deluxe@pending\lx@deluxe@caption\global\let\lx@deluxe@caption\@empty
+\let\lx@deluxe@caption@orig\caption\def\caption{\let\lx@deluxe@pending\@empty\lx@deluxe@caption@orig}");
+  DefMacro!("\\lx@deluxe@pending@caption",
+    r"\ifx\lx@deluxe@pending\@empty\else\expandafter\lx@deluxe@caption@orig\expandafter{\lx@deluxe@pending}\fi");
 
   DefMacro!("\\tablehead{}",
     "\\def\\@deluxetable@header{\\lx@alignment@begin@heading#1\\\\\\hline\\lx@alignment@end@heading}");

@@ -6,6 +6,26 @@ use crate::{
   prelude::*,
 };
 
+/// Whether `digested` holds a table float of its own — the `{table}` a deluxetable opens (`{longrotatetable}`).
+fn holds_table_float(digested: &Digested) -> bool {
+  match digested.data() {
+    DigestedData::List(list) => list.borrow().boxes.iter().any(holds_table_float),
+    DigestedData::Whatsit(whatsit) => {
+      let whatsit = whatsit.borrow();
+      let cs = whatsit.get_definition().get_cs().to_string();
+      cs == "\\begin{table}"
+        || cs == "\\begin{table*}"
+        || whatsit
+          .get_body()
+          .ok()
+          .flatten()
+          .is_some_and(|body| holds_table_float(&body))
+        || whatsit.get_args().iter().flatten().any(holds_table_float)
+    },
+    _ => false,
+  }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: aas_support.sty.ltxml — support macros for AAS styles
@@ -837,7 +857,53 @@ LoadDefinitions!({
   // never typesets them: a file `rolling_ns3.mp4` raised "Script _ can only appear in math mode" (2303.02355;
   // OXIDIZED_DESIGN #551). Guard `perfect_kernel_batch65m::file_arguments_are_not_typeset`.
   DefEnvironment!("{interactive} Semiverbatim Semiverbatim", "#body");
-  DefEnvironment!("{longrotatetable}", "#body");
+  // aastex701.cls:12245-12286 (aastex631.cls alike) `{longrotatetable}` turns the page for the long table it holds, a
+  // deluxetable it sets non-floating (`\global\floatfalse`, `\startlongtabletrue`). Around a plain `tabular` it is that
+  // table's float here (main-session call 2026-10-18, under user ruling 2 "keep the author's caption"; OXIDIZED_DESIGN
+  // _DIVERGENCES #739): `\@captype` is `table`, so its `\tablecaption` is the table's `\caption` and its `\label` the
+  // table's, where the PDF set the tabular without the caption the class stored and never printed (2204.03327). Around
+  // a deluxetable — whose own `{table}` the body then holds — it stays the page's setting, the body alone.
+  // Guard: `perfect_kernel_batch73a::longrotatetable_around_a_tabular_is_its_table`.
+  DefEnvironment!("{longrotatetable}", sub[document, _args, props] {
+    let body = match props.get("body") {
+      Some(Stored::Digested(body)) => Some(body.clone()),
+      _ => None,
+    };
+    if matches!(props.get("holds_table"), Some(Stored::Bool(true))) {
+      if let Some(body) = body {
+        document.absorb(&body, None)?;
+      }
+      return Ok(());
+    }
+    let save = document.float_to_element("ltx:table", true)?;
+    let mut attrs = string_map!();
+    for key in ["id", "inlist"] {
+      if let Some(value) = props.get(key).map(|v| v.to_string()).filter(|v| !v.trim().is_empty()) {
+        attrs.insert(if key == "id" { "xml:id".to_string() } else { key.to_string() }, value);
+      }
+    }
+    document.open_element("ltx:table", Some(attrs), None)?;
+    if let Some(Stored::Digested(tags)) = props.get("tags") {
+      document.absorb(tags, None)?;
+    }
+    if let Some(body) = body {
+      document.absorb(&body, None)?;
+    }
+    document.close_element("ltx:table")?;
+    if let Some(save) = save {
+      document.set_node(&save);
+    }
+    Ok(())
+  },
+    properties => { stored_map!("layout" => "vertical") },
+    mode => "internal_vertical",
+    before_digest => { before_float_ex("table", None, true)?; engine::latex_constructs::reset_float_box()?; },
+    after_digest => sub[whatsit] { after_float(whatsit); },
+    after_digest_body => sub[whatsit] {
+      if let Ok(Some(body)) = whatsit.get_body() {
+        whatsit.set_property("holds_table", Stored::Bool(holds_table_float(&body)));
+      }
+    });
   // aastex701.cls TL :12212-12231 — `rotatetable(*)` sets its table turned 90° on its own page, page layout as for
   // `longrotatetable` (2609.01052).
   DefEnvironment!("{rotatetable}", "#body");

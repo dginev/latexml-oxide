@@ -1,0 +1,24 @@
+% witness: review 73a finding 1 (tc_stale, 2204.03327): a stored AASTeX 6+ `\tablecaption` no deluxetable took was
+%          set on the next, unrelated, caption-less deluxetable
+% oracle:  pdflatex (clean): no caption on the table (aastex631.cls stores the stray caption, its deluxetable empties the
+%          store at its start)
+% engines: rust 73a1 = 0 errors, the table captioned "Stray caption."; Perl = 1 error (deluxetable.sty.ltxml:77, the
+%          `\caption` outside any float)
+% expect:  0 errors, 0 warnings; the deluxetable without a caption (AASTeX 6+ scope the store to its group,
+%          OXIDIZED_DESIGN_DIVERGENCES #739)
+% status:  RED (73a1) -> GREEN (73a r2)
+% preload: ar5iv.sty
+\documentclass{aastex631}
+\begin{document}
+\begin{center}
+\tablecaption{Stray caption.}
+Centered text.
+\end{center}
+Later text.
+\begin{deluxetable}{cc}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+5 & 6 \\
+\enddata
+\end{deluxetable}
+\end{document}

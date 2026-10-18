@@ -19737,46 +19737,82 @@ koma_ids_and_appendix_follow_the_standard_classes, ceurart_title_mode_sub_is_the
 `sectioning-frontmatter/koma_ids_and_appendix_{scrartcl,scrreprt,scrbook}`, `koma_sectioning_check_warns`,
 `stand-in-copies/class_slot/ceurart_title_mode_sub`.
 
-### 738. An `\index`/`\nomenclature` entry is typeset only where its list is printed (user ruling 2026-10-18)
+### 738. An `\index`/`\nomenclature`/`\glossary` entry is typeset only where its list is printed (user ruling 2026-10-18)
 
 **TeX**: `\index` writes its entry `\@sanitize`d and `\protected@write`-expanded to the `.idx` (latex.ltx:17710-17726),
-`\nomenclature` to the `.nlo` (nomencl.sty:208-245); the entry is typeset only when `\printindex`/`\printnomenclature`
-reads makeindex's `.ind`/`.nls` — with all the document's entries, the ones after the command too. Without a print
-command nothing is typeset, so an entry's `_` or `\|` is no TeX error; makeindex itself rejects a nomencl line holding a
-second `|` or `@` ("Extra `|'", the `.ilg`), braced or not.
+`\glossary` after `\makeglossary` to the `.glo` (:17727-17741), `\nomenclature` to the `.nlo` (nomencl.sty:208-245); the
+entry is typeset only when `\printindex`/the `.gls` input/`\printnomenclature` reads makeindex's `.ind`/`.gls`/`.nls` —
+with all the document's entries, the ones after the command too. Without a print command nothing is typeset, so an
+entry's `_` or `\|` is no TeX error; makeindex itself rejects a nomencl line holding a second `|` or `@` ("Extra `|'",
+the `.ilg`), braced or not.
 
 **Perl**: every phrase is digested at the `\index`/`\nomenclature` (pool `\index`; Perl's nomencl is raw and prints no
-list).
+list); `\glossary` inserts a phrase only outside `ltx:p` (KNOWN_PERL_ERRORS #281).
 
 **Rust** (73a): the entry's tokens (expanded as the write expands them; nomencl's with `\theequation` fixed) are kept
 under an id (latexml_core stomach.rs `defer_print`) and the anchor `\lx@deferred@print{id}` stands where the entry was
-made; when the list is printed (`{theindex}`, makeidx/imakeidx `\printindex`, the `.ind` stand-in `\lx@makeindex@output`,
-nomencl's `\printnomenclature`) `resolve_deferred_prints` digests them in document order and the anchors absorb the
-marks, so an index keeps its marks where the `\index`es stood; once printed, a later entry is digested at once. A list
-never printed typesets nothing: no `<ltx:indexmark>`/`<ltx:glossarydefinition>`, and no HTML head keywords from index
-phrases (the webpage stylesheet's source) — the document has no index. A nomencl entry makeindex would reject is left out
-of the printed list with a Warning. `\glossary` (`glo`) is unchanged. Under streaming (and the adaptive eager phase's
+made; when the list is printed (`{theindex}`, makeidx/imakeidx `\printindex`, the `.ind`/`.gls` stand-in
+`\lx@makeindex@output`, nomencl's `\printnomenclature`) `resolve_deferred_prints` digests them in document order (from a
+low-water mark, so repeated resolutions scan each entry once) and the anchors absorb the marks, so a list keeps its
+marks where the entries stood; once printed, a later entry is digested at once. A list never printed typesets nothing:
+no `<ltx:indexmark>`/`<ltx:glossarydefinition>`, and no HTML head keywords from index phrases (the webpage stylesheet's
+source) — the document has no index; that loss is accepted as the ruling's consequence (main session 2026-10-18; raw
+undigested marks were declined). `\glossary` follows the same rule (main-session call 2026-10-18 under the ruling).
+A nomencl entry makeindex would reject (a `|`/`@` in its prefix, symbol, description, or table-mode unit and note,
+nomencl.sty:228-232) is left out of the printed list with a Warning. Under streaming (and the adaptive eager phase's
 soft yield) a fragment is built before a later print could fill its anchors, so a yield digests every pending entry at
-once, as Perl does (the output then holds marks of an unprinted list; the streaming sweeps' fixtures print theirs).
-Witnesses 1112.3972 (20 → 0 Errors), 2506.02168 (1 → 0, `\printnomenclature` ahead of the entries). Repros
+once, as Perl does: a streamed conversion then holds marks of an unprinted list where the eager one has none — the
+second documented exception to the `--streaming` byte-identity besides #456 (the `--streaming` help text; the sweep's
+`streaming_sweep::STREAMING_DIVERGENT_FIXTURES` lets `cluster_regressions/verb_in_index.tex` differ and
+`114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries` asserts the divergence). Witnesses
+1112.3972 (20 → 0 Errors), 2506.02168 (1 → 0, `\printnomenclature` ahead of the entries). Repros
 index/{index_entry_typeset_only_when_printed, printed_index_keeps_its_entries,
-nomenclature_entry_typeset_only_when_printed}; guards `perfect_kernel_batch73a::{index_entry_is_typeset_only_when_printed,
-printed_index_keeps_its_entries, nomenclature_entry_is_typeset_only_when_printed}`.
+nomenclature_entry_typeset_only_when_printed, glossary_entry_typeset_only_when_printed},
+index-bib/index_entry_ampersand_is_literal_list_printed_first; guards
+`perfect_kernel_batch73a::{index_entry_is_typeset_only_when_printed, printed_index_keeps_its_entries,
+nomenclature_entry_is_typeset_only_when_printed, glossary_entry_is_typeset_only_when_printed,
+index_entry_ampersand_is_literal_list_printed_first, nomentbl_unit_with_a_bar_is_rejected}`.
 
-### 739. aastex's `\tablecaption` before `\begin{deluxetable}` is the table's caption (user ruling 2026-10-18)
+### 739. AASTeX 6+'s `\tablecaption` before `\begin{deluxetable}`, or in a `{longrotatetable}` around a plain `tabular`, is the table's caption (user ruling 2026-10-18)
 
 **TeX**: aastex701.cls:8417-8418 (aastex631.cls alike) `\def\tablecaption#1{\gdef\@tablecaption{#1}}` stores the caption,
-and `\deluxetable` resets it at the table's start (:11303-11304 `\let\tablecaption\deluxetablecaption
-\deluxetablecaption{}`): a caption given before the table is lost in the PDF.
+and `\deluxetable` empties the store at the table's start (:11303-11304 `\let\tablecaption\deluxetablecaption
+\deluxetablecaption{}`): a caption given before the table is lost in the PDF, a caption inside it set. In
+`{longrotatetable}` (:12245-12286) around a plain `tabular` the stored caption is never printed.
 
 **Perl**: `\let\tablecaption\caption` (deluxetable.sty.ltxml:77) — outside a float an Error ("outside any known float").
 
-**Rust** (73a): outside a float or a `{longtable}`, `\tablecaption` stores (deluxetable_sty.rs `\lx@deluxe@tablecaption`,
-emulateapj_cls.rs's outer branch too), and the next deluxetable sets the stored caption as its `\caption` — the author's
-caption kept, content before PDF fidelity. In a float or longtable it is that table's `\caption`, as before. A stored
-caption no deluxetable takes is lost, as in the PDF (2204.03327: `{longrotatetable}` around a plain `tabular`). Witnesses
-1010.4329 (4 → 0), 1903.10014, 2204.03327 (2 → 0). Repro class-bindings/aastex_tablecaption_before_deluxetable; guard
-`perfect_kernel_batch73a::aastex_tablecaption_before_deluxetable`.
+**Rust** (73a): outside a float or a `{longtable}`, `\tablecaption` stores (deluxetable_sty.rs `\lx@deluxe@tablecaption`);
+the next deluxetable takes the stored caption at its start (the store emptied, the caption pending for this table) and
+sets it at its end only when the table set no `\tablecaption`/`\caption` of its own — the inner one wins, as in the PDF;
+the author's outer caption is kept where the PDF loses it, content before PDF fidelity. AASTeX 6+ scope the store to its
+group (aastex_cls.rs `\let\lx@deluxe@caption@store\def`; the class's is `\gdef`), so a caption no deluxetable took in
+its group is not set on a later, unrelated table. An aastex `{longrotatetable}` around a plain `tabular` is that table's
+float (aas_support_sty.rs, main-session call 2026-10-18 under the ruling): `\@captype` is `table`, its `\tablecaption`
+the table's `\caption`, its `\label` the table's; around a deluxetable (aastex's `\floatfalse`) it is the page's setting,
+the deluxetable its own table. In a float or longtable `\tablecaption` is that table's `\caption`, as before. The
+emulateapj and AASTeX 5 stores are TeX's (#740). Witnesses 2204.03327 (2 → 0, its two `{longrotatetable}` captions
+kept). Repros class-bindings/{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
+stored_tablecaption_scoped_to_its_group, longrotatetable_around_a_tabular_is_its_table}; guards
+`perfect_kernel_batch73a::{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
+stored_tablecaption_scoped_to_its_group, longrotatetable_around_a_tabular_is_its_table}`.
+
+### 740. emulateapj's and AASTeX 5's stored `\tablecaption` is printed by the next table (Perl: an Error outside a float)
+
+**TeX**: emulateapj.cls:1217-1218 (1010.4329's copy; TL 2025's :1293-1294) `\gdef\@tablecaption{#1}` stores the
+caption globally and the next `{deluxetable}` prints it at its head (:1249, :1257; TL :1325, :1333; `{deluxetable}`
+:1354-1383 does not empty the store first), so a `\tablecaption`
+before the table is that table's caption; AASTeX 5's aastex.cls:1280 `\gdef\pt@caption` stores it the same way (:1507
+prints it).
+
+**Perl**: `\let\tablecaption\caption` (deluxetable.sty.ltxml:77) — outside a float an Error ("outside any known float").
+
+**Rust** (73a): the store of #739, global (`\lx@deluxe@caption@store` = `\gdef`, the classes' own), is taken by the next
+deluxetable (emulateapj_cls.rs's `\tablecaption` outer branch, its `\deluxetable` and `\lx@eapj@end@deluxetable`), so
+the caption is the table's, as in the PDF; a caption inside the table wins, as the class's later `\gdef` does. In a
+`{longtable}` the `\tablecaption` is the longtable's `\caption` (1903.10014's AASTeX 5 longtable: the store is never
+printed there, no deluxetable following — the author's caption kept, as #739). Witnesses 1010.4329 (4 → 0), 1903.10014
+(1 → 0). Guard `perfect_kernel_batch73a::stored_tablecaption_scoped_to_its_group` (its emulateapj half).
 
 ### 744. A stand-in copy's `\input` files are part of the copy; its syntax ends with its load; its declaration names the binding that answered
 

@@ -55,7 +55,8 @@ LoadDefinitions!({
   def_macro_noop("\\EOD")?;
   // `\Figure[pos](keys)[gopts]{file}{caption}` (ieeeaccess.cls:270-300): a `{figure}` (`{figure*}` when the image is wider
   // than the column — page layout, not kept here) holding `\includegraphics[gopts]{file}` and `\caption{caption}`; the
-  // `figkeys` (`topskip`/`midskip`/`botskip`, :262-267) are vertical spacing. As `\@gobble` it dropped the figure and
+  // `figkeys` (`topskip`/`midskip`/`botskip`, :262-267) are vertical spacing, so the class's `\setkeys{figkeys}{#2}`
+  // (:275) is not run. As `\@gobble` it dropped the figure and
   // spilled the file name, whose `_` erred (1803.04935, 1910.07402). Guard:
   // `perfect_kernel_batch73a::ieeeaccess_figure_is_a_figure`.
   RawTeX!(

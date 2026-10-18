@@ -118,14 +118,16 @@ LoadDefinitions!({
   // every cell is a node, its entry boxed (`\psm@beginnode`, :1206-1220: an optional `[par]` first, then
   // `\hbox{$\displaystyle …$}` when the matrix is in math, `\textstyle` in inline math, plain text outside), `\\` ending
   // a row (`\psm@cr`, :1196-1204; its `[dim]` only when the bracket follows at once, so a next row's `[name=…]` stays
-  // that node's) — the node geometry dropped as for the other nodes here. A no-op left its `&` stray (0705.2689,
+  // that node's) — the node geometry dropped as for the other nodes here. The matrix is a group (`\begingroup` …
+  // `\endgroup`, :1163/:1191-1192), so its `\\` does not outlive a `\psmatrix … \endpsmatrix` used without
+  // `\begin`/`\end`. Guard: `perfect_kernel_batch73a::psmatrix_is_a_group`. A no-op left its `&` stray (0705.2689,
   // 1712.01407; Perl defines no `{psmatrix}`, so its `\begin{psmatrix}` is undefined).
   // Guard: `perfect_kernel_batch73a::psmatrix_is_an_alignment`.
-  RawTeX!(r"\def\psmatrix{\@ifnextchar[\lx@psm@opt\lx@psm@begin}
+  RawTeX!(r"\def\psmatrix{\begingroup\@ifnextchar[\lx@psm@opt\lx@psm@begin}
 \def\lx@psm@opt[#1]{\lx@psm@begin}
 \def\lx@psm@begin{\edef\lx@psm@bm{\ifmmode$\noexpand\m@th\ifinner\noexpand\textstyle\else\noexpand\displaystyle\fi\fi}%
 \edef\lx@psm@em{\ifmmode$\fi}\let\\\lx@psm@cr\leavevmode\vbox\bgroup\halign\bgroup&\lx@psm@cell##\lx@psm@endcell\cr}
-\def\endpsmatrix{\crcr\egroup\egroup}
+\def\endpsmatrix{\crcr\egroup\egroup\endgroup}
 \def\lx@psm@cr{\futurelet\lx@psm@next\lx@psm@cr@}
 \def\lx@psm@cr@{\ifx\lx@psm@next[\expandafter\lx@psm@cr@opt\else\expandafter\cr\fi}
 \def\lx@psm@cr@opt[#1]{\cr}

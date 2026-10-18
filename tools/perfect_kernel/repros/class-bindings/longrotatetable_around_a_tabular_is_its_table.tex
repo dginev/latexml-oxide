@@ -1,0 +1,33 @@
+% witness: 2204.03327 (aastex631: `\begin{longrotatetable}\tablecaption{…}\label{…}\begin{tabular}…`)
+% oracle:  pdflatex (clean) sets the tabular turned on its own page; aastex631.cls stores the caption and never prints it
+% engines: rust 73a1 = 0 errors, the caption stored and lost (or set on a later caption-less deluxetable, tc_stale);
+%          Perl = 1 error (deluxetable.sty.ltxml:77, the `\caption` outside any float)
+% expect:  0 errors, 0 warnings; the longrotatetable is the tabular's table float, captioned "Table 1", its label
+%          attached; the deluxetable after it uncaptioned, Table 2 (main-session call 2026-10-18 under user ruling 2,
+%          OXIDIZED_DESIGN_DIVERGENCES #739)
+% status:  RED (73a1) -> GREEN (73a r2)
+% preload: ar5iv.sty
+\documentclass{aastex631}
+\begin{document}
+\begin{longrotatetable}
+\tablecaption{Caption of the plain tabular.}
+\label{tab:plain}
+\begin{tabular}{cc}1&2\end{tabular}
+\end{longrotatetable}
+Later text, Table~\ref{tab:plain}.
+\begin{deluxetable}{cc}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+5 & 6 \\
+\enddata
+\end{deluxetable}
+\begin{longrotatetable}
+\begin{deluxetable*}{cc}
+\tablecaption{A long deluxetable.}
+\tablehead{\colhead{C} & \colhead{D}}
+\startdata
+7 & 8 \\
+\enddata
+\end{deluxetable*}
+\end{longrotatetable}
+\end{document}

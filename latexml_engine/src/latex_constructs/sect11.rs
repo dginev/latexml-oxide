@@ -1396,13 +1396,16 @@ pub(crate) fn load() -> Result<()> {
   // `\@bsphack\begingroup\@sanitize\@index`: the entry is read and dropped
   // (`\@index`, :17726), never typeset — the arXiv papers above call none, and
   // guitar.dtx:397-399's `\changes` text `\protected@edef`s to `\def{\relax}`
-  // (repro `index/glossary_digests_argument_guitar.tex`).
+  // (repro `index/glossary_digests_argument_guitar.tex`). After it, the entry is typeset only where the glossary is
+  // printed (the `.gls` stand-in, `\lx@makeindex@output`), as an `\index` entry is (OXIDIZED_DESIGN_DIVERGENCES #738,
+  // main-session call 2026-10-18 under user ruling 1): latex.ltx:17737-17741 `\@wrglossary` writes it raw to the
+  // `.glo`. Guard: `perfect_kernel_batch73a::glossary_entry_is_typeset_only_when_printed`.
   DefMacro!("\\glossary SanitizedVerbatim", sub[(phrases)] {
     if !is_defined_token(&T_CS!("\\@glossaryfile")) {
       return Ok(Tokens!());
     }
     let (entry, formed) = reread_sanitized_entry(&Tokens::new(phrases.revert()));
-    process_index_phrases(entry, &IndexChars::in_force(), Some("glo"), &formed)
+    Ok(deferred_print_tokens("glo", process_index_phrases(entry, &IndexChars::in_force(), Some("glo"), &formed)?))
   });
 
   // Standard English caption names set by babel-english.ldf's

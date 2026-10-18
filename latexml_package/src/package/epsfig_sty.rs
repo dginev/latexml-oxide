@@ -70,7 +70,10 @@ LoadDefinitions!({
       Ok(stored_map!("graphic" => file, "candidates" => candidates, "options" => options))
     });
   Let!("\\epsfig", "\\psfig");
-  DefConstructor!("\\DeclareGraphicsExtensions{}", "");
+  // No `\DeclareGraphicsExtensions` of its own: epsfig.sty defines none, and Perl's `DefConstructor(…, '')`
+  // (epsfig.sty.ltxml:57) replaced graphics.sty's macro (graphics_sty.rs), so `\DeclareGraphicsExtensions{.pdf,.pdf_tex}`
+  // was typeset and its `_` erred (KNOWN_PERL_ERRORS #966). Guard:
+  // `perfect_kernel_batch73a::declare_graphics_extensions_is_not_typeset`.
   // Not Perl's `DefConstructor('\DeclareGraphicsRule{}{}{} Undigested', '')` (epsfig.sty.ltxml:58): epsfig.sty
   // defines no `\DeclareGraphicsRule`, and the redefinition dropped graphics.sty's rule (graphics_sty.rs), so a
   // `\usepackage{epsfig}` lost gincltex's `.tex` rule (2408.06999; KNOWN_PERL_ERRORS #858, #921).

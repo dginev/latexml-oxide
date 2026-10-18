@@ -152,7 +152,7 @@ LoadDefinitions!({
     DefMacro!("\\theequation", "\\thesection.\\arabic{equation}");
   }
 
-  // Theorems — Perl elsart_support_core.sty.ltxml L168-175: `{thm}` is elsart.cls's, declared by elsart_support_sty.rs;
+  // Theorems — Perl elsart_support_core.sty.ltxml L200-204: `{thm}` is elsart.cls's, declared by elsart_support_sty.rs;
   // elsarticle.cls has none (its own `\newdefinition` :1154, `\newproof` :1200), so an elsarticle preamble's
   // `\newcommand{\thm}` stands (2212.01438; Perl gives elsarticle the `{thm}` too, KNOWN_PERL_ERRORS #965).
   Let!("\\newdefinition", "\\newtheorem");
