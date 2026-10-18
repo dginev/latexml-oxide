@@ -19926,7 +19926,9 @@ typesets there starts a paragraph, whose `\everypar{\@nodocument}` (latex.ltx:91
 `\lx@setlength@nodocument`, which runs `\@nodocument` when the code, begun in vertical mode, left it horizontal
 (fancyheadings' `\headrulewidth`, a macro since 2.0: `\setlength{\headrulewidth}{0pt}` prints "0.4pt 0pt" and raises
 that Error, pdflatex 1; guard `perfect_kernel_batch73b::setlength_on_a_macro_in_the_preamble_errs_as_tex`). `\addtolength`
-keeps the error, as `\advance` reads a variable. Perl:
+keeps the error, as `\advance` reads a variable. An undefined name run this way is LaTeXML's undefined command: its
+Error, and an `<ERROR class="undefined">` element where it stood (`\setlength{\bibsep}{0pt}` without natbib: pdflatex 2
+Errors, ours 2, "0pt" printed by both). Perl:
 latex_constructs.pool.ltxml:4603 `{Variable}` (KNOWN_PERL_ERRORS #971). Guard
 `perfect_kernel_batch73b::setlength_on_a_non_register_runs_its_code`; repro
 `parameter-conditional/setlength_on_a_non_register_runs_its_code`.
@@ -19962,9 +19964,9 @@ Guard `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`; repro
 ### 750. A `\bibitem` label's reference forms are typeset only where a `\cite` prints them
 
 **Decision** (70c; rc_struct4 row C1; user ruling 2026-10-18: text TeX writes to an auxiliary file and typesets only
-when printed is digested only where it is printed): `\@lbibitem` (latex.ltx:6233-6237) typesets the label in the list
+when printed is digested only where it is printed): `\@lbibitem` (latex.ltx:17746-17749) typesets the label in the list
 as `\item[\@biblabel{#1}\hfill]` and writes it to the .aux as `\bibcite{key}{label}`; only a `\cite` of the key expands
-`\b@key` (latex.ltx:6197-6206). So `\lx@bibitem` (sect11.rs) reads its `[label]` undigested and splits the entry's tags
+`\b@key` (latex.ltx:17761-17771). So `\lx@bibitem` (sect11.rs) reads its `[label]` undigested and splits the entry's tags
 (base_utilities.rs `tag_forms`): the role-less tag, `\fnum@@bibitem` = `{\@biblabel{\the@bibitem}}`, is digested at the
 `\bibitem` through the class's own `\@biblabel`; the forms a reference prints (refnum, typerefnum, autoref, the
 cleveref forms) are deferred under the deferred-print list `b@key` (73a's latexml_core `defer_print`, #738), resolved

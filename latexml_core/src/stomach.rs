@@ -2442,6 +2442,12 @@ pub fn defer_print(list: &str, tokens: Tokens) -> i64 {
     Stored::String(arena::pin(list)),
     Some(Scope::Global),
   );
+  let pending = lookup_int(&s!("lx@deferred@print@pending@{list}")) + 1;
+  assign_value(
+    &s!("lx@deferred@print@pending@{list}"),
+    Stored::Int(pending),
+    Some(Scope::Global),
+  );
   id
 }
 
@@ -2474,18 +2480,28 @@ pub fn resolve_deferred_prints(list: Option<&str>) -> Result<()> {
   if lookup_int("lx@deferred@print@unresolved") <= 0 {
     return Ok(());
   }
+  // A list with nothing pending has nothing to scan for: a `\cite` of a key whose `\bibitem` comes later (70c's
+  // `b@<key>` lists), with a document's unprinted `\index` entries pending, would otherwise rescan them all, once per
+  // cite (40k entries and 5k cites: 19.5 s).
+  if let Some(list) = list
+    && lookup_int(&s!("lx@deferred@print@pending@{list}")) <= 0
+  {
+    return Ok(());
+  }
   // The entries below the low-water mark are all resolved: a scan starts at the first one still pending, so the
-  // streaming yields, which resolve every list, scan each entry once.
+  // streaming yields, which resolve every list, scan each entry once; one list's scan stops at its last entry.
   let count = lookup_int("lx@deferred@print@count");
   let low = lookup_int("lx@deferred@print@low").max(1);
   let mut first_pending: Option<i64> = None;
+  let mut scanned_to = count;
   for id in low..=count {
     let key = s!("lx@deferred@print@tokens@{id}");
     let Some(Stored::Tokens(tokens)) = lookup_value(&key) else {
       continue;
     };
+    let entry_list = lookup_string(&s!("lx@deferred@print@list@{id}"));
     if let Some(list) = list
-      && lookup_string(&s!("lx@deferred@print@list@{id}")) != list
+      && entry_list != list
     {
       first_pending.get_or_insert(id);
       continue;
@@ -2497,16 +2513,23 @@ pub fn resolve_deferred_prints(list: Option<&str>) -> Result<()> {
       Stored::Int(unresolved),
       Some(Scope::Global),
     );
+    let pending_key = s!("lx@deferred@print@pending@{entry_list}");
+    let pending = lookup_int(&pending_key) - 1;
+    assign_value(&pending_key, Stored::Int(pending), Some(Scope::Global));
     let content = digest(tokens)?;
     assign_value(
       &s!("lx@deferred@print@content@{id}"),
       Stored::Digested(content),
       Some(Scope::Global),
     );
+    if list.is_some() && pending <= 0 {
+      scanned_to = id;
+      break;
+    }
   }
   assign_value(
     "lx@deferred@print@low",
-    Stored::Int(first_pending.unwrap_or(count + 1)),
+    Stored::Int(first_pending.unwrap_or(scanned_to + 1)),
     Some(Scope::Global),
   );
   Ok(())

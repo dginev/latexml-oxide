@@ -3787,7 +3787,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   the author/year parse) is not emulated, so its display tag still typesets a `\citeauthoryear` label (1801.05986,
   1610.05396; Error kept); (b) old mn.sty prints `[label]` (mn.sty:1605), so 0903.4835 and astro-ph0010188 keep theirs,
   as pdflatex; (c) the bibliography XSLT shows a bibitem's refnum when it has no role-less tag, so under mn2e/mnras a
-  cited entry shows its label in HTML and an uncited one none, where the PDF prints none for either (main-session call).
+  cited entry shows its label in HTML and an uncited one none, where the PDF prints none for either (a 4-line patch
+  keeping the empty role-less tag exists, `base_utilities.rs` `\lx@tag@intags` after_construct, but it diverges from
+  Perl's `removeEmptyElement` and shifts `.ltx_bibitem .ltx_tag`'s -2em margin: kept as a row; `.bbl` lists hold only
+  cited or `\nocite`d entries); (d) `\@lbibitem`'s `\write` expansion of the label (latex.ltx:17746-17749, `\let\protect
+  \noexpand`) is not run, so an unprotected undefined command in an uncited label (`\bibitem[\foo{A} 2017]{a}`) loses
+  the Error pdflatex raises (73b row (b)'s `\protected@write` stage); (e) acmlarge.cls:1054-1058 defines
+  `\citeauthoryear` inside its own `\cite` (no-natbib branch of its `\AtBeginDocument`), which our locked `\cite` never
+  runs: 1710.09074, 1508.03599 keep 1 Error each where the faithful result is 0 (pdflatex's errors there come from its
+  broken TL 2025 preamble); (f) html.sty's `\htmlcite` (html_sty.rs:47) builds its `ltx:bibref` without
+  `cite_prints_keys`. A cite resolves its key's list only while it has pending entries (stomach.rs
+  `lx@deferred@print@pending@<list>`; 40k unprinted `\index` entries and 5k cites took 19.5 s before).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

@@ -615,7 +615,7 @@ pub(crate) fn load() -> Result<()> {
         properties.insert("labelled", "true".into());
         // The label is typeset where TeX prints it, form by form. The entry's own label, `\fnum@@bibitem` =
         // `{\@biblabel{\the@bibitem}}`, is printed here, as `\@lbibitem`'s `\item[\@biblabel{#1}\hfill]`
-        // (latex.ltx:6233-6237). The forms a reference prints (refnum, …) are TeX's `\b@key`, which `\@lbibitem`
+        // (latex.ltx:17746-17749). The forms a reference prints (refnum, …) are TeX's `\b@key`, which `\@lbibitem`
         // writes to the .aux (`\bibcite{key}{label}`) and only a `\cite` of the key expands: typeset only once some
         // `\cite` prints the key (`cite_prints_keys`), at once when one already has, through the deferred-print list
         // `b@key` (latexml_core `defer_print`; OXIDIZED_DESIGN_DIVERGENCES #750). Under mn2e/mnras without natbib
@@ -2126,10 +2126,10 @@ fn carries_nothing(item: &Digested) -> bool {
 }
 
 /// The deferred-print list of the entry `key` (latexml_core `defer_print`): TeX's `\b@key`, the label `\@lbibitem`
-/// writes to the .aux (latex.ltx:6233-6237 `\bibcite`) for a `\cite` to print.
+/// writes to the .aux (latex.ltx:17746-17749 `\bibcite`) for a `\cite` to print.
 fn cite_list(key: &str) -> String { s!("b@{key}") }
 
-/// A citation prints its keys' labels (latex.ltx:6197-6206 `\@citex` reads each `\b@key`): the forms of each entry's
+/// A citation prints its keys' labels (latex.ltx:17761-17771 `\@citex` reads each `\b@key`): the forms of each entry's
 /// tags a reference prints, deferred by `\lx@bibitem` until then, are typeset (`resolve_deferred_prints`), and an entry
 /// that comes later typesets them at once. Every citation reaches this through `\@@bibref` (the kernel's `\cite`,
 /// natbib's, biblatex's, the `.bbl` styles'); `\nocite` prints nothing and does not (`\lx@mark@nocite`).
