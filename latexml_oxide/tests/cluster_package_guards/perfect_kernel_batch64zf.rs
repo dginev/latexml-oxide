@@ -18,7 +18,7 @@ fn lines_with<'a>(log: &'a str, kind: &str) -> Vec<&'a str> {
 
 /// The core `xml` through `LaTeXML-html5.xsl` in-process, its source files in `source_directory` (the post stage reads
 /// the `.bib` there), with the post stage's log.
-fn post_logged(xml: &str, source_directory: &str) -> (String, String) {
+pub(super) fn post_logged(xml: &str, source_directory: &str) -> (String, String) {
   latexml_core::util::logger::bind_log();
   let destination = format!("{source_directory}/guard.html");
   let opts = latexml::post::PostOptions {

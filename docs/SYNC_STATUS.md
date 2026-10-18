@@ -95,7 +95,8 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | 11, 23, 24 | class gaps: apa/asmejour/cclayout fields, an.cls `\abstract{}`, aastex `\figcaption` | open (bindings) |
 | 15 | mdframed `frametitle=` (options, `\newmdenv` presets, `\mdfsetup`) never typeset | FIXED int27 (mdframed_sty.rs: options run as `\mdfsetup` in the frame's group; the title is the frame's first paragraph in `\mdf@frametitlefont`; ~0.07 % of 2401 papers use it; 2401.03158) |
 | 14, 16 | `\refstepcounter` rebinding text, tcolorbox listing title | open |
-| 20, 21, 22 | `\gls` only in display math, biblatex `type=`/`check=` filters, empty `{titlepage}` hiding the title (XSLT) | open |
+| 22 | an empty `{titlepage}` hiding the document title in HTML (XSLT) | FIXED int27 (OD #761: only a titlepage with ink hides the title) |
+| 20, 21 | `\gls` only in display math, biblatex `type=`/`check=` filters | open |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | open (low reach) |
 
 ## Current status
@@ -630,8 +631,6 @@ says otherwise.
   - deepseek.cls `\correspondingauthor` footer text lost, silently (2401.14196);
   - aastex `\figcaption` text emitted as `<p>` inside the figure, with no caption or "Figure N" (astro-ph9806172);
   - amsrefs source-order numbering.
-- **An empty `{titlepage}` with no class `\title` shows 0 visible titles,** because any titlepage hides the document
-  title (LaTeXML-structure-xhtml.xsl:374-375) (68t).
 - **Singletons:**
   - (a) subcaption `{subfigure}` sets no `\linewidth`, so `\includegraphics[width=\linewidth]` gives 345pt. SHARED;
     subcaption.sty:70, 99; 2407.02944, html_feedback #6128; repro scratch_59s/listings_issues/repro/subfiglw.tex.

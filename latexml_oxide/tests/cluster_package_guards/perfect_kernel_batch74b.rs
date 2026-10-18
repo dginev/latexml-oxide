@@ -327,3 +327,29 @@ fn mdframed_frametitle_is_kept() {
     assert!(xml.contains(element), "{element}: {xml}");
   }
 }
+
+/// An empty `{titlepage}` (a blank cover) before `\maketitle` no longer hides the document title in the HTML: only a
+/// titlepage with ink stands for the title (LaTeXML-structure-xhtml.xsl `ltx:title`; OXIDIZED_DESIGN #761).
+#[test]
+fn empty_titlepage_keeps_the_title() {
+  let (log, xml, (html, post_log)) = latexml::util::test::convert_bytes_files_then(
+    include_bytes!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/empty_titlepage_keeps_the_title.tex"
+    ),
+    &[],
+    Some("ar5iv.sty"),
+    |xml, source_dir| {
+      super::perfect_kernel_batch64zf::post_logged(xml, source_dir.to_str().expect("a UTF-8 path"))
+    },
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(error_count(&post_log), 0, "{post_log}");
+  assert!(
+    squash(&xml).contains(r#"<titlepage xml:id="id1"/> <title>The Real Title</title>"#),
+    "{xml}"
+  );
+  assert!(
+    html.contains(r#"<h1 class="ltx_title ltx_title_document">The Real Title</h1>"#),
+    "{html}"
+  );
+}

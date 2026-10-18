@@ -20127,3 +20127,14 @@ it; pdflatex sets the heading inside the abstract's text block either way. Perl:
 environment_abstract_unclosed_at_end_document_errs_and_keeps_its_text, keywords_command_form_ends_at_first_section,
 keywords_label_inside_abstract_ends_with_it}`; repros `sectioning-frontmatter/{abstract_section_closes_the_abstract,
 keywords_command_form_ends_at_first_section, class_keywords/keywords_label_inside_abstract_ends_with_it}`.
+
+### 761. Only a titlepage with ink hides the document title in HTML (Perl: any titlepage hides it)
+
+LaTeXML's HTML stylesheet skips the document's `ltx:title` whenever the document has an `ltx:titlepage` child
+(LaTeXML-structure-xhtml.xsl, Perl's :358-359), taking the cover to carry the title. An empty cover —
+`\begin{titlepage}\thispagestyle{empty}\vspace*{2cm}\end{titlepage}` before `\maketitle`, which pdflatex prints as a
+blank page and then the title — builds an empty `<ltx:titlepage/>`, so the HTML showed no title at all (only the
+`<head>` `<title>`), with 0 errors (68t; silent-loss inventory #22). The rule now skips the title only beside a
+titlepage with ink: text, or a graphic, picture, formula or SVG. A cover that prints the title keeps hiding the
+duplicate, as before. Repro `sectioning-frontmatter/empty_titlepage_keeps_the_title`; guard
+`perfect_kernel_batch74b::empty_titlepage_keeps_the_title`.
