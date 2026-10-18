@@ -3390,8 +3390,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   same 543 papers (542 converted): fms1f byte-identical to round 5's outputs on all 542 (the 5 lift papers ≠ 67int19b as
   before), 0 Error/Warning/Fatal change, 12 `field_ink` lifts, no mark or `_fieldbox` leaked; 20 papers through one CLI
   process: byte-identical to round 5, the same 12 lifts. `perf stat -e instructions:u`, bench, 3 runs, fms1d → fms1e →
-  fms1f: empty article 942.46M → 944.60M → 944.63M, 1708.01239 11,773.0M → 11,794.3M → 11,794.6M (round 6 ±0.0 %; round
-  5's +0.2 % stands, on the empty article too, where no field is stamped), XML identical. Open
+  fms1f: empty article 942.46M → 944.60M → 944.63M, 1708.01239 11,773.0M → 11,794.3M → 11,794.6M (round 6 +0.08 % by the
+  r6 review, 943.1M → 943.8M; round 5's +0.2 % stands, on the empty article too, where no field is stamped), XML
+  identical. int22 (main session, r6 review finding 1): digest-time box marks wait for the live ledger, not for the stamp,
+  so a header box before a body-declared `\title` is a box (`field_prov_header_mbox_before_title_decl_lifted`). Open
   (pre-existing, Perl the same): `\hypersetup{pdftitle=\@title}` records the RDF `dcterms:title` as the literal
   `\@title`; our `\pdfstringdef` is a `\gdef`, so a copy made before `\maketitle` empties the store prints nothing.
 

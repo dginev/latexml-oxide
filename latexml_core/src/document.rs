@@ -314,16 +314,16 @@ pub const FIELD_BOX_PROPERTY: &str = "fieldBox";
 /// opened for its material ([`Document::mark_field_box`]).
 pub const FIELD_BOX_ATTRIBUTE: &str = "_fieldbox";
 
-/// Is field ink being recorded in this conversion (a field stamped, the ledger not settled)? The gate of every
-/// field-box mark, checked before anything else is looked up.
+/// Can a box digested now still matter to a frontmatter field's print (the field ledger not settled)? The gate of
+/// every digest-time field-box mark, checked before anything else is looked up. It does not wait for a field to be
+/// stamped: a header box may be digested before the document declares its `\title` (fms1 round-6 review finding 1);
+/// [`Document::mark_field_box`] applies the stamp at absorb time.
 #[inline]
-pub fn field_ink_recorded() -> bool {
-  FIELD_PROV_STAMPED.get() && crate::token::field_ledger_live()
-}
+pub fn field_box_marks_live() -> bool { crate::token::field_ledger_live() }
 
-/// Mark `whatsit` as a TeX box's constructor ([`FIELD_BOX_PROPERTY`]), while field ink is recorded.
+/// Mark `whatsit` as a TeX box's constructor ([`FIELD_BOX_PROPERTY`]), while a field's print can still be lifted.
 pub fn field_box_whatsit(whatsit: &mut crate::whatsit::Whatsit) {
-  if field_ink_recorded() {
+  if field_box_marks_live() {
     whatsit.set_property(FIELD_BOX_PROPERTY, true);
   }
 }

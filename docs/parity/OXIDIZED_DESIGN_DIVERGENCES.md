@@ -18940,7 +18940,8 @@ with the wrappers it empties (not a `labels` one), when:
   attribute stripped at finalize): a constructor declared `mode => "restricted_horizontal"` outside math
   (`DeclaredMode::restricted_box`; `Constructor::digest_to_whatsit` sets the `fieldBox` whatsit property and the first
   element its absorption opens, before it absorbs anything, is marked, `Document::open_element`; one that opens none
-  marks nothing): `\hbox` (so `\rightline`/`\leftline`/`\centerline`, each `\hbox to\hsize`, and `\colorbox`,
+  marks nothing; the digest-time mark waits for the live ledger only, not for a stamped field, since a header box may be
+  digested before the body declares `\title` — the stamp is applied at absorb time, int22 on the r6 review finding 1): `\hbox` (so `\rightline`/`\leftline`/`\centerline`, each `\hbox to\hsize`, and `\colorbox`,
   color.sty's `\color@b@x`), `\mbox`, `\makebox`, `\raisebox`, `\fcolorbox`,
   `\scalebox`/`\resizebox`/`\rotatebox`/`\reflectbox`, amsmath's `\text` and `\eqref` outside math (an `\mbox`, an
   `\hbox`), `\shortstack`, `\put`, the pstricks frame boxes, `\turnbox`; `\framebox`/`\fbox` (no declared mode: its text
@@ -18961,7 +18962,8 @@ with the wrappers it empties (not a `labels` one), when:
   `\lxDeclare`/`\@lxDefMathDeclare` and `\textbb` (bbold's font command; both open no element, so mark nothing),
   `\lx@acm@addresspart@` (acmart's `\institution`/`\city`…, plain text of `\affiliation`; marked, inside the
   frontmatter's contact, which is set apart), and `\tablenotemark` (an `\rlap` box in agupp.sty and the old aastex,
-  `\textsuperscript` in aastex701.cls:8494; marked, in a table, which is set apart). Round 4 took the element names
+  `\textsuperscript` in aastex701.cls:8494; marked, but emitted as an `ltx:note`, which is set apart in a table or out
+  of one, deluxetable_sty.rs:226-227). Round 4 took the element names
   `ltx:inline-block`/`inline-logical-block`/`inline-para`/`tabular` for boxes, so `\makebox`, `\mbox`, `\fbox`,
   `\raisebox` and `\rightline` (all an `ltx:text`) were body text and `\parbox` not. A cover's header box (the
   preprint-number `\parbox` of 0706.0979 and 1605.00182, a `\rightline{LA-UR-…}`, a `\makebox[\textwidth][r]{…}`, an

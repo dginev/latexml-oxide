@@ -1628,7 +1628,7 @@ pub fn def_environment(
     options.after_digest_body.insert(
       0,
       after_digest_simple!(whatsit, {
-        if crate::document::field_ink_recorded()
+        if crate::document::field_box_marks_live()
           && environment_tex_group(&box_key, TexGroup::Box) == TexGroup::Box
         {
           crate::document::field_box_whatsit(whatsit);

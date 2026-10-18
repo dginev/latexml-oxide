@@ -810,6 +810,25 @@ fn field_prov_header_mbox_lifted() {
   );
 }
 
+/// sectioning-frontmatter/field_prov_header_mbox_before_title_decl_lifted: an `\mbox` preprint line digested before
+/// the body declares `\title`/`\author` is still a TeX box: the title block is lifted, the header kept (fms1 round-6
+/// review finding 1).
+#[test]
+fn field_prov_header_mbox_before_title_decl_lifted() {
+  let (xml, _) = assert_lifts(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/field_prov_header_mbox_before_title_decl_lifted.tex"
+    ),
+    (2, 0),
+    &[],
+  );
+  assert_eq!(
+    leading_body(&xml),
+    "  <para class=\"ltx_noindent\" xml:id=\"p1\">\n    <p>LA-UR-12-3456</p>\n  </para>",
+    "{xml}"
+  );
+}
+
 /// sectioning-frontmatter/field_prov_header_flushright_kept: a `{flushright}` report number before the title block is a
 /// list environment's paragraph, body text: the title block stays (round-4 review finding 3 ruling).
 #[test]

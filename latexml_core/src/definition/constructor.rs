@@ -424,7 +424,7 @@ impl Constructor {
     // frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
     if self.declared_mode.is_some_and(|mode| mode.restricted_box)
       && !ismath
-      && crate::document::field_ink_recorded()
+      && crate::document::field_box_marks_live()
     {
       properties.insert(crate::document::FIELD_BOX_PROPERTY, Stored::Bool(true));
     }
