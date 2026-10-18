@@ -85,7 +85,7 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | 3 | real `\cite`s, empty bibliography (6 papers) | CLOSED stale 2026-10-18 (R3b) |
 | 4 | `&` in a fenced macro argument truncating the document | CLOSED int26 (R3d, KPE #981) |
 | 5 | raw-class off-table title-page stores never typeset (41/3,000 sample papers raw + 22 with a binding) | batch 75a (replay gate reads bodies as TeX runs them, appends to a refused `\maketitle`, wiley/ACM CCS table entries) in review; generic off-table rule open |
-| 19 | cryptocode: pseudocode lines after the first lose their numbers; text mode `\@pc@lb` (20 papers) | batch 76a running (`\halign` redefinition run where alignments start) |
+| 19 | cryptocode: pseudocode lines after the first lose their numbers; text mode `\@pc@lb` (20 papers) | FIXED int27 (76a: `\halign` redefinition run where binding alignments reach `\halign`; 27 papers 45 E → 0, numbered lines 145 → 1,180) |
 | 13 | floatrow `\floatfoot` in a plain float / a `\DeclareNewFloatType` float lost | FIXED int27 (floatrow_sty.rs `\lx@flrow@plainfoot`); the float itself is kept |
 | 17 | longtable caption row: the cell before `x & \caption` lost | FIXED int27 (kept, LaTeX's "Misplaced \noalign"); other shapes lose nothing |
 | 18 | amsrefs `\bib` keys differing in case merge, one entry lost | honest Error int27 (`scan_bibentries`); keeping both open |
@@ -3970,14 +3970,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
 
 - **76a** (silent-loss inventory agent_reports/2026-10-18_silent_loss_inventory.md item #19; the run-340
   `undefined:\@pc@lb` cluster, 27 papers). A document's `\halign` redefinition now runs where an alignment the binding
-  builds reaches `\halign` in TeX (amsmath's environments, every `\ialign`-based one; not `tabbing`, which latex.ltx
+  builds reaches `\halign` in TeX (amsmath's environments, the `\ialign`-based bindings — a document's own `\ialign`, `\let` to `\halign`, does not; not `tabbing`, which latex.ltx
   builds from boxes — its alignment carries `ALIGNMENT_WITHOUT_HALIGN`): `\lx@begin@alignment`'s before-digest
   (tex_tables.rs `run_halign_redefinition_prelude`) digests a parameterless `\halign` macro whose expansion ends with a
   constructor declared `halign_primitive` (the primitive under any name, or its pgf SVG stand-in `\lxSVG@halign`) just
   before the alignment, the final primitive being the alignment already built; any other shape is not run. Typeset
   material precedes the alignment, except where the alignment is the display itself (`ALIGNMENT_IS_DISPLAY`: TeX's
-  "Improper \halign inside $$'s") — a Warning, dropped; a redefinition's global side effects run once per alignment
-  (TeX's amsmath measuring pass runs them twice) (OXIDIZED_DESIGN_DIVERGENCES #760; Perl never loads cryptocode).
+  "Improper \halign inside $$'s"; not `numcases`, a `\vbox`; `multline` unmarked, material kept) — a Warning, dropped; a redefinition's global side effects run once per alignment
+  (TeX's amsmath measured environments run them twice) (OXIDIZED_DESIGN_DIVERGENCES #760; Perl never loads cryptocode).
   cryptocode.sty:950-957 binds `\@pc@lb` and its line-numbering `\\` that way: every pseudocode line after the first
   had lost its number, silently, and `mode=text` erred. A/B vs 67int28-rel over the 27 papers: Errors 45 → 0 (each
   paper's `\@pc@lb` plus its cascades; 2107.05054 in TikZ nodes 11 → 0), Fatals 0 → 0, numbered pseudocode lines 145 →
@@ -3991,7 +3991,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   alignments_after_a_pseudocode_block_are_unaffected, halign_redefinition_runs_for_a_tabular_not_for_a_tabbing,
   halign_redefinition_not_ending_with_the_primitive_is_not_run,
   halign_redefinition_material_before_a_display_alignment_is_reported,
-  halign_redefinition_material_before_a_tabular_is_kept, cryptocode_pseudocode_in_a_tikz_node_numbers_every_line}`;
+  halign_redefinition_material_before_a_tabular_is_kept, halign_redefinition_material_before_numcases_is_kept,
+  cryptocode_pseudocode_in_a_tikz_node_numbers_every_line}`;
   repros kernel-alignment/cryptocode_halign_redefinition_numbers_lines RED → GREEN,
   kernel-alignment/halign_redefinition_skips_tabbing_and_keeps_material.
 

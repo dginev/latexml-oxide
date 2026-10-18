@@ -258,6 +258,11 @@ c &= d
     r#"<p xml:id="p1.1">RAN</p>"#,
   );
   assert_eq!(xml.matches("<equation ").count(), 2, "{xml}");
+  // the deleted material is in no formula
+  assert!(
+    !xml.contains(">X</XMTok>") && !xml.contains("tex=\"\\displaystyle X"),
+    "{xml}"
+  );
 }
 
 /// Outside display math TeX typesets that material where the redefinition runs, before the alignment, with no error
@@ -311,4 +316,28 @@ second line
     let id = format!("xml:id=\"S0.Ex{row}.2\"");
     assert_element(&xml, "td", &[&id], &text_statement_td(row, text));
   }
+}
+
+/// cases.sty's `numcases` sets its `\halign` inside a `\vbox` (cases.sty:73-75), not as the display: TeX keeps the
+/// material the redefinition typesets (pdflatex prints "XYZ" above the cases, 0 errors), so no Warning and the material
+/// stays.
+#[test]
+fn halign_redefinition_material_before_numcases_is_kept() {
+  let tex = r"\documentclass{article}
+\usepackage{cases}
+\let\primhalign\halign
+\begin{document}
+\begingroup
+\def\halign{XYZ\primhalign}
+\begin{numcases}{f(x)=}
+1 & if $x>0$\\
+0 & otherwise
+\end{numcases}
+\endgroup
+\end{document}
+";
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("XYZ"), "{xml}");
+  assert_eq!(xml.matches("<equation ").count(), 2, "{xml}");
 }

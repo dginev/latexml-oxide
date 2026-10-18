@@ -72,9 +72,9 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
     attrs.insert(String::from("rowsep"), cur_jot.to_string());
   }
 
-  // cases.sty:48-75 `$$`…`\halign to \displaywidth`.
-  let mut numcases_properties = SymHashMap::default();
-  numcases_properties.insert(engine::tex_tables::ALIGNMENT_IS_DISPLAY, Stored::Bool(true));
+  // Not a display alignment: cases.sty:73-75 sets the `\halign` inside `\setbox\tw@\vbox\bgroup`, so material a
+  // document's `\halign` macro typesets before it is kept (pdflatex prints it above the cases, no error).
+  let numcases_properties = SymHashMap::default();
   let alignment = Alignment::new(AlignmentConfig {
     template:        Some(template),
     open_container:  Rc::new(move |document, mut props| {

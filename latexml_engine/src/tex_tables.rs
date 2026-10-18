@@ -37,9 +37,11 @@ fn omit_cell_is_text(alignment: &Alignment) -> bool {
 pub const ALIGNMENT_WITHOUT_HALIGN: &str = "without_halign";
 
 /// The alignment property of an alignment that is a display by itself in TeX, `$$\halign…$$`: amsmath's align and
-/// gather families (amsmath.sty `\start@align`, `\start@gather`), latex.ltx's `eqnarray`, IEEEtrantools'
-/// `IEEEeqnarray` (IEEEtrantools.sty:2013) and cases.sty's `numcases` (cases.sty:48-75). Material a document's
-/// `\halign` macro typesets before the primitive is an error there (`run_halign_redefinition_prelude`).
+/// gather families (amsmath.sty `\start@align`, `\start@gather`), latex.ltx's `eqnarray` and IEEEtrantools'
+/// `IEEEeqnarray` (IEEEtrantools.sty:2013). Material a document's `\halign` macro typesets before the primitive is an
+/// error there (`run_halign_redefinition_prelude`). Not cases.sty's `numcases`, whose `\halign` is inside a `\vbox`
+/// (cases.sty:73-75). amsmath's `multline` is a display too but is not marked: its material is kept in the formula
+/// (TeX: "Improper \halign inside $$'s"), the safe direction.
 pub const ALIGNMENT_IS_DISPLAY: &str = "display";
 
 /// Whether `token` means the `\halign` primitive, under whatever name a package saved it (cryptocode.sty:950
