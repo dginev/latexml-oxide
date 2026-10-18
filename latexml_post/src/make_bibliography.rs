@@ -542,6 +542,21 @@ impl MakeBibliography {
 
       // A key repeated in a later source keeps its first position (bibtex keeps the first entry, "Repeated
       // entry"), its content from the later source as Perl.
+      // Two entries whose keys differ only in case are one key here (lowercased, as Perl's `lc` and bibtex's
+      // case-insensitive keys), so one of them is lost: bibtex reports it as an error ("Repeated entry"), and amsrefs,
+      // whose keys are case-sensitive, prints both — an honest Error naming the entry that is replaced.
+      if let Some(previous) = entries.get(&lc_key)
+        && previous.bib_key != bibkey
+      {
+        Error!(
+          "unexpected",
+          &bibkey,
+          "Bibliography entries '{}' and '{}' differ only in case: they share one key and the entry '{}' is replaced",
+          previous.bib_key,
+          bibkey,
+          previous.bib_key
+        );
+      }
       let db_index = entries.get(&lc_key).map_or(entries.len(), |e| e.db_index);
       entries.insert(lc_key, BibEntryData {
         bib_key: bibkey,

@@ -70,6 +70,32 @@ affected** → **is it unblocked** → **effort**.
 
 ---
 
+## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
+
+"We should address all of [the High Priority items that were not Error status] before claiming 98 % is reached": a
+conversion that loses authored content or its markup with 0 errors is a false success. Source:
+`agent_reports/2026-10-18_silent_loss_inventory.md` (27 items, numbered as there); each row is fixed, or at least made
+an honest Error, before the 98 % report or the E/F rerun. Measured on all three targets (error-free log, authored text
+present, semantic element) — `feedback_three_metrics_honest_tests`.
+
+| # | loss | state |
+|---|---|---|
+| 1, 2 | open frontmatter body at `\end{document}` → empty `<document/>` | FIXED int26 (OD #754) |
+| — | command-form `\keywords` swallowing the document into `<ltx:keywords>` (found by the int26 A/B) | FIXED int26 (OD #755) |
+| 3 | real `\cite`s, empty bibliography (6 papers) | CLOSED stale 2026-10-18 (R3b) |
+| 4 | `&` in a fenced macro argument truncating the document | CLOSED int26 (R3d, KPE #981) |
+| 5 | raw-class off-table title-page stores never typeset (41/3,000 sample papers raw + 22 with a binding) | batch 75a (replay gate reads bodies as TeX runs them, appends to a refused `\maketitle`, wiley/ACM CCS table entries) in review; generic off-table rule open |
+| 19 | cryptocode: pseudocode lines after the first lose their numbers; text mode `\@pc@lb` (20 papers) | batch 76a running (`\halign` redefinition run where alignments start) |
+| 13 | floatrow `\floatfoot` / `\DeclareNewFloatType` float lost | open (RED `captions-floats/floatrow_floatfoot_in_plain_figure`) |
+| 17 | longtable caption row with no later `&` dropped | open (RED from 65h r2) |
+| 18 | amsrefs `\bib` keys differing in case merge, one entry lost | honest Error int27 (`scan_bibentries`); keeping both open |
+| 6, 7, 8, 12 | frontmatter store timing / replayed setters / late class `\author` / `\AFF` before `\AUTHOR` | open (synthetic REDs; no paper count) |
+| 9 | revtex supplement title replaces the paper's | open (design; ruling: keep the MAIN frontmatter) |
+| 10, 11, 23, 24 | class gaps: deepseek `\correspondingauthor`, apa/asmejour/cclayout fields, an.cls `\abstract{}`, aastex `\figcaption` | open (bindings) |
+| 14, 15, 16 | `\refstepcounter` rebinding text, mdframed `frametitle=`, tcolorbox listing title | open |
+| 20, 21, 22 | `\gls` only in display math, biblatex `type=`/`check=` filters, empty `{titlepage}` hiding the title (XSLT) | open |
+| 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | open (low reach) |
+
 ## Current status
 
 The corpus measure is the perfect-kernel scoreboard ([`PERFECT_KERNEL.md`](PERFECT_KERNEL.md), sweeps of the 2,374
@@ -4573,8 +4599,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   prints all its entries, cited or not, each bibliography its own (OD #57; 1012.2719 29 → 34 references). Guards
   `perfect_kernel_batch63::svjour3_epj_*`, `06_cluster_bibliography::amsrefs_*`. The revtex shape of the same audit row
   (2011.01984, 2301.08449: all `\author`s, then `$^{a}$`-marked `\affiliation`s) is the marked-affiliation linking still
-  open for per-author classes (OD #459). Open RED repro: index-bib/amsrefs_case_distinct_keys_both_kept (two `\bib`
-  keys differing only in case merge into one entry, silently).
+  open for per-author classes (OD #459). Repro index-bib/amsrefs_case_distinct_keys_both_kept: two `\bib` keys
+  differing only in case merge into one entry (keys lowercased in MakeBibliography, as Perl's `lc` and bibtex) — since
+  int27 an honest Error naming the replaced entry (make_bibliography.rs `scan_bibentries`, bibtex's "Repeated entry";
+  guard `amsrefs_case_distinct_keys::case_distinct_amsrefs_keys_report_the_lost_entry`); keeping both (case-sensitive
+  keys through citation and bibliography) stays RED.
 - **63f**: frontmatter fidelity follow-ups (run-336 audit): acmart's `\received` keeps its whole history — received,
   revised (several), labelled — each its own date via the frontmatter key `accumulate` (KPE #522; 2307.05988); initials
   glued to a surname (`A.G.Bogdanchikov`, `Yu.M.Shatunov`; not `St.`/`Mt.`/`Ft.`) read as a name and a `\vspace`'s length

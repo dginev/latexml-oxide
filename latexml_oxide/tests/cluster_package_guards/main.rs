@@ -20,6 +20,7 @@ mod aastex_contribution_appendix;
 mod accent_meaning_robust_shape;
 mod acmart_description_aria;
 mod aligned_overset_includestyles;
+mod amsrefs_case_distinct_keys;
 mod bib_field_digest_once;
 mod biblatex_fallback_no_cite_loop;
 mod bibliography_crossref;
