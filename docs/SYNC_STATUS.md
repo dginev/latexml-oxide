@@ -3649,6 +3649,25 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   chapters (`\documentstyle{article}` appendix "A X", as pdflatex; repro
   sectioning-frontmatter/documentstyle_document_chapter_is_no_class_chapter); a runtime script binding's `LoadClass`
   settles too; rows for the body `\documentclass` diagnostic and jmlrbook's `\bookappendix` (Corpus Triage Quick Wins).
+  **Integration (int23, c3a799ebad, binary 67int23b):** 72a r1-r10 + 72b r1-r4 cherry-picked onto int22 49f63f14d1
+  (conflicts: KPE/OD entry-wise, guards module list, converter.rs reset blocks, state.rs `class_layer_definition` kept by
+  72b's `class_defines_chapter` doc), then two integration fix rounds (agent_reports/2026-10-18_int23_fix.md: scrbook
+  front matter unnumbered, the class slot through a shipped intermediate class, ws-rv9x6 ids guarded;
+  2026-10-18_int23_fix2.md, from the classifier's report 2026-10-18_int23_classify.md: a copy's expl3 syntax ends with its
+  load — fcs 2606.16349 recall 14.6 → 95.4; a copy's `\input` files (.clo/.cfg) follow its provides rule — svjour
+  0901.1015, 1012.5412, 1111.3868, 1512.01957, 2411.18962, 2107.02119 keep their affiliations; identity by the answering
+  binding; elife `\figsupp`, neurips contacts (fallback guess; user 2026-10-18 prefers reading the copy's stored values —
+  int24), mdpi cleveref only where the copy loads it, NJDapacite marked loaded with apacite, listing whitespace). Gates
+  nextest 5954/5954 + cortex 10/10, clippy/rustdoc clean, inits plain=0 latex=0, dumps identical to 67int22; population
+  A/B vs 67int22 over 1,428 papers (pop67int23.tsv = pop67int22's set, results_rint23b): E 6,130 → 6,015, F 17 → 17, 0
+  newly Fatal, 35 E-better, 2 E-worse both pdflatex-faithful (1711.03503 "No valid journal"; 2506.06265 natbib option
+  clash, pdflatex log:323), 15 word losses > 1 % all classified faithful (mdpi numeric citations per mdpi.cls:265-271 and
+  cleveref type-name tags gone; 2604.08415's pgf code dump replaced by tikz pictures, E 40 → 0; MRM/Wiley superscripts;
+  "Fig." per the classes); the writers' combined A/B (871 papers: census 400, forks, natbib gains, ceurart 112, atlasdoc 14,
+  lmcs/pnas-new/jgcc/czipreprint/clear2025 55, KOMA 100, 72b's 188): E 2,938 → 1,795, F 10 → 8, appendix elements 216 →
+  245, counter-named ids 140 → 42. Nets 135/136: elife 1907.05060 E 1 → 3 (the copy's `\format@title@figure` misreads our
+  caption; `{fullwidth}` now defined — row (t)), the fcs recall dips 0.6-0.8 faithful. Perf: KOMA load ≈ 2.2× pdflatex's
+  (ceurart +162 %, atlasdoc +34 % instructions), recorded in OD #731.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
