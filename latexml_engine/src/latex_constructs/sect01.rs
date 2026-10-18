@@ -42,8 +42,10 @@ pub(crate) fn make_missing_float_counters() -> Result<()> {
 /// `<chapter>` (scrbook.cls, read raw by scrbook_cls.rs). Where the class has chapters by a binding's counter or
 /// OmniBus's guess, [`settle_chapter_after_class_load`] puts the kernel's back (a binding that needs it during its own
 /// load reads `\lx@kernel@chapter`: amsart_cls.rs `\specialsection`). Only the document's first `\documentclass`: a
-/// second one (a merged file's; latex.ltx:18618 of TL 2025 makes it `\@twoclasseserror` after the first) loads no class
-/// in TeX and keeps the first class's chapters (memoir with a second `\documentclass{memoir}`: both chapters, 0 Errors).
+/// second one (a merged file's) loads no class in TeX — in the preamble latex.ltx:18618 of TL 2025 has made it
+/// `\@twoclasseserror`, in the body :18621 `\@onlypreamble\documentclass` stops it ("Can be used only in preamble",
+/// a diagnostic we do not raise yet, SYNC_STATUS) — and keeps the first class's chapters (memoir with a second
+/// `\documentclass{memoir}` in the body: both chapters).
 pub(crate) fn retract_chapter_before_class_load() {
   if lookup_bool("\\chapter:settles") {
     return;
@@ -65,8 +67,9 @@ pub(crate) fn retract_chapter_before_class_load() {
 
 #[rustfmt::skip]
 /// OXIDIZED_DESIGN #179, the "has chapters" step, after each class load of a `\documentclass` document: the class's
-/// own (`\documentclass`), a raw class's `\LoadClass`/`\LoadClassWithOptions` (sect05.rs) and a binding's `LoadClass!`
-/// (setup_binding_language.rs). It makes the one "has chapters" test (`state::class_has_chapters_now`: (a) the class's
+/// own (`\documentclass`), a raw class's `\LoadClass`/`\LoadClassWithOptions` (sect05.rs), a binding's `LoadClass!`
+/// (setup_binding_language.rs) and a runtime script binding's `LoadClass` (latexml_contrib script_bindings/engine.rs;
+/// guard `perfect_kernel_batch72b::a_script_binding_class_load_settles_the_chapters`). It makes the one "has chapters" test (`state::class_has_chapters_now`: (a) the class's
 /// own code assigned `\chapter`, (b) a compiled binding made `\c@chapter`, (c) OmniBus guesses an unknown class) and
 /// stores its answer for `state::class_defines_chapter` — natbib's forks, appendix.sty, titlesec.sty and the kernel's
 /// `\appendix` read it. Where the class has chapters by (b) or (c) and `\chapter` is undefined, the kernel's is put
@@ -114,6 +117,29 @@ pub fn settle_chapter_after_class_load() -> Result<()> {
   // (the kernel's binding is in place or the name is free: nothing kept aside for a refusal to put back)
   assign_value("\\chapter:locked@cleared", Stored::None, Some(Scope::Global));
   Ok(())
+}
+
+/// OXIDIZED_DESIGN #179, the LaTeX 2.09 `\documentstyle` document (tex_job.rs): its class keeps the kernel's `\chapter`
+/// (only a `\documentclass` retracts it, `\chapter:settles`), so nothing is put back or cleared, but the "has chapters"
+/// answer is stored where the class's load ends — at its end-of-class hook, after latex209.def's `\@documentclasshook`
+/// and before `\compat@loadpackages` loads the style options — and `\chapter:stored` makes
+/// `state::class_defines_chapter` read it from then on. A refusal the document's own `\def\chapter` meets later
+/// (`\chapter:redefined`) is no class's chapters: `\documentstyle{article}` + `\newcounter{chapter}` +
+/// `\def\chapter#1{…}` letters its appendix "A", as pdflatex, and `\documentstyle[appendix]{report}` still numbers its
+/// appendix chapters "Appendix A". `begin`: the refusals recorded before the class load are no class's either.
+/// Guard: `perfect_kernel_batch72b::appendices_follow_the_class_chapters`.
+pub fn store_chapter_after_latex_ix_class_load(begin: bool) {
+  if begin {
+    assign_value("\\chapter:redefined", false, Some(Scope::Global));
+    assign_value("\\chapter:stored", false, Some(Scope::Global));
+    return;
+  }
+  assign_value(
+    CLASS_HAS_CHAPTERS,
+    class_has_chapters_now(),
+    Some(Scope::Global),
+  );
+  assign_value("\\chapter:stored", true, Some(Scope::Global));
 }
 
 /// OXIDIZED_DESIGN #734: at `\begin{document}`, after the begin-document hooks have run (so a package's

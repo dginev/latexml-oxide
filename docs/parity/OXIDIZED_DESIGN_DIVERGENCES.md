@@ -7026,8 +7026,10 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 
 **Perl behavior**: `DefMacroI('\chapter', undef, '\@startsection{chapter}…', locked => 1)` in the kernel pool (latex_constructs.pool.ltxml:557), so `\@ifundefined{chapter}` is FALSE under article/scrartcl. blindtext.sty:243 `\blinddocument`, hvfloat's 50 test documents, coseoul, xassoccnt take the chapter branch and error `undefined:\thechapter` (53 docs, sweep 30).
 **Rust behavior**: the document's first `\documentclass` clears the kernel's `\chapter` before the class loads (sect01.rs
-`retract_chapter_before_class_load`; a second one, which latex.ltx:18618 makes `\@twoclasseserror`, keeps the first
-class's chapters: probe rev72b/r2/dc2, memoir's two chapters), so the class's own code meets it undefined, as in TeX: a raw class's
+`retract_chapter_before_class_load`; a second one loads no class in TeX and keeps the first class's chapters — in the
+preamble latex.ltx:18618 has made it `\@twoclasseserror`, in the body :18621 `\@onlypreamble\documentclass` stops it
+with "Can be used only in preamble", which we do not raise yet (SYNC_STATUS): probe rev72b/r2/dc2, memoir's two
+chapters), so the class's own code meets it undefined, as in TeX: a raw class's
 `\@ifundefined{chapter}` takes the undefined branch (pdflatex "CLS=S.", where 72b r1 and Perl say C). The lock stays,
 with the kernel's binding kept aside as for a file's clearing `\let` (`\chapter:locked@cleared`, #569): a class's own
 definition of `\chapter` is refused, LaTeXML's chapter put in its place (numbered by a chapter counter of its own at the
@@ -7035,9 +7037,9 @@ first call where the class made none, `\lx@kernel@chapter@counted`) and the refu
 raw class's chapters stay `<chapter>` (scrbook.cls, read raw by scrbook_cls.rs). After each class load — the
 `\documentclass` itself, a raw `\LoadClass`/`\LoadClassWithOptions` (sect05.rs) and a binding's `LoadClass!`
 (setup_binding_language.rs; every compiled binding's class load goes through it, `withoptions => true` for Perl's
-`LoadClass(…, withoptions => 1)`: svmult, gen_m_l, svjour, subfiles and the rest; not the runtime script bindings'
-`load_class` (script_bindings/engine.rs) nor OmniBus's autoload of a class at a trigger in the body (omnibus_cls.rs),
-which run after the class's own settle) — the "has chapters" step (`settle_chapter_after_class_load`) makes the one test
+`LoadClass(…, withoptions => 1)`: svmult, gen_m_l, svjour, subfiles and the rest), and a runtime script binding's
+`LoadClass` (script_bindings/engine.rs, which settles after its load as `LoadClass!` does; not OmniBus's autoload of a
+class at a trigger in the body, omnibus_cls.rs, which runs after the class's own settle) — the "has chapters" step (`settle_chapter_after_class_load`) makes the one test
 (`state::class_has_chapters_now`) and stores its answer (`\chapter:class@has@chapters`). `state::class_defines_chapter`
 returns it (while a class loads, the test made then), and every reader of "has chapters" goes through it: natbib's forks
 (njdnatbib_sty.rs, ws_rv_har_sty.rs), and, with the counter (`has_chapter_counter() && class_defines_chapter()`), the
@@ -7068,9 +7070,16 @@ under its `chapter` option (kluwer.cls:135-136, :2464-2508, :2704-2708: sections
 `\lx@kernel@chapter` (amsart_cls.rs `\specialsection`, Perl `Let('\specialsection','\chapter')`). A document that calls
 `\chapter` in a class without chapters reads LaTeXML's chapter, the name still undefined (#734). The LaTeX 2.09
 `\documentstyle` path keeps the kernel's `\chapter` in every class (only a `\documentclass` retracts and settles,
-`\chapter:settles`); there `class_defines_chapter` makes the test when asked, so `\documentstyle[appendix]{report}`
-letters its appendix chapters, pdflatex "Chapter 1 Intro 1.1 S Appendix A Extra A.1 T" (probe rev72b/r2/d209; 72b r2
-read the unset stored answer: "Chapter 2 Extra", "A T"). Residual: a standalone raw class's own `\def`/`\newcommand` of
+`\chapter:settles`); there the answer is stored where the class's load ends — the end-of-class hook, after
+latex209.def's `\@documentclasshook` and before `\compat@loadpackages` loads the style options (tex_job.rs
+`\lx@latex@ix@store@chapters`, sect01.rs `store_chapter_after_latex_ix_class_load`, `\chapter:stored`, which
+`class_defines_chapter` reads as it reads a settled answer; the refusals recorded before the class load are cleared) —
+so `\documentstyle[appendix]{report}` letters its appendix chapters, pdflatex "Chapter 1 Intro 1.1 S Appendix A Extra
+A.1 T" (probe rev72b/r2/d209; 72b r2 read the unset stored answer: "Chapter 2 Extra", "A T"), and the lock's refusal of
+a document's own `\def\chapter` (with its `\newcounter{chapter}`) under `\documentstyle{article}` is no class's
+chapters, its appendix "A X" as pdflatex (probe rev72b/r3/d209u, repro
+sectioning-frontmatter/documentstyle_document_chapter_is_no_class_chapter; 72b r3, testing on every read, "Appendix
+1.A"). Residual: a standalone raw class's own `\def`/`\newcommand` of
 `\chapter`, made before any `\LoadClass`, is replaced by LaTeXML's chapter, as the lock replaces every raw sectioning
 definition (Perl State.pm:502-517): `\providecommand\chapter{\par\noindent PROVIDEDCHAP }` is `<chapter>` "Chapter 1
 Hello" where pdflatex sets "PROVIDEDCHAP Hello" (probe rev72b/p/r1). Two cases keep the class's own body: a class that
@@ -7100,7 +7109,8 @@ above; 1807.01378 (ws-rv9x6 counter), 1906.09200 (subfiles), 0704.3654 (pasj00).
 koma_part_is_a_part}`, `perfect_kernel_batch72b::{chapter_exists_where_the_class_has_chapters,
 a_class_has_chapters_when_its_code_defines_chapter, a_raw_class_meets_chapter_undefined_while_it_loads,
 appendices_follow_the_class_chapters, bindings_whose_class_has_chapters_define_them,
-a_second_documentclass_keeps_the_first_class_chapters, an_unknown_class_chapter_has_its_counter}`; KNOWN_PERL_ERRORS #962.
+a_second_documentclass_keeps_the_first_class_chapters, an_unknown_class_chapter_has_its_counter,
+a_script_binding_class_load_settles_the_chapters}`; KNOWN_PERL_ERRORS #962.
 **Upstream**: not filed.
 
 ### 180. `\@trivlist` is the shared list opener (Perl neutralizes it to `\relax`) — PLANS P38

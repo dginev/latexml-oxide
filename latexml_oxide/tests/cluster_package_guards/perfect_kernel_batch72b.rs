@@ -238,9 +238,12 @@ fn a_preamble_chapter_errs_and_the_body_chapter_reads_the_stand_in() {
 /// r1 "Appendix 1.A") and under a raw class whose `\newcounter{chapter}[part]` makes no `\chapter` (as WileyNJDv5.cls:5728,
 /// MRM.cls:2160; probes rev72a/r6 retract, retract2: cimart, daj), `\appendix` and appendix.sty's `appendices` letter
 /// the sections, "Appendix A" — pdflatex "A AppSec", "CHAP:UNDEF." and "A Extra". A LaTeX 2.09 `\documentstyle`
-/// document stores no answer (72b review r2 finding 1, probe rev72b/r2/d209): `\documentstyle[appendix]{report}` is
-/// tested now, its appendix chapters lettered — pdflatex "Chapter 1 Intro 1.1 S Appendix A Extra A.1 T" (72b r2:
-/// "Chapter 2 Extra", "A T").
+/// document stores its class's answer where the class load ends (`\chapter:stored`; 72b review r2 finding 1, probe
+/// rev72b/r2/d209; r3 finding 1, probe rev72b/r3/d209u): `\documentstyle[appendix]{report}` letters its appendix
+/// chapters — pdflatex "Chapter 1 Intro 1.1 S Appendix A Extra A.1 T" (72b r2: "Chapter 2 Extra", "A T") — and
+/// `\documentstyle{article}` whose document makes its own `\newcounter{chapter}` + `\def\chapter` letters its appendix
+/// sections, pdflatex "A X" (repro sectioning-frontmatter/documentstyle_document_chapter_is_no_class_chapter; 72b r3
+/// "Appendix 1.A": the lock's refusal of the document's `\def` read as the class's chapters).
 #[test]
 fn appendices_follow_the_class_chapters() {
   assert_elements(
@@ -281,6 +284,18 @@ fn appendices_follow_the_class_chapters() {
       r#"<appendix inlist="toc" xml:id="A1"><tags><tag>Appendix A</tag><tag role="refnum">A</tag><tag role="typerefnum">Appendix A</tag></tags><title><tag close=" ">Appendix A</tag>Extra</title><toctitle><tag close=" ">A</tag>Extra</toctitle><section inlist="toc" xml:id="A1.S1"><tags><tag>A.1</tag><tag role="refnum">A.1</tag><tag role="typerefnum">§A.1</tag></tags><title><tag close=" ">A.1</tag>T</title></section></appendix>"#,
     ),
   ]);
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/documentstyle_document_chapter_is_no_class_chapter.tex"
+    ),
+    AR5IV,
+    (0, 0),
+    &[(
+      "appendix",
+      "A1",
+      r#"<appendix inlist="toc" xml:id="A1"><tags><tag>Appendix A</tag><tag role="refnum">A</tag><tag role="typerefnum">Appendix A</tag></tags><title><tag close=" ">Appendix A</tag>X</title><toctitle><tag close=" ">A</tag>X</toctitle><para xml:id="A1.p1"><p xml:id="A1.p1.1">More.</p></para></appendix>"#,
+    )],
+  );
 }
 
 /// Bindings whose real class has chapters define them (72b review findings 4, 7; r2 findings 2, 4, 6): jmlr
@@ -372,14 +387,23 @@ fn bindings_whose_class_has_chapters_define_them() {
 }
 
 /// 72b review r2 finding 3 (probe rev72b/r2/dc2): only the document's first `\documentclass` clears `\chapter`; a
-/// second one (latex.ltx:18618 makes it `\@twoclasseserror`) keeps the first class's chapters — memoir's two chapters,
-/// 0 Errors (72b r2: one chapter and `Error:undefined:\chapter`).
+/// second one keeps the first class's chapters — memoir's two chapters (72b r2: one chapter and
+/// `Error:undefined:\chapter`). In the preamble latex.ltx:18618 makes a second one `\@twoclasseserror`; this one is in
+/// the body, where :18621 `\@onlypreamble\documentclass` stops it — pdflatex's one error "Can be used only in
+/// preamble.", which we do not raise yet (SYNC_STATUS row; r3 finding 3), so 0 Errors. The one Warning is memoir's own
+/// misnamed conditional (memoir.cls:5454 `\newif \@iffirstamp`, the first load), as on 72b r3.
 #[test]
 fn a_second_documentclass_keeps_the_first_class_chapters() {
   let tex = "\\documentclass{memoir}\n\\begin{document}\n\\chapter{One}\nText.\n\\documentclass{memoir}\n\\chapter{Two}\n\
              More.\n\\end{document}\n";
   let (stderr, xml) = convert_files_with(tex, &[], Some(AR5IV));
   assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.lines().any(|line| line
+      == "Warning:misdefined:\\@iffirstamp The conditional \\@iffirstamp is being defined but doesn't start with \\if"),
+    "{stderr}"
+  );
   latexml::util::test::assert_element(
     &xml,
     "chapter",
@@ -391,13 +415,28 @@ fn a_second_documentclass_keeps_the_first_class_chapters() {
 /// 72b review r2 finding 8: OmniBus's guess (c) — an unknown class, and subfiles (subfiles.cls:38-40) — puts back
 /// LaTeXML's chapter with a counter of its own at the first call, so a chapter is numbered and has its id: 1906.09200's
 /// subfile `\chapter` was "Counter 'chapter' was not defined" and "`\c@chapter` is not a register" (72a6, 72b r2).
-/// Its one Warning is the missing class binding.
+/// Its one Warning is the missing class binding (`missing_file:lxunknownclass`, OmniBus standing in).
 #[test]
 fn an_unknown_class_chapter_has_its_counter() {
   let tex = "\\documentclass{lxunknownclass}\n\\begin{document}\n\\chapter{Intro}\nText.\n\\end{document}\n";
-  assert_files_elements(tex, &[], (0, 1), &[], &[(
+  let missing = "Warning:missing_file:lxunknownclass Can't find binding for class lxunknownclass (using OmniBus)";
+  assert_files_elements(tex, &[], (0, 1), &[missing], &[(
     "chapter",
     "Ch1",
     r#"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title><tag close=" ">Chapter 1</tag>Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><para xml:id="Ch1.p1"><p xml:id="Ch1.p1.1">Text.</p></para></chapter>"#,
   )]);
+}
+
+/// 72b review r3 finding 2: a runtime script binding's `LoadClass` makes the "has chapters" step after its load, as a
+/// compiled binding's `LoadClass!` (script_bindings/engine.rs, OXIDIZED_DESIGN #179), so the binding's own code after
+/// `LoadClass("report")` sees report's `\chapter` — pdflatex "X=C." for the same class read raw (`\LoadClass{report}`
+/// then `\@ifundefined{chapter}`); 72b r3 "X=S." (`\chapter` cleared until the document's class load ended).
+#[cfg(feature = "runtime-bindings")]
+#[test]
+fn a_script_binding_class_load_settles_the_chapters() {
+  let script = "LoadClass(\"report\");\nRawTeX(\"\\\\@ifundefined{chapter}{\\\\gdef\\\\lxx{S}}{\\\\gdef\\\\lxx{C}}\");\n";
+  let tex = "\\documentclass{lxscriptreport}\n\\begin{document}\nX=\\lxx.\n\\end{document}\n";
+  assert_files_elements(tex, &[("lxscriptreport.cls.rhai", script)], (0, 0), &[], &[
+    ("p", "p1.1", r#"<p xml:id="p1.1">X=C.</p>"#),
+  ]);
 }

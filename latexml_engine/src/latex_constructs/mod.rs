@@ -5669,7 +5669,7 @@ fn makebox_alignment(key: &str) -> &'static str {
 // bitwise dump diff at the split, 2026-09-03).
 mod sect01;
 pub(crate) use sect01::make_missing_float_counters;
-pub use sect01::settle_chapter_after_class_load;
+pub use sect01::{settle_chapter_after_class_load, store_chapter_after_latex_ix_class_load};
 mod sect02;
 mod sect03;
 mod sect04;

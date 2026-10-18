@@ -295,7 +295,13 @@ LoadDefinitions!({
     let class_cls_found = !class_sty_found && (class_cls_binding_exact
       || class_cls_via_fallback || class_cls_raw);
 
-    let after = Tokens!(T_CS!("\\@documentclasshook"), T_CS!("\\compat@loadpackages"));
+    // (OXIDIZED_DESIGN #179: the "has chapters" answer is stored where the class's load ends, before the style options)
+    crate::latex_constructs::store_chapter_after_latex_ix_class_load(true);
+    let after = Tokens!(
+      T_CS!("\\@documentclasshook"),
+      T_CS!("\\lx@latex@ix@store@chapters"),
+      T_CS!("\\compat@loadpackages")
+    );
 
     if class_sty_found {
       // Branch 1 — class is actually a `.sty` (e.g. spackap, aipproc,
@@ -426,6 +432,11 @@ with \string\documentclass\space rather than \string\documentstyle}}%
 \def\xviipt{\edef\f@size{\@xviipt}\rm}\def\xxpt{\edef\f@size{\@xxpt}\rm}\def\xxvpt{\edef\f@size{\@xxvpt}\rm}
 \RequirePackage{latexsym}"
   );
+
+  // OXIDIZED_DESIGN #179: the 2.09 class's end stores its "has chapters" answer (`store_chapter_after_latex_ix_class_load`).
+  DefPrimitive!("\\lx@latex@ix@store@chapters", {
+    crate::latex_constructs::store_chapter_after_latex_ix_class_load(false);
+  });
 
   // Initial alias `\documentstyle = \lx@documentstyle@impl`. The latex_dump
   // may overwrite this on autoload; `\@load@latex@pool` (tex.rs) re-applies

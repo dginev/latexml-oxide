@@ -149,9 +149,22 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   `\LoadClass` so combine's inner class is jmlr, then `\jmlrbookcommands` (jmlr.cls:950-959) switches `\chapter` to
   `\bookchapter`: a jmlrbook chapter is legitimate. jmlr_cls.rs answers the class and its `\chapter` is always the
   article's `\artchapter` stand-in (OXIDIZED_DESIGN #735), so each jmlrbook document with chapters gets one false
-  "Class jmlr Error: Chapters not permitted in articles" Warning; the chapters themselves convert. Fix: a jmlrbook
+  "Class jmlr Error: Chapters not permitted in articles" Warning; the chapters themselves convert. `\jmlrbookcommands`
+  (jmlr.cls:950-956) also makes `\appendix` the book's `\bookappendix` (:936-949: `\thechapter` `\@Alph`, chapter and
+  section counters reset), which letters the appendix chapters ("Appendix A"), where ours is jmlr's article
+  `\artappendix` (:720-729), lettering sections within the last chapter (72b review r3 finding 5). Fix: a jmlrbook
   binding (or jmlr_cls.rs keyed on the requested class) that runs the book commands: `\chapter` the kernel's, no
-  Warning. No arXiv witness counted yet. Classification: RUST-ONLY (Perl has no jmlr binding).
+  Warning, `\appendix` lettering chapters. No arXiv witness counted yet. Classification: RUST-ONLY (Perl has no jmlr
+  binding).
+- **A `\documentclass` in the body is not "Can be used only in preamble"** (72b review r3 finding 3, probe
+  rev72b/r3/dc2): latex.ltx:18621 `\@onlypreamble\documentclass` (and :18625 for `\documentstyle`) makes a body call
+  `\@notprerr`, pdflatex 1 error "LaTeX Error: Can be used only in preamble."; ours raises none (0 Errors) and, as TeX,
+  loads no class (the first class's chapters kept, OXIDIZED_DESIGN #179; a second one in the preamble is latex.ltx:18618
+  `\@twoclasseserror`). Perl errs here: its `\documentclass` has `beforeDigest => onlyPreamble('\documentclass')`
+  (latex_constructs.pool.ltxml:75, :155-160, "The current command '\documentclass' can only appear in the preamble"),
+  which sect01.rs's `\documentclass` lacks (`latex_constructs::only_preamble` exists, mod.rs). Fix: the same
+  `before_digest`, a one-line port (it adds one Error to every merged-file paper with a body `\documentclass`).
+  Classification: RUST-ONLY.
 - **combine's `book`/`report`/`memoir` option is ignored** (72b review r2 finding 8): combine.cls:85-88 picks the
   inner class (`\c@lclass`, default article, :29), but combine_cls.rs:11 always loads article, so under
   `\documentclass[book]{combine}` `\chapter` is undefined and a chapter reads #734's stand-in with the chapterless
@@ -3603,7 +3616,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   binding's class load is `LoadClass!` (`withoptions => true` added); OmniBus's guess (c) puts back
   `\lx@kernel@chapter@counted` (1906.09200's two counter Warnings gone). Open: a standalone raw class's own `\chapter`
   body is LaTeXML's chapter (the lock, as Perl), where TeX typesets the class's; jmlrbook's false Warning and combine's
-  ignored `book` option (Corpus Triage Quick Wins).
+  ignored `book` option (Corpus Triage Quick Wins). Round 4 (72b review r3): a `\documentstyle` document stores its class's
+  answer where the class load ends (tex_job.rs `\lx@latex@ix@store@chapters`, after `\@documentclasshook`, before
+  `\compat@loadpackages`; `\chapter:stored`), so the lock's refusal of the document's own `\def\chapter` is no class's
+  chapters (`\documentstyle{article}` appendix "A X", as pdflatex; repro
+  sectioning-frontmatter/documentstyle_document_chapter_is_no_class_chapter); a runtime script binding's `LoadClass`
+  settles too; rows for the body `\documentclass` diagnostic and jmlrbook's `\bookappendix` (Corpus Triage Quick Wins).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

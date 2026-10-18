@@ -2633,10 +2633,15 @@ fn class_layer_definition(token: &Token) -> bool {
 /// test made now ([`class_has_chapters_now`]), as a class's own `\@ifundefined{chapter}` is answered by what it has
 /// defined so far. Not a `chapter` counter alone: WileyNJDv5.cls:5728 and MRM.cls:2160 `\newcounter{chapter}[part]` with
 /// no `\chapter` (2609.08425, 2506.14995: "REFERENCES"; 2211.16474: "Appendix A"). A LaTeX 2.09 `\documentstyle`
-/// document never settles (only a `\documentclass` stores the answer, `\chapter:settles`), so it gets the test made
-/// now too: `\documentstyle[appendix]{report}` numbers its appendix chapters "Appendix A", as pdflatex.
+/// document never settles (only a `\documentclass` retracts and settles, `\chapter:settles`); its class's end stores
+/// the answer (`\chapter:stored`, `store_chapter_after_latex_ix_class_load`, latexml_engine sect01.rs), so
+/// `\documentstyle[appendix]{report}` numbers its appendix chapters "Appendix A" and `\documentstyle{article}` with the
+/// document's own `\newcounter{chapter}` + `\def\chapter` letters its appendix "A", as pdflatex. Before any class load
+/// (plain TeX), the test made now.
 pub fn class_defines_chapter() -> bool {
-  if crate::binding::content::class_loading() || !lookup_bool("\\chapter:settles") {
+  if crate::binding::content::class_loading()
+    || !(lookup_bool("\\chapter:settles") || lookup_bool("\\chapter:stored"))
+  {
     class_has_chapters_now()
   } else {
     lookup_bool(CLASS_HAS_CHAPTERS)
