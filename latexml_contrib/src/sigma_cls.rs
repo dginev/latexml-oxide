@@ -9,6 +9,11 @@ LoadDefinitions!({
   // text (2111.06645). The binding dropped both options. Guard: `perfect_kernel_batch73a::sigma_passes_fleqn`.
   Digest!("\\PassOptionsToClass{fleqn,11pt,twoside}{article}")?;
   LoadClass!("OmniBus");
+  // sigma.cls:20-21 (2111.06645's copy; 0902.2977's, 0705.3628's and 1404.0720's at :17-19) `\LoadClass[fleqn,11pt,
+  // twoside]{article}` and `\PassOptionsToPackage{fleqn}{amsmath}`: flush-left displays (fleqn.clo, fleqn_sty.rs), then
+  // amsmath's under `\if@fleqn`, which set an author's `$` in a display as text in the math (amsmath_sty.rs
+  // `\lx@mathdisplay@hook`). Guard `perfect_kernel_batch73b::sigma_displays_are_flush_left_hboxes`.
+  fleqn_sty::fleqn_clo()?;
   RequirePackage!("amsmath", options => vec!["fleqn".to_string()]);
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");

@@ -279,26 +279,37 @@ fn read_balanced_group(tokens: &[Token], pos: &mut usize) -> Vec<Token> {
   result
 }
 
-/// Perl: TokenizeBalanced — tokenize a string with current catcodes, then balance groups.
+/// Perl: TokenizeBalanced — the TeX an escape holds (`escapechar`, `escapeinside`, `mathescape`, `texcl`), its groups
+/// balanced. listings executes it as TeX where it stands (lstmisc.sty `\lst@DefEsc`), reading it then, so a command
+/// in it may change the catcodes of what follows (`%B(col\verb._.idx(j))%`, 1106.5908: tokenized at once, the `_` was a
+/// subscript, "Script _ can only appear in math mode"). So the text is kept and read by a mouth of its own when the
+/// listing is digested (`\lx@lst@escape`), the balancing braces Perl adds put around it. Guard
+/// `perfect_kernel_batch73b::listings_escape_is_read_where_it_runs`.
 fn tokenize_balanced(text: &str) -> Vec<Token> {
-  let tokens = mouth::tokenize(TeXString::assembled(text.to_string()));
-  let mut toks: Vec<Token> = tokens.unlist();
   let mut level: i32 = 0;
-  for t in &toks {
+  let mut opened: i32 = 0;
+  for t in mouth::tokenize(TeXString::assembled(text.to_string())).unlist() {
     match t.get_catcode() {
       Catcode::BEGIN => level += 1,
       Catcode::END => level -= 1,
       _ => {},
     }
+    opened = opened.min(level);
   }
-  while level > 0 {
-    toks.push(T_END!());
-    level -= 1;
+  let open = usize::try_from(-opened).unwrap_or(0);
+  let close = usize::try_from(level - opened).unwrap_or(0);
+  let balanced = s!("{}{text}{}", "{".repeat(open), "}".repeat(close));
+  thread_local! {
+    static ESCAPE_SEQ: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
   }
-  while level < 0 {
-    toks.insert(0, T_BEGIN!());
-    level += 1;
-  }
+  let id = ESCAPE_SEQ.with(|seq| {
+    seq.set(seq.get().wrapping_add(1));
+    seq.get()
+  });
+  assign_value(&s!("lx@lst@escape@{id}"), balanced, Some(Scope::Global));
+  let mut toks = vec![T_CS!("\\lx@lst@escape"), T_BEGIN!()];
+  toks.extend(Explode!(id));
+  toks.push(T_END!());
   toks
 }
 
@@ -4155,6 +4166,23 @@ LoadDefinitions!({
   });
 
   // escapechar handler
+  // An escape's TeX, read where the listing digests it (`tokenize_balanced`).
+  DefPrimitive!("\\lx@lst@escape{}", sub[(id)] {
+    if let Some(text) = lookup_value(&s!("lx@lst@escape@{}", id.to_string())) {
+      let text = text.to_string();
+      if !text.is_empty() {
+        // The text is one input of its own, not a line of the file: no `\endlinechar` after it, the current one
+        // restored once it is read (the restore waits in the enclosing mouth).
+        let endline = lookup_register("\\endlinechar", Vec::new())?.map_or(13, |value| value.value_of());
+        let mut restore = vec![T_CS!("\\endlinechar")];
+        restore.extend(Explode!(endline));
+        restore.push(T_CS!("\\relax"));
+        unread_vec(restore);
+        assign_register("\\endlinechar", Number::new(-1).into(), Some(Scope::Local), Vec::new())?;
+        open_mouth_with(Mouth::new(&text, None)?, true, BalancedBoundary::Opaque);
+      }
+    }
+  });
   DefMacro!("\\lst@@escapechar Until:\\end", sub [args] {
     let esc = lst_deslash(&args[0].to_string());
     // `escapechar={}` CLEARS an inherited escape (listings' `\lst@@escapechar`

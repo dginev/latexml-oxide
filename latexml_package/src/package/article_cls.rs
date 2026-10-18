@@ -47,7 +47,8 @@ LoadDefinitions!( {
     });
   });
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
-  DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+  // `\input{fleqn.clo}` (fleqn_sty.rs `fleqn_clo`).
+  DeclareOption!("fleqn", sub { fleqn_sty::fleqn_clo()?; });
 
   // article.cls:84-86: two-sided only by option (the kernel's `\@twosidefalse` is the default;
   // KNOWN_PERL_ERRORS #469: Perl's options are no-ops, as book's were for hep-ph0207204).

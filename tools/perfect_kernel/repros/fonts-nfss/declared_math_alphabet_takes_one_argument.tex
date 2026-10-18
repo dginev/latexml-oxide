@@ -1,0 +1,11 @@
+% witness: 1810.09080 (rc_struct6 row 10); mathalpha.sty:116 `\DeclareMathAlphabet{\mathbb}{U}{msb}{m}{n}`
+% oracle:  pdflatex 0 errors: a declared alphabet takes one argument (latex.ltx `\select@group`): W blackboard, c italic
+% engines: rust 67int23b = 1 ("Missing sub/superscript argument": the switch set `c` in msbm), perl = 0 (same switch,
+%   no msbm map)
+% expect:  0 errors; the numerator W (blackboard) subscripted by an italic c
+% status:  RED (67int23b) -> GREEN (73b: sect08.rs `\DeclareMathAlphabet`, OXIDIZED_DESIGN #747)
+\documentclass{article}
+\usepackage{amsmath,amssymb}\usepackage[cal=dutchcal,scr=boondoxo,bb=ams,frak=euler]{mathalfa}
+\begin{document}
+X $\frac{\mathbb{W}_c}{w}$ Y
+\end{document}

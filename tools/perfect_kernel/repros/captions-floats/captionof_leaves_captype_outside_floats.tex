@@ -1,0 +1,19 @@
+% witness: 2206.08980, 2508.21533 (rc_struct6 row 6)
+% oracle:  pdflatex 0 errors: caption.sty:389-391 `\captionof` is `\setcaptiontype*{figure}\caption`, leaving
+%   `\@captype` set in the enclosing group, so the later bare `\caption` in the minipage is Figure 2
+% engines: rust 67int23b = 1 ("Use of \caption outside any known float"), perl = 1
+% expect:  0 errors; two figures, "Figure 1" and "Figure 2"
+% status:  RED (67int23b) -> GREEN (73b: caption_sty.rs `\lx@caption@of@after`)
+\documentclass{article}
+\usepackage{caption}
+\usepackage{graphicx}
+\begin{document}
+\noindent\rule{2cm}{1cm}
+\captionof{figure}{First caption.}
+
+Text between.
+
+\begin{minipage}{\columnwidth}
+\caption{Second caption.}
+\end{minipage}
+\end{document}

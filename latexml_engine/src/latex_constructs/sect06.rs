@@ -153,12 +153,17 @@ pub(crate) fn load() -> Result<()> {
   // closing the first inline, and array content lands inside
   // `<ltx:p>` triggering schema violations. Driver: astro-ph0203201
   // (table*+center+$$+array).
+  // `{center}`, `{flushleft}` and `{flushright}` are `\trivlist` and `\centering`, `\raggedright`, `\raggedleft`
+  // (latex.ltx:15415-15432), which let `\\` be `\@centercr`, a line break: in them `\\` is the kernel's newline
+  // (`\@normalcr`, as a parbox's), whatever the document made it (`\def\\ml{m_L}`, hep-ph9607435: "Missing argument
+  // Match:ml" per `\\`). Guard `perfect_kernel_batch73b::centering_rebinds_the_line_break`.
   DefEnvironment!("{center}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     // aligning will take care of \\\\ "rows"
     aligning_environment("center", "ltx_centering", document, props)?;
     Ok(())
-  }, mode => "internal_vertical");
+  }, mode => "internal_vertical",
+  before_digest => { Let!("\\\\", "\\@normalcr"); });
   // HOWEVER, define a plain \center to act like \centering (?)
   DefMacro!("\\center", "\\centering");
   def_macro_noop("\\endcenter")?;
@@ -171,12 +176,14 @@ pub(crate) fn load() -> Result<()> {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     aligning_environment("left", "ltx_align_left", document, props)?;
     Ok(())
-  }, mode => "internal_vertical");
+  }, mode => "internal_vertical",
+  before_digest => { Let!("\\\\", "\\@normalcr"); });
   DefEnvironment!("{flushright}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     aligning_environment("right", "ltx_align_right", document, props)?;
     Ok(())
-  }, mode => "internal_vertical");
+  }, mode => "internal_vertical",
+  before_digest => { Let!("\\\\", "\\@normalcr"); });
   // Perl latex_constructs.pool.ltxml L1316-1318: "Redefine these so they work
   // both as environments, and as single commands". The bare `\flushleft` /
   // `\flushright` commands (without matching `\end...`) are used as
@@ -210,9 +217,10 @@ pub(crate) fn load() -> Result<()> {
   // \raggedsignature` in `\closing`: "You can't use \raggedsignature after
   // \the" (bfh-ci letter, SFSesim, makelabels ×2, scrlttr2copy; Perl's
   // constructors fail identically, pool:1237-1240).
-  DefMacro!("\\centering", "\\lx@do@centering");
-  DefMacro!("\\raggedright", "\\lx@do@raggedright");
-  DefMacro!("\\raggedleft", "\\lx@do@raggedleft");
+  // Each lets `\\` be the kernel's newline first, as latex.ltx's `\let\\\@centercr` (`{center}` above; hep-ph9607435).
+  DefMacro!("\\centering", "\\let\\\\\\@normalcr\\lx@do@centering");
+  DefMacro!("\\raggedright", "\\let\\\\\\@normalcr\\lx@do@raggedright");
+  DefMacro!("\\raggedleft", "\\let\\\\\\@normalcr\\lx@do@raggedleft");
   DefConstructor!("\\lx@do@centering", sub[doc,_args] {
     setup_aligning_context(doc);
   },

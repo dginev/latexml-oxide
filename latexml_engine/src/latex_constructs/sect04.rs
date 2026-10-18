@@ -322,7 +322,21 @@ pub(crate) fn load() -> Result<()> {
       }
       let invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
           vec![stype_clean_tokens, toctitle_tokens]);
-      let xtoctitle = digest(invoked_toctitle)?;
+      // A `[short]` is written to the .toc and typeset only in a printed table of contents (latex.ltx:17263
+      // `\addcontentsline{toc}`, `\@starttoc`): its diagnostics are held and raised only if the document prints the
+      // contents (`\tableofcontents`; logger.rs `defer_to_list`, ruling 7e's held tags). `\subsection[Example:
+      // $M(-2;1/2,1/2,3/4)]{…}` with no contents (2304.03934: "Extra }, or forgotten $"). OXIDIZED_DESIGN #749; guard
+      // `perfect_kernel_batch73b::short_toc_title_errs_only_where_printed`.
+      let hold = short.map(|_| util::logger::DiagnosticsHold::begin());
+      let xtoctitle = digest(invoked_toctitle);
+      if let Some(hold) = hold {
+        if xtoctitle.is_err() || hold.is_empty() {
+          hold.commit();
+        } else if let Some(deferred) = hold.defer() {
+          util::logger::defer_to_list("toc", util::logger::keep_deferred(deferred));
+        }
+      }
+      let xtoctitle = xtoctitle?;
 
       if xtoctitle.to_string() != xtitle.to_string() {
         props.insert("toctitle", xtoctitle.into());
@@ -496,6 +510,17 @@ pub(crate) fn load() -> Result<()> {
         "name" => digest_in_group(T_CS!("\\contentsname"))?))
     }
   );
+
+  // A printed list (`\tableofcontents`, `\listoffigures`, a binding's own contents) raises the held diagnostics of the
+  // copies written to it (logger.rs `defer_to_list`; a heading's `[short]`, above). Guard
+  // `perfect_kernel_batch73b::short_toc_title_errs_only_where_printed`.
+  Tag!("ltx:TOC", after_close => sub[_document, node] {
+    if let Some(lists) = node.get_attribute("lists") {
+      for list in lists.split_whitespace() {
+        util::logger::note_list_shown(list);
+      }
+    }
+  });
 
   // arXiv-fork (23771504 + 085c9fb6): abstract and acknowledgements carry
   // `inlist="toc"` + a generated xml:id so the navigation TOC (Post::Scan +

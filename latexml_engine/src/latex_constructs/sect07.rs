@@ -11,6 +11,13 @@ fn mathdisplay_hook() -> Result<()> {
   Ok(())
 }
 
+/// Runs `\lx@equation@hook` (latex_constructs_rust_only.rs) where `{equation}` begins: the display hook, unless a
+/// class sets `{equation}` apart from `\[` (fleqn.clo, fleqn_sty.rs `math_displays_in_hbox`).
+fn equation_hook() -> Result<()> {
+  digest(Tokens!(T_CS!("\\lx@equation@hook")))?;
+  Ok(())
+}
+
 #[rustfmt::skip]
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
@@ -80,7 +87,7 @@ pub(crate) fn load() -> Result<()> {
     before_digest => {
       prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
       before_equation()?;
-      mathdisplay_hook()?;
+      equation_hook()?;
     },
     after_digest_body => sub[whatsit] {
       after_equation(Some(whatsit))?;

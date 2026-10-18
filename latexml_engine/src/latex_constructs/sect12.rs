@@ -32,7 +32,9 @@ fn length_register_type(register: Option<RegisterType>) -> RegisterType {
 /// 2605.08367, 2605.24444, 2605.29037, 2606.03162; Perl drops the rest, KNOWN_PERL_ERRORS #275). The register is
 /// read by the `Variable` reader (prefixes, a braced `\relax` and spaces skipped; a non-register is reported and
 /// skipped, as Perl), its value by its own type (OXIDIZED_DESIGN #317; guards `braced_quantity_tail`,
-/// `perfect_kernel_batch61::setlength_reads_its_register_and_value_as_one_stream`).
+/// `perfect_kernel_batch61::setlength_reads_its_register_and_value_as_one_stream`). A `\setlength` in the body whose
+/// `#1` begins with no register is TeX's code `#1 #2\relax`, run as it stands (OXIDIZED_DESIGN #746; guard
+/// `perfect_kernel_batch73b::setlength_on_a_non_register_runs_its_code`).
 fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()> {
   thread_local! {
     /// The `Variable` reader, parsed once.
@@ -52,7 +54,38 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
   let mut stream = target.unlist();
   stream.push(T_SPACE!());
   stream.extend(length.unlist());
+  let code = stream.clone();
+  let mut executed = false;
   let (assignment, tail) = read_braced(Tokens::new(stream), || {
+    // `\setlength`'s `#1 #2\relax` is code TeX executes: what `#1` begins with, past spaces and `\relax`, when it is
+    // neither a register nor a prefix, is simply run (`\setlength` before an `\item`, IEEEtran templates' empty
+    // `\setlength` line: 2201.08831, 2401.09168), where the `Variable` read reported "A <variable> was supposed to be
+    // here" and dropped it. `\addtolength`'s `\advance` reads a variable, and errs as TeX does. In the preamble
+    // (`\@nodocument` not yet `\relax`, latex.ltx:9137) what it would set is TeX's "Missing \begin{document}", which
+    // nothing here raises: the `Variable` read's Error stands for it (fancyheadings' `\headrulewidth`, a macro since
+    // 2.0: `\setlength{\headrulewidth}{0pt}`; guard `perfect_kernel_batch73b::setlength_on_a_macro_in_the_preamble_keeps_its_error`).
+    if !add && x_equals(&T_CS!("\\@nodocument"), &T_CS!("\\relax")) {
+      loop {
+        match read_x_token(None, false, None)? {
+          Some(token) if token.get_catcode() == Catcode::SPACE || token == T_CS!("\\relax") => {},
+          Some(token) => {
+            let assignable = lookup_register_definition(&token).is_some()
+              || (token.get_catcode().is_active_or_cs()
+                && lookup_definition(&token)?.is_some_and(|defn| defn.is_prefix()));
+            unread_vec(vec![token]);
+            if !assignable {
+              executed = true;
+              return Ok(None);
+            }
+            break;
+          },
+          None => {
+            executed = true;
+            return Ok(None);
+          },
+        }
+      }
+    }
     let Some(ArgWrap::RegisterDefinition(dbox)) = variable.read_arguments(None)?.into_iter().next()
     else {
       return Ok(None);
@@ -64,6 +97,12 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
     let value = read_length_value(length_register_type(defn.register_type()))?;
     Ok(Some((defn, params, value)))
   })?;
+  if executed {
+    let mut code = code;
+    code.push(T_CS!("\\relax"));
+    unread_vec(code);
+    return Ok(());
+  }
   if let Some((defn, params, value)) = assignment {
     if add {
       let oldlength = defn.value_of(params.clone()).unwrap_or_default();

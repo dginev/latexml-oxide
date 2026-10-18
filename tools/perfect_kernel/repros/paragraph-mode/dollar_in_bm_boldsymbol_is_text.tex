@@ -1,0 +1,13 @@
+% witness: 2506.20975 (rc_struct6 row 9; `\subsection{$\boldsymbol{\ee$$\rt$$\jpsi$$\rt$$\Xi\,\bar{\Xi}}$, …}` with bm)
+% oracle:  pdflatex 0 errors: bm.sty's `\bm` (its `\boldsymbol`) emits each math shift at the level it is used at
+%   (`\bm@add{#1}`, bm.sty:281), so each `$$` ends a formula and begins the next
+% engines: rust 67int23b = 2 Errors + 9 Warnings ("Extra }, or forgotten $"), perl = 8
+% expect:  0 errors, 0 warnings; the title holds three bold formulas, e+e-, the arrow, J/psi
+% status:  RED (67int23b) -> GREEN (73b: bm_sty.rs `bold_math` sets bold runs between the `$`s)
+\documentclass{article}
+\usepackage{amsmath,bm}
+\newcommand{\ee}{e^+ e^-}
+\begin{document}
+\section{$\boldsymbol{\ee$$\rightarrow$$J/\psi}$, fits}
+Text $\bm{x_1}$.
+\end{document}

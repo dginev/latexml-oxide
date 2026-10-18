@@ -1,0 +1,12 @@
+% witness: 1905.11073 (rc_struct6 row 2); iopart.cls:771-775 (1907.10288's copy) `\def\equation{… \hbox to\linewidth
+%   \bgroup $ \displaystyle\hskip\mathindent}`, :763-769 `\[` with a `\bgroup` after the `$`
+% oracle:  pdflatex (with 1907.10288's iopart.cls and iopart12.clo) 0 errors: the `$ for $` is text in the box
+% engines: rust 67int23b = 2, perl = 2 (KNOWN_PERL_ERRORS #907)
+% expect:  0 errors; one Math whose XMath holds an XMText "for"
+% status:  RED (67int23b) -> GREEN (73b: iopart_support_sty.rs, fleqn_sty.rs `math_displays_in_hbox`)
+\documentclass[12pt]{iopart}
+\begin{document}
+\begin{equation}
+E = mc^2 $ for $ v \ll c.
+\end{equation}
+\end{document}

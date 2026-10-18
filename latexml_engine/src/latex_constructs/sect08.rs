@@ -975,7 +975,15 @@ pub(crate) fn load() -> Result<()> {
     } else {
       let font : Option<Font> = Some(font::lookup_tex_font(
         &family.to_string(), &series.to_string(), &shape.to_string()));
-      DefPrimitive!(cs_tok, None, None, font => font);
+      // latex.ltx's `\DeclareMathAlphabet` makes a one-argument alphabet (`\select@group`, latex.ltx:3986-3999:
+      // `\mathbb{W}` sets W alone), bound as the stock alphabets are (`\mathrm{}`, sect07.rs; amsfonts' `\mathbb{}`).
+      // Perl's parameterless switch (latex_constructs.pool.ltxml:2686) set the rest of the group in the alphabet:
+      // `\frac{\mathbb{W}_c}{w}` under mathalfa's `bb=ams` (mathalpha.sty:116 `\DeclareMathAlphabet{\mathbb}{U}{msb}
+      // {m}{n}`) read `c` in msbm, where it sets nothing, "Missing sub/superscript argument" (1810.09080;
+      // OXIDIZED_DESIGN #747). The `\@fontswitch` path reads the font from the definition (sect13.rs
+      // `math_alphabet_font`). Guard `perfect_kernel_batch73b::declared_math_alphabet_takes_one_argument`.
+      DefConstructor!(s!("{}{{}}", cs_tok.with_str(str::to_string)).as_str(), "#1",
+        bounded => true, require_math => true, font => font);
     }
   });
 

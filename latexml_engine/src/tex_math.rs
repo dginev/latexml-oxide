@@ -774,7 +774,9 @@ LoadDefinitions!({
   // horizontal mode, §1138 `init_math` there): amsmath's display under `\if@fleqn` (amsmath.sty:2794-2812
   // `\mathdisplay`'s `\hbox to\displaywidth\bgroup … $\displaystyle`, amsmath_sty.rs `\lx@mathdisplay@hook`),
   // proof.sty's label, conclusion and premises (proof.sty:160-166 `\hbox{$#1$}`, the `$##$` cells; proof_sty.rs),
-  // accents.sty's under-accent (accents.sty:206-213 `\cc@uaccentset`, `\hbox{$…#1$}`; accents_sty.rs). Here the
+  // accents.sty's under-accent (accents.sty:206-213 `\cc@uaccentset`, `\hbox{$…#1$}`; accents_sty.rs), fleqn.clo's,
+  // iopart's and pasj's `{equation}` (fleqn.clo:92-103; fleqn_sty.rs `math_displays_in_hbox`), amsbsy's `\boldsymbol`
+  // (amsbsy.sty:28-36; bm_sty.rs `bold_math`; 73b: cond-mat0202518, 1905.11073, 2311.01721, 2508.01295). Here the
   // math is the enclosing formula's, so `$` takes the meaning it has in a math alignment cell, which balances the
   // cell's hidden `$` the same way: the first opens in-math text, the next ends it (`\lx@dollar@in@mathmode`), and a
   // `$…$` inside a text box of that math (`\mbox{$x$}`) is still a formula. Local to the group of the math.
@@ -803,6 +805,15 @@ LoadDefinitions!({
     alias => "$",
     // Perl: beginMode('restricted_horizontal') — NOT 'text'
     before_digest => sub { begin_mode("restricted_horizontal")?; },
+    // An empty text (`$$` in a math TeX sets in a box, bm's `\boldsymbol{e^+e^-$$\rightarrow$$J/\psi}`: a formula
+    // ends and the next begins, 2506.20975) is no operand: dropped. Guard `perfect_kernel_batch73b::dollar_in_boldsymbol_is_text`.
+    after_construct => sub[document, _whatsit] {
+      if let Some(node) = document.get_node().get_last_child()
+        && node.get_first_child().is_none()
+      {
+        document.remove_node(node);
+      }
+    },
     capture_body => true
   );
   DefConstructor!("\\lx@end@inmath@text", "", alias => "$",

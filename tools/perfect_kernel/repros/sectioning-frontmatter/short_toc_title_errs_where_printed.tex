@@ -1,0 +1,12 @@
+% witness: the sibling of short_toc_title_errs_only_where_printed, with the contents printed
+% oracle:  pdflatex 3 errors, from the contents line (`$` unbalanced in the .toc entry)
+% engines: rust 67int23b = 1, perl = 7
+% expect:  1 error ("Extra }, or forgotten $", replayed once the document is built)
+% status:  CONTROL (73b: the held diagnostics are raised because the contents are printed)
+\documentclass{article}
+\begin{document}
+\tableofcontents
+\section{Intro}
+\subsection[Example: $M(-2;1/2)]{Example: $M(-2;1/2)$}
+Text.
+\end{document}

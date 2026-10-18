@@ -1,0 +1,11 @@
+% witness: 2304.03934 (rc_struct6 row 10; `\subsection[Example: $M(-2;1/2,1/2,3/4)]{…}`, no contents)
+% oracle:  pdflatex 0 errors: the `[short]` title goes to the .toc, typeset only by a `\tableofcontents`
+% engines: rust 67int23b = 1 ("Extra }, or forgotten $"), perl = 7
+% expect:  0 errors (the toc copy's diagnostics are held and dropped: no contents printed)
+% status:  RED (67int23b) -> GREEN (73b: sect04.rs, logger.rs `defer_to_list`, OXIDIZED_DESIGN #749)
+\documentclass{article}
+\begin{document}
+\section{Intro}
+\subsection[Example: $M(-2;1/2)]{Example: $M(-2;1/2)$}
+Text.
+\end{document}

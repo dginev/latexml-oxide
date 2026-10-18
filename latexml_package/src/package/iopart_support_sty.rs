@@ -51,6 +51,10 @@ LoadDefinitions!({
 
   // Equation numbering — Perl L29
   DefMacro!("\\theequation", "\\ifnumbysec\\arabic{section}.\\arabic{equation}\\else\\arabic{equation}\\fi");
+  // iopart.cls:771-775 (1907.10288's copy): `{equation}` is flush left, `\hbox to\linewidth\bgroup $ \displaystyle
+  // \hskip\mathindent`, as fleqn.clo's (fleqn_sty.rs `math_displays_in_hbox`): an author's `$` in it is text in the math
+  // (1905.11073; KNOWN_PERL_ERRORS #907). Guard `perfect_kernel_batch73b::dollar_in_an_iopart_equation_is_text`.
+  fleqn_sty::math_displays_in_hbox()?;
 
   // Authors (Perl PR #2767)
   // iopart.cls:240-248: "Use once for each address" — each `\address` prints its own block, so each adds its

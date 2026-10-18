@@ -1,0 +1,11 @@
+% witness: the boundary of dollar_in_fleqn_clo_equation_is_text
+% oracle:  pdflatex 4 errors: fleqn.clo:50-73 `\[` (so `{displaymath}`) opens a `\bgroup` after its `$`, which the
+%   author's `$` meets ("Missing } inserted", then "Extra }, or forgotten $" at `\]`), two per display
+% engines: rust 67int23b = 4, perl = 4
+% expect:  4 errors ("Missing $ closing display math", two per display): the kernel's display, not an hbox
+% status:  CONTROL
+\documentclass[fleqn]{article}
+\begin{document}
+\[ a $ with $ b \]
+\begin{displaymath} c $ and $ d \end{displaymath}
+\end{document}

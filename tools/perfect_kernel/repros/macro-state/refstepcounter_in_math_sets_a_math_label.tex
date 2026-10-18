@@ -1,0 +1,15 @@
+% witness: 1609.03070 (93 errors), 1904.00290 (57) (rc_struct6 row 5)
+% oracle:  pdflatex 0 errors: `\refstepcounter` keeps `\@currentlabel` unexpanded (latex.ltx:14963-14967), typeset
+%   only where `\ref` prints it (in math here)
+% engines: rust 67int23b = 3 ("Script _ can only appear in math mode", Perl's text digest, Package.pm:770), perl = 4
+% expect:  0 errors; an equation stepped twice in math keeps its text tags
+% status:  RED (67int23b) -> GREEN (73b: counter/dialect.rs `label_stepped_counter`, OXIDIZED_DESIGN #748)
+\documentclass{article}
+\newcounter{consta}
+\renewcommand{\theconsta}{{\kappa_{\arabic{consta}}}}
+\newcommand{\consta}{\refstepcounter{consta}\theconsta}
+\begin{document}
+There is a constant $\consta\label{k:a} > 0$; and $\ref{k:a}$ is it.
+\begin{equation}\refstepcounter{equation}x\label{e:b}\end{equation}
+See \ref{e:b}.
+\end{document}

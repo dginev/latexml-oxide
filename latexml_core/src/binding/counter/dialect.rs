@@ -763,15 +763,52 @@ pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> 
     String::new()
   };
 
-  let refnum = digest_text(Tokens!(T_CS!(&the_ctr)))?;
-  let invocation;
-  {
-    invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
+  let digest_label = || -> Result<(crate::Digested, crate::Digested)> {
+    let refnum = digest_text(Tokens!(T_CS!(&the_ctr)))?;
+    let invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
       ctype
     )))])?;
-  }
-
-  let tags = stomach::digest(invocation)?;
+    Ok((refnum, stomach::digest(invocation)?))
+  };
+  // TeX keeps the label unexpanded (`\@currentlabel`, latex.ltx:14963-14967) and typesets it only where `\ref`
+  // prints it; Perl digests it as text here (Package.pm:770 `DigestText`). A step made in math whose label text
+  // cannot set (`\renewcommand{\theconsta}{{\kappa_{\arabic{consta}}}}`, `$\refstepcounter{consta}…$`: three "Script _
+  // can only appear in math mode" per step, 1609.03070, 1904.00290) is the author's math: its digest is discarded and
+  // the label set as `\ensuremath{\the<ctr>}`, local to the label (OXIDIZED_DESIGN #748; guard
+  // `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`). A label text sets keeps Perl's digest.
+  let (refnum, tags) = if lookup_bool("IN_MATH") {
+    let hold = crate::util::logger::DiagnosticsHold::begin();
+    match digest_label() {
+      Ok(label) if hold.errors_raised() == 0 => {
+        hold.commit();
+        label
+      },
+      Err(err) => {
+        hold.commit();
+        return Err(err);
+      },
+      Ok(_) => {
+        hold.discard();
+        push_frame();
+        let saved = T_CS!(s!("\\lx@the@in@math@{ctr}"));
+        let_i(&saved, &the_ctr_cs, Some(Scope::Local));
+        let label = def_macro(
+          the_ctr_cs,
+          None,
+          Tokens::new(vec![T_CS!("\\ensuremath"), T_BEGIN!(), saved, T_END!()]),
+          Some(ExpandableOptions {
+            scope: Some(Scope::Local),
+            ..ExpandableOptions::default()
+          }),
+        )
+        .and_then(|()| digest_label());
+        pop_frame()?;
+        label?
+      },
+    }
+  } else {
+    digest_label()?
+  };
 
   // Any scopes activated for previous value of this counter (& any nested counters) must be
   // removed. This may also include scopes activated for \label

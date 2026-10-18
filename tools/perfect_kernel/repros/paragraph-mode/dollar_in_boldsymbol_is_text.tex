@@ -1,0 +1,10 @@
+% witness: 2508.01295 (rc_struct6 row 9); amsbsy.sty:28-36 `\boldsymbol` sets its argument as `\hbox{$\m@th…#1$}`
+% oracle:  pdflatex 0 errors: the author's `$` ends the boxed math, " and " is text in the box, the next `$` begins math
+% engines: rust 67int23b = 1 Error + 2 Warnings ("Missing } inserted", "Missing $ inserted"), perl = 2
+% expect:  0 errors, 0 warnings; one Math, the XMText " and " between the bold formulas
+% status:  RED (67int23b) -> GREEN (73b: bm_sty.rs `bold_math`, `\lx@math@in@hbox` in the bounded argument)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+$\textbf{Case I}$: $\boldsymbol{\theta=\pi/2$ and $\phi=0}$
+\end{document}

@@ -55,6 +55,12 @@ LoadDefinitions!({
   // (latex_constructs.pool.ltxml:2070) followed by the hook. Guard
   // `perfect_kernel_batch69c::dollar_in_an_amsmath_fleqn_display_is_text`.
   DefMacro!("\\lx@mathdisplay@hook", "");
+  // `{equation}` runs `\lx@equation@hook`, the display hook unless a class sets `{equation}` apart: fleqn.clo:92-103
+  // sets it as `\hb@xt@\linewidth\bgroup $\m@th\displaystyle\hskip\mathindent`, so an author's `$` in it ends that
+  // math and starts text in the box (fleqn_sty.rs `math_displays_in_hbox`), where its `\[` (:50-73) opens a `\bgroup`
+  // after the `$`, which an author's `$` meets as TeX's "Missing } inserted". amsmath, redefining `{equation}`, sets it
+  // back (amsmath_sty.rs). Guard `perfect_kernel_batch73b::dollar_in_a_fleqn_clo_display_is_text`.
+  DefMacro!("\\lx@equation@hook", "\\lx@mathdisplay@hook");
 
   // The register LaTeX's paragraph hook runs: latex.ltx:9070 `\newtoks\everypar` and :9072-9077
   // put `\the\toks<number>` in `\g__para_standard_everypar_tl`, so the hook names the user list by

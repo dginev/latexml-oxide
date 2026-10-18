@@ -1,0 +1,13 @@
+% witness: 2201.08831, 2401.09168 (rc_struct6 row 4: IEEEtran templates' `\setlength` line before an `\item`)
+% oracle:  pdflatex 0 errors: latex.ltx:10253 `\def\setlength#1#2{#1 #2\relax}` runs `\item F\relax` and the rest
+% engines: rust 67int23b = 1 ("A <variable> was supposed to be here", the item lost its first letter), perl = 1
+% expect:  0 errors; two items "FaceFusion, a tool." and "UBO."
+% status:  RED (67int23b) -> GREEN (73b: sect12.rs `assign_braced_length`, OXIDIZED_DESIGN #746)
+\documentclass{article}
+\begin{document}
+\begin{itemize}
+  \setlength
+  \item FaceFusion, a tool.
+  \item UBO.
+\end{itemize}
+\end{document}

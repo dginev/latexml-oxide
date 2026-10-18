@@ -29,6 +29,15 @@ pub(crate) fn pasj_class(name: &str) -> Result<()> {
     InputDefinitions!(name, noltxml => true, extension => Some(Cow::Borrowed("cls")));
     Let!("\\caption", "\\lx@caption");
     Let!("\\@maketitle", "\\@empty");
+    // pasj00.cls:4025-4035, pasj01.cls:4098-4110 ("%%% fleqn"): `\equation` is fleqn.clo's flush-left `\hbox to
+    // \linewidth\bgroup $\m@th\displaystyle`, which the raw class cannot give the kernel's `{equation}`, so its hook is
+    // set here (latexml_package fleqn_sty.rs `math_displays_in_hbox`): an author's `$` in it is text in the math
+    // (2311.01721; KNOWN_PERL_ERRORS #907). pasj02.cls:4070-4083 leaves `\equation` commented out.
+    if crate::shipped_class::shipped_class_text(name)?
+      .is_some_and(|text| crate::shipped_class::class_code_contains(&text, "\\def\\equation{"))
+    {
+      fleqn_sty::math_displays_in_hbox()?;
+    }
   } else {
     LoadClass!("OmniBus");
     pasj_unshipped_longtable()?;

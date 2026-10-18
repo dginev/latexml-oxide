@@ -601,8 +601,13 @@ LoadDefinitions!({
   // `\captionsetup{type=…}` set, and sets none itself, as caption's `\caption`.
   DefMacro!("\\captionof", "\\@ifstar{\\lx@caption@of\\@scaptionof}{\\lx@caption@of\\@captionof}");
   // The type is expanded once, as `\caption@@settype`'s `\edef` (caption.sty:309).
+  // Outside a float the type stays set in the current group, as `\setcaptiontype*` leaves `\@captype` (caption.sty:391),
+  // so a later bare `\caption` there is a caption of that type (`\captionof{figure}`, then a `\caption` in a minipage:
+  // 2206.08980, 2508.21533): `\lx@caption@of@after`, run after the caption's wrapper group. Inside a float the type
+  // stays the float's own (above). Guard `perfect_kernel_batch73b::captionof_leaves_the_type_outside_floats`.
   RawTeX!(r"\def\lx@caption@of#1#2{\edef\lx@caption@of@type{#2}\expandafter\lx@caption@of@\expandafter{\lx@caption@of@type}#1}
-\def\lx@caption@of@#1#2{\lx@caption@settype{#1}#2{#1}}");
+\def\lx@caption@of@#1#2{\@ifundefined{@captype}{\def\lx@caption@of@after{\def\@captype{#1}}}{\let\lx@caption@of@after\relax}\lx@caption@settype{#1}#2{#1}}
+\let\lx@caption@of@after\relax");
   // caption.sty:288-298 `\setcaptiontype[*]{type}[options]`: `\caption@settype`, in the group it
   // stands in (the options are typographic, `\caption@setoptions` a no-op here). 2605.20199's
   // figure sets its type back after a `\captionof{table}`.
@@ -685,9 +690,10 @@ LoadDefinitions!({
     out.push(T_END!());
     out.push(T_CS!("\\lx@caption@wrapper@done"));
     out.push(T_CS!("\\endgroup"));
+    out.extend([T_CS!("\\lx@caption@of@after"), T_CS!("\\let"), T_CS!("\\lx@caption@of@after"), T_CS!("\\relax")]);
     Ok(Tokens::new(out))
   });
-  DefMacro!("\\@scaptionof{}{}", r"\begin{#1*}\@scaption{#2}\end{#1*}");
+  DefMacro!("\\@scaptionof{}{}", r"\begin{#1*}\@scaption{#2}\end{#1*}\lx@caption@of@after\let\lx@caption@of@after\relax");
 
   // caption3.sty:275-280 `\clearcaptionsetup*[option]{type}`; Perl's argument-less
   // (caption.sty.ltxml:130) left the type as text (KPE #316).

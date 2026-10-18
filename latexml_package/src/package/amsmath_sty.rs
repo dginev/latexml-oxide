@@ -361,6 +361,8 @@ LoadDefinitions!({
   // agent_reports/2026-10-17_rc_struct3.md); KNOWN_PERL_ERRORS #907. Guard
   // `perfect_kernel_batch69c::dollar_in_an_amsmath_fleqn_display_is_text`.
   DefMacro!("\\lx@mathdisplay@hook", "\\if@fleqn\\lx@math@in@hbox\\fi");
+  // amsmath's `{equation}` is its own (amsmath.sty:2913-2932), whatever a class's fleqn.clo made it (fleqn_sty.rs).
+  DefMacro!("\\lx@equation@hook", "\\lx@mathdisplay@hook");
   // DIVERGENCE from Perl (#334): amsmath.sty:64 `\newif\if@fleqn` starts
   // false, and amsmath's display environments read only it, so an earlier
   // `fleqn` (article's `fleqn.clo`, fleqn.sty, elsarticle's binding) stops

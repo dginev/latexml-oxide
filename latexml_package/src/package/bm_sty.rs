@@ -362,6 +362,41 @@ pub fn bold_math(cs: &str, bold: Token, arg: Tokens, argument: BoldArgument) -> 
   let in_math = lookup_bool("IN_MATH");
   // Perl's `requireMath` on `cs` (Package.pm:1069-1073), the warning naming `cs`.
   requireMath!(cs);
+  // bm.sty's `\bm` emits a math shift at the level `\bm` is used at (`\bm@add{#1}`, bm.sty:281), where it ends the
+  // enclosing formula and the next begins one: the argument is set as bold runs between its top-level `$`s, which stand
+  // between them (bm's `\boldsymbol{e^+e^-$$\rightarrow$$J/\psi}`, 2506.20975: three formulas; rc_struct6 row 9;
+  // `\bm{\hat{m}$}` ends the formula after the bold m). Guard `perfect_kernel_batch73b::dollar_in_boldsymbol_is_text`.
+  if argument == BoldArgument::Scanned && in_math {
+    let mut level = 0usize;
+    let shifts: Vec<usize> = tokens
+      .iter()
+      .enumerate()
+      .filter_map(|(at, token)| {
+        match token.get_catcode() {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => level = level.saturating_sub(1),
+          Catcode::MATH if level == 0 => return Some(at),
+          _ => {},
+        }
+        None
+      })
+      .collect();
+    if !shifts.is_empty() {
+      let mut out = Vec::new();
+      let mut from = 0;
+      for at in shifts.into_iter().chain(std::iter::once(tokens.len())) {
+        let segment = &tokens[from..at];
+        if skip_blanks(segment, 0) < segment.len() {
+          out.extend(bold_math(cs, bold, Tokens::new(segment.to_vec()), argument).unlist());
+        }
+        if let Some(&shift) = tokens.get(at) {
+          out.push(shift);
+        }
+        from = at + 1;
+      }
+      return Tokens::new(out);
+    }
+  }
   let commands: Vec<Token> = tokens
     .iter()
     .filter(|t| at_top_level(&mut depth, t))
@@ -392,7 +427,14 @@ pub fn bold_math(cs: &str, bold: Token, arg: Tokens, argument: BoldArgument) -> 
     let mut out = Vec::new();
     // `\bm_`: the script alone, attaching to what precedes `\bm` as in TeX.
     if script.is_none() || skip_blanks(&tokens, 0) < tokens.len() {
+      // A command that boxes its argument — amsbsy's `\boldsymbol`, `\hbox{$\m@th\displaystyle#1$}` (amsbsy.sty:28-36)
+      // — has a `$` there end that math and start text in the box, the next begin math again (tex.web §1193, §1138):
+      // `\lx@math@in@hbox` (tex_math.rs), local to `bold`'s bounded group. `$\boldsymbol{\theta=\pi/2$ and $\phi=0}$`
+      // (2508.01295; rc_struct6 row 9, KNOWN_PERL_ERRORS #907). Guard `perfect_kernel_batch73b::dollar_in_boldsymbol_is_text`.
       out.extend([bold, T_BEGIN!()]);
+      if argument == BoldArgument::Grouped {
+        out.push(T_CS!("\\lx@math@in@hbox"));
+      }
       out.extend(tokens);
       out.push(T_END!());
     }

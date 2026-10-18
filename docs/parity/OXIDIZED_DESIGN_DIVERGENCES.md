@@ -19912,3 +19912,59 @@ whitespace where `#PCDATA` cannot go). An `{algorithmic}` set in `\ttfamily` (Wi
 2608.15322, 2602.03247, 2607.19926. fancyvrb's indentation (#47's case, 2605.00468) lands in a paragraph the builder
 auto-opens and is unchanged. Guard `perfect_kernel_batchint23::a_typewriter_algorithmic_drops_the_leading_space`; repro
 `listings-algorithms/typewriter_algorithmic_drops_the_leading_space`.
+
+### 746. `\setlength` on a non-register runs its code
+
+**Decision** (73b; rc_struct6 row 4): latex.ltx:10253 `\def\setlength#1#2{#1 #2\relax}` is code TeX executes. When what
+`#1` begins with, past spaces and `\relax` (and expanded, as TeX's `get_x_token`), is neither a register nor a prefix,
+the braced `\setlength` (sect12.rs `assign_braced_length`) puts `#1 #2\relax` back unexpanded and lets it run, where
+the `Variable` read reported "A <variable> was supposed to be here" and dropped both arguments. IEEEtran templates' empty
+`\setlength` line before an `\item` (2201.08831, 2401.09168) took `\item` and `F` as its arguments: the item lost its
+first letter and the conversion an Error; now the item runs (pdflatex 0 errors). Only in the body: in the preamble
+(`\@nodocument` not yet `\relax`) what the code typesets is TeX's "Missing \begin{document}", which LaTeXML does not
+raise, so the `Variable` read's Error stands for it there (fancyheadings' `\headrulewidth`, a macro since 2.0:
+`\setlength{\headrulewidth}{0pt}` keeps its 1 Error and recovery, pdflatex 1). `\addtolength`
+keeps the error, as `\advance` reads a variable. Perl:
+latex_constructs.pool.ltxml:4603 `{Variable}` (KNOWN_PERL_ERRORS #971). Guard
+`perfect_kernel_batch73b::setlength_on_a_non_register_runs_its_code`; repro
+`parameter-conditional/setlength_on_a_non_register_runs_its_code`.
+
+### 747. A `\DeclareMathAlphabet`'d alphabet takes one argument
+
+**Decision** (73b; rc_struct6 row 10): `\DeclareMathAlphabet{\cs}{enc}{fam}{ser}{sh}` defines `\cs{}` as the stock
+alphabets are bound (`\mathrm{}`, sect07.rs; amsfonts' `\mathbb{}`): a bounded constructor carrying the font of
+`lookup_tex_font`, as latex.ltx's alphabet sets its argument alone (`\select@group`). Perl's `DefPrimitiveI(cs, undef,
+undef, font => …)` (latex_constructs.pool.ltxml:2686) is a switch to the end of the group: `\mathfoo{AB}c` set `c` in the
+alphabet too, and under mathalfa's `bb=ams` (mathalpha.sty:116 `\DeclareMathAlphabet{\mathbb}{U}{msb}{m}{n}`, after
+`\let\mathbb\relax`) `\frac{\mathbb{W}_c}{w}` read `c` in msbm, where it sets nothing: "Missing sub/superscript
+argument" (1810.09080). `\@fontswitch` (`{\foo XY}` for a `\DeclareOldFontCommand`) reads the font from the definition
+as before (sect13.rs `math_alphabet_font`); in text the alphabet warns "should only appear in math mode", as the stock
+ones. KNOWN_PERL_ERRORS #972. Guard `perfect_kernel_batch73b::declared_math_alphabet_takes_one_argument`; repro
+`fonts-nfss/declared_math_alphabet_takes_one_argument`.
+
+### 748. A counter stepped in math whose label text cannot set is labelled as math
+
+**Decision** (73b; rc_struct6 row 5): `label_stepped_counter` (counter/dialect.rs) digests the step's refnum and tags
+(Package.pm:770 `DigestText(T_CS("\\the$ctr"))`, then `\lx@make@tags`) as text. TeX keeps `\@currentlabel`
+unexpanded (latex.ltx:14963-14967) and typesets it only where `\ref` prints it. For a step made in math, the text digest
+is held (`DiagnosticsHold`); if it raised an Error, it is discarded and the label digested again with `\the<ctr>` as
+`\ensuremath{\the<ctr>}`, local to the label. `\renewcommand{\theconsta}{{\kappa_{\arabic{consta}}}}` with
+`\refstepcounter{consta}` in a formula raised three "Script _ can only appear in math mode" per step (1609.03070: 93,
+1904.00290: 57). A label text sets keeps Perl's digest, byte-identical (an equation stepped in math keeps its text tags).
+Not the 70c timing redesign (labels digested only where printed): a mechanism-local fallback. KNOWN_PERL_ERRORS #973.
+Guard `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`; repro
+`macro-state/refstepcounter_in_math_sets_a_math_label`.
+
+### 749. A heading's `[short]` toc title raises its diagnostics only if the contents are printed
+
+**Decision** (73b; rc_struct6 row 10; the held-tag mechanism of ruling 7e): LaTeX writes a sectioning command's `[short]`
+argument to the .toc (latex.ltx:17263 `\addcontentsline{toc}`) and typesets it only in a printed table of contents. The
+toc copy is still digested where the heading is (sect04.rs), for `ltx:toctitle`, but a `[short]`'s diagnostics are
+held (`DiagnosticsHold::defer`), tied to the list (`logger::defer_to_list("toc", …)`) and replayed once the document is
+built only if an `ltx:TOC` of that list was constructed (`note_list_shown`, a `Tag!("ltx:TOC", after_close)`: every
+`\tableofcontents`, a binding's own contents too). `\subsection[Example: $M(-2;1/2,1/2,3/4)]{…}` with no contents
+(2304.03934) raised "Extra }, or forgotten $"; with `\tableofcontents` it still does (pdflatex 3). A toc copy without a
+`[short]` re-reads the title, whose diagnostics the heading gives. A Fatal is never held. Divergence from Perl, which
+digests the copy and raises its errors (KNOWN_PERL_ERRORS #974). Guard
+`perfect_kernel_batch73b::short_toc_title_errs_only_where_printed`; repros
+`sectioning-frontmatter/short_toc_title_errs_{only_where_printed,where_printed}`.

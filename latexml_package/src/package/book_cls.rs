@@ -39,7 +39,8 @@ LoadDefinitions!({
     });
   });
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
-  DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+  // `\input{fleqn.clo}` (fleqn_sty.rs `fleqn_clo`).
+  DeclareOption!("fleqn", sub { fleqn_sty::fleqn_clo()?; });
   // Kernel contract (book.cls L52/L98/L119): `\newif\if@openright`, default
   // TRUE via \ExecuteOptions{...,openright}. Neither Perl's book.cls.ltxml
   // nor report.cls.ltxml declare the switch, but derived classes and docs

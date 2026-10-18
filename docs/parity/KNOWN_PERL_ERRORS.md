@@ -15028,8 +15028,17 @@ paragraph-mode/proof_infer_parts_keep_the_formulas_dollar, guard
 papers, 1 proof.sty, 1 accents.sty). Repros paragraph-mode/dollar_in_hbox_math_is_text_{fleqn_display,proof_accents},
 control paragraph-mode/dollar_in_display_math_still_errs; guards
 `perfect_kernel_batch69c::{dollar_in_an_amsmath_fleqn_display_is_text, dollar_in_proof_and_accents_hbox_math_is_text,
-dollar_in_a_display_still_errs}`. Not modelled: fleqn.clo's own `{equation}` without amsmath (fleqn.clo:44-53, also
-`\hbox{$…$}`), whose `\[` errs in pdflatex as it opens a group in its math.
+dollar_in_a_display_still_errs}`. 73b: fleqn.clo's own `{equation}` without amsmath (fleqn.clo:92-103), iopart's
+(iopart.cls:771-775), pasj00/01's (pasj01.cls:4098-4110) run `\lx@math@in@hbox` from `{equation}`'s hook
+(`\lx@equation@hook`, fleqn_sty.rs `math_displays_in_hbox`; cond-mat0202518, hep-ex9806021, 1905.11073, 2311.01721); their
+`\[` keeps the kernel display, as it opens a `\bgroup` after its `$` and errs in pdflatex (control
+paragraph-mode/dollar_in_fleqn_clo_bracket_still_errs). sigma's binding loads amsmath with `fleqn` as sigma.cls:21
+does (2111.06645). amsbsy's `\boldsymbol` (amsbsy.sty:28-36 `\hbox{$…#1$}`) runs it in the bounded argument (bm_sty.rs `bold_math`;
+2508.01295), and an empty in-math text (`$$`) is dropped; bm's `\bm` (its `\boldsymbol`) emits a math shift at the
+level it is used at (bm.sty:281 `\bm@add{#1}`), so its argument is set as bold runs between its `$`s, each a formula of
+its own (2506.20975). Guards
+`perfect_kernel_batch73b::{dollar_in_a_fleqn_clo_display_is_text, dollar_in_an_iopart_equation_is_text,
+sigma_displays_are_flush_left_hboxes, dollar_in_boldsymbol_is_text}`.
 The hidden group adds one boxing level, so a script inside a proof.sty part or an under-accent numbers its `scriptpos`
 one higher (`post2` for `post1`; 2002.01960, 2510.11617, 1011.2307 — uniform, position only, no structure change).
 Quieter than pdflatex where pdflatex errs: a math-only command in a part's in-math text is accepted, as in Perl and
@@ -15674,3 +15683,48 @@ Rust: the same fallback (content.rs `class_binding_alternate`) and the same 2 Er
 not read over the `aa` binding either (OXIDIZED_DESIGN_DIVERGENCES #744 item 3). Left as Perl: telling a renamed copy of
 another class from a family member (mysvjour3, mn2ebis, IEEEtranTCOM) needs the class text. Guard
 `perfect_kernel_batchint23::a_renamed_class_under_a_fallback_is_not_read`.
+
+## 971. `\setlength` on a non-register drops both arguments with "A <variable> was supposed to be here"
+
+latex_constructs.pool.ltxml:4603 `DefPrimitive('\setlength {Variable}{Dimension}')` reads a register; latex.ltx:10253
+`\def\setlength#1#2{#1 #2\relax}` runs whatever `#1` is. An empty `\setlength` line before an `\item` (IEEEtran
+templates) takes `\item` and the item's first letter as its arguments.
+
+Trigger: `\documentclass{article}\begin{document}\begin{itemize}\setlength⏎\item FaceFusion.\end{itemize}\end{document}`
+— pdflatex 0 errors, "FaceFusion."; Perl 1 error, "aceFusion.".
+
+Rust: OXIDIZED_DESIGN_DIVERGENCES #746 (2201.08831, 2401.09168). Guard
+`perfect_kernel_batch73b::setlength_on_a_non_register_runs_its_code`.
+
+## 972. A `\DeclareMathAlphabet`'d alphabet is a switch to the end of the group
+
+latex_constructs.pool.ltxml:2686 `DefPrimitiveI(T_CS($csname), undef, undef, font => {%font})` defines the alphabet with
+no argument, so `\mathfoo{AB}c` sets `c` in it too, where latex.ltx's alphabet sets its argument alone.
+
+Trigger: `\documentclass{article}\DeclareMathAlphabet{\mathfoo}{OT1}{cmss}{m}{n}\begin{document}$\mathfoo{AB}c$\end{document}`
+— pdflatex: AB sans serif, c italic; Perl: "ABc" sans serif.
+
+Rust: OXIDIZED_DESIGN_DIVERGENCES #747 (1810.09080: under mathalfa's `bb=ams` the msbm `c` set nothing, "Missing
+sub/superscript argument"). Guard `perfect_kernel_batch73b::declared_math_alphabet_takes_one_argument`.
+
+## 973. A `\refstepcounter` in math digests the counter's label as text
+
+Package.pm:770 `my $refnum = DigestText(T_CS("\\the$ctr"))` (and `\lx@make@tags`) sets the label in text mode wherever
+the step is; TeX keeps `\@currentlabel` unexpanded and typesets it only where `\ref` prints it. A label written for
+math errs at every step made in a formula.
+
+Trigger: `\documentclass{article}\newcounter{c}\renewcommand{\thec}{{\kappa_{\arabic{c}}}}\begin{document}
+$\refstepcounter{c}x$\end{document}` — pdflatex 0 errors; Perl 3 errors ("Script _ can only appear in math mode").
+
+Rust: OXIDIZED_DESIGN_DIVERGENCES #748 (1609.03070, 1904.00290). Guard
+`perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`.
+
+## 974. A heading's `[short]` toc title errs though no contents are printed
+
+The `[short]` argument is digested for the toc copy (latex_constructs.pool.ltxml `\@@numbered@section`'s `toctitle`)
+and its errors raised, where LaTeX only writes it to the .toc: TeX errs on it only in a printed table of contents.
+
+Trigger: `\documentclass{article}\begin{document}\section{A}\subsection[Ex: $M(-2;1/2)]{Ex: $M(-2;1/2)$}x\end{document}`
+— pdflatex 0 errors; Perl 3 errors. With `\tableofcontents`, pdflatex 3.
+
+Rust: OXIDIZED_DESIGN_DIVERGENCES #749 (2304.03934). Guard `perfect_kernel_batch73b::short_toc_title_errs_only_where_printed`.
