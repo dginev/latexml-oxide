@@ -3923,6 +3923,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   held the keywords nesting in 4 + 3 error papers. Guards `perfect_kernel_batch74b::{keywords_command_form_ends_at_first_section,
   keywords_label_inside_abstract_ends_with_it}`; `keywords_unclosed_inside_unclosed_abstract_keep_their_text` now
   pins pdflatex's single error.
+  **Integration (int26, 678a5d55d4, binary 67int28):** 0158522543 + 8e1cb136bb + f5874ceff9 + ad466e67b7 (the
+  content rule: a frontmatter body that typesets nothing adds no entry, golden `babel/elsart_keyword_brace_form`) +
+  the A/B fix round 678a5d55d4. Gates nextest 6035/6035 + cortex 10/10, clippy/rustdoc clean, inits plain=0 latex=0.
+  Population A/B over 1,428 papers (pop67int23.tsv): first round 67int27 vs 67int26 5 changed, E 5,660 → 5,665 (the 4
+  spurious keywords Errors above, hep-th9412183 −1 word), 0 newly Fatal; fix round 67int28 vs 67int27 4 changed, E
+  5,665 → 5,632 (exactly the 4 papers, each → 0 Errors, words unchanged, keywords 94-118 characters, sections back at
+  document level), 0 worse. Binding nets 136/136 on 67int27 and on 67int28, 0 documents worse than 67int23. Witnesses
+  as listed under (B)-(E); 1507.08575 2 → 0 errors, no empty abstract (2,488 words); 1111.0026 5 → 0, sections
+  un-nested.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
