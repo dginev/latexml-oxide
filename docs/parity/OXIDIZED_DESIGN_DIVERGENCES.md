@@ -15075,6 +15075,40 @@ request loaded as its basename's binding (`JINST-Sample-files/JINST`, `fallback_
 copy the fallback answered (`JINST_mod`, `fallback_request`; 1307.5525, 1407.3938), not OmniBus. Open (SYNC):
 the 31 renamed JHEP3 copies (QCEMDA, AKRSX, jhepLike, MCPlane1, …; `\ProvidesClass{JHEP3}` in 29) need a class route by
 content, not name.
+**74a, an environment's begin code** (user ruling 2026-10-18, "Replay, lock kept"; FM5's lock of `{abstract}` through
+S3 stays, no environment observer): a refused begin code — `\lx@dropped@abstract` of no parameters, from a class's
+`\renewenvironment{abstract}`, its `\newenvironment{abstract}` (the kernel's `{abstract}` exists before any class; a
+locked `\newenvironment` now keeps the refused code as `\renewenvironment`'s does, sect08.rs) or a raw `\def\abstract`
+— runs at the head of the kernel abstract's body (`\lx@abstract@class@setters` → `replay_class_begin_code`), with the
+protections above and: no argument; the sectioning hook's `\maybe@end@abstract` inert; its own unclosed groups (the
+class's `\begingroup`, frontiersFPHY.cls:520, whose `\endgroup` is in its end code) closed by the replay's unwinding
+rather than met by the replay's braces (TeX's "Extra }"), the counters put back after; what it binds in its plain groups
+— new meanings and changes to existing ones, `\let\section\absection` — read at its end (`\lx@replay@capture@changes`,
+state.rs `top_group_frames_meanings`; frames an environment or a mode opened are the kernel's machinery and are skipped)
+and made again locally in the abstract's group, ending with it: the class's group lies inside the environment (latex.ltx
+`\begin` reads the begin code inside the environment's group, `\end` closes it after the end code), so its extent is the
+abstract's; the class's end code needs nothing. Not kept: NFSS's current-font record (`\f@family`…`\f@linespread`,
+`\tf@size`/`\sf@size`/`\ssf@size`, `\@currsize`: the font the code selects is its layout, discarded with its output —
+kept, the next `\bfseries` selected the class's family, the run-in labels alone sans serif), and the keywords setters
+`\lx@abstract@class@setters` defines for the body (#634). Not replayed at all: a begin code whose final command may read
+past it (`tail_reads_ahead`: a macro, or a command taking arguments, as the last token or before its trailing braced
+groups and `\csname…\endcsname` operands) — it would read the body the replay does not have: environ's `\NewEnviron`
+begin code `\expandafter\Collect@Body\csname env@…@parse\endcsname` ran `\end{\@currenvir}` = `\end{document}` and
+looped (wiley-article.cls:446-489, 1706.00599; astlb/pazh), smfart.cls:552-558's `\begin{@genabstract}{abstract}`
+(`\@getgenabstext#1\end #2`) hung (2506.20120's smfbourbaki). For every replay, the box registers the dropped body `\setbox`es
+itself are restored as its `\def` stores are (`filled_boxes`): memo-l.cls:79-84's begin code `\global\setbox\abstractbox=
+\vtop\bgroup…` filled the box its `\tableofcontents` (:89-93) prints when not void, a second abstract of the header
+alone (1409.3892). Witnesses, `\section{Motivation:}`/`\keyFont{\section{Keywords:} …}` in the abstract a run-in bold
+label as in the PDF (were sections nested in the abstract, `malformed:ltx:section`; Perl the same, KNOWN_PERL_ERRORS
+#979): Frontiers (frontiersFPHY/SCNS/HLTH, frontiersinFPHY_FAMS, FrontiersinHarvard: 1508.06756, 1805.07007,
+1902.06410, 1711.03919, 2201.04171, 2103.09201, 2112.09018, 2107.01728, 2212.11157, 2403.18314, 2205.07366, 2206.02832,
+2511.22548, 1507.03572, 1802.07258, 2409.09413), bioinfo.cls:495-500 (0901.4589, 1406.7114, 2108.03515), 4arXiv
+(1404.0027). Not this shape: MRM.cls:1583-1591's `\abstract[2][]` stores its `\let\section\@abssection` in the
+`\@abstract` it prints later (2202.01479, 2511.23135, 2409.04353), scrartcl's `\section*{Abstract:}` inside `{abstract}`
+(1507.08575) and an iopart paper written inside its abstract (1111.0026). Guards
+`perfect_kernel_batch74a::{class_abstract_begin_code_makes_section_a_run_in_label,
+class_newenvironment_abstract_begin_code_runs}`, `perfect_kernel_batch68n::*` (environ not replayed); repros
+`sectioning-frontmatter/class_abstract/abstract_class_begin_code_runs_{frontiers,bioinfo}`.
 **Why**: since 62k reads shipped classes raw (#444), the refused setters left the classes' checks failing: JINST.cls's
 `\AtBeginDocument` "Some \author{...} should appear" / "\abstract{...} should appear" (:1592-1607; the JHEP family,
 JHEP copies and CECS: 340 of run 336's papers; 2601.17161, 1310.6454, gr-qc0406095, hep-th0201170), and compositio's
@@ -19986,3 +20020,38 @@ Perl, which digests the label and every form at `\bibitem` (latex_constructs.poo
 0812.1037, 1105.2318, 1306.6339, 1805.00040. Guards `perfect_kernel_batch70c::*`; repros
 `index-bib/mnras_bibitem_label_{uncited,nocite_only,cited_before,cited_after}`, controls
 `index-bib/bibitem_numeric_label_cited_and_uncited`, `index-bib/mnras_usenatbib_bibitem_label_cited`.
+
+### 753. A table of contents inside a frontmatter container goes after it; `\tableofcontents` begins as a heading
+
+**Perl behavior**: latex_constructs.pool.ltxml:725-743 binds `\tableofcontents`, `\listoffigures` and `\listoftables`
+to `<ltx:TOC …>` constructors inserted where they stand. Inside a balanced `{abstract}` (`abstract_model` = Block.model,
+no TOC) that is `malformed:ltx:TOC <ltx:TOC> isn't allowed in <ltx:p>` (or `<ltx:abstract>`), the TOC left inside, the
+document invalid; after a brace-less `\abstract` the same, since the TOC does not end it (KNOWN_PERL_ERRORS #978).
+**Rust behavior**: (1) `insert_toc` (sect04.rs) puts the TOC of an insertion point inside a frontmatter container
+(`ltx:abstract`, `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`, `ltx:creator`) at the nearest open
+ancestor that admits it (`Document::float_out_of_frontmatter`: Perl's `floatToElement`, Document.pm:1052-1077, closing
+form; the container cannot auto-close, so the insertion point comes back): after the abstract, and the text after it
+stays the abstract's. Elsewhere the TOC is inserted as before (in a `{quote}` the inline logical block of #271's bridge).
+(2) The kernel's three begin `\par\@startsection@hook` (in `\lx@kernel@tableofcontents`/`…listoffigures`/`…listoftables`,
+`\protected` as `\section*` is robust, still the user name's only token before `\lx@kernel@listbody`: tocbasic.sty:1175-1179's
+`\edef` of `\newcommand*\csname listof\tb@nt@types\endcsname{…}`, KOMA's `\DeclareNewTOC`, expands `\listoffigures`
+and must meet one token), as the `\section*{\contentsname…}` they are in article.cls,
+report.cls and amsart.cls (`\chapter*` in book.cls) does: a paragraph ends, and after a brace-less `\abstract` or inside
+an unclosed `\abstract{` the TOC ends the abstract as a `\section` does (sect05.rs `\abstract`), the hook's other
+members running as at any heading (the frontmatter fallback of a document without `\maketitle`, a bibliography's end).
+A raw class's own `\tableofcontents` replaces the kernel's, as before. The rule for a TOC differs from a `\section*`
+inside a balanced abstract, which document.rs's sectioning leniency still keeps in place without an Error (Perl errs
+there, `<ltx:section> isn't allowed in <ltx:abstract>`; a nested second one errs in both): the TOC follows the schema
+and Perl's own placement of an element its context refuses.
+**Why**: pdflatex prints the TOC inside the abstract's quotation (`\section*` in the `quotation` list), where the schema
+has no place for it; after the abstract keeps both whole and in order. Witnesses — a balanced abstract ending with
+`\tableofcontents{}` (LyX; amsart/article/revtex4): 1011.3976, 1310.0349, 1509.04736, 1404.7641, 0809.1270, 1509.03167,
+1706.09575, 2105.04928, 2401.08592, 2403.19281, 2408.04858, 2408.11452, 2509.01284; mid-abstract 1602.08755; an
+unclosed `\abstract`/`\abstract{` (article/report): 2007.03709, 2202.05904, 2411.02384, 2506.07991, 2512.04732,
+2602.15970, hep-lat9910044; mdpi's template under article 2104.05770; sapthesis 1603.02077 (its `\mainmatter` after
+the TOC was read inside the unclosed abstract, its chapters' sections unnumbered: now numbered as in the PDF). Guards
+`perfect_kernel_batch74a::{toc_at_the_end_of_a_balanced_abstract_follows_it, toc_mid_abstract_follows_it_and_the_text_stays,
+toc_ends_an_unclosed_abstract, toc_ends_an_unclosed_braced_abstract, lists_of_figures_and_tables_follow_the_abstract,
+toc_outside_the_frontmatter_is_unchanged}`; repros `sectioning-frontmatter/{toc_inside_balanced_abstract_at_its_end,
+toc_inside_balanced_abstract_mid_text, toc_ends_an_unclosed_abstract, toc_ends_an_unclosed_braced_abstract,
+lists_of_figures_and_tables_inside_abstract}`.

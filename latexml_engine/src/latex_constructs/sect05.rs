@@ -1126,6 +1126,13 @@ pub(crate) fn load() -> Result<()> {
     let meanings = top_frame_new_meanings();
     REPLAY_CAPTURED.with(|c| *c.borrow_mut() = meanings);
   });
+  // the end of a replayed begin code, in the body's own group: what it bound in its plain groups, new or changed
+  // (`replay_class_begin_code`)
+  DefPrimitive!("\\lx@replay@capture@changes", {
+    let base = lookup_int("lx_replay_body_depth").max(0) as usize;
+    let meanings = top_group_frames_meanings((get_frame_depth() + 1).saturating_sub(base));
+    REPLAY_CAPTURED.with(|c| *c.borrow_mut() = meanings);
+  });
   // the replay group's inert frontmatter: each entry point a local no-op taking the same arguments
   DefPrimitive!("\\lx@replay@inert", {
     for cs in FRONTMATTER_ENTRY_POINTS {
@@ -2252,13 +2259,78 @@ thread_local! {
 /// state (jsty3-author.sty:542's xparse `\author`, whose expl3 author list its printer then looped over 991 times:
 /// 2607.24171). Perl never runs a refused definition (State.pm:502-517).
 fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
-  if !lookup_bool(&s!("\\{name}:redefined")) || lookup_bool("lx_replaying_class_setter") {
+  replay_dropped_class_code(name, Some((opt, arg)), &[])
+}
+
+/// The refused class environment's begin code (`\lx@dropped@<name>` of no parameters, from the class's
+/// `\newenvironment`/`\renewenvironment`), replayed at the head of the kernel's environment body
+/// ([`replay_dropped_class_code`] without a call): its output discarded, what it binds in its plain groups — new
+/// meanings and changes to existing ones, `\let\section\absection` — held in the group the kernel's body is read in,
+/// and ended with it, as in TeX, where latex.ltx's `\begin` reads the begin code inside the environment's group
+/// (frontiersFPHY.cls:516-524: 1508.06756, 1805.07007, 1902.06410; bioinfo.cls:495-500: 1406.7114, 0901.4589;
+/// 4arXiv: 1404.0027). The class's own `\begingroup` in it (frontiersFPHY.cls:520) opens a frame of the replay whose
+/// bindings are kept with the others: its `\endgroup` is in the class's end code, so its extent is the environment's
+/// and holding them in the environment's group keeps it; the replay then closes it. A frame an environment or a mode
+/// opened (a `\quotation`, `\begin{center}`) keeps the kernel's own machinery and is not kept. `keep_out`: names
+/// the caller defines for the body itself (`\lx@abstract@class@setters`'s keywords setters). OXIDIZED_DESIGN #482.
+pub(crate) fn replay_class_begin_code(name: &str, keep_out: &[SymStr]) -> Result<()> {
+  replay_dropped_class_code(name, None, keep_out)
+}
+
+/// NFSS's record of the current font (latex.ltx:10519-10535 `\f@family`…, `\fontsize`'s `\f@size`, the size
+/// commands' `\@currsize`): a replayed begin code's font is its layout, discarded with its output, so its record of
+/// that font is not kept either — the next `\bfseries` in the body would select the class's family from it
+/// (frontiersFPHY.cls:521 `\fontfamily{\sfdefault}…\selectfont`: the run-in labels alone sans serif, 1508.06756).
+fn is_font_state(key: SymStr) -> bool {
+  const FONT_STATE: [&str; 11] = [
+    "\\f@encoding",
+    "\\f@family",
+    "\\f@series",
+    "\\f@shape",
+    "\\f@size",
+    "\\f@baselineskip",
+    "\\f@linespread",
+    "\\tf@size",
+    "\\sf@size",
+    "\\ssf@size",
+    "\\@currsize",
+  ];
+  FONT_STATE.iter().any(|cs| meaning_key(&T_CS!(cs)) == key)
+}
+
+/// [`replay_class_setter`] (`call` = the call's `[opt]{arg}`) and [`replay_class_begin_code`] (`call` = `None`).
+fn replay_dropped_class_code(
+  name: &str,
+  call: Option<(Tokens, Tokens)>,
+  keep_out: &[SymStr],
+) -> Result<()> {
+  // (a refused `\newenvironment`/`\renewenvironment` keeps its code without marking the command redefined:
+  // the record is enough for a begin code)
+  if (call.is_some() && !lookup_bool(&s!("\\{name}:redefined")))
+    || lookup_bool("lx_replaying_class_setter")
+  {
     return Ok(());
   }
   let dropped = T_CS!(s!("\\lx@dropped@{name}"));
   let Some((takes_opt, stores)) = dropped_class_setter(name) else {
     return Ok(());
   };
+  let begin_code = call.is_none();
+  // a begin code is read with no arguments: one with parameters would take the environment's body
+  if begin_code
+    && !matches!(lookup_meaning(&dropped), Some(Stored::Expandable(d))
+      if d.get_parameters().is_none_or(|p| p.get_parameters().is_empty()))
+  {
+    return Ok(());
+  }
+  if begin_code
+    && let Some(Stored::Expandable(d)) = lookup_meaning(&dropped)
+    && let Some(ExpansionBody::Tokens(body)) = d.get_expansion()
+    && tail_reads_ahead(body.unlist_ref())
+  {
+    return Ok(());
+  }
+  let (opt, arg) = call.unwrap_or_default();
   // A class `\abstract` keeps nothing of its text the kernel needs (JINST.cls:819-823 sets `\@abstracttrue`; the store
   // is restored below), and a body that typesets it would step its counters (uwthesis.cls:805-839): it gets none.
   let arg = if name == "abstract" {
@@ -2273,25 +2345,32 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   // for jheppub's one-argument `\abstract{…}` in the preamble, emitted the title and authors there, where they were
   // lost, and disabled the document's `\maketitle` (2012.12760, 2207.06852: the rawclasses lever).
   let mut replay = mouth::tokenize_internal(
-    r"{\lx@replay@inert\let\lx@frontmatter@fallback\relax\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\relax\let\label\@gobble\xdef\lx@replay@counts{\global\c@footnote=\the\c@footnote\relax\global\c@equation=\the\c@equation\relax}",
+    r"{\lx@replay@inert\let\lx@frontmatter@fallback\relax\let\maybe@end@abstract\relax\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\relax\let\label\@gobble\xdef\lx@replay@counts{\global\c@footnote=\the\c@footnote\relax\global\c@equation=\the\c@equation\relax}",
   )
   .unlist();
   // The body in a group of its own inside the replay's: what it defines locally there (`\lx@replay@capture`) is what
   // it would define where the call stands, as in TeX, where the class's setter runs in no group of its own.
   replay.push(T_BEGIN!());
   replay.push(dropped);
-  if takes_opt && !opt.is_empty() {
-    replay.push(T_OTHER!("["));
-    replay.extend(opt.unlist());
-    replay.push(T_OTHER!("]"));
+  if begin_code {
+    // A begin code may leave its own groups open for the end code to close (frontiersFPHY.cls:520 `\begingroup`): the
+    // replay's braces are not read after it, where they would meet that group (TeX's "Extra }"); its frames, the
+    // replay's two with them, are closed below as a body's unclosed groups are, and the counters put back after.
+    replay.push(T_CS!("\\lx@replay@capture@changes"));
+  } else {
+    if takes_opt && !opt.is_empty() {
+      replay.push(T_OTHER!("["));
+      replay.extend(opt.unlist());
+      replay.push(T_OTHER!("]"));
+    }
+    replay.push(T_BEGIN!());
+    replay.extend(arg.unlist());
+    replay.push(T_END!());
+    replay.push(T_CS!("\\lx@replay@capture"));
+    replay.push(T_END!());
+    replay.push(T_END!());
+    replay.push(T_CS!("\\lx@replay@counts"));
   }
-  replay.push(T_BEGIN!());
-  replay.extend(arg.unlist());
-  replay.push(T_END!());
-  replay.push(T_CS!("\\lx@replay@capture"));
-  replay.push(T_END!());
-  replay.push(T_END!());
-  replay.push(T_CS!("\\lx@replay@counts"));
   // The stores stay as they were: the kernel's (JINST.cls:757-761 `\xdef`s `\@author`, its layout of every author so
   // far, which `\lx@author@flush` would then hand to the previous author as an author-block row) and those the body
   // itself defines (`\gdef\abstract@cs{…}`, JINST.cls:820), which the class's title layout prints — the kernel is the
@@ -2300,12 +2379,25 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   let mut kernel_stores = vec![T_CS!("\\@author"), T_CS!("\\@shortauthor")];
   kernel_stores.extend(stores);
   let saved: Vec<Option<Stored>> = kernel_stores.iter().map(lookup_meaning).collect();
+  // …and the boxes the body itself fills (`filled_boxes`): memo-l.cls:79-84's begin code `\global\setbox\abstractbox=
+  // \vtop\bgroup…` keeps its layout of the abstract, which its `\tableofcontents` (:89-93) prints when the box is not
+  // void — a second abstract, of the header alone (1409.3892)
+  let boxes = match lookup_meaning(&dropped) {
+    Some(Stored::Expandable(d)) => match d.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => filled_boxes(body.unlist_ref()),
+      _ => Vec::new(),
+    },
+    _ => Vec::new(),
+  };
+  let saved_boxes: Vec<Option<Stored>> = boxes.iter().map(|key| lookup_value(key)).collect();
   // …and the lock's own record of the class's definition: a `\let\abstract…` or `\def\author…` the body itself
   // makes is refused again, globally (state.rs), and would replace it.
   let lock_keys = [s!("\\{name}:redefined"), s!("\\{name}:redefined@nargs")];
   let lock_values: Vec<Option<Stored>> = lock_keys.iter().map(|k| lookup_value(k)).collect();
   let dropped_meaning = lookup_meaning(&dropped);
   let depth = get_frame_depth();
+  // the body's own group, inside the replay's (`\lx@replay@capture@changes`)
+  AssignValue!("lx_replay_body_depth" => Stored::Int(depth as i64 + 2), Some(Scope::Global));
   AssignValue!("lx_replaying_class_setter" => true, Some(Scope::Global));
   let hold = util::logger::DiagnosticsHold::begin();
   let journal = begin_assignment_journal();
@@ -2329,6 +2421,11 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
     expire_local_box_list();
     Ok(())
   });
+  let unwound = if begin_code && unwound.is_ok() {
+    digest(Tokens!(T_CS!("\\lx@replay@counts"))).map(|_| ())
+  } else {
+    unwound
+  };
   // An erring replay is undone, a clean one kept. A rollback that cannot apply (the body closed a frame of the
   // document's, or the journal was not open) leaves the replay's assignments, so its diagnostics stay too.
   let mut undone = false;
@@ -2353,6 +2450,9 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   let captured = REPLAY_CAPTURED.with(|c| std::mem::take(&mut *c.borrow_mut()));
   if result.is_ok() && hold.errors_raised() == 0 && unbalanced == 0 {
     for (key, meaning) in captured {
+      if keep_out.contains(&key) || (begin_code && is_font_state(key)) {
+        continue;
+      }
       assign_internal(TableName::Meaning, key, meaning, Some(Scope::Local));
     }
   }
@@ -2366,6 +2466,9 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
     && !same_meaning(lookup_meaning(&dropped).as_ref(), Some(&meaning))
   {
     assign_meaning(&dropped, meaning, Some(Scope::Global));
+  }
+  for (key, value) in boxes.iter().zip(saved_boxes) {
+    assign_value(key, value.unwrap_or(Stored::None), Some(Scope::Global));
   }
   for (cs, meaning) in kernel_stores.iter().zip(saved) {
     // only what the body changed past its group (a global `\gdef`/`\xdef`): a store a group of the document holds
@@ -3309,6 +3412,105 @@ const SECTIONAL_UNITS: [&str; 9] = [
 
 /// The control sequences a body defines with `\def`, `\gdef`, `\edef` or `\xdef` (the targets the lock's drop gives an
 /// empty definition, state.rs).
+/// Whether code ending in `tokens` may read what follows it: its final command — the last token, or the one before its
+/// trailing braced groups and `\csname…\endcsname` operands, `\expandafter`s passed over — is a macro (what it reads
+/// cannot be told from here: environ's `\NewEnviron` begin code `\expandafter\Collect@Body\csname env@…@parse
+/// \endcsname`, wiley-article.cls:446-489, 1706.00599, defines its reader as it runs) or takes arguments. A begin code
+/// that does would read the environment's body, which a replay does not have: it is not replayed (smfart.cls:552-558's
+/// `\begin{@genabstract}{abstract}`, whose `\@getgenabstext#1\end #2` scans the body). One that ends in a
+/// primitive taking none (frontiersFPHY.cls:523 `\par`, memo-l.cls:84 `\indent`, lipics `\ignorespaces`) is: a reader
+/// inside the code reads the code's own rest (frontiersFPHY.cls:521's `\fontfamily{\sfdefault}`).
+fn tail_reads_ahead(tokens: &[Token]) -> bool {
+  let mut i = tokens.len();
+  let next = |i: &mut usize| -> Option<Token> {
+    while *i > 0 {
+      *i -= 1;
+      if tokens[*i].get_catcode() != Catcode::SPACE {
+        return Some(tokens[*i]);
+      }
+    }
+    None
+  };
+  let Some(mut last) = next(&mut i) else {
+    return false;
+  };
+  // the trailing operands — braced groups, `\csname…\endcsname` runs — back to the command they follow
+  loop {
+    if last.get_catcode() == Catcode::END {
+      let mut level = 1usize;
+      while level > 0 {
+        let Some(t) = next(&mut i) else {
+          return false;
+        };
+        match t.get_catcode() {
+          Catcode::END => level += 1,
+          Catcode::BEGIN => level -= 1,
+          _ => {},
+        }
+      }
+    } else if last.get_catcode() == Catcode::CS && last.with_cs_name(|n| n == "\\endcsname") {
+      loop {
+        let Some(t) = next(&mut i) else {
+          return false;
+        };
+        if t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n == "\\csname") {
+          break;
+        }
+      }
+    } else {
+      break;
+    }
+    let Some(t) = next(&mut i) else {
+      return false;
+    };
+    last = t;
+  }
+  while last.get_catcode() == Catcode::CS && last.with_cs_name(|n| n == "\\expandafter") {
+    let Some(t) = next(&mut i) else {
+      return false;
+    };
+    last = t;
+  }
+  if !last.get_catcode().is_active_or_cs() {
+    return false;
+  }
+  match lookup_meaning(&last) {
+    Some(Stored::Expandable(_)) => true,
+    _ => lookup_definition(&last).ok().flatten().is_some_and(|d| {
+      d.get_parameters()
+        .is_some_and(|p| !p.get_parameters().is_empty())
+    }),
+  }
+}
+
+/// The box registers a dropped body `\setbox`es itself (`\global\setbox\abstractbox=\vtop\bgroup`, memo-l.cls:80), as
+/// their value keys (`box<n>`), the register read as `\setbox` reads it: a store, as [`defined_stores`]'s are.
+fn filled_boxes(body: &[Token]) -> Vec<String> {
+  let mut boxes: Vec<String> = Vec::new();
+  for (i, t) in body.iter().enumerate() {
+    if t.get_catcode() != Catcode::CS || !t.with_cs_name(|n| n == "\\setbox") {
+      continue;
+    }
+    // (a register, as `\newbox`'s `\chardef` makes: a scratch `\setbox0` or an undefined name is no store)
+    let Some(target) = body.get(i + 1).filter(|t| {
+      t.get_catcode() == Catcode::CS && matches!(lookup_meaning(t), Some(Stored::Register(_)))
+    }) else {
+      continue;
+    };
+    let number = reading_from_mouth(Mouth::default(), || {
+      unread(Tokens!(*target));
+      read_number()
+    });
+    if let Ok(number) = number {
+      let key = s!("box{}", number.value_of());
+      if !boxes.contains(&key) {
+        boxes.push(key);
+      }
+    }
+  }
+  boxes
+}
+
 fn defined_stores(body: &[Token]) -> Vec<Token> {
   let definers = ["\\def", "\\gdef", "\\edef", "\\xdef"];
   let mut stores: Vec<Token> = Vec::new();

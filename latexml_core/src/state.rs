@@ -5275,6 +5275,40 @@ pub fn top_frame_new_meanings() -> Vec<(SymStr, Stored)> {
     .collect()
 }
 
+/// The meanings the topmost `n` frames bind — new ones and changes to what an outer frame defined — that are plain
+/// groups (`{…}`, `\begingroup`): a frame an environment or a mode opened (it binds `current_environment` or `MODE`)
+/// is skipped, its bindings being that construct's own machinery. Each key with the binding of the innermost such frame
+/// that binds it (a key bound there to nothing is left out). For a replayed environment begin code (sect05.rs
+/// `replay_class_setter`).
+pub fn top_group_frames_meanings(n: usize) -> Vec<(SymStr, Stored)> {
+  let state = state!();
+  let environment = crate::pin!("current_environment");
+  let mode = crate::pin!("MODE");
+  // how many bindings of a key the frames above the current one hold: the current frame's is at that position
+  let mut above: HashMap<SymStr, usize> = HashMap::default();
+  let mut chosen: Vec<(SymStr, Stored)> = Vec::new();
+  let mut seen: HashSet<SymStr> = HashSet::default();
+  for frame in state.undo.iter().take(n) {
+    let plain_group = !frame.value.contains_key(&environment) && !frame.value.contains_key(&mode);
+    for (key, count) in frame.meaning.iter() {
+      let offset = above.entry(*key).or_insert(0);
+      if plain_group
+        && *count > 0
+        && seen.insert(*key)
+        && let Some(value) = state
+          .meaning
+          .get(key)
+          .and_then(|values| values.get(*offset))
+        && !matches!(value, Stored::None)
+      {
+        chosen.push((*key, value.clone()));
+      }
+      *offset += *count;
+    }
+  }
+  chosen
+}
+
 /// The keys bound at the topmost frame for the Meaning and Value tables, taken
 /// before an autoloaded package loads; see [`hoist_top_frame_package_load`].
 pub struct TopFrameKeys {

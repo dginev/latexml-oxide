@@ -5690,6 +5690,7 @@ mod sect03;
 mod sect04;
 pub use sect04::kernel_chapter_with_warning;
 mod sect05;
+pub(crate) use sect05::replay_class_begin_code;
 mod sect06;
 mod sect07;
 mod sect08;

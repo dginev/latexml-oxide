@@ -4143,7 +4143,8 @@ impl Document {
           // Perl shares every one of these errors (same schema, no such autoOpen). Not inside a frontmatter
           // container (`ltx:abstract`, `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`, `ltx:creator`, or
           // anything in one): there the "isn't allowed" Error stands, as in Perl, until the frontmatter study is ruled
-          // on (main-session ruling 2026-10-17; guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`).
+          // on (main-session ruling 2026-10-17; guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`); a
+          // kernel table of contents there goes after the container instead (`float_out_of_frontmatter`, OD #753).
           // Witnesses 2406.11811, 2103.03402, 0806.0214, 2602.15784, 2301.10544, 1410.7242 (theorem in a quote),
           // 1412.2039, math0603642 (TOC in a quote), 2507.09788, 2307.10959, 2308.06338, 2410.15097, 0804.3724,
           // math0612590 (theorem in a footnote), 1310.0491 (an ltx:text). Guards
@@ -7352,6 +7353,19 @@ impl Document {
   }
 
   /// Find a node in the document that can contain an element `qname`
+  /// [`Self::float_to_element`] (closing form) for an element a frontmatter container (`ltx:abstract`…) refuses,
+  /// when the insertion point is inside one: the element goes to the nearest open ancestor that admits it, as Perl's
+  /// `floatToElement` places one (Document.pm:1052-1077), and the insertion point comes back (the saved node is
+  /// returned for the caller to restore), so what follows stays in the container. Elsewhere `None`: the element is
+  /// inserted where it stands, by [`Self::find_insertion_point`]'s rules. A `\tableofcontents` inside an abstract
+  /// (1011.3976, 1602.08755, 2007.03709; OXIDIZED_DESIGN_DIVERGENCES #753).
+  pub fn float_out_of_frontmatter(&mut self, qname: &str) -> Result<Option<Node>> {
+    if outside_frontmatter_container(&self.node) {
+      return Ok(None);
+    }
+    self.float_to_element(qname, true)
+  }
+
   pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool) -> Result<Option<Node>> {
     let mut candidates: VecDeque<Node> = VecDeque::from(self.get_insertion_candidates(&self.node));
     let mut closeable = true;

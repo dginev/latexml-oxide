@@ -1,0 +1,20 @@
+% A `\tableofcontents` inside an unclosed `\abstract{` group: the TOC ends the abstract as a `\section` there does
+% (sect05.rs `\abstract`, the runaway group closed with a Warning, as TeX reports "\end occurred inside a group").
+% witness: 2411.02384, 2506.07991
+% oracle:  pdflatex 0 errors, "(\end occurred inside a group at level 1)": "Abstract First text. Contents 1 Intro",
+%          then "1 Intro Body."
+% engines: rust 67int23b = 1 Error (malformed:ltx:TOC in ltx:abstract), 1 Warning
+% expect:  0 errors, 1 warning (unexpected:\lx@end@abstract, the open group); ltx:abstract = one p "First text.";
+%          the ltx:TOC its next sibling
+% status:  RED (67int23b) -> GREEN (74a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract{First text.
+
+\tableofcontents
+
+\section{Intro}
+Body.
+\end{document}

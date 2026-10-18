@@ -2207,9 +2207,23 @@ LoadDefinitions!({
     // frame (`\@currenvir` stays the enclosing one).
     assign_value("lx_in_kernel_abstract", true, Some(Scope::Local));
     let in_place = lookup_bool("lx_frontmatter_kept_in_place");
-    for (name, api, definer, own) in abstract_setter_definitions() {
+    let setters = abstract_setter_definitions();
+    // (whether the document defined each before the class's begin code runs: a `\newcommand` there leaves it)
+    let mut defined = Vec::with_capacity(setters.len());
+    for (name, ..) in &setters {
+      defined.push(lookup_definition(&T_CS!(&s!("\\{name}")))?.is_some());
+    }
+    // The class's refused begin code runs here for its effects, held in the abstract's group
+    // (`replay_class_begin_code`, sect05.rs: frontiersFPHY.cls:520 `\let\section\absection`, 1508.06756); the
+    // keywords setters below are the body's.
+    let keep_out: Vec<SymStr> = setters
+      .iter()
+      .map(|(name, ..)| meaning_key(&T_CS!(&s!("\\{name}"))))
+      .collect();
+    crate::latex_constructs::replay_class_begin_code("abstract", &keep_out)?;
+    for ((name, api, definer, own), defined) in setters.into_iter().zip(defined) {
       let cs = T_CS!(&s!("\\{name}"));
-      if definer == Definer::Keeps && lookup_definition(&cs)?.is_some() {
+      if definer == Definer::Keeps && defined {
         continue;
       }
       let label = label_before_argument(&own);

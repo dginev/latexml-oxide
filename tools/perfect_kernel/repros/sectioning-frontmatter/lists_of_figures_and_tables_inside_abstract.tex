@@ -1,0 +1,21 @@
+% `\listoffigures` and `\listoftables` inside a balanced `{abstract}` take the TOC's place: after the abstract.
+% witness: none (synthetic; the `\tableofcontents` rule's 1011.3976, 1602.08755)
+% oracle:  pdflatex 0 errors: "Abstract First text. List of Figures 1 A figure List of Tables Second text."
+% engines: rust 67int23b = 2 Errors (malformed:ltx:TOC in ltx:p, in ltx:abstract)
+% expect:  0 errors, 0 warnings; ltx:abstract = p "First text.", p "Second text."; then ltx:TOC lists="lof",
+%          ltx:TOC lists="lot"
+% status:  RED (67int23b) -> GREEN (74a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\begin{abstract}
+First text.
+\listoffigures
+\listoftables
+Second text.
+\end{abstract}
+\section{Intro}
+Body.
+\begin{figure}\caption{A figure}\end{figure}
+\end{document}

@@ -15718,3 +15718,30 @@ $\refstepcounter{c}x$\end{document}` — pdflatex 0 errors; Perl 3 errors ("Scri
 
 Rust: OXIDIZED_DESIGN_DIVERGENCES #748 (1609.03070, 1904.00290). Guard
 `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`.
+
+## 978. A `\tableofcontents` inside an abstract is "not allowed" there
+
+latex_constructs.pool.ltxml:725 inserts `<ltx:TOC>` where `\tableofcontents` stands; `ltx:abstract` (Block.model)
+admits none, and the TOC is no `\section*`, so it does not end a brace-less `\abstract` either.
+
+Trigger: `\documentclass{article}\begin{document}\abstract First.\tableofcontents\section{A}B\end{document}` — pdflatex
+0 errors ("Abstract First. Contents 1 A …"); Perl 1 error (`malformed:ltx:TOC <ltx:TOC> isn't allowed in <ltx:p>`), the
+TOC inside the abstract's paragraph.
+
+Rust: OXIDIZED_DESIGN_DIVERGENCES #753 (1011.3976, 1602.08755, 2007.03709). Guards `perfect_kernel_batch74a::toc_*`.
+
+## 979. A raw class's own `{abstract}` begin code never runs
+
+The kernel's `{abstract}` is locked (latex_constructs.pool.ltxml:1136-1143; State.pm:502-517): a class's
+`\newenvironment{abstract}{\begingroup\let\section\absection…}{\endgroup…}` (frontiersFPHY.cls:516-524, bioinfo.cls:
+495-500) is dropped whole, so the `\section{Motivation:}` labels its template puts in the abstract open real sections.
+
+Trigger (`--includestyles`): `absfront.cls` = `\LoadClass{article}\newcommand{\absection}[1]{\par\noindent{\bfseries
+#1}\space\ignorespaces}\renewenvironment{abstract}{\begingroup\let\section\absection}{\endgroup}`, and
+`\documentclass{absfront}\begin{document}\begin{abstract}\section{Motivation:} A. \section{Results:} B.\end{abstract}
+\end{document}` — pdflatex 0 errors, two run-in bold labels; Perl 2 errors (`<ltx:section> isn't allowed in
+<ltx:abstract>`, `… in <ltx:section>`; 3 with a third label).
+
+Rust: OXIDIZED_DESIGN_DIVERGENCES #482, 74a (1508.06756, 1406.7114, 1404.0027). Guards
+`perfect_kernel_batch74a::{class_abstract_begin_code_makes_section_a_run_in_label,
+class_newenvironment_abstract_begin_code_runs}`.

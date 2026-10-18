@@ -256,6 +256,7 @@ mod perfect_kernel_batch72a;
 mod perfect_kernel_batch72b;
 mod perfect_kernel_batch73a;
 mod perfect_kernel_batch73b;
+mod perfect_kernel_batch74a;
 mod perfect_kernel_batchfms1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;

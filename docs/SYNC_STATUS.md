@@ -3821,6 +3821,33 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   of a list never printed (73a; 1204.6199's `\makenomenclature` without `\printnomenclature`), 2106.12527 its garbled
   math (E 25 → 0). Binding nets 136/136, 0 documents worse than 67int23.
 
+- **74a** (abstract content: the two shapes of ~40 of the ~61 projection-sample papers still needed for 98 %; report
+  agent_reports/2026-10-18_payload_74a.md). (A) User ruling 2026-10-18 "Replay, lock kept": a raw class's refused
+  `{abstract}` begin code runs at the kernel abstract's head for its effects (sect05.rs `replay_class_begin_code`, from
+  frontmatter_stores.rs `\lx@abstract@class@setters`; OXIDIZED_DESIGN_DIVERGENCES #482 extended, KNOWN_PERL_ERRORS #979):
+  what it binds in its plain groups, the class's own `\begingroup` included, holds in the abstract's group
+  (state.rs `top_group_frames_meanings`); NFSS's font record and the #634 keywords setters are not kept; a begin code
+  whose final command may read past it (environ's `\Collect@Body`) is not replayed; a refused `\newenvironment` keeps
+  its code (sect08.rs); every replay restores the boxes its body `\setbox`es (memo-l 1409.3892). The Frontiers/bioinfo/
+  4arXiv `\section{Motivation:}` labels are run-in bold paragraphs, as in the PDF (1508.06756, 1406.7114, 1404.0027 and
+  14 more). (B) A `\tableofcontents`/`\listoffigures`/`\listoftables` inside a frontmatter container goes after it
+  (`Document::float_out_of_frontmatter`, Perl's `floatToElement`; sect04.rs `insert_toc`), and the kernel's three begin
+  `\par\@startsection@hook` as the `\section*` they are, ending an unclosed `\abstract` (OXIDIZED_DESIGN_DIVERGENCES #753,
+  KNOWN_PERL_ERRORS #978; 1011.3976, 1602.08755, 2007.03709, hep-lat9910044, 2104.05770, sapthesis 1603.02077 whose
+  sections are numbered again). Guards `perfect_kernel_batch74a::*`; repros `sectioning-frontmatter/class_abstract/*`,
+  `sectioning-frontmatter/{toc_*abstract*, lists_of_figures_and_tables_inside_abstract}`. A/B vs 67int23b over 140
+  papers (the 45 sample papers, 15 more Frontiers/bioinfo, 20 raw classes redefining `{abstract}`, 20 balanced
+  amsart/revtex/article abstracts, 40 random of pop67int23): E 178 → 116, F 0 → 0, W 2,302 → 2,302, 54 better, 0
+  worse, 0 new Fatal. Open rows:
+  - (a) Not these shapes, left (sample papers): MRM.cls:1583-1591's `\abstract[2][]` stores `\let\section\@abssection` in
+    the `\@abstract` its `\maketitle` prints (2202.01479, 2511.23135, 2409.04353: sections nested in the abstract);
+    scrartcl 1507.08575 (`\section*{Abstract:}` twice inside `{abstract}`: the second nests in the first); iopart
+    1111.0026 (the whole paper inside `{abstract}`); 1404.0027 and 2108.03515 keep a `caption`/`toccaption`/`para` in
+    `ltx:block` error (a figure's).
+  - (b) A `\section*` inside a balanced abstract is still kept in place silently by document.rs's sectioning leniency
+    (`is_lenient_container`; Perl errs `<ltx:section> isn't allowed in <ltx:abstract>`), schema-invalid; a TOC there
+    now goes after the abstract. Whether a heading inside an abstract should end it, go after it or stay is a ruling.
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

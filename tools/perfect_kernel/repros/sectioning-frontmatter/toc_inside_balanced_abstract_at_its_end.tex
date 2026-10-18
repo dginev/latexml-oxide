@@ -1,0 +1,20 @@
+% A `\tableofcontents{}` at the end of a balanced `{abstract}` (LyX's shape): pdflatex prints it inside the abstract's
+% quotation; `ltx:abstract` admits no `ltx:TOC`, so it goes after the abstract, to the nearest open ancestor that admits
+% it (Perl's `floatToElement`), and the abstract keeps its text.
+% witness: 1011.3976, 1310.0349, 1509.04736, 1404.7641, 0809.1270
+% oracle:  pdflatex 0 errors: "Abstract First text. Contents 1 Intro", then "1 Intro Body."
+% engines: rust 67int23b = 1 Error (malformed:ltx:TOC in ltx:p); Perl the same
+% expect:  0 errors, 0 warnings; ltx:abstract = one p "First text."; the ltx:TOC its next sibling, a child of
+%          ltx:document
+% status:  RED (67int23b) -> GREEN (74a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\begin{abstract}
+First text.
+\tableofcontents{}
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

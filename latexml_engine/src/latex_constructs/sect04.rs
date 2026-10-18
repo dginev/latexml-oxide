@@ -493,10 +493,26 @@ pub(crate) fn load() -> Result<()> {
   // whose failure branch runs an undefined `\fail`; TeX Live class census
   // 2026-09-24), but running it would read a stale `\jobname.toc` from disk
   // (sect08.rs `\@starttoc`). The TOC element is built in post-processing.
+  // The three begin as the heading they are in article.cls, report.cls and amsart.cls (`\section*{\contentsname…}`,
+  // `\chapter*` in book.cls): a paragraph ends, and the sectioning hook runs (`\@startsection@hook`, sect04.rs
+  // `\@@unnumbered@section`), so a TOC after an unclosed `\abstract` or `\abstract{…` ends it as a `\section` does
+  // (sect05.rs `\abstract`; 2007.03709, 2202.05904, 2512.04732, hep-lat9910044). OXIDIZED_DESIGN_DIVERGENCES #753.
+  // The heading is in `\lx@kernel@<name>`, `\protected` as the `\section*` it stands for is robust, and the user
+  // name's first token: an `\edef` that expands the user name meets that one token and stops, as before.
+  // tocbasic.sty:1175-1179's `\edef\@tempa{\noexpand\newcommand*\csname listof\tb@nt@types\endcsname{…}}` (KOMA's
+  // `\DeclareNewTOC{lof}`, scrbook.cls:7341) expands `\listoffigures` there: with a second token the `\newcommand`
+  // named the first, and its body group was typeset in the preamble, a starred chapter
+  // (`perfect_kernel_batchint23::scrbook_front_matter_chapters_are_unnumbered`).
   RawTeX!(r"\long\def\lx@kernel@listbody#1{}");
+  RawTeX!(r"\protected\def\lx@kernel@tableofcontents{\par\@startsection@hook\lx@kernel@toc@element}");
+  RawTeX!(r"\protected\def\lx@kernel@listoffigures{\par\@startsection@hook\lx@kernel@lof@element}");
+  RawTeX!(r"\protected\def\lx@kernel@listoftables{\par\@startsection@hook\lx@kernel@lot@element}");
   DefMacro!("\\tableofcontents", "\\lx@kernel@tableofcontents\\lx@kernel@listbody{\\@starttoc{toc}}");
-  DefConstructor!("\\lx@kernel@tableofcontents",
-    "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
+  // Perl latex_constructs.pool.ltxml:725 "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name
+  // </ltx:title></ltx:TOC>", placed by `insert_toc` (a TOC inside an abstract goes after it).
+  DefConstructor!("\\lx@kernel@toc@element", sub[document, _args, props] {
+      insert_toc(document, "toc", Some(prop_string!(props, "select")), prop_digested!(props, "name"))?;
+    },
     properties => {
       Ok(stored_map!("select" => toc_select()?,
         "name" => digest_in_group(T_CS!("\\contentsname"))?))
@@ -514,13 +530,15 @@ pub(crate) fn load() -> Result<()> {
 
   // \listfigurename / \listtablename live in `latex_constructs_rust_only.rs` section 8.
   DefMacro!("\\listoffigures", "\\lx@kernel@listoffigures\\lx@kernel@listbody{\\@starttoc{lof}}");
-  DefConstructor!("\\lx@kernel@listoffigures",
-    "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
+  DefConstructor!("\\lx@kernel@lof@element", sub[document, _args, props] {
+      insert_toc(document, "lof", None, prop_digested!(props, "name"))?;
+    },
     properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\listfigurename"))?)) });
 
   DefMacro!("\\listoftables", "\\lx@kernel@listoftables\\lx@kernel@listbody{\\@starttoc{lot}}");
-  DefConstructor!("\\lx@kernel@listoftables",
-    "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
+  DefConstructor!("\\lx@kernel@lot@element", sub[document, _args, props] {
+      insert_toc(document, "lot", None, prop_digested!(props, "name"))?;
+    },
     properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\listtablename"))?)) });
 
   // The three under names of their own, for a binding that interprets a package raw and puts them back (tocloft_sty.rs:
@@ -708,4 +726,31 @@ pub fn kernel_chapter_with_warning(category: &str, message: &str) -> Result<Toke
     assign_value("\\chapter:stand@in@counter", true, Some(Scope::Global));
   }
   Ok(Tokens!(T_CS!("\\lx@kernel@chapter")))
+}
+
+/// The kernel's `\tableofcontents`/`\listoffigures`/`\listoftables` element, `<ltx:TOC lists=… scope='global'
+/// [select=…]><ltx:title>name</ltx:title></ltx:TOC>` (Perl latex_constructs.pool.ltxml:725-743). Inside a frontmatter
+/// container, whose model refuses it (`ltx:abstract`, Block.model), it goes to the nearest open ancestor that admits
+/// it, after the container, and what follows stays in the container (`Document::float_out_of_frontmatter`, Perl's
+/// `floatToElement`): pdflatex prints it inside the abstract's quotation, where the schema has no place for it — a
+/// LyX abstract that ends with `\tableofcontents{}` (1011.3976, 1310.0349, 1509.04736), one with it mid-abstract
+/// (1602.08755). OXIDIZED_DESIGN_DIVERGENCES #753.
+fn insert_toc(
+  document: &mut Document,
+  lists: &str,
+  select: Option<String>,
+  name: Vec<&Digested>,
+) -> Result<()> {
+  let save = document.float_out_of_frontmatter("ltx:TOC")?;
+  let mut attrs = string_map!("lists" => lists.to_string(), "scope" => "global".to_string());
+  if let Some(select) = select.filter(|s| !s.is_empty()) {
+    attrs.insert("select".to_string(), select);
+  }
+  document.open_element("ltx:TOC", Some(attrs), None)?;
+  document.insert_element("ltx:title", name, None)?;
+  document.close_element("ltx:TOC")?;
+  if let Some(save) = save {
+    document.set_node(&save);
+  }
+  Ok(())
 }

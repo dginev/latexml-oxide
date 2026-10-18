@@ -1255,6 +1255,20 @@ pub(crate) fn load() -> Result<()> {
       if !is_locked {
         let message = s!("Ignoring redefinition (\\newenvironment) of Environment {:?}", name);
         Info!("ignore", name, message);
+      } else if !copy_provides_refuses_locked(&name_cs) {
+        // A locked environment the class defines anew (the kernel's `{abstract}` exists before any class does: in
+        // LaTeX a class not built on article defines it here, frontiersFPHY.cls:519, bioinfo.cls:497 — 1508.06756,
+        // 1406.7114): the refused code kept as `\renewenvironment` keeps it (below), for the locked binding to read
+        // and replay (`replay_class_begin_code`, sect05.rs). Nothing else runs it.
+        let dropped = T_CS!(s!("\\lx@dropped@{name}"));
+        let dropped_end = T_CS!(s!("\\lx@dropped@end{name}"));
+        let converted_args = convert_latex_args(nargs.value_of() as usize, opt.clone())?;
+        DefMacro!(dropped, converted_args, begin.clone(), scope => Some(Scope::Global));
+        DefMacro!(dropped_end, None, end.clone(), scope => Some(Scope::Global));
+        if let Some(default) = opt {
+          record_redefined_default(&name_cs, default);
+        }
+        record_dropped_environment_stores(&name, &[&begin, &end])?;
       }
     } else {
       // TODO: can we convince DefMacro! this is not a second mutable borrow of state::
@@ -1298,7 +1312,8 @@ pub(crate) fn load() -> Result<()> {
       // The refused begin and end code, kept as `\lx@dropped@<name>` and `\lx@dropped@end<name>` (the record
       // `install_definition` keeps for a refused `\def`, state.rs; `\newcommand`'s above), for a locked binding to read
       // what the class wrote: the keywords setter mtt.cls:176-181's `{abstract}` defines for its body
-      // (frontmatter_stores.rs `abstract_setter_definitions`; 1310.0585). Nothing runs them.
+      // (frontmatter_stores.rs `abstract_setter_definitions`; 1310.0585), and a begin code the kernel `{abstract}`
+      // replays for its effects (sect05.rs `replay_class_begin_code`; 1508.06756). Nothing else runs them.
       let dropped = T_CS!(s!("\\lx@dropped@{name}"));
       let dropped_end = T_CS!(s!("\\lx@dropped@end{name}"));
       let converted_args = convert_latex_args(nargs.value_of() as usize, opt.clone())?;
