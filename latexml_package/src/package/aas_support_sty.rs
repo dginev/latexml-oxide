@@ -668,7 +668,10 @@ LoadDefinitions!({
   // (`\startdata`, deluxetable_sty.rs) — inside the group the table opens; tabularx shares tabular's bindings here, where
   // in pdflatex it reads its body before `\tabular` and keeps the body's `$` as written. Witness 2609.05675 (an author's `$z_0$` in a `C` cell).
   let_i(&T_ACTIVE!('$'), &T_CS!("\\savedollar"), Some(Scope::Global));
-  DefMacro!("\\aas@table@dollar", "\\catcode`\\$=\\active\\relax");
+  // …only AASTeX 6+ (aastex_cls.rs sets it): AASTeX 5.x's aastex.cls (5.2; copies in 1403.0937, astro-ph0609108) and
+  // emulateapj.cls have no active `$`, and an author's `$`-delimited macro there (`\def\mcn#1$-$#2 {…}` in a table,
+  // 0903.2259) must find its catcode-3 delimiter (repro captions-floats/aastex5_table_dollar_delimited_macro).
+  DefMacro!("\\aas@table@dollar", "");
   Let!("\\aas@@tabular@bindings", "\\@tabular@bindings");
   DefMacro!("\\@tabular@bindings", "\\aas@table@dollar\\aas@@tabular@bindings");
   Let!("\\aas@@deluxetable@bindings", "\\@deluxetable@bindings");

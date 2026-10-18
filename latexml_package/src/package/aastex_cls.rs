@@ -118,6 +118,8 @@ LoadDefinitions!({
   // `perfect_kernel_batch73a::stored_tablecaption_scoped_to_its_group`.
   if aastex6_plus {
     RawTeX!(r"\lx@deluxe@persistentfalse");
+    // aastex701.cls:8608-8610, :8849 (and aastex6/61/62/63/631): `$` is active in every table (aas_support_sty.rs).
+    RawTeX!(r"\def\aas@table@dollar{\catcode`\$=\active\relax}");
   }
   // `\authorcomment`'s label differs between versions (aas_support_sty.rs `define_authorcomment`): the paper's copy of
   // the class decides — "(Author~note: …)" in most aastex63.cls copies (2205.09859 :5731) and in aastex62.cls, the

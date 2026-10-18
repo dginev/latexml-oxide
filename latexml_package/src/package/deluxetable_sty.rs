@@ -303,7 +303,11 @@ LoadDefinitions!({
     r"\lx@deluxe@intabletrue\global\lx@deluxe@printedfalse\global\lx@deluxe@emptyheadfalse\global\let\lx@deluxe@own\@empty\global\let\lx@deluxe@late\@empty
 \iflx@deluxe@persistent\global\let\lx@deluxe@pending\@empty\else\global\let\lx@deluxe@pending\lx@deluxe@caption
 \global\let\lx@deluxe@caption\@empty\fi
-\let\lx@deluxe@caption@orig\caption\def\caption{\global\lx@deluxe@printedtrue\lx@deluxe@caption@orig}");
+\ifx\caption\lx@deluxe@caption@mark\else\let\lx@deluxe@caption@orig\caption\let\caption\lx@deluxe@caption@mark\fi");
+  // The marking `\caption`, wrapped once: a deluxetable begun inside another's group (an author's runaway argument
+  // swallowing `\end{deluxetable}`: 0903.2259) finds `\caption` already wrapped, and re-wrapping it would make the
+  // wrapper call itself (Fatal infinite expansion; repro captions-floats/deluxetable_inside_deluxetable).
+  DefMacro!("\\lx@deluxe@caption@mark", r"\global\lx@deluxe@printedtrue\lx@deluxe@caption@orig");
   // The print point: the store (emulateapj, AASTeX 5: numbered, empty or not), or AASTeX 6+'s own caption (numbered),
   // the kept caption (unnumbered; numbered in a long table) or, in a long table, an empty numbered one. An empty store
   // is the table's number alone (`\iflx@deluxe@emptyhead`), set at the table's end — as the caption of the first

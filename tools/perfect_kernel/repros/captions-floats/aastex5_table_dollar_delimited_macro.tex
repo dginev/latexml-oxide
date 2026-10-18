@@ -1,0 +1,26 @@
+% witness: 0903.2259 (AASTeX 5.2 `aastex`; table3.tex:9 `\def\mcn#1$-$#2 {#1$^4$}` used in deluxetable cells)
+% oracle:  pdflatex with the AASTeX 5.2 aastex.cls (copy from 1403.0937) 0 errors; Perl 0 errors. AASTeX 5.x and
+%          emulateapj have no active `$` in tables (only AASTeX 6+: aastex701.cls:8608-8610, :8849)
+% engines: rust 67int23b: 5 Errors (`\mcn`'s `$-$` delimiter never matched an active `$`: the argument ran away and
+%          swallowed `\end{deluxetable}`); 67int24b: Fatal infinite expansion (the second table, begun inside the first,
+%          re-wrapped the wrapped `\caption`), 39 bytes
+% expect:  0 errors; two tables captioned "One" and "Two"
+% status:  RED (67int24b) -> GREEN (int25: aas_support_sty.rs `\aas@table@dollar` empty, set in aastex_cls.rs for 6+)
+% preload: ar5iv.sty
+\documentclass[12pt,preprint]{aastex}
+\begin{document}
+\def\mcn#1$-$#2 {#1$^4$}
+\begin{deluxetable}{ll}
+\tablecaption{One}
+\startdata
+a & \mcn 6dF J0342278$-$260243 \\
+\enddata
+\end{deluxetable}
+
+\begin{deluxetable}{ll}
+\tablecaption{Two}
+\startdata
+c & d \\
+\enddata
+\end{deluxetable}
+\end{document}
