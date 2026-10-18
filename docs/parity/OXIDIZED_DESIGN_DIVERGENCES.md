@@ -20143,9 +20143,10 @@ whether every control sequence a refused class body would run is defined. It now
 The gate itself never reports: a parameter text is read by its own `gate_parameters` — `None` (no delimiters matched,
 the call's arguments checked as tokens) for one holding an argument of the enclosing macro (an `ARG` token), a doubled
 `#` or parameters out of order — and never by `parse_def_parameters`, whose ParamSpec Fatal is sticky (a class
-`\renewcommand{\author}[1]{\expandafter\def\csname tp@au#1\endcsname##1{##1}…}` marked a clean paper Fatal). A name
-`\csname` makes, or a replacement text an `\expandafter` chain expands, is read in place as it runs
-(`expandafter_definee`: `\expandafter\def\expandafter\x\expandafter{\y}` defines `\x`, and `\y` is checked). A called
+`\renewcommand{\author}[1]{\expandafter\def\csname tp@au#1\endcsname##1{##1}…}` marked a clean paper Fatal). A name `\csname` makes has its tokens run in place, and an `\expandafter` chain expands the one token after the
+replacement text's brace (`expandafter_definee`: `\expandafter\def\expandafter\x\expandafter{\y\z}` defines `\x` and
+checks `\y`); the rest of either's replacement text is stored like any `\def`'s (tex.web §473), so only an
+`\edef`/`\xdef` reads it in place (round 3). A called
 macro's definitions count only for a control sequence undefined here, from its live branches and outside the stored
 replacement texts of the definitions it makes (`callee_definees`), so a real meaning is never shadowed. A body whose own
 definitions call one another more than 8 deep is refused with an Info, not admitted unread.
@@ -20162,8 +20163,10 @@ ACM copyright/permission blocks of 0712.1016, 1301.5612, 1609.02839, cs0404029; 
 two-refusal `\maketitle` and wiley/nbdt/CSML papers of the sample) against 67int27: E 1,933 → 1,924, F 2 → 2, no paper
 with more errors, none losing more than 1 % of its words, no doubled creator. Guards
 `perfect_kernel_batch75a::{maketitle_replay_skips_stored_replacement_text, maketitle_replay_skips_called_delimiters,
-maketitle_replay_gate_reads_csname_def_silently, maketitle_replay_expandafter_def_reads_in_place}`; repros
-`sectioning-frontmatter/class_title_page/maketitle_replay_{skips_*,gate_reads_csname_def_silently,expandafter_def_reads_in_place}`.
+maketitle_replay_gate_reads_csname_def_silently, maketitle_replay_expandafter_def_reads_in_place,
+maketitle_replay_gate_stores_csname_and_expandafter_definitions}`; repros
+`sectioning-frontmatter/class_title_page/maketitle_replay_{skips_*,gate_reads_csname_def_silently,expandafter_def_reads_in_place,
+gate_stores_csname_and_expandafter_definitions}`.
 
 ### 757. A class's append to a locked command it redefined extends the class's own definition (Perl: lost)
 
@@ -20207,16 +20210,19 @@ The #482 replay of a refused class `\title`/`\author` keeps the class's lists; w
 call's argument — vmsta.cls:296-315 `\g@addto@macro\@@@authors{…\name@m@front{#2}…}` — is the class's record of the field
 the kernel's frontmatter carries. For each macro the kept replay changed (its assignment journal with the value before,
 state.rs `AssignmentJournalGuard::assigned`) that is now a parameterless token list, the part the replay added — the
-tail appended to the value before, the head prepended, or the whole value when the replay overwrote the macro — joins
+tail appended to the value before, the head prepended, the text inserted between the old value's common head and
+tail (before a list's end sentinel), or the whole value when the replay overwrote the macro — joins
 `lx_replay_records` when it holds the argument (sect05.rs `note_replay_records`), and `\lx@replay@records` takes each
 recorded part out of its macro, locally, in the `\@maketitle` deposit and the `\maketitle` replay, as they null
 `\@author`. What other code put in the same list stays: a class `\workplace` appending to the author list keeps its
-text, in either call order. Once #757 let vmsta's own `\maketitle` replay, it printed the author and affiliation a
+text, in either call order, whether it appends or inserts before a sentinel. Once #757 let vmsta's own `\maketitle` replay, it printed the author and affiliation a
 second time (1506.02940, 1801.00977). Residual, awaiting a ruling (SYNC_STATUS 75a row (e)): a record that does not
 hold the argument — vmsta 2018+'s `\csxdef{author\the\c@author}` and its list of names — is not found, and its title page
-prints the authors and e-mails again (1806.03850, 1810.09667, 2012.03249). Guards `perfect_kernel_batch75a::{maketitle_replay_reads_class_author_list_as_empty,
-maketitle_replay_keeps_other_setters_in_shared_list}`; repros
-`sectioning-frontmatter/class_title_page/maketitle_replay_{reads_class_author_list_as_empty,keeps_other_setters_in_shared_list_*}`.
+prints the author line beside the creators, and its e-mail line — recovered content, kept nowhere else — twice (it is
+built in the toks register `\email@author@toks`, vmsta.cls:1226/1248, not a macro; 1806.03850, 1810.09667, 2012.03249). Guards `perfect_kernel_batch75a::{maketitle_replay_reads_class_author_list_as_empty,
+maketitle_replay_keeps_other_setters_in_shared_list,
+maketitle_replay_keeps_other_setters_in_sentinel_list}`; repros
+`sectioning-frontmatter/class_title_page/maketitle_replay_{reads_class_author_list_as_empty,keeps_other_setters_in_{shared,sentinel}_list_*}`.
 
 ### 760. A document's `\halign` redefinition runs where a binding's alignment reaches `\halign` (Perl: never runs)
 

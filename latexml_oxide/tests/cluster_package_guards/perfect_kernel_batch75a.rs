@@ -238,6 +238,54 @@ fn maketitle_replay_keeps_other_setters_in_shared_list() {
   }
 }
 
+/// The same two setters inserting into one list before its end sentinel (`\def\tp@tmp##1\tp@end{…##1#1\tp@end}`): the
+/// new value neither starts nor ends with the old one when `\workplace` came first, and the title-page replay takes out
+/// only the middle the `\author` replay inserted, in either call order (75a review r2 finding 1).
+#[test]
+fn maketitle_replay_keeps_other_setters_in_sentinel_list() {
+  for (log, xml) in [
+    convert_beside!(
+      "maketitle_replay_keeps_other_setters_in_sentinel_list_author_first.tex",
+      "tpsentinel.cls"
+    ),
+    convert_beside!(
+      "maketitle_replay_keeps_other_setters_in_sentinel_list_workplace_first.tex",
+      "tpsentinel.cls"
+    ),
+  ] {
+    assert!(!log.contains("not replayed"), "{log}");
+    title_and_author_once(&xml);
+    assert!(
+      xml.contains(
+        r#"</creator> <para xml:id="p1"> <p xml:id="p1.1"><text font="italic" xml:id="p1.1.1">Widget University</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Body text.</p> </para>"#
+      ),
+      "{xml}"
+    );
+    assert_eq!(xml.matches("Widget University").count(), 1, "{xml}");
+  }
+}
+
+/// `\expandafter\def\csname tp@mark\endcsname{…\@thefnmark}` and `\expandafter\def\expandafter\tp@x\expandafter{\@venue
+/// \@thefnmark}` in a class's `\maketitle` that calls neither: the name is made and the one token after the brace
+/// expanded, the rest stored, so `\@thefnmark` does not stop the replay and the venue line is kept (75a review r2
+/// finding 2).
+#[test]
+fn maketitle_replay_gate_stores_csname_and_expandafter_definitions() {
+  let (log, xml) = convert_beside!(
+    "maketitle_replay_gate_stores_csname_and_expandafter_definitions.tex",
+    "tpstored.cls"
+  );
+  assert!(!log.contains("not replayed"), "{log}");
+  title_and_author_once(&xml);
+  assert!(
+    xml.contains(
+      r#"</creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1">Venue: Widget Conf</p> </para> <para xml:id="p2"> <p xml:id="p2.1">Body text.</p> </para>"#
+    ),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("Widget Conf").count(), 1, "{xml}");
+}
+
 /// `\expandafter\def\expandafter\tp@x\expandafter{\@venue}` in a class's `\maketitle`: `\tp@x` is what it defines and
 /// the replacement text is checked in place, so the title page replays and its venue line is kept (75a review nit 7).
 #[test]

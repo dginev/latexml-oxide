@@ -4008,18 +4008,23 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1911.06213, vmsta 1506.02940/1801.00977 whose dates, affiliation and keywords are now kept). (W) K11 table setters
   `corraddress`, `corremail`, `fundinginfo` (notes), `papertype`, `paperfield` (pubnotes), `ACMCCS` (classification)
   (store_setters.rs, #758; 1808.01384, 1911.06213, 2012.13110, 2203.03068, CSML 1608.04592/1602.00476). (D) The class's
-  part a refused `\author` replay added to a list (the tail it appended, from the journal's value before) is taken out
-  of that list in the title-page deposit and replay (`note_replay_records`, `\lx@replay@records`, #759; vmsta printed
+  part a refused `\author` replay added to a list (from the journal's value before: the tail it appended, the head it
+  prepended, or the text it inserted before the list's end sentinel — round 3) is taken out of that list in the title-page deposit and replay (`note_replay_records`, `\lx@replay@records`, #759; vmsta printed
   its author twice once F2 let its `\maketitle` run), and what another class setter appended to the same list stays.
   (K) `\@topnewpage` takes latex.ltx's bracketed argument and sets the header as a paragraph of its own in a group
   (KNOWN_PERL_ERRORS #982; jpsj's replayed `\twocolumn[…]` printed "[" "]": cond-mat0011490). Round 2 (review
   agent_reports/2026-10-18_75a_review.md): the gate never reports — its own `gate_parameters` reads a parameter text,
-  never the sticky-Fatal `parse_def_parameters`, and a `\csname`/`\expandafter` definee is read in place
-  (`expandafter_definee`); a called macro's definitions count only for an undefined control sequence
+  never the sticky-Fatal `parse_def_parameters`, and a `\csname`-made name's tokens run in place while an `\expandafter` chain expands only the token after the
+  brace, the rest of either's replacement text stored (`expandafter_definee`; round 3); a called macro's definitions count only for an undefined control sequence
   (`callee_definees`); a body nested past 8 definitions is refused with an Info. Guards `perfect_kernel_batch75a::*`; repros
   `sectioning-frontmatter/class_title_page/*`. A/B vs 67int27 over 244 papers (the 204 + 31 two-refusal `\maketitle`
   papers + the wiley/nbdt/CSML papers of the sample): E 1,933 → 1,924, F 2 → 2, 84 changed, 0 with more E/F, 0 losing
-  >1 % of words, 0 doubled creators. Open rows:
+  >1 % of words, 0 doubled creators. Round 3 (r2 review findings 1, 2, 4): a replay that inserts into a list before its
+  end sentinel records only the inserted middle (`note_replay_records`, common head and tail; guard
+  `maketitle_replay_keeps_other_setters_in_sentinel_list` — `\workplace` first lost "Widget University"); the gate's
+  `\csname`/`\expandafter` definitions store their replacement text (guard
+  `maketitle_replay_gate_stores_csname_and_expandafter_definitions`); `\lx@replay@records` skips a macro that has since
+  taken parameters. Open rows:
   - (a) FOLLOW-UP (not done, needs its own batch): the report's generic rule — an off-table pure store the document set,
     whose only readers are title-page code that did not typeset (a refused body the gate rejects, a deposit or replay
     that errs), handed on as `\lx@add@frontmatter{ltx:note}[role=<setter>]` at `\lx@store@defaults`; ~15 sample papers
@@ -4046,12 +4051,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     `\csxdef{author\the\c@author}{…}`, `\xappto\author@list{,author<n>}`) records each author under a `\csname`-made name
     holding the processed name, and its list holds names, not the argument, so #759's "holds the argument" test misses
     it: once #757 lets its `\maketitle` replay, the title page prints the author line (bold "Vitalii Miroshnichenko,
-    Rostyslav Maiboroda 0") and the e-mail line a second time, beside what it recovers (affiliation, the received/
+    Rostyslav Maiboroda 0"), a duplicate of the creators, and the e-mail line twice — recovered content, kept nowhere
+    else, built in the toks register `\email@author@toks` (vmsta.cls:1226/1248), not a macro — beside what it recovers (affiliation, the received/
     revised/accepted/published dates, keywords, MSC) — 1806.03850, 1810.09667, 2012.03249 (3 of the 3,000 sample;
     67int28 kept the authors once and lost the rest). Proposed single rule: the title-page deposit and replay undo
     every assignment a kept refused-setter replay made (from the journal's values before: an appended tail taken out,
     a newly defined macro emptied), keeping what other code added, replacing #759's argument test; risk: a title page
-    that prints only from a setter's records (an affiliation a setter stores) loses it, so it needs its own A/B.
+    that prints only from a setter's records (an affiliation a setter stores) loses it, and it would not touch the
+    doubled e-mails (a toks register). Reviewer's safer variant (75a r2 review): take a recorded part out only when its
+    expanded text is contained in the creator built from the same setter call, and undo text our own replay doubled from
+    that replay's own toks/macro tail. Either needs its own A/B counting e-mail, affiliation and orcid occurrences.
     nowfnt (2108.12618, 2308.02698): with its `\author` replay running (#756) pdflatex's author block "Marina Haikin¹,
     Matan Gavish², …" is now typeset beside the creators split "Haikin", "Marina" (row (b)).
 

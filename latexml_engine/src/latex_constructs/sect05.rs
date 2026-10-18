@@ -1249,6 +1249,10 @@ pub(crate) fn load() -> Result<()> {
       };
       let cs = T_CS!(with(*name, ToString::to_string));
       let Some(Stored::Expandable(d)) = lookup_meaning(&cs) else { continue };
+      // a macro that has since taken parameters is not the token list the record was taken from
+      if d.get_parameters().is_some_and(|p| !p.get_parameters().is_empty()) {
+        continue;
+      }
       let body: Vec<Token> = match d.get_expansion() {
         Some(ExpansionBody::Tokens(body)) => body.unlist_ref().to_vec(),
         _ => continue,
@@ -2041,8 +2045,10 @@ pub(crate) fn options_pi_spelling(arg: Option<&Digested>) -> SymHashMap<Stored> 
 ///   nowfnt.cls:552 `\@nil`, 1912.00312); what a called macro defines and is undefined here is defined after the call
 ///   ([`callee_definees`]); `\futurelet` defines;
 /// - the gate never reports a diagnostic: a parameter text is read by [`gate_parameters`], never by the definition
-///   parser, whose ParamSpec Fatal is sticky; a `\csname`-made name or an `\expandafter` chain is read in place
-///   ([`expandafter_definee`]); a body whose definitions nest past [`GATE_DEFINITION_DEPTH`] is refused with an Info.
+///   parser, whose ParamSpec Fatal is sticky; a `\csname`-made name's tokens are run in place and an `\expandafter`
+///   chain's `{`-adjacent token is expanded in place, the rest of either's replacement text stored
+///   ([`expandafter_definee`]; 75a review r3); a body whose definitions nest past [`GATE_DEFINITION_DEPTH`] is refused
+///   with an Info.
 fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
   let mut definees: Vec<BodyDefinee> = Vec::new();
   vocabulary_is_defined(body, what, &mut definees, 0)
@@ -2150,18 +2156,78 @@ fn vocabulary_is_defined(
         i = j + 1;
         continue;
       }
-      // `\expandafter\def\expandafter\x\expandafter{\y}` and `\def\csname…\endcsname`: the replacement text is
-      // expanded, or the name made, as the definition runs — read in place, past the definee an `\expandafter` chain
-      // leads to (`\csname`: its name tokens are run).
+      // `\expandafter\def\expandafter\x\expandafter{\y…}` and `\expandafter\def\csname…\endcsname{…}`: the first token
+      // of the replacement text is expanded once, or the name made, as the definition runs (tex.web §367-368, §372);
+      // the rest of the replacement text is stored like any `\def`'s (§473), so only an `\edef`/`\xdef` reads it in
+      // place. A chain this does not read this way is read in place.
       if definee == T_CS!("\\expandafter") || definee == T_CS!("\\csname") {
+        let expanding = t.with_str(|s| s == "\\edef" || s == "\\xdef");
         if let Some(real) = expandafter_definee(body, at) {
-          definees.push(BodyDefinee {
-            cs:          body[real],
-            replacement: None,
-            params:      None,
-            checked:     true,
+          // `\x`, then nothing but `\expandafter`s up to the replacement text's brace
+          let stored = stored_definition(body, t, real).filter(|s| {
+            body[real + 1..s.open]
+              .iter()
+              .all(|u| *u == T_CS!("\\expandafter") || u.get_catcode() == Catcode::SPACE)
           });
-          i = real + 1;
+          match stored {
+            Some(StoredDefinition { replacement, past, open, .. }) if !expanding => {
+              definees.push(BodyDefinee {
+                cs:          body[real],
+                replacement: Some(replacement),
+                params:      Some(Vec::new()),
+                checked:     false,
+              });
+              // the one token an `\expandafter` before the brace expands now
+              if body[open - 1] == T_CS!("\\expandafter")
+                && open + 1 < past - 1
+                && !vocabulary_is_defined(&body[open + 1..open + 2], what, definees, depth)
+              {
+                return false;
+              }
+              i = past;
+            },
+            _ => {
+              definees.push(BodyDefinee {
+                cs:          body[real],
+                replacement: None,
+                params:      None,
+                checked:     true,
+              });
+              i = real + 1;
+            },
+          }
+          continue;
+        }
+        // `\csname`, perhaps after an `\expandafter` chain: its name tokens are run here; the definition then reads on
+        // from `\endcsname` (the name it makes is not one the body can be checked calling)
+        let mut k = at;
+        while body
+          .get(k)
+          .is_some_and(|u| *u == T_CS!("\\expandafter") || u.get_catcode() == Catcode::SPACE)
+        {
+          k += 1;
+        }
+        let end = (body.get(k) == Some(&T_CS!("\\csname")))
+          .then(|| {
+            let mut level = 0usize;
+            (k..body.len()).find(|&e| {
+              if body[e] == T_CS!("\\csname") {
+                level += 1;
+              } else if body[e] == T_CS!("\\endcsname") {
+                level -= 1;
+              }
+              level == 0
+            })
+          })
+          .flatten();
+        if let Some(end) = end
+          && !expanding
+          && let Some(StoredDefinition { past, .. }) = stored_definition(body, t, end)
+        {
+          if !vocabulary_is_defined(&body[k + 1..end], what, definees, depth) {
+            return false;
+          }
+          i = past;
         }
         continue;
       }
@@ -2865,8 +2931,9 @@ fn is_font_state(key: SymStr) -> bool {
 
 /// After a kept replay of a refused class setter: what the replay added to each macro it changed (`assigned`, its
 /// journal's meanings with their values before) that is now a parameterless token list — the tail it appended to the
-/// value before (`\g@addto@macro`, `\appto`), the head it prepended, or, when it overwrote the macro, the whole new
-/// value — when that part holds the call's argument `arg`: the class's own record of the value the kernel's setter gave
+/// value before (`\g@addto@macro`, `\appto`), the head it prepended, the text it inserted between the two (before a
+/// list's end sentinel), or, when it overwrote the macro, the whole new value — when that part holds the call's
+/// argument `arg`: the class's own record of the value the kernel's setter gave
 /// the frontmatter. Each joins `lx_replay_records` (name, part), which `\lx@replay@records` takes out of the macro in
 /// the title-page deposit and replay (`\lx@deposit@maketitle`); what other code put in the same macro stays (an
 /// affiliation a second class setter appends to the author list).
@@ -2916,10 +2983,25 @@ fn note_replay_records(assigned: &[(SymStr, Option<Stored>)], arg: &Tokens) {
     let Some(now) = value(now.as_ref()) else {
       continue;
     };
+    // What the replay put in: the old value's longest common prefix and suffix stay, and the middle between them is
+    // the replay's — a tail appended (no suffix), a head prepended (no prefix), or text inserted before a sentinel
+    // (`\def\tp@tmp##1\tp@end{\gdef\tp@block{##1#1\tp@end}}`). Only when the old value does not split that way is the
+    // whole value the replay's.
     let part = match value(before.as_ref()) {
-      Some(old) if now.len() >= old.len() && now.starts_with(&old) => now[old.len()..].to_vec(),
-      Some(old) if now.len() >= old.len() && now.ends_with(&old) => {
-        now[..now.len() - old.len()].to_vec()
+      Some(old) if now.len() >= old.len() => {
+        let prefix = now.iter().zip(&old).take_while(|(a, b)| a == b).count();
+        let suffix = now
+          .iter()
+          .rev()
+          .zip(old.iter().rev())
+          .take(old.len() - prefix)
+          .take_while(|(a, b)| a == b)
+          .count();
+        if prefix + suffix == old.len() {
+          now[prefix..now.len() - suffix].to_vec()
+        } else {
+          now
+        }
       },
       _ => now,
     };
