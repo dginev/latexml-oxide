@@ -32,7 +32,7 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RequirePackage!("mn2e_support");
 
   // And some stuff not in the later version...

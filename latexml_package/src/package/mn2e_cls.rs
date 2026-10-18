@@ -37,7 +37,7 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RequirePackage!("mn2e_support");
   // mn2e.cls (2001/02/06 v2.2) :1210-1216, as mnras.cls :1349-1354 (mnras_cls.rs): with `usedcolumn`, the class's
   // column types on dcolumn's `D` (mn2e_support loads dcolumn). Perl's mn2e_support.sty.ltxml:18-19 only loads

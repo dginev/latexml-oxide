@@ -18,7 +18,7 @@ LoadDefinitions!({
   // with `reqno` as well: ACM numbers equations on the right, where amsart's
   // default is the left (DIVERGENCES #336, KPE #306; 2605.02222, 2605.24417).
   Digest!("\\PassOptionsToClass{reqno}{amsart}")?;
-  load_class_with_options("amsart", Tokens!())?;
+  LoadClass!("amsart", withoptions => true);
 
   // Beyond-Perl fidelity (OXIDIZED_DESIGN "acmart establishes T1 font
   // encoding"): real acmart.cls loads libertine + `\RequirePackage[T1]{fontenc}`

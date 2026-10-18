@@ -95,7 +95,7 @@ LoadDefinitions!({
   }
   assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   // Queue the citation style onto natbib rather than pre-loading natbib here.
   // `numbers` gives the numeric `[N]` refnum + square/comma inline; `author-year`
   // leaves natbib's own author-year (round/semicolon) default. `\PassOptionsToPackage`

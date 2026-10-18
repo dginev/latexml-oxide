@@ -25,10 +25,15 @@ LoadDefinitions!({
   // and a `\chapter` call is LaTeXML's chapter without the chapterless Warning (OXIDIZED_DESIGN #179 (a), #734).
   // Its chapter counter with it, the sections numbered within it (ws-rv9x6.cls:397 `\newcounter{chapter}`, :399
   // `\newcounter{section}[chapter]`): 1807.01378's `\setcounter{chapter}{…}` was "Counter 'chapter' was not defined".
+  // The section redeclared within the chapter, ids too (`Ch1.S1`, as book_cls.rs), the class's `\thesection` kept.
   if Expand!(Tokens!(T_CS!("\\@currname"))).to_string() == "ws-rv9x6" {
     DefMacro!("\\chapter", "\\@startsection{chapter}{0}{}{}{}{}");
-    NewCounter!("chapter", "document", idprefix => "Ch");
-    RawTeX!(r"\@addtoreset{section}{chapter}");
+    NewCounter!("chapter", "document", idprefix => "Ch", nested => vec!["section"]);
+    let thesection = lookup_meaning(&T_CS!("\\thesection"));
+    NewCounter!("section", "chapter", idprefix => "S", nested => vec!["subsection"]);
+    if let Some(meaning) = thesection {
+      assign_meaning(&T_CS!("\\thesection"), meaning, Some(Scope::Global));
+    }
   }
   // ws-rv9x6.cls:1524-1528 (0706.1148's copy) `\usepackage[figuresright]{rotating}`, `{amsfonts,amssymb,amsmath}`,
   // `{boxedminipage}`, `{makeidx}`, `{url}`: a review-volume chapter ends with `\printindex` without loading makeidx

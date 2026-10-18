@@ -41,8 +41,13 @@ pub(crate) fn make_missing_float_counters() -> Result<()> {
 /// refusal recorded (`\chapter:redefined`, (a) of the "has chapters" test), so a raw class's chapters stay LaTeXML's
 /// `<chapter>` (scrbook.cls, read raw by scrbook_cls.rs). Where the class has chapters by a binding's counter or
 /// OmniBus's guess, [`settle_chapter_after_class_load`] puts the kernel's back (a binding that needs it during its own
-/// load reads `\lx@kernel@chapter`: amsart_cls.rs `\specialsection`).
+/// load reads `\lx@kernel@chapter`: amsart_cls.rs `\specialsection`). Only the document's first `\documentclass`: a
+/// second one (a merged file's; latex.ltx:18618 of TL 2025 makes it `\@twoclasseserror` after the first) loads no class
+/// in TeX and keeps the first class's chapters (memoir with a second `\documentclass{memoir}`: both chapters, 0 Errors).
 pub(crate) fn retract_chapter_before_class_load() {
+  if lookup_bool("\\chapter:settles") {
+    return;
+  }
   let chapter = T_CS!("\\chapter");
   // (kept aside: LaTeXML's chapter, with a counter of its own at the first call where the class made none)
   if lookup_bool("\\chapter:locked")
@@ -95,7 +100,9 @@ pub fn settle_chapter_after_class_load() -> Result<()> {
     .then(|| definition::origin::CopyProvidesGuard::new(0));
   if kernel_kept {
     if !defined {
-      let_i(&chapter, &T_CS!("\\lx@kernel@chapter"), Some(Scope::Global));
+      // (with a chapter counter of its own at the first call where the class made none: OmniBus's guess (c) and
+      // subfiles make none, so 1906.09200's chapters were "Counter 'chapter' was not defined")
+      let_i(&chapter, &T_CS!("\\lx@kernel@chapter@counted"), Some(Scope::Global));
       assign_value("\\chapter:locked", true, Some(Scope::Global));
     }
   } else {

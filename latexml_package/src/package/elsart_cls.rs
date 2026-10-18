@@ -46,7 +46,7 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RequirePackage!("elsart_support");
   // elsart.cls:28 (v2.18, 0708.4004's copy; v2.20:27 "Elsevier", 0712.3870's): `\@journal` is the publisher until
   // `\journal` sets it (elsart_support_core_sty.rs).

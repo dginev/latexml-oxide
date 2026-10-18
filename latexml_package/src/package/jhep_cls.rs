@@ -165,7 +165,7 @@ LoadDefinitions!({
   DeclareOption!("nohyper", {});
   DeclareOption!("notoc", {});
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RequirePackage!("amssymb");
   // The raw JHEP.cls loads hyperref, giving authors \href / \url / \hypertarget
   // without an explicit \usepackage{hyperref}. Perl's JHEP.cls.ltxml omits

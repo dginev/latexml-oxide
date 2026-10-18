@@ -31,9 +31,16 @@ LoadDefinitions!({
   DeclareOption!("chapter", "\\@chapterdeftrue");
   DeclareOption!(None, {});
   ProcessOptions!();
+  // The section is declared within the chapter, ids too (`Ch1.S1`, as book_cls.rs), and the class's `\appendix`
+  // (:2780-2787 under `\if@chapterdef`) letters the chapters, "Appendix A", as report's.
   if if_condition(&T_CS!("\\if@chapterdef"))?.unwrap_or(false) {
-    NewCounter!("chapter", "document", idprefix => "Ch");
-    RawTeX!(r"\@addtoreset{section}{chapter}\def\thesection{\thechapter.\arabic{section}}");
+    NewCounter!("chapter", "document", idprefix => "Ch", nested => vec!["section"]);
+    NewCounter!("section", "chapter", idprefix => "S", nested => vec!["subsection"]);
+    RawTeX!(r"\def\thesection{\thechapter.\arabic{section}}\def\@chapapp{\chaptername}");
+    DefMacro!("\\appendix", "\\@appendix\\gdef\\@chapapp{\\appendixname}");
+    DefPrimitive!("\\@appendix", {
+      start_appendices("chapter");
+    });
   }
   RawTeX!(
     r"\newcounter{article}

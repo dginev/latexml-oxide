@@ -15,7 +15,7 @@ LoadDefinitions!({
 \expandafter\@tempa\@currnamestack{}{}{}\@nil
 \ifx\@classname\@empty \edef\@classname{\@currname}\fi");
   // LoadClass('ams_core', withoptions => 1);
-  load_class_with_options("ams_core", Tokens!())?;
+  LoadClass!("ams_core", withoptions => true);
   RequireResource!("ltx-amsart.css");
 
   // amsart.cls.ltxml : journal article

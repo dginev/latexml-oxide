@@ -39,7 +39,7 @@ LoadDefinitions!({
 
   ProcessOptions!();
 
-  load_class("revtex4", Vec::new(), Tokens!())?;
+  LoadClass!("revtex4");
   // Every AASTeX numbers its sections in arabic (aastex.cls 5.x:1076-1093, aastex63.cls:1117, aastex701.cls:7629-7636),
   // as does emulateapj.cls:676, where revtex4's are Roman (revtex4_support_sty.rs `\thesection`): every AAS paper's
   // section numbers and `\ref`s read "I", "I.1" (2609.21324, astro-ph/0003209; Perl the same: aastex.cls.ltxml:44 +

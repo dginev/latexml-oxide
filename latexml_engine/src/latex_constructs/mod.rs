@@ -276,10 +276,11 @@ pub fn start_appendices(kind: &str) { begin_appendices(kind) }
 /// OXIDIZED_DESIGN #179 retracts it in a chapterless class, tcilatex's no-chapters branch makes a bare count register
 /// (`\newcount\c@chapter`, tcilatex_tex.rs), and the appendix numbered `\thechapter.\Alph{section}` with `\thechapter`
 /// undefined (537 of run 336's papers: 1509.06343, quant-ph0609144). Not `\thechapter`: under OmniBus it is an autoload
-/// stub that loads book.cls (omnibus_cls.rs).
+/// stub that loads book.cls (omnibus_cls.rs). Nor the counter a `\chapter` call TeX refuses makes for LaTeXML's
+/// chapter (`kernel_chapter_with_warning`, `\chapter:stand@in@counter`): jmlr's article appendix is "Appendix A".
 pub fn has_chapter_counter() -> bool {
   let defined = |name: &str| lookup_definition(&T_CS!(name)).ok().flatten().is_some();
-  defined("\\c@chapter") && defined("\\cl@chapter")
+  defined("\\c@chapter") && defined("\\cl@chapter") && !lookup_bool("\\chapter:stand@in@counter")
 }
 
 pub fn begin_appendices(counter: &str) {

@@ -688,6 +688,10 @@ pub fn toc_select() -> Result<String> {
 /// reset of the sections: the class's own numbering stands; Perl's kernel `\chapter` in an article raises
 /// `undefined:\thechapter`, KNOWN_PERL_ERRORS #962), then `\lx@kernel@chapter`. The chapterless class's stand-in
 /// (`\lx@chapterless@chapter`) and jmlr's article `\chapter` (jmlr.cls:743-745 `\artchapter`'s ClassError) read it.
+/// That counter is the stand-in's, marked so (`\chapter:stand@in@counter`): it is no chapter counter of the class's
+/// for [`has_chapter_counter`](super::has_chapter_counter), so an `\appendix` after it is lettered as the class
+/// letters it — jmlr's `\artappendix` (jmlr.cls:720-729) "Appendix A", not "Appendix 1.A" — and every binding that
+/// reuses this helper is covered.
 pub fn kernel_chapter_with_warning(category: &str, message: &str) -> Result<Tokens> {
   if !lookup_bool("\\chapter:fallback@warned") {
     assign_value("\\chapter:fallback@warned", true, Some(Scope::Global));
@@ -695,6 +699,7 @@ pub fn kernel_chapter_with_warning(category: &str, message: &str) -> Result<Toke
   }
   if lookup_definition(&T_CS!("\\c@chapter"))?.is_none() {
     NewCounter!("chapter", "document", idprefix => "Ch");
+    assign_value("\\chapter:stand@in@counter", true, Some(Scope::Global));
   }
   Ok(Tokens!(T_CS!("\\lx@kernel@chapter")))
 }

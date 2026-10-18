@@ -237,7 +237,10 @@ fn a_preamble_chapter_errs_and_the_body_chapter_reads_the_stand_in() {
 /// stand-in's chapter in an article (repro sectioning-frontmatter/appendix_after_a_chapter_in_a_chapterless_class; 72b
 /// r1 "Appendix 1.A") and under a raw class whose `\newcounter{chapter}[part]` makes no `\chapter` (as WileyNJDv5.cls:5728,
 /// MRM.cls:2160; probes rev72a/r6 retract, retract2: cimart, daj), `\appendix` and appendix.sty's `appendices` letter
-/// the sections, "Appendix A" — pdflatex "A AppSec", "CHAP:UNDEF." and "A Extra".
+/// the sections, "Appendix A" — pdflatex "A AppSec", "CHAP:UNDEF." and "A Extra". A LaTeX 2.09 `\documentstyle`
+/// document stores no answer (72b review r2 finding 1, probe rev72b/r2/d209): `\documentstyle[appendix]{report}` is
+/// tested now, its appendix chapters lettered — pdflatex "Chapter 1 Intro 1.1 S Appendix A Extra A.1 T" (72b r2:
+/// "Chapter 2 Extra", "A T").
 #[test]
 fn appendices_follow_the_class_chapters() {
   assert_elements(
@@ -264,13 +267,32 @@ fn appendices_follow_the_class_chapters() {
       r#"<appendix inlist="toc" xml:id="A1"><tags><tag>Appendix A</tag><tag role="refnum">A</tag><tag role="typerefnum">Appendix A</tag></tags><title><tag close=" ">Appendix A</tag>Extra</title><toctitle><tag close=" ">A</tag>Extra</toctitle><para xml:id="A1.p1"><p xml:id="A1.p1.1">More.</p></para></appendix>"#,
     ),
   ]);
+  let d209 = "\\documentstyle[appendix]{report}\n\\begin{document}\n\\chapter{Intro}\n\\section{S}\n\\begin{appendices}\n\
+              \\chapter{Extra}\n\\section{T}\n\\end{appendices}\n\\end{document}\n";
+  assert_files_elements(d209, &[], (0, 0), &[], &[
+    (
+      "chapter",
+      "Ch1",
+      r#"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title><tag close=" ">Chapter 1</tag>Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><section inlist="toc" xml:id="Ch1.S1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title><tag close=" ">1.1</tag>S</title></section></chapter>"#,
+    ),
+    (
+      "appendix",
+      "A1",
+      r#"<appendix inlist="toc" xml:id="A1"><tags><tag>Appendix A</tag><tag role="refnum">A</tag><tag role="typerefnum">Appendix A</tag></tags><title><tag close=" ">Appendix A</tag>Extra</title><toctitle><tag close=" ">A</tag>Extra</toctitle><section inlist="toc" xml:id="A1.S1"><tags><tag>A.1</tag><tag role="refnum">A.1</tag><tag role="typerefnum">§A.1</tag></tags><title><tag close=" ">A.1</tag>T</title></section></appendix>"#,
+    ),
+  ]);
 }
 
-/// Bindings whose real class has chapters define them (72b review findings 4, 7): jmlr (jmlr.cls:743-745
-/// `\let\chapter\artchapter`, a ClassError; pdflatex "X=C." and 1 error) — a call is LaTeXML's chapter with jmlr's
-/// error text as the one Warning; kluwer under its `chapter` option (kluwer.cls:135-136, :2464-2508; pdflatex "X=C.",
-/// "1. Intro", "1.1. Sec"; without it "X=S."); ws-rv9x6 with its chapter counter (ws-rv9x6.cls:397-399; 1807.01378's
-/// `\setcounter{chapter}` was "Counter 'chapter' was not defined"), "Chapter 3".
+/// Bindings whose real class has chapters define them (72b review findings 4, 7; r2 findings 2, 4, 6): jmlr
+/// (jmlr.cls:743-745 `\let\chapter\artchapter`, a ClassError; pdflatex "X=C." and 1 error) — a call is LaTeXML's
+/// chapter with jmlr's error text as the one Warning, and its counter is the stand-in's, so jmlr's `\artappendix`
+/// (jmlr.cls:720-729) letters the appendix sections, pdflatex "Appendix A. AppSec" (72b r2 "Appendix 1.A"; probe
+/// rev72b/r2/jma); kluwer under its `chapter` option (kluwer.cls:135-136, :2464-2508, :2704-2708; pdflatex "X=C.",
+/// "1. Intro", "1.1. Sec", sections `Ch1.S1`/`Ch2.S1` within their chapters (probe klid; 72b r2 `S1`, `S1a`), and its
+/// `\appendix` (:2780-2787) letters the chapters, "A. Extra", "A.1. T" (72b r2 "Chapter 2", "Appendix 2.A"); without
+/// it "X=S."); ws-rv9x6 with its chapter counter (ws-rv9x6.cls:397-399; 1807.01378's `\setcounter{chapter}` was
+/// "Counter 'chapter' was not defined"), "Chapter 3", its section within it (`Ch3.S1`, "1" as the class's
+/// `\thesection` without `addchapnum`, :409-411).
 #[test]
 fn bindings_whose_class_has_chapters_define_them() {
   let probe = |class: &str, body: &str| {
@@ -280,18 +302,28 @@ fn bindings_whose_class_has_chapters_define_them() {
     )
   };
   assert_files_elements(
-    &probe("{jmlr}", "\\chapter{Intro}\nText.\n"),
+    &probe(
+      "{jmlr}",
+      "\\chapter{Intro}\n\\section{One}\nText.\n\\appendix\n\\section{AppSec}\nMore.\n",
+    ),
     &[],
     (0, 1),
     &[
       "Warning:latex:\\chapter Class jmlr Error: Chapters not permitted in articles; LaTeXML's \\chapter is used",
     ],
-    &[("p", "p1.1", r#"<p xml:id="p1.1">X=C.</p>"#)],
+    &[
+      ("p", "p1.1", r#"<p xml:id="p1.1">X=C.</p>"#),
+      (
+        "chapter",
+        "Ch1",
+        r#"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="autoref">chapter 1<text xml:id="Ch1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title><tag close=" ">Chapter 1</tag>Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="autoref">section 1<text xml:id="S1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>One</title><para xml:id="S1.p1"><p xml:id="S1.p1.1">Text.</p></para></section><appendix inlist="toc" xml:id="A1"><tags><tag>Appendix A</tag><tag role="autoref">Appendix A<text xml:id="A1.1"/></tag><tag role="refnum">A</tag><tag role="typerefnum">Appendix A</tag></tags><title><tag close=" ">Appendix A</tag>AppSec</title><toctitle><tag close=" ">A</tag>AppSec</toctitle><para xml:id="A1.p1"><p xml:id="A1.p1.1">More.</p></para></appendix></chapter>"#,
+      ),
+    ],
   );
   assert_files_elements(
     &probe(
       "[chapter]{kluwer}",
-      "\\chapter{Intro}\n\\section{Sec}\nText.\n",
+      "\\chapter{Intro}\n\\section{Sec}\nText.\n\\chapter{Two}\n\\section{B}\nMore.\n\\appendix\n\\chapter{Extra}\n\\section{T}\nEnd.\n",
     ),
     &[],
     (0, 0),
@@ -301,7 +333,17 @@ fn bindings_whose_class_has_chapters_define_them() {
       (
         "chapter",
         "Ch1",
-        r#"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title><tag close=" ">Chapter 1</tag>Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><section inlist="toc" xml:id="S1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title><tag close=" ">1.1</tag>Sec</title><para xml:id="S1.p1"><p xml:id="S1.p1.1">Text.</p></para></section></chapter>"#,
+        r#"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title><tag close=" ">Chapter 1</tag>Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><section inlist="toc" xml:id="Ch1.S1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title><tag close=" ">1.1</tag>Sec</title><para xml:id="Ch1.S1.p1"><p xml:id="Ch1.S1.p1.1">Text.</p></para></section></chapter>"#,
+      ),
+      (
+        "section",
+        "Ch2.S1",
+        r#"<section inlist="toc" xml:id="Ch2.S1"><tags><tag>2.1</tag><tag role="refnum">2.1</tag><tag role="typerefnum">§2.1</tag></tags><title><tag close=" ">2.1</tag>B</title><para xml:id="Ch2.S1.p1"><p xml:id="Ch2.S1.p1.1">More.</p></para></section>"#,
+      ),
+      (
+        "appendix",
+        "A1",
+        r#"<appendix inlist="toc" xml:id="A1"><tags><tag>Appendix A</tag><tag role="refnum">A</tag><tag role="typerefnum">Appendix A</tag></tags><title><tag close=" ">Appendix A</tag>Extra</title><toctitle><tag close=" ">A</tag>Extra</toctitle><section inlist="toc" xml:id="A1.S1"><tags><tag>A.1</tag><tag role="refnum">A.1</tag><tag role="typerefnum">§A.1</tag></tags><title><tag close=" ">A.1</tag>T</title><para xml:id="A1.S1.p1"><p xml:id="A1.S1.p1.1">End.</p></para></section></appendix>"#,
       ),
     ],
   );
@@ -313,11 +355,49 @@ fn bindings_whose_class_has_chapters_define_them() {
   assert_files_elements(
     &probe(
       "{ws-rv9x6}",
-      "\\setcounter{chapter}{2}\n\\chapter{Intro}\nText.\n",
+      "\\setcounter{chapter}{2}\n\\chapter{Intro}\n\\section{Sec}\nText.\n",
     ),
     &[],
     (0, 0),
     &[],
-    &[("p", "p1.1", r#"<p xml:id="p1.1">X=C.</p>"#)],
+    &[
+      ("p", "p1.1", r#"<p xml:id="p1.1">X=C.</p>"#),
+      (
+        "chapter",
+        "Ch3",
+        r#"<chapter inlist="toc" xml:id="Ch3"><tags><tag>Chapter 3</tag><tag role="autoref">chapter 3<text xml:id="Ch3.1"/></tag><tag role="refnum">3</tag><tag role="typerefnum">Chapter 3</tag></tags><title><tag close=" ">Chapter 3</tag>Intro</title><toctitle><tag close=" ">3</tag>Intro</toctitle><section inlist="toc" xml:id="Ch3.S1"><tags><tag>1</tag><tag role="autoref">section 1<text xml:id="Ch3.S1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>Sec</title><para xml:id="Ch3.S1.p1"><p xml:id="Ch3.S1.p1.1">Text.</p></para></section></chapter>"#,
+      ),
+    ],
   );
+}
+
+/// 72b review r2 finding 3 (probe rev72b/r2/dc2): only the document's first `\documentclass` clears `\chapter`; a
+/// second one (latex.ltx:18618 makes it `\@twoclasseserror`) keeps the first class's chapters — memoir's two chapters,
+/// 0 Errors (72b r2: one chapter and `Error:undefined:\chapter`).
+#[test]
+fn a_second_documentclass_keeps_the_first_class_chapters() {
+  let tex = "\\documentclass{memoir}\n\\begin{document}\n\\chapter{One}\nText.\n\\documentclass{memoir}\n\\chapter{Two}\n\
+             More.\n\\end{document}\n";
+  let (stderr, xml) = convert_files_with(tex, &[], Some(AR5IV));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "chapter",
+    &["xml:id=\"chapter2\""],
+    r#"<chapter inlist="toc" xml:id="chapter2"><tags><tag>Chapter 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Chapter 2</tag></tags><title><tag close=" ">Chapter 2</tag>Two</title><toctitle><tag close=" ">2</tag>Two</toctitle><para xml:id="chapter2.p1"><p xml:id="chapter2.p1.1">More.</p><pagination role="newpage"/></para></chapter>"#,
+  );
+}
+
+/// 72b review r2 finding 8: OmniBus's guess (c) — an unknown class, and subfiles (subfiles.cls:38-40) — puts back
+/// LaTeXML's chapter with a counter of its own at the first call, so a chapter is numbered and has its id: 1906.09200's
+/// subfile `\chapter` was "Counter 'chapter' was not defined" and "`\c@chapter` is not a register" (72a6, 72b r2).
+/// Its one Warning is the missing class binding.
+#[test]
+fn an_unknown_class_chapter_has_its_counter() {
+  let tex = "\\documentclass{lxunknownclass}\n\\begin{document}\n\\chapter{Intro}\nText.\n\\end{document}\n";
+  assert_files_elements(tex, &[], (0, 1), &[], &[(
+    "chapter",
+    "Ch1",
+    r#"<chapter inlist="toc" xml:id="Ch1"><tags><tag>Chapter 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Chapter 1</tag></tags><title><tag close=" ">Chapter 1</tag>Intro</title><toctitle><tag close=" ">1</tag>Intro</toctitle><para xml:id="Ch1.p1"><p xml:id="Ch1.p1.1">Text.</p></para></chapter>"#,
+  )]);
 }

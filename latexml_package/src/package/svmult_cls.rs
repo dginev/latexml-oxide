@@ -33,7 +33,7 @@ LoadDefinitions!({
 
   ProcessOptions!();
   // Perl svmult.cls.ltxml L34: LoadClass('book', withoptions => 1)
-  load_class_with_options("book", Tokens!())?;
+  LoadClass!("book", withoptions => true);
   RequirePackage!("sv_support");
   RequirePackage!("url");
   // svmult.cls v1.0:939/942 (CR line ends), svmultln.cls:1810/1813: `\newtoks\tocauthor`, `\newtoks\toctitle`, the

@@ -8,7 +8,7 @@ LoadDefinitions!({
   // reads `class_options` from state and passes them through. Previous
   // `load_class("aastex", Vec::new(), ...)` silently dropped the user's
   // `\documentclass[...]{emulateapj}` options before they reached aastex.
-  load_class_with_options("aastex", Tokens!())?;
+  LoadClass!("aastex", withoptions => true);
   RequireResource!("ltx-apj.css");
   RequirePackage!("emulateapj");
   // emulateapj.cls is a revtex4 class of its own (:165-167 `\LoadClass…{\@revtex@cls}`), not an AASTeX version: it has

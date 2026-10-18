@@ -41,7 +41,7 @@ LoadDefinitions!({
   AssignValue!("aipproc_font" => "mathptmx");
 
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
 
   // Load the selected font package
   let font_pkg = lookup_value("aipproc_font")

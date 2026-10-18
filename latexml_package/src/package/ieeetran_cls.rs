@@ -159,7 +159,7 @@ LoadDefinitions!({
   ProcessOptions!();
 
   // Load article as base
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
 
   // `\@ptsize` as the size options set it (IEEEtran.cls:290-293), which article's own setting replaced.
   RawTeX!(r"\ifnum\CLASSOPTIONpt=11 \def\@ptsize{1}\fi\ifnum\CLASSOPTIONpt=12 \def\@ptsize{2}\fi");

@@ -5,7 +5,7 @@ LoadDefinitions!({
   // Perl: quantumarticle.cls.ltxml — Quantum Journal
   // See https://github.com/quantum-journal/quantum-journal
 
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   // quantumarticle.cls:282-284 `\RequirePackage[margin=…,bottom=3cm]{geometry}` (2cm or 3cm by column count; the page
   // setup is not rendered), then `\@blacklistpackage{geometry}`: papers adjust it with `\geometry`/`\newgeometry`
   // (30 of run 353 with them undefined: 1612.06828, 1701.03135, 1712.01826).

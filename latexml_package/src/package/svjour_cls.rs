@@ -39,7 +39,7 @@ LoadDefinitions!({
   });
 
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RequireResource!("ltx-svjour.css");
   RequirePackage!("sv_support");
   // svjour.cls:61-62 and svjour3.cls:392-393 (v3.3): `\preprint{<number>}`, the report number `\makeheadbox` sets

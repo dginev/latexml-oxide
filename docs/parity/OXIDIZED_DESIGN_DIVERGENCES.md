@@ -7025,15 +7025,19 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 ### 179. `\chapter` exists only where the class has chapters (Perl defines it in every class)
 
 **Perl behavior**: `DefMacroI('\chapter', undef, '\@startsection{chapter}…', locked => 1)` in the kernel pool (latex_constructs.pool.ltxml:557), so `\@ifundefined{chapter}` is FALSE under article/scrartcl. blindtext.sty:243 `\blinddocument`, hvfloat's 50 test documents, coseoul, xassoccnt take the chapter branch and error `undefined:\thechapter` (53 docs, sweep 30).
-**Rust behavior**: `\documentclass` clears the kernel's `\chapter` before the class loads (sect01.rs
-`retract_chapter_before_class_load`), so the class's own code meets it undefined, as in TeX: a raw class's
+**Rust behavior**: the document's first `\documentclass` clears the kernel's `\chapter` before the class loads (sect01.rs
+`retract_chapter_before_class_load`; a second one, which latex.ltx:18618 makes `\@twoclasseserror`, keeps the first
+class's chapters: probe rev72b/r2/dc2, memoir's two chapters), so the class's own code meets it undefined, as in TeX: a raw class's
 `\@ifundefined{chapter}` takes the undefined branch (pdflatex "CLS=S.", where 72b r1 and Perl say C). The lock stays,
 with the kernel's binding kept aside as for a file's clearing `\let` (`\chapter:locked@cleared`, #569): a class's own
 definition of `\chapter` is refused, LaTeXML's chapter put in its place (numbered by a chapter counter of its own at the
 first call where the class made none, `\lx@kernel@chapter@counted`) and the refusal recorded (`\chapter:redefined`), so a
 raw class's chapters stay `<chapter>` (scrbook.cls, read raw by scrbook_cls.rs). After each class load — the
 `\documentclass` itself, a raw `\LoadClass`/`\LoadClassWithOptions` (sect05.rs) and a binding's `LoadClass!`
-(setup_binding_language.rs) — the "has chapters" step (`settle_chapter_after_class_load`) makes the one test
+(setup_binding_language.rs; every compiled binding's class load goes through it, `withoptions => true` for Perl's
+`LoadClass(…, withoptions => 1)`: svmult, gen_m_l, svjour, subfiles and the rest; not the runtime script bindings'
+`load_class` (script_bindings/engine.rs) nor OmniBus's autoload of a class at a trigger in the body (omnibus_cls.rs),
+which run after the class's own settle) — the "has chapters" step (`settle_chapter_after_class_load`) makes the one test
 (`state::class_has_chapters_now`) and stores its answer (`\chapter:class@has@chapters`). `state::class_defines_chapter`
 returns it (while a class loads, the test made then), and every reader of "has chapters" goes through it: natbib's forks
 (njdnatbib_sty.rs, ws_rv_har_sty.rs), and, with the counter (`has_chapter_counter() && class_defines_chapter()`), the
@@ -7050,20 +7054,29 @@ or copy `\newcounter{chapter}` alone is not chapters (WileyNJDv5.cls:5728, MRM.c
 OmniBus's own article load, so the class's dependency scan sees `\chapter` too; and by subfiles_cls.rs, as
 subfiles.cls:38-40 loads the main file's class), which may have chapters (OmniBus autoloads book.cls on `\thechapter`,
 arXiv:2602.10407). Where the class has chapters by (b) or (c) and `\chapter` is undefined, the kernel's is put back,
-locked; where it has none, `\chapter` stays undefined and is unlocked (a later package's or the document's definition
+locked, with a chapter counter of its own at the first call where the class made none (`\lx@kernel@chapter@counted`:
+OmniBus and subfiles make none, so 1906.09200's chapters were "Counter 'chapter' was not defined" and "`\c@chapter` is
+not a register"); where it has none, `\chapter` stays undefined and is unlocked (a later package's or the document's definition
 goes through, as in LaTeX). A named binding that loads OmniBus as its base is not (c): bmvc2k, WileyNJD and MRM had kept
 the kernel's `\chapter`, so the raw natbib forks' `\@ifundefined{chapter}` (bmvc2k_natbib.sty:779, NJDnatbib.sty:1050)
 took `\chapter*{\bibname}` (2412.14509, 2212.00057, 2210.06270, 1501.07873, 2311.17607, 2406.08486; 2101.06297,
 2211.16474, 2411.11493, 2206.08798, 2602.03829, 2408.07575, 2609.08425, 2506.14995). Bindings whose real class has
 chapters define them: ws-rv9x6 (ws_procs_cls.rs, ws-rv9x6.cls:397-399, :497: `\chapter` and its counter, sections
-within it; 1807.01378), nic-series (nic-series.cls:74), jmlr (jmlr.cls:743-745, #735) and kluwer under its `chapter`
-option (kluwer.cls:135-136, :2464-2508, :2704-2708). A binding that needs the kernel's chapter during its own load reads
+within it, ids too: `Ch1.S1`; 1807.01378), nic-series (nic-series.cls:74), jmlr (jmlr.cls:743-745, #735) and kluwer
+under its `chapter` option (kluwer.cls:135-136, :2464-2508, :2704-2708: sections within chapters, ids too; its
+`\appendix`, :2780-2787, letters the chapters). A binding that needs the kernel's chapter during its own load reads
 `\lx@kernel@chapter` (amsart_cls.rs `\specialsection`, Perl `Let('\specialsection','\chapter')`). A document that calls
-`\chapter` in a class without chapters reads LaTeXML's chapter, the name still undefined (#734). Not covered: the LaTeX
-2.09 `\documentstyle` path keeps the kernel's `\chapter` in every class (only a `\documentclass` settles:
-`\chapter:settles`). Residual: a raw class's own `\chapter` body is replaced by LaTeXML's chapter, as the lock replaces
-every raw sectioning definition (Perl State.pm:502-517): `\providecommand\chapter{\par\noindent PROVIDEDCHAP }` is
-`<chapter>` "Chapter 1 Hello" where pdflatex sets "PROVIDEDCHAP Hello" (probe rev72b/p/r1).
+`\chapter` in a class without chapters reads LaTeXML's chapter, the name still undefined (#734). The LaTeX 2.09
+`\documentstyle` path keeps the kernel's `\chapter` in every class (only a `\documentclass` retracts and settles,
+`\chapter:settles`); there `class_defines_chapter` makes the test when asked, so `\documentstyle[appendix]{report}`
+letters its appendix chapters, pdflatex "Chapter 1 Intro 1.1 S Appendix A Extra A.1 T" (probe rev72b/r2/d209; 72b r2
+read the unset stored answer: "Chapter 2 Extra", "A T"). Residual: a standalone raw class's own `\def`/`\newcommand` of
+`\chapter`, made before any `\LoadClass`, is replaced by LaTeXML's chapter, as the lock replaces every raw sectioning
+definition (Perl State.pm:502-517): `\providecommand\chapter{\par\noindent PROVIDEDCHAP }` is `<chapter>` "Chapter 1
+Hello" where pdflatex sets "PROVIDEDCHAP Hello" (probe rev72b/p/r1). Two cases keep the class's own body: a class that
+`\LoadClass{article}` first (that `\LoadClass`'s settle unlocks a chapterless `\chapter`, so the class's later
+definition goes through: 0907.3938's `\let\chapter\part`), and a `\let\chapter\X`, which a plain lock lets through
+(state.rs `let_i`, as Perl).
 **Why**: latex.ltx defines no `\chapter`; only report/book-like classes do, and a package's or class's
 `\@ifundefined{chapter}` is how LaTeX code tells them apart. Of the 12 papers of the 3,000-paper projection sample with
 `Error:undefined:\chapter` on 67int21, 5 call `\chapter` in a class without chapters, where pdflatex stops at each call
@@ -7077,15 +7090,17 @@ chapters: the appendix numbered `\thechapter.\Alph{section}` with `\thechapter` 
 1509.06343, quant-ph0609144). Numbering within chapters needs "`chapter` is a LaTeX counter" (`\c@chapter` and its reset
 list `\cl@chapter`, as `\newcounter` makes both; not `\thechapter`, which OmniBus defines as a book.cls autoload stub;
 `latex_constructs::has_chapter_counter`) and the class's chapters (`class_defines_chapter`): a copy's counter without a
-`\chapter` (cimart, daj: probes rev72a/r6 retract, retract2) and the stand-in's counter after a chapterless call (#734)
-letter the appendices "A".
+`\chapter` (cimart, daj: probes rev72a/r6 retract, retract2) and the stand-in's counter after a call TeX refuses (#734, #735:
+`kernel_chapter_with_warning` marks it `\chapter:stand@in@counter`, which `has_chapter_counter` ignores) letter the
+appendices "A".
 **Witnesses**: coseoul/cosexamp, hvfloat ×50, modular, sillypage, xassoccnt_totalcounters_example; the 14 fork papers
 above; 1807.01378 (ws-rv9x6 counter), 1906.09200 (subfiles), 0704.3654 (pasj00).
 **Guard**: `perfect_kernel_batch54::chapter_is_undefined_in_a_chapterless_class`, `06_cluster_regressions::cluster_omnibus_chapter_book_autoload`,
 `perfect_kernel_batch64::tcilatex_chapter_counter_appendix`, `perfect_kernel_batch56::{loadclass_return_retracts_kernel_chapter,
 koma_part_is_a_part}`, `perfect_kernel_batch72b::{chapter_exists_where_the_class_has_chapters,
 a_class_has_chapters_when_its_code_defines_chapter, a_raw_class_meets_chapter_undefined_while_it_loads,
-appendices_follow_the_class_chapters, bindings_whose_class_has_chapters_define_them}`; KNOWN_PERL_ERRORS #962.
+appendices_follow_the_class_chapters, bindings_whose_class_has_chapters_define_them,
+a_second_documentclass_keeps_the_first_class_chapters, an_unknown_class_chapter_has_its_counter}`; KNOWN_PERL_ERRORS #962.
 **Upstream**: not filed.
 
 ### 180. `\@trivlist` is the shared list opener (Perl neutralizes it to `\relax`) — PLANS P38
@@ -19577,11 +19592,13 @@ appendix_after_a_chapter_in_a_chapterless_class}.
 :950-959 `\jmlrbookcommands` switches to `\bookchapter`), so a package's `\@ifundefined{chapter}` takes the chapter
 branch, as TeX's (pdflatex "X=C."). A call in an article reads LaTeXML's numbered chapter through
 `kernel_chapter_with_warning` (#734's), with one `Warning:latex:\chapter` "Class jmlr Error: Chapters not permitted in
-articles; LaTeXML's \chapter is used"; the class's chapter counter (:732) is made at the call, so the article's appendix
-stays lettered by section (:950-959 `\artappendix`), not within a chapter.
+articles; LaTeXML's \chapter is used"; the class's chapter counter (:732) is made at the call, marked as the stand-in's
+(`\chapter:stand@in@counter`; `has_chapter_counter` ignores it, for every binding that reuses the helper), so the
+article's `\appendix` letters the sections as jmlr.cls:720-729 `\artappendix` (`\let\appendix\artappendix`) does:
+pdflatex "Appendix A. AppSec", ours "Appendix A" (72b r2: "Appendix 1.A", numbered within the stand-in's chapter).
 **Why**: the OD #721 / #734 precedent: TeX's error is the class refusing what the author wrote; the author's chapter is
 kept, with a Warning that names the class's error.
-**Witnesses**: the 72b review's jmlr probe (jmlr.cls TL 2025); no arXiv paper calls it (3 jmlr papers of the 72b A/B,
+**Witnesses**: the 72b review's jmlr probes (jmlr.cls TL 2025; rev72b/r2/jma for the appendix); no arXiv paper calls it (3 jmlr papers of the 72b A/B,
 unchanged).
 **Guard**: `perfect_kernel_batch72b::bindings_whose_class_has_chapters_define_them`.
 **Upstream**: not filed.

@@ -6,7 +6,7 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: svjour3.cls.ltxml
   // Intended to cover svjour.cls, svjour1.cls, svjour2.cls & svjour3.cls
-  load_class("svjour", Vec::new(), Tokens!())?;
+  LoadClass!("svjour");
   // What editions of svjour3.cls papers ship add (run 347: 42 svjour3 papers), a copy without one leaving it to the
   // paper (`DefinitionOrigin::Fallback`):
   // - the economics edition's `\JEL{codes}` (6 copies, v3.2 and v3.3, 1402.2599's :314-317 "JEL Classification", its

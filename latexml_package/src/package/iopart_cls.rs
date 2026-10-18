@@ -12,6 +12,6 @@ LoadDefinitions!({
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
   });
 
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RequirePackage!("iopart_support");
 });

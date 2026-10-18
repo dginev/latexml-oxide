@@ -26,7 +26,7 @@ LoadDefinitions!({
 
   Digest!("\\ExecuteOptions{landscape,a0b,final}")?;
   ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
 
   RawTeX!(r"\ifanullb
   \setlength { \paperwidth }{ 119 cm }

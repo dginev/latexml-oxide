@@ -43,7 +43,7 @@ LoadDefinitions!({
   DeclareOption!(None, { Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?; });
   ProcessOptions!();
 
-  load_class_with_options("article", Tokens!())?;
+  LoadClass!("article", withoptions => true);
 
   RequirePackage!("amssymb");
   // NB: arximspdf does NOT load amsmath — it defines \tfrac/\dfrac/\operatorname/

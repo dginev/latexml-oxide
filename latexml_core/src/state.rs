@@ -2632,9 +2632,11 @@ fn class_layer_definition(token: &Token) -> bool {
 /// (`settle_chapter_after_class_load`, latexml_engine sect01.rs, [`CLASS_HAS_CHAPTERS`]); while a class loads, the
 /// test made now ([`class_has_chapters_now`]), as a class's own `\@ifundefined{chapter}` is answered by what it has
 /// defined so far. Not a `chapter` counter alone: WileyNJDv5.cls:5728 and MRM.cls:2160 `\newcounter{chapter}[part]` with
-/// no `\chapter` (2609.08425, 2506.14995: "REFERENCES"; 2211.16474: "Appendix A").
+/// no `\chapter` (2609.08425, 2506.14995: "REFERENCES"; 2211.16474: "Appendix A"). A LaTeX 2.09 `\documentstyle`
+/// document never settles (only a `\documentclass` stores the answer, `\chapter:settles`), so it gets the test made
+/// now too: `\documentstyle[appendix]{report}` numbers its appendix chapters "Appendix A", as pdflatex.
 pub fn class_defines_chapter() -> bool {
-  if crate::binding::content::class_loading() {
+  if crate::binding::content::class_loading() || !lookup_bool("\\chapter:settles") {
     class_has_chapters_now()
   } else {
     lookup_bool(CLASS_HAS_CHAPTERS)
@@ -2677,10 +2679,11 @@ pub fn class_chapter_sources() -> (bool, bool) {
     .any(|copy| copy.declined.contains(&key) || copy.overlay.get(&key).is_some_and(meaningful));
   let meaning = lookup_meaning(&chapter);
   let defined = meaning.as_ref().is_some_and(meaningful) && !lookup_bool("\\chapter:error@stub");
-  // the kernel's own meaning (the pool's, or `\lx@kernel@chapter` put back): a class's same-bodied
-  // `\newcommand\chapter{\@startsection{chapter}…}` is the class's
+  // the kernel's own meaning (the pool's, or `\lx@kernel@chapter` / `\lx@kernel@chapter@counted` put back): a class's
+  // same-bodied `\newcommand\chapter{\@startsection{chapter}…}` is the class's
   let kernels = defined
-    && x_equals(&chapter, &T_CS!("\\lx@kernel@chapter"))
+    && (x_equals(&chapter, &T_CS!("\\lx@kernel@chapter"))
+      || x_equals(&chapter, &T_CS!("\\lx@kernel@chapter@counted")))
     && meaning
       .as_ref()
       .and_then(definition_origin)

@@ -47,7 +47,7 @@ LoadDefinitions!({
   // The size option set `\@ptsize` (amsart.cls:258-296); the article binding resets it (article_cls.rs), the class
   // loading no base class.
   RawTeX!(r"\let\lx@ams@ptsize\@ptsize");
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
   RawTeX!(r"\let\@ptsize\lx@ams@ptsize");
   RequirePackage!("ams_support");
   ams_support_sty::amsart_author_storage()?;
