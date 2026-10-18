@@ -4326,8 +4326,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `collects_body_for_the_title_page` reads, and not a table environment); smfart.cls:568-583 `{altabstract}` boxed for
   the title page (2506.20120); colorart's `\address` through projlib-author.sty:98-125, an expl3
   `cmd/@author/after` hook (2609.02711, the address lost). Still open: apa's
-  `\acknowledgements`/`\note` (not table names); asmejour.cls:1483's expl3 `\date` (`\tl_gset:Nn
-  \g__asmejour_date_tl`, 2510.10694, the date lost); thcc.sty:81-91 `\th@ccproof` (theorem.sty's binding does not run
+  `\acknowledgements`/`\note` (not table names); thcc.sty:81-91 `\th@ccproof` (theorem.sty's binding does not run
   a raw style's `\@begintheorem`: cc's proofs are numbered theorems "Proof 1", pdflatex "Proof.", 14 papers; repro
   class-bindings/cc_proof_style_unnumbered_thcc, RED); cclayout.sty:76-81 `{subject}` (the classification, lost; not a
   table name); smfart/nrc/letter/saj.sty addresses stay class-typeset body text (semantic only); a
