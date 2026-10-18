@@ -1,12 +1,14 @@
 % floatrow's `\floatfoot` in a plain `figure` (the float's body, not a `\floatbox`/`\ffigbox`/`\ttabbox` object):
 % `\floatfoot@` stores the text in `\flrow@foot` (floatrow.sty:502-504) and `\FB@foot` (:419, called from the layouts
-% :363-418) puts it under the caption; how a plain float reaches that layout is not traced here.
+% :363-418) puts it under the caption at floatrow's `\float@end` (:114-127, :421-424), which the kernel's locked
+% `figure` never reaches; the float's end now sets the pending foot (floatrow_sty.rs `\lx@flrow@plainfoot`).
 % witness: 68q review side finding 5 (probes rev68q/probe/fr2.tex "Plain foot.", fr3.tex "TwoFoot"); not 68q's
 %          defect — 67int11 and 68q drop it alike.
 % oracle:  pdflatex 0 errors: "Figure 1: PlainCap" / "Plain foot." (the foot below the caption, footnotesize)
 % engines: rust 67int11, 68q round 2: the rule and the caption, "Plain foot." missing (0 errors)
 % expect:  0 errors; "Plain foot." in the figure, after its caption
-% status:  RED (68q round 2; SYNC_STATUS row, no fix yet)
+% status:  RED (68q round 2) -> GREEN (int27: floatrow_sty.rs `\lx@flrow@plainfoot` at `env/figure/end`; guard
+%          `perfect_kernel_batch58::floatrow_floatfoot_in_plain_figure_keeps_its_text`)
 \documentclass{article}
 \usepackage{floatrow}
 \floatsetup[figure]{footposition=caption}

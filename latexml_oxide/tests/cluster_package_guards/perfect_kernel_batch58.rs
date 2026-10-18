@@ -2,7 +2,10 @@
 //! (58a) found in the 57cp review.
 use latexml::util::test::assert_element;
 
-use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with},
+};
 
 /// 58a (reledmac root C): the optional `=` of `\setbox`, `\font`, `\openin`, `\openout` is scanned
 /// with expansion (tex.web §405), so a conditional or a macro may supply it; matched unexpanded (Perl
@@ -702,6 +705,53 @@ fn floatrow_floatfoot_keeps_its_text() {
     "S0.T1",
     r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.T1.p1"><p align="center" vattach="bottom">Body</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="top" xml:id="S0.T1.fig1"><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Table 1</tag>Cap</caption><p vattach="top"><text fontsize="80%">A foot note.</text></p></figure></inline-logical-block></p></table>"##,
   )]);
+}
+
+/// A plain `figure` (no floatbox object) under floatrow: the kernel's float never reaches floatrow's `\float@end`, so the
+/// float's end sets the pending `\floatfoot` (floatrow_sty.rs `\lx@flrow@plainfoot`, `env/figure/end`): "Plain foot."
+/// after the caption, 0 errors (was lost with 0 errors). Repro captions-floats/floatrow_floatfoot_in_plain_figure.
+#[test]
+fn floatrow_floatfoot_in_plain_figure_keeps_its_text() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_floatfoot_in_plain_figure.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "figure",
+    "S0.F1",
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule align="center" class="ltx_figure_panel" height="28.5pt" width="56.9pt"/><toccaption class="ltx_centering"><tag close=" ">1</tag>PlainCap</toccaption><caption class="ltx_centering"><tag close=": ">Figure 1</tag>PlainCap</caption><p align="center" class="ltx_figure_panel" vattach="bottom"><text fontsize="80%">Plain foot.</text></p></figure>"##,
+  )]);
+}
+
+/// A `\DeclareNewFloatType` float (floatrow's own `\float@end`) and a plain `table` keep their `\floatfoot` after the
+/// caption (floatrow_sty.rs `\lx@flrow@plainfoot`; "Chart foot." was lost with 0 errors). Repro
+/// captions-floats/floatrow_floatfoot_in_new_float_type.
+#[test]
+fn floatrow_floatfoot_in_new_float_type_keeps_its_text() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/floatrow_floatfoot_in_new_float_type.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = xml.split_whitespace().collect::<Vec<_>>().join(" ");
+  for (open, foot) in [
+    ("<float class=\"ltx_float_chart\"", "Chart foot."),
+    ("<table ", "Tab foot."),
+  ] {
+    let float = xml.split(open).nth(1).unwrap_or_default();
+    let float = float
+      .split("</float>")
+      .next()
+      .unwrap_or_default()
+      .split("</table>")
+      .next()
+      .unwrap_or_default();
+    let caption_end = float.find("</caption>").unwrap_or(usize::MAX);
+    let foot_at = float.find(foot).unwrap_or(0);
+    assert!(
+      foot_at > caption_end && caption_end != usize::MAX,
+      "{foot} after the caption: {xml}"
+    );
+  }
 }
 
 /// 58i: a sub-float's caption stays in its panel while the floatbox captures the main caption

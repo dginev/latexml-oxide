@@ -86,7 +86,7 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | 4 | `&` in a fenced macro argument truncating the document | CLOSED int26 (R3d, KPE #981) |
 | 5 | raw-class off-table title-page stores never typeset (41/3,000 sample papers raw + 22 with a binding) | batch 75a (replay gate reads bodies as TeX runs them, appends to a refused `\maketitle`, wiley/ACM CCS table entries) in review; generic off-table rule open |
 | 19 | cryptocode: pseudocode lines after the first lose their numbers; text mode `\@pc@lb` (20 papers) | batch 76a running (`\halign` redefinition run where alignments start) |
-| 13 | floatrow `\floatfoot` / `\DeclareNewFloatType` float lost | open (RED `captions-floats/floatrow_floatfoot_in_plain_figure`) |
+| 13 | floatrow `\floatfoot` in a plain float / a `\DeclareNewFloatType` float lost | FIXED int27 (floatrow_sty.rs `\lx@flrow@plainfoot`); the float itself is kept |
 | 17 | longtable caption row: the cell before `x & \caption` lost | FIXED int27 (kept, LaTeX's "Misplaced \noalign"); other shapes lose nothing |
 | 18 | amsrefs `\bib` keys differing in case merge, one entry lost | honest Error int27 (`scan_bibentries`); keeping both open |
 | 6, 7, 8, 12 | frontmatter store timing / replayed setters / late class `\author` / `\AFF` before `\AUTHOR` | open (synthetic REDs; no paper count) |
@@ -316,9 +316,10 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     captionsetup_type_in_a_figure_minipage, captionless_longtable_is_not_listed, label_after_a_continued_caption,
     label_after_a_caption_with_a_note_names_the_float (SHARED), cleveref_optional_label_type_names_the_label (2605.13648),
     filecontents_graphic_has_its_size}`, RED `boxes-groups/caption_minipage_in_a_table_cell`; text a `\refstepcounter`
-    rebinding typesets is dropped; floatrow — a footnote ignores `\def\@mpfn{mpfootnote}` (floatrow.sty:476-478), a
-    `\floatfoot` in a plain `table` and a `\DeclareNewFloatType` float are lost (our float environments shadow
-    `\float@end`, :114-127, :421-424), a floatbox caption lacks `ltx_centering` and a zero-size `<rule>` follows the body
+    rebinding typesets is dropped; floatrow — a footnote ignores `\def\@mpfn{mpfootnote}` (floatrow.sty:476-478); a
+    `\floatfoot` in a plain `figure`/`table` or a `\DeclareNewFloatType` float is FIXED int27 (the float's end sets the
+    pending foot, floatrow_sty.rs `\lx@flrow@plainfoot`; guards `perfect_kernel_batch58::floatrow_floatfoot_in_{plain_figure,
+    new_float_type}_keeps_its_text`; the new-type float itself was already kept); a floatbox caption lacks `ltx_centering` and a zero-size `<rule>` follows the body
     (:392); float placements are unchecked (`[!H]`); a tcolorbox listing's title/number is not printed (59i).
   - *box measurement* (58b-58e; K15/K18): `\vsplit` never splits a paragraph into lines (reledmac
     2-titles_in_line_numbering_with_notes 16 numbered lines vs 28); `\penalty` leaves no item, no interline glue or
@@ -2516,9 +2517,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   order the PDF's; accepted by the main session 2026-10-16). Open: raw Paul Taylor `diagrams` loops (math0301370,
   `\input{taylor_diagrams}`; probe scratch_68q/wm03/d2.tex `$$\begin{diagram} A & \rTo & B \end{diagram}$$`, in both
   binaries): our `end_graf` keeps a line where TeX's paragraph is null (§1096), so the package's `\reformatmatrix`
-  `\lastbox` loop keeps finding an hbox — not 68q's. Open RED (68q review side finding 5, not 68q's): floatrow's
-  `\floatfoot` in a plain `figure` (not a `\floatbox` object) is dropped by 67int11 and 68q alike, pdflatex prints it
-  (captions-floats/floatrow_floatfoot_in_plain_figure; review probes fr2 "Plain foot.", fr3 "TwoFoot"). Open RED (int12
+  `\lastbox` loop keeps finding an hbox — not 68q's. 68q review side finding 5 (floatrow's
+  `\floatfoot` in a plain `figure` dropped; captions-floats/floatrow_floatfoot_in_plain_figure, probes fr2 "Plain foot.",
+  fr3 "TwoFoot") — FIXED int27 (floatrow_sty.rs `\lx@flrow@plainfoot`). Open RED (int12
   nets, sigma 0907.2394 errors 0 → 8): easybmat's `\@easy@buildbox` peels the `\halign`'s rows with `\lastbox` after
   `\unvbox`; our alignment is one whatsit, not TeX's row hboxes (§799), so the whole alignment is taken as a row and
   unhboxed → 2 `malformed` per BMAT; the matrix itself was LOST before 68q (the box went back whole, the loop ended at

@@ -31,4 +31,18 @@ LoadDefinitions!({
 \let\lx@flrow@FBget@box\FBget@box
 \def\FBget@box{\let\lx@setfloatcapt\lx@flrow@setfloatcapt\lx@flrow@FBget@box}
 \def\RawCaption#1{{\let\@makecaption\FR@makecaption\let\lx@setfloatcapt\lx@kernel@setfloatcapt#1}}");
+  // A plain `figure`/`table` (no floatbox object) is the kernel's float, which never reaches floatrow's float end
+  // (`\float@end`, floatrow.sty:114-127, :421-424, whose layout `\FB@foot` sets `\flrow@foot` under the caption): its
+  // `\floatfoot` filled the box (`\floatfoot@`, :502-504) and nothing set it, the text lost with 0 errors. The float's
+  // end sets a foot still pending there, and empties the box globally, as `\floatfoot@` filled it. A floatbox inside the
+  // float sets and empties it in its own layout first. Repro captions-floats/floatrow_floatfoot_in_plain_figure.
+  // A `\DeclareNewFloatType` float ends with floatrow's own `\float@end`/`\float@dblend`/`\float@endH` (`\let` to its
+  // `\end<type>` when the type is declared, floatrow.sty:126-127, :274), whose layout sets the foot only beside a filled
+  // caption box — which the kernel's caption leaves void: the pending foot is set first there too.
+  RawTeX!(r"\def\lx@flrow@plainfoot{\ifvoid\flrow@foot\else\par\copy\flrow@foot\global\setbox\flrow@foot\box\voidb@x\fi}
+\AddToHook{env/figure/end}{\lx@flrow@plainfoot}\AddToHook{env/figure*/end}{\lx@flrow@plainfoot}
+\AddToHook{env/table/end}{\lx@flrow@plainfoot}\AddToHook{env/table*/end}{\lx@flrow@plainfoot}
+\let\lx@flrow@float@end\float@end\def\float@end{\lx@flrow@plainfoot\lx@flrow@float@end}
+\let\lx@flrow@float@dblend\float@dblend\def\float@dblend{\lx@flrow@plainfoot\lx@flrow@float@dblend}
+\let\lx@flrow@float@endH\float@endH\def\float@endH{\lx@flrow@plainfoot\lx@flrow@float@endH}");
 });

@@ -228,7 +228,7 @@ LoadDefinitions!({
           && current > 1
           && alignment.current_row().is_some_and(|row| {
             row.get_columns().iter().take(current - 1).any(|column| {
-              column.boxes.as_ref().is_some_and(engine::base_utilities::typesets_content)
+              column.boxes.as_ref().is_some_and(typesets_content)
             })
           })
       })
