@@ -353,3 +353,31 @@ fn empty_titlepage_keeps_the_title() {
     "{html}"
   );
 }
+
+/// AASTeX's `\figcaption` outside a figure is that figure's numbered caption, its `\label` the figure's
+/// (aas_support_sty.rs `\@figcaption`; aastex701.cls:8111-8114; astro-ph9806172). Was: the bare text in the figure.
+#[test]
+fn aastex_figcaption_outside_a_figure_is_its_caption() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/aastex_figcaption_outside_a_figure_is_its_caption.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(r#"<figure inlist="lof" labels="LABEL:f1" xml:id="S0.F1">"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(
+      r#"<caption><tag close=": ">Figure 1</tag>The first figure’s caption.</caption> </figure>"#
+    ),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<p xml:id="p2.1">See Figure <ref labelref="LABEL:f1"/>.</p>"#),
+    "{xml}"
+  );
+}

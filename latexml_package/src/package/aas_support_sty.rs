@@ -609,7 +609,11 @@ LoadDefinitions!({
   // catcode. Driver: arXiv:astro-ph/9808081 has 5× `\figcaption[X_Y.ps]`.
   // \figcaption checks if inside a figure environment.
   // If yes → \caption; if no → \@figcaption (wraps in figure env).
-  DefMacro!("\\@figcaption {}", "\\begin{figure}#1\\end{figure}");
+  // Outside a figure the text is the figure's caption, numbered: AASTeX sets it with `\caption` under
+  // `\def\@captype{figure}` (aastex701.cls:8111-8114; AASTeX 4's end-of-paper list prints "Fig. N.—"). Perl wraps the
+  // bare text in the figure (aas_support.sty.ltxml:332), a `<p>` with no caption and no number, lost markup with 0
+  // errors (astro-ph9806172; silent-loss inventory #24). Guard `perfect_kernel_batch74b::aastex_figcaption_outside_a_figure_is_its_caption`.
+  DefMacro!("\\@figcaption {}", "\\begin{figure}\\caption{#1}\\end{figure}");
   DefMacro!("\\figcaption OptionalSemiverbatim", sub[(opt_arg)] {
     let env = lookup_string_from_sym(pin!("current_environment"));
     if env.contains("figure") {

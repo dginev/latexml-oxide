@@ -92,7 +92,8 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | 6, 7, 8, 12 | frontmatter store timing / replayed setters / late class `\author` / `\AFF` before `\AUTHOR` | open (synthetic REDs; no paper count) |
 | 9 | revtex supplement title replaces the paper's | open (design; ruling: keep the MAIN frontmatter) |
 | 10 | deepseek.cls `\correspondingauthor` note, printed only in the title page's `firststyle` footer | FIXED int27 (deepseek_cls.rs: the shipped class loads raw; the note is added where its `\maketitle` selects the footer; 2401.14196) |
-| 11, 23, 24 | class gaps: apa/asmejour/cclayout fields, an.cls `\abstract{}`, aastex `\figcaption` | open (bindings) |
+| 24 | aastex `\figcaption` outside a figure: the text a `<p>`, no caption, no number | FIXED int27 (aas_support_sty.rs `\@figcaption` = a figure with `\caption`, aastex701.cls:8111-8114; astro-ph9806172 0 → 3 captions) |
+| 11, 23 | class gaps: apa/asmejour/cclayout fields, an.cls `\abstract{}` | open (bindings) |
 | 15 | mdframed `frametitle=` (options, `\newmdenv` presets, `\mdfsetup`) never typeset | FIXED int27 (mdframed_sty.rs: options run as `\mdfsetup` in the frame's group; the title is the frame's first paragraph in `\mdf@frametitlefont`; ~0.07 % of 2401 papers use it; 2401.03158) |
 | 14, 16 | `\refstepcounter` rebinding text, tcolorbox listing title | open |
 | 22 | an empty `{titlepage}` hiding the document title in HTML (XSLT) | FIXED int27 (OD #761: only a titlepage with ink hides the title) |
@@ -628,8 +629,6 @@ says otherwise.
 
 **Frontmatter (re-probe each on head first; check against FM S2/S5)**
 - **Fidelity round-1 residuals** (scratch_356a0c47/fidelity/audit.tsv):
-  - deepseek.cls `\correspondingauthor` footer text lost, silently (2401.14196);
-  - aastex `\figcaption` text emitted as `<p>` inside the figure, with no caption or "Figure N" (astro-ph9806172);
   - amsrefs source-order numbering.
 - **Singletons:**
   - (a) subcaption `{subfigure}` sets no `\linewidth`, so `\includegraphics[width=\linewidth]` gives 345pt. SHARED;
