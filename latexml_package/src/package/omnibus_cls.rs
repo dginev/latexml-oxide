@@ -165,6 +165,12 @@ LoadDefinitions!({
   Let!("\\endmainmatter",  "\\@empty");
   Let!("\\backmatter",     "\\@empty");
   Let!("\\endbackmatter",  "\\@empty");
+  // …and the flag book.cls declares with them (book.cls:53 `\newif\if@mainmatter \@mainmattertrue`), which a
+  // package that finds `\mainmatter` defined expects: scrlayer.sty:102-110 warns "\mainmatter defined without
+  // \if@mainmatter!" otherwise, as it did on the ceurart papers whose base class is scrartcl with OmniBus provided over
+  // it (`provide_over_base_class`; 111 of the 112 of 2506+2509: 2509.11492, 2509.11496), where pdflatex, whose
+  // scrartcl has no `\mainmatter`, is quiet. A class that declares the flag keeps its own.
+  RawTeX!(r"\@ifundefined{if@mainmatter}{\newif\if@mainmatter\@mainmattertrue}{}");
 
   // Perl L62-63
   DefMacro!("\\shorttitle{}", "\\lx@add@toctitle{#1}");

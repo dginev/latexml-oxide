@@ -797,13 +797,10 @@ fn raw_class_normalsize_nominal() {
   let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(!stderr.contains("Bad type area settings"), "{stderr}");
-  // Only KOMA's two sectioning-identity warnings may remain (LEDGER 56ig).
-  let other_warnings = stderr
-    .lines()
-    .filter(|l| l.contains("Warning:"))
-    .filter(|l| !l.contains("has been") && !l.contains("Unexpected definition of"))
-    .count();
-  assert_eq!(other_warnings, 0, "{stderr}");
+  // (no warning at all: KOMA's two sectioning-identity warnings, LEDGER 56ig, are gone since 72a r10, koma_script.rs
+  // `koma_pre_load`)
+  let warnings = stderr.lines().filter(|l| l.contains("Warning:")).count();
+  assert_eq!(warnings, 0, "{stderr}");
   assert!(
     xml
       .contains(r#"<p>Body <text fontsize="110%">L</text> and <text fontsize="91%">s</text>.</p>"#),

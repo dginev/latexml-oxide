@@ -490,14 +490,14 @@ fn copy_setters_store_class_defaults() {
   ];
   for (tex, cls, title, author, date) in cases {
     let (log, xml) = convert_files_with(&tex, &[("atlasdoc.cls", &cls)], Some("ar5iv.sty"));
-    // (the binding's base is the KOMA class atlasdoc.cls loads, which warns as `\documentclass{scrartcl}` does)
+    // (the binding's base is the KOMA class atlasdoc.cls loads, quiet as `\documentclass{scrartcl}` is)
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 2),
+      (0, 0),
       "{tex}\n{log}"
     );
     assert!(
-      ["scrartcl", "scrreprt", "scrbook"]
+      !["scrartcl", "scrreprt", "scrbook"]
         .iter()
         .any(|class| koma_raw_warnings(&log, class)),
       "{tex}\n{log}"
@@ -1288,12 +1288,14 @@ fn class_load_record_does_not_reach_the_next_document() {
   drop(papers);
 }
 
-/// The KOMA class a raw scrartcl load warns of, as `\documentclass{scrartcl}` does (scrartcl.cls:3397 `\@startsection`,
-/// :3555 `\@sect`: LaTeXML's sectioning is not latex.ltx's text) — the open KOMA row of OXIDIZED_DESIGN_DIVERGENCES #736.
+/// Does the log carry either Warning KOMA writes when the kernel's sectioning workers are not latex.ltx's
+/// (scrartcl.cls:3397 `\@startsection`, :3555 `\@sect`)? LaTeXML's are its own, and KOMA's copies of them are set to
+/// them before the raw load (koma_script.rs `koma_pre_load`, OXIDIZED_DESIGN_DIVERGENCES #737), so no KOMA document
+/// has either, as under pdflatex.
 pub(crate) fn koma_raw_warnings(log: &str, class: &str) -> bool {
   log.contains(&format!(
     "Warning:latex:(\\KOMAClassName)  Class {class} Warning: `\\@startsection' has been changed."
-  )) && log.contains(&format!(
+  )) || log.contains(&format!(
     "Warning:latex:(\\KOMAClassName)  Class {class} Warning: Unexpected definition of \\@sect!"
   ))
 }
@@ -1320,10 +1322,10 @@ fn copy_load_class_is_the_bindings_base_class() {
       warning_count(&log),
       log.matches("Fatal:").count()
     ),
-    (0, 2, 0),
+    (0, 0, 0),
     "{log}"
   );
-  assert!(koma_raw_warnings(&log, "scrartcl"), "{log}");
+  assert!(!koma_raw_warnings(&log, "scrartcl"), "{log}");
   assert!(!log.contains("stands for the copy's"), "{log}");
   assert_element(&xml, "title", &[], "<title>A Title</title>");
   assert_element(
@@ -1335,10 +1337,10 @@ fn copy_load_class_is_the_bindings_base_class() {
   assert_element(
     &xml,
     "section",
-    &["xml:id=\"section1\""],
-    "<section inlist=\"toc\" xml:id=\"section1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text \
-     xml:id=\"section1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag \
-     close=\" \">1</tag>Intro</title><para xml:id=\"section1.p1\"><p xml:id=\"section1.p1.1\">Text \
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text \
+     xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag \
+     close=\" \">1</tag>Intro</title><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">Text \
      CEUR.</p></para></section>",
   );
 
@@ -1353,18 +1355,18 @@ fn copy_load_class_is_the_bindings_base_class() {
       warning_count(&log),
       log.matches("Fatal:").count()
     ),
-    (0, 2, 0),
+    (0, 0, 0),
     "{log}"
   );
-  assert!(koma_raw_warnings(&log, "scrartcl"), "{log}");
+  assert!(!koma_raw_warnings(&log, "scrartcl"), "{log}");
   assert!(!log.contains("stands for the copy's"), "{log}");
   assert_element(
     &xml,
     "section",
-    &["xml:id=\"section1\""],
-    "<section inlist=\"toc\" xml:id=\"section1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag \
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag \
      role=\"typerefnum\">§1</tag></tags><title><tag close=\" \">1</tag>Intro</title><para \
-     xml:id=\"section1.p1\"><p xml:id=\"section1.p1.1\">Text ATLAS.</p></para></section>",
+     xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">Text ATLAS.</p></para></section>",
   );
 
   let (log, xml) = convert_files_with(
@@ -1525,4 +1527,158 @@ fn raw_read_record_does_not_reach_the_next_document() {
     assert!(log.contains("Command \\refname already defined"), "{log}");
   }
   drop(dir);
+}
+
+/// The KOMA classes check that the kernel's `\@startsection` and `\@sect` are still latex.ltx's (scrartcl.cls:3326,
+/// :3552; scrreprt, scrbook alike); LaTeXML's are its own, and KOMA's copies of them are set to them before the raw load
+/// (koma_script.rs `koma_pre_load`, OXIDIZED_DESIGN_DIVERGENCES #737), so the class takes pdflatex's branch and writes
+/// neither "`\@startsection' has been changed" nor "Unexpected definition of \@sect!" (every KOMA paper had both, 67int21
+/// and 72a r9: 2509.11496, 2608.23214). pdflatex: "1 One", "Text.", no Class Warning. Repro
+/// sectioning-frontmatter/koma_sectioning_check_warns (CONTROL since batch 60m, now GREEN).
+#[test]
+fn koma_classes_take_the_kernel_branch_without_warnings() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/koma_sectioning_check_warns.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (
+      error_count(&log),
+      warning_count(&log),
+      log.matches("Fatal:").count()
+    ),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert!(!koma_raw_warnings(&log, "scrartcl"), "{log}");
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag \
+     role=\"typerefnum\">§1</tag></tags><title><tag close=\" \">1</tag>One</title><para xml:id=\"S1.p1\"><p \
+     xml:id=\"S1.p1.1\">Text.</p></para></section>",
+  );
+}
+
+/// A KOMA paper's ids and appendix are an article's, report's or book's (koma_script.rs `koma_counter_ids`,
+/// `koma_appendix`; OXIDIZED_DESIGN_DIVERGENCES #737): `S1`, `S1.SS1`, `S1.E1`, `S1.F1` under scrartcl, `Ch1`,
+/// `Ch1.S1`, `Ch1.E1` under scrreprt and scrbook, and `\appendix` starts `ltx:appendix` at the section or chapter level
+/// with KOMA's lettering. 72a r9 (and 67int21): `section1`, `section1.subsection1`, `equation1`, and the appendix more
+/// sections (`section1a`), in 26 of 27 ceurart/atlasdoc papers with an appendix (2509.11496, 2506.00694, 2509.01219).
+/// pdflatex: "1. A", "(1)", "1.1. B", "A. Proofs", "B. Inner"; scrreprt/scrbook "1. Intro", "1.1. A", "(1.1)",
+/// "A. Proofs", "A.1. Inner"; 0 warnings. Perl (OmniBus→article for a KOMA class): `S1`, `S1.E1`, `<appendix>` A1, A2.
+/// Repros sectioning-frontmatter/koma_ids_and_appendix_{scrartcl,scrreprt,scrbook}.
+#[test]
+fn koma_ids_and_appendix_follow_the_standard_classes() {
+  let cases: [(&str, &[&str], &str); 3] = [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/koma_ids_and_appendix_scrartcl.tex"
+      ),
+      &["S1", "S1.E1", "S1.SS1", "S1.F1", "A1", "A2"],
+      "<appendix inlist=\"toc\" xml:id=\"A1\"><tags><tag>Appendix A</tag><tag role=\"refnum\">A</tag><tag \
+       role=\"typerefnum\">Appendix A</tag></tags><title><tag close=\" \">Appendix \
+       A</tag>Proofs</title><toctitle><tag close=\" \">A</tag>Proofs</toctitle></appendix>",
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/koma_ids_and_appendix_scrreprt.tex"
+      ),
+      &[
+        "Ch1",
+        "Ch1.S1",
+        "Ch1.E1",
+        "Ch1.S1.SS1",
+        "Ch1.F1",
+        "A1",
+        "A1.S1",
+      ],
+      "<appendix inlist=\"toc\" xml:id=\"A1\"><tags><tag>Appendix A</tag><tag role=\"refnum\">A</tag><tag \
+       role=\"typerefnum\">Appendix A</tag></tags><title><tag close=\" \">Appendix \
+       A</tag>Proofs</title><toctitle><tag close=\" \">A</tag>Proofs</toctitle><section inlist=\"toc\" \
+       xml:id=\"A1.S1\"><tags><tag>A.1</tag><tag role=\"refnum\">A.1</tag><tag \
+       role=\"typerefnum\">§A.1</tag></tags><title><tag close=\" \">A.1</tag>Inner</title><para \
+       xml:id=\"A1.S1.p1\"><p xml:id=\"A1.S1.p1.1\">More.</p></para></section></appendix>",
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/koma_ids_and_appendix_scrbook.tex"
+      ),
+      &[
+        "Ch1",
+        "Ch1.S1",
+        "Ch1.E1",
+        "Ch1.S1.SS1",
+        "Ch1.F1",
+        "A1",
+        "A1.S1",
+      ],
+      "<appendix inlist=\"toc\" xml:id=\"A1\"><tags><tag>Appendix A</tag><tag role=\"refnum\">A</tag><tag \
+       role=\"typerefnum\">Appendix A</tag></tags><title><tag close=\" \">Appendix \
+       A</tag>Proofs</title><toctitle><tag close=\" \">A</tag>Proofs</toctitle><section inlist=\"toc\" \
+       xml:id=\"A1.S1\"><tags><tag>A.1</tag><tag role=\"refnum\">A.1</tag><tag \
+       role=\"typerefnum\">§A.1</tag></tags><title><tag close=\" \">A.1</tag>Inner</title><para \
+       xml:id=\"A1.S1.p1\"><p xml:id=\"A1.S1.p1.1\">More.</p></para></section></appendix>",
+    ),
+  ];
+  for (tex, ids, appendix) in cases {
+    let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (
+        error_count(&log),
+        warning_count(&log),
+        log.matches("Fatal:").count()
+      ),
+      (0, 0, 0),
+      "{log}"
+    );
+    for id in ids {
+      assert!(xml.contains(&format!("xml:id=\"{id}\"")), "{id}\n{xml}");
+    }
+    for stale in ["section1", "chapter1", "equation1", "figure1"] {
+      assert!(
+        !xml.contains(&format!("xml:id=\"{stale}")),
+        "{stale}\n{xml}"
+      );
+    }
+    assert_element(&xml, "appendix", &["xml:id=\"A1\""], appendix);
+  }
+}
+
+/// ceurart.cls:472-500 `\title[mode=<mode>]{…}`: the optional argument is a key list, each call a line of the title
+/// block; `mode=sub` is the subtitle (`\subtitle` is `\title[mode=sub]`), a translated title a note, the main title the
+/// `mode=title` one (19 of the 112 ceurart papers of 2506+2509 lost it to their subtitle, 67int21 and 72a r9:
+/// 2509.11492, 2509.11496). And scrlayer-scrpage (ceurart.cls:2172) finds OmniBus's `\mainmatter` with book.cls's
+/// `\if@mainmatter` (omnibus_cls.rs): no "\mainmatter defined without \if@mainmatter!" (111 of the 112 under 72a r9;
+/// pdflatex quiet). pdflatex (the real class of 2509.11492): the title, then the subtitle smaller. Repro
+/// stand-in-copies/class_slot/ceurart_title_mode_sub.
+#[test]
+fn ceurart_title_mode_sub_is_the_subtitle() {
+  let (log, xml) = convert_files_with(
+    repro!("class_slot/ceurart_title_mode_sub.tex"),
+    &[("ceurart.cls", repro!("class_slot/ceurart.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (
+      error_count(&log),
+      warning_count(&log),
+      log.matches("Fatal:").count()
+    ),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert_element(&xml, "title", &[], "<title>A Title</title>");
+  assert_element(&xml, "subtitle", &[], "<subtitle>A Subtitle</subtitle>");
+  assert_element(
+    &xml,
+    "note",
+    &["role=\"translatedtitle\""],
+    "<note role=\"translatedtitle\" xml:id=\"id1\">Ein Titel</note>",
+  );
+  assert!(!xml.contains("<toctitle>mode"), "{xml}");
+  assert!(!log.contains("defined without"), "{log}");
 }

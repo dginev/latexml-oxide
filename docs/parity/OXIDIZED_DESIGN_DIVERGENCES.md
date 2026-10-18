@@ -19392,7 +19392,15 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 % in r3-r7, its `\LoadClass{scrartcl}`
 (atlasdoc.cls:319, KOMA's 22 files), +0.8-3.8 % in r8, where the binding's base class stood for it, and back with r9,
 where the binding loads it (#736); ceurart papers +159 % over 67int21 in r9 (scrartcl raw, then the copy's own loads:
-scrlayer-scrpage, doclicense, fontawesome5, …);
+scrlayer-scrpage, doclicense, fontawesome5, …). Breakdown (r10, `perf stat -e instructions:u`, minimal documents, TL
+2025): `\documentclass{article}` 0.94 G, `{scrartcl}` 6.9 G — scrkbase + tocbasic + typearea 1.07 G, scrartcl.cls's own
+code the rest, of which its six `\DeclareSectionCommand`s (scrartcl.cls:5152-5208) 2.1 G, 0.35-0.42 G each; pdflatex
+pays the same class 2.7 G (article 1.35 G, scrartcl 4.09 G; the six calls 0.88 G), so the raw KOMA load runs at 2.2-2.4×
+pdflatex's instructions, the engine's general interpretation rate (hot: `gullet::read_internal_token_checked` 17-19 %,
+`read_balanced_with_close` 11-15 %), with no file read twice and no loop of ours; a minimal ceurart document (the copy of
+2509.11492) 2.17 G on 67int21, 11.4 G on 72a r9/r10 (scrartcl + the binding's packages 8.3 G, the copy and OmniBus
+provided over it 3.1 G), pdflatex 8.5 G. No cheap faithful lever: the cost is the class, read as TeX reads it;
+`project_raw_interpreter_perf_directive` is the lever;
 2309.03819 +65 %, jgcc.cls:52's tikz; 2609.08425 +37 %, WileyNJDv5.cls's
 unconditional loads under its options (fontspec, xunicode, tuenc, mathastext, microtype…), with one Warning for its
 unclosed `\if@large@design` (:4748-4844), which xelatex reports too.
@@ -19515,10 +19523,50 @@ code is written for Y and a command of Y's interface it calls before anything el
 as the copy's own Errors are (user ruling 2026-10-17; book's interface covers article's, so svmult copies meet none).
 latex.ltx's two-`\LoadClass` Error itself is not emulated in general (a document's own second `\LoadClass` still loads
 it: the reviewer's probe scr2, `\documentclass{article}` then `\LoadClass{scrartcl}`, is Fatal on 67int21 too; SYNC 72a
-row (n)). A raw KOMA base warns as `\documentclass{scrartcl}` does — "`\@startsection` has been changed", "Unexpected
-definition of \@sect" (scrartcl.cls:3397, :3552-3559: LaTeXML's sectioning is not latex.ltx's text) — and lacks the
-article binding's semantic layer: `\appendix` is KOMA's (sections, not `ltx:appendix`: 26 of the 27 ceurart/atlasdoc
-papers with appendices in 2506+2509) and its raw `\newcounter`s carry no id prefixes (`section1`, not `S1`: 124 of 126);
-SYNC 72a row (p). Guards `perfect_kernel_batch72a::copy_load_class_is_the_bindings_base_class` (ceurart, atlasdoc, jgcc:
-0 E / 0 F, the KOMA pair of Warnings, title, keywords, author and section whole) and
+row (n)). The raw KOMA base gets the standard classes' semantic layer, its ids, `\appendix` and quiet sectioning check,
+as every KOMA document does (#737). Guards `perfect_kernel_batch72a::copy_load_class_is_the_bindings_base_class` (ceurart, atlasdoc, jgcc:
+0 E / 0 W / 0 F, title, keywords, author and section whole) and
 `::copy_load_class_meets_the_class_slot` (svmult); repros `stand-in-copies/class_slot/`.
+
+### 737. The KOMA classes, read raw, get the standard classes' semantic layer: ids, `\appendix`, and a quiet sectioning check
+
+**TeX**: `\documentclass{scrartcl}` (scrreprt, scrbook) is KOMA-Script's class: its `\newcounter`s (scrartcl.cls:5045-5127,
+scrreprt.cls:5530-6051), its `\appendix` (scrartcl.cls:4842-4867: counters reset, `\thesection` = `\@Alph\c@section`,
+`\appendixmore`; scrreprt.cls:5305-5335 and scrbook.cls:5284-5314 at the chapter level, `\@chapapp` = `\appendixname`),
+and a check that the kernel's `\@startsection` and `\@sect` are still latex.ltx's (scrartcl.cls:3292 + :3326, :3520 +
+:3552), which passes: pdflatex writes no Class Warning for a minimal document.
+
+**Perl**: no KOMA binding; the class is "missing" and OmniBus (article) loads (`Can't find binding for class scrartcl
+(using OmniBus)`), so a KOMA paper has the article's ids (`S1`, `S1.E1`, `S1.F1`) and `<appendix>` elements, and none of
+KOMA's own commands.
+
+**Rust** (72a r10; main-session call, row (p) option b): the classes are raw-read (scrartcl_cls.rs, the memoir
+precedent, batch 53) and koma_script.rs adds the semantic layer the article, report and book bindings give:
+1. *Ids* (`koma_counter_ids`): after the raw load, each sectioning and float counter the class declared gets the ids of
+   the standard class's binding (article_cls.rs:86-107 for scrartcl, report_cls.rs:94-130 / book_cls.rs:100-136 for
+   scrreprt and scrbook: `idprefix`, `idwithin`, `nested`), through `counter::dialect::define_counter_ids`, the id half
+   of `new_counter` split out; the registers and reset lists stay the class's. Before: `section1`,
+   `section1.subsection1`, `equation1`, `figure1` (124 of 126 ceurart/atlasdoc papers of 2506+2509 under 72a r9, every
+   KOMA paper under 67int21).
+2. *Appendix* (`koma_appendix`): `\appendix` is `\@appendix` — `start_appendices("section")` for scrartcl, `("chapter")`
+   for scrreprt/scrbook, as article_cls.rs:148-152 and report_cls.rs:178-182 — then KOMA's own, whose lettering,
+   `\@chapapp`, one-time hook and `\appendixmore` stand. Before: more `ltx:section`s, their ids colliding with the body's
+   (`section1a`), in 26 of the 27 ceurart/atlasdoc papers with an appendix (2509.11496, 2506.00694).
+3. *The sectioning check* (`koma_pre_load`): KOMA's copies of the two kernel workers (`\scr@saved@startsection`,
+   `\scr@latex@sect`) are set to the kernel's — LaTeXML's native `\@startsection` (sect04.rs) and `\@sect` router
+   (latex_constructs_rust_only.rs) — and locked against the class's definitions of them, so the class takes pdflatex's
+   branch and writes neither "`\@startsection' has been changed" nor "Unexpected definition of \@sect!" (both on every
+   KOMA document since the classes were raw-read; CONTROL repro sectioning-frontmatter/koma_sectioning_check_warns of
+   batch 60m, which judged them true). Neither copy is called on that branch: the dispatcher KOMA puts over
+   `\@startsection` is refused by its lock, and `\scr@startsection` is LaTeXML's `\@startsection` (`koma_post_load`).
+Divergence from Perl: KOMA's own commands are defined (the raw class), and under scrreprt/scrbook the ids are report's
+(`Ch1.S1`), not Perl's article ids. With it, ceurart's `\title[mode=<mode>]` (ceurart.cls:381-500: the optional
+argument is a key list; `mode=sub`, and `\subtitle`, the subtitle) maps onto the frontmatter (ceurart_cls.rs: `title` the
+main title, `sub` `ltx:subtitle`, `trans`/`transsub` notes as acmart's `\translatedtitle`), where the kernel `\title`
+took the keys for a short title and the last call won (19 of the 112 ceurart papers of 2506+2509: 2509.11492,
+2509.11496); and OmniBus declares book.cls:53's `\if@mainmatter` with its `\mainmatter` (omnibus_cls.rs), which
+scrlayer.sty:102-110 expects ("\mainmatter defined without \if@mainmatter!" on 111 of the 112 under 72a r9, where OmniBus
+is provided over scrartcl; pdflatex quiet). Guards `perfect_kernel_batch72a::{koma_classes_take_the_kernel_branch_without_warnings,
+koma_ids_and_appendix_follow_the_standard_classes, ceurart_title_mode_sub_is_the_subtitle}`; repros
+`sectioning-frontmatter/koma_ids_and_appendix_{scrartcl,scrreprt,scrbook}`, `koma_sectioning_check_warns`,
+`stand-in-copies/class_slot/ceurart_title_mode_sub`.

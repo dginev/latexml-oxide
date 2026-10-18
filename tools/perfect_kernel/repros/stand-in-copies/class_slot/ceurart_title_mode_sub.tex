@@ -1,0 +1,20 @@
+% witness: 2509.11492, 2509.11496 (19 of the 112 ceurart papers of 2506+2509 call `\title[mode=sub]{…}`)
+% oracle:  pdflatex (real ceurart.cls of 2509.11492): the title block "A Title" then, smaller, "A Subtitle"
+%          (ceurart.cls:472-500: every `\title[mode=<m>]` call adds a styled line, `\subtitle` = `[mode=sub]`)
+% engines: rust 67int21 and 72a r9 = `<title>A Subtitle</title>`, the main title lost (the kernel `\title` took the
+%          key list for a short title and the last call won)
+% expect:  0 errors, 0 warnings (scrlayer-scrpage, which ceurart.cls:2172 loads, finds OmniBus's `\mainmatter` with
+%          its `\if@mainmatter`: no "\mainmatter defined without \if@mainmatter!"); `<title>A Title</title>`, `<subtitle>A Subtitle</subtitle>`, a translated title a
+%          `note[role=translatedtitle]`; no toctitle from the key list
+% status:  RED (72a r9) -> GREEN (72a r10)
+% preload: ar5iv.sty
+\documentclass{ceurart}
+\usepackage{scrlayer-scrpage}
+\title[mode=title]{A Title}
+\title[mode=sub]{A Subtitle}
+\title[mode = trans]{Ein Titel}
+\begin{document}
+\maketitle
+\section{Intro}
+Text \ceurextra.
+\end{document}

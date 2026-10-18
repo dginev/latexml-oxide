@@ -277,9 +277,9 @@ fn amsart_end_matter_is_set() {
 
 /// 60m: ltxdockit's `\rcsid` sets the revision's date (`\ltd@setdate`, ltxdockit.cls:129-137, the aux read-back the
 /// binding replays in the same run), which `\rcstoday` prints: pdflatex "January 3, 2011", where the title page had
-/// the conversion day. Repro sectioning-frontmatter/ltxdockit_rcsid_sets_the_date. (The two KOMA warnings are every
-/// scrartcl document's: KOMA's check of the kernel sectioning macros, which are LaTeXML's; CONTROL
-/// sectioning-frontmatter/koma_sectioning_check_warns.)
+/// the conversion day. Repro sectioning-frontmatter/ltxdockit_rcsid_sets_the_date. (No KOMA warning: KOMA's check of
+/// the kernel sectioning macros passes, as under pdflatex, since 72a r10; sectioning-frontmatter/
+/// koma_sectioning_check_warns.)
 #[test]
 fn ltxdockit_rcsid_sets_the_date() {
   let xml = assert_elements_with(
@@ -287,11 +287,8 @@ fn ltxdockit_rcsid_sets_the_date() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ltxdockit_rcsid_sets_the_date.tex"
     ),
     RAW,
-    (0, 2),
-    &[
-      "`\\@startsection' has been changed",
-      "Unexpected definition of \\@sect",
-    ],
+    (0, 0),
+    &[],
     &[],
   );
   assert_element(

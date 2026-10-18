@@ -26,13 +26,13 @@ macro_rules! clean {
 }
 
 /// A binding whose base is scrartcl, as its class loads it (ceurart, atlasdoc: OXIDIZED_DESIGN_DIVERGENCES #736): the
-/// raw KOMA load warns of LaTeXML's `\@startsection` and `\@sect`, as `\documentclass{scrartcl}` does.
+/// raw KOMA load is quiet, as `\documentclass{scrartcl}` is under pdflatex (OXIDIZED_DESIGN_DIVERGENCES #737).
 macro_rules! clean_koma {
   ($path:literal) => {{
     let (log, xml) = repro!($path);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     assert!(
-      ["scrartcl", "scrreprt"]
+      !["scrartcl", "scrreprt"]
         .iter()
         .any(|class| super::perfect_kernel_batch72a::koma_raw_warnings(&log, class)),
       "{log}"

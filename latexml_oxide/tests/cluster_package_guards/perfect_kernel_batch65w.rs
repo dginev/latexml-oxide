@@ -10,13 +10,13 @@ fn convert(tex: &str) -> String {
   xml
 }
 
-/// atlasdoc's binding loads the KOMA class atlasdoc.cls loads (OXIDIZED_DESIGN_DIVERGENCES #736), whose raw load warns
-/// of LaTeXML's `\@startsection` and `\@sect`, as `\documentclass{scrartcl}` does.
+/// atlasdoc's binding loads the KOMA class atlasdoc.cls loads (OXIDIZED_DESIGN_DIVERGENCES #736), whose raw load is
+/// quiet, as `\documentclass{scrartcl}` is under pdflatex (OXIDIZED_DESIGN_DIVERGENCES #737).
 fn convert_atlasdoc(tex: &str) -> String {
   let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
-    ["scrartcl", "scrreprt", "scrbook"]
+    !["scrartcl", "scrreprt", "scrbook"]
       .iter()
       .any(|class| super::perfect_kernel_batch72a::koma_raw_warnings(&log, class)),
     "{log}"

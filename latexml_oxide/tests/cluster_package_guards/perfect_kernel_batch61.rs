@@ -230,12 +230,8 @@ fn bfh_title_footer_is_frontmatter() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bfh_title_footer_is_frontmatter.tex"
     ),
     RAW,
-    (0, 3),
-    &[
-      "`\\@startsection' has been changed",
-      "Unexpected definition of \\@sect",
-      "You are using pdfLaTeX",
-    ],
+    (0, 1),
+    &["You are using pdfLaTeX"],
     &[],
   );
   assert_element(
@@ -265,12 +261,8 @@ fn bfh_thesis_stores_stay_affiliations() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bfh_thesis_stores_stay_affiliations.tex"
     ),
     RAW,
-    (0, 3),
-    &[
-      "`\\@startsection' has been changed",
-      "Unexpected definition of \\@sect",
-      "You are using pdfLaTeX",
-    ],
+    (0, 1),
+    &["You are using pdfLaTeX"],
     &[],
   );
   assert_element(

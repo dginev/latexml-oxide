@@ -3099,11 +3099,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   atlasdoc papers — resolved in r9 by option B (the binding loads the real base); open where the slot still fires:
   Perl's svmult binding loads book where svmult.cls/svmono.cls `\LoadClass{article}` (book covers article's interface;
   its numbering "0.1" against the copy's "1"), daj's binding emulates tocbase (not in TeX Live) over article; (p) a raw
-  KOMA base lacks the article binding's semantic layer (r9): `\appendix` is KOMA's (sections, not `ltx:appendix`: 26 of
-  27 ceurart/atlasdoc papers with appendices in 2506+2509), its raw `\newcounter`s carry no id prefixes (`section1`,
-  not `S1`; 124 of 126), and it warns of LaTeXML's `\@startsection`/`\@sect` (2 Warnings, as `\documentclass{scrartcl}`
-  on 67int21) — koma_script.rs work for every KOMA document (pre-set `@ID@prefix@<ctr>`, an `\appendix` that starts
-  the appendices), for a ruling.
+  KOMA base lacked the article binding's semantic layer (r9): KOMA's `\appendix`, no id prefixes, the 2 sectioning
+  Warnings — resolved in r10 for every KOMA document (OXIDIZED_DESIGN_DIVERGENCES #737).
   r7: a raw file's own repeat of natbib after a binding's early load — a stand-in copy that loads natbib itself,
   neurips_2024.sty:71, icml2024.sty:95 — applies its options, joins them to the first load's and ends the early-load
   state, so the document's `\usepackage[numbers]{natbib}` after it is LaTeX's "Option clash" (the reviewer's
@@ -3135,6 +3132,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   base before (`omnibus_cls::provide_over_base_class`: ceurart's `{keywords}`). The slot stays as the net (svmult, daj).
   2509.11496, 2608.23214, 2310.02658, 2505.16276 0 E; ceurart 38 → 21 E (vs 67int21) and atlasdoc 1 → 0 over 2506+2509,
   0 worse; rows (o), (p) above.
+  r10: the KOMA classes get the standard classes' semantic layer (OXIDIZED_DESIGN_DIVERGENCES #737, koma_script.rs):
+  the ids of article/report/book (`S1`, `S1.SS1`, `S1.E1`; `Ch1.S1` under scrreprt/scrbook; `define_counter_ids`),
+  `\appendix` = `start_appendices` + KOMA's own (`<appendix>`, KOMA's lettering), and KOMA's copies of the kernel
+  `\@startsection`/`\@sect` set to LaTeXML's before the raw load, so its check passes as under pdflatex (0 Warnings
+  where every KOMA paper had 2); ceurart's `\title[mode=sub]` is the subtitle (19 of 112 lost their main title), and
+  OmniBus declares `\if@mainmatter` with its `\mainmatter` (scrlayer's "\mainmatter defined without \if@mainmatter!",
+  111 of the 112 ceurart papers under r9). Perf: the raw KOMA load is 2.2-2.4× pdflatex's instructions for the same
+  class (scrartcl minimal 6.9 G vs article 0.94 G; pdflatex 4.09 G vs 1.35 G), no double load or loop: #731's costs.
+  A/B (72a10 vs 72a9 / 67int21): r9's 602 papers 0 better, 0 worse, 0 new Fatal, Warnings 7342 → 6958 (the KOMA trio
+  384 → 0), words +597 (41), papers with `<appendix>` 143 → 172; 100 `\documentclass{scr*}` papers (2506-2509) E 120
+  = 120, 0 worse, KOMA Warnings 194 → 0, `<appendix>` in 3 → 32, counter-named ids in 97 → 0, instructions ±0.2 %.
   Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
 
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;

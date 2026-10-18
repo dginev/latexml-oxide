@@ -180,6 +180,30 @@ LoadDefinitions!({
 
   // Subtitle — emit as a creator / extra-title fragment.
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
+  // ceurart.cls:381-500 `\title[mode=<mode>]{…}`: every call adds a line to the title block (`\g_ceur_title_seq`, printed
+  // in order by `\@title`), styled by its mode — `title` (the default, `O{mode = title}`), `sub`, `alt`, `trans`,
+  // `transsub`, `ascii` — and `\subtitle{…}` is `\title[mode=sub]{…}` (:500). The optional argument is that key list,
+  // never a short title. The main title is the `title` one; a `sub` call is the subtitle, a translated one a note, as
+  // acmart's `\translatedtitle`/`\translatedsubtitle` (acmart_cls.rs). Under the kernel `\title` (locked; the copy's
+  // `\RenewDocumentCommand\title` is refused) a `\title[mode=sub]{…}` replaced the main title (19 of the 112 ceurart
+  // papers of 2506+2509: 2509.11496, 2509.11492).
+  Let!("\\lx@ceur@title", "\\title");
+  DefMacro!("\\title[]{}", sub[(keys, text)] {
+    let mode = keys.as_ref().and_then(|keys| ceur_title_mode(&keys.to_string()));
+    let head = match mode.as_deref() {
+      Some("sub") => "\\@add@frontmatter{ltx:subtitle}",
+      Some("transsub") => "\\@add@frontmatter{ltx:note}[role=translatedsubtitle]",
+      Some("trans") => "\\@add@frontmatter{ltx:note}[role=translatedtitle]",
+      Some("alt") => "\\@add@frontmatter{ltx:note}[role=alternativetitle]",
+      Some("ascii") => "\\@add@frontmatter{ltx:note}[role=asciititle]",
+      _ => "\\lx@ceur@title",
+    };
+    let mut out = TokenizeInternal!(head).unlist();
+    out.push(T_BEGIN!());
+    out.extend(text.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  }, locked => true);
 
   // CEUR-WS conference metadata. These DO carry author content (event
   // name, date, location, etc.) — preserve as ltx:note frontmatter.
@@ -226,3 +250,11 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=volume]{#1}"
   );
 });
+
+/// The `mode` key of a ceurart `\title[<keys>]` (ceurart.cls:381-382, a `.choice:`), trimmed; `None` without one.
+fn ceur_title_mode(keys: &str) -> Option<String> {
+  keys.split(',').find_map(|pair| {
+    let (key, value) = pair.split_once('=')?;
+    (key.trim() == "mode").then(|| value.trim().to_string())
+  })
+}

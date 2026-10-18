@@ -265,16 +265,6 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   }
   define_hyper_counter_name(ctr, within)?;
 
-  if let Some(ref options) = options_opt
-    && !options.nested.is_empty()
-  {
-    assign_value(
-      &s!("nested_counters_{}", ctr),
-      options.nested.clone(),
-      Some(Scope::Global),
-    )
-  }
-
   // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro:
   // Perl Package.pm:686 `\the<ctr>` = `\lx@counter@arabic{<ctr>}`, a Token
   // body the format dump can carry (a closure is opaque to it).
@@ -303,9 +293,31 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     )?;
   }
 
+  define_counter_ids(ctr, within, options_opt.as_ref())
+}
+
+/// The id half of [`new_counter`] (Perl Package.pm:689-705, `NewCounter`'s `idprefix`/`idwithin`/`nested`): records
+/// `@ID@prefix@<ctr>` and `nested_counters_<ctr>`, and defines `\the<ctr>@ID` and `\@<ctr>@ID`. A binding calls it
+/// alone for a counter a raw class declared, to give it the ids its standard-class binding gives (the KOMA classes,
+/// `koma_script.rs`: `S1.SS1`, not `section1.subsection1`); the register and its reset list stay the class's.
+pub fn define_counter_ids(
+  ctr: &str,
+  within: &str,
+  options_opt: Option<&NewCounterOptions>,
+) -> Result<()> {
+  if let Some(options) = options_opt
+    && !options.nested.is_empty()
+  {
+    assign_value(
+      &s!("nested_counters_{}", ctr),
+      options.nested.clone(),
+      Some(Scope::Global),
+    )
+  }
+
   let mut prefix = match options_opt {
     None => String::new(),
-    Some(ref opt) => opt.idprefix.to_string(),
+    Some(opt) => opt.idprefix.to_string(),
   };
   if !prefix.is_empty() {
     assign_value(
@@ -323,7 +335,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 
   if !prefix.is_empty() {
     let idwithin = match options_opt {
-      Some(ref opts) => {
+      Some(opts) => {
         if opts.idwithin.is_empty() {
           within
         } else {
