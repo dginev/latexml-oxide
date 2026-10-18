@@ -3396,6 +3396,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   so a header box before a body-declared `\title` is a box (`field_prov_header_mbox_before_title_decl_lifted`). Open
   (pre-existing, Perl the same): `\hypersetup{pdftitle=\@title}` records the RDF `dcterms:title` as the literal
   `\@title`; our `\pdfstringdef` is a `\gdef`, so a copy made before `\maketitle` empties the store prints nothing.
+  **Integration (int22, 9472af17e3, binary 67int22):** fms1 rounds 1-6 rebased onto 7a7b95864d (code delta identical
+  to dd4e1592b3) + the main-session r6-review fix; gates nextest 5895/5895 + cortex 10/10, clippy/rustdoc clean, inits
+  plain=0 latex=0, dumps identical to 67int21; population A/B vs 67int21 over 1,428 papers (pop67int22.tsv = pop67int21's
+  899 + fms1's 543-paper frontmatter set, results_r67int22): E 6,130 → 6,130, F 17 → 17, 0 newly Fatal, 0 E-worse, 0
+  word losses > 1 %; 8 changed: the 5 known lift papers (2205.02555, 0706.0979, 1004.2125, 1605.00182, 1503.06457), two
+  new whole-print lifts of title + author (1112.0959 −9 words, 2409.06655 −18: the in-place duplicate of the title the
+  frontmatter shows, e.g. 1112.0959's title 2 → 1 occurrence), and 2005.02474 (timeout on both sides, W 6 → 5); nets
+  136/136 no worse. Reviews: agent_reports/2026-10-17_fms1_review_r{3,4,5,6}.md.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
