@@ -302,3 +302,28 @@ fn deepseek_corresponding_author_note_is_kept() {
   );
   assert!(xml.contains(r#"<p xml:id="p1.1">Body text.</p>"#), "{xml}");
 }
+
+/// mdframed's `frametitle=` (from the env's options, a `\newmdenv` preset or `\mdfsetup`) is the frame's first
+/// paragraph, in `\normalfont\mdf@frametitlefont`; a nested frame inherits the outer title, as in pdflatex
+/// (mdframed_sty.rs; 2401.03158).
+#[test]
+fn mdframed_frametitle_is_kept() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/mdframed_frametitle_is_kept.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(log.contains("Warning:missing_file:mdframed.sty"), "{log}");
+  let xml = squash(&xml);
+  for element in [
+    r#"<p xml:id="p1.1"><text font="bold" xml:id="p1.1.1">Outer Title</text></p> <p xml:id="p1.2">Outer body.</p>"#,
+    r#"<block framed="rectangle" xml:id="p1.3"> <p xml:id="p1.3.1"><text font="bold" xml:id="p1.3.1.1">Outer Title</text></p> <p xml:id="p1.3.2">Inner body.</p> </block>"#,
+    r#"<p xml:id="p2.1"><text font="bold" xml:id="p2.1.1">Preset Title</text></p> <p xml:id="p2.2">Boxed body.</p>"#,
+    r#"<p xml:id="p3.1"><text font="italic" xml:id="p3.1.1">Styled <Math mode="inline" tex="x^{2}""#,
+    r#"</Math> Title</text></p> <p xml:id="p3.2">Third body.</p>"#,
+  ] {
+    assert!(xml.contains(element), "{element}: {xml}");
+  }
+}

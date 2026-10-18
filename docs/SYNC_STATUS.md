@@ -93,7 +93,8 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | 9 | revtex supplement title replaces the paper's | open (design; ruling: keep the MAIN frontmatter) |
 | 10 | deepseek.cls `\correspondingauthor` note, printed only in the title page's `firststyle` footer | FIXED int27 (deepseek_cls.rs: the shipped class loads raw; the note is added where its `\maketitle` selects the footer; 2401.14196) |
 | 11, 23, 24 | class gaps: apa/asmejour/cclayout fields, an.cls `\abstract{}`, aastex `\figcaption` | open (bindings) |
-| 14, 15, 16 | `\refstepcounter` rebinding text, mdframed `frametitle=`, tcolorbox listing title | open |
+| 15 | mdframed `frametitle=` (options, `\newmdenv` presets, `\mdfsetup`) never typeset | FIXED int27 (mdframed_sty.rs: options run as `\mdfsetup` in the frame's group; the title is the frame's first paragraph in `\mdf@frametitlefont`; ~0.07 % of 2401 papers use it; 2401.03158) |
+| 14, 16 | `\refstepcounter` rebinding text, tcolorbox listing title | open |
 | 20, 21, 22 | `\gls` only in display math, biblatex `type=`/`check=` filters, empty `{titlepage}` hiding the title (XSLT) | open |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | open (low reach) |
 
@@ -3680,8 +3681,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   its one documented exception, `cluster_regressions/verb_in_index.tex`, compared without its `<indexmark>`s
   (`STREAMING_DIVERGENT_FIXTURES`, asserted by
   `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries`). Accepted (main session): a
-  document with an unprinted index has no HTML `<meta keywords>`. Open: mdframed's `frametitle=` (mdframed.sty:637-697)
-  is lost — the `{mdframed}` binding reads its options but never runs `\mdfsetup{#1}` (mdframed_sty.rs). Open: cimento.cls `\PACSes`/`\instlist` for papers that do not ship the
+  document with an unprinted index has no HTML `<meta keywords>`. mdframed's `frametitle=` FIXED int27 (the options run as
+  `\mdfsetup` in the frame's group; the title is the frame's first paragraph, mdframed_sty.rs). Open: cimento.cls `\PACSes`/`\instlist` for papers that do not ship the
   class (1012.2907 1208.1260 0907.0634: the binding falls to OmniBus; a stand-in port of cimento's frontmatter is
   needed). Round 4 (review 73a r3, rebased on int23 8fad3f852f): a `{longrotatetable}` caption no `\begin{tabular}`
   took (`tabular*`, `tabularx`, `longtable`, or after the tabular) is set at its end (`\lx@lrt@end@caption`); a kept

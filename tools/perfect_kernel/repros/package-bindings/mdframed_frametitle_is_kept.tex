@@ -1,0 +1,28 @@
+% mdframed sets a `frametitle=` (the env's options, `\newmdenv`'s preset, `\mdfsetup`) in its own box on top of the
+% frame, in `\normalfont\mdf@frametitlefont` (default `\bfseries`, mdframed.sty:702-711, :858-859); a frame nested in a
+% titled one inherits its title, as the keys are set in the frame's group. Kept as the frame's first paragraph.
+% witness: 2401.03158 (`\begin{mdframed}[frametitle={Prompt1}]`); 2401.01508 defines a titled env it never uses
+% oracle:  pdflatex 0 errors: "Outer Title / Outer body. / Outer Title / Inner body. / Preset Title / Boxed body. /
+%          Styled x2 Title / Third body."
+% engines: rust 67int28 = 0 errors, 1 warning (the stub notice), every title absent; perl not run
+% expect:  0 errors, 1 warning (mdframed.sty "only minimally stubbed"); each frame's first paragraph is its title
+% status:  RED (67int28) -> GREEN (int27)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mdframed}
+\newmdenv[frametitle=Preset Title]{boxed}
+\begin{document}
+\begin{mdframed}[frametitle=Outer Title,linecolor=red]
+Outer body.
+\begin{mdframed}
+Inner body.
+\end{mdframed}
+\end{mdframed}
+\begin{boxed}
+Boxed body.
+\end{boxed}
+\mdfsetup{frametitlefont=\itshape}
+\begin{mdframed}[frametitle={Styled $x^2$ Title}]
+Third body.
+\end{mdframed}
+\end{document}

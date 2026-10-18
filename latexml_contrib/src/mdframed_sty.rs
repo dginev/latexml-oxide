@@ -57,7 +57,9 @@ LoadDefinitions!({
   // (`\mdf@LoadFile@IfExist`); the `xcolor` key loads xcolor (mdframed.sty:369-380, whose option list is never
   // passed on). Documents and classes draw with the tikz the option loaded (witness 2101.02817:
   // `[framemethod=TikZ]{mdframed}`, then `{tikzpicture}`). The frame drawing itself stays ours, so the other
-  // keys (mdframed.sty defines them in family `mdf`) are accepted and dropped, here and in `\mdfsetup`.
+  // keys (mdframed.sty defines them in family `mdf`) are accepted and dropped, here and in `\mdfsetup` — but for the
+  // frame title's (mdframed.sty:234-256 `frametitle`, `firstframetitle`, `frametitlefont` = `\normalfont\bfseries`,
+  // `frametitlealignment`), which `\lx@mdf@frametitle` sets as the frame's first paragraph.
   RawTeX!(
     r"\def\mdf@LoadFile@IfExist#1{\IfFileExists{#1.sty}{\RequirePackage{#1}}{\PackageWarning{mdframed}{The file #1
  does not exist\MessageBreak but needed by mdframed}}}
@@ -70,6 +72,11 @@ LoadDefinitions!({
 \DeclareVoidOption{pstricks}{\setkeys{mdf}{framemethod=pstricks}}
 \DeclareVoidOption{PSTricks}{\setkeys{mdf}{framemethod=pstricks}}
 \define@key{mdf}{xcolor}[]{\RequirePackage{xcolor}}
+\def\mdf@frametitle{}\def\mdf@firstframetitle{}\def\mdf@frametitlefont{\normalfont\bfseries}\def\mdf@frametitlealignment{}
+\define@key{mdf}{frametitle}{\def\mdf@frametitle{#1}}
+\define@key{mdf}{firstframetitle}{\def\mdf@firstframetitle{#1}}
+\define@key{mdf}{frametitlefont}{\def\mdf@frametitlefont{#1}}
+\define@key{mdf}{frametitlealignment}{\def\mdf@frametitlealignment{#1}}
 \kv@set@family@handler{mdf}{}
 \DeclareDefaultOption{}
 \ProcessKeyvalOptions*\relax"
@@ -138,7 +145,9 @@ LoadDefinitions!({
     r"\providecommand\mdf@subtitlefont{\normalfont\bfseries}
 \providecommand\mdf@subsubtitlefont{\normalfont}
 \newcommand\mdfsubtitle[2][]{\par\noindent{\mdf@subtitlefont #2}\par}
-\newcommand\mdfsubsubtitle[2][]{\par\noindent{\mdf@subsubtitlefont #2}\par}"
+\newcommand\mdfsubsubtitle[2][]{\par\noindent{\mdf@subsubtitlefont #2}\par}
+\def\lx@mdf@frametitle{\ifdefempty{\mdf@firstframetitle}{}{\let\mdf@frametitle\mdf@firstframetitle}%
+  \ifdefempty{\mdf@frametitle}{}{{\mdf@frametitlealignment\leavevmode\normalfont\mdf@frametitlefont{\mdf@frametitle}\par}}}"
   );
   def_macro_noop("\\mdfapptodefinestyle{}{}")?;
   // mdframed.sty:386 `\mdfsetup` = `\kvsetkeys{mdf}`: a `framemethod` set there loads its package too.
@@ -161,8 +170,13 @@ LoadDefinitions!({
   // Guards: `perfect_kernel_batch56::mdframed_inside_low_level_list_keeps_items`,
   // `perfect_kernel_gemini::{mdframed_block_bibliography_juradiss, mdframed_in_float_and_nested}`.
   // The options are keys (mdframed.sty:835-837 `\newenvironment{mdframed}[1][]{…
-  // \mdfsetup{userdefinedwidth=\linewidth,#1}`), read undigested: digested, a colour named `chinese_red` erred
-  // (2408.09945); not run, so a `frametitle=` is lost (docs/SYNC_STATUS.md 73a row). Guard: `perfect_kernel_batch73a::mdframed_options_are_not_typeset`.
+  // \mdfsetup{userdefinedwidth=\linewidth,#1}`), read undigested: digested as text, a colour named `chinese_red` erred
+  // (2408.09945). They run as mdframed runs them, `\mdfsetup` in the frame's group, so a key the binding defines takes
+  // effect there and in frames nested inside (an inner frame shows the outer `frametitle`, as pdflatex does); the others
+  // are dropped by the family's handler. Then the title, which mdframed sets in its own box on top of the frame
+  // (`\mdfframedtitleenv`, mdframed.sty:702-711, :858-859: `\mdf@frametitlealignment`, `\normalfont\mdf@frametitlefont`),
+  // is the body's first paragraph; it was lost with 0 errors (silent-loss inventory #15). Guards:
+  // `perfect_kernel_batch73a::mdframed_options_are_not_typeset`, `perfect_kernel_batch74b::mdframed_frametitle_is_kept`.
   DefEnvironment!(
     "{mdframed} OptionalUndigested",
     sub[document, _args, props] {
@@ -176,6 +190,14 @@ LoadDefinitions!({
         insert_block(document, body, attrs)?;
       }
       Ok(())
+    },
+    after_digest_begin => sub[whatsit] {
+      let mut toks = vec![T_CS!("\\mdfsetup"), T_BEGIN!()];
+      if let Some(options) = whatsit.get_arg(1) {
+        toks.extend(options.revert()?.unlist());
+      }
+      toks.extend([T_END!(), T_CS!("\\lx@mdf@frametitle")]);
+      unread(Tokens::new(toks));
     },
     properties => sub[_args] {
       let mut props = SymHashMap::default();
