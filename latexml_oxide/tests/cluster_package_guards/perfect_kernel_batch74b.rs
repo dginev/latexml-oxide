@@ -381,3 +381,28 @@ fn aastex_figcaption_outside_a_figure_is_its_caption() {
     "{xml}"
   );
 }
+
+/// A glossary entry used only in display math is listed: its location-only reference goes in a `ltx:text` of the
+/// equation after the formula (glossaries_sty.rs `\lx@glossaries@glsadd`; silent-loss inventory #20).
+#[test]
+fn gls_only_in_display_math_is_listed() {
+  let (log, xml, (html, post_log)) = latexml::util::test::convert_bytes_files_then(
+    include_bytes!(
+      "../../../tools/perfect_kernel/repros/index-bib/gls_only_in_display_math_is_listed.tex"
+    ),
+    &[],
+    Some("ar5iv.sty"),
+    |xml, source_dir| {
+      super::perfect_kernel_batch64zf::post_logged(xml, source_dir.to_str().expect("a UTF-8 path"))
+    },
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(error_count(&post_log), 0, "{post_log}");
+  assert!(
+    squash(&xml).contains(r#"<text font="italic" xml:id="S0.E1.1"><glossaryref inlist="main" key="energy" show="none"/></text> </equation>"#),
+    "{xml}"
+  );
+  for description in ["the energy of the system", "the mass"] {
+    assert!(html.contains(description), "{description}: {html}");
+  }
+}

@@ -10857,7 +10857,7 @@ error). In the body `\glsadd` opens a
 paragraph in vertical mode as LaTeX's `\@gls@adjustmode` (`\ifvmode\mbox{}\fi`, glossaries.sty:5294)
 does. In math (batch 56jt) the reference is placed where a `^` float puts an element, at the
 nearest enclosing level that admits it, after the formula (the `p` of inline math); a display
-formula has no such level, so there none is made (SYNC_STATUS). The `\@gls@link` wrap in math is
+formula's `ltx:equation` admits no bare inline element but admits `ltx:text`, so there the reference goes in an `ltx:text` of the equation (int27; guards `perfect_kernel_batch74b::gls_only_in_display_math_is_listed`, `stream_a_recall::gls_in_an_alignment_leaves_the_formulae_alone`) — before, none was made and an entry named only in display math was not listed. The `\@gls@link` wrap in math is
 the original alone plus that reference: the wrap there was an `XMText` atom of the formula,
 spelling `\lx@glossaries@gls@link{…}` in `alttext`/`tex=` (KNOWN_PERL_ERRORS #276). After
 glossaries-extra loads, the binding's `\@gls@link` wrap is re-applied over

@@ -1,0 +1,21 @@
+% A glossary entry used only in display math is listed in the glossary, as pdflatex lists it: the location-only
+% reference goes in an `ltx:text` of the equation, after the formula (glossaries_sty.rs `\lx@glossaries@glsadd`); the
+% equation admits no bare inline element, so no reference was made and the entry was left out (OD #320 residual).
+% witness: synthetic (silent-loss inventory #20)
+% oracle:  pdflatex 0 errors: "Glossary / E the energy of the system. 1 / m the mass. 1"
+% engines: rust 67int28 = 0 errors, the glossary lists only "m"; perl not run
+% expect:  0 errors; the HTML glossary lists both entries
+% status:  RED (67int28) -> GREEN (int27)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{glossaries}
+\makenoidxglossaries
+\newglossaryentry{energy}{name={E},description={the energy of the system}}
+\newglossaryentry{mass}{name={m},description={the mass}}
+\begin{document}
+Text about \gls{mass}.
+\begin{equation}
+\gls{energy} = 1
+\end{equation}
+\printnoidxglossaries
+\end{document}

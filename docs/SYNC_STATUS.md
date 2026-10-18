@@ -95,9 +95,11 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | 24 | aastex `\figcaption` outside a figure: the text a `<p>`, no caption, no number | FIXED int27 (aas_support_sty.rs `\@figcaption` = a figure with `\caption`, aastex701.cls:8111-8114; astro-ph9806172 0 → 3 captions) |
 | 11, 23 | class gaps: apa/asmejour/cclayout fields, an.cls `\abstract{}` | open (bindings) |
 | 15 | mdframed `frametitle=` (options, `\newmdenv` presets, `\mdfsetup`) never typeset | FIXED int27 (mdframed_sty.rs: options run as `\mdfsetup` in the frame's group; the title is the frame's first paragraph in `\mdf@frametitlefont`; ~0.07 % of 2401 papers use it; 2401.03158) |
-| 14, 16 | `\refstepcounter` rebinding text, tcolorbox listing title | open |
+| 16 | tcolorbox listing title | open, root-caused 2026-10-18 (repros scratch_356a0c47/tcb16/): (a) a `\newtcblisting`'s `title=` is never typeset — `tcb_listing_startend` (tcolorbox_sty.rs) reads the counter, mode and `listing file` keys only (the raw `{tcblisting}` title prints); (b) a raw `{tcblisting}`'s listing is a `lol` float with toccaption `\jobname.listing` although tcolorbox reads it back `nolol` (tcblistings.code.tex:39, :45), and that name prints as text inside a following `\newtcblisting` environment (v6.tex: "x = 1 v6.listing y = 2"); a `nolol` gate in `lst_process_display` does not reach it (the read-back is not `\lstinputlisting`'s branch). Reach: 2 of 3,000 2401 papers use `\newtcblisting` |
+| 14 | `\refstepcounter` rebinding text | open |
 | 22 | an empty `{titlepage}` hiding the document title in HTML (XSLT) | FIXED int27 (OD #761: only a titlepage with ink hides the title) |
-| 20, 21 | `\gls` only in display math, biblatex `type=`/`check=` filters | open |
+| 20 | `\gls` only in display math: entry left out of the glossary | FIXED int27 (glossaries_sty.rs: the location-only reference goes in an `ltx:text` of the `ltx:equation`, after the formula; OD #320 updated) |
+| 21 | biblatex `type=`/`check=` filters | open |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | open (low reach) |
 
 ## Current status

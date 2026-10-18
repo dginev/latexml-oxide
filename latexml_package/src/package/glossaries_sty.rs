@@ -126,10 +126,11 @@ LoadDefinitions!({
   // The location-only reference. Digested in math (a `\gls` or `\glsadd` in a
   // formula), it goes where a `^` float puts an element: the nearest enclosing
   // level that admits it, after the formula (the `p` of inline math). A display
-  // formula has no such level (`ltx:equation` admits no inline element), so there
-  // none is made, rather than an `XMText` in the formula: an entry named only in
-  // display math is not listed (SYNC_STATUS). It reverts to nothing, so the
-  // formula's `tex=` is the term's.
+  // formula's `ltx:equation` admits no bare inline element but admits `ltx:text`,
+  // so there the reference goes in a `ltx:text` of the equation, after the formula,
+  // rather than an `XMText` in it; an entry named only in display math was not
+  // listed (silent-loss inventory #20). It reverts to nothing, so the formula's
+  // `tex=` is the term's.
   DefConstructor!("\\lx@glossaries@glsadd{} ExpandedSemiverbatim",
     sub[document, args, props] {
       let key = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
@@ -138,6 +139,11 @@ LoadDefinitions!({
       if prop_bool!(props, "math") {
         if let Some(save) = document.float_to_element("ltx:glossaryref", false)? {
           document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
+          document.set_node(&save);
+        } else if let Some(save) = document.float_to_element("ltx:text", false)? {
+          document.open_element("ltx:text", None, None)?;
+          document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
+          document.close_element("ltx:text")?;
           document.set_node(&save);
         }
       } else {

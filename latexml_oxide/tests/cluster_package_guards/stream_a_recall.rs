@@ -289,9 +289,10 @@ fn gls_in_math_typesets_the_term_alone() {
 }
 
 /// In an alignment the cells' formulae and the whole-row formula of the
-/// `MathFork` stay clean too: a display level admits no inline element, so no
-/// location-only reference is made there, and neither `\gls` nor a `\glsadd`
-/// inside a macro (`\vx`) leaves an `XMText` atom in any formula.
+/// `MathFork` stay clean too: neither `\gls` nor a `\glsadd` inside a macro
+/// (`\vx`) leaves an `XMText` atom in any formula. The location-only reference
+/// goes in a `ltx:text` of the row's `ltx:equation` (which admits no bare inline
+/// element), so each entry is listed (glossaries_sty.rs; silent-loss inventory #20).
 #[test]
 fn gls_in_an_alignment_leaves_the_formulae_alone() {
   let tex = r"\documentclass{article}
@@ -310,7 +311,12 @@ fn gls_in_an_alignment_leaves_the_formulae_alone() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(!xml.contains("<XMText"), "{xml}");
-  assert!(!xml.contains("<glossaryref"), "{xml}");
+  for key in ["v", "vec"] {
+    let reference =
+      format!(r#"<text font="italic"><glossaryref inlist="main" key="{key}" show="none"/></text>"#);
+    assert_eq!(xml.matches(&reference).count(), 1, "{reference}: {xml}");
+  }
+  assert_eq!(xml.matches("<glossaryref").count(), 2, "{xml}");
   assert_element(
     &xml,
     "Math",
