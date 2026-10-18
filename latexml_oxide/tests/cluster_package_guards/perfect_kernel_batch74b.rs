@@ -1,4 +1,4 @@
-//! Red/green guards for int26, from the silent-loss inventory (agent_reports/2026-10-18_silent_loss_inventory.md) and
+//! Red/green guards for int26 and int27, from the silent-loss inventory (agent_reports/2026-10-18_silent_loss_inventory.md) and
 //! the `undefined:\thetitle` cluster: a frontmatter body still open at `\end{document}` ends there and keeps its text
 //! (sect02.rs `\lx@end@open@frontmatter`; was an empty `<document/>` with 0 errors), and a refused `\title` replays for
 //! its side effects as `\author`'s does (sect05.rs `\title`, the support bindings' `\title`; OXIDIZED_DESIGN #482). Each
@@ -276,4 +276,29 @@ fn keywords_label_inside_abstract_ends_with_it() {
   for text in ["<section", "Body text here."] {
     assert!(after.contains(text), "{text}: {xml}");
   }
+}
+
+/// deepseek.cls prints its `\correspondingauthor` toks only in the title page's footer (`firststyle`, which its
+/// `\maketitle` selects); footers are not set, but the note is frontmatter and is kept (deepseek_cls.rs; 2401.14196).
+#[test]
+fn deepseek_corresponding_author_note_is_kept() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/deepseek_corresponding_author_footer_note.tex"
+    ),
+    &[(
+      "deepseek.cls",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/deepseek.cls"
+      ),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(r#"<creator role="author"> <personname>Ann Author</personname> </creator> <note role="corresponding" xml:id="id1">*Core contributors, ordered alphabetically.</note>"#),
+    "{xml}"
+  );
+  assert!(xml.contains(r#"<p xml:id="p1.1">Body text.</p>"#), "{xml}");
 }

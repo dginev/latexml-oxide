@@ -91,7 +91,8 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | 18 | amsrefs `\bib` keys differing in case merge, one entry lost | honest Error int27 (`scan_bibentries`); keeping both open |
 | 6, 7, 8, 12 | frontmatter store timing / replayed setters / late class `\author` / `\AFF` before `\AUTHOR` | open (synthetic REDs; no paper count) |
 | 9 | revtex supplement title replaces the paper's | open (design; ruling: keep the MAIN frontmatter) |
-| 10, 11, 23, 24 | class gaps: deepseek `\correspondingauthor`, apa/asmejour/cclayout fields, an.cls `\abstract{}`, aastex `\figcaption` | open (bindings) |
+| 10 | deepseek.cls `\correspondingauthor` note, printed only in the title page's `firststyle` footer | FIXED int27 (deepseek_cls.rs: the shipped class loads raw; the note is added where its `\maketitle` selects the footer; 2401.14196) |
+| 11, 23, 24 | class gaps: apa/asmejour/cclayout fields, an.cls `\abstract{}`, aastex `\figcaption` | open (bindings) |
 | 14, 15, 16 | `\refstepcounter` rebinding text, mdframed `frametitle=`, tcolorbox listing title | open |
 | 20, 21, 22 | `\gls` only in display math, biblatex `type=`/`check=` filters, empty `{titlepage}` hiding the title (XSLT) | open |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | open (low reach) |

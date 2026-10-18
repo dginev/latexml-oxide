@@ -629,6 +629,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "cls",
     package::quantumview_cls::load_definitions,
   ),
+  ("deepseek", "cls", package::deepseek_cls::load_definitions),
   ("shapepar", "sty", package::shapepar_sty::load_definitions),
   ("multido", "sty", package::multido_sty::load_definitions),
   ("multirow", "sty", package::multirow_sty::load_definitions),

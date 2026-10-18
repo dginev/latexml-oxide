@@ -1,0 +1,17 @@
+% deepseek.cls prints its `\correspondingauthor` note only in the title page's footer (`firststyle`, selected by
+% `\maketitle`); the note is frontmatter, kept as an `ltx:note` (deepseek_cls.rs).
+% witness: 2401.14196 (`\correspondingauthor{Core contributors, ordered alphabetically by the name.}`)
+% oracle:  pdflatex 0 errors (beside the minimal deepseek.cls); the first page's footer "*Core contributors, ordered alphabetically."
+% engines: rust 67int28 = 0 errors, the note absent; perl not run
+% expect:  0 errors, 0 warnings; <ltx:note role="corresponding">*Core contributors, ordered alphabetically.</ltx:note>
+%          in the document's frontmatter
+% status:  RED (67int28) -> GREEN (int27)
+% preload: ar5iv.sty
+\documentclass{deepseek}
+\title{A Title}
+\author{Ann Author}
+\correspondingauthor{Core contributors, ordered alphabetically.}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
