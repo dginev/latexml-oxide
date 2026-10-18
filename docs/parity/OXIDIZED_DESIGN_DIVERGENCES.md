@@ -20082,10 +20082,12 @@ An abstract (or keywords) is read as a deferred frontmatter body up to its termi
 brace-less `\abstract` no sectioning command ends — that body ran to the end of input: it held the finalizer and the
 rest of the document, and nothing placed it, so the output was an empty `<document/>` with 0 errors (Perl: resources
 only, 1 error). pdflatex prints every word. `\end{document}` now begins with `\lx@end@open@frontmatter` (sect02.rs):
-when the innermost frame is such a body, its terminal is read first, the body ends with its text, and the end-document
-code runs at the document's level, as an unclosed `{itemize}` keeps its list (65c). Diagnostics as pdflatex's: the
+when the nearest open frontmatter body is such a body, its terminal is read first, the body ends with its text (one body
+per pass, so keywords left open inside an abstract end both, int26 review p8), and the end-document code runs at the
+document's level, as an unclosed `{itemize}` keeps its list (65c). Diagnostics as pdflatex's: the
 unclosed `\begin{abstract}` is LaTeX's error (`\@checkend`: "\begin{abstract} … ended by \end{document}"; Perl errs
-too), the unbalanced `\abstract{` reports its open group (`until_terminal_inside_group`), the brace-less form nothing (it
+too), named as the open environment when one is recorded (`current_environment`; else abstract/keywords), and only at the body's own level (an environment
+open inside it, a `{minipage}`, keeps its Warning, as before), the unbalanced `\abstract{` reports its open group (`until_terminal_inside_group`), the brace-less form nothing (it
 has no extent; pdflatex reports nothing). A `\section` after an unclosed `\begin{abstract}` stays inside it, as in the
 PDF — the ruling on a heading inside an abstract is open (SYNC 74a row (b)). KNOWN_PERL_ERRORS #980. Guards
 `perfect_kernel_batch74b::{braceless_abstract_unclosed_at_end_document_keeps_its_text,
@@ -20093,3 +20095,20 @@ braced_abstract_unclosed_at_end_document_keeps_its_text, environment_abstract_un
 repros `sectioning-frontmatter/{braceless,braced}_abstract_unclosed_at_end_document_keeps_the_document`,
 `sectioning-frontmatter/unclosed_abstract_at_end_document_keeps_the_document`.
 **Why**: the status code must be honest (user 2026-10-18): a whole document lost with 0 errors counted as a success.
+
+### 755. A sectioning heading inside an abstract ends the abstract (Perl: an error, the heading nested)
+
+User ruling 2026-10-18: "A \section inside an abstract should close/complete the abstract". `\@startsection` (sect04.rs)
+at section level or above (`\part`, `\chapter`, `\section`, starred or not) first reads `\lx@heading@ends@abstract`
+(sect05.rs): when the nearest open frontmatter body is an abstract, its terminal is read before the heading, so the
+abstract ends with the text before it and the heading starts the body with the text after it — as the brace-less
+`\abstract` already ended at `\@startsection@hook`. The `\end{abstract}` that follows is then a no-op; one a
+heading-ended `\begin{abstract}` never gets is LaTeX's "\begin{abstract} ended by \end{document}" at `\end{document}`
+(sect02.rs `\lx@end@open@frontmatter`). Not inside a replayed class begin code (its `\section*{\abstractname}` is the
+class's own heading, discarded with the replay, #482), and not where a class rebinds `\section` inside the abstract
+(frontiersFPHY's `\absection`: a run-in label, no heading). Lower levels (`\subsection`…`\subparagraph`) do not close
+it; pdflatex sets the heading inside the abstract's text block either way. Perl: `<ltx:section> isn't allowed in
+<ltx:abstract>` (1 error); ours kept it nested, schema-invalid (74a row (b)). Guards
+`perfect_kernel_batch74b::{section_inside_balanced_abstract_closes_it,
+environment_abstract_unclosed_at_end_document_errs_and_keeps_its_text}`; repro
+`sectioning-frontmatter/abstract_section_closes_the_abstract`.

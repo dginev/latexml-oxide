@@ -9,9 +9,9 @@
 % engines: rust 64ze = 0 errors, 2 warnings (unexpected:\end{document}, expected:\lx@end@abstract), `<document/>`;
 %          65c = the same; Perl = 1 error, 2 warnings, a document with only its resources (no text)
 % expect:  1 error (\begin{abstract} ended by \end{document}, as pdflatex and Perl); the abstract with "Abstract only
-%          text.", section 1 "Body" with "Body text." — the section nested in the abstract, as in the PDF, until the
-%          ruling on a heading inside an abstract (SYNC 74a row (b))
-% status:  RED (65c review r2) -> GREEN for content and the error (int26, sect02.rs `\lx@end@open@frontmatter`)
+%          text.", then section 1 "Body" with "Body text." after it (the `\section` closes the abstract, user ruling
+%          2026-10-18; the `\end{abstract}` it still owes is the error)
+% status:  RED (65c review r2) -> GREEN (int26: `\lx@heading@ends@abstract`, `\lx@end@open@frontmatter`)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

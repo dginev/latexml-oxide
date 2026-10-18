@@ -82,7 +82,13 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 ## Open items — detail for the ranked rows
 
 ### R3 — Bibliography-Absence Campaign (PR #444 Residuals)
-- **R3d: Alignment Parameter Scan vs Cell Read Distinction (`suppressed_tab_marks`):**
+- **R3d — RE-MEASURED + CLOSED int26 (agent_reports/2026-10-18_r3d_remeasure.md):** of the 28 papers
+  (`docs/parity/bib_absence_2026-07-29/residual_characterization.tsv.gz`, `\lx@begin@alignment` rows) 27 convert to the
+  end on head with their bibliographies; the last, 2606.03447, was physics' unguarded `[…]` read (KNOWN_PERL_ERRORS
+  #981), fixed in int26 (`phys_read_optional`). The mechanism below was wrong: TeX's `macro_call` does not disable tab
+  marks (that is `read_toks`, tex.web §482); ltcmd's `\group_align_safe_begin:` (latex.ltx:2103-2110) does, so a global
+  guard in `Parameters::read_arguments` would be unfaithful (settled dead end; the 5 regressions were correct).
+- **(historical) R3d: Alignment Parameter Scan vs Cell Read Distinction (`suppressed_tab_marks`):**
   - *Symptom:* An unescaped `&` inside a delimiter-fenced macro argument splits the alignment row and truncates the document (and bibliography). 12 papers remain affected.
   - *Mechanism:* `tex.web` §394 `macro_call` suppresses tab marks while scanning parameters. `SuppressedTabMarks` in [`latexml_core/src/common/local_assignments.rs:194`](../latexml_core/src/common/local_assignments.rs#L194) fixed `physics.sty`'s `\mqty` (14 papers), but applying it globally to `Parameters::read_arguments` regressed 5 tests (`cells_test`, `numprints_test`, `xytest_test`, `consort_flowchart_test`, `unit_tests_by_silviu_test`) because that path also reads alignment cell content.
   - *Action:* Distinguish macro parameter scanning from alignment cell reading in `Parameters::read_arguments` so tab marks inside `{...}` do not split outer cells.
@@ -3844,7 +3850,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     scrartcl 1507.08575 (`\section*{Abstract:}` twice inside `{abstract}`: the second nests in the first); iopart
     1111.0026 (the whole paper inside `{abstract}`); 1404.0027 and 2108.03515 keep a `caption`/`toccaption`/`para` in
     `ltx:block` error (a figure's).
-  - (b) A `\section*` inside a balanced abstract is still kept in place silently by document.rs's sectioning leniency
+  - (b) RULED + FIXED int26 (user 2026-10-18: "A \section inside an abstract should close/complete the abstract";
+    OXIDIZED_DESIGN_DIVERGENCES #755): a section-level heading ends the abstract. Was: a `\section*` inside a balanced abstract is still kept in place silently by document.rs's sectioning leniency
     (`is_lenient_container`; Perl errs `<ltx:section> isn't allowed in <ltx:abstract>`), schema-invalid; a TOC there
     now goes after the abstract. Whether a heading inside an abstract should end it, go after it or stay is a ruling.
   - (c) Review fixes (int25; agent_reports/2026-10-18_74a_review.md NO-SHIP → fixed in the main session): the
@@ -3889,7 +3896,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   2411.17580, 2502.19922, 2503.15412, 2503.23679, 2503.24009, 2506.01799, 2510.03312, 2511.06823, 2511.16669, 2511.18452,
   2602.09494; 0907.1044 3 → 2, its `&` errors left; each gains the title text, `<title>` counts unchanged, its `<ERROR>`
   node gone). 2402.10194 (amsart `\markboth{…}{\thetitle}`, never defined; pdflatex errs too) is an honest author
-  error. Guards `perfect_kernel_batch74b::*`.
+  error. Guards `perfect_kernel_batch74b::*`. Review (agent_reports/2026-10-18_int26_review.md, SHIP) fixes folded in:
+  keywords left open inside an open abstract end both (one body per pass; p8), a `{titlepage}` class `\title` runs
+  once (p10), the error names the open environment when recorded; plus (C) user ruling 2026-10-18 — a section-level
+  heading inside an abstract closes it (OXIDIZED_DESIGN_DIVERGENCES #755; 74a row (b)); (D) physics `[…]` arguments
+  read align-safe (KNOWN_PERL_ERRORS #981, 2606.03447; R3d closed). Open rows from the review: a class `\gdef\Title{#1}`
+  stored by a refused `\title` and printed by the document renders empty (probe p2; pre-existing silent loss — the
+  replay now runs the setter, re-measure before filing); a heading below section level inside an abstract stays
+  inside it (lower levels not covered by ruling 6).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

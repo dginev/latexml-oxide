@@ -1,0 +1,16 @@
+% A package's refused `\title` that typesets, called inside `{titlepage}`: it runs once on the cover
+% (`titlepage_class_run`), and the kernel's part does not replay it again — its counter counts 1, as in pdflatex.
+% witness: int26 review probe p10
+% oracle:  pdflatex 0 errors: "Cover Title" on the cover; "Count is 1."
+% engines: rust int26 first round = "Count is 2." (the replay ran the class \title a second time); 67int26 "Count is 1."
+% expect:  0 errors; "Count is 1."; the cover title printed once
+% status:  RED (int26 r1) -> GREEN (int26 review fixes)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tp}
+\begin{document}
+\begin{titlepage}
+\title{Cover Title}
+\end{titlepage}
+Count is \thetcount.
+\end{document}

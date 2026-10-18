@@ -177,15 +177,15 @@ pub fn local_align_group_count(v: i32) { locals_mut!().align_group_count.push(v)
 pub fn expire_align_group_count() -> Option<i32> { locals_mut!().align_group_count.pop() }
 
 /// Disables tab marks for the lifetime of the guard, restoring the previous
-/// count on drop — `tex.web` §394 `macro_call`:
-///
-/// ```text
-/// align_state:=1000000; {disable tab marks, etc.}
-/// ```
-///
-/// TeX suppresses `&` and `\cr` while it scans a macro's parameters, so a tab
-/// mark inside an argument is an ordinary token. Without that, a `&` in a
-/// **delimiter-fenced** argument reaches the alignment as a cell break: for
+/// count on drop — what ltcmd does around every argument it reads: latex.ltx:2103-2110
+/// (`\__cmd_start:nNNnnn`) opens `\group_align_safe_begin:` (closed at :2128), which raises `align_state`
+/// by the backquote-constant rule (tex.web §442), and physics.sty does it by hand around its fenced reads
+/// (`{\ifnum\z@=`}\fi`, physics.sty:35/74/141). TeX's own `macro_call` (§389-399) does NOT disable tab
+/// marks — the `{disable tab marks, etc.}` of `align_state:=1000000` is `read_toks`, behind `\read`
+/// (tex.web §482) — so a plain macro's delimited argument holding an `&` inside an alignment errs in TeX
+/// too ("Argument of \… has an extra }"); arming this in `Parameters::read_arguments` would be unfaithful.
+/// For an ltcmd/physics reader, without it a `&` in a **delimiter-fenced** argument reaches the alignment as a
+/// cell break: for
 /// `\mqty( b_0 &0 \\ 0 &b_1 )` (physics.sty, witness 2605.05903) the row splits
 /// mid-argument and the alignment then cannot close its own group —
 /// `Error:unexpected:\lx@begin@alignment Attempt to close a group that switched

@@ -195,6 +195,11 @@ pub(crate) fn load() -> Result<()> {
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
       };
+      // At section level or above, a heading inside an abstract ends it first (`\lx@heading@ends@abstract`, sect05.rs;
+      // user ruling 2026-10-18).
+      if level_int <= 1 {
+        tokens.insert(0, T_CS!("\\lx@heading@ends@abstract"));
+      }
       Ok(Tokens::new(tokens))
     },
     locked => true

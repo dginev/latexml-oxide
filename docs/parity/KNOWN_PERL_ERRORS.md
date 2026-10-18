@@ -15748,8 +15748,9 @@ class_newenvironment_abstract_begin_code_runs}`.
 
 ## 980. An abstract left open at `\end{document}` leaves a document of resources only
 
-latex_constructs.pool.ltxml:1136-1143 reads `{abstract}` as a deferred frontmatter body up to `\lx@end@abstract`; left
-open, the body takes the rest of the document and is never placed.
+latex_constructs.pool.ltxml:1130's `\begin{abstract}` reads its body as a deferred frontmatter entry
+(Base_Utility.pool.ltxml:619-628, `\lx@add@frontmatter@until` at :424) up to `\lx@end@abstract`; left open, the body
+takes the rest of the document and is never placed.
 
 Trigger: `\documentclass{article}\begin{document}\begin{abstract}Abstract only text.\section{Body}Body text.
 \end{document}` — pdflatex 1 error ("\begin{abstract} on input line 3 ended by \end{document}"), every word printed;
@@ -15757,3 +15758,15 @@ Perl 1 error, 2 warnings, an output with its resources and no text.
 
 Rust: OXIDIZED_DESIGN_DIVERGENCES #754 (the abstract keeps its text; the error kept). Guards
 `perfect_kernel_batch74b::*abstract_unclosed_at_end_document*`.
+
+## 981. physics `\exp[…]` with an `&` in its optional argument breaks the enclosing alignment row
+
+physics.sty.ltxml:283 reads an operator's `[power]` with a bare `$gullet->readOptional`, so a matrix `&` inside it
+reaches an enclosing `align` as a cell break; physics.sty reads it through ltcmd's `o` argument, align-safe
+(latex.ltx:2103-2110 `\group_align_safe_begin:`; physics.sty:279 `\opbraces{ m g o d() }`).
+
+Trigger: `\usepackage{amsmath,physics}` … `\begin{align} P &= \exp[ - \begin{matrix} a & b \\ c & d \end{matrix} ] \\ Q
+&= 1 \end{align} TAILTEXT` — pdflatex 0 errors; Perl 11 errors and the text after the alignment lost.
+
+Rust: physics_sty.rs `phys_read_optional` (2606.03447). Guard
+`perfect_kernel_batch74b::physics_optional_argument_amp_in_align_keeps_the_rows`.

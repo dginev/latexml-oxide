@@ -984,6 +984,8 @@ pub(crate) fn load() -> Result<()> {
   // (a class `\title` that calls a saved kernel `\title`): the frontmatter takes the title once.
   DefMacro!("\\lx@titlepage@kernel{}", sub[(kernel)] {
     Ok(if lookup_bool("lx_sealed_class_call_reached_kernel") {
+      // (no kernel part, so no replay to take the cover run's mark)
+      AssignValue!("lx_titlepage_class_ran" => false, Some(Scope::Global));
       Tokens::default()
     } else {
       kernel
@@ -1530,7 +1532,7 @@ pub(crate) fn load() -> Result<()> {
   // a paragraph of its own (Perl kept it in the paragraph before, which the cover
   // then moved ahead of the abstract; 59f, OXIDIZED_DESIGN_DIVERGENCES #407).
   DefMacro!(T_CS!("\\begin{abstract}"), None, "\\par\\lx@begin@abstract");
-  DefMacro!(T_CS!("\\end{abstract}"), None, "\\lx@end@abstract");
+  DefMacro!(T_CS!("\\end{abstract}"), None, "\\lx@end@abstract\\lx@abstract@end@seen");
   // If called directly, maybe as
   //   \abstract{text}
   // OR \abstract text \endabstract
@@ -1602,13 +1604,34 @@ pub(crate) fn load() -> Result<()> {
 
   DefMacro!(
     "\\endabstract",
-    "\\lx@end@abstract\\let\\maybe@end@abstract\\relax"
+    "\\lx@end@abstract\\let\\maybe@end@abstract\\relax\\lx@abstract@end@seen"
   );
+  // (the `\end{abstract}` a heading-ended `\begin{abstract}` owes, `\lx@heading@ends@abstract`)
+  DefPrimitive!("\\lx@abstract@end@seen", {
+    assign_value("lx_abstract_owes_end", false, Some(Scope::Global));
+  });
   // A token at the head of a brace-less `\abstract`'s body, read in the frame `\lx@add@frontmatter@until` digests it in:
   // marks that frame as a bare environment's, ended by `\lx@end@abstract`, so the `\endgroup` of an enclosing group
   // meeting it ends the abstract and then its own group (stomach.rs `close_environment_frame`; an Info, as TeX
   // has no mismatch): `\twocolumn[\begin{@twocolumnfalse}\maketitle\abstract … \end{@twocolumnfalse}]`
   // (witness 2305.17823).
+  // A heading at section level or above (`\@startsection`, sect04.rs) inside an abstract ends the abstract there (user
+  // ruling 2026-10-18: "a \section inside an abstract should close/complete the abstract"; Perl errs `<ltx:section>
+  // isn't allowed in <ltx:abstract>`, and ours kept it nested, schema-invalid): the abstract's terminal is read before
+  // the heading, which starts the body with the text after it, as for the brace-less form's `\@startsection@hook`. Not
+  // inside a replayed class code, whose `\section*{\abstractname}` is the class's own heading, discarded with the replay.
+  // A `\begin{abstract}` so ended still owes its `\end{abstract}`: one missing at `\end{document}` is LaTeX's error
+  // (sect02.rs `\lx@end@open@frontmatter`).
+  DefPrimitive!("\\lx@heading@ends@abstract", {
+    if !lookup_bool("lx_replaying_class_setter")
+      && lookup_token("lx@until@terminal") == Some(T_CS!("\\lx@end@abstract"))
+    {
+      if lookup_value("lx@env@bare@end").is_none() && until_body_at_own_level() {
+        assign_value("lx_abstract_owes_end", true, Some(Scope::Global));
+      }
+      unread(Tokens!(T_CS!("\\lx@end@abstract")));
+    }
+  });
   // Before a brace-less `\abstract`'s body: a class's refused begin code is not replayed for it
   // (`\lx@abstract@class@setters`, frontmatter_stores.rs). Without its end code it has no extent in TeX, and its
   // bindings would hold for the rest of the abstract: `\let\section\absection` (frontiersFPHY.cls:520) would disable
@@ -2332,6 +2355,11 @@ fn replay_dropped_class_code(
   {
     return Ok(());
   }
+  // the kernel's part of a `{titlepage}` call whose class `\title` just ran on the cover (`titlepage_class_run`)
+  if call.is_some() && name == "title" && lookup_bool("lx_titlepage_class_ran") {
+    AssignValue!("lx_titlepage_class_ran" => false, Some(Scope::Global));
+    return Ok(());
+  }
   let dropped = T_CS!(s!("\\lx@dropped@{name}"));
   let Some((takes_opt, stores)) = dropped_class_setter(name) else {
     return Ok(());
@@ -2827,6 +2855,9 @@ fn titlepage_class_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Diges
     journal.keep();
   }
   hold.commit();
+  // The class's `\title` ran here and stays run: the kernel's part that follows does not replay it a second time
+  // (`replay_dropped_class_code`; a counter it steps would count twice, int26 review p10).
+  AssignValue!("lx_titlepage_class_ran" => true, Some(Scope::Global));
   if !typesets_content(&digested) {
     return Ok(Vec::new());
   }

@@ -496,18 +496,41 @@ pub(crate) fn load() -> Result<()> {
     if let Some(terminal) = lookup_token("lx@until@terminal")
       && (terminal == T_CS!("\\lx@end@abstract") || terminal == T_CS!("\\lx@end@keywords"))
     {
+      // One body per pass, re-read after its terminal, so keywords left open inside an abstract end both (int26
+      // review p8); a body its terminal did not end (the same depth again) stops the passes.
+      let depth = match lookup_value("lx@until@depth") {
+        Some(Stored::Number(n)) => n.0 + 1,
+        _ => 0,
+      };
+      let last = lookup_int("lx_end_open_frontmatter_depth");
+      if last != 0 && depth >= last {
+        return Ok(Vec::new());
+      }
+      assign_value("lx_end_open_frontmatter_depth", Stored::Int(depth), Some(Scope::Global));
       // An environment's body left open is LaTeX's error (latex.ltx `\@checkend`: "\begin{abstract} on input line …
-      // ended by \end{document}"; Perl errs too). A brace-less `\abstract` has no extent (no diagnostic in pdflatex);
-      // an unbalanced `\abstract{` reports its open group (`until_terminal_inside_group`).
+      // ended by \end{document}"; Perl errs too), named as the open environment when one is recorded. A brace-less
+      // `\abstract` has no extent (no diagnostic in pdflatex); an unbalanced `\abstract{` reports its open group
+      // (`until_terminal_inside_group`).
       if lookup_value("lx@env@bare@end").is_none() && until_body_at_own_level() {
-        let name = if terminal == T_CS!("\\lx@end@abstract") { "abstract" } else { "keywords" };
+        let open = lookup_string("current_environment");
+        let name = if !open.is_empty() && open != "document" {
+          open
+        } else if terminal == T_CS!("\\lx@end@abstract") {
+          "abstract".to_string()
+        } else {
+          "keywords".to_string()
+        };
         Error!(
           "unexpected",
           "\\end{document}",
           s!("\\begin{{{name}}} ended by \\end{{document}}: the {name} ends here")
         );
       }
-      unread(Tokens!(terminal));
+      unread(Tokens!(terminal, T_CS!("\\lx@end@open@frontmatter")));
+    } else if lookup_bool("lx_abstract_owes_end") {
+      // a `\begin{abstract}` a heading ended (`\lx@heading@ends@abstract`, sect05.rs) whose `\end{abstract}` never came
+      assign_value("lx_abstract_owes_end", false, Some(Scope::Global));
+      Error!("unexpected", "\\end{document}", "\\begin{abstract} ended by \\end{document}");
     }
   });
   DefPrimitive!("\\lx@enddocument@hooks", sub[_args] {
