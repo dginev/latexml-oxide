@@ -406,3 +406,33 @@ fn gls_only_in_display_math_is_listed() {
     assert!(html.contains(description), "{description}: {html}");
   }
 }
+
+/// asmejour's `\keywords`, stored for the abstract's coffin the locked `{abstract}` never builds, are the document's
+/// keywords under the class's label; the class's own date footnote keeps `\date` (asmejour_cls.rs; 2510.10694).
+#[test]
+fn asmejour_keywords_are_kept() {
+  if !latexml::util::test::kpse_has("asmejour.cls") {
+    eprintln!("skipped: asmejour.cls is not installed");
+    return;
+  }
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/asmejour_keywords_kept.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(r#"<keywords name="Keywords: ">alpha, beta</keywords>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"role="footnotetext""#) && xml.contains("Version 2, 1 May 2025</note>"),
+    "{xml}"
+  );
+  assert!(
+    xml.contains("<p xml:id=\"abstract1.1\">Abstract text.</p>"),
+    "{xml}"
+  );
+}

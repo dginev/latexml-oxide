@@ -3,6 +3,7 @@ pub mod algorithmic_sty;
 pub mod amstex_sty;
 pub mod amstex_tex;
 pub mod applemac_def;
+pub mod asmejour_cls;
 pub mod cp852_def;
 pub mod csquotes_def;
 pub mod t5enc_def;
