@@ -1,0 +1,23 @@
+% witness: review of 76a (an \halign macro in scope around a tabbing ran in r1; prelude material before a tabular was dropped)
+% oracle:  pdflatex 0 errors; "TABBING:0." "XYZ" above "p q" "TABULAR:1." (latex.ltx's tabbing is built from boxes and never executes \halign; \@array's \ialign does once, its material typeset in text mode)
+% engines: rust 76a r1 = TABBING:1, the XYZ dropped with a Warning; rust 76a r2 = TABBING:0. XYZ<tabular> TABULAR:1., 0 warnings; perl = not run (its bindings build the tabular without executing \halign, as ours did before 76a)
+% expect:  0 errors, 0 warnings; TABBING:0. and TABULAR:1.; XYZ before the tabular
+% status:  GREEN (76a r2: tabbing's alignment carries ALIGNMENT_WITHOUT_HALIGN; the prelude's material precedes the alignment outside display math; OXIDIZED_DESIGN_DIVERGENCES #760; guards perfect_kernel_batch76a)
+\documentclass{article}
+\makeatletter
+\let\primhalign\halign
+\makeatother
+\newcount\hcount
+\begin{document}
+\begingroup
+\def\halign{\global\advance\hcount1\relax\primhalign}
+\begin{tabbing}
+one \= two \\
+three \> four
+\end{tabbing}
+TABBING:\the\hcount.
+
+\def\halign{\global\advance\hcount1\relax XYZ\primhalign}
+\begin{tabular}{ll} p & q \end{tabular} TABULAR:\the\hcount.
+\endgroup
+\end{document}

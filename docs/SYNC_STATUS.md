@@ -3968,6 +3968,33 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   as listed under (B)-(E); 1507.08575 2 → 0 errors, no empty abstract (2,488 words); 1111.0026 5 → 0, sections
   un-nested.
 
+- **76a** (silent-loss inventory agent_reports/2026-10-18_silent_loss_inventory.md item #19; the run-340
+  `undefined:\@pc@lb` cluster, 27 papers). A document's `\halign` redefinition now runs where an alignment the binding
+  builds reaches `\halign` in TeX (amsmath's environments, every `\ialign`-based one; not `tabbing`, which latex.ltx
+  builds from boxes — its alignment carries `ALIGNMENT_WITHOUT_HALIGN`): `\lx@begin@alignment`'s before-digest
+  (tex_tables.rs `run_halign_redefinition_prelude`) digests a parameterless `\halign` macro whose expansion ends with a
+  constructor declared `halign_primitive` (the primitive under any name, or its pgf SVG stand-in `\lxSVG@halign`) just
+  before the alignment, the final primitive being the alignment already built; any other shape is not run. Typeset
+  material precedes the alignment, except where the alignment is the display itself (`ALIGNMENT_IS_DISPLAY`: TeX's
+  "Improper \halign inside $$'s") — a Warning, dropped; a redefinition's global side effects run once per alignment
+  (TeX's amsmath measuring pass runs them twice) (OXIDIZED_DESIGN_DIVERGENCES #760; Perl never loads cryptocode).
+  cryptocode.sty:950-957 binds `\@pc@lb` and its line-numbering `\\` that way: every pseudocode line after the first
+  had lost its number, silently, and `mode=text` erred. A/B vs 67int28-rel over the 27 papers: Errors 45 → 0 (each
+  paper's `\@pc@lb` plus its cascades; 2107.05054 in TikZ nodes 11 → 0), Fatals 0 → 0, numbered pseudocode lines 145 →
+  1,180 (1804.05141 8 → 217, 2410.11134 95 → 481, 2305.06833 9 → 151), each row its own equation, line numbers in order
+  with `lnstart` honored, words outside math unchanged (the few deltas are rows' text moving into the numbered row's
+  formula); warnings ±: the newly numbered rows add unparsed-math warnings on 2202.07253 (+2), 2305.06833 (+6),
+  2311.03723 (+1), the `\@pc@lb` cascades' drop elsewhere. Six amsmath/tabular-heavy papers without cryptocode
+  (1303.1693, 1408.3693, 1708.04180, 1809.10292, 2008.06429, 2401.14742) byte-identical. Residual: cryptocode's
+  measuring pass sums amsmath's `\maxcolumn@widths`, which the binding leaves empty — one `Warning:expected:<number>`
+  per pseudocode without `width=` (pre-existing). Guards `perfect_kernel_batch76a::{cryptocode_halign_redefinition_numbers_every_line,
+  alignments_after_a_pseudocode_block_are_unaffected, halign_redefinition_runs_for_a_tabular_not_for_a_tabbing,
+  halign_redefinition_not_ending_with_the_primitive_is_not_run,
+  halign_redefinition_material_before_a_display_alignment_is_reported,
+  halign_redefinition_material_before_a_tabular_is_kept, cryptocode_pseudocode_in_a_tikz_node_numbers_every_line}`;
+  repros kernel-alignment/cryptocode_halign_redefinition_numbers_lines RED → GREEN,
+  kernel-alignment/halign_redefinition_skips_tabbing_and_keeps_material.
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
@@ -4082,9 +4109,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   libertinust1math (libertinust1math_sty.rs) — loads xkeyval, etoolbox, amsmath (:7, :75; the 68i residual 2110.09723,
   2201.10869, 2208.02596) and defines its own `\mathbcal`, `\mathbfit`, `\widebar`, `\widecheck`, `\lesssim`,
   `\gtrsim`, `\blacksquare`, `\varkappa`, `\eqdef`, `\cupdot`, `\bigcupdot`, `\oiint` when undefined. Not done:
-  cryptocode `\@pc@lb` (20 papers; cryptocode.sty:950-957 redefines `\halign` to set it and its line-numbering `\\`, and
-  the amsmath binding's alignments never reach `\halign` — also every pseudocode line after the first loses its number,
-  silently; needs a kernel mechanism; repro kernel-alignment/cryptocode_halign_redefinition_numbers_lines RED);
+  cryptocode `\@pc@lb` (cryptocode.sty:950-957 redefines `\halign` to set it and its line-numbering `\\`, and the
+  amsmath binding's alignments never reached `\halign` — also every pseudocode line after the first lost its number,
+  silently: FIXED 76a, the kernel runs the redefinition where `\lx@begin@alignment` starts, OXIDIZED_DESIGN_DIVERGENCES
+  #760; repro kernel-alignment/cryptocode_halign_redefinition_numbers_lines GREEN);
   mathalpha `\mathbcal`/`\mathbscr` (25 papers, discounted: the pre-1.14 mathalfa interface — TL 2025 mathalpha.sty:1107
   defines them only under `oldbold`, and TL 2025 pdflatex errs undefined on 1607.07843, 1612.01166, 1612.06674,
   1703.06879, 1709.03549). KNOWN_PERL_ERRORS #820-#825. Repros package-bindings/{newpxmath_symbol_set,

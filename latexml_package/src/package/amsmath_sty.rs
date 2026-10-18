@@ -60,7 +60,9 @@ fn ams_rearrangeable_bindings(
   mut xml_attributes: HashMap<String, String>,
   redirect_label: bool,
 ) -> Result<()> {
-  let properties = SymHashMap::default();
+  // amsmath.sty `\start@align`, `\start@gather`: the `\halign` is the display itself (`$$\halign`).
+  let mut properties = SymHashMap::default();
+  properties.insert(engine::tex_tables::ALIGNMENT_IS_DISPLAY, Stored::Bool(true));
   // Perl (amsmath.sty.ltxml L123-125):
   //   my $cur_jot = LookupDimension('\jot');
   //   if ($cur_jot && $cur_jot->valueOf != LookupDimension('\lx@default@jot')->valueOf)

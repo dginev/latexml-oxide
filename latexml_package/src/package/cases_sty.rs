@@ -72,6 +72,9 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
     attrs.insert(String::from("rowsep"), cur_jot.to_string());
   }
 
+  // cases.sty:48-75 `$$`…`\halign to \displaywidth`.
+  let mut numcases_properties = SymHashMap::default();
+  numcases_properties.insert(engine::tex_tables::ALIGNMENT_IS_DISPLAY, Stored::Bool(true));
   let alignment = Alignment::new(AlignmentConfig {
     template:        Some(template),
     open_container:  Rc::new(move |document, mut props| {
@@ -113,7 +116,7 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
     }),
     close_column:    Rc::new(|document| document.close_element("ltx:_Capture_")),
     is_math:         true,
-    properties:      SymHashMap::default(),
+    properties:      numcases_properties,
     xml_attributes:  attrs,
   });
   assign_alignment(alignment, None);

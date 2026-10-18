@@ -30,6 +30,107 @@ fn omit_cell_is_text(alignment: &Alignment) -> bool {
   })
 }
 
+/// The alignment property of an alignment set without `\halign` in TeX: latex.ltx's `tabbing` builds each line from
+/// boxes (`\@startline`, `\@stopline`, `\@addfield`) and never executes `\halign`, so a document's `\halign` macro
+/// does not run for it (`run_halign_redefinition_prelude`). Every other alignment `\lx@begin@alignment` starts reaches
+/// `\halign` in TeX.
+pub const ALIGNMENT_WITHOUT_HALIGN: &str = "without_halign";
+
+/// The alignment property of an alignment that is a display by itself in TeX, `$$\halign…$$`: amsmath's align and
+/// gather families (amsmath.sty `\start@align`, `\start@gather`), latex.ltx's `eqnarray`, IEEEtrantools'
+/// `IEEEeqnarray` (IEEEtrantools.sty:2013) and cases.sty's `numcases` (cases.sty:48-75). Material a document's
+/// `\halign` macro typesets before the primitive is an error there (`run_halign_redefinition_prelude`).
+pub const ALIGNMENT_IS_DISPLAY: &str = "display";
+
+/// Whether `token` means the `\halign` primitive, under whatever name a package saved it (cryptocode.sty:950
+/// `\let\@pc@halign\halign`): a constructor declared `halign_primitive`, the primitive itself or a binding's stand-in
+/// that takes its place — inside a pgf picture its SVG matrix `\lxSVG@halign` (`\lxSVG@installcommands` lets `\halign`
+/// to it, pgfsys_latexml_def.rs; Perl pgfsys-latexml.def L59), which a pseudocode in a TikZ node saves instead (witness
+/// 2107.05054).
+fn means_halign_primitive(token: &Token) -> bool {
+  with_meaning(
+    token,
+    |meaning| matches!(meaning, Some(Stored::Constructor(c)) if c.halign_primitive),
+  )
+}
+
+/// Whether the alignment being started (its bindings ran before `\lx@begin@alignment`) carries the boolean `key`.
+fn alignment_property(key: &str) -> bool {
+  lookup_alignment().is_some_and(|alignment| {
+    alignment.alignment_cell().is_some_and(|cell| {
+      matches!(
+        cell.borrow().get_property(key).as_deref(),
+        Some(Stored::Bool(true))
+      )
+    })
+  })
+}
+
+/// Run a document's `\halign` redefinition where an alignment the binding builds would reach `\halign` in TeX: the
+/// `before_digest` of `\lx@begin@alignment`, whose boxes go before the alignment.
+///
+/// amsmath's alignment environments and every `\ialign`-based one (latex.ltx `\@array`, plain `\ialign` =
+/// `\everycr{}\tabskip\z@skip\halign`, `\eqalign`, `\matrix`, `\oalign`, longtable, eqnarray, amscd, blkarray,
+/// IEEEtrantools) execute the token `\halign`, so in TeX a macro `\halign` runs first and the primitive it ends with
+/// starts the alignment. Our bindings build those alignments in Rust (`\lx@begin@alignment`), so the macro's
+/// expansion is digested here, in the group the alignment starts in (TeX's: its definitions last as long), and its
+/// final primitive is the alignment already being built. `tabbing` never reaches `\halign`
+/// ([`ALIGNMENT_WITHOUT_HALIGN`]). Only the conservative shape is run: a parameterless macro whose expansion ends with
+/// the primitive (under any name); one that never reaches it, reaches it only through another macro, or reaches it
+/// mid-expansion is not run at all.
+///
+/// Material the expansion typesets precedes the alignment, as on TeX's list. In display math TeX errs instead ("Improper
+/// \halign inside $$'s", tex.web §774) and deletes it: there it is a Warning and dropped.
+///
+/// cryptocode.sty:950-957 (and its `mode=text` branch :760-770) redefines `\halign` inside `\pseudocode` to bind
+/// `\@pc@lb` to the alignment's `\\` and `\\` to its line-numbering wrapper: without the prelude every line after the
+/// first lost its number and `mode=text` erred `undefined:\@pc@lb` (witnesses 1804.05141, 2106.03626, 2107.06049,
+/// 2108.04600, 2202.07253, 2410.11134). Repro kernel-alignment/cryptocode_halign_redefinition_numbers_lines; guards
+/// `perfect_kernel_batch76a`. OXIDIZED_DESIGN_DIVERGENCES #760.
+fn run_halign_redefinition_prelude() -> Result<Vec<Digested>> {
+  let halign = T_CS!("\\halign");
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&halign) else {
+    return Ok(Vec::new());
+  };
+  if defn.get_num_args() != 0 || !matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(_))) {
+    return Ok(Vec::new());
+  }
+  if alignment_property(ALIGNMENT_WITHOUT_HALIGN) {
+    return Ok(Vec::new());
+  }
+  let mut expansion = defn.invoke(false)?.unlist();
+  while expansion
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    expansion.pop();
+  }
+  match expansion.pop() {
+    Some(last) if means_halign_primitive(&last) => {},
+    _ => return Ok(Vec::new()),
+  }
+  if expansion.iter().any(means_halign_primitive) {
+    return Ok(Vec::new());
+  }
+  let material = digest(Tokens::new(expansion))?;
+  if material.is_skippable() {
+    return Ok(Vec::new());
+  }
+  if alignment_property(ALIGNMENT_IS_DISPLAY) {
+    Warn!(
+      "unexpected",
+      "\\halign",
+      format!(
+        "Improper \\halign inside $$'s: the redefined \\halign typeset material before its display alignment, which \
+         is deleted: {}",
+        material.untex().unwrap_or_default()
+      )
+    );
+    return Ok(Vec::new());
+  }
+  Ok(vec![material])
+}
+
 fn multicolumn_omits(alignment: &Alignment) -> i64 {
   match alignment.get_property(MULTICOLUMN_OMITS).as_deref() {
     Some(Stored::Int(n)) => *n,
@@ -75,6 +176,7 @@ LoadDefinitions!({
         Ok(Tokens!())
       }}},
     sizer => "#alignment",
+    before_digest => sub { run_halign_redefinition_prelude() },
     after_digest => sub[whatsit] {
       bgroup();
       if let Some(alignment) = lookup_alignment() {
@@ -355,6 +457,7 @@ LoadDefinitions!({
 
   // Perl TeX_Tables L159-184: \halign BoxSpecification
   DefConstructor!("\\halign BoxSpecification", "#alignment",
+  halign_primitive => true,
   reversion => sub[whatsit, _args] {
     let mut tks = vec![T_CS!("\\halign")];
     if let Some(spec) = whatsit.get_arg(1) {

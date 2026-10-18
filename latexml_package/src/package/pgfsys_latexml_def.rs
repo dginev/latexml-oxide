@@ -370,6 +370,9 @@ LoadDefinitions!({
   // with transform matrices instead of <ltx:tabular/tr/td>.
   DefConstructor!("\\lxSVG@halign BoxSpecification",
     "#alignment",
+    // It takes the primitive's place (`\lxSVG@installcommands` lets `\halign` to it), so a document's `\halign` macro
+    // saved inside a picture ends with it (tex_tables.rs `run_halign_redefinition_prelude`; witness 2107.05054).
+    halign_primitive => true,
     bounded => true, leave_horizontal => true,
     sizer => sub[whatsit] {
       match whatsit.get_property("alignment").as_deref() { Some(Stored::Digested(alignment_d)) => {

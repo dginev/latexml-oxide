@@ -167,6 +167,8 @@ pub struct ConstructorOptions {
   pub locked:             bool,
   /// alternative (command sequence) name, used for reversion
   pub alias:              Option<String>,
+  /// The constructor is TeX's `\halign` primitive or a binding's stand-in for it ([`Constructor::halign_primitive`]).
+  pub halign_primitive:   bool,
 }
 impl Default for ConstructorOptions {
   fn default() -> Self {
@@ -196,6 +198,7 @@ impl Default for ConstructorOptions {
       alias:              None,
       reversion:          None,
       sizer:              None,
+      halign_primitive:   false,
     }
   }
 }
@@ -249,6 +252,10 @@ pub struct Constructor {
   pub declared_mode:     Option<crate::definition::DeclaredMode>,
   /// The `font` option `def_constructor` compiled into `before_digest` ([`Definition::declared_font`]).
   pub font:              Option<FontDirective>,
+  /// TeX's `\halign` primitive (tex_tables.rs) or a binding's stand-in that takes its place (pgfsys-latexml's SVG
+  /// matrix `\lxSVG@halign`): what a document's `\halign` macro ends with when it is run before an alignment the
+  /// bindings build (latexml_engine tex_tables.rs `run_halign_redefinition_prelude`), under whatever name it was saved.
+  pub halign_primitive:  bool,
 }
 impl Default for Constructor {
   fn default() -> Self {
@@ -270,6 +277,7 @@ impl Default for Constructor {
       sizer:             None,
       declared_mode:     None,
       font:              None,
+      halign_primitive:  false,
     }
   }
 }

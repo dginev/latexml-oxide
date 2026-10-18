@@ -20128,6 +20128,41 @@ environment_abstract_unclosed_at_end_document_errs_and_keeps_its_text, keywords_
 keywords_label_inside_abstract_ends_with_it}`; repros `sectioning-frontmatter/{abstract_section_closes_the_abstract,
 keywords_command_form_ends_at_first_section, class_keywords/keywords_label_inside_abstract_ends_with_it}`.
 
+### 760. A document's `\halign` redefinition runs where a binding's alignment reaches `\halign` (Perl: never runs)
+
+In TeX every amsmath alignment environment and every `\ialign`-based one (latex.ltx `\@array` for array/tabular/
+tabularx, plain `\ialign` = `\everycr{}\tabskip\z@skip\halign`, `\eqalign`, `\matrix`, `\oalign`, eqnarray, longtable,
+amscd, blkarray, IEEEtrantools, numcases) executes the token `\halign`, so a macro `\halign` runs just before the
+primitive it finally reaches. Our bindings build those alignments in Rust (`\lx@begin@alignment`) and never executed
+`\halign`. `\lx@begin@alignment`'s before-digest (tex_tables.rs `run_halign_redefinition_prelude`) now digests the
+redefinition's expansion in the group the alignment starts in, just before it, and treats the primitive it ends with as
+the alignment already being built. latex.ltx's `tabbing` builds its lines from boxes and never executes `\halign`: its
+alignment carries `ALIGNMENT_WITHOUT_HALIGN` (latex_constructs `tabbing_bindings`) and runs no prelude. Only the
+conservative shape runs: a parameterless macro whose expansion ends with a token meaning the primitive — a constructor
+declared `halign_primitive` (core `Constructor::halign_primitive`): the primitive itself under any name (cryptocode.sty:950
+`\let\@pc@halign\halign`) or, inside a pgf picture, its SVG stand-in `\lxSVG@halign`, which `\lxSVG@installcommands` lets
+`\halign` to. A redefinition that does not end with the primitive, reaches it only through another macro (one macro
+level only; pdflatex runs the two-level shape — a deliberate limit, guard
+`halign_redefinition_not_ending_with_the_primitive_is_not_run`), or reaches it in mid-expansion is not run at all. Global
+side effects of a redefinition run once per binding alignment, against TeX's measure-then-set: amsmath's measuring pass
+runs an `align`'s or `gather`'s `\halign` twice. Material the expansion typesets precedes the alignment, as on TeX's
+list (pdflatex typesets it with 0 errors); in math contexts it is digested as math where TeX sets it as text in the
+alignment's `\vcenter` (`aligned`, `matrix`, `split`: content kept, its mode differs). Where the alignment is the display
+itself (`$$\halign`: amsmath's align/gather families, eqnarray, IEEEeqnarray, numcases — `ALIGNMENT_IS_DISPLAY`) TeX
+errs "Improper \halign inside $$'s" and deletes it (tex.web §776 `flush_math`): a Warning names it and it is dropped.
+
+cryptocode.sty:950-957 (and its `mode=text` branch :760-770) redefines `\halign` inside `\pseudocode` to bind `\@pc@lb`
+to the alignment's `\\` and `\\` to its line-numbering wrapper. Without the prelude every pseudocode line after the
+first lost its number, silently, and `mode=text` erred `undefined:\@pc@lb` (its `\@pc@modeend` closes the `{varwidth}`
+holding the text-mode `\@pc@lb` before the wrapper calls it). Run 340: 27 papers with `undefined:\@pc@lb` (witnesses
+1804.05141, 2106.03626, 2107.06049, 2108.04600, 2202.07253; 2107.05054 in TikZ nodes, 11 errors → 0; 2410.11134 95 →
+481 numbered lines): all 27 now 0 Errors, every pseudocode row its own numbered row, words unchanged. Perl does not load
+cryptocode.sty at all (raw loading off), so it has neither the numbering nor the error. Six amsmath/tabular-heavy papers
+without cryptocode convert byte-identically. Guards `perfect_kernel_batch76a::*`; repros
+`kernel-alignment/{cryptocode_halign_redefinition_numbers_lines, halign_redefinition_skips_tabbing_and_keeps_material}`.
+**Why**: the author's content — every line number pdflatex prints — and an error-free log, by the TeX semantics of
+`\halign` rather than a cryptocode special case.
+
 ### 761. Only a titlepage with ink hides the document title in HTML (Perl: any titlepage hides it)
 
 LaTeXML's HTML stylesheet skips the document's `ltx:title` whenever the document has an `ltx:titlepage` child

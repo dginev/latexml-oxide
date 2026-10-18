@@ -1891,6 +1891,8 @@ fn install_eqnarray_alignment(columns: Vec<Cell>, equation_columns: usize) -> Re
   }
   let mut properties = SymHashMap::default();
   properties.insert("preserve_structure", Stored::Bool(true));
+  // latex.ltx `\eqnarray`: `$$\halign to\displaywidth` (IEEEtrantools.sty:2013 alike).
+  properties.insert(crate::tex_tables::ALIGNMENT_IS_DISPLAY, Stored::Bool(true));
   // The columns past the equations' are the number column (latex.ltx:15764), which `\lx@eqnarray@number@check`
   // guards.
   if has_number_column {
@@ -4159,6 +4161,12 @@ fn tabbing_bindings() -> Result<()> {
   let mut xml_attrs = HashMap::default();
   xml_attrs.insert(String::from("class"), String::from("ltx_tabbing"));
 
+  // latex.ltx's tabbing is built from boxes, never `\halign` (tex_tables.rs `ALIGNMENT_WITHOUT_HALIGN`).
+  let mut tabbing_properties = SymHashMap::default();
+  tabbing_properties.insert(
+    crate::tex_tables::ALIGNMENT_WITHOUT_HALIGN,
+    Stored::Bool(true),
+  );
   let alignment = Alignment::new(AlignmentConfig {
     template:        Some(template),
     open_container:  Rc::new(|document, props| {
@@ -4180,7 +4188,7 @@ fn tabbing_bindings() -> Result<()> {
     }),
     close_column:    Rc::new(|document| document.close_element("ltx:td")),
     is_math:         false,
-    properties:      SymHashMap::default(),
+    properties:      tabbing_properties,
     xml_attributes:  xml_attrs,
   });
   assign_alignment(alignment, None);
