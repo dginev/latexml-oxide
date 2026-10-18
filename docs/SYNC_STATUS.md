@@ -84,7 +84,7 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | — | command-form `\keywords` swallowing the document into `<ltx:keywords>` (found by the int26 A/B) | FIXED int26 (OD #755) |
 | 3 | real `\cite`s, empty bibliography (6 papers) | CLOSED stale 2026-10-18 (R3b) |
 | 4 | `&` in a fenced macro argument truncating the document | CLOSED int26 (R3d, KPE #981) |
-| 5 | raw-class off-table title-page stores never typeset (41/3,000 sample papers raw + 22 with a binding) | batch 75a (replay gate reads bodies as TeX runs them, appends to a refused `\maketitle`, wiley/ACM CCS table entries) in review; generic off-table rule open |
+| 5 | raw-class off-table title-page stores never typeset (41/3,000 sample papers raw + 22 with a binding) | FIXED int27 for the replayed shapes (75a r1-r3: the replay gate reads bodies as TeX runs them, a class's append to the refused `\maketitle` extends the class's own, wiley/CSML K11 table entries, a refused setter's record taken out of shared lists; "not replayed" 329 → 52 of the 3,000 sample); open: the generic off-table store rule (75a row (a)) and the vmsta 2018+ record ruling (75a row (e)) |
 | 19 | cryptocode: pseudocode lines after the first lose their numbers; text mode `\@pc@lb` (20 papers) | FIXED int27 (76a: `\halign` redefinition run where binding alignments reach `\halign`; 27 papers 45 E → 0, numbered lines 145 → 1,180) |
 | 13 | floatrow `\floatfoot` in a plain float / a `\DeclareNewFloatType` float lost | FIXED int27 (floatrow_sty.rs `\lx@flrow@plainfoot`); the float itself is kept |
 | 17 | longtable caption row: the cell before `x & \caption` lost | FIXED int27 (kept, LaTeX's "Misplaced \noalign"); other shapes lose nothing |
@@ -4063,6 +4063,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     that replay's own toks/macro tail. Either needs its own A/B counting e-mail, affiliation and orcid occurrences.
     nowfnt (2108.12618, 2308.02698): with its `\author` replay running (#756) pdflatex's author block "Marina Haikin¹,
     Matan Gavish², …" is now typeset beside the creators split "Haikin", "Marina" (row (b)).
+  - (f) RESIDUE (int27 A/B): eas.cls (1512.08933) appends each per-call `\author` name to its own author block and
+    `\address` appends the affiliation mark after it; #759 takes the names out of the deposited block (duplicates of
+    the five creators, 672 → 663 words), the marks stay as a line of bare superscripts "¹,², ³, ⁴, ¹ and ²".
+  **Integration (int27, 2468d4e4b5, binary 67int29):** the silent-loss commits cb964cb607 … 17894c7dd9 + 908281ca98
+  (inventory #10, #11 asmejour, #13, #15, #17, #18 honest Error, #20, #22, #24), 76a 884cfa1943 + review r2
+  bffcf87498, 75a b17c218eed + r2 a59de2000b + r3 3e9c58b1d7, and 2468d4e4b5 (deepseek.cls listed as an author-file
+  stand-in — the one gates failure, `perfect_kernel_batch68d::every_binding_outside_tex_live_is_listed`). Gates on
+  3e9c58b1d7: nextest 6064/6065 (that guard) + cortex 10/10, clippy/rustdoc clean, inits plain=0 latex=0, dump diff
+  empty; on 2468d4e4b5 the batch68d/74b guards 26/26. Population A/B over 1,428 papers (pop67int23.tsv), 67int29 vs
+  67int28: 35 changed, E 5,632 → 5,632, F 15 → 15, 0 worse, words +912; one paper over 1 % word loss, 1512.08933 (row
+  (f), explained). Binding nets 136/136, 0 documents worse than 67int28. Earlier int27 measures: the first 9 commits
+  (i27a) E 5,632 → 5,632, 2 changed (+525 words); 76a 27 `\@pc@lb` papers 45 E → 0, numbered lines 145 → 1,180; 75a
+  r2 over the 3,000 projection sample E 34,993 → 34,981, F 163 → 163, "not replayed" 329 → 52.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
