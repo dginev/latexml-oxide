@@ -20086,10 +20086,15 @@ when the nearest open frontmatter body is such a body, its terminal is read firs
 per pass, so keywords left open inside an abstract end both, int26 review p8), and the end-document code runs at the
 document's level, as an unclosed `{itemize}` keeps its list (65c). Diagnostics as pdflatex's: the
 unclosed `\begin{abstract}` is LaTeX's error (`\@checkend`: "\begin{abstract} … ended by \end{document}"; Perl errs
-too), named as the open environment when one is recorded (`current_environment`; else abstract/keywords), and only at the body's own level (an environment
-open inside it, a `{minipage}`, keeps its Warning, as before), the unbalanced `\abstract{` reports its open group (`until_terminal_inside_group`), the brace-less form nothing (it
-has no extent; pdflatex reports nothing). A `\section` after an unclosed `\begin{abstract}` stays inside it, as in the
-PDF — the ruling on a heading inside an abstract is open (SYNC 74a row (b)). KNOWN_PERL_ERRORS #980. Guards
+too), raised once, on the first pass, naming the innermost environment begun with `\begin` (`\@currenvir`:
+stomach.rs `begun_environment` — `\begin`'s `current_environment`, or `lx@until@begun`, which the kernel's
+`\begin{abstract}`, no environment frame of its own, leaves in its body's frame; the IEEEtran binding's
+`\begin{IEEEkeywords}` now sets `\@currenvir` as `\begin` does), and only at the body's own level (an environment open
+inside it, a `{minipage}`, keeps its Warning, as before). A begin code called as a command opens no environment LaTeX
+checks, so it reports nothing: the brace-less `\abstract`, mn2e's `\keywords{…}`, spconf's `\keywords …` (an int26 A/B
+fix: four papers had gained a spurious Error, 1004.2791, 2201.07008, 2309.07195, 1401.5657); the unbalanced `\abstract{`
+reports its open group (`until_terminal_inside_group`). A heading after an unclosed `\begin{abstract}` ends it (#755).
+KNOWN_PERL_ERRORS #980. Guards
 `perfect_kernel_batch74b::{braceless_abstract_unclosed_at_end_document_keeps_its_text,
 braced_abstract_unclosed_at_end_document_keeps_its_text, environment_abstract_unclosed_at_end_document_errs_and_keeps_its_text}`;
 repros `sectioning-frontmatter/{braceless,braced}_abstract_unclosed_at_end_document_keeps_the_document`,
@@ -20099,10 +20104,16 @@ repros `sectioning-frontmatter/{braceless,braced}_abstract_unclosed_at_end_docum
 ### 755. A sectioning heading inside an abstract ends the abstract (Perl: an error, the heading nested)
 
 User ruling 2026-10-18: "A \section inside an abstract should close/complete the abstract". `\@startsection` (sect04.rs)
-at section level or above (`\part`, `\chapter`, `\section`, starred or not) first reads `\lx@heading@ends@abstract`
-(sect05.rs): when the nearest open frontmatter body is an abstract, its terminal is read before the heading, so the
-abstract ends with the text before it and the heading starts the body with the text after it — as the brace-less
-`\abstract` already ended at `\@startsection@hook`. The `\end{abstract}` that follows is then a no-op; one a
+at section level or above (`\part`, `\chapter`, `\section`, starred or not) first reads `\lx@heading@ends@frontmatter`
+(sect05.rs): when the nearest open frontmatter body is an abstract or keywords, its terminal is read before the heading,
+so the body ends with the text before it and the heading starts the document's body with the text after it — as the
+brace-less `\abstract` already ended at `\@startsection@hook`. Keywords alike (int26 A/B fix round): an environment's
+begin code called as a command has no extent — mn2e.cls:993-1003 and mnras.cls:1122-1131 `\keywords` open a `\list` no
+`\endkeywords` closes, spconf's and ieeeconf's are labels — and the text the author gave it ends where the paper's first
+section begins; read as the open body, the whole document went into `<ltx:keywords>`, every section an Error
+(`<ltx:section> isn't allowed in <ltx:keywords>`, then in `<ltx:section>`): 1004.2791, 2201.07008, 2309.07195 (28
+Errors → 0, words unchanged). A keywords body a command form opened inside the abstract ends with it
+(base_utilities.rs `\lx@end@abstract`; ieeeconf `\begin{abstract} … \keywords \MyKeywords \end{abstract}`, 1401.5657). The `\end{abstract}` that follows is then a no-op; one a
 heading-ended `\begin{abstract}` never gets is LaTeX's "\begin{abstract} ended by \end{document}" at `\end{document}`
 (sect02.rs `\lx@end@open@frontmatter`). Not inside a replayed class begin code (its `\section*{\abstractname}` is the
 class's own heading, discarded with the replay, #482), and not where a class rebinds `\section` inside the abstract
@@ -20113,5 +20124,6 @@ element either (Perl: an empty `ltx:abstract`). Lower levels (`\subsection`…`\
 it; pdflatex sets the heading inside the abstract's text block either way. Perl: `<ltx:section> isn't allowed in
 <ltx:abstract>` (1 error); ours kept it nested, schema-invalid (74a row (b)). Guards
 `perfect_kernel_batch74b::{section_inside_balanced_abstract_closes_it,
-environment_abstract_unclosed_at_end_document_errs_and_keeps_its_text}`; repro
-`sectioning-frontmatter/abstract_section_closes_the_abstract`.
+environment_abstract_unclosed_at_end_document_errs_and_keeps_its_text, keywords_command_form_ends_at_first_section,
+keywords_label_inside_abstract_ends_with_it}`; repros `sectioning-frontmatter/{abstract_section_closes_the_abstract,
+keywords_command_form_ends_at_first_section, class_keywords/keywords_label_inside_abstract_ends_with_it}`.

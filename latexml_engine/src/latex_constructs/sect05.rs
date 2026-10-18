@@ -1531,7 +1531,13 @@ pub(crate) fn load() -> Result<()> {
   // `\list` (article.cls:377-387), `\titlepage`, `\section*` — so text after it is
   // a paragraph of its own (Perl kept it in the paragraph before, which the cover
   // then moved ahead of the abstract; 59f, OXIDIZED_DESIGN_DIVERGENCES #407).
-  DefMacro!(T_CS!("\\begin{abstract}"), None, "\\par\\lx@begin@abstract");
+  DefMacro!(T_CS!("\\begin{abstract}"), None, "\\par\\lx@abstract@begun\\lx@begin@abstract");
+  // An abstract begun with `\begin`: its body's frame records the environment (`lx@until@begun`, read by
+  // `begun_environment`; set by `\lx@abstract@class@setters`, frontmatter_stores.rs, its first token), whose end LaTeX
+  // checks at `\end{document}` or owes after a heading closed it; the command forms do not.
+  DefPrimitive!("\\lx@abstract@begun", {
+    assign_value("lx_abstract_begun", true, Some(Scope::Global));
+  });
   DefMacro!(T_CS!("\\end{abstract}"), None, "\\lx@end@abstract\\lx@abstract@end@seen");
   // If called directly, maybe as
   //   \abstract{text}
@@ -1606,7 +1612,7 @@ pub(crate) fn load() -> Result<()> {
     "\\endabstract",
     "\\lx@end@abstract\\let\\maybe@end@abstract\\relax\\lx@abstract@end@seen"
   );
-  // (the `\end{abstract}` a heading-ended `\begin{abstract}` owes, `\lx@heading@ends@abstract`)
+  // (the `\end{abstract}` a heading-ended `\begin{abstract}` owes, `\lx@heading@ends@frontmatter`)
   DefPrimitive!("\\lx@abstract@end@seen", {
     assign_value("lx_abstract_owes_end", false, Some(Scope::Global));
   });
@@ -1621,15 +1627,20 @@ pub(crate) fn load() -> Result<()> {
   // the heading, which starts the body with the text after it, as for the brace-less form's `\@startsection@hook`. Not
   // inside a replayed class code, whose `\section*{\abstractname}` is the class's own heading, discarded with the replay.
   // A `\begin{abstract}` so ended still owes its `\end{abstract}`: one missing at `\end{document}` is LaTeX's error
-  // (sect02.rs `\lx@end@open@frontmatter`).
-  DefPrimitive!("\\lx@heading@ends@abstract", {
+  // (sect02.rs `\lx@end@open@frontmatter`). Keywords end there alike: an environment's begin code called as a command
+  // has no extent — mn2e.cls:993-1003 `\keywords` opens a `\list` no `\endkeywords` closes, spconf's `\keywords` is a
+  // label — and the text the author gave it ends where the paper's first section begins; read as the open body, the
+  // whole document went into `<ltx:keywords>` (mn2e `\keywords{…}` 1004.2791, mnras `\keywords: …` 2201.07008, spconf
+  // `\keywords …` 2309.07195).
+  DefPrimitive!("\\lx@heading@ends@frontmatter", {
+    let terminal = lookup_token("lx@until@terminal");
     if !lookup_bool("lx_replaying_class_setter")
-      && lookup_token("lx@until@terminal") == Some(T_CS!("\\lx@end@abstract"))
+      && let Some(terminal) = terminal.filter(|t| *t == T_CS!("\\lx@end@abstract") || *t == T_CS!("\\lx@end@keywords"))
     {
-      if lookup_value("lx@env@bare@end").is_none() && until_body_at_own_level() {
+      if terminal == T_CS!("\\lx@end@abstract") && begun_environment().is_some() {
         assign_value("lx_abstract_owes_end", true, Some(Scope::Global));
       }
-      unread(Tokens!(T_CS!("\\lx@end@abstract")));
+      unread(Tokens!(terminal));
     }
   });
   // Before a brace-less `\abstract`'s body: a class's refused begin code is not replayed for it

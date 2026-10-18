@@ -1,9 +1,9 @@
 % Keywords left open inside an abstract left open: at `\end{document}` both bodies end, one per pass
-% (`\lx@end@open@frontmatter`), and keep their text; each open environment is LaTeX's error.
+% (`\lx@end@open@frontmatter`), and keep their text; LaTeX's one error names the innermost open environment.
 % witness: int26 review probe p8
 % oracle:  pdflatex 1 error ("\begin{IEEEkeywords} … ended by \end{document}"); every word printed
 % engines: rust int26 first round = 1 Error, an empty <document/>; 67int26 = 0 errors, an empty <document/>
-% expect:  errors only for the open environments; "Abstract text here.", "alpha, beta" and "Body text here." present
+% expect:  1 error, naming IEEEkeywords (the innermost open environment, as pdflatex); "Abstract text here.", "alpha, beta" and "Body text here." present
 % status:  RED (int26 r1) -> GREEN (int26 review fixes)
 % preload: ar5iv.sty
 \documentclass{IEEEtran}

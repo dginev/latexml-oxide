@@ -92,8 +92,16 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   - *Symptom:* An unescaped `&` inside a delimiter-fenced macro argument splits the alignment row and truncates the document (and bibliography). 12 papers remain affected.
   - *Mechanism:* `tex.web` §394 `macro_call` suppresses tab marks while scanning parameters. `SuppressedTabMarks` in [`latexml_core/src/common/local_assignments.rs:194`](../latexml_core/src/common/local_assignments.rs#L194) fixed `physics.sty`'s `\mqty` (14 papers), but applying it globally to `Parameters::read_arguments` regressed 5 tests (`cells_test`, `numprints_test`, `xytest_test`, `consort_flowchart_test`, `unit_tests_by_silviu_test`) because that path also reads alignment cell content.
   - *Action:* Distinguish macro parameter scanning from alignment cell reading in `Parameters::read_arguments` so tab marks inside `{...}` do not split outer cells.
-- **R3b: No-Diagnostic Chase Candidates (~6 left):**
-  - Remaining papers with real `\cite` calls but empty bibliography: `2605.14990`, `2606.05629` (math-in-body silent drop), `2606.10056`, `2606.17491`, `2606.00231`, `2605.29754`.
+- **R3b — RE-MEASURED + CLOSED 2026-10-18 (agent_reports/2026-10-18_r3b_rootcause.md):** the six "real `\cite`, empty
+  bibliography" papers all keep their bibliographies on 67int27 — 2605.14990 53, 2606.05629 19, 2606.10056 26,
+  2606.17491 30, 2606.00231 31 bibitems, each = pdflatex+bibtex's `.bbl`, 0 E/F (count them in the post-processed
+  output: the core XML's `<bibliography files=…>` is a placeholder latexml_post fills from the `.bib`). 2605.29754
+  comments out biblatex's `\printbibliography` and types its list by hand (kept); its `\cite`s render the keys with
+  `Warning:expected:ids Missing Entry`, as Perl (SHARED, honest; biblatex labels without an `ltx:bibliography` would be
+  a 1-paper surpass, not pursued). Side finding, open: tlp.cls `\maketitle` leaves a group open — a Rust-only
+  `Warning:unexpected:\end{document} … inside a group at level 1` (2606.10056; content intact; suspect the locked
+  `\maketitle` replaying tlp.cls:519-536 `\@ifnextchar [{\m@ketitleone}…` through `\lx@deposit@maketitle`; repro
+  scratch_356a0c47/r3b/repro_tlp/a.tex).
 - **R3g: amsrefs bare `\begin{biblist}` — FIXED (71a):** a `{biblist}` outside `{bibdiv}` opens its own bibliography
   through the backmatter route (amsrefs_sty.rs; KNOWN_PERL_ERRORS #939).
 
@@ -3903,7 +3911,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   read align-safe (KNOWN_PERL_ERRORS #981, 2606.03447; R3d closed). Open rows from the review: a class `\gdef\Title{#1}`
   stored by a refused `\title` and printed by the document renders empty (probe p2; pre-existing silent loss — the
   replay now runs the setter, re-measure before filing); a heading below section level inside an abstract stays
-  inside it (lower levels not covered by ruling 6).
+  inside it (lower levels not covered by ruling 6). (E) A/B fix round: the first int26 A/B (67int27 vs 67int26) gave
+  4 papers a spurious `\begin{keywords} ended by \end{document}` — command forms (mn2e `\keywords{…}` 1004.2791,
+  mnras `\keywords: …` 2201.07008, spconf `\keywords …` 2309.07195, ieeeconf `\keywords` inside `{abstract}`
+  1401.5657) whose body, already on the pushed binary, swallowed the whole document into `<ltx:keywords>` (every
+  section an Error). A section-level heading now ends an open keywords body as it ends an abstract
+  (`\lx@heading@ends@frontmatter`), `\lx@end@abstract` ends a keywords body opened inside the abstract, and the
+  `\end{document}` Error is raised once, naming the innermost environment begun with `\begin` (`begun_environment`;
+  the IEEEtran binding's `\begin{IEEEkeywords}` sets `\@currenvir`), never for a command form: the 4 papers 28 Errors
+  → 0, words unchanged, sections un-nested (OXIDIZED_DESIGN_DIVERGENCES #754/#755). Pre-int26 projection samples
+  held the keywords nesting in 4 + 3 error papers. Guards `perfect_kernel_batch74b::{keywords_command_form_ends_at_first_section,
+  keywords_label_inside_abstract_ends_with_it}`; `keywords_unclosed_inside_unclosed_abstract_keep_their_text` now
+  pins pdflatex's single error.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

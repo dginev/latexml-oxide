@@ -314,8 +314,9 @@ LoadDefinitions!({
   // Kept so user `\def\endIEEEkeywords` can't break env routing. Drivers:
   // 2007.13436, 1812.09324.
   // With LaTeX's group, as `\begin`/`\end` give it: a document's own `\IEEEkeywords` setting the class's
-  // `\@IEEEabskeysecsize\bfseries` kept its fonts to the end of the document (2609.12903, 13235, 16206).
-  DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\begingroup\\IEEEkeywords");
+  // `\@IEEEabskeysecsize\bfseries` kept its fonts to the end of the document (2609.12903, 13235, 16206). And with its
+  // `\@currenvir` (latex.ltx `\begin`), which `\end{document}` checks: one left open is LaTeX's error naming it.
+  DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\begingroup\\lx@setcurrenvir{IEEEkeywords}\\IEEEkeywords");
   DefMacro!(T_CS!("\\end{IEEEkeywords}"),   None, "\\endIEEEkeywords\\endgroup");
 
   // IEEEtai (IEEE Trans. AI) IEEEImpStatement environment — author

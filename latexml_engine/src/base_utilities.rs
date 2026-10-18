@@ -573,7 +573,7 @@ LoadDefinitions!({
     // A body that typesets nothing adds no entry: an abstract (keywords, classification) with no authored content is
     // no frontmatter, whatever ended it — a heading that closed it before its first line (scrartcl's
     // `\begin{abstract}\section*{Abstract:} …`, 1507.08575; user ruling 2026-10-18, sect05.rs
-    // `\lx@heading@ends@abstract`) or an environment left empty (pdflatex prints only its heading).
+    // `\lx@heading@ends@frontmatter`) or an environment left empty (pdflatex prints only its heading).
     if !typesets_content(&digested) {
       frontmatter_remove(&tag, index);
       return Ok(Vec::new());
@@ -1133,7 +1133,17 @@ LoadDefinitions!({
   // Like \let \relax, but \relax not def yet!
   // The until-body terminals: no-ops when the body's loop sees them; inside a
   // nested group they end the body from there (stomach.rs).
+  // A keywords body a command form opened inside the abstract ends with it: ieeeconf's `\keywords` is a label with no
+  // extent (`\begin{abstract} … \keywords \MyKeywords \end{abstract}`, 1401.5657), and read as the open body it kept the
+  // abstract open past its `\end{abstract}`, so the whole document went into `<ltx:keywords>`.
   DefPrimitive!("\\lx@end@abstract", {
+    if lookup_token("lx@until@terminal") == Some(T_CS!("\\lx@end@keywords")) {
+      unread(Tokens!(
+        T_CS!("\\lx@end@keywords"),
+        T_CS!("\\lx@end@abstract")
+      ));
+      return Ok(Vec::new());
+    }
     until_terminal_inside_group(&T_CS!("\\lx@end@abstract"))?;
   });
 

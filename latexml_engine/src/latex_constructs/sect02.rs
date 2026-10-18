@@ -508,18 +508,13 @@ pub(crate) fn load() -> Result<()> {
       }
       assign_value("lx_end_open_frontmatter_depth", Stored::Int(depth), Some(Scope::Global));
       // An environment's body left open is LaTeX's error (latex.ltx `\@checkend`: "\begin{abstract} on input line …
-      // ended by \end{document}"; Perl errs too), named as the open environment when one is recorded. A brace-less
-      // `\abstract` has no extent (no diagnostic in pdflatex); an unbalanced `\abstract{` reports its open group
-      // (`until_terminal_inside_group`).
-      if lookup_value("lx@env@bare@end").is_none() && until_body_at_own_level() {
-        let open = lookup_string("current_environment");
-        let name = if !open.is_empty() && open != "document" {
-          open
-        } else if terminal == T_CS!("\\lx@end@abstract") {
-          "abstract".to_string()
-        } else {
-          "keywords".to_string()
-        };
+      // ended by \end{document}"; Perl errs too), raised once, for the innermost open environment (`\@currenvir`), on
+      // the first pass. A begin code called as a command opens no environment LaTeX checks (`begun_environment`): the
+      // brace-less `\abstract`, mn2e's `\keywords{…}` (1004.2791), spconf's `\keywords …` (2309.07195) — no
+      // diagnostic in pdflatex; an unbalanced `\abstract{` reports its open group (`until_terminal_inside_group`).
+      if last == 0
+        && let Some(name) = begun_environment()
+      {
         Error!(
           "unexpected",
           "\\end{document}",
@@ -528,7 +523,7 @@ pub(crate) fn load() -> Result<()> {
       }
       unread(Tokens!(terminal, T_CS!("\\lx@end@open@frontmatter")));
     } else if lookup_bool("lx_abstract_owes_end") {
-      // a `\begin{abstract}` a heading ended (`\lx@heading@ends@abstract`, sect05.rs) whose `\end{abstract}` never came
+      // a `\begin{abstract}` a heading ended (`\lx@heading@ends@frontmatter`, sect05.rs) whose `\end{abstract}` never came
       assign_value("lx_abstract_owes_end", false, Some(Scope::Global));
       Error!("unexpected", "\\end{document}", "\\begin{abstract} ended by \\end{document}");
     }

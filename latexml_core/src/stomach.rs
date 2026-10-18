@@ -2611,6 +2611,28 @@ pub fn until_body_at_own_level() -> bool {
   }
 }
 
+/// The environment begun with `\begin` that the open until-body is read in — LaTeX's `\@currenvir`, whose end
+/// `\@checkend` checks — or `None` when the body is a begin code called as a command: a bare begin code
+/// (`lx@env@bare@end`), or one whose innermost recorded environment is `{document}` (mn2e `\keywords{…}`,
+/// mn2e.cls:993-1003, opens its body in the document's own environment, which LaTeX never checks against it). The
+/// innermost frame that records an environment names it: `\begin`'s `current_environment`, or `lx@until@begun`, which
+/// the kernel's `\begin{abstract}` (no environment frame of its own) leaves in its body's frame.
+pub fn begun_environment() -> Option<String> {
+  if lookup_value("lx@env@bare@end").is_some() || !until_body_at_own_level() {
+    return None;
+  }
+  for frame in 0..=get_frame_depth() {
+    if is_value_bound("lx@until@begun", Some(frame)) {
+      return Some(lookup_string("lx@until@begun"));
+    }
+    if is_value_bound("current_environment", Some(frame)) {
+      let open = lookup_string("current_environment");
+      return (!open.is_empty() && open != "document").then_some(open);
+    }
+  }
+  None
+}
+
 /// Return the digested `List` after reading and digesting a body from the its Gullet.
 /// The body extends until the current level of boxing or environment is closed.
 /// A bounded body's terminal token (`\lx@add@frontmatter@until`'s

@@ -94,12 +94,19 @@ fn section_inside_balanced_abstract_closes_it() {
   );
 }
 
-/// Keywords left open inside an abstract left open: both bodies end at `\end{document}` and keep their text; each open
-/// environment is an error, pinned by count (int26 review p8; was an empty `<document/>`).
+/// Keywords left open inside an abstract left open: both bodies end at `\end{document}` and keep their text; LaTeX's
+/// one error names the innermost open environment (`\@checkend` against `\@currenvir`, as pdflatex), raised on purpose
+/// and pinned by count (int26 review p8; was an empty `<document/>`).
 #[test]
 fn keywords_unclosed_inside_unclosed_abstract_keep_their_text() {
   let (log, xml) = convert_repro!("keywords_unclosed_inside_unclosed_abstract.tex");
-  assert_eq!(error_count(&log), 2, "{log}");
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert!(
+    log.lines().any(|l| l.starts_with(
+      "Error:unexpected:\\end{document} \\begin{IEEEkeywords} ended by \\end{document}"
+    )),
+    "{log}"
+  );
   for text in ["Abstract text here.", "alpha, beta", "Body text here."] {
     assert!(xml.contains(text), "{text}: {xml}");
   }
@@ -219,4 +226,54 @@ fn abstract_opening_with_a_section_leaves_no_empty_abstract() {
     xml.contains(r#"<p xml:id="Sx2.p1.1">Code is online.</p>"#),
     "{xml}"
   );
+}
+
+/// A begin code called as a command has no extent: mnras's `\keywords{…}` (a `\list` no `\endkeywords` closes) ends
+/// where the paper's first section begins, and the sections are the document's (was the whole document inside
+/// `<ltx:keywords>`, 3 Errors; 1004.2791, 2201.07008, 2309.07195).
+#[test]
+fn keywords_command_form_ends_at_first_section() {
+  let (log, xml) = convert_repro!("keywords_command_form_ends_at_first_section.tex");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"<keywords name="Keywords: ">planets and satellites: interiors </keywords>"#),
+    "{xml}"
+  );
+  let after = xml.split("</keywords>").nth(1).unwrap_or_default();
+  for text in ["<section", "Body text here.", "More text."] {
+    assert!(after.contains(text), "{text}: {xml}");
+  }
+}
+
+/// ieeeconf's `\keywords` inside `{abstract}` is a label: it ends with the abstract, and the section after it is the
+/// document's (was the abstract kept open past its `\end{abstract}`, the whole document inside `<ltx:keywords>`, 3
+/// Errors; 1401.5657).
+#[test]
+fn keywords_label_inside_abstract_ends_with_it() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_keywords/keywords_label_inside_abstract_ends_with_it.tex"
+    ),
+    &[(
+      "ieeeconf.cls",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_keywords/ieeeconf.cls"
+      ),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert!(
+    xml.contains(r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">Abstract text.</p> </abstract>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<keywords name="Index Terms: ">alpha, beta </keywords>"#),
+    "{xml}"
+  );
+  let after = xml.split("</keywords>").nth(1).unwrap_or_default();
+  for text in ["<section", "Body text here."] {
+    assert!(after.contains(text), "{text}: {xml}");
+  }
 }

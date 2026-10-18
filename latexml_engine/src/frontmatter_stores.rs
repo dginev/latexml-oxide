@@ -2206,6 +2206,10 @@ LoadDefinitions!({
     // The body is the abstract's, for [`refused_environment_definition`]: the kernel's abstract is no environment
     // frame (`\@currenvir` stays the enclosing one).
     assign_value("lx_in_kernel_abstract", true, Some(Scope::Local));
+    if lookup_bool("lx_abstract_begun") {
+      assign_value("lx_abstract_begun", false, Some(Scope::Global));
+      assign_value("lx@until@begun", "abstract", Some(Scope::Local));
+    }
     let in_place = lookup_bool("lx_frontmatter_kept_in_place");
     let setters = abstract_setter_definitions();
     // (whether the document defined each before the class's begin code runs: a `\newcommand` there leaves it)

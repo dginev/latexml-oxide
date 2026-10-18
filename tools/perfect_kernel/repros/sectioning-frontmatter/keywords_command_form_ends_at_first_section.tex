@@ -1,0 +1,27 @@
+% An environment's begin code called as a command has no extent: mnras's `\keywords` opens a `\list` no
+% `\endkeywords` closes (mnras.cls:1122-1131, as mn2e.cls:993-1003), so the text the author gave it ends where the
+% paper's first section begins (`\lx@heading@ends@frontmatter`, sect05.rs; user ruling 2026-10-18 for abstracts).
+% witness: 1004.2791 (mn2e `\keywords{…}`), 2201.07008 (mnras `\keywords: …`), 2309.07195 (spconf `\keywords …`)
+% oracle:  pdflatex 0 errors under `onecolumn` (2201.07008; in two columns `\keywords` opens a `\vbox` no end closes and
+%          pdflatex stops at `\end{document}`); "Key words: planets and satellites: interiors", "1 INTRODUCTION"
+% engines: rust 67int27 = the whole document inside <ltx:keywords>, 3 Errors (<ltx:section> isn't allowed in
+%          <ltx:keywords>, then in <ltx:section>) and "\begin{keywords} ended by \end{document}"; perl not run
+% expect:  0 errors, 0 warnings; the keywords hold only their text; the sections are the document's
+% status:  RED (67int27) -> GREEN (int26 A/B fix round)
+% preload: ar5iv.sty
+\documentclass[onecolumn]{mnras}
+\begin{document}
+\title{T}
+\author{A. Author}
+\maketitle
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\keywords{planets and satellites: interiors}
+
+\section{Introduction}
+Body text here.
+
+\section{Method}
+More text.
+\end{document}
