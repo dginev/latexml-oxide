@@ -2203,6 +2203,11 @@ pub fn read_x_token(
               unread_one(token);
               continue;
             }
+            // a stand-in named for the undefined name (`\chapter` in a class without chapters, OXIDIZED_DESIGN #734)
+            if let Some(stand_in) = crate::binding::kernel_autoload::undefined_fallback(&token) {
+              unread_one(stand_in);
+              continue;
+            }
             return Ok(Some(generate_error_stub(&token)?));
           } else {
             return Ok(Some(token));

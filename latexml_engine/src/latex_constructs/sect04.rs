@@ -29,6 +29,33 @@ pub(crate) fn load() -> Result<()> {
   // These are defined in terms of \@startsection so that
   // casual user redefinitions work, too.
   DefMacro!("\\chapter", "\\@startsection{chapter}{0}{}{}{}{}", locked=>true);
+  // The same definition kept under a name of LaTeXML's own: what the "has chapters" step puts back when a binding's
+  // class has chapters, and what a binding that `\let`s to the kernel's chapter reads, whether or not `\chapter`
+  // exists (sect01.rs `settle_chapter_after_class_load`, OXIDIZED_DESIGN #179).
+  DefMacro!("\\lx@kernel@chapter", "\\@startsection{chapter}{0}{}{}{}{}");
+  // …and what the lock puts back in place of a class's own `\chapter` it refused while the class loaded (sect01.rs
+  // `retract_chapter_before_class_load`): a class that defines its `\chapter` may make no chapter counter of LaTeXML's
+  // kind (a `\providecommand\chapter` whose body steps none), so LaTeXML's chapter standing in for it makes its own at
+  // the first call, as report.cls.ltxml's (`undefined:\thechapter` otherwise, KNOWN_PERL_ERRORS #962).
+  DefMacro!("\\lx@kernel@chapter@counted", {
+    if lookup_definition(&T_CS!("\\c@chapter"))?.is_none() {
+      NewCounter!("chapter", "document", idprefix => "Ch");
+    }
+    Ok(Tokens!(T_CS!("\\lx@kernel@chapter")))
+  });
+  // OXIDIZED_DESIGN #734: what a `\chapter` call reads in a class without chapters, where `\chapter` stays undefined
+  // (`\begin{document}` names it as the undefined `\chapter`'s stand-in, sect02.rs). TeX stops there with an
+  // undefined control sequence; LaTeXML keeps the author's chapter, with one Warning per document saying so.
+  DefMacro!("\\lx@chapterless@chapter", {
+    let stood_in = lookup_string("\\chapter:class@stood@in");
+    let message = if stood_in.is_empty() {
+      s!("The class defines no \\chapter, so TeX stops here with an undefined control sequence; LaTeXML's \\chapter is used")
+    } else {
+      // (0909.2812: mn_thesis.cls loads report through mnphd.cls; its binding here is the prefix alternate `mn`)
+      s!("The binding answering class {stood_in} defines no \\chapter; LaTeXML's \\chapter is used")
+    };
+    kernel_chapter_with_warning("undefined", &message)
+  });
 
   // not locked since sometimes redefined as partition?
   DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}");
@@ -653,4 +680,21 @@ pub fn toc_select() -> Result<String> {
     s_depth.push("ltx:bibliography");
   }
   Ok(s_depth.join(" | "))
+}
+
+/// A `\chapter` call TeX would refuse, read as LaTeXML's chapter (OXIDIZED_DESIGN #734, the OD #721 precedent: a TeX
+/// error whose recovery keeps the author's content is a Warning): one Warning per document (`category`, `message`
+/// saying what TeX does there), a chapter counter of its own where the class made none (report.cls.ltxml's, without its
+/// reset of the sections: the class's own numbering stands; Perl's kernel `\chapter` in an article raises
+/// `undefined:\thechapter`, KNOWN_PERL_ERRORS #962), then `\lx@kernel@chapter`. The chapterless class's stand-in
+/// (`\lx@chapterless@chapter`) and jmlr's article `\chapter` (jmlr.cls:743-745 `\artchapter`'s ClassError) read it.
+pub fn kernel_chapter_with_warning(category: &str, message: &str) -> Result<Tokens> {
+  if !lookup_bool("\\chapter:fallback@warned") {
+    assign_value("\\chapter:fallback@warned", true, Some(Scope::Global));
+    Warn!(category, "\\chapter", message);
+  }
+  if lookup_definition(&T_CS!("\\c@chapter"))?.is_none() {
+    NewCounter!("chapter", "document", idprefix => "Ch");
+  }
+  Ok(Tokens!(T_CS!("\\lx@kernel@chapter")))
 }

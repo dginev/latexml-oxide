@@ -15573,3 +15573,21 @@ Rust (72a r5): natbib_sty.rs defines each only where it is undefined. No arXiv w
 it (MRM.cls:3191's `\def\refname{REFERENCES}` follows its NJDnatbib load at :2441-2442, so either order of definition
 heads it "REFERENCES"); the minimal trigger above is the case. Guards
 `perfect_kernel_batch72a::renamed_natbib_copies_take_the_class_options`, `copy_text_defaults_hold`.
+
+## 962. `\chapter` is defined in every class, so a package's `\@ifundefined{chapter}` takes the book branch under article, and a call errs `undefined:\thechapter`
+
+latex_constructs.pool.ltxml:557 `DefMacroI('\chapter', undef, '\@startsection{chapter}{0}{}{}{}{}', locked => 1)`
+defines `\chapter` whatever the class; latex.ltx defines none, and article/scrartcl never do. So every test of it answers
+"defined": natbib-style forks title the bibliography `\chapter*{\bibname}` (bmvc2k_natbib.sty:779, NJDnatbib.sty:1050),
+blindtext's `\blinddocument` makes a chapter. A call in a class without chapters digests the kernel's chapter with no
+chapter counter: 2-3 warnings ("Counter 'chapter' was not defined", "\c@chapter is not a register") and
+`Error:undefined:\thechapter` in its tags, where pdflatex stops at `\chapter` ("Undefined control sequence").
+
+Trigger: `\documentclass{article}\makeatletter\@ifundefined{chapter}{\def\x{S}}{\def\x{C}}\makeatother
+\begin{document}X=\x.\end{document}` — pdflatex "X=S.", Perl 0.8.8 on this host "X=C."; with `\chapter{Intro}` in the
+body, Perl 1 error (`undefined:\thechapter`).
+
+Rust: OXIDIZED_DESIGN #179 (`\chapter` exists only where the class has chapters: cleared before the class loads, so a
+raw class's own `\@ifundefined{chapter}` also says undefined; one "has chapters" test) and #734 (a call reads LaTeXML's
+numbered chapter, with its own counter and one Warning). Guards `perfect_kernel_batch72b::{chapter_exists_where_the_class_has_chapters,
+chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning, a_raw_class_meets_chapter_undefined_while_it_loads}`.

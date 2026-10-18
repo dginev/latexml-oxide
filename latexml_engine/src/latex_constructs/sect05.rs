@@ -225,7 +225,7 @@ pub(crate) fn load() -> Result<()> {
       };
       respell_file_argument(whatsit, 2)?;
       load_class(&class, options, Tokens!())?;
-      sect01::retract_kernel_chapter_if_chapterless()?;
+      settle_chapter_after_class_load()?;
     }
   );
 
@@ -460,7 +460,7 @@ pub(crate) fn load() -> Result<()> {
       let class = requested_class_name(&requested);
       respell_file_argument(whatsit, 1)?;
       load_class_with_options(&class, Tokens!())?;
-      sect01::retract_kernel_chapter_if_chapterless()?;
+      settle_chapter_after_class_load()?;
     }
   );
   // Perl: latex_constructs.pool.ltxml L900-903

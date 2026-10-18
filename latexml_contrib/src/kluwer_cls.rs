@@ -23,8 +23,18 @@ LoadDefinitions!({
   RawTeX!(r"\newif\if@numreferences");
   DeclareOption!("namedreferences", "\\@numreferencesfalse");
   DeclareOption!("numreferences", "\\@numreferencestrue");
+  // :135-136 `\if@chapterdef`, set by the `chapter` option: the class's chapters (:2464-2503 `\newcommand{\chapter}`,
+  // :2704-2708 `\newcounter{chapter}`, `\newcounter{section}[chapter]`, `\thesection` `\thechapter.\arabic{section}`),
+  // so a package's `\@ifundefined{chapter}` and a `\chapter` call see them (OXIDIZED_DESIGN #179 (b): the counter
+  // keeps the kernel's `\chapter`).
+  RawTeX!(r"\newif\if@chapterdef");
+  DeclareOption!("chapter", "\\@chapterdeftrue");
   DeclareOption!(None, {});
   ProcessOptions!();
+  if if_condition(&T_CS!("\\if@chapterdef"))?.unwrap_or(false) {
+    NewCounter!("chapter", "document", idprefix => "Ch");
+    RawTeX!(r"\@addtoreset{section}{chapter}\def\thesection{\thechapter.\arabic{section}}");
+  }
   RawTeX!(
     r"\newcounter{article}
 \newenvironment{article}{\stepcounter{article}}{}

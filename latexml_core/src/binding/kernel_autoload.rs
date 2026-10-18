@@ -108,3 +108,43 @@ pub fn try_refused_environment_definition(token: &Token) -> bool {
     None => false,
   }
 }
+
+thread_local! {
+  /// Has a stand-in been named on this thread ([`name_undefined_fallback`])? Until one is, [`undefined_fallback`]
+  /// answers at once, without spelling a key for every undefined control sequence (expl3-code.tex's load meets
+  /// thousands).
+  static FALLBACK_NAMED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Name `stand_in` as what a use of the undefined `token` reads (`"{cs}:undefined@fallback"`, global), for
+/// [`undefined_fallback`].
+pub fn name_undefined_fallback(token: &Token, stand_in: Token) {
+  FALLBACK_NAMED.with(|named| named.set(true));
+  let key = token.with_cs_name(|cs| format!("{cs}:undefined@fallback"));
+  crate::state::assign_value(
+    &key,
+    crate::state::Stored::Token(stand_in),
+    Some(crate::state::Scope::Global),
+  );
+}
+
+/// Forget that a stand-in was named (`reset_thread_engine`).
+pub fn reset_undefined_fallback() { FALLBACK_NAMED.with(|named| named.set(false)); }
+
+/// The stand-in LaTeXML reads for an undefined `token`, if one is named ([`name_undefined_fallback`]): the name stays
+/// undefined — `\ifdefined`, `\@ifundefined` and `\meaning` see what TeX sees — and a use of it reads the stand-in,
+/// which is responsible for saying that TeX errs there. The class-less `\chapter` is the one named (OXIDIZED_DESIGN
+/// #734, latexml_engine `supply_chapter_fallback`). Asked at the two undefined-CS sites, after [`try_autoload`] and
+/// [`try_refused_environment_definition`]: `Some` ⇒ read the stand-in in place of `token`.
+pub fn undefined_fallback(token: &Token) -> Option<Token> {
+  if !FALLBACK_NAMED.with(std::cell::Cell::get) {
+    return None;
+  }
+  let key = token.with_cs_name(|cs| format!("{cs}:undefined@fallback"));
+  // probe-only: a name never given a stand-in has no interned key
+  crate::common::arena::get(&key)?;
+  match crate::state::lookup_value(&key) {
+    Some(crate::state::Stored::Token(stand_in)) => Some(stand_in),
+    _ => None,
+  }
+}

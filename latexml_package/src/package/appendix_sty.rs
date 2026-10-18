@@ -61,8 +61,11 @@ LoadDefinitions!({
   def_macro_noop("\\appendixpage")?;
   def_macro_noop("\\addappheadtotoc")?;
 
+  // (by the class's chapters, as appendix.sty:38's `\@ifundefined{chapter}` — not a `chapter` counter alone, which
+  // WileyNJD-v2.cls:2410, WileyNJDv5.cls:5728 and MRM.cls:2160 declare with no `\chapter`: "Appendix A";
+  // `state::class_defines_chapter`, OXIDIZED_DESIGN #179)
   DefPrimitive!("\\lx@pp@appendix@begin", {
-    if has_chapter_counter() {
+    if has_chapter_counter() && class_defines_chapter() {
       begin_appendices("chapter");
     } else {
       begin_appendices("section");
@@ -79,7 +82,7 @@ LoadDefinitions!({
 
   // Adjust numbering!!!
   DefPrimitive!("\\lx@pp@subappendix@begin", {
-    if has_chapter_counter() {
+    if has_chapter_counter() && class_defines_chapter() {
       begin_appendices("section");
     } else {
       begin_appendices("subsection");

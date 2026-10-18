@@ -4195,6 +4195,10 @@ fn class_binding_for_path(name: &str) -> Option<&'static str> {
     })
 }
 
+/// Is a class loading now ([`load_class`] entered and not yet returned)? A class's own tests are answered by what it
+/// has defined so far (`state::class_defines_chapter`).
+pub fn class_loading() -> bool { CLASS_LOAD_DEPTH.with(|d| d.get()) > 0 }
+
 /// Load a document class — the `\documentclass` / `\LoadClass` implementation,
 /// port of Perl `Package.pm:LoadClass` L2702-2730.
 ///

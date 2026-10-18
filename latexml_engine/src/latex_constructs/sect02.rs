@@ -355,6 +355,11 @@ pub(crate) fn load() -> Result<()> {
       expire_state_unlocked();
       boxes.push(r?);
     }
+    // The begin-document hooks have run (their tests of `\chapter` got TeX's answer): a `\chapter` the class left
+    // undefined reads LaTeXML's chapter from here, with one Warning (OXIDIZED_DESIGN #734).
+    if first_begin {
+      sect01::supply_chapter_fallback();
+    }
     // Leave the preamble now — AFTER the begindocument hooks (the `\@preamblecmds`
     // point, latex.ltx L9522). This single transition both (a) disables the
     // \@onlypreamble commands, so from here the onlyPreamble guard rejects body-level

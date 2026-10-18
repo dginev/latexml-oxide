@@ -60,6 +60,13 @@ pub fn provide_over_base_class() -> Result<()> {
 LoadDefinitions!({
   // Perl L33: LoadClass('article'). Loaded provide-only (`\compat@loadpackages`), a class is loaded already, and
   // article's numbering and layout are not that class's (`\documentstyle[foobarx]{report}` numbers "1.1", not "1").
+  // Loaded as the fallback the class loader chose for a class with no binding (`fallback_target`, `load_class`), not
+  // as the base of a named binding (bmvc2k_cls.rs, wileynjd_cls.rs): an unknown class may have chapters, so it keeps
+  // the kernel's `\chapter` (OXIDIZED_DESIGN #179 (c), `settle_chapter_after_class_load`) — from article's return on,
+  // so the packages the class's dependency scan loads after it see it too.
+  if lookup_string("fallback_target") == "OmniBus" {
+    assign_value("OmniBus:fallback", true, Some(Scope::Global));
+  }
   if !provide_only() {
     LoadClass!("article");
   }

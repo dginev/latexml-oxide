@@ -34,6 +34,18 @@ LoadDefinitions!({
   // the `\floatconts` family, `enumerate*` (pmlr-sample). Guard:
   // `perfect_kernel_batch54::jmlr_has_the_jmlrutils_surface`.
   RequirePackage!("jmlrutils");
+  // jmlr.cls:743-745 `\artchapter` (`\ClassError{jmlr}{Chapters not permitted in articles}`) with `\let\chapter
+  // \artchapter`, and :950-959 `\jmlrbookcommands`' `\bookchapter`: the class has a `\chapter`, so a package's
+  // `\@ifundefined{chapter}` takes the chapter branch, as in TeX (OXIDIZED_DESIGN #179 (a)). An article's call, which
+  // TeX refuses with the class's error, is LaTeXML's chapter with that error's text as its one Warning (OD #734, the
+  // OD #721 precedent). The class's chapter counter (:732) is made at the call: here the class's appendix is
+  // lettered by section (:950-959 `\artappendix`), not within a chapter.
+  DefMacro!("\\chapter", {
+    kernel_chapter_with_warning(
+      "latex",
+      "Class jmlr Error: Chapters not permitted in articles; LaTeXML's \\chapter is used",
+    )
+  });
 
   // Author block. jmlr.cls L259/374-449:
   //   \author[short]{ \Name{N1} \Email{E1} \\ \Name{N2} \Email{E2}

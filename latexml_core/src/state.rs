@@ -2625,38 +2625,72 @@ fn class_layer_definition(token: &Token) -> bool {
   )
 }
 
-/// Does the document's class define `\chapter`, as the real class's `\@ifundefined{chapter}` sees it (natbib's forks
-/// head the bibliography by it: NJDnatbib.sty:1050, ws-rv-har.sty:676)? A stand-in's copy that (re)declared `\chapter`
-/// (its overlay, or declined by the lock: ws-rv9x6.cls:499 `\newcommand\chapter`, 2301.03442); a definition of the
-/// document's world or a binding's own (`File`, `Document`, `Binding`), or one a raw class gave that the lock refused
-/// (`\chapter:redefined`, sect08.rs); or LaTeXML's kernel `\chapter` under a base class
-/// with chapters (book, report). Not the kernel's, OmniBus's or a counter: WileyNJDv5.cls:5728 and MRM.cls:2160
-/// `\newcounter{chapter}[part]` with no `\chapter` (2609.08425, 2506.14995: "REFERENCES"). Today the kernel's
-/// `\chapter` stays defined under OmniBus (`retract_kernel_chapter_if_chapterless`); where it is retracted, the answer is
-/// `\@ifundefined{chapter}`'s.
+/// The one "has chapters" test (OXIDIZED_DESIGN #179): does the class have chapters, as the real class's
+/// `\@ifundefined{chapter}` sees it? natbib's forks head the bibliography by it (NJDnatbib.sty:1050, ws-rv-har.sty:676),
+/// appendix.sty:38 and titlesec.sty:1526 number by it, and the kernel's `\appendix` numbers within chapters only then
+/// (`begin_appendices`). The answer the "has chapters" step stored after the document's class loaded
+/// (`settle_chapter_after_class_load`, latexml_engine sect01.rs, [`CLASS_HAS_CHAPTERS`]); while a class loads, the
+/// test made now ([`class_has_chapters_now`]), as a class's own `\@ifundefined{chapter}` is answered by what it has
+/// defined so far. Not a `chapter` counter alone: WileyNJDv5.cls:5728 and MRM.cls:2160 `\newcounter{chapter}[part]` with
+/// no `\chapter` (2609.08425, 2506.14995: "REFERENCES"; 2211.16474: "Appendix A").
 pub fn class_defines_chapter() -> bool {
+  if crate::binding::content::class_loading() {
+    class_has_chapters_now()
+  } else {
+    lookup_bool(CLASS_HAS_CHAPTERS)
+  }
+}
+
+/// The value [`class_defines_chapter`] reads once the document's class has loaded.
+pub const CLASS_HAS_CHAPTERS: &str = "\\chapter:class@has@chapters";
+
+/// The "has chapters" test made now (OXIDIZED_DESIGN #179), which `settle_chapter_after_class_load` stores after each
+/// class load: the class has chapters when
+/// - (a) its own code assigned `\chapter`: a meaning other than the kernel's (a raw class's `\providecommand\chapter`, a
+///   binding's own `\chapter`: ws-rv9x6, nic-series, jmlr, kluwer's `chapter` option; a `\let\chapter\artchapter`), a
+///   redefinition the kernel's lock refused (`\chapter:redefined`, state.rs `install_definition`, sect08.rs), or a
+///   stand-in copy's definition its binding's owned name kept aside or declined (pasj00.cls's `\def\chapter`;
+///   ws-rv9x6.cls:499 `\newcommand\chapter`, 2301.03442). A meaning that is undefined, `\relax`
+///   (`\let\chapter\@undefined`; `\csname chapter\endcsname`) or the undefined-error stub of a call is no definition;
+/// - (b) a compiled binding made the chapter counter (`\c@chapter` of LaTeXML's own origin: report, book, memoir…;
+///   Perl's own probe, latex_constructs.pool.ltxml:690). A raw or copy `\newcounter{chapter}` alone is not;
+/// - (c) the class is unknown and OmniBus guesses it (`OmniBus:fallback`: the class loader's fallback, and subfiles,
+///   whose subfiles.cls:38-40 loads the main file's class), as an unknown class may well have chapters: OmniBus
+///   autoloads book.cls on `\thechapter` (arXiv:2602.10407).
+pub fn class_has_chapters_now() -> bool {
+  let (assigned, kernel_kept) = class_chapter_sources();
+  assigned || kernel_kept
+}
+
+/// The two halves of [`class_has_chapters_now`]: whether the class's own code assigned `\chapter` (a), and whether the
+/// class keeps LaTeXML's kernel `\chapter` as a binding's chapters (b) or OmniBus's guess (c).
+pub fn class_chapter_sources() -> (bool, bool) {
   use crate::definition::origin::DefinitionOrigin;
   let chapter = T_CS!("\\chapter");
+  let relax = lookup_meaning(&T_CS!("\\relax"));
+  let meaningful =
+    |meaning: &Stored| !matches!(meaning, Stored::None) && relax.as_ref() != Some(meaning);
   let key = meaning_key(&chapter);
-  if state!()
+  let by_copy = state!()
     .copy_provides_copies
     .iter()
-    .any(|copy| copy.overlay.contains_key(&key) || copy.declined.contains(&key))
-    || lookup_bool("\\chapter:redefined")
-  {
-    return true;
-  }
-  match lookup_meaning(&chapter)
-    .as_ref()
-    .and_then(definition_origin)
-  {
-    None => false,
-    Some(DefinitionOrigin::File | DefinitionOrigin::Document | DefinitionOrigin::Binding) => true,
-    Some(_) => {
-      lookup_meaning(&T_CS!("\\ver@book.cls")).is_some()
-        || lookup_meaning(&T_CS!("\\ver@report.cls")).is_some()
-    },
-  }
+    .any(|copy| copy.declined.contains(&key) || copy.overlay.get(&key).is_some_and(meaningful));
+  let meaning = lookup_meaning(&chapter);
+  let defined = meaning.as_ref().is_some_and(meaningful) && !lookup_bool("\\chapter:error@stub");
+  // the kernel's own meaning (the pool's, or `\lx@kernel@chapter` put back): a class's same-bodied
+  // `\newcommand\chapter{\@startsection{chapter}…}` is the class's
+  let kernels = defined
+    && x_equals(&chapter, &T_CS!("\\lx@kernel@chapter"))
+    && meaning
+      .as_ref()
+      .and_then(definition_origin)
+      .is_some_and(|origin| matches!(origin, DefinitionOrigin::Pool | DefinitionOrigin::Unknown));
+  let assigned = by_copy || lookup_bool("\\chapter:redefined") || (defined && !kernels);
+  let binding_counter = matches!(
+    lookup_meaning(&T_CS!("\\c@chapter")),
+    Some(Stored::Register(ref register)) if register.origin.is_latexml_owned()
+  );
+  (assigned, binding_counter || lookup_bool("OmniBus:fallback"))
 }
 
 /// The meaning the latest stand-in copy of `file` (a file name, `NJDnatbib.sty`) gave `token` in its own code: its

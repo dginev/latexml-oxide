@@ -1,0 +1,16 @@
+% witness: bmvc2k_natbib.sty:779 `\@ifundefined{chapter}` (2412.14509, 2212.00057, 2210.06270, 1501.07873, 2311.17607,
+%          2406.08486); NJDnatbib.sty:1050 under WileyNJD/MRM (2101.06297, 2211.16474, 2411.11493, 2206.08798, 2602.03829,
+%          2408.07575, 2609.08425, 2506.14995)
+% oracle:  pdflatex (bmvc2k.cls of 2412.14509, with its bmvc2k_natbib.sty) 0 errors; "P=S. B=S."
+% engines: rust 67int21 = "P=C. B=C." (the bmvc2k binding loads OmniBus, which kept the kernel \chapter)
+% expect:  0 errors, 0 warnings; paragraph "P=S. B=S."
+% status:  RED (67int21) -> GREEN (72b: OXIDIZED_DESIGN #179 (a)-(c))
+% preload: ar5iv.sty
+\documentclass{bmvc2k}
+\makeatletter
+\@ifundefined{chapter}{\def\p{S}}{\def\p{C}}
+\AtBeginDocument{\@ifundefined{chapter}{\gdef\b{S}}{\gdef\b{C}}}
+\makeatother
+\begin{document}
+P=\p. B=\b.
+\end{document}

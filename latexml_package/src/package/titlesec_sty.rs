@@ -302,7 +302,8 @@ LoadDefinitions!({
   // (regulatory example1/2 -en/-nl; Perl titlesec.sty.ltxml:83 shares the
   // no-op). A kernel sectioning command (locked) keeps its binding; a new
   // one becomes an `\@startsection` heading at the titlesec level, shifted
-  // by one in a chapterless class (LaTeX's own level 0 is `\chapter`). Guard:
+  // by one in a chapterless class (LaTeX's own level 0 is `\chapter`; titlesec.sty:1526 `\@ifundefined{chapter}`,
+  // `state::class_defines_chapter`, not a `chapter` counter alone). Guard:
   // `perfect_kernel_batch54::titleclass_defines_a_new_heading_command`.
   DefPrimitive!("\\titleclass {} [] {} []", sub[(cmd, level, _class, parent)] {
     let Some(cmd) = cmd.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) else {
@@ -325,7 +326,7 @@ LoadDefinitions!({
     if lookup_meaning(&cmd).is_some() {
       return Ok(vec![]); // \section & co keep their (locked) bindings
     }
-    let shift = if has_chapter_counter() { 0 } else { 1 };
+    let shift = if has_chapter_counter() && class_defines_chapter() { 0 } else { 1 };
     def_macro(
       cmd,
       None,
@@ -393,7 +394,11 @@ fn ttl_class_heading(name: &str) -> Tokens {
     _ => None,
   };
   let level = level.unwrap_or_else(|| {
-    let shift = if has_chapter_counter() { 0 } else { 1 };
+    let shift = if has_chapter_counter() && class_defines_chapter() {
+      0
+    } else {
+      1
+    };
     do_expand(Tokenize!(TeXString::assembled(s!(
       "\\csname ttll@{name}\\endcsname"
     ))))

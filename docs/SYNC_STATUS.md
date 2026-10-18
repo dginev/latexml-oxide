@@ -137,6 +137,14 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 4. **`make_sub_collection_documents` returns `vec![]`** (collector.rs:141): `--splitindex`/`--splitbibliography` drop entries past first initial.
 
 ### Corpus Triage Quick Wins
+- **mn_thesis.cls is bound as `mn` (the prefix alternate)** (72b review finding 1): 0909.2812's mn_thesis.cls:36
+  loads mnphd.cls, whose :22 `\LoadClass{report}`; pdflatex 0 errors, six chapters. The class loader's prefix fallback
+  (Perl Package.pm:2700-2716, the same alternate there) picks `mn` (MNRAS) by name for both, so the thesis gets MNRAS's
+  frontmatter guesses and 12 Errors for the thesis class's own macros (`\adviser`, `\graduationdate`, `\makecopyright`,
+  `{dedication}`, `\doublespacing`…); its chapters come from report, which the dependency scan of the shipped classes
+  loads (72b r2: no chapterless Warning). Options for the main session: a prefix alternate only where the shipped class
+  declares that class (`\ProvidesClass`/`\LoadClass` of it), else OmniBus; or read such a class raw under `rawclasses`.
+  Classification: SHARED with Perl.
 - **A paragraph's trailing whitespace: Perl and Rust split its text into different nodes** (56jy; RED repro `tools/perfect_kernel/repros/block-model/paragraph_trim_text_node_split.tex`): both trim with `s/\s+$//` (all Unicode whitespace; TeX_Paragraph.pool.ltxml:184-196, `document.rs` `trim_node_right_whitespace`) and only the last text node. Perl appends the space after a formula with XML::LibXML `appendChild` (Document.pm:1148-1153), which never merges, and a formula's own text with `appendTextNode` (Document.pm:2123, :2133), which merges into the text before it; Rust's `add_child` (xmlAddChild) merges the space, and `replace_node_as_tree` keeps the formula's text a node of its own. `\item $\,$ ` gives Perl `<p>U+2006</p>` (its golden `t/parse/artefacts.xml`), us `<p/>`; `\item A $\,$\par` Perl `A`, us `A `. `cleanup_Math` runs as the Math element closes in both (Document.pm:1239-1248, tex_math.rs:756), so ordering is not the cause. Cosmetic; a faithful fix appends text without merging, which touches many goldens. Where the trim empties the last text node, Rust frees it and Perl keeps it empty, which Perl's `isVAttached` then counts (KNOWN_PERL_ERRORS #311).
 - **Test-suite hygiene (57z)**: the logger echoes through `eprint!` (`logger.rs` `stderr_echo`), so `cargo test` captures every test's log lines with its output (a direct `std::io::stderr()` write bypassed libtest's capture and leaked all of them to the terminal); every passing test that prints `Error:`/`Fatal:` exercises an error path and pins it by count (inventory 2026-09-28: 84 of 3,634 tests; incidental fixture errors removed, loose `> 0`/`contains` checks made exact); the streaming sweeps require each swept fixture to convert error-free (the math sweep has its dispatcher; intentional-error and preload-needing fixtures are excluded); `latexml::util::test::error_count` counts every `Error:<category>:` (`missing_file`, `I/O` were missed). Found by the inventory: LANDED 57aa `expl3/tex_jobname_is_the_jobname` (the dump wrote `\tex_jobname:D`, a `\let` of `\jobname`, by value — empty; now, as Perl's `Lt`, a `\let` copy identical to its source is an alias record re-`\let` at load; copies a preload takes before the job's `\jobname` exists are re-pointed at install, `core_interface::install_jobname`: `\c_sys_jobname_str` is the job name with and without a preload; RUST-ONLY; DUMP_DESIGN "Format"); open: RED `boxes-groups/nicefrac_text_argument_is_text` (nicefrac's parts are text in `\mbox`, the binding digests them in math; PERL-ORIGIN); forest binding gaps `\@escapeifif` (forest.sty:203) and `\forest@file@copy` (:8430), used by forest-index.sty (RUST-ONLY, stub binding), and `\lst@InstallKeywords` (lstmisc.sty:618, lstdoc.sty:178; SHARED) — pinned by `perfect_kernel_batch56::forest_docinput_lstenv_writefile_gobbles_doc_percent`; the parked pTeX-format registers (`\hour`, `\jfam`, `\kanjiskip`, §D9) behind jsarticle/jarticle/otf; tests that still mutate the process env (race under `cargo test`): `117_post_2gib_handoff.rs:82` (`LATEXML_POST_MEM_PARSE_LIMIT`), `118_streaming_split_parity.rs:142-216` (`LATEXML_POST_STREAM_SPLIT`/`_THRESHOLD`), `identity.rs:113` (`SOURCE_DATE_EPOCH`) — migrate to thread-local overrides as `datatool_sty`/`pgfkeys_code_tex::set_native_override`; RED `loader/package_options_keep_protected_macros` (a robust or e-TeX `\protected` macro in a package option is expanded on the option path: pdflatex stores `k=\protect \lxr`, `j=\lxp`; Rust `k=\protect \protectR`, `j=P`; the chinesechess guard `package_options_are_stored_by_protected_xdef` no longer discriminates).
 - **simplebnf-doc warns `unexpected:\fatslash … should only appear in math mode`** (sweep #130, 0 → 1; new since sweep #129): stmaryrd's `\fatslash` (loaded `\AtBeginDocument` with `[only,fatslash]`) inside the manual's tcolorbox `example` re-typesetting (`lx-example-1.tmp`); a minimal `bnf` + stmaryrd probe is clean in both builds and Perl, so the trigger is the example's re-read. Likely 57n's requireMath for every DefMath constructor meeting a text-mode re-read; confirm against Perl on the manual before fixing.
@@ -3547,6 +3555,36 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   new whole-print lifts of title + author (1112.0959 −9 words, 2409.06655 −18: the in-place duplicate of the title the
   frontmatter shows, e.g. 1112.0959's title 2 → 1 occurrence), and 2005.02474 (timeout on both sides, W 6 → 5); nets
   136/136 no worse. Reviews: agent_reports/2026-10-17_fms1_review_r{3,4,5,6}.md.
+
+- **72b** (`\chapter` exists only where the class has chapters; user rulings 2026-10-17: TeX's answer to every
+  `\@ifundefined{chapter}` while the class and packages load, documents that call it still convert, the fallback is
+  LaTeXML's ordinary numbered chapter; rounds 1-2, report agent_reports/2026-10-17_payload_72b.md).
+  (1) OXIDIZED_DESIGN #179 rewritten: `\documentclass` clears the kernel's `\chapter` before the class loads
+  (`retract_chapter_before_class_load`; the lock stays, the binding kept aside, so a raw class's own definition is
+  refused and LaTeXML's chapter stands in its place: scrbook), and after each class load (`\documentclass`, raw
+  `\LoadClass`, a binding's `LoadClass!`) `settle_chapter_after_class_load` makes the one "has chapters" test
+  (`state::class_has_chapters_now`): (a) the class's own code assigned `\chapter` (a meaning not the kernel's, a refusal
+  by the lock, a stand-in copy's overlay or declined definition: pasj00), (b) a compiled binding made `\c@chapter`, (c)
+  OmniBus guesses an unknown class (`OmniBus:fallback`; subfiles). It stores the answer, which
+  `state::class_defines_chapter` returns to natbib's forks, `\appendix`, appendix.sty and titlesec (with the counter).
+  Bindings whose class has chapters define them: ws-rv9x6 (with its counter: 1807.01378), nic-series, jmlr (a call is
+  LaTeXML's chapter with jmlr's ClassError text as the Warning, #735), kluwer `[chapter]`; amsart's `\specialsection`
+  reads `\lx@kernel@chapter`. (2) OXIDIZED_DESIGN #734: at `\begin{document}`, after the begin-document hooks, an
+  undefined `\chapter` gets a stand-in (`kernel_autoload::name_undefined_fallback`, read at the gullet's and stomach's
+  undefined-CS sites): the name stays undefined, a call reads LaTeXML's numbered chapter with a counter of its own and
+  one Warning (worded without a TeX claim when the class was answered by another binding); a preamble call errs as TeX
+  and its error stub is cleared at `\begin{document}` (KNOWN_PERL_ERRORS #962: Perl errs `undefined:\thechapter`).
+  (3) Use-time tests in bindings (tocbibind `\tocbibname`, fancyhdr `\f@nch@initialise`, biblatex's
+  `\printbibliography` heading) unchanged. Witnesses 0907.3938 1403.2269 1511.03874 1606.03650 2504.00704 0909.2812
+  (`undefined:\chapter` gone); 0802.3014 and 1507.01872 call it in preamble package code (pretex's `\UInewAction`), the
+  hep-th phyzzx papers (hep-th9303147 hep-th9308050 hep-th9312154 hep-th9412062) in plain TeX. Round-1 A/B vs 67int21
+  over 188 papers (the 12, 15 ruling witnesses, 100 on OmniBus-based bindings, 50 shipping a `\@ifundefined{chapter}`,
+  17 ws-rv9x6/jmlr/kluwer/pasj00; overlapping): 6 better, 0 worse, 0 new Fatal, 182 byte-identical. Round 2 on top of
+  72a r6: see the report. Repros sectioning-frontmatter/{chapter_undefined_in_a_chapterless_class,
+  chapter_call_in_a_chapterless_class, chapter_undefined_under_an_omnibus_based_binding,
+  chapter_in_the_preamble_errs_and_the_body_chapter_converts, appendix_after_a_chapter_in_a_chapterless_class}; guards
+  `perfect_kernel_batch72b::*`. Open: the LaTeX 2.09 `\documentstyle` path keeps the kernel's `\chapter` in every class;
+  a raw class's own `\chapter` body is LaTeXML's chapter (the lock, as Perl), where TeX typesets the class's.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

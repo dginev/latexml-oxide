@@ -33,28 +33,102 @@ pub(crate) fn make_missing_float_counters() -> Result<()> {
   Ok(())
 }
 
-#[rustfmt::skip]
-/// OXIDIZED_DESIGN #179, the "has chapters" step: after a class has loaded,
-/// the kernel-level `\chapter` (Perl pool:557, locked) is retracted unless
-/// the class made a chapter counter (Perl's own probe, pool:690) or the class
-/// is the OmniBus fallback. Runs at `\documentclass` AND at `\LoadClass`
-/// return (sect05.rs): a class body's probe `\@ifundefined{chapter}` after
-/// its `\LoadClass{article}` (aguplus.cls:524 "figcaps may only be used with
-/// article-like classes") must already see article's answer, as in LaTeX
-/// where article never defines one. The lock is released with the
-/// definition so a class that builds its own chapters afterwards
-/// (source3body.tex:100-123 `\newcounter{chapter}` + `\newcommand\chapter`)
-/// is not "Ignoring redefinition of \chapter" (KNOWN_PERL_ERRORS #141).
-/// Guard: `perfect_kernel_batch56::loadclass_return_retracts_kernel_chapter`.
-pub(crate) fn retract_kernel_chapter_if_chapterless() -> Result<()> {
-  if lookup_definition(&T_CS!("\\c@chapter"))?.is_none()
-    && !lookup_bool("OmniBus.cls_loaded")
-    && !lookup_bool("OmniBus.cls.ltxml_loaded")
+/// OXIDIZED_DESIGN #179, before the document's class loads: the kernel-level `\chapter` (Perl pool:557, locked) is
+/// cleared, as latex.ltx defines none, so the class's own code meets `\chapter` undefined, as in TeX: a raw class's
+/// `\@ifundefined{chapter}` takes the undefined branch and its `\providecommand\chapter` defines. The lock stays, with
+/// the kernel's binding kept aside as for a file's clearing `\let` (`\chapter:locked@cleared`, state.rs `let_i`,
+/// OXIDIZED_DESIGN #569): the class's own definition is refused, the kernel's chapter put back in its place and the
+/// refusal recorded (`\chapter:redefined`, (a) of the "has chapters" test), so a raw class's chapters stay LaTeXML's
+/// `<chapter>` (scrbook.cls, read raw by scrbook_cls.rs). Where the class has chapters by a binding's counter or
+/// OmniBus's guess, [`settle_chapter_after_class_load`] puts the kernel's back (a binding that needs it during its own
+/// load reads `\lx@kernel@chapter`: amsart_cls.rs `\specialsection`).
+pub(crate) fn retract_chapter_before_class_load() {
+  let chapter = T_CS!("\\chapter");
+  // (kept aside: LaTeXML's chapter, with a counter of its own at the first call where the class made none)
+  if lookup_bool("\\chapter:locked")
+    && let Some(binding) = lookup_meaning(&T_CS!("\\lx@kernel@chapter@counted"))
   {
-    let_i(&T_CS!("\\chapter"), &T_CS!("\\@undefined"), Some(Scope::Global));
+    assign_value("\\chapter:locked@cleared", binding, Some(Scope::Global));
+  }
+  assign_meaning(&chapter, Stored::None, Some(Scope::Global));
+  // (a refusal of the class's own `\chapter` by the lock is read after the load)
+  assign_value("\\chapter:redefined", false, Some(Scope::Global));
+  assign_value(CLASS_HAS_CHAPTERS, false, Some(Scope::Global));
+  // (the LaTeX 2.09 `\documentstyle` keeps the kernel's `\chapter` in every class: only a `\documentclass` settles)
+  assign_value("\\chapter:settles", true, Some(Scope::Global));
+}
+
+#[rustfmt::skip]
+/// OXIDIZED_DESIGN #179, the "has chapters" step, after each class load of a `\documentclass` document: the class's
+/// own (`\documentclass`), a raw class's `\LoadClass`/`\LoadClassWithOptions` (sect05.rs) and a binding's `LoadClass!`
+/// (setup_binding_language.rs). It makes the one "has chapters" test (`state::class_has_chapters_now`: (a) the class's
+/// own code assigned `\chapter`, (b) a compiled binding made `\c@chapter`, (c) OmniBus guesses an unknown class) and
+/// stores its answer for `state::class_defines_chapter` — natbib's forks, appendix.sty, titlesec.sty and the kernel's
+/// `\appendix` read it. Where the class has chapters by (b) or (c) and `\chapter` is undefined, the kernel's is put
+/// back, locked (a report-based binding's later code and packages see it); where it has none, `\chapter` is left
+/// undefined and unlocked, so every `\@ifundefined{chapter}` a class or package makes gets TeX's answer: the raw natbib
+/// forks under bmvc2k (bmvc2k_natbib.sty:779) and WileyNJD (NJDnatbib.sty:1050) took the `\chapter*{\bibname}` branch
+/// (2412.14509, 2212.00057, 2210.06270, 1501.07873, 2311.17607, 2406.08486; 2101.06297, 2211.16474, 2411.11493,
+/// 2206.08798, 2602.03829, 2408.07575, 2609.08425, 2506.14995), blindtext's `\blinddocument` made a chapter
+/// (blindtext.sty:243, hvfloat's test documents, coseoul, xassoccnt), and a class body's probe after its
+/// `\LoadClass{article}` (aguplus.cls:524 "figcaps may only be used with article-like classes") saw article's answer.
+/// A class that builds its own chapters afterwards (source3body.tex:100-123 `\newcounter{chapter}` +
+/// `\newcommand\chapter`) is not "Ignoring redefinition of \chapter" (KNOWN_PERL_ERRORS #141). A document that calls
+/// `\chapter` all the same gets LaTeXML's chapter with one Warning (OXIDIZED_DESIGN #734, `\lx@chapterless@chapter`).
+/// Its own removal is no assignment of a stand-in's copy: a copy's `\LoadClass` (tlp) settles outside the copy's
+/// provides-mode.
+/// Guards: `perfect_kernel_batch56::loadclass_return_retracts_kernel_chapter`,
+/// `perfect_kernel_batch72b::chapter_exists_where_the_class_has_chapters`,
+/// `perfect_kernel_batch72b::a_class_has_chapters_when_its_code_defines_chapter`.
+pub fn settle_chapter_after_class_load() -> Result<()> {
+  if !lookup_bool("\\chapter:settles") {
+    return Ok(());
+  }
+  let chapter = T_CS!("\\chapter");
+  let (assigned, kernel_kept) = class_chapter_sources();
+  assign_value(CLASS_HAS_CHAPTERS, assigned || kernel_kept, Some(Scope::Global));
+  if assigned {
+    return Ok(());
+  }
+  let defined = lookup_meaning(&chapter).is_some_and(|m| !matches!(m, Stored::None));
+  let _outside_copy = (definition::origin::copy_provides() != 0)
+    .then(|| definition::origin::CopyProvidesGuard::new(0));
+  if kernel_kept {
+    if !defined {
+      let_i(&chapter, &T_CS!("\\lx@kernel@chapter"), Some(Scope::Global));
+      assign_value("\\chapter:locked", true, Some(Scope::Global));
+    }
+  } else {
+    if defined {
+      let_i(&chapter, &T_CS!("\\@undefined"), Some(Scope::Global));
+    }
     assign_value("\\chapter:locked", false, Some(Scope::Global));
   }
+  // (the kernel's binding is in place or the name is free: nothing kept aside for a refusal to put back)
+  assign_value("\\chapter:locked@cleared", Stored::None, Some(Scope::Global));
   Ok(())
+}
+
+/// OXIDIZED_DESIGN #734: at `\begin{document}`, after the begin-document hooks have run (so a package's
+/// `\AtBeginDocument` test of `\chapter` still gets TeX's answer), a `\chapter` the class left undefined is given
+/// LaTeXML's chapter as its stand-in (`kernel_autoload::name_undefined_fallback`, read where the undefined token is
+/// met). The name stays undefined, so a test made in the body (blindtext.sty:243 `\blinddocument`, hvfloat's test
+/// documents) also gets TeX's answer, while a document that calls `\chapter` converts, with one Warning
+/// (`\lx@chapterless@chapter`). A call made in the preamble or a begin-document hook met the undefined name, as in TeX
+/// (one Error), and left its undefined-error stub: TeX's `\chapter` is still undefined after it, so the stub goes and the
+/// body's call reads the stand-in. Witnesses: 0802.3014, 0909.2812, 0907.3938, 1403.2269, 1507.01872, 1511.03874,
+/// 1606.03650, 2504.00704 (`Error:undefined:\chapter` before).
+/// Guards: `perfect_kernel_batch72b::chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning`,
+/// `perfect_kernel_batch72b::a_preamble_chapter_errs_and_the_body_chapter_reads_the_stand_in`.
+pub(crate) fn supply_chapter_fallback() {
+  let chapter = T_CS!("\\chapter");
+  if lookup_bool("\\chapter:error@stub") {
+    let_i(&chapter, &T_CS!("\\@undefined"), Some(Scope::Global));
+    assign_value("\\chapter:error@stub", false, Some(Scope::Global));
+  }
+  if lookup_meaning(&chapter).is_none_or(|m| matches!(m, Stored::None)) {
+    binding::kernel_autoload::name_undefined_fallback(&chapter, T_CS!("\\lx@chapterless@chapter"));
+  }
 }
 
 pub(crate) fn load() -> Result<()> {
@@ -162,20 +236,18 @@ pub(crate) fn load() -> Result<()> {
       let requested = whatsit.get_arg(2).unwrap().to_string();
       let class_name = sect05::requested_class_name(&requested);
       sect05::respell_file_argument(whatsit, 2)?;
+      retract_chapter_before_class_load();
       load_class(&class_name,
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))?;
-      // OXIDIZED_DESIGN #179: `\chapter` exists only where the class made a
-      // chapter counter. latex.ltx defines no `\chapter`; article/scrartcl
-      // never do, so `\@ifundefined{chapter}` is how packages decide
-      // (blindtext.sty:243 `\blinddocument`, hvfloat's 50 test docs,
-      // coseoul, xassoccnt: the kernel-level `\chapter` — Perl pool:557,
-      // locked — took the chapter branch and every doc errored
-      // `undefined:\thechapter`). The `\c@chapter` probe is Perl's own
-      // "has chapters" test (pool:690). An unknown class (OmniBus fallback)
-      // may well have chapters — OmniBus autoloads book.cls on `\thechapter`
-      // (arXiv:2602.10407) — so it keeps the kernel `\chapter`.
-      retract_kernel_chapter_if_chapterless()?;
+      // OXIDIZED_DESIGN #179: `\chapter` exists only where the class has chapters (`settle_chapter_after_class_load`);
+      // a class answered by a binding not its own (an alternate, a versioned fallback) says so in the chapterless
+      // Warning, as the real class may have chapters (0909.2812: mn_thesis.cls → mnphd.cls → report, bound as `mn`).
+      let base = class_name.rsplit('/').next().unwrap_or(&class_name);
+      if !lookup_bool(&s!("{base}.cls.ltxml_loaded")) && !lookup_bool(&s!("{base}.cls_raw_loaded")) {
+        assign_value("\\chapter:class@stood@in", class_name.clone(), Some(Scope::Global));
+      }
+      settle_chapter_after_class_load()?;
       make_missing_float_counters()?;
       Ok(())
   });

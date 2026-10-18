@@ -95,9 +95,18 @@ macro_rules! RequirePackage {
 }
 #[macro_export]
 #[rustfmt::skip] // arms carry edition-2024 `:expr_2021` markers that push past 100 cols
+/// A binding's class load, then the "has chapters" step for it, as at a raw class's `\LoadClass` return
+/// (`settle_chapter_after_class_load`, OXIDIZED_DESIGN #179): a binding built on report or book has the kernel's
+/// `\chapter` for the rest of its load.
 macro_rules! LoadClass {
-  ($class:expr_2021) => {{ load_class($class, Vec::new(), Tokens!())? }};
-  ($class:expr_2021, $options:expr_2021, $after:expr_2021) => {{ load_class($class, $options, $after)? }};
+  ($class:expr_2021) => {{
+    load_class($class, Vec::new(), Tokens!())?;
+    $crate::latex_constructs::settle_chapter_after_class_load()?
+  }};
+  ($class:expr_2021, $options:expr_2021, $after:expr_2021) => {{
+    load_class($class, $options, $after)?;
+    $crate::latex_constructs::settle_chapter_after_class_load()?
+  }};
 }
 
 #[macro_export]

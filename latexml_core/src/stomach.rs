@@ -3926,6 +3926,11 @@ fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
     gullet::unread_one(*token);
     return Ok(Vec::new());
   }
+  // a stand-in named for the undefined name (`kernel_autoload::undefined_fallback`, OXIDIZED_DESIGN #734)
+  if let Some(stand_in) = crate::binding::kernel_autoload::undefined_fallback(token) {
+    gullet::unread_one(stand_in);
+    return Ok(Vec::new());
+  }
   let cs = token.with_cs_name(|cs| String::from(cs));
   // Gate the undefined-CS summary tally and the Error! emission by
   // SUPPRESS_UNDEFINED_ERRORS. During expl3-code.tex raw load we install

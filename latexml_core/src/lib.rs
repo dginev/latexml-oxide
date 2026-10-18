@@ -168,6 +168,7 @@ pub fn reset_thread_engine() {
   binding::content::reset_subfile_package_load();
   binding::content::reset_raw_read_paths();
   definition::origin::reset_copy_provides();
+  binding::kernel_autoload::reset_undefined_fallback();
 }
 
 pub use crate::common::error::*;

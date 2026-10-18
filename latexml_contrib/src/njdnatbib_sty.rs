@@ -18,10 +18,11 @@
 //!   `NATBIB_SUPER_POSTNOTE_INSIDE`).
 //!
 //! The version is v5's class (`\@ifclassloaded{WileyNJDv5}`) or the copy's own `\bibsection` set by `\bmsection`, v5's
-//! marker; a class without chapters is decided by `\chapter`, as the copy's `\@ifundefined{chapter}` does
-//! (`state::class_defines_chapter`): not by a `chapter` counter, which the Wiley classes declare without a `\chapter`
-//! (WileyNJDv5.cls:5728, MRM.cls:2160 `\newcounter{chapter}[part]`), and not by LaTeXML's kernel `\chapter`, which
-//! stays defined under the OmniBus base (`\@ifundefined{chapter}` was false under the WileyNJDv5 binding: 2609.08425).
+//! marker; a class without chapters is decided by the one "has chapters" test, as the copy's `\@ifundefined{chapter}`
+//! does (`state::class_defines_chapter`, OXIDIZED_DESIGN #179): not by a `chapter` counter, which the Wiley classes
+//! declare without a `\chapter` (WileyNJDv5.cls:5728, MRM.cls:2160 `\newcounter{chapter}[part]`). The WileyNJDv5
+//! binding's OmniBus base keeps no kernel `\chapter` (a named binding is no unknown class), so the copy's test is TeX's
+//! (2609.08425: "REFERENCES").
 use latexml_package::prelude::*;
 
 /// A renamed natbib copy's options are natbib's (natbib.sty:234-285): the natbib binding loads next with each one

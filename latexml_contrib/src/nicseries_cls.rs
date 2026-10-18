@@ -8,4 +8,9 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   LoadClass!("OmniBus");
   def_macro_noop("\\authortoc{}")?;
+  // nic-series.cls:74-78 `\newcommand\chapter`: the class has chapters (OXIDIZED_DESIGN #179 (a)), which OmniBus as
+  // its base does not give it; LaTeXML's chapter (witness 0902.2652). The class defines no `\@chapter` and no chapter
+  // counter: in TeX only `\chapter*` works, a numbered `\chapter` stops at the undefined `\@chapter` (0902.2652 calls
+  // neither).
+  DefMacro!("\\chapter", "\\@startsection{chapter}{0}{}{}{}{}");
 });

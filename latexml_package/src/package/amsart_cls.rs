@@ -27,5 +27,7 @@ LoadDefinitions!({
 
   //======================================================================
   // Sec. 5. Document Body
-  Let!("\\specialsection", "\\chapter"); // Close enough?
+  // Perl `Let('\specialsection', '\chapter')`: the kernel's chapter, which `\documentclass` takes away while the class
+  // loads (amsart has no `\chapter`; OXIDIZED_DESIGN #179), so read under its own name.
+  Let!("\\specialsection", "\\lx@kernel@chapter"); // Close enough?
 });
