@@ -706,7 +706,11 @@ pub(crate) fn load() -> Result<()> {
   // \@toplist/\@botlist/etc. are ignored (LaTeXML doesn't track float-page
   // placement), but they need to be defined so latex.ltx-driven code paths
   // that consult them (e.g. via `\@cons`) don't error on `\@empty` lookups.
-  def_macro_identity("\\@topnewpage{}")?;
+  // latex.ltx:20466 `\long\def \@topnewpage [#1]{…}`: the bracketed spanning header `\twocolumn[…]` hands it, typeset
+  // here in place. Perl's `\@topnewpage{}` (L1020) read the `[` as its argument, so a class's own `\twocolumn` that
+  // ends `\@ifnextchar[{\@topnewpage}{}` (jpsj.sty:170-173, replayed with its `\maketitle`: cond-mat0011490,
+  // cond-mat0101276, quant-ph9911038) printed "[" and "]" around it (KNOWN_PERL_ERRORS #982).
+  TeX!(r"\long\def\@topnewpage[#1]{#1}");
   DefMacro!(
     "\\@next{}{}{}{}",
     r"\ifx#2\@empty #4\else\expandafter\@xnext #2\@@#1#2#3\fi"
@@ -1230,6 +1234,15 @@ pub(crate) fn load() -> Result<()> {
   // The stores of a frontmatter ENVIRONMENT the class renewed and the lock kept
   // (sect08.rs `record_dropped_environment_stores`): given and empty here too.
   DefMacro!("\\lx@dropped@env@stores", "");
+  // The class's own records of the values its refused `\title`/`\author` setters were given (`note_replay_records`),
+  // given and empty here too: `\let<record>\@empty` each.
+  DefMacro!("\\lx@replay@records", sub[_args] {
+    let mut nulls: Vec<Token> = Vec::new();
+    for name in lookup_string("lx_replay_records").split(',').filter(|n| !n.is_empty()) {
+      nulls.extend([T_CS!("\\let"), T_CS!(name), T_CS!("\\@empty")]);
+    }
+    Ok(Tokens::new(nulls))
+  });
   // A primitive, not a macro: the deposit is digested first and kept only
   // when it produced content. A class whose `\@maketitle` typesets nothing
   // but captured stores (ptptex, every field in the frontmatter) yields
@@ -1246,7 +1259,7 @@ pub(crate) fn load() -> Result<()> {
     // "undefined" for page furniture (1309.1271, 1405.5596, 1109.2657).
     let hold = util::logger::DiagnosticsHold::begin();
     let deposit = digest(mouth::tokenize_internal(
-      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\and\relax\lx@captured@stores\lx@dropped@env@stores\@maketitle}\fi",
+      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\and\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records\@maketitle}\fi",
     ));
     AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
     let deposit = match deposit {
@@ -1317,7 +1330,7 @@ pub(crate) fn load() -> Result<()> {
       // A `\maketitle[<options>]` body gets the options the kernel `\maketitle`
       // read for it (`\lx@maketitle@withopt`); without them, its default.
       let mut replay = mouth::tokenize_internal(
-        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@dropped@maketitle",
+        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records\lx@dropped@maketitle",
       )
       .unlist();
       if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
@@ -1995,16 +2008,45 @@ pub(crate) fn options_pi_spelling(arg: Option<&Digested>) -> SymHashMap<Stored> 
 ///   (JINST.cls:823 `\let\abstract\gobble`, with no `\gobble` in the class);
 /// - since 61o, a control sequence the body itself defines before using it counts as defined: uiucthesis.cls:134-137
 ///   `\newcommand{\thesis@small}{\small}` then `{\thesis@small …}`, :147 `\newdimen\thesis@dim` (its title page,
-///   degree statement and Urbana-Champaign line were lost; thesis-ex 86.1 %).
+///   degree statement and Urbana-Champaign line were lost; thesis-ex 86.1 %);
+/// - since 75a the body is read as TeX runs it (OXIDIZED_DESIGN_DIVERGENCES #756): a `\def`/`\gdef`'s parameter text
+///   and replacement text, and a `\newcommand`-family definition's default and body, are stored, not run (tex.web
+///   §473), so they are checked where the body calls the macro ([`BodyDefinee`]) — sig-alternate-05-2015.cls:726-730's
+///   `\def\@makefnmark{…\@thefnmark}` (1505.04771; 204 of the 3,000 sample papers) — while an `\edef`/`\xdef`'s is
+///   checked in place; a called macro's parameter-text delimiters are matched, not run ([`delimiter_positions`];
+///   nowfnt.cls:552 `\@nil`, 1912.00312); what a called macro defines is defined after the call; `\futurelet` defines.
 fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
+  let mut definees: Vec<BodyDefinee> = Vec::new();
+  vocabulary_is_defined(body, what, &mut definees, 0)
+}
+
+/// A control sequence the checked body defines itself: its replacement text and parameters when the body made it with
+/// a definer that stores its replacement text unexpanded (`\def`, `\gdef`, `\newcommand`…; tex.web §473 `scan_toks`
+/// with `xpand` false), checked where the body calls it, once.
+struct BodyDefinee {
+  cs:          Token,
+  replacement: Option<Vec<Token>>,
+  params:      Option<Parameters>,
+  checked:     bool,
+}
+
+/// [`body_vocabulary_is_defined`] over `body`, with the definitions an enclosing body made (`definees`); `depth` bounds
+/// the checks of the replacement texts a body calls.
+fn vocabulary_is_defined(
+  body: &[Token],
+  what: &str,
+  definees: &mut Vec<BodyDefinee>,
+  depth: usize,
+) -> bool {
   let body = live_branches(body);
   let body = &body[..];
-  let mut definees: Vec<Token> = Vec::new();
+  // the positions of the delimiters a called macro's parameter text matches (`\nowfnt@splitauthor#2,!,!,\@nil`)
+  let mut delimiters: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
   let mut i = 0;
   while i < body.len() {
     let t = &body[i];
     i += 1;
-    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) || delimiters.contains(&(i - 1)) {
       continue;
     }
     if *t == T_CS!("\\begin")
@@ -2014,19 +2056,26 @@ fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
       continue;
     }
     if t.with_str(|s| BODY_DEFINERS.contains(&s))
-      && let Some(definee) = body[i..].iter().find(|n| {
+      && let Some(at) = body[i..].iter().position(|n| {
         !matches!(
           n.get_catcode(),
           Catcode::BEGIN | Catcode::SPACE | Catcode::OTHER
         )
       })
-      && matches!(definee.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      && matches!(body[i + at].get_catcode(), Catcode::CS | Catcode::ACTIVE)
     {
-      definees.push(*definee);
+      let at = i + at;
+      let definee = body[at];
       if *t == T_CS!("\\let") {
+        definees.push(BodyDefinee {
+          cs:          definee,
+          replacement: None,
+          params:      None,
+          checked:     true,
+        });
         // past the definee, spaces, an optional `=` and one space, and the source (tex.web §1221)
         let is_space = |n: &Token| n.get_catcode() == Catcode::SPACE;
-        let mut j = i + body[i..].iter().position(|n| n == definee).unwrap_or(0) + 1;
+        let mut j = at + 1;
         while body.get(j).is_some_and(is_space) {
           j += 1;
         }
@@ -2039,8 +2088,56 @@ fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
         i = j + 1;
         continue;
       }
+      // `\def\cs<parameter text>{<replacement text>}`: the parameter text is never run, and only `\edef`/`\xdef`
+      // expand the replacement text as they define (tex.web §473, §1218); the others store it, to run where the
+      // body calls `\cs` (article.cls:206's `\def\@makefnmark{…\@thefnmark}`, copied into sig-alternate-05-2015.cls:
+      // 726-730's `\maketitle` and run only by its footnotes, where latex.ltx defines `\@thefnmark`: 1505.04771).
+      // `\newcommand{\cs}[n][default]{…}` stores the default and the body alike.
+      if let Some(StoredDefinition {
+        replacement,
+        params,
+        past,
+        open,
+      }) = stored_definition(body, t, at)
+      {
+        // (`\expandafter\def\csname…`: the name is made at run time and cannot be called by name here)
+        if definee != T_CS!("\\csname") {
+          let unexpanded = !t.with_str(|s| s == "\\edef" || s == "\\xdef");
+          definees.push(BodyDefinee {
+            cs: definee,
+            replacement: unexpanded.then_some(replacement),
+            params,
+            checked: !unexpanded,
+          });
+        }
+        // an `\edef`'s replacement text is expanded as it is defined: checked here, past the parameter text
+        i = if t.with_str(|s| s == "\\edef" || s == "\\xdef") {
+          open
+        } else {
+          past
+        };
+        continue;
+      }
+      definees.push(BodyDefinee {
+        cs:          definee,
+        replacement: None,
+        params:      None,
+        checked:     true,
+      });
     }
-    if definees.contains(t) {
+    if let Some(k) = definees.iter().rposition(|d| d.cs == *t) {
+      if let Some(params) = definees[k].params.clone() {
+        delimiters.extend(delimiter_positions(body, i, &params));
+      }
+      if !definees[k].checked {
+        definees[k].checked = true;
+        if let Some(replacement) = definees[k].replacement.clone()
+          && depth < 8
+          && !vocabulary_is_defined(&replacement, what, definees, depth + 1)
+        {
+          return false;
+        }
+      }
       continue;
     }
     let Some(meaning) = lookup_meaning(t) else {
@@ -2054,6 +2151,35 @@ fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
       );
       return false;
     };
+    if let Stored::Expandable(ref d) = meaning {
+      if let Some(params) = d.get_parameters() {
+        delimiters.extend(delimiter_positions(body, i, params));
+      }
+      // What a macro the body calls defines is defined after the call: nowfnt.cls:552-575's `\nowfnt@splitauthor`
+      // `\def`s the `\nowfnt@lastname` its `\author` (:581-600) then reads (1912.00312).
+      if let Some(ExpansionBody::Tokens(callee)) = d.get_expansion() {
+        let callee = callee.unlist_ref();
+        for (k, c) in callee.iter().enumerate() {
+          if c.with_str(|s| BODY_DEFINERS.contains(&s))
+            && let Some(n) = callee[k + 1..].iter().find(|n| {
+              !matches!(
+                n.get_catcode(),
+                Catcode::BEGIN | Catcode::SPACE | Catcode::OTHER
+              )
+            })
+            && matches!(n.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+            && !definees.iter().any(|d| d.cs == *n)
+          {
+            definees.push(BodyDefinee {
+              cs:          *n,
+              replacement: None,
+              params:      None,
+              checked:     true,
+            });
+          }
+        }
+      }
+    }
     let own_hold = lookup_bool(&s!("replay_gate_skips_arguments:{}", t.to_string()));
     // An empty expansion is stored as `None`.
     let params = match meaning {
@@ -2077,8 +2203,192 @@ fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
   true
 }
 
+/// A definition a checked body makes ([`stored_definition`]).
+struct StoredDefinition {
+  /// the replacement text it stores (a `\newcommand`'s default with it)
+  replacement: Vec<Token>,
+  /// the parameters a `\def`'s parameter text declares
+  params:      Option<Parameters>,
+  /// the index past the definition
+  past:        usize,
+  /// the index of the replacement text's opening brace
+  open:        usize,
+}
+
+/// After a definer `t` whose definee is `body[at]`: the replacement text a `\def`-family or `\newcommand`-family
+/// definer stores (a `\newcommand`'s default of its optional argument with it), the parameters a `\def`'s parameter
+/// text declares, and the indices past the definition and of its replacement text's opening brace. `None` for any
+/// other definer, or a definition this cannot read (no braced replacement text).
+fn stored_definition(body: &[Token], t: &Token, at: usize) -> Option<StoredDefinition> {
+  let group_past = |open: usize| -> Option<usize> {
+    let mut level = 0usize;
+    for (k, u) in body.iter().enumerate().skip(open) {
+      match u.get_catcode() {
+        Catcode::BEGIN => level += 1,
+        Catcode::END => {
+          level = level.checked_sub(1)?;
+          if level == 0 {
+            return Some(k + 1);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let name = t.to_string();
+  if ["\\def", "\\gdef", "\\edef", "\\xdef"].contains(&name.as_str()) {
+    // the parameter text runs up to the first `{` (tex.web §473-476)
+    let open = (at + 1..body.len()).find(|&k| body[k].get_catcode() == Catcode::BEGIN)?;
+    let past = group_past(open)?;
+    let params = parse_def_parameters(&body[at], Tokens::new(body[at + 1..open].to_vec()))
+      .ok()
+      .flatten();
+    return Some(StoredDefinition {
+      replacement: body[open + 1..past - 1].to_vec(),
+      params,
+      past,
+      open,
+    });
+  }
+  if ![
+    "\\newcommand",
+    "\\renewcommand",
+    "\\providecommand",
+    "\\DeclareRobustCommand",
+  ]
+  .contains(&name.as_str())
+  {
+    return None;
+  }
+  let skip_spaces = |mut k: usize| {
+    while body
+      .get(k)
+      .is_some_and(|u| u.get_catcode() == Catcode::SPACE)
+    {
+      k += 1;
+    }
+    k
+  };
+  // past `\cs` or `{\cs}`
+  let mut k = skip_spaces(at + 1);
+  if body.get(k).is_some_and(|u| u.get_catcode() == Catcode::END) {
+    k = skip_spaces(k + 1);
+  }
+  let mut replacement = Vec::new();
+  // `[n]`, then `[default]`
+  for n in 0..2 {
+    if body.get(k) != Some(&T_OTHER!("[")) {
+      break;
+    }
+    let close = (k + 1..body.len()).find(|&j| body[j] == T_OTHER!("]"))?;
+    if n == 1 {
+      replacement.extend_from_slice(&body[k + 1..close]);
+    }
+    k = skip_spaces(close + 1);
+  }
+  if !body
+    .get(k)
+    .is_some_and(|u| u.get_catcode() == Catcode::BEGIN)
+  {
+    return None;
+  }
+  let past = group_past(k)?;
+  replacement.extend_from_slice(&body[k + 1..past - 1]);
+  Some(StoredDefinition {
+    replacement,
+    params: None,
+    past,
+    open: k,
+  })
+}
+
+/// The positions in `body` from `i` on of the delimiters a call of a macro with `params` matches: a `Match`
+/// parameter's literal tokens and an `Until` parameter's delimiter, found as TeX finds them (tex.web §392-399: a
+/// delimited argument runs to the first occurrence of its delimiter outside braces). TeX never runs these tokens —
+/// the macro's parameter text consumes them (nowfnt.cls:552's `\nowfnt@splitauthor#1,#2,#3,#4\@nil`, called as
+/// `\nowfnt@splitauthor#2,!,!,\@nil` by its `\author`: 1912.00312). The arguments themselves are checked as before.
+/// Matching stops at the first parameter of another kind, or at one that does not match.
+fn delimiter_positions(body: &[Token], i: usize, params: &Parameters) -> Vec<usize> {
+  let mut out = Vec::new();
+  let params = params.get_parameters();
+  if !params
+    .iter()
+    .any(|p| p.name == pin!("Until") || p.name == pin!("Match"))
+  {
+    return out;
+  }
+  let mut k = i;
+  for p in params {
+    if p.name == pin!("Match") {
+      let Some(lit) = p.extra.first() else { break };
+      let lit = lit.unlist_ref();
+      if !body[k.min(body.len())..].starts_with(lit) {
+        break;
+      }
+      out.extend(k..k + lit.len());
+      k += lit.len();
+    } else if p.name == pin!("Until") {
+      let Some(delim) = p.extra.first() else { break };
+      let delim = delim.unlist_ref();
+      let mut level = 0usize;
+      let mut found = None;
+      for j in k..body.len() {
+        if level == 0 && !delim.is_empty() && body[j..].starts_with(delim) {
+          found = Some(j);
+          break;
+        }
+        match body[j].get_catcode() {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => match level.checked_sub(1) {
+            Some(l) => level = l,
+            None => break,
+          },
+          _ => {},
+        }
+      }
+      let Some(j) = found else { break };
+      out.extend(j..j + delim.len());
+      k = j + delim.len();
+    } else if p.name == pin!("Plain") {
+      while body
+        .get(k)
+        .is_some_and(|u| u.get_catcode() == Catcode::SPACE)
+      {
+        k += 1;
+      }
+      match body.get(k) {
+        Some(u) if u.get_catcode() == Catcode::BEGIN => {
+          let mut level = 0usize;
+          let mut past = None;
+          for (j, v) in body.iter().enumerate().skip(k) {
+            match v.get_catcode() {
+              Catcode::BEGIN => level += 1,
+              Catcode::END => {
+                level -= 1;
+                if level == 0 {
+                  past = Some(j + 1);
+                  break;
+                }
+              },
+              _ => {},
+            }
+          }
+          let Some(past) = past else { break };
+          k = past;
+        },
+        Some(_) => k += 1,
+        None => break,
+      }
+    } else {
+      break;
+    }
+  }
+  out
+}
+
 /// The definition commands whose next control sequence the body defines (`*`, `{` and spaces skipped).
-const BODY_DEFINERS: [&str; 18] = [
+const BODY_DEFINERS: [&str; 19] = [
   "\\def",
   "\\edef",
   "\\gdef",
@@ -2097,6 +2407,8 @@ const BODY_DEFINERS: [&str; 18] = [
   "\\newtoks",
   "\\newbox",
   "\\newif",
+  // `\futurelet\cs<token1><token2>` lets `\cs` to `<token2>`, as `\let` does (tex.web §1221); `<token1>` then runs
+  "\\futurelet",
 ];
 
 /// `Some(true)`/`Some(false)` for a token meaning `\iftrue`/`\iffalse` — a `\newif` switch's state.
@@ -2353,6 +2665,68 @@ fn is_font_state(key: SymStr) -> bool {
   FONT_STATE.iter().any(|cs| meaning_key(&T_CS!(cs)) == key)
 }
 
+/// After a kept replay of a refused class setter: each macro the replay changed (`assigned`, its journal's meanings with
+/// their values before) that is now a parameterless token list holding the call's argument `arg` — the class's own
+/// record of the value the kernel's setter gave the frontmatter — joins `lx_replay_records`, which
+/// `\lx@replay@records` reads as empty in the title-page deposit and replay (`\lx@deposit@maketitle`).
+fn note_replay_records(assigned: &[(SymStr, Option<Stored>)], arg: &Tokens) {
+  let arg: Vec<Token> = arg
+    .unlist_ref()
+    .iter()
+    .copied()
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .collect();
+  if arg.is_empty() {
+    return;
+  }
+  let mut records = lookup_string("lx_replay_records");
+  for (key, before) in assigned {
+    let name = with(*key, ToString::to_string);
+    if !name.starts_with('\\') {
+      continue;
+    }
+    let cs = T_CS!(&name);
+    let Some(now) = lookup_meaning(&cs) else {
+      continue;
+    };
+    if same_meaning(Some(&now), before.as_ref()) {
+      continue;
+    }
+    let Stored::Expandable(ref d) = now else {
+      continue;
+    };
+    let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+      continue;
+    };
+    if d
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+    {
+      continue;
+    }
+    let body: Vec<Token> = body
+      .unlist_ref()
+      .iter()
+      .copied()
+      .filter(|t| t.get_catcode() != Catcode::SPACE)
+      .collect();
+    if body.len() >= arg.len()
+      && body.windows(arg.len()).any(|w| w == arg.as_slice())
+      && !records.split(',').any(|r| r == name)
+    {
+      if !records.is_empty() {
+        records.push(',');
+      }
+      records.push_str(&name);
+    }
+  }
+  assign_value(
+    "lx_replay_records",
+    Stored::String(pin(records)),
+    Some(Scope::Global),
+  );
+}
+
 /// [`replay_class_setter`] (`call` = the call's `[opt]{arg}`) and [`replay_class_begin_code`] (`call` = `None`).
 fn replay_dropped_class_code(
   name: &str,
@@ -2424,7 +2798,7 @@ fn replay_dropped_class_code(
       replay.push(T_OTHER!("]"));
     }
     replay.push(T_BEGIN!());
-    replay.extend(arg.unlist());
+    replay.extend(arg.unlist_ref().iter().copied());
     replay.push(T_END!());
     replay.push(T_CS!("\\lx@replay@capture"));
     replay.push(T_END!());
@@ -2489,10 +2863,12 @@ fn replay_dropped_class_code(
   // An erring replay is undone, a clean one kept. A rollback that cannot apply (the body closed a frame of the
   // document's, or the journal was not open) leaves the replay's assignments, so its diagnostics stay too.
   let mut undone = false;
+  let mut assigned: Vec<(SymStr, Option<Stored>)> = Vec::new();
   if let Some(journal) = journal {
     if result.is_ok() && hold.errors_raised() > 0 {
       undone = journal.rollback();
     } else {
+      assigned = journal.assigned(TableName::Meaning);
       journal.keep();
     }
   }
@@ -2554,6 +2930,13 @@ fn replay_dropped_class_code(
       .map(|empty| Stored::Expandable(Rc::new(empty)))
     });
     assign_meaning(cs, meaning.unwrap_or(Stored::None), Some(Scope::Global));
+  }
+  // The class's own record of the field's value — a list the body appended the call's argument to, vmsta.cls:296-315's
+  // `\g@addto@macro\@@@authors{…\name@m@front{#2}…}`, which its `\maketitle` (:534-545, its `\appto` at :691) prints —
+  // is the frontmatter's field (`note_replay_records`): the title-page deposit and replay read it as empty, as they read
+  // `\@author` (1506.02940 printed its author and affiliation a second time).
+  if !begin_code && result.is_ok() && hold.errors_raised() == 0 {
+    note_replay_records(&assigned, &arg);
   }
   if let Err(err) = result {
     hold.commit();

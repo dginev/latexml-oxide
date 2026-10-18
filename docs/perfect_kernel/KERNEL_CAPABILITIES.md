@@ -329,9 +329,16 @@ labels linked from the authors' `$^{n,}$` (`\lx@author@withsup` /
 of that class load, the binding's own setters kept),
 `\lx@class@loaded@raw{name}` runs `frontmatter_stores::reroute_raw_class_stores`: each setter of the NAME → kind
 table that the class defined as a pure store — one argument, or `[optional]{mandatory}` (58m, bfhlayout
-`\institute`) — is rerouted to the frontmatter API, and once any store was captured `\let\@maketitle\@empty`, as
-Perl's locked `\maketitle` discards it; off-table stores are dropped with it (Perl parity; guard
-`only_table_names_with_store_bodies_are_rerouted`). Since 58m the stores are read where the class reads them:
+`\institute`) — is rerouted to the frontmatter API. The class's `\@maketitle` is kept (it was `\let` to `\@empty`
+until sweep 93): `\lx@deposit@maketitle` (sect05.rs) digests it with the title fields and the captured stores read as
+empty and keeps what it typesets when it raises no error, and replays the class's own refused `\maketitle`
+(`\lx@dropped@maketitle`) the same way when the replay gate finds its vocabulary defined (`body_vocabulary_is_defined`;
+since 75a a `\def`'s replacement text and a called macro's delimiters are not checked as run, and a class's
+`\appto`/`\g@addto@macro` to the refused `\maketitle` extends the class's definition, state.rs
+`extended_refused_definition`; OXIDIZED_DESIGN_DIVERGENCES #756-#757). An off-table store is lost only when the
+title-page code that reads it does not typeset: a refused body the gate rejects, a deposit or replay that errs, or a
+store only a refused class environment prints (wiley-article's abstract, whose stores 75a tables; #758). Guard
+`only_table_names_with_store_bodies_are_rerouted`. Since 58m the stores are read where the class reads them:
 creator stores (affiliation, address, e-mail, ORCID; editor, speaker) at `\maketitle`, the others when set. 58q
 leaves a binding's own setters alone (`latexml_core::binding::store_setters`, KPE #418/#419); 59d hands what code
 appends to `\@author` to the creator (DIVERGENCES #405); 59e lets a later `\maketitle` typeset the authors set

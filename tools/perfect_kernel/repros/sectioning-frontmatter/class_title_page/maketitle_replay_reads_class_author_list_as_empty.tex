@@ -1,0 +1,17 @@
+% A raw class's refused `\author` replays for its side effects and appends the name to the class's own list, which
+% its `\maketitle` prints: in the title-page replay that list is the frontmatter's author field and reads as empty,
+% as `\@author` does (sect05.rs `note_replay_records`, `\lx@replay@records`).
+% witness: 1506.02940 (vmsta.cls:296-315 `\g@addto@macro\@@@authors`, :534-545, :691)
+% oracle:  pdflatex (tplist.cls beside it) 0 errors: "On Widgets / A. Author / Received: 9 February 2015 / Body text."
+% engines: rust 67int27 = 0 errors, "A. Author" twice (the creator and a bold body paragraph);
+%          perl (OmniBus, the class is not read) = 0 errors, a date[role=received]
+% expect:  0 errors, 0 warnings; "A. Author" once (the creator); the received line a centred paragraph
+% status:  RED (67int27) -> GREEN (75a)
+% preload: ar5iv.sty
+\documentclass{tplist}
+\received{9 February 2015}
+\begin{document}
+\title{On Widgets}\author{A. Author}
+\maketitle
+Body text.
+\end{document}

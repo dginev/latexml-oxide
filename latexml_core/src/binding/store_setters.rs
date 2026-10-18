@@ -74,11 +74,35 @@ pub const STORE_SETTERS: &[(&str, &str)] = &[
   ),
   ("conferenceinfo", "\\lx@add@pubnote[role=conference]{#1}"),
   ("articletype", "\\lx@add@pubnote[role=type]{#1}"),
+  // wiley-article.cls:213-214 (nbdt-article.cls too): the article type and the journal section its `\maketitle`
+  // (:420-466) prints above the title (1911.06213 "Research article", 1808.01384 "Original Article", 2012.13110).
+  ("papertype", "\\lx@add@pubnote[role=type]{#1}"),
+  ("paperfield", "\\lx@add@pubnote{#1}"),
   ("orcid", "\\lx@add@orcid{#1}"),
   ("orcidID", "\\lx@add@orcid{#1}"),
   ("editor", "\\lx@add@editor{#1}"),
   ("editors", "\\lx@add@editor{#1}"),
   ("speaker", "\\lx@add@creator[role=speaker]{#1}"),
+  // The correspondence block, e-mail and funding line wiley-article.cls:206-209 stores (nbdt-article.cls too), which
+  // only its own abstract environment prints (`\wiley@affilmetadata`, :416-433, in the margin beside the abstract,
+  // :470): the kernel's locked `{abstract}` refuses that environment, so they were lost (1808.01384
+  // "pantelis@ucdavis.edu" and its funding line, 1911.06213; 13 papers of the 3,000-paper sample). The e-mail is the
+  // correspondence block's, not a named author's: a note, as OmniBus's `\printead` makes it.
+  (
+    "corraddress",
+    "\\lx@add@frontmatter{ltx:note}[role=correspondence]{#1}",
+  ),
+  (
+    "corremail",
+    "\\lx@add@frontmatter{ltx:note}[role=email]{#1}",
+  ),
+  (
+    "fundinginfo",
+    "\\lx@add@frontmatter{ltx:note}[role=funding]{#1}",
+  ),
+  // CSML.cls:227-229 `\def\ACMCCS#1{\def\@ACMCCS{#1}}`, "2012 ACM CCS", printed by its `\@setACMCCS` (:285-286) at
+  // the title page's foot (LMCS: 1608.04592 "Theory of computation", 1602.00476).
+  ("ACMCCS", "\\lx@add@classification[scheme=ACMCCS]{#1}"),
   // The author note a title page prints under its heading (apa6.cls:779 `\authornote` → `\@acks`, printed by its
   // `\maketitle` only; 68 of 188 apa/apa6 papers), as apa7's binding makes it (apa7_cls.rs).
   (

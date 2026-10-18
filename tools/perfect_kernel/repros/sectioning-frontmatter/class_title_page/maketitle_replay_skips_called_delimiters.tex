@@ -1,0 +1,18 @@
+% A raw class's refused title-page code calls a helper whose parameter text is delimited by `\@nil` and reads a macro
+% that helper defines: the replay gate matches the delimiters as TeX does (tex.web §392-399), not as commands run, and
+% counts what a called macro defines as defined.
+% witness: 1912.00312 (nowfnt.cls:552 `\nowfnt@splitauthor#1,#2,#3,#4\@nil`, :581-600 its `\author`); `\@nil` stopped
+%          11 replays and `|` 16 in the 3,000-paper sample
+% oracle:  pdflatex (tpdelim.cls beside it) 0 errors: "Series: Lecture Notes in Widgets / Body text."
+% engines: rust 67int27 = 0 errors, the series line lost (Info "not replayed: it uses \@nil");
+%          perl (OmniBus, the class is not read) = 1 error (\series undefined)
+% expect:  0 errors, 0 warnings; one noindent paragraph "Series: Lecture Notes in Widgets" after the title
+% status:  RED (67int27) -> GREEN (75a)
+% preload: ar5iv.sty
+\documentclass{tpdelim}
+\series{Lecture Notes in Widgets}
+\begin{document}
+\title{On Widgets}\author{A. Author}
+\maketitle
+Body text.
+\end{document}

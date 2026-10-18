@@ -1,0 +1,20 @@
+% A raw class renews `\maketitle` (refused by the lock, kept as \lx@dropped@maketitle) and then `\appto`s to it: the
+% append extends the class's own definition, as in TeX, not the kernel's locked one (state.rs
+% `extended_refused_definition`).
+% witness: 1911.06213 (wiley-article.cls:420-466, :576 `\appto{\maketitle}`; "Ignoring redefinition of \maketitle"
+%          twice, 31 of the 3,000 sample papers), 1506.02940 (vmsta.cls:534-545, :691)
+% oracle:  pdflatex (tpappend.cls beside it) 0 errors: "Research Article / On Widgets / A. Author / Funded by the
+%          Example Foundation. / Body text."
+% engines: rust 67int27 = 0 errors, "Research Article" lost (the record held the kernel's body and the append);
+%          perl (OmniBus, the class is not read) = 2 errors (\papertopic, \grantinfo undefined)
+% expect:  0 errors, 0 warnings; bold "Research Article", then "Funded by the Example Foundation.", in that order
+% status:  RED (67int27) -> GREEN (75a)
+% preload: ar5iv.sty
+\documentclass{tpappend}
+\papertopic{Research Article}
+\grantinfo{the Example Foundation}
+\begin{document}
+\title{On Widgets}\author{A. Author}
+\maketitle
+Body text.
+\end{document}

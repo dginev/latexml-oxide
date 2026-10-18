@@ -1508,6 +1508,75 @@ pub fn reset_thread_state() {
   STATE_IN_USE.set(RotateState::Main);
 }
 
+/// A refused redefinition of a locked `\<name>` that EXTENDS the meaning it read — the locked binding's replacement
+/// text with tokens appended or prepended, as etoolbox's `\appto`/`\preto` (`\edef#1{\expandonce#1…}`) and
+/// latex.ltx's `\g@addto@macro` (`\toks@\expandafter{#1#2}\xdef#1{\the\toks@}`) make it — extends what the
+/// class itself defined: in TeX the class's own definition is the meaning it extends, so the record of the class's
+/// definition (`\lx@dropped@<name>`, `dropped_key`) becomes that definition with the same tokens appended or
+/// prepended. wiley-article.cls:420-466 `\renewcommand{\maketitle}{…\@papertype…\@paperfield…}` then :576
+/// `\appto{\maketitle}{…}`: the record held the kernel's body and the append, and the class's title page, which
+/// the `\maketitle` deposit replays, was gone (1911.06213). `None` (the refused definition is recorded as it is)
+/// unless the class's record and the binding are parameterless token bodies and the refused one is the binding's body
+/// with tokens added at one end.
+fn extended_refused_definition(
+  token: &Token,
+  definition: &Stored,
+  dropped_key: SymStr,
+) -> Option<Stored> {
+  let parameterless = |d: &Expandable| {
+    d.get_parameters()
+      .is_none_or(|p| p.get_parameters().is_empty())
+  };
+  let Stored::Expandable(new) = definition else {
+    return None;
+  };
+  let Some(Stored::Expandable(binding)) = lookup_meaning(token) else {
+    return None;
+  };
+  let Some(Stored::Expandable(prior)) =
+    lookup_meaning(&T_CS!(arena::with(dropped_key, ToString::to_string)))
+  else {
+    return None;
+  };
+  if !parameterless(new) || !parameterless(&binding) || !parameterless(&prior) {
+    return None;
+  }
+  let (
+    Some(ExpansionBody::Tokens(new_body)),
+    Some(ExpansionBody::Tokens(kernel)),
+    Some(ExpansionBody::Tokens(own)),
+  ) = (
+    new.get_expansion(),
+    binding.get_expansion(),
+    prior.get_expansion(),
+  )
+  else {
+    return None;
+  };
+  let (new_body, kernel, own) = (new_body.unlist_ref(), kernel.unlist_ref(), own.unlist_ref());
+  if kernel.is_empty() || new_body.len() <= kernel.len() {
+    return None;
+  }
+  let extended: Vec<Token> = if new_body.starts_with(kernel) {
+    own
+      .iter()
+      .chain(&new_body[kernel.len()..])
+      .copied()
+      .collect()
+  } else if new_body.ends_with(kernel) {
+    new_body[..new_body.len() - kernel.len()]
+      .iter()
+      .chain(own)
+      .copied()
+      .collect()
+  } else {
+    return None;
+  };
+  let mut kept = (*prior).clone();
+  kept.expansion = Some(ExpansionBody::Tokens(Tokens::new(extended)));
+  Some(Stored::Expandable(Rc::new(kept)))
+}
+
 /// A shorthand for installing definitions
 pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) {
   let definition = definition.into();
@@ -1629,12 +1698,9 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     if matches!(definition, Stored::Expandable(_)) {
       let dropped_key =
         arena::pin(token.with_cs_name(|cs| s!("\\lx@dropped@{}", cs.trim_start_matches('\\'))));
-      state_mut!().assign_internal(
-        TableName::Meaning,
-        dropped_key,
-        definition.clone(),
-        Some(Scope::Global),
-      );
+      let kept = extended_refused_definition(&token, &definition, dropped_key)
+        .unwrap_or_else(|| definition.clone());
+      state_mut!().assign_internal(TableName::Meaning, dropped_key, kept, Some(Scope::Global));
     }
     // Record that a redefinition was dropped: a locked binding may consult
     // `<cs>:redefined` to yield the parts of its behaviour the class took
@@ -4943,6 +5009,21 @@ pub struct AssignmentJournalGuard {
 }
 
 impl AssignmentJournalGuard {
+  /// The keys of `table` the journal saw assigned since it began, each with its value then (the front of its stack;
+  /// `None`: unbound).
+  pub fn assigned(&self, table: TableName) -> Vec<(SymStr, Option<Stored>)> {
+    let state = state!();
+    let Some(journal) = state.journal.as_ref() else {
+      return Vec::new();
+    };
+    journal
+      .saved
+      .iter()
+      .filter(|((t, _), _)| *t == table)
+      .map(|((_, key), (values, _))| (*key, values.as_ref().and_then(|v| v.front().cloned())))
+      .collect()
+  }
+
   /// Close the journal, keeping every assignment made since it began.
   pub fn keep(mut self) {
     self.open = false;

@@ -3996,6 +3996,45 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   repros kernel-alignment/cryptocode_halign_redefinition_numbers_lines RED → GREEN,
   kernel-alignment/halign_redefinition_skips_tabbing_and_keeps_material.
 
+- **75a** (silent loss of authored title-page text: K11's off-table stores, agent_reports/2026-10-18_k11_offtable_reach.md
+  — 41 + 22 of the 3,000 sample papers lose title-page text because the class's title-page code never typesets; report
+  agent_reports/2026-10-18_payload_75a.md). (F1) The `\maketitle` replay gate reads a body as TeX runs it
+  (sect05.rs `body_vocabulary_is_defined`, OXIDIZED_DESIGN_DIVERGENCES #756): a `\def`/`\newcommand`'s stored
+  replacement text is checked where the body calls it, a called macro's parameter-text delimiters (`\@nil`, `|`) are
+  matched, what a called macro defines is defined, `\futurelet` defines. 201 of the 204 sample papers logging "not
+  replayed: it uses \@thefnmark" now replay (1505.04771 `\toappear`; ACM copyright blocks, NeurIPS venue lines, author
+  notes: 0712.1016, 1609.02839, 1506.04304, 2407.00478). (F2) A class's `\appto`/`\g@addto@macro` to the `\maketitle`
+  the lock refused extends the class's recorded definition (state.rs `extended_refused_definition`, #757; wiley-article
+  1911.06213, vmsta 1506.02940/1801.00977 whose dates, affiliation and keywords are now kept). (W) K11 table setters
+  `corraddress`, `corremail`, `fundinginfo` (notes), `papertype`, `paperfield` (pubnotes), `ACMCCS` (classification)
+  (store_setters.rs, #758; 1808.01384, 1911.06213, 2012.13110, 2203.03068, CSML 1608.04592/1602.00476). (D) The class's
+  own list a refused `\author` replay appended the name to reads as empty in the title-page deposit and replay
+  (`note_replay_records`, `\lx@replay@records`, #759; vmsta printed its author twice once F2 let its `\maketitle` run).
+  (K) `\@topnewpage` takes latex.ltx's bracketed argument (KNOWN_PERL_ERRORS #982; jpsj's replayed `\twocolumn[…]`
+  printed "[" "]": cond-mat0011490). Guards `perfect_kernel_batch75a::*`; repros
+  `sectioning-frontmatter/class_title_page/*`. A/B vs 67int27 over 244 papers (the 204 + 31 two-refusal `\maketitle`
+  papers + the wiley/nbdt/CSML papers of the sample): E 1,933 → 1,924, F 2 → 2, 84 changed, 0 with more E/F, 0 losing
+  >1 % of words, 0 doubled creators. Open rows:
+  - (a) FOLLOW-UP (not done, needs its own batch): the report's generic rule — an off-table pure store the document set,
+    whose only readers are title-page code that did not typeset (a refused body the gate rejects, a deposit or replay
+    that errs), handed on as `\lx@add@frontmatter{ltx:note}[role=<setter>]` at `\lx@store@defaults`; ~15 sample papers
+    (jfpc.cls:188-191 `\def\@author` built from its stores, 1503.05530; risethesis cover fields; `\fnm`), risk of
+    duplicates if the "was it typeset" tracking misses a case.
+  - (b) 1912.00312 (nowfnt `[plain]`): its `\author[1]{Deng,Eric}` is the class's bibliography/header data and
+    `\maintitleauthorlist{…}` (nowfnt.cls:801, `\gdef\@author{#1}`) is the printed author block; the locked kernel
+    `\author` makes creators "Deng", "Eric", … and the author block is lost. A ruling on a class setter that stores into
+    the kernel's `\@author` is needed; 1 Error (`\nowfnt@font@articledata` undefined, nowfnt.cls:322, pre-existing).
+  - (c) Not tabled: bullsrsl `\correspondance` → `\BSRSL@CorrEmail` (2410.19120; rule (a) needs an `\@` store); vmsta
+    `\publishedonline`/`\received` (wrapped, not pure stores; they now print with its title page); pazhastl.cls:81
+    `\submitted` (a pure store, printed "Received \@submitted" by its dropped `\@maketitle`: 1108.4222 "September 6,
+    2010" lost) — tabled as `\lx@add@date[role=submitted]` (emulateapj's role) it gave 1108.4222 its date, but
+    tlp.cls:627's line "submitted \@submitted; revised \@revised; accepted \@accepted" then has every value carried
+    and the deposit keeps its labels alone, "submitted ; revised ; accepted" (1209.2617). Needs a rule for a title-page
+    line whose values are all carried (drop the line), then the entry.
+  - (d) The replay's output is body paragraphs after the title, not frontmatter elements (#265): sig-alternate's
+    `\toappear` is a copyrightbox float; an unset `\toappear` leaves an empty copyrightbox float (1202.3179,
+    1308.1440, 1402.4624; `typesets_content` counts the float's placement and the picture's coordinates).
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

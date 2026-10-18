@@ -1,0 +1,16 @@
+% CSML's `\ACMCCS` store, printed in a title-page footnote, is a K11 table setter: the frontmatter's classification.
+% witness: 1608.04592 (CSML.cls:227-229, :285-296), 1602.00476 (their `\@maketitle` deposits err and were dropped)
+% oracle:  pdflatex (tpccs.cls beside it) 0 errors: "On Widgets / A. Author / Body text. / 2012 ACM CCS: [Theory of
+%          computation]: Models of computation."
+% engines: rust 67int27 = 0 errors, the terms an unmarked footnotetext note; perl (OmniBus, the class is not read) =
+%          1 error (\ACMCCS undefined)
+% expect:  0 errors, 0 warnings; ltx:classification[scheme=ACMCCS] holding the terms, once
+% status:  RED (67int27) -> GREEN (75a)
+% preload: ar5iv.sty
+\documentclass{tpccs}
+\ACMCCS{[Theory of computation]: Models of computation}
+\begin{document}
+\title{On Widgets}\author{A. Author}
+\maketitle
+Body text.
+\end{document}

@@ -20128,6 +20128,75 @@ environment_abstract_unclosed_at_end_document_errs_and_keeps_its_text, keywords_
 keywords_label_inside_abstract_ends_with_it}`; repros `sectioning-frontmatter/{abstract_section_closes_the_abstract,
 keywords_command_form_ends_at_first_section, class_keywords/keywords_label_inside_abstract_ends_with_it}`.
 
+### 756. The `\maketitle` replay gate reads a class body as TeX runs it (Perl: the class body is never run)
+
+`body_vocabulary_is_defined` (sect05.rs; the gate of the #265 `\maketitle` replay and the #482 setter replays) asks
+whether every control sequence a refused class body would run is defined. It now reads the body as TeX does:
+- the parameter text and replacement text of a `\def`/`\gdef` (any prefix) and the default and body of a
+  `\newcommand`-family definition are stored, not run (tex.web §473 `scan_toks` with `xpand` false): they are checked
+  where the body calls the macro, once (`BodyDefinee`), and a macro the body never calls is not checked;
+  `\edef`/`\xdef` replacement texts are expanded as they are defined (§1218) and stay checked in place;
+- the delimiters a called macro's parameter text matches (`Match`/`Until` parameters, tex.web §392-399) are
+  matched, not run (`delimiter_positions`); the arguments themselves stay checked;
+- what a called macro's body defines counts as defined after the call;
+- `\futurelet` defines what it lets, as `\let` does (§1221).
+sig-alternate-05-2015.cls:726-737's `\maketitle` defines `\@makefnmark` (article.cls:206, reading `\@thefnmark`, which
+latex.ltx defines only when a footnote is made): "not replayed: it uses \@thefnmark" stopped 204 of the 3,000
+sample papers' replays, which now run (1505.04771's `\toappear` "pre-print of an article appearing at KDD'16"; the
+ACM copyright/permission blocks of 0712.1016, 1301.5612, 1609.02839, cs0404029; the NeurIPS venue lines of
+1506.04304, 1704.05155, 2111.02813; 2407.00478's author notes). nowfnt.cls:552-583's `\author` calls
+`\nowfnt@splitauthor#2,!,!,\@nil` and reads the `\nowfnt@lastname` it defines (1912.00312: the replay now runs; its
+`\maintitleauthorlist` is a separate residual, SYNC_STATUS 75a). A/B over those 204 papers and 40 more (the
+two-refusal `\maketitle` and wiley/nbdt/CSML papers of the sample) against 67int27: E 1,933 → 1,924, F 2 → 2, no paper
+with more errors, none losing more than 1 % of its words, no doubled creator. Guards
+`perfect_kernel_batch75a::{maketitle_replay_skips_stored_replacement_text, maketitle_replay_skips_called_delimiters}`;
+repros `sectioning-frontmatter/class_title_page/maketitle_replay_skips_*`.
+
+### 757. A class's append to a locked command it redefined extends the class's own definition (Perl: lost)
+
+When the lock refuses a redefinition that is the locked binding's replacement text with tokens appended or prepended
+— etoolbox's `\appto`/`\preto` (`\edef#1{\expandonce#1…}`) and latex.ltx's `\g@addto@macro` build it from the meaning
+they read — and the class's own refused definition of the name is on record (`\lx@dropped@<name>`, #265), the record
+becomes the class's definition with the same tokens appended or prepended (state.rs `extended_refused_definition`), as
+in TeX, where the class's definition is the meaning the append reads. wiley-article.cls:420-466 renews `\maketitle` and
+:576 `\appto`s to it: the record held the kernel's body and the append, so the replay ran nothing of the class's title
+page (1911.06213, 31 sample papers logging the refusal twice); vmsta.cls:691's `\appto\maketitle{\hypersetup…}` after
+its own `\maketitle` (:534-545) likewise (1506.02940, 1801.00977: the received/revised/accepted/published dates, the
+affiliation and the keywords the class alone prints are now kept). Parameterless token bodies only; any other
+refused definition is recorded as before. Guard `perfect_kernel_batch75a::maketitle_class_append_extends_class_body`;
+repro `sectioning-frontmatter/class_title_page/maketitle_class_append_extends_class_body`.
+
+### 758. wiley-article's correspondence, e-mail, funding, paper type and journal section, and CSML's ACM CCS terms, are K11 table setters (Perl: undefined under OmniBus)
+
+`STORE_SETTERS` (latexml_core/src/binding/store_setters.rs) gains `corraddress` → `ltx:note[role=correspondence]`,
+`corremail` → `ltx:note[role=email]`, `fundinginfo` → `ltx:note[role=funding]`, `papertype` → `ltx:pubnote[role=type]`
+(as `articletype`), `paperfield` → `ltx:pubnote`, and `ACMCCS` → `ltx:classification[scheme=ACMCCS]`. wiley-article.cls
+:206-214 (nbdt-article too) prints the type and section in its `\maketitle` and the correspondence block, e-mail and
+funding line only in its own abstract environment (`\wiley@affilmetadata`, :416-433, in the margin, :470), which the
+kernel's locked `{abstract}` refuses, and #482's begin-code replay discards its output: they were lost in 13 sample
+papers (1808.01384 "pantelis@ucdavis.edu" and its funding line, 1911.06213, 2012.13110, 2203.03068). The e-mail is the
+correspondence block's, not a named author's, so it is a note (as OmniBus's `\printead`), not a creator contact.
+CSML.cls:227-229 `\def\ACMCCS#1{\def\@ACMCCS{#1}}` (LMCS), printed in a title-page footnote, was lost with a
+`\@maketitle` deposit that errs (1608.04592, 1602.00476). The stores are handed on as they are set and read as empty in
+the deposit and replay, so the class's title page adds no second copy. Not tabled, each checked against its class:
+sig-alternate's `\toappear` and vmsta's `\publishedonline`/`\received` wrap their argument (not pure stores; #756/#757
+print them with the class's title page), bullsrsl's `\correspondance` stores into `\BSRSL@CorrEmail` (rule (a) needs an
+`\@` store), and pazhastl's pure-store `\submitted` waits for a rule on a title-page line whose values are all
+carried (tlp.cls:627 would keep "submitted ; revised ; accepted": 1209.2617; SYNC_STATUS 75a row (c)). Guards `perfect_kernel_batch75a::{class_stores_printed_by_class_abstract,
+class_acmccs_store_is_a_classification}`.
+
+### 759. The class's own record of a value its refused setter was given reads as empty in the title-page deposit (Perl: never run)
+
+The #482 replay of a refused class `\title`/`\author` keeps the class's lists; a list the body appended the call's
+argument to — vmsta.cls:296-315 `\g@addto@macro\@@@authors{…\name@m@front{#2}…}` — is the class's record of the field
+the kernel's frontmatter carries. Each macro the kept replay changed (its assignment journal, state.rs
+`AssignmentJournalGuard::assigned`) that is now a parameterless token list holding the argument joins
+`lx_replay_records` (sect05.rs `note_replay_records`), and `\lx@replay@records` `\let`s each to `\@empty` in the
+`\@maketitle` deposit and the `\maketitle` replay, as they null `\@author`: once #757 let vmsta's own `\maketitle`
+replay, it printed the author and affiliation a second time (1506.02940). Guard
+`perfect_kernel_batch75a::maketitle_replay_reads_class_author_list_as_empty`; repro
+`sectioning-frontmatter/class_title_page/maketitle_replay_reads_class_author_list_as_empty`.
+
 ### 760. A document's `\halign` redefinition runs where a binding's alignment reaches `\halign` (Perl: never runs)
 
 In TeX every amsmath alignment environment and every `\ialign`-based one (latex.ltx `\@array` for array/tabular/

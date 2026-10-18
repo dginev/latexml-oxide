@@ -15770,3 +15770,16 @@ Trigger: `\usepackage{amsmath,physics}` … `\begin{align} P &= \exp[ - \begin{m
 
 Rust: physics_sty.rs `phys_read_optional` (2606.03447). Guard
 `perfect_kernel_batch74b::physics_optional_argument_amp_in_align_keeps_the_rows`.
+
+## 982. `\@topnewpage` reads the `[` of its bracketed argument as its argument
+
+latex_constructs.pool.ltxml:1020 `DefMacro('\@topnewpage{}', '#1')` takes one undelimited argument, where latex.ltx:20466
+`\long\def \@topnewpage [#1]{…}` takes the bracketed spanning header `\twocolumn[…]` hands it: a class's own
+`\twocolumn` that ends `\@ifnextchar[{\@topnewpage}{}` (jpsj.sty:170-173) prints the brackets around the header.
+
+Trigger: `\documentclass{article}\makeatletter\renewcommand\twocolumn{\global\@twocolumntrue\global\@firstcolumntrue
+\@ifnextchar[{\@topnewpage}{}}\makeatother\begin{document}\twocolumn[Spanning header.]Text.\end{document}` — pdflatex
+"Spanning header. / Text."; Perl "[Spanning header.]".
+
+Rust: sect05.rs `\long\def\@topnewpage[#1]{#1}` (75a; the jpsj `\maketitle` replay #756 printed "[" and "]" in
+cond-mat0011490, cond-mat0101276, quant-ph9911038).
