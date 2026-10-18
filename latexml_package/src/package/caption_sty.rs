@@ -603,10 +603,22 @@ LoadDefinitions!({
   // The type is expanded once, as `\caption@@settype`'s `\edef` (caption.sty:309).
   // Outside a float the type stays set in the current group, as `\setcaptiontype*` leaves `\@captype` (caption.sty:391),
   // so a later bare `\caption` there is a caption of that type (`\captionof{figure}`, then a `\caption` in a minipage:
-  // 2206.08980, 2508.21533): `\lx@caption@of@after`, run after the caption's wrapper group. Inside a float the type
-  // stays the float's own (above). Guard `perfect_kernel_batch73b::captionof_leaves_the_type_outside_floats`.
+  // 2206.08980, 2508.21533): `\lx@caption@of@after`, run after the caption's wrapper group. Inside a float
+  // (`lx@in@float`, as sect09.rs's caption properties test it) the type stays the float's own (above). Every
+  // `\captionof` outside a float sets it anew, so a `\captionof{table}` after a `\captionof{figure}` leaves `table`.
+  // Guard `perfect_kernel_batch73b::captionof_leaves_the_type_outside_floats`.
+  DefMacro!("\\lx@caption@of@set@after{}", sub[(ty)] {
+    if lookup_bool("lx@in@float") {
+      return Ok(TokenizeInternal!(r"\let\lx@caption@of@after\relax"));
+    }
+    let mut out = vec![T_CS!("\\def"), T_CS!("\\lx@caption@of@after"), T_BEGIN!(), T_CS!("\\def"),
+      T_CS!("\\@captype"), T_BEGIN!()];
+    out.extend(ty.unlist());
+    out.extend([T_END!(), T_END!()]);
+    Ok(Tokens::new(out))
+  });
   RawTeX!(r"\def\lx@caption@of#1#2{\edef\lx@caption@of@type{#2}\expandafter\lx@caption@of@\expandafter{\lx@caption@of@type}#1}
-\def\lx@caption@of@#1#2{\@ifundefined{@captype}{\def\lx@caption@of@after{\def\@captype{#1}}}{\let\lx@caption@of@after\relax}\lx@caption@settype{#1}#2{#1}}
+\def\lx@caption@of@#1#2{\lx@caption@of@set@after{#1}\lx@caption@settype{#1}#2{#1}}
 \let\lx@caption@of@after\relax");
   // caption.sty:288-298 `\setcaptiontype[*]{type}[options]`: `\caption@settype`, in the group it
   // stands in (the options are typographic, `\caption@setoptions` a no-op here). 2605.20199's

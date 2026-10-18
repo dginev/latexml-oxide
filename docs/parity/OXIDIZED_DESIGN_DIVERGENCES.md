@@ -19920,10 +19920,12 @@ auto-opens and is unchanged. Guard `perfect_kernel_batchint23::a_typewriter_algo
 the braced `\setlength` (sect12.rs `assign_braced_length`) puts `#1 #2\relax` back unexpanded and lets it run, where
 the `Variable` read reported "A <variable> was supposed to be here" and dropped both arguments. IEEEtran templates' empty
 `\setlength` line before an `\item` (2201.08831, 2401.09168) took `\item` and `F` as its arguments: the item lost its
-first letter and the conversion an Error; now the item runs (pdflatex 0 errors). Only in the body: in the preamble
-(`\@nodocument` not yet `\relax`) what the code typesets is TeX's "Missing \begin{document}", which LaTeXML does not
-raise, so the `Variable` read's Error stands for it there (fancyheadings' `\headrulewidth`, a macro since 2.0:
-`\setlength{\headrulewidth}{0pt}` keeps its 1 Error and recovery, pdflatex 1). `\addtolength`
+first letter and the conversion an Error; now the item runs (pdflatex 0 errors). The preamble runs it too: what it
+typesets there starts a paragraph, whose `\everypar{\@nodocument}` (latex.ltx:9137) is TeX's "Missing
+\begin{document}"; LaTeXML fires no preamble `\everypar` (stomach.rs `pending_everypar`), so the code is followed by
+`\lx@setlength@nodocument`, which runs `\@nodocument` when the code, begun in vertical mode, left it horizontal
+(fancyheadings' `\headrulewidth`, a macro since 2.0: `\setlength{\headrulewidth}{0pt}` prints "0.4pt 0pt" and raises
+that Error, pdflatex 1; guard `perfect_kernel_batch73b::setlength_on_a_macro_in_the_preamble_errs_as_tex`). `\addtolength`
 keeps the error, as `\advance` reads a variable. Perl:
 latex_constructs.pool.ltxml:4603 `{Variable}` (KNOWN_PERL_ERRORS #971). Guard
 `perfect_kernel_batch73b::setlength_on_a_non_register_runs_its_code`; repro
@@ -19951,20 +19953,8 @@ is held (`DiagnosticsHold`); if it raised an Error, it is discarded and the labe
 `\ensuremath{\the<ctr>}`, local to the label. `\renewcommand{\theconsta}{{\kappa_{\arabic{consta}}}}` with
 `\refstepcounter{consta}` in a formula raised three "Script _ can only appear in math mode" per step (1609.03070: 93,
 1904.00290: 57). A label text sets keeps Perl's digest, byte-identical (an equation stepped in math keeps its text tags).
-Not the 70c timing redesign (labels digested only where printed): a mechanism-local fallback. KNOWN_PERL_ERRORS #973.
+Not the 70c timing redesign (labels digested only where printed): a mechanism-local fallback. Part of the surpass: a
+`\ref` to such a label in text now prints the math label, where TeX typesets `\@currentlabel` (`{\kappa_{1}}`) in text
+and errs ("Missing $ inserted"). KNOWN_PERL_ERRORS #973.
 Guard `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`; repro
 `macro-state/refstepcounter_in_math_sets_a_math_label`.
-
-### 749. A heading's `[short]` toc title raises its diagnostics only if the contents are printed
-
-**Decision** (73b; rc_struct6 row 10; the held-tag mechanism of ruling 7e): LaTeX writes a sectioning command's `[short]`
-argument to the .toc (latex.ltx:17263 `\addcontentsline{toc}`) and typesets it only in a printed table of contents. The
-toc copy is still digested where the heading is (sect04.rs), for `ltx:toctitle`, but a `[short]`'s diagnostics are
-held (`DiagnosticsHold::defer`), tied to the list (`logger::defer_to_list("toc", …)`) and replayed once the document is
-built only if an `ltx:TOC` of that list was constructed (`note_list_shown`, a `Tag!("ltx:TOC", after_close)`: every
-`\tableofcontents`, a binding's own contents too). `\subsection[Example: $M(-2;1/2,1/2,3/4)]{…}` with no contents
-(2304.03934) raised "Extra }, or forgotten $"; with `\tableofcontents` it still does (pdflatex 3). A toc copy without a
-`[short]` re-reads the title, whose diagnostics the heading gives. A Fatal is never held. Divergence from Perl, which
-digests the copy and raises its errors (KNOWN_PERL_ERRORS #974). Guard
-`perfect_kernel_batch73b::short_toc_title_errs_only_where_printed`; repros
-`sectioning-frontmatter/short_toc_title_errs_{only_where_printed,where_printed}`.

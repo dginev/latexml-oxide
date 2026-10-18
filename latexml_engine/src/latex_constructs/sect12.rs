@@ -32,7 +32,7 @@ fn length_register_type(register: Option<RegisterType>) -> RegisterType {
 /// 2605.08367, 2605.24444, 2605.29037, 2606.03162; Perl drops the rest, KNOWN_PERL_ERRORS #275). The register is
 /// read by the `Variable` reader (prefixes, a braced `\relax` and spaces skipped; a non-register is reported and
 /// skipped, as Perl), its value by its own type (OXIDIZED_DESIGN #317; guards `braced_quantity_tail`,
-/// `perfect_kernel_batch61::setlength_reads_its_register_and_value_as_one_stream`). A `\setlength` in the body whose
+/// `perfect_kernel_batch61::setlength_reads_its_register_and_value_as_one_stream`). A `\setlength` whose
 /// `#1` begins with no register is TeX's code `#1 #2\relax`, run as it stands (OXIDIZED_DESIGN #746; guard
 /// `perfect_kernel_batch73b::setlength_on_a_non_register_runs_its_code`).
 fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()> {
@@ -60,11 +60,12 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
     // `\setlength`'s `#1 #2\relax` is code TeX executes: what `#1` begins with, past spaces and `\relax`, when it is
     // neither a register nor a prefix, is simply run (`\setlength` before an `\item`, IEEEtran templates' empty
     // `\setlength` line: 2201.08831, 2401.09168), where the `Variable` read reported "A <variable> was supposed to be
-    // here" and dropped it. `\addtolength`'s `\advance` reads a variable, and errs as TeX does. In the preamble
-    // (`\@nodocument` not yet `\relax`, latex.ltx:9137) what it would set is TeX's "Missing \begin{document}", which
-    // nothing here raises: the `Variable` read's Error stands for it (fancyheadings' `\headrulewidth`, a macro since
-    // 2.0: `\setlength{\headrulewidth}{0pt}`; guard `perfect_kernel_batch73b::setlength_on_a_macro_in_the_preamble_keeps_its_error`).
-    if !add && x_equals(&T_CS!("\\@nodocument"), &T_CS!("\\relax")) {
+    // here" and dropped it. `\addtolength`'s `\advance` reads a variable, and errs as TeX does. The preamble runs it
+    // too: what it typesets there starts a paragraph, whose `\everypar{\@nodocument}` (latex.ltx:9137) is TeX's
+    // "Missing \begin{document}" (fancyheadings' `\headrulewidth`, a macro since 2.0: `\setlength{\headrulewidth}{0pt}`
+    // prints "0.4pt 0pt"; `\lx@setlength@nodocument` below; guard
+    // `perfect_kernel_batch73b::setlength_on_a_macro_in_the_preamble_errs_as_tex`).
+    if !add {
       loop {
         match read_x_token(None, false, None)? {
           Some(token) if token.get_catcode() == Catcode::SPACE || token == T_CS!("\\relax") => {},
@@ -100,6 +101,13 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
   if executed {
     let mut code = code;
     code.push(T_CS!("\\relax"));
+    // In the preamble a paragraph the code starts runs `\@nodocument` (LaTeXML fires no preamble `\everypar`,
+    // stomach.rs `pending_everypar`): tested once the code has run, from the mode it began in.
+    if !x_equals(&T_CS!("\\@nodocument"), &T_CS!("\\relax"))
+      && lookup_string("MODE").ends_with("vertical")
+    {
+      code.push(T_CS!("\\lx@setlength@nodocument"));
+    }
     unread_vec(code);
     return Ok(());
   }
@@ -124,6 +132,15 @@ pub(crate) fn load() -> Result<()> {
   //======================================================================
   // C.12.1 Line Breaking
   //======================================================================
+  // A preamble `\setlength` whose code started a paragraph (`assign_braced_length`): latex.ltx:9137
+  // `\everypar{\@nodocument}`, "Missing \begin{document}".
+  DefMacro!("\\lx@setlength@nodocument", sub[_args] {
+    if lookup_string("MODE").ends_with("horizontal") && is_defined_token(&T_CS!("\\@nodocument")) {
+      Ok(Tokens!(T_CS!("\\@nodocument")))
+    } else {
+      Ok(Tokens!())
+    }
+  });
   DefPrimitive!("\\linebreak[]");
   DefPrimitive!("\\nolinebreak[]");
   DefPrimitive!("\\-"); // We don't do hyphenation.

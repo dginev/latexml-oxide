@@ -15718,13 +15718,3 @@ $\refstepcounter{c}x$\end{document}` — pdflatex 0 errors; Perl 3 errors ("Scri
 
 Rust: OXIDIZED_DESIGN_DIVERGENCES #748 (1609.03070, 1904.00290). Guard
 `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`.
-
-## 974. A heading's `[short]` toc title errs though no contents are printed
-
-The `[short]` argument is digested for the toc copy (latex_constructs.pool.ltxml `\@@numbered@section`'s `toctitle`)
-and its errors raised, where LaTeX only writes it to the .toc: TeX errs on it only in a printed table of contents.
-
-Trigger: `\documentclass{article}\begin{document}\section{A}\subsection[Ex: $M(-2;1/2)]{Ex: $M(-2;1/2)$}x\end{document}`
-— pdflatex 0 errors; Perl 3 errors. With `\tableofcontents`, pdflatex 3.
-
-Rust: OXIDIZED_DESIGN_DIVERGENCES #749 (2304.03934). Guard `perfect_kernel_batch73b::short_toc_title_errs_only_where_printed`.

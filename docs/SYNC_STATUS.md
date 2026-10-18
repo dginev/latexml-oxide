@@ -3713,40 +3713,62 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (ceurart +162 %, atlasdoc +34 % instructions), recorded in OD #731.
 
 - **73b** (kernel shapes of the rc_struct6 study, agent_reports/2026-10-17_rc_struct6.md rows 2, 4, 5, 6, 9 and the
-  kernel one-offs of row 10; report agent_reports/2026-10-18_payload_73b.md). (1) Row 2: fleqn.clo's `{equation}`
-  (fleqn.clo:92-103, `\hbox{$…$}`) is `{equation}`'s new hook `\lx@equation@hook` running `\lx@math@in@hbox`
-  (fleqn_sty.rs `fleqn_clo`/`math_displays_in_hbox`; article/report/book/slides `fleqn`, fleqn.sty), as iopart's
-  (iopart_support_sty.rs) and a shipped pasj00/pasj01's (pasj00_cls.rs, by the copy's `\def\equation{`); their `\[`
-  keeps the kernel display, as it errs in pdflatex (control paragraph-mode/dollar_in_fleqn_clo_bracket_still_errs);
+  kernel one-offs of row 10; report agent_reports/2026-10-18_payload_73b.md, review 2026-10-18_73b_review.md). (1) Row 2:
+  fleqn.clo's `{equation}` (fleqn.clo:92-103, `\hbox{$…$}`) is `{equation}`'s new hook `\lx@equation@hook` running
+  `\lx@math@in@hbox` (fleqn_sty.rs `fleqn_clo`/`math_displays_in_hbox`; article/report/book/slides `fleqn`, fleqn.sty),
+  as iopart's (iopart_support_sty.rs) and a shipped pasj00/pasj01's (pasj00_cls.rs, by the copy's `\def\equation{`);
+  their `\[` keeps the kernel display, as it errs in pdflatex (control paragraph-mode/dollar_in_fleqn_clo_bracket_still_errs);
   amsmath sets the hook back. sigma's binding inputs fleqn.clo and loads amsmath `[fleqn]` (sigma.cls:20-21). Witnesses
   cond-mat0202518, hep-ex9806021, 1905.11073, 2311.01721 (2111.06645 non-sole: its 2 `$` errors gone, its `\substack`
   typo Fatal stays). (2) Row 9: amsbsy's `\boldsymbol` runs `\lx@math@in@hbox` in its bounded argument; bm's `\bm`
-  sets bold runs between its top-level `$`s, each `$` at the outer level (bm.sty:281); an empty in-math text is dropped
-  (2508.01295, 2506.20975; KNOWN_PERL_ERRORS #907 extended). (3) Row 4: `\setlength` on a non-register runs `#1
-  #2\relax` in the body (OXIDIZED_DESIGN_DIVERGENCES #746, KNOWN_PERL_ERRORS #971; 2201.08831, 2401.09168); in the
-  preamble the Error stays (fancyheadings' `\headrulewidth`). (4) Row 6: `\captionof` outside a float leaves
-  `\@captype` set (caption.sty:391; caption_sty.rs `\lx@caption@of@after`; 2206.08980, 2508.21533). (5) Row 5: a
+  sets bold runs between its top-level `$`s, each `$` at the outer level (bm.sty:281); an empty in-math `XMText` is
+  dropped (2508.01295, 2506.20975; KNOWN_PERL_ERRORS #907 extended). (3) Row 4: `\setlength` on a non-register runs `#1
+  #2\relax`, in the preamble too, where a paragraph it starts raises latex.ltx:9137's `\@nodocument` ("Missing
+  \begin{document}"; OXIDIZED_DESIGN_DIVERGENCES #746, KNOWN_PERL_ERRORS #971; 2201.08831, 2401.09168; fancyheadings'
+  `\headrulewidth` prints "0.4pt 0pt" with 1 Error, as pdflatex). (4) Row 6: `\captionof` outside a float (`lx@in@float`)
+  sets `\@captype` after its caption (caption.sty:391; caption_sty.rs `\lx@caption@of@set@after`; 2206.08980,
+  2508.21533; a second `\captionof` of another type then a bare `\caption`: Table 2, as pdflatex). (5) Row 5: a
   `\refstepcounter` in math whose label text cannot set is labelled as `\ensuremath{\the<ctr>}`
   (OXIDIZED_DESIGN_DIVERGENCES #748, KNOWN_PERL_ERRORS #973; 1609.03070 93 → 0, 1904.00290 57 → 0). (6) Row 10:
   `{center}`/`{flushleft}`/`{flushright}` and `\centering`/`\raggedright`/`\raggedleft` let `\\` be the kernel
   newline (latex.ltx:15402-15432; hep-ph9607435; also `{center}` in a `p{}` cell: physics0603169 0 → 6,445 words,
   1307.3556 101+F → 0); ragged2e's commands only where `\\` is still the one it saved (ragged2e.sty:189, 216;
-  1606.01980). The title font is handed the title braced (latex.ltx:17256 `#6{…}`; sectsty's trailing `\uppercase`,
-  1509.02957). A listings escape is read by a mouth of its own where the listing is digested (`\lx@lst@escape`;
-  `\verb._.`, 1106.5908). `\DeclareMathAlphabet` makes a one-argument alphabet (OXIDIZED_DESIGN_DIVERGENCES #747,
-  KNOWN_PERL_ERRORS #972; 1810.09080, and 2211.02508's lost `^d`). A heading's `[short]` toc title holds its
-  diagnostics until an `ltx:TOC` of the list is built (OXIDIZED_DESIGN_DIVERGENCES #749, KNOWN_PERL_ERRORS #974;
-  2304.03934). Guards `perfect_kernel_batch73b::*` (13), repros under paragraph-mode, parameter-conditional,
-  captions-floats, macro-state, package-bindings, listings-algorithms, fonts-nfss, sectioning-frontmatter. A/B vs
-  67int23b over 229 papers (19 witnesses, 50 `expected:$`/`unexpected:}` projection papers, 100 random of pop67int23,
-  30 IEEEtran, 30 with a contents): Errors 5,881 → 5,438, Fatals 13 → 11, error-free 84 → 106, 0 new Fatal; 2 worse,
-  both error-recovery counts in captions that err in pdflatex too (2206.05542 56 → 60, `$360\degree$` with the class's
-  one-argument `\degree`; 2407.00688 266 → 267). Open rows: (a) `$$` in restricted horizontal mode (tex.web §1138,
-  `\mbox{\[…}`, 1508.07482) dropped: MODE is restricted_horizontal in LaTeXML constructs where TeX is not (a beamer
-  frame, a stale `\lx@tag` or in-math-text frame left by an earlier error: 1301.0681 0 → 4, 1111.0674 244 → 313,
-  2312.14898, 2406.05750), so `\[` cannot test it; needs a box-level test. (b) A `\caption[short]`'s lof copy is not
-  held like a heading's (the same rule would cover it). (c) `>{\centering}p{…}` as a last column ending its rows with
-  `\\` now errs as in pdflatex ("Extra alignment tab"), where the row end was read before.
+  1606.01980). A heading hands its title font the title braced (sect04.rs; latex.ltx:17256 `#6{…}`; sectsty's
+  trailing `\uppercase`, 1509.02957); a caption does not (`\@makecaption` has no font argument). A listings escape is
+  read by a mouth of its own where the listing is digested (`\lx@lst@escape`; `\verb._.`, 1106.5908).
+  `\DeclareMathAlphabet` makes a one-argument alphabet (OXIDIZED_DESIGN_DIVERGENCES #747, KNOWN_PERL_ERRORS #972;
+  1810.09080, and 2211.02508's lost `^d`). (7) Side rows of the review: gensymb's commands are set again in
+  `\AtBeginDocument` (gensymb.sty:112-140; 2206.05542's restored one-argument `\degree`); a `"` in a package name is no
+  part of it (content.rs `require_package`, tex.ch `more_name`; 2407.00688's `\usepackage{"mydefs"}`). Guards
+  `perfect_kernel_batch73b::*`, repros under paragraph-mode, parameter-conditional, captions-floats, macro-state,
+  package-bindings, listings-algorithms, fonts-nfss. Round-1 A/B vs 67int23b over 229 papers: Errors 5,881 → 5,438,
+  Fatals 13 → 11, error-free 84 → 106, 0 new Fatal; its 2 worse rows (2206.05542 56 → 60, 2407.00688 266 → 267) were
+  spurious, not "errs in pdflatex too" (pdflatex: 1 preamble error, 0): the title bracing reached captions, removed in
+  round 2. Open rows:
+  - (a) `$$` in restricted horizontal mode (tex.web §1138, `\mbox{\[…}`, 1508.07482) dropped: MODE is
+    restricted_horizontal in LaTeXML constructs where TeX is not (a beamer frame, a stale `\lx@tag` or in-math-text
+    frame left by an earlier error: 1301.0681 0 → 4, 1111.0674 244 → 313, 2312.14898, 2406.05750), so `\[` cannot test
+    it; needs a box-level test.
+  - (b) A heading's `[short]` toc title (2304.03934, `\subsection[Example: $M(-2;1/2,1/2,3/4)]{…}`, no contents) still
+    digests at the heading and raises its errors there (1 Error; pdflatex 0). The faithful design, not built: expand it
+    at the heading as latex.ltx:17263 `\addcontentsline` → `\protected@write` does (under `\@unexpandable@protect`,
+    raising expansion errors there: `\section[Short \foo]{…}` errs in pdflatex with no contents), then
+    `defer_print("toc", …)` with an anchor in the toctitle, resolved by every printed contents (`\tableofcontents`, a
+    class's or package's `\@starttoc{toc}`: minitoc, etoc, titletoc, raw classes); a heading after the contents digests
+    at once (`deferred_list_is_printed`). Running heads (`\sectionmark{#7}`, which also typesets it) are page furniture,
+    dropped by ruling. `\caption[short]`'s lof copy is the same shape.
+  - (c) `>{\centering}p{…}` as a last column ending its rows with `\\` now errs as in pdflatex ("Extra alignment tab"),
+    where the row end was read before.
+  - (d) RED: a Fortran listing line that is a comment (`C(i) = …` with `language=Fortran`, 1106.5908's listing) ends
+    with a stray "C" pdflatex does not print (base too): `\lstset{escapechar=\%,language=Fortran}` + `  C(i) = val(j) *
+    %B(col\verb._.idx(j))%`.
+  - (e) fleqn's siblings: extarticle, extreport, extbook, memoir, aastex701 and other classes `\input{fleqn.clo}` for
+    `fleqn` but only article/report/book/slides/sigma/iopart/pasj are wired to `fleqn_clo`; check each (bound or raw:
+    a raw class inputs fleqn.clo itself). pasj sets its hook after the whole raw class (a copy loading amsmath after its
+    own `\def\equation` would differ; none found).
+  - (f) bm: the split sees only top-level `$`; a `$` inside a braced subgroup of a `\bm` argument (bm.sty:252-256,
+    `\mathchoice\hbox`) gets no in-hbox treatment. The `Grouped` rule also covers RevTeX 4.x's own unboxed `\bm` (TeX
+    errs there anyway).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

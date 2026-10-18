@@ -499,13 +499,12 @@ fn undelimited_argument_warning_once_per_occurrence() {
     .iter()
     .map(|l| l.split_whitespace().next().unwrap_or(""))
     .collect();
-  // The `[short]` heading's (`\check`) is held and raised once the document is built, as the contents print it
-  // (OXIDIZED_DESIGN_DIVERGENCES #749).
   assert_eq!(
     readers,
     [
       "Warning:malformed:\\hat",
       "Warning:malformed:\\dot",
+      "Warning:malformed:\\check",
       "Warning:malformed:\\ddot",
       "Warning:malformed:\\tilde",
       "Warning:malformed:\\breve",
@@ -515,7 +514,6 @@ fn undelimited_argument_warning_once_per_occurrence() {
       "Warning:malformed:\\grave",
       "Warning:malformed:\\mathring",
       "Warning:malformed:\\hat",
-      "Warning:malformed:\\check",
     ],
     "{log}"
   );
@@ -533,15 +531,13 @@ fn undelimited_argument_warning_once_per_occurrence() {
     "{log}"
   );
   assert_eq!(
-    (located[0], located[10]),
+    (located[0], located[11]),
     (
       "at t; line 6 col 1 - line 6 col 37",
       "at t; line 18 col 40 - line 18 col 40"
     ),
     "{log}"
   );
-  // the held `[short]` keeps its heading's location
-  assert!(located[11].starts_with("at t; line 7 "), "{log}");
   assert_element(
     &xml,
     "toctitle",

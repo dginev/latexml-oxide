@@ -975,7 +975,7 @@ pub(crate) fn load() -> Result<()> {
     } else {
       let font : Option<Font> = Some(font::lookup_tex_font(
         &family.to_string(), &series.to_string(), &shape.to_string()));
-      // latex.ltx's `\DeclareMathAlphabet` makes a one-argument alphabet (`\select@group`, latex.ltx:3986-3999:
+      // latex.ltx's `\DeclareMathAlphabet` makes a one-argument alphabet (`\select@group`, latex.ltx:12903-12922, `#1{#4}` through `\use@mathgroup` at :12914:
       // `\mathbb{W}` sets W alone), bound as the stock alphabets are (`\mathrm{}`, sect07.rs; amsfonts' `\mathbb{}`).
       // Perl's parameterless switch (latex_constructs.pool.ltxml:2686) set the rest of the group in the alphabet:
       // `\frac{\mathbb{W}_c}{w}` under mathalfa's `bb=ams` (mathalpha.sty:116 `\DeclareMathAlphabet{\mathbb}{U}{msb}

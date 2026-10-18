@@ -828,13 +828,6 @@ static DEFERRED_AT_LABEL: RefCell<Option<HeldByLabel>> = RefCell::new(None);
 #[thread_local]
 static LABEL_USES: RefCell<Vec<(String, String)>> = RefCell::new(Vec::new());
 
-/// Per list (`toc`), the deferred diagnostics of the copies written to it.
-#[thread_local]
-static DEFERRED_AT_LIST: RefCell<Vec<(String, usize)>> = RefCell::new(Vec::new());
-/// The lists the document prints (an `ltx:TOC` of the list).
-#[thread_local]
-static LISTS_SHOWN: RefCell<Vec<String>> = RefCell::new(Vec::new());
-
 /// Keep deferred diagnostics; their id.
 pub fn keep_deferred(deferred: DeferredDiagnostics) -> usize {
   let mut kept = DEFERRED.borrow_mut();
@@ -852,20 +845,6 @@ pub fn defer_to_label(label: &str, role: &str, id: usize) {
     .push((role.to_string(), id));
 }
 
-/// Deferred diagnostics `id` were raised by a copy written to `list` (a heading's `[short]` toc title, which LaTeX
-/// writes to the .toc and typesets only in a printed table of contents): replayed if the document prints the list.
-pub fn defer_to_list(list: &str, id: usize) {
-  DEFERRED_AT_LIST.borrow_mut().push((list.to_string(), id));
-}
-
-/// The document prints `list` (an `ltx:TOC` of it).
-pub fn note_list_shown(list: &str) {
-  let mut shown = LISTS_SHOWN.borrow_mut();
-  if !shown.iter().any(|l| l == list) {
-    shown.push(list.to_string());
-  }
-}
-
 /// A reference to `label` prints its target's tags as `show` names them.
 pub fn note_label_use(label: &str, show: &str) {
   LABEL_USES
@@ -875,8 +854,8 @@ pub fn note_label_use(label: &str, show: &str) {
 
 /// Replay the deferred diagnostics of every tag a reference prints — a held tag of role R answering for a label,
 /// referenced with a `show` naming R (a word of it: CrossRef's show words, `autoref`, `typerefnum`…; a looser split
-/// than CrossRef's, so it can only replay more) — once each — and those of every copy written to a list the document
-/// prints ([`defer_to_list`]); the rest are dropped unraised, as TeX never typesets them. Run once the document is built (forward references included); empties the job's registries.
+/// than CrossRef's, so it can only replay more) — once each; the rest are dropped unraised, as TeX never typesets them.
+/// Run once the document is built (forward references included); empties the job's registries.
 pub fn replay_shown_deferred() {
   let uses = std::mem::take(&mut *LABEL_USES.borrow_mut());
   let at_label = DEFERRED_AT_LABEL.borrow_mut().take().unwrap_or_default();
@@ -903,15 +882,6 @@ pub fn replay_shown_deferred() {
       }
     }
   }
-  let at_list = std::mem::take(&mut *DEFERRED_AT_LIST.borrow_mut());
-  let shown = std::mem::take(&mut *LISTS_SHOWN.borrow_mut());
-  for (list, id) in at_list {
-    if shown.contains(&list)
-      && let Some(diagnostics) = deferred.get_mut(id).and_then(Option::take)
-    {
-      diagnostics.replay(&mut undefined_seen);
-    }
-  }
 }
 
 /// Forget the job's deferred diagnostics (each conversion's `initialize_report`).
@@ -919,8 +889,6 @@ pub fn reset_deferred_diagnostics() {
   DEFERRED.borrow_mut().clear();
   DEFERRED_AT_LABEL.borrow_mut().take();
   LABEL_USES.borrow_mut().clear();
-  DEFERRED_AT_LIST.borrow_mut().clear();
-  LISTS_SHOWN.borrow_mut().clear();
 }
 
 /// initialize the logger at a given STDERR verbosity `level`

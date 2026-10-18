@@ -5,7 +5,7 @@
 //! - `\setlength` on a non-register runs `#1 #2\relax` (latex.ltx:10253); `\captionof` leaves `\@captype` set
 //!   (caption.sty:391); a `\refstepcounter` in math whose label text cannot set is set as math.
 //! - One-offs: `{center}`'s `\\`, a sectsty style ending in a command, a listings escape read where it runs, a
-//!   declared math alphabet's argument, a `[short]` toc title's diagnostics.
+//!   declared math alphabet's argument; gensymb's `\AtBeginDocument` definitions and a quoted package name (review side rows).
 //!
 //! Every repro is checked against pdflatex (TL 2025; its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -99,26 +99,22 @@ fn setlength_on_a_non_register_runs_its_code() {
   );
 }
 
-/// In the preamble what such a `\setlength` sets is TeX's "Missing \begin{document}" (pdflatex 1 error), which nothing
-/// raises here: the `Variable` read's Error stands for it, with its recovery as before 73b (fancyheadings'
-/// `\headrulewidth`, a macro).
+/// The preamble runs the code too: what it typesets starts a paragraph, whose `\everypar{\@nodocument}`
+/// (latex.ltx:9137) is TeX's "Missing \begin{document}"; pdflatex prints "0.4pt 0pt Hello." with 1 error
+/// (fancyheadings' `\headrulewidth`, a macro). Before 73b: the `Variable` read's Error, and ".4pt 0pt Hello.".
 #[test]
-fn setlength_on_a_macro_in_the_preamble_keeps_its_error() {
+fn setlength_on_a_macro_in_the_preamble_errs_as_tex() {
   let (stderr, xml) = convert_with(
     "\\documentclass{article}\n\\def\\headrulewidth{0.4pt}\n\\setlength{\\headrulewidth}{0pt}\n\\begin{document}\nHello.\n\\end{document}\n",
     None,
   );
   assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(
-    stderr.contains("A <variable> was supposed to be here"),
+    stderr.contains("LaTeX Error: Missing \\begin{document}"),
     "{stderr}"
   );
-  assert_element(
-    &xml,
-    "para",
-    &[],
-    r#"<para xml:id="p1"><p>.4pt 0pt Hello.</p></para>"#,
-  );
+  assert_element(&xml, "p", &[], "<p>0.4pt 0pt Hello.</p>");
 }
 
 /// captions-floats/captionof_leaves_captype_outside_floats: after `\captionof{figure}` a bare `\caption` in a
@@ -133,6 +129,22 @@ fn captionof_leaves_the_type_outside_floats() {
     "figure",
     &["xml:id=\"S0.F2\""],
     r#"<figure class="ltx_minipage" inlist="lof" vattach="middle" width="345.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">2</tag>Second caption.</toccaption><caption><tag close=": ">Figure 2</tag>Second caption.</caption></figure>"#,
+  );
+}
+
+/// captions-floats/captionof_of_another_type_sets_the_type: a `\captionof{table}` after a `\captionof{figure}` leaves
+/// the type `table`, so the bare `\caption` in the minipage is Table 2 (pdflatex 0 errors, "Figure 1 / Table 1 /
+/// Table 2"; 73b round 1 gave a silent "Figure 2", the test keyed on `\@captype` being defined, not on `lx@in@float`).
+#[test]
+fn captionof_of_another_type_sets_the_type() {
+  let (stderr, xml) = repro!("captions-floats/captionof_of_another_type_sets_the_type.tex");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "table",
+    &["xml:id=\"S0.T2\""],
+    r#"<table class="ltx_minipage" inlist="lot" vattach="middle" width="345.0pt" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Third caption.</toccaption><caption><tag close=": ">Table 2</tag>Third caption.</caption></table>"#,
   );
 }
 
@@ -182,8 +194,9 @@ fn section_font_ending_in_a_command_takes_the_title() {
   );
 }
 
-/// listings-algorithms/listings_escape_verb_recatcodes: `%B(col\verb._.idx(j))%` (1106.5908; pdflatex 0 errors).
-/// Before 73b: 1 Error.
+/// listings-algorithms/listings_escape_verb_recatcodes: `%B(col\verb._.idx(j))%` in a C listing (1106.5908's is
+/// Fortran; pdflatex 0 errors, "B(col_idx(j)) ;"). Before 73b: 1 Error. The repro is in C because the Fortran line
+/// ends with a "C" pdflatex does not print, in base too (a separate RED row in SYNC_STATUS).
 #[test]
 fn listings_escape_is_read_where_it_runs() {
   let (stderr, xml) = repro!("listings-algorithms/listings_escape_verb_recatcodes.tex");
@@ -193,7 +206,7 @@ fn listings_escape_is_read_where_it_runs() {
     &xml,
     "listingline",
     &[],
-    r#"<listingline xml:id="lstnumberx1"><text class="ltx_lst_space">  </text><text class="ltx_lst_comment" font="italic">C(i)<text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>val(j)<text class="ltx_lst_space"> </text>*<text class="ltx_lst_space"> </text>B(col<verbatim font="typewriter upright">_</verbatim>idx(j))C</text></listingline>"#,
+    r#"<listingline xml:id="lstnumberx1"><text class="ltx_lst_space">  </text><text class="ltx_lst_identifier">c</text>[<text class="ltx_lst_identifier">i</text>]<text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">val</text>(<text class="ltx_lst_identifier">j</text>)<text class="ltx_lst_space"> </text>*<text class="ltx_lst_space"> </text>B(col<verbatim font="typewriter">_</verbatim>idx(j));</listingline>"#,
   );
 }
 
@@ -211,21 +224,40 @@ fn declared_math_alphabet_takes_one_argument() {
   );
 }
 
-/// sectioning-frontmatter/short_toc_title_errs_only_where_printed (and _where_printed): a `[short]` toc title's
-/// unbalanced `$` errs only when the contents are printed (2304.03934; pdflatex 0 and 3 errors). Before 73b: 1 Error
-/// in both.
+/// gensymb.sty:112-140 defines `\degree` and its siblings in `\AtBeginDocument`, over a preamble redefinition (2206.05542's
+/// main.tex:54-58 restores a one-argument `\degree` after gensymb; pdflatex 0 errors, "360°"). Before: the body's
+/// `\degree` took the one-argument definition, an Error per use.
 #[test]
-fn short_toc_title_errs_only_where_printed() {
-  let (stderr, xml) = repro!("sectioning-frontmatter/short_toc_title_errs_only_where_printed.tex");
+fn gensymb_defines_its_commands_at_begin_document() {
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{gensymb}\n\\renewcommand{\\degree}[1]{\\textbf{#1}}\n\\begin{document}\nAn angle $360\\degree$.\n\\end{document}\n",
+    None,
+  );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_element(
     &xml,
-    "subsection",
+    "XMath",
     &[],
-    r#"<subsection inlist="toc" xml:id="S1.SS1"><tags><tag>1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">§1.1</tag></tags><title><tag close=" ">1.1</tag>Example: <Math mode="inline" tex="M(-2;1/2)" text="M@(list@(- 2, 1 / 2))" xml:id="S1.SS1.m1"><XMath><XMApp><XMTok font="italic" role="UNKNOWN">M</XMTok><XMDual><XMApp><XMTok meaning="list"/><XMRef idref="S1.SS1.m1.1"/><XMRef idref="S1.SS1.m1.2"/></XMApp><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMApp xml:id="S1.SS1.m1.1"><XMTok meaning="minus" role="ADDOP">-</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok role="PUNCT">;</XMTok><XMApp xml:id="S1.SS1.m1.2"><XMTok meaning="divide" role="MULOP">/</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok><XMTok meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math></title><para xml:id="S1.SS1.p1"><p>Text.</p></para></subsection>"#,
+    r#"<XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok meaning="360" role="NUMBER">360</XMTok><XMTok name="degree" role="UNKNOWN">°</XMTok></XMApp></XMath>"#,
   );
-  let (stderr, _) = repro!("sectioning-frontmatter/short_toc_title_errs_where_printed.tex");
-  assert_eq!(error_count(&stderr), 1, "{stderr}");
-  assert!(stderr.contains("Extra }, or forgotten $"), "{stderr}");
+}
+
+/// A `"` in a package name quotes spaces and is not part of the name (tex.ch `more_name`): `\usepackage{"xcolor"}` loads
+/// xcolor (2407.00688's `\usepackage{"mydefs"}`; pdflatex 0 errors). Before: "Can't find binding or file for
+/// '"xcolor".sty'", and `\textcolor` undefined.
+#[test]
+fn quoted_package_name_is_found() {
+  let (stderr, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{\"xcolor\"}\n\\begin{document}\nA \\textcolor{red}{word}.\n\\end{document}\n",
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r##"<p>A <text color="#FF0000">word</text>.</p>"##,
+  );
 }

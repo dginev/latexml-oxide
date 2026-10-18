@@ -2870,13 +2870,10 @@ LoadDefinitions!({
   // Format a title (or caption) appropriately for type.
   // Customize by defining \format@title@type{title}
   // Default composes \lx@fnum@@{type} space title.
-  // The title font is handed the title as a braced group, as latex.ltx:17256-17259 `\@sect` hands `#6` its
-  // `{\@hangfrom…#8\@@par}`: a style ending in a one-argument command (sectsty's `\sectionfont{\large\centering
-  // \uppercase}`, 1509.02957: "Expected opening '{'") takes the whole title; the group is transparent for a
-  // declaration. Guard `perfect_kernel_batch73b::section_font_ending_in_a_command_takes_the_title`.
+  // A heading passes its title braced (sect04.rs, latex.ltx:17256 `#6{…}`); a caption does not.
   DefMacro!(
     "\\lx@format@title@@{}{}",
-    r"\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}{#2}}}"
+    r"\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}"
   );
   DefMacro!(
     "\\lx@@format@title@@{}{}",

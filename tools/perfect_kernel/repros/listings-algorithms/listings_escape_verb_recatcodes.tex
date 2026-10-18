@@ -1,13 +1,14 @@
 % witness: 1106.5908 (rc_struct6 row 10)
 % oracle:  pdflatex 0 errors: the escaped text is TeX read where it runs, so `\verb._.` recatcodes its `_`
 % engines: rust 67int23b = 1 ("Script _ can only appear in math mode": the escape was tokenized at once), perl = 1
-% expect:  0 errors; the line holds "B(col", a verbatim "_", "idx(j))"
+% expect:  0 errors; the line holds "B(col", a verbatim "_", "idx(j))", then ";"
 % status:  RED (67int23b) -> GREEN (73b: listings_sty.rs `tokenize_balanced` / `\lx@lst@escape`)
+% note:    language C (1106.5908's is Fortran, whose comment line we end with a stray "C": a separate RED row)
 \documentclass{article}
 \usepackage{listings}
-\lstset{escapechar=\%,language=Fortran}
+\lstset{escapechar=\%,language=C}
 \begin{document}
 \begin{lstlisting}
-  C(i) = val(j) * %B(col\verb._.idx(j))%
+  c[i] = val(j) * %B(col\verb._.idx(j))%;
 \end{lstlisting}
 \end{document}

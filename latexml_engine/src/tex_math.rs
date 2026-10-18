@@ -806,10 +806,11 @@ LoadDefinitions!({
     // Perl: beginMode('restricted_horizontal') — NOT 'text'
     before_digest => sub { begin_mode("restricted_horizontal")?; },
     // An empty text (`$$` in a math TeX sets in a box, bm's `\boldsymbol{e^+e^-$$\rightarrow$$J/\psi}`: a formula
-    // ends and the next begins, 2506.20975) is no operand: dropped. Guard `perfect_kernel_batch73b::dollar_in_boldsymbol_is_text`.
+    // ends and the next begins, 2506.20975) is no operand: dropped — the text just built, the last child if an `ltx:XMText`. Guard `perfect_kernel_batch73b::dollar_in_boldsymbol_is_text`.
     after_construct => sub[document, _whatsit] {
       if let Some(node) = document.get_node().get_last_child()
         && node.get_first_child().is_none()
+        && document::with_node_qname(&node, |qn| qn == "ltx:XMText")
       {
         document.remove_node(node);
       }

@@ -3226,7 +3226,14 @@ fn source_tree_basename<'a>(name: &'a str, ext: &str) -> Cow<'a, str> {
 
 pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   let ext = options.extension.as_deref().unwrap_or("sty").to_string();
-  let name = source_tree_basename(name, &ext);
+  // A `"` quotes spaces in a file name and is not part of it (tex.ch `more_name`, as `tex_file_name` reads `\input`):
+  // `\usepackage{"mydefs"}` opens `mydefs.sty` (2407.00688: not found, its `\r`/`\b`/`\g` kept their accent meanings).
+  let unquoted: Cow<str> = if name.contains('"') {
+    Cow::Owned(name.replace('"', ""))
+  } else {
+    Cow::Borrowed(name)
+  };
+  let name = source_tree_basename(&unquoted, &ext);
   let name = name.as_ref();
   // A stand-in's copy read after its binding (`read_stand_in_copy`) runs the very `\usepackage`/`\RequirePackage`
   // lines the binding's dependency scan stands in for, so they take the scan's test (`marked_loaded_unrecorded`,
