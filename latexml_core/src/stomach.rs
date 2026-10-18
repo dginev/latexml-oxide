@@ -2602,6 +2602,15 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
   })
 }
 
+/// Whether the open until-body's own loop reads the next token: no group of the body is open inside it (an
+/// unbalanced `\abstract{` has its `{` open), so its terminal ends it without closing one ([`until_terminal_inside_group`]).
+pub fn until_body_at_own_level() -> bool {
+  match lookup_value("lx@until@depth") {
+    Some(Stored::Number(n)) => stomach!().boxing.len() <= n.0 as usize,
+    _ => false,
+  }
+}
+
 /// Return the digested `List` after reading and digesting a body from the its Gullet.
 /// The body extends until the current level of boxing or environment is closed.
 /// A bounded body's terminal token (`\lx@add@frontmatter@until`'s

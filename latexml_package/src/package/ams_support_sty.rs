@@ -146,8 +146,10 @@ LoadDefinitions!({
 
   // 68t: a call inside the document's `{titlepage}` also runs a refused printing `\title` there (sect05.rs
   // `titlepage_class_call`, as revtex4_support's: gr-qc9404034).
+  // The class's refused `\title` runs first for its side effects, as under the kernel's (sect05.rs `\title`,
+  // OXIDIZED_DESIGN #482: the cvpr template's `\thetitle`; acmart 2506.01799).
   DefMacro!("\\title[]{}",
-    "\\lx@titlepage@class@call{title}{#1}{#2}{\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}");
+    "\\lx@titlepage@class@call{title}{#1}{#2}{\\lx@replay@class@setter{title}{#1}{#2}\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}");
 
   DefMacro!("\\lx@author@sep", ",\\ ");
   DefMacro!("\\lx@author@conj", "\\ and\\ ");   // \@@and

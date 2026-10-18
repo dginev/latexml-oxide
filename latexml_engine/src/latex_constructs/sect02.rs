@@ -486,7 +486,30 @@ pub(crate) fn load() -> Result<()> {
   // dump): that one does `\tex_shipout:D\vbox to\textheight{…}` with the
   // "Temporary page!" text (latex.ltx:20261-20269), which the `\shipout`
   // primitive would now emit in place (DIVERGENCES #314).
-  DefMacro!(T_CS!("\\end{document}"), None, "\\lx@enddocument@hooks\\lx@finalize@document\\@@end");
+  DefMacro!(T_CS!("\\end{document}"), None, "\\lx@end@open@frontmatter\\lx@enddocument@hooks\\lx@finalize@document\\@@end");
+  // A frontmatter body still open at `\end{document}` — an unclosed `\begin{abstract}`, `\abstract{`, or a brace-less
+  // `\abstract` no sectioning command ended (`\lx@add@frontmatter@until`, base_utilities.rs) — ends first: its terminal
+  // is read before the end-document code, which then runs at the document's level, so the abstract keeps its text as an
+  // unclosed `{itemize}` keeps its list (65c; the open environment's Warning stays). Read inside the body, the finalizer
+  // closed the document within the abstract's box, which nothing placed: an empty `<document/>` with 0 errors.
+  DefPrimitive!("\\lx@end@open@frontmatter", {
+    if let Some(terminal) = lookup_token("lx@until@terminal")
+      && (terminal == T_CS!("\\lx@end@abstract") || terminal == T_CS!("\\lx@end@keywords"))
+    {
+      // An environment's body left open is LaTeX's error (latex.ltx `\@checkend`: "\begin{abstract} on input line …
+      // ended by \end{document}"; Perl errs too). A brace-less `\abstract` has no extent (no diagnostic in pdflatex);
+      // an unbalanced `\abstract{` reports its open group (`until_terminal_inside_group`).
+      if lookup_value("lx@env@bare@end").is_none() && until_body_at_own_level() {
+        let name = if terminal == T_CS!("\\lx@end@abstract") { "abstract" } else { "keywords" };
+        Error!(
+          "unexpected",
+          "\\end{document}",
+          s!("\\begin{{{name}}} ended by \\end{{document}}: the {name} ends here")
+        );
+      }
+      unread(Tokens!(terminal));
+    }
+  });
   DefPrimitive!("\\lx@enddocument@hooks", sub[_args] {
     if lookup_bool("lx@enddocument@hooks@fired") {
       return Ok(Vec::new());

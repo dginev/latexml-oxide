@@ -15745,3 +15745,15 @@ Trigger (`--includestyles`): `absfront.cls` = `\LoadClass{article}\newcommand{\a
 Rust: OXIDIZED_DESIGN_DIVERGENCES #482, 74a (1508.06756, 1406.7114, 1404.0027). Guards
 `perfect_kernel_batch74a::{class_abstract_begin_code_makes_section_a_run_in_label,
 class_newenvironment_abstract_begin_code_runs}`.
+
+## 980. An abstract left open at `\end{document}` leaves a document of resources only
+
+latex_constructs.pool.ltxml:1136-1143 reads `{abstract}` as a deferred frontmatter body up to `\lx@end@abstract`; left
+open, the body takes the rest of the document and is never placed.
+
+Trigger: `\documentclass{article}\begin{document}\begin{abstract}Abstract only text.\section{Body}Body text.
+\end{document}` — pdflatex 1 error ("\begin{abstract} on input line 3 ended by \end{document}"), every word printed;
+Perl 1 error, 2 warnings, an output with its resources and no text.
+
+Rust: OXIDIZED_DESIGN_DIVERGENCES #754 (the abstract keeps its text; the error kept). Guards
+`perfect_kernel_batch74b::*abstract_unclosed_at_end_document*`.

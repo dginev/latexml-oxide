@@ -15121,6 +15121,13 @@ empty `<document/>`, 0 errors). (c) What a begin code binds in its own groups is
 `tail_reads_ahead` steps over a `\def`-family definer: its target is no command the code runs. Guards
 `perfect_kernel_batch74a::{class_abstract_begin_code_calling_maketitle_keeps_the_frontmatter,
 class_abstract_begin_code_local_definition_reaches_the_body, braceless_abstract_does_not_replay_the_class_begin_code}`.
+**int26, `\title`**: the kernel's `\title` (and the support bindings' `\lx@titlepage@class@call` `\title` — ams_support,
+revtex4_support, iopart_support, mn2e_support) replays the refused `\title` too, as `\author` does: the cvpr
+template's `\renewcommand{\title}[1]{\titleold{#1}\newcommand{\thetitle}{#1}}` (cvpr.sty:596-597 and its renamed
+copies; in the preamble), whose `\maketitlesupplementary` prints `\thetitle` (`undefined:\thetitle`: 2308.03900,
+2409.09893, 2503.23679, 2410.13860, 2407.18899, 2510.03312, 2511.06823, acmart 2506.01799 and 9 more; 16 of 17 sole
+errors), and hepthesis.cls:217's `\global\let\thetitle\@title` (0907.1044). Perl errs the same (shared). Guards
+`perfect_kernel_batch74b::{refused_package_title_defines_thetitle, refused_document_title_defines_thetitle_under_acmart}`.
 **Why**: since 62k reads shipped classes raw (#444), the refused setters left the classes' checks failing: JINST.cls's
 `\AtBeginDocument` "Some \author{...} should appear" / "\abstract{...} should appear" (:1592-1607; the JHEP family,
 JHEP copies and CECS: 340 of run 336's papers; 2601.17161, 1310.6454, gr-qc0406095, hep-th0201170), and compositio's
@@ -20067,3 +20074,22 @@ toc_ends_an_unclosed_abstract, toc_ends_an_unclosed_braced_abstract, lists_of_fi
 toc_outside_the_frontmatter_is_unchanged}`; repros `sectioning-frontmatter/{toc_inside_balanced_abstract_at_its_end,
 toc_inside_balanced_abstract_mid_text, toc_ends_an_unclosed_abstract, toc_ends_an_unclosed_braced_abstract,
 lists_of_figures_and_tables_inside_abstract}`.
+
+### 754. A frontmatter body left open at `\end{document}` ends there and keeps its text (Perl: an empty document)
+
+An abstract (or keywords) is read as a deferred frontmatter body up to its terminal (`\lx@add@frontmatter@until …
+\lx@end@abstract`, base_utilities.rs). Left open — an unclosed `\begin{abstract}`, an unbalanced `\abstract{`, a
+brace-less `\abstract` no sectioning command ends — that body ran to the end of input: it held the finalizer and the
+rest of the document, and nothing placed it, so the output was an empty `<document/>` with 0 errors (Perl: resources
+only, 1 error). pdflatex prints every word. `\end{document}` now begins with `\lx@end@open@frontmatter` (sect02.rs):
+when the innermost frame is such a body, its terminal is read first, the body ends with its text, and the end-document
+code runs at the document's level, as an unclosed `{itemize}` keeps its list (65c). Diagnostics as pdflatex's: the
+unclosed `\begin{abstract}` is LaTeX's error (`\@checkend`: "\begin{abstract} … ended by \end{document}"; Perl errs
+too), the unbalanced `\abstract{` reports its open group (`until_terminal_inside_group`), the brace-less form nothing (it
+has no extent; pdflatex reports nothing). A `\section` after an unclosed `\begin{abstract}` stays inside it, as in the
+PDF — the ruling on a heading inside an abstract is open (SYNC 74a row (b)). KNOWN_PERL_ERRORS #980. Guards
+`perfect_kernel_batch74b::{braceless_abstract_unclosed_at_end_document_keeps_its_text,
+braced_abstract_unclosed_at_end_document_keeps_its_text, environment_abstract_unclosed_at_end_document_errs_and_keeps_its_text}`;
+repros `sectioning-frontmatter/{braceless,braced}_abstract_unclosed_at_end_document_keeps_the_document`,
+`sectioning-frontmatter/unclosed_abstract_at_end_document_keeps_the_document`.
+**Why**: the status code must be honest (user 2026-10-18): a whole document lost with 0 errors counted as a success.

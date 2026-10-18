@@ -929,7 +929,13 @@ pub(crate) fn load() -> Result<()> {
     // field provenance (`\lx@field@mark`, base_utilities.rs; no token added), so a print of `\@title` (or of titling's
     // `\thetitle`, set by the after-slot from it) is known for the title's ink (P2 witnesses 1605.00182, 2402.14614, 1603.09631, 1503.06457;
     // OXIDIZED_DESIGN #715). `\author` below does the same for `\@author`.
-    r"\lx@sealed@class@call{title}{#1}{#2}{\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}\lx@field@mark\gdef\@title{title}\expandafter\lx@title@after\expandafter{\@title}}",
+    // The class's (or a package's, or the document's) own `\title`, refused by the lock, still runs for its side effects
+    // first, as `\author`'s does (`replay_class_setter`, OXIDIZED_DESIGN #482): the cvpr template's
+    // `\renewcommand{\title}[1]{\titleold{#1}\newcommand{\thetitle}{#1}}` (cvpr.sty:596-597 and its renamed copies:
+    // 2308.03900, 2409.09893, 2503.23679, 2410.13860 corl_2024.sty:382, 2407.18899 eccv.sty:240; in the preamble: 2510.03312,
+    // 2511.06823), whose `\maketitlesupplementary` prints `\thetitle` (undefined:\thetitle); hepthesis.cls:217's
+    // `\global\let\thetitle\@title` (0907.1044).
+    r"\lx@sealed@class@call{title}{#1}{#2}{\lx@replay@class@setter{title}{#1}{#2}\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}\lx@field@mark\gdef\@title{title}\expandafter\lx@title@after\expandafter{\@title}}",
     locked => true);
   // The class's own call (`sealed_class_call`) when the document body sealed this one off; inside the document's
   // `{titlepage}`, the class's own printing call and then the kernel's (`titlepage_class_call`); else the kernel's.

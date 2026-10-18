@@ -401,7 +401,7 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   expansion. RED `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`. The same for an AASTeX 7 address recorded as
   `schema:email` metadata (`\email{\url{…}}` → `content="\url{…}"`; RED
   `sectioning-frontmatter/aastex7_email_markup_recorded_as_text`, OXIDIZED_DESIGN_DIVERGENCES #479).
-- **A `{abstract}` left open at `\end{document}` empties the document** (SHARED; 65c review side finding): the deferred
+- **FIXED int26 (OXIDIZED_DESIGN_DIVERGENCES #754, KNOWN_PERL_ERRORS #980) — a `{abstract}` left open at `\end{document}` empties the document** (SHARED; 65c review side finding): the deferred
   abstract body (`\lx@add@frontmatter@until … \lx@end@abstract`) runs to the end, holding the finalize whatsit and the
   rest of the document, and is never placed — `<document/>` with or without a following `\section` (Perl: resources
   only, 1 error); pdflatex prints every word with 1 error. RED `sectioning-frontmatter/unclosed_abstract_at_end_document_keeps_the_document`.
@@ -3860,7 +3860,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     prints `\moveright 3pc\box\abstractbox`, although `filled_boxes` restores the box; blanking cmfne.cls's
     `\global\setbox\abstractbox=\vtop\bgroup` line removes it, synthetic copies do not reproduce it. No content lost;
     root cause open (low priority, one paper).
-  - (e) Pre-existing, HIGH priority (status-code honesty): an unclosed brace-less `\abstract` drops the whole document
+  - (e) FIXED int26 (OXIDIZED_DESIGN_DIVERGENCES #754): an unclosed brace-less `\abstract` dropped the whole document
     silently — `\documentclass{article}\begin{document}\abstract Text.` + blank line + `More.\end{document}` gives
     `<document/>` with 0 errors and 2 warnings (`\end{document}` with open groups; `\lx@end@abstract` body unended), 74a
     review finding 2. Content loss must at least be an Error.
@@ -3878,6 +3878,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   of its words; the review fixes alone (67int26 vs 67int25) 1 changed (+30 words), 0 worse. Binding nets 136/136, 0
   documents worse than 67int23. Witnesses: 0806.4576 title + 3 creators back; 2210.02246, 1508.06756, 0901.4589,
   1805.07007, 1209.2208, 0908.1913, 1603.02077, 2007.03709, 1011.3976 byte-identical to 67int25.
+
+- **int26** (silent-loss inventory agent_reports/2026-10-18_silent_loss_inventory.md items #1/#2; the `\thetitle`
+  cluster, agent_reports/2026-10-18_thetitle_rootcause.md). (A) A frontmatter body left open at `\end{document}` — an
+  unclosed `\begin{abstract}`, `\abstract{`, or brace-less `\abstract` — ends there and keeps its text (sect02.rs
+  `\lx@end@open@frontmatter`; was an empty `<document/>` with 0 errors); the unclosed `\begin{abstract}` reports
+  LaTeX's error as pdflatex and Perl do (OXIDIZED_DESIGN_DIVERGENCES #754, KNOWN_PERL_ERRORS #980). (B) The kernel's
+  `\title` and the four support bindings' replay the refused `\title` as `\author` does (OXIDIZED_DESIGN #482): the
+  cvpr-template `\thetitle` (16 of 17 witnesses error-free: 2308.03900, 2311.18531, 2407.18899, 2409.09893, 2410.13860,
+  2411.17580, 2502.19922, 2503.15412, 2503.23679, 2503.24009, 2506.01799, 2510.03312, 2511.06823, 2511.16669, 2511.18452,
+  2602.09494; 0907.1044 3 → 2, its `&` errors left; each gains the title text, `<title>` counts unchanged, its `<ERROR>`
+  node gone). 2402.10194 (amsart `\markboth{…}{\thetitle}`, never defined; pdflatex errs too) is an honest author
+  error. Guards `perfect_kernel_batch74b::*`.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
