@@ -200,3 +200,23 @@ fn physics_optional_argument_amp_in_align_keeps_the_rows() {
   assert!(xml.contains("<XMArray"), "{xml}");
   assert!(xml.contains("TAILTEXT survives."), "{xml}");
 }
+
+/// An abstract whose first line is a heading (scrartcl `\begin{abstract}\section*{Abstract:} …`, 1507.08575): the
+/// heading closes it before any text, the text follows with the heading in the body, and the body that typesets
+/// nothing adds no `ltx:abstract` (no empty element; was three sections nested in the abstract, 2 Errors).
+#[test]
+fn abstract_opening_with_a_section_leaves_no_empty_abstract() {
+  let (log, xml) = convert_repro!("abstract_opening_with_a_section_leaves_no_empty_abstract.tex");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("<abstract"), "{xml}");
+  assert!(xml.contains(r#"<title>Abstract:</title>"#), "{xml}");
+  assert!(
+    xml.contains(r#"<p xml:id="Sx1.p1.1">Structured abstract text.</p>"#),
+    "{xml}"
+  );
+  assert!(xml.contains(r#"<title>Availability:</title>"#), "{xml}");
+  assert!(
+    xml.contains(r#"<p xml:id="Sx2.p1.1">Code is online.</p>"#),
+    "{xml}"
+  );
+}

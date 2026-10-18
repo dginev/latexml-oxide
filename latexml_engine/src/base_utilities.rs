@@ -570,6 +570,14 @@ LoadDefinitions!({
     // this frame, `until_terminal_inside_group` (stomach.rs) acts.
     let body = digest_next_body(Some(end))?;
     let digested = Digested::from(List::new(body));
+    // A body that typesets nothing adds no entry: an abstract (keywords, classification) with no authored content is
+    // no frontmatter, whatever ended it — a heading that closed it before its first line (scrartcl's
+    // `\begin{abstract}\section*{Abstract:} …`, 1507.08575; user ruling 2026-10-18, sect05.rs
+    // `\lx@heading@ends@abstract`) or an environment left empty (pdflatex prints only its heading).
+    if !typesets_content(&digested) {
+      frontmatter_remove(&tag, index);
+      return Ok(Vec::new());
+    }
     DebugFeature!("frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
     if let Some(key) = seal {
@@ -4693,6 +4701,18 @@ fn frontmatter_push(tag: &str, entry: TagData) -> usize {
       0
     }
   })
+}
+
+/// Remove the entry at (tag, index) of frontmatter{tag}.
+fn frontmatter_remove(tag: &str, index: usize) {
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(list) = frnt.get_mut(tag)
+      && index < list.len()
+    {
+      list.remove(index);
+    }
+  });
 }
 
 /// The author creators queued and not yet digested.

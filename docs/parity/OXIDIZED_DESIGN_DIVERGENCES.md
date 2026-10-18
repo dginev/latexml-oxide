@@ -20106,7 +20106,10 @@ abstract ends with the text before it and the heading starts the body with the t
 heading-ended `\begin{abstract}` never gets is LaTeX's "\begin{abstract} ended by \end{document}" at `\end{document}`
 (sect02.rs `\lx@end@open@frontmatter`). Not inside a replayed class begin code (its `\section*{\abstractname}` is the
 class's own heading, discarded with the replay, #482), and not where a class rebinds `\section` inside the abstract
-(frontiersFPHY's `\absection`: a run-in label, no heading). Lower levels (`\subsection`…`\subparagraph`) do not close
+(frontiersFPHY's `\absection`: a run-in label, no heading). An abstract the heading closed before its first line (the structured-abstract idiom, scrartcl
+`\begin{abstract}\section*{Abstract:} …`, 1507.08575) holds nothing and adds no entry: `\lx@add@frontmatter@until`
+keeps no body that typesets nothing (abstract, keywords, classification), so an empty environment leaves no empty
+element either (Perl: an empty `ltx:abstract`). Lower levels (`\subsection`…`\subparagraph`) do not close
 it; pdflatex sets the heading inside the abstract's text block either way. Perl: `<ltx:section> isn't allowed in
 <ltx:abstract>` (1 error); ours kept it nested, schema-invalid (74a row (b)). Guards
 `perfect_kernel_batch74b::{section_inside_balanced_abstract_closes_it,
