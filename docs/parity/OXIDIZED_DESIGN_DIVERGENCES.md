@@ -19809,8 +19809,9 @@ no id, so a `\label` written after the stored caption names the last numbered un
 `tab:allesFitted` = 4.1.5). The first `\begin{tabular}` directly in a `{longrotatetable}` sets a caption still stored,
 unnumbered; one no `\begin{tabular}` took (a `tabular*`, `tabularx` or `longtable` in it, or a `\tablecaption` after
 the tabular) is set at the longrotatetable's end, in its group (`\lx@lrt@end@caption`; a held longtable keeps its own
-number and id); the longrotatetable is then that table's float; around a deluxetable it is the page's setting, the
-deluxetable its own table. In a `{longtable}` the `\tablecaption` is the caption only while the longtable has none —
+number and id); the longrotatetable is then that table's float; around a deluxetable (or a `{table}`) it is the page's setting, the
+deluxetable its own table; a `\tablecaption` stored there and not taken by the held table is lost, as in the PDF
+(an overwritten store behaves the same way). In a `{longtable}` the `\tablecaption` is the caption only while the longtable has none —
 numbered, the longtable's own `\caption` (tag and list entry), as the PDF counts the longtable (`\ref` 1, the next
 table 2); after a `\caption` it is stored, never printed there (1903.10014, #740). In another float it is the float's `\caption`, as Perl. The author's caption is kept where the PDF
 loses it, content before PDF fidelity; the numbering stays the PDF's. The emulateapj and AASTeX 5 stores are TeX's
@@ -19866,8 +19867,8 @@ setter — the copy's own are provided as usual (#731) and store — and its `\e
 `\lx@end@abstract` after) emits a non-empty `\@projectpage` as a `role=url` contact named "Project Page: " and
 `\@emailaddress` as a `role=email` contact named "Email Address: " (`\lx@neurips@contacts`, `\lx@add@contact`), where
 the copy's abstract prints them — frontmatter, not text. Without such a copy nothing is defined: `\projectpage` errs
-undefined, as in TeX. Witness 2605.09681 (both contacts kept). Repros stand-in-copies/neurips_contact/{copy_setters_
-are_contacts, projectpage_undefined_without_a_copy}; guards `perfect_kernel_batchint23::neurips_copy_setters_are_contacts`,
+undefined, as in TeX. Witness 2605.09681 (both contacts kept). Repros stand-in-copies/neurips_contact/copy_setters_are_contacts
+(with the copy) and stand-in-copies/neurips_no_copy/projectpage_undefined_without_a_copy (in a directory without one); guards `perfect_kernel_batchint23::neurips_copy_setters_are_contacts`,
 `perfect_kernel_batch73a::neurips_projectpage_undefined_without_a_copy`.
 
 ### 744. A stand-in copy's `\input` files are part of the copy; its syntax ends with its load; its declaration names the binding that answered

@@ -716,7 +716,7 @@ fn kept_caption_label_names_the_table() {
   assert!(!xml.contains("<section inlist=\"toc\" labels"), "{xml}");
 }
 
-/// Review 73a r3 finding 4: an AASTeX 6+ longtable whose only caption is a `\tablecaption` has the longtable's numbered
+/// Review 73a r3 finding 4: an AASTeX 5 or 6+ longtable whose only caption is a `\tablecaption` has the longtable's numbered
 /// caption, tag and list entry; the deluxetable after it is Table 2 ("See 1 and 2.", as pdflatex).
 #[test]
 fn longtable_tablecaption_is_numbered() {
@@ -784,7 +784,7 @@ fn caption_package_title_takes_a_paragraph_break() {
 #[test]
 fn neurips_projectpage_undefined_without_a_copy() {
   let (log, xml) = convert_counted(include_str!(
-    "../../../tools/perfect_kernel/repros/stand-in-copies/neurips_contact/projectpage_undefined_without_a_copy.tex"
+    "../../../tools/perfect_kernel/repros/stand-in-copies/neurips_no_copy/projectpage_undefined_without_a_copy.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert!(log.contains("Error:undefined:\\projectpage"), "{log}");

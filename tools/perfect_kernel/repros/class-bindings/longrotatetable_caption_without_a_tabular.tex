@@ -1,7 +1,8 @@
 % witness: review 73a r3 finding 1 (2204.03327's `{longrotatetable}` shape with a `tabular*`, a `longtable`, or the
 %          `\tablecaption` after the tabular; probes lrt_star, lrt_after)
 % oracle:  pdflatex (TL 2025 aastex701.cls, clean): aastex701.cls:8417-8418 stores every `\tablecaption` here and
-%          `{longrotatetable}` (:12245-12286) never prints it; "See ??."; the deluxetable after it "Table 1. Real one."
+%          `{longrotatetable}` (:12245-12286) never prints it; "See ??."; the deluxetable after it "Table 2. Real one." (the longtable steps
+%          the counter)
 % engines: rust 73a r3 = the three captions lost (only a `\begin{tabular}` took the store) and the `\label` gone;
 %          Perl = 3 errors (deluxetable.sty.ltxml:77, `\caption` outside any float)
 % expect:  0 errors, 0 warnings; each caption kept on its table, unnumbered, set at the longrotatetable's end (user

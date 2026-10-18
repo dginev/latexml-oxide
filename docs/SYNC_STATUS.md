@@ -3641,12 +3641,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   took (`tabular*`, `tabularx`, `longtable`, or after the tabular) is set at its end (`\lx@lrt@end@caption`); a kept
   unnumbered caption holding a `\label` takes an id step (`\lx@deluxe@id@step`, Perl `RefStepID`), so the label names
   the table — a `\ref` to it shows the enclosing section's number, as Perl's CrossRef walks up before its title
-  fallback; an AASTeX 6+ longtable's lone `\tablecaption` is its numbered caption; the emulateapj/AASTeX 5 repeat of an
+  fallback; an AASTeX 5 or 6+ longtable's lone `\tablecaption` is its numbered caption; the emulateapj/AASTeX 5 repeat of an
   in-data caption drops its `\label` (OD #739, #740, #664). caption's title takes the caption `\long`
   (caption_sty.rs `\lx@caption@settitle`, caption3.sty:1488; elife 1907.05060 E 3 → 0, row (t)). neurips (user
   2026-10-18, option C): the binding no longer defines `\projectpage`/`\emailaddress`; a copy's setters store and the
   abstract's end makes the stored values contacts (OD #741; 2605.09681). Repros under class-bindings/,
-  captions-floats/, stand-in-copies/neurips_contact/, package-bindings/, graphics-tikz/, index/, index-bib/; guards
+  captions-floats/, stand-in-copies/neurips_contact/, stand-in-copies/neurips_no_copy/, package-bindings/, graphics-tikz/, index/, index-bib/; guards
   `perfect_kernel_batch73a::*` (36).
 
 - **72b** (`\chapter` exists only where the class has chapters; user rulings 2026-10-17: TeX's answer to every
