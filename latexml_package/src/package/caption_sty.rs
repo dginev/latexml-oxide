@@ -876,8 +876,11 @@ LoadDefinitions!({
   DefMacro!("\\lx@format@caption@@{}{}", sub[(ty, text)] { caption_format_tokens(ty, text) });
   // caption3.sty:1468-1472 `\caption@fnum`: the label format's name argument is `\@nameuse{<type>name}`, empty when
   // the type has none.
+  // The title takes the caption's text as caption3 does, `\long` (`\newcommand\caption@@make[2]`, caption3.sty:1488): a
+  // caption with a paragraph break (1907.05060's elife figures) erred "Paragraph ended before \format@title@figure".
+  // Guard `perfect_kernel_batch73a::caption_package_title_takes_a_paragraph_break`.
   RawTeX!(r"\def\lx@caption@fnum#1#2{\expandafter\def\csname fnum@#2\endcsname{\csname caption@labelformat@#1\endcsname{\ifcsname #2name\endcsname\csname #2name\endcsname\fi}{\lx@the@@{#2}}}}
-\def\lx@caption@settitle#1#2{\@namedef{format@title@#1}##1{\lx@tag[][#2]{\lx@fnum@@{#1}}##1}}
+\def\lx@caption@settitle#1#2{\expandafter\long\expandafter\def\csname format@title@#1\endcsname##1{\lx@tag[][#2]{\lx@fnum@@{#1}}##1}}
 \def\lx@caption@addfont#1#2{\@ifundefined{#1}{\@namedef{#1}{}}{}\expandafter\l@addto@macro\csname #1\endcsname{#2}}");
 
   // caption3.sty:1774-1806 `\DeclareCaptionSubType*[<numbering>]{<type>}`: the sub-type `sub<type>`, its counter

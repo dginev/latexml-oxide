@@ -1,0 +1,40 @@
+% witness: review 73a r3 finding 1 (2204.03327's `{longrotatetable}` shape with a `tabular*`, a `longtable`, or the
+%          `\tablecaption` after the tabular; probes lrt_star, lrt_after)
+% oracle:  pdflatex (TL 2025 aastex701.cls, clean): aastex701.cls:8417-8418 stores every `\tablecaption` here and
+%          `{longrotatetable}` (:12245-12286) never prints it; "See ??."; the deluxetable after it "Table 1. Real one."
+% engines: rust 73a r3 = the three captions lost (only a `\begin{tabular}` took the store) and the `\label` gone;
+%          Perl = 3 errors (deluxetable.sty.ltxml:77, `\caption` outside any float)
+% expect:  0 errors, 0 warnings; each caption kept on its table, unnumbered, set at the longrotatetable's end (user
+%          ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #739); the `\label` inside the first names its table (an id
+%          step); the longtable keeps its own number and id; the deluxetable "Table 2" after the longtable's 1
+% status:  RED (73a r3) -> GREEN (73a r4)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\begin{longrotatetable}
+\tablecaption{Star caption.\label{ts}}
+\begin{tabular*}{\textwidth}{cc}
+A & B \\
+\end{tabular*}
+\end{longrotatetable}
+\begin{longrotatetable}
+\tablecaption{Longtable caption.}
+\begin{longtable}{cc}
+C & D \\
+\end{longtable}
+\end{longrotatetable}
+\begin{longrotatetable}
+\begin{tabular}{cc}
+E & F \\
+\end{tabular}
+\tablecaption{After the tabular.}
+\end{longrotatetable}
+\begin{deluxetable}{cc}
+\tablecaption{Real one.}
+\tablehead{\colhead{G} & \colhead{H}}
+\startdata
+3 & 4 \\
+\enddata
+\end{deluxetable}
+See \ref{ts}.
+\end{document}

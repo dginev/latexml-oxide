@@ -1,0 +1,33 @@
+% witness: review 73a r3 finding 3 (probe eapj_cap; 1104.2619's in-data captions, OXIDIZED_DESIGN_DIVERGENCES #664/#740)
+% oracle:  pdflatex (TL 2025 emulateapj.cls, clean): TABLE 1 "Head one.", TABLE 2 "Head one." (the store repeats, the
+%          in-data caption only stored), TABLE 3 "In data two." (its `\label` runs there: "See 3.")
+% engines: rust 73a r3 = "In data two." on Table 2 (#664) and again on Table 3, `t2` on both tables; Perl = the
+%          `\tablecaption` is `\caption` where it stands (deluxetable.sty.ltxml:77)
+% expect:  0 errors, 0 warnings; the in-data caption kept on Table 2 with its `\label`; Table 3 repeats it as pdflatex,
+%          without the `\label` (one label, on the table that shows the caption first)
+% status:  RED (73a r3) -> GREEN (73a r4)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\begin{deluxetable}{cc}
+\tablecaption{Head one.}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1 & 2 \\
+\enddata
+\end{deluxetable}
+\begin{deluxetable}{cc}
+\tablehead{\colhead{C} & \colhead{D}}
+\tablecaption{In data two.\label{t2}}
+\startdata
+3 & 4 \\
+\enddata
+\end{deluxetable}
+\begin{deluxetable}{cc}
+\tablehead{\colhead{E} & \colhead{F}}
+\startdata
+5 & 6 \\
+\enddata
+\end{deluxetable}
+See \ref{t2}.
+\end{document}

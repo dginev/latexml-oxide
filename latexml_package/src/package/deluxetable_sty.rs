@@ -223,9 +223,10 @@ LoadDefinitions!({
   // - in a deluxetable, before its print point, it is this table's caption (`\lx@deluxe@own`), set at the print point
   //   (`\lx@deluxe@print@caption`, the class's place: before the tabular); given in the data (after the print point)
   //   it is kept for the table's end, unnumbered (the table has its number; OXIDIZED_DESIGN_DIVERGENCES #664);
-  // - in a `{longtable}` it is the longtable's caption while the longtable has none (unnumbered: no class prints it
-  //   there; the longtable steps its number itself), else stored, never printed there (1903.10014: the longtable's
-  //   `\caption` stays; aastex.cls:1280/:1507, aastex701.cls:8418);
+  // - in a `{longtable}` it is the longtable's caption while the longtable has none — numbered, the longtable's own
+  //   `\caption` (`\lx@longtable@caption`, tag and list entry): the table takes its number there, as the PDF counts it
+  //   (repro class-bindings/longtable_tablecaption_is_numbered: `\ref` 1, the next table 2) — else stored, never
+  //   printed there (1903.10014: the longtable's `\caption` stays; aastex.cls:1280/:1507, aastex701.cls:8418);
   // - directly in an aastex `{longrotatetable}` or outside a float it is stored; in another float it is that float's
   //   `\caption`, as Perl.
   // The emulateapj and AASTeX 5 store (`\iflx@deluxe@persistent`, the default) is the classes' own: global, never
@@ -234,22 +235,46 @@ LoadDefinitions!({
   // (aastex701.cls:11303-11304), so a caption given before the table is lost in the PDF; it is kept here (user ruling 2,
   // 2026-10-18; OXIDIZED_DESIGN_DIVERGENCES #739), scoped to its group, and — as the PDF prints no caption there — set
   // unnumbered (`\lx@deluxe@unnumbered`), so every later number and `\ref` is the PDF's (2204.03327's `tab:wasp43_res`
-  // is 3); a long table prints its numbered caption in the PDF, empty or not, so there it is numbered (tc_lrtdlx7).
+  // is 3); a long table prints its numbered caption in the PDF, empty or not, so there it is numbered (repro
+  // class-bindings/longrotatetable_tablecaption_goes_to_its_table).
   // Guards: `perfect_kernel_batch73a::{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
   // stored_tablecaption_scoped_to_its_group, longtable_keeps_its_printed_caption, emulateapj_stored_caption_repeats,
-  // kept_tablecaption_is_unnumbered, longrotatetable_tablecaption_goes_to_its_table}`.
+  // kept_tablecaption_is_unnumbered, longrotatetable_tablecaption_goes_to_its_table, kept_caption_label_names_the_table,
+  // longtable_tablecaption_is_numbered, emulateapj_repeat_drops_the_label}`.
   RawTeX!(r"\newif\iflx@deluxe@persistent\lx@deluxe@persistenttrue\newif\iflx@deluxe@intable\newif\iflx@deluxe@printed
 \newif\iflx@deluxe@long\newif\iflx@deluxe@emptyhead\gdef\lx@deluxe@caption{}\global\let\lx@deluxe@own\@empty\global\let\lx@deluxe@pending\@empty
-\global\let\lx@deluxe@late\@empty\let\lx@deluxe@caption@orig\caption");
+\global\let\lx@deluxe@late\@empty\let\lx@deluxe@caption@orig\caption\global\let\lx@deluxe@shown\relax");
   DefMacro!("\\lx@deluxe@caption@store{}",
     r"\iflx@deluxe@persistent\gdef\lx@deluxe@caption{#1}\else\def\lx@deluxe@caption{#1}\fi");
-  DefMacro!("\\lx@deluxe@unnumbered{}", r"\lx@setfloatcapt{\lx@@caption{#1}}");
+  // A kept caption the PDF never prints takes no counter step and no list entry; holding a `\label`, it takes an id step
+  // (Perl `RefStepID`, Package.pm; main-session call 2026-10-18): the table gets an id (`<type>_id`, set on the float by
+  // `after_float`, Perl `RescueCaptionCounters`), so the `\label` names the table (Perl `floatToLabel` takes the nearest
+  // ancestor with an id; pdflatex never runs it, "??"). A caption without one takes none, so a `\label` written after
+  // the stored caption names what TeX's `\label` names, the last numbered unit (2204.03327: `tab:allesFitted` = 4.1.5,
+  // its aux). A table whose own caption already gave it an id keeps it. Repros class-bindings/{aastex_tablecaption_
+  // before_deluxetable, kept_caption_label_names_the_table}.
+  DefPrimitive!("\\lx@deluxe@id@step{}", sub[(caption)] {
+    let captype = do_expand(T_CS!("\\@captype"))?.to_string();
+    let key = s!("{captype}_id");
+    let label = T_CS!("\\label");
+    if !captype.is_empty()
+      && caption.unlist().contains(&label)
+      && lookup_value(&key).is_none_or(|v| matches!(v, Stored::None))
+    {
+      let props = ref_step_id(&captype)?;
+      assign_value(&key, props.get("id"), Some(Scope::Global));
+    }
+  });
+  DefMacro!("\\lx@deluxe@unnumbered{}", r"\lx@deluxe@id@step{#1}\lx@setfloatcapt{\lx@@caption{#1}}");
   DefMacro!("\\lx@deluxe@tablecaption",
     r"\iflx@deluxe@intable\expandafter\lx@deluxe@caption@intable\else
 \ifx\caption\lx@longtable@caption\expandafter\expandafter\expandafter\lx@deluxe@caption@inlongtable
 \else\expandafter\expandafter\expandafter\lx@deluxe@caption@outside\fi\fi");
+  // A caption given in the data is set on its table here (OXIDIZED_DESIGN_DIVERGENCES #664), where TeX only stores it:
+  // the emulateapj/AASTeX 5 store keeps it for the next table, which prints it again, as pdflatex — without its
+  // `\label` (`\lx@deluxe@shown`, `\lx@deluxe@caption@nolabel`), which names the table that shows it first.
   DefMacro!("\\lx@deluxe@caption@intable{}",
-    r"\iflx@deluxe@persistent\gdef\lx@deluxe@caption{#1}\fi
+    r"\iflx@deluxe@persistent\gdef\lx@deluxe@caption{#1}\iflx@deluxe@printed\gdef\lx@deluxe@shown{#1}\fi\fi
 \iflx@deluxe@printed\iflx@deluxe@emptyhead\global\lx@deluxe@emptyheadfalse
 \g@addto@macro\lx@deluxe@late{\lx@deluxe@caption@orig{#1}}\else\g@addto@macro\lx@deluxe@late{\lx@deluxe@unnumbered{#1}}\fi
 \else\gdef\lx@deluxe@own{#1}\fi");
@@ -263,7 +288,7 @@ LoadDefinitions!({
   });
   DefMacro!("\\lx@deluxe@longtable@stored{}", r"\iflx@deluxe@persistent\gdef\lx@deluxe@caption{#1}\fi");
   DefMacro!("\\lx@deluxe@longtable@caption{}",
-    r"\iflx@deluxe@persistent\gdef\lx@deluxe@caption{#1}\fi\lx@longtable@caption@{}{#1}\lx@longtable@caption@row");
+    r"\iflx@deluxe@persistent\gdef\lx@deluxe@caption{#1}\fi\lx@longtable@caption{#1}");
   // Outside a deluxetable and a longtable: a float's own caption, unless the float is an aastex `{longrotatetable}`
   // (aas_support_sty.rs, its frame `lx@lrt@frame`), whose `\tablecaption` is stored for the table it holds.
   DefMacro!("\\lx@deluxe@caption@outside{}", sub[(caption)] {
@@ -286,6 +311,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@deluxe@print@caption",
     r"\iflx@deluxe@printed\else\global\lx@deluxe@printedtrue
 \iflx@deluxe@persistent\let\lx@deluxe@next\lx@deluxe@caption@orig\let\lx@deluxe@arg\lx@deluxe@caption
+\ifx\lx@deluxe@caption\lx@deluxe@shown\let\lx@deluxe@next\lx@deluxe@caption@nolabel\fi
 \ifx\lx@deluxe@caption\@empty\global\lx@deluxe@emptyheadtrue\let\lx@deluxe@next\@gobble\fi
 \else\ifx\lx@deluxe@own\@empty\let\lx@deluxe@arg\lx@deluxe@pending
 \ifx\lx@deluxe@pending\@empty\iflx@deluxe@long\let\lx@deluxe@next\lx@deluxe@caption@orig\else\let\lx@deluxe@next\@gobble\fi
@@ -293,6 +319,8 @@ LoadDefinitions!({
 \else\let\lx@deluxe@next\lx@deluxe@caption@orig\let\lx@deluxe@arg\lx@deluxe@own\fi\fi
 \global\let\lx@deluxe@own\@empty\global\let\lx@deluxe@pending\@empty
 \expandafter\lx@deluxe@next\expandafter{\lx@deluxe@arg}\fi");
+  DefMacro!("\\lx@deluxe@caption@nolabel{}",
+    r"\let\lx@deluxe@label\label\let\label\@gobble\lx@deluxe@caption@orig{#1}\let\label\lx@deluxe@label");
   // The table's end: a table that reached no print point sets its own caption (numbered) or the kept one
   // (unnumbered); the captions given in the data follow; a long table's flag ends with it.
   DefMacro!("\\lx@deluxe@pending@caption",

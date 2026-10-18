@@ -1,5 +1,3 @@
-use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
-
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -193,13 +191,19 @@ LoadDefinitions!({
   DefMacro!("\\answerNA[]",   "\\textcolor{gray}{[N/A] #1}");
   DefMacro!("\\answerTODO[]", "\\textcolor{red}{\\bf [TODO]}");
   // A neurips_2026.sty copy's own setters (2605.09681's :410-411 `\projectpage`, `\emailaddress`; the distributed style
-  // has neither), which the end of its `{abstract}` prints (:445-458) where the binding's abstract does not: the
-  // paper's contacts, "Project Page:" and "Email Address:". A guess a paper's own definition replaces.
-  {
-    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
-    DefMacro!("\\projectpage{}", "\\lx@add@contact[role=url,name={Project Page: }]{#1}");
-    DefMacro!("\\emailaddress{}", "\\lx@add@contact[role=email,name={Email Address: }]{#1}");
-  }
+  // has neither) store `\@projectpage`/`\@emailaddress`, which the end of the copy's `{abstract}` prints (:445-458) —
+  // an abstract the copy does not replace here. The abstract's end emits what they stored, non-empty, as the paper's
+  // contacts, "Project Page:" (url) and "Email Address:" (email). The binding defines neither setter (user 2026-10-18,
+  // option C): without such a copy `\projectpage` is undefined, as in TeX. Guard
+  // `perfect_kernel_batchint23::neurips_copy_setters_are_contacts`.
+  RawTeX!(r"\def\lx@neurips@contacts{\ifx\@projectpage\@undefined\else\ifx\@projectpage\@empty\else
+\expandafter\lx@neurips@contact\expandafter{\@projectpage}{url}{Project Page: }\fi\fi
+\ifx\@emailaddress\@undefined\else\ifx\@emailaddress\@empty\else
+\expandafter\lx@neurips@contact\expandafter{\@emailaddress}{email}{Email Address: }\fi\fi}
+\def\lx@neurips@contact#1#2#3{\lx@add@contact[role=#2,name={#3}]{#1}}");
+  // The abstract's end is the kernel's (sect05.rs `\end{abstract}`, Perl latex_constructs.pool.ltxml:1131), the
+  // contacts first.
+  DefMacro!(T_CS!("\\end{abstract}"), None, r"\lx@neurips@contacts\lx@end@abstract");
 
   // {ack} environment — Perl L51-52 unreads `\acksection` before the body
   // digests so the "Acknowledgments and Disclosure of Funding" title

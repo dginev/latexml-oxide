@@ -1,0 +1,26 @@
+% witness: review 73a r3 finding 4 (probe lt4; 1903.10014's longtable shape)
+% oracle:  pdflatex (TL 2025 aastex701.cls, clean): the longtable takes Table 1 ("See 1 and 2."), the deluxetable after
+%          it "Table 2. Next table."
+% engines: rust 73a r3 = the longtable numbered (tags) but its caption without tag or list entry; Perl = the
+%          `\tablecaption` is `\caption`, the longtable's (deluxetable.sty.ltxml:77)
+% expect:  0 errors, 0 warnings; the longtable's caption numbered, "Table 1: Only tablecaption." with its list entry
+%          (`\lx@longtable@caption`); the next table Table 2
+% status:  RED (73a r3) -> GREEN (73a r4)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\usepackage{longtable}
+\begin{document}
+\begin{longtable}{cc}
+\tablecaption{Only tablecaption.} \label{tab:lo}\\
+A & B \\
+1 & 2 \\
+\end{longtable}
+\begin{deluxetable}{cc}
+\tablecaption{Next table.}\label{tab:nx}
+\tablehead{\colhead{C} & \colhead{D}}
+\startdata
+3 & 4 \\
+\enddata
+\end{deluxetable}
+See \ref{tab:lo} and \ref{tab:nx}.
+\end{document}

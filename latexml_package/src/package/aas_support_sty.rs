@@ -864,10 +864,13 @@ LoadDefinitions!({
   // (deluxetable_sty.rs `\lx@deluxe@tablecaption`, `in_longrotatetable_body`): a deluxetable in it takes the store, and
   // the first `\begin{tabular}` directly in it sets a caption still stored, unnumbered — the PDF never prints it, so
   // the later numbers stay the PDF's (2204.03327). Its `\global\startlongtabletrue` makes the next deluxetable a long
-  // one (`\lx@deluxe@longtrue`), whose caption the PDF always prints, numbered (tc_lrtdlx7). Around a deluxetable —
+  // one (`\lx@deluxe@longtrue`), whose caption the PDF always prints, numbered (repro
+  // class-bindings/longrotatetable_tablecaption_goes_to_its_table). Around a deluxetable —
   // whose own `{table}` the body then holds — it stays the page's setting, the body alone.
+  // A caption no `\begin{tabular}` took (a `tabular*`, `tabularx` or `longtable`, or a `\tablecaption` after the
+  // tabular) is set at the end, in its group, unnumbered (review 73a r3 finding 1).
   // Guards: `perfect_kernel_batch73a::{longrotatetable_around_a_tabular_is_its_table,
-  // longrotatetable_tablecaption_goes_to_its_table}`.
+  // longrotatetable_tablecaption_goes_to_its_table, longrotatetable_caption_without_a_tabular}`.
   DefEnvironment!("{longrotatetable}", sub[document, _args, props] {
     let body = match props.get("body") {
       Some(Stored::Digested(body)) => Some(body.clone()),
@@ -912,8 +915,25 @@ LoadDefinitions!({
         tokens.extend(lookup_tokens(hook).map(Tokens::unlist).unwrap_or_default());
         assign_value(hook, Stored::Tokens(Tokens::new(tokens)), Some(Scope::Local));
       }
+      // A table float in the body (a deluxetable's `{table}`) makes the body the page's setting (`holds_table_float`),
+      // and a `{longtable}` is a numbered table of its own, with its id: their `beforebegin` hooks note them here, in
+      // the longrotatetable's group, for the end's fallback.
+      for (env, note) in [("table", "\\lx@lrt@note@table"), ("table*", "\\lx@lrt@note@table"),
+        ("longtable", "\\lx@lrt@note@longtable")]
+      {
+        let hook = s!("@environment@{env}@beforebegin");
+        let hook = hook.as_str();
+        if matches!(lookup_value(hook), None | Some(Stored::None) | Some(Stored::Tokens(_))) {
+          let mut tokens = vec![T_CS!(note)];
+          tokens.extend(lookup_tokens(hook).map(Tokens::unlist).unwrap_or_default());
+          assign_value(hook, Stored::Tokens(Tokens::new(tokens)), Some(Scope::Local));
+        }
+      }
       Digest!(r"\global\lx@deluxe@longtrue")?;
     },
+    // The end, inside its group: a caption still stored — no `tabular` took it (a `tabular*`, `tabularx` or
+    // `longtable`, or a `\tablecaption` after the tabular) — is set here, unnumbered, as at a `tabular`.
+    before_digest_end => { digest(Tokens!(T_CS!("\\lx@lrt@end@caption")))? },
     after_digest => sub[whatsit] { after_float(whatsit); },
     after_digest_body => sub[whatsit] {
       if let Ok(Some(body)) = whatsit.get_body() {
@@ -922,6 +942,38 @@ LoadDefinitions!({
     });
   DefMacro!("\\lx@lrt@tabular@caption", sub[_args] {
     Ok(if deluxetable_sty::in_longrotatetable_body() { Tokens!(T_CS!("\\lx@lrt@stored@caption")) } else { Tokens!() })
+  });
+  DefPrimitive!("\\lx@lrt@note@table", {
+    if deluxetable_sty::in_longrotatetable_body() {
+      assign_value("lx@lrt@holds@table", Stored::Bool(true), Some(Scope::Local));
+    }
+  });
+  DefPrimitive!("\\lx@lrt@note@longtable", {
+    if deluxetable_sty::in_longrotatetable_body() {
+      assign_value("lx@lrt@holds@longtable", Stored::Bool(true), Some(Scope::Local));
+    }
+  });
+  // A held `{longtable}` has its number and id (longtable_sty.rs steps at its start), so its caption takes no id step.
+  DefMacro!("\\lx@lrt@end@caption", sub[_args] {
+    Ok(if !deluxetable_sty::in_longrotatetable_body() || lookup_bool("lx@lrt@holds@table") {
+      Tokens!()
+    } else if lookup_bool("lx@lrt@holds@longtable") {
+      Tokens!(T_CS!("\\lx@lrt@stored@caption@noid"))
+    } else {
+      Tokens!(T_CS!("\\lx@lrt@stored@caption"))
+    })
+  });
+  DefMacro!("\\lx@lrt@stored@caption@noid",
+    r"\ifx\lx@deluxe@caption\@empty\else\expandafter\lx@deluxe@caption@noid\expandafter{\lx@deluxe@caption}\global\let\lx@deluxe@caption\@empty\fi");
+  DefMacro!("\\lx@deluxe@caption@noid{}", r"\lx@lrt@longtable@id\lx@setfloatcapt{\lx@@caption{#1}}");
+  // The table then is the longtable's: its id (the longtable steps at its start, longtable_sty.rs), which the collapse
+  // of the two tables keeps (`collapse_float`).
+  DefPrimitive!("\\lx@lrt@longtable@id", {
+    if let Some(Stored::HashStored(props)) = lookup_value("LONGTABLE_PROPERTIES")
+      && lookup_value("table_id").is_none_or(|v| matches!(v, Stored::None))
+    {
+      assign_value("table_id", props.get("id"), Some(Scope::Global));
+    }
   });
   DefMacro!("\\lx@lrt@stored@caption",
     r"\ifx\lx@deluxe@caption\@empty\else\expandafter\lx@deluxe@unnumbered\expandafter{\lx@deluxe@caption}\global\let\lx@deluxe@caption\@empty\fi");

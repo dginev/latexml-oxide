@@ -18740,7 +18740,8 @@ page prints the caption the store held before — the previous table's, or none 
 (68y review probe e3 `\tablehead{…}` `\tablecaption{CaptionInData\label{tcd}}` `\startdata`). Here the head prints the
 store as TeX does (#740), and the caption given in the data is stored and also kept for this table's end (emulateapj_cls.rs
 `\lx@eapj@labels`, deluxetable_sty.rs `\lx@deluxe@late`, with the notes and labels), unnumbered — the table has its
-number — after the tabular, so the row it was written in stays empty. When the store was empty the head printed the
+number — after the tabular, so the row it was written in stays empty; the next table's repeat of it drops its
+`\label` (#740). When the store was empty the head printed the
 number alone ("TABLE 1", no text), so the first caption given in the data is the table's numbered caption there, as
 before (1104.2619: `\tablehead{…}\tablecaption{GOODS AGN sample…}`). Why kept: the author's caption is content, and
 a table may be the last. Why after the tabular: the data is open from `\tablehead` (KNOWN_PERL_ERRORS #874), so a
@@ -19798,20 +19799,30 @@ an aastex `{longrotatetable}` (aas_support_sty.rs, `in_longrotatetable_body`). T
 its start; at its print point (`\lx@deluxe@print@caption`, `\startdata`, above the tabular) it sets its own caption,
 numbered, else the kept one — **unnumbered** (`\lx@deluxe@unnumbered`, the kernel's starred caption: no counter step,
 no list entry), so every later "Table N" and `\ref` is the PDF's (main-session call 2026-10-18; 2204.03327's
-`tab:wasp43_res` is 3) — or, in a long table, numbered, kept or empty, as the PDF numbers it. The first `\begin{tabular}`
-directly in a `{longrotatetable}` sets a caption still stored, unnumbered; the longrotatetable is then that table's
-float, its `\label` the last numbered unit's as in TeX; around a deluxetable it is the page's setting, the deluxetable
-its own table. In a `{longtable}` the `\tablecaption` is the caption only while the longtable has none, unnumbered (no
-class prints it there; the longtable steps its own number); after a `\caption` it is stored, never printed there
-(1903.10014, #740). In another float it is the float's `\caption`, as Perl. The author's caption is kept where the PDF
+`tab:wasp43_res` is 3) — or, in a long table, numbered, kept or empty, as the PDF numbers it. A kept caption holding
+a `\label` takes an id step (`\lx@deluxe@id@step`, Perl `RefStepID`: no counter, no list entry; main-session call
+2026-10-18), so that `\label` — which pdflatex never runs ("??") — names the table, not the document or section (Perl
+`floatToLabel` takes the nearest ancestor with an id); a `\ref` to it shows what Post CrossRef `generateRef` finds
+walking up from the table (CrossRef.pm:686-695: the requested `refnum` on the table, then its parents, the title only
+when none has one), i.e. the enclosing section's number, linked to the table. A kept caption without a `\label` takes
+no id, so a `\label` written after the stored caption names the last numbered unit, as TeX's (2204.03327's aux:
+`tab:allesFitted` = 4.1.5). The first `\begin{tabular}` directly in a `{longrotatetable}` sets a caption still stored,
+unnumbered; one no `\begin{tabular}` took (a `tabular*`, `tabularx` or `longtable` in it, or a `\tablecaption` after
+the tabular) is set at the longrotatetable's end, in its group (`\lx@lrt@end@caption`; a held longtable keeps its own
+number and id); the longrotatetable is then that table's float; around a deluxetable it is the page's setting, the
+deluxetable its own table. In a `{longtable}` the `\tablecaption` is the caption only while the longtable has none —
+numbered, the longtable's own `\caption` (tag and list entry), as the PDF counts the longtable (`\ref` 1, the next
+table 2); after a `\caption` it is stored, never printed there (1903.10014, #740). In another float it is the float's `\caption`, as Perl. The author's caption is kept where the PDF
 loses it, content before PDF fidelity; the numbering stays the PDF's. The emulateapj and AASTeX 5 stores are TeX's
 (#740). Witnesses 2204.03327 (2 → 0, its two `{longrotatetable}` captions kept), 1511.09213 (the deluxetable's `[h]`
 placement read again). Repros class-bindings/{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
 stored_tablecaption_scoped_to_its_group, longrotatetable_around_a_tabular_is_its_table,
-longrotatetable_tablecaption_goes_to_its_table, kept_tablecaption_is_unnumbered, longtable_keeps_its_printed_caption};
+longrotatetable_tablecaption_goes_to_its_table, kept_tablecaption_is_unnumbered, longtable_keeps_its_printed_caption,
+longrotatetable_caption_without_a_tabular, kept_caption_label_names_the_table, longtable_tablecaption_is_numbered};
 guards `perfect_kernel_batch73a::{aastex_tablecaption_before_deluxetable, tablecaption_inside_the_table_wins,
 stored_tablecaption_scoped_to_its_group, longrotatetable_around_a_tabular_is_its_table,
-longrotatetable_tablecaption_goes_to_its_table, kept_tablecaption_is_unnumbered, longtable_keeps_its_printed_caption}`.
+longrotatetable_tablecaption_goes_to_its_table, kept_tablecaption_is_unnumbered, longtable_keeps_its_printed_caption,
+longrotatetable_caption_without_a_tabular, kept_caption_label_names_the_table, longtable_tablecaption_is_numbered}`.
 
 ### 740. emulateapj's and AASTeX 5's stored `\tablecaption` is printed by every table's head (Perl: an Error outside a float)
 
@@ -19827,14 +19838,37 @@ emptied only `\AtBeginDocument` (:1305) and printed by every deluxetable's `\sta
 `\tablecaption` stores it globally — outside a float, in a table, in a float (which also sets it as its `\caption`, as
 Perl) — and every deluxetable prints it at its print point (deluxetable_sty.rs `\lx@deluxe@print@caption` at
 `\startdata`; emulateapj_cls.rs where the data opens, at `\tablehead` or `\startdata`), numbered, above the tabular;
-an empty store is the number alone, set at the table's end (#664). A caption given in the data, after the print point, is stored for the next table and kept for this one's
-end, unnumbered (#664). In a `{longtable}` a `\tablecaption` is the caption only while the longtable has none, else
+an empty store is the number alone, set at the table's end (#664). A caption given in the data, after the print
+point, is stored for the next table and kept for this one's end, unnumbered (#664); the next table without a caption
+of its own prints it again, as pdflatex, but without its `\label` (`\lx@deluxe@shown`, `\lx@deluxe@caption@nolabel`):
+the label names the table that shows the caption first, where pdflatex's names the repeat (it runs only there), and no
+label is defined twice. A store printed by two tables from outside both (`\tablecaption{…\label{t1}}` before them)
+defines its label twice, as pdflatex ("Label multiply defined"; ours warns nothing). In a `{longtable}` a `\tablecaption` is the caption only while the longtable has none, else
 stored (1903.10014's AASTeX 5 longtable keeps its printed `\caption{Observing Log…}`, and "Summary of targets", never
 printed, is not set); emulateapj's is numbered there, its `\tablehead` printing it (1810.10130). Witnesses 1010.4329
 (4 → 0, each caption above its tabular), 1903.10014 (1 → 0). Repros class-bindings/{emulateapj_stored_caption_repeats,
-longtable_keeps_its_printed_caption, emulateapj_startdata_ends_head}; guards
+longtable_keeps_its_printed_caption, emulateapj_startdata_ends_head, emulateapj_repeat_drops_the_label}; guards
 `perfect_kernel_batch73a::{emulateapj_stored_caption_repeats, longtable_keeps_its_printed_caption,
-stored_tablecaption_scoped_to_its_group}` (its emulateapj half), `perfect_kernel_batch68y::emulateapj_startdata_ends_the_head`.
+stored_tablecaption_scoped_to_its_group, emulateapj_repeat_drops_the_label}` (its emulateapj half),
+`perfect_kernel_batch68y::emulateapj_startdata_ends_the_head`.
+
+### 741. A neurips copy's stored `\@projectpage`/`\@emailaddress` are the paper's contacts (TeX: printed as text at its abstract's end; Perl: no binding for the setters)
+
+**TeX**: 2605.09681's neurips_2026.sty copy adds `\newcommand{\projectpage}[1]{\gdef\@projectpage{#1}}` and
+`\emailaddress` (:410-411; the distributed style has neither) and prints the non-empty stores at the end of its renewed
+`{abstract}` (:445-458): "Project Page: \texttt{…}", "Email Address: …".
+
+**Perl**: neurips.sty.ltxml defines neither; the copy's abstract is not read, so the values are lost (with the copy's
+setters) or `\projectpage` is undefined (without).
+
+**Rust** (73a r4; user 2026-10-18, option C, superseding int23's Fallback-origin setters): the binding defines no
+setter — the copy's own are provided as usual (#731) and store — and its `\end{abstract}` (neurips_sty.rs, the kernel's
+`\lx@end@abstract` after) emits a non-empty `\@projectpage` as a `role=url` contact named "Project Page: " and
+`\@emailaddress` as a `role=email` contact named "Email Address: " (`\lx@neurips@contacts`, `\lx@add@contact`), where
+the copy's abstract prints them — frontmatter, not text. Without such a copy nothing is defined: `\projectpage` errs
+undefined, as in TeX. Witness 2605.09681 (both contacts kept). Repros stand-in-copies/neurips_contact/{copy_setters_
+are_contacts, projectpage_undefined_without_a_copy}; guards `perfect_kernel_batchint23::neurips_copy_setters_are_contacts`,
+`perfect_kernel_batch73a::neurips_projectpage_undefined_without_a_copy`.
 
 ### 744. A stand-in copy's `\input` files are part of the copy; its syntax ends with its load; its declaration names the binding that answered
 

@@ -1,0 +1,19 @@
+% witness: 1907.05060 (elife.cls loads caption with `labelsep=period`; Results.tex's first figure caption has blank
+%          lines before its closing brace)
+% oracle:  pdflatex (TL 2025, clean): "Figure 1. Long A." / "B." / "See 1."
+% engines: rust int23 = 3 errors ("Paragraph ended before \format@title@figure was complete" + 2 "Attempt to close
+%          boxing group"); Perl = 0 (its caption binding formats nothing, KNOWN_PERL_ERRORS #795)
+% expect:  0 errors, 0 warnings; the caption's two paragraphs in the figure's caption, "Figure 1." with the period
+% status:  RED (int23 c3a799ebad) -> GREEN (73a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[labelfont={bf},labelsep=period,font=small]{caption}
+\begin{document}
+\begin{figure}
+\caption[Short]{Long A.
+
+B.}
+\label{f}
+\end{figure}
+See \ref{f}.
+\end{document}

@@ -4,7 +4,7 @@
 %          Perl = 1 error (deluxetable.sty.ltxml:77, the `\caption` outside any float)
 %          (2204.03327's aux: the labels are the subsubsection's, `tab:allesFitted` = 4.1.5); aastex701/631's
 %          `{longrotatetable}` sets `\global\startlongtabletrue`, reset only by a long table's end, so the next
-%          deluxetable is a long one and prints "Table 1." empty (TL 2025 aastex701.cls, probe tc_stale7)
+%          deluxetable is a long one and prints "Table 1." empty (TL 2025 aastex701.cls)
 % expect:  0 errors, 0 warnings; the longrotatetable is the tabular's table float, its kept caption set at the
 %          `\begin{tabular}` unnumbered (the PDF prints none; main-session call 2026-10-18), its label the last numbered
 %          unit's, as TeX; the deluxetable after it "Table 1" empty, the long deluxetable "Table 2" (main-session call

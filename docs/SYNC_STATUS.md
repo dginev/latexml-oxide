@@ -3194,11 +3194,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (#744; svjour affiliations back: 0901.1015, 1012.5412, 1111.3868, 1512.01957, 2411.18962, 2107.02119); a `.cls`/`.sty`
   copy's expl3 syntax ends with its load (fcs 2606.16349, 2308.11432); the declaration test reads the binding that
   answered (1705.03989, KNOWN_PERL_ERRORS #970); elife's `\figsupp` prints its supplements at the end (2311.00616);
-  neurips copy setters `\projectpage`/`\emailaddress` are contacts (2605.09681); mdpi loads cleveref only where its
+  neurips copy setters `\projectpage`/`\emailaddress` are contacts (2605.09681; since 73a r4 read from the copy's
+  store at the abstract's end, the binding defining neither, OD #741); mdpi loads cleveref only where its
   copy does (2111.02495, 2201.05363); WileyNJD marks NJDapacite loaded with its apacite (2606.10545, 2602.12288);
   typewriter whitespace stays out of a listing (#745; 2608.15322, 2602.03247, 2607.19926). Open: (s) siamart 1703.08345
   `hypdvips: Wrong hyperref driver` (siamart.cls:1269-1272 `\ifpdf` false under `\pdfoutput=0`, K6 ruling, while the
-  hyperref driver is pdftex's); (t) elife 1907.05060 E 1 → 3 (`\format@title@figure` in a paragraph); (u) aamas
+  hyperref driver is pdftex's); (t) elife 1907.05060 E 1 → 3 (`\format@title@figure` in a paragraph) — fixed in 73a r4 (caption's title
+  takes its text `\long`); (u) aamas
   1702.08222 E 4 → 6 (`\alignauthor` tabular in `\author`); `\cal` from a copy (svjour3.cls:1145, aamas2017.cls:646)
   is `font="caligraphic"` L in the XML and ℒ in the post's MathML, as the binding's. Guards `perfect_kernel_batch72a::*`,
   `perfect_kernel_batchint23::*`; repros `stand-in-copies/`.
@@ -3635,8 +3637,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   document with an unprinted index has no HTML `<meta keywords>`. Open: mdframed's `frametitle=` (mdframed.sty:637-697)
   is lost — the `{mdframed}` binding reads its options but never runs `\mdfsetup{#1}` (mdframed_sty.rs). Open: cimento.cls `\PACSes`/`\instlist` for papers that do not ship the
   class (1012.2907 1208.1260 0907.0634: the binding falls to OmniBus; a stand-in port of cimento's frontmatter is
-  needed). Repros under class-bindings/, package-bindings/, graphics-tikz/, index/, index-bib/; guards
-  `perfect_kernel_batch73a::*` (30).
+  needed). Round 4 (review 73a r3, rebased on int23 8fad3f852f): a `{longrotatetable}` caption no `\begin{tabular}`
+  took (`tabular*`, `tabularx`, `longtable`, or after the tabular) is set at its end (`\lx@lrt@end@caption`); a kept
+  unnumbered caption holding a `\label` takes an id step (`\lx@deluxe@id@step`, Perl `RefStepID`), so the label names
+  the table — a `\ref` to it shows the enclosing section's number, as Perl's CrossRef walks up before its title
+  fallback; an AASTeX 6+ longtable's lone `\tablecaption` is its numbered caption; the emulateapj/AASTeX 5 repeat of an
+  in-data caption drops its `\label` (OD #739, #740, #664). caption's title takes the caption `\long`
+  (caption_sty.rs `\lx@caption@settitle`, caption3.sty:1488; elife 1907.05060 E 3 → 0, row (t)). neurips (user
+  2026-10-18, option C): the binding no longer defines `\projectpage`/`\emailaddress`; a copy's setters store and the
+  abstract's end makes the stored values contacts (OD #741; 2605.09681). Repros under class-bindings/,
+  captions-floats/, stand-in-copies/neurips_contact/, package-bindings/, graphics-tikz/, index/, index-bib/; guards
+  `perfect_kernel_batch73a::*` (36).
 
 - **72b** (`\chapter` exists only where the class has chapters; user rulings 2026-10-17: TeX's answer to every
   `\@ifundefined{chapter}` while the class and packages load, documents that call it still convert, the fallback is

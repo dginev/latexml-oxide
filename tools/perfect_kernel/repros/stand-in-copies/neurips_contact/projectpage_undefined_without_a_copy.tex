@@ -1,0 +1,20 @@
+% witness: 2605.09681 (its neurips_2026.sty copy defines the setters; the distributed style has none)
+% oracle:  pdflatex with a style that defines no setter (the distributed neurips_2026.sty, not in TL 2025, has none;
+%          probed with a `\ProvidesPackage{neurips_2026}` stand-in): "! Undefined control sequence. \projectpage",
+%          1 error; the URL then typeset as text
+% engines: rust int23 = 0 errors (the binding defined `\projectpage` as a contact, a Fallback-origin guess)
+% expect:  1 error (undefined `\projectpage`), 0 warnings: the binding defines no setter (user 2026-10-18, option C)
+% status:  RED (int23 c3a799ebad) -> GREEN (73a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{neurips_2026}
+\title{T}
+\author{A. Author}
+\begin{document}
+\maketitle
+\projectpage{https://example.org/p}
+\begin{abstract}
+Abs.
+\end{abstract}
+Body.
+\end{document}

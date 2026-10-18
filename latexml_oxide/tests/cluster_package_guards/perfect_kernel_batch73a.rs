@@ -33,7 +33,8 @@ fn aastex_dataset_links_its_url() {
 
 /// A `\tablecaption` ahead of `\begin{deluxetable*}` is kept on the table (user ruling 2026-10-18, OD #739; 1010.4329,
 /// 1903.10014), unnumbered: the PDF prints no caption there, so the table takes no number (main-session call, review
-/// 73a r2 finding 5). Its `\label`, never set in the PDF, names what TeX's `\label` would, the last numbered unit.
+/// 73a r2 finding 5). The `\label` inside it, which pdflatex never runs, names the table: the caption takes an id step
+/// (review 73a r3 finding 2, main-session call 2026-10-18), and no label lands on the document.
 #[test]
 fn aastex_tablecaption_before_deluxetable() {
   let xml = clean(include_str!(
@@ -43,9 +44,14 @@ fn aastex_tablecaption_before_deluxetable() {
     &xml,
     "table",
     &[],
-    "<table xml:id=\"tab1\"><caption>Frequencies for KIC\u{a0}11026764.</caption><tabular xml:id=\"tab1.1\"><thead><tr xml:id=\"tab1.1.1\"><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"tab1.1.1.1\">A</td><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"tab1.1.1.2\">B</td></tr></thead><tbody><tr xml:id=\"tab1.1.2\"><td align=\"center\" border=\"b t\" xml:id=\"tab1.1.2.1\">1</td><td align=\"center\" border=\"b t\" xml:id=\"tab1.1.2.2\">2</td></tr></tbody></tabular></table>",
+    "<table labels=\"LABEL:tab1\" xml:id=\"S0.Tx1\"><caption>Frequencies for KIC\u{a0}11026764.</caption><tabular xml:id=\"S0.Tx1.1\"><thead><tr xml:id=\"S0.Tx1.1.1\"><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"S0.Tx1.1.1.1\">A</td><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"S0.Tx1.1.1.2\">B</td></tr></thead><tbody><tr xml:id=\"S0.Tx1.1.2\"><td align=\"center\" border=\"b t\" xml:id=\"S0.Tx1.1.2.1\">1</td><td align=\"center\" border=\"b t\" xml:id=\"S0.Tx1.1.2.2\">2</td></tr></tbody></tabular></table>",
   );
   assert_eq!(xml.matches("<table ").count(), 1, "{xml}");
+  assert!(xml.contains("labels=\"LABEL:tab1\""), "{xml}");
+  assert!(
+    !xml.contains("<document xmlns=\"http://dlmf.nist.gov/LaTeXML\" labels"),
+    "{xml}"
+  );
 }
 
 /// aastex701.cls:6726-6732: without `longbib` a reference's `\bibinfo{title}` is dropped (2508.20177, 2510.05388).
@@ -330,7 +336,7 @@ fn nomenclature_entry_is_typeset_only_when_printed() {
   assert!(!xml.contains("<glossarydefinition"), "{xml}");
 }
 
-/// Review 73a finding 1 (tc_double): a caption inside the deluxetable wins over a stored one (aastex701.cls:11303-11304
+/// Review 73a finding 1 (repro tablecaption_inside_the_table_wins): a caption inside the deluxetable wins over a stored one (aastex701.cls:11303-11304
 /// empties the store at the table's start), and the table float after it is Table 2.
 #[test]
 fn tablecaption_inside_the_table_wins() {
@@ -353,7 +359,7 @@ fn tablecaption_inside_the_table_wins() {
   );
 }
 
-/// Review 73a finding 1 (tc_stale): AASTeX 6+ scope a stored `\tablecaption` to its group, so a caption a group closed on
+/// Review 73a finding 1 (repro stored_tablecaption_scoped_to_its_group): AASTeX 6+ scope a stored `\tablecaption` to its group, so a caption a group closed on
 /// is not set on the next, unrelated, deluxetable (OD #739).
 #[test]
 fn stored_tablecaption_scoped_to_its_group() {
@@ -386,7 +392,7 @@ fn stored_tablecaption_scoped_to_its_group() {
 /// set at the `\begin{tabular}`, unnumbered (the PDF never prints it; review 73a r2 finding 5), its `\label` the last
 /// numbered unit's, as pdflatex's aux has it (2204.03327: `tab:allesFitted` = 4.1.5). The longrotatetable leaves the
 /// next deluxetable a long one (aastex631.cls `\global\startlongtabletrue`, reset only by a long table's end), whose
-/// caption the class always prints: "Table 1", empty, as pdflatex (tc_stale7); around a deluxetable it is the page's
+/// caption the class always prints: "Table 1", empty, as pdflatex (TL 2025 aastex701.cls); around a deluxetable it is the page's
 /// setting (main-session call 2026-10-18).
 #[test]
 fn longrotatetable_around_a_tabular_is_its_table() {
@@ -414,7 +420,7 @@ fn longrotatetable_around_a_tabular_is_its_table() {
   assert_eq!(xml.matches("<table ").count(), 3, "{xml}");
 }
 
-/// revtex4-1.cls:7565 (revtex4-2.cls:7586) defines `\bm` at load (review 73a finding 2, bm41): Perl's bold `\bm`
+/// revtex4-1.cls:7565 (revtex4-2.cls:7586) defines `\bm` at load (review 73a finding 2, repro revtex41_bm_defined_at_load): Perl's bold `\bm`
 /// (revtex4_support.sty.ltxml:167) stays, the author's `\newcommand` ignored with LaTeXML's Info (pdflatex errs and its
 /// `\REV@bm` gobbles the argument, "Text .").
 #[test]
@@ -540,7 +546,8 @@ fn nomentbl_unit_with_a_bar_is_rejected() {
 
 /// 1903.10014 (review 73a r2 finding 1, the blocker): in a longtable a `\tablecaption` is the caption only while the
 /// longtable has none — after a `\caption` it is stored, never printed there (aastex.cls:1280/:1507; aastex701.cls
-/// :8418), so the printed caption stays; alone it is kept, unnumbered (no class prints it; OD #739/#740).
+/// :8418), so the printed caption stays; alone it is the longtable's numbered caption, tag and list entry, as the PDF
+/// counts the longtable (review 73a r3 finding 4; OD #739/#740).
 #[test]
 fn longtable_keeps_its_printed_caption() {
   let xml = clean(include_str!(
@@ -556,7 +563,7 @@ fn longtable_keeps_its_printed_caption() {
     &xml,
     "table",
     &[r#"xml:id="S0.T2""#],
-    "<table inlist=\"lot\" xml:id=\"S0.T2\"><tags><tag>Table 2</tag><tag role=\"autoref\">Table\u{a0}2<text xml:id=\"S0.T2.1\"/></tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Table 2</tag></tags><caption>Only a table caption.</caption><tabular xml:id=\"S0.T2.2\"><tr xml:id=\"S0.T2.2.1\"><td align=\"center\" xml:id=\"S0.T2.2.1.1\">C</td><td align=\"center\" xml:id=\"S0.T2.2.1.2\">D</td></tr></tabular></table>",
+    "<table inlist=\"lot\" xml:id=\"S0.T2\"><tags><tag>Table 2</tag><tag role=\"autoref\">Table\u{a0}2<text xml:id=\"S0.T2.1\"/></tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">Table 2</tag></tags><caption><tag close=\": \">Table 2</tag>Only a table caption.</caption><toccaption><tag close=\" \">2</tag>Only a table caption.</toccaption><tabular xml:id=\"S0.T2.2\"><tr xml:id=\"S0.T2.2.1\"><td align=\"center\" xml:id=\"S0.T2.2.1.1\">C</td><td align=\"center\" xml:id=\"S0.T2.2.1.2\">D</td></tr></tabular></table>",
   );
   assert!(!xml.contains("Stored never printed"), "{xml}");
 }
@@ -603,7 +610,7 @@ fn emulateapj_stored_caption_repeats() {
 
 /// A `\tablecaption` directly in an aastex `{longrotatetable}` is stored and the deluxetable in it takes it — numbered,
 /// as the long table prints its caption in the PDF ("Table 1.", empty) — with its `\label`; no caption paragraph, no
-/// label on the document (review 73a r2 finding 2, tc_lrtdlx7; 2204.03327; OD #739).
+/// label on the document (review 73a r2 finding 2; 2204.03327; OD #739).
 #[test]
 fn longrotatetable_tablecaption_goes_to_its_table() {
   let xml = clean(include_str!(
@@ -650,4 +657,136 @@ fn kept_tablecaption_is_unnumbered() {
   assert!(!xml.contains("First stray"), "{xml}");
   // the kept caption is taken once: the last deluxetable has none
   assert_eq!(xml.matches("<caption").count(), 2, "{xml}");
+}
+
+/// Review 73a r3 finding 1: a `\tablecaption` in an aastex `{longrotatetable}` that no `\begin{tabular}` takes — a
+/// `tabular*`, a `longtable`, or a caption after the tabular — is set at the longrotatetable's end, in its group,
+/// unnumbered; the `\label` inside the first names its table; the longtable keeps its own number and id; the
+/// deluxetable after it is Table 2, as pdflatex (which prints none of the three captions; OD #739).
+#[test]
+fn longrotatetable_caption_without_a_tabular() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/longrotatetable_caption_without_a_tabular.tex"
+  ));
+  assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.Tx1""#],
+    "<table labels=\"LABEL:ts\" xml:id=\"S0.Tx1\"><tabular vattach=\"middle\" xml:id=\"S0.Tx1.1\"><tbody><tr xml:id=\"S0.Tx1.1.1\"><td align=\"center\" xml:id=\"S0.Tx1.1.1.1\">A</td><td align=\"center\" xml:id=\"S0.Tx1.1.1.2\">B</td></tr></tbody></tabular><caption>Star caption.</caption></table>",
+  );
+  assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T1""#],
+    "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><tabular xml:id=\"S0.T1.2\"><tr xml:id=\"S0.T1.2.1\"><td align=\"center\" xml:id=\"S0.T1.2.1.1\">C</td><td align=\"center\" xml:id=\"S0.T1.2.1.2\">D</td></tr></tabular><caption>Longtable caption.</caption></table>",
+  );
+  assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="tab1""#],
+    "<table xml:id=\"tab1\"><tabular vattach=\"middle\" xml:id=\"tab1.1\"><tbody><tr xml:id=\"tab1.1.1\"><td align=\"center\" xml:id=\"tab1.1.1.1\">E</td><td align=\"center\" xml:id=\"tab1.1.1.2\">F</td></tr></tbody></tabular><caption>After the tabular.</caption></table>",
+  );
+  assert!(
+    xml.contains(r#"<caption><tag close=": ">Table 2</tag>Real one.</caption>"#),
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<table ").count(), 4, "{xml}");
+}
+
+/// Review 73a r3 finding 2 (main-session call 2026-10-18): a caption kept unnumbered takes an id step, so the `\label`
+/// inside it names its table (pdflatex never runs it, "See ?? and 1."); no label lands on the section, and the next
+/// table is Table 1 with its own label.
+#[test]
+fn kept_caption_label_names_the_table() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/kept_caption_label_names_the_table.tex"
+  ));
+  assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S1.Tx1""#],
+    "<table labels=\"LABEL:tab:k\" xml:id=\"S1.Tx1\"><caption>Kept caption.</caption><tabular xml:id=\"S1.Tx1.1\"><thead><tr xml:id=\"S1.Tx1.1.1\"><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"S1.Tx1.1.1.1\">A</td><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"S1.Tx1.1.1.2\">B</td></tr></thead><tbody><tr xml:id=\"S1.Tx1.1.2\"><td align=\"center\" border=\"b t\" xml:id=\"S1.Tx1.1.2.1\">1</td><td align=\"center\" border=\"b t\" xml:id=\"S1.Tx1.1.2.2\">2</td></tr></tbody></tabular></table>",
+  );
+  assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S1.T1""#],
+    "<table inlist=\"lot\" labels=\"LABEL:tab:n\" xml:id=\"S1.T1\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S1.T1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Numbered.</toccaption><caption><tag close=\": \">Table 1</tag>Numbered.</caption><tabular xml:id=\"S1.T1.2\"><thead><tr xml:id=\"S1.T1.2.1\"><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"S1.T1.2.1.1\">C</td><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"S1.T1.2.1.2\">D</td></tr></thead><tbody><tr xml:id=\"S1.T1.2.2\"><td align=\"center\" border=\"b t\" xml:id=\"S1.T1.2.2.1\">3</td><td align=\"center\" border=\"b t\" xml:id=\"S1.T1.2.2.2\">4</td></tr></tbody></tabular></table>",
+  );
+  assert!(!xml.contains("<section inlist=\"toc\" labels"), "{xml}");
+}
+
+/// Review 73a r3 finding 4: an AASTeX 6+ longtable whose only caption is a `\tablecaption` has the longtable's numbered
+/// caption, tag and list entry; the deluxetable after it is Table 2 ("See 1 and 2.", as pdflatex).
+#[test]
+fn longtable_tablecaption_is_numbered() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/longtable_tablecaption_is_numbered.tex"
+  ));
+  assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T1""#],
+    "<table inlist=\"lot\" labels=\"LABEL:tab:lo\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><caption><tag close=\": \">Table 1</tag>Only tablecaption.</caption><toccaption><tag close=\" \">1</tag>Only tablecaption.</toccaption><tabular xml:id=\"S0.T1.2\"><tr xml:id=\"S0.T1.2.1\"><td align=\"center\" xml:id=\"S0.T1.2.1.1\">A</td><td align=\"center\" xml:id=\"S0.T1.2.1.2\">B</td></tr><tr xml:id=\"S0.T1.2.2\"><td align=\"center\" xml:id=\"S0.T1.2.2.1\">1</td><td align=\"center\" xml:id=\"S0.T1.2.2.2\">2</td></tr></tabular></table>",
+  );
+  assert_element(
+    &xml,
+    "caption",
+    &[],
+    r#"<caption><tag close=": ">Table 1</tag>Only tablecaption.</caption>"#,
+  );
+  assert!(
+    xml.contains("<toccaption><tag close=\" \">2</tag>Next table.</toccaption>"),
+    "{xml}"
+  );
+}
+
+/// Review 73a r3 finding 3: an emulateapj in-data `\tablecaption` is kept on its table (OD #664) and the store repeats it
+/// on the next caption-less table, as pdflatex, without its `\label`: one label, on the table that shows it first.
+#[test]
+fn emulateapj_repeat_drops_the_label() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/emulateapj_repeat_drops_the_label.tex"
+  ));
+  assert_element(
+    &xml,
+    "table",
+    &[r#"xml:id="S0.T3""#],
+    "<table inlist=\"lot\" xml:id=\"S0.T3\"><tags><tag>Table 3</tag><tag role=\"autoref\">Table\u{a0}3<text xml:id=\"S0.T3.1\"/></tag><tag role=\"refnum\">3</tag><tag role=\"typerefnum\">Table 3</tag></tags><toccaption><tag close=\" \">3</tag>In data two.</toccaption><caption><tag>Table 3</tag>In data two.</caption><tabular xml:id=\"S0.T3.2\"><thead><tr xml:id=\"S0.T3.2.1\"><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"S0.T3.2.1.1\">E</td><td align=\"center\" border=\"tt\" thead=\"column\" xml:id=\"S0.T3.2.1.2\">F</td></tr></thead><tbody><tr xml:id=\"S0.T3.2.2\"><td align=\"center\" border=\"b t\" xml:id=\"S0.T3.2.2.1\">5</td><td align=\"center\" border=\"b t\" xml:id=\"S0.T3.2.2.2\">6</td></tr></tbody></tabular></table>",
+  );
+  assert_eq!(xml.matches("LABEL:t2\"").count(), 2, "{xml}");
+  assert!(
+    xml.contains("<table inlist=\"lot\" labels=\"LABEL:t2\" xml:id=\"S0.T2\">"),
+    "{xml}"
+  );
+  assert!(xml.contains("<caption>In data two.</caption>"), "{xml}");
+}
+
+/// 1907.05060 (elife.cls loads caption with `labelsep=period`): caption's title takes the caption text `\long`, as
+/// caption3's `\caption@@make` (caption3.sty:1488), so a caption with a paragraph break is set whole, without
+/// "Paragraph ended before \format@title@figure" and its two boxing-group Errors.
+#[test]
+fn caption_package_title_takes_a_paragraph_break() {
+  let xml = clean(include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/caption_package_title_takes_a_paragraph_break.tex"
+  ));
+  assert_element(
+    &xml,
+    "caption",
+    &[],
+    "<caption><tag close=\". \"><text font=\"bold\" fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Long A. B.</text></caption>",
+  );
+}
+
+/// neurips, user 2026-10-18 option C: the binding defines no `\projectpage`/`\emailaddress` (2605.09681's copy defines
+/// them, `perfect_kernel_batchint23::neurips_copy_setters_are_contacts`); without such a copy `\projectpage` is
+/// undefined, one Error, as in TeX, and no contact is made.
+#[test]
+fn neurips_projectpage_undefined_without_a_copy() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/stand-in-copies/neurips_contact/projectpage_undefined_without_a_copy.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(log.contains("Error:undefined:\\projectpage"), "{log}");
+  assert!(!xml.contains("<contact"), "{xml}");
 }
