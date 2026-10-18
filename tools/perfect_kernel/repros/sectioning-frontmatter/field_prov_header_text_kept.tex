@@ -5,6 +5,7 @@
 % expect:  0 errors, 0 warnings; no `field_ink` Info; the header and the title block kept.
 \documentclass{article}
 \makeatletter
+\year=2026 \month=10 \day=17 % a fixed \today, so the guard does not depend on the run's date
 \title{Header Title}\author{Ann Author}
 \begin{document}
 \noindent Preprint ABC-123\hfill\today\par

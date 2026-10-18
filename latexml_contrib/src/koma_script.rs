@@ -103,13 +103,41 @@ pub(crate) fn koma_post_load(class: KomaClass) -> Result<()> {
   Ok(())
 }
 
+/// scrbook's `\frontmatter`, `\mainmatter` and `\backmatter` (scrbook.cls:5272-5283) switch `\if@mainmatter`, by which
+/// KOMA's chapter numbers (scrbook.cls:5573-5576 `\if@mainmatter \@tempswatrue`): a front- or back-matter chapter is
+/// unnumbered and leaves the chapter counter alone. LaTeXML's sectioning numbers by `no_number_sections` instead
+/// (sect04.rs `\@startsection`), which book.cls's binding sets in its `\frontmatter`/`\mainmatter` (book_cls.rs; Perl
+/// book.cls.ltxml:112-118). Here the two also set it, before KOMA's own code (the page clearing, `\@mainmatterfalse`,
+/// `\pagenumbering`), which stays as written. `\backmatter` is left to KOMA, as book's binding leaves its own: the flag
+/// unnumbers every level, where KOMA unnumbers only the chapter and keeps a section's number without the chapter's
+/// (scrbook.cls:6030-6036 `\if@mainmatter\thechapter.\fi`), and a back-matter appendix's sections are referenced by
+/// those numbers (2508.01496: "Appendix" with sections 1-24; set at `\backmatter`, every reference to them lost its
+/// number). Witness 2506.17485: "Abstract" unnumbered, then "1 Introduction", as its PDF (before: "Chapter 1
+/// Abstract", every later number one too high). Guard
+/// `perfect_kernel_batchint23::scrbook_front_matter_chapters_are_unnumbered`.
+pub(crate) fn koma_book_matter() -> Result<()> {
+  DefPrimitive!("\\lx@koma@unnumbered", {
+    AssignValue!("no_number_sections" => true);
+  });
+  DefPrimitive!("\\lx@koma@numbered", {
+    AssignValue!("no_number_sections" => false);
+  });
+  RawTeX!(
+    r"\let\lx@koma@frontmatter\frontmatter\def\frontmatter{\lx@koma@unnumbered\lx@koma@frontmatter}%
+\let\lx@koma@mainmatter\mainmatter\def\mainmatter{\lx@koma@numbered\lx@koma@mainmatter}"
+  );
+  Ok(())
+}
+
 /// The ids of the sectioning and float counters, as the standard class's binding gives them (article_cls.rs:86-107,
 /// report_cls.rs:94-130, book_cls.rs:100-136; Perl article.cls.ltxml:52-63): the raw class declares the counters with
 /// `\newcounter` (scrartcl.cls:5045-5127, scrreprt.cls:5530-6051, tocbasic's `\DeclareNewTOC` for figure and table),
 /// which names their ids after the counter (`section1.subsection1`, `equation1`), where an article paper's are
 /// `S1.SS1` and `S1.E1`. Perl, which has no KOMA binding, loads OmniBus (article) for these classes and gives the
 /// article's ids. Only the ids are set: the registers and reset lists stay the class's. A counter the class did not
-/// declare is left alone.
+/// declare is left alone. Witnesses: 124 of the 126 ceurart/atlasdoc papers of 2506+2509 and 97 of the KOMA 100 had
+/// counter-named ids (2509.11496, 2506.00694, 2509.01219). Guard
+/// `perfect_kernel_batch72a::koma_ids_and_appendix_follow_the_standard_classes`.
 fn koma_counter_ids(class: KomaClass) -> Result<()> {
   let opts = |idprefix, idwithin, nested| NewCounterOptions { idprefix, idwithin, nested };
   let table: Vec<(&str, &str, NewCounterOptions)> = match class {

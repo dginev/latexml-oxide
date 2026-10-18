@@ -3036,7 +3036,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
 - **72a** (a stand-in binding's shipped copy adds its extras; OXIDIZED_DESIGN_DIVERGENCES #731; census
-  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-9). After
+  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-10; the
+  int23 integration fix round agent_reports/2026-10-18_int23_fix.md). After
   a binding on `AUTHOR_FILE_STAND_INS` loads, the paper's copy is read raw (content.rs `read_stand_in_copy`) when it is
   the file the binding stands in for (`copy_is_the_stood_in_file`, r3: its `\Provides(Expl)…` names the file, the
   binding or a file the binding loads — 2308.11432's `\ProvidesExplClass{fcs}`, 2011.13564's IEEEtai.cls declaring
@@ -3133,7 +3134,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Perl's svmult binding loads book where svmult.cls/svmono.cls `\LoadClass{article}` (book covers article's interface;
   its numbering "0.1" against the copy's "1"), daj's binding emulates tocbase (not in TeX Live) over article; (p) a raw
   KOMA base lacked the article binding's semantic layer (r9): KOMA's `\appendix`, no id prefixes, the 2 sectioning
-  Warnings — resolved in r10 for every KOMA document (OXIDIZED_DESIGN_DIVERGENCES #737).
+  Warnings — resolved in r10 for every KOMA document (OXIDIZED_DESIGN_DIVERGENCES #737); (q) ws-rv9x6 copies had
+  counter-named ids from r6 on (2301.03442, 1602.07982: `chapter1`, sections `S1` not nested; 67int21 `id1.1`/`Ch0.S1`)
+  — resolved with 72b r3's binding chapter counter, which the copy's `\newcounter{chapter}` keeps: `Ch1`, `Ch1.S1` (int23
+  guard `perfect_kernel_batchint23::ws_rv9x6_copy_counters_keep_the_binding_ids`); (r) `atlasdoc_cls::main_class` keys
+  on the copy's version, not on the class its `\LoadClass` names: a modified copy naming `article` or `book` gets its
+  version's KOMA class, which the slot then stands for the copy's (72a review r7 NIT 8; open, no witness yet).
   r7: a raw file's own repeat of natbib after a binding's early load — a stand-in copy that loads natbib itself,
   neurips_2024.sty:71, icml2024.sty:95 — applies its options, joins them to the first load's and ends the early-load
   state, so the document's `\usepackage[numbers]{natbib}` after it is LaTeX's "Option clash" (the reviewer's
@@ -3176,7 +3182,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   A/B (72a10 vs 72a9 / 67int21): r9's 602 papers 0 better, 0 worse, 0 new Fatal, Warnings 7342 → 6958 (the KOMA trio
   384 → 0), words +597 (41), papers with `<appendix>` 143 → 172; 100 `\documentclass{scr*}` papers (2506-2509) E 120
   = 120, 0 worse, KOMA Warnings 194 → 0, `<appendix>` in 3 → 32, counter-named ids in 97 → 0, instructions ±0.2 %.
-  Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
+  int23 (72a review r7): scrbook's `\frontmatter` unnumbers the chapters and `\mainmatter` numbers them
+  (`koma_script::koma_book_matter`, `no_number_sections` as book_cls.rs, before KOMA's own `\if@mainmatter` code; #737
+  item 4): 2506.17485 "Abstract", then "1 Introduction", as its PDF (was "Chapter 1 Abstract", every number +1);
+  `\backmatter` left to KOMA, as book's (the flag would unnumber KOMA's back-matter sections too: 2508.01496's appendix
+  sections, referenced by number; open: its appendix chapter "Appendix A", PDF "Appendix"); the
+  class slot reads the classes the binding loaded from the copy's first class load, so a class a shipped intermediate
+  class `\LoadClass`es (copy → mybase.cls → article under svmult's book) meets the slot too (#736,
+  `state::open_class_load_classes`). Guards `perfect_kernel_batch72a::*`, `perfect_kernel_batchint23::*`; repros
+  `stand-in-copies/`.
 
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;
   agent_reports/2026-10-17_payload_int20.md). (1) The plain-TeX `\halign` rows (math9611222, math9611223, math9412232,
@@ -3583,14 +3597,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
 
 - **72b** (`\chapter` exists only where the class has chapters; user rulings 2026-10-17: TeX's answer to every
   `\@ifundefined{chapter}` while the class and packages load, documents that call it still convert, the fallback is
-  LaTeXML's ordinary numbered chapter; rounds 1-3, report agent_reports/2026-10-17_payload_72b.md).
+  LaTeXML's ordinary numbered chapter; rounds 1-4, report agent_reports/2026-10-17_payload_72b.md).
   (1) OXIDIZED_DESIGN #179 rewritten: `\documentclass` clears the kernel's `\chapter` before the class loads
   (`retract_chapter_before_class_load`; the lock stays, the binding kept aside, so a raw class's own definition is
   refused and LaTeXML's chapter stands in its place: scrbook), and after each class load (`\documentclass`, raw
   `\LoadClass`, a binding's `LoadClass!`) `settle_chapter_after_class_load` makes the one "has chapters" test
   (`state::class_has_chapters_now`): (a) the class's own code assigned `\chapter` (a meaning not the kernel's, a refusal
   by the lock, a stand-in copy's overlay or declined definition: pasj00), (b) a compiled binding made `\c@chapter`, (c)
-  OmniBus guesses an unknown class (`OmniBus:fallback`; subfiles). It stores the answer, which
+  OmniBus guesses an unknown class (`OmniBus:fallback`, set only when the class loader chose OmniBus as the fallback, and
+  by subfiles; the OmniBus that 72a r9 provides over a named binding's real base — ceurart, atlasdoc — is no guess, so
+  ceurart and atlasdoc's scrartcl answer "no chapters" as pdflatex). It stores the answer, which
   `state::class_defines_chapter` returns to natbib's forks, `\appendix`, appendix.sty and titlesec (with the counter).
   Bindings whose class has chapters define them: ws-rv9x6 (with its counter: 1807.01378), nic-series, jmlr (a call is
   LaTeXML's chapter with jmlr's ClassError text as the Warning, #735), kluwer `[chapter]`; amsart's `\specialsection`

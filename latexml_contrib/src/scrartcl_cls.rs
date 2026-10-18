@@ -14,7 +14,8 @@
 //! stub's `\newkomafont` never registered anything (witness
 //! contract-example-de/en). The real class raw-loads cleanly under the
 //! engine and yields the correct `<section>`/`<subsection>` structure. Perl
-//! LaTeXML ships no KOMA bindings; it raw-loads the class the same way.
+//! LaTeXML ships no KOMA bindings and does not raw-load the class: it finds no
+//! `scrartcl.cls.ltxml` and falls back to OmniBus, which loads article.
 //! Keeping this binding (rather than deleting the file) makes scrartcl
 //! raw-load under BOTH `[rawclasses]` and the default arXiv configuration.
 //!

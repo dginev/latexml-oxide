@@ -50,7 +50,9 @@ fn is_all_ascii_digits(arg: &Tokens) -> bool {
 /// provide-only ([`ProvideOnlyGuard`], as `\documentstyle` loads it over a class, sect01.rs), so it adds the frontmatter
 /// commands and environments the base class leaves undefined (`{keywords}`, `\email`, `\affiliation`, …) and replaces
 /// none of the base class's. A binding that once loaded OmniBus as its base (ceurart, atlasdoc, lmcs, pnas-new,
-/// czipreprint) keeps what OmniBus gave it where the real base class (scrartcl, amsart, extarticle) has nothing.
+/// czipreprint) keeps what OmniBus gave it where the real base class (scrartcl, amsart, extarticle) has nothing:
+/// ceurart's `{keywords}`, OmniBus's `ltx:classification`, which a trial without it lost (-10 to -15 words a paper;
+/// ceurart witnesses 2509.11496, 2608.23214).
 pub fn provide_over_base_class() -> Result<()> {
   let _provide_only = ProvideOnlyGuard::new();
   load_class("OmniBus", Vec::new(), Tokens!())

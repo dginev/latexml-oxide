@@ -2263,7 +2263,12 @@ fn shipped_with_paper(path: &str) -> bool {
 /// copy's base classes (`state::note_copy_base_classes`; a copy's `\newcommand` of a name they define errs, as over
 /// the real class), with an Info. Perl never reads the copy (Package.pm:2113-2133 prefers the `.ltxml`).
 fn binding_base_class_stands_for(name: &str) -> Result<bool> {
-  let id = crate::definition::origin::copy_provides();
+  // (the copy read now, or the copy whose own `\LoadClass` is open: a class a shipped intermediate class loads, copy →
+  // mybase.cls → `\LoadClass{scrartcl}`, is the copy's too — 72a review r7 NIT 8)
+  let id = match crate::definition::origin::copy_provides() {
+    0 => open_copy_class_load().unwrap_or(0),
+    id => id,
+  };
   if id == 0 || name.is_empty() {
     return Ok(false);
   }

@@ -428,9 +428,11 @@ pub struct State {
   pub class_loads:             Vec<ClassLoadRecord>,
   /// The class loads open now, as indices into [`State::class_loads`], innermost last ([`ClassLoadFrame`]).
   pub class_load_frames:       Vec<usize>,
-  /// The stand-in copies whose own `\LoadClass` is open now, innermost last: a class loaded inside it is a base class
-  /// of that copy too ([`ClassLoadFrame`]; the reviewer's probe nc_chain, `\LoadClass{mybase}` over article).
-  pub copy_class_loads:        Vec<u32>,
+  /// The stand-in copies whose own `\LoadClass` is open now, innermost last, each with the classes the class load
+  /// open when it began had loaded: a class loaded inside it is a base class of that copy too ([`ClassLoadFrame`]; the
+  /// reviewer's probe nc_chain, `\LoadClass{mybase}` over article), and a copy's first entry holds the classes its
+  /// binding's load loaded ([`open_class_load_classes`]).
+  pub copy_class_loads:        Vec<(u32, Vec<String>)>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
 }
@@ -2510,6 +2512,12 @@ impl ClassLoadFrame {
     // (a class loaded inside the frames open now is loaded inside each of them: the binding's `LoadClass!` of its
     // base class, ceurart_cls.rs → OmniBus → article, is a class the binding's load loaded)
     let state = &mut *state;
+    // (the classes the load open now had loaded before this one: for a copy's own load, its binding's base classes)
+    let outer_classes = copy
+      .and_then(|_| state.class_load_frames.last())
+      .and_then(|&open| state.class_loads.get(open))
+      .map(|record| record.classes.clone())
+      .unwrap_or_default();
     for &open in &state.class_load_frames {
       if let Some(outer) = state.class_loads.get_mut(open)
         && outer.file != name
@@ -2534,7 +2542,7 @@ impl ClassLoadFrame {
     };
     state.class_load_frames.push(index);
     if let Some(id) = copy {
-      state.copy_class_loads.push(id);
+      state.copy_class_loads.push((id, outer_classes));
     }
     ClassLoadFrame { copy: copy.is_some() }
   }
@@ -2551,17 +2559,32 @@ impl Drop for ClassLoadFrame {
 }
 
 /// The stand-in copy whose own `\LoadClass` is open now, if any ([`ClassLoadFrame`]).
-pub fn open_copy_class_load() -> Option<u32> { state!().copy_class_loads.last().copied() }
+pub fn open_copy_class_load() -> Option<u32> { state!().copy_class_loads.last().map(|(id, _)| *id) }
 
-/// The classes loaded inside the class load open now, innermost included ([`ClassLoadRecord::classes`]): while a
-/// stand-in class binding's copy is read, the classes the binding's load loaded — its base class.
+/// The classes the stand-in binding's load loaded — its base class — for the copy read now
+/// ([`ClassLoadRecord::classes`]). While the copy's own code runs, the classes of the class load open now; inside a
+/// class the copy's own `\LoadClass` loaded (a shipped mybase.cls between the copy and a TeX Live class), the classes
+/// loaded when the copy's first class load began ([`State::copy_class_loads`]), so a class mybase.cls `\LoadClass`es
+/// meets the binding's base class too, not the empty class load of mybase.cls (72a review r7 NIT 8; guard
+/// `perfect_kernel_batchint23::a_shipped_intermediate_class_meets_the_class_slot`).
 pub fn open_class_load_classes() -> Vec<String> {
   let state = state!();
+  if crate::definition::origin::copy_provides() != 0 {
+    return state
+      .class_load_frames
+      .last()
+      .and_then(|&class| state.class_loads.get(class))
+      .map(|record| record.classes.clone())
+      .unwrap_or_default();
+  }
+  let Some((id, _)) = state.copy_class_loads.last() else {
+    return Vec::new();
+  };
   state
-    .class_load_frames
-    .last()
-    .and_then(|&class| state.class_loads.get(class))
-    .map(|record| record.classes.clone())
+    .copy_class_loads
+    .iter()
+    .find(|(copy, _)| copy == id)
+    .map(|(_, classes)| classes.clone())
     .unwrap_or_default()
 }
 

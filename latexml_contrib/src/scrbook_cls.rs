@@ -8,4 +8,5 @@ LoadDefinitions!({
   crate::koma_script::koma_pre_load()?;
   InputDefinitions!("scrbook", noltxml => true, extension => Some(Cow::Borrowed("cls")));
   crate::koma_script::koma_post_load(crate::koma_script::KomaClass::Chaptered)?;
+  crate::koma_script::koma_book_matter()?;
 });

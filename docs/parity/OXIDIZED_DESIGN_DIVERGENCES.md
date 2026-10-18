@@ -19475,8 +19475,8 @@ pdflatex's instructions, the engine's general interpretation rate (hot: `gullet:
 `read_balanced_with_close` 11-15 %), with no file read twice and no loop of ours; a minimal ceurart document (the copy of
 2509.11492) 2.17 G on 67int21, 11.4 G on 72a r9/r10 (scrartcl + the binding's packages 8.3 G, the copy and OmniBus
 provided over it 3.1 G), pdflatex 8.5 G. No cheap faithful lever: the cost is the class, read as TeX reads it;
-`project_raw_interpreter_perf_directive` is the lever;
-2309.03819 +65 %, jgcc.cls:52's tikz; 2609.08425 +37 %, WileyNJDv5.cls's
+the lever is the high-performance raw interpretation of `docs/perfect_kernel/PLANS.md` item 12 (tex.web's data model:
+`docs/performance/ARXIV_PERFORMANCE.md`). Other costs: 2309.03819 +65 %, jgcc.cls:52's tikz; 2609.08425 +37 %, WileyNJDv5.cls's
 unconditional loads under its options (fontspec, xunicode, tuenc, mathastext, microtype…), with one Warning for its
 unclosed `\if@large@design` (:4748-4844), which xelatex reports too.
 
@@ -19622,18 +19622,24 @@ copy's own `\LoadClass{Y}` then loaded a second class over the first. ceurart.cl
 scrartcl, scrkbase and typearea over article, whose `\@ptsize` of 0 sends typearea.sty:1400-1413 off its path ("DIV for
 0.0pt", then Fatal "Conditional limit of 48000000 exceeded": 2509.11496 9 E / 1 F and 0 words, 2608.23214, 2310.02658,
 2505.16276; 74 ceurart papers in 2509, 39 in 2506); atlasdoc.cls's `\LoadClass[titlepage, 11pt]{\ADOC@mainclass}`
-(scrartcl) redefined `\@startsection` and `\@sect` under the binding (2509.01219: "`\@startsection` has been changed",
-"Unexpected definition of \@sect", 3x "Bad type area settings"; +26-33 % instructions).
+(scrartcl) redefined `\@startsection` and `\@sect` under the binding (2509.01219: "`\@startsection` has been changed" and
+"Unexpected definition of \@sect", which #737 shows were LaTeXML's; its 3x "Bad type area settings" are true, pdflatex
+logs the same 3; +26-33 % instructions).
 
 Now (`binding::content::binding_base_class_stands_for`, at the top of `load_class`): when the copy's own code loads a
 class (provides-mode on; a file the copy loads is a real load, its `\LoadClass` is not the copy's), the class is not
 loaded yet (`\ver@Y.cls` undefined — the binding's own base class is a repeat load: cimart.cls `\LoadClass{article}`),
 the class load open now — the binding's — loaded a class (`state::ClassLoadRecord::classes`, the classes loaded while a
 class's frame is open), and the paper does not ship Y (`shipped_with_paper`, the copy test's), Y is not loaded: Info
-"the binding's base class (OmniBus.cls, article.cls) stands for the copy's \LoadClass{Y}: not loaded", and the binding's
+"the binding's base class (book.cls) stands for the copy's \LoadClass{article}: not loaded" (svmult; daj's names
+article.cls), and the binding's
 classes become the copy's base classes (`state::note_copy_base_classes`), so a copy's `\newcommand` of a name they
 define errs as over the real class (#732; newcmd_base and nc_chain keep their 2 Errors). A class the author ships is
-read (the reviewer's nc_chain `\LoadClass{mybase}`, nc_namedef, nc_cond, nc_letrelax). Decided by mechanism, no class
+read (the reviewer's nc_chain `\LoadClass{mybase}`, nc_namedef, nc_cond, nc_letrelax), and a class that shipped class
+loads is the copy's too: copy → mybase.cls → `\LoadClass{Y}` meets the classes the binding's load loaded
+(`state::open_class_load_classes` reads them from the copy's first class load, `State::copy_class_loads`, not from
+mybase.cls's empty frame; int23, 72a review r7 NIT 8; probe and guard
+`perfect_kernel_batchint23::a_shipped_intermediate_class_meets_the_class_slot`). Decided by mechanism, no class
 names. Perl never reads the copy (Package.pm:2113-2133 prefers the `.ltxml`), so it has neither the Fatal nor the copy's
 extras.
 
@@ -19666,7 +19672,10 @@ it: the reviewer's probe scr2, `\documentclass{article}` then `\LoadClass{scrart
 row (n)). The raw KOMA base gets the standard classes' semantic layer, its ids, `\appendix` and quiet sectioning check,
 as every KOMA document does (#737). Guards `perfect_kernel_batch72a::copy_load_class_is_the_bindings_base_class` (ceurart, atlasdoc, jgcc:
 0 E / 0 W / 0 F, title, keywords, author and section whole) and
-`::copy_load_class_meets_the_class_slot` (svmult); repros `stand-in-copies/class_slot/`.
+`::copy_load_class_meets_the_class_slot` (svmult); repros `stand-in-copies/class_slot/`. Residual: `atlasdoc_cls::main_class`
+keys on the copy's version (its `{koma}` and `{REPORT}` options), not on the class its `\LoadClass` names, so a modified
+copy that names `article` or `book` itself gets the KOMA class of its version; the slot then stands that class for the
+copy's (SYNC 72a row (r)).
 
 ### 737. The KOMA classes, read raw, get the standard classes' semantic layer: ids, `\appendix`, and a quiet sectioning check
 
@@ -19699,14 +19708,29 @@ precedent, batch 53) and koma_script.rs adds the semantic layer the article, rep
    KOMA document since the classes were raw-read; CONTROL repro sectioning-frontmatter/koma_sectioning_check_warns of
    batch 60m, which judged them true). Neither copy is called on that branch: the dispatcher KOMA puts over
    `\@startsection` is refused by its lock, and `\scr@startsection` is LaTeXML's `\@startsection` (`koma_post_load`).
+4. *Front matter* (`koma_book_matter`, scrbook only; int23, 72a review r7 SHOULD 1): scrbook's `\frontmatter`,
+   `\mainmatter` and `\backmatter` (scrbook.cls:5272-5283) switch `\if@mainmatter`, by which KOMA numbers a chapter
+   (:5573-5576); LaTeXML's sectioning numbers by `no_number_sections`, which `\frontmatter` and `\mainmatter` now also
+   set before KOMA's own code runs, as book_cls.rs's do (Perl book.cls.ltxml:112-118). Before: 2506.17485 "Chapter 1
+   Abstract", "Chapter 2 Introduction", every number one too high; now "Abstract", "1 Introduction", as its PDF.
+   Residual: the flag unnumbers every level, where KOMA unnumbers only the chapter outside the main matter and keeps
+   a section's number without the chapter's (scrbook.cls:6030-6036 `\if@mainmatter\thechapter.\fi`), so `\backmatter`
+   is left to KOMA, as book's binding leaves its own: a back-matter chapter is numbered (2508.01496's appendix
+   "Appendix A", PDF "Appendix"), its sections keep KOMA's numbers ("13", as scrbook.cls numbers them; with the flag
+   set there, every reference to them lost its number: -201 words); a section inside a front-matter chapter is
+   unnumbered (KOMA "1").
 Divergence from Perl: KOMA's own commands are defined (the raw class), and under scrreprt/scrbook the ids are report's
 (`Ch1.S1`), not Perl's article ids. With it, ceurart's `\title[mode=<mode>]` (ceurart.cls:381-500: the optional
 argument is a key list; `mode=sub`, and `\subtitle`, the subtitle) maps onto the frontmatter (ceurart_cls.rs: `title` the
-main title, `sub` `ltx:subtitle`, `trans`/`transsub` notes as acmart's `\translatedtitle`), where the kernel `\title`
+main title, `sub` `ltx:subtitle`, `trans`/`transsub` notes as acmart's `\translatedtitle`, `alt`/`ascii` the notes
+`alternativetitle`/`asciititle`: ceurart.cls:435-483 prints them as further title lines in styles of their own, an
+alternative title and the title in ASCII, so they stay apart from the main title), where the kernel `\title`
 took the keys for a short title and the last call won (19 of the 112 ceurart papers of 2506+2509: 2509.11492,
 2509.11496); and OmniBus declares book.cls:53's `\if@mainmatter` with its `\mainmatter` (omnibus_cls.rs), which
 scrlayer.sty:102-110 expects ("\mainmatter defined without \if@mainmatter!" on 111 of the 112 under 72a r9, where OmniBus
 is provided over scrartcl; pdflatex quiet). Guards `perfect_kernel_batch72a::{koma_classes_take_the_kernel_branch_without_warnings,
-koma_ids_and_appendix_follow_the_standard_classes, ceurart_title_mode_sub_is_the_subtitle}`; repros
+koma_ids_and_appendix_follow_the_standard_classes, ceurart_title_mode_sub_is_the_subtitle}`,
+`perfect_kernel_batchint23::scrbook_front_matter_chapters_are_unnumbered`; repros
+`sectioning-frontmatter/scrbook_front_matter_chapters_are_unnumbered`,
 `sectioning-frontmatter/koma_ids_and_appendix_{scrartcl,scrreprt,scrbook}`, `koma_sectioning_check_warns`,
 `stand-in-copies/class_slot/ceurart_title_mode_sub`.
