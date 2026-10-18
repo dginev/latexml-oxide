@@ -3003,7 +3003,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in it) where tex.web §1197 finishes the display and reads the token again — a recovery ruling.
 
 - **72a** (a stand-in binding's shipped copy adds its extras; OXIDIZED_DESIGN_DIVERGENCES #731; census
-  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-6). After
+  agent_reports/2026-10-17_standin_extras_census.md; report agent_reports/2026-10-17_payload_72a.md, rounds 1-8). After
   a binding on `AUTHOR_FILE_STAND_INS` loads, the paper's copy is read raw (content.rs `read_stand_in_copy`) when it is
   the file the binding stands in for (`copy_is_the_stood_in_file`, r3: its `\Provides(Expl)…` names the file, the
   binding or a file the binding loads — 2308.11432's `\ProvidesExplClass{fcs}`, 2011.13564's IEEEtai.cls declaring
@@ -3089,7 +3089,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   copy's repeat load sets them); (m) the bindings revtex4_support (revtex4_support:9), achemso, apacite and mnras load
   natbib other than their real files do and do not mark the load as the file's own, so a document's repeat after them
   applies its options (the r6 reviewer's sizing over 2506: 38 subset repeats, which clash with no file; 2506.08397's
-  `sort` the only non-subset) — per-binding calls, left open.
+  `sort` the only non-subset) — per-binding calls, left open; (n) latex.ltx's two-`\LoadClass` Error
+  (:18800, `\@twoloadclasserror` :18938-18942) is not emulated in general: a document's own second `\LoadClass` still
+  loads the class (the r7 reviewer's probe scr2, `\documentclass{article}` + `\LoadClass{scrartcl}`, Fatal on 67int21
+  too, typearea.sty:1400-1413 under article's `\@ptsize` 0); (o) a slot-filled copy's calls of its absent class's
+  interface are undefined, Errors as the copy's own (r8, OXIDIZED_DESIGN_DIVERGENCES #736): ceurart.cls:63
+  `\KOMAoptions{DIV=10}` 1 Error in each of 107 ceurart papers of 2506+2509 (0 on 67int21, which read no copy),
+  atlasdoc.cls 11 (`\KOMAoptions`, `\KOMAClassName`, `\setkomafont`, `\setcapindent`, `\deffootnote`, …) in each of 14
+  atlasdoc papers — for a ruling (options in agent_reports/2026-10-17_payload_72a.md, round 8).
   r7: a raw file's own repeat of natbib after a binding's early load — a stand-in copy that loads natbib itself,
   neurips_2024.sty:71, icml2024.sty:95 — applies its options, joins them to the first load's and ends the early-load
   state, so the document's `\usepackage[numbers]{natbib}` after it is LaTeX's "Option clash" (the reviewer's
@@ -3104,6 +3111,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   a name made `\relax` stays definable for the copy's `\newcommand`. A text default still the macro a class load
   assigned is the class layer's, so a copy's redefinition stands: 1202.3442 "ABSTRACT" (emulateapj.cls:470),
   astro-ph0105230, astro-ph9912326, hep-ph0102191 "REFERENCES" (aipproc.sty:49), each as its PDF.
+  r8: one class slot, the exception to "nested loads are real loads" (OXIDIZED_DESIGN_DIVERGENCES #736): a stand-in
+  class's copy's own `\LoadClass{Y}` of a class not loaded and not shipped, after the binding loaded its base class,
+  does not load Y — ceurart.cls:62's scrartcl had raw-read typearea over article (Fatal "Conditional limit of 48000000
+  exceeded": 2509.11496, 2608.23214, 2310.02658, 2505.16276 now 0 Fatal, 1 Error each), atlasdoc.cls's
+  `\LoadClass{\ADOC@mainclass}` (2509.01219: no KOMA Warnings; atlasdoc instructions +0.8-3.8 % vs 67int21, r3-r7
+  +26-33 %); the binding's classes are the copy's base classes (newcmd_base, nc_chain 2 Errors); a shipped class is
+  read. Class-layer identity holds the definition (`state::ClassLoadRecord`, `Rc::ptr_eq`); the files read raw and the
+  provides-modes reset at every `Converter::prepare_session` (the reviewer's probe two, `latexml_oxide t.tex u.tex`,
+  both copies read); natbib's repeat options in natbib's declaration order with `nobibstyle`/`bibstyle`
+  (`[square,authoryear]` gobbles `\bibstyle`, natbib.sty:238-263; OXIDIZED_DESIGN_DIVERGENCES #733). Rows (n), (o)
+  above.
   Guards `perfect_kernel_batch72a::*`; repros `stand-in-copies/`.
 
 - **int20** (fix round for the int20 bundle A/B's 48 worse rows, 70a + 70b + latex209 on 9cc0920336;

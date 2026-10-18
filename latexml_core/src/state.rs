@@ -423,10 +423,9 @@ pub struct State {
   pub binding_lets:            rustc_hash::FxHashSet<SymStr>,
   /// The frontmatter setters whose calls are observed ([`crate::definition::origin::watch_setter_calls`]).
   pub watched_setters:         rustc_hash::FxHashSet<SymStr>,
-  /// Each class loaded (its file name, `article.cls`) with the names its load frame assigned a macro (with the macro's
-  /// address, to tell it is still the meaning) or had a definition refused by a lock (address 0): what that class
+  /// Each class loaded, with the names its load frame assigned and the classes loaded inside it: what that class
   /// defines, as its real file does ([`ClassLoadFrame`], `copy_base_class_defines`, `class_layer_definition`).
-  pub class_loads:             Vec<(String, rustc_hash::FxHashMap<SymStr, usize>)>,
+  pub class_loads:             Vec<ClassLoadRecord>,
   /// The class loads open now, as indices into [`State::class_loads`], innermost last ([`ClassLoadFrame`]).
   pub class_load_frames:       Vec<usize>,
   /// The stand-in copies whose own `\LoadClass` is open now, innermost last: a class loaded inside it is a base class
@@ -434,6 +433,17 @@ pub struct State {
   pub copy_class_loads:        Vec<u32>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
+}
+
+/// One class loaded ([`ClassLoadFrame`]): its file name (`article.cls`), the names its load frame assigned a macro (the
+/// macro itself, to tell it is still the meaning: compared by [`Rc::ptr_eq`]) or had a definition refused by a lock
+/// (`None`), and the classes loaded while its frame was open, innermost included (a binding's `LoadClass!` of its base
+/// class: ceurart_cls.rs → OmniBus → article).
+#[derive(Debug, Default)]
+pub struct ClassLoadRecord {
+  pub file:    String,
+  pub names:   rustc_hash::FxHashMap<SymStr, Option<Rc<Expandable>>>,
+  pub classes: Vec<String>,
 }
 
 /// What [`note_copy_provides_assignment`] keeps for one stand-in's copy: the copy's file, its own definitions of names
@@ -1117,9 +1127,9 @@ impl State {
             | crate::definition::origin::DefinitionOrigin::Document
         )
         && let Stored::Expandable(defn) = &value
-        && let Some((_, names)) = self.class_loads.get_mut(class)
+        && let Some(record) = self.class_loads.get_mut(class)
       {
-        names.insert(key, Rc::as_ptr(defn) as usize);
+        record.names.insert(key, Some(Rc::clone(defn)));
       }
       if crate::definition::origin::stand_in_loading() {
         self.stand_in_meanings.insert(key);
@@ -2464,7 +2474,7 @@ fn binding_owns(token: &Token) -> bool {
 }
 
 /// The class file name a load request names (`article`, `dir/mybase.cls` → `article.cls`, `mybase.cls`).
-fn class_file_name(file: &str) -> String {
+pub fn class_file_name(file: &str) -> String {
   let name = file.trim();
   let name = name.rsplit(['/', '\\']).next().unwrap_or(name);
   if name.ends_with(".cls") {
@@ -2497,16 +2507,28 @@ impl ClassLoadFrame {
     {
       record.loads_classes.push(name.clone());
     }
+    // (a class loaded inside the frames open now is loaded inside each of them: the binding's `LoadClass!` of its
+    // base class, ceurart_cls.rs → OmniBus → article, is a class the binding's load loaded)
+    let state = &mut *state;
+    for &open in &state.class_load_frames {
+      if let Some(outer) = state.class_loads.get_mut(open)
+        && outer.file != name
+        && !outer.classes.contains(&name)
+      {
+        outer.classes.push(name.clone());
+      }
+    }
     let index = match state
       .class_loads
       .iter()
-      .position(|(class, _)| *class == name)
+      .position(|record| record.file == name)
     {
       Some(index) => index,
       None => {
-        state
-          .class_loads
-          .push((name, rustc_hash::FxHashMap::default()));
+        state.class_loads.push(ClassLoadRecord {
+          file: name,
+          ..ClassLoadRecord::default()
+        });
         state.class_loads.len() - 1
       },
     };
@@ -2531,13 +2553,39 @@ impl Drop for ClassLoadFrame {
 /// The stand-in copy whose own `\LoadClass` is open now, if any ([`ClassLoadFrame`]).
 pub fn open_copy_class_load() -> Option<u32> { state!().copy_class_loads.last().copied() }
 
+/// The classes loaded inside the class load open now, innermost included ([`ClassLoadRecord::classes`]): while a
+/// stand-in class binding's copy is read, the classes the binding's load loaded — its base class.
+pub fn open_class_load_classes() -> Vec<String> {
+  let state = state!();
+  state
+    .class_load_frames
+    .last()
+    .and_then(|&class| state.class_loads.get(class))
+    .map(|record| record.classes.clone())
+    .unwrap_or_default()
+}
+
+/// Name `classes` among the base classes of the stand-in copy `id` (`CopyProvidesRecord::loads_classes`): the classes
+/// its binding loaded, which stand for the class the copy's own `\LoadClass` named (`binding::content`
+/// `binding_base_class_stands_for`).
+pub fn note_copy_base_classes(id: u32, classes: &[String]) {
+  let mut state = state_mut!();
+  if let Some(record) = state.copy_provides_copies.get_mut(id as usize - 1) {
+    for class in classes {
+      if !record.loads_classes.contains(class) {
+        record.loads_classes.push(class.clone());
+      }
+    }
+  }
+}
+
 /// Record `key` as a name the class load open now defines ([`ClassLoadFrame`]).
 fn note_class_load_name(key: SymStr) {
   let mut state = state_mut!();
   if let Some(&class) = state.class_load_frames.last()
-    && let Some((_, names)) = state.class_loads.get_mut(class)
+    && let Some(record) = state.class_loads.get_mut(class)
   {
-    names.entry(key).or_insert(0);
+    record.names.entry(key).or_insert(None);
   }
 }
 
@@ -2560,7 +2608,7 @@ fn copy_base_class_defines(token: &Token) -> bool {
     state
       .class_loads
       .iter()
-      .any(|(name, names)| name == class && names.contains_key(&key))
+      .any(|record| record.file == *class && record.names.contains_key(&key))
   })
 }
 
@@ -2572,11 +2620,9 @@ fn class_layer_definition(token: &Token) -> bool {
     return false;
   };
   let key = meaning_key(token);
-  let address = Rc::as_ptr(&defn) as usize;
-  state!()
-    .class_loads
-    .iter()
-    .any(|(_, names)| names.get(&key) == Some(&address))
+  state!().class_loads.iter().any(
+    |record| matches!(record.names.get(&key), Some(Some(assigned)) if Rc::ptr_eq(assigned, &defn)),
+  )
 }
 
 /// Does the document's class define `\chapter`, as the real class's `\@ifundefined{chapter}` sees it (natbib's forks

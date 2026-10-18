@@ -2220,13 +2220,8 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
   ) else {
     return Ok(());
   };
-  let shipped = crate::binding::virtual_files::vfs_read(&path).is_some() || {
-    let dir = lookup_string("SOURCEDIRECTORY");
-    let canonical =
-      |p: &str| std::fs::canonicalize(p).unwrap_or_else(|_| Path::new(p).to_path_buf());
-    !dir.is_empty() && canonical(&path).starts_with(canonical(&dir))
-  };
-  if !shipped || read_raw_already(&path) || lookup_bool(&s!("{file}_raw_loaded")) {
+  if !shipped_with_paper(&path) || read_raw_already(&path) || lookup_bool(&s!("{file}_raw_loaded"))
+  {
     return Ok(());
   }
   if !copy_is_the_stood_in_file(&file, binding, &path) {
@@ -2238,6 +2233,69 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
   let _origin = OriginGuard::new(DefinitionOrigin::File);
   let _provides = CopyProvidesGuard::new(id);
   load_tex_definitions(&file, &path, false, ext != "tex", in_expl3, false)
+}
+
+/// Is the file at `path` one the paper ships: a `{filecontents}` virtual file, or one under the document's own source
+/// directory (`SOURCEDIRECTORY`), not TeX Live's?
+fn shipped_with_paper(path: &str) -> bool {
+  crate::binding::virtual_files::vfs_read(path).is_some() || {
+    let dir = lookup_string("SOURCEDIRECTORY");
+    let canonical =
+      |p: &str| std::fs::canonicalize(p).unwrap_or_else(|_| Path::new(p).to_path_buf());
+    !dir.is_empty() && canonical(path).starts_with(canonical(&dir))
+  }
+}
+
+/// One class slot (OXIDIZED_DESIGN_DIVERGENCES #736): does the base class a stand-in class binding loaded stand for the
+/// class `name` its copy's own `\LoadClass` names? A document has one class: latex.ltx:18800 lets a class file
+/// `\LoadClass` once (a second is `\@twoloadclasserror`, :18938-18942), and the binding has already loaded the base
+/// class it models the copy on (ceurart_cls.rs → OmniBus → article). Loading the copy's class too put a second class on
+/// top of the first: ceurart.cls:62 `\LoadClass{scrartcl}` raw-read scrartcl, scrkbase and typearea over article,
+/// whose `\@ptsize` of 0 sends typearea.sty:1400-1413 off its path ("DIV for 0.0pt", then "Conditional limit of
+/// 48000000 exceeded": 2509.11496, 2608.23214, 2310.02658, 2505.16276); atlasdoc.cls `\LoadClass{\ADOC@mainclass}`
+/// (scrartcl) redefined `\@startsection` and `\@sect` under the binding (2509.01219, "Bad type area settings"). So
+/// when the copy's own code (provides-mode on: a file it loads is a real load, [`input_definitions`]) loads a class
+/// that is not loaded yet (`\ver@<name>.cls` undefined; the binding's own base class is a repeat load, cimart.cls
+/// `\LoadClass{article}`), the binding's load loaded a class, and the paper does not ship the class (a class the author
+/// ships is read: the reviewer's nc_chain `\LoadClass{mybase}`), the class is not loaded: the binding's classes are the
+/// copy's base classes (`state::note_copy_base_classes`; a copy's `\newcommand` of a name they define errs, as over
+/// the real class), with an Info. Perl never reads the copy (Package.pm:2113-2133 prefers the `.ltxml`).
+fn binding_base_class_stands_for(name: &str) -> Result<bool> {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 || name.is_empty() {
+    return Ok(false);
+  }
+  let file = class_file_name(name);
+  if lookup_definition(&T_CS!(s!("\\ver@{file}")))?.is_some() {
+    return Ok(false);
+  }
+  let classes = open_class_load_classes();
+  if classes.is_empty() {
+    return Ok(false);
+  }
+  if find_file(
+    name,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Borrowed("cls")),
+      forbid_ltxml: true,
+      ..FindFileOptions::default()
+    }),
+  )
+  .is_some_and(|path| shipped_with_paper(&path))
+  {
+    return Ok(false);
+  }
+  note_copy_base_classes(id, &classes);
+  Info!(
+    "provide",
+    &file,
+    s!(
+      "the binding's base class ({}) stands for the copy's \\LoadClass{{{}}}: not loaded",
+      classes.join(", "),
+      name
+    )
+  );
+  Ok(true)
 }
 
 /// Is the paper's file at `path`, of the name a stand-in binding answers (`file`), the file the binding `binding`
@@ -4152,6 +4210,11 @@ fn class_binding_for_path(name: &str) -> Option<&'static str> {
 /// per-branch reasoning, and the arXiv witnesses behind it, are in the body
 /// comments.
 pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
+  // (a stand-in class's copy has one class slot, which its binding's base class fills: OXIDIZED_DESIGN_DIVERGENCES
+  // #736)
+  if binding_base_class_stands_for(name)? {
+    return Ok(());
+  }
   // A class loaded while another class loads — `\LoadClass`, a binding's
   // base class, the dependency scan's harvest — is nested: its options are
   // its own, never global options (`InputDefinitionOptions::nested_class`,

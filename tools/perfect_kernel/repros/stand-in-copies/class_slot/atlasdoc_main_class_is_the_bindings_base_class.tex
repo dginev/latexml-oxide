@@ -1,0 +1,14 @@
+% witness: 2509.01219 (atlasdoc.cls `\LoadClass[titlepage, 11pt]{\ADOC@mainclass}`, scrartcl; 10 atlasdoc papers in
+%          2509)
+% oracle:  pdflatex 0 errors: "1 Intro", "Text ATLAS."
+% engines: rust 72a r7 = scrartcl raw-read over the binding's article: "\@startsection has been changed",
+%          "Unexpected definition of \@sect", 3x "Bad type area settings" Warnings
+% expect:  0 errors, 0 warnings; the section whole
+% status:  RED (72a r7) -> GREEN (72a r8)
+% preload: ar5iv.sty
+\documentclass{atlasdoc}
+\title{T}
+\begin{document}
+\section{Intro}
+Text \ATLASextra.
+\end{document}

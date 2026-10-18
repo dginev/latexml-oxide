@@ -4,6 +4,60 @@ use crate::prelude::*;
 // Perl natbib.sty.ltxml L379-405: sub setCitationStyle { while (@pairs) { ($key,$value)=... }
 // Unified dispatch: callers may pass flag-only pairs (value=None) from DeclareOption
 // handlers or key=value pairs (value=Some(tokens)) from `\setcitestyle`'s getPairs.
+/// natbib's citation-style options in its declaration order (natbib.sty:238-263), the order `\ProcessOptions` runs
+/// them in.
+const NATBIB_STYLE_OPTIONS: [&str; 12] = [
+  "numbers",
+  "super",
+  "authoryear",
+  "round",
+  "square",
+  "angle",
+  "curly",
+  "comma",
+  "semicolon",
+  "colon",
+  "nobibstyle",
+  "bibstyle",
+];
+
+/// Run natbib's style option `option` as its `\DeclareOption` code does (natbib.sty:238-263), the options its
+/// `\ExecuteOptions` names in their order.
+fn natbib_style_option(option: &str) {
+  match option {
+    "numbers" => {
+      set_citation_style(&[("numbers", None)]);
+      for sub in ["square", "comma", "nobibstyle"] {
+        natbib_style_option(sub);
+      }
+    },
+    "super" => {
+      set_citation_style(&[("super", None)]);
+      assign_value("CITE_OPEN", Stored::Tokens(Tokens!()), None);
+      assign_value("CITE_CLOSE", Stored::Tokens(Tokens!()), None);
+      natbib_style_option("nobibstyle");
+    },
+    "authoryear" => {
+      set_citation_style(&[("authoryear", None)]);
+      for sub in ["round", "semicolon", "bibstyle"] {
+        natbib_style_option(sub);
+      }
+    },
+    "round" | "square" | "angle" | "curly" | "comma" | "semicolon" => {
+      set_citation_style(&[(option, None)]);
+      natbib_style_option("nobibstyle");
+    },
+    "colon" => natbib_style_option("semicolon"),
+    "nobibstyle" => {
+      Let!("\\bibstyle", "\\@gobble");
+    },
+    "bibstyle" => {
+      Let!("\\bibstyle", "\\@citestyle");
+    },
+    _ => {},
+  }
+}
+
 fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
   for (key, value) in pairs {
     match *key {
@@ -468,34 +522,20 @@ LoadDefinitions!({
   // (only after a compiled binding's own early load or for a renamed copy's request; else LaTeX's "Option clash" Error,
   // the first options kept: binding/content.rs `apply_new_options_on_reload`)
   AssignValue!("natbib.sty_repeat_clash" => true, Scope::Global);
+  // (in natbib's declaration order, as `\ProcessOptions` runs them, natbib.sty:238-263 — not the order written: under
+  // `[square,authoryear]` authoryear's `bibstyle` runs first and square's `nobibstyle` last, so a later
+  // `\bibliographystyle`'s `\bibstyle@<style>` is gobbled, as in TeX —, each option's own `\ExecuteOptions` in its
+  // order: `numbers` is also `square,comma,nobibstyle`, `authoryear` `round,semicolon,bibstyle`, a bracket or separator
+  // option `nobibstyle`; `nobibstyle`/`bibstyle` let `\bibstyle` to `\@gobble`/`\@citestyle`, which decides whether a
+  // `\bibliographystyle`'s `\bibstyle@<style>` may still change the punctuation — 2506.08967's
+  // `\usepackage[square,numbers]{natbib}` after the neurips binding's early load, then `\bibliographystyle{plainnat}`,
+  // numbered as its first load would be; 2506.05937)
   DefPrimitive!("\\lx@natbib@repeat@options{}", sub[(list)] {
-    for option in list.to_string().split(',').map(str::trim) {
-      match option {
-        "numbers" => set_citation_style(&[("numbers", None), ("square", None), ("comma", None)]),
-        "authoryear" => set_citation_style(&[("authoryear", None), ("round", None), ("semicolon", None)]),
-        "super" => {
-          set_citation_style(&[("super", None)]);
-          assign_value("CITE_OPEN", Stored::Tokens(Tokens!()), None);
-          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!()), None);
-        },
-        "colon" => set_citation_style(&[("semicolon", None)]),
-        "round" | "square" | "curly" | "angle" | "comma" | "semicolon" => {
-          set_citation_style(&[(option, None)])
-        },
-        _ => {},
-      }
-      // (and each of them sets whether a `\bibliographystyle`'s `\bibstyle@<style>` may still change the punctuation,
-      // natbib.sty:238-262: an explicit style option `nobibstyle`, `authoryear` `bibstyle` — 2506.08967's
-      // `\usepackage[square,numbers]{natbib}` after the neurips binding's early load, then
-      // `\bibliographystyle{plainnat}`, numbered as its first load would be)
-      match option {
-        "numbers" | "super" | "colon" | "round" | "square" | "curly" | "angle" | "comma" | "semicolon" => {
-          Let!("\\bibstyle", "\\@gobble");
-        },
-        "authoryear" => {
-          Let!("\\bibstyle", "\\@citestyle");
-        },
-        _ => {},
+    let list = list.to_string();
+    let given: Vec<&str> = list.split(',').map(str::trim).collect();
+    for option in NATBIB_STYLE_OPTIONS {
+      if given.contains(&option) {
+        natbib_style_option(option);
       }
     }
   });

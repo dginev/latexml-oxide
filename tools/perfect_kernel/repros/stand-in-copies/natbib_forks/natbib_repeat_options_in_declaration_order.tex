@@ -1,0 +1,20 @@
+% witness: the reviewer's round-6 NIT 4 (natbib_sty.rs repeat setter in the order written); 2506.08967, 2506.05937
+%          (a repeat's explicit style options leave a later \bibliographystyle{plainnat} without effect)
+% oracle:  pdflatex (the copy's load commented out, so the document's load is natbib's first): `[square,authoryear]`
+%          runs authoryear (round, semicolon, bibstyle) then square (nobibstyle), natbib.sty:238-263, so
+%          \bibliographystyle{plainnat}'s \bibstyle@plainnat is gobbled: "[Smith, 2001; Jones et al., 2005]"
+% engines: rust 72a r7 = the options in the order written: plainnat's comma, "[Smith, 2001, Jones et al., 2005]"
+% expect:  0 errors, 0 warnings; square brackets, ";" between the entries
+% status:  RED (72a r7) -> GREEN (72a r8)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{neurips_2024}
+\usepackage[square,authoryear]{natbib}
+\bibliographystyle{plainnat}
+\begin{document}
+Text \citep{a,b}.
+\begin{thebibliography}{2}
+\bibitem[Smith(2001)]{a} J. Smith. A paper. 2001.
+\bibitem[Jones et~al.(2005)]{b} K. Jones, L. Doe and M. Roe. Another. 2005.
+\end{thebibliography}
+\end{document}

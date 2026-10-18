@@ -1154,6 +1154,11 @@ impl Converter {
     // The field provenance of the frontmatter's `\title`/`\author` is per conversion: a previous document's settled
     // ledger would lift nothing here (OXIDIZED_DESIGN #715).
     latexml_core::document::reset_field_provenance();
+    // The files read raw and the stand-in copies' provides-modes are this conversion's: a CLI run over several files
+    // (`latexml_oxide t.tex u.tex`) or a worker reusing its thread starts each with none, so the second paper's copy
+    // is read too (OXIDIZED_DESIGN_DIVERGENCES #731).
+    latexml_core::binding::content::reset_raw_read_paths();
+    latexml_core::definition::origin::reset_copy_provides();
     if !self.ready {
       self.initialize_session()?
     }

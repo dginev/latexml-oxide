@@ -1248,10 +1248,6 @@ fn s_add(base: &str, extra: &str) -> String { format!("{base}{extra}") }
 /// name, did): 1 error, then 0.
 #[test]
 fn class_load_record_does_not_reach_the_next_document() {
-  use std::rc::Rc;
-
-  use latexml::converter::Converter;
-  use latexml_core::common::{Config, OutputFormat};
   let tex = repro!("text_defaults/chain/copy_newcommand_through_a_chained_base_class_errs.tex");
   let cimart = repro!("text_defaults/chain/cimart.cls").replace(
     "\\newcommand\\refname{Works Cited}\n\\newcommand\\figurename{Fig}\n",
@@ -1273,7 +1269,114 @@ fn class_load_record_does_not_reach_the_next_document() {
     .iter()
     .map(|dir| dir.path().join("paper.tex").to_string_lossy().into_owned())
     .collect();
-  let logs = std::thread::Builder::new()
+  let logs = convert_on_one_thread(sources);
+  for (log, errors) in logs.iter().zip([1, 0]) {
+    assert_eq!((error_count(log), warning_count(log)), (errors, 0), "{log}");
+    assert_eq!(
+      log.matches("Command \\bibname already defined").count(),
+      errors,
+      "{log}"
+    );
+  }
+  drop(papers);
+}
+
+/// One class slot (OXIDIZED_DESIGN_DIVERGENCES #736; latex.ltx:18800, :18938-18942 `\@twoloadclasserror`): a stand-in
+/// class's copy whose own `\LoadClass` names a class the paper does not ship, after the binding loaded its base class,
+/// does not load a second class over the first — ceurart.cls:62 `\LoadClass{scrartcl}` raw-read typearea over article
+/// (Fatal "Conditional limit of 48000000 exceeded": 2509.11496, 2608.23214, 2310.02658, 2505.16276), atlasdoc.cls's
+/// `\LoadClass{\ADOC@mainclass}` redefined `\@startsection` and `\@sect` (2509.01219). pdflatex: "A Title", "1 Intro",
+/// "Text CEUR."; "1 Intro", "Text ATLAS."; 0 errors. A class the author ships is still read (the nc_chain case of
+/// `copy_newcommand_through_a_chained_base_class`).
+#[test]
+fn copy_load_class_is_the_bindings_base_class() {
+  let (log, xml) = convert_files_with(
+    repro!("class_slot/copy_load_class_is_the_bindings_base_class.tex"),
+    &[("ceurart.cls", repro!("class_slot/ceurart.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (
+      error_count(&log),
+      warning_count(&log),
+      log.matches("Fatal:").count()
+    ),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert!(
+    log.contains(
+      "Info:provide:scrartcl.cls the binding's base class (OmniBus.cls, article.cls) stands for the copy's \
+       \\LoadClass{scrartcl}: not loaded"
+    ),
+    "{log}"
+  );
+  assert_element(&xml, "title", &[], "<title>A Title</title>");
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text \
+     xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag \
+     close=\" \">1</tag>Intro</title><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">Text CEUR.</p></para></section>",
+  );
+
+  let (log, xml) = convert_files_with(
+    repro!("class_slot/atlasdoc_main_class_is_the_bindings_base_class.tex"),
+    &[("atlasdoc.cls", repro!("class_slot/atlasdoc.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (
+      error_count(&log),
+      warning_count(&log),
+      log.matches("Fatal:").count()
+    ),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert!(!log.contains("KOMA"), "{log}");
+  assert_element(
+    &xml,
+    "section",
+    &["xml:id=\"S1\""],
+    "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag \
+     role=\"typerefnum\">§1</tag></tags><title><tag close=\" \">1</tag>Intro</title><para xml:id=\"S1.p1\"><p \
+     xml:id=\"S1.p1.1\">Text ATLAS.</p></para></section>",
+  );
+}
+
+/// natbib's repeat options run in natbib's declaration order, as `\ProcessOptions` runs them (natbib.sty:238-263):
+/// `[square,authoryear]` is authoryear's `bibstyle` then square's `nobibstyle`, so `\bibliographystyle{plainnat}` is
+/// gobbled. pdflatex (the copy's own load commented out, so the document's load is natbib's first): "[Smith, 2001;
+/// Jones et al., 2005]"; in the order written, plainnat's "," separated the entries.
+#[test]
+fn natbib_repeat_options_in_declaration_order() {
+  let copy = repro!("natbib_forks/copy_load/neurips_2024.sty")
+    .replace("\\RequirePackage{natbib}", "%\\RequirePackage{natbib}");
+  let (log, xml) = convert_files_with(
+    repro!("natbib_forks/natbib_repeat_options_in_declaration_order.tex"),
+    &[("neurips_2024.sty", &copy)],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Text <cite class=\"ltx_citemacro_citep\">[<bibref bibrefs=\"a,b\" separator=\";\" \
+     show=\"AuthorsPhrase1Year\" yyseparator=\",\"><bibrefphrase>, </bibrefphrase></bibref>]</cite>.</p>",
+  );
+}
+
+/// Convert each of `sources` with one `Converter` each on one thread, no engine reset between them, as the CLI's
+/// `latexml_oxide t.tex u.tex` and a long-lived worker do; the logs.
+fn convert_on_one_thread(sources: Vec<String>) -> Vec<String> {
+  use std::rc::Rc;
+
+  use latexml::converter::Converter;
+  use latexml_core::common::{Config, OutputFormat};
+  std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
       let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
@@ -1299,14 +1402,31 @@ fn class_load_record_does_not_reach_the_next_document() {
     })
     .expect("a conversion thread")
     .join()
-    .expect("the conversions");
-  for (log, errors) in logs.iter().zip([1, 0]) {
-    assert_eq!((error_count(log), warning_count(log)), (errors, 0), "{log}");
-    assert_eq!(
-      log.matches("Command \\bibname already defined").count(),
-      errors,
-      "{log}"
-    );
+    .expect("the conversions")
+}
+
+/// The files read raw are the conversion's own (`reset_raw_read_paths` at every `prepare_session`): two documents of
+/// one directory on one thread (the reviewer's probe two, `latexml_oxide t.tex u.tex`, both cimart) each read the
+/// copy, 2 errors each as pdflatex; the second read nothing before.
+#[test]
+fn raw_read_record_does_not_reach_the_next_document() {
+  let tex = repro!("text_defaults/loadclass/copy_newcommand_of_a_base_class_name_errs.tex");
+  let dir = tempfile::tempdir().expect("a paper directory");
+  for name in ["t.tex", "u.tex"] {
+    std::fs::write(dir.path().join(name), tex).expect("the paper");
   }
-  drop(papers);
+  std::fs::write(
+    dir.path().join("cimart.cls"),
+    repro!("text_defaults/loadclass/cimart.cls"),
+  )
+  .expect("the copy");
+  let sources: Vec<String> = ["t.tex", "u.tex"]
+    .iter()
+    .map(|name| dir.path().join(name).to_string_lossy().into_owned())
+    .collect();
+  for log in convert_on_one_thread(sources) {
+    assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
+    assert!(log.contains("Command \\refname already defined"), "{log}");
+  }
+  drop(dir);
 }
