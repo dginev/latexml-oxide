@@ -9,7 +9,8 @@ LoadDefinitions!({
   RequirePackage!("amssymb");
   RequirePackage!("xstring");
   DefConditional!("\\iftagpdfopt", { false });
-  DefMacro!("\\auxiliaryspace", " ");
+  // (a space; a `" "` string body would tokenize as an empty line, `\par`: KNOWN_PERL_ERRORS #984)
+  DefMacro!(T_CS!("\\auxiliaryspace"), None, Tokens!(T_SPACE!()));
   DefMacro!("\\wrap{}", "#1");
   DefMacro!("\\wrapml{}", "#1");
   DefMacro!("\\wrapmlalt{}", "#1");

@@ -1,14 +1,17 @@
 % A paragraph break (`\par`, a blank line) inside a frontmatter item whose element holds only inline content
-% (`ltx:acknowledgements`, `ltx:keywords`, `ltx:date`, …: `Inline.model`, no `ltx:p`, but `ltx:break`) is a line break
-% of the item, where text mode merged the paragraphs into one run of text; breaks at the item's ends add nothing and a
-% run of them is one (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #766). The rule is decided at construction,
-% by the schema: the abstract (`Block.model`) keeps its paragraphs, and a `\par` in a group of the item (`ltx:text`)
-% breaks the line there.
+% (`ltx:acknowledgements`, `ltx:keywords`, `ltx:pubnote`, …: `Inline.model`, no `ltx:p`, but `ltx:break`) is a line
+% break of the item, where text mode merged the paragraphs into one run of text (user ruling 2026-10-18,
+% OXIDIZED_DESIGN_DIVERGENCES #766). Decided at construction, by the schema: a break parts lines only (none before the
+% item's first text, none after another, none left at its end, in a group of it too); an element that holds paragraphs
+% keeps the ordinary `\par` — the abstract its `<p>`s, a note its one run (spaces kept), a minipage in an item its
+% blocks; a keywords environment (`\lx@begin@keywords`, the `\lx@add@frontmatter@until` path) has the same rule.
 % witness: none (apa.cls `\acknowledgements`, repro class_notes/apa_acknowledgements_paragraphs_are_lines)
 % oracle:  pdflatex prints each part on its own line (the class title pages set the store as paragraphs)
-% engines: rust 67int29 = 0 errors, "First part.\nSecond part." one text run; perl = the same (Inline.model, text mode)
-% expect:  0 errors; <ltx:acknowledgements …>First part.<ltx:break/>Second part.<ltx:break/><ltx:text font="bold">Bold
-%          part.<ltx:break/>Bold again.</ltx:text></ltx:acknowledgements>; the abstract two <ltx:p>
+% engines: rust 67int29 = 0 errors, "First part. Second part." one text run; perl = the same (Inline.model, text mode)
+% expect:  0 errors, 0 warnings; <ltx:acknowledgements>First part. <ltx:break/>Second part. <ltx:break/><ltx:text
+%          font="bold">Bold part. <ltx:break/>Bold again.</ltx:text></ltx:acknowledgements>; the abstract two <ltx:p>;
+%          <ltx:note>Note one. Note two.</ltx:note>; the dedication with no break; the minipage with no break;
+%          <ltx:keywords>alpha, beta <ltx:break/>gamma</ltx:keywords>
 % status:  RED (67int29) -> GREEN (77f)
 \documentclass{article}
 \makeatletter
@@ -27,6 +30,14 @@ Bold again.}
 \lx@add@abstract{First paragraph.
 
 Second paragraph.}
+\lx@add@frontmatter{ltx:note}[role=note]{Note one.
+
+Note two.}
+\lx@add@frontmatter{ltx:pubnote}[role=dedication]{{\bfseries\par Lead} and \textit{tail\par}}
+\lx@add@frontmatter{ltx:pubnote}[role=thanks]{\begin{minipage}{5cm}\begin{itemize}\item one\end{itemize}\par Mini two\end{minipage}}
+\lx@begin@keywords[]alpha, beta
+
+gamma\lx@end@keywords
 \makeatother
 \title{A Title}
 \author{Ann Author}

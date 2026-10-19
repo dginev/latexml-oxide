@@ -2182,7 +2182,8 @@ LoadDefinitions!({
   // (overrides the L94 definition; Perl runs them in order).
   DefMacro!("\\bibinithyphendelim", "-");
   DefMacro!("\\bibrangedash", "\u{2013}");
-  DefMacro!("\\bibnamedelimi", " ");
+  // (a space; a `" "` string body would tokenize as an empty line, `\par`: KNOWN_PERL_ERRORS #984)
+  DefMacro!(T_CS!("\\bibnamedelimi"), None, Tokens!(T_SPACE!()));
 
   // Perl L364
   def_macro_noop("\\biblatex@bbl@range{}{}")?;

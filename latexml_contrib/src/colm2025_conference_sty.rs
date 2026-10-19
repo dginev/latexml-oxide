@@ -12,10 +12,11 @@ LoadDefinitions!({
   // don't silently option-clash and miss dvipsnam.def/colortbl.
   RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
 
-  // Author-list separators (colm L107-153).
-  DefMacro!("\\And", " ");
-  DefMacro!("\\AND", " ");
-  DefMacro!("\\Ands", " ");
+  // Author-list separators (colm L107-153): a space each (a `" "` string body would tokenize as an empty line, `\par`;
+  // KNOWN_PERL_ERRORS #984).
+  DefMacro!(T_CS!("\\And"), None, Tokens!(T_SPACE!()));
+  DefMacro!(T_CS!("\\AND"), None, Tokens!(T_SPACE!()));
+  DefMacro!(T_CS!("\\Ands"), None, Tokens!(T_SPACE!()));
   // ICLR/NeurIPS-style author email-aside.
   // \affilmark{N,M,...} — affiliation superscript markers on the
   // author line. Author content; emit as superscript inline.

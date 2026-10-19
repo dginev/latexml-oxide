@@ -28,7 +28,8 @@ LoadDefinitions!({
   def_macro_noop("\\name")?;
   def_macro_noop("\\addr")?;
   def_macro_noop("\\email")?;
-  DefMacro!("\\And", " ");
+  // (a space; a `" "` string body would tokenize as an empty line, `\par`: KNOWN_PERL_ERRORS #984)
+  DefMacro!(T_CS!("\\And"), None, Tokens!(T_SPACE!()));
 
   // jmlr2e.sty: `\newcommand{\BlackBox}{\rule{1.5ex}{1.5ex}}` — the
   // end-of-proof QED box. Papers use `\hfill\BlackBox` or

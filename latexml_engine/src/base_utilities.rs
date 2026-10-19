@@ -564,12 +564,17 @@ LoadDefinitions!({
       );
     }
     let index = frontmatter_push(&tag, entry);
+    // the field being made, for its paragraph breaks (`frontmatter_paragraph_break`), as `digest_frontmatter_item` sets
+    // it; the field around this body comes back after it
+    let enclosing_item = lookup_string("lx_frontmatter_item");
+    assign_value("lx_frontmatter_item", tag.clone(), Some(Scope::Local));
     // A terminal reached INSIDE a nested group (`\section`'s
     // `\@startsection@hook` inside an unbalanced `\abstract{…`) ends the
     // body from there: `digest_next_body` records the terminal and depth on
     // this frame, `until_terminal_inside_group` (stomach.rs) acts.
-    let body = digest_next_body(Some(end))?;
-    let digested = Digested::from(List::new(body));
+    let body = digest_next_body(Some(end));
+    assign_value("lx_frontmatter_item", enclosing_item, Some(Scope::Local));
+    let digested = Digested::from(List::new(body?));
     // A body that typesets nothing adds no entry: an abstract (keywords, classification) with no authored content is
     // no frontmatter, whatever ended it — a heading that closed it before its first line (scrartcl's
     // `\begin{abstract}\section*{Abstract:} …`, 1507.08575; user ruling 2026-10-18, sect05.rs
@@ -4459,9 +4464,12 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
 
 /// A `\par` digested in the frontmatter item `item` (its whatsit's `frontmatter_item`), constructed where the schema is
 /// known: when the item's element holds only inline content (`ltx:acknowledgements`, `ltx:keywords`, `ltx:date`, …: no
-/// `ltx:p`, but `ltx:break`) and no paragraph of its own is open, the paragraph break is a line break of the item, where
-/// text mode would merge the paragraphs (user ruling 2026-10-18; apa.cls's two-paragraph `\acknowledgements`,
-/// OXIDIZED_DESIGN_DIVERGENCES #766). Returns whether it was (the `\par` then closes nothing).
+/// `ltx:p`, but `ltx:break`) and is reached from the insertion point without passing an element that holds paragraphs
+/// of its own, the paragraph break is a line break of the item, where text mode would merge the paragraphs (user ruling
+/// 2026-10-18; apa.cls's two-paragraph `\acknowledgements`, OXIDIZED_DESIGN_DIVERGENCES #766). A break only parts
+/// lines: none before the item's first text, none after another (a run of `\par`s), and those left at its end are
+/// dropped when it closes ([`drop_trailing_paragraph_breaks`]). Returns whether the `\par` was the item's (it then
+/// closes nothing); otherwise it is the ordinary `\par`.
 pub(crate) fn frontmatter_paragraph_break(document: &mut Document, item: &str) -> Result<bool> {
   if document::can_contain_qname(item, "ltx:p") || !document::can_contain_qname(item, "ltx:break") {
     return Ok(false);
@@ -4469,51 +4477,78 @@ pub(crate) fn frontmatter_paragraph_break(document: &mut Document, item: &str) -
   let Some(current) = document.get_element() else {
     return Ok(false);
   };
-  let (item_sym, p_sym) = (pin(item), pin!("ltx:p"));
+  let item_sym = pin(item);
+  let mut open = Vec::new();
   let mut node = Some(current.clone());
-  while let Some(n) = node {
-    let qname = document::get_node_qname(&n);
-    if qname == p_sym {
+  let item_node = loop {
+    let Some(n) = node else {
+      return Ok(false);
+    };
+    if document::get_node_qname(&n) == item_sym {
+      break n;
+    }
+    if document::can_contain(&n, "ltx:p") || document::get_node_qname(&n) == pin!("ltx:p") {
       return Ok(false);
     }
-    if qname == item_sym {
-      if document::can_contain(&current, "ltx:break") {
-        document.insert_element("ltx:break", Vec::new(), None)?;
-      }
-      return Ok(true);
-    }
     node = n.get_parent();
+    open.push(n);
+  };
+  open.push(item_node.clone());
+  let begun = !item_node.get_content().trim().is_empty();
+  if begun
+    && last_line_end(&item_node, &open) != Some(true)
+    && document::can_contain(&current, "ltx:break")
+  {
+    document.insert_element(
+      "ltx:break",
+      Vec::new(),
+      Some(map!(PARAGRAPH_BREAK_MARK.to_string() => "true".to_string())),
+    )?;
   }
-  Ok(false)
+  Ok(true)
 }
 
-/// `item` with its paragraph breaks (`\par`) between content only: none at either end, one for a run of them (spaces
-/// between them count for nothing). TeX's `\par` begins, ends or repeats no paragraph there, and a paragraph break the
-/// item's element takes as a line break ([`frontmatter_paragraph_break`]) is one between its lines.
-fn paragraph_breaks_between_content(item: Tokens) -> Tokens {
-  let par = T_CS!("\\par");
-  let mut out: Vec<Token> = Vec::new();
-  let mut pending = false;
-  for t in item.unlist_ref() {
-    if *t == par {
-      pending = out.iter().any(|o| o.get_catcode() != Catcode::SPACE);
-    } else if pending && t.get_catcode() == Catcode::SPACE {
-      continue;
-    } else {
-      if pending {
-        while out
-          .last()
-          .is_some_and(|l| l.get_catcode() == Catcode::SPACE)
-        {
-          out.pop();
-        }
-        out.push(par);
-        pending = false;
-      }
-      out.push(*t);
+/// The transient mark on the `ltx:break`s [`frontmatter_paragraph_break`] makes (dropped with the other `_`
+/// attributes when the document is finalized).
+const PARAGRAPH_BREAK_MARK: &str = "_paragraph_break";
+
+/// Does `node`'s content end with a paragraph break the frontmatter made (`Some(true)`), with other content
+/// (`Some(false)`), or is it empty (`None`)? Whitespace counts for nothing, and so does an element still `open` (where
+/// the content goes on) that holds nothing yet.
+fn last_line_end(node: &Node, open: &[Node]) -> Option<bool> {
+  let mut child = node.get_last_child();
+  while let Some(n) = child {
+    match n.get_type() {
+      Some(NodeType::TextNode) if n.get_content().trim().is_empty() => {},
+      Some(NodeType::ElementNode) if n.has_attribute(PARAGRAPH_BREAK_MARK) => return Some(true),
+      Some(NodeType::ElementNode) => match last_line_end(&n, open) {
+        Some(found) => return Some(found),
+        None if open.iter().any(|o| o.to_hashable() == n.to_hashable()) => {},
+        None => return Some(false),
+      },
+      _ => return Some(false),
     }
+    child = n.get_prev_sibling();
   }
-  Tokens::new(out)
+  None
+}
+
+/// Drop the paragraph breaks [`frontmatter_paragraph_break`] left at the end of the frontmatter element `node` (in its
+/// last group too): a `\par` that ends an item ends no line of it.
+fn drop_trailing_paragraph_breaks(document: &mut Document, node: &Node) {
+  let mut child = node.get_last_child();
+  while let Some(n) = child {
+    let previous = n.get_prev_sibling();
+    match n.get_type() {
+      Some(NodeType::TextNode) if n.get_content().trim().is_empty() => {},
+      Some(NodeType::ElementNode) if n.has_attribute(PARAGRAPH_BREAK_MARK) => {
+        document.remove_node(n)
+      },
+      Some(NodeType::ElementNode) => return drop_trailing_paragraph_breaks(document, &n),
+      _ => return,
+    }
+    child = previous;
+  }
 }
 
 /// Digest the content for a frontmatter item, disabling or masking certain commands.
@@ -4558,8 +4593,7 @@ fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
     let_i(&T_CS!("\\fnmsep"), &T_CS!("\\lx@frontmatter@fnmsep"), None);
     assign_value("lx_frontmatter_fnmsep", Stored::Bool(true), None);
   }
-  // (its `\par`s, which an inline-only element takes as line breaks: `frontmatter_paragraph_break`)
-  let digested = digest_text(paragraph_breaks_between_content(item));
+  let digested = digest_text(item);
   egroup()?;
   digested
 }
@@ -7256,6 +7290,7 @@ fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<
   for item in content {
     insert_frontmatter_rec(document, item)?;
   }
+  drop_trailing_paragraph_breaks(document, &opened);
   // Scoped close (OXIDIZED_DESIGN #202): a deferred body that ran to the end
   // of the input carries the `\end{document}` whatsit (an unbalanced
   // `\abstract{…`, #207); absorbing it here closes the document — and this

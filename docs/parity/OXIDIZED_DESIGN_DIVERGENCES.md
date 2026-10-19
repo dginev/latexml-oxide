@@ -20340,17 +20340,31 @@ own (no hook label is pushed for them, as on the LaTeX of the era). Repro `loade
 ### 766. A paragraph break inside an inline-only frontmatter item is a line break (Perl: the paragraphs run together)
 
 A frontmatter item is digested in text mode (Perl `digestFrontmatterItem` → `DigestText`), where `\par` closes no
-paragraph, so an item whose element holds only inline content — `ltx:acknowledgements`, `ltx:keywords`, `ltx:date`,
-`ltx:contact`, … (`Inline.model`: no `ltx:p`, but `ltx:break`) — ran its paragraphs together into one text: apa.cls's
-`\acknowledgements{We thank …\n\nCorrespondence to …}` (#763) read "…agency. Correspondence…" as one run. By user
-ruling (2026-10-18) such a paragraph break is a line break of the item. The `\par` whatsit records the frontmatter field
-it was digested in (tex_paragraph.rs `\lx@normal@par`, the `lx_frontmatter_item` value `digest_frontmatter_item`
-sets), and its constructor — where the schema is loaded, as in Perl the model is only read when the document is built
-— inserts an `ltx:break` when that element cannot hold `ltx:p` but can hold `ltx:break` and no paragraph of the item is
-open (base_utilities.rs `frontmatter_paragraph_break`); otherwise it closes paragraphs as before, so an `ltx:abstract`
-(`Block.model`) keeps its `<p>`s. Before digestion the item's `\par`s are kept between content only — none at either
-end, one for a run, the spaces between them dropped (`paragraph_breaks_between_content`) — which in a block item is what
-TeX's `\par` does anyway. Repros `sectioning-frontmatter/inline_item_paragraphs_are_line_breaks`,
+paragraph, so an item whose element holds only inline content — `Inline.model`: no `ltx:p`, but `ltx:break` —
+ran its paragraphs together into one text: apa.cls's `\acknowledgements{We thank …\n\nCorrespondence to …}` (#763)
+read "…agency. Correspondence…". By user ruling (2026-10-18) such a paragraph break is a line break of the item.
+
+Mechanism (all at construction, where the schema is loaded — Perl too reads the model only when it builds the document;
+WISDOM #100): the `\par` whatsit records the frontmatter field it was digested in (tex_paragraph.rs `\lx@normal@par`,
+the `lx_frontmatter_item` value set by `digest_frontmatter_item` and by `\lx@add@frontmatter@until` for a keywords or
+classification environment's body). Its constructor (base_utilities.rs `frontmatter_paragraph_break`) walks up from the
+insertion point to that field's element; when the element is inline-only and no element on the way holds paragraphs of
+its own (a minipage, a note), it inserts a marked `ltx:break` — unless the item has no text yet, or its content already
+ends with such a break (a run of `\par`s, in a group of the item too) — and closes nothing. When the item element
+closes, the marked breaks left at its end are dropped (`drop_trailing_paragraph_breaks`). Otherwise the `\par` is the
+ordinary one: an `ltx:abstract` (`Block.model`) keeps its `<p>`s, an `ltx:note` its one run of text, a box absorbed
+outside its item (a reused title) is untouched. No token of the item is changed.
+
+Where it shows: `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`, `ltx:date`, `ltx:pubnote`, `ltx:contact`,
+`ltx:title` and an author's `ltx:personname` (through its `ltx:creator`). In the standard classes `\title`, `\author`
+and `\date` are not `\long` — pdflatex stops with "Paragraph ended before \author was complete" — so the last three are
+reached only through `\long` setters (apa's) or bindings. Beyond TeX: a `\par` in a box or a `c` cell inside an item
+(`\date{\begin{tabular}{c}D1\par D2\end{tabular}}`) is a line break here, where TeX ignores `\par` in restricted
+horizontal mode (tex.web §1096 `end_graf`; the item's own text mode is the same mode string, so the two cannot be told
+apart at digest time). A macro whose string body is a single space tokenizes as an empty line, `\par` (KNOWN_PERL_ERRORS
+#984); amsppt's `\usualspace` and the Rust-only bindings' `\And`/`\AND`/`\Ands` (colm2025_conference, jmlr, jmlr2e),
+`\auxiliaryspace` (axessibility) and `\bibnamedelimi` (biblatex) are explicit space tokens now, so none of them breaks a
+line (colm's `\Ands` had made "Carol <break/>Dan"). Repros `sectioning-frontmatter/inline_item_paragraphs_are_line_breaks`,
 `sectioning-frontmatter/class_notes/apa_acknowledgements_paragraphs_are_lines`; guards
 `perfect_kernel_batch77f::{inline_item_paragraphs_are_line_breaks, apa_acknowledgements_paragraphs_are_lines}`. **Why**:
 the author's line structure is content; merging two paragraphs into one sentence run misreports it.
