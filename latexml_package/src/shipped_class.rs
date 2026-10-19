@@ -255,6 +255,94 @@ fn strip_cls(name: &str) -> &str {
   }
 }
 
+/// A file a binding reads raw — a TeX Live class or package, or an author's class the paper ships — with the binding's
+/// adjustments, each placed where the file defines what it adjusts ([`read_raw`]). One declaration per binding, so the
+/// read, the no-copy fallback and the order of the adjustments cannot drift between bindings.
+pub struct RawRead {
+  /// The file's name, without its extension (`pasa`).
+  pub name:     &'static str,
+  /// Its extension (`cls`, `sty`).
+  pub ext:      &'static str,
+  /// An author's class, not in TeX Live: read from the paper's copy ([`requested_shipped_class`]); without one the
+  /// document gets OmniBus and the missing-file warning, as for any class the paper names and lacks.
+  pub shipped:  bool,
+  /// `(cs, definition)`: held while the file is read — `definition` (TeX) replaces the meaning of `cs`, locked against
+  /// the file's own definition — and the meaning before returns after it (pasa.cls's era `\@popfilename`).
+  pub held:     &'static [(&'static str, &'static str)],
+  /// Meanings the file overrides with copies of an older kernel's: left to the file while it is read (its own code may
+  /// need them), and the meaning before restored after it (pasa.cls's era `\@pushfilename`).
+  pub restored: &'static [&'static str],
+  /// `(setter, body)`: a store the file defines (`\aaabstract`), redefined after the read to `body`, a frontmatter API
+  /// call with `#1` the setter's argument (the body grammar of K11's `STORE_SETTERS`) — only when the file defines it.
+  pub setters:  &'static [(&'static str, &'static str)],
+  /// TeX run last, for what the declarations above do not cover.
+  pub after:    &'static str,
+}
+
+impl RawRead {
+  /// The plain declaration of `name`.`ext`: read raw, nothing held, no setter, nothing after.
+  pub const fn new(name: &'static str, ext: &'static str) -> Self {
+    RawRead {
+      name,
+      ext,
+      shipped: false,
+      held: &[],
+      restored: &[],
+      setters: &[],
+      after: "",
+    }
+  }
+}
+
+/// Read the file `spec` declares, raw, with its adjustments in their order: the held meanings in place and locked, the
+/// file, the held and restored meanings back to what they were before it, the setters the file defined redefined, then
+/// `after`.
+pub fn read_raw(spec: &RawRead) -> Result<()> {
+  let file = if spec.shipped {
+    let Some(class) = requested_shipped_class(spec.name)? else {
+      Warn!(
+        "missing_file",
+        &s!("{}.{}", spec.name, spec.ext),
+        &s!(
+          "Can't find the {} file {}.{} the document uses (using OmniBus)",
+          spec.ext,
+          spec.name,
+          spec.ext
+        )
+      );
+      LoadClass!("OmniBus");
+      return Ok(());
+    };
+    class
+  } else {
+    spec.name.to_string()
+  };
+  let kept = |cs: &str| s!("\\lx@raw@kept@{}", &cs[1..]);
+  for cs in spec.held.iter().map(|(cs, _)| cs).chain(spec.restored) {
+    Let!(T_CS!(&kept(cs)), T_CS!(*cs));
+  }
+  for (cs, definition) in spec.held {
+    RawTeX!(*definition);
+    AssignValue!(&s!("{cs}:locked") => true, Some(Scope::Global));
+  }
+  InputDefinitions!(&file, noltxml => true, extension => Some(Cow::Owned(spec.ext.to_string())));
+  for (cs, _) in spec.held {
+    AssignValue!(&s!("{cs}:locked") => false, Some(Scope::Global));
+  }
+  for cs in spec.held.iter().map(|(cs, _)| cs).chain(spec.restored) {
+    Let!(T_CS!(*cs), T_CS!(&kept(cs)), Scope::Global);
+  }
+  for (setter, body) in spec.setters {
+    if IsDefined!(&T_CS!(*setter)) {
+      RawTeX!(&s!("\\long\\def{setter}#1{{{body}}}"));
+    }
+  }
+  if !spec.after.is_empty() {
+    RawTeX!(spec.after);
+  }
+  Ok(())
+}
+
 #[cfg(test)]
 mod tests {
   use super::class_text_loads;

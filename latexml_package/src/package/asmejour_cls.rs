@@ -1,4 +1,7 @@
-use crate::prelude::*;
+use crate::{
+  prelude::*,
+  shipped_class::{RawRead, read_raw},
+};
 
 // asmejour.cls (TeX Live; papers also ship it) loads raw as written. Its `\keywords{…}` (asmejour.cls:1367-1371)
 // stores `\__asmejour_keywords`, which the abstract's coffin sets after the abstract text as "Keywords: …"
@@ -8,8 +11,11 @@ use crate::prelude::*;
 // unnumbered first-column footnote (`\DateFootnote`, :1474-1488) is set by the class's `\maketitle` and keeps the
 // date. Silent-loss inventory #11; repro sectioning-frontmatter/class_notes/asmejour_keywords_kept; guard
 // `perfect_kernel_batch74b::asmejour_keywords_are_kept`.
-#[rustfmt::skip]
+const ASMEJOUR: RawRead = RawRead {
+  setters: &[("\\keywords", r"\lx@add@keywords[name={\keywordname:~}]{#1}")],
+  ..RawRead::new("asmejour", "cls")
+};
+
 LoadDefinitions!({
-  InputDefinitions!("asmejour", noltxml => true, extension => Some(Cow::Borrowed("cls")));
-  RawTeX!(r"\DeclareDocumentCommand{\keywords}{m}{\lx@add@keywords[name={\keywordname:~}]{#1}}");
+  read_raw(&ASMEJOUR)?;
 });
