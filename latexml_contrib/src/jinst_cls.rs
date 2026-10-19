@@ -27,10 +27,12 @@ use latexml_package::prelude::*;
 /// by replaying the class's own (OXIDIZED_DESIGN #482). A paper whose source lacks the class falls to OmniBus, with
 /// the loader's missing-file Warning.
 pub(crate) fn jhep_family_class(name: &str) -> Result<()> {
-  let Some(class) = crate::shipped_class::requested_shipped_class(name)? else {
-    return crate::shipped_class::omnibus_without_copy(name);
-  };
-  InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  if !crate::shipped_class::read_raw(&crate::shipped_class::RawRead {
+    shipped: true,
+    ..crate::shipped_class::RawRead::new(name, "cls")
+  })? {
+    return Ok(());
+  }
   // a class only named like the family (the prefix fallback's `JINSTfoo`) is left as it is: without the JHEP title
   // page (`\auto@maketitle`), nothing it stores is laid out only there
   if !IsDefined!(&T_CS!("\\auto@maketitle")) {

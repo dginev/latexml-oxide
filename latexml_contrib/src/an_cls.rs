@@ -3,11 +3,17 @@
 //! missing-file Warning.
 use latexml_package::prelude::*;
 
+const AN: crate::shipped_class::RawRead = crate::shipped_class::RawRead {
+  shipped: true,
+  setters: &[("\\aaabstract", r"\lx@add@abstract{#1}")],
+  after: r"\ifdefined\aaabstract\ifdefined\@abstract\else\let\@abstract\@empty\fi\fi",
+  ..crate::shipped_class::RawRead::new("an", "cls")
+};
+
 LoadDefinitions!({
-  let Some(class) = crate::shipped_class::requested_shipped_class("an")? else {
-    return crate::shipped_class::omnibus_without_copy("an");
-  };
-  InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  if !crate::shipped_class::read_raw(&AN)? {
+    return Ok(());
+  }
   // an.cls:414 `\def\aaabstract#1{\gdef\@abstract{#1}}`, which the class makes the document's `\abstract` at its end
   // (:98 `\AtEndOfClass{\let\abstract=\aaabstract}`), stores the abstract for its title page (`\@maketitle` :718
   // `{\@abstract}`): the text was one plain paragraph of the deposited title block, no abstract. The setter is the
@@ -33,8 +39,5 @@ LoadDefinitions!({
       "\\@maketitle",
       TokenizeInternal!(LABELLED_STORE),
     );
-  } else {
-    RawTeX!(r"\ifdefined\aaabstract\def\aaabstract#1{\lx@add@abstract{#1}}\fi");
   }
-  RawTeX!(r"\ifdefined\aaabstract\ifdefined\@abstract\else\let\@abstract\@empty\fi\fi");
 });

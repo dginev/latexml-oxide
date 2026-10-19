@@ -3086,3 +3086,20 @@ match; a naive shift names those. Two process facts make a parked child stand ou
 (`/proc/<pid>/task/*/wchan`), and its CPU time stops growing between two `ps -o times` samples while its age runs past
 the timeout (a harness child converts many papers, so its age alone means nothing). This found the 67m
 allocation-failure-hook deadlock (SYNC_STATUS 67m).
+
+## 99. A binding that reads a file raw is a `RawRead` declaration, not a hand-rolled load
+
+A class or package binding that reads the TeX Live file, or the copy an author's class the paper ships, raw and then
+adjusts it declares a `latexml_package::shipped_class::RawRead` and calls `read_raw`, which owns the order and the
+no-copy path: the paper's copy for a `shipped` class (`requested_shipped_class`, a renamed or path-prefixed request
+included), else OmniBus with the loader's missing-file Warning (`omnibus_without_copy`, silent when the prefix
+fallback already warned); `held` definitions locked against the file's own while it is read and restored after
+(pasa.cls's era `\@popfilename`); `restored` meanings the file overrides with an older kernel's copy, restored after
+(pasa.cls's `\@pushfilename`); `setters` — a store the file defines turned into a frontmatter API body with `#1` its
+argument, the grammar of K11's `STORE_SETTERS`, only when the file defines it (an.cls `\aaabstract`, cclayout's
+`\for@cc@subject`, asmejour's `\keywords`); then `after` TeX. `read_raw` returns `false` when the class fell to
+OmniBus, so version-dependent Rust (an.cls v1.03's labelled store, a family's "only named like it" checks) runs only
+after a real read. Hand-rolled copies of this sequence drifted before it existed: some no-copy branches warned and
+some did not, and a forgotten `AUTHOR_FILE_STAND_INS` entry failed the gates (deepseek, pasa). A new author-file
+binding still needs its name in `AUTHOR_FILE_STAND_INS`; `perfect_kernel_batch68d::every_binding_outside_tex_live_is_listed`
+names any it misses.

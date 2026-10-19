@@ -292,9 +292,9 @@ fn strip_cls(name: &str) -> &str {
 /// A file a binding reads raw — a TeX Live class or package, or an author's class the paper ships — with the binding's
 /// adjustments, each placed where the file defines what it adjusts ([`read_raw`]). One declaration per binding, so the
 /// read, the no-copy fallback and the order of the adjustments cannot drift between bindings.
-pub struct RawRead {
-  /// The file's name, without its extension (`pasa`).
-  pub name:     &'static str,
+pub struct RawRead<'a> {
+  /// The file's name, without its extension (`pasa`; a family binding's, chosen as it loads: `compositio`).
+  pub name:     &'a str,
   /// Its extension (`cls`, `sty`).
   pub ext:      &'static str,
   /// An author's class, not in TeX Live: read from the paper's copy ([`requested_shipped_class`]); without one the
@@ -313,9 +313,9 @@ pub struct RawRead {
   pub after:    &'static str,
 }
 
-impl RawRead {
+impl<'a> RawRead<'a> {
   /// The plain declaration of `name`.`ext`: read raw, nothing held, no setter, nothing after.
-  pub const fn new(name: &'static str, ext: &'static str) -> Self {
+  pub const fn new(name: &'a str, ext: &'static str) -> Self {
     RawRead {
       name,
       ext,
@@ -330,22 +330,13 @@ impl RawRead {
 
 /// Read the file `spec` declares, raw, with its adjustments in their order: the held meanings in place and locked, the
 /// file, the held and restored meanings back to what they were before it, the setters the file defined redefined, then
-/// `after`.
-pub fn read_raw(spec: &RawRead) -> Result<()> {
+/// `after`. `false` when a shipped class is not in the paper's source: the document then has OmniBus
+/// ([`omnibus_without_copy`]) and the binding stops there.
+pub fn read_raw(spec: &RawRead) -> Result<bool> {
   let file = if spec.shipped {
     let Some(class) = requested_shipped_class(spec.name)? else {
-      Warn!(
-        "missing_file",
-        &s!("{}.{}", spec.name, spec.ext),
-        &s!(
-          "Can't find the {} file {}.{} the document uses (using OmniBus)",
-          spec.ext,
-          spec.name,
-          spec.ext
-        )
-      );
-      LoadClass!("OmniBus");
-      return Ok(());
+      omnibus_without_copy(spec.name)?;
+      return Ok(false);
     };
     class
   } else {
@@ -374,7 +365,7 @@ pub fn read_raw(spec: &RawRead) -> Result<()> {
   if !spec.after.is_empty() {
     RawTeX!(spec.after);
   }
-  Ok(())
+  Ok(true)
 }
 
 #[cfg(test)]

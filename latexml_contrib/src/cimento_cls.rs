@@ -4,11 +4,15 @@
 //! the loader's missing-file Warning.
 use latexml_package::prelude::*;
 
+const CIMENTO: crate::shipped_class::RawRead = crate::shipped_class::RawRead {
+  shipped: true,
+  ..crate::shipped_class::RawRead::new("cimento", "cls")
+};
+
 LoadDefinitions!({
-  let Some(class) = crate::shipped_class::requested_shipped_class("cimento")? else {
-    return crate::shipped_class::omnibus_without_copy("cimento");
-  };
-  InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  if !crate::shipped_class::read_raw(&CIMENTO)? {
+    return Ok(());
+  }
   // cimento.cls:746 `\def\ETC{\unskip\unscrunch|}`, inside its `\maketitle`: in an author list (or a title) `\ETC` marks
   // where the running head cuts the list short with "etc." (:766 `\def\ETC{\unskip\ etc.\scrunch|}`), and on the title
   // page it sets the whole list (`\unscrunch|#1|{#1}` over the rest of `\@author@`, which `\author` ends with `|`,

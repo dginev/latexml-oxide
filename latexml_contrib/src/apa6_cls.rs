@@ -46,13 +46,15 @@ pub fn define_numbered_author_forms(mask: Option<&str>) -> Result<()> {
 /// ([`define_numbered_author_forms`]) when it has them. A paper whose source lacks the class falls to OmniBus, with the
 /// loader's missing-file Warning.
 pub fn apa_family_class(name: &str, mask: Option<&str>) -> Result<()> {
-  let Some(class) = crate::shipped_class::requested_shipped_class(name)? else {
-    return crate::shipped_class::omnibus_without_copy(name);
-  };
   // (the class read raw by a binding is still a raw class to K11, as when the rawclasses lever reads it: its title-page
   // stores — `\shorttitle`, `\affiliation`, `\keywords`, `\abstract`, … — reach the frontmatter, `input_definitions`
   // firing the reroutes at the end of this class load)
-  InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  if !crate::shipped_class::read_raw(&crate::shipped_class::RawRead {
+    shipped: true,
+    ..crate::shipped_class::RawRead::new(name, "cls")
+  })? {
+    return Ok(());
+  }
   // (a class only named like the family, without the numbered stores, is left as it is)
   if !IsDefined!(&T_CS!("\\twoauthors")) || !IsDefined!(&T_CS!("\\twoaffiliations")) {
     return Ok(());

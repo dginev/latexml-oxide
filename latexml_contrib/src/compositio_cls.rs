@@ -24,11 +24,13 @@ use latexml_package::prelude::*;
 /// A paper whose source lacks the class falls to OmniBus, with the loader's missing-file Warning, as before the binding
 /// (OXIDIZED_DESIGN #444).
 pub(crate) fn compositio_family_class(name: &str) -> Result<()> {
-  let Some(class) = crate::shipped_class::requested_shipped_class(name)? else {
-    return crate::shipped_class::omnibus_without_copy(name);
-  };
   Let!("\\lx@compositio@kernel@thanks", "\\thanks");
-  InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  if !crate::shipped_class::read_raw(&crate::shipped_class::RawRead {
+    shipped: true,
+    ..crate::shipped_class::RawRead::new(name, "cls")
+  })? {
+    return Ok(());
+  }
   // a class only named like the family (the prefix fallback's `jcmfoo`, `hhafoo`) is left as it is: without the
   // family's current-author store (`\@curr@author`, compositio.cls:126, hha.cls, jcm.cls:7), it has none of its setters
   if !IsDefined!(&T_CS!("\\@curr@author")) {
