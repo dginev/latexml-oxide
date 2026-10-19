@@ -86,3 +86,17 @@ fn nomenclature_prefix_is_a_string() {
   assert!(xml.contains(r#"role="sort">Enc_Aut<Math"#), "{xml}");
   assert!(xml.contains("Energy"), "{xml}");
 }
+
+/// backref's citation hook `\Hy@backout` (backref.sty:457-482) is defined as backref defines it, so a document's
+/// `\patchcmd{\Hy@backout}{Doc-Start}{\@currentHref}{}{\errmessage{…}}` succeeds (2405.13143, 2601.06492, 2004.14852).
+#[test]
+fn backref_citation_hook_is_patchable() {
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\\usepackage[pagebackref]{hyperref}\\usepackage{etoolbox}\n\\makeatletter\
+     \\patchcmd{\\Hy@backout}{Doc-Start}{\\@currentHref}{}{\\errmessage{I can't seem to patch backref}}\\makeatother\n\
+     \\begin{document}\\section{A}Text \\cite{k1}.\n\\begin{thebibliography}{9}\\bibitem{k1} One.\\end{thebibliography}\\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("One."), "{xml}");
+}
